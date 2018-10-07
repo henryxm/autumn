@@ -106,4 +106,4 @@ Autumn
 - 技术讨论、二次开发等咨询、问题和建议，请移步到官方社区，我会在第一时间进行解答和回复！
  
 
-![捐赠](http://www.xushaohua.com/wp-content/uploads/2018/10/1538912713586.jpg "捐赠") 
+![捐赠](http://www.xushaohua.com/wp-content/uploads/2018/10/shoukuanma.jpg "捐赠") 
