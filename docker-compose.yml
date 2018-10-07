@@ -1,0 +1,8 @@
+version: '1'
+services:
+  autumn-web:
+    image: autumn/web
+    ports:
+      - "80:80"
+    environment:
+      - spring.profiles.active=prod
