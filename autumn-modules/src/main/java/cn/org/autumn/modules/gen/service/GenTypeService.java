@@ -1,4 +1,4 @@
-package ${package}.${moduleName}.service;
+package cn.org.autumn.modules.gen.service;
 
 import cn.org.autumn.table.TableInit;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -7,26 +7,26 @@ import java.util.Map;
 import com.baomidou.mybatisplus.mapper.EntityWrapper;
 import com.baomidou.mybatisplus.plugins.Page;
 import com.baomidou.mybatisplus.service.impl.ServiceImpl;
-import ${mainPath}.utils.PageUtils;
-import ${mainPath}.utils.Query;
+import cn.org.autumn.utils.PageUtils;
+import cn.org.autumn.utils.Query;
 
-import ${package}.${moduleName}.dao.${className}Dao;
-import ${package}.${moduleName}.entity.${className}Entity;
+import cn.org.autumn.modules.gen.dao.GenTypeDao;
+import cn.org.autumn.modules.gen.entity.GenTypeEntity;
 
 import javax.annotation.PostConstruct;
 import cn.org.autumn.modules.sys.entity.SysMenuEntity;
 import cn.org.autumn.modules.sys.service.SysMenuService;
 
 /**
- * ${comment}控制器
+ * 代码生成设置控制器
  *
- * @author ${author}
- * @email ${email}
- * @date ${datetime}
+ * @author Shaohua Xu
+ * @email henryxm@163.com
+ * @date 2018-10
  */
 
-@Service("${classname}Service")
-public class ${className}Service extends ServiceImpl<${className}Dao, ${className}Entity> {
+@Service("genTypeService")
+public class GenTypeService extends ServiceImpl<GenTypeDao, GenTypeEntity> {
 
     protected static final String NULL = null;
 
@@ -37,9 +37,9 @@ public class ${className}Service extends ServiceImpl<${className}Dao, ${classNam
     protected TableInit tableInit;
 
     public PageUtils queryPage(Map<String, Object> params) {
-        Page<${className}Entity> page = this.selectPage(
-                new Query<${className}Entity>(params).getPage(),
-                new EntityWrapper<${className}Entity>()
+        Page<GenTypeEntity> page = this.selectPage(
+                new Query<GenTypeEntity>(params).getPage(),
+                new EntityWrapper<GenTypeEntity>()
         );
 
         return new PageUtils(page);
@@ -79,7 +79,7 @@ public class ${className}Service extends ServiceImpl<${className}Dao, ${classNam
             return;
         Long id = 0L;
         String[] _m = new String[]
-                {null, parent(), "${comment}", "modules/${moduleName}/${pathName}.html", "${moduleName}:${pathName}:list,${moduleName}:${pathName}:info,${moduleName}:${pathName}:save,${moduleName}:${pathName}:update,${moduleName}:${pathName}:delete", "1", "fa fa-file-code-o", order()};
+                {null, parent(), "代码生成设置", "modules/gen/gentype.html", "gen:gentype:list,gen:gentype:info,gen:gentype:save,gen:gentype:update,gen:gentype:delete", "1", "fa fa-file-code-o", order()};
         SysMenuEntity sysMenu = sysMenuService.from(_m);
         SysMenuEntity entity = sysMenuService.get(sysMenu);
         if (null == entity) {
@@ -89,10 +89,10 @@ public class ${className}Service extends ServiceImpl<${className}Dao, ${classNam
         } else
             id = entity.getMenuId();
         String[][] menus = new String[][]{
-                {null, id + "", "查看", null, "${moduleName}:${pathName}:list,${moduleName}:${pathName}:info", "2", null, order()},
-                {null, id + "", "新增", null, "${moduleName}:${pathName}:save", "2", null, order()},
-                {null, id + "", "修改", null, "${moduleName}:${pathName}:update", "2", null, order()},
-                {null, id + "", "删除", null, "${moduleName}:${pathName}:delete", "2", null, order()},
+                {null, id + "", "查看", null, "gen:gentype:list,gen:gentype:info", "2", null, order()},
+                {null, id + "", "新增", null, "gen:gentype:save", "2", null, order()},
+                {null, id + "", "修改", null, "gen:gentype:update", "2", null, order()},
+                {null, id + "", "删除", null, "gen:gentype:delete", "2", null, order()},
         };
         for (String[] menu : menus) {
             sysMenu = sysMenuService.from(menu);

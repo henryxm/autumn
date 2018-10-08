@@ -8,7 +8,7 @@ import org.springframework.boot.web.servlet.support.SpringBootServletInitializer
 
 
 @SpringBootApplication
-@MapperScan(basePackages = {"cn.org.autumn.modules.*.dao","cn.org.autumn.table.dao","cn.org.autumn.modules.user.dao",})
+@MapperScan(basePackages = {"cn.org.autumn.modules.*.dao","cn.org.autumn.table.dao",})
 public class AutumnApplication extends SpringBootServletInitializer {
 
 	public static void main(String[] args) {

@@ -98,8 +98,8 @@ Autumn
 #### 如何交流、反馈、参与贡献？
 - 开发文档：https://gitlab.microhome.cn/autumn/autumn
 - 官方社区：https://gitlab.microhome.cn/autumn/autumn
-- gitee仓库：https://gitlab.microhome.cn/autumn/autumn
-- github仓库：https://gitlab.microhome.cn/autumn/autumn
+- gitee仓库：https://gitee.com/henryxm/autumn
+- github仓库：https://github.com/henryxm/autumn
 - [官方网站](http://www.autumn.org.cn)：http://www.autumn.org.cn   
 - 官方QQ群：176164260
 - 如需关注项目最新动态，请Watch、Star项目，同时也是对项目最好的支持

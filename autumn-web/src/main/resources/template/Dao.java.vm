@@ -6,7 +6,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.springframework.stereotype.Repository;
 
 /**
- * ${comments}
+ * ${comment}
  * 
  * @author ${author}
  * @email ${email}

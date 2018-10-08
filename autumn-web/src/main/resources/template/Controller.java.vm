@@ -20,7 +20,7 @@ import ${mainPath}.utils.R;
 
 
 /**
- * ${comments}
+ * ${comment}
  *
  * @author ${author}
  * @email ${email}
@@ -39,7 +39,6 @@ public class ${className}Controller {
     @RequiresPermissions("${moduleName}:${pathName}:list")
     public R list(@RequestParam Map<String, Object> params){
         PageUtils page = ${classname}Service.queryPage(params);
-
         return R.ok().put("page", page);
     }
 
@@ -51,7 +50,6 @@ public class ${className}Controller {
     @RequiresPermissions("${moduleName}:${pathName}:info")
     public R info(@PathVariable("${pk.attrname}") ${pk.attrType} ${pk.attrname}){
         ${className}Entity ${classname} = ${classname}Service.selectById(${pk.attrname});
-
         return R.ok().put("${classname}", ${classname});
     }
 
@@ -62,7 +60,6 @@ public class ${className}Controller {
     @RequiresPermissions("${moduleName}:${pathName}:save")
     public R save(@RequestBody ${className}Entity ${classname}){
         ${classname}Service.insert(${classname});
-
         return R.ok();
     }
 
@@ -74,7 +71,6 @@ public class ${className}Controller {
     public R update(@RequestBody ${className}Entity ${classname}){
         ValidatorUtils.validateEntity(${classname});
         ${classname}Service.updateAllColumnById(${classname});//全部更新
-        
         return R.ok();
     }
 
@@ -85,7 +81,6 @@ public class ${className}Controller {
     @RequiresPermissions("${moduleName}:${pathName}:delete")
     public R delete(@RequestBody ${pk.attrType}[] ${pk.attrname}s){
         ${classname}Service.deleteBatchIds(Arrays.asList(${pk.attrname}s));
-
         return R.ok();
     }
 

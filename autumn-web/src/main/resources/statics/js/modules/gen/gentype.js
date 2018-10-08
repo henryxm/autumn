@@ -1,16 +1,18 @@
 $(function () {
     $("#jqGrid").jqGrid({
-        url: baseURL + '${moduleName}/${pathName}/list',
+        url: baseURL + 'gen/gentype/list',
         datatype: "json",
         colModel: [			
-#foreach($column in $columns)
-#if($column.name == $pk.name)
-			{ label: '${column.attrname}', name: '${column.attrname}', index: '${column.name}', width: 50, key: true },
-#else
-			{ label: '${column.comment}', name: '${column.attrname}', index: '${column.name}', width: 80 }#if($velocityCount != $columns.size()), #end
-			
-#end			
-#end
+			{ label: 'id', name: 'id', index: 'id', width: 50, key: true },
+			{ label: '数据库类型', name: 'databaseType', index: 'database_type', width: 80 }, 			
+			{ label: '程序根包名', name: 'rootPackage', index: 'root_package', width: 80 }, 			
+			{ label: '模块根包名', name: 'modulePackage', index: 'module_package', width: 80 }, 			
+			{ label: '模块名(用于包名)', name: 'moduleName', index: 'module_name', width: 80 }, 			
+			{ label: '模块名称(用于目录)', name: 'moduleText', index: 'module_text', width: 80 }, 			
+			{ label: '作者名字', name: 'authorName', index: 'author_name', width: 80 }, 			
+			{ label: '作者邮箱', name: 'email', index: 'email', width: 80 }, 			
+			{ label: '表前缀', name: 'tablePrefix', index: 'table_prefix', width: 80 }, 			
+			{ label: '表字段映射', name: 'mappingString', index: 'mapping_string', width: 80 }, 			
         ],
 		viewrecords: true,
         height: 385,
@@ -44,7 +46,7 @@ var vm = new Vue({
 	data:{
 		showList: true,
 		title: null,
-		${classname}: {}
+		genType: {}
 	},
 	methods: {
 		query: function () {
@@ -53,25 +55,25 @@ var vm = new Vue({
 		add: function(){
 			vm.showList = false;
 			vm.title = "新增";
-			vm.${classname} = {};
+			vm.genType = {};
 		},
 		update: function (event) {
-			var $pk.attrname = getSelectedRow();
-			if($pk.attrname == null){
+			var id = getSelectedRow();
+			if(id == null){
 				return ;
 			}
 			vm.showList = false;
             vm.title = "修改";
             
-            vm.getInfo(${pk.attrname})
+            vm.getInfo(id)
 		},
 		saveOrUpdate: function (event) {
-			var url = vm.${classname}.${pk.attrname} == null ? "${moduleName}/${pathName}/save" : "${moduleName}/${pathName}/update";
+			var url = vm.genType.id == null ? "gen/gentype/save" : "gen/gentype/update";
 			$.ajax({
 				type: "POST",
 			    url: baseURL + url,
                 contentType: "application/json",
-			    data: JSON.stringify(vm.${classname}),
+			    data: JSON.stringify(vm.genType),
 			    success: function(r){
 			    	if(r.code === 0){
 						alert('操作成功', function(index){
@@ -84,17 +86,17 @@ var vm = new Vue({
 			});
 		},
 		del: function (event) {
-			var ${pk.attrname}s = getSelectedRows();
-			if(${pk.attrname}s == null){
+			var ids = getSelectedRows();
+			if(ids == null){
 				return ;
 			}
 			
 			confirm('确定要删除选中的记录？', function(){
 				$.ajax({
 					type: "POST",
-				    url: baseURL + "${moduleName}/${pathName}/delete",
+				    url: baseURL + "gen/gentype/delete",
                     contentType: "application/json",
-				    data: JSON.stringify(${pk.attrname}s),
+				    data: JSON.stringify(ids),
 				    success: function(r){
 						if(r.code == 0){
 							alert('操作成功', function(index){
@@ -107,9 +109,9 @@ var vm = new Vue({
 				});
 			});
 		},
-		getInfo: function(${pk.attrname}){
-			$.get(baseURL + "${moduleName}/${pathName}/info/"+${pk.attrname}, function(r){
-                vm.${classname} = r.${classname};
+		getInfo: function(id){
+			$.get(baseURL + "gen/gentype/info/"+id, function(r){
+                vm.genType = r.genType;
             });
 		},
 		reload: function (event) {

@@ -32,6 +32,14 @@ public class TableInit {
     @Value("${autumn.table.init}")
     public boolean init = false;
 
+    public String getDatabaseType() {
+        return databaseType;
+    }
+
+    public boolean isInit() {
+        return init;
+    }
+
     /**
      * link to table create service;
      */

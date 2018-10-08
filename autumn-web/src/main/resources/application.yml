@@ -45,7 +45,7 @@ autumn:
   table:
     auto: create
     init: true
-    pack: cn.org.autumn.modules.stock.entity,cn.org.autumn.modules.sms.entity,cn.org.autumn.modules.user.entity,cn.org.autumn.modules.job.entity,cn.org.autumn.modules.oss.entity,cn.org.autumn.modules.sys.entity
+    pack: cn.org.autumn.modules
 
 #mybatis
 mybatis-plus:
@@ -79,8 +79,8 @@ mybatis-plus:
 
 
 logging:
-  level: debug
-  level.cn.org.autumn: debug
+  level: warn
+  level.cn.org.autumn: info
   path: logs/
   file: admin.log
 

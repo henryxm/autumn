@@ -1,8 +1,10 @@
 package cn.org.autumn.table.data;
 
 import cn.org.autumn.table.annotation.Column;
+import cn.org.autumn.table.mysql.ColumnMeta;
 import cn.org.autumn.table.utils.HumpConvert;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.WordUtils;
 
 import java.lang.reflect.Field;
 
@@ -67,12 +69,96 @@ public class ColumnInfo {
     private String comment;
 
 
+    //属性名称(第一个字母大写)，如：user_name => UserName
+    private String attrName;
+    //属性名称(第一个字母小写)，如：user_name => userName
+    private String attrname;
+    //属性类型 列的数据类型，转换成Java类型
+    private String attrType;
+    //auto_increment
+    private String extra;
+
+    private String genAnnotation;
+
+
     public ColumnInfo(Field field) {
+        initFrom(field);
+    }
+
+    public ColumnInfo(ColumnMeta field) {
         initFrom(field);
     }
 
     public static ColumnInfo from(Field field) {
         return new ColumnInfo(field);
+    }
+
+    public void initFrom(ColumnMeta column) {
+        setName(column.getColumnName());
+        setType(column.getDataType());
+        setComment(column.getColumnComment());
+        setExtra(column.getExtra());
+        if ("PRI".equalsIgnoreCase(column.getColumnKey())) {
+            setKey(true);
+        }
+        setNull(column.getNullable());
+        String ct = column.getColumnType();
+        String[] tt = ct.split("\\(");
+        String len = tt[1].split("\\)")[0];
+        int length = Integer.valueOf(len);
+        setLength(length);
+        setGenAnnotation(buildAnnotation());
+    }
+
+    private String buildAnnotation() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("@Column(");
+        String divider = "";
+        if (this.isKey) {
+            sb.append("isKey = true");
+            divider = ", ";
+        }
+        if (!"varchar".equalsIgnoreCase(type)) {
+            sb.append(divider + "type = \"" + type + "\"");
+            divider = ", ";
+        }
+        if (length != 255) {
+            sb.append(divider + "length = " + length);
+            divider = ", ";
+        }
+        if (!isNull) {
+            sb.append(divider + "isNull = false");
+            divider = ", ";
+        }
+        if (isAutoIncrement) {
+            sb.append(divider + "isAutoIncrement = true");
+            divider = ", ";
+        }
+        if (!StringUtils.isEmpty(comment)) {
+            sb.append(divider + "comment = \"" + comment + "\"");
+        }
+        sb.append(")");
+        return sb.toString();
+    }
+
+    public String getGenAnnotation() {
+        return genAnnotation;
+    }
+
+    public void setGenAnnotation(String genAnnotation) {
+        this.genAnnotation = genAnnotation;
+    }
+
+    public static void main(String[] args) {
+        String dd = "bigint(20)";
+        String[] tt = dd.split("\\(");
+        String type = tt[0];
+        String len = tt[1].split("\\)")[0];
+        System.out.print(tt[0]);
+    }
+
+    public static String columnToJava(String columnName) {
+        return WordUtils.capitalizeFully(columnName, new char[]{'_'}).replace("_", "");
     }
 
     public void initFrom(Field field) {
@@ -84,7 +170,7 @@ public class ColumnInfo {
         if (StringUtils.isEmpty(columnName)) {
             columnName = field.getName();
             columnName = HumpConvert.HumpToUnderline(columnName);
-            if(columnName.startsWith("_"))
+            if (columnName.startsWith("_"))
                 columnName = columnName.substring(1);
         }
         this.name = columnName;
@@ -121,6 +207,8 @@ public class ColumnInfo {
 
     public void setName(String name) {
         this.name = name;
+        setAttrName(columnToJava(name));
+        setAttrname(StringUtils.uncapitalize(attrName));
     }
 
     public String getType() {
@@ -195,4 +283,38 @@ public class ColumnInfo {
         this.isUnique = unique;
     }
 
+    public String getAttrName() {
+        return attrName;
+    }
+
+    public void setAttrName(String attrName) {
+        this.attrName = attrName;
+    }
+
+    public String getAttrname() {
+        return attrname;
+    }
+
+    public void setAttrname(String attrname) {
+        this.attrname = attrname;
+    }
+
+    public String getAttrType() {
+        return attrType;
+    }
+
+    public void setAttrType(String attrType) {
+        this.attrType = attrType;
+    }
+
+    public String getExtra() {
+        return extra;
+    }
+
+    public void setExtra(String extra) {
+        this.extra = extra;
+        if ("auto_increment".equalsIgnoreCase(this.extra)) {
+            this.isAutoIncrement = true;
+        }
+    }
 }

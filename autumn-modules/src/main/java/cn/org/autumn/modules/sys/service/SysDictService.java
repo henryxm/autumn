@@ -35,7 +35,7 @@ import java.util.Map;
 @Service
 public class SysDictService extends ServiceImpl<SysDictDao, SysDictEntity> {
 
-    private static final String NULL = null;
+    protected static final String NULL = null;
 
     @Autowired
     private SysDictDao sysDictDao;
