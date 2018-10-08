@@ -17,26 +17,27 @@
 package cn.org.autumn.modules.sys.dao;
 
 import cn.org.autumn.modules.sys.entity.SysUserRoleEntity;
+import cn.org.autumn.mybatis.SelectInLangDriver;
 import com.baomidou.mybatisplus.mapper.BaseMapper;
+import org.apache.ibatis.annotations.*;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
-/**
- * 用户与角色对应关系
- * 
- * @author chenshun
- * @email sunlightcs@gmail.com
- * @date 2016年9月18日 上午9:34:46
- */
+@Mapper
+@Repository
 public interface SysUserRoleDao extends BaseMapper<SysUserRoleEntity> {
-	
-	/**
-	 * 根据用户ID，获取角色ID列表
-	 */
-	List<Long> queryRoleIdList(Long userId);
 
-	/**
-	 * 根据角色ID数组，批量删除
-	 */
-	int deleteBatch(Long[] roleIds);
+    /**
+     * 根据用户ID，获取角色ID列表
+     */
+    @Select("select role_id from sys_user_role where user_id = #{value}")
+    List<Long> queryRoleIdList(@Param("value") Long userId);
+
+    /**
+     * 根据角色ID数组，批量删除
+     */
+    @Delete("DELETE FROM sys_user_role WHERE role_id IN (#{roleIds})")
+    @Lang(SelectInLangDriver.class)
+    int deleteBatch(@Param("roleIds") Long[] roleIds);
 }

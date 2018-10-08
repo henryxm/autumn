@@ -22,11 +22,8 @@ import com.baomidou.mybatisplus.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.springframework.stereotype.Repository;
 
-/**
- * 系统日志
- */
 @Mapper
 @Repository
 public interface SysLogDao extends BaseMapper<SysLogEntity> {
-	
+
 }

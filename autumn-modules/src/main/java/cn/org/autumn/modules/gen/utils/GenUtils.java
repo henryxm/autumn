@@ -53,8 +53,9 @@ public class GenUtils {
 
 	public static void generatorCode(TableInfo tableInfo, GenTypeWrapper wrapper, ZipOutputStream zip){
 		boolean hasBigDecimal = false;
-		Properties prop = new Properties();  
-		prop.put("file.resource.loader.class", "org.apache.velocity.runtime.resource.loader.ClasspathResourceLoader");  
+		Properties prop = new Properties();
+		prop.setProperty("resource.loader", "class");
+		prop.setProperty("class.resource.loader.class", "org.apache.velocity.runtime.resource.loader.ClasspathResourceLoader");
 		Velocity.init(prop);
 
 		String mainPath = wrapper.getEntity().getRootPackage();

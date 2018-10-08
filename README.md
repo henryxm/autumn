@@ -4,13 +4,13 @@
 - 采用Spring、Spring Boot、Redis、MyBatis、Shiro、Druid框架开发,搭载mysql数据。
 - 如果你厌烦了MyBatis中需要手动创建表的事情，这个项目非常适合你，自动为你生成表。
 - 从此你不在需要导入sql文件了，项目初始化变得异常简单，结构清晰，易于开发，真正拿来可用。
+- 全注解MyBatis开发，没有任何mapper文件，一切sql 映射都用代码实现，全程无xml配置，对xml编写mapper有恐惧症的人的福音。
 
 - 提供双向生成功能：
   1. 实体类自动生成数据库表，全过程不需要任何SQL语句，所有表自动生成
   2. 通过表生成基础结构代码，生成代码中已包含CRUD功能，表级别的API接口全部都有
   3. 基本实例数据全自动通过代码初始化，无需干预
   4. 仅仅只需要修改数据库连接地址，用户名，密码，即可启动运行。
-<br>
 
 #### 具有如下特点
 - 灵活的权限控制，可控制到页面或按钮，满足绝大部分的权限需求
@@ -22,7 +22,6 @@
 - 页面交互使用Vue2.x，极大的提高了开发效率
 - 引入swagger文档支持，方便编写API接口文档
 
-<br>
 
 #### 数据权限设计思想
 - 管理员管理、角色管理、部门管理，可操作本部门及子部门数据
@@ -45,11 +44,11 @@ Autumn
 │    │    └─user 普通用户
 │    │ 
 │    └─resources 
-│        └─mapper   MyBatis文件
+│        └─template   代码生成模板文件
 │
 ├─autumn-web    系统启动入口
 │        ├─statics  静态资源
-│        ├─template 系统页面
+│        ├─templates 系统页面
 │        │    ├─modules      模块页面
 │        │    ├─index.html   AdminLTE主题风格（默认主题）
 │        │    └─index1.html  Layui主题风格
@@ -96,14 +95,11 @@ Autumn
 
 
 #### 如何交流、反馈、参与贡献？
-- 开发文档：https://gitlab.microhome.cn/autumn/autumn
-- 官方社区：https://gitlab.microhome.cn/autumn/autumn
+- 开发文档：https://gitlab.microhome.cn/henryxm/autumn
+- 官方社区：https://gitlab.microhome.cn/henryxm/autumn
 - gitee仓库：https://gitee.com/henryxm/autumn
 - github仓库：https://github.com/henryxm/autumn
 - [官方网站](http://www.autumn.org.cn)：http://www.autumn.org.cn   
 - 官方QQ群：176164260
 - 如需关注项目最新动态，请Watch、Star项目，同时也是对项目最好的支持
 - 技术讨论、二次开发等咨询、问题和建议，请移步到官方社区，我会在第一时间进行解答和回复！
- 
-
-![捐赠](http://www.xushaohua.com/wp-content/uploads/2018/10/shoukuanma.jpg "捐赠") 

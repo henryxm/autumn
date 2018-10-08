@@ -104,9 +104,12 @@ public class ColumnInfo {
         setNull(column.getNullable());
         String ct = column.getColumnType();
         String[] tt = ct.split("\\(");
-        String len = tt[1].split("\\)")[0];
-        int length = Integer.valueOf(len);
-        setLength(length);
+        if (tt.length > 1) {
+            String len = tt[1].split("\\)")[0];
+            int length = Integer.valueOf(len);
+            setLength(length);
+        } else
+            length = 0;
         setGenAnnotation(buildAnnotation());
     }
 
@@ -122,7 +125,7 @@ public class ColumnInfo {
             sb.append(divider + "type = \"" + type + "\"");
             divider = ", ";
         }
-        if (length != 255) {
+        if (length != 255 && length != 0) {
             sb.append(divider + "length = " + length);
             divider = ", ";
         }

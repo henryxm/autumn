@@ -24,9 +24,6 @@ import javax.validation.constraints.NotBlank;
 
 /**
  * 注册表单
- *
- * @author Mark sunlightcs@gmail.com
- * @since 3.1.0 2018-01-25
  */
 @ApiModel(value = "注册表单")
 public class RegisterForm {

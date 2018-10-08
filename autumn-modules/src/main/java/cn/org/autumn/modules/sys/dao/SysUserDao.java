@@ -18,23 +18,34 @@ package cn.org.autumn.modules.sys.dao;
 
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import com.baomidou.mybatisplus.mapper.BaseMapper;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
-/**
- * 系统用户
- */
+@Mapper
+@Repository
 public interface SysUserDao extends BaseMapper<SysUserEntity> {
-	
-	/**
-	 * 查询用户的所有权限
-	 * @param userId  用户ID
-	 */
-	List<String> queryAllPerms(Long userId);
-	
-	/**
-	 * 查询用户的所有菜单ID
-	 */
-	List<Long> queryAllMenuId(Long userId);
+
+    /**
+     * 查询用户的所有权限
+     *
+     * @param userId 用户ID
+     */
+    @Select("select m.perms from sys_user_role ur " +
+            "LEFT JOIN sys_role_menu rm on ur.role_id = rm.role_id " +
+            "LEFT JOIN sys_menu m on rm.menu_id = m.menu_id " +
+            "where ur.user_id = #{userId}")
+    List<String> queryAllPerms(@Param("userId") Long userId);
+
+    /**
+     * 查询用户的所有菜单ID
+     */
+    @Select("select distinct rm.menu_id from sys_user_role ur " +
+            "LEFT JOIN sys_role_menu rm on ur.role_id = rm.role_id " +
+            "where ur.user_id = #{userId}")
+    List<Long> queryAllMenuId(@Param("userId") Long userId);
 
 }

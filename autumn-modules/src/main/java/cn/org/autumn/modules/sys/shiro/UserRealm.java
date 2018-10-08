@@ -40,13 +40,6 @@ import org.apache.shiro.util.ByteSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-/**
- * 认证
- * 
- * @author chenshun
- * @email sunlightcs@gmail.com
- * @date 2016年11月10日 上午11:55:49
- */
 @Component
 public class UserRealm extends AuthorizingRealm {
     @Autowired

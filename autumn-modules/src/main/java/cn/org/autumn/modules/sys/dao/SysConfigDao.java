@@ -25,9 +25,6 @@ import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 import org.springframework.stereotype.Repository;
 
-/**
- * 系统配置信息
- */
 @Mapper
 @Repository
 public interface SysConfigDao extends BaseMapper<SysConfigEntity> {

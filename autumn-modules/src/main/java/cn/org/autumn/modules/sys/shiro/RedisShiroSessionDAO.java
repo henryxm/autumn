@@ -26,13 +26,6 @@ import org.springframework.stereotype.Component;
 import java.io.*;
 import java.util.concurrent.TimeUnit;
 
-/**
- * shiro session dao
- *
- * @author chenshun
- * @email sunlightcs@gmail.com
- * @date 2017/9/27 21:35
- */
 @Component
 public class RedisShiroSessionDAO extends EnterpriseCacheSessionDAO {
     @Autowired

@@ -25,9 +25,6 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
-/**
- * 部门管理
- */
 @Mapper
 @Repository
 public interface SysDeptDao extends BaseMapper<SysDeptEntity> {
@@ -37,7 +34,7 @@ public interface SysDeptDao extends BaseMapper<SysDeptEntity> {
      *
      * @param parentId 上级部门ID
      */
-    @Select("select dept_id from sys_dept where del_flag = 0")// parent_id = #{value} and
+    @Select("select dept_id from sys_dept where parent_id = #{value} and del_flag = 0")
     List<Long> queryDetpIdList(@Param("value") Long parentId);
 
 }

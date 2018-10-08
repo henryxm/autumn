@@ -23,13 +23,6 @@ import org.apache.shiro.crypto.hash.SimpleHash;
 import org.apache.shiro.session.Session;
 import org.apache.shiro.subject.Subject;
 
-/**
- * Shiro工具类
- * 
- * @author chenshun
- * @email sunlightcs@gmail.com
- * @date 2016年11月12日 上午9:49:19
- */
 public class ShiroUtils {
 	/**  加密算法 */
 	public final static String hashAlgorithmName = "SHA-256";

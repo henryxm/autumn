@@ -21,11 +21,8 @@ import com.baomidou.mybatisplus.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.springframework.stereotype.Repository;
 
-/**
- * 数据字典
- */
 @Mapper
 @Repository
 public interface SysDictDao extends BaseMapper<SysDictEntity> {
-	
+
 }

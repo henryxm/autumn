@@ -25,9 +25,6 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
-/**
- * 菜单管理
- */
 @Mapper
 @Repository
 public interface SysMenuDao extends BaseMapper<SysMenuEntity> {
