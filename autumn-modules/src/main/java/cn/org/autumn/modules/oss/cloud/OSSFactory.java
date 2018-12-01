@@ -29,13 +29,13 @@ import cn.org.autumn.utils.SpringContextUtils;
  * @date 2017-03-26 10:18
  */
 public final class OSSFactory {
+
     private static SysConfigService sysConfigService;
 
-    static {
-        OSSFactory.sysConfigService = (SysConfigService) SpringContextUtils.getBean("sysConfigService");
-    }
-
     public static CloudStorageService build(){
+
+        if(null == sysConfigService)
+            sysConfigService = (SysConfigService) SpringContextUtils.getBean("sysConfigService");
         //获取云存储配置信息
         CloudStorageConfig config = sysConfigService.getConfigObject(ConfigConstant.CLOUD_STORAGE_CONFIG_KEY, CloudStorageConfig.class);
 
