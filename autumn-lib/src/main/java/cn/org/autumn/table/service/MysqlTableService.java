@@ -249,7 +249,6 @@ public class MysqlTableService {
                     // 拼接出类型加长度，比如varchar(1)
                     typeAndLength = typeAndLength + "(" + createTableParam.getLength() + ")";
                 } else if (length == 2) {
-                    // 拼接出类型加长度，比如varchar(1)
                     typeAndLength = typeAndLength + "(" + createTableParam.getLength() + ","
                             + createTableParam.getDecimalLength() + ")";
                 }
@@ -336,8 +335,8 @@ public class MysqlTableService {
                                    List<String> columnNames, Map<String, ColumnInfo> fieldMap) {
         for (String fieldNm : columnNames) {
             // 判断该字段在新的model结构中是否存在
-            if (fieldMap.get(fieldNm) == null) {
-                // 不存在，做删除处理
+
+            if(!containIgnoreCase(fieldMap.keySet(),fieldNm)){
                 removeFieldList.add(fieldNm);
             }
         }
@@ -345,6 +344,8 @@ public class MysqlTableService {
             removeTableMap.put(table, removeFieldList);
         }
     }
+
+
 
     /**
      * 根据数据库中表的结构和model中表的结构对比找出新增的字段
@@ -360,7 +361,8 @@ public class MysqlTableService {
         for (Object obj : newFieldList) {
             ColumnInfo createTableParam = (ColumnInfo) obj;
             // 循环新的model中的字段，判断是否在数据库中已经存在
-            if (!columnNames.contains(createTableParam.getName())) {
+
+            if (!containIgnoreCase(columnNames,createTableParam.getName())) {
                 // 不存在，表示要在数据库中增加该字段
                 addFieldList.add(obj);
             }
@@ -368,6 +370,22 @@ public class MysqlTableService {
         if (addFieldList.size() > 0) {
             addTableMap.put(table, addFieldList);
         }
+    }
+
+    private boolean containIgnoreCase(List<String> columnNames, String column){
+        for(String s:columnNames){
+            if(s.equalsIgnoreCase(column))
+                return true;
+        }
+        return false;
+    }
+
+    private boolean containIgnoreCase(Set<String> columnNames, String column){
+        for(String s:columnNames){
+            if(s.equalsIgnoreCase(column))
+                return true;
+        }
+        return false;
     }
 
     /**
@@ -391,7 +409,12 @@ public class MysqlTableService {
                 // 根据注解类型返回方法的指定类型注解
                 Column column = field.getAnnotation(Column.class);
                 ColumnInfo columnInfo = new ColumnInfo(field);
-                int length = (Integer) mySqlTypeAndLengthMap.get(column.type().toLowerCase());
+                int length = 0;
+                try {
+                    length = (Integer) mySqlTypeAndLengthMap.get(column.type().toLowerCase());
+                }catch (Exception e){
+                    log.error("未知的Mysql数据类型字段:"+column.type());
+                }
                 columnInfo.setTypeLength(length);
                 newFieldList.add(columnInfo);
             }
@@ -561,7 +584,8 @@ public class MysqlTableService {
         Map<String, Object> map = new HashMap<String, Object>();
         for (Field field : fields) {
             LengthCount lengthCount = field.getAnnotation(LengthCount.class);
-            map.put(field.getName().toLowerCase(), lengthCount.LengthCount());
+            if(null != lengthCount)
+                map.put(field.getName().toLowerCase(), lengthCount.LengthCount());
         }
         return map;
     }

@@ -19,12 +19,8 @@ package cn.org.autumn.modules.gen.utils;
 import cn.org.autumn.exception.AException;
 import cn.org.autumn.modules.gen.entity.GenTypeWrapper;
 import cn.org.autumn.table.data.TableInfo;
-import org.apache.commons.configuration.Configuration;
-import org.apache.commons.configuration.ConfigurationException;
-import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
-import org.apache.commons.lang.WordUtils;
 import org.apache.velocity.Template;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.Velocity;
@@ -44,15 +40,16 @@ public class GenUtils {
 		List<String> templates = new ArrayList<String>();
 		templates.add("template/Entity.java.vm");
 		templates.add("template/Dao.java.vm");
+		templates.add("template/ServiceGen.java.vm");
 		templates.add("template/Service.java.vm");
 		templates.add("template/Controller.java.vm");
+		templates.add("template/ControllerGen.java.vm");
 		templates.add("template/list.html.vm");
 		templates.add("template/list.js.vm");
 		return templates;
 	}
 
 	public static void generatorCode(TableInfo tableInfo, GenTypeWrapper wrapper, ZipOutputStream zip){
-		boolean hasBigDecimal = false;
 		Properties prop = new Properties();
 		prop.setProperty("resource.loader", "class");
 		prop.setProperty("class.resource.loader.class", "org.apache.velocity.runtime.resource.loader.ClasspathResourceLoader");
@@ -69,23 +66,23 @@ public class GenUtils {
 		map.put("classname", tableInfo.getClassname());
 		map.put("pathName", tableInfo.getClassname().toLowerCase());
 		map.put("columns", tableInfo.getColumns());
-		map.put("hasBigDecimal", hasBigDecimal);
+		map.put("hasBigDecimal", tableInfo.getHasBigDecimal());
 		map.put("mainPath", mainPath);
 		map.put("package", wrapper.getModulePackage());
 		map.put("moduleName", wrapper.getModuleName());
 		map.put("author", wrapper.getAuthorName());
 		map.put("email", wrapper.getEmail());
 		map.put("datetime", DateUtils.format(new Date(), DateUtils.DATE_TIME_PATTERN));
-        VelocityContext context = new VelocityContext(map);
-        
-        //获取模板列表
+		VelocityContext context = new VelocityContext(map);
+
+		//获取模板列表
 		List<String> templates = getTemplates();
 		for(String template : templates){
 			//渲染模板
 			StringWriter sw = new StringWriter();
 			Template tpl = Velocity.getTemplate(template, "UTF-8");
 			tpl.merge(context, sw);
-			
+
 			try {
 				//添加到zip
 				zip.putNextEntry(new ZipEntry(getFileName(template, tableInfo.getClassName(), wrapper.getModulePackage(), wrapper.getModuleName())));
@@ -115,12 +112,20 @@ public class GenUtils {
 			return packagePath + "dao" + File.separator + className + "Dao.java";
 		}
 
+		if (template.contains("ServiceGen.java.vm" )) {
+			return packagePath + "service" + File.separator +"gen"+ File.separator+ className + "ServiceGen.java";
+		}
+
 		if (template.contains("Service.java.vm" )) {
 			return packagePath + "service" + File.separator + className + "Service.java";
 		}
 
 		if (template.contains("Controller.java.vm" )) {
 			return packagePath + "controller" + File.separator + className + "Controller.java";
+		}
+
+		if (template.contains("ControllerGen.java.vm" )) {
+			return packagePath + "controller" + File.separator +"gen"+ File.separator+ className + "ControllerGen.java";
 		}
 
 		if (template.contains("list.html.vm" )) {

@@ -81,7 +81,9 @@ public interface TableDao {
     @ResultType(List.class)
     List<TableMeta> getTableMetas(@Param(paramName) String tableName);
 
-
+    @SelectProvider(type = QuerySql.class, method = getTableCount)
+    @ResultType(Integer.class)
+    Integer getTableCount();
     /**
      * 为表增加字段
      *

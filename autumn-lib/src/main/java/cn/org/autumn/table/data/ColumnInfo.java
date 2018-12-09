@@ -5,6 +5,7 @@ import cn.org.autumn.table.mysql.ColumnMeta;
 import cn.org.autumn.table.utils.HumpConvert;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.WordUtils;
+import org.omg.Messaging.SYNC_WITH_TRANSPORT;
 
 import java.lang.reflect.Field;
 
@@ -102,12 +103,21 @@ public class ColumnInfo {
             setKey(true);
         }
         setNull(column.getNullable());
+        setDefaultValue(column.getColumnDefault());
         String ct = column.getColumnType();
         String[] tt = ct.split("\\(");
         if (tt.length > 1) {
             String len = tt[1].split("\\)")[0];
-            int length = Integer.valueOf(len);
-            setLength(length);
+            if (len.contains(",")) {
+                String[] rr = len.split(",");
+                int length = Integer.valueOf(rr[0]);
+                setLength(length);
+                length = Integer.valueOf(rr[1]);
+                setDecimalLength(length);
+            } else {
+                int length = Integer.valueOf(len);
+                setLength(length);
+            }
         } else
             length = 0;
         setGenAnnotation(buildAnnotation());
@@ -137,9 +147,19 @@ public class ColumnInfo {
             sb.append(divider + "isAutoIncrement = true");
             divider = ", ";
         }
+        if (decimalLength > 0) {
+            sb.append(divider + "decimalLength = " + decimalLength);
+            divider = ", ";
+        }
+        if (null != defaultValue && !"NULL".equalsIgnoreCase(defaultValue)) {
+            sb.append(divider + "defaultValue = \"" + defaultValue + "\"");
+            divider = ", ";
+        }
+
         if (!StringUtils.isEmpty(comment)) {
             sb.append(divider + "comment = \"" + comment + "\"");
         }
+
         sb.append(")");
         return sb.toString();
     }
@@ -161,7 +181,7 @@ public class ColumnInfo {
     }
 
     public static String columnToJava(String columnName) {
-        return WordUtils.capitalizeFully(columnName, new char[]{'_'}).replace("_", "");
+        return WordUtils.capitalizeFully(columnName, new char[]{'_'}).replace("_" , "");
     }
 
     public void initFrom(Field field) {
@@ -173,8 +193,8 @@ public class ColumnInfo {
         if (StringUtils.isEmpty(columnName)) {
             columnName = field.getName();
             columnName = HumpConvert.HumpToUnderline(columnName);
-            if (columnName.startsWith("_"))
-                columnName = columnName.substring(1);
+//            if (columnName.startsWith("_"))
+//                columnName = columnName.substring(1);
         }
         this.name = columnName;
         this.type = column.type().toLowerCase();
@@ -201,7 +221,8 @@ public class ColumnInfo {
     }
 
     public void setComment(String comment) {
-        this.comment = comment;
+        if (null != comment)
+            this.comment = comment.trim();
     }
 
     public String getName() {
@@ -211,7 +232,7 @@ public class ColumnInfo {
     public void setName(String name) {
         this.name = name;
         setAttrName(columnToJava(name));
-        setAttrname(StringUtils.uncapitalize(attrName));
+        setAttrname((name.startsWith("_") ? "_" : "")+StringUtils.uncapitalize(attrName));
     }
 
     public String getType() {

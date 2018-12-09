@@ -15,6 +15,7 @@ public class TableInfo {
     private String comment;
     private String engine;
     private String charset;
+    private Boolean hasBigDecimal;
 
     //表的主键
     private ColumnInfo pk;
@@ -172,5 +173,13 @@ public class TableInfo {
 
     public void setCharset(String charset) {
         this.charset = charset;
+    }
+
+    public Boolean getHasBigDecimal() {
+        return hasBigDecimal;
+    }
+
+    public void setHasBigDecimal(Boolean hasBigDecimal) {
+        this.hasBigDecimal = hasBigDecimal;
     }
 }

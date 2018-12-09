@@ -35,6 +35,7 @@ public class QuerySql {
     public static final String dropIndex = "dropIndex";
     public static final String dropTable = "dropTable";
     public static final String getTableMetas = "getTableMetas";
+    public static final String getTableCount = "getTableCount";
     public static final String getTableMetasWithMap = "getTableMetasWithMap";
 
     public String getColumnMetas() {
@@ -56,8 +57,12 @@ public class QuerySql {
             rows = Integer.MAX_VALUE;
         String whereClause = "";
         if (!StringUtils.isEmpty(tableName))
-            whereClause = " table_name like concat('%', '" + tableName + "', '%') and";
+            whereClause = " table_name = #{" + paramName + "} and";
         return "select * from information_schema.tables where" + whereClause + " table_schema = (select database()) order by create_time desc limit " + offset + ", " + rows;
+    }
+
+    public String getTableCount(){
+        return "select count( * ) from information_schema.tables where table_schema = (select database())";
     }
 
     public String hasTable() {

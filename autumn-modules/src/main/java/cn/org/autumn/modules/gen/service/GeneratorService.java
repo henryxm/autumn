@@ -49,7 +49,11 @@ public class GeneratorService {
 
     public PageUtils queryPage(Map<String, Object> params) {
         Page<TableMeta> page = new Page<>();
-        page.setRecords(queryList(new Query(params)));
+        Query query = new Query(params);
+        page.setRecords(queryList(query));
+        page.setTotal(generatorDao.getTableCount());
+        page.setCurrent(query.getCurrPage());
+        page.setSize(query.getLimit());
         return new PageUtils(page);
     }
 
@@ -104,6 +108,9 @@ public class GeneratorService {
             if (columnInfo.isKey() && null == tableInfo.getPk())
                 tableInfo.setPk(columnInfo);
             list.add(columnInfo);
+            if("BigDecimal".equalsIgnoreCase(columnInfo.getAttrType())){
+                tableInfo.setHasBigDecimal(true);
+            }
         }
         tableInfo.setColumns(list);
         if (null == tableInfo.getPk())
