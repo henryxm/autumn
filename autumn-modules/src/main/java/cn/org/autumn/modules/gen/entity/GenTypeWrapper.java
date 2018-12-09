@@ -68,4 +68,8 @@ public class GenTypeWrapper {
     public GenTypeEntity getEntity() {
         return entity;
     }
+
+    public String getModuleId() {
+        return entity.getModuleId();
+    }
 }

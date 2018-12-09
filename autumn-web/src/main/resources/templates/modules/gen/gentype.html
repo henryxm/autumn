@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>代码生成设置</title>
+    <title>代码生成方案</title>
 	<#include "/header.html">
 </head>
 <body>
@@ -52,7 +52,7 @@
                     <div class="form-group">
                         <div class="col-sm-2 control-label">模块名称(用于目录)</div>
                         <div class="col-sm-10">
-                            <input type="text" class="form-control" v-model="genType.moduleText" placeholder="模块名称(用于目录)"/>
+                            <input type="text" class="form-control" style="cursor:pointer;" v-model="genType.moduleText" @click="menuTree" readonly="readonly" placeholder="一级菜单"/>
                         </div>
                     </div>
                     <div class="form-group">
@@ -86,6 +86,11 @@
             </div>
         </form>
     </div>
+</div>
+
+<!-- 选择菜单 -->
+<div id="menuLayer" style="display: none;padding:10px;">
+    <ul id="menuTree" class="ztree"></ul>
 </div>
 
 <script src="${request.contextPath}/statics/js/modules/gen/gentype.js?_${.now?long}"></script>

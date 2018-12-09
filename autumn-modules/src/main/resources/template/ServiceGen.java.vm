@@ -66,10 +66,10 @@ public class ${className}ServiceGen extends ServiceImpl<${className}Dao, ${class
     * @return
     */
     public int parentMenu(){
-        return 1;
+        return ${moduleId};
     }
 
-    private String ico(){
+    public String ico(){
         return "fa-file-code-o";
     }
 

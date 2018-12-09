@@ -29,7 +29,7 @@ public class GenTypeExService extends GenTypeService {
         if (!tableInit.init)
             return;
         String[][] mapping = new String[][]{
-                {NULL, "mysql", "cn.org.autumn", "cn.org.autumn.modules", "sys", "系统设置", "Shaohua Xu", "henryxm@163.com", "tb",
+                {NULL, "mysql", "cn.org.autumn", "cn.org.autumn.modules", "sys", "系统管理", "Shaohua Xu", "henryxm@163.com", "tb",
                         "tinyint=Integer,smallint=Integer,mediumint=Integer,int=Integer,integer=Integer,bigint=Long,float=Float," +
                                 "double=Double,decimal=BigDecimal,bit=Boolean,char=String,varchar=String,tinytext=String,text=String," +
                                 "mediumtext=String,longtext=String,date=Date,datetime=Date,timestamp=Date"},

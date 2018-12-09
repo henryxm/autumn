@@ -6,15 +6,13 @@ import org.springframework.stereotype.Service;
 @Service
 public class ${className}Service extends ${className}ServiceGen {
 
+    @Override
     public int menuOrder(){
-        return 0;
+        return super.menuOrder();
     }
 
-    public int parentMenu(){
-        return 1;
-    }
-
-    private String ico(){
-        return "fa-file-code-o";
+    @Override
+    public String ico(){
+        return super.ico();
     }
 }

@@ -72,6 +72,7 @@ public class GenUtils {
 		map.put("moduleName", wrapper.getModuleName());
 		map.put("author", wrapper.getAuthorName());
 		map.put("email", wrapper.getEmail());
+		map.put("moduleId", wrapper.getModuleId());
 		map.put("datetime", DateUtils.format(new Date(), DateUtils.DATE_TIME_PATTERN));
 		VelocityContext context = new VelocityContext(map);
 

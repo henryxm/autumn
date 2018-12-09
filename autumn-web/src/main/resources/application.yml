@@ -43,7 +43,7 @@ autumn:
     redis: false # true表示shiro session存到redis里，需要开启redis，才会生效【分布式场景】
   database: mysql
   table:
-    auto: create
+    auto: update
     init: true
     pack: cn.org.autumn.modules
 

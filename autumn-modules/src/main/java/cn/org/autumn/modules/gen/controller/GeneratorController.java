@@ -1,10 +1,13 @@
 package cn.org.autumn.modules.gen.controller;
 
+import cn.org.autumn.exception.AException;
 import cn.org.autumn.modules.gen.service.GeneratorService;
 import cn.org.autumn.utils.PageUtils;
 import cn.org.autumn.utils.Query;
 import cn.org.autumn.utils.R;
+import net.bytebuddy.implementation.bytecode.Throw;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -42,8 +45,11 @@ public class GeneratorController {
 	 */
 	@RequestMapping("/code")
 	@RequiresPermissions("gen:generator:code")
-	public void code(String tables, HttpServletResponse response) throws IOException{
-		byte[] data = sysGeneratorService.generatorCode(tables.split(","));
+	public void code(String tables, String genId, HttpServletResponse response) throws IOException{
+		if(StringUtils.isEmpty(genId)){
+			throw new AException("未选择生成方案");
+		}
+		byte[] data = sysGeneratorService.generatorCode(tables.split(","), genId);
 		
 		response.reset();  
         response.setHeader("Content-Disposition", "attachment; filename=\"autumn.zip\"");

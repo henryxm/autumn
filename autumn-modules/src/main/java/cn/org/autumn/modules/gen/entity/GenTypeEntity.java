@@ -52,6 +52,13 @@ public class GenTypeEntity implements Serializable {
 	 */
 	@Column(comment = "模块名称(用于目录)")
 	private String moduleText;
+
+	/**
+	 * 模块名称(用于目录)
+	 */
+	@Column(comment = "模块ID(用于目录)")
+	private String moduleId;
+
 	/**
 	 * 作者名字
 	 */
@@ -192,5 +199,13 @@ public class GenTypeEntity implements Serializable {
 	 */
 	public String getMappingString() {
 		return mappingString;
+	}
+
+	public String getModuleId() {
+		return moduleId;
+	}
+
+	public void setModuleId(String moduleId) {
+		this.moduleId = moduleId;
 	}
 }

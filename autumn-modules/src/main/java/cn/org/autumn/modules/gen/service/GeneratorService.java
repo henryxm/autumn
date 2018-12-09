@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.gen.service;
 
+import cn.org.autumn.modules.gen.entity.GenTypeEntity;
 import cn.org.autumn.modules.gen.entity.GenTypeWrapper;
 import cn.org.autumn.modules.gen.ex.GenTypeExService;
 import cn.org.autumn.modules.gen.utils.GenUtils;
@@ -82,29 +83,26 @@ public class GeneratorService {
         return generatorDao.getColumnMetas(tableName);
     }
 
-
     public TableInfo toTableInfo(TableMeta table) {
         TableInfo tableInfo = new TableInfo(table);
         tableInfo.setPrefix(wrapper.getEntity().getTablePrefix());
         return tableInfo;
     }
 
-
-    public ColumnInfo toColumnInfo(ColumnMeta meta) {
-        GenTypeWrapper wrapper = genTypeExService.getGenType(tableInit.getDatabaseType());
+    public ColumnInfo toColumnInfo(ColumnMeta meta, GenTypeWrapper wrapper) {
         ColumnInfo columnInfo = new ColumnInfo(meta);
         String attrType = wrapper.getMapping().get(meta.getDataType());
         columnInfo.setAttrType(attrType);
         return columnInfo;
     }
 
-    public TableInfo build(String tableName) {
+    public TableInfo build(String tableName, GenTypeWrapper wrapper) {
         List<TableMeta> table = queryTable(tableName);
         List<ColumnMeta> columns = queryColumns(tableName);
         TableInfo tableInfo = toTableInfo(table.get(0));
         List<ColumnInfo> list = new ArrayList<>();
         for (ColumnMeta columnMeta : columns) {
-            ColumnInfo columnInfo = toColumnInfo(columnMeta);
+            ColumnInfo columnInfo = toColumnInfo(columnMeta, wrapper);
             if (columnInfo.isKey() && null == tableInfo.getPk())
                 tableInfo.setPk(columnInfo);
             list.add(columnInfo);
@@ -118,15 +116,13 @@ public class GeneratorService {
         return tableInfo;
     }
 
-    public byte[] generatorCode(String[] tableNames) {
+    public byte[] generatorCode(String[] tableNames, String genId) {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         ZipOutputStream zip = new ZipOutputStream(outputStream);
-        wrapper = genTypeExService.getGenType(tableInit.getDatabaseType());
+        GenTypeEntity entity = genTypeExService.selectById(genId);
+        wrapper = new GenTypeWrapper(entity);
         for (String tableName : tableNames) {
-
-
-            TableInfo tableInfo = build(tableName);
-
+            TableInfo tableInfo = build(tableName, wrapper);
             //生成代码
             GenUtils.generatorCode(tableInfo, wrapper, zip);
         }

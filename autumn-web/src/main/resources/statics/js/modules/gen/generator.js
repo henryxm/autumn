@@ -39,7 +39,11 @@ var vm = new Vue({
 	el:'#rrapp',
 	data:{
 		q:{
-			tableName: null
+			tableName: null,
+            genType:null,
+            moduleText:"选择代码生成方案",
+            genId:null,
+            genTypeList:[],
 		}
 	},
 	methods: {
@@ -54,8 +58,20 @@ var vm = new Vue({
 			if(tableNames == null){
 				return ;
 			}
-            location.href = baseURL + "gen/generator/code?tables=" + tableNames.join();
-		}
-	}
+            location.href = baseURL + "gen/generator/code?tables=" + tableNames.join()+"&genId="+vm.q.genId;
+		},
+        selectType: function(a) {
+           vm.q.genType = vm.q.genTypeList[a];
+           vm.q.genId = vm.q.genType.id;
+           vm.q.moduleText = vm.q.genType.moduleText;
+        }
+	},
+    mounted: function () {
+        this.$nextTick(function () {
+            $.get(baseURL + "gen/gentype/list",function (data) {
+                vm.q.genTypeList = data.page.list;
+            })
+        });
+    }
 });
 

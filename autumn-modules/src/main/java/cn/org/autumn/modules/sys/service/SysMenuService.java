@@ -49,7 +49,7 @@ public class SysMenuService extends ServiceImpl<SysMenuDao, SysMenuEntity> {
         if (!tableInit.init)
             return;
         String[][] menus = new String[][]{
-                {"1", "0", "系统管理", NULL, NULL, "0", "fa fa-cog", "0"},
+                {"1", "0", "系统管理", NULL, NULL, "0", "fa fa-cog", "999999"},
                 {"2", "1", "管理员管理", "modules/sys/user.html", NULL, "1", "fa fa-user", "1"},
                 {"3", "1", "角色管理", "modules/sys/role.html", NULL, "1", "fa fa-user-secret", "2"},
                 {"4", "1", "菜单管理", "modules/sys/menu.html", NULL, "1", "fa fa-th-list", "3"},
