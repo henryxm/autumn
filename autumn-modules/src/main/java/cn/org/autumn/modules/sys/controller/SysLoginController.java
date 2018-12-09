@@ -17,10 +17,12 @@
 package cn.org.autumn.modules.sys.controller;
 
 
+import cn.org.autumn.config.Config;
 import com.google.code.kaptcha.Constants;
 import com.google.code.kaptcha.Producer;
 import cn.org.autumn.utils.R;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.shiro.authc.*;
 import org.apache.shiro.subject.Subject;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -62,9 +64,16 @@ public class SysLoginController {
     @ResponseBody
     @RequestMapping(value = "/sys/login", method = RequestMethod.POST)
     public R login(String username, String password, String captcha) {
-        String kaptcha = ShiroUtils.getKaptcha(Constants.KAPTCHA_SESSION_KEY);
-        if (!captcha.equalsIgnoreCase(kaptcha)) {
-            return R.error("验证码不正确");
+        if (!Config.isDev()) {
+            String kaptcha = ShiroUtils.getKaptcha(Constants.KAPTCHA_SESSION_KEY);
+            if (!captcha.equalsIgnoreCase(kaptcha)) {
+                return R.error("验证码不正确");
+            }
+        } else {
+            if (StringUtils.isEmpty(username))
+                username = "admin";
+            if (StringUtils.isEmpty(password))
+                password = "admin";
         }
 
         try {
@@ -83,6 +92,20 @@ public class SysLoginController {
 
         return R.ok();
     }
+
+
+    /**
+     * 退出
+     */
+    @ResponseBody
+    @RequestMapping(value = "sys/autologin", method = RequestMethod.POST)
+    public R autoLogin() {
+        if (Config.isDev())
+            return R.ok();
+        else
+            return R.error();
+    }
+
 
     /**
      * 退出

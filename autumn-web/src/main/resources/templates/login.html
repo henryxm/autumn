@@ -110,9 +110,25 @@ var vm = new Vue({
 					}
 				}
 			});
-		}
+		},
+
+		checkenv:function() {
+            $.ajax({
+                type: "POST",
+                url: "sys/autologin",
+                dataType: "json",
+                success: function(result){
+                    if(result.code == 0){
+                        vm.login();
+                    }
+                }
+            });
+        }
 	}
 });
+
+vm.checkenv();
+
 </script>
 </body>
 </html>
