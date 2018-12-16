@@ -54,6 +54,11 @@ var vm = new Vue({
             }).trigger("reloadGrid");
 		},
 		generator: function() {
+		    if(null == vm.q.genId){
+		        alert("请选择代码生成方案");
+		        return;
+            }
+
 			var tableNames = getSelectedRows();
 			if(tableNames == null){
 				return ;

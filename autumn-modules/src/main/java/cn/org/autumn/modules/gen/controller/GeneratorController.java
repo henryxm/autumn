@@ -46,7 +46,7 @@ public class GeneratorController {
 	@RequestMapping("/code")
 	@RequiresPermissions("gen:generator:code")
 	public void code(String tables, String genId, HttpServletResponse response) throws IOException{
-		if(StringUtils.isEmpty(genId)){
+		if(StringUtils.isBlank(genId)){
 			throw new AException("未选择生成方案");
 		}
 		byte[] data = sysGeneratorService.generatorCode(tables.split(","), genId);

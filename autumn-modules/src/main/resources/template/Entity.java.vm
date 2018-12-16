@@ -1,14 +1,13 @@
 package ${package}.${moduleName}.entity;
 
-import com.baomidou.mybatisplus.annotations.TableId;
-import com.baomidou.mybatisplus.annotations.TableName;
-import cn.org.autumn.table.annotation.Column;
-import cn.org.autumn.table.annotation.Table;
+import com.baomidou.mybatisplus.annotations.*;
+import cn.org.autumn.table.annotation.*;
 import cn.org.autumn.table.data.DataType;
 
 #if(${hasBigDecimal})
 import java.math.BigDecimal;
 #end
+
 import java.io.Serializable;
 import java.util.Date;
 
@@ -19,6 +18,7 @@ import java.util.Date;
  * @email ${email}
  * @date ${datetime}
  */
+${uniqueKey}
 @TableName("${tableName}")
 @Table(value = "${tableName}", comment = "${comment}")
 public class ${className}Entity implements Serializable {

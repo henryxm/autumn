@@ -36,6 +36,7 @@ public class QuerySql {
     public static final String dropTable = "dropTable";
     public static final String getTableMetas = "getTableMetas";
     public static final String getTableCount = "getTableCount";
+    public static final String showKeys = "showKeys";
     public static final String getTableMetasWithMap = "getTableMetasWithMap";
 
     public String getColumnMetas() {
@@ -61,7 +62,7 @@ public class QuerySql {
         return "select * from information_schema.tables where" + whereClause + " table_schema = (select database()) order by create_time desc limit " + offset + ", " + rows;
     }
 
-    public String getTableCount(){
+    public String getTableCount() {
         return "select count( * ) from information_schema.tables where table_schema = (select database())";
     }
 
@@ -75,6 +76,11 @@ public class QuerySql {
         return "DROP TABLE IF EXISTS " + tableName;
     }
 
+    public String showKeys(Map<String,String> map){
+        String tableName = map.get(paramName);
+        return "SHOW KEYS FROM " + tableName;
+    }
+
     private void appendCommon(ColumnInfo columnInfo, StringBuilder sb) {
         if (columnInfo.getTypeLength() == 0)
             sb.append("`" + columnInfo.getName() + "` " + columnInfo.getType());
@@ -82,7 +88,7 @@ public class QuerySql {
             sb.append("`" + columnInfo.getName() + "` " + columnInfo.getType() + "(" + columnInfo.getLength() + ")");
         if (columnInfo.getTypeLength() == 2) {
             sb.append("`" + columnInfo.getName() + "` ");
-            sb.append(columnInfo.getType() + "(" + columnInfo.getLength() + ")," + columnInfo.getDecimalLength());
+            sb.append(columnInfo.getType() + "(" + columnInfo.getLength() + "," + columnInfo.getDecimalLength() + ")");
         }
         if (columnInfo.isNull())
             sb.append(" NULL");
@@ -177,15 +183,30 @@ public class QuerySql {
             TableInfo tableInfo = kv.getKey();
             stringBuilder.append("CREATE TABLE `" + tableInfo.getName() + "`(");
             List<ColumnInfo> list = kv.getValue();
+            String primaryKey = "";
+            String uniqueKey = "";
             for (ColumnInfo columnInfo : list) {
                 appendCommon(columnInfo, stringBuilder);
-                if (columnInfo.isKey())
-                    stringBuilder.append(", PRIMARY KEY (`" + columnInfo.getName() + "`)");
+                if (columnInfo.isKey()) {
+                    String split = ",";
+                    if (StringUtils.isBlank(primaryKey))
+                        split = "";
+                    primaryKey = primaryKey + split + "`" + columnInfo.getName() + "`";
+                }
                 if (columnInfo.isUnique())
                     stringBuilder.append(", UNIQUE KEY (`" + columnInfo.getName() + "`)");
+
                 if (list.indexOf(columnInfo) != list.size() - 1)
                     stringBuilder.append(", ");
             }
+
+            if (!StringUtils.isBlank(primaryKey)) {
+                stringBuilder.append(", PRIMARY KEY (" + primaryKey + ") USING BTREE");
+            }
+            if (tableInfo.getUniqueKeyInfos().size() > 0) {
+                stringBuilder.append(", "+ tableInfo.buildUniqueSql());
+            }
+
             stringBuilder.append(")");
             stringBuilder.append(" ENGINE=" + tableInfo.getEngine());
             stringBuilder.append(" DEFAULT CHARACTER SET " + tableInfo.getCharset());

@@ -17,6 +17,7 @@
 package cn.org.autumn.table.dao;
 
 import cn.org.autumn.table.data.TableInfo;
+import cn.org.autumn.table.data.UniqueKeyInfo;
 import cn.org.autumn.table.mysql.ColumnMeta;
 import cn.org.autumn.table.mysql.QuerySql;
 import cn.org.autumn.table.mysql.TableMeta;
@@ -80,6 +81,10 @@ public interface TableDao {
     @SelectProvider(type = QuerySql.class, method = getTableMetas)
     @ResultType(List.class)
     List<TableMeta> getTableMetas(@Param(paramName) String tableName);
+
+    @SelectProvider(type = QuerySql.class, method = showKeys)
+    @ResultType(List.class)
+    List<UniqueKeyInfo> getTableKeys(@Param(paramName) String tableName);
 
     @SelectProvider(type = QuerySql.class, method = getTableCount)
     @ResultType(Integer.class)

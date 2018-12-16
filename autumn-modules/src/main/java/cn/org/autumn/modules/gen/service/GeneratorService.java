@@ -11,6 +11,7 @@ import cn.org.autumn.table.annotation.Column;
 import cn.org.autumn.table.dao.TableDao;
 import cn.org.autumn.table.data.ColumnInfo;
 import cn.org.autumn.table.data.TableInfo;
+import cn.org.autumn.table.data.UniqueKeyInfo;
 import cn.org.autumn.table.mysql.ColumnMeta;
 import cn.org.autumn.table.mysql.TableMeta;
 import cn.org.autumn.utils.PageUtils;
@@ -79,6 +80,9 @@ public class GeneratorService {
         return generatorDao.getTableMetas(tableName);
     }
 
+    public List<UniqueKeyInfo> showKeys(String tableName) {
+        return generatorDao.getTableKeys(tableName);
+    }
     public List<ColumnMeta> queryColumns(String tableName) {
         return generatorDao.getColumnMetas(tableName);
     }
@@ -100,6 +104,7 @@ public class GeneratorService {
         List<TableMeta> table = queryTable(tableName);
         List<ColumnMeta> columns = queryColumns(tableName);
         TableInfo tableInfo = toTableInfo(table.get(0));
+        tableInfo.setUniqueKeyInfos(showKeys(tableName));
         List<ColumnInfo> list = new ArrayList<>();
         for (ColumnMeta columnMeta : columns) {
             ColumnInfo columnInfo = toColumnInfo(columnMeta, wrapper);
