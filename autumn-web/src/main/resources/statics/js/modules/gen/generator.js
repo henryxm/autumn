@@ -41,7 +41,7 @@ var vm = new Vue({
 		q:{
 			tableName: null,
             genType:null,
-            moduleText:"选择代码生成方案",
+            moduleText:"选择生成方案",
             genId:null,
             genTypeList:[],
 		}
@@ -55,7 +55,7 @@ var vm = new Vue({
 		},
 		generator: function() {
 		    if(null == vm.q.genId){
-		        alert("请选择代码生成方案");
+		        alert("请选择生成方案");
 		        return;
             }
 

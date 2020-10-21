@@ -79,7 +79,7 @@ public class GenTypeService extends ServiceImpl<GenTypeDao, GenTypeEntity> {
             return;
         Long id = 0L;
         String[] _m = new String[]
-                {null, parent(), "代码生成方案", "modules/gen/gentype.html", "gen:gentype:list,gen:gentype:info,gen:gentype:save,gen:gentype:update,gen:gentype:delete", "1", "fa fa-file-code-o", order()};
+                {null, parent(), "生成方案", "modules/gen/gentype.html", "gen:gentype:list,gen:gentype:info,gen:gentype:save,gen:gentype:update,gen:gentype:delete", "1", "fa fa-file-code-o", order()};
         SysMenuEntity sysMenu = sysMenuService.from(_m);
         SysMenuEntity entity = sysMenuService.get(sysMenu);
         if (null == entity) {

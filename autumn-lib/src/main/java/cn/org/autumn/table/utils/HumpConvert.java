@@ -1,5 +1,7 @@
 package cn.org.autumn.table.utils;
 
+import io.netty.util.internal.StringUtil;
+
 /**
  * Camel to underline convert
  */
@@ -42,5 +44,11 @@ public class HumpConvert {
             }
         }
         return sb.toString().toLowerCase();
+    }
+
+    public static String toFirstStringUpper(String str) {
+        if (StringUtil.isNullOrEmpty(str))
+            return "";
+        return str.substring(0, 1).toUpperCase() + str.substring(1);
     }
 }

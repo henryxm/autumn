@@ -84,6 +84,13 @@ public class SysUserEntity implements Serializable {
 	@Column(length = 100, comment = "手机号")
 	private String mobile;
 
+	@Column(length = 100, comment = "qq号")
+	private String qq;
+	@Column(length = 100, comment = "微信号")
+	private String weixing;
+	@Column(length = 100, comment = "支付宝号")
+	private String alipay;
+
 	/**
 	 * 状态  0：禁用   1：正常
 	 */
@@ -256,5 +263,29 @@ public class SysUserEntity implements Serializable {
 
 	public void setDeptName(String deptName) {
 		this.deptName = deptName;
+	}
+
+	public String getQq() {
+		return qq;
+	}
+
+	public void setQq(String qq) {
+		this.qq = qq;
+	}
+
+	public String getWeixing() {
+		return weixing;
+	}
+
+	public void setWeixing(String weixing) {
+		this.weixing = weixing;
+	}
+
+	public String getAlipay() {
+		return alipay;
+	}
+
+	public void setAlipay(String alipay) {
+		this.alipay = alipay;
 	}
 }

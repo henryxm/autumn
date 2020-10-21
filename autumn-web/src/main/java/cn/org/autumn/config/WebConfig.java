@@ -4,6 +4,7 @@ import cn.org.autumn.modules.user.interceptor.AuthorizationInterceptor;
 import cn.org.autumn.modules.user.resolver.LoginUserHandlerMethodArgumentResolver;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.DependsOn;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
@@ -15,11 +16,11 @@ import java.util.List;
  * WebMvc配置
  */
 @Configuration
+@DependsOn({"env"})
 public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         registry.addResourceHandler("/statics/**").addResourceLocations("classpath:/statics/");
-        registry.addResourceHandler("/stock/**").addResourceLocations("classpath:/stock/");
     }
     @Autowired
     private AuthorizationInterceptor authorizationInterceptor;

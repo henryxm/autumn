@@ -42,4 +42,6 @@ public interface SysMenuDao extends BaseMapper<SysMenuEntity> {
 	@Select("select * from sys_menu where type != 2 order by order_num asc")
 	List<SysMenuEntity> queryNotButtonList();
 
+	@Select("select * from sys_menu where menu_key = #{menuKey} limit 1")
+	SysMenuEntity getByMenuKey(@Param("menuKey") String menuKey);
 }

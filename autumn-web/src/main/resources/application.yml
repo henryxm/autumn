@@ -4,9 +4,9 @@ server:
     uri-encoding: UTF-8
     max-threads: 1000
     min-spare-threads: 30
-  port: 8090
+  port: 80
   servlet:
-    context-path: /autumn
+    context-path: /
 
 spring:
   profiles:
@@ -79,8 +79,18 @@ mybatis-plus:
 
 
 logging:
-  level: warn
+  level: info
   level.cn.org.autumn: info
+  level.com.aliyun.oss: fatal
+  level.springfox.documentation: fatal
+  level.org.quartz: warn
+  level.org.springframework: fatal
+  #  level.org.springframework.web: warn
+  #  level.org.springframework.jmx: warn
+  #  level.org.springframework.boot.web: warn
+  #  level.org.springframework.boot.web.servlet: warn
+  level.org.springframework.boot.web.embedded: info
+  level.com.alibaba.druid: off
   path: logs/
   file: admin.log
 

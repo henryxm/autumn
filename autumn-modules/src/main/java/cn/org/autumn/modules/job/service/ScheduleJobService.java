@@ -16,7 +16,9 @@
 
 package cn.org.autumn.modules.job.service;
 
+import cn.org.autumn.annotation.TaskAware;
 import cn.org.autumn.table.TableInit;
+import cn.org.autumn.utils.SpringContextUtils;
 import com.baomidou.mybatisplus.mapper.EntityWrapper;
 import com.baomidou.mybatisplus.plugins.Page;
 import com.baomidou.mybatisplus.service.impl.ServiceImpl;
@@ -30,13 +32,16 @@ import org.apache.commons.lang.StringUtils;
 import org.quartz.CronTrigger;
 import org.quartz.Scheduler;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.DependsOn;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.PostConstruct;
+import java.lang.reflect.Method;
 import java.util.*;
 
 @Service("scheduleJobService")
+@DependsOn("springContextUtils")
 public class ScheduleJobService extends ServiceImpl<ScheduleJobDao, ScheduleJobEntity> {
     @Autowired
     private Scheduler scheduler;
@@ -47,16 +52,55 @@ public class ScheduleJobService extends ServiceImpl<ScheduleJobDao, ScheduleJobE
     @Autowired
     private TableInit tableInit;
 
+    private int wEveryCount = 0;
+
     private static final String NULL = null;
+
+    private void scanInit() {
+        List<TaskAware> list = new ArrayList<>();
+        if (null != SpringContextUtils.applicationContext) {
+            String[] beans = SpringContextUtils.applicationContext.getBeanDefinitionNames();
+            for (String beanName : beans) {
+                Class<?> beanType = SpringContextUtils.applicationContext.getType(beanName);
+
+                Method[] methods = beanType.getMethods();
+
+                for (Method method : methods) {
+                    TaskAware taskAware = method.getAnnotation(TaskAware.class);
+                    if (null != taskAware) {
+                        ScheduleJobEntity scheduleJobEntity = new ScheduleJobEntity();
+                        scheduleJobEntity.setBeanName(beanName);
+                        scheduleJobEntity.setMethodName(method.getName());
+                        ScheduleJobEntity entity = scheduleJobDao.selectOne(scheduleJobEntity);
+                        if (null == entity) {
+                            scheduleJobEntity.setStatus(taskAware.status());
+                            scheduleJobEntity.setCronExpression(taskAware.cronExpression());
+                            scheduleJobEntity.setParams(taskAware.params());
+                            scheduleJobEntity.setRemark(taskAware.remark());
+                            scheduleJobEntity.setCreateTime(new Date());
+                            scheduleJobEntity.setMode(taskAware.mode());
+                            scheduleJobDao.insert(scheduleJobEntity);
+                        } else {
+                            if (StringUtils.isEmpty(entity.getMode())) {
+                                entity.setMode(taskAware.mode());
+                                scheduleJobDao.updateById(entity);
+                            }
+                        }
+                        list.add(taskAware);
+                    }
+                }
+
+            }
+        }
+
+    }
 
     @PostConstruct
     public void init() {
         if (!tableInit.init)
             return;
-        String[][] mapping = new String[][]{
-                {"testTask", "test", "autumn", "0 0/30 * * * ?", "0", "有参数测试", "2016-12-01 23:16:46"},
-                {"testTask", "test2", NULL, "0 0/30 * * * ?", "1", "无参数测试", "2016-12-03 14:55:56"},
-        };
+        scanInit();
+        String[][] mapping = new String[][]{};
         for (String[] map : mapping) {
             ScheduleJobEntity sysMenu = new ScheduleJobEntity();
             String temp = map[0];
@@ -65,24 +109,26 @@ public class ScheduleJobService extends ServiceImpl<ScheduleJobDao, ScheduleJobE
             temp = map[1];
             if (NULL != temp)
                 sysMenu.setMethodName(temp);
-            temp = map[2];
-            if (NULL != temp)
-                sysMenu.setParams(temp);
-            temp = map[3];
-            if (NULL != temp)
-                sysMenu.setCronExpression(temp);
-            temp = map[4];
-            if (NULL != temp)
-                sysMenu.setStatus(Integer.valueOf(temp));
-            temp = map[5];
-            if (NULL != temp)
-                sysMenu.setRemark(temp);
             ScheduleJobEntity entity = scheduleJobDao.selectOne(sysMenu);
+
             if (null == entity) {
+                temp = map[2];
+                if (NULL != temp)
+                    sysMenu.setParams(temp);
+                temp = map[3];
+                if (NULL != temp)
+                    sysMenu.setCronExpression(temp);
+                temp = map[4];
+                if (NULL != temp)
+                    sysMenu.setStatus(Integer.valueOf(temp));
+                temp = map[5];
+                if (NULL != temp)
+                    sysMenu.setRemark(temp);
                 sysMenu.setCreateTime(new Date());
                 scheduleJobDao.insert(sysMenu);
             }
         }
+        initScheduler();
     }
 
     /**
@@ -102,12 +148,26 @@ public class ScheduleJobService extends ServiceImpl<ScheduleJobDao, ScheduleJobE
         }
     }
 
+    public void load(int i) {
+        if (wEveryCount < i) {
+            wEveryCount++;
+            return;
+        }
+        wEveryCount = 0;
+        initScheduler();
+    }
+
     public PageUtils queryPage(Map<String, Object> params) {
+        Page<ScheduleJobEntity> _page = new Query<ScheduleJobEntity>(params).getPage();
+        EntityWrapper<ScheduleJobEntity> entityEntityWrapper = new EntityWrapper<>();
+        Map<String, Object> condition = new HashMap<>();
+
         String beanName = (String) params.get("beanName");
-        Page<ScheduleJobEntity> page = this.selectPage(
-                new Query<ScheduleJobEntity>(params).getPage(),
-                new EntityWrapper<ScheduleJobEntity>().like(StringUtils.isNotBlank(beanName), "bean_name", beanName)
-        );
+        entityEntityWrapper.like(StringUtils.isNotBlank(beanName), "bean_name" , beanName);
+
+        _page.setCondition(condition);
+        Page<ScheduleJobEntity> page = this.selectPage(_page, entityEntityWrapper);
+        page.setTotal(baseMapper.selectCount(entityEntityWrapper));
         return new PageUtils(page);
     }
 

@@ -29,6 +29,7 @@ import org.springframework.aop.framework.autoproxy.DefaultAdvisorAutoProxyCreato
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.DependsOn;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -40,6 +41,7 @@ import java.util.Map;
  * @since 3.0.0 2017-09-27
  */
 @Configuration
+@DependsOn({"env"})
 public class ShiroConfig {
 
     @Bean("sessionManager")
@@ -68,7 +70,6 @@ public class ShiroConfig {
         return securityManager;
     }
 
-
     @Bean("shiroFilter")
     public ShiroFilterFactoryBean shiroFilter(SecurityManager securityManager) {
         ShiroFilterFactoryBean shiroFilter = new ShiroFilterFactoryBean();
@@ -77,14 +78,16 @@ public class ShiroConfig {
         shiroFilter.setUnauthorizedUrl("/");
 
         Map<String, String> filterMap = new LinkedHashMap<>();
-        filterMap.put("/swagger/**", "anon");
-        filterMap.put("/v2/api-docs", "anon");
-        filterMap.put("/swagger-ui.html", "anon");
-        filterMap.put("/webjars/**", "anon");
-        filterMap.put("/swagger-resources/**", "anon");
+
+        if (Config.isDev()) {
+            filterMap.put("/swagger/**", "anon");
+            filterMap.put("/v2/api-docs", "anon");
+            filterMap.put("/swagger-ui.html", "anon");
+            filterMap.put("/webjars/**", "anon");
+            filterMap.put("/swagger-resources/**", "anon");
+        }
 
         filterMap.put("/statics/**", "anon");
-        filterMap.put("/stock/**", "anon");
         filterMap.put("/api/**", "anon");
         filterMap.put("/login.html", "anon");
         filterMap.put("/sys/login", "anon");

@@ -77,7 +77,7 @@ public class ScheduleJobEntity implements Serializable {
     /**
      * 任务状态
      */
-    @Column(type = DataType.INT,comment = "任务状态  0：正常  1：暂停")
+    @Column(type = DataType.INT, comment = "任务状态  0：正常  1：暂停")
     private Integer status;
 
     /**
@@ -92,6 +92,9 @@ public class ScheduleJobEntity implements Serializable {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     @Column(type = DataType.DATETIME, comment = "创建时间")
     private Date createTime;
+
+    @Column(comment = "任务执行模式")
+    private String mode;
 
     /**
      * 设置：任务id
@@ -195,5 +198,13 @@ public class ScheduleJobEntity implements Serializable {
      */
     public Date getCreateTime() {
         return createTime;
+    }
+
+    public String getMode() {
+        return mode;
+    }
+
+    public void setMode(String mode) {
+        this.mode = mode;
     }
 }

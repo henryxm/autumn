@@ -48,4 +48,17 @@ public interface SysUserDao extends BaseMapper<SysUserEntity> {
             "where ur.user_id = #{userId}")
     List<Long> queryAllMenuId(@Param("userId") Long userId);
 
+    @Select("select * from sys_user u " +
+            "where u.mobile = #{mobile}")
+    SysUserEntity findByMobile(@Param("mobile") String mobile);
+
+    @Select("select * from sys_user u where u.username = #{username}")
+    SysUserEntity getByUsername(@Param("username") String username);
+
+    @Select("SELECT * FROM sys_user WHERE email=#{email}")
+    SysUserEntity getByEmail(@Param("email")String email);
+
+    @Select("SELECT * FROM sys_user WHERE mobile=#{mobile}")
+    SysUserEntity getByPhone(@Param("mobile")String mobile);
+
 }

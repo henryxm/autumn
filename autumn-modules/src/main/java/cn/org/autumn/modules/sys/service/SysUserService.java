@@ -19,6 +19,7 @@ package cn.org.autumn.modules.sys.service;
 
 import cn.org.autumn.table.TableInit;
 import com.baomidou.mybatisplus.mapper.EntityWrapper;
+import com.baomidou.mybatisplus.mapper.Wrapper;
 import com.baomidou.mybatisplus.plugins.Page;
 import com.baomidou.mybatisplus.service.impl.ServiceImpl;
 import cn.org.autumn.utils.Constant;
@@ -31,6 +32,7 @@ import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.ibatis.annotations.Param;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -72,7 +74,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> {
             admin.setPassword("e1153123d7d180ceeb820d577ff119876678732a68eef4e6ffc0b1f06a01f91b");
             admin.setSalt("YzcmCZNvbXocrsz9dm8e");
             admin.setEmail("admin@autumn.org.cn");
-            admin.setMobile("13011111111");
+            admin.setMobile("admin");
             admin.setStatus(1);
             admin.setDeptId(1L);
             admin.setCreateTime(new Date());
@@ -83,7 +85,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> {
     @DataFilter(subDept = true, user = false)
     public PageUtils queryPage(Map<String, Object> params) {
         String username = (String) params.get("username");
-
+        EntityWrapper<SysUserEntity> entityEntityWrapper = new EntityWrapper<>();
         Page<SysUserEntity> page = this.selectPage(
                 new Query<SysUserEntity>(params).getPage(),
                 new EntityWrapper<SysUserEntity>()
@@ -93,9 +95,10 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> {
 
         for (SysUserEntity sysUserEntity : page.getRecords()) {
             SysDeptEntity sysDeptEntity = sysDeptService.selectById(sysUserEntity.getDeptId());
-            sysUserEntity.setDeptName(sysDeptEntity.getName());
+            if (null != sysDeptEntity)
+                sysUserEntity.setDeptName(sysDeptEntity.getName());
         }
-
+        page.setTotal(baseMapper.selectCount(entityEntityWrapper));
         return new PageUtils(page);
     }
 
@@ -114,21 +117,39 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> {
 
     @Transactional(rollbackFor = Exception.class)
     public void update(SysUserEntity user) {
-        if (StringUtils.isBlank(user.getPassword())) {
-            user.setPassword(null);
-        } else {
-            user.setPassword(ShiroUtils.sha256(user.getPassword(), user.getSalt()));
-        }
-        this.updateById(user);
-
+        updateNoRole(user);
         //保存用户与角色关系
         sysUserRoleService.saveOrUpdate(user.getUserId(), user.getRoleIdList());
     }
 
-    public boolean updatePassword(Long userId, String password, String newPassword) {
-        SysUserEntity userEntity = new SysUserEntity();
-        userEntity.setPassword(newPassword);
-        return this.update(userEntity,
-                new EntityWrapper<SysUserEntity>().eq("user_id", userId).eq("password", password));
+    public void updateNoRole(SysUserEntity user) {
+        if (StringUtils.isBlank(user.getPassword())) {
+            user.setPassword(null);
+            String password = getByUsername(user.getUsername()).getPassword();
+            user.setPassword(password);
+        } else {
+            user.setPassword(ShiroUtils.sha256(user.getPassword(), user.getSalt()));
+        }
+        this.updateById(user);
     }
+
+    public boolean updatePassword(Long userId, String password, String newPassword) {
+        SysUserEntity userEntity = selectById(userId);
+        if (null == userEntity || !password.equals(userEntity.getPassword()))
+            return false;
+        userEntity.setPassword(newPassword);
+        return insertOrUpdate(userEntity);
+    }
+
+    public SysUserEntity findByMobile(String mobile) {
+        return baseMapper.findByMobile(mobile);
+    }
+
+    public SysUserEntity getByUsername(String username) {
+        return baseMapper.getByUsername(username);
+    }
+
+    public SysUserEntity getByEmail(String email){ return baseMapper.getByEmail(email); }
+
+    public SysUserEntity getByPhone(String mobile){return baseMapper.getByPhone(mobile);}
 }

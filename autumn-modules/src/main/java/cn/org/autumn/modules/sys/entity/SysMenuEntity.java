@@ -48,6 +48,9 @@ public class SysMenuEntity implements Serializable {
     @Column(type = DataType.BIGINT, length = 20, comment = "父菜单ID，一级菜单为0")
     private Long parentId;
 
+    @Column(length = 50, comment = "MenuKey")
+    private String menuKey;
+
     /**
      * 父菜单名称
      */
@@ -235,5 +238,13 @@ public class SysMenuEntity implements Serializable {
 
     public void setOpen(Boolean open) {
         this.open = open;
+    }
+
+    public String getMenuKey() {
+        return menuKey;
+    }
+
+    public void setMenuKey(String menuKey) {
+        this.menuKey = menuKey;
     }
 }

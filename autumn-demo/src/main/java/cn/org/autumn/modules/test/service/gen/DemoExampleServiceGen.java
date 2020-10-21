@@ -1,4 +1,4 @@
-package ${package}.${moduleName}.service.gen;
+package cn.org.autumn.modules.test.service.gen;
 
 import cn.org.autumn.table.TableInit;
 import org.apache.commons.lang.StringUtils;
@@ -10,31 +10,31 @@ import java.util.Map;
 import com.baomidou.mybatisplus.mapper.EntityWrapper;
 import com.baomidou.mybatisplus.plugins.Page;
 import com.baomidou.mybatisplus.service.impl.ServiceImpl;
-import ${mainPath}.utils.PageUtils;
-import ${mainPath}.utils.Query;
+import cn.org.autumn.utils.PageUtils;
+import cn.org.autumn.utils.Query;
 
-import cn.org.autumn.modules.${moduleName}.service.${upperModuleName}Menu;
-import ${package}.${moduleName}.dao.${className}Dao;
-import ${package}.${moduleName}.entity.${className}Entity;
+import cn.org.autumn.modules.test.service.TestMenu;
+import cn.org.autumn.modules.test.dao.DemoExampleDao;
+import cn.org.autumn.modules.test.entity.DemoExampleEntity;
 
 import javax.annotation.PostConstruct;
 import cn.org.autumn.modules.sys.entity.SysMenuEntity;
 import cn.org.autumn.modules.sys.service.SysMenuService;
 
 /**
- * ${comment}控制器
+ * 例子控制器
  *
- * @author ${author}
- * @email ${email}
- * @date ${datetime}
+ * @author Shaohua Xu
+ * @email henryxm@163.com
+ * @date 2020-10
  */
 
-public class ${className}ServiceGen extends ServiceImpl<${className}Dao, ${className}Entity> {
+public class DemoExampleServiceGen extends ServiceImpl<DemoExampleDao, DemoExampleEntity> {
 
     protected static final String NULL = null;
 
     @Autowired
-    protected ${upperModuleName}Menu ${moduleName}Menu;
+    protected TestMenu testMenu;
 
     @Autowired
     protected SysMenuService sysMenuService;
@@ -43,16 +43,17 @@ public class ${className}ServiceGen extends ServiceImpl<${className}Dao, ${class
     protected TableInit tableInit;
 
     public PageUtils queryPage(Map<String, Object> params) {
-        Page<${className}Entity> _page = new Query<${className}Entity>(params).getPage();
-        EntityWrapper<${className}Entity> entityEntityWrapper = new EntityWrapper<>();
+        Page<DemoExampleEntity> _page = new Query<DemoExampleEntity>(params).getPage();
+        EntityWrapper<DemoExampleEntity> entityEntityWrapper = new EntityWrapper<>();
         Map<String,Object> condition = new HashMap<>();
-        #foreach ($column in $columns)
-        if(params.containsKey("$column.attrname") && null !=params.get("$column.attrname") && StringUtils.isNotEmpty(params.get("$column.attrname").toString())) {
-            condition.put("$column.name", params.get("$column.attrname"));
+        if(params.containsKey("id") && null !=params.get("id") && StringUtils.isNotEmpty(params.get("id").toString())) {
+            condition.put("id", params.get("id"));
         }
-        #end
+        if(params.containsKey("example") && null !=params.get("example") && StringUtils.isNotEmpty(params.get("example").toString())) {
+            condition.put("example", params.get("example"));
+        }
         _page.setCondition(condition);
-        Page<${className}Entity> page = this.selectPage(_page, entityEntityWrapper);
+        Page<DemoExampleEntity> page = this.selectPage(_page, entityEntityWrapper);
         page.setTotal(baseMapper.selectCount(entityEntityWrapper));
         return new PageUtils(page);
     }
@@ -70,11 +71,11 @@ public class ${className}ServiceGen extends ServiceImpl<${className}Dao, ${class
     * @return
     */
     public int parentMenu(){
-        ${moduleName}Menu.init();
-        SysMenuEntity sysMenuEntity = sysMenuService.getByMenuKey(${upperModuleName}Menu.${moduleName}_menu);
+        testMenu.init();
+        SysMenuEntity sysMenuEntity = sysMenuService.getByMenuKey(TestMenu.test_menu);
         if(null != sysMenuEntity)
             return sysMenuEntity.getMenuId().intValue();
-        return ${moduleId};
+        return 48;
     }
 
     public String ico(){
@@ -96,7 +97,7 @@ public class ${className}ServiceGen extends ServiceImpl<${className}Dao, ${class
             return;
         Long id = 0L;
         String[] _m = new String[]
-                {null, parent(), "${comment}", "modules/${moduleName}/${pathName}.html", "${moduleName}:${pathName}:list,${moduleName}:${pathName}:info,${moduleName}:${pathName}:save,${moduleName}:${pathName}:update,${moduleName}:${pathName}:delete", "1", "fa " + ico(), order()};
+                {null, parent(), "例子", "modules/test/demoexample.html", "test:demoexample:list,test:demoexample:info,test:demoexample:save,test:demoexample:update,test:demoexample:delete", "1", "fa " + ico(), order()};
         SysMenuEntity sysMenu = sysMenuService.from(_m);
         SysMenuEntity entity = sysMenuService.get(sysMenu);
         if (null == entity) {
@@ -106,10 +107,10 @@ public class ${className}ServiceGen extends ServiceImpl<${className}Dao, ${class
         } else
             id = entity.getMenuId();
         String[][] menus = new String[][]{
-                {null, id + "", "查看", null, "${moduleName}:${pathName}:list,${moduleName}:${pathName}:info", "2", null, order()},
-                {null, id + "", "新增", null, "${moduleName}:${pathName}:save", "2", null, order()},
-                {null, id + "", "修改", null, "${moduleName}:${pathName}:update", "2", null, order()},
-                {null, id + "", "删除", null, "${moduleName}:${pathName}:delete", "2", null, order()},
+                {null, id + "", "查看", null, "test:demoexample:list,test:demoexample:info", "2", null, order()},
+                {null, id + "", "新增", null, "test:demoexample:save", "2", null, order()},
+                {null, id + "", "修改", null, "test:demoexample:update", "2", null, order()},
+                {null, id + "", "删除", null, "test:demoexample:delete", "2", null, order()},
         };
         for (String[] menu : menus) {
             sysMenu = sysMenuService.from(menu);

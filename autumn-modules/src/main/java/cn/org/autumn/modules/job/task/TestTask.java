@@ -16,6 +16,7 @@ package cn.org.autumn.modules.job.task;
  * the License.
  */
 
+import cn.org.autumn.annotation.TaskAware;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysUserService;
 import org.apache.commons.lang.builder.ToStringBuilder;
@@ -26,7 +27,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * 测试定时任务(演示Demo，可删除)
- *
+ * <p>
  * testTask为spring bean的名称
  *
  * @author Mark sunlightcs@gmail.com
@@ -34,27 +35,27 @@ import org.springframework.stereotype.Component;
  */
 @Component("testTask")
 public class TestTask {
-	private Logger logger = LoggerFactory.getLogger(getClass());
-	
-	@Autowired
-	private SysUserService sysUserService;
-	
-	public void test(String params){
-		logger.info("我是带参数的test方法，正在被执行，参数为：" + params);
-		
-		try {
-			Thread.sleep(1000L);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-		
-		SysUserEntity user = sysUserService.selectById(1L);
-		System.out.println(ToStringBuilder.reflectionToString(user));
-		
-	}
-	
-	
-	public void test2(){
-		logger.info("我是不带参数的test2方法，正在被执行");
-	}
+    private Logger logger = LoggerFactory.getLogger(getClass());
+
+    @Autowired
+    private SysUserService sysUserService;
+
+    @TaskAware(mode = "prod" , params = "Test" , remark = "测试1")
+    public void test(String params) {
+        logger.info("我是带参数的test方法，正在被执行，参数为：" + params);
+
+        try {
+            Thread.sleep(1000L);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        SysUserEntity user = sysUserService.selectById(1L);
+        System.out.println(ToStringBuilder.reflectionToString(user));
+    }
+
+    @TaskAware(mode = "prod" , remark = "测试2")
+    public void test2() {
+        logger.info("我是不带参数的test2方法，正在被执行");
+    }
 }

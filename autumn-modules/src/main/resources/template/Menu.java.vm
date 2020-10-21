@@ -1,0 +1,40 @@
+package ${package}.${moduleName}.service;
+
+import cn.org.autumn.modules.sys.entity.SysMenuEntity;
+import cn.org.autumn.modules.sys.service.SysMenuService;
+import cn.org.autumn.table.TableInit;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+/**
+ * ${comment}
+ *
+ * @author ${author}
+ * @email ${email}
+ * @date ${datetime}
+ */
+
+@Service
+public class ${upperModuleName}Menu {
+
+    public static final String ${moduleName}_menu = "${moduleName}_menu";
+
+    @Autowired
+    protected SysMenuService sysMenuService;
+
+    @Autowired
+    protected TableInit tableInit;
+
+    public void init() {
+        if (!tableInit.init)
+            return;
+        Long id = 0L;
+        String[] _m = new String[]
+                {null, "0" , "${moduleText}" , "" , "" , "0" , "fa fa-address-card-o" , "0" , ${moduleName}_menu};
+        SysMenuEntity sysMenu = sysMenuService.from(_m);
+        SysMenuEntity entity = sysMenuService.get(sysMenu);
+        if (null == entity) {
+            sysMenuService.put(sysMenu);
+        }
+    }
+}

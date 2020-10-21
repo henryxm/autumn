@@ -29,6 +29,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
+import java.util.List;
 import java.util.Map;
 
 
@@ -98,4 +99,7 @@ public class SysDictService extends ServiceImpl<SysDictDao, SysDictEntity> {
         return new PageUtils(page);
     }
 
+    public List<SysDictEntity> getByType(String type) {
+        return baseMapper.getByType(type);
+    }
 }

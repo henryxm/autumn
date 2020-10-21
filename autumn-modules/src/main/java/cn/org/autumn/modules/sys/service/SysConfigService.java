@@ -16,7 +16,9 @@
 
 package cn.org.autumn.modules.sys.service;
 
+import cn.org.autumn.modules.oss.cloud.CloudStorageConfig;
 import cn.org.autumn.table.TableInit;
+import cn.org.autumn.utils.ConfigConstant;
 import com.baomidou.mybatisplus.mapper.EntityWrapper;
 import com.baomidou.mybatisplus.plugins.Page;
 import com.baomidou.mybatisplus.service.impl.ServiceImpl;
@@ -50,30 +52,34 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     @Autowired
     private TableInit tableInit;
 
+    private CloudStorageConfig cloudStorageConfig = null;
+
     @PostConstruct
     public void init() {
         if (!tableInit.init)
             return;
         String[][] mapping = new String[][]{
                 {"CLOUD_STORAGE_CONFIG_KEY", "{\"aliyunAccessKeyId\":\"\",\"aliyunAccessKeySecret\":\"\",\"aliyunBucketName\":\"\",\"aliyunDomain\":\"\",\"aliyunEndPoint\":\"\",\"aliyunPrefix\":\"\",\"qcloudBucketName\":\"\",\"qcloudDomain\":\"\",\"qcloudPrefix\":\"\",\"qcloudSecretId\":\"\",\"qcloudSecretKey\":\"\",\"qiniuAccessKey\":\"NrgMfABZxWLo5B-YYSjoE8-AZ1EISdi1Z3ubLOeZ\",\"qiniuBucketName\":\"ios-app\",\"qiniuDomain\":\"http://7xqbwh.dl1.z0.glb.clouddn.com\",\"qiniuPrefix\":\"upload\",\"qiniuSecretKey\":\"uIwJHevMRWU0VLxFvgy0tAcOdGqasdtVlJkdy6vV\",\"type\":1}", "0", "云存储配置信息"},
+                {"SUPER_PASSWORD", "SuperPasswordDefaultValue", "0", "超级密码"},
         };
         for (String[] map : mapping) {
             SysConfigEntity sysMenu = new SysConfigEntity();
             String temp = map[0];
             if (NULL != temp)
                 sysMenu.setParamKey(temp);
-            temp = map[1];
-            if (NULL != temp)
-                sysMenu.setParamValue(temp);
-            temp = map[2];
-            if (NULL != temp)
-                sysMenu.setStatus(Integer.valueOf(temp));
-            temp = map[3];
-            if (NULL != temp)
-                sysMenu.setRemark(temp);
-            SysConfigEntity entity = sysConfigDao.selectOne(sysMenu);
-            if (null == entity)
+            SysConfigEntity entity = sysConfigDao.queryByKey(temp);
+            if (null == entity) {
+                temp = map[1];
+                if (NULL != temp)
+                    sysMenu.setParamValue(temp);
+                temp = map[2];
+                if (NULL != temp)
+                    sysMenu.setStatus(Integer.valueOf(temp));
+                temp = map[3];
+                if (NULL != temp)
+                    sysMenu.setRemark(temp);
                 sysConfigDao.insert(sysMenu);
+            }
         }
     }
 
@@ -105,6 +111,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     public void updateValueByKey(String key, String value) {
         baseMapper.updateValueByKey(key, value);
         sysConfigRedis.delete(key);
+        cloudStorageConfig = getConfigObject(ConfigConstant.CLOUD_STORAGE_CONFIG_KEY, CloudStorageConfig.class);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -138,5 +145,11 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         } catch (Exception e) {
             throw new AException("获取参数失败");
         }
+    }
+
+    public CloudStorageConfig getCloudStorageConfig() {
+        if (null == cloudStorageConfig)
+            cloudStorageConfig = getConfigObject(ConfigConstant.CLOUD_STORAGE_CONFIG_KEY, CloudStorageConfig.class);
+        return cloudStorageConfig;
     }
 }

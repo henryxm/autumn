@@ -34,23 +34,38 @@ import java.util.Map;
 @Service("scheduleJobLogService")
 public class ScheduleJobLogService extends ServiceImpl<ScheduleJobLogDao, ScheduleJobLogEntity> {
 
-	@Autowired
-	private TableInit tableInit;
+    @Autowired
+    private TableInit tableInit;
 
-	public PageUtils queryPage(Map<String, Object> params) {
-		String jobId = (String)params.get("jobId");
+    private int wEveryCount = 0;
 
-		Page<ScheduleJobLogEntity> page = this.selectPage(
-				new Query<ScheduleJobLogEntity>(params).getPage(),
-				new EntityWrapper<ScheduleJobLogEntity>().like(StringUtils.isNotBlank(jobId),"job_id", jobId)
-		);
+    public PageUtils queryPage(Map<String, Object> params) {
+        String jobId = (String) params.get("jobId");
 
-		return new PageUtils(page);
-	}
+        Page<ScheduleJobLogEntity> page = this.selectPage(
+                new Query<ScheduleJobLogEntity>(params).getPage(),
+                new EntityWrapper<ScheduleJobLogEntity>().like(StringUtils.isNotBlank(jobId), "job_id", jobId)
+        );
 
-	@PostConstruct
-	public void init(){
-		if(!tableInit.init)
-			return;
-	}
+        return new PageUtils(page);
+    }
+
+    @PostConstruct
+    public void init() {
+        if (!tableInit.init)
+            return;
+    }
+
+    public void clear() {
+        baseMapper.clear();
+    }
+
+    public void clear(int i) {
+        if (wEveryCount < i) {
+            wEveryCount++;
+            return;
+        }
+        wEveryCount = 0;
+        baseMapper.clear();
+    }
 }

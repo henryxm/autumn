@@ -8,7 +8,6 @@ import java.util.List;
 
 public class Config {
 
-    public static final String ACTIVE = "spring.profiles.active";
     public static final String DEV = "dev";
     public static final String TEST = "test";
     public static final String PROD = "prod";
@@ -63,4 +62,34 @@ public class Config {
             return false;
     }
 
+    public static boolean linux() {
+        String os = System.getProperty("os.name");
+        if (os.toLowerCase().startsWith("linux")) {
+            return true;
+        }
+        return false;
+    }
+
+    public static boolean windows() {
+        String os = System.getProperty("os.name");
+        if (os.toLowerCase().startsWith("win")) {
+            return true;
+        }
+        return false;
+    }
+
+    public static boolean mac() {
+        String os = System.getProperty("os.name");
+        if (os.toLowerCase().startsWith("mac")) {
+            return true;
+        }
+        return false;
+    }
+
+    public static String home() {
+        String home = System.getProperty("user.home");
+        if (!home.endsWith("/"))
+            home = home + "/";
+        return home;
+    }
 }

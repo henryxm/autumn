@@ -49,45 +49,45 @@ public class SysMenuService extends ServiceImpl<SysMenuDao, SysMenuEntity> {
         if (!tableInit.init)
             return;
         String[][] menus = new String[][]{
-                {"1", "0", "系统管理", NULL, NULL, "0", "fa fa-cog", "999999"},
-                {"2", "1", "管理员管理", "modules/sys/user.html", NULL, "1", "fa fa-user", "1"},
-                {"3", "1", "角色管理", "modules/sys/role.html", NULL, "1", "fa fa-user-secret", "2"},
-                {"4", "1", "菜单管理", "modules/sys/menu.html", NULL, "1", "fa fa-th-list", "3"},
-                {"5", "1", "SQL监控", "druid/sql.html", NULL, "1", "fa fa-bug", "4"},
-                {"6", "1", "定时任务", "modules/job/schedule.html", NULL, "1", "fa fa-tasks", "5"},
-                {"7", "6", "查看", NULL, "sys:schedule:list,sys:schedule:info", "2", NULL, "0"},
-                {"8", "6", "新增", NULL, "sys:schedule:save", "2", NULL, "0"},
-                {"9", "6", "修改", NULL, "sys:schedule:update", "2", NULL, "0"},
-                {"10", "6", "删除", NULL, "sys:schedule:delete", "2", NULL, "0"},
-                {"11", "6", "暂停", NULL, "sys:schedule:pause", "2", NULL, "0"},
-                {"12", "6", "恢复", NULL, "sys:schedule:resume", "2", NULL, "0"},
-                {"13", "6", "立即执行", NULL, "sys:schedule:run", "2", NULL, "0"},
-                {"14", "6", "日志列表", NULL, "sys:schedule:log", "2", NULL, "0"},
-                {"15", "2", "查看", NULL, "sys:user:list,sys:user:info", "2", NULL, "0"},
-                {"16", "2", "新增", NULL, "sys:user:save,sys:role:select", "2", NULL, "0"},
-                {"17", "2", "修改", NULL, "sys:user:update,sys:role:select", "2", NULL, "0"},
-                {"18", "2", "删除", NULL, "sys:user:delete", "2", NULL, "0"},
-                {"19", "3", "查看", NULL, "sys:role:list,sys:role:info", "2", NULL, "0"},
-                {"20", "3", "新增", NULL, "sys:role:save,sys:menu:perms", "2", NULL, "0"},
-                {"21", "3", "修改", NULL, "sys:role:update,sys:menu:perms", "2", NULL, "0"},
-                {"22", "3", "删除", NULL, "sys:role:delete", "2", NULL, "0"},
-                {"23", "4", "查看", NULL, "sys:menu:list,sys:menu:info", "2", NULL, "0"},
-                {"24", "4", "新增", NULL, "sys:menu:save,sys:menu:select", "2", NULL, "0"},
-                {"25", "4", "修改", NULL, "sys:menu:update,sys:menu:select", "2", NULL, "0"},
-                {"26", "4", "删除", NULL, "sys:menu:delete", "2", NULL, "0"},
-                {"27", "1", "参数管理", "modules/sys/config.html", "sys:config:list,sys:config:info,sys:config:save,sys:config:update,sys:config:delete", "1", "fa fa-sun-o", "6"},
-                {"28", "1", "系统日志", "modules/sys/log.html", "sys:log:list", "1", "fa fa-file-text-o", "7"},
-                {"29", "1", "文件上传", "modules/oss/oss.html", "sys:oss:all", "1", "fa fa-file-image-o", "6"},
-                {"30", "1", "部门管理", "modules/sys/dept.html", NULL, "1", "fa fa-file-code-o", "1"},
-                {"31", "30", "查看", NULL, "sys:dept:list,sys:dept:info", "2", NULL, "0"},
-                {"32", "30", "新增", NULL, "sys:dept:save,sys:dept:select", "2", NULL, "0"},
-                {"33", "30", "修改", NULL, "sys:dept:update,sys:dept:select", "2", NULL, "0"},
-                {"34", "30", "删除", NULL, "sys:dept:delete", "2", NULL, "0"},
-                {"35", "1", "字典管理", "modules/sys/dict.html", NULL, "1", "fa fa-bookmark-o", "6"},
-                {"36", "35", "查看", NULL, "sys:dict:list,sys:dict:info", "2", NULL, "6"},
-                {"37", "35", "新增", NULL, "sys:dict:save", "2", NULL, "6"},
-                {"38", "35", "修改", NULL, "sys:dict:update", "2", NULL, "6"},
-                {"39", "35", "删除", NULL, "sys:dict:delete", "2", NULL, "6"},
+                {"1" , "0" , "系统管理" , NULL, NULL, "0" , "fa fa-cog" , "999999"},
+                {"2" , "1" , "管理员管理" , "modules/sys/user.html" , NULL, "1" , "fa fa-user" , "1"},
+                {"3" , "1" , "角色管理" , "modules/sys/role.html" , NULL, "1" , "fa fa-user-secret" , "2"},
+                {"4" , "1" , "菜单管理" , "modules/sys/menu.html" , NULL, "1" , "fa fa-th-list" , "3"},
+                {"5" , "1" , "SQL监控" , "druid/sql.html" , NULL, "1" , "fa fa-bug" , "4"},
+                {"6" , "1" , "定时任务" , "modules/job/schedule.html" , NULL, "1" , "fa fa-tasks" , "5"},
+                {"7" , "6" , "查看" , NULL, "sys:schedule:list,sys:schedule:info" , "2" , NULL, "0"},
+                {"8" , "6" , "新增" , NULL, "sys:schedule:save" , "2" , NULL, "0"},
+                {"9" , "6" , "修改" , NULL, "sys:schedule:update" , "2" , NULL, "0"},
+                {"10" , "6" , "删除" , NULL, "sys:schedule:delete" , "2" , NULL, "0"},
+                {"11" , "6" , "暂停" , NULL, "sys:schedule:pause" , "2" , NULL, "0"},
+                {"12" , "6" , "恢复" , NULL, "sys:schedule:resume" , "2" , NULL, "0"},
+                {"13" , "6" , "立即执行" , NULL, "sys:schedule:run" , "2" , NULL, "0"},
+                {"14" , "6" , "日志列表" , NULL, "sys:schedule:log" , "2" , NULL, "0"},
+                {"15" , "2" , "查看" , NULL, "sys:user:list,sys:user:info" , "2" , NULL, "0"},
+                {"16" , "2" , "新增" , NULL, "sys:user:save,sys:role:select" , "2" , NULL, "0"},
+                {"17" , "2" , "修改" , NULL, "sys:user:update,sys:role:select" , "2" , NULL, "0"},
+                {"18" , "2" , "删除" , NULL, "sys:user:delete" , "2" , NULL, "0"},
+                {"19" , "3" , "查看" , NULL, "sys:role:list,sys:role:info" , "2" , NULL, "0"},
+                {"20" , "3" , "新增" , NULL, "sys:role:save,sys:menu:perms" , "2" , NULL, "0"},
+                {"21" , "3" , "修改" , NULL, "sys:role:update,sys:menu:perms" , "2" , NULL, "0"},
+                {"22" , "3" , "删除" , NULL, "sys:role:delete" , "2" , NULL, "0"},
+                {"23" , "4" , "查看" , NULL, "sys:menu:list,sys:menu:info" , "2" , NULL, "0"},
+                {"24" , "4" , "新增" , NULL, "sys:menu:save,sys:menu:select" , "2" , NULL, "0"},
+                {"25" , "4" , "修改" , NULL, "sys:menu:update,sys:menu:select" , "2" , NULL, "0"},
+                {"26" , "4" , "删除" , NULL, "sys:menu:delete" , "2" , NULL, "0"},
+                {"27" , "1" , "参数管理" , "modules/sys/config.html" , "sys:config:list,sys:config:info,sys:config:save,sys:config:update,sys:config:delete" , "1" , "fa fa-sun-o" , "6"},
+                {"28" , "1" , "系统日志" , "modules/sys/log.html" , "sys:log:list" , "1" , "fa fa-file-text-o" , "7"},
+                {"29" , "1" , "文件上传" , "modules/oss/oss.html" , "sys:oss:all" , "1" , "fa fa-file-image-o" , "6"},
+                {"30" , "1" , "部门管理" , "modules/sys/dept.html" , NULL, "1" , "fa fa-file-code-o" , "1"},
+                {"31" , "30" , "查看" , NULL, "sys:dept:list,sys:dept:info" , "2" , NULL, "0"},
+                {"32" , "30" , "新增" , NULL, "sys:dept:save,sys:dept:select" , "2" , NULL, "0"},
+                {"33" , "30" , "修改" , NULL, "sys:dept:update,sys:dept:select" , "2" , NULL, "0"},
+                {"34" , "30" , "删除" , NULL, "sys:dept:delete" , "2" , NULL, "0"},
+                {"35" , "1" , "字典管理" , "modules/sys/dict.html" , NULL, "1" , "fa fa-bookmark-o" , "6"},
+                {"36" , "35" , "查看" , NULL, "sys:dict:list,sys:dict:info" , "2" , NULL, "6"},
+                {"37" , "35" , "新增" , NULL, "sys:dict:save" , "2" , NULL, "6"},
+                {"38" , "35" , "修改" , NULL, "sys:dict:update" , "2" , NULL, "6"},
+                {"39" , "35" , "删除" , NULL, "sys:dict:delete" , "2" , NULL, "6"},
         };
 
         for (String[] menu : menus) {
@@ -98,12 +98,11 @@ public class SysMenuService extends ServiceImpl<SysMenuDao, SysMenuEntity> {
         }
     }
 
-    public SysMenuEntity get(SysMenuEntity sysMenuEntity)
-    {
+    public SysMenuEntity get(SysMenuEntity sysMenuEntity) {
         return sysMenuDao.selectOne(sysMenuEntity);
     }
 
-    public Integer put(SysMenuEntity sysMenuEntity){
+    public Integer put(SysMenuEntity sysMenuEntity) {
         return sysMenuDao.insert(sysMenuEntity);
     }
 
@@ -133,6 +132,11 @@ public class SysMenuService extends ServiceImpl<SysMenuDao, SysMenuEntity> {
         temp = menu[7];
         if (NULL != temp)
             sysMenu.setOrderNum(Integer.valueOf(temp));
+        if (menu.length > 8) {
+            temp = menu[8];
+            if (NULL != temp)
+                sysMenu.setMenuKey(temp);
+        }
         return sysMenu;
     }
 
@@ -174,7 +178,7 @@ public class SysMenuService extends ServiceImpl<SysMenuDao, SysMenuEntity> {
         //删除菜单
         this.deleteById(menuId);
         //删除菜单与角色关联
-        sysRoleMenuService.deleteByMap(new MapUtils().put("menu_id", menuId));
+        sysRoleMenuService.deleteByMap(new MapUtils().put("menu_id" , menuId));
     }
 
     /**
@@ -204,5 +208,9 @@ public class SysMenuService extends ServiceImpl<SysMenuDao, SysMenuEntity> {
         }
 
         return subMenuList;
+    }
+
+    public SysMenuEntity getByMenuKey(String menuKey) {
+        return baseMapper.getByMenuKey(menuKey);
     }
 }
