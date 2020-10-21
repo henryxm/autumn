@@ -31,9 +31,9 @@ public class TestMenu {
         Long id = 0L;
         String[] _m = new String[]
                 {null, "0" , "测试" , "" , "" , "0" , "fa fa-address-card-o" , "0" , test_menu};
-        SysMenuEntity sysMenu = sysMenuService.from(_m);
-        SysMenuEntity entity = sysMenuService.get(sysMenu);
+        SysMenuEntity entity = sysMenuService.get(sysMenuService.find(_m));
         if (null == entity) {
+            SysMenuEntity sysMenu = sysMenuService.from(_m);
             sysMenuService.put(sysMenu);
         }
     }

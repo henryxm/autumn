@@ -106,6 +106,28 @@ public class SysMenuService extends ServiceImpl<SysMenuDao, SysMenuEntity> {
         return sysMenuDao.insert(sysMenuEntity);
     }
 
+    public SysMenuEntity find(String[] menu) {
+        SysMenuEntity sysMenu = new SysMenuEntity();
+        String temp = menu[0];
+        if (NULL != temp)
+            sysMenu.setMenuId(Long.valueOf(temp));
+        temp = menu[1];
+        if (NULL != temp)
+            sysMenu.setParentId(Long.valueOf(temp));
+        temp = menu[2];
+        if (NULL != temp)
+            sysMenu.setName(temp);
+        temp = menu[5];
+        if (NULL != temp)
+            sysMenu.setType(Integer.valueOf(temp));
+        if (menu.length > 8) {
+            temp = menu[8];
+            if (NULL != temp)
+                sysMenu.setMenuKey(temp);
+        }
+        return sysMenu;
+    }
+
     public SysMenuEntity from(String[] menu) {
         SysMenuEntity sysMenu = new SysMenuEntity();
         String temp = menu[0];
