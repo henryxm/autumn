@@ -1,5 +1,6 @@
 package cn.org.autumn.config;
 
+import cn.org.autumn.modules.lan.interceptor.LanguageInterceptor;
 import cn.org.autumn.modules.user.interceptor.AuthorizationInterceptor;
 import cn.org.autumn.modules.user.resolver.LoginUserHandlerMethodArgumentResolver;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,15 +23,20 @@ public class WebConfig implements WebMvcConfigurer {
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         registry.addResourceHandler("/statics/**").addResourceLocations("classpath:/statics/");
     }
+
     @Autowired
     private AuthorizationInterceptor authorizationInterceptor;
 
     @Autowired
     private LoginUserHandlerMethodArgumentResolver loginUserHandlerMethodArgumentResolver;
 
+    @Autowired
+    private LanguageInterceptor languageInterceptor;
+
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(authorizationInterceptor).addPathPatterns("/autumn/**");
+        registry.addInterceptor(languageInterceptor);
     }
 
     @Override

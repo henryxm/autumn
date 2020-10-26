@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <title>Autumn管理系统</title>
+  <title>${lang.sys_string_management}</title>
   <!-- Tell the browser to be responsive to screen width -->
   <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
   <link rel="stylesheet" href="${request.contextPath}/statics/css/bootstrap.min.css">
@@ -29,7 +29,7 @@
       <!-- mini logo for sidebar mini 50x50 pixels -->
       <span class="logo-mini"><b>Autumn</b></span>
       <!-- logo for regular state and mobile devices -->
-      <span class="logo-lg"><b>Autumn管理系统</b></span>
+      <span class="logo-lg"><b>${lang.sys_string_management}</b></span>
     </a>
     <!-- Header Navbar: style can be found in header.less -->
     <nav class="navbar navbar-static-top" role="navigation">
@@ -37,7 +37,7 @@
       <a href="#" class="sidebar-toggle" data-toggle="offcanvas" role="button">
         <span class="sr-only">Toggle navigation</span>
       </a>
-	  <div style="float:left;color:#fff;padding:15px 10px;">欢迎 {{user.username}}</div>
+	  <div style="float:left;color:#fff;padding:15px 10px;">${lang.sys_string_welcome} {{user.username}}</div>
       <div class="navbar-custom-menu">
         <ul class="nav navbar-nav">
           <li><a href="javascript:;" @click="donate"><i class="fa fa-jpy"></i> &nbsp;捐赠作者</a></li>
