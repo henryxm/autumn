@@ -159,7 +159,7 @@ public class LanguageServiceGen extends ServiceImpl<LanguageDao, LanguageEntity>
             return;
         Long id = 0L;
         String[] _m = new String[]
-                {null, parent(), "国家语言", "modules/lan/language.html", "lan:language:list,lan:language:info,lan:language:save,lan:language:update,lan:language:delete", "1", "fa " + ico(), order()};
+                {null, parent(), "国家语言", "modules/lan/language", "lan:language:list,lan:language:info,lan:language:save,lan:language:update,lan:language:delete", "1", "fa " + ico(), order()};
         SysMenuEntity sysMenu = sysMenuService.from(_m);
         SysMenuEntity entity = sysMenuService.get(sysMenu);
         if (null == entity) {

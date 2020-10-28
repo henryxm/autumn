@@ -167,7 +167,7 @@ public class GeneratorService {
             return;
         Long id = 0L;
         String[] _m = new String[]
-                {null, parent(), "代码生成", "modules/gen/generator.html", "gen:generator:list,gen:generator:code", "1", "fa fa-file-code-o", order()};
+                {null, parent(), "代码生成", "modules/gen/generator", "gen:generator:list,gen:generator:code", "1", "fa fa-file-code-o", order()};
         SysMenuEntity sysMenu = sysMenuService.from(_m);
         SysMenuEntity entity = sysMenuService.get(sysMenu);
         if (null == entity) {

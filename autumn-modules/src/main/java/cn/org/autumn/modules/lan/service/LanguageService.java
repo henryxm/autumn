@@ -103,6 +103,12 @@ public class LanguageService extends LanguageServiceGen {
         addItem("sys_string_welcome", "欢迎", "Welcome");
         addItem("sys_string_login", "登录", "Login");
         addItem("sys_string_logout", "退出系统", "Logout");
+        addColumnItem();
         load();
+    }
+
+    public void addColumnItem() {
+        addItem("sys_string_lan_column_name", "标识", "Unique Name");
+        addItem("sys_string_lan_column_en_us", "英语(美国)", "English(United States)");
     }
 }

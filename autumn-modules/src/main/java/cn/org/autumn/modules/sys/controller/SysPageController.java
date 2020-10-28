@@ -23,9 +23,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 @Controller
 public class SysPageController {
 
-    @RequestMapping("modules/{module}/{url}.html")
+    @RequestMapping("modules/{module}/{url}")
     public String module(@PathVariable("module") String module, @PathVariable("url") String url) {
         return "modules/" + module + "/" + url;
+    }
+
+    @RequestMapping("modules/{module}/{url}.js")
+    public String js(@PathVariable("module") String module, @PathVariable("url") String url) {
+        return "modules/" + module + "/" + url + ".js";
     }
 
     @RequestMapping(value = {"/", "index.html"})

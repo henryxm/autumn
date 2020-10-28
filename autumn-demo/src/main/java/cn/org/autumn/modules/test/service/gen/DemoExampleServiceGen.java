@@ -97,7 +97,7 @@ public class DemoExampleServiceGen extends ServiceImpl<DemoExampleDao, DemoExamp
             return;
         Long id = 0L;
         String[] _m = new String[]
-                {null, parent(), "例子", "modules/test/demoexample.html", "test:demoexample:list,test:demoexample:info,test:demoexample:save,test:demoexample:update,test:demoexample:delete", "1", "fa " + ico(), order()};
+                {null, parent(), "例子", "modules/test/demoexample", "test:demoexample:list,test:demoexample:info,test:demoexample:save,test:demoexample:update,test:demoexample:delete", "1", "fa " + ico(), order()};
         SysMenuEntity sysMenu = sysMenuService.from(_m);
         SysMenuEntity entity = sysMenuService.get(sysMenu);
         if (null == entity) {

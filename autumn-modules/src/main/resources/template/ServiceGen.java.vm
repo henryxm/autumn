@@ -96,7 +96,7 @@ public class ${className}ServiceGen extends ServiceImpl<${className}Dao, ${class
             return;
         Long id = 0L;
         String[] _m = new String[]
-                {null, parent(), "${comment}", "modules/${moduleName}/${pathName}.html", "${moduleName}:${pathName}:list,${moduleName}:${pathName}:info,${moduleName}:${pathName}:save,${moduleName}:${pathName}:update,${moduleName}:${pathName}:delete", "1", "fa " + ico(), order()};
+                {null, parent(), "${comment}", "modules/${moduleName}/${pathName}", "${moduleName}:${pathName}:list,${moduleName}:${pathName}:info,${moduleName}:${pathName}:save,${moduleName}:${pathName}:update,${moduleName}:${pathName}:delete", "1", "fa " + ico(), order()};
         SysMenuEntity sysMenu = sysMenuService.from(_m);
         SysMenuEntity entity = sysMenuService.get(sysMenu);
         if (null == entity) {
