@@ -98,6 +98,7 @@ public class LanguageService extends LanguageServiceGen {
 
     @PostConstruct
     public void init() {
+        super.init();
         addItem("sys_string_management", "Autumn 后台管理系统", "Autumn Management System");
         addItem("sys_string_welcome", "欢迎", "Welcome");
         addItem("sys_string_login", "登录", "Login");

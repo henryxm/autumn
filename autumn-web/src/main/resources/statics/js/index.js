@@ -43,7 +43,18 @@ var vm = new Vue({
 		main:"main.html",
 		password:'',
 		newPassword:'',
-        navTitle:"控制台"
+        navTitle:"控制台",
+		columeType:"",
+		columeTypeArr:[{
+			value:'zh_CN',
+			label:'简体中文(中国大陆)'
+		},{
+			value:'zh_Hk',
+			label:'繁体中文(香港)',
+		},{
+			value:'en_US',
+			label:'英语(美国)'
+		}],
 	},
 	methods: {
 		getMenuList: function (event) {
@@ -86,16 +97,28 @@ var vm = new Vue({
 	            }
 			});
 		},
-        donate: function () {
-            layer.open({
-                type: 2,
-                title: false,
-                area: ['300px', '450px'],
-                closeBtn: 1,
-                shadeClose: false,
-                content: ['http://www.xushaohua.com/wp-content/uploads/2018/10/shoukuanma.jpg', 'no']
-            });
-        }
+		setQueryString(key, val) { //传进想设置querystring的key和value
+			var search = location.search.substr(1); //获取地址栏 "?"后的内容
+			var hash = location.hash;
+			var query = {};
+			if (search) {
+				search.split('&').forEach((item) => {
+					var arr = item.split('=');
+					query[arr[0]] = arr[1];
+				});
+			}
+			query[key] = val;
+			var queryArr = [];
+			for (var p in query) {
+				queryArr.push(p + '=' + query[p]);
+			}
+			history.replaceState(null, null, '?' + queryArr.join('&'));
+			window.location.href = window.location.href + hash;
+			window.location.reload();
+		},
+		onChangeLanguage: function () {
+			vm.setQueryString("lang",vm.columeType)
+		}
 	},
 	created: function(){
 		this.getMenuList();

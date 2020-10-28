@@ -153,7 +153,6 @@ public class LanguageServiceGen extends ServiceImpl<LanguageDao, LanguageEntity>
         return String.valueOf(parentMenu());
     }
 
-
     @PostConstruct
     public void init() {
         if (!tableInit.init)

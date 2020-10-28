@@ -40,8 +40,16 @@
 	  <div style="float:left;color:#fff;padding:15px 10px;">${lang.sys_string_welcome} {{user.username}}</div>
       <div class="navbar-custom-menu">
         <ul class="nav navbar-nav">
-          <li><a href="javascript:;" @click="donate"><i class="fa fa-jpy"></i> &nbsp;捐赠作者</a></li>
-          <li><a href="http://www.autumn.org.cn" target="_blank"><i class="fa fa-home"></i> &nbsp;Autumn</a></li>
+            <li><a>
+                    <i class="fa fa-language"></i>
+                    <select v-model="columeType" @change="onChangeLanguage" placeholder="选择语言" style="width: 150px; color: black">
+                        <option disabled value="">请选择语言</option>
+                        <option v-for="(item,index) in columeTypeArr" :key="index" :label="item.label" :value="item.value">
+                        </option>
+                    </select>
+                </a>
+            </li>
+
 		  <li><a href="javascript:;" @click="updatePassword"><i class="fa fa-lock"></i> &nbsp;修改密码</a></li>
           <li><a href="logout"><i class="fa fa-sign-out"></i> &nbsp;退出系统</a></li>
 		</ul>
