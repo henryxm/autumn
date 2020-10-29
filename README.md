@@ -90,7 +90,7 @@ Autumn
 - 需要配置【autumn.shiro.redis=true】，表示把shiro session存到redis里
 
 #### 项目演示
-- 演示地址：http://autumn.microhome.cn/autumn
+- 演示地址：http://demo.autumn.org.cn/autumn
 - 账号密码：admin/admin
 
 
