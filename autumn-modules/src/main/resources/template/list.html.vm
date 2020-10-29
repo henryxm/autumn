@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>${comment}</title>
+    <title>${${lang}${moduleName}_${pathName}_table_comment}</title>
 	#set($header='<#include "/header.html">')
 	#set($save='<#if shiro.hasPermission("'+${moduleName}+':'+${pathName}+':save")>')
 	#set($update='<#if shiro.hasPermission("'+${moduleName}+':'+${pathName}+':update")>')
@@ -14,13 +14,13 @@
     <div v-show="showList">
         <div class="grid-btn">
 			$save
-            <a class="btn btn-primary" @click="add"><i class="fa fa-plus"></i>&nbsp;新增</a>
+            <a class="btn btn-primary" @click="add"><i class="fa fa-plus"></i>&nbsp;${lang.sys_string_add}</a>
 			$end
 			$update
-            <a class="btn btn-primary" @click="update"><i class="fa fa-pencil-square-o"></i>&nbsp;修改</a>
+            <a class="btn btn-primary" @click="update"><i class="fa fa-pencil-square-o"></i>&nbsp;${lang.sys_string_change}</a>
 			$end
 			$delete
-            <a class="btn btn-primary" @click="del"><i class="fa fa-trash-o"></i>&nbsp;删除</a>
+            <a class="btn btn-primary" @click="del"><i class="fa fa-trash-o"></i>&nbsp;${lang.sys_string_delete}</a>
 			$end
         </div>
         <table id="jqGrid"></table>
@@ -33,22 +33,22 @@
 			#foreach($column in $columns)
 				#if($column.name != $pk.name)
                     <div class="form-group">
-                        <div class="col-sm-2 control-label">${column.comment}</div>
+                        <div class="col-sm-2 control-label">${${lang}${moduleName}_${pathName}_column_${column.name}}</div>
                         <div class="col-sm-10">
-                            <input type="text" class="form-control" v-model="${classname}.${column.attrname}" placeholder="${column.comment}"/>
+                            <input type="text" class="form-control" v-model="${classname}.${column.attrname}" placeholder="${${lang}${moduleName}_${pathName}_column_${column.name}}"/>
                         </div>
                     </div>
 				#end
 			#end
             <div class="form-group">
                 <div class="col-sm-2 control-label"></div>
-                <input type="button" class="btn btn-primary" @click="saveOrUpdate" value="确定"/>
-                &nbsp;&nbsp;<input type="button" class="btn btn-warning" @click="reload" value="返回"/>
+                <input type="button" class="btn btn-primary" @click="saveOrUpdate" value="${lang.sys_string_confirm}"/>
+                &nbsp;&nbsp;<input type="button" class="btn btn-warning" @click="reload" value="${lang.sys_string_back}"/>
             </div>
         </form>
     </div>
 </div>
 
-<script src="${request.contextPath}/statics/js/modules/${moduleName}/${pathName}.js?_${.now?long}"></script>
+<script src="${request.contextPath}/modules/${moduleName}/${pathName}.js?_${.now?long}"></script>
 </body>
 </html>

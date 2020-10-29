@@ -20,6 +20,7 @@ import ${package}.${moduleName}.entity.${className}Entity;
 import javax.annotation.PostConstruct;
 import cn.org.autumn.modules.sys.entity.SysMenuEntity;
 import cn.org.autumn.modules.sys.service.SysMenuService;
+import cn.org.autumn.modules.lan.service.LanguageService;
 
 /**
  * ${comment}控制器
@@ -41,6 +42,9 @@ public class ${className}ServiceGen extends ServiceImpl<${className}Dao, ${class
 
     @Autowired
     protected TableInit tableInit;
+
+    @Autowired
+    protected LanguageService languageService;
 
     public PageUtils queryPage(Map<String, Object> params) {
         Page<${className}Entity> _page = new Query<${className}Entity>(params).getPage();
@@ -96,7 +100,7 @@ public class ${className}ServiceGen extends ServiceImpl<${className}Dao, ${class
             return;
         Long id = 0L;
         String[] _m = new String[]
-                {null, parent(), "${comment}", "modules/${moduleName}/${pathName}", "${moduleName}:${pathName}:list,${moduleName}:${pathName}:info,${moduleName}:${pathName}:save,${moduleName}:${pathName}:update,${moduleName}:${pathName}:delete", "1", "fa " + ico(), order()};
+                {null, parent(), "${comment}", "modules/${moduleName}/${pathName}", "${moduleName}:${pathName}:list,${moduleName}:${pathName}:info,${moduleName}:${pathName}:save,${moduleName}:${pathName}:update,${moduleName}:${pathName}:delete", "1", "fa " + ico(), order(), "", "${moduleName}_${pathName}_table_comment"};
         SysMenuEntity sysMenu = sysMenuService.from(_m);
         SysMenuEntity entity = sysMenuService.get(sysMenu);
         if (null == entity) {
@@ -106,10 +110,10 @@ public class ${className}ServiceGen extends ServiceImpl<${className}Dao, ${class
         } else
             id = entity.getMenuId();
         String[][] menus = new String[][]{
-                {null, id + "", "查看", null, "${moduleName}:${pathName}:list,${moduleName}:${pathName}:info", "2", null, order()},
-                {null, id + "", "新增", null, "${moduleName}:${pathName}:save", "2", null, order()},
-                {null, id + "", "修改", null, "${moduleName}:${pathName}:update", "2", null, order()},
-                {null, id + "", "删除", null, "${moduleName}:${pathName}:delete", "2", null, order()},
+                {null, id + "", "查看", null, "${moduleName}:${pathName}:list,${moduleName}:${pathName}:info", "2", null, order(), "", "sys_string_lookup"},
+                {null, id + "", "新增", null, "${moduleName}:${pathName}:save", "2", null, order(), "", "sys_string_add"},
+                {null, id + "", "修改", null, "${moduleName}:${pathName}:update", "2", null, order(), "", "sys_string_change"},
+                {null, id + "", "删除", null, "${moduleName}:${pathName}:delete", "2", null, order(), "", "sys_string_delete"},
         };
         for (String[] menu : menus) {
             sysMenu = sysMenuService.from(menu);
@@ -118,5 +122,13 @@ public class ${className}ServiceGen extends ServiceImpl<${className}Dao, ${class
                 sysMenuService.put(sysMenu);
             }
         }
+        addLanguageColumnItem();
+    }
+
+    public void addLanguageColumnItem() {
+        languageService.addLanguageColumnItem("${moduleName}_${pathName}_table_comment", "$comment");
+    #foreach ($column in $columns)
+        languageService.addLanguageColumnItem("${moduleName}_${pathName}_column_$column.name", "$column.comment");
+    #end
     }
 }

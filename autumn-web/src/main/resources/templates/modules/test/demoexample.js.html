@@ -1,16 +1,10 @@
 $(function () {
     $("#jqGrid").jqGrid({
-        url: baseURL + '${moduleName}/${pathName}/list',
+        url: baseURL + 'test/demoexample/list',
         datatype: "json",
         colModel: [			
-#foreach($column in $columns)
-#if($column.name == $pk.name)
-			{ label: '${column.attrname}', name: '${column.attrname}', index: '${column.name}', width: 50, key: true },
-#else
-			{ label: '${${lang}${moduleName}_${pathName}_column_${column.name}}', name: '${column.attrname}', index: '${column.name}', width: 80 }#if($velocityCount != $columns.size()), #end
-			
-#end			
-#end
+			{ label: 'id', name: 'id', index: 'id', width: 50, key: true },
+			{ label: '${lang.test_demoexample_column_example}', name: 'example', index: 'example', width: 80 }, 			
         ],
 		viewrecords: true,
         height: 385,
@@ -44,7 +38,7 @@ var vm = new Vue({
 	data:{
 		showList: true,
 		title: null,
-		${classname}: {}
+		demoExample: {}
 	},
 	methods: {
 		query: function () {
@@ -53,25 +47,25 @@ var vm = new Vue({
 		add: function(){
 			vm.showList = false;
 			vm.title = "${lang.sys_string_add}";
-			vm.${classname} = {};
+			vm.demoExample = {};
 		},
 		update: function (event) {
-			var $pk.attrname = getSelectedRow();
-			if($pk.attrname == null){
+			var id = getSelectedRow();
+			if(id == null){
 				return ;
 			}
 			vm.showList = false;
             vm.title = "${lang.sys_string_change}";
             
-            vm.getInfo(${pk.attrname})
+            vm.getInfo(id)
 		},
 		saveOrUpdate: function (event) {
-			var url = vm.${classname}.${pk.attrname} == null ? "${moduleName}/${pathName}/save" : "${moduleName}/${pathName}/update";
+			var url = vm.demoExample.id == null ? "test/demoexample/save" : "test/demoexample/update";
 			$.ajax({
 				type: "POST",
 			    url: baseURL + url,
                 contentType: "application/json",
-			    data: JSON.stringify(vm.${classname}),
+			    data: JSON.stringify(vm.demoExample),
 			    success: function(r){
 			    	if(r.code === 0){
 						alert('${lang.sys_string_successful}', function(index){
@@ -84,17 +78,17 @@ var vm = new Vue({
 			});
 		},
 		del: function (event) {
-			var ${pk.attrname}s = getSelectedRows();
-			if(${pk.attrname}s == null){
+			var ids = getSelectedRows();
+			if(ids == null){
 				return ;
 			}
 			
 			confirm('${lang.sys_string_are_sure_to_delete}？', function(){
 				$.ajax({
 					type: "POST",
-				    url: baseURL + "${moduleName}/${pathName}/delete",
+				    url: baseURL + "test/demoexample/delete",
                     contentType: "application/json",
-				    data: JSON.stringify(${pk.attrname}s),
+				    data: JSON.stringify(ids),
 				    success: function(r){
 						if(r.code == 0){
 							alert('${lang.sys_string_successful}', function(index){
@@ -107,9 +101,9 @@ var vm = new Vue({
 				});
 			});
 		},
-		getInfo: function(${pk.attrname}){
-			$.get(baseURL + "${moduleName}/${pathName}/info/"+${pk.attrname}, function(r){
-                vm.${classname} = r.${classname};
+		getInfo: function(id){
+			$.get(baseURL + "test/demoexample/info/"+id, function(r){
+                vm.demoExample = r.demoExample;
             });
 		},
 		reload: function (event) {

@@ -40,18 +40,19 @@
 	  <div style="float:left;color:#fff;padding:15px 10px;">${lang.sys_string_welcome} {{user.username}}</div>
       <div class="navbar-custom-menu">
         <ul class="nav navbar-nav">
-            <li><a>
+            <li>
+                <a>
                     <i class="fa fa-language"></i>
-                    <select v-model="columeType" @change="onChangeLanguage" placeholder="选择语言" style="width: 150px; color: black">
-                        <option disabled value="">请选择语言</option>
+                    <select v-model="columeType" @change="onChangeLanguage" placeholder="${lang.sys_string_select_language}" style="width: 150px; color: black">
+                        <option disabled value="">${lang.sys_string_select_language}</option>
                         <option v-for="(item,index) in columeTypeArr" :key="index" :label="item.label" :value="item.value">
                         </option>
                     </select>
                 </a>
             </li>
 
-		  <li><a href="javascript:;" @click="updatePassword"><i class="fa fa-lock"></i> &nbsp;修改密码</a></li>
-          <li><a href="logout"><i class="fa fa-sign-out"></i> &nbsp;退出系统</a></li>
+		  <li><a href="javascript:;" @click="updatePassword"><i class="fa fa-lock"></i> &nbsp;${lang.sys_string_modify_password}</a></li>
+          <li><a href="logout"><i class="fa fa-sign-out"></i> &nbsp;${lang.sys_string_logout}</a></li>
 		</ul>
       </div>
     </nav>
@@ -66,7 +67,7 @@
       <!-- /.search form -->
       <!-- sidebar menu: : style can be found in sidebar.less -->
       <ul class="sidebar-menu">
-        <li class="header">导航菜单</li>
+        <li class="header">${lang.sys_string_navigation_menu}</li>
         
         <!-- vue生成的菜单 -->
 		<menu-item :item="item" v-for="item in menuList"></menu-item>
@@ -80,7 +81,7 @@
     <!-- Content Header (Page header) -->
     <section class="content-header">
       <ol class="breadcrumb" id="nav_title" style="position:static;float:none;">
-          <li class="active"><a href=""><i class="fa fa-home" style="font-size:20px;position:relative;top:2px;left:-3px;"></i> &nbsp; 首页</a> </li>
+          <li class="active"><a href=""><i class="fa fa-home" style="font-size:20px;position:relative;top:2px;left:-3px;"></i> &nbsp; ${lang.sys_string_home}</a> </li>
           <li class="active"><a :href="'index.html#' + main">{{navTitle}}</a></li>
       </ol>
     </section>
@@ -109,19 +110,19 @@
 	<form class="form-horizontal">
 	<div class="form-group">
 		<div class="form-group">
-		   	<div class="col-sm-2 control-label">账号</div>
+		   	<div class="col-sm-2 control-label">${lang.sys_string_account}</div>
 		    <span class="label label-success" style="vertical-align: bottom;">{{user.username}}</span>
 		</div>
 		<div class="form-group">
-		   	<div class="col-sm-2 control-label">原密码</div>
+		   	<div class="col-sm-2 control-label">${lang.sys_string_old_password}</div>
 		   	<div class="col-sm-10">
-		      <input type="password" class="form-control" v-model="password" placeholder="原密码"/>
+		      <input type="password" class="form-control" v-model="password" placeholder="${lang.sys_string_old_password}"/>
 		    </div>
 		</div>
 		<div class="form-group">
-		   	<div class="col-sm-2 control-label">新密码</div>
+		   	<div class="col-sm-2 control-label">${lang.sys_string_new_password}</div>
 		   	<div class="col-sm-10">
-		      <input type="text" class="form-control" v-model="newPassword" placeholder="新密码"/>
+		      <input type="text" class="form-control" v-model="newPassword" placeholder="${lang.sys_string_new_password}"/>
 		    </div>
 		</div>
 	</div>

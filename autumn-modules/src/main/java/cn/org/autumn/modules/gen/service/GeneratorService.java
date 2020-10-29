@@ -83,6 +83,7 @@ public class GeneratorService {
     public List<UniqueKeyInfo> showKeys(String tableName) {
         return generatorDao.getTableKeys(tableName);
     }
+
     public List<ColumnMeta> queryColumns(String tableName) {
         return generatorDao.getColumnMetas(tableName);
     }
@@ -111,7 +112,7 @@ public class GeneratorService {
             if (columnInfo.isKey() && null == tableInfo.getPk())
                 tableInfo.setPk(columnInfo);
             list.add(columnInfo);
-            if("BigDecimal".equalsIgnoreCase(columnInfo.getAttrType())){
+            if ("BigDecimal".equalsIgnoreCase(columnInfo.getAttrType())) {
                 tableInfo.setHasBigDecimal(true);
             }
         }
@@ -167,7 +168,7 @@ public class GeneratorService {
             return;
         Long id = 0L;
         String[] _m = new String[]
-                {null, parent(), "代码生成", "modules/gen/generator", "gen:generator:list,gen:generator:code", "1", "fa fa-file-code-o", order()};
+                {null, parent(), "代码生成", "modules/gen/generator", "gen:generator:list,gen:generator:code", "1", "fa fa-file-code-o", order(), "", "sys_string_code_generator"};
         SysMenuEntity sysMenu = sysMenuService.from(_m);
         SysMenuEntity entity = sysMenuService.get(sysMenu);
         if (null == entity) {
@@ -177,8 +178,8 @@ public class GeneratorService {
         } else
             id = entity.getMenuId();
         String[][] menus = new String[][]{
-                {null, id + "", "查看", null, "gen:generator:list,gen:generator:info", "2", null, order()},
-                {null, id + "", "生成", null, "gen:generator:code", "2", null, order()},
+                {null, id + "", "查看", null, "gen:generator:list,gen:generator:info", "2", null, order(), "", "sys_string_lookup"},
+                {null, id + "", "生成", null, "gen:generator:code", "2", null, order(), "", "sys_string_generate"},
         };
         for (String[] menu : menus) {
             sysMenu = sysMenuService.from(menu);

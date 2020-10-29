@@ -5,6 +5,7 @@ import cn.org.autumn.modules.sys.service.SysMenuService;
 import cn.org.autumn.table.TableInit;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import cn.org.autumn.modules.lan.service.LanguageService;
 
 /**
  * ${comment}
@@ -25,16 +26,24 @@ public class ${upperModuleName}Menu {
     @Autowired
     protected TableInit tableInit;
 
+    @Autowired
+    protected LanguageService languageService;
+
     public void init() {
         if (!tableInit.init)
             return;
         Long id = 0L;
         String[] _m = new String[]
-                {null, "0" , "${moduleText}" , "" , "" , "0" , "fa fa-address-card-o" , "0" , ${moduleName}_menu};
+                {null, "0" , "${moduleText}" , "" , "" , "0" , "fa fa-address-card-o" , "0" , ${moduleName}_menu, ${moduleName}_menu + "_text"};
         SysMenuEntity entity = sysMenuService.get(sysMenuService.find(_m));
         if (null == entity) {
             SysMenuEntity sysMenu = sysMenuService.from(_m);
             sysMenuService.put(sysMenu);
         }
+        addLanguageColumnItem();
+    }
+
+    public void addLanguageColumnItem() {
+        languageService.addLanguageColumnItem(${moduleName}_menu + "_text", "${moduleText}");
     }
 }

@@ -33,15 +33,15 @@ public class LanguageEntity implements Serializable {
 	@Column(length = 200, isNull = false, comment = "标识")
 	private String name;
 	/**
-	 * 英语(美国)
-	 */
-	@Column(type = "text", comment = "英语(美国)")
-	private String enUs;
-	/**
 	 * 简体中文(中国)
 	 */
 	@Column(type = "text", comment = "简体中文(中国)")
 	private String zhCn;
+	/**
+	 * 英语(美国)
+	 */
+	@Column(type = "text", comment = "英语(美国)")
+	private String enUs;
 	/**
 	 * 繁体中文(香港)
 	 */

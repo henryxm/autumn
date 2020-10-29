@@ -16,12 +16,16 @@
 
 package cn.org.autumn.modules.sys.controller;
 
+import cn.org.autumn.modules.lan.entity.LanguageEntity;
+import cn.org.autumn.modules.lan.interceptor.LanguageInterceptor;
+import cn.org.autumn.modules.lan.service.LanguageService;
 import cn.org.autumn.utils.Constant;
 import cn.org.autumn.annotation.SysLog;
 import cn.org.autumn.exception.AException;
 import cn.org.autumn.utils.R;
 import cn.org.autumn.modules.sys.entity.SysMenuEntity;
 import cn.org.autumn.modules.sys.service.SysMenuService;
+import io.netty.util.internal.StringUtil;
 import org.apache.commons.lang.StringUtils;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,7 +34,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.servlet.http.HttpServletRequest;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/sys/menu")
@@ -38,12 +45,39 @@ public class SysMenuController extends AbstractController {
     @Autowired
     private SysMenuService sysMenuService;
 
+    @Autowired
+    LanguageService languageService;
+
+    public void r(SysMenuEntity sysMenuEntity, Map<String, String> language) {
+        if (!StringUtil.isNullOrEmpty(sysMenuEntity.getLanguageName())) {
+            if (language.containsKey(sysMenuEntity.getLanguageName())) {
+                sysMenuEntity.setName(language.get(sysMenuEntity.getLanguageName()));
+            }
+        }
+        if (null != sysMenuEntity.getList() && sysMenuEntity.getList().size() > 0) {
+            try {
+                for (SysMenuEntity sub : (List<SysMenuEntity>) sysMenuEntity.getList()) {
+                    r(sub, language);
+                }
+            } finally {
+
+            }
+        }
+    }
+
     /**
      * 导航菜单
      */
     @RequestMapping("/nav")
-    public R nav() {
+    public R nav(HttpServletRequest request) {
         List<SysMenuEntity> menuList = sysMenuService.getUserMenuList(getUserId());
+        Locale locale = LanguageInterceptor.getLocale(request);
+        Map<String, String> language = languageService.getLanguage(locale);
+        if (null != language && language.size() > 0) {
+            for (SysMenuEntity sysMenuEntity : menuList) {
+                r(sysMenuEntity, language);
+            }
+        }
         return R.ok().put("menuList", menuList);
     }
 

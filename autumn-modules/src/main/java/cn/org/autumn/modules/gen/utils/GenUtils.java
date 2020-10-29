@@ -78,6 +78,7 @@ public class GenUtils {
         map.put("author" , wrapper.getAuthorName());
         map.put("email" , wrapper.getEmail());
         map.put("moduleId" , wrapper.getModuleId());
+        map.put("lang" , "lang.");
         map.put("datetime" , DateUtils.format(new Date(), DateUtils.DATE_TIME_PATTERN));
         VelocityContext context = new VelocityContext(map);
 
@@ -144,8 +145,8 @@ public class GenUtils {
         }
 
         if (template.contains("list.js.vm")) {
-            return "main" + File.separator + "resources" + File.separator + "statics" + File.separator + "js" + File.separator
-                    + "modules" + File.separator + moduleName + File.separator + className.toLowerCase() + ".js";
+            return "main" + File.separator + "resources" + File.separator + "templates" + File.separator
+                    + "modules" + File.separator + moduleName + File.separator + className.toLowerCase() + ".js.html";
         }
 
         return null;

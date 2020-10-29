@@ -12,7 +12,7 @@
 
 .body{display: block;}
 .layui-layout-admin .header-demo{border-bottom-color: #1AA094;}
-.header-demo .logo{font-family: "Helvetica Neue",Helvetica,Arial,sans-serif;left: 10px;top: 8px;font-size: 24px;font-weight:bold; color:#fff;height: 50px;line-height: 50px;text-align: center;}
+.header-demo .logo{font-family: "Helvetica Neue",Helvetica,Arial,sans-serif;font-weight:bold; color:#fff;height: 50px;text-align: center;}
 .header-demo .layui-nav{top: 0;}
 .header-demo .layui-nav .layui-nav-item{margin: 0 10px; line-height: 70px;}
 .header-demo .layui-nav .layui-nav-item a{

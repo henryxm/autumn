@@ -23,7 +23,7 @@ public class LanguageInterceptor extends HandlerInterceptorAdapter {
 
     public static String LANGUAGE_SESSION = "LANGUAGE_SESSION";
 
-    public Locale getLocale(HttpServletRequest request) {
+    public static Locale getLocale(HttpServletRequest request) {
         String language = request.getParameter("lang");
         Locale locale = Locale.getDefault();
         if (!StringUtils.isEmpty(language)) {

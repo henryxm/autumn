@@ -20,6 +20,7 @@ import cn.org.autumn.modules.test.entity.DemoExampleEntity;
 import javax.annotation.PostConstruct;
 import cn.org.autumn.modules.sys.entity.SysMenuEntity;
 import cn.org.autumn.modules.sys.service.SysMenuService;
+import cn.org.autumn.modules.lan.service.LanguageService;
 
 /**
  * 例子控制器
@@ -41,6 +42,9 @@ public class DemoExampleServiceGen extends ServiceImpl<DemoExampleDao, DemoExamp
 
     @Autowired
     protected TableInit tableInit;
+
+    @Autowired
+    protected LanguageService languageService;
 
     public PageUtils queryPage(Map<String, Object> params) {
         Page<DemoExampleEntity> _page = new Query<DemoExampleEntity>(params).getPage();
@@ -75,7 +79,7 @@ public class DemoExampleServiceGen extends ServiceImpl<DemoExampleDao, DemoExamp
         SysMenuEntity sysMenuEntity = sysMenuService.getByMenuKey(TestMenu.test_menu);
         if(null != sysMenuEntity)
             return sysMenuEntity.getMenuId().intValue();
-        return 48;
+        return 53;
     }
 
     public String ico(){
@@ -97,7 +101,7 @@ public class DemoExampleServiceGen extends ServiceImpl<DemoExampleDao, DemoExamp
             return;
         Long id = 0L;
         String[] _m = new String[]
-                {null, parent(), "例子", "modules/test/demoexample", "test:demoexample:list,test:demoexample:info,test:demoexample:save,test:demoexample:update,test:demoexample:delete", "1", "fa " + ico(), order()};
+                {null, parent(), "例子", "modules/test/demoexample", "test:demoexample:list,test:demoexample:info,test:demoexample:save,test:demoexample:update,test:demoexample:delete", "1", "fa " + ico(), order(), "", "test_demoexample_table_comment"};
         SysMenuEntity sysMenu = sysMenuService.from(_m);
         SysMenuEntity entity = sysMenuService.get(sysMenu);
         if (null == entity) {
@@ -107,10 +111,10 @@ public class DemoExampleServiceGen extends ServiceImpl<DemoExampleDao, DemoExamp
         } else
             id = entity.getMenuId();
         String[][] menus = new String[][]{
-                {null, id + "", "查看", null, "test:demoexample:list,test:demoexample:info", "2", null, order()},
-                {null, id + "", "新增", null, "test:demoexample:save", "2", null, order()},
-                {null, id + "", "修改", null, "test:demoexample:update", "2", null, order()},
-                {null, id + "", "删除", null, "test:demoexample:delete", "2", null, order()},
+                {null, id + "", "查看", null, "test:demoexample:list,test:demoexample:info", "2", null, order(), "", "sys_string_lookup"},
+                {null, id + "", "新增", null, "test:demoexample:save", "2", null, order(), "", "sys_string_add"},
+                {null, id + "", "修改", null, "test:demoexample:update", "2", null, order(), "", "sys_string_change"},
+                {null, id + "", "删除", null, "test:demoexample:delete", "2", null, order(), "", "sys_string_delete"},
         };
         for (String[] menu : menus) {
             sysMenu = sysMenuService.from(menu);
@@ -119,5 +123,12 @@ public class DemoExampleServiceGen extends ServiceImpl<DemoExampleDao, DemoExamp
                 sysMenuService.put(sysMenu);
             }
         }
+        addLanguageColumnItem();
+    }
+
+    public void addLanguageColumnItem() {
+        languageService.addLanguageColumnItem("test_demoexample_table_comment", "例子");
+        languageService.addLanguageColumnItem("test_demoexample_column_id", "ID");
+        languageService.addLanguageColumnItem("test_demoexample_column_example", "example");
     }
 }

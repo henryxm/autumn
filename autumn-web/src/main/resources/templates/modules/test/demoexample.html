@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>例子</title>
+    <title>${lang.test_demoexample_table_comment}</title>
 	<#include "/header.html">
 </head>
 <body>
@@ -9,13 +9,13 @@
     <div v-show="showList">
         <div class="grid-btn">
 			<#if shiro.hasPermission("test:demoexample:save")>
-            <a class="btn btn-primary" @click="add"><i class="fa fa-plus"></i>&nbsp;新增</a>
+            <a class="btn btn-primary" @click="add"><i class="fa fa-plus"></i>&nbsp;${lang.sys_string_add}</a>
 			</#if>
 			<#if shiro.hasPermission("test:demoexample:update")>
-            <a class="btn btn-primary" @click="update"><i class="fa fa-pencil-square-o"></i>&nbsp;修改</a>
+            <a class="btn btn-primary" @click="update"><i class="fa fa-pencil-square-o"></i>&nbsp;${lang.sys_string_change}</a>
 			</#if>
 			<#if shiro.hasPermission("test:demoexample:delete")>
-            <a class="btn btn-primary" @click="del"><i class="fa fa-trash-o"></i>&nbsp;删除</a>
+            <a class="btn btn-primary" @click="del"><i class="fa fa-trash-o"></i>&nbsp;${lang.sys_string_delete}</a>
 			</#if>
         </div>
         <table id="jqGrid"></table>
@@ -26,20 +26,20 @@
         <div class="panel-heading">{{title}}</div>
         <form class="form-horizontal">
                     <div class="form-group">
-                        <div class="col-sm-2 control-label">example</div>
+                        <div class="col-sm-2 control-label">${lang.test_demoexample_column_example}</div>
                         <div class="col-sm-10">
-                            <input type="text" class="form-control" v-model="demoExample.example" placeholder="example"/>
+                            <input type="text" class="form-control" v-model="demoExample.example" placeholder="${lang.test_demoexample_column_example}"/>
                         </div>
                     </div>
             <div class="form-group">
                 <div class="col-sm-2 control-label"></div>
-                <input type="button" class="btn btn-primary" @click="saveOrUpdate" value="确定"/>
-                &nbsp;&nbsp;<input type="button" class="btn btn-warning" @click="reload" value="返回"/>
+                <input type="button" class="btn btn-primary" @click="saveOrUpdate" value="${lang.sys_string_confirm}"/>
+                &nbsp;&nbsp;<input type="button" class="btn btn-warning" @click="reload" value="${lang.sys_string_back}"/>
             </div>
         </form>
     </div>
 </div>
 
-<script src="${request.contextPath}/statics/js/modules/test/demoexample.js?_${.now?long}"></script>
+<script src="${request.contextPath}/modules/test/demoexample.js?_${.now?long}"></script>
 </body>
 </html>

@@ -40,7 +40,8 @@ Autumn
 │    │    ├─gen 代码生成
 │    │    ├─job 定时任务
 │    │    ├─oss 文件存储
-│    │    └─sys 系统管理(核心)
+│    │    ├─lan 多语言
+│    │    ├─sys 系统管理(核心)
 │    │    └─user 普通用户
 │    │ 
 │    └─resources 
@@ -80,8 +81,8 @@ Autumn
 - 在autumn-web目录下，执行mvn clean install
 
 - Eclipse、IDEA运行AdminApplication.java，则可启动项目【autumn-web】
-- admin访问路径：http://localhost:8090/autumn
-- swagger文档路径：http://localhost:8090/autumn/swagger/index.html
+- admin访问路径：http://localhost/autumn
+- swagger文档路径：http://localhost/autumn/swagger/index.html
 - 账号密码：admin/admin
 
 #### 分布式部署
@@ -89,17 +90,5 @@ Autumn
 - 需要配置【autumn.redis.open=true】，表示开启redis缓存
 - 需要配置【autumn.shiro.redis=true】，表示把shiro session存到redis里
 
-#### 项目演示
-- 演示地址：http://demo.autumn.org.cn/autumn
-- 账号密码：admin/admin
-
-
 #### 如何交流、反馈、参与贡献？
-- 开发文档：https://gitlab.microhome.cn/henryxm/autumn
-- 官方社区：https://gitlab.microhome.cn/henryxm/autumn
-- gitee仓库：https://gitee.com/henryxm/autumn
 - github仓库：https://github.com/henryxm/autumn
-- [官方网站](http://www.autumn.org.cn)：http://www.autumn.org.cn   
-- 官方QQ群：176164260
-- 如需关注项目最新动态，请Watch、Star项目，同时也是对项目最好的支持
-- 技术讨论、二次开发等咨询、问题和建议，请移步到官方社区，我会在第一时间进行解答和回复！

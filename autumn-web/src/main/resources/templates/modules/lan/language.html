@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>国家语言</title>
+    <title>${lang.lan_language_table_comment}</title>
 	<#include "/header.html">
 </head>
 <body>
@@ -9,13 +9,13 @@
     <div v-show="showList">
         <div class="grid-btn">
 			<#if shiro.hasPermission("lan:language:save")>
-            <a class="btn btn-primary" @click="add"><i class="fa fa-plus"></i>&nbsp;新增</a>
+            <a class="btn btn-primary" @click="add"><i class="fa fa-plus"></i>&nbsp;${lang.sys_string_add}</a>
 			</#if>
 			<#if shiro.hasPermission("lan:language:update")>
-            <a class="btn btn-primary" @click="update"><i class="fa fa-pencil-square-o"></i>&nbsp;修改</a>
+            <a class="btn btn-primary" @click="update"><i class="fa fa-pencil-square-o"></i>&nbsp;${lang.sys_string_change}</a>
 			</#if>
 			<#if shiro.hasPermission("lan:language:delete")>
-            <a class="btn btn-primary" @click="del"><i class="fa fa-trash-o"></i>&nbsp;删除</a>
+            <a class="btn btn-primary" @click="del"><i class="fa fa-trash-o"></i>&nbsp;${lang.sys_string_delete}</a>
 			</#if>
         </div>
         <table id="jqGrid"></table>
@@ -26,159 +26,159 @@
         <div class="panel-heading">{{title}}</div>
         <form class="form-horizontal">
                     <div class="form-group">
-                        <div class="col-sm-2 control-label">标识</div>
+                        <div class="col-sm-2 control-label">${lang.lan_language_column_name}</div>
                         <div class="col-sm-10">
-                            <input type="text" class="form-control" v-model="language.name" placeholder="标识"/>
+                            <input type="text" class="form-control" v-model="language.name" placeholder="${lang.lan_language_column_name}"/>
                         </div>
                     </div>
                     <div class="form-group">
-                        <div class="col-sm-2 control-label">英语(美国)</div>
+                        <div class="col-sm-2 control-label">${lang.lan_language_column_zh_cn}</div>
                         <div class="col-sm-10">
-                            <input type="text" class="form-control" v-model="language.enUs" placeholder="英语(美国)"/>
+                            <input type="text" class="form-control" v-model="language.zhCn" placeholder="${lang.lan_language_column_zh_cn}"/>
                         </div>
                     </div>
                     <div class="form-group">
-                        <div class="col-sm-2 control-label">简体中文(中国)</div>
+                        <div class="col-sm-2 control-label">${lang.lan_language_column_en_us}</div>
                         <div class="col-sm-10">
-                            <input type="text" class="form-control" v-model="language.zhCn" placeholder="简体中文(中国)"/>
+                            <input type="text" class="form-control" v-model="language.enUs" placeholder="${lang.lan_language_column_en_us}"/>
                         </div>
                     </div>
                     <div class="form-group">
-                        <div class="col-sm-2 control-label">繁体中文(香港)</div>
+                        <div class="col-sm-2 control-label">${lang.lan_language_column_zh_hk}</div>
                         <div class="col-sm-10">
-                            <input type="text" class="form-control" v-model="language.zhHk" placeholder="繁体中文(香港)"/>
+                            <input type="text" class="form-control" v-model="language.zhHk" placeholder="${lang.lan_language_column_zh_hk}"/>
                         </div>
                     </div>
                     <div class="form-group">
-                        <div class="col-sm-2 control-label">韩语(韩国)</div>
+                        <div class="col-sm-2 control-label">${lang.lan_language_column_ko_kr}</div>
                         <div class="col-sm-10">
-                            <input type="text" class="form-control" v-model="language.koKr" placeholder="韩语(韩国)"/>
+                            <input type="text" class="form-control" v-model="language.koKr" placeholder="${lang.lan_language_column_ko_kr}"/>
                         </div>
                     </div>
                     <div class="form-group">
-                        <div class="col-sm-2 control-label">日语(日本)</div>
+                        <div class="col-sm-2 control-label">${lang.lan_language_column_ja_jp}</div>
                         <div class="col-sm-10">
-                            <input type="text" class="form-control" v-model="language.jaJp" placeholder="日语(日本)"/>
+                            <input type="text" class="form-control" v-model="language.jaJp" placeholder="${lang.lan_language_column_ja_jp}"/>
                         </div>
                     </div>
                     <div class="form-group">
-                        <div class="col-sm-2 control-label">俄语(俄罗斯)</div>
+                        <div class="col-sm-2 control-label">${lang.lan_language_column_tt_ru}</div>
                         <div class="col-sm-10">
-                            <input type="text" class="form-control" v-model="language.ttRu" placeholder="俄语(俄罗斯)"/>
+                            <input type="text" class="form-control" v-model="language.ttRu" placeholder="${lang.lan_language_column_tt_ru}"/>
                         </div>
                     </div>
                     <div class="form-group">
-                        <div class="col-sm-2 control-label">法语(法国)</div>
+                        <div class="col-sm-2 control-label">${lang.lan_language_column_fr_fr}</div>
                         <div class="col-sm-10">
-                            <input type="text" class="form-control" v-model="language.frFr" placeholder="法语(法国)"/>
+                            <input type="text" class="form-control" v-model="language.frFr" placeholder="${lang.lan_language_column_fr_fr}"/>
                         </div>
                     </div>
                     <div class="form-group">
-                        <div class="col-sm-2 control-label">德语(德国)</div>
+                        <div class="col-sm-2 control-label">${lang.lan_language_column_de_de}</div>
                         <div class="col-sm-10">
-                            <input type="text" class="form-control" v-model="language.deDe" placeholder="德语(德国)"/>
+                            <input type="text" class="form-control" v-model="language.deDe" placeholder="${lang.lan_language_column_de_de}"/>
                         </div>
                     </div>
                     <div class="form-group">
-                        <div class="col-sm-2 control-label">越语(越南)</div>
+                        <div class="col-sm-2 control-label">${lang.lan_language_column_vi_vn}</div>
                         <div class="col-sm-10">
-                            <input type="text" class="form-control" v-model="language.viVn" placeholder="越语(越南)"/>
+                            <input type="text" class="form-control" v-model="language.viVn" placeholder="${lang.lan_language_column_vi_vn}"/>
                         </div>
                     </div>
                     <div class="form-group">
-                        <div class="col-sm-2 control-label">泰语(泰国)</div>
+                        <div class="col-sm-2 control-label">${lang.lan_language_column_th_th}</div>
                         <div class="col-sm-10">
-                            <input type="text" class="form-control" v-model="language.thTh" placeholder="泰语(泰国)"/>
+                            <input type="text" class="form-control" v-model="language.thTh" placeholder="${lang.lan_language_column_th_th}"/>
                         </div>
                     </div>
                     <div class="form-group">
-                        <div class="col-sm-2 control-label">马来语(马来西亚)</div>
+                        <div class="col-sm-2 control-label">${lang.lan_language_column_ms_my}</div>
                         <div class="col-sm-10">
-                            <input type="text" class="form-control" v-model="language.msMy" placeholder="马来语(马来西亚)"/>
+                            <input type="text" class="form-control" v-model="language.msMy" placeholder="${lang.lan_language_column_ms_my}"/>
                         </div>
                     </div>
                     <div class="form-group">
-                        <div class="col-sm-2 control-label">印尼语(印尼)</div>
+                        <div class="col-sm-2 control-label">${lang.lan_language_column_id_id}</div>
                         <div class="col-sm-10">
-                            <input type="text" class="form-control" v-model="language.idId" placeholder="印尼语(印尼)"/>
+                            <input type="text" class="form-control" v-model="language.idId" placeholder="${lang.lan_language_column_id_id}"/>
                         </div>
                     </div>
                     <div class="form-group">
-                        <div class="col-sm-2 control-label">西班牙语(西班牙)</div>
+                        <div class="col-sm-2 control-label">${lang.lan_language_column_es_es}</div>
                         <div class="col-sm-10">
-                            <input type="text" class="form-control" v-model="language.esEs" placeholder="西班牙语(西班牙)"/>
+                            <input type="text" class="form-control" v-model="language.esEs" placeholder="${lang.lan_language_column_es_es}"/>
                         </div>
                     </div>
                     <div class="form-group">
-                        <div class="col-sm-2 control-label">土耳其语(土耳其)</div>
+                        <div class="col-sm-2 control-label">${lang.lan_language_column_tr_tr}</div>
                         <div class="col-sm-10">
-                            <input type="text" class="form-control" v-model="language.trTr" placeholder="土耳其语(土耳其)"/>
+                            <input type="text" class="form-control" v-model="language.trTr" placeholder="${lang.lan_language_column_tr_tr}"/>
                         </div>
                     </div>
                     <div class="form-group">
-                        <div class="col-sm-2 control-label">乌克兰语(乌克兰)</div>
+                        <div class="col-sm-2 control-label">${lang.lan_language_column_uk_uk}</div>
                         <div class="col-sm-10">
-                            <input type="text" class="form-control" v-model="language.ukUk" placeholder="乌克兰语(乌克兰)"/>
+                            <input type="text" class="form-control" v-model="language.ukUk" placeholder="${lang.lan_language_column_uk_uk}"/>
                         </div>
                     </div>
                     <div class="form-group">
-                        <div class="col-sm-2 control-label">葡萄牙语(葡萄牙)</div>
+                        <div class="col-sm-2 control-label">${lang.lan_language_column_pu_pt}</div>
                         <div class="col-sm-10">
-                            <input type="text" class="form-control" v-model="language.puPt" placeholder="葡萄牙语(葡萄牙)"/>
+                            <input type="text" class="form-control" v-model="language.puPt" placeholder="${lang.lan_language_column_pu_pt}"/>
                         </div>
                     </div>
                     <div class="form-group">
-                        <div class="col-sm-2 control-label">波兰语(波兰)</div>
+                        <div class="col-sm-2 control-label">${lang.lan_language_column_pl_pl}</div>
                         <div class="col-sm-10">
-                            <input type="text" class="form-control" v-model="language.plPl" placeholder="波兰语(波兰)"/>
+                            <input type="text" class="form-control" v-model="language.plPl" placeholder="${lang.lan_language_column_pl_pl}"/>
                         </div>
                     </div>
                     <div class="form-group">
-                        <div class="col-sm-2 control-label">蒙古语(蒙古)</div>
+                        <div class="col-sm-2 control-label">${lang.lan_language_column_mn_mn}</div>
                         <div class="col-sm-10">
-                            <input type="text" class="form-control" v-model="language.mnMn" placeholder="蒙古语(蒙古)"/>
+                            <input type="text" class="form-control" v-model="language.mnMn" placeholder="${lang.lan_language_column_mn_mn}"/>
                         </div>
                     </div>
                     <div class="form-group">
-                        <div class="col-sm-2 control-label">挪威语(挪威)</div>
+                        <div class="col-sm-2 control-label">${lang.lan_language_column_nb_no}</div>
                         <div class="col-sm-10">
-                            <input type="text" class="form-control" v-model="language.nbNo" placeholder="挪威语(挪威)"/>
+                            <input type="text" class="form-control" v-model="language.nbNo" placeholder="${lang.lan_language_column_nb_no}"/>
                         </div>
                     </div>
                     <div class="form-group">
-                        <div class="col-sm-2 control-label">意大利语(意大利)</div>
+                        <div class="col-sm-2 control-label">${lang.lan_language_column_it_it}</div>
                         <div class="col-sm-10">
-                            <input type="text" class="form-control" v-model="language.itIt" placeholder="意大利语(意大利)"/>
+                            <input type="text" class="form-control" v-model="language.itIt" placeholder="${lang.lan_language_column_it_it}"/>
                         </div>
                     </div>
                     <div class="form-group">
-                        <div class="col-sm-2 control-label">希伯来语(以色列)</div>
+                        <div class="col-sm-2 control-label">${lang.lan_language_column_he_il}</div>
                         <div class="col-sm-10">
-                            <input type="text" class="form-control" v-model="language.heIl" placeholder="希伯来语(以色列)"/>
+                            <input type="text" class="form-control" v-model="language.heIl" placeholder="${lang.lan_language_column_he_il}"/>
                         </div>
                     </div>
                     <div class="form-group">
-                        <div class="col-sm-2 control-label">希腊语(希腊)</div>
+                        <div class="col-sm-2 control-label">${lang.lan_language_column_el_gr}</div>
                         <div class="col-sm-10">
-                            <input type="text" class="form-control" v-model="language.elGr" placeholder="希腊语(希腊)"/>
+                            <input type="text" class="form-control" v-model="language.elGr" placeholder="${lang.lan_language_column_el_gr}"/>
                         </div>
                     </div>
                     <div class="form-group">
-                        <div class="col-sm-2 control-label">波斯语(伊朗)</div>
+                        <div class="col-sm-2 control-label">${lang.lan_language_column_fa_ir}</div>
                         <div class="col-sm-10">
-                            <input type="text" class="form-control" v-model="language.faIr" placeholder="波斯语(伊朗)"/>
+                            <input type="text" class="form-control" v-model="language.faIr" placeholder="${lang.lan_language_column_fa_ir}"/>
                         </div>
                     </div>
                     <div class="form-group">
-                        <div class="col-sm-2 control-label">阿拉伯语(沙特阿拉伯)</div>
+                        <div class="col-sm-2 control-label">${lang.lan_language_column_ar_sa}</div>
                         <div class="col-sm-10">
-                            <input type="text" class="form-control" v-model="language.arSa" placeholder="阿拉伯语(沙特阿拉伯)"/>
+                            <input type="text" class="form-control" v-model="language.arSa" placeholder="${lang.lan_language_column_ar_sa}"/>
                         </div>
                     </div>
             <div class="form-group">
                 <div class="col-sm-2 control-label"></div>
-                <input type="button" class="btn btn-primary" @click="saveOrUpdate" value="确定"/>
-                &nbsp;&nbsp;<input type="button" class="btn btn-warning" @click="reload" value="返回"/>
+                <input type="button" class="btn btn-primary" @click="saveOrUpdate" value="${lang.sys_string_confirm}"/>
+                &nbsp;&nbsp;<input type="button" class="btn btn-warning" @click="reload" value="${lang.sys_string_back}"/>
             </div>
         </form>
     </div>
