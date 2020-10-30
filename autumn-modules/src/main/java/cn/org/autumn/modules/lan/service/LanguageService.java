@@ -1,9 +1,12 @@
 package cn.org.autumn.modules.lan.service;
 
+import cn.org.autumn.config.PostLoad;
+import cn.org.autumn.config.PostLoadFactory;
 import cn.org.autumn.modules.lan.entity.LanguageEntity;
 import cn.org.autumn.modules.lan.service.gen.LanguageServiceGen;
 import cn.org.autumn.table.utils.HumpConvert;
 import io.netty.util.internal.StringUtil;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
@@ -11,7 +14,10 @@ import java.lang.reflect.Field;
 import java.util.*;
 
 @Service
-public class LanguageService extends LanguageServiceGen {
+public class LanguageService extends LanguageServiceGen implements PostLoad {
+
+    @Autowired
+    PostLoadFactory postLoadFactory;
 
     private static Map<String, Map<String, String>> languages;
 
@@ -143,7 +149,7 @@ public class LanguageService extends LanguageServiceGen {
         addLanguageColumnItem("sys_string_successful", "操作成功", "Successful");
         addLanguageColumnItem("sys_string_are_sure_to_delete", "确定要删除选中的记录", "Are you sure to delete the selected record");
         addLanguageColumnItem();
-        load();
+        postLoadFactory.register(this);
     }
 
     public void addLanguageColumnItem() {
