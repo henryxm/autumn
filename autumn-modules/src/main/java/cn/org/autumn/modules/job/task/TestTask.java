@@ -40,7 +40,7 @@ public class TestTask {
     @Autowired
     private SysUserService sysUserService;
 
-    @TaskAware(mode = "prod" , params = "Test" , remark = "测试1")
+    @TaskAware(mode = "all" , params = "Test" , remark = "测试1", cronExpression = "0/10 * * * * ? *")
     public void test(String params) {
         logger.info("我是带参数的test方法，正在被执行，参数为：" + params);
 
@@ -54,7 +54,7 @@ public class TestTask {
         System.out.println(ToStringBuilder.reflectionToString(user));
     }
 
-    @TaskAware(mode = "prod" , remark = "测试2")
+    @TaskAware(mode = "prod,dev" , remark = "测试2")
     public void test2() {
         logger.info("我是不带参数的test2方法，正在被执行");
     }

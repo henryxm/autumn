@@ -8,7 +8,7 @@ import java.lang.annotation.*;
 public @interface TaskAware {
     String params() default "";
 
-    String cronExpression() default "0 0/30 * * * ?";
+    String cronExpression() default "0/30 * * * * ? *";
 
     int status() default 0;
 

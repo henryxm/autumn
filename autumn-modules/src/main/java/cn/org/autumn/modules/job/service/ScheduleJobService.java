@@ -1,33 +1,17 @@
-/**
- * Copyright 2018 Autumn.org.cn http://www.autumn.org.cn
- * <p>
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not
- * use this file except in compliance with the License. You may obtain a copy of
- * the License at
- * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
- */
-
 package cn.org.autumn.modules.job.service;
 
 import cn.org.autumn.annotation.TaskAware;
+import cn.org.autumn.modules.job.dao.ScheduleJobDao;
+import cn.org.autumn.modules.job.entity.ScheduleJobEntity;
+import cn.org.autumn.modules.job.service.gen.ScheduleJobServiceGen;
+import cn.org.autumn.modules.job.utils.ScheduleUtils;
 import cn.org.autumn.table.TableInit;
-import cn.org.autumn.utils.SpringContextUtils;
-import com.baomidou.mybatisplus.mapper.EntityWrapper;
-import com.baomidou.mybatisplus.plugins.Page;
-import com.baomidou.mybatisplus.service.impl.ServiceImpl;
 import cn.org.autumn.utils.Constant;
 import cn.org.autumn.utils.PageUtils;
 import cn.org.autumn.utils.Query;
-import cn.org.autumn.modules.job.dao.ScheduleJobDao;
-import cn.org.autumn.modules.job.entity.ScheduleJobEntity;
-import cn.org.autumn.modules.job.utils.ScheduleUtils;
+import cn.org.autumn.utils.SpringContextUtils;
+import com.baomidou.mybatisplus.mapper.EntityWrapper;
+import com.baomidou.mybatisplus.plugins.Page;
 import org.apache.commons.lang.StringUtils;
 import org.quartz.CronTrigger;
 import org.quartz.Scheduler;
@@ -40,17 +24,22 @@ import javax.annotation.PostConstruct;
 import java.lang.reflect.Method;
 import java.util.*;
 
-@Service("scheduleJobService")
 @DependsOn("springContextUtils")
-public class ScheduleJobService extends ServiceImpl<ScheduleJobDao, ScheduleJobEntity> {
+@Service
+public class ScheduleJobService extends ScheduleJobServiceGen {
+
     @Autowired
     private Scheduler scheduler;
 
-    @Autowired
-    private ScheduleJobDao scheduleJobDao;
+    @Override
+    public int menuOrder() {
+        return super.menuOrder();
+    }
 
-    @Autowired
-    private TableInit tableInit;
+    @Override
+    public String ico() {
+        return super.ico();
+    }
 
     private int wEveryCount = 0;
 
@@ -71,7 +60,7 @@ public class ScheduleJobService extends ServiceImpl<ScheduleJobDao, ScheduleJobE
                         ScheduleJobEntity scheduleJobEntity = new ScheduleJobEntity();
                         scheduleJobEntity.setBeanName(beanName);
                         scheduleJobEntity.setMethodName(method.getName());
-                        ScheduleJobEntity entity = scheduleJobDao.selectOne(scheduleJobEntity);
+                        ScheduleJobEntity entity = baseMapper.selectOne(scheduleJobEntity);
                         if (null == entity) {
                             scheduleJobEntity.setStatus(taskAware.status());
                             scheduleJobEntity.setCronExpression(taskAware.cronExpression());
@@ -79,11 +68,11 @@ public class ScheduleJobService extends ServiceImpl<ScheduleJobDao, ScheduleJobE
                             scheduleJobEntity.setRemark(taskAware.remark());
                             scheduleJobEntity.setCreateTime(new Date());
                             scheduleJobEntity.setMode(taskAware.mode());
-                            scheduleJobDao.insert(scheduleJobEntity);
+                            baseMapper.insert(scheduleJobEntity);
                         } else {
                             if (StringUtils.isEmpty(entity.getMode())) {
                                 entity.setMode(taskAware.mode());
-                                scheduleJobDao.updateById(entity);
+                                baseMapper.updateById(entity);
                             }
                         }
                         list.add(taskAware);
@@ -97,6 +86,7 @@ public class ScheduleJobService extends ServiceImpl<ScheduleJobDao, ScheduleJobE
 
     @PostConstruct
     public void init() {
+        super.init();
         if (!tableInit.init)
             return;
         scanInit();
@@ -109,7 +99,7 @@ public class ScheduleJobService extends ServiceImpl<ScheduleJobDao, ScheduleJobE
             temp = map[1];
             if (NULL != temp)
                 sysMenu.setMethodName(temp);
-            ScheduleJobEntity entity = scheduleJobDao.selectOne(sysMenu);
+            ScheduleJobEntity entity = baseMapper.selectOne(sysMenu);
 
             if (null == entity) {
                 temp = map[2];
@@ -125,7 +115,7 @@ public class ScheduleJobService extends ServiceImpl<ScheduleJobDao, ScheduleJobE
                 if (NULL != temp)
                     sysMenu.setRemark(temp);
                 sysMenu.setCreateTime(new Date());
-                scheduleJobDao.insert(sysMenu);
+                baseMapper.insert(sysMenu);
             }
         }
         initScheduler();
@@ -163,7 +153,7 @@ public class ScheduleJobService extends ServiceImpl<ScheduleJobDao, ScheduleJobE
         Map<String, Object> condition = new HashMap<>();
 
         String beanName = (String) params.get("beanName");
-        entityEntityWrapper.like(StringUtils.isNotBlank(beanName), "bean_name" , beanName);
+        entityEntityWrapper.like(StringUtils.isNotBlank(beanName), "bean_name", beanName);
 
         _page.setCondition(condition);
         Page<ScheduleJobEntity> page = this.selectPage(_page, entityEntityWrapper);

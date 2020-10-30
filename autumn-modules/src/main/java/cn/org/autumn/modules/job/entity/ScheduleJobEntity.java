@@ -30,8 +30,8 @@ import java.util.Date;
 /**
  * 定时任务
  */
-@TableName("schedule_job")
-@Table(value = "schedule_job", comment = "定时任务")
+@TableName("sys_schedule_job")
+@Table(value = "sys_schedule_job", comment = "定时任务")
 public class ScheduleJobEntity implements Serializable {
     private static final long serialVersionUID = 1L;
 
@@ -80,6 +80,9 @@ public class ScheduleJobEntity implements Serializable {
     @Column(type = DataType.INT, comment = "任务状态  0：正常  1：暂停")
     private Integer status;
 
+    @Column(comment = "任务执行模式")
+    private String mode;
+
     /**
      * 备注
      */
@@ -92,9 +95,6 @@ public class ScheduleJobEntity implements Serializable {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     @Column(type = DataType.DATETIME, comment = "创建时间")
     private Date createTime;
-
-    @Column(comment = "任务执行模式")
-    private String mode;
 
     /**
      * 设置：任务id

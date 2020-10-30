@@ -29,8 +29,8 @@ import java.util.Date;
 /**
  * 定时任务日志
  */
-@TableName("schedule_job_log")
-@Table(value = "schedule_job_log", comment = "定时任务日志")
+@TableName("sys_schedule_job_log")
+@Table(value = "sys_schedule_job_log", comment = "定时任务日志")
 public class ScheduleJobLogEntity implements Serializable {
     private static final long serialVersionUID = 1L;
 

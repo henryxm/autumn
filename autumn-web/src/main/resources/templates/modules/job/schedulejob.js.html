@@ -1,18 +1,19 @@
 $(function () {
     $("#jqGrid").jqGrid({
-        url: baseURL + 'sys/schedule/list',
+        url: baseURL + 'job/schedulejob/list',
         datatype: "json",
         colModel: [			
-			{ label: '任务ID', name: 'jobId', width: 60, key: true },
-			{ label: 'bean名称', name: 'beanName', width: 100 },
-			{ label: '方法名称', name: 'methodName', width: 100 },
-			{ label: '参数', name: 'params', width: 100 },
-			{ label: 'cron表达式 ', name: 'cronExpression', width: 100 },
-			{ label: '备注 ', name: 'remark', width: 100 },
-			{ label: '状态', name: 'status', width: 60, formatter: function(value, options, row){
+			{ label: '${lang.job_schedulejob_column_job_id}', name: 'jobId', width: 60, key: true },
+			{ label: '${lang.job_schedulejob_column_bean_name}', name: 'beanName', width: 100 },
+			{ label: '${lang.job_schedulejob_column_method_name}', name: 'methodName', width: 100 },
+			{ label: '${lang.job_schedulejob_column_params}', name: 'params', width: 100 },
+			{ label: '${lang.job_schedulejob_column_cron_expression} ', name: 'cronExpression', width: 100 },
+			{ label: '${lang.job_schedulejob_column_mode}', name: 'mode', index: 'mode', width: 80 },
+			{ label: '${lang.job_schedulejob_column_remark} ', name: 'remark', width: 100 },
+			{ label: '${lang.job_schedulejob_column_status}', name: 'status', width: 60, formatter: function(value, options, row){
 				return value === 0 ? 
-					'<span class="label label-success">正常</span>' : 
-					'<span class="label label-danger">暂停</span>';
+					'<span class="label label-success">${lang.sys_string_normal}</span>' :
+					'<span class="label label-danger">${lang.sys_string_suspend}</span>';
 			}}
         ],
 		viewrecords: true,
@@ -50,7 +51,7 @@ var vm = new Vue({
 		},
 		showList: true,
 		title: null,
-		schedule: {}
+		scheduleJob: {}
 	},
 	methods: {
 		query: function () {
@@ -58,8 +59,8 @@ var vm = new Vue({
 		},
 		add: function(){
 			vm.showList = false;
-			vm.title = "新增";
-			vm.schedule = {};
+			vm.title = "${lang.sys_string_add}";
+			vm.scheduleJob = {};
 		},
 		update: function () {
 			var jobId = getSelectedRow();
@@ -67,22 +68,22 @@ var vm = new Vue({
 				return ;
 			}
 			
-			$.get(baseURL + "sys/schedule/info/"+jobId, function(r){
+			$.get(baseURL + "job/schedulejob/info/"+jobId, function(r){
 				vm.showList = false;
-                vm.title = "修改";
-				vm.schedule = r.schedule;
+                vm.title = "${lang.sys_string_change}";
+				vm.scheduleJob = r.scheduleJob;
 			});
 		},
 		saveOrUpdate: function (event) {
-			var url = vm.schedule.jobId == null ? "sys/schedule/save" : "sys/schedule/update";
+			var url = vm.scheduleJob.jobId == null ? "job/schedulejob/save" : "job/schedulejob/update";
 			$.ajax({
 				type: "POST",
 			    url: baseURL + url,
                 contentType: "application/json",
-			    data: JSON.stringify(vm.schedule),
+			    data: JSON.stringify(vm.scheduleJob),
 			    success: function(r){
 			    	if(r.code === 0){
-						alert('操作成功', function(index){
+						alert('${lang.sys_string_successful}', function(index){
 							vm.reload();
 						});
 					}else{
@@ -97,15 +98,15 @@ var vm = new Vue({
 				return ;
 			}
 			
-			confirm('确定要删除选中的记录？', function(){
+			confirm('${lang.sys_string_are_sure_to_delete}？', function(){
 				$.ajax({
 					type: "POST",
-				    url: baseURL + "sys/schedule/delete",
+				    url: baseURL + "job/schedulejob/delete",
                     contentType: "application/json",
 				    data: JSON.stringify(jobIds),
 				    success: function(r){
 						if(r.code == 0){
-							alert('操作成功', function(index){
+							alert('${lang.sys_string_successful}', function(index){
 								vm.reload();
 							});
 						}else{
@@ -121,15 +122,15 @@ var vm = new Vue({
 				return ;
 			}
 			
-			confirm('确定要暂停选中的记录？', function(){
+			confirm('${lang.sys_string_are_sure_to_pause}？', function(){
 				$.ajax({
 					type: "POST",
-				    url: baseURL + "sys/schedule/pause",
+				    url: baseURL + "job/schedulejob/pause",
                     contentType: "application/json",
 				    data: JSON.stringify(jobIds),
 				    success: function(r){
 						if(r.code == 0){
-							alert('操作成功', function(index){
+							alert('${lang.sys_string_successful}', function(index){
 								vm.reload();
 							});
 						}else{
@@ -145,15 +146,15 @@ var vm = new Vue({
 				return ;
 			}
 			
-			confirm('确定要恢复选中的记录？', function(){
+			confirm('${lang.sys_string_are_sure_to_resume}？', function(){
 				$.ajax({
 					type: "POST",
-				    url: baseURL + "sys/schedule/resume",
+				    url: baseURL + "job/schedulejob/resume",
                     contentType: "application/json",
 				    data: JSON.stringify(jobIds),
 				    success: function(r){
 						if(r.code == 0){
-							alert('操作成功', function(index){
+							alert('${lang.sys_string_successful}', function(index){
 								vm.reload();
 							});
 						}else{
@@ -169,15 +170,15 @@ var vm = new Vue({
 				return ;
 			}
 			
-			confirm('确定要立即执行选中的记录？', function(){
+			confirm('${lang.sys_string_are_sure_to_execute}？', function(){
 				$.ajax({
 					type: "POST",
-				    url: baseURL + "sys/schedule/run",
+				    url: baseURL + "job/schedulejob/run",
                     contentType: "application/json",
 				    data: JSON.stringify(jobIds),
 				    success: function(r){
 						if(r.code == 0){
-							alert('操作成功', function(index){
+							alert('${lang.sys_string_successful}', function(index){
 								vm.reload();
 							});
 						}else{

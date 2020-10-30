@@ -26,6 +26,6 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface ScheduleJobLogDao extends BaseMapper<ScheduleJobLogEntity> {
 
-    @Delete("truncate table schedule_job_log")
+    @Delete("truncate table sys_schedule_job_log")
     void clear();
 }

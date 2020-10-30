@@ -119,6 +119,7 @@ public class LanguageService extends LanguageServiceGen implements PostLoad {
         addLanguageColumnItem("sys_string_lookup", "查看", "Look up");
         addLanguageColumnItem("sys_string_suspend", "暂停", "Suspend");
         addLanguageColumnItem("sys_string_resume", "恢复", "Resume");
+        addLanguageColumnItem("sys_string_normal", "正常", "Normal");
         addLanguageColumnItem("sys_string_immediate_execution", "立即执行", "Immediate execution");
         addLanguageColumnItem("sys_string_log_list", "日志列表", "Log list");
         addLanguageColumnItem("sys_string_config_management", "参数管理", "Config management");
@@ -126,18 +127,15 @@ public class LanguageService extends LanguageServiceGen implements PostLoad {
         addLanguageColumnItem("sys_string_file_upload", "文件上传", "File upload");
         addLanguageColumnItem("sys_string_department_management", "部门管理", "Department management");
         addLanguageColumnItem("sys_string_dictionary_management", "字典管理", "Dictionary management");
-
         addLanguageColumnItem("sys_string_code_generator", "代码生成", "Code generator");
         addLanguageColumnItem("sys_string_generate", "生成", "generate");
         addLanguageColumnItem("sys_string_generator_solution", "生成方案", "Generator solution");
         addLanguageColumnItem("sys_string_select_generator_solution", "选择生成方案", "Select generator solution");
-
         addLanguageColumnItem("sys_string_table_name", "表名", "Table name");
         addLanguageColumnItem("sys_string_engine", "引擎", "Engine");
         addLanguageColumnItem("sys_string_table_comment", "表备注", "Table comment");
         addLanguageColumnItem("sys_string_create_time", "创建时间", "Create time");
         addLanguageColumnItem("sys_string_query", "查询", "Query");
-
         addLanguageColumnItem("sys_string_select_language", "请选择语言", "Please select language");
         addLanguageColumnItem("sys_string_modify_password", "修改密码", "Modify password");
         addLanguageColumnItem("sys_string_navigation_menu", "导航菜单", "Navigation menu");
@@ -156,8 +154,15 @@ public class LanguageService extends LanguageServiceGen implements PostLoad {
         addLanguageColumnItem("sys_string_cancel", "取消", "Cancel");
         addLanguageColumnItem("sys_string_delete", "删除", "Delete");
         addLanguageColumnItem("sys_string_back", "返回", "Back");
+        addLanguageColumnItem("sys_string_success", "成功", "Success");
+        addLanguageColumnItem("sys_string_fail", "失败", "Fail");
+        addLanguageColumnItem("sys_string_fail_message", "失败信息", "Fail message");
         addLanguageColumnItem("sys_string_successful", "操作成功", "Successful");
         addLanguageColumnItem("sys_string_are_sure_to_delete", "确定要删除选中的记录", "Are you sure to delete the selected record");
+        addLanguageColumnItem("sys_string_are_sure_to_pause", "确定要暂停选中的记录", "Are you sure to pause the selected record");
+        addLanguageColumnItem("sys_string_are_sure_to_resume", "确定要恢复选中的记录", "Are you sure to resume the selected record");
+        addLanguageColumnItem("sys_string_are_sure_to_execute", "确定要立即执行选中的记录", "Are you sure to execute the selected record");
+
         addLanguageColumnItem();
         postLoadFactory.register(this);
     }

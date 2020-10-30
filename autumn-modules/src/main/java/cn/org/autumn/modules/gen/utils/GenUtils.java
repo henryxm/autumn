@@ -31,6 +31,7 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.util.*;
 import java.util.zip.ZipEntry;
+import java.util.zip.ZipException;
 import java.util.zip.ZipOutputStream;
 
 /**
@@ -53,33 +54,33 @@ public class GenUtils {
 
     public static void generatorCode(TableInfo tableInfo, GenTypeWrapper wrapper, ZipOutputStream zip) {
         Properties prop = new Properties();
-        prop.setProperty("resource.loader" , "class");
-        prop.setProperty("class.resource.loader.class" , "org.apache.velocity.runtime.resource.loader.ClasspathResourceLoader");
+        prop.setProperty("resource.loader", "class");
+        prop.setProperty("class.resource.loader.class", "org.apache.velocity.runtime.resource.loader.ClasspathResourceLoader");
         Velocity.init(prop);
 
         String mainPath = wrapper.getEntity().getRootPackage();
         mainPath = StringUtils.isBlank(mainPath) ? "cn.org.autumn" : mainPath;
 
         Map<String, Object> map = new HashMap<>();
-        map.put("tableName" , tableInfo.getName());
-        map.put("comment" , tableInfo.getComment());
-        map.put("pk" , tableInfo.getPk());
-        map.put("className" , tableInfo.getClassName());
-        map.put("classname" , tableInfo.getClassname());
-        map.put("pathName" , tableInfo.getClassname().toLowerCase());
-        map.put("columns" , tableInfo.getColumns());
-        map.put("uniqueKey" , tableInfo.buildUniqueKey());
-        map.put("hasBigDecimal" , tableInfo.getHasBigDecimal());
-        map.put("mainPath" , mainPath);
-        map.put("package" , wrapper.getModulePackage());
-        map.put("moduleName" , wrapper.getModuleName());
-        map.put("moduleText" , wrapper.getModuleText());
-        map.put("upperModuleName" , HumpConvert.toFirstStringUpper(wrapper.getModuleName()));
-        map.put("author" , wrapper.getAuthorName());
-        map.put("email" , wrapper.getEmail());
-        map.put("moduleId" , wrapper.getModuleId());
-        map.put("lang" , "lang.");
-        map.put("datetime" , DateUtils.format(new Date(), DateUtils.DATE_TIME_PATTERN));
+        map.put("tableName", tableInfo.getName());
+        map.put("comment", tableInfo.getComment());
+        map.put("pk", tableInfo.getPk());
+        map.put("className", tableInfo.getClassName());
+        map.put("classname", tableInfo.getClassname());
+        map.put("pathName", tableInfo.getClassname().toLowerCase());
+        map.put("columns", tableInfo.getColumns());
+        map.put("uniqueKey", tableInfo.buildUniqueKey());
+        map.put("hasBigDecimal", tableInfo.getHasBigDecimal());
+        map.put("mainPath", mainPath);
+        map.put("package", wrapper.getModulePackage());
+        map.put("moduleName", wrapper.getModuleName());
+        map.put("moduleText", wrapper.getModuleText());
+        map.put("upperModuleName", HumpConvert.toFirstStringUpper(wrapper.getModuleName()));
+        map.put("author", wrapper.getAuthorName());
+        map.put("email", wrapper.getEmail());
+        map.put("moduleId", wrapper.getModuleId());
+        map.put("lang", "lang.");
+        map.put("datetime", DateUtils.format(new Date(), DateUtils.DATE_TIME_PATTERN));
         VelocityContext context = new VelocityContext(map);
 
         //获取模板列表
@@ -96,6 +97,9 @@ public class GenUtils {
                 IOUtils.write(sw.toString(), zip, "UTF-8");
                 IOUtils.closeQuietly(sw);
                 zip.closeEntry();
+            } catch (ZipException e) {
+                if (null != e.getMessage() && e.getMessage().contains("duplicate entry"))
+                    continue;
             } catch (IOException e) {
                 throw new AException("渲染模板失败，表名：" + tableInfo.getName(), e);
             }
@@ -108,7 +112,7 @@ public class GenUtils {
     public static String getFileName(String template, String className, String packageName, String moduleName) {
         String packagePath = "main" + File.separator + "java" + File.separator;
         if (StringUtils.isNotBlank(packageName)) {
-            packagePath += packageName.replace("." , File.separator) + File.separator + moduleName + File.separator;
+            packagePath += packageName.replace(".", File.separator) + File.separator + moduleName + File.separator;
         }
 
         if (template.contains("Entity.java.vm")) {

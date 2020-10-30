@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>${lang.job_schedulejoblog_table_comment}</title>
+	<#include "/header.html">
+</head>
+<body>
+<div id="rrapp" v-cloak>
+    <div v-show="showList">
+        <div class="grid-btn">
+            <div class="form-group col-sm-2">
+                <input type="text" class="form-control" v-model="jobId" @keyup.enter="query" placeholder="${lang.job_schedulejob_column_job_id}">
+            </div>
+            <a class="btn btn-default" @click="query">${lang.sys_string_query}</a> &nbsp;&nbsp;
+			<#if shiro.hasPermission("job:schedulejoblog:save")>
+            <a class="btn btn-primary" @click="add"><i class="fa fa-plus"></i>&nbsp;${lang.sys_string_add}</a>
+			</#if>
+			<#if shiro.hasPermission("job:schedulejoblog:update")>
+            <a class="btn btn-primary" @click="update"><i class="fa fa-pencil-square-o"></i>&nbsp;${lang.sys_string_change}</a>
+			</#if>
+			<#if shiro.hasPermission("job:schedulejoblog:delete")>
+            <a class="btn btn-primary" @click="del"><i class="fa fa-trash-o"></i>&nbsp;${lang.sys_string_delete}</a>
+			</#if>
+            &nbsp;&nbsp;<input type="button" class="btn btn-warning" @click="back" value="${lang.sys_string_back}"/>
+        </div>
+        <table id="jqGrid"></table>
+        <div id="jqGridPager"></div>
+    </div>
+
+    <div v-show="!showList" class="panel panel-default">
+        <div class="panel-heading">{{title}}</div>
+        <form class="form-horizontal">
+                    <div class="form-group">
+                        <div class="col-sm-2 control-label">${lang.job_schedulejoblog_column_job_id}</div>
+                        <div class="col-sm-10">
+                            <input type="text" class="form-control" v-model="scheduleJobLog.jobId" placeholder="${lang.job_schedulejoblog_column_job_id}"/>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="col-sm-2 control-label">${lang.job_schedulejoblog_column_bean_name}</div>
+                        <div class="col-sm-10">
+                            <input type="text" class="form-control" v-model="scheduleJobLog.beanName" placeholder="${lang.job_schedulejoblog_column_bean_name}"/>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="col-sm-2 control-label">${lang.job_schedulejoblog_column_method_name}</div>
+                        <div class="col-sm-10">
+                            <input type="text" class="form-control" v-model="scheduleJobLog.methodName" placeholder="${lang.job_schedulejoblog_column_method_name}"/>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="col-sm-2 control-label">${lang.job_schedulejoblog_column_params}</div>
+                        <div class="col-sm-10">
+                            <input type="text" class="form-control" v-model="scheduleJobLog.params" placeholder="${lang.job_schedulejoblog_column_params}"/>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="col-sm-2 control-label">${lang.job_schedulejoblog_column_status}</div>
+                        <div class="col-sm-10">
+                            <input type="text" class="form-control" v-model="scheduleJobLog.status" placeholder="${lang.job_schedulejoblog_column_status}"/>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="col-sm-2 control-label">${lang.job_schedulejoblog_column_error}</div>
+                        <div class="col-sm-10">
+                            <input type="text" class="form-control" v-model="scheduleJobLog.error" placeholder="${lang.job_schedulejoblog_column_error}"/>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="col-sm-2 control-label">${lang.job_schedulejoblog_column_times}</div>
+                        <div class="col-sm-10">
+                            <input type="text" class="form-control" v-model="scheduleJobLog.times" placeholder="${lang.job_schedulejoblog_column_times}"/>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="col-sm-2 control-label">${lang.job_schedulejoblog_column_create_time}</div>
+                        <div class="col-sm-10">
+                            <input type="text" class="form-control" v-model="scheduleJobLog.createTime" placeholder="${lang.job_schedulejoblog_column_create_time}"/>
+                        </div>
+                    </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label"></div>
+                <input type="button" class="btn btn-primary" @click="saveOrUpdate" value="${lang.sys_string_confirm}"/>
+                &nbsp;&nbsp;<input type="button" class="btn btn-warning" @click="reload" value="${lang.sys_string_back}"/>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="${request.contextPath}/modules/job/schedulejoblog.js?_${.now?long}"></script>
+</body>
+</html>

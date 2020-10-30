@@ -28,7 +28,7 @@ import java.util.Map;
 @Repository
 public interface ScheduleJobDao extends BaseMapper<ScheduleJobEntity> {
 
-    @Update("UPDATE schedule_job SET status = #{status} where job_id IN (#{jobIds})")
+    @Update("UPDATE sys_schedule_job SET status = #{status} where job_id IN (#{jobIds})")
     @Lang(SelectInLangDriver.class)
     int updateBatch(@Param("jobIds") Long[] jobIds, @Param("status") int status);
 }
