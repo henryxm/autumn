@@ -6,7 +6,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.springframework.stereotype.Repository;
 
 /**
- * 例子
+ * 测试例子
  * 
  * @author Shaohua Xu
  * @email henryxm@163.com

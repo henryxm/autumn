@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service;
 import cn.org.autumn.modules.lan.service.LanguageService;
 
 /**
- * 例子
+ * 测试例子
  *
  * @author Shaohua Xu
  * @email henryxm@163.com
@@ -34,7 +34,7 @@ public class TestMenu {
             return;
         Long id = 0L;
         String[] _m = new String[]
-                {null, "0" , "测试" , "" , "" , "0" , "fa fa-address-card-o" , "0" , test_menu, test_menu + "_text"};
+                {null, "0", "测试", "", "", "0", "fa fa-address-card-o", "0", test_menu, test_menu + "_text"};
         SysMenuEntity entity = sysMenuService.get(sysMenuService.find(_m));
         if (null == entity) {
             SysMenuEntity sysMenu = sysMenuService.from(_m);
@@ -44,6 +44,6 @@ public class TestMenu {
     }
 
     public void addLanguageColumnItem() {
-        languageService.addLanguageColumnItem(test_menu + "_text", "测试");
+        languageService.addLanguageColumnItem(test_menu + "_text", "测试", "Testing");
     }
 }

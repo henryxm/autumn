@@ -8,7 +8,7 @@ import cn.org.autumn.modules.test.controller.gen.DemoExampleControllerGen;
 
 
 /**
- * 例子
+ * 测试例子
  *
  * @author Shaohua Xu
  * @email henryxm@163.com

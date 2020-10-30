@@ -103,18 +103,24 @@ public class SysMenuController extends AbstractController {
      */
     @RequestMapping("/select")
     @RequiresPermissions("sys:menu:select")
-    public R select() {
+    public R select(HttpServletRequest request) {
         //查询列表数据
         List<SysMenuEntity> menuList = sysMenuService.queryNotButtonList();
-
         //添加顶级菜单
         SysMenuEntity root = new SysMenuEntity();
         root.setMenuId(0L);
+        root.setLanguageName("sys_string_root_menu");
         root.setName("一级菜单");
         root.setParentId(-1L);
         root.setOpen(true);
         menuList.add(root);
-
+        Locale locale = LanguageInterceptor.getLocale(request);
+        Map<String, String> language = languageService.getLanguage(locale);
+        if (null != language && language.size() > 0) {
+            for (SysMenuEntity sysMenuEntity : menuList) {
+                r(sysMenuEntity, language);
+            }
+        }
         return R.ok().put("menuList", menuList);
     }
 

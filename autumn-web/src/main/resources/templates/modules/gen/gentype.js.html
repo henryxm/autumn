@@ -4,15 +4,15 @@ $(function () {
         datatype: "json",
         colModel: [			
 			{ label: 'id', name: 'id', index: 'id', width: 50, key: true },
-			{ label: '数据库类型', name: 'databaseType', index: 'database_type', width: 80 }, 			
-			{ label: '程序根包名', name: 'rootPackage', index: 'root_package', width: 80 }, 			
-			{ label: '模块根包名', name: 'modulePackage', index: 'module_package', width: 80 }, 			
-			{ label: '模块名(用于包名)', name: 'moduleName', index: 'module_name', width: 80 }, 			
-			{ label: '模块名称(用于目录)', name: 'moduleText', index: 'module_text', width: 80 }, 			
-			{ label: '作者名字', name: 'authorName', index: 'author_name', width: 80 }, 			
-			{ label: '作者邮箱', name: 'email', index: 'email', width: 80 }, 			
-			{ label: '表前缀', name: 'tablePrefix', index: 'table_prefix', width: 80 }, 			
-			{ label: '表字段映射', name: 'mappingString', index: 'mapping_string', width: 80 }, 			
+			{ label: '${lang.gen_gentype_column_database_type}', name: 'databaseType', index: 'database_type', width: 80 },
+			{ label: '${lang.gen_gentype_column_root_package}', name: 'rootPackage', index: 'root_package', width: 80 },
+			{ label: '${lang.gen_gentype_column_module_package}', name: 'modulePackage', index: 'module_package', width: 80 },
+			{ label: '${lang.gen_gentype_column_module_name}', name: 'moduleName', index: 'module_name', width: 80 },
+			{ label: '${lang.gen_gentype_column_module_text}', name: 'moduleText', index: 'module_text', width: 80 },
+			{ label: '${lang.gen_gentype_column_author_name}', name: 'authorName', index: 'author_name', width: 80 },
+			{ label: '${lang.gen_gentype_column_email}', name: 'email', index: 'email', width: 80 },
+			{ label: '${lang.gen_gentype_column_table_prefix}', name: 'tablePrefix', index: 'table_prefix', width: 80 },
+			{ label: '${lang.gen_gentype_column_mapping_string}', name: 'mappingString', index: 'mapping_string', width: 80 },
         ],
 		viewrecords: true,
         height: 385,
@@ -82,7 +82,7 @@ var vm = new Vue({
 		},
 		add: function(){
 			vm.showList = false;
-			vm.title = "新增";
+			vm.title = "${lang.sys_string_add}";
 			vm.genType = {};
             vm.getMenu();
 		},
@@ -92,7 +92,7 @@ var vm = new Vue({
 				return ;
 			}
 			vm.showList = false;
-            vm.title = "修改";
+            vm.title = "${lang.sys_string_change}";
             
             vm.getInfo(id);
             vm.getMenu();
@@ -106,7 +106,7 @@ var vm = new Vue({
 			    data: JSON.stringify(vm.genType),
 			    success: function(r){
 			    	if(r.code === 0){
-						alert('操作成功', function(index){
+						alert('${lang.sys_string_successful}', function(index){
 							vm.reload();
 						});
 					}else{
@@ -121,7 +121,7 @@ var vm = new Vue({
 				return ;
 			}
 			
-			confirm('确定要删除选中的记录？', function(){
+			confirm('${lang.sys_string_are_sure_to_delete}？', function(){
 				$.ajax({
 					type: "POST",
 				    url: baseURL + "gen/gentype/delete",
@@ -129,7 +129,7 @@ var vm = new Vue({
 				    data: JSON.stringify(ids),
 				    success: function(r){
 						if(r.code == 0){
-							alert('操作成功', function(index){
+							alert('${lang.sys_string_successful}', function(index){
 								$("#jqGrid").trigger("reloadGrid");
 							});
 						}else{
@@ -156,12 +156,12 @@ var vm = new Vue({
                 type: 1,
                 offset: '50px',
                 skin: 'layui-layer-molv',
-                title: "选择菜单",
+                title: "${lang.sys_string_select_menu}",
                 area: ['300px', '450px'],
                 shade: 0,
                 shadeClose: false,
                 content: jQuery("#menuLayer"),
-                btn: ['确定', '取消'],
+                btn: ['${lang.sys_string_confirm}', '${lang.sys_string_cancel}'],
                 btn1: function (index) {
                     var node = ztree.getSelectedNodes();
                     //选择上级菜单

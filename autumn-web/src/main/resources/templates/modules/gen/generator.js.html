@@ -3,10 +3,10 @@ $(function () {
         url: baseURL +'gen/generator/list',
         datatype: "json",
         colModel: [			
-			{ label: '表名', name: 'tableName', width: 100, key: true },
-			{ label: 'Engine', name: 'engine', width: 70},
-			{ label: '表备注', name: 'tableComment', width: 100 },
-			{ label: '创建时间', name: 'createTime', width: 100 }
+			{ label: '${lang.sys_string_table_name}', name: 'tableName', width: 100, key: true },
+			{ label: '${lang.sys_string_engine}', name: 'engine', width: 70},
+			{ label: '${lang.sys_string_table_comment}', name: 'tableComment', width: 100 },
+			{ label: '${lang.sys_string_create_time}', name: 'createTime', width: 100 }
         ],
 		viewrecords: true,
         height: 385,
@@ -41,7 +41,7 @@ var vm = new Vue({
 		q:{
 			tableName: null,
             genType:null,
-            moduleText:"选择生成方案",
+            moduleText:"${lang.sys_string_select_generator_solution}",
             genId:null,
             genTypeList:[],
 		}
@@ -55,7 +55,7 @@ var vm = new Vue({
 		},
 		generator: function() {
 		    if(null == vm.q.genId){
-		        alert("请选择生成方案");
+		        alert("${lang.sys_string_select_generator_solution}");
 		        return;
             }
 

@@ -2,8 +2,8 @@ package cn.org.autumn.modules.gen.service;
 
 import cn.org.autumn.modules.gen.entity.GenTypeEntity;
 import cn.org.autumn.modules.gen.entity.GenTypeWrapper;
-import cn.org.autumn.modules.gen.ex.GenTypeExService;
 import cn.org.autumn.modules.gen.utils.GenUtils;
+import cn.org.autumn.modules.lan.service.LanguageService;
 import cn.org.autumn.modules.sys.entity.SysMenuEntity;
 import cn.org.autumn.modules.sys.service.SysMenuService;
 import cn.org.autumn.table.TableInit;
@@ -42,10 +42,13 @@ public class GeneratorService {
     private TableDao generatorDao;
 
     @Autowired
-    private GenTypeExService genTypeExService;
+    private GenTypeService genTypeService;
 
     @Autowired
     private TableInit tableInit;
+
+    @Autowired
+    protected LanguageService languageService;
 
     private GenTypeWrapper wrapper;
 
@@ -125,7 +128,7 @@ public class GeneratorService {
     public byte[] generatorCode(String[] tableNames, String genId) {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         ZipOutputStream zip = new ZipOutputStream(outputStream);
-        GenTypeEntity entity = genTypeExService.selectById(genId);
+        GenTypeEntity entity = genTypeService.selectById(genId);
         wrapper = new GenTypeWrapper(entity);
         for (String tableName : tableNames) {
             TableInfo tableInfo = build(tableName, wrapper);

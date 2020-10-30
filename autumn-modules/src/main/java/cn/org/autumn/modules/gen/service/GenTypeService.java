@@ -1,110 +1,86 @@
 package cn.org.autumn.modules.gen.service;
 
-import cn.org.autumn.table.TableInit;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
-import java.util.Map;
-
-import com.baomidou.mybatisplus.mapper.EntityWrapper;
-import com.baomidou.mybatisplus.plugins.Page;
-import com.baomidou.mybatisplus.service.impl.ServiceImpl;
-import cn.org.autumn.utils.PageUtils;
-import cn.org.autumn.utils.Query;
-
-import cn.org.autumn.modules.gen.dao.GenTypeDao;
 import cn.org.autumn.modules.gen.entity.GenTypeEntity;
+import cn.org.autumn.modules.gen.entity.GenTypeWrapper;
+import cn.org.autumn.modules.gen.service.gen.GenTypeServiceGen;
+import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
 
-import cn.org.autumn.modules.sys.entity.SysMenuEntity;
-import cn.org.autumn.modules.sys.service.SysMenuService;
+@Service
+public class GenTypeService extends GenTypeServiceGen {
 
-/**
- * 代码生成设置控制器
- *
- * @author Shaohua Xu
- * @email henryxm@163.com
- * @date 2018-10
- */
-
-@Service("genTypeService")
-public class GenTypeService extends ServiceImpl<GenTypeDao, GenTypeEntity> {
-
-    protected static final String NULL = null;
-
-    @Autowired
-    protected SysMenuService sysMenuService;
-
-    @Autowired
-    protected TableInit tableInit;
-
-    public PageUtils queryPage(Map<String, Object> params) {
-        Page<GenTypeEntity> page = this.selectPage(
-                new Query<GenTypeEntity>(params).getPage(),
-                new EntityWrapper<GenTypeEntity>()
-        );
-
-        return new PageUtils(page);
+    @Override
+    public String ico(){
+        return super.ico();
     }
 
-    /**
-     * need implement it in the subclass.
-     *
-     * @return
-     */
     public int menuOrder() {
-        return 0;
+        return 14;
     }
 
-    /**
-     * need implement it in the subclass.
-     *
-     * @return
-     */
     public int parentMenu() {
         return 1;
     }
 
-    private String order() {
-        return String.valueOf(menuOrder());
-    }
-
-    private String parent() {
-        return String.valueOf(parentMenu());
-    }
-
-    /**
-     * Remove the comment for @PostConstruct, it will automaticlly to init data when startup.
-     * Please do it in the subclass, since the code is generated.
-     */
-    //@PostConstruct
+    @PostConstruct
     public void init() {
+        super.init();
         if (!tableInit.init)
             return;
-        Long id = 0L;
-        String[] _m = new String[]
-                {null, parent(), "生成方案", "modules/gen/gentype", "gen:gentype:list,gen:gentype:info,gen:gentype:save,gen:gentype:update,gen:gentype:delete", "1", "fa fa-file-code-o", order(), "", "sys_string_generator_solution"};
-        SysMenuEntity sysMenu = sysMenuService.from(_m);
-        SysMenuEntity entity = sysMenuService.get(sysMenu);
-        if (null == entity) {
-            int ret = sysMenuService.put(sysMenu);
-            if (1 == ret)
-                id = sysMenu.getMenuId();
-        } else
-            id = entity.getMenuId();
-        String[][] menus = new String[][]{
-                {null, id + "", "查看", null, "gen:gentype:list,gen:gentype:info", "2", null, order(), "", "sys_string_lookup"},
-                {null, id + "", "新增", null, "gen:gentype:save", "2", null, order(), "", "sys_string_add"},
-                {null, id + "", "修改", null, "gen:gentype:update", "2", null, order(), "", "sys_string_change"},
-                {null, id + "", "删除", null, "gen:gentype:delete", "2", null, order(), "", "sys_string_delete"},
+        String[][] mapping = new String[][]{
+                {NULL, "mysql", "cn.org.autumn", "cn.org.autumn.modules", "sys", "系统管理", "Shaohua Xu", "henryxm@163.com", "tb",
+                        "tinyint=Integer,smallint=Integer,mediumint=Integer,int=Integer,integer=Integer,bigint=Long,float=Float," +
+                                "double=Double,decimal=BigDecimal,bit=Boolean,char=String,varchar=String,tinytext=String,text=String," +
+                                "mediumtext=String,longtext=String,date=Date,datetime=Date,timestamp=Date"},
         };
-        for (String[] menu : menus) {
-            sysMenu = sysMenuService.from(menu);
-            entity = sysMenuService.get(sysMenu);
-            if (null == entity) {
-                sysMenuService.put(sysMenu);
-            }
+
+        for (String[] map : mapping) {
+            GenTypeEntity entity = new GenTypeEntity();
+            String temp = map[0];
+            if (NULL != temp)
+                entity.setId(Long.valueOf(temp));
+            temp = map[1];
+            if (NULL != temp)
+                entity.setDatabaseType(temp);
+            temp = map[2];
+            if (NULL != temp)
+                entity.setRootPackage(temp);
+            temp = map[3];
+            if (NULL != temp)
+                entity.setModulePackage(temp);
+            temp = map[4];
+            if (NULL != temp)
+                entity.setModuleName(temp);
+            temp = map[5];
+            if (NULL != temp)
+                entity.setModuleText(temp);
+            temp = map[6];
+            if (NULL != temp)
+                entity.setAuthorName(temp);
+            temp = map[7];
+            if (NULL != temp)
+                entity.setEmail(temp);
+            temp = map[8];
+            if (NULL != temp)
+                entity.setTablePrefix(temp);
+            temp = map[9];
+            if (NULL != temp)
+                entity.setMappingString(temp);
+            GenTypeEntity et = baseMapper.selectOne(entity);
+            if (null == et)
+                baseMapper.insert(entity);
         }
+    }
+
+    public GenTypeWrapper getGenType(String databaseType) {
+        GenTypeEntity entity = new GenTypeEntity();
+        entity.setDatabaseType(databaseType);
+        entity = baseMapper.selectOne(entity);
+        if (null != entity) {
+            GenTypeWrapper wrapper = new GenTypeWrapper(entity);
+            return wrapper;
+        }
+        return null;
     }
 }

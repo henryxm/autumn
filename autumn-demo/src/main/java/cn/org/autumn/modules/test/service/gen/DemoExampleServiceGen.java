@@ -23,7 +23,7 @@ import cn.org.autumn.modules.sys.service.SysMenuService;
 import cn.org.autumn.modules.lan.service.LanguageService;
 
 /**
- * 例子控制器
+ * 测试例子控制器
  *
  * @author Shaohua Xu
  * @email henryxm@163.com
@@ -101,7 +101,7 @@ public class DemoExampleServiceGen extends ServiceImpl<DemoExampleDao, DemoExamp
             return;
         Long id = 0L;
         String[] _m = new String[]
-                {null, parent(), "例子", "modules/test/demoexample", "test:demoexample:list,test:demoexample:info,test:demoexample:save,test:demoexample:update,test:demoexample:delete", "1", "fa " + ico(), order(), "", "test_demoexample_table_comment"};
+                {null, parent(), "测试例子", "modules/test/demoexample", "test:demoexample:list,test:demoexample:info,test:demoexample:save,test:demoexample:update,test:demoexample:delete", "1", "fa " + ico(), order(), "", "test_demoexample_table_comment"};
         SysMenuEntity sysMenu = sysMenuService.from(_m);
         SysMenuEntity entity = sysMenuService.get(sysMenu);
         if (null == entity) {
@@ -127,8 +127,8 @@ public class DemoExampleServiceGen extends ServiceImpl<DemoExampleDao, DemoExamp
     }
 
     public void addLanguageColumnItem() {
-        languageService.addLanguageColumnItem("test_demoexample_table_comment", "例子");
+        languageService.addLanguageColumnItem("test_demoexample_table_comment", "测试例子","Test example");
         languageService.addLanguageColumnItem("test_demoexample_column_id", "ID");
-        languageService.addLanguageColumnItem("test_demoexample_column_example", "example");
+        languageService.addLanguageColumnItem("test_demoexample_column_example", "例子字段","Example column");
     }
 }

@@ -1,4 +1,4 @@
-package cn.org.autumn.modules.test.controller.gen;
+package cn.org.autumn.modules.gen.controller.gen;
 
 import java.util.Arrays;
 import java.util.Date;
@@ -13,32 +13,32 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import cn.org.autumn.modules.test.entity.DemoExampleEntity;
-import cn.org.autumn.modules.test.service.DemoExampleService;
+import cn.org.autumn.modules.gen.entity.GenTypeEntity;
+import cn.org.autumn.modules.gen.service.GenTypeService;
 import cn.org.autumn.utils.PageUtils;
 import cn.org.autumn.utils.R;
 
 
 
 /**
- * 测试例子
+ * 生成方案
  *
  * @author Shaohua Xu
  * @email henryxm@163.com
  * @date 2020-10
  */
-public class DemoExampleControllerGen {
+public class GenTypeControllerGen {
 
     @Autowired
-    protected DemoExampleService demoExampleService;
+    protected GenTypeService genTypeService;
 
     /**
      * 列表
      */
     @RequestMapping("/list")
-    @RequiresPermissions("test:demoexample:list")
+    @RequiresPermissions("gen:gentype:list")
     public R list(@RequestParam Map<String, Object> params){
-        PageUtils page = demoExampleService.queryPage(params);
+        PageUtils page = genTypeService.queryPage(params);
         return R.ok().put("page", page);
     }
 
@@ -47,19 +47,19 @@ public class DemoExampleControllerGen {
      * 信息
      */
     @RequestMapping("/info/{id}")
-    @RequiresPermissions("test:demoexample:info")
+    @RequiresPermissions("gen:gentype:info")
     public R info(@PathVariable("id") Long id){
-        DemoExampleEntity demoExample = demoExampleService.selectById(id);
-        return R.ok().put("demoExample", demoExample);
+        GenTypeEntity genType = genTypeService.selectById(id);
+        return R.ok().put("genType", genType);
     }
 
     /**
      * 保存
      */
     @RequestMapping("/save")
-    @RequiresPermissions("test:demoexample:save")
-    public R save(@RequestBody DemoExampleEntity demoExample){
-        demoExampleService.insert(demoExample);
+    @RequiresPermissions("gen:gentype:save")
+    public R save(@RequestBody GenTypeEntity genType){
+        genTypeService.insert(genType);
         return R.ok();
     }
 
@@ -67,10 +67,10 @@ public class DemoExampleControllerGen {
      * 修改
      */
     @RequestMapping("/update")
-    @RequiresPermissions("test:demoexample:update")
-    public R update(@RequestBody DemoExampleEntity demoExample){
-        ValidatorUtils.validateEntity(demoExample);
-        demoExampleService.updateAllColumnById(demoExample);//全部更新
+    @RequiresPermissions("gen:gentype:update")
+    public R update(@RequestBody GenTypeEntity genType){
+        ValidatorUtils.validateEntity(genType);
+        genTypeService.updateAllColumnById(genType);//全部更新
         return R.ok();
     }
 
@@ -78,9 +78,9 @@ public class DemoExampleControllerGen {
      * 删除
      */
     @RequestMapping("/delete")
-    @RequiresPermissions("test:demoexample:delete")
+    @RequiresPermissions("gen:gentype:delete")
     public R delete(@RequestBody Long[] ids){
-        demoExampleService.deleteBatchIds(Arrays.asList(ids));
+        genTypeService.deleteBatchIds(Arrays.asList(ids));
         return R.ok();
     }
 

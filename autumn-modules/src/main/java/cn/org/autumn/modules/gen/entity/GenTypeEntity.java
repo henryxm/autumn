@@ -16,8 +16,8 @@ import java.util.Date;
  * @email henryxm@163.com
  * @date 2018-10
  */
-@TableName("tb_gen_type")
-@Table(value = "tb_gen_type", comment = "代码生成设置")
+@TableName("sys_gen_type")
+@Table(value = "sys_gen_type", comment = "生成方案")
 public class GenTypeEntity implements Serializable {
 	private static final long serialVersionUID = 1L;
 

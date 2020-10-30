@@ -9,7 +9,7 @@ import java.io.Serializable;
 import java.util.Date;
 
 /**
- * 例子
+ * 测试例子
  * 
  * @author Shaohua Xu
  * @email henryxm@163.com
@@ -17,7 +17,7 @@ import java.util.Date;
  */
 
 @TableName("test_demo_example")
-@Table(value = "test_demo_example", comment = "例子")
+@Table(value = "test_demo_example", comment = "测试例子")
 public class DemoExampleEntity implements Serializable {
 	private static final long serialVersionUID = 1L;
 
@@ -28,9 +28,9 @@ public class DemoExampleEntity implements Serializable {
 	@Column(isKey = true, type = "bigint", length = 20, isNull = false, isAutoIncrement = true, comment = "ID")
 	private Long id;
 	/**
-	 * example
+	 * 例子字段
 	 */
-	@Column(comment = "example")
+	@Column(comment = "例子字段")
 	private String example;
 
 	/**
@@ -46,13 +46,13 @@ public class DemoExampleEntity implements Serializable {
 		return id;
 	}
 	/**
-	 * 设置：example
+	 * 设置：例子字段
 	 */
 	public void setExample(String example) {
 		this.example = example;
 	}
 	/**
-	 * 获取：example
+	 * 获取：例子字段
 	 */
 	public String getExample() {
 		return example;

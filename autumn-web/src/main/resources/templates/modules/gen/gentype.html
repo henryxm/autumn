@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>生成方案</title>
+    <title>${lang.gen_gentype_table_comment}</title>
 	<#include "/header.html">
 </head>
 <body>
@@ -9,13 +9,13 @@
     <div v-show="showList">
         <div class="grid-btn">
 			<#if shiro.hasPermission("gen:gentype:save")>
-            <a class="btn btn-primary" @click="add"><i class="fa fa-plus"></i>&nbsp;新增</a>
+            <a class="btn btn-primary" @click="add"><i class="fa fa-plus"></i>&nbsp;${lang.sys_string_add}</a>
 			</#if>
 			<#if shiro.hasPermission("gen:gentype:update")>
-            <a class="btn btn-primary" @click="update"><i class="fa fa-pencil-square-o"></i>&nbsp;修改</a>
+            <a class="btn btn-primary" @click="update"><i class="fa fa-pencil-square-o"></i>&nbsp;${lang.sys_string_change}</a>
 			</#if>
 			<#if shiro.hasPermission("gen:gentype:delete")>
-            <a class="btn btn-primary" @click="del"><i class="fa fa-trash-o"></i>&nbsp;删除</a>
+            <a class="btn btn-primary" @click="del"><i class="fa fa-trash-o"></i>&nbsp;${lang.sys_string_delete}</a>
 			</#if>
         </div>
         <table id="jqGrid"></table>
@@ -26,63 +26,63 @@
         <div class="panel-heading">{{title}}</div>
         <form class="form-horizontal">
                     <div class="form-group">
-                        <div class="col-sm-2 control-label">数据库类型</div>
+                        <div class="col-sm-2 control-label">${lang.gen_gentype_column_database_type}</div>
                         <div class="col-sm-10">
-                            <input type="text" class="form-control" v-model="genType.databaseType" placeholder="数据库类型"/>
+                            <input type="text" class="form-control" v-model="genType.databaseType" placeholder="${lang.gen_gentype_column_database_type}"/>
                         </div>
                     </div>
                     <div class="form-group">
-                        <div class="col-sm-2 control-label">程序根包名</div>
+                        <div class="col-sm-2 control-label">${lang.gen_gentype_column_root_package}</div>
                         <div class="col-sm-10">
-                            <input type="text" class="form-control" v-model="genType.rootPackage" placeholder="程序根包名"/>
+                            <input type="text" class="form-control" v-model="genType.rootPackage" placeholder="${lang.gen_gentype_column_root_package}"/>
                         </div>
                     </div>
                     <div class="form-group">
-                        <div class="col-sm-2 control-label">模块根包名</div>
+                        <div class="col-sm-2 control-label">${lang.gen_gentype_column_module_package}</div>
                         <div class="col-sm-10">
-                            <input type="text" class="form-control" v-model="genType.modulePackage" placeholder="模块根包名"/>
+                            <input type="text" class="form-control" v-model="genType.modulePackage" placeholder="${lang.gen_gentype_column_module_package}"/>
                         </div>
                     </div>
                     <div class="form-group">
-                        <div class="col-sm-2 control-label">模块名(用于包名)</div>
+                        <div class="col-sm-2 control-label">${lang.gen_gentype_column_module_name}</div>
                         <div class="col-sm-10">
-                            <input type="text" class="form-control" v-model="genType.moduleName" placeholder="模块名(用于包名)"/>
+                            <input type="text" class="form-control" v-model="genType.moduleName" placeholder="${lang.gen_gentype_column_module_name}"/>
                         </div>
                     </div>
                     <div class="form-group">
-                        <div class="col-sm-2 control-label">模块名称(用于目录)</div>
+                        <div class="col-sm-2 control-label">${lang.gen_gentype_column_module_text}</div>
                         <div class="col-sm-10">
-                            <input type="text" class="form-control" style="cursor:pointer;" v-model="genType.moduleText" @click="menuTree" readonly="readonly" placeholder="一级菜单"/>
+                            <input type="text" class="form-control" style="cursor:pointer;" v-model="genType.moduleText" @click="menuTree" readonly="readonly" placeholder="${lang.sys_string_root_menu}"/>
                         </div>
                     </div>
                     <div class="form-group">
-                        <div class="col-sm-2 control-label">作者名字</div>
+                        <div class="col-sm-2 control-label">${lang.gen_gentype_column_author_name}</div>
                         <div class="col-sm-10">
-                            <input type="text" class="form-control" v-model="genType.authorName" placeholder="作者名字"/>
+                            <input type="text" class="form-control" v-model="genType.authorName" placeholder="${lang.gen_gentype_column_author_name}"/>
                         </div>
                     </div>
                     <div class="form-group">
-                        <div class="col-sm-2 control-label">作者邮箱</div>
+                        <div class="col-sm-2 control-label">${lang.gen_gentype_column_email}</div>
                         <div class="col-sm-10">
-                            <input type="text" class="form-control" v-model="genType.email" placeholder="作者邮箱"/>
+                            <input type="text" class="form-control" v-model="genType.email" placeholder="${lang.gen_gentype_column_email}"/>
                         </div>
                     </div>
                     <div class="form-group">
-                        <div class="col-sm-2 control-label">表前缀</div>
+                        <div class="col-sm-2 control-label">${lang.gen_gentype_column_table_prefix}</div>
                         <div class="col-sm-10">
-                            <input type="text" class="form-control" v-model="genType.tablePrefix" placeholder="表前缀"/>
+                            <input type="text" class="form-control" v-model="genType.tablePrefix" placeholder="${lang.gen_gentype_column_table_prefix}"/>
                         </div>
                     </div>
                     <div class="form-group">
-                        <div class="col-sm-2 control-label">表字段映射</div>
+                        <div class="col-sm-2 control-label">${lang.gen_gentype_column_mapping_string}</div>
                         <div class="col-sm-10">
-                            <input type="text" class="form-control" v-model="genType.mappingString" placeholder="表字段映射"/>
+                            <input type="text" class="form-control" v-model="genType.mappingString" placeholder="${lang.gen_gentype_column_mapping_string}"/>
                         </div>
                     </div>
             <div class="form-group">
                 <div class="col-sm-2 control-label"></div>
-                <input type="button" class="btn btn-primary" @click="saveOrUpdate" value="确定"/>
-                &nbsp;&nbsp;<input type="button" class="btn btn-warning" @click="reload" value="返回"/>
+                <input type="button" class="btn btn-primary" @click="saveOrUpdate" value="${lang.sys_string_confirm}"/>
+                &nbsp;&nbsp;<input type="button" class="btn btn-warning" @click="reload" value="${lang.sys_string_back}"/>
             </div>
         </form>
     </div>
@@ -93,6 +93,6 @@
     <ul id="menuTree" class="ztree"></ul>
 </div>
 
-<script src="${request.contextPath}/statics/js/modules/gen/gentype.js?_${.now?long}"></script>
+<script src="${request.contextPath}/modules/gen/gentype.js?_${.now?long}"></script>
 </body>
 </html>
