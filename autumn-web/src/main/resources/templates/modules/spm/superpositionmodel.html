@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>${lang.spm_superpositionmodel_table_comment}</title>
+	<#include "/header.html">
+</head>
+<body>
+<div id="rrapp" v-cloak>
+    <div v-show="showList">
+        <div class="grid-btn">
+			<#if shiro.hasPermission("spm:superpositionmodel:save")>
+            <a class="btn btn-primary" @click="add"><i class="fa fa-plus"></i>&nbsp;${lang.sys_string_add}</a>
+			</#if>
+			<#if shiro.hasPermission("spm:superpositionmodel:update")>
+            <a class="btn btn-primary" @click="update"><i class="fa fa-pencil-square-o"></i>&nbsp;${lang.sys_string_change}</a>
+			</#if>
+			<#if shiro.hasPermission("spm:superpositionmodel:delete")>
+            <a class="btn btn-primary" @click="del"><i class="fa fa-trash-o"></i>&nbsp;${lang.sys_string_delete}</a>
+			</#if>
+        </div>
+        <table id="jqGrid"></table>
+        <div id="jqGridPager"></div>
+    </div>
+
+    <div v-show="!showList" class="panel panel-default">
+        <div class="panel-heading">{{title}}</div>
+        <form class="form-horizontal">
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.spm_superpositionmodel_column_site_id}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="superPositionModel.siteId" placeholder="${lang.spm_superpositionmodel_column_site_id}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.spm_superpositionmodel_column_page_id}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="superPositionModel.pageId" placeholder="${lang.spm_superpositionmodel_column_page_id}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.spm_superpositionmodel_column_channel_id}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="superPositionModel.channelId" placeholder="${lang.spm_superpositionmodel_column_channel_id}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.spm_superpositionmodel_column_product_id}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="superPositionModel.productId" placeholder="${lang.spm_superpositionmodel_column_product_id}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.spm_superpositionmodel_column_resource_id}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="superPositionModel.resourceId" placeholder="${lang.spm_superpositionmodel_column_resource_id}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.spm_superpositionmodel_column_need_login}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="superPositionModel.needLogin" placeholder="${lang.spm_superpositionmodel_column_need_login}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label"></div>
+                <input type="button" class="btn btn-primary" @click="saveOrUpdate" value="${lang.sys_string_confirm}"/>
+                &nbsp;&nbsp;<input type="button" class="btn btn-warning" @click="reload" value="${lang.sys_string_back}"/>
+            </div>
+        </form>
+    </div>
+</div>
+<script src="${request.contextPath}/modules/spm/superpositionmodel.js?_${.now?long}"></script>
+</body>
+</html>

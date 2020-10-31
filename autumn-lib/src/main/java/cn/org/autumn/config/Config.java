@@ -1,5 +1,6 @@
 package cn.org.autumn.config;
 
+import org.springframework.context.ApplicationContext;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.Environment;
 
@@ -13,7 +14,7 @@ public class Config {
     public static final String PROD = "prod";
 
     private static Config instance = null;
-
+    private ApplicationContext applicationContext;
     private Environment environment;
 
     private Config() {
@@ -33,11 +34,12 @@ public class Config {
     public void setEnv(Environment environment) {
         this.environment = environment;
         ENVs.clear();
-        for(String e:environment.getActiveProfiles()){
+        for (String e : environment.getActiveProfiles()) {
             ENVs.add(e);
         }
     }
-    public Environment getEnvironment(){
+
+    public Environment getEnvironment() {
         return this.environment;
     }
 
@@ -91,5 +93,20 @@ public class Config {
         if (!home.endsWith("/"))
             home = home + "/";
         return home;
+    }
+
+    public void setApplicationContext(ApplicationContext applicationContext) {
+        this.applicationContext = applicationContext;
+    }
+
+    public ApplicationContext getApplicationContext() {
+        return applicationContext;
+    }
+
+    public static Object getBean(String beanName) {
+        if (null != getInstance().getApplicationContext()) {
+            return getInstance().getApplicationContext().getBean(beanName);
+        }
+        return null;
     }
 }

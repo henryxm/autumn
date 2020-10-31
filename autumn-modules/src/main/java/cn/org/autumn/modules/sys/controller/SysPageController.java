@@ -33,7 +33,7 @@ public class SysPageController {
         return "modules/" + module + "/" + url + ".js";
     }
 
-    @RequestMapping(value = {"/", "index.html"})
+    @RequestMapping(value = {"index.html"})
     public String index() {
         return "index";
     }

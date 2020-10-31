@@ -52,7 +52,7 @@ public class GeneratorController {
 		byte[] data = sysGeneratorService.generatorCode(tables.split(","), genId);
 		
 		response.reset();  
-        response.setHeader("Content-Disposition", "attachment; filename=\"autumn.zip\"");
+        response.setHeader("Content-Disposition", "attachment; filename=\"generated.zip\"");
         response.addHeader("Content-Length", "" + data.length);  
         response.setContentType("application/octet-stream; charset=UTF-8");  
   

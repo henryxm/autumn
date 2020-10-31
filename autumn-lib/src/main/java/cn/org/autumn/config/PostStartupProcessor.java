@@ -20,7 +20,7 @@ public class PostStartupProcessor implements ApplicationListener<ContextRefreshe
     public void onApplicationEvent(ContextRefreshedEvent event) {
 
         AnnotationConfigServletWebServerApplicationContext context = (AnnotationConfigServletWebServerApplicationContext) event.getSource();
-
+        Config.getInstance().setApplicationContext(context);
         String[] profiles = context.getEnvironment().getActiveProfiles();
 
         if (profiles.length > 0) {
