@@ -38,7 +38,7 @@ var vm = new Vue({
         },
         add: function(){
             vm.showList = false;
-            vm.title = "新增";
+            vm.title = "${lang.sys_string_add}";
             vm.menu = {parentName:null,parentId:0,type:1,orderNum:0};
             vm.getMenu();
         },
@@ -50,7 +50,7 @@ var vm = new Vue({
 
             $.get(baseURL + "sys/menu/info/"+menuId, function(r){
                 vm.showList = false;
-                vm.title = "修改";
+                vm.title = "${lang.sys_string_change}";
                 vm.menu = r.menu;
 
                 vm.getMenu();
@@ -62,14 +62,14 @@ var vm = new Vue({
                 return ;
             }
 
-            confirm('确定要删除选中的记录？', function(){
+            confirm('${lang.sys_string_are_sure_to_delete}？', function(){
                 $.ajax({
                     type: "POST",
                     url: baseURL + "sys/menu/delete",
                     data: "menuId=" + menuId,
                     success: function(r){
                         if(r.code === 0){
-                            alert('操作成功', function(){
+                            alert('${lang.sys_string_success}', function(){
                                 vm.reload();
                             });
                         }else{
@@ -92,7 +92,7 @@ var vm = new Vue({
                 data: JSON.stringify(vm.menu),
                 success: function(r){
                     if(r.code === 0){
-                        alert('操作成功', function(){
+                        alert('${lang.sys_string_success}', function(){
                             vm.reload();
                         });
                     }else{
@@ -106,12 +106,12 @@ var vm = new Vue({
                 type: 1,
                 offset: '50px',
                 skin: 'layui-layer-molv',
-                title: "选择菜单",
+                title: "${lang.sys_string_select_menu}",
                 area: ['300px', '450px'],
                 shade: 0,
                 shadeClose: false,
                 content: jQuery("#menuLayer"),
-                btn: ['确定', '取消'],
+                btn: ['${lang.sys_string_confirm}', '${lang.sys_string_cancel}'],
                 btn1: function (index) {
                     var node = ztree.getSelectedNodes();
                     //选择上级菜单
@@ -128,13 +128,13 @@ var vm = new Vue({
         },
         validator: function () {
             if(isBlank(vm.menu.name)){
-                alert("菜单名称不能为空");
+                alert("${lang.sys_string_menu_name_cannot_be_empty}");
                 return true;
             }
 
             //菜单
             if(vm.menu.type === 1 && isBlank(vm.menu.url)){
-                alert("菜单URL不能为空");
+                alert("${lang.sys_string_menu_url_cannot_be_empty}");
                 return true;
             }
         }
@@ -154,27 +154,27 @@ var Menu = {
 Menu.initColumn = function () {
     var columns = [
         {field: 'selectItem', radio: true},
-        {title: '菜单ID', field: 'menuId', visible: false, align: 'center', valign: 'middle', width: '80px'},
-        {title: '菜单名称', field: 'name', align: 'center', valign: 'middle', sortable: true, width: '180px'},
-        {title: '菜单标记', field: 'menuKey', align: 'center', valign: 'middle', sortable: true, width: '120px'},
-        {title: '上级菜单', field: 'parentName', align: 'center', valign: 'middle', sortable: true, width: '100px'},
-        {title: '图标', field: 'icon', align: 'center', valign: 'middle', sortable: true, width: '80px', formatter: function(item, index){
+        {title: '${lang.sys_string_menu_id}', field: 'menuId', visible: false, align: 'center', valign: 'middle', width: '80px'},
+        {title: '${lang.sys_string_menu_name}', field: 'name', align: 'center', valign: 'middle', sortable: true, width: '180px'},
+        {title: '${lang.sys_string_menu_key}', field: 'menuKey', align: 'center', valign: 'middle', sortable: true, width: '120px'},
+        {title: '${lang.sys_string_upper_menu}', field: 'parentName', align: 'center', valign: 'middle', sortable: true, width: '100px'},
+        {title: '${lang.sys_string_icon}', field: 'icon', align: 'center', valign: 'middle', sortable: true, width: '80px', formatter: function(item, index){
             return item.icon == null ? '' : '<i class="'+item.icon+' fa-lg"></i>';
         }},
-        {title: '类型', field: 'type', align: 'center', valign: 'middle', sortable: true, width: '100px', formatter: function(item, index){
+        {title: '${lang.sys_string_type}', field: 'type', align: 'center', valign: 'middle', sortable: true, width: '100px', formatter: function(item, index){
             if(item.type === 0){
-                return '<span class="label label-primary">目录</span>';
+                return '<span class="label label-primary">${lang.sys_string_directory}</span>';
             }
             if(item.type === 1){
-                return '<span class="label label-success">菜单</span>';
+                return '<span class="label label-success">${lang.sys_string_menu}</span>';
             }
             if(item.type === 2){
-                return '<span class="label label-warning">按钮</span>';
+                return '<span class="label label-warning">${lang.sys_string_button}</span>';
             }
         }},
-        {title: '排序号', field: 'orderNum', align: 'center', valign: 'middle', sortable: true, width: '100px'},
-        {title: '菜单URL', field: 'url', align: 'center', valign: 'middle', sortable: true, width: '160px'},
-        {title: '授权标识', field: 'perms', align: 'center', valign: 'middle', sortable: true}]
+        {title: '${lang.sys_string_order_number}', field: 'orderNum', align: 'center', valign: 'middle', sortable: true, width: '100px'},
+        {title: '${lang.sys_string_menu_url}', field: 'url', align: 'center', valign: 'middle', sortable: true, width: '160px'},
+        {title: '${lang.sys_string_permissions}', field: 'perms', align: 'center', valign: 'middle', sortable: true}]
     return columns;
 };
 
@@ -182,7 +182,7 @@ Menu.initColumn = function () {
 function getMenuId () {
     var selected = $('#menuTable').bootstrapTreeTable('getSelections');
     if (selected.length == 0) {
-        alert("请选择一条记录");
+        alert("${lang.sys_string_please_select_record}");
         return null;
     } else {
         return selected[0].id;

@@ -1,15 +1,13 @@
 $(function () {
     $("#jqGrid").jqGrid({
-        url: baseURL + 'sys/dict/list',
+        url: baseURL + 'sys/config/list',
         datatype: "json",
         colModel: [			
-			{ label: '字典名称', name: 'name', index: 'name', width: 80 },
-			{ label: '字典类型', name: 'type', index: 'type', width: 80 }, 			
-			{ label: '字典码', name: 'code', index: 'code', width: 80 }, 			
-			{ label: '字典值', name: 'value', index: 'value', width: 80 }, 			
-			{ label: '排序', name: 'orderNum', index: 'order_num', width: 80 }, 			
-			{ label: '备注', name: 'remark', index: 'remark', width: 80 }
-		],
+			{ label: 'ID', name: 'id', width: 30, key: true },
+			{ label: '${lang.sys_string_config_name}', name: 'paramKey', sortable: false, width: 60 },
+			{ label: '${lang.sys_string_config_value}', name: 'paramValue', width: 100 },
+			{ label: '${lang.sys_string_remark}', name: 'remark', width: 80 }
+        ],
 		viewrecords: true,
         height: 385,
         rowNum: 10,
@@ -40,12 +38,12 @@ $(function () {
 var vm = new Vue({
 	el:'#rrapp',
 	data:{
-        q:{
-            name: null
-        },
+		q:{
+            paramKey: null
+		},
 		showList: true,
 		title: null,
-		dict: {}
+		config: {}
 	},
 	methods: {
 		query: function () {
@@ -53,36 +51,20 @@ var vm = new Vue({
 		},
 		add: function(){
 			vm.showList = false;
-			vm.title = "新增";
-			vm.dict = {};
+			vm.title = "${lang.sys_string_add}";
+			vm.config = {};
 		},
-		update: function (event) {
+		update: function () {
 			var id = getSelectedRow();
 			if(id == null){
 				return ;
 			}
-			vm.showList = false;
-            vm.title = "修改";
-            
-            vm.getInfo(id)
-		},
-		saveOrUpdate: function (event) {
-			var url = vm.dict.id == null ? "sys/dict/save" : "sys/dict/update";
-			$.ajax({
-				type: "POST",
-			    url: baseURL + url,
-                contentType: "application/json",
-			    data: JSON.stringify(vm.dict),
-			    success: function(r){
-			    	if(r.code === 0){
-						alert('操作成功', function(index){
-							vm.reload();
-						});
-					}else{
-						alert(r.msg);
-					}
-				}
-			});
+			
+			$.get(baseURL + "sys/config/info/"+id, function(r){
+                vm.showList = false;
+                vm.title = "${lang.sys_string_change}";
+                vm.config = r.config;
+            });
 		},
 		del: function (event) {
 			var ids = getSelectedRows();
@@ -90,16 +72,16 @@ var vm = new Vue({
 				return ;
 			}
 			
-			confirm('确定要删除选中的记录？', function(){
+			confirm('${lang.sys_string_are_sure_to_delete}？', function(){
 				$.ajax({
 					type: "POST",
-				    url: baseURL + "sys/dict/delete",
+				    url: baseURL + "sys/config/delete",
                     contentType: "application/json",
 				    data: JSON.stringify(ids),
 				    success: function(r){
 						if(r.code == 0){
-							alert('操作成功', function(index){
-								$("#jqGrid").trigger("reloadGrid");
+							alert('${lang.sys_string_successful}', function(index){
+								vm.reload();
 							});
 						}else{
 							alert(r.msg);
@@ -108,16 +90,29 @@ var vm = new Vue({
 				});
 			});
 		},
-		getInfo: function(id){
-			$.get(baseURL + "sys/dict/info/"+id, function(r){
-                vm.dict = r.dict;
-            });
+		saveOrUpdate: function (event) {
+			var url = vm.config.id == null ? "sys/config/save" : "sys/config/update";
+			$.ajax({
+				type: "POST",
+			    url: baseURL + url,
+                contentType: "application/json",
+			    data: JSON.stringify(vm.config),
+			    success: function(r){
+			    	if(r.code === 0){
+						alert('sys_string_successful', function(index){
+							vm.reload();
+						});
+					}else{
+						alert(r.msg);
+					}
+				}
+			});
 		},
 		reload: function (event) {
 			vm.showList = true;
 			var page = $("#jqGrid").jqGrid('getGridParam','page');
-			$("#jqGrid").jqGrid('setGridParam',{
-                postData:{'name': vm.q.name},
+			$("#jqGrid").jqGrid('setGridParam',{ 
+                postData:{'paramKey': vm.q.paramKey},
                 page:page
             }).trigger("reloadGrid");
 		}

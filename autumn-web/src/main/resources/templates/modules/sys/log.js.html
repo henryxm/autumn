@@ -4,13 +4,13 @@ $(function () {
         datatype: "json",
         colModel: [			
 			{ label: 'id', name: 'id', width: 30, key: true },
-			{ label: '用户名', name: 'username', width: 50 }, 			
-			{ label: '用户操作', name: 'operation', width: 70 }, 			
-			{ label: '请求方法', name: 'method', width: 150 }, 			
-			{ label: '请求参数', name: 'params', width: 80 },
-            { label: '执行时长(毫秒)', name: 'time', width: 80 },
-			{ label: 'IP地址', name: 'ip', width: 70 }, 			
-			{ label: '创建时间', name: 'createDate', width: 90 }			
+			{ label: '${lang.sys_string_username}', name: 'username', width: 50 },
+			{ label: '${lang.sys_string_query_username}', name: 'operation', width: 70 },
+			{ label: '${lang.sys_string_request_method}', name: 'method', width: 150 },
+			{ label: '${lang.sys_string_request_parameter}', name: 'params', width: 80 },
+            { label: '${lang.sys_string_execute_duration}', name: 'time', width: 80 },
+			{ label: '${lang.sys_string_ip_address}', name: 'ip', width: 70 },
+			{ label: '${lang.sys_string_create_time}', name: 'createDate', width: 90 }
         ],
 		viewrecords: true,
         height: 385,

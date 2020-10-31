@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>角色管理</title>
+<title>${lang.sys_string_role_management}</title>
 <#include "/header.html">
 </head>
 <body>
@@ -9,18 +9,18 @@
 	<div v-show="showList">
 		<div class="grid-btn">
 			<div class="form-group col-sm-2">
-				<input type="text" class="form-control" v-model="q.roleName" @keyup.enter="query" placeholder="角色名称">
+				<input type="text" class="form-control" v-model="q.roleName" @keyup.enter="query" placeholder="${lang.sys_string_role_name}">
 			</div>
-			<a class="btn btn-default" @click="query">查询</a>
+			<a class="btn btn-default" @click="query">${lang.sys_string_query}</a>
 
 			<#if shiro.hasPermission("sys:role:save")>
-			<a class="btn btn-primary" @click="add"><i class="fa fa-plus"></i>&nbsp;新增</a>
+			<a class="btn btn-primary" @click="add"><i class="fa fa-plus"></i>&nbsp;${lang.sys_string_add}</a>
 			</#if>
 			<#if shiro.hasPermission("sys:role:update")>
-			<a class="btn btn-primary" @click="update"><i class="fa fa-pencil-square-o"></i>&nbsp;修改</a>
+			<a class="btn btn-primary" @click="update"><i class="fa fa-pencil-square-o"></i>&nbsp;${lang.sys_string_change}</a>
 			</#if>
 			<#if shiro.hasPermission("sys:role:delete")>
-			<a class="btn btn-primary" @click="del"><i class="fa fa-trash-o"></i>&nbsp;删除</a>
+			<a class="btn btn-primary" @click="del"><i class="fa fa-trash-o"></i>&nbsp;${lang.sys_string_delete}</a>
 			</#if>
 		</div>
 	    <table id="jqGrid"></table>
@@ -31,32 +31,32 @@
 		<div class="panel-heading">{{title}}</div>
 		<form class="form-horizontal">
 			<div class="form-group">
-				<div class="col-sm-2 control-label">角色名称</div>
+				<div class="col-sm-2 control-label">${lang.sys_string_role_name}</div>
 				<div class="col-sm-10">
-					<input type="text" class="form-control" v-model="role.roleName" placeholder="角色名称"/>
+					<input type="text" class="form-control" v-model="role.roleName" placeholder="${lang.sys_string_role_name}"/>
 				</div>
 			</div>
 			<div class="form-group">
-				<div class="col-sm-2 control-label">所属部门</div>
+				<div class="col-sm-2 control-label">${lang.sys_string_own_department}</div>
 				<div class="col-sm-10">
-					<input type="text" class="form-control" style="cursor:pointer;" v-model="role.deptName" @click="deptTree" readonly="readonly" placeholder="所属部门"/>
+					<input type="text" class="form-control" style="cursor:pointer;" v-model="role.deptName" @click="deptTree" readonly="readonly" placeholder="${lang.sys_string_own_department}"/>
 				</div>
 			</div>
 			<div class="form-group">
-				<div class="col-sm-2 control-label">备注</div>
+				<div class="col-sm-2 control-label">${lang.sys_string_remark}</div>
 				<div class="col-sm-10">
-					<input type="text" class="form-control" v-model="role.remark" placeholder="备注"/>
+					<input type="text" class="form-control" v-model="role.remark" placeholder="${lang.sys_string_remark}"/>
 				</div>
 			</div>
 			<div class="form-inline clearfix" style="margin-top:30px;margin-left:26px;">
 				<div class="form-group col-md-6">
-					<strong class="col-sm-5 control-label">功能权限</strong>
+					<strong class="col-sm-5 control-label">${lang.sys_string_function_authority}</strong>
 					<div class="col-sm-10">
 						<ul id="menuTree" class="ztree"></ul>
 					</div>
 				</div>
 				<div class="form-group col-md-6">
-					<strong class="col-sm-5 control-label">数据权限</strong>
+					<strong class="col-sm-5 control-label">${lang.sys_string_data_authority}</strong>
 					<div class="col-sm-10">
 						<ul id="dataTree" class="ztree"></ul>
 					</div>
@@ -64,8 +64,8 @@
 			</div>
 			<div class="form-group">
 				<div class="col-sm-2 control-label"></div>
-				<input type="button" class="btn btn-primary" @click="saveOrUpdate" value="确定"/>
-				&nbsp;&nbsp;<input type="button" class="btn btn-warning" @click="reload" value="返回"/>
+				<input type="button" class="btn btn-primary" @click="saveOrUpdate" value="${lang.sys_string_confirm}"/>
+				&nbsp;&nbsp;<input type="button" class="btn btn-warning" @click="reload" value="${lang.sys_string_back}"/>
 			</div>
 		</form>
 	</div>
@@ -76,6 +76,6 @@
 	<ul id="deptTree" class="ztree"></ul>
 </div>
 
-<script src="${request.contextPath}/statics/js/modules/sys/role.js?_${.now?long}"></script>
+<script src="${request.contextPath}/modules/sys/role.js?_${.now?long}"></script>
 </body>
 </html>

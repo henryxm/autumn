@@ -3,11 +3,11 @@ $(function () {
         url: baseURL + 'sys/role/list',
         datatype: "json",
         colModel: [
-            { label: '角色ID', name: 'roleId', index: "role_id", width: 45, key: true },
-            { label: '角色名称', name: 'roleName', index: "role_name", width: 75 },
-            { label: '所属部门', name: 'deptName', sortable: false, width: 75 },
-            { label: '备注', name: 'remark', width: 100 },
-            { label: '创建时间', name: 'createTime', index: "create_time", width: 80}
+            { label: '${lang.sys_string_role_id}', name: 'roleId', index: "role_id", width: 45, key: true },
+            { label: '${lang.sys_string_role_name}', name: 'roleName', index: "role_name", width: 75 },
+            { label: '${lang.sys_string_own_department}', name: 'deptName', sortable: false, width: 75 },
+            { label: '${lang.sys_string_remark}', name: 'remark', width: 100 },
+            { label: '${lang.sys_string_create_time}', name: 'createTime', index: "create_time", width: 80}
         ],
         viewrecords: true,
         height: 385,
@@ -112,7 +112,7 @@ var vm = new Vue({
         },
         add: function(){
             vm.showList = false;
-            vm.title = "新增";
+            vm.title = "${lang.sys_string_add}";
             vm.role = {deptName:null, deptId:null};
             vm.getMenuTree(null);
 
@@ -127,7 +127,7 @@ var vm = new Vue({
             }
 
             vm.showList = false;
-            vm.title = "修改";
+            vm.title = "${lang.sys_string_change}";
             vm.getDataTree();
             vm.getMenuTree(roleId);
 
@@ -139,7 +139,7 @@ var vm = new Vue({
                 return ;
             }
 
-            confirm('确定要删除选中的记录？', function(){
+            confirm('${lang.sys_string_are_sure_to_delete}？', function(){
                 $.ajax({
                     type: "POST",
                     url: baseURL + "sys/role/delete",
@@ -147,7 +147,7 @@ var vm = new Vue({
                     data: JSON.stringify(roleIds),
                     success: function(r){
                         if(r.code == 0){
-                            alert('操作成功', function(){
+                            alert('${lang.sys_string_success}', function(){
                                 vm.reload();
                             });
                         }else{
@@ -203,7 +203,7 @@ var vm = new Vue({
                 data: JSON.stringify(vm.role),
                 success: function(r){
                     if(r.code === 0){
-                        alert('操作成功', function(){
+                        alert('${lang.sys_string_success}', function(){
                             vm.reload();
                         });
                     }else{
@@ -249,12 +249,12 @@ var vm = new Vue({
                 type: 1,
                 offset: '50px',
                 skin: 'layui-layer-molv',
-                title: "选择部门",
+                title: "${lang.sys_string_select_department}",
                 area: ['300px', '450px'],
                 shade: 0,
                 shadeClose: false,
                 content: jQuery("#deptLayer"),
-                btn: ['确定', '取消'],
+                btn: ['${lang.sys_string_confirm}', '${lang.sys_string_cancel}'],
                 btn1: function (index) {
                     var node = dept_ztree.getSelectedNodes();
                     //选择上级部门

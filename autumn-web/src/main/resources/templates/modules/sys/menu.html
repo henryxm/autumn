@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>菜单管理</title>
+<title>${lang.sys_string_menu_management}</title>
 <#include "/header.html">
 <link rel="stylesheet" href="${request.contextPath}/statics/css/bootstrap-table.min.css">
 <link rel="stylesheet" href="${request.contextPath}/statics/plugins/treegrid/jquery.treegrid.css">
@@ -16,13 +16,13 @@
 	<div v-show="showList">
 		<div class="grid-btn">
 			<#if shiro.hasPermission("sys:menu:save")>
-			<a class="btn btn-primary" @click="add"><i class="fa fa-plus"></i>&nbsp;新增</a>
+			<a class="btn btn-primary" @click="add"><i class="fa fa-plus"></i>&nbsp;${lang.sys_string_add}</a>
 			</#if>
 			<#if shiro.hasPermission("sys:menu:update")>
-			<a class="btn btn-primary" @click="update"><i class="fa fa-pencil-square-o"></i>&nbsp;修改</a>
+			<a class="btn btn-primary" @click="update"><i class="fa fa-pencil-square-o"></i>&nbsp;${lang.sys_string_change}</a>
 			</#if>
 			<#if shiro.hasPermission("sys:menu:delete")>
-			<a class="btn btn-primary" @click="del"><i class="fa fa-trash-o"></i>&nbsp;删除</a>
+			<a class="btn btn-primary" @click="del"><i class="fa fa-trash-o"></i>&nbsp;${lang.sys_string_delete}</a>
 			</#if>
 		</div>
 		<table id="menuTable" data-mobile-responsive="true" data-click-to-select="true">
@@ -38,64 +38,64 @@
 		<div class="panel-heading">{{title}}</div>
 		<form class="form-horizontal">
 			<div class="form-group">
-				<div class="col-sm-2 control-label">类型</div>
+				<div class="col-sm-2 control-label">${lang.sys_string_type}</div>
 				<label class="radio-inline">
-					<input type="radio" name="type" value="0" v-model="menu.type"/> 目录
+					<input type="radio" name="type" value="0" v-model="menu.type"/> ${lang.sys_string_directory}
 				</label>
 				<label class="radio-inline">
-					<input type="radio" name="type" value="1" v-model="menu.type"/> 菜单
+					<input type="radio" name="type" value="1" v-model="menu.type"/> ${lang.sys_string_menu}
 				</label>
 				<label class="radio-inline">
-					<input type="radio" name="type" value="2" v-model="menu.type"/> 按钮
+					<input type="radio" name="type" value="2" v-model="menu.type"/> ${lang.sys_string_button}
 				</label>
 			</div>
 			<div class="form-group">
-				<div class="col-sm-2 control-label">菜单名称</div>
+				<div class="col-sm-2 control-label">${lang.sys_string_menu_name}</div>
 				<div class="col-sm-10">
-					<input type="text" class="form-control" v-model="menu.name" placeholder="菜单名称或按钮名称"/>
+					<input type="text" class="form-control" v-model="menu.name" placeholder="${lang.sys_string_menu_or_button_name}"/>
 				</div>
 			</div>
 			<div class="form-group">
-				<div class="col-sm-2 control-label">菜单标记</div>
+				<div class="col-sm-2 control-label">${lang.sys_string_menu_key}</div>
 				<div class="col-sm-10">
-					<input type="text" class="form-control" v-model="menu.menuKey" placeholder="格式：{模块包名}_menu"/>
+					<input type="text" class="form-control" v-model="menu.menuKey" placeholder="${lang.sys_string_menu_key_format}"/>
 				</div>
 			</div>
 			<div class="form-group">
-				<div class="col-sm-2 control-label">上级菜单</div>
+				<div class="col-sm-2 control-label">${lang.sys_string_upper_menu}</div>
 				<div class="col-sm-10">
-					<input type="text" class="form-control" style="cursor:pointer;" v-model="menu.parentName" @click="menuTree" readonly="readonly" placeholder="一级菜单"/>
+					<input type="text" class="form-control" style="cursor:pointer;" v-model="menu.parentName" @click="menuTree" readonly="readonly" placeholder="${lang.sys_string_root_menu}"/>
 				</div>
 			</div>
 			<div v-if="menu.type == 1" class="form-group">
-				<div class="col-sm-2 control-label">菜单URL</div>
+				<div class="col-sm-2 control-label">${lang.sys_string_menu_url}</div>
 				<div class="col-sm-10">
-					<input type="text" class="form-control" v-model="menu.url" placeholder="菜单URL"/>
+					<input type="text" class="form-control" v-model="menu.url" placeholder="${lang.sys_string_menu_url}"/>
 				</div>
 			</div>
 			<div v-if="menu.type == 1 || menu.type == 2" class="form-group">
-				<div class="col-sm-2 control-label">授权标识</div>
+				<div class="col-sm-2 control-label">${lang.sys_string_permissions}</div>
 				<div class="col-sm-10">
-					<input type="text" class="form-control" v-model="menu.perms" placeholder="多个用逗号分隔，如：user:list,user:create"/>
+					<input type="text" class="form-control" v-model="menu.perms" placeholder="${lang.sys_string_permissions_ex}"/>
 				</div>
 			</div>
 			<div v-if="menu.type != 2" class="form-group">
-				<div class="col-sm-2 control-label">排序号</div>
+				<div class="col-sm-2 control-label">${lang.sys_string_order_number}</div>
 				<div class="col-sm-10">
-					<input type="number" class="form-control" v-model="menu.orderNum" placeholder="排序号"/>
+					<input type="number" class="form-control" v-model="menu.orderNum" placeholder="${lang.sys_string_order_number}"/>
 				</div>
 			</div>
 			<div v-if="menu.type != 2" class="form-group">
-				<div class="col-sm-2 control-label">图标</div>
+				<div class="col-sm-2 control-label">${lang.sys_string_icon}</div>
 				<div class="col-sm-10">
-					<input type="text" class="form-control" v-model="menu.icon" placeholder="菜单图标"/>
-					<code style="margin-top:4px;display: block;">获取图标：http://www.fontawesome.com.cn/faicons/</code>
+					<input type="text" class="form-control" v-model="menu.icon" placeholder="${lang.sys_string_menu_icon}"/>
+					<code style="margin-top:4px;display: block;">${lang.sys_string_find_icon}：http://www.fontawesome.com.cn/faicons/</code>
 				</div>
 			</div>
 			<div class="form-group">
 				<div class="col-sm-2 control-label"></div>
-				<input type="button" class="btn btn-primary" @click="saveOrUpdate" value="确定"/>
-				&nbsp;&nbsp;<input type="button" class="btn btn-warning" @click="reload" value="返回"/>
+				<input type="button" class="btn btn-primary" @click="saveOrUpdate" value="${lang.sys_string_confirm}"/>
+				&nbsp;&nbsp;<input type="button" class="btn btn-warning" @click="reload" value="${lang.sys_string_back}"/>
 			</div>
 		</form>
 	</div>
@@ -106,6 +106,6 @@
 	<ul id="menuTree" class="ztree"></ul>
 </div>
 
-<script src="${request.contextPath}/statics/js/modules/sys/menu.js?_${.now?long}"></script>
+<script src="${request.contextPath}/modules/sys/menu.js?_${.now?long}"></script>
 </body>
 </html>

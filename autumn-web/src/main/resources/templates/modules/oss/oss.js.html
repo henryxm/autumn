@@ -4,8 +4,8 @@ $(function () {
         datatype: "json",
         colModel: [			
 			{ label: 'id', name: 'id', width: 20, key: true },
-            { label: 'URL地址', name: 'url', width: 160 },
-			{ label: '创建时间', name: 'createDate', width: 40 }
+            { label: '${lang.sys_sysoss_column_url}', name: 'url', width: 160 },
+			{ label: '${lang.sys_sysoss_column_create_date}', name: 'createDate', width: 40 }
         ],
 		viewrecords: true,
         height: 385,
@@ -40,11 +40,11 @@ $(function () {
         responseType:"json",
         onSubmit:function(file, extension){
             if(vm.config.type == null){
-                alert("云存储配置未配置");
+                alert("${lang.sys_sysoss_cloud_storage_no_config}");
                 return false;
             }
             if (!(extension && /^(jpg|jpeg|png|gif)$/.test(extension.toLowerCase()))){
-                alert('只支持jpg、png、gif格式的图片！');
+                alert('${lang.sys_sysoss_support_jpg_png_gif}');
                 return false;
             }
         },
@@ -82,7 +82,7 @@ var vm = new Vue({
         },
 		addConfig: function(){
 			vm.showList = false;
-			vm.title = "云存储配置";
+			vm.title = "${lang.sys_sysoss_string_cloud_storage_config}";
 		},
 		saveOrUpdate: function () {
 			var url = baseURL + "sys/oss/saveConfig";
@@ -93,7 +93,7 @@ var vm = new Vue({
 			    data: JSON.stringify(vm.config),
 			    success: function(r){
 			    	if(r.code === 0){
-						alert('操作成功', function(){
+						alert('${lang.sys_string_successful}', function(){
 							vm.reload();
 						});
 					}else{
@@ -108,7 +108,7 @@ var vm = new Vue({
                 return ;
             }
 
-            confirm('确定要删除选中的记录？', function(){
+            confirm('${lang.sys_string_are_sure_to_delete}？', function(){
                 $.ajax({
                     type: "POST",
                     url: baseURL + "sys/oss/delete",
@@ -116,7 +116,7 @@ var vm = new Vue({
                     data: JSON.stringify(ossIds),
                     success: function(r){
                         if(r.code === 0){
-                            alert('操作成功', function(){
+                            alert('${lang.sys_string_successful}', function(){
                                 vm.reload();
                             });
                         }else{
