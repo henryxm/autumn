@@ -11,7 +11,7 @@ import javax.annotation.PostConstruct;
 public class GenTypeService extends GenTypeServiceGen {
 
     @Override
-    public String ico(){
+    public String ico() {
         return super.ico();
     }
 
@@ -29,10 +29,10 @@ public class GenTypeService extends GenTypeServiceGen {
         if (!tableInit.init)
             return;
         String[][] mapping = new String[][]{
-                {NULL, "mysql", "cn.org.autumn", "cn.org.autumn.modules", "sys", "系统管理", "Shaohua Xu", "henryxm@163.com", "tb",
+                {NULL, "mysql" , "cn.org.autumn" , "cn.org.autumn.modules" , "sys" , "系统管理" , "1" , "Shaohua Xu" , "henryxm@163.com" , "tb" ,
                         "tinyint=Integer,smallint=Integer,mediumint=Integer,int=Integer,integer=Integer,bigint=Long,float=Float," +
                                 "double=Double,decimal=BigDecimal,bit=Boolean,char=String,varchar=String,tinytext=String,text=String," +
-                                "mediumtext=String,longtext=String,date=Date,datetime=Date,timestamp=Date"},
+                                "mediumtext=String,longtext=String,date=Date,datetime=Date,timestamp=Date" },
         };
 
         for (String[] map : mapping) {
@@ -57,14 +57,17 @@ public class GenTypeService extends GenTypeServiceGen {
                 entity.setModuleText(temp);
             temp = map[6];
             if (NULL != temp)
-                entity.setAuthorName(temp);
+                entity.setModuleId(temp);
             temp = map[7];
             if (NULL != temp)
-                entity.setEmail(temp);
+                entity.setAuthorName(temp);
             temp = map[8];
             if (NULL != temp)
-                entity.setTablePrefix(temp);
+                entity.setEmail(temp);
             temp = map[9];
+            if (NULL != temp)
+                entity.setTablePrefix(temp);
+            temp = map[10];
             if (NULL != temp)
                 entity.setMappingString(temp);
             GenTypeEntity et = baseMapper.selectOne(entity);

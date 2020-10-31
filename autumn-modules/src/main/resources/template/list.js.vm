@@ -5,10 +5,9 @@ $(function () {
         colModel: [			
 #foreach($column in $columns)
 #if($column.name == $pk.name)
-			{ label: '${column.attrname}', name: '${column.attrname}', index: '${column.name}', width: 50, key: true },
+			{ label: '${${lang}${moduleName}_${pathName}_column_${column.name}}', name: '${column.attrname}', index: '${column.name}', width: 50, key: true },
 #else
 			{ label: '${${lang}${moduleName}_${pathName}_column_${column.name}}', name: '${column.attrname}', index: '${column.name}', width: 80 }#if($velocityCount != $columns.size()), #end
-			
 #end			
 #end
         ],
@@ -88,7 +87,6 @@ var vm = new Vue({
 			if(${pk.attrname}s == null){
 				return ;
 			}
-			
 			confirm('${lang.sys_string_are_sure_to_delete}？', function(){
 				$.ajax({
 					type: "POST",

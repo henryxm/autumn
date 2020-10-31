@@ -2,10 +2,7 @@ package ${package}.${moduleName}.controller;
 
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
 import ${package}.${moduleName}.controller.gen.${className}ControllerGen;
-
-
 
 /**
  * ${comment}
@@ -16,6 +13,6 @@ import ${package}.${moduleName}.controller.gen.${className}ControllerGen;
  */
 @RestController
 @RequestMapping("${moduleName}/${pathName}")
-public class ${className}Controller extends ${className}ControllerGen{
+public class ${className}Controller extends ${className}ControllerGen {
 
 }

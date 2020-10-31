@@ -12,7 +12,6 @@ import org.springframework.stereotype.Repository;
  * @email ${email}
  * @date ${datetime}
  */
-
 @Mapper
 @Repository
 public interface ${className}Dao extends BaseMapper<${className}Entity> {

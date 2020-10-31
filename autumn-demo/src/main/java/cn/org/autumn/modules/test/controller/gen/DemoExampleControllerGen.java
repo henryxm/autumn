@@ -1,9 +1,7 @@
 package cn.org.autumn.modules.test.controller.gen;
 
 import java.util.Arrays;
-import java.util.Date;
 import java.util.Map;
-
 import cn.org.autumn.validator.ValidatorUtils;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,14 +9,10 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-
 import cn.org.autumn.modules.test.entity.DemoExampleEntity;
 import cn.org.autumn.modules.test.service.DemoExampleService;
 import cn.org.autumn.utils.PageUtils;
 import cn.org.autumn.utils.R;
-
-
 
 /**
  * 测试例子
@@ -37,20 +31,19 @@ public class DemoExampleControllerGen {
      */
     @RequestMapping("/list")
     @RequiresPermissions("test:demoexample:list")
-    public R list(@RequestParam Map<String, Object> params){
+    public R list(@RequestParam Map<String, Object> params) {
         PageUtils page = demoExampleService.queryPage(params);
-        return R.ok().put("page", page);
+        return R.ok().put("page" , page);
     }
-
 
     /**
      * 信息
      */
     @RequestMapping("/info/{id}")
     @RequiresPermissions("test:demoexample:info")
-    public R info(@PathVariable("id") Long id){
+    public R info(@PathVariable("id") Long id) {
         DemoExampleEntity demoExample = demoExampleService.selectById(id);
-        return R.ok().put("demoExample", demoExample);
+        return R.ok().put("demoExample" , demoExample);
     }
 
     /**
@@ -58,7 +51,7 @@ public class DemoExampleControllerGen {
      */
     @RequestMapping("/save")
     @RequiresPermissions("test:demoexample:save")
-    public R save(@RequestBody DemoExampleEntity demoExample){
+    public R save(@RequestBody DemoExampleEntity demoExample) {
         demoExampleService.insert(demoExample);
         return R.ok();
     }
@@ -68,7 +61,7 @@ public class DemoExampleControllerGen {
      */
     @RequestMapping("/update")
     @RequiresPermissions("test:demoexample:update")
-    public R update(@RequestBody DemoExampleEntity demoExample){
+    public R update(@RequestBody DemoExampleEntity demoExample) {
         ValidatorUtils.validateEntity(demoExample);
         demoExampleService.updateAllColumnById(demoExample);//全部更新
         return R.ok();
@@ -79,9 +72,8 @@ public class DemoExampleControllerGen {
      */
     @RequestMapping("/delete")
     @RequiresPermissions("test:demoexample:delete")
-    public R delete(@RequestBody Long[] ids){
+    public R delete(@RequestBody Long[] ids) {
         demoExampleService.deleteBatchIds(Arrays.asList(ids));
         return R.ok();
     }
-
 }

@@ -3,9 +3,8 @@ $(function () {
         url: baseURL + 'test/demoexample/list',
         datatype: "json",
         colModel: [			
-			{ label: 'id', name: 'id', index: 'id', width: 50, key: true },
-			{ label: '${lang.test_demoexample_column_example}', name: 'example', index: 'example', width: 80 }, 			
-        ],
+			{ label: '${lang.test_demoexample_column_id}', name: 'id', index: 'id', width: 50, key: true },
+			{ label: '${lang.test_demoexample_column_example}', name: 'example', index: 'example', width: 80 },         ],
 		viewrecords: true,
         height: 385,
         rowNum: 10,
@@ -82,7 +81,6 @@ var vm = new Vue({
 			if(ids == null){
 				return ;
 			}
-			
 			confirm('${lang.sys_string_are_sure_to_delete}？', function(){
 				$.ajax({
 					type: "POST",

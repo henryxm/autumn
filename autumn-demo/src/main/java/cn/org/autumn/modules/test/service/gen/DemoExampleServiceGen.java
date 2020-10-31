@@ -94,7 +94,6 @@ public class DemoExampleServiceGen extends ServiceImpl<DemoExampleDao, DemoExamp
         return String.valueOf(parentMenu());
     }
 
-
     @PostConstruct
     public void init() {
         if (!tableInit.init)

@@ -14,7 +14,6 @@ import cn.org.autumn.modules.lan.service.LanguageService;
  * @email ${email}
  * @date ${datetime}
  */
-
 @Service
 public class ${upperModuleName}Menu {
 
