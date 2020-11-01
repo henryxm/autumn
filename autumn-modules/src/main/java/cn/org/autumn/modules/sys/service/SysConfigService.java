@@ -16,6 +16,7 @@
 
 package cn.org.autumn.modules.sys.service;
 
+import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.oss.cloud.CloudStorageConfig;
 import cn.org.autumn.table.TableInit;
 import cn.org.autumn.utils.ConfigConstant;
@@ -39,7 +40,7 @@ import java.util.Arrays;
 import java.util.Map;
 
 @Service
-public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity> {
+public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity> implements LoopJob.Job {
 
     @Autowired
     private SysConfigRedis sysConfigRedis;
@@ -56,6 +57,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
 
     @PostConstruct
     public void init() {
+        LoopJob.onOneMinute(this);
         if (!tableInit.init)
             return;
         String[][] mapping = new String[][]{
@@ -151,5 +153,10 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         if (null == cloudStorageConfig)
             cloudStorageConfig = getConfigObject(ConfigConstant.CLOUD_STORAGE_CONFIG_KEY, CloudStorageConfig.class);
         return cloudStorageConfig;
+    }
+
+    @Override
+    public void runJob() {
+
     }
 }

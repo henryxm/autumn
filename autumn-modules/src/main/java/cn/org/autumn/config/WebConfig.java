@@ -13,9 +13,6 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.util.List;
 
-/**
- * WebMvc配置
- */
 @Configuration
 @DependsOn({"env"})
 public class WebConfig implements WebMvcConfigurer {
@@ -35,7 +32,7 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(authorizationInterceptor).addPathPatterns("/autumn/**");
+        registry.addInterceptor(authorizationInterceptor).addPathPatterns("/**");
         registry.addInterceptor(languageInterceptor);
     }
 

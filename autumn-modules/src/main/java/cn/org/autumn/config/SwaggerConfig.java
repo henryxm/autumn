@@ -28,12 +28,6 @@ import springfox.documentation.spi.DocumentationType;
 import springfox.documentation.spring.web.plugins.Docket;
 import springfox.documentation.swagger2.annotations.EnableSwagger2;
 
-/**
- * Swagger配置
- *
- * @author Mark sunlightcs@gmail.com
- * @since 3.0.0 2018-01-16
- */
 @Configuration
 @EnableSwagger2
 @DependsOn({"env"})

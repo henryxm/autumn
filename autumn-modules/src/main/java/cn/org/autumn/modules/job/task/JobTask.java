@@ -6,7 +6,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 @Component
-public class ScheduleJob {
+public class JobTask {
     private Logger logger = LoggerFactory.getLogger(getClass());
 
     private boolean secondJobLock = false;
@@ -28,7 +28,7 @@ public class ScheduleJob {
     /**
      * 定时循环任务
      */
-    @TaskAware(mode = "all" , remark = "秒级定时触发器(每秒触发一次)" , cronExpression = "* * * * * ? *")
+    @TaskAware(mode = "all", remark = "秒级定时触发器(每秒触发一次)", cronExpression = "* * * * * ? *")
     public void SecondJob() {
         secondJobCounter++;
         if (secondJobLock)
@@ -54,7 +54,7 @@ public class ScheduleJob {
         }
     }
 
-    @TaskAware(mode = "all" , remark = "分钟级定时触发器(每分钟触发一次)" , cronExpression = "0 * * * * ? *")
+    @TaskAware(mode = "all", remark = "分钟级定时触发器(每分钟触发一次)", cronExpression = "0 * * * * ? *")
     public void MinuteJob() {
         minuteJobCounter++;
         if (minuteJobLock)
@@ -80,7 +80,7 @@ public class ScheduleJob {
         }
     }
 
-    @TaskAware(mode = "all" , remark = "小时级定时触发器(每小时触发一次)" , cronExpression = "0 0 * * * ? *")
+    @TaskAware(mode = "all", remark = "小时级定时触发器(每小时触发一次)", cronExpression = "0 0 * * * ? *")
     public void HourJob() {
         hourJobCounter++;
         if (hourJobLock)
@@ -106,7 +106,7 @@ public class ScheduleJob {
         }
     }
 
-    @TaskAware(mode = "all" , remark = "每天定时触发器(每天触发一次)" , cronExpression = "0 0 0 * * ? *")
+    @TaskAware(mode = "all", remark = "每天定时触发器(每天触发一次)", cronExpression = "0 0 0 * * ? *")
     public void DayJob() {
         if (dayJobLock)
             return;
@@ -121,7 +121,7 @@ public class ScheduleJob {
         }
     }
 
-    @TaskAware(mode = "all" , remark = "每周定时触发器(每周触发一次)" , cronExpression = "0 0 0 ? * MON")
+    @TaskAware(mode = "all", remark = "每周定时触发器(每周触发一次)", cronExpression = "0 0 0 ? * MON")
     public void WeekJob() {
         if (weekJobLock)
             return;

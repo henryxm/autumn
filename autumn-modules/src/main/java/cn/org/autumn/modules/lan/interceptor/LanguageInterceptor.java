@@ -2,6 +2,8 @@ package cn.org.autumn.modules.lan.interceptor;
 
 import cn.org.autumn.modules.lan.service.LanguageService;
 import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
@@ -12,6 +14,7 @@ import org.springframework.web.servlet.handler.HandlerInterceptorAdapter;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
+import java.util.Enumeration;
 import java.util.Locale;
 import java.util.Map;
 
@@ -36,10 +39,13 @@ public class LanguageInterceptor extends HandlerInterceptorAdapter {
             session.setAttribute(LANGUAGE_SESSION, locale);
         } else {
             //如果没有带国际化参数，则判断session有没有保存，有保存，则使用保存的，也就是之前设置的，避免之后的请求不带国际化参数造成语言显示不对
-            HttpSession session = request.getSession();
-            Locale localeInSession = (Locale) session.getAttribute(LANGUAGE_SESSION);
-            if (localeInSession != null) {
-                locale = localeInSession;
+            try {
+                HttpSession session = request.getSession();
+                Locale localeInSession = (Locale) session.getAttribute(LANGUAGE_SESSION);
+                if (localeInSession != null) {
+                    locale = localeInSession;
+                }
+            } catch (Exception e) {
             }
         }
         return locale;

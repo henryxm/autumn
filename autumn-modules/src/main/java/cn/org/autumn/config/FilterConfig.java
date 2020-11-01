@@ -24,12 +24,6 @@ import org.springframework.web.filter.DelegatingFilterProxy;
 
 import javax.servlet.DispatcherType;
 
-/**
- * Filter配置
- *
- * @author Mark sunlightcs@gmail.com
- * @since 2.1.0 2017-04-21
- */
 @Configuration
 public class FilterConfig {
 

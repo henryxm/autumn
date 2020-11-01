@@ -52,6 +52,10 @@ public class SuperPositionModelEntity implements Serializable {
     @Column(length = 250, comment = "资源ID")
     private String resourceId;
 
+    @Column(length = 250, comment = "资源ID")
+    private String url;
+
+
     @Column(length = 20, comment = "需要登录" , defaultValue = "0")
     private Integer needLogin;
 

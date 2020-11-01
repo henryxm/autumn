@@ -155,7 +155,7 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen {
         super.init();
         put("202010" , "202010" , "main" , "" , "main" , false);
         put("202010" , "202010" , "index" , "" , "index" , true);
-        put("202010" , "202010" , "404" , "" , "404" , false);
+        put("202010" , "202010" , "test" , "" , "test" , false);
     }
 
     public void addLanguageColumnItem() {

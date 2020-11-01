@@ -16,6 +16,7 @@
 
 package cn.org.autumn.modules.sys.service;
 
+import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.table.TableInit;
 import com.baomidou.mybatisplus.mapper.EntityWrapper;
 import com.baomidou.mybatisplus.plugins.Page;
@@ -33,16 +34,19 @@ import java.util.Map;
 
 
 @Service
-public class SysLogService extends ServiceImpl<SysLogDao, SysLogEntity> {
+public class SysLogService extends ServiceImpl<SysLogDao, SysLogEntity> implements LoopJob.Job {
 
     @Autowired
     private TableInit tableInit;
 
     @PostConstruct
     public void init() {
+        LoopJob.onOneWeek(this);
         if (!tableInit.init)
             return;
+
     }
+
     public PageUtils queryPage(Map<String, Object> params) {
         String key = (String) params.get("key");
 
@@ -52,5 +56,10 @@ public class SysLogService extends ServiceImpl<SysLogDao, SysLogEntity> {
         );
 
         return new PageUtils(page);
+    }
+
+    @Override
+    public void runJob() {
+        baseMapper.clear();
     }
 }
