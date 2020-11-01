@@ -1,42 +1,29 @@
 package cn.org.autumn.modules.job.service;
 
-import cn.org.autumn.modules.job.entity.ScheduleJobLogEntity;
 import cn.org.autumn.modules.job.service.gen.ScheduleJobLogServiceGen;
-import cn.org.autumn.utils.PageUtils;
-import cn.org.autumn.utils.Query;
-import com.baomidou.mybatisplus.mapper.EntityWrapper;
-import com.baomidou.mybatisplus.plugins.Page;
-import org.apache.commons.lang.StringUtils;
+import cn.org.autumn.modules.job.task.LoopJob;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.PostConstruct;
-import java.util.Map;
-
 @Service
-public class ScheduleJobLogService extends ScheduleJobLogServiceGen {
+public class ScheduleJobLogService extends ScheduleJobLogServiceGen implements LoopJob.Job {
 
     @Override
-    public int menuOrder(){
+    public int menuOrder() {
         return super.menuOrder();
     }
 
     @Override
-    public String ico(){
+    public String ico() {
         return super.ico();
     }
 
-    private int wEveryCount = 0;
-
-    public void clear() {
-        baseMapper.clear();
+    public void init() {
+        super.init();
+        LoopJob.onOneHour(this);
     }
 
-    public void clear(int i) {
-        if (wEveryCount < i) {
-            wEveryCount++;
-            return;
-        }
-        wEveryCount = 0;
+    @Override
+    public void runJob() {
         baseMapper.clear();
     }
 }

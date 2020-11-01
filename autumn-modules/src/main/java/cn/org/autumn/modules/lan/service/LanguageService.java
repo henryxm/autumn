@@ -2,6 +2,7 @@ package cn.org.autumn.modules.lan.service;
 
 import cn.org.autumn.config.PostLoad;
 import cn.org.autumn.config.PostLoadFactory;
+import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.lan.entity.LanguageEntity;
 import cn.org.autumn.modules.lan.service.gen.LanguageServiceGen;
 import cn.org.autumn.table.utils.HumpConvert;
@@ -16,7 +17,7 @@ import java.lang.reflect.Field;
 import java.util.*;
 
 @Service
-public class LanguageService extends LanguageServiceGen implements PostLoad {
+public class LanguageService extends LanguageServiceGen implements PostLoad, LoopJob.Job {
     private Logger logger = LoggerFactory.getLogger(getClass());
     @Autowired
     PostLoadFactory postLoadFactory;
@@ -113,6 +114,7 @@ public class LanguageService extends LanguageServiceGen implements PostLoad {
     @PostConstruct
     public void init() {
         super.init();
+        LoopJob.onTenMinute(this);
         addLanguageColumnItem("sys_string_management", "管理系统", "Manage system");
         addLanguageColumnItem("sys_string_system_management", "系统管理", "System management");
         addLanguageColumnItem("sys_string_manager_management", "管理员管理", "Manager management");
@@ -225,9 +227,6 @@ public class LanguageService extends LanguageServiceGen implements PostLoad {
         addLanguageColumnItem("sys_string_request_parameter", "请求参数", "Request parameter");
         addLanguageColumnItem("sys_string_execute_duration", "执行时长(毫秒)", "Execute duration");
         addLanguageColumnItem("sys_string_ip_address", "IP地址", "IP Address");
-
-
-
         addLanguageColumnItem();
         postLoadFactory.register(this);
     }
@@ -259,5 +258,10 @@ public class LanguageService extends LanguageServiceGen implements PostLoad {
         addLanguageColumnItem("lan_language_column_el_gr", "希腊语(希腊)");
         addLanguageColumnItem("lan_language_column_fa_ir", "波斯语(伊朗)");
         addLanguageColumnItem("lan_language_column_ar_sa", "阿拉伯语(沙特阿拉伯)");
+    }
+
+    @Override
+    public void runJob() {
+        load();
     }
 }
