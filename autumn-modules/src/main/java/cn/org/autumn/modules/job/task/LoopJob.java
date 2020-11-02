@@ -13,6 +13,8 @@ public class LoopJob {
     }
 
     private static List<Job> oneSecondJobList = new ArrayList<>();
+    private static List<Job> threeSecondJobList = new ArrayList<>();
+    private static List<Job> fiveSecondJobList = new ArrayList<>();
     private static List<Job> tenSecondJobList = new ArrayList<>();
     private static List<Job> thirtySecondJobList = new ArrayList<>();
 
@@ -31,6 +33,14 @@ public class LoopJob {
 
     public static void onOneSecond(Job job) {
         oneSecondJobList.add(job);
+    }
+
+    public static void onThreeSecond(Job job) {
+        threeSecondJobList.add(job);
+    }
+
+    public static void onFiveSecond(Job job) {
+        fiveSecondJobList.add(job);
     }
 
     public static void onTenSecond(Job job) {
@@ -76,6 +86,22 @@ public class LoopJob {
     public static void runOneSecondJob() {
         if (oneSecondJobList.size() > 0) {
             for (Job job : oneSecondJobList) {
+                job.runJob();
+            }
+        }
+    }
+
+    public static void runThreeSecondJob() {
+        if (threeSecondJobList.size() > 0) {
+            for (Job job : threeSecondJobList) {
+                job.runJob();
+            }
+        }
+    }
+
+    public static void runFiveSecondJob() {
+        if (fiveSecondJobList.size() > 0) {
+            for (Job job : fiveSecondJobList) {
                 job.runJob();
             }
         }

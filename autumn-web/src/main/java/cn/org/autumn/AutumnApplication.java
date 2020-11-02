@@ -7,16 +7,22 @@ import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
+import org.springframework.boot.web.servlet.ServletComponentScan;
 import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.core.task.AsyncTaskExecutor;
+import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ThreadPoolExecutor;
 
 
+@EnableAspectJAutoProxy(proxyTargetClass = true, exposeProxy = true)
+@ServletComponentScan(basePackages = {"cn.org.autumn.modules.wall.*"})
+@EnableAsync
 @SpringBootApplication
 @MapperScan(basePackages = {"cn.org.autumn.modules.*.dao", "cn.org.autumn.table.dao",})
 public class AutumnApplication extends SpringBootServletInitializer implements LoaderFactory.Loader {

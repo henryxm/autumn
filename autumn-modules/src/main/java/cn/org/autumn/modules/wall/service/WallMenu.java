@@ -1,4 +1,4 @@
-package cn.org.autumn.modules.spm.service;
+package cn.org.autumn.modules.wall.service;
 
 import cn.org.autumn.modules.sys.entity.SysMenuEntity;
 import cn.org.autumn.modules.sys.service.SysMenuService;
@@ -8,16 +8,16 @@ import org.springframework.stereotype.Service;
 import cn.org.autumn.modules.lan.service.LanguageService;
 
 /**
- * 超级位置模型
+ * 防火墙
  *
  * @author Shaohua Xu
  * @email henryxm@163.com
  * @date 2020-11
  */
 @Service
-public class SpmMenu {
+public class WallMenu {
 
-    public static final String spm_menu = "spm_menu";
+    public static final String wall_menu = "wall_menu";
 
     @Autowired
     protected SysMenuService sysMenuService;
@@ -33,7 +33,7 @@ public class SpmMenu {
             return;
         Long id = 0L;
         String[] _m = new String[]
-                {null, "0" , "超级模型" , "" , "" , "0" , "fa fa-dot-circle-o" , "888888" , spm_menu, spm_menu + "_text"};
+                {null, "0", "防火墙", "", "", "0", "fa fa-firefox", "777777", wall_menu, wall_menu + "_text"};
         SysMenuEntity entity = sysMenuService.get(sysMenuService.find(_m));
         if (null == entity) {
             SysMenuEntity sysMenu = sysMenuService.from(_m);
@@ -43,6 +43,6 @@ public class SpmMenu {
     }
 
     public void addLanguageColumnItem() {
-        languageService.addLanguageColumnItem(spm_menu + "_text", "超级模型","Super model");
+        languageService.addLanguageColumnItem(wall_menu + "_text", "防火墙", "Fire wall");
     }
 }
