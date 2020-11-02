@@ -208,7 +208,6 @@ public class LanguageService extends LanguageServiceGen implements PostLoad, Loo
         addLanguageColumnItem("sys_string_menu_url_cannot_be_empty", "菜单URL不能为空", "Menu url cannot by empty");
 
 
-
         addLanguageColumnItem("sys_string_menu_key_format", "格式：{模块包名}_menu", "Format:(module)_menu");
 
         addLanguageColumnItem("sys_string_role", "角色", "Role");
@@ -227,6 +226,8 @@ public class LanguageService extends LanguageServiceGen implements PostLoad, Loo
         addLanguageColumnItem("sys_string_request_parameter", "请求参数", "Request parameter");
         addLanguageColumnItem("sys_string_execute_duration", "执行时长(毫秒)", "Execute duration");
         addLanguageColumnItem("sys_string_ip_address", "IP地址", "IP Address");
+        addLanguageColumnItem("sys_string_yes", "是", "Yes");
+        addLanguageColumnItem("sys_string_no", "否", "No");
         addLanguageColumnItem();
         postLoadFactory.register(this);
     }

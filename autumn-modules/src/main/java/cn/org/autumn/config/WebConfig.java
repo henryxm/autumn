@@ -1,6 +1,7 @@
 package cn.org.autumn.config;
 
 import cn.org.autumn.modules.lan.interceptor.LanguageInterceptor;
+import cn.org.autumn.modules.spm.interceptor.SpmInterceptor;
 import cn.org.autumn.modules.user.interceptor.AuthorizationInterceptor;
 import cn.org.autumn.modules.user.resolver.LoginUserHandlerMethodArgumentResolver;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,10 +31,14 @@ public class WebConfig implements WebMvcConfigurer {
     @Autowired
     private LanguageInterceptor languageInterceptor;
 
+    @Autowired
+    private SpmInterceptor spmInterceptor;
+
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(authorizationInterceptor).addPathPatterns("/**");
         registry.addInterceptor(languageInterceptor);
+        registry.addInterceptor(spmInterceptor);
     }
 
     @Override

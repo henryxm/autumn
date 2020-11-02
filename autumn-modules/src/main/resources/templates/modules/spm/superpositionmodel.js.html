@@ -4,7 +4,33 @@ $(function () {
         datatype: "json",
         colModel: [			
 			{ label: '${lang.spm_superpositionmodel_column_id}', name: 'id', index: 'id', width: 50, key: true },
-			{ label: '${lang.spm_superpositionmodel_column_site_id}', name: 'siteId', index: 'site_id', width: 80 }, 			{ label: '${lang.spm_superpositionmodel_column_page_id}', name: 'pageId', index: 'page_id', width: 80 }, 			{ label: '${lang.spm_superpositionmodel_column_channel_id}', name: 'channelId', index: 'channel_id', width: 80 }, 			{ label: '${lang.spm_superpositionmodel_column_product_id}', name: 'productId', index: 'product_id', width: 80 }, 			{ label: '${lang.spm_superpositionmodel_column_resource_id}', name: 'resourceId', index: 'resource_id', width: 80 }, 			{ label: '${lang.spm_superpositionmodel_column_need_login}', name: 'needLogin', index: 'need_login', width: 80 },         ],
+			{ label: '${lang.spm_superpositionmodel_column_site_id}', name: 'siteId', index: 'site_id', width: 50 },
+			{ label: '${lang.spm_superpositionmodel_column_page_id}', name: 'pageId', index: 'page_id', width: 50 },
+			{ label: '${lang.spm_superpositionmodel_column_channel_id}', name: 'channelId', index: 'channel_id', width: 50 },
+			{ label: '${lang.spm_superpositionmodel_column_product_id}', name: 'productId', index: 'product_id', width: 50 },
+			{ label: '${lang.spm_superpositionmodel_column_resource_id}', name: 'resourceId', index: 'resource_id', width: 80 }, 
+			{ label: '${lang.spm_superpositionmodel_column_url_path}', name: 'urlPath', index: 'url_path', width: 80 }, 
+			{ label: '${lang.spm_superpositionmodel_column_url_key}', name: 'urlKey', index: 'url_key', width: 80 }, 
+			{ label: '${lang.spm_superpositionmodel_column_spm_value}', name: 'spmValue', index: 'spm_value', width: 160,
+				formatter: function(value, options, row){
+					return '<a href="/?spm='+value +'">'+value +'</a>';
+				}
+			},
+			{ label: '${lang.spm_superpositionmodel_column_forbidden}', name: 'forbidden', index: 'forbidden', width: 50,
+				formatter: function(value, options, row){
+				return value === 0 ?
+					'<span class="label label-success">${lang.sys_string_no}</span>' :
+					'<span class="label label-info">${lang.sys_string_yes}</span>';
+				}
+			},
+			{ label: '${lang.spm_superpositionmodel_column_need_login}', name: 'needLogin', index: 'need_login', width: 50,
+				formatter: function(value, options, row){
+					return value === 0 ?
+					'<span class="label label-success">${lang.sys_string_no}</span>' :
+					'<span class="label label-info">${lang.sys_string_yes}</span>';
+				}
+			},
+        ],
 		viewrecords: true,
         height: 385,
         rowNum: 10,

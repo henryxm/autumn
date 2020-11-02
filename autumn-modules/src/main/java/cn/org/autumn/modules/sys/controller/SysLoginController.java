@@ -18,6 +18,7 @@ package cn.org.autumn.modules.sys.controller;
 
 
 import cn.org.autumn.config.Config;
+import cn.org.autumn.modules.spm.service.SuperPositionModelService;
 import com.google.code.kaptcha.Constants;
 import com.google.code.kaptcha.Producer;
 import cn.org.autumn.utils.R;
@@ -41,6 +42,9 @@ import java.io.IOException;
 public class SysLoginController {
     @Autowired
     private Producer producer;
+
+    @Autowired
+    SuperPositionModelService superPositionModelService;
 
     @RequestMapping("captcha.jpg")
     public void captcha(HttpServletResponse response) throws IOException {
@@ -90,7 +94,10 @@ public class SysLoginController {
             return R.error("账户验证失败");
         }
 
-        return R.ok();
+        String j = "index.html";
+        if (superPositionModelService.menuWithSpm())
+            j = "/";
+        return R.ok().put("data", j);
     }
 
 

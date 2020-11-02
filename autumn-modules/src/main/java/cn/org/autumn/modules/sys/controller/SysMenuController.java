@@ -16,16 +16,16 @@
 
 package cn.org.autumn.modules.sys.controller;
 
-import cn.org.autumn.modules.lan.entity.LanguageEntity;
 import cn.org.autumn.modules.lan.interceptor.LanguageInterceptor;
 import cn.org.autumn.modules.lan.service.LanguageService;
+import cn.org.autumn.modules.spm.entity.SuperPositionModelEntity;
+import cn.org.autumn.modules.spm.service.SuperPositionModelService;
 import cn.org.autumn.utils.Constant;
 import cn.org.autumn.annotation.SysLog;
 import cn.org.autumn.exception.AException;
 import cn.org.autumn.utils.R;
 import cn.org.autumn.modules.sys.entity.SysMenuEntity;
 import cn.org.autumn.modules.sys.service.SysMenuService;
-import io.netty.util.internal.StringUtil;
 import org.apache.commons.lang.StringUtils;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,19 +48,26 @@ public class SysMenuController extends AbstractController {
     @Autowired
     LanguageService languageService;
 
-    public void r(SysMenuEntity sysMenuEntity, Map<String, String> language) {
-        if (!StringUtil.isNullOrEmpty(sysMenuEntity.getLanguageName())) {
-            if (language.containsKey(sysMenuEntity.getLanguageName())) {
-                sysMenuEntity.setName(language.get(sysMenuEntity.getLanguageName()));
+    @Autowired
+    SuperPositionModelService superPositionModelService;
+
+    public void r(SysMenuEntity sysMenuEntity, Map<String, String> language, Map<String, SuperPositionModelEntity> spms) {
+        if (StringUtils.isNotEmpty(sysMenuEntity.getLanguageName()) && language.containsKey(sysMenuEntity.getLanguageName())) {
+            sysMenuEntity.setName(language.get(sysMenuEntity.getLanguageName()));
+        }
+
+        if (superPositionModelService.menuWithSpm()) {
+            if (StringUtils.isNotEmpty(sysMenuEntity.getUrl()) && spms.containsKey(sysMenuEntity.getUrl())) {
+                sysMenuEntity.setUrl("?spm=" + spms.get(sysMenuEntity.getUrl()).toString());
             }
         }
+
         if (null != sysMenuEntity.getList() && sysMenuEntity.getList().size() > 0) {
             try {
                 for (SysMenuEntity sub : (List<SysMenuEntity>) sysMenuEntity.getList()) {
-                    r(sub, language);
+                    r(sub, language, spms);
                 }
-            } finally {
-
+            } catch (Exception e) {
             }
         }
     }
@@ -73,9 +80,10 @@ public class SysMenuController extends AbstractController {
         List<SysMenuEntity> menuList = sysMenuService.getUserMenuList(getUserId());
         Locale locale = LanguageInterceptor.getLocale(request);
         Map<String, String> language = languageService.getLanguage(locale);
+        Map<String, SuperPositionModelEntity> spms = superPositionModelService.getSpmListForResourceID();
         if (null != language && language.size() > 0) {
             for (SysMenuEntity sysMenuEntity : menuList) {
-                r(sysMenuEntity, language);
+                r(sysMenuEntity, language, spms);
             }
         }
         return R.ok().put("menuList", menuList);
@@ -116,9 +124,10 @@ public class SysMenuController extends AbstractController {
         menuList.add(root);
         Locale locale = LanguageInterceptor.getLocale(request);
         Map<String, String> language = languageService.getLanguage(locale);
+        Map<String, SuperPositionModelEntity> spms = superPositionModelService.getSpmListForResourceID();
         if (null != language && language.size() > 0) {
             for (SysMenuEntity sysMenuEntity : menuList) {
-                r(sysMenuEntity, language);
+                r(sysMenuEntity, language, spms);
             }
         }
         return R.ok().put("menuList", menuList);

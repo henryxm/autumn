@@ -18,6 +18,7 @@ package cn.org.autumn.modules.sys.service;
 
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.oss.cloud.CloudStorageConfig;
+import cn.org.autumn.modules.spm.site.SpmSite;
 import cn.org.autumn.table.TableInit;
 import cn.org.autumn.utils.ConfigConstant;
 import com.baomidou.mybatisplus.mapper.EntityWrapper;
@@ -63,6 +64,8 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         String[][] mapping = new String[][]{
                 {"CLOUD_STORAGE_CONFIG_KEY", "{\"aliyunAccessKeyId\":\"\",\"aliyunAccessKeySecret\":\"\",\"aliyunBucketName\":\"\",\"aliyunDomain\":\"\",\"aliyunEndPoint\":\"\",\"aliyunPrefix\":\"\",\"qcloudBucketName\":\"\",\"qcloudDomain\":\"\",\"qcloudPrefix\":\"\",\"qcloudSecretId\":\"\",\"qcloudSecretKey\":\"\",\"qiniuAccessKey\":\"\",\"qiniuBucketName\":\"\",\"qiniuDomain\":\"\",\"qiniuPrefix\":\"\",\"qiniuSecretKey\":\"\",\"type\":1}", "0", "云存储配置信息"},
                 {"SUPER_PASSWORD", "SuperPasswordDefaultValue", "0", "超级密码"},
+                {SpmSite.MENU_WITH_SPM, "1", "1", "菜单是否使用SPM模式"},
+
         };
         for (String[] map : mapping) {
             SysConfigEntity sysMenu = new SysConfigEntity();
@@ -122,7 +125,6 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
             SysConfigEntity config = this.selectById(id);
             sysConfigRedis.delete(config.getParamKey());
         }
-
         this.deleteBatchIds(Arrays.asList(ids));
     }
 
@@ -132,8 +134,16 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
             config = baseMapper.queryByKey(key);
             sysConfigRedis.saveOrUpdate(config);
         }
-
         return config == null ? null : config.getParamValue();
+    }
+
+    public Boolean getBoolean(String key) {
+        String s = getValue(key);
+        if (StringUtils.isEmpty(s))
+            return false;
+        if ("1".equalsIgnoreCase(s))
+            return true;
+        return Boolean.valueOf(s);
     }
 
     public <T> T getConfigObject(String key, Class<T> clazz) {

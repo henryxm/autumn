@@ -63,6 +63,18 @@ public class SuperPositionModelServiceGen extends ServiceImpl<SuperPositionModel
         if(params.containsKey("resourceId") && null !=params.get("resourceId") && StringUtils.isNotEmpty(params.get("resourceId").toString())) {
             condition.put("resource_id", params.get("resourceId"));
         }
+        if(params.containsKey("urlPath") && null !=params.get("urlPath") && StringUtils.isNotEmpty(params.get("urlPath").toString())) {
+            condition.put("url_path", params.get("urlPath"));
+        }
+        if(params.containsKey("urlKey") && null !=params.get("urlKey") && StringUtils.isNotEmpty(params.get("urlKey").toString())) {
+            condition.put("url_key", params.get("urlKey"));
+        }
+        if(params.containsKey("spmValue") && null !=params.get("spmValue") && StringUtils.isNotEmpty(params.get("spmValue").toString())) {
+            condition.put("spm_value", params.get("spmValue"));
+        }
+        if(params.containsKey("forbidden") && null !=params.get("forbidden") && StringUtils.isNotEmpty(params.get("forbidden").toString())) {
+            condition.put("forbidden", params.get("forbidden"));
+        }
         if(params.containsKey("needLogin") && null !=params.get("needLogin") && StringUtils.isNotEmpty(params.get("needLogin").toString())) {
             condition.put("need_login", params.get("needLogin"));
         }
@@ -89,7 +101,7 @@ public class SuperPositionModelServiceGen extends ServiceImpl<SuperPositionModel
         SysMenuEntity sysMenuEntity = sysMenuService.getByMenuKey(SpmMenu.spm_menu);
         if(null != sysMenuEntity)
             return sysMenuEntity.getMenuId().intValue();
-        return 1;
+        return 69;
     }
 
     public String ico(){
@@ -143,6 +155,10 @@ public class SuperPositionModelServiceGen extends ServiceImpl<SuperPositionModel
         languageService.addLanguageColumnItem("spm_superpositionmodel_column_channel_id", "频道ID");
         languageService.addLanguageColumnItem("spm_superpositionmodel_column_product_id", "产品ID");
         languageService.addLanguageColumnItem("spm_superpositionmodel_column_resource_id", "资源ID");
+        languageService.addLanguageColumnItem("spm_superpositionmodel_column_url_path", "URL路径");
+        languageService.addLanguageColumnItem("spm_superpositionmodel_column_url_key", "URLKey");
+        languageService.addLanguageColumnItem("spm_superpositionmodel_column_spm_value", "SPM值");
+        languageService.addLanguageColumnItem("spm_superpositionmodel_column_forbidden", "是否禁用");
         languageService.addLanguageColumnItem("spm_superpositionmodel_column_need_login", "需要登录");
     }
 }

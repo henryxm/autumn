@@ -12,7 +12,7 @@ import cn.org.autumn.modules.lan.service.LanguageService;
  *
  * @author Shaohua Xu
  * @email henryxm@163.com
- * @date 2020-10
+ * @date 2020-11
  */
 @Service
 public class SpmMenu {
@@ -29,5 +29,20 @@ public class SpmMenu {
     protected LanguageService languageService;
 
     public void init() {
+        if (!tableInit.init)
+            return;
+        Long id = 0L;
+        String[] _m = new String[]
+                {null, "0" , "超级模型" , "" , "" , "0" , "fa fa-address-card-o" , "0" , spm_menu, spm_menu + "_text"};
+        SysMenuEntity entity = sysMenuService.get(sysMenuService.find(_m));
+        if (null == entity) {
+            SysMenuEntity sysMenu = sysMenuService.from(_m);
+            sysMenuService.put(sysMenu);
+        }
+        addLanguageColumnItem();
+    }
+
+    public void addLanguageColumnItem() {
+        languageService.addLanguageColumnItem(spm_menu + "_text", "超级模型","Super model");
     }
 }
