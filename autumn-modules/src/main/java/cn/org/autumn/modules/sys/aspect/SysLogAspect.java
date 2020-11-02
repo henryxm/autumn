@@ -95,7 +95,7 @@ public class SysLogAspect {
 		//获取request
 		HttpServletRequest request = HttpContextUtils.getHttpServletRequest();
 		//设置IP地址
-		sysLog.setIp(IPUtils.getIpAddr(request));
+		sysLog.setIp(IPUtils.getIp(request));
 
 		//用户名
 		String username = ((SysUserEntity) SecurityUtils.getSubject().getPrincipal()).getUsername();

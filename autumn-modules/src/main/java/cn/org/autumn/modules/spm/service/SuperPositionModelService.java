@@ -36,6 +36,9 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
     @Autowired
     PostLoadFactory postLoadFactory;
 
+    @Autowired
+    VisitLogService visitLogService;
+
     private static Map<String, String> spmListForHtml;
     private static Map<String, SuperPositionModelEntity> spmListForUrlKey;
     private static Map<String, SuperPositionModelEntity> spmListForResourceID;
@@ -81,7 +84,7 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
         SuperPositionModelEntity superPositionModelEntity = sMap.get(sessionId);
 
         if (null == superPositionModelEntity)
-            superPositionModelEntity = getSpm(spm);
+            superPositionModelEntity = getSpm(httpServletRequest, spm);
         else
             sMap.remove(sessionId);
         if (null != superPositionModelEntity && StringUtils.isNotEmpty(superPositionModelEntity.getResourceId()))
@@ -96,7 +99,7 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
      */
     public boolean needLogin(HttpServletRequest httpServletRequest, String spm) {
         String sessionId = httpServletRequest.getSession().getId();
-        SuperPositionModelEntity superPositionModelEntity = getSpm(spm);
+        SuperPositionModelEntity superPositionModelEntity = getSpm(httpServletRequest, spm);
         if (null != superPositionModelEntity) {
             sMap.put(sessionId, superPositionModelEntity);
             if (null != superPositionModelEntity.getNeedLogin())
@@ -105,10 +108,10 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
         return true;
     }
 
-    public SuperPositionModelEntity getSpm(String spm) {
+    public SuperPositionModelEntity getSpm(HttpServletRequest httpServletRequest, String spm) {
         SuperPositionModelEntity superPositionModelEntity = getSpmInternal(spm);
         if (null != superPositionModelEntity)
-            log(superPositionModelEntity);
+            log(httpServletRequest, superPositionModelEntity);
         return superPositionModelEntity;
     }
 
@@ -124,11 +127,11 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
         return baseMapper.getByUrlKey(urlKey);
     }
 
-    public void log(SuperPositionModelEntity superPositionModelEntity) {
+    public void log(HttpServletRequest request, SuperPositionModelEntity superPositionModelEntity) {
         asyncTaskExecutor.execute(new Runnable() {
             @Override
             public void run() {
-                logger.info(superPositionModelEntity.toString());
+                visitLogService.put(request, superPositionModelEntity);
             }
         });
     }

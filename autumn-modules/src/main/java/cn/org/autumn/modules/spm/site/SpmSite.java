@@ -17,11 +17,16 @@ public class SpmSite {
     public final static String superpositionmodelResourceId = "modules/spm/superpositionmodel";
     public final static String superpositionmodelKeyId = prefix + "superpositionmodel" + suffix;
 
+    public final static String visitlogPageId = "10001";
+    public final static String visitlogResourceId = "modules/spm/visitlog";
+    public final static String visitlogKeyId = prefix + "visitlog" + suffix;
+
     @Autowired
     SuperPositionModelService superPositionModelService;
 
     @PostConstruct
     public void init() {
         superPositionModelService.put(siteId, superpositionmodelPageId, "superpositionmodel", "0", superpositionmodelResourceId, superpositionmodelResourceId, superpositionmodelKeyId, true);
+        superPositionModelService.put(siteId, visitlogPageId, "visitlog", "0", visitlogResourceId, visitlogResourceId, visitlogKeyId, true);
     }
 }
