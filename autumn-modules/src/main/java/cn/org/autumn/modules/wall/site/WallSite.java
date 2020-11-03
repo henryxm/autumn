@@ -32,7 +32,7 @@ public class WallSite {
     public final static String ipwhiteKeyId = prefix + ipwhite + suffix;
 
     public final static String urlblack = "urlblack";
-    public final static String urlblackPageId = "1003";
+    public final static String urlblackPageId = "1004";
     public final static String urlblackProductId = "0";
     public final static String urlblackResourceId = "modules/" + pack + "/" + urlblack;
     public final static String urlblackKeyId = prefix + urlblack + suffix;

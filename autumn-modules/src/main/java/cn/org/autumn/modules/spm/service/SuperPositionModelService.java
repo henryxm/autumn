@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.spm.service;
 
+import cn.org.autumn.annotation.PageAware;
 import cn.org.autumn.config.PostLoad;
 import cn.org.autumn.config.PostLoadFactory;
 import cn.org.autumn.modules.job.task.LoopJob;
@@ -7,6 +8,7 @@ import cn.org.autumn.modules.spm.entity.SuperPositionModelEntity;
 import cn.org.autumn.modules.spm.service.gen.SuperPositionModelServiceGen;
 import cn.org.autumn.modules.spm.site.SpmSite;
 import cn.org.autumn.modules.sys.service.SysConfigService;
+import cn.org.autumn.site.SiteFactory;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,10 +17,8 @@ import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.stereotype.Service;
 
 import javax.servlet.http.HttpServletRequest;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.lang.reflect.Field;
+import java.util.*;
 
 @Service
 public class SuperPositionModelService extends SuperPositionModelServiceGen implements PostLoad, LoopJob.Job {
@@ -38,6 +38,9 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
 
     @Autowired
     VisitLogService visitLogService;
+
+    @Autowired
+    SiteFactory siteFactory;
 
     private static Map<String, String> spmListForHtml;
     private static Map<String, SuperPositionModelEntity> spmListForUrlKey;
@@ -68,11 +71,48 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
     }
 
     public void load() {
+        site();
         List<SuperPositionModelEntity> list = baseMapper.selectByMap(new HashMap<>());
         for (SuperPositionModelEntity superPositionModelEntity : list) {
             spmListForHtml.put(superPositionModelEntity.getUrlKey(), "spm=" + superPositionModelEntity.toString());
             spmListForUrlKey.put(superPositionModelEntity.getUrlKey(), superPositionModelEntity);
             spmListForResourceID.put(superPositionModelEntity.getResourceId(), superPositionModelEntity);
+        }
+
+    }
+
+    public void site() {
+        Collection<SiteFactory.Site> sites = siteFactory.getSites();
+        if (null == sites)
+            return;
+        for (SiteFactory.Site site : sites) {
+
+            Field[] fields = site.getClass().getDeclaredFields();
+            for (Field field : fields) {
+                PageAware aware = field.getAnnotation(PageAware.class);
+                if (null == aware)
+                    continue;
+                String siteId = site.getId();
+                String pack = site.getPack();
+                String page = field.getName();
+
+                if (StringUtils.isNotEmpty(aware.page()) && !"NULL".equalsIgnoreCase(aware.page()) && !"0".equalsIgnoreCase(aware.page()))
+                    page = aware.page();
+
+                String channel = aware.channel();
+                String product = aware.product();
+
+                String resource = page;
+                if (StringUtils.isNotEmpty(aware.resource()))
+                    resource = aware.resource();
+                String url = page;
+                if (StringUtils.isNotEmpty(aware.url()))
+                    url = aware.url();
+
+                boolean login = aware.login();
+                String key = pack + "_" + page;
+                put(siteId, page, channel, product, resource, url, key, login);
+            }
         }
     }
 
@@ -230,7 +270,6 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
 
     public void init() {
         super.init();
-        load();
         postLoadFactory.register(this);
         LoopJob.onOneMinute(this);
     }

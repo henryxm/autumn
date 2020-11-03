@@ -16,7 +16,6 @@
 
 package cn.org.autumn.modules.sys.service;
 
-import cn.org.autumn.modules.lan.service.LanguageService;
 import cn.org.autumn.table.TableInit;
 import com.aliyuncs.utils.StringUtils;
 import com.baomidou.mybatisplus.service.impl.ServiceImpl;
@@ -24,7 +23,6 @@ import cn.org.autumn.utils.Constant;
 import cn.org.autumn.utils.MapUtils;
 import cn.org.autumn.modules.sys.dao.SysMenuDao;
 import cn.org.autumn.modules.sys.entity.SysMenuEntity;
-import io.netty.util.internal.StringUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -46,9 +44,6 @@ public class SysMenuService extends ServiceImpl<SysMenuDao, SysMenuEntity> {
 
     @Autowired
     private TableInit tableInit;
-
-    @Autowired
-    LanguageService languageService;
 
     @PostConstruct
     public void init() {
