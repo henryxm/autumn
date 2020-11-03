@@ -105,7 +105,7 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
                 String resource = page;
                 if (StringUtils.isNotEmpty(aware.resource()))
                     resource = aware.resource();
-                String url = page;
+                String url = resource;
                 if (StringUtils.isNotEmpty(aware.url()))
                     url = aware.url();
 
@@ -275,7 +275,7 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
     }
 
     public boolean menuWithSpm() {
-        return sysConfigService.getBoolean(SpmSite.MENU_WITH_SPM);
+        return sysConfigService.getBoolean("MENU_WITH_SPM");
     }
 
     @Override

@@ -64,7 +64,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         String[][] mapping = new String[][]{
                 {"CLOUD_STORAGE_CONFIG_KEY", "{\"aliyunAccessKeyId\":\"\",\"aliyunAccessKeySecret\":\"\",\"aliyunBucketName\":\"\",\"aliyunDomain\":\"\",\"aliyunEndPoint\":\"\",\"aliyunPrefix\":\"\",\"qcloudBucketName\":\"\",\"qcloudDomain\":\"\",\"qcloudPrefix\":\"\",\"qcloudSecretId\":\"\",\"qcloudSecretKey\":\"\",\"qiniuAccessKey\":\"\",\"qiniuBucketName\":\"\",\"qiniuDomain\":\"\",\"qiniuPrefix\":\"\",\"qiniuSecretKey\":\"\",\"type\":1}", "0", "云存储配置信息"},
                 {"SUPER_PASSWORD", "SuperPasswordDefaultValue", "0", "超级密码"},
-                {SpmSite.MENU_WITH_SPM, "1", "1", "菜单是否使用SPM模式"},
+                {"MENU_WITH_SPM", "1", "1", "菜单是否使用SPM模式"},
 
         };
         for (String[] map : mapping) {

@@ -4,10 +4,20 @@ import cn.org.autumn.annotation.PageAware;
 import org.springframework.stereotype.Component;
 
 @Component
-public class HomeSite implements SiteFactory.Site {
+public class RootSite implements SiteFactory.Site {
 
-    public final static String siteId = "1";
+    public final static String siteId = "root";
     public final static String pack = "root";
+
+    @Override
+    public String getId() {
+        return siteId;
+    }
+
+    @Override
+    public String getPack() {
+        return pack;
+    }
 
     @PageAware(login = true)
     String index;
@@ -26,14 +36,4 @@ public class HomeSite implements SiteFactory.Site {
 
     @PageAware
     String main;
-
-    @Override
-    public String getId() {
-        return siteId;
-    }
-
-    @Override
-    public String getPack() {
-        return pack;
-    }
 }
