@@ -10,6 +10,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.boot.web.servlet.ServletComponentScan;
 import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
+//import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.EnableAspectJAutoProxy;
@@ -20,6 +21,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ThreadPoolExecutor;
 
+//@EnableDiscoveryClient
 @EnableAspectJAutoProxy(proxyTargetClass = true, exposeProxy = true)
 @ServletComponentScan
 @EnableAsync
@@ -28,7 +30,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 public class AutumnApplication extends SpringBootServletInitializer implements LoaderFactory.Loader {
     public static void main(String[] args) {
         SpringApplication springApplication = new SpringApplication(AutumnApplication.class);
-//        springApplication.setBannerMode(Banner.Mode.OFF);
+        springApplication.setBannerMode(Banner.Mode.OFF);
         ConfigurableApplicationContext configurableApplicationContext = springApplication.run(args);
     }
 

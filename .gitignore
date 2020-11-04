@@ -25,4 +25,3 @@ nbdist/
 .nb-gradle/
 
 logs/
-/LOG_PATH_IS_UNDEFINEDdaily/*

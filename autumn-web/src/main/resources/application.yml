@@ -2,13 +2,16 @@
 server:
   tomcat:
     uri-encoding: UTF-8
-    max-threads: 1000
-    min-spare-threads: 30
+    threads:
+      min-spare: 30
+      max: 1000
   port: 80
   servlet:
     context-path: /
 
 spring:
+  application:
+    name: autumn-web
   profiles:
     active: dev
   jackson:
@@ -91,8 +94,9 @@ logging:
   #  level.org.springframework.boot.web.servlet: warn
   level.org.springframework.boot.web.embedded: info
   level.com.alibaba.druid: off
-  path: logs/
-  file: admin.log
+  file:
+    name: file.log
+    path: logs/
 
 pagehelper:
   reasonable: true
