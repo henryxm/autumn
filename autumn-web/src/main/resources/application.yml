@@ -102,3 +102,8 @@ pagehelper:
 
 mybatis:
   mapperLocations: classpath:mapper/**/*.xml
+
+#eureka.client.serviceUrl.defaultZone: http://admin:admin@192.168.2.6:8761/eureka/
+#eureka.instance.preferIpAddress: true
+#eureka.instance.instance-id: ${spring.application.name}:${spring.cloud.client.ip-address}:${server.port}
+#eureka.instance.status-page-url: test.com

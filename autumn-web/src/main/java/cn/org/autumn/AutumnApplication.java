@@ -4,6 +4,7 @@ import cn.org.autumn.loader.LoaderFactory;
 import freemarker.cache.ClassTemplateLoader;
 import freemarker.cache.TemplateLoader;
 import org.mybatis.spring.annotation.MapperScan;
+import org.springframework.boot.Banner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
@@ -19,16 +20,15 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ThreadPoolExecutor;
 
-
 @EnableAspectJAutoProxy(proxyTargetClass = true, exposeProxy = true)
-@ServletComponentScan(basePackages = {"cn.org.autumn.modules.wall.*"})
+@ServletComponentScan
 @EnableAsync
 @SpringBootApplication
 @MapperScan(basePackages = {"cn.org.autumn.modules.*.dao", "cn.org.autumn.table.dao",})
 public class AutumnApplication extends SpringBootServletInitializer implements LoaderFactory.Loader {
-
     public static void main(String[] args) {
         SpringApplication springApplication = new SpringApplication(AutumnApplication.class);
+//        springApplication.setBannerMode(Banner.Mode.OFF);
         ConfigurableApplicationContext configurableApplicationContext = springApplication.run(args);
     }
 
