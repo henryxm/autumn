@@ -57,6 +57,11 @@ public class LanguageService extends LanguageServiceGen implements PostLoad, Loo
             if (!languages.containsKey(name)) {
                 map = new LinkedHashMap<>();
                 languages.put(name, map);
+                if (name.contains("_")) {
+                    String l = name.split("_")[0];
+                    if (!languages.containsKey(l))
+                        languages.put(l, map);
+                }
             } else {
                 map = languages.get(name);
             }

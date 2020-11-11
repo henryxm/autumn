@@ -1,8 +1,39 @@
-version: '1'
+version: '3'
 services:
-  autumn-web:
-    image: autumn/web
+  web:
+    build: ./autumn-web
+    container_name: autumn
+    environment:
+      - "--spring.profiles.active=dev-docker"
     ports:
       - "80:80"
+    volumes:
+      - "./storage/data/web/tmp:/tmp"
+    depends_on:
+      - db
+      - redis
+    links:
+      - "db:database"
+  db:
+    image: mysql:5.7
+    restart: always
+    container_name: mysql
     environment:
-      - spring.profiles.active=prod
+      MYSQL_USER: autumn
+      MYSQL_PASSWORD: autumn
+      MYSQL_DATABASE: autumn
+      MYSQL_ROOT_PASSWORD: 123456
+    ports:
+      - '3306:3306'
+    volumes:
+      - "./storage/data/mysql:/var/lib/mysql"
+      - "./storage/config/my.cnf:/etc/my.cnf"
+  redis:
+    image: redis
+    restart: always
+    container_name: redis
+    command: --appendonly yes
+    ports:
+      - 6379:6379
+    volumes:
+      - "./storage/data/redis:/data"

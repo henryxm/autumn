@@ -7,7 +7,7 @@
     <version>1.0.0</version>
     <packaging>jar</packaging>
 
-    <name>autumn-core</name>
+    <name>autumn-lib</name>
     <url>http://autumn.org.cn</url>
 
     <properties>

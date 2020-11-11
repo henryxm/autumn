@@ -13,6 +13,10 @@ public class Config {
     public static final String TEST = "test";
     public static final String PROD = "prod";
 
+    public static final String DEV_DOCKER = "dev-docker";
+    public static final String TEST_DOCKER = "test-docker";
+    public static final String PROD_DOCKER = "prod-docker";
+
     private static Config instance = null;
     private ApplicationContext applicationContext;
     private Environment environment;
@@ -44,21 +48,21 @@ public class Config {
     }
 
     public static boolean isProd() {
-        if (getInstance().ENVs.contains(Config.PROD))
+        if (getInstance().ENVs.contains(Config.PROD) || getInstance().ENVs.contains(Config.PROD_DOCKER))
             return true;
         else
             return false;
     }
 
     public static boolean isDev() {
-        if (getInstance().ENVs.contains(Config.DEV))
+        if (getInstance().ENVs.contains(Config.DEV) || getInstance().ENVs.contains(Config.DEV_DOCKER))
             return true;
         else
             return false;
     }
 
     public static boolean isTest() {
-        if (getInstance().ENVs.contains(Config.TEST))
+        if (getInstance().ENVs.contains(Config.TEST) || getInstance().ENVs.contains(Config.TEST_DOCKER))
             return true;
         else
             return false;

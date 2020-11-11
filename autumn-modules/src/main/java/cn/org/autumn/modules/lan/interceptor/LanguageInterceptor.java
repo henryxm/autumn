@@ -21,6 +21,8 @@ import java.util.Map;
 @Component
 public class LanguageInterceptor extends HandlerInterceptorAdapter {
 
+    private static Logger logger = LoggerFactory.getLogger(LanguageInterceptor.class);
+
     @Autowired
     LanguageService languageService;
 
@@ -46,16 +48,23 @@ public class LanguageInterceptor extends HandlerInterceptorAdapter {
                     locale = localeInSession;
                 }
             } catch (Exception e) {
+                logger.error("LanguageInterceptor.getLocale error: " + e.getMessage());
             }
         }
         return locale;
     }
 
     public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, @Nullable ModelAndView modelAndView) throws Exception {
+        String uri = request.getRequestURI();
         if (null != modelAndView) {
             ModelMap modelMap = modelAndView.getModelMap();
             Locale locale = getLocale(request);
+            if (null == locale) {
+                logger.error("locale can not be null");
+            }
             Map<String, String> lang = languageService.getLanguage(locale);
+            if (null == lang || lang.isEmpty())
+                logger.error("language cannot be empty");
             modelMap.put("lang", lang);
         }
     }
