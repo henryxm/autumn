@@ -4,10 +4,11 @@ import java.lang.reflect.Field;
 import java.util.*;
 import java.util.Map.Entry;
 
+import cn.org.autumn.table.annotation.UniqueKey;
+import cn.org.autumn.table.annotation.UniqueKeys;
 import cn.org.autumn.table.dao.TableDao;
 import cn.org.autumn.table.data.TableInfo;
 import cn.org.autumn.table.mysql.ColumnMeta;
-import cn.org.autumn.table.mysql.TableMeta;
 import org.apache.commons.lang.ArrayUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,6 +28,16 @@ import cn.org.autumn.table.utils.ClassTools;
 public class MysqlTableService {
 
     private static final Logger log = LoggerFactory.getLogger(MysqlTableService.class);
+
+    private static List<String> ignoreLengthList = new ArrayList<>();
+
+    static {
+        ignoreLengthList.add("int");
+        ignoreLengthList.add("integer");
+        ignoreLengthList.add("bigint");
+        ignoreLengthList.add("tinyint");
+        ignoreLengthList.add("datetime");
+    }
 
     @Autowired
     private TableDao tableDao;
@@ -55,7 +66,6 @@ public class MysqlTableService {
 
         // 获取Mysql的类型，以及类型需要设置几个长度
         Map<String, Object> mySqlTypeAndLengthMap = mySqlTypeAndLengthMap();
-
 
 
         // 从包package中获取所有的Class
@@ -106,9 +116,9 @@ public class MysqlTableService {
                                       Map<TableInfo, List<Object>> dropKeyTableMap, Map<TableInfo, List<Object>> dropUniqueTableMap) {
         for (Class<?> clas : classes) {
 
-           TableInfo tableInfo = new TableInfo(clas);
+            TableInfo tableInfo = new TableInfo(clas);
 
-            if(!tableInfo.isValid())
+            if (!tableInfo.isValid())
                 continue;
 
             // 用于存新增表的字段
@@ -202,6 +212,10 @@ public class MysqlTableService {
                 modifyFieldList, dropKeyFieldList, dropUniqueFieldList, tableColumnList, fieldMap);
     }
 
+    private boolean ignoreLength(String typeAndLength) {
+        return ignoreLengthList.contains(typeAndLength.toLowerCase());
+    }
+
     /**
      * 根据数据库中表的结构和model中表的结构对比找出修改类型默认值等属性的字段
      *
@@ -231,7 +245,7 @@ public class MysqlTableService {
                 }
 
                 // 原本是唯一，现在不是了，那么要去做删除唯一的操作
-                if ("UNI".equals(sysColumn.getColumnKey()) && !createTableParam.isUnique()) {
+                if ("UNI".equals(sysColumn.getColumnKey()) && !createTableParam.hasUniqueKey()) {
                     dropUniqueFieldList.add(createTableParam);
                 }
 
@@ -242,20 +256,28 @@ public class MysqlTableService {
                     continue;
                 }
                 // 2.验证长度
-                // 3.验证小数点位数
+                // 3.验证小数点位数integer
                 int length = (Integer) mySqlTypeAndLengthMap.get(createTableParam.getType().toLowerCase());
                 String typeAndLength = createTableParam.getType().toLowerCase();
-                if (length == 1) {
-                    // 拼接出类型加长度，比如varchar(1)
-                    typeAndLength = typeAndLength + "(" + createTableParam.getLength() + ")";
-                } else if (length == 2) {
-                    typeAndLength = typeAndLength + "(" + createTableParam.getLength() + ","
-                            + createTableParam.getDecimalLength() + ")";
-                }
-                // 判断类型+长度是否相同
-                if (!sysColumn.getColumnType().toLowerCase().equals(typeAndLength)) {
-                    modifyFieldList.add(createTableParam);
-                    continue;
+                boolean ignoreLenth = ignoreLength(typeAndLength);
+                if (!ignoreLenth) {
+                    if (length == 1) {
+                        // 拼接出类型加长度，比如varchar(1)
+                        typeAndLength = typeAndLength + "(" + createTableParam.getLength() + ")";
+                    } else if (length == 2) {
+                        typeAndLength = typeAndLength + "(" + createTableParam.getLength() + ","
+                                + createTableParam.getDecimalLength() + ")";
+                    }
+                    // 判断类型+长度是否相同
+                    if (!sysColumn.getColumnType().toLowerCase().equals(typeAndLength)) {
+                        modifyFieldList.add(createTableParam);
+                        continue;
+                    }
+                } else {
+                    if (!sysColumn.getColumnType().toLowerCase().contains(typeAndLength)) {
+                        modifyFieldList.add(createTableParam);
+                        continue;
+                    }
                 }
 
                 // 4.验证主键
@@ -291,7 +313,7 @@ public class MysqlTableService {
                         modifyFieldList.add(createTableParam);
                         continue;
                     }
-                } else if (sysColumn.getNullable()&& !createTableParam.isKey()) {
+                } else if (sysColumn.getNullable() && !createTableParam.isKey()) {
                     if (!createTableParam.isNull()) {
                         // 一个是可以一个是不可用，所以需要更新该字段
                         modifyFieldList.add(createTableParam);
@@ -300,7 +322,7 @@ public class MysqlTableService {
                 }
 
                 // 8.验证是否唯一
-                if (!"UNI".equals(sysColumn.getColumnKey()) && createTableParam.isUnique()) {
+                if (!"UNI".equals(sysColumn.getColumnKey()) && createTableParam.hasUniqueKey()) {
                     // 原本不是唯一，现在变成了唯一，那么要去做更新
                     modifyFieldList.add(createTableParam);
                     continue;
@@ -336,7 +358,7 @@ public class MysqlTableService {
         for (String fieldNm : columnNames) {
             // 判断该字段在新的model结构中是否存在
 
-            if(!containIgnoreCase(fieldMap.keySet(),fieldNm)){
+            if (!containIgnoreCase(fieldMap.keySet(), fieldNm)) {
                 removeFieldList.add(fieldNm);
             }
         }
@@ -344,7 +366,6 @@ public class MysqlTableService {
             removeTableMap.put(table, removeFieldList);
         }
     }
-
 
 
     /**
@@ -362,7 +383,7 @@ public class MysqlTableService {
             ColumnInfo createTableParam = (ColumnInfo) obj;
             // 循环新的model中的字段，判断是否在数据库中已经存在
 
-            if (!containIgnoreCase(columnNames,createTableParam.getName())) {
+            if (!containIgnoreCase(columnNames, createTableParam.getName())) {
                 // 不存在，表示要在数据库中增加该字段
                 addFieldList.add(obj);
             }
@@ -372,17 +393,17 @@ public class MysqlTableService {
         }
     }
 
-    private boolean containIgnoreCase(List<String> columnNames, String column){
-        for(String s:columnNames){
-            if(s.equalsIgnoreCase(column))
+    private boolean containIgnoreCase(List<String> columnNames, String column) {
+        for (String s : columnNames) {
+            if (s.equalsIgnoreCase(column))
                 return true;
         }
         return false;
     }
 
-    private boolean containIgnoreCase(Set<String> columnNames, String column){
-        for(String s:columnNames){
-            if(s.equalsIgnoreCase(column))
+    private boolean containIgnoreCase(Set<String> columnNames, String column) {
+        for (String s : columnNames) {
+            if (s.equalsIgnoreCase(column))
                 return true;
         }
         return false;
@@ -402,18 +423,21 @@ public class MysqlTableService {
         // 判断是否有父类，如果有拉取父类的field，这里只支持多层继承
         fields = recursionParents(clas, fields);
 
+        UniqueKeys uniqueKeys = clas.getAnnotation(UniqueKeys.class);
+        UniqueKey uniqueKey = clas.getAnnotation(UniqueKey.class);
+
         for (Field field : fields) {
             // 判断方法中是否有指定注解类型的注解
             boolean hasAnnotation = field.isAnnotationPresent(Column.class);
             if (hasAnnotation) {
                 // 根据注解类型返回方法的指定类型注解
                 Column column = field.getAnnotation(Column.class);
-                ColumnInfo columnInfo = new ColumnInfo(field);
+                ColumnInfo columnInfo = new ColumnInfo(field, uniqueKeys, uniqueKey);
                 int length = 0;
                 try {
                     length = (Integer) mySqlTypeAndLengthMap.get(column.type().toLowerCase());
-                }catch (Exception e){
-                    log.error("未知的Mysql数据类型字段:"+column.type());
+                } catch (Exception e) {
+                    log.error("未知的Mysql数据类型字段:" + column.type());
                 }
                 columnInfo.setTypeLength(length);
                 newFieldList.add(columnInfo);
@@ -584,7 +608,7 @@ public class MysqlTableService {
         Map<String, Object> map = new HashMap<String, Object>();
         for (Field field : fields) {
             LengthCount lengthCount = field.getAnnotation(LengthCount.class);
-            if(null != lengthCount)
+            if (null != lengthCount)
                 map.put(field.getName().toLowerCase(), lengthCount.LengthCount());
         }
         return map;

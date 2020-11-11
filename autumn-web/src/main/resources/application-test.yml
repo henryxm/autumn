@@ -1,7 +1,7 @@
 spring:
   datasource:
     type: com.alibaba.druid.pool.DruidDataSource
-    driverClassName: com.mysql.jdbc.Driver
+    driverClassName: com.mysql.cj.jdbc.Driver
     druid:
       first:  #数据源1
         url: jdbc:mysql://localhost:3306/useSSL=false&autumn?allowMultiQueries=true&useUnicode=true&characterEncoding=UTF-8
