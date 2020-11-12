@@ -105,12 +105,4 @@ pagehelper:
 mybatis:
   mapperLocations: classpath:mapper/**/*.xml
 
-eureka:
-  client:
-    serviceUrl:
-      defaultZone: http://admin:admin@harbor.iparkcar.cn:668/eureka/
-  instance:
-    preferIpAddress: true
-    instance-id: ${spring.application.name}:${spring.cloud.client.ip-address}:${server.port}
-
 

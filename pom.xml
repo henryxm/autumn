@@ -41,7 +41,6 @@
         <commons.configuration.version>1.10</commons.configuration.version>
         <pagehelper.spring.boot.version>1.2.5</pagehelper.spring.boot.version>
         <velocity.version>1.7</velocity.version>
-        <spring.cloud-version>Hoxton.SR8</spring.cloud-version>
     </properties>
 
     <modules>
@@ -50,27 +49,7 @@
         <module>autumn-web</module>
         <module>autumn-demo</module>
     </modules>
-    <dependencyManagement>
-        <dependencies>
-            <dependency>
-                <groupId>org.springframework.cloud</groupId>
-                <artifactId>spring-cloud-dependencies</artifactId>
-                <version>${spring.cloud-version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
-
     <dependencies>
-        <dependency>
-            <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-actuator</artifactId>
-        </dependency>
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
