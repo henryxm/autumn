@@ -10,7 +10,7 @@ public class ColumnMeta {
     private String columnName;
     private String ordinalPosition;
     private String columnDefault;
-    private Boolean isNullable;
+    private String isNullable;
     private String dataType;
     private Integer characterMaximumLength;
     private Integer characterOctetLength;
@@ -25,6 +25,9 @@ public class ColumnMeta {
     private String generationExpression;
     private String extra;
     private String privileges;
+
+    public ColumnMeta() {
+    }
 
     public String getTableCatalog() {
         return tableCatalog;
@@ -75,10 +78,20 @@ public class ColumnMeta {
     }
 
     public Boolean getNullable() {
+        if (null == isNullable || "y".equalsIgnoreCase(isNullable) || "yes".equalsIgnoreCase(isNullable) || "true".equalsIgnoreCase(isNullable) || "1".equalsIgnoreCase(isNullable))
+            return true;
+        return false;
+    }
+
+    public void setNullable(String nullable) {
+        isNullable = nullable;
+    }
+
+    public String getIsNullable() {
         return isNullable;
     }
 
-    public void setNullable(Boolean nullable) {
+    public void setIsNullable(String nullable) {
         isNullable = nullable;
     }
 

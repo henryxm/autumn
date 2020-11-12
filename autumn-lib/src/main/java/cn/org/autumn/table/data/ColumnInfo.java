@@ -1,6 +1,9 @@
 package cn.org.autumn.table.data;
 
 import cn.org.autumn.table.annotation.Column;
+import cn.org.autumn.table.annotation.UniqueKey;
+import cn.org.autumn.table.annotation.UniqueKeyFields;
+import cn.org.autumn.table.annotation.UniqueKeys;
 import cn.org.autumn.table.mysql.ColumnMeta;
 import cn.org.autumn.table.utils.HumpConvert;
 import org.apache.commons.lang.StringUtils;
@@ -64,6 +67,9 @@ public class ColumnInfo {
      */
     private boolean isUnique;
 
+
+    private boolean hasUniqueKey;
+
     /**
      * 字段注释
      */
@@ -82,16 +88,16 @@ public class ColumnInfo {
     private String genAnnotation;
 
 
-    public ColumnInfo(Field field) {
-        initFrom(field);
+    public ColumnInfo(Field field, UniqueKeys uniqueKeys, UniqueKey uniqueKey) {
+        initFrom(field, uniqueKeys, uniqueKey);
     }
 
     public ColumnInfo(ColumnMeta field) {
         initFrom(field);
     }
 
-    public static ColumnInfo from(Field field) {
-        return new ColumnInfo(field);
+    public static ColumnInfo from(Field field, UniqueKeys uniqueKeys, UniqueKey uniqueKey) {
+        return new ColumnInfo(field, uniqueKeys, uniqueKey);
     }
 
     public void initFrom(ColumnMeta column) {
@@ -181,10 +187,10 @@ public class ColumnInfo {
     }
 
     public static String columnToJava(String columnName) {
-        return WordUtils.capitalizeFully(columnName, new char[]{'_'}).replace("_" , "");
+        return WordUtils.capitalizeFully(columnName, new char[]{'_'}).replace("_", "");
     }
 
-    public void initFrom(Field field) {
+    public void initFrom(Field field, UniqueKeys uniqueKeys, UniqueKey uniqueKey) {
         Column column = field.getAnnotation(Column.class);
         if (null == column) {
             return;
@@ -209,8 +215,31 @@ public class ColumnInfo {
         this.isAutoIncrement = column.isAutoIncrement();
         this.defaultValue = column.defaultValue();
         this.isUnique = column.isUnique();
+        this.hasUniqueKey = isUnique;
+        if (null != uniqueKey) {
+            UniqueKeyFields[] uniqueKeyFields = uniqueKey.fields();
+            for (UniqueKeyFields u : uniqueKeyFields) {
+                if (name.equalsIgnoreCase(u.field())) {
+                    hasUniqueKey = true;
+                    break;
+                }
+            }
+        }
+        if (!hasUniqueKey && null != uniqueKeys) {
+            UniqueKey[] uu = uniqueKeys.value();
+            for (UniqueKey u1 : uu) {
+                UniqueKeyFields[] uniqueKeyFields = u1.fields();
+                for (UniqueKeyFields u : uniqueKeyFields) {
+                    if (name.equalsIgnoreCase(u.field())) {
+                        hasUniqueKey = true;
+                        break;
+                    }
+                }
+            }
+        }
         this.comment = column.comment();
     }
+
 
     public boolean isValid() {
         return StringUtils.isEmpty(this.name) ? false : true;
@@ -232,7 +261,7 @@ public class ColumnInfo {
     public void setName(String name) {
         this.name = name;
         setAttrName(columnToJava(name));
-        setAttrname((name.startsWith("_") ? "_" : "")+StringUtils.uncapitalize(attrName));
+        setAttrname((name.startsWith("_") ? "_" : "") + StringUtils.uncapitalize(attrName));
     }
 
     public String getType() {
@@ -340,5 +369,9 @@ public class ColumnInfo {
         if ("auto_increment".equalsIgnoreCase(this.extra)) {
             this.isAutoIncrement = true;
         }
+    }
+
+    public boolean hasUniqueKey() {
+        return hasUniqueKey;
     }
 }

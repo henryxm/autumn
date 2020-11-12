@@ -8,7 +8,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 /**
  * Initialize table, scan the pointed destination package, generate the tables.
@@ -50,10 +49,5 @@ public class TableInit {
     public void start() {
         if (MYSQL.equals(databaseType))
             mysqlTableService.createMysqlTable();
-        else
-            throw new NotImplementedException();
-
     }
-
-
 }
