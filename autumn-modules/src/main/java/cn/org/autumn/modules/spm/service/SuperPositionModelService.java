@@ -167,6 +167,14 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
         return baseMapper.getByUrlKey(urlKey);
     }
 
+    public String getViewByKey(String key) {
+        SuperPositionModelEntity superPositionModelEntity = getByUrlKey(key);
+        if (isSpmMode()) {
+            return ("/?spm=" + superPositionModelEntity.getSpmValue());
+        } else
+            return ("/" + superPositionModelEntity.getResourceId());
+    }
+
     public void log(HttpServletRequest request, SuperPositionModelEntity superPositionModelEntity) {
         asyncTaskExecutor.execute(new Runnable() {
             @Override
@@ -276,6 +284,10 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
 
     public boolean menuWithSpm() {
         return sysConfigService.getBoolean("MENU_WITH_SPM");
+    }
+
+    public boolean isSpmMode() {
+        return menuWithSpm();
     }
 
     @Override

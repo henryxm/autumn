@@ -3,7 +3,7 @@ package cn.org.autumn.config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.web.servlet.context.AnnotationConfigServletWebServerApplicationContext;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.stereotype.Component;
@@ -18,8 +18,7 @@ public class PostStartupProcessor implements ApplicationListener<ContextRefreshe
 
     @Override
     public void onApplicationEvent(ContextRefreshedEvent event) {
-
-        AnnotationConfigServletWebServerApplicationContext context = (AnnotationConfigServletWebServerApplicationContext) event.getSource();
+        ApplicationContext context = (ApplicationContext) event.getSource();
         Config.getInstance().setApplicationContext(context);
         String[] profiles = context.getEnvironment().getActiveProfiles();
 

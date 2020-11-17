@@ -35,6 +35,11 @@ public class RedisAspect {
     //是否开启redis缓存  true开启   false关闭
     @Value("${autumn.redis.open: false}")
     private boolean open;
+
+    public boolean isOpen() {
+        return open;
+    }
+
     @Around("execution(* cn.org.autumn.utils.RedisUtils.*(..))")
     public Object around(ProceedingJoinPoint point) throws Throwable {
         Object result = null;

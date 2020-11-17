@@ -15,7 +15,7 @@ services:
     links:
       - "db:database"
   db:
-    image: mysql:5.7
+    image: mysql:latest
     restart: always
     container_name: mysql
     environment:
