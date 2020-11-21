@@ -31,7 +31,7 @@
             <a class="btn btn-primary" @click="runOnce"><i class="fa fa-arrow-circle-right"></i>&nbsp;${lang.sys_string_immediate_execution}</a>
             </#if>
             <#if shiro.hasPermission("job:schedulejob:log")>
-            <a class="btn btn-danger" style="float:right;" href="schedulejoblog">${lang.sys_string_log_list}</a>
+            <a class="btn btn-danger" style="float:right;" href="/?${spm.job_schedulejoblog}">${lang.sys_string_log_list}</a>
             </#if>
         </div>
         <table id="jqGrid"></table>

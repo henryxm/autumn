@@ -16,6 +16,9 @@
 
 package cn.org.autumn.xss;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import javax.servlet.*;
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
@@ -25,19 +28,16 @@ import java.io.IOException;
  */
 public class XssFilter implements Filter {
 
-	@Override
-	public void init(FilterConfig config) throws ServletException {
-	}
+    protected Logger logger = LoggerFactory.getLogger(getClass());
 
-	public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
+    public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
             throws IOException, ServletException {
-		XssHttpServletRequestWrapper xssRequest = new XssHttpServletRequestWrapper(
-				(HttpServletRequest) request);
-		chain.doFilter(xssRequest, response);
-	}
-
-	@Override
-	public void destroy() {
-	}
-
+        try {
+            XssHttpServletRequestWrapper xssRequest = new XssHttpServletRequestWrapper(
+                    (HttpServletRequest) request);
+            chain.doFilter(xssRequest, response);
+        } catch (Exception e) {
+            logger.error("XssFilter:" + e.getMessage());
+        }
+    }
 }

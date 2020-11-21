@@ -2,16 +2,17 @@ package cn.org.autumn.modules.spm.filter;
 
 import cn.org.autumn.config.Config;
 import cn.org.autumn.modules.spm.service.SuperPositionModelService;
+import cn.org.autumn.modules.wall.service.WallService;
 import org.apache.shiro.web.filter.authc.FormAuthenticationFilter;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import javax.servlet.*;
 import javax.servlet.http.HttpServletRequest;
 
 public class SpmFilter extends FormAuthenticationFilter {
 
-    private Logger logger = LoggerFactory.getLogger(getClass());
+    protected boolean isEnabled(ServletRequest request, ServletResponse response) {
+        WallService wallService = (WallService) Config.getBean("wallService");
+        return wallService.isEnabled(request, response,false);
+    }
 
     @Override
     protected boolean isAccessAllowed(ServletRequest request, ServletResponse response, Object mappedValue) {

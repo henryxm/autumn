@@ -8,14 +8,14 @@ services:
     ports:
       - "80:80"
     volumes:
-      - "./storage/data/web/tmp:/tmp"
+      - "./storage/web/tmp:/tmp"
     depends_on:
       - db
       - redis
     links:
       - "db:database"
   db:
-    image: mysql:latest
+    image: mysql:5.7
     restart: always
     container_name: mysql
     environment:
@@ -26,8 +26,8 @@ services:
     ports:
       - '3306:3306'
     volumes:
-      - "./storage/data/mysql:/var/lib/mysql"
-      - "./storage/config/my.cnf:/etc/my.cnf"
+      - "./storage/mysql/data:/var/lib/mysql"
+      - "./storage/mysql/my.cnf:/etc/my.cnf"
   redis:
     image: redis
     restart: always
@@ -36,4 +36,4 @@ services:
     ports:
       - 6379:6379
     volumes:
-      - "./storage/data/redis:/data"
+      - "./storage/redis:/data"

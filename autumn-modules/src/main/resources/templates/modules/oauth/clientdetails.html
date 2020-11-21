@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>${lang.oauth_clientdetails_table_comment}</title>
+	<#include "/header.html">
+</head>
+<body>
+<div id="rrapp" v-cloak>
+    <div v-show="showList">
+        <div class="grid-btn">
+			<#if shiro.hasPermission("oauth:clientdetails:save")>
+            <a class="btn btn-primary" @click="add"><i class="fa fa-plus"></i>&nbsp;${lang.sys_string_add}</a>
+			</#if>
+			<#if shiro.hasPermission("oauth:clientdetails:update")>
+            <a class="btn btn-primary" @click="update"><i class="fa fa-pencil-square-o"></i>&nbsp;${lang.sys_string_change}</a>
+			</#if>
+			<#if shiro.hasPermission("oauth:clientdetails:delete")>
+            <a class="btn btn-primary" @click="del"><i class="fa fa-trash-o"></i>&nbsp;${lang.sys_string_delete}</a>
+			</#if>
+        </div>
+        <table id="jqGrid"></table>
+        <div id="jqGridPager"></div>
+    </div>
+
+    <div v-show="!showList" class="panel panel-default">
+        <div class="panel-heading">{{title}}</div>
+        <form class="form-horizontal">
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.oauth_clientdetails_column_resource_ids}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="clientDetails.resourceIds" placeholder="${lang.oauth_clientdetails_column_resource_ids}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.oauth_clientdetails_column_scope}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="clientDetails.scope" placeholder="${lang.oauth_clientdetails_column_scope}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.oauth_clientdetails_column_grant_types}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="clientDetails.grantTypes" placeholder="${lang.oauth_clientdetails_column_grant_types}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.oauth_clientdetails_column_roles}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="clientDetails.roles" placeholder="${lang.oauth_clientdetails_column_roles}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.oauth_clientdetails_column_trusted}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="clientDetails.trusted" placeholder="${lang.oauth_clientdetails_column_trusted}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.oauth_clientdetails_column_archived}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="clientDetails.archived" placeholder="${lang.oauth_clientdetails_column_archived}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.oauth_clientdetails_column_create_time}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="clientDetails.createTime" placeholder="${lang.oauth_clientdetails_column_create_time}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.oauth_clientdetails_column_client_id}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="clientDetails.clientId" placeholder="${lang.oauth_clientdetails_column_client_id}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.oauth_clientdetails_column_client_secret}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="clientDetails.clientSecret" placeholder="${lang.oauth_clientdetails_column_client_secret}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.oauth_clientdetails_column_client_name}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="clientDetails.clientName" placeholder="${lang.oauth_clientdetails_column_client_name}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.oauth_clientdetails_column_client_uri}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="clientDetails.clientUri" placeholder="${lang.oauth_clientdetails_column_client_uri}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.oauth_clientdetails_column_client_icon_uri}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="clientDetails.clientIconUri" placeholder="${lang.oauth_clientdetails_column_client_icon_uri}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.oauth_clientdetails_column_redirect_uri}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="clientDetails.redirectUri" placeholder="${lang.oauth_clientdetails_column_redirect_uri}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.oauth_clientdetails_column_description}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="clientDetails.description" placeholder="${lang.oauth_clientdetails_column_description}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label"></div>
+                <input type="button" class="btn btn-primary" @click="saveOrUpdate" value="${lang.sys_string_confirm}"/>
+                &nbsp;&nbsp;<input type="button" class="btn btn-warning" @click="reload" value="${lang.sys_string_back}"/>
+            </div>
+        </form>
+    </div>
+</div>
+<script src="${request.contextPath}/modules/oauth/clientdetails.js?_${.now?long}"></script>
+</body>
+</html>

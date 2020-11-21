@@ -205,6 +205,27 @@ public class ColumnInfo {
         this.name = columnName;
         this.type = column.type().toLowerCase();
         this.length = column.length();
+        if (Long.class.equals(field.getType())) {
+            if (column.length() == 255)
+                this.length = 20;
+            this.type = DataType.BIGINT;
+        }
+        if (int.class.equals(field.getType()) || Integer.class.equals(field.getType())) {
+            if (column.length() == 255)
+                this.length = 11;
+            this.type = DataType.INT;
+        }
+        if (float.class.equals(field.getType()) || Float.class.equals(field.getType())) {
+            if (column.length() == 255)
+                this.length = 11;
+            this.type = DataType.FLOAT;
+        }
+        if (double.class.equals(field.getType()) || Double.class.equals(field.getType())) {
+            if (column.length() == 255)
+                this.length = 11;
+            this.type = DataType.DOUBLE;
+        }
+
         this.decimalLength = column.decimalLength();
         // 主键或唯一键时设置必须不为null
         if (column.isKey() || column.isUnique())

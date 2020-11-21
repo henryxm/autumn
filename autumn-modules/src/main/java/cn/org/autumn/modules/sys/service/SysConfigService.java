@@ -38,6 +38,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.PostConstruct;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -56,6 +58,8 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
 
     private CloudStorageConfig cloudStorageConfig = null;
 
+    private Map<String, SysConfigEntity> map;
+
     @PostConstruct
     public void init() {
         LoopJob.onOneMinute(this);
@@ -65,6 +69,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 {"CLOUD_STORAGE_CONFIG_KEY", "{\"aliyunAccessKeyId\":\"\",\"aliyunAccessKeySecret\":\"\",\"aliyunBucketName\":\"\",\"aliyunDomain\":\"\",\"aliyunEndPoint\":\"\",\"aliyunPrefix\":\"\",\"qcloudBucketName\":\"\",\"qcloudDomain\":\"\",\"qcloudPrefix\":\"\",\"qcloudSecretId\":\"\",\"qcloudSecretKey\":\"\",\"qiniuAccessKey\":\"\",\"qiniuBucketName\":\"\",\"qiniuDomain\":\"\",\"qiniuPrefix\":\"\",\"qiniuSecretKey\":\"\",\"type\":1}", "0", "云存储配置信息"},
                 {"SUPER_PASSWORD", "SuperPasswordDefaultValue", "0", "超级密码"},
                 {"MENU_WITH_SPM", "1", "1", "菜单是否使用SPM模式"},
+                {"DEBUG_MODE", "1", "1", "是否开启调试模式，调试模式下将记录详细的访问日志"},
 
         };
         for (String[] map : mapping) {
@@ -129,7 +134,12 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     }
 
     public String getValue(String key) {
-        SysConfigEntity config = sysConfigRedis.get(key);
+        SysConfigEntity config = null;
+        if (null != map && map.containsKey(key)) {
+            config = map.get(key);
+        }
+        if (null == config)
+            config = sysConfigRedis.get(key);
         if (config == null) {
             config = baseMapper.queryByKey(key);
             sysConfigRedis.saveOrUpdate(config);
@@ -165,8 +175,19 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         return cloudStorageConfig;
     }
 
+    public boolean isDebugMode() {
+        return getBoolean("DEBUG_MODE");
+    }
+
     @Override
     public void runJob() {
-
+        List<SysConfigEntity> list = selectByMap(new HashMap<>());
+        if (null != list && list.size() > 0) {
+            Map<String, SysConfigEntity> t = new HashMap<>();
+            for (SysConfigEntity sysConfigEntity : list) {
+                t.put(sysConfigEntity.getParamKey(), sysConfigEntity);
+            }
+            map = t;
+        }
     }
 }

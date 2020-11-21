@@ -32,8 +32,11 @@ public class RootSite implements SiteFactory.Site {
     String index1;
 
     @PageAware
-    String login;
+    public static String login = "root_login";
 
     @PageAware
     String main;
+
+    @PageAware(resource = "oauth2/login", login = false)
+    public static String oauth2login = "root_oauth2login";
 }

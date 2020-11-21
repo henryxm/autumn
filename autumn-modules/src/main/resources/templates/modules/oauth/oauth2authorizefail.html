@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html class="no-js">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>OAuth 2.0认证失败</title>
+    <meta name="keywords" content="index">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="Cache-Control" content="no-siteapp"/>
+    <style type="text/css">
+        .oauth_main {
+            border: 1px solid #d2d2d2;
+            border-radius: 6px;
+            box-shadow: 0 0 5px #c6c6c6;
+        }
+
+        .oauth_content {
+            padding: 20px 18px 30px 20px;
+        }
+    </style>
+
+</head>
+<body>
+<div class="oauth_wrap">
+    <div class="oauth_header clearfix">
+        <h1 title="Autumn" class="WB_logo">Autumn</h1>
+        <p class="login_account"></p>
+    </div>
+    <div class="WB_panel oauth_main oauth_content">
+        <div class="oauth_error">
+            <div class="oauth_error_content clearfix"><span class="oauth_error_icon WB_tipB_err"></span>
+                <dl class="error_content">
+                    <dt>访问出错了！</dt>
+                    <dd>你所访问的站点认证失败或者稍后再试。<br>
+                        失败信息：${OAuth2FailedMessage }
+                    </dd>
+                </dl>
+            </div>
+            <div class="oauth_copyright"><a href="#">Autumn</a>版权所有</div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
