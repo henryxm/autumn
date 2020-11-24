@@ -49,6 +49,9 @@ public class SysUserEntity implements Serializable {
 	@Column(isKey = true, type = DataType.BIGINT, length = 20, isNull = false, isAutoIncrement = true, comment = "id")
 	private Long userId;
 
+	@Column(comment = "UUID")
+	private String uuid;
+
 	/**
 	 * 用户名
 	 */
@@ -287,5 +290,13 @@ public class SysUserEntity implements Serializable {
 
 	public void setAlipay(String alipay) {
 		this.alipay = alipay;
+	}
+
+	public String getUuid() {
+		return uuid;
+	}
+
+	public void setUuid(String uuid) {
+		this.uuid = uuid;
 	}
 }

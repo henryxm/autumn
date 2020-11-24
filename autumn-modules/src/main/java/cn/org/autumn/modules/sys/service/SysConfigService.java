@@ -18,7 +18,6 @@ package cn.org.autumn.modules.sys.service;
 
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.oss.cloud.CloudStorageConfig;
-import cn.org.autumn.modules.spm.site.SpmSite;
 import cn.org.autumn.table.TableInit;
 import cn.org.autumn.utils.ConfigConstant;
 import com.baomidou.mybatisplus.mapper.EntityWrapper;
@@ -45,11 +44,19 @@ import java.util.Map;
 @Service
 public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity> implements LoopJob.Job {
 
+    public static final String CLOUD_STORAGE_CONFIG_KEY = "CLOUD_STORAGE_CONFIG_KEY";
+    public static final String SUPER_PASSWORD = "SUPER_PASSWORD";
+    public static final String MENU_WITH_SPM = "MENU_WITH_SPM";
+    public static final String LOGGER_LEVEL = "LOGGER_LEVEL";
+
     @Autowired
     private SysConfigRedis sysConfigRedis;
 
     @Autowired
     private SysConfigDao sysConfigDao;
+
+    @Autowired
+    private SysLogService sysLogService;
 
     private static final String NULL = null;
 
@@ -60,16 +67,18 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
 
     private Map<String, SysConfigEntity> map;
 
+    private String lastLoggerLevel = null;
+
     @PostConstruct
     public void init() {
         LoopJob.onOneMinute(this);
         if (!tableInit.init)
             return;
         String[][] mapping = new String[][]{
-                {"CLOUD_STORAGE_CONFIG_KEY", "{\"aliyunAccessKeyId\":\"\",\"aliyunAccessKeySecret\":\"\",\"aliyunBucketName\":\"\",\"aliyunDomain\":\"\",\"aliyunEndPoint\":\"\",\"aliyunPrefix\":\"\",\"qcloudBucketName\":\"\",\"qcloudDomain\":\"\",\"qcloudPrefix\":\"\",\"qcloudSecretId\":\"\",\"qcloudSecretKey\":\"\",\"qiniuAccessKey\":\"\",\"qiniuBucketName\":\"\",\"qiniuDomain\":\"\",\"qiniuPrefix\":\"\",\"qiniuSecretKey\":\"\",\"type\":1}", "0", "云存储配置信息"},
-                {"SUPER_PASSWORD", "SuperPasswordDefaultValue", "0", "超级密码"},
-                {"MENU_WITH_SPM", "1", "1", "菜单是否使用SPM模式"},
-                {"DEBUG_MODE", "1", "1", "是否开启调试模式，调试模式下将记录详细的访问日志"},
+                {CLOUD_STORAGE_CONFIG_KEY, "{\"aliyunAccessKeyId\":\"\",\"aliyunAccessKeySecret\":\"\",\"aliyunBucketName\":\"\",\"aliyunDomain\":\"\",\"aliyunEndPoint\":\"\",\"aliyunPrefix\":\"\",\"qcloudBucketName\":\"\",\"qcloudDomain\":\"\",\"qcloudPrefix\":\"\",\"qcloudSecretId\":\"\",\"qcloudSecretKey\":\"\",\"qiniuAccessKey\":\"\",\"qiniuBucketName\":\"\",\"qiniuDomain\":\"\",\"qiniuPrefix\":\"\",\"qiniuSecretKey\":\"\",\"type\":1}", "0", "云存储配置信息"},
+                {SUPER_PASSWORD, "SuperPasswordDefaultValue", "0", "超级密码"},
+                {MENU_WITH_SPM, "1", "1", "菜单是否使用SPM模式"},
+                {LOGGER_LEVEL, "INFO", "1", "动态调整全局日志等级，级别:ALL,TRACE,DEBUG,INFO,WARN,ERROR,OFF"},
 
         };
         for (String[] map : mapping) {
@@ -109,12 +118,18 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     public void save(SysConfigEntity config) {
         this.insert(config);
         sysConfigRedis.saveOrUpdate(config);
+        if (LOGGER_LEVEL.equalsIgnoreCase(config.getParamKey())) {
+            sysLogService.changeLevel(config.getParamValue(), NULL, NULL);
+        }
     }
 
     @Transactional(rollbackFor = Exception.class)
     public void update(SysConfigEntity config) {
         this.updateAllColumnById(config);
         sysConfigRedis.saveOrUpdate(config);
+        if (LOGGER_LEVEL.equalsIgnoreCase(config.getParamKey())) {
+            sysLogService.changeLevel(config.getParamValue(), NULL, NULL);
+        }
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -122,6 +137,9 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         baseMapper.updateValueByKey(key, value);
         sysConfigRedis.delete(key);
         cloudStorageConfig = getConfigObject(ConfigConstant.CLOUD_STORAGE_CONFIG_KEY, CloudStorageConfig.class);
+        if (LOGGER_LEVEL.equalsIgnoreCase(key)) {
+            sysLogService.changeLevel(value, NULL, NULL);
+        }
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -175,10 +193,6 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         return cloudStorageConfig;
     }
 
-    public boolean isDebugMode() {
-        return getBoolean("DEBUG_MODE");
-    }
-
     @Override
     public void runJob() {
         List<SysConfigEntity> list = selectByMap(new HashMap<>());
@@ -186,6 +200,11 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
             Map<String, SysConfigEntity> t = new HashMap<>();
             for (SysConfigEntity sysConfigEntity : list) {
                 t.put(sysConfigEntity.getParamKey(), sysConfigEntity);
+                if (LOGGER_LEVEL.equalsIgnoreCase(sysConfigEntity.getParamKey())) {
+                    if (null == lastLoggerLevel || !lastLoggerLevel.equalsIgnoreCase(sysConfigEntity.getParamValue()))
+                        sysLogService.changeLevel(sysConfigEntity.getParamValue(), NULL, NULL);
+                    lastLoggerLevel = sysConfigEntity.getParamValue();
+                }
             }
             map = t;
         }

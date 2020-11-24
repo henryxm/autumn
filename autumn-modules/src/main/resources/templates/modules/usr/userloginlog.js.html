@@ -1,11 +1,13 @@
 $(function () {
     $("#jqGrid").jqGrid({
-        url: baseURL + 'sys/config/list',
+        url: baseURL + 'usr/userloginlog/list',
         datatype: "json",
-        colModel: [
-			{ label: '${lang.sys_string_config_name}', name: 'paramKey', sortable: false, width: 80 },
-			{ label: '${lang.sys_string_config_value}', name: 'paramValue', width: 80 },
-			{ label: '${lang.sys_string_remark}', name: 'remark', width: 300 }
+        colModel: [			
+			{ label: '${lang.usr_userloginlog_column_id}', name: 'id', index: 'id', width: 50, key: true },
+			{ label: '${lang.usr_userloginlog_column_user_id}', name: 'userId', index: 'user_id', width: 80 }, 
+			{ label: '${lang.usr_userloginlog_column_username}', name: 'username', index: 'username', width: 80 }, 
+			{ label: '${lang.usr_userloginlog_column_login_time}', name: 'loginTime', index: 'login_time', width: 80 }, 
+			{ label: '${lang.usr_userloginlog_column_logout_time}', name: 'logoutTime', index: 'logout_time', width: 80 }, 
         ],
 		viewrecords: true,
         height: 385,
@@ -37,12 +39,9 @@ $(function () {
 var vm = new Vue({
 	el:'#rrapp',
 	data:{
-		q:{
-            paramKey: null
-		},
 		showList: true,
 		title: null,
-		config: {}
+		userLoginLog: {}
 	},
 	methods: {
 		query: function () {
@@ -51,51 +50,25 @@ var vm = new Vue({
 		add: function(){
 			vm.showList = false;
 			vm.title = "${lang.sys_string_add}";
-			vm.config = {};
+			vm.userLoginLog = {};
 		},
-		update: function () {
+		update: function (event) {
 			var id = getSelectedRow();
 			if(id == null){
 				return ;
 			}
-			
-			$.get(baseURL + "sys/config/info/"+id, function(r){
-                vm.showList = false;
-                vm.title = "${lang.sys_string_change}";
-                vm.config = r.config;
-            });
-		},
-		del: function (event) {
-			var ids = getSelectedRows();
-			if(ids == null){
-				return ;
-			}
-			
-			confirm('${lang.sys_string_are_sure_to_delete}？', function(){
-				$.ajax({
-					type: "POST",
-				    url: baseURL + "sys/config/delete",
-                    contentType: "application/json",
-				    data: JSON.stringify(ids),
-				    success: function(r){
-						if(r.code == 0){
-							alert('${lang.sys_string_successful}', function(index){
-								vm.reload();
-							});
-						}else{
-							alert(r.msg);
-						}
-					}
-				});
-			});
+			vm.showList = false;
+            vm.title = "${lang.sys_string_change}";
+            
+            vm.getInfo(id)
 		},
 		saveOrUpdate: function (event) {
-			var url = vm.config.id == null ? "sys/config/save" : "sys/config/update";
+			var url = vm.userLoginLog.id == null ? "usr/userloginlog/save" : "usr/userloginlog/update";
 			$.ajax({
 				type: "POST",
 			    url: baseURL + url,
                 contentType: "application/json",
-			    data: JSON.stringify(vm.config),
+			    data: JSON.stringify(vm.userLoginLog),
 			    success: function(r){
 			    	if(r.code === 0){
 						alert('${lang.sys_string_successful}', function(index){
@@ -107,11 +80,38 @@ var vm = new Vue({
 				}
 			});
 		},
+		del: function (event) {
+			var ids = getSelectedRows();
+			if(ids == null){
+				return ;
+			}
+			confirm('${lang.sys_string_are_sure_to_delete}？', function(){
+				$.ajax({
+					type: "POST",
+				    url: baseURL + "usr/userloginlog/delete",
+                    contentType: "application/json",
+				    data: JSON.stringify(ids),
+				    success: function(r){
+						if(r.code == 0){
+							alert('${lang.sys_string_successful}', function(index){
+								$("#jqGrid").trigger("reloadGrid");
+							});
+						}else{
+							alert(r.msg);
+						}
+					}
+				});
+			});
+		},
+		getInfo: function(id){
+			$.get(baseURL + "usr/userloginlog/info/"+id, function(r){
+                vm.userLoginLog = r.userLoginLog;
+            });
+		},
 		reload: function (event) {
 			vm.showList = true;
 			var page = $("#jqGrid").jqGrid('getGridParam','page');
 			$("#jqGrid").jqGrid('setGridParam',{ 
-                postData:{'paramKey': vm.q.paramKey},
                 page:page
             }).trigger("reloadGrid");
 		}

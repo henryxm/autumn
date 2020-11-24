@@ -2,13 +2,14 @@ package cn.org.autumn.modules.oauth.oauth2;
 
 import cn.org.autumn.modules.oauth.entity.ClientDetailsEntity;
 import cn.org.autumn.modules.oauth.service.ClientDetailsService;
-import cn.org.autumn.modules.spm.entity.SuperPositionModelEntity;
 import cn.org.autumn.modules.spm.service.SuperPositionModelService;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysUserService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
-import cn.org.autumn.modules.user.entity.UserEntity;
-import cn.org.autumn.site.RootSite;
+import cn.org.autumn.modules.usr.dto.UserProfile;
+import cn.org.autumn.modules.usr.entity.UserProfileEntity;
+import cn.org.autumn.modules.usr.service.UserLoginLogService;
+import cn.org.autumn.modules.usr.service.UserProfileService;
 import cn.org.autumn.utils.R;
 import com.alibaba.fastjson.JSON;
 import org.apache.commons.lang.StringUtils;
@@ -62,6 +63,12 @@ public class AuthorizationController {
 
     @Autowired
     SysUserService sysUserService;
+
+    @Autowired
+    UserProfileService userProfileService;
+
+    @Autowired
+    UserLoginLogService userLoginLogService;
 
     private String getCallBack(HttpServletRequest request) {
         try {
@@ -143,7 +150,7 @@ public class AuthorizationController {
         if (responseType.equals(ResponseType.CODE.toString())) {
             OAuthIssuerImpl oAuthIssuerImpl = new OAuthIssuerImpl(new MD5Generator());
             authCode = oAuthIssuerImpl.authorizationCode();
-            clientDetailsService.addAuthCode(authCode, userEntity.getUsername());
+            clientDetailsService.put(authCode, userEntity);
         }
 
         //构建OAuth响应
@@ -181,7 +188,6 @@ public class AuthorizationController {
         return mav;
     }
 
-
     @RequestMapping(value = "token", method = RequestMethod.POST)
     public HttpEntity applyAccessToken(HttpServletRequest request) throws OAuthSystemException, OAuthProblemException {
         //构建OAuth请求
@@ -211,7 +217,7 @@ public class AuthorizationController {
         String authCode = tokenRequest.getParam(OAuth.OAUTH_CODE);
         //验证类型，有AUTHORIZATION_CODE/PASSWORD/REFRESH_TOKEN/CLIENT_CREDENTIALS
         if (tokenRequest.getParam(OAuth.OAUTH_GRANT_TYPE).equals(GrantType.AUTHORIZATION_CODE.toString())) {
-            if (!clientDetailsService.checkAuthCode(authCode)) {
+            if (!clientDetailsService.checkCode(authCode)) {
                 OAuthResponse response = OAuthResponse.errorResponse(HttpServletResponse.SC_BAD_REQUEST)
                         .setError(OAuthError.TokenResponse.INVALID_GRANT)
                         .setErrorDescription("错误的授权码")
@@ -225,7 +231,7 @@ public class AuthorizationController {
         String accessToken = authIssuerImpl.accessToken();
         String refreshToken = authIssuerImpl.refreshToken();
 
-        clientDetailsService.addAccessToken(accessToken, clientDetailsService.getUsernameByAuthCode(authCode));
+        clientDetailsService.put(accessToken, clientDetailsService.get(authCode));
 
         //生成OAuth响应
         OAuthResponse response = OAuthASResponse
@@ -236,7 +242,6 @@ public class AuthorizationController {
                 .buildJSONMessage();
         return new ResponseEntity(response.getBody(), HttpStatus.valueOf(response.getResponseStatus()));
     }
-
 
     @RequestMapping(value = "/userInfo", produces = "text/html;charset=UTF-8")
     public HttpEntity authUserInfo(HttpServletRequest request) throws OAuthSystemException {
@@ -266,8 +271,15 @@ public class AuthorizationController {
             }
 
             // 返回用户名
-            String username = clientDetailsService.getUsernameByAccessToken(accessTokenKey);
-            return new ResponseEntity(username, HttpStatus.OK);
+            Object username = clientDetailsService.get(accessTokenKey);
+            if (username instanceof SysUserEntity) {
+                SysUserEntity sysUserEntity = (SysUserEntity) username;
+                UserProfileEntity userProfileEntity = userProfileService.from(sysUserEntity);
+                UserProfile userProfile = UserProfile.from(userProfileEntity);
+                username = userProfile;
+                userLoginLogService.login(userProfileEntity);
+            }
+            return new ResponseEntity(JSON.toJSONString(username), HttpStatus.OK);
         } catch (OAuthProblemException e) {
             e.printStackTrace();
 

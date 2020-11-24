@@ -39,7 +39,7 @@ public class WallService {
         try {
             String remoteip = request.getHeader("remoteip");
             String host = request.getHeader("host");
-            if (sysConfigService.isDebugMode() && logEnable)
+            if (logEnable)
                 print(request);
             if (hostService.isBlack(host)) {
                 if (null != response) {
@@ -108,6 +108,6 @@ public class WallService {
             stringBuilder.append(",  ");
             h = e.hasMoreElements();
         }
-        logger.info(stringBuilder.toString());
+        logger.debug(stringBuilder.toString());
     }
 }

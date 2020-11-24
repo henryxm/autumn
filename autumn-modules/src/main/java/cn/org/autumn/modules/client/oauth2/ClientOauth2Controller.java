@@ -2,7 +2,10 @@ package cn.org.autumn.modules.client.oauth2;
 
 import cn.org.autumn.modules.client.entity.WebAuthenticationEntity;
 import cn.org.autumn.modules.client.service.WebAuthenticationService;
+import cn.org.autumn.modules.usr.dto.UserProfile;
+import cn.org.autumn.modules.usr.service.UserProfileService;
 import cn.org.autumn.utils.HttpClientUtils;
+import com.alibaba.fastjson.JSON;
 import org.apache.commons.lang.StringUtils;
 import org.apache.oltu.oauth2.as.response.OAuthASResponse;
 import org.apache.oltu.oauth2.client.OAuthClient;
@@ -36,6 +39,9 @@ public class ClientOauth2Controller {
     @Autowired
     WebAuthenticationService webAuthenticationService;
 
+    @Autowired
+    UserProfileService userProfileService;
+
     @RequestMapping("oauth2/callback")
     public Object defaultCodeCallback(HttpServletRequest request) throws OAuthSystemException {
         String authCode = request.getParameter(OAuth.OAUTH_CODE);
@@ -50,8 +56,8 @@ public class ClientOauth2Controller {
 
         WebAuthenticationEntity webAuthenticationEntity = webAuthenticationService.findByClientId("default_client_id");
         String accessToken = getAccessToken(webAuthenticationEntity, authCode);
-        String userInfo = getUserInfo(webAuthenticationEntity, accessToken);
-        logger.info(userInfo);
+        UserProfile userInfo = getUserInfo(webAuthenticationEntity, accessToken);
+        logger.info(userInfo.toString());
         return "redirect:/";
     }
 
@@ -77,7 +83,7 @@ public class ClientOauth2Controller {
         return accessToken;
     }
 
-    public String getUserInfo(WebAuthenticationEntity webAuthClientEntity, String accessToken) {
+    public UserProfile getUserInfo(WebAuthenticationEntity webAuthClientEntity, String accessToken) {
         String userInfo = webAuthClientEntity.getUserInfoUri();
         OAuthClient oAuthClient = new OAuthClient(new URLConnectionClient());
         OAuthClientRequest authUserRequest;
@@ -85,11 +91,13 @@ public class ClientOauth2Controller {
             authUserRequest = new OAuthBearerClientRequest(userInfo).setAccessToken(accessToken).buildQueryMessage();
             OAuthResourceResponse resourceResponse = oAuthClient.resource(authUserRequest, OAuth.HttpMethod.GET, OAuthResourceResponse.class);
             String userinfo = resourceResponse.getBody();
-            return userinfo;
+            UserProfile userProfile = JSON.parseObject(userinfo, UserProfile.class);
+            userProfileService.login(userProfile);
+            return userProfile;
         } catch (Exception e) {
             logger.error("getUserInfo error：" + e.getMessage());
         }
-        return "";
+        return null;
     }
 
 }

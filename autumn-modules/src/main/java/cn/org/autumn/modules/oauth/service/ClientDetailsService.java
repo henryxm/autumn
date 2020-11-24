@@ -3,12 +3,8 @@ package cn.org.autumn.modules.oauth.service;
 import cn.org.autumn.aspect.RedisAspect;
 import cn.org.autumn.modules.oauth.entity.ClientDetailsEntity;
 import cn.org.autumn.modules.oauth.service.gen.ClientDetailsServiceGen;
-import cn.org.autumn.utils.PageUtils;
 import cn.org.autumn.utils.RedisUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.Cache;
-import org.springframework.cache.CacheManager;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
@@ -21,20 +17,20 @@ public class ClientDetailsService extends ClientDetailsServiceGen {
     @Autowired
     RedisUtils redisUtils;
 
-    Map<String, String> cache = new HashMap<>();
+    Map<String, Object> cache = new HashMap<>();
 
     @Autowired
     RedisAspect redisAspect;
 
-    private void put(String code, String username) {
+    public void put(String code, Object user) {
         if (redisAspect.isOpen()) {
-            redisUtils.set(code, username);
+            redisUtils.set(code, user);
         } else {
-            cache.put(code, username);
+            cache.put(code, user);
         }
     }
 
-    private String get(String code) {
+    public Object get(String code) {
         if (redisAspect.isOpen()) {
             return redisUtils.get(code);
         } else {
@@ -56,23 +52,19 @@ public class ClientDetailsService extends ClientDetailsServiceGen {
         return baseMapper.findByClientId(clientId);
     }
 
-    public void addAuthCode(String authCode, String username) {
-        put(authCode, username);
-    }
-
     public boolean checkClientSecret(String clientSecret) {
         return baseMapper.findByClientSecret(clientSecret) != null;
     }
 
-    public boolean checkAuthCode(String authCode) {
-        return get(authCode) != null;
+    public boolean checkCode(String code) {
+        return get(code) != null;
     }
 
     public long getExpireIn() {
         return 3600L;
     }
 
-    public String getUsernameByAuthCode(String authCode) {
+    public Object getUsernameByAuthCode(String authCode) {
         return get(authCode);
     }
 
@@ -84,7 +76,7 @@ public class ClientDetailsService extends ClientDetailsServiceGen {
         return get(accessToken) != null;
     }
 
-    public String getUsernameByAccessToken(String accessToken) {
+    public Object getUsernameByAccessToken(String accessToken) {
         return get(accessToken);
     }
 
