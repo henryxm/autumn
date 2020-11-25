@@ -6,7 +6,7 @@ services:
     environment:
       - "--spring.profiles.active=dev-docker"
     ports:
-      - "80:80"
+      - "81:81"
     volumes:
       - "./storage/web/tmp:/tmp"
     depends_on:

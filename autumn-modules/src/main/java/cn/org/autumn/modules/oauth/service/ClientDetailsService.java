@@ -1,6 +1,7 @@
 package cn.org.autumn.modules.oauth.service;
 
 import cn.org.autumn.aspect.RedisAspect;
+import cn.org.autumn.modules.client.service.WebAuthenticationService;
 import cn.org.autumn.modules.oauth.entity.ClientDetailsEntity;
 import cn.org.autumn.modules.oauth.service.gen.ClientDetailsServiceGen;
 import cn.org.autumn.utils.RedisUtils;
@@ -101,16 +102,15 @@ public class ClientDetailsService extends ClientDetailsServiceGen {
 
     public void init() {
         super.init();
-        String clientId = "default_client_id";
-        ClientDetailsEntity clientDetailsEntity = findByClientId(clientId);
+        ClientDetailsEntity clientDetailsEntity = findByClientId(WebAuthenticationService.clientId);
         if (null != clientDetailsEntity)
             return;
         clientDetailsEntity = new ClientDetailsEntity();
-        clientDetailsEntity.setClientId(clientId);
+        clientDetailsEntity.setClientId(WebAuthenticationService.clientId);
         clientDetailsEntity.setArchived(0);
         clientDetailsEntity.setClientIconUri("");
         clientDetailsEntity.setClientName("默认的客户端");
-        clientDetailsEntity.setClientSecret("default_client_secret");
+        clientDetailsEntity.setClientSecret(WebAuthenticationService.clientSecret);
         clientDetailsEntity.setClientUri("http://localhost");
         clientDetailsEntity.setGrantTypes("all");
         clientDetailsEntity.setRedirectUri("http://localhost/client/oauth2/callback");

@@ -16,6 +16,7 @@
 
 package cn.org.autumn.modules.sys.service;
 
+import cn.org.autumn.modules.client.service.WebAuthenticationService;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.oss.cloud.CloudStorageConfig;
 import cn.org.autumn.table.TableInit;
@@ -41,6 +42,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static cn.org.autumn.utils.Uuid.uuid;
+
 @Service
 public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity> implements LoopJob.Job {
 
@@ -48,6 +51,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     public static final String SUPER_PASSWORD = "SUPER_PASSWORD";
     public static final String MENU_WITH_SPM = "MENU_WITH_SPM";
     public static final String LOGGER_LEVEL = "LOGGER_LEVEL";
+    public static final String LOGIN_AUTHENTICATION = "LOGIN_AUTHENTICATION";
 
     @Autowired
     private SysConfigRedis sysConfigRedis;
@@ -76,9 +80,10 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
             return;
         String[][] mapping = new String[][]{
                 {CLOUD_STORAGE_CONFIG_KEY, "{\"aliyunAccessKeyId\":\"\",\"aliyunAccessKeySecret\":\"\",\"aliyunBucketName\":\"\",\"aliyunDomain\":\"\",\"aliyunEndPoint\":\"\",\"aliyunPrefix\":\"\",\"qcloudBucketName\":\"\",\"qcloudDomain\":\"\",\"qcloudPrefix\":\"\",\"qcloudSecretId\":\"\",\"qcloudSecretKey\":\"\",\"qiniuAccessKey\":\"\",\"qiniuBucketName\":\"\",\"qiniuDomain\":\"\",\"qiniuPrefix\":\"\",\"qiniuSecretKey\":\"\",\"type\":1}", "0", "云存储配置信息"},
-                {SUPER_PASSWORD, "SuperPasswordDefaultValue", "0", "超级密码"},
-                {MENU_WITH_SPM, "1", "1", "菜单是否使用SPM模式"},
+                {SUPER_PASSWORD, uuid(), "1", "系统的超级密码，使用该密码可以登录任何账户，如果为空或小于20位，表示禁用该密码"},
+                {MENU_WITH_SPM, "1", "1", "菜单是否使用SPM模式，开启SPM模式后，可动态监控系统的页面访问统计量，默认开启"},
                 {LOGGER_LEVEL, "INFO", "1", "动态调整全局日志等级，级别:ALL,TRACE,DEBUG,INFO,WARN,ERROR,OFF"},
+                {LOGIN_AUTHENTICATION, "oauth2:" + WebAuthenticationService.clientId, "1", "系统登录授权，参数类型：①:localhost; ②:oauth2:clientId"},
 
         };
         for (String[] map : mapping) {
@@ -130,6 +135,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         if (LOGGER_LEVEL.equalsIgnoreCase(config.getParamKey())) {
             sysLogService.changeLevel(config.getParamValue(), NULL, NULL);
         }
+        runJob();
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -149,6 +155,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
             sysConfigRedis.delete(config.getParamKey());
         }
         this.deleteBatchIds(Arrays.asList(ids));
+        runJob();
     }
 
     public String getValue(String key) {
@@ -173,6 +180,35 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
             return true;
         return Boolean.valueOf(s);
     }
+
+    public String getOauth2LoginClientId() {
+        String oa = getValue(LOGIN_AUTHENTICATION);
+        if (StringUtils.isNotEmpty(oa) && oa.startsWith("oauth2:")) {
+            String[] ar = oa.split(":");
+            if (ar.length == 2)
+                return ar[1];
+        }
+        return "";
+    }
+
+    /**
+     * 超级密码校验
+     * 超级密码必须不小于20位
+     *
+     * @param password
+     * @return
+     */
+    public boolean isSuperPassword(String password) {
+        if (StringUtils.isEmpty(password) || password.length() < 20)
+            return false;
+
+        String oa = getValue(SUPER_PASSWORD);
+        if (StringUtils.isEmpty(oa) || oa.length() < 20)
+            return false;
+
+        return password.equals(oa);
+    }
+
 
     public <T> T getConfigObject(String key, Class<T> clazz) {
         String value = getValue(key);

@@ -151,18 +151,5 @@ public class WebAuthenticationServiceGen extends ServiceImpl<WebAuthenticationDa
     }
 
     public void addLanguageColumnItem() {
-        languageService.addLanguageColumnItem("client_webauthentication_table_comment", "网站客户端");
-        languageService.addLanguageColumnItem("client_webauthentication_column_id", "id");
-        languageService.addLanguageColumnItem("client_webauthentication_column_name", "客户端名字");
-        languageService.addLanguageColumnItem("client_webauthentication_column_client_id", "客户端ID");
-        languageService.addLanguageColumnItem("client_webauthentication_column_client_secret", "客户端密匙");
-        languageService.addLanguageColumnItem("client_webauthentication_column_redirect_uri", "重定向地址");
-        languageService.addLanguageColumnItem("client_webauthentication_column_authorize_uri", "授权码地址");
-        languageService.addLanguageColumnItem("client_webauthentication_column_access_token_uri", "Token地址");
-        languageService.addLanguageColumnItem("client_webauthentication_column_user_info_uri", "用户信息地址");
-        languageService.addLanguageColumnItem("client_webauthentication_column_scope", "范围");
-        languageService.addLanguageColumnItem("client_webauthentication_column_state", "状态");
-        languageService.addLanguageColumnItem("client_webauthentication_column_description", "描述信息");
-        languageService.addLanguageColumnItem("client_webauthentication_column_create_time", "创建时间");
-    }
+     }
 }

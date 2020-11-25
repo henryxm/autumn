@@ -2,6 +2,7 @@ package cn.org.autumn.modules.client.oauth2;
 
 import cn.org.autumn.modules.client.entity.WebAuthenticationEntity;
 import cn.org.autumn.modules.client.service.WebAuthenticationService;
+import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.modules.usr.dto.UserProfile;
 import cn.org.autumn.modules.usr.service.UserProfileService;
 import cn.org.autumn.utils.HttpClientUtils;
@@ -42,6 +43,9 @@ public class ClientOauth2Controller {
     @Autowired
     UserProfileService userProfileService;
 
+    @Autowired
+    SysConfigService sysConfigService;
+
     @RequestMapping("oauth2/callback")
     public Object defaultCodeCallback(HttpServletRequest request) throws OAuthSystemException {
         String authCode = request.getParameter(OAuth.OAUTH_CODE);
@@ -54,10 +58,11 @@ public class ClientOauth2Controller {
             return new ResponseEntity(response.getBody(), HttpStatus.valueOf(response.getResponseStatus()));
         }
 
-        WebAuthenticationEntity webAuthenticationEntity = webAuthenticationService.findByClientId("default_client_id");
+        WebAuthenticationEntity webAuthenticationEntity = webAuthenticationService.findByClientId(sysConfigService.getOauth2LoginClientId());
         String accessToken = getAccessToken(webAuthenticationEntity, authCode);
-        UserProfile userInfo = getUserInfo(webAuthenticationEntity, accessToken);
-        logger.info(userInfo.toString());
+        UserProfile userProfile = getUserInfo(webAuthenticationEntity, accessToken);
+        if (null != userProfile)
+            logger.info(userProfile.toString());
         return "redirect:/";
     }
 
@@ -92,7 +97,8 @@ public class ClientOauth2Controller {
             OAuthResourceResponse resourceResponse = oAuthClient.resource(authUserRequest, OAuth.HttpMethod.GET, OAuthResourceResponse.class);
             String userinfo = resourceResponse.getBody();
             UserProfile userProfile = JSON.parseObject(userinfo, UserProfile.class);
-            userProfileService.login(userProfile);
+            if (null != userProfile)
+                userProfileService.login(userProfile);
             return userProfile;
         } catch (Exception e) {
             logger.error("getUserInfo error：" + e.getMessage());

@@ -109,7 +109,7 @@ public class UserRealm extends AuthorizingRealm {
 
     @Override
     public void setCredentialsMatcher(CredentialsMatcher credentialsMatcher) {
-        OauthHashedCredentialsMatcher shaCredentialsMatcher = new OauthHashedCredentialsMatcher();
+        NamedHashedCredentialsMatcher shaCredentialsMatcher = new NamedHashedCredentialsMatcher();
         shaCredentialsMatcher.setHashAlgorithmName(ShiroUtils.hashAlgorithmName);
         shaCredentialsMatcher.setHashIterations(ShiroUtils.hashIterations);
         super.setCredentialsMatcher(shaCredentialsMatcher);

@@ -95,9 +95,7 @@ public class AuthorizationController {
             if (request.getMethod().equalsIgnoreCase(POST)) {
                 String callback = getCallBack(request);
                 if (!StringUtils.isEmpty(callback)) {
-                    Subject subject = ShiroUtils.getSubject();
-                    UsernamePasswordToken token = new UsernamePasswordToken(username, password);
-                    subject.login(token);
+                    sysUserService.login(username, password);
                     return "redirect:" + callback;
                 }
             }

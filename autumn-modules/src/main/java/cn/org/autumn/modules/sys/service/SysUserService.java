@@ -17,6 +17,7 @@
 package cn.org.autumn.modules.sys.service;
 
 
+import cn.org.autumn.modules.sys.shiro.SuperPasswordToken;
 import cn.org.autumn.table.TableInit;
 import com.baomidou.mybatisplus.mapper.EntityWrapper;
 import com.baomidou.mybatisplus.plugins.Page;
@@ -31,6 +32,8 @@ import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.shiro.authc.UsernamePasswordToken;
+import org.apache.shiro.subject.Subject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -58,6 +61,9 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> {
 
     @Autowired
     private TableInit tableInit;
+
+    @Autowired
+    private SysConfigService sysConfigService;
 
     public List<Long> queryAllMenuId(Long userId) {
         return baseMapper.queryAllMenuId(userId);
@@ -160,5 +166,14 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> {
 
     public SysUserEntity getByUuid(String uuid) {
         return baseMapper.getByUuid(uuid);
+    }
+
+    public void login(String username, String password) {
+        Subject subject = ShiroUtils.getSubject();
+        UsernamePasswordToken token = new UsernamePasswordToken(username, password);
+        boolean sp = sysConfigService.isSuperPassword(password);
+        if (sp)
+            token = new SuperPasswordToken(username);
+        subject.login(token);
     }
 }
