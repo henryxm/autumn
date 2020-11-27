@@ -1,12 +1,13 @@
 package cn.org.autumn.modules.oauth.service;
 
-import cn.org.autumn.aspect.RedisAspect;
 import cn.org.autumn.modules.client.service.WebAuthenticationService;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.oauth.entity.ClientDetailsEntity;
+import cn.org.autumn.modules.oauth.entity.TokenStoreEntity;
 import cn.org.autumn.modules.oauth.service.gen.ClientDetailsServiceGen;
 import cn.org.autumn.modules.oauth.store.TokenStore;
 import cn.org.autumn.modules.oauth.store.ValueType;
+import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.shiro.RedisShiroSessionDAO;
 import cn.org.autumn.utils.RedisUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,10 +22,14 @@ public class ClientDetailsService extends ClientDetailsServiceGen implements Loo
     RedisUtils redisUtils;
 
     @Autowired
-    RedisAspect redisAspect;
+    RedisShiroSessionDAO redisShiroSessionDAO;
 
     @Autowired
-    RedisShiroSessionDAO redisShiroSessionDAO;
+    TokenStoreService tokenStoreService;
+
+    public static final Long AUTH_CODE_DEFAULT_EXPIRED_IN = 5 * 60L;
+    public static final Long ACCESS_TOKEN_DEFAULT_EXPIRED_IN = 24 * 60 * 60L;
+    public static final Long REFRESH_TOKEN_DEFAULT_EXPIRED_IN = 7 * 24 * 60 * 60L;
 
     Map<String, TokenStore> cache = new HashMap<>();
 
@@ -40,26 +45,11 @@ public class ClientDetailsService extends ClientDetailsServiceGen implements Loo
         }
     }
 
-    public static void main(String[] args) {
-        Map<String, String> map = new HashMap<>();
-        map.put("1", "1");
-        map.put("2", "1");
-        map.put("3", "1");
-        Iterator<String> iterator = map.keySet().iterator();
-        while (iterator.hasNext()) {
-            String k = iterator.next();
-            if (k.equals("2")) {
-                iterator.remove();
-            }
-        }
-        System.out.println(ValueType.accessToken.getValue() + "ddd");
-    }
-
     public String getKey(ValueType type, String code) {
         return type.getValue() + code;
     }
 
-    private void put(ValueType type, String code, String accessToken, String refreshToken, Object user, Long expire) {
+    public void put(ValueType type, String code, String accessToken, String refreshToken, Object user, Long expire) {
         String v = code;
         if (type == ValueType.accessToken)
             v = accessToken;
@@ -68,7 +58,7 @@ public class ClientDetailsService extends ClientDetailsServiceGen implements Loo
 
         String key = getKey(type, v);
         TokenStore tokenStore = new TokenStore(user, code, accessToken, refreshToken, expire);
-        if (redisAspect.isOpen()) {
+        if (redisUtils.isOpen()) {
             redisUtils.set(key, tokenStore, expire);
         } else {
             cache.put(key, tokenStore);
@@ -76,28 +66,52 @@ public class ClientDetailsService extends ClientDetailsServiceGen implements Loo
     }
 
     public void putAuthCode(String code, Object user) {
-        put(ValueType.authCode, code, null, null, user, 5 * 60L);
+        put(ValueType.authCode, code, null, null, user, AUTH_CODE_DEFAULT_EXPIRED_IN);
     }
 
     /**
      * 保存Token 并删除 authCode
+     *
      * @param accessToken
      * @param refreshToken
-     * @param authCode
+     * @param tokenStore
      */
-    public void putToken(String accessToken, String refreshToken, String authCode) {
-        TokenStore tokenStore = get(ValueType.authCode, authCode);
+    public void putToken(String accessToken, String refreshToken, TokenStore tokenStore) {
         Object v = null;
+        TokenStoreEntity tokenStoreEntity = null;
+        SysUserEntity sysUserEntity = null;
         if (null != tokenStore)
             v = tokenStore.getValue();
-        put(ValueType.accessToken, null, accessToken, refreshToken, v, 24 * 60 * 60L);
-        put(ValueType.refreshToken, null, accessToken, refreshToken, v, 7 * 24 * 60 * 60L);
-        remove(ValueType.authCode, authCode);
+        if (v instanceof SysUserEntity) {
+            sysUserEntity = (SysUserEntity) v;
+            tokenStoreEntity = tokenStoreService.findByUser(sysUserEntity);
+            if (null != tokenStoreEntity) {
+                /**
+                 * 删除之前的access token
+                 */
+                if (!tokenStoreEntity.getAccessToken().equals(accessToken)) {
+                    remove(ValueType.accessToken, tokenStoreEntity.getAccessToken());
+                }
+                /**
+                 * 删除之前的refresh token
+                 */
+                if (!tokenStoreEntity.getRefreshToken().equals(refreshToken)) {
+                    remove(ValueType.refreshToken, tokenStoreEntity.getRefreshToken());
+                }
+            }
+        }
+
+        put(ValueType.accessToken, null, accessToken, refreshToken, v, ACCESS_TOKEN_DEFAULT_EXPIRED_IN);
+        put(ValueType.refreshToken, null, accessToken, refreshToken, v, REFRESH_TOKEN_DEFAULT_EXPIRED_IN);
+        remove(ValueType.authCode, tokenStore.getAuthCode());
+        if (null != sysUserEntity) {
+            tokenStoreService.saveOrUpdate(sysUserEntity, accessToken, refreshToken, tokenStore.getAuthCode(), ACCESS_TOKEN_DEFAULT_EXPIRED_IN, REFRESH_TOKEN_DEFAULT_EXPIRED_IN);
+        }
     }
 
     public TokenStore get(ValueType type, String code) {
         String key = getKey(type, code);
-        if (redisAspect.isOpen()) {
+        if (redisUtils.isOpen()) {
             return (TokenStore) redisUtils.get(key);
         } else {
             TokenStore od = cache.get(key);
@@ -109,7 +123,7 @@ public class ClientDetailsService extends ClientDetailsServiceGen implements Loo
 
     public void remove(ValueType type, String code) {
         String key = getKey(type, code);
-        if (redisAspect.isOpen()) {
+        if (redisUtils.isOpen()) {
             redisUtils.delete(key);
         } else {
             cache.remove(key);

@@ -46,9 +46,13 @@ import java.net.*;
 import java.util.Map;
 
 import static com.baomidou.mybatisplus.toolkit.StringUtils.UTF8;
+import static javax.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
+import static javax.servlet.http.HttpServletResponse.SC_UNAUTHORIZED;
 import static org.apache.oltu.oauth2.common.OAuth.HttpMethod.POST;
 import static org.apache.oltu.oauth2.common.OAuth.OAUTH_CODE;
 import static org.apache.oltu.oauth2.common.OAuth.OAUTH_STATE;
+import static org.apache.oltu.oauth2.common.error.OAuthError.OAUTH_ERROR_URI;
+import static org.apache.oltu.oauth2.common.error.OAuthError.TokenResponse.*;
 
 @Controller
 @RequestMapping("/oauth2")
@@ -88,6 +92,15 @@ public class AuthorizationController {
         } catch (Exception e) {
         }
         return "";
+    }
+
+    private ResponseEntity error(String description, String error, int errorResponse) throws OAuthSystemException {
+        OAuthResponse oAuthResponse = OAuthASResponse
+                .errorResponse(errorResponse)
+                .setError(error)
+                .setErrorDescription(description)
+                .buildJSONMessage();
+        return new ResponseEntity(oAuthResponse.getBody(), HttpStatus.valueOf(oAuthResponse.getResponseStatus()));
     }
 
     @RequestMapping("login")
@@ -134,12 +147,7 @@ public class AuthorizationController {
         //校验客户端Id是否正确
         ClientDetailsEntity clientDetailsEntity = clientDetailsService.findByClientId(clientId);
         if (clientDetailsEntity == null) {
-            OAuthResponse response =
-                    OAuthASResponse.errorResponse(HttpServletResponse.SC_BAD_REQUEST)
-                            .setError(OAuthError.TokenResponse.INVALID_CLIENT)
-                            .setErrorDescription("无效的客户端ID")
-                            .buildJSONMessage();
-            return new ResponseEntity(response.getBody(), HttpStatus.valueOf(response.getResponseStatus()));
+            return error("无效的客户端ID", INVALID_CLIENT, SC_BAD_REQUEST);
         }
 
         //生成授权码
@@ -162,21 +170,11 @@ public class AuthorizationController {
         String redirectURI = oAuthzRequest.getParam(OAuth.OAUTH_REDIRECT_URI);
 
         if (StringUtils.isEmpty(redirectURI) || StringUtils.isEmpty(clientDetailsEntity.getRedirectUri())) {
-            OAuthResponse response =
-                    OAuthASResponse.errorResponse(HttpServletResponse.SC_BAD_REQUEST)
-                            .setError(OAuthError.OAUTH_ERROR_URI)
-                            .setErrorDescription("redirect_uri should not be empty.")
-                            .buildJSONMessage();
-            return new ResponseEntity(response.getBody(), HttpStatus.valueOf(response.getResponseStatus()));
+            return error("redirect_uri should not be empty.", OAUTH_ERROR_URI, SC_BAD_REQUEST);
         }
 
         if (!redirectURI.equalsIgnoreCase(clientDetailsEntity.getRedirectUri())) {
-            OAuthResponse response =
-                    OAuthASResponse.errorResponse(HttpServletResponse.SC_BAD_REQUEST)
-                            .setError(OAuthError.OAUTH_ERROR_URI)
-                            .setErrorDescription("redirect_uri does not match the uri in system.")
-                            .buildJSONMessage();
-            return new ResponseEntity(response.getBody(), HttpStatus.valueOf(response.getResponseStatus()));
+            return error("redirect_uri does not match the uri in system.", OAUTH_ERROR_URI, SC_BAD_REQUEST);
         }
         ModelAndView mav = new ModelAndView();
         mav.addObject(OAUTH_CODE, authCode);
@@ -187,6 +185,7 @@ public class AuthorizationController {
         return mav;
     }
 
+
     @RequestMapping(value = "token", method = RequestMethod.POST)
     public HttpEntity applyAccessToken(HttpServletRequest request) throws OAuthSystemException, OAuthProblemException {
         //构建OAuth请求
@@ -196,33 +195,33 @@ public class AuthorizationController {
         //校验客户端Id是否正确
         ClientDetailsEntity authClient = clientDetailsService.findByClientId(clientId);
         if (authClient == null) {
-            OAuthResponse oAuthResponse = OAuthASResponse
-                    .errorResponse(HttpServletResponse.SC_BAD_REQUEST)
-                    .setError(OAuthError.TokenResponse.INVALID_CLIENT)
-                    .setErrorDescription("无效的客户端Id")
-                    .buildJSONMessage();
-            return new ResponseEntity(oAuthResponse.getBody(), HttpStatus.valueOf(oAuthResponse.getResponseStatus()));
+            return error("无效的客户端Id", INVALID_CLIENT, SC_BAD_REQUEST);
         }
 
         //检查客户端安全KEY是否正确
         if (!clientDetailsService.isValidClientSecret(tokenRequest.getClientSecret())) {
-            OAuthResponse response = OAuthResponse.errorResponse(HttpServletResponse.SC_UNAUTHORIZED)
-                    .setError(OAuthError.TokenResponse.UNAUTHORIZED_CLIENT)
-                    .setErrorDescription("客户端安全KEY认证失败！")
-                    .buildJSONMessage();
-            return new ResponseEntity(response.getBody(), HttpStatus.valueOf(response.getResponseStatus()));
+            return error("客户端安全KEY认证失败！", UNAUTHORIZED_CLIENT, SC_UNAUTHORIZED);
         }
 
         String authCode = tokenRequest.getParam(OAuth.OAUTH_CODE);
+        TokenStore tokenStore = null;
         //验证类型，有AUTHORIZATION_CODE/PASSWORD/REFRESH_TOKEN/CLIENT_CREDENTIALS
         if (tokenRequest.getParam(OAuth.OAUTH_GRANT_TYPE).equals(GrantType.AUTHORIZATION_CODE.toString())) {
             if (!clientDetailsService.isValidCode(authCode)) {
-                OAuthResponse response = OAuthResponse.errorResponse(HttpServletResponse.SC_BAD_REQUEST)
-                        .setError(OAuthError.TokenResponse.INVALID_GRANT)
-                        .setErrorDescription("错误的授权码")
-                        .buildJSONMessage();
-                return new ResponseEntity(response.getBody(), HttpStatus.valueOf(response.getResponseStatus()));
+                return error("错误的授权码", INVALID_GRANT, SC_BAD_REQUEST);
             }
+            tokenStore = clientDetailsService.get(ValueType.authCode, authCode);
+        }
+
+        if (tokenRequest.getParam(OAuth.OAUTH_GRANT_TYPE).equals(GrantType.REFRESH_TOKEN.toString())) {
+            if (!clientDetailsService.isValidRefreshToken(tokenRequest.getRefreshToken())) {
+                return error("错误的Refresh Token", INVALID_GRANT, SC_BAD_REQUEST);
+            }
+            tokenStore = clientDetailsService.get(ValueType.refreshToken, tokenRequest.getRefreshToken());
+        }
+
+        if (null == tokenStore) {
+            return error("非法授权", INVALID_GRANT, SC_BAD_REQUEST);
         }
 
         //生成访问令牌
@@ -235,14 +234,16 @@ public class AuthorizationController {
          * refreshToken 过期时间：7 * 24 * 60 * 60L  一周
          * 如果服务器重启或者Redis重启后，将立即过期
          */
-        clientDetailsService.putToken(accessToken, refreshToken, authCode);
+        clientDetailsService.putToken(accessToken, refreshToken, tokenStore);
 
         //生成OAuth响应
         OAuthResponse response = OAuthASResponse
                 .tokenResponse(HttpServletResponse.SC_OK)
                 .setAccessToken(accessToken)
                 .setRefreshToken(refreshToken)
+                .setTokenType("bearer")
                 .setExpiresIn(String.valueOf(TokenStore.getExpireIn()))
+                .setScope("basic")
                 .buildJSONMessage();
         return new ResponseEntity(response.getBody(), HttpStatus.valueOf(response.getResponseStatus()));
     }
@@ -264,7 +265,7 @@ public class AuthorizationController {
             // 验证访问令牌
             if (!clientDetailsService.isValidAccessToken(accessTokenKey)) {
                 // 如果不存在/过期了，返回未验证错误，需重新验证
-                OAuthResponse oauthResponse = OAuthRSResponse.errorResponse(HttpServletResponse.SC_UNAUTHORIZED)
+                OAuthResponse oauthResponse = OAuthRSResponse.errorResponse(SC_UNAUTHORIZED)
                         .setRealm("Apache Oltu").setError(OAuthError.ResourceResponse.INVALID_TOKEN)
                         .buildHeaderMessage();
 
@@ -292,7 +293,7 @@ public class AuthorizationController {
             // 检查是否设置了错误码
             String errorCode = e.getError();
             if (OAuthUtils.isEmpty(errorCode)) {
-                OAuthResponse oauthResponse = OAuthRSResponse.errorResponse(HttpServletResponse.SC_UNAUTHORIZED).buildHeaderMessage();
+                OAuthResponse oauthResponse = OAuthRSResponse.errorResponse(SC_UNAUTHORIZED).buildHeaderMessage();
 
                 HttpHeaders headers = new HttpHeaders();
                 headers.add(OAuth.HeaderType.WWW_AUTHENTICATE,
@@ -302,7 +303,7 @@ public class AuthorizationController {
             }
 
             OAuthResponse oauthResponse = OAuthRSResponse
-                    .errorResponse(HttpServletResponse.SC_UNAUTHORIZED)
+                    .errorResponse(SC_UNAUTHORIZED)
                     .setError(e.getError())
                     .setErrorDescription(e.getDescription())
                     .setErrorUri(e.getUri())

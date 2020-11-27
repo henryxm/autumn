@@ -18,6 +18,7 @@ package cn.org.autumn.utils;
 
 import com.alibaba.fastjson.JSON;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.*;
 import org.springframework.stereotype.Component;
 
@@ -51,23 +52,36 @@ public class RedisUtils {
      */
     public final static long NOT_EXPIRE = -1;
 
+    @Value("${autumn.redis.open: false}")
+    private boolean open;
+
+    public boolean isOpen() {
+        return open;
+    }
+
     public void set(String key, Object value, long expire) {
-        valueOperations.set(key, value);
-        if (expire != NOT_EXPIRE) {
-            redisTemplate.expire(key, expire, TimeUnit.SECONDS);
+        if (open) {
+            valueOperations.set(key, value);
+            if (expire != NOT_EXPIRE) {
+                redisTemplate.expire(key, expire, TimeUnit.SECONDS);
+            }
         }
     }
 
     public void set(String key, Object value) {
-        set(key, value, DEFAULT_EXPIRE);
+        if (open)
+            set(key, value, DEFAULT_EXPIRE);
     }
 
     public Object get(String key) {
-        return valueOperations.get(key);
+        if (open)
+            return valueOperations.get(key);
+        return null;
     }
 
     public void delete(String key) {
-        redisTemplate.delete(key);
+        if (open)
+            redisTemplate.delete(key);
     }
 
     /**

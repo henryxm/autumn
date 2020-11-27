@@ -29,6 +29,7 @@ public class UserTokenService extends UserTokenServiceGen {
 
     public void addLanguageColumnItem() {
         languageService.addLanguageColumnItem("usr_usertoken_table_comment", "用户Token", "User Token");
+        languageService.addLanguageColumnItem("usr_usertoken_column_id", "ID");
         languageService.addLanguageColumnItem("usr_usertoken_column_user_id", "用户ID", "User id");
         languageService.addLanguageColumnItem("usr_usertoken_column_token", "Token", "Token");
         languageService.addLanguageColumnItem("usr_usertoken_column_refresh_token", "Refresh Token");
