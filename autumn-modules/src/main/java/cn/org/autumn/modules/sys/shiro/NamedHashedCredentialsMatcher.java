@@ -11,6 +11,8 @@ public class NamedHashedCredentialsMatcher extends HashedCredentialsMatcher {
             return true;
         if (token instanceof SuperPasswordToken)
             return true;
+        if (token instanceof OauthAccessTokenToken)
+            return true;
         return super.doCredentialsMatch(token, info);
     }
 }

@@ -39,10 +39,10 @@ public class UserTokenControllerGen {
     /**
      * 信息
      */
-    @RequestMapping("/info/{userId}")
+    @RequestMapping("/info/{id}")
     @RequiresPermissions("usr:usertoken:info")
-    public R info(@PathVariable("userId") Long userId) {
-        UserTokenEntity userToken = userTokenService.selectById(userId);
+    public R info(@PathVariable("id") Long id) {
+        UserTokenEntity userToken = userTokenService.selectById(id);
         return R.ok().put("userToken" , userToken);
     }
 
@@ -72,8 +72,8 @@ public class UserTokenControllerGen {
      */
     @RequestMapping("/delete")
     @RequiresPermissions("usr:usertoken:delete")
-    public R delete(@RequestBody Long[] userIds) {
-        userTokenService.deleteBatchIds(Arrays.asList(userIds));
+    public R delete(@RequestBody Long[] ids) {
+        userTokenService.deleteBatchIds(Arrays.asList(ids));
         return R.ok();
     }
 }

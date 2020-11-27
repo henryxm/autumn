@@ -3,7 +3,8 @@ $(function () {
         url: baseURL + 'usr/usertoken/list',
         datatype: "json",
         colModel: [			
-			{ label: '${lang.usr_usertoken_column_user_id}', name: 'userId', index: 'user_id', width: 50, key: true },
+			{ label: '${lang.usr_usertoken_column_id}', name: 'id', index: 'id', width: 50, key: true },
+			{ label: '${lang.usr_usertoken_column_user_id}', name: 'userId', index: 'user_id', width: 80 }, 
 			{ label: '${lang.usr_usertoken_column_token}', name: 'token', index: 'token', width: 80 }, 
 			{ label: '${lang.usr_usertoken_column_refresh_token}', name: 'refreshToken', index: 'refresh_token', width: 80 }, 
 			{ label: '${lang.usr_usertoken_column_expire_time}', name: 'expireTime', index: 'expire_time', width: 80 }, 
@@ -53,17 +54,17 @@ var vm = new Vue({
 			vm.userToken = {};
 		},
 		update: function (event) {
-			var userId = getSelectedRow();
-			if(userId == null){
+			var id = getSelectedRow();
+			if(id == null){
 				return ;
 			}
 			vm.showList = false;
             vm.title = "${lang.sys_string_change}";
             
-            vm.getInfo(userId)
+            vm.getInfo(id)
 		},
 		saveOrUpdate: function (event) {
-			var url = vm.userToken.userId == null ? "usr/usertoken/save" : "usr/usertoken/update";
+			var url = vm.userToken.id == null ? "usr/usertoken/save" : "usr/usertoken/update";
 			$.ajax({
 				type: "POST",
 			    url: baseURL + url,
@@ -81,8 +82,8 @@ var vm = new Vue({
 			});
 		},
 		del: function (event) {
-			var userIds = getSelectedRows();
-			if(userIds == null){
+			var ids = getSelectedRows();
+			if(ids == null){
 				return ;
 			}
 			confirm('${lang.sys_string_are_sure_to_delete}？', function(){
@@ -90,7 +91,7 @@ var vm = new Vue({
 					type: "POST",
 				    url: baseURL + "usr/usertoken/delete",
                     contentType: "application/json",
-				    data: JSON.stringify(userIds),
+				    data: JSON.stringify(ids),
 				    success: function(r){
 						if(r.code == 0){
 							alert('${lang.sys_string_successful}', function(index){
@@ -103,8 +104,8 @@ var vm = new Vue({
 				});
 			});
 		},
-		getInfo: function(userId){
-			$.get(baseURL + "usr/usertoken/info/"+userId, function(r){
+		getInfo: function(id){
+			$.get(baseURL + "usr/usertoken/info/"+id, function(r){
                 vm.userToken = r.userToken;
             });
 		},

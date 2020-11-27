@@ -12,6 +12,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 @RunWith(SpringRunner.class)
 @SpringBootTest
 public class RedisTest {
+
     @Autowired
     private RedisUtils redisUtils;
 
@@ -21,7 +22,7 @@ public class RedisTest {
         user.setEmail("123456@qq.com");
         redisUtils.set("user", user);
 
-        System.out.println(ToStringBuilder.reflectionToString(redisUtils.get("user", SysUserEntity.class)));
+        System.out.println(ToStringBuilder.reflectionToString(redisUtils.get("user")));
     }
 
 }

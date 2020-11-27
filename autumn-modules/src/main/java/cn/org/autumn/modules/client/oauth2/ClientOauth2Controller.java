@@ -5,6 +5,7 @@ import cn.org.autumn.modules.client.service.WebAuthenticationService;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.modules.usr.dto.UserProfile;
 import cn.org.autumn.modules.usr.service.UserProfileService;
+import cn.org.autumn.modules.usr.service.UserTokenService;
 import cn.org.autumn.utils.HttpClientUtils;
 import com.alibaba.fastjson.JSON;
 import org.apache.commons.lang.StringUtils;
@@ -46,6 +47,9 @@ public class ClientOauth2Controller {
     @Autowired
     SysConfigService sysConfigService;
 
+    @Autowired
+    UserTokenService userTokenService;
+
     @RequestMapping("oauth2/callback")
     public Object defaultCodeCallback(HttpServletRequest request) throws OAuthSystemException {
         String authCode = request.getParameter(OAuth.OAUTH_CODE);
@@ -61,8 +65,11 @@ public class ClientOauth2Controller {
         WebAuthenticationEntity webAuthenticationEntity = webAuthenticationService.findByClientId(sysConfigService.getOauth2LoginClientId());
         String accessToken = getAccessToken(webAuthenticationEntity, authCode);
         UserProfile userProfile = getUserInfo(webAuthenticationEntity, accessToken);
-        if (null != userProfile)
+        if (null != userProfile) {
+            userProfileService.login(userProfile);
+            userTokenService.saveToken(accessToken);
             logger.info(userProfile.toString());
+        }
         return "redirect:/";
     }
 
@@ -85,6 +92,7 @@ public class ClientOauth2Controller {
         paramMap.put(OAuth.OAUTH_CLIENT_SECRET, clientSecret);
         paramMap.put(OAuth.OAUTH_REDIRECT_URI, redirectUrl);
         String accessToken = HttpClientUtils.doPost(webAuthClientEntity.getAccessTokenUri(), paramMap);
+        logger.info(accessToken);
         return accessToken;
     }
 
@@ -97,8 +105,6 @@ public class ClientOauth2Controller {
             OAuthResourceResponse resourceResponse = oAuthClient.resource(authUserRequest, OAuth.HttpMethod.GET, OAuthResourceResponse.class);
             String userinfo = resourceResponse.getBody();
             UserProfile userProfile = JSON.parseObject(userinfo, UserProfile.class);
-            if (null != userProfile)
-                userProfileService.login(userProfile);
             return userProfile;
         } catch (Exception e) {
             logger.error("getUserInfo error：" + e.getMessage());

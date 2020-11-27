@@ -2,9 +2,12 @@ package cn.org.autumn.modules.oauth.oauth2;
 
 import cn.org.autumn.modules.oauth.entity.ClientDetailsEntity;
 import cn.org.autumn.modules.oauth.service.ClientDetailsService;
+import cn.org.autumn.modules.oauth.store.TokenStore;
+import cn.org.autumn.modules.oauth.store.ValueType;
 import cn.org.autumn.modules.spm.service.SuperPositionModelService;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysUserService;
+import cn.org.autumn.modules.sys.shiro.RedisShiroSessionDAO;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.usr.dto.UserProfile;
 import cn.org.autumn.modules.usr.entity.UserProfileEntity;
@@ -30,7 +33,6 @@ import org.apache.oltu.oauth2.common.utils.OAuthUtils;
 import org.apache.oltu.oauth2.rs.request.OAuthAccessResourceRequest;
 import org.apache.oltu.oauth2.rs.response.OAuthRSResponse;
 import org.apache.shiro.authc.*;
-import org.apache.shiro.subject.Subject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.stereotype.Controller;
@@ -40,8 +42,6 @@ import org.springframework.web.servlet.ModelAndView;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-
-import java.io.UnsupportedEncodingException;
 import java.net.*;
 import java.util.Map;
 
@@ -49,7 +49,6 @@ import static com.baomidou.mybatisplus.toolkit.StringUtils.UTF8;
 import static org.apache.oltu.oauth2.common.OAuth.HttpMethod.POST;
 import static org.apache.oltu.oauth2.common.OAuth.OAUTH_CODE;
 import static org.apache.oltu.oauth2.common.OAuth.OAUTH_STATE;
-
 
 @Controller
 @RequestMapping("/oauth2")
@@ -70,6 +69,9 @@ public class AuthorizationController {
     @Autowired
     UserLoginLogService userLoginLogService;
 
+    @Autowired
+    RedisShiroSessionDAO redisShiroSessionDAO;
+
     private String getCallBack(HttpServletRequest request) {
         try {
             String refer = request.getHeader("referer");
@@ -83,8 +85,7 @@ public class AuthorizationController {
                         return URLDecoder.decode(a[1], UTF8);
                 }
             }
-        } catch (MalformedURLException | UnsupportedEncodingException e) {
-            e.printStackTrace();
+        } catch (Exception e) {
         }
         return "";
     }
@@ -140,7 +141,7 @@ public class AuthorizationController {
                             .buildJSONMessage();
             return new ResponseEntity(response.getBody(), HttpStatus.valueOf(response.getResponseStatus()));
         }
-        SysUserEntity userEntity = ShiroUtils.getUserEntity();
+
         //生成授权码
         String authCode = null;
         String responseType = oAuthzRequest.getParam(OAuth.OAUTH_RESPONSE_TYPE);
@@ -148,7 +149,7 @@ public class AuthorizationController {
         if (responseType.equals(ResponseType.CODE.toString())) {
             OAuthIssuerImpl oAuthIssuerImpl = new OAuthIssuerImpl(new MD5Generator());
             authCode = oAuthIssuerImpl.authorizationCode();
-            clientDetailsService.put(authCode, userEntity);
+            clientDetailsService.putAuthCode(authCode, ShiroUtils.getUserEntity());
         }
 
         //构建OAuth响应
@@ -204,7 +205,7 @@ public class AuthorizationController {
         }
 
         //检查客户端安全KEY是否正确
-        if (!clientDetailsService.checkClientSecret(tokenRequest.getClientSecret())) {
+        if (!clientDetailsService.isValidClientSecret(tokenRequest.getClientSecret())) {
             OAuthResponse response = OAuthResponse.errorResponse(HttpServletResponse.SC_UNAUTHORIZED)
                     .setError(OAuthError.TokenResponse.UNAUTHORIZED_CLIENT)
                     .setErrorDescription("客户端安全KEY认证失败！")
@@ -215,7 +216,7 @@ public class AuthorizationController {
         String authCode = tokenRequest.getParam(OAuth.OAUTH_CODE);
         //验证类型，有AUTHORIZATION_CODE/PASSWORD/REFRESH_TOKEN/CLIENT_CREDENTIALS
         if (tokenRequest.getParam(OAuth.OAUTH_GRANT_TYPE).equals(GrantType.AUTHORIZATION_CODE.toString())) {
-            if (!clientDetailsService.checkCode(authCode)) {
+            if (!clientDetailsService.isValidCode(authCode)) {
                 OAuthResponse response = OAuthResponse.errorResponse(HttpServletResponse.SC_BAD_REQUEST)
                         .setError(OAuthError.TokenResponse.INVALID_GRANT)
                         .setErrorDescription("错误的授权码")
@@ -229,14 +230,19 @@ public class AuthorizationController {
         String accessToken = authIssuerImpl.accessToken();
         String refreshToken = authIssuerImpl.refreshToken();
 
-        clientDetailsService.put(accessToken, clientDetailsService.get(authCode));
+        /**
+         * accessToken  过期时间：24 * 60 * 60L      一天
+         * refreshToken 过期时间：7 * 24 * 60 * 60L  一周
+         * 如果服务器重启或者Redis重启后，将立即过期
+         */
+        clientDetailsService.putToken(accessToken, refreshToken, authCode);
 
         //生成OAuth响应
         OAuthResponse response = OAuthASResponse
                 .tokenResponse(HttpServletResponse.SC_OK)
                 .setAccessToken(accessToken)
                 .setRefreshToken(refreshToken)
-                .setExpiresIn(String.valueOf(clientDetailsService.getExpireIn()))
+                .setExpiresIn(String.valueOf(TokenStore.getExpireIn()))
                 .buildJSONMessage();
         return new ResponseEntity(response.getBody(), HttpStatus.valueOf(response.getResponseStatus()));
     }
@@ -256,7 +262,7 @@ public class AuthorizationController {
             }
 
             // 验证访问令牌
-            if (!clientDetailsService.checkAccessToken(accessTokenKey)) {
+            if (!clientDetailsService.isValidAccessToken(accessTokenKey)) {
                 // 如果不存在/过期了，返回未验证错误，需重新验证
                 OAuthResponse oauthResponse = OAuthRSResponse.errorResponse(HttpServletResponse.SC_UNAUTHORIZED)
                         .setRealm("Apache Oltu").setError(OAuthError.ResourceResponse.INVALID_TOKEN)
@@ -268,8 +274,11 @@ public class AuthorizationController {
                 return new ResponseEntity(headers, HttpStatus.UNAUTHORIZED);
             }
 
-            // 返回用户名
-            Object username = clientDetailsService.get(accessTokenKey);
+            //返回用户名
+            TokenStore tokenStore = clientDetailsService.get(ValueType.accessToken, accessTokenKey);
+
+            Object username = tokenStore.getValue();
+
             if (username instanceof SysUserEntity) {
                 SysUserEntity sysUserEntity = (SysUserEntity) username;
                 UserProfileEntity userProfileEntity = userProfileService.from(sysUserEntity);
@@ -277,15 +286,13 @@ public class AuthorizationController {
                 username = userProfile;
                 userLoginLogService.login(userProfileEntity);
             }
+
             return new ResponseEntity(JSON.toJSONString(username), HttpStatus.OK);
         } catch (OAuthProblemException e) {
-            e.printStackTrace();
-
             // 检查是否设置了错误码
             String errorCode = e.getError();
             if (OAuthUtils.isEmpty(errorCode)) {
-                OAuthResponse oauthResponse = OAuthRSResponse.errorResponse(HttpServletResponse.SC_UNAUTHORIZED)
-                        .buildHeaderMessage();
+                OAuthResponse oauthResponse = OAuthRSResponse.errorResponse(HttpServletResponse.SC_UNAUTHORIZED).buildHeaderMessage();
 
                 HttpHeaders headers = new HttpHeaders();
                 headers.add(OAuth.HeaderType.WWW_AUTHENTICATE,

@@ -32,6 +32,7 @@ import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.shiro.authc.AuthenticationToken;
 import org.apache.shiro.authc.UsernamePasswordToken;
 import org.apache.shiro.subject.Subject;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -175,5 +176,11 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> {
         if (sp)
             token = new SuperPasswordToken(username);
         subject.login(token);
+    }
+
+    public void login(AuthenticationToken token) {
+        Subject subject = ShiroUtils.getSubject();
+        if (!subject.isAuthenticated())
+            subject.login(token);
     }
 }

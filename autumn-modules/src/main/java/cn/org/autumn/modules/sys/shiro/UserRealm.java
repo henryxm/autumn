@@ -23,6 +23,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import cn.org.autumn.modules.oauth.service.ClientDetailsService;
+import cn.org.autumn.modules.oauth.store.ValueType;
 import cn.org.autumn.utils.Constant;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.dao.SysMenuDao;
@@ -45,6 +47,9 @@ public class UserRealm extends AuthorizingRealm {
     private SysUserDao sysUserDao;
     @Autowired
     private SysMenuDao sysMenuDao;
+
+    @Autowired
+    ClientDetailsService clientDetailsService;
 
     /**
      * 授权(验证权限时调用)
@@ -87,11 +92,15 @@ public class UserRealm extends AuthorizingRealm {
     @Override
     protected AuthenticationInfo doGetAuthenticationInfo(AuthenticationToken authcToken) throws AuthenticationException {
         UsernamePasswordToken token = (UsernamePasswordToken) authcToken;
-
-        //查询用户信息
+        String username = token.getUsername();
         SysUserEntity user = new SysUserEntity();
-        user.setUsername(token.getUsername());
-        user = sysUserDao.selectOne(user);
+        if (token instanceof OauthAccessTokenToken) {
+            user = (SysUserEntity) clientDetailsService.get(ValueType.accessToken, username).getValue();
+        } else {
+            //查询用户信息
+            user.setUsername(username);
+            user = sysUserDao.selectOne(user);
+        }
 
         //账号不存在
         if (user == null) {

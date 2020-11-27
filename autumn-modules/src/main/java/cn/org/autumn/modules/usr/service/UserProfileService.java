@@ -111,9 +111,7 @@ public class UserProfileService extends UserProfileServiceGen {
             }
             if (null == sysUserEntity)
                 sysUserEntity = sysUserService.selectById(userProfileEntity.getSysUserId());
-            Subject subject = ShiroUtils.getSubject();
-            OauthUsernameToken token = new OauthUsernameToken(sysUserEntity.getUsername());
-            subject.login(token);
+            sysUserService.login(new OauthUsernameToken(sysUserEntity.getUsername()));
         }
     }
 }

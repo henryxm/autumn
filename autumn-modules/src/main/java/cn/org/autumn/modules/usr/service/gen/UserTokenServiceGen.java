@@ -3,10 +3,8 @@ package cn.org.autumn.modules.usr.service.gen;
 import cn.org.autumn.table.TableInit;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-
 import java.util.HashMap;
 import java.util.Map;
-
 import com.baomidou.mybatisplus.mapper.EntityWrapper;
 import com.baomidou.mybatisplus.plugins.Page;
 import com.baomidou.mybatisplus.service.impl.ServiceImpl;
@@ -15,9 +13,7 @@ import cn.org.autumn.utils.Query;
 import cn.org.autumn.modules.usr.service.UsrMenu;
 import cn.org.autumn.modules.usr.dao.UserTokenDao;
 import cn.org.autumn.modules.usr.entity.UserTokenEntity;
-
 import javax.annotation.PostConstruct;
-
 import cn.org.autumn.modules.sys.entity.SysMenuEntity;
 import cn.org.autumn.modules.sys.service.SysMenuService;
 import cn.org.autumn.modules.lan.service.LanguageService;
@@ -48,20 +44,23 @@ public class UserTokenServiceGen extends ServiceImpl<UserTokenDao, UserTokenEnti
     public PageUtils queryPage(Map<String, Object> params) {
         Page<UserTokenEntity> _page = new Query<UserTokenEntity>(params).getPage();
         EntityWrapper<UserTokenEntity> entityEntityWrapper = new EntityWrapper<>();
-        Map<String, Object> condition = new HashMap<>();
-        if (params.containsKey("userId") && null != params.get("userId") && StringUtils.isNotEmpty(params.get("userId").toString())) {
+        Map<String,Object> condition = new HashMap<>();
+        if(params.containsKey("id") && null !=params.get("id") && StringUtils.isNotEmpty(params.get("id").toString())) {
+            condition.put("id", params.get("id"));
+        }
+        if(params.containsKey("userId") && null !=params.get("userId") && StringUtils.isNotEmpty(params.get("userId").toString())) {
             condition.put("user_id", params.get("userId"));
         }
-        if (params.containsKey("token") && null != params.get("token") && StringUtils.isNotEmpty(params.get("token").toString())) {
+        if(params.containsKey("token") && null !=params.get("token") && StringUtils.isNotEmpty(params.get("token").toString())) {
             condition.put("token", params.get("token"));
         }
-        if (params.containsKey("refreshToken") && null != params.get("refreshToken") && StringUtils.isNotEmpty(params.get("refreshToken").toString())) {
+        if(params.containsKey("refreshToken") && null !=params.get("refreshToken") && StringUtils.isNotEmpty(params.get("refreshToken").toString())) {
             condition.put("refresh_token", params.get("refreshToken"));
         }
-        if (params.containsKey("expireTime") && null != params.get("expireTime") && StringUtils.isNotEmpty(params.get("expireTime").toString())) {
+        if(params.containsKey("expireTime") && null !=params.get("expireTime") && StringUtils.isNotEmpty(params.get("expireTime").toString())) {
             condition.put("expire_time", params.get("expireTime"));
         }
-        if (params.containsKey("updateTime") && null != params.get("updateTime") && StringUtils.isNotEmpty(params.get("updateTime").toString())) {
+        if(params.containsKey("updateTime") && null !=params.get("updateTime") && StringUtils.isNotEmpty(params.get("updateTime").toString())) {
             condition.put("update_time", params.get("updateTime"));
         }
         _page.setCondition(condition);
@@ -71,36 +70,34 @@ public class UserTokenServiceGen extends ServiceImpl<UserTokenDao, UserTokenEnti
     }
 
     /**
-     * need implement it in the subclass.
-     *
-     * @return
-     */
-    public int menuOrder() {
+    * need implement it in the subclass.
+    * @return
+    */
+    public int menuOrder(){
         return 0;
     }
 
     /**
-     * need implement it in the subclass.
-     *
-     * @return
-     */
-    public int parentMenu() {
+    * need implement it in the subclass.
+    * @return
+    */
+    public int parentMenu(){
         usrMenu.init();
         SysMenuEntity sysMenuEntity = sysMenuService.getByMenuKey(UsrMenu.usr_menu);
-        if (null != sysMenuEntity)
+        if(null != sysMenuEntity)
             return sysMenuEntity.getMenuId().intValue();
-        return 108;
+        return 66;
     }
 
-    public String ico() {
+    public String ico(){
         return "fa-file-code-o";
     }
 
-    private String order() {
+    private String order(){
         return String.valueOf(menuOrder());
     }
 
-    private String parent() {
+    private String parent(){
         return String.valueOf(parentMenu());
     }
 
