@@ -115,7 +115,7 @@ public class ClientDetailsService extends ClientDetailsServiceGen implements Loo
             return (TokenStore) redisUtils.get(key);
         } else {
             TokenStore od = cache.get(key);
-            if (!od.isExpired())
+            if (null != od && !od.isExpired())
                 return od;
             return null;
         }

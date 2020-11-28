@@ -117,10 +117,10 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> {
         sysUserRoleService.saveOrUpdate(user.getUserId(), user.getRoleIdList());
     }
 
-    public SysUserEntity newUser(String username, String password) {
+    public SysUserEntity newUser(String uuid, String password) {
         SysUserEntity sysUserEntity = new SysUserEntity();
-        sysUserEntity.setUuid(uuid());
-        sysUserEntity.setUsername(username);
+        sysUserEntity.setUuid(uuid);
+        sysUserEntity.setUsername(uuid);
         sysUserEntity.setPassword(password);
         sysUserEntity.setStatus(1);
         save(sysUserEntity);

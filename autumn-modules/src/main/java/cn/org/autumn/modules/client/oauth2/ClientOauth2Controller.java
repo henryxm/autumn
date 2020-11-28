@@ -68,7 +68,7 @@ public class ClientOauth2Controller {
         if (null != userProfile) {
             userProfileService.login(userProfile);
             userTokenService.saveToken(accessToken);
-            logger.info(userProfile.toString());
+            logger.debug(userProfile.toString());
         }
         return "redirect:/";
     }
@@ -90,9 +90,8 @@ public class ClientOauth2Controller {
         paramMap.put(OAuth.OAUTH_CLIENT_ID, webAuthClientEntity.getClientId());
         paramMap.put(OAuth.OAUTH_CODE, oauthCode);
         paramMap.put(OAuth.OAUTH_CLIENT_SECRET, clientSecret);
-        paramMap.put(OAuth.OAUTH_REDIRECT_URI, redirectUrl);
         String accessToken = HttpClientUtils.doPost(webAuthClientEntity.getAccessTokenUri(), paramMap);
-        logger.info(accessToken);
+        logger.debug(accessToken);
         return accessToken;
     }
 

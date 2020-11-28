@@ -12,10 +12,10 @@ import cn.org.autumn.modules.usr.form.LoginForm;
 import cn.org.autumn.modules.usr.service.gen.UserProfileServiceGen;
 import cn.org.autumn.validator.Assert;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.shiro.subject.Subject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import javax.validation.constraints.Null;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -57,7 +57,7 @@ public class UserProfileService extends UserProfileServiceGen {
         super.addLanguageColumnItem();
     }
 
-    public UserProfileEntity from(SysUserEntity sysUserEntity) {
+    public UserProfileEntity from(SysUserEntity sysUserEntity, @Null UserProfile merge) {
         UserProfileEntity userProfileEntity = baseMapper.getBySysUserId(sysUserEntity.getUserId());
         if (null == userProfileEntity) {
             userProfileEntity = new UserProfileEntity();
@@ -68,8 +68,13 @@ public class UserProfileService extends UserProfileServiceGen {
             userProfileEntity.setUsername(sysUserEntity.getUsername());
             userProfileEntity.setMobile(sysUserEntity.getMobile());
             userProfileEntity.setUuid(sysUserEntity.getUuid());
-            userProfileEntity.setUnionId(uuid());
-            userProfileEntity.setOpenId(uuid());
+            if (null != merge) {
+                userProfileEntity.setUnionId(merge.getUnionId());
+                userProfileEntity.setOpenId(merge.getOpenId());
+            } else {
+                userProfileEntity.setUnionId(uuid());
+                userProfileEntity.setOpenId(uuid());
+            }
             insert(userProfileEntity);
         }
         return userProfileEntity;
@@ -106,8 +111,8 @@ public class UserProfileService extends UserProfileServiceGen {
             UserProfileEntity userProfileEntity = baseMapper.getByUuid(userProfile.getUuid());
             SysUserEntity sysUserEntity = null;
             if (null == userProfileEntity) {
-                sysUserEntity = sysUserService.newUser(userProfileEntity.getUsername(), "P@ssw0rd");
-                userProfileEntity = from(sysUserEntity);
+                sysUserEntity = sysUserService.newUser(userProfile.getUuid(), "P@ssw0rd");
+                userProfileEntity = from(sysUserEntity, userProfile);
             }
             if (null == sysUserEntity)
                 sysUserEntity = sysUserService.selectById(userProfileEntity.getSysUserId());

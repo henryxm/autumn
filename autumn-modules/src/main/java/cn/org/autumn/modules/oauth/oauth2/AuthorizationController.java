@@ -282,7 +282,7 @@ public class AuthorizationController {
 
             if (username instanceof SysUserEntity) {
                 SysUserEntity sysUserEntity = (SysUserEntity) username;
-                UserProfileEntity userProfileEntity = userProfileService.from(sysUserEntity);
+                UserProfileEntity userProfileEntity = userProfileService.from(sysUserEntity,null);
                 UserProfile userProfile = UserProfile.from(userProfileEntity);
                 username = userProfile;
                 userLoginLogService.login(userProfileEntity);
