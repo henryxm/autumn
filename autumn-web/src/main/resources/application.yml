@@ -24,7 +24,7 @@ spring:
       enabled: true
   redis:
     database: 0
-    host: 192.168.10.10
+    host: 192.168.2.45
     port: 6379
     password:      # 密码（默认为空）
     timeout: 6000ms  # 连接超时时长（毫秒）
@@ -86,13 +86,18 @@ logging:
   level.com.aliyun.oss: fatal
   level.springfox.documentation: fatal
   level.org.quartz: warn
-  level.org.springframework: fatal
+  level.org.springframework: info
   #  level.org.springframework.web: warn
   #  level.org.springframework.jmx: warn
   #  level.org.springframework.boot.web: warn
   #  level.org.springframework.boot.web.servlet: warn
   level.org.springframework.boot.web.embedded: info
-  level.com.alibaba.druid: off
+  level.com.alibaba.druid: info
+  level.org.mybatis.spring: info
+  level.org.apache.tomcat: info
+  level.org.apache.catalina: info
+  level.sun.rmi.transport.tcp: info
+
   file:
     name: file.log
     path: logs/

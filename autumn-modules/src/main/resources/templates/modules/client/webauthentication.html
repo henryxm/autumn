@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>${lang.client_webauthentication_table_comment}</title>
+	<#include "/header.html">
+</head>
+<body>
+<div id="rrapp" v-cloak>
+    <div v-show="showList">
+        <div class="grid-btn">
+			<#if shiro.hasPermission("client:webauthentication:save")>
+            <a class="btn btn-primary" @click="add"><i class="fa fa-plus"></i>&nbsp;${lang.sys_string_add}</a>
+			</#if>
+			<#if shiro.hasPermission("client:webauthentication:update")>
+            <a class="btn btn-primary" @click="update"><i class="fa fa-pencil-square-o"></i>&nbsp;${lang.sys_string_change}</a>
+			</#if>
+			<#if shiro.hasPermission("client:webauthentication:delete")>
+            <a class="btn btn-primary" @click="del"><i class="fa fa-trash-o"></i>&nbsp;${lang.sys_string_delete}</a>
+			</#if>
+        </div>
+        <table id="jqGrid"></table>
+        <div id="jqGridPager"></div>
+    </div>
+
+    <div v-show="!showList" class="panel panel-default">
+        <div class="panel-heading">{{title}}</div>
+        <form class="form-horizontal">
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.client_webauthentication_column_name}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="webAuthentication.name" placeholder="${lang.client_webauthentication_column_name}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.client_webauthentication_column_client_id}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="webAuthentication.clientId" placeholder="${lang.client_webauthentication_column_client_id}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.client_webauthentication_column_client_secret}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="webAuthentication.clientSecret" placeholder="${lang.client_webauthentication_column_client_secret}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.client_webauthentication_column_redirect_uri}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="webAuthentication.redirectUri" placeholder="${lang.client_webauthentication_column_redirect_uri}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.client_webauthentication_column_authorize_uri}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="webAuthentication.authorizeUri" placeholder="${lang.client_webauthentication_column_authorize_uri}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.client_webauthentication_column_access_token_uri}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="webAuthentication.accessTokenUri" placeholder="${lang.client_webauthentication_column_access_token_uri}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.client_webauthentication_column_user_info_uri}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="webAuthentication.userInfoUri" placeholder="${lang.client_webauthentication_column_user_info_uri}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.client_webauthentication_column_scope}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="webAuthentication.scope" placeholder="${lang.client_webauthentication_column_scope}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.client_webauthentication_column_state}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="webAuthentication.state" placeholder="${lang.client_webauthentication_column_state}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.client_webauthentication_column_description}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="webAuthentication.description" placeholder="${lang.client_webauthentication_column_description}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.client_webauthentication_column_create_time}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="webAuthentication.createTime" placeholder="${lang.client_webauthentication_column_create_time}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label"></div>
+                <input type="button" class="btn btn-primary" @click="saveOrUpdate" value="${lang.sys_string_confirm}"/>
+                &nbsp;&nbsp;<input type="button" class="btn btn-warning" @click="reload" value="${lang.sys_string_back}"/>
+            </div>
+        </form>
+    </div>
+</div>
+<script src="${request.contextPath}/modules/client/webauthentication.js?_${.now?long}"></script>
+</body>
+</html>

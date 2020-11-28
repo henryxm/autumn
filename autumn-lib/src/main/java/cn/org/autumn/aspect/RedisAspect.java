@@ -28,8 +28,9 @@ import org.springframework.stereotype.Component;
 /**
  * Redis切面处理类
  */
-@Aspect
-@Component
+//@Aspect
+//@Component
+@Deprecated
 public class RedisAspect {
     private Logger logger = LoggerFactory.getLogger(getClass());
     //是否开启redis缓存  true开启   false关闭

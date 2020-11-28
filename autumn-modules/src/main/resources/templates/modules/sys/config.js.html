@@ -2,11 +2,10 @@ $(function () {
     $("#jqGrid").jqGrid({
         url: baseURL + 'sys/config/list',
         datatype: "json",
-        colModel: [			
-			{ label: 'ID', name: 'id', width: 30, key: true },
-			{ label: '${lang.sys_string_config_name}', name: 'paramKey', sortable: false, width: 60 },
-			{ label: '${lang.sys_string_config_value}', name: 'paramValue', width: 100 },
-			{ label: '${lang.sys_string_remark}', name: 'remark', width: 80 }
+        colModel: [
+			{ label: '${lang.sys_string_config_name}', name: 'paramKey', sortable: false, width: 80 },
+			{ label: '${lang.sys_string_config_value}', name: 'paramValue', width: 80 },
+			{ label: '${lang.sys_string_remark}', name: 'remark', width: 300 }
         ],
 		viewrecords: true,
         height: 385,
@@ -99,7 +98,7 @@ var vm = new Vue({
 			    data: JSON.stringify(vm.config),
 			    success: function(r){
 			    	if(r.code === 0){
-						alert('sys_string_successful', function(index){
+						alert('${lang.sys_string_successful}', function(index){
 							vm.reload();
 						});
 					}else{

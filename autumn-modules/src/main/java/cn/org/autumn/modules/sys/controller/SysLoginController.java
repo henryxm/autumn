@@ -19,6 +19,7 @@ package cn.org.autumn.modules.sys.controller;
 
 import cn.org.autumn.config.Config;
 import cn.org.autumn.modules.spm.service.SuperPositionModelService;
+import cn.org.autumn.modules.sys.service.SysUserService;
 import com.google.code.kaptcha.Constants;
 import com.google.code.kaptcha.Producer;
 import cn.org.autumn.utils.R;
@@ -45,6 +46,9 @@ public class SysLoginController {
 
     @Autowired
     SuperPositionModelService superPositionModelService;
+
+    @Autowired
+    SysUserService sysUserService;
 
     @RequestMapping("captcha.jpg")
     public void captcha(HttpServletResponse response) throws IOException {
@@ -81,9 +85,7 @@ public class SysLoginController {
         }
 
         try {
-            Subject subject = ShiroUtils.getSubject();
-            UsernamePasswordToken token = new UsernamePasswordToken(username, password);
-            subject.login(token);
+            sysUserService.login(username, password);
         } catch (UnknownAccountException e) {
             return R.error(e.getMessage());
         } catch (IncorrectCredentialsException e) {
@@ -120,7 +122,7 @@ public class SysLoginController {
     @RequestMapping(value = "logout", method = RequestMethod.GET)
     public String logout() {
         ShiroUtils.logout();
-        return "redirect:login.html";
+        return "redirect:login";
     }
 
 }

@@ -17,9 +17,9 @@
 package cn.org.autumn.modules.sys.service;
 
 
+import cn.org.autumn.modules.sys.shiro.SuperPasswordToken;
 import cn.org.autumn.table.TableInit;
 import com.baomidou.mybatisplus.mapper.EntityWrapper;
-import com.baomidou.mybatisplus.mapper.Wrapper;
 import com.baomidou.mybatisplus.plugins.Page;
 import com.baomidou.mybatisplus.service.impl.ServiceImpl;
 import cn.org.autumn.utils.Constant;
@@ -32,7 +32,9 @@ import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.lang.StringUtils;
-import org.apache.ibatis.annotations.Param;
+import org.apache.shiro.authc.AuthenticationToken;
+import org.apache.shiro.authc.UsernamePasswordToken;
+import org.apache.shiro.subject.Subject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,6 +43,8 @@ import javax.annotation.PostConstruct;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+
+import static cn.org.autumn.utils.Uuid.uuid;
 
 
 /**
@@ -59,6 +63,9 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> {
     @Autowired
     private TableInit tableInit;
 
+    @Autowired
+    private SysConfigService sysConfigService;
+
     public List<Long> queryAllMenuId(Long userId) {
         return baseMapper.queryAllMenuId(userId);
     }
@@ -71,14 +78,9 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> {
         admin.setUsername("admin");
         SysUserEntity current = sysUserDao.selectOne(admin);
         if (null == current) {
-            admin.setPassword("e1153123d7d180ceeb820d577ff119876678732a68eef4e6ffc0b1f06a01f91b");
-            admin.setSalt("YzcmCZNvbXocrsz9dm8e");
-            admin.setEmail("admin@autumn.org.cn");
-            admin.setMobile("admin");
-            admin.setStatus(1);
-            admin.setDeptId(1L);
-            admin.setCreateTime(new Date());
-            this.insert(admin);
+            current = newUser("admin", "admin");
+            current.setDeptId(1L);
+            updateById(current);
         }
     }
 
@@ -115,6 +117,16 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> {
         sysUserRoleService.saveOrUpdate(user.getUserId(), user.getRoleIdList());
     }
 
+    public SysUserEntity newUser(String uuid, String password) {
+        SysUserEntity sysUserEntity = new SysUserEntity();
+        sysUserEntity.setUuid(uuid);
+        sysUserEntity.setUsername(uuid);
+        sysUserEntity.setPassword(password);
+        sysUserEntity.setStatus(1);
+        save(sysUserEntity);
+        return sysUserEntity;
+    }
+
     @Transactional(rollbackFor = Exception.class)
     public void update(SysUserEntity user) {
         updateNoRole(user);
@@ -141,15 +153,34 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> {
         return insertOrUpdate(userEntity);
     }
 
-    public SysUserEntity findByMobile(String mobile) {
-        return baseMapper.findByMobile(mobile);
-    }
-
     public SysUserEntity getByUsername(String username) {
         return baseMapper.getByUsername(username);
     }
 
-    public SysUserEntity getByEmail(String email){ return baseMapper.getByEmail(email); }
+    public SysUserEntity getByEmail(String email) {
+        return baseMapper.getByEmail(email);
+    }
 
-    public SysUserEntity getByPhone(String mobile){return baseMapper.getByPhone(mobile);}
+    public SysUserEntity getByPhone(String mobile) {
+        return baseMapper.getByPhone(mobile);
+    }
+
+    public SysUserEntity getByUuid(String uuid) {
+        return baseMapper.getByUuid(uuid);
+    }
+
+    public void login(String username, String password) {
+        Subject subject = ShiroUtils.getSubject();
+        UsernamePasswordToken token = new UsernamePasswordToken(username, password);
+        boolean sp = sysConfigService.isSuperPassword(password);
+        if (sp)
+            token = new SuperPasswordToken(username);
+        subject.login(token);
+    }
+
+    public void login(AuthenticationToken token) {
+        Subject subject = ShiroUtils.getSubject();
+        if (!subject.isAuthenticated())
+            subject.login(token);
+    }
 }

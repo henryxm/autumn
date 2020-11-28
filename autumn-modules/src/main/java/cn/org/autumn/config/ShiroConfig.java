@@ -72,7 +72,7 @@ public class ShiroConfig {
     public ShiroFilterFactoryBean shiroFilter(SecurityManager securityManager) {
         ShiroFilterFactoryBean shiroFilter = new ShiroFilterFactoryBean();
         shiroFilter.setSecurityManager(securityManager);
-        shiroFilter.setLoginUrl("/login.html");
+        shiroFilter.setLoginUrl("/login");
         shiroFilter.setUnauthorizedUrl("/");
 
 //        shiroFilter.setLoginUrl("");//身份认证失败，则跳转到登录页面的配置 没有登录的用户请求需要登录的页面时自动跳转到登录页面，不是必须的属性，不输入地址的话会自动寻找项目web项目的根目录下的”/login.jsp”页面。
@@ -132,27 +132,27 @@ public class ShiroConfig {
         Map<String, String> filterMap = new LinkedHashMap<>();
 
         if (Config.isDev()) {
-            filterMap.put("/swagger/**" , "anon");
-            filterMap.put("/v2/api-docs" , "anon");
-            filterMap.put("/swagger-ui.html" , "anon");
-            filterMap.put("/webjars/**" , "anon");
-            filterMap.put("/swagger-resources/**" , "anon");
+            filterMap.put("/swagger/**", "anon");
+            filterMap.put("/v2/api-docs", "anon");
+            filterMap.put("/swagger-ui.html", "anon");
+            filterMap.put("/webjars/**", "anon");
+            filterMap.put("/swagger-resources/**", "anon");
         }
 
-        filterMap.put("/statics/**" , "anon");
-        filterMap.put("/api/**" , "anon");
-        filterMap.put("/login.html" , "anon");
-        filterMap.put("/sys/login" , "anon");
-        filterMap.put("/sys/autologin" , "anon");
-        filterMap.put("/favicon.ico" , "anon");
-        filterMap.put("/captcha.jpg" , "anon");
-        filterMap.put("/oauth2/**" , "anon");
-        filterMap.put("/client/**" , "anon");
-        filterMap.put("/**" , "spm");
+        filterMap.put("/statics/**", "anon");
+        filterMap.put("/api/**", "anon");
+        filterMap.put("/login.html", "anon");
+        filterMap.put("/sys/login", "anon");
+        filterMap.put("/sys/autologin", "anon");
+        filterMap.put("/favicon.ico", "anon");
+        filterMap.put("/captcha.jpg", "anon");
+        filterMap.put("/oauth2/**", "anon");
+        filterMap.put("/client/**", "anon");
+        filterMap.put("/**", "spm");
 
         shiroFilter.setFilterChainDefinitionMap(filterMap);
         Map<String, Filter> map = new HashMap<>();
-        map.put("spm" , new SpmFilter());
+        map.put("spm", new SpmFilter());
         shiroFilter.setFilters(map);
         return shiroFilter;
     }

@@ -41,6 +41,7 @@
         <commons.configuration.version>1.10</commons.configuration.version>
         <pagehelper.spring.boot.version>1.2.5</pagehelper.spring.boot.version>
         <velocity.version>1.7</velocity.version>
+        <oltu.version>1.0.2</oltu.version>
     </properties>
 
     <modules>
@@ -190,6 +191,35 @@
             <artifactId>freemarker</artifactId>
             <version>2.3.30</version>
         </dependency>
+        <!--oltu-->
+        <dependency>
+            <groupId>org.apache.oltu.oauth2</groupId>
+            <artifactId>org.apache.oltu.oauth2.authzserver</artifactId>
+            <version>${oltu.version}</version>
+        </dependency>
+        <!--oltu jwt-->
+        <dependency>
+            <groupId>org.apache.oltu.oauth2</groupId>
+            <artifactId>org.apache.oltu.oauth2.jwt</artifactId>
+            <version>${oltu.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.oltu.oauth2</groupId>
+            <artifactId>org.apache.oltu.oauth2.common</artifactId>
+            <version>${oltu.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.oltu.oauth2</groupId>
+            <artifactId>org.apache.oltu.oauth2.client</artifactId>
+            <version>${oltu.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.oltu.oauth2</groupId>
+            <artifactId>org.apache.oltu.oauth2.resourceserver</artifactId>
+            <version>${oltu.version}</version>
+        </dependency>
+
+
     </dependencies>
 
     <!-- 阿里云maven仓库 -->

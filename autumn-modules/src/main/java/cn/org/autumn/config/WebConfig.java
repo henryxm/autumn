@@ -2,8 +2,8 @@ package cn.org.autumn.config;
 
 import cn.org.autumn.modules.lan.interceptor.LanguageInterceptor;
 import cn.org.autumn.modules.spm.interceptor.SpmInterceptor;
-import cn.org.autumn.modules.user.interceptor.AuthorizationInterceptor;
-import cn.org.autumn.modules.user.resolver.LoginUserHandlerMethodArgumentResolver;
+import cn.org.autumn.modules.usr.interceptor.AuthorizationInterceptor;
+import cn.org.autumn.modules.usr.resolver.LoginUserHandlerMethodArgumentResolver;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.DependsOn;
