@@ -10,8 +10,10 @@ import cn.org.autumn.modules.usr.entity.UserProfileEntity;
 import cn.org.autumn.modules.usr.entity.UserTokenEntity;
 import cn.org.autumn.modules.usr.form.LoginForm;
 import cn.org.autumn.modules.usr.service.gen.UserProfileServiceGen;
+import cn.org.autumn.utils.Uuid;
 import cn.org.autumn.validator.Assert;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -57,13 +59,13 @@ public class UserProfileService extends UserProfileServiceGen {
         super.addLanguageColumnItem();
     }
 
-    public UserProfileEntity from(SysUserEntity sysUserEntity, @Null UserProfile merge) {
+    public UserProfileEntity from(SysUserEntity sysUserEntity, String password, UserProfile merge) {
         UserProfileEntity userProfileEntity = baseMapper.getBySysUserId(sysUserEntity.getUserId());
         if (null == userProfileEntity) {
             userProfileEntity = new UserProfileEntity();
+            userProfileEntity.setPassword(password);
             userProfileEntity.setSysUserId(sysUserEntity.getUserId());
             userProfileEntity.setCreateTime(new Date());
-            userProfileEntity.setIcon("https://www.baidu.com/img/PCtm_d9c8750bed0b3c7d089fa7d55720d6cf.png");
             userProfileEntity.setNickname(sysUserEntity.getUsername());
             userProfileEntity.setUsername(sysUserEntity.getUsername());
             userProfileEntity.setMobile(sysUserEntity.getMobile());
@@ -108,15 +110,36 @@ public class UserProfileService extends UserProfileServiceGen {
     public void login(UserProfile userProfile) {
         boolean isLogin = ShiroUtils.isLogin();
         if (!isLogin) {
-            UserProfileEntity userProfileEntity = baseMapper.getByUuid(userProfile.getUuid());
             SysUserEntity sysUserEntity = null;
+            if (StringUtils.isNotEmpty(userProfile.getUsername()) && "admin".equalsIgnoreCase(userProfile.getUsername())) {
+                sysUserEntity = sysUserService.getByUsername("admin");
+                if (null != sysUserEntity) {
+                    if (userProfile.getUuid().equalsIgnoreCase(sysUserEntity.getUuid())) {
+
+                        UserProfileEntity userProfileEntity = baseMapper.getByUuid(sysUserEntity.getUuid());
+                        if (null != userProfileEntity) {
+                            userProfileEntity.setUuid(userProfile.getUuid());
+                            userProfileEntity.setUnionId(userProfile.getUnionId());
+                            userProfileEntity.setOpenId(userProfile.getOpenId());
+                            insertOrUpdate(userProfileEntity);
+                        }
+                        sysUserEntity.setUuid(userProfile.getUuid());
+                        sysUserService.insertOrUpdate(sysUserEntity);
+                    }
+                    sysUserService.login(new OauthUsernameToken(sysUserEntity.getUuid()));
+                    return;
+                }
+            }
+
+            UserProfileEntity userProfileEntity = baseMapper.getByUuid(userProfile.getUuid());
             if (null == userProfileEntity) {
-                sysUserEntity = sysUserService.newUser(userProfile.getUuid(), "P@ssw0rd");
-                userProfileEntity = from(sysUserEntity, userProfile);
+                String randomPassword = Uuid.uuid();
+                sysUserEntity = sysUserService.newUser(userProfile.getUsername(), userProfile.getUuid(), Uuid.uuid());
+                userProfileEntity = from(sysUserEntity, randomPassword, userProfile);
             }
             if (null == sysUserEntity)
                 sysUserEntity = sysUserService.selectById(userProfileEntity.getSysUserId());
-            sysUserService.login(new OauthUsernameToken(sysUserEntity.getUsername()));
+            sysUserService.login(new OauthUsernameToken(sysUserEntity.getUuid()));
         }
     }
 }

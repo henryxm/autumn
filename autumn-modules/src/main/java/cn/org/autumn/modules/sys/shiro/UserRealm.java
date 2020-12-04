@@ -98,7 +98,10 @@ public class UserRealm extends AuthorizingRealm {
             user = (SysUserEntity) clientDetailsService.get(ValueType.accessToken, username).getValue();
         } else {
             //查询用户信息
-            user.setUsername(username);
+            if (token instanceof OauthUsernameToken)
+                user.setUuid(username);
+            else
+                user.setUsername(username);
             user = sysUserDao.selectOne(user);
         }
 

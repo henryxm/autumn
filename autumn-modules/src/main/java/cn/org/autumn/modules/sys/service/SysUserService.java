@@ -18,6 +18,7 @@ package cn.org.autumn.modules.sys.service;
 
 
 import cn.org.autumn.modules.sys.shiro.SuperPasswordToken;
+import cn.org.autumn.modules.usr.service.UserProfileService;
 import cn.org.autumn.table.TableInit;
 import com.baomidou.mybatisplus.mapper.EntityWrapper;
 import com.baomidou.mybatisplus.plugins.Page;
@@ -44,8 +45,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
-import static cn.org.autumn.utils.Uuid.uuid;
-
 
 /**
  * 系统用户
@@ -66,6 +65,9 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> {
     @Autowired
     private SysConfigService sysConfigService;
 
+    @Autowired
+    private UserProfileService userProfileService;
+
     public List<Long> queryAllMenuId(Long userId) {
         return baseMapper.queryAllMenuId(userId);
     }
@@ -78,7 +80,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> {
         admin.setUsername("admin");
         SysUserEntity current = sysUserDao.selectOne(admin);
         if (null == current) {
-            current = newUser("admin", "admin");
+            current = newUser("admin", null, "admin");
             current.setDeptId(1L);
             updateById(current);
         }
@@ -106,21 +108,23 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> {
 
     @Transactional(rollbackFor = Exception.class)
     public void save(SysUserEntity user) {
+        String password = user.getPassword();
         user.setCreateTime(new Date());
         //sha256加密
         String salt = RandomStringUtils.randomAlphanumeric(20);
         user.setSalt(salt);
-        user.setPassword(ShiroUtils.sha256(user.getPassword(), user.getSalt()));
+        user.setPassword(ShiroUtils.sha256(password, user.getSalt()));
         this.insert(user);
+        userProfileService.from(user, password, null);
 
         //保存用户与角色关系
         sysUserRoleService.saveOrUpdate(user.getUserId(), user.getRoleIdList());
     }
 
-    public SysUserEntity newUser(String uuid, String password) {
+    public SysUserEntity newUser(String username, String uuid, String password) {
         SysUserEntity sysUserEntity = new SysUserEntity();
         sysUserEntity.setUuid(uuid);
-        sysUserEntity.setUsername(uuid);
+        sysUserEntity.setUsername(username);
         sysUserEntity.setPassword(password);
         sysUserEntity.setStatus(1);
         save(sysUserEntity);
