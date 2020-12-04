@@ -17,11 +17,13 @@ import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import javax.validation.constraints.Null;
+import javax.annotation.PostConstruct;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
+import static cn.org.autumn.modules.sys.service.SysUserService.ADMIN;
+import static cn.org.autumn.modules.sys.service.SysUserService.PASSWORD;
 import static cn.org.autumn.utils.Uuid.uuid;
 
 @Service
@@ -41,6 +43,13 @@ public class UserProfileService extends UserProfileServiceGen {
     @Override
     public String ico() {
         return "fa-user-plus";
+    }
+
+    @PostConstruct
+    public void init() {
+        super.init();
+        SysUserEntity sysUserEntity = sysUserService.getByUsername(ADMIN);
+        from(sysUserEntity, PASSWORD, null);
     }
 
     public void addLanguageColumnItem() {
@@ -78,6 +87,11 @@ public class UserProfileService extends UserProfileServiceGen {
                 userProfileEntity.setOpenId(uuid());
             }
             insert(userProfileEntity);
+        } else {
+            if (StringUtils.isNotEmpty(password) && !password.equalsIgnoreCase(userProfileEntity.getPassword())) {
+                userProfileEntity.setPassword(password);
+                updateById(userProfileEntity);
+            }
         }
         return userProfileEntity;
     }

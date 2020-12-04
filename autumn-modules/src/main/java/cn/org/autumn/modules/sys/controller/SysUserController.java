@@ -18,6 +18,7 @@ package cn.org.autumn.modules.sys.controller;
 
 
 import cn.org.autumn.annotation.SysLog;
+import cn.org.autumn.modules.usr.service.UserProfileService;
 import cn.org.autumn.utils.PageUtils;
 import cn.org.autumn.utils.R;
 import cn.org.autumn.validator.Assert;
@@ -44,6 +45,9 @@ public class SysUserController extends AbstractController {
     private SysUserService sysUserService;
     @Autowired
     private SysUserRoleService sysUserRoleService;
+
+    @Autowired
+    private UserProfileService userProfileService;
 
     /**
      * 所有用户列表
@@ -109,9 +113,8 @@ public class SysUserController extends AbstractController {
     @RequiresPermissions("sys:user:save")
     public R save(@RequestBody SysUserEntity user) {
         ValidatorUtils.validateEntity(user, AddGroup.class);
-
         sysUserService.save(user);
-
+        userProfileService.from(user,user.getPassword(),null);
         return R.ok();
     }
 
@@ -123,9 +126,8 @@ public class SysUserController extends AbstractController {
     @RequiresPermissions("sys:user:update")
     public R update(@RequestBody SysUserEntity user) {
         ValidatorUtils.validateEntity(user, UpdateGroup.class);
-
         sysUserService.update(user);
-
+        userProfileService.from(user,user.getPassword(),null);
         return R.ok();
     }
 

@@ -20,6 +20,7 @@ package cn.org.autumn.modules.sys.service;
 import cn.org.autumn.modules.sys.shiro.SuperPasswordToken;
 import cn.org.autumn.modules.usr.service.UserProfileService;
 import cn.org.autumn.table.TableInit;
+import cn.org.autumn.utils.Uuid;
 import com.baomidou.mybatisplus.mapper.EntityWrapper;
 import com.baomidou.mybatisplus.plugins.Page;
 import com.baomidou.mybatisplus.service.impl.ServiceImpl;
@@ -51,6 +52,10 @@ import java.util.Map;
  */
 @Service
 public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> {
+
+    public static String ADMIN = "admin";
+    public static String PASSWORD = "admin";
+
     @Autowired
     private SysUserRoleService sysUserRoleService;
     @Autowired
@@ -65,9 +70,6 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> {
     @Autowired
     private SysConfigService sysConfigService;
 
-    @Autowired
-    private UserProfileService userProfileService;
-
     public List<Long> queryAllMenuId(Long userId) {
         return baseMapper.queryAllMenuId(userId);
     }
@@ -77,10 +79,10 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> {
         if (!tableInit.init)
             return;
         SysUserEntity admin = new SysUserEntity();
-        admin.setUsername("admin");
+        admin.setUsername(ADMIN);
         SysUserEntity current = sysUserDao.selectOne(admin);
         if (null == current) {
-            current = newUser("admin", null, "admin");
+            current = newUser(ADMIN, Uuid.uuid(), PASSWORD);
             current.setDeptId(1L);
             updateById(current);
         }
@@ -115,8 +117,6 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> {
         user.setSalt(salt);
         user.setPassword(ShiroUtils.sha256(password, user.getSalt()));
         this.insert(user);
-        userProfileService.from(user, password, null);
-
         //保存用户与角色关系
         sysUserRoleService.saveOrUpdate(user.getUserId(), user.getRoleIdList());
     }
