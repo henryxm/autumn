@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.stereotype.Service;
+import org.springframework.ui.Model;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -124,8 +125,8 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
         }
     }
 
-    public String getResourceId(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, String spm) {
-        String path = pathFactory.get(httpServletRequest, httpServletResponse);
+    public String getResourceId(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model, String spm) {
+        String path = pathFactory.get(httpServletRequest, httpServletResponse, model);
         if (StringUtils.isNotEmpty(path))
             return path;
 
