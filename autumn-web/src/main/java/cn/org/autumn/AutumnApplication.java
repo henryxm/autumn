@@ -42,7 +42,7 @@ public class AutumnApplication extends SpringBootServletInitializer implements L
      * @return
      */
     @Bean
-    public AsyncTaskExecutor taskExecutor() {
+    public AsyncTaskExecutor asyncTaskExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         executor.setThreadNamePrefix("Anno-Executor");
         executor.setMaxPoolSize(50000);

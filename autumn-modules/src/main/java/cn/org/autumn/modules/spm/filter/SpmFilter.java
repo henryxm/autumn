@@ -58,10 +58,9 @@ public class SpmFilter extends FormAuthenticationFilter {
     protected boolean isAccessAllowed(ServletRequest request, ServletResponse response, Object mappedValue) {
         HttpServletRequest httpServletRequest = (HttpServletRequest) request;
         if (null != request) {
-            String spm = httpServletRequest.getParameter("spm");
             if (null == superPositionModelService)
                 superPositionModelService = (SuperPositionModelService) Config.getBean("superPositionModelService");
-            if (null != superPositionModelService && !superPositionModelService.needLogin(httpServletRequest, spm))
+            if (null != superPositionModelService && !superPositionModelService.needLogin(httpServletRequest))
                 return true;
         }
         return super.isAccessAllowed(request, response, mappedValue);

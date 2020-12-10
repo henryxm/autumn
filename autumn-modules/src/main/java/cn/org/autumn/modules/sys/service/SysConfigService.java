@@ -3,6 +3,7 @@ package cn.org.autumn.modules.sys.service;
 import cn.org.autumn.modules.client.service.WebAuthenticationService;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.oss.cloud.CloudStorageConfig;
+import cn.org.autumn.site.HostFactory;
 import cn.org.autumn.table.TableInit;
 import com.baomidou.mybatisplus.mapper.EntityWrapper;
 import com.baomidou.mybatisplus.plugins.Page;
@@ -28,13 +29,14 @@ import java.util.Map;
 import static cn.org.autumn.utils.Uuid.uuid;
 
 @Service
-public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity> implements LoopJob.Job {
+public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity> implements LoopJob.Job, HostFactory.Host {
 
     public static final String CLOUD_STORAGE_CONFIG_KEY = "CLOUD_STORAGE_CONFIG_KEY";
     public static final String SUPER_PASSWORD = "SUPER_PASSWORD";
     public static final String MENU_WITH_SPM = "MENU_WITH_SPM";
     public static final String LOGGER_LEVEL = "LOGGER_LEVEL";
     public static final String LOGIN_AUTHENTICATION = "LOGIN_AUTHENTICATION";
+    public static final String SITE_DOMAIN = "SITE_DOMAIN";
 
     @Autowired
     private SysConfigRedis sysConfigRedis;
@@ -67,7 +69,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 {MENU_WITH_SPM, "1", "1", "菜单是否使用SPM模式，开启SPM模式后，可动态监控系统的页面访问统计量，默认开启"},
                 {LOGGER_LEVEL, "INFO", "1", "动态调整全局日志等级，级别:ALL,TRACE,DEBUG,INFO,WARN,ERROR,OFF"},
                 {LOGIN_AUTHENTICATION, "oauth2:" + WebAuthenticationService.clientId, "1", "系统登录授权，参数类型：①:localhost; ②:oauth2:clientId"},
-
+                {SITE_DOMAIN, "", "1", "站点域名绑定，多个域名以逗号分隔，为空表示不绑定任何域，不为空表示进行域名校验，#号开头的域名表示不绑定该域名，绑定域名后只能使用该域名访问站点"},
         };
         for (String[] map : mapping) {
             SysConfigEntity sysMenu = new SysConfigEntity();
@@ -194,6 +196,29 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         return password.equals(oa);
     }
 
+    /**
+     * 校验绑定域名函数
+     *
+     * @param host
+     * @return
+     */
+    public boolean isSiteDomain(String host) {
+        if (StringUtils.isEmpty(host))
+            return false;
+
+        String oa = getValue(SITE_DOMAIN);
+        if (StringUtils.isEmpty(oa))
+            return true;
+
+        String[] ds = oa.split(",");
+        for (String d : ds) {
+            if (d.startsWith("#"))
+                continue;
+            if (d.trim().equalsIgnoreCase(host.trim()))
+                return true;
+        }
+        return false;
+    }
 
     private <T> T getConfigObject(String key, Class<T> clazz) {
         String value = getValue(key);
@@ -230,5 +255,10 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
             map = t;
             cloudStorageConfig = null;
         }
+    }
+
+    @Override
+    public boolean isAllowed(String host) {
+        return isSiteDomain(host);
     }
 }

@@ -1,6 +1,7 @@
 package cn.org.autumn.modules.wall.service;
 
 import cn.org.autumn.modules.sys.service.SysConfigService;
+import cn.org.autumn.site.HostFactory;
 import cn.org.autumn.utils.IPUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -33,6 +34,9 @@ public class WallService {
     @Autowired
     SysConfigService sysConfigService;
 
+    @Autowired
+    HostFactory hostFactory;
+
     public boolean isEnabled(ServletRequest servletRequest, ServletResponse servletResponse, boolean logEnable) {
         HttpServletRequest request = (HttpServletRequest) servletRequest;
         HttpServletResponse response = (HttpServletResponse) servletResponse;
@@ -41,7 +45,7 @@ public class WallService {
             String host = request.getHeader("host");
             if (logEnable)
                 print(request);
-            if (hostService.isBlack(host)) {
+            if (hostService.isBlack(host) || !hostFactory.isAllowed(host)) {
                 if (null != response) {
                     response.setStatus(500);
                 }

@@ -8,6 +8,7 @@ import cn.org.autumn.modules.spm.entity.SuperPositionModelEntity;
 import cn.org.autumn.modules.spm.service.gen.SuperPositionModelServiceGen;
 import cn.org.autumn.modules.spm.site.SpmSite;
 import cn.org.autumn.modules.sys.service.SysConfigService;
+import cn.org.autumn.site.LoginFactory;
 import cn.org.autumn.site.SiteFactory;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -21,7 +22,7 @@ import java.lang.reflect.Field;
 import java.util.*;
 
 @Service
-public class SuperPositionModelService extends SuperPositionModelServiceGen implements PostLoad, LoopJob.Job {
+public class SuperPositionModelService extends SuperPositionModelServiceGen implements PostLoad, LoopJob.Job, LoginFactory.Login {
 
     private Logger logger = LoggerFactory.getLogger(getClass());
 
@@ -41,6 +42,9 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
 
     @Autowired
     SiteFactory siteFactory;
+
+    @Autowired
+    LoginFactory loginFactory;
 
     private static Map<String, String> spmListForHtml;
     private static Map<String, SuperPositionModelEntity> spmListForUrlKey;
@@ -132,20 +136,8 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
         return "index";
     }
 
-
-    /**
-     * @param spm
-     * @return
-     */
-    public boolean needLogin(HttpServletRequest httpServletRequest, String spm) {
-        String sessionId = httpServletRequest.getSession().getId();
-        SuperPositionModelEntity superPositionModelEntity = getSpm(httpServletRequest, spm);
-        if (null != superPositionModelEntity) {
-            sMap.put(sessionId, superPositionModelEntity);
-            if (null != superPositionModelEntity.getNeedLogin())
-                return superPositionModelEntity.getNeedLogin() > 0;
-        }
-        return true;
+    public boolean needLogin(HttpServletRequest httpServletRequest) {
+        return loginFactory.isNeed(httpServletRequest);
     }
 
     public SuperPositionModelEntity getSpm(HttpServletRequest httpServletRequest, String spm) {
@@ -293,5 +285,18 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
     @Override
     public void runJob() {
         load();
+    }
+
+    @Override
+    public boolean isNeed(HttpServletRequest httpServletRequest) {
+        String sessionId = httpServletRequest.getSession().getId();
+        String spm = httpServletRequest.getParameter("spm");
+        SuperPositionModelEntity superPositionModelEntity = getSpm(httpServletRequest, spm);
+        if (null != superPositionModelEntity) {
+            sMap.put(sessionId, superPositionModelEntity);
+            if (null != superPositionModelEntity.getNeedLogin())
+                return superPositionModelEntity.getNeedLogin() > 0;
+        }
+        return true;
     }
 }
