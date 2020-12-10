@@ -8,6 +8,7 @@ import cn.org.autumn.modules.spm.entity.SuperPositionModelEntity;
 import cn.org.autumn.modules.spm.service.gen.SuperPositionModelServiceGen;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.site.LoginFactory;
+import cn.org.autumn.site.PathFactory;
 import cn.org.autumn.site.SiteFactory;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -45,6 +46,9 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
 
     @Autowired
     LoginFactory loginFactory;
+
+    @Autowired
+    PathFactory pathFactory;
 
     private static Map<String, String> spmListForHtml;
     private static Map<String, SuperPositionModelEntity> spmListForUrlKey;
@@ -120,7 +124,11 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
         }
     }
 
-    public String getResourceId(HttpServletRequest httpServletRequest, String spm) {
+    public String getResourceId(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, String spm) {
+        String path = pathFactory.get(httpServletRequest, httpServletResponse);
+        if (StringUtils.isNotEmpty(path))
+            return path;
+
         if (StringUtils.isEmpty(spm)) {
             return "index";
         }

@@ -54,7 +54,7 @@ public class SysPageController {
     @RequestMapping(value = {"index.html"})
     public String index(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, String spm) {
         if (superPositionModelService.menuWithSpm()) {
-            return superPositionModelService.getResourceId(httpServletRequest, spm);
+            return superPositionModelService.getResourceId(httpServletRequest, httpServletResponse, spm);
         }
         return "index";
     }

@@ -16,11 +16,11 @@ public class SpmController {
 
     @RequestMapping("admin")
     public String admin(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, String spm) {
-        return superPositionModelService.getResourceId(httpServletRequest, spm);
+        return superPositionModelService.getResourceId(httpServletRequest, httpServletResponse, spm);
     }
 
     @RequestMapping("/")
     public String spm(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, String spm) {
-        return superPositionModelService.getResourceId(httpServletRequest, spm);
+        return superPositionModelService.getResourceId(httpServletRequest, httpServletResponse, spm);
     }
 }
