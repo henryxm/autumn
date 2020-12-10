@@ -45,7 +45,7 @@ public class WallService {
             String host = request.getHeader("host");
             if (logEnable)
                 print(request);
-            if (hostService.isBlack(host) || !hostFactory.isAllowed(host)) {
+            if (hostService.isBlack(host) || !hostFactory.isAllowed(request, response)) {
                 if (null != response) {
                     response.setStatus(500);
                 }

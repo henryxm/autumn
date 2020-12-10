@@ -17,6 +17,7 @@ import org.apache.shiro.web.filter.authc.FormAuthenticationFilter;
 
 import javax.servlet.*;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.util.Map;
 
 public class SpmFilter extends FormAuthenticationFilter {
@@ -57,10 +58,11 @@ public class SpmFilter extends FormAuthenticationFilter {
     @Override
     protected boolean isAccessAllowed(ServletRequest request, ServletResponse response, Object mappedValue) {
         HttpServletRequest httpServletRequest = (HttpServletRequest) request;
+        HttpServletResponse httpServletResponse = (HttpServletResponse) response;
         if (null != request) {
             if (null == superPositionModelService)
                 superPositionModelService = (SuperPositionModelService) Config.getBean("superPositionModelService");
-            if (null != superPositionModelService && !superPositionModelService.needLogin(httpServletRequest))
+            if (null != superPositionModelService && !superPositionModelService.needLogin(httpServletRequest, httpServletResponse))
                 return true;
         }
         return super.isAccessAllowed(request, response, mappedValue);

@@ -6,7 +6,6 @@ import cn.org.autumn.config.PostLoadFactory;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.spm.entity.SuperPositionModelEntity;
 import cn.org.autumn.modules.spm.service.gen.SuperPositionModelServiceGen;
-import cn.org.autumn.modules.spm.site.SpmSite;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.site.LoginFactory;
 import cn.org.autumn.site.SiteFactory;
@@ -18,6 +17,7 @@ import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.stereotype.Service;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.lang.reflect.Field;
 import java.util.*;
 
@@ -136,8 +136,8 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
         return "index";
     }
 
-    public boolean needLogin(HttpServletRequest httpServletRequest) {
-        return loginFactory.isNeed(httpServletRequest);
+    public boolean needLogin(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse) {
+        return loginFactory.isNeed(httpServletRequest, httpServletResponse);
     }
 
     public SuperPositionModelEntity getSpm(HttpServletRequest httpServletRequest, String spm) {
@@ -288,7 +288,7 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
     }
 
     @Override
-    public boolean isNeed(HttpServletRequest httpServletRequest) {
+    public boolean isNeed(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse) {
         String sessionId = httpServletRequest.getSession().getId();
         String spm = httpServletRequest.getParameter("spm");
         SuperPositionModelEntity superPositionModelEntity = getSpm(httpServletRequest, spm);

@@ -5,6 +5,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.util.Map;
 
 @Component
@@ -13,7 +14,7 @@ public class LoginFactory {
     private static Map<String, LoginFactory.Login> map = null;
 
     public interface Login {
-        boolean isNeed(HttpServletRequest httpServletRequest);
+        boolean isNeed(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse);
     }
 
     /**
@@ -23,7 +24,7 @@ public class LoginFactory {
      * @param httpServletRequest
      * @return
      */
-    public boolean isNeed(HttpServletRequest httpServletRequest) {
+    public boolean isNeed(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse) {
         ApplicationContext applicationContext = SpringContextUtils.getApplicationContext();
         if (null == applicationContext)
             return false;
@@ -31,7 +32,7 @@ public class LoginFactory {
             map = applicationContext.getBeansOfType(LoginFactory.Login.class);
         for (Map.Entry<String, LoginFactory.Login> k : map.entrySet()) {
             LoginFactory.Login login = k.getValue();
-            if (!login.isNeed(httpServletRequest))
+            if (!login.isNeed(httpServletRequest, httpServletResponse))
                 return false;
         }
         return true;
