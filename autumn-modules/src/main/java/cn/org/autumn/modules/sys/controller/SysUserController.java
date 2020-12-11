@@ -112,9 +112,10 @@ public class SysUserController extends AbstractController {
     @RequestMapping("/save")
     @RequiresPermissions("sys:user:save")
     public R save(@RequestBody SysUserEntity user) {
+        String password = user.getPassword();
         ValidatorUtils.validateEntity(user, AddGroup.class);
         sysUserService.save(user);
-        userProfileService.from(user,user.getPassword(),null);
+        userProfileService.from(user,password,null);
         return R.ok();
     }
 
@@ -125,9 +126,10 @@ public class SysUserController extends AbstractController {
     @RequestMapping("/update")
     @RequiresPermissions("sys:user:update")
     public R update(@RequestBody SysUserEntity user) {
+        String password = user.getPassword();
         ValidatorUtils.validateEntity(user, UpdateGroup.class);
         sysUserService.update(user);
-        userProfileService.from(user,user.getPassword(),null);
+        userProfileService.from(user,password,null);
         return R.ok();
     }
 

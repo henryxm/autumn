@@ -1,24 +1,7 @@
-/**
- * Copyright 2018 Autumn.org.cn http://www.autumn.org.cn
- * <p>
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not
- * use this file except in compliance with the License. You may obtain a copy of
- * the License at
- * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
- */
-
 package cn.org.autumn.modules.sys.service;
 
-
+import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.sys.shiro.SuperPasswordToken;
-import cn.org.autumn.modules.usr.service.UserProfileService;
 import cn.org.autumn.table.TableInit;
 import cn.org.autumn.utils.Uuid;
 import com.baomidou.mybatisplus.mapper.EntityWrapper;
@@ -42,19 +25,18 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.PostConstruct;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-
+import java.util.*;
 
 /**
  * 系统用户
  */
 @Service
-public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> {
+public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> implements LoopJob.Job {
 
     public static String ADMIN = "admin";
     public static String PASSWORD = "admin";
+
+    static Map<String, SysUserEntity> sync = new HashMap<>();
 
     @Autowired
     private SysUserRoleService sysUserRoleService;
@@ -86,6 +68,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> {
             current.setDeptId(1L);
             updateById(current);
         }
+        LoopJob.onOneMinute(this);
     }
 
     @DataFilter(subDept = true, user = false)
@@ -116,6 +99,8 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> {
         String salt = RandomStringUtils.randomAlphanumeric(20);
         user.setSalt(salt);
         user.setPassword(ShiroUtils.sha256(password, user.getSalt()));
+        if (StringUtils.isEmpty(user.getUuid()))
+            user.setUuid(Uuid.uuid());
         this.insert(user);
         //保存用户与角色关系
         sysUserRoleService.saveOrUpdate(user.getUserId(), user.getRoleIdList());
@@ -146,6 +131,8 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> {
         } else {
             user.setPassword(ShiroUtils.sha256(user.getPassword(), user.getSalt()));
         }
+        if (StringUtils.isEmpty(user.getUuid()))
+            user.setUuid(Uuid.uuid());
         this.updateById(user);
     }
 
@@ -186,5 +173,26 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> {
         Subject subject = ShiroUtils.getSubject();
         if (!subject.isAuthenticated())
             subject.login(token);
+    }
+
+    public void merge(SysUserEntity sysUserEntity) {
+        if (null != sysUserEntity && StringUtils.isNotEmpty(sysUserEntity.getUuid()))
+            sync.put(sysUserEntity.getUuid(), sysUserEntity);
+    }
+
+    @Override
+    public void runJob() {
+        if (null != sync && sync.size() > 0) {
+            Iterator<Map.Entry<String, SysUserEntity>> iterator = sync.entrySet().iterator();
+            while (iterator.hasNext()) {
+                Map.Entry<String, SysUserEntity> entity = iterator.next();
+                SysUserEntity sysUserEntity = entity.getValue();
+                SysUserEntity ex = getByUuid(sysUserEntity.getUuid());
+                if (null == ex || ex.hashCode() != sysUserEntity.hashCode()) {
+                    updateById(sysUserEntity);
+                }
+                iterator.remove();
+            }
+        }
     }
 }

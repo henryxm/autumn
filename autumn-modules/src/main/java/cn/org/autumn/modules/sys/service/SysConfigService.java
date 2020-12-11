@@ -175,7 +175,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         if (StringUtils.isNotEmpty(oa) && oa.startsWith("oauth2:")) {
             String[] ar = oa.split(":");
             if (ar.length == 2)
-                return ar[1];
+                return ar[1].trim();
         }
         return "";
     }

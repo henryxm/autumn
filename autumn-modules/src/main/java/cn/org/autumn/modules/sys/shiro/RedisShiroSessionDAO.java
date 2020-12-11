@@ -1,8 +1,12 @@
 package cn.org.autumn.modules.sys.shiro;
 
+import cn.org.autumn.modules.sys.entity.SysUserEntity;
+import cn.org.autumn.modules.sys.service.SysUserService;
 import cn.org.autumn.utils.RedisKeys;
 import org.apache.shiro.session.Session;
+import org.apache.shiro.session.UnknownSessionException;
 import org.apache.shiro.session.mgt.eis.EnterpriseCacheSessionDAO;
+import org.apache.shiro.subject.PrincipalCollection;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
@@ -10,10 +14,15 @@ import org.springframework.stereotype.Component;
 import java.io.*;
 import java.util.concurrent.TimeUnit;
 
+import static org.apache.shiro.subject.support.DefaultSubjectContext.PRINCIPALS_SESSION_KEY;
+
 @Component
 public class RedisShiroSessionDAO extends EnterpriseCacheSessionDAO {
     @Autowired
     private RedisTemplate redisTemplate;
+
+    @Autowired
+    SysUserService sysUserService;
 
     //创建session
     @Override
@@ -24,11 +33,16 @@ public class RedisShiroSessionDAO extends EnterpriseCacheSessionDAO {
         return sessionId;
     }
 
+    @Override
+    public Session readSession(Serializable sessionId) throws UnknownSessionException {
+        return doReadSession(sessionId);
+    }
+
     //获取session
     @Override
     protected Session doReadSession(Serializable sessionId) {
         Session session = super.doReadSession(sessionId);
-        if(session == null){
+        if (session == null) {
             final String key = RedisKeys.getShiroSessionKey(sessionId.toString());
             session = getShiroSession(key);
         }
@@ -52,13 +66,19 @@ public class RedisShiroSessionDAO extends EnterpriseCacheSessionDAO {
     }
 
     private Session getShiroSession(String key) {
-        return (Session)redisTemplate.opsForValue().get(key);
+        return (Session) redisTemplate.opsForValue().get(key);
     }
 
-    private void setShiroSession(String key, Session session){
+    private void setShiroSession(String key, Session session) {
         redisTemplate.opsForValue().set(key, session);
         //60分钟过期
         redisTemplate.expire(key, 60, TimeUnit.MINUTES);
+        PrincipalCollection principals = (PrincipalCollection) session.getAttribute(PRINCIPALS_SESSION_KEY);
+        if (null != principals) {
+            Object o = principals.getPrimaryPrincipal();
+            if (null != o && o instanceof SysUserEntity) {
+                sysUserService.merge((SysUserEntity) o);
+            }
+        }
     }
-
 }

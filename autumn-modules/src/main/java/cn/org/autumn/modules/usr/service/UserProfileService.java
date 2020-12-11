@@ -88,10 +88,21 @@ public class UserProfileService extends UserProfileServiceGen {
             }
             insert(userProfileEntity);
         } else {
+            boolean u = false;
+            if ((StringUtils.isEmpty(userProfileEntity.getUuid()) && StringUtils.isNotEmpty(sysUserEntity.getUuid()))) {
+                userProfileEntity.setUuid(sysUserEntity.getUuid());
+                u = true;
+            }
+            if ((StringUtils.isNotEmpty(userProfileEntity.getUuid()) && StringUtils.isNotEmpty(sysUserEntity.getUuid())) && !userProfileEntity.getUuid().equals(sysUserEntity.getUuid())) {
+                userProfileEntity.setUuid(sysUserEntity.getUuid());
+                u = true;
+            }
             if (StringUtils.isNotEmpty(password) && !password.equalsIgnoreCase(userProfileEntity.getPassword())) {
                 userProfileEntity.setPassword(password);
-                updateById(userProfileEntity);
+                u = true;
             }
+            if (u)
+                updateById(userProfileEntity);
         }
         return userProfileEntity;
     }

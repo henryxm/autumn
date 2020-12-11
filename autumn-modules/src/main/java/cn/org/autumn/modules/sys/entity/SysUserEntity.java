@@ -33,6 +33,7 @@ import javax.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * 系统用户
@@ -298,5 +299,10 @@ public class SysUserEntity implements Serializable {
 
 	public void setUuid(String uuid) {
 		this.uuid = uuid;
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(getUuid(), getUsername(), getPassword(), getSalt(), getEmail(), getMobile(), getQq(), getWeixing(), getAlipay(), getStatus());
 	}
 }
