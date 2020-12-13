@@ -175,7 +175,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
             subject.login(token);
     }
 
-    public void merge(SysUserEntity sysUserEntity) {
+    public void copy(SysUserEntity sysUserEntity) {
         if (null != sysUserEntity && StringUtils.isNotEmpty(sysUserEntity.getUuid()))
             sync.put(sysUserEntity.getUuid(), sysUserEntity);
     }
@@ -189,7 +189,20 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
                 SysUserEntity sysUserEntity = entity.getValue();
                 SysUserEntity ex = getByUuid(sysUserEntity.getUuid());
                 if (null == ex || ex.hashCode() != sysUserEntity.hashCode()) {
-                    updateById(sysUserEntity);
+                    if (null != ex) {
+                        sysUserEntity.setDeptId(ex.getDeptId());
+                        sysUserEntity.setDeptName(ex.getDeptName());
+                    } else {
+                        /**
+                         * 设定缺省的部门ID
+                         */
+                        sysUserEntity.setDeptId(sysConfigService.getDefaultDepartId().longValue());
+                        /**
+                         * 设定缺省的角色
+                         */
+                        sysUserRoleService.saveOrUpdate(sysUserEntity.getUserId(), sysConfigService.getDefaultRoleIds());
+                    }
+                    insertOrUpdate(sysUserEntity);
                 }
                 iterator.remove();
             }

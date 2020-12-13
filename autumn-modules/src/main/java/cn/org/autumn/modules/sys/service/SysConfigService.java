@@ -1,8 +1,10 @@
 package cn.org.autumn.modules.sys.service;
 
+import cn.org.autumn.config.Config;
 import cn.org.autumn.modules.client.service.WebAuthenticationService;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.oss.cloud.CloudStorageConfig;
+import cn.org.autumn.modules.wall.service.WallService;
 import cn.org.autumn.site.HostFactory;
 import cn.org.autumn.table.TableInit;
 import com.baomidou.mybatisplus.mapper.EntityWrapper;
@@ -16,6 +18,9 @@ import cn.org.autumn.modules.sys.dao.SysConfigDao;
 import cn.org.autumn.modules.sys.entity.SysConfigEntity;
 import cn.org.autumn.modules.sys.redis.SysConfigRedis;
 import org.apache.commons.lang.StringUtils;
+import org.apache.shiro.session.mgt.SessionManager;
+import org.apache.shiro.web.servlet.Cookie;
+import org.apache.shiro.web.session.mgt.DefaultWebSessionManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,10 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static cn.org.autumn.utils.Uuid.uuid;
 
@@ -39,6 +41,9 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     public static final String LOGGER_LEVEL = "LOGGER_LEVEL";
     public static final String LOGIN_AUTHENTICATION = "LOGIN_AUTHENTICATION";
     public static final String SITE_DOMAIN = "SITE_DOMAIN";
+    public static final String CLUSTER_ROOT_DOMAIN = "CLUSTER_ROOT_DOMAIN";
+    public static final String USER_DEFAULT_DEPART_ID = "USER_DEFAULT_DEPART_ID";
+    public static final String USER_DEFAULT_ROLE_IDS = "USER_DEFAULT_ROLE_IDS";
 
     @Autowired
     private SysConfigRedis sysConfigRedis;
@@ -48,6 +53,8 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
 
     @Autowired
     private SysLogService sysLogService;
+
+    private static SessionManager sessionManager;
 
     private static final String NULL = null;
 
@@ -72,6 +79,9 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 {LOGGER_LEVEL, "INFO", "1", "动态调整全局日志等级，级别:ALL,TRACE,DEBUG,INFO,WARN,ERROR,OFF"},
                 {LOGIN_AUTHENTICATION, "oauth2:" + WebAuthenticationService.clientId, "1", "系统登录授权，参数类型：①:localhost; ②:oauth2:clientId"},
                 {SITE_DOMAIN, "", "1", "站点域名绑定，多个域名以逗号分隔，为空表示不绑定任何域，不为空表示进行域名校验，#号开头的域名表示不绑定该域名，绑定域名后只能使用该域名访问站点"},
+                {CLUSTER_ROOT_DOMAIN, "autumn.org.cn", "1", "集群的根域名，当开启Redis后，有相同根域名后缀的服务会使用相同的Cookie，集群可通过Cookie中的登录用户进行用户同步"},
+                {USER_DEFAULT_DEPART_ID, "1", "1", "缺省的部门ID，当用户从集群中的账户体系中同步用户信息后，授予的默认的部门权限"},
+                {USER_DEFAULT_ROLE_IDS, "0", "1", "缺省的角色IDs，多个ID用半角逗号分隔，当用户从集群中的账户体系中同步用户信息后，授予的默认的角色权限"},
         };
         for (String[] map : mapping) {
             SysConfigEntity sysMenu = new SysConfigEntity();
@@ -170,6 +180,42 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         return Boolean.valueOf(s);
     }
 
+    public Integer getInt(String key) {
+        try {
+            String s = getValue(key);
+            if (StringUtils.isNotEmpty(s))
+                return Integer.valueOf(s);
+        } catch (Exception e) {
+        }
+        return 0;
+    }
+
+    public Integer getDefaultDepartId() {
+        return getInt(USER_DEFAULT_DEPART_ID);
+    }
+
+    public String getClusterRootDomain() {
+        return getValue(CLUSTER_ROOT_DOMAIN);
+    }
+
+    public List<Long> getDefaultRoleIds() {
+        String s = getValue(USER_DEFAULT_ROLE_IDS);
+        List<Long> roles = new ArrayList<>();
+        if (StringUtils.isNotEmpty(s)) {
+            String[] a = s.split(",");
+            for (String i : a) {
+                i = i.trim();
+                try {
+                    Long r = Long.getLong(i);
+                    if (!roles.contains(r))
+                        roles.add(r);
+                } catch (Exception e) {
+                }
+            }
+        }
+        return roles;
+    }
+
     public String getOauth2LoginClientId() {
         String oa = getValue(LOGIN_AUTHENTICATION);
         if (StringUtils.isNotEmpty(oa) && oa.startsWith("oauth2:")) {
@@ -256,6 +302,27 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
             }
             map = t;
             cloudStorageConfig = null;
+            updateCookieDomain();
+        }
+    }
+
+    private void updateCookieDomain() {
+        if (null == sessionManager)
+            sessionManager = (SessionManager) Config.getBean("sessionManager");
+        if (null == sessionManager)
+            return;
+        String rootDomain = getClusterRootDomain();
+        if (StringUtils.isEmpty(rootDomain))
+            return;
+        if (sessionManager instanceof DefaultWebSessionManager) {
+            DefaultWebSessionManager webSessionManager = (DefaultWebSessionManager) sessionManager;
+            Cookie cookie = webSessionManager.getSessionIdCookie();
+            if (null != cookie) {
+                if (!rootDomain.startsWith("."))
+                    rootDomain = "." + rootDomain;
+                if (StringUtils.isEmpty(cookie.getDomain()) || !cookie.getDomain().equalsIgnoreCase(rootDomain))
+                    cookie.setDomain(rootDomain);
+            }
         }
     }
 

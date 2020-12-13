@@ -2,6 +2,7 @@ package cn.org.autumn.modules.sys.shiro;
 
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysUserService;
+import cn.org.autumn.modules.usr.service.UserProfileService;
 import cn.org.autumn.utils.RedisKeys;
 import org.apache.shiro.session.Session;
 import org.apache.shiro.session.UnknownSessionException;
@@ -23,6 +24,9 @@ public class RedisShiroSessionDAO extends EnterpriseCacheSessionDAO {
 
     @Autowired
     SysUserService sysUserService;
+
+    @Autowired
+    UserProfileService userProfileService;
 
     //创建session
     @Override
@@ -77,7 +81,11 @@ public class RedisShiroSessionDAO extends EnterpriseCacheSessionDAO {
         if (null != principals) {
             Object o = principals.getPrimaryPrincipal();
             if (null != o && o instanceof SysUserEntity) {
-                sysUserService.merge((SysUserEntity) o);
+                SysUserEntity sysUserEntity = (SysUserEntity) o;
+                sysUserService.copy(sysUserEntity);
+                if (null != sysUserEntity.getUserProfileEntity()) {
+                    userProfileService.copy(sysUserEntity.getUserProfileEntity());
+                }
             }
         }
     }

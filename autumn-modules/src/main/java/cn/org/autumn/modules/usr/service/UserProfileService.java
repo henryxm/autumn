@@ -1,6 +1,7 @@
 package cn.org.autumn.modules.usr.service;
 
 import cn.org.autumn.exception.AException;
+import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysUserService;
 import cn.org.autumn.modules.sys.shiro.OauthUsernameToken;
@@ -18,22 +19,22 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 import static cn.org.autumn.modules.sys.service.SysUserService.ADMIN;
 import static cn.org.autumn.modules.sys.service.SysUserService.PASSWORD;
 import static cn.org.autumn.utils.Uuid.uuid;
 
 @Service
-public class UserProfileService extends UserProfileServiceGen {
+public class UserProfileService extends UserProfileServiceGen implements LoopJob.Job {
 
     @Autowired
     UserTokenService userTokenService;
 
     @Autowired
     SysUserService sysUserService;
+
+    static Map<String, UserProfileEntity> sync = new HashMap<>();
 
     @Override
     public int menuOrder() {
@@ -50,6 +51,7 @@ public class UserProfileService extends UserProfileServiceGen {
         super.init();
         SysUserEntity sysUserEntity = sysUserService.getByUsername(ADMIN);
         from(sysUserEntity, PASSWORD, null);
+        LoopJob.onOneMinute(this);
     }
 
     public void addLanguageColumnItem() {
@@ -165,6 +167,50 @@ public class UserProfileService extends UserProfileServiceGen {
             if (null == sysUserEntity)
                 sysUserEntity = sysUserService.selectById(userProfileEntity.getSysUserId());
             sysUserService.login(new OauthUsernameToken(sysUserEntity.getUuid()));
+        }
+    }
+
+    public UserProfileEntity getByUuid(String uuid) {
+        return baseMapper.getByUuid(uuid);
+    }
+
+    public UserProfileEntity getByOpenId(String openId) {
+        return baseMapper.getByOpenId(openId);
+    }
+
+    public UserProfileEntity getByUnionId(String unionId) {
+        return baseMapper.getByUnionId(unionId);
+    }
+
+    public SysUserEntity setProfile(SysUserEntity sysUserEntity) {
+        if (null != sysUserEntity) {
+            sysUserEntity.setUserProfileEntity(getByUuid(sysUserEntity.getUuid()));
+        }
+        return sysUserEntity;
+    }
+
+    public void copy(UserProfileEntity userProfileEntity) {
+        if (null != userProfileEntity && StringUtils.isNotEmpty(userProfileEntity.getUuid()))
+            sync.put(userProfileEntity.getUuid(), userProfileEntity);
+    }
+
+    @Override
+    public void runJob() {
+        if (null != sync && sync.size() > 0) {
+            Iterator<Map.Entry<String, UserProfileEntity>> iterator = sync.entrySet().iterator();
+            while (iterator.hasNext()) {
+                Map.Entry<String, UserProfileEntity> entity = iterator.next();
+                UserProfileEntity userProfileEntity = entity.getValue();
+                UserProfileEntity ex = getByUuid(userProfileEntity.getUuid());
+                if (null == ex || ex.hashCode() != userProfileEntity.hashCode()) {
+                    if (null != ex) {
+                        userProfileEntity.setNickname(ex.getNickname());
+                        userProfileEntity.setMobile(ex.getMobile());
+                    }
+                    insertOrUpdate(userProfileEntity);
+                }
+                iterator.remove();
+            }
         }
     }
 }

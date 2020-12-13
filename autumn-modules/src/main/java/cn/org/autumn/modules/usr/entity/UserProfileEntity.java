@@ -7,6 +7,7 @@ import cn.org.autumn.table.data.DataType;
 
 import java.io.Serializable;
 import java.util.Date;
+import java.util.Objects;
 
 /**
  * 用户信息
@@ -208,5 +209,10 @@ public class UserProfileEntity implements Serializable {
 	 */
 	public Date getCreateTime() {
 		return createTime;
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(getUserId(), getSysUserId(), getUuid(), getOpenId(), getUnionId(), getIcon(), getUsername(), getPassword(), getCreateTime());
 	}
 }

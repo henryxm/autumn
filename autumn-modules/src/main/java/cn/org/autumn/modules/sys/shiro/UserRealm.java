@@ -25,6 +25,7 @@ import java.util.Set;
 
 import cn.org.autumn.modules.oauth.service.ClientDetailsService;
 import cn.org.autumn.modules.oauth.store.ValueType;
+import cn.org.autumn.modules.usr.service.UserProfileService;
 import cn.org.autumn.utils.Constant;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.dao.SysMenuDao;
@@ -50,6 +51,9 @@ public class UserRealm extends AuthorizingRealm {
 
     @Autowired
     ClientDetailsService clientDetailsService;
+
+    @Autowired
+    UserProfileService userProfileService;
 
     /**
      * 授权(验证权限时调用)
@@ -114,7 +118,7 @@ public class UserRealm extends AuthorizingRealm {
         if (user.getStatus() == 0) {
             throw new LockedAccountException("账号已被锁定,请联系管理员");
         }
-
+        user = userProfileService.setProfile(user);
         SimpleAuthenticationInfo info = new SimpleAuthenticationInfo(user, user.getPassword(), ByteSource.Util.bytes(user.getSalt()), getName());
         return info;
     }
