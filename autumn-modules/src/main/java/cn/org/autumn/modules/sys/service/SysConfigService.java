@@ -206,7 +206,9 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
             for (String i : a) {
                 i = i.trim();
                 try {
-                    Long r = Long.getLong(i);
+                    Long r = Long.valueOf(i);
+                    if (r <= 0)
+                        continue;
                     if (!roles.contains(r))
                         roles.add(r);
                 } catch (Exception e) {
