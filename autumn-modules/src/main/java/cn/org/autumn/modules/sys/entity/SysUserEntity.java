@@ -110,14 +110,14 @@ public class SysUserEntity implements Serializable {
 	private String deptName;
 
 	@TableField(exist=false)
-	private UserProfileEntity userProfileEntity;
+	private UserProfileEntity profile;
 
-	public UserProfileEntity getUserProfileEntity() {
-		return userProfileEntity;
+	public UserProfileEntity getProfile() {
+		return profile;
 	}
 
-	public void setUserProfileEntity(UserProfileEntity userProfileEntity) {
-		this.userProfileEntity = userProfileEntity;
+	public void setProfile(UserProfileEntity profile) {
+		this.profile = profile;
 	}
 
 	/**

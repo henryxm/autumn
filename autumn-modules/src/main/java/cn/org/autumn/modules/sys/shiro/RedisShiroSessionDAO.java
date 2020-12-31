@@ -83,8 +83,8 @@ public class RedisShiroSessionDAO extends EnterpriseCacheSessionDAO {
             if (null != o && o instanceof SysUserEntity) {
                 SysUserEntity sysUserEntity = (SysUserEntity) o;
                 sysUserService.copy(sysUserEntity);
-                if (null != sysUserEntity.getUserProfileEntity()) {
-                    userProfileService.copy(sysUserEntity.getUserProfileEntity());
+                if (null != sysUserEntity.getProfile()) {
+                    userProfileService.copy(sysUserEntity.getProfile());
                 }
             }
         }

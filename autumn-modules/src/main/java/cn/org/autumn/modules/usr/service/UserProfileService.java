@@ -184,7 +184,7 @@ public class UserProfileService extends UserProfileServiceGen implements LoopJob
 
     public SysUserEntity setProfile(SysUserEntity sysUserEntity) {
         if (null != sysUserEntity) {
-            sysUserEntity.setUserProfileEntity(getByUuid(sysUserEntity.getUuid()));
+            sysUserEntity.setProfile(getByUuid(sysUserEntity.getUuid()));
         }
         return sysUserEntity;
     }
