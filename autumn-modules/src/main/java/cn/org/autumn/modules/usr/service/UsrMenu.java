@@ -1,10 +1,9 @@
 package cn.org.autumn.modules.usr.service;
 
-import cn.org.autumn.modules.sys.entity.SysMenuEntity;
 import cn.org.autumn.modules.sys.service.SysMenuService;
-import cn.org.autumn.table.TableInit;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import cn.org.autumn.modules.lan.service.Language;
 import cn.org.autumn.modules.lan.service.LanguageService;
 
 /**
@@ -12,37 +11,45 @@ import cn.org.autumn.modules.lan.service.LanguageService;
  *
  * @author Shaohua Xu
  * @email henryxm@163.com
- * @date 2020-11
+ * @date 2021-01
  */
 @Service
 public class UsrMenu {
 
-    public static final String usr_menu = "usr_menu";
+    public static final String usr_menu = SysMenuService.getMenuKey("Usr", "UsrMenu");
+    public static final String parent_menu = "";
+    public static final String usr_language = "usr_menu";
 
     @Autowired
     protected SysMenuService sysMenuService;
 
     @Autowired
-    protected TableInit tableInit;
+    protected Language language;
 
     @Autowired
     protected LanguageService languageService;
 
     public void init() {
-        if (!tableInit.init)
-            return;
-        Long id = 0L;
-        String[] _m = new String[]
-                {null, "0" , "用户管理" , "" , "" , "0" , "fa fa-users" , "444444" , usr_menu, usr_menu + "_text"};
-        SysMenuEntity entity = sysMenuService.get(sysMenuService.find(_m));
-        if (null == entity) {
-            SysMenuEntity sysMenu = sysMenuService.from(_m);
-            sysMenuService.put(sysMenu);
-        }
+        sysMenuService.put(getMenus());
+        language.add(getLanguageItemArray());
         addLanguageColumnItem();
     }
 
     public void addLanguageColumnItem() {
-        languageService.addLanguageColumnItem(usr_menu + "_text", "用户管理","User profiles");
+    }
+
+    public String[][] getMenus() {
+        String[][] menus = new String[][]{
+                //{0:菜单名字,1:URL,2:权限,3:菜单类型,4:ICON,5:排序,6:MenuKey,7:ParentKey,8:Language}
+                {"用户管理", "", "", "0", "fa fa-users", "444444", usr_menu, parent_menu, usr_language + "_text"},
+        };
+        return menus;
+    }
+
+    public String[][] getLanguageItemArray() {
+        String[][] items = new String[][]{
+                {usr_language + "_text", "用户管理", "User profiles"},
+        };
+        return items;
     }
 }

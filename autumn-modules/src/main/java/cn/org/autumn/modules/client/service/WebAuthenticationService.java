@@ -47,18 +47,18 @@ public class WebAuthenticationService extends WebAuthenticationServiceGen {
     }
 
     public void addLanguageColumnItem() {
-        languageService.addLanguageColumnItem("client_webauthentication_table_comment", "网站客户端", "Web client");
-        languageService.addLanguageColumnItem("client_webauthentication_column_id", "id");
-        languageService.addLanguageColumnItem("client_webauthentication_column_name", "客户端名字", "Client name");
-        languageService.addLanguageColumnItem("client_webauthentication_column_client_id", "客户端ID", "Client id");
-        languageService.addLanguageColumnItem("client_webauthentication_column_client_secret", "客户端密匙", "Client secret");
-        languageService.addLanguageColumnItem("client_webauthentication_column_redirect_uri", "重定向地址", "Redirect uri");
-        languageService.addLanguageColumnItem("client_webauthentication_column_authorize_uri", "授权码地址", "Authorize uri");
-        languageService.addLanguageColumnItem("client_webauthentication_column_access_token_uri", "Token地址", "Token uri");
-        languageService.addLanguageColumnItem("client_webauthentication_column_user_info_uri", "用户信息地址", "User info uri");
-        languageService.addLanguageColumnItem("client_webauthentication_column_scope", "范围", "Scope");
-        languageService.addLanguageColumnItem("client_webauthentication_column_state", "状态", "State");
-        languageService.addLanguageColumnItem("client_webauthentication_column_description", "描述信息", "Description");
-        languageService.addLanguageColumnItem("client_webauthentication_column_create_time", "创建时间", "Create time");
+        language.add("client_webauthentication_table_comment", "网站客户端", "Web client");
+        language.add("client_webauthentication_column_id", "id");
+        language.add("client_webauthentication_column_name", "客户端名字", "Client name");
+        language.add("client_webauthentication_column_client_id", "客户端ID", "Client id");
+        language.add("client_webauthentication_column_client_secret", "客户端密匙", "Client secret");
+        language.add("client_webauthentication_column_redirect_uri", "重定向地址", "Redirect uri");
+        language.add("client_webauthentication_column_authorize_uri", "授权码地址", "Authorize uri");
+        language.add("client_webauthentication_column_access_token_uri", "Token地址", "Token uri");
+        language.add("client_webauthentication_column_user_info_uri", "用户信息地址", "User info uri");
+        language.add("client_webauthentication_column_scope", "范围", "Scope");
+        language.add("client_webauthentication_column_state", "状态", "State");
+        language.add("client_webauthentication_column_description", "描述信息", "Description");
+        language.add("client_webauthentication_column_create_time", "创建时间", "Create time");
     }
 }

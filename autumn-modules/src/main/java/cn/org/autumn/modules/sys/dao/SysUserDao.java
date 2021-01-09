@@ -34,11 +34,18 @@ public interface SysUserDao extends BaseMapper<SysUserEntity> {
      *
      * @param userId 用户ID
      */
+    @Deprecated
     @Select("select m.perms from sys_user_role ur " +
             "LEFT JOIN sys_role_menu rm on ur.role_id = rm.role_id " +
             "LEFT JOIN sys_menu m on rm.menu_id = m.menu_id " +
             "where ur.user_id = #{userId}")
     List<String> queryAllPerms(@Param("userId") Long userId);
+
+    @Select("select m.perms from sys_user_role ur " +
+            "LEFT JOIN sys_role_menu rm on ur.role_id = rm.role_id " +
+            "LEFT JOIN sys_menu m on rm.menu_id = m.menu_id " +
+            "where ur.user_id = #{userId}")
+    List<String> getPermsByUserUuid(@Param("userId") String userUuid);
 
     /**
      * 查询用户的所有菜单ID

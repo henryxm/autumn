@@ -50,8 +50,8 @@ public class ScheduleJobEntity implements Serializable {
     /**
      * spring bean名称
      */
-    @NotBlank(message = "bean名称不能为空")
-    @Column(length = 200, comment = "spring bean名称")
+    @NotBlank(message = "Bean名称不能为空")
+    @Column(length = 200, comment = "BeanName")
     private String beanName;
 
     /**
@@ -71,13 +71,13 @@ public class ScheduleJobEntity implements Serializable {
      * cron表达式
      */
     @NotBlank(message = "cron表达式不能为空")
-    @Column(length = 100, comment = "cron表达式")
+    @Column(length = 100, comment = "Cron表达式")
     private String cronExpression;
 
     /**
      * 任务状态
      */
-    @Column(type = DataType.INT, comment = "任务状态  0：正常  1：暂停")
+    @Column(type = DataType.INT, comment = "任务状态,0:正常,1:暂停")
     private Integer status;
 
     @Column(comment = "任务执行模式")

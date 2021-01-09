@@ -15,4 +15,12 @@ public class DemoExampleService extends DemoExampleServiceGen {
     public String ico(){
         return super.ico();
     }
+
+    public String[][] getLanguageItemArray() {
+        String[][] items = new String[][]{
+                {"test_demoexample_table_comment", "测试例子", "Test example"},
+                {"test_demoexample_column_example", "例子字段", "Example column"},
+        };
+        return items;
+    }
 }

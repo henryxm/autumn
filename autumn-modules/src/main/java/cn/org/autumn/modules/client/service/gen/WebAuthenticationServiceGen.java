@@ -1,9 +1,10 @@
 package cn.org.autumn.modules.client.service.gen;
 
-import cn.org.autumn.table.TableInit;
+import cn.org.autumn.site.InitFactory;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import com.baomidou.mybatisplus.mapper.EntityWrapper;
 import com.baomidou.mybatisplus.plugins.Page;
@@ -13,9 +14,9 @@ import cn.org.autumn.utils.Query;
 import cn.org.autumn.modules.client.service.ClientMenu;
 import cn.org.autumn.modules.client.dao.WebAuthenticationDao;
 import cn.org.autumn.modules.client.entity.WebAuthenticationEntity;
-import javax.annotation.PostConstruct;
 import cn.org.autumn.modules.sys.entity.SysMenuEntity;
 import cn.org.autumn.modules.sys.service.SysMenuService;
+import cn.org.autumn.modules.lan.service.Language;
 import cn.org.autumn.modules.lan.service.LanguageService;
 
 /**
@@ -23,9 +24,9 @@ import cn.org.autumn.modules.lan.service.LanguageService;
  *
  * @author Shaohua Xu
  * @email henryxm@163.com
- * @date 2020-11
+ * @date 2021-01
  */
-public class WebAuthenticationServiceGen extends ServiceImpl<WebAuthenticationDao, WebAuthenticationEntity> {
+public class WebAuthenticationServiceGen extends ServiceImpl<WebAuthenticationDao, WebAuthenticationEntity> implements InitFactory.Init {
 
     protected static final String NULL = null;
 
@@ -36,7 +37,7 @@ public class WebAuthenticationServiceGen extends ServiceImpl<WebAuthenticationDa
     protected SysMenuService sysMenuService;
 
     @Autowired
-    protected TableInit tableInit;
+    protected Language language;
 
     @Autowired
     protected LanguageService languageService;
@@ -99,12 +100,12 @@ public class WebAuthenticationServiceGen extends ServiceImpl<WebAuthenticationDa
     * need implement it in the subclass.
     * @return
     */
-    public int parentMenu(){
+    public String parentMenu(){
         clientMenu.init();
         SysMenuEntity sysMenuEntity = sysMenuService.getByMenuKey(ClientMenu.client_menu);
         if(null != sysMenuEntity)
-            return sysMenuEntity.getMenuId().intValue();
-        return 77;
+            return sysMenuEntity.getMenuKey();
+        return "";
     }
 
     public String ico(){
@@ -115,41 +116,54 @@ public class WebAuthenticationServiceGen extends ServiceImpl<WebAuthenticationDa
         return String.valueOf(menuOrder());
     }
 
-    private String parent(){
-        return String.valueOf(parentMenu());
-    }
-
-    @PostConstruct
     public void init() {
-        if (!tableInit.init)
-            return;
-        Long id = 0L;
-        String[] _m = new String[]
-                {null, parent(), "网站客户端", "modules/client/webauthentication", "client:webauthentication:list,client:webauthentication:info,client:webauthentication:save,client:webauthentication:update,client:webauthentication:delete", "1", "fa " + ico(), order(), "", "client_webauthentication_table_comment"};
-        SysMenuEntity sysMenu = sysMenuService.from(_m);
-        SysMenuEntity entity = sysMenuService.get(sysMenu);
-        if (null == entity) {
-            int ret = sysMenuService.put(sysMenu);
-            if (1 == ret)
-                id = sysMenu.getMenuId();
-        } else
-            id = entity.getMenuId();
-        String[][] menus = new String[][]{
-                {null, id + "", "查看", null, "client:webauthentication:list,client:webauthentication:info", "2", null, order(), "", "sys_string_lookup"},
-                {null, id + "", "新增", null, "client:webauthentication:save", "2", null, order(), "", "sys_string_add"},
-                {null, id + "", "修改", null, "client:webauthentication:update", "2", null, order(), "", "sys_string_change"},
-                {null, id + "", "删除", null, "client:webauthentication:delete", "2", null, order(), "", "sys_string_delete"},
-        };
-        for (String[] menu : menus) {
-            sysMenu = sysMenuService.from(menu);
-            entity = sysMenuService.get(sysMenu);
-            if (null == entity) {
-                sysMenuService.put(sysMenu);
-            }
-        }
+        sysMenuService.put(getMenus());
+        language.add(getLanguageItemArray());
+        language.add(getLanguageItems());
         addLanguageColumnItem();
+        language.add(getLanguageItemsInternal());
     }
 
-    public void addLanguageColumnItem() {
-     }
+    public String[][] getLanguageItemArray() {
+        return null;
+    }
+
+    public List<String[]> getLanguageItems() {
+        return null;
+    }
+
+    public void addLanguageColumnItem(){
+    }
+
+    public String[][] getLanguageItemsInternal() {
+        String[][] items = new String[][]{
+                {"client_webauthentication_table_comment", "网站客户端"},
+                {"client_webauthentication_column_id", "id"},
+                {"client_webauthentication_column_name", "客户端名字"},
+                {"client_webauthentication_column_client_id", "客户端ID"},
+                {"client_webauthentication_column_client_secret", "客户端密匙"},
+                {"client_webauthentication_column_redirect_uri", "重定向地址"},
+                {"client_webauthentication_column_authorize_uri", "授权码地址"},
+                {"client_webauthentication_column_access_token_uri", "Token地址"},
+                {"client_webauthentication_column_user_info_uri", "用户信息地址"},
+                {"client_webauthentication_column_scope", "范围"},
+                {"client_webauthentication_column_state", "状态"},
+                {"client_webauthentication_column_description", "描述信息"},
+                {"client_webauthentication_column_create_time", "创建时间"},
+        };
+        return items;
+    }
+
+    public String[][] getMenus() {
+        String menuKey = SysMenuService.getMenuKey("Client", "WebAuthentication");
+        String[][] menus = new String[][]{
+                //{0:菜单名字,1:URL,2:权限,3:菜单类型,4:ICON,5:排序,6:MenuKey,7:ParentKey,8:Language}
+                {"网站客户端", "modules/client/webauthentication", "client:webauthentication:list,client:webauthentication:info,client:webauthentication:save,client:webauthentication:update,client:webauthentication:delete", "1", "fa " + ico(), order(), menuKey, parentMenu(), "client_webauthentication_table_comment"},
+                {"查看", null, "client:webauthentication:list,client:webauthentication:info", "2", null, order(), SysMenuService.getMenuKey("Client", "WebAuthenticationInfo"), menuKey, "sys_string_lookup"},
+                {"新增", null, "client:webauthentication:save", "2", null, order(), SysMenuService.getMenuKey("Client", "WebAuthenticationSave"), menuKey, "sys_string_add"},
+                {"修改", null, "client:webauthentication:update", "2", null, order(), SysMenuService.getMenuKey("Client", "WebAuthenticationUpdate"), menuKey, "sys_string_change"},
+                {"删除", null, "client:webauthentication:delete", "2", null, order(), SysMenuService.getMenuKey("Client", "WebAuthenticationDelete"), menuKey, "sys_string_delete"},
+        };
+        return menus;
+    }
 }

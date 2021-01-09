@@ -1,23 +1,7 @@
-/**
- * Copyright 2018 Autumn.org.cn http://www.autumn.org.cn
- * <p>
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not
- * use this file except in compliance with the License. You may obtain a copy of
- * the License at
- * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
- */
-
 package cn.org.autumn.modules.oss.service;
 
 import cn.org.autumn.modules.lan.service.LanguageService;
-import cn.org.autumn.table.TableInit;
+import cn.org.autumn.site.InitFactory;
 import com.baomidou.mybatisplus.plugins.Page;
 import com.baomidou.mybatisplus.service.impl.ServiceImpl;
 import cn.org.autumn.utils.PageUtils;
@@ -26,15 +10,10 @@ import cn.org.autumn.modules.oss.dao.SysOssDao;
 import cn.org.autumn.modules.oss.entity.SysOssEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
-import javax.annotation.PostConstruct;
 import java.util.Map;
 
 @Service
-public class SysOssService extends ServiceImpl<SysOssDao, SysOssEntity> {
-
-    @Autowired
-    private TableInit tableInit;
+public class SysOssService extends ServiceImpl<SysOssDao, SysOssEntity> implements InitFactory.Init {
 
     @Autowired
     protected LanguageService languageService;
@@ -46,10 +25,7 @@ public class SysOssService extends ServiceImpl<SysOssDao, SysOssEntity> {
         return new PageUtils(page);
     }
 
-    @PostConstruct
     public void init() {
-        if (!tableInit.init)
-            return;
         addLanguageColumnItem();
     }
 
@@ -59,17 +35,13 @@ public class SysOssService extends ServiceImpl<SysOssDao, SysOssEntity> {
         languageService.addLanguageColumnItem("sys_sysoss_column_create_date", "创建时间", "Create date");
         languageService.addLanguageColumnItem("sys_sysoss_cloud_storage_no_config", "云存储配置未配置", "Cloud storage no configuration");
         languageService.addLanguageColumnItem("sys_sysoss_support_jpg_png_gif", "只支持jpg、png、gif格式的图片！", "Only support jpg, png, gif");
-
         languageService.addLanguageColumnItem("sys_sysoss_string_cloud_storage_config", "云存储配置", "Cloud storage config");
-
         languageService.addLanguageColumnItem("sys_sysoss_string_delete", "删除", "Delete");
         languageService.addLanguageColumnItem("sys_sysoss_string_apply_qiniu_free_space", "免费申请(七牛)10GB储存空间", "Apply qiniu 10GB storage space for free");
-
         languageService.addLanguageColumnItem("sys_sysoss_string_storage_type", "存储类型", "Storage type");
         languageService.addLanguageColumnItem("sys_sysoss_string_qiniu", "七牛", "Qiniu");
         languageService.addLanguageColumnItem("sys_sysoss_string_aliyun", "阿里云", "Aliyun");
         languageService.addLanguageColumnItem("sys_sysoss_string_qcloud", "腾讯云", "Qcloud");
-
         languageService.addLanguageColumnItem("sys_sysoss_string_bing_qiniu_domain", "七牛绑定的域名", "Binding domain on qiniu");
         languageService.addLanguageColumnItem("sys_sysoss_string_domain", "域名", "Domain");
         languageService.addLanguageColumnItem("sys_sysoss_string_prefix", "路径前缀", "Prefix");
@@ -83,7 +55,6 @@ public class SysOssService extends ServiceImpl<SysOssDao, SysOssEntity> {
         languageService.addLanguageColumnItem("sys_sysoss_string_aliyun_access_key_id", "阿里云AccessKeyId", "Aliyun Access Key Id");
         languageService.addLanguageColumnItem("sys_sysoss_string_aliyun_access_key_secret", "阿里云AccessKeySecret", "Aliyun Access Key Secret");
         languageService.addLanguageColumnItem("sys_sysoss_string_aliyun_bucket_name", "阿里云BucketName", "Aliyun Bucket Name");
-
         languageService.addLanguageColumnItem("sys_sysoss_string_qcloud_domain", "腾讯云绑定的域名", "Qcloud domain");
         languageService.addLanguageColumnItem("sys_sysoss_string_qcloud_app_id", "腾讯云AppId", "Qcloud AppId");
         languageService.addLanguageColumnItem("sys_sysoss_string_qcloud_secret_id", "腾讯云SecretId", "Qcloud SecretId");
@@ -91,8 +62,5 @@ public class SysOssService extends ServiceImpl<SysOssDao, SysOssEntity> {
         languageService.addLanguageColumnItem("sys_sysoss_string_qcloud_bucket_name", "腾讯云BucketName", "Qcloud BucketName");
         languageService.addLanguageColumnItem("sys_sysoss_string_qcloud_bucket_location", "Bucket所属地区", "Bucket Location");
         languageService.addLanguageColumnItem("sys_sysoss_string_qcloud_bucket_location_sample", "如：sh（可选值 ，华南：gz 华北：tj 华东：sh）", "Example：sh（possible value）");
-
-
     }
-
 }

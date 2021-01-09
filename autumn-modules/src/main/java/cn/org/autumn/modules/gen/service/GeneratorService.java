@@ -4,10 +4,8 @@ import cn.org.autumn.modules.gen.entity.GenTypeEntity;
 import cn.org.autumn.modules.gen.entity.GenTypeWrapper;
 import cn.org.autumn.modules.gen.utils.GenUtils;
 import cn.org.autumn.modules.lan.service.LanguageService;
-import cn.org.autumn.modules.sys.entity.SysMenuEntity;
 import cn.org.autumn.modules.sys.service.SysMenuService;
-import cn.org.autumn.table.TableInit;
-import cn.org.autumn.table.annotation.Column;
+import cn.org.autumn.site.InitFactory;
 import cn.org.autumn.table.dao.TableDao;
 import cn.org.autumn.table.data.ColumnInfo;
 import cn.org.autumn.table.data.TableInfo;
@@ -21,8 +19,6 @@ import com.baomidou.mybatisplus.plugins.pagination.PageHelper;
 import org.apache.commons.io.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
-import javax.annotation.PostConstruct;
 import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.List;
@@ -33,7 +29,7 @@ import java.util.zip.ZipOutputStream;
  * 代码生成器
  */
 @Service
-public class GeneratorService {
+public class GeneratorService implements InitFactory.Init {
 
     @Autowired
     private SysMenuService sysMenuService;
@@ -43,9 +39,6 @@ public class GeneratorService {
 
     @Autowired
     private GenTypeService genTypeService;
-
-    @Autowired
-    private TableInit tableInit;
 
     @Autowired
     protected LanguageService languageService;
@@ -153,43 +146,26 @@ public class GeneratorService {
      *
      * @return
      */
-    public int parentMenu() {
-        return 1;
+
+    public String parentMenu() {
+        return SysMenuService.getSystemManagementMenuKey();
     }
 
     private String order() {
         return String.valueOf(menuOrder());
     }
 
-    private String parent() {
-        return String.valueOf(parentMenu());
+    protected String ico() {
+        return "fa-codepen";
     }
 
-    @PostConstruct
     public void init() {
-        if (!tableInit.init)
-            return;
-        Long id = 0L;
-        String[] _m = new String[]
-                {null, parent(), "代码生成", "modules/gen/generator", "gen:generator:list,gen:generator:code", "1", "fa fa-file-code-o", order(), "", "sys_string_code_generator"};
-        SysMenuEntity sysMenu = sysMenuService.from(_m);
-        SysMenuEntity entity = sysMenuService.get(sysMenu);
-        if (null == entity) {
-            int ret = sysMenuService.put(sysMenu);
-            if (1 == ret)
-                id = sysMenu.getMenuId();
-        } else
-            id = entity.getMenuId();
+        String keyMenu = SysMenuService.getMenuKey("Gen", "Generator");
         String[][] menus = new String[][]{
-                {null, id + "", "查看", null, "gen:generator:list,gen:generator:info", "2", null, order(), "", "sys_string_lookup"},
-                {null, id + "", "生成", null, "gen:generator:code", "2", null, order(), "", "sys_string_generate"},
+                {"代码生成", "modules/gen/generator", "gen:generator:list,gen:generator:code", "1", "fa " + ico(), order(), keyMenu, parentMenu(), "sys_string_code_generator"},
+                {"查看", null, "gen:generator:list,gen:generator:info", "2", null, order(), SysMenuService.getMenuKey("Gen", "GeneratorInfo"), keyMenu, "sys_string_lookup"},
+                {"生成", null, "gen:generator:code", "2", null, order(), SysMenuService.getMenuKey("Gen", "GeneratorCode"), keyMenu, "sys_string_generate"},
         };
-        for (String[] menu : menus) {
-            sysMenu = sysMenuService.from(menu);
-            entity = sysMenuService.get(sysMenu);
-            if (null == entity) {
-                sysMenuService.put(sysMenu);
-            }
-        }
+        sysMenuService.put(menus);
     }
 }

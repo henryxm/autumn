@@ -3,36 +3,32 @@ package cn.org.autumn.modules.gen.service;
 import cn.org.autumn.modules.gen.entity.GenTypeEntity;
 import cn.org.autumn.modules.gen.entity.GenTypeWrapper;
 import cn.org.autumn.modules.gen.service.gen.GenTypeServiceGen;
+import cn.org.autumn.modules.sys.service.SysMenuService;
 import org.springframework.stereotype.Service;
-
-import javax.annotation.PostConstruct;
 
 @Service
 public class GenTypeService extends GenTypeServiceGen {
 
     @Override
     public String ico() {
-        return super.ico();
+        return "fa-file-text";
     }
 
     public int menuOrder() {
         return 14;
     }
 
-    public int parentMenu() {
-        return 1;
+    public String parentMenu() {
+        super.parentMenu();
+        return SysMenuService.getSystemManagementMenuKey();
     }
 
-    @PostConstruct
     public void init() {
-        super.init();
-        if (!tableInit.init)
-            return;
         String[][] mapping = new String[][]{
-                {NULL, "mysql" , "cn.org.autumn" , "cn.org.autumn.modules" , "sys" , "系统管理" , "1" , "Shaohua Xu" , "henryxm@163.com" , "tb" ,
+                {NULL, "mysql", "cn.org.autumn", "cn.org.autumn.modules", "sys", "系统管理", "1", "Shaohua Xu", "henryxm@163.com", "tb",
                         "tinyint=Integer,smallint=Integer,mediumint=Integer,int=Integer,integer=Integer,bigint=Long,float=Float," +
                                 "double=Double,decimal=BigDecimal,bit=Boolean,char=String,varchar=String,tinytext=String,text=String," +
-                                "mediumtext=String,longtext=String,date=Date,datetime=Date,timestamp=Date" },
+                                "mediumtext=String,longtext=String,date=Date,datetime=Date,timestamp=Date"},
         };
 
         for (String[] map : mapping) {
@@ -74,6 +70,13 @@ public class GenTypeService extends GenTypeServiceGen {
             if (null == et)
                 baseMapper.insert(entity);
         }
+        super.init();
+
+        String keyMenu = SysMenuService.getMenuKey("Gen", "GenType");
+        String[][] menus = new String[][]{
+                {"删除", null, "gen:gentype:copy", "2", "fa " + ico(), order(), SysMenuService.getMenuKey("Gen", "GenTypeCopy"), keyMenu, "sys_string_copy"},
+        };
+        sysMenuService.put(menus);
     }
 
     public GenTypeWrapper getGenType(String databaseType) {
@@ -85,5 +88,13 @@ public class GenTypeService extends GenTypeServiceGen {
             return wrapper;
         }
         return null;
+    }
+
+    public void copy(Long[] ids) {
+        for (Long id : ids) {
+            GenTypeEntity genTypeEntity = selectById(id);
+            genTypeEntity.setId(null);
+            insert(genTypeEntity);
+        }
     }
 }

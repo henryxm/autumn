@@ -136,10 +136,12 @@ var Dept = {
 Dept.initColumn = function () {
     var columns = [
         {field: 'selectItem', radio: true},
-        {title: '${lang.sys_string_department_id}', field: 'deptId', visible: false, align: 'center', valign: 'middle', width: '80px'},
-        {title: '${lang.sys_string_department_name}', field: 'name', align: 'center', valign: 'middle', sortable: true, width: '180px'},
+        {title: '${lang.sys_string_department_id}', field: 'deptId', visible: false, align: 'center', valign: 'middle', width: '50px'},
+        {title: '${lang.sys_string_department_name}', field: 'name', align: 'center', valign: 'middle', sortable: true, width: '150px'},
+        {title: '${lang.sys_string_department_key}', field: 'deptKey', align: 'center', valign: 'middle', sortable: true, width: '150px'},
         {title: '${lang.sys_string_upper_department}', field: 'parentName', align: 'center', valign: 'middle', sortable: true, width: '100px'},
-        {title: '${lang.sys_string_order_number}', field: 'orderNum', align: 'center', valign: 'middle', sortable: true, width: '100px'}]
+        {title: '${lang.sys_string_order_number}', field: 'orderNum', align: 'center', valign: 'middle', sortable: true, width: '50px'},
+        {title: '${lang.sys_string_remark}', field: 'remark', align: 'center', valign: 'middle', sortable: true, width: '100px'}]
     return columns;
 };
 

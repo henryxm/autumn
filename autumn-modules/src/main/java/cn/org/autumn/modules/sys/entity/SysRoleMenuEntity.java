@@ -42,11 +42,18 @@ public class SysRoleMenuEntity implements Serializable {
 	@Column(length = 11, type = DataType.INT, comment = "角色ID")
 	private Long roleId;
 
+
+	@Column(length = 100, comment = "角色标识")
+	private String roleKey;
+
 	/**
 	 * 菜单ID
 	 */
 	@Column(length = 11, type = DataType.INT, comment = "菜单ID")
 	private Long menuId;
+
+	@Column(length = 50, comment = "MenuKey")
+	private String menuKey;
 
 	/**
 	 * 设置：
@@ -95,5 +102,20 @@ public class SysRoleMenuEntity implements Serializable {
 	public Long getMenuId() {
 		return menuId;
 	}
-	
+
+	public String getRoleKey() {
+		return roleKey;
+	}
+
+	public void setRoleKey(String roleKey) {
+		this.roleKey = roleKey;
+	}
+
+	public String getMenuKey() {
+		return menuKey;
+	}
+
+	public void setMenuKey(String menuKey) {
+		this.menuKey = menuKey;
+	}
 }

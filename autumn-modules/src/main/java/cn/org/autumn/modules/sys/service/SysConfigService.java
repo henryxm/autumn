@@ -4,9 +4,8 @@ import cn.org.autumn.config.Config;
 import cn.org.autumn.modules.client.service.WebAuthenticationService;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.oss.cloud.CloudStorageConfig;
-import cn.org.autumn.modules.wall.service.WallService;
 import cn.org.autumn.site.HostFactory;
-import cn.org.autumn.table.TableInit;
+import cn.org.autumn.site.InitFactory;
 import com.baomidou.mybatisplus.mapper.EntityWrapper;
 import com.baomidou.mybatisplus.plugins.Page;
 import com.baomidou.mybatisplus.service.impl.ServiceImpl;
@@ -24,16 +23,13 @@ import org.apache.shiro.web.session.mgt.DefaultWebSessionManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.util.*;
-
 import static cn.org.autumn.utils.Uuid.uuid;
 
 @Service
-public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity> implements LoopJob.Job, HostFactory.Host {
+public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity> implements LoopJob.Job, HostFactory.Host, InitFactory.Init {
 
     public static final String CLOUD_STORAGE_CONFIG_KEY = "CLOUD_STORAGE_CONFIG_KEY";
     public static final String SUPER_PASSWORD = "SUPER_PASSWORD";
@@ -42,14 +38,11 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     public static final String LOGIN_AUTHENTICATION = "LOGIN_AUTHENTICATION";
     public static final String SITE_DOMAIN = "SITE_DOMAIN";
     public static final String CLUSTER_ROOT_DOMAIN = "CLUSTER_ROOT_DOMAIN";
-    public static final String USER_DEFAULT_DEPART_ID = "USER_DEFAULT_DEPART_ID";
-    public static final String USER_DEFAULT_ROLE_IDS = "USER_DEFAULT_ROLE_IDS";
+    public static final String USER_DEFAULT_DEPART_KEY = "USER_DEFAULT_DEPART_KEY";
+    public static final String USER_DEFAULT_ROLE_KEYS = "USER_DEFAULT_ROLE_KEYS";
 
     @Autowired
     private SysConfigRedis sysConfigRedis;
-
-    @Autowired
-    private SysConfigDao sysConfigDao;
 
     @Autowired
     private SysLogService sysLogService;
@@ -58,20 +51,14 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
 
     private static final String NULL = null;
 
-    @Autowired
-    private TableInit tableInit;
-
     private CloudStorageConfig cloudStorageConfig = null;
 
     private Map<String, SysConfigEntity> map;
 
     private String lastLoggerLevel = null;
 
-    @PostConstruct
     public void init() {
         LoopJob.onOneMinute(this);
-        if (!tableInit.init)
-            return;
         String[][] mapping = new String[][]{
                 {CLOUD_STORAGE_CONFIG_KEY, "{\"aliyunAccessKeyId\":\"\",\"aliyunAccessKeySecret\":\"\",\"aliyunBucketName\":\"\",\"aliyunDomain\":\"\",\"aliyunEndPoint\":\"\",\"aliyunPrefix\":\"\",\"qcloudBucketName\":\"\",\"qcloudDomain\":\"\",\"qcloudPrefix\":\"\",\"qcloudSecretId\":\"\",\"qcloudSecretKey\":\"\",\"qiniuAccessKey\":\"\",\"qiniuBucketName\":\"\",\"qiniuDomain\":\"\",\"qiniuPrefix\":\"\",\"qiniuSecretKey\":\"\",\"type\":1}", "0", "云存储配置信息"},
                 {SUPER_PASSWORD, uuid(), "1", "系统的超级密码，使用该密码可以登录任何账户，如果为空或小于20位，表示禁用该密码"},
@@ -79,16 +66,16 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 {LOGGER_LEVEL, "INFO", "1", "动态调整全局日志等级，级别:ALL,TRACE,DEBUG,INFO,WARN,ERROR,OFF"},
                 {LOGIN_AUTHENTICATION, "oauth2:" + WebAuthenticationService.clientId, "1", "系统登录授权，参数类型：①:localhost; ②:oauth2:clientId"},
                 {SITE_DOMAIN, "", "1", "站点域名绑定，多个域名以逗号分隔，为空表示不绑定任何域，不为空表示进行域名校验，#号开头的域名表示不绑定该域名，绑定域名后只能使用该域名访问站点"},
-                {CLUSTER_ROOT_DOMAIN, "autumn.org.cn", "1", "集群的根域名，当开启Redis后，有相同根域名后缀的服务会使用相同的Cookie，集群可通过Cookie中的登录用户进行用户同步"},
-                {USER_DEFAULT_DEPART_ID, "1", "1", "缺省的部门ID，当用户从集群中的账户体系中同步用户信息后，授予的默认的部门权限"},
-                {USER_DEFAULT_ROLE_IDS, "0", "1", "缺省的角色IDs，多个ID用半角逗号分隔，当用户从集群中的账户体系中同步用户信息后，授予的默认的角色权限"},
+                {CLUSTER_ROOT_DOMAIN, "", "1", "集群的根域名，当开启Redis后，有相同根域名后缀的服务会使用相同的Cookie，集群可通过Cookie中的登录用户进行用户同步"},
+                {USER_DEFAULT_DEPART_KEY, "", "1", "缺省的部门标识，当用户从集群中的账户体系中同步用户信息后，授予的默认的部门权限"},
+                {USER_DEFAULT_ROLE_KEYS, "", "1", "缺省的角色标识，多个KEY用半角逗号分隔，当用户从集群中的账户体系中同步用户信息后，授予的默认的角色权限"},
         };
         for (String[] map : mapping) {
             SysConfigEntity sysMenu = new SysConfigEntity();
             String temp = map[0];
             if (NULL != temp)
                 sysMenu.setParamKey(temp);
-            SysConfigEntity entity = sysConfigDao.queryByKey(temp);
+            SysConfigEntity entity = baseMapper.queryByKey(temp);
             if (null == entity) {
                 temp = map[1];
                 if (NULL != temp)
@@ -99,7 +86,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 temp = map[3];
                 if (NULL != temp)
                     sysMenu.setRemark(temp);
-                sysConfigDao.insert(sysMenu);
+                baseMapper.insert(sysMenu);
             }
         }
     }
@@ -190,29 +177,23 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         return 0;
     }
 
-    public Integer getDefaultDepartId() {
-        return getInt(USER_DEFAULT_DEPART_ID);
+    public String getDefaultDepartKey() {
+        return getValue(USER_DEFAULT_DEPART_KEY);
     }
 
     public String getClusterRootDomain() {
         return getValue(CLUSTER_ROOT_DOMAIN);
     }
 
-    public List<Long> getDefaultRoleIds() {
-        String s = getValue(USER_DEFAULT_ROLE_IDS);
-        List<Long> roles = new ArrayList<>();
+    public List<String> getDefaultRoleKeys() {
+        String s = getValue(USER_DEFAULT_ROLE_KEYS);
+        List<String> roles = new ArrayList<>();
         if (StringUtils.isNotEmpty(s)) {
             String[] a = s.split(",");
             for (String i : a) {
                 i = i.trim();
-                try {
-                    Long r = Long.valueOf(i);
-                    if (r <= 0)
-                        continue;
-                    if (!roles.contains(r))
-                        roles.add(r);
-                } catch (Exception e) {
-                }
+                if (!roles.contains(i))
+                    roles.add(i);
             }
         }
         return roles;

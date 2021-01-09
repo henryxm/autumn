@@ -24,7 +24,7 @@ spring:
       enabled: true
   redis:
     database: 0
-    host: 192.168.2.45
+    host: localhost
     port: 6379
     password:      # 密码（默认为空）
     timeout: 6000ms  # 连接超时时长（毫秒）
@@ -37,7 +37,6 @@ spring:
   freemarker:
     suffix: .html
     request-context-attribute: request
-
 
 autumn:
   redis:

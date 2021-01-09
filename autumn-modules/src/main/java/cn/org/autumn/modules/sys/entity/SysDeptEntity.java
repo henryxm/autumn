@@ -34,110 +34,150 @@ import java.util.List;
 @TableName("sys_dept")
 @Table(value = "sys_dept", comment = "部门管理")
 public class SysDeptEntity implements Serializable {
-	private static final long serialVersionUID = 1L;
-	
-	//部门ID
-	@TableId
-	@Column(isKey = true, type = DataType.BIGINT, length = 20, isNull = false, isAutoIncrement = true, comment = "id")
-	private Long deptId;
-	//上级部门ID，一级部门为0
-	@Column( type = DataType.BIGINT,length = 20, comment = "上级部门ID，一级部门为0")
-	private Long parentId;
-	//部门名称
-	@Column(length = 50, comment = "部门名称")
-	private String name;
-	//上级部门名称
-	@TableField(exist=false)
-	private String parentName;
-	//排序
-	@Column(length = 11, type = DataType.INT, comment = "排序")
-	private Integer orderNum;
+    private static final long serialVersionUID = 1L;
 
-	@TableLogic
-	@Column(length = 4, type = DataType.INT, defaultValue = "0", comment = "是否删除  -1：已删除  0：正常")
-	private Integer delFlag;
-	/**
-	 * ztree属性
-	 */
-	@TableField(exist=false)
-	private Boolean open;
-	@TableField(exist=false)
-	private List<?> list;
+    //部门ID
+    @TableId
+    @Column(isKey = true, type = DataType.BIGINT, length = 20, isNull = false, isAutoIncrement = true, comment = "id")
+    private Long deptId;
+    //上级部门ID，一级部门为0
+    @Column(type = DataType.BIGINT, length = 20, comment = "上级部门ID，一级部门为0")
+    private Long parentId;
+
+    @Column(length = 100, comment = "部门标识")
+    private String deptKey;
+
+    @Column(length = 100, comment = "上级标识")
+    private String parentKey;
+
+    //部门名称
+    @Column(length = 50, comment = "部门名称")
+    private String name;
+    //上级部门名称
+    @TableField(exist = false)
+    private String parentName;
+    //排序
+    @Column(length = 11, type = DataType.INT, comment = "排序")
+    private Integer orderNum;
+
+    @Column(length = 100, comment = "备注")
+    private String remark;
+
+    @TableLogic
+    @Column(length = 4, type = DataType.INT, defaultValue = "0", comment = "是否删除  -1：已删除  0：正常")
+    private Integer delFlag;
+    /**
+     * ztree属性
+     */
+    @TableField(exist = false)
+    private Boolean open;
+    @TableField(exist = false)
+    private List<?> list;
 
 
-	public void setDeptId(Long deptId) {
-		this.deptId = deptId;
-	}
+    public void setDeptId(Long deptId) {
+        this.deptId = deptId;
+    }
 
-	public Long getDeptId() {
-		return deptId;
-	}
-	/**
-	 * 设置：上级部门ID，一级部门为0
-	 */
-	public void setParentId(Long parentId) {
-		this.parentId = parentId;
-	}
-	/**
-	 * 获取：上级部门ID，一级部门为0
-	 */
-	public Long getParentId() {
-		return parentId;
-	}
-	/**
-	 * 设置：部门名称
-	 */
-	public void setName(String name) {
-		this.name = name;
-	}
-	/**
-	 * 获取：部门名称
-	 */
-	public String getName() {
-		return name;
-	}
-	/**
-	 * 设置：排序
-	 */
-	public void setOrderNum(Integer orderNum) {
-		this.orderNum = orderNum;
-	}
-	/**
-	 * 获取：排序
-	 */
-	public Integer getOrderNum() {
-		return orderNum;
-	}
+    public Long getDeptId() {
+        return deptId;
+    }
 
-	public Integer getDelFlag() {
-		return delFlag;
-	}
+    /**
+     * 设置：上级部门ID，一级部门为0
+     */
+    public void setParentId(Long parentId) {
+        this.parentId = parentId;
+    }
 
-	public void setDelFlag(Integer delFlag) {
-		this.delFlag = delFlag;
-	}
+    /**
+     * 获取：上级部门ID，一级部门为0
+     */
+    public Long getParentId() {
+        return parentId;
+    }
 
-	public String getParentName() {
-		return parentName;
-	}
+    /**
+     * 设置：部门名称
+     */
+    public void setName(String name) {
+        this.name = name;
+    }
 
-	public void setParentName(String parentName) {
-		this.parentName = parentName;
-	}
+    /**
+     * 获取：部门名称
+     */
+    public String getName() {
+        return name;
+    }
 
-	public Boolean getOpen() {
-		return open;
-	}
+    /**
+     * 设置：排序
+     */
+    public void setOrderNum(Integer orderNum) {
+        this.orderNum = orderNum;
+    }
 
-	public void setOpen(Boolean open) {
-		this.open = open;
-	}
+    /**
+     * 获取：排序
+     */
+    public Integer getOrderNum() {
+        return orderNum;
+    }
 
-	public List<?> getList() {
-		return list;
-	}
+    public Integer getDelFlag() {
+        return delFlag;
+    }
 
-	public void setList(List<?> list) {
-		this.list = list;
-	}
+    public void setDelFlag(Integer delFlag) {
+        this.delFlag = delFlag;
+    }
+
+    public String getParentName() {
+        return parentName;
+    }
+
+    public void setParentName(String parentName) {
+        this.parentName = parentName;
+    }
+
+    public Boolean getOpen() {
+        return open;
+    }
+
+    public void setOpen(Boolean open) {
+        this.open = open;
+    }
+
+    public List<?> getList() {
+        return list;
+    }
+
+    public void setList(List<?> list) {
+        this.list = list;
+    }
+
+    public String getDeptKey() {
+        return deptKey;
+    }
+
+    public void setDeptKey(String deptKey) {
+        this.deptKey = deptKey;
+    }
+
+    public String getParentKey() {
+        return parentKey;
+    }
+
+    public void setParentKey(String parentKey) {
+        this.parentKey = parentKey;
+    }
+
+    public String getRemark() {
+        return remark;
+    }
+
+    public void setRemark(String remark) {
+        this.remark = remark;
+    }
 }

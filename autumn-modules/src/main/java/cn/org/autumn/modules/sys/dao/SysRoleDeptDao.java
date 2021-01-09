@@ -41,4 +41,16 @@ public interface SysRoleDeptDao extends BaseMapper<SysRoleDeptEntity> {
     @Delete("DELETE FROM sys_role_dept WHERE role_id IN (#{roleIds})")
     @Lang(SelectInLangDriver.class)
     int deleteBatch(@Param("roleIds") Long[] roleIds);
+
+    /**
+     * 根据角色key，获取部门Key列表
+     */
+    @Select("SELECT dept_key FROM sys_role_dept WHERE role_key IN (#{roleKeys})")
+    List<String> getDeptKeys(@Param("roleKeys") String[] roleKeys);
+
+    /**
+     * 根据角色Key数组，批量删除
+     */
+    @Delete("DELETE FROM sys_role_dept WHERE role_key IN (#{roleKeys})")
+    int deleteByRoleKey(@Param("roleKeys") String[] roleKeys);
 }

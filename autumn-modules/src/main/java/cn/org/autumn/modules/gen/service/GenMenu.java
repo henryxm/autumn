@@ -1,8 +1,6 @@
 package cn.org.autumn.modules.gen.service;
 
-import cn.org.autumn.modules.sys.entity.SysMenuEntity;
 import cn.org.autumn.modules.sys.service.SysMenuService;
-import cn.org.autumn.table.TableInit;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import cn.org.autumn.modules.lan.service.LanguageService;
@@ -18,13 +16,12 @@ import cn.org.autumn.modules.lan.service.LanguageService;
 @Service
 public class GenMenu {
 
-    public static final String gen_menu = "gen_menu";
+    public static final String gen_menu = SysMenuService.getMenuKey("Gen", "TopMenu");
+    public static final String parent_menu = "";
+    public static final String gen_language = "gen_menu";
 
     @Autowired
     protected SysMenuService sysMenuService;
-
-    @Autowired
-    protected TableInit tableInit;
 
     @Autowired
     protected LanguageService languageService;

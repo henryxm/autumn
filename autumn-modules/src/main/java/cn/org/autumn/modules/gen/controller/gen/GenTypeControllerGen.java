@@ -84,4 +84,10 @@ public class GenTypeControllerGen {
         return R.ok();
     }
 
+    @RequestMapping("/copy")
+    @RequiresPermissions("gen:gentype:copy")
+    public R copy(@RequestBody Long[] ids){
+        genTypeService.copy(ids);
+        return R.ok();
+    }
 }

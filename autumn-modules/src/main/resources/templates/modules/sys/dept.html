@@ -44,6 +44,12 @@
 				</div>
 			</div>
 			<div class="form-group">
+				<div class="col-sm-2 control-label">${lang.sys_string_department_key}</div>
+				<div class="col-sm-10">
+					<input type="text" class="form-control" v-model="dept.deptKey" placeholder="${lang.sys_string_department_key}"/>
+				</div>
+			</div>
+			<div class="form-group">
 				<div class="col-sm-2 control-label">${lang.sys_string_upper_department}</div>
 				<div class="col-sm-10">
 					<input type="text" class="form-control" style="cursor:pointer;" v-model="dept.parentName" @click="deptTree" readonly="readonly" placeholder="${lang.sys_string_upper_department}"/>
@@ -53,6 +59,12 @@
 				<div class="col-sm-2 control-label">${lang.sys_string_order_number}</div>
 				<div class="col-sm-10">
 					<input type="number" class="form-control" v-model="dept.orderNum" placeholder="${lang.sys_string_order_number}"/>
+				</div>
+			</div>
+			<div class="form-group">
+				<div class="col-sm-2 control-label">${lang.sys_string_remark}</div>
+				<div class="col-sm-10">
+					<input type="text" class="form-control" v-model="dept.remark" placeholder="${lang.sys_string_remark}"/>
 				</div>
 			</div>
 			<div class="form-group">

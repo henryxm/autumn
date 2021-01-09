@@ -5,6 +5,7 @@ import cn.org.autumn.modules.spm.entity.SuperPositionModelEntity;
 import cn.org.autumn.modules.spm.entity.VisitLogEntity;
 import cn.org.autumn.modules.spm.service.gen.VisitLogServiceGen;
 
+import cn.org.autumn.modules.sys.service.SysMenuService;
 import cn.org.autumn.utils.IPUtils;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.stereotype.Service;

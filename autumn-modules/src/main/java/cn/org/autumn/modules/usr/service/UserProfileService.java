@@ -11,6 +11,7 @@ import cn.org.autumn.modules.usr.entity.UserProfileEntity;
 import cn.org.autumn.modules.usr.entity.UserTokenEntity;
 import cn.org.autumn.modules.usr.form.LoginForm;
 import cn.org.autumn.modules.usr.service.gen.UserProfileServiceGen;
+import cn.org.autumn.site.InitFactory;
 import cn.org.autumn.utils.Uuid;
 import cn.org.autumn.validator.Assert;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -34,7 +35,9 @@ public class UserProfileService extends UserProfileServiceGen implements LoopJob
     @Autowired
     SysUserService sysUserService;
 
-    static Map<String, UserProfileEntity> sync = new HashMap<>();
+    static Map<String, UserProfileEntity> sync = new LinkedHashMap<>();
+
+    static Map<String, Integer> hashUser = new HashMap<>();
 
     @Override
     public int menuOrder() {
@@ -46,27 +49,26 @@ public class UserProfileService extends UserProfileServiceGen implements LoopJob
         return "fa-user-plus";
     }
 
-    @PostConstruct
     public void init() {
         super.init();
         SysUserEntity sysUserEntity = sysUserService.getByUsername(ADMIN);
         from(sysUserEntity, PASSWORD, null);
-        LoopJob.onOneMinute(this);
+        LoopJob.onTenSecond(this);
     }
 
     public void addLanguageColumnItem() {
-        languageService.addLanguageColumnItem("usr_userprofile_table_comment", "用户信息", "User profile");
-        languageService.addLanguageColumnItem("usr_userprofile_column_user_id", "用户ID", "User ID");
-        languageService.addLanguageColumnItem("usr_userprofile_column_sys_user_id", "系统用户ID", "System user ID");
-        languageService.addLanguageColumnItem("usr_userprofile_column_uuid", "UUID", "UUID");
-        languageService.addLanguageColumnItem("usr_userprofile_column_open_id", "OPENID", "OPENID");
-        languageService.addLanguageColumnItem("usr_userprofile_column_union_id", "UNIONID", "UNIONID");
-        languageService.addLanguageColumnItem("usr_userprofile_column_icon", "头像", "Header icon");
-        languageService.addLanguageColumnItem("usr_userprofile_column_username", "用户名", "Username");
-        languageService.addLanguageColumnItem("usr_userprofile_column_nickname", "用户昵称", "Nickname");
-        languageService.addLanguageColumnItem("usr_userprofile_column_mobile", "手机号", "Phone number");
-        languageService.addLanguageColumnItem("usr_userprofile_column_password", "密码", "Password");
-        languageService.addLanguageColumnItem("usr_userprofile_column_create_time", "创建时间", "Create time");
+        language.add("usr_userprofile_table_comment", "用户信息", "User profile");
+        language.add("usr_userprofile_column_user_id", "用户ID", "User ID");
+        language.add("usr_userprofile_column_sys_user_id", "系统用户ID", "System user ID");
+        language.add("usr_userprofile_column_uuid", "UUID", "UUID");
+        language.add("usr_userprofile_column_open_id", "OPENID", "OPENID");
+        language.add("usr_userprofile_column_union_id", "UNIONID", "UNIONID");
+        language.add("usr_userprofile_column_icon", "头像", "Header icon");
+        language.add("usr_userprofile_column_username", "用户名", "Username");
+        language.add("usr_userprofile_column_nickname", "用户昵称", "Nickname");
+        language.add("usr_userprofile_column_mobile", "手机号", "Phone number");
+        language.add("usr_userprofile_column_password", "密码", "Password");
+        language.add("usr_userprofile_column_create_time", "创建时间", "Create time");
         super.addLanguageColumnItem();
     }
 
@@ -161,7 +163,7 @@ public class UserProfileService extends UserProfileServiceGen implements LoopJob
             UserProfileEntity userProfileEntity = baseMapper.getByUuid(userProfile.getUuid());
             if (null == userProfileEntity) {
                 String randomPassword = Uuid.uuid();
-                sysUserEntity = sysUserService.newUser(userProfile.getUsername(), userProfile.getUuid(), Uuid.uuid());
+                sysUserEntity = sysUserService.newUser(userProfile.getUsername(), userProfile.getUuid(), Uuid.uuid(), null);
                 userProfileEntity = from(sysUserEntity, randomPassword, userProfile);
             }
             if (null == sysUserEntity)
@@ -190,8 +192,16 @@ public class UserProfileService extends UserProfileServiceGen implements LoopJob
     }
 
     public void copy(UserProfileEntity userProfileEntity) {
-        if (null != userProfileEntity && StringUtils.isNotEmpty(userProfileEntity.getUuid()))
+        if (null != userProfileEntity && StringUtils.isNotEmpty(userProfileEntity.getUuid())) {
             sync.put(userProfileEntity.getUuid(), userProfileEntity);
+        }
+    }
+
+    private boolean checkNeedUpdate(UserProfileEntity userProfileEntity) {
+        Integer integer = hashUser.get(userProfileEntity.getUuid());
+        if (null == integer || integer != userProfileEntity.hashCode())
+            return true;
+        return false;
     }
 
     @Override
@@ -201,6 +211,8 @@ public class UserProfileService extends UserProfileServiceGen implements LoopJob
             while (iterator.hasNext()) {
                 Map.Entry<String, UserProfileEntity> entity = iterator.next();
                 UserProfileEntity userProfileEntity = entity.getValue();
+                if (!checkNeedUpdate(userProfileEntity))
+                    continue;
                 UserProfileEntity ex = getByUuid(userProfileEntity.getUuid());
                 if (null == ex || ex.hashCode() != userProfileEntity.hashCode()) {
                     if (null != ex) {
@@ -209,8 +221,15 @@ public class UserProfileService extends UserProfileServiceGen implements LoopJob
                     }
                     insertOrUpdate(userProfileEntity);
                 }
+                hashUser.put(userProfileEntity.getUuid(), userProfileEntity.hashCode());
                 iterator.remove();
             }
+        }
+        /**
+         * 清理缓存，避免过度消耗内存
+         */
+        if (hashUser.size() > 10000) {
+            hashUser.clear();
         }
     }
 }

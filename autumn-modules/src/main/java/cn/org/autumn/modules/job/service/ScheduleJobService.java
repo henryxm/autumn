@@ -1,11 +1,11 @@
 package cn.org.autumn.modules.job.service;
 
 import cn.org.autumn.annotation.TaskAware;
-import cn.org.autumn.modules.job.dao.ScheduleJobDao;
 import cn.org.autumn.modules.job.entity.ScheduleJobEntity;
 import cn.org.autumn.modules.job.service.gen.ScheduleJobServiceGen;
+import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.job.utils.ScheduleUtils;
-import cn.org.autumn.table.TableInit;
+import cn.org.autumn.modules.sys.service.SysMenuService;
 import cn.org.autumn.utils.Constant;
 import cn.org.autumn.utils.PageUtils;
 import cn.org.autumn.utils.Query;
@@ -20,28 +20,32 @@ import org.springframework.context.annotation.DependsOn;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.annotation.PostConstruct;
 import java.lang.reflect.Method;
 import java.util.*;
 
+import static cn.org.autumn.modules.sys.service.SysMenuService.getSystemMenuKey;
+
 @DependsOn("springContextUtils")
 @Service
-public class ScheduleJobService extends ScheduleJobServiceGen {
+public class ScheduleJobService extends ScheduleJobServiceGen implements LoopJob.Job {
 
     @Autowired
     private Scheduler scheduler;
 
     @Override
     public int menuOrder() {
-        return super.menuOrder();
+        return 5;
     }
 
     @Override
     public String ico() {
-        return super.ico();
+        return "fa-tasks";
     }
 
-    private int wEveryCount = 0;
+    public String parentMenu() {
+        super.parentMenu();
+        return SysMenuService.getSystemManagementMenuKey();
+    }
 
     private static final String NULL = null;
 
@@ -51,9 +55,7 @@ public class ScheduleJobService extends ScheduleJobServiceGen {
             String[] beans = SpringContextUtils.applicationContext.getBeanDefinitionNames();
             for (String beanName : beans) {
                 Class<?> beanType = SpringContextUtils.applicationContext.getType(beanName);
-
                 Method[] methods = beanType.getMethods();
-
                 for (Method method : methods) {
                     TaskAware taskAware = method.getAnnotation(TaskAware.class);
                     if (null != taskAware) {
@@ -78,17 +80,12 @@ public class ScheduleJobService extends ScheduleJobServiceGen {
                         list.add(taskAware);
                     }
                 }
-
             }
         }
-
     }
 
-    @PostConstruct
     public void init() {
         super.init();
-        if (!tableInit.init)
-            return;
         scanInit();
         String[][] mapping = new String[][]{};
         for (String[] map : mapping) {
@@ -119,12 +116,25 @@ public class ScheduleJobService extends ScheduleJobServiceGen {
             }
         }
         initScheduler();
+        sysMenuService.put(menus());
+        LoopJob.onTenSecond(this);
+    }
+
+    public String[][] menus() {
+        String menuKey = SysMenuService.getMenuKey("Job", "ScheduleJob");
+        String[][] menus = new String[][]{
+                //{0:菜单名字,1:URL,2:权限,3:菜单类型,4:ICON,5:排序,6:MenuKey,7:ParentKey,8:Language}
+                {"日志列表", NULL, "job:schedulejob:log", "2", NULL, "0", getSystemMenuKey("JobScheduleLog"), menuKey, "sys_string_log_list"},
+                {"立即执行", NULL, "job:schedulejob:run", "2", NULL, "0", getSystemMenuKey("JobScheduleRun"), menuKey, "sys_string_immediate_execution"},
+                {"暂停", NULL, "job:schedulejob:pause", "2", NULL, "0", getSystemMenuKey("JobSchedulePause"), menuKey, "sys_string_suspend"},
+                {"恢复", NULL, "job:schedulejob:resume", "2", NULL, "0", getSystemMenuKey("JobScheduleResume"), menuKey, "sys_string_resume"},
+        };
+        return menus;
     }
 
     /**
      * 项目启动时，初始化定时器
      */
-    @PostConstruct
     public void initScheduler() {
         List<ScheduleJobEntity> scheduleJobList = this.selectList(null);
         for (ScheduleJobEntity scheduleJob : scheduleJobList) {
@@ -136,15 +146,6 @@ public class ScheduleJobService extends ScheduleJobServiceGen {
                 ScheduleUtils.updateScheduleJob(scheduler, scheduleJob);
             }
         }
-    }
-
-    public void load(int i) {
-        if (wEveryCount < i) {
-            wEveryCount++;
-            return;
-        }
-        wEveryCount = 0;
-        initScheduler();
     }
 
     public PageUtils queryPage(Map<String, Object> params) {
@@ -208,5 +209,26 @@ public class ScheduleJobService extends ScheduleJobServiceGen {
             ScheduleUtils.resumeJob(scheduler, jobId);
         }
         updateBatch(jobIds, Constant.ScheduleStatus.NORMAL.getValue());
+    }
+
+    public String[][] getLanguageItemArray() {
+        String[][] items = new String[][]{
+                {"job_schedulejob_table_comment", "定时任务", "Schedule job"},
+                {"job_schedulejob_column_job_id", "任务id", "Task ID"},
+                {"job_schedulejob_column_bean_name", "BeanName", "Bean name"},
+                {"job_schedulejob_column_method_name", "方法名", "Method name"},
+                {"job_schedulejob_column_params", "参数", "Parameter"},
+                {"job_schedulejob_column_cron_expression", "Cron表达式", "Cron express"},
+                {"job_schedulejob_column_status", "任务状态", "Task status"},
+                {"job_schedulejob_column_mode", "任务执行模式", "Task run mode"},
+                {"job_schedulejob_column_remark", "备注", "Remark"},
+                {"job_schedulejob_column_create_time", "创建时间", "Create time"},
+        };
+        return items;
+    }
+
+    @Override
+    public void runJob() {
+        initScheduler();
     }
 }

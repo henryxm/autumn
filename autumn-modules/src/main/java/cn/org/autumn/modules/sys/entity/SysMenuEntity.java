@@ -51,12 +51,8 @@ public class SysMenuEntity implements Serializable {
     @Column(length = 50, comment = "MenuKey")
     private String menuKey;
 
-    /**
-     * 父菜单名称
-     */
-    @TableField(exist = false)
-    private String parentName;
-
+    @Column(length = 50, comment = "ParentKey")
+    private String parentKey;
 
     @Column(length = 50, comment = "语言标识")
     private String languageName;
@@ -66,6 +62,12 @@ public class SysMenuEntity implements Serializable {
      */
     @Column(length = 50, comment = "菜单名称")
     private String name;
+
+    /**
+     * 父菜单名称
+     */
+    @TableField(exist = false)
+    private String parentName;
 
     /**
      * 菜单URL
@@ -258,5 +260,13 @@ public class SysMenuEntity implements Serializable {
 
     public void setLanguageName(String languageName) {
         this.languageName = languageName;
+    }
+
+    public String getParentKey() {
+        return parentKey;
+    }
+
+    public void setParentKey(String parentKey) {
+        this.parentKey = parentKey;
     }
 }

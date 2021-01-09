@@ -1,26 +1,22 @@
 package cn.org.autumn.modules.lan.service;
 
-import cn.org.autumn.config.PostLoad;
-import cn.org.autumn.config.PostLoadFactory;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.lan.entity.LanguageEntity;
 import cn.org.autumn.modules.lan.service.gen.LanguageServiceGen;
+import cn.org.autumn.site.InitFactory;
+import cn.org.autumn.site.LoadFactory;
 import cn.org.autumn.table.utils.HumpConvert;
 import io.netty.util.internal.StringUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.PostConstruct;
 import java.lang.reflect.Field;
 import java.util.*;
 
 @Service
-public class LanguageService extends LanguageServiceGen implements PostLoad, LoopJob.Job {
+public class LanguageService extends LanguageServiceGen implements LoadFactory.Load, LoopJob.Job {
     private Logger logger = LoggerFactory.getLogger(getClass());
-    @Autowired
-    PostLoadFactory postLoadFactory;
 
     private static Map<String, Map<String, String>> languages;
 
@@ -38,8 +34,8 @@ public class LanguageService extends LanguageServiceGen implements PostLoad, Loo
         return "fa-language";
     }
 
-    public int parentMenu() {
-        return 1;
+    public String parentMenu() {
+        return sysMenuService.getSystemMenuKey("SystemManagement");
     }
 
     public static void f(LanguageEntity languageEntity) {
@@ -116,9 +112,7 @@ public class LanguageService extends LanguageServiceGen implements PostLoad, Loo
         return addLanguageColumnItem(key, zhCn, null);
     }
 
-    @PostConstruct
     public void init() {
-        super.init();
         LoopJob.onTenMinute(this);
         addLanguageColumnItem("sys_string_management", "管理系统", "Manage system");
         addLanguageColumnItem("sys_string_system_management", "系统管理", "System management");
@@ -170,6 +164,7 @@ public class LanguageService extends LanguageServiceGen implements PostLoad, Loo
         addLanguageColumnItem("sys_string_login", "登录", "Login");
         addLanguageColumnItem("sys_string_logout", "退出系统", "Logout");
         addLanguageColumnItem("sys_string_add", "新增", "Add");
+        addLanguageColumnItem("sys_string_copy", "复制", "Copy");
         addLanguageColumnItem("sys_string_change", "修改", "Change");
         addLanguageColumnItem("sys_string_confirm", "确定", "Confirm");
         addLanguageColumnItem("sys_string_cancel", "取消", "Cancel");
@@ -179,6 +174,7 @@ public class LanguageService extends LanguageServiceGen implements PostLoad, Loo
         addLanguageColumnItem("sys_string_fail", "失败", "Fail");
         addLanguageColumnItem("sys_string_fail_message", "失败信息", "Fail message");
         addLanguageColumnItem("sys_string_successful", "操作成功", "Successful");
+        addLanguageColumnItem("sys_string_are_sure_to_copy", "确定要复制选中的记录", "Are you sure to copy the selected record");
         addLanguageColumnItem("sys_string_are_sure_to_delete", "确定要删除选中的记录", "Are you sure to delete the selected record");
         addLanguageColumnItem("sys_string_are_sure_to_pause", "确定要暂停选中的记录", "Are you sure to pause the selected record");
         addLanguageColumnItem("sys_string_are_sure_to_resume", "确定要恢复选中的记录", "Are you sure to resume the selected record");
@@ -186,18 +182,17 @@ public class LanguageService extends LanguageServiceGen implements PostLoad, Loo
         addLanguageColumnItem("sys_string_please_select_record", "请选择一条记录", "Please select one record");
         addLanguageColumnItem("sys_string_department_id", "部门ID", "Department ID");
         addLanguageColumnItem("sys_string_department_name", "部门名称", "Department name");
+        addLanguageColumnItem("sys_string_department_key", "部门标识", "Department key");
         addLanguageColumnItem("sys_string_upper_department", "上级部门", "Upper department");
+        addLanguageColumnItem("sys_string_upper_department_key", "上级标识", "Upper key");
         addLanguageColumnItem("sys_string_order_number", "排序号", "Order number");
         addLanguageColumnItem("sys_string_icon", "图标", "Icon");
         addLanguageColumnItem("sys_string_menu_icon", "菜单图标", "Menu icon");
         addLanguageColumnItem("sys_string_find_icon", "获取图标", "Find icon");
-
         addLanguageColumnItem("sys_string_dict_name", "字典名称", "Dict name");
         addLanguageColumnItem("sys_string_dict_type", "字典类型", "Dict type");
         addLanguageColumnItem("sys_string_dict_code", "字典码", "Dict code");
         addLanguageColumnItem("sys_string_dict_value", "字典值", "Dict value");
-
-
         addLanguageColumnItem("sys_string_user_id", "用户ID", "User ID");
         addLanguageColumnItem("sys_string_username", "用户名", "Username");
         addLanguageColumnItem("sys_string_query_username", "用户名、用户操作", "ex: username");
@@ -211,30 +206,25 @@ public class LanguageService extends LanguageServiceGen implements PostLoad, Loo
         addLanguageColumnItem("sys_string_menu_key", "菜单标记", "Menu key");
         addLanguageColumnItem("sys_string_menu_name_cannot_be_empty", "菜单名称不能为空", "Menu name cannot by empty");
         addLanguageColumnItem("sys_string_menu_url_cannot_be_empty", "菜单URL不能为空", "Menu url cannot by empty");
-
-
-        addLanguageColumnItem("sys_string_menu_key_format", "格式：{模块包名}_menu", "Format:(module)_menu");
-
+        addLanguageColumnItem("sys_string_menu_key_format", "格式：Menu:{模块包名}:{模块包名}Menu", "Format:Menu:{module}:{module}_menu");
         addLanguageColumnItem("sys_string_role", "角色", "Role");
         addLanguageColumnItem("sys_string_role_id", "角色ID", "Role ID");
         addLanguageColumnItem("sys_string_role_name", "角色名称", "Role name");
+        addLanguageColumnItem("sys_string_role_key", "角色标识", "Role Key");
         addLanguageColumnItem("sys_string_own_department", "所属部门", "Own department");
         addLanguageColumnItem("sys_string_function_authority", "功能权限", "Function authority");
         addLanguageColumnItem("sys_string_data_authority", "数据权限", "Data authority");
-
         addLanguageColumnItem("sys_string_mobile", "手机", "Mobile");
         addLanguageColumnItem("sys_string_phone_number", "手机号", "Phone number");
         addLanguageColumnItem("sys_string_email", "邮箱", "Email");
         addLanguageColumnItem("sys_string_password", "密码", "Password");
-
         addLanguageColumnItem("sys_string_request_method", "请求方法", "Request method");
         addLanguageColumnItem("sys_string_request_parameter", "请求参数", "Request parameter");
         addLanguageColumnItem("sys_string_execute_duration", "执行时长(毫秒)", "Execute duration");
         addLanguageColumnItem("sys_string_ip_address", "IP地址", "IP Address");
         addLanguageColumnItem("sys_string_yes", "是", "Yes");
         addLanguageColumnItem("sys_string_no", "否", "No");
-        addLanguageColumnItem();
-        postLoadFactory.register(this);
+        super.init();
     }
 
     public void addLanguageColumnItem() {

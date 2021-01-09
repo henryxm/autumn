@@ -1,7 +1,6 @@
 package cn.org.autumn.modules.wall.service;
 
-import cn.org.autumn.config.PostLoad;
-import cn.org.autumn.config.PostLoadFactory;
+import cn.org.autumn.site.LoadFactory;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.wall.entity.UrlBlackEntity;
 import cn.org.autumn.modules.wall.service.gen.UrlBlackServiceGen;
@@ -17,7 +16,7 @@ import java.util.List;
 import java.util.Map;
 
 @Service
-public class UrlBlackService extends UrlBlackServiceGen implements PostLoad, LoopJob.Job {
+public class UrlBlackService extends UrlBlackServiceGen implements LoadFactory.Load, LoopJob.Job {
 
     private static final Logger log = LoggerFactory.getLogger(UrlBlackService.class);
 
@@ -38,9 +37,6 @@ public class UrlBlackService extends UrlBlackServiceGen implements PostLoad, Loo
 
     @Autowired
     IpBlackService ipBlackService;
-
-    @Autowired
-    PostLoadFactory postLoadFactory;
 
     /**
      * 为了提高效率，在黑客大量攻击的时候，不能频繁进行数据库访问，通过定时器定时加载IP地址黑名单数据，提高效率。
@@ -125,7 +121,6 @@ public class UrlBlackService extends UrlBlackServiceGen implements PostLoad, Loo
 
     public void init() {
         super.init();
-        postLoadFactory.register(this);
         LoopJob.onThreeSecond(this);
     }
 

@@ -1,24 +1,22 @@
-package cn.org.autumn.modules.job.service;
+package cn.org.autumn.modules.lan.service;
 
 import cn.org.autumn.modules.sys.service.SysMenuService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import cn.org.autumn.modules.lan.service.Language;
-import cn.org.autumn.modules.lan.service.LanguageService;
 
 /**
- * 定时任务
+ * 国家语言
  *
  * @author Shaohua Xu
  * @email henryxm@163.com
  * @date 2021-01
  */
 @Service
-public class JobMenu {
+public class LanMenu {
 
-    public static final String job_menu = SysMenuService.getMenuKey("Job", "JobMenu");
+    public static final String lan_menu = SysMenuService.getMenuKey("Lan", "LanMenu");
     public static final String parent_menu = "";
-    public static final String job_language = "job_menu";
+    public static final String lan_language = "lan_menu";
 
     @Autowired
     protected SysMenuService sysMenuService;

@@ -1,10 +1,9 @@
 package cn.org.autumn.modules.client.service;
 
-import cn.org.autumn.modules.sys.entity.SysMenuEntity;
 import cn.org.autumn.modules.sys.service.SysMenuService;
-import cn.org.autumn.table.TableInit;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import cn.org.autumn.modules.lan.service.Language;
 import cn.org.autumn.modules.lan.service.LanguageService;
 
 /**
@@ -12,37 +11,45 @@ import cn.org.autumn.modules.lan.service.LanguageService;
  *
  * @author Shaohua Xu
  * @email henryxm@163.com
- * @date 2020-11
+ * @date 2021-01
  */
 @Service
 public class ClientMenu {
 
-    public static final String client_menu = "client_menu";
+    public static final String client_menu = SysMenuService.getMenuKey("Client", "ClientMenu");
+    public static final String parent_menu = "";
+    public static final String client_language = "client_menu";
 
     @Autowired
     protected SysMenuService sysMenuService;
 
     @Autowired
-    protected TableInit tableInit;
+    protected Language language;
 
     @Autowired
     protected LanguageService languageService;
 
     public void init() {
-        if (!tableInit.init)
-            return;
-        Long id = 0L;
-        String[] _m = new String[]
-                {null, "0", "客户端", "", "", "0", "fa fa-eercast", "555555", client_menu, client_menu + "_text"};
-        SysMenuEntity entity = sysMenuService.get(sysMenuService.find(_m));
-        if (null == entity) {
-            SysMenuEntity sysMenu = sysMenuService.from(_m);
-            sysMenuService.put(sysMenu);
-        }
+        sysMenuService.put(getMenus());
+        language.add(getLanguageItemArray());
         addLanguageColumnItem();
     }
 
     public void addLanguageColumnItem() {
-        languageService.addLanguageColumnItem(client_menu + "_text", "客户端", "Client");
+    }
+
+    public String[][] getMenus() {
+        String[][] menus = new String[][]{
+                //{0:菜单名字,1:URL,2:权限,3:菜单类型,4:ICON,5:排序,6:MenuKey,7:ParentKey,8:Language}
+                {"客户端", "", "", "0", "fa fa-eercast", "555555", client_menu, parent_menu, client_language + "_text"},
+        };
+        return menus;
+    }
+
+    public String[][] getLanguageItemArray() {
+        String[][] items = new String[][]{
+                {client_language + "_text", "客户端", "Client"},
+        };
+        return items;
     }
 }

@@ -3,7 +3,7 @@ package cn.org.autumn.modules.sys.service;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
 import cn.org.autumn.modules.job.task.LoopJob;
-import cn.org.autumn.table.TableInit;
+import cn.org.autumn.site.InitFactory;
 import com.baomidou.mybatisplus.mapper.EntityWrapper;
 import com.baomidou.mybatisplus.plugins.Page;
 import com.baomidou.mybatisplus.service.impl.ServiceImpl;
@@ -14,26 +14,16 @@ import cn.org.autumn.modules.sys.entity.SysLogEntity;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
-import javax.annotation.PostConstruct;
 import java.util.Map;
 
 @Service
-public class SysLogService extends ServiceImpl<SysLogDao, SysLogEntity> implements LoopJob.Job {
+public class SysLogService extends ServiceImpl<SysLogDao, SysLogEntity> implements LoopJob.Job, InitFactory.Init {
 
     private Logger logger = LoggerFactory.getLogger(getClass());
 
-    @Autowired
-    private TableInit tableInit;
-
-    @PostConstruct
     public void init() {
         LoopJob.onOneWeek(this);
-        if (!tableInit.init)
-            return;
-
     }
 
     public PageUtils queryPage(Map<String, Object> params) {

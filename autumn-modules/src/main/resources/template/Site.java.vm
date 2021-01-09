@@ -1,0 +1,21 @@
+package ${package}.${moduleName}.site;
+
+import cn.org.autumn.annotation.PageAware;
+import cn.org.autumn.site.SiteFactory;
+import org.springframework.stereotype.Component;
+
+@Component
+public class ${upperModuleName}Site implements SiteFactory.Site {
+    public final static String siteId = "${moduleName}";
+    public final static String pack = "${moduleName}";
+
+    @Override
+    public String getId() {
+        return siteId;
+    }
+
+    @Override
+    public String getPack() {
+        return pack;
+    }
+}

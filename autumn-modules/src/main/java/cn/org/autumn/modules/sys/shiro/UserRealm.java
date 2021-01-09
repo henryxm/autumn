@@ -1,21 +1,4 @@
-/**
- * Copyright 2018 Autumn.org.cn http://www.autumn.org.cn
- * <p>
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not
- * use this file except in compliance with the License. You may obtain a copy of
- * the License at
- * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
- */
-
 package cn.org.autumn.modules.sys.shiro;
-
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -25,8 +8,9 @@ import java.util.Set;
 
 import cn.org.autumn.modules.oauth.service.ClientDetailsService;
 import cn.org.autumn.modules.oauth.store.ValueType;
+import cn.org.autumn.modules.sys.service.SysUserRoleService;
+import cn.org.autumn.modules.sys.service.SysUserService;
 import cn.org.autumn.modules.usr.service.UserProfileService;
-import cn.org.autumn.utils.Constant;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.dao.SysMenuDao;
 import cn.org.autumn.modules.sys.dao.SysUserDao;
@@ -55,6 +39,12 @@ public class UserRealm extends AuthorizingRealm {
     @Autowired
     UserProfileService userProfileService;
 
+    @Autowired
+    SysUserService sysUserService;
+
+    @Autowired
+    SysUserRoleService sysUserRoleService;
+
     /**
      * 授权(验证权限时调用)
      */
@@ -66,7 +56,7 @@ public class UserRealm extends AuthorizingRealm {
         List<String> permsList;
 
         //系统管理员，拥有最高权限
-        if (userId == Constant.SUPER_ADMIN) {
+        if (sysUserRoleService.isSystemAdministrator(user)) {
             List<SysMenuEntity> menuList = sysMenuDao.selectList(null);
             permsList = new ArrayList<>(menuList.size());
             for (SysMenuEntity menu : menuList) {
@@ -119,6 +109,13 @@ public class UserRealm extends AuthorizingRealm {
             throw new LockedAccountException("账号已被锁定,请联系管理员");
         }
         user = userProfileService.setProfile(user);
+        if (StringUtils.isNotEmpty(user.getParentUuid())) {
+            SysUserEntity parent = sysUserDao.getByUuid(user.getParentUuid());
+            if (null != parent) {
+                parent = userProfileService.setProfile(parent);
+                user.setParent(parent);
+            }
+        }
         SimpleAuthenticationInfo info = new SimpleAuthenticationInfo(user, user.getPassword(), ByteSource.Util.bytes(user.getSalt()), getName());
         return info;
     }

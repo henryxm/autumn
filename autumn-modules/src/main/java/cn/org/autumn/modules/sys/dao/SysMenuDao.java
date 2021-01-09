@@ -33,8 +33,12 @@ public interface SysMenuDao extends BaseMapper<SysMenuEntity> {
 	 * 根据父菜单，查询子菜单
 	 * @param parentId 父菜单ID
 	 */
+	@Deprecated
 	@Select("select * from sys_menu where parent_id = #{parentId} order by order_num asc")
 	List<SysMenuEntity> queryListParentId(@Param("parentId") Long parentId);
+
+	@Select("select * from sys_menu where parent_key = #{parentKey} order by order_num asc")
+	List<SysMenuEntity> getByParentKey(@Param("parentKey") String parentKey);
 	
 	/**
 	 * 获取不包含按钮的菜单列表

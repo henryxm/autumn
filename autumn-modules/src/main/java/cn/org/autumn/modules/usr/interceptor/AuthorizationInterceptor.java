@@ -3,6 +3,7 @@ package cn.org.autumn.modules.usr.interceptor;
 import cn.org.autumn.annotation.Login;
 import cn.org.autumn.exception.AException;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
+import cn.org.autumn.modules.sys.service.SysUserService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.usr.entity.UserTokenEntity;
 import cn.org.autumn.modules.usr.service.UserProfileService;
@@ -31,6 +32,9 @@ public class AuthorizationInterceptor extends HandlerInterceptorAdapter {
 
     @Autowired
     private UserProfileService userProfileService;
+
+    @Autowired
+    private SysUserService sysUserService;
 
     public static final String USER_KEY = "userId";
 
@@ -67,8 +71,21 @@ public class AuthorizationInterceptor extends HandlerInterceptorAdapter {
 
         //设置userId到request里，后续根据userId，获取用户信息
         request.setAttribute(USER_KEY, tokenEntity.getUserId());
-
         return true;
+    }
+
+    private SysUserEntity append(SysUserEntity sysUserEntity) {
+        if (null == sysUserEntity) {
+            if (null == sysUserEntity.getProfile())
+                sysUserEntity = userProfileService.setProfile(sysUserEntity);
+            if (null == sysUserEntity.getProfile()) {
+                sysUserEntity.setProfile(userProfileService.from(sysUserEntity, PASSWORD, null));
+            }
+            if (null == sysUserEntity.getProfile().getIcon()) {
+                sysUserEntity.getProfile().setIcon("");
+            }
+        }
+        return sysUserEntity;
     }
 
     public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, @Nullable ModelAndView modelAndView) throws Exception {
@@ -76,12 +93,11 @@ public class AuthorizationInterceptor extends HandlerInterceptorAdapter {
             ModelMap modelMap = modelAndView.getModelMap();
             if (ShiroUtils.isLogin()) {
                 SysUserEntity sysUserEntity = ShiroUtils.getUserEntity();
-                sysUserEntity = userProfileService.setProfile(sysUserEntity);
-                if(null == sysUserEntity.getProfile()){
-                    sysUserEntity.setProfile(userProfileService.from(sysUserEntity, PASSWORD, null));
-                }
-                if(null == sysUserEntity.getProfile().getIcon()){
-                    sysUserEntity.getProfile().setIcon("https://t.microhome.cn/adminlte/v3.1.0-rc/dist/img/user1-128x128.jpg");
+                sysUserEntity = append(sysUserEntity);
+                if (StringUtils.isNotEmpty(sysUserEntity.getParentUuid()) && null == sysUserEntity.getParent()) {
+                    SysUserEntity parent = sysUserService.getByUuid(sysUserEntity.getParentUuid());
+                    parent = append(parent);
+                    sysUserEntity.setParent(parent);
                 }
                 modelMap.put("user", sysUserEntity);
             }

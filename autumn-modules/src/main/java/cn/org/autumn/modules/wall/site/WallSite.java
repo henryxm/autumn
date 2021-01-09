@@ -30,5 +30,4 @@ public class WallSite implements SiteFactory.Site {
 
     @PageAware(login = true, resource = "modules/wall/urlblack")
     String urlblack;
-
 }

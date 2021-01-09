@@ -17,6 +17,7 @@
 package cn.org.autumn.modules.sys.dao;
 
 import cn.org.autumn.modules.sys.entity.SysDeptEntity;
+import cn.org.autumn.modules.sys.entity.SysRoleEntity;
 import com.baomidou.mybatisplus.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -37,4 +38,6 @@ public interface SysDeptDao extends BaseMapper<SysDeptEntity> {
     @Select("select dept_id from sys_dept where parent_id = #{value} and del_flag = 0")
     List<Long> queryDetpIdList(@Param("value") Long parentId);
 
+    @Select("select * from sys_dept where dept_Key = #{deptKey}")
+    SysDeptEntity getByDeptKey(@Param("deptKey") String deptKey);
 }

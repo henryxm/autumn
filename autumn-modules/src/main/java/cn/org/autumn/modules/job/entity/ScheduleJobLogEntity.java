@@ -30,7 +30,7 @@ import java.util.Date;
  * 定时任务日志
  */
 @TableName("sys_schedule_job_log")
-@Table(value = "sys_schedule_job_log", comment = "定时任务日志")
+@Table(value = "sys_schedule_job_log", comment = "任务日志")
 public class ScheduleJobLogEntity implements Serializable {
     private static final long serialVersionUID = 1L;
 
@@ -50,7 +50,7 @@ public class ScheduleJobLogEntity implements Serializable {
     /**
      * spring bean名称
      */
-    @Column(length = 200, comment = "spring bean名称")
+    @Column(length = 200, comment = "BeanName")
     private String beanName;
 
     /**
@@ -68,7 +68,7 @@ public class ScheduleJobLogEntity implements Serializable {
     /**
      * 任务状态    0：成功    1：失败
      */
-    @Column(type = DataType.INT,comment = "任务状态    0：成功    1：失败")
+    @Column(type = DataType.INT,comment = "任务状态,0:成功,1:失败")
     private Integer status;
 
     /**

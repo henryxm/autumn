@@ -1,47 +1,32 @@
-/**
- * Copyright 2018 Autumn.org.cn http://www.autumn.org.cn
- * <p>
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not
- * use this file except in compliance with the License. You may obtain a copy of
- * the License at
- * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
- */
-
 package cn.org.autumn.modules.sys.service;
 
-import cn.org.autumn.table.TableInit;
+import cn.org.autumn.modules.sys.entity.SysDeptEntity;
+import cn.org.autumn.modules.sys.entity.SysRoleEntity;
+import cn.org.autumn.site.InitFactory;
 import com.baomidou.mybatisplus.service.impl.ServiceImpl;
 import cn.org.autumn.modules.sys.dao.SysRoleDeptDao;
 import cn.org.autumn.modules.sys.entity.SysRoleDeptEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import javax.annotation.PostConstruct;
 import java.util.ArrayList;
 import java.util.List;
-
 
 /**
  * 角色与部门对应关系
  */
 @Service
-public class SysRoleDeptService extends ServiceImpl<SysRoleDeptDao, SysRoleDeptEntity> {
-    @Autowired
-    private TableInit tableInit;
+public class SysRoleDeptService extends ServiceImpl<SysRoleDeptDao, SysRoleDeptEntity> implements InitFactory.Init {
 
-    @PostConstruct
+    @Autowired
+    SysRoleService sysRoleService;
+
+    @Autowired
+    SysDeptService sysDeptService;
+
     public void init() {
-        if (!tableInit.init)
-            return;
     }
+
     @Transactional(rollbackFor = Exception.class)
     public void saveOrUpdate(Long roleId, List<Long> deptIdList) {
         //先删除角色与部门关系
@@ -51,13 +36,49 @@ public class SysRoleDeptService extends ServiceImpl<SysRoleDeptDao, SysRoleDeptE
             return;
         }
 
+        SysRoleEntity sysRoleEntity = sysRoleService.selectById(roleId);
+        if (null == sysRoleEntity)
+            return;
         //保存角色与菜单关系
         List<SysRoleDeptEntity> list = new ArrayList<>(deptIdList.size());
         for (Long deptId : deptIdList) {
+            SysDeptEntity sysDeptEntity = sysDeptService.selectById(deptId);
+            if (null == sysDeptEntity)
+                continue;
             SysRoleDeptEntity sysRoleDeptEntity = new SysRoleDeptEntity();
             sysRoleDeptEntity.setDeptId(deptId);
             sysRoleDeptEntity.setRoleId(roleId);
+            sysRoleDeptEntity.setDeptKey(sysDeptEntity.getDeptKey());
+            sysRoleDeptEntity.setRoleKey(sysRoleEntity.getRoleKey());
+            list.add(sysRoleDeptEntity);
+        }
+        this.insertBatch(list);
+    }
 
+    @Transactional(rollbackFor = Exception.class)
+    public void saveOrUpdate(String roleKey, List<String> deptKeys) {
+        //先删除角色与部门关系
+        deleteBatch(new String[]{roleKey});
+
+        if (deptKeys.size() == 0) {
+            return;
+        }
+
+        SysRoleEntity sysRoleEntity = sysRoleService.getByRoleKey(roleKey);
+        if (null == sysRoleEntity)
+            return;
+
+        //保存角色与菜单关系
+        List<SysRoleDeptEntity> list = new ArrayList<>(deptKeys.size());
+        for (String deptKey : deptKeys) {
+            SysDeptEntity sysDeptEntity = sysDeptService.getByDeptKey(deptKey);
+            if (null == sysDeptEntity)
+                continue;
+            SysRoleDeptEntity sysRoleDeptEntity = new SysRoleDeptEntity();
+            sysRoleDeptEntity.setDeptId(sysDeptEntity.getDeptId());
+            sysRoleDeptEntity.setDeptKey(sysDeptEntity.getDeptKey());
+            sysRoleDeptEntity.setRoleId(sysRoleEntity.getRoleId());
+            sysRoleDeptEntity.setRoleKey(sysRoleEntity.getRoleKey());
             list.add(sysRoleDeptEntity);
         }
         this.insertBatch(list);
@@ -67,7 +88,15 @@ public class SysRoleDeptService extends ServiceImpl<SysRoleDeptDao, SysRoleDeptE
         return baseMapper.queryDeptIdList(roleIds);
     }
 
+    public List<String> getDeptKeys(String[] roleKeys) {
+        return baseMapper.getDeptKeys(roleKeys);
+    }
+
     public int deleteBatch(Long[] roleIds) {
         return baseMapper.deleteBatch(roleIds);
+    }
+
+    public int deleteBatch(String[] roleKeys) {
+        return baseMapper.deleteByRoleKey(roleKeys);
     }
 }

@@ -1,7 +1,6 @@
 package cn.org.autumn.modules.wall.service;
 
-import cn.org.autumn.config.PostLoad;
-import cn.org.autumn.config.PostLoadFactory;
+import cn.org.autumn.site.LoadFactory;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.wall.entity.IpBlackEntity;
 import cn.org.autumn.modules.wall.service.gen.IpBlackServiceGen;
@@ -9,14 +8,12 @@ import cn.org.autumn.utils.IPUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.PostConstruct;
 import java.util.*;
 
 @Service
-public class IpBlackService extends IpBlackServiceGen implements PostLoad, LoopJob.Job {
+public class IpBlackService extends IpBlackServiceGen implements LoadFactory.Load, LoopJob.Job {
     private static final Logger log = LoggerFactory.getLogger(IpBlackService.class);
 
     /**
@@ -31,8 +28,6 @@ public class IpBlackService extends IpBlackServiceGen implements PostLoad, LoopJ
 
     private List<String> ipBlackSectionList;
 
-    @Autowired
-    PostLoadFactory postLoadFactory;
     /**
      * 一个ip地址统计刷新周期内，统计所有的ip地址及其访问的次数
      */
@@ -207,7 +202,6 @@ public class IpBlackService extends IpBlackServiceGen implements PostLoad, LoopJ
 
     public void init() {
         super.init();
-        postLoadFactory.register(this);
         LoopJob.onFiveSecond(this);
     }
 

@@ -1,29 +1,23 @@
 package cn.org.autumn.modules.wall.service;
 
-import cn.org.autumn.config.PostLoad;
-import cn.org.autumn.config.PostLoadFactory;
+import cn.org.autumn.site.LoadFactory;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.wall.entity.HostEntity;
 import cn.org.autumn.modules.wall.service.gen.HostServiceGen;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.PostConstruct;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 @Service
-public class HostService extends HostServiceGen implements PostLoad, LoopJob.Job {
+public class HostService extends HostServiceGen implements LoadFactory.Load, LoopJob.Job {
 
     private static final Logger log = LoggerFactory.getLogger(HostService.class);
-
-    @Autowired
-    PostLoadFactory postLoadFactory;
 
     /**
      * 黑名单列表
@@ -135,7 +129,6 @@ public class HostService extends HostServiceGen implements PostLoad, LoopJob.Job
 
     public void init() {
         super.init();
-        postLoadFactory.register(this);
         LoopJob.onOneMinute(this);
     }
 

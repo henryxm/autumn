@@ -1,10 +1,9 @@
 package cn.org.autumn.modules.test.service;
 
-import cn.org.autumn.modules.sys.entity.SysMenuEntity;
 import cn.org.autumn.modules.sys.service.SysMenuService;
-import cn.org.autumn.table.TableInit;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import cn.org.autumn.modules.lan.service.Language;
 import cn.org.autumn.modules.lan.service.LanguageService;
 
 /**
@@ -12,38 +11,53 @@ import cn.org.autumn.modules.lan.service.LanguageService;
  *
  * @author Shaohua Xu
  * @email henryxm@163.com
- * @date 2020-10
+ * @date 2021-01
  */
-
 @Service
 public class TestMenu {
 
-    public static final String test_menu = "test_menu";
+    public static final String test_menu = SysMenuService.getMenuKey("Test", "TestMenu");
+    public static final String parent_menu = "";
+    public static final String test_language = "test_menu";
 
     @Autowired
     protected SysMenuService sysMenuService;
 
     @Autowired
-    protected TableInit tableInit;
+    protected Language language;
 
     @Autowired
     protected LanguageService languageService;
 
+    protected String order(){
+        return "0";
+    }
+
+    protected String ico(){
+        return "fa-file-code-o";
+    }
+
     public void init() {
-        if (!tableInit.init)
-            return;
-        Long id = 0L;
-        String[] _m = new String[]
-                {null, "0", "测试", "", "", "0", "fa fa-address-card-o", "0", test_menu, test_menu + "_text"};
-        SysMenuEntity entity = sysMenuService.get(sysMenuService.find(_m));
-        if (null == entity) {
-            SysMenuEntity sysMenu = sysMenuService.from(_m);
-            sysMenuService.put(sysMenu);
-        }
+        sysMenuService.put(getMenus());
+        language.add(getLanguageItemArray());
         addLanguageColumnItem();
     }
 
     public void addLanguageColumnItem() {
-        languageService.addLanguageColumnItem(test_menu + "_text", "测试", "Testing");
+    }
+
+    public String[][] getMenus() {
+        String[][] menus = new String[][]{
+                //{0:菜单名字,1:URL,2:权限,3:菜单类型,4:ICON,5:排序,6:MenuKey,7:ParentKey,8:Language}
+                {"测试例子", "", "", "0", "fa " + ico(), order(), test_menu, parent_menu, test_language + "_text"},
+        };
+        return menus;
+    }
+
+    public String[][] getLanguageItemArray() {
+        String[][] items = new String[][]{
+                {test_language + "_text", "测试例子", "Test example"},
+        };
+        return items;
     }
 }

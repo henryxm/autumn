@@ -42,11 +42,17 @@ public class SysRoleDeptEntity implements Serializable {
 	@Column(length = 11,  type = DataType.BIGINT,comment = "角色ID")
 	private Long roleId;
 
+	@Column(length = 100, comment = "角色标识")
+	private String roleKey;
+
 	/**
 	 * 部门ID
 	 */
 	@Column(length = 11,  type = DataType.BIGINT,comment = "菜单ID")
 	private Long deptId;
+
+	@Column(length = 100, comment = "部门标识")
+	private String deptKey;
 
 	/**
 	 * 设置：
@@ -95,5 +101,20 @@ public class SysRoleDeptEntity implements Serializable {
 	public Long getDeptId() {
 		return deptId;
 	}
-	
+
+	public String getRoleKey() {
+		return roleKey;
+	}
+
+	public void setRoleKey(String roleKey) {
+		this.roleKey = roleKey;
+	}
+
+	public String getDeptKey() {
+		return deptKey;
+	}
+
+	public void setDeptKey(String deptKey) {
+		this.deptKey = deptKey;
+	}
 }
