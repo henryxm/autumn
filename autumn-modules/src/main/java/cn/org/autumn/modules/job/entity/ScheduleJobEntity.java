@@ -1,19 +1,3 @@
-/**
- * Copyright 2018 Autumn.org.cn http://www.autumn.org.cn
- * <p>
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not
- * use this file except in compliance with the License. You may obtain a copy of
- * the License at
- * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
- */
-
 package cn.org.autumn.modules.job.entity;
 
 import cn.org.autumn.table.annotation.Column;
@@ -50,8 +34,8 @@ public class ScheduleJobEntity implements Serializable {
     /**
      * spring bean名称
      */
-    @NotBlank(message = "bean名称不能为空")
-    @Column(length = 200, comment = "spring bean名称")
+    @NotBlank(message = "Bean名称不能为空")
+    @Column(length = 200, comment = "BeanName")
     private String beanName;
 
     /**
@@ -71,13 +55,13 @@ public class ScheduleJobEntity implements Serializable {
      * cron表达式
      */
     @NotBlank(message = "cron表达式不能为空")
-    @Column(length = 100, comment = "cron表达式")
+    @Column(length = 100, comment = "Cron表达式")
     private String cronExpression;
 
     /**
      * 任务状态
      */
-    @Column(type = DataType.INT, comment = "任务状态  0：正常  1：暂停")
+    @Column(type = DataType.INT, comment = "任务状态,0:正常,1:暂停")
     private Integer status;
 
     @Column(comment = "任务执行模式")

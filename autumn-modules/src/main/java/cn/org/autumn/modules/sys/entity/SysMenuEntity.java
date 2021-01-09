@@ -1,21 +1,4 @@
-/**
- * Copyright 2018 Autumn.org.cn http://www.autumn.org.cn
- * <p>
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not
- * use this file except in compliance with the License. You may obtain a copy of
- * the License at
- * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
- */
-
 package cn.org.autumn.modules.sys.entity;
-
 
 import cn.org.autumn.table.annotation.Column;
 import cn.org.autumn.table.annotation.Table;
@@ -51,12 +34,8 @@ public class SysMenuEntity implements Serializable {
     @Column(length = 50, comment = "MenuKey")
     private String menuKey;
 
-    /**
-     * 父菜单名称
-     */
-    @TableField(exist = false)
-    private String parentName;
-
+    @Column(length = 50, comment = "ParentKey")
+    private String parentKey;
 
     @Column(length = 50, comment = "语言标识")
     private String languageName;
@@ -66,6 +45,12 @@ public class SysMenuEntity implements Serializable {
      */
     @Column(length = 50, comment = "菜单名称")
     private String name;
+
+    /**
+     * 父菜单名称
+     */
+    @TableField(exist = false)
+    private String parentName;
 
     /**
      * 菜单URL
@@ -258,5 +243,13 @@ public class SysMenuEntity implements Serializable {
 
     public void setLanguageName(String languageName) {
         this.languageName = languageName;
+    }
+
+    public String getParentKey() {
+        return parentKey;
+    }
+
+    public void setParentKey(String parentKey) {
+        this.parentKey = parentKey;
     }
 }

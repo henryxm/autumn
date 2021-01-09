@@ -1,9 +1,10 @@
 package ${package}.${moduleName}.service.gen;
 
-import cn.org.autumn.table.TableInit;
+import cn.org.autumn.site.InitFactory;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import com.baomidou.mybatisplus.mapper.EntityWrapper;
 import com.baomidou.mybatisplus.plugins.Page;
@@ -13,9 +14,9 @@ import ${mainPath}.utils.Query;
 import cn.org.autumn.modules.${moduleName}.service.${upperModuleName}Menu;
 import ${package}.${moduleName}.dao.${className}Dao;
 import ${package}.${moduleName}.entity.${className}Entity;
-import javax.annotation.PostConstruct;
 import cn.org.autumn.modules.sys.entity.SysMenuEntity;
 import cn.org.autumn.modules.sys.service.SysMenuService;
+import cn.org.autumn.modules.lan.service.Language;
 import cn.org.autumn.modules.lan.service.LanguageService;
 
 /**
@@ -25,7 +26,7 @@ import cn.org.autumn.modules.lan.service.LanguageService;
  * @email ${email}
  * @date ${datetime}
  */
-public class ${className}ServiceGen extends ServiceImpl<${className}Dao, ${className}Entity> {
+public class ${className}ServiceGen extends ServiceImpl<${className}Dao, ${className}Entity> implements InitFactory.Init {
 
     protected static final String NULL = null;
 
@@ -36,7 +37,7 @@ public class ${className}ServiceGen extends ServiceImpl<${className}Dao, ${class
     protected SysMenuService sysMenuService;
 
     @Autowired
-    protected TableInit tableInit;
+    protected Language language;
 
     @Autowired
     protected LanguageService languageService;
@@ -46,7 +47,7 @@ public class ${className}ServiceGen extends ServiceImpl<${className}Dao, ${class
         EntityWrapper<${className}Entity> entityEntityWrapper = new EntityWrapper<>();
         Map<String,Object> condition = new HashMap<>();
         #foreach ($column in $columns)
-        if(params.containsKey("$column.attrname") && null !=params.get("$column.attrname") && StringUtils.isNotEmpty(params.get("$column.attrname").toString())) {
+        if(params.containsKey("$column.attrname") && null != params.get("$column.attrname") && StringUtils.isNotEmpty(params.get("$column.attrname").toString())) {
             condition.put("$column.name", params.get("$column.attrname"));
         }
         #end
@@ -68,61 +69,61 @@ public class ${className}ServiceGen extends ServiceImpl<${className}Dao, ${class
     * need implement it in the subclass.
     * @return
     */
-    public int parentMenu(){
+    public String parentMenu(){
         ${moduleName}Menu.init();
         SysMenuEntity sysMenuEntity = sysMenuService.getByMenuKey(${upperModuleName}Menu.${moduleName}_menu);
         if(null != sysMenuEntity)
-            return sysMenuEntity.getMenuId().intValue();
-        return ${moduleId};
+            return sysMenuEntity.getMenuKey();
+        return "";
     }
 
     public String ico(){
         return "fa-file-code-o";
     }
 
-    private String order(){
+    protected String order(){
         return String.valueOf(menuOrder());
     }
 
-    private String parent(){
-        return String.valueOf(parentMenu());
-    }
-
-    @PostConstruct
     public void init() {
-        if (!tableInit.init)
-            return;
-        Long id = 0L;
-        String[] _m = new String[]
-                {null, parent(), "${comment}", "modules/${moduleName}/${pathName}", "${moduleName}:${pathName}:list,${moduleName}:${pathName}:info,${moduleName}:${pathName}:save,${moduleName}:${pathName}:update,${moduleName}:${pathName}:delete", "1", "fa " + ico(), order(), "", "${moduleName}_${pathName}_table_comment"};
-        SysMenuEntity sysMenu = sysMenuService.from(_m);
-        SysMenuEntity entity = sysMenuService.get(sysMenu);
-        if (null == entity) {
-            int ret = sysMenuService.put(sysMenu);
-            if (1 == ret)
-                id = sysMenu.getMenuId();
-        } else
-            id = entity.getMenuId();
-        String[][] menus = new String[][]{
-                {null, id + "", "查看", null, "${moduleName}:${pathName}:list,${moduleName}:${pathName}:info", "2", null, order(), "", "sys_string_lookup"},
-                {null, id + "", "新增", null, "${moduleName}:${pathName}:save", "2", null, order(), "", "sys_string_add"},
-                {null, id + "", "修改", null, "${moduleName}:${pathName}:update", "2", null, order(), "", "sys_string_change"},
-                {null, id + "", "删除", null, "${moduleName}:${pathName}:delete", "2", null, order(), "", "sys_string_delete"},
-        };
-        for (String[] menu : menus) {
-            sysMenu = sysMenuService.from(menu);
-            entity = sysMenuService.get(sysMenu);
-            if (null == entity) {
-                sysMenuService.put(sysMenu);
-            }
-        }
+        sysMenuService.put(getMenus());
+        language.add(getLanguageItemArray());
+        language.add(getLanguageItems());
         addLanguageColumnItem();
+        language.add(getLanguageItemsInternal());
     }
 
-    public void addLanguageColumnItem() {
-        languageService.addLanguageColumnItem("${moduleName}_${pathName}_table_comment", "$comment");
-    #foreach ($column in $columns)
-        languageService.addLanguageColumnItem("${moduleName}_${pathName}_column_$column.name", "$column.comment");
-    #end
+    public String[][] getLanguageItemArray() {
+        return null;
+    }
+
+    public List<String[]> getLanguageItems() {
+        return null;
+    }
+
+    public void addLanguageColumnItem(){
+    }
+
+    protected String[][] getLanguageItemsInternal() {
+        String[][] items = new String[][]{
+                {"${moduleName}_${pathName}_table_comment", "$comment"},
+        #foreach ($column in $columns)
+                {"${moduleName}_${pathName}_column_$column.name", "$column.comment"},
+        #end
+        };
+        return items;
+    }
+
+    public String[][] getMenus() {
+        String menuKey = SysMenuService.getMenuKey("${upperModuleName}", "${className}");
+        String[][] menus = new String[][]{
+                //{0:菜单名字,1:URL,2:权限,3:菜单类型,4:ICON,5:排序,6:MenuKey,7:ParentKey,8:Language}
+                {"${comment}", "modules/${moduleName}/${pathName}", "${moduleName}:${pathName}:list,${moduleName}:${pathName}:info,${moduleName}:${pathName}:save,${moduleName}:${pathName}:update,${moduleName}:${pathName}:delete", "1", "fa " + ico(), order(), menuKey, parentMenu(), "${moduleName}_${pathName}_table_comment"},
+                {"查看", null, "${moduleName}:${pathName}:list,${moduleName}:${pathName}:info", "2", null, order(), SysMenuService.getMenuKey("${upperModuleName}", "${className}Info"), menuKey, "sys_string_lookup"},
+                {"新增", null, "${moduleName}:${pathName}:save", "2", null, order(), SysMenuService.getMenuKey("${upperModuleName}", "${className}Save"), menuKey, "sys_string_add"},
+                {"修改", null, "${moduleName}:${pathName}:update", "2", null, order(), SysMenuService.getMenuKey("${upperModuleName}", "${className}Update"), menuKey, "sys_string_change"},
+                {"删除", null, "${moduleName}:${pathName}:delete", "2", null, order(), SysMenuService.getMenuKey("${upperModuleName}", "${className}Delete"), menuKey, "sys_string_delete"},
+        };
+        return menus;
     }
 }

@@ -1,8 +1,7 @@
 package cn.org.autumn.modules.spm.service;
 
 import cn.org.autumn.annotation.PageAware;
-import cn.org.autumn.config.PostLoad;
-import cn.org.autumn.config.PostLoadFactory;
+import cn.org.autumn.site.LoadFactory;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.spm.entity.SuperPositionModelEntity;
 import cn.org.autumn.modules.spm.service.gen.SuperPositionModelServiceGen;
@@ -24,7 +23,7 @@ import java.lang.reflect.Field;
 import java.util.*;
 
 @Service
-public class SuperPositionModelService extends SuperPositionModelServiceGen implements PostLoad, LoopJob.Job, LoginFactory.Login {
+public class SuperPositionModelService extends SuperPositionModelServiceGen implements LoadFactory.Load, LoopJob.Job, LoginFactory.Login {
 
     private Logger logger = LoggerFactory.getLogger(getClass());
 
@@ -35,9 +34,6 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
 
     @Autowired
     SysConfigService sysConfigService;
-
-    @Autowired
-    PostLoadFactory postLoadFactory;
 
     @Autowired
     VisitLogService visitLogService;
@@ -87,7 +83,6 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
             spmListForUrlKey.put(superPositionModelEntity.getUrlKey(), superPositionModelEntity);
             spmListForResourceID.put(superPositionModelEntity.getResourceId(), superPositionModelEntity);
         }
-
     }
 
     public void site() {
@@ -279,7 +274,6 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
 
     public void init() {
         super.init();
-        postLoadFactory.register(this);
         LoopJob.onOneMinute(this);
     }
 

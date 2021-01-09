@@ -1,21 +1,4 @@
-/**
- * Copyright 2018 Autumn.org.cn http://www.autumn.org.cn
- * <p>
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not
- * use this file except in compliance with the License. You may obtain a copy of
- * the License at
- * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
- */
-
 package cn.org.autumn.modules.sys.entity;
-
 
 import cn.org.autumn.table.annotation.Column;
 import cn.org.autumn.table.annotation.Table;
@@ -37,138 +20,168 @@ import java.util.List;
 @TableName("sys_role")
 @Table(value = "sys_role", comment = "角色")
 public class SysRoleEntity implements Serializable {
-	private static final long serialVersionUID = 1L;
-	
-	/**
-	 * 角色ID
-	 */
-	@TableId
-	@Column(isKey = true, type = DataType.BIGINT, length = 20, isNull = false, isAutoIncrement = true, comment = "id")
-	private Long roleId;
+    private static final long serialVersionUID = 1L;
 
-	/**
-	 * 角色名称
-	 */
-	@NotBlank(message="角色名称不能为空")
-	@Column(length = 100, comment = "角色名称")
-	private String roleName;
+    /**
+     * 角色ID
+     */
+    @TableId
+    @Column(isKey = true, type = DataType.BIGINT, length = 20, isNull = false, isAutoIncrement = true, comment = "id")
+    private Long roleId;
 
-	/**
-	 * 备注
-	 */
-	@Column(length = 100, comment = "备注")
-	private String remark;
+    /**
+     * 角色名称
+     */
+    @NotBlank(message = "角色名称不能为空")
+    @Column(length = 100, comment = "角色名称")
+    private String roleName;
 
-	/**
-	 * 部门ID
-	 */
-	@NotNull(message="部门不能为空")
-	@Column(length = 20, type = DataType.INT, comment = "部门ID")
-	private Long deptId;
+    @NotBlank(message = "角色标识不能为空")
+    @Column(length = 100, comment = "角色标识")
+    private String roleKey;
 
-	/**
-	 * 部门名称
-	 */
-	@TableField(exist=false)
-	private String deptName;
+    /**
+     * 备注
+     */
+    @Column(length = 100, comment = "备注")
+    private String remark;
 
-	@TableField(exist=false)
-	private List<Long> menuIdList;
-	@TableField(exist=false)
-	private List<Long> deptIdList;
-	
-	/**
-	 * 创建时间
-	 */
-	@JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
-	@Column( type = DataType.DATETIME, comment = "创建时间")
-	private Date createTime;
+    /**
+     * 部门ID
+     */
+    @NotNull(message = "部门不能为空")
+    @Column(length = 20, type = DataType.INT, comment = "部门ID")
+    private Long deptId;
 
-	/**
-	 * 设置：
-	 * @param roleId 
-	 */
-	public void setRoleId(Long roleId) {
-		this.roleId = roleId;
-	}
+    @Column(length = 100, comment = "部门标识")
+    private String deptKey;
 
-	/**
-	 * 获取：
-	 * @return Long
-	 */
-	public Long getRoleId() {
-		return roleId;
-	}
-	
-	/**
-	 * 设置：角色名称
-	 * @param roleName 角色名称
-	 */
-	public void setRoleName(String roleName) {
-		this.roleName = roleName;
-	}
+    /**
+     * 部门名称
+     */
+    @TableField(exist = false)
+    private String deptName;
 
-	/**
-	 * 获取：角色名称
-	 * @return String
-	 */
-	public String getRoleName() {
-		return roleName;
-	}
-	
-	/**
-	 * 设置：备注
-	 * @param remark 备注
-	 */
-	public void setRemark(String remark) {
-		this.remark = remark;
-	}
+    @TableField(exist = false)
+    private List<Long> menuIdList;
 
-	/**
-	 * 获取：备注
-	 * @return String
-	 */
-	public String getRemark() {
-		return remark;
-	}
+    @TableField(exist = false)
+    private List<Long> deptIdList;
 
-	public Date getCreateTime() {
-		return createTime;
-	}
+    /**
+     * 创建时间
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    @Column(type = DataType.DATETIME, comment = "创建时间")
+    private Date createTime;
 
-	public void setCreateTime(Date createTime) {
-		this.createTime = createTime;
-	}
+    /**
+     * 设置：
+     *
+     * @param roleId
+     */
+    public void setRoleId(Long roleId) {
+        this.roleId = roleId;
+    }
 
-	public List<Long> getMenuIdList() {
-		return menuIdList;
-	}
+    /**
+     * 获取：
+     *
+     * @return Long
+     */
+    public Long getRoleId() {
+        return roleId;
+    }
 
-	public void setMenuIdList(List<Long> menuIdList) {
-		this.menuIdList = menuIdList;
-	}
+    /**
+     * 设置：角色名称
+     *
+     * @param roleName 角色名称
+     */
+    public void setRoleName(String roleName) {
+        this.roleName = roleName;
+    }
 
-	public Long getDeptId() {
-		return deptId;
-	}
+    /**
+     * 获取：角色名称
+     *
+     * @return String
+     */
+    public String getRoleName() {
+        return roleName;
+    }
 
-	public void setDeptId(Long deptId) {
-		this.deptId = deptId;
-	}
+    /**
+     * 设置：备注
+     *
+     * @param remark 备注
+     */
+    public void setRemark(String remark) {
+        this.remark = remark;
+    }
 
-	public String getDeptName() {
-		return deptName;
-	}
+    /**
+     * 获取：备注
+     *
+     * @return String
+     */
+    public String getRemark() {
+        return remark;
+    }
 
-	public void setDeptName(String deptName) {
-		this.deptName = deptName;
-	}
+    public Date getCreateTime() {
+        return createTime;
+    }
 
-	public List<Long> getDeptIdList() {
-		return deptIdList;
-	}
+    public void setCreateTime(Date createTime) {
+        this.createTime = createTime;
+    }
 
-	public void setDeptIdList(List<Long> deptIdList) {
-		this.deptIdList = deptIdList;
-	}
+    public List<Long> getMenuIdList() {
+        return menuIdList;
+    }
+
+    public void setMenuIdList(List<Long> menuIdList) {
+        this.menuIdList = menuIdList;
+    }
+
+    public Long getDeptId() {
+        return deptId;
+    }
+
+    public void setDeptId(Long deptId) {
+        this.deptId = deptId;
+    }
+
+    public String getDeptName() {
+        return deptName;
+    }
+
+    public void setDeptName(String deptName) {
+        this.deptName = deptName;
+    }
+
+    public List<Long> getDeptIdList() {
+        return deptIdList;
+    }
+
+    public void setDeptIdList(List<Long> deptIdList) {
+        this.deptIdList = deptIdList;
+    }
+
+    public String getRoleKey() {
+        return roleKey;
+    }
+
+    public void setRoleKey(String roleKey) {
+        this.roleKey = roleKey;
+    }
+
+    public String getDeptKey() {
+        return deptKey;
+    }
+
+    public void setDeptKey(String deptKey) {
+        this.deptKey = deptKey;
+    }
 }

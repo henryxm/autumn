@@ -139,6 +139,29 @@ var vm = new Vue({
 				});
 			});
 		},
+		copy: function (event) {
+			var ids = getSelectedRows();
+			if(ids == null){
+				return ;
+			}
+			confirm('${lang.sys_string_are_sure_to_copy}？', function(){
+				$.ajax({
+					type: "POST",
+					url: baseURL + "gen/gentype/copy",
+					contentType: "application/json",
+					data: JSON.stringify(ids),
+					success: function(r){
+						if(r.code == 0){
+							alert('${lang.sys_string_successful}', function(index){
+								$("#jqGrid").trigger("reloadGrid");
+							});
+						}else{
+							alert(r.msg);
+						}
+					}
+				});
+			});
+		},
 		getInfo: function(id){
 			$.get(baseURL + "gen/gentype/info/"+id, function(r){
                 vm.genType = r.genType;

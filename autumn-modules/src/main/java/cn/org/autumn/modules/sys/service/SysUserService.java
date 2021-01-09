@@ -2,7 +2,7 @@ package cn.org.autumn.modules.sys.service;
 
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.sys.shiro.SuperPasswordToken;
-import cn.org.autumn.table.TableInit;
+import cn.org.autumn.site.InitFactory;
 import cn.org.autumn.utils.Uuid;
 import com.baomidou.mybatisplus.mapper.EntityWrapper;
 import com.baomidou.mybatisplus.plugins.Page;
@@ -21,22 +21,26 @@ import org.apache.shiro.authc.AuthenticationToken;
 import org.apache.shiro.authc.UsernamePasswordToken;
 import org.apache.shiro.subject.Subject;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.annotation.PostConstruct;
 import java.util.*;
+
+import static cn.org.autumn.modules.sys.service.SysDeptService.Department_System_Administrator;
+import static cn.org.autumn.modules.sys.service.SysRoleService.Role_System_Administrator;
 
 /**
  * 系统用户
  */
 @Service
-public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> implements LoopJob.Job {
+public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> implements LoopJob.Job, InitFactory.Init {
 
     public static String ADMIN = "admin";
     public static String PASSWORD = "admin";
 
-    static Map<String, SysUserEntity> sync = new HashMap<>();
+    static Map<String, SysUserEntity> sync = new LinkedHashMap<>();
+    static Map<String, Integer> hashUser = new HashMap<>();
 
     @Autowired
     private SysUserRoleService sysUserRoleService;
@@ -47,28 +51,29 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
     private SysUserDao sysUserDao;
 
     @Autowired
-    private TableInit tableInit;
-
-    @Autowired
     private SysConfigService sysConfigService;
 
     public List<Long> queryAllMenuId(Long userId) {
         return baseMapper.queryAllMenuId(userId);
     }
 
-    @PostConstruct
+    @Order(10)
     public void init() {
-        if (!tableInit.init)
-            return;
         SysUserEntity admin = new SysUserEntity();
         admin.setUsername(ADMIN);
         SysUserEntity current = sysUserDao.selectOne(admin);
         if (null == current) {
-            current = newUser(ADMIN, Uuid.uuid(), PASSWORD);
-            current.setDeptId(1L);
+            List<String> roleKeys = new ArrayList<>();
+            roleKeys.add(Role_System_Administrator);
+            current = newUser(ADMIN, Uuid.uuid(), PASSWORD, roleKeys);
+            SysDeptEntity sysDeptEntity = sysDeptService.getByDeptKey(Department_System_Administrator);
+            if (null != sysDeptEntity) {
+                current.setDeptId(sysDeptEntity.getDeptId());
+                current.setDeptKey(sysDeptEntity.getDeptKey());
+            }
             updateById(current);
         }
-        LoopJob.onOneMinute(this);
+        LoopJob.onTenSecond(this);
     }
 
     @DataFilter(subDept = true, user = false)
@@ -103,15 +108,20 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
             user.setUuid(Uuid.uuid());
         this.insert(user);
         //保存用户与角色关系
-        sysUserRoleService.saveOrUpdate(user.getUserId(), user.getRoleIdList());
+        if (null != user.getRoleKeys() && user.getRoleKeys().size() > 0)
+            sysUserRoleService.saveOrUpdate(user.getUuid(), user.getRoleKeys());
+        else {
+            sysUserRoleService.saveOrUpdate(user.getUserId(), user.getRoleIdList());
+        }
     }
 
-    public SysUserEntity newUser(String username, String uuid, String password) {
+    public SysUserEntity newUser(String username, String uuid, String password, List<String> roleKeys) {
         SysUserEntity sysUserEntity = new SysUserEntity();
         sysUserEntity.setUuid(uuid);
         sysUserEntity.setUsername(username);
         sysUserEntity.setPassword(password);
         sysUserEntity.setStatus(1);
+        sysUserEntity.setRoleKeys(roleKeys);
         save(sysUserEntity);
         return sysUserEntity;
     }
@@ -120,7 +130,10 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
     public void update(SysUserEntity user) {
         updateNoRole(user);
         //保存用户与角色关系
-        sysUserRoleService.saveOrUpdate(user.getUserId(), user.getRoleIdList());
+        if (null != user.getRoleKeys() && user.getRoleKeys().size() > 0)
+            sysUserRoleService.saveOrUpdate(user.getUuid(), user.getRoleKeys());
+        else
+            sysUserRoleService.saveOrUpdate(user.getUserId(), user.getRoleIdList());
     }
 
     public void updateNoRole(SysUserEntity user) {
@@ -175,9 +188,25 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
             subject.login(token);
     }
 
+    public SysUserEntity setParent(SysUserEntity sysUserEntity) {
+        if (null != sysUserEntity && null == sysUserEntity.getParent() && StringUtils.isNotEmpty(sysUserEntity.getParentUuid())) {
+            SysUserEntity parent = getByUuid(sysUserEntity.getParentUuid());
+            sysUserEntity.setParent(parent);
+        }
+        return sysUserEntity;
+    }
+
     public void copy(SysUserEntity sysUserEntity) {
-        if (null != sysUserEntity && StringUtils.isNotEmpty(sysUserEntity.getUuid()))
+        if (null != sysUserEntity && StringUtils.isNotEmpty(sysUserEntity.getUuid())) {
             sync.put(sysUserEntity.getUuid(), sysUserEntity);
+        }
+    }
+
+    private boolean checkNeedUpdate(SysUserEntity sysUserEntity) {
+        Integer integer = hashUser.get(sysUserEntity.getUuid());
+        if (null == integer || integer != sysUserEntity.hashCode())
+            return true;
+        return false;
     }
 
     @Override
@@ -187,7 +216,12 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
             while (iterator.hasNext()) {
                 Map.Entry<String, SysUserEntity> entity = iterator.next();
                 SysUserEntity sysUserEntity = entity.getValue();
+
+                if (!checkNeedUpdate(sysUserEntity))
+                    continue;
+
                 SysUserEntity ex = getByUuid(sysUserEntity.getUuid());
+
                 if (null == ex || ex.hashCode() != sysUserEntity.hashCode()) {
                     if (null != ex) {
                         sysUserEntity.setDeptId(ex.getDeptId());
@@ -196,16 +230,33 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
                         /**
                          * 设定缺省的部门ID
                          */
-                        sysUserEntity.setDeptId(sysConfigService.getDefaultDepartId().longValue());
+                        String dk = sysConfigService.getDefaultDepartKey();
+                        SysDeptEntity sysDeptEntity = sysDeptService.getByDeptKey(dk);
+                        if (null != sysDeptEntity) {
+                            sysUserEntity.setDeptId(sysDeptEntity.getDeptId());
+                            sysUserEntity.setDeptKey(sysDeptEntity.getDeptKey());
+                        }
+
                         /**
                          * 设定缺省的角色
                          */
-                        sysUserRoleService.saveOrUpdate(sysUserEntity.getUserId(), sysConfigService.getDefaultRoleIds());
+                        sysUserRoleService.saveOrUpdate(sysUserEntity.getUuid(), sysConfigService.getDefaultRoleKeys());
                     }
                     insertOrUpdate(sysUserEntity);
                 }
+                hashUser.put(sysUserEntity.getUuid(), sysUserEntity.hashCode());
                 iterator.remove();
             }
         }
+        /**
+         * 清理缓存，避免过度消耗内存
+         */
+        if (hashUser.size() > 10000) {
+            hashUser.clear();
+        }
+    }
+
+    public boolean isSystemAdministrator(SysUserEntity sysUserEntity) {
+        return sysUserRoleService.isSystemAdministrator(sysUserEntity);
     }
 }

@@ -1,22 +1,6 @@
-/**
- * Copyright 2018 Autumn.org.cn http://www.autumn.org.cn
- * <p>
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not
- * use this file except in compliance with the License. You may obtain a copy of
- * the License at
- * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
- */
-
 package cn.org.autumn.modules.sys.service;
 
-import cn.org.autumn.table.TableInit;
+import cn.org.autumn.site.InitFactory;
 import com.baomidou.mybatisplus.mapper.EntityWrapper;
 import com.baomidou.mybatisplus.plugins.Page;
 import com.baomidou.mybatisplus.service.impl.ServiceImpl;
@@ -29,20 +13,18 @@ import cn.org.autumn.modules.sys.entity.SysDeptEntity;
 import cn.org.autumn.modules.sys.entity.SysRoleEntity;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.annotation.PostConstruct;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.Map;
 
+import static cn.org.autumn.modules.sys.service.SysDeptService.Department_System_Administrator;
 
-/**
- * 角色
- */
 @Service
-public class SysRoleService extends ServiceImpl<SysRoleDao, SysRoleEntity> {
+public class SysRoleService extends ServiceImpl<SysRoleDao, SysRoleEntity> implements InitFactory.Init {
     @Autowired
     private SysRoleMenuService sysRoleMenuService;
     @Autowired
@@ -51,13 +33,46 @@ public class SysRoleService extends ServiceImpl<SysRoleDao, SysRoleEntity> {
     private SysUserRoleService sysUserRoleService;
     @Autowired
     private SysDeptService sysDeptService;
-    @Autowired
-    private TableInit tableInit;
 
-    @PostConstruct
+    private static final String NULL = null;
+    public static final String Role_System_Administrator = "Role:System:Administrator";
+
+    @Order(0)
     public void init() {
-        if (!tableInit.init)
-            return;
+        String[][] mapping = new String[][]{
+                //{角色标识,角色名字,角色部门,角色备注}
+                {Role_System_Administrator, "系统超级管理员", Department_System_Administrator, "系统超级管理员角色默认拥有系统一切角色功能权限，该角色随系统启动后自动初始化，不能删除"},
+        };
+        for (String[] map : mapping) {
+            SysRoleEntity sysRoleEntity = new SysRoleEntity();
+            String temp = map[0];
+            if (NULL != temp)
+                sysRoleEntity.setRoleKey(temp);
+            SysRoleEntity entity = baseMapper.getByRoleKey(temp);
+            if (null == entity) {
+                temp = map[1];
+                if (NULL != temp)
+                    sysRoleEntity.setRoleName(temp);
+                temp = map[2];
+                if (NULL != temp) {
+                    SysDeptEntity sysDeptEntity = sysDeptService.getByDeptKey(temp);
+                    Long deptId = 0L;
+                    if (null != sysDeptEntity)
+                        deptId = sysDeptEntity.getDeptId();
+                    sysRoleEntity.setDeptId(deptId);
+                    sysRoleEntity.setDeptKey(temp);
+                }
+                temp = map[3];
+                if (NULL != temp)
+                    sysRoleEntity.setRemark(temp);
+                sysRoleEntity.setCreateTime(new Date());
+                insert(sysRoleEntity);
+            }
+        }
+    }
+
+    public SysRoleEntity getByRoleKey(String roleKey) {
+        return baseMapper.getByRoleKey(roleKey);
     }
 
     @DataFilter(subDept = true, user = false)
@@ -77,7 +92,6 @@ public class SysRoleService extends ServiceImpl<SysRoleDao, SysRoleEntity> {
                 sysRoleEntity.setDeptName(sysDeptEntity.getName());
             }
         }
-
         return new PageUtils(page);
     }
 
@@ -108,16 +122,11 @@ public class SysRoleService extends ServiceImpl<SysRoleDao, SysRoleEntity> {
     public void deleteBatch(Long[] roleIds) {
         //删除角色
         this.deleteBatchIds(Arrays.asList(roleIds));
-
         //删除角色与菜单关联
         sysRoleMenuService.deleteBatch(roleIds);
-
         //删除角色与部门关联
         sysRoleDeptService.deleteBatch(roleIds);
-
         //删除角色与用户关联
         sysUserRoleService.deleteBatch(roleIds);
     }
-
-
 }

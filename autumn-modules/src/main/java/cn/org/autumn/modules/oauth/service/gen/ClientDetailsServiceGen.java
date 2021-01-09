@@ -1,9 +1,10 @@
 package cn.org.autumn.modules.oauth.service.gen;
 
-import cn.org.autumn.table.TableInit;
+import cn.org.autumn.site.InitFactory;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import com.baomidou.mybatisplus.mapper.EntityWrapper;
 import com.baomidou.mybatisplus.plugins.Page;
@@ -13,9 +14,9 @@ import cn.org.autumn.utils.Query;
 import cn.org.autumn.modules.oauth.service.OauthMenu;
 import cn.org.autumn.modules.oauth.dao.ClientDetailsDao;
 import cn.org.autumn.modules.oauth.entity.ClientDetailsEntity;
-import javax.annotation.PostConstruct;
 import cn.org.autumn.modules.sys.entity.SysMenuEntity;
 import cn.org.autumn.modules.sys.service.SysMenuService;
+import cn.org.autumn.modules.lan.service.Language;
 import cn.org.autumn.modules.lan.service.LanguageService;
 
 /**
@@ -23,9 +24,9 @@ import cn.org.autumn.modules.lan.service.LanguageService;
  *
  * @author Shaohua Xu
  * @email henryxm@163.com
- * @date 2020-11
+ * @date 2021-01
  */
-public class ClientDetailsServiceGen extends ServiceImpl<ClientDetailsDao, ClientDetailsEntity> {
+public class ClientDetailsServiceGen extends ServiceImpl<ClientDetailsDao, ClientDetailsEntity> implements InitFactory.Init {
 
     protected static final String NULL = null;
 
@@ -36,7 +37,7 @@ public class ClientDetailsServiceGen extends ServiceImpl<ClientDetailsDao, Clien
     protected SysMenuService sysMenuService;
 
     @Autowired
-    protected TableInit tableInit;
+    protected Language language;
 
     @Autowired
     protected LanguageService languageService;
@@ -108,12 +109,12 @@ public class ClientDetailsServiceGen extends ServiceImpl<ClientDetailsDao, Clien
     * need implement it in the subclass.
     * @return
     */
-    public int parentMenu(){
+    public String parentMenu(){
         oauthMenu.init();
         SysMenuEntity sysMenuEntity = sysMenuService.getByMenuKey(OauthMenu.oauth_menu);
         if(null != sysMenuEntity)
-            return sysMenuEntity.getMenuId().intValue();
-        return 90;
+            return sysMenuEntity.getMenuKey();
+        return "";
     }
 
     public String ico(){
@@ -124,57 +125,57 @@ public class ClientDetailsServiceGen extends ServiceImpl<ClientDetailsDao, Clien
         return String.valueOf(menuOrder());
     }
 
-    private String parent(){
-        return String.valueOf(parentMenu());
-    }
-
-    @PostConstruct
     public void init() {
-        if (!tableInit.init)
-            return;
-        Long id = 0L;
-        String[] _m = new String[]
-                {null, parent(), "客户端详情", "modules/oauth/clientdetails", "oauth:clientdetails:list,oauth:clientdetails:info,oauth:clientdetails:save,oauth:clientdetails:update,oauth:clientdetails:delete", "1", "fa " + ico(), order(), "", "oauth_clientdetails_table_comment"};
-        SysMenuEntity sysMenu = sysMenuService.from(_m);
-        SysMenuEntity entity = sysMenuService.get(sysMenu);
-        if (null == entity) {
-            int ret = sysMenuService.put(sysMenu);
-            if (1 == ret)
-                id = sysMenu.getMenuId();
-        } else
-            id = entity.getMenuId();
-        String[][] menus = new String[][]{
-                {null, id + "", "查看", null, "oauth:clientdetails:list,oauth:clientdetails:info", "2", null, order(), "", "sys_string_lookup"},
-                {null, id + "", "新增", null, "oauth:clientdetails:save", "2", null, order(), "", "sys_string_add"},
-                {null, id + "", "修改", null, "oauth:clientdetails:update", "2", null, order(), "", "sys_string_change"},
-                {null, id + "", "删除", null, "oauth:clientdetails:delete", "2", null, order(), "", "sys_string_delete"},
-        };
-        for (String[] menu : menus) {
-            sysMenu = sysMenuService.from(menu);
-            entity = sysMenuService.get(sysMenu);
-            if (null == entity) {
-                sysMenuService.put(sysMenu);
-            }
-        }
+        sysMenuService.put(getMenus());
+        language.add(getLanguageItemArray());
+        language.add(getLanguageItems());
         addLanguageColumnItem();
+        language.add(getLanguageItemsInternal());
     }
 
-    public void addLanguageColumnItem() {
-        languageService.addLanguageColumnItem("oauth_clientdetails_table_comment", "客户端详情");
-        languageService.addLanguageColumnItem("oauth_clientdetails_column_id", "id");
-        languageService.addLanguageColumnItem("oauth_clientdetails_column_resource_ids", "资源ID");
-        languageService.addLanguageColumnItem("oauth_clientdetails_column_scope", "范围");
-        languageService.addLanguageColumnItem("oauth_clientdetails_column_grant_types", "授权类型");
-        languageService.addLanguageColumnItem("oauth_clientdetails_column_roles", "角色");
-        languageService.addLanguageColumnItem("oauth_clientdetails_column_trusted", "是否可信");
-        languageService.addLanguageColumnItem("oauth_clientdetails_column_archived", "是否归档");
-        languageService.addLanguageColumnItem("oauth_clientdetails_column_create_time", "创建时间");
-        languageService.addLanguageColumnItem("oauth_clientdetails_column_client_id", "客户端ID");
-        languageService.addLanguageColumnItem("oauth_clientdetails_column_client_secret", "客户端密匙");
-        languageService.addLanguageColumnItem("oauth_clientdetails_column_client_name", "客户端名字");
-        languageService.addLanguageColumnItem("oauth_clientdetails_column_client_uri", "客户端URI");
-        languageService.addLanguageColumnItem("oauth_clientdetails_column_client_icon_uri", "客户端图标URI");
-        languageService.addLanguageColumnItem("oauth_clientdetails_column_redirect_uri", "重定向地址");
-        languageService.addLanguageColumnItem("oauth_clientdetails_column_description", "描述信息");
+    public String[][] getLanguageItemArray() {
+        return null;
+    }
+
+    public List<String[]> getLanguageItems() {
+        return null;
+    }
+
+    public void addLanguageColumnItem(){
+    }
+
+    public String[][] getLanguageItemsInternal() {
+        String[][] items = new String[][]{
+                {"oauth_clientdetails_table_comment", "客户端详情"},
+                {"oauth_clientdetails_column_id", "id"},
+                {"oauth_clientdetails_column_resource_ids", "资源ID"},
+                {"oauth_clientdetails_column_scope", "范围"},
+                {"oauth_clientdetails_column_grant_types", "授权类型"},
+                {"oauth_clientdetails_column_roles", "角色"},
+                {"oauth_clientdetails_column_trusted", "是否可信"},
+                {"oauth_clientdetails_column_archived", "是否归档"},
+                {"oauth_clientdetails_column_create_time", "创建时间"},
+                {"oauth_clientdetails_column_client_id", "客户端ID"},
+                {"oauth_clientdetails_column_client_secret", "客户端密匙"},
+                {"oauth_clientdetails_column_client_name", "客户端名字"},
+                {"oauth_clientdetails_column_client_uri", "客户端URI"},
+                {"oauth_clientdetails_column_client_icon_uri", "客户端图标URI"},
+                {"oauth_clientdetails_column_redirect_uri", "重定向地址"},
+                {"oauth_clientdetails_column_description", "描述信息"},
+        };
+        return items;
+    }
+
+    public String[][] getMenus() {
+        String menuKey = SysMenuService.getMenuKey("Oauth", "ClientDetails");
+        String[][] menus = new String[][]{
+                //{0:菜单名字,1:URL,2:权限,3:菜单类型,4:ICON,5:排序,6:MenuKey,7:ParentKey,8:Language}
+                {"客户端详情", "modules/oauth/clientdetails", "oauth:clientdetails:list,oauth:clientdetails:info,oauth:clientdetails:save,oauth:clientdetails:update,oauth:clientdetails:delete", "1", "fa " + ico(), order(), menuKey, parentMenu(), "oauth_clientdetails_table_comment"},
+                {"查看", null, "oauth:clientdetails:list,oauth:clientdetails:info", "2", null, order(), SysMenuService.getMenuKey("Oauth", "ClientDetailsInfo"), menuKey, "sys_string_lookup"},
+                {"新增", null, "oauth:clientdetails:save", "2", null, order(), SysMenuService.getMenuKey("Oauth", "ClientDetailsSave"), menuKey, "sys_string_add"},
+                {"修改", null, "oauth:clientdetails:update", "2", null, order(), SysMenuService.getMenuKey("Oauth", "ClientDetailsUpdate"), menuKey, "sys_string_change"},
+                {"删除", null, "oauth:clientdetails:delete", "2", null, order(), SysMenuService.getMenuKey("Oauth", "ClientDetailsDelete"), menuKey, "sys_string_delete"},
+        };
+        return menus;
     }
 }

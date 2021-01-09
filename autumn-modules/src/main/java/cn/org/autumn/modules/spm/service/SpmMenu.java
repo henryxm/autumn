@@ -1,48 +1,63 @@
 package cn.org.autumn.modules.spm.service;
 
-import cn.org.autumn.modules.sys.entity.SysMenuEntity;
 import cn.org.autumn.modules.sys.service.SysMenuService;
-import cn.org.autumn.table.TableInit;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import cn.org.autumn.modules.lan.service.Language;
 import cn.org.autumn.modules.lan.service.LanguageService;
 
 /**
- * 超级位置模型
+ * 访问统计
  *
  * @author Shaohua Xu
  * @email henryxm@163.com
- * @date 2020-11
+ * @date 2021-01
  */
 @Service
 public class SpmMenu {
 
-    public static final String spm_menu = "spm_menu";
+    public static final String spm_menu = SysMenuService.getMenuKey("Spm", "SpmMenu");
+    public static final String parent_menu = "";
+    public static final String spm_language = "spm_menu";
 
     @Autowired
     protected SysMenuService sysMenuService;
 
     @Autowired
-    protected TableInit tableInit;
+    protected Language language;
 
     @Autowired
     protected LanguageService languageService;
 
+    protected String order() {
+        return "888888";
+    }
+
+    protected String ico() {
+        return "fa-dot-circle-o";
+    }
+
     public void init() {
-        if (!tableInit.init)
-            return;
-        Long id = 0L;
-        String[] _m = new String[]
-                {null, "0" , "超级模型" , "" , "" , "0" , "fa fa-dot-circle-o" , "888888" , spm_menu, spm_menu + "_text"};
-        SysMenuEntity entity = sysMenuService.get(sysMenuService.find(_m));
-        if (null == entity) {
-            SysMenuEntity sysMenu = sysMenuService.from(_m);
-            sysMenuService.put(sysMenu);
-        }
+        sysMenuService.put(getMenus());
+        language.add(getLanguageItemArray());
         addLanguageColumnItem();
     }
 
     public void addLanguageColumnItem() {
-        languageService.addLanguageColumnItem(spm_menu + "_text", "超级模型","Super model");
+    }
+
+    public String[][] getMenus() {
+        String[][] menus = new String[][]{
+                //{0:菜单名字,1:URL,2:权限,3:菜单类型,4:ICON,5:排序,6:MenuKey,7:ParentKey,8:Language}
+                {"超级模型", "", "", "0", "fa " + ico(), order(), spm_menu, parent_menu, spm_language + "_text"},
+        };
+        return menus;
+    }
+
+    public String[][] getLanguageItemArray() {
+        String[][] items = new String[][]{
+                {spm_language + "_text", "超级模型", "Super model"},
+        };
+        return items;
     }
 }

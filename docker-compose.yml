@@ -8,7 +8,7 @@ services:
     ports:
       - "80:80"
     volumes:
-      - "./storage/web/tmp:/tmp"
+      - "./.storage/web/tmp:/tmp"
     depends_on:
       - db
       - redis
@@ -26,8 +26,8 @@ services:
     ports:
       - '3306:3306'
     volumes:
-      - "./storage/mysql/data:/var/lib/mysql"
-      - "./storage/mysql/my.cnf:/etc/my.cnf"
+      - "./.storage/mysql/data:/var/lib/mysql"
+      - "./.storage/mysql/my.cnf:/etc/my.cnf"
   redis:
     image: redis
     restart: always
@@ -36,4 +36,4 @@ services:
     ports:
       - 6379:6379
     volumes:
-      - "./storage/redis:/data"
+      - "./.storage/redis:/data"

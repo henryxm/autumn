@@ -1,87 +1,100 @@
-/**
- * Copyright 2018 Autumn.org.cn http://www.autumn.org.cn
- * <p>
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not
- * use this file except in compliance with the License. You may obtain a copy of
- * the License at
- * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
- */
-
 package cn.org.autumn.modules.sys.service;
 
-import cn.org.autumn.table.TableInit;
+import cn.org.autumn.site.InitFactory;
 import com.baomidou.mybatisplus.mapper.EntityWrapper;
 import com.baomidou.mybatisplus.service.impl.ServiceImpl;
 import cn.org.autumn.utils.Constant;
 import cn.org.autumn.annotation.DataFilter;
 import cn.org.autumn.modules.sys.dao.SysDeptDao;
 import cn.org.autumn.modules.sys.entity.SysDeptEntity;
+import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.PostConstruct;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-
 @Service
-public class SysDeptService extends ServiceImpl<SysDeptDao, SysDeptEntity> {
-
-    @Autowired
-    private TableInit tableInit;
+public class SysDeptService extends ServiceImpl<SysDeptDao, SysDeptEntity> implements InitFactory.Init {
 
     @Autowired
     private SysDeptDao sysDeptDao;
 
+    Map<String, SysDeptEntity> cache = new HashMap<>();
+
     private static final String NULL = null;
 
-    @PostConstruct
-    public void init() {
-        if (!tableInit.init)
-            return;
-        String[][] mapping = new String[][]{
-                {"1", "0", "集团总公司", "0", "0"},
-                {"2", "1", "四川分公司", "1", "0"},
-                {"3", "1", "北京分公司", "2", "0"},
-                {"4", "1", "广州分公司", "2", "0"},
-                {"5", "1", "技术部", "0", "0"},
-                {"6", "2", "销售部", "1", "0"},
-                {"7", "3", "产品部", "1", "0"},
-                {"8", "4", "渠道部", "1", "0"},
-                {"9", "1", "后勤部", "1", "0"},
-                {"10", "1", "总经办", "1", "0"},
-        };
+    public static final String Department_System_Administrator = "Department:System:Administrator";
 
+    public static final String Department_System_User = "Department:System:User";
+
+    @Order(-1)
+    public void init() {
+        String[][] mapping = new String[][]{
+                //{部门标识,                   父级标识,  部门名称,   排序号,删除标记,备注说明}
+                {Department_System_Administrator, "", "系统超级管理", "0", "0", "超级管理员部门，系统默认创建"},
+                {Department_System_User, Department_System_Administrator, "系统后台管理", "0", "0", "系统管理普通用户部门"},
+        };
         for (String[] map : mapping) {
-            SysDeptEntity sysMenu = new SysDeptEntity();
+            SysDeptEntity sysDeptEntity = new SysDeptEntity();
             String temp = map[0];
+            if (null != baseMapper.getByDeptKey(temp))
+                continue;
             if (NULL != temp)
-                sysMenu.setDeptId(Long.valueOf(temp));
+                sysDeptEntity.setDeptKey(temp);
             temp = map[1];
-            if (NULL != temp)
-                sysMenu.setParentId(Long.valueOf(temp));
+            if (StringUtils.isNotEmpty(temp)) {
+                sysDeptEntity.setParentKey(temp);
+                SysDeptEntity parent = cache.get(temp);
+                Long dID = 0L;
+                if (null != parent)
+                    dID = parent.getDeptId();
+                sysDeptEntity.setParentId(dID);
+            } else {
+                sysDeptEntity.setParentKey("");
+                sysDeptEntity.setParentId(0L);
+            }
             temp = map[2];
             if (NULL != temp)
-                sysMenu.setName(temp);
+                sysDeptEntity.setName(temp);
             temp = map[3];
             if (NULL != temp)
-                sysMenu.setOrderNum(Integer.valueOf(temp));
+                sysDeptEntity.setOrderNum(Integer.valueOf(temp));
             temp = map[4];
             if (NULL != temp)
-                sysMenu.setDelFlag(Integer.valueOf(temp));
-            SysDeptEntity entity = sysDeptDao.selectOne(sysMenu);
-            if (null == entity)
-                sysDeptDao.insert(sysMenu);
+                sysDeptEntity.setDelFlag(Integer.valueOf(temp));
+            temp = map[5];
+            if (NULL != temp)
+                sysDeptEntity.setRemark(temp);
+            sysDeptDao.insert(sysDeptEntity);
+            cache.put(sysDeptEntity.getDeptKey(), sysDeptEntity);
         }
+    }
 
+    public void save(SysDeptEntity dept){
+        if (null != dept.getParentId()) {
+            SysDeptEntity parent = selectById(dept.getParentId());
+            if (null != parent)
+                dept.setParentKey(parent.getDeptKey());
+            else
+                dept.setParentKey("");
+        }
+        if (null == dept.getDelFlag()) {
+            dept.setDelFlag(0);
+        }
+        insertOrUpdate(dept);
+    }
+
+    public SysDeptEntity getByDeptKey(String deptKey) {
+        SysDeptEntity sysDeptEntity = cache.get(deptKey);
+        if (null == sysDeptEntity) {
+            sysDeptEntity = baseMapper.getByDeptKey(deptKey);
+            cache.put(deptKey, sysDeptEntity);
+        }
+        return sysDeptEntity;
     }
 
     @DataFilter(subDept = true, user = false)

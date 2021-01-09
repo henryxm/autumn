@@ -17,6 +17,9 @@
 			<#if shiro.hasPermission("gen:gentype:delete")>
             <a class="btn btn-primary" @click="del"><i class="fa fa-trash-o"></i>&nbsp;${lang.sys_string_delete}</a>
 			</#if>
+            <#if shiro.hasPermission("gen:gentype:copy")>
+            <a class="btn btn-primary" @click="copy"><i class="fa fa-copy"></i>&nbsp;${lang.sys_string_copy}</a>
+            </#if>
         </div>
         <table id="jqGrid"></table>
         <div id="jqGridPager"></div>

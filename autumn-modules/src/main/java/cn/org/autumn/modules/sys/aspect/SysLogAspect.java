@@ -2,13 +2,11 @@ package cn.org.autumn.modules.sys.aspect;
 
 import cn.org.autumn.annotation.SysLog;
 import com.google.gson.Gson;
-
 import cn.org.autumn.modules.sys.entity.SysLogEntity;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysLogService;
 import cn.org.autumn.utils.HttpContextUtils;
 import cn.org.autumn.utils.IPUtils;
-
 import org.apache.shiro.SecurityUtils;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;

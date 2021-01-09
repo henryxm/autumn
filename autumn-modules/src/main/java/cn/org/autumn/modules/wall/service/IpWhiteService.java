@@ -1,7 +1,6 @@
 package cn.org.autumn.modules.wall.service;
 
-import cn.org.autumn.config.PostLoad;
-import cn.org.autumn.config.PostLoadFactory;
+import cn.org.autumn.site.LoadFactory;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.wall.entity.IpWhiteEntity;
 import cn.org.autumn.modules.wall.service.gen.IpWhiteServiceGen;
@@ -9,23 +8,19 @@ import cn.org.autumn.utils.IPUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.PostConstruct;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
 @Service
-public class IpWhiteService extends IpWhiteServiceGen implements PostLoad, LoopJob.Job {
+public class IpWhiteService extends IpWhiteServiceGen implements LoadFactory.Load, LoopJob.Job {
 
     private static final Logger log = LoggerFactory.getLogger(IpWhiteService.class);
 
     private List<String> ipWhiteList;
     private List<String> ipWhiteSectionList;
-    @Autowired
-    PostLoadFactory postLoadFactory;
 
     /**
      * 为了提高效率，在黑客大量攻击的时候，不能频繁进行数据库访问，通过定时器定时加载IP地址黑名单数据，提高效率。
@@ -98,7 +93,6 @@ public class IpWhiteService extends IpWhiteServiceGen implements PostLoad, LoopJ
 
     public void init() {
         super.init();
-        postLoadFactory.register(this);
         LoopJob.onOneMinute(this);
     }
 
