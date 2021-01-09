@@ -44,7 +44,7 @@ public class DataFilterAspect {
             SysUserEntity user = ShiroUtils.getUserEntity();
 
             //如果不是超级管理员，则进行数据过滤
-            if (user.getUserId() != Constant.SUPER_ADMIN) {
+            if (sysUserRoleService.isSystemAdministrator(user)) {
                 Map map = (Map) params;
                 map.put(Constant.SQL_FILTER, getSQLFilter(user, point));
             }

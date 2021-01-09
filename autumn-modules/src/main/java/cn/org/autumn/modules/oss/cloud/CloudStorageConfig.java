@@ -1,38 +1,14 @@
-/**
- * Copyright 2018 Autumn.org.cn http://www.autumn.org.cn
- * <p>
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not
- * use this file except in compliance with the License. You may obtain a copy of
- * the License at
- * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
- */
-
 package cn.org.autumn.modules.oss.cloud;
-
 
 import cn.org.autumn.validator.group.AliyunGroup;
 import cn.org.autumn.validator.group.QcloudGroup;
 import cn.org.autumn.validator.group.QiniuGroup;
 import org.hibernate.validator.constraints.Range;
 import org.hibernate.validator.constraints.URL;
-
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import java.io.Serializable;
 
-/**
- * 云存储配置信息
- * @author chenshun
- * @email sunlightcs@gmail.com
- * @date 2017-03-25 16:12
- */
 public class CloudStorageConfig implements Serializable {
     private static final long serialVersionUID = 1L;
 

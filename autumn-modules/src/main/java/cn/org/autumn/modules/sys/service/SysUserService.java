@@ -24,6 +24,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.util.*;
 
 import static cn.org.autumn.modules.sys.service.SysDeptService.Department_System_Administrator;
@@ -253,5 +254,9 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         if (hashUser.size() > 10000) {
             hashUser.clear();
         }
+    }
+
+    public boolean isSystemAdministrator(SysUserEntity sysUserEntity) {
+        return sysUserRoleService.isSystemAdministrator(sysUserEntity);
     }
 }

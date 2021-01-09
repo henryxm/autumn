@@ -1,19 +1,3 @@
-/**
- * Copyright 2018 Autumn.org.cn http://www.autumn.org.cn
- * <p>
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not
- * use this file except in compliance with the License. You may obtain a copy of
- * the License at
- * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
- */
-
 package cn.org.autumn.table.dao;
 
 import cn.org.autumn.table.data.TableInfo;
@@ -43,6 +27,7 @@ public interface TableDao {
 
     /**
      * 根据表名查询表在库中是否存在
+     *
      * @param tableName
      * @return true 表存在  false 表不存在
      */
@@ -62,8 +47,9 @@ public interface TableDao {
 
     /**
      * get table meta data
-     *
+     * <p>
      * support empty parameter and one parameter with "like" searching.
+     *
      * @param tableName
      * @return
      */
@@ -74,7 +60,6 @@ public interface TableDao {
                                   @Param("rows") int rows);
 
     /**
-     *
      * @param tableName
      * @return
      */
@@ -89,6 +74,7 @@ public interface TableDao {
     @SelectProvider(type = QuerySql.class, method = getTableCount)
     @ResultType(Integer.class)
     Integer getTableCount();
+
     /**
      * 为表增加字段
      *
@@ -115,6 +101,7 @@ public interface TableDao {
 
     /**
      * 删除主键
+     *
      * @param map
      */
     @SelectProvider(type = QuerySql.class, method = dropPrimaryKey)
@@ -122,6 +109,7 @@ public interface TableDao {
 
     /**
      * 删除索引
+     *
      * @param map
      */
     @SelectProvider(type = QuerySql.class, method = dropIndex)
@@ -129,9 +117,9 @@ public interface TableDao {
 
     /**
      * 如果表存在，就删除
+     *
      * @param tableName
      */
     @SelectProvider(type = QuerySql.class, method = dropTable)
     void dropTable(@Param(paramName) String tableName);
-
 }

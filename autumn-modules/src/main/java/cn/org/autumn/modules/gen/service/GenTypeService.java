@@ -74,11 +74,28 @@ public class GenTypeService extends GenTypeServiceGen {
 
         String keyMenu = SysMenuService.getMenuKey("Gen", "GenType");
         String[][] menus = new String[][]{
-                {"删除", null, "gen:gentype:copy", "2", "fa " + ico(), order(), SysMenuService.getMenuKey("Gen", "GenTypeCopy"), keyMenu, "sys_string_copy"},
+                {"复制", null, "gen:gentype:copy", "2", "fa " + ico(), order(), SysMenuService.getMenuKey("Gen", "GenTypeCopy"), keyMenu, "sys_string_copy"},
         };
         sysMenuService.put(menus);
     }
 
+    public String[][] getLanguageItemArray() {
+        String[][] items = new String[][]{
+                {"gen_gentype_table_comment", "生成方案", "Generate solution"},
+                {"gen_gentype_column_id", "序列号", "Serial number"},
+                {"gen_gentype_column_database_type", "数据库类型", "Database type"},
+                {"gen_gentype_column_root_package", "程序根包名", "Root package name"},
+                {"gen_gentype_column_module_package", "模块根包名", "Module package name"},
+                {"gen_gentype_column_module_name", "模块名(用于包名)", "Module name"},
+                {"gen_gentype_column_module_text", "模块名称(用于目录)", "Module menu name"},
+                {"gen_gentype_column_module_id", "模块ID(用于目录)", "Module ID"},
+                {"gen_gentype_column_author_name", "作者名字", "Author name"},
+                {"gen_gentype_column_email", "作者邮箱", "Author email"},
+                {"gen_gentype_column_table_prefix", "表前缀", "Table prefix"},
+                {"gen_gentype_column_mapping_string", "表字段映射", "Table mapping"},
+        };
+        return items;
+    }
     public GenTypeWrapper getGenType(String databaseType) {
         GenTypeEntity entity = new GenTypeEntity();
         entity.setDatabaseType(databaseType);

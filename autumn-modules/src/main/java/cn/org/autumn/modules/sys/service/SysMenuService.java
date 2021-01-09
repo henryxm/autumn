@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.sys.service;
 
+import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.site.InitFactory;
 import com.aliyuncs.utils.StringUtils;
 import com.baomidou.mybatisplus.service.impl.ServiceImpl;
@@ -17,6 +18,7 @@ import java.util.*;
 public class SysMenuService extends ServiceImpl<SysMenuDao, SysMenuEntity> implements InitFactory.Init {
     @Autowired
     private SysUserService sysUserService;
+
     @Autowired
     private SysRoleMenuService sysRoleMenuService;
 
@@ -74,7 +76,7 @@ public class SysMenuService extends ServiceImpl<SysMenuDao, SysMenuEntity> imple
         put(menus);
     }
 
-    public void put(String[][] menus){
+    public void put(String[][] menus) {
         for (String[] menu : menus) {
             SysMenuEntity sysMenu = from(menu);
             SysMenuEntity entity = getByMenuKey(sysMenu.getMenuKey());
@@ -169,13 +171,18 @@ public class SysMenuService extends ServiceImpl<SysMenuDao, SysMenuEntity> imple
     }
 
     public List<SysMenuEntity> getUserMenuList(Long userId) {
+        SysUserEntity sysUserEntity = sysUserService.selectById(userId);
+        return getMenus(sysUserEntity);
+    }
+
+    public List<SysMenuEntity> getMenus(SysUserEntity sysUserEntity) {
+        boolean isAdmin = sysUserService.isSystemAdministrator(sysUserEntity);
         //系统管理员，拥有最高权限
-        if (userId == Constant.SUPER_ADMIN) {
+        if (isAdmin) {
             return getAllMenuList(null);
         }
-
         //用户菜单列表
-        List<Long> menuIdList = sysUserService.queryAllMenuId(userId);
+        List<Long> menuIdList = sysUserService.queryAllMenuId(sysUserEntity.getUserId());
         return getAllMenuList(menuIdList);
     }
 
@@ -203,7 +210,6 @@ public class SysMenuService extends ServiceImpl<SysMenuDao, SysMenuEntity> imple
      */
     private List<SysMenuEntity> getMenuTreeList(List<SysMenuEntity> menuList, List<Long> menuIdList) {
         List<SysMenuEntity> subMenuList = new ArrayList<SysMenuEntity>();
-
         for (SysMenuEntity entity : menuList) {
             //目录
             if (entity.getType() == Constant.MenuType.CATALOG.getValue()) {
@@ -211,7 +217,6 @@ public class SysMenuService extends ServiceImpl<SysMenuDao, SysMenuEntity> imple
             }
             subMenuList.add(entity);
         }
-
         return subMenuList;
     }
 }

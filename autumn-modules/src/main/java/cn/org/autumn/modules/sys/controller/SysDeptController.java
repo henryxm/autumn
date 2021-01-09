@@ -1,22 +1,6 @@
-/**
- * Copyright 2018 Autumn.org.cn http://www.autumn.org.cn
- * <p>
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not
- * use this file except in compliance with the License. You may obtain a copy of
- * the License at
- * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
- */
-
 package cn.org.autumn.modules.sys.controller;
 
-import cn.org.autumn.utils.Constant;
+import cn.org.autumn.modules.sys.service.SysUserService;
 import cn.org.autumn.modules.sys.entity.SysDeptEntity;
 import cn.org.autumn.modules.sys.service.SysDeptService;
 import cn.org.autumn.utils.R;
@@ -35,6 +19,9 @@ import java.util.List;
 public class SysDeptController extends AbstractController {
     @Autowired
     private SysDeptService sysDeptService;
+
+    @Autowired
+    private SysUserService sysUserService;
 
     /**
      * 列表
@@ -56,7 +43,7 @@ public class SysDeptController extends AbstractController {
         List<SysDeptEntity> deptList = sysDeptService.queryList(new HashMap<String, Object>());
 
         //添加一级部门
-        if (getUserId() == Constant.SUPER_ADMIN) {
+        if (sysUserService.isSystemAdministrator(getUser())) {
             SysDeptEntity root = new SysDeptEntity();
             root.setDeptId(0L);
             root.setName("一级部门");
@@ -75,7 +62,7 @@ public class SysDeptController extends AbstractController {
     @RequiresPermissions("sys:dept:list")
     public R info() {
         long deptId = 0;
-        if (getUserId() != Constant.SUPER_ADMIN) {
+        if (sysUserService.isSystemAdministrator(getUser())) {
             List<SysDeptEntity> deptList = sysDeptService.queryList(new HashMap<String, Object>());
             Long parentId = null;
             for (SysDeptEntity sysDeptEntity : deptList) {
@@ -138,5 +125,4 @@ public class SysDeptController extends AbstractController {
         sysDeptService.deleteById(deptId);
         return R.ok();
     }
-
 }
