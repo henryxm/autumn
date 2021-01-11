@@ -3,12 +3,13 @@ package cn.org.autumn.modules.lan.service;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.lan.entity.LanguageEntity;
 import cn.org.autumn.modules.lan.service.gen.LanguageServiceGen;
-import cn.org.autumn.site.InitFactory;
+import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.site.LoadFactory;
 import cn.org.autumn.table.utils.HumpConvert;
 import io.netty.util.internal.StringUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.lang.reflect.Field;
@@ -17,6 +18,9 @@ import java.util.*;
 @Service
 public class LanguageService extends LanguageServiceGen implements LoadFactory.Load, LoopJob.Job {
     private Logger logger = LoggerFactory.getLogger(getClass());
+
+    @Autowired
+    SysConfigService sysConfigService;
 
     private static Map<String, Map<String, String>> languages;
 
@@ -107,6 +111,128 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
         insert(languageEntity);
         return true;
     }
+
+    private static Field getEntityField(Field[] fields, String key) {
+        Field r = null;
+        for (Field field : fields) {
+            if (field.getName().toLowerCase().contains(key)) {
+                r = field;
+            }
+        }
+        return r;
+    }
+
+
+    public static Map<String, LanguageEntity> from(List<String[]> ls) {
+        Map<String, LanguageEntity> map = new LinkedHashMap<>();
+        for (String[] l : ls) {
+            LanguageEntity languageEntity = from(l);
+            map.put(languageEntity.getName(), languageEntity);
+        }
+        return map;
+    }
+
+    public static Map<String, LanguageEntity> from(String[][] ls) {
+        Map<String, LanguageEntity> map = new LinkedHashMap<>();
+        for (String[] l : ls) {
+            LanguageEntity languageEntity = from(l);
+            map.put(languageEntity.getName(), languageEntity);
+        }
+        return map;
+    }
+
+    public static LanguageEntity from(String[] languages) {
+        Field[] fields = LanguageEntity.class.getDeclaredFields();
+        LanguageEntity languageEntity = new LanguageEntity();
+        for (int i = 0; i < languages.length; i++) {
+            try {
+                String lang = languages[i];
+                if (lang.contains(":")) {
+                    String[] sp = lang.split(":");
+                    String lk = sp[0].trim().toLowerCase();
+                    String lv = sp[1];
+                    Field field = getEntityField(fields, lk);
+                    if (null != field) {
+                        field.setAccessible(true);
+                        field.set(languageEntity, lv);
+                    } else {
+                        if (i < fields.length - 1) {
+                            field = fields[i + 2];
+                            field.setAccessible(true);
+                            field.set(languageEntity, lang);
+                        }
+                    }
+                } else {
+                    if (i < fields.length - 1) {
+                        Field field = fields[i + 2];
+                        field.setAccessible(true);
+                        field.set(languageEntity, lang);
+                    }
+                }
+            } catch (IllegalAccessException e) {
+            }
+        }
+        return languageEntity;
+    }
+
+    private Map<String, LanguageEntity> merge(Object... objects) {
+        Map<String, LanguageEntity> map = new LinkedHashMap<>();
+        for (Object o : objects) {
+            if (o instanceof List) {
+                List<String[]> l = (List<String[]>) o;
+                Map<String, LanguageEntity> t = from(l);
+                map.putAll(t);
+            }
+            if (o instanceof String[][]) {
+                String[][] l = (String[][]) o;
+                Map<String, LanguageEntity> t = from(l);
+                map.putAll(t);
+            }
+        }
+        return map;
+    }
+
+    public void put(boolean update, Object... objects) {
+        Map<String, LanguageEntity> map = merge(objects);
+        put(update, map.values());
+    }
+
+    public void put(Object... objects) {
+        Map<String, LanguageEntity> map = merge(objects);
+        put(map.values());
+    }
+
+    public void put(boolean update, Collection<LanguageEntity> languageEntities) {
+        for (LanguageEntity languageEntity : languageEntities) {
+            put(update, languageEntity);
+        }
+    }
+
+    public void put(Collection<LanguageEntity> languageEntities) {
+        boolean update = sysConfigService.isUpdateLanguage();
+        put(update, languageEntities);
+    }
+
+    public void put(LanguageEntity languageEntity) {
+        boolean update = sysConfigService.isUpdateLanguage();
+        put(update, languageEntity);
+    }
+
+    public void put(boolean update, LanguageEntity languageEntity) {
+        if (null == languageEntity)
+            return;
+        LanguageEntity existed = baseMapper.getByKey(languageEntity.getName());
+        if (null == existed) {
+            insert(languageEntity);
+        } else {
+            if (update && existed.hashCode() != languageEntity.hashCode()) {
+                existed.merge(languageEntity);
+                updateById(existed);
+            }
+        }
+        return;
+    }
+
 
     public boolean addLanguageColumnItem(String key, String zhCn) {
         return addLanguageColumnItem(key, zhCn, null);

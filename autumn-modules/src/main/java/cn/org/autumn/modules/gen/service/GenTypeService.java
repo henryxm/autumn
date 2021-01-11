@@ -66,20 +66,24 @@ public class GenTypeService extends GenTypeServiceGen {
             temp = map[10];
             if (NULL != temp)
                 entity.setMappingString(temp);
-            GenTypeEntity et = baseMapper.selectOne(entity);
-            if (null == et)
-                baseMapper.insert(entity);
+            try {
+                GenTypeEntity et = baseMapper.selectOne(entity);
+                if (null == et)
+                    baseMapper.insert(entity);
+            } catch (Exception e) {
+            }
         }
         super.init();
-
-        String keyMenu = SysMenuService.getMenuKey("Gen", "GenType");
-        String[][] menus = new String[][]{
-                {"复制", null, "gen:gentype:copy", "2", "fa " + ico(), order(), SysMenuService.getMenuKey("Gen", "GenTypeCopy"), keyMenu, "sys_string_copy"},
-        };
-        sysMenuService.put(menus);
     }
 
-    public String[][] getLanguageItemArray() {
+    public String[][] getMenuItems() {
+        String[][] menus = new String[][]{
+                {"复制", null, "gen:gentype:copy", "2", "fa " + ico(), order(), button("Copy"), menu(), "sys_string_copy"},
+        };
+        return menus;
+    }
+
+    public String[][] getLanguageItems() {
         String[][] items = new String[][]{
                 {"gen_gentype_table_comment", "生成方案", "Generate solution"},
                 {"gen_gentype_column_id", "序列号", "Serial number"},
@@ -93,9 +97,13 @@ public class GenTypeService extends GenTypeServiceGen {
                 {"gen_gentype_column_email", "作者邮箱", "Author email"},
                 {"gen_gentype_column_table_prefix", "表前缀", "Table prefix"},
                 {"gen_gentype_column_mapping_string", "表字段映射", "Table mapping"},
+                //
+                {"gen_string_package_name", "包名", "Package name"},
+                {"gen_string_table_prefix", "表前缀", "Table prefix"},
         };
         return items;
     }
+
     public GenTypeWrapper getGenType(String databaseType) {
         GenTypeEntity entity = new GenTypeEntity();
         entity.setDatabaseType(databaseType);

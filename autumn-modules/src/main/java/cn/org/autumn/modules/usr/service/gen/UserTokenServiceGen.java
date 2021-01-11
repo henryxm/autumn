@@ -46,22 +46,22 @@ public class UserTokenServiceGen extends ServiceImpl<UserTokenDao, UserTokenEnti
         Page<UserTokenEntity> _page = new Query<UserTokenEntity>(params).getPage();
         EntityWrapper<UserTokenEntity> entityEntityWrapper = new EntityWrapper<>();
         Map<String,Object> condition = new HashMap<>();
-        if(params.containsKey("id") && null !=params.get("id") && StringUtils.isNotEmpty(params.get("id").toString())) {
+        if(params.containsKey("id") && null != params.get("id") && StringUtils.isNotEmpty(params.get("id").toString())) {
             condition.put("id", params.get("id"));
         }
-        if(params.containsKey("userId") && null !=params.get("userId") && StringUtils.isNotEmpty(params.get("userId").toString())) {
+        if(params.containsKey("userId") && null != params.get("userId") && StringUtils.isNotEmpty(params.get("userId").toString())) {
             condition.put("user_id", params.get("userId"));
         }
-        if(params.containsKey("token") && null !=params.get("token") && StringUtils.isNotEmpty(params.get("token").toString())) {
+        if(params.containsKey("token") && null != params.get("token") && StringUtils.isNotEmpty(params.get("token").toString())) {
             condition.put("token", params.get("token"));
         }
-        if(params.containsKey("refreshToken") && null !=params.get("refreshToken") && StringUtils.isNotEmpty(params.get("refreshToken").toString())) {
+        if(params.containsKey("refreshToken") && null != params.get("refreshToken") && StringUtils.isNotEmpty(params.get("refreshToken").toString())) {
             condition.put("refresh_token", params.get("refreshToken"));
         }
-        if(params.containsKey("expireTime") && null !=params.get("expireTime") && StringUtils.isNotEmpty(params.get("expireTime").toString())) {
+        if(params.containsKey("expireTime") && null != params.get("expireTime") && StringUtils.isNotEmpty(params.get("expireTime").toString())) {
             condition.put("expire_time", params.get("expireTime"));
         }
-        if(params.containsKey("updateTime") && null !=params.get("updateTime") && StringUtils.isNotEmpty(params.get("updateTime").toString())) {
+        if(params.containsKey("updateTime") && null != params.get("updateTime") && StringUtils.isNotEmpty(params.get("updateTime").toString())) {
             condition.put("update_time", params.get("updateTime"));
         }
         _page.setCondition(condition);
@@ -84,40 +84,49 @@ public class UserTokenServiceGen extends ServiceImpl<UserTokenDao, UserTokenEnti
     */
     public String parentMenu(){
         usrMenu.init();
-        SysMenuEntity sysMenuEntity = sysMenuService.getByMenuKey(UsrMenu.usr_menu);
+        SysMenuEntity sysMenuEntity = sysMenuService.getByMenuKey(usrMenu.getMenu());
         if(null != sysMenuEntity)
             return sysMenuEntity.getMenuKey();
         return "";
+    }
+
+    public String menu() {
+        String menu = SysMenuService.getMenuKey("Usr", "UserToken");
+        return menu;
+    }
+
+    public String button(String button) {
+        String menu = menu() + button;
+        return menu;
     }
 
     public String ico(){
         return "fa-file-code-o";
     }
 
-    private String order(){
+    protected String order(){
         return String.valueOf(menuOrder());
     }
 
     public void init() {
-        sysMenuService.put(getMenus());
-        language.add(getLanguageItemArray());
-        language.add(getLanguageItems());
+        sysMenuService.put(getMenuItemsInternal(), getMenuItems(), getMenuList());
+        language.put(getLanguageItemsInternal(), getLanguageItems(), getLanguageList());
         addLanguageColumnItem();
-        language.add(getLanguageItemsInternal());
     }
 
-    public String[][] getLanguageItemArray() {
+    @Deprecated
+    public void addLanguageColumnItem() {
+    }
+
+    public List<String[]> getLanguageList() {
         return null;
     }
 
-    public List<String[]> getLanguageItems() {
+    public String[][] getLanguageItems() {
         return null;
     }
 
-    public void addLanguageColumnItem(){
-    }
-
-    public String[][] getLanguageItemsInternal() {
+    private String[][] getLanguageItemsInternal() {
         String[][] items = new String[][]{
                 {"usr_usertoken_table_comment", "用户Token"},
                 {"usr_usertoken_column_id", "ID"},
@@ -130,15 +139,22 @@ public class UserTokenServiceGen extends ServiceImpl<UserTokenDao, UserTokenEnti
         return items;
     }
 
-    public String[][] getMenus() {
-        String menuKey = SysMenuService.getMenuKey("Usr", "UserToken");
+    public List<String[]> getMenuList() {
+        return null;
+    }
+
+    public String[][] getMenuItems() {
+        return null;
+    }
+
+    private String[][] getMenuItemsInternal() {
         String[][] menus = new String[][]{
                 //{0:菜单名字,1:URL,2:权限,3:菜单类型,4:ICON,5:排序,6:MenuKey,7:ParentKey,8:Language}
-                {"用户Token", "modules/usr/usertoken", "usr:usertoken:list,usr:usertoken:info,usr:usertoken:save,usr:usertoken:update,usr:usertoken:delete", "1", "fa " + ico(), order(), menuKey, parentMenu(), "usr_usertoken_table_comment"},
-                {"查看", null, "usr:usertoken:list,usr:usertoken:info", "2", null, order(), SysMenuService.getMenuKey("Usr", "UserTokenInfo"), menuKey, "sys_string_lookup"},
-                {"新增", null, "usr:usertoken:save", "2", null, order(), SysMenuService.getMenuKey("Usr", "UserTokenSave"), menuKey, "sys_string_add"},
-                {"修改", null, "usr:usertoken:update", "2", null, order(), SysMenuService.getMenuKey("Usr", "UserTokenUpdate"), menuKey, "sys_string_change"},
-                {"删除", null, "usr:usertoken:delete", "2", null, order(), SysMenuService.getMenuKey("Usr", "UserTokenDelete"), menuKey, "sys_string_delete"},
+                {"用户Token", "modules/usr/usertoken", "usr:usertoken:list,usr:usertoken:info,usr:usertoken:save,usr:usertoken:update,usr:usertoken:delete", "1", "fa " + ico(), order(), menu(), parentMenu(), "usr_usertoken_table_comment"},
+                {"查看", null, "usr:usertoken:list,usr:usertoken:info", "2", null, order(), button("List"), menu(), "sys_string_lookup"},
+                {"新增", null, "usr:usertoken:save", "2", null, order(), button("Save"), menu(), "sys_string_add"},
+                {"修改", null, "usr:usertoken:update", "2", null, order(), button("Update"), menu(), "sys_string_change"},
+                {"删除", null, "usr:usertoken:delete", "2", null, order(), button("Delete"), menu(), "sys_string_delete"},
         };
         return menus;
     }

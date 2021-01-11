@@ -19,7 +19,7 @@
 			</button>
 			<ul class="dropdown-menu" role="menu">
 				<li v-for="(genType, index) in q.genTypeList" :key="genType.id">
-					<a href="#" @click="selectType(index)">{{ genType.moduleText }}</a>
+					<a href="#" @click="selectType(index)">{{ genType.moduleText }}:[${lang.gen_string_package_name}:{{ genType.moduleName }}][${lang.gen_string_table_prefix}:{{ genType.tablePrefix }}]</a>
 				</li>
 			</ul>
 		</div>

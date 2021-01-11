@@ -1,10 +1,11 @@
-package cn.org.autumn.modules.gen.service;
+package cn.org.autumn.modules.gen.service.gen;
 
-import cn.org.autumn.modules.sys.service.SysMenuService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
 import cn.org.autumn.modules.lan.service.Language;
 import cn.org.autumn.modules.lan.service.LanguageService;
+import cn.org.autumn.modules.sys.service.SysMenuService;
+import cn.org.autumn.site.InitFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 /**
  * 生成方案
@@ -14,8 +15,7 @@ import cn.org.autumn.modules.lan.service.LanguageService;
  * @date 2021-01
  */
 @Service
-public class GenMenu {
-
+public class GenMenuGen implements InitFactory.Init {
 
     public static final String gen_menu = SysMenuService.getMenuKey("Gen", "GenMenu");
     public static final String parent_menu = "";

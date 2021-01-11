@@ -1,10 +1,7 @@
 package cn.org.autumn.modules.test.service;
 
-import cn.org.autumn.modules.sys.service.SysMenuService;
-import org.springframework.beans.factory.annotation.Autowired;
+import cn.org.autumn.modules.test.service.gen.TestMenuGen;
 import org.springframework.stereotype.Service;
-import cn.org.autumn.modules.lan.service.Language;
-import cn.org.autumn.modules.lan.service.LanguageService;
 
 /**
  * 测试例子
@@ -14,49 +11,36 @@ import cn.org.autumn.modules.lan.service.LanguageService;
  * @date 2021-01
  */
 @Service
-public class TestMenu {
+public class TestMenu extends TestMenuGen {
 
-    public static final String test_menu = SysMenuService.getMenuKey("Test", "TestMenu");
-    public static final String parent_menu = "";
-    public static final String test_language = "test_menu";
-
-    @Autowired
-    protected SysMenuService sysMenuService;
-
-    @Autowired
-    protected Language language;
-
-    @Autowired
-    protected LanguageService languageService;
-
-    protected String order(){
-        return "0";
+    @Override
+    protected String order() {
+        return super.order();
     }
 
-    protected String ico(){
-        return "fa-file-code-o";
+    @Override
+    public String ico() {
+        return super.ico();
     }
 
+    @Override
+    public String getMenu() {
+        return super.getMenu();
+    }
+
+    @Override
+    public String getParentMenu() {
+        return super.getParentMenu();
+    }
+
+    @Override
     public void init() {
-        sysMenuService.put(getMenus());
-        language.add(getLanguageItemArray());
-        addLanguageColumnItem();
+        super.init();
     }
 
-    public void addLanguageColumnItem() {
-    }
-
-    public String[][] getMenus() {
-        String[][] menus = new String[][]{
-                //{0:菜单名字,1:URL,2:权限,3:菜单类型,4:ICON,5:排序,6:MenuKey,7:ParentKey,8:Language}
-                {"测试例子", "", "", "0", "fa " + ico(), order(), test_menu, parent_menu, test_language + "_text"},
-        };
-        return menus;
-    }
-
-    public String[][] getLanguageItemArray() {
+    public String[][] getLanguageItems() {
         String[][] items = new String[][]{
-                {test_language + "_text", "测试例子", "Test example"},
+                {test_menu + "_text", "测试例子", "Test Example"},
         };
         return items;
     }

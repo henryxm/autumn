@@ -46,10 +46,10 @@ public class DemoExampleServiceGen extends ServiceImpl<DemoExampleDao, DemoExamp
         Page<DemoExampleEntity> _page = new Query<DemoExampleEntity>(params).getPage();
         EntityWrapper<DemoExampleEntity> entityEntityWrapper = new EntityWrapper<>();
         Map<String,Object> condition = new HashMap<>();
-        if(params.containsKey("id") && null !=params.get("id") && StringUtils.isNotEmpty(params.get("id").toString())) {
+        if(params.containsKey("id") && null != params.get("id") && StringUtils.isNotEmpty(params.get("id").toString())) {
             condition.put("id", params.get("id"));
         }
-        if(params.containsKey("example") && null !=params.get("example") && StringUtils.isNotEmpty(params.get("example").toString())) {
+        if(params.containsKey("example") && null != params.get("example") && StringUtils.isNotEmpty(params.get("example").toString())) {
             condition.put("example", params.get("example"));
         }
         _page.setCondition(condition);
@@ -72,10 +72,20 @@ public class DemoExampleServiceGen extends ServiceImpl<DemoExampleDao, DemoExamp
     */
     public String parentMenu(){
         testMenu.init();
-        SysMenuEntity sysMenuEntity = sysMenuService.getByMenuKey(TestMenu.test_menu);
+        SysMenuEntity sysMenuEntity = sysMenuService.getByMenuKey(testMenu.getMenu());
         if(null != sysMenuEntity)
             return sysMenuEntity.getMenuKey();
         return "";
+    }
+
+    public String menu() {
+        String menu = SysMenuService.getMenuKey("Test", "DemoExample");
+        return menu;
+    }
+
+    public String button(String button) {
+        String menu = menu() + button;
+        return menu;
     }
 
     public String ico(){
@@ -87,25 +97,24 @@ public class DemoExampleServiceGen extends ServiceImpl<DemoExampleDao, DemoExamp
     }
 
     public void init() {
-        sysMenuService.put(getMenus());
-        language.add(getLanguageItemArray());
-        language.add(getLanguageItems());
+        sysMenuService.put(getMenuItemsInternal(), getMenuItems(), getMenuList());
+        language.put(getLanguageItemsInternal(), getLanguageItems(), getLanguageList());
         addLanguageColumnItem();
-        language.add(getLanguageItemsInternal());
     }
 
-    public String[][] getLanguageItemArray() {
+    @Deprecated
+    public void addLanguageColumnItem() {
+    }
+
+    public List<String[]> getLanguageList() {
         return null;
     }
 
-    public List<String[]> getLanguageItems() {
+    public String[][] getLanguageItems() {
         return null;
     }
 
-    public void addLanguageColumnItem(){
-    }
-
-    public String[][] getLanguageItemsInternal() {
+    private String[][] getLanguageItemsInternal() {
         String[][] items = new String[][]{
                 {"test_demoexample_table_comment", "测试例子"},
                 {"test_demoexample_column_id", "ID"},
@@ -114,15 +123,22 @@ public class DemoExampleServiceGen extends ServiceImpl<DemoExampleDao, DemoExamp
         return items;
     }
 
-    public String[][] getMenus() {
-        String menuKey = SysMenuService.getMenuKey("Test", "DemoExample");
+    public List<String[]> getMenuList() {
+        return null;
+    }
+
+    public String[][] getMenuItems() {
+        return null;
+    }
+
+    private String[][] getMenuItemsInternal() {
         String[][] menus = new String[][]{
                 //{0:菜单名字,1:URL,2:权限,3:菜单类型,4:ICON,5:排序,6:MenuKey,7:ParentKey,8:Language}
-                {"测试例子", "modules/test/demoexample", "test:demoexample:list,test:demoexample:info,test:demoexample:save,test:demoexample:update,test:demoexample:delete", "1", "fa " + ico(), order(), menuKey, parentMenu(), "test_demoexample_table_comment"},
-                {"查看", null, "test:demoexample:list,test:demoexample:info", "2", null, order(), SysMenuService.getMenuKey("Test", "DemoExampleInfo"), menuKey, "sys_string_lookup"},
-                {"新增", null, "test:demoexample:save", "2", null, order(), SysMenuService.getMenuKey("Test", "DemoExampleSave"), menuKey, "sys_string_add"},
-                {"修改", null, "test:demoexample:update", "2", null, order(), SysMenuService.getMenuKey("Test", "DemoExampleUpdate"), menuKey, "sys_string_change"},
-                {"删除", null, "test:demoexample:delete", "2", null, order(), SysMenuService.getMenuKey("Test", "DemoExampleDelete"), menuKey, "sys_string_delete"},
+                {"测试例子", "modules/test/demoexample", "test:demoexample:list,test:demoexample:info,test:demoexample:save,test:demoexample:update,test:demoexample:delete", "1", "fa " + ico(), order(), menu(), parentMenu(), "test_demoexample_table_comment"},
+                {"查看", null, "test:demoexample:list,test:demoexample:info", "2", null, order(), button("List"), menu(), "sys_string_lookup"},
+                {"新增", null, "test:demoexample:save", "2", null, order(), button("Save"), menu(), "sys_string_add"},
+                {"修改", null, "test:demoexample:update", "2", null, order(), button("Update"), menu(), "sys_string_change"},
+                {"删除", null, "test:demoexample:delete", "2", null, order(), button("Delete"), menu(), "sys_string_delete"},
         };
         return menus;
     }

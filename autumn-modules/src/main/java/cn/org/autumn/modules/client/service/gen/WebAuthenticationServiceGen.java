@@ -102,7 +102,7 @@ public class WebAuthenticationServiceGen extends ServiceImpl<WebAuthenticationDa
     */
     public String parentMenu(){
         clientMenu.init();
-        SysMenuEntity sysMenuEntity = sysMenuService.getByMenuKey(ClientMenu.client_menu);
+        SysMenuEntity sysMenuEntity = sysMenuService.getByMenuKey(clientMenu.getMenu());
         if(null != sysMenuEntity)
             return sysMenuEntity.getMenuKey();
         return "";
