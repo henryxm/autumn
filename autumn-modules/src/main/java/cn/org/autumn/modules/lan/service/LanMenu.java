@@ -1,7 +1,6 @@
 package cn.org.autumn.modules.lan.service;
 
-import cn.org.autumn.modules.sys.service.SysMenuService;
-import org.springframework.beans.factory.annotation.Autowired;
+import cn.org.autumn.modules.lan.service.gen.LanMenuGen;
 import org.springframework.stereotype.Service;
 
 /**
@@ -12,21 +11,33 @@ import org.springframework.stereotype.Service;
  * @date 2021-01
  */
 @Service
-public class LanMenu {
+public class LanMenu extends LanMenuGen {
 
-    public static final String lan_menu = SysMenuService.getMenuKey("Lan", "LanMenu");
-    public static final String parent_menu = "";
-    public static final String lan_language = "lan_menu";
+    @Override
+    protected String order() {
+        return super.order();
+    }
 
-    @Autowired
-    protected SysMenuService sysMenuService;
+    @Override
+    public String ico() {
+        return super.ico();
+    }
 
-    @Autowired
-    protected Language language;
+    @Override
+    public String getMenu() {
+        return super.getMenu();
+    }
 
-    @Autowired
-    protected LanguageService languageService;
+    @Override
+    public String getParentMenu() {
+        return super.getParentMenu();
+    }
 
+    @Override
     public void init() {
+    }
+
+    public String[][] getLanguageItems() {
+        return null;
     }
 }

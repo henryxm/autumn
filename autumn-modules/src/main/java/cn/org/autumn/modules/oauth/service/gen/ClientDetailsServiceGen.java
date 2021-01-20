@@ -28,8 +28,6 @@ import cn.org.autumn.modules.lan.service.LanguageService;
  */
 public class ClientDetailsServiceGen extends ServiceImpl<ClientDetailsDao, ClientDetailsEntity> implements InitFactory.Init {
 
-    protected static final String NULL = null;
-
     @Autowired
     protected OauthMenu oauthMenu;
 
@@ -46,49 +44,49 @@ public class ClientDetailsServiceGen extends ServiceImpl<ClientDetailsDao, Clien
         Page<ClientDetailsEntity> _page = new Query<ClientDetailsEntity>(params).getPage();
         EntityWrapper<ClientDetailsEntity> entityEntityWrapper = new EntityWrapper<>();
         Map<String,Object> condition = new HashMap<>();
-        if(params.containsKey("id") && null !=params.get("id") && StringUtils.isNotEmpty(params.get("id").toString())) {
+        if(params.containsKey("id") && null != params.get("id") && StringUtils.isNotEmpty(params.get("id").toString())) {
             condition.put("id", params.get("id"));
         }
-        if(params.containsKey("resourceIds") && null !=params.get("resourceIds") && StringUtils.isNotEmpty(params.get("resourceIds").toString())) {
+        if(params.containsKey("resourceIds") && null != params.get("resourceIds") && StringUtils.isNotEmpty(params.get("resourceIds").toString())) {
             condition.put("resource_ids", params.get("resourceIds"));
         }
-        if(params.containsKey("scope") && null !=params.get("scope") && StringUtils.isNotEmpty(params.get("scope").toString())) {
+        if(params.containsKey("scope") && null != params.get("scope") && StringUtils.isNotEmpty(params.get("scope").toString())) {
             condition.put("scope", params.get("scope"));
         }
-        if(params.containsKey("grantTypes") && null !=params.get("grantTypes") && StringUtils.isNotEmpty(params.get("grantTypes").toString())) {
+        if(params.containsKey("grantTypes") && null != params.get("grantTypes") && StringUtils.isNotEmpty(params.get("grantTypes").toString())) {
             condition.put("grant_types", params.get("grantTypes"));
         }
-        if(params.containsKey("roles") && null !=params.get("roles") && StringUtils.isNotEmpty(params.get("roles").toString())) {
+        if(params.containsKey("roles") && null != params.get("roles") && StringUtils.isNotEmpty(params.get("roles").toString())) {
             condition.put("roles", params.get("roles"));
         }
-        if(params.containsKey("trusted") && null !=params.get("trusted") && StringUtils.isNotEmpty(params.get("trusted").toString())) {
+        if(params.containsKey("trusted") && null != params.get("trusted") && StringUtils.isNotEmpty(params.get("trusted").toString())) {
             condition.put("trusted", params.get("trusted"));
         }
-        if(params.containsKey("archived") && null !=params.get("archived") && StringUtils.isNotEmpty(params.get("archived").toString())) {
+        if(params.containsKey("archived") && null != params.get("archived") && StringUtils.isNotEmpty(params.get("archived").toString())) {
             condition.put("archived", params.get("archived"));
         }
-        if(params.containsKey("createTime") && null !=params.get("createTime") && StringUtils.isNotEmpty(params.get("createTime").toString())) {
+        if(params.containsKey("createTime") && null != params.get("createTime") && StringUtils.isNotEmpty(params.get("createTime").toString())) {
             condition.put("create_time", params.get("createTime"));
         }
-        if(params.containsKey("clientId") && null !=params.get("clientId") && StringUtils.isNotEmpty(params.get("clientId").toString())) {
+        if(params.containsKey("clientId") && null != params.get("clientId") && StringUtils.isNotEmpty(params.get("clientId").toString())) {
             condition.put("client_id", params.get("clientId"));
         }
-        if(params.containsKey("clientSecret") && null !=params.get("clientSecret") && StringUtils.isNotEmpty(params.get("clientSecret").toString())) {
+        if(params.containsKey("clientSecret") && null != params.get("clientSecret") && StringUtils.isNotEmpty(params.get("clientSecret").toString())) {
             condition.put("client_secret", params.get("clientSecret"));
         }
-        if(params.containsKey("clientName") && null !=params.get("clientName") && StringUtils.isNotEmpty(params.get("clientName").toString())) {
+        if(params.containsKey("clientName") && null != params.get("clientName") && StringUtils.isNotEmpty(params.get("clientName").toString())) {
             condition.put("client_name", params.get("clientName"));
         }
-        if(params.containsKey("clientUri") && null !=params.get("clientUri") && StringUtils.isNotEmpty(params.get("clientUri").toString())) {
+        if(params.containsKey("clientUri") && null != params.get("clientUri") && StringUtils.isNotEmpty(params.get("clientUri").toString())) {
             condition.put("client_uri", params.get("clientUri"));
         }
-        if(params.containsKey("clientIconUri") && null !=params.get("clientIconUri") && StringUtils.isNotEmpty(params.get("clientIconUri").toString())) {
+        if(params.containsKey("clientIconUri") && null != params.get("clientIconUri") && StringUtils.isNotEmpty(params.get("clientIconUri").toString())) {
             condition.put("client_icon_uri", params.get("clientIconUri"));
         }
-        if(params.containsKey("redirectUri") && null !=params.get("redirectUri") && StringUtils.isNotEmpty(params.get("redirectUri").toString())) {
+        if(params.containsKey("redirectUri") && null != params.get("redirectUri") && StringUtils.isNotEmpty(params.get("redirectUri").toString())) {
             condition.put("redirect_uri", params.get("redirectUri"));
         }
-        if(params.containsKey("description") && null !=params.get("description") && StringUtils.isNotEmpty(params.get("description").toString())) {
+        if(params.containsKey("description") && null != params.get("description") && StringUtils.isNotEmpty(params.get("description").toString())) {
             condition.put("description", params.get("description"));
         }
         _page.setCondition(condition);
@@ -111,40 +109,44 @@ public class ClientDetailsServiceGen extends ServiceImpl<ClientDetailsDao, Clien
     */
     public String parentMenu(){
         oauthMenu.init();
-        SysMenuEntity sysMenuEntity = sysMenuService.getByMenuKey(OauthMenu.oauth_menu);
+        SysMenuEntity sysMenuEntity = sysMenuService.getByMenuKey(oauthMenu.getMenu());
         if(null != sysMenuEntity)
             return sysMenuEntity.getMenuKey();
         return "";
+    }
+
+    public String menu() {
+        String menu = SysMenuService.getMenuKey("Oauth", "ClientDetails");
+        return menu;
+    }
+
+    public String button(String button) {
+        String menu = menu() + button;
+        return menu;
     }
 
     public String ico(){
         return "fa-file-code-o";
     }
 
-    private String order(){
+    protected String order(){
         return String.valueOf(menuOrder());
     }
 
     public void init() {
-        sysMenuService.put(getMenus());
-        language.add(getLanguageItemArray());
-        language.add(getLanguageItems());
-        addLanguageColumnItem();
-        language.add(getLanguageItemsInternal());
+        sysMenuService.put(getMenuItemsInternal(), getMenuItems(), getMenuList());
+        language.put(getLanguageItemsInternal(), getLanguageItems(), getLanguageList());
     }
 
-    public String[][] getLanguageItemArray() {
+    public List<String[]> getLanguageList() {
         return null;
     }
 
-    public List<String[]> getLanguageItems() {
+    public String[][] getLanguageItems() {
         return null;
     }
 
-    public void addLanguageColumnItem(){
-    }
-
-    public String[][] getLanguageItemsInternal() {
+    private String[][] getLanguageItemsInternal() {
         String[][] items = new String[][]{
                 {"oauth_clientdetails_table_comment", "客户端详情"},
                 {"oauth_clientdetails_column_id", "id"},
@@ -166,15 +168,22 @@ public class ClientDetailsServiceGen extends ServiceImpl<ClientDetailsDao, Clien
         return items;
     }
 
-    public String[][] getMenus() {
-        String menuKey = SysMenuService.getMenuKey("Oauth", "ClientDetails");
+    public List<String[]> getMenuList() {
+        return null;
+    }
+
+    public String[][] getMenuItems() {
+        return null;
+    }
+
+    private String[][] getMenuItemsInternal() {
         String[][] menus = new String[][]{
                 //{0:菜单名字,1:URL,2:权限,3:菜单类型,4:ICON,5:排序,6:MenuKey,7:ParentKey,8:Language}
-                {"客户端详情", "modules/oauth/clientdetails", "oauth:clientdetails:list,oauth:clientdetails:info,oauth:clientdetails:save,oauth:clientdetails:update,oauth:clientdetails:delete", "1", "fa " + ico(), order(), menuKey, parentMenu(), "oauth_clientdetails_table_comment"},
-                {"查看", null, "oauth:clientdetails:list,oauth:clientdetails:info", "2", null, order(), SysMenuService.getMenuKey("Oauth", "ClientDetailsInfo"), menuKey, "sys_string_lookup"},
-                {"新增", null, "oauth:clientdetails:save", "2", null, order(), SysMenuService.getMenuKey("Oauth", "ClientDetailsSave"), menuKey, "sys_string_add"},
-                {"修改", null, "oauth:clientdetails:update", "2", null, order(), SysMenuService.getMenuKey("Oauth", "ClientDetailsUpdate"), menuKey, "sys_string_change"},
-                {"删除", null, "oauth:clientdetails:delete", "2", null, order(), SysMenuService.getMenuKey("Oauth", "ClientDetailsDelete"), menuKey, "sys_string_delete"},
+                {"客户端详情", "modules/oauth/clientdetails", "oauth:clientdetails:list,oauth:clientdetails:info,oauth:clientdetails:save,oauth:clientdetails:update,oauth:clientdetails:delete", "1", "fa " + ico(), order(), menu(), parentMenu(), "oauth_clientdetails_table_comment"},
+                {"查看", null, "oauth:clientdetails:list,oauth:clientdetails:info", "2", null, order(), button("List"), menu(), "sys_string_lookup"},
+                {"新增", null, "oauth:clientdetails:save", "2", null, order(), button("Save"), menu(), "sys_string_add"},
+                {"修改", null, "oauth:clientdetails:update", "2", null, order(), button("Update"), menu(), "sys_string_change"},
+                {"删除", null, "oauth:clientdetails:delete", "2", null, order(), button("Delete"), menu(), "sys_string_delete"},
         };
         return menus;
     }

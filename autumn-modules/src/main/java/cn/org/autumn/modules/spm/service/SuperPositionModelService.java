@@ -260,16 +260,18 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
         insert(superPositionModelEntity);
     }
 
-    public void addLanguageColumnItem() {
-        languageService.addLanguageColumnItem("spm_superpositionmodel_table_comment", "超级位置模型", "Super Position Model");
-        languageService.addLanguageColumnItem("spm_superpositionmodel_column_id", "id");
-        languageService.addLanguageColumnItem("spm_superpositionmodel_column_site_id", "网站ID", "Site ID");
-        languageService.addLanguageColumnItem("spm_superpositionmodel_column_page_id", "网页ID", "Page ID");
-        languageService.addLanguageColumnItem("spm_superpositionmodel_column_channel_id", "频道ID", "Channel ID");
-        languageService.addLanguageColumnItem("spm_superpositionmodel_column_product_id", "产品ID", "Product ID");
-        languageService.addLanguageColumnItem("spm_superpositionmodel_column_resource_id", "资源ID", "Resource ID");
-        languageService.addLanguageColumnItem("spm_superpositionmodel_column_need_login", "需要登录", "Need login");
-        super.addLanguageColumnItem();
+    public String[][] getLanguageItems() {
+        String[][] items = new String[][]{
+                {"spm_superpositionmodel_table_comment", "超级位置模型", "Super Position Model"},
+                {"spm_superpositionmodel_column_id", "id"},
+                {"spm_superpositionmodel_column_site_id", "网站ID", "Site ID"},
+                {"spm_superpositionmodel_column_page_id", "网页ID", "Page ID"},
+                {"spm_superpositionmodel_column_channel_id", "频道ID", "Channel ID"},
+                {"spm_superpositionmodel_column_product_id", "产品ID", "Product ID"},
+                {"spm_superpositionmodel_column_resource_id", "资源ID", "Resource ID"},
+                {"spm_superpositionmodel_column_need_login", "需要登录", "Need login"},
+        };
+        return items;
     }
 
     public void init() {

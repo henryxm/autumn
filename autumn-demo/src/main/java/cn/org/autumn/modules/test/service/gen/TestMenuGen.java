@@ -45,11 +45,6 @@ public class TestMenuGen implements InitFactory.Init {
     public void init() {
         sysMenuService.put(getMenuItemsInternal(), getMenuItems(), getMenuList());
         language.put(getLanguageItemsInternal(), getLanguageItems(), getLanguageList());
-        addLanguageColumnItem();
-    }
-
-    @Deprecated
-    public void addLanguageColumnItem() {
     }
 
     public List<String[]> getMenuList() {

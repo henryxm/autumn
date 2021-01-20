@@ -28,8 +28,6 @@ import cn.org.autumn.modules.lan.service.LanguageService;
  */
 public class IpBlackServiceGen extends ServiceImpl<IpBlackDao, IpBlackEntity> implements InitFactory.Init {
 
-    protected static final String NULL = null;
-
     @Autowired
     protected WallMenu wallMenu;
 
@@ -46,28 +44,28 @@ public class IpBlackServiceGen extends ServiceImpl<IpBlackDao, IpBlackEntity> im
         Page<IpBlackEntity> _page = new Query<IpBlackEntity>(params).getPage();
         EntityWrapper<IpBlackEntity> entityEntityWrapper = new EntityWrapper<>();
         Map<String,Object> condition = new HashMap<>();
-        if(params.containsKey("id") && null !=params.get("id") && StringUtils.isNotEmpty(params.get("id").toString())) {
+        if(params.containsKey("id") && null != params.get("id") && StringUtils.isNotEmpty(params.get("id").toString())) {
             condition.put("id", params.get("id"));
         }
-        if(params.containsKey("ip") && null !=params.get("ip") && StringUtils.isNotEmpty(params.get("ip").toString())) {
+        if(params.containsKey("ip") && null != params.get("ip") && StringUtils.isNotEmpty(params.get("ip").toString())) {
             condition.put("ip", params.get("ip"));
         }
-        if(params.containsKey("count") && null !=params.get("count") && StringUtils.isNotEmpty(params.get("count").toString())) {
+        if(params.containsKey("count") && null != params.get("count") && StringUtils.isNotEmpty(params.get("count").toString())) {
             condition.put("count", params.get("count"));
         }
-        if(params.containsKey("available") && null !=params.get("available") && StringUtils.isNotEmpty(params.get("available").toString())) {
+        if(params.containsKey("available") && null != params.get("available") && StringUtils.isNotEmpty(params.get("available").toString())) {
             condition.put("available", params.get("available"));
         }
-        if(params.containsKey("tag") && null !=params.get("tag") && StringUtils.isNotEmpty(params.get("tag").toString())) {
+        if(params.containsKey("tag") && null != params.get("tag") && StringUtils.isNotEmpty(params.get("tag").toString())) {
             condition.put("tag", params.get("tag"));
         }
-        if(params.containsKey("description") && null !=params.get("description") && StringUtils.isNotEmpty(params.get("description").toString())) {
+        if(params.containsKey("description") && null != params.get("description") && StringUtils.isNotEmpty(params.get("description").toString())) {
             condition.put("description", params.get("description"));
         }
-        if(params.containsKey("createTime") && null !=params.get("createTime") && StringUtils.isNotEmpty(params.get("createTime").toString())) {
+        if(params.containsKey("createTime") && null != params.get("createTime") && StringUtils.isNotEmpty(params.get("createTime").toString())) {
             condition.put("create_time", params.get("createTime"));
         }
-        if(params.containsKey("updateTime") && null !=params.get("updateTime") && StringUtils.isNotEmpty(params.get("updateTime").toString())) {
+        if(params.containsKey("updateTime") && null != params.get("updateTime") && StringUtils.isNotEmpty(params.get("updateTime").toString())) {
             condition.put("update_time", params.get("updateTime"));
         }
         _page.setCondition(condition);
@@ -90,10 +88,20 @@ public class IpBlackServiceGen extends ServiceImpl<IpBlackDao, IpBlackEntity> im
     */
     public String parentMenu(){
         wallMenu.init();
-        SysMenuEntity sysMenuEntity = sysMenuService.getByMenuKey(WallMenu.wall_menu);
+        SysMenuEntity sysMenuEntity = sysMenuService.getByMenuKey(wallMenu.getMenu());
         if(null != sysMenuEntity)
             return sysMenuEntity.getMenuKey();
         return "";
+    }
+
+    public String menu() {
+        String menu = SysMenuService.getMenuKey("Wall", "IpBlack");
+        return menu;
+    }
+
+    public String button(String button) {
+        String menu = menu() + button;
+        return menu;
     }
 
     public String ico(){
@@ -105,25 +113,19 @@ public class IpBlackServiceGen extends ServiceImpl<IpBlackDao, IpBlackEntity> im
     }
 
     public void init() {
-        sysMenuService.put(getMenus());
-        language.add(getLanguageItemArray());
-        language.add(getLanguageItems());
-        addLanguageColumnItem();
-        language.add(getLanguageItemsInternal());
+        sysMenuService.put(getMenuItemsInternal(), getMenuItems(), getMenuList());
+        language.put(getLanguageItemsInternal(), getLanguageItems(), getLanguageList());
     }
 
-    public String[][] getLanguageItemArray() {
+    public List<String[]> getLanguageList() {
         return null;
     }
 
-    public List<String[]> getLanguageItems() {
+    public String[][] getLanguageItems() {
         return null;
     }
 
-    public void addLanguageColumnItem(){
-    }
-
-    public String[][] getLanguageItemsInternal() {
+    private String[][] getLanguageItemsInternal() {
         String[][] items = new String[][]{
                 {"wall_ipblack_table_comment", "IP黑名单"},
                 {"wall_ipblack_column_id", "id"},
@@ -138,15 +140,22 @@ public class IpBlackServiceGen extends ServiceImpl<IpBlackDao, IpBlackEntity> im
         return items;
     }
 
-    public String[][] getMenus() {
-        String menuKey = SysMenuService.getMenuKey("Wall", "IpBlack");
+    public List<String[]> getMenuList() {
+        return null;
+    }
+
+    public String[][] getMenuItems() {
+        return null;
+    }
+
+    private String[][] getMenuItemsInternal() {
         String[][] menus = new String[][]{
                 //{0:菜单名字,1:URL,2:权限,3:菜单类型,4:ICON,5:排序,6:MenuKey,7:ParentKey,8:Language}
-                {"IP黑名单", "modules/wall/ipblack", "wall:ipblack:list,wall:ipblack:info,wall:ipblack:save,wall:ipblack:update,wall:ipblack:delete", "1", "fa " + ico(), order(), menuKey, parentMenu(), "wall_ipblack_table_comment"},
-                {"查看", null, "wall:ipblack:list,wall:ipblack:info", "2", null, order(), SysMenuService.getMenuKey("Wall", "IpBlackInfo"), menuKey, "sys_string_lookup"},
-                {"新增", null, "wall:ipblack:save", "2", null, order(), SysMenuService.getMenuKey("Wall", "IpBlackSave"), menuKey, "sys_string_add"},
-                {"修改", null, "wall:ipblack:update", "2", null, order(), SysMenuService.getMenuKey("Wall", "IpBlackUpdate"), menuKey, "sys_string_change"},
-                {"删除", null, "wall:ipblack:delete", "2", null, order(), SysMenuService.getMenuKey("Wall", "IpBlackDelete"), menuKey, "sys_string_delete"},
+                {"IP黑名单", "modules/wall/ipblack", "wall:ipblack:list,wall:ipblack:info,wall:ipblack:save,wall:ipblack:update,wall:ipblack:delete", "1", "fa " + ico(), order(), menu(), parentMenu(), "wall_ipblack_table_comment"},
+                {"查看", null, "wall:ipblack:list,wall:ipblack:info", "2", null, order(), button("List"), menu(), "sys_string_lookup"},
+                {"新增", null, "wall:ipblack:save", "2", null, order(), button("Save"), menu(), "sys_string_add"},
+                {"修改", null, "wall:ipblack:update", "2", null, order(), button("Update"), menu(), "sys_string_change"},
+                {"删除", null, "wall:ipblack:delete", "2", null, order(), button("Delete"), menu(), "sys_string_delete"},
         };
         return menus;
     }

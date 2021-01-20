@@ -28,8 +28,6 @@ import cn.org.autumn.modules.lan.service.LanguageService;
  */
 public class UserTokenServiceGen extends ServiceImpl<UserTokenDao, UserTokenEntity> implements InitFactory.Init {
 
-    protected static final String NULL = null;
-
     @Autowired
     protected UsrMenu usrMenu;
 
@@ -111,11 +109,6 @@ public class UserTokenServiceGen extends ServiceImpl<UserTokenDao, UserTokenEnti
     public void init() {
         sysMenuService.put(getMenuItemsInternal(), getMenuItems(), getMenuList());
         language.put(getLanguageItemsInternal(), getLanguageItems(), getLanguageList());
-        addLanguageColumnItem();
-    }
-
-    @Deprecated
-    public void addLanguageColumnItem() {
     }
 
     public List<String[]> getLanguageList() {

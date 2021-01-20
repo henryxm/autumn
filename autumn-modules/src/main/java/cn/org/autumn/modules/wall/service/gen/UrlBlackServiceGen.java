@@ -28,8 +28,6 @@ import cn.org.autumn.modules.lan.service.LanguageService;
  */
 public class UrlBlackServiceGen extends ServiceImpl<UrlBlackDao, UrlBlackEntity> implements InitFactory.Init {
 
-    protected static final String NULL = null;
-
     @Autowired
     protected WallMenu wallMenu;
 
@@ -46,22 +44,22 @@ public class UrlBlackServiceGen extends ServiceImpl<UrlBlackDao, UrlBlackEntity>
         Page<UrlBlackEntity> _page = new Query<UrlBlackEntity>(params).getPage();
         EntityWrapper<UrlBlackEntity> entityEntityWrapper = new EntityWrapper<>();
         Map<String,Object> condition = new HashMap<>();
-        if(params.containsKey("id") && null !=params.get("id") && StringUtils.isNotEmpty(params.get("id").toString())) {
+        if(params.containsKey("id") && null != params.get("id") && StringUtils.isNotEmpty(params.get("id").toString())) {
             condition.put("id", params.get("id"));
         }
-        if(params.containsKey("url") && null !=params.get("url") && StringUtils.isNotEmpty(params.get("url").toString())) {
+        if(params.containsKey("url") && null != params.get("url") && StringUtils.isNotEmpty(params.get("url").toString())) {
             condition.put("url", params.get("url"));
         }
-        if(params.containsKey("count") && null !=params.get("count") && StringUtils.isNotEmpty(params.get("count").toString())) {
+        if(params.containsKey("count") && null != params.get("count") && StringUtils.isNotEmpty(params.get("count").toString())) {
             condition.put("count", params.get("count"));
         }
-        if(params.containsKey("forbidden") && null !=params.get("forbidden") && StringUtils.isNotEmpty(params.get("forbidden").toString())) {
+        if(params.containsKey("forbidden") && null != params.get("forbidden") && StringUtils.isNotEmpty(params.get("forbidden").toString())) {
             condition.put("forbidden", params.get("forbidden"));
         }
-        if(params.containsKey("tag") && null !=params.get("tag") && StringUtils.isNotEmpty(params.get("tag").toString())) {
+        if(params.containsKey("tag") && null != params.get("tag") && StringUtils.isNotEmpty(params.get("tag").toString())) {
             condition.put("tag", params.get("tag"));
         }
-        if(params.containsKey("description") && null !=params.get("description") && StringUtils.isNotEmpty(params.get("description").toString())) {
+        if(params.containsKey("description") && null != params.get("description") && StringUtils.isNotEmpty(params.get("description").toString())) {
             condition.put("description", params.get("description"));
         }
         _page.setCondition(condition);
@@ -84,10 +82,20 @@ public class UrlBlackServiceGen extends ServiceImpl<UrlBlackDao, UrlBlackEntity>
     */
     public String parentMenu(){
         wallMenu.init();
-        SysMenuEntity sysMenuEntity = sysMenuService.getByMenuKey(WallMenu.wall_menu);
+        SysMenuEntity sysMenuEntity = sysMenuService.getByMenuKey(wallMenu.getMenu());
         if(null != sysMenuEntity)
             return sysMenuEntity.getMenuKey();
         return "";
+    }
+
+    public String menu() {
+        String menu = SysMenuService.getMenuKey("Wall", "UrlBlack");
+        return menu;
+    }
+
+    public String button(String button) {
+        String menu = menu() + button;
+        return menu;
     }
 
     public String ico(){
@@ -99,25 +107,19 @@ public class UrlBlackServiceGen extends ServiceImpl<UrlBlackDao, UrlBlackEntity>
     }
 
     public void init() {
-        sysMenuService.put(getMenus());
-        language.add(getLanguageItemArray());
-        language.add(getLanguageItems());
-        addLanguageColumnItem();
-        language.add(getLanguageItemsInternal());
+        sysMenuService.put(getMenuItemsInternal(), getMenuItems(), getMenuList());
+        language.put(getLanguageItemsInternal(), getLanguageItems(), getLanguageList());
     }
 
-    public String[][] getLanguageItemArray() {
+    public List<String[]> getLanguageList() {
         return null;
     }
 
-    public List<String[]> getLanguageItems() {
+    public String[][] getLanguageItems() {
         return null;
     }
 
-    public void addLanguageColumnItem(){
-    }
-
-    public String[][] getLanguageItemsInternal() {
+    private String[][] getLanguageItemsInternal() {
         String[][] items = new String[][]{
                 {"wall_urlblack_table_comment", "链接黑名单"},
                 {"wall_urlblack_column_id", "id"},
@@ -130,15 +132,22 @@ public class UrlBlackServiceGen extends ServiceImpl<UrlBlackDao, UrlBlackEntity>
         return items;
     }
 
-    public String[][] getMenus() {
-        String menuKey = SysMenuService.getMenuKey("Wall", "UrlBlack");
+    public List<String[]> getMenuList() {
+        return null;
+    }
+
+    public String[][] getMenuItems() {
+        return null;
+    }
+
+    private String[][] getMenuItemsInternal() {
         String[][] menus = new String[][]{
                 //{0:菜单名字,1:URL,2:权限,3:菜单类型,4:ICON,5:排序,6:MenuKey,7:ParentKey,8:Language}
-                {"链接黑名单", "modules/wall/urlblack", "wall:urlblack:list,wall:urlblack:info,wall:urlblack:save,wall:urlblack:update,wall:urlblack:delete", "1", "fa " + ico(), order(), menuKey, parentMenu(), "wall_urlblack_table_comment"},
-                {"查看", null, "wall:urlblack:list,wall:urlblack:info", "2", null, order(), SysMenuService.getMenuKey("Wall", "UrlBlackInfo"), menuKey, "sys_string_lookup"},
-                {"新增", null, "wall:urlblack:save", "2", null, order(), SysMenuService.getMenuKey("Wall", "UrlBlackSave"), menuKey, "sys_string_add"},
-                {"修改", null, "wall:urlblack:update", "2", null, order(), SysMenuService.getMenuKey("Wall", "UrlBlackUpdate"), menuKey, "sys_string_change"},
-                {"删除", null, "wall:urlblack:delete", "2", null, order(), SysMenuService.getMenuKey("Wall", "UrlBlackDelete"), menuKey, "sys_string_delete"},
+                {"链接黑名单", "modules/wall/urlblack", "wall:urlblack:list,wall:urlblack:info,wall:urlblack:save,wall:urlblack:update,wall:urlblack:delete", "1", "fa " + ico(), order(), menu(), parentMenu(), "wall_urlblack_table_comment"},
+                {"查看", null, "wall:urlblack:list,wall:urlblack:info", "2", null, order(), button("List"), menu(), "sys_string_lookup"},
+                {"新增", null, "wall:urlblack:save", "2", null, order(), button("Save"), menu(), "sys_string_add"},
+                {"修改", null, "wall:urlblack:update", "2", null, order(), button("Update"), menu(), "sys_string_change"},
+                {"删除", null, "wall:urlblack:delete", "2", null, order(), button("Delete"), menu(), "sys_string_delete"},
         };
         return menus;
     }

@@ -1,14 +1,11 @@
 package cn.org.autumn.modules.client.service.gen;
 
-import cn.org.autumn.modules.lan.service.Language;
-import cn.org.autumn.modules.lan.service.LanguageService;
 import cn.org.autumn.modules.sys.service.SysMenuService;
 import cn.org.autumn.site.InitFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
+import cn.org.autumn.modules.lan.service.Language;
+import cn.org.autumn.modules.lan.service.LanguageService;
 import java.util.List;
-
 /**
  * 网站客户端
  *
@@ -29,16 +26,12 @@ public class ClientMenuGen implements InitFactory.Init {
     @Autowired
     protected LanguageService languageService;
 
-    public String ico() {
+    protected String order(){
+        return "0";
+    }
+
+    protected String ico(){
         return "fa-file-code-o";
-    }
-
-    public int menuOrder() {
-        return 0;
-    }
-
-    protected String order() {
-        return String.valueOf(menuOrder());
     }
 
     public String getMenu() {
@@ -52,11 +45,6 @@ public class ClientMenuGen implements InitFactory.Init {
     public void init() {
         sysMenuService.put(getMenuItemsInternal(), getMenuItems(), getMenuList());
         language.put(getLanguageItemsInternal(), getLanguageItems(), getLanguageList());
-        addLanguageColumnItem();
-    }
-
-    @Deprecated
-    public void addLanguageColumnItem() {
     }
 
     public List<String[]> getMenuList() {
@@ -67,7 +55,7 @@ public class ClientMenuGen implements InitFactory.Init {
         return null;
     }
 
-    public String[][] getMenuItemsInternal() {
+    private String[][] getMenuItemsInternal() {
         String[][] menus = new String[][]{
                 //{0:菜单名字,1:URL,2:权限,3:菜单类型,4:ICON,5:排序,6:MenuKey,7:ParentKey,8:Language}
                 {"客户端", "", "", "0", "fa " + ico(), order(), getMenu(), getParentMenu(), client_menu + "_text"},

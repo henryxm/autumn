@@ -7,7 +7,7 @@ import cn.org.autumn.modules.lan.service.Language;
 import cn.org.autumn.modules.lan.service.LanguageService;
 import java.util.List;
 /**
- * 登录日志
+ * 用户信息
  *
  * @author Shaohua Xu
  * @email henryxm@163.com
@@ -45,11 +45,6 @@ public class UsrMenuGen implements InitFactory.Init {
     public void init() {
         sysMenuService.put(getMenuItemsInternal(), getMenuItems(), getMenuList());
         language.put(getLanguageItemsInternal(), getLanguageItems(), getLanguageList());
-        addLanguageColumnItem();
-    }
-
-    @Deprecated
-    public void addLanguageColumnItem() {
     }
 
     public List<String[]> getMenuList() {

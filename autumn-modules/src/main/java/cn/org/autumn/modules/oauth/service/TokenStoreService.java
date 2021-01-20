@@ -38,18 +38,20 @@ public class TokenStoreService extends TokenStoreServiceGen {
         super.init();
     }
 
-    public void addLanguageColumnItem() {
-        languageService.addLanguageColumnItem("oauth_tokenstore_table_comment", "授权令牌", "Authorize token");
-        languageService.addLanguageColumnItem("oauth_tokenstore_column_id", "id");
-        languageService.addLanguageColumnItem("oauth_tokenstore_column_user_id", "用户ID", "User id");
-        languageService.addLanguageColumnItem("oauth_tokenstore_column_user_uuid", "用户Uuid", "User uuid");
-        languageService.addLanguageColumnItem("oauth_tokenstore_column_auth_code", "授权码", "Authentication code");
-        languageService.addLanguageColumnItem("oauth_tokenstore_column_access_token", "访问令牌", "Access token");
-        languageService.addLanguageColumnItem("oauth_tokenstore_column_access_token_expired_in", "访问令牌有效时长(秒)", "Access token duration");
-        languageService.addLanguageColumnItem("oauth_tokenstore_column_refresh_token", "刷新令牌", "Refresh token");
-        languageService.addLanguageColumnItem("oauth_tokenstore_column_refresh_token_expired_in", "刷新令牌有效时长(秒)", "Refresh token duration");
-        languageService.addLanguageColumnItem("oauth_tokenstore_column_create_time", "创建时间", "Create time");
-        super.addLanguageColumnItem();
+    public String[][] getLanguageItems() {
+        String[][] items = new String[][]{
+                {"oauth_tokenstore_table_comment", "授权令牌", "Authorize token"},
+                {"oauth_tokenstore_column_id", "id"},
+                {"oauth_tokenstore_column_user_id", "用户ID", "User id"},
+                {"oauth_tokenstore_column_user_uuid", "用户Uuid", "User uuid"},
+                {"oauth_tokenstore_column_auth_code", "授权码", "Authentication code"},
+                {"oauth_tokenstore_column_access_token", "访问令牌", "Access token"},
+                {"oauth_tokenstore_column_access_token_expired_in", "访问令牌有效时长(秒)", "Access token duration"},
+                {"oauth_tokenstore_column_refresh_token", "刷新令牌", "Refresh token"},
+                {"oauth_tokenstore_column_refresh_token_expired_in", "刷新令牌有效时长(秒)", "Refresh token duration"},
+                {"oauth_tokenstore_column_create_time", "创建时间", "Create time"},
+        };
+        return items;
     }
 
     public TokenStoreEntity findByUserId(Long userId) {

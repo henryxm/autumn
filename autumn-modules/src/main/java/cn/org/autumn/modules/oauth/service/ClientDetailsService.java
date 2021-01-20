@@ -160,23 +160,26 @@ public class ClientDetailsService extends ClientDetailsServiceGen implements Loo
         return get(ValueType.refreshToken, refreshToken) != null;
     }
 
-    public void addLanguageColumnItem() {
-        languageService.addLanguageColumnItem("oauth_clientdetails_table_comment", "客户端详情", "Client details");
-        languageService.addLanguageColumnItem("oauth_clientdetails_column_id", "id");
-        languageService.addLanguageColumnItem("oauth_clientdetails_column_resource_ids", "资源ID", "Resource ID");
-        languageService.addLanguageColumnItem("oauth_clientdetails_column_scope", "范围", "Scope");
-        languageService.addLanguageColumnItem("oauth_clientdetails_column_grant_types", "授权类型", "Grant type");
-        languageService.addLanguageColumnItem("oauth_clientdetails_column_roles", "角色", "Roles");
-        languageService.addLanguageColumnItem("oauth_clientdetails_column_trusted", "是否可信", "Trusted");
-        languageService.addLanguageColumnItem("oauth_clientdetails_column_archived", "是否归档", "Archived");
-        languageService.addLanguageColumnItem("oauth_clientdetails_column_create_time", "创建时间", "Create time");
-        languageService.addLanguageColumnItem("oauth_clientdetails_column_client_id", "客户端ID", "Client ID");
-        languageService.addLanguageColumnItem("oauth_clientdetails_column_client_secret", "客户端密匙", "Client secret");
-        languageService.addLanguageColumnItem("oauth_clientdetails_column_client_name", "客户端名字", "Client name");
-        languageService.addLanguageColumnItem("oauth_clientdetails_column_client_uri", "客户端URI", "Client uri");
-        languageService.addLanguageColumnItem("oauth_clientdetails_column_client_icon_uri", "客户端图标URI", "Client icon uri");
-        languageService.addLanguageColumnItem("oauth_clientdetails_column_redirect_uri", "重定向地址", "Redirect uri");
-        languageService.addLanguageColumnItem("oauth_clientdetails_column_description", "描述信息", "Description");
+    public String[][] getLanguageItems() {
+        String[][] items = new String[][]{
+                {"oauth_clientdetails_table_comment", "客户端详情", "Client details"},
+                {"oauth_clientdetails_column_id", "id"},
+                {"oauth_clientdetails_column_resource_ids", "资源ID", "Resource ID"},
+                {"oauth_clientdetails_column_scope", "范围", "Scope"},
+                {"oauth_clientdetails_column_grant_types", "授权类型", "Grant type"},
+                {"oauth_clientdetails_column_roles", "角色", "Roles"},
+                {"oauth_clientdetails_column_trusted", "是否可信", "Trusted"},
+                {"oauth_clientdetails_column_archived", "是否归档", "Archived"},
+                {"oauth_clientdetails_column_create_time", "创建时间", "Create time"},
+                {"oauth_clientdetails_column_client_id", "客户端ID", "Client ID"},
+                {"oauth_clientdetails_column_client_secret", "客户端密匙", "Client secret"},
+                {"oauth_clientdetails_column_client_name", "客户端名字", "Client name"},
+                {"oauth_clientdetails_column_client_uri", "客户端URI", "Client uri"},
+                {"oauth_clientdetails_column_client_icon_uri", "客户端图标URI", "Client icon uri"},
+                {"oauth_clientdetails_column_redirect_uri", "重定向地址", "Redirect uri"},
+                {"oauth_clientdetails_column_description", "描述信息", "Description"},
+        };
+        return items;
     }
 
     public void init() {

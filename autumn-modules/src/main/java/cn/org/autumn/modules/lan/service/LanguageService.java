@@ -233,153 +233,157 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
         return;
     }
 
-
     public boolean addLanguageColumnItem(String key, String zhCn) {
         return addLanguageColumnItem(key, zhCn, null);
     }
 
     public void init() {
         LoopJob.onTenMinute(this);
-        addLanguageColumnItem("sys_string_management", "管理系统", "Manage system");
-        addLanguageColumnItem("sys_string_system_management", "系统管理", "System management");
-        addLanguageColumnItem("sys_string_manager_management", "管理员管理", "Manager management");
-        addLanguageColumnItem("sys_string_role_management", "角色管理", "Role management");
-        addLanguageColumnItem("sys_string_menu_management", "菜单管理", "Menu management");
-        addLanguageColumnItem("sys_string_sql_monitor", "SQL监控", "SQL monitor");
-        addLanguageColumnItem("sys_string_job_schedule", "定时任务", "Schedule job");
-        addLanguageColumnItem("sys_string_lookup", "查看", "Look up");
-        addLanguageColumnItem("sys_string_suspend", "暂停", "Suspend");
-        addLanguageColumnItem("sys_string_resume", "恢复", "Resume");
-        addLanguageColumnItem("sys_string_normal", "正常", "Normal");
-        addLanguageColumnItem("sys_string_forbidden", "禁用", "Forbidden");
-        addLanguageColumnItem("sys_string_status", "状态", "Status");
-        addLanguageColumnItem("sys_string_immediate_execution", "立即执行", "Immediate execution");
-        addLanguageColumnItem("sys_string_log_list", "日志列表", "Log list");
-        addLanguageColumnItem("sys_string_config_management", "参数管理", "Config management");
-        addLanguageColumnItem("sys_string_config_name", "参数名", "Config name");
-        addLanguageColumnItem("sys_string_config_value", "参数值", "Config value");
-        addLanguageColumnItem("sys_string_system_log", "系统日志", "System log");
-        addLanguageColumnItem("sys_string_file_upload", "文件上传", "File upload");
-        addLanguageColumnItem("sys_string_department_management", "部门管理", "Department management");
-        addLanguageColumnItem("sys_string_select_department", "选择部门", "Select department");
-        addLanguageColumnItem("sys_string_dictionary_management", "字典管理", "Dictionary management");
-        addLanguageColumnItem("sys_string_code_generator", "代码生成", "Code generator");
-        addLanguageColumnItem("sys_string_generate", "生成", "generate");
-        addLanguageColumnItem("sys_string_generator_solution", "生成方案", "Generator solution");
-        addLanguageColumnItem("sys_string_select_generator_solution", "选择生成方案", "Select generator solution");
-        addLanguageColumnItem("sys_string_table_name", "表名", "Table name");
-        addLanguageColumnItem("sys_string_engine", "引擎", "Engine");
-        addLanguageColumnItem("sys_string_table_comment", "表备注", "Table comment");
-        addLanguageColumnItem("sys_string_remark", "备注", "Remark");
-        addLanguageColumnItem("sys_string_create_time", "创建时间", "Create time");
-        addLanguageColumnItem("sys_string_query", "查询", "Query");
-        addLanguageColumnItem("sys_string_select_language", "请选择语言", "Please select language");
-        addLanguageColumnItem("sys_string_modify_password", "修改密码", "Modify password");
-        addLanguageColumnItem("sys_string_navigation_menu", "导航菜单", "Navigation menu");
-        addLanguageColumnItem("sys_string_select_menu", "选择菜单", "Select menu");
-        addLanguageColumnItem("sys_string_upper_menu", "上级菜单", "Upper menu");
-        addLanguageColumnItem("sys_string_menu_url", "菜单URL", "Menu url");
-        addLanguageColumnItem("sys_string_permissions", "授权标识", "Permissions");
-        addLanguageColumnItem("sys_string_permissions_ex", "多个用逗号分隔，如：user:list,user:create", "Comma split，ex：user:list,user:create");
-        addLanguageColumnItem("sys_string_root_menu", "一级菜单", "Root menu");
-        addLanguageColumnItem("sys_string_home", "首页", "Home");
-        addLanguageColumnItem("sys_string_account", "账号", "Account");
-        addLanguageColumnItem("sys_string_old_password", "原密码", "Old password");
-        addLanguageColumnItem("sys_string_new_password", "新密码", "New password");
-        addLanguageColumnItem("sys_string_welcome", "欢迎", "Welcome");
-        addLanguageColumnItem("sys_string_login", "登录", "Login");
-        addLanguageColumnItem("sys_string_logout", "退出系统", "Logout");
-        addLanguageColumnItem("sys_string_add", "新增", "Add");
-        addLanguageColumnItem("sys_string_copy", "复制", "Copy");
-        addLanguageColumnItem("sys_string_change", "修改", "Change");
-        addLanguageColumnItem("sys_string_confirm", "确定", "Confirm");
-        addLanguageColumnItem("sys_string_cancel", "取消", "Cancel");
-        addLanguageColumnItem("sys_string_delete", "删除", "Delete");
-        addLanguageColumnItem("sys_string_back", "返回", "Back");
-        addLanguageColumnItem("sys_string_success", "成功", "Success");
-        addLanguageColumnItem("sys_string_fail", "失败", "Fail");
-        addLanguageColumnItem("sys_string_fail_message", "失败信息", "Fail message");
-        addLanguageColumnItem("sys_string_successful", "操作成功", "Successful");
-        addLanguageColumnItem("sys_string_are_sure_to_copy", "确定要复制选中的记录", "Are you sure to copy the selected record");
-        addLanguageColumnItem("sys_string_are_sure_to_delete", "确定要删除选中的记录", "Are you sure to delete the selected record");
-        addLanguageColumnItem("sys_string_are_sure_to_pause", "确定要暂停选中的记录", "Are you sure to pause the selected record");
-        addLanguageColumnItem("sys_string_are_sure_to_resume", "确定要恢复选中的记录", "Are you sure to resume the selected record");
-        addLanguageColumnItem("sys_string_are_sure_to_execute", "确定要立即执行选中的记录", "Are you sure to execute the selected record");
-        addLanguageColumnItem("sys_string_please_select_record", "请选择一条记录", "Please select one record");
-        addLanguageColumnItem("sys_string_department_id", "部门ID", "Department ID");
-        addLanguageColumnItem("sys_string_department_name", "部门名称", "Department name");
-        addLanguageColumnItem("sys_string_department_key", "部门标识", "Department key");
-        addLanguageColumnItem("sys_string_upper_department", "上级部门", "Upper department");
-        addLanguageColumnItem("sys_string_upper_department_key", "上级标识", "Upper key");
-        addLanguageColumnItem("sys_string_order_number", "排序号", "Order number");
-        addLanguageColumnItem("sys_string_icon", "图标", "Icon");
-        addLanguageColumnItem("sys_string_menu_icon", "菜单图标", "Menu icon");
-        addLanguageColumnItem("sys_string_find_icon", "获取图标", "Find icon");
-        addLanguageColumnItem("sys_string_dict_name", "字典名称", "Dict name");
-        addLanguageColumnItem("sys_string_dict_type", "字典类型", "Dict type");
-        addLanguageColumnItem("sys_string_dict_code", "字典码", "Dict code");
-        addLanguageColumnItem("sys_string_dict_value", "字典值", "Dict value");
-        addLanguageColumnItem("sys_string_user_id", "用户ID", "User ID");
-        addLanguageColumnItem("sys_string_username", "用户名", "Username");
-        addLanguageColumnItem("sys_string_query_username", "用户名、用户操作", "ex: username");
-        addLanguageColumnItem("sys_string_type", "类型", "Type");
-        addLanguageColumnItem("sys_string_directory", "目录", "Directory");
-        addLanguageColumnItem("sys_string_menu", "菜单", "Menu");
-        addLanguageColumnItem("sys_string_button", "按钮", "Button");
-        addLanguageColumnItem("sys_string_menu_name", "菜单名称", "Menu name");
-        addLanguageColumnItem("sys_string_menu_id", "菜单ID", "Menu ID");
-        addLanguageColumnItem("sys_string_menu_or_button_name", "菜单名称或按钮名称", "Menu name or button name");
-        addLanguageColumnItem("sys_string_menu_key", "菜单标记", "Menu key");
-        addLanguageColumnItem("sys_string_menu_name_cannot_be_empty", "菜单名称不能为空", "Menu name cannot by empty");
-        addLanguageColumnItem("sys_string_menu_url_cannot_be_empty", "菜单URL不能为空", "Menu url cannot by empty");
-        addLanguageColumnItem("sys_string_menu_key_format", "格式：Menu:{模块包名}:{模块包名}Menu", "Format:Menu:{module}:{module}_menu");
-        addLanguageColumnItem("sys_string_role", "角色", "Role");
-        addLanguageColumnItem("sys_string_role_id", "角色ID", "Role ID");
-        addLanguageColumnItem("sys_string_role_name", "角色名称", "Role name");
-        addLanguageColumnItem("sys_string_role_key", "角色标识", "Role Key");
-        addLanguageColumnItem("sys_string_own_department", "所属部门", "Own department");
-        addLanguageColumnItem("sys_string_function_authority", "功能权限", "Function authority");
-        addLanguageColumnItem("sys_string_data_authority", "数据权限", "Data authority");
-        addLanguageColumnItem("sys_string_mobile", "手机", "Mobile");
-        addLanguageColumnItem("sys_string_phone_number", "手机号", "Phone number");
-        addLanguageColumnItem("sys_string_email", "邮箱", "Email");
-        addLanguageColumnItem("sys_string_password", "密码", "Password");
-        addLanguageColumnItem("sys_string_request_method", "请求方法", "Request method");
-        addLanguageColumnItem("sys_string_request_parameter", "请求参数", "Request parameter");
-        addLanguageColumnItem("sys_string_execute_duration", "执行时长(毫秒)", "Execute duration");
-        addLanguageColumnItem("sys_string_ip_address", "IP地址", "IP Address");
-        addLanguageColumnItem("sys_string_yes", "是", "Yes");
-        addLanguageColumnItem("sys_string_no", "否", "No");
         super.init();
     }
 
-    public void addLanguageColumnItem() {
-        addLanguageColumnItem("lan_language_table_comment", "国家语言", "Language");
-        addLanguageColumnItem("lan_language_column_name", "标识", "Unique Name");
-        addLanguageColumnItem("lan_language_column_zh_cn", "简体中文(中国)", "Chinese(China)");
-        addLanguageColumnItem("lan_language_column_en_us", "英语(美国)");
-        addLanguageColumnItem("lan_language_column_zh_hk", "繁体中文(香港)");
-        addLanguageColumnItem("lan_language_column_ko_kr", "韩语(韩国)");
-        addLanguageColumnItem("lan_language_column_ja_jp", "日语(日本)");
-        addLanguageColumnItem("lan_language_column_tt_ru", "俄语(俄罗斯)");
-        addLanguageColumnItem("lan_language_column_fr_fr", "法语(法国)");
-        addLanguageColumnItem("lan_language_column_de_de", "德语(德国)");
-        addLanguageColumnItem("lan_language_column_vi_vn", "越语(越南)");
-        addLanguageColumnItem("lan_language_column_th_th", "泰语(泰国)");
-        addLanguageColumnItem("lan_language_column_ms_my", "马来语(马来西亚)");
-        addLanguageColumnItem("lan_language_column_id_id", "印尼语(印尼)");
-        addLanguageColumnItem("lan_language_column_es_es", "西班牙语(西班牙)");
-        addLanguageColumnItem("lan_language_column_tr_tr", "土耳其语(土耳其)");
-        addLanguageColumnItem("lan_language_column_uk_uk", "乌克兰语(乌克兰)");
-        addLanguageColumnItem("lan_language_column_pu_pt", "葡萄牙语(葡萄牙)");
-        addLanguageColumnItem("lan_language_column_pl_pl", "波兰语(波兰)");
-        addLanguageColumnItem("lan_language_column_mn_mn", "蒙古语(蒙古)");
-        addLanguageColumnItem("lan_language_column_nb_no", "挪威语(挪威)");
-        addLanguageColumnItem("lan_language_column_it_it", "意大利语(意大利)");
-        addLanguageColumnItem("lan_language_column_he_il", "希伯来语(以色列)");
-        addLanguageColumnItem("lan_language_column_el_gr", "希腊语(希腊)");
-        addLanguageColumnItem("lan_language_column_fa_ir", "波斯语(伊朗)");
-        addLanguageColumnItem("lan_language_column_ar_sa", "阿拉伯语(沙特阿拉伯)");
+    public String[][] getLanguageItems() {
+        String[][] items = new String[][]{
+
+                {"lan_language_table_comment", "国家语言", "Language"},
+                {"lan_language_column_name", "标识", "Unique Name"},
+                {"lan_language_column_zh_cn", "简体中文(中国)", "Chinese(China)"},
+                {"lan_language_column_en_us", "英语(美国)"},
+                {"lan_language_column_zh_hk", "繁体中文(香港)"},
+                {"lan_language_column_ko_kr", "韩语(韩国)"},
+                {"lan_language_column_ja_jp", "日语(日本)"},
+                {"lan_language_column_tt_ru", "俄语(俄罗斯)"},
+                {"lan_language_column_fr_fr", "法语(法国)"},
+                {"lan_language_column_de_de", "德语(德国)"},
+                {"lan_language_column_vi_vn", "越语(越南)"},
+                {"lan_language_column_th_th", "泰语(泰国)"},
+                {"lan_language_column_ms_my", "马来语(马来西亚)"},
+                {"lan_language_column_id_id", "印尼语(印尼)"},
+                {"lan_language_column_es_es", "西班牙语(西班牙)"},
+                {"lan_language_column_tr_tr", "土耳其语(土耳其)"},
+                {"lan_language_column_uk_uk", "乌克兰语(乌克兰)"},
+                {"lan_language_column_pu_pt", "葡萄牙语(葡萄牙)"},
+                {"lan_language_column_pl_pl", "波兰语(波兰)"},
+                {"lan_language_column_mn_mn", "蒙古语(蒙古)"},
+                {"lan_language_column_nb_no", "挪威语(挪威)"},
+                {"lan_language_column_it_it", "意大利语(意大利)"},
+                {"lan_language_column_he_il", "希伯来语(以色列)"},
+                {"lan_language_column_el_gr", "希腊语(希腊)"},
+                {"lan_language_column_fa_ir", "波斯语(伊朗)"},
+                {"lan_language_column_ar_sa", "阿拉伯语(沙特阿拉伯)"},
+
+                {"sys_string_management", "管理系统", "Manage system"},
+                {"sys_string_system_management", "系统管理", "System management"},
+                {"sys_string_manager_management", "管理员管理", "Manager management"},
+                {"sys_string_role_management", "角色管理", "Role management"},
+                {"sys_string_menu_management", "菜单管理", "Menu management"},
+                {"sys_string_sql_monitor", "SQL监控", "SQL monitor"},
+                {"sys_string_job_schedule", "定时任务", "Schedule job"},
+                {"sys_string_lookup", "查看", "Look up"},
+                {"sys_string_suspend", "暂停", "Suspend"},
+                {"sys_string_resume", "恢复", "Resume"},
+                {"sys_string_normal", "正常", "Normal"},
+                {"sys_string_forbidden", "禁用", "Forbidden"},
+                {"sys_string_status", "状态", "Status"},
+                {"sys_string_immediate_execution", "立即执行", "Immediate execution"},
+                {"sys_string_log_list", "日志列表", "Log list"},
+                {"sys_string_config_management", "参数管理", "Config management"},
+                {"sys_string_config_name", "参数名", "Config name"},
+                {"sys_string_config_value", "参数值", "Config value"},
+                {"sys_string_system_log", "系统日志", "System log"},
+                {"sys_string_file_upload", "文件上传", "File upload"},
+                {"sys_string_department_management", "部门管理", "Department management"},
+                {"sys_string_select_department", "选择部门", "Select department"},
+                {"sys_string_dictionary_management", "字典管理", "Dictionary management"},
+                {"sys_string_code_generator", "代码生成", "Code generator"},
+                {"sys_string_generate", "生成", "generate"},
+                {"sys_string_generator_solution", "生成方案", "Generator solution"},
+                {"sys_string_select_generator_solution", "选择生成方案", "Select generator solution"},
+                {"sys_string_table_name", "表名", "Table name"},
+                {"sys_string_engine", "引擎", "Engine"},
+                {"sys_string_table_comment", "表备注", "Table comment"},
+                {"sys_string_remark", "备注", "Remark"},
+                {"sys_string_create_time", "创建时间", "Create time"},
+                {"sys_string_query", "查询", "Query"},
+                {"sys_string_select_language", "请选择语言", "Please select language"},
+                {"sys_string_modify_password", "修改密码", "Modify password"},
+                {"sys_string_navigation_menu", "导航菜单", "Navigation menu"},
+                {"sys_string_select_menu", "选择菜单", "Select menu"},
+                {"sys_string_upper_menu", "上级菜单", "Upper menu"},
+                {"sys_string_menu_url", "菜单URL", "Menu url"},
+                {"sys_string_permissions", "授权标识", "Permissions"},
+                {"sys_string_permissions_ex", "多个用逗号分隔，如：user:list,user:create", "Comma split，ex：user:list,user:create"},
+                {"sys_string_root_menu", "一级菜单", "Root menu"},
+                {"sys_string_home", "首页", "Home"},
+                {"sys_string_account", "账号", "Account"},
+                {"sys_string_old_password", "原密码", "Old password"},
+                {"sys_string_new_password", "新密码", "New password"},
+                {"sys_string_welcome", "欢迎", "Welcome"},
+                {"sys_string_login", "登录", "Login"},
+                {"sys_string_logout", "退出系统", "Logout"},
+                {"sys_string_add", "新增", "Add"},
+                {"sys_string_copy", "复制", "Copy"},
+                {"sys_string_change", "修改", "Change"},
+                {"sys_string_confirm", "确定", "Confirm"},
+                {"sys_string_cancel", "取消", "Cancel"},
+                {"sys_string_delete", "删除", "Delete"},
+                {"sys_string_back", "返回", "Back"},
+                {"sys_string_success", "成功", "Success"},
+                {"sys_string_fail", "失败", "Fail"},
+                {"sys_string_fail_message", "失败信息", "Fail message"},
+                {"sys_string_successful", "操作成功", "Successful"},
+                {"sys_string_are_sure_to_copy", "确定要复制选中的记录", "Are you sure to copy the selected record"},
+                {"sys_string_are_sure_to_delete", "确定要删除选中的记录", "Are you sure to delete the selected record"},
+                {"sys_string_are_sure_to_pause", "确定要暂停选中的记录", "Are you sure to pause the selected record"},
+                {"sys_string_are_sure_to_resume", "确定要恢复选中的记录", "Are you sure to resume the selected record"},
+                {"sys_string_are_sure_to_execute", "确定要立即执行选中的记录", "Are you sure to execute the selected record"},
+                {"sys_string_please_select_record", "请选择一条记录", "Please select one record"},
+                {"sys_string_department_id", "部门ID", "Department ID"},
+                {"sys_string_department_name", "部门名称", "Department name"},
+                {"sys_string_department_key", "部门标识", "Department key"},
+                {"sys_string_upper_department", "上级部门", "Upper department"},
+                {"sys_string_upper_department_key", "上级标识", "Upper key"},
+                {"sys_string_order_number", "排序号", "Order number"},
+                {"sys_string_icon", "图标", "Icon"},
+                {"sys_string_menu_icon", "菜单图标", "Menu icon"},
+                {"sys_string_find_icon", "获取图标", "Find icon"},
+                {"sys_string_dict_name", "字典名称", "Dict name"},
+                {"sys_string_dict_type", "字典类型", "Dict type"},
+                {"sys_string_dict_code", "字典码", "Dict code"},
+                {"sys_string_dict_value", "字典值", "Dict value"},
+                {"sys_string_user_id", "用户ID", "User ID"},
+                {"sys_string_username", "用户名", "Username"},
+                {"sys_string_query_username", "用户名、用户操作", "ex: username"},
+                {"sys_string_type", "类型", "Type"},
+                {"sys_string_directory", "目录", "Directory"},
+                {"sys_string_menu", "菜单", "Menu"},
+                {"sys_string_button", "按钮", "Button"},
+                {"sys_string_menu_name", "菜单名称", "Menu name"},
+                {"sys_string_menu_id", "菜单ID", "Menu ID"},
+                {"sys_string_menu_or_button_name", "菜单名称或按钮名称", "Menu name or button name"},
+                {"sys_string_menu_key", "菜单标记", "Menu key"},
+                {"sys_string_menu_name_cannot_be_empty", "菜单名称不能为空", "Menu name cannot by empty"},
+                {"sys_string_menu_url_cannot_be_empty", "菜单URL不能为空", "Menu url cannot by empty"},
+                {"sys_string_menu_key_format", "格式：Menu:{模块包名}:{模块包名}Menu", "Format:Menu:{module}:{module}_menu"},
+                {"sys_string_role", "角色", "Role"},
+                {"sys_string_role_id", "角色ID", "Role ID"},
+                {"sys_string_role_name", "角色名称", "Role name"},
+                {"sys_string_role_key", "角色标识", "Role Key"},
+                {"sys_string_own_department", "所属部门", "Own department"},
+                {"sys_string_function_authority", "功能权限", "Function authority"},
+                {"sys_string_data_authority", "数据权限", "Data authority"},
+                {"sys_string_mobile", "手机", "Mobile"},
+                {"sys_string_phone_number", "手机号", "Phone number"},
+                {"sys_string_email", "邮箱", "Email"},
+                {"sys_string_password", "密码", "Password"},
+                {"sys_string_request_method", "请求方法", "Request method"},
+                {"sys_string_request_parameter", "请求参数", "Request parameter"},
+                {"sys_string_execute_duration", "执行时长(毫秒)", "Execute duration"},
+                {"sys_string_ip_address", "IP地址", "IP Address"},
+                {"sys_string_yes", "是", "Yes"},
+                {"sys_string_no", "否", "No"},
+        };
+        return items;
     }
 
     @Override

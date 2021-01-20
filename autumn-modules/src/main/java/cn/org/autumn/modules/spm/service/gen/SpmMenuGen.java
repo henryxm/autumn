@@ -1,4 +1,4 @@
-package ${package}.${moduleName}.service.gen;
+package cn.org.autumn.modules.spm.service.gen;
 
 import cn.org.autumn.modules.sys.service.SysMenuService;
 import cn.org.autumn.site.InitFactory;
@@ -7,15 +7,15 @@ import cn.org.autumn.modules.lan.service.Language;
 import cn.org.autumn.modules.lan.service.LanguageService;
 import java.util.List;
 /**
- * ${comment}
+ * 超级位置模型
  *
- * @author ${author}
- * @email ${email}
- * @date ${datetime}
+ * @author Shaohua Xu
+ * @email henryxm@163.com
+ * @date 2021-01
  */
-public class ${upperModuleName}MenuGen implements InitFactory.Init {
+public class SpmMenuGen implements InitFactory.Init {
 
-    public static final String ${moduleName}_menu = "${moduleName}_menu";
+    public static final String spm_menu = "spm_menu";
 
     @Autowired
     protected SysMenuService sysMenuService;
@@ -35,7 +35,7 @@ public class ${upperModuleName}MenuGen implements InitFactory.Init {
     }
 
     public String getMenu() {
-        return SysMenuService.getMenuKey("${upperModuleName}", "${upperModuleName}Menu");
+        return SysMenuService.getMenuKey("Spm", "SpmMenu");
     }
 
     public String getParentMenu() {
@@ -58,7 +58,7 @@ public class ${upperModuleName}MenuGen implements InitFactory.Init {
     private String[][] getMenuItemsInternal() {
         String[][] menus = new String[][]{
                 //{0:菜单名字,1:URL,2:权限,3:菜单类型,4:ICON,5:排序,6:MenuKey,7:ParentKey,8:Language}
-                {"${moduleText}", "", "", "0", "fa " + ico(), order(), getMenu(), getParentMenu(), ${moduleName}_menu + "_text"},
+                {"超级模型", "", "", "0", "fa " + ico(), order(), getMenu(), getParentMenu(), spm_menu + "_text"},
         };
         return menus;
     }
@@ -73,7 +73,7 @@ public class ${upperModuleName}MenuGen implements InitFactory.Init {
 
     private String[][] getLanguageItemsInternal() {
         String[][] items = new String[][]{
-                {${moduleName}_menu + "_text", "${moduleText}"},
+                {spm_menu + "_text", "超级模型"},
         };
         return items;
     }

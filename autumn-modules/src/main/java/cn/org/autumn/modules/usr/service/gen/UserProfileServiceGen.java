@@ -28,8 +28,6 @@ import cn.org.autumn.modules.lan.service.LanguageService;
  */
 public class UserProfileServiceGen extends ServiceImpl<UserProfileDao, UserProfileEntity> implements InitFactory.Init {
 
-    protected static final String NULL = null;
-
     @Autowired
     protected UsrMenu usrMenu;
 
@@ -126,11 +124,6 @@ public class UserProfileServiceGen extends ServiceImpl<UserProfileDao, UserProfi
     public void init() {
         sysMenuService.put(getMenuItemsInternal(), getMenuItems(), getMenuList());
         language.put(getLanguageItemsInternal(), getLanguageItems(), getLanguageList());
-        addLanguageColumnItem();
-    }
-
-    @Deprecated
-    public void addLanguageColumnItem() {
     }
 
     public List<String[]> getLanguageList() {

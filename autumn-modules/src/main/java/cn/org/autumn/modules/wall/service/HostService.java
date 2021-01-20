@@ -132,15 +132,17 @@ public class HostService extends HostServiceGen implements LoadFactory.Load, Loo
         LoopJob.onOneMinute(this);
     }
 
-    public void addLanguageColumnItem() {
-        languageService.addLanguageColumnItem("wall_host_table_comment", "主机统计", "Host Visit");
-        languageService.addLanguageColumnItem("wall_host_column_id", "id");
-        languageService.addLanguageColumnItem("wall_host_column_host", "主机地址", "Host address");
-        languageService.addLanguageColumnItem("wall_host_column_count", "访问次数", "Visit count");
-        languageService.addLanguageColumnItem("wall_host_column_forbidden", "禁用", "Forbidden");
-        languageService.addLanguageColumnItem("wall_host_column_tag", "标签说明", "Tag");
-        languageService.addLanguageColumnItem("wall_host_column_description", "描述信息", "Description");
-        super.addLanguageColumnItem();
+    public String[][] getLanguageItems() {
+        String[][] items = new String[][]{
+                {"wall_host_table_comment", "主机统计", "Host Visit"},
+                {"wall_host_column_id", "id"},
+                {"wall_host_column_host", "主机地址", "Host address"},
+                {"wall_host_column_count", "访问次数", "Visit count"},
+                {"wall_host_column_forbidden", "禁用", "Forbidden"},
+                {"wall_host_column_tag", "标签说明", "Tag"},
+                {"wall_host_column_description", "描述信息", "Description"},
+        };
+        return items;
     }
 
     @Override

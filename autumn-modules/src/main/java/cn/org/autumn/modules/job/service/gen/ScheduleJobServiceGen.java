@@ -28,8 +28,6 @@ import cn.org.autumn.modules.lan.service.LanguageService;
  */
 public class ScheduleJobServiceGen extends ServiceImpl<ScheduleJobDao, ScheduleJobEntity> implements InitFactory.Init {
 
-    protected static final String NULL = null;
-
     @Autowired
     protected JobMenu jobMenu;
 
@@ -46,31 +44,31 @@ public class ScheduleJobServiceGen extends ServiceImpl<ScheduleJobDao, ScheduleJ
         Page<ScheduleJobEntity> _page = new Query<ScheduleJobEntity>(params).getPage();
         EntityWrapper<ScheduleJobEntity> entityEntityWrapper = new EntityWrapper<>();
         Map<String,Object> condition = new HashMap<>();
-        if(params.containsKey("jobId") && null !=params.get("jobId") && StringUtils.isNotEmpty(params.get("jobId").toString())) {
+        if(params.containsKey("jobId") && null != params.get("jobId") && StringUtils.isNotEmpty(params.get("jobId").toString())) {
             condition.put("job_id", params.get("jobId"));
         }
-        if(params.containsKey("beanName") && null !=params.get("beanName") && StringUtils.isNotEmpty(params.get("beanName").toString())) {
+        if(params.containsKey("beanName") && null != params.get("beanName") && StringUtils.isNotEmpty(params.get("beanName").toString())) {
             condition.put("bean_name", params.get("beanName"));
         }
-        if(params.containsKey("methodName") && null !=params.get("methodName") && StringUtils.isNotEmpty(params.get("methodName").toString())) {
+        if(params.containsKey("methodName") && null != params.get("methodName") && StringUtils.isNotEmpty(params.get("methodName").toString())) {
             condition.put("method_name", params.get("methodName"));
         }
-        if(params.containsKey("params") && null !=params.get("params") && StringUtils.isNotEmpty(params.get("params").toString())) {
+        if(params.containsKey("params") && null != params.get("params") && StringUtils.isNotEmpty(params.get("params").toString())) {
             condition.put("params", params.get("params"));
         }
-        if(params.containsKey("cronExpression") && null !=params.get("cronExpression") && StringUtils.isNotEmpty(params.get("cronExpression").toString())) {
+        if(params.containsKey("cronExpression") && null != params.get("cronExpression") && StringUtils.isNotEmpty(params.get("cronExpression").toString())) {
             condition.put("cron_expression", params.get("cronExpression"));
         }
-        if(params.containsKey("status") && null !=params.get("status") && StringUtils.isNotEmpty(params.get("status").toString())) {
+        if(params.containsKey("status") && null != params.get("status") && StringUtils.isNotEmpty(params.get("status").toString())) {
             condition.put("status", params.get("status"));
         }
-        if(params.containsKey("mode") && null !=params.get("mode") && StringUtils.isNotEmpty(params.get("mode").toString())) {
+        if(params.containsKey("mode") && null != params.get("mode") && StringUtils.isNotEmpty(params.get("mode").toString())) {
             condition.put("mode", params.get("mode"));
         }
-        if(params.containsKey("remark") && null !=params.get("remark") && StringUtils.isNotEmpty(params.get("remark").toString())) {
+        if(params.containsKey("remark") && null != params.get("remark") && StringUtils.isNotEmpty(params.get("remark").toString())) {
             condition.put("remark", params.get("remark"));
         }
-        if(params.containsKey("createTime") && null !=params.get("createTime") && StringUtils.isNotEmpty(params.get("createTime").toString())) {
+        if(params.containsKey("createTime") && null != params.get("createTime") && StringUtils.isNotEmpty(params.get("createTime").toString())) {
             condition.put("create_time", params.get("createTime"));
         }
         _page.setCondition(condition);
@@ -93,10 +91,20 @@ public class ScheduleJobServiceGen extends ServiceImpl<ScheduleJobDao, ScheduleJ
     */
     public String parentMenu(){
         jobMenu.init();
-        SysMenuEntity sysMenuEntity = sysMenuService.getByMenuKey(JobMenu.job_menu);
+        SysMenuEntity sysMenuEntity = sysMenuService.getByMenuKey(jobMenu.getMenu());
         if(null != sysMenuEntity)
             return sysMenuEntity.getMenuKey();
         return "";
+    }
+
+    public String menu() {
+        String menu = SysMenuService.getMenuKey("Job", "ScheduleJob");
+        return menu;
+    }
+
+    public String button(String button) {
+        String menu = menu() + button;
+        return menu;
     }
 
     public String ico(){
@@ -108,25 +116,19 @@ public class ScheduleJobServiceGen extends ServiceImpl<ScheduleJobDao, ScheduleJ
     }
 
     public void init() {
-        sysMenuService.put(getMenus());
-        language.add(getLanguageItemArray());
-        language.add(getLanguageItems());
-        addLanguageColumnItem();
-        language.add(getLanguageItemsInternal());
+        sysMenuService.put(getMenuItemsInternal(), getMenuItems(), getMenuList());
+        language.put(getLanguageItemsInternal(), getLanguageItems(), getLanguageList());
     }
 
-    public String[][] getLanguageItemArray() {
+    public List<String[]> getLanguageList() {
         return null;
     }
 
-    public List<String[]> getLanguageItems() {
+    public String[][] getLanguageItems() {
         return null;
     }
 
-    public void addLanguageColumnItem(){
-    }
-
-    public String[][] getLanguageItemsInternal() {
+    private String[][] getLanguageItemsInternal() {
         String[][] items = new String[][]{
                 {"job_schedulejob_table_comment", "定时任务"},
                 {"job_schedulejob_column_job_id", "任务id"},
@@ -142,15 +144,22 @@ public class ScheduleJobServiceGen extends ServiceImpl<ScheduleJobDao, ScheduleJ
         return items;
     }
 
-    public String[][] getMenus() {
-        String menuKey = SysMenuService.getMenuKey("Job", "ScheduleJob");
+    public List<String[]> getMenuList() {
+        return null;
+    }
+
+    public String[][] getMenuItems() {
+        return null;
+    }
+
+    private String[][] getMenuItemsInternal() {
         String[][] menus = new String[][]{
                 //{0:菜单名字,1:URL,2:权限,3:菜单类型,4:ICON,5:排序,6:MenuKey,7:ParentKey,8:Language}
-                {"定时任务", "modules/job/schedulejob", "job:schedulejob:list,job:schedulejob:info,job:schedulejob:save,job:schedulejob:update,job:schedulejob:delete", "1", "fa " + ico(), order(), menuKey, parentMenu(), "job_schedulejob_table_comment"},
-                {"查看", null, "job:schedulejob:list,job:schedulejob:info", "2", null, order(), SysMenuService.getMenuKey("Job", "ScheduleJobInfo"), menuKey, "sys_string_lookup"},
-                {"新增", null, "job:schedulejob:save", "2", null, order(), SysMenuService.getMenuKey("Job", "ScheduleJobSave"), menuKey, "sys_string_add"},
-                {"修改", null, "job:schedulejob:update", "2", null, order(), SysMenuService.getMenuKey("Job", "ScheduleJobUpdate"), menuKey, "sys_string_change"},
-                {"删除", null, "job:schedulejob:delete", "2", null, order(), SysMenuService.getMenuKey("Job", "ScheduleJobDelete"), menuKey, "sys_string_delete"},
+                {"定时任务", "modules/job/schedulejob", "job:schedulejob:list,job:schedulejob:info,job:schedulejob:save,job:schedulejob:update,job:schedulejob:delete", "1", "fa " + ico(), order(), menu(), parentMenu(), "job_schedulejob_table_comment"},
+                {"查看", null, "job:schedulejob:list,job:schedulejob:info", "2", null, order(), button("List"), menu(), "sys_string_lookup"},
+                {"新增", null, "job:schedulejob:save", "2", null, order(), button("Save"), menu(), "sys_string_add"},
+                {"修改", null, "job:schedulejob:update", "2", null, order(), button("Update"), menu(), "sys_string_change"},
+                {"删除", null, "job:schedulejob:delete", "2", null, order(), button("Delete"), menu(), "sys_string_delete"},
         };
         return menus;
     }

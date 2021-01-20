@@ -3,11 +3,9 @@ package cn.org.autumn.modules.gen.service.gen;
 import cn.org.autumn.site.InitFactory;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import com.baomidou.mybatisplus.mapper.EntityWrapper;
 import com.baomidou.mybatisplus.plugins.Page;
 import com.baomidou.mybatisplus.service.impl.ServiceImpl;
@@ -30,8 +28,6 @@ import cn.org.autumn.modules.lan.service.LanguageService;
  */
 public class GenTypeServiceGen extends ServiceImpl<GenTypeDao, GenTypeEntity> implements InitFactory.Init {
 
-    protected static final String NULL = null;
-
     @Autowired
     protected GenMenu genMenu;
 
@@ -47,38 +43,38 @@ public class GenTypeServiceGen extends ServiceImpl<GenTypeDao, GenTypeEntity> im
     public PageUtils queryPage(Map<String, Object> params) {
         Page<GenTypeEntity> _page = new Query<GenTypeEntity>(params).getPage();
         EntityWrapper<GenTypeEntity> entityEntityWrapper = new EntityWrapper<>();
-        Map<String, Object> condition = new HashMap<>();
-        if (params.containsKey("id") && null != params.get("id") && StringUtils.isNotEmpty(params.get("id").toString())) {
+        Map<String,Object> condition = new HashMap<>();
+        if(params.containsKey("id") && null != params.get("id") && StringUtils.isNotEmpty(params.get("id").toString())) {
             condition.put("id", params.get("id"));
         }
-        if (params.containsKey("databaseType") && null != params.get("databaseType") && StringUtils.isNotEmpty(params.get("databaseType").toString())) {
+        if(params.containsKey("databaseType") && null != params.get("databaseType") && StringUtils.isNotEmpty(params.get("databaseType").toString())) {
             condition.put("database_type", params.get("databaseType"));
         }
-        if (params.containsKey("rootPackage") && null != params.get("rootPackage") && StringUtils.isNotEmpty(params.get("rootPackage").toString())) {
+        if(params.containsKey("rootPackage") && null != params.get("rootPackage") && StringUtils.isNotEmpty(params.get("rootPackage").toString())) {
             condition.put("root_package", params.get("rootPackage"));
         }
-        if (params.containsKey("modulePackage") && null != params.get("modulePackage") && StringUtils.isNotEmpty(params.get("modulePackage").toString())) {
+        if(params.containsKey("modulePackage") && null != params.get("modulePackage") && StringUtils.isNotEmpty(params.get("modulePackage").toString())) {
             condition.put("module_package", params.get("modulePackage"));
         }
-        if (params.containsKey("moduleName") && null != params.get("moduleName") && StringUtils.isNotEmpty(params.get("moduleName").toString())) {
+        if(params.containsKey("moduleName") && null != params.get("moduleName") && StringUtils.isNotEmpty(params.get("moduleName").toString())) {
             condition.put("module_name", params.get("moduleName"));
         }
-        if (params.containsKey("moduleText") && null != params.get("moduleText") && StringUtils.isNotEmpty(params.get("moduleText").toString())) {
+        if(params.containsKey("moduleText") && null != params.get("moduleText") && StringUtils.isNotEmpty(params.get("moduleText").toString())) {
             condition.put("module_text", params.get("moduleText"));
         }
-        if (params.containsKey("moduleId") && null != params.get("moduleId") && StringUtils.isNotEmpty(params.get("moduleId").toString())) {
+        if(params.containsKey("moduleId") && null != params.get("moduleId") && StringUtils.isNotEmpty(params.get("moduleId").toString())) {
             condition.put("module_id", params.get("moduleId"));
         }
-        if (params.containsKey("authorName") && null != params.get("authorName") && StringUtils.isNotEmpty(params.get("authorName").toString())) {
+        if(params.containsKey("authorName") && null != params.get("authorName") && StringUtils.isNotEmpty(params.get("authorName").toString())) {
             condition.put("author_name", params.get("authorName"));
         }
-        if (params.containsKey("email") && null != params.get("email") && StringUtils.isNotEmpty(params.get("email").toString())) {
+        if(params.containsKey("email") && null != params.get("email") && StringUtils.isNotEmpty(params.get("email").toString())) {
             condition.put("email", params.get("email"));
         }
-        if (params.containsKey("tablePrefix") && null != params.get("tablePrefix") && StringUtils.isNotEmpty(params.get("tablePrefix").toString())) {
+        if(params.containsKey("tablePrefix") && null != params.get("tablePrefix") && StringUtils.isNotEmpty(params.get("tablePrefix").toString())) {
             condition.put("table_prefix", params.get("tablePrefix"));
         }
-        if (params.containsKey("mappingString") && null != params.get("mappingString") && StringUtils.isNotEmpty(params.get("mappingString").toString())) {
+        if(params.containsKey("mappingString") && null != params.get("mappingString") && StringUtils.isNotEmpty(params.get("mappingString").toString())) {
             condition.put("mapping_string", params.get("mappingString"));
         }
         _page.setCondition(condition);
@@ -88,23 +84,21 @@ public class GenTypeServiceGen extends ServiceImpl<GenTypeDao, GenTypeEntity> im
     }
 
     /**
-     * need implement it in the subclass.
-     *
-     * @return
-     */
-    public int menuOrder() {
+    * need implement it in the subclass.
+    * @return
+    */
+    public int menuOrder(){
         return 0;
     }
 
     /**
-     * need implement it in the subclass.
-     *
-     * @return
-     */
-    public String parentMenu() {
+    * need implement it in the subclass.
+    * @return
+    */
+    public String parentMenu(){
         genMenu.init();
-        SysMenuEntity sysMenuEntity = sysMenuService.getByMenuKey(GenMenu.gen_menu);
-        if (null != sysMenuEntity)
+        SysMenuEntity sysMenuEntity = sysMenuService.getByMenuKey(genMenu.getMenu());
+        if(null != sysMenuEntity)
             return sysMenuEntity.getMenuKey();
         return "";
     }
@@ -115,26 +109,21 @@ public class GenTypeServiceGen extends ServiceImpl<GenTypeDao, GenTypeEntity> im
     }
 
     public String button(String button) {
-        String menu = SysMenuService.getMenuKey("Gen", "GenType" + button);
+        String menu = menu() + button;
         return menu;
     }
 
-    public String ico() {
+    public String ico(){
         return "fa-file-code-o";
     }
 
-    protected String order() {
+    protected String order(){
         return String.valueOf(menuOrder());
     }
 
     public void init() {
         sysMenuService.put(getMenuItemsInternal(), getMenuItems(), getMenuList());
         language.put(getLanguageItemsInternal(), getLanguageItems(), getLanguageList());
-        addLanguageColumnItem();
-    }
-
-    @Deprecated
-    public void addLanguageColumnItem() {
     }
 
     public List<String[]> getLanguageList() {
