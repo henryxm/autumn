@@ -28,7 +28,7 @@ public class ScheduleJobLogService extends ScheduleJobLogServiceGen implements L
         return SysMenuService.getSystemManagementMenuKey();
     }
 
-    public String[][] getLanguageItemArray() {
+    public String[][] getLanguageItems() {
         String[][] items = new String[][]{
                 {"job_schedulejoblog_table_comment", "任务日志", "Task log"},
                 {"job_schedulejoblog_column_log_id", "任务日志id", "Log ID"},

@@ -21,4 +21,7 @@ public interface LanguageDao extends BaseMapper<LanguageEntity> {
 
     @Select("select count(*) from sys_language where name = #{name}")
     Integer hasKey(@Param("name") String name);
+
+    @Select("select * from sys_language where name = #{name} limit 1")
+    LanguageEntity getByKey(@Param("name") String name);
 }

@@ -28,8 +28,6 @@ import cn.org.autumn.modules.lan.service.LanguageService;
  */
 public class SuperPositionModelServiceGen extends ServiceImpl<SuperPositionModelDao, SuperPositionModelEntity> implements InitFactory.Init {
 
-    protected static final String NULL = null;
-
     @Autowired
     protected SpmMenu spmMenu;
 
@@ -46,37 +44,37 @@ public class SuperPositionModelServiceGen extends ServiceImpl<SuperPositionModel
         Page<SuperPositionModelEntity> _page = new Query<SuperPositionModelEntity>(params).getPage();
         EntityWrapper<SuperPositionModelEntity> entityEntityWrapper = new EntityWrapper<>();
         Map<String,Object> condition = new HashMap<>();
-        if(params.containsKey("id") && null !=params.get("id") && StringUtils.isNotEmpty(params.get("id").toString())) {
+        if(params.containsKey("id") && null != params.get("id") && StringUtils.isNotEmpty(params.get("id").toString())) {
             condition.put("id", params.get("id"));
         }
-        if(params.containsKey("siteId") && null !=params.get("siteId") && StringUtils.isNotEmpty(params.get("siteId").toString())) {
+        if(params.containsKey("siteId") && null != params.get("siteId") && StringUtils.isNotEmpty(params.get("siteId").toString())) {
             condition.put("site_id", params.get("siteId"));
         }
-        if(params.containsKey("pageId") && null !=params.get("pageId") && StringUtils.isNotEmpty(params.get("pageId").toString())) {
+        if(params.containsKey("pageId") && null != params.get("pageId") && StringUtils.isNotEmpty(params.get("pageId").toString())) {
             condition.put("page_id", params.get("pageId"));
         }
-        if(params.containsKey("channelId") && null !=params.get("channelId") && StringUtils.isNotEmpty(params.get("channelId").toString())) {
+        if(params.containsKey("channelId") && null != params.get("channelId") && StringUtils.isNotEmpty(params.get("channelId").toString())) {
             condition.put("channel_id", params.get("channelId"));
         }
-        if(params.containsKey("productId") && null !=params.get("productId") && StringUtils.isNotEmpty(params.get("productId").toString())) {
+        if(params.containsKey("productId") && null != params.get("productId") && StringUtils.isNotEmpty(params.get("productId").toString())) {
             condition.put("product_id", params.get("productId"));
         }
-        if(params.containsKey("resourceId") && null !=params.get("resourceId") && StringUtils.isNotEmpty(params.get("resourceId").toString())) {
+        if(params.containsKey("resourceId") && null != params.get("resourceId") && StringUtils.isNotEmpty(params.get("resourceId").toString())) {
             condition.put("resource_id", params.get("resourceId"));
         }
-        if(params.containsKey("urlPath") && null !=params.get("urlPath") && StringUtils.isNotEmpty(params.get("urlPath").toString())) {
+        if(params.containsKey("urlPath") && null != params.get("urlPath") && StringUtils.isNotEmpty(params.get("urlPath").toString())) {
             condition.put("url_path", params.get("urlPath"));
         }
-        if(params.containsKey("urlKey") && null !=params.get("urlKey") && StringUtils.isNotEmpty(params.get("urlKey").toString())) {
+        if(params.containsKey("urlKey") && null != params.get("urlKey") && StringUtils.isNotEmpty(params.get("urlKey").toString())) {
             condition.put("url_key", params.get("urlKey"));
         }
-        if(params.containsKey("spmValue") && null !=params.get("spmValue") && StringUtils.isNotEmpty(params.get("spmValue").toString())) {
+        if(params.containsKey("spmValue") && null != params.get("spmValue") && StringUtils.isNotEmpty(params.get("spmValue").toString())) {
             condition.put("spm_value", params.get("spmValue"));
         }
-        if(params.containsKey("forbidden") && null !=params.get("forbidden") && StringUtils.isNotEmpty(params.get("forbidden").toString())) {
+        if(params.containsKey("forbidden") && null != params.get("forbidden") && StringUtils.isNotEmpty(params.get("forbidden").toString())) {
             condition.put("forbidden", params.get("forbidden"));
         }
-        if(params.containsKey("needLogin") && null !=params.get("needLogin") && StringUtils.isNotEmpty(params.get("needLogin").toString())) {
+        if(params.containsKey("needLogin") && null != params.get("needLogin") && StringUtils.isNotEmpty(params.get("needLogin").toString())) {
             condition.put("need_login", params.get("needLogin"));
         }
         _page.setCondition(condition);
@@ -99,10 +97,20 @@ public class SuperPositionModelServiceGen extends ServiceImpl<SuperPositionModel
     */
     public String parentMenu(){
         spmMenu.init();
-        SysMenuEntity sysMenuEntity = sysMenuService.getByMenuKey(SpmMenu.spm_menu);
+        SysMenuEntity sysMenuEntity = sysMenuService.getByMenuKey(spmMenu.getMenu());
         if(null != sysMenuEntity)
             return sysMenuEntity.getMenuKey();
         return "";
+    }
+
+    public String menu() {
+        String menu = SysMenuService.getMenuKey("Spm", "SuperPositionModel");
+        return menu;
+    }
+
+    public String button(String button) {
+        String menu = menu() + button;
+        return menu;
     }
 
     public String ico(){
@@ -114,25 +122,19 @@ public class SuperPositionModelServiceGen extends ServiceImpl<SuperPositionModel
     }
 
     public void init() {
-        sysMenuService.put(getMenus());
-        language.add(getLanguageItemArray());
-        language.add(getLanguageItems());
-        addLanguageColumnItem();
-        language.add(getLanguageItemsInternal());
+        sysMenuService.put(getMenuItemsInternal(), getMenuItems(), getMenuList());
+        language.put(getLanguageItemsInternal(), getLanguageItems(), getLanguageList());
     }
 
-    public String[][] getLanguageItemArray() {
+    public List<String[]> getLanguageList() {
         return null;
     }
 
-    public List<String[]> getLanguageItems() {
+    public String[][] getLanguageItems() {
         return null;
     }
 
-    public void addLanguageColumnItem(){
-    }
-
-    public String[][] getLanguageItemsInternal() {
+    private String[][] getLanguageItemsInternal() {
         String[][] items = new String[][]{
                 {"spm_superpositionmodel_table_comment", "超级位置模型"},
                 {"spm_superpositionmodel_column_id", "id"},
@@ -150,15 +152,22 @@ public class SuperPositionModelServiceGen extends ServiceImpl<SuperPositionModel
         return items;
     }
 
-    public String[][] getMenus() {
-        String menuKey = SysMenuService.getMenuKey("Spm", "SuperPositionModel");
+    public List<String[]> getMenuList() {
+        return null;
+    }
+
+    public String[][] getMenuItems() {
+        return null;
+    }
+
+    private String[][] getMenuItemsInternal() {
         String[][] menus = new String[][]{
                 //{0:菜单名字,1:URL,2:权限,3:菜单类型,4:ICON,5:排序,6:MenuKey,7:ParentKey,8:Language}
-                {"超级位置模型", "modules/spm/superpositionmodel", "spm:superpositionmodel:list,spm:superpositionmodel:info,spm:superpositionmodel:save,spm:superpositionmodel:update,spm:superpositionmodel:delete", "1", "fa " + ico(), order(), menuKey, parentMenu(), "spm_superpositionmodel_table_comment"},
-                {"查看", null, "spm:superpositionmodel:list,spm:superpositionmodel:info", "2", null, order(), SysMenuService.getMenuKey("Spm", "SuperPositionModelInfo"), menuKey, "sys_string_lookup"},
-                {"新增", null, "spm:superpositionmodel:save", "2", null, order(), SysMenuService.getMenuKey("Spm", "SuperPositionModelSave"), menuKey, "sys_string_add"},
-                {"修改", null, "spm:superpositionmodel:update", "2", null, order(), SysMenuService.getMenuKey("Spm", "SuperPositionModelUpdate"), menuKey, "sys_string_change"},
-                {"删除", null, "spm:superpositionmodel:delete", "2", null, order(), SysMenuService.getMenuKey("Spm", "SuperPositionModelDelete"), menuKey, "sys_string_delete"},
+                {"超级位置模型", "modules/spm/superpositionmodel", "spm:superpositionmodel:list,spm:superpositionmodel:info,spm:superpositionmodel:save,spm:superpositionmodel:update,spm:superpositionmodel:delete", "1", "fa " + ico(), order(), menu(), parentMenu(), "spm_superpositionmodel_table_comment"},
+                {"查看", null, "spm:superpositionmodel:list,spm:superpositionmodel:info", "2", null, order(), button("List"), menu(), "sys_string_lookup"},
+                {"新增", null, "spm:superpositionmodel:save", "2", null, order(), button("Save"), menu(), "sys_string_add"},
+                {"修改", null, "spm:superpositionmodel:update", "2", null, order(), button("Update"), menu(), "sys_string_change"},
+                {"删除", null, "spm:superpositionmodel:delete", "2", null, order(), button("Delete"), menu(), "sys_string_delete"},
         };
         return menus;
     }

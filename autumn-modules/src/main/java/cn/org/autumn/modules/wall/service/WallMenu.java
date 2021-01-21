@@ -1,54 +1,46 @@
 package cn.org.autumn.modules.wall.service;
 
-import cn.org.autumn.modules.sys.service.SysMenuService;
-import org.springframework.beans.factory.annotation.Autowired;
+import cn.org.autumn.modules.wall.service.gen.WallMenuGen;
 import org.springframework.stereotype.Service;
-import cn.org.autumn.modules.lan.service.Language;
-import cn.org.autumn.modules.lan.service.LanguageService;
 
 /**
- * 主机统计
+ * 链接黑名单
  *
  * @author Shaohua Xu
  * @email henryxm@163.com
  * @date 2021-01
  */
 @Service
-public class WallMenu {
+public class WallMenu extends WallMenuGen {
 
-    public static final String wall_menu = SysMenuService.getMenuKey("Wall", "WallMenu");
-    public static final String parent_menu = "";
-    public static final String wall_language = "wall_menu";
+    @Override
+    protected String order() {
+        return "777777";
+    }
 
-    @Autowired
-    protected SysMenuService sysMenuService;
+    @Override
+    public String ico() {
+        return "fa-firefox";
+    }
 
-    @Autowired
-    protected Language language;
+    @Override
+    public String getMenu() {
+        return super.getMenu();
+    }
 
-    @Autowired
-    protected LanguageService languageService;
+    @Override
+    public String getParentMenu() {
+        return super.getParentMenu();
+    }
 
+    @Override
     public void init() {
-        sysMenuService.put(getMenus());
-        language.add(getLanguageItemArray());
-        addLanguageColumnItem();
+        super.init();
     }
 
-    public void addLanguageColumnItem() {
-    }
-
-    public String[][] getMenus() {
-        String[][] menus = new String[][]{
-                //{0:菜单名字,1:URL,2:权限,3:菜单类型,4:ICON,5:排序,6:MenuKey,7:ParentKey,8:Language}
-                {"防火墙", "", "", "0", "fa fa-firefox", "777777", wall_menu, parent_menu, wall_language + "_text"},
-        };
-        return menus;
-    }
-
-    public String[][] getLanguageItemArray() {
+    public String[][] getLanguageItems() {
         String[][] items = new String[][]{
-                {wall_language + "_text", "防火墙", "Fire wall"},
+                {wall_menu + "_text", "防火墙", "Fire wall"},
         };
         return items;
     }

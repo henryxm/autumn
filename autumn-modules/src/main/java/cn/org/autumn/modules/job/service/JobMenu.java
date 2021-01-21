@@ -1,10 +1,7 @@
 package cn.org.autumn.modules.job.service;
 
-import cn.org.autumn.modules.sys.service.SysMenuService;
-import org.springframework.beans.factory.annotation.Autowired;
+import cn.org.autumn.modules.job.service.gen.JobMenuGen;
 import org.springframework.stereotype.Service;
-import cn.org.autumn.modules.lan.service.Language;
-import cn.org.autumn.modules.lan.service.LanguageService;
 
 /**
  * 定时任务
@@ -14,21 +11,33 @@ import cn.org.autumn.modules.lan.service.LanguageService;
  * @date 2021-01
  */
 @Service
-public class JobMenu {
+public class JobMenu extends JobMenuGen {
 
-    public static final String job_menu = SysMenuService.getMenuKey("Job", "JobMenu");
-    public static final String parent_menu = "";
-    public static final String job_language = "job_menu";
+    @Override
+    protected String order() {
+        return super.order();
+    }
 
-    @Autowired
-    protected SysMenuService sysMenuService;
+    @Override
+    public String ico() {
+        return super.ico();
+    }
 
-    @Autowired
-    protected Language language;
+    @Override
+    public String getMenu() {
+        return super.getMenu();
+    }
 
-    @Autowired
-    protected LanguageService languageService;
+    @Override
+    public String getParentMenu() {
+        return super.getParentMenu();
+    }
 
+    @Override
     public void init() {
+    }
+
+    public String[][] getLanguageItems() {
+        return null;
     }
 }

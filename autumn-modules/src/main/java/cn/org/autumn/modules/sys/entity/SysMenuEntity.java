@@ -9,6 +9,7 @@ import com.baomidou.mybatisplus.annotations.TableName;
 
 import java.io.Serializable;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * 菜单管理
@@ -251,5 +252,10 @@ public class SysMenuEntity implements Serializable {
 
     public void setParentKey(String parentKey) {
         this.parentKey = parentKey;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(getMenuKey(), getLanguageName(), getName(), getUrl(), getPerms(), getType(), getIcon(), getOrderNum());
     }
 }

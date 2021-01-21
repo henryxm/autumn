@@ -25,7 +25,7 @@ public class GenTypeService extends GenTypeServiceGen {
 
     public void init() {
         String[][] mapping = new String[][]{
-                {NULL, "mysql", "cn.org.autumn", "cn.org.autumn.modules", "sys", "系统管理", "1", "Shaohua Xu", "henryxm@163.com", "tb",
+                {null, "mysql", "cn.org.autumn", "cn.org.autumn.modules", "sys", "系统管理", "1", "Shaohua Xu", "henryxm@163.com", "tb",
                         "tinyint=Integer,smallint=Integer,mediumint=Integer,int=Integer,integer=Integer,bigint=Long,float=Float," +
                                 "double=Double,decimal=BigDecimal,bit=Boolean,char=String,varchar=String,tinytext=String,text=String," +
                                 "mediumtext=String,longtext=String,date=Date,datetime=Date,timestamp=Date"},
@@ -34,52 +34,56 @@ public class GenTypeService extends GenTypeServiceGen {
         for (String[] map : mapping) {
             GenTypeEntity entity = new GenTypeEntity();
             String temp = map[0];
-            if (NULL != temp)
+            if (null != temp)
                 entity.setId(Long.valueOf(temp));
             temp = map[1];
-            if (NULL != temp)
+            if (null != temp)
                 entity.setDatabaseType(temp);
             temp = map[2];
-            if (NULL != temp)
+            if (null != temp)
                 entity.setRootPackage(temp);
             temp = map[3];
-            if (NULL != temp)
+            if (null != temp)
                 entity.setModulePackage(temp);
             temp = map[4];
-            if (NULL != temp)
+            if (null != temp)
                 entity.setModuleName(temp);
             temp = map[5];
-            if (NULL != temp)
+            if (null != temp)
                 entity.setModuleText(temp);
             temp = map[6];
-            if (NULL != temp)
+            if (null != temp)
                 entity.setModuleId(temp);
             temp = map[7];
-            if (NULL != temp)
+            if (null != temp)
                 entity.setAuthorName(temp);
             temp = map[8];
-            if (NULL != temp)
+            if (null != temp)
                 entity.setEmail(temp);
             temp = map[9];
-            if (NULL != temp)
+            if (null != temp)
                 entity.setTablePrefix(temp);
             temp = map[10];
-            if (NULL != temp)
+            if (null != temp)
                 entity.setMappingString(temp);
-            GenTypeEntity et = baseMapper.selectOne(entity);
-            if (null == et)
-                baseMapper.insert(entity);
+            try {
+                GenTypeEntity et = baseMapper.selectOne(entity);
+                if (null == et)
+                    baseMapper.insert(entity);
+            } catch (Exception e) {
+            }
         }
         super.init();
-
-        String keyMenu = SysMenuService.getMenuKey("Gen", "GenType");
-        String[][] menus = new String[][]{
-                {"复制", null, "gen:gentype:copy", "2", "fa " + ico(), order(), SysMenuService.getMenuKey("Gen", "GenTypeCopy"), keyMenu, "sys_string_copy"},
-        };
-        sysMenuService.put(menus);
     }
 
-    public String[][] getLanguageItemArray() {
+    public String[][] getMenuItems() {
+        String[][] menus = new String[][]{
+                {"复制", null, "gen:gentype:copy", "2", "fa " + ico(), order(), button("Copy"), menu(), "sys_string_copy"},
+        };
+        return menus;
+    }
+
+    public String[][] getLanguageItems() {
         String[][] items = new String[][]{
                 {"gen_gentype_table_comment", "生成方案", "Generate solution"},
                 {"gen_gentype_column_id", "序列号", "Serial number"},
@@ -93,9 +97,13 @@ public class GenTypeService extends GenTypeServiceGen {
                 {"gen_gentype_column_email", "作者邮箱", "Author email"},
                 {"gen_gentype_column_table_prefix", "表前缀", "Table prefix"},
                 {"gen_gentype_column_mapping_string", "表字段映射", "Table mapping"},
+                //
+                {"gen_string_package_name", "包名", "Package name"},
+                {"gen_string_table_prefix", "表前缀", "Table prefix"},
         };
         return items;
     }
+
     public GenTypeWrapper getGenType(String databaseType) {
         GenTypeEntity entity = new GenTypeEntity();
         entity.setDatabaseType(databaseType);

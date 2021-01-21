@@ -120,18 +120,6 @@ public class ScheduleJobService extends ScheduleJobServiceGen implements LoopJob
         LoopJob.onTenSecond(this);
     }
 
-    public String[][] menus() {
-        String menuKey = SysMenuService.getMenuKey("Job", "ScheduleJob");
-        String[][] menus = new String[][]{
-                //{0:菜单名字,1:URL,2:权限,3:菜单类型,4:ICON,5:排序,6:MenuKey,7:ParentKey,8:Language}
-                {"日志列表", NULL, "job:schedulejob:log", "2", NULL, "0", getSystemMenuKey("JobScheduleLog"), menuKey, "sys_string_log_list"},
-                {"立即执行", NULL, "job:schedulejob:run", "2", NULL, "0", getSystemMenuKey("JobScheduleRun"), menuKey, "sys_string_immediate_execution"},
-                {"暂停", NULL, "job:schedulejob:pause", "2", NULL, "0", getSystemMenuKey("JobSchedulePause"), menuKey, "sys_string_suspend"},
-                {"恢复", NULL, "job:schedulejob:resume", "2", NULL, "0", getSystemMenuKey("JobScheduleResume"), menuKey, "sys_string_resume"},
-        };
-        return menus;
-    }
-
     /**
      * 项目启动时，初始化定时器
      */
@@ -211,7 +199,19 @@ public class ScheduleJobService extends ScheduleJobServiceGen implements LoopJob
         updateBatch(jobIds, Constant.ScheduleStatus.NORMAL.getValue());
     }
 
-    public String[][] getLanguageItemArray() {
+    public String[][] menus() {
+        String menuKey = SysMenuService.getMenuKey("Job", "ScheduleJob");
+        String[][] menus = new String[][]{
+                //{0:菜单名字,1:URL,2:权限,3:菜单类型,4:ICON,5:排序,6:MenuKey,7:ParentKey,8:Language}
+                {"日志列表", NULL, "job:schedulejob:log", "2", NULL, "0", getSystemMenuKey("JobScheduleLog"), menuKey, "sys_string_log_list"},
+                {"立即执行", NULL, "job:schedulejob:run", "2", NULL, "0", getSystemMenuKey("JobScheduleRun"), menuKey, "sys_string_immediate_execution"},
+                {"暂停", NULL, "job:schedulejob:pause", "2", NULL, "0", getSystemMenuKey("JobSchedulePause"), menuKey, "sys_string_suspend"},
+                {"恢复", NULL, "job:schedulejob:resume", "2", NULL, "0", getSystemMenuKey("JobScheduleResume"), menuKey, "sys_string_resume"},
+        };
+        return menus;
+    }
+
+    public String[][] getLanguageItems() {
         String[][] items = new String[][]{
                 {"job_schedulejob_table_comment", "定时任务", "Schedule job"},
                 {"job_schedulejob_column_job_id", "任务id", "Task ID"},

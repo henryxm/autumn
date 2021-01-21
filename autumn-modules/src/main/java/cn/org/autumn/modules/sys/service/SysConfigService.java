@@ -21,11 +21,14 @@ import org.apache.shiro.session.mgt.SessionManager;
 import org.apache.shiro.web.servlet.Cookie;
 import org.apache.shiro.web.session.mgt.DefaultWebSessionManager;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.util.*;
+
 import static cn.org.autumn.utils.Uuid.uuid;
 
 @Service
@@ -40,6 +43,8 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     public static final String CLUSTER_ROOT_DOMAIN = "CLUSTER_ROOT_DOMAIN";
     public static final String USER_DEFAULT_DEPART_KEY = "USER_DEFAULT_DEPART_KEY";
     public static final String USER_DEFAULT_ROLE_KEYS = "USER_DEFAULT_ROLE_KEYS";
+    public static final String UPDATE_MENU_ON_INIT = "UPDATE_MENU_ON_INIT";
+    public static final String UPDATE_LANGUAGE_ON_INIT = "UPDATE_LANGUAGE_ON_INIT";
 
     @Autowired
     private SysConfigRedis sysConfigRedis;
@@ -57,6 +62,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
 
     private String lastLoggerLevel = null;
 
+    @Order(1000)
     public void init() {
         LoopJob.onOneMinute(this);
         String[][] mapping = new String[][]{
@@ -69,6 +75,8 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 {CLUSTER_ROOT_DOMAIN, "", "1", "集群的根域名，当开启Redis后，有相同根域名后缀的服务会使用相同的Cookie，集群可通过Cookie中的登录用户进行用户同步"},
                 {USER_DEFAULT_DEPART_KEY, "", "1", "缺省的部门标识，当用户从集群中的账户体系中同步用户信息后，授予的默认的部门权限"},
                 {USER_DEFAULT_ROLE_KEYS, "", "1", "缺省的角色标识，多个KEY用半角逗号分隔，当用户从集群中的账户体系中同步用户信息后，授予的默认的角色权限"},
+                {UPDATE_MENU_ON_INIT, "true", "1", "当系统启动或执行初始化的时候更新菜单，特别是当系统升级更新的时候，需要开启该功能"},
+                {UPDATE_LANGUAGE_ON_INIT, "true", "1", "当系统启动或执行初始化的时候更新语言列表，开发模式下可以开启该功能，该模式会自动合并新的值到现有的表中"},
         };
         for (String[] map : mapping) {
             SysConfigEntity sysMenu = new SysConfigEntity();
@@ -155,14 +163,25 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
             config = baseMapper.queryByKey(key);
             sysConfigRedis.saveOrUpdate(config);
         }
-        return config == null ? null : config.getParamValue();
+        String r = config == null ? null : config.getParamValue();
+        if (null != r) {
+            r = r.trim();
+        }
+        return r;
     }
 
     public Boolean getBoolean(String key) {
         String s = getValue(key);
         if (StringUtils.isEmpty(s))
             return false;
-        if ("1".equalsIgnoreCase(s))
+        List<String> v = new ArrayList<>();
+        v.add("1");
+        v.add("yes");
+        v.add("on");
+        v.add("true");
+        v.add("是");
+        v.add("好");
+        if (v.contains(s.toLowerCase()))
             return true;
         return Boolean.valueOf(s);
     }
@@ -307,6 +326,14 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                     cookie.setDomain(rootDomain);
             }
         }
+    }
+
+    public boolean isUpdateMenu() {
+        return getBoolean(UPDATE_MENU_ON_INIT);
+    }
+
+    public boolean isUpdateLanguage() {
+        return getBoolean(UPDATE_LANGUAGE_ON_INIT);
     }
 
     @Override

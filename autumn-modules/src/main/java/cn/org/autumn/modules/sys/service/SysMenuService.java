@@ -22,6 +22,9 @@ public class SysMenuService extends ServiceImpl<SysMenuDao, SysMenuEntity> imple
     @Autowired
     private SysRoleMenuService sysRoleMenuService;
 
+    @Autowired
+    private SysConfigService sysConfigService;
+
     private static final String NULL = null;
 
     private Map<String, SysMenuEntity> cache = new HashMap<>();
@@ -76,6 +79,57 @@ public class SysMenuService extends ServiceImpl<SysMenuDao, SysMenuEntity> imple
         put(menus);
     }
 
+    private Map<String, SysMenuEntity> merge(Object... objects) {
+        Map<String, SysMenuEntity> map = new LinkedHashMap<>();
+        if (null != objects && objects.length > 0) {
+            for (Object o : objects) {
+                if (null == o)
+                    continue;
+                if (o instanceof List) {
+                    List l = (List) o;
+                    if (l.isEmpty())
+                        continue;
+                    for (Object b : l) {
+                        if (b instanceof String[]) {
+                            String[] menu = (String[]) b;
+                            SysMenuEntity sysMenu = from(menu);
+                            map.put(sysMenu.getMenuKey(), sysMenu);
+                        }
+                    }
+                }
+                if (o instanceof String[][]) {
+                    String[][] menus = (String[][]) o;
+                    for (String[] menu : menus) {
+                        SysMenuEntity sysMenu = from(menu);
+                        map.put(sysMenu.getMenuKey(), sysMenu);
+                    }
+                }
+            }
+        }
+        return map;
+    }
+
+    public void put(Object... objects) {
+        boolean update = sysConfigService.isUpdateMenu();
+        put(update, objects);
+    }
+
+    public void put(boolean update, Object... objects) {
+        Map<String, SysMenuEntity> menus = merge(objects);
+        for (Map.Entry<String, SysMenuEntity> entry : menus.entrySet()) {
+            SysMenuEntity sysMenu = entry.getValue();
+            SysMenuEntity entity = getByMenuKey(sysMenu.getMenuKey());
+            if (null == entity) {
+                put(sysMenu);
+            } else {
+                if (update && (sysMenu.hashCode() != entity.hashCode() || null == entity.getParentId())) {
+                    sysMenu.setMenuId(entity.getMenuId());
+                    put(sysMenu);
+                }
+            }
+        }
+    }
+
     public void put(String[][] menus) {
         for (String[] menu : menus) {
             SysMenuEntity sysMenu = from(menu);
@@ -98,14 +152,14 @@ public class SysMenuService extends ServiceImpl<SysMenuDao, SysMenuEntity> imple
         return sysMenuEntity;
     }
 
-    public Integer put(SysMenuEntity sysMenuEntity) {
+    public boolean put(SysMenuEntity sysMenuEntity) {
         SysMenuEntity parent = getByMenuKey(sysMenuEntity.getParentKey());
         if (null != parent)
             sysMenuEntity.setParentId(parent.getMenuId());
         else
             sysMenuEntity.setParentId(0L);
         cache.put(sysMenuEntity.getMenuKey(), sysMenuEntity);
-        return baseMapper.insert(sysMenuEntity);
+        return insertOrUpdate(sysMenuEntity);
     }
 
     //{0:菜单名字,1:URL,2:权限,3:菜单类型,4:ICON,5:排序,6:MenuKey,7:ParentKey,8:Language}

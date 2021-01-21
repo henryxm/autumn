@@ -1,10 +1,7 @@
 package cn.org.autumn.modules.oauth.service;
 
-import cn.org.autumn.modules.sys.service.SysMenuService;
-import org.springframework.beans.factory.annotation.Autowired;
+import cn.org.autumn.modules.oauth.service.gen.OauthMenuGen;
 import org.springframework.stereotype.Service;
-import cn.org.autumn.modules.lan.service.Language;
-import cn.org.autumn.modules.lan.service.LanguageService;
 
 /**
  * 授权令牌
@@ -14,41 +11,36 @@ import cn.org.autumn.modules.lan.service.LanguageService;
  * @date 2021-01
  */
 @Service
-public class OauthMenu {
+public class OauthMenu extends OauthMenuGen {
 
-    public static final String oauth_menu = SysMenuService.getMenuKey("Oauth", "OauthMenu");
-    public static final String parent_menu = "";
-    public static final String oauth_language = "oauth_menu";
+    @Override
+    protected String order() {
+        return "666666";
+    }
 
-    @Autowired
-    protected SysMenuService sysMenuService;
+    @Override
+    public String ico() {
+        return "fa-sign-in";
+    }
 
-    @Autowired
-    protected Language language;
+    @Override
+    public String getMenu() {
+        return super.getMenu();
+    }
 
-    @Autowired
-    protected LanguageService languageService;
+    @Override
+    public String getParentMenu() {
+        return super.getParentMenu();
+    }
 
+    @Override
     public void init() {
-        sysMenuService.put(getMenus());
-        language.add(getLanguageItemArray());
-        addLanguageColumnItem();
+        super.init();
     }
 
-    public void addLanguageColumnItem() {
-    }
-
-    public String[][] getMenus() {
-        String[][] menus = new String[][]{
-                //{0:菜单名字,1:URL,2:权限,3:菜单类型,4:ICON,5:排序,6:MenuKey,7:ParentKey,8:Language}
-                {"授权登录", "", "", "0", "fa fa-sign-in", "666666", oauth_menu, parent_menu, oauth_language + "_text"},
-        };
-        return menus;
-    }
-
-    public String[][] getLanguageItemArray() {
+    public String[][] getLanguageItems() {
         String[][] items = new String[][]{
-                {oauth_language + "_text", "授权登录", "Authentication"},
+                {oauth_menu + "_text", "授权登录", "Authentication"},
         };
         return items;
     }

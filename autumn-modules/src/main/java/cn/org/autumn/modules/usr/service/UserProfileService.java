@@ -56,20 +56,22 @@ public class UserProfileService extends UserProfileServiceGen implements LoopJob
         LoopJob.onTenSecond(this);
     }
 
-    public void addLanguageColumnItem() {
-        language.add("usr_userprofile_table_comment", "用户信息", "User profile");
-        language.add("usr_userprofile_column_user_id", "用户ID", "User ID");
-        language.add("usr_userprofile_column_sys_user_id", "系统用户ID", "System user ID");
-        language.add("usr_userprofile_column_uuid", "UUID", "UUID");
-        language.add("usr_userprofile_column_open_id", "OPENID", "OPENID");
-        language.add("usr_userprofile_column_union_id", "UNIONID", "UNIONID");
-        language.add("usr_userprofile_column_icon", "头像", "Header icon");
-        language.add("usr_userprofile_column_username", "用户名", "Username");
-        language.add("usr_userprofile_column_nickname", "用户昵称", "Nickname");
-        language.add("usr_userprofile_column_mobile", "手机号", "Phone number");
-        language.add("usr_userprofile_column_password", "密码", "Password");
-        language.add("usr_userprofile_column_create_time", "创建时间", "Create time");
-        super.addLanguageColumnItem();
+    public String[][] getLanguageItems() {
+        String[][] items = new String[][]{
+                {"usr_userprofile_table_comment", "用户信息", "User profile"},
+                {"usr_userprofile_column_user_id", "用户ID", "User ID"},
+                {"usr_userprofile_column_sys_user_id", "系统用户ID", "System user ID"},
+                {"usr_userprofile_column_uuid", "UUID", "UUID"},
+                {"usr_userprofile_column_open_id", "OPENID", "OPENID"},
+                {"usr_userprofile_column_union_id", "UNIONID", "UNIONID"},
+                {"usr_userprofile_column_icon", "头像", "Header icon"},
+                {"usr_userprofile_column_username", "用户名", "Username"},
+                {"usr_userprofile_column_nickname", "用户昵称", "Nickname"},
+                {"usr_userprofile_column_mobile", "手机号", "Phone number"},
+                {"usr_userprofile_column_password", "密码", "Password"},
+                {"usr_userprofile_column_create_time", "创建时间", "Create time"},
+        };
+        return items;
     }
 
     public UserProfileEntity from(SysUserEntity sysUserEntity, String password, UserProfile merge) {

@@ -29,6 +29,7 @@ public class GenUtils {
         templates.add("template/ServiceGen.java.vm");
         templates.add("template/Service.java.vm");
         templates.add("template/Menu.java.vm");
+        templates.add("template/MenuGen.java.vm");
         templates.add("template/Controller.java.vm");
         templates.add("template/ControllerGen.java.vm");
         templates.add("template/list.html.vm");
@@ -120,6 +121,10 @@ public class GenUtils {
             return packagePath + "service" + File.separator + HumpConvert.toFirstStringUpper(moduleName) + "Menu.java";
         }
 
+        if (template.contains("MenuGen.java.vm")) {
+            return packagePath + "service" + File.separator + "gen" + File.separator + HumpConvert.toFirstStringUpper(moduleName) + "MenuGen.java";
+        }
+
         if (template.contains("Site.java.vm")) {
             return packagePath + "site" + File.separator + HumpConvert.toFirstStringUpper(moduleName) + "Site.java";
         }
@@ -141,7 +146,6 @@ public class GenUtils {
             return "main" + File.separator + "resources" + File.separator + "templates" + File.separator
                     + "modules" + File.separator + moduleName + File.separator + className.toLowerCase() + ".js.html";
         }
-
         return null;
     }
 }

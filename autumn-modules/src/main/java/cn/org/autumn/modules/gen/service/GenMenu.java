@@ -1,10 +1,7 @@
 package cn.org.autumn.modules.gen.service;
 
-import cn.org.autumn.modules.sys.service.SysMenuService;
-import org.springframework.beans.factory.annotation.Autowired;
+import cn.org.autumn.modules.gen.service.gen.GenMenuGen;
 import org.springframework.stereotype.Service;
-import cn.org.autumn.modules.lan.service.Language;
-import cn.org.autumn.modules.lan.service.LanguageService;
 
 /**
  * 生成方案
@@ -14,29 +11,33 @@ import cn.org.autumn.modules.lan.service.LanguageService;
  * @date 2021-01
  */
 @Service
-public class GenMenu {
+public class GenMenu extends GenMenuGen {
 
-    public static final String gen_menu = SysMenuService.getMenuKey("Gen", "GenMenu");
-    public static final String parent_menu = "";
-    public static final String gen_language = "gen_menu";
-
-    @Autowired
-    protected SysMenuService sysMenuService;
-
-    @Autowired
-    protected Language language;
-
-    @Autowired
-    protected LanguageService languageService;
-
-    protected String order(){
-        return "0";
+    @Override
+    protected String order() {
+        return super.order();
     }
 
-    protected String ico(){
-        return "fa-file-code-o";
+    @Override
+    public String ico() {
+        return super.ico();
     }
 
+    @Override
+    public String getMenu() {
+        return super.getMenu();
+    }
+
+    @Override
+    public String getParentMenu() {
+        return super.getParentMenu();
+    }
+
+    @Override
     public void init() {
+    }
+
+    public String[][] getLanguageItems() {
+        return null;
     }
 }

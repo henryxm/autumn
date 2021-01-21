@@ -205,17 +205,19 @@ public class IpBlackService extends IpBlackServiceGen implements LoadFactory.Loa
         LoopJob.onFiveSecond(this);
     }
 
-    public void addLanguageColumnItem() {
-        languageService.addLanguageColumnItem("wall_ipblack_table_comment", "IP黑名单", "IP black list");
-        languageService.addLanguageColumnItem("wall_ipblack_column_id", "id");
-        languageService.addLanguageColumnItem("wall_ipblack_column_ip", "IP地址", "IP address");
-        languageService.addLanguageColumnItem("wall_ipblack_column_count", "访问次数", "Visit count");
-        languageService.addLanguageColumnItem("wall_ipblack_column_available", "可用", "Available");
-        languageService.addLanguageColumnItem("wall_ipblack_column_tag", "标签说明", "Tag");
-        languageService.addLanguageColumnItem("wall_ipblack_column_description", "描述信息", "Description");
-        languageService.addLanguageColumnItem("wall_ipblack_column_create_time", "创建时间", "Create time");
-        languageService.addLanguageColumnItem("wall_ipblack_column_update_time", "更新时间", "Update time");
-        super.addLanguageColumnItem();
+    public String[][] getLanguageItems() {
+        String[][] items = new String[][]{
+                {"wall_ipblack_table_comment", "IP黑名单", "IP black list"},
+                {"wall_ipblack_column_id", "id"},
+                {"wall_ipblack_column_ip", "IP地址", "IP address"},
+                {"wall_ipblack_column_count", "访问次数", "Visit count"},
+                {"wall_ipblack_column_available", "可用", "Available"},
+                {"wall_ipblack_column_tag", "标签说明", "Tag"},
+                {"wall_ipblack_column_description", "描述信息", "Description"},
+                {"wall_ipblack_column_create_time", "创建时间", "Create time"},
+                {"wall_ipblack_column_update_time", "更新时间", "Update time"},
+        };
+        return items;
     }
 
     @Override

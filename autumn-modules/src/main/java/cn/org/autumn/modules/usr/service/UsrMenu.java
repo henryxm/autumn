@@ -1,10 +1,7 @@
 package cn.org.autumn.modules.usr.service;
 
-import cn.org.autumn.modules.sys.service.SysMenuService;
-import org.springframework.beans.factory.annotation.Autowired;
+import cn.org.autumn.modules.usr.service.gen.UsrMenuGen;
 import org.springframework.stereotype.Service;
-import cn.org.autumn.modules.lan.service.Language;
-import cn.org.autumn.modules.lan.service.LanguageService;
 
 /**
  * 用户信息
@@ -14,41 +11,36 @@ import cn.org.autumn.modules.lan.service.LanguageService;
  * @date 2021-01
  */
 @Service
-public class UsrMenu {
+public class UsrMenu extends UsrMenuGen {
 
-    public static final String usr_menu = SysMenuService.getMenuKey("Usr", "UsrMenu");
-    public static final String parent_menu = "";
-    public static final String usr_language = "usr_menu";
+    @Override
+    protected String order() {
+        return "444444";
+    }
 
-    @Autowired
-    protected SysMenuService sysMenuService;
+    @Override
+    public String ico() {
+        return "fa-users";
+    }
 
-    @Autowired
-    protected Language language;
+    @Override
+    public String getMenu() {
+        return super.getMenu();
+    }
 
-    @Autowired
-    protected LanguageService languageService;
+    @Override
+    public String getParentMenu() {
+        return super.getParentMenu();
+    }
 
+    @Override
     public void init() {
-        sysMenuService.put(getMenus());
-        language.add(getLanguageItemArray());
-        addLanguageColumnItem();
+        super.init();
     }
 
-    public void addLanguageColumnItem() {
-    }
-
-    public String[][] getMenus() {
-        String[][] menus = new String[][]{
-                //{0:菜单名字,1:URL,2:权限,3:菜单类型,4:ICON,5:排序,6:MenuKey,7:ParentKey,8:Language}
-                {"用户管理", "", "", "0", "fa fa-users", "444444", usr_menu, parent_menu, usr_language + "_text"},
-        };
-        return menus;
-    }
-
-    public String[][] getLanguageItemArray() {
+    public String[][] getLanguageItems() {
         String[][] items = new String[][]{
-                {usr_language + "_text", "用户管理", "User profiles"},
+                {usr_menu + "_text", "用户管理", "User profiles"},
         };
         return items;
     }

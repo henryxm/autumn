@@ -28,8 +28,6 @@ import cn.org.autumn.modules.lan.service.LanguageService;
  */
 public class VisitLogServiceGen extends ServiceImpl<VisitLogDao, VisitLogEntity> implements InitFactory.Init {
 
-    protected static final String NULL = null;
-
     @Autowired
     protected SpmMenu spmMenu;
 
@@ -46,31 +44,31 @@ public class VisitLogServiceGen extends ServiceImpl<VisitLogDao, VisitLogEntity>
         Page<VisitLogEntity> _page = new Query<VisitLogEntity>(params).getPage();
         EntityWrapper<VisitLogEntity> entityEntityWrapper = new EntityWrapper<>();
         Map<String,Object> condition = new HashMap<>();
-        if(params.containsKey("id") && null !=params.get("id") && StringUtils.isNotEmpty(params.get("id").toString())) {
+        if(params.containsKey("id") && null != params.get("id") && StringUtils.isNotEmpty(params.get("id").toString())) {
             condition.put("id", params.get("id"));
         }
-        if(params.containsKey("siteId") && null !=params.get("siteId") && StringUtils.isNotEmpty(params.get("siteId").toString())) {
+        if(params.containsKey("siteId") && null != params.get("siteId") && StringUtils.isNotEmpty(params.get("siteId").toString())) {
             condition.put("site_id", params.get("siteId"));
         }
-        if(params.containsKey("pageId") && null !=params.get("pageId") && StringUtils.isNotEmpty(params.get("pageId").toString())) {
+        if(params.containsKey("pageId") && null != params.get("pageId") && StringUtils.isNotEmpty(params.get("pageId").toString())) {
             condition.put("page_id", params.get("pageId"));
         }
-        if(params.containsKey("channelId") && null !=params.get("channelId") && StringUtils.isNotEmpty(params.get("channelId").toString())) {
+        if(params.containsKey("channelId") && null != params.get("channelId") && StringUtils.isNotEmpty(params.get("channelId").toString())) {
             condition.put("channel_id", params.get("channelId"));
         }
-        if(params.containsKey("productId") && null !=params.get("productId") && StringUtils.isNotEmpty(params.get("productId").toString())) {
+        if(params.containsKey("productId") && null != params.get("productId") && StringUtils.isNotEmpty(params.get("productId").toString())) {
             condition.put("product_id", params.get("productId"));
         }
-        if(params.containsKey("uniqueVisitor") && null !=params.get("uniqueVisitor") && StringUtils.isNotEmpty(params.get("uniqueVisitor").toString())) {
+        if(params.containsKey("uniqueVisitor") && null != params.get("uniqueVisitor") && StringUtils.isNotEmpty(params.get("uniqueVisitor").toString())) {
             condition.put("unique_visitor", params.get("uniqueVisitor"));
         }
-        if(params.containsKey("pageView") && null !=params.get("pageView") && StringUtils.isNotEmpty(params.get("pageView").toString())) {
+        if(params.containsKey("pageView") && null != params.get("pageView") && StringUtils.isNotEmpty(params.get("pageView").toString())) {
             condition.put("page_view", params.get("pageView"));
         }
-        if(params.containsKey("dayString") && null !=params.get("dayString") && StringUtils.isNotEmpty(params.get("dayString").toString())) {
+        if(params.containsKey("dayString") && null != params.get("dayString") && StringUtils.isNotEmpty(params.get("dayString").toString())) {
             condition.put("day_string", params.get("dayString"));
         }
-        if(params.containsKey("createTime") && null !=params.get("createTime") && StringUtils.isNotEmpty(params.get("createTime").toString())) {
+        if(params.containsKey("createTime") && null != params.get("createTime") && StringUtils.isNotEmpty(params.get("createTime").toString())) {
             condition.put("create_time", params.get("createTime"));
         }
         _page.setCondition(condition);
@@ -93,10 +91,20 @@ public class VisitLogServiceGen extends ServiceImpl<VisitLogDao, VisitLogEntity>
     */
     public String parentMenu(){
         spmMenu.init();
-        SysMenuEntity sysMenuEntity = sysMenuService.getByMenuKey(SpmMenu.spm_menu);
+        SysMenuEntity sysMenuEntity = sysMenuService.getByMenuKey(spmMenu.getMenu());
         if(null != sysMenuEntity)
             return sysMenuEntity.getMenuKey();
         return "";
+    }
+
+    public String menu() {
+        String menu = SysMenuService.getMenuKey("Spm", "VisitLog");
+        return menu;
+    }
+
+    public String button(String button) {
+        String menu = menu() + button;
+        return menu;
     }
 
     public String ico(){
@@ -108,25 +116,19 @@ public class VisitLogServiceGen extends ServiceImpl<VisitLogDao, VisitLogEntity>
     }
 
     public void init() {
-        sysMenuService.put(getMenus());
-        language.add(getLanguageItemArray());
-        language.add(getLanguageItems());
-        addLanguageColumnItem();
-        language.add(getLanguageItemsInternal());
+        sysMenuService.put(getMenuItemsInternal(), getMenuItems(), getMenuList());
+        language.put(getLanguageItemsInternal(), getLanguageItems(), getLanguageList());
     }
 
-    public String[][] getLanguageItemArray() {
+    public List<String[]> getLanguageList() {
         return null;
     }
 
-    public List<String[]> getLanguageItems() {
+    public String[][] getLanguageItems() {
         return null;
     }
 
-    public void addLanguageColumnItem(){
-    }
-
-    public String[][] getLanguageItemsInternal() {
+    private String[][] getLanguageItemsInternal() {
         String[][] items = new String[][]{
                 {"spm_visitlog_table_comment", "访问统计"},
                 {"spm_visitlog_column_id", "id"},
@@ -142,15 +144,22 @@ public class VisitLogServiceGen extends ServiceImpl<VisitLogDao, VisitLogEntity>
         return items;
     }
 
-    public String[][] getMenus() {
-        String menuKey = SysMenuService.getMenuKey("Spm", "VisitLog");
+    public List<String[]> getMenuList() {
+        return null;
+    }
+
+    public String[][] getMenuItems() {
+        return null;
+    }
+
+    private String[][] getMenuItemsInternal() {
         String[][] menus = new String[][]{
                 //{0:菜单名字,1:URL,2:权限,3:菜单类型,4:ICON,5:排序,6:MenuKey,7:ParentKey,8:Language}
-                {"访问统计", "modules/spm/visitlog", "spm:visitlog:list,spm:visitlog:info,spm:visitlog:save,spm:visitlog:update,spm:visitlog:delete", "1", "fa " + ico(), order(), menuKey, parentMenu(), "spm_visitlog_table_comment"},
-                {"查看", null, "spm:visitlog:list,spm:visitlog:info", "2", null, order(), SysMenuService.getMenuKey("Spm", "VisitLogInfo"), menuKey, "sys_string_lookup"},
-                {"新增", null, "spm:visitlog:save", "2", null, order(), SysMenuService.getMenuKey("Spm", "VisitLogSave"), menuKey, "sys_string_add"},
-                {"修改", null, "spm:visitlog:update", "2", null, order(), SysMenuService.getMenuKey("Spm", "VisitLogUpdate"), menuKey, "sys_string_change"},
-                {"删除", null, "spm:visitlog:delete", "2", null, order(), SysMenuService.getMenuKey("Spm", "VisitLogDelete"), menuKey, "sys_string_delete"},
+                {"访问统计", "modules/spm/visitlog", "spm:visitlog:list,spm:visitlog:info,spm:visitlog:save,spm:visitlog:update,spm:visitlog:delete", "1", "fa " + ico(), order(), menu(), parentMenu(), "spm_visitlog_table_comment"},
+                {"查看", null, "spm:visitlog:list,spm:visitlog:info", "2", null, order(), button("List"), menu(), "sys_string_lookup"},
+                {"新增", null, "spm:visitlog:save", "2", null, order(), button("Save"), menu(), "sys_string_add"},
+                {"修改", null, "spm:visitlog:update", "2", null, order(), button("Update"), menu(), "sys_string_change"},
+                {"删除", null, "spm:visitlog:delete", "2", null, order(), button("Delete"), menu(), "sys_string_delete"},
         };
         return menus;
     }

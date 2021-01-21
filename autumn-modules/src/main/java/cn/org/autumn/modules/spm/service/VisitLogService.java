@@ -82,18 +82,20 @@ public class VisitLogService extends VisitLogServiceGen implements LoopJob.Job {
         LoopJob.onOneDay(this);
     }
 
-    public void addLanguageColumnItem() {
-        languageService.addLanguageColumnItem("spm_visitlog_table_comment", "访问统计", "Visit log");
-        languageService.addLanguageColumnItem("spm_visitlog_column_id", "id");
-        languageService.addLanguageColumnItem("spm_visitlog_column_site_id", "网站ID", "Site id");
-        languageService.addLanguageColumnItem("spm_visitlog_column_page_id", "网页ID", "Page id");
-        languageService.addLanguageColumnItem("spm_visitlog_column_channel_id", "频道ID", "Channel id");
-        languageService.addLanguageColumnItem("spm_visitlog_column_product_id", "产品ID", " Product id");
-        languageService.addLanguageColumnItem("spm_visitlog_column_unique_visitor", "独立访客(UV)", "Unique visitor");
-        languageService.addLanguageColumnItem("spm_visitlog_column_page_view", "访问量(PV)", "Page view");
-        languageService.addLanguageColumnItem("spm_visitlog_column_day_string", "当天", "Current day");
-        languageService.addLanguageColumnItem("spm_visitlog_column_create_time", "创建时间", "Create time");
-        super.addLanguageColumnItem();
+    public String[][] getLanguageItems() {
+        String[][] items = new String[][]{
+                {"spm_visitlog_table_comment", "访问统计", "Visit log"},
+                {"spm_visitlog_column_id", "id"},
+                {"spm_visitlog_column_site_id", "网站ID", "Site id"},
+                {"spm_visitlog_column_page_id", "网页ID", "Page id"},
+                {"spm_visitlog_column_channel_id", "频道ID", "Channel id"},
+                {"spm_visitlog_column_product_id", "产品ID", " Product id"},
+                {"spm_visitlog_column_unique_visitor", "独立访客(UV)", "Unique visitor"},
+                {"spm_visitlog_column_page_view", "访问量(PV)", "Page view"},
+                {"spm_visitlog_column_day_string", "当天", "Current day"},
+                {"spm_visitlog_column_create_time", "创建时间", "Create time"},
+        };
+        return items;
     }
 
     @Override

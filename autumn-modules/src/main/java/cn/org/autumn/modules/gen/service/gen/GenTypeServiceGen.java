@@ -28,8 +28,6 @@ import cn.org.autumn.modules.lan.service.LanguageService;
  */
 public class GenTypeServiceGen extends ServiceImpl<GenTypeDao, GenTypeEntity> implements InitFactory.Init {
 
-    protected static final String NULL = null;
-
     @Autowired
     protected GenMenu genMenu;
 
@@ -99,10 +97,20 @@ public class GenTypeServiceGen extends ServiceImpl<GenTypeDao, GenTypeEntity> im
     */
     public String parentMenu(){
         genMenu.init();
-        SysMenuEntity sysMenuEntity = sysMenuService.getByMenuKey(GenMenu.gen_menu);
+        SysMenuEntity sysMenuEntity = sysMenuService.getByMenuKey(genMenu.getMenu());
         if(null != sysMenuEntity)
             return sysMenuEntity.getMenuKey();
         return "";
+    }
+
+    public String menu() {
+        String menu = SysMenuService.getMenuKey("Gen", "GenType");
+        return menu;
+    }
+
+    public String button(String button) {
+        String menu = menu() + button;
+        return menu;
     }
 
     public String ico(){
@@ -114,25 +122,19 @@ public class GenTypeServiceGen extends ServiceImpl<GenTypeDao, GenTypeEntity> im
     }
 
     public void init() {
-        sysMenuService.put(getMenus());
-        language.add(getLanguageItemArray());
-        language.add(getLanguageItems());
-        addLanguageColumnItem();
-        language.add(getLanguageItemsInternal());
+        sysMenuService.put(getMenuItemsInternal(), getMenuItems(), getMenuList());
+        language.put(getLanguageItemsInternal(), getLanguageItems(), getLanguageList());
     }
 
-    public String[][] getLanguageItemArray() {
+    public List<String[]> getLanguageList() {
         return null;
     }
 
-    public List<String[]> getLanguageItems() {
+    public String[][] getLanguageItems() {
         return null;
     }
 
-    public void addLanguageColumnItem(){
-    }
-
-    protected String[][] getLanguageItemsInternal() {
+    private String[][] getLanguageItemsInternal() {
         String[][] items = new String[][]{
                 {"gen_gentype_table_comment", "生成方案"},
                 {"gen_gentype_column_id", "序列号"},
@@ -150,15 +152,22 @@ public class GenTypeServiceGen extends ServiceImpl<GenTypeDao, GenTypeEntity> im
         return items;
     }
 
-    public String[][] getMenus() {
-        String menuKey = SysMenuService.getMenuKey("Gen", "GenType");
+    public List<String[]> getMenuList() {
+        return null;
+    }
+
+    public String[][] getMenuItems() {
+        return null;
+    }
+
+    private String[][] getMenuItemsInternal() {
         String[][] menus = new String[][]{
                 //{0:菜单名字,1:URL,2:权限,3:菜单类型,4:ICON,5:排序,6:MenuKey,7:ParentKey,8:Language}
-                {"生成方案", "modules/gen/gentype", "gen:gentype:list,gen:gentype:info,gen:gentype:save,gen:gentype:update,gen:gentype:delete", "1", "fa " + ico(), order(), menuKey, parentMenu(), "gen_gentype_table_comment"},
-                {"查看", null, "gen:gentype:list,gen:gentype:info", "2", null, order(), SysMenuService.getMenuKey("Gen", "GenTypeInfo"), menuKey, "sys_string_lookup"},
-                {"新增", null, "gen:gentype:save", "2", null, order(), SysMenuService.getMenuKey("Gen", "GenTypeSave"), menuKey, "sys_string_add"},
-                {"修改", null, "gen:gentype:update", "2", null, order(), SysMenuService.getMenuKey("Gen", "GenTypeUpdate"), menuKey, "sys_string_change"},
-                {"删除", null, "gen:gentype:delete", "2", null, order(), SysMenuService.getMenuKey("Gen", "GenTypeDelete"), menuKey, "sys_string_delete"},
+                {"生成方案", "modules/gen/gentype", "gen:gentype:list,gen:gentype:info,gen:gentype:save,gen:gentype:update,gen:gentype:delete", "1", "fa " + ico(), order(), menu(), parentMenu(), "gen_gentype_table_comment"},
+                {"查看", null, "gen:gentype:list,gen:gentype:info", "2", null, order(), button("List"), menu(), "sys_string_lookup"},
+                {"新增", null, "gen:gentype:save", "2", null, order(), button("Save"), menu(), "sys_string_add"},
+                {"修改", null, "gen:gentype:update", "2", null, order(), button("Update"), menu(), "sys_string_change"},
+                {"删除", null, "gen:gentype:delete", "2", null, order(), button("Delete"), menu(), "sys_string_delete"},
         };
         return menus;
     }

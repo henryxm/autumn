@@ -28,8 +28,6 @@ import cn.org.autumn.modules.lan.service.LanguageService;
  */
 public class WebAuthenticationServiceGen extends ServiceImpl<WebAuthenticationDao, WebAuthenticationEntity> implements InitFactory.Init {
 
-    protected static final String NULL = null;
-
     @Autowired
     protected ClientMenu clientMenu;
 
@@ -46,40 +44,40 @@ public class WebAuthenticationServiceGen extends ServiceImpl<WebAuthenticationDa
         Page<WebAuthenticationEntity> _page = new Query<WebAuthenticationEntity>(params).getPage();
         EntityWrapper<WebAuthenticationEntity> entityEntityWrapper = new EntityWrapper<>();
         Map<String,Object> condition = new HashMap<>();
-        if(params.containsKey("id") && null !=params.get("id") && StringUtils.isNotEmpty(params.get("id").toString())) {
+        if(params.containsKey("id") && null != params.get("id") && StringUtils.isNotEmpty(params.get("id").toString())) {
             condition.put("id", params.get("id"));
         }
-        if(params.containsKey("name") && null !=params.get("name") && StringUtils.isNotEmpty(params.get("name").toString())) {
+        if(params.containsKey("name") && null != params.get("name") && StringUtils.isNotEmpty(params.get("name").toString())) {
             condition.put("name", params.get("name"));
         }
-        if(params.containsKey("clientId") && null !=params.get("clientId") && StringUtils.isNotEmpty(params.get("clientId").toString())) {
+        if(params.containsKey("clientId") && null != params.get("clientId") && StringUtils.isNotEmpty(params.get("clientId").toString())) {
             condition.put("client_id", params.get("clientId"));
         }
-        if(params.containsKey("clientSecret") && null !=params.get("clientSecret") && StringUtils.isNotEmpty(params.get("clientSecret").toString())) {
+        if(params.containsKey("clientSecret") && null != params.get("clientSecret") && StringUtils.isNotEmpty(params.get("clientSecret").toString())) {
             condition.put("client_secret", params.get("clientSecret"));
         }
-        if(params.containsKey("redirectUri") && null !=params.get("redirectUri") && StringUtils.isNotEmpty(params.get("redirectUri").toString())) {
+        if(params.containsKey("redirectUri") && null != params.get("redirectUri") && StringUtils.isNotEmpty(params.get("redirectUri").toString())) {
             condition.put("redirect_uri", params.get("redirectUri"));
         }
-        if(params.containsKey("authorizeUri") && null !=params.get("authorizeUri") && StringUtils.isNotEmpty(params.get("authorizeUri").toString())) {
+        if(params.containsKey("authorizeUri") && null != params.get("authorizeUri") && StringUtils.isNotEmpty(params.get("authorizeUri").toString())) {
             condition.put("authorize_uri", params.get("authorizeUri"));
         }
-        if(params.containsKey("accessTokenUri") && null !=params.get("accessTokenUri") && StringUtils.isNotEmpty(params.get("accessTokenUri").toString())) {
+        if(params.containsKey("accessTokenUri") && null != params.get("accessTokenUri") && StringUtils.isNotEmpty(params.get("accessTokenUri").toString())) {
             condition.put("access_token_uri", params.get("accessTokenUri"));
         }
-        if(params.containsKey("userInfoUri") && null !=params.get("userInfoUri") && StringUtils.isNotEmpty(params.get("userInfoUri").toString())) {
+        if(params.containsKey("userInfoUri") && null != params.get("userInfoUri") && StringUtils.isNotEmpty(params.get("userInfoUri").toString())) {
             condition.put("user_info_uri", params.get("userInfoUri"));
         }
-        if(params.containsKey("scope") && null !=params.get("scope") && StringUtils.isNotEmpty(params.get("scope").toString())) {
+        if(params.containsKey("scope") && null != params.get("scope") && StringUtils.isNotEmpty(params.get("scope").toString())) {
             condition.put("scope", params.get("scope"));
         }
-        if(params.containsKey("state") && null !=params.get("state") && StringUtils.isNotEmpty(params.get("state").toString())) {
+        if(params.containsKey("state") && null != params.get("state") && StringUtils.isNotEmpty(params.get("state").toString())) {
             condition.put("state", params.get("state"));
         }
-        if(params.containsKey("description") && null !=params.get("description") && StringUtils.isNotEmpty(params.get("description").toString())) {
+        if(params.containsKey("description") && null != params.get("description") && StringUtils.isNotEmpty(params.get("description").toString())) {
             condition.put("description", params.get("description"));
         }
-        if(params.containsKey("createTime") && null !=params.get("createTime") && StringUtils.isNotEmpty(params.get("createTime").toString())) {
+        if(params.containsKey("createTime") && null != params.get("createTime") && StringUtils.isNotEmpty(params.get("createTime").toString())) {
             condition.put("create_time", params.get("createTime"));
         }
         _page.setCondition(condition);
@@ -102,40 +100,44 @@ public class WebAuthenticationServiceGen extends ServiceImpl<WebAuthenticationDa
     */
     public String parentMenu(){
         clientMenu.init();
-        SysMenuEntity sysMenuEntity = sysMenuService.getByMenuKey(ClientMenu.client_menu);
+        SysMenuEntity sysMenuEntity = sysMenuService.getByMenuKey(clientMenu.getMenu());
         if(null != sysMenuEntity)
             return sysMenuEntity.getMenuKey();
         return "";
+    }
+
+    public String menu() {
+        String menu = SysMenuService.getMenuKey("Client", "WebAuthentication");
+        return menu;
+    }
+
+    public String button(String button) {
+        String menu = menu() + button;
+        return menu;
     }
 
     public String ico(){
         return "fa-file-code-o";
     }
 
-    private String order(){
+    protected String order(){
         return String.valueOf(menuOrder());
     }
 
     public void init() {
-        sysMenuService.put(getMenus());
-        language.add(getLanguageItemArray());
-        language.add(getLanguageItems());
-        addLanguageColumnItem();
-        language.add(getLanguageItemsInternal());
+        sysMenuService.put(getMenuItemsInternal(), getMenuItems(), getMenuList());
+        language.put(getLanguageItemsInternal(), getLanguageItems(), getLanguageList());
     }
 
-    public String[][] getLanguageItemArray() {
+    public List<String[]> getLanguageList() {
         return null;
     }
 
-    public List<String[]> getLanguageItems() {
+    public String[][] getLanguageItems() {
         return null;
     }
 
-    public void addLanguageColumnItem(){
-    }
-
-    public String[][] getLanguageItemsInternal() {
+    private String[][] getLanguageItemsInternal() {
         String[][] items = new String[][]{
                 {"client_webauthentication_table_comment", "网站客户端"},
                 {"client_webauthentication_column_id", "id"},
@@ -154,15 +156,22 @@ public class WebAuthenticationServiceGen extends ServiceImpl<WebAuthenticationDa
         return items;
     }
 
-    public String[][] getMenus() {
-        String menuKey = SysMenuService.getMenuKey("Client", "WebAuthentication");
+    public List<String[]> getMenuList() {
+        return null;
+    }
+
+    public String[][] getMenuItems() {
+        return null;
+    }
+
+    private String[][] getMenuItemsInternal() {
         String[][] menus = new String[][]{
                 //{0:菜单名字,1:URL,2:权限,3:菜单类型,4:ICON,5:排序,6:MenuKey,7:ParentKey,8:Language}
-                {"网站客户端", "modules/client/webauthentication", "client:webauthentication:list,client:webauthentication:info,client:webauthentication:save,client:webauthentication:update,client:webauthentication:delete", "1", "fa " + ico(), order(), menuKey, parentMenu(), "client_webauthentication_table_comment"},
-                {"查看", null, "client:webauthentication:list,client:webauthentication:info", "2", null, order(), SysMenuService.getMenuKey("Client", "WebAuthenticationInfo"), menuKey, "sys_string_lookup"},
-                {"新增", null, "client:webauthentication:save", "2", null, order(), SysMenuService.getMenuKey("Client", "WebAuthenticationSave"), menuKey, "sys_string_add"},
-                {"修改", null, "client:webauthentication:update", "2", null, order(), SysMenuService.getMenuKey("Client", "WebAuthenticationUpdate"), menuKey, "sys_string_change"},
-                {"删除", null, "client:webauthentication:delete", "2", null, order(), SysMenuService.getMenuKey("Client", "WebAuthenticationDelete"), menuKey, "sys_string_delete"},
+                {"网站客户端", "modules/client/webauthentication", "client:webauthentication:list,client:webauthentication:info,client:webauthentication:save,client:webauthentication:update,client:webauthentication:delete", "1", "fa " + ico(), order(), menu(), parentMenu(), "client_webauthentication_table_comment"},
+                {"查看", null, "client:webauthentication:list,client:webauthentication:info", "2", null, order(), button("List"), menu(), "sys_string_lookup"},
+                {"新增", null, "client:webauthentication:save", "2", null, order(), button("Save"), menu(), "sys_string_add"},
+                {"修改", null, "client:webauthentication:update", "2", null, order(), button("Update"), menu(), "sys_string_change"},
+                {"删除", null, "client:webauthentication:delete", "2", null, order(), button("Delete"), menu(), "sys_string_delete"},
         };
         return menus;
     }

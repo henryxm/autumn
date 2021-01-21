@@ -1,9 +1,9 @@
 package cn.org.autumn.modules.lan.service;
 
 import cn.org.autumn.modules.lan.interceptor.LanguageInterceptor;
+import cn.org.autumn.modules.sys.service.SysConfigService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
 import javax.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.Locale;
@@ -15,6 +15,9 @@ public final class Language {
     @Autowired
     LanguageService languageService;
 
+    @Autowired
+    SysConfigService sysConfigService;
+
     public Locale getLocale(HttpServletRequest httpServletRequest) {
         return LanguageInterceptor.getLocale(httpServletRequest);
     }
@@ -25,6 +28,14 @@ public final class Language {
             return language.get(key);
         }
         return key;
+    }
+
+    public void put(boolean update, Object... objects) {
+        languageService.put(update, objects);
+    }
+
+    public void put(Object... objects) {
+        languageService.put(objects);
     }
 
     public void add(String key, String zh_CN) {

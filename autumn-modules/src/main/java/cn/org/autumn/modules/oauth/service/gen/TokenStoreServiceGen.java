@@ -28,8 +28,6 @@ import cn.org.autumn.modules.lan.service.LanguageService;
  */
 public class TokenStoreServiceGen extends ServiceImpl<TokenStoreDao, TokenStoreEntity> implements InitFactory.Init {
 
-    protected static final String NULL = null;
-
     @Autowired
     protected OauthMenu oauthMenu;
 
@@ -46,31 +44,31 @@ public class TokenStoreServiceGen extends ServiceImpl<TokenStoreDao, TokenStoreE
         Page<TokenStoreEntity> _page = new Query<TokenStoreEntity>(params).getPage();
         EntityWrapper<TokenStoreEntity> entityEntityWrapper = new EntityWrapper<>();
         Map<String,Object> condition = new HashMap<>();
-        if(params.containsKey("id") && null !=params.get("id") && StringUtils.isNotEmpty(params.get("id").toString())) {
+        if(params.containsKey("id") && null != params.get("id") && StringUtils.isNotEmpty(params.get("id").toString())) {
             condition.put("id", params.get("id"));
         }
-        if(params.containsKey("userId") && null !=params.get("userId") && StringUtils.isNotEmpty(params.get("userId").toString())) {
+        if(params.containsKey("userId") && null != params.get("userId") && StringUtils.isNotEmpty(params.get("userId").toString())) {
             condition.put("user_id", params.get("userId"));
         }
-        if(params.containsKey("userUuid") && null !=params.get("userUuid") && StringUtils.isNotEmpty(params.get("userUuid").toString())) {
+        if(params.containsKey("userUuid") && null != params.get("userUuid") && StringUtils.isNotEmpty(params.get("userUuid").toString())) {
             condition.put("user_uuid", params.get("userUuid"));
         }
-        if(params.containsKey("authCode") && null !=params.get("authCode") && StringUtils.isNotEmpty(params.get("authCode").toString())) {
+        if(params.containsKey("authCode") && null != params.get("authCode") && StringUtils.isNotEmpty(params.get("authCode").toString())) {
             condition.put("auth_code", params.get("authCode"));
         }
-        if(params.containsKey("accessToken") && null !=params.get("accessToken") && StringUtils.isNotEmpty(params.get("accessToken").toString())) {
+        if(params.containsKey("accessToken") && null != params.get("accessToken") && StringUtils.isNotEmpty(params.get("accessToken").toString())) {
             condition.put("access_token", params.get("accessToken"));
         }
-        if(params.containsKey("accessTokenExpiredIn") && null !=params.get("accessTokenExpiredIn") && StringUtils.isNotEmpty(params.get("accessTokenExpiredIn").toString())) {
+        if(params.containsKey("accessTokenExpiredIn") && null != params.get("accessTokenExpiredIn") && StringUtils.isNotEmpty(params.get("accessTokenExpiredIn").toString())) {
             condition.put("access_token_expired_in", params.get("accessTokenExpiredIn"));
         }
-        if(params.containsKey("refreshToken") && null !=params.get("refreshToken") && StringUtils.isNotEmpty(params.get("refreshToken").toString())) {
+        if(params.containsKey("refreshToken") && null != params.get("refreshToken") && StringUtils.isNotEmpty(params.get("refreshToken").toString())) {
             condition.put("refresh_token", params.get("refreshToken"));
         }
-        if(params.containsKey("refreshTokenExpiredIn") && null !=params.get("refreshTokenExpiredIn") && StringUtils.isNotEmpty(params.get("refreshTokenExpiredIn").toString())) {
+        if(params.containsKey("refreshTokenExpiredIn") && null != params.get("refreshTokenExpiredIn") && StringUtils.isNotEmpty(params.get("refreshTokenExpiredIn").toString())) {
             condition.put("refresh_token_expired_in", params.get("refreshTokenExpiredIn"));
         }
-        if(params.containsKey("createTime") && null !=params.get("createTime") && StringUtils.isNotEmpty(params.get("createTime").toString())) {
+        if(params.containsKey("createTime") && null != params.get("createTime") && StringUtils.isNotEmpty(params.get("createTime").toString())) {
             condition.put("create_time", params.get("createTime"));
         }
         _page.setCondition(condition);
@@ -93,40 +91,44 @@ public class TokenStoreServiceGen extends ServiceImpl<TokenStoreDao, TokenStoreE
     */
     public String parentMenu(){
         oauthMenu.init();
-        SysMenuEntity sysMenuEntity = sysMenuService.getByMenuKey(OauthMenu.oauth_menu);
+        SysMenuEntity sysMenuEntity = sysMenuService.getByMenuKey(oauthMenu.getMenu());
         if(null != sysMenuEntity)
             return sysMenuEntity.getMenuKey();
         return "";
+    }
+
+    public String menu() {
+        String menu = SysMenuService.getMenuKey("Oauth", "TokenStore");
+        return menu;
+    }
+
+    public String button(String button) {
+        String menu = menu() + button;
+        return menu;
     }
 
     public String ico(){
         return "fa-file-code-o";
     }
 
-    private String order(){
+    protected String order(){
         return String.valueOf(menuOrder());
     }
 
     public void init() {
-        sysMenuService.put(getMenus());
-        language.add(getLanguageItemArray());
-        language.add(getLanguageItems());
-        addLanguageColumnItem();
-        language.add(getLanguageItemsInternal());
+        sysMenuService.put(getMenuItemsInternal(), getMenuItems(), getMenuList());
+        language.put(getLanguageItemsInternal(), getLanguageItems(), getLanguageList());
     }
 
-    public String[][] getLanguageItemArray() {
+    public List<String[]> getLanguageList() {
         return null;
     }
 
-    public List<String[]> getLanguageItems() {
+    public String[][] getLanguageItems() {
         return null;
     }
 
-    public void addLanguageColumnItem(){
-    }
-
-    public String[][] getLanguageItemsInternal() {
+    private String[][] getLanguageItemsInternal() {
         String[][] items = new String[][]{
                 {"oauth_tokenstore_table_comment", "授权令牌"},
                 {"oauth_tokenstore_column_id", "id"},
@@ -142,15 +144,22 @@ public class TokenStoreServiceGen extends ServiceImpl<TokenStoreDao, TokenStoreE
         return items;
     }
 
-    public String[][] getMenus() {
-        String menuKey = SysMenuService.getMenuKey("Oauth", "TokenStore");
+    public List<String[]> getMenuList() {
+        return null;
+    }
+
+    public String[][] getMenuItems() {
+        return null;
+    }
+
+    private String[][] getMenuItemsInternal() {
         String[][] menus = new String[][]{
                 //{0:菜单名字,1:URL,2:权限,3:菜单类型,4:ICON,5:排序,6:MenuKey,7:ParentKey,8:Language}
-                {"授权令牌", "modules/oauth/tokenstore", "oauth:tokenstore:list,oauth:tokenstore:info,oauth:tokenstore:save,oauth:tokenstore:update,oauth:tokenstore:delete", "1", "fa " + ico(), order(), menuKey, parentMenu(), "oauth_tokenstore_table_comment"},
-                {"查看", null, "oauth:tokenstore:list,oauth:tokenstore:info", "2", null, order(), SysMenuService.getMenuKey("Oauth", "TokenStoreInfo"), menuKey, "sys_string_lookup"},
-                {"新增", null, "oauth:tokenstore:save", "2", null, order(), SysMenuService.getMenuKey("Oauth", "TokenStoreSave"), menuKey, "sys_string_add"},
-                {"修改", null, "oauth:tokenstore:update", "2", null, order(), SysMenuService.getMenuKey("Oauth", "TokenStoreUpdate"), menuKey, "sys_string_change"},
-                {"删除", null, "oauth:tokenstore:delete", "2", null, order(), SysMenuService.getMenuKey("Oauth", "TokenStoreDelete"), menuKey, "sys_string_delete"},
+                {"授权令牌", "modules/oauth/tokenstore", "oauth:tokenstore:list,oauth:tokenstore:info,oauth:tokenstore:save,oauth:tokenstore:update,oauth:tokenstore:delete", "1", "fa " + ico(), order(), menu(), parentMenu(), "oauth_tokenstore_table_comment"},
+                {"查看", null, "oauth:tokenstore:list,oauth:tokenstore:info", "2", null, order(), button("List"), menu(), "sys_string_lookup"},
+                {"新增", null, "oauth:tokenstore:save", "2", null, order(), button("Save"), menu(), "sys_string_add"},
+                {"修改", null, "oauth:tokenstore:update", "2", null, order(), button("Update"), menu(), "sys_string_change"},
+                {"删除", null, "oauth:tokenstore:delete", "2", null, order(), button("Delete"), menu(), "sys_string_delete"},
         };
         return menus;
     }
