@@ -28,6 +28,7 @@ services:
     volumes:
       - "./.storage/mysql/data:/var/lib/mysql"
       - "./.storage/mysql/my.cnf:/etc/my.cnf"
+    command: '--default-time-zone=+8:00'
   redis:
     image: redis
     restart: always
