@@ -17,7 +17,7 @@ import java.util.*;
 
 @Service
 public class LanguageService extends LanguageServiceGen implements LoadFactory.Load, LoopJob.Job {
-    private Logger logger = LoggerFactory.getLogger(getClass());
+    private static Logger logger = LoggerFactory.getLogger(LanguageService.class);
 
     @Autowired
     SysConfigService sysConfigService;
@@ -89,7 +89,14 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
     public Map<String, String> getLanguage(Locale locale) {
         String t = locale.toLanguageTag();
         t = t.replace("-", "_").toLowerCase();
-        return languages.get(t);
+        String c = locale.getCountry();
+        Map<String, String> map = languages.get(t);
+        if (null == map) {
+            t = locale.getLanguage() + "_" + locale.getCountry();
+            t = t.toLowerCase();
+            map = languages.get(t);
+        }
+        return map;
     }
 
     /**
@@ -146,13 +153,13 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
         LanguageEntity languageEntity = new LanguageEntity();
         for (int i = 0; i < languages.length; i++) {
             try {
-                String lang = languages[i];
+                String lang = languages[i].trim();
                 if (lang.contains(":")) {
                     String[] sp = lang.split(":");
                     String lk = sp[0].trim().toLowerCase();
-                    String lv = sp[1];
                     Field field = getEntityField(fields, lk);
-                    if (null != field) {
+                    if (null != field && sp.length > 1) {
+                        String lv = sp[1];
                         field.setAccessible(true);
                         field.set(languageEntity, lv);
                     } else {
@@ -169,7 +176,8 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
                         field.set(languageEntity, lang);
                     }
                 }
-            } catch (IllegalAccessException e) {
+            } catch (Exception e) {
+                logger.error(e.getMessage());
             }
         }
         return languageEntity;
