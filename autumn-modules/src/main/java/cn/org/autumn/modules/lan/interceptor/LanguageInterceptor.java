@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.lan.interceptor;
 
+import cn.org.autumn.config.Config;
 import cn.org.autumn.modules.lan.service.LanguageService;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -25,12 +26,14 @@ public class LanguageInterceptor extends HandlerInterceptorAdapter {
     @Autowired
     LanguageService languageService;
 
+    public static LanguageService lang;
+
     public static String LANGUAGE_SESSION = "LANGUAGE_SESSION";
 
     public static Locale getLocale(HttpServletRequest request) {
         String language = request.getParameter("lang");
         Locale locale = Locale.getDefault();
-        if (!StringUtils.isEmpty(language)) {
+        if (StringUtils.isNotEmpty(language)) {
             language = language.replace("-", "_");
             String[] lc = language.split("_");
             if (lc.length == 2)
@@ -45,6 +48,19 @@ public class LanguageInterceptor extends HandlerInterceptorAdapter {
                 Locale localeInSession = (Locale) session.getAttribute(LANGUAGE_SESSION);
                 if (localeInSession != null) {
                     locale = localeInSession;
+                }else{
+                    if (StringUtils.isEmpty(language)) {
+                        if (null == lang)
+                            lang = (LanguageService) Config.getBean("languageService");
+                        if (null != lang)
+                            language = lang.getUserDefaultLanguage();
+                        if(StringUtils.isNotEmpty(language)){
+                            language = language.replace("-", "_");
+                            String[] lc = language.split("_");
+                            if (lc.length == 2)
+                                locale = new Locale(lc[0], lc[1]);
+                        }
+                    }
                 }
             } catch (Exception e) {
                 logger.error("LanguageInterceptor.getLocale error: " + e.getMessage());

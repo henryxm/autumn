@@ -2,10 +2,12 @@ package cn.org.autumn.modules.lan.service;
 
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.lan.entity.LanguageEntity;
+import cn.org.autumn.modules.lan.entity.LanguageMetadata;
 import cn.org.autumn.modules.lan.service.gen.LanguageServiceGen;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.site.LoadFactory;
 import cn.org.autumn.table.utils.HumpConvert;
+import com.google.gson.Gson;
 import io.netty.util.internal.StringUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,6 +20,9 @@ import java.util.*;
 @Service
 public class LanguageService extends LanguageServiceGen implements LoadFactory.Load, LoopJob.Job {
     private static Logger logger = LoggerFactory.getLogger(LanguageService.class);
+
+    public static final String MULTIPLE_LANGUAGE_CONFIG_KEY = "MULTIPLE_LANGUAGE_CONFIG_KEY";
+    public static final String DEFAULT_USER_LANGUAGE = "DEFAULT_USER_LANGUAGE";
 
     @Autowired
     SysConfigService sysConfigService;
@@ -248,6 +253,7 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
     public void init() {
         LoopJob.onTenMinute(this);
         super.init();
+        sysConfigService.put(getConfigItems());
     }
 
     public String[][] getLanguageItems() {
@@ -392,6 +398,37 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
                 {"sys_string_no", "否", "No"},
         };
         return items;
+    }
+
+    public String getLanguageMetadataJson() {
+        return new Gson().toJson(LanguageEntity.getLanguageMetadata());
+    }
+
+    public String[][] getConfigItems() {
+        String[][] mapping = new String[][]{
+                {MULTIPLE_LANGUAGE_CONFIG_KEY, getLanguageMetadataJson(), "0", "多语言配置信息"},
+                {DEFAULT_USER_LANGUAGE, "zh_CN", "1", "用户缺省语言设置"},
+        };
+        return mapping;
+    }
+
+    public String getUserDefaultLanguage() {
+        String defaultLang = sysConfigService.getValue(DEFAULT_USER_LANGUAGE);
+        return defaultLang;
+    }
+
+    public List<LanguageMetadata> getLanguageMetadata() {
+        List<LanguageMetadata> languageMetadataList = sysConfigService.getConfigObjectList(MULTIPLE_LANGUAGE_CONFIG_KEY, LanguageMetadata.class);
+        if (null == languageMetadataList) {
+            Boolean hasKey = sysConfigService.hasKey(MULTIPLE_LANGUAGE_CONFIG_KEY);
+            if (hasKey) {
+                sysConfigService.updateValueByKey(MULTIPLE_LANGUAGE_CONFIG_KEY, getLanguageMetadataJson());
+            } else {
+                sysConfigService.put(getConfigItems());
+            }
+            languageMetadataList = sysConfigService.getConfigObjectList(MULTIPLE_LANGUAGE_CONFIG_KEY, LanguageMetadata.class);
+        }
+        return languageMetadataList;
     }
 
     @Override

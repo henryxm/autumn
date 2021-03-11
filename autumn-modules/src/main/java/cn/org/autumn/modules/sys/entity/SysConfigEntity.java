@@ -19,12 +19,12 @@ public class SysConfigEntity implements Serializable {
     @Column(isKey = true, type = DataType.BIGINT, length = 20, isNull = false, isAutoIncrement = true, comment = "id")
     private Long id;
     @NotBlank(message = "参数名不能为空")
-    @Column(length = 50, comment = "key")
+    @Column(comment = "key")
     private String paramKey;
     @NotBlank(message = "参数值不能为空")
-    @Column(length = 2000, comment = "value")
+    @Column(type = DataType.TEXT, comment = "value")
     private String paramValue;
-    @Column(length = 500, comment = "备注")
+    @Column(type = DataType.TEXT, comment = "备注")
     private String remark;
     @Column(type = DataType.INT, length = 4, defaultValue = "1", comment = "状态   0：隐藏   1：显示")
     private int status;

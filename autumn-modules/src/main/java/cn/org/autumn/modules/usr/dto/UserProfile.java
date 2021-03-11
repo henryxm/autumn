@@ -2,6 +2,7 @@ package cn.org.autumn.modules.usr.dto;
 
 import cn.org.autumn.modules.usr.entity.UserProfileEntity;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import org.apache.commons.lang.StringUtils;
 
 import java.io.Serializable;
 
@@ -22,7 +23,10 @@ public class UserProfile implements Serializable {
 
     public static UserProfile from(UserProfileEntity userProfileEntity) {
         UserProfile userProfile = new UserProfile();
-        userProfile.setIcon(userProfileEntity.getIcon());
+        if (StringUtils.isNotEmpty(userProfileEntity.getIcon()))
+            userProfile.setIcon(userProfileEntity.getIcon());
+        else
+            userProfile.setIcon("");
         userProfile.setUsername(userProfileEntity.getUsername());
         userProfile.setNickname(userProfileEntity.getNickname());
         userProfile.setOpenId(userProfileEntity.getOpenId());

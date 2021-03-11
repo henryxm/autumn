@@ -18,6 +18,9 @@ public interface SysConfigDao extends BaseMapper<SysConfigEntity> {
     @Select("select * from sys_config where param_key = #{paramKey}")
     SysConfigEntity queryByKey(@Param("paramKey") String paramKey);
 
+    @Select("select count(*) from sys_config where param_key = #{paramKey}")
+    Integer hasKey(@Param("paramKey") String paramKey);
+
     /**
      * 根据key，更新value
      */

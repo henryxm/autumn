@@ -44,17 +44,8 @@ var vm = new Vue({
 		password:'',
 		newPassword:'',
         navTitle:"控制台",
-		columeType:"",
-		columeTypeArr:[{
-			value:'zh_CN',
-			label:'简体中文(中国大陆)'
-		},{
-			value:'zh_Hk',
-			label:'繁体中文(香港)',
-		},{
-			value:'en_US',
-			label:'英语(美国)'
-		}],
+		currentLanguage:"",
+		languageList:[],
 	},
 	methods: {
 		getMenuList: function (event) {
@@ -65,6 +56,11 @@ var vm = new Vue({
 		getUser: function(){
 			$.getJSON("sys/user/info?_"+$.now(), function(r){
 				vm.user = r.user;
+			});
+		},
+		getLanguageList: function(){
+			$.getJSON("api/getsupportedlanguage?_"+$.now(), function(r){
+				vm.languageList = r.language;
 			});
 		},
 		updatePassword: function(){
@@ -117,12 +113,13 @@ var vm = new Vue({
 			window.location.reload();
 		},
 		onChangeLanguage: function () {
-			vm.setQueryString("lang",vm.columeType)
+			vm.setQueryString("lang",vm.currentLanguage)
 		}
 	},
 	created: function(){
 		this.getMenuList();
 		this.getUser();
+		this.getLanguageList();
 	},
 	updated: function(){
 		//路由

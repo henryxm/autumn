@@ -75,7 +75,7 @@ public class AuthorizationInterceptor extends HandlerInterceptorAdapter {
     }
 
     private SysUserEntity append(SysUserEntity sysUserEntity) {
-        if (null == sysUserEntity) {
+        if (null != sysUserEntity) {
             if (null == sysUserEntity.getProfile())
                 sysUserEntity = userProfileService.setProfile(sysUserEntity);
             if (null == sysUserEntity.getProfile()) {

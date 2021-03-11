@@ -85,6 +85,7 @@ public class UserProfileService extends UserProfileServiceGen implements LoopJob
             userProfileEntity.setUsername(sysUserEntity.getUsername());
             userProfileEntity.setMobile(sysUserEntity.getMobile());
             userProfileEntity.setUuid(sysUserEntity.getUuid());
+            userProfileEntity.setIcon("");
             if (null != merge) {
                 userProfileEntity.setUnionId(merge.getUnionId());
                 userProfileEntity.setOpenId(merge.getOpenId());

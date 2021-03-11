@@ -2,9 +2,16 @@ package cn.org.autumn.modules.lan.entity;
 
 import com.baomidou.mybatisplus.annotations.*;
 import cn.org.autumn.table.annotation.*;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+import org.apache.commons.lang.StringUtils;
 
 import java.io.Serializable;
 import java.lang.reflect.Field;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -544,5 +551,33 @@ public class LanguageEntity implements Serializable {
             }
         }
         return this;
+    }
+
+    public static List<LanguageMetadata> getLanguageMetadata() {
+        List<LanguageMetadata> languageMetadataList = new ArrayList<>();
+        Field[] fields = LanguageEntity.class.getDeclaredFields();
+        for (Field field : fields) {
+            if ("id".equalsIgnoreCase(field.getName()) || "serialVersionUID".equalsIgnoreCase(field.getName()) || "name".equalsIgnoreCase(field.getName()))
+                continue;
+            try {
+                String name = field.getName();
+                LanguageMetadata languageMetadata = new LanguageMetadata();
+                languageMetadata.setName(name);
+                languageMetadata.setEnable(true);
+                StringBuilder stringBuilder = new StringBuilder(name);
+                Character character = stringBuilder.charAt(3);
+                String last = character.toString().toUpperCase();
+                stringBuilder.replace(3, 4, last);
+                stringBuilder.insert(2, "_");
+                languageMetadata.setValue(stringBuilder.toString());
+                Column column = field.getAnnotation(Column.class);
+                if (null != column) {
+                    languageMetadata.setLabel(column.comment());
+                }
+                languageMetadataList.add(languageMetadata);
+            } catch (Exception e) {
+            }
+        }
+        return languageMetadataList;
     }
 }

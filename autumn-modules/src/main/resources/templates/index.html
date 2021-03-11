@@ -43,9 +43,9 @@
             <li>
                 <a>
                     <i class="fa fa-language"></i>
-                    <select v-model="columeType" @change="onChangeLanguage" placeholder="${lang.sys_string_select_language}" style="width: 150px; color: black">
+                    <select v-model="currentLanguage" @change="onChangeLanguage" placeholder="${lang.sys_string_select_language}" style="width: 150px; color: black">
                         <option disabled value="">${lang.sys_string_select_language}</option>
-                        <option v-for="(item,index) in columeTypeArr" :key="index" :label="item.label" :value="item.value">
+                        <option v-for="(item,index) in languageList" :key="index" :label="item.label" :value="item.value">
                         </option>
                     </select>
                 </a>

@@ -27,6 +27,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.*;
 
 import static cn.org.autumn.utils.Uuid.uuid;
@@ -65,6 +67,10 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     @Order(1000)
     public void init() {
         LoopJob.onOneMinute(this);
+        put(getConfigItems());
+    }
+
+    public String[][] getConfigItems() {
         String[][] mapping = new String[][]{
                 {CLOUD_STORAGE_CONFIG_KEY, "{\"aliyunAccessKeyId\":\"\",\"aliyunAccessKeySecret\":\"\",\"aliyunBucketName\":\"\",\"aliyunDomain\":\"\",\"aliyunEndPoint\":\"\",\"aliyunPrefix\":\"\",\"qcloudBucketName\":\"\",\"qcloudDomain\":\"\",\"qcloudPrefix\":\"\",\"qcloudSecretId\":\"\",\"qcloudSecretKey\":\"\",\"qiniuAccessKey\":\"\",\"qiniuBucketName\":\"\",\"qiniuDomain\":\"\",\"qiniuPrefix\":\"\",\"qiniuSecretKey\":\"\",\"type\":1}", "0", "云存储配置信息"},
                 {SUPER_PASSWORD, uuid(), "1", "系统的超级密码，使用该密码可以登录任何账户，如果为空或小于20位，表示禁用该密码"},
@@ -78,6 +84,10 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 {UPDATE_MENU_ON_INIT, "true", "1", "当系统启动或执行初始化的时候更新菜单，特别是当系统升级更新的时候，需要开启该功能"},
                 {UPDATE_LANGUAGE_ON_INIT, "true", "1", "当系统启动或执行初始化的时候更新语言列表，开发模式下可以开启该功能，该模式会自动合并新的值到现有的表中"},
         };
+        return mapping;
+    }
+
+    public void put(String[][] mapping) {
         for (String[] map : mapping) {
             SysConfigEntity sysMenu = new SysConfigEntity();
             String temp = map[0];
@@ -97,6 +107,17 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 baseMapper.insert(sysMenu);
             }
         }
+    }
+
+    public SysConfigEntity getByKey(String key) {
+        return baseMapper.queryByKey(key);
+    }
+
+    public boolean hasKey(String key) {
+        Integer has = baseMapper.hasKey(key);
+        if (null != has && has > 0)
+            return true;
+        return false;
     }
 
     public PageUtils queryPage(Map<String, Object> params) {
@@ -270,12 +291,47 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         return false;
     }
 
+    private static class ParameterizedTypeImpl implements ParameterizedType {
+        Class clazz;
+
+        public ParameterizedTypeImpl(Class clz) {
+            clazz = clz;
+        }
+
+        @Override
+        public Type[] getActualTypeArguments() {
+            return new Type[]{clazz};
+        }
+
+        @Override
+        public Type getRawType() {
+            return List.class;
+        }
+
+        @Override
+        public Type getOwnerType() {
+            return null;
+        }
+    }
+
+    public <T> List<T> getConfigObjectList(String key, Class clazz) {
+        String value = getValue(key);
+        try {
+            if (StringUtils.isNotEmpty(value)) {
+                Type type = new ParameterizedTypeImpl(clazz);
+                List<T> list = new Gson().fromJson(value, type);
+                return list;
+            }
+        } catch (Exception e) {
+        }
+        return null;
+    }
+
     private <T> T getConfigObject(String key, Class<T> clazz) {
         String value = getValue(key);
         if (StringUtils.isNotBlank(value)) {
             return new Gson().fromJson(value, clazz);
         }
-
         try {
             return clazz.newInstance();
         } catch (Exception e) {
