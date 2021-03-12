@@ -91,10 +91,29 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
         }
     }
 
+    public static void main(String[] args) {
+        Locale locale = Locale.getDefault();
+        String t = locale.toLanguageTag();
+        t = t.replace("-", "_");
+        System.out.println(t);
+    }
+
+    public String toLang(Locale locale) {
+        if (null == locale)
+            return null;
+        String t = locale.toLanguageTag();
+        t = t.replace("-", "_");
+        if (!languages.containsKey(t)) {
+            t = locale.getLanguage() + "_" + locale.getCountry().toUpperCase();
+        }
+        return t;
+    }
+
     public Map<String, String> getLanguage(Locale locale) {
+        if (null == locale)
+            return null;
         String t = locale.toLanguageTag();
         t = t.replace("-", "_").toLowerCase();
-        String c = locale.getCountry();
         Map<String, String> map = languages.get(t);
         if (null == map) {
             t = locale.getLanguage() + "_" + locale.getCountry();
@@ -258,33 +277,32 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
 
     public String[][] getLanguageItems() {
         String[][] items = new String[][]{
-
                 {"lan_language_table_comment", "国家语言", "Language"},
                 {"lan_language_column_name", "标识", "Unique Name"},
                 {"lan_language_column_zh_cn", "简体中文(中国)", "Chinese(China)"},
-                {"lan_language_column_en_us", "英语(美国)"},
-                {"lan_language_column_zh_hk", "繁体中文(香港)"},
-                {"lan_language_column_ko_kr", "韩语(韩国)"},
-                {"lan_language_column_ja_jp", "日语(日本)"},
-                {"lan_language_column_tt_ru", "俄语(俄罗斯)"},
-                {"lan_language_column_fr_fr", "法语(法国)"},
-                {"lan_language_column_de_de", "德语(德国)"},
-                {"lan_language_column_vi_vn", "越语(越南)"},
-                {"lan_language_column_th_th", "泰语(泰国)"},
-                {"lan_language_column_ms_my", "马来语(马来西亚)"},
-                {"lan_language_column_id_id", "印尼语(印尼)"},
-                {"lan_language_column_es_es", "西班牙语(西班牙)"},
-                {"lan_language_column_tr_tr", "土耳其语(土耳其)"},
-                {"lan_language_column_uk_uk", "乌克兰语(乌克兰)"},
-                {"lan_language_column_pu_pt", "葡萄牙语(葡萄牙)"},
-                {"lan_language_column_pl_pl", "波兰语(波兰)"},
-                {"lan_language_column_mn_mn", "蒙古语(蒙古)"},
-                {"lan_language_column_nb_no", "挪威语(挪威)"},
-                {"lan_language_column_it_it", "意大利语(意大利)"},
-                {"lan_language_column_he_il", "希伯来语(以色列)"},
-                {"lan_language_column_el_gr", "希腊语(希腊)"},
-                {"lan_language_column_fa_ir", "波斯语(伊朗)"},
-                {"lan_language_column_ar_sa", "阿拉伯语(沙特阿拉伯)"},
+                {"lan_language_column_en_us", "英语(美国)", "English(United States)"},
+                {"lan_language_column_zh_hk", "繁体中文(香港)", "Traditional Chinese(Hong Kong)"},
+                {"lan_language_column_ko_kr", "韩语(韩国)", "Korean(South Korea)"},
+                {"lan_language_column_ja_jp", "日语(日本)", "Japanese(Japan)"},
+                {"lan_language_column_tt_ru", "俄语(俄罗斯)", "Russian(Russia)"},
+                {"lan_language_column_fr_fr", "法语(法国)", "French(France)"},
+                {"lan_language_column_de_de", "德语(德国)", "German(Germany)"},
+                {"lan_language_column_vi_vn", "越语(越南)", "Vietnamese(Viet Nam)"},
+                {"lan_language_column_th_th", "泰语(泰国)", "Thai(Thailand)"},
+                {"lan_language_column_ms_my", "马来语(马来西亚)", "Malay(Malaysia)"},
+                {"lan_language_column_id_id", "印尼语(印尼)", "Indonesian(Indonesia)"},
+                {"lan_language_column_es_es", "西班牙语(西班牙)", "Spainish(Spain)"},
+                {"lan_language_column_tr_tr", "土耳其语(土耳其)", "Turkish(Turkey)"},
+                {"lan_language_column_uk_uk", "乌克兰语(乌克兰)", "Ukrainian(Ukraine)"},
+                {"lan_language_column_pu_pt", "葡萄牙语(葡萄牙)", "Portuguese(Portugal)"},
+                {"lan_language_column_pl_pl", "波兰语(波兰)", "Polish(Poland)"},
+                {"lan_language_column_mn_mn", "蒙古语(蒙古)", "Mongol(Mongolia)"},
+                {"lan_language_column_nb_no", "挪威语(挪威)", "Norwegian(Norway)"},
+                {"lan_language_column_it_it", "意大利语(意大利)", "Italian(Italy)"},
+                {"lan_language_column_he_il", "希伯来语(以色列)", "Hebrew(Israel)"},
+                {"lan_language_column_el_gr", "希腊语(希腊)", "Greek(Greece)"},
+                {"lan_language_column_fa_ir", "波斯语(伊朗)", "Bosnian(Iran)"},
+                {"lan_language_column_ar_sa", "阿拉伯语(沙特阿拉伯)", "Arabic(Saudi Arabia)"},
 
                 {"sys_string_management", "管理系统", "Manage system"},
                 {"sys_string_system_management", "系统管理", "System management"},
@@ -320,6 +338,7 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
                 {"sys_string_create_time", "创建时间", "Create time"},
                 {"sys_string_query", "查询", "Query"},
                 {"sys_string_select_language", "请选择语言", "Please select language"},
+                {"sys_string_config_language", "语言配置", "Language Configuration"},
                 {"sys_string_modify_password", "修改密码", "Modify password"},
                 {"sys_string_navigation_menu", "导航菜单", "Navigation menu"},
                 {"sys_string_select_menu", "选择菜单", "Select menu"},
@@ -429,6 +448,23 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
             languageMetadataList = sysConfigService.getConfigObjectList(MULTIPLE_LANGUAGE_CONFIG_KEY, LanguageMetadata.class);
         }
         return languageMetadataList;
+    }
+
+    public List<LanguageMetadata> getLanguageMetadata(String lang) {
+        List<LanguageMetadata> languageMetadataList = getLanguageMetadata();
+        List<LanguageMetadata> supportedList = new ArrayList<>();
+        Map<String, String> map = languages.get(lang.toLowerCase());
+        for (LanguageMetadata languageMetadata : languageMetadataList) {
+            if(languageMetadata.isEnable()) {
+                String v = languageMetadata.getValue();
+                String key = "lan_language_column_" + v.toLowerCase();
+                if (map.containsKey(key)) {
+                    languageMetadata.setLabel(map.get(key));
+                }
+                supportedList.add(languageMetadata);
+            }
+        }
+        return supportedList;
     }
 
     @Override

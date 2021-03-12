@@ -65,13 +65,13 @@ public class SysDictService extends ServiceImpl<SysDictDao, SysDictEntity> imple
 
     public PageUtils queryPage(Map<String, Object> params) {
         String name = (String) params.get("name");
-
+        EntityWrapper<SysDictEntity> entityEntityWrapper = new EntityWrapper<>();
         Page<SysDictEntity> page = this.selectPage(
                 new Query<SysDictEntity>(params).getPage(),
                 new EntityWrapper<SysDictEntity>()
                         .like(StringUtils.isNotBlank(name), "name", name)
         );
-
+        page.setTotal(baseMapper.selectCount(entityEntityWrapper));
         return new PageUtils(page);
     }
 

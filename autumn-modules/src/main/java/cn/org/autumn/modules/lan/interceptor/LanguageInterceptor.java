@@ -1,6 +1,7 @@
 package cn.org.autumn.modules.lan.interceptor;
 
 import cn.org.autumn.config.Config;
+import cn.org.autumn.modules.lan.service.Language;
 import cn.org.autumn.modules.lan.service.LanguageService;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -34,10 +35,9 @@ public class LanguageInterceptor extends HandlerInterceptorAdapter {
         String language = request.getParameter("lang");
         Locale locale = Locale.getDefault();
         if (StringUtils.isNotEmpty(language)) {
-            language = language.replace("-", "_");
-            String[] lc = language.split("_");
-            if (lc.length == 2)
-                locale = new Locale(lc[0], lc[1]);
+            Locale l = Language.toLocale(language);
+            if (null != l)
+                locale = l;
             //将国际化语言保存到session
             HttpSession session = request.getSession();
             session.setAttribute(LANGUAGE_SESSION, locale);
@@ -48,18 +48,15 @@ public class LanguageInterceptor extends HandlerInterceptorAdapter {
                 Locale localeInSession = (Locale) session.getAttribute(LANGUAGE_SESSION);
                 if (localeInSession != null) {
                     locale = localeInSession;
-                }else{
+                } else {
                     if (StringUtils.isEmpty(language)) {
                         if (null == lang)
                             lang = (LanguageService) Config.getBean("languageService");
                         if (null != lang)
                             language = lang.getUserDefaultLanguage();
-                        if(StringUtils.isNotEmpty(language)){
-                            language = language.replace("-", "_");
-                            String[] lc = language.split("_");
-                            if (lc.length == 2)
-                                locale = new Locale(lc[0], lc[1]);
-                        }
+                        Locale l = Language.toLocale(language);
+                        if (null != l)
+                            locale = l;
                     }
                 }
             } catch (Exception e) {

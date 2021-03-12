@@ -2,12 +2,17 @@ package cn.org.autumn.modules.lan.service;
 
 import cn.org.autumn.modules.lan.interceptor.LanguageInterceptor;
 import cn.org.autumn.modules.sys.service.SysConfigService;
+import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+
+import static cn.org.autumn.modules.lan.interceptor.LanguageInterceptor.LANGUAGE_SESSION;
 
 @Service
 public final class Language {
@@ -18,8 +23,43 @@ public final class Language {
     @Autowired
     SysConfigService sysConfigService;
 
-    public Locale getLocale(HttpServletRequest httpServletRequest) {
+    public static Locale getLocale(HttpServletRequest httpServletRequest) {
         return LanguageInterceptor.getLocale(httpServletRequest);
+    }
+
+    public String toLang(Locale locale) {
+        return languageService.toLang(locale);
+    }
+
+    public static Locale toLocale(String lang) {
+        Locale locale = null;
+        if (StringUtils.isNotEmpty(lang)) {
+            lang = lang.replace("-", "_");
+            String[] lc = lang.split("_");
+            if (lc.length == 2)
+                locale = new Locale(lc[0], lc[1]);
+        }
+        return locale;
+    }
+
+    /**
+     * lang example: zh_CN
+     *
+     * @param httpServletRequest
+     * @param lang
+     */
+    public static void setLocale(HttpServletRequest httpServletRequest, String lang) {
+        setLocale(httpServletRequest, toLocale(lang));
+    }
+
+    public static void setLocale(HttpServletRequest httpServletRequest, Locale locale) {
+        try {
+            if (null != locale && null != httpServletRequest) {
+                HttpSession session = httpServletRequest.getSession();
+                session.setAttribute(LANGUAGE_SESSION, locale);
+            }
+        } catch (Exception e) {
+        }
     }
 
     public String get(String key, HttpServletRequest httpServletRequest) {

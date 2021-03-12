@@ -122,14 +122,14 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
 
     public PageUtils queryPage(Map<String, Object> params) {
         String paramKey = (String) params.get("paramKey");
-
+        EntityWrapper<SysConfigEntity> entityEntityWrapper = new EntityWrapper<>();
         Page<SysConfigEntity> page = this.selectPage(
                 new Query<SysConfigEntity>(params).getPage(),
                 new EntityWrapper<SysConfigEntity>()
                         .like(StringUtils.isNotBlank(paramKey), "param_key", paramKey)
                         .eq("status", 1)
         );
-
+        page.setTotal(baseMapper.selectCount(entityEntityWrapper));
         return new PageUtils(page);
     }
 

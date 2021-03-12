@@ -43,8 +43,7 @@
             <li>
                 <a>
                     <i class="fa fa-language"></i>
-                    <select v-model="currentLanguage" @change="onChangeLanguage" placeholder="${lang.sys_string_select_language}" style="width: 150px; color: black">
-                        <option disabled value="">${lang.sys_string_select_language}</option>
+                    <select v-model="lang" @change="onChangeLanguage" placeholder="${lang.sys_string_select_language}" style="width: 150px; color: black">
                         <option v-for="(item,index) in languageList" :key="index" :label="item.label" :value="item.value">
                         </option>
                     </select>

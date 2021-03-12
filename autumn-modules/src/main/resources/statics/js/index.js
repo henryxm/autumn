@@ -44,7 +44,7 @@ var vm = new Vue({
 		password:'',
 		newPassword:'',
         navTitle:"控制台",
-		currentLanguage:"",
+		lang:"",
 		languageList:[],
 	},
 	methods: {
@@ -61,6 +61,7 @@ var vm = new Vue({
 		getLanguageList: function(){
 			$.getJSON("api/getsupportedlanguage?_"+$.now(), function(r){
 				vm.languageList = r.language;
+				vm.lang = r.lang;
 			});
 		},
 		updatePassword: function(){
@@ -113,7 +114,7 @@ var vm = new Vue({
 			window.location.reload();
 		},
 		onChangeLanguage: function () {
-			vm.setQueryString("lang",vm.currentLanguage)
+			vm.setQueryString("lang",vm.lang)
 		}
 	},
 	created: function(){

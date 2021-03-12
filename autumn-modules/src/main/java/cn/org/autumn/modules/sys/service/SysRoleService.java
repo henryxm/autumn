@@ -78,7 +78,7 @@ public class SysRoleService extends ServiceImpl<SysRoleDao, SysRoleEntity> imple
     @DataFilter(subDept = true, user = false)
     public PageUtils queryPage(Map<String, Object> params) {
         String roleName = (String) params.get("roleName");
-
+        EntityWrapper<SysRoleEntity> entityEntityWrapper = new EntityWrapper<>();
         Page<SysRoleEntity> page = this.selectPage(
                 new Query<SysRoleEntity>(params).getPage(),
                 new EntityWrapper<SysRoleEntity>()
@@ -92,6 +92,7 @@ public class SysRoleService extends ServiceImpl<SysRoleDao, SysRoleEntity> imple
                 sysRoleEntity.setDeptName(sysDeptEntity.getName());
             }
         }
+        page.setTotal(baseMapper.selectCount(entityEntityWrapper));
         return new PageUtils(page);
     }
 

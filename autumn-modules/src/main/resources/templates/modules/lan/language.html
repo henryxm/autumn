@@ -8,7 +8,7 @@
 <div id="rrapp" v-cloak>
     <div v-show="showList">
         <div class="grid-btn">
-			<#if shiro.hasPermission("lan:language:save")>
+            <#if shiro.hasPermission("lan:language:save")>
             <a class="btn btn-primary" @click="add"><i class="fa fa-plus"></i>&nbsp;${lang.sys_string_add}</a>
 			</#if>
 			<#if shiro.hasPermission("lan:language:update")>
