@@ -47,6 +47,15 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
         return sysMenuService.getSystemMenuKey("SystemManagement");
     }
 
+    public String[][] getMenuItems() {
+        String[][] menus = new String[][]{
+                //{0:菜单名字,1:URL,2:权限,3:菜单类型,4:ICON,5:排序,6:MenuKey,7:ParentKey,8:Language}
+                {"查看支持语言", null, "lan:language:supportedlist", "2", null, order(), button("SupportedList"), menu(), "sys_string_list_supported_language"},
+                {"修改支持语言", null, "lan:language:updatesupported", "2", null, order(), button("UpdateSupported"), menu(), "sys_string_update_supported_language"},
+        };
+        return menus;
+    }
+
     public static void f(LanguageEntity languageEntity) {
         if (null == languageEntity)
             return;
@@ -415,6 +424,9 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
                 {"sys_string_ip_address", "IP地址", "IP Address"},
                 {"sys_string_yes", "是", "Yes"},
                 {"sys_string_no", "否", "No"},
+                {"sys_string_list_supported_language", "查看支持语言", "Look up supported language"},
+                {"sys_string_update_supported_language", "修改支持语言", "Update supported language"},
+                {"sys_string_language_config", "语言配置", "Language configuration"},
         };
         return items;
     }
@@ -436,6 +448,15 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
         return defaultLang;
     }
 
+    public void updateLanguageMetadata(List<LanguageMetadata> languageMetadataList) {
+        if (null != languageMetadataList && !languageMetadataList.isEmpty()) {
+            Boolean hasKey = sysConfigService.hasKey(MULTIPLE_LANGUAGE_CONFIG_KEY);
+            if (hasKey) {
+                sysConfigService.updateValueByKey(MULTIPLE_LANGUAGE_CONFIG_KEY, new Gson().toJson(languageMetadataList));
+            }
+        }
+    }
+
     public List<LanguageMetadata> getLanguageMetadata() {
         List<LanguageMetadata> languageMetadataList = sysConfigService.getConfigObjectList(MULTIPLE_LANGUAGE_CONFIG_KEY, LanguageMetadata.class);
         if (null == languageMetadataList) {
@@ -455,7 +476,7 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
         List<LanguageMetadata> supportedList = new ArrayList<>();
         Map<String, String> map = languages.get(lang.toLowerCase());
         for (LanguageMetadata languageMetadata : languageMetadataList) {
-            if(languageMetadata.isEnable()) {
+            if (languageMetadata.isEnable()) {
                 String v = languageMetadata.getValue();
                 String key = "lan_language_column_" + v.toLowerCase();
                 if (map.containsKey(key)) {

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>${lang.sys_string_language_config}</title>
+    <#include "/header.html">
+</head>
+<body>
+<div id="rrapp">
+    <div class="panel panel-default">
+        <form class="form-horizontal">
+            <div class="form-group">
+                <div class="col-sm-4 control-label">选择需要支持的语言</div>
+            </div>
+            <div class="form-group">
+                <div :for="index" v-for="(item, index) in language" :key="index">
+                    <input style="margin-left: 50px" type="checkbox" :value="item.label" v-model="item.enable">{{item.label}}
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label"></div>
+                <#if shiro.hasPermission("lan:language:updatesupported")>
+                <input type="button" class="btn btn-primary" @click="update" value="${lang.sys_string_confirm}"/>
+                </#if>
+                &nbsp;&nbsp;<input type="button" class="btn btn-warning" @click="window.history.go(-1)" value="${lang.sys_string_back}"/>
+            </div>
+        </form>
+    </div>
+</div>
+</body>
+<script>
+    var vm = new Vue({
+        el: '#rrapp',
+        data: {
+            language: [],
+        },
+        created: function () {
+            this.getSupportedLanguage();
+        },
+        methods: {
+            getSupportedLanguage: function (event) {
+                var url = "lan/language/supportedlist";
+                $.ajax({
+                    type: "GET",
+                    url: baseURL + url,
+                    contentType: "application/json",
+                    success: function (r) {
+                        if (r.code === 0) {
+                            vm.language = r.language;
+                        }
+                    }
+                });
+            },
+            update: function (event) {
+                var url = "lan/language/updatesupportedlanguage";
+                $.ajax({
+                    type: "POST",
+                    url: baseURL + url,
+                    contentType: "application/json",
+                    data: JSON.stringify(vm.language),
+                    success: function (r) {
+                        if (r.code === 0) {
+                            alert('${lang.sys_string_successful}', function(index){
+                                window.history.go(-1);
+                            });
+                        }
+                    }
+                });
+            },
+        }
+    });
+</script>
+
+</html>

@@ -114,7 +114,8 @@ var vm = new Vue({
 			window.location.reload();
 		},
 		onChangeLanguage: function () {
-			vm.setQueryString("lang",vm.lang)
+			if(undefined != vm.lang)
+				vm.setQueryString("lang",vm.lang)
 		}
 	},
 	created: function(){

@@ -22,4 +22,7 @@ public class LanSite implements SiteFactory.Site {
 
     @PageAware(login = true, resource = "modules/lan/language")
     String language;
+
+    @PageAware(login = true, resource = "modules/lan/supportedlanguage")
+    String supportedlanguage;
 }
