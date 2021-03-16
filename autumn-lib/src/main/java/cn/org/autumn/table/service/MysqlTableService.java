@@ -613,4 +613,8 @@ public class MysqlTableService {
         }
         return map;
     }
+
+    public void dropTable(String tableName) {
+        tableDao.dropTable(tableName);
+    }
 }

@@ -65,6 +65,29 @@ var vm = new Vue({
 			}
             location.href = baseURL + "gen/generator/code?tables=" + tableNames.join()+"&genId="+vm.q.genId;
 		},
+        resetTable: function() {
+            var tableNames = getSelectedRows();
+            if(tableNames == null){
+                tableNames = [] ;
+            }
+            confirm('${lang.sys_string_are_sure_to_reset_table}？', function(){
+                $.ajax({
+                    type: "POST",
+                    url: baseURL + "gen/generator/reset",
+                    contentType: "application/json",
+                    data: JSON.stringify(tableNames),
+                    success: function(r){
+                        if(r.code == 0){
+                            alert('${lang.sys_string_success}', function(){
+                                vm.reload();
+                            });
+                        }else{
+                            alert(r.msg);
+                        }
+                    }
+                });
+            });
+        },
         selectType: function(a) {
            vm.q.genType = vm.q.genTypeList[a];
            vm.q.genId = vm.q.genType.id;

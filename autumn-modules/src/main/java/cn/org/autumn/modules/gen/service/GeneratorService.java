@@ -165,6 +165,7 @@ public class GeneratorService implements InitFactory.Init {
                 {"代码生成", "modules/gen/generator", "gen:generator:list,gen:generator:code", "1", "fa " + ico(), order(), keyMenu, parentMenu(), "sys_string_code_generator"},
                 {"查看", null, "gen:generator:list,gen:generator:info", "2", null, order(), SysMenuService.getMenuKey("Gen", "GeneratorInfo"), keyMenu, "sys_string_lookup"},
                 {"生成", null, "gen:generator:code", "2", null, order(), SysMenuService.getMenuKey("Gen", "GeneratorCode"), keyMenu, "sys_string_generate"},
+                {"重置表", null, "gen:generator:reset", "2", null, order(), SysMenuService.getMenuKey("Gen", "ResetTable"), keyMenu, "sys_string_reset_table"},
         };
         sysMenuService.put(menus);
     }

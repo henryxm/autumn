@@ -22,9 +22,10 @@
 					<a href="#" @click="selectType(index)">{{ genType.moduleText }}:[${lang.gen_string_package_name}:{{ genType.moduleName }}][${lang.gen_string_table_prefix}:{{ genType.tablePrefix }}]</a>
 				</li>
 			</ul>
+			<a class="btn btn-primary" @click="generator"><i class="fa fa-file-code-o"></i>&nbsp;${lang.sys_string_code_generator}</a>
+			<a class="btn btn-primary" @click="resetTable"><i class="fa fa-file-code-o"></i>&nbsp;${lang.sys_string_reset_table}</a>
 		</div>
 
-		<a class="btn btn-primary" @click="generator"><i class="fa fa-file-code-o"></i>&nbsp;${lang.sys_string_code_generator}</a>
 	</div>
     <table id="jqGrid"></table>
     <div id="jqGridPager"></div>
