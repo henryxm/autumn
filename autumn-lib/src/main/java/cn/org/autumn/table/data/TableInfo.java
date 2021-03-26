@@ -54,11 +54,11 @@ public class TableInfo {
     }
 
     /**
-     * 表名转换成Java类名
+     * 表名转换成Java类名, 去掉表前缀
      */
     public static String tableToJava(String tableName, String tablePrefix) {
-        if (StringUtils.isNotBlank(tablePrefix)) {
-            tableName = tableName.replace(tablePrefix, "");
+        if (StringUtils.isNotBlank(tablePrefix) && tableName.startsWith(tablePrefix)) {
+            tableName = tableName.replaceFirst(tablePrefix, "");
         }
         return columnToJava(tableName);
     }
