@@ -185,7 +185,6 @@ public class AuthorizationController {
         return mav;
     }
 
-
     @RequestMapping(value = "token", method = RequestMethod.POST)
     public HttpEntity applyAccessToken(HttpServletRequest request) throws OAuthSystemException, OAuthProblemException {
         //构建OAuth请求
@@ -206,6 +205,7 @@ public class AuthorizationController {
         String authCode = tokenRequest.getParam(OAuth.OAUTH_CODE);
         TokenStore tokenStore = null;
         //验证类型，有AUTHORIZATION_CODE/PASSWORD/REFRESH_TOKEN/CLIENT_CREDENTIALS
+        //1. 授权码获取Token模式
         if (tokenRequest.getParam(OAuth.OAUTH_GRANT_TYPE).equals(GrantType.AUTHORIZATION_CODE.toString())) {
             if (!clientDetailsService.isValidCode(authCode)) {
                 return error("错误的授权码", INVALID_GRANT, SC_BAD_REQUEST);
@@ -213,11 +213,39 @@ public class AuthorizationController {
             tokenStore = clientDetailsService.get(ValueType.authCode, authCode);
         }
 
+        //2. 使用Refresh Token 获取Token模式
         if (tokenRequest.getParam(OAuth.OAUTH_GRANT_TYPE).equals(GrantType.REFRESH_TOKEN.toString())) {
             if (!clientDetailsService.isValidRefreshToken(tokenRequest.getRefreshToken())) {
                 return error("错误的Refresh Token", INVALID_GRANT, SC_BAD_REQUEST);
             }
             tokenStore = clientDetailsService.get(ValueType.refreshToken, tokenRequest.getRefreshToken());
+        }
+
+        //3.客户端证书授权模式
+        if (tokenRequest.getParam(OAuth.OAUTH_GRANT_TYPE).equals(GrantType.CLIENT_CREDENTIALS.toString())) {
+            SysUserEntity sysUserEntity = sysUserService.getByUsername(authClient.getClientId());
+            if (null == sysUserEntity) {
+                clientDetailsService.clientToUser();
+                sysUserEntity = sysUserService.getByUsername(authClient.getClientId());
+            }
+            tokenStore = new TokenStore(sysUserEntity);
+        }
+
+        //4.密码授权模式
+        if (tokenRequest.getParam(OAuth.OAUTH_GRANT_TYPE).equals(GrantType.PASSWORD.toString())) {
+            String username = tokenRequest.getUsername();
+            String password = tokenRequest.getPassword();
+            sysUserService.login(username, password);
+            boolean isLogin = ShiroUtils.isLogin();
+            if (isLogin) {
+                SysUserEntity sysUserEntity = sysUserService.getByUsername(username);
+                tokenStore = new TokenStore(sysUserEntity);
+            }
+        }
+
+        //5. 简化授权模式
+        if (tokenRequest.getParam(OAuth.OAUTH_GRANT_TYPE).equals(GrantType.IMPLICIT.toString())) {
+
         }
 
         if (null == tokenStore) {
@@ -282,7 +310,7 @@ public class AuthorizationController {
 
             if (username instanceof SysUserEntity) {
                 SysUserEntity sysUserEntity = (SysUserEntity) username;
-                UserProfileEntity userProfileEntity = userProfileService.from(sysUserEntity,null,null);
+                UserProfileEntity userProfileEntity = userProfileService.from(sysUserEntity, null, null);
                 UserProfile userProfile = UserProfile.from(userProfileEntity);
                 username = userProfile;
                 userLoginLogService.login(userProfileEntity);

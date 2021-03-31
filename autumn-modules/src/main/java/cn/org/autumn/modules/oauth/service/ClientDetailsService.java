@@ -8,8 +8,11 @@ import cn.org.autumn.modules.oauth.service.gen.ClientDetailsServiceGen;
 import cn.org.autumn.modules.oauth.store.TokenStore;
 import cn.org.autumn.modules.oauth.store.ValueType;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
+import cn.org.autumn.modules.sys.service.SysConfigService;
+import cn.org.autumn.modules.sys.service.SysUserService;
 import cn.org.autumn.modules.sys.shiro.RedisShiroSessionDAO;
 import cn.org.autumn.utils.RedisUtils;
+import cn.org.autumn.utils.Uuid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -26,6 +29,12 @@ public class ClientDetailsService extends ClientDetailsServiceGen implements Loo
 
     @Autowired
     TokenStoreService tokenStoreService;
+
+    @Autowired
+    SysUserService sysUserService;
+
+    @Autowired
+    SysConfigService sysConfigService;
 
     public static final Long AUTH_CODE_DEFAULT_EXPIRED_IN = 5 * 60L;
     public static final Long ACCESS_TOKEN_DEFAULT_EXPIRED_IN = 24 * 60 * 60L;
@@ -186,22 +195,32 @@ public class ClientDetailsService extends ClientDetailsServiceGen implements Loo
         super.init();
         LoopJob.onOneHour(this);
         ClientDetailsEntity clientDetailsEntity = findByClientId(WebAuthenticationService.clientId);
-        if (null != clientDetailsEntity)
-            return;
-        clientDetailsEntity = new ClientDetailsEntity();
-        clientDetailsEntity.setClientId(WebAuthenticationService.clientId);
-        clientDetailsEntity.setArchived(0);
-        clientDetailsEntity.setClientIconUri("");
-        clientDetailsEntity.setClientName("默认的客户端");
-        clientDetailsEntity.setClientSecret(WebAuthenticationService.clientSecret);
-        clientDetailsEntity.setClientUri("http://localhost");
-        clientDetailsEntity.setGrantTypes("all");
-        clientDetailsEntity.setRedirectUri("http://localhost/client/oauth2/callback");
-        clientDetailsEntity.setDescription("系统缺省的客户端");
-        clientDetailsEntity.setScope("all");
-        clientDetailsEntity.setTrusted(1);
-        clientDetailsEntity.setRoles("admin");
-        clientDetailsEntity.setCreateTime(new Date());
-        insert(clientDetailsEntity);
+        if (null == clientDetailsEntity) {
+            clientDetailsEntity = new ClientDetailsEntity();
+            clientDetailsEntity.setClientId(WebAuthenticationService.clientId);
+            clientDetailsEntity.setArchived(0);
+            clientDetailsEntity.setClientIconUri("");
+            clientDetailsEntity.setClientName("默认的客户端");
+            clientDetailsEntity.setClientSecret(WebAuthenticationService.clientSecret);
+            clientDetailsEntity.setClientUri("http://localhost");
+            clientDetailsEntity.setGrantTypes("all");
+            clientDetailsEntity.setRedirectUri("http://localhost/client/oauth2/callback");
+            clientDetailsEntity.setDescription("系统缺省的客户端");
+            clientDetailsEntity.setScope("all");
+            clientDetailsEntity.setTrusted(1);
+            clientDetailsEntity.setRoles("admin");
+            clientDetailsEntity.setCreateTime(new Date());
+            insert(clientDetailsEntity);
+        }
+        clientToUser();
+    }
+
+    public void clientToUser() {
+        List<ClientDetailsEntity> list = baseMapper.selectByMap(null);
+        for (ClientDetailsEntity clientDetailsEntity : list) {
+            SysUserEntity sysUserEntity = sysUserService.getByUsername(clientDetailsEntity.getClientId());
+            if (null == sysUserEntity)
+                sysUserService.newUser(clientDetailsEntity.getClientId(), Uuid.uuid(), Uuid.uuid(), sysConfigService.getDefaultRoleKeys());
+        }
     }
 }

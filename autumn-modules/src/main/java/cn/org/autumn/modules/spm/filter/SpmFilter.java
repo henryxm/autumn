@@ -14,6 +14,8 @@ import org.apache.shiro.authc.AuthenticationException;
 import org.apache.shiro.authc.AuthenticationToken;
 import org.apache.shiro.subject.Subject;
 import org.apache.shiro.web.filter.authc.FormAuthenticationFilter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.servlet.*;
 import javax.servlet.http.HttpServletRequest;
@@ -21,6 +23,8 @@ import javax.servlet.http.HttpServletResponse;
 import java.util.Map;
 
 public class SpmFilter extends FormAuthenticationFilter {
+
+    private static final Logger log = LoggerFactory.getLogger(SpmFilter.class);
 
     private static WallService wallService;
     private static SuperPositionModelService superPositionModelService;
@@ -41,7 +45,7 @@ public class SpmFilter extends FormAuthenticationFilter {
 
     public String getAccessToken(ServletRequest request) {
         try {
-            OAuthAccessResourceRequest oauthRequest = new OAuthAccessResourceRequest((HttpServletRequest) request, ParameterStyle.QUERY);
+            OAuthAccessResourceRequest oauthRequest = new OAuthAccessResourceRequest((HttpServletRequest) request, ParameterStyle.QUERY, ParameterStyle.HEADER);
             String accessToken = oauthRequest.getAccessToken();
             Object resp = JSON.parse(accessToken);
             Map map = (Map) resp;
@@ -51,6 +55,11 @@ public class SpmFilter extends FormAuthenticationFilter {
             }
             return accessTokenKey;
         } catch (Exception e) {
+            if (request instanceof HttpServletRequest) {
+                HttpServletRequest httpServletRequest = (HttpServletRequest) request;
+                log.debug(httpServletRequest.getServletPath());
+            }
+            log.debug("getAccessToken:", e);
         }
         return "";
     }
