@@ -62,6 +62,10 @@ public class SysUserRoleService extends ServiceImpl<SysUserRoleDao, SysUserRoleE
         }
     }
 
+    public List<SysUserRoleEntity> getByUsername(String username) {
+        return baseMapper.getByUsername(username);
+    }
+
     public boolean hasUserRole(String userUuid, String roleKey) {
         Integer i = baseMapper.hasUserRole(userUuid, roleKey);
         if (null != i && i > 0) {

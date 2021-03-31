@@ -1,13 +1,15 @@
 package cn.org.autumn.config;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
-import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.Environment;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class Config {
+    private static final Logger log = LoggerFactory.getLogger(Config.class);
 
     public static final String DEV = "dev";
     public static final String TEST = "test";
@@ -108,8 +110,23 @@ public class Config {
     }
 
     public static Object getBean(String beanName) {
-        if (null != getInstance().getApplicationContext()) {
-            return getInstance().getApplicationContext().getBean(beanName);
+        try {
+            if (null != getInstance().getApplicationContext()) {
+                return getInstance().getApplicationContext().getBean(beanName);
+            }
+        } catch (Exception e) {
+            log.debug("getBean:", e);
+        }
+        return null;
+    }
+
+    public static Object getBean(Class clazz) {
+        try {
+            if (null != getInstance().getApplicationContext()) {
+                return getInstance().getApplicationContext().getBean(clazz);
+            }
+        } catch (Exception e) {
+            log.debug("getBean:", e);
         }
         return null;
     }

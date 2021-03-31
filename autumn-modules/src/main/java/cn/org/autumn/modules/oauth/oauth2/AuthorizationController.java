@@ -38,6 +38,7 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.ModelAndView;
 
 import javax.servlet.http.HttpServletRequest;
@@ -276,7 +277,8 @@ public class AuthorizationController {
         return new ResponseEntity(response.getBody(), HttpStatus.valueOf(response.getResponseStatus()));
     }
 
-    @RequestMapping(value = "/userInfo", produces = "text/html;charset=UTF-8")
+    @RequestMapping(value = "/userInfo", produces = "application/json;charset=UTF-8")
+    @ResponseBody
     public HttpEntity authUserInfo(HttpServletRequest request) throws OAuthSystemException {
         try {
             // 构建OAuth资源请求
@@ -344,5 +346,4 @@ public class AuthorizationController {
             return new ResponseEntity(HttpStatus.BAD_REQUEST);
         }
     }
-
 }

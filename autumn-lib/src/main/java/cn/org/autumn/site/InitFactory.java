@@ -2,6 +2,8 @@ package cn.org.autumn.site;
 
 import cn.org.autumn.table.TableInit;
 import cn.org.autumn.utils.SpringContextUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.annotation.Order;
@@ -12,6 +14,7 @@ import java.util.*;
 
 @Component
 public class InitFactory {
+    private static final Logger log = LoggerFactory.getLogger(InitFactory.class);
 
     @Autowired
     private TableInit tableInit;
@@ -67,6 +70,7 @@ public class InitFactory {
                 try {
                     init.init();
                 } catch (Exception e) {
+                    log.debug(init.getClass().getSimpleName(), e);
                 }
             }
         }
