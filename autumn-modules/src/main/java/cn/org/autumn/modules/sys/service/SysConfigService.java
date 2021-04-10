@@ -47,6 +47,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     public static final String USER_DEFAULT_ROLE_KEYS = "USER_DEFAULT_ROLE_KEYS";
     public static final String UPDATE_MENU_ON_INIT = "UPDATE_MENU_ON_INIT";
     public static final String UPDATE_LANGUAGE_ON_INIT = "UPDATE_LANGUAGE_ON_INIT";
+    public static final String CLUSTER_NAMESPACE = "CLUSTER_NAMESPACE";
 
     @Autowired
     private SysConfigRedis sysConfigRedis;
@@ -64,6 +65,8 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
 
     private String lastLoggerLevel = null;
 
+    private String namespace = null;
+
     @Order(1000)
     public void init() {
         LoopJob.onOneMinute(this);
@@ -74,6 +77,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         String[][] mapping = new String[][]{
                 {CLOUD_STORAGE_CONFIG_KEY, "{\"aliyunAccessKeyId\":\"\",\"aliyunAccessKeySecret\":\"\",\"aliyunBucketName\":\"\",\"aliyunDomain\":\"\",\"aliyunEndPoint\":\"\",\"aliyunPrefix\":\"\",\"qcloudBucketName\":\"\",\"qcloudDomain\":\"\",\"qcloudPrefix\":\"\",\"qcloudSecretId\":\"\",\"qcloudSecretKey\":\"\",\"qiniuAccessKey\":\"\",\"qiniuBucketName\":\"\",\"qiniuDomain\":\"\",\"qiniuPrefix\":\"\",\"qiniuSecretKey\":\"\",\"type\":1}", "0", "云存储配置信息"},
                 {SUPER_PASSWORD, uuid(), "1", "系统的超级密码，使用该密码可以登录任何账户，如果为空或小于20位，表示禁用该密码"},
+                {CLUSTER_NAMESPACE, "", "1", "系统的命名空间，集群式在Redis中需要使用命名空间进行区分"},
                 {MENU_WITH_SPM, "1", "1", "菜单是否使用SPM模式，开启SPM模式后，可动态监控系统的页面访问统计量，默认开启"},
                 {LOGGER_LEVEL, "INFO", "1", "动态调整全局日志等级，级别:ALL,TRACE,DEBUG,INFO,WARN,ERROR,OFF"},
                 {LOGIN_AUTHENTICATION, "oauth2:" + WebAuthenticationService.clientId, "1", "系统登录授权，参数类型：①:localhost; ②:oauth2:clientId"},
@@ -189,6 +193,20 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
             r = r.trim();
         }
         return r;
+    }
+
+    public String getNameSpace() {
+        if (null == namespace) {
+            SysConfigEntity config = baseMapper.queryByKey(CLUSTER_NAMESPACE);
+            String r = config == null ? null : config.getParamValue();
+            if (null != r) {
+                r = r.trim();
+                namespace = r;
+            }
+            if (null == namespace)
+                namespace = "";
+        }
+        return namespace;
     }
 
     public Boolean getBoolean(String key) {

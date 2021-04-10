@@ -5,8 +5,12 @@ package cn.org.autumn.utils;
  */
 public class RedisKeys {
 
-    public static String getSysConfigKey(String key) {
-        return "system:config:" + key;
+    public static String getSysConfigKey(String namespace, String key) {
+        if (null == namespace)
+            namespace = "";
+        else
+            namespace = namespace.trim() + ":";
+        return "system:config:" + namespace + key;
     }
 
     public static String getShiroSessionKey(String key) {
