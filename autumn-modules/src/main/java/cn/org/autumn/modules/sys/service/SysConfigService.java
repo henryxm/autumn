@@ -309,6 +309,11 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         return false;
     }
 
+    public String getSiteDomain() {
+        String oa = getValue(SITE_DOMAIN);
+        return oa;
+    }
+
     private static class ParameterizedTypeImpl implements ParameterizedType {
         Class clazz;
 

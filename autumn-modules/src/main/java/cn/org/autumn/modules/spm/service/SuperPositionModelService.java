@@ -1,6 +1,7 @@
 package cn.org.autumn.modules.spm.service;
 
 import cn.org.autumn.annotation.PageAware;
+import cn.org.autumn.config.Config;
 import cn.org.autumn.site.LoadFactory;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.spm.entity.SuperPositionModelEntity;
@@ -112,9 +113,21 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
                 String url = resource;
                 if (StringUtils.isNotEmpty(aware.url()))
                     url = aware.url();
-
+                if (StringUtils.isEmpty(resource) || page.equals(resource)) {
+                    try {
+                        field.setAccessible(true);
+                        Object v = field.get(site);
+                        if (v instanceof String) {
+                            String value = (String) v;
+                            if (StringUtils.isNotEmpty(value))
+                                resource = value;
+                        }
+                    } catch (Exception e) {
+                        logger.error("Error:", e);
+                    }
+                }
                 boolean login = aware.login();
-                String key = pack + "_" + page;
+                String key = site.getKey(field.getName());
                 put(siteId, page, channel, product, resource, url, key, login);
             }
         }
@@ -140,6 +153,13 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
         return "index";
     }
 
+    /**
+     * 判断是否需要登录
+     *
+     * @param httpServletRequest
+     * @param httpServletResponse
+     * @return
+     */
     public boolean needLogin(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse) {
         return loginFactory.isNeed(httpServletRequest, httpServletResponse);
     }
@@ -163,6 +183,12 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
         return baseMapper.getByUrlKey(urlKey);
     }
 
+    /**
+     * 获取View的地址
+     *
+     * @param key
+     * @return
+     */
     public String getViewByKey(String key) {
         SuperPositionModelEntity superPositionModelEntity = getByUrlKey(key);
         if (isSpmMode()) {
@@ -171,6 +197,35 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
             return ("/" + superPositionModelEntity.getResourceId());
     }
 
+    /**
+     * 根据 key 获取URL包含域名在内的全路径，
+     *
+     * @param key
+     * @return
+     */
+    public String getUrl(String key) {
+        String view = getViewByKey(key);
+        if (StringUtils.isEmpty(view))
+            return "";
+        String siteDomain = sysConfigService.getSiteDomain();
+        if (StringUtils.isNotEmpty(siteDomain)) {
+            if ((!siteDomain.startsWith("http://") || !siteDomain.startsWith("https://")) && Config.isProd()) {
+                siteDomain = "https://" + siteDomain;
+            } else {
+                siteDomain = "http://" + siteDomain;
+            }
+        } else {
+            siteDomain = "";
+        }
+        return siteDomain + view;
+    }
+
+    /**
+     * 记录Spm 访问的日志信息
+     *
+     * @param request
+     * @param superPositionModelEntity
+     */
     public void log(HttpServletRequest request, SuperPositionModelEntity superPositionModelEntity) {
         asyncTaskExecutor.execute(new Runnable() {
             @Override
@@ -214,7 +269,6 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
         }
         return null;
     }
-
 
     public void put(String siteId, String pageId, String channelId, String productId, String resourceId, String urlPath, String urlKey, boolean needLogin) {
         SuperPositionModelEntity superPositionModelEntity = new SuperPositionModelEntity();
