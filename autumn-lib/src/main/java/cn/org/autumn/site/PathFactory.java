@@ -16,10 +16,24 @@ public class PathFactory {
     private static Map<String, PathFactory.Path> map = null;
 
     public interface Path {
-        String get(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model);
+
+        String get(HttpServletRequest request, HttpServletResponse response, Model model);
+
+        default boolean isRoot(HttpServletRequest request) {
+            String uri = request.getRequestURI();
+            if (StringUtils.isNotEmpty(uri) && "/".equals(uri))
+                return true;
+            return false;
+        }
+
+        default boolean isSpm(HttpServletRequest request) {
+            if (StringUtils.isNotEmpty(request.getParameter("spm")))
+                return true;
+            return false;
+        }
     }
 
-    public String get(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+    public String get(HttpServletRequest request, HttpServletResponse response, Model model) {
         ApplicationContext applicationContext = SpringContextUtils.getApplicationContext();
         if (null == applicationContext)
             return null;
@@ -27,7 +41,7 @@ public class PathFactory {
             map = applicationContext.getBeansOfType(Path.class);
         for (Map.Entry<String, Path> k : map.entrySet()) {
             Path path = k.getValue();
-            String o = path.get(httpServletRequest, httpServletResponse, model);
+            String o = path.get(request, response, model);
             if (StringUtils.isEmpty(o))
                 continue;
             return o;

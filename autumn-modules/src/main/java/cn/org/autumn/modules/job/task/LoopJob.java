@@ -1,6 +1,6 @@
 package cn.org.autumn.modules.job.task;
 
-import java.util.ArrayList;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.List;
 
 public class LoopJob {
@@ -12,24 +12,22 @@ public class LoopJob {
         void runJob();
     }
 
-    private static List<Job> oneSecondJobList = new ArrayList<>();
-    private static List<Job> threeSecondJobList = new ArrayList<>();
-    private static List<Job> fiveSecondJobList = new ArrayList<>();
-    private static List<Job> tenSecondJobList = new ArrayList<>();
-    private static List<Job> thirtySecondJobList = new ArrayList<>();
+    private static List<Job> oneSecondJobList = new CopyOnWriteArrayList<>();
+    private static List<Job> threeSecondJobList = new CopyOnWriteArrayList<>();
+    private static List<Job> fiveSecondJobList = new CopyOnWriteArrayList<>();
+    private static List<Job> tenSecondJobList = new CopyOnWriteArrayList<>();
+    private static List<Job> thirtySecondJobList = new CopyOnWriteArrayList<>();
 
+    private static List<Job> oneMinuteJobList = new CopyOnWriteArrayList<>();
+    private static List<Job> tenMinuteJobList = new CopyOnWriteArrayList<>();
+    private static List<Job> thirtyMinuteJobList = new CopyOnWriteArrayList<>();
 
-    private static List<Job> oneMinuteJobList = new ArrayList<>();
-    private static List<Job> tenMinuteJobList = new ArrayList<>();
-    private static List<Job> thirtyMinuteJobList = new ArrayList<>();
+    private static List<Job> oneHourJobList = new CopyOnWriteArrayList<>();
+    private static List<Job> tenHourJobList = new CopyOnWriteArrayList<>();
+    private static List<Job> thirtyHourJobList = new CopyOnWriteArrayList<>();
 
-
-    private static List<Job> oneHourJobList = new ArrayList<>();
-    private static List<Job> tenHourJobList = new ArrayList<>();
-    private static List<Job> thirtyHourJobList = new ArrayList<>();
-
-    private static List<Job> oneDayJobList = new ArrayList<>();
-    private static List<Job> oneWeekJobList = new ArrayList<>();
+    private static List<Job> oneDayJobList = new CopyOnWriteArrayList<>();
+    private static List<Job> oneWeekJobList = new CopyOnWriteArrayList<>();
 
     public static void onOneSecond(Job job) {
         oneSecondJobList.add(job);

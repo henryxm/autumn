@@ -20,11 +20,11 @@ public final class SiteFactory {
 
         @NotNull String getPack();
 
-        default String getKey(String fileName) {
-            if (StringUtils.isEmpty(fileName))
+        default String getKey(String fieldName) {
+            if (StringUtils.isEmpty(fieldName))
                 return "";
             try {
-                Field field = getClass().getField(fileName);
+                Field field = getClass().getField(fieldName);
                 if (null != field) {
                     PageAware aware = field.getAnnotation(PageAware.class);
                     if (null != aware) {
@@ -36,7 +36,7 @@ public final class SiteFactory {
                 }
             } catch (Exception e) {
             }
-            return getId() + "_" + fileName;
+            return getId() + "_" + fieldName;
         }
     }
 
