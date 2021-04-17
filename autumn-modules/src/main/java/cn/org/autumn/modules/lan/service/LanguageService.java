@@ -9,6 +9,7 @@ import cn.org.autumn.site.LoadFactory;
 import cn.org.autumn.table.utils.HumpConvert;
 import com.google.gson.Gson;
 import io.netty.util.internal.StringUtil;
+import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -118,9 +119,20 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
         return t;
     }
 
+    public Map<String, String> getLanguage(String lang) {
+        if (StringUtils.isEmpty(lang))
+            return new HashMap<>();
+        Map<String, String> map = null;
+        if (null != languages && languages.containsKey(lang))
+            map = languages.get(lang);
+        if (null == map)
+            map = new HashMap<>();
+        return map;
+    }
+
     public Map<String, String> getLanguage(Locale locale) {
         if (null == locale)
-            return null;
+            return new HashMap<>();
         String t = locale.toLanguageTag();
         t = t.replace("-", "_").toLowerCase();
         Map<String, String> map = languages.get(t);
