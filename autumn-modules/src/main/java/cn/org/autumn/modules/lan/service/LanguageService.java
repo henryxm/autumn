@@ -123,6 +123,7 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
         if (StringUtils.isEmpty(lang))
             return new HashMap<>();
         Map<String, String> map = null;
+        lang = lang.trim().toLowerCase();
         if (null != languages && languages.containsKey(lang))
             map = languages.get(lang);
         if (null == map)
