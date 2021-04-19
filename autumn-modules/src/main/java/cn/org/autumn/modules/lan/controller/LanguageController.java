@@ -3,10 +3,7 @@ package cn.org.autumn.modules.lan.controller;
 import cn.org.autumn.modules.lan.entity.LanguageMetadata;
 import cn.org.autumn.utils.R;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import cn.org.autumn.modules.lan.controller.gen.LanguageControllerGen;
 
@@ -39,6 +36,18 @@ public class LanguageController extends LanguageControllerGen {
     @RequiresPermissions("lan:language:updatesupported")
     public R updatesupportedlanguage(@RequestBody List<LanguageMetadata> languageMetadata) {
         languageService.updateLanguageMetadata(languageMetadata);
+        return R.ok();
+    }
+
+    /**
+     * 语言资源注册接口，可以通过外部调用，增加多语言资源，集群时，各个子系统需要相互调用以注册多语言资源
+     *
+     * @param lang
+     * @return
+     */
+    @RequestMapping(value = "/put", method = RequestMethod.POST)
+    public R put(@RequestBody String[][] lang) {
+        languageService.put(lang);
         return R.ok();
     }
 }
