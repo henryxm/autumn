@@ -47,7 +47,9 @@ public class LanguageController extends LanguageControllerGen {
      */
     @RequestMapping(value = "/put", method = RequestMethod.POST)
     public R put(@RequestBody String[][] lang) {
-        languageService.put(lang);
+        Object[] objects = new Object[1];
+        objects[0] = lang;
+        languageService.put(objects);
         return R.ok();
     }
 }
