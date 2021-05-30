@@ -55,7 +55,7 @@ public class GenUtils {
         map.put("classname", tableInfo.getClassname());
         map.put("pathName", tableInfo.getClassname().toLowerCase());
         map.put("columns", tableInfo.getColumns());
-        map.put("uniqueKey", tableInfo.buildUniqueKey());
+        map.put("index", tableInfo.buildIndexKey());
         map.put("hasBigDecimal", tableInfo.getHasBigDecimal());
         map.put("mainPath", mainPath);
         map.put("package", wrapper.getModulePackage());

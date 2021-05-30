@@ -8,6 +8,7 @@ import cn.org.autumn.modules.sys.service.SysMenuService;
 import cn.org.autumn.site.InitFactory;
 import cn.org.autumn.table.dao.TableDao;
 import cn.org.autumn.table.data.ColumnInfo;
+import cn.org.autumn.table.data.IndexInfo;
 import cn.org.autumn.table.data.TableInfo;
 import cn.org.autumn.table.data.UniqueKeyInfo;
 import cn.org.autumn.table.mysql.ColumnMeta;
@@ -19,6 +20,7 @@ import com.baomidou.mybatisplus.plugins.pagination.PageHelper;
 import org.apache.commons.io.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
 import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.List;
@@ -80,6 +82,10 @@ public class GeneratorService implements InitFactory.Init {
         return generatorDao.getTableKeys(tableName);
     }
 
+    public List<IndexInfo> showIndex(String tableName) {
+        return generatorDao.getTableIndex(tableName);
+    }
+
     public List<ColumnMeta> queryColumns(String tableName) {
         return generatorDao.getColumnMetas(tableName);
     }
@@ -101,7 +107,7 @@ public class GeneratorService implements InitFactory.Init {
         List<TableMeta> table = queryTable(tableName);
         List<ColumnMeta> columns = queryColumns(tableName);
         TableInfo tableInfo = toTableInfo(table.get(0));
-        tableInfo.setUniqueKeyInfos(showKeys(tableName));
+        tableInfo.setIndexInfos(showIndex(tableName));
         List<ColumnInfo> list = new ArrayList<>();
         for (ColumnMeta columnMeta : columns) {
             ColumnInfo columnInfo = toColumnInfo(columnMeta, wrapper);

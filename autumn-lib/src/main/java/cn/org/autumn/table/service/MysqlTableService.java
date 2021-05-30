@@ -7,6 +7,7 @@ import java.util.Map.Entry;
 import cn.org.autumn.table.annotation.UniqueKey;
 import cn.org.autumn.table.annotation.UniqueKeys;
 import cn.org.autumn.table.dao.TableDao;
+import cn.org.autumn.table.data.IndexInfo;
 import cn.org.autumn.table.data.TableInfo;
 import cn.org.autumn.table.mysql.ColumnMeta;
 import org.apache.commons.lang.ArrayUtils;
@@ -89,13 +90,16 @@ public class MysqlTableService {
         // 用于存需要删除唯一约束的表名+结构
         Map<TableInfo, List<Object>> dropUniqueTableMap = new HashMap<TableInfo, List<Object>>();
 
+        // 用于存需要删除唯一约束的表名+结构
+        Map<TableInfo, List<Object>> addIndexTableMap = new HashMap<TableInfo, List<Object>>();
+        Map<TableInfo, List<Object>> removeIndexTableMap = new HashMap<TableInfo, List<Object>>();
         // 构建出全部表的增删改的map
         allTableMapConstruct(mySqlTypeAndLengthMap, classes, newTableMap, modifyTableMap, addTableMap, removeTableMap,
-                dropKeyTableMap, dropUniqueTableMap);
+                dropKeyTableMap, dropUniqueTableMap, addIndexTableMap, removeIndexTableMap);
 
         // 根据传入的map，分别去创建或修改表结构
         createOrModifyTableConstruct(newTableMap, modifyTableMap, addTableMap, removeTableMap, dropKeyTableMap,
-                dropUniqueTableMap);
+                dropUniqueTableMap, addIndexTableMap, removeIndexTableMap);
     }
 
     /**
@@ -113,7 +117,7 @@ public class MysqlTableService {
     private void allTableMapConstruct(Map<String, Object> mySqlTypeAndLengthMap, Set<Class<?>> classes,
                                       Map<TableInfo, List<Object>> newTableMap, Map<TableInfo, List<Object>> modifyTableMap,
                                       Map<TableInfo, List<Object>> addTableMap, Map<TableInfo, List<Object>> removeTableMap,
-                                      Map<TableInfo, List<Object>> dropKeyTableMap, Map<TableInfo, List<Object>> dropUniqueTableMap) {
+                                      Map<TableInfo, List<Object>> dropKeyTableMap, Map<TableInfo, List<Object>> dropUniqueTableMap, Map<TableInfo, List<Object>> addIndexTableMap, Map<TableInfo, List<Object>> removeIndexTableMap) {
         for (Class<?> clas : classes) {
 
             TableInfo tableInfo = new TableInfo(clas);
@@ -133,6 +137,10 @@ public class MysqlTableService {
             List<Object> dropKeyFieldList = new ArrayList<Object>();
             // 用于存删除唯一约束的字段
             List<Object> dropUniqueFieldList = new ArrayList<Object>();
+            // 保存需要增加索引的信息
+            List<Object> addIndexList = new ArrayList<Object>();
+            // 保存需要删除索引的信息
+            List<Object> removeIndexList = new ArrayList<Object>();
 
             // 迭代出所有model的所有fields存到newFieldList中
             tableFieldsConstruct(mySqlTypeAndLengthMap, clas, newFieldList);
@@ -160,8 +168,8 @@ public class MysqlTableService {
                 // 2. 找出删除的字段
                 // 3. 找出更新的字段
                 buildAddAndRemoveAndModifyFields(mySqlTypeAndLengthMap, modifyTableMap, addTableMap, removeTableMap,
-                        dropKeyTableMap, dropUniqueTableMap, tableInfo, newFieldList, removeFieldList, addFieldList,
-                        modifyFieldList, dropKeyFieldList, dropUniqueFieldList, tableColumnList, columnNames);
+                        dropKeyTableMap, dropUniqueTableMap, addIndexTableMap, removeIndexTableMap, tableInfo, newFieldList, removeFieldList, addFieldList,
+                        modifyFieldList, dropKeyFieldList, dropUniqueFieldList, addIndexList, removeIndexList, tableColumnList, columnNames);
 
             }
         }
@@ -189,9 +197,11 @@ public class MysqlTableService {
     private void buildAddAndRemoveAndModifyFields(Map<String, Object> mySqlTypeAndLengthMap,
                                                   Map<TableInfo, List<Object>> modifyTableMap, Map<TableInfo, List<Object>> addTableMap,
                                                   Map<TableInfo, List<Object>> removeTableMap, Map<TableInfo, List<Object>> dropKeyTableMap,
-                                                  Map<TableInfo, List<Object>> dropUniqueTableMap, TableInfo tableInfo, List<Object> newFieldList,
+                                                  Map<TableInfo, List<Object>> dropUniqueTableMap, Map<TableInfo, List<Object>> addIndexTableMap,
+                                                  Map<TableInfo, List<Object>> removeIndexTableMap,
+                                                  TableInfo tableInfo, List<Object> newFieldList,
                                                   List<Object> removeFieldList, List<Object> addFieldList, List<Object> modifyFieldList,
-                                                  List<Object> dropKeyFieldList, List<Object> dropUniqueFieldList, List<ColumnMeta> tableColumnList,
+                                                  List<Object> dropKeyFieldList, List<Object> dropUniqueFieldList, List<Object> addIndexList, List<Object> removeIndexList, List<ColumnMeta> tableColumnList,
                                                   List<String> columnNames) {
         // 1. 找出增加的字段
         // 根据数据库中表的结构和model中表的结构对比找出新增的字段
@@ -208,8 +218,63 @@ public class MysqlTableService {
         buildRemoveFields(removeTableMap, tableInfo, removeFieldList, columnNames, fieldMap);
 
         // 3. 找出更新的字段
-        buildModifyFields(mySqlTypeAndLengthMap, modifyTableMap, dropKeyTableMap, dropUniqueTableMap, tableInfo,
-                modifyFieldList, dropKeyFieldList, dropUniqueFieldList, tableColumnList, fieldMap);
+        buildModifyFields(mySqlTypeAndLengthMap, modifyTableMap, dropKeyTableMap, dropUniqueTableMap, addIndexTableMap, tableInfo,
+                modifyFieldList, dropKeyFieldList, dropUniqueFieldList, addIndexList, tableColumnList, fieldMap);
+        buildModifyIndex(tableInfo, addIndexTableMap, addIndexList, removeIndexTableMap, removeIndexList);
+
+    }
+
+    private Collection<IndexInfo> filter(List<IndexInfo> indexInfoList) {
+        Map<String, IndexInfo> stringIndexInfoHashMap = new HashMap<>();
+        for (IndexInfo indexInfo : indexInfoList) {
+            indexInfo.resolve();
+            String keyName = indexInfo.getKeyName();
+            if ("PRIMARY".equalsIgnoreCase(keyName))
+                continue;
+            if (stringIndexInfoHashMap.containsKey(keyName)) {
+                IndexInfo i = stringIndexInfoHashMap.get(keyName);
+                if (i.getFields() == null)
+                    i.setFields(new HashMap<>());
+                i.getFields().put(indexInfo.getColumnName(), 0);
+            } else {
+                if (indexInfo.getFields() == null)
+                    indexInfo.setFields(new HashMap<>());
+                indexInfo.getFields().put(indexInfo.getColumnName(), 0);
+                stringIndexInfoHashMap.put(keyName, indexInfo);
+            }
+        }
+        return stringIndexInfoHashMap.values();
+    }
+
+    private void buildModifyIndex(TableInfo table, Map<TableInfo, List<Object>> addIndexTableMap, List<Object> addIndexList, Map<TableInfo, List<Object>> removeIndexTableMap, List<Object> removeIndexList) {
+        List<IndexInfo> indexInfos = table.getIndexInfosCombine();
+        List<IndexInfo> indexInfoList = tableDao.getTableIndex(table.getName());
+        Collection<IndexInfo> nn = filter(indexInfoList);
+        for (IndexInfo indexInfo : indexInfos) {
+            boolean has = false;
+            for (IndexInfo indexInfo1 : nn) {
+                has = indexInfo.equals(indexInfo1);
+                if (has)
+                    break;
+            }
+            if (!has) {
+                addIndexList.add(indexInfo);
+            }
+        }
+        addIndexTableMap.put(table, addIndexList);
+
+        for (IndexInfo indexInfo : nn) {
+            boolean has = false;
+            for (IndexInfo indexInfo1 : indexInfos) {
+                has = indexInfo.equals(indexInfo1);
+                if (has)
+                    break;
+            }
+            if (!has) {
+                removeIndexList.add(indexInfo);
+            }
+        }
+        removeIndexTableMap.put(table, removeIndexList);
     }
 
     private boolean ignoreLength(String typeAndLength) {
@@ -231,8 +296,8 @@ public class MysqlTableService {
      * @param fieldMap              从sysColumns中取出我们需要比较的列的List
      */
     private void buildModifyFields(Map<String, Object> mySqlTypeAndLengthMap, Map<TableInfo, List<Object>> modifyTableMap,
-                                   Map<TableInfo, List<Object>> dropKeyTableMap, Map<TableInfo, List<Object>> dropUniqueTableMap, TableInfo table,
-                                   List<Object> modifyFieldList, List<Object> dropKeyFieldList, List<Object> dropUniqueFieldList,
+                                   Map<TableInfo, List<Object>> dropKeyTableMap, Map<TableInfo, List<Object>> dropUniqueTableMap, Map<TableInfo, List<Object>> addIndexTableMap, TableInfo table,
+                                   List<Object> modifyFieldList, List<Object> dropKeyFieldList, List<Object> dropUniqueFieldList, List<Object> addIndexFieldList,
                                    List<ColumnMeta> tableColumnList, Map<String, ColumnInfo> fieldMap) {
         for (ColumnMeta sysColumn : tableColumnList) {
             // 数据库中有该字段时
@@ -324,7 +389,7 @@ public class MysqlTableService {
                 // 8.验证是否唯一
                 if (!"UNI".equals(sysColumn.getColumnKey()) && createTableParam.hasUniqueKey()) {
                     // 原本不是唯一，现在变成了唯一，那么要去做更新
-                    modifyFieldList.add(createTableParam);
+//                    modifyFieldList.add(createTableParam);
                     continue;
                 }
 
@@ -342,6 +407,7 @@ public class MysqlTableService {
         if (dropUniqueFieldList.size() > 0) {
             dropUniqueTableMap.put(table, dropUniqueFieldList);
         }
+
     }
 
     /**
@@ -474,7 +540,8 @@ public class MysqlTableService {
     private void createOrModifyTableConstruct(Map<TableInfo, List<Object>> newTableMap,
                                               Map<TableInfo, List<Object>> modifyTableMap, Map<TableInfo, List<Object>> addTableMap,
                                               Map<TableInfo, List<Object>> removeTableMap, Map<TableInfo, List<Object>> dropKeyTableMap,
-                                              Map<TableInfo, List<Object>> dropUniqueTableMap) {
+                                              Map<TableInfo, List<Object>> dropUniqueTableMap, Map<TableInfo, List<Object>> addIndexTableMap,
+                                              Map<TableInfo, List<Object>> removeIndexTableMap) {
         // 1. 创建表
         createTableByMap(newTableMap);
         // 2. 删除要变更主键的表的原来的字段的主键
@@ -487,7 +554,8 @@ public class MysqlTableService {
         removeFieldsByMap(removeTableMap);
         // 6. 修改字段类型等
         modifyFieldsByMap(modifyTableMap);
-
+        addIndexByMap(addIndexTableMap);
+        removeIndexByMap(removeIndexTableMap);
     }
 
     /**
@@ -579,6 +647,37 @@ public class MysqlTableService {
                     map.put(entry.getKey(), obj);
                     tableDao.dropIndex(map);
                     tableDao.modifyColumn(map);
+                }
+            }
+        }
+    }
+
+    /**
+     * 根据map结构增加索引
+     *
+     * @param addIndexTableMap 用于存需要删除唯一约束的表名+结构
+     */
+    private void addIndexByMap(Map<TableInfo, List<Object>> addIndexTableMap) {
+        // 先去做删除唯一约束的操作，这步操作必须在增加和修改字段之前！
+        if (addIndexTableMap.size() > 0) {
+            for (Entry<TableInfo, List<Object>> entry : addIndexTableMap.entrySet()) {
+                for (Object obj : entry.getValue()) {
+                    Map<TableInfo, Object> map = new HashMap<TableInfo, Object>();
+                    map.put(entry.getKey(), obj);
+                    tableDao.addIndex(map);
+                }
+            }
+        }
+    }
+
+    private void removeIndexByMap(Map<TableInfo, List<Object>> addIndexTableMap) {
+        // 先去做删除唯一约束的操作，这步操作必须在增加和修改字段之前！
+        if (addIndexTableMap.size() > 0) {
+            for (Entry<TableInfo, List<Object>> entry : addIndexTableMap.entrySet()) {
+                for (Object obj : entry.getValue()) {
+                    Map<TableInfo, Object> map = new HashMap<TableInfo, Object>();
+                    map.put(entry.getKey(), obj);
+                    tableDao.dropIndex(map);
                 }
             }
         }

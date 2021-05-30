@@ -6,8 +6,7 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@Deprecated
-public @interface UniqueKeyFields {
+public @interface IndexField {
     String field();
 
     int length() default 0;

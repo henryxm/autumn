@@ -1,9 +1,13 @@
 package cn.org.autumn.table.mysql;
 
+import cn.org.autumn.table.annotation.IndexTypeEnum;
+import cn.org.autumn.table.data.IndexInfo;
 import cn.org.autumn.table.data.TableInfo;
 import cn.org.autumn.table.data.ColumnInfo;
+import cn.org.autumn.table.utils.HumpConvert;
 import org.apache.commons.lang.StringUtils;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -18,9 +22,11 @@ public class QuerySql {
     public static final String dropPrimaryKey = "dropPrimaryKey";
     public static final String dropIndex = "dropIndex";
     public static final String dropTable = "dropTable";
+    public static final String addIndex = "addIndex";
     public static final String getTableMetas = "getTableMetas";
     public static final String getTableCount = "getTableCount";
     public static final String showKeys = "showKeys";
+    public static final String showIndex = "showIndex";
     public static final String getTableMetasWithMap = "getTableMetasWithMap";
 
     public String getColumnMetas() {
@@ -65,6 +71,11 @@ public class QuerySql {
         return "SHOW KEYS FROM " + tableName;
     }
 
+    public String showIndex(Map<String, String> map) {
+        String tableName = map.get(paramName);
+        return "SHOW INDEX FROM " + tableName;
+    }
+
     private void appendCommon(ColumnInfo columnInfo, StringBuilder sb) {
         if (columnInfo.getTypeLength() == 0)
             sb.append("`" + columnInfo.getName() + "` " + columnInfo.getType());
@@ -102,8 +113,11 @@ public class QuerySql {
             appendCommon(columnInfo, sb);
             if (columnInfo.isKey())
                 sb.append(" PRIMARY KEY");
+            if (columnInfo.isKey() && columnInfo.isUnique()) {
+                sb.append(",");
+            }
             if (columnInfo.isUnique())
-                sb.append(", UNIQUE KEY");
+                sb.append(" UNIQUE KEY");
             sb.append(";");
         }
         return sb.toString();
@@ -138,15 +152,42 @@ public class QuerySql {
         return stringBuilder.toString();
     }
 
-    public String dropIndex(final Map<String, Map<TableInfo, ColumnInfo>> map) {
+    public String dropIndex(final Map<String, Map<TableInfo, IndexInfo>> map) {
         StringBuilder stringBuilder = new StringBuilder();
-        Map<TableInfo, ColumnInfo> parameter = map.get(paramName);
-        for (Map.Entry<TableInfo, ColumnInfo> kv : parameter.entrySet()) {
+        Map<TableInfo, IndexInfo> parameter = map.get(paramName);
+        for (Map.Entry<TableInfo, IndexInfo> kv : parameter.entrySet()) {
             TableInfo tableInfo = kv.getKey();
             stringBuilder.append("ALTER TABLE `" + tableInfo.getName() + "` DROP INDEX");
-            ColumnInfo columnInfo = kv.getValue();
-            stringBuilder.append(" `" + columnInfo.getName() + "`");
+            IndexInfo indexInfo = kv.getValue();
+            stringBuilder.append(" `" + indexInfo.getName() + "`");
             stringBuilder.append(";");
+        }
+        return stringBuilder.toString();
+    }
+
+    public String addIndex(final Map<String, Map<TableInfo, IndexInfo>> map) {
+        StringBuilder stringBuilder = new StringBuilder();
+        Map<TableInfo, IndexInfo> parameter = map.get(paramName);
+        for (Map.Entry<TableInfo, IndexInfo> ii : parameter.entrySet()) {
+            stringBuilder.append("ALTER TABLE `" + ii.getKey().getName() + "` ADD ");
+            IndexInfo indexInfo = ii.getValue();
+            if (!IndexTypeEnum.NORMAL.toString().equals(indexInfo.getIndexType()))
+                stringBuilder.append(indexInfo.getIndexType() + " ");
+            stringBuilder.append("INDEX ");
+            stringBuilder.append("`" + HumpConvert.HumpToUnderline(indexInfo.getName()) + "` (");
+            Iterator<Map.Entry<String, Integer>> iterator = indexInfo.getFields().entrySet().iterator();
+            while (iterator.hasNext()) {
+                Map.Entry<String, Integer> kv = iterator.next();
+                if (kv.getValue() > 0)
+                    stringBuilder.append("`" + HumpConvert.HumpToUnderline(kv.getKey()) + "`(" + kv.getValue() + ")");
+                else
+                    stringBuilder.append("`" + HumpConvert.HumpToUnderline(kv.getKey()) + "`");
+                if (iterator.hasNext()) {
+                    stringBuilder.append(",");
+                }
+            }
+            stringBuilder.append(")");
+            stringBuilder.append(" USING " + indexInfo.getIndexMethod().toUpperCase() + ";");
         }
         return stringBuilder.toString();
     }
@@ -189,6 +230,9 @@ public class QuerySql {
             }
             if (tableInfo.getUniqueKeyInfos().size() > 0) {
                 stringBuilder.append(", " + tableInfo.buildUniqueSql());
+            }
+            if (tableInfo.getIndexInfos().size() > 0) {
+                stringBuilder.append(", " + tableInfo.buildIndexSql());
             }
 
             stringBuilder.append(")");

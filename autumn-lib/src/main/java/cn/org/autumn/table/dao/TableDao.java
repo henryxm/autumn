@@ -1,5 +1,6 @@
 package cn.org.autumn.table.dao;
 
+import cn.org.autumn.table.data.IndexInfo;
 import cn.org.autumn.table.data.TableInfo;
 import cn.org.autumn.table.data.UniqueKeyInfo;
 import cn.org.autumn.table.mysql.ColumnMeta;
@@ -71,6 +72,10 @@ public interface TableDao {
     @ResultType(List.class)
     List<UniqueKeyInfo> getTableKeys(@Param(paramName) String tableName);
 
+    @SelectProvider(type = QuerySql.class, method = showIndex)
+    @ResultType(List.class)
+    List<IndexInfo> getTableIndex(@Param(paramName) String tableName);
+
     @SelectProvider(type = QuerySql.class, method = getTableCount)
     @ResultType(Integer.class)
     Integer getTableCount();
@@ -122,4 +127,11 @@ public interface TableDao {
      */
     @SelectProvider(type = QuerySql.class, method = dropTable)
     void dropTable(@Param(paramName) String tableName);
+    /**
+     * 增加索引
+     *
+     * @param map
+     */
+    @SelectProvider(type = QuerySql.class, method = addIndex)
+    void addIndex(@Param(paramName) Map<TableInfo, Object> map);
 }

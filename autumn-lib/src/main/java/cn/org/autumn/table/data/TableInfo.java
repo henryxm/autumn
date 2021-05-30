@@ -1,14 +1,12 @@
 package cn.org.autumn.table.data;
 
-import cn.org.autumn.table.annotation.Table;
-import cn.org.autumn.table.annotation.UniqueKey;
-import cn.org.autumn.table.annotation.UniqueKeyFields;
-import cn.org.autumn.table.annotation.UniqueKeys;
+import cn.org.autumn.table.annotation.*;
 import cn.org.autumn.table.mysql.TableMeta;
 import cn.org.autumn.table.utils.HumpConvert;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.WordUtils;
 
+import java.lang.reflect.Field;
 import java.util.*;
 
 public class TableInfo {
@@ -31,6 +29,8 @@ public class TableInfo {
     private String classname;
 
     private List<UniqueKeyInfo> uniqueKeyInfos;
+    private List<IndexInfo> indexInfos;
+    private List<IndexInfo> indexColumn;
 
     public TableInfo(Class<?> clazz) {
         initFrom(clazz);
@@ -108,12 +108,41 @@ public class TableInfo {
             }
         }
 
+
+        this.indexInfos = new ArrayList<>();
+        Index index = clas.getAnnotation(Index.class);
+        if (null != index) {
+            indexInfos.add(new IndexInfo(index));
+        }
+
+        Indexes indexes = clas.getAnnotation(Indexes.class);
+
+        if (null != indexes && indexes.value().length > 0) {
+            for (Index u : indexes.value()) {
+                indexInfos.add(new IndexInfo(u));
+            }
+        }
+
+        Field[] fields = clas.getDeclaredFields();
+
+        this.indexColumn = new ArrayList<>();
+        for (Field field : fields) {
+            Index k = field.getAnnotation(Index.class);
+            if (null != k) {
+                indexInfos.add(new IndexInfo(k, field));
+            }
+
+            Column column = field.getAnnotation(Column.class);
+            if (null != column && column.isUnique()) {
+                indexColumn.add(new IndexInfo(column, field));
+            }
+        }
+
         this.name = tableName;
         this.charset = table.charset();
         this.comment = table.comment();
         this.engine = table.engine();
         this.prefix = table.prefix();
-
     }
 
     public String buildUniqueSql() {
@@ -145,47 +174,79 @@ public class TableInfo {
         return stringBuilder.toString();
     }
 
-    public Collection<UniqueKeyInfo> merged() {
-        Map<String, UniqueKeyInfo> _unique = new HashMap<>();
-
-        for (UniqueKeyInfo uniqueKeyInfo : uniqueKeyInfos) {
-            if ("PRIMARY".equalsIgnoreCase(uniqueKeyInfo.getKeyName()))
-                continue;
-            if (!_unique.containsKey(uniqueKeyInfo.getKeyName())) {
-                _unique.put(uniqueKeyInfo.getKeyName(), uniqueKeyInfo);
-                if (!uniqueKeyInfo.getFields().containsKey(uniqueKeyInfo.getColumnName()))
-                    uniqueKeyInfo.getFields().put(uniqueKeyInfo.getColumnName(), uniqueKeyInfo.getSubPartInt());
-            } else {
-                UniqueKeyInfo t = _unique.get(uniqueKeyInfo.getKeyName());
-                if (!t.getFields().containsKey(uniqueKeyInfo.getColumnName()))
-                    t.getFields().put(uniqueKeyInfo.getColumnName(), uniqueKeyInfo.getSubPartInt());
-            }
-        }
-        return _unique.values();
-    }
-
-    public String buildUniqueKey() {
+    public String buildIndexSql() {
         StringBuilder stringBuilder = new StringBuilder();
-        Collection<UniqueKeyInfo> merged = merged();
-        if (null != merged && merged.size() > 0) {
-            stringBuilder.append("@UniqueKeys({");
-            Iterator<UniqueKeyInfo> uniqueKeyInfoIterator = merged.iterator();
-            while (uniqueKeyInfoIterator.hasNext()) {
-                UniqueKeyInfo uniqueKeyInfo = uniqueKeyInfoIterator.next();
-                stringBuilder.append("@UniqueKey(name = \"" + uniqueKeyInfo.getName() + "\"" + ", fields = {");
-                Iterator<Map.Entry<String, Integer>> iterator = uniqueKeyInfo.getFields().entrySet().iterator();
+        if (null != indexInfos && indexInfos.size() > 0) {
+            Iterator<IndexInfo> indexKeyInfoIterator = indexInfos.iterator();
+            while (indexKeyInfoIterator.hasNext()) {
+                IndexInfo indexInfo = indexKeyInfoIterator.next();
+                if (!IndexTypeEnum.NORMAL.toString().equals(indexInfo.getIndexType()))
+                    stringBuilder.append(indexInfo.getIndexType() + " ");
+                stringBuilder.append("INDEX ");
+                stringBuilder.append("`" + indexInfo.getName() + "` (");
+                Iterator<Map.Entry<String, Integer>> iterator = indexInfo.getFields().entrySet().iterator();
                 while (iterator.hasNext()) {
                     Map.Entry<String, Integer> kv = iterator.next();
                     if (kv.getValue() > 0)
-                        stringBuilder.append("@UniqueKeyFields(field = \"" + kv.getKey() + "\", length = " + kv.getValue() + ")");
+                        stringBuilder.append("`" + kv.getKey() + "`(" + kv.getValue() + ")");
                     else
-                        stringBuilder.append("@UniqueKeyFields(field = \"" + kv.getKey() + "\")");
+                        stringBuilder.append("`" + kv.getKey() + "`");
+                    if (iterator.hasNext()) {
+                        stringBuilder.append(",");
+                    }
+                }
+                stringBuilder.append(")");
+                stringBuilder.append(" USING " + indexInfo.getIndexMethod().toUpperCase());
+                if (indexKeyInfoIterator.hasNext()) {
+                    stringBuilder.append(", ");
+                }
+            }
+        }
+        return stringBuilder.toString();
+    }
+
+    public Collection<IndexInfo> merged() {
+        Map<String, IndexInfo> _index = new HashMap<>();
+
+        for (IndexInfo indexInfo : indexInfos) {
+            if ("PRIMARY".equalsIgnoreCase(indexInfo.getKeyName()))
+                continue;
+            if (!_index.containsKey(indexInfo.getKeyName())) {
+                _index.put(indexInfo.getKeyName(), indexInfo);
+                if (!indexInfo.getFields().containsKey(indexInfo.getColumnName()))
+                    indexInfo.getFields().put(indexInfo.getColumnName(), indexInfo.getSubPartInt());
+            } else {
+                IndexInfo t = _index.get(indexInfo.getKeyName());
+                if (!t.getFields().containsKey(indexInfo.getColumnName()))
+                    t.getFields().put(indexInfo.getColumnName(), indexInfo.getSubPartInt());
+            }
+        }
+        return _index.values();
+    }
+
+    public String buildIndexKey() {
+        StringBuilder stringBuilder = new StringBuilder();
+        Collection<IndexInfo> merged = merged();
+        if (null != merged && merged.size() > 0) {
+            stringBuilder.append("@IndexKeys({");
+            Iterator<IndexInfo> indexKeyInfoIterator = merged.iterator();
+            while (indexKeyInfoIterator.hasNext()) {
+                IndexInfo indexInfo = indexKeyInfoIterator.next();
+                indexInfo.resolve();
+                stringBuilder.append("@IndexKey(name = \"" + indexInfo.getName() + "\"" + ", indexType = IndexTypeEnum." + indexInfo.getIndexType() + ", indexMethod = IndexMethodEnum." + indexInfo.getIndexMethod() + ", fields = {");
+                Iterator<Map.Entry<String, Integer>> iterator = indexInfo.getFields().entrySet().iterator();
+                while (iterator.hasNext()) {
+                    Map.Entry<String, Integer> kv = iterator.next();
+                    if (kv.getValue() > 0)
+                        stringBuilder.append("@IndexKeyField(field = \"" + kv.getKey() + "\", length = " + kv.getValue() + ")");
+                    else
+                        stringBuilder.append("@IndexKeyField(field = \"" + kv.getKey() + "\")");
                     if (iterator.hasNext()) {
                         stringBuilder.append(",");
                     }
                 }
                 stringBuilder.append("})");
-                if (uniqueKeyInfoIterator.hasNext()) {
+                if (indexKeyInfoIterator.hasNext()) {
                     stringBuilder.append(",");
                 }
             }
@@ -255,6 +316,37 @@ public class TableInfo {
 
     public void setUniqueKeyInfos(List<UniqueKeyInfo> uniqueKeyInfos) {
         this.uniqueKeyInfos = uniqueKeyInfos;
+    }
+
+    public List<IndexInfo> getIndexInfos() {
+        return indexInfos;
+    }
+
+    public List<IndexInfo> getIndexInfosCombine() {
+        if (null != uniqueKeyInfos && uniqueKeyInfos.size() > 0) {
+            for (UniqueKeyInfo uniqueKeyInfo : uniqueKeyInfos) {
+                indexInfos.add(IndexInfo.copy(uniqueKeyInfo));
+            }
+        }
+        if (null != indexColumn && indexColumn.size() > 0) {
+            for (IndexInfo indexInfo : indexColumn) {
+                indexInfos.add(indexInfo);
+            }
+        }
+        return indexInfos;
+    }
+
+
+    public void setIndexInfos(List<IndexInfo> indexInfos) {
+        this.indexInfos = indexInfos;
+    }
+
+    public List<IndexInfo> getIndexColumn() {
+        return indexColumn;
+    }
+
+    public void setIndexColumn(List<IndexInfo> indexColumn) {
+        this.indexColumn = indexColumn;
     }
 
     public String getComment() {
