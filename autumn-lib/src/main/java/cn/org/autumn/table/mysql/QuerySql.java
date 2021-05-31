@@ -7,6 +7,7 @@ import cn.org.autumn.table.data.ColumnInfo;
 import cn.org.autumn.table.utils.HumpConvert;
 import org.apache.commons.lang.StringUtils;
 
+import java.lang.reflect.Field;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -152,14 +153,17 @@ public class QuerySql {
         return stringBuilder.toString();
     }
 
-    public String dropIndex(final Map<String, Map<TableInfo, IndexInfo>> map) {
+    public String dropIndex(final Map<String, Map<TableInfo, Object>> map) throws NoSuchFieldException, IllegalAccessException {
         StringBuilder stringBuilder = new StringBuilder();
-        Map<TableInfo, IndexInfo> parameter = map.get(paramName);
-        for (Map.Entry<TableInfo, IndexInfo> kv : parameter.entrySet()) {
+        Map<TableInfo, Object> parameter = map.get(paramName);
+        for (Map.Entry<TableInfo, Object> kv : parameter.entrySet()) {
             TableInfo tableInfo = kv.getKey();
             stringBuilder.append("ALTER TABLE `" + tableInfo.getName() + "` DROP INDEX");
-            IndexInfo indexInfo = kv.getValue();
-            stringBuilder.append(" `" + indexInfo.getName() + "`");
+            Object indexInfo = kv.getValue();
+            Field field = indexInfo.getClass().getDeclaredField("name");
+            field.setAccessible(true);
+            String name = (String) field.get(indexInfo);
+            stringBuilder.append(" `" + name + "`");
             stringBuilder.append(";");
         }
         return stringBuilder.toString();
@@ -244,6 +248,4 @@ public class QuerySql {
         }
         return stringBuilder.toString();
     }
-
-
 }

@@ -311,7 +311,7 @@ public class MysqlTableService {
 
                 // 原本是唯一，现在不是了，那么要去做删除唯一的操作
                 if ("UNI".equals(sysColumn.getColumnKey()) && !createTableParam.hasUniqueKey()) {
-                    dropUniqueFieldList.add(createTableParam);
+//                    dropUniqueFieldList.add(createTableParam);
                 }
 
                 // 验证是否有更新

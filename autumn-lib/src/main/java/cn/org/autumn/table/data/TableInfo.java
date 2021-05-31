@@ -228,19 +228,19 @@ public class TableInfo {
         StringBuilder stringBuilder = new StringBuilder();
         Collection<IndexInfo> merged = merged();
         if (null != merged && merged.size() > 0) {
-            stringBuilder.append("@IndexKeys({");
+            stringBuilder.append("@Indexes({");
             Iterator<IndexInfo> indexKeyInfoIterator = merged.iterator();
             while (indexKeyInfoIterator.hasNext()) {
                 IndexInfo indexInfo = indexKeyInfoIterator.next();
                 indexInfo.resolve();
-                stringBuilder.append("@IndexKey(name = \"" + indexInfo.getName() + "\"" + ", indexType = IndexTypeEnum." + indexInfo.getIndexType() + ", indexMethod = IndexMethodEnum." + indexInfo.getIndexMethod() + ", fields = {");
+                stringBuilder.append("@Index(name = \"" + indexInfo.getName() + "\"" + ", indexType = IndexTypeEnum." + indexInfo.getIndexType() + ", indexMethod = IndexMethodEnum." + indexInfo.getIndexMethod() + ", fields = {");
                 Iterator<Map.Entry<String, Integer>> iterator = indexInfo.getFields().entrySet().iterator();
                 while (iterator.hasNext()) {
                     Map.Entry<String, Integer> kv = iterator.next();
                     if (kv.getValue() > 0)
-                        stringBuilder.append("@IndexKeyField(field = \"" + kv.getKey() + "\", length = " + kv.getValue() + ")");
+                        stringBuilder.append("@IndexField(field = \"" + kv.getKey() + "\", length = " + kv.getValue() + ")");
                     else
-                        stringBuilder.append("@IndexKeyField(field = \"" + kv.getKey() + "\")");
+                        stringBuilder.append("@IndexField(field = \"" + kv.getKey() + "\")");
                     if (iterator.hasNext()) {
                         stringBuilder.append(",");
                     }
