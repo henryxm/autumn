@@ -65,7 +65,7 @@ public class ClientDetailsEntity implements Serializable {
 	/**
 	 * 客户端ID
 	 */
-	@Column(length = 200, comment = "客户端ID")
+	@Column(length = 200, comment = "客户端ID", isUnique = true)
 	private String clientId;
 	/**
 	 * 客户端密匙

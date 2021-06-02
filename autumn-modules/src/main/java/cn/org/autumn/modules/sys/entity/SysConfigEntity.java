@@ -18,14 +18,18 @@ public class SysConfigEntity implements Serializable {
     @TableId
     @Column(isKey = true, type = DataType.BIGINT, length = 20, isNull = false, isAutoIncrement = true, comment = "id")
     private Long id;
+
     @NotBlank(message = "参数名不能为空")
-    @Column(comment = "key")
+    @Column(comment = "key", isUnique = true)
     private String paramKey;
+
     @NotBlank(message = "参数值不能为空")
     @Column(type = DataType.TEXT, comment = "value")
     private String paramValue;
+
     @Column(type = DataType.TEXT, comment = "备注")
     private String remark;
+
     @Column(type = DataType.INT, length = 4, defaultValue = "1", comment = "状态   0：隐藏   1：显示")
     private int status;
 

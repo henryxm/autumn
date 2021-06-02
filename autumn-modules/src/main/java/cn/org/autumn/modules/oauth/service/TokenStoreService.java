@@ -81,12 +81,14 @@ public class TokenStoreService extends TokenStoreServiceGen {
             tokenStoreEntity.setUserId(sysUserEntity.getUserId());
             tokenStoreEntity.setUserUuid(sysUserEntity.getUuid());
         }
+        if (null == tokenStoreEntity.getCreateTime())
+            tokenStoreEntity.setCreateTime(new Date());
         tokenStoreEntity.setAuthCode(authCode);
         tokenStoreEntity.setAccessToken(accessToken);
         tokenStoreEntity.setRefreshToken(refreshToken);
         tokenStoreEntity.setAccessTokenExpiredIn(accessTokenExpiredIn);
         tokenStoreEntity.setRefreshTokenExpiredIn(refreshTokenExpiredIn);
-        tokenStoreEntity.setCreateTime(new Date());
+        tokenStoreEntity.setUpdateTime(new Date());
         insertOrUpdate(tokenStoreEntity);
         return tokenStoreEntity;
     }
@@ -100,7 +102,9 @@ public class TokenStoreService extends TokenStoreServiceGen {
             tokenStoreEntity.setAccessTokenExpiredIn(accessTokenExpiredIn);
         if (null != refreshTokenExpiredIn)
             tokenStoreEntity.setRefreshTokenExpiredIn(refreshTokenExpiredIn);
-        tokenStoreEntity.setCreateTime(new Date());
+        if (null == tokenStoreEntity.getCreateTime())
+            tokenStoreEntity.setCreateTime(new Date());
+        tokenStoreEntity.setUpdateTime(new Date());
         insertOrUpdate(tokenStoreEntity);
         return tokenStoreEntity;
     }

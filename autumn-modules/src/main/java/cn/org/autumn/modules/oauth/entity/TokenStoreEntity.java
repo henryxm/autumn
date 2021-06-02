@@ -67,6 +67,11 @@ public class TokenStoreEntity implements Serializable {
 	 */
 	@Column(type = "datetime", comment = "创建时间")
 	private Date createTime;
+	/**
+	 * 更新时间
+	 */
+	@Column(type = "datetime", comment = "更新时间")
+	private Date updateTime;
 
 	/**
 	 * 设置：id
@@ -175,5 +180,13 @@ public class TokenStoreEntity implements Serializable {
 	 */
 	public Date getCreateTime() {
 		return createTime;
+	}
+
+	public Date getUpdateTime() {
+		return updateTime;
+	}
+
+	public void setUpdateTime(Date updateTime) {
+		this.updateTime = updateTime;
 	}
 }

@@ -37,7 +37,7 @@ public class SysRoleEntity implements Serializable {
     private String roleName;
 
     @NotBlank(message = "角色标识不能为空")
-    @Column(length = 100, comment = "角色标识")
+    @Column(length = 100, comment = "角色标识", isUnique = true)
     private String roleKey;
 
     /**

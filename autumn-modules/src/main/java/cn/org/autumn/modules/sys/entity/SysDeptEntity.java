@@ -27,7 +27,7 @@ public class SysDeptEntity implements Serializable {
     @Column(type = DataType.BIGINT, length = 20, comment = "上级部门ID，一级部门为0")
     private Long parentId;
 
-    @Column(length = 100, comment = "部门标识")
+    @Column(length = 100, comment = "部门标识", isUnique = true)
     private String deptKey;
 
     @Column(length = 100, comment = "上级标识")

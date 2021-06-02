@@ -34,7 +34,7 @@ public class SysUserEntity implements Serializable {
     @Column(isKey = true, type = DataType.BIGINT, length = 20, isNull = false, isAutoIncrement = true, comment = "id")
     private Long userId;
 
-    @Column(comment = "UUID")
+    @Column(comment = "UUID", isUnique = true)
     private String uuid;
 
     @Column(type = DataType.BIGINT, length = 20, comment = "父级ID")
@@ -47,7 +47,7 @@ public class SysUserEntity implements Serializable {
      * 用户名
      */
     @NotBlank(message = "用户名不能为空", groups = {AddGroup.class, UpdateGroup.class})
-    @Column(length = 50, comment = "用户名")
+    @Column(length = 50, comment = "用户名", isUnique = true)
     private String username;
 
     /**

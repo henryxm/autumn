@@ -32,7 +32,7 @@ public class SysMenuEntity implements Serializable {
     @Column(type = DataType.BIGINT, length = 20, comment = "父菜单ID，一级菜单为0")
     private Long parentId;
 
-    @Column(length = 50, comment = "MenuKey")
+    @Column(length = 50, comment = "MenuKey", isUnique = true)
     private String menuKey;
 
     @Column(length = 50, comment = "ParentKey")
