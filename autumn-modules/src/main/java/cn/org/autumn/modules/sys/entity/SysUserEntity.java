@@ -28,8 +28,11 @@ import java.util.Objects;
 public class SysUserEntity implements Serializable {
     private static final long serialVersionUID = 1L;
 
-    @TableId(type = IdType.INPUT)
-    @Column(isKey = true, length = 50, comment = "UUID", isUnique = true)
+    @TableId
+    @Column(isKey = true, type = DataType.BIGINT, length = 20, isNull = false, isAutoIncrement = true, comment = "id")
+    private Long userId;
+
+    @Column(length = 50, comment = "UUID", isUnique = true)
     private String uuid;
 
     @Column(comment = "父级UUID")
@@ -101,6 +104,14 @@ public class SysUserEntity implements Serializable {
 
     @TableField(exist = false)
     private SysUserEntity parent;
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
+    }
 
     public String getUuid() {
         return uuid;

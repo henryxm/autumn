@@ -217,6 +217,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
                     if (null == ex || ex.hashCode() != sysUserEntity.hashCode()) {
                         if (null != ex) {
                             sysUserEntity.setDeptKey(ex.getDeptKey());
+                            sysUserEntity.setUserId(ex.getUserId());
                             updateById(sysUserEntity);
                         } else {
                             /**
@@ -227,6 +228,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
                             if (null != sysDeptEntity) {
                                 sysUserEntity.setDeptKey(sysDeptEntity.getDeptKey());
                             }
+                            sysUserEntity.setUserId(null);
                             insert(sysUserEntity);
                             /**
                              * 设定缺省的角色
@@ -235,7 +237,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
                         }
                     }
                 } catch (Exception e) {
-                    log.error("User Synchronize Error, User uuid:" + sysUserEntity.getUuid() + e.getMessage());
+                    log.error("User Synchronize Error, User uuid:" + sysUserEntity.getUuid() + ", Msg:" + e.getMessage());
                 }
                 hashUser.put(sysUserEntity.getUuid(), sysUserEntity.hashCode());
                 iterator.remove();

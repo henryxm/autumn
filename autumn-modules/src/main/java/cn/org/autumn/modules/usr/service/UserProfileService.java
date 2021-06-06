@@ -1,6 +1,5 @@
 package cn.org.autumn.modules.usr.service;
 
-import cn.org.autumn.exception.AException;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysUserService;
@@ -8,18 +7,14 @@ import cn.org.autumn.modules.sys.shiro.OauthUsernameToken;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.usr.dto.UserProfile;
 import cn.org.autumn.modules.usr.entity.UserProfileEntity;
-import cn.org.autumn.modules.usr.entity.UserTokenEntity;
-import cn.org.autumn.modules.usr.form.LoginForm;
 import cn.org.autumn.modules.usr.service.gen.UserProfileServiceGen;
-import cn.org.autumn.site.InitFactory;
 import cn.org.autumn.utils.Uuid;
-import cn.org.autumn.validator.Assert;
-import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.PostConstruct;
 import java.util.*;
 
 import static cn.org.autumn.modules.sys.service.SysUserService.ADMIN;
@@ -28,6 +23,8 @@ import static cn.org.autumn.utils.Uuid.uuid;
 
 @Service
 public class UserProfileService extends UserProfileServiceGen implements LoopJob.Job {
+
+    Logger log = LoggerFactory.getLogger(getClass());
 
     @Autowired
     UserTokenService userTokenService;
@@ -193,13 +190,20 @@ public class UserProfileService extends UserProfileServiceGen implements LoopJob
                 UserProfileEntity userProfileEntity = entity.getValue();
                 if (!checkNeedUpdate(userProfileEntity))
                     continue;
-                UserProfileEntity ex = getByUuid(userProfileEntity.getUuid());
-                if (null == ex || ex.hashCode() != userProfileEntity.hashCode()) {
-                    if (null != ex) {
-                        userProfileEntity.setNickname(ex.getNickname());
-                        userProfileEntity.setMobile(ex.getMobile());
+                try {
+                    UserProfileEntity ex = getByUuid(userProfileEntity.getUuid());
+                    if (null == ex || ex.hashCode() != userProfileEntity.hashCode()) {
+                        if (null != ex) {
+                            userProfileEntity.setNickname(ex.getNickname());
+                            userProfileEntity.setMobile(ex.getMobile());
+                            userProfileEntity.setUserId(ex.getUserId());
+                        } else {
+                            userProfileEntity.setUserId(null);
+                        }
+                        insertOrUpdate(userProfileEntity);
                     }
-                    insertOrUpdate(userProfileEntity);
+                } catch (Exception e) {
+                    log.error("UserProfile Synchronize Error, User uuid:" + userProfileEntity.getUuid() + ", Msg:" + e.getMessage());
                 }
                 hashUser.put(userProfileEntity.getUuid(), userProfileEntity.hashCode());
                 iterator.remove();
