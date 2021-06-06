@@ -43,7 +43,6 @@ public class SysUserRoleService extends ServiceImpl<SysUserRoleDao, SysUserRoleE
                     continue;
                 sysUserRoleEntity.setUsername(sysUserEntity.getUsername());
                 sysUserRoleEntity.setUserUuid(sysUserEntity.getUuid());
-                sysUserRoleEntity.setUserId(sysUserEntity.getUserId());
                 userUuid = sysUserEntity.getUuid();
             }
             temp = map[1];
@@ -57,7 +56,6 @@ public class SysUserRoleService extends ServiceImpl<SysUserRoleDao, SysUserRoleE
                 continue;
             SysRoleEntity sysRoleEntity = sysRoleService.getByRoleKey(roleKey);
             sysUserRoleEntity.setRoleKey(roleKey);
-            sysUserRoleEntity.setRoleId(sysRoleEntity.getRoleId());
             insert(sysUserRoleEntity);
         }
     }
@@ -93,8 +91,6 @@ public class SysUserRoleService extends ServiceImpl<SysUserRoleDao, SysUserRoleE
             if (null == sysRoleEntity)
                 continue;
             SysUserRoleEntity sysUserRoleEntity = new SysUserRoleEntity();
-            sysUserRoleEntity.setUserId(userId);
-            sysUserRoleEntity.setRoleId(roleId);
             sysUserRoleEntity.setRoleKey(sysRoleEntity.getRoleKey());
             sysUserRoleEntity.setUsername(sysUserEntity.getUsername());
             sysUserRoleEntity.setUserUuid(sysUserEntity.getUuid());
@@ -110,9 +106,8 @@ public class SysUserRoleService extends ServiceImpl<SysUserRoleDao, SysUserRoleE
             return;
         }
         List<String> existed = getRoleKeys(userUuid);
-        List<String> needDeleted = new ArrayList<String>();
+        List<String> needDeleted = new ArrayList<>();
         List<String> needAdded = new ArrayList<>();
-
         if (null != existed && existed.size() > 0) {
             for (String e : existed) {
                 if (roleKeys.contains(e)) {
@@ -136,36 +131,24 @@ public class SysUserRoleService extends ServiceImpl<SysUserRoleDao, SysUserRoleE
         }
 
         //保存用户与角色关系
-        List<SysUserRoleEntity> list = new ArrayList<>(needAdded.size());
+        List<SysUserRoleEntity> list = new ArrayList<>();
         for (String roleKey : needAdded) {
             boolean has = hasUserRole(userUuid, roleKey);
             if (has)
                 continue;
             SysUserRoleEntity sysUserRoleEntity = new SysUserRoleEntity();
             SysUserEntity sysUserEntity = sysUserService.getByUuid(userUuid);
-            sysUserRoleEntity.setUserId(sysUserEntity.getUserId());
             sysUserRoleEntity.setUserUuid(userUuid);
             sysUserRoleEntity.setUsername(sysUserEntity.getUsername());
-            SysRoleEntity sysRoleEntity = sysRoleService.getByRoleKey(roleKey);
-            sysUserRoleEntity.setRoleId(sysRoleEntity.getRoleId());
             sysUserRoleEntity.setRoleKey(roleKey);
             list.add(sysUserRoleEntity);
         }
-        this.insertBatch(list);
-    }
-
-    @Deprecated
-    public List<Long> queryRoleIdList(Long userId) {
-        return baseMapper.queryRoleIdList(userId);
+        if (list.size() > 0)
+            this.insertBatch(list);
     }
 
     public List<String> getRoleKeys(String userUuid) {
         return baseMapper.getRoleKeys(userUuid);
-    }
-
-    @Deprecated
-    public int deleteBatch(Long[] roleIds) {
-        return baseMapper.deleteBatch(roleIds);
     }
 
     public int deleteBatch(String[] roleKeys) {

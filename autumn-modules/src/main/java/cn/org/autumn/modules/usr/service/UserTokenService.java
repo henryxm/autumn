@@ -55,8 +55,8 @@ public class UserTokenService extends UserTokenServiceGen {
             String tk = (String) map.get(OAuth.OAUTH_ACCESS_TOKEN);
             userTokenEntity = new UserTokenEntity();
             if (ShiroUtils.isLogin()) {
-                Long userId = ShiroUtils.getUserId();
-                userTokenEntity.setUserId(userId);
+                String userUuid = ShiroUtils.getUserUuid();
+                userTokenEntity.setUserUuid(userUuid);
             }
             userTokenEntity.setToken(tk);
         }
@@ -73,7 +73,7 @@ public class UserTokenService extends UserTokenServiceGen {
         insertOrUpdate(userTokenEntity);
     }
 
-    public UserTokenEntity createToken(long userId) {
+    public UserTokenEntity createToken(String userUuid) {
         //当前时间
         Date now = new Date();
         //过期时间
@@ -84,7 +84,7 @@ public class UserTokenService extends UserTokenServiceGen {
 
         //保存或更新用户token
         UserTokenEntity tokenEntity = new UserTokenEntity();
-        tokenEntity.setUserId(userId);
+        tokenEntity.setUserUuid(userUuid);
         tokenEntity.setToken(token);
         tokenEntity.setUpdateTime(now);
         tokenEntity.setExpireTime(expireTime);
@@ -93,10 +93,10 @@ public class UserTokenService extends UserTokenServiceGen {
         return tokenEntity;
     }
 
-    public void expireToken(long userId) {
+    public void expireToken(String userUuid) {
         Date now = new Date();
         UserTokenEntity tokenEntity = new UserTokenEntity();
-        tokenEntity.setUserId(userId);
+        tokenEntity.setUserUuid(userUuid);
         tokenEntity.setUpdateTime(now);
         tokenEntity.setExpireTime(now);
         this.insertOrUpdate(tokenEntity);

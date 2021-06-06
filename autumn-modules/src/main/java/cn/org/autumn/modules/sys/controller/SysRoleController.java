@@ -32,7 +32,6 @@ public class SysRoleController extends AbstractController {
     @RequiresPermissions("sys:role:list")
     public R list(@RequestParam Map<String, Object> params) {
         PageUtils page = sysRoleService.queryPage(params);
-
         return R.ok().put("page", page);
     }
 
@@ -43,26 +42,22 @@ public class SysRoleController extends AbstractController {
     @RequiresPermissions("sys:role:select")
     public R select() {
         List<SysRoleEntity> list = sysRoleService.selectList(null);
-
         return R.ok().put("list", list);
     }
 
     /**
      * 角色信息
      */
-    @RequestMapping("/info/{roleId}")
+    @RequestMapping("/info/{roleKey}")
     @RequiresPermissions("sys:role:info")
-    public R info(@PathVariable("roleId") Long roleId) {
-        SysRoleEntity role = sysRoleService.selectById(roleId);
-
+    public R info(@PathVariable("roleKey") String roleKey) {
+        SysRoleEntity role = sysRoleService.getByRoleKey(roleKey);
         //查询角色对应的菜单
-        List<Long> menuIdList = sysRoleMenuService.queryMenuIdList(roleId);
-        role.setMenuIdList(menuIdList);
-
+        List<String> menuKeys = sysRoleMenuService.getMenuKeys(roleKey);
+        role.setMenuKeys(menuKeys);
         //查询角色对应的部门
-        List<Long> deptIdList = sysRoleDeptService.queryDeptIdList(new Long[]{roleId});
-        role.setDeptIdList(deptIdList);
-
+        List<String> deptKeys = sysRoleDeptService.getDeptKeys(new String[]{roleKey});
+        role.setDeptKeys(deptKeys);
         return R.ok().put("role", role);
     }
 
@@ -74,23 +69,7 @@ public class SysRoleController extends AbstractController {
     @RequiresPermissions("sys:role:save")
     public R save(@RequestBody SysRoleEntity role) {
         ValidatorUtils.validateEntity(role);
-
         sysRoleService.save(role);
-
-        return R.ok();
-    }
-
-    /**
-     * 修改角色
-     */
-    @SysLog("修改角色")
-    @RequestMapping("/update")
-    @RequiresPermissions("sys:role:update")
-    public R update(@RequestBody SysRoleEntity role) {
-        ValidatorUtils.validateEntity(role);
-
-        sysRoleService.update(role);
-
         return R.ok();
     }
 
@@ -100,9 +79,8 @@ public class SysRoleController extends AbstractController {
     @SysLog("删除角色")
     @RequestMapping("/delete")
     @RequiresPermissions("sys:role:delete")
-    public R delete(@RequestBody Long[] roleIds) {
-        sysRoleService.deleteBatch(roleIds);
-
+    public R delete(@RequestBody String[] roleKeys) {
+        sysRoleService.deleteBatch(roleKeys);
         return R.ok();
     }
 }

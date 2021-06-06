@@ -24,7 +24,7 @@ import cn.org.autumn.modules.lan.service.LanguageService;
  *
  * @author Shaohua Xu
  * @email henryxm@163.com
- * @date 2021-01
+ * @date 2021-06
  */
 public class UserProfileServiceGen extends ServiceImpl<UserProfileDao, UserProfileEntity> implements InitFactory.Init {
 
@@ -44,12 +44,6 @@ public class UserProfileServiceGen extends ServiceImpl<UserProfileDao, UserProfi
         Page<UserProfileEntity> _page = new Query<UserProfileEntity>(params).getPage();
         EntityWrapper<UserProfileEntity> entityEntityWrapper = new EntityWrapper<>();
         Map<String,Object> condition = new HashMap<>();
-        if(params.containsKey("userId") && null != params.get("userId") && StringUtils.isNotEmpty(params.get("userId").toString())) {
-            condition.put("user_id", params.get("userId"));
-        }
-        if(params.containsKey("sysUserId") && null != params.get("sysUserId") && StringUtils.isNotEmpty(params.get("sysUserId").toString())) {
-            condition.put("sys_user_id", params.get("sysUserId"));
-        }
         if(params.containsKey("uuid") && null != params.get("uuid") && StringUtils.isNotEmpty(params.get("uuid").toString())) {
             condition.put("uuid", params.get("uuid"));
         }
@@ -137,8 +131,6 @@ public class UserProfileServiceGen extends ServiceImpl<UserProfileDao, UserProfi
     private String[][] getLanguageItemsInternal() {
         String[][] items = new String[][]{
                 {"usr_userprofile_table_comment", "用户信息"},
-                {"usr_userprofile_column_user_id", "用户ID"},
-                {"usr_userprofile_column_sys_user_id", "系统用户ID"},
                 {"usr_userprofile_column_uuid", "UUID"},
                 {"usr_userprofile_column_open_id", "OPENID"},
                 {"usr_userprofile_column_union_id", "UNIONID"},

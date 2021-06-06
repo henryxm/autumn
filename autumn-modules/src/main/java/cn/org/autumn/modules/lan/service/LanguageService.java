@@ -408,7 +408,7 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
                 {"sys_string_dict_type", "字典类型", "Dict type"},
                 {"sys_string_dict_code", "字典码", "Dict code"},
                 {"sys_string_dict_value", "字典值", "Dict value"},
-                {"sys_string_user_id", "用户ID", "User ID"},
+                {"sys_string_uuid", "UUID", "UUID"},
                 {"sys_string_username", "用户名", "Username"},
                 {"sys_string_query_username", "用户名、用户操作", "ex: username"},
                 {"sys_string_type", "类型", "Type"},

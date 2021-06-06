@@ -28,11 +28,6 @@ public class TokenStoreEntity implements Serializable {
 	@Column(isKey = true, type = "bigint", length = 20, isNull = false, isAutoIncrement = true, comment = "id")
 	private Long id;
 	/**
-	 * 用户ID
-	 */
-	@Column(type = "bigint", length = 20, comment = "用户ID")
-	private Long userId;
-	/**
 	 * 用户Uuid
 	 */
 	@Column(length = 200, comment = "用户Uuid")
@@ -84,18 +79,6 @@ public class TokenStoreEntity implements Serializable {
 	 */
 	public Long getId() {
 		return id;
-	}
-	/**
-	 * 设置：用户ID
-	 */
-	public void setUserId(Long userId) {
-		this.userId = userId;
-	}
-	/**
-	 * 获取：用户ID
-	 */
-	public Long getUserId() {
-		return userId;
 	}
 	/**
 	 * 设置：用户Uuid

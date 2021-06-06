@@ -36,7 +36,7 @@ public class LoginUserHandlerMethodArgumentResolver implements HandlerMethodArgu
         }
 
         //获取用户信息
-        UserProfileEntity user = userProfileService.selectById((Long) object);
+        UserProfileEntity user = userProfileService.getByUuid((String) object);
 
         return user;
     }

@@ -7,6 +7,7 @@ import cn.org.autumn.table.data.DataType;
 import com.baomidou.mybatisplus.annotations.TableField;
 import com.baomidou.mybatisplus.annotations.TableId;
 import com.baomidou.mybatisplus.annotations.TableName;
+import com.baomidou.mybatisplus.enums.IdType;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import cn.org.autumn.validator.group.AddGroup;
 import cn.org.autumn.validator.group.UpdateGroup;
@@ -27,18 +28,9 @@ import java.util.Objects;
 public class SysUserEntity implements Serializable {
     private static final long serialVersionUID = 1L;
 
-    /**
-     * 用户ID
-     */
-    @TableId
-    @Column(isKey = true, type = DataType.BIGINT, length = 20, isNull = false, isAutoIncrement = true, comment = "id")
-    private Long userId;
-
-    @Column(comment = "UUID", isUnique = true)
+    @TableId(type = IdType.INPUT)
+    @Column(isKey = true, length = 50, comment = "UUID", isUnique = true)
     private String uuid;
-
-    @Column(type = DataType.BIGINT, length = 20, comment = "父级ID")
-    private Long parentId;
 
     @Column(comment = "父级UUID")
     private String parentUuid;
@@ -67,8 +59,6 @@ public class SysUserEntity implements Serializable {
     /**
      * 邮箱
      */
-    @NotBlank(message = "邮箱不能为空", groups = {AddGroup.class, UpdateGroup.class})
-    @Email(message = "邮箱格式不正确", groups = {AddGroup.class, UpdateGroup.class})
     @Column(length = 100, comment = "邮箱")
     private String email;
 
@@ -84,32 +74,17 @@ public class SysUserEntity implements Serializable {
     private String weixing;
     @Column(length = 100, comment = "支付宝号")
     private String alipay;
-
     /**
      * 状态  0：禁用   1：正常
      */
     @Column(length = 4, type = DataType.INT, comment = "状态  0：禁用   1：正常")
     private Integer status;
 
-    /**
-     * 角色ID列表
-     */
-    @TableField(exist = false)
-    private List<Long> roleIdList;
-
     @TableField(exist = false)
     private List<String> roleKeys;
 
-    /**
-     * 部门ID
-     */
-    @NotNull(message = "部门不能为空", groups = {AddGroup.class, UpdateGroup.class})
-    @Column(length = 20, type = DataType.BIGINT, comment = "部门ID")
-    private Long deptId;
-
     @Column(length = 100, comment = "部门标识")
     private String deptKey;
-
     /**
      * 创建时间
      */
@@ -127,20 +102,12 @@ public class SysUserEntity implements Serializable {
     @TableField(exist = false)
     private SysUserEntity parent;
 
-    public UserProfileEntity getProfile() {
-        return profile;
+    public String getUuid() {
+        return uuid;
     }
 
-    public void setProfile(UserProfileEntity profile) {
-        this.profile = profile;
-    }
-
-    public Long getParentId() {
-        return parentId;
-    }
-
-    public void setParentId(Long parentId) {
-        this.parentId = parentId;
+    public void setUuid(String uuid) {
+        this.uuid = uuid;
     }
 
     public String getParentUuid() {
@@ -151,146 +118,20 @@ public class SysUserEntity implements Serializable {
         this.parentUuid = parentUuid;
     }
 
-    public SysUserEntity getParent() {
-        return parent;
-    }
-
-    public void setParent(SysUserEntity parent) {
-        this.parent = parent;
-    }
-
-    /**
-     * 设置：
-     *
-     * @param userId
-     */
-    public void setUserId(Long userId) {
-        this.userId = userId;
-    }
-
-    /**
-     * 获取：
-     *
-     * @return Long
-     */
-    public Long getUserId() {
-        return userId;
-    }
-
-    /**
-     * 设置：用户名
-     *
-     * @param username 用户名
-     */
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
-    /**
-     * 获取：用户名
-     *
-     * @return String
-     */
     public String getUsername() {
         return username;
     }
 
-    /**
-     * 设置：密码
-     *
-     * @param password 密码
-     */
-    public void setPassword(String password) {
-        this.password = password;
+    public void setUsername(String username) {
+        this.username = username;
     }
 
-    /**
-     * 获取：密码
-     *
-     * @return String
-     */
     public String getPassword() {
         return password;
     }
 
-    /**
-     * 设置：邮箱
-     *
-     * @param email 邮箱
-     */
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    /**
-     * 获取：邮箱
-     *
-     * @return String
-     */
-    public String getEmail() {
-        return email;
-    }
-
-    /**
-     * 设置：手机号
-     *
-     * @param mobile 手机号
-     */
-    public void setMobile(String mobile) {
-        this.mobile = mobile;
-    }
-
-    /**
-     * 获取：手机号
-     *
-     * @return String
-     */
-    public String getMobile() {
-        return mobile;
-    }
-
-    /**
-     * 设置：状态  0：禁用   1：正常
-     *
-     * @param status 状态  0：禁用   1：正常
-     */
-    public void setStatus(Integer status) {
-        this.status = status;
-    }
-
-    /**
-     * 获取：状态  0：禁用   1：正常
-     *
-     * @return Integer
-     */
-    public Integer getStatus() {
-        return status;
-    }
-
-    /**
-     * 设置：创建时间
-     *
-     * @param createTime 创建时间
-     */
-    public void setCreateTime(Date createTime) {
-        this.createTime = createTime;
-    }
-
-    /**
-     * 获取：创建时间
-     *
-     * @return Date
-     */
-    public Date getCreateTime() {
-        return createTime;
-    }
-
-    public List<Long> getRoleIdList() {
-        return roleIdList;
-    }
-
-    public void setRoleIdList(List<Long> roleIdList) {
-        this.roleIdList = roleIdList;
+    public void setPassword(String password) {
+        this.password = password;
     }
 
     public String getSalt() {
@@ -301,20 +142,20 @@ public class SysUserEntity implements Serializable {
         this.salt = salt;
     }
 
-    public Long getDeptId() {
-        return deptId;
+    public String getEmail() {
+        return email;
     }
 
-    public void setDeptId(Long deptId) {
-        this.deptId = deptId;
+    public void setEmail(String email) {
+        this.email = email;
     }
 
-    public String getDeptName() {
-        return deptName;
+    public String getMobile() {
+        return mobile;
     }
 
-    public void setDeptName(String deptName) {
-        this.deptName = deptName;
+    public void setMobile(String mobile) {
+        this.mobile = mobile;
     }
 
     public String getQq() {
@@ -341,20 +182,12 @@ public class SysUserEntity implements Serializable {
         this.alipay = alipay;
     }
 
-    public String getUuid() {
-        return uuid;
+    public Integer getStatus() {
+        return status;
     }
 
-    public void setUuid(String uuid) {
-        this.uuid = uuid;
-    }
-
-    public String getDeptKey() {
-        return deptKey;
-    }
-
-    public void setDeptKey(String deptKey) {
-        this.deptKey = deptKey;
+    public void setStatus(Integer status) {
+        this.status = status;
     }
 
     public List<String> getRoleKeys() {
@@ -365,11 +198,63 @@ public class SysUserEntity implements Serializable {
         this.roleKeys = roleKeys;
     }
 
+    public String getDeptKey() {
+        return deptKey;
+    }
+
+    public void setDeptKey(String deptKey) {
+        this.deptKey = deptKey;
+    }
+
+    public Date getCreateTime() {
+        return createTime;
+    }
+
+    public void setCreateTime(Date createTime) {
+        this.createTime = createTime;
+    }
+
+    public String getDeptName() {
+        return deptName;
+    }
+
+    public void setDeptName(String deptName) {
+        this.deptName = deptName;
+    }
+
+    public UserProfileEntity getProfile() {
+        return profile;
+    }
+
+    public void setProfile(UserProfileEntity profile) {
+        this.profile = profile;
+    }
+
+    public SysUserEntity getParent() {
+        return parent;
+    }
+
+    public void setParent(SysUserEntity parent) {
+        this.parent = parent;
+    }
+
+    public void copy(SysUserEntity entity) {
+        this.parentUuid = entity.parentUuid;
+        this.username = entity.username;
+        this.password = entity.password;
+        this.salt = entity.salt;
+        this.alipay = entity.alipay;
+        this.mobile = entity.mobile;
+        this.email = entity.email;
+        this.qq = entity.qq;
+        this.weixing = entity.weixing;
+        this.status = entity.status;
+    }
+
     @Override
     public int hashCode() {
         return Objects.hash(
                 getUuid(),
-                getParentId(),
                 getParentUuid(),
                 getUsername(),
                 getPassword(),

@@ -28,8 +28,8 @@ public class UserTokenEntity implements Serializable {
     @Column(isKey = true, type = "bigint", length = 20, isNull = false, isAutoIncrement = true, comment = "ID")
     private Long id;
 
-    @Column(type = "bigint", comment = "用户ID")
-    private Long userId;
+    @Column(length = 50, comment = "用户UUID")
+    private String userUuid;
     /**
      * Token
      */
@@ -51,18 +51,12 @@ public class UserTokenEntity implements Serializable {
     @Column(type = "datetime", comment = "更新时间")
     private Date updateTime;
 
-    /**
-     * 设置：用户ID
-     */
-    public void setUserId(Long userId) {
-        this.userId = userId;
+    public String getUserUuid() {
+        return userUuid;
     }
 
-    /**
-     * 获取：用户ID
-     */
-    public Long getUserId() {
-        return userId;
+    public void setUserUuid(String userUuid) {
+        this.userUuid = userUuid;
     }
 
     /**

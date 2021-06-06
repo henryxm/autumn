@@ -122,8 +122,8 @@ public class SysMenuService extends ServiceImpl<SysMenuDao, SysMenuEntity> imple
             if (null == entity) {
                 put(sysMenu);
             } else {
-                if (update && (sysMenu.hashCode() != entity.hashCode() || null == entity.getParentId())) {
-                    sysMenu.setMenuId(entity.getMenuId());
+                if (update && (sysMenu.hashCode() != entity.hashCode() || null == entity.getParentKey())) {
+                    sysMenu.setMenuKey(entity.getMenuKey());
                     put(sysMenu);
                 }
             }
@@ -155,9 +155,9 @@ public class SysMenuService extends ServiceImpl<SysMenuDao, SysMenuEntity> imple
     public boolean put(SysMenuEntity sysMenuEntity) {
         SysMenuEntity parent = getByMenuKey(sysMenuEntity.getParentKey());
         if (null != parent)
-            sysMenuEntity.setParentId(parent.getMenuId());
+            sysMenuEntity.setParentKey(parent.getParentKey());
         else
-            sysMenuEntity.setParentId(0L);
+            sysMenuEntity.setParentKey("");
         cache.put(sysMenuEntity.getMenuKey(), sysMenuEntity);
         return insertOrUpdate(sysMenuEntity);
     }
@@ -201,31 +201,31 @@ public class SysMenuService extends ServiceImpl<SysMenuDao, SysMenuEntity> imple
         return sysMenu;
     }
 
-    public List<SysMenuEntity> queryListParentId(Long parentId, List<Long> menuIdList) {
-        List<SysMenuEntity> menuList = queryListParentId(parentId);
-        if (menuIdList == null) {
+    public List<SysMenuEntity> queryListParentId(String parentKey, List<String> menuKeys) {
+        List<SysMenuEntity> menuList = getByParentKey(parentKey);
+        if (menuKeys == null) {
             return menuList;
         }
 
         List<SysMenuEntity> userMenuList = new ArrayList<>();
         for (SysMenuEntity menu : menuList) {
-            if (menuIdList.contains(menu.getMenuId())) {
+            if (menuKeys.contains(menu.getMenuKey())) {
                 userMenuList.add(menu);
             }
         }
         return userMenuList;
     }
 
-    public List<SysMenuEntity> queryListParentId(Long parentId) {
-        return baseMapper.queryListParentId(parentId);
+    public List<SysMenuEntity> getByParentKey(String parentKey) {
+        return baseMapper.getByParentKey(parentKey);
     }
 
     public List<SysMenuEntity> queryNotButtonList() {
         return baseMapper.queryNotButtonList();
     }
 
-    public List<SysMenuEntity> getUserMenuList(Long userId) {
-        SysUserEntity sysUserEntity = sysUserService.selectById(userId);
+    public List<SysMenuEntity> getUserMenuList(String userUuid) {
+        SysUserEntity sysUserEntity = sysUserService.getByUuid(userUuid);
         return getMenus(sysUserEntity);
     }
 
@@ -236,23 +236,23 @@ public class SysMenuService extends ServiceImpl<SysMenuDao, SysMenuEntity> imple
             return getAllMenuList(null);
         }
         //用户菜单列表
-        List<Long> menuIdList = sysUserService.queryAllMenuId(sysUserEntity.getUserId());
+        List<String> menuIdList = sysUserService.getMenus(sysUserEntity.getUuid());
         return getAllMenuList(menuIdList);
     }
 
-    public void delete(Long menuId) {
+    public void delete(String menuKey) {
         //删除菜单
-        this.deleteById(menuId);
+        this.deleteById(menuKey);
         //删除菜单与角色关联
-        sysRoleMenuService.deleteByMap(new MapUtils().put("menu_id", menuId));
+        sysRoleMenuService.deleteByMap(new MapUtils().put("menu_key", menuKey));
     }
 
     /**
      * 获取所有菜单列表
      */
-    private List<SysMenuEntity> getAllMenuList(List<Long> menuIdList) {
+    private List<SysMenuEntity> getAllMenuList(List<String> menuIdList) {
         //查询根菜单列表
-        List<SysMenuEntity> menuList = queryListParentId(0L, menuIdList);
+        List<SysMenuEntity> menuList = queryListParentId("", menuIdList);
         //递归获取子菜单
         getMenuTreeList(menuList, menuIdList);
 
@@ -262,12 +262,12 @@ public class SysMenuService extends ServiceImpl<SysMenuDao, SysMenuEntity> imple
     /**
      * 递归
      */
-    private List<SysMenuEntity> getMenuTreeList(List<SysMenuEntity> menuList, List<Long> menuIdList) {
+    private List<SysMenuEntity> getMenuTreeList(List<SysMenuEntity> menuList, List<String> menuKeyList) {
         List<SysMenuEntity> subMenuList = new ArrayList<SysMenuEntity>();
         for (SysMenuEntity entity : menuList) {
             //目录
             if (entity.getType() == Constant.MenuType.CATALOG.getValue()) {
-                entity.setList(getMenuTreeList(queryListParentId(entity.getMenuId(), menuIdList), menuIdList));
+                entity.setList(getMenuTreeList(queryListParentId(entity.getMenuKey(), menuKeyList), menuKeyList));
             }
             subMenuList.add(entity);
         }

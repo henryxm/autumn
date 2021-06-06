@@ -24,7 +24,6 @@ public class UserLoginLogService extends UserLoginLogServiceGen {
         String[][] items = new String[][]{
                 {"usr_userloginlog_table_comment", "登录日志", "Login log"},
                 {"usr_userloginlog_column_id", "日志ID", "Log id"},
-                {"usr_userloginlog_column_user_id", "用户ID", "User id"},
                 {"usr_userloginlog_column_username", "用户名", "Username"},
                 {"usr_userloginlog_column_login_time", "登录时间", "Login time"},
                 {"usr_userloginlog_column_logout_time", "登出时间", "Logout time"},
@@ -32,21 +31,19 @@ public class UserLoginLogService extends UserLoginLogServiceGen {
         return items;
     }
 
-    public void login(Long userId, String username) {
+    public void login(String username) {
         UserLoginLogEntity userLoginLogEntity = new UserLoginLogEntity();
-        userLoginLogEntity.setUserId(userId);
         userLoginLogEntity.setUsername(username);
         userLoginLogEntity.setLoginTime(new Date());
         insert(userLoginLogEntity);
     }
 
     public void login(UserProfileEntity userProfileEntity) {
-        login(userProfileEntity.getUserId(), userProfileEntity.getUsername());
+        login(userProfileEntity.getUsername());
     }
 
-    public void logout(Long userId, String username) {
+    public void logout(String username) {
         UserLoginLogEntity userLoginLogEntity = new UserLoginLogEntity();
-        userLoginLogEntity.setUserId(userId);
         userLoginLogEntity.setUsername(username);
         userLoginLogEntity.setLogoutTime(new Date());
         insert(userLoginLogEntity);

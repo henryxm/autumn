@@ -12,16 +12,14 @@ import java.util.List;
 @Repository
 public interface SysRoleMenuDao extends BaseMapper<SysRoleMenuEntity> {
 
-    @Select("select menu_id from sys_role_menu where role_id = #{value}")
-    List<Long> queryMenuIdList(@Param("value") Long roleId);
-
-    @Delete("DELETE FROM sys_role_menu WHERE role_id IN (#{roleIds})")
+    @Delete("DELETE FROM sys_role_menu WHERE role_key IN (#{roleKeys})")
     @Lang(SelectInLangDriver.class)
-    int deleteBatch(@Param("roleIds") Long[] roleIds);
+    int deleteBatch(@Param("roleKeys") String[] roleKeys);
 
     @Select("select menu_key from sys_role_menu where role_key = #{roleKey}")
     List<String> getMenuKeys(@Param("roleKey") String roleKey);
 
     @Delete("DELETE FROM sys_role_menu WHERE role_key IN (#{roleKeys})")
+    @Lang(SelectInLangDriver.class)
     int deleteMenus(@Param("roleKeys") String[] roleKeys);
 }

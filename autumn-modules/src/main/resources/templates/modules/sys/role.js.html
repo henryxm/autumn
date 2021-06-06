@@ -3,9 +3,8 @@ $(function () {
         url: baseURL + 'sys/role/list',
         datatype: "json",
         colModel: [
-            { label: '${lang.sys_string_role_id}', name: 'roleId', index: "role_id", width: 45, key: true },
+            { label: '${lang.sys_string_role_key}', name: 'roleKey', index: "role_key", width: 75, key: true},
             { label: '${lang.sys_string_role_name}', name: 'roleName', index: "role_name", width: 75 },
-            { label: '${lang.sys_string_role_key}', name: 'roleKey', index: "role_key", width: 75 },
             { label: '${lang.sys_string_own_department}', name: 'deptName', sortable: false, width: 75 },
             { label: '${lang.sys_string_remark}', name: 'remark', width: 100 },
             { label: '${lang.sys_string_create_time}', name: 'createTime', index: "create_time", width: 80}
@@ -43,9 +42,9 @@ var menu_setting = {
     data: {
         simpleData: {
             enable: true,
-            idKey: "menuId",
-            pIdKey: "parentId",
-            rootPId: -1
+            idKey: "menuKey",
+            pIdKey: "parentKey",
+            rootPId: ""
         },
         key: {
             url:"nourl"
@@ -63,9 +62,9 @@ var dept_setting = {
     data: {
         simpleData: {
             enable: true,
-            idKey: "deptId",
-            pIdKey: "parentId",
-            rootPId: -1
+            idKey: "deptKey",
+            pIdKey: "parentKey",
+            rootPId: ""
         },
         key: {
             url:"nourl"
@@ -79,9 +78,9 @@ var data_setting = {
     data: {
         simpleData: {
             enable: true,
-            idKey: "deptId",
-            pIdKey: "parentId",
-            rootPId: -1
+            idKey: "deptKey",
+            pIdKey: "parentKey",
+            rootPId: ""
         },
         key: {
             url:"nourl"
@@ -103,7 +102,7 @@ var vm = new Vue({
         showList: true,
         title:null,
         role:{
-            deptId:null,
+            deptKey:null,
             deptName:null
         }
     },
@@ -114,7 +113,7 @@ var vm = new Vue({
         add: function(){
             vm.showList = false;
             vm.title = "${lang.sys_string_add}";
-            vm.role = {deptName:null, deptId:null};
+            vm.role = {deptName:null, deptKey:null};
             vm.getMenuTree(null);
 
             vm.getDept();
@@ -122,21 +121,19 @@ var vm = new Vue({
             vm.getDataTree();
         },
         update: function () {
-            var roleId = getSelectedRow();
-            if(roleId == null){
+            var roleKey = getSelectedRow();
+            if(roleKey == null){
                 return ;
             }
-
             vm.showList = false;
             vm.title = "${lang.sys_string_change}";
             vm.getDataTree();
-            vm.getMenuTree(roleId);
-
+            vm.getMenuTree(roleKey);
             vm.getDept();
         },
         del: function () {
-            var roleIds = getSelectedRows();
-            if(roleIds == null){
+            var roleKeys = getSelectedRows();
+            if(roleKeys == null){
                 return ;
             }
 
@@ -145,7 +142,7 @@ var vm = new Vue({
                     type: "POST",
                     url: baseURL + "sys/role/delete",
                     contentType: "application/json",
-                    data: JSON.stringify(roleIds),
+                    data: JSON.stringify(roleKeys),
                     success: function(r){
                         if(r.code == 0){
                             alert('${lang.sys_string_success}', function(){
@@ -158,21 +155,21 @@ var vm = new Vue({
                 });
             });
         },
-        getRole: function(roleId){
-            $.get(baseURL + "sys/role/info/"+roleId, function(r){
+        getRole: function(roleKey){
+            $.get(baseURL + "sys/role/info/"+roleKey, function(r){
                 vm.role = r.role;
 
                 //勾选角色所拥有的菜单
-                var menuIds = vm.role.menuIdList;
-                for(var i=0; i<menuIds.length; i++) {
-                    var node = menu_ztree.getNodeByParam("menuId", menuIds[i]);
+                var menuKeys = vm.role.menuKeys;
+                for(var i=0; i < menuKeys.length; i++) {
+                    var node = menu_ztree.getNodeByParam("menuKey", menuKeys[i]);
                     menu_ztree.checkNode(node, true, false);
                 }
 
                 //勾选角色所拥有的部门数据权限
-                var deptIds = vm.role.deptIdList;
-                for(var i=0; i<deptIds.length; i++) {
-                    var node = data_ztree.getNodeByParam("deptId", deptIds[i]);
+                var deptKeys = vm.role.deptKeys;
+                for(var i=0; i < deptKeys.length; i++) {
+                    var node = data_ztree.getNodeByParam("deptKey", deptKeys[i]);
                     data_ztree.checkNode(node, true, false);
                 }
 
@@ -182,21 +179,21 @@ var vm = new Vue({
         saveOrUpdate: function () {
             //获取选择的菜单
             var nodes = menu_ztree.getCheckedNodes(true);
-            var menuIdList = new Array();
-            for(var i=0; i<nodes.length; i++) {
-                menuIdList.push(nodes[i].menuId);
+            var menuKeys = new Array();
+            for(var i=0; i < nodes.length; i++) {
+                menuKeys.push(nodes[i].menuKey);
             }
-            vm.role.menuIdList = menuIdList;
+            vm.role.menuKeys = menuKeys;
 
             //获取选择的数据
             var nodes = data_ztree.getCheckedNodes(true);
-            var deptIdList = new Array();
-            for(var i=0; i<nodes.length; i++) {
-                deptIdList.push(nodes[i].deptId);
+            var deptKeys = new Array();
+            for(var i=0; i < nodes.length; i++) {
+                deptKeys.push(nodes[i].deptKey);
             }
-            vm.role.deptIdList = deptIdList;
+            vm.role.deptKeys = deptKeys;
 
-            var url = vm.role.roleId == null ? "sys/role/save" : "sys/role/update";
+            var url = "sys/role/save";
             $.ajax({
                 type: "POST",
                 url: baseURL + url,
@@ -213,15 +210,14 @@ var vm = new Vue({
                 }
             });
         },
-        getMenuTree: function(roleId) {
+        getMenuTree: function(roleKey) {
             //加载菜单树
             $.get(baseURL + "sys/menu/list", function(r){
                 menu_ztree = $.fn.zTree.init($("#menuTree"), menu_setting, r);
                 //展开所有节点
                 menu_ztree.expandAll(true);
-
-                if(roleId != null){
-                    vm.getRole(roleId);
+                if(roleKey != null){
+                    vm.getRole(roleKey);
                 }
             });
         },
@@ -237,10 +233,9 @@ var vm = new Vue({
             //加载部门树
             $.get(baseURL + "sys/dept/list", function(r){
                 dept_ztree = $.fn.zTree.init($("#deptTree"), dept_setting, r);
-                var node = dept_ztree.getNodeByParam("deptId", vm.role.deptId);
+                var node = dept_ztree.getNodeByParam("deptKey", vm.role.deptKey);
                 if(node != null){
                     dept_ztree.selectNode(node);
-
                     vm.role.deptName = node.name;
                 }
             })
@@ -259,9 +254,8 @@ var vm = new Vue({
                 btn1: function (index) {
                     var node = dept_ztree.getSelectedNodes();
                     //选择上级部门
-                    vm.role.deptId = node[0].deptId;
+                    vm.role.deptKey = node[0].deptKey;
                     vm.role.deptName = node[0].name;
-
                     layer.close(index);
                 }
             });

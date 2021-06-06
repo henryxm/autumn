@@ -19,13 +19,9 @@ import java.util.List;
 public class SysDeptEntity implements Serializable {
     private static final long serialVersionUID = 1L;
 
-    //部门ID
     @TableId
     @Column(isKey = true, type = DataType.BIGINT, length = 20, isNull = false, isAutoIncrement = true, comment = "id")
     private Long deptId;
-    //上级部门ID，一级部门为0
-    @Column(type = DataType.BIGINT, length = 20, comment = "上级部门ID，一级部门为0")
-    private Long parentId;
 
     @Column(length = 100, comment = "部门标识", isUnique = true)
     private String deptKey;
@@ -57,87 +53,12 @@ public class SysDeptEntity implements Serializable {
     @TableField(exist = false)
     private List<?> list;
 
-
-    public void setDeptId(Long deptId) {
-        this.deptId = deptId;
-    }
-
     public Long getDeptId() {
         return deptId;
     }
 
-    /**
-     * 设置：上级部门ID，一级部门为0
-     */
-    public void setParentId(Long parentId) {
-        this.parentId = parentId;
-    }
-
-    /**
-     * 获取：上级部门ID，一级部门为0
-     */
-    public Long getParentId() {
-        return parentId;
-    }
-
-    /**
-     * 设置：部门名称
-     */
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    /**
-     * 获取：部门名称
-     */
-    public String getName() {
-        return name;
-    }
-
-    /**
-     * 设置：排序
-     */
-    public void setOrderNum(Integer orderNum) {
-        this.orderNum = orderNum;
-    }
-
-    /**
-     * 获取：排序
-     */
-    public Integer getOrderNum() {
-        return orderNum;
-    }
-
-    public Integer getDelFlag() {
-        return delFlag;
-    }
-
-    public void setDelFlag(Integer delFlag) {
-        this.delFlag = delFlag;
-    }
-
-    public String getParentName() {
-        return parentName;
-    }
-
-    public void setParentName(String parentName) {
-        this.parentName = parentName;
-    }
-
-    public Boolean getOpen() {
-        return open;
-    }
-
-    public void setOpen(Boolean open) {
-        this.open = open;
-    }
-
-    public List<?> getList() {
-        return list;
-    }
-
-    public void setList(List<?> list) {
-        this.list = list;
+    public void setDeptId(Long deptId) {
+        this.deptId = deptId;
     }
 
     public String getDeptKey() {
@@ -156,11 +77,59 @@ public class SysDeptEntity implements Serializable {
         this.parentKey = parentKey;
     }
 
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getParentName() {
+        return parentName;
+    }
+
+    public void setParentName(String parentName) {
+        this.parentName = parentName;
+    }
+
+    public Integer getOrderNum() {
+        return orderNum;
+    }
+
+    public void setOrderNum(Integer orderNum) {
+        this.orderNum = orderNum;
+    }
+
     public String getRemark() {
         return remark;
     }
 
     public void setRemark(String remark) {
         this.remark = remark;
+    }
+
+    public Integer getDelFlag() {
+        return delFlag;
+    }
+
+    public void setDelFlag(Integer delFlag) {
+        this.delFlag = delFlag;
+    }
+
+    public Boolean getOpen() {
+        return open;
+    }
+
+    public void setOpen(Boolean open) {
+        this.open = open;
+    }
+
+    public List<?> getList() {
+        return list;
+    }
+
+    public void setList(List<?> list) {
+        this.list = list;
     }
 }

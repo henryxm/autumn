@@ -13,42 +13,27 @@ import java.util.List;
 @Repository
 public interface SysUserDao extends BaseMapper<SysUserEntity> {
 
-    /**
-     * 查询用户的所有权限
-     *
-     * @param userId 用户ID
-     */
-    @Deprecated
     @Select("select m.perms from sys_user_role ur " +
-            "LEFT JOIN sys_role_menu rm on ur.role_id = rm.role_id " +
-            "LEFT JOIN sys_menu m on rm.menu_id = m.menu_id " +
-            "where ur.user_id = #{userId}")
-    List<String> queryAllPerms(@Param("userId") Long userId);
+            "LEFT JOIN sys_role_menu rm on ur.role_key = rm.role_key " +
+            "LEFT JOIN sys_menu m on rm.menu_key = m.menu_key " +
+            "where ur.user_uuid = #{userUuid}")
+    List<String> getPermsByUserUuid(@Param("userUuid") String userUuid);
 
-    @Select("select m.perms from sys_user_role ur " +
-            "LEFT JOIN sys_role_menu rm on ur.role_id = rm.role_id " +
-            "LEFT JOIN sys_menu m on rm.menu_id = m.menu_id " +
-            "where ur.user_id = #{userId}")
-    List<String> getPermsByUserUuid(@Param("userId") String userUuid);
-
-    /**
-     * 查询用户的所有菜单ID
-     */
-    @Select("select distinct rm.menu_id from sys_user_role ur " +
-            "LEFT JOIN sys_role_menu rm on ur.role_id = rm.role_id " +
-            "where ur.user_id = #{userId}")
-    List<Long> queryAllMenuId(@Param("userId") Long userId);
+    @Select("select distinct rm.menu_key from sys_user_role ur " +
+            "LEFT JOIN sys_role_menu rm on ur.role_key = rm.role_key " +
+            "where ur.user_uuid = #{userUuid}")
+    List<String> getMenus(@Param("userUuid") String userUuid);
 
     @Select("select * from sys_user u where u.username = #{username}")
     SysUserEntity getByUsername(@Param("username") String username);
 
     @Select("SELECT * FROM sys_user WHERE email=#{email}")
-    SysUserEntity getByEmail(@Param("email")String email);
+    SysUserEntity getByEmail(@Param("email") String email);
 
     @Select("SELECT * FROM sys_user WHERE mobile=#{mobile}")
-    SysUserEntity getByPhone(@Param("mobile")String mobile);
+    SysUserEntity getByPhone(@Param("mobile") String mobile);
 
     @Select("SELECT * FROM sys_user WHERE uuid=#{uuid}")
-    SysUserEntity getByUuid(@Param("uuid")String uuid);
+    SysUserEntity getByUuid(@Param("uuid") String uuid);
 
 }

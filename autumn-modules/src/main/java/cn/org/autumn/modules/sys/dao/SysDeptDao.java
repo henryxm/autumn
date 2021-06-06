@@ -14,13 +14,8 @@ import java.util.List;
 @Repository
 public interface SysDeptDao extends BaseMapper<SysDeptEntity> {
 
-    /**
-     * 查询子部门ID列表
-     *
-     * @param parentId 上级部门ID
-     */
-    @Select("select dept_id from sys_dept where parent_id = #{value} and del_flag = 0")
-    List<Long> queryDetpIdList(@Param("value") Long parentId);
+    @Select("select dept_key from sys_dept where parent_key = #{value} and del_flag = 0")
+    List<String> getByParentKey(@Param("value") String parentKey);
 
     @Select("select * from sys_dept where dept_Key = #{deptKey}")
     SysDeptEntity getByDeptKey(@Param("deptKey") String deptKey);

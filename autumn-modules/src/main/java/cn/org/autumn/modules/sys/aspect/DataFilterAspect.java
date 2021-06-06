@@ -68,18 +68,18 @@ public class DataFilterAspect {
         }
 
         //部门ID列表
-        Set<Long> deptIdList = new HashSet<>();
+        Set<String> deptIdList = new HashSet<>();
 
         //用户角色对应的部门ID列表
-        List<Long> roleIdList = sysUserRoleService.queryRoleIdList(user.getUserId());
+        List<String> roleIdList = sysUserRoleService.getRoleKeys(user.getUuid());
         if (roleIdList.size() > 0) {
-            List<Long> userDeptIdList = sysRoleDeptService.queryDeptIdList(roleIdList.toArray(new Long[roleIdList.size()]));
+            List<String> userDeptIdList = sysRoleDeptService.getDeptKeys(roleIdList.toArray(new String[roleIdList.size()]));
             deptIdList.addAll(userDeptIdList);
         }
 
         //用户子部门ID列表
         if (dataFilter.subDept()) {
-            List<Long> subDeptIdList = sysDeptService.getSubDeptIdList(user.getDeptId());
+            List<String> subDeptIdList = sysDeptService.getSubDeptKeys(user.getDeptKey());
             deptIdList.addAll(subDeptIdList);
         }
 
@@ -95,7 +95,7 @@ public class DataFilterAspect {
             if (deptIdList.size() > 0) {
                 sqlFilter.append(" or ");
             }
-            sqlFilter.append(tableAlias).append(dataFilter.userId()).append("=").append(user.getUserId());
+            sqlFilter.append(tableAlias).append(dataFilter.userUuid()).append("=").append(user.getUuid());
         }
 
         sqlFilter.append(")");

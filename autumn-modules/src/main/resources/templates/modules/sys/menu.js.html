@@ -2,8 +2,8 @@ var setting = {
     data: {
         simpleData: {
             enable: true,
-            idKey: "menuId",
-            pIdKey: "parentId",
+            idKey: "menuKey",
+            pIdKey: "parentKey",
             rootPId: -1
         },
         key: {
@@ -20,7 +20,7 @@ var vm = new Vue({
         title: null,
         menu:{
             parentName:null,
-            parentId:0,
+            parentKey:0,
             type:1,
             orderNum:0
         }
@@ -30,7 +30,7 @@ var vm = new Vue({
             //加载菜单树
             $.get(baseURL + "sys/menu/select", function(r){
                 ztree = $.fn.zTree.init($("#menuTree"), setting, r.menuList);
-                var node = ztree.getNodeByParam("menuId", vm.menu.parentId);
+                var node = ztree.getNodeByParam("menuKey", vm.menu.parentKey);
                 ztree.selectNode(node);
 
                 vm.menu.parentName = node.name;
@@ -43,12 +43,12 @@ var vm = new Vue({
             vm.getMenu();
         },
         update: function () {
-            var menuId = getMenuId();
-            if(menuId == null){
+            var menuKey = getMenuId();
+            if(menuKey == null){
                 return ;
             }
 
-            $.get(baseURL + "sys/menu/info/"+menuId, function(r){
+            $.get(baseURL + "sys/menu/info/"+menuKey, function(r){
                 vm.showList = false;
                 vm.title = "${lang.sys_string_change}";
                 vm.menu = r.menu;
@@ -57,8 +57,8 @@ var vm = new Vue({
             });
         },
         del: function () {
-            var menuId = getMenuId();
-            if(menuId == null){
+            var menuKey = getMenuId();
+            if(menuKey == null){
                 return ;
             }
 
@@ -66,7 +66,7 @@ var vm = new Vue({
                 $.ajax({
                     type: "POST",
                     url: baseURL + "sys/menu/delete",
-                    data: "menuId=" + menuId,
+                    data: "menuKey=" + menuKey,
                     success: function(r){
                         if(r.code === 0){
                             alert('${lang.sys_string_success}', function(){
@@ -84,7 +84,7 @@ var vm = new Vue({
                 return ;
             }
 
-            var url = vm.menu.menuId == null ? "sys/menu/save" : "sys/menu/update";
+            var url = vm.menu.menuKey == null ? "sys/menu/save" : "sys/menu/update";
             $.ajax({
                 type: "POST",
                 url:  baseURL + url,
@@ -154,7 +154,6 @@ var Menu = {
 Menu.initColumn = function () {
     var columns = [
         {field: 'selectItem', radio: true},
-        {title: '${lang.sys_string_menu_id}', field: 'menuId', visible: false, align: 'center', valign: 'middle', width: '80px'},
         {title: '${lang.sys_string_menu_name}', field: 'name', align: 'center', valign: 'middle', sortable: true, width: '180px'},
         {title: '${lang.sys_string_menu_key}', field: 'menuKey', align: 'center', valign: 'middle', sortable: true, width: '120px'},
         {title: '${lang.sys_string_upper_menu}', field: 'parentName', align: 'center', valign: 'middle', sortable: true, width: '100px'},
@@ -194,9 +193,9 @@ $(function () {
     var colunms = Menu.initColumn();
     var table = new TreeTable(Menu.id, baseURL + "sys/menu/list", colunms);
     table.setExpandColumn(2);
-    table.setIdField("menuId");
-    table.setCodeField("menuId");
-    table.setParentCodeField("parentId");
+    table.setIdField("menuKey");
+    table.setCodeField("menuKey");
+    table.setParentCodeField("parentKey");
     table.setExpandAll(false);
     table.init();
     Menu.table = table;

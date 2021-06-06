@@ -12,11 +12,11 @@ public abstract class AbstractController {
         return (SysUserEntity) SecurityUtils.getSubject().getPrincipal();
     }
 
-    protected Long getUserId() {
-        return getUser().getUserId();
+    protected String getUserUuid() {
+        return getUser().getUuid();
     }
 
-    protected Long getDeptId() {
-        return getUser().getDeptId();
+    protected String getDeptKey() {
+        return getUser().getDeptKey();
     }
 }

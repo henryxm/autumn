@@ -3,9 +3,7 @@ $(function () {
         url: baseURL + 'usr/userprofile/list',
         datatype: "json",
         colModel: [			
-			{ label: '${lang.usr_userprofile_column_user_id}', name: 'userId', index: 'user_id', width: 50, key: true },
-			{ label: '${lang.usr_userprofile_column_sys_user_id}', name: 'sysUserId', index: 'sys_user_id', width: 80 }, 
-			{ label: '${lang.usr_userprofile_column_uuid}', name: 'uuid', index: 'uuid', width: 80 }, 
+			{ label: '${lang.usr_userprofile_column_uuid}', name: 'uuid', index: 'uuid', width: 50, key: true },
 			{ label: '${lang.usr_userprofile_column_open_id}', name: 'openId', index: 'open_id', width: 80 }, 
 			{ label: '${lang.usr_userprofile_column_union_id}', name: 'unionId', index: 'union_id', width: 80 }, 
 			{ label: '${lang.usr_userprofile_column_icon}', name: 'icon', index: 'icon', width: 80 }, 
@@ -59,17 +57,17 @@ var vm = new Vue({
 			vm.userProfile = {};
 		},
 		update: function (event) {
-			var userId = getSelectedRow();
-			if(userId == null){
+			var uuid = getSelectedRow();
+			if(uuid == null){
 				return ;
 			}
 			vm.showList = false;
             vm.title = "${lang.sys_string_change}";
             
-            vm.getInfo(userId)
+            vm.getInfo(uuid)
 		},
 		saveOrUpdate: function (event) {
-			var url = vm.userProfile.userId == null ? "usr/userprofile/save" : "usr/userprofile/update";
+			var url = vm.userProfile.uuid == null ? "usr/userprofile/save" : "usr/userprofile/update";
 			$.ajax({
 				type: "POST",
 			    url: baseURL + url,
@@ -87,8 +85,8 @@ var vm = new Vue({
 			});
 		},
 		del: function (event) {
-			var userIds = getSelectedRows();
-			if(userIds == null){
+			var uuids = getSelectedRows();
+			if(uuids == null){
 				return ;
 			}
 			confirm('${lang.sys_string_are_sure_to_delete}？', function(){
@@ -96,7 +94,7 @@ var vm = new Vue({
 					type: "POST",
 				    url: baseURL + "usr/userprofile/delete",
                     contentType: "application/json",
-				    data: JSON.stringify(userIds),
+				    data: JSON.stringify(uuids),
 				    success: function(r){
 						if(r.code == 0){
 							alert('${lang.sys_string_successful}', function(index){
@@ -109,8 +107,8 @@ var vm = new Vue({
 				});
 			});
 		},
-		getInfo: function(userId){
-			$.get(baseURL + "usr/userprofile/info/"+userId, function(r){
+		getInfo: function(uuid){
+			$.get(baseURL + "usr/userprofile/info/"+uuid, function(r){
                 vm.userProfile = r.userProfile;
             });
 		},

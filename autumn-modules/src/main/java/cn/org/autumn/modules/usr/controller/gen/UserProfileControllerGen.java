@@ -19,7 +19,7 @@ import cn.org.autumn.utils.R;
  *
  * @author Shaohua Xu
  * @email henryxm@163.com
- * @date 2020-11
+ * @date 2021-06
  */
 public class UserProfileControllerGen {
 
@@ -39,10 +39,10 @@ public class UserProfileControllerGen {
     /**
      * 信息
      */
-    @RequestMapping("/info/{userId}")
+    @RequestMapping("/info/{uuid}")
     @RequiresPermissions("usr:userprofile:info")
-    public R info(@PathVariable("userId") Long userId) {
-        UserProfileEntity userProfile = userProfileService.selectById(userId);
+    public R info(@PathVariable("uuid") String uuid) {
+        UserProfileEntity userProfile = userProfileService.selectById(uuid);
         return R.ok().put("userProfile" , userProfile);
     }
 
@@ -72,8 +72,8 @@ public class UserProfileControllerGen {
      */
     @RequestMapping("/delete")
     @RequiresPermissions("usr:userprofile:delete")
-    public R delete(@RequestBody Long[] userIds) {
-        userProfileService.deleteBatchIds(Arrays.asList(userIds));
+    public R delete(@RequestBody String[] uuids) {
+        userProfileService.deleteBatchIds(Arrays.asList(uuids));
         return R.ok();
     }
 }

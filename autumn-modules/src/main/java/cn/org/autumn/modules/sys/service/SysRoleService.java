@@ -55,11 +55,6 @@ public class SysRoleService extends ServiceImpl<SysRoleDao, SysRoleEntity> imple
                     sysRoleEntity.setRoleName(temp);
                 temp = map[2];
                 if (NULL != temp) {
-                    SysDeptEntity sysDeptEntity = sysDeptService.getByDeptKey(temp);
-                    Long deptId = 0L;
-                    if (null != sysDeptEntity)
-                        deptId = sysDeptEntity.getDeptId();
-                    sysRoleEntity.setDeptId(deptId);
                     sysRoleEntity.setDeptKey(temp);
                 }
                 temp = map[3];
@@ -87,7 +82,7 @@ public class SysRoleService extends ServiceImpl<SysRoleDao, SysRoleEntity> imple
         );
 
         for (SysRoleEntity sysRoleEntity : page.getRecords()) {
-            SysDeptEntity sysDeptEntity = sysDeptService.selectById(sysRoleEntity.getDeptId());
+            SysDeptEntity sysDeptEntity = sysDeptService.getByDeptKey(sysRoleEntity.getDeptKey());
             if (sysDeptEntity != null) {
                 sysRoleEntity.setDeptName(sysDeptEntity.getName());
             }
@@ -98,36 +93,30 @@ public class SysRoleService extends ServiceImpl<SysRoleDao, SysRoleEntity> imple
 
     @Transactional(rollbackFor = Exception.class)
     public void save(SysRoleEntity role) {
-        role.setCreateTime(new Date());
-        this.insert(role);
+        SysRoleEntity o = getByRoleKey(role.getRoleKey());
+        if (null != o) {
+            updateById(role);
+        } else {
+            role.setCreateTime(new Date());
+            insert(role);
+        }
 
         //保存角色与菜单关系
-        sysRoleMenuService.saveOrUpdate(role.getRoleId(), role.getMenuIdList());
+        sysRoleMenuService.saveOrUpdate(role.getRoleKey(), role.getMenuKeys());
 
         //保存角色与部门关系
-        sysRoleDeptService.saveOrUpdate(role.getRoleId(), role.getDeptIdList());
+        sysRoleDeptService.saveOrUpdate(role.getRoleKey(), role.getDeptKeys());
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void update(SysRoleEntity role) {
-        this.updateAllColumnById(role);
-
-        //更新角色与菜单关系
-        sysRoleMenuService.saveOrUpdate(role.getRoleId(), role.getMenuIdList());
-
-        //保存角色与部门关系
-        sysRoleDeptService.saveOrUpdate(role.getRoleId(), role.getDeptIdList());
-    }
-
-    @Transactional(rollbackFor = Exception.class)
-    public void deleteBatch(Long[] roleIds) {
+    public void deleteBatch(String[] roleKeys) {
         //删除角色
-        this.deleteBatchIds(Arrays.asList(roleIds));
+        this.deleteBatchIds(Arrays.asList(roleKeys));
         //删除角色与菜单关联
-        sysRoleMenuService.deleteBatch(roleIds);
+        sysRoleMenuService.deleteBatch(roleKeys);
         //删除角色与部门关联
-        sysRoleDeptService.deleteBatch(roleIds);
+        sysRoleDeptService.deleteBatch(roleKeys);
         //删除角色与用户关联
-        sysUserRoleService.deleteBatch(roleIds);
+        sysUserRoleService.deleteBatch(roleKeys);
     }
 }

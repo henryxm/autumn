@@ -20,6 +20,8 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.shiro.authc.AuthenticationToken;
 import org.apache.shiro.authc.UsernamePasswordToken;
 import org.apache.shiro.subject.Subject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
@@ -35,6 +37,8 @@ import static cn.org.autumn.modules.sys.service.SysRoleService.Role_System_Admin
  */
 @Service
 public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> implements LoopJob.Job, InitFactory.Init {
+
+    Logger log = LoggerFactory.getLogger(getClass());
 
     public static String ADMIN = "admin";
     public static String PASSWORD = "admin";
@@ -53,8 +57,8 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
     @Autowired
     private SysConfigService sysConfigService;
 
-    public List<Long> queryAllMenuId(Long userId) {
-        return baseMapper.queryAllMenuId(userId);
+    public List<String> getMenus(String uuid) {
+        return baseMapper.getMenus(uuid);
     }
 
     @Order(10)
@@ -68,7 +72,6 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
             current = newUser(ADMIN, Uuid.uuid(), PASSWORD, roleKeys);
             SysDeptEntity sysDeptEntity = sysDeptService.getByDeptKey(Department_System_Administrator);
             if (null != sysDeptEntity) {
-                current.setDeptId(sysDeptEntity.getDeptId());
                 current.setDeptKey(sysDeptEntity.getDeptKey());
             }
             updateById(current);
@@ -88,7 +91,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         );
 
         for (SysUserEntity sysUserEntity : page.getRecords()) {
-            SysDeptEntity sysDeptEntity = sysDeptService.selectById(sysUserEntity.getDeptId());
+            SysDeptEntity sysDeptEntity = sysDeptService.getByDeptKey(sysUserEntity.getDeptKey());
             if (null != sysDeptEntity)
                 sysUserEntity.setDeptName(sysDeptEntity.getName());
         }
@@ -107,12 +110,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         if (StringUtils.isEmpty(user.getUuid()))
             user.setUuid(Uuid.uuid());
         this.insert(user);
-        //保存用户与角色关系
-        if (null != user.getRoleKeys() && user.getRoleKeys().size() > 0)
-            sysUserRoleService.saveOrUpdate(user.getUuid(), user.getRoleKeys());
-        else {
-            sysUserRoleService.saveOrUpdate(user.getUserId(), user.getRoleIdList());
-        }
+        sysUserRoleService.saveOrUpdate(user.getUuid(), user.getRoleKeys());
     }
 
     public SysUserEntity newUser(String username, String uuid, String password, List<String> roleKeys) {
@@ -129,11 +127,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
     @Transactional(rollbackFor = Exception.class)
     public void update(SysUserEntity user) {
         updateNoRole(user);
-        //保存用户与角色关系
-        if (null != user.getRoleKeys() && user.getRoleKeys().size() > 0)
-            sysUserRoleService.saveOrUpdate(user.getUuid(), user.getRoleKeys());
-        else
-            sysUserRoleService.saveOrUpdate(user.getUserId(), user.getRoleIdList());
+        sysUserRoleService.saveOrUpdate(user.getUuid(), user.getRoleKeys());
     }
 
     public void updateNoRole(SysUserEntity user) {
@@ -149,8 +143,8 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         this.updateById(user);
     }
 
-    public boolean updatePassword(Long userId, String password, String newPassword) {
-        SysUserEntity userEntity = selectById(userId);
+    public boolean updatePassword(String userUuid, String password, String newPassword) {
+        SysUserEntity userEntity = getByUuid(userUuid);
         if (null == userEntity || !password.equals(userEntity.getPassword()))
             return false;
         userEntity.setPassword(newPassword);
@@ -216,33 +210,32 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
             while (iterator.hasNext()) {
                 Map.Entry<String, SysUserEntity> entity = iterator.next();
                 SysUserEntity sysUserEntity = entity.getValue();
-
                 if (!checkNeedUpdate(sysUserEntity))
                     continue;
-
                 SysUserEntity ex = getByUuid(sysUserEntity.getUuid());
-
-                if (null == ex || ex.hashCode() != sysUserEntity.hashCode()) {
-                    if (null != ex) {
-                        sysUserEntity.setDeptId(ex.getDeptId());
-                        sysUserEntity.setDeptName(ex.getDeptName());
-                    } else {
-                        /**
-                         * 设定缺省的部门ID
-                         */
-                        String dk = sysConfigService.getDefaultDepartKey();
-                        SysDeptEntity sysDeptEntity = sysDeptService.getByDeptKey(dk);
-                        if (null != sysDeptEntity) {
-                            sysUserEntity.setDeptId(sysDeptEntity.getDeptId());
-                            sysUserEntity.setDeptKey(sysDeptEntity.getDeptKey());
+                try {
+                    if (null == ex || ex.hashCode() != sysUserEntity.hashCode()) {
+                        if (null != ex) {
+                            sysUserEntity.setDeptKey(ex.getDeptKey());
+                            updateById(sysUserEntity);
+                        } else {
+                            /**
+                             * 设定缺省的部门ID
+                             */
+                            String dk = sysConfigService.getDefaultDepartKey();
+                            SysDeptEntity sysDeptEntity = sysDeptService.getByDeptKey(dk);
+                            if (null != sysDeptEntity) {
+                                sysUserEntity.setDeptKey(sysDeptEntity.getDeptKey());
+                            }
+                            insert(sysUserEntity);
+                            /**
+                             * 设定缺省的角色
+                             */
+                            sysUserRoleService.saveOrUpdate(ex.getUuid(), sysConfigService.getDefaultRoleKeys());
                         }
-
-                        /**
-                         * 设定缺省的角色
-                         */
-                        sysUserRoleService.saveOrUpdate(sysUserEntity.getUuid(), sysConfigService.getDefaultRoleKeys());
                     }
-                    insertOrUpdate(sysUserEntity);
+                } catch (Exception e) {
+                    log.error("User Synchronize Error, User uuid:" + sysUserEntity.getUuid() + e.getMessage());
                 }
                 hashUser.put(sysUserEntity.getUuid(), sysUserEntity.hashCode());
                 iterator.remove();

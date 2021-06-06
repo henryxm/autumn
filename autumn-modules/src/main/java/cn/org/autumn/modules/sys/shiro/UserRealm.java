@@ -51,7 +51,7 @@ public class UserRealm extends AuthorizingRealm {
     @Override
     protected AuthorizationInfo doGetAuthorizationInfo(PrincipalCollection principals) {
         SysUserEntity user = (SysUserEntity) principals.getPrimaryPrincipal();
-        Long userId = user.getUserId();
+        String uuid = user.getUuid();
 
         List<String> permsList;
 
@@ -63,7 +63,7 @@ public class UserRealm extends AuthorizingRealm {
                 permsList.add(menu.getPerms());
             }
         } else {
-            permsList = sysUserDao.queryAllPerms(userId);
+            permsList = sysUserDao.getPermsByUserUuid(uuid);
         }
 
         //用户权限列表

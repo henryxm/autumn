@@ -22,6 +22,6 @@ public @interface DataFilter {
     String deptId() default "dept_id";
 
     /**  用户ID */
-    String userId() default "user_id";
+    String userUuid() default "user_uuid";
 }
 

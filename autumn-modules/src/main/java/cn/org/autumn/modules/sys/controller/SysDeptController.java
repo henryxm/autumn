@@ -29,7 +29,7 @@ public class SysDeptController extends AbstractController {
     @RequestMapping("/list")
     @RequiresPermissions("sys:dept:list")
     public List<SysDeptEntity> list() {
-        List<SysDeptEntity> deptList = sysDeptService.queryList(new HashMap<String, Object>());
+        List<SysDeptEntity> deptList = sysDeptService.queryList(new HashMap<>());
 
         return deptList;
     }
@@ -40,14 +40,14 @@ public class SysDeptController extends AbstractController {
     @RequestMapping("/select")
     @RequiresPermissions("sys:dept:select")
     public R select() {
-        List<SysDeptEntity> deptList = sysDeptService.queryList(new HashMap<String, Object>());
+        List<SysDeptEntity> deptList = sysDeptService.queryList(new HashMap<>());
 
         //添加一级部门
         if (sysUserService.isSystemAdministrator(getUser())) {
             SysDeptEntity root = new SysDeptEntity();
-            root.setDeptId(0L);
+            root.setDeptKey("0");
             root.setName("一级部门");
-            root.setParentId(-1L);
+            root.setParentKey("");
             root.setOpen(true);
             deptList.add(root);
         }
@@ -61,33 +61,28 @@ public class SysDeptController extends AbstractController {
     @RequestMapping("/info")
     @RequiresPermissions("sys:dept:list")
     public R info() {
-        long deptId = 0;
+        String deptKey = "";
         if (sysUserService.isSystemAdministrator(getUser())) {
-            List<SysDeptEntity> deptList = sysDeptService.queryList(new HashMap<String, Object>());
-            Long parentId = null;
+            List<SysDeptEntity> deptList = sysDeptService.queryList(new HashMap<>());
+            String parentId = null;
             for (SysDeptEntity sysDeptEntity : deptList) {
                 if (parentId == null) {
-                    parentId = sysDeptEntity.getParentId();
+                    parentId = sysDeptEntity.getParentKey();
                     continue;
                 }
-
-                if (parentId > sysDeptEntity.getParentId().longValue()) {
-                    parentId = sysDeptEntity.getParentId();
-                }
             }
-            deptId = parentId;
+            deptKey = parentId;
         }
-
-        return R.ok().put("deptId", deptId);
+        return R.ok().put("deptKey", deptKey);
     }
 
     /**
      * 信息
      */
-    @RequestMapping("/info/{deptId}")
+    @RequestMapping("/info/{deptKey}")
     @RequiresPermissions("sys:dept:info")
-    public R info(@PathVariable("deptId") Long deptId) {
-        SysDeptEntity dept = sysDeptService.selectById(deptId);
+    public R info(@PathVariable("deptKey") String deptKey) {
+        SysDeptEntity dept = sysDeptService.getByDeptKey(deptKey);
         return R.ok().put("dept", dept);
     }
 
@@ -116,13 +111,13 @@ public class SysDeptController extends AbstractController {
      */
     @RequestMapping("/delete")
     @RequiresPermissions("sys:dept:delete")
-    public R delete(long deptId) {
+    public R delete(String deptKey) {
         //判断是否有子部门
-        List<Long> deptList = sysDeptService.queryDetpIdList(deptId);
+        List<String> deptList = sysDeptService.getByParentKey(deptKey);
         if (deptList.size() > 0) {
             return R.error("请先删除子部门");
         }
-        sysDeptService.deleteById(deptId);
+        sysDeptService.deleteById(deptKey);
         return R.ok();
     }
 }

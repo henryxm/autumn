@@ -33,8 +33,8 @@ public class ShiroUtils {
         return (SysUserEntity) SecurityUtils.getSubject().getPrincipal();
     }
 
-    public static Long getUserId() {
-        return getUserEntity().getUserId();
+    public static String getUserUuid() {
+        return getUserEntity().getUuid();
     }
 
     public static void setSessionAttribute(Object key, Object value) {

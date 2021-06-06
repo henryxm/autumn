@@ -23,8 +23,6 @@ public class SysDeptService extends ServiceImpl<SysDeptDao, SysDeptEntity> imple
     @Autowired
     private SysDeptDao sysDeptDao;
 
-    Map<String, SysDeptEntity> cache = new HashMap<>();
-
     private static final String NULL = null;
 
     public static final String Department_System_Administrator = "Department:System:Administrator";
@@ -48,14 +46,8 @@ public class SysDeptService extends ServiceImpl<SysDeptDao, SysDeptEntity> imple
             temp = map[1];
             if (StringUtils.isNotEmpty(temp)) {
                 sysDeptEntity.setParentKey(temp);
-                SysDeptEntity parent = cache.get(temp);
-                Long dID = 0L;
-                if (null != parent)
-                    dID = parent.getDeptId();
-                sysDeptEntity.setParentId(dID);
             } else {
                 sysDeptEntity.setParentKey("");
-                sysDeptEntity.setParentId(0L);
             }
             temp = map[2];
             if (NULL != temp)
@@ -70,13 +62,12 @@ public class SysDeptService extends ServiceImpl<SysDeptDao, SysDeptEntity> imple
             if (NULL != temp)
                 sysDeptEntity.setRemark(temp);
             sysDeptDao.insert(sysDeptEntity);
-            cache.put(sysDeptEntity.getDeptKey(), sysDeptEntity);
         }
     }
 
-    public void save(SysDeptEntity dept){
-        if (null != dept.getParentId()) {
-            SysDeptEntity parent = selectById(dept.getParentId());
+    public void save(SysDeptEntity dept) {
+        if (null != dept.getParentKey()) {
+            SysDeptEntity parent = getByDeptKey(dept.getParentKey());
             if (null != parent)
                 dept.setParentKey(parent.getDeptKey());
             else
@@ -89,12 +80,7 @@ public class SysDeptService extends ServiceImpl<SysDeptDao, SysDeptEntity> imple
     }
 
     public SysDeptEntity getByDeptKey(String deptKey) {
-        SysDeptEntity sysDeptEntity = cache.get(deptKey);
-        if (null == sysDeptEntity) {
-            sysDeptEntity = baseMapper.getByDeptKey(deptKey);
-            cache.put(deptKey, sysDeptEntity);
-        }
-        return sysDeptEntity;
+        return baseMapper.getByDeptKey(deptKey);
     }
 
     @DataFilter(subDept = true, user = false)
@@ -104,7 +90,7 @@ public class SysDeptService extends ServiceImpl<SysDeptDao, SysDeptEntity> imple
                         .addFilterIfNeed(params.get(Constant.SQL_FILTER) != null, (String) params.get(Constant.SQL_FILTER)));
 
         for (SysDeptEntity sysDeptEntity : deptList) {
-            SysDeptEntity parentDeptEntity = this.selectById(sysDeptEntity.getParentId());
+            SysDeptEntity parentDeptEntity = getByDeptKey(sysDeptEntity.getParentKey());
             if (parentDeptEntity != null) {
                 sysDeptEntity.setParentName(parentDeptEntity.getName());
             }
@@ -112,32 +98,29 @@ public class SysDeptService extends ServiceImpl<SysDeptDao, SysDeptEntity> imple
         return deptList;
     }
 
-    public List<Long> queryDetpIdList(Long parentId) {
-        return baseMapper.queryDetpIdList(parentId);
+    public List<String> getByParentKey(String parentKey) {
+        return baseMapper.getByParentKey(parentKey);
     }
 
-    public List<Long> getSubDeptIdList(Long deptId) {
+    public List<String> getSubDeptKeys(String deptKey) {
         //部门及子部门ID列表
-        List<Long> deptIdList = new ArrayList<>();
-
+        List<String> deptIdList = new ArrayList<>();
         //获取子部门ID
-        List<Long> subIdList = queryDetpIdList(deptId);
+        List<String> subIdList = getByParentKey(deptKey);
         getDeptTreeList(subIdList, deptIdList);
-
         return deptIdList;
     }
 
     /**
      * 递归
      */
-    private void getDeptTreeList(List<Long> subIdList, List<Long> deptIdList) {
-        for (Long deptId : subIdList) {
-            List<Long> list = queryDetpIdList(deptId);
+    private void getDeptTreeList(List<String> subKeys, List<String> deptKeys) {
+        for (String deptKey : subKeys) {
+            List<String> list = getByParentKey(deptKey);
             if (list.size() > 0) {
-                getDeptTreeList(list, deptIdList);
+                getDeptTreeList(list, deptKeys);
             }
-
-            deptIdList.add(deptId);
+            deptKeys.add(deptKey);
         }
     }
 }

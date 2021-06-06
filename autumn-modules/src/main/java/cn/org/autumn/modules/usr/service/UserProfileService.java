@@ -59,8 +59,6 @@ public class UserProfileService extends UserProfileServiceGen implements LoopJob
     public String[][] getLanguageItems() {
         String[][] items = new String[][]{
                 {"usr_userprofile_table_comment", "用户信息", "User profile"},
-                {"usr_userprofile_column_user_id", "用户ID", "User ID"},
-                {"usr_userprofile_column_sys_user_id", "系统用户ID", "System user ID"},
                 {"usr_userprofile_column_uuid", "UUID", "UUID"},
                 {"usr_userprofile_column_open_id", "OPENID", "OPENID"},
                 {"usr_userprofile_column_union_id", "UNIONID", "UNIONID"},
@@ -75,11 +73,10 @@ public class UserProfileService extends UserProfileServiceGen implements LoopJob
     }
 
     public UserProfileEntity from(SysUserEntity sysUserEntity, String password, UserProfile merge) {
-        UserProfileEntity userProfileEntity = baseMapper.getBySysUserId(sysUserEntity.getUserId());
+        UserProfileEntity userProfileEntity = baseMapper.getByUuid(sysUserEntity.getUuid());
         if (null == userProfileEntity) {
             userProfileEntity = new UserProfileEntity();
             userProfileEntity.setPassword(password);
-            userProfileEntity.setSysUserId(sysUserEntity.getUserId());
             userProfileEntity.setCreateTime(new Date());
             userProfileEntity.setNickname(sysUserEntity.getUsername());
             userProfileEntity.setUsername(sysUserEntity.getUsername());
@@ -120,25 +117,6 @@ public class UserProfileService extends UserProfileServiceGen implements LoopJob
         return baseMapper.selectOne(userEntity);
     }
 
-    public Map<String, Object> login(LoginForm form) {
-        UserProfileEntity user = queryByMobile(form.getMobile());
-        Assert.isNull(user, "手机号或密码错误");
-
-        //密码错误
-        if (!user.getPassword().equals(DigestUtils.sha256Hex(form.getPassword()))) {
-            throw new AException("手机号或密码错误");
-        }
-
-        //获取登录token
-        UserTokenEntity tokenEntity = userTokenService.createToken(user.getUserId());
-
-        Map<String, Object> map = new HashMap<>(2);
-        map.put("token", tokenEntity.getToken());
-        map.put("expire", tokenEntity.getExpireTime().getTime() - System.currentTimeMillis());
-
-        return map;
-    }
-
     public void login(UserProfile userProfile) {
         boolean isLogin = ShiroUtils.isLogin();
         if (!isLogin) {
@@ -147,7 +125,6 @@ public class UserProfileService extends UserProfileServiceGen implements LoopJob
                 sysUserEntity = sysUserService.getByUsername("admin");
                 if (null != sysUserEntity) {
                     if (userProfile.getUuid().equalsIgnoreCase(sysUserEntity.getUuid())) {
-
                         UserProfileEntity userProfileEntity = baseMapper.getByUuid(sysUserEntity.getUuid());
                         if (null != userProfileEntity) {
                             userProfileEntity.setUuid(userProfile.getUuid());
@@ -170,7 +147,7 @@ public class UserProfileService extends UserProfileServiceGen implements LoopJob
                 userProfileEntity = from(sysUserEntity, randomPassword, userProfile);
             }
             if (null == sysUserEntity)
-                sysUserEntity = sysUserService.selectById(userProfileEntity.getSysUserId());
+                sysUserEntity = sysUserService.getByUuid(userProfileEntity.getUuid());
             sysUserService.login(new OauthUsernameToken(sysUserEntity.getUuid()));
         }
     }

@@ -61,7 +61,7 @@ public class SysMenuController extends AbstractController {
      */
     @RequestMapping("/nav")
     public R nav(HttpServletRequest request) {
-        List<SysMenuEntity> menuList = sysMenuService.getUserMenuList(getUserId());
+        List<SysMenuEntity> menuList = sysMenuService.getUserMenuList(getUserUuid());
         Locale locale = LanguageInterceptor.getLocale(request);
         Map<String, String> language = languageService.getLanguage(locale);
         Map<String, SuperPositionModelEntity> spms = superPositionModelService.getSpmListForResourceID();
@@ -81,12 +81,11 @@ public class SysMenuController extends AbstractController {
     public List<SysMenuEntity> list() {
         List<SysMenuEntity> menuList = sysMenuService.selectList(null);
         for (SysMenuEntity sysMenuEntity : menuList) {
-            SysMenuEntity parentMenuEntity = sysMenuService.selectById(sysMenuEntity.getParentId());
+            SysMenuEntity parentMenuEntity = sysMenuService.getByMenuKey(sysMenuEntity.getParentKey());
             if (parentMenuEntity != null) {
                 sysMenuEntity.setParentName(parentMenuEntity.getName());
             }
         }
-
         return menuList;
     }
 
@@ -100,10 +99,10 @@ public class SysMenuController extends AbstractController {
         List<SysMenuEntity> menuList = sysMenuService.queryNotButtonList();
         //添加顶级菜单
         SysMenuEntity root = new SysMenuEntity();
-        root.setMenuId(0L);
+        root.setMenuKey("0");
         root.setLanguageName("sys_string_root_menu");
         root.setName("一级菜单");
-        root.setParentId(-1L);
+        root.setParentKey("-1");
         root.setOpen(true);
         menuList.add(root);
         Locale locale = LanguageInterceptor.getLocale(request);
@@ -120,10 +119,10 @@ public class SysMenuController extends AbstractController {
     /**
      * 菜单信息
      */
-    @RequestMapping("/info/{menuId}")
+    @RequestMapping("/info/{menuKey}")
     @RequiresPermissions("sys:menu:info")
-    public R info(@PathVariable("menuId") Long menuId) {
-        SysMenuEntity menu = sysMenuService.selectById(menuId);
+    public R info(@PathVariable("menuKey") String menuKey) {
+        SysMenuEntity menu = sysMenuService.getByMenuKey(menuKey);
         return R.ok().put("menu", menu);
     }
 
@@ -163,18 +162,15 @@ public class SysMenuController extends AbstractController {
     @SysLog("删除菜单")
     @RequestMapping("/delete")
     @RequiresPermissions("sys:menu:delete")
-    public R delete(long menuId) {
-        if (menuId <= 31) {
-            return R.error("系统菜单，不能删除");
-        }
+    public R delete(String menuKey) {
 
         //判断是否有子菜单或按钮
-        List<SysMenuEntity> menuList = sysMenuService.queryListParentId(menuId);
+        List<SysMenuEntity> menuList = sysMenuService.getByParentKey(menuKey);
         if (menuList.size() > 0) {
             return R.error("请先删除子菜单或按钮");
         }
 
-        sysMenuService.delete(menuId);
+        sysMenuService.delete(menuKey);
 
         return R.ok();
     }
@@ -187,7 +183,7 @@ public class SysMenuController extends AbstractController {
             throw new AException("菜单名称不能为空");
         }
 
-        if (menu.getParentId() == null) {
+        if (StringUtils.isEmpty(menu.getParentKey())) {
             throw new AException("上级菜单不能为空");
         }
 
@@ -200,8 +196,8 @@ public class SysMenuController extends AbstractController {
 
         //上级菜单类型
         int parentType = Constant.MenuType.CATALOG.getValue();
-        if (menu.getParentId() != 0) {
-            SysMenuEntity parentMenu = sysMenuService.selectById(menu.getParentId());
+        if (StringUtils.isNotEmpty(menu.getParentKey())) {
+            SysMenuEntity parentMenu = sysMenuService.getByMenuKey(menu.getParentKey());
             parentType = parentMenu.getType();
         }
 

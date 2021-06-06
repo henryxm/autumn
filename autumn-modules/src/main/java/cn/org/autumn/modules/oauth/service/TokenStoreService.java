@@ -71,14 +71,13 @@ public class TokenStoreService extends TokenStoreServiceGen {
     }
 
     public TokenStoreEntity findByUser(SysUserEntity sysUserEntity) {
-        return findByUserId(sysUserEntity.getUserId());
+        return findByUserUuid(sysUserEntity.getUuid());
     }
 
     public TokenStoreEntity saveOrUpdate(SysUserEntity sysUserEntity, String accessToken, String refreshToken, String authCode, Long accessTokenExpiredIn, Long refreshTokenExpiredIn) {
         TokenStoreEntity tokenStoreEntity = findByUser(sysUserEntity);
         if (null == tokenStoreEntity) {
             tokenStoreEntity = new TokenStoreEntity();
-            tokenStoreEntity.setUserId(sysUserEntity.getUserId());
             tokenStoreEntity.setUserUuid(sysUserEntity.getUuid());
         }
         if (null == tokenStoreEntity.getCreateTime())
@@ -164,7 +163,7 @@ public class TokenStoreService extends TokenStoreServiceGen {
     public void load() {
         List<TokenStoreEntity> list = selectByMap(null);
         for (TokenStoreEntity tokenStoreEntity : list) {
-            SysUserEntity sysUserEntity = sysUserService.selectById(tokenStoreEntity.getUserId());
+            SysUserEntity sysUserEntity = sysUserService.selectById(tokenStoreEntity.getUserUuid());
             if (null != sysUserEntity) {
                 Long at = getAccessTokenExpiredIn(tokenStoreEntity);
                 if (at > 0)

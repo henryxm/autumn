@@ -24,7 +24,7 @@ import cn.org.autumn.modules.lan.service.LanguageService;
  *
  * @author Shaohua Xu
  * @email henryxm@163.com
- * @date 2021-01
+ * @date 2021-06
  */
 public class UserTokenServiceGen extends ServiceImpl<UserTokenDao, UserTokenEntity> implements InitFactory.Init {
 
@@ -47,8 +47,8 @@ public class UserTokenServiceGen extends ServiceImpl<UserTokenDao, UserTokenEnti
         if(params.containsKey("id") && null != params.get("id") && StringUtils.isNotEmpty(params.get("id").toString())) {
             condition.put("id", params.get("id"));
         }
-        if(params.containsKey("userId") && null != params.get("userId") && StringUtils.isNotEmpty(params.get("userId").toString())) {
-            condition.put("user_id", params.get("userId"));
+        if(params.containsKey("userUuid") && null != params.get("userUuid") && StringUtils.isNotEmpty(params.get("userUuid").toString())) {
+            condition.put("user_uuid", params.get("userUuid"));
         }
         if(params.containsKey("token") && null != params.get("token") && StringUtils.isNotEmpty(params.get("token").toString())) {
             condition.put("token", params.get("token"));
@@ -123,7 +123,7 @@ public class UserTokenServiceGen extends ServiceImpl<UserTokenDao, UserTokenEnti
         String[][] items = new String[][]{
                 {"usr_usertoken_table_comment", "用户Token"},
                 {"usr_usertoken_column_id", "ID"},
-                {"usr_usertoken_column_user_id", "用户ID"},
+                {"usr_usertoken_column_user_uuid", "用户UUID"},
                 {"usr_usertoken_column_token", "Token"},
                 {"usr_usertoken_column_refresh_token", "Refresh Token"},
                 {"usr_usertoken_column_expire_time", "过期时间"},

@@ -18,9 +18,6 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface UserProfileDao extends BaseMapper<UserProfileEntity> {
 
-    @Select("select * from usr_user_profile where sys_user_id = #{sysUserId} limit 1")
-    UserProfileEntity getBySysUserId(@Param("sysUserId") Long sysUserId);
-
     @Select("select * from usr_user_profile where uuid = #{uuid} limit 1")
     UserProfileEntity getByUuid(@Param("uuid") String uuid);
 

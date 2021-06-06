@@ -2,8 +2,8 @@ $(function () {
     $("#jqGrid").jqGrid({
         url: baseURL + 'sys/user/list',
         datatype: "json",
-        colModel: [			
-			{ label: '${lang.sys_string_user_id}', name: 'userId', index: "user_id", width: 45, key: true },
+        colModel: [
+            { label: '${lang.sys_string_uuid}', name: 'uuid', index: "uuid", width: 75, key: true },
 			{ label: '${lang.sys_string_username}', name: 'username', width: 75 },
             { label: '${lang.sys_string_own_department}', name: 'deptName', sortable: false, width: 75 },
 			{ label: '${lang.sys_string_email}', name: 'email', width: 90 },
@@ -45,9 +45,9 @@ var setting = {
     data: {
         simpleData: {
             enable: true,
-            idKey: "deptId",
-            pIdKey: "parentId",
-            rootPId: -1
+            idKey: "deptKey",
+            pIdKey: "parentKey",
+            rootPId: ""
         },
         key: {
             url:"nourl"
@@ -67,9 +67,9 @@ var vm = new Vue({
         roleList:{},
         user:{
             status:1,
-            deptId:null,
+            deptKey:null,
             deptName:null,
-            roleIdList:[]
+            roleKeys:[]
         }
     },
     methods: {
@@ -80,7 +80,7 @@ var vm = new Vue({
             vm.showList = false;
             vm.title = "${lang.sys_string_add}";
             vm.roleList = {};
-            vm.user = {deptName:null, deptId:null, status:1, roleIdList:[]};
+            vm.user = {deptName:null, deptKey:null, status:1, roleKeys:[]};
 
             //获取角色信息
             this.getRoleList();
@@ -91,7 +91,7 @@ var vm = new Vue({
             //加载部门树
             $.get(baseURL + "sys/dept/list", function(r){
                 ztree = $.fn.zTree.init($("#deptTree"), setting, r);
-                var node = ztree.getNodeByParam("deptId", vm.user.deptId);
+                var node = ztree.getNodeByParam("deptKey", vm.user.deptKey);
                 if(node != null){
                     ztree.selectNode(node);
 
@@ -100,21 +100,21 @@ var vm = new Vue({
             })
         },
         update: function () {
-            var userId = getSelectedRow();
-            if(userId == null){
+            var uuid = getSelectedRow();
+            if(uuid == null){
                 return ;
             }
 
             vm.showList = false;
             vm.title = "${lang.sys_string_change}";
 
-            vm.getUser(userId);
+            vm.getUser(uuid);
             //获取角色信息
             this.getRoleList();
         },
         del: function () {
-            var userIds = getSelectedRows();
-            if(userIds == null){
+            var uuids = getSelectedRows();
+            if(uuids == null){
                 return ;
             }
 
@@ -123,7 +123,7 @@ var vm = new Vue({
                     type: "POST",
                     url: baseURL + "sys/user/delete",
                     contentType: "application/json",
-                    data: JSON.stringify(userIds),
+                    data: JSON.stringify(uuids),
                     success: function(r){
                         if(r.code == 0){
                             alert('${lang.sys_string_success}', function(){
@@ -137,7 +137,7 @@ var vm = new Vue({
             });
         },
         saveOrUpdate: function () {
-            var url = vm.user.userId == null ? "sys/user/save" : "sys/user/update";
+            var url = vm.user.uuid == null ? "sys/user/save" : "sys/user/update";
             $.ajax({
                 type: "POST",
                 url: baseURL + url,
@@ -154,8 +154,8 @@ var vm = new Vue({
                 }
             });
         },
-        getUser: function(userId){
-            $.get(baseURL + "sys/user/info/"+userId, function(r){
+        getUser: function(uuid){
+            $.get(baseURL + "sys/user/info/"+uuid, function(r){
                 vm.user = r.user;
                 vm.user.password = null;
 
@@ -181,7 +181,7 @@ var vm = new Vue({
                 btn1: function (index) {
                     var node = ztree.getSelectedNodes();
                     //选择上级部门
-                    vm.user.deptId = node[0].deptId;
+                    vm.user.deptKey = node[0].deptKey;
                     vm.user.deptName = node[0].name;
 
                     layer.close(index);

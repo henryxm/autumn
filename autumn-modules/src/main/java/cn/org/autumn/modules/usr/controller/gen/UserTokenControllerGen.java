@@ -19,7 +19,7 @@ import cn.org.autumn.utils.R;
  *
  * @author Shaohua Xu
  * @email henryxm@163.com
- * @date 2020-11
+ * @date 2021-06
  */
 public class UserTokenControllerGen {
 

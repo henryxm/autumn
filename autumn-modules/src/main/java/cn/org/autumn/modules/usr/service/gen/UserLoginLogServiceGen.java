@@ -24,7 +24,7 @@ import cn.org.autumn.modules.lan.service.LanguageService;
  *
  * @author Shaohua Xu
  * @email henryxm@163.com
- * @date 2021-01
+ * @date 2021-06
  */
 public class UserLoginLogServiceGen extends ServiceImpl<UserLoginLogDao, UserLoginLogEntity> implements InitFactory.Init {
 
@@ -46,9 +46,6 @@ public class UserLoginLogServiceGen extends ServiceImpl<UserLoginLogDao, UserLog
         Map<String,Object> condition = new HashMap<>();
         if(params.containsKey("id") && null != params.get("id") && StringUtils.isNotEmpty(params.get("id").toString())) {
             condition.put("id", params.get("id"));
-        }
-        if(params.containsKey("userId") && null != params.get("userId") && StringUtils.isNotEmpty(params.get("userId").toString())) {
-            condition.put("user_id", params.get("userId"));
         }
         if(params.containsKey("username") && null != params.get("username") && StringUtils.isNotEmpty(params.get("username").toString())) {
             condition.put("username", params.get("username"));
@@ -120,7 +117,6 @@ public class UserLoginLogServiceGen extends ServiceImpl<UserLoginLogDao, UserLog
         String[][] items = new String[][]{
                 {"usr_userloginlog_table_comment", "登录日志"},
                 {"usr_userloginlog_column_id", "日志ID"},
-                {"usr_userloginlog_column_user_id", "用户ID"},
                 {"usr_userloginlog_column_username", "用户名"},
                 {"usr_userloginlog_column_login_time", "登录时间"},
                 {"usr_userloginlog_column_logout_time", "登出时间"},
