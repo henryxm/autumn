@@ -155,7 +155,7 @@ public class SysMenuService extends ServiceImpl<SysMenuDao, SysMenuEntity> imple
     public boolean put(SysMenuEntity sysMenuEntity) {
         SysMenuEntity parent = getByMenuKey(sysMenuEntity.getParentKey());
         if (null != parent)
-            sysMenuEntity.setParentKey(parent.getParentKey());
+            sysMenuEntity.setParentKey(parent.getMenuKey());
         else
             sysMenuEntity.setParentKey("");
         cache.put(sysMenuEntity.getMenuKey(), sysMenuEntity);
