@@ -4,7 +4,7 @@ var setting = {
             enable: true,
             idKey: "menuKey",
             pIdKey: "parentKey",
-            rootPId: -1
+            rootPId: "-1"
         },
         key: {
             url:"nourl"
@@ -20,7 +20,7 @@ var vm = new Vue({
         title: null,
         menu:{
             parentName:null,
-            parentKey:0,
+            parentKey:"-1",
             type:1,
             orderNum:0
         }
@@ -84,7 +84,7 @@ var vm = new Vue({
                 return ;
             }
 
-            var url = vm.menu.menuKey == null ? "sys/menu/save" : "sys/menu/update";
+            var url = "sys/menu/save";
             $.ajax({
                 type: "POST",
                 url:  baseURL + url,
@@ -115,7 +115,7 @@ var vm = new Vue({
                 btn1: function (index) {
                     var node = ztree.getSelectedNodes();
                     //选择上级菜单
-                    vm.menu.parentId = node[0].menuId;
+                    vm.menu.parentKey = node[0].menuKey;
                     vm.menu.parentName = node[0].name;
 
                     layer.close(index);

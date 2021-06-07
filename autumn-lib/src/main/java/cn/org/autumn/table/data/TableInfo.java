@@ -27,6 +27,8 @@ public class TableInfo {
     private String className;
     //类名(第一个字母小写)，如：sys_user => sysUser
     private String classname;
+    //英语名
+    private String enLang;
 
     private List<UniqueKeyInfo> uniqueKeyInfos;
     private List<IndexInfo> indexInfos;
@@ -53,6 +55,10 @@ public class TableInfo {
         return WordUtils.capitalizeFully(columnName, new char[]{'_'}).replace("_", "");
     }
 
+    public static String columnToLang(String columnName) {
+        return WordUtils.capitalizeFully(columnName, new char[]{'_'}).replace("_", " ");
+    }
+
     /**
      * 表名转换成Java类名, 去掉表前缀
      */
@@ -61,6 +67,13 @@ public class TableInfo {
             tableName = tableName.replaceFirst(tablePrefix, "");
         }
         return columnToJava(tableName);
+    }
+
+    public static String tableToLang(String tableName, String tablePrefix) {
+        if (StringUtils.isNotBlank(tablePrefix) && tableName.startsWith(tablePrefix)) {
+            tableName = tableName.replaceFirst(tablePrefix, "");
+        }
+        return columnToLang(tableName);
     }
 
     public static TableInfo from(Class<?> clazz) {
@@ -266,6 +279,7 @@ public class TableInfo {
     public void setName(String name) {
         this.name = name;
         setClassName(tableToJava(this.name, prefix));
+        setEnLang(tableToLang(this.name, prefix));
         setClassname(StringUtils.uncapitalize(className));
     }
 
@@ -299,6 +313,14 @@ public class TableInfo {
 
     public void setClassname(String classname) {
         this.classname = classname;
+    }
+
+    public String getEnLang() {
+        return enLang;
+    }
+
+    public void setEnLang(String enLang) {
+        this.enLang = enLang;
     }
 
     public String getPrefix() {

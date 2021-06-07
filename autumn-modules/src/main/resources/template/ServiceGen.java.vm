@@ -108,9 +108,9 @@ public class ${className}ServiceGen extends ServiceImpl<${className}Dao, ${class
 
     private String[][] getLanguageItemsInternal() {
         String[][] items = new String[][]{
-                {"${moduleName}_${pathName}_table_comment", "$comment"},
+                {"${moduleName}_${pathName}_table_comment", "$comment", "$enLang"},
         #foreach ($column in $columns)
-                {"${moduleName}_${pathName}_column_$column.name", "$column.comment"},
+                {"${moduleName}_${pathName}_column_$column.name", "$column.comment", "$column.enLang"},
         #end
         };
         return items;

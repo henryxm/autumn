@@ -25,7 +25,7 @@ public class GenTypeService extends GenTypeServiceGen {
 
     public void init() {
         String[][] mapping = new String[][]{
-                {null, "mysql", "cn.org.autumn", "cn.org.autumn.modules", "sys", "系统管理", "1", "Shaohua Xu", "henryxm@163.com", "tb",
+                {null, "mysql", "cn.org.autumn", "cn.org.autumn.modules", "sys", "系统管理", SysMenuService.getSystemManagementMenuKey(), "Shaohua Xu", "henryxm@163.com", "sys",
                         "tinyint=Integer,smallint=Integer,mediumint=Integer,int=Integer,integer=Integer,bigint=Long,float=Float," +
                                 "double=Double,decimal=BigDecimal,bit=Boolean,char=String,varchar=String,tinytext=String,text=String," +
                                 "mediumtext=String,longtext=String,date=Date,datetime=Date,timestamp=Date"},

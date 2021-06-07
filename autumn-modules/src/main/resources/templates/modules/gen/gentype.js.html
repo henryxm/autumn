@@ -45,9 +45,9 @@ var setting = {
     data: {
         simpleData: {
             enable: true,
-            idKey: "menuId",
-            pIdKey: "parentId",
-            rootPId: -1
+            idKey: "menuKey",
+            pIdKey: "parentKey",
+            rootPId: "-1"
         },
         key: {
             url:"nourl"
@@ -64,7 +64,7 @@ var vm = new Vue({
 		title: null,
 		genType: {
             moduleText:null,
-            moduleId:0,
+            moduleId:"",
 		},
 	},
 	methods: {
@@ -72,7 +72,7 @@ var vm = new Vue({
             //加载菜单树
             $.get(baseURL + "sys/menu/select", function(r){
                 ztree = $.fn.zTree.init($("#menuTree"), setting, r.menuList);
-                var node = ztree.getNodeByParam("menuId", vm.genType.moduleId);
+                var node = ztree.getNodeByParam("menuKey", vm.genType.moduleId);
                 ztree.selectNode(node);
                 vm.genType.moduleText = node.name;
             })
@@ -188,7 +188,7 @@ var vm = new Vue({
                 btn1: function (index) {
                     var node = ztree.getSelectedNodes();
                     //选择上级菜单
-                    vm.genType.moduleId = node[0].menuId;
+                    vm.genType.moduleId = node[0].menuKey;
                     vm.genType.moduleText = node[0].name;
 
                     layer.close(index);

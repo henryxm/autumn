@@ -83,6 +83,18 @@ public class SysMenuEntity implements Serializable {
     @TableField(exist = false)
     private List<?> list;
 
+    public void copy(SysMenuEntity entity){
+        this.icon = entity.icon;
+        this.name = entity.name;
+        this.orderNum = entity.orderNum;
+        this.parentKey = entity.parentKey;
+        this.parentName = entity.parentName;
+        this.perms = entity.perms;
+        this.type = entity.type;
+        this.url = entity.url;
+        this.languageName = entity.languageName;
+    }
+
     public Long getMenuId() {
         return menuId;
     }

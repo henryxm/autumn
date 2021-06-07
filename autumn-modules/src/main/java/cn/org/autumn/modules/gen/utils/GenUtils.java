@@ -53,6 +53,7 @@ public class GenUtils {
         map.put("pk", tableInfo.getPk());
         map.put("className", tableInfo.getClassName());
         map.put("classname", tableInfo.getClassname());
+        map.put("enLang", tableInfo.getEnLang());
         map.put("pathName", tableInfo.getClassname().toLowerCase());
         map.put("columns", tableInfo.getColumns());
         map.put("index", tableInfo.buildIndexKey());

@@ -73,7 +73,7 @@ public class ${upperModuleName}MenuGen implements InitFactory.Init {
 
     private String[][] getLanguageItemsInternal() {
         String[][] items = new String[][]{
-                {${moduleName}_menu + "_text", "${moduleText}"},
+                {${moduleName}_menu + "_text", "${moduleText}", "${upperModuleName}"},
         };
         return items;
     }

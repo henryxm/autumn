@@ -75,6 +75,10 @@ public class ColumnInfo {
      */
     private String comment;
 
+    /**
+     * 英语
+     */
+    private String enLang;
 
     //属性名称(第一个字母大写)，如：user_name => UserName
     private String attrName;
@@ -132,34 +136,34 @@ public class ColumnInfo {
     private String buildAnnotation() {
         StringBuilder sb = new StringBuilder();
         sb.append("@Column(");
-        String divider = "";
+        String divider = "" ;
         if (this.isKey) {
             sb.append("isKey = true");
-            divider = ", ";
+            divider = ", " ;
         }
         if (!"varchar".equalsIgnoreCase(type)) {
             sb.append(divider + "type = \"" + type + "\"");
-            divider = ", ";
+            divider = ", " ;
         }
         if (length != 255 && length != 0) {
             sb.append(divider + "length = " + length);
-            divider = ", ";
+            divider = ", " ;
         }
         if (!isNull) {
             sb.append(divider + "isNull = false");
-            divider = ", ";
+            divider = ", " ;
         }
         if (isAutoIncrement) {
             sb.append(divider + "isAutoIncrement = true");
-            divider = ", ";
+            divider = ", " ;
         }
         if (decimalLength > 0) {
             sb.append(divider + "decimalLength = " + decimalLength);
-            divider = ", ";
+            divider = ", " ;
         }
         if (null != defaultValue && !"NULL".equalsIgnoreCase(defaultValue)) {
             sb.append(divider + "defaultValue = \"" + defaultValue + "\"");
-            divider = ", ";
+            divider = ", " ;
         }
 
         if (!StringUtils.isEmpty(comment)) {
@@ -179,7 +183,7 @@ public class ColumnInfo {
     }
 
     public static void main(String[] args) {
-        String dd = "bigint(20)";
+        String dd = "bigint(20)" ;
         String[] tt = dd.split("\\(");
         String type = tt[0];
         String len = tt[1].split("\\)")[0];
@@ -188,6 +192,10 @@ public class ColumnInfo {
 
     public static String columnToJava(String columnName) {
         return WordUtils.capitalizeFully(columnName, new char[]{'_'}).replace("_", "");
+    }
+
+    public static String columnToEnLang(String columnName) {
+        return WordUtils.capitalizeFully(columnName, new char[]{'_'}).replace("_", " ");
     }
 
     public void initFrom(Field field, UniqueKeys uniqueKeys, UniqueKey uniqueKey) {
@@ -275,6 +283,14 @@ public class ColumnInfo {
             this.comment = comment.trim();
     }
 
+    public String getEnLang() {
+        return enLang;
+    }
+
+    public void setEnLang(String enLang) {
+        this.enLang = enLang;
+    }
+
     public String getName() {
         return name;
     }
@@ -282,6 +298,7 @@ public class ColumnInfo {
     public void setName(String name) {
         this.name = name;
         setAttrName(columnToJava(name));
+        setEnLang(columnToEnLang(name));
         setAttrname((name.startsWith("_") ? "_" : "") + StringUtils.uncapitalize(attrName));
     }
 

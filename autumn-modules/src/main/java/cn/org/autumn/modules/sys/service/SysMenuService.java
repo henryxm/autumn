@@ -27,8 +27,6 @@ public class SysMenuService extends ServiceImpl<SysMenuDao, SysMenuEntity> imple
 
     private static final String NULL = null;
 
-    private Map<String, SysMenuEntity> cache = new HashMap<>();
-
     public static String getMenuKey(String namespace, String menuKey) {
         return "Menu:" + namespace + ":" + menuKey;
     }
@@ -141,15 +139,7 @@ public class SysMenuService extends ServiceImpl<SysMenuDao, SysMenuEntity> imple
     }
 
     public SysMenuEntity getByMenuKey(String menuKey) {
-        if (StringUtils.isEmpty(menuKey))
-            return null;
-        SysMenuEntity sysMenuEntity = cache.get(menuKey);
-        if (null == sysMenuEntity) {
-            sysMenuEntity = baseMapper.getByMenuKey(menuKey);
-            if (null != sysMenuEntity)
-                cache.put(menuKey, sysMenuEntity);
-        }
-        return sysMenuEntity;
+        return baseMapper.getByMenuKey(menuKey);
     }
 
     public boolean put(SysMenuEntity sysMenuEntity) {
@@ -158,8 +148,12 @@ public class SysMenuService extends ServiceImpl<SysMenuDao, SysMenuEntity> imple
             sysMenuEntity.setParentKey(parent.getMenuKey());
         else
             sysMenuEntity.setParentKey("");
-        cache.put(sysMenuEntity.getMenuKey(), sysMenuEntity);
-        return insertOrUpdate(sysMenuEntity);
+        SysMenuEntity current = getByMenuKey(sysMenuEntity.getMenuKey());
+        if (null != current) {
+            current.copy(sysMenuEntity);
+        } else
+            current = sysMenuEntity;
+        return insertOrUpdate(current);
     }
 
     //{0:菜单名字,1:URL,2:权限,3:菜单类型,4:ICON,5:排序,6:MenuKey,7:ParentKey,8:Language}
@@ -242,9 +236,13 @@ public class SysMenuService extends ServiceImpl<SysMenuDao, SysMenuEntity> imple
 
     public void delete(String menuKey) {
         //删除菜单
-        this.deleteById(menuKey);
+        this.deleteByMenuKeys(new String[]{menuKey});
         //删除菜单与角色关联
         sysRoleMenuService.deleteByMap(new MapUtils().put("menu_key", menuKey));
+    }
+
+    public int deleteByMenuKeys(String[] menuKeys) {
+        return baseMapper.deleteByMenuKeys(menuKeys);
     }
 
     /**

@@ -99,7 +99,7 @@ public class SysMenuController extends AbstractController {
         List<SysMenuEntity> menuList = sysMenuService.queryNotButtonList();
         //添加顶级菜单
         SysMenuEntity root = new SysMenuEntity();
-        root.setMenuKey("0");
+        root.setMenuKey("");
         root.setLanguageName("sys_string_root_menu");
         root.setName("一级菜单");
         root.setParentKey("-1");
@@ -135,24 +135,9 @@ public class SysMenuController extends AbstractController {
     public R save(@RequestBody SysMenuEntity menu) {
         //数据校验
         verifyForm(menu);
-
-        sysMenuService.insert(menu);
-
-        return R.ok();
-    }
-
-    /**
-     * 修改
-     */
-    @SysLog("修改菜单")
-    @RequestMapping("/update")
-    @RequiresPermissions("sys:menu:update")
-    public R update(@RequestBody SysMenuEntity menu) {
-        //数据校验
-        verifyForm(menu);
-
-        sysMenuService.updateById(menu);
-
+        if (null == menu.getParentKey())
+            menu.setParentKey("");
+        sysMenuService.insertOrUpdate(menu);
         return R.ok();
     }
 
@@ -183,7 +168,7 @@ public class SysMenuController extends AbstractController {
             throw new AException("菜单名称不能为空");
         }
 
-        if (StringUtils.isEmpty(menu.getParentKey())) {
+        if (null != menu.getParentKey()) {
             throw new AException("上级菜单不能为空");
         }
 
