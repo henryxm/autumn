@@ -196,9 +196,6 @@ public class UserProfileService extends UserProfileServiceGen implements LoopJob
                         if (null != ex) {
                             userProfileEntity.setNickname(ex.getNickname());
                             userProfileEntity.setMobile(ex.getMobile());
-                            userProfileEntity.setUserId(ex.getUserId());
-                        } else {
-                            userProfileEntity.setUserId(null);
                         }
                         insertOrUpdate(userProfileEntity);
                     }

@@ -114,16 +114,10 @@ public class QuerySql {
             appendCommon(columnInfo, sb);
             if (columnInfo.isKey())
                 sb.append(" PRIMARY KEY");
-            if (columnInfo.isKey() && columnInfo.isUnique()) {
-                sb.append(",");
-            }
-            if (columnInfo.isUnique())
-                sb.append(" UNIQUE KEY");
             sb.append(";");
         }
         return sb.toString();
     }
-
 
     public String dropColumn(final Map<String, Map<TableInfo, String>> map) {
         StringBuilder stringBuilder = new StringBuilder();
@@ -178,14 +172,14 @@ public class QuerySql {
             if (!IndexTypeEnum.NORMAL.toString().equals(indexInfo.getIndexType()))
                 stringBuilder.append(indexInfo.getIndexType() + " ");
             stringBuilder.append("INDEX ");
-            stringBuilder.append("`" + HumpConvert.HumpToUnderline(indexInfo.getName()) + "` (");
+            stringBuilder.append("`" + indexInfo.getName() + "` (");
             Iterator<Map.Entry<String, Integer>> iterator = indexInfo.getFields().entrySet().iterator();
             while (iterator.hasNext()) {
                 Map.Entry<String, Integer> kv = iterator.next();
                 if (kv.getValue() > 0)
-                    stringBuilder.append("`" + HumpConvert.HumpToUnderline(kv.getKey()) + "`(" + kv.getValue() + ")");
+                    stringBuilder.append("`" + kv.getKey() + "`(" + kv.getValue() + ")");
                 else
-                    stringBuilder.append("`" + HumpConvert.HumpToUnderline(kv.getKey()) + "`");
+                    stringBuilder.append("`" + kv.getKey() + "`");
                 if (iterator.hasNext()) {
                     stringBuilder.append(",");
                 }

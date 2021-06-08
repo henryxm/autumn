@@ -1,6 +1,5 @@
 package cn.org.autumn.modules.usr.entity;
 
-import cn.org.autumn.table.data.DataType;
 import com.baomidou.mybatisplus.annotations.*;
 import cn.org.autumn.table.annotation.*;
 
@@ -20,21 +19,17 @@ import java.util.Objects;
 public class UserProfileEntity implements Serializable {
     private static final long serialVersionUID = 1L;
 
-    @TableId
-    @Column(isKey = true, type = DataType.BIGINT, length = 20, isNull = false, isAutoIncrement = true, comment = "id")
-    private Long userId;
-
-    @Column(comment = "UUID", length = 50, isUnique = true)
+    @Column(isKey = true, comment = "UUID", length = 50, isUnique = true)
     private String uuid;
     /**
      * OPENID
      */
-    @Column(comment = "OPENID")
+    @Column(comment = "OPENID", length = 50)
     private String openId;
     /**
      * UNIONID
      */
-    @Column(comment = "UNIONID")
+    @Column(comment = "UNIONID", length = 50)
     private String unionId;
     /**
      * 头像
@@ -66,14 +61,6 @@ public class UserProfileEntity implements Serializable {
      */
     @Column(type = "datetime", comment = "创建时间")
     private Date createTime;
-
-    public Long getUserId() {
-        return userId;
-    }
-
-    public void setUserId(Long userId) {
-        this.userId = userId;
-    }
 
     /**
      * 设置：UUID

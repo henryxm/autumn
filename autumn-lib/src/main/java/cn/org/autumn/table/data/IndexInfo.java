@@ -1,6 +1,7 @@
 package cn.org.autumn.table.data;
 
 import cn.org.autumn.table.annotation.*;
+import cn.org.autumn.table.utils.HumpConvert;
 
 import java.lang.reflect.Field;
 import java.util.*;
@@ -96,7 +97,8 @@ public class IndexInfo {
         fields = new HashMap<>();
         if (indexKey.fields().length > 0) {
             for (IndexField indexKeyField : indexKey.fields()) {
-                fields.put(indexKeyField.field(), indexKeyField.length());
+                String n = HumpConvert.HumpToUnderline(indexKeyField.field());
+                fields.put(n, indexKeyField.length());
             }
         }
     }
@@ -105,15 +107,21 @@ public class IndexInfo {
         fields = new HashMap<>();
         this.name = index.name();
         if (name.isEmpty() && null != field) {
-            this.name = field.getName();
-            fields.put(field.getName(), 0);
+            name = HumpConvert.HumpToUnderline(field.getName());
+            int length = 0;
+            Column column = field.getAnnotation(Column.class);
+            if (null != column) {
+                length = column.length();
+            }
+            fields.put(name, length);
         }
         this.indexMethod = index.indexMethod().toString();
         this.indexType = index.indexType().toString();
         this.comment = index.comment();
         if (index.fields().length > 0) {
             for (IndexField indexKeyField : index.fields()) {
-                fields.put(indexKeyField.field(), indexKeyField.length());
+                String n = HumpConvert.HumpToUnderline(indexKeyField.field());
+                fields.put(n, indexKeyField.length());
             }
         }
     }
@@ -123,8 +131,8 @@ public class IndexInfo {
         this.indexMethod = "BTREE";
         this.indexType = "UNIQUE";
         this.comment = index.comment();
-        this.name = field.getName();
-        fields.put(field.getName(), index.length());
+        this.name = HumpConvert.HumpToUnderline(field.getName());
+        fields.put(name, index.length());
     }
 
     public String getName() {

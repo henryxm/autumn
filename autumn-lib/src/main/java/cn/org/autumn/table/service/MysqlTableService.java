@@ -221,7 +221,6 @@ public class MysqlTableService {
         buildModifyFields(mySqlTypeAndLengthMap, modifyTableMap, dropKeyTableMap, dropUniqueTableMap, addIndexTableMap, tableInfo,
                 modifyFieldList, dropKeyFieldList, dropUniqueFieldList, addIndexList, tableColumnList, fieldMap);
         buildModifyIndex(tableInfo, addIndexTableMap, addIndexList, removeIndexTableMap, removeIndexList);
-
     }
 
     private Collection<IndexInfo> filter(List<IndexInfo> indexInfoList) {
@@ -554,8 +553,8 @@ public class MysqlTableService {
         removeFieldsByMap(removeTableMap);
         // 6. 修改字段类型等
         modifyFieldsByMap(modifyTableMap);
-        addIndexByMap(addIndexTableMap);
         removeIndexByMap(removeIndexTableMap);
+        addIndexByMap(addIndexTableMap);
     }
 
     /**
