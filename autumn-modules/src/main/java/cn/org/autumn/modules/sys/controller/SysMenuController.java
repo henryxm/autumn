@@ -168,7 +168,7 @@ public class SysMenuController extends AbstractController {
             throw new AException("菜单名称不能为空");
         }
 
-        if (null != menu.getParentKey()) {
+        if (null == menu.getParentKey()) {
             throw new AException("上级菜单不能为空");
         }
 
