@@ -2,6 +2,7 @@ package cn.org.autumn.modules.usr.entity;
 
 import com.baomidou.mybatisplus.annotations.*;
 import cn.org.autumn.table.annotation.*;
+import com.baomidou.mybatisplus.enums.IdType;
 
 import java.io.Serializable;
 import java.util.Date;
@@ -19,6 +20,7 @@ import java.util.Objects;
 public class UserProfileEntity implements Serializable {
     private static final long serialVersionUID = 1L;
 
+    @TableId(type = IdType.INPUT)
     @Column(isKey = true, comment = "UUID", length = 50, isUnique = true)
     private String uuid;
     /**
