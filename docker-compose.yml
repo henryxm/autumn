@@ -33,7 +33,7 @@ services:
     image: redis
     restart: always
     container_name: redis
-    command: --appendonly yes
+    command: --appendonly yes --requirepass autumn
     ports:
       - 6379:6379
     volumes:
