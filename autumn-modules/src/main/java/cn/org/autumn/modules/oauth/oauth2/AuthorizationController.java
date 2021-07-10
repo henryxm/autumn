@@ -151,6 +151,14 @@ public class AuthorizationController {
             return error("无效的客户端ID", INVALID_CLIENT, SC_BAD_REQUEST);
         }
 
+        if (null == clientDetailsEntity.getTrusted() || 0 == clientDetailsEntity.getTrusted()) {
+            return error("不受信任的客户端ID", INVALID_CLIENT, SC_BAD_REQUEST);
+        }
+
+        if (null != clientDetailsEntity.getArchived() && 1 == clientDetailsEntity.getArchived()) {
+            return error("客户端ID已归档，不能使用", INVALID_CLIENT, SC_BAD_REQUEST);
+        }
+
         //生成授权码
         String authCode = null;
         String responseType = oAuthzRequest.getParam(OAuth.OAUTH_RESPONSE_TYPE);
@@ -196,6 +204,14 @@ public class AuthorizationController {
         ClientDetailsEntity authClient = clientDetailsService.findByClientId(clientId);
         if (authClient == null) {
             return error("无效的客户端Id", INVALID_CLIENT, SC_BAD_REQUEST);
+        }
+
+        if (null == authClient.getTrusted() || 0 == authClient.getTrusted()) {
+            return error("不受信任的客户端ID", INVALID_CLIENT, SC_BAD_REQUEST);
+        }
+
+        if (null != authClient.getArchived() && 1 == authClient.getArchived()) {
+            return error("客户端ID已归档，不能使用", INVALID_CLIENT, SC_BAD_REQUEST);
         }
 
         //检查客户端安全KEY是否正确
