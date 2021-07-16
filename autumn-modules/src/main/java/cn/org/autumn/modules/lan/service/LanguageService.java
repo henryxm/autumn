@@ -101,13 +101,6 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
         }
     }
 
-    public static void main(String[] args) {
-        Locale locale = Locale.getDefault();
-        String t = locale.toLanguageTag();
-        t = t.replace("-", "_");
-        System.out.println(t);
-    }
-
     public String toLang(Locale locale) {
         if (null == locale)
             return null;
@@ -284,7 +277,6 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
                 updateById(existed);
             }
         }
-        return;
     }
 
     public boolean addLanguageColumnItem(String key, String zhCn) {

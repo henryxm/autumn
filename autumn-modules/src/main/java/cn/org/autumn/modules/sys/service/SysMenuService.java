@@ -8,6 +8,8 @@ import cn.org.autumn.utils.Constant;
 import cn.org.autumn.utils.MapUtils;
 import cn.org.autumn.modules.sys.dao.SysMenuDao;
 import cn.org.autumn.modules.sys.entity.SysMenuEntity;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
@@ -16,6 +18,9 @@ import java.util.*;
 
 @Service
 public class SysMenuService extends ServiceImpl<SysMenuDao, SysMenuEntity> implements InitFactory.Init {
+
+    Logger log = LoggerFactory.getLogger(getClass());
+
     @Autowired
     private SysUserService sysUserService;
 
@@ -108,8 +113,12 @@ public class SysMenuService extends ServiceImpl<SysMenuDao, SysMenuEntity> imple
     }
 
     public void put(Object... objects) {
-        boolean update = sysConfigService.isUpdateMenu();
-        put(update, objects);
+        try {
+            boolean update = sysConfigService.isUpdateMenu();
+            put(update, objects);
+        } catch (Exception e) {
+            log.debug(e.getMessage());
+        }
     }
 
     public void put(boolean update, Object... objects) {

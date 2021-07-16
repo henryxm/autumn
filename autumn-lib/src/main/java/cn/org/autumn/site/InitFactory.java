@@ -19,7 +19,18 @@ public class InitFactory {
     @Autowired
     private TableInit tableInit;
 
+    //初始化
     public interface Init {
+        void init();
+    }
+
+    //在初始化数据前执行
+    public interface Before {
+        void init();
+    }
+
+    //在初始化完成后执行
+    public interface After {
         void init();
     }
 
@@ -29,6 +40,16 @@ public class InitFactory {
         ApplicationContext applicationContext = SpringContextUtils.getApplicationContext();
         if (null == applicationContext)
             return;
+
+        Map<String, Before> before = applicationContext.getBeansOfType(Before.class);
+        for (Map.Entry<String, Before> entry : before.entrySet()) {
+            try {
+                Before init = entry.getValue();
+                init.init();
+            } catch (Exception e) {
+                log.debug(e.getMessage());
+            }
+        }
         Map<String, Init> map = applicationContext.getBeansOfType(Init.class);
         Map<Integer, List<Init>> ordered = new TreeMap<>(new Comparator<Integer>() {
             @Override
@@ -72,6 +93,16 @@ public class InitFactory {
                 } catch (Exception e) {
                     log.debug(init.getClass().getSimpleName(), e);
                 }
+            }
+        }
+
+        Map<String, After> after = applicationContext.getBeansOfType(After.class);
+        for (Map.Entry<String, After> entry : after.entrySet()) {
+            try {
+                After init = entry.getValue();
+                init.init();
+            } catch (Exception e) {
+                log.debug(e.getMessage());
             }
         }
     }

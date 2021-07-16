@@ -3,6 +3,8 @@ package cn.org.autumn.modules.lan.service;
 import cn.org.autumn.modules.lan.interceptor.LanguageInterceptor;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -16,6 +18,7 @@ import static cn.org.autumn.modules.lan.interceptor.LanguageInterceptor.LANGUAGE
 
 @Service
 public final class Language {
+    Logger log = LoggerFactory.getLogger(getClass());
 
     @Autowired
     LanguageService languageService;
@@ -75,7 +78,11 @@ public final class Language {
     }
 
     public void put(Object... objects) {
-        languageService.put(objects);
+        try {
+            languageService.put(objects);
+        } catch (Exception e) {
+            log.debug(e.getMessage());
+        }
     }
 
     public void add(String key, String zh_CN) {
