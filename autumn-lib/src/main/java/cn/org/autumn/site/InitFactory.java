@@ -26,12 +26,12 @@ public class InitFactory {
 
     //在初始化数据前执行
     public interface Before {
-        void init();
+        void before();
     }
 
     //在初始化完成后执行
     public interface After {
-        void init();
+        void after();
     }
 
     public void init() {
@@ -45,7 +45,7 @@ public class InitFactory {
         for (Map.Entry<String, Before> entry : before.entrySet()) {
             try {
                 Before init = entry.getValue();
-                init.init();
+                init.before();
             } catch (Exception e) {
                 log.debug(e.getMessage());
             }
@@ -100,7 +100,7 @@ public class InitFactory {
         for (Map.Entry<String, After> entry : after.entrySet()) {
             try {
                 After init = entry.getValue();
-                init.init();
+                init.after();
             } catch (Exception e) {
                 log.debug(e.getMessage());
             }
