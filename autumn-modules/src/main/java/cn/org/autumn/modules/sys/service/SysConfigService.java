@@ -109,6 +109,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 if (NULL != temp)
                     sysMenu.setRemark(temp);
                 baseMapper.insert(sysMenu);
+                sysConfigRedis.saveOrUpdate(sysMenu);
             }
         }
     }
