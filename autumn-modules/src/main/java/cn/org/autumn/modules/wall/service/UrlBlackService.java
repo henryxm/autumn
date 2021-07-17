@@ -33,7 +33,7 @@ public class UrlBlackService extends UrlBlackServiceGen implements LoadFactory.L
     /**
      * 每个周期的URL访问数大于改值后，将其对应的IP地址拉入黑名单
      */
-    public static Integer lastCount = 30;
+    public static Integer lastCount = 300;
 
     @Autowired
     IpBlackService ipBlackService;
@@ -139,6 +139,6 @@ public class UrlBlackService extends UrlBlackServiceGen implements LoadFactory.L
 
     @Override
     public void runJob() {
-        refresh(30);
+        refresh(300);
     }
 }

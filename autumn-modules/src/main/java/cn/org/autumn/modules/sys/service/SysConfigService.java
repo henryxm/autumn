@@ -394,13 +394,17 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         if (null == sessionManager)
             return;
         String rootDomain = getClusterRootDomain();
-        if (StringUtils.isEmpty(rootDomain))
+        if (StringUtils.isBlank(rootDomain))
             return;
+        String siteDomain = getSiteDomain();
+        if (StringUtils.isBlank(siteDomain) || !siteDomain.endsWith(rootDomain)) {
+            return;
+        }
         if (sessionManager instanceof DefaultWebSessionManager) {
             DefaultWebSessionManager webSessionManager = (DefaultWebSessionManager) sessionManager;
             Cookie cookie = webSessionManager.getSessionIdCookie();
             if (null != cookie) {
-                if (!rootDomain.startsWith("."))
+                if (!rootDomain.startsWith(".") && !siteDomain.equalsIgnoreCase(rootDomain))
                     rootDomain = "." + rootDomain;
                 if (StringUtils.isEmpty(cookie.getDomain()) || !cookie.getDomain().equalsIgnoreCase(rootDomain))
                     cookie.setDomain(rootDomain);
