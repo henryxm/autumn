@@ -9,6 +9,7 @@ import cn.org.autumn.utils.IPUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -16,6 +17,9 @@ import java.util.*;
 @Service
 public class IpBlackService extends IpBlackServiceGen implements LoadFactory.Load, LoopJob.Job {
     private static final Logger log = LoggerFactory.getLogger(IpBlackService.class);
+
+    @Autowired
+    IpWhiteService ipWhiteService;
 
     /**
      * 一个ip地址统计刷新周期内，ip访问次数大于该值后，把ip地址加入到黑名单
@@ -153,6 +157,8 @@ public class IpBlackService extends IpBlackServiceGen implements LoadFactory.Loa
      */
     public boolean saveBlackIp(String ip, Integer count, String tag) {
         try {
+            if (ipWhiteService.isWhite(ip))
+                return false;
             if (isBlack(ip)) {
                 IpBlackEntity ipBlackEntity = baseMapper.getByIp(ip);
                 if (null != ipBlackEntity) {

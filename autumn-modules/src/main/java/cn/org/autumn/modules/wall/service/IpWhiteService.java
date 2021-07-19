@@ -98,6 +98,10 @@ public class IpWhiteService extends IpWhiteServiceGen implements LoadFactory.Loa
                         return true;
                 }
             }
+            if (hasIp(ip)) {
+                put(ip);
+                return true;
+            }
             return false;
         } catch (Exception e) {
             log.error("无法判断IP白名单：", e);
