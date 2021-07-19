@@ -124,6 +124,35 @@ public class UrlBlackService extends UrlBlackServiceGen implements LoadFactory.L
         LoopJob.onThreeSecond(this);
     }
 
+    public UrlBlackEntity getByUrl(String url) {
+        return baseMapper.getByUrl(url);
+    }
+
+    public boolean hasUrl(String url) {
+        Integer integer = baseMapper.hasUrl(url);
+        if (null != integer && integer > 0)
+            return true;
+        return false;
+    }
+
+    public UrlBlackEntity creat(String url, String tag) {
+        UrlBlackEntity urlBlackEntity = null;
+        try {
+            urlBlackEntity = getByUrl(url);
+            if (null == urlBlackEntity) {
+                urlBlackEntity = new UrlBlackEntity();
+                urlBlackEntity.setUrl(url);
+                urlBlackEntity.setCount(0L);
+                urlBlackEntity.setForbidden(1);
+                urlBlackEntity.setTag(tag);
+                insert(urlBlackEntity);
+            }
+        } catch (Exception e) {
+            //do nothing
+        }
+        return urlBlackEntity;
+    }
+
     public String[][] getLanguageItems() {
         String[][] items = new String[][]{
                 {"wall_urlblack_table_comment", "链接黑名单", "URL black list"},

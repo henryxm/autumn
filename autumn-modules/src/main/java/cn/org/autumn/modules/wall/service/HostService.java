@@ -132,6 +132,37 @@ public class HostService extends HostServiceGen implements LoadFactory.Load, Loo
         LoopJob.onOneMinute(this);
     }
 
+    public boolean hasHost(String host) {
+        Integer integer = baseMapper.hasHost(host);
+        if (null != integer && integer > 0)
+            return true;
+        return false;
+    }
+
+    public HostEntity getByHost(String host) {
+        return baseMapper.getByHost(host);
+    }
+
+    public HostEntity creat(String host, String tag, String description) {
+        HostEntity hostEntity = null;
+        try {
+            hostEntity = getByHost(host);
+            if (null == hostEntity) {
+                hostEntity = new HostEntity();
+                hostEntity.setHost(host);
+                hostEntity.setCount(0L);
+                hostEntity.setForbidden(0);
+                hostEntity.setTag(tag);
+                hostEntity.setDescription(description);
+                insert(hostEntity);
+            }
+
+        } catch (Exception e) {
+            //do nothing
+        }
+        return hostEntity;
+    }
+
     public String[][] getLanguageItems() {
         String[][] items = new String[][]{
                 {"wall_host_table_comment", "主机统计", "Host Visit"},

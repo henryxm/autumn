@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.wall.service;
 
+import cn.org.autumn.modules.wall.entity.IpWhiteEntity;
 import cn.org.autumn.site.LoadFactory;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.wall.entity.IpBlackEntity;
@@ -203,6 +204,40 @@ public class IpBlackService extends IpBlackServiceGen implements LoadFactory.Loa
     public void init() {
         super.init();
         LoopJob.onFiveSecond(this);
+    }
+
+    public boolean hasIp(String ip) {
+        Integer integer = baseMapper.hasIp(ip);
+        if (null != integer && integer > 0)
+            return true;
+        return false;
+    }
+
+    public IpBlackEntity getByIp(String ip) {
+        return baseMapper.getByIp(ip);
+    }
+
+    public IpBlackEntity create(String ip, String tag, String description) {
+        IpBlackEntity blackEntity = null;
+        try {
+            blackEntity = getByIp(ip);
+            if (null == blackEntity) {
+                blackEntity = new IpBlackEntity();
+                blackEntity.setIp(ip);
+                blackEntity.setTag(tag);
+                blackEntity.setDescription(description);
+                blackEntity.setCreateTime(new Date());
+                blackEntity.setAvailable(0);
+                blackEntity.setCount(0L);
+                if (!ipBlackList.contains(ip)) {
+                    ipBlackList.add(ip);
+                }
+                insert(blackEntity);
+            }
+        } catch (Exception e) {
+            //do nothing
+        }
+        return blackEntity;
     }
 
     public String[][] getLanguageItems() {

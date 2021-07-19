@@ -10,7 +10,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
+import java.net.InetAddress;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 
@@ -54,6 +57,17 @@ public class IpWhiteService extends IpWhiteServiceGen implements LoadFactory.Loa
         }
     }
 
+    public IpWhiteEntity getByIp(String ip) {
+        return baseMapper.getByIp(ip);
+    }
+
+    public boolean hasIp(String ip) {
+        Integer integer = baseMapper.hasIp(ip);
+        if (null != integer && integer > 0)
+            return true;
+        return false;
+    }
+
     public boolean isWhite(String ip) {
         try {
             if (StringUtils.isEmpty(ip))
@@ -94,6 +108,11 @@ public class IpWhiteService extends IpWhiteServiceGen implements LoadFactory.Loa
     public void init() {
         super.init();
         LoopJob.onOneMinute(this);
+        try {
+            addLocal();
+        } catch (IOException e) {
+            log.debug("addLocal:", e);
+        }
     }
 
     public String[][] getLanguageItems() {
@@ -114,5 +133,35 @@ public class IpWhiteService extends IpWhiteServiceGen implements LoadFactory.Loa
     @Override
     public void runJob() {
         load();
+    }
+
+    public IpWhiteEntity create(String ip, String tag, String description) {
+        IpWhiteEntity whiteEntity = null;
+        try {
+            whiteEntity = getByIp(ip);
+            if (null == whiteEntity) {
+                whiteEntity = new IpWhiteEntity();
+                whiteEntity.setIp(ip);
+                whiteEntity.setTag(tag);
+                whiteEntity.setDescription(description);
+                whiteEntity.setCreateTime(new Date());
+                whiteEntity.setForbidden(0);
+                whiteEntity.setCount(0L);
+                insert(whiteEntity);
+            }
+        } catch (Exception e) {
+            //do nothing
+        }
+        return whiteEntity;
+    }
+
+    private void addLocal() throws IOException {
+        String hostname = InetAddress.getLocalHost().getHostName();
+        InetAddress[] addresses = InetAddress.getAllByName(hostname);
+        for (InetAddress address : addresses) {
+            if (!address.isReachable(2000))
+                continue;
+            create(address.getHostAddress(), "localhost", "本地IP地址(自动)");
+        }
     }
 }

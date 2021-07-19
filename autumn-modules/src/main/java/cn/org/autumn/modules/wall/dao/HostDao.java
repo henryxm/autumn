@@ -9,7 +9,7 @@ import org.springframework.stereotype.Repository;
 
 /**
  * 主机统计
- * 
+ *
  * @author Shaohua Xu
  * @email henryxm@163.com
  * @date 2020-11
@@ -20,4 +20,8 @@ public interface HostDao extends BaseMapper<HostEntity> {
 
     @Select("select * from wall_host where host = #{host} limit 1")
     HostEntity getByHost(@Param("host") String host);
+
+    @Select("select count(*) from wall_host where host = #{host} limit 1")
+    Integer hasHost(@Param("host") String host);
+
 }

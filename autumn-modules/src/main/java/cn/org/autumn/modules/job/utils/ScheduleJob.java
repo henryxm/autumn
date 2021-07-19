@@ -24,8 +24,14 @@ public class ScheduleJob extends QuartzJobBean {
     private Logger logger = LoggerFactory.getLogger(getClass());
     private ExecutorService service = Executors.newSingleThreadExecutor();
 
+    private static boolean enable = false;
+
     @Autowired
     private ScheduleJobLogService scheduleJobLogService;
+
+    public static void toggle() {
+        enable = !enable;
+    }
 
     @Override
     protected void executeInternal(JobExecutionContext context) {
@@ -92,7 +98,8 @@ public class ScheduleJob extends QuartzJobBean {
             log.setStatus(1);
             log.setError(StringUtils.substring(e.toString(), 0, 2000));
         } finally {
-            scheduleJobLogService.insert(log);
+            if (enable)
+                scheduleJobLogService.insert(log);
         }
     }
 }

@@ -7,6 +7,8 @@ import cn.org.autumn.modules.usr.dto.UserProfile;
 import cn.org.autumn.modules.usr.service.UserProfileService;
 import cn.org.autumn.modules.usr.service.UserTokenService;
 import cn.org.autumn.utils.HttpClientUtils;
+import cn.org.autumn.utils.IPUtils;
+import cn.org.autumn.utils.R;
 import com.alibaba.fastjson.JSON;
 import org.apache.commons.lang.StringUtils;
 import org.apache.oltu.oauth2.as.response.OAuthASResponse;
@@ -27,6 +29,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -111,4 +114,16 @@ public class ClientOauth2Controller {
         return null;
     }
 
+    @ResponseBody
+    @RequestMapping(value = {"/myip"})
+    public String myip(HttpServletRequest request) {
+        String ip = IPUtils.getIp(request);
+        return ip;
+    }
+
+    @ResponseBody
+    @RequestMapping(value = {"/health"})
+    public R health() {
+        return R.ok();
+    }
 }
