@@ -57,6 +57,16 @@ public class IpWhiteService extends IpWhiteServiceGen implements LoadFactory.Loa
         }
     }
 
+    public void put(String ip) {
+        if (null == ipWhiteList) {
+            ipWhiteList = new ArrayList<>();
+            ipWhiteList.add(ip);
+        } else {
+            if (!ipWhiteList.contains(ip))
+                ipWhiteList.add(ip);
+        }
+    }
+
     public IpWhiteEntity getByIp(String ip) {
         return baseMapper.getByIp(ip);
     }
@@ -149,6 +159,7 @@ public class IpWhiteService extends IpWhiteServiceGen implements LoadFactory.Loa
                 whiteEntity.setCount(0L);
                 insert(whiteEntity);
             }
+            put(ip);
         } catch (Exception e) {
             //do nothing
         }

@@ -191,6 +191,8 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
      */
     public String getViewByKey(String key) {
         SuperPositionModelEntity superPositionModelEntity = getByUrlKey(key);
+        if (null == superPositionModelEntity)
+            return "";
         if (isSpmMode()) {
             return ("/?spm=" + superPositionModelEntity.getSpmValue());
         } else
