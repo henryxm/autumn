@@ -3,6 +3,7 @@ package cn.org.autumn.config;
 import cn.org.autumn.modules.spm.filter.SpmFilter;
 import cn.org.autumn.modules.sys.shiro.RedisShiroSessionDAO;
 import cn.org.autumn.modules.sys.shiro.UserRealm;
+import org.apache.commons.lang.StringUtils;
 import org.apache.shiro.mgt.SecurityManager;
 import org.apache.shiro.session.mgt.SessionManager;
 import org.apache.shiro.spring.LifecycleBeanPostProcessor;
@@ -19,6 +20,7 @@ import org.springframework.context.annotation.DependsOn;
 import javax.servlet.Filter;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 @Configuration
@@ -47,17 +49,13 @@ public class ShiroConfig {
         DefaultWebSecurityManager securityManager = new DefaultWebSecurityManager();
         securityManager.setRealm(userRealm);
         securityManager.setSessionManager(sessionManager);
-
         return securityManager;
     }
 
     @Bean("shiroFilter")
-    public ShiroFilterFactoryBean shiroFilter(SecurityManager securityManager) {
+    public ShiroFilterFactoryBean shiroFilter(SecurityManager securityManager, List<FilterChain> filterChains) {
         ShiroFilterFactoryBean shiroFilter = new ShiroFilterFactoryBean();
         shiroFilter.setSecurityManager(securityManager);
-        shiroFilter.setLoginUrl("/login");
-        shiroFilter.setUnauthorizedUrl("/");
-
 //        shiroFilter.setLoginUrl("");//身份认证失败，则跳转到登录页面的配置 没有登录的用户请求需要登录的页面时自动跳转到登录页面，不是必须的属性，不输入地址的话会自动寻找项目web项目的根目录下的”/login.jsp”页面。
 //        shiroFilter.setSuccessUrl("");//登录成功默认跳转页面，不配置则跳转至”/”。如果登陆前点击的一个需要登录的页面，则在登录自动跳转到那个需要登录的页面。不跳转到此。
 //        shiroFilter.setUnauthorizedUrl("");//没有权限默认跳转的页面
@@ -76,9 +74,7 @@ public class ShiroConfig {
          * roles--------------org.apache.shiro.web.filter.authz.RolesAuthorizationFilter 参数可以写多个，多个时必须加上引号，并且参数之间用逗号分割，当有多个参数时，例如admins/user/**=roles["admin,guest"],每个参数通过才算通过，相当于hasAllRoles()方法。
          * ssl----------------org.apache.shiro.web.filter.authz.SslFilter 没有参数，表示安全的url请求，协议为https
          * user---------------org.apache.shiro.web.filter.authz.UserFilter 没有参数表示必须存在用户，当登入操作时不做检查
-         */
-
-        /**
+         *
          * 通常可将这些过滤器分为两组
          * anon,authc,authcBasic,user是第一组认证过滤器
          * perms,port,rest,roles,ssl是第二组授权过滤器
@@ -90,10 +86,7 @@ public class ShiroConfig {
          *  /admin=authc,roles[admin]      表示用户必需已通过认证,并拥有admin角色才可以正常发起'/admin'请求
          *  /edit=authc,perms[admin:edit]  表示用户必需已通过认证,并拥有admin:edit权限才可以正常发起'/edit'请求
          *  /home=user     表示用户不一定需要已经通过认证,只需要曾经被Shiro记住过登录状态就可以正常发起'/home'请求
-         */
-
-
-        /**
+         *
          * 各默认过滤器常用如下(注意URL Pattern里用到的是两颗星,这样才能实现任意层次的全匹配)
          * /admins/**=anon             无参,表示可匿名使用,可以理解为匿名用户或游客
          *  /admins/user/**=authc       无参,表示需认证才能使用
@@ -105,15 +98,32 @@ public class ShiroConfig {
          *  /admins/user/**=roles[admin]  参数可写多个,多个时必须加上引号,且参数之间用逗号分割,如：/admins/user/**=roles["admin,guest"]。当有多个参数时必须每个参数都通过才算通过,相当于hasAllRoles()方法
          *
          */
-
-
-        //Shiro验证URL时,URL匹配成功便不再继续匹配查找(所以要注意配置文件中的URL顺序,尤其在使用通配符时)
-
-
         //Shiro验证URL时,URL匹配成功便不再继续匹配查找(所以要注意配置文件中的URL顺序,尤其在使用通配符时)
         // 配置不会被拦截的链接 顺序判断
         Map<String, String> filterMap = new LinkedHashMap<>();
+        Map<String, Filter> map = new HashMap<>();
+        map.put("spm", new SpmFilter());
+        String login = "/login";
+        String unauthorized = "/";
+        String success = "";
 
+        for (FilterChain filterChain : filterChains) {
+            filterChain.definition(filterMap);
+            filterChain.filter(map);
+            String l = filterChain.login(login);
+            if (StringUtils.isNotBlank(l))
+                login = l;
+            String u = filterChain.unauthorized(unauthorized);
+            if (StringUtils.isNotBlank(u))
+                unauthorized = u;
+            String s = filterChain.success(success);
+            if (StringUtils.isNotBlank(s))
+                success = s;
+        }
+        shiroFilter.setLoginUrl(login);
+        shiroFilter.setUnauthorizedUrl(unauthorized);
+        if (StringUtils.isNotBlank(success))
+            shiroFilter.setSuccessUrl(success);
         if (Config.isDev()) {
             filterMap.put("/swagger/**", "anon");
             filterMap.put("/v2/api-docs", "anon");
@@ -132,10 +142,7 @@ public class ShiroConfig {
         filterMap.put("/oauth2/**", "anon");
         filterMap.put("/client/**", "anon");
         filterMap.put("/**", "spm");
-
         shiroFilter.setFilterChainDefinitionMap(filterMap);
-        Map<String, Filter> map = new HashMap<>();
-        map.put("spm", new SpmFilter());
         shiroFilter.setFilters(map);
         return shiroFilter;
     }

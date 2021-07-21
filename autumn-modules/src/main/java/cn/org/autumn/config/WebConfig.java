@@ -17,10 +17,19 @@ import java.util.List;
 @Configuration
 @DependsOn({"env"})
 public class WebConfig implements WebMvcConfigurer {
+
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         registry.addResourceHandler("/statics/**").addResourceLocations("classpath:/statics/");
+        if (null != resourceHandlers && resourceHandlers.size() > 0) {
+            for (ResourceHandler resourceHandler : resourceHandlers) {
+                resourceHandler.apply(registry);
+            }
+        }
     }
+
+    @Autowired
+    List<ResourceHandler> resourceHandlers;
 
     @Autowired
     private AuthorizationInterceptor authorizationInterceptor;
