@@ -72,6 +72,13 @@ public class UserProfileService extends UserProfileServiceGen implements LoopJob
     public UserProfileEntity from(SysUserEntity sysUserEntity, String password, UserProfile merge) {
         UserProfileEntity userProfileEntity = baseMapper.getByUuid(sysUserEntity.getUuid());
         if (null == userProfileEntity) {
+            userProfileEntity = baseMapper.getByUsername(sysUserEntity.getUsername());
+            if (null != userProfileEntity) {
+                userProfileEntity.setUuid(sysUserEntity.getUuid());
+                baseMapper.setUuid(sysUserEntity.getUsername(), sysUserEntity.getUuid());
+            }
+        }
+        if (null == userProfileEntity) {
             userProfileEntity = new UserProfileEntity();
             userProfileEntity.setPassword(password);
             userProfileEntity.setCreateTime(new Date());

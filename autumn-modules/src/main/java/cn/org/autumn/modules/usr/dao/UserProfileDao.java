@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -26,4 +27,10 @@ public interface UserProfileDao extends BaseMapper<UserProfileEntity> {
 
     @Select("select * from usr_user_profile where union_id = #{unionId} limit 1")
     UserProfileEntity getByUnionId(@Param("unionId") String unionId);
+
+    @Select("select * from usr_user_profile where username = #{username} limit 1")
+    UserProfileEntity getByUsername(@Param("username") String username);
+
+    @Update("update usr_user_profile set uuid = #{uuid} where username = #{username}")
+    Integer setUuid(@Param("username") String username, @Param("uuid") String uuid);
 }
