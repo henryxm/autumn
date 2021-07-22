@@ -1,5 +1,6 @@
 package cn.org.autumn.config;
 
+import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
@@ -7,6 +8,7 @@ import org.springframework.core.env.Environment;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class Config {
     private static final Logger log = LoggerFactory.getLogger(Config.class);
@@ -118,6 +120,19 @@ public class Config {
             log.debug("getBean:", e);
         }
         return null;
+    }
+
+    public static String getEnv(String key) {
+        if (StringUtils.isBlank(key))
+            return key;
+        Map<String, String> map = System.getenv();
+        String value = "";
+        if (map.containsKey(key))
+            value = map.get(key);
+        if (StringUtils.isBlank(value)) {
+            value = System.getProperties().getProperty(key);
+        }
+        return value;
     }
 
     public static Object getBean(Class clazz) {

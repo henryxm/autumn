@@ -182,14 +182,6 @@ public class ColumnInfo {
         this.genAnnotation = genAnnotation;
     }
 
-    public static void main(String[] args) {
-        String dd = "bigint(20)" ;
-        String[] tt = dd.split("\\(");
-        String type = tt[0];
-        String len = tt[1].split("\\)")[0];
-        System.out.print(tt[0]);
-    }
-
     public static String columnToJava(String columnName) {
         return WordUtils.capitalizeFully(columnName, new char[]{'_'}).replace("_", "");
     }

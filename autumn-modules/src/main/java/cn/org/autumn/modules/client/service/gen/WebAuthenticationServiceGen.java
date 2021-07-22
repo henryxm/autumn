@@ -24,7 +24,7 @@ import cn.org.autumn.modules.lan.service.LanguageService;
  *
  * @author Shaohua Xu
  * @email henryxm@163.com
- * @date 2021-01
+ * @date 2021-07
  */
 public class WebAuthenticationServiceGen extends ServiceImpl<WebAuthenticationDao, WebAuthenticationEntity> implements InitFactory.Init {
 
@@ -139,19 +139,19 @@ public class WebAuthenticationServiceGen extends ServiceImpl<WebAuthenticationDa
 
     private String[][] getLanguageItemsInternal() {
         String[][] items = new String[][]{
-                {"client_webauthentication_table_comment", "网站客户端"},
-                {"client_webauthentication_column_id", "id"},
-                {"client_webauthentication_column_name", "客户端名字"},
-                {"client_webauthentication_column_client_id", "客户端ID"},
-                {"client_webauthentication_column_client_secret", "客户端密匙"},
-                {"client_webauthentication_column_redirect_uri", "重定向地址"},
-                {"client_webauthentication_column_authorize_uri", "授权码地址"},
-                {"client_webauthentication_column_access_token_uri", "Token地址"},
-                {"client_webauthentication_column_user_info_uri", "用户信息地址"},
-                {"client_webauthentication_column_scope", "范围"},
-                {"client_webauthentication_column_state", "状态"},
-                {"client_webauthentication_column_description", "描述信息"},
-                {"client_webauthentication_column_create_time", "创建时间"},
+                {"client_webauthentication_table_comment", "网站客户端", "Web Authentication"},
+                {"client_webauthentication_column_id", "id", "Id"},
+                {"client_webauthentication_column_name", "客户端名字", "Name"},
+                {"client_webauthentication_column_client_id", "客户端ID", "Client Id"},
+                {"client_webauthentication_column_client_secret", "客户端密匙", "Client Secret"},
+                {"client_webauthentication_column_redirect_uri", "重定向地址", "Redirect Uri"},
+                {"client_webauthentication_column_authorize_uri", "授权码地址", "Authorize Uri"},
+                {"client_webauthentication_column_access_token_uri", "Token地址", "Access Token Uri"},
+                {"client_webauthentication_column_user_info_uri", "用户信息地址", "User Info Uri"},
+                {"client_webauthentication_column_scope", "范围", "Scope"},
+                {"client_webauthentication_column_state", "状态", "State"},
+                {"client_webauthentication_column_description", "描述信息", "Description"},
+                {"client_webauthentication_column_create_time", "创建时间", "Create Time"},
         };
         return items;
     }

@@ -26,12 +26,6 @@
         <div class="panel-heading">{{title}}</div>
         <form class="form-horizontal">
             <div class="form-group">
-                <div class="col-sm-2 control-label">${lang.oauth_tokenstore_column_user_id}</div>
-                <div class="col-sm-10">
-                    <input type="text" class="form-control" v-model="tokenStore.userId" placeholder="${lang.oauth_tokenstore_column_user_id}"/>
-                </div>
-            </div>
-            <div class="form-group">
                 <div class="col-sm-2 control-label">${lang.oauth_tokenstore_column_user_uuid}</div>
                 <div class="col-sm-10">
                     <input type="text" class="form-control" v-model="tokenStore.userUuid" placeholder="${lang.oauth_tokenstore_column_user_uuid}"/>
@@ -71,6 +65,12 @@
                 <div class="col-sm-2 control-label">${lang.oauth_tokenstore_column_create_time}</div>
                 <div class="col-sm-10">
                     <input type="text" class="form-control" v-model="tokenStore.createTime" placeholder="${lang.oauth_tokenstore_column_create_time}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.oauth_tokenstore_column_update_time}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="tokenStore.updateTime" placeholder="${lang.oauth_tokenstore_column_update_time}"/>
                 </div>
             </div>
             <div class="form-group">

@@ -218,6 +218,12 @@ public class AuthorizationController {
         if (!clientDetailsService.isValidClientSecret(tokenRequest.getClientSecret())) {
             return error("客户端安全KEY认证失败！", UNAUTHORIZED_CLIENT, SC_UNAUTHORIZED);
         }
+        String grantType = tokenRequest.getParam(OAuth.OAUTH_GRANT_TYPE);
+        if (StringUtils.isBlank(grantType))
+            return error("非法授权", INVALID_GRANT, SC_BAD_REQUEST);
+
+        if (!authClient.granted(grantType))
+            return error("未获得授权", INVALID_GRANT, SC_BAD_REQUEST);
 
         String authCode = tokenRequest.getParam(OAuth.OAUTH_CODE);
         TokenStore tokenStore = null;
@@ -242,7 +248,7 @@ public class AuthorizationController {
         if (tokenRequest.getParam(OAuth.OAUTH_GRANT_TYPE).equals(GrantType.CLIENT_CREDENTIALS.toString())) {
             SysUserEntity sysUserEntity = sysUserService.getByUsername(authClient.getClientId());
             if (null == sysUserEntity) {
-                clientDetailsService.clientToUser();
+                clientDetailsService.clientToUser(null);
                 sysUserEntity = sysUserService.getByUsername(authClient.getClientId());
             }
             tokenStore = new TokenStore(sysUserEntity);

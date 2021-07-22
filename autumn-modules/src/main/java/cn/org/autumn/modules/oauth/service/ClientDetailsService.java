@@ -1,6 +1,5 @@
 package cn.org.autumn.modules.oauth.service;
 
-import cn.org.autumn.modules.client.service.WebAuthenticationService;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.oauth.entity.ClientDetailsEntity;
 import cn.org.autumn.modules.oauth.entity.TokenStoreEntity;
@@ -13,7 +12,9 @@ import cn.org.autumn.modules.sys.service.SysUserService;
 import cn.org.autumn.modules.sys.shiro.RedisShiroSessionDAO;
 import cn.org.autumn.utils.RedisUtils;
 import cn.org.autumn.utils.Uuid;
+import com.qiniu.util.Md5;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -35,6 +36,9 @@ public class ClientDetailsService extends ClientDetailsServiceGen implements Loo
 
     @Autowired
     SysConfigService sysConfigService;
+
+    @Autowired
+    AsyncTaskExecutor asyncTaskExecutor;
 
     public static final Long AUTH_CODE_DEFAULT_EXPIRED_IN = 5 * 60L;
     public static final Long ACCESS_TOKEN_DEFAULT_EXPIRED_IN = 24 * 60 * 60L;
@@ -109,10 +113,10 @@ public class ClientDetailsService extends ClientDetailsServiceGen implements Loo
                 }
             }
         }
-
         put(ValueType.accessToken, null, accessToken, refreshToken, v, ACCESS_TOKEN_DEFAULT_EXPIRED_IN);
         put(ValueType.refreshToken, null, accessToken, refreshToken, v, REFRESH_TOKEN_DEFAULT_EXPIRED_IN);
-        remove(ValueType.authCode, tokenStore.getAuthCode());
+        if (null != tokenStore)
+            remove(ValueType.authCode, tokenStore.getAuthCode());
         if (null != sysUserEntity) {
             tokenStoreService.saveOrUpdate(sysUserEntity, accessToken, refreshToken, tokenStore.getAuthCode(), ACCESS_TOKEN_DEFAULT_EXPIRED_IN, REFRESH_TOKEN_DEFAULT_EXPIRED_IN);
         }
@@ -169,54 +173,82 @@ public class ClientDetailsService extends ClientDetailsServiceGen implements Loo
         return get(ValueType.refreshToken, refreshToken) != null;
     }
 
-    public String[][] getLanguageItems() {
-        String[][] items = new String[][]{
-                {"oauth_clientdetails_table_comment", "客户端详情", "Client details"},
-                {"oauth_clientdetails_column_id", "id"},
-                {"oauth_clientdetails_column_resource_ids", "资源ID", "Resource ID"},
-                {"oauth_clientdetails_column_scope", "范围", "Scope"},
-                {"oauth_clientdetails_column_grant_types", "授权类型", "Grant type"},
-                {"oauth_clientdetails_column_roles", "角色", "Roles"},
-                {"oauth_clientdetails_column_trusted", "是否可信", "Trusted"},
-                {"oauth_clientdetails_column_archived", "是否归档", "Archived"},
-                {"oauth_clientdetails_column_create_time", "创建时间", "Create time"},
-                {"oauth_clientdetails_column_client_id", "客户端ID", "Client ID"},
-                {"oauth_clientdetails_column_client_secret", "客户端密匙", "Client secret"},
-                {"oauth_clientdetails_column_client_name", "客户端名字", "Client name"},
-                {"oauth_clientdetails_column_client_uri", "客户端URI", "Client uri"},
-                {"oauth_clientdetails_column_client_icon_uri", "客户端图标URI", "Client icon uri"},
-                {"oauth_clientdetails_column_redirect_uri", "重定向地址", "Redirect uri"},
-                {"oauth_clientdetails_column_description", "描述信息", "Description"},
-        };
-        return items;
-    }
-
     public void init() {
         super.init();
         LoopJob.onOneHour(this);
-        ClientDetailsEntity clientDetailsEntity = findByClientId(WebAuthenticationService.clientId);
+        ClientDetailsEntity clientDetailsEntity = findByClientId(sysConfigService.getClientId());
         if (null == clientDetailsEntity) {
             clientDetailsEntity = new ClientDetailsEntity();
-            clientDetailsEntity.setClientId(WebAuthenticationService.clientId);
+            clientDetailsEntity.setClientId(sysConfigService.getClientId());
             clientDetailsEntity.setArchived(0);
             clientDetailsEntity.setClientIconUri("");
             clientDetailsEntity.setClientName("默认的客户端");
-            clientDetailsEntity.setClientSecret(WebAuthenticationService.clientSecret);
-            clientDetailsEntity.setClientUri("http://localhost");
+            clientDetailsEntity.setClientSecret(sysConfigService.getClientSecret());
+            clientDetailsEntity.setClientUri(sysConfigService.getBaseUrl());
             clientDetailsEntity.setGrantTypes("all");
-            clientDetailsEntity.setRedirectUri("http://localhost/client/oauth2/callback");
-            clientDetailsEntity.setDescription("系统缺省的客户端");
-            clientDetailsEntity.setScope("all");
+            clientDetailsEntity.setResourceIds("all");
+            clientDetailsEntity.setRedirectUri(sysConfigService.getBaseUrl() + "/client/oauth2/callback");
+            clientDetailsEntity.setDescription("默认的客户端");
+            clientDetailsEntity.setScope("basic");
             clientDetailsEntity.setTrusted(1);
-            clientDetailsEntity.setRoles("admin");
+            clientDetailsEntity.setRoles("user");
             clientDetailsEntity.setCreateTime(new Date());
             insert(clientDetailsEntity);
         }
-        clientToUser();
+        clientToUser(clientDetailsEntity);
     }
 
-    public void clientToUser() {
-        List<ClientDetailsEntity> list = baseMapper.selectByMap(null);
+    public static final String allChar = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+    public static String newKey(String prefix) {
+        int length = 10;
+        StringBuffer sb = new StringBuffer();
+        Random random = new Random();
+        for (int i = 0; i < length; i++) {
+            sb.append(allChar.charAt(random.nextInt(allChar.length())));
+        }
+        return prefix + sb;
+    }
+
+    public ClientDetailsEntity create(String prefix) {
+        String accessKey = newKey(prefix);
+        String secret = Md5.md5((accessKey + Uuid.uuid()).getBytes());
+        ClientDetailsEntity clientDetailsEntity = findByClientId(accessKey);
+        if (null == clientDetailsEntity) {
+            clientDetailsEntity = new ClientDetailsEntity();
+            clientDetailsEntity.setClientId(accessKey);
+            clientDetailsEntity.setArchived(0);
+            clientDetailsEntity.setClientIconUri("");
+            clientDetailsEntity.setClientName(accessKey);
+            clientDetailsEntity.setClientSecret(secret);
+            clientDetailsEntity.setClientUri("");
+            clientDetailsEntity.setGrantTypes("client_credentials");
+            clientDetailsEntity.setRedirectUri("");
+            clientDetailsEntity.setDescription("AccessKey");
+            clientDetailsEntity.setScope("basic");
+            clientDetailsEntity.setTrusted(1);
+            clientDetailsEntity.setRoles("user");
+            clientDetailsEntity.setCreateTime(new Date());
+            insert(clientDetailsEntity);
+            ClientDetailsEntity finalClientDetailsEntity = clientDetailsEntity;
+            asyncTaskExecutor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    clientToUser(finalClientDetailsEntity);
+                }
+            });
+            return clientDetailsEntity;
+        } else
+            return null;
+    }
+
+    public void clientToUser(ClientDetailsEntity detailsEntity) {
+        List<ClientDetailsEntity> list = null;
+        if (null != detailsEntity) {
+            list = new ArrayList<>();
+            list.add(detailsEntity);
+        } else
+            list = baseMapper.selectByMap(null);
         for (ClientDetailsEntity clientDetailsEntity : list) {
             SysUserEntity sysUserEntity = sysUserService.getByUsername(clientDetailsEntity.getClientId());
             if (null == sysUserEntity)

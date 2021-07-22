@@ -24,7 +24,7 @@ import cn.org.autumn.modules.lan.service.LanguageService;
  *
  * @author Shaohua Xu
  * @email henryxm@163.com
- * @date 2021-01
+ * @date 2021-07
  */
 public class TokenStoreServiceGen extends ServiceImpl<TokenStoreDao, TokenStoreEntity> implements InitFactory.Init {
 
@@ -47,9 +47,6 @@ public class TokenStoreServiceGen extends ServiceImpl<TokenStoreDao, TokenStoreE
         if(params.containsKey("id") && null != params.get("id") && StringUtils.isNotEmpty(params.get("id").toString())) {
             condition.put("id", params.get("id"));
         }
-        if(params.containsKey("userId") && null != params.get("userId") && StringUtils.isNotEmpty(params.get("userId").toString())) {
-            condition.put("user_id", params.get("userId"));
-        }
         if(params.containsKey("userUuid") && null != params.get("userUuid") && StringUtils.isNotEmpty(params.get("userUuid").toString())) {
             condition.put("user_uuid", params.get("userUuid"));
         }
@@ -70,6 +67,9 @@ public class TokenStoreServiceGen extends ServiceImpl<TokenStoreDao, TokenStoreE
         }
         if(params.containsKey("createTime") && null != params.get("createTime") && StringUtils.isNotEmpty(params.get("createTime").toString())) {
             condition.put("create_time", params.get("createTime"));
+        }
+        if(params.containsKey("updateTime") && null != params.get("updateTime") && StringUtils.isNotEmpty(params.get("updateTime").toString())) {
+            condition.put("update_time", params.get("updateTime"));
         }
         _page.setCondition(condition);
         Page<TokenStoreEntity> page = this.selectPage(_page, entityEntityWrapper);
@@ -130,16 +130,16 @@ public class TokenStoreServiceGen extends ServiceImpl<TokenStoreDao, TokenStoreE
 
     private String[][] getLanguageItemsInternal() {
         String[][] items = new String[][]{
-                {"oauth_tokenstore_table_comment", "授权令牌"},
-                {"oauth_tokenstore_column_id", "id"},
-                {"oauth_tokenstore_column_user_id", "用户ID"},
-                {"oauth_tokenstore_column_user_uuid", "用户Uuid"},
-                {"oauth_tokenstore_column_auth_code", "授权码"},
-                {"oauth_tokenstore_column_access_token", "访问令牌"},
-                {"oauth_tokenstore_column_access_token_expired_in", "访问令牌有效时长(秒)"},
-                {"oauth_tokenstore_column_refresh_token", "刷新令牌"},
-                {"oauth_tokenstore_column_refresh_token_expired_in", "刷新令牌有效时长(秒)"},
-                {"oauth_tokenstore_column_create_time", "创建时间"},
+                {"oauth_tokenstore_table_comment", "授权令牌", "Token Store"},
+                {"oauth_tokenstore_column_id", "id", "Id"},
+                {"oauth_tokenstore_column_user_uuid", "用户Uuid", "User Uuid"},
+                {"oauth_tokenstore_column_auth_code", "授权码", "Auth Code"},
+                {"oauth_tokenstore_column_access_token", "访问令牌", "Access Token"},
+                {"oauth_tokenstore_column_access_token_expired_in", "访问令牌有效时长(秒)", "Access Token Expired In"},
+                {"oauth_tokenstore_column_refresh_token", "刷新令牌", "Refresh Token"},
+                {"oauth_tokenstore_column_refresh_token_expired_in", "刷新令牌有效时长(秒)", "Refresh Token Expired In"},
+                {"oauth_tokenstore_column_create_time", "创建时间", "Create Time"},
+                {"oauth_tokenstore_column_update_time", "更新时间", "Update Time"},
         };
         return items;
     }

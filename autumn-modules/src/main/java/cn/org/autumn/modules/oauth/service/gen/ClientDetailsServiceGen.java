@@ -24,7 +24,7 @@ import cn.org.autumn.modules.lan.service.LanguageService;
  *
  * @author Shaohua Xu
  * @email henryxm@163.com
- * @date 2021-01
+ * @date 2021-07
  */
 public class ClientDetailsServiceGen extends ServiceImpl<ClientDetailsDao, ClientDetailsEntity> implements InitFactory.Init {
 
@@ -65,9 +65,6 @@ public class ClientDetailsServiceGen extends ServiceImpl<ClientDetailsDao, Clien
         if(params.containsKey("archived") && null != params.get("archived") && StringUtils.isNotEmpty(params.get("archived").toString())) {
             condition.put("archived", params.get("archived"));
         }
-        if(params.containsKey("createTime") && null != params.get("createTime") && StringUtils.isNotEmpty(params.get("createTime").toString())) {
-            condition.put("create_time", params.get("createTime"));
-        }
         if(params.containsKey("clientId") && null != params.get("clientId") && StringUtils.isNotEmpty(params.get("clientId").toString())) {
             condition.put("client_id", params.get("clientId"));
         }
@@ -88,6 +85,9 @@ public class ClientDetailsServiceGen extends ServiceImpl<ClientDetailsDao, Clien
         }
         if(params.containsKey("description") && null != params.get("description") && StringUtils.isNotEmpty(params.get("description").toString())) {
             condition.put("description", params.get("description"));
+        }
+        if(params.containsKey("createTime") && null != params.get("createTime") && StringUtils.isNotEmpty(params.get("createTime").toString())) {
+            condition.put("create_time", params.get("createTime"));
         }
         _page.setCondition(condition);
         Page<ClientDetailsEntity> page = this.selectPage(_page, entityEntityWrapper);
@@ -148,22 +148,22 @@ public class ClientDetailsServiceGen extends ServiceImpl<ClientDetailsDao, Clien
 
     private String[][] getLanguageItemsInternal() {
         String[][] items = new String[][]{
-                {"oauth_clientdetails_table_comment", "客户端详情"},
-                {"oauth_clientdetails_column_id", "id"},
-                {"oauth_clientdetails_column_resource_ids", "资源ID"},
-                {"oauth_clientdetails_column_scope", "范围"},
-                {"oauth_clientdetails_column_grant_types", "授权类型"},
-                {"oauth_clientdetails_column_roles", "角色"},
-                {"oauth_clientdetails_column_trusted", "是否可信"},
-                {"oauth_clientdetails_column_archived", "是否归档"},
-                {"oauth_clientdetails_column_create_time", "创建时间"},
-                {"oauth_clientdetails_column_client_id", "客户端ID"},
-                {"oauth_clientdetails_column_client_secret", "客户端密匙"},
-                {"oauth_clientdetails_column_client_name", "客户端名字"},
-                {"oauth_clientdetails_column_client_uri", "客户端URI"},
-                {"oauth_clientdetails_column_client_icon_uri", "客户端图标URI"},
-                {"oauth_clientdetails_column_redirect_uri", "重定向地址"},
-                {"oauth_clientdetails_column_description", "描述信息"},
+                {"oauth_clientdetails_table_comment", "客户端详情", "Client Details"},
+                {"oauth_clientdetails_column_id", "id", "Id"},
+                {"oauth_clientdetails_column_resource_ids", "资源ID", "Resource Ids"},
+                {"oauth_clientdetails_column_scope", "范围", "Scope"},
+                {"oauth_clientdetails_column_grant_types", "授权类型", "Grant Types"},
+                {"oauth_clientdetails_column_roles", "角色", "Roles"},
+                {"oauth_clientdetails_column_trusted", "是否可信", "Trusted"},
+                {"oauth_clientdetails_column_archived", "是否归档", "Archived"},
+                {"oauth_clientdetails_column_client_id", "客户端ID", "Client Id"},
+                {"oauth_clientdetails_column_client_secret", "客户端密匙", "Client Secret"},
+                {"oauth_clientdetails_column_client_name", "客户端名字", "Client Name"},
+                {"oauth_clientdetails_column_client_uri", "客户端URI", "Client Uri"},
+                {"oauth_clientdetails_column_client_icon_uri", "客户端图标URI", "Client Icon Uri"},
+                {"oauth_clientdetails_column_redirect_uri", "重定向地址", "Redirect Uri"},
+                {"oauth_clientdetails_column_description", "描述信息", "Description"},
+                {"oauth_clientdetails_column_create_time", "创建时间", "Create Time"},
         };
         return items;
     }

@@ -1,11 +1,13 @@
 package cn.org.autumn.modules.sys.service;
 
+import cn.org.autumn.bean.EnvBean;
 import cn.org.autumn.config.Config;
-import cn.org.autumn.modules.client.service.WebAuthenticationService;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.oss.cloud.CloudStorageConfig;
 import cn.org.autumn.site.HostFactory;
 import cn.org.autumn.site.InitFactory;
+import cn.org.autumn.utils.IPUtils;
+import cn.org.autumn.utils.Uuid;
 import com.baomidou.mybatisplus.mapper.EntityWrapper;
 import com.baomidou.mybatisplus.plugins.Page;
 import com.baomidou.mybatisplus.service.impl.ServiceImpl;
@@ -42,18 +44,23 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     public static final String LOGGER_LEVEL = "LOGGER_LEVEL";
     public static final String LOGIN_AUTHENTICATION = "LOGIN_AUTHENTICATION";
     public static final String SITE_DOMAIN = "SITE_DOMAIN";
+    public static final String SITE_SSL = "SITE_SSL";
     public static final String CLUSTER_ROOT_DOMAIN = "CLUSTER_ROOT_DOMAIN";
     public static final String USER_DEFAULT_DEPART_KEY = "USER_DEFAULT_DEPART_KEY";
     public static final String USER_DEFAULT_ROLE_KEYS = "USER_DEFAULT_ROLE_KEYS";
     public static final String UPDATE_MENU_ON_INIT = "UPDATE_MENU_ON_INIT";
     public static final String UPDATE_LANGUAGE_ON_INIT = "UPDATE_LANGUAGE_ON_INIT";
     public static final String CLUSTER_NAMESPACE = "CLUSTER_NAMESPACE";
+    public static final String Localhost = "localhost";
 
     @Autowired
     private SysConfigRedis sysConfigRedis;
 
     @Autowired
     private SysLogService sysLogService;
+
+    @Autowired
+    EnvBean envBean;
 
     private static SessionManager sessionManager;
 
@@ -73,16 +80,33 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         put(getConfigItems());
     }
 
+    public String getClientId() {
+        String clientId = getOauth2LoginClientId();
+        if (StringUtils.isBlank(clientId))
+            clientId = envBean.getClientId();
+        if (StringUtils.isBlank(clientId))
+            clientId = getSiteDomain();
+        return clientId;
+    }
+
+    public String getClientSecret() {
+        String secret = envBean.getClientSecret();
+        if (StringUtils.isBlank(secret))
+            secret = Uuid.uuid();
+        return secret;
+    }
+
     public String[][] getConfigItems() {
         String[][] mapping = new String[][]{
                 {CLOUD_STORAGE_CONFIG_KEY, "{\"aliyunAccessKeyId\":\"\",\"aliyunAccessKeySecret\":\"\",\"aliyunBucketName\":\"\",\"aliyunDomain\":\"\",\"aliyunEndPoint\":\"\",\"aliyunPrefix\":\"\",\"qcloudBucketName\":\"\",\"qcloudDomain\":\"\",\"qcloudPrefix\":\"\",\"qcloudSecretId\":\"\",\"qcloudSecretKey\":\"\",\"qiniuAccessKey\":\"\",\"qiniuBucketName\":\"\",\"qiniuDomain\":\"\",\"qiniuPrefix\":\"\",\"qiniuSecretKey\":\"\",\"type\":1}", "0", "云存储配置信息"},
-                {SUPER_PASSWORD, uuid(), "1", "系统的超级密码，使用该密码可以登录任何账户，如果为空或小于20位，表示禁用该密码"},
-                {CLUSTER_NAMESPACE, "", "1", "系统的命名空间，集群式在Redis中需要使用命名空间进行区分"},
+                {SUPER_PASSWORD, getSuperPassword(), "1", "系统的超级密码，使用该密码可以登录任何账户，如果为空或小于20位，表示禁用该密码"},
+                {CLUSTER_NAMESPACE, getNameSpace(), "1", "系统的命名空间，集群式在Redis中需要使用命名空间进行区分"},
                 {MENU_WITH_SPM, "1", "1", "菜单是否使用SPM模式，开启SPM模式后，可动态监控系统的页面访问统计量，默认开启"},
-                {LOGGER_LEVEL, "INFO", "1", "动态调整全局日志等级，级别:ALL,TRACE,DEBUG,INFO,WARN,ERROR,OFF"},
-                {LOGIN_AUTHENTICATION, "oauth2:" + WebAuthenticationService.clientId, "1", "系统登录授权，参数类型：①:localhost; ②:oauth2:clientId"},
-                {SITE_DOMAIN, "", "1", "站点域名绑定，多个域名以逗号分隔，为空表示不绑定任何域，不为空表示进行域名校验，#号开头的域名表示不绑定该域名，绑定域名后只能使用该域名访问站点"},
-                {CLUSTER_ROOT_DOMAIN, "", "1", "集群的根域名，当开启Redis后，有相同根域名后缀的服务会使用相同的Cookie，集群可通过Cookie中的登录用户进行用户同步"},
+                {LOGGER_LEVEL, getLoggerLevel(), "1", "动态调整全局日志等级，级别:ALL,TRACE,DEBUG,INFO,WARN,ERROR,OFF"},
+                {LOGIN_AUTHENTICATION, "oauth2:" + getClientId(), "1", "系统登录授权，参数类型：①:localhost; ②:oauth2:clientId"},
+                {SITE_DOMAIN, getSiteDomain(), "1", "站点域名绑定，多个域名以逗号分隔，为空表示不绑定任何域，不为空表示进行域名校验，#号开头的域名表示不绑定该域名，绑定域名后只能使用该域名访问站点"},
+                {SITE_SSL, String.valueOf(isSsl()), "1", "站点是否支持证书，0:不支持，1:支持"},
+                {CLUSTER_ROOT_DOMAIN, getClusterRootDomain(), "1", "集群的根域名，当开启Redis后，有相同根域名后缀的服务会使用相同的Cookie，集群可通过Cookie中的登录用户进行用户同步"},
                 {USER_DEFAULT_DEPART_KEY, "", "1", "缺省的部门标识，当用户从集群中的账户体系中同步用户信息后，授予的默认的部门权限"},
                 {USER_DEFAULT_ROLE_KEYS, "", "1", "缺省的角色标识，多个KEY用半角逗号分隔，当用户从集群中的账户体系中同步用户信息后，授予的默认的角色权限"},
                 {UPDATE_MENU_ON_INIT, "true", "1", "当系统启动或执行初始化的时候更新菜单，特别是当系统升级更新的时候，需要开启该功能"},
@@ -207,6 +231,8 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
             if (null == namespace)
                 namespace = "";
         }
+        if (StringUtils.isBlank(namespace))
+            namespace = envBean.getClusterNamespace();
         return namespace;
     }
 
@@ -241,7 +267,31 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     }
 
     public String getClusterRootDomain() {
-        return getValue(CLUSTER_ROOT_DOMAIN);
+        String rootDomain = getValue(CLUSTER_ROOT_DOMAIN);
+        if (StringUtils.isBlank(rootDomain)) {
+            rootDomain = envBean.getRootDomain();
+        }
+        if (StringUtils.isBlank(rootDomain))
+            rootDomain = "";
+        return rootDomain;
+    }
+
+    public String getSuperPassword() {
+        String superPassword = getValue(SUPER_PASSWORD);
+        if (StringUtils.isBlank(superPassword))
+            superPassword = envBean.getSupperPassword();
+        if (StringUtils.isBlank(superPassword))
+            superPassword = uuid();
+        return superPassword;
+    }
+
+    public String getLoggerLevel() {
+        String loggerLevel = getValue(LOGGER_LEVEL);
+        if (StringUtils.isBlank(loggerLevel))
+            loggerLevel = envBean.getLoggerLevel();
+        if (StringUtils.isBlank(loggerLevel))
+            loggerLevel = "INFO";
+        return loggerLevel;
     }
 
     public List<String> getDefaultRoleKeys() {
@@ -312,7 +362,56 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
 
     public String getSiteDomain() {
         String oa = getValue(SITE_DOMAIN);
+        if (StringUtils.isBlank(oa))
+            oa = envBean.getSiteDomain();
+        if (StringUtils.isBlank(oa))
+            oa = Localhost;
+        if (oa.contains(",")) {
+            String[] ds = oa.split(",");
+            for (String d : ds) {
+                if (d.startsWith("#"))
+                    continue;
+                return d.trim();
+            }
+        }
         return oa;
+    }
+
+    public String getBaseUrl() {
+        String site = getSiteDomain();
+        if (StringUtils.isBlank(site))
+            site = Localhost;
+        String scheme = "http://";
+        if (isSsl())
+            scheme = "https://";
+        return scheme + site;
+    }
+
+    public void enableSsl() {
+        SysConfigEntity entity = getByKey(SITE_SSL);
+        entity.setParamValue("true");
+        update(entity);
+    }
+
+    public void disableSsl() {
+        SysConfigEntity entity = getByKey(SITE_SSL);
+        entity.setParamValue("false");
+        update(entity);
+    }
+
+    public boolean isSsl() {
+        boolean isSsl = getBoolean(SITE_SSL);
+        String siteDomain = getSiteDomain();
+        //域名为空不是SSL
+        if (StringUtils.isBlank(siteDomain) ||
+                //localhost不是ssl
+                Localhost.equalsIgnoreCase(siteDomain) ||
+                //ip地址不是SSL
+                IPUtils.isIp(siteDomain) ||
+                IPUtils.isIPV6(siteDomain) ||
+                !siteDomain.contains("."))
+            isSsl = false;
+        return isSsl;
     }
 
     private static class ParameterizedTypeImpl implements ParameterizedType {

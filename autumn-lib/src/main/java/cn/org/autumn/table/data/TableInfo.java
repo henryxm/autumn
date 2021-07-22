@@ -52,11 +52,11 @@ public class TableInfo {
      * 列名转换成Java属性名
      */
     public static String columnToJava(String columnName) {
-        return WordUtils.capitalizeFully(columnName, new char[]{'_'}).replace("_", "");
+        return WordUtils.capitalizeFully(columnName, new char[]{'_'}).replace("_", "").trim();
     }
 
     public static String columnToLang(String columnName) {
-        return WordUtils.capitalizeFully(columnName, new char[]{'_'}).replace("_", " ");
+        return WordUtils.capitalizeFully(columnName, new char[]{'_'}).replace("_", " ").trim();
     }
 
     /**

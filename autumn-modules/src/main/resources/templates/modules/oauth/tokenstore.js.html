@@ -4,7 +4,6 @@ $(function () {
         datatype: "json",
         colModel: [			
 			{ label: '${lang.oauth_tokenstore_column_id}', name: 'id', index: 'id', width: 50, key: true },
-			{ label: '${lang.oauth_tokenstore_column_user_id}', name: 'userId', index: 'user_id', width: 80 }, 
 			{ label: '${lang.oauth_tokenstore_column_user_uuid}', name: 'userUuid', index: 'user_uuid', width: 80 }, 
 			{ label: '${lang.oauth_tokenstore_column_auth_code}', name: 'authCode', index: 'auth_code', width: 80 }, 
 			{ label: '${lang.oauth_tokenstore_column_access_token}', name: 'accessToken', index: 'access_token', width: 80 }, 
@@ -12,6 +11,7 @@ $(function () {
 			{ label: '${lang.oauth_tokenstore_column_refresh_token}', name: 'refreshToken', index: 'refresh_token', width: 80 }, 
 			{ label: '${lang.oauth_tokenstore_column_refresh_token_expired_in}', name: 'refreshTokenExpiredIn', index: 'refresh_token_expired_in', width: 80 }, 
 			{ label: '${lang.oauth_tokenstore_column_create_time}', name: 'createTime', index: 'create_time', width: 80 }, 
+			{ label: '${lang.oauth_tokenstore_column_update_time}', name: 'updateTime', index: 'update_time', width: 80 }, 
         ],
 		viewrecords: true,
         height: 385,
