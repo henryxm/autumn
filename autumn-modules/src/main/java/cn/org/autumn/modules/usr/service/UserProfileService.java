@@ -17,8 +17,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.*;
 
-import static cn.org.autumn.modules.sys.service.SysUserService.ADMIN;
-import static cn.org.autumn.modules.sys.service.SysUserService.PASSWORD;
 import static cn.org.autumn.utils.Uuid.uuid;
 
 @Service
@@ -48,8 +46,8 @@ public class UserProfileService extends UserProfileServiceGen implements LoopJob
 
     public void init() {
         super.init();
-        SysUserEntity sysUserEntity = sysUserService.getByUsername(ADMIN);
-        from(sysUserEntity, PASSWORD, null);
+        SysUserEntity sysUserEntity = sysUserService.getByUsername(sysUserService.getAdmin());
+        from(sysUserEntity, sysUserService.getPassword(), null);
         LoopJob.onTenSecond(this);
     }
 

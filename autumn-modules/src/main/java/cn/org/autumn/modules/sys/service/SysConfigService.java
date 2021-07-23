@@ -1,20 +1,19 @@
 package cn.org.autumn.modules.sys.service;
 
 import cn.org.autumn.bean.EnvBean;
+import cn.org.autumn.cluster.ServiceHandler;
+import cn.org.autumn.cluster.UserHandler;
 import cn.org.autumn.config.Config;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.oss.cloud.CloudStorageConfig;
 import cn.org.autumn.site.HostFactory;
 import cn.org.autumn.site.InitFactory;
-import cn.org.autumn.utils.IPUtils;
-import cn.org.autumn.utils.Uuid;
+import cn.org.autumn.utils.*;
 import com.baomidou.mybatisplus.mapper.EntityWrapper;
 import com.baomidou.mybatisplus.plugins.Page;
 import com.baomidou.mybatisplus.service.impl.ServiceImpl;
 import com.google.gson.Gson;
 import cn.org.autumn.exception.AException;
-import cn.org.autumn.utils.PageUtils;
-import cn.org.autumn.utils.Query;
 import cn.org.autumn.modules.sys.dao.SysConfigDao;
 import cn.org.autumn.modules.sys.entity.SysConfigEntity;
 import cn.org.autumn.modules.sys.redis.SysConfigRedis;
@@ -31,6 +30,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.net.URI;
 import java.util.*;
 
 import static cn.org.autumn.utils.Uuid.uuid;
@@ -236,28 +236,16 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         return namespace;
     }
 
-    public Boolean getBoolean(String key) {
-        String s = getValue(key);
-        if (StringUtils.isEmpty(s))
-            return false;
-        List<String> v = new ArrayList<>();
-        v.add("1");
-        v.add("yes");
-        v.add("on");
-        v.add("true");
-        v.add("是");
-        v.add("好");
-        if (v.contains(s.toLowerCase()))
-            return true;
-        return Boolean.valueOf(s);
+    public boolean getBoolean(String key) {
+        return Utils.parseBoolean(getValue(key));
     }
 
-    public Integer getInt(String key) {
+    public int getInt(String key) {
         try {
             String s = getValue(key);
             if (StringUtils.isNotEmpty(s))
-                return Integer.valueOf(s);
-        } catch (Exception e) {
+                return Integer.parseInt(s);
+        } catch (Exception ignored) {
         }
         return 0;
     }
@@ -360,6 +348,11 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         return false;
     }
 
+    /**
+     * 如果设定了多个SiteDomain的情况下，默认使用第一个有效值，作为网站入口访问域名
+     *
+     * @return siteDomain
+     */
     public String getSiteDomain() {
         String oa = getValue(SITE_DOMAIN);
         if (StringUtils.isBlank(oa))
@@ -485,6 +478,18 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
             cloudStorageConfig = null;
             updateCookieDomain();
         }
+    }
+
+    /**
+     * 判断Handler是否是同一个服务
+     *
+     * @param handler service handler
+     * @return 如果是同一台服务器，返回true,否则返回false
+     */
+    public boolean isSame(ServiceHandler handler) {
+        URI uri = handler.uri();
+        String site = getSiteDomain();
+        return null == uri || StringUtils.isBlank(site) || StringUtils.isBlank(uri.getHost()) || uri.getHost().equalsIgnoreCase(site);
     }
 
     private void updateCookieDomain() {

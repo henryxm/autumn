@@ -1,5 +1,8 @@
 package cn.org.autumn.modules.sys.service;
 
+import cn.org.autumn.bean.EnvBean;
+import cn.org.autumn.cluster.UserHandler;
+import cn.org.autumn.cluster.UserMapping;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.sys.shiro.SuperPasswordToken;
 import cn.org.autumn.site.InitFactory;
@@ -36,18 +39,16 @@ import static cn.org.autumn.modules.sys.service.SysRoleService.Role_System_Admin
  * 系统用户
  */
 @Service
-public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> implements LoopJob.Job, InitFactory.Init {
+public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> implements LoopJob.Job, InitFactory.Init, InitFactory.After {
 
     Logger log = LoggerFactory.getLogger(getClass());
-
-    public static String ADMIN = "admin";
-    public static String PASSWORD = "admin";
 
     static Map<String, SysUserEntity> sync = new LinkedHashMap<>();
     static Map<String, Integer> hashUser = new HashMap<>();
 
     @Autowired
     private SysUserRoleService sysUserRoleService;
+
     @Autowired
     private SysDeptService sysDeptService;
 
@@ -57,19 +58,39 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
     @Autowired
     private SysConfigService sysConfigService;
 
+    @Autowired
+    EnvBean envBean;
+
+    @Autowired(required = false)
+    List<UserHandler> userHandlers;
+
     public List<String> getMenus(String uuid) {
         return baseMapper.getMenus(uuid);
+    }
+
+    public String getAdmin() {
+        String username = envBean.getSystemUsername();
+        if (StringUtils.isBlank(username))
+            username = "admin";
+        return username;
+    }
+
+    public String getPassword() {
+        String password = envBean.getSystemPassword();
+        if (StringUtils.isBlank(password))
+            password = "admin";
+        return password;
     }
 
     @Order(10)
     public void init() {
         SysUserEntity admin = new SysUserEntity();
-        admin.setUsername(ADMIN);
+        admin.setUsername(getAdmin());
         SysUserEntity current = sysUserDao.selectOne(admin);
         if (null == current) {
             List<String> roleKeys = new ArrayList<>();
             roleKeys.add(Role_System_Administrator);
-            current = newUser(ADMIN, Uuid.uuid(), PASSWORD, roleKeys);
+            current = newUser(getAdmin(), Uuid.uuid(), getPassword(), roleKeys);
             SysDeptEntity sysDeptEntity = sysDeptService.getByDeptKey(Department_System_Administrator);
             if (null != sysDeptEntity) {
                 current.setDeptKey(sysDeptEntity.getDeptKey());
@@ -77,6 +98,24 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
             updateById(current);
         }
         LoopJob.onTenSecond(this);
+    }
+
+    private void syncAdminUuid() {
+        if (null == userHandlers)
+            return;
+        for (UserHandler userHandler : userHandlers) {
+            if (sysConfigService.isSame(userHandler))
+                continue;
+            UserMapping mapping = userHandler.getByUsername(getAdmin());
+            if (null != mapping && StringUtils.isNotBlank(mapping.getUuid())) {
+                SysUserEntity sysUserEntity = getByUsername(getAdmin());
+                if (null != sysUserEntity && StringUtils.isNotEmpty(sysUserEntity.getUuid())
+                        && !mapping.getUuid().equals(sysUserEntity.getUuid())) {
+                    sysUserEntity.setUuid(mapping.getUuid());
+                    updateById(sysUserEntity);
+                }
+            }
+        }
     }
 
     @DataFilter(subDept = true, user = false)
@@ -151,8 +190,39 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         return insertOrUpdate(userEntity);
     }
 
-    public SysUserEntity getByUsername(String username) {
+    public boolean hasUsername(String username) {
+        return baseMapper.getByUsername(username) != null;
+    }
+
+    public SysUserEntity getUsername(String username) {
         return baseMapper.getByUsername(username);
+    }
+
+    public SysUserEntity getByUsername(String username) {
+        SysUserEntity sysUserEntity = baseMapper.getByUsername(username);
+        if (null == sysUserEntity && null != userHandlers && userHandlers.size() > 0) {
+            try {
+                for (UserHandler handler : userHandlers) {
+                    if (sysConfigService.isSame(handler))
+                        continue;
+                    UserMapping mapping = handler.getByUsername(username);
+                    if (null != mapping && StringUtils.isNotBlank(mapping.getUuid())) {
+                        sysUserEntity = baseMapper.getByUuid(mapping.getUuid());
+                        if (null != sysUserEntity) {
+                            sysUserEntity.setUsername(username);
+                            updateById(sysUserEntity);
+                        } else {
+                            sysUserEntity = new SysUserEntity();
+                            sysUserEntity.setUsername(mapping.getUsername());
+                            sysUserEntity.setUuid(mapping.getUuid());
+                            insert(sysUserEntity);
+                        }
+                    }
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        return sysUserEntity;
     }
 
     public SysUserEntity getByEmail(String email) {
@@ -163,8 +233,42 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         return baseMapper.getByPhone(mobile);
     }
 
-    public SysUserEntity getByUuid(String uuid) {
+    public SysUserEntity getUuid(String uuid) {
         return baseMapper.getByUuid(uuid);
+    }
+
+    public SysUserEntity getByUuid(String uuid) {
+        SysUserEntity sysUserEntity = baseMapper.getByUuid(uuid);
+        if (null == sysUserEntity && null != userHandlers && userHandlers.size() > 0) {
+            try {
+                for (UserHandler handler : userHandlers) {
+                    if (sysConfigService.isSame(handler))
+                        continue;
+                    UserMapping mapping = handler.getByUuid(uuid);
+                    if (null != mapping) {
+                        SysUserEntity tmp = null;
+                        if (StringUtils.isNotBlank(mapping.getUsername()))
+                            tmp = baseMapper.getByUsername(mapping.getUsername());
+                        sysUserEntity = new SysUserEntity();
+                        if (null != tmp) {
+                            int i = 1;
+                            while (null != tmp) {
+                                String name = mapping.getUsername() + "(" + i + ")";
+                                sysUserEntity.setUsername(name);
+                                tmp = baseMapper.getByUsername(name);
+                                i++;
+                            }
+                        } else {
+                            sysUserEntity.setUsername(mapping.getUsername());
+                        }
+                        sysUserEntity.setUuid(mapping.getUuid());
+                        insert(sysUserEntity);
+                    }
+                }
+            } catch (Exception e) {
+            }
+        }
+        return sysUserEntity;
     }
 
     public void login(String username, String password) {
@@ -253,5 +357,10 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
 
     public boolean isSystemAdministrator(SysUserEntity sysUserEntity) {
         return sysUserRoleService.isSystemAdministrator(sysUserEntity);
+    }
+
+    @Override
+    public void after() {
+        syncAdminUuid();
     }
 }

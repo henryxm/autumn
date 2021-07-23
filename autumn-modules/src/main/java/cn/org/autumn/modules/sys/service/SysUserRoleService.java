@@ -1,5 +1,7 @@
 package cn.org.autumn.modules.sys.service;
 
+import cn.org.autumn.cluster.UserHandler;
+import cn.org.autumn.cluster.UserMapping;
 import cn.org.autumn.modules.sys.entity.SysRoleEntity;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.site.InitFactory;
@@ -15,13 +17,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static cn.org.autumn.modules.sys.service.SysRoleService.Role_System_Administrator;
-import static cn.org.autumn.modules.sys.service.SysUserService.ADMIN;
 
 /**
  * 用户与角色对应关系
  */
 @Service
-public class SysUserRoleService extends ServiceImpl<SysUserRoleDao, SysUserRoleEntity> implements InitFactory.Init {
+public class SysUserRoleService extends ServiceImpl<SysUserRoleDao, SysUserRoleEntity> implements InitFactory.Init, InitFactory.After {
 
     @Autowired
     private SysUserService sysUserService;
@@ -29,9 +30,15 @@ public class SysUserRoleService extends ServiceImpl<SysUserRoleDao, SysUserRoleE
     @Autowired
     private SysRoleService sysRoleService;
 
+    @Autowired
+    private SysConfigService sysConfigService;
+
+    @Autowired(required = false)
+    private List<UserHandler> userHandlers;
+
     public void init() {
         String[][] mapping = new String[][]{
-                {ADMIN, Role_System_Administrator},
+                {sysUserService.getAdmin(), Role_System_Administrator},
         };
         for (String[] map : mapping) {
             SysUserRoleEntity sysUserRoleEntity = new SysUserRoleEntity();
@@ -161,5 +168,31 @@ public class SysUserRoleService extends ServiceImpl<SysUserRoleDao, SysUserRoleE
             return roleKeys.contains(Role_System_Administrator);
         }
         return false;
+    }
+
+    private void syncAdminUuid() {
+        if (null != userHandlers && userHandlers.size() > 0) {
+            for (UserHandler userHandler : userHandlers) {
+                if (sysConfigService.isSame(userHandler))
+                    continue;
+                UserMapping mapping = userHandler.getByUsername(sysUserService.getAdmin());
+                if (null != mapping && StringUtils.isNotEmpty(mapping.getUuid())) {
+                    List<SysUserRoleEntity> userRoleEntities = getByUsername(sysUserService.getAdmin());
+                    if (null != userRoleEntities && !userRoleEntities.isEmpty()) {
+                        for (SysUserRoleEntity sysUserRoleEntity : userRoleEntities) {
+                            if (StringUtils.isEmpty(sysUserRoleEntity.getUserUuid()) || !mapping.getUuid().equals(sysUserRoleEntity.getUserUuid())) {
+                                sysUserRoleEntity.setUserUuid(mapping.getUuid());
+                                updateById(sysUserRoleEntity);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @Override
+    public void after() {
+        syncAdminUuid();
     }
 }

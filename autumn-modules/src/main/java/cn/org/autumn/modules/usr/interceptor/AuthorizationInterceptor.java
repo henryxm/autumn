@@ -1,6 +1,7 @@
 package cn.org.autumn.modules.usr.interceptor;
 
 import cn.org.autumn.annotation.Login;
+import cn.org.autumn.config.InterceptorHandler;
 import cn.org.autumn.exception.AException;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysUserService;
@@ -14,19 +15,21 @@ import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.method.HandlerMethod;
+import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.handler.HandlerInterceptorAdapter;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import static cn.org.autumn.modules.sys.service.SysUserService.PASSWORD;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 权限(Token)验证
  */
 @Component
-public class AuthorizationInterceptor extends HandlerInterceptorAdapter {
+public class AuthorizationInterceptor extends HandlerInterceptorAdapter implements InterceptorHandler {
     @Autowired
     private UserTokenService userTokenService;
 
@@ -79,7 +82,7 @@ public class AuthorizationInterceptor extends HandlerInterceptorAdapter {
             if (null == sysUserEntity.getProfile())
                 sysUserEntity = userProfileService.setProfile(sysUserEntity);
             if (null == sysUserEntity.getProfile()) {
-                sysUserEntity.setProfile(userProfileService.from(sysUserEntity, PASSWORD, null));
+                sysUserEntity.setProfile(userProfileService.from(sysUserEntity, sysUserService.getPassword(), null));
             }
             if (null == sysUserEntity.getProfile().getIcon()) {
                 sysUserEntity.getProfile().setIcon("");
@@ -102,5 +105,17 @@ public class AuthorizationInterceptor extends HandlerInterceptorAdapter {
                 modelMap.put("user", sysUserEntity);
             }
         }
+    }
+
+    @Override
+    public HandlerInterceptor getHandlerInterceptor() {
+        return this;
+    }
+
+    @Override
+    public List<String> getPatterns() {
+        List<String> list = new ArrayList<>();
+        list.add("/**");
+        return list;
     }
 }

@@ -1,5 +1,7 @@
 package cn.org.autumn.modules.oauth.service;
 
+import cn.org.autumn.cluster.UserHandler;
+import cn.org.autumn.cluster.UserMapping;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.oauth.entity.ClientDetailsEntity;
 import cn.org.autumn.modules.oauth.entity.TokenStoreEntity;
@@ -10,9 +12,11 @@ import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.modules.sys.service.SysUserService;
 import cn.org.autumn.modules.sys.shiro.RedisShiroSessionDAO;
+import cn.org.autumn.site.InitFactory;
 import cn.org.autumn.utils.RedisUtils;
 import cn.org.autumn.utils.Uuid;
 import com.qiniu.util.Md5;
+import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.stereotype.Service;
@@ -20,7 +24,7 @@ import org.springframework.stereotype.Service;
 import java.util.*;
 
 @Service
-public class ClientDetailsService extends ClientDetailsServiceGen implements LoopJob.Job {
+public class ClientDetailsService extends ClientDetailsServiceGen implements LoopJob.Job, InitFactory.After {
 
     @Autowired
     RedisUtils redisUtils;
@@ -39,6 +43,9 @@ public class ClientDetailsService extends ClientDetailsServiceGen implements Loo
 
     @Autowired
     AsyncTaskExecutor asyncTaskExecutor;
+
+    @Autowired(required = false)
+    List<UserHandler> userHandlers;
 
     public static final Long AUTH_CODE_DEFAULT_EXPIRED_IN = 5 * 60L;
     public static final Long ACCESS_TOKEN_DEFAULT_EXPIRED_IN = 24 * 60 * 60L;
@@ -251,8 +258,35 @@ public class ClientDetailsService extends ClientDetailsServiceGen implements Loo
             list = baseMapper.selectByMap(null);
         for (ClientDetailsEntity clientDetailsEntity : list) {
             SysUserEntity sysUserEntity = sysUserService.getByUsername(clientDetailsEntity.getClientId());
-            if (null == sysUserEntity)
-                sysUserService.newUser(clientDetailsEntity.getClientId(), Uuid.uuid(), Uuid.uuid(), sysConfigService.getDefaultRoleKeys());
+            UserMapping mapping;
+            String uuid = null;
+            if (null != userHandlers && userHandlers.size() > 0) {
+                for (UserHandler handler : userHandlers) {
+                    if (sysConfigService.isSame(handler))
+                        continue;
+                    mapping = handler.getByUsername(clientDetailsEntity.getClientId());
+                    if (null != mapping) {
+                        uuid = mapping.getUuid();
+                        if (StringUtils.isNotBlank(uuid))
+                            break;
+                    }
+                }
+            }
+            if (null == sysUserEntity) {
+                if (StringUtils.isEmpty(uuid))
+                    uuid = Uuid.uuid();
+                sysUserService.newUser(clientDetailsEntity.getClientId(), uuid, Uuid.uuid(), sysConfigService.getDefaultRoleKeys());
+            } else {
+                if (StringUtils.isNotEmpty(sysUserEntity.getUuid()) && StringUtils.isNotEmpty(uuid) && !uuid.equals(sysUserEntity.getUuid())) {
+                    sysUserEntity.setUuid(uuid);
+                    sysUserService.updateById(sysUserEntity);
+                }
+            }
         }
+    }
+
+    @Override
+    public void after() {
+        clientToUser(null);
     }
 }

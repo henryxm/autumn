@@ -25,6 +25,12 @@ public class EnvBean implements EnvHandler {
     @EnvAware("site.domain")
     String siteDomain;
 
+    @EnvAware("system.username")
+    String systemUsername;
+
+    @EnvAware("system.password")
+    String systemPassword;
+
     @EnvAware("site.ssl")
     boolean siteSsl;
 
@@ -77,6 +83,22 @@ public class EnvBean implements EnvHandler {
 
     public void setSiteDomain(String siteDomain) {
         this.siteDomain = siteDomain;
+    }
+
+    public String getSystemUsername() {
+        return systemUsername;
+    }
+
+    public void setSystemUsername(String systemUsername) {
+        this.systemUsername = systemUsername;
+    }
+
+    public String getSystemPassword() {
+        return systemPassword;
+    }
+
+    public void setSystemPassword(String systemPassword) {
+        this.systemPassword = systemPassword;
     }
 
     public boolean isSiteSsl() {

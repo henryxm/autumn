@@ -1,6 +1,7 @@
 package cn.org.autumn.modules.usr.resolver;
 
 import cn.org.autumn.annotation.LoginUser;
+import cn.org.autumn.config.ResolverHandler;
 import cn.org.autumn.modules.usr.interceptor.AuthorizationInterceptor;
 import cn.org.autumn.modules.usr.entity.UserProfileEntity;
 import cn.org.autumn.modules.usr.service.UserProfileService;
@@ -17,7 +18,7 @@ import org.springframework.web.method.support.ModelAndViewContainer;
  * 有@LoginUser注解的方法参数，注入当前登录用户
  */
 @Component
-public class LoginUserHandlerMethodArgumentResolver implements HandlerMethodArgumentResolver {
+public class LoginUserHandlerMethodArgumentResolver implements HandlerMethodArgumentResolver, ResolverHandler {
     @Autowired
     private UserProfileService userProfileService;
 
@@ -39,5 +40,10 @@ public class LoginUserHandlerMethodArgumentResolver implements HandlerMethodArgu
         UserProfileEntity user = userProfileService.getByUuid((String) object);
 
         return user;
+    }
+
+    @Override
+    public HandlerMethodArgumentResolver getResolver() {
+        return this;
     }
 }

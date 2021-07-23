@@ -1,6 +1,7 @@
 package cn.org.autumn.modules.lan.interceptor;
 
 import cn.org.autumn.config.Config;
+import cn.org.autumn.config.InterceptorHandler;
 import cn.org.autumn.modules.lan.service.Language;
 import cn.org.autumn.modules.lan.service.LanguageService;
 import org.apache.commons.lang.StringUtils;
@@ -10,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
 import org.springframework.ui.ModelMap;
+import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.handler.HandlerInterceptorAdapter;
 
@@ -20,7 +22,7 @@ import java.util.Locale;
 import java.util.Map;
 
 @Component
-public class LanguageInterceptor extends HandlerInterceptorAdapter {
+public class LanguageInterceptor extends HandlerInterceptorAdapter implements InterceptorHandler {
 
     private static Logger logger = LoggerFactory.getLogger(LanguageInterceptor.class);
 
@@ -79,5 +81,10 @@ public class LanguageInterceptor extends HandlerInterceptorAdapter {
                 logger.error("language cannot be empty");
             modelMap.put("lang", lang);
         }
+    }
+
+    @Override
+    public HandlerInterceptor getHandlerInterceptor() {
+        return this;
     }
 }
