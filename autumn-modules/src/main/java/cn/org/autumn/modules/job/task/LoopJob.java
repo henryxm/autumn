@@ -1,9 +1,13 @@
 package cn.org.autumn.modules.job.task;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.List;
 
 public class LoopJob {
+    static Logger log = LoggerFactory.getLogger(LoopJob.class);
 
     private LoopJob() {
     }
@@ -81,10 +85,18 @@ public class LoopJob {
         oneWeekJobList.add(job);
     }
 
+    private static void print(Job job, Exception e) {
+        log.error("Job(" + job.getClass().getName() + "):" + e.getMessage());
+    }
+
     public static void runOneSecondJob() {
         if (oneSecondJobList.size() > 0) {
             for (Job job : oneSecondJobList) {
-                job.runJob();
+                try {
+                    job.runJob();
+                } catch (Exception e) {
+                    print(job, e);
+                }
             }
         }
     }
@@ -92,7 +104,11 @@ public class LoopJob {
     public static void runThreeSecondJob() {
         if (threeSecondJobList.size() > 0) {
             for (Job job : threeSecondJobList) {
-                job.runJob();
+                try {
+                    job.runJob();
+                } catch (Exception e) {
+                    print(job, e);
+                }
             }
         }
     }
@@ -100,7 +116,11 @@ public class LoopJob {
     public static void runFiveSecondJob() {
         if (fiveSecondJobList.size() > 0) {
             for (Job job : fiveSecondJobList) {
-                job.runJob();
+                try {
+                    job.runJob();
+                } catch (Exception e) {
+                    print(job, e);
+                }
             }
         }
     }
@@ -108,7 +128,11 @@ public class LoopJob {
     public static void runTenSecondJob() {
         if (tenSecondJobList.size() > 0) {
             for (Job job : tenSecondJobList) {
-                job.runJob();
+                try {
+                    job.runJob();
+                } catch (Exception e) {
+                    print(job, e);
+                }
             }
         }
     }
@@ -116,7 +140,11 @@ public class LoopJob {
     public static void runThirtySecondJob() {
         if (thirtySecondJobList.size() > 0) {
             for (Job job : thirtySecondJobList) {
-                job.runJob();
+                try {
+                    job.runJob();
+                } catch (Exception e) {
+                    print(job, e);
+                }
             }
         }
     }
@@ -124,7 +152,11 @@ public class LoopJob {
     public static void runOneMinuteJob() {
         if (oneMinuteJobList.size() > 0) {
             for (Job job : oneMinuteJobList) {
-                job.runJob();
+                try {
+                    job.runJob();
+                } catch (Exception e) {
+                    print(job, e);
+                }
             }
         }
     }
@@ -132,7 +164,11 @@ public class LoopJob {
     public static void runTenMinuteJob() {
         if (tenMinuteJobList.size() > 0) {
             for (Job job : tenMinuteJobList) {
-                job.runJob();
+                try {
+                    job.runJob();
+                } catch (Exception e) {
+                    print(job, e);
+                }
             }
         }
     }
@@ -140,7 +176,11 @@ public class LoopJob {
     public static void runThirtyMinuteJob() {
         if (thirtyMinuteJobList.size() > 0) {
             for (Job job : thirtyMinuteJobList) {
-                job.runJob();
+                try {
+                    job.runJob();
+                } catch (Exception e) {
+                    print(job, e);
+                }
             }
         }
     }
@@ -149,7 +189,11 @@ public class LoopJob {
     public static void runOneHourJob() {
         if (oneHourJobList.size() > 0) {
             for (Job job : oneHourJobList) {
-                job.runJob();
+                try {
+                    job.runJob();
+                } catch (Exception e) {
+                    print(job, e);
+                }
             }
         }
     }
@@ -157,7 +201,11 @@ public class LoopJob {
     public static void runTenHourJob() {
         if (tenHourJobList.size() > 0) {
             for (Job job : tenHourJobList) {
-                job.runJob();
+                try {
+                    job.runJob();
+                } catch (Exception e) {
+                    print(job, e);
+                }
             }
         }
     }
@@ -165,7 +213,11 @@ public class LoopJob {
     public static void runThirtyHourJob() {
         if (thirtyHourJobList.size() > 0) {
             for (Job job : thirtyHourJobList) {
-                job.runJob();
+                try {
+                    job.runJob();
+                } catch (Exception e) {
+                    print(job, e);
+                }
             }
         }
     }
@@ -173,7 +225,11 @@ public class LoopJob {
     public static void runOneDayJob() {
         if (oneDayJobList.size() > 0) {
             for (Job job : oneDayJobList) {
-                job.runJob();
+                try {
+                    job.runJob();
+                } catch (Exception e) {
+                    print(job, e);
+                }
             }
         }
     }
@@ -181,7 +237,11 @@ public class LoopJob {
     public static void runOneWeekJob() {
         if (oneWeekJobList.size() > 0) {
             for (Job job : oneWeekJobList) {
-                job.runJob();
+                try {
+                    job.runJob();
+                } catch (Exception e) {
+                    print(job, e);
+                }
             }
         }
     }

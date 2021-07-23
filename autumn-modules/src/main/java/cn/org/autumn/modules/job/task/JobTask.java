@@ -54,7 +54,7 @@ public class JobTask {
                 LoopJob.runThirtySecondJob();
             }
         } catch (Exception e) {
-            logger.error(e.getMessage());
+            logger.error("SecondJob:", e);
         } finally {
             secondJobLock = false;
             if (secondJobCounter >= 60)
@@ -80,7 +80,7 @@ public class JobTask {
                 LoopJob.runThirtyMinuteJob();
             }
         } catch (Exception e) {
-            logger.error(e.getMessage());
+            logger.error("MinuteJob:", e);
         } finally {
             minuteJobLock = false;
             if (minuteJobCounter >= 60)
@@ -106,7 +106,7 @@ public class JobTask {
                 LoopJob.runThirtyHourJob();
             }
         } catch (Exception e) {
-            logger.error(e.getMessage());
+            logger.error("HourJob:", e);
         } finally {
             hourJobLock = false;
             if (hourJobCounter >= 60)
@@ -123,7 +123,7 @@ public class JobTask {
             logger.debug("每天定时触发一次,如果该任务一天内未执行完毕，下一天跳过执行");
             LoopJob.runOneDayJob();
         } catch (Exception e) {
-            logger.error(e.getMessage());
+            logger.error("DayJob:", e);
         } finally {
             dayJobLock = false;
         }
@@ -138,7 +138,7 @@ public class JobTask {
             logger.debug("每周定时触发一次,如果该任务一周内未执行完毕，下一周跳过执行");
             LoopJob.runOneWeekJob();
         } catch (Exception e) {
-            logger.error(e.getMessage());
+            logger.error("WeekJob:", e);
         } finally {
             weekJobLock = false;
         }

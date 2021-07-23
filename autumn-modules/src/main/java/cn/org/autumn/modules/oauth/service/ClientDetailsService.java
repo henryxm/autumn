@@ -18,6 +18,7 @@ import cn.org.autumn.utils.Uuid;
 import com.qiniu.util.Md5;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.annotation.Order;
 import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.stereotype.Service;
 
@@ -180,6 +181,7 @@ public class ClientDetailsService extends ClientDetailsServiceGen implements Loo
         return get(ValueType.refreshToken, refreshToken) != null;
     }
 
+    @Order(2000)
     public void init() {
         super.init();
         LoopJob.onOneHour(this);

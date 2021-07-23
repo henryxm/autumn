@@ -2,7 +2,6 @@ package cn.org.autumn.modules.sys.service;
 
 import cn.org.autumn.bean.EnvBean;
 import cn.org.autumn.cluster.ServiceHandler;
-import cn.org.autumn.cluster.UserHandler;
 import cn.org.autumn.config.Config;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.oss.cloud.CloudStorageConfig;

@@ -368,7 +368,7 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
                 {"sys_string_new_password", "新密码", "New password"},
                 {"sys_string_welcome", "欢迎", "Welcome"},
                 {"sys_string_login", "登录", "Login"},
-                {"sys_string_logout", "退出系统", "Logout"},
+                {"sys_string_logout", "退出", "Logout"},
                 {"sys_string_add", "新增", "Add"},
                 {"sys_string_copy", "复制", "Copy"},
                 {"sys_string_change", "修改", "Change"},
