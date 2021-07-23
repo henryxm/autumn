@@ -45,6 +45,7 @@
     </properties>
 
     <modules>
+        <module>autumn-handler</module>
         <module>autumn-lib</module>
         <module>autumn-modules</module>
         <module>autumn-web</module>

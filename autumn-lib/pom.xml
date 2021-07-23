@@ -17,6 +17,13 @@
         <maven.compiler.target>1.8</maven.compiler.target>
         <maven.compiler.compilerVersion>1.8</maven.compiler.compilerVersion>
     </properties>
+    <dependencies>
+        <dependency>
+            <groupId>cn.org.autumn</groupId>
+            <artifactId>autumn-handler</artifactId>
+            <version>1.0.0</version>
+        </dependency>
+    </dependencies>
     <parent>
         <groupId>cn.org.autumn</groupId>
         <artifactId>autumn</artifactId>
