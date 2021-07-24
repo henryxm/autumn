@@ -24,7 +24,7 @@ import cn.org.autumn.modules.lan.service.LanguageService;
  *
  * @author Shaohua Xu
  * @email henryxm@163.com
- * @date 2021-01
+ * @date 2021-07
  */
 public class HostServiceGen extends ServiceImpl<HostDao, HostEntity> implements InitFactory.Init {
 
@@ -121,13 +121,13 @@ public class HostServiceGen extends ServiceImpl<HostDao, HostEntity> implements 
 
     private String[][] getLanguageItemsInternal() {
         String[][] items = new String[][]{
-                {"wall_host_table_comment", "主机统计"},
-                {"wall_host_column_id", "id"},
-                {"wall_host_column_host", "主机地址"},
-                {"wall_host_column_count", "访问次数"},
-                {"wall_host_column_forbidden", "禁用"},
-                {"wall_host_column_tag", "标签说明"},
-                {"wall_host_column_description", "描述信息"},
+                {"wall_host_table_comment", "主机统计", "Host"},
+                {"wall_host_column_id", "id", "Id"},
+                {"wall_host_column_host", "主机地址", "Host"},
+                {"wall_host_column_count", "访问次数", "Count"},
+                {"wall_host_column_forbidden", "禁用", "Forbidden"},
+                {"wall_host_column_tag", "标签说明", "Tag"},
+                {"wall_host_column_description", "描述信息", "Description"},
         };
         return items;
     }

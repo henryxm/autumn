@@ -24,7 +24,7 @@ import cn.org.autumn.modules.lan.service.LanguageService;
  *
  * @author Shaohua Xu
  * @email henryxm@163.com
- * @date 2021-01
+ * @date 2021-07
  */
 public class IpBlackServiceGen extends ServiceImpl<IpBlackDao, IpBlackEntity> implements InitFactory.Init {
 
@@ -127,15 +127,15 @@ public class IpBlackServiceGen extends ServiceImpl<IpBlackDao, IpBlackEntity> im
 
     private String[][] getLanguageItemsInternal() {
         String[][] items = new String[][]{
-                {"wall_ipblack_table_comment", "IP黑名单"},
-                {"wall_ipblack_column_id", "id"},
-                {"wall_ipblack_column_ip", "IP地址"},
-                {"wall_ipblack_column_count", "访问次数"},
-                {"wall_ipblack_column_available", "可用"},
-                {"wall_ipblack_column_tag", "标签说明"},
-                {"wall_ipblack_column_description", "描述信息"},
-                {"wall_ipblack_column_create_time", "创建时间"},
-                {"wall_ipblack_column_update_time", "更新时间"},
+                {"wall_ipblack_table_comment", "IP黑名单", "Ip Black"},
+                {"wall_ipblack_column_id", "id", "Id"},
+                {"wall_ipblack_column_ip", "IP地址", "Ip"},
+                {"wall_ipblack_column_count", "访问次数", "Count"},
+                {"wall_ipblack_column_available", "可用", "Available"},
+                {"wall_ipblack_column_tag", "标签说明", "Tag"},
+                {"wall_ipblack_column_description", "描述信息", "Description"},
+                {"wall_ipblack_column_create_time", "创建时间", "Create Time"},
+                {"wall_ipblack_column_update_time", "更新时间", "Update Time"},
         };
         return items;
     }

@@ -7,11 +7,11 @@ import cn.org.autumn.modules.lan.service.Language;
 import cn.org.autumn.modules.lan.service.LanguageService;
 import java.util.List;
 /**
- * 链接黑名单
+ * 主机统计
  *
  * @author Shaohua Xu
  * @email henryxm@163.com
- * @date 2021-01
+ * @date 2021-07
  */
 public class WallMenuGen implements InitFactory.Init {
 
@@ -73,7 +73,7 @@ public class WallMenuGen implements InitFactory.Init {
 
     private String[][] getLanguageItemsInternal() {
         String[][] items = new String[][]{
-                {wall_menu + "_text", "防火墙"},
+                {wall_menu + "_text", "防火墙", "Wall"},
         };
         return items;
     }

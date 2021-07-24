@@ -27,19 +27,6 @@ public class UserTokenService extends UserTokenServiceGen {
         return "fa-eye-slash";
     }
 
-    public String[][] getLanguageItems() {
-        String[][] items = new String[][]{
-                {"usr_usertoken_table_comment", "用户Token", "User Token"},
-                {"usr_usertoken_column_id", "ID"},
-                {"usr_usertoken_column_user_id", "用户ID", "User id"},
-                {"usr_usertoken_column_token", "Token", "Token"},
-                {"usr_usertoken_column_refresh_token", "Refresh Token"},
-                {"usr_usertoken_column_expire_time", "过期时间", "Expire time"},
-                {"usr_usertoken_column_update_time", "更新时间", "Update time"},
-        };
-        return items;
-    }
-
     public UserTokenEntity queryByToken(String token) {
         return this.selectOne(new EntityWrapper<UserTokenEntity>().eq("token", token));
     }

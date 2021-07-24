@@ -24,7 +24,7 @@ import cn.org.autumn.modules.lan.service.LanguageService;
  *
  * @author Shaohua Xu
  * @email henryxm@163.com
- * @date 2021-01
+ * @date 2021-07
  */
 public class UrlBlackServiceGen extends ServiceImpl<UrlBlackDao, UrlBlackEntity> implements InitFactory.Init {
 
@@ -121,13 +121,13 @@ public class UrlBlackServiceGen extends ServiceImpl<UrlBlackDao, UrlBlackEntity>
 
     private String[][] getLanguageItemsInternal() {
         String[][] items = new String[][]{
-                {"wall_urlblack_table_comment", "链接黑名单"},
-                {"wall_urlblack_column_id", "id"},
-                {"wall_urlblack_column_url", "URL地址"},
-                {"wall_urlblack_column_count", "访问次数"},
-                {"wall_urlblack_column_forbidden", "禁用"},
-                {"wall_urlblack_column_tag", "标签说明"},
-                {"wall_urlblack_column_description", "描述信息"},
+                {"wall_urlblack_table_comment", "链接黑名单", "Url Black"},
+                {"wall_urlblack_column_id", "id", "Id"},
+                {"wall_urlblack_column_url", "URL地址", "Url"},
+                {"wall_urlblack_column_count", "访问次数", "Count"},
+                {"wall_urlblack_column_forbidden", "禁用", "Forbidden"},
+                {"wall_urlblack_column_tag", "标签说明", "Tag"},
+                {"wall_urlblack_column_description", "描述信息", "Description"},
         };
         return items;
     }

@@ -37,11 +37,4 @@ public class WallMenu extends WallMenuGen {
     public void init() {
         super.init();
     }
-
-    public String[][] getLanguageItems() {
-        String[][] items = new String[][]{
-                {wall_menu + "_text", "防火墙", "Fire wall"},
-        };
-        return items;
-    }
 }

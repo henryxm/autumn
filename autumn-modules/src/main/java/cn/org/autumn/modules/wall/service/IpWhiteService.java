@@ -129,21 +129,6 @@ public class IpWhiteService extends IpWhiteServiceGen implements LoadFactory.Loa
         }
     }
 
-    public String[][] getLanguageItems() {
-        String[][] items = new String[][]{
-                {"wall_ipwhite_table_comment", "IP白名单", "IP black list"},
-                {"wall_ipwhite_column_id", "id"},
-                {"wall_ipwhite_column_ip", "IP地址", "IP address"},
-                {"wall_ipwhite_column_count", "访问次数", "Visit count"},
-                {"wall_ipwhite_column_forbidden", "禁用", "Forbidden"},
-                {"wall_ipwhite_column_tag", "标签说明", "Tag"},
-                {"wall_ipwhite_column_description", "描述信息", "Description"},
-                {"wall_ipwhite_column_create_time", "创建时间", "Create time"},
-                {"wall_ipwhite_column_update_time", "更新时间", "Update time"},
-        };
-        return items;
-    }
-
     @Override
     public void runJob() {
         load();

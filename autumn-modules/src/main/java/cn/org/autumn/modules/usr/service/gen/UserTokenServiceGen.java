@@ -24,7 +24,7 @@ import cn.org.autumn.modules.lan.service.LanguageService;
  *
  * @author Shaohua Xu
  * @email henryxm@163.com
- * @date 2021-06
+ * @date 2021-07
  */
 public class UserTokenServiceGen extends ServiceImpl<UserTokenDao, UserTokenEntity> implements InitFactory.Init {
 
@@ -121,13 +121,13 @@ public class UserTokenServiceGen extends ServiceImpl<UserTokenDao, UserTokenEnti
 
     private String[][] getLanguageItemsInternal() {
         String[][] items = new String[][]{
-                {"usr_usertoken_table_comment", "用户Token"},
-                {"usr_usertoken_column_id", "ID"},
-                {"usr_usertoken_column_user_uuid", "用户UUID"},
-                {"usr_usertoken_column_token", "Token"},
-                {"usr_usertoken_column_refresh_token", "Refresh Token"},
-                {"usr_usertoken_column_expire_time", "过期时间"},
-                {"usr_usertoken_column_update_time", "更新时间"},
+                {"usr_usertoken_table_comment", "用户Token", "User Token"},
+                {"usr_usertoken_column_id", "ID", "Id"},
+                {"usr_usertoken_column_user_uuid", "用户UUID", "User Uuid"},
+                {"usr_usertoken_column_token", "Token", "Token"},
+                {"usr_usertoken_column_refresh_token", "Refresh Token", "Refresh Token"},
+                {"usr_usertoken_column_expire_time", "过期时间", "Expire Time"},
+                {"usr_usertoken_column_update_time", "更新时间", "Update Time"},
         };
         return items;
     }

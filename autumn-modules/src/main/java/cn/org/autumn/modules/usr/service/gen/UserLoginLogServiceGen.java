@@ -24,7 +24,7 @@ import cn.org.autumn.modules.lan.service.LanguageService;
  *
  * @author Shaohua Xu
  * @email henryxm@163.com
- * @date 2021-06
+ * @date 2021-07
  */
 public class UserLoginLogServiceGen extends ServiceImpl<UserLoginLogDao, UserLoginLogEntity> implements InitFactory.Init {
 
@@ -115,11 +115,11 @@ public class UserLoginLogServiceGen extends ServiceImpl<UserLoginLogDao, UserLog
 
     private String[][] getLanguageItemsInternal() {
         String[][] items = new String[][]{
-                {"usr_userloginlog_table_comment", "登录日志"},
-                {"usr_userloginlog_column_id", "日志ID"},
-                {"usr_userloginlog_column_username", "用户名"},
-                {"usr_userloginlog_column_login_time", "登录时间"},
-                {"usr_userloginlog_column_logout_time", "登出时间"},
+                {"usr_userloginlog_table_comment", "登录日志", "User Login Log"},
+                {"usr_userloginlog_column_id", "日志ID", "Id"},
+                {"usr_userloginlog_column_username", "用户名", "Username"},
+                {"usr_userloginlog_column_login_time", "登录时间", "Login Time"},
+                {"usr_userloginlog_column_logout_time", "登出时间", "Logout Time"},
         };
         return items;
     }

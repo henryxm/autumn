@@ -24,7 +24,7 @@ import cn.org.autumn.modules.lan.service.LanguageService;
  *
  * @author Shaohua Xu
  * @email henryxm@163.com
- * @date 2021-06
+ * @date 2021-07
  */
 public class UserProfileServiceGen extends ServiceImpl<UserProfileDao, UserProfileEntity> implements InitFactory.Init {
 
@@ -130,16 +130,16 @@ public class UserProfileServiceGen extends ServiceImpl<UserProfileDao, UserProfi
 
     private String[][] getLanguageItemsInternal() {
         String[][] items = new String[][]{
-                {"usr_userprofile_table_comment", "用户信息"},
-                {"usr_userprofile_column_uuid", "UUID"},
-                {"usr_userprofile_column_open_id", "OPENID"},
-                {"usr_userprofile_column_union_id", "UNIONID"},
-                {"usr_userprofile_column_icon", "头像"},
-                {"usr_userprofile_column_username", "用户名"},
-                {"usr_userprofile_column_nickname", "用户昵称"},
-                {"usr_userprofile_column_mobile", "手机号"},
-                {"usr_userprofile_column_password", "密码"},
-                {"usr_userprofile_column_create_time", "创建时间"},
+                {"usr_userprofile_table_comment", "用户信息", "User Profile"},
+                {"usr_userprofile_column_uuid", "UUID", "Uuid"},
+                {"usr_userprofile_column_open_id", "OPENID", "Open Id"},
+                {"usr_userprofile_column_union_id", "UNIONID", "Union Id"},
+                {"usr_userprofile_column_icon", "头像", "Icon"},
+                {"usr_userprofile_column_username", "用户名", "Username"},
+                {"usr_userprofile_column_nickname", "用户昵称", "Nickname"},
+                {"usr_userprofile_column_mobile", "手机号", "Mobile"},
+                {"usr_userprofile_column_password", "密码", "Password"},
+                {"usr_userprofile_column_create_time", "创建时间", "Create Time"},
         };
         return items;
     }

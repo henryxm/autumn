@@ -1,6 +1,8 @@
 package cn.org.autumn.modules.sys.shiro;
 
+import cn.org.autumn.cluster.UserHandler;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
+import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.modules.sys.service.SysUserService;
 import cn.org.autumn.modules.usr.service.UserProfileService;
 import cn.org.autumn.utils.RedisKeys;
@@ -13,12 +15,14 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
 import java.io.*;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static org.apache.shiro.subject.support.DefaultSubjectContext.PRINCIPALS_SESSION_KEY;
 
 @Component
 public class RedisShiroSessionDAO extends EnterpriseCacheSessionDAO {
+
     @Autowired
     private RedisTemplate redisTemplate;
 
@@ -27,6 +31,12 @@ public class RedisShiroSessionDAO extends EnterpriseCacheSessionDAO {
 
     @Autowired
     UserProfileService userProfileService;
+
+    @Autowired
+    SysConfigService sysConfigService;
+
+    @Autowired(required = false)
+    List<UserHandler> userHandlers;
 
     //创建session
     @Override
@@ -77,14 +87,26 @@ public class RedisShiroSessionDAO extends EnterpriseCacheSessionDAO {
         redisTemplate.opsForValue().set(key, session);
         //60分钟过期
         redisTemplate.expire(key, 60, TimeUnit.MINUTES);
+
+        //如果没找到userHandler 则不需要同步用户
+        if (null == userHandlers || userHandlers.size() == 0)
+            return;
+        //如果有 userHandler, 但是如果是同一台服务器，则不需要同步
+        boolean same = true;
+        for (UserHandler userHandler : userHandlers) {
+            same = sysConfigService.isSame(userHandler);
+            if (!same)
+                break;
+        }
+        if (same)
+            return;
+
         PrincipalCollection principals = (PrincipalCollection) session.getAttribute(PRINCIPALS_SESSION_KEY);
         if (null != principals) {
             Object o = principals.getPrimaryPrincipal();
-            if (null != o && o instanceof SysUserEntity) {
+            if (o instanceof SysUserEntity) {
                 SysUserEntity sysUserEntity = (SysUserEntity) o;
-                /**
-                 * 增加子账户后，需优先同步主账户
-                 */
+                // 增加子账户后，需优先同步主账户
                 if (null != sysUserEntity.getParent()) {
                     SysUserEntity parent = sysUserEntity.getParent();
                     sysUserService.copy(parent);

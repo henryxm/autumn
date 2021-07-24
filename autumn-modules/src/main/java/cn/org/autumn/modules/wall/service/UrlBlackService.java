@@ -153,19 +153,6 @@ public class UrlBlackService extends UrlBlackServiceGen implements LoadFactory.L
         return urlBlackEntity;
     }
 
-    public String[][] getLanguageItems() {
-        String[][] items = new String[][]{
-                {"wall_urlblack_table_comment", "链接黑名单", "URL black list"},
-                {"wall_urlblack_column_id", "id"},
-                {"wall_urlblack_column_url", "URL地址", "URL address"},
-                {"wall_urlblack_column_count", "访问次数", "Visit count"},
-                {"wall_urlblack_column_forbidden", "禁用", "Forbidden"},
-                {"wall_urlblack_column_tag", "标签说明", "Tag"},
-                {"wall_urlblack_column_description", "描述信息", "Description"},
-        };
-        return items;
-    }
-
     @Override
     public void runJob() {
         refresh(300);

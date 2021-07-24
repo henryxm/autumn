@@ -24,7 +24,7 @@ import cn.org.autumn.modules.lan.service.LanguageService;
  *
  * @author Shaohua Xu
  * @email henryxm@163.com
- * @date 2021-01
+ * @date 2021-07
  */
 public class VisitLogServiceGen extends ServiceImpl<VisitLogDao, VisitLogEntity> implements InitFactory.Init {
 
@@ -130,16 +130,16 @@ public class VisitLogServiceGen extends ServiceImpl<VisitLogDao, VisitLogEntity>
 
     private String[][] getLanguageItemsInternal() {
         String[][] items = new String[][]{
-                {"spm_visitlog_table_comment", "访问统计"},
-                {"spm_visitlog_column_id", "id"},
-                {"spm_visitlog_column_site_id", "网站ID"},
-                {"spm_visitlog_column_page_id", "网页ID"},
-                {"spm_visitlog_column_channel_id", "频道ID"},
-                {"spm_visitlog_column_product_id", "产品ID"},
-                {"spm_visitlog_column_unique_visitor", "独立访客(UV)"},
-                {"spm_visitlog_column_page_view", "访问量(PV)"},
-                {"spm_visitlog_column_day_string", "当天"},
-                {"spm_visitlog_column_create_time", "创建时间"},
+                {"spm_visitlog_table_comment", "访问统计", "Visit Log"},
+                {"spm_visitlog_column_id", "id", "Id"},
+                {"spm_visitlog_column_site_id", "网站ID", "Site Id"},
+                {"spm_visitlog_column_page_id", "网页ID", "Page Id"},
+                {"spm_visitlog_column_channel_id", "频道ID", "Channel Id"},
+                {"spm_visitlog_column_product_id", "产品ID", "Product Id"},
+                {"spm_visitlog_column_unique_visitor", "独立访客(UV)", "Unique Visitor"},
+                {"spm_visitlog_column_page_view", "访问量(PV)", "Page View"},
+                {"spm_visitlog_column_day_string", "当天", "Day String"},
+                {"spm_visitlog_column_create_time", "创建时间", "Create Time"},
         };
         return items;
     }

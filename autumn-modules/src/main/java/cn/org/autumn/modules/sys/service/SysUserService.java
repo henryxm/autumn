@@ -324,9 +324,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
                             sysUserEntity.setUserId(ex.getUserId());
                             updateById(sysUserEntity);
                         } else {
-                            /**
-                             * 设定缺省的部门ID
-                             */
+                            // 设定缺省的部门ID
                             String dk = sysConfigService.getDefaultDepartKey();
                             SysDeptEntity sysDeptEntity = sysDeptService.getByDeptKey(dk);
                             if (null != sysDeptEntity) {
@@ -334,10 +332,8 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
                             }
                             sysUserEntity.setUserId(null);
                             insert(sysUserEntity);
-                            /**
-                             * 设定缺省的角色
-                             */
-                            sysUserRoleService.saveOrUpdate(ex.getUuid(), sysConfigService.getDefaultRoleKeys());
+                            // 设定缺省的角色
+                            sysUserRoleService.saveOrUpdate(sysUserEntity.getUuid(), sysConfigService.getDefaultRoleKeys());
                         }
                     }
                 } catch (Exception e) {
@@ -347,9 +343,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
                 iterator.remove();
             }
         }
-        /**
-         * 清理缓存，避免过度消耗内存
-         */
+        // 清理缓存，避免过度消耗内存
         if (hashUser.size() > 10000) {
             hashUser.clear();
         }

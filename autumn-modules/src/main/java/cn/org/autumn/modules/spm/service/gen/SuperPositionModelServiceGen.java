@@ -24,7 +24,7 @@ import cn.org.autumn.modules.lan.service.LanguageService;
  *
  * @author Shaohua Xu
  * @email henryxm@163.com
- * @date 2021-01
+ * @date 2021-07
  */
 public class SuperPositionModelServiceGen extends ServiceImpl<SuperPositionModelDao, SuperPositionModelEntity> implements InitFactory.Init {
 
@@ -136,18 +136,18 @@ public class SuperPositionModelServiceGen extends ServiceImpl<SuperPositionModel
 
     private String[][] getLanguageItemsInternal() {
         String[][] items = new String[][]{
-                {"spm_superpositionmodel_table_comment", "超级位置模型"},
-                {"spm_superpositionmodel_column_id", "id"},
-                {"spm_superpositionmodel_column_site_id", "网站ID"},
-                {"spm_superpositionmodel_column_page_id", "网页ID"},
-                {"spm_superpositionmodel_column_channel_id", "频道ID"},
-                {"spm_superpositionmodel_column_product_id", "产品ID"},
-                {"spm_superpositionmodel_column_resource_id", "资源ID"},
-                {"spm_superpositionmodel_column_url_path", "URL路径"},
-                {"spm_superpositionmodel_column_url_key", "URLKey"},
-                {"spm_superpositionmodel_column_spm_value", "SPM值"},
-                {"spm_superpositionmodel_column_forbidden", "是否禁用"},
-                {"spm_superpositionmodel_column_need_login", "需要登录"},
+                {"spm_superpositionmodel_table_comment", "超级位置模型", "Super Position Model"},
+                {"spm_superpositionmodel_column_id", "id", "Id"},
+                {"spm_superpositionmodel_column_site_id", "网站ID", "Site Id"},
+                {"spm_superpositionmodel_column_page_id", "网页ID", "Page Id"},
+                {"spm_superpositionmodel_column_channel_id", "频道ID", "Channel Id"},
+                {"spm_superpositionmodel_column_product_id", "产品ID", "Product Id"},
+                {"spm_superpositionmodel_column_resource_id", "资源ID", "Resource Id"},
+                {"spm_superpositionmodel_column_url_path", "URL路径", "Url Path"},
+                {"spm_superpositionmodel_column_url_key", "URLKey", "Url Key"},
+                {"spm_superpositionmodel_column_spm_value", "SPM值", "Spm Value"},
+                {"spm_superpositionmodel_column_forbidden", "是否禁用", "Forbidden"},
+                {"spm_superpositionmodel_column_need_login", "需要登录", "Need Login"},
         };
         return items;
     }

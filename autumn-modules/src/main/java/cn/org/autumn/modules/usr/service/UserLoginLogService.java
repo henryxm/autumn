@@ -20,17 +20,6 @@ public class UserLoginLogService extends UserLoginLogServiceGen {
         return "fa-sun-o";
     }
 
-    public String[][] getLanguageItems() {
-        String[][] items = new String[][]{
-                {"usr_userloginlog_table_comment", "登录日志", "Login log"},
-                {"usr_userloginlog_column_id", "日志ID", "Log id"},
-                {"usr_userloginlog_column_username", "用户名", "Username"},
-                {"usr_userloginlog_column_login_time", "登录时间", "Login time"},
-                {"usr_userloginlog_column_logout_time", "登出时间", "Logout time"},
-        };
-        return items;
-    }
-
     public void login(String username) {
         UserLoginLogEntity userLoginLogEntity = new UserLoginLogEntity();
         userLoginLogEntity.setUsername(username);
