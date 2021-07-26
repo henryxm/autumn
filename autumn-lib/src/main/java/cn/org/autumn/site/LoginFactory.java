@@ -2,6 +2,7 @@ package cn.org.autumn.site;
 
 import cn.org.autumn.utils.SpringContextUtils;
 import org.springframework.context.ApplicationContext;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import javax.servlet.http.HttpServletRequest;
@@ -15,6 +16,7 @@ public class LoginFactory extends Factory {
     private static Map<Integer, List<Login>> map = null;
 
     public interface Login {
+        @Order(DEFAULT_ORDER)
         boolean isNeed(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse);
     }
 

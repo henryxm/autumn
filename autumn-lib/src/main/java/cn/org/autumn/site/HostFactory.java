@@ -1,5 +1,6 @@
 package cn.org.autumn.site;
 
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import javax.servlet.http.HttpServletRequest;
@@ -13,6 +14,7 @@ public class HostFactory extends Factory {
     private static Map<Integer, List<Host>> map = null;
 
     public interface Host {
+        @Order(DEFAULT_ORDER)
         boolean isAllowed(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse);
     }
 

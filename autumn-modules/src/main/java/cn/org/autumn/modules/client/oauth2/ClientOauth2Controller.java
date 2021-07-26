@@ -65,7 +65,7 @@ public class ClientOauth2Controller {
             return new ResponseEntity(response.getBody(), HttpStatus.valueOf(response.getResponseStatus()));
         }
 
-        WebAuthenticationEntity webAuthenticationEntity = webAuthenticationService.findByClientId(sysConfigService.getOauth2LoginClientId());
+        WebAuthenticationEntity webAuthenticationEntity = webAuthenticationService.getByClientId(sysConfigService.getOauth2LoginClientId());
         String accessToken = getAccessToken(webAuthenticationEntity, authCode);
         UserProfile userProfile = getUserInfo(webAuthenticationEntity, accessToken);
         if (null != userProfile) {

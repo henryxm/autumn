@@ -2,6 +2,7 @@ package cn.org.autumn.config;
 
 import cn.org.autumn.annotation.EnvAware;
 import cn.org.autumn.site.InitFactory;
+import cn.org.autumn.utils.Utils;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.core.annotation.Order;
 
@@ -29,10 +30,7 @@ public interface EnvHandler extends InitFactory.Before {
                 try {
                     Type type = field.getGenericType();
                     if (type.equals(boolean.class) || type.equals(Boolean.class)) {
-                        boolean v = false;
-                        if ("1".equals(value) || "true".equalsIgnoreCase(value) || "yes".equalsIgnoreCase(value))
-                            v = true;
-                        field.set(this, v);
+                        field.set(this, Utils.parseBoolean(value));
                     } else if (type.equals(int.class) || type.equals(Integer.class)) {
                         field.set(this, Integer.parseInt(value));
                     } else if (type.equals(long.class) || type.equals(Long.class)) {

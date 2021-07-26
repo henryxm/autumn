@@ -61,7 +61,7 @@ public class SysPageController {
          */
         String clientId = sysConfigService.getOauth2LoginClientId();
         if (StringUtils.isNotEmpty(clientId)) {
-            WebAuthenticationEntity webAuthenticationEntity = webAuthenticationService.findByClientId(clientId);
+            WebAuthenticationEntity webAuthenticationEntity = webAuthenticationService.getByClientId(clientId);
             if (null != webAuthenticationEntity) {
                 StringBuffer sb = new StringBuffer();
                 if (StringUtils.isNotEmpty(webAuthenticationEntity.getAuthorizeUri()) && StringUtils.isNotEmpty(webAuthenticationEntity.getRedirectUri())) {

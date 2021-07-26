@@ -1,6 +1,7 @@
 package cn.org.autumn.site;
 
 import org.apache.commons.lang.StringUtils;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.ui.Model;
 
@@ -16,6 +17,7 @@ public class PathFactory extends Factory {
 
     public interface Path {
 
+        @Order(DEFAULT_ORDER)
         String get(HttpServletRequest request, HttpServletResponse response, Model model);
 
         default boolean isRoot(HttpServletRequest request) {

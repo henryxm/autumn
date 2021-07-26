@@ -9,7 +9,7 @@ import org.springframework.stereotype.Repository;
 
 /**
  * 网站客户端
- * 
+ *
  * @author Shaohua Xu
  * @email henryxm@163.com
  * @date 2020-11
@@ -19,5 +19,8 @@ import org.springframework.stereotype.Repository;
 public interface WebAuthenticationDao extends BaseMapper<WebAuthenticationEntity> {
 
     @Select("select * from client_web_authentication where client_id = #{clientId} limit 1")
-    WebAuthenticationEntity findByClientId(@Param("clientId") String clientId);
+    WebAuthenticationEntity getByClientId(@Param("clientId") String clientId);
+
+    @Select("select count(*) from client_web_authentication where client_id = #{clientId}")
+    Integer hasClientId(@Param("clientId") String clientId);
 }

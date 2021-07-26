@@ -90,8 +90,10 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
 
     public String getClientSecret() {
         String secret = envBean.getClientSecret();
-        if (StringUtils.isBlank(secret))
+        if (StringUtils.isBlank(secret)) {
             secret = Uuid.uuid();
+            envBean.setClientSecret(secret);
+        }
         return secret;
     }
 

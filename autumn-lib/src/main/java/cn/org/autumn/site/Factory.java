@@ -14,6 +14,11 @@ public class Factory {
     private static final Logger log = LoggerFactory.getLogger(Factory.class);
 
     /**
+     * 排序缺省值
+     */
+    public static final int DEFAULT_ORDER = Integer.MAX_VALUE / 1000;
+
+    /**
      * 查找所有实现了T类型的接口的Bean，并对Bean方法注解中指定的方法上的的Order进行排序
      * <p>
      * 根据从小到大的顺序执行Bean方法，达到根据排序进行先后有序执行的效果。
@@ -43,7 +48,7 @@ public class Factory {
             Order order = null;
             try {
                 Class<?> clazz = init.getClass();
-                while (null != clazz && null == order) {
+                while (null != clazz && null == order && !clazz.equals(Object.class)) {
                     method = clazz.getMethod(name, parameterTypes);
                     order = method.getAnnotation(Order.class);
                     clazz = clazz.getSuperclass();
@@ -52,13 +57,22 @@ public class Factory {
                 if (log.isDebugEnabled())
                     log.debug("getOrdered", e);
             }
+            if (null == order) {
+                try {
+                    method = t.getMethod(name, parameterTypes);
+                    order = method.getAnnotation(Order.class);
+                } catch (Exception e) {
+                    if (log.isDebugEnabled())
+                        log.debug("getOrdered", e);
+                }
+            }
             List<T> list = null;
-            int value = Integer.MAX_VALUE;
+            int value = Integer.MAX_VALUE / 100;
             if (null != order) {
                 list = ordered.get(order.value());
                 value = order.value();
             } else {
-                list = ordered.get(Integer.MAX_VALUE);
+                list = ordered.get(value);
             }
             if (null == list) {
                 list = new ArrayList<>();
@@ -77,7 +91,7 @@ public class Factory {
      * @param name 方法名
      * @param <T>  Bean Class
      */
-    public <T> void invoke(Class<T> t, String name, Class<?>... parameterTypes) {
+    public <T> void invoke(Class<T> t, String name) {
         Map<Integer, List<T>> ordered = getOrdered(t, name);
         if (null == ordered || ordered.size() == 0)
             return;
@@ -85,7 +99,7 @@ public class Factory {
             List<T> list = entry.getValue();
             for (T obj : list) {
                 try {
-                    Method m = obj.getClass().getMethod(name, parameterTypes);
+                    Method m = obj.getClass().getMethod(name);
                     m.invoke(obj);
                 } catch (Exception e) {
                     log.debug(t.getSimpleName(), e);
