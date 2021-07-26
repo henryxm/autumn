@@ -11,19 +11,19 @@ import java.util.*;
 
 public class Factory {
 
-    private static final Logger log = LoggerFactory.getLogger(InitFactory.class);
+    private static final Logger log = LoggerFactory.getLogger(Factory.class);
 
     /**
      * 查找所有实现了T类型的接口的Bean，并对Bean方法注解中指定的方法上的的Order进行排序
      * <p>
      * 根据从小到大的顺序执行Bean方法，达到根据排序进行先后有序执行的效果。
      *
-     * @param t   Bean Class
-     * @param mtd 方法名
-     * @param <T> Bean Class
+     * @param t    Bean Class
+     * @param name 方法名
+     * @param <T>  Bean Class
      * @return ordered Beans
      */
-    public static <T> Map<Integer, List<T>> getOrdered(Class<T> t, String mtd) {
+    public static <T> Map<Integer, List<T>> getOrdered(Class<T> t, String name, Class<?>... parameterTypes) {
         ApplicationContext applicationContext = SpringContextUtils.getApplicationContext();
         if (null == applicationContext)
             return null;
@@ -40,13 +40,18 @@ public class Factory {
         for (Map.Entry<String, T> k : map.entrySet()) {
             T init = k.getValue();
             Method method = null;
-            try {
-                method = init.getClass().getDeclaredMethod(mtd, null);
-            } catch (Exception ignored) {
-            }
             Order order = null;
-            if (null != method)
-                order = method.getAnnotation(Order.class);
+            try {
+                Class<?> clazz = init.getClass();
+                while (null != clazz && null == order) {
+                    method = clazz.getMethod(name, parameterTypes);
+                    order = method.getAnnotation(Order.class);
+                    clazz = clazz.getSuperclass();
+                }
+            } catch (Exception e) {
+                if (log.isDebugEnabled())
+                    log.debug("getOrdered", e);
+            }
             List<T> list = null;
             int value = Integer.MAX_VALUE;
             if (null != order) {
@@ -68,19 +73,19 @@ public class Factory {
      * 调用所有实现了接口T的Bean的方法
      * 有小到大的顺序执行
      *
-     * @param t      Bean Class
-     * @param method 方法名
-     * @param <T>    Bean Class
+     * @param t    Bean Class
+     * @param name 方法名
+     * @param <T>  Bean Class
      */
-    public <T> void invoke(Class<T> t, String method) {
-        Map<Integer, List<T>> ordered = getOrdered(t, method);
+    public <T> void invoke(Class<T> t, String name, Class<?>... parameterTypes) {
+        Map<Integer, List<T>> ordered = getOrdered(t, name);
         if (null == ordered || ordered.size() == 0)
             return;
         for (Map.Entry<Integer, List<T>> entry : ordered.entrySet()) {
             List<T> list = entry.getValue();
             for (T obj : list) {
                 try {
-                    Method m = obj.getClass().getMethod(method, null);
+                    Method m = obj.getClass().getMethod(name, parameterTypes);
                     m.invoke(obj);
                 } catch (Exception e) {
                     log.debug(t.getSimpleName(), e);

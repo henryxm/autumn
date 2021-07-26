@@ -524,6 +524,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     }
 
     @Override
+    @Order(0)
     public boolean isAllowed(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse) {
         String host = httpServletRequest.getHeader("host");
         return isSiteDomain(host);

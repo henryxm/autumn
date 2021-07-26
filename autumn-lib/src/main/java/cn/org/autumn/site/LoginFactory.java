@@ -6,12 +6,13 @@ import org.springframework.stereotype.Component;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.util.List;
 import java.util.Map;
 
 @Component
-public class LoginFactory {
+public class LoginFactory extends Factory {
 
-    private static Map<String, LoginFactory.Login> map = null;
+    private static Map<Integer, List<Login>> map = null;
 
     public interface Login {
         boolean isNeed(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse);
@@ -29,11 +30,15 @@ public class LoginFactory {
         if (null == applicationContext)
             return false;
         if (null == map)
-            map = applicationContext.getBeansOfType(LoginFactory.Login.class);
-        for (Map.Entry<String, LoginFactory.Login> k : map.entrySet()) {
-            LoginFactory.Login login = k.getValue();
-            if (!login.isNeed(httpServletRequest, httpServletResponse))
-                return false;
+            map = getOrdered(Login.class, "isNeed", HttpServletRequest.class, HttpServletResponse.class);
+        if (null != map && map.size() > 0) {
+            for (Map.Entry<Integer, List<Login>> k : map.entrySet()) {
+                List<Login> list = k.getValue();
+                for (Login login : list) {
+                    if (!login.isNeed(httpServletRequest, httpServletResponse))
+                        return false;
+                }
+            }
         }
         return true;
     }

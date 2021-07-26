@@ -1,19 +1,18 @@
 package cn.org.autumn.site;
 
-import cn.org.autumn.utils.SpringContextUtils;
 import org.apache.commons.lang.StringUtils;
-import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 import org.springframework.ui.Model;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.util.List;
 import java.util.Map;
 
 @Component
-public class PathFactory {
+public class PathFactory extends Factory {
 
-    private static Map<String, PathFactory.Path> map = null;
+    private static Map<Integer, List<Path>> map = null;
 
     public interface Path {
 
@@ -34,17 +33,18 @@ public class PathFactory {
     }
 
     public String get(HttpServletRequest request, HttpServletResponse response, Model model) {
-        ApplicationContext applicationContext = SpringContextUtils.getApplicationContext();
-        if (null == applicationContext)
-            return null;
         if (null == map)
-            map = applicationContext.getBeansOfType(Path.class);
-        for (Map.Entry<String, Path> k : map.entrySet()) {
-            Path path = k.getValue();
-            String o = path.get(request, response, model);
-            if (StringUtils.isEmpty(o))
-                continue;
-            return o;
+            map = getOrdered(Path.class, "get", HttpServletRequest.class, HttpServletResponse.class, Model.class);
+        if (null != map && map.size() > 0) {
+            for (Map.Entry<Integer, List<Path>> k : map.entrySet()) {
+                List<Path> paths = k.getValue();
+                for (Path path : paths) {
+                    String o = path.get(request, response, model);
+                    if (StringUtils.isEmpty(o))
+                        continue;
+                    return o;
+                }
+            }
         }
         return null;
     }
