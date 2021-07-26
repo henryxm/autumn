@@ -395,6 +395,8 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
 
     public boolean isSsl() {
         boolean isSsl = getBoolean(SITE_SSL);
+        if (!isSsl)
+            isSsl = envBean.isSiteSsl();
         String siteDomain = getSiteDomain();
         //域名为空不是SSL
         if (StringUtils.isBlank(siteDomain) ||

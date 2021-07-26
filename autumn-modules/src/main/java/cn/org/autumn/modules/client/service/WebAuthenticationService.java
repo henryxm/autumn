@@ -72,7 +72,7 @@ public class WebAuthenticationService extends WebAuthenticationServiceGen {
     public void init() {
         super.init();
         if (!hasClientId(sysConfigService.getClientId())) {
-            create(sysConfigService.getBaseUrl(), sysConfigService.getClientId(), sysConfigService.getClientSecret(), "默认的客户端", "basic", "normal");
+            create(sysConfigService.getClientId(), sysConfigService.getClientSecret(), sysConfigService.getBaseUrl(), "默认的客户端", "basic", "normal");
         }
     }
 }
