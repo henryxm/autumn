@@ -4,7 +4,7 @@ import cn.org.autumn.annotation.PageAware;
 import org.springframework.stereotype.Component;
 
 @Component
-public class RootSite implements SiteFactory.Site {
+public class RootSite implements SiteFactory.Site, TemplateFactory.Template {
 
     public final static String siteId = "root";
     public final static String pack = "root";

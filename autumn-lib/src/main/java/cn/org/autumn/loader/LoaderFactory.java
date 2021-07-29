@@ -13,7 +13,14 @@ public final class LoaderFactory {
     private LoaderFactory() {
     }
 
+    /**
+     * 使用TemplateFactory.Template 代替 LoaderFactory.Loader
+     *
+     * @see cn.org.autumn.site.TemplateFactory
+     */
+    @Deprecated
     public interface Loader {
+        @Deprecated
         TemplateLoader get();
     }
 

@@ -1,69 +1,21 @@
 package cn.org.autumn;
 
-import cn.org.autumn.loader.LoaderFactory;
-import freemarker.cache.ClassTemplateLoader;
-import freemarker.cache.TemplateLoader;
+import cn.org.autumn.site.TemplateFactory;
 import org.mybatis.spring.annotation.MapperScan;
-import org.springframework.boot.Banner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.boot.web.servlet.ServletComponentScan;
 import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
-import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.EnableAspectJAutoProxy;
-import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.scheduling.annotation.EnableAsync;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
-import java.util.concurrent.RejectedExecutionHandler;
-import java.util.concurrent.ThreadPoolExecutor;
 
 @EnableAspectJAutoProxy(proxyTargetClass = true, exposeProxy = true)
 @ServletComponentScan
 @EnableAsync
 @SpringBootApplication
 @MapperScan(basePackages = {"cn.org.autumn.modules.*.dao", "cn.org.autumn.table.dao",})
-public class AutumnApplication extends SpringBootServletInitializer implements LoaderFactory.Loader {
+public class AutumnApplication extends SpringBootServletInitializer implements TemplateFactory.Template {
     public static void main(String[] args) {
-        SpringApplication springApplication = new SpringApplication(AutumnApplication.class);
-        springApplication.setBannerMode(Banner.Mode.OFF);
-        ConfigurableApplicationContext configurableApplicationContext = springApplication.run(args);
-    }
-
-    @Override
-    protected SpringApplicationBuilder configure(SpringApplicationBuilder application) {
-        return application.sources(AutumnApplication.class);
-    }
-
-    /**
-     * 自定义异步线程池
-     *
-     * @return
-     */
-    @Bean
-    public AsyncTaskExecutor asyncTaskExecutor() {
-        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setThreadNamePrefix("Anno-Executor");
-        executor.setMaxPoolSize(50000);
-        executor.setCorePoolSize(1000);
-
-        // 设置拒绝策略
-        executor.setRejectedExecutionHandler(new RejectedExecutionHandler() {
-            @Override
-            public void rejectedExecution(Runnable r, ThreadPoolExecutor executor) {
-                // .....
-            }
-        });
-        // 使用预定义的异常处理类
-        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
-
-        return executor;
-    }
-
-    @Override
-    public TemplateLoader get() {
-        TemplateLoader loader = new ClassTemplateLoader(this.getClass(), "/templates");
-        return loader;
+        new SpringApplication(AutumnApplication.class).run(args);
     }
 }

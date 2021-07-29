@@ -6,6 +6,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import cn.org.autumn.cluster.PermissionHandler;
 import cn.org.autumn.modules.oauth.service.ClientDetailsService;
 import cn.org.autumn.modules.oauth.store.ValueType;
 import cn.org.autumn.modules.sys.service.SysUserRoleService;
@@ -45,6 +46,9 @@ public class UserRealm extends AuthorizingRealm {
     @Autowired
     SysUserRoleService sysUserRoleService;
 
+    @Autowired(required = false)
+    List<PermissionHandler> permissionHandlers;
+
     /**
      * 授权(验证权限时调用)
      */
@@ -73,6 +77,13 @@ public class UserRealm extends AuthorizingRealm {
                 continue;
             }
             permsSet.addAll(Arrays.asList(perms.trim().split(",")));
+        }
+        if (null != permissionHandlers && permissionHandlers.size() > 0) {
+            for (PermissionHandler permissionHandler : permissionHandlers) {
+                Set<String> permissions = permissionHandler.getPermissions(uuid);
+                if (null != permissions && permissions.size() > 0)
+                    permsSet.addAll(permissions);
+            }
         }
 
         SimpleAuthorizationInfo info = new SimpleAuthorizationInfo();

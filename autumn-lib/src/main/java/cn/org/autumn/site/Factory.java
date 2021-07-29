@@ -46,21 +46,29 @@ public class Factory {
             T init = k.getValue();
             Method method = null;
             Order order = null;
+
+            //获取实例中的排序Order，如果没找到，你从超类中寻找
             try {
                 Class<?> clazz = init.getClass();
                 while (null != clazz && null == order && !clazz.equals(Object.class)) {
                     method = clazz.getMethod(name, parameterTypes);
                     order = method.getAnnotation(Order.class);
+                    if (null == order) {
+                        order = clazz.getAnnotation(Order.class);
+                    }
                     clazz = clazz.getSuperclass();
                 }
             } catch (Exception e) {
                 if (log.isDebugEnabled())
                     log.debug("getOrdered", e);
             }
+            //如果从实例中没有找到Order，则寻找接口中的Order
             if (null == order) {
                 try {
                     method = t.getMethod(name, parameterTypes);
                     order = method.getAnnotation(Order.class);
+                    if (null == order)
+                        order = t.getAnnotation(Order.class);
                 } catch (Exception e) {
                     if (log.isDebugEnabled())
                         log.debug("getOrdered", e);

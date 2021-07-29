@@ -25,16 +25,14 @@ public final class SiteFactory {
                 return "";
             try {
                 Field field = getClass().getField(fieldName);
-                if (null != field) {
-                    PageAware aware = field.getAnnotation(PageAware.class);
-                    if (null != aware) {
-                        String page = field.getName();
-                        if (StringUtils.isNotEmpty(aware.page()) && !"NULL".equalsIgnoreCase(aware.page()) && !"0".equalsIgnoreCase(aware.page()))
-                            page = aware.page();
-                        return getId() + "_" + page;
-                    }
+                PageAware aware = field.getAnnotation(PageAware.class);
+                if (null != aware) {
+                    String page = field.getName();
+                    if (StringUtils.isNotEmpty(aware.page()) && !"NULL".equalsIgnoreCase(aware.page()) && !"0".equalsIgnoreCase(aware.page()))
+                        page = aware.page();
+                    return getId() + "_" + page;
                 }
-            } catch (Exception e) {
+            } catch (Exception ignored) {
             }
             return getId() + "_" + fieldName;
         }
