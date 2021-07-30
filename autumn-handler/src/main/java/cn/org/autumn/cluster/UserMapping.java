@@ -5,6 +5,10 @@ public interface UserMapping {
 
     String getUuid();
 
+    default String getIdCard() {
+        return "";
+    }
+
     default String getMobile() {
         return "";
     }

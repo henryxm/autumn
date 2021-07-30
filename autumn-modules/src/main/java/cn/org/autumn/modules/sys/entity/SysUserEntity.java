@@ -2,19 +2,17 @@ package cn.org.autumn.modules.sys.entity;
 
 import cn.org.autumn.modules.usr.entity.UserProfileEntity;
 import cn.org.autumn.table.annotation.Column;
+import cn.org.autumn.table.annotation.Index;
 import cn.org.autumn.table.annotation.Table;
 import cn.org.autumn.table.data.DataType;
 import com.baomidou.mybatisplus.annotations.TableField;
 import com.baomidou.mybatisplus.annotations.TableId;
 import com.baomidou.mybatisplus.annotations.TableName;
-import com.baomidou.mybatisplus.enums.IdType;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import cn.org.autumn.validator.group.AddGroup;
 import cn.org.autumn.validator.group.UpdateGroup;
 
-import javax.validation.constraints.Email;
 import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.util.Date;
 import java.util.List;
@@ -63,20 +61,32 @@ public class SysUserEntity implements Serializable {
      * 邮箱
      */
     @Column(length = 100, comment = "邮箱")
+    @Index
     private String email;
 
     /**
      * 手机号
      */
     @Column(length = 100, comment = "手机号")
+    @Index
     private String mobile;
 
     @Column(length = 100, comment = "qq号")
+    @Index
     private String qq;
+
     @Column(length = 100, comment = "微信号")
+    @Index
     private String weixing;
+
     @Column(length = 100, comment = "支付宝号")
+    @Index
     private String alipay;
+
+    @Column(comment = "身份证号", length = 50)
+    @Index
+    private String idCard;
+
     /**
      * 状态  0：禁用   1：正常
      */
@@ -193,6 +203,14 @@ public class SysUserEntity implements Serializable {
         this.alipay = alipay;
     }
 
+    public String getIdCard() {
+        return idCard;
+    }
+
+    public void setIdCard(String idCard) {
+        this.idCard = idCard;
+    }
+
     public Integer getStatus() {
         return status;
     }
@@ -275,6 +293,7 @@ public class SysUserEntity implements Serializable {
                 getQq(),
                 getWeixing(),
                 getAlipay(),
+                getIdCard(),
                 getStatus()
         );
     }

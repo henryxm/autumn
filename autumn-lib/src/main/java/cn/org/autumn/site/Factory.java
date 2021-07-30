@@ -115,4 +115,16 @@ public class Factory {
             }
         }
     }
+
+    public <T> List<T> getOrderList(Class<T> t, String name, Class<?>... parameterTypes) {
+        List<T> tmp = new ArrayList<>();
+        Map<Integer, List<T>> ordered = getOrdered(t, name, parameterTypes);
+        if (null != ordered && ordered.size() > 0) {
+            for (Map.Entry<Integer, List<T>> entry : ordered.entrySet()) {
+                List<T> list = entry.getValue();
+                tmp.addAll(list);
+            }
+        }
+        return tmp;
+    }
 }

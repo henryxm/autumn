@@ -73,7 +73,10 @@ public class ClientOauth2Controller {
             userTokenService.saveToken(accessToken);
             logger.debug(userProfile.toString());
         }
-        return "redirect:/";
+        String callback = request.getParameter("callback");
+        if (StringUtils.isBlank(callback) || "null".equalsIgnoreCase(callback))
+            callback = "/";
+        return "redirect:" + callback;
     }
 
     private String getAccessToken(WebAuthenticationEntity webAuthClientEntity, String oauthCode) {

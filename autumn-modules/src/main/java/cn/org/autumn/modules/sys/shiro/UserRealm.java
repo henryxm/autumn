@@ -16,6 +16,10 @@ import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.dao.SysMenuDao;
 import cn.org.autumn.modules.sys.dao.SysUserDao;
 import cn.org.autumn.modules.sys.entity.SysMenuEntity;
+import cn.org.autumn.utils.Email;
+import cn.org.autumn.utils.IDCard;
+import cn.org.autumn.utils.Phone;
+import cn.org.autumn.utils.QQ;
 import org.apache.commons.lang.StringUtils;
 import org.apache.shiro.authc.*;
 import org.apache.shiro.authc.credential.CredentialsMatcher;
@@ -108,6 +112,24 @@ public class UserRealm extends AuthorizingRealm {
             else
                 user.setUsername(username);
             user = sysUserDao.selectOne(user);
+        }
+        if (null == user && Email.isEmail(username)) {
+            user = sysUserDao.getByEmail(username);
+        }
+        if (null == user && Phone.isPhone(username)) {
+            user = sysUserDao.getByPhone(username);
+        }
+        if (null == user && IDCard.isIdCard(username)) {
+            user = sysUserDao.getByIdCard(username);
+        }
+        if (null == user && QQ.isQQ(username)) {
+            user = sysUserDao.getByQq(username);
+        }
+        if (null == user) {
+            user = sysUserDao.getByWeixing(username);
+        }
+        if (null == user) {
+            user = sysUserDao.getByAlipay(username);
         }
 
         //账号不存在

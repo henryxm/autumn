@@ -3,6 +3,7 @@ package cn.org.autumn.modules.sys.controller;
 import cn.org.autumn.config.Config;
 import cn.org.autumn.modules.spm.service.SuperPositionModelService;
 import cn.org.autumn.modules.sys.service.SysUserService;
+import cn.org.autumn.site.PageFactory;
 import com.google.code.kaptcha.Constants;
 import com.google.code.kaptcha.Producer;
 import cn.org.autumn.utils.R;
@@ -31,6 +32,9 @@ public class SysLoginController {
 
     @Autowired
     SysUserService sysUserService;
+
+    @Autowired
+    PageFactory pageFactory;
 
     @RequestMapping("captcha.jpg")
     public void captcha(HttpServletResponse response) throws IOException {
@@ -84,7 +88,6 @@ public class SysLoginController {
         return R.ok().put("data", j);
     }
 
-
     /**
      * 退出
      */
@@ -97,14 +100,12 @@ public class SysLoginController {
             return R.error();
     }
 
-
     /**
      * 退出
      */
     @RequestMapping(value = "logout", method = RequestMethod.GET)
     public String logout() {
         ShiroUtils.logout();
-        return "redirect:login";
+        return "redirect:" + pageFactory.getLogin();
     }
-
 }

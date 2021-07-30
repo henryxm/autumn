@@ -53,7 +53,7 @@ public class ShiroConfig {
     }
 
     @Bean("shiroFilter")
-    public ShiroFilterFactoryBean shiroFilter(SecurityManager securityManager, List<FilterChain> filterChains) {
+    public ShiroFilterFactoryBean shiroFilter(SecurityManager securityManager, List<FilterChainHandler> filterChainHandlers) {
         ShiroFilterFactoryBean shiroFilter = new ShiroFilterFactoryBean();
         shiroFilter.setSecurityManager(securityManager);
 //        shiroFilter.setLoginUrl("");//身份认证失败，则跳转到登录页面的配置 没有登录的用户请求需要登录的页面时自动跳转到登录页面，不是必须的属性，不输入地址的话会自动寻找项目web项目的根目录下的”/login.jsp”页面。
@@ -107,16 +107,16 @@ public class ShiroConfig {
         String unauthorized = "/";
         String success = "";
 
-        for (FilterChain filterChain : filterChains) {
-            filterChain.definition(filterMap);
-            filterChain.filter(map);
-            String l = filterChain.login(login);
+        for (FilterChainHandler filterChainHandler : filterChainHandlers) {
+            filterChainHandler.definition(filterMap);
+            filterChainHandler.filter(map);
+            String l = filterChainHandler.login(login);
             if (StringUtils.isNotBlank(l))
                 login = l;
-            String u = filterChain.unauthorized(unauthorized);
+            String u = filterChainHandler.unauthorized(unauthorized);
             if (StringUtils.isNotBlank(u))
                 unauthorized = u;
-            String s = filterChain.success(success);
+            String s = filterChainHandler.success(success);
             if (StringUtils.isNotBlank(s))
                 success = s;
         }
@@ -135,6 +135,10 @@ public class ShiroConfig {
         filterMap.put("/statics/**", "anon");
         filterMap.put("/api/**", "anon");
         filterMap.put("/login.html", "anon");
+        filterMap.put("/404.html", "anon");
+        filterMap.put("/error.html", "anon");
+        filterMap.put("/404", "anon");
+        filterMap.put("/error", "anon");
         filterMap.put("/sys/login", "anon");
         filterMap.put("/sys/autologin", "anon");
         filterMap.put("/favicon.ico", "anon");

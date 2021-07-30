@@ -7,8 +7,8 @@ import javax.servlet.Filter;
 import java.util.Map;
 
 @Component
-@ConditionalOnMissingBean(FilterChain.class)
-public interface FilterChain {
+@ConditionalOnMissingBean(FilterChainHandler.class)
+public interface FilterChainHandler {
     default void definition(Map<String, String> map) {
     }
 

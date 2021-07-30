@@ -4,6 +4,8 @@ import cn.org.autumn.modules.client.entity.WebAuthenticationEntity;
 import cn.org.autumn.modules.client.service.WebAuthenticationService;
 import cn.org.autumn.modules.spm.service.SuperPositionModelService;
 import cn.org.autumn.modules.sys.service.SysConfigService;
+import cn.org.autumn.site.PageFactory;
+import cn.org.autumn.utils.Utils;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -26,6 +28,9 @@ public class SysPageController {
     @Autowired
     SysConfigService sysConfigService;
 
+    @Autowired
+    PageFactory pageFactory;
+
     @RequestMapping("modules/{module}/{url}")
     public String module(@PathVariable("module") String module, @PathVariable("url") String url) {
         return "modules/" + module + "/" + url;
@@ -41,7 +46,7 @@ public class SysPageController {
         if (superPositionModelService.menuWithSpm()) {
             return superPositionModelService.getResourceId(httpServletRequest, httpServletResponse, model, spm);
         }
-        return "index";
+        return pageFactory.getIndex();
     }
 
     @RequestMapping("index1.html")
@@ -51,15 +56,16 @@ public class SysPageController {
 
     @RequestMapping("login.html")
     public String login() {
-        return "login";
+        return pageFactory.getLogin();
     }
 
     @RequestMapping("login")
-    public String loginOauth() {
+    public String loginOauth(HttpServletRequest request) {
         /**
          * 根据系统配置方式进行登录验证
          */
         String clientId = sysConfigService.getOauth2LoginClientId();
+        String callback = Utils.getCallback(request);
         if (StringUtils.isNotEmpty(clientId)) {
             WebAuthenticationEntity webAuthenticationEntity = webAuthenticationService.getByClientId(clientId);
             if (null != webAuthenticationEntity) {
@@ -68,22 +74,28 @@ public class SysPageController {
                     sb.append(webAuthenticationEntity.getAuthorizeUri());
                     sb.append("?response_type=code&client_id=" + clientId + "&redirect_uri=");
                     sb.append(webAuthenticationEntity.getRedirectUri());
+                    if (StringUtils.isNotBlank(callback))
+                        sb.append("&callback=" + callback);
                     String redirect = sb.toString();
                     return "redirect:" + redirect;
                 }
             }
         }
-        return "login";
+        return pageFactory.getLogin();
     }
 
     @RequestMapping("main.html")
     public String main() {
-        return "main";
+        return pageFactory.getMain();
     }
 
-    @RequestMapping("404.html")
+    @RequestMapping({"404.html", "404"})
     public String notFound() {
-        return "404";
+        return pageFactory.get404();
     }
 
+    @RequestMapping({"error.html", "error"})
+    public String error() {
+        return pageFactory.getError();
+    }
 }

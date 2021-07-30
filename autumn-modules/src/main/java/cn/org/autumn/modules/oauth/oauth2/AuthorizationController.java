@@ -13,7 +13,8 @@ import cn.org.autumn.modules.usr.dto.UserProfile;
 import cn.org.autumn.modules.usr.entity.UserProfileEntity;
 import cn.org.autumn.modules.usr.service.UserLoginLogService;
 import cn.org.autumn.modules.usr.service.UserProfileService;
-import cn.org.autumn.utils.R;
+import cn.org.autumn.site.PageFactory;
+import cn.org.autumn.utils.Utils;
 import com.alibaba.fastjson.JSON;
 import org.apache.commons.lang.StringUtils;
 import org.apache.oltu.oauth2.as.issuer.MD5Generator;
@@ -33,9 +34,12 @@ import org.apache.oltu.oauth2.common.utils.OAuthUtils;
 import org.apache.oltu.oauth2.rs.request.OAuthAccessResourceRequest;
 import org.apache.oltu.oauth2.rs.response.OAuthRSResponse;
 import org.apache.shiro.authc.*;
+import org.apache.shiro.web.util.SavedRequest;
+import org.apache.shiro.web.util.WebUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -43,6 +47,7 @@ import org.springframework.web.servlet.ModelAndView;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.io.UnsupportedEncodingException;
 import java.net.*;
 import java.util.Map;
 
@@ -77,23 +82,8 @@ public class AuthorizationController {
     @Autowired
     RedisShiroSessionDAO redisShiroSessionDAO;
 
-    private String getCallBack(HttpServletRequest request) {
-        try {
-            String refer = request.getHeader("referer");
-            URL uri = new URL(refer);
-            String query = uri.getQuery();
-            String[] dd = query.split("&");
-            for (String b : dd) {
-                if (b.startsWith("callback=")) {
-                    String[] a = b.split("=");
-                    if (a.length == 2)
-                        return URLDecoder.decode(a[1], UTF8);
-                }
-            }
-        } catch (Exception e) {
-        }
-        return "";
-    }
+    @Autowired
+    PageFactory pageFactory;
 
     private ResponseEntity error(String description, String error, int errorResponse) throws OAuthSystemException {
         OAuthResponse oAuthResponse = OAuthASResponse
@@ -105,25 +95,46 @@ public class AuthorizationController {
     }
 
     @RequestMapping("login")
-    public Object login(HttpServletRequest request, String username, String password) {
+    public Object login(HttpServletRequest request, String username, String password, Model model) throws UnsupportedEncodingException {
+        String error = "";
+        String callback = Utils.getCallback(request);
         try {
             if (request.getMethod().equalsIgnoreCase(POST)) {
-                String callback = getCallBack(request);
-                if (!StringUtils.isEmpty(callback)) {
-                    sysUserService.login(username, password);
-                    return "redirect:" + callback;
+                SavedRequest savedRequest = WebUtils.getSavedRequest(request);
+                String back = callback;
+                if (null != savedRequest) {
+                    if (StringUtils.isBlank(callback))
+                        back = savedRequest.getRequestUrl();
+                    else
+                        back = callback + "&callback=" + savedRequest.getRequestUrl();
                 }
+                if (StringUtils.isBlank(back))
+                    back = "/";
+                sysUserService.login(username, password);
+                return "redirect:" + back;
             }
         } catch (UnknownAccountException e) {
-            return R.error(e.getMessage());
+            error = e.getMessage();
         } catch (IncorrectCredentialsException e) {
-            return R.error("账号或密码不正确");
+            error = "账号或密码不正确";
         } catch (LockedAccountException e) {
-            return R.error("账号已被锁定,请联系管理员");
+            error = "账号已被锁定,请联系管理员";
         } catch (AuthenticationException e) {
-            return R.error("账户验证失败");
+            error = "账户验证失败";
         }
-        return "oauth2/login";
+        if (StringUtils.isNotBlank(error)) {
+            if (error.length() > 200)
+                error = error.substring(0, 200);
+            if (StringUtils.isBlank(callback))
+                return "redirect:/oauth2/login?error=" + URLEncoder.encode(error, "utf-8");
+            else
+                return "redirect:/oauth2/login?callback=" + URLEncoder.encode(callback, "utf-8") + "&error=" + URLEncoder.encode(error, "utf-8");
+        }
+        String perror = request.getParameter("error");
+        if (StringUtils.isBlank(perror))
+            perror = "";
+        model.addAttribute("error", perror);
+        return pageFactory.getOauth2Login();
     }
 
     @RequestMapping("authorize")
@@ -137,7 +148,7 @@ public class AuthorizationController {
                 url = url + "?" + queryString;
             }
             mav1.addObject("callback", url);
-            mav1.setViewName("redirect:/oauth2/login");
+            mav1.setViewName("redirect:/" + pageFactory.getOauth2Login());
             return mav1;
         }
 
@@ -190,7 +201,12 @@ public class AuthorizationController {
         String state = request.getParameter(OAUTH_STATE);
         if (StringUtils.isNotEmpty(state))
             mav.addObject(OAUTH_STATE, state);
-        mav.setViewName("redirect:" + redirectURI);
+        String callback = request.getParameter("callback");
+        if (null == callback)
+            callback = "";
+        else
+            callback = "?callback=" + callback;
+        mav.setViewName("redirect:" + redirectURI + callback);
         return mav;
     }
 
