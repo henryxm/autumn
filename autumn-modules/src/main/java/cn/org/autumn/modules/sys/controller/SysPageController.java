@@ -5,9 +5,9 @@ import cn.org.autumn.modules.client.service.WebAuthenticationService;
 import cn.org.autumn.modules.spm.service.SuperPositionModelService;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.site.PageFactory;
-import cn.org.autumn.utils.Utils;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.web.servlet.error.ErrorController;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -17,7 +17,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 @Controller
-public class SysPageController {
+public class SysPageController implements ErrorController {
 
     @Autowired
     SuperPositionModelService superPositionModelService;
@@ -60,12 +60,11 @@ public class SysPageController {
     }
 
     @RequestMapping("login")
-    public String loginOauth(HttpServletRequest request) {
+    public String loginOauth() {
         /**
          * 根据系统配置方式进行登录验证
          */
         String clientId = sysConfigService.getOauth2LoginClientId();
-        String callback = Utils.getCallback(request);
         if (StringUtils.isNotEmpty(clientId)) {
             WebAuthenticationEntity webAuthenticationEntity = webAuthenticationService.getByClientId(clientId);
             if (null != webAuthenticationEntity) {
@@ -74,8 +73,6 @@ public class SysPageController {
                     sb.append(webAuthenticationEntity.getAuthorizeUri());
                     sb.append("?response_type=code&client_id=" + clientId + "&redirect_uri=");
                     sb.append(webAuthenticationEntity.getRedirectUri());
-                    if (StringUtils.isNotBlank(callback))
-                        sb.append("&callback=" + callback);
                     String redirect = sb.toString();
                     return "redirect:" + redirect;
                 }
@@ -90,12 +87,19 @@ public class SysPageController {
     }
 
     @RequestMapping({"404.html", "404"})
-    public String notFound() {
+    public String notFound(HttpServletResponse response) {
+        response.setStatus(pageFactory.get404Status());
         return pageFactory.get404();
     }
 
-    @RequestMapping({"error.html", "error"})
-    public String error() {
+    @Override
+    public String getErrorPath() {
         return pageFactory.getError();
+    }
+
+    @RequestMapping({"error.html", "error"})
+    public String error(HttpServletResponse response) {
+        response.setStatus(pageFactory.getErrorStatus());
+        return getErrorPath();
     }
 }

@@ -23,8 +23,16 @@ public interface PageHandler {
         return "";
     }
 
+    default int get404Status() {
+        return 404;
+    }
+
     default String getError() {
         return "";
+    }
+
+    default int getErrorStatus() {
+        return 404;
     }
 
     default String getHeader() {

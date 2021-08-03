@@ -31,8 +31,8 @@ public class PageFactory extends Factory {
             for (PageHandler pageHandler : list) {
                 Method method1 = pageHandler.getClass().getMethod(method);
                 Object o = method1.invoke(pageHandler);
-                if (o instanceof String) {
-                    String value = (String) o;
+                if (o instanceof String || o instanceof Integer) {
+                    String value = String.valueOf(o);
                     if (StringUtils.isNotBlank(value))
                         return value;
                 }
@@ -54,8 +54,16 @@ public class PageFactory extends Factory {
         return getValue("get404", "404");
     }
 
+    public int get404Status() {
+        return Integer.parseInt(getValue("get404Status", "404"));
+    }
+
     public String getError() {
         return getValue("getError", "error");
+    }
+
+    public int getErrorStatus() {
+        return Integer.parseInt(getValue("getErrorStatus", "404"));
     }
 
     public String getHeader() {

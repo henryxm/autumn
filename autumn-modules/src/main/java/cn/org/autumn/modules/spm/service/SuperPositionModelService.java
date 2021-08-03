@@ -2,14 +2,11 @@ package cn.org.autumn.modules.spm.service;
 
 import cn.org.autumn.annotation.PageAware;
 import cn.org.autumn.config.Config;
-import cn.org.autumn.site.LoadFactory;
+import cn.org.autumn.site.*;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.spm.entity.SuperPositionModelEntity;
 import cn.org.autumn.modules.spm.service.gen.SuperPositionModelServiceGen;
 import cn.org.autumn.modules.sys.service.SysConfigService;
-import cn.org.autumn.site.LoginFactory;
-import cn.org.autumn.site.PathFactory;
-import cn.org.autumn.site.SiteFactory;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,6 +44,9 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
 
     @Autowired
     PathFactory pathFactory;
+
+    @Autowired
+    PageFactory pageFactory;
 
     private static Map<String, String> spmListForHtml;
     private static Map<String, SuperPositionModelEntity> spmListForUrlKey;
@@ -139,7 +139,7 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
             return path;
 
         if (StringUtils.isEmpty(spm)) {
-            return "index";
+            return pageFactory.getIndex();
         }
         String sessionId = httpServletRequest.getSession().getId();
         SuperPositionModelEntity superPositionModelEntity = sMap.get(sessionId);
@@ -150,7 +150,7 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
             sMap.remove(sessionId);
         if (null != superPositionModelEntity && StringUtils.isNotEmpty(superPositionModelEntity.getResourceId()))
             return superPositionModelEntity.getResourceId();
-        return "index";
+        return pageFactory.get404();
     }
 
     /**
