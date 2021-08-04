@@ -3,7 +3,10 @@ package cn.org.autumn.site;
 import cn.org.autumn.config.PageHandler;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.stereotype.Component;
+import org.springframework.ui.Model;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.List;
@@ -19,18 +22,18 @@ public class PageFactory extends Factory {
         if (map.containsKey(method)) {
             list = map.get(method);
         } else {
-            list = getOrderList(PageHandler.class, method);
+            list = getOrderList(PageHandler.class, method, HttpServletRequest.class, HttpServletResponse.class, Model.class);
             map.put(method, list);
         }
         return list;
     }
 
-    public String getValue(String method, String defaultValue) {
+    public String invoke(String method, String defaultValue, HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
         List<PageHandler> list = getList(method);
         try {
             for (PageHandler pageHandler : list) {
-                Method method1 = pageHandler.getClass().getMethod(method);
-                Object o = method1.invoke(pageHandler);
+                Method method1 = pageHandler.getClass().getMethod(method, HttpServletRequest.class, HttpServletResponse.class, Model.class);
+                Object o = method1.invoke(pageHandler, httpServletRequest, httpServletResponse, model);
                 if (o instanceof String || o instanceof Integer) {
                     String value = String.valueOf(o);
                     if (StringUtils.isNotBlank(value))
@@ -42,39 +45,39 @@ public class PageFactory extends Factory {
         return defaultValue;
     }
 
-    public String getOauth2Login() {
-        return getValue("getOauth2Login", "oauth2/login");
+    public String oauth2Login(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        return invoke("oauth2Login", "oauth2/login", httpServletRequest, httpServletResponse, model);
     }
 
-    public String getLogin() {
-        return getValue("getLogin", "login");
+    public String login(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        return invoke("login", "login", httpServletRequest, httpServletResponse, model);
     }
 
-    public String get404() {
-        return getValue("get404", "404");
+    public String logout(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        return invoke("logout", "login", httpServletRequest, httpServletResponse, model);
     }
 
-    public int get404Status() {
-        return Integer.parseInt(getValue("get404Status", "404"));
+    public String _404(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        if (null != httpServletResponse)
+            httpServletResponse.setStatus(404);
+        return invoke("_404", "404", httpServletRequest, httpServletResponse, model);
     }
 
-    public String getError() {
-        return getValue("getError", "error");
+    public String error(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        if (null != httpServletResponse)
+            httpServletResponse.setStatus(500);
+        return invoke("error", "error", httpServletRequest, httpServletResponse, model);
     }
 
-    public int getErrorStatus() {
-        return Integer.parseInt(getValue("getErrorStatus", "404"));
+    public String header(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        return invoke("header", "header", httpServletRequest, httpServletResponse, model);
     }
 
-    public String getHeader() {
-        return getValue("getHeader", "header");
+    public String index(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        return invoke("index", "index", httpServletRequest, httpServletResponse, model);
     }
 
-    public String getIndex() {
-        return getValue("getIndex", "index");
-    }
-
-    public String getMain() {
-        return getValue("getMain", "main");
+    public String main(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        return invoke("main", "main", httpServletRequest, httpServletResponse, model);
     }
 }

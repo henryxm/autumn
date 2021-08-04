@@ -46,21 +46,21 @@ public class SysPageController implements ErrorController {
         if (superPositionModelService.menuWithSpm()) {
             return superPositionModelService.getResourceId(httpServletRequest, httpServletResponse, model, spm);
         }
-        return pageFactory.getIndex();
+        return pageFactory.index(httpServletRequest, httpServletResponse, model);
     }
 
     @RequestMapping("index1.html")
-    public String index1() {
+    public String index1(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
         return "index1";
     }
 
     @RequestMapping("login.html")
-    public String login() {
-        return pageFactory.getLogin();
+    public String login(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        return pageFactory.login(httpServletRequest, httpServletResponse, model);
     }
 
     @RequestMapping("login")
-    public String loginOauth() {
+    public String loginOauth(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
         /**
          * 根据系统配置方式进行登录验证
          */
@@ -78,28 +78,26 @@ public class SysPageController implements ErrorController {
                 }
             }
         }
-        return pageFactory.getLogin();
+        return pageFactory.login(httpServletRequest, httpServletResponse, model);
     }
 
     @RequestMapping("main.html")
-    public String main() {
-        return pageFactory.getMain();
+    public String main(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        return pageFactory.main(httpServletRequest, httpServletResponse, model);
     }
 
     @RequestMapping({"404.html", "404"})
-    public String notFound(HttpServletResponse response) {
-        response.setStatus(pageFactory.get404Status());
-        return pageFactory.get404();
+    public String notFound(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        return pageFactory._404(httpServletRequest, httpServletResponse, model);
     }
 
     @Override
     public String getErrorPath() {
-        return pageFactory.getError();
+        return null;
     }
 
     @RequestMapping({"error.html", "error"})
-    public String error(HttpServletResponse response) {
-        response.setStatus(pageFactory.getErrorStatus());
-        return getErrorPath();
+    public String error(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        return pageFactory.error(httpServletRequest, httpServletResponse, model);
     }
 }

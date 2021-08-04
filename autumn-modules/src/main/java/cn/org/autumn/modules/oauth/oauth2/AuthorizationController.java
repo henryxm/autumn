@@ -95,7 +95,7 @@ public class AuthorizationController {
     }
 
     @RequestMapping("login")
-    public Object login(HttpServletRequest request, String username, String password, Model model) throws UnsupportedEncodingException {
+    public Object login(HttpServletRequest request, HttpServletResponse response, String username, String password, Model model) throws UnsupportedEncodingException {
         String error = "";
         String callback = Utils.getCallback(request);
         try {
@@ -134,11 +134,11 @@ public class AuthorizationController {
         if (StringUtils.isBlank(perror))
             perror = "";
         model.addAttribute("error", perror);
-        return pageFactory.getOauth2Login();
+        return pageFactory.oauth2Login(request, response, model);
     }
 
     @RequestMapping("authorize")
-    public Object applyAuthorize(HttpServletRequest request) throws OAuthSystemException, OAuthProblemException {
+    public Object applyAuthorize(HttpServletRequest request, HttpServletResponse response, Model model) throws OAuthSystemException, OAuthProblemException {
         boolean isLogin = ShiroUtils.isLogin();
         if (!isLogin) {
             ModelAndView mav1 = new ModelAndView();
@@ -148,7 +148,7 @@ public class AuthorizationController {
                 url = url + "?" + queryString;
             }
             mav1.addObject("callback", url);
-            mav1.setViewName("redirect:/" + pageFactory.getOauth2Login());
+            mav1.setViewName("redirect:/" + pageFactory.oauth2Login(request, response, model));
             return mav1;
         }
 

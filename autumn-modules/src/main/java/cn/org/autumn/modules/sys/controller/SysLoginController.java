@@ -12,12 +12,14 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.shiro.authc.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import javax.imageio.ImageIO;
 import javax.servlet.ServletOutputStream;
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
@@ -104,8 +106,8 @@ public class SysLoginController {
      * 退出
      */
     @RequestMapping(value = "logout", method = RequestMethod.GET)
-    public String logout() {
+    public String logout(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
         ShiroUtils.logout();
-        return "redirect:" + pageFactory.getLogin();
+        return "redirect:" + pageFactory.logout(httpServletRequest, httpServletResponse, model);
     }
 }

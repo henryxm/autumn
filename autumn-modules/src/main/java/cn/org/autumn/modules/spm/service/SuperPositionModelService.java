@@ -139,7 +139,7 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
             return path;
 
         if (StringUtils.isEmpty(spm)) {
-            return pageFactory.getIndex();
+            return pageFactory.index(httpServletRequest, httpServletResponse, model);
         }
         String sessionId = httpServletRequest.getSession().getId();
         SuperPositionModelEntity superPositionModelEntity = sMap.get(sessionId);
@@ -150,7 +150,7 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
             sMap.remove(sessionId);
         if (null != superPositionModelEntity && StringUtils.isNotEmpty(superPositionModelEntity.getResourceId()))
             return superPositionModelEntity.getResourceId();
-        return pageFactory.get404();
+        return pageFactory._404(httpServletRequest, httpServletResponse, model);
     }
 
     /**

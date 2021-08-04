@@ -30,7 +30,7 @@ public class SpmController {
         SysUserEntity sysUserEntity = ShiroUtils.getUserEntity();
         if (sysUserRoleService.isSystemAdministrator(sysUserEntity))
             return superPositionModelService.getResourceId(httpServletRequest, httpServletResponse, model, spm);
-        return pageFactory.get404();
+        return pageFactory._404(httpServletRequest, httpServletResponse, model);
     }
 
     @RequestMapping("/")
