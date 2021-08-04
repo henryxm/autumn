@@ -1,7 +1,6 @@
 package cn.org.autumn.modules.spm.service;
 
 import cn.org.autumn.annotation.PageAware;
-import cn.org.autumn.config.Config;
 import cn.org.autumn.site.*;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.spm.entity.SuperPositionModelEntity;
@@ -211,10 +210,12 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
             return "";
         String siteDomain = sysConfigService.getSiteDomain();
         if (StringUtils.isNotEmpty(siteDomain)) {
-            if ((!siteDomain.startsWith("http://") || !siteDomain.startsWith("https://")) && Config.isProd()) {
-                siteDomain = "https://" + siteDomain;
-            } else {
-                siteDomain = "http://" + siteDomain;
+            if ((!siteDomain.startsWith("http://") || !siteDomain.startsWith("https://"))) {
+                if (sysConfigService.isSsl()) {
+                    siteDomain = "https://" + siteDomain;
+                } else {
+                    siteDomain = "http://" + siteDomain;
+                }
             }
         } else {
             siteDomain = "";
