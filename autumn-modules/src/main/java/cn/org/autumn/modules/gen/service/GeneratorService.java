@@ -18,13 +18,12 @@ import cn.org.autumn.utils.Query;
 import com.baomidou.mybatisplus.plugins.Page;
 import com.baomidou.mybatisplus.plugins.pagination.PageHelper;
 import org.apache.commons.io.IOUtils;
+import org.apache.velocity.app.Velocity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.zip.ZipOutputStream;
 
 /**
@@ -129,11 +128,13 @@ public class GeneratorService implements InitFactory.Init {
         ZipOutputStream zip = new ZipOutputStream(outputStream);
         GenTypeEntity entity = genTypeService.selectById(genId);
         wrapper = new GenTypeWrapper(entity);
+        List<Map<String, Object>> tables = new ArrayList<>();
         for (String tableName : tableNames) {
             TableInfo tableInfo = build(tableName, wrapper);
             //生成代码
-            GenUtils.generatorCode(tableInfo, wrapper, zip);
+            GenUtils.generatorCode(tableInfo, wrapper, zip, GenUtils.getTemplates(), tables);
         }
+        GenUtils.generatorCode(null, wrapper, zip, GenUtils.getSiteTemplates(), tables);
         IOUtils.closeQuietly(zip);
         return outputStream.toByteArray();
     }
@@ -168,11 +169,19 @@ public class GeneratorService implements InitFactory.Init {
     public void init() {
         String keyMenu = SysMenuService.getMenuKey("Gen", "Generator");
         String[][] menus = new String[][]{
-                {"代码生成", "modules/gen/generator", "gen:generator:list,gen:generator:code", "1", "fa " + ico(), order(), keyMenu, parentMenu(), "sys_string_code_generator"},
-                {"查看", null, "gen:generator:list,gen:generator:info", "2", null, order(), SysMenuService.getMenuKey("Gen", "GeneratorInfo"), keyMenu, "sys_string_lookup"},
-                {"生成", null, "gen:generator:code", "2", null, order(), SysMenuService.getMenuKey("Gen", "GeneratorCode"), keyMenu, "sys_string_generate"},
-                {"重置表", null, "gen:generator:reset", "2", null, order(), SysMenuService.getMenuKey("Gen", "ResetTable"), keyMenu, "sys_string_reset_table"},
+                {"代码生成", "modules/gen/generator", "gen:generator:list,gen:generator:code", "1", "fa " + ico(), order(), keyMenu, parentMenu(), "sys_string_code_generator" },
+                {"查看", null, "gen:generator:list,gen:generator:info", "2", null, order(), SysMenuService.getMenuKey("Gen", "GeneratorInfo"), keyMenu, "sys_string_lookup" },
+                {"生成", null, "gen:generator:code", "2", null, order(), SysMenuService.getMenuKey("Gen", "GeneratorCode"), keyMenu, "sys_string_generate" },
+                {"重置表", null, "gen:generator:reset", "2", null, order(), SysMenuService.getMenuKey("Gen", "ResetTable"), keyMenu, "sys_string_reset_table" },
         };
         sysMenuService.put(menus);
+        initVelocity();
+    }
+
+    public void initVelocity() {
+        Properties prop = new Properties();
+        prop.setProperty("resource.loader", "class");
+        prop.setProperty("class.resource.loader.class", "org.apache.velocity.runtime.resource.loader.ClasspathResourceLoader");
+        Velocity.init(prop);
     }
 }

@@ -1,6 +1,5 @@
 package cn.org.autumn.modules.gen.utils;
 
-import cn.org.autumn.exception.AException;
 import cn.org.autumn.modules.gen.entity.GenTypeWrapper;
 import cn.org.autumn.table.data.TableInfo;
 import cn.org.autumn.table.utils.HumpConvert;
@@ -9,19 +8,22 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.velocity.Template;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.Velocity;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.IOException;
 import java.io.StringWriter;
 import java.util.*;
 import java.util.zip.ZipEntry;
-import java.util.zip.ZipException;
 import java.util.zip.ZipOutputStream;
 
 /**
  * Coding generator tool
  */
 public class GenUtils {
+
+    private static final Logger log = LoggerFactory.getLogger(GenUtils.class);
+
     public static List<String> getTemplates() {
         List<String> templates = new ArrayList<String>();
         templates.add("template/Entity.java.vm");
@@ -34,30 +36,32 @@ public class GenUtils {
         templates.add("template/ControllerGen.java.vm");
         templates.add("template/list.html.vm");
         templates.add("template/list.js.vm");
+        return templates;
+    }
+
+    public static List<String> getSiteTemplates() {
+        List<String> templates = new ArrayList<String>();
         templates.add("template/Site.java.vm");
         return templates;
     }
 
-    public static void generatorCode(TableInfo tableInfo, GenTypeWrapper wrapper, ZipOutputStream zip) {
-        Properties prop = new Properties();
-        prop.setProperty("resource.loader", "class");
-        prop.setProperty("class.resource.loader.class", "org.apache.velocity.runtime.resource.loader.ClasspathResourceLoader");
-        Velocity.init(prop);
-
+    public static void generatorCode(TableInfo tableInfo, GenTypeWrapper wrapper, ZipOutputStream zip, List<String> templates, List<Map<String, Object>> tables) {
         String mainPath = wrapper.getEntity().getRootPackage();
         mainPath = StringUtils.isBlank(mainPath) ? "cn.org.autumn" : mainPath;
-
         Map<String, Object> map = new HashMap<>();
-        map.put("tableName", tableInfo.getName());
-        map.put("comment", tableInfo.getComment());
-        map.put("pk", tableInfo.getPk());
-        map.put("className", tableInfo.getClassName());
-        map.put("classname", tableInfo.getClassname());
-        map.put("enLang", tableInfo.getEnLang());
-        map.put("pathName", tableInfo.getClassname().toLowerCase());
-        map.put("columns", tableInfo.getColumns());
-        map.put("index", tableInfo.buildIndexKey());
-        map.put("hasBigDecimal", tableInfo.getHasBigDecimal());
+        if (null != tableInfo) {
+            map.put("tableName", tableInfo.getName());
+            map.put("comment", tableInfo.getComment());
+            map.put("pk", tableInfo.getPk());
+            map.put("className", tableInfo.getClassName());
+            map.put("classname", tableInfo.getClassname());
+            map.put("filename", tableInfo.getFilename());
+            map.put("enLang", tableInfo.getEnLang());
+            map.put("pathName", tableInfo.getClassname().toLowerCase());
+            map.put("columns", tableInfo.getColumns());
+            map.put("index", tableInfo.buildIndexKey());
+            map.put("hasBigDecimal", tableInfo.getHasBigDecimal());
+        }
         map.put("mainPath", mainPath);
         map.put("package", wrapper.getModulePackage());
         map.put("moduleName", wrapper.getModuleName());
@@ -68,10 +72,15 @@ public class GenUtils {
         map.put("moduleId", wrapper.getModuleId());
         map.put("lang", "lang.");
         map.put("datetime", DateUtils.format(new Date(), DateUtils.DATE_TIME_PATTERN));
+
+        if (null != tables) {
+            if (null != tableInfo)
+                tables.add(map);
+            map.put("tables", tables);
+        }
+
         VelocityContext context = new VelocityContext(map);
 
-        //获取模板列表
-        List<String> templates = getTemplates();
         for (String template : templates) {
             //渲染模板
             StringWriter sw = new StringWriter();
@@ -80,15 +89,18 @@ public class GenUtils {
 
             try {
                 //添加到zip
-                zip.putNextEntry(new ZipEntry(getFileName(template, tableInfo.getClassName(), wrapper.getModulePackage(), wrapper.getModuleName())));
-                IOUtils.write(sw.toString(), zip, "UTF-8");
-                IOUtils.closeQuietly(sw);
-                zip.closeEntry();
-            } catch (ZipException e) {
-                if (null != e.getMessage() && e.getMessage().contains("duplicate entry"))
-                    continue;
-            } catch (IOException e) {
-                throw new AException("渲染模板失败，表名：" + tableInfo.getName(), e);
+                String className = "";
+                if (null != tableInfo)
+                    className = tableInfo.getClassName();
+                String fileName = getFileName(template, className, wrapper.getModulePackage(), wrapper.getModuleName());
+                if (null != fileName) {
+                    zip.putNextEntry(new ZipEntry(fileName));
+                    IOUtils.write(sw.toString(), zip, "UTF-8");
+                    IOUtils.closeQuietly(sw);
+                    zip.closeEntry();
+                }
+            } catch (Exception e) {
+                log.error("generatorCode:", e);
             }
         }
     }

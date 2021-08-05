@@ -110,7 +110,7 @@ public class Factory {
                     Method m = obj.getClass().getMethod(name);
                     m.invoke(obj);
                 } catch (Exception e) {
-                    log.error(t.getSimpleName(), e);
+                    log.error(obj.getClass().getSimpleName() + "." + name, e);
                 }
             }
         }

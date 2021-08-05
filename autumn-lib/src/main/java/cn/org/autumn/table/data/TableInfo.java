@@ -27,6 +27,9 @@ public class TableInfo {
     private String className;
     //类名(第一个字母小写)，如：sys_user => sysUser
     private String classname;
+    //类名(全字母小写)，如：sys_user => sysuser
+    private String filename;
+
     //英语名
     private String enLang;
 
@@ -281,6 +284,7 @@ public class TableInfo {
         setClassName(tableToJava(this.name, prefix));
         setEnLang(tableToLang(this.name, prefix));
         setClassname(StringUtils.uncapitalize(className));
+        setFilename(className.toLowerCase());
     }
 
     public ColumnInfo getPk() {
@@ -313,6 +317,14 @@ public class TableInfo {
 
     public void setClassname(String classname) {
         this.classname = classname;
+    }
+
+    public String getFilename() {
+        return filename;
+    }
+
+    public void setFilename(String filename) {
+        this.filename = filename;
     }
 
     public String getEnLang() {
