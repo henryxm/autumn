@@ -15,9 +15,6 @@ import javax.servlet.http.HttpServletResponse;
 @ConditionalOnMissingBean(PageHandler.class)
 @Order(Integer.MAX_VALUE / 100)
 public interface PageHandler {
-    default String oauth2Login(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
-        return "";
-    }
 
     default String login(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
         return "";

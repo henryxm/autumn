@@ -134,7 +134,7 @@ public class AuthorizationController {
         if (StringUtils.isBlank(perror))
             perror = "";
         model.addAttribute("error", perror);
-        return pageFactory.oauth2Login(request, response, model);
+        return pageFactory.login(request, response, model);
     }
 
     @RequestMapping("authorize")
@@ -148,7 +148,7 @@ public class AuthorizationController {
                 url = url + "?" + queryString;
             }
             mav1.addObject("callback", url);
-            mav1.setViewName("redirect:/" + pageFactory.oauth2Login(request, response, model));
+            mav1.setViewName("redirect:/" + pageFactory.login(request, response, model));
             return mav1;
         }
 

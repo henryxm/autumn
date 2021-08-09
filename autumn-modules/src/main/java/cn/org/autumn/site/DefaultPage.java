@@ -1,5 +1,9 @@
-package cn.org.autumn.config;
+package cn.org.autumn.site;
 
+import cn.org.autumn.config.PageHandler;
+import cn.org.autumn.modules.sys.service.SysConfigService;
+import org.apache.commons.lang.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.ui.Model;
@@ -11,19 +15,20 @@ import javax.servlet.http.HttpServletResponse;
 @Order(Integer.MAX_VALUE / 10)
 public class DefaultPage implements PageHandler {
 
-    @Override
-    public String oauth2Login(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
-        return "oauth2/login";
-    }
+    @Autowired
+    SysConfigService sysConfigService;
 
     @Override
     public String login(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        String clientId = sysConfigService.getOauth2LoginClientId();
+        if (StringUtils.isNotBlank(clientId))
+            return "oauth2/login";
         return "login";
     }
 
     @Override
     public String logout(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
-        return login(httpServletRequest, httpServletResponse, model);
+        return "/";
     }
 
     @Override

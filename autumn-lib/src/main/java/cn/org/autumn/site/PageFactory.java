@@ -45,10 +45,6 @@ public class PageFactory extends Factory {
         return defaultValue;
     }
 
-    public String oauth2Login(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
-        return invoke("oauth2Login", "oauth2/login", httpServletRequest, httpServletResponse, model);
-    }
-
     public String login(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
         return invoke("login", "login", httpServletRequest, httpServletResponse, model);
     }
