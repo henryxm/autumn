@@ -4,6 +4,7 @@ import cn.org.autumn.config.Config;
 import cn.org.autumn.modules.oauth.service.ClientDetailsService;
 import cn.org.autumn.modules.spm.service.SuperPositionModelService;
 import cn.org.autumn.modules.sys.shiro.OauthAccessTokenToken;
+import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.wall.service.WallService;
 import com.alibaba.fastjson.JSON;
 import org.apache.commons.lang.StringUtils;
@@ -74,6 +75,8 @@ public class SpmFilter extends FormAuthenticationFilter {
             if (null != superPositionModelService && !superPositionModelService.needLogin(httpServletRequest, httpServletResponse))
                 return true;
         }
+        if (ShiroUtils.isLogin() && Config.isDev())
+            return true;
         return super.isAccessAllowed(request, response, mappedValue);
     }
 
@@ -84,6 +87,7 @@ public class SpmFilter extends FormAuthenticationFilter {
         }
         if (null == clientDetailsService)
             clientDetailsService = (ClientDetailsService) Config.getBean("clientDetailsService");
+        assert clientDetailsService != null;
         boolean valid = clientDetailsService.isValidAccessToken(accessToken);
         if (valid)
             return executeLogin(request, response);

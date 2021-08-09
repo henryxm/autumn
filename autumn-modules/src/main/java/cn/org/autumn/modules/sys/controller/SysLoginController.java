@@ -59,7 +59,7 @@ public class SysLoginController {
      */
     @ResponseBody
     @RequestMapping(value = "/sys/login", method = RequestMethod.POST)
-    public R login(String username, String password, String captcha) {
+    public R login(String username, String password, boolean rememberMe, String captcha) {
         if (!Config.isDev()) {
             String kaptcha = ShiroUtils.getKaptcha(Constants.KAPTCHA_SESSION_KEY);
             if (!captcha.equalsIgnoreCase(kaptcha)) {
@@ -73,7 +73,7 @@ public class SysLoginController {
         }
 
         try {
-            sysUserService.login(username, password);
+            sysUserService.login(username, password, rememberMe);
         } catch (UnknownAccountException e) {
             return R.error(e.getMessage());
         } catch (IncorrectCredentialsException e) {

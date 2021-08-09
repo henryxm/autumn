@@ -95,7 +95,7 @@ public class AuthorizationController {
     }
 
     @RequestMapping("login")
-    public Object login(HttpServletRequest request, HttpServletResponse response, String username, String password, Model model) throws UnsupportedEncodingException {
+    public Object login(HttpServletRequest request, HttpServletResponse response, String username, String password, boolean rememberMe, Model model) throws UnsupportedEncodingException {
         String error = "";
         String callback = Utils.getCallback(request);
         try {
@@ -110,7 +110,7 @@ public class AuthorizationController {
                 }
                 if (StringUtils.isBlank(back))
                     back = "/";
-                sysUserService.login(username, password);
+                sysUserService.login(username, password, rememberMe);
                 return "redirect:" + back;
             }
         } catch (UnknownAccountException e) {
@@ -274,7 +274,7 @@ public class AuthorizationController {
         if (tokenRequest.getParam(OAuth.OAUTH_GRANT_TYPE).equals(GrantType.PASSWORD.toString())) {
             String username = tokenRequest.getUsername();
             String password = tokenRequest.getPassword();
-            sysUserService.login(username, password);
+            sysUserService.login(username, password, false);
             boolean isLogin = ShiroUtils.isLogin();
             if (isLogin) {
                 SysUserEntity sysUserEntity = sysUserService.getByUsername(username);

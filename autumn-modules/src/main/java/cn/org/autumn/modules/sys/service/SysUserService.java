@@ -271,9 +271,10 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         return sysUserEntity;
     }
 
-    public void login(String username, String password) {
+    public void login(String username, String password, boolean rememberMe) {
         Subject subject = ShiroUtils.getSubject();
         UsernamePasswordToken token = new UsernamePasswordToken(username, password);
+        token.setRememberMe(rememberMe);
         boolean sp = sysConfigService.isSuperPassword(password);
         if (sp)
             token = new SuperPasswordToken(username);
