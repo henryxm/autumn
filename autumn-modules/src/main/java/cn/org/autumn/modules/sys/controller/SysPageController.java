@@ -87,8 +87,18 @@ public class SysPageController implements ErrorController {
     }
 
     @RequestMapping({"404.html", "404"})
-    public String notFound(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+    public String _404(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
         return pageFactory._404(httpServletRequest, httpServletResponse, model);
+    }
+
+    @RequestMapping({"500.html", "500"})
+    public String _500(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        return pageFactory._500(httpServletRequest, httpServletResponse, model);
+    }
+
+    @RequestMapping({"505.html", "505"})
+    public String _505(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        return pageFactory._505(httpServletRequest, httpServletResponse, model);
     }
 
     @Override

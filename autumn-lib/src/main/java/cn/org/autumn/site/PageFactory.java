@@ -53,10 +53,32 @@ public class PageFactory extends Factory {
         return invoke("logout", "login", httpServletRequest, httpServletResponse, model);
     }
 
+    public String direct(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        return invoke("direct", "direct", httpServletRequest, httpServletResponse, model);
+    }
+
+    public String direct(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model, String url) {
+        if (!model.containsAttribute("url"))
+            model.addAttribute("url", url);
+        return direct(httpServletRequest, httpServletResponse, model);
+    }
+
     public String _404(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
         if (null != httpServletResponse)
             httpServletResponse.setStatus(404);
         return invoke("_404", "404", httpServletRequest, httpServletResponse, model);
+    }
+
+    public String _500(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        if (null != httpServletResponse)
+            httpServletResponse.setStatus(500);
+        return invoke("_500", "500", httpServletRequest, httpServletResponse, model);
+    }
+
+    public String _505(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        if (null != httpServletResponse)
+            httpServletResponse.setStatus(505);
+        return invoke("_505", "505", httpServletRequest, httpServletResponse, model);
     }
 
     public String error(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {

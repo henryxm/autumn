@@ -11,6 +11,7 @@ import org.apache.shiro.spring.security.interceptor.AuthorizationAttributeSource
 import org.apache.shiro.spring.web.ShiroFilterFactoryBean;
 import org.apache.shiro.web.mgt.CookieRememberMeManager;
 import org.apache.shiro.web.mgt.DefaultWebSecurityManager;
+import org.apache.shiro.web.servlet.Cookie;
 import org.apache.shiro.web.servlet.SimpleCookie;
 import org.apache.shiro.web.session.mgt.DefaultWebSessionManager;
 import org.springframework.aop.framework.autoproxy.DefaultAdvisorAutoProxyCreator;
@@ -35,7 +36,9 @@ public class ShiroConfig {
         sessionManager.setGlobalSessionTimeout(60 * 60 * 1000);
         sessionManager.setSessionValidationSchedulerEnabled(true);
         sessionManager.setSessionIdUrlRewritingEnabled(false);
-
+        Cookie cookie = sessionManager.getSessionIdCookie();
+        cookie.setMaxAge(24 * 60 * 60);
+        cookie.setName("autumnid");
         //如果开启redis缓存且autumn.shiro.redis=true，则shiro session存到redis里
         if (redisOpen && shiroRedis) {
             sessionManager.setSessionDAO(redisShiroSessionDAO);
@@ -152,8 +155,12 @@ public class ShiroConfig {
         filterMap.put("/api/**", "anon");
         filterMap.put("/login.html", "anon");
         filterMap.put("/404.html", "anon");
+        filterMap.put("/500.html", "anon");
+        filterMap.put("/505.html", "anon");
         filterMap.put("/error.html", "anon");
         filterMap.put("/404", "anon");
+        filterMap.put("/500", "anon");
+        filterMap.put("/505", "anon");
         filterMap.put("/error", "anon");
         filterMap.put("/sys/login", "anon");
         filterMap.put("/sys/autologin", "anon");

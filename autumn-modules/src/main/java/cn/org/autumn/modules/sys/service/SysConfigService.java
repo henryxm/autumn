@@ -75,8 +75,9 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
 
     @Order(1000)
     public void init() {
-        LoopJob.onOneMinute(this);
+        LoopJob.onThirtyMinute(this);
         put(getConfigItems());
+        updateCookieDomain();
     }
 
     public String getClientId() {
@@ -500,22 +501,28 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
             sessionManager = (SessionManager) Config.getBean("sessionManager");
         if (null == sessionManager)
             return;
-        String rootDomain = getClusterRootDomain();
-        if (StringUtils.isBlank(rootDomain))
-            return;
-        String siteDomain = getSiteDomain();
-        if (StringUtils.isBlank(siteDomain) || !siteDomain.endsWith(rootDomain)) {
-            return;
-        }
         if (sessionManager instanceof DefaultWebSessionManager) {
             DefaultWebSessionManager webSessionManager = (DefaultWebSessionManager) sessionManager;
             Cookie cookie = webSessionManager.getSessionIdCookie();
-            if (null != cookie) {
-                if (!rootDomain.startsWith(".") && !siteDomain.equalsIgnoreCase(rootDomain))
-                    rootDomain = "." + rootDomain;
-                if (StringUtils.isEmpty(cookie.getDomain()) || !cookie.getDomain().equalsIgnoreCase(rootDomain))
-                    cookie.setDomain(rootDomain);
+            cookie.setMaxAge(24 * 60 * 60);
+            String rootDomain = getClusterRootDomain();
+            String siteDomain = getSiteDomain();
+            String name = siteDomain;
+            String domain = rootDomain;
+            if (StringUtils.isNotBlank(rootDomain)) {
+                name = rootDomain;
             }
+            if (StringUtils.isNotBlank(siteDomain) &&
+                    siteDomain.endsWith(rootDomain) &&
+                    !rootDomain.startsWith(".") &&
+                    !siteDomain.equalsIgnoreCase(rootDomain)) {
+                domain = "." + rootDomain;
+            }
+            if (StringUtils.isBlank(name))
+                name = "autumnid";
+            cookie.setName(name);
+            if (StringUtils.isNotBlank(domain))
+                cookie.setDomain(domain);
         }
     }
 

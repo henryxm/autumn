@@ -24,7 +24,19 @@ public interface PageHandler {
         return "";
     }
 
+    default String direct(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        return "";
+    }
+
     default String _404(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        return "";
+    }
+
+    default String _505(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        return "";
+    }
+
+    default String _500(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
         return "";
     }
 

@@ -6,6 +6,7 @@ import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.modules.usr.dto.UserProfile;
 import cn.org.autumn.modules.usr.service.UserProfileService;
 import cn.org.autumn.modules.usr.service.UserTokenService;
+import cn.org.autumn.site.PageFactory;
 import cn.org.autumn.utils.HttpClientUtils;
 import cn.org.autumn.utils.IPUtils;
 import cn.org.autumn.utils.R;
@@ -28,6 +29,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 
@@ -53,16 +55,19 @@ public class ClientOauth2Controller {
     @Autowired
     UserTokenService userTokenService;
 
+    @Autowired
+    PageFactory pageFactory;
+
     @RequestMapping("oauth2/callback")
-    public Object defaultCodeCallback(HttpServletRequest request) throws OAuthSystemException {
+    public Object defaultCodeCallback(HttpServletRequest request, HttpServletResponse response, Model model) throws OAuthSystemException {
         String authCode = request.getParameter(OAuth.OAUTH_CODE);
         if (StringUtils.isEmpty(authCode)) {
-            OAuthResponse response =
+            OAuthResponse oAuthResponse =
                     OAuthASResponse.errorResponse(HttpServletResponse.SC_BAD_REQUEST)
                             .setError(OAuthError.OAUTH_ERROR)
                             .setErrorDescription("Code should not be empty.")
                             .buildJSONMessage();
-            return new ResponseEntity(response.getBody(), HttpStatus.valueOf(response.getResponseStatus()));
+            return new ResponseEntity(oAuthResponse.getBody(), HttpStatus.valueOf(oAuthResponse.getResponseStatus()));
         }
 
         WebAuthenticationEntity webAuthenticationEntity = webAuthenticationService.getByClientId(sysConfigService.getOauth2LoginClientId());
@@ -71,12 +76,12 @@ public class ClientOauth2Controller {
         if (null != userProfile) {
             userProfileService.login(userProfile);
             userTokenService.saveToken(accessToken);
-            logger.debug(userProfile.toString());
+            logger.info("User Login: "+userProfile.toString());
         }
         String callback = request.getParameter("callback");
         if (StringUtils.isBlank(callback) || "null".equalsIgnoreCase(callback))
             callback = "/";
-        return "redirect:" + callback;
+        return pageFactory.direct(request, response, model, callback);
     }
 
     private String getAccessToken(WebAuthenticationEntity webAuthClientEntity, String oauthCode) {
