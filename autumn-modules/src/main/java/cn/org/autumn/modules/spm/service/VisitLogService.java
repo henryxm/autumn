@@ -5,7 +5,6 @@ import cn.org.autumn.modules.spm.entity.SuperPositionModelEntity;
 import cn.org.autumn.modules.spm.entity.VisitLogEntity;
 import cn.org.autumn.modules.spm.service.gen.VisitLogServiceGen;
 
-import cn.org.autumn.modules.sys.service.SysMenuService;
 import cn.org.autumn.utils.IPUtils;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.stereotype.Service;
@@ -21,6 +20,8 @@ public class VisitLogService extends VisitLogServiceGen implements LoopJob.Job {
 
     private boolean isUv(HttpServletRequest request, SuperPositionModelEntity superPositionModelEntity) {
         String ip = IPUtils.getIp(request);
+        if (StringUtils.isBlank(ip) || null == superPositionModelEntity)
+            return false;
         if (map.containsKey(superPositionModelEntity.toString())) {
             List<String> list = map.get(superPositionModelEntity.toString());
             if (list.contains(ip))
@@ -28,7 +29,7 @@ public class VisitLogService extends VisitLogServiceGen implements LoopJob.Job {
             else
                 list.add(ip);
         } else {
-            List l = new ArrayList();
+            List<String> l = new ArrayList<>();
             l.add(ip);
             map.put(superPositionModelEntity.toString(), l);
         }

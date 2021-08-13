@@ -17,23 +17,24 @@ public class IPUtils {
 
     //判断是否字符串是ipv6
     public static boolean isIPV6(String ip) {
-        if (ip == null || ip.isEmpty()) {
+        if (StringUtils.isBlank(ip)) {
             return false;
         }
         return Pattern.compile(IPV6_REGEX, Pattern.CASE_INSENSITIVE).matcher(ip).matches();
     }
 
     public static boolean isIPV6Address(String address) {
-        if (address == null || address.isEmpty()) {
+        if (StringUtils.isBlank(address)) {
             return false;
         }
         Pattern pattern1 = Pattern.compile("\\[\\S+\\]:\\d+", Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
         Pattern pattern2 = Pattern.compile("\\S+:\\S+:\\d+", Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
-
         return pattern1.matcher(address).matches() || pattern2.matcher(address).matches();
     }
 
     public static String getIp(HttpServletRequest request) {
+        if (null == request)
+            return "";
         String ip = request.getHeader("X-Forwarded-For");
         if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
             if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
@@ -97,5 +98,4 @@ public class IPUtils {
                 | Integer.parseInt(cidrIps[3]);
         return (ipAddr & mask) == (cidrIpAddr & mask);
     }
-
 }

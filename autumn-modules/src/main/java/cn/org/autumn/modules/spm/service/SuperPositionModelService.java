@@ -165,7 +165,7 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
 
     public SuperPositionModelEntity getSpm(HttpServletRequest httpServletRequest, String spm) {
         SuperPositionModelEntity superPositionModelEntity = getSpmInternal(spm);
-        if (null != superPositionModelEntity)
+        if (null != superPositionModelEntity && null != httpServletRequest)
             log(httpServletRequest, superPositionModelEntity);
         return superPositionModelEntity;
     }
