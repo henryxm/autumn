@@ -139,8 +139,7 @@ public class AuthorizationController {
 
     @RequestMapping("authorize")
     public Object applyAuthorize(HttpServletRequest request, HttpServletResponse response, Model model) throws OAuthSystemException, OAuthProblemException {
-        boolean isLogin = ShiroUtils.isLogin();
-        if (!isLogin) {
+        if (ShiroUtils.needLogin()) {
             ModelAndView mav1 = new ModelAndView();
             String url = request.getRequestURL().toString();
             String queryString = request.getQueryString();

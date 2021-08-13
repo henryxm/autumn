@@ -75,7 +75,7 @@ public class SpmFilter extends FormAuthenticationFilter {
             if (null != superPositionModelService && !superPositionModelService.needLogin(httpServletRequest, httpServletResponse))
                 return true;
         }
-        if (ShiroUtils.isLogin() && Config.isDev())
+        if (ShiroUtils.isLogin())
             return true;
         return super.isAccessAllowed(request, response, mappedValue);
     }

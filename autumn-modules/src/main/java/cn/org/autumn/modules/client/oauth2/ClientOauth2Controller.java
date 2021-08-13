@@ -3,6 +3,7 @@ package cn.org.autumn.modules.client.oauth2;
 import cn.org.autumn.modules.client.entity.WebAuthenticationEntity;
 import cn.org.autumn.modules.client.service.WebAuthenticationService;
 import cn.org.autumn.modules.sys.service.SysConfigService;
+import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.usr.dto.UserProfile;
 import cn.org.autumn.modules.usr.service.UserProfileService;
 import cn.org.autumn.modules.usr.service.UserTokenService;
@@ -69,14 +70,15 @@ public class ClientOauth2Controller {
                             .buildJSONMessage();
             return new ResponseEntity(oAuthResponse.getBody(), HttpStatus.valueOf(oAuthResponse.getResponseStatus()));
         }
-
-        WebAuthenticationEntity webAuthenticationEntity = webAuthenticationService.getByClientId(sysConfigService.getOauth2LoginClientId());
-        String accessToken = getAccessToken(webAuthenticationEntity, authCode);
-        UserProfile userProfile = getUserInfo(webAuthenticationEntity, accessToken);
-        if (null != userProfile) {
-            userProfileService.login(userProfile);
-            userTokenService.saveToken(accessToken);
-            logger.info("User Login: "+userProfile.toString());
+        if (ShiroUtils.needLogin()) {
+            WebAuthenticationEntity webAuthenticationEntity = webAuthenticationService.getByClientId(sysConfigService.getOauth2LoginClientId());
+            String accessToken = getAccessToken(webAuthenticationEntity, authCode);
+            UserProfile userProfile = getUserInfo(webAuthenticationEntity, accessToken);
+            if (null != userProfile) {
+                userProfileService.login(userProfile);
+                userTokenService.saveToken(accessToken);
+                logger.info("User Login: " + userProfile.toString());
+            }
         }
         String callback = request.getParameter("callback");
         if (StringUtils.isBlank(callback) || "null".equalsIgnoreCase(callback))

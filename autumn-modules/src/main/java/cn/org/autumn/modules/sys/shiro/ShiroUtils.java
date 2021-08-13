@@ -53,6 +53,14 @@ public class ShiroUtils {
         }
     }
 
+    public static boolean isAuthenticated() {
+        return SecurityUtils.getSubject().isAuthenticated();
+    }
+
+    public static boolean needLogin() {
+        return !isLogin() && !isAuthenticated();
+    }
+
     public static void logout() {
         try {
             SecurityUtils.getSubject().logout();
@@ -68,5 +76,4 @@ public class ShiroUtils {
         getSession().removeAttribute(key);
         return kaptcha.toString();
     }
-
 }

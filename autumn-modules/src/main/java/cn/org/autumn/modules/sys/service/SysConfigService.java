@@ -76,8 +76,18 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     @Order(1000)
     public void init() {
         LoopJob.onThirtyMinute(this);
+        clear();
         put(getConfigItems());
         updateCookieDomain();
+    }
+
+    public void clear() {
+        List<SysConfigEntity> list = selectByMap(null);
+        if (null != list && !list.isEmpty()) {
+            for (SysConfigEntity sysConfigEntity : list) {
+                sysConfigRedis.delete(sysConfigEntity.getParamKey());
+            }
+        }
     }
 
     public String getClientId() {
@@ -513,6 +523,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 name = rootDomain;
             }
             if (StringUtils.isNotBlank(siteDomain) &&
+                    StringUtils.isNotBlank(rootDomain) &&
                     siteDomain.endsWith(rootDomain) &&
                     !rootDomain.startsWith(".") &&
                     !siteDomain.equalsIgnoreCase(rootDomain)) {
