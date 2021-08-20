@@ -30,8 +30,11 @@ public class SpmService {
 
     public Spm getSpm(HttpServletRequest httpServletRequest) {
         String spm = httpServletRequest.getParameter("spm");
+        if (StringUtils.isBlank(spm))
+            return null;
         SuperPositionModelEntity entity = superPositionModelService.getSpm(httpServletRequest, spm);
-        entity.parse(spm);
+        if (null != entity)
+            entity.parse(spm);
         return entity;
     }
 

@@ -196,7 +196,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     public void updateValueByKey(String key, String value) {
         baseMapper.updateValueByKey(key, value);
         sysConfigRedis.delete(key);
-        if (map.containsKey(key))
+        if (null != map)
             map.remove(key);
         if (CLOUD_STORAGE_CONFIG_KEY.equalsIgnoreCase(key))
             cloudStorageConfig = null;
@@ -457,7 +457,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         return null;
     }
 
-    private <T> T getConfigObject(String key, Class<T> clazz) {
+    public <T> T getConfigObject(String key, Class<T> clazz) {
         String value = getValue(key);
         if (StringUtils.isNotBlank(value)) {
             return new Gson().fromJson(value, clazz);
