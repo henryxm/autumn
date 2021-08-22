@@ -1,19 +1,161 @@
 package cn.org.autumn.modules.job.task;
 
+import cn.org.autumn.site.Factory;
+import cn.org.autumn.site.LoadFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.List;
 
-public class LoopJob {
+@Component
+public class LoopJob extends Factory implements LoadFactory.Load {
     static Logger log = LoggerFactory.getLogger(LoopJob.class);
 
-    private LoopJob() {
+    static Map<Integer, Job> disabled = new HashMap<>();
+
+    public Collection<Job> getDisabledJobs() {
+        return disabled.values();
+    }
+
+    @Override
+    public void load() {
+        List<OneSecond> oneSeconds = getOrderList(OneSecond.class, "onOneSecond");
+        for (OneSecond oneSecond : oneSeconds) {
+            onOneSecond(oneSecond);
+        }
+
+        List<ThreeSecond> threeSeconds = getOrderList(ThreeSecond.class, "onThreeSecond");
+        for (ThreeSecond threeSecond : threeSeconds) {
+            onThreeSecond(threeSecond);
+        }
+
+        List<FiveSecond> fiveSeconds = getOrderList(FiveSecond.class, "onFiveSecond");
+        for (FiveSecond fiveSecond : fiveSeconds) {
+            onFiveSecond(fiveSecond);
+        }
+
+        List<TenSecond> tenSeconds = getOrderList(TenSecond.class, "onTenSecond");
+        for (TenSecond tenSecond : tenSeconds) {
+            onTenSecond(tenSecond);
+        }
+
+        List<ThirtySecond> thirtySeconds = getOrderList(ThirtySecond.class, "onThirtySecond");
+        for (ThirtySecond thirtySecond : thirtySeconds) {
+            onThirtySecond(thirtySecond);
+        }
+
+        List<OneMinute> oneMinutes = getOrderList(OneMinute.class, "onOneMinute");
+        for (OneMinute oneMinute : oneMinutes) {
+            onOneMinute(oneMinute);
+        }
+
+        List<TenMinute> tenMinutes = getOrderList(TenMinute.class, "onTenMinute");
+        for (TenMinute tenMinute : tenMinutes) {
+            onTenMinute(tenMinute);
+        }
+
+        List<ThirtyMinute> thirtyMinutes = getOrderList(ThirtyMinute.class, "onThirtyMinute");
+        for (ThirtyMinute thirtyMinute : thirtyMinutes) {
+            onThirtyMinute(thirtyMinute);
+        }
+
+        List<OneHour> oneHours = getOrderList(OneHour.class, "onOneHour");
+        for (OneHour oneHour : oneHours) {
+            onOneHour(oneHour);
+        }
+
+        List<TenHour> tenHours = getOrderList(TenHour.class, "onTenHour");
+        for (TenHour tenHour : tenHours) {
+            onTenHour(tenHour);
+        }
+
+        List<ThirtyHour> thirtyHours = getOrderList(ThirtyHour.class, "onThirtyHour");
+        for (ThirtyHour thirtyHour : thirtyHours) {
+            onThirtyHour(thirtyHour);
+        }
+
+        List<OneDay> oneDays = getOrderList(OneDay.class, "onOneDay");
+        for (OneDay oneDay : oneDays) {
+            onOneDay(oneDay);
+        }
+
+        List<OneWeek> oneWeeks = getOrderList(OneWeek.class, "onOneWeek");
+        for (OneWeek oneWeek : oneWeeks) {
+            onOneWeek(oneWeek);
+        }
     }
 
     public interface Job {
         void runJob();
+
+        default boolean isEnabled() {
+            return !disabled.containsKey(hashCode());
+        }
+
+        default void enable() {
+            disabled.remove(hashCode());
+        }
+
+        default void disable() {
+            disabled.put(hashCode(), this);
+        }
+    }
+
+    public interface OneSecond extends Job {
+        void onOneSecond();
+    }
+
+    public interface ThreeSecond extends Job {
+        void onThreeSecond();
+    }
+
+    public interface FiveSecond extends Job {
+        void onFiveSecond();
+    }
+
+    public interface TenSecond extends Job {
+        void onTenSecond();
+    }
+
+    public interface ThirtySecond extends Job {
+        void onThirtySecond();
+    }
+
+    public interface OneMinute extends Job {
+        void onOneMinute();
+    }
+
+    public interface TenMinute extends Job {
+        void onTenMinute();
+    }
+
+    public interface ThirtyMinute extends Job {
+        void onThirtyMinute();
+    }
+
+    public interface OneHour extends Job {
+        void onOneHour();
+    }
+
+    public interface TenHour extends Job {
+        void onTenHour();
+    }
+
+    public interface ThirtyHour extends Job {
+        void onThirtyHour();
+    }
+
+    public interface OneDay extends Job {
+        void onOneDay();
+    }
+
+    public interface OneWeek extends Job {
+        void onOneWeek();
     }
 
     private static List<Job> oneSecondJobList = new CopyOnWriteArrayList<>();
@@ -93,7 +235,12 @@ public class LoopJob {
         if (oneSecondJobList.size() > 0) {
             for (Job job : oneSecondJobList) {
                 try {
-                    job.runJob();
+                    if (!job.isEnabled())
+                        continue;
+                    if (job instanceof OneSecond)
+                        ((OneSecond) job).onOneSecond();
+                    else
+                        job.runJob();
                 } catch (Exception e) {
                     print(job, e);
                 }
@@ -105,7 +252,12 @@ public class LoopJob {
         if (threeSecondJobList.size() > 0) {
             for (Job job : threeSecondJobList) {
                 try {
-                    job.runJob();
+                    if (!job.isEnabled())
+                        continue;
+                    if (job instanceof ThreeSecond)
+                        ((ThreeSecond) job).onThreeSecond();
+                    else
+                        job.runJob();
                 } catch (Exception e) {
                     print(job, e);
                 }
@@ -117,7 +269,12 @@ public class LoopJob {
         if (fiveSecondJobList.size() > 0) {
             for (Job job : fiveSecondJobList) {
                 try {
-                    job.runJob();
+                    if (!job.isEnabled())
+                        continue;
+                    if (job instanceof FiveSecond)
+                        ((FiveSecond) job).onFiveSecond();
+                    else
+                        job.runJob();
                 } catch (Exception e) {
                     print(job, e);
                 }
@@ -129,7 +286,12 @@ public class LoopJob {
         if (tenSecondJobList.size() > 0) {
             for (Job job : tenSecondJobList) {
                 try {
-                    job.runJob();
+                    if (!job.isEnabled())
+                        continue;
+                    if (job instanceof TenSecond)
+                        ((TenSecond) job).onTenSecond();
+                    else
+                        job.runJob();
                 } catch (Exception e) {
                     print(job, e);
                 }
@@ -141,7 +303,12 @@ public class LoopJob {
         if (thirtySecondJobList.size() > 0) {
             for (Job job : thirtySecondJobList) {
                 try {
-                    job.runJob();
+                    if (!job.isEnabled())
+                        continue;
+                    if (job instanceof ThirtySecond)
+                        ((ThirtySecond) job).onThirtySecond();
+                    else
+                        job.runJob();
                 } catch (Exception e) {
                     print(job, e);
                 }
@@ -153,7 +320,12 @@ public class LoopJob {
         if (oneMinuteJobList.size() > 0) {
             for (Job job : oneMinuteJobList) {
                 try {
-                    job.runJob();
+                    if (!job.isEnabled())
+                        continue;
+                    if (job instanceof OneMinute)
+                        ((OneMinute) job).onOneMinute();
+                    else
+                        job.runJob();
                 } catch (Exception e) {
                     print(job, e);
                 }
@@ -165,7 +337,12 @@ public class LoopJob {
         if (tenMinuteJobList.size() > 0) {
             for (Job job : tenMinuteJobList) {
                 try {
-                    job.runJob();
+                    if (!job.isEnabled())
+                        continue;
+                    if (job instanceof TenMinute)
+                        ((TenMinute) job).onTenMinute();
+                    else
+                        job.runJob();
                 } catch (Exception e) {
                     print(job, e);
                 }
@@ -177,7 +354,12 @@ public class LoopJob {
         if (thirtyMinuteJobList.size() > 0) {
             for (Job job : thirtyMinuteJobList) {
                 try {
-                    job.runJob();
+                    if (!job.isEnabled())
+                        continue;
+                    if (job instanceof ThirtyMinute)
+                        ((ThirtyMinute) job).onThirtyMinute();
+                    else
+                        job.runJob();
                 } catch (Exception e) {
                     print(job, e);
                 }
@@ -190,7 +372,12 @@ public class LoopJob {
         if (oneHourJobList.size() > 0) {
             for (Job job : oneHourJobList) {
                 try {
-                    job.runJob();
+                    if (!job.isEnabled())
+                        continue;
+                    if (job instanceof OneHour)
+                        ((OneHour) job).onOneHour();
+                    else
+                        job.runJob();
                 } catch (Exception e) {
                     print(job, e);
                 }
@@ -202,7 +389,12 @@ public class LoopJob {
         if (tenHourJobList.size() > 0) {
             for (Job job : tenHourJobList) {
                 try {
-                    job.runJob();
+                    if (!job.isEnabled())
+                        continue;
+                    if (job instanceof TenHour)
+                        ((TenHour) job).onTenHour();
+                    else
+                        job.runJob();
                 } catch (Exception e) {
                     print(job, e);
                 }
@@ -214,7 +406,12 @@ public class LoopJob {
         if (thirtyHourJobList.size() > 0) {
             for (Job job : thirtyHourJobList) {
                 try {
-                    job.runJob();
+                    if (!job.isEnabled())
+                        continue;
+                    if (job instanceof ThirtyHour)
+                        ((ThirtyHour) job).onThirtyHour();
+                    else
+                        job.runJob();
                 } catch (Exception e) {
                     print(job, e);
                 }
@@ -226,7 +423,12 @@ public class LoopJob {
         if (oneDayJobList.size() > 0) {
             for (Job job : oneDayJobList) {
                 try {
-                    job.runJob();
+                    if (!job.isEnabled())
+                        continue;
+                    if (job instanceof OneDay)
+                        ((OneDay) job).onOneDay();
+                    else
+                        job.runJob();
                 } catch (Exception e) {
                     print(job, e);
                 }
@@ -238,7 +440,12 @@ public class LoopJob {
         if (oneWeekJobList.size() > 0) {
             for (Job job : oneWeekJobList) {
                 try {
-                    job.runJob();
+                    if (!job.isEnabled())
+                        continue;
+                    if (job instanceof OneWeek)
+                        ((OneWeek) job).onOneWeek();
+                    else
+                        job.runJob();
                 } catch (Exception e) {
                     print(job, e);
                 }
