@@ -91,7 +91,8 @@ public class LoopJob extends Factory implements LoadFactory.Load {
     }
 
     public interface Job {
-        void runJob();
+        default void runJob() {
+        }
 
         default boolean isEnabled() {
             return !disabled.containsKey(hashCode());
@@ -107,124 +108,150 @@ public class LoopJob extends Factory implements LoadFactory.Load {
     }
 
     public interface OneSecond extends Job {
-        void onOneSecond();
+        default void onOneSecond() {
+        }
     }
 
     public interface ThreeSecond extends Job {
-        void onThreeSecond();
+        default void onThreeSecond() {
+        }
     }
 
     public interface FiveSecond extends Job {
-        void onFiveSecond();
+        default void onFiveSecond() {
+        }
     }
 
     public interface TenSecond extends Job {
-        void onTenSecond();
+        default void onTenSecond() {
+        }
     }
 
     public interface ThirtySecond extends Job {
-        void onThirtySecond();
+        default void onThirtySecond() {
+        }
     }
 
     public interface OneMinute extends Job {
-        void onOneMinute();
+        default void onOneMinute() {
+        }
     }
 
     public interface TenMinute extends Job {
-        void onTenMinute();
+        default void onTenMinute() {
+        }
     }
 
     public interface ThirtyMinute extends Job {
-        void onThirtyMinute();
+        default void onThirtyMinute() {
+        }
     }
 
     public interface OneHour extends Job {
-        void onOneHour();
+        default void onOneHour() {
+        }
     }
 
     public interface TenHour extends Job {
-        void onTenHour();
+        default void onTenHour() {
+        }
     }
 
     public interface ThirtyHour extends Job {
-        void onThirtyHour();
+        default void onThirtyHour() {
+        }
     }
 
     public interface OneDay extends Job {
-        void onOneDay();
+        default void onOneDay() {
+        }
     }
 
     public interface OneWeek extends Job {
-        void onOneWeek();
+        default void onOneWeek() {
+        }
     }
 
-    private static List<Job> oneSecondJobList = new CopyOnWriteArrayList<>();
-    private static List<Job> threeSecondJobList = new CopyOnWriteArrayList<>();
-    private static List<Job> fiveSecondJobList = new CopyOnWriteArrayList<>();
-    private static List<Job> tenSecondJobList = new CopyOnWriteArrayList<>();
-    private static List<Job> thirtySecondJobList = new CopyOnWriteArrayList<>();
+    private static final List<Job> oneSecondJobList = new CopyOnWriteArrayList<>();
+    private static final List<Job> threeSecondJobList = new CopyOnWriteArrayList<>();
+    private static final List<Job> fiveSecondJobList = new CopyOnWriteArrayList<>();
+    private static final List<Job> tenSecondJobList = new CopyOnWriteArrayList<>();
+    private static final List<Job> thirtySecondJobList = new CopyOnWriteArrayList<>();
 
-    private static List<Job> oneMinuteJobList = new CopyOnWriteArrayList<>();
-    private static List<Job> tenMinuteJobList = new CopyOnWriteArrayList<>();
-    private static List<Job> thirtyMinuteJobList = new CopyOnWriteArrayList<>();
+    private static final List<Job> oneMinuteJobList = new CopyOnWriteArrayList<>();
+    private static final List<Job> tenMinuteJobList = new CopyOnWriteArrayList<>();
+    private static final List<Job> thirtyMinuteJobList = new CopyOnWriteArrayList<>();
 
-    private static List<Job> oneHourJobList = new CopyOnWriteArrayList<>();
-    private static List<Job> tenHourJobList = new CopyOnWriteArrayList<>();
-    private static List<Job> thirtyHourJobList = new CopyOnWriteArrayList<>();
+    private static final List<Job> oneHourJobList = new CopyOnWriteArrayList<>();
+    private static final List<Job> tenHourJobList = new CopyOnWriteArrayList<>();
+    private static final List<Job> thirtyHourJobList = new CopyOnWriteArrayList<>();
 
-    private static List<Job> oneDayJobList = new CopyOnWriteArrayList<>();
-    private static List<Job> oneWeekJobList = new CopyOnWriteArrayList<>();
+    private static final List<Job> oneDayJobList = new CopyOnWriteArrayList<>();
+    private static final List<Job> oneWeekJobList = new CopyOnWriteArrayList<>();
 
     public static void onOneSecond(Job job) {
-        oneSecondJobList.add(job);
+        if (!oneSecondJobList.contains(job))
+            oneSecondJobList.add(job);
     }
 
     public static void onThreeSecond(Job job) {
-        threeSecondJobList.add(job);
+        if (!threeSecondJobList.contains(job))
+            threeSecondJobList.add(job);
     }
 
     public static void onFiveSecond(Job job) {
-        fiveSecondJobList.add(job);
+        if (!fiveSecondJobList.contains(job))
+            fiveSecondJobList.add(job);
     }
 
     public static void onTenSecond(Job job) {
-        tenSecondJobList.add(job);
+        if (!tenSecondJobList.contains(job))
+            tenSecondJobList.add(job);
     }
 
     public static void onThirtySecond(Job job) {
-        thirtySecondJobList.add(job);
+        if (!thirtySecondJobList.contains(job))
+            thirtySecondJobList.add(job);
     }
 
     public static void onOneMinute(Job job) {
-        oneMinuteJobList.add(job);
+        if (!oneMinuteJobList.contains(job))
+            oneMinuteJobList.add(job);
     }
 
     public static void onTenMinute(Job job) {
-        tenMinuteJobList.add(job);
+        if (!tenMinuteJobList.contains(job))
+            tenMinuteJobList.add(job);
     }
 
     public static void onThirtyMinute(Job job) {
-        thirtyMinuteJobList.add(job);
+        if (!thirtyMinuteJobList.contains(job))
+            thirtyMinuteJobList.add(job);
     }
 
     public static void onOneHour(Job job) {
-        oneHourJobList.add(job);
+        if (!oneHourJobList.contains(job))
+            oneHourJobList.add(job);
     }
 
     public static void onTenHour(Job job) {
-        tenHourJobList.add(job);
+        if (!tenHourJobList.contains(job))
+            tenHourJobList.add(job);
     }
 
     public static void onThirtyHour(Job job) {
-        thirtyHourJobList.add(job);
+        if (!thirtyHourJobList.contains(job))
+            thirtyHourJobList.add(job);
     }
 
     public static void onOneDay(Job job) {
-        oneDayJobList.add(job);
+        if (!oneDayJobList.contains(job))
+            oneDayJobList.add(job);
     }
 
     public static void onOneWeek(Job job) {
-        oneWeekJobList.add(job);
+        if (!oneWeekJobList.contains(job))
+            oneWeekJobList.add(job);
     }
 
     private static void print(Job job, Exception e) {
