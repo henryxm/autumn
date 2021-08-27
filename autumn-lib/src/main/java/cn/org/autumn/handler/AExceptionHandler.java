@@ -13,29 +13,28 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
  */
 @RestControllerAdvice
 public class AExceptionHandler {
-	private Logger logger = LoggerFactory.getLogger(getClass());
+    private Logger logger = LoggerFactory.getLogger(getClass());
 
-	/**
-	 * 处理自定义异常
-	 */
-	@ExceptionHandler(AException.class)
-	public R handleRRException(AException e){
-		R r = new R();
-		r.put("code", e.getCode());
-		r.put("msg", e.getMessage());
+    /**
+     * 处理自定义异常
+     */
+    @ExceptionHandler(AException.class)
+    public R handleRRException(AException e) {
+        R r = new R();
+        r.put("code", e.getCode());
+        r.put("msg", e.getMessage());
+        return r;
+    }
 
-		return r;
-	}
+    @ExceptionHandler(DuplicateKeyException.class)
+    public R handleDuplicateKeyException(DuplicateKeyException e) {
+        logger.error(e.getMessage(), e);
+        return R.error("数据库中已存在该记录");
+    }
 
-	@ExceptionHandler(DuplicateKeyException.class)
-	public R handleDuplicateKeyException(DuplicateKeyException e){
-		logger.error(e.getMessage(), e);
-		return R.error("数据库中已存在该记录");
-	}
-
-	@ExceptionHandler(Exception.class)
-	public R handleException(Exception e){
-		logger.error(e.getMessage(), e);
-		return R.error();
-	}
+    @ExceptionHandler(Exception.class)
+    public R handleException(Exception e) {
+        logger.error(e.getMessage(), e);
+        return R.error(e.getMessage());
+    }
 }
