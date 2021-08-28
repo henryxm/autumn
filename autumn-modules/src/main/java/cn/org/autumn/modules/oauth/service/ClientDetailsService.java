@@ -204,7 +204,6 @@ public class ClientDetailsService extends ClientDetailsServiceGen implements Loo
             clientDetailsEntity.setCreateTime(new Date());
             insert(clientDetailsEntity);
         }
-        clientToUser(clientDetailsEntity);
     }
 
     public static final String allChar = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
