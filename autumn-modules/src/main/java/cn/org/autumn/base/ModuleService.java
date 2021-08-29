@@ -1,17 +1,24 @@
 package cn.org.autumn.base;
 
 import cn.org.autumn.config.Config;
+import cn.org.autumn.exception.AException;
 import cn.org.autumn.menu.BaseMenu;
 import cn.org.autumn.modules.lan.service.Language;
 import cn.org.autumn.modules.lan.service.LanguageService;
 import cn.org.autumn.modules.sys.entity.SysMenuEntity;
 import cn.org.autumn.modules.sys.service.SysMenuService;
 import cn.org.autumn.service.BaseService;
-import cn.org.autumn.site.InitFactory;
 import com.baomidou.mybatisplus.mapper.BaseMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 
-public abstract class ModuleService<M extends BaseMapper<T>, T> extends BaseService<M, T> implements InitFactory.Init {
+/**
+ * 模块示例基础服务类
+ * 自动化处理相关语言及菜单更新
+ *
+ * @param <M>
+ * @param <T>
+ */
+public abstract class ModuleService<M extends BaseMapper<T>, T> extends BaseService<M, T> {
 
     @Autowired
     protected SysMenuService sysMenuService;
@@ -31,9 +38,12 @@ public abstract class ModuleService<M extends BaseMapper<T>, T> extends BaseServ
         Object o = Config.getBean(bean);
         if (o instanceof BaseMenu)
             baseMenu = (BaseMenu) o;
+        if (null == baseMenu)
+            throw new AException("Module menu default class name is missing, You should implement getBaseMenu by yourself.");
         return baseMenu;
     }
 
+    @Override
     public String parentMenu() {
         getBaseMenu().init();
         SysMenuEntity sysMenuEntity = sysMenuService.getByMenuKey(getBaseMenu().getMenu());
@@ -42,6 +52,7 @@ public abstract class ModuleService<M extends BaseMapper<T>, T> extends BaseServ
         return "";
     }
 
+    @Override
     public String menu() {
         Class<?> clazz = getModelClass();
         String menuKey = clazz.getSimpleName();
@@ -51,6 +62,7 @@ public abstract class ModuleService<M extends BaseMapper<T>, T> extends BaseServ
         return SysMenuService.getMenuKey(getBaseMenu().getNamespace(), menuKey);
     }
 
+    @Override
     public void init() {
         sysMenuService.put(getMenuItemsInternal(), getMenuItems(), getMenuList());
         language.put(getLanguageItemsInternal(), getLanguageItems(), getLanguageList());

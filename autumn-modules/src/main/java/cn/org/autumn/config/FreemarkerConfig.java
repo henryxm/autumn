@@ -1,12 +1,16 @@
 package cn.org.autumn.config;
 
+import cn.org.autumn.site.ViewFactory;
+import cn.org.autumn.view.NameBasedViewResolver;
 import freemarker.cache.TemplateLoader;
 import freemarker.template.TemplateException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.freemarker.FreeMarkerProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.view.freemarker.FreeMarkerConfigurer;
+import org.springframework.web.servlet.view.freemarker.FreeMarkerViewResolver;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -43,4 +47,10 @@ public class FreemarkerConfig {
         return configurer;
     }
 
+    @Bean
+    FreeMarkerViewResolver freeMarkerViewResolver(FreeMarkerProperties properties, ViewFactory viewFactory) {
+        FreeMarkerViewResolver freeMarkerViewResolver = new NameBasedViewResolver(viewFactory);
+        properties.applyToMvcViewResolver(freeMarkerViewResolver);
+        return freeMarkerViewResolver;
+    }
 }

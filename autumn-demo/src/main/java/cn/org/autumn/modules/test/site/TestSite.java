@@ -7,12 +7,15 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class TestSite implements SiteFactory.Site, TemplateFactory.Template {
-
     public final static String siteId = "test";
     public final static String pack = "test";
 
-    @PageAware(login = true, resource = "modules/test/demoexample")
-    String demoexample;
+    @PageAware(login = true)
+    public String demoexample = "modules/test/demoexample";
+
+    public String getDemoExampleKey() {
+        return getKey("demoexample");
+    }
 
     @Override
     public String getId() {
@@ -23,5 +26,4 @@ public class TestSite implements SiteFactory.Site, TemplateFactory.Template {
     public String getPack() {
         return pack;
     }
-
 }

@@ -149,7 +149,7 @@ public class GenUtils {
 
         if (template.contains("list.js.vm")) {
             return "main" + File.separator + "resources" + File.separator + "templates" + File.separator
-                    + "modules" + File.separator + moduleName + File.separator + className.toLowerCase() + ".js.html";
+                    + "modules" + File.separator + moduleName + File.separator + className.toLowerCase() + ".js";
         }
         return null;
     }

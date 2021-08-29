@@ -1,6 +1,7 @@
 package cn.org.autumn.site;
 
 import cn.org.autumn.utils.SpringContextUtils;
+import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
@@ -51,8 +52,10 @@ public class Factory {
             try {
                 Class<?> clazz = init.getClass();
                 while (null != clazz && null == order && !clazz.equals(Object.class)) {
-                    method = clazz.getMethod(name, parameterTypes);
-                    order = method.getAnnotation(Order.class);
+                    if (StringUtils.isNotBlank(name)) {
+                        method = clazz.getMethod(name, parameterTypes);
+                        order = method.getAnnotation(Order.class);
+                    }
                     if (null == order) {
                         order = clazz.getAnnotation(Order.class);
                     }
@@ -65,8 +68,10 @@ public class Factory {
             //如果从实例中没有找到Order，则寻找接口中的Order
             if (null == order) {
                 try {
-                    method = t.getMethod(name, parameterTypes);
-                    order = method.getAnnotation(Order.class);
+                    if (StringUtils.isNotBlank(name)) {
+                        method = t.getMethod(name, parameterTypes);
+                        order = method.getAnnotation(Order.class);
+                    }
                     if (null == order)
                         order = t.getAnnotation(Order.class);
                 } catch (Exception e) {
@@ -114,6 +119,10 @@ public class Factory {
                 }
             }
         }
+    }
+
+    public <T> List<T> getOrderList(Class<T> t) {
+        return getOrderList(t, null);
     }
 
     public <T> List<T> getOrderList(Class<T> t, String name, Class<?>... parameterTypes) {

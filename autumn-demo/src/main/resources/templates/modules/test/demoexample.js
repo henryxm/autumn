@@ -4,7 +4,8 @@ $(function () {
         datatype: "json",
         colModel: [			
 			{ label: '${lang.test_demoexample_column_id}', name: 'id', index: 'id', width: 50, key: true },
-			{ label: '${lang.test_demoexample_column_example}', name: 'example', index: 'example', width: 80 },         ],
+			{ label: '${lang.test_demoexample_column_example}', name: 'example', index: 'example', width: 80 }, 
+        ],
 		viewrecords: true,
         height: 385,
         rowNum: 10,

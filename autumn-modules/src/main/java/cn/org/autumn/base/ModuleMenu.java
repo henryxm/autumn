@@ -4,12 +4,11 @@ import cn.org.autumn.menu.BaseMenu;
 import cn.org.autumn.modules.lan.service.Language;
 import cn.org.autumn.modules.lan.service.LanguageService;
 import cn.org.autumn.modules.sys.service.SysMenuService;
-import cn.org.autumn.site.InitFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.List;
 
-public abstract class ModuleMenu implements BaseMenu, InitFactory.Init {
+public abstract class ModuleMenu implements BaseMenu {
 
     @Autowired
     protected SysMenuService sysMenuService;
