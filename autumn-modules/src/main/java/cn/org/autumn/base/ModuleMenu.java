@@ -1,21 +1,15 @@
-package ${package}.${moduleName}.service.gen;
+package cn.org.autumn.base;
 
+import cn.org.autumn.menu.BaseMenu;
+import cn.org.autumn.modules.lan.service.Language;
+import cn.org.autumn.modules.lan.service.LanguageService;
 import cn.org.autumn.modules.sys.service.SysMenuService;
 import cn.org.autumn.site.InitFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import cn.org.autumn.modules.lan.service.Language;
-import cn.org.autumn.modules.lan.service.LanguageService;
-import java.util.List;
-/**
- * ${comment}
- *
- * @author ${author}
- * @email ${email}
- * @date ${datetime}
- */
-public class ${upperModuleName}MenuGen implements InitFactory.Init {
 
-    public static final String ${moduleName}_menu = "${moduleName}_menu";
+import java.util.List;
+
+public abstract class ModuleMenu implements BaseMenu, InitFactory.Init {
 
     @Autowired
     protected SysMenuService sysMenuService;
@@ -26,20 +20,8 @@ public class ${upperModuleName}MenuGen implements InitFactory.Init {
     @Autowired
     protected LanguageService languageService;
 
-    protected String order(){
-        return "0";
-    }
-
-    protected String ico(){
-        return "fa-file-code-o";
-    }
-
     public String getMenu() {
-        return SysMenuService.getMenuKey("${upperModuleName}", "${upperModuleName}Menu");
-    }
-
-    public String getParentMenu() {
-        return "";
+        return SysMenuService.getMenuKey(getNamespace(), getMenuKey());
     }
 
     public void init() {
@@ -56,11 +38,10 @@ public class ${upperModuleName}MenuGen implements InitFactory.Init {
     }
 
     private String[][] getMenuItemsInternal() {
-        String[][] menus = new String[][]{
+        return new String[][]{
                 //{0:菜单名字,1:URL,2:权限,3:菜单类型,4:ICON,5:排序,6:MenuKey,7:ParentKey,8:Language}
-                {"${moduleText}", "", "", "0", "fa " + ico(), order(), getMenu(), getParentMenu(), ${moduleName}_menu + "_text"},
+                {getName(), "", "", "0", "fa " + ico(), order(), getMenu(), getParentMenu(), getLanguageKey()},
         };
-        return menus;
     }
 
     public List<String[]> getLanguageList() {
@@ -72,9 +53,6 @@ public class ${upperModuleName}MenuGen implements InitFactory.Init {
     }
 
     private String[][] getLanguageItemsInternal() {
-        String[][] items = new String[][]{
-                {${moduleName}_menu + "_text", "${moduleText}", "${upperModuleName}"},
-        };
-        return items;
+        return new String[][]{{getLanguageKey(), getName()}};
     }
 }

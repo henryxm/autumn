@@ -25,13 +25,11 @@ public class GenUtils {
     private static final Logger log = LoggerFactory.getLogger(GenUtils.class);
 
     public static List<String> getTemplates() {
-        List<String> templates = new ArrayList<String>();
+        List<String> templates = new ArrayList<>();
         templates.add("template/Entity.java.vm");
         templates.add("template/Dao.java.vm");
-        templates.add("template/ServiceGen.java.vm");
         templates.add("template/Service.java.vm");
         templates.add("template/Menu.java.vm");
-        templates.add("template/MenuGen.java.vm");
         templates.add("template/Controller.java.vm");
         templates.add("template/ControllerGen.java.vm");
         templates.add("template/list.html.vm");
@@ -66,6 +64,8 @@ public class GenUtils {
         map.put("package", wrapper.getModulePackage());
         map.put("moduleName", wrapper.getModuleName());
         map.put("moduleText", wrapper.getModuleText());
+        map.put("moduleIcon", wrapper.getModuleIcon());
+        map.put("moduleOrder", wrapper.getModuleOrder());
         map.put("upperModuleName", HumpConvert.toFirstStringUpper(wrapper.getModuleName()));
         map.put("author", wrapper.getAuthorName());
         map.put("email", wrapper.getEmail());
@@ -122,20 +122,12 @@ public class GenUtils {
             return packagePath + "dao" + File.separator + className + "Dao.java";
         }
 
-        if (template.contains("ServiceGen.java.vm")) {
-            return packagePath + "service" + File.separator + "gen" + File.separator + className + "ServiceGen.java";
-        }
-
         if (template.contains("Service.java.vm")) {
             return packagePath + "service" + File.separator + className + "Service.java";
         }
 
         if (template.contains("Menu.java.vm")) {
             return packagePath + "service" + File.separator + HumpConvert.toFirstStringUpper(moduleName) + "Menu.java";
-        }
-
-        if (template.contains("MenuGen.java.vm")) {
-            return packagePath + "service" + File.separator + "gen" + File.separator + HumpConvert.toFirstStringUpper(moduleName) + "MenuGen.java";
         }
 
         if (template.contains("Site.java.vm")) {

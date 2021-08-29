@@ -3,6 +3,7 @@ package cn.org.autumn.modules.gen.service;
 import cn.org.autumn.modules.gen.entity.GenTypeEntity;
 import cn.org.autumn.modules.gen.entity.GenTypeWrapper;
 import cn.org.autumn.modules.gen.service.gen.GenTypeServiceGen;
+import cn.org.autumn.modules.sys.entity.SysMenuEntity;
 import cn.org.autumn.modules.sys.service.SysMenuService;
 import org.springframework.stereotype.Service;
 
@@ -108,11 +109,8 @@ public class GenTypeService extends GenTypeServiceGen {
         GenTypeEntity entity = new GenTypeEntity();
         entity.setDatabaseType(databaseType);
         entity = baseMapper.selectOne(entity);
-        if (null != entity) {
-            GenTypeWrapper wrapper = new GenTypeWrapper(entity);
-            return wrapper;
-        }
-        return null;
+        SysMenuEntity sysMenuEntity = sysMenuService.getByMenuKey(entity.getModuleId());
+        return new GenTypeWrapper(entity, sysMenuEntity);
     }
 
     public void copy(Long[] ids) {

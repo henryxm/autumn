@@ -4,6 +4,7 @@ import cn.org.autumn.modules.gen.entity.GenTypeEntity;
 import cn.org.autumn.modules.gen.entity.GenTypeWrapper;
 import cn.org.autumn.modules.gen.utils.GenUtils;
 import cn.org.autumn.modules.lan.service.LanguageService;
+import cn.org.autumn.modules.sys.entity.SysMenuEntity;
 import cn.org.autumn.modules.sys.service.SysMenuService;
 import cn.org.autumn.site.InitFactory;
 import cn.org.autumn.table.dao.TableDao;
@@ -127,7 +128,9 @@ public class GeneratorService implements InitFactory.Init {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         ZipOutputStream zip = new ZipOutputStream(outputStream);
         GenTypeEntity entity = genTypeService.selectById(genId);
-        wrapper = new GenTypeWrapper(entity);
+        String menuKey = entity.getModuleId();
+        SysMenuEntity sysMenuEntity = sysMenuService.getByMenuKey(menuKey);
+        wrapper = new GenTypeWrapper(entity, sysMenuEntity);
         List<Map<String, Object>> tables = new ArrayList<>();
         for (String tableName : tableNames) {
             TableInfo tableInfo = build(tableName, wrapper);
@@ -169,10 +172,10 @@ public class GeneratorService implements InitFactory.Init {
     public void init() {
         String keyMenu = SysMenuService.getMenuKey("Gen", "Generator");
         String[][] menus = new String[][]{
-                {"代码生成", "modules/gen/generator", "gen:generator:list,gen:generator:code", "1", "fa " + ico(), order(), keyMenu, parentMenu(), "sys_string_code_generator" },
-                {"查看", null, "gen:generator:list,gen:generator:info", "2", null, order(), SysMenuService.getMenuKey("Gen", "GeneratorInfo"), keyMenu, "sys_string_lookup" },
-                {"生成", null, "gen:generator:code", "2", null, order(), SysMenuService.getMenuKey("Gen", "GeneratorCode"), keyMenu, "sys_string_generate" },
-                {"重置表", null, "gen:generator:reset", "2", null, order(), SysMenuService.getMenuKey("Gen", "ResetTable"), keyMenu, "sys_string_reset_table" },
+                {"代码生成", "modules/gen/generator", "gen:generator:list,gen:generator:code", "1", "fa " + ico(), order(), keyMenu, parentMenu(), "sys_string_code_generator"},
+                {"查看", null, "gen:generator:list,gen:generator:info", "2", null, order(), SysMenuService.getMenuKey("Gen", "GeneratorInfo"), keyMenu, "sys_string_lookup"},
+                {"生成", null, "gen:generator:code", "2", null, order(), SysMenuService.getMenuKey("Gen", "GeneratorCode"), keyMenu, "sys_string_generate"},
+                {"重置表", null, "gen:generator:reset", "2", null, order(), SysMenuService.getMenuKey("Gen", "ResetTable"), keyMenu, "sys_string_reset_table"},
         };
         sysMenuService.put(menus);
         initVelocity();

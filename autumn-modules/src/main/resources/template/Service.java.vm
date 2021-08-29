@@ -1,18 +1,11 @@
 package ${package}.${moduleName}.service;
 
-import ${package}.${moduleName}.service.gen.${className}ServiceGen;
+import cn.org.autumn.base.ModuleService;
 import org.springframework.stereotype.Service;
+import ${package}.${moduleName}.dao.${className}Dao;
+import ${package}.${moduleName}.entity.${className}Entity;
 
 @Service
-public class ${className}Service extends ${className}ServiceGen {
+public class ${className}Service extends ModuleService<${className}Dao, ${className}Entity> {
 
-    @Override
-    public int menuOrder(){
-        return super.menuOrder();
-    }
-
-    @Override
-    public String ico(){
-        return super.ico();
-    }
 }

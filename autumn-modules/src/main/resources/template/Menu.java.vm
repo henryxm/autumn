@@ -1,6 +1,7 @@
 package ${package}.${moduleName}.service;
 
-import ${package}.${moduleName}.service.gen.${upperModuleName}MenuGen;
+import cn.org.autumn.menu.Menu;
+import cn.org.autumn.base.ModuleMenu;
 import org.springframework.stereotype.Service;
 
 /**
@@ -11,34 +12,7 @@ import org.springframework.stereotype.Service;
  * @date ${datetime}
  */
 @Service
-public class ${upperModuleName}Menu extends ${upperModuleName}MenuGen {
+@Menu(name = "${moduleText}", order = ${moduleOrder}, ico = "${moduleIcon}")
+public class ${upperModuleName}Menu extends ModuleMenu {
 
-    @Override
-    protected String order() {
-        return super.order();
-    }
-
-    @Override
-    public String ico() {
-        return super.ico();
-    }
-
-    @Override
-    public String getMenu() {
-        return super.getMenu();
-    }
-
-    @Override
-    public String getParentMenu() {
-        return super.getParentMenu();
-    }
-
-    @Override
-    public void init() {
-        super.init();
-    }
-
-    public String[][] getLanguageItems() {
-        return null;
-    }
 }

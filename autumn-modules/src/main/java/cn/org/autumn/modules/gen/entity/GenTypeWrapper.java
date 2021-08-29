@@ -1,14 +1,18 @@
 package cn.org.autumn.modules.gen.entity;
 
+import cn.org.autumn.modules.sys.entity.SysMenuEntity;
+
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class GenTypeWrapper {
     private GenTypeEntity entity;
+    private SysMenuEntity menuEntity;
 
-    public GenTypeWrapper(GenTypeEntity entity) {
+    public GenTypeWrapper(GenTypeEntity entity, SysMenuEntity sysMenuEntity) {
         this.mapping = new LinkedHashMap<>();
         this.entity = entity;
+        this.menuEntity = sysMenuEntity;
         if (null == entity)
             return;
         String m = this.entity.getMappingString();
@@ -21,6 +25,18 @@ public class GenTypeWrapper {
 
     public String getModuleText() {
         return entity.getModuleText();
+    }
+
+    public String getModuleIcon() {
+        if (null != menuEntity)
+            return menuEntity.getIcon();
+        return "fa-file-word-o";
+    }
+
+    public String getModuleOrder() {
+        if (null != menuEntity && null != menuEntity.getOrderNum())
+            return String.valueOf(menuEntity.getOrderNum());
+        return "0";
     }
 
     public String getDatabaseType() {
