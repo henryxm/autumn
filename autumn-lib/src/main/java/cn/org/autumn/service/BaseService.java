@@ -1,5 +1,6 @@
 package cn.org.autumn.service;
 
+import cn.org.autumn.menu.BaseMenu;
 import cn.org.autumn.table.annotation.Column;
 import cn.org.autumn.table.annotation.Table;
 import cn.org.autumn.table.utils.HumpConvert;
@@ -23,7 +24,7 @@ import java.util.*;
  * @param <M> Mapper
  * @param <T> Entity
  */
-public abstract class BaseService<M extends BaseMapper<T>, T> extends ServiceImpl<M, T> {
+public abstract class BaseService<M extends BaseMapper<T>, T> extends ServiceImpl<M, T> implements BaseMenu {
 
     private Class<?> modelClass = null;
     private String prefix = null;
@@ -130,16 +131,6 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends ServiceImp
         return getPage(params, new ArrayList<>(Arrays.asList(descs)));
     }
 
-    /**
-     * need implement it if the order is not default
-     * default value is 0
-     *
-     * @return order value
-     */
-    public int menuOrder() {
-        return 0;
-    }
-
     public String getPrefix() {
         if (null == prefix) {
             Class<?> clazz = getModelClass();
@@ -169,16 +160,12 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends ServiceImp
 
     public abstract String parentMenu();
 
+    public String getMenu() {
+        return menu();
+    }
+
     public String button(String button) {
         return menu() + button;
-    }
-
-    public String ico() {
-        return "fa-file-code-o";
-    }
-
-    protected String order() {
-        return String.valueOf(menuOrder());
     }
 
     public List<String[]> getLanguageList() {
@@ -243,9 +230,12 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends ServiceImp
         if (StringUtils.isNotBlank(tableComment) && tableComment.contains(":")) {
             tableComment = tableComment.split(":")[0];
         }
+        String ico = ico();
+        if (!ico.startsWith("fa "))
+            ico = "fa " + ico;
         String[][] menus = new String[][]{
                 //{0:菜单名字,1:URL,2:权限,3:菜单类型,4:ICON,5:排序,6:MenuKey,7:ParentKey,8:Language}
-                {tableComment, "modules/" + pre + "/" + name, pre + ":" + name + ":list," + pre + ":" + name + ":info," + pre + ":" + name + ":save," + pre + ":" + name + ":update," + pre + ":" + name + ":delete", "1", "fa " + ico(), order(), menu(), parentMenu(), pre + "_" + name + "_table_comment"},
+                {tableComment, "modules/" + pre + "/" + name, pre + ":" + name + ":list," + pre + ":" + name + ":info," + pre + ":" + name + ":save," + pre + ":" + name + ":update," + pre + ":" + name + ":delete", "1", ico, order(), menu(), parentMenu(), pre + "_" + name + "_table_comment"},
                 {"查看", null, pre + ":" + name + ":list," + pre + ":" + name + ":info", "2", null, order(), button("List"), menu(), "sys_string_lookup"},
                 {"新增", null, pre + ":" + name + ":save", "2", null, order(), button("Save"), menu(), "sys_string_add"},
                 {"修改", null, pre + ":" + name + ":update", "2", null, order(), button("Update"), menu(), "sys_string_change"},

@@ -1,6 +1,7 @@
 package cn.org.autumn.modules.gen.entity;
 
 import cn.org.autumn.modules.sys.entity.SysMenuEntity;
+import org.apache.commons.lang.StringUtils;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -24,13 +25,22 @@ public class GenTypeWrapper {
     }
 
     public String getModuleText() {
-        return entity.getModuleText();
+        String text = entity.getModuleText();
+        if (StringUtils.isBlank(text))
+            text = "";
+        return text;
     }
 
     public String getModuleIcon() {
-        if (null != menuEntity)
-            return menuEntity.getIcon();
-        return "fa-file-word-o";
+        String ico = null;
+        if (null != menuEntity) {
+            ico = menuEntity.getIcon();
+            while (StringUtils.isNotBlank(ico) && ico.startsWith("fa "))
+                ico = ico.substring(2).trim();
+        }
+        if (StringUtils.isBlank(ico))
+            ico = "fa-file-word-o";
+        return ico;
     }
 
     public String getModuleOrder() {
