@@ -127,7 +127,7 @@ public class GenUtils {
         }
 
         if (template.contains("Menu.java.vm")) {
-            return packagePath + "service" + File.separator + HumpConvert.toFirstStringUpper(moduleName) + "Menu.java";
+            return packagePath + "site" + File.separator + HumpConvert.toFirstStringUpper(moduleName) + "Menu.java";
         }
 
         if (template.contains("Site.java.vm")) {

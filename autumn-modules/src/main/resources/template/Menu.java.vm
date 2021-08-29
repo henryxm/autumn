@@ -1,4 +1,4 @@
-package ${package}.${moduleName}.service;
+package ${package}.${moduleName}.site;
 
 import cn.org.autumn.menu.Menu;
 import cn.org.autumn.base.ModuleMenu;
