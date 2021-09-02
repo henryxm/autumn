@@ -41,6 +41,11 @@ public class SysPageController implements ErrorController {
         return "modules/" + module + "/" + url + ".js";
     }
 
+    @RequestMapping({"modules/**", "pages/**", "html/**", "h5/**", "js/**", "css/**"})
+    public String modules(HttpServletRequest httpServletRequest) {
+        return httpServletRequest.getRequestURI();
+    }
+
     @RequestMapping(value = {"index.html"})
     public String index(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model, String spm) {
         if (superPositionModelService.menuWithSpm()) {

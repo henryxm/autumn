@@ -50,6 +50,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     public static final String UPDATE_MENU_ON_INIT = "UPDATE_MENU_ON_INIT";
     public static final String UPDATE_LANGUAGE_ON_INIT = "UPDATE_LANGUAGE_ON_INIT";
     public static final String CLUSTER_NAMESPACE = "CLUSTER_NAMESPACE";
+    public static final String NONE_SUFFIX_VIEW = "NONE_SUFFIX_VIEW";
     public static final String Localhost = "localhost";
 
     @Autowired
@@ -123,6 +124,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 {USER_DEFAULT_ROLE_KEYS, "", "1", "缺省的角色标识，多个KEY用半角逗号分隔，当用户从集群中的账户体系中同步用户信息后，授予的默认的角色权限"},
                 {UPDATE_MENU_ON_INIT, "true", "1", "当系统启动或执行初始化的时候更新菜单，特别是当系统升级更新的时候，需要开启该功能"},
                 {UPDATE_LANGUAGE_ON_INIT, "true", "1", "当系统启动或执行初始化的时候更新语言列表，开发模式下可以开启该功能，该模式会自动合并新的值到现有的表中"},
+                {NONE_SUFFIX_VIEW, "js,css,map,html,htm,shtml", "1", "系统默认后缀名为:.html, Request请求的路径在程序查找资源的时候，默认会带上.html, 通过配置无后缀名文件视图, 系统将请求路径进行资源查找"},
         };
         return mapping;
     }
@@ -543,6 +545,14 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
 
     public boolean isUpdateLanguage() {
         return getBoolean(UPDATE_LANGUAGE_ON_INIT);
+    }
+
+    public String[] getNoneSuffix() {
+        String v = getValue(NONE_SUFFIX_VIEW);
+        if (StringUtils.isNotBlank(v)) {
+            return v.split(",|，|;|；|:|：| ");
+        }
+        return null;
     }
 
     @Override
