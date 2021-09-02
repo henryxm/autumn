@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.spm.service;
 
+import cn.org.autumn.config.VariablesHandler;
 import cn.org.autumn.modules.spm.entity.Spm;
 import cn.org.autumn.modules.spm.entity.SuperPositionModelEntity;
 import org.apache.commons.lang.StringUtils;
@@ -11,9 +12,14 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 @Service
-public class SpmService {
+public class SpmService implements VariablesHandler {
     @Autowired
     SuperPositionModelService superPositionModelService;
+
+    @Override
+    public String getName() {
+        return "spm";
+    }
 
     public boolean isSpmMode() {
         return superPositionModelService.isSpmMode();
@@ -45,5 +51,9 @@ public class SpmService {
         if (null != entity)
             entity.parse(spm);
         return entity;
+    }
+
+    public String getUrl(String key) {
+        return superPositionModelService.getUrl(key);
     }
 }
