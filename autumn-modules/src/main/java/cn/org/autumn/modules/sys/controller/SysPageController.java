@@ -41,7 +41,7 @@ public class SysPageController implements ErrorController {
         return "modules/" + module + "/" + url + ".js";
     }
 
-    @RequestMapping({"modules/**", "pages/**", "html/**", "h5/**", "js/**", "css/**"})
+    @RequestMapping({"modules/**", "pages/**"})
     public String modules(HttpServletRequest httpServletRequest) {
         return httpServletRequest.getRequestURI();
     }
