@@ -29,7 +29,6 @@ public class GenUtils {
         templates.add("template/Entity.java.vm");
         templates.add("template/Dao.java.vm");
         templates.add("template/Service.java.vm");
-        templates.add("template/Menu.java.vm");
         templates.add("template/Controller.java.vm");
         templates.add("template/ControllerGen.java.vm");
         templates.add("template/list.html.vm");
@@ -40,6 +39,7 @@ public class GenUtils {
     public static List<String> getSiteTemplates() {
         List<String> templates = new ArrayList<String>();
         templates.add("template/Site.java.vm");
+        templates.add("template/Menu.java.vm");
         return templates;
     }
 

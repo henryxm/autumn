@@ -5,8 +5,6 @@ import cn.org.autumn.base.ModuleMenu;
 import org.springframework.stereotype.Service;
 
 /**
- * ${comment}
- *
  * @author ${author}
  * @email ${email}
  * @date ${datetime}
