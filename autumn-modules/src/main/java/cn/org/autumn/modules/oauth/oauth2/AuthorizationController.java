@@ -147,7 +147,7 @@ public class AuthorizationController {
                 url = url + "?" + queryString;
             }
             mav1.addObject("callback", url);
-            mav1.setViewName("redirect:/" + pageFactory.login(request, response, model));
+            mav1.setViewName("redirect:/oauth2/login");
             return mav1;
         }
 
