@@ -95,11 +95,15 @@ public class AuthorizationController {
     }
 
     @RequestMapping("login")
-    public Object login(HttpServletRequest request, HttpServletResponse response, String username, String password, boolean rememberMe, Model model) throws UnsupportedEncodingException {
+    public Object login(HttpServletRequest request, HttpServletResponse response, String username, String password, boolean rememberMe, Model model) {
         String error = "";
+        if (model.containsAttribute("error")) {
+            Object obj = model.getAttribute("error");
+            error = String.valueOf(obj);
+        }
         String callback = Utils.getCallback(request);
         try {
-            if (request.getMethod().equalsIgnoreCase(POST)) {
+            if (StringUtils.isBlank(error) && request.getMethod().equalsIgnoreCase(POST)) {
                 SavedRequest savedRequest = WebUtils.getSavedRequest(request);
                 String back = callback;
                 if (null != savedRequest) {
@@ -122,13 +126,16 @@ public class AuthorizationController {
         } catch (AuthenticationException e) {
             error = "账户验证失败";
         }
-        if (StringUtils.isNotBlank(error)) {
-            if (error.length() > 200)
-                error = error.substring(0, 200);
-            if (StringUtils.isBlank(callback))
-                return "redirect:/oauth2/login?error=" + URLEncoder.encode(error, "utf-8");
-            else
-                return "redirect:/oauth2/login?callback=" + URLEncoder.encode(callback, "utf-8") + "&error=" + URLEncoder.encode(error, "utf-8");
+        try {
+            if (StringUtils.isNotBlank(error)) {
+                if (error.length() > 200)
+                    error = error.substring(0, 200);
+                if (StringUtils.isBlank(callback))
+                    return "redirect:/oauth2/login?error=" + URLEncoder.encode(error, "utf-8");
+                else
+                    return "redirect:/oauth2/login?callback=" + URLEncoder.encode(callback, "utf-8") + "&error=" + URLEncoder.encode(error, "utf-8");
+            }
+        } catch (Exception ignored) {
         }
         String perror = request.getParameter("error");
         if (StringUtils.isBlank(perror))
