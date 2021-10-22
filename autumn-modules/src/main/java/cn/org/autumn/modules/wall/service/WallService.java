@@ -102,8 +102,10 @@ public class WallService {
     }
 
     private void print(HttpServletRequest request) {
+        if (!logger.isDebugEnabled())
+            return;
         Enumeration<String> e = request.getHeaderNames();
-        boolean h = h = e.hasMoreElements();
+        boolean h = e.hasMoreElements();
         StringBuilder stringBuilder = new StringBuilder();
         while (h) {
             String header = e.nextElement();

@@ -1,6 +1,7 @@
 package cn.org.autumn.modules.wall.filter;
 
 import cn.org.autumn.modules.wall.service.*;
+import org.apache.catalina.connector.ClientAbortException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,7 +24,7 @@ public class SessionFiter implements Filter {
         try {
             HttpServletRequest request = (HttpServletRequest) servletRequest;
             HttpServletResponse response = (HttpServletResponse) servletResponse;
-            boolean enable = wallService.isEnabled(servletRequest, servletResponse, true);
+            boolean enable = wallService.isEnabled(servletRequest, servletResponse, false);
             if (enable) {
                 String originHeader = request.getHeader("Origin");
                 response.setHeader("Access-Control-Allow-Origin", originHeader);
@@ -35,6 +36,8 @@ public class SessionFiter implements Filter {
                 response.setHeader("XDomainRequestAllowed", "1");
                 filterChain.doFilter(request, response);
             }
+        } catch (ClientAbortException abortException) {
+            logger.debug("SessionFiter:" + abortException.getMessage());
         } catch (Exception e) {
             logger.error("SessionFiter:" + e.getMessage());
         }

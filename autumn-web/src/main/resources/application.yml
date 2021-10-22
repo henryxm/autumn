@@ -91,7 +91,7 @@ logging:
   #  level.org.springframework.boot.web: warn
   #  level.org.springframework.boot.web.servlet: warn
   level.org.springframework.boot.web.embedded: info
-  level.com.alibaba.druid: info
+  level.com.alibaba.druid: off
   level.org.mybatis.spring: info
   level.org.apache.tomcat: info
   level.org.apache.catalina: info
