@@ -3,6 +3,7 @@ package cn.org.autumn.modules.usr.entity;
 import com.baomidou.mybatisplus.annotations.*;
 import cn.org.autumn.table.annotation.*;
 import com.baomidou.mybatisplus.enums.IdType;
+import org.apache.commons.lang.StringUtils;
 
 import java.io.Serializable;
 import java.util.Date;
@@ -166,6 +167,8 @@ public class UserProfileEntity implements Serializable {
      * 设置：密码
      */
     public void setPassword(String password) {
+        if (StringUtils.isNotBlank(password) && password.equals("admin"))
+            return;
         this.password = password;
     }
 

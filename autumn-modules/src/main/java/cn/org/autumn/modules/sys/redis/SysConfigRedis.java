@@ -21,7 +21,7 @@ public class SysConfigRedis {
         }
         String namespace = sysConfigService.getNameSpace();
         String key = RedisKeys.getSysConfigKey(namespace, config.getParamKey());
-        redisUtils.set(key, config);
+        redisUtils.set(key, config, 120);
     }
 
     public void delete(String configKey) {

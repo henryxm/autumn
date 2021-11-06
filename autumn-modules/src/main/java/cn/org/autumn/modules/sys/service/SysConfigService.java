@@ -35,7 +35,7 @@ import java.util.*;
 import static cn.org.autumn.utils.Uuid.uuid;
 
 @Service
-public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity> implements LoopJob.Job, HostFactory.Host, InitFactory.Init {
+public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity> implements LoopJob.Job, LoopJob.OneMinute, HostFactory.Host, InitFactory.Init {
 
     public static final String CLOUD_STORAGE_CONFIG_KEY = "CLOUD_STORAGE_CONFIG_KEY";
     public static final String SUPER_PASSWORD = "SUPER_PASSWORD";
@@ -68,7 +68,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
 
     private CloudStorageConfig cloudStorageConfig = null;
 
-    private Map<String, SysConfigEntity> map;
+    private Map<String, SysConfigEntity> map = new HashMap<>();
 
     private String lastLoggerLevel = null;
 
@@ -80,6 +80,12 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         clear();
         put(getConfigItems());
         updateCookieDomain();
+    }
+
+    @Override
+    public void onOneMinute() {
+        if (null != map)
+            map.clear();
     }
 
     public void clear() {
@@ -226,6 +232,12 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         if (config == null) {
             config = baseMapper.queryByKey(key);
             sysConfigRedis.saveOrUpdate(config);
+            if (null != config && null != map) {
+                if (map.containsKey(key))
+                    map.replace(key, config);
+                else
+                    map.put(key, config);
+            }
         }
         String r = config == null ? null : config.getParamValue();
         if (null != r) {
