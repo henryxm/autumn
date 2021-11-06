@@ -1,11 +1,14 @@
 package cn.org.autumn.modules.oauth.oauth2;
 
 import cn.org.autumn.modules.oauth.entity.ClientDetailsEntity;
+import cn.org.autumn.modules.oauth.entity.TokenStoreEntity;
 import cn.org.autumn.modules.oauth.service.ClientDetailsService;
+import cn.org.autumn.modules.oauth.service.TokenStoreService;
 import cn.org.autumn.modules.oauth.store.TokenStore;
 import cn.org.autumn.modules.oauth.store.ValueType;
 import cn.org.autumn.modules.spm.service.SuperPositionModelService;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
+import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.modules.sys.service.SysUserService;
 import cn.org.autumn.modules.sys.shiro.RedisShiroSessionDAO;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
@@ -47,11 +50,9 @@ import org.springframework.web.servlet.ModelAndView;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.UnsupportedEncodingException;
 import java.net.*;
 import java.util.Map;
 
-import static com.baomidou.mybatisplus.toolkit.StringUtils.UTF8;
 import static javax.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
 import static javax.servlet.http.HttpServletResponse.SC_UNAUTHORIZED;
 import static org.apache.oltu.oauth2.common.OAuth.HttpMethod.POST;
@@ -81,6 +82,12 @@ public class AuthorizationController {
 
     @Autowired
     RedisShiroSessionDAO redisShiroSessionDAO;
+
+    @Autowired
+    TokenStoreService tokenStoreService;
+
+    @Autowired
+    SysConfigService sysConfigService;
 
     @Autowired
     PageFactory pageFactory;
@@ -297,17 +304,35 @@ public class AuthorizationController {
             return error("非法授权", INVALID_GRANT, SC_BAD_REQUEST);
         }
 
-        //生成访问令牌
-        OAuthIssuerImpl authIssuerImpl = new OAuthIssuerImpl(new MD5Generator());
-        String accessToken = authIssuerImpl.accessToken();
-        String refreshToken = authIssuerImpl.refreshToken();
+        String accessToken = "";
+        String refreshToken = "";
+        if (null != tokenStore.getValue() && sysConfigService.currentToken() && tokenStore.getValue() instanceof SysUserEntity) {
+            SysUserEntity sysUserEntity = (SysUserEntity) tokenStore.getValue();
+            TokenStoreEntity tokenStoreEntity = tokenStoreService.findByUser(sysUserEntity);
+            if (null != tokenStoreEntity
+                    && StringUtils.isNotBlank(tokenStoreEntity.getAccessToken())
+                    && StringUtils.isNotBlank(tokenStoreEntity.getRefreshToken())) {
+                boolean validA = clientDetailsService.isValidAccessToken(tokenStoreEntity.getAccessToken());
+                boolean validR = clientDetailsService.isValidRefreshToken(tokenStoreEntity.getRefreshToken());
+                if (validA && validR) {
+                    accessToken = tokenStoreEntity.getAccessToken();
+                    refreshToken = tokenStoreEntity.getRefreshToken();
+                }
+            }
+        }
 
-        /**
-         * accessToken  过期时间：24 * 60 * 60L      一天
-         * refreshToken 过期时间：7 * 24 * 60 * 60L  一周
-         * 如果服务器重启或者Redis重启后，将立即过期
-         */
-        clientDetailsService.putToken(accessToken, refreshToken, tokenStore);
+        if (StringUtils.isBlank(accessToken) || StringUtils.isBlank(refreshToken)) {
+            //生成访问令牌
+            OAuthIssuerImpl authIssuerImpl = new OAuthIssuerImpl(new MD5Generator());
+            accessToken = authIssuerImpl.accessToken();
+            refreshToken = authIssuerImpl.refreshToken();
+            /**
+             * accessToken  过期时间：24 * 60 * 60L      一天
+             * refreshToken 过期时间：7 * 24 * 60 * 60L  一周
+             * 如果服务器重启或者Redis重启后，将立即过期
+             */
+            clientDetailsService.putToken(accessToken, refreshToken, tokenStore);
+        }
 
         //生成OAuth响应
         OAuthResponse response = OAuthASResponse
