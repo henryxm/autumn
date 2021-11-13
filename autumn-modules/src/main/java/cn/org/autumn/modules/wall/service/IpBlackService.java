@@ -1,10 +1,9 @@
 package cn.org.autumn.modules.wall.service;
 
-import cn.org.autumn.modules.wall.entity.IpWhiteEntity;
+import cn.org.autumn.modules.wall.dao.IpBlackDao;
 import cn.org.autumn.site.LoadFactory;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.wall.entity.IpBlackEntity;
-import cn.org.autumn.modules.wall.service.gen.IpBlackServiceGen;
 import cn.org.autumn.utils.IPUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -15,7 +14,7 @@ import org.springframework.stereotype.Service;
 import java.util.*;
 
 @Service
-public class IpBlackService extends IpBlackServiceGen implements LoadFactory.Load, LoopJob.Job {
+public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> implements LoadFactory.Load, LoopJob.Job {
     private static final Logger log = LoggerFactory.getLogger(IpBlackService.class);
 
     @Autowired
@@ -74,15 +73,20 @@ public class IpBlackService extends IpBlackServiceGen implements LoadFactory.Loa
 
     public boolean isBlack(String ip) {
         try {
-            if (null != ipBlackList && ipBlackList.size() > 0 && StringUtils.isNotEmpty(ip)) {
-                if (ipBlackList.contains(ip))
+            if (StringUtils.isBlank(ip))
+                return false;
+            if (null != ipBlackList && !ipBlackList.isEmpty()) {
+                if (ipBlackList.contains(ip)) {
+                    count(ip);
                     return true;
-
-                if (null != ipBlackSectionList && ipBlackSectionList.size() > 0) {
-                    for (String section : ipBlackSectionList) {
-                        boolean is = IPUtils.isInRange(ip, section);
-                        if (is)
-                            return true;
+                }
+            }
+            if (null != ipBlackSectionList && !ipBlackSectionList.isEmpty()) {
+                for (String section : ipBlackSectionList) {
+                    boolean is = IPUtils.isInRange(ip, section);
+                    if (is) {
+                        count(section);
+                        return true;
                     }
                 }
             }
@@ -198,11 +202,6 @@ public class IpBlackService extends IpBlackServiceGen implements LoadFactory.Loa
     }
 
     @Override
-    public int menuOrder() {
-        return super.menuOrder();
-    }
-
-    @Override
     public String ico() {
         return "fa-list-alt";
     }
@@ -235,6 +234,7 @@ public class IpBlackService extends IpBlackServiceGen implements LoadFactory.Loa
                 blackEntity.setCreateTime(new Date());
                 blackEntity.setAvailable(0);
                 blackEntity.setCount(0L);
+                blackEntity.setToday(0L);
                 if (!ipBlackList.contains(ip)) {
                     ipBlackList.add(ip);
                 }
@@ -250,5 +250,20 @@ public class IpBlackService extends IpBlackServiceGen implements LoadFactory.Loa
     public void runJob() {
         refresh(150);
         load();
+    }
+
+    @Override
+    protected void count(String key, Integer count) {
+        baseMapper.count(key, count);
+    }
+
+    @Override
+    protected void clear() {
+        baseMapper.clear();
+    }
+
+    @Override
+    protected boolean has(String key) {
+        return hasIp(key);
     }
 }

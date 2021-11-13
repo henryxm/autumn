@@ -2,8 +2,6 @@ package cn.org.autumn.modules.wall.entity;
 
 import com.baomidou.mybatisplus.annotations.*;
 import cn.org.autumn.table.annotation.*;
-import cn.org.autumn.table.data.DataType;
-
 
 import java.io.Serializable;
 import java.util.Date;
@@ -36,6 +34,9 @@ public class IpBlackEntity implements Serializable {
      */
     @Column(type = "bigint", length = 20, comment = "访问次数")
     private Long count;
+
+    @Column(type = "bigint", length = 20, comment = "今日次数")
+    private Long today;
     /**
      * 可用
      */
@@ -102,6 +103,14 @@ public class IpBlackEntity implements Serializable {
      */
     public Long getCount() {
         return count;
+    }
+
+    public Long getToday() {
+        return today;
+    }
+
+    public void setToday(Long today) {
+        this.today = today;
     }
 
     /**

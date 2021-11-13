@@ -9,6 +9,41 @@ public class WallSite implements SiteFactory.Site {
     public final static String siteId = "wall";
     public final static String pack = "wall";
 
+    @PageAware(login = true)
+    public String ipvisit = "modules/wall/ipvisit";
+
+    @PageAware(login = true)
+    public String ipwhite = "modules/wall/ipwhite";
+
+    @PageAware(login = true)
+    public String urlblack = "modules/wall/urlblack";
+
+    @PageAware(login = true)
+    public String ipblack = "modules/wall/ipblack";
+
+    @PageAware(login = true)
+    public String host = "modules/wall/host";
+
+    public String getIpVisitKey() {
+        return getKey("ipvisit");
+    }
+
+    public String getIpWhiteKey() {
+        return getKey("ipwhite");
+    }
+
+    public String getUrlBlackKey() {
+        return getKey("urlblack");
+    }
+
+    public String getIpBlackKey() {
+        return getKey("ipblack");
+    }
+
+    public String getHostKey() {
+        return getKey("host");
+    }
+
     @Override
     public String getId() {
         return siteId;
@@ -18,16 +53,4 @@ public class WallSite implements SiteFactory.Site {
     public String getPack() {
         return pack;
     }
-
-    @PageAware(login = true, resource = "modules/wall/host")
-    String host;
-
-    @PageAware(login = true, resource = "modules/wall/ipblack")
-    String ipblack;
-
-    @PageAware(login = true, resource = "modules/wall/ipwhite")
-    String ipwhite;
-
-    @PageAware(login = true, resource = "modules/wall/urlblack")
-    String urlblack;
 }

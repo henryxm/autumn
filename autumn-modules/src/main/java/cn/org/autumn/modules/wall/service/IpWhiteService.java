@@ -1,9 +1,9 @@
 package cn.org.autumn.modules.wall.service;
 
+import cn.org.autumn.modules.wall.dao.IpWhiteDao;
 import cn.org.autumn.site.LoadFactory;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.wall.entity.IpWhiteEntity;
-import cn.org.autumn.modules.wall.service.gen.IpWhiteServiceGen;
 import cn.org.autumn.utils.IPUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -12,13 +12,10 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.net.InetAddress;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 
 @Service
-public class IpWhiteService extends IpWhiteServiceGen implements LoadFactory.Load, LoopJob.Job {
+public class IpWhiteService extends WallCounter<IpWhiteDao, IpWhiteEntity> implements LoadFactory.Load, LoopJob.Job {
 
     private static final Logger log = LoggerFactory.getLogger(IpWhiteService.class);
 
@@ -84,8 +81,10 @@ public class IpWhiteService extends IpWhiteServiceGen implements LoadFactory.Loa
                 return false;
 
             if (null != ipWhiteList && ipWhiteList.size() > 0) {
-                if (ipWhiteList.contains(ip))
+                if (ipWhiteList.contains(ip)) {
+                    count(ip);
                     return true;
+                }
             }
 
             /**
@@ -94,12 +93,15 @@ public class IpWhiteService extends IpWhiteServiceGen implements LoadFactory.Loa
             if (null != ipWhiteSectionList && ipWhiteSectionList.size() > 0) {
                 for (String section : ipWhiteSectionList) {
                     boolean is = IPUtils.isInRange(ip, section);
-                    if (is)
+                    if (is) {
+                        count(section);
                         return true;
+                    }
                 }
             }
             if (hasIp(ip)) {
                 put(ip);
+                count(ip);
                 return true;
             }
             return false;
@@ -107,11 +109,6 @@ public class IpWhiteService extends IpWhiteServiceGen implements LoadFactory.Loa
             log.error("无法判断IP白名单：", e);
             return false;
         }
-    }
-
-    @Override
-    public int menuOrder() {
-        return super.menuOrder();
     }
 
     @Override
@@ -132,6 +129,7 @@ public class IpWhiteService extends IpWhiteServiceGen implements LoadFactory.Loa
     @Override
     public void runJob() {
         load();
+        count();
     }
 
     public IpWhiteEntity create(String ip, String tag, String description) {
@@ -146,6 +144,7 @@ public class IpWhiteService extends IpWhiteServiceGen implements LoadFactory.Loa
                 whiteEntity.setCreateTime(new Date());
                 whiteEntity.setForbidden(0);
                 whiteEntity.setCount(0L);
+                whiteEntity.setToday(0L);
                 insert(whiteEntity);
             }
             put(ip);
@@ -163,5 +162,20 @@ public class IpWhiteService extends IpWhiteServiceGen implements LoadFactory.Loa
                 continue;
             create(address.getHostAddress(), "localhost", "本地IP地址(自动)");
         }
+    }
+
+    @Override
+    protected void count(String key, Integer count) {
+        baseMapper.count(key, count);
+    }
+
+    @Override
+    protected void clear() {
+        baseMapper.clear();
+    }
+
+    @Override
+    protected boolean has(String key) {
+        return hasIp(key);
     }
 }

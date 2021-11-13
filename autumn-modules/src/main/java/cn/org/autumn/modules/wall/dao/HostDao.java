@@ -24,4 +24,9 @@ public interface HostDao extends BaseMapper<HostEntity> {
     @Select("select count(*) from wall_host where host = #{host} limit 1")
     Integer hasHost(@Param("host") String host);
 
+    @Select("update wall_host set `count` = ifnull(`count`,0) + #{count}, today = ifnull(today,0) + #{count}, update_time = now() where host = #{host}")
+    Integer count(@Param("host") String host, @Param("count") Integer count);
+
+    @Select("update wall_host set today = 0")
+    Integer clear();
 }

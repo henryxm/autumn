@@ -6,6 +6,7 @@ $(function () {
 			{ label: '${lang.wall_ipwhite_column_id}', name: 'id', index: 'id', width: 50, key: true },
 			{ label: '${lang.wall_ipwhite_column_ip}', name: 'ip', index: 'ip', width: 80 }, 
 			{ label: '${lang.wall_ipwhite_column_count}', name: 'count', index: 'count', width: 80 }, 
+			{ label: '${lang.wall_ipwhite_column_today}', name: 'today', index: 'today', width: 80 }, 
 			{ label: '${lang.wall_ipwhite_column_forbidden}', name: 'forbidden', index: 'forbidden', width: 80 }, 
 			{ label: '${lang.wall_ipwhite_column_tag}', name: 'tag', index: 'tag', width: 80 }, 
 			{ label: '${lang.wall_ipwhite_column_description}', name: 'description', index: 'description', width: 80 }, 

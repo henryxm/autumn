@@ -1,9 +1,9 @@
 package cn.org.autumn.modules.wall.service;
 
+import cn.org.autumn.modules.wall.dao.UrlBlackDao;
 import cn.org.autumn.site.LoadFactory;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.wall.entity.UrlBlackEntity;
-import cn.org.autumn.modules.wall.service.gen.UrlBlackServiceGen;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.Map;
 
 @Service
-public class UrlBlackService extends UrlBlackServiceGen implements LoadFactory.Load, LoopJob.Job {
+public class UrlBlackService extends WallCounter<UrlBlackDao, UrlBlackEntity> implements LoadFactory.Load, LoopJob.Job {
 
     private static final Logger log = LoggerFactory.getLogger(UrlBlackService.class);
 
@@ -61,8 +61,10 @@ public class UrlBlackService extends UrlBlackServiceGen implements LoadFactory.L
     public boolean isBlack(String url) {
         try {
             if (null != blackUrls && blackUrls.size() > 0 && StringUtils.isNotEmpty(url)) {
-                if (blackUrls.contains(url))
+                if (blackUrls.contains(url)) {
+                    count(url);
                     return true;
+                }
             }
             return false;
         } catch (Exception e) {
@@ -110,11 +112,6 @@ public class UrlBlackService extends UrlBlackServiceGen implements LoadFactory.L
     }
 
     @Override
-    public int menuOrder() {
-        return super.menuOrder();
-    }
-
-    @Override
     public String ico() {
         return "fa-th-list";
     }
@@ -143,6 +140,7 @@ public class UrlBlackService extends UrlBlackServiceGen implements LoadFactory.L
                 urlBlackEntity = new UrlBlackEntity();
                 urlBlackEntity.setUrl(url);
                 urlBlackEntity.setCount(0L);
+                urlBlackEntity.setToday(0L);
                 urlBlackEntity.setForbidden(1);
                 urlBlackEntity.setTag(tag);
                 insert(urlBlackEntity);
@@ -156,5 +154,20 @@ public class UrlBlackService extends UrlBlackServiceGen implements LoadFactory.L
     @Override
     public void runJob() {
         refresh(300);
+    }
+
+    @Override
+    protected void count(String key, Integer count) {
+        baseMapper.count(key, count);
+    }
+
+    @Override
+    protected void clear() {
+        baseMapper.clear();
+    }
+
+    @Override
+    protected boolean has(String key) {
+        return hasUrl(key);
     }
 }

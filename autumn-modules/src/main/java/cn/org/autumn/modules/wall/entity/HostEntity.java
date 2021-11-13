@@ -36,6 +36,9 @@ public class HostEntity implements Serializable {
      */
     @Column(type = "bigint", length = 20, comment = "访问次数")
     private Long count;
+
+    @Column(type = "bigint", length = 20, comment = "今日次数")
+    private Long today;
     /**
      * 禁用
      */
@@ -51,6 +54,16 @@ public class HostEntity implements Serializable {
      */
     @Column(comment = "描述信息")
     private String description;
+    /**
+     * 创建时间
+     */
+    @Column(type = "datetime", comment = "创建时间")
+    private Date createTime;
+    /**
+     * 更新时间
+     */
+    @Column(type = "datetime", comment = "更新时间")
+    private Date updateTime;
 
     /**
      * 设置：id
@@ -94,6 +107,14 @@ public class HostEntity implements Serializable {
         return count;
     }
 
+    public Long getToday() {
+        return today;
+    }
+
+    public void setToday(Long today) {
+        this.today = today;
+    }
+
     /**
      * 设置：禁用
      */
@@ -134,5 +155,21 @@ public class HostEntity implements Serializable {
      */
     public String getDescription() {
         return description;
+    }
+
+    public Date getCreateTime() {
+        return createTime;
+    }
+
+    public void setCreateTime(Date createTime) {
+        this.createTime = createTime;
+    }
+
+    public Date getUpdateTime() {
+        return updateTime;
+    }
+
+    public void setUpdateTime(Date updateTime) {
+        this.updateTime = updateTime;
     }
 }

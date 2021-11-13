@@ -23,4 +23,10 @@ public interface UrlBlackDao extends BaseMapper<UrlBlackEntity> {
 
     @Select("select count(*) from wall_url_black where url = #{url} limit 1")
     Integer hasUrl(@Param("url") String url);
+
+    @Select("update wall_url_black set `count` = ifnull(`count`,0) + #{count}, today = ifnull(today,0) + #{count}, update_time = now() where url = #{url}")
+    Integer count(@Param("url") String url, @Param("count") Integer count);
+
+    @Select("update wall_url_black set today = 0")
+    Integer clear();
 }

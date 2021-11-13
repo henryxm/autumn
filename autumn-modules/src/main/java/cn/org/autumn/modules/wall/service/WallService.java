@@ -29,6 +29,9 @@ public class WallService {
     UrlBlackService urlBlackService;
 
     @Autowired
+    IpVisitService ipVisitService;
+
+    @Autowired
     HostService hostService;
 
     @Autowired
@@ -52,9 +55,7 @@ public class WallService {
                 return false;
             }
 
-            /**
-             * 不是白名单的ip，并且是黑名单ip，就直接退出
-             */
+            // 不是白名单的ip，并且是黑名单ip，就直接退出
             if (!ipWhiteService.isWhite(remoteip) && ipBlackService.isBlack(remoteip)) {
                 if (null != response) {
                     response.setStatus(500);
@@ -85,16 +86,14 @@ public class WallService {
                 return false;
             } else
                 urlBlackService.countUrl(uri, ip);
-
             if (!ipWhiteService.isWhite(ip)) {
                 ipBlackService.countIp(ip);
             }
-
             if (null != remoteip && !remoteip.equals(ip) && !ipWhiteService.isWhite(remoteip) && !"null".equals(remoteip)) {
                 ipBlackService.countIp(remoteip);
             }
-
-            hostService.countHost(host);
+            hostService.count(host);
+            ipVisitService.count(ip);
         } catch (Exception e) {
             logger.error("黑名单过滤错误，需核查：", e);
         }

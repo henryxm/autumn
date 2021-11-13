@@ -1,17 +1,16 @@
 $(function () {
     $("#jqGrid").jqGrid({
-        url: baseURL + 'wall/host/list',
+        url: baseURL + 'wall/ipvisit/list',
         datatype: "json",
         colModel: [			
-			{ label: '${lang.wall_host_column_id}', name: 'id', index: 'id', width: 50, key: true },
-			{ label: '${lang.wall_host_column_host}', name: 'host', index: 'host', width: 80 }, 
-			{ label: '${lang.wall_host_column_count}', name: 'count', index: 'count', width: 80 }, 
-			{ label: '${lang.wall_host_column_today}', name: 'today', index: 'today', width: 80 }, 
-			{ label: '${lang.wall_host_column_forbidden}', name: 'forbidden', index: 'forbidden', width: 80 }, 
-			{ label: '${lang.wall_host_column_tag}', name: 'tag', index: 'tag', width: 80 }, 
-			{ label: '${lang.wall_host_column_description}', name: 'description', index: 'description', width: 80 }, 
-			{ label: '${lang.wall_host_column_create_time}', name: 'createTime', index: 'create_time', width: 80 }, 
-			{ label: '${lang.wall_host_column_update_time}', name: 'updateTime', index: 'update_time', width: 80 }, 
+			{ label: '${lang.wall_ipvisit_column_id}', name: 'id', index: 'id', width: 50, key: true },
+			{ label: '${lang.wall_ipvisit_column_ip}', name: 'ip', index: 'ip', width: 80 }, 
+			{ label: '${lang.wall_ipvisit_column_count}', name: 'count', index: 'count', width: 80 }, 
+			{ label: '${lang.wall_ipvisit_column_today}', name: 'today', index: 'today', width: 80 }, 
+			{ label: '${lang.wall_ipvisit_column_tag}', name: 'tag', index: 'tag', width: 80 }, 
+			{ label: '${lang.wall_ipvisit_column_description}', name: 'description', index: 'description', width: 80 }, 
+			{ label: '${lang.wall_ipvisit_column_create_time}', name: 'createTime', index: 'create_time', width: 80 }, 
+			{ label: '${lang.wall_ipvisit_column_update_time}', name: 'updateTime', index: 'update_time', width: 80 }, 
         ],
 		viewrecords: true,
         height: 385,
@@ -45,7 +44,7 @@ var vm = new Vue({
 	data:{
 		showList: true,
 		title: null,
-		host: {}
+		ipVisit: {}
 	},
 	methods: {
 		query: function () {
@@ -54,7 +53,7 @@ var vm = new Vue({
 		add: function(){
 			vm.showList = false;
 			vm.title = "${lang.sys_string_add}";
-			vm.host = {};
+			vm.ipVisit = {};
 		},
 		update: function (event) {
 			var id = getSelectedRow();
@@ -67,12 +66,12 @@ var vm = new Vue({
             vm.getInfo(id)
 		},
 		saveOrUpdate: function (event) {
-			var url = vm.host.id == null ? "wall/host/save" : "wall/host/update";
+			var url = vm.ipVisit.id == null ? "wall/ipvisit/save" : "wall/ipvisit/update";
 			$.ajax({
 				type: "POST",
 			    url: baseURL + url,
                 contentType: "application/json",
-			    data: JSON.stringify(vm.host),
+			    data: JSON.stringify(vm.ipVisit),
 			    success: function(r){
 			    	if(r.code === 0){
 						alert('${lang.sys_string_successful}', function(index){
@@ -92,7 +91,7 @@ var vm = new Vue({
 			confirm('${lang.sys_string_are_sure_to_delete}？', function(){
 				$.ajax({
 					type: "POST",
-				    url: baseURL + "wall/host/delete",
+				    url: baseURL + "wall/ipvisit/delete",
                     contentType: "application/json",
 				    data: JSON.stringify(ids),
 				    success: function(r){
@@ -108,8 +107,8 @@ var vm = new Vue({
 			});
 		},
 		getInfo: function(id){
-			$.get(baseURL + "wall/host/info/"+id, function(r){
-                vm.host = r.host;
+			$.get(baseURL + "wall/ipvisit/info/"+id, function(r){
+                vm.ipVisit = r.ipVisit;
             });
 		},
 		reload: function (event) {

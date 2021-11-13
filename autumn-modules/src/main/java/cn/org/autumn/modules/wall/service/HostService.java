@@ -1,21 +1,18 @@
 package cn.org.autumn.modules.wall.service;
 
+import cn.org.autumn.modules.wall.dao.HostDao;
 import cn.org.autumn.site.LoadFactory;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.wall.entity.HostEntity;
-import cn.org.autumn.modules.wall.service.gen.HostServiceGen;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Service
-public class HostService extends HostServiceGen implements LoadFactory.Load, LoopJob.Job {
+public class HostService extends WallCounter<HostDao, HostEntity> implements LoadFactory.Load, LoopJob.Job {
 
     private static final Logger log = LoggerFactory.getLogger(HostService.class);
 
@@ -23,11 +20,6 @@ public class HostService extends HostServiceGen implements LoadFactory.Load, Loo
      * 黑名单列表
      */
     private List<String> blackHostList;
-
-    /**
-     * 主机访问统计
-     */
-    private Map<String, Integer> hosts;
 
     public void load() {
         try {
@@ -45,40 +37,6 @@ public class HostService extends HostServiceGen implements LoadFactory.Load, Loo
                 }
             }
             blackHostList = tmp;
-
-            /**
-             * 将HOST的访问次数更新到数据库
-             */
-            if (null != hosts && hosts.size() > 0) {
-                for (Map.Entry<String, Integer> kv : hosts.entrySet()) {
-                    String h = kv.getKey().toLowerCase();
-                    Integer c = kv.getValue();
-                    if (eMap.containsKey(h)) {
-                        HostEntity hostEntity = eMap.get(h);
-                        Long cc = 0L;
-                        if (null != hostEntity.getCount())
-                            cc = hostEntity.getCount();
-                        cc = cc + c;
-                        hostEntity.setCount(cc);
-                        updateById(hostEntity);
-                    } else {
-                        try {
-                            if (StringUtils.isNotEmpty(h)) {
-                                HostEntity hostEntity = new HostEntity();
-                                hostEntity.setHost(h);
-                                hostEntity.setCount(c.longValue());
-                                hostEntity.setDescription("程序自动写入");
-                                hostEntity.setForbidden(0);
-                                hostEntity.setTag(h);
-                                insert(hostEntity);
-                            }
-                        } catch (Exception e) {
-                            log.error("Host增加失败", e);
-                        }
-                    }
-                    hosts.replace(h, 0);
-                }
-            }
         } catch (Exception e) {
             log.error("加载HOST列表出错：", e);
         }
@@ -93,33 +51,16 @@ public class HostService extends HostServiceGen implements LoadFactory.Load, Loo
     public boolean isBlack(String host) {
         try {
             if (null != blackHostList && blackHostList.size() > 0 && StringUtils.isNotEmpty(host)) {
-                if (blackHostList.contains(host))
+                if (blackHostList.contains(host)) {
+                    count(host);
                     return true;
+                }
             }
             return false;
         } catch (Exception e) {
             log.error("无法判断HOST黑名单：", e);
             return false;
         }
-    }
-
-    public void countHost(String host) {
-        if (StringUtils.isEmpty(host))
-            return;
-        host = host.trim().toLowerCase();
-        if (null == hosts)
-            hosts = new HashMap<>();
-        if (hosts.containsKey(host)) {
-            Integer count = hosts.get(host);
-            count++;
-            hosts.replace(host, count);
-        } else
-            hosts.put(host, 1);
-    }
-
-    @Override
-    public int menuOrder() {
-        return super.menuOrder();
     }
 
     @Override
@@ -143,7 +84,7 @@ public class HostService extends HostServiceGen implements LoadFactory.Load, Loo
         return baseMapper.getByHost(host);
     }
 
-    public HostEntity creat(String host, String tag, String description) {
+    public HostEntity create(String host, String tag, String description) {
         HostEntity hostEntity = null;
         try {
             hostEntity = getByHost(host);
@@ -153,10 +94,10 @@ public class HostService extends HostServiceGen implements LoadFactory.Load, Loo
                 hostEntity.setCount(0L);
                 hostEntity.setForbidden(0);
                 hostEntity.setTag(tag);
+                hostEntity.setCreateTime(new Date());
                 hostEntity.setDescription(description);
                 insert(hostEntity);
             }
-
         } catch (Exception e) {
             //do nothing
         }
@@ -166,5 +107,30 @@ public class HostService extends HostServiceGen implements LoadFactory.Load, Loo
     @Override
     public void runJob() {
         load();
+    }
+
+    @Override
+    protected void count(String key, Integer count) {
+        baseMapper.count(key, count);
+    }
+
+    @Override
+    protected void clear() {
+        baseMapper.clear();
+    }
+
+    @Override
+    protected boolean has(String key) {
+        return hasHost(key);
+    }
+
+    @Override
+    protected boolean create() {
+        return true;
+    }
+
+    @Override
+    protected void create(String key) {
+        create(key, "", "自动写入");
     }
 }
