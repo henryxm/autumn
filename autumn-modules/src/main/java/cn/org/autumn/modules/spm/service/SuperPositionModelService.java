@@ -47,6 +47,9 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
     @Autowired
     PageFactory pageFactory;
 
+    @Autowired
+    LoadFactory loadFactory;
+
     private static Map<String, String> spmListForHtml;
     private static Map<String, SuperPositionModelEntity> spmListForUrlKey;
     private static Map<String, SuperPositionModelEntity> spmListForResourceID;
@@ -133,6 +136,10 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
     }
 
     public String getResourceId(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model, String spm) {
+        if (!loadFactory.isDone()) {
+            return pageFactory.loading(httpServletRequest, httpServletResponse, model);
+        }
+
         String path = pathFactory.get(httpServletRequest, httpServletResponse, model);
         if (StringUtils.isNotEmpty(path))
             return path;

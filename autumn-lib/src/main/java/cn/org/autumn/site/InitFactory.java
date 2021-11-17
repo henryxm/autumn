@@ -12,6 +12,8 @@ public class InitFactory extends Factory {
     @Autowired
     private TableInit tableInit;
 
+    private boolean done = false;
+
     //在初始化数据前执行
     public interface Before {
         @Order(DEFAULT_ORDER)
@@ -36,6 +38,10 @@ public class InitFactory extends Factory {
         void post();
     }
 
+    public boolean isDone() {
+        return done;
+    }
+
     public void init() {
         if (!tableInit.init)
             return;
@@ -43,5 +49,6 @@ public class InitFactory extends Factory {
         invoke(Init.class, "init");
         invoke(After.class, "after");
         invoke(Post.class, "post");
+        done = true;
     }
 }

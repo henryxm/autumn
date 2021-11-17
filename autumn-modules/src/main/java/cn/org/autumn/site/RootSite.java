@@ -37,6 +37,9 @@ public class RootSite implements SiteFactory.Site, TemplateFactory.Template {
     @PageAware
     String main;
 
+    @PageAware
+    String loading;
+
     @PageAware(resource = "oauth2/login", login = false)
     public static String oauth2login = "root_oauth2login";
 }

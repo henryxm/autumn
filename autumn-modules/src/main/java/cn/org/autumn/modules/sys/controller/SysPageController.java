@@ -91,6 +91,11 @@ public class SysPageController implements ErrorController {
         return pageFactory.main(httpServletRequest, httpServletResponse, model);
     }
 
+    @RequestMapping("loading.html")
+    public String loading(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        return pageFactory.loading(httpServletRequest, httpServletResponse, model);
+    }
+
     @RequestMapping({"404.html", "404"})
     public String _404(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
         return pageFactory._404(httpServletRequest, httpServletResponse, model);

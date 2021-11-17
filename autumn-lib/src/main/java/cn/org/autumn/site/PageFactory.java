@@ -98,4 +98,8 @@ public class PageFactory extends Factory {
     public String main(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
         return invoke("main", "main", httpServletRequest, httpServletResponse, model);
     }
+
+    public String loading(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        return invoke("loading", "loading", httpServletRequest, httpServletResponse, model);
+    }
 }

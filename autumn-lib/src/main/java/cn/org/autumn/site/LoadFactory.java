@@ -6,6 +6,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class LoadFactory extends Factory {
 
+    private boolean done = false;
+
     public interface Before {
         @Order(DEFAULT_ORDER)
         void before();
@@ -26,10 +28,15 @@ public class LoadFactory extends Factory {
         void post();
     }
 
+    public boolean isDone() {
+        return done;
+    }
+
     public void load() {
         invoke(Before.class, "before");
         invoke(Load.class, "load");
         invoke(After.class, "after");
         invoke(Post.class, "post");
+        done = true;
     }
 }

@@ -77,8 +77,6 @@ public class LanguageInterceptor extends HandlerInterceptorAdapter implements In
                 logger.error("locale can not be null");
             }
             Map<String, String> lang = languageService.getLanguage(locale);
-            if (null == lang || lang.isEmpty())
-                logger.error("language cannot be empty");
             modelMap.put("lang", lang);
         }
     }
