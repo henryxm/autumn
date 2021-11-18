@@ -69,7 +69,8 @@ public class SysPageController implements ErrorController {
         /**
          * 根据系统配置方式进行登录验证
          */
-        String clientId = sysConfigService.getOauth2LoginClientId();
+        String host = httpServletRequest.getHeader("host");
+        String clientId = sysConfigService.getOauth2LoginClientId(host);
         if (StringUtils.isNotEmpty(clientId)) {
             WebAuthenticationEntity webAuthenticationEntity = webAuthenticationService.getByClientId(clientId);
             if (null != webAuthenticationEntity) {

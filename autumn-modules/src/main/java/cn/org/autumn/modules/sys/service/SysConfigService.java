@@ -123,7 +123,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 {CLUSTER_NAMESPACE, getNameSpace(), "1", "系统的命名空间，集群式在Redis中需要使用命名空间进行区分"},
                 {MENU_WITH_SPM, "1", "1", "菜单是否使用SPM模式，开启SPM模式后，可动态监控系统的页面访问统计量，默认开启"},
                 {LOGGER_LEVEL, getLoggerLevel(), "1", "动态调整全局日志等级，级别:ALL,TRACE,DEBUG,INFO,WARN,ERROR,OFF"},
-                {LOGIN_AUTHENTICATION, "oauth2:" + getClientId(), "1", "系统登录授权，参数类型：①:localhost; ②:oauth2:clientId"},
+                {LOGIN_AUTHENTICATION, "oauth2:" + getClientId(), "1", "系统登录授权，参数类型：①:localhost; ②:oauth2:clientId; ③shell"},
                 {TOKEN_GENERATE_STRATEGY, "current", "1", "授权获取Token的时候，每次获取Token的策略：①:new(每次获取Token的时候都生成新的,需要保证:ClientId,AccessKeyId使用地方的唯一性,多个不同地方使用相同ClientId会造成Token竞争性失效); ②:current(默认值,使用之前已存在并且有效的,只有当前Token失效后才重新生成)"},
                 {SITE_DOMAIN, getSiteDomain(), "1", "站点域名绑定，多个域名以逗号分隔，为空表示不绑定任何域，不为空表示进行域名校验，#号开头的域名表示不绑定该域名，绑定域名后只能使用该域名访问站点"},
                 {SITE_SSL, String.valueOf(isSsl()), "1", "站点是否支持证书，0:不支持，1:支持"},
@@ -325,13 +325,22 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     }
 
     public String getOauth2LoginClientId() {
+        return getOauth2LoginClientId(null);
+    }
+
+    public String getOauth2LoginClientId(String host) {
         String oa = getValue(LOGIN_AUTHENTICATION);
-        if (StringUtils.isNotEmpty(oa) && oa.startsWith("oauth2:")) {
-            String[] ar = oa.split(":");
-            if (ar.length == 2)
-                return ar[1].trim();
+        if (StringUtils.isNotEmpty(oa)) {
+            if (oa.startsWith("oauth2:")) {
+                String[] ar = oa.split(":");
+                if (ar.length == 2)
+                    return ar[1].trim();
+            }
+            if (oa.equals("shell") && StringUtils.isNotBlank(host)) {
+                return host;
+            }
         }
-        return "";
+        return oa;
     }
 
     public boolean currentToken() {

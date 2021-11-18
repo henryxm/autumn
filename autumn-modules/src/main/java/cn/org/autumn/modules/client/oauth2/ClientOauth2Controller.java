@@ -71,7 +71,8 @@ public class ClientOauth2Controller {
             return new ResponseEntity(oAuthResponse.getBody(), HttpStatus.valueOf(oAuthResponse.getResponseStatus()));
         }
         if (ShiroUtils.needLogin()) {
-            WebAuthenticationEntity webAuthenticationEntity = webAuthenticationService.getByClientId(sysConfigService.getOauth2LoginClientId());
+            String host = request.getHeader("host");
+            WebAuthenticationEntity webAuthenticationEntity = webAuthenticationService.getByClientId(sysConfigService.getOauth2LoginClientId(host));
             String accessToken = getAccessToken(webAuthenticationEntity, authCode);
             UserProfile userProfile = getUserInfo(webAuthenticationEntity, accessToken);
             if (null != userProfile) {
@@ -81,8 +82,16 @@ public class ClientOauth2Controller {
             }
         }
         String callback = request.getParameter("callback");
-        if (StringUtils.isBlank(callback) || "null".equalsIgnoreCase(callback))
+
+        if (StringUtils.isBlank(callback)
+                || "null".equalsIgnoreCase(callback)
+                || callback.endsWith(".js")
+                || callback.endsWith(".css"))
             callback = "/";
+
+        if (!callback.contains("?spm=") && !callback.endsWith(".html")) {
+            callback = "/";
+        }
         return pageFactory.direct(request, response, model, callback);
     }
 
