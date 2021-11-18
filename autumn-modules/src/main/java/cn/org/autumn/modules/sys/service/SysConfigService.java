@@ -336,7 +336,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 if (ar.length == 2)
                     return ar[1].trim();
             }
-            if (oa.equals("shell")) {
+            if (oa.startsWith("shell:")) {
                 if (StringUtils.isNotBlank(host))
                     return host;
                 else {
