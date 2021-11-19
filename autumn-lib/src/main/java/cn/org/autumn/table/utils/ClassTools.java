@@ -39,9 +39,7 @@ public class ClassTools{
 		Set<Class<?>> classes = new LinkedHashSet<Class<?>>();
 		// 是否循环迭代
 		boolean recursive = true;
-		// 获取包的名字 并进行替换
-		String packageName = pack;
-		String packageDirName = packageName.replace('.', '/');
+		String packageDirName = pack.replace('.', '/');
 		// 定义一个枚举的集合 并进行循环来处理这个目录下的things
 		Enumeration<URL> dirs;
 		try{
@@ -57,12 +55,14 @@ public class ClassTools{
 					// 获取包的物理路径
 					String filePath = URLDecoder.decode(url.getFile(), "UTF-8");
 					// 以文件的方式扫描整个包下的文件 并添加到集合中
-					findAndAddClassesInPackageByFile(packageName, filePath, recursive, classes);
+					findAndAddClassesInPackageByFile(pack, filePath, recursive, classes);
 				}else if ("jar".equals(protocol)) {
 					// 如果是jar包文件
 					// 定义一个JarFile
 					JarFile jar;
 					try{
+                        // 获取包的名字 并进行替换
+                        String packageName = pack;
 						// 获取jar
 						jar = ((JarURLConnection) url.openConnection()).getJarFile();
 						// 从此jar包 得到一个枚举类
