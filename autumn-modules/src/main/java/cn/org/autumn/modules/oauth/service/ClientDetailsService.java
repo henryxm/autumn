@@ -205,7 +205,7 @@ public class ClientDetailsService extends ClientDetailsServiceGen implements Loo
             return null;
         if (StringUtils.isBlank(secret))
             secret = Uuid.uuid();
-        ClientDetailsEntity clientDetailsEntity = findByClientId(sysConfigService.getClientId());
+        ClientDetailsEntity clientDetailsEntity = findByClientId(clientId);
         if (null == clientDetailsEntity) {
             clientDetailsEntity = new ClientDetailsEntity();
             clientDetailsEntity.setClientId(clientId);
