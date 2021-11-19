@@ -185,25 +185,7 @@ public class ClientDetailsService extends ClientDetailsServiceGen implements Loo
     public void init() {
         super.init();
         LoopJob.onOneHour(this);
-        ClientDetailsEntity clientDetailsEntity = findByClientId(sysConfigService.getClientId());
-        if (null == clientDetailsEntity) {
-            clientDetailsEntity = new ClientDetailsEntity();
-            clientDetailsEntity.setClientId(sysConfigService.getClientId());
-            clientDetailsEntity.setArchived(0);
-            clientDetailsEntity.setClientIconUri("");
-            clientDetailsEntity.setClientName("默认的客户端");
-            clientDetailsEntity.setClientSecret(sysConfigService.getClientSecret());
-            clientDetailsEntity.setClientUri(sysConfigService.getBaseUrl());
-            clientDetailsEntity.setGrantTypes("all");
-            clientDetailsEntity.setResourceIds("all");
-            clientDetailsEntity.setRedirectUri(sysConfigService.getBaseUrl() + "/client/oauth2/callback");
-            clientDetailsEntity.setDescription("默认的客户端");
-            clientDetailsEntity.setScope("basic");
-            clientDetailsEntity.setTrusted(1);
-            clientDetailsEntity.setRoles("user");
-            clientDetailsEntity.setCreateTime(new Date());
-            insert(clientDetailsEntity);
-        }
+        create(sysConfigService.getClientId(), sysConfigService.getClientSecret(), "默认的客户端", "默认的客户端");
     }
 
     public static final String allChar = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -216,6 +198,33 @@ public class ClientDetailsService extends ClientDetailsServiceGen implements Loo
             sb.append(allChar.charAt(random.nextInt(allChar.length())));
         }
         return prefix + sb;
+    }
+
+    public ClientDetailsEntity create(String clientId, String secret, String name, String description) {
+        if (StringUtils.isBlank(clientId))
+            return null;
+        if (StringUtils.isBlank(secret))
+            secret = Uuid.uuid();
+        ClientDetailsEntity clientDetailsEntity = findByClientId(sysConfigService.getClientId());
+        if (null == clientDetailsEntity) {
+            clientDetailsEntity = new ClientDetailsEntity();
+            clientDetailsEntity.setClientId(clientId);
+            clientDetailsEntity.setArchived(0);
+            clientDetailsEntity.setClientIconUri("");
+            clientDetailsEntity.setClientName(name);
+            clientDetailsEntity.setClientSecret(secret);
+            clientDetailsEntity.setClientUri(sysConfigService.getBaseUrl());
+            clientDetailsEntity.setGrantTypes("all");
+            clientDetailsEntity.setResourceIds("all");
+            clientDetailsEntity.setRedirectUri(sysConfigService.getBaseUrl() + "/client/oauth2/callback");
+            clientDetailsEntity.setDescription(description);
+            clientDetailsEntity.setScope("basic");
+            clientDetailsEntity.setTrusted(1);
+            clientDetailsEntity.setRoles("user");
+            clientDetailsEntity.setCreateTime(new Date());
+            insert(clientDetailsEntity);
+        }
+        return clientDetailsEntity;
     }
 
     public ClientDetailsEntity create(String prefix) {
