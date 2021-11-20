@@ -292,7 +292,9 @@ public class ClientDetailsService extends ClientDetailsServiceGen implements Loo
             if (null == sysUserEntity) {
                 if (StringUtils.isEmpty(uuid))
                     uuid = Uuid.uuid();
-                sysUserService.newUser(clientDetailsEntity.getClientId(), uuid, Uuid.uuid(), sysConfigService.getDefaultRoleKeys());
+                SysUserEntity username = sysUserService.getUsername(clientDetailsEntity.getClientId());
+                if (null == username)
+                    sysUserService.newUser(clientDetailsEntity.getClientId(), uuid, Uuid.uuid(), sysConfigService.getDefaultRoleKeys());
             } else {
                 if (StringUtils.isNotEmpty(sysUserEntity.getUuid()) && StringUtils.isNotEmpty(uuid) && !uuid.equals(sysUserEntity.getUuid())) {
                     sysUserEntity.setUuid(uuid);
