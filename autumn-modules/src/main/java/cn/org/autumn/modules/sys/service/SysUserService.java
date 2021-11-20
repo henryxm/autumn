@@ -325,6 +325,9 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
                             sysUserEntity.setUserId(ex.getUserId());
                             updateById(sysUserEntity);
                         } else {
+                            SysUserEntity username = getUsername(sysUserEntity.getUsername());
+                            if (null != username)
+                                continue;
                             // 设定缺省的部门ID
                             String dk = sysConfigService.getDefaultDepartKey();
                             SysDeptEntity sysDeptEntity = sysDeptService.getByDeptKey(dk);
@@ -338,7 +341,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
                         }
                     }
                 } catch (Exception e) {
-                    log.error("User Synchronize Error, User uuid:" + sysUserEntity.getUuid() + ", Msg:" + e.getMessage());
+                    log.debug("User Synchronize Error, User uuid:" + sysUserEntity.getUuid() + ", Msg:" + e.getMessage());
                 }
                 hashUser.put(sysUserEntity.getUuid(), sysUserEntity.hashCode());
                 iterator.remove();

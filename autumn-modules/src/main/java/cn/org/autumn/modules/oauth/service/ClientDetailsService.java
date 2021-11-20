@@ -260,6 +260,10 @@ public class ClientDetailsService extends ClientDetailsServiceGen implements Loo
     }
 
     public void clientToUser(ClientDetailsEntity detailsEntity) {
+        clientToUser(detailsEntity, false);
+    }
+
+    public void clientToUser(ClientDetailsEntity detailsEntity, boolean direct) {
         List<ClientDetailsEntity> list = null;
         if (null != detailsEntity) {
             list = new ArrayList<>();
@@ -267,18 +271,21 @@ public class ClientDetailsService extends ClientDetailsServiceGen implements Loo
         } else
             list = baseMapper.selectByMap(null);
         for (ClientDetailsEntity clientDetailsEntity : list) {
-            SysUserEntity sysUserEntity = sysUserService.getByUsername(clientDetailsEntity.getClientId());
-            UserMapping mapping;
+            SysUserEntity sysUserEntity = null;
             String uuid = null;
-            if (null != userHandlers && userHandlers.size() > 0) {
-                for (UserHandler handler : userHandlers) {
-                    if (sysConfigService.isSame(handler))
-                        continue;
-                    mapping = handler.getByUsername(clientDetailsEntity.getClientId());
-                    if (null != mapping) {
-                        uuid = mapping.getUuid();
-                        if (StringUtils.isNotBlank(uuid))
-                            break;
+            if (!direct) {
+                sysUserEntity = sysUserService.getByUsername(clientDetailsEntity.getClientId());
+                UserMapping mapping;
+                if (null != userHandlers && userHandlers.size() > 0) {
+                    for (UserHandler handler : userHandlers) {
+                        if (sysConfigService.isSame(handler))
+                            continue;
+                        mapping = handler.getByUsername(clientDetailsEntity.getClientId());
+                        if (null != mapping) {
+                            uuid = mapping.getUuid();
+                            if (StringUtils.isNotBlank(uuid))
+                                break;
+                        }
                     }
                 }
             }

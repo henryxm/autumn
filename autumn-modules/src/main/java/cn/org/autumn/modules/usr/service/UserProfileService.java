@@ -186,10 +186,13 @@ public class UserProfileService extends UserProfileServiceGen implements LoopJob
                             userProfileEntity.setNickname(ex.getNickname());
                             userProfileEntity.setMobile(ex.getMobile());
                         }
+                        UserProfileEntity username = baseMapper.getByUsername(userProfileEntity.getUsername());
+                        if (null != username)
+                            continue;
                         insertOrUpdate(userProfileEntity);
                     }
                 } catch (Exception e) {
-                    log.error("UserProfile Synchronize Error, User uuid:" + userProfileEntity.getUuid() + ", Msg:" + e.getMessage());
+                    log.debug("UserProfile Synchronize Error, User uuid:" + userProfileEntity.getUuid() + ", Msg:" + e.getMessage());
                 }
                 hashUser.put(userProfileEntity.getUuid(), userProfileEntity.hashCode());
                 iterator.remove();
