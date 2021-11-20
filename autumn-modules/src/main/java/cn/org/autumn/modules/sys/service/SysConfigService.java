@@ -548,7 +548,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     public boolean isSame(ServiceHandler handler) {
         URI uri = handler.uri();
         String site = getSiteDomain();
-        return null == uri || StringUtils.isBlank(site) || StringUtils.isBlank(uri.getHost()) || uri.getHost().equalsIgnoreCase(site);
+        return null == uri || StringUtils.isBlank(site) || StringUtils.isBlank(uri.getHost()) || isSiteDomain(uri.getHost());
     }
 
     private void updateCookieDomain() {

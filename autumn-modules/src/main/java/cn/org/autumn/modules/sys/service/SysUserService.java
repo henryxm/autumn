@@ -205,6 +205,12 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
                 for (UserHandler handler : userHandlers) {
                     if (sysConfigService.isSame(handler))
                         continue;
+                    if (log.isInfoEnabled()) {
+                        String host = "";
+                        if (null != handler.uri() && StringUtils.isNotBlank(handler.uri().getHost()))
+                            host = handler.uri().getHost();
+                        log.info("Synchronize username: " + username + ", Handler:" + host + ", Site Domain: " + sysConfigService.getSiteDomain());
+                    }
                     UserMapping mapping = handler.getByUsername(username);
                     if (null != mapping && StringUtils.isNotBlank(mapping.getUuid())) {
                         sysUserEntity = baseMapper.getByUuid(mapping.getUuid());
