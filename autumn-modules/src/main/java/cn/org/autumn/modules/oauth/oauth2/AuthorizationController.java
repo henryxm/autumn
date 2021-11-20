@@ -277,7 +277,7 @@ public class AuthorizationController {
         if (tokenRequest.getParam(OAuth.OAUTH_GRANT_TYPE).equals(GrantType.CLIENT_CREDENTIALS.toString())) {
             SysUserEntity sysUserEntity = sysUserService.getByUsername(authClient.getClientId());
             if (null == sysUserEntity) {
-                clientDetailsService.clientToUser(null);
+                clientDetailsService.clientToUser();
                 sysUserEntity = sysUserService.getByUsername(authClient.getClientId());
             }
             tokenStore = new TokenStore(sysUserEntity);

@@ -25,7 +25,7 @@ import org.springframework.stereotype.Service;
 import java.util.*;
 
 @Service
-public class ClientDetailsService extends ClientDetailsServiceGen implements LoopJob.Job, InitFactory.After {
+public class ClientDetailsService extends ClientDetailsServiceGen implements LoopJob.Job {
 
     @Autowired
     RedisUtils redisUtils;
@@ -223,6 +223,7 @@ public class ClientDetailsService extends ClientDetailsServiceGen implements Loo
             clientDetailsEntity.setRoles("user");
             clientDetailsEntity.setCreateTime(new Date());
             insert(clientDetailsEntity);
+            clientToUser(clientDetailsEntity);
         }
         return clientDetailsEntity;
     }
@@ -247,23 +248,17 @@ public class ClientDetailsService extends ClientDetailsServiceGen implements Loo
             clientDetailsEntity.setRoles("user");
             clientDetailsEntity.setCreateTime(new Date());
             insert(clientDetailsEntity);
-            ClientDetailsEntity finalClientDetailsEntity = clientDetailsEntity;
-            asyncTaskExecutor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    clientToUser(finalClientDetailsEntity);
-                }
-            });
+            clientToUser(clientDetailsEntity);
             return clientDetailsEntity;
         } else
             return null;
     }
 
-    public void clientToUser(ClientDetailsEntity detailsEntity) {
-        clientToUser(detailsEntity, false);
+    public void clientToUser() {
+        clientToUser(null);
     }
 
-    public void clientToUser(ClientDetailsEntity detailsEntity, boolean direct) {
+    public synchronized void clientToUser(ClientDetailsEntity detailsEntity) {
         List<ClientDetailsEntity> list = null;
         if (null != detailsEntity) {
             list = new ArrayList<>();
@@ -271,41 +266,10 @@ public class ClientDetailsService extends ClientDetailsServiceGen implements Loo
         } else
             list = baseMapper.selectByMap(null);
         for (ClientDetailsEntity clientDetailsEntity : list) {
-            SysUserEntity sysUserEntity = null;
-            String uuid = null;
-            if (!direct) {
-                sysUserEntity = sysUserService.getByUsername(clientDetailsEntity.getClientId());
-                UserMapping mapping;
-                if (null != userHandlers && userHandlers.size() > 0) {
-                    for (UserHandler handler : userHandlers) {
-                        if (sysConfigService.isSame(handler))
-                            continue;
-                        mapping = handler.getByUsername(clientDetailsEntity.getClientId());
-                        if (null != mapping) {
-                            uuid = mapping.getUuid();
-                            if (StringUtils.isNotBlank(uuid))
-                                break;
-                        }
-                    }
-                }
-            }
+            SysUserEntity sysUserEntity = sysUserService.getUsername(clientDetailsEntity.getClientId());
             if (null == sysUserEntity) {
-                if (StringUtils.isEmpty(uuid))
-                    uuid = Uuid.uuid();
-                SysUserEntity username = sysUserService.getUsername(clientDetailsEntity.getClientId());
-                if (null == username)
-                    sysUserService.newUser(clientDetailsEntity.getClientId(), uuid, Uuid.uuid(), sysConfigService.getDefaultRoleKeys());
-            } else {
-                if (StringUtils.isNotEmpty(sysUserEntity.getUuid()) && StringUtils.isNotEmpty(uuid) && !uuid.equals(sysUserEntity.getUuid())) {
-                    sysUserEntity.setUuid(uuid);
-                    sysUserService.updateById(sysUserEntity);
-                }
+                sysUserService.newUser(clientDetailsEntity.getClientId(), Uuid.uuid(), Uuid.uuid(), sysConfigService.getDefaultRoleKeys());
             }
         }
-    }
-
-    @Override
-    public void after() {
-        clientToUser(null);
     }
 }
