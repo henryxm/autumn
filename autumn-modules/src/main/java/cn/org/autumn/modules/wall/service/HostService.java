@@ -1,10 +1,9 @@
 package cn.org.autumn.modules.wall.service;
 
+import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.wall.dao.HostDao;
 import cn.org.autumn.site.LoadFactory;
-import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.wall.entity.HostEntity;
-import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -12,49 +11,25 @@ import org.springframework.stereotype.Service;
 import java.util.*;
 
 @Service
-public class HostService extends WallCounter<HostDao, HostEntity> implements LoadFactory.Load, LoopJob.Job {
+public class HostService extends WallCounter<HostDao, HostEntity> implements LoadFactory.Load, LoopJob.FiveSecond {
 
     private static final Logger log = LoggerFactory.getLogger(HostService.class);
 
     /**
      * 黑名单列表
      */
-    private List<String> blackHostList;
+    private List<String> blackHostList = new ArrayList<>();
 
     public void load() {
-        try {
-            List<String> tmp = new ArrayList<>();
-            List<HostEntity> cache = baseMapper.selectByMap(new HashMap<>());
-            Map<String, HostEntity> eMap = new HashMap<>();
-            if (null != cache && cache.size() > 0) {
-                for (HostEntity hostEntity : cache) {
-                    if (StringUtils.isNotEmpty(hostEntity.getHost()) && !tmp.contains(hostEntity.getHost())) {
-                        Integer forbidden = hostEntity.getForbidden();
-                        if (null != forbidden && 1 == forbidden)
-                            tmp.add(hostEntity.getHost().toLowerCase());
-                    }
-                    eMap.put(hostEntity.getHost().toLowerCase(), hostEntity);
-                }
-            }
-            blackHostList = tmp;
-        } catch (Exception e) {
-            log.error("加载HOST列表出错：", e);
-        }
+        blackHostList = baseMapper.getHosts(1);
     }
 
-    /**
-     * 主机访问黑名单
-     *
-     * @param host
-     * @return
-     */
+    // 主机访问黑名单
     public boolean isBlack(String host) {
         try {
-            if (null != blackHostList && blackHostList.size() > 0 && StringUtils.isNotEmpty(host)) {
-                if (blackHostList.contains(host)) {
-                    count(host);
-                    return true;
-                }
+            if (blackHostList.contains(host)) {
+                count(host);
+                return true;
             }
             return false;
         } catch (Exception e) {
@@ -68,16 +43,9 @@ public class HostService extends WallCounter<HostDao, HostEntity> implements Loa
         return "fa-ioxhost";
     }
 
-    public void init() {
-        super.init();
-        LoopJob.onOneMinute(this);
-    }
-
     public boolean hasHost(String host) {
         Integer integer = baseMapper.hasHost(host);
-        if (null != integer && integer > 0)
-            return true;
-        return false;
+        return null != integer && integer > 0;
     }
 
     public HostEntity getByHost(String host) {
@@ -105,7 +73,7 @@ public class HostService extends WallCounter<HostDao, HostEntity> implements Loa
     }
 
     @Override
-    public void runJob() {
+    public void onFiveSecond() {
         load();
     }
 

@@ -3,12 +3,16 @@ package cn.org.autumn.modules.wall.service;
 import cn.org.autumn.base.ModuleService;
 import cn.org.autumn.modules.job.task.LoopJob;
 import com.baomidou.mybatisplus.mapper.BaseMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
 public abstract class WallCounter<M extends BaseMapper<T>, T> extends ModuleService<M, T> implements LoopJob.OneMinute, LoopJob.OneDay {
+
+    private final Logger log = LoggerFactory.getLogger(getClass());
 
     private final Map<String, Integer> counter = new HashMap<>();
 
@@ -46,7 +50,11 @@ public abstract class WallCounter<M extends BaseMapper<T>, T> extends ModuleServ
 
     @Override
     public void onOneMinute() {
-        count();
+        try {
+            count();
+        } catch (Exception e) {
+            log.error("Wall Counter:" + getClass().getSimpleName() + ", Exception:" + e.getClass().getSimpleName() + ", Msg:" + e.getMessage());
+        }
     }
 
     @Override

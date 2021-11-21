@@ -14,7 +14,7 @@ import org.springframework.stereotype.Service;
 import java.util.*;
 
 @Service
-public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> implements LoadFactory.Load, LoopJob.Job {
+public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> implements LoadFactory.Load, LoopJob.FiveSecond {
     private static final Logger log = LoggerFactory.getLogger(IpBlackService.class);
 
     @Autowired
@@ -28,9 +28,9 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
     /**
      * 缓存的黑名单列表，一个刷新周期内，从数据库加载一次
      */
-    private List<String> ipBlackList;
+    private List<String> ipBlackList = new ArrayList<>();
 
-    private List<String> ipBlackSectionList;
+    private List<String> ipBlackSectionList = new ArrayList<>();
 
     /**
      * 一个ip地址统计刷新周期内，统计所有的ip地址及其访问的次数
@@ -46,25 +46,13 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
      */
     public void load() {
         try {
-            List<String> tmp = new ArrayList<>();
+            ipBlackList = baseMapper.getIps(0);
             List<String> tmpSection = new ArrayList<>();
-            List<IpBlackEntity> cache = baseMapper.selectByMap(new HashMap<>());
-            if (null != cache && cache.size() > 0) {
-                for (IpBlackEntity ipBlackEntity : cache) {
-                    String ip = ipBlackEntity.getIp();
-                    if (StringUtils.isNotEmpty(ip) && !tmp.contains(ip)) {
-                        Integer available = ipBlackEntity.getAvailable();
-                        if (null != available && 1 == available)
-                            continue;
-                        if (ip.contains("/")) {
-                            tmpSection.add(ip);
-                        } else {
-                            tmp.add(ip);
-                        }
-                    }
+            for (String ip : ipBlackList) {
+                if (ip.contains("/")) {
+                    tmpSection.add(ip);
                 }
             }
-            ipBlackList = tmp;
             ipBlackSectionList = tmpSection;
         } catch (Exception e) {
             log.error("加载IP黑名单数据出错：", e);
@@ -75,19 +63,15 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
         try {
             if (StringUtils.isBlank(ip))
                 return false;
-            if (null != ipBlackList && !ipBlackList.isEmpty()) {
-                if (ipBlackList.contains(ip)) {
-                    count(ip);
-                    return true;
-                }
+            if (ipBlackList.contains(ip)) {
+                count(ip);
+                return true;
             }
-            if (null != ipBlackSectionList && !ipBlackSectionList.isEmpty()) {
-                for (String section : ipBlackSectionList) {
-                    boolean is = IPUtils.isInRange(ip, section);
-                    if (is) {
-                        count(section);
-                        return true;
-                    }
+            for (String section : ipBlackSectionList) {
+                boolean is = IPUtils.isInRange(ip, section);
+                if (is) {
+                    count(section);
+                    return true;
                 }
             }
             return false;
@@ -206,11 +190,6 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
         return "fa-list-alt";
     }
 
-    public void init() {
-        super.init();
-        LoopJob.onFiveSecond(this);
-    }
-
     public boolean hasIp(String ip) {
         Integer integer = baseMapper.hasIp(ip);
         if (null != integer && integer > 0)
@@ -247,7 +226,7 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
     }
 
     @Override
-    public void runJob() {
+    public void onFiveSecond() {
         refresh(150);
         load();
     }

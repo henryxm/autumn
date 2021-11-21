@@ -15,39 +15,27 @@ import java.net.InetAddress;
 import java.util.*;
 
 @Service
-public class IpWhiteService extends WallCounter<IpWhiteDao, IpWhiteEntity> implements LoadFactory.Load, LoopJob.Job {
+public class IpWhiteService extends WallCounter<IpWhiteDao, IpWhiteEntity> implements LoadFactory.Load, LoopJob.FiveSecond {
 
     private static final Logger log = LoggerFactory.getLogger(IpWhiteService.class);
 
-    private List<String> ipWhiteList;
-    private List<String> ipWhiteSectionList;
+    private List<String> ipWhiteList = new ArrayList<>();
+    private List<String> ipWhiteSectionList = new ArrayList<>();
 
     /**
      * 为了提高效率，在黑客大量攻击的时候，不能频繁进行数据库访问，通过定时器定时加载IP地址黑名单数据，提高效率。
      */
     public void load() {
         try {
-            List<String> tmp = new ArrayList<>();
+            ipWhiteList = baseMapper.getIps(0);
             List<String> tmpSection = new ArrayList<>();
-            List<IpWhiteEntity> cache = baseMapper.selectByMap(new HashMap<>());
-            if (null != cache && cache.size() > 0) {
-                for (IpWhiteEntity ipWhiteEntity : cache) {
-                    if (StringUtils.isEmpty(ipWhiteEntity.getIp()))
-                        continue;
-                    String ip = ipWhiteEntity.getIp();
-                    if (StringUtils.isNotEmpty(ip) && !tmp.contains(ip)) {
-                        Integer forbidden = ipWhiteEntity.getForbidden();
-                        if (null == forbidden || 0 == forbidden) {
-                            if (ip.contains("/")) {
-                                tmpSection.add(ip);
-                            } else {
-                                tmp.add(ip);
-                            }
-                        }
-                    }
+            for (String ip : ipWhiteList) {
+                if (StringUtils.isEmpty(ip))
+                    continue;
+                if (ip.contains("/")) {
+                    tmpSection.add(ip);
                 }
             }
-            ipWhiteList = tmp;
             ipWhiteSectionList = tmpSection;
         } catch (Exception e) {
             log.error("加载IP白名单数据出错：", e);
@@ -55,13 +43,8 @@ public class IpWhiteService extends WallCounter<IpWhiteDao, IpWhiteEntity> imple
     }
 
     public void put(String ip) {
-        if (null == ipWhiteList) {
-            ipWhiteList = new ArrayList<>();
+        if (!ipWhiteList.contains(ip))
             ipWhiteList.add(ip);
-        } else {
-            if (!ipWhiteList.contains(ip))
-                ipWhiteList.add(ip);
-        }
     }
 
     public IpWhiteEntity getByIp(String ip) {
@@ -69,34 +52,22 @@ public class IpWhiteService extends WallCounter<IpWhiteDao, IpWhiteEntity> imple
     }
 
     public boolean hasIp(String ip) {
-        Integer integer = baseMapper.hasIp(ip);
-        if (null != integer && integer > 0)
-            return true;
-        return false;
+        return 0 < baseMapper.hasIp(ip);
     }
 
     public boolean isWhite(String ip) {
         try {
             if (StringUtils.isEmpty(ip))
                 return false;
-
-            if (null != ipWhiteList && ipWhiteList.size() > 0) {
-                if (ipWhiteList.contains(ip)) {
-                    count(ip);
-                    return true;
-                }
+            if (ipWhiteList.contains(ip)) {
+                count(ip);
+                return true;
             }
-
-            /**
-             * 如果IP在白名单段校验
-             */
-            if (null != ipWhiteSectionList && ipWhiteSectionList.size() > 0) {
-                for (String section : ipWhiteSectionList) {
-                    boolean is = IPUtils.isInRange(ip, section);
-                    if (is) {
-                        count(section);
-                        return true;
-                    }
+            for (String section : ipWhiteSectionList) {
+                boolean is = IPUtils.isInRange(ip, section);
+                if (is) {
+                    count(section);
+                    return true;
                 }
             }
             if (hasIp(ip)) {
@@ -118,7 +89,6 @@ public class IpWhiteService extends WallCounter<IpWhiteDao, IpWhiteEntity> imple
 
     public void init() {
         super.init();
-        LoopJob.onOneMinute(this);
         try {
             addLocal();
         } catch (IOException e) {
@@ -127,9 +97,8 @@ public class IpWhiteService extends WallCounter<IpWhiteDao, IpWhiteEntity> imple
     }
 
     @Override
-    public void runJob() {
+    public void onFiveSecond() {
         load();
-        count();
     }
 
     public IpWhiteEntity create(String ip, String tag, String description) {

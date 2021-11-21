@@ -7,6 +7,8 @@ import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 /**
  * 主机统计
  *
@@ -29,4 +31,7 @@ public interface HostDao extends BaseMapper<HostEntity> {
 
     @Select("update wall_host set today = 0")
     Integer clear();
+
+    @Select("select wh.host from wall_host wh where wh.forbidden = #{forbidden}")
+    List<String> getHosts(@Param("forbidden") Integer forbidden);
 }

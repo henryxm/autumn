@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.Map;
 
 @Service
-public class UrlBlackService extends WallCounter<UrlBlackDao, UrlBlackEntity> implements LoadFactory.Load, LoopJob.Job {
+public class UrlBlackService extends WallCounter<UrlBlackDao, UrlBlackEntity> implements LoadFactory.Load, LoopJob.FiveSecond {
 
     private static final Logger log = LoggerFactory.getLogger(UrlBlackService.class);
 
@@ -28,7 +28,7 @@ public class UrlBlackService extends WallCounter<UrlBlackDao, UrlBlackEntity> im
     /**
      * URL 黑名单列表
      */
-    private List<String> blackUrls;
+    private List<String> blackUrls = new ArrayList<>();
 
     /**
      * 每个周期的URL访问数大于改值后，将其对应的IP地址拉入黑名单
@@ -42,35 +42,15 @@ public class UrlBlackService extends WallCounter<UrlBlackDao, UrlBlackEntity> im
      * 为了提高效率，在黑客大量攻击的时候，不能频繁进行数据库访问，通过定时器定时加载IP地址黑名单数据，提高效率。
      */
     public void load() {
-        try {
-            List<String> tmp = new ArrayList<>();
-            List<UrlBlackEntity> cache = baseMapper.selectByMap(new HashMap<>());
-            if (null != cache && cache.size() > 0) {
-                for (UrlBlackEntity urlBlackEntity : cache) {
-                    if (StringUtils.isNotEmpty(urlBlackEntity.getUrl()) && !tmp.contains(urlBlackEntity.getUrl())) {
-                        tmp.add(urlBlackEntity.getUrl());
-                    }
-                }
-            }
-            blackUrls = tmp;
-        } catch (Exception e) {
-            log.error("加载URL黑名单数据出错：", e);
-        }
+        blackUrls = baseMapper.getUrls(1);
     }
 
     public boolean isBlack(String url) {
-        try {
-            if (null != blackUrls && blackUrls.size() > 0 && StringUtils.isNotEmpty(url)) {
-                if (blackUrls.contains(url)) {
-                    count(url);
-                    return true;
-                }
-            }
-            return false;
-        } catch (Exception e) {
-            log.error("无法判断URL黑名单：", e);
-            return false;
+        if (blackUrls.contains(url)) {
+            count(url);
+            return true;
         }
+        return false;
     }
 
     public void countUrl(String url, String ip) {
@@ -116,11 +96,6 @@ public class UrlBlackService extends WallCounter<UrlBlackDao, UrlBlackEntity> im
         return "fa-th-list";
     }
 
-    public void init() {
-        super.init();
-        LoopJob.onThreeSecond(this);
-    }
-
     public UrlBlackEntity getByUrl(String url) {
         return baseMapper.getByUrl(url);
     }
@@ -152,8 +127,9 @@ public class UrlBlackService extends WallCounter<UrlBlackDao, UrlBlackEntity> im
     }
 
     @Override
-    public void runJob() {
-        refresh(300);
+    public void onFiveSecond() {
+        refresh(500);
+        load();
     }
 
     @Override

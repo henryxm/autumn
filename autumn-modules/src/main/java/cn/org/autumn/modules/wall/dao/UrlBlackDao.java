@@ -7,6 +7,8 @@ import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 /**
  * 链接黑名单
  *
@@ -29,4 +31,7 @@ public interface UrlBlackDao extends BaseMapper<UrlBlackEntity> {
 
     @Select("update wall_url_black set today = 0")
     Integer clear();
+
+    @Select("select wh.url from wall_url_black wh where wh.forbidden = #{forbidden}")
+    List<String> getUrls(@Param("forbidden") Integer forbidden);
 }
