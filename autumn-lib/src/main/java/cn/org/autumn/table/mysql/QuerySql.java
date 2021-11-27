@@ -98,7 +98,7 @@ public class QuerySql {
 //            }
 //        }
         if (!"NULL".equals(columnInfo.getDefaultValue())) {
-            sb.append(" DEFAULT " + columnInfo.getDefaultValue());
+            sb.append(" DEFAULT '" + columnInfo.getDefaultValue() + "'");
         }
         if (!StringUtils.isEmpty(columnInfo.getComment()))
             sb.append(" COMMENT '" + columnInfo.getComment() + "'");
