@@ -31,10 +31,18 @@ public class MysqlTool {
         return result == 1;
     }
 
+    public void deleteDatabase(String database) throws SQLException {
+        statement.executeUpdate("DROP DATABASE IF EXISTS " + database);
+    }
+
     //创建一个用户
     public void createUser(String username, String password) throws SQLException {
         statement.executeUpdate("DROP USER IF EXISTS " + username + "@'%'");
         statement.executeUpdate("create user " + username + "@'%' identified by '" + password + "'");
+    }
+
+    public void deleteUser(String username) throws SQLException {
+        statement.executeUpdate("DROP USER IF EXISTS " + username + "@'%'");
     }
 
     //授权用户
@@ -72,6 +80,17 @@ public class MysqlTool {
             return r;
         } catch (Exception e) {
             return false;
+        }
+    }
+
+    public static void delete(String host, int port, String root, String rootPass, String database, String username) {
+        try {
+            MysqlTool mysqlTool = new MysqlTool(host, port);
+            mysqlTool.connect(root, rootPass);
+            mysqlTool.deleteDatabase(database);
+            mysqlTool.deleteUser(username);
+            mysqlTool.close();
+        } catch (Exception ignored) {
         }
     }
 }
