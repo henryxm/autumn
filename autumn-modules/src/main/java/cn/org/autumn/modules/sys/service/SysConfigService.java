@@ -449,6 +449,10 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         update(entity);
     }
 
+    public String getScheme() {
+        return isSsl() ? "https" : "http";
+    }
+
     public boolean isSsl() {
         boolean isSsl = getBoolean(SITE_SSL);
         if (!isSsl)
