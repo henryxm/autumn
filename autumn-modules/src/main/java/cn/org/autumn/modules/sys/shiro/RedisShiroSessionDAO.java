@@ -42,7 +42,7 @@ public class RedisShiroSessionDAO extends EnterpriseCacheSessionDAO {
     @Override
     protected Serializable doCreate(Session session) {
         Serializable sessionId = super.doCreate(session);
-        final String key = RedisKeys.getShiroSessionKey(sessionId.toString());
+        final String key = RedisKeys.getShiroSessionKey(sysConfigService.getNameSpace(), sessionId.toString());
         setShiroSession(key, session);
         return sessionId;
     }
@@ -57,7 +57,7 @@ public class RedisShiroSessionDAO extends EnterpriseCacheSessionDAO {
     protected Session doReadSession(Serializable sessionId) {
         Session session = super.doReadSession(sessionId);
         if (session == null) {
-            final String key = RedisKeys.getShiroSessionKey(sessionId.toString());
+            final String key = RedisKeys.getShiroSessionKey(sysConfigService.getNameSpace(), sessionId.toString());
             session = getShiroSession(key);
         }
         return session;
@@ -67,7 +67,7 @@ public class RedisShiroSessionDAO extends EnterpriseCacheSessionDAO {
     @Override
     protected void doUpdate(Session session) {
         super.doUpdate(session);
-        final String key = RedisKeys.getShiroSessionKey(session.getId().toString());
+        final String key = RedisKeys.getShiroSessionKey(sysConfigService.getNameSpace(), session.getId().toString());
         setShiroSession(key, session);
     }
 
@@ -75,7 +75,7 @@ public class RedisShiroSessionDAO extends EnterpriseCacheSessionDAO {
     @Override
     protected void doDelete(Session session) {
         super.doDelete(session);
-        final String key = RedisKeys.getShiroSessionKey(session.getId().toString());
+        final String key = RedisKeys.getShiroSessionKey(sysConfigService.getNameSpace(), session.getId().toString());
         redisTemplate.delete(key);
     }
 

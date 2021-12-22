@@ -19,21 +19,16 @@ public class SysConfigRedis {
         if (config == null) {
             return;
         }
-        String namespace = sysConfigService.getNameSpace();
-        String key = RedisKeys.getSysConfigKey(namespace, config.getParamKey());
+        String key = RedisKeys.getSysConfigKey(sysConfigService.getNameSpace(), config.getParamKey());
         redisUtils.set(key, config, 120);
     }
 
     public void delete(String configKey) {
-        String namespace = sysConfigService.getNameSpace();
-        String key = RedisKeys.getSysConfigKey(namespace, configKey);
-        redisUtils.delete(key);
+        redisUtils.delete(RedisKeys.getSysConfigKey(sysConfigService.getNameSpace(), configKey));
     }
 
     public SysConfigEntity get(String configKey) {
-        String namespace = sysConfigService.getNameSpace();
-        String key = RedisKeys.getSysConfigKey(namespace, configKey);
-        Object o = redisUtils.get(key);
+        Object o = redisUtils.get(RedisKeys.getSysConfigKey(sysConfigService.getNameSpace(), configKey));
         if (o instanceof SysConfigEntity) {
             return (SysConfigEntity) o;
         }

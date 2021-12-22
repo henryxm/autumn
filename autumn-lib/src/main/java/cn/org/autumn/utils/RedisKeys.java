@@ -10,10 +10,14 @@ public class RedisKeys {
             namespace = "";
         else
             namespace = namespace.trim() + ":";
-        return "system:config:" + namespace + key;
+        return namespace + "system:config:" + key;
     }
 
-    public static String getShiroSessionKey(String key) {
-        return "system:sessionid:" + key;
+    public static String getShiroSessionKey(String namespace, String key) {
+        if (null == namespace)
+            namespace = "";
+        else
+            namespace = namespace.trim() + ":";
+        return namespace + "system:sessionid:" + key;
     }
 }
