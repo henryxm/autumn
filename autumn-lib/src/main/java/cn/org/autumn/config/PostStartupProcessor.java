@@ -2,6 +2,7 @@ package cn.org.autumn.config;
 
 import cn.org.autumn.site.InitFactory;
 import cn.org.autumn.site.LoadFactory;
+import cn.org.autumn.site.UpgradeFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +22,9 @@ public class PostStartupProcessor implements ApplicationListener<ContextRefreshe
     @Autowired
     InitFactory initFactory;
 
+    @Autowired
+    UpgradeFactory upgradeFactory;
+
     @Override
     public void onApplicationEvent(ContextRefreshedEvent event) {
         ApplicationContext context = (ApplicationContext) event.getSource();
@@ -37,6 +41,7 @@ public class PostStartupProcessor implements ApplicationListener<ContextRefreshe
         try {
             initFactory.init();
             loadFactory.load();
+            upgradeFactory.upgrade();
         } catch (Exception e) {
             log.error(e.getMessage());
         }
