@@ -3,6 +3,8 @@ package cn.org.autumn.modules.client.service;
 import cn.org.autumn.modules.client.entity.WebAuthenticationEntity;
 import cn.org.autumn.modules.client.service.gen.WebAuthenticationServiceGen;
 import cn.org.autumn.modules.sys.service.SysConfigService;
+import cn.org.autumn.site.UpgradeFactory;
+import cn.org.autumn.utils.Utils;
 import cn.org.autumn.utils.Uuid;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,9 +12,10 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
+import java.util.List;
 
 @Service
-public class WebAuthenticationService extends WebAuthenticationServiceGen {
+public class WebAuthenticationService extends WebAuthenticationServiceGen implements UpgradeFactory.Domain {
 
     @Autowired
     SysConfigService sysConfigService;
@@ -73,6 +76,24 @@ public class WebAuthenticationService extends WebAuthenticationServiceGen {
         super.init();
         if (!hasClientId(sysConfigService.getClientId())) {
             create(sysConfigService.getClientId(), sysConfigService.getClientSecret(), sysConfigService.getBaseUrl(), "默认的客户端", "basic", "normal");
+        }
+    }
+
+    @Override
+    public void onDomainChanged() {
+        String host = sysConfigService.getSiteDomain();
+        String scheme = sysConfigService.getScheme();
+        List<WebAuthenticationEntity> entities = selectByMap(null);
+        for (WebAuthenticationEntity entity : entities) {
+            if (StringUtils.isNotBlank(entity.getAccessTokenUri()))
+                entity.setAccessTokenUri(Utils.replaceSchemeHost(scheme, host, entity.getAccessTokenUri()));
+            if (StringUtils.isNotBlank(entity.getAuthorizeUri()))
+                entity.setAuthorizeUri(Utils.replaceSchemeHost(scheme, host, entity.getAuthorizeUri()));
+            if (StringUtils.isNotBlank(entity.getRedirectUri()))
+                entity.setRedirectUri(Utils.replaceSchemeHost(scheme, host, entity.getRedirectUri()));
+            if (StringUtils.isNotBlank(entity.getUserInfoUri()))
+                entity.setUserInfoUri(Utils.replaceSchemeHost(scheme, host, entity.getUserInfoUri()));
+            updateById(entity);
         }
     }
 }

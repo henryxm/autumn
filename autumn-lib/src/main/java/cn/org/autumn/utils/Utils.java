@@ -1,8 +1,10 @@
 package cn.org.autumn.utils;
 
 import javax.servlet.http.HttpServletRequest;
+import java.net.URI;
 import java.net.URL;
 import java.net.URLDecoder;
+import java.util.Locale;
 
 import static com.baomidou.mybatisplus.toolkit.StringUtils.UTF8;
 
@@ -33,5 +35,15 @@ public class Utils {
         } catch (Exception ignored) {
         }
         return "";
+    }
+
+    public static String replaceSchemeHost(String scheme, String host, String original) {
+        try {
+            URI uri = new URI(original);
+            uri = new URI(scheme.toLowerCase(Locale.US), uri.getUserInfo(), host, uri.getPort(), uri.getPath(), uri.getQuery(), uri.getFragment());
+            return uri.toString();
+        } catch (Exception e) {
+            return original;
+        }
     }
 }

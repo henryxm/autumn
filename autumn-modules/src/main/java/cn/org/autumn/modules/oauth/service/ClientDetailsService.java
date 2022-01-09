@@ -12,8 +12,9 @@ import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.modules.sys.service.SysUserService;
 import cn.org.autumn.modules.sys.shiro.RedisShiroSessionDAO;
-import cn.org.autumn.site.InitFactory;
+import cn.org.autumn.site.UpgradeFactory;
 import cn.org.autumn.utils.RedisUtils;
+import cn.org.autumn.utils.Utils;
 import cn.org.autumn.utils.Uuid;
 import com.qiniu.util.Md5;
 import org.apache.commons.lang.StringUtils;
@@ -25,7 +26,7 @@ import org.springframework.stereotype.Service;
 import java.util.*;
 
 @Service
-public class ClientDetailsService extends ClientDetailsServiceGen implements LoopJob.Job {
+public class ClientDetailsService extends ClientDetailsServiceGen implements LoopJob.Job, UpgradeFactory.Domain {
 
     @Autowired
     RedisUtils redisUtils;
@@ -270,6 +271,22 @@ public class ClientDetailsService extends ClientDetailsServiceGen implements Loo
             if (null == sysUserEntity) {
                 sysUserService.newUser(clientDetailsEntity.getClientId(), Uuid.uuid(), Uuid.uuid(), sysConfigService.getDefaultRoleKeys());
             }
+        }
+    }
+
+    @Override
+    public void onDomainChanged() {
+        String host = sysConfigService.getSiteDomain();
+        String scheme = sysConfigService.getScheme();
+        List<ClientDetailsEntity> entities = selectByMap(null);
+        for (ClientDetailsEntity entity : entities) {
+            if (StringUtils.isNotBlank(entity.getClientUri()))
+                entity.setClientUri(Utils.replaceSchemeHost(scheme, host, entity.getClientUri()));
+            if (StringUtils.isNotBlank(entity.getClientIconUri()))
+                entity.setClientIconUri(Utils.replaceSchemeHost(scheme, host, entity.getClientIconUri()));
+            if (StringUtils.isNotBlank(entity.getRedirectUri()))
+                entity.setRedirectUri(Utils.replaceSchemeHost(scheme, host, entity.getRedirectUri()));
+            updateById(entity);
         }
     }
 }
