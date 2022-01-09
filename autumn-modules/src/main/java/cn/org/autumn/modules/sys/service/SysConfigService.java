@@ -44,6 +44,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     public static final String LOGIN_AUTHENTICATION = "LOGIN_AUTHENTICATION";
     public static final String TOKEN_GENERATE_STRATEGY = "TOKEN_GENERATE_STRATEGY";
     public static final String SITE_DOMAIN = "SITE_DOMAIN";
+    public static final String BIND_DOMAIN = "BIND_DOMAIN";
     public static final String SITE_SSL = "SITE_SSL";
     public static final String CLUSTER_ROOT_DOMAIN = "CLUSTER_ROOT_DOMAIN";
     public static final String USER_DEFAULT_DEPART_KEY = "USER_DEFAULT_DEPART_KEY";
@@ -126,6 +127,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 {LOGIN_AUTHENTICATION, "oauth2:" + getClientId(), "1", "系统登录授权，参数类型：①:localhost; ②:oauth2:clientId; ③shell"},
                 {TOKEN_GENERATE_STRATEGY, "current", "1", "授权获取Token的时候，每次获取Token的策略：①:new(每次获取Token的时候都生成新的,需要保证:ClientId,AccessKeyId使用地方的唯一性,多个不同地方使用相同ClientId会造成Token竞争性失效); ②:current(默认值,使用之前已存在并且有效的,只有当前Token失效后才重新生成)"},
                 {SITE_DOMAIN, getSiteDomain(), "1", "站点域名绑定，多个域名以逗号分隔，为空表示不绑定任何域，不为空表示进行域名校验，#号开头的域名表示不绑定该域名，绑定域名后只能使用该域名访问站点"},
+                {BIND_DOMAIN, "", "1", "站点绑定域名，多个域名以逗号分隔，为空表示不绑定任何域，不为空表示进行域名校验，#号开头的域名表示不绑定该域名，绑定域名后，防火墙放行"},
                 {SITE_SSL, String.valueOf(isSsl()), "1", "站点是否支持证书，0:不支持，1:支持"},
                 {CLUSTER_ROOT_DOMAIN, getClusterRootDomain(), "1", "集群的根域名，当开启Redis后，有相同根域名后缀的服务会使用相同的Cookie，集群可通过Cookie中的登录用户进行用户同步"},
                 {USER_DEFAULT_DEPART_KEY, "", "1", "缺省的部门标识，当用户从集群中的账户体系中同步用户信息后，授予的默认的部门权限"},
@@ -402,7 +404,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
             if (d.trim().equalsIgnoreCase(host.trim()))
                 return true;
         }
-        return false;
+        return getBindDomains().contains(host);
     }
 
     /**
@@ -425,6 +427,20 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
             }
         }
         return oa;
+    }
+
+    public List<String> getBindDomains() {
+        String oa = getValue(BIND_DOMAIN);
+        List<String> list = new ArrayList<>();
+        if (StringUtils.isNotBlank(oa)) {
+            String[] ds = oa.split(",");
+            for (String d : ds) {
+                if (d.startsWith("#"))
+                    continue;
+                list.add(d.trim());
+            }
+        }
+        return list;
     }
 
     public String getBaseUrl() {
