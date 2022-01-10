@@ -1,6 +1,9 @@
 package cn.org.autumn.site;
 
 import cn.org.autumn.utils.SpringContextUtils;
+import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -13,11 +16,24 @@ import java.util.Map;
 @Component
 public class LoginFactory extends Factory {
 
+    Logger log = LoggerFactory.getLogger(getClass());
+
     private static Map<Integer, List<Login>> map = null;
 
     public interface Login {
         @Order(DEFAULT_ORDER)
         boolean isNeed(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse);
+    }
+
+    public String getUrl(HttpServletRequest request) {
+        String url = request.getRequestURL().toString();
+        String query = request.getQueryString();
+        if (StringUtils.isNotBlank(query)) {
+            query = "?" + query;
+        } else
+            query = "";
+        url += query;
+        return url;
     }
 
     /**
@@ -37,11 +53,14 @@ public class LoginFactory extends Factory {
             for (Map.Entry<Integer, List<Login>> k : map.entrySet()) {
                 List<Login> list = k.getValue();
                 for (Login login : list) {
-                    if (!login.isNeed(httpServletRequest, httpServletResponse))
+                    if (!login.isNeed(httpServletRequest, httpServletResponse)) {
+                        log.debug("No Login:{}, {}", getUrl(httpServletRequest), login.getClass().getTypeName());
                         return false;
+                    }
                 }
             }
         }
+        log.debug("Need Login:{}", getUrl(httpServletRequest));
         return true;
     }
 }
