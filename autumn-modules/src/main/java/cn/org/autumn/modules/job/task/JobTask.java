@@ -71,6 +71,10 @@ public class JobTask {
         try {
             logger.debug("每分钟定时触发一次,如果该任务一分钟内未执行完毕，下一分钟跳过执行, Counter=" + minuteJobCounter);
             LoopJob.runOneMinuteJob();
+            if (minuteJobCounter % 5 == 0) {
+                logger.debug("每5分钟定时触发一次, Counter=" + minuteJobCounter);
+                LoopJob.runFiveMinuteJob();
+            }
             if (minuteJobCounter % 10 == 0) {
                 logger.debug("每10分钟定时触发一次, Counter=" + minuteJobCounter);
                 LoopJob.runTenMinuteJob();

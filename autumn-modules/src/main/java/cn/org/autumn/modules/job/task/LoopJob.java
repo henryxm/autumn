@@ -54,6 +54,11 @@ public class LoopJob extends Factory implements LoadFactory.Load {
             onOneMinute(oneMinute);
         }
 
+        List<FiveMinute> fiveMinutes = getOrderList(FiveMinute.class, "onFiveMinute");
+        for (FiveMinute fiveMinute : fiveMinutes) {
+            onFiveMinute(fiveMinute);
+        }
+
         List<TenMinute> tenMinutes = getOrderList(TenMinute.class, "onTenMinute");
         for (TenMinute tenMinute : tenMinutes) {
             onTenMinute(tenMinute);
@@ -137,6 +142,11 @@ public class LoopJob extends Factory implements LoadFactory.Load {
         }
     }
 
+    public interface FiveMinute extends Job {
+        default void onFiveMinute() {
+        }
+    }
+
     public interface TenMinute extends Job {
         default void onTenMinute() {
         }
@@ -179,6 +189,7 @@ public class LoopJob extends Factory implements LoadFactory.Load {
     private static final List<Job> thirtySecondJobList = new CopyOnWriteArrayList<>();
 
     private static final List<Job> oneMinuteJobList = new CopyOnWriteArrayList<>();
+    private static final List<Job> fiveMinuteJobList = new CopyOnWriteArrayList<>();
     private static final List<Job> tenMinuteJobList = new CopyOnWriteArrayList<>();
     private static final List<Job> thirtyMinuteJobList = new CopyOnWriteArrayList<>();
 
@@ -217,6 +228,11 @@ public class LoopJob extends Factory implements LoadFactory.Load {
     public static void onOneMinute(Job job) {
         if (!oneMinuteJobList.contains(job))
             oneMinuteJobList.add(job);
+    }
+
+    public static void onFiveMinute(Job job) {
+        if (!fiveMinuteJobList.contains(job))
+            fiveMinuteJobList.add(job);
     }
 
     public static void onTenMinute(Job job) {
@@ -351,6 +367,23 @@ public class LoopJob extends Factory implements LoadFactory.Load {
                         continue;
                     if (job instanceof OneMinute)
                         ((OneMinute) job).onOneMinute();
+                    else
+                        job.runJob();
+                } catch (Exception e) {
+                    print(job, e);
+                }
+            }
+        }
+    }
+
+    public static void runFiveMinuteJob() {
+        if (fiveMinuteJobList.size() > 0) {
+            for (Job job : fiveMinuteJobList) {
+                try {
+                    if (!job.isEnabled())
+                        continue;
+                    if (job instanceof FiveMinute)
+                        ((FiveMinute) job).onFiveMinute();
                     else
                         job.runJob();
                 } catch (Exception e) {
