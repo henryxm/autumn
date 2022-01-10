@@ -54,13 +54,13 @@ public class LoginFactory extends Factory {
                 List<Login> list = k.getValue();
                 for (Login login : list) {
                     if (!login.isNeed(httpServletRequest, httpServletResponse)) {
-                        log.info("No Login:{}, {}", getUrl(httpServletRequest), login.getClass().getTypeName());
+                        log.debug("No Login:{}, {}", getUrl(httpServletRequest), login.getClass().getTypeName());
                         return false;
                     }
                 }
             }
         }
-        log.info("Need Login:{}", getUrl(httpServletRequest));
+        log.debug("Need Login:{}", getUrl(httpServletRequest));
         return true;
     }
 }
