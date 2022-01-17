@@ -37,11 +37,11 @@ public @interface Column{
 	public int length() default 255;
 
 	/**
-	 * 小数点长度，默认是0
+	 * 小数点长度，默认是-1
 	 * 
-	 * @return 小数点长度，默认是0
+	 * @return 小数点长度，默认是-1
 	 */
-	public int decimalLength() default 0;
+	public int decimalLength() default -1;
 
 	/**
 	 * 是否为可以为null，true是可以，false是不可以，默认为true

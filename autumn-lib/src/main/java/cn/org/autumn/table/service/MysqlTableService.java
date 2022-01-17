@@ -1,6 +1,7 @@
 package cn.org.autumn.table.service;
 
 import java.lang.reflect.Field;
+import java.math.BigDecimal;
 import java.util.*;
 import java.util.Map.Entry;
 
@@ -365,8 +366,18 @@ public class MysqlTableService {
                         continue;
                     }
                 } else if (!sysColumn.getColumnDefault().equals(createTableParam.getDefaultValue())) {
-                    // 两者不相等时，需要更新该字段
-                    modifyFieldList.add(createTableParam);
+                    if (createTableParam.getType().equals(DataType.FLOAT) || createTableParam.getType().equals(DataType.DECIMAL) || createTableParam.getType().equals(DataType.DOUBLE)) {
+                        try {
+                            double d = Double.parseDouble(sysColumn.getColumnDefault());
+                            double c = Double.parseDouble(createTableParam.getDefaultValue());
+                            if (d != c) {
+                                modifyFieldList.add(createTableParam);
+                            }
+                        } catch (Exception ignored) {
+                        }
+                    } else
+                        // 两者不相等时，需要更新该字段
+                        modifyFieldList.add(createTableParam);
                     continue;
                 }
 
@@ -500,7 +511,7 @@ public class MysqlTableService {
                 ColumnInfo columnInfo = new ColumnInfo(field, uniqueKeys, uniqueKey);
                 int length = 0;
                 try {
-                    length = (Integer) mySqlTypeAndLengthMap.get(column.type().toLowerCase());
+                    length = (Integer) mySqlTypeAndLengthMap.get(columnInfo.getType());
                 } catch (Exception e) {
                     log.error("未知的Mysql数据类型字段:" + column.type());
                 }

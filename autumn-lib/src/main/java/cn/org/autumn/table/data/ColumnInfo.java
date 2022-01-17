@@ -8,9 +8,10 @@ import cn.org.autumn.table.mysql.ColumnMeta;
 import cn.org.autumn.table.utils.HumpConvert;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.WordUtils;
-import org.omg.Messaging.SYNC_WITH_TRANSPORT;
 
 import java.lang.reflect.Field;
+import java.math.BigDecimal;
+import java.util.Date;
 
 /**
  * 用于存放创建表的字段信息
@@ -120,12 +121,12 @@ public class ColumnInfo {
             String len = tt[1].split("\\)")[0];
             if (len.contains(",")) {
                 String[] rr = len.split(",");
-                int length = Integer.valueOf(rr[0]);
+                int length = Integer.parseInt(rr[0]);
                 setLength(length);
-                length = Integer.valueOf(rr[1]);
+                length = Integer.parseInt(rr[1]);
                 setDecimalLength(length);
             } else {
-                int length = Integer.valueOf(len);
+                int length = Integer.parseInt(len);
                 setLength(length);
             }
         } else
@@ -136,34 +137,34 @@ public class ColumnInfo {
     private String buildAnnotation() {
         StringBuilder sb = new StringBuilder();
         sb.append("@Column(");
-        String divider = "" ;
+        String divider = "";
         if (this.isKey) {
             sb.append("isKey = true");
-            divider = ", " ;
+            divider = ", ";
         }
         if (!"varchar".equalsIgnoreCase(type)) {
             sb.append(divider + "type = \"" + type + "\"");
-            divider = ", " ;
+            divider = ", ";
         }
         if (length != 255 && length != 0) {
             sb.append(divider + "length = " + length);
-            divider = ", " ;
+            divider = ", ";
         }
         if (!isNull) {
             sb.append(divider + "isNull = false");
-            divider = ", " ;
+            divider = ", ";
         }
         if (isAutoIncrement) {
             sb.append(divider + "isAutoIncrement = true");
-            divider = ", " ;
+            divider = ", ";
         }
         if (decimalLength > 0) {
             sb.append(divider + "decimalLength = " + decimalLength);
-            divider = ", " ;
+            divider = ", ";
         }
         if (null != defaultValue && !"NULL".equalsIgnoreCase(defaultValue)) {
             sb.append(divider + "defaultValue = \"" + defaultValue + "\"");
-            divider = ", " ;
+            divider = ", ";
         }
 
         if (!StringUtils.isEmpty(comment)) {
@@ -199,12 +200,17 @@ public class ColumnInfo {
         if (StringUtils.isEmpty(columnName)) {
             columnName = field.getName();
             columnName = HumpConvert.HumpToUnderline(columnName);
-//            if (columnName.startsWith("_"))
-//                columnName = columnName.substring(1);
         }
         this.name = columnName;
         this.type = column.type().toLowerCase();
         this.length = column.length();
+        if (boolean.class.equals(field.getType()) || Boolean.class.equals(field.getType())) {
+            this.type = DataType.TINYINT;
+            this.length = 1;
+        }
+        if (Date.class.equals(field.getType()) || java.sql.Date.class.equals(field.getType())) {
+            this.type = DataType.DATETIME;
+        }
         if (Long.class.equals(field.getType())) {
             if (column.length() == 255)
                 this.length = 20;
@@ -215,18 +221,30 @@ public class ColumnInfo {
                 this.length = 11;
             this.type = DataType.INT;
         }
+        this.decimalLength = column.decimalLength();
         if (float.class.equals(field.getType()) || Float.class.equals(field.getType())) {
             if (column.length() == 255)
                 this.length = 11;
             this.type = DataType.FLOAT;
+            if (decimalLength < 0 || decimalLength > 8)
+                decimalLength = 2;
         }
         if (double.class.equals(field.getType()) || Double.class.equals(field.getType())) {
             if (column.length() == 255)
                 this.length = 11;
             this.type = DataType.DOUBLE;
+            if (decimalLength < 0 || decimalLength > 15)
+                decimalLength = 2;
         }
-
-        this.decimalLength = column.decimalLength();
+        if (BigDecimal.class.equals(field.getType())) {
+            if (column.length() == 255)
+                this.length = 20;
+            this.type = DataType.DECIMAL;
+            if (decimalLength < 0 || decimalLength > 28)
+                decimalLength = 2;
+        }
+        if (decimalLength < 0)
+            this.decimalLength = 0;
         // 主键或唯一键时设置必须不为null
         if (column.isKey() || column.isUnique())
             this.isNull = false;
@@ -259,11 +277,14 @@ public class ColumnInfo {
             }
         }
         this.comment = column.comment();
+        if (StringUtils.isBlank(this.comment)) {
+            this.comment = HumpConvert.HumpToName(field.getName());
+        }
     }
 
 
     public boolean isValid() {
-        return StringUtils.isEmpty(this.name) ? false : true;
+        return !StringUtils.isEmpty(this.name);
     }
 
     public String getComment() {

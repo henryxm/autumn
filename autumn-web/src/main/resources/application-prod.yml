@@ -1,16 +1,18 @@
 spring:
+  application:
+    name: ${site.domain}
   datasource:
     type: com.alibaba.druid.pool.DruidDataSource
     driverClassName: com.mysql.cj.jdbc.Driver
     druid:
       first:  #数据源1
-        url: jdbc:mysql://localhost:3306/autumn?serverTimezone=Asia/Shanghai&useSSL=false&allowMultiQueries=true&useUnicode=true&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
-        username: autumn
-        password: autumn
+        url: jdbc:mysql://${database.host}:${database.port}/${database.database}?serverTimezone=Asia/Shanghai&useSSL=false&allowMultiQueries=true&useUnicode=true&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
+        username: ${database.username}
+        password: ${database.password}
       second:  #数据源2
-        url: jdbc:mysql://localhost:3306/autumn?serverTimezone=Asia/Shanghai&useSSL=false&allowMultiQueries=true&useUnicode=true&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
-        username: autumn
-        password: autumn
+        url: jdbc:mysql://${database2.host}:${database2.port}/${database2.database}?serverTimezone=Asia/Shanghai&useSSL=false&allowMultiQueries=true&useUnicode=true&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
+        username: ${database2.username}
+        password: ${database2.password}
       initial-size: 10
       max-active: 100
       min-idle: 10
@@ -19,7 +21,7 @@ spring:
       max-pool-prepared-statement-per-connection-size: 20
       time-between-eviction-runs-millis: 60000
       min-evictable-idle-time-millis: 300000
-      #validation-query: SELECT 1 FROM DUAL
+      validation-query: SELECT 1 FROM DUAL
       test-while-idle: true
       test-on-borrow: false
       test-on-return: false
@@ -36,3 +38,8 @@ spring:
         wall:
           config:
             multi-statement-allow: true
+  redis:
+    host: ${redis.host}
+    database: ${redis.database}
+    port: ${redis.port}
+    password: ${redis.password}

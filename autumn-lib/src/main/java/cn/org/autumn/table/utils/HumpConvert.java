@@ -46,6 +46,19 @@ public class HumpConvert {
         return sb.toString().toLowerCase();
     }
 
+    public static String HumpToName(String para) {
+        para = toFirstStringUpper(para);
+        StringBuilder sb = new StringBuilder(para);
+        int temp = 0;//定位
+        for (int i = 1; i < para.length(); i++) {
+            if (Character.isUpperCase(para.charAt(i))) {
+                sb.insert(i + temp, " ");
+                temp += 1;
+            }
+        }
+        return sb.toString();
+    }
+
     public static String toFirstStringUpper(String str) {
         if (StringUtil.isNullOrEmpty(str))
             return "";

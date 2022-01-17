@@ -85,11 +85,12 @@ logging:
   level.com.aliyun.oss: fatal
   level.springfox.documentation: fatal
   level.org.quartz: warn
-  level.org.springframework: info
-  #  level.org.springframework.web: warn
-  #  level.org.springframework.jmx: warn
-  #  level.org.springframework.boot.web: warn
-  #  level.org.springframework.boot.web.servlet: warn
+  level.org.springframework: fatal
+  level.org.springframework.web: warn
+  level.org.springframework.jmx: warn
+  level.org.springframework.boot.web: warn
+  level.org.springframework.boot.web.servlet: warn
+  level.com.netflix.discovery.shared.resolver.aws: fatal
   level.org.springframework.boot.web.embedded: info
   level.org.apache.shiro.session: fatal
   level.com.alibaba.druid: off
@@ -97,6 +98,8 @@ logging:
   level.org.apache.tomcat: info
   level.org.apache.catalina: info
   level.sun.rmi.transport.tcp: info
+  level.com.netflix: fatal
+  level.net.sf.ehcache: fatal
 
   file:
     name: file.log

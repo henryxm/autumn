@@ -33,7 +33,7 @@ public class DataType {
     @LengthCount(LengthCount = 2)
     public static final String DOUBLE = "double";
 
-    @LengthCount(LengthCount = 1)
+    @LengthCount(LengthCount = 2)
     public static final String FLOAT = "float";
 
     @LengthCount
