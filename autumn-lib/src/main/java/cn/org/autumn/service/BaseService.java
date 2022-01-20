@@ -211,6 +211,9 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends ServiceImp
             if (StringUtils.isNotBlank(columnComment) && columnComment.contains(":")) {
                 columnComment = columnComment.split(":")[0];
             }
+            if (StringUtils.isBlank(columnComment)) {
+                columnComment = HumpConvert.HumpToName(field.getName());
+            }
             items.add(new String[]{pre + "_" + name + "_column_" + underline, columnComment, toLang(underline)});
         }
         return items;
