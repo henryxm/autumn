@@ -17,6 +17,7 @@ import cn.org.autumn.modules.usr.entity.UserProfileEntity;
 import cn.org.autumn.modules.usr.service.UserLoginLogService;
 import cn.org.autumn.modules.usr.service.UserProfileService;
 import cn.org.autumn.site.PageFactory;
+import cn.org.autumn.utils.IPUtils;
 import cn.org.autumn.utils.Utils;
 import com.alibaba.fastjson.JSON;
 import org.apache.commons.lang.StringUtils;
@@ -122,6 +123,14 @@ public class AuthorizationController {
                 if (StringUtils.isBlank(back))
                     back = "/";
                 sysUserService.login(username, password, rememberMe);
+                try {
+                    String ip = IPUtils.getIp(request);
+                    SysUserEntity userEntity = ShiroUtils.getUserEntity();
+                    if (null != userEntity) {
+                        userProfileService.updateLoginIp(userEntity.getUuid(), ip);
+                    }
+                } catch (Exception ignored) {
+                }
                 return "redirect:" + back;
             }
         } catch (UnknownAccountException e) {
@@ -292,6 +301,7 @@ public class AuthorizationController {
             if (isLogin) {
                 SysUserEntity sysUserEntity = sysUserService.getByUsername(username);
                 tokenStore = new TokenStore(sysUserEntity);
+                userProfileService.updateLoginIp(sysUserEntity.getUuid(), IPUtils.getIp(request));
             }
         }
 

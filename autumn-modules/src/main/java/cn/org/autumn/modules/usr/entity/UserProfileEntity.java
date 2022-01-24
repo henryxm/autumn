@@ -59,11 +59,23 @@ public class UserProfileEntity implements Serializable {
      */
     @Column(length = 128, comment = "密码")
     private String password;
+
+    @Column(comment = "登录IP")
+    private String loginIp;
+
+    @Column(comment = "访问IP")
+    private String visitIp;
     /**
      * 创建时间
      */
     @Column(type = "datetime", comment = "创建时间")
     private Date createTime;
+
+    @Column(type = "datetime", comment = "登录时间")
+    private Date loginTime;
+
+    @Column(type = "datetime", comment = "访问时间")
+    private Date visitTime;
 
     /**
      * 设置：UUID
@@ -191,6 +203,38 @@ public class UserProfileEntity implements Serializable {
      */
     public Date getCreateTime() {
         return createTime;
+    }
+
+    public String getLoginIp() {
+        return loginIp;
+    }
+
+    public void setLoginIp(String loginIp) {
+        this.loginIp = loginIp;
+    }
+
+    public String getVisitIp() {
+        return visitIp;
+    }
+
+    public void setVisitIp(String visitIp) {
+        this.visitIp = visitIp;
+    }
+
+    public Date getLoginTime() {
+        return loginTime;
+    }
+
+    public void setLoginTime(Date loginTime) {
+        this.loginTime = loginTime;
+    }
+
+    public Date getVisitTime() {
+        return visitTime;
+    }
+
+    public void setVisitTime(Date visitTime) {
+        this.visitTime = visitTime;
     }
 
     @Override

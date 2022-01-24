@@ -6,9 +6,11 @@ import cn.org.autumn.modules.sys.service.SysUserService;
 import cn.org.autumn.modules.sys.shiro.OauthUsernameToken;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.usr.dto.UserProfile;
+import cn.org.autumn.modules.usr.dto.VisitIp;
 import cn.org.autumn.modules.usr.entity.UserProfileEntity;
 import cn.org.autumn.modules.usr.service.gen.UserProfileServiceGen;
 import cn.org.autumn.utils.Uuid;
+import io.lettuce.core.KeyValue;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,7 +22,7 @@ import java.util.*;
 import static cn.org.autumn.utils.Uuid.uuid;
 
 @Service
-public class UserProfileService extends UserProfileServiceGen implements LoopJob.Job {
+public class UserProfileService extends UserProfileServiceGen implements LoopJob.TenSecond, LoopJob.OneMinute, LoopJob.OneHour {
 
     Logger log = LoggerFactory.getLogger(getClass());
 
@@ -33,6 +35,8 @@ public class UserProfileService extends UserProfileServiceGen implements LoopJob
     static Map<String, UserProfileEntity> sync = new LinkedHashMap<>();
 
     static Map<String, Integer> hashUser = new HashMap<>();
+
+    Map<String, VisitIp> visitIps = new HashMap<>();
 
     @Override
     public int menuOrder() {
@@ -48,7 +52,35 @@ public class UserProfileService extends UserProfileServiceGen implements LoopJob
         super.init();
         SysUserEntity sysUserEntity = sysUserService.getByUsername(sysUserService.getAdmin());
         from(sysUserEntity, sysUserService.getPassword(), null);
-        LoopJob.onTenSecond(this);
+    }
+
+    public void updateLoginIp(String uuid, String ip) {
+        if (StringUtils.isBlank(ip) || StringUtils.isBlank(uuid) || ip.length() > 100)
+            return;
+        baseMapper.updateLoginIp(uuid, ip);
+    }
+
+    public void syncVisitIp() {
+        for (Map.Entry<String, VisitIp> entry : visitIps.entrySet()) {
+            if (!entry.getValue().isUpdated()) {
+                baseMapper.updateVisitIp(entry.getKey(), entry.getValue().getIp());
+                entry.getValue().setUpdated(true);
+            }
+        }
+    }
+
+    public void updateVisitIp(String uuid, String ip) {
+        if (StringUtils.isBlank(ip) || StringUtils.isBlank(uuid) || ip.length() > 100)
+            return;
+        if (visitIps.containsKey(uuid)) {
+            VisitIp visitIp = visitIps.get(uuid);
+            if (!visitIp.getIp().equals(ip)) {
+                visitIp.setIp(ip);
+                visitIp.setUpdated(false);
+            }
+        } else {
+            visitIps.put(uuid, new VisitIp(ip));
+        }
     }
 
     public UserProfileEntity from(SysUserEntity sysUserEntity, String password, UserProfile merge) {
@@ -171,7 +203,18 @@ public class UserProfileService extends UserProfileServiceGen implements LoopJob
     }
 
     @Override
-    public void runJob() {
+    public void onOneMinute() {
+        syncVisitIp();
+    }
+
+    @Override
+    public void onOneHour() {
+        if (visitIps.size() > 10000)
+            visitIps.clear();
+    }
+
+    @Override
+    public void onTenSecond() {
         if (null != sync && sync.size() > 0) {
             Iterator<Map.Entry<String, UserProfileEntity>> iterator = sync.entrySet().iterator();
             while (iterator.hasNext()) {

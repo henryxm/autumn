@@ -33,4 +33,10 @@ public interface UserProfileDao extends BaseMapper<UserProfileEntity> {
 
     @Update("update usr_user_profile set uuid = #{uuid} where username = #{username}")
     Integer setUuid(@Param("username") String username, @Param("uuid") String uuid);
+
+    @Update("update usr_user_profile set login_ip = #{ip}, visit_ip = #{ip}, login_time = now(), visit_time = now() where uuid = #{uuid}")
+    Integer updateLoginIp(@Param("uuid") String uuid, @Param("ip") String ip);
+
+    @Update("update usr_user_profile set visit_ip = #{ip}, visit_time = now() where uuid = #{uuid}")
+    Integer updateVisitIp(@Param("uuid") String uuid, @Param("ip") String ip);
 }

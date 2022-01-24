@@ -219,8 +219,11 @@
             <artifactId>org.apache.oltu.oauth2.resourceserver</artifactId>
             <version>${oltu.version}</version>
         </dependency>
-
-
+        <dependency>
+            <groupId>io.springfox</groupId>
+            <artifactId>springfox-boot-starter</artifactId>
+            <version>3.0.0</version>
+        </dependency>
     </dependencies>
 
     <!-- 阿里云maven仓库 -->
@@ -232,6 +235,17 @@
             <releases>
                 <enabled>true</enabled>
             </releases>
+        </repository>
+        <repository>
+            <id>releases</id>
+            <name>nutch nexus</name>
+            <url>http://git.minclouds.com/nexus/content/repositories/releases/</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
         </repository>
     </repositories>
     <pluginRepositories>
@@ -247,4 +261,11 @@
             </snapshots>
         </pluginRepository>
     </pluginRepositories>
+
+    <distributionManagement>
+        <repository>
+            <id>releases</id>
+            <url>http://git.minclouds.com/nexus/content/repositories/releases</url>
+        </repository>
+    </distributionManagement>
 </project>

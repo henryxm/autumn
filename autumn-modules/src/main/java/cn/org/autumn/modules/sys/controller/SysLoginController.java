@@ -2,8 +2,11 @@ package cn.org.autumn.modules.sys.controller;
 
 import cn.org.autumn.config.Config;
 import cn.org.autumn.modules.spm.service.SuperPositionModelService;
+import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysUserService;
+import cn.org.autumn.modules.usr.service.UserProfileService;
 import cn.org.autumn.site.PageFactory;
+import cn.org.autumn.utils.IPUtils;
 import com.google.code.kaptcha.Constants;
 import com.google.code.kaptcha.Producer;
 import cn.org.autumn.utils.R;
@@ -38,6 +41,9 @@ public class SysLoginController {
     @Autowired
     PageFactory pageFactory;
 
+    @Autowired
+    UserProfileService userProfileService;
+
     @RequestMapping("captcha.jpg")
     public void captcha(HttpServletResponse response) throws IOException {
         response.setHeader("Cache-Control", "no-store, no-cache");
@@ -59,7 +65,7 @@ public class SysLoginController {
      */
     @ResponseBody
     @RequestMapping(value = "/sys/login", method = RequestMethod.POST)
-    public R login(String username, String password, boolean rememberMe, String captcha) {
+    public R login(String username, String password, boolean rememberMe, String captcha, HttpServletRequest request) {
         if (!Config.isDev()) {
             String kaptcha = ShiroUtils.getKaptcha(Constants.KAPTCHA_SESSION_KEY);
             if (!captcha.equalsIgnoreCase(kaptcha)) {
@@ -74,6 +80,15 @@ public class SysLoginController {
 
         try {
             sysUserService.login(username, password, rememberMe);
+            String ip = IPUtils.getIp(request);
+            try {
+                SysUserEntity userEntity = ShiroUtils.getUserEntity();
+                if (null != userEntity) {
+                    userProfileService.updateLoginIp(userEntity.getUuid(), ip);
+                }
+            } catch (Exception ignored) {
+            }
+
         } catch (UnknownAccountException e) {
             return R.error(e.getMessage());
         } catch (IncorrectCredentialsException e) {

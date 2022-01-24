@@ -5,7 +5,6 @@ import cn.org.autumn.utils.PageUtils;
 import cn.org.autumn.utils.R;
 import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiImplicitParams;
-import io.swagger.annotations.ApiOperation;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -42,7 +41,6 @@ public class SysLogController {
      * @param singlePath  需要单独设置日志输出级别的类的全限定名（例:com.chinasofti.cloudeasy.api.web.LogController）
      * @return
      */
-    @ApiOperation(value = "changeLogLevel")
     @GetMapping("changeLevel")
     @ApiImplicitParams({
             @ApiImplicitParam(name = "rootLevel",

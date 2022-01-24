@@ -1,6 +1,9 @@
 package cn.org.autumn.modules.wall.service;
 
+import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysConfigService;
+import cn.org.autumn.modules.sys.shiro.ShiroUtils;
+import cn.org.autumn.modules.usr.service.UserProfileService;
 import cn.org.autumn.site.HostFactory;
 import cn.org.autumn.utils.IPUtils;
 import org.apache.commons.lang.StringUtils;
@@ -40,6 +43,9 @@ public class WallService {
     @Autowired
     HostFactory hostFactory;
 
+    @Autowired
+    UserProfileService userProfileService;
+
     public boolean isEnabled(ServletRequest servletRequest, ServletResponse servletResponse, boolean logEnable) {
         HttpServletRequest request = (HttpServletRequest) servletRequest;
         HttpServletResponse response = (HttpServletResponse) servletResponse;
@@ -64,6 +70,14 @@ public class WallService {
             }
 
             String ip = IPUtils.getIp(request);
+            try {
+                SysUserEntity userEntity = ShiroUtils.getUserEntity();
+                if (null != userEntity) {
+                    userProfileService.updateVisitIp(userEntity.getUuid(), ip);
+                }
+            } catch (Exception ignored) {
+            }
+
             if (!ipWhiteService.isWhite(ip) && ipBlackService.isBlack(ip)) {
                 if (null != response) {
                     response.setStatus(500);
