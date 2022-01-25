@@ -13,4 +13,9 @@ import org.springframework.stereotype.Service;
 @Menu(name = "防火墙", order = 777777, ico = "fa-firefox")
 public class WallMenu extends ModuleMenu {
 
+    public String[][] getLanguageItems() {
+        return new String[][]{
+                {getLanguageKey(), "防火墙", "Fire Wall"},
+        };
+    }
 }

@@ -2,14 +2,9 @@ package cn.org.autumn.modules.lan.entity;
 
 import com.baomidou.mybatisplus.annotations.*;
 import cn.org.autumn.table.annotation.*;
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
-import org.apache.commons.lang.StringUtils;
 
 import java.io.Serializable;
 import java.lang.reflect.Field;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -21,7 +16,6 @@ import java.util.Objects;
  * @email henryxm@163.com
  * @date 2020-10
  */
-@UniqueKeys({@UniqueKey(name = "name", fields = {@UniqueKeyFields(field = "name")})})
 @TableName("sys_language")
 @Table(value = "sys_language", comment = "国家语言")
 public class LanguageEntity implements Serializable {
@@ -36,7 +30,7 @@ public class LanguageEntity implements Serializable {
     /**
      * 标识
      */
-    @Column(length = 200, isNull = false, comment = "标识")
+    @Column(length = 200, isNull = false, isUnique = true, comment = "标识")
     private String name;
     /**
      * 简体中文(中国)
@@ -528,11 +522,7 @@ public class LanguageEntity implements Serializable {
         return Objects.hash(getName(), getZhCn(), getEnUs(), getZhHk(), getKoKr(), getJaJp(), getTtRu(), getFrFr(), getDeDe(), getViVn(), getThTh(), getMsMy(), getIdId(), getEsEs(), getTrTr(), getUkUk(), getPuPt(), getPlPl(), getMnMn(), getNbNo(), getItIt(), getHeIl(), getElGr(), getFaIr(), getArSa());
     }
 
-    /**
-     * 合并值
-     *
-     * @param merge
-     */
+    // 合并值
     public LanguageEntity merge(LanguageEntity merge) {
         if (null == merge)
             return this;
@@ -547,7 +537,7 @@ public class LanguageEntity implements Serializable {
                     field.setAccessible(true);
                     field.set(this, f);
                 }
-            } catch (Exception e) {
+            } catch (Exception ignored) {
             }
         }
         return this;
@@ -563,10 +553,10 @@ public class LanguageEntity implements Serializable {
                 String name = field.getName();
                 LanguageMetadata languageMetadata = new LanguageMetadata();
                 languageMetadata.setName(name);
-                languageMetadata.setEnable(true);
+                languageMetadata.setEnable("zhCn".equals(name) || "enUs".equals(name));
                 StringBuilder stringBuilder = new StringBuilder(name);
-                Character character = stringBuilder.charAt(3);
-                String last = character.toString().toUpperCase();
+                char character = stringBuilder.charAt(3);
+                String last = Character.toString(character).toUpperCase();
                 stringBuilder.replace(3, 4, last);
                 stringBuilder.insert(2, "_");
                 languageMetadata.setValue(stringBuilder.toString());
@@ -575,7 +565,7 @@ public class LanguageEntity implements Serializable {
                     languageMetadata.setLabel(column.comment());
                 }
                 languageMetadataList.add(languageMetadata);
-            } catch (Exception e) {
+            } catch (Exception ignored) {
             }
         }
         return languageMetadataList;
