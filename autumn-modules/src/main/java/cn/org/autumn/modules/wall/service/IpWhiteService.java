@@ -38,7 +38,7 @@ public class IpWhiteService extends WallCounter<IpWhiteDao, IpWhiteEntity> imple
             }
             ipWhiteSectionList = tmpSection;
         } catch (Exception e) {
-            log.error("加载IP白名单数据出错：", e);
+            log.error("加载IP白名单数据出错：{}", e.getMessage());
         }
     }
 
@@ -77,7 +77,7 @@ public class IpWhiteService extends WallCounter<IpWhiteDao, IpWhiteEntity> imple
             }
             return false;
         } catch (Exception e) {
-            log.error("无法判断IP白名单：", e);
+            log.error("无法判断IP白名单：{}", e.getMessage());
             return false;
         }
     }
@@ -85,15 +85,6 @@ public class IpWhiteService extends WallCounter<IpWhiteDao, IpWhiteEntity> imple
     @Override
     public String ico() {
         return "fa-list-ul";
-    }
-
-    public void init() {
-        super.init();
-        try {
-            addLocal();
-        } catch (IOException e) {
-            log.debug("addLocal:", e);
-        }
     }
 
     @Override

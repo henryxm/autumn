@@ -486,7 +486,7 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
             if (languageMetadata.isEnable()) {
                 String v = languageMetadata.getValue();
                 String key = "lan_language_column_" + v.toLowerCase();
-                if (map.containsKey(key)) {
+                if (null != map && map.containsKey(key)) {
                     languageMetadata.setLabel(map.get(key));
                 }
                 supportedList.add(languageMetadata);
