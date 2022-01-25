@@ -22,7 +22,7 @@ import java.util.*;
 import static cn.org.autumn.utils.Uuid.uuid;
 
 @Service
-public class UserProfileService extends UserProfileServiceGen implements LoopJob.TenSecond, LoopJob.OneMinute, LoopJob.OneHour {
+public class UserProfileService extends UserProfileServiceGen implements LoopJob.TenSecond, LoopJob.OneMinute {
 
     Logger log = LoggerFactory.getLogger(getClass());
 
@@ -205,12 +205,7 @@ public class UserProfileService extends UserProfileServiceGen implements LoopJob
     @Override
     public void onOneMinute() {
         syncVisitIp();
-    }
-
-    @Override
-    public void onOneHour() {
-        if (visitIps.size() > 10000)
-            visitIps.clear();
+        visitIps.clear();
     }
 
     @Override
