@@ -23,7 +23,7 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
     /**
      * 一个ip地址统计刷新周期内，ip访问次数大于该值后，把ip地址加入到黑名单
      */
-    private int lastCount = 150;
+    private int lastCount = 500;
 
     /**
      * 缓存的黑名单列表，一个刷新周期内，从数据库加载一次
@@ -59,18 +59,18 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
         }
     }
 
-    public boolean isBlack(String ip) {
+    public boolean isBlack(String ip, String agent) {
         try {
             if (StringUtils.isBlank(ip))
                 return false;
             if (ipBlackList.contains(ip)) {
-                count(ip);
+                count(ip, agent);
                 return true;
             }
             for (String section : ipBlackSectionList) {
                 boolean is = IPUtils.isInRange(ip, section);
                 if (is) {
-                    count(section);
+                    count(section, agent);
                     return true;
                 }
             }
@@ -121,7 +121,7 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
      *
      * @param ip
      */
-    public void countIp(String ip) {
+    public void countIp(String ip, String agent) {
         if (StringUtils.isEmpty(ip))
             return;
         if (null == allIp)
@@ -131,7 +131,7 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
             count++;
             allIp.replace(ip, count);
             if (count > lastCount) {
-                saveBlackIp(ip, count, "触发IP黑名单策略");
+                saveBlackIp(ip, agent, count, "触发IP黑名单策略");
             }
         } else
             allIp.put(ip, 1);
@@ -143,11 +143,11 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
      * @param ip
      * @return
      */
-    public boolean saveBlackIp(String ip, Integer count, String tag) {
+    public boolean saveBlackIp(String ip, String agent, Integer count, String tag) {
         try {
-            if (ipWhiteService.isWhite(ip))
+            if (ipWhiteService.isWhite(ip, agent))
                 return false;
-            if (isBlack(ip)) {
+            if (isBlack(ip, agent)) {
                 IpBlackEntity ipBlackEntity = baseMapper.getByIp(ip);
                 if (null != ipBlackEntity) {
                     Long c = ipBlackEntity.getCount();
@@ -227,13 +227,13 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
 
     @Override
     public void onFiveSecond() {
-        refresh(150);
+        refresh(500);
         load();
     }
 
     @Override
-    protected void count(String key, Integer count) {
-        baseMapper.count(key, count);
+    protected void count(String key, String userAgent, Integer count) {
+        baseMapper.count(key, userAgent, count);
     }
 
     @Override

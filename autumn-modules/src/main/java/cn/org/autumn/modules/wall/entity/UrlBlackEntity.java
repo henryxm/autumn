@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.wall.entity;
 
+import cn.org.autumn.table.data.DataType;
 import com.baomidou.mybatisplus.annotations.*;
 import cn.org.autumn.table.annotation.*;
 
@@ -47,6 +48,9 @@ public class UrlBlackEntity implements Serializable {
      */
     @Column(comment = "标签说明")
     private String tag;
+
+    @Column(comment = "用户代理", type = DataType.TEXT)
+    private String userAgent;
     /**
      * 描述信息
      */
@@ -143,5 +147,13 @@ public class UrlBlackEntity implements Serializable {
      */
     public String getDescription() {
         return description;
+    }
+
+    public String getUserAgent() {
+        return userAgent;
+    }
+
+    public void setUserAgent(String userAgent) {
+        this.userAgent = userAgent;
     }
 }

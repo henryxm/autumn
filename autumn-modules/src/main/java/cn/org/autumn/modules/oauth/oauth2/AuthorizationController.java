@@ -20,6 +20,7 @@ import cn.org.autumn.site.PageFactory;
 import cn.org.autumn.utils.IPUtils;
 import cn.org.autumn.utils.Utils;
 import com.alibaba.fastjson.JSON;
+import io.swagger.v3.oas.annotations.Operation;
 import org.apache.commons.lang.StringUtils;
 import org.apache.oltu.oauth2.as.issuer.MD5Generator;
 import org.apache.oltu.oauth2.as.issuer.OAuthIssuerImpl;
@@ -94,11 +95,7 @@ public class AuthorizationController {
     PageFactory pageFactory;
 
     private ResponseEntity error(String description, String error, int errorResponse) throws OAuthSystemException {
-        OAuthResponse oAuthResponse = OAuthASResponse
-                .errorResponse(errorResponse)
-                .setError(error)
-                .setErrorDescription(description)
-                .buildJSONMessage();
+        OAuthResponse oAuthResponse = OAuthASResponse.errorResponse(errorResponse).setError(error).setErrorDescription(description).buildJSONMessage();
         return new ResponseEntity(oAuthResponse.getBody(), HttpStatus.valueOf(oAuthResponse.getResponseStatus()));
     }
 
@@ -115,19 +112,16 @@ public class AuthorizationController {
                 SavedRequest savedRequest = WebUtils.getSavedRequest(request);
                 String back = callback;
                 if (null != savedRequest) {
-                    if (StringUtils.isBlank(callback))
-                        back = savedRequest.getRequestUrl();
-                    else
-                        back = callback + "&callback=" + savedRequest.getRequestUrl();
+                    if (StringUtils.isBlank(callback)) back = savedRequest.getRequestUrl();
+                    else back = callback + "&callback=" + savedRequest.getRequestUrl();
                 }
-                if (StringUtils.isBlank(back))
-                    back = "/";
+                if (StringUtils.isBlank(back)) back = "/";
                 sysUserService.login(username, password, rememberMe);
                 try {
                     String ip = IPUtils.getIp(request);
                     SysUserEntity userEntity = ShiroUtils.getUserEntity();
                     if (null != userEntity) {
-                        userProfileService.updateLoginIp(userEntity.getUuid(), ip);
+                        userProfileService.updateLoginIp(userEntity.getUuid(), ip, request.getHeader("user-agent"));
                     }
                 } catch (Exception ignored) {
                 }
@@ -144,8 +138,7 @@ public class AuthorizationController {
         }
         try {
             if (StringUtils.isNotBlank(error)) {
-                if (error.length() > 200)
-                    error = error.substring(0, 200);
+                if (error.length() > 200) error = error.substring(0, 200);
                 if (StringUtils.isBlank(callback))
                     return "redirect:/oauth2/login?error=" + URLEncoder.encode(error, "utf-8");
                 else
@@ -154,13 +147,13 @@ public class AuthorizationController {
         } catch (Exception ignored) {
         }
         String perror = request.getParameter("error");
-        if (StringUtils.isBlank(perror))
-            perror = "";
+        if (StringUtils.isBlank(perror)) perror = "";
         model.addAttribute("error", perror);
         return pageFactory.login(request, response, model);
     }
 
-    @RequestMapping("authorize")
+    @RequestMapping(value = "authorize", method = RequestMethod.GET)
+    @Operation(description = "授权登录", summary = "授权登录", operationId = "authorize")
     public Object applyAuthorize(HttpServletRequest request, HttpServletResponse response, Model model) throws OAuthSystemException, OAuthProblemException {
         if (ShiroUtils.needLogin()) {
             ModelAndView mav1 = new ModelAndView();
@@ -221,18 +214,16 @@ public class AuthorizationController {
         ModelAndView mav = new ModelAndView();
         mav.addObject(OAUTH_CODE, authCode);
         String state = request.getParameter(OAUTH_STATE);
-        if (StringUtils.isNotEmpty(state))
-            mav.addObject(OAUTH_STATE, state);
+        if (StringUtils.isNotEmpty(state)) mav.addObject(OAUTH_STATE, state);
         String callback = request.getParameter("callback");
-        if (null == callback)
-            callback = "";
-        else
-            callback = "?callback=" + callback;
+        if (null == callback) callback = "";
+        else callback = "?callback=" + callback;
         mav.setViewName("redirect:" + redirectURI + callback);
         return mav;
     }
 
     @RequestMapping(value = "token", method = RequestMethod.POST)
+    @Operation(description = "获取token", summary = "获取token", operationId = "token")
     public HttpEntity applyAccessToken(HttpServletRequest request) throws OAuthSystemException, OAuthProblemException {
         //构建OAuth请求
         OAuthTokenRequest tokenRequest = new OAuthTokenRequest(request);
@@ -257,11 +248,9 @@ public class AuthorizationController {
             return error("客户端安全KEY认证失败！", UNAUTHORIZED_CLIENT, SC_UNAUTHORIZED);
         }
         String grantType = tokenRequest.getParam(OAuth.OAUTH_GRANT_TYPE);
-        if (StringUtils.isBlank(grantType))
-            return error("非法授权", INVALID_GRANT, SC_BAD_REQUEST);
+        if (StringUtils.isBlank(grantType)) return error("非法授权", INVALID_GRANT, SC_BAD_REQUEST);
 
-        if (!authClient.granted(grantType))
-            return error("未获得授权", INVALID_GRANT, SC_BAD_REQUEST);
+        if (!authClient.granted(grantType)) return error("未获得授权", INVALID_GRANT, SC_BAD_REQUEST);
 
         String authCode = tokenRequest.getParam(OAuth.OAUTH_CODE);
         TokenStore tokenStore = null;
@@ -301,7 +290,7 @@ public class AuthorizationController {
             if (isLogin) {
                 SysUserEntity sysUserEntity = sysUserService.getByUsername(username);
                 tokenStore = new TokenStore(sysUserEntity);
-                userProfileService.updateLoginIp(sysUserEntity.getUuid(), IPUtils.getIp(request));
+                userProfileService.updateLoginIp(sysUserEntity.getUuid(), IPUtils.getIp(request), request.getHeader("user-agent"));
             }
         }
 
@@ -319,9 +308,7 @@ public class AuthorizationController {
         if (null != tokenStore.getValue() && sysConfigService.currentToken() && tokenStore.getValue() instanceof SysUserEntity) {
             SysUserEntity sysUserEntity = (SysUserEntity) tokenStore.getValue();
             TokenStoreEntity tokenStoreEntity = tokenStoreService.findByUser(sysUserEntity);
-            if (null != tokenStoreEntity
-                    && StringUtils.isNotBlank(tokenStoreEntity.getAccessToken())
-                    && StringUtils.isNotBlank(tokenStoreEntity.getRefreshToken())) {
+            if (null != tokenStoreEntity && StringUtils.isNotBlank(tokenStoreEntity.getAccessToken()) && StringUtils.isNotBlank(tokenStoreEntity.getRefreshToken())) {
                 boolean validA = clientDetailsService.isValidAccessToken(tokenStoreEntity.getAccessToken());
                 boolean validR = clientDetailsService.isValidRefreshToken(tokenStoreEntity.getRefreshToken());
                 if (validA && validR) {
@@ -345,14 +332,7 @@ public class AuthorizationController {
         }
 
         //生成OAuth响应
-        OAuthResponse response = OAuthASResponse
-                .tokenResponse(HttpServletResponse.SC_OK)
-                .setAccessToken(accessToken)
-                .setRefreshToken(refreshToken)
-                .setTokenType("bearer")
-                .setExpiresIn(String.valueOf(TokenStore.getExpireIn()))
-                .setScope("basic")
-                .buildJSONMessage();
+        OAuthResponse response = OAuthASResponse.tokenResponse(HttpServletResponse.SC_OK).setAccessToken(accessToken).setRefreshToken(refreshToken).setTokenType("bearer").setExpiresIn(String.valueOf(TokenStore.getExpireIn())).setScope("basic").buildJSONMessage();
         return new ResponseEntity(response.getBody(), HttpStatus.valueOf(response.getResponseStatus()));
     }
 
@@ -374,13 +354,10 @@ public class AuthorizationController {
             // 验证访问令牌
             if (!clientDetailsService.isValidAccessToken(accessTokenKey)) {
                 // 如果不存在/过期了，返回未验证错误，需重新验证
-                OAuthResponse oauthResponse = OAuthRSResponse.errorResponse(SC_UNAUTHORIZED)
-                        .setRealm("Apache Oltu").setError(OAuthError.ResourceResponse.INVALID_TOKEN)
-                        .buildHeaderMessage();
+                OAuthResponse oauthResponse = OAuthRSResponse.errorResponse(SC_UNAUTHORIZED).setRealm("Apache Oltu").setError(OAuthError.ResourceResponse.INVALID_TOKEN).buildHeaderMessage();
 
                 HttpHeaders headers = new HttpHeaders();
-                headers.add(OAuth.HeaderType.WWW_AUTHENTICATE,
-                        oauthResponse.getHeader(OAuth.HeaderType.WWW_AUTHENTICATE));
+                headers.add(OAuth.HeaderType.WWW_AUTHENTICATE, oauthResponse.getHeader(OAuth.HeaderType.WWW_AUTHENTICATE));
                 return new ResponseEntity(headers, HttpStatus.UNAUTHORIZED);
             }
 
@@ -405,22 +382,15 @@ public class AuthorizationController {
                 OAuthResponse oauthResponse = OAuthRSResponse.errorResponse(SC_UNAUTHORIZED).buildHeaderMessage();
 
                 HttpHeaders headers = new HttpHeaders();
-                headers.add(OAuth.HeaderType.WWW_AUTHENTICATE,
-                        oauthResponse.getHeader(OAuth.HeaderType.WWW_AUTHENTICATE));
+                headers.add(OAuth.HeaderType.WWW_AUTHENTICATE, oauthResponse.getHeader(OAuth.HeaderType.WWW_AUTHENTICATE));
 
                 return new ResponseEntity(headers, HttpStatus.UNAUTHORIZED);
             }
 
-            OAuthResponse oauthResponse = OAuthRSResponse
-                    .errorResponse(SC_UNAUTHORIZED)
-                    .setError(e.getError())
-                    .setErrorDescription(e.getDescription())
-                    .setErrorUri(e.getUri())
-                    .buildHeaderMessage();
+            OAuthResponse oauthResponse = OAuthRSResponse.errorResponse(SC_UNAUTHORIZED).setError(e.getError()).setErrorDescription(e.getDescription()).setErrorUri(e.getUri()).buildHeaderMessage();
 
             HttpHeaders headers = new HttpHeaders();
-            headers.add(OAuth.HeaderType.WWW_AUTHENTICATE,
-                    oauthResponse.getHeader(OAuth.HeaderType.WWW_AUTHENTICATE));
+            headers.add(OAuth.HeaderType.WWW_AUTHENTICATE, oauthResponse.getHeader(OAuth.HeaderType.WWW_AUTHENTICATE));
 
             return new ResponseEntity(HttpStatus.BAD_REQUEST);
         }

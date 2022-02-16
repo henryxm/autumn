@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.wall.entity;
 
+import cn.org.autumn.table.data.DataType;
 import com.baomidou.mybatisplus.annotations.*;
 import cn.org.autumn.table.annotation.*;
 
@@ -47,11 +48,15 @@ public class IpBlackEntity implements Serializable {
      */
     @Column(comment = "标签说明")
     private String tag;
+
+    @Column(comment = "用户代理", type = DataType.TEXT)
+    private String userAgent;
     /**
      * 描述信息
      */
     @Column(comment = "描述信息")
     private String description;
+
     /**
      * 创建时间
      */
@@ -181,5 +186,13 @@ public class IpBlackEntity implements Serializable {
      */
     public Date getUpdateTime() {
         return updateTime;
+    }
+
+    public String getUserAgent() {
+        return userAgent;
+    }
+
+    public void setUserAgent(String userAgent) {
+        this.userAgent = userAgent;
     }
 }

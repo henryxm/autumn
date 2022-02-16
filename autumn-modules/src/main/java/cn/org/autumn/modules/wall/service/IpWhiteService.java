@@ -55,24 +55,24 @@ public class IpWhiteService extends WallCounter<IpWhiteDao, IpWhiteEntity> imple
         return 0 < baseMapper.hasIp(ip);
     }
 
-    public boolean isWhite(String ip) {
+    public boolean isWhite(String ip, String agent) {
         try {
             if (StringUtils.isEmpty(ip))
                 return false;
             if (ipWhiteList.contains(ip)) {
-                count(ip);
+                count(ip, agent);
                 return true;
             }
             for (String section : ipWhiteSectionList) {
                 boolean is = IPUtils.isInRange(ip, section);
                 if (is) {
-                    count(section);
+                    count(section, agent);
                     return true;
                 }
             }
             if (hasIp(ip)) {
                 put(ip);
-                count(ip);
+                count(ip, agent);
                 return true;
             }
             return false;
@@ -125,8 +125,8 @@ public class IpWhiteService extends WallCounter<IpWhiteDao, IpWhiteEntity> imple
     }
 
     @Override
-    protected void count(String key, Integer count) {
-        baseMapper.count(key, count);
+    protected void count(String key, String userAgent, Integer count) {
+        baseMapper.count(key, userAgent, count);
     }
 
     @Override

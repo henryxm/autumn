@@ -46,8 +46,8 @@ public class IpVisitService extends WallCounter<IpVisitDao, IpVisitEntity> {
     }
 
     @Override
-    protected void count(String key, Integer count) {
-        baseMapper.count(key, count);
+    protected void count(String key, String userAgent, Integer count) {
+        baseMapper.count(key, userAgent, count);
     }
 
     protected void clear() {

@@ -16,7 +16,9 @@ public abstract class WallCounter<M extends BaseMapper<T>, T> extends ModuleServ
 
     private final Map<String, Integer> counter = new HashMap<>();
 
-    protected abstract void count(String key, Integer count);
+    private final Map<String, String> userAgent = new HashMap<>();
+
+    protected abstract void count(String key, String userAgent, Integer count);
 
     protected abstract void clear();
 
@@ -29,11 +31,14 @@ public abstract class WallCounter<M extends BaseMapper<T>, T> extends ModuleServ
     protected void create(String key) {
     }
 
-    public void count(String key) {
+    public void count(String key, String agent) {
         if (counter.containsKey(key)) {
             counter.replace(key, counter.get(key) + 1);
-        } else
+            userAgent.replace(key, agent);
+        } else {
             counter.put(key, 1);
+            userAgent.put(key, agent);
+        }
     }
 
     public void count() {
@@ -43,8 +48,9 @@ public abstract class WallCounter<M extends BaseMapper<T>, T> extends ModuleServ
             if (create() && !has(entry.getKey())) {
                 create(entry.getKey());
             }
-            count(entry.getKey(), entry.getValue());
+            count(entry.getKey(), userAgent.get(entry.getKey()), entry.getValue());
             iterator.remove();
+            userAgent.remove(entry.getKey());
         }
     }
 

@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.usr.entity;
 
+import cn.org.autumn.table.data.DataType;
 import com.baomidou.mybatisplus.annotations.*;
 import cn.org.autumn.table.annotation.*;
 import com.baomidou.mybatisplus.enums.IdType;
@@ -65,6 +66,9 @@ public class UserProfileEntity implements Serializable {
 
     @Column(comment = "访问IP")
     private String visitIp;
+
+    @Column(comment = "用户代理", type = DataType.TEXT)
+    private String userAgent;
     /**
      * 创建时间
      */
@@ -235,6 +239,14 @@ public class UserProfileEntity implements Serializable {
 
     public void setVisitTime(Date visitTime) {
         this.visitTime = visitTime;
+    }
+
+    public String getUserAgent() {
+        return userAgent;
+    }
+
+    public void setUserAgent(String userAgent) {
+        this.userAgent = userAgent;
     }
 
     @Override

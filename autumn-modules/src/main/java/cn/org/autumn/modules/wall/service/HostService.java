@@ -28,7 +28,7 @@ public class HostService extends WallCounter<HostDao, HostEntity> implements Loa
     public boolean isBlack(String host) {
         try {
             if (blackHostList.contains(host)) {
-                count(host);
+                count(host, "");
                 return true;
             }
             return false;
@@ -78,7 +78,7 @@ public class HostService extends WallCounter<HostDao, HostEntity> implements Loa
     }
 
     @Override
-    protected void count(String key, Integer count) {
+    protected void count(String key, String userAgent, Integer count) {
         baseMapper.count(key, count);
     }
 

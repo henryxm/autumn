@@ -2,6 +2,7 @@ package cn.org.autumn.modules.wall.entity;
 
 import cn.org.autumn.table.annotation.Column;
 import cn.org.autumn.table.annotation.Table;
+import cn.org.autumn.table.data.DataType;
 import com.baomidou.mybatisplus.annotations.TableId;
 import com.baomidou.mybatisplus.annotations.TableName;
 
@@ -28,6 +29,9 @@ public class IpVisitEntity implements Serializable {
 
     @Column(comment = "标签说明")
     private String tag;
+
+    @Column(comment = "用户代理", type = DataType.TEXT)
+    private String userAgent;
 
     @Column(comment = "描述信息")
     private String description;
@@ -100,5 +104,13 @@ public class IpVisitEntity implements Serializable {
 
     public void setUpdateTime(Date updateTime) {
         this.updateTime = updateTime;
+    }
+
+    public String getUserAgent() {
+        return userAgent;
+    }
+
+    public void setUserAgent(String userAgent) {
+        this.userAgent = userAgent;
     }
 }

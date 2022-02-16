@@ -163,9 +163,11 @@ public class SysUserRoleService extends ServiceImpl<SysUserRoleDao, SysUserRoleE
     }
 
     public boolean isSystemAdministrator(SysUserEntity sysUserEntity) {
-        List<String> roleKeys = baseMapper.getRoleKeys(sysUserEntity.getUuid());
-        if (null != roleKeys && roleKeys.size() > 0) {
-            return roleKeys.contains(Role_System_Administrator);
+        if (null != sysUserEntity) {
+            List<String> roleKeys = baseMapper.getRoleKeys(sysUserEntity.getUuid());
+            if (null != roleKeys && roleKeys.size() > 0) {
+                return roleKeys.contains(Role_System_Administrator);
+            }
         }
         return false;
     }

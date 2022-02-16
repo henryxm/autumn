@@ -55,31 +55,40 @@ public class UserProfileService extends UserProfileServiceGen implements LoopJob
     }
 
     public void updateLoginIp(String uuid, String ip) {
+        updateLoginIp(uuid, ip, "");
+    }
+
+    public void updateLoginIp(String uuid, String ip, String userAgent) {
         if (StringUtils.isBlank(ip) || StringUtils.isBlank(uuid) || ip.length() > 100)
             return;
-        baseMapper.updateLoginIp(uuid, ip);
+        baseMapper.updateLoginIp(uuid, ip, userAgent);
     }
 
     public void syncVisitIp() {
         for (Map.Entry<String, VisitIp> entry : visitIps.entrySet()) {
             if (!entry.getValue().isUpdated()) {
-                baseMapper.updateVisitIp(entry.getKey(), entry.getValue().getIp());
+                baseMapper.updateVisitIp(entry.getKey(), entry.getValue().getIp(), entry.getValue().getUserAgent());
                 entry.getValue().setUpdated(true);
             }
         }
     }
 
     public void updateVisitIp(String uuid, String ip) {
+        updateVisitIp(uuid, ip, "");
+    }
+
+    public void updateVisitIp(String uuid, String ip, String userAgent) {
         if (StringUtils.isBlank(ip) || StringUtils.isBlank(uuid) || ip.length() > 100)
             return;
         if (visitIps.containsKey(uuid)) {
             VisitIp visitIp = visitIps.get(uuid);
             if (!visitIp.getIp().equals(ip)) {
                 visitIp.setIp(ip);
+                visitIp.setUserAgent(userAgent);
                 visitIp.setUpdated(false);
             }
         } else {
-            visitIps.put(uuid, new VisitIp(ip));
+            visitIps.put(uuid, new VisitIp(ip, userAgent));
         }
     }
 

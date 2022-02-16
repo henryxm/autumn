@@ -84,7 +84,7 @@ public class SysLoginController {
             try {
                 SysUserEntity userEntity = ShiroUtils.getUserEntity();
                 if (null != userEntity) {
-                    userProfileService.updateLoginIp(userEntity.getUuid(), ip);
+                    userProfileService.updateLoginIp(userEntity.getUuid(), ip, request.getHeader("user-agent"));
                 }
             } catch (Exception ignored) {
             }

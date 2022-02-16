@@ -25,8 +25,8 @@ public interface IpVisitDao extends BaseMapper<IpVisitEntity> {
     @Select("select count(*) from wall_ip_visit where ip = #{ip}")
     Integer hasIp(@Param("ip") String ip);
 
-    @Select("update wall_ip_visit set `count` = ifnull(`count`,0) + #{count}, today = ifnull(today,0) + #{count}, update_time = now() where ip = #{ip}")
-    Integer count(@Param("ip") String ip, @Param("count") Integer count);
+    @Select("update wall_ip_visit set `count` = ifnull(`count`,0) + #{count}, user_agent = #{userAgent}, today = ifnull(today,0) + #{count}, update_time = now() where ip = #{ip}")
+    Integer count(@Param("ip") String ip, @Param("userAgent") String userAgent, @Param("count") Integer count);
 
     @Select("update wall_ip_visit set today = 0")
     Integer clear();

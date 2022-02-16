@@ -52,6 +52,7 @@ public class WallService {
         try {
             String remoteip = request.getHeader("remoteip");
             String host = request.getHeader("host");
+            String userAgent = request.getHeader("user-agent");
             if (logEnable)
                 print(request);
             if (hostService.isBlack(host) || !hostFactory.isAllowed(request, response)) {
@@ -62,7 +63,7 @@ public class WallService {
             }
 
             // 不是白名单的ip，并且是黑名单ip，就直接退出
-            if (!ipWhiteService.isWhite(remoteip) && ipBlackService.isBlack(remoteip)) {
+            if (!ipWhiteService.isWhite(remoteip, userAgent) && ipBlackService.isBlack(remoteip, userAgent)) {
                 if (null != response) {
                     response.setStatus(500);
                 }
@@ -73,12 +74,12 @@ public class WallService {
             try {
                 SysUserEntity userEntity = ShiroUtils.getUserEntity();
                 if (null != userEntity) {
-                    userProfileService.updateVisitIp(userEntity.getUuid(), ip);
+                    userProfileService.updateVisitIp(userEntity.getUuid(), ip, userAgent);
                 }
             } catch (Exception ignored) {
             }
 
-            if (!ipWhiteService.isWhite(ip) && ipBlackService.isBlack(ip)) {
+            if (!ipWhiteService.isWhite(ip, userAgent) && ipBlackService.isBlack(ip, userAgent)) {
                 if (null != response) {
                     response.setStatus(500);
                 }
@@ -99,15 +100,15 @@ public class WallService {
                 }
                 return false;
             } else
-                urlBlackService.countUrl(uri, ip);
-            if (!ipWhiteService.isWhite(ip)) {
-                ipBlackService.countIp(ip);
+                urlBlackService.countUrl(uri, ip, userAgent);
+            if (!ipWhiteService.isWhite(ip, userAgent)) {
+                ipBlackService.countIp(ip, userAgent);
             }
-            if (null != remoteip && !remoteip.equals(ip) && !ipWhiteService.isWhite(remoteip) && !"null".equals(remoteip)) {
-                ipBlackService.countIp(remoteip);
+            if (null != remoteip && !remoteip.equals(ip) && !ipWhiteService.isWhite(remoteip, userAgent) && !"null".equals(remoteip)) {
+                ipBlackService.countIp(remoteip, userAgent);
             }
-            hostService.count(host);
-            ipVisitService.count(ip);
+            hostService.count(host, userAgent);
+            ipVisitService.count(ip, userAgent);
         } catch (Exception e) {
             logger.error("黑名单过滤错误，需核查：{}", e.getMessage());
         }

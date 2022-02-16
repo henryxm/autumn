@@ -47,13 +47,13 @@ public class UrlBlackService extends WallCounter<UrlBlackDao, UrlBlackEntity> im
 
     public boolean isBlack(String url) {
         if (blackUrls.contains(url)) {
-            count(url);
+            count(url, "");
             return true;
         }
         return false;
     }
 
-    public void countUrl(String url, String ip) {
+    public void countUrl(String url, String ip, String agent) {
         try {
             if (StringUtils.isEmpty(ip))
                 return;
@@ -70,7 +70,7 @@ public class UrlBlackService extends WallCounter<UrlBlackDao, UrlBlackEntity> im
                 int count = allUrls.get(hashCode) + 1;
                 allUrls.replace(hashCode, count);
                 if (count > lastCount) {
-                    ipBlackService.saveBlackIp(ip, 0, "触发URL黑名单策略");
+                    ipBlackService.saveBlackIp(ip, agent, 0, "触发URL黑名单策略");
                     allUrls.replace(hashCode, 0);
                 }
             } else
@@ -133,8 +133,8 @@ public class UrlBlackService extends WallCounter<UrlBlackDao, UrlBlackEntity> im
     }
 
     @Override
-    protected void count(String key, Integer count) {
-        baseMapper.count(key, count);
+    protected void count(String key, String userAgent, Integer count) {
+        baseMapper.count(key, userAgent, count);
     }
 
     @Override
