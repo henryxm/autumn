@@ -30,6 +30,9 @@ public class IpVisitEntity implements Serializable {
     @Column(comment = "标签说明")
     private String tag;
 
+    @Column(comment = "主机地址")
+    private String host;
+
     @Column(comment = "用户代理", type = DataType.TEXT)
     private String userAgent;
 
@@ -112,5 +115,13 @@ public class IpVisitEntity implements Serializable {
 
     public void setUserAgent(String userAgent) {
         this.userAgent = userAgent;
+    }
+
+    public String getHost() {
+        return host;
+    }
+
+    public void setHost(String host) {
+        this.host = host;
     }
 }

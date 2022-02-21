@@ -232,7 +232,7 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
     }
 
     @Override
-    protected void count(String key, String userAgent, Integer count) {
+    protected void count(String key, String userAgent, String host, Integer count) {
         baseMapper.count(key, userAgent, count);
     }
 

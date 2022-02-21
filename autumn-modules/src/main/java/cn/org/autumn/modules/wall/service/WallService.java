@@ -107,8 +107,8 @@ public class WallService {
             if (null != remoteip && !remoteip.equals(ip) && !ipWhiteService.isWhite(remoteip, userAgent) && !"null".equals(remoteip)) {
                 ipBlackService.countIp(remoteip, userAgent);
             }
-            hostService.count(host, userAgent);
-            ipVisitService.count(ip, userAgent);
+            hostService.count(host, userAgent, host);
+            ipVisitService.count(ip, userAgent, host);
         } catch (Exception e) {
             logger.error("黑名单过滤错误，需核查：{}", e.getMessage());
         }

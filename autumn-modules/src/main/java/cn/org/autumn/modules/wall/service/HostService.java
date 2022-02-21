@@ -78,7 +78,7 @@ public class HostService extends WallCounter<HostDao, HostEntity> implements Loa
     }
 
     @Override
-    protected void count(String key, String userAgent, Integer count) {
+    protected void count(String key, String userAgent, String host, Integer count) {
         baseMapper.count(key, count);
     }
 
