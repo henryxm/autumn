@@ -4,6 +4,7 @@ import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.usr.service.UserProfileService;
+import cn.org.autumn.modules.wall.entity.RData;
 import cn.org.autumn.site.HostFactory;
 import cn.org.autumn.utils.IPUtils;
 import org.apache.commons.lang.StringUtils;
@@ -53,6 +54,7 @@ public class WallService {
             String remoteip = request.getHeader("remoteip");
             String host = request.getHeader("host");
             String userAgent = request.getHeader("user-agent");
+            String refer = request.getHeader("refer");
             if (logEnable)
                 print(request);
             if (hostService.isBlack(host) || !hostFactory.isAllowed(request, response)) {
@@ -101,14 +103,20 @@ public class WallService {
                 return false;
             } else
                 urlBlackService.countUrl(uri, ip, userAgent);
+            RData rData = new RData();
+            rData.setHost(host);
+            rData.setIp(ip);
+            rData.setUri(uri);
+            rData.setRefer(refer);
+            rData.setUserAgent(userAgent);
             if (!ipWhiteService.isWhite(ip, userAgent)) {
                 ipBlackService.countIp(ip, userAgent);
             }
             if (null != remoteip && !remoteip.equals(ip) && !ipWhiteService.isWhite(remoteip, userAgent) && !"null".equals(remoteip)) {
                 ipBlackService.countIp(remoteip, userAgent);
             }
-            hostService.count(host, userAgent, host);
-            ipVisitService.count(ip, userAgent, host);
+            hostService.count(host, rData);
+            ipVisitService.count(ip, rData);
         } catch (Exception e) {
             logger.error("黑名单过滤错误，需核查：{}", e.getMessage());
         }

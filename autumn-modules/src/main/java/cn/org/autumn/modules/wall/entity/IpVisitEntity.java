@@ -33,6 +33,12 @@ public class IpVisitEntity implements Serializable {
     @Column(comment = "主机地址")
     private String host;
 
+    @Column(comment = "访问地址", type = DataType.TEXT)
+    String uri;
+
+    @Column(comment = "关联地址", type = DataType.TEXT)
+    String refer;
+
     @Column(comment = "用户代理", type = DataType.TEXT)
     private String userAgent;
 
@@ -123,5 +129,21 @@ public class IpVisitEntity implements Serializable {
 
     public void setHost(String host) {
         this.host = host;
+    }
+
+    public String getUri() {
+        return uri;
+    }
+
+    public void setUri(String uri) {
+        this.uri = uri;
+    }
+
+    public String getRefer() {
+        return refer;
+    }
+
+    public void setRefer(String refer) {
+        this.refer = refer;
     }
 }

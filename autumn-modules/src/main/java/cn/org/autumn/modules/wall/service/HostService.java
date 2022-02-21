@@ -2,6 +2,7 @@ package cn.org.autumn.modules.wall.service;
 
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.wall.dao.HostDao;
+import cn.org.autumn.modules.wall.entity.RData;
 import cn.org.autumn.site.LoadFactory;
 import cn.org.autumn.modules.wall.entity.HostEntity;
 import org.slf4j.Logger;
@@ -28,7 +29,7 @@ public class HostService extends WallCounter<HostDao, HostEntity> implements Loa
     public boolean isBlack(String host) {
         try {
             if (blackHostList.contains(host)) {
-                count(host, "");
+                count(host, new RData());
                 return true;
             }
             return false;
@@ -78,8 +79,8 @@ public class HostService extends WallCounter<HostDao, HostEntity> implements Loa
     }
 
     @Override
-    protected void count(String key, String userAgent, String host, Integer count) {
-        baseMapper.count(key, count);
+    protected void save(String key, RData rData) {
+        baseMapper.count(key, rData.getCount());
     }
 
     @Override

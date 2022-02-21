@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.wall.service;
 
+import cn.org.autumn.modules.wall.entity.RData;
 import org.springframework.stereotype.Service;
 import cn.org.autumn.modules.wall.dao.IpVisitDao;
 import cn.org.autumn.modules.wall.entity.IpVisitEntity;
@@ -46,8 +47,8 @@ public class IpVisitService extends WallCounter<IpVisitDao, IpVisitEntity> {
     }
 
     @Override
-    protected void count(String key, String userAgent, String host, Integer count) {
-        baseMapper.count(key, userAgent, host, count);
+    protected void save(String key, RData rData) {
+        baseMapper.count(key, rData.getUserAgent(), rData.getHost(), rData.getUri(), rData.getRefer(), rData.getCount());
     }
 
     protected void clear() {

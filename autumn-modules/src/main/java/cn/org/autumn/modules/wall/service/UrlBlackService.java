@@ -1,6 +1,7 @@
 package cn.org.autumn.modules.wall.service;
 
 import cn.org.autumn.modules.wall.dao.UrlBlackDao;
+import cn.org.autumn.modules.wall.entity.RData;
 import cn.org.autumn.site.LoadFactory;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.wall.entity.UrlBlackEntity;
@@ -47,7 +48,7 @@ public class UrlBlackService extends WallCounter<UrlBlackDao, UrlBlackEntity> im
 
     public boolean isBlack(String url) {
         if (blackUrls.contains(url)) {
-            count(url, "");
+            count(url, null);
             return true;
         }
         return false;
@@ -133,8 +134,8 @@ public class UrlBlackService extends WallCounter<UrlBlackDao, UrlBlackEntity> im
     }
 
     @Override
-    protected void count(String key, String userAgent, String host, Integer count) {
-        baseMapper.count(key, userAgent, count);
+    protected void save(String key, RData rData) {
+        baseMapper.count(key, rData.getUserAgent(), rData.getCount());
     }
 
     @Override

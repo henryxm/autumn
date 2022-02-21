@@ -2,6 +2,7 @@ package cn.org.autumn.modules.wall.service;
 
 import cn.org.autumn.base.ModuleService;
 import cn.org.autumn.modules.job.task.LoopJob;
+import cn.org.autumn.modules.wall.entity.RData;
 import com.baomidou.mybatisplus.mapper.BaseMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,13 +15,9 @@ public abstract class WallCounter<M extends BaseMapper<T>, T> extends ModuleServ
 
     private final Logger log = LoggerFactory.getLogger(getClass());
 
-    private final Map<String, Integer> counter = new HashMap<>();
+    private final Map<String, RData> counter = new HashMap<>();
 
-    private final Map<String, String> userAgent = new HashMap<>();
-
-    private final Map<String, String> userHost = new HashMap<>();
-
-    protected abstract void count(String key, String userAgent, String host, Integer count);
+    protected abstract void save(String key, RData rData);
 
     protected abstract void clear();
 
@@ -33,33 +30,31 @@ public abstract class WallCounter<M extends BaseMapper<T>, T> extends ModuleServ
     protected void create(String key) {
     }
 
-    public void count(String key, String agent) {
-        count(key, agent, "");
-    }
-
-    public void count(String key, String agent, String host) {
+    public void count(String key, RData rData) {
         if (counter.containsKey(key)) {
-            counter.replace(key, counter.get(key) + 1);
-            userAgent.replace(key, agent);
-            userHost.replace(key, host);
+            if (null == rData)
+                rData = new RData();
+            if (null != counter.get(key))
+                rData.setCount(counter.get(key).getCount() + 1);
+            counter.replace(key, rData);
         } else {
-            counter.put(key, 1);
-            userAgent.put(key, agent);
-            userHost.put(key, host);
+            if (null == rData) {
+                rData = new RData();
+                rData.setCount(1);
+            }
+            counter.put(key, rData);
         }
     }
 
     public void count() {
-        Iterator<Map.Entry<String, Integer>> iterator = counter.entrySet().iterator();
+        Iterator<Map.Entry<String, RData>> iterator = counter.entrySet().iterator();
         if (iterator.hasNext()) {
-            Map.Entry<String, Integer> entry = iterator.next();
+            Map.Entry<String, RData> entry = iterator.next();
             if (create() && !has(entry.getKey())) {
                 create(entry.getKey());
             }
-            count(entry.getKey(), userAgent.get(entry.getKey()), userHost.get(entry.getKey()), entry.getValue());
+            save(entry.getKey(), entry.getValue());
             iterator.remove();
-            userAgent.remove(entry.getKey());
-            userHost.remove(entry.getKey());
         }
     }
 

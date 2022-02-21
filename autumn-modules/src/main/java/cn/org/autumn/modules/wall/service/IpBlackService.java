@@ -1,6 +1,7 @@
 package cn.org.autumn.modules.wall.service;
 
 import cn.org.autumn.modules.wall.dao.IpBlackDao;
+import cn.org.autumn.modules.wall.entity.RData;
 import cn.org.autumn.site.LoadFactory;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.wall.entity.IpBlackEntity;
@@ -64,13 +65,17 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
             if (StringUtils.isBlank(ip))
                 return false;
             if (ipBlackList.contains(ip)) {
-                count(ip, agent);
+                RData rData = new RData();
+                rData.setUserAgent(agent);
+                count(ip, rData);
                 return true;
             }
             for (String section : ipBlackSectionList) {
                 boolean is = IPUtils.isInRange(ip, section);
                 if (is) {
-                    count(section, agent);
+                    RData rData = new RData();
+                    rData.setUserAgent(agent);
+                    count(section, rData);
                     return true;
                 }
             }
@@ -232,8 +237,8 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
     }
 
     @Override
-    protected void count(String key, String userAgent, String host, Integer count) {
-        baseMapper.count(key, userAgent, count);
+    protected void save(String key, RData rData) {
+        baseMapper.count(key, rData.getUserAgent(), rData.getCount());
     }
 
     @Override

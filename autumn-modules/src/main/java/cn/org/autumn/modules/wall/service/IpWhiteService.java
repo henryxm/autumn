@@ -1,6 +1,7 @@
 package cn.org.autumn.modules.wall.service;
 
 import cn.org.autumn.modules.wall.dao.IpWhiteDao;
+import cn.org.autumn.modules.wall.entity.RData;
 import cn.org.autumn.site.LoadFactory;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.wall.entity.IpWhiteEntity;
@@ -60,19 +61,25 @@ public class IpWhiteService extends WallCounter<IpWhiteDao, IpWhiteEntity> imple
             if (StringUtils.isEmpty(ip))
                 return false;
             if (ipWhiteList.contains(ip)) {
-                count(ip, agent);
+                RData rData = new RData();
+                rData.setUserAgent(agent);
+                count(ip, rData);
                 return true;
             }
             for (String section : ipWhiteSectionList) {
                 boolean is = IPUtils.isInRange(ip, section);
                 if (is) {
-                    count(section, agent);
+                    RData rData = new RData();
+                    rData.setUserAgent(agent);
+                    count(section, rData);
                     return true;
                 }
             }
             if (hasIp(ip)) {
                 put(ip);
-                count(ip, agent);
+                RData rData = new RData();
+                rData.setUserAgent(agent);
+                count(ip, rData);
                 return true;
             }
             return false;
@@ -125,8 +132,8 @@ public class IpWhiteService extends WallCounter<IpWhiteDao, IpWhiteEntity> imple
     }
 
     @Override
-    protected void count(String key, String userAgent, String host, Integer count) {
-        baseMapper.count(key, userAgent, count);
+    protected void save(String key, RData rData) {
+        baseMapper.count(key, rData.getUserAgent(), rData.getCount());
     }
 
     @Override
