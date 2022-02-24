@@ -47,7 +47,7 @@ public class WallService {
     @Autowired
     UserProfileService userProfileService;
 
-    public boolean isEnabled(ServletRequest servletRequest, ServletResponse servletResponse, boolean logEnable) {
+    public boolean isEnabled(ServletRequest servletRequest, ServletResponse servletResponse, boolean logEnable, boolean counter) {
         HttpServletRequest request = (HttpServletRequest) servletRequest;
         HttpServletResponse response = (HttpServletResponse) servletResponse;
         try {
@@ -103,20 +103,22 @@ public class WallService {
                 return false;
             } else
                 urlBlackService.countUrl(uri, ip, userAgent);
-            RData rData = new RData();
-            rData.setHost(host);
-            rData.setIp(ip);
-            rData.setUri(uri);
-            rData.setRefer(refer);
-            rData.setUserAgent(userAgent);
             if (!ipWhiteService.isWhite(ip, userAgent)) {
                 ipBlackService.countIp(ip, userAgent);
             }
             if (null != remoteip && !remoteip.equals(ip) && !ipWhiteService.isWhite(remoteip, userAgent) && !"null".equals(remoteip)) {
                 ipBlackService.countIp(remoteip, userAgent);
             }
-            hostService.count(host, rData);
-            ipVisitService.count(ip, rData);
+            if (counter) {
+                RData rData = new RData();
+                rData.setHost(host);
+                rData.setIp(ip);
+                rData.setUri(uri);
+                rData.setRefer(refer);
+                rData.setUserAgent(userAgent);
+                hostService.count(host, rData);
+                ipVisitService.count(ip, rData);
+            }
         } catch (Exception e) {
             logger.error("黑名单过滤错误，需核查：{}", e.getMessage());
         }

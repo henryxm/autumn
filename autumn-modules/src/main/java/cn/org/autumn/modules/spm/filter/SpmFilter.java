@@ -35,7 +35,7 @@ public class SpmFilter extends FormAuthenticationFilter {
         if (null == wallService)
             wallService = (WallService) Config.getBean("wallService");
         if (null != wallService)
-            return wallService.isEnabled(request, response, false);
+            return wallService.isEnabled(request, response, false,false);
         return true;
     }
 

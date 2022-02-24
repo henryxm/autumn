@@ -22,7 +22,7 @@ public class SessionFiter implements Filter {
     public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
         HttpServletRequest request = (HttpServletRequest) servletRequest;
         HttpServletResponse response = (HttpServletResponse) servletResponse;
-        boolean enable = wallService.isEnabled(servletRequest, servletResponse, false);
+        boolean enable = wallService.isEnabled(servletRequest, servletResponse, false, true);
         if (enable) {
             String originHeader = request.getHeader("Origin");
             response.setHeader("Access-Control-Allow-Origin", originHeader);
