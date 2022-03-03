@@ -28,6 +28,8 @@ public class PostStartupProcessor implements ApplicationListener<ContextRefreshe
     @Override
     public void onApplicationEvent(ContextRefreshedEvent event) {
         ApplicationContext context = (ApplicationContext) event.getSource();
+        if (null != Config.getInstance().getApplicationContext())
+            return;
         Config.getInstance().setApplicationContext(context);
         String[] profiles = context.getEnvironment().getActiveProfiles();
 

@@ -7,15 +7,15 @@ import com.baomidou.mybatisplus.mapper.BaseMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public abstract class WallCounter<M extends BaseMapper<T>, T> extends ModuleService<M, T> implements LoopJob.OneMinute, LoopJob.OneDay {
 
     private final Logger log = LoggerFactory.getLogger(getClass());
 
-    private final Map<String, RData> counter = new HashMap<>();
+    private final Map<String, RData> counter = new ConcurrentHashMap<>();
 
     protected abstract void save(String key, RData rData);
 
