@@ -38,12 +38,12 @@ public class TokenStoreService extends TokenStoreServiceGen {
         super.init();
     }
 
-    public TokenStoreEntity findByUserId(Long userId) {
-        return baseMapper.findByUserId(userId);
-    }
-
     public TokenStoreEntity findByUserUuid(String userUuid) {
         return baseMapper.findByUserUuid(userUuid);
+    }
+
+    public TokenStoreEntity findByAuthCode(String authCode) {
+        return baseMapper.findByAuthCode(authCode);
     }
 
     public TokenStoreEntity findByAccessToken(String accessToken) {

@@ -83,7 +83,10 @@ public class ClientDetailsService extends ClientDetailsServiceGen implements Loo
         if (redisUtils.isOpen()) {
             redisUtils.set(key, tokenStore, expire);
         } else {
-            cache.put(key, tokenStore);
+            if (cache.containsKey(key))
+                cache.replace(key, tokenStore);
+            else
+                cache.put(key, tokenStore);
         }
     }
 
@@ -133,14 +136,46 @@ public class ClientDetailsService extends ClientDetailsServiceGen implements Loo
 
     public TokenStore get(ValueType type, String code) {
         String key = getKey(type, code);
+        TokenStore tokenStore = null;
         if (redisUtils.isOpen()) {
-            return (TokenStore) redisUtils.get(key);
+            Object object = redisUtils.get(key);
+            if (object instanceof TokenStore)
+                tokenStore = (TokenStore) object;
         } else {
             TokenStore od = cache.get(key);
             if (null != od && !od.isExpired())
-                return od;
-            return null;
+                tokenStore = od;
         }
+        if (null == tokenStore) {
+            TokenStoreEntity storeEntity = null;
+            Long expire = null;
+            SysUserEntity sysUserEntity = null;
+            if (type.equals(ValueType.accessToken)) {
+                storeEntity = tokenStoreService.findByAccessToken(code);
+            } else if (type.equals(ValueType.refreshToken)) {
+                storeEntity = tokenStoreService.findByRefreshToken(code);
+            } else if (type.equals(ValueType.authCode)) {
+                storeEntity = tokenStoreService.findByAuthCode(code);
+            }
+            if (null != storeEntity) {
+                sysUserEntity = sysUserService.getByUuid(storeEntity.getUserUuid());
+                if (null != sysUserEntity) {
+                    Date date = storeEntity.getUpdateTime();
+                    if (null == date) {
+                        date = new Date();
+                        storeEntity.setUpdateTime(date);
+                        tokenStoreService.updateById(storeEntity);
+                    }
+                    expire = (date.getTime() + storeEntity.getAccessTokenExpiredIn() * 1000 - (new Date().getTime())) / 1000;
+                    if (expire > 0)
+                        tokenStore = new TokenStore(sysUserEntity, storeEntity.getAuthCode(), storeEntity.getAccessToken(), storeEntity.getRefreshToken(), expire);
+                }
+            }
+            if (null != tokenStore) {
+                put(type, storeEntity.getAuthCode(), storeEntity.getAccessToken(), storeEntity.getRefreshToken(), sysUserEntity, expire);
+            }
+        }
+        return tokenStore;
     }
 
     public void remove(ValueType type, String code) {

@@ -18,8 +18,8 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface TokenStoreDao extends BaseMapper<TokenStoreEntity> {
 
-    @Select("select * from oauth_token_store where user_id = #{userId} limit 1")
-    TokenStoreEntity findByUserId(@Param("userId") Long userId);
+    @Select("select * from oauth_token_store where auth_code = #{authCode} limit 1")
+    TokenStoreEntity findByAuthCode(@Param("authCode") String authCode);
 
     @Select("select * from oauth_token_store where user_uuid = #{userUuid} limit 1")
     TokenStoreEntity findByUserUuid(@Param("userUuid") String userUuid);

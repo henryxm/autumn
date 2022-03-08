@@ -31,8 +31,21 @@ public class TokenStore implements Serializable {
         this.date.setTime(this.date.getTime() + expire * 1000);
     }
 
-    public static long getExpireIn() {
-        return 60 * 60;
+    public TokenStore(Object value, String authCode, String accessToken, String refreshToken, Date date) {
+        this.value = value;
+        this.authCode = authCode;
+        this.accessToken = accessToken;
+        this.refreshToken = refreshToken;
+        this.date = date;
+    }
+
+    public long getExpireIn() {
+        long expired = (this.date.getTime() - new Date().getTime()) / 1000;
+        //设置提前一分钟过期，避免网络通信延时
+        expired = expired - 60;
+        if (expired < 0)
+            expired = 0L;
+        return expired;
     }
 
     public boolean isExpired() {

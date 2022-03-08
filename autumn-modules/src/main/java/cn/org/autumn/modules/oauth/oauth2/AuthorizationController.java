@@ -330,9 +330,9 @@ public class AuthorizationController {
              */
             clientDetailsService.putToken(accessToken, refreshToken, tokenStore);
         }
-
+        TokenStore store = clientDetailsService.get(ValueType.accessToken, accessToken);
         //生成OAuth响应
-        OAuthResponse response = OAuthASResponse.tokenResponse(HttpServletResponse.SC_OK).setAccessToken(accessToken).setRefreshToken(refreshToken).setTokenType("bearer").setExpiresIn(String.valueOf(TokenStore.getExpireIn())).setScope("basic").buildJSONMessage();
+        OAuthResponse response = OAuthASResponse.tokenResponse(HttpServletResponse.SC_OK).setAccessToken(accessToken).setRefreshToken(refreshToken).setTokenType("bearer").setExpiresIn(String.valueOf(store.getExpireIn())).setScope("basic").buildJSONMessage();
         return new ResponseEntity(response.getBody(), HttpStatus.valueOf(response.getResponseStatus()));
     }
 
@@ -363,18 +363,17 @@ public class AuthorizationController {
 
             //返回用户名
             TokenStore tokenStore = clientDetailsService.get(ValueType.accessToken, accessTokenKey);
-
-            Object username = tokenStore.getValue();
-
-            if (username instanceof SysUserEntity) {
-                SysUserEntity sysUserEntity = (SysUserEntity) username;
-                UserProfileEntity userProfileEntity = userProfileService.from(sysUserEntity, null, null);
-                UserProfile userProfile = UserProfile.from(userProfileEntity);
-                username = userProfile;
-                userLoginLogService.login(userProfileEntity);
+            if (null != tokenStore) {
+                Object username = tokenStore.getValue();
+                if (username instanceof SysUserEntity) {
+                    SysUserEntity sysUserEntity = (SysUserEntity) username;
+                    UserProfileEntity userProfileEntity = userProfileService.from(sysUserEntity, null, null);
+                    UserProfile userProfile = UserProfile.from(userProfileEntity);
+                    username = userProfile;
+                    userLoginLogService.login(userProfileEntity);
+                }
+                return new ResponseEntity(JSON.toJSONString(username), HttpStatus.OK);
             }
-
-            return new ResponseEntity(JSON.toJSONString(username), HttpStatus.OK);
         } catch (OAuthProblemException e) {
             // 检查是否设置了错误码
             String errorCode = e.getError();
@@ -394,5 +393,6 @@ public class AuthorizationController {
 
             return new ResponseEntity(HttpStatus.BAD_REQUEST);
         }
+        return new ResponseEntity(HttpStatus.BAD_REQUEST);
     }
 }
