@@ -5,11 +5,11 @@ import cn.org.autumn.cluster.UserMapping;
 import cn.org.autumn.modules.sys.entity.SysRoleEntity;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.site.InitFactory;
-import com.aliyuncs.utils.StringUtils;
 import com.baomidou.mybatisplus.service.impl.ServiceImpl;
 import cn.org.autumn.utils.MapUtils;
 import cn.org.autumn.modules.sys.dao.SysUserRoleDao;
 import cn.org.autumn.modules.sys.entity.SysUserRoleEntity;
+import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -165,6 +165,16 @@ public class SysUserRoleService extends ServiceImpl<SysUserRoleDao, SysUserRoleE
     public boolean isSystemAdministrator(SysUserEntity sysUserEntity) {
         if (null != sysUserEntity) {
             List<String> roleKeys = baseMapper.getRoleKeys(sysUserEntity.getUuid());
+            if (null != roleKeys && roleKeys.size() > 0) {
+                return roleKeys.contains(Role_System_Administrator);
+            }
+        }
+        return false;
+    }
+
+    public boolean isSystemAdministrator(String uuid) {
+        if (StringUtils.isNotBlank(uuid)) {
+            List<String> roleKeys = baseMapper.getRoleKeys(uuid);
             if (null != roleKeys && roleKeys.size() > 0) {
                 return roleKeys.contains(Role_System_Administrator);
             }
