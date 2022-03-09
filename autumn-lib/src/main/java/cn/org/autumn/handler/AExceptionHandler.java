@@ -28,13 +28,13 @@ public class AExceptionHandler {
 
     @ExceptionHandler(DuplicateKeyException.class)
     public R handleDuplicateKeyException(DuplicateKeyException e) {
-        logger.error(e.getMessage(), e);
+        logger.error("DuplicateKeyException:{}", e.getMessage());
         return R.error("数据库中已存在该记录");
     }
 
     @ExceptionHandler(Exception.class)
     public R handleException(Exception e) {
-        logger.error(e.getMessage(), e);
+        logger.error("Exception:{}", e.getMessage());
         return R.error(e.getMessage());
     }
 }
