@@ -1,9 +1,9 @@
 package cn.org.autumn.site;
 
+import cn.org.autumn.loader.DynamicTemplateLoader;
 import cn.org.autumn.loader.LoaderFactory;
 import cn.org.autumn.utils.SpringContextUtils;
 import freemarker.cache.ClassTemplateLoader;
-import freemarker.cache.MultiTemplateLoader;
 import freemarker.cache.TemplateLoader;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
@@ -57,6 +57,6 @@ public class TemplateFactory extends Factory {
 
         TemplateLoader[] templateLoaders1 = new TemplateLoader[templateLoaders.size()];
         templateLoaders.toArray(templateLoaders1);
-        return new MultiTemplateLoader(templateLoaders1);
+        return new DynamicTemplateLoader(templateLoaders1);
     }
 }

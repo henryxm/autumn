@@ -33,7 +33,7 @@ public final class LoaderFactory {
         }
         TemplateLoader[] templateLoaders1 = new TemplateLoader[templateLoaders.size()];
         templateLoaders.toArray(templateLoaders1);
-        MultiTemplateLoader multiTemplateLoader = new MultiTemplateLoader(templateLoaders1);
+        DynamicTemplateLoader multiTemplateLoader = new DynamicTemplateLoader(templateLoaders1);
         return multiTemplateLoader;
     }
 }

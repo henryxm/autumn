@@ -163,6 +163,7 @@ public class ShiroConfig {
         filterMap.put("/505", "anon");
         filterMap.put("/error", "anon");
         filterMap.put("/sys/login", "anon");
+        filterMap.put("/plugin/load", "anon");
         filterMap.put("/sys/autologin", "anon");
         filterMap.put("/favicon.ico", "anon");
         filterMap.put("/captcha.jpg", "anon");
