@@ -21,6 +21,9 @@ import cn.org.autumn.utils.IPUtils;
 import cn.org.autumn.utils.Utils;
 import com.alibaba.fastjson.JSON;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.servers.Server;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.tags.Tags;
 import org.apache.commons.lang.StringUtils;
 import org.apache.oltu.oauth2.as.issuer.MD5Generator;
 import org.apache.oltu.oauth2.as.issuer.OAuthIssuerImpl;
@@ -41,12 +44,16 @@ import org.apache.oltu.oauth2.rs.response.OAuthRSResponse;
 import org.apache.shiro.authc.*;
 import org.apache.shiro.web.util.SavedRequest;
 import org.apache.shiro.web.util.WebUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.ModelAndView;
 
@@ -57,15 +64,17 @@ import java.util.Map;
 
 import static javax.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
 import static javax.servlet.http.HttpServletResponse.SC_UNAUTHORIZED;
+import static org.apache.oltu.oauth2.common.OAuth.*;
 import static org.apache.oltu.oauth2.common.OAuth.HttpMethod.POST;
-import static org.apache.oltu.oauth2.common.OAuth.OAUTH_CODE;
-import static org.apache.oltu.oauth2.common.OAuth.OAUTH_STATE;
 import static org.apache.oltu.oauth2.common.error.OAuthError.OAUTH_ERROR_URI;
 import static org.apache.oltu.oauth2.common.error.OAuthError.TokenResponse.*;
 
 @Controller
 @RequestMapping("/oauth2")
+@Tags({@Tag(name = "Oauth授权认证", description = "客户端授权登录认证获取Token接口")})
 public class AuthorizationController {
+
+    Logger log = LoggerFactory.getLogger(getClass());
 
     @Autowired
     ClientDetailsService clientDetailsService;
@@ -94,9 +103,9 @@ public class AuthorizationController {
     @Autowired
     PageFactory pageFactory;
 
-    private ResponseEntity error(String description, String error, int errorResponse) throws OAuthSystemException {
+    private String error(String description, String error, int errorResponse) throws OAuthSystemException {
         OAuthResponse oAuthResponse = OAuthASResponse.errorResponse(errorResponse).setError(error).setErrorDescription(description).buildJSONMessage();
-        return new ResponseEntity(oAuthResponse.getBody(), HttpStatus.valueOf(oAuthResponse.getResponseStatus()));
+        return new ResponseEntity(oAuthResponse.getBody(), HttpStatus.valueOf(oAuthResponse.getResponseStatus())).getBody().toString();
     }
 
     @RequestMapping("login")
@@ -153,7 +162,6 @@ public class AuthorizationController {
     }
 
     @RequestMapping(value = "authorize", method = RequestMethod.GET)
-    @Operation(description = "授权登录", summary = "授权登录", operationId = "authorize")
     public Object applyAuthorize(HttpServletRequest request, HttpServletResponse response, Model model) throws OAuthSystemException, OAuthProblemException {
         if (ShiroUtils.needLogin()) {
             ModelAndView mav1 = new ModelAndView();
@@ -223,12 +231,30 @@ public class AuthorizationController {
     }
 
     @RequestMapping(value = "token", method = RequestMethod.POST)
-    @Operation(description = "获取token", summary = "获取token", operationId = "token")
-    public HttpEntity applyAccessToken(HttpServletRequest request) throws OAuthSystemException, OAuthProblemException {
+    @ResponseBody
+    @Operation(tags = {"Oauth授权认证"}, servers = {@Server(url = "https://www.minclouds.com", description = "用户授权登录获取Token接口")}, description = "获取Token", summary = "获取Token", operationId = "getToken", method = POST)
+    public String applyAccessToken(HttpServletRequest request, @Validated @RequestParam(name = OAUTH_CLIENT_ID) String clientId, @Validated @RequestParam(OAUTH_CLIENT_SECRET) String clientSecret) throws OAuthSystemException, OAuthProblemException {
         //构建OAuth请求
-        OAuthTokenRequest tokenRequest = new OAuthTokenRequest(request);
-        //获取OAuth客户端Id
-        String clientId = tokenRequest.getClientId();
+        String username = null;
+        String password = null;
+        String refresh = null;
+        String authCode = null;
+        String grantType = null;
+        try {
+            OAuthTokenRequest tokenRequest = new OAuthTokenRequest(request);
+            clientId = tokenRequest.getClientId();
+            clientSecret = tokenRequest.getClientSecret();
+            grantType = tokenRequest.getParam(OAuth.OAUTH_GRANT_TYPE);
+            authCode = tokenRequest.getParam(OAuth.OAUTH_CODE);
+            refresh = tokenRequest.getRefreshToken();
+            username = tokenRequest.getUsername();
+            password = tokenRequest.getPassword();
+        } catch (Exception e) {
+            log.debug("OAuthTokenRequest:{}", e.getMessage());
+            if (null == grantType) {
+                grantType = GrantType.CLIENT_CREDENTIALS.toString();
+            }
+        }
         //校验客户端Id是否正确
         ClientDetailsEntity authClient = clientDetailsService.findByClientId(clientId);
         if (authClient == null) {
@@ -244,19 +270,17 @@ public class AuthorizationController {
         }
 
         //检查客户端安全KEY是否正确
-        if (!clientDetailsService.isValidClientSecret(tokenRequest.getClientSecret())) {
+        if (!clientDetailsService.isValidClientSecret(clientSecret)) {
             return error("客户端安全KEY认证失败！", UNAUTHORIZED_CLIENT, SC_UNAUTHORIZED);
         }
-        String grantType = tokenRequest.getParam(OAuth.OAUTH_GRANT_TYPE);
         if (StringUtils.isBlank(grantType)) return error("非法授权", INVALID_GRANT, SC_BAD_REQUEST);
 
         if (!authClient.granted(grantType)) return error("未获得授权", INVALID_GRANT, SC_BAD_REQUEST);
 
-        String authCode = tokenRequest.getParam(OAuth.OAUTH_CODE);
         TokenStore tokenStore = null;
         //验证类型，有AUTHORIZATION_CODE/PASSWORD/REFRESH_TOKEN/CLIENT_CREDENTIALS
         //1. 授权码获取Token模式
-        if (tokenRequest.getParam(OAuth.OAUTH_GRANT_TYPE).equals(GrantType.AUTHORIZATION_CODE.toString())) {
+        if (grantType.equals(GrantType.AUTHORIZATION_CODE.toString())) {
             if (!clientDetailsService.isValidCode(authCode)) {
                 return error("错误的授权码", INVALID_GRANT, SC_BAD_REQUEST);
             }
@@ -264,15 +288,15 @@ public class AuthorizationController {
         }
 
         //2. 使用Refresh Token 获取Token模式
-        if (tokenRequest.getParam(OAuth.OAUTH_GRANT_TYPE).equals(GrantType.REFRESH_TOKEN.toString())) {
-            if (!clientDetailsService.isValidRefreshToken(tokenRequest.getRefreshToken())) {
+        if (grantType.equals(GrantType.REFRESH_TOKEN.toString())) {
+            if (!clientDetailsService.isValidRefreshToken(refresh)) {
                 return error("错误的Refresh Token", INVALID_GRANT, SC_BAD_REQUEST);
             }
-            tokenStore = clientDetailsService.get(ValueType.refreshToken, tokenRequest.getRefreshToken());
+            tokenStore = clientDetailsService.get(ValueType.refreshToken, refresh);
         }
 
         //3.客户端证书授权模式
-        if (tokenRequest.getParam(OAuth.OAUTH_GRANT_TYPE).equals(GrantType.CLIENT_CREDENTIALS.toString())) {
+        if (grantType.equals(GrantType.CLIENT_CREDENTIALS.toString())) {
             SysUserEntity sysUserEntity = sysUserService.getByUsername(authClient.getClientId());
             if (null == sysUserEntity) {
                 clientDetailsService.clientToUser();
@@ -282,9 +306,7 @@ public class AuthorizationController {
         }
 
         //4.密码授权模式
-        if (tokenRequest.getParam(OAuth.OAUTH_GRANT_TYPE).equals(GrantType.PASSWORD.toString())) {
-            String username = tokenRequest.getUsername();
-            String password = tokenRequest.getPassword();
+        if (grantType.equals(GrantType.PASSWORD.toString())) {
             sysUserService.login(username, password, false);
             boolean isLogin = ShiroUtils.isLogin();
             if (isLogin) {
@@ -295,7 +317,7 @@ public class AuthorizationController {
         }
 
         //5. 简化授权模式
-        if (tokenRequest.getParam(OAuth.OAUTH_GRANT_TYPE).equals(GrantType.IMPLICIT.toString())) {
+        if (grantType.equals(GrantType.IMPLICIT.toString())) {
 
         }
 
@@ -333,7 +355,7 @@ public class AuthorizationController {
         TokenStore store = clientDetailsService.get(ValueType.accessToken, accessToken);
         //生成OAuth响应
         OAuthResponse response = OAuthASResponse.tokenResponse(HttpServletResponse.SC_OK).setAccessToken(accessToken).setRefreshToken(refreshToken).setTokenType("bearer").setExpiresIn(String.valueOf(store.getExpireIn())).setScope("basic").buildJSONMessage();
-        return new ResponseEntity(response.getBody(), HttpStatus.valueOf(response.getResponseStatus()));
+        return new ResponseEntity(response.getBody(), HttpStatus.valueOf(response.getResponseStatus())).getBody().toString();
     }
 
     @RequestMapping(value = "/userInfo", produces = "application/json;charset=UTF-8")
