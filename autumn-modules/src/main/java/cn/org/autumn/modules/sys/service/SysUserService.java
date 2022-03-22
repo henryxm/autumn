@@ -26,6 +26,7 @@ import org.apache.shiro.subject.Subject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,15 +48,19 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
     static Map<String, Integer> hashUser = new HashMap<>();
 
     @Autowired
+    @Lazy
     private SysUserRoleService sysUserRoleService;
 
     @Autowired
+    @Lazy
     private SysDeptService sysDeptService;
 
     @Autowired
+    @Lazy
     private SysUserDao sysUserDao;
 
     @Autowired
+    @Lazy
     private SysConfigService sysConfigService;
 
     @Autowired

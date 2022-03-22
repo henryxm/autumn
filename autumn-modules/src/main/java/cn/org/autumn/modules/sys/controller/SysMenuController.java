@@ -13,6 +13,7 @@ import cn.org.autumn.modules.sys.service.SysMenuService;
 import org.apache.commons.lang.StringUtils;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -27,12 +28,15 @@ import java.util.Map;
 @RequestMapping("/sys/menu")
 public class SysMenuController extends AbstractController {
     @Autowired
+    @Lazy
     private SysMenuService sysMenuService;
 
     @Autowired
+    @Lazy
     LanguageService languageService;
 
     @Autowired
+    @Lazy
     SuperPositionModelService superPositionModelService;
 
     public void r(SysMenuEntity sysMenuEntity, Map<String, String> language, Map<String, SuperPositionModelEntity> spms) {

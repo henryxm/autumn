@@ -13,6 +13,7 @@ import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.lang.reflect.Field;
@@ -26,6 +27,7 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
     public static final String DEFAULT_USER_LANGUAGE = "DEFAULT_USER_LANGUAGE";
 
     @Autowired
+    @Lazy
     SysConfigService sysConfigService;
 
     private static Map<String, Map<String, String>> languages;
@@ -286,6 +288,8 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
     public void init() {
         LoopJob.onTenMinute(this);
         super.init();
+        sysMenuService.put(getMenuItemsInternal(), getMenuItems(), getMenuList());
+        put(getLanguageItemsInternal(), getLanguageItems(), getLanguageList());
         sysConfigService.put(getConfigItems());
     }
 

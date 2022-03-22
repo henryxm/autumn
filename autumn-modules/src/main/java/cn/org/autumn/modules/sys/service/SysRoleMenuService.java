@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.service.impl.ServiceImpl;
 import cn.org.autumn.modules.sys.dao.SysRoleMenuDao;
 import cn.org.autumn.modules.sys.entity.SysRoleMenuEntity;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,9 +21,11 @@ import java.util.List;
 public class SysRoleMenuService extends ServiceImpl<SysRoleMenuDao, SysRoleMenuEntity> implements InitFactory.Init {
 
     @Autowired
+    @Lazy
     private SysRoleService sysRoleService;
 
     @Autowired
+    @Lazy
     private SysMenuService sysMenuService;
 
     public void init() {

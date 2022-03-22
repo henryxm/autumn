@@ -8,6 +8,7 @@ import cn.org.autumn.site.PageFactory;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.web.servlet.error.ErrorController;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -20,12 +21,15 @@ import javax.servlet.http.HttpServletResponse;
 public class SysPageController implements ErrorController {
 
     @Autowired
+    @Lazy
     SuperPositionModelService superPositionModelService;
 
     @Autowired
+    @Lazy
     WebAuthenticationService webAuthenticationService;
 
     @Autowired
+    @Lazy
     SysConfigService sysConfigService;
 
     @Autowired

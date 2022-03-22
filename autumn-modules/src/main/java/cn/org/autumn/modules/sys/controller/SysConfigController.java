@@ -8,6 +8,7 @@ import cn.org.autumn.modules.sys.entity.SysConfigEntity;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -16,6 +17,7 @@ import java.util.Map;
 @RequestMapping("/sys/config")
 public class SysConfigController extends AbstractController {
     @Autowired
+    @Lazy
     private SysConfigService sysConfigService;
 
     /**

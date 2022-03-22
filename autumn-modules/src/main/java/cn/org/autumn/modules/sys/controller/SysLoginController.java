@@ -14,6 +14,7 @@ import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.shiro.authc.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -33,15 +34,19 @@ public class SysLoginController {
     private Producer producer;
 
     @Autowired
+    @Lazy
     SuperPositionModelService superPositionModelService;
 
     @Autowired
+    @Lazy
     SysUserService sysUserService;
 
     @Autowired
+    @Lazy
     PageFactory pageFactory;
 
     @Autowired
+    @Lazy
     UserProfileService userProfileService;
 
     @RequestMapping("captcha.jpg")

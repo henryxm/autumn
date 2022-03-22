@@ -5,14 +5,17 @@ import cn.org.autumn.utils.RedisKeys;
 import cn.org.autumn.modules.sys.entity.SysConfigEntity;
 import cn.org.autumn.utils.RedisUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
 @Component
 public class SysConfigRedis {
     @Autowired
+    @Lazy
     private RedisUtils redisUtils;
 
     @Autowired
+    @Lazy
     SysConfigService sysConfigService;
 
     public void saveOrUpdate(SysConfigEntity config) {

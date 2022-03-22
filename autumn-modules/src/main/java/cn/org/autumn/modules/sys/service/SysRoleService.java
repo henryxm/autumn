@@ -13,6 +13,7 @@ import cn.org.autumn.modules.sys.entity.SysDeptEntity;
 import cn.org.autumn.modules.sys.entity.SysRoleEntity;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,12 +27,16 @@ import static cn.org.autumn.modules.sys.service.SysDeptService.Department_System
 @Service
 public class SysRoleService extends ServiceImpl<SysRoleDao, SysRoleEntity> implements InitFactory.Init {
     @Autowired
+    @Lazy
     private SysRoleMenuService sysRoleMenuService;
     @Autowired
+    @Lazy
     private SysRoleDeptService sysRoleDeptService;
     @Autowired
+    @Lazy
     private SysUserRoleService sysUserRoleService;
     @Autowired
+    @Lazy
     private SysDeptService sysDeptService;
 
     private static final String NULL = null;

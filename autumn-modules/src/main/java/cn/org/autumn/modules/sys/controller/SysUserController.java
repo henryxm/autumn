@@ -15,6 +15,7 @@ import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Arrays;
@@ -25,12 +26,15 @@ import java.util.Map;
 @RequestMapping("/sys/user")
 public class SysUserController extends AbstractController {
     @Autowired
+    @Lazy
     private SysUserService sysUserService;
 
     @Autowired
+    @Lazy
     private SysUserRoleService sysUserRoleService;
 
     @Autowired
+    @Lazy
     private UserProfileService userProfileService;
 
     /**

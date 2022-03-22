@@ -10,6 +10,7 @@ import cn.org.autumn.modules.sys.service.SysRoleMenuService;
 import cn.org.autumn.modules.sys.service.SysRoleService;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,10 +20,13 @@ import java.util.Map;
 @RequestMapping("/sys/role")
 public class SysRoleController extends AbstractController {
     @Autowired
+    @Lazy
     private SysRoleService sysRoleService;
     @Autowired
+    @Lazy
     private SysRoleMenuService sysRoleMenuService;
     @Autowired
+    @Lazy
     private SysRoleDeptService sysRoleDeptService;
 
     /**

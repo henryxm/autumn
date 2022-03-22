@@ -21,6 +21,7 @@ import org.apache.shiro.session.mgt.SessionManager;
 import org.apache.shiro.web.servlet.Cookie;
 import org.apache.shiro.web.session.mgt.DefaultWebSessionManager;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -57,9 +58,11 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     public static final String Localhost = "localhost";
 
     @Autowired
+    @Lazy
     private SysConfigRedis sysConfigRedis;
 
     @Autowired
+    @Lazy
     private SysLogService sysLogService;
 
     @Autowired

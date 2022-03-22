@@ -11,6 +11,7 @@ import cn.org.autumn.modules.sys.dao.SysUserRoleDao;
 import cn.org.autumn.modules.sys.entity.SysUserRoleEntity;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -25,12 +26,15 @@ import static cn.org.autumn.modules.sys.service.SysRoleService.Role_System_Admin
 public class SysUserRoleService extends ServiceImpl<SysUserRoleDao, SysUserRoleEntity> implements InitFactory.Init, InitFactory.After {
 
     @Autowired
+    @Lazy
     private SysUserService sysUserService;
 
     @Autowired
+    @Lazy
     private SysRoleService sysRoleService;
 
     @Autowired
+    @Lazy
     private SysConfigService sysConfigService;
 
     @Autowired(required = false)

@@ -11,6 +11,7 @@ import cn.org.autumn.modules.sys.entity.SysMenuEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 
@@ -22,12 +23,15 @@ public class SysMenuService extends ServiceImpl<SysMenuDao, SysMenuEntity> imple
     Logger log = LoggerFactory.getLogger(getClass());
 
     @Autowired
+    @Lazy
     private SysUserService sysUserService;
 
     @Autowired
+    @Lazy
     private SysRoleMenuService sysRoleMenuService;
 
     @Autowired
+    @Lazy
     private SysConfigService sysConfigService;
 
     private static final String NULL = null;

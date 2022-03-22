@@ -16,8 +16,7 @@ import cn.org.autumn.modules.lan.dao.LanguageDao;
 import cn.org.autumn.modules.lan.entity.LanguageEntity;
 import cn.org.autumn.modules.sys.entity.SysMenuEntity;
 import cn.org.autumn.modules.sys.service.SysMenuService;
-import cn.org.autumn.modules.lan.service.Language;
-import cn.org.autumn.modules.lan.service.LanguageService;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 国家语言控制器
@@ -29,97 +28,93 @@ import cn.org.autumn.modules.lan.service.LanguageService;
 public class LanguageServiceGen extends ServiceImpl<LanguageDao, LanguageEntity> implements InitFactory.Init {
 
     @Autowired
+    @Lazy
     protected LanMenu lanMenu;
 
     @Autowired
+    @Lazy
     protected SysMenuService sysMenuService;
-
-    @Autowired
-    protected Language language;
-
-    @Autowired
-    protected LanguageService languageService;
 
     public PageUtils queryPage(Map<String, Object> params) {
         Page<LanguageEntity> _page = new Query<LanguageEntity>(params).getPage();
         EntityWrapper<LanguageEntity> entityEntityWrapper = new EntityWrapper<>();
-        Map<String,Object> condition = new HashMap<>();
-        if(params.containsKey("id") && null != params.get("id") && StringUtils.isNotEmpty(params.get("id").toString())) {
+        Map<String, Object> condition = new HashMap<>();
+        if (params.containsKey("id") && null != params.get("id") && StringUtils.isNotEmpty(params.get("id").toString())) {
             condition.put("id", params.get("id"));
         }
-        if(params.containsKey("name") && null != params.get("name") && StringUtils.isNotEmpty(params.get("name").toString())) {
+        if (params.containsKey("name") && null != params.get("name") && StringUtils.isNotEmpty(params.get("name").toString())) {
             condition.put("name", params.get("name"));
         }
-        if(params.containsKey("zhCn") && null != params.get("zhCn") && StringUtils.isNotEmpty(params.get("zhCn").toString())) {
+        if (params.containsKey("zhCn") && null != params.get("zhCn") && StringUtils.isNotEmpty(params.get("zhCn").toString())) {
             condition.put("zh_cn", params.get("zhCn"));
         }
-        if(params.containsKey("enUs") && null != params.get("enUs") && StringUtils.isNotEmpty(params.get("enUs").toString())) {
+        if (params.containsKey("enUs") && null != params.get("enUs") && StringUtils.isNotEmpty(params.get("enUs").toString())) {
             condition.put("en_us", params.get("enUs"));
         }
-        if(params.containsKey("zhHk") && null != params.get("zhHk") && StringUtils.isNotEmpty(params.get("zhHk").toString())) {
+        if (params.containsKey("zhHk") && null != params.get("zhHk") && StringUtils.isNotEmpty(params.get("zhHk").toString())) {
             condition.put("zh_hk", params.get("zhHk"));
         }
-        if(params.containsKey("koKr") && null != params.get("koKr") && StringUtils.isNotEmpty(params.get("koKr").toString())) {
+        if (params.containsKey("koKr") && null != params.get("koKr") && StringUtils.isNotEmpty(params.get("koKr").toString())) {
             condition.put("ko_kr", params.get("koKr"));
         }
-        if(params.containsKey("jaJp") && null != params.get("jaJp") && StringUtils.isNotEmpty(params.get("jaJp").toString())) {
+        if (params.containsKey("jaJp") && null != params.get("jaJp") && StringUtils.isNotEmpty(params.get("jaJp").toString())) {
             condition.put("ja_jp", params.get("jaJp"));
         }
-        if(params.containsKey("ttRu") && null != params.get("ttRu") && StringUtils.isNotEmpty(params.get("ttRu").toString())) {
+        if (params.containsKey("ttRu") && null != params.get("ttRu") && StringUtils.isNotEmpty(params.get("ttRu").toString())) {
             condition.put("tt_ru", params.get("ttRu"));
         }
-        if(params.containsKey("frFr") && null != params.get("frFr") && StringUtils.isNotEmpty(params.get("frFr").toString())) {
+        if (params.containsKey("frFr") && null != params.get("frFr") && StringUtils.isNotEmpty(params.get("frFr").toString())) {
             condition.put("fr_fr", params.get("frFr"));
         }
-        if(params.containsKey("deDe") && null != params.get("deDe") && StringUtils.isNotEmpty(params.get("deDe").toString())) {
+        if (params.containsKey("deDe") && null != params.get("deDe") && StringUtils.isNotEmpty(params.get("deDe").toString())) {
             condition.put("de_de", params.get("deDe"));
         }
-        if(params.containsKey("viVn") && null != params.get("viVn") && StringUtils.isNotEmpty(params.get("viVn").toString())) {
+        if (params.containsKey("viVn") && null != params.get("viVn") && StringUtils.isNotEmpty(params.get("viVn").toString())) {
             condition.put("vi_vn", params.get("viVn"));
         }
-        if(params.containsKey("thTh") && null != params.get("thTh") && StringUtils.isNotEmpty(params.get("thTh").toString())) {
+        if (params.containsKey("thTh") && null != params.get("thTh") && StringUtils.isNotEmpty(params.get("thTh").toString())) {
             condition.put("th_th", params.get("thTh"));
         }
-        if(params.containsKey("msMy") && null != params.get("msMy") && StringUtils.isNotEmpty(params.get("msMy").toString())) {
+        if (params.containsKey("msMy") && null != params.get("msMy") && StringUtils.isNotEmpty(params.get("msMy").toString())) {
             condition.put("ms_my", params.get("msMy"));
         }
-        if(params.containsKey("idId") && null != params.get("idId") && StringUtils.isNotEmpty(params.get("idId").toString())) {
+        if (params.containsKey("idId") && null != params.get("idId") && StringUtils.isNotEmpty(params.get("idId").toString())) {
             condition.put("id_id", params.get("idId"));
         }
-        if(params.containsKey("esEs") && null != params.get("esEs") && StringUtils.isNotEmpty(params.get("esEs").toString())) {
+        if (params.containsKey("esEs") && null != params.get("esEs") && StringUtils.isNotEmpty(params.get("esEs").toString())) {
             condition.put("es_es", params.get("esEs"));
         }
-        if(params.containsKey("trTr") && null != params.get("trTr") && StringUtils.isNotEmpty(params.get("trTr").toString())) {
+        if (params.containsKey("trTr") && null != params.get("trTr") && StringUtils.isNotEmpty(params.get("trTr").toString())) {
             condition.put("tr_tr", params.get("trTr"));
         }
-        if(params.containsKey("ukUk") && null != params.get("ukUk") && StringUtils.isNotEmpty(params.get("ukUk").toString())) {
+        if (params.containsKey("ukUk") && null != params.get("ukUk") && StringUtils.isNotEmpty(params.get("ukUk").toString())) {
             condition.put("uk_uk", params.get("ukUk"));
         }
-        if(params.containsKey("puPt") && null != params.get("puPt") && StringUtils.isNotEmpty(params.get("puPt").toString())) {
+        if (params.containsKey("puPt") && null != params.get("puPt") && StringUtils.isNotEmpty(params.get("puPt").toString())) {
             condition.put("pu_pt", params.get("puPt"));
         }
-        if(params.containsKey("plPl") && null != params.get("plPl") && StringUtils.isNotEmpty(params.get("plPl").toString())) {
+        if (params.containsKey("plPl") && null != params.get("plPl") && StringUtils.isNotEmpty(params.get("plPl").toString())) {
             condition.put("pl_pl", params.get("plPl"));
         }
-        if(params.containsKey("mnMn") && null != params.get("mnMn") && StringUtils.isNotEmpty(params.get("mnMn").toString())) {
+        if (params.containsKey("mnMn") && null != params.get("mnMn") && StringUtils.isNotEmpty(params.get("mnMn").toString())) {
             condition.put("mn_mn", params.get("mnMn"));
         }
-        if(params.containsKey("nbNo") && null != params.get("nbNo") && StringUtils.isNotEmpty(params.get("nbNo").toString())) {
+        if (params.containsKey("nbNo") && null != params.get("nbNo") && StringUtils.isNotEmpty(params.get("nbNo").toString())) {
             condition.put("nb_no", params.get("nbNo"));
         }
-        if(params.containsKey("itIt") && null != params.get("itIt") && StringUtils.isNotEmpty(params.get("itIt").toString())) {
+        if (params.containsKey("itIt") && null != params.get("itIt") && StringUtils.isNotEmpty(params.get("itIt").toString())) {
             condition.put("it_it", params.get("itIt"));
         }
-        if(params.containsKey("heIl") && null != params.get("heIl") && StringUtils.isNotEmpty(params.get("heIl").toString())) {
+        if (params.containsKey("heIl") && null != params.get("heIl") && StringUtils.isNotEmpty(params.get("heIl").toString())) {
             condition.put("he_il", params.get("heIl"));
         }
-        if(params.containsKey("elGr") && null != params.get("elGr") && StringUtils.isNotEmpty(params.get("elGr").toString())) {
+        if (params.containsKey("elGr") && null != params.get("elGr") && StringUtils.isNotEmpty(params.get("elGr").toString())) {
             condition.put("el_gr", params.get("elGr"));
         }
-        if(params.containsKey("faIr") && null != params.get("faIr") && StringUtils.isNotEmpty(params.get("faIr").toString())) {
+        if (params.containsKey("faIr") && null != params.get("faIr") && StringUtils.isNotEmpty(params.get("faIr").toString())) {
             condition.put("fa_ir", params.get("faIr"));
         }
-        if(params.containsKey("arSa") && null != params.get("arSa") && StringUtils.isNotEmpty(params.get("arSa").toString())) {
+        if (params.containsKey("arSa") && null != params.get("arSa") && StringUtils.isNotEmpty(params.get("arSa").toString())) {
             condition.put("ar_sa", params.get("arSa"));
         }
         _page.setCondition(condition);
@@ -129,21 +124,23 @@ public class LanguageServiceGen extends ServiceImpl<LanguageDao, LanguageEntity>
     }
 
     /**
-    * need implement it in the subclass.
-    * @return
-    */
-    public int menuOrder(){
+     * need implement it in the subclass.
+     *
+     * @return
+     */
+    public int menuOrder() {
         return 0;
     }
 
     /**
-    * need implement it in the subclass.
-    * @return
-    */
-    public String parentMenu(){
+     * need implement it in the subclass.
+     *
+     * @return
+     */
+    public String parentMenu() {
         lanMenu.init();
         SysMenuEntity sysMenuEntity = sysMenuService.getByMenuKey(lanMenu.getMenu());
-        if(null != sysMenuEntity)
+        if (null != sysMenuEntity)
             return sysMenuEntity.getMenuKey();
         return "";
     }
@@ -158,17 +155,12 @@ public class LanguageServiceGen extends ServiceImpl<LanguageDao, LanguageEntity>
         return menu;
     }
 
-    public String ico(){
+    public String ico() {
         return "fa-file-code-o";
     }
 
-    protected String order(){
+    protected String order() {
         return String.valueOf(menuOrder());
-    }
-
-    public void init() {
-        sysMenuService.put(getMenuItemsInternal(), getMenuItems(), getMenuList());
-        language.put(getLanguageItemsInternal(), getLanguageItems(), getLanguageList());
     }
 
     public List<String[]> getLanguageList() {
@@ -179,7 +171,7 @@ public class LanguageServiceGen extends ServiceImpl<LanguageDao, LanguageEntity>
         return null;
     }
 
-    private String[][] getLanguageItemsInternal() {
+    protected String[][] getLanguageItemsInternal() {
         String[][] items = new String[][]{
                 {"lan_language_table_comment", "国家语言"},
                 {"lan_language_column_id", "id"},
@@ -220,7 +212,7 @@ public class LanguageServiceGen extends ServiceImpl<LanguageDao, LanguageEntity>
         return null;
     }
 
-    private String[][] getMenuItemsInternal() {
+    protected String[][] getMenuItemsInternal() {
         String[][] menus = new String[][]{
                 //{0:菜单名字,1:URL,2:权限,3:菜单类型,4:ICON,5:排序,6:MenuKey,7:ParentKey,8:Language}
                 {"国家语言", "modules/lan/language", "lan:language:list,lan:language:info,lan:language:save,lan:language:update,lan:language:delete", "1", "fa " + ico(), order(), menu(), parentMenu(), "lan_language_table_comment"},
@@ -230,5 +222,9 @@ public class LanguageServiceGen extends ServiceImpl<LanguageDao, LanguageEntity>
                 {"删除", null, "lan:language:delete", "2", null, order(), button("Delete"), menu(), "sys_string_delete"},
         };
         return menus;
+    }
+
+    @Override
+    public void init() {
     }
 }

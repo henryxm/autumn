@@ -6,6 +6,7 @@ import cn.org.autumn.modules.oauth.store.ValueType;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysUserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
@@ -18,9 +19,11 @@ import static cn.org.autumn.modules.oauth.service.ClientDetailsService.REFRESH_T
 public class TokenStoreService extends TokenStoreServiceGen {
 
     @Autowired
+    @Lazy
     ClientDetailsService clientDetailsService;
 
     @Autowired
+    @Lazy
     SysUserService sysUserService;
 
     @Override

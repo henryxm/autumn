@@ -4,7 +4,7 @@ services:
     build: ./autumn-web
     container_name: autumn
     environment:
-      - "--spring.profiles.active=dev-docker"
+      - "--spring.profiles.active=dev"
     ports:
       - "80:80"
     volumes:

@@ -1,6 +1,8 @@
 package cn.org.autumn.datasources;
 
 import com.alibaba.druid.spring.boot.autoconfigure.DruidDataSourceBuilder;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -14,6 +16,7 @@ import java.util.Map;
  * 配置多数据源
  */
 @Configuration
+@EnableAutoConfiguration(exclude = {DataSourceAutoConfiguration.class})
 public class DynamicDataSourceConfig {
 
     @Bean

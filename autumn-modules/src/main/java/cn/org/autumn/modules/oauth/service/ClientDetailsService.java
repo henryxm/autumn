@@ -19,6 +19,7 @@ import cn.org.autumn.utils.Uuid;
 import com.qiniu.util.Md5;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.stereotype.Service;
@@ -35,12 +36,15 @@ public class ClientDetailsService extends ClientDetailsServiceGen implements Loo
     RedisShiroSessionDAO redisShiroSessionDAO;
 
     @Autowired
+    @Lazy
     TokenStoreService tokenStoreService;
 
     @Autowired
+    @Lazy
     SysUserService sysUserService;
 
     @Autowired
+    @Lazy
     SysConfigService sysConfigService;
 
     @Autowired
