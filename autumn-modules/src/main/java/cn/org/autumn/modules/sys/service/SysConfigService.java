@@ -92,6 +92,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     public void onOneMinute() {
         if (null != map)
             map.clear();
+        clear();
     }
 
     public void clear() {
