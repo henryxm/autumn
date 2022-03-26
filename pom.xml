@@ -40,7 +40,7 @@
         <joda.time.version>2.9.9</joda.time.version>
         <commons.configuration.version>1.10</commons.configuration.version>
         <pagehelper.spring.boot.version>1.2.5</pagehelper.spring.boot.version>
-        <velocity.version>1.7</velocity.version>
+        <velocity.version>2.0</velocity.version>
         <oltu.version>1.0.2</oltu.version>
     </properties>
 
@@ -179,8 +179,8 @@
             <version>1.1.0</version>
         </dependency>
         <dependency>
-            <artifactId>velocity</artifactId>
             <groupId>org.apache.velocity</groupId>
+            <artifactId>velocity-engine-core</artifactId>
             <version>${velocity.version}</version>
         </dependency>
         <dependency>
