@@ -32,7 +32,7 @@ public class SpmController {
 
     public void active(HttpServletRequest request) {
         String param = request.getParameter("active");
-        if (StringUtils.isBlank(param) && !"administrator".equals(param))
+        if (StringUtils.isBlank(param) || !"admin".equals(param))
             return;
         String sessionId = request.getSession().getId();
         active.add(sessionId);
@@ -45,7 +45,7 @@ public class SpmController {
 
     public void inactive(HttpServletRequest request) {
         String param = request.getParameter("inactive");
-        if (StringUtils.isNotBlank(param) && "administrator".equals(param)) {
+        if (StringUtils.isNotBlank(param) && "admin".equals(param)) {
             String sessionId = request.getSession().getId();
             active.remove(sessionId);
         }
