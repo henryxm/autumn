@@ -9,8 +9,8 @@ import cn.org.autumn.modules.usr.dto.UserProfile;
 import cn.org.autumn.modules.usr.dto.VisitIp;
 import cn.org.autumn.modules.usr.entity.UserProfileEntity;
 import cn.org.autumn.modules.usr.service.gen.UserProfileServiceGen;
+import cn.org.autumn.utils.IPUtils;
 import cn.org.autumn.utils.Uuid;
-import io.lettuce.core.KeyValue;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static cn.org.autumn.utils.Uuid.uuid;
 
@@ -32,11 +33,11 @@ public class UserProfileService extends UserProfileServiceGen implements LoopJob
     @Autowired
     SysUserService sysUserService;
 
-    static Map<String, UserProfileEntity> sync = new LinkedHashMap<>();
+    static Map<String, UserProfileEntity> sync = new ConcurrentHashMap<>();
 
-    static Map<String, Integer> hashUser = new HashMap<>();
+    static Map<String, Integer> hashUser = new ConcurrentHashMap<>();
 
-    Map<String, VisitIp> visitIps = new HashMap<>();
+    static Map<String, VisitIp> visitIps = new ConcurrentHashMap<>();
 
     @Override
     public int menuOrder() {
@@ -66,6 +67,8 @@ public class UserProfileService extends UserProfileServiceGen implements LoopJob
 
     public void syncVisitIp() {
         for (Map.Entry<String, VisitIp> entry : visitIps.entrySet()) {
+            if (null == entry.getValue() || StringUtils.isBlank(entry.getValue().getIp()) || StringUtils.isBlank(entry.getValue().getUserAgent()))
+                continue;
             if (!entry.getValue().isUpdated()) {
                 baseMapper.updateVisitIp(entry.getKey(), entry.getValue().getIp(), entry.getValue().getUserAgent());
                 entry.getValue().setUpdated(true);
@@ -78,7 +81,9 @@ public class UserProfileService extends UserProfileServiceGen implements LoopJob
     }
 
     public void updateVisitIp(String uuid, String ip, String userAgent) {
-        if (StringUtils.isBlank(ip) || StringUtils.isBlank(uuid) || ip.length() > 100)
+        if (StringUtils.isBlank(ip) || StringUtils.isBlank(uuid) || StringUtils.isBlank(userAgent))
+            return;
+        if (!IPUtils.isIp(ip) && !IPUtils.isIPV6(ip))
             return;
         if (visitIps.containsKey(uuid)) {
             VisitIp visitIp = visitIps.get(uuid);
@@ -213,43 +218,51 @@ public class UserProfileService extends UserProfileServiceGen implements LoopJob
 
     @Override
     public void onOneMinute() {
-        syncVisitIp();
-        visitIps.clear();
+        try {
+            syncVisitIp();
+            visitIps.clear();
+        } catch (Exception e) {
+            log.error("Synchronize User IP:{}", e.getMessage());
+        }
     }
 
     @Override
     public void onTenSecond() {
-        if (null != sync && sync.size() > 0) {
-            Iterator<Map.Entry<String, UserProfileEntity>> iterator = sync.entrySet().iterator();
-            while (iterator.hasNext()) {
-                Map.Entry<String, UserProfileEntity> entity = iterator.next();
-                UserProfileEntity userProfileEntity = entity.getValue();
-                if (!checkNeedUpdate(userProfileEntity))
-                    continue;
-                try {
-                    UserProfileEntity ex = getByUuid(userProfileEntity.getUuid());
-                    if (null == ex || ex.hashCode() != userProfileEntity.hashCode()) {
-                        if (null != ex) {
-                            userProfileEntity.setNickname(ex.getNickname());
-                            userProfileEntity.setMobile(ex.getMobile());
+        try {
+            if (null != sync && sync.size() > 0) {
+                Iterator<Map.Entry<String, UserProfileEntity>> iterator = sync.entrySet().iterator();
+                while (iterator.hasNext()) {
+                    Map.Entry<String, UserProfileEntity> entity = iterator.next();
+                    UserProfileEntity userProfileEntity = entity.getValue();
+                    if (!checkNeedUpdate(userProfileEntity))
+                        continue;
+                    try {
+                        UserProfileEntity ex = getByUuid(userProfileEntity.getUuid());
+                        if (null == ex || ex.hashCode() != userProfileEntity.hashCode()) {
+                            if (null != ex) {
+                                userProfileEntity.setNickname(ex.getNickname());
+                                userProfileEntity.setMobile(ex.getMobile());
+                            }
+                            UserProfileEntity username = baseMapper.getByUsername(userProfileEntity.getUsername());
+                            if (null != username)
+                                continue;
+                            insertOrUpdate(userProfileEntity);
                         }
-                        UserProfileEntity username = baseMapper.getByUsername(userProfileEntity.getUsername());
-                        if (null != username)
-                            continue;
-                        insertOrUpdate(userProfileEntity);
+                    } catch (Exception e) {
+                        log.debug("UserProfile Synchronize Error, User uuid:" + userProfileEntity.getUuid() + ", Msg:" + e.getMessage());
                     }
-                } catch (Exception e) {
-                    log.debug("UserProfile Synchronize Error, User uuid:" + userProfileEntity.getUuid() + ", Msg:" + e.getMessage());
+                    hashUser.put(userProfileEntity.getUuid(), userProfileEntity.hashCode());
+                    iterator.remove();
                 }
-                hashUser.put(userProfileEntity.getUuid(), userProfileEntity.hashCode());
-                iterator.remove();
             }
-        }
-        /**
-         * 清理缓存，避免过度消耗内存
-         */
-        if (hashUser.size() > 10000) {
-            hashUser.clear();
+            /**
+             * 清理缓存，避免过度消耗内存
+             */
+            if (hashUser.size() > 10000) {
+                hashUser.clear();
+            }
+        } catch (Exception e) {
+            log.error("Synchronize User Profile:{}", e.getMessage());
         }
     }
 }
