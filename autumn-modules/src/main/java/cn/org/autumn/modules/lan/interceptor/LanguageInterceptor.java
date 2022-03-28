@@ -72,19 +72,20 @@ public class LanguageInterceptor extends HandlerInterceptorAdapter implements In
         String uri = request.getRequestURI();
         if (null != modelAndView) {
             ModelMap modelMap = modelAndView.getModelMap();
-            Locale locale = null;
+            String locale = null;
+            Map<String, String> lang = null;
             if (modelMap.containsAttribute("locale")) {
                 Object obj = modelMap.getAttribute("locale");
-                if (obj instanceof Locale) {
-                    locale = (Locale) obj;
+                if (obj instanceof String) {
+                    locale = (String) obj;
                 }
             }
-            if (null == locale)
-                locale = getLocale(request);
-            if (null == locale) {
-                logger.error("locale can not be null");
+            if (StringUtils.isNotBlank(locale)) {
+                lang = languageService.getLanguage(locale);
             }
-            Map<String, String> lang = languageService.getLanguage(locale);
+            if (null == lang || lang.isEmpty()) {
+                lang = languageService.getLanguage(getLocale(request));
+            }
             modelMap.put("lang", lang);
         }
     }
