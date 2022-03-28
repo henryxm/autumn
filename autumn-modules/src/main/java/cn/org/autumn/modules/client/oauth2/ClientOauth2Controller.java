@@ -7,7 +7,9 @@ import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.usr.dto.UserProfile;
 import cn.org.autumn.modules.usr.service.UserProfileService;
 import cn.org.autumn.modules.usr.service.UserTokenService;
+import cn.org.autumn.site.HealthFactory;
 import cn.org.autumn.site.PageFactory;
+import cn.org.autumn.site.VersionFactory;
 import cn.org.autumn.utils.HttpClientUtils;
 import cn.org.autumn.utils.IPUtils;
 import cn.org.autumn.utils.R;
@@ -37,6 +39,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Controller
@@ -58,6 +61,12 @@ public class ClientOauth2Controller {
 
     @Autowired
     PageFactory pageFactory;
+
+    @Autowired
+    HealthFactory healthFactory;
+
+    @Autowired
+    VersionFactory versionFactory;
 
     @RequestMapping("oauth2/callback")
     public Object defaultCodeCallback(HttpServletRequest request, HttpServletResponse response, Model model) throws OAuthSystemException {
@@ -143,6 +152,20 @@ public class ClientOauth2Controller {
     @ResponseBody
     @RequestMapping(value = {"/health"})
     public R health() {
-        return R.ok();
+        Map<String, Object> o = healthFactory.getHealth();
+        if (null != o && !o.isEmpty())
+            return R.ok().put("data", o);
+        else
+            return R.ok();
+    }
+
+    @ResponseBody
+    @RequestMapping(value = {"/version"})
+    public R version() {
+        Map<String, Object> o = versionFactory.getVersion();
+        if (null != o && !o.isEmpty())
+            return R.ok().put("data", o);
+        else
+            return R.ok();
     }
 }
