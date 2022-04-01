@@ -46,7 +46,7 @@ public class DataFilterAspect {
             //如果不是超级管理员，则进行数据过滤
             if (sysUserRoleService.isSystemAdministrator(user)) {
                 Map map = (Map) params;
-                map.put(Constant.SQL_FILTER, getSQLFilter(user, point));
+//                map.put(Constant.SQL_FILTER, getSQLFilter(user, point));
             }
 
             return;
@@ -87,7 +87,7 @@ public class DataFilterAspect {
         sqlFilter.append(" (");
 
         if (deptIdList.size() > 0) {
-            sqlFilter.append(tableAlias).append(dataFilter.deptId()).append(" in(").append(StringUtils.join(deptIdList, ",")).append(")");
+            sqlFilter.append(tableAlias).append(" find_in_set(").append(dataFilter.deptId()).append(", '").append(StringUtils.join(deptIdList, ",")).append("')");
         }
 
         //没有本部门数据权限，也能查询本人数据

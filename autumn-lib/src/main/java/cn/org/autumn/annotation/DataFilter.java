@@ -19,7 +19,7 @@ public @interface DataFilter {
     boolean subDept() default false;
 
     /**  部门ID */
-    String deptId() default "dept_id";
+    String deptId() default "dept_key";
 
     /**  用户ID */
     String userUuid() default "user_uuid";
