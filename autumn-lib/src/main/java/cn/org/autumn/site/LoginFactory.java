@@ -58,8 +58,8 @@ public class LoginFactory extends Factory {
                             log.debug("No Login:{}, {}", getUrl(httpServletRequest), login.getClass().getTypeName());
                             return false;
                         }
-                    } catch (Exception e) {
-                        log.error("Need Login:{}", login.getClass().getName(), e);
+                    } catch (Throwable e) {
+                        log.error("Need Login Throwable:{}", login.getClass().getName(), e);
                     }
                 }
             }
