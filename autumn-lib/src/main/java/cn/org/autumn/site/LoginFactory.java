@@ -53,9 +53,13 @@ public class LoginFactory extends Factory {
             for (Map.Entry<Integer, List<Login>> k : map.entrySet()) {
                 List<Login> list = k.getValue();
                 for (Login login : list) {
-                    if (!login.isNeed(httpServletRequest, httpServletResponse)) {
-                        log.debug("No Login:{}, {}", getUrl(httpServletRequest), login.getClass().getTypeName());
-                        return false;
+                    try {
+                        if (!login.isNeed(httpServletRequest, httpServletResponse)) {
+                            log.debug("No Login:{}, {}", getUrl(httpServletRequest), login.getClass().getTypeName());
+                            return false;
+                        }
+                    } catch (Exception e) {
+                        log.error("Need Login:{}", login.getClass().getName(), e);
                     }
                 }
             }
