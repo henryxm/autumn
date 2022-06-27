@@ -4,12 +4,15 @@ import cn.org.autumn.modules.spm.service.SuperPositionModelService;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysUserRoleService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
+import cn.org.autumn.site.MappingFactory;
 import cn.org.autumn.site.PageFactory;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -27,6 +30,9 @@ public class SpmController {
 
     @Autowired
     PageFactory pageFactory;
+
+    @Autowired
+    MappingFactory mappingFactory;
 
     List<String> active = new ArrayList<>();
 
@@ -66,5 +72,10 @@ public class SpmController {
     @RequestMapping("/")
     public String spm(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model, String spm) {
         return superPositionModelService.getResourceId(httpServletRequest, httpServletResponse, model, spm);
+    }
+
+    @RequestMapping(value = "/{value}", method = RequestMethod.GET)
+    public String mapping(HttpServletRequest request, HttpServletResponse response, Model model, @PathVariable("value") String value) {
+        return mappingFactory.mapping(request, response, model, value);
     }
 }
