@@ -580,8 +580,11 @@ public class MysqlTableService {
                 for (Object obj : entry.getValue()) {
                     Map<TableInfo, Object> map = new HashMap<TableInfo, Object>();
                     map.put(entry.getKey(), obj);
-                    ColumnInfo fieldProperties = (ColumnInfo) obj;
-                    tableDao.modifyColumn(map);
+                    try {
+                        tableDao.modifyColumn(map);
+                    } catch (Throwable e) {
+                        log.error("Modify Columns:{}", e.getMessage());
+                    }
                 }
             }
         }
@@ -599,8 +602,11 @@ public class MysqlTableService {
                 for (Object obj : entry.getValue()) {
                     Map<TableInfo, Object> map = new HashMap<TableInfo, Object>();
                     map.put(entry.getKey(), obj);
-                    String fieldName = (String) obj;
-                    tableDao.dropColumn(map);
+                    try {
+                        tableDao.dropColumn(map);
+                    } catch (Throwable e) {
+                        log.error("Drop Columns:{}", e.getMessage());
+                    }
                 }
             }
         }
@@ -617,8 +623,11 @@ public class MysqlTableService {
                 for (Object obj : entry.getValue()) {
                     Map<TableInfo, Object> map = new HashMap<TableInfo, Object>();
                     map.put(entry.getKey(), obj);
-                    ColumnInfo fieldProperties = (ColumnInfo) obj;
-                    tableDao.addColumns(map);
+                    try {
+                        tableDao.addColumns(map);
+                    } catch (Throwable e) {
+                        log.error("Add Columns:{}", e.getMessage());
+                    }
                 }
             }
         }
@@ -636,8 +645,11 @@ public class MysqlTableService {
                 for (Object obj : entry.getValue()) {
                     Map<TableInfo, Object> map = new HashMap<TableInfo, Object>();
                     map.put(entry.getKey(), obj);
-                    ColumnInfo fieldProperties = (ColumnInfo) obj;
-                    tableDao.dropPrimaryKey(map);
+                    try {
+                        tableDao.dropPrimaryKey(map);
+                    } catch (Throwable e) {
+                        log.error("Drop Primary Key:{}", e.getMessage());
+                    }
                 }
             }
         }
@@ -655,8 +667,16 @@ public class MysqlTableService {
                 for (Object obj : entry.getValue()) {
                     Map<TableInfo, Object> map = new HashMap<TableInfo, Object>();
                     map.put(entry.getKey(), obj);
-                    tableDao.dropIndex(map);
-                    tableDao.modifyColumn(map);
+                    try {
+                        tableDao.dropIndex(map);
+                    } catch (Throwable e) {
+                        log.error("Drop Index:{}", e.getMessage());
+                    }
+                    try {
+                        tableDao.modifyColumn(map);
+                    } catch (Throwable e) {
+                        log.error("Modify Column:{}", e.getMessage());
+                    }
                 }
             }
         }
@@ -674,7 +694,11 @@ public class MysqlTableService {
                 for (Object obj : entry.getValue()) {
                     Map<TableInfo, Object> map = new HashMap<TableInfo, Object>();
                     map.put(entry.getKey(), obj);
-                    tableDao.addIndex(map);
+                    try {
+                        tableDao.addIndex(map);
+                    } catch (Throwable e) {
+                        log.error("Add Index:{}", e.getMessage());
+                    }
                 }
             }
         }
@@ -687,7 +711,11 @@ public class MysqlTableService {
                 for (Object obj : entry.getValue()) {
                     Map<TableInfo, Object> map = new HashMap<TableInfo, Object>();
                     map.put(entry.getKey(), obj);
-                    tableDao.dropIndex(map);
+                    try {
+                        tableDao.dropIndex(map);
+                    } catch (Throwable e) {
+                        log.error("Drop Index:{}", e.getMessage());
+                    }
                 }
             }
         }
@@ -703,7 +731,11 @@ public class MysqlTableService {
             for (Entry<TableInfo, List<Object>> entry : newTableMap.entrySet()) {
                 Map<TableInfo, List<Object>> map = new HashMap<TableInfo, List<Object>>();
                 map.put(entry.getKey(), entry.getValue());
-                tableDao.createTable(map);
+                try {
+                    tableDao.createTable(map);
+                } catch (Throwable e) {
+                    log.error("Create Table:{}", e.getMessage());
+                }
             }
         }
     }
@@ -724,6 +756,10 @@ public class MysqlTableService {
     }
 
     public void dropTable(String tableName) {
-        tableDao.dropTable(tableName);
+        try {
+            tableDao.dropTable(tableName);
+        } catch (Throwable e) {
+            log.error("Drop Table:{}", e.getMessage());
+        }
     }
 }
