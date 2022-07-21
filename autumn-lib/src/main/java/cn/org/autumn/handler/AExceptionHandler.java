@@ -5,6 +5,8 @@ import cn.org.autumn.utils.R;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DuplicateKeyException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -34,7 +36,11 @@ public class AExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public R handleException(Exception e) {
-        logger.error("Exception", e);
+        //Suppress known exception log
+        if (!(e instanceof HttpMessageNotReadableException)
+                && !(e instanceof HttpRequestMethodNotSupportedException)
+        )
+            logger.error("Exception", e);
         return R.error(e.getMessage());
     }
 }
