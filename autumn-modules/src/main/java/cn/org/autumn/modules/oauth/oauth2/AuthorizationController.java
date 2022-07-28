@@ -358,12 +358,13 @@ public class AuthorizationController {
         return new ResponseEntity(response.getBody(), HttpStatus.valueOf(response.getResponseStatus())).getBody().toString();
     }
 
-    @RequestMapping(value = "/userInfo", produces = "application/json;charset=UTF-8")
+    @RequestMapping(value = "/userInfo", produces = "application/json;charset=UTF-8", method = {RequestMethod.GET, RequestMethod.POST})
     @ResponseBody
+    @Operation(tags = {"Oauth授权认证"}, servers = {@Server(url = "https://www.minclouds.com", description = "获取用户信息")}, description = "获取用户信息", summary = "获取用户信息", operationId = "userInfo")
     public HttpEntity authUserInfo(HttpServletRequest request) throws OAuthSystemException {
         try {
             // 构建OAuth资源请求
-            OAuthAccessResourceRequest oauthRequest = new OAuthAccessResourceRequest(request, ParameterStyle.QUERY);
+            OAuthAccessResourceRequest oauthRequest = new OAuthAccessResourceRequest(request, ParameterStyle.QUERY, ParameterStyle.HEADER);
             String accessToken = oauthRequest.getAccessToken();
 
             Object resp = JSON.parse(accessToken);
