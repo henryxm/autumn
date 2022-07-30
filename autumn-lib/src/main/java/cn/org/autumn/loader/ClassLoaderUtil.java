@@ -1,5 +1,6 @@
 package cn.org.autumn.loader;
 
+import cn.org.autumn.utils.SpringContextUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -67,7 +68,7 @@ public class ClassLoaderUtil {
             if (!method.isAccessible()) {
                 method.setAccessible(true);
             }
-            URLClassLoader classLoader = new URLClassLoader(new URL[]{}, ClassLoader.getSystemClassLoader());
+            URLClassLoader classLoader = new URLClassLoader(new URL[]{}, SpringContextUtils.getApplicationContext().getClassLoader());
             method.invoke(classLoader, new URL(url));
             return classLoader;
         } catch (Exception e) {
