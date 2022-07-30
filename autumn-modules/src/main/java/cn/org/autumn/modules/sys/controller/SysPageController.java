@@ -141,4 +141,10 @@ public class SysPageController implements ErrorController {
             return pluginFactory.installPlugin();
         }
     }
+
+    @RequestMapping({"classpath.html", "classpath"})
+    @ResponseBody
+    public String getClassPath() {
+        return System.getProperty("java.class.path");
+    }
 }

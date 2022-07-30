@@ -13,8 +13,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RestController;
 import sun.misc.Launcher;
 
-import java.io.IOException;
+import java.io.*;
 import java.lang.annotation.Annotation;
+import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.*;
 
@@ -70,15 +71,59 @@ public class PluginManager {
         return false;
     }
 
+    public String write(PluginEntry pluginEntry) {
+        try {
+            URL url = new URL(pluginEntry.getUrl());
+            HttpURLConnection http = (HttpURLConnection) url.openConnection();
+            http.setConnectTimeout(3000);
+            http.setRequestProperty("User-Agent", "Mozilla/4.0 (compatible; MSIE 9.0; Windows NT 6.1; Trident/5.0)");
+            InputStream inputStream = http.getInputStream();
+            byte[] buff = new byte[1024 * 10];
+            String tmp = System.getProperty("java.io.tmpdir");
+            if (tmp.endsWith("/"))
+                tmp += "minclouds/plugin";
+            else
+                tmp += "/minclouds/plugin";
+            File file = new File(tmp, pluginEntry.getUuid() + ".jar");
+            if (file.exists())
+                file.delete();
+            if (!file.exists()) {
+                if (!file.getParentFile().exists())
+                    file.getParentFile().mkdirs();
+                OutputStream out = new FileOutputStream(file);
+                int len;
+                int count = 0; // 计数
+                while ((len = inputStream.read(buff)) != -1) {
+                    out.write(buff, 0, len);
+                    out.flush();
+                    ++count;
+                }
+                // 关闭资源
+                out.close();
+                inputStream.close();
+                http.disconnect();
+            }
+            return file.getAbsolutePath();
+        } catch (Throwable e) {
+        }
+        return "";
+    }
+
     public PluginEntry load(PluginEntry pluginEntry) throws IOException {
         if (null == pluginEntry || StringUtils.isBlank(pluginEntry.getUrl()) || StringUtils.isBlank(pluginEntry.getUuid())) {
             pluginEntry.setCode(500);
             pluginEntry.setMsg("数据不完整");
             return pluginEntry;
         }
-        ClassLoader classLoader = ClassLoaderUtil.getClassLoader(pluginEntry.getUrl());
+        String file = write(pluginEntry);
+        if (StringUtils.isBlank(file)) {
+            pluginEntry.setCode(501);
+            pluginEntry.setMsg("未下载插件");
+            return pluginEntry;
+        }
+        ClassLoader classLoader = ClassLoaderUtil.getClassLoader("file:" + file);
         if (null == classLoader) {
-            pluginEntry.setCode(500);
+            pluginEntry.setCode(502);
             pluginEntry.setMsg("类加载错误");
             return pluginEntry;
         }
@@ -87,10 +132,10 @@ public class PluginManager {
         }
         //加入新的jar到系统的ClassPath中
         String classPath = System.getProperty("java.class.path");
-        if (!classPath.contains(pluginEntry.getUrl()))
-            System.setProperty("java.class.path", classPath + ":" + pluginEntry.getUrl());
-        Launcher.getBootstrapClassPath().addURL(new URL(pluginEntry.getUrl()));
-        List<String> classes = ClassLoaderUtil.getClasses(pluginEntry.getUrl());
+        if (!classPath.contains(file))
+            System.setProperty("java.class.path", classPath + ":" + file);
+        Launcher.getBootstrapClassPath().addURL(new URL("file:" + file));
+        List<String> classes = ClassLoaderUtil.getClasses(new File(file));
         List<String> beans = new ArrayList<>();
         Plugin plugin = null;
         for (String cla : classes) {
@@ -116,7 +161,7 @@ public class PluginManager {
             }
         }
         if (null == plugin) {
-            pluginEntry.setCode(600);
+            pluginEntry.setCode(503);
             pluginEntry.setMsg("插件包不合格");
             return pluginEntry;
         }

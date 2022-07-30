@@ -5,6 +5,8 @@ import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.net.URL;
@@ -44,6 +46,22 @@ public class ClassLoaderUtil {
             // 这里可以获取到Class-Path,或者某个执行的Main-Class
             System.out.println(key + ": " + value);
         }
+    }
+
+    public static List<String> getClasses(File file) throws IOException {
+        FileInputStream inputStream = new FileInputStream(file);
+        JarInputStream jis = new JarInputStream(inputStream);
+        //Manifest manifest = jis.getManifest();
+        //pringManifestFile(manifest);
+        JarEntry nextJarEntry = jis.getNextJarEntry();
+        List<String> classes = new ArrayList<>();
+        while (nextJarEntry != null) {
+            String className = getClassName(nextJarEntry);
+            if (StringUtils.isNotBlank(className))
+                classes.add(className);
+            nextJarEntry = jis.getNextJarEntry();
+        }
+        return classes;
     }
 
     public static List<String> getClasses(String url) throws IOException {
