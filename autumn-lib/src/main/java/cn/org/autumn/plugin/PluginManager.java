@@ -4,6 +4,8 @@ import cn.org.autumn.loader.ClassLoaderUtil;
 import cn.org.autumn.table.utils.HumpConvert;
 import cn.org.autumn.utils.SpringContextUtils;
 import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Controller;
@@ -18,6 +20,9 @@ import java.util.*;
 
 @Component
 public class PluginManager {
+
+    Logger log = LoggerFactory.getLogger(getClass());
+
     Map<PluginEntry, List<String>> plugins = new HashMap<>();
 
     public Map.Entry<PluginEntry, List<String>> getEntryItem(String uuid) {
@@ -81,8 +86,9 @@ public class PluginManager {
             unload(pluginEntry);
         }
         //加入新的jar到系统的ClassPath中
-        //String classPath = System.getProperty("java.class.path");
-        //System.setProperty("java.class.path", classPath + ":"+);
+        String classPath = System.getProperty("java.class.path");
+        if (!classPath.contains(pluginEntry.getUrl()))
+            System.setProperty("java.class.path", classPath + ":" + pluginEntry.getUrl());
         Launcher.getBootstrapClassPath().addURL(new URL(pluginEntry.getUrl()));
         List<String> classes = ClassLoaderUtil.getClasses(pluginEntry.getUrl());
         List<String> beans = new ArrayList<>();
@@ -105,7 +111,8 @@ public class PluginManager {
                 }
                 if (null != bean)
                     beans.add(name);
-            } catch (Exception ignored) {
+            } catch (Throwable e) {
+                log.error("Class:{}", cla, e);
             }
         }
         if (null == plugin) {
