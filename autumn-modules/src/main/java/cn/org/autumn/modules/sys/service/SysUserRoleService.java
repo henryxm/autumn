@@ -2,6 +2,7 @@ package cn.org.autumn.modules.sys.service;
 
 import cn.org.autumn.cluster.UserHandler;
 import cn.org.autumn.cluster.UserMapping;
+import cn.org.autumn.config.Config;
 import cn.org.autumn.modules.sys.entity.SysRoleEntity;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.site.InitFactory;
@@ -187,6 +188,8 @@ public class SysUserRoleService extends ServiceImpl<SysUserRoleDao, SysUserRoleE
     }
 
     private void syncAdminUuid() {
+        if (Config.isDev())
+            return;
         if (null != userHandlers && userHandlers.size() > 0) {
             for (UserHandler userHandler : userHandlers) {
                 if (sysConfigService.isSame(userHandler))

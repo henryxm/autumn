@@ -47,7 +47,7 @@ public class PluginManager {
         }
     }
 
-    public Set<PluginEntry> getPlugins(){
+    public Set<PluginEntry> getPlugins() {
         return plugins.keySet();
     }
 
@@ -105,20 +105,30 @@ public class PluginManager {
         }
         if (null == plugin)
             return "Plugin Not Found";
+        pluginEntry.setPlugin(plugin);
         plugins.put(pluginEntry, beans);
         return plugin.version();
     }
 
     public void unload(PluginEntry pluginEntry) {
-        Map.Entry<PluginEntry, List<String>> item = getEntryItem(pluginEntry.getUuid());
+        unload(pluginEntry.getUuid());
+    }
+
+    public void unload(String uuid) {
+        Map.Entry<PluginEntry, List<String>> item = getEntryItem(uuid);
         if (null != item) {
+            PluginEntry pluginEntry = item.getKey();
             List<String> list = item.getValue();
             if (null != list && !list.isEmpty()) {
                 for (String bean : list) {
                     SpringContextUtils.removeBean(bean);
                 }
             }
+            remove(pluginEntry);
+            if (pluginEntry.getPlugin() instanceof Plugin) {
+                Plugin plugin = (Plugin) pluginEntry.getPlugin();
+                plugin.uninstall();
+            }
         }
-        remove(pluginEntry);
     }
 }

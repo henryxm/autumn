@@ -1,5 +1,6 @@
 package cn.org.autumn.loader;
 
+import freemarker.cache.ClassTemplateLoader;
 import freemarker.cache.MultiTemplateLoader;
 import freemarker.cache.StatefulTemplateLoader;
 import freemarker.cache.TemplateLoader;
@@ -21,9 +22,17 @@ public class DynamicTemplateLoader extends MultiTemplateLoader {
     }
 
     public void add(TemplateLoader templateLoader) {
-        String name = templateLoader.getClass().getName();
+        ClassTemplateLoader classTemplateLoader = (ClassTemplateLoader) templateLoader;
+        String name = classTemplateLoader.getResourceLoaderClass().getName();
         if (!templateLoaders.containsKey(name))
             templateLoaders.put(name, templateLoader);
+    }
+
+    public void remove(TemplateLoader templateLoader) {
+        ClassTemplateLoader classTemplateLoader = (ClassTemplateLoader) templateLoader;
+        String name = classTemplateLoader.getResourceLoaderClass().getName();
+        if (templateLoaders.containsKey(name))
+            templateLoaders.remove(name);
     }
 
     @Override

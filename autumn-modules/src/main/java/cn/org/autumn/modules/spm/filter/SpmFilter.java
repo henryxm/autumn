@@ -57,7 +57,7 @@ public class SpmFilter extends FormAuthenticationFilter {
                 accessTokenKey = (String) map.get(OAuth.OAUTH_ACCESS_TOKEN);
             }
             return accessTokenKey;
-        } catch (Exception e) {
+        } catch (Throwable e) {
             if (request instanceof HttpServletRequest) {
                 HttpServletRequest httpServletRequest = (HttpServletRequest) request;
                 log.debug(httpServletRequest.getServletPath());

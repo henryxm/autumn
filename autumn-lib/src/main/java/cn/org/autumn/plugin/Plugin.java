@@ -24,4 +24,12 @@ public interface Plugin extends TemplateFactory.Template {
             dynamicTemplateLoader.add(this.getTemplateLoader());
         }
     }
+
+    default void uninstall() {
+        TemplateLoader templateLoader = (TemplateLoader) Config.getBean(TemplateLoader.class);
+        if (templateLoader instanceof DynamicTemplateLoader) {
+            DynamicTemplateLoader dynamicTemplateLoader = (DynamicTemplateLoader) templateLoader;
+            dynamicTemplateLoader.remove(this.getTemplateLoader());
+        }
+    }
 }

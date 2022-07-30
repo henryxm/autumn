@@ -3,6 +3,7 @@ package cn.org.autumn.modules.sys.service;
 import cn.org.autumn.bean.EnvBean;
 import cn.org.autumn.cluster.UserHandler;
 import cn.org.autumn.cluster.UserMapping;
+import cn.org.autumn.config.Config;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.sys.shiro.SuperPasswordToken;
 import cn.org.autumn.site.InitFactory;
@@ -106,7 +107,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
     }
 
     private void syncAdminUuid() {
-        if (null == userHandlers)
+        if (null == userHandlers || Config.isDev())
             return;
         for (UserHandler userHandler : userHandlers) {
             if (sysConfigService.isSame(userHandler))
