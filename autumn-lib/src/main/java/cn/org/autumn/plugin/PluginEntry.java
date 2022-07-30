@@ -11,6 +11,8 @@ public class PluginEntry implements Serializable {
 
     private String url;
 
+    private String namespace;
+
     private String description;
 
     public String getUuid() {
@@ -35,6 +37,14 @@ public class PluginEntry implements Serializable {
 
     public void setUrl(String url) {
         this.url = url;
+    }
+
+    public String getNamespace() {
+        return namespace;
+    }
+
+    public void setNamespace(String namespace) {
+        this.namespace = namespace;
     }
 
     public String getDescription() {

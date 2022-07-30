@@ -43,6 +43,16 @@ public class SpringContextUtils implements ApplicationContextAware {
         }
     }
 
+    public static void removeBean(String beanName) {
+        try {
+            if (StringUtils.isNotBlank(beanName) && null != defaultListableBeanFactory) {
+                defaultListableBeanFactory.removeBeanDefinition(beanName);
+            }
+        } catch (Exception e) {
+            log.error("Remove Bean:{}", e.getMessage());
+        }
+    }
+
     public static Object getBean(String name) {
         try {
             return applicationContext.getBean(name);
