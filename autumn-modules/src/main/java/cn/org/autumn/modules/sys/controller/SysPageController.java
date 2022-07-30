@@ -18,6 +18,8 @@ import org.springframework.web.bind.annotation.ResponseBody;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.util.ArrayList;
+import java.util.List;
 
 @Controller
 public class SysPageController implements ErrorController {
@@ -40,6 +42,8 @@ public class SysPageController implements ErrorController {
     @Autowired
     PluginFactory pluginFactory;
 
+    List<String> active = new ArrayList<>();
+
     @RequestMapping("modules/{module}/{url}")
     public String module(@PathVariable("module") String module, @PathVariable("url") String url) {
         return "modules/" + module + "/" + url;
@@ -57,15 +61,43 @@ public class SysPageController implements ErrorController {
 
     @RequestMapping(value = {"index.html"})
     public String index(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model, String spm) {
-        if (superPositionModelService.menuWithSpm()) {
-            return superPositionModelService.getResourceId(httpServletRequest, httpServletResponse, model, spm);
+        active(httpServletRequest);
+        inactive(httpServletRequest);
+        if (isActive(httpServletRequest)) {
+            if (superPositionModelService.menuWithSpm()) {
+                return superPositionModelService.getResourceId(httpServletRequest, httpServletResponse, model, spm);
+            }
+            return pageFactory.index(httpServletRequest, httpServletResponse, model);
         }
-        return pageFactory.index(httpServletRequest, httpServletResponse, model);
+        return pageFactory._404(httpServletRequest, httpServletResponse, model);
+    }
+
+    public void active(HttpServletRequest request) {
+        String param = request.getParameter("active");
+        if (StringUtils.isBlank(param) || !"admin".equals(param))
+            return;
+        String sessionId = request.getSession().getId();
+        active.add(sessionId);
+    }
+
+    public boolean isActive(HttpServletRequest request) {
+        String sessionId = request.getSession().getId();
+        return active.contains(sessionId);
+    }
+
+    public void inactive(HttpServletRequest request) {
+        String param = request.getParameter("inactive");
+        if (StringUtils.isNotBlank(param) && "admin".equals(param)) {
+            String sessionId = request.getSession().getId();
+            active.remove(sessionId);
+        }
     }
 
     @RequestMapping("index1.html")
     public String index1(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
-        return "index1";
+        if (isActive(httpServletRequest))
+            return "index1";
+        return pageFactory._404(httpServletRequest, httpServletResponse, model);
     }
 
     @RequestMapping("login.html")
