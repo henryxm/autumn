@@ -65,12 +65,17 @@ public class PluginManager {
         return false;
     }
 
-    public String load(PluginEntry pluginEntry) throws IOException {
-        if (null == pluginEntry || StringUtils.isBlank(pluginEntry.getUrl()) || StringUtils.isBlank(pluginEntry.getUuid()))
-            return "Empty Plugin";
+    public PluginEntry load(PluginEntry pluginEntry) throws IOException {
+        if (null == pluginEntry || StringUtils.isBlank(pluginEntry.getUrl()) || StringUtils.isBlank(pluginEntry.getUuid())) {
+            pluginEntry.setCode(500);
+            pluginEntry.setMsg("数据不完整");
+            return pluginEntry;
+        }
         ClassLoader classLoader = ClassLoaderUtil.getClassLoader(pluginEntry.getUrl());
         if (null == classLoader) {
-            return "Class Load Error";
+            pluginEntry.setCode(500);
+            pluginEntry.setMsg("类加载错误");
+            return pluginEntry;
         }
         if (contain(pluginEntry)) {
             unload(pluginEntry);
@@ -103,15 +108,25 @@ public class PluginManager {
             } catch (Exception ignored) {
             }
         }
-        if (null == plugin)
-            return "Plugin Not Found";
+        if (null == plugin) {
+            pluginEntry.setCode(600);
+            pluginEntry.setMsg("插件包不合格");
+            return pluginEntry;
+        }
         pluginEntry.setPlugin(plugin);
+        pluginEntry.merge(plugin.entry());
         plugins.put(pluginEntry, beans);
-        return plugin.version();
+        pluginEntry.setCode(0);
+        pluginEntry.setMsg("插件已加载");
+        pluginEntry.setData("");
+        return pluginEntry;
     }
 
-    public void unload(PluginEntry pluginEntry) {
+    public PluginEntry unload(PluginEntry pluginEntry) {
         unload(pluginEntry.getUuid());
+        pluginEntry.setCode(0);
+        pluginEntry.setMsg("插件已卸载");
+        return pluginEntry;
     }
 
     public void unload(String uuid) {

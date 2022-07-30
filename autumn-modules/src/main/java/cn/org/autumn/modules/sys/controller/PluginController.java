@@ -19,14 +19,14 @@ public class PluginController {
     PluginManager pluginManager;
 
     @RequestMapping(value = "/load", method = RequestMethod.POST)
-    public String load(@RequestBody PluginEntry pluginEntry) throws IOException {
+    public PluginEntry load(@RequestBody PluginEntry pluginEntry) throws IOException {
         return pluginManager.load(pluginEntry);
     }
 
     @RequestMapping(value = "/unload", method = RequestMethod.POST)
-    public String unload(@RequestBody PluginEntry pluginEntry) throws IOException {
+    public PluginEntry unload(@RequestBody PluginEntry pluginEntry) throws IOException {
         pluginManager.unload(pluginEntry);
-        return "success";
+        return pluginEntry;
     }
 
     @RequestMapping(value = "/getPlugins", method = {RequestMethod.POST, RequestMethod.GET})

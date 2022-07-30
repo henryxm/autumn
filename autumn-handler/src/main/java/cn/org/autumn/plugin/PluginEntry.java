@@ -17,6 +17,12 @@ public class PluginEntry implements Serializable {
 
     private String url;
 
+    private String logo;
+
+    private String banner;
+
+    private String index;
+
     private String price;
 
     private String version;
@@ -28,6 +34,12 @@ public class PluginEntry implements Serializable {
     private String summary;
 
     private String description;
+
+    private Integer code;
+
+    private String msg;
+
+    private String data;
 
     private Date createTime;
 
@@ -57,12 +69,44 @@ public class PluginEntry implements Serializable {
         this.author = author;
     }
 
+    public String getNamespace() {
+        return namespace;
+    }
+
+    public void setNamespace(String namespace) {
+        this.namespace = namespace;
+    }
+
     public String getUrl() {
         return url;
     }
 
     public void setUrl(String url) {
         this.url = url;
+    }
+
+    public String getLogo() {
+        return logo;
+    }
+
+    public void setLogo(String logo) {
+        this.logo = logo;
+    }
+
+    public String getBanner() {
+        return banner;
+    }
+
+    public void setBanner(String banner) {
+        this.banner = banner;
+    }
+
+    public String getIndex() {
+        return index;
+    }
+
+    public void setIndex(String index) {
+        this.index = index;
     }
 
     public String getPrice() {
@@ -79,14 +123,6 @@ public class PluginEntry implements Serializable {
 
     public void setVersion(String version) {
         this.version = version;
-    }
-
-    public String getNamespace() {
-        return namespace;
-    }
-
-    public void setNamespace(String namespace) {
-        this.namespace = namespace;
     }
 
     public Object getPlugin() {
@@ -121,6 +157,30 @@ public class PluginEntry implements Serializable {
         this.description = description;
     }
 
+    public Integer getCode() {
+        return code;
+    }
+
+    public void setCode(Integer code) {
+        this.code = code;
+    }
+
+    public String getMsg() {
+        return msg;
+    }
+
+    public void setMsg(String msg) {
+        this.msg = msg;
+    }
+
+    public String getData() {
+        return data;
+    }
+
+    public void setData(String data) {
+        this.data = data;
+    }
+
     public Date getCreateTime() {
         return createTime;
     }
@@ -135,5 +195,26 @@ public class PluginEntry implements Serializable {
 
     public void setUpdateTime(Date updateTime) {
         this.updateTime = updateTime;
+    }
+
+    public static boolean isBlank(String str) {
+        int strLen;
+        if (str != null && (strLen = str.length()) != 0) {
+            for (int i = 0; i < strLen; ++i) {
+                if (!Character.isWhitespace(str.charAt(i))) {
+                    return false;
+                }
+            }
+            return true;
+        } else {
+            return true;
+        }
+    }
+
+    public void merge(PluginEntry pluginEntry) {
+        if (null != pluginEntry) {
+            if (!isBlank(pluginEntry.getIndex()))
+                setIndex(pluginEntry.getIndex());
+        }
     }
 }
