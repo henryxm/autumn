@@ -152,11 +152,17 @@ public class ShiroConfig {
         }
 
         filterMap.put("/statics/**", "anon");
+        filterMap.put("/static/**", "anon");
+        filterMap.put("/js/**", "anon");
+        filterMap.put("/css/**", "anon");
+        filterMap.put("/images/**", "anon");
         filterMap.put("/api/**", "anon");
         filterMap.put("/login.html", "anon");
+        filterMap.put("/plugin.html", "anon");
         filterMap.put("/404.html", "anon");
         filterMap.put("/500.html", "anon");
         filterMap.put("/505.html", "anon");
+        filterMap.put("/plugin", "anon");
         filterMap.put("/error.html", "anon");
         filterMap.put("/404", "anon");
         filterMap.put("/500", "anon");

@@ -5,6 +5,7 @@ import cn.org.autumn.modules.client.service.WebAuthenticationService;
 import cn.org.autumn.modules.spm.service.SuperPositionModelService;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.site.PageFactory;
+import cn.org.autumn.site.PluginFactory;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.web.servlet.error.ErrorController;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -34,6 +36,9 @@ public class SysPageController implements ErrorController {
 
     @Autowired
     PageFactory pageFactory;
+
+    @Autowired
+    PluginFactory pluginFactory;
 
     @RequestMapping("modules/{module}/{url}")
     public String module(@PathVariable("module") String module, @PathVariable("url") String url) {
@@ -124,5 +129,16 @@ public class SysPageController implements ErrorController {
     @RequestMapping({"error.html", "error"})
     public String error(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
         return pageFactory.error(httpServletRequest, httpServletResponse, model);
+    }
+
+    @RequestMapping({"plugin.html", "plugin"})
+    @ResponseBody
+    public Object plugin(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        String unload = httpServletRequest.getParameter("load");
+        if (StringUtils.isNotBlank(unload) && unload.equals("unload")) {
+            return pluginFactory.uninstallPlugin();
+        } else {
+            return pluginFactory.installPlugin();
+        }
     }
 }
