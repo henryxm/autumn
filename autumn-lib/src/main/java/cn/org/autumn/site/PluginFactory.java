@@ -16,7 +16,7 @@ public class PluginFactory extends Factory {
 
     List<PluginHandler> pluginHandlers = null;
 
-    public Set<PluginEntry> installPlugin() {
+    public List<PluginEntry> installPlugin() {
         if (null == pluginHandlers)
             pluginHandlers = getOrderList(PluginHandler.class);
         if (null != pluginHandlers && !pluginHandlers.isEmpty()) {
@@ -27,8 +27,8 @@ public class PluginFactory extends Factory {
         return pluginManager.getPlugins();
     }
 
-    public Set<PluginEntry> uninstallPlugin() {
-        Set<PluginEntry> pluginEntries = pluginManager.getPlugins();
+    public List<PluginEntry> uninstallPlugin() {
+        List<PluginEntry> pluginEntries = pluginManager.getPlugins();
         for (PluginEntry entry : pluginEntries) {
             pluginManager.unload(entry);
         }

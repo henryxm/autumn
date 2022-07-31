@@ -1,16 +1,24 @@
 package cn.org.autumn.loader;
 
+import cn.org.autumn.plugin.PluginManager;
 import freemarker.cache.ClassTemplateLoader;
 import freemarker.cache.MultiTemplateLoader;
 import freemarker.cache.StatefulTemplateLoader;
 import freemarker.cache.TemplateLoader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.Reader;
+import java.lang.reflect.Field;
+import java.net.URL;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class DynamicTemplateLoader extends MultiTemplateLoader {
+
+    Logger log = LoggerFactory.getLogger(getClass());
 
     private final Map<String, TemplateLoader> templateLoaders = new ConcurrentHashMap();
 
@@ -35,9 +43,41 @@ public class DynamicTemplateLoader extends MultiTemplateLoader {
             templateLoaders.remove(name);
     }
 
+    public boolean exists(Object obj) {
+        try {
+            if (null != obj) {
+                if (obj.getClass().getSimpleName().equals("MultiSource")) {
+                    Field field = obj.getClass().getDeclaredField("source");
+                    field.setAccessible(true);
+                    Object source = field.get(obj);
+                    if (source.getClass().getSimpleName().equals("URLTemplateSource")) {
+                        Field urlField = source.getClass().getDeclaredField("url");
+                        urlField.setAccessible(true);
+                        Object url = urlField.get(source);
+                        if (url instanceof URL) {
+                            URL a = (URL) url;
+                            if (a.getFile().startsWith("file:")) {
+                                String file = a.getFile().replace("file:", "");
+                                if (file.startsWith(PluginManager.getPluginBaseDir()) && file.contains("!")) {
+                                    file = file.split("!")[0];
+                                    File f = new File(file);
+                                    return f.exists();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+        return true;
+    }
+
     @Override
     public Object findTemplateSource(String name) throws IOException {
         Object source = super.findTemplateSource(name);
+        if (!exists(source))
+            return null;
         if (null == source) {
             TemplateLoader lastTemplateLoader = null;
             if (this.sticky) {

@@ -24,7 +24,22 @@ public class PluginManager {
 
     Logger log = LoggerFactory.getLogger(getClass());
 
+    public static String pluginDir;
+
     Map<PluginEntry, List<String>> plugins = new HashMap<>();
+
+    public static String getPluginBaseDir() {
+        if (null == pluginDir) {
+            String tmp = System.getProperty("java.io.tmpdir");
+            String plugin = "cn.org.autumn.application/plugins";
+            if (tmp.endsWith("/"))
+                tmp += plugin;
+            else
+                tmp += ("/" + plugin);
+            pluginDir = tmp;
+        }
+        return pluginDir;
+    }
 
     public Map.Entry<PluginEntry, List<String>> getEntryItem(String uuid) {
         for (Map.Entry<PluginEntry, List<String>> entry : plugins.entrySet()) {
@@ -53,8 +68,12 @@ public class PluginManager {
         }
     }
 
-    public Set<PluginEntry> getPlugins() {
-        return plugins.keySet();
+    public List<PluginEntry> getPlugins() {
+        List<PluginEntry> list = new ArrayList<>();
+        for (PluginEntry entry : plugins.keySet()) {
+            list.add(entry.copy());
+        }
+        return list;
     }
 
     public boolean isComponent(Class<?> clazz) {
@@ -79,12 +98,7 @@ public class PluginManager {
             http.setRequestProperty("User-Agent", "Mozilla/4.0 (compatible; MSIE 9.0; Windows NT 6.1; Trident/5.0)");
             InputStream inputStream = http.getInputStream();
             byte[] buff = new byte[1024 * 10];
-            String tmp = System.getProperty("java.io.tmpdir");
-            if (tmp.endsWith("/"))
-                tmp += "minclouds/plugin";
-            else
-                tmp += "/minclouds/plugin";
-            File file = new File(tmp, pluginEntry.getUuid() + ".jar");
+            File file = new File(getPluginBaseDir(), pluginEntry.getUuid() + ".jar");
             if (file.exists())
                 file.delete();
             if (!file.exists()) {
@@ -115,6 +129,9 @@ public class PluginManager {
             pluginEntry.setMsg("数据不完整");
             return pluginEntry;
         }
+        if (contain(pluginEntry)) {
+            unload(pluginEntry);
+        }
         String file = write(pluginEntry);
         if (StringUtils.isBlank(file)) {
             pluginEntry.setCode(501);
@@ -126,9 +143,6 @@ public class PluginManager {
             pluginEntry.setCode(502);
             pluginEntry.setMsg("类加载错误");
             return pluginEntry;
-        }
-        if (contain(pluginEntry)) {
-            unload(pluginEntry);
         }
         //加入新的jar到系统的ClassPath中
         String classPath = System.getProperty("java.class.path");
@@ -171,6 +185,7 @@ public class PluginManager {
         pluginEntry.setCode(0);
         pluginEntry.setMsg("插件已加载");
         pluginEntry.setData("");
+        pluginEntry.setFile(file);
         return pluginEntry;
     }
 
@@ -179,6 +194,12 @@ public class PluginManager {
         pluginEntry.setCode(0);
         pluginEntry.setMsg("插件已卸载");
         return pluginEntry;
+    }
+
+    public void clear() {
+        for (PluginEntry entry : plugins.keySet()) {
+            unload(entry);
+        }
     }
 
     public void unload(String uuid) {
@@ -196,6 +217,18 @@ public class PluginManager {
                 Plugin plugin = (Plugin) pluginEntry.getPlugin();
                 plugin.uninstall();
             }
+            clearClassPath(pluginEntry);
+        }
+    }
+
+    public void clearClassPath(PluginEntry pluginEntry) {
+        String classPath = System.getProperty("java.class.path");
+        if (StringUtils.isNotBlank(pluginEntry.getFile()) && classPath.contains(":" + pluginEntry.getFile())) {
+            classPath = classPath.replace(":" + pluginEntry.getFile(), "");
+            System.setProperty("java.class.path", classPath);
+            File file = new File(pluginEntry.getFile());
+            if (file.exists())
+                file.delete();
         }
     }
 }

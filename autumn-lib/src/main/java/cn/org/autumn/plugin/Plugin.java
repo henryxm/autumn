@@ -30,6 +30,7 @@ public interface Plugin extends TemplateFactory.Template {
         if (templateLoader instanceof DynamicTemplateLoader) {
             DynamicTemplateLoader dynamicTemplateLoader = (DynamicTemplateLoader) templateLoader;
             dynamicTemplateLoader.remove(this.getTemplateLoader());
+            dynamicTemplateLoader.resetState();
         }
     }
 }

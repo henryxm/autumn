@@ -23,6 +23,9 @@ public class PluginEntry implements Serializable {
 
     private String index;
 
+    //设为主要启动插件，优先使用该插件的index首页
+    private Boolean main;
+
     private String price;
 
     private String version;
@@ -40,6 +43,8 @@ public class PluginEntry implements Serializable {
     private String msg;
 
     private String data;
+
+    private String file;
 
     private Date createTime;
 
@@ -107,6 +112,14 @@ public class PluginEntry implements Serializable {
 
     public void setIndex(String index) {
         this.index = index;
+    }
+
+    public Boolean getMain() {
+        return main;
+    }
+
+    public void setMain(Boolean main) {
+        this.main = main;
     }
 
     public String getPrice() {
@@ -181,6 +194,14 @@ public class PluginEntry implements Serializable {
         this.data = data;
     }
 
+    public String getFile() {
+        return file;
+    }
+
+    public void setFile(String file) {
+        this.file = file;
+    }
+
     public Date getCreateTime() {
         return createTime;
     }
@@ -216,5 +237,29 @@ public class PluginEntry implements Serializable {
             if (!isBlank(pluginEntry.getIndex()))
                 setIndex(pluginEntry.getIndex());
         }
+    }
+
+    public PluginEntry copy() {
+        PluginEntry pluginEntry = new PluginEntry();
+        pluginEntry.setIndex(index);
+        pluginEntry.setCode(code);
+        pluginEntry.setMsg(msg);
+        pluginEntry.setData(data);
+        pluginEntry.setDescription(description);
+        pluginEntry.setNamespace(namespace);
+        pluginEntry.setUuid(uuid);
+        pluginEntry.setAuthor(author);
+        pluginEntry.setBanner(banner);
+        pluginEntry.setCreateTime(createTime);
+        pluginEntry.setUpdateTime(updateTime);
+        pluginEntry.setUrl(url);
+        pluginEntry.setImages(images);
+        pluginEntry.setMain(main);
+        pluginEntry.setLogo(logo);
+        pluginEntry.setSummary(summary);
+        pluginEntry.setPrice(price);
+        pluginEntry.setName(name);
+        pluginEntry.setVersion(version);
+        return pluginEntry;
     }
 }
