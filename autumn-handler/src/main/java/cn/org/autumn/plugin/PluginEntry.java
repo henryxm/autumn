@@ -24,7 +24,7 @@ public class PluginEntry implements Serializable {
     private String index;
 
     //设为主要启动插件，优先使用该插件的index首页
-    private Boolean main;
+    private boolean main = false;
 
     private String price;
 
@@ -114,11 +114,11 @@ public class PluginEntry implements Serializable {
         this.index = index;
     }
 
-    public Boolean getMain() {
+    public boolean getMain() {
         return main;
     }
 
-    public void setMain(Boolean main) {
+    public void setMain(boolean main) {
         this.main = main;
     }
 
