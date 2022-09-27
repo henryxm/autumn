@@ -38,7 +38,7 @@ public class SysLogController {
      *
      * @param rootLevel   全局日志级别
      * @param singleLevel 某个类日志级别
-     * @param singlePath  需要单独设置日志输出级别的类的全限定名（例:com.chinasofti.cloudeasy.api.web.LogController）
+     * @param singlePath  需要单独设置日志输出级别的类的全限定名（例:cn.org.autumn.modules.sys.controller.SysLogController）
      * @return
      */
     @GetMapping("changeLevel")
@@ -48,8 +48,9 @@ public class SysLogController {
             @ApiImplicitParam(name = "singleLevel",
                     value = "单独设置类日志级别:ALL,TRACE,DEBUG,INFO,WARN,ERROR,OFF", required = false),
             @ApiImplicitParam(name = "singlePath",
-                    value = "单独类路径:com.chinasofti.cloudeasy.api.web.LogController",
+                    value = "单独类路径:cn.org.autumn.modules.sys.controller.SysLogController",
                     required = false)})
+    @ResponseBody
     public String changeLevel(String rootLevel, String singleLevel, String singlePath) {
         return sysLogService.changeLevel(rootLevel, singleLevel, singlePath);
     }
