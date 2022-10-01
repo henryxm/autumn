@@ -20,7 +20,7 @@ import java.lang.reflect.Field;
 import java.util.*;
 
 @Service
-public class LanguageService extends LanguageServiceGen implements LoadFactory.Load, LoopJob.Job {
+public class LanguageService extends LanguageServiceGen implements LoadFactory.Load, LoadFactory.Must, LoopJob.TenMinute {
     private static Logger logger = LoggerFactory.getLogger(LanguageService.class);
 
     public static final String MULTIPLE_LANGUAGE_CONFIG_KEY = "MULTIPLE_LANGUAGE_CONFIG_KEY";
@@ -29,6 +29,8 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
     @Autowired
     @Lazy
     SysConfigService sysConfigService;
+
+    boolean loaded = false;
 
     private static Map<String, Map<String, String>> languages;
 
@@ -97,6 +99,9 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
     }
 
     public void load() {
+        if (loaded)
+            return;
+        loaded = true;
         List<LanguageEntity> languageEntityList = baseMapper.selectByMap(new HashMap<>());
         for (LanguageEntity languageEntity : languageEntityList) {
             f(languageEntity);
@@ -286,7 +291,6 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
     }
 
     public void init() {
-        LoopJob.onTenMinute(this);
         super.init();
         sysMenuService.put(getMenuItemsInternal(), getMenuItems(), getMenuList());
         put(getLanguageItemsInternal(), getLanguageItems(), getLanguageList());
@@ -500,7 +504,13 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
     }
 
     @Override
-    public void runJob() {
+    public void onTenMinute() {
+        loaded = false;
+        load();
+    }
+
+    @Override
+    public void must() {
         load();
     }
 }

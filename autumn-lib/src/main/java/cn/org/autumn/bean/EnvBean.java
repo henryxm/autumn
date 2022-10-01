@@ -4,6 +4,8 @@ import cn.org.autumn.annotation.EnvAware;
 import cn.org.autumn.config.EnvHandler;
 import org.springframework.stereotype.Component;
 
+import javax.annotation.PostConstruct;
+
 @Component
 public class EnvBean implements EnvHandler {
 
@@ -36,6 +38,9 @@ public class EnvBean implements EnvHandler {
 
     @EnvAware("root.domain")
     String rootDomain;
+
+    @EnvAware("table.init")
+    boolean tableInit = true;
 
     public String getClientId() {
         return clientId;
@@ -115,5 +120,13 @@ public class EnvBean implements EnvHandler {
 
     public void setRootDomain(String rootDomain) {
         this.rootDomain = rootDomain;
+    }
+
+    public boolean isTableInit() {
+        return tableInit;
+    }
+
+    public void setTableInit(boolean tableInit) {
+        this.tableInit = tableInit;
     }
 }

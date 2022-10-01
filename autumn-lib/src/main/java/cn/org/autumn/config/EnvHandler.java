@@ -6,6 +6,7 @@ import cn.org.autumn.utils.Utils;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.core.annotation.Order;
 
+import javax.annotation.PostConstruct;
 import java.lang.reflect.Field;
 import java.lang.reflect.Type;
 import java.math.BigDecimal;
@@ -17,6 +18,7 @@ public interface EnvHandler extends InitFactory.Before {
 
     @Override
     @Order(0)
+    @PostConstruct
     default void before() {
         Field[] fields = getClass().getDeclaredFields();
         for (Field field : fields) {

@@ -2,6 +2,7 @@ package cn.org.autumn.table;
 
 import javax.annotation.PostConstruct;
 
+import cn.org.autumn.bean.EnvBean;
 import cn.org.autumn.table.service.MysqlTableService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,6 +17,9 @@ import org.springframework.stereotype.Service;
 public class TableInit {
 
     private static final Logger log = LoggerFactory.getLogger(TableInit.class);
+
+    @Autowired
+    EnvBean envBean;
 
     /**
      * constant value for mysql database.
@@ -47,6 +51,8 @@ public class TableInit {
 
     @PostConstruct
     public void start() {
+        if (!envBean.isTableInit())
+            return;
         if (MYSQL.equals(databaseType))
             mysqlTableService.createMysqlTable();
     }
