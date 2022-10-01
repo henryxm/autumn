@@ -6,11 +6,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.List;
 
 @Component
 public class LoopJob extends Factory implements LoadFactory.Must {
@@ -280,6 +277,7 @@ public class LoopJob extends Factory implements LoadFactory.Must {
                 try {
                     if (!job.isEnabled())
                         continue;
+                    log.debug("Run One Second Job:{}", job.getClass().getSimpleName());
                     if (job instanceof OneSecond)
                         ((OneSecond) job).onOneSecond();
                     else
@@ -297,6 +295,7 @@ public class LoopJob extends Factory implements LoadFactory.Must {
                 try {
                     if (!job.isEnabled())
                         continue;
+                    log.debug("Run Three Second Job:{}", job.getClass().getSimpleName());
                     if (job instanceof ThreeSecond)
                         ((ThreeSecond) job).onThreeSecond();
                     else
@@ -314,6 +313,7 @@ public class LoopJob extends Factory implements LoadFactory.Must {
                 try {
                     if (!job.isEnabled())
                         continue;
+                    log.debug("Run Five Second Job:{}", job.getClass().getSimpleName());
                     if (job instanceof FiveSecond)
                         ((FiveSecond) job).onFiveSecond();
                     else
@@ -331,6 +331,7 @@ public class LoopJob extends Factory implements LoadFactory.Must {
                 try {
                     if (!job.isEnabled())
                         continue;
+                    log.debug("Run Ten Second Job:{}", job.getClass().getSimpleName());
                     if (job instanceof TenSecond)
                         ((TenSecond) job).onTenSecond();
                     else
@@ -348,6 +349,7 @@ public class LoopJob extends Factory implements LoadFactory.Must {
                 try {
                     if (!job.isEnabled())
                         continue;
+                    log.debug("Run Thirty Second Job:{}", job.getClass().getSimpleName());
                     if (job instanceof ThirtySecond)
                         ((ThirtySecond) job).onThirtySecond();
                     else
@@ -365,6 +367,7 @@ public class LoopJob extends Factory implements LoadFactory.Must {
                 try {
                     if (!job.isEnabled())
                         continue;
+                    log.debug("Run One Minute Job:{}", job.getClass().getSimpleName());
                     if (job instanceof OneMinute)
                         ((OneMinute) job).onOneMinute();
                     else
@@ -382,6 +385,7 @@ public class LoopJob extends Factory implements LoadFactory.Must {
                 try {
                     if (!job.isEnabled())
                         continue;
+                    log.debug("Run Five Minute Job:{}", job.getClass().getSimpleName());
                     if (job instanceof FiveMinute)
                         ((FiveMinute) job).onFiveMinute();
                     else
@@ -399,6 +403,7 @@ public class LoopJob extends Factory implements LoadFactory.Must {
                 try {
                     if (!job.isEnabled())
                         continue;
+                    log.debug("Run Ten Minute Job:{}", job.getClass().getSimpleName());
                     if (job instanceof TenMinute)
                         ((TenMinute) job).onTenMinute();
                     else
@@ -416,6 +421,7 @@ public class LoopJob extends Factory implements LoadFactory.Must {
                 try {
                     if (!job.isEnabled())
                         continue;
+                    log.debug("Run Thirty Minute Job:{}", job.getClass().getSimpleName());
                     if (job instanceof ThirtyMinute)
                         ((ThirtyMinute) job).onThirtyMinute();
                     else
@@ -434,6 +440,7 @@ public class LoopJob extends Factory implements LoadFactory.Must {
                 try {
                     if (!job.isEnabled())
                         continue;
+                    log.debug("Run One Hour Job:{}", job.getClass().getSimpleName());
                     if (job instanceof OneHour)
                         ((OneHour) job).onOneHour();
                     else
@@ -451,6 +458,7 @@ public class LoopJob extends Factory implements LoadFactory.Must {
                 try {
                     if (!job.isEnabled())
                         continue;
+                    log.debug("Run Ten Hour Job:{}", job.getClass().getSimpleName());
                     if (job instanceof TenHour)
                         ((TenHour) job).onTenHour();
                     else
@@ -468,6 +476,7 @@ public class LoopJob extends Factory implements LoadFactory.Must {
                 try {
                     if (!job.isEnabled())
                         continue;
+                    log.debug("Run Thirty Hour Job:{}", job.getClass().getSimpleName());
                     if (job instanceof ThirtyHour)
                         ((ThirtyHour) job).onThirtyHour();
                     else
@@ -485,6 +494,7 @@ public class LoopJob extends Factory implements LoadFactory.Must {
                 try {
                     if (!job.isEnabled())
                         continue;
+                    log.debug("Run Day Job:{}", job.getClass().getSimpleName());
                     if (job instanceof OneDay)
                         ((OneDay) job).onOneDay();
                     else
@@ -502,6 +512,7 @@ public class LoopJob extends Factory implements LoadFactory.Must {
                 try {
                     if (!job.isEnabled())
                         continue;
+                    log.debug("Run Week Job:{}", job.getClass().getSimpleName());
                     if (job instanceof OneWeek)
                         ((OneWeek) job).onOneWeek();
                     else
@@ -511,5 +522,27 @@ public class LoopJob extends Factory implements LoadFactory.Must {
                 }
             }
         }
+    }
+
+    public static Map<String, List<String>> print() {
+        Map<String, List<String>> map = new HashMap<>();
+        List<String> oneSecondJobName = new ArrayList<>();
+        for (Job job : oneSecondJobList) {
+            oneSecondJobName.add(job.getClass().getName());
+        }
+        map.put("OneSecondJob", oneSecondJobName);
+
+        List<String> thirtySecondJobName = new ArrayList<>();
+        for (Job job : thirtySecondJobList) {
+            thirtySecondJobName.add(job.getClass().getName());
+        }
+        map.put("ThirtySecondJob", thirtySecondJobName);
+
+        List<String> tenSecondJobName = new ArrayList<>();
+        for (Job job : tenSecondJobList) {
+            tenSecondJobName.add(job.getClass().getName());
+        }
+        map.put("TenSecondJob", tenSecondJobName);
+        return map;
     }
 }

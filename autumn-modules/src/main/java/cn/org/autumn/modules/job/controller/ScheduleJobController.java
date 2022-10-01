@@ -1,13 +1,15 @@
 package cn.org.autumn.modules.job.controller;
 
 import cn.org.autumn.annotation.SysLog;
+import cn.org.autumn.modules.job.controller.gen.ScheduleJobControllerGen;
 import cn.org.autumn.modules.job.entity.ScheduleJobEntity;
+import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.utils.R;
 import cn.org.autumn.validator.ValidatorUtils;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
-import org.springframework.web.bind.annotation.*;
-
-import cn.org.autumn.modules.job.controller.gen.ScheduleJobControllerGen;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 定时任务
@@ -85,5 +87,10 @@ public class ScheduleJobController extends ScheduleJobControllerGen {
     public R resume(@RequestBody Long[] jobIds) {
         scheduleJobService.resume(jobIds);
         return R.ok();
+    }
+
+    @RequestMapping("/print")
+    public Object print() {
+        return LoopJob.print();
     }
 }
