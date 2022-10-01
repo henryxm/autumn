@@ -6,6 +6,7 @@ import cn.org.autumn.modules.job.service.gen.ScheduleJobServiceGen;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.job.utils.ScheduleUtils;
 import cn.org.autumn.modules.sys.service.SysMenuService;
+import cn.org.autumn.site.InitFactory;
 import cn.org.autumn.utils.Constant;
 import cn.org.autumn.utils.PageUtils;
 import cn.org.autumn.utils.Query;
@@ -27,7 +28,7 @@ import static cn.org.autumn.modules.sys.service.SysMenuService.getSystemMenuKey;
 
 @DependsOn("springContextUtils")
 @Service
-public class ScheduleJobService extends ScheduleJobServiceGen implements LoopJob.Job {
+public class ScheduleJobService extends ScheduleJobServiceGen implements InitFactory.Must, LoopJob.TenSecond {
 
     @Autowired
     private Scheduler scheduler;
@@ -86,6 +87,10 @@ public class ScheduleJobService extends ScheduleJobServiceGen implements LoopJob
 
     public void init() {
         super.init();
+        sysMenuService.put(menus());
+    }
+
+    public void must() {
         scanInit();
         String[][] mapping = new String[][]{};
         for (String[] map : mapping) {
@@ -116,8 +121,6 @@ public class ScheduleJobService extends ScheduleJobServiceGen implements LoopJob
             }
         }
         initScheduler();
-        sysMenuService.put(menus());
-        LoopJob.onTenSecond(this);
     }
 
     /**
@@ -228,7 +231,7 @@ public class ScheduleJobService extends ScheduleJobServiceGen implements LoopJob
     }
 
     @Override
-    public void runJob() {
+    public void onTenSecond() {
         initScheduler();
     }
 }

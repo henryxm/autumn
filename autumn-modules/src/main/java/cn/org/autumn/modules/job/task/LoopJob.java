@@ -13,7 +13,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.List;
 
 @Component
-public class LoopJob extends Factory implements LoadFactory.Load {
+public class LoopJob extends Factory implements LoadFactory.Must {
     static Logger log = LoggerFactory.getLogger(LoopJob.class);
 
     static Map<Integer, Job> disabled = new HashMap<>();
@@ -23,7 +23,7 @@ public class LoopJob extends Factory implements LoadFactory.Load {
     }
 
     @Override
-    public void load() {
+    public void must() {
         List<OneSecond> oneSeconds = getOrderList(OneSecond.class, "onOneSecond");
         for (OneSecond oneSecond : oneSeconds) {
             onOneSecond(oneSecond);
