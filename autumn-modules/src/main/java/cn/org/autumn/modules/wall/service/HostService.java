@@ -5,8 +5,10 @@ import cn.org.autumn.modules.wall.dao.HostDao;
 import cn.org.autumn.modules.wall.entity.RData;
 import cn.org.autumn.site.LoadFactory;
 import cn.org.autumn.modules.wall.entity.HostEntity;
+import cn.org.autumn.site.WallFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -15,6 +17,9 @@ import java.util.*;
 public class HostService extends WallCounter<HostDao, HostEntity> implements LoadFactory.Load, LoopJob.FiveSecond {
 
     private static final Logger log = LoggerFactory.getLogger(HostService.class);
+
+    @Autowired
+    WallFactory wallFactory;
 
     /**
      * 黑名单列表
@@ -28,7 +33,7 @@ public class HostService extends WallCounter<HostDao, HostEntity> implements Loa
     // 主机访问黑名单
     public boolean isBlack(String host) {
         try {
-            if (blackHostList.contains(host)) {
+            if (wallFactory.isHostEnable() && blackHostList.contains(host)) {
                 count(host, new RData());
                 return true;
             }
@@ -75,7 +80,10 @@ public class HostService extends WallCounter<HostDao, HostEntity> implements Loa
 
     @Override
     public void onFiveSecond() {
-        load();
+        if (wallFactory.isHostEnable())
+            load();
+        else
+            clear();
     }
 
     @Override

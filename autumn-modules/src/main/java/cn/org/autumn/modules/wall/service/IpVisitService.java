@@ -1,6 +1,8 @@
 package cn.org.autumn.modules.wall.service;
 
 import cn.org.autumn.modules.wall.entity.RData;
+import cn.org.autumn.site.WallFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import cn.org.autumn.modules.wall.dao.IpVisitDao;
 import cn.org.autumn.modules.wall.entity.IpVisitEntity;
@@ -9,6 +11,9 @@ import java.util.Date;
 
 @Service
 public class IpVisitService extends WallCounter<IpVisitDao, IpVisitEntity> {
+
+    @Autowired
+    WallFactory wallFactory;
 
     public IpVisitEntity getByIp(String ip) {
         return baseMapper.getByIp(ip);
@@ -27,6 +32,8 @@ public class IpVisitService extends WallCounter<IpVisitDao, IpVisitEntity> {
     }
 
     public IpVisitEntity create(String ip, String tag, String description) {
+        if (!wallFactory.isVisitEnable())
+            return null;
         IpVisitEntity visitEntity = null;
         try {
             visitEntity = getByIp(ip);

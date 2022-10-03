@@ -5,6 +5,7 @@ import cn.org.autumn.modules.wall.entity.RData;
 import cn.org.autumn.site.LoadFactory;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.wall.entity.UrlBlackEntity;
+import cn.org.autumn.site.WallFactory;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,6 +40,9 @@ public class UrlBlackService extends WallCounter<UrlBlackDao, UrlBlackEntity> im
     @Autowired
     IpBlackService ipBlackService;
 
+    @Autowired
+    WallFactory wallFactory;
+
     /**
      * 为了提高效率，在黑客大量攻击的时候，不能频繁进行数据库访问，通过定时器定时加载IP地址黑名单数据，提高效率。
      */
@@ -47,7 +51,7 @@ public class UrlBlackService extends WallCounter<UrlBlackDao, UrlBlackEntity> im
     }
 
     public boolean isBlack(String url) {
-        if (blackUrls.contains(url)) {
+        if (wallFactory.isUrlBlack() && blackUrls.contains(url)) {
             count(url, null);
             return true;
         }
@@ -129,8 +133,11 @@ public class UrlBlackService extends WallCounter<UrlBlackDao, UrlBlackEntity> im
 
     @Override
     public void onFiveSecond() {
-        refresh(500);
-        load();
+        if (wallFactory.isUrlBlack()) {
+            refresh(500);
+            load();
+        } else
+            clear();
     }
 
     @Override

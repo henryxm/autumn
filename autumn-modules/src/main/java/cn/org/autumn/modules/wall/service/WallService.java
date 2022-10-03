@@ -6,6 +6,7 @@ import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.usr.service.UserProfileService;
 import cn.org.autumn.modules.wall.entity.RData;
 import cn.org.autumn.site.HostFactory;
+import cn.org.autumn.site.WallFactory;
 import cn.org.autumn.utils.IPUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -45,9 +46,14 @@ public class WallService {
     HostFactory hostFactory;
 
     @Autowired
+    WallFactory wallFactory;
+
+    @Autowired
     UserProfileService userProfileService;
 
     public boolean isEnabled(ServletRequest servletRequest, ServletResponse servletResponse, boolean logEnable, boolean counter) {
+        if (!wallFactory.isOpen())
+            return true;
         HttpServletRequest request = (HttpServletRequest) servletRequest;
         HttpServletResponse response = (HttpServletResponse) servletResponse;
         try {

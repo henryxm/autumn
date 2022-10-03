@@ -5,6 +5,7 @@ import cn.org.autumn.modules.wall.entity.RData;
 import cn.org.autumn.site.LoadFactory;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.wall.entity.IpBlackEntity;
+import cn.org.autumn.site.WallFactory;
 import cn.org.autumn.utils.IPUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -20,6 +21,9 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
 
     @Autowired
     IpWhiteService ipWhiteService;
+
+    @Autowired
+    WallFactory wallFactory;
 
     /**
      * 一个ip地址统计刷新周期内，ip访问次数大于该值后，把ip地址加入到黑名单
@@ -62,6 +66,8 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
 
     public boolean isBlack(String ip, String agent) {
         try {
+            if (!wallFactory.isIpBlackEnable())
+                return false;
             if (StringUtils.isBlank(ip))
                 return false;
             if (ipBlackList.contains(ip)) {
@@ -232,8 +238,11 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
 
     @Override
     public void onFiveSecond() {
-        refresh(500);
-        load();
+        if (wallFactory.isIpBlackEnable()) {
+            refresh(500);
+            load();
+        } else
+            clear();
     }
 
     @Override

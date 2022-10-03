@@ -5,10 +5,12 @@ import cn.org.autumn.modules.wall.entity.RData;
 import cn.org.autumn.site.LoadFactory;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.wall.entity.IpWhiteEntity;
+import cn.org.autumn.site.WallFactory;
 import cn.org.autumn.utils.IPUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -22,6 +24,9 @@ public class IpWhiteService extends WallCounter<IpWhiteDao, IpWhiteEntity> imple
 
     private List<String> ipWhiteList = new ArrayList<>();
     private List<String> ipWhiteSectionList = new ArrayList<>();
+
+    @Autowired
+    WallFactory wallFactory;
 
     /**
      * 为了提高效率，在黑客大量攻击的时候，不能频繁进行数据库访问，通过定时器定时加载IP地址黑名单数据，提高效率。
@@ -58,6 +63,8 @@ public class IpWhiteService extends WallCounter<IpWhiteDao, IpWhiteEntity> imple
 
     public boolean isWhite(String ip, String agent) {
         try {
+            if (!wallFactory.isIpWhiteEnable())
+                return false;
             if (StringUtils.isEmpty(ip))
                 return false;
             if (ipWhiteList.contains(ip)) {
@@ -96,7 +103,10 @@ public class IpWhiteService extends WallCounter<IpWhiteDao, IpWhiteEntity> imple
 
     @Override
     public void onFiveSecond() {
-        load();
+        if (wallFactory.isIpWhiteEnable())
+            load();
+        else
+            clear();
     }
 
     public IpWhiteEntity create(String ip, String tag, String description) {

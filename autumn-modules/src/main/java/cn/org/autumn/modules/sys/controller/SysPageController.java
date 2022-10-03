@@ -4,6 +4,9 @@ import cn.org.autumn.modules.client.entity.WebAuthenticationEntity;
 import cn.org.autumn.modules.client.service.WebAuthenticationService;
 import cn.org.autumn.modules.spm.service.SuperPositionModelService;
 import cn.org.autumn.modules.sys.service.SysConfigService;
+import cn.org.autumn.modules.sys.service.SysUserRoleService;
+import cn.org.autumn.modules.sys.shiro.ShiroUtils;
+import cn.org.autumn.modules.wall.site.WallDefault;
 import cn.org.autumn.site.PageFactory;
 import cn.org.autumn.site.PluginFactory;
 import org.apache.commons.lang.StringUtils;
@@ -41,6 +44,12 @@ public class SysPageController implements ErrorController {
 
     @Autowired
     PluginFactory pluginFactory;
+
+    @Autowired
+    WallDefault wallDefault;
+
+    @Autowired
+    SysUserRoleService sysUserRoleService;
 
     List<String> active = new ArrayList<>();
 
@@ -177,6 +186,28 @@ public class SysPageController implements ErrorController {
     @RequestMapping({"classpath.html", "classpath"})
     @ResponseBody
     public String getClassPath() {
+        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
+            return "";
         return System.getProperty("java.class.path");
+    }
+
+    @RequestMapping({"firewall.html", "firewall"})
+    @ResponseBody
+    public WallDefault wall(Boolean open, Boolean white, Boolean black, Boolean host, Boolean visit, Boolean url) {
+        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
+            return null;
+        if (null != open)
+            wallDefault.setOpen(open);
+        if (null != white)
+            wallDefault.setIpWhiteEnable(white);
+        if (null != black)
+            wallDefault.setIpBlackEnable(black);
+        if (null != host)
+            wallDefault.setHostEnable(host);
+        if (null != visit)
+            wallDefault.setVisitEnable(visit);
+        if (null != url)
+            wallDefault.setUrlBlackEnable(url);
+        return wallDefault;
     }
 }
