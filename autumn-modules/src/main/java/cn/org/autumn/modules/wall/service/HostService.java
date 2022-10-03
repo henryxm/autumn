@@ -82,8 +82,6 @@ public class HostService extends WallCounter<HostDao, HostEntity> implements Loa
     public void onFiveSecond() {
         if (wallFactory.isHostEnable())
             load();
-        else
-            clear();
     }
 
     @Override

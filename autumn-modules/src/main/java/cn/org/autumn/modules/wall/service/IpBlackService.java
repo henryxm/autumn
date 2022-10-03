@@ -241,8 +241,7 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
         if (wallFactory.isIpBlackEnable()) {
             refresh(500);
             load();
-        } else
-            clear();
+        }
     }
 
     @Override

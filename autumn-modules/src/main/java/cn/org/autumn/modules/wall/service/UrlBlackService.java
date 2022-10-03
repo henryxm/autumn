@@ -136,8 +136,7 @@ public class UrlBlackService extends WallCounter<UrlBlackDao, UrlBlackEntity> im
         if (wallFactory.isUrlBlack()) {
             refresh(500);
             load();
-        } else
-            clear();
+        }
     }
 
     @Override

@@ -105,8 +105,6 @@ public class IpWhiteService extends WallCounter<IpWhiteDao, IpWhiteEntity> imple
     public void onFiveSecond() {
         if (wallFactory.isIpWhiteEnable())
             load();
-        else
-            clear();
     }
 
     public IpWhiteEntity create(String ip, String tag, String description) {
