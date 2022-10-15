@@ -29,7 +29,7 @@
         <druid.version>1.1.10</druid.version>
         <mybatisplus.version>2.1.9</mybatisplus.version>
         <mybatisplus.spring.boot.version>1.0.5</mybatisplus.spring.boot.version>
-        <mysql.version>[8.0.16,)</mysql.version>
+        <mysql.version>8.0.30</mysql.version>
         <mssql.version>4.0</mssql.version>
         <oracle.version>11.2.0.3</oracle.version>
         <commons.lang.version>2.6</commons.lang.version>
