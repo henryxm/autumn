@@ -25,22 +25,21 @@ public class AExceptionHandler {
         R r = new R();
         r.put("code", e.getCode());
         r.put("msg", e.getMessage());
+        logger.debug("AException", e);
         return r;
     }
 
     @ExceptionHandler(DuplicateKeyException.class)
     public R handleDuplicateKeyException(DuplicateKeyException e) {
-        logger.error("DuplicateKeyException", e);
+        logger.debug("DuplicateKeyException", e);
         return R.error("数据库中已存在该记录");
     }
 
     @ExceptionHandler(Exception.class)
     public R handleException(Exception e) {
         //Suppress known exception log
-        if (!(e instanceof HttpMessageNotReadableException)
-                && !(e instanceof HttpRequestMethodNotSupportedException)
-        )
-            logger.error("Exception", e);
+        if (!(e instanceof HttpMessageNotReadableException) && !(e instanceof HttpRequestMethodNotSupportedException))
+            logger.debug("Exception", e);
         return R.error(e.getMessage());
     }
 }
