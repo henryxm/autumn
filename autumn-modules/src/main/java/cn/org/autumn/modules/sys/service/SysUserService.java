@@ -241,8 +241,70 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         return baseMapper.getByEmail(email);
     }
 
+    public SysUserEntity getByEmailLike(String email) {
+        return baseMapper.getByEmailLike(email);
+    }
+
     public SysUserEntity getByPhone(String mobile) {
         return baseMapper.getByPhone(mobile);
+    }
+
+    public SysUserEntity getByPhoneLike(String mobile) {
+        return baseMapper.getByPhoneLike(mobile);
+    }
+
+    public SysUserEntity getByQq(String qq) {
+        return baseMapper.getByQq(qq);
+    }
+
+    public SysUserEntity getByQqLike(String qq) {
+        return baseMapper.getByQqLike(qq);
+    }
+
+    public SysUserEntity getByWeixing(String weixing) {
+        return baseMapper.getByWeixing(weixing);
+    }
+
+    public SysUserEntity getByWeixingLike(String weixing) {
+        return baseMapper.getByWeixingLike(weixing);
+    }
+
+    public SysUserEntity getByAlipay(String alipay) {
+        return baseMapper.getByAlipay(alipay);
+    }
+
+    public SysUserEntity getByAlipayLike(String alipay) {
+        return baseMapper.getByAlipayLike(alipay);
+    }
+
+    public SysUserEntity getByIdCard(String idCard) {
+        return baseMapper.getByIdCard(idCard);
+    }
+
+    public SysUserEntity getByIdCardLike(String idCard) {
+        return baseMapper.getByIdCardLike(idCard);
+    }
+
+    public SysUserEntity getByAccountFuzzySearch(String account) {
+        if (StringUtils.isBlank(account))
+            return null;
+
+        SysUserEntity sysUserEntity = null;
+        sysUserEntity = baseMapper.getByUsernameLike(account);
+        if (null == sysUserEntity)
+            sysUserEntity = baseMapper.getByPhoneLike(account);
+        if (null == sysUserEntity)
+            sysUserEntity = baseMapper.getByEmailLike(account);
+        if (null == sysUserEntity)
+            sysUserEntity = baseMapper.getByQqLike(account);
+        if (null == sysUserEntity)
+            sysUserEntity = baseMapper.getByWeixingLike(account);
+        if (null == sysUserEntity)
+            sysUserEntity = baseMapper.getByAlipayLike(account);
+        if (null == sysUserEntity)
+            sysUserEntity = baseMapper.getByIdCardLike(account);
+
+        return sysUserEntity;
     }
 
     public SysUserEntity getUuid(String uuid) {
