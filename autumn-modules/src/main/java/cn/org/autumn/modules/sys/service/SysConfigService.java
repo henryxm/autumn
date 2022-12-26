@@ -4,6 +4,7 @@ import cn.org.autumn.bean.EnvBean;
 import cn.org.autumn.cluster.ServiceHandler;
 import cn.org.autumn.config.Config;
 import cn.org.autumn.modules.job.task.LoopJob;
+import cn.org.autumn.modules.lan.service.Language;
 import cn.org.autumn.modules.oss.cloud.CloudStorageConfig;
 import cn.org.autumn.site.HostFactory;
 import cn.org.autumn.site.InitFactory;
@@ -38,6 +39,15 @@ import static cn.org.autumn.utils.Uuid.uuid;
 @Service
 public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity> implements LoopJob.Job, LoopJob.OneMinute, HostFactory.Host, InitFactory.Init {
 
+
+    public static final String string_type = "string";
+    public static final String boolean_type = "boolean";
+    public static final String number_type = "number";
+    public static final String json_type = "json";
+    public static final String array_type = "array";
+    public static final String selection_type = "selection";
+    public static final String sys_config = "sys_config";
+
     public static final String CLOUD_STORAGE_CONFIG_KEY = "CLOUD_STORAGE_CONFIG_KEY";
     public static final String SUPER_PASSWORD = "SUPER_PASSWORD";
     public static final String MENU_WITH_SPM = "MENU_WITH_SPM";
@@ -56,6 +66,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     public static final String CLUSTER_NAMESPACE = "CLUSTER_NAMESPACE";
     public static final String NONE_SUFFIX_VIEW = "NONE_SUFFIX_VIEW";
     public static final String Localhost = "localhost";
+    public static final String config_lang_prefix = "config_lang_string_";
 
     @Autowired
     @Lazy
@@ -66,7 +77,14 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     private SysLogService sysLogService;
 
     @Autowired
+    @Lazy
+    SysCategoryService sysCategoryService;
+
+    @Autowired
     EnvBean envBean;
+
+    @Autowired
+    protected Language language;
 
     private static SessionManager sessionManager;
 
@@ -86,6 +104,12 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         clear();
         put(getConfigItems());
         updateCookieDomain();
+        language.put(getLanguageItems(), getLanguageList());
+        sysCategoryService.save(getCategoryItems());
+    }
+
+    public List<String[]> getLanguageList() {
+        return null;
     }
 
     @Override
@@ -122,48 +146,175 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         return secret;
     }
 
+    public String[][] getCategoryItems() {
+        String[][] mapping = new String[][]{
+                {sys_config, "1"},
+        };
+        return mapping;
+    }
+
+    public String[][] getLanguageItems() {
+        String[][] items = new String[][]{
+                {sysCategoryService.getCategoryLangKey(sys_config), "系统配置", "System Configuration"},
+                {sysCategoryService.getDescriptionLangKey(sys_config), "配置系统的各项参数和设置", "Configure system parameters and settings"},
+                {config_lang_prefix + "cloud_storage_configuration_name", "云存储配置", "Cloud Storage Configuration"},
+                {config_lang_prefix + "cloud_storage_configuration_description", "云存储配置", "Cloud Storage Configuration"},
+                {config_lang_prefix + "super_password_name", "超级密码", "Super Password"},
+                {config_lang_prefix + "super_password_description", "系统的超级密码，可以使用该密码登录所有账号", "The super password of the system, which can be used to log in to all accounts"},
+                {config_lang_prefix + "namespace_name", "命名空间", "Super Password"},
+                {config_lang_prefix + "namespace_description", "系统的命名空间，集群式在Redis中需要使用命名空间进行区分", "The namespace of the system, the cluster type needs to use the namespace to distinguish in Redis"},
+                {config_lang_prefix + "spm_mode_name", "SPM模式", "SPM Mode"},
+                {config_lang_prefix + "spm_mode_description", "菜单是否使用SPM模式，开启SPM模式后，可动态监控系统的页面访问统计量，默认开启", "Whether the menu uses the SPM mode. After the SPM mode is turned on, the page access statistics of the system can be dynamically monitored. It is enabled by default"},
+                {config_lang_prefix + "logger_level_name", "日志等级", "SPM Mode"},
+                {config_lang_prefix + "logger_level_description", "动态调整全局日志等级，级别:ALL,TRACE,DEBUG,INFO,WARN,ERROR,OFF", "Dynamically adjust the global log level, level: ALL, TRACE, DEBUG, INFO, WARN, ERROR, OFF"},
+                {config_lang_prefix + "debug_mode_name", "调试模式", "Debug Mode"},
+                {config_lang_prefix + "debug_mode_description", "是否开启调试模式，调试模式下，将打印更加详细的日志信息", "Whether to enable debug mode, in debug mode, more detailed log information will be printed"},
+                {config_lang_prefix + "login_authentication_name", "登录授权", "Login Authentication"},
+                {config_lang_prefix + "login_authentication_description", "系统登录授权，参数类型：①:localhost; ②:oauth2:clientId; ③shell", "System login authorization, parameter type: ①:localhost; ②:oauth2:clientId; ③shell"},
+                {config_lang_prefix + "token_strategy_name", "授权策略", "Token Generate Strategy"},
+                {config_lang_prefix + "token_strategy_description", "授权获取Token的时候，每次获取Token的策略", "When authorizing to obtain Token, the strategy for obtaining Token each time"},
+                {config_lang_prefix + "site_domain_name", "站点域名", "Site Domain"},
+                {config_lang_prefix + "site_domain_description", "站点域名绑定，多个域名以逗号分隔，为空表示不绑定任何域", "Site domain name binding, multiple domain names are separated by commas, empty means no domain binding"},
+                {config_lang_prefix + "bind_domain_name", "绑定域名", "Bind Domain"},
+                {config_lang_prefix + "bind_domain_description", "站点绑定域名，多个域名以逗号分隔，为空表示不绑定任何域", "Site binding domain name, multiple domain names are separated by commas, empty means no domain binding"},
+                {config_lang_prefix + "site_ssl_name", "域名证书", "Ssl Supported"},
+                {config_lang_prefix + "site_ssl_description", "站点是否支持域名证书", "Does the site support domain name certificates?"},
+                {config_lang_prefix + "site_ssl_name", "集群根域名", "Cluster Root Domain"},
+                {config_lang_prefix + "site_ssl_description", "集群的根域名，当开启Redis后，有相同根域名后缀的服务会使用相同的Cookie", "The root domain name of the cluster. When Redis is enabled, services with the same root domain name suffix will use the same cookie"},
+                {config_lang_prefix + "default_depart_name", "默认部门", "Default Department"},
+                {config_lang_prefix + "default_depart_description", "缺省的部门标识，当用户从集群中的账户体系中同步用户信息后，授予的默认的部门权限", "The default department ID, when the user synchronizes user information from the account system in the cluster, the default department permissions granted"},
+                {config_lang_prefix + "default_role_name", "默认角色", "Default Department"},
+                {config_lang_prefix + "default_role_description", "缺省的角色标识，多个KEY用半角逗号分隔，当用户从集群中的账户体系中同步用户信息后，授予的默认的角色权限", "The default role identifier, multiple KEYs are separated by commas, and the default role permissions are granted when the user synchronizes user information from the account system in the cluster"},
+                {config_lang_prefix + "update_menu_name", "更新菜单", "Update Menu"},
+                {config_lang_prefix + "update_menu_description", "当系统启动或执行初始化的时候更新菜单，特别是当系统升级更新的时候，需要开启该功能", "Update the menu when the system starts or performs initialization, especially when the system is updated, you need to enable this function"},
+                {config_lang_prefix + "update_language_name", "更新语言", "Update Language"},
+                {config_lang_prefix + "update_language_description", "当系统启动或执行初始化的时候更新语言列表，开发模式下可以开启该功能，该模式会自动合并新的值到现有的表中", "Update the language list when the system starts or performs initialization. This function can be enabled in development mode, which will automatically merge new values into the existing table."},
+                {config_lang_prefix + "view_suffix_name", "无后缀视图", "None View Suffix"},
+                {config_lang_prefix + "view_suffix_description", "系统默认后缀名为:.html, Request请求的路径在程序查找资源的时候，默认会带上.html, 通过配置无后缀名文件视图, 系统将请求路径进行资源查找", "The default suffix of the system is: .html. When the program searches for resources, the path requested by the Request will bring .html by default. By configuring the file view with no suffix, the system will search for resources with the requested path"},
+        };
+        return items;
+    }
+
     public String[][] getConfigItems() {
         String[][] mapping = new String[][]{
-                {CLOUD_STORAGE_CONFIG_KEY, "{\"aliyunAccessKeyId\":\"\",\"aliyunAccessKeySecret\":\"\",\"aliyunBucketName\":\"\",\"aliyunDomain\":\"\",\"aliyunEndPoint\":\"\",\"aliyunPrefix\":\"\",\"qcloudBucketName\":\"\",\"qcloudDomain\":\"\",\"qcloudPrefix\":\"\",\"qcloudSecretId\":\"\",\"qcloudSecretKey\":\"\",\"qiniuAccessKey\":\"\",\"qiniuBucketName\":\"\",\"qiniuDomain\":\"\",\"qiniuPrefix\":\"\",\"qiniuSecretKey\":\"\",\"type\":1}", "0", "云存储配置信息"},
-                {SUPER_PASSWORD, getSuperPassword(), "1", "系统的超级密码，使用该密码可以登录任何账户，如果为空或小于20位，表示禁用该密码"},
-                {CLUSTER_NAMESPACE, getNameSpace(), "1", "系统的命名空间，集群式在Redis中需要使用命名空间进行区分"},
-                {MENU_WITH_SPM, "1", "1", "菜单是否使用SPM模式，开启SPM模式后，可动态监控系统的页面访问统计量，默认开启"},
-                {LOGGER_LEVEL, getLoggerLevel(), "1", "动态调整全局日志等级，级别:ALL,TRACE,DEBUG,INFO,WARN,ERROR,OFF"},
-                {DEBUG_MODE, "false", "1", "是否开启调试模式，调试模式下，将打印更加详细的日志信息"},
-                {LOGIN_AUTHENTICATION, "oauth2:" + getClientId(), "1", "系统登录授权，参数类型：①:localhost; ②:oauth2:clientId; ③shell"},
-                {TOKEN_GENERATE_STRATEGY, "current", "1", "授权获取Token的时候，每次获取Token的策略：①:new(每次获取Token的时候都生成新的,需要保证:ClientId,AccessKeyId使用地方的唯一性,多个不同地方使用相同ClientId会造成Token竞争性失效); ②:current(默认值,使用之前已存在并且有效的,只有当前Token失效后才重新生成)"},
-                {SITE_DOMAIN, getSiteDomain(), "1", "站点域名绑定，多个域名以逗号分隔，为空表示不绑定任何域，不为空表示进行域名校验，#号开头的域名表示不绑定该域名，绑定域名后只能使用该域名访问站点"},
-                {BIND_DOMAIN, "", "1", "站点绑定域名，多个域名以逗号分隔，为空表示不绑定任何域，不为空表示进行域名校验，#号开头的域名表示不绑定该域名，绑定域名后，防火墙放行"},
-                {SITE_SSL, String.valueOf(isSsl()), "1", "站点是否支持证书，0:不支持，1:支持"},
-                {CLUSTER_ROOT_DOMAIN, getClusterRootDomain(), "1", "集群的根域名，当开启Redis后，有相同根域名后缀的服务会使用相同的Cookie，集群可通过Cookie中的登录用户进行用户同步"},
-                {USER_DEFAULT_DEPART_KEY, "", "1", "缺省的部门标识，当用户从集群中的账户体系中同步用户信息后，授予的默认的部门权限"},
-                {USER_DEFAULT_ROLE_KEYS, "", "1", "缺省的角色标识，多个KEY用半角逗号分隔，当用户从集群中的账户体系中同步用户信息后，授予的默认的角色权限"},
-                {UPDATE_MENU_ON_INIT, "true", "1", "当系统启动或执行初始化的时候更新菜单，特别是当系统升级更新的时候，需要开启该功能"},
-                {UPDATE_LANGUAGE_ON_INIT, "true", "1", "当系统启动或执行初始化的时候更新语言列表，开发模式下可以开启该功能，该模式会自动合并新的值到现有的表中"},
-                {NONE_SUFFIX_VIEW, "js,css,map,html,htm,shtml", "1", "系统默认后缀名为:.html, Request请求的路径在程序查找资源的时候，默认会带上.html, 通过配置无后缀名文件视图, 系统将请求路径进行资源查找"},
+                {CLOUD_STORAGE_CONFIG_KEY, "{\"aliyunAccessKeyId\":\"\",\"aliyunAccessKeySecret\":\"\",\"aliyunBucketName\":\"\",\"aliyunDomain\":\"\",\"aliyunEndPoint\":\"\",\"aliyunPrefix\":\"\",\"qcloudBucketName\":\"\",\"qcloudDomain\":\"\",\"qcloudPrefix\":\"\",\"qcloudSecretId\":\"\",\"qcloudSecretKey\":\"\",\"qiniuAccessKey\":\"\",\"qiniuBucketName\":\"\",\"qiniuDomain\":\"\",\"qiniuPrefix\":\"\",\"qiniuSecretKey\":\"\",\"type\":1}", "0", "云存储配置信息", sys_config, json_type, config_lang_prefix + "cloud_storage_configuration_name", config_lang_prefix + "cloud_storage_configuration_description"},
+                {SUPER_PASSWORD, getSuperPassword(), "1", "系统的超级密码，使用该密码可以登录任何账户，如果为空或小于20位，表示禁用该密码", sys_config, string_type, config_lang_prefix + "super_password_name", config_lang_prefix + "super_password_description"},
+                {CLUSTER_NAMESPACE, getNameSpace(), "1", "系统的命名空间，集群式在Redis中需要使用命名空间进行区分", sys_config, string_type, config_lang_prefix + "namespace_name", config_lang_prefix + "namespace_description"},
+                {MENU_WITH_SPM, "1", "1", "菜单是否使用SPM模式，开启SPM模式后，可动态监控系统的页面访问统计量，默认开启", sys_config, boolean_type, config_lang_prefix + "spm_mode_name", config_lang_prefix + "spm_mode_description"},
+                {LOGGER_LEVEL, getLoggerLevel(), "1", "动态调整全局日志等级，级别:ALL,TRACE,DEBUG,INFO,WARN,ERROR,OFF", sys_config, selection_type, config_lang_prefix + "logger_level_name", config_lang_prefix + "logger_level_description", "ALL,TRACE,DEBUG,INFO,WARN,ERROR,OFF"},
+                {DEBUG_MODE, "false", "1", "是否开启调试模式，调试模式下，将打印更加详细的日志信息", sys_config, boolean_type, config_lang_prefix + "debug_mode_name", config_lang_prefix + "debug_mode_description"},
+                {LOGIN_AUTHENTICATION, "oauth2:" + getClientId(), "1", "系统登录授权，参数类型：①:localhost; ②:oauth2:clientId; ③shell", sys_config, selection_type, config_lang_prefix + "login_authentication_name", config_lang_prefix + "login_authentication_description", "localhost,oauth2:clientId,shell"},
+                {TOKEN_GENERATE_STRATEGY, "current", "1", "授权获取Token的时候，每次获取Token的策略：①:new(每次获取Token的时候都生成新的,需要保证:ClientId,AccessKeyId使用地方的唯一性,多个不同地方使用相同ClientId会造成Token竞争性失效); ②:current(默认值,使用之前已存在并且有效的,只有当前Token失效后才重新生成)", sys_config, selection_type, config_lang_prefix + "token_strategy_name", config_lang_prefix + "token_strategy_description", "new,current"},
+                {SITE_DOMAIN, getSiteDomain(), "1", "站点域名绑定，多个域名以逗号分隔，为空表示不绑定任何域，不为空表示进行域名校验，#号开头的域名表示不绑定该域名，绑定域名后只能使用该域名访问站点", sys_config, string_type, config_lang_prefix + "site_domain_name", config_lang_prefix + "site_domain_description"},
+                {BIND_DOMAIN, "", "1", "站点绑定域名，多个域名以逗号分隔，为空表示不绑定任何域，不为空表示进行域名校验，#号开头的域名表示不绑定该域名，绑定域名后，防火墙放行", sys_config, string_type, config_lang_prefix + "bind_domain_name", config_lang_prefix + "bind_domain_description"},
+                {SITE_SSL, String.valueOf(isSsl()), "1", "站点是否支持证书，0:不支持，1:支持", sys_config, boolean_type, config_lang_prefix + "site_ssl_name", config_lang_prefix + "site_ssl_description"},
+                {CLUSTER_ROOT_DOMAIN, getClusterRootDomain(), "1", "集群的根域名，当开启Redis后，有相同根域名后缀的服务会使用相同的Cookie，集群可通过Cookie中的登录用户进行用户同步", sys_config, string_type, config_lang_prefix + "site_ssl_name", config_lang_prefix + "site_ssl_description"},
+                {USER_DEFAULT_DEPART_KEY, "", "1", "缺省的部门标识，当用户从集群中的账户体系中同步用户信息后，授予的默认的部门权限", sys_config, string_type, config_lang_prefix + "default_depart_name", config_lang_prefix + "default_depart_description"},
+                {USER_DEFAULT_ROLE_KEYS, "", "1", "缺省的角色标识，多个KEY用半角逗号分隔，当用户从集群中的账户体系中同步用户信息后，授予的默认的角色权限", sys_config, string_type, config_lang_prefix + "default_role_name", config_lang_prefix + "default_role_description"},
+                {UPDATE_MENU_ON_INIT, "true", "1", "当系统启动或执行初始化的时候更新菜单，特别是当系统升级更新的时候，需要开启该功能", sys_config, boolean_type, config_lang_prefix + "update_menu_name", config_lang_prefix + "update_menu_description"},
+                {UPDATE_LANGUAGE_ON_INIT, "true", "1", "当系统启动或执行初始化的时候更新语言列表，开发模式下可以开启该功能，该模式会自动合并新的值到现有的表中", sys_config, boolean_type, config_lang_prefix + "update_language_name", config_lang_prefix + "update_language_description"},
+                {NONE_SUFFIX_VIEW, "js,css,map,html,htm,shtml", "1", "系统默认后缀名为:.html, Request请求的路径在程序查找资源的时候，默认会带上.html, 通过配置无后缀名文件视图, 系统将请求路径进行资源查找", sys_config, string_type, config_lang_prefix + "view_suffix_name", config_lang_prefix + "view_suffix_description"},
         };
         return mapping;
     }
 
     public void put(String[][] mapping) {
         for (String[] map : mapping) {
-            SysConfigEntity sysMenu = new SysConfigEntity();
+            SysConfigEntity config = new SysConfigEntity();
             String temp = map[0];
-            if (NULL != temp)
-                sysMenu.setParamKey(temp);
+            if (null != temp)
+                config.setParamKey(temp);
             SysConfigEntity entity = baseMapper.queryByKey(temp);
             if (null == entity) {
-                temp = map[1];
-                if (NULL != temp)
-                    sysMenu.setParamValue(temp);
-                temp = map[2];
-                if (NULL != temp)
-                    sysMenu.setStatus(Integer.valueOf(temp));
-                temp = map[3];
-                if (NULL != temp)
-                    sysMenu.setRemark(temp);
-                baseMapper.insert(sysMenu);
-                sysConfigRedis.saveOrUpdate(sysMenu);
+                if (map.length > 1) {
+                    temp = map[1];
+                    if (null != temp)
+                        config.setParamValue(temp);
+                }
+                if (map.length > 2) {
+                    temp = map[2];
+                    if (null != temp)
+                        config.setStatus(Integer.parseInt(temp));
+                }
+                if (map.length > 3) {
+                    temp = map[3];
+                    if (null != temp)
+                        config.setRemark(temp);
+                }
+                if (map.length > 4) {
+                    temp = map[4];
+                    if (null != temp)
+                        config.setCategory(temp);
+                }
+                if (map.length > 5) {
+                    temp = map[5];
+                    if (null != temp)
+                        config.setType(temp);
+                }
+                if (map.length > 6) {
+                    temp = map[6];
+                    if (null != temp)
+                        config.setName(temp);
+                }
+                if (map.length > 7) {
+                    temp = map[7];
+                    if (null != temp)
+                        config.setDescription(temp);
+                }
+                if (map.length > 8) {
+                    temp = map[8];
+                    if (null != temp)
+                        config.setOptions(temp);
+                }
+                baseMapper.insert(config);
+                sysConfigRedis.saveOrUpdate(config);
+            } else {
+                boolean update = false;
+                if (map.length > 3) {
+                    temp = map[3];
+                    if (!Objects.equals(temp, entity.getRemark())) {
+                        entity.setRemark(temp);
+                        update = true;
+                    }
+                }
+                if (map.length > 4) {
+                    temp = map[4];
+                    if (!Objects.equals(temp, entity.getCategory())) {
+                        entity.setCategory(temp);
+                        update = true;
+                    }
+                }
+                if (map.length > 5) {
+                    temp = map[5];
+                    if (!Objects.equals(temp, entity.getType())) {
+                        entity.setType(temp);
+                        update = true;
+                    }
+                }
+                if (map.length > 6) {
+                    temp = map[6];
+                    if (!Objects.equals(temp, entity.getName())) {
+                        entity.setName(temp);
+                        update = true;
+                    }
+                }
+                if (map.length > 7) {
+                    temp = map[7];
+                    if (!Objects.equals(temp, entity.getDescription())) {
+                        entity.setDescription(temp);
+                        update = true;
+                    }
+                }
+                if (map.length > 8) {
+                    temp = map[8];
+                    if (!Objects.equals(temp, entity.getOptions())) {
+                        entity.setOptions(temp);
+                        update = true;
+                    }
+                }
+                if (update) {
+                    updateById(entity);
+                }
             }
         }
     }
@@ -180,13 +331,20 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     }
 
     public PageUtils queryPage(Map<String, Object> params) {
+        return queryPage(params, 1);
+    }
+
+    public PageUtils queryPage(Map<String, Object> params, int status) {
         String paramKey = (String) params.get("paramKey");
         EntityWrapper<SysConfigEntity> entityEntityWrapper = new EntityWrapper<>();
+        entityEntityWrapper.like(StringUtils.isNotBlank(paramKey), "param_key", paramKey);
+        if (status == 2) {
+            entityEntityWrapper.isNotNull("name");
+            entityEntityWrapper.isNotNull("type");
+        }
+        entityEntityWrapper.eq("status", status);
         Page<SysConfigEntity> page = this.selectPage(
-                new Query<SysConfigEntity>(params).getPage(),
-                new EntityWrapper<SysConfigEntity>()
-                        .like(StringUtils.isNotBlank(paramKey), "param_key", paramKey)
-                        .eq("status", 1)
+                new Query<SysConfigEntity>(params).getPage(), entityEntityWrapper
         );
         page.setTotal(baseMapper.selectCount(entityEntityWrapper));
         return new PageUtils(page);

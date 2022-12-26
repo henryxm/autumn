@@ -31,6 +31,12 @@ public class SysConfigController extends AbstractController {
         return R.ok().put("page", page);
     }
 
+    @RequestMapping("/basic")
+    @RequiresPermissions("sys:config:list")
+    public R basic(@RequestParam Map<String, Object> params) {
+        PageUtils page = sysConfigService.queryPage(params, 2);
+        return R.ok().put("page", page);
+    }
 
     /**
      * 配置信息

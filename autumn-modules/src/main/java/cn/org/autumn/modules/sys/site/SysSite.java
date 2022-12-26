@@ -40,4 +40,7 @@ public class SysSite implements SiteFactory.Site {
 
     @PageAware(login = true, resource = "modules/sys/user")
     String user;
+
+    @PageAware(login = true, resource = "modules/sys/category")
+    String category;
 }

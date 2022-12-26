@@ -15,6 +15,9 @@ import java.io.Serializable;
 @TableName("sys_config")
 @Table(value = "sys_config", comment = "系统配置信息表")
 public class SysConfigEntity implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
     @TableId
     @Column(isKey = true, type = DataType.BIGINT, length = 20, isNull = false, isAutoIncrement = true, comment = "id")
     private Long id;
@@ -32,6 +35,21 @@ public class SysConfigEntity implements Serializable {
 
     @Column(type = DataType.INT, length = 4, defaultValue = "1", comment = "状态   0：隐藏   1：显示")
     private int status;
+
+    @Column(comment = "类型")
+    private String type;
+
+    @Column(comment = "分类")
+    private String category;
+
+    @Column(comment = "名称")
+    private String name;
+
+    @Column(type = DataType.TEXT, comment = "说明")
+    private String description;
+
+    @Column(type = DataType.TEXT, comment = "可选项")
+    private String options;
 
     public int getStatus() {
         return status;
@@ -71,5 +89,45 @@ public class SysConfigEntity implements Serializable {
 
     public void setRemark(String remark) {
         this.remark = remark;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
+    }
+
+    public String getCategory() {
+        return category;
+    }
+
+    public void setCategory(String category) {
+        this.category = category;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public String getOptions() {
+        return options;
+    }
+
+    public void setOptions(String options) {
+        this.options = options;
     }
 }
