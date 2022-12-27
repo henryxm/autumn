@@ -391,6 +391,7 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
                 {"sys_string_copy", "复制", "Copy"},
                 {"sys_string_change", "修改", "Change"},
                 {"sys_string_confirm", "确定", "Confirm"},
+                {"sys_string_save", "保存", "Save"},
                 {"sys_string_cancel", "取消", "Cancel"},
                 {"sys_string_delete", "删除", "Delete"},
                 {"sys_string_back", "返回", "Back"},
@@ -456,7 +457,8 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
                 {config_lang_prefix + "language_config_description", "多语言配置信息", "Multilingual configuration information"},
                 {config_lang_prefix + "default_language_name", "默认语言", "Default Language"},
                 {config_lang_prefix + "default_language_description", "用户默认语言设置", "Default language configuration"},
-
+                {sysCategoryService.getCategoryLangKey(lang_config), "语言配置", "Language configuration"},
+                {sysCategoryService.getDescriptionLangKey(lang_config), "配置系统多语言类型和用户默认使用的语音", "Configure the system multilingual type and the voice used by the user by default"},
         };
         return items;
     }
@@ -475,7 +477,7 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
     public String[][] getConfigItems() {
         String[][] mapping = new String[][]{
                 {MULTIPLE_LANGUAGE_CONFIG_KEY, getLanguageMetadataJson(), "0", "多语言配置信息", lang_config, array_type, config_lang_prefix + "language_config_name", config_lang_prefix + "language_config_description"},
-                {DEFAULT_USER_LANGUAGE, "zh_CN", "1", "用户缺省语言设置", lang_config, string_type, config_lang_prefix + "default_language_name", config_lang_prefix + "default_language_description"},
+                {DEFAULT_USER_LANGUAGE, "zh_CN", "1", "用户缺省语言设置", lang_config, selection_type, config_lang_prefix + "default_language_name", config_lang_prefix + "default_language_description", "zh_CN,en_US"},
         };
         return mapping;
     }

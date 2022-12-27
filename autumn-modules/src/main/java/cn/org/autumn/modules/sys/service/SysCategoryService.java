@@ -2,6 +2,8 @@ package cn.org.autumn.modules.sys.service;
 
 import cn.org.autumn.base.ModuleService;
 import cn.org.autumn.modules.lan.service.LanguageService;
+import cn.org.autumn.modules.sys.entity.CategoryItem;
+import cn.org.autumn.modules.sys.entity.ConfigItem;
 import cn.org.autumn.modules.sys.entity.SysConfigEntity;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,7 +11,6 @@ import org.springframework.stereotype.Service;
 import cn.org.autumn.modules.sys.dao.SysCategoryDao;
 import cn.org.autumn.modules.sys.entity.SysCategoryEntity;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -107,9 +108,9 @@ public class SysCategoryService extends ModuleService<SysCategoryDao, SysCategor
         insertOrUpdate(categoryEntity);
     }
 
-    public Map<String, SysCategoryEntity> getCategories(String language) {
+    public Map<String, CategoryItem> getCategories(String language) {
         List<SysConfigEntity> sysConfigEntities = sysConfigService.selectByMap(null);
-        Map<String, SysCategoryEntity> map = new HashMap<>();
+        Map<String, CategoryItem> map = new HashMap<>();
         for (SysConfigEntity sysConfigEntity : sysConfigEntities) {
             if (sysConfigEntity.getStatus() <= 0)
                 continue;
@@ -132,15 +133,15 @@ public class SysCategoryService extends ModuleService<SysCategoryDao, SysCategor
             String category = sysConfigEntity.getCategory();
             if (StringUtils.isBlank(category))
                 category = default_category;
-            SysCategoryEntity categoryEntity = map.get(category);
-            if (null != categoryEntity) {
-                categoryEntity.getConfigs().add(sysConfigEntity);
+            CategoryItem categoryItem = map.get(category);
+            if (null != categoryItem) {
+                categoryItem.getConfigs().add(new ConfigItem(sysConfigEntity));
             } else {
-                categoryEntity = getByCategory(category, language);
-                if (null != categoryEntity && categoryEntity.getStatus() > 0) {
-                    categoryEntity.setConfigs(new ArrayList<>());
-                    categoryEntity.getConfigs().add(sysConfigEntity);
-                    map.put(category, categoryEntity);
+                SysCategoryEntity sysCategoryEntity = getByCategory(category, language);
+                if (null != sysCategoryEntity && sysCategoryEntity.getStatus() > 0) {
+                    categoryItem = new CategoryItem(sysCategoryEntity);
+                    categoryItem.getConfigs().add(new ConfigItem(sysConfigEntity));
+                    map.put(category, categoryItem);
                 }
             }
         }

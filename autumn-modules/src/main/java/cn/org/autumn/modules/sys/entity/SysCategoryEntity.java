@@ -35,9 +35,6 @@ public class SysCategoryEntity implements Serializable {
     @Column(comment = "描述")
     private String description;
 
-    @TableField(exist = false)
-    List<SysConfigEntity> configs;
-
     public Long getId() {
         return id;
     }
@@ -84,13 +81,5 @@ public class SysCategoryEntity implements Serializable {
 
     public void setDescription(String description) {
         this.description = description;
-    }
-
-    public List<SysConfigEntity> getConfigs() {
-        return configs;
-    }
-
-    public void setConfigs(List<SysConfigEntity> configs) {
-        this.configs = configs;
     }
 }

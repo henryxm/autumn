@@ -1,6 +1,8 @@
 package cn.org.autumn.modules.sys.controller;
 
 import cn.org.autumn.annotation.SysLog;
+import cn.org.autumn.modules.lan.service.Language;
+import cn.org.autumn.modules.sys.service.SysCategoryService;
 import cn.org.autumn.utils.PageUtils;
 import cn.org.autumn.utils.R;
 import cn.org.autumn.validator.ValidatorUtils;
@@ -9,8 +11,11 @@ import cn.org.autumn.modules.sys.service.SysConfigService;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.util.Map;
 
 @RestController
@@ -19,6 +24,12 @@ public class SysConfigController extends AbstractController {
     @Autowired
     @Lazy
     private SysConfigService sysConfigService;
+
+    @Autowired
+    SysCategoryService sysCategoryService;
+
+    @Autowired
+    Language language;
 
     /**
      * 所有配置列表
@@ -70,7 +81,16 @@ public class SysConfigController extends AbstractController {
     @RequestMapping("/update")
     @RequiresPermissions("sys:config:update")
     public R update(@RequestBody SysConfigEntity config) {
-        ValidatorUtils.validateEntity(config);
+        if (null == config)
+            return R.error();
+        if (null == config.getId()) {
+            SysConfigEntity entity = sysConfigService.getByKey(config.getParamKey());
+            if (null == entity)
+                return R.error();
+            entity.setParamValue(config.getParamValue());
+            config = entity;
+        } else
+            ValidatorUtils.validateEntity(config);
 
         sysConfigService.update(config);
 
@@ -89,4 +109,12 @@ public class SysConfigController extends AbstractController {
         return R.ok();
     }
 
+    @RequestMapping("data")
+    public R basic(HttpServletRequest request, HttpServletResponse response, Model model) {
+        String lang = language.toLang(Language.getLocale(request));
+        Map map = sysCategoryService.getCategories(lang);
+        R r = R.ok();
+        r.put("data", map);
+        return r;
+    }
 }
