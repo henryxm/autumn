@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.lan.service;
 
+import cn.org.autumn.config.CategoryHandler;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.lan.entity.LanguageEntity;
 import cn.org.autumn.modules.lan.entity.LanguageMetadata;
@@ -23,13 +24,13 @@ import java.util.*;
 import static cn.org.autumn.modules.sys.service.SysConfigService.*;
 
 @Service
-public class LanguageService extends LanguageServiceGen implements LoadFactory.Load, LoadFactory.Must, LoopJob.TenMinute {
+public class LanguageService extends LanguageServiceGen implements LoadFactory.Load, LoadFactory.Must, LoopJob.TenMinute, CategoryHandler {
     private static Logger logger = LoggerFactory.getLogger(LanguageService.class);
 
     public static final String MULTIPLE_LANGUAGE_CONFIG_KEY = "MULTIPLE_LANGUAGE_CONFIG_KEY";
     public static final String DEFAULT_USER_LANGUAGE = "DEFAULT_USER_LANGUAGE";
 
-    public static final String lang_config = "lang_config";
+    public static final String config = "lang_config";
 
     @Autowired
     @Lazy
@@ -304,7 +305,6 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
         sysMenuService.put(getMenuItemsInternal(), getMenuItems(), getMenuList());
         put(getLanguageItemsInternal(), getLanguageItems(), getLanguageList());
         sysConfigService.put(getConfigItems());
-        sysCategoryService.save(getCategoryItems());
     }
 
     public String[][] getLanguageItems() {
@@ -453,12 +453,12 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
                 {"sys_string_list_supported_language", "查看支持语言", "Look up supported language"},
                 {"sys_string_update_supported_language", "修改支持语言", "Update supported language"},
                 {"sys_string_language_config", "语言配置", "Language configuration"},
-                {config_lang_prefix + "language_config_name", "多语言配置", "Multiple Language configuration"},
-                {config_lang_prefix + "language_config_description", "多语言配置信息", "Multilingual configuration information"},
-                {config_lang_prefix + "default_language_name", "默认语言", "Default Language"},
-                {config_lang_prefix + "default_language_description", "用户默认语言设置", "Default language configuration"},
-                {sysCategoryService.getCategoryLangKey(lang_config), "语言配置", "Language configuration"},
-                {sysCategoryService.getDescriptionLangKey(lang_config), "配置系统多语言类型和用户默认使用的语音", "Configure the system multilingual type and the voice used by the user by default"},
+                {categoryName(config), "语言配置", "Language configuration"},
+                {categoryDescription(config), "配置系统多语言类型和用户默认使用的语音", "Configure the system multilingual type and the voice used by the user by default"},
+                {configName(MULTIPLE_LANGUAGE_CONFIG_KEY), "多语言配置", "Multiple Language configuration"},
+                {configDescription(MULTIPLE_LANGUAGE_CONFIG_KEY), "多语言配置信息", "Multilingual configuration information"},
+                {configName(DEFAULT_USER_LANGUAGE), "默认语言", "Default Language"},
+                {configDescription(DEFAULT_USER_LANGUAGE), "用户默认语言设置", "Default language configuration"},
         };
         return items;
     }
@@ -469,15 +469,15 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
 
     public String[][] getCategoryItems() {
         String[][] mapping = new String[][]{
-                {lang_config, "1"},
+                {config, "1"},
         };
         return mapping;
     }
 
     public String[][] getConfigItems() {
         String[][] mapping = new String[][]{
-                {MULTIPLE_LANGUAGE_CONFIG_KEY, getLanguageMetadataJson(), "0", "多语言配置信息", lang_config, array_type, config_lang_prefix + "language_config_name", config_lang_prefix + "language_config_description"},
-                {DEFAULT_USER_LANGUAGE, "zh_CN", "1", "用户缺省语言设置", lang_config, selection_type, config_lang_prefix + "default_language_name", config_lang_prefix + "default_language_description", "zh_CN,en_US"},
+                {MULTIPLE_LANGUAGE_CONFIG_KEY, getLanguageMetadataJson(), "0", "多语言配置信息", config, array_type},
+                {DEFAULT_USER_LANGUAGE, "zh_CN", "1", "用户缺省语言设置", config, selection_type, "zh_CN,en_US"},
         };
         return mapping;
     }

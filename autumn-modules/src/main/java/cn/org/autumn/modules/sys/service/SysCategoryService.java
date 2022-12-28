@@ -1,6 +1,7 @@
 package cn.org.autumn.modules.sys.service;
 
 import cn.org.autumn.base.ModuleService;
+import cn.org.autumn.config.CategoryHandler;
 import cn.org.autumn.modules.lan.service.LanguageService;
 import cn.org.autumn.modules.sys.entity.CategoryItem;
 import cn.org.autumn.modules.sys.entity.ConfigItem;
@@ -16,11 +17,9 @@ import java.util.List;
 import java.util.Map;
 
 @Service
-public class SysCategoryService extends ModuleService<SysCategoryDao, SysCategoryEntity> {
+public class SysCategoryService extends ModuleService<SysCategoryDao, SysCategoryEntity> implements CategoryHandler {
 
     public static final String default_category = "default";
-
-    public static final String category_lang_prefix = "category_lang_string_";
 
     @Autowired
     SysConfigService sysConfigService;
@@ -28,26 +27,24 @@ public class SysCategoryService extends ModuleService<SysCategoryDao, SysCategor
     @Autowired
     LanguageService languageService;
 
+    @Autowired
+    List<CategoryHandler> categoryHandlerList;
+
     @Override
     public void init() {
-        save(getCategoryItems());
         language.put(getLanguageItemsInternal(), getLanguageItems(), getLanguageList());
+        for (CategoryHandler categoryHandler : categoryHandlerList) {
+            put(categoryHandler.getCategoryItems());
+        }
+        put(getCategoryItems());
     }
 
     public String[][] getLanguageItems() {
         String[][] items = new String[][]{
-                {getCategoryLangKey(default_category), "默认分类", "Default classification"},
-                {getDescriptionLangKey(default_category), "默认分类配置项，未进行分类的配置进入默认分类", "Default classification configuration items, unclassified configurations enter the default classification"},
+                {categoryName(default_category), "默认分类", "Default classification"},
+                {categoryDescription(default_category), "默认分类配置项，未进行分类的配置进入默认分类", "Default classification configuration items, unclassified configurations enter the default classification"},
         };
         return items;
-    }
-
-    public String getCategoryLangKey(String category) {
-        return category_lang_prefix + category + "_category";
-    }
-
-    public String getDescriptionLangKey(String category) {
-        return category_lang_prefix + category + "_description";
     }
 
     public boolean has(String category) {
@@ -61,13 +58,13 @@ public class SysCategoryService extends ModuleService<SysCategoryDao, SysCategor
         if (StringUtils.isNotBlank(language)) {
             Map<String, String> lMap = languageService.getLanguage(language);
             if (null != lMap) {
-                if (StringUtils.isNotBlank(categoryEntity.getName()) && categoryEntity.getName().startsWith(category_lang_prefix)) {
+                if (StringUtils.isNotBlank(categoryEntity.getName()) && categoryEntity.getName().startsWith(category_lang_string)) {
                     String name = lMap.get(categoryEntity.getName());
                     if (StringUtils.isNotBlank(name)) {
                         categoryEntity.setName(name);
                     }
                 }
-                if (StringUtils.isNotBlank(categoryEntity.getDescription()) && categoryEntity.getDescription().startsWith(category_lang_prefix)) {
+                if (StringUtils.isNotBlank(categoryEntity.getDescription()) && categoryEntity.getDescription().startsWith(category_lang_string)) {
                     String description = lMap.get(categoryEntity.getDescription());
                     if (StringUtils.isNotBlank(description)) {
                         categoryEntity.setDescription(description);
@@ -85,10 +82,12 @@ public class SysCategoryService extends ModuleService<SysCategoryDao, SysCategor
         return mapping;
     }
 
-    public void save(String[][] items) {
+    public void put(String[][] items) {
+        if (null == items)
+            return;
         for (String[] item : items) {
             String category = item[0];
-            save(category, getCategoryLangKey(category), Integer.parseInt(item[1]), getDescriptionLangKey(category));
+            save(category, categoryName(category), Integer.parseInt(item[1]), categoryDescription(category));
         }
     }
 
