@@ -190,7 +190,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 {configDescription(CLUSTER_ROOT_DOMAIN), "集群的根域名，当开启Redis后，有相同根域名后缀的服务会使用相同的Cookie", "The root domain name of the cluster. When Redis is enabled, services with the same root domain name suffix will use the same cookie"},
                 {configName(USER_DEFAULT_DEPART_KEY), "默认部门", "Default Department"},
                 {configDescription(USER_DEFAULT_DEPART_KEY), "缺省的部门标识，当用户从集群中的账户体系中同步用户信息后，授予的默认的部门权限", "The default department ID, when the user synchronizes user information from the account system in the cluster, the default department permissions granted"},
-                {configName(USER_DEFAULT_ROLE_KEYS), "默认角色", "Default Department"},
+                {configName(USER_DEFAULT_ROLE_KEYS), "默认角色", "Default Role"},
                 {configDescription(USER_DEFAULT_ROLE_KEYS), "缺省的角色标识，多个KEY用半角逗号分隔，当用户从集群中的账户体系中同步用户信息后，授予的默认的角色权限", "The default role identifier, multiple KEYs are separated by commas, and the default role permissions are granted when the user synchronizes user information from the account system in the cluster"},
                 {configName(UPDATE_MENU_ON_INIT), "更新菜单", "Update Menu"},
                 {configDescription(UPDATE_MENU_ON_INIT), "当系统启动或执行初始化的时候更新菜单，特别是当系统升级更新的时候，需要开启该功能", "Update the menu when the system starts or performs initialization, especially when the system is updated, you need to enable this function"},
