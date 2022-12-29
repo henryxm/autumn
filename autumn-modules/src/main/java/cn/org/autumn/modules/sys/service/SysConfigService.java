@@ -292,7 +292,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                     }
                 } else {
                     update = true;
-                    config.setCategory(SysConfigService.config);
+                    entity.setCategory(SysConfigService.config);
                 }
                 if (map.length > 5) {
                     temp = map[5];
@@ -302,7 +302,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                     }
                 } else {
                     update = true;
-                    config.setType(string_type);
+                    entity.setType(string_type);
                 }
                 if (map.length > 6) {
                     temp = map[6];
@@ -315,8 +315,8 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                     update = true;
                 }
                 if (update) {
-                    entity.setName(configName(config.getParamKey()));
-                    entity.setDescription(configDescription(config.getParamKey()));
+                    entity.setName(configName(entity.getParamKey()));
+                    entity.setDescription(configDescription(entity.getParamKey()));
                     updateById(entity);
                 }
                 langEntity = entity;
