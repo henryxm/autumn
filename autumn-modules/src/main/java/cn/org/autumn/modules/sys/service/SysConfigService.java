@@ -26,6 +26,7 @@ import org.apache.shiro.web.session.mgt.DefaultWebSessionManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.core.annotation.Order;
+import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -89,6 +90,9 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
 
     @Autowired
     ConfigFactory configFactory;
+
+    @Autowired
+    AsyncTaskExecutor asyncTaskExecutor;
 
     private static SessionManager sessionManager;
 
@@ -393,8 +397,13 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         if (LOGGER_LEVEL.equalsIgnoreCase(config.getParamKey())) {
             sysLogService.changeLevel(config.getParamValue(), NULL, NULL);
         }
-        configFactory.config(config.getParamKey(), config.getParamValue());
-        runJob();
+        asyncTaskExecutor.execute(new Runnable() {
+            @Override
+            public void run() {
+                runJob();
+                configFactory.update(config.getParamKey(), config.getParamValue());
+            }
+        });
     }
 
     @Transactional(rollbackFor = Exception.class)
