@@ -7,6 +7,7 @@ import cn.org.autumn.config.CategoryHandler;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.lan.service.Language;
 import cn.org.autumn.modules.oss.cloud.CloudStorageConfig;
+import cn.org.autumn.site.ConfigFactory;
 import cn.org.autumn.site.HostFactory;
 import cn.org.autumn.site.InitFactory;
 import cn.org.autumn.utils.*;
@@ -85,6 +86,9 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
 
     @Autowired
     protected Language language;
+
+    @Autowired
+    ConfigFactory configFactory;
 
     private static SessionManager sessionManager;
 
@@ -389,6 +393,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         if (LOGGER_LEVEL.equalsIgnoreCase(config.getParamKey())) {
             sysLogService.changeLevel(config.getParamValue(), NULL, NULL);
         }
+        configFactory.config(config.getParamKey(), config.getParamValue());
         runJob();
     }
 
