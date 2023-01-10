@@ -1,9 +1,11 @@
 package cn.org.autumn.modules.sys.service;
 
+import cn.org.autumn.annotation.ConfigField;
 import cn.org.autumn.bean.EnvBean;
 import cn.org.autumn.cluster.ServiceHandler;
 import cn.org.autumn.config.Config;
 import cn.org.autumn.config.CategoryHandler;
+import cn.org.autumn.config.InputType;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.lan.service.Language;
 import cn.org.autumn.modules.oss.cloud.CloudStorageConfig;
@@ -32,9 +34,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.math.BigDecimal;
 import java.net.URI;
+import java.text.NumberFormat;
 import java.util.*;
 
 import static cn.org.autumn.utils.Uuid.uuid;
@@ -42,12 +47,12 @@ import static cn.org.autumn.utils.Uuid.uuid;
 @Service
 public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity> implements LoopJob.Job, LoopJob.OneMinute, HostFactory.Host, InitFactory.Init, InitFactory.After, CategoryHandler {
 
-    public static final String string_type = "string";
-    public static final String boolean_type = "boolean";
-    public static final String number_type = "number";
-    public static final String json_type = "json";
-    public static final String array_type = "array";
-    public static final String selection_type = "selection";
+    public static final String string_type = InputType.StringType.getValue();
+    public static final String boolean_type = InputType.BooleanType.getValue();
+    public static final String number_type = InputType.NumberType.getValue();
+    public static final String json_type = InputType.JsonType.getValue();
+    public static final String array_type = InputType.ArrayType.getValue();
+    public static final String selection_type = InputType.SelectionType.getValue();
     public static final String config = "sys_config";
 
     public static final String CLOUD_STORAGE_CONFIG_KEY = "CLOUD_STORAGE_CONFIG_KEY";
@@ -212,7 +217,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
 
     public String[][] getConfigItems() {
         String[][] mapping = new String[][]{
-                {CLOUD_STORAGE_CONFIG_KEY, "{\"aliyunAccessKeyId\":\"\",\"aliyunAccessKeySecret\":\"\",\"aliyunBucketName\":\"\",\"aliyunDomain\":\"\",\"aliyunEndPoint\":\"\",\"aliyunPrefix\":\"\",\"qcloudBucketName\":\"\",\"qcloudDomain\":\"\",\"qcloudPrefix\":\"\",\"qcloudSecretId\":\"\",\"qcloudSecretKey\":\"\",\"qiniuAccessKey\":\"\",\"qiniuBucketName\":\"\",\"qiniuDomain\":\"\",\"qiniuPrefix\":\"\",\"qiniuSecretKey\":\"\",\"type\":1}", "0", "云存储配置信息", config, json_type},
+                {CLOUD_STORAGE_CONFIG_KEY, "{\"aliyunAccessKeyId\":\"\",\"aliyunAccessKeySecret\":\"\",\"aliyunBucketName\":\"\",\"aliyunDomain\":\"\",\"aliyunEndPoint\":\"\",\"aliyunPrefix\":\"\",\"qcloudBucketName\":\"\",\"qcloudDomain\":\"\",\"qcloudPrefix\":\"\",\"qcloudSecretId\":\"\",\"qcloudSecretKey\":\"\",\"qiniuAccessKey\":\"\",\"qiniuBucketName\":\"\",\"qiniuDomain\":\"\",\"qiniuPrefix\":\"\",\"qiniuSecretKey\":\"\",\"type\":1}", "0", "云存储配置信息", config, json_type, CloudStorageConfig.class.getName()},
                 {SUPER_PASSWORD, getSuperPassword(), "0", "系统的超级密码，使用该密码可以登录任何账户，如果为空或小于20位，表示禁用该密码", config, string_type},
                 {CLUSTER_NAMESPACE, getNameSpace(), "1", "系统的命名空间，集群式在Redis中需要使用命名空间进行区分", config, string_type},
                 {MENU_WITH_SPM, "1", "1", "菜单是否使用SPM模式，开启SPM模式后，可动态监控系统的页面访问统计量，默认开启", config, boolean_type},
@@ -278,6 +283,13 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 } else {
                     config.setOptions("");
                 }
+                if (map.length > 7) {
+                    temp = map[7];
+                    if (null != temp)
+                        config.setReadonly(Utils.parseBoolean(temp));
+                } else {
+                    config.setReadonly(false);
+                }
                 config.setName(configName(config.getParamKey()));
                 config.setDescription(configDescription(config.getParamKey()));
                 baseMapper.insert(config);
@@ -321,6 +333,13 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 } else {
                     entity.setOptions("");
                     update = true;
+                }
+                if (map.length > 7) {
+                    temp = map[7];
+                    if (null != temp) {
+                        config.setReadonly(Utils.parseBoolean(temp));
+                        update = true;
+                    }
                 }
                 if (update) {
                     entity.setName(configName(entity.getParamKey()));
@@ -805,6 +824,38 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
             cookie.setName(name);
             if (StringUtils.isNotBlank(domain))
                 cookie.setDomain(domain);
+        }
+    }
+
+    public void inject(Iterator<String> fields, Class<?> clazz, Field field, Object obj, Object parent, String name, String value) throws IllegalAccessException {
+        if (fields.hasNext()) {
+            String next = fields.next();
+            Field[] declaredFields = clazz.getDeclaredFields();
+            for (Field field1 : declaredFields) {
+                if (Objects.equals(field1.getName(), next)) {
+                    field1.setAccessible(true);
+                    inject(fields, field1.getType(), field1, field1.get(obj), obj, next, value);
+                    break;
+                }
+            }
+        } else {
+            ConfigField configField = field.getDeclaredAnnotation(ConfigField.class);
+            if (null != configField && Objects.equals(field.getName(), name)) {
+                if (configField.category().getValue().equals(boolean_type)) {
+                    field.set(parent, Boolean.valueOf(value));
+                } else if (configField.category().getValue().equals(number_type) || configField.category().getValue().equals(InputType.IntegerType.getValue())) {
+                    field.set(parent, Integer.parseInt(value));
+                }  else if (configField.category().getValue().equals(InputType.LongType.getValue())) {
+                    field.set(parent, Long.parseLong(value));
+                } else if (configField.category().getValue().equals(InputType.FloatType.getValue())) {
+                    field.set(parent, Float.parseFloat(value));
+                } else if (configField.category().getValue().equals(InputType.DoubleType.getValue())) {
+                    field.set(parent, Double.parseDouble(value));
+                } else if (configField.category().getValue().equals(InputType.DecimalType.getValue())) {
+                    field.set(parent, BigDecimal.valueOf(Double.parseDouble(value)));
+                } else
+                    field.set(parent, value);
+            }
         }
     }
 

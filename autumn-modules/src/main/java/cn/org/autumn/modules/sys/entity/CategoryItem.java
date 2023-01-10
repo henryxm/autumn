@@ -1,5 +1,7 @@
 package cn.org.autumn.modules.sys.entity;
 
+import cn.org.autumn.annotation.ConfigParam;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
@@ -7,6 +9,7 @@ import java.util.List;
 public class CategoryItem implements Serializable {
 
     private static final long serialVersionUID = 1L;
+    private String paramKey;
     private String category;
     private String name;
     private String description;
@@ -19,6 +22,20 @@ public class CategoryItem implements Serializable {
         this.category = entity.getCategory();
         this.name = entity.getName();
         this.description = entity.getDescription();
+    }
+
+    public CategoryItem(ConfigParam configParam) {
+        this.paramKey = configParam.paramKey();
+        this.category = configParam.category();
+        this.name = configParam.name();
+        this.description = configParam.description();
+    }
+    public String getParamKey() {
+        return paramKey;
+    }
+
+    public void setParamKey(String paramKey) {
+        this.paramKey = paramKey;
     }
 
     public String getCategory() {

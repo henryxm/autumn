@@ -1,25 +1,37 @@
 package cn.org.autumn.modules.sys.service;
 
+import cn.org.autumn.annotation.ConfigField;
+import cn.org.autumn.annotation.ConfigParam;
 import cn.org.autumn.base.ModuleService;
 import cn.org.autumn.config.CategoryHandler;
+import cn.org.autumn.config.InputType;
 import cn.org.autumn.modules.lan.service.LanguageService;
 import cn.org.autumn.modules.sys.entity.CategoryItem;
 import cn.org.autumn.modules.sys.entity.ConfigItem;
 import cn.org.autumn.modules.sys.entity.SysConfigEntity;
+import com.google.gson.Gson;
 import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import cn.org.autumn.modules.sys.dao.SysCategoryDao;
 import cn.org.autumn.modules.sys.entity.SysCategoryEntity;
 
+import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static cn.org.autumn.modules.sys.service.SysConfigService.json_type;
+
 @Service
 public class SysCategoryService extends ModuleService<SysCategoryDao, SysCategoryEntity> implements CategoryHandler {
 
-    public static final String default_category = "default";
+    public Logger log = LoggerFactory.getLogger(getClass());
+
+    public static final String default_config = "default";
+    public static final String storage_config = "storage_config";
 
     @Autowired
     SysConfigService sysConfigService;
@@ -41,8 +53,10 @@ public class SysCategoryService extends ModuleService<SysCategoryDao, SysCategor
 
     public String[][] getLanguageItems() {
         String[][] items = new String[][]{
-                {categoryName(default_category), "默认分类", "Default classification"},
-                {categoryDescription(default_category), "默认分类配置项，未进行分类的配置进入默认分类", "Default classification configuration items, unclassified configurations enter the default classification"},
+                {categoryName(default_config), "默认分类", "Default classification"},
+                {categoryDescription(default_config), "默认分类配置项，未进行分类的配置进入默认分类", "Default classification configuration items, unclassified configurations enter the default classification"},
+                {categoryName(storage_config), "云存储配置", "Cloud Storage Configuration"},
+                {categoryDescription(storage_config), "配置公有云存储相关信息", "Configure public cloud storage related information"},
         };
         return items;
     }
@@ -77,7 +91,8 @@ public class SysCategoryService extends ModuleService<SysCategoryDao, SysCategor
 
     public String[][] getCategoryItems() {
         String[][] mapping = new String[][]{
-                {default_category, "1"},
+                {default_config, "1"},
+                {storage_config, "1"},
         };
         return mapping;
     }
@@ -107,12 +122,101 @@ public class SysCategoryService extends ModuleService<SysCategoryDao, SysCategor
         insertOrUpdate(categoryEntity);
     }
 
+
+    public Map<String, CategoryItem> reverse(Class<?> clazz, String fieldName, Object obj, String language) {
+        try {
+            ConfigParam configParam = clazz.getAnnotation(ConfigParam.class);
+            Map<String, CategoryItem> map = new HashMap<>();
+            if (null != configParam) {
+                Field[] fields = clazz.getDeclaredFields();
+                for (Field field : fields) {
+                    field.setAccessible(true);
+                    ConfigField configField = field.getDeclaredAnnotation(ConfigField.class);
+                    if (null != configField) {
+                        Object value = field.get(obj);
+                        String category = configParam.category();
+                        if (StringUtils.isBlank(category))
+                            category = default_config;
+                        CategoryItem categoryItem = map.get(category);
+                        if (null != categoryItem) {
+                            ConfigItem configItem = new ConfigItem(configParam, configField, fieldName, field, value);
+                            configItem.setName(translate(language, configItem.getName()));
+                            configItem.setDescription(translate(language, configItem.getDescription()));
+                            categoryItem.getConfigs().add(configItem);
+                        } else {
+                            SysCategoryEntity sysCategoryEntity = getByCategory(category, language);
+                            if (null != sysCategoryEntity && sysCategoryEntity.getStatus() > 0) {
+                                categoryItem = new CategoryItem(configParam);
+                                categoryItem.setName(translate(language, categoryItem.getName()));
+                                categoryItem.setDescription(translate(language, categoryItem.getDescription()));
+                                ConfigItem configItem = new ConfigItem(configParam, configField, fieldName, field, value);
+                                configItem.setName(translate(language, configItem.getName()));
+                                configItem.setDescription(translate(language, configItem.getDescription()));
+                                categoryItem.getConfigs().add(configItem);
+                                map.put(category, categoryItem);
+                            }
+                        }
+                    } else {
+                        ConfigParam nestParam = field.getDeclaredAnnotation(ConfigParam.class);
+                        if (null != nestParam) {
+                            Class<?> nestClazz = field.getType();
+                            String fn = field.getName();
+                            if (StringUtils.isNotBlank(fieldName)) {
+                                fn = fieldName + "." + fn;
+                            }
+                            map.putAll(reverse(nestClazz, fn, field.get(obj), language));
+                        }
+                    }
+                }
+            }
+            return map;
+        } catch (IllegalAccessException e) {
+            log.error("非法访问:{}", clazz.getName());
+        }
+        return null;
+    }
+
+    public Map<String, CategoryItem> category(SysConfigEntity sysConfigEntity, String language) {
+        try {
+            if (sysConfigEntity.getType().equals(InputType.JsonType.getValue()) && StringUtils.isNotBlank(sysConfigEntity.getOptions())) {
+                Class<?> clazz = Class.forName(sysConfigEntity.getOptions());
+                Object o = new Gson().fromJson(sysConfigEntity.getParamValue(), clazz);
+                return reverse(clazz, "", o, language);
+            }
+        } catch (ClassNotFoundException e) {
+            log.error("类不存在:{}", sysConfigEntity.getOptions());
+        }
+        return null;
+    }
+
+    public String translate(String language, String key) {
+        Map<String, String> map = languageService.getLanguage(language);
+        if (StringUtils.isNotBlank(key) && (key.startsWith(SysConfigService.config_lang_prefix) || key.startsWith(category_lang_string)) && map.containsKey(key)) {
+            return map.get(key);
+        }
+        return key;
+    }
+
     public Map<String, CategoryItem> getCategories(String language) {
         List<SysConfigEntity> sysConfigEntities = sysConfigService.selectByMap(null);
         Map<String, CategoryItem> map = new HashMap<>();
         for (SysConfigEntity sysConfigEntity : sysConfigEntities) {
             if (sysConfigEntity.getStatus() <= 0)
                 continue;
+            if (sysConfigEntity.getType().equals(json_type)) {
+                Map<String, CategoryItem> nn = category(sysConfigEntity, language);
+                if (null != nn) {
+                    for (Map.Entry<String, CategoryItem> entry : nn.entrySet()) {
+                        if (map.containsKey(entry.getKey())) {
+                            CategoryItem item = map.get(entry.getKey());
+                            if (!entry.getValue().getConfigs().isEmpty())
+                                item.getConfigs().addAll(entry.getValue().getConfigs());
+                        } else
+                            map.put(entry.getKey(), entry.getValue());
+                    }
+                    continue;
+                }
+            }
             Map<String, String> lMap = languageService.getLanguage(language);
             if (null != lMap) {
                 if (StringUtils.isNotBlank(sysConfigEntity.getName()) && sysConfigEntity.getName().startsWith(SysConfigService.config_lang_prefix)) {
@@ -131,7 +235,7 @@ public class SysCategoryService extends ModuleService<SysCategoryDao, SysCategor
             }
             String category = sysConfigEntity.getCategory();
             if (StringUtils.isBlank(category))
-                category = default_category;
+                category = default_config;
             CategoryItem categoryItem = map.get(category);
             if (null != categoryItem) {
                 categoryItem.getConfigs().add(new ConfigItem(sysConfigEntity));

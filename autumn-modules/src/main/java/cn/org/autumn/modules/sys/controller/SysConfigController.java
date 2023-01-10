@@ -8,6 +8,8 @@ import cn.org.autumn.utils.R;
 import cn.org.autumn.validator.ValidatorUtils;
 import cn.org.autumn.modules.sys.entity.SysConfigEntity;
 import cn.org.autumn.modules.sys.service.SysConfigService;
+import com.google.gson.Gson;
+import org.apache.commons.lang.StringUtils;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -16,7 +18,9 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.util.Map;
+import java.util.*;
+
+import static cn.org.autumn.modules.sys.service.SysConfigService.*;
 
 @RestController
 @RequestMapping("/sys/config")
@@ -87,7 +91,23 @@ public class SysConfigController extends AbstractController {
             SysConfigEntity entity = sysConfigService.getByKey(config.getParamKey());
             if (null == entity)
                 return R.error();
-            entity.setParamValue(config.getParamValue());
+            String value = config.getParamValue();
+            if (entity.getType().equals(json_type) && StringUtils.isNotBlank(entity.getOptions())) {
+                try {
+                    Class<?> clazz = Class.forName(entity.getOptions());
+                    Gson gson = new Gson();
+                    Object o = gson.fromJson(entity.getParamValue(), clazz);
+                    List<String> list = Arrays.asList(config.getFieldName().split("\\."));
+                    if (!list.isEmpty()) {
+                        sysConfigService.inject(list.listIterator(), clazz, null, o, null, null, value);
+                        String json = gson.toJson(o);
+                        entity.setParamValue(json);
+                    }
+                } catch (ClassNotFoundException | IllegalAccessException e) {
+                }
+            } else {
+                entity.setParamValue(value);
+            }
             config = entity;
         } else
             ValidatorUtils.validateEntity(config);

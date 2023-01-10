@@ -3,6 +3,7 @@ package cn.org.autumn.modules.sys.entity;
 import cn.org.autumn.table.annotation.Column;
 import cn.org.autumn.table.annotation.Table;
 import cn.org.autumn.table.data.DataType;
+import com.baomidou.mybatisplus.annotations.TableField;
 import com.baomidou.mybatisplus.annotations.TableId;
 import com.baomidou.mybatisplus.annotations.TableName;
 
@@ -36,10 +37,10 @@ public class SysConfigEntity implements Serializable {
     @Column(type = DataType.INT, length = 4, defaultValue = "1", comment = "状态   0：隐藏   1：显示")
     private int status;
 
-    @Column(comment = "类型")
+    @Column(comment = "数据类型")
     private String type;
 
-    @Column(comment = "分类")
+    @Column(comment = "分组类型")
     private String category;
 
     @Column(comment = "名称")
@@ -50,6 +51,12 @@ public class SysConfigEntity implements Serializable {
 
     @Column(type = DataType.TEXT, comment = "可选项")
     private String options;
+
+    @Column(comment = "只读", defaultValue = "0")
+    private boolean readonly;
+
+    @TableField(exist = false)
+    private String fieldName = "";
 
     public int getStatus() {
         return status;
@@ -129,5 +136,21 @@ public class SysConfigEntity implements Serializable {
 
     public void setOptions(String options) {
         this.options = options;
+    }
+
+    public boolean isReadonly() {
+        return readonly;
+    }
+
+    public void setReadonly(boolean readonly) {
+        this.readonly = readonly;
+    }
+
+    public String getFieldName() {
+        return fieldName;
+    }
+
+    public void setFieldName(String fieldName) {
+        this.fieldName = fieldName;
     }
 }
