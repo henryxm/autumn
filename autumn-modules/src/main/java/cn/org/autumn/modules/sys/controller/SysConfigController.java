@@ -2,6 +2,9 @@ package cn.org.autumn.modules.sys.controller;
 
 import cn.org.autumn.annotation.SysLog;
 import cn.org.autumn.modules.lan.service.Language;
+import cn.org.autumn.modules.spm.entity.Spm;
+import cn.org.autumn.modules.spm.service.SpmService;
+import cn.org.autumn.modules.spm.service.SuperPositionModelService;
 import cn.org.autumn.modules.sys.service.SysCategoryService;
 import cn.org.autumn.utils.PageUtils;
 import cn.org.autumn.utils.R;
@@ -34,6 +37,9 @@ public class SysConfigController extends AbstractController {
 
     @Autowired
     Language language;
+
+    @Autowired
+    SpmService spmService;
 
     /**
      * 所有配置列表
@@ -129,10 +135,18 @@ public class SysConfigController extends AbstractController {
         return R.ok();
     }
 
-    @RequestMapping("data")
-    public R basic(HttpServletRequest request, HttpServletResponse response, Model model) {
+    @RequestMapping(value = "data", method = RequestMethod.POST)
+    public R basic(String spm, HttpServletRequest request) {
         String lang = language.toLang(Language.getLocale(request));
-        Map map = sysCategoryService.getCategories(lang);
+        Spm spm1 = spmService.getSpm(spm);
+        String key = "";
+        if (null != spm1) {
+            String productId = spm1.getProductId();
+            if (StringUtils.isNotBlank(productId) && !productId.equals("0")) {
+                key = spm1.getProductId();
+            }
+        }
+        Map map = sysCategoryService.getCategories(lang, key);
         R r = R.ok();
         r.put("data", map);
         return r;

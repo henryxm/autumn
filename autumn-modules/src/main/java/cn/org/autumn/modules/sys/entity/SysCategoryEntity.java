@@ -29,6 +29,9 @@ public class SysCategoryEntity implements Serializable {
     @Column(comment = "状态", defaultValue = "0")
     private int status;
 
+    @Column(comment = "排序:值越大,显示靠前", defaultValue = "0")
+    private int order;
+
     @Column(comment = "冻结:冻结后不更新状态和描述", defaultValue = "0")
     private boolean frozen;
 
@@ -65,6 +68,14 @@ public class SysCategoryEntity implements Serializable {
 
     public void setStatus(int status) {
         this.status = status;
+    }
+
+    public int getOrder() {
+        return order;
+    }
+
+    public void setOrder(int order) {
+        this.order = order;
     }
 
     public boolean isFrozen() {

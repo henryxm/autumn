@@ -10,6 +10,7 @@ import cn.org.autumn.modules.sys.entity.CategoryItem;
 import cn.org.autumn.modules.sys.entity.ConfigItem;
 import cn.org.autumn.modules.sys.entity.SysConfigEntity;
 import com.google.gson.Gson;
+import com.google.gson.internal.LinkedHashTreeMap;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,9 +20,7 @@ import cn.org.autumn.modules.sys.dao.SysCategoryDao;
 import cn.org.autumn.modules.sys.entity.SysCategoryEntity;
 
 import java.lang.reflect.Field;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static cn.org.autumn.modules.sys.service.SysConfigService.json_type;
 
@@ -197,9 +196,31 @@ public class SysCategoryService extends ModuleService<SysCategoryDao, SysCategor
         return key;
     }
 
-    public Map<String, CategoryItem> getCategories(String language) {
-        List<SysConfigEntity> sysConfigEntities = sysConfigService.selectByMap(null);
-        Map<String, CategoryItem> map = new HashMap<>();
+    /**
+     * 获取配置
+     *
+     * @param language
+     * @param key      paramKey or category
+     * @return
+     */
+    public Map<String, CategoryItem> getCategories(String language, String key) {
+        List<SysConfigEntity> sysConfigEntities = null;
+        SysCategoryEntity categoryEntity = null;
+        if (StringUtils.isNotBlank(key)) {
+            SysConfigEntity config = sysConfigService.getByKey(key);
+            if (null != config)
+                sysConfigEntities = Collections.singletonList(config);
+            else {
+                categoryEntity = getByCategory(key, language);
+                if (null != categoryEntity) {
+                    sysConfigEntities = sysConfigService.selectByMap(null);
+                }
+            }
+        } else
+            sysConfigEntities = sysConfigService.selectByMap(null);
+        Map<String, CategoryItem> map = new LinkedHashTreeMap<>();
+        if (null == sysConfigEntities)
+            return map;
         for (SysConfigEntity sysConfigEntity : sysConfigEntities) {
             if (sysConfigEntity.getStatus() <= 0)
                 continue;
@@ -211,8 +232,9 @@ public class SysCategoryService extends ModuleService<SysCategoryDao, SysCategor
                             CategoryItem item = map.get(entry.getKey());
                             if (!entry.getValue().getConfigs().isEmpty())
                                 item.getConfigs().addAll(entry.getValue().getConfigs());
-                        } else
+                        } else {
                             map.put(entry.getKey(), entry.getValue());
+                        }
                     }
                     continue;
                 }
@@ -247,6 +269,32 @@ public class SysCategoryService extends ModuleService<SysCategoryDao, SysCategor
                     map.put(category, categoryItem);
                 }
             }
+        }
+
+        if (null != categoryEntity) {
+            CategoryItem item = map.get(categoryEntity.getCategory());
+            if (null != item) {
+                map.clear();
+                map.put(item.getCategory(), item);
+            }
+        }
+
+        List<Map.Entry<String, CategoryItem>> oList = new ArrayList<>(map.entrySet());
+        oList.sort(new Comparator<Map.Entry<String, CategoryItem>>() {
+            @Override
+            public int compare(Map.Entry<String, CategoryItem> o1, Map.Entry<String, CategoryItem> o2) {
+                return o2.getValue().getOrder() - o1.getValue().getOrder();
+            }
+        });
+        map.clear();
+        for (Map.Entry<String, CategoryItem> entry : oList) {
+            entry.getValue().getConfigs().sort(new Comparator<ConfigItem>() {
+                @Override
+                public int compare(ConfigItem o1, ConfigItem o2) {
+                    return o2.getOrder() - o1.getOrder();
+                }
+            });
+            map.put(entry.getKey(), entry.getValue());
         }
         return map;
     }

@@ -55,6 +55,9 @@ public class SysConfigEntity implements Serializable {
     @Column(comment = "只读", defaultValue = "0")
     private boolean readonly;
 
+    @Column(comment = "排序:值越大,显示靠前", defaultValue = "0")
+    private int order;
+
     @TableField(exist = false)
     private String fieldName = "";
 
@@ -144,6 +147,14 @@ public class SysConfigEntity implements Serializable {
 
     public void setReadonly(boolean readonly) {
         this.readonly = readonly;
+    }
+
+    public int getOrder() {
+        return order;
+    }
+
+    public void setOrder(int order) {
+        this.order = order;
     }
 
     public String getFieldName() {

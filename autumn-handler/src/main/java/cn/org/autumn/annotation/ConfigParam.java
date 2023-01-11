@@ -12,5 +12,7 @@ public @interface ConfigParam {
 
     String name() default "";
 
+    int order() default 0;
+
     String description() default "";
 }

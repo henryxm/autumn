@@ -20,4 +20,6 @@ public @interface ConfigField {
     String options() default "";
 
     boolean readonly() default false;
+
+    int order() default 0;
 }

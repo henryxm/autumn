@@ -34,6 +34,8 @@ public class ConfigItem implements Serializable {
 
     private boolean readonly;
 
+    private int order;
+
     public ConfigItem() {
     }
 
@@ -54,6 +56,7 @@ public class ConfigItem implements Serializable {
         } else
             this.options = entity.getOptions();
         this.readonly = entity.isReadonly();
+        this.order = entity.getOrder();
     }
 
     public ConfigItem(ConfigParam configParam, ConfigField configField, String prefix, Field field, Object paramValue) {
@@ -73,6 +76,7 @@ public class ConfigItem implements Serializable {
         } else
             this.options = configField.options();
         this.readonly = configField.readonly();
+        this.order = configField.order();
     }
 
     public String getParamKey() {
@@ -145,5 +149,13 @@ public class ConfigItem implements Serializable {
 
     public void setReadonly(boolean readonly) {
         this.readonly = readonly;
+    }
+
+    public int getOrder() {
+        return order;
+    }
+
+    public void setOrder(int order) {
+        this.order = order;
     }
 }
