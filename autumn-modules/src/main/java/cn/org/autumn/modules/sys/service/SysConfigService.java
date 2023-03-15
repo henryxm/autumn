@@ -171,6 +171,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     public String[][] getCategoryItems() {
         String[][] mapping = new String[][]{
                 {config, "1"},
+                {SystemUpgrade.config, "1"},
         };
         return mapping;
     }
@@ -238,7 +239,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 {UPDATE_MENU_ON_INIT, "true", "1", "当系统启动或执行初始化的时候更新菜单，特别是当系统升级更新的时候，需要开启该功能", config, boolean_type},
                 {UPDATE_LANGUAGE_ON_INIT, "true", "1", "当系统启动或执行初始化的时候更新语言列表，开发模式下可以开启该功能，该模式会自动合并新的值到现有的表中", config, boolean_type},
                 {NONE_SUFFIX_VIEW, "js,css,map,html,htm,shtml", "0", "系统默认后缀名为:.html, Request请求的路径在程序查找资源的时候，默认会带上.html, 通过配置无后缀名文件视图, 系统将请求路径进行资源查找", config, string_type},
-                {SYSTEM_UPGRADE, new Gson().toJson(new SystemUpgrade()), "0", "系统升级开关与提示信息", json_type, SystemUpgrade.class.getName()},
+                {SYSTEM_UPGRADE, new Gson().toJson(new SystemUpgrade()), "1", "系统升级开关与提示信息", config, json_type, SystemUpgrade.class.getName()},
         };
         return mapping;
     }
