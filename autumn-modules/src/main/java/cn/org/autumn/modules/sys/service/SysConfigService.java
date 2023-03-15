@@ -9,6 +9,7 @@ import cn.org.autumn.config.InputType;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.lan.service.Language;
 import cn.org.autumn.modules.oss.cloud.CloudStorageConfig;
+import cn.org.autumn.modules.sys.entity.SystemUpgrade;
 import cn.org.autumn.site.ConfigFactory;
 import cn.org.autumn.site.HostFactory;
 import cn.org.autumn.site.InitFactory;
@@ -72,6 +73,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     public static final String UPDATE_LANGUAGE_ON_INIT = "UPDATE_LANGUAGE_ON_INIT";
     public static final String CLUSTER_NAMESPACE = "CLUSTER_NAMESPACE";
     public static final String NONE_SUFFIX_VIEW = "NONE_SUFFIX_VIEW";
+    public static final String SYSTEM_UPGRADE = "SYSTEM_UPGRADE";
     public static final String Localhost = "localhost";
     public static final String config_lang_prefix = "config_lang_string_";
 
@@ -211,6 +213,8 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 {configDescription(UPDATE_LANGUAGE_ON_INIT), "当系统启动或执行初始化的时候更新语言列表，开发模式下可以开启该功能，该模式会自动合并新的值到现有的表中", "Update the language list when the system starts or performs initialization. This function can be enabled in development mode, which will automatically merge new values into the existing table."},
                 {configName(NONE_SUFFIX_VIEW), "无后缀视图", "None View Suffix"},
                 {configDescription(NONE_SUFFIX_VIEW), "系统默认后缀名为:.html, Request请求的路径在程序查找资源的时候，默认会带上.html, 通过配置无后缀名文件视图, 系统将请求路径进行资源查找", "The default suffix of the system is: .html. When the program searches for resources, the path requested by the Request will bring .html by default. By configuring the file view with no suffix, the system will search for resources with the requested path"},
+                {configName(SYSTEM_UPGRADE), "系统升级", "System Upgrade"},
+                {configDescription(SYSTEM_UPGRADE), "系统升级过程启用开关，当升级时，部分功能被禁止，比如上传数据，新增数据", "The switch is enabled during the system upgrade process. When upgrading, some functions are prohibited, such as uploading data and adding data"},
         };
         return items;
     }
@@ -234,6 +238,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 {UPDATE_MENU_ON_INIT, "true", "1", "当系统启动或执行初始化的时候更新菜单，特别是当系统升级更新的时候，需要开启该功能", config, boolean_type},
                 {UPDATE_LANGUAGE_ON_INIT, "true", "1", "当系统启动或执行初始化的时候更新语言列表，开发模式下可以开启该功能，该模式会自动合并新的值到现有的表中", config, boolean_type},
                 {NONE_SUFFIX_VIEW, "js,css,map,html,htm,shtml", "0", "系统默认后缀名为:.html, Request请求的路径在程序查找资源的时候，默认会带上.html, 通过配置无后缀名文件视图, 系统将请求路径进行资源查找", config, string_type},
+                {SYSTEM_UPGRADE, new Gson().toJson(new SystemUpgrade()), "0", "系统升级开关与提示信息", json_type, SystemUpgrade.class.getName()},
         };
         return mapping;
     }
@@ -368,6 +373,10 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 lang.add(desc);
             }
         }
+    }
+
+    public SystemUpgrade getSystemUpgrade() {
+        return getConfigObject(SYSTEM_UPGRADE, SystemUpgrade.class);
     }
 
     public SysConfigEntity getByKey(String key) {
@@ -845,7 +854,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                     field.set(parent, Boolean.valueOf(value));
                 } else if (configField.category().getValue().equals(number_type) || configField.category().getValue().equals(InputType.IntegerType.getValue())) {
                     field.set(parent, Integer.parseInt(value));
-                }  else if (configField.category().getValue().equals(InputType.LongType.getValue())) {
+                } else if (configField.category().getValue().equals(InputType.LongType.getValue())) {
                     field.set(parent, Long.parseLong(value));
                 } else if (configField.category().getValue().equals(InputType.FloatType.getValue())) {
                     field.set(parent, Float.parseFloat(value));
