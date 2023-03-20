@@ -39,9 +39,6 @@ public class LoginFactory extends Factory {
     /**
      * 根据host 进行登录检查
      * 默认需要登录，只要有一个不需要登录，则不需登录
-     *
-     * @param httpServletRequest
-     * @return
      */
     public boolean isNeed(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse) {
         ApplicationContext applicationContext = SpringContextUtils.getApplicationContext();
@@ -55,16 +52,18 @@ public class LoginFactory extends Factory {
                 for (Login login : list) {
                     try {
                         if (!login.isNeed(httpServletRequest, httpServletResponse)) {
-                            log.debug("No Login:{}, {}", getUrl(httpServletRequest), login.getClass().getTypeName());
+                            if (log.isDebugEnabled())
+                                log.debug("无需登录:{}, {}", getUrl(httpServletRequest), login.getClass().getTypeName());
                             return false;
                         }
                     } catch (Throwable e) {
-                        log.error("Need Login Throwable:{}", login.getClass().getName(), e);
+                        log.debug("访问异常:{},{}", login.getClass().getSimpleName(), e.getMessage());
                     }
                 }
             }
         }
-        log.debug("Need Login:{}", getUrl(httpServletRequest));
+        if (log.isDebugEnabled())
+            log.debug("需要登录:{}", getUrl(httpServletRequest));
         return true;
     }
 }
