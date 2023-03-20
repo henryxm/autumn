@@ -5,6 +5,7 @@ import cn.org.autumn.modules.lan.service.Language;
 import cn.org.autumn.modules.spm.entity.Spm;
 import cn.org.autumn.modules.spm.service.SpmService;
 import cn.org.autumn.modules.spm.service.SuperPositionModelService;
+import cn.org.autumn.modules.sys.entity.SystemUpgrade;
 import cn.org.autumn.modules.sys.service.SysCategoryService;
 import cn.org.autumn.utils.PageUtils;
 import cn.org.autumn.utils.R;
@@ -149,6 +150,13 @@ public class SysConfigController extends AbstractController {
         Map map = sysCategoryService.getCategories(lang, key);
         R r = R.ok();
         r.put("data", map);
+        return r;
+    }
+
+    @RequestMapping(value = "getSystemUpgrade")
+    public R getSystemUpgrade() {
+        R r = R.ok();
+        r.put("data", sysConfigService.getSystemUpgrade());
         return r;
     }
 }
