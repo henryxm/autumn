@@ -14,6 +14,10 @@ public abstract class TagRunnable implements Runnable, Tag {
 
     String tag = "";
 
+    String method = "";
+
+    Class<?> type = null;
+
     @Override
     public String getName() {
         return name;
@@ -44,6 +48,24 @@ public abstract class TagRunnable implements Runnable, Tag {
         this.tag = tag;
     }
 
+    public String getMethod() {
+        return method;
+    }
+
+    public void setMethod(String method) {
+        this.method = method;
+    }
+
+    @Override
+    public Class<?> getType() {
+        return type;
+    }
+
+    @Override
+    public void setType(Class<?> type) {
+        this.type = type;
+    }
+
     @Override
     public void run() {
         long start = System.currentTimeMillis();
@@ -63,5 +85,9 @@ public abstract class TagRunnable implements Runnable, Tag {
         }
     }
 
-    public abstract void exe();
+    public void exe() {
+        if (log.isDebugEnabled()) {
+            log.debug("执行任务:{}, 时间:{}, 线程名:{}", getTag(), time, getName());
+        }
+    }
 }

@@ -219,7 +219,6 @@ public class SysPageController implements ErrorController {
     @RequestMapping({"threading.html", "threading"})
     @ResponseBody
     public List<Tag> getThreading() {
-        tagTaskExecutor.print();
         return tagTaskExecutor.getRunning();
     }
 }

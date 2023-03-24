@@ -6,13 +6,21 @@ public interface Tag {
 
     String getName();
 
-    Date getTime();
-
-    String getTag();
-
     void setName(String name);
+
+    Date getTime();
 
     void setTime(Date time);
 
+    String getTag();
+
     void setTag(String tag);
+
+    String getMethod();
+
+    void setMethod(String method);
+
+    Class<?> getType();
+
+    void setType(Class<?> type);
 }

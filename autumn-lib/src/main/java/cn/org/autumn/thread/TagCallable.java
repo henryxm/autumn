@@ -65,5 +65,10 @@ public abstract class TagCallable<V> implements Callable<V>, Tag {
         }
     }
 
-    public abstract V exe() throws Exception;
+    public V exe() throws Exception {
+        if (log.isDebugEnabled()) {
+            log.debug("执行任务:{}, 时间:{}, 线程名:{}", getTag(), time, getName());
+        }
+        return null;
+    }
 }
