@@ -1,5 +1,6 @@
 package cn.org.autumn.config;
 
+import cn.org.autumn.thread.NameTaskExecutor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.task.AsyncTaskExecutor;
@@ -17,9 +18,9 @@ public class ThreadConfig {
      * @return AsyncTaskExecutor
      */
     @Bean
-    public AsyncTaskExecutor asyncTaskExecutor(List<RejectedHandler> rejectedHandlers) {
-        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setThreadNamePrefix("Anno-Executor");
+    public NameTaskExecutor asyncTaskExecutor(List<RejectedHandler> rejectedHandlers) {
+        NameTaskExecutor executor = new NameTaskExecutor();
+        executor.setThreadNamePrefix("Executor");
         executor.setMaxPoolSize(50000);
         executor.setCorePoolSize(1000);
         if (null != rejectedHandlers && rejectedHandlers.size() > 0) {
