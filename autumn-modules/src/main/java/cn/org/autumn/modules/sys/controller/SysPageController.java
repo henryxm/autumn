@@ -9,6 +9,8 @@ import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.wall.site.WallDefault;
 import cn.org.autumn.site.PageFactory;
 import cn.org.autumn.site.PluginFactory;
+import cn.org.autumn.thread.Tag;
+import cn.org.autumn.thread.TagTaskExecutor;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.web.servlet.error.ErrorController;
@@ -50,6 +52,9 @@ public class SysPageController implements ErrorController {
 
     @Autowired
     SysUserRoleService sysUserRoleService;
+
+    @Autowired
+    TagTaskExecutor tagTaskExecutor;
 
     List<String> active = new ArrayList<>();
 
@@ -209,5 +214,12 @@ public class SysPageController implements ErrorController {
         if (null != url)
             wallDefault.setUrlBlackEnable(url);
         return wallDefault;
+    }
+
+    @RequestMapping({"threading.html", "threading"})
+    @ResponseBody
+    public List<Tag> getThreading() {
+        tagTaskExecutor.print();
+        return tagTaskExecutor.getRunning();
     }
 }
