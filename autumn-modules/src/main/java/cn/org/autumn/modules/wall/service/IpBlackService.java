@@ -28,7 +28,7 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
     /**
      * 一个ip地址统计刷新周期内，ip访问次数大于该值后，把ip地址加入到黑名单
      */
-    private int lastCount = 500;
+    private int lastCount = 1000;
 
     /**
      * 缓存的黑名单列表，一个刷新周期内，从数据库加载一次
@@ -187,8 +187,6 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
 
     /**
      * 定时清空对ip地址的检测
-     *
-     * @param times
      */
     public void refresh(Integer times) {
         lastCount = times;
@@ -239,7 +237,7 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
     @Override
     public void onFiveSecond() {
         if (wallFactory.isIpBlackEnable()) {
-            refresh(500);
+            refresh(1000);
             load();
         }
     }

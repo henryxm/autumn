@@ -35,7 +35,7 @@ public class UrlBlackService extends WallCounter<UrlBlackDao, UrlBlackEntity> im
     /**
      * 每个周期的URL访问数大于改值后，将其对应的IP地址拉入黑名单
      */
-    public static Integer lastCount = 300;
+    public static Integer lastCount = 500;
 
     @Autowired
     IpBlackService ipBlackService;

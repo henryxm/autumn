@@ -22,7 +22,7 @@ import java.util.Enumeration;
 
 @Component
 public class WallService {
-    private Logger logger = LoggerFactory.getLogger(getClass());
+    private final Logger logger = LoggerFactory.getLogger(getClass());
 
     @Autowired
     IpBlackService ipBlackService;
@@ -140,7 +140,7 @@ public class WallService {
         while (h) {
             String header = e.nextElement();
             String h_value = request.getHeader(header);
-            stringBuilder.append(header + ":" + h_value);
+            stringBuilder.append(header).append(":").append(h_value);
             stringBuilder.append(",  ");
             h = e.hasMoreElements();
         }

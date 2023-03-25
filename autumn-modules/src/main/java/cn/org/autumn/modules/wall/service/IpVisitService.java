@@ -26,9 +26,7 @@ public class IpVisitService extends WallCounter<IpVisitDao, IpVisitEntity> {
 
     public boolean hasIp(String ip) {
         Integer integer = baseMapper.hasIp(ip);
-        if (null != integer && integer > 0)
-            return true;
-        return false;
+        return null != integer && integer > 0;
     }
 
     public IpVisitEntity create(String ip, String tag, String description) {
