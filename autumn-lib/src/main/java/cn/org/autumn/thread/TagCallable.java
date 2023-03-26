@@ -15,6 +15,10 @@ public abstract class TagCallable<V> implements Callable<V>, Tag {
 
     String tag = "";
 
+    String method = "";
+
+    Class<?> type = null;
+
     @Override
     public String getName() {
         return name;
@@ -43,6 +47,24 @@ public abstract class TagCallable<V> implements Callable<V>, Tag {
     @Override
     public void setTag(String tag) {
         this.tag = tag;
+    }
+
+    public String getMethod() {
+        return method;
+    }
+
+    public void setMethod(String method) {
+        this.method = method;
+    }
+
+    @Override
+    public Class<?> getType() {
+        return type;
+    }
+
+    @Override
+    public void setType(Class<?> type) {
+        this.type = type;
     }
 
     @Override
