@@ -79,6 +79,8 @@ public class LanguageInterceptor extends HandlerInterceptorAdapter implements In
                 if (obj instanceof String) {
                     locale = (String) obj;
                 }
+            } else {
+                modelMap.addAttribute("locale", "");
             }
             if (StringUtils.isNotBlank(locale)) {
                 lang = languageService.getLanguage(locale);

@@ -59,12 +59,18 @@ public class SysPageController implements ErrorController {
     List<String> active = new ArrayList<>();
 
     @RequestMapping("modules/{module}/{url}")
-    public String module(@PathVariable("module") String module, @PathVariable("url") String url) {
+    public String module(@PathVariable("module") String module, @PathVariable("url") String url, String lang, Model model) {
+        if (StringUtils.isNotBlank(lang)) {
+            model.addAttribute("locale", lang);
+        }
         return "modules/" + module + "/" + url;
     }
 
     @RequestMapping("modules/{module}/{url}.js")
-    public String js(@PathVariable("module") String module, @PathVariable("url") String url) {
+    public String js(@PathVariable("module") String module, @PathVariable("url") String url, String lang, Model model) {
+        if (StringUtils.isNotBlank(lang)) {
+            model.addAttribute("locale", lang);
+        }
         return "modules/" + module + "/" + url + ".js";
     }
 
