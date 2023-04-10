@@ -3,10 +3,10 @@
 <head>
     <title>${${lang}${moduleName}_${pathName}_table_comment}</title>
 	#set($header='<#include "/header.html">')
-	#set($save='<#if shiro.hasPermission("'+${moduleName}+':'+${pathName}+':save")>')
-	#set($update='<#if shiro.hasPermission("'+${moduleName}+':'+${pathName}+':update")>')
-	#set($delete='<#if shiro.hasPermission("'+${moduleName}+':'+${pathName}+':delete")>')
-	#set($end='</#if>')
+	#set($save='<!--<#if shiro.hasPermission("'+${moduleName}+':'+${pathName}+':save")>-->')
+	#set($update='<!--<#if shiro.hasPermission("'+${moduleName}+':'+${pathName}+':update")>-->')
+	#set($delete='<!--<#if shiro.hasPermission("'+${moduleName}+':'+${pathName}+':delete")>-->')
+	#set($end='<!--</#if>-->')
 	$header
 </head>
 <body>
