@@ -1,7 +1,7 @@
 package cn.org.autumn.modules.oauth.service;
 
 import cn.org.autumn.cluster.UserHandler;
-import cn.org.autumn.cluster.UserMapping;
+import cn.org.autumn.config.ClientType;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.oauth.entity.ClientDetailsEntity;
 import cn.org.autumn.modules.oauth.entity.TokenStoreEntity;
@@ -226,6 +226,7 @@ public class ClientDetailsService extends ClientDetailsServiceGen implements Loo
         super.init();
         LoopJob.onOneHour(this);
         create(sysConfigService.getClientId(), sysConfigService.getClientSecret(), "默认的客户端", "默认的客户端");
+        updateClientType(sysConfigService.getClientId(), ClientType.SiteDefault);
     }
 
     public static final String allChar = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -241,6 +242,10 @@ public class ClientDetailsService extends ClientDetailsServiceGen implements Loo
     }
 
     public ClientDetailsEntity create(String clientId, String secret, String name, String description) {
+        return create(sysConfigService.getBaseUrl(), clientId, secret, ClientType.SiteDefault, name, description);
+    }
+
+    public ClientDetailsEntity create(String baseUrl, String clientId, String secret, ClientType clientType, String name, String description) {
         if (StringUtils.isBlank(clientId))
             return null;
         if (StringUtils.isBlank(secret))
@@ -248,19 +253,21 @@ public class ClientDetailsService extends ClientDetailsServiceGen implements Loo
         ClientDetailsEntity clientDetailsEntity = findByClientId(clientId);
         if (null == clientDetailsEntity) {
             clientDetailsEntity = new ClientDetailsEntity();
+            clientDetailsEntity.setUuid(Uuid.uuid());
             clientDetailsEntity.setClientId(clientId);
             clientDetailsEntity.setArchived(0);
             clientDetailsEntity.setClientIconUri("");
             clientDetailsEntity.setClientName(name);
             clientDetailsEntity.setClientSecret(secret);
-            clientDetailsEntity.setClientUri(sysConfigService.getBaseUrl());
+            clientDetailsEntity.setClientUri(baseUrl);
             clientDetailsEntity.setGrantTypes("all");
             clientDetailsEntity.setResourceIds("all");
-            clientDetailsEntity.setRedirectUri(sysConfigService.getBaseUrl() + "/client/oauth2/callback");
+            clientDetailsEntity.setRedirectUri(baseUrl + "/client/oauth2/callback");
             clientDetailsEntity.setDescription(description);
             clientDetailsEntity.setScope("basic");
             clientDetailsEntity.setTrusted(1);
             clientDetailsEntity.setRoles("user");
+            clientDetailsEntity.setClientType(clientType);
             clientDetailsEntity.setCreateTime(new Date());
             insert(clientDetailsEntity);
             clientToUser(clientDetailsEntity);
@@ -274,6 +281,7 @@ public class ClientDetailsService extends ClientDetailsServiceGen implements Loo
         ClientDetailsEntity clientDetailsEntity = findByClientId(accessKey);
         if (null == clientDetailsEntity) {
             clientDetailsEntity = new ClientDetailsEntity();
+            clientDetailsEntity.setUuid(Uuid.uuid());
             clientDetailsEntity.setClientId(accessKey);
             clientDetailsEntity.setArchived(0);
             clientDetailsEntity.setClientIconUri("");
@@ -313,19 +321,41 @@ public class ClientDetailsService extends ClientDetailsServiceGen implements Loo
         }
     }
 
+    public void updateClientType(String clientId, ClientType clientType) {
+        baseMapper.updateClientType(clientId, clientType);
+    }
+
     @Override
     public void onDomainChanged() {
         String host = sysConfigService.getSiteDomain();
         String scheme = sysConfigService.getScheme();
         List<ClientDetailsEntity> entities = selectByMap(null);
         for (ClientDetailsEntity entity : entities) {
-            if (StringUtils.isNotBlank(entity.getClientUri()))
-                entity.setClientUri(Utils.replaceSchemeHost(scheme, host, entity.getClientUri()));
-            if (StringUtils.isNotBlank(entity.getClientIconUri()))
-                entity.setClientIconUri(Utils.replaceSchemeHost(scheme, host, entity.getClientIconUri()));
-            if (StringUtils.isNotBlank(entity.getRedirectUri()))
-                entity.setRedirectUri(Utils.replaceSchemeHost(scheme, host, entity.getRedirectUri()));
+            update(entity, scheme, host);
+        }
+    }
+
+    public void update(ClientDetailsEntity entity, String scheme, String host) {
+        if (StringUtils.isBlank(entity.getUuid())) {
+            entity.setUuid(Uuid.uuid());
             updateById(entity);
+        }
+        if (!Objects.equals(entity.getClientType(), ClientType.SiteDefault))
+            return;
+        if (StringUtils.isNotBlank(entity.getClientUri()))
+            entity.setClientUri(Utils.replaceSchemeHost(scheme, host, entity.getClientUri()));
+        if (StringUtils.isNotBlank(entity.getClientIconUri()))
+            entity.setClientIconUri(Utils.replaceSchemeHost(scheme, host, entity.getClientIconUri()));
+        if (StringUtils.isNotBlank(entity.getRedirectUri()))
+            entity.setRedirectUri(Utils.replaceSchemeHost(scheme, host, entity.getRedirectUri()));
+        updateById(entity);
+    }
+
+    public void update(String uuid, String domain) {
+        ClientDetailsEntity entity = baseMapper.getByUuid(uuid);
+        if (null != entity) {
+            String scheme = sysConfigService.getScheme();
+            update(entity, scheme, domain);
         }
     }
 }
