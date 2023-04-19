@@ -96,11 +96,11 @@ public abstract class ModuleService<M extends BaseMapper<T>, T> extends BaseServ
         webAuthenticationService.update(uuid, domain);
     }
 
-    ClientDetailsEntity getClientDetails(String domain) {
+    public ClientDetailsEntity getClientDetails(String domain) {
         return clientDetailsService.findByClientId(domain);
     }
 
-    WebAuthenticationEntity getWebAuthentication(String domain) {
+    public WebAuthenticationEntity getWebAuthentication(String domain) {
         return webAuthenticationService.getByClientId(domain);
     }
 }

@@ -8,15 +8,15 @@
 <div id="rrapp" v-cloak>
     <div v-show="showList">
         <div class="grid-btn">
-			<#if shiro.hasPermission("client:webauthentication:save")>
+			<!--<#if shiro.hasPermission("client:webauthentication:save")>-->
             <a class="btn btn-primary" @click="add"><i class="fa fa-plus"></i>&nbsp;${lang.sys_string_add}</a>
-			</#if>
-			<#if shiro.hasPermission("client:webauthentication:update")>
+			<!--</#if>-->
+			<!--<#if shiro.hasPermission("client:webauthentication:update")>-->
             <a class="btn btn-primary" @click="update"><i class="fa fa-pencil-square-o"></i>&nbsp;${lang.sys_string_change}</a>
-			</#if>
-			<#if shiro.hasPermission("client:webauthentication:delete")>
+			<!--</#if>-->
+			<!--<#if shiro.hasPermission("client:webauthentication:delete")>-->
             <a class="btn btn-primary" @click="del"><i class="fa fa-trash-o"></i>&nbsp;${lang.sys_string_delete}</a>
-			</#if>
+			<!--</#if>-->
         </div>
         <table id="jqGrid"></table>
         <div id="jqGridPager"></div>
@@ -25,6 +25,12 @@
     <div v-show="!showList" class="panel panel-default">
         <div class="panel-heading">{{title}}</div>
         <form class="form-horizontal">
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.client_webauthentication_column_uuid}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="webAuthentication.uuid" placeholder="${lang.client_webauthentication_column_uuid}"/>
+                </div>
+            </div>
             <div class="form-group">
                 <div class="col-sm-2 control-label">${lang.client_webauthentication_column_name}</div>
                 <div class="col-sm-10">
@@ -77,6 +83,12 @@
                 <div class="col-sm-2 control-label">${lang.client_webauthentication_column_state}</div>
                 <div class="col-sm-10">
                     <input type="text" class="form-control" v-model="webAuthentication.state" placeholder="${lang.client_webauthentication_column_state}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.client_webauthentication_column_client_type}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="webAuthentication.clientType" placeholder="${lang.client_webauthentication_column_client_type}"/>
                 </div>
             </div>
             <div class="form-group">

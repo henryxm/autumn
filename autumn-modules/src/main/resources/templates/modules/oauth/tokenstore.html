@@ -8,15 +8,15 @@
 <div id="rrapp" v-cloak>
     <div v-show="showList">
         <div class="grid-btn">
-			<#if shiro.hasPermission("oauth:tokenstore:save")>
+			<!--<#if shiro.hasPermission("oauth:tokenstore:save")>-->
             <a class="btn btn-primary" @click="add"><i class="fa fa-plus"></i>&nbsp;${lang.sys_string_add}</a>
-			</#if>
-			<#if shiro.hasPermission("oauth:tokenstore:update")>
+			<!--</#if>-->
+			<!--<#if shiro.hasPermission("oauth:tokenstore:update")>-->
             <a class="btn btn-primary" @click="update"><i class="fa fa-pencil-square-o"></i>&nbsp;${lang.sys_string_change}</a>
-			</#if>
-			<#if shiro.hasPermission("oauth:tokenstore:delete")>
+			<!--</#if>-->
+			<!--<#if shiro.hasPermission("oauth:tokenstore:delete")>-->
             <a class="btn btn-primary" @click="del"><i class="fa fa-trash-o"></i>&nbsp;${lang.sys_string_delete}</a>
-			</#if>
+			<!--</#if>-->
         </div>
         <table id="jqGrid"></table>
         <div id="jqGridPager"></div>

@@ -4,6 +4,7 @@ $(function () {
         datatype: "json",
         colModel: [			
 			{ label: '${lang.client_webauthentication_column_id}', name: 'id', index: 'id', width: 50, key: true },
+			{ label: '${lang.client_webauthentication_column_uuid}', name: 'uuid', index: 'uuid', width: 80 }, 
 			{ label: '${lang.client_webauthentication_column_name}', name: 'name', index: 'name', width: 80 }, 
 			{ label: '${lang.client_webauthentication_column_client_id}', name: 'clientId', index: 'client_id', width: 80 }, 
 			{ label: '${lang.client_webauthentication_column_client_secret}', name: 'clientSecret', index: 'client_secret', width: 80 }, 
@@ -13,6 +14,7 @@ $(function () {
 			{ label: '${lang.client_webauthentication_column_user_info_uri}', name: 'userInfoUri', index: 'user_info_uri', width: 80 }, 
 			{ label: '${lang.client_webauthentication_column_scope}', name: 'scope', index: 'scope', width: 80 }, 
 			{ label: '${lang.client_webauthentication_column_state}', name: 'state', index: 'state', width: 80 }, 
+			{ label: '${lang.client_webauthentication_column_client_type}', name: 'clientType', index: 'client_type', width: 80 }, 
 			{ label: '${lang.client_webauthentication_column_description}', name: 'description', index: 'description', width: 80 }, 
 			{ label: '${lang.client_webauthentication_column_create_time}', name: 'createTime', index: 'create_time', width: 80 }, 
         ],

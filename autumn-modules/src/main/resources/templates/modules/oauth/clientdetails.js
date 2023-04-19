@@ -4,6 +4,7 @@ $(function () {
         datatype: "json",
         colModel: [			
 			{ label: '${lang.oauth_clientdetails_column_id}', name: 'id', index: 'id', width: 50, key: true },
+			{ label: '${lang.oauth_clientdetails_column_uuid}', name: 'uuid', index: 'uuid', width: 80 }, 
 			{ label: '${lang.oauth_clientdetails_column_resource_ids}', name: 'resourceIds', index: 'resource_ids', width: 80 }, 
 			{ label: '${lang.oauth_clientdetails_column_scope}', name: 'scope', index: 'scope', width: 80 }, 
 			{ label: '${lang.oauth_clientdetails_column_grant_types}', name: 'grantTypes', index: 'grant_types', width: 80 }, 
@@ -16,6 +17,7 @@ $(function () {
 			{ label: '${lang.oauth_clientdetails_column_client_uri}', name: 'clientUri', index: 'client_uri', width: 80 }, 
 			{ label: '${lang.oauth_clientdetails_column_client_icon_uri}', name: 'clientIconUri', index: 'client_icon_uri', width: 80 }, 
 			{ label: '${lang.oauth_clientdetails_column_redirect_uri}', name: 'redirectUri', index: 'redirect_uri', width: 80 }, 
+			{ label: '${lang.oauth_clientdetails_column_client_type}', name: 'clientType', index: 'client_type', width: 80 }, 
 			{ label: '${lang.oauth_clientdetails_column_description}', name: 'description', index: 'description', width: 80 }, 
 			{ label: '${lang.oauth_clientdetails_column_create_time}', name: 'createTime', index: 'create_time', width: 80 }, 
         ],
