@@ -20,4 +20,7 @@ public interface WebOauthCombineDao extends BaseMapper<WebOauthCombineEntity> {
 
     @Select("select * from client_web_oauth_combine where client_id = #{clientId} limit 1")
     WebOauthCombineEntity getByClientId(@Param("clientId") String clientId);
+
+    @Select("select count(*) from client_web_oauth_combine where client_id = #{clientId}")
+    int count(@Param("clientId") String clientId);
 }

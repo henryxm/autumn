@@ -2,6 +2,7 @@ package cn.org.autumn.modules.client.service;
 
 import cn.org.autumn.base.ModuleService;
 import cn.org.autumn.config.ClientType;
+import cn.org.autumn.config.DomainHandler;
 import cn.org.autumn.modules.client.dao.WebAuthenticationDao;
 import cn.org.autumn.modules.client.entity.WebAuthenticationEntity;
 import cn.org.autumn.modules.sys.service.SysConfigService;
@@ -18,7 +19,7 @@ import java.util.List;
 import java.util.Objects;
 
 @Service
-public class WebAuthenticationService extends ModuleService<WebAuthenticationDao, WebAuthenticationEntity> implements UpgradeFactory.Domain {
+public class WebAuthenticationService extends ModuleService<WebAuthenticationDao, WebAuthenticationEntity> implements UpgradeFactory.Domain, DomainHandler {
 
     @Autowired
     SysConfigService sysConfigService;
@@ -126,5 +127,10 @@ public class WebAuthenticationService extends ModuleService<WebAuthenticationDao
             String scheme = sysConfigService.getScheme();
             update(entity, scheme, domain, true);
         }
+    }
+
+    @Override
+    public boolean isSiteDomain(String domain) {
+        return baseMapper.count(domain) > 0;
     }
 }

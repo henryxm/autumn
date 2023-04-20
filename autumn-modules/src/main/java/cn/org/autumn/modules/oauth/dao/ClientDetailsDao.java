@@ -23,6 +23,9 @@ public interface ClientDetailsDao extends BaseMapper<ClientDetailsEntity> {
     @Select("select * from oauth_client_details where client_id = #{clientId} limit 1")
     ClientDetailsEntity findByClientId(@Param("clientId") String clientId);
 
+    @Select("select count(*) from oauth_client_details where client_id = #{clientId}")
+    int count(@Param("clientId") String clientId);
+
     @Select("select * from oauth_client_details where uuid = #{uuid} limit 1")
     ClientDetailsEntity getByUuid(@Param("uuid") String uuid);
 

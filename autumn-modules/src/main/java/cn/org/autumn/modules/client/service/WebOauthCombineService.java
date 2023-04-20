@@ -2,6 +2,7 @@ package cn.org.autumn.modules.client.service;
 
 import cn.org.autumn.base.ModuleService;
 import cn.org.autumn.config.ClientType;
+import cn.org.autumn.config.DomainHandler;
 import cn.org.autumn.modules.client.entity.WebAuthenticationEntity;
 import cn.org.autumn.modules.oauth.entity.ClientDetailsEntity;
 import cn.org.autumn.modules.oauth.service.ClientDetailsService;
@@ -15,7 +16,7 @@ import java.util.Date;
 import java.util.Objects;
 
 @Service
-public class WebOauthCombineService extends ModuleService<WebOauthCombineDao, WebOauthCombineEntity> {
+public class WebOauthCombineService extends ModuleService<WebOauthCombineDao, WebOauthCombineEntity> implements DomainHandler {
 
     @Autowired
     protected ClientDetailsService clientDetailsService;
@@ -75,5 +76,10 @@ public class WebOauthCombineService extends ModuleService<WebOauthCombineDao, We
             entity.setCreateTime(new Date());
         entity.setUpdateTime(new Date());
         return super.updateAllColumnById(entity);
+    }
+
+    @Override
+    public boolean isSiteDomain(String domain) {
+        return baseMapper.count(domain) > 0;
     }
 }

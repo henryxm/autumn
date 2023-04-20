@@ -5,12 +5,14 @@ import cn.org.autumn.bean.EnvBean;
 import cn.org.autumn.cluster.ServiceHandler;
 import cn.org.autumn.config.Config;
 import cn.org.autumn.config.CategoryHandler;
+import cn.org.autumn.config.DomainHandler;
 import cn.org.autumn.config.InputType;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.lan.service.Language;
 import cn.org.autumn.modules.oss.cloud.CloudStorageConfig;
 import cn.org.autumn.modules.sys.entity.SystemUpgrade;
 import cn.org.autumn.site.ConfigFactory;
+import cn.org.autumn.site.DomainFactory;
 import cn.org.autumn.site.HostFactory;
 import cn.org.autumn.site.InitFactory;
 import cn.org.autumn.utils.*;
@@ -40,13 +42,12 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.math.BigDecimal;
 import java.net.URI;
-import java.text.NumberFormat;
 import java.util.*;
 
 import static cn.org.autumn.utils.Uuid.uuid;
 
 @Service
-public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity> implements LoopJob.Job, LoopJob.OneMinute, HostFactory.Host, InitFactory.Init, InitFactory.After, CategoryHandler {
+public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity> implements LoopJob.Job, LoopJob.OneMinute, HostFactory.Host, InitFactory.Init, InitFactory.After, CategoryHandler, DomainHandler {
 
     public static final String string_type = InputType.StringType.getValue();
     public static final String boolean_type = InputType.BooleanType.getValue();
@@ -101,6 +102,9 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     @Autowired
     AsyncTaskExecutor asyncTaskExecutor;
 
+    @Autowired
+    DomainFactory domainFactory;
+
     private static SessionManager sessionManager;
 
     private static final String NULL = null;
@@ -139,6 +143,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         if (null != map)
             map.clear();
         clear();
+        domainFactory.clear();
     }
 
     public void clear() {
@@ -639,7 +644,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
             if (d.trim().equalsIgnoreCase(host.trim()))
                 return true;
         }
-        return getBindDomains().contains(host);
+        return false;
     }
 
     /**
@@ -662,6 +667,14 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
             }
         }
         return oa;
+    }
+
+    @Override
+    public boolean isBindDomain(String domain) {
+        if (StringUtils.isBlank(domain))
+            return false;
+        domain = domain.toLowerCase().trim();
+        return getBindDomains().contains(domain);
     }
 
     public List<String> getBindDomains() {
@@ -803,7 +816,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     public boolean isSame(ServiceHandler handler) {
         URI uri = handler.uri();
         String site = getSiteDomain();
-        return null == uri || StringUtils.isBlank(site) || StringUtils.isBlank(uri.getHost()) || isSiteDomain(uri.getHost());
+        return null == uri || StringUtils.isBlank(site) || StringUtils.isBlank(uri.getHost()) || domainFactory.isSiteBind(uri.getHost());
     }
 
     private void updateCookieDomain() {
@@ -889,6 +902,6 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     @Order(0)
     public boolean isAllowed(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse) {
         String host = httpServletRequest.getHeader("host");
-        return isSiteDomain(host);
+        return domainFactory.isSiteBind(host);
     }
 }

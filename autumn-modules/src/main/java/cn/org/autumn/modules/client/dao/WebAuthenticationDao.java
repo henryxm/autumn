@@ -23,6 +23,9 @@ public interface WebAuthenticationDao extends BaseMapper<WebAuthenticationEntity
     @Select("select * from client_web_authentication where client_id = #{clientId} limit 1")
     WebAuthenticationEntity getByClientId(@Param("clientId") String clientId);
 
+    @Select("select count(*) from client_web_authentication where client_id = #{clientId}")
+    int count(@Param("clientId") String clientId);
+
     @Select("select * from client_web_authentication where uuid = #{uuid} limit 1")
     WebAuthenticationEntity getByUuid(@Param("uuid") String uuid);
 

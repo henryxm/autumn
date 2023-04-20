@@ -3,6 +3,7 @@ package cn.org.autumn.modules.oauth.service;
 import cn.org.autumn.base.ModuleService;
 import cn.org.autumn.cluster.UserHandler;
 import cn.org.autumn.config.ClientType;
+import cn.org.autumn.config.DomainHandler;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.oauth.dao.ClientDetailsDao;
 import cn.org.autumn.modules.oauth.entity.ClientDetailsEntity;
@@ -28,7 +29,7 @@ import org.springframework.stereotype.Service;
 import java.util.*;
 
 @Service
-public class ClientDetailsService extends ModuleService<ClientDetailsDao, ClientDetailsEntity> implements LoopJob.Job, UpgradeFactory.Domain {
+public class ClientDetailsService extends ModuleService<ClientDetailsDao, ClientDetailsEntity> implements LoopJob.Job, UpgradeFactory.Domain, DomainHandler {
 
     @Autowired
     RedisUtils redisUtils;
@@ -356,5 +357,10 @@ public class ClientDetailsService extends ModuleService<ClientDetailsDao, Client
             String scheme = sysConfigService.getScheme();
             update(entity, scheme, domain, true);
         }
+    }
+
+    @Override
+    public boolean isSiteDomain(String domain) {
+        return baseMapper.count(domain) > 0;
     }
 }
