@@ -4,7 +4,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.stereotype.Component;
 
 @Component
-@ConditionalOnMissingBean(CategoryHandler.class)
+@ConditionalOnMissingBean(DomainHandler.class)
 public interface DomainHandler {
     default boolean isSiteDomain(String domain) {
         return false;
