@@ -22,4 +22,14 @@ public class ClientSite implements SiteFactory.Site {
     @PageAware(login = true, resource = "modules/client/webauthentication")
     String webauthentication;
 
+    @PageAware(login = true)
+    public String weboauthcombine = "modules/client/weboauthcombine";
+
+    public String getWebOauthCombineKey() {
+        return getKey("weboauthcombine");
+    }
+
+    public String getWebauthenticationKey() {
+        return getKey("webauthentication");
+    }
 }

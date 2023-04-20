@@ -1,11 +1,12 @@
 package cn.org.autumn.modules.oauth.service;
 
+import cn.org.autumn.base.ModuleService;
 import cn.org.autumn.cluster.UserHandler;
 import cn.org.autumn.config.ClientType;
 import cn.org.autumn.modules.job.task.LoopJob;
+import cn.org.autumn.modules.oauth.dao.ClientDetailsDao;
 import cn.org.autumn.modules.oauth.entity.ClientDetailsEntity;
 import cn.org.autumn.modules.oauth.entity.TokenStoreEntity;
-import cn.org.autumn.modules.oauth.service.gen.ClientDetailsServiceGen;
 import cn.org.autumn.modules.oauth.store.TokenStore;
 import cn.org.autumn.modules.oauth.store.ValueType;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
@@ -27,7 +28,7 @@ import org.springframework.stereotype.Service;
 import java.util.*;
 
 @Service
-public class ClientDetailsService extends ClientDetailsServiceGen implements LoopJob.Job, UpgradeFactory.Domain {
+public class ClientDetailsService extends ModuleService<ClientDetailsDao, ClientDetailsEntity> implements LoopJob.Job, UpgradeFactory.Domain {
 
     @Autowired
     RedisUtils redisUtils;
@@ -192,11 +193,6 @@ public class ClientDetailsService extends ClientDetailsServiceGen implements Loo
     }
 
     @Override
-    public int menuOrder() {
-        return super.menuOrder();
-    }
-
-    @Override
     public String ico() {
         return "fa-reddit-alien";
     }
@@ -331,16 +327,16 @@ public class ClientDetailsService extends ClientDetailsServiceGen implements Loo
         String scheme = sysConfigService.getScheme();
         List<ClientDetailsEntity> entities = selectByMap(null);
         for (ClientDetailsEntity entity : entities) {
-            update(entity, scheme, host);
+            update(entity, scheme, host, false);
         }
     }
 
-    public void update(ClientDetailsEntity entity, String scheme, String host) {
+    public void update(ClientDetailsEntity entity, String scheme, String host, boolean force) {
         if (StringUtils.isBlank(entity.getUuid())) {
             entity.setUuid(Uuid.uuid());
             updateById(entity);
         }
-        if (!Objects.equals(entity.getClientType(), ClientType.SiteDefault))
+        if (!force && !Objects.equals(entity.getClientType(), ClientType.SiteDefault))
             return;
         if (StringUtils.isNotBlank(entity.getClientUri()))
             entity.setClientUri(Utils.replaceSchemeHost(scheme, host, entity.getClientUri()));
@@ -348,6 +344,9 @@ public class ClientDetailsService extends ClientDetailsServiceGen implements Loo
             entity.setClientIconUri(Utils.replaceSchemeHost(scheme, host, entity.getClientIconUri()));
         if (StringUtils.isNotBlank(entity.getRedirectUri()))
             entity.setRedirectUri(Utils.replaceSchemeHost(scheme, host, entity.getRedirectUri()));
+        entity.setClientId(host);
+        entity.setClientName(host);
+        entity.setDescription(host);
         updateById(entity);
     }
 
@@ -355,7 +354,7 @@ public class ClientDetailsService extends ClientDetailsServiceGen implements Loo
         ClientDetailsEntity entity = baseMapper.getByUuid(uuid);
         if (null != entity) {
             String scheme = sysConfigService.getScheme();
-            update(entity, scheme, domain);
+            update(entity, scheme, domain, true);
         }
     }
 }

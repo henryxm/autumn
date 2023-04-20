@@ -1,20 +1,14 @@
 package cn.org.autumn.base;
 
-import cn.org.autumn.config.ClientType;
 import cn.org.autumn.config.Config;
 import cn.org.autumn.exception.AException;
 import cn.org.autumn.menu.BaseMenu;
-import cn.org.autumn.modules.client.entity.WebAuthenticationEntity;
-import cn.org.autumn.modules.client.service.WebAuthenticationService;
 import cn.org.autumn.modules.lan.service.Language;
 import cn.org.autumn.modules.lan.service.LanguageService;
-import cn.org.autumn.modules.oauth.entity.ClientDetailsEntity;
-import cn.org.autumn.modules.oauth.service.ClientDetailsService;
 import cn.org.autumn.modules.sys.entity.SysMenuEntity;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.modules.sys.service.SysMenuService;
 import cn.org.autumn.service.BaseService;
-import cn.org.autumn.utils.Uuid;
 import com.baomidou.mybatisplus.mapper.BaseMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -35,12 +29,6 @@ public abstract class ModuleService<M extends BaseMapper<T>, T> extends BaseServ
 
     @Autowired
     protected LanguageService languageService;
-
-    @Autowired
-    protected ClientDetailsService clientDetailsService;
-
-    @Autowired
-    protected WebAuthenticationService webAuthenticationService;
 
     @Autowired
     protected SysConfigService sysConfigService;
@@ -82,25 +70,5 @@ public abstract class ModuleService<M extends BaseMapper<T>, T> extends BaseServ
     public void init() {
         sysMenuService.put(getMenuItemsInternal(), getMenuItems(), getMenuList());
         language.put(getLanguageItemsInternal(), getLanguageItems(), getLanguageList());
-    }
-
-    public void createClient(String domain) {
-        String secret = Uuid.uuid();
-        String url = sysConfigService.getScheme() + "://" + domain;
-        clientDetailsService.create(url, domain, secret, ClientType.ManualCreate, domain, domain);
-        webAuthenticationService.create(url, domain, secret, ClientType.ManualCreate, domain, "basic", "normal");
-    }
-
-    public void updateClient(String uuid, String domain) {
-        clientDetailsService.update(uuid, domain);
-        webAuthenticationService.update(uuid, domain);
-    }
-
-    public ClientDetailsEntity getClientDetails(String domain) {
-        return clientDetailsService.findByClientId(domain);
-    }
-
-    public WebAuthenticationEntity getWebAuthentication(String domain) {
-        return webAuthenticationService.getByClientId(domain);
     }
 }

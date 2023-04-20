@@ -1,8 +1,9 @@
 package cn.org.autumn.modules.client.service;
 
+import cn.org.autumn.base.ModuleService;
 import cn.org.autumn.config.ClientType;
+import cn.org.autumn.modules.client.dao.WebAuthenticationDao;
 import cn.org.autumn.modules.client.entity.WebAuthenticationEntity;
-import cn.org.autumn.modules.client.service.gen.WebAuthenticationServiceGen;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.site.UpgradeFactory;
 import cn.org.autumn.utils.Utils;
@@ -17,7 +18,7 @@ import java.util.List;
 import java.util.Objects;
 
 @Service
-public class WebAuthenticationService extends WebAuthenticationServiceGen implements UpgradeFactory.Domain {
+public class WebAuthenticationService extends ModuleService<WebAuthenticationDao, WebAuthenticationEntity> implements UpgradeFactory.Domain {
 
     @Autowired
     SysConfigService sysConfigService;
@@ -94,16 +95,16 @@ public class WebAuthenticationService extends WebAuthenticationServiceGen implem
         String scheme = sysConfigService.getScheme();
         List<WebAuthenticationEntity> entities = selectByMap(null);
         for (WebAuthenticationEntity entity : entities) {
-            update(entity, scheme, host);
+            update(entity, scheme, host, false);
         }
     }
 
-    public void update(WebAuthenticationEntity entity, String scheme, String host) {
+    public void update(WebAuthenticationEntity entity, String scheme, String host, boolean force) {
         if (StringUtils.isBlank(entity.getUuid())) {
             entity.setUuid(Uuid.uuid());
             updateById(entity);
         }
-        if (!Objects.equals(entity.getClientType(), ClientType.SiteDefault))
+        if (!force && !Objects.equals(entity.getClientType(), ClientType.SiteDefault))
             return;
         if (StringUtils.isNotBlank(entity.getAccessTokenUri()))
             entity.setAccessTokenUri(Utils.replaceSchemeHost(scheme, host, entity.getAccessTokenUri()));
@@ -113,6 +114,9 @@ public class WebAuthenticationService extends WebAuthenticationServiceGen implem
             entity.setRedirectUri(Utils.replaceSchemeHost(scheme, host, entity.getRedirectUri()));
         if (StringUtils.isNotBlank(entity.getUserInfoUri()))
             entity.setUserInfoUri(Utils.replaceSchemeHost(scheme, host, entity.getUserInfoUri()));
+        entity.setName(host);
+        entity.setDescription(host);
+        entity.setClientId(host);
         updateById(entity);
     }
 
@@ -120,7 +124,7 @@ public class WebAuthenticationService extends WebAuthenticationServiceGen implem
         WebAuthenticationEntity entity = baseMapper.getByUuid(uuid);
         if (null != entity) {
             String scheme = sysConfigService.getScheme();
-            update(entity, scheme, domain);
+            update(entity, scheme, domain, true);
         }
     }
 }

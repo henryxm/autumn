@@ -1,7 +1,8 @@
 package cn.org.autumn.modules.oauth.service;
 
+import cn.org.autumn.base.ModuleService;
+import cn.org.autumn.modules.oauth.dao.TokenStoreDao;
 import cn.org.autumn.modules.oauth.entity.TokenStoreEntity;
-import cn.org.autumn.modules.oauth.service.gen.TokenStoreServiceGen;
 import cn.org.autumn.modules.oauth.store.ValueType;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysUserService;
@@ -16,7 +17,7 @@ import static cn.org.autumn.modules.oauth.service.ClientDetailsService.ACCESS_TO
 import static cn.org.autumn.modules.oauth.service.ClientDetailsService.REFRESH_TOKEN_DEFAULT_EXPIRED_IN;
 
 @Service
-public class TokenStoreService extends TokenStoreServiceGen {
+public class TokenStoreService extends ModuleService<TokenStoreDao, TokenStoreEntity> {
 
     @Autowired
     @Lazy
@@ -25,11 +26,6 @@ public class TokenStoreService extends TokenStoreServiceGen {
     @Autowired
     @Lazy
     SysUserService sysUserService;
-
-    @Override
-    public int menuOrder() {
-        return super.menuOrder();
-    }
 
     @Override
     public String ico() {

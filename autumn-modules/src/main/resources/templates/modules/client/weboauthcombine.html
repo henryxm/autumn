@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>${lang.client_weboauthcombine_table_comment}</title>
+	<#include "/header.html">
+</head>
+<body>
+<div id="rrapp" v-cloak>
+    <div v-show="showList">
+        <div class="grid-btn">
+			<!--<#if shiro.hasPermission("client:weboauthcombine:save")>-->
+            <a class="btn btn-primary" @click="add"><i class="fa fa-plus"></i>&nbsp;${lang.sys_string_add}</a>
+			<!--</#if>-->
+			<!--<#if shiro.hasPermission("client:weboauthcombine:update")>-->
+            <a class="btn btn-primary" @click="update"><i class="fa fa-pencil-square-o"></i>&nbsp;${lang.sys_string_change}</a>
+			<!--</#if>-->
+			<!--<#if shiro.hasPermission("client:weboauthcombine:delete")>-->
+            <a class="btn btn-primary" @click="del"><i class="fa fa-trash-o"></i>&nbsp;${lang.sys_string_delete}</a>
+			<!--</#if>-->
+        </div>
+        <table id="jqGrid"></table>
+        <div id="jqGridPager"></div>
+    </div>
+
+    <div v-show="!showList" class="panel panel-default">
+        <div class="panel-heading">{{title}}</div>
+        <form class="form-horizontal">
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.client_weboauthcombine_column_uuid}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="webOauthCombine.uuid" placeholder="${lang.client_weboauthcombine_column_uuid}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.client_weboauthcombine_column_client_id}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="webOauthCombine.clientId" placeholder="${lang.client_weboauthcombine_column_client_id}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.client_weboauthcombine_column_web_authentication_uuid}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="webOauthCombine.webAuthenticationUuid" placeholder="${lang.client_weboauthcombine_column_web_authentication_uuid}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.client_weboauthcombine_column_client_details_uuid}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="webOauthCombine.clientDetailsUuid" placeholder="${lang.client_weboauthcombine_column_client_details_uuid}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.client_weboauthcombine_column_create_time}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="webOauthCombine.createTime" placeholder="${lang.client_weboauthcombine_column_create_time}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.client_weboauthcombine_column_update_time}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="webOauthCombine.updateTime" placeholder="${lang.client_weboauthcombine_column_update_time}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label"></div>
+                <input type="button" class="btn btn-primary" @click="saveOrUpdate" value="${lang.sys_string_confirm}"/>
+                &nbsp;&nbsp;<input type="button" class="btn btn-warning" @click="reload" value="${lang.sys_string_back}"/>
+            </div>
+        </form>
+    </div>
+</div>
+<script src="${request.contextPath}/modules/client/weboauthcombine.js?_${.now?long}"></script>
+</body>
+</html>
