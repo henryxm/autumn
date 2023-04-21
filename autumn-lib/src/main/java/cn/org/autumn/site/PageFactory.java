@@ -2,6 +2,8 @@ package cn.org.autumn.site;
 
 import cn.org.autumn.config.PageHandler;
 import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.ui.Model;
 
@@ -14,7 +16,7 @@ import java.util.Map;
 
 @Component
 public class PageFactory extends Factory {
-
+    static final Logger log = LoggerFactory.getLogger(PageFactory.class);
     Map<String, List<PageHandler>> map = new HashMap<>();
 
     private List<PageHandler> getList(String method) {
@@ -29,6 +31,8 @@ public class PageFactory extends Factory {
     }
 
     public String invoke(String method, String defaultValue, HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        if (null != httpServletRequest && log.isDebugEnabled())
+            log.debug("{}:{}?{}", method, httpServletRequest.getRequestURL().toString(), httpServletRequest.getQueryString());
         List<PageHandler> list = getList(method);
         try {
             for (PageHandler pageHandler : list) {
@@ -40,7 +44,8 @@ public class PageFactory extends Factory {
                         return value;
                 }
             }
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            log.debug("Invoke:{}", e.getMessage());
         }
         return defaultValue;
     }
