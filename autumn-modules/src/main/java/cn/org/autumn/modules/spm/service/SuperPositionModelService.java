@@ -20,7 +20,7 @@ import java.lang.reflect.Field;
 import java.util.*;
 
 @Service
-public class SuperPositionModelService extends SuperPositionModelServiceGen implements LoadFactory.Load, LoopJob.Job, LoginFactory.Login {
+public class SuperPositionModelService extends SuperPositionModelServiceGen implements LoadFactory.Load, LoopJob.OneMinute, LoginFactory.Login {
 
     private Logger logger = LoggerFactory.getLogger(getClass());
 
@@ -324,11 +324,6 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
         insert(superPositionModelEntity);
     }
 
-    public void init() {
-        super.init();
-        LoopJob.onOneMinute(this);
-    }
-
     public boolean menuWithSpm() {
         return sysConfigService.getBoolean("MENU_WITH_SPM");
     }
@@ -338,7 +333,7 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
     }
 
     @Override
-    public void runJob() {
+    public void onOneMinute() {
         load();
     }
 
