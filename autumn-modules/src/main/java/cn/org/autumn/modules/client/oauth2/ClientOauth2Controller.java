@@ -39,13 +39,12 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 @Controller
 @RequestMapping("client")
 public class ClientOauth2Controller {
-    private Logger logger = LoggerFactory.getLogger(getClass());
+    private Logger log = LoggerFactory.getLogger(getClass());
 
     @Autowired
     WebAuthenticationService webAuthenticationService;
@@ -70,6 +69,14 @@ public class ClientOauth2Controller {
 
     @RequestMapping("oauth2/callback")
     public Object defaultCodeCallback(HttpServletRequest request, HttpServletResponse response, Model model) throws OAuthSystemException {
+        if (log.isDebugEnabled()) {
+            String query = request.getQueryString();
+            if (StringUtils.isNotBlank(query))
+                query = "?" + query;
+            else
+                query = "";
+            log.debug("客户端授权登录:{}{}", request.getRequestURL().toString(), query);
+        }
         String authCode = request.getParameter(OAuth.OAUTH_CODE);
         if (StringUtils.isEmpty(authCode)) {
             OAuthResponse oAuthResponse =
@@ -81,13 +88,18 @@ public class ClientOauth2Controller {
         }
         if (ShiroUtils.needLogin()) {
             String host = request.getHeader("host");
-            WebAuthenticationEntity webAuthenticationEntity = webAuthenticationService.getByClientId(sysConfigService.getOauth2LoginClientId(host));
+            if (log.isDebugEnabled())
+                log.debug("登录域名:{}", host);
+            WebAuthenticationEntity webAuthenticationEntity = webAuthenticationService.getByClientId(host);
+            if (null == webAuthenticationEntity)
+                webAuthenticationEntity = webAuthenticationService.getByClientId(sysConfigService.getOauth2LoginClientId(host));
             String accessToken = getAccessToken(webAuthenticationEntity, authCode);
             UserProfile userProfile = getUserInfo(webAuthenticationEntity, accessToken);
             if (null != userProfile) {
                 userProfileService.login(userProfile);
                 userTokenService.saveToken(accessToken);
-                logger.info("User Login: " + userProfile.toString());
+                if (log.isDebugEnabled())
+                    log.debug("登录用户:{}", userProfile);
             }
         }
         String callback = request.getParameter("callback");
@@ -101,6 +113,8 @@ public class ClientOauth2Controller {
         if (!callback.contains("?spm=") && !callback.endsWith(".html")) {
             callback = "/";
         }
+        if (log.isDebugEnabled())
+            log.debug("回调地址:{}", callback);
         return pageFactory.direct(request, response, model, callback);
     }
 
@@ -122,7 +136,7 @@ public class ClientOauth2Controller {
         paramMap.put(OAuth.OAUTH_CODE, oauthCode);
         paramMap.put(OAuth.OAUTH_CLIENT_SECRET, clientSecret);
         String accessToken = HttpClientUtils.doPost(webAuthClientEntity.getAccessTokenUri(), paramMap);
-        logger.debug(accessToken);
+        log.debug(accessToken);
         return accessToken;
     }
 
@@ -137,7 +151,7 @@ public class ClientOauth2Controller {
             UserProfile userProfile = JSON.parseObject(userinfo, UserProfile.class);
             return userProfile;
         } catch (Exception e) {
-            logger.error("getUserInfo error：" + e.getMessage());
+            log.error("getUserInfo error：" + e.getMessage());
         }
         return null;
     }

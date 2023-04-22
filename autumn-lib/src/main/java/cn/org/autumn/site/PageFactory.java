@@ -31,8 +31,14 @@ public class PageFactory extends Factory {
     }
 
     public String invoke(String method, String defaultValue, HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
-        if (null != httpServletRequest && log.isDebugEnabled())
-            log.debug("{}:{}?{}", method, httpServletRequest.getRequestURL().toString(), httpServletRequest.getQueryString());
+        if (null != httpServletRequest && log.isDebugEnabled()) {
+            String query = httpServletRequest.getQueryString();
+            if (StringUtils.isNotBlank(query))
+                query = "?" + query;
+            else
+                query = "";
+            log.debug("{}:{}{}", method, httpServletRequest.getRequestURL().toString(), query);
+        }
         List<PageHandler> list = getList(method);
         try {
             for (PageHandler pageHandler : list) {
@@ -40,13 +46,18 @@ public class PageFactory extends Factory {
                 Object o = method1.invoke(pageHandler, httpServletRequest, httpServletResponse, model);
                 if (o instanceof String || o instanceof Integer) {
                     String value = String.valueOf(o);
-                    if (StringUtils.isNotBlank(value))
+                    if (StringUtils.isNotBlank(value)) {
+                        if (log.isDebugEnabled())
+                            log.debug("跳转执行:{}", value);
                         return value;
+                    }
                 }
             }
         } catch (Exception e) {
             log.debug("Invoke:{}", e.getMessage());
         }
+        if (log.isDebugEnabled())
+            log.debug("默认执行:{}", defaultValue);
         return defaultValue;
     }
 
