@@ -1,6 +1,8 @@
 package cn.org.autumn.site;
 
 import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.ui.Model;
@@ -13,6 +15,8 @@ import java.util.Map;
 @Component
 public class PathFactory extends Factory {
 
+    final Logger log = LoggerFactory.getLogger(getClass());
+
     private static Map<Integer, List<Path>> map = null;
 
     public interface Path {
@@ -22,15 +26,11 @@ public class PathFactory extends Factory {
 
         default boolean isRoot(HttpServletRequest request) {
             String uri = request.getRequestURI();
-            if (StringUtils.isNotEmpty(uri) && "/".equals(uri))
-                return true;
-            return false;
+            return StringUtils.isNotEmpty(uri) && "/".equals(uri);
         }
 
         default boolean isSpm(HttpServletRequest request) {
-            if (StringUtils.isNotEmpty(request.getParameter("spm")))
-                return true;
-            return false;
+            return StringUtils.isNotEmpty(request.getParameter("spm"));
         }
     }
 
@@ -44,6 +44,8 @@ public class PathFactory extends Factory {
                     String o = path.get(request, response, model);
                     if (StringUtils.isEmpty(o))
                         continue;
+                    if (log.isDebugEnabled())
+                        log.debug("路径访问类:{}, 值:{}", path.getClass().getName(), o);
                     return o;
                 }
             }

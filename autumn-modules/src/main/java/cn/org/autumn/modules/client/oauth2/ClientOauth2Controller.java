@@ -44,7 +44,7 @@ import java.util.Map;
 @Controller
 @RequestMapping("client")
 public class ClientOauth2Controller {
-    private Logger log = LoggerFactory.getLogger(getClass());
+    final Logger log = LoggerFactory.getLogger(getClass());
 
     @Autowired
     WebAuthenticationService webAuthenticationService;

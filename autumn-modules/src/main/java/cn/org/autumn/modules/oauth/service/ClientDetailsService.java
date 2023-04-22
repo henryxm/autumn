@@ -29,7 +29,7 @@ import org.springframework.stereotype.Service;
 import java.util.*;
 
 @Service
-public class ClientDetailsService extends ModuleService<ClientDetailsDao, ClientDetailsEntity> implements LoopJob.Job, UpgradeFactory.Domain, DomainHandler {
+public class ClientDetailsService extends ModuleService<ClientDetailsDao, ClientDetailsEntity> implements LoopJob.OneHour, UpgradeFactory.Domain, DomainHandler {
 
     @Autowired
     RedisUtils redisUtils;
@@ -58,6 +58,8 @@ public class ClientDetailsService extends ModuleService<ClientDetailsDao, Client
     public static final Long AUTH_CODE_DEFAULT_EXPIRED_IN = 5 * 60L;
     public static final Long ACCESS_TOKEN_DEFAULT_EXPIRED_IN = 24 * 60 * 60L;
     public static final Long REFRESH_TOKEN_DEFAULT_EXPIRED_IN = 7 * 24 * 60 * 60L;
+
+    public static final String allChar = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
     Map<String, TokenStore> cache = new HashMap<>();
 
@@ -102,10 +104,6 @@ public class ClientDetailsService extends ModuleService<ClientDetailsDao, Client
 
     /**
      * 保存Token 并删除 authCode
-     *
-     * @param accessToken
-     * @param refreshToken
-     * @param tokenStore
      */
     public void putToken(String accessToken, String refreshToken, TokenStore tokenStore) {
         Object v = null;
@@ -117,15 +115,9 @@ public class ClientDetailsService extends ModuleService<ClientDetailsDao, Client
             sysUserEntity = (SysUserEntity) v;
             tokenStoreEntity = tokenStoreService.findByUser(sysUserEntity);
             if (null != tokenStoreEntity) {
-                /**
-                 * 删除之前的access token
-                 */
                 if (!tokenStoreEntity.getAccessToken().equals(accessToken)) {
                     remove(ValueType.accessToken, tokenStoreEntity.getAccessToken());
                 }
-                /**
-                 * 删除之前的refresh token
-                 */
                 if (!tokenStoreEntity.getRefreshToken().equals(refreshToken)) {
                     remove(ValueType.refreshToken, tokenStoreEntity.getRefreshToken());
                 }
@@ -221,16 +213,18 @@ public class ClientDetailsService extends ModuleService<ClientDetailsDao, Client
     @Order(2000)
     public void init() {
         super.init();
-        LoopJob.onOneHour(this);
+        onOneHour();
+    }
+
+    @Override
+    public void onOneHour() {
         create(sysConfigService.getClientId(), sysConfigService.getClientSecret(), "默认的客户端", "默认的客户端");
         updateClientType(sysConfigService.getClientId(), ClientType.SiteDefault);
     }
 
-    public static final String allChar = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-
     public static String newKey(String prefix) {
         int length = 10;
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
         Random random = new Random();
         for (int i = 0; i < length; i++) {
             sb.append(allChar.charAt(random.nextInt(allChar.length())));

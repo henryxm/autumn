@@ -137,14 +137,21 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
 
     public String getResourceId(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model, String spm) {
         if (!loadFactory.isDone()) {
+            if (logger.isDebugEnabled())
+                logger.debug("启动中:{}", httpServletRequest.getRequestURL());
             return pageFactory.loading(httpServletRequest, httpServletResponse, model);
         }
 
         String path = pathFactory.get(httpServletRequest, httpServletResponse, model);
-        if (StringUtils.isNotEmpty(path))
+        if (StringUtils.isNotEmpty(path)) {
+            if (logger.isDebugEnabled())
+                logger.debug("路径:{}, 工厂:{}", httpServletRequest.getRequestURL(), path);
             return path;
+        }
 
         if (StringUtils.isEmpty(spm)) {
+            if (logger.isDebugEnabled())
+                logger.debug("默认路径:{}", httpServletRequest.getRequestURL());
             return pageFactory.index(httpServletRequest, httpServletResponse, model);
         }
         String sessionId = httpServletRequest.getSession().getId();
@@ -156,6 +163,8 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
             sMap.remove(sessionId);
         if (null != superPositionModelEntity && StringUtils.isNotEmpty(superPositionModelEntity.getResourceId()))
             return superPositionModelEntity.getResourceId();
+        if (logger.isDebugEnabled())
+            logger.debug("无效路径:{}, 返回:404", httpServletRequest.getRequestURL());
         return pageFactory._404(httpServletRequest, httpServletResponse, model);
     }
 

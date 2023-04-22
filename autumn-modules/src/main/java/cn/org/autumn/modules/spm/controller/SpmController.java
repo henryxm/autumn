@@ -7,6 +7,8 @@ import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.site.MappingFactory;
 import cn.org.autumn.site.PageFactory;
 import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -21,6 +23,8 @@ import java.util.List;
 
 @Controller
 public class SpmController {
+
+    final Logger log = LoggerFactory.getLogger(getClass());
 
     @Autowired
     SuperPositionModelService superPositionModelService;
@@ -63,19 +67,31 @@ public class SpmController {
         inactive(httpServletRequest);
         if (isActive(httpServletRequest)) {
             SysUserEntity sysUserEntity = ShiroUtils.getUserEntity();
-            if (sysUserRoleService.isSystemAdministrator(sysUserEntity))
-                return superPositionModelService.getResourceId(httpServletRequest, httpServletResponse, model, spm);
+            if (sysUserRoleService.isSystemAdministrator(sysUserEntity)) {
+                String resourceId = superPositionModelService.getResourceId(httpServletRequest, httpServletResponse, model, spm);
+                if (log.isDebugEnabled())
+                    log.debug("管理资源ID:{}", resourceId);
+                return resourceId;
+            }
         }
+        if (log.isDebugEnabled())
+            log.debug("未经授权访问");
         return pageFactory._404(httpServletRequest, httpServletResponse, model);
     }
 
     @RequestMapping("/")
     public String spm(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model, String spm) {
-        return superPositionModelService.getResourceId(httpServletRequest, httpServletResponse, model, spm);
+        String resourceId = superPositionModelService.getResourceId(httpServletRequest, httpServletResponse, model, spm);
+        if (log.isDebugEnabled())
+            log.debug("资源ID:{}", resourceId);
+        return resourceId;
     }
 
     @RequestMapping(value = "/{value}", method = RequestMethod.GET)
     public String mapping(HttpServletRequest request, HttpServletResponse response, Model model, @PathVariable("value") String value) {
-        return mappingFactory.mapping(request, response, model, value);
+        String resourceId = mappingFactory.mapping(request, response, model, value);
+        if (log.isDebugEnabled())
+            log.debug("路径:{}, 资源ID:{}", value, resourceId);
+        return resourceId;
     }
 }
