@@ -131,14 +131,17 @@ public class SysPageController implements ErrorController {
          * 根据系统配置方式进行登录验证
          */
         String host = httpServletRequest.getHeader("host");
-        String clientId = sysConfigService.getOauth2LoginClientId(host);
-        if (StringUtils.isNotEmpty(clientId)) {
-            WebAuthenticationEntity webAuthenticationEntity = webAuthenticationService.getByClientId(clientId);
+        WebAuthenticationEntity webAuthenticationEntity = webAuthenticationService.getByClientId(host);
+        if (StringUtils.isNotEmpty(host)) {
+            if (null == webAuthenticationEntity)
+                webAuthenticationEntity = webAuthenticationService.getByClientId(sysConfigService.getOauth2LoginClientId(host));
             if (null != webAuthenticationEntity) {
-                StringBuffer sb = new StringBuffer();
+                StringBuilder sb = new StringBuilder();
                 if (StringUtils.isNotEmpty(webAuthenticationEntity.getAuthorizeUri()) && StringUtils.isNotEmpty(webAuthenticationEntity.getRedirectUri())) {
                     sb.append(webAuthenticationEntity.getAuthorizeUri());
-                    sb.append("?response_type=code&client_id=" + clientId + "&redirect_uri=");
+                    sb.append("?response_type=code&client_id=");
+                    sb.append(webAuthenticationEntity.getClientId());
+                    sb.append("&redirect_uri=");
                     sb.append(webAuthenticationEntity.getRedirectUri());
                     String redirect = sb.toString();
                     return "redirect:" + redirect;
