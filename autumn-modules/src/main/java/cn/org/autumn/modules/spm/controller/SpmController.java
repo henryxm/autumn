@@ -4,6 +4,7 @@ import cn.org.autumn.modules.spm.service.SuperPositionModelService;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysUserRoleService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
+import cn.org.autumn.site.LoadFactory;
 import cn.org.autumn.site.MappingFactory;
 import cn.org.autumn.site.PageFactory;
 import org.apache.commons.lang.StringUtils;
@@ -37,6 +38,9 @@ public class SpmController {
 
     @Autowired
     MappingFactory mappingFactory;
+
+    @Autowired
+    LoadFactory loadFactory;
 
     List<String> active = new ArrayList<>();
 
@@ -89,6 +93,11 @@ public class SpmController {
 
     @RequestMapping(value = "/{value}", method = RequestMethod.GET)
     public String mapping(HttpServletRequest request, HttpServletResponse response, Model model, @PathVariable("value") String value) {
+        if (!loadFactory.isDone()) {
+            if (log.isDebugEnabled())
+                log.debug("启动中:{}", request.getRequestURL());
+            return pageFactory.loading(request, response, model);
+        }
         String resourceId = mappingFactory.mapping(request, response, model, value);
         if (log.isDebugEnabled())
             log.debug("路径:{}, 资源ID:{}", value, resourceId);
