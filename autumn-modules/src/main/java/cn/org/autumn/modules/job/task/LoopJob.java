@@ -470,24 +470,6 @@ public class LoopJob extends Factory implements LoadFactory.Must {
         }
     }
 
-    public static void runThirtyHourJob() {
-        if (thirtyHourJobList.size() > 0) {
-            for (Job job : thirtyHourJobList) {
-                try {
-                    if (!job.isEnabled())
-                        continue;
-                    log.debug("Run Thirty Hour Job:{}", job.getClass().getSimpleName());
-                    if (job instanceof ThirtyHour)
-                        ((ThirtyHour) job).onThirtyHour();
-                    else
-                        job.runJob();
-                } catch (Exception e) {
-                    print(job, e);
-                }
-            }
-        }
-    }
-
     public static void runOneDayJob() {
         if (oneDayJobList.size() > 0) {
             for (Job job : oneDayJobList) {
