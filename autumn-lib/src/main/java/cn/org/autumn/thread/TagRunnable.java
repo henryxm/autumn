@@ -1,8 +1,10 @@
 package cn.org.autumn.thread;
 
+import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.Method;
 import java.util.Date;
 
 public abstract class TagRunnable implements Runnable, Tag {
@@ -18,8 +20,27 @@ public abstract class TagRunnable implements Runnable, Tag {
 
     Class<?> type = null;
 
+    TagValue tagValue = null;
+
+    public TagValue getTagValue() {
+        if (null != tagValue)
+            return tagValue;
+        try {
+            Method mt = getClass().getDeclaredMethod("exe");
+            tagValue = mt.getDeclaredAnnotation(TagValue.class);
+            return tagValue;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     @Override
     public String getName() {
+        if (StringUtils.isBlank(name)) {
+            TagValue t = getTagValue();
+            if (null != t)
+                return t.name();
+        }
         return name;
     }
 
@@ -40,6 +61,11 @@ public abstract class TagRunnable implements Runnable, Tag {
 
     @Override
     public String getTag() {
+        if (StringUtils.isBlank(tag)) {
+            TagValue t = getTagValue();
+            if (null != t)
+                return t.tag();
+        }
         return tag;
     }
 
@@ -49,6 +75,11 @@ public abstract class TagRunnable implements Runnable, Tag {
     }
 
     public String getMethod() {
+        if (StringUtils.isBlank(method)) {
+            TagValue t = getTagValue();
+            if (null != t)
+                return t.method();
+        }
         return method;
     }
 
@@ -58,6 +89,11 @@ public abstract class TagRunnable implements Runnable, Tag {
 
     @Override
     public Class<?> getType() {
+        if (null == type) {
+            TagValue t = getTagValue();
+            if (null != t)
+                return t.type();
+        }
         return type;
     }
 
@@ -79,7 +115,7 @@ public abstract class TagRunnable implements Runnable, Tag {
             long end = System.currentTimeMillis();
             long time = (end - start);
             if (log.isDebugEnabled()) {
-                log.debug("执行任务:{}, 用时:{}毫秒, 线程名:{}", getTag(), time, getName());
+                log.debug("执行任务:{}, 方法:{}, 用时:{}毫秒, 线程:{}", getTag(), getMethod(), time, getName());
             }
             TagTaskExecutor.remove(TagRunnable.this);
         }
