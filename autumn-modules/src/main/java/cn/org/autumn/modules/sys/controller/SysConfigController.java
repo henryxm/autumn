@@ -7,6 +7,8 @@ import cn.org.autumn.modules.spm.service.SpmService;
 import cn.org.autumn.modules.spm.service.SuperPositionModelService;
 import cn.org.autumn.modules.sys.entity.SystemUpgrade;
 import cn.org.autumn.modules.sys.service.SysCategoryService;
+import cn.org.autumn.modules.sys.service.SysUserRoleService;
+import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.utils.PageUtils;
 import cn.org.autumn.utils.R;
 import cn.org.autumn.validator.ValidatorUtils;
@@ -35,6 +37,9 @@ public class SysConfigController extends AbstractController {
 
     @Autowired
     SysCategoryService sysCategoryService;
+
+    @Autowired
+    SysUserRoleService sysUserRoleService;
 
     @Autowired
     Language language;
@@ -137,7 +142,12 @@ public class SysConfigController extends AbstractController {
     }
 
     @RequestMapping(value = "data", method = RequestMethod.POST)
+    @RequiresPermissions("sys:config:list")
     public R basic(String spm, HttpServletRequest request) {
+        if (!ShiroUtils.isLogin())
+            return R.error("Not Login!");
+        if (!sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserEntity()))
+            return R.error("权限不足");
         String lang = language.toLang(Language.getLocale(request));
         Spm spm1 = spmService.getSpm(spm);
         String key = "";
