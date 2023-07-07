@@ -87,7 +87,8 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
             }
             return false;
         } catch (Exception e) {
-            log.error("无法判断IP黑名单：", e);
+            if (log.isDebugEnabled())
+                log.debug("无法判断IP黑名单:{}", e.getMessage());
             return false;
         }
     }
@@ -139,6 +140,8 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
             allIp = new HashMap<>();
         if (allIp.containsKey(ip)) {
             Integer count = allIp.get(ip);
+            if (null == count)
+                return;
             count++;
             allIp.replace(ip, count);
             if (count > lastCount) {

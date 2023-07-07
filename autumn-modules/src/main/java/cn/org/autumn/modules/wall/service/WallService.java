@@ -126,7 +126,7 @@ public class WallService {
                 ipVisitService.count(ip, rData);
             }
         } catch (Exception e) {
-            logger.error("黑名单过滤错误，需核查：{}", e.getMessage());
+            logger.debug("黑名单过滤错误:{}", e.getMessage());
         }
         return true;
     }

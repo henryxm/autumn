@@ -63,7 +63,8 @@ public abstract class WallCounter<M extends BaseMapper<T>, T> extends ModuleServ
         try {
             count();
         } catch (Exception e) {
-            log.error("Wall Counter:" + getClass().getSimpleName() + ", Exception:" + e.getClass().getSimpleName() + ", Msg:" + e.getMessage());
+            if (log.isDebugEnabled())
+                log.debug("Wall Counter:" + getClass().getSimpleName() + ", Exception:" + e.getClass().getSimpleName() + ", Msg:" + e.getMessage());
         }
     }
 

@@ -70,9 +70,11 @@ public class UrlBlackService extends WallCounter<UrlBlackDao, UrlBlackEntity> im
              * 计算URL的hashCode，提高对特定字符串的查找效率
              */
             Integer hashCode = urlIp.hashCode();
-
             if (allUrls.containsKey(hashCode)) {
-                int count = allUrls.get(hashCode) + 1;
+                Integer integer = allUrls.get(hashCode);
+                if (null == integer)
+                    return;
+                int count = integer + 1;
                 allUrls.replace(hashCode, count);
                 if (count > lastCount) {
                     ipBlackService.saveBlackIp(ip, agent, 0, "触发URL黑名单策略");
@@ -81,7 +83,7 @@ public class UrlBlackService extends WallCounter<UrlBlackDao, UrlBlackEntity> im
             } else
                 allUrls.put(hashCode, 1);
         } catch (Exception e) {
-            log.error("URL黑名单计数错误:", e);
+            log.debug("URL黑名单计数错误:{}", e.getMessage());
         }
     }
 

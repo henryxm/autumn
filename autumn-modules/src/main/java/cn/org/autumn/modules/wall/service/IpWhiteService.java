@@ -91,7 +91,8 @@ public class IpWhiteService extends WallCounter<IpWhiteDao, IpWhiteEntity> imple
             }
             return false;
         } catch (Exception e) {
-            log.error("无法判断IP白名单：{}", e.getMessage());
+            if (log.isDebugEnabled())
+                log.debug("无法判断IP白名单：{}", e.getMessage());
             return false;
         }
     }
