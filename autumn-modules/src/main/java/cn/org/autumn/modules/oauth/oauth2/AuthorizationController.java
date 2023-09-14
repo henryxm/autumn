@@ -71,7 +71,7 @@ import static org.apache.oltu.oauth2.common.error.OAuthError.TokenResponse.*;
 
 @Controller
 @RequestMapping("/oauth2")
-@Tags({@Tag(name = "Oauth授权认证", description = "客户端授权登录认证获取Token接口")})
+@Tags({@Tag(name = "oauth", description = "客户端授权登录认证获取Token接口")})
 public class AuthorizationController {
 
     Logger log = LoggerFactory.getLogger(getClass());
@@ -232,7 +232,7 @@ public class AuthorizationController {
 
     @RequestMapping(value = "token", method = RequestMethod.POST)
     @ResponseBody
-    @Operation(tags = {"Oauth授权认证"}, servers = {@Server(url = "https://www.minclouds.com", description = "用户授权登录获取Token接口")}, description = "获取Token", summary = "获取Token", operationId = "getToken", method = POST)
+    @Operation(tags = {"oauth"}, servers = {@Server(url = "https://www.minclouds.com", description = "用户授权登录获取Token接口")}, description = "获取Token", summary = "获取Token", operationId = "getToken", method = POST)
     public String applyAccessToken(HttpServletRequest request, @Validated @RequestParam(name = OAUTH_CLIENT_ID) String clientId, @Validated @RequestParam(OAUTH_CLIENT_SECRET) String clientSecret) throws OAuthSystemException, OAuthProblemException {
         //构建OAuth请求
         String username = null;
@@ -360,7 +360,7 @@ public class AuthorizationController {
 
     @RequestMapping(value = "/userInfo", produces = "application/json;charset=UTF-8", method = {RequestMethod.GET, RequestMethod.POST})
     @ResponseBody
-    @Operation(tags = {"Oauth授权认证"}, servers = {@Server(url = "https://www.minclouds.com", description = "获取用户信息")}, description = "获取用户信息", summary = "获取用户信息", operationId = "userInfo")
+    @Operation(tags = {"oauth"}, servers = {@Server(url = "https://www.minclouds.com", description = "获取用户信息")}, description = "获取用户信息", summary = "获取用户信息", operationId = "getUserInfo")
     public HttpEntity authUserInfo(HttpServletRequest request) throws OAuthSystemException {
         try {
             // 构建OAuth资源请求
