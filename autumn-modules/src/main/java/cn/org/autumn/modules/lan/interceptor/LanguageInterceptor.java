@@ -62,7 +62,7 @@ public class LanguageInterceptor extends HandlerInterceptorAdapter implements In
                     }
                 }
             } catch (Exception e) {
-                logger.error("LanguageInterceptor.getLocale error: " + e.getMessage());
+                logger.debug("LanguageInterceptor.getLocale error: " + e.getMessage());
             }
         }
         return locale;
