@@ -87,6 +87,14 @@ public class SysUserEntity implements Serializable {
     @Index
     private String idCard;
 
+    @Column(comment = "OPENID")
+    @Index
+    private String openId;
+
+    @Column(comment = "UNIONID")
+    @Index
+    private String unionId;
+
     /**
      * 状态  0：禁用   1：正常
      */
@@ -209,6 +217,22 @@ public class SysUserEntity implements Serializable {
 
     public void setIdCard(String idCard) {
         this.idCard = idCard;
+    }
+
+    public String getOpenId() {
+        return openId;
+    }
+
+    public void setOpenId(String openId) {
+        this.openId = openId;
+    }
+
+    public String getUnionId() {
+        return unionId;
+    }
+
+    public void setUnionId(String unionId) {
+        this.unionId = unionId;
     }
 
     public Integer getStatus() {
