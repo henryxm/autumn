@@ -533,7 +533,7 @@ public class LanguageEntity implements Serializable {
             try {
                 Object t = field.get(this);
                 Object f = field.get(merge);
-                if (null == t && null != f) {
+                if (!Objects.equals(t, f)) {
                     field.setAccessible(true);
                     field.set(this, f);
                 }
