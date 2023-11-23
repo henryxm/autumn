@@ -130,7 +130,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
 
     @Override
     public void after() {
-        language.put(lang, getLanguageList());
+        language.put(false, lang, getLanguageList());
         lang.clear();
     }
 
