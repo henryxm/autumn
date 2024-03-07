@@ -25,7 +25,7 @@ public class HttpClientUtils {
 
     static Logger log = LoggerFactory.getLogger(HttpClientUtils.class);
 
-    public static String doGet(String url, Map<String, String> param) {
+    public static String doGet(String url, Map<String, String> param, Map<String, String> header) {
         CloseableHttpClient httpclient = HttpClients.createDefault();
         String resultString = "";
         CloseableHttpResponse response = null;
@@ -38,6 +38,11 @@ public class HttpClientUtils {
             }
             URI uri = builder.build();
             HttpGet httpGet = new HttpGet(uri);
+            if (null != header && header.size() > 0) {
+                for (Map.Entry<String, String> kv : header.entrySet()) {
+                    httpGet.setHeader(kv.getKey(), kv.getValue());
+                }
+            }
             response = httpclient.execute(httpGet);
             if (response.getStatusLine().getStatusCode() == 200) {
                 resultString = EntityUtils.toString(response.getEntity(), "UTF-8");
@@ -57,11 +62,15 @@ public class HttpClientUtils {
         return resultString;
     }
 
+    public static String doGet(String url, Map<String, String> param) {
+        return doGet(url, param, null);
+    }
+
     public static String doGet(String url) {
         return doGet(url, null);
     }
 
-    public static String doPost(String url, Map<String, String> param) {
+    public static String doPost(String url, Map<String, String> param, Map<String, String> header) {
         CloseableHttpClient httpClient = HttpClients.createDefault();
         CloseableHttpResponse response = null;
         String resultString = "";
@@ -74,6 +83,11 @@ public class HttpClientUtils {
                 }
                 UrlEncodedFormEntity entity = new UrlEncodedFormEntity(paramList);
                 httpPost.setEntity(entity);
+            }
+            if (null != header && header.size() > 0) {
+                for (Map.Entry<String, String> kv : header.entrySet()) {
+                    httpPost.setHeader(kv.getKey(), kv.getValue());
+                }
             }
             response = httpClient.execute(httpPost);
             resultString = EntityUtils.toString(response.getEntity(), "utf-8");
@@ -88,6 +102,10 @@ public class HttpClientUtils {
             }
         }
         return resultString;
+    }
+
+    public static String doPost(String url, Map<String, String> param) {
+        return doPost(url, param, null);
     }
 
     public static String doPost(String url) {
