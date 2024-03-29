@@ -1,6 +1,7 @@
 package cn.org.autumn.utils;
 
 import org.apache.http.NameValuePair;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -25,7 +26,19 @@ public class HttpClientUtils {
 
     static Logger log = LoggerFactory.getLogger(HttpClientUtils.class);
 
-    public static String doGet(String url, Map<String, String> param, Map<String, String> header) {
+    public  static String doGet(String url, Map<String, String> param, Map<String, String> header) {
+        return doGet(url, param, header, 5000);
+    }
+
+    public  static String doGet(String url, Map<String, String> param, Map<String, String> header, int timeout) {
+        RequestConfig config = RequestConfig.custom()
+                .setConnectTimeout(timeout)
+                .setConnectionRequestTimeout(1000)
+                .setSocketTimeout(timeout).build();
+        return doGet(url, param, header, config);
+    }
+
+    public static String doGet(String url, Map<String, String> param, Map<String, String> header, RequestConfig config) {
         CloseableHttpClient httpclient = HttpClients.createDefault();
         String resultString = "";
         CloseableHttpResponse response = null;
@@ -43,6 +56,8 @@ public class HttpClientUtils {
                     httpGet.setHeader(kv.getKey(), kv.getValue());
                 }
             }
+            if (null != config)
+                httpGet.setConfig(config);
             response = httpclient.execute(httpGet);
             if (response.getStatusLine().getStatusCode() == 200) {
                 resultString = EntityUtils.toString(response.getEntity(), "UTF-8");
@@ -66,11 +81,27 @@ public class HttpClientUtils {
         return doGet(url, param, null);
     }
 
+    public static String doGet(String url, int timeout) {
+        return doGet(url, null, null, timeout);
+    }
+
     public static String doGet(String url) {
         return doGet(url, null);
     }
 
     public static String doPost(String url, Map<String, String> param, Map<String, String> header) {
+        return doPost(url, param, header, 5000);
+    }
+
+    public static String doPost(String url, Map<String, String> param, Map<String, String> header, int timeout) {
+        RequestConfig config = RequestConfig.custom()
+                .setConnectTimeout(timeout)
+                .setConnectionRequestTimeout(1000)
+                .setSocketTimeout(timeout).build();
+        return doGet(url, param, header, config);
+    }
+
+    public static String doPost(String url, Map<String, String> param, Map<String, String> header, RequestConfig config) {
         CloseableHttpClient httpClient = HttpClients.createDefault();
         CloseableHttpResponse response = null;
         String resultString = "";
@@ -89,6 +120,8 @@ public class HttpClientUtils {
                     httpPost.setHeader(kv.getKey(), kv.getValue());
                 }
             }
+            if (null != config)
+                httpPost.setConfig(config);
             response = httpClient.execute(httpPost);
             resultString = EntityUtils.toString(response.getEntity(), "utf-8");
         } catch (Exception e) {
@@ -113,11 +146,25 @@ public class HttpClientUtils {
     }
 
     public static String doPostJson(String url, String json) {
+        return doPostJson(url, json, 5000);
+    }
+
+    public static String doPostJson(String url, String json, int timeout) {
+        RequestConfig config = RequestConfig.custom()
+                .setConnectTimeout(timeout)
+                .setConnectionRequestTimeout(1000)
+                .setSocketTimeout(timeout).build();
+        return doPostJson(url, json, config);
+    }
+
+    public static String doPostJson(String url, String json, RequestConfig config) {
         CloseableHttpClient httpClient = HttpClients.createDefault();
         CloseableHttpResponse response = null;
         String resultString = "";
         try {
             HttpPost httpPost = new HttpPost(url);
+            if (null != config)
+                httpPost.setConfig(config);
             StringEntity entity = new StringEntity(json, ContentType.APPLICATION_JSON);
             httpPost.setEntity(entity);
             response = httpClient.execute(httpPost);
