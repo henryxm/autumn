@@ -6,6 +6,7 @@ import java.net.URL;
 import java.net.URLDecoder;
 import java.util.Enumeration;
 import java.util.Locale;
+import java.util.Random;
 
 import static com.baomidou.mybatisplus.toolkit.StringUtils.UTF8;
 
@@ -61,5 +62,17 @@ public class Utils {
         } catch (Exception e) {
             return original;
         }
+    }
+
+    public static String getRandomCode(int c) {
+        String t = "0123456789";
+        int l = t.length();
+        String r = "";
+        Random random = new Random();
+        while (r.length() < c) {
+            int i = random.nextInt(l);
+            r = r + t.charAt(i);
+        }
+        return r;
     }
 }

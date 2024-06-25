@@ -24,7 +24,7 @@ spring:
       enabled: true
   redis:
     database: 0
-    host: localhost
+    host: 192.168.101.160
     port: 6379
     auth:  # 密码（默认为空）
     timeout: 6000ms  # 连接超时时长（毫秒）
