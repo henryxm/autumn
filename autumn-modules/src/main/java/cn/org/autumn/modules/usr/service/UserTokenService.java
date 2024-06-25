@@ -89,6 +89,26 @@ public class UserTokenService extends UserTokenServiceGen {
         this.insertOrUpdate(tokenEntity);
     }
 
+    public UserTokenEntity createOrUpdateToken(UserTokenEntity tokenEntity) {
+        //当前时间
+        Date now = new Date();
+        //过期时间
+        Date expireTime = new Date(now.getTime() + EXPIRE * 1000);
+
+        //生成token
+        String token = generateToken();
+
+        //保存或更新用户token
+        //UserTokenEntity tokenEntity = new UserTokenEntity();
+        //tokenEntity.setUserUuid(userUuid);
+        tokenEntity.setToken(token);
+        tokenEntity.setUpdateTime(now);
+        tokenEntity.setExpireTime(expireTime);
+        this.insertOrUpdate(tokenEntity);
+
+        return tokenEntity;
+    }
+
     private String generateToken() {
         return UUID.randomUUID().toString().replace("-", "");
     }

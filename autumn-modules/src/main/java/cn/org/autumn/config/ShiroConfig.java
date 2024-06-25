@@ -176,6 +176,9 @@ public class ShiroConfig {
         filterMap.put("/oauth2/**", "anon");
         filterMap.put("/client/**", "anon");
         filterMap.put("/actuator/**", "anon");
+
+        filterMap.put("/app/api/**", "anon");
+
         filterMap.put("/**", "spm");
         shiroFilter.setFilterChainDefinitionMap(filterMap);
         shiroFilter.setFilters(map);
