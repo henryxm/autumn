@@ -6,9 +6,12 @@ import cn.org.autumn.site.UpgradeFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationListener;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.event.ContextRefreshedEvent;
+import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -25,6 +28,9 @@ public class PostStartupProcessor implements ApplicationListener<ContextRefreshe
     @Autowired
     UpgradeFactory upgradeFactory;
 
+    @Autowired
+    AsyncTaskExecutor asyncTaskExecutor;
+
     @Override
     public void onApplicationEvent(ContextRefreshedEvent event) {
         ApplicationContext context = (ApplicationContext) event.getSource();
@@ -40,12 +46,12 @@ public class PostStartupProcessor implements ApplicationListener<ContextRefreshe
         if (event.getApplicationContext().getParent() == null) {
 
         }
-        try {
-            initFactory.init();
-            loadFactory.load();
-            upgradeFactory.upgrade();
-        } catch (Exception e) {
-            log.error(e.getMessage());
-        }
+    }
+
+    @Bean
+    public CommandLineRunner run() {
+        return args -> {
+            log.debug("Processing command line arguments.");
+        };
     }
 }
