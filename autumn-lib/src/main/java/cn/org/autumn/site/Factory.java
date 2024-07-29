@@ -8,16 +8,21 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.core.annotation.Order;
 
 import java.lang.reflect.Method;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
+/**
+ * @author mac
+ */
 public class Factory {
-
-    private static final Logger log = LoggerFactory.getLogger(Factory.class);
 
     /**
      * 排序缺省值
      */
     public static final int DEFAULT_ORDER = Integer.MAX_VALUE / 1000;
+    private static final Logger log = LoggerFactory.getLogger(Factory.class);
 
     /**
      * 查找所有实现了T类型的接口的Bean，并对Bean方法注解中指定的方法上的的Order进行排序
@@ -31,21 +36,20 @@ public class Factory {
      */
     public static <T> Map<Integer, List<T>> getOrdered(Class<T> t, String name, Class<?>... parameterTypes) {
         ApplicationContext applicationContext = SpringContextUtils.getApplicationContext();
-        if (null == applicationContext)
+        if (null == applicationContext) {
             return null;
+        }
         Map<String, T> map = applicationContext.getBeansOfType(t);
-        Map<Integer, List<T>> ordered = new TreeMap<>(new Comparator<Integer>() {
-            @Override
-            public int compare(Integer o1, Integer o2) {
-                if (o1 == Integer.MIN_VALUE)
-                    return -1;
-                return o1 - o2;
+        Map<Integer, List<T>> ordered = new TreeMap<>((o1, o2) -> {
+            if (o1 == Integer.MIN_VALUE) {
+                return -1;
             }
+            return o1 - o2;
         });
 
         for (Map.Entry<String, T> k : map.entrySet()) {
             T init = k.getValue();
-            Method method = null;
+            Method method;
             Order order = null;
 
             //获取实例中的排序Order，如果没找到，你从超类中寻找
@@ -62,8 +66,9 @@ public class Factory {
                     clazz = clazz.getSuperclass();
                 }
             } catch (Exception e) {
-                if (log.isDebugEnabled())
+                if (log.isDebugEnabled()) {
                     log.debug("getOrdered", e);
+                }
             }
             //如果从实例中没有找到Order，则寻找接口中的Order
             if (null == order) {
@@ -72,14 +77,16 @@ public class Factory {
                         method = t.getMethod(name, parameterTypes);
                         order = method.getAnnotation(Order.class);
                     }
-                    if (null == order)
+                    if (null == order) {
                         order = t.getAnnotation(Order.class);
+                    }
                 } catch (Exception e) {
-                    if (log.isDebugEnabled())
+                    if (log.isDebugEnabled()) {
                         log.debug("getOrdered", e);
+                    }
                 }
             }
-            List<T> list = null;
+            List<T> list;
             int value = Integer.MAX_VALUE / 100;
             if (null != order) {
                 list = ordered.get(order.value());
@@ -106,8 +113,9 @@ public class Factory {
      */
     public <T> void invoke(Class<T> t, String name) {
         Map<Integer, List<T>> ordered = getOrdered(t, name);
-        if (null == ordered || ordered.size() == 0)
+        if (null == ordered || ordered.isEmpty()) {
             return;
+        }
         for (Map.Entry<Integer, List<T>> entry : ordered.entrySet()) {
             List<T> list = entry.getValue();
             for (T obj : list) {
@@ -115,7 +123,7 @@ public class Factory {
                     Method m = obj.getClass().getMethod(name);
                     m.invoke(obj);
                 } catch (Exception e) {
-                    log.error(obj.getClass().getSimpleName() + "." + name, e);
+                    log.error("{}.{}", obj.getClass().getSimpleName(), name, e);
                 }
             }
         }
@@ -128,7 +136,7 @@ public class Factory {
     public <T> List<T> getOrderList(Class<T> t, String name, Class<?>... parameterTypes) {
         List<T> tmp = new ArrayList<>();
         Map<Integer, List<T>> ordered = getOrdered(t, name, parameterTypes);
-        if (null != ordered && ordered.size() > 0) {
+        if (null != ordered && !ordered.isEmpty()) {
             for (Map.Entry<Integer, List<T>> entry : ordered.entrySet()) {
                 List<T> list = entry.getValue();
                 tmp.addAll(list);

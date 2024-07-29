@@ -3,14 +3,18 @@ package cn.org.autumn.modules.sys.service;
 import cn.org.autumn.annotation.ConfigField;
 import cn.org.autumn.bean.EnvBean;
 import cn.org.autumn.cluster.ServiceHandler;
-import cn.org.autumn.config.Config;
 import cn.org.autumn.config.CategoryHandler;
+import cn.org.autumn.config.Config;
 import cn.org.autumn.config.DomainHandler;
 import cn.org.autumn.config.InputType;
+import cn.org.autumn.exception.AException;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.lan.service.Language;
 import cn.org.autumn.modules.oss.cloud.CloudStorageConfig;
+import cn.org.autumn.modules.sys.dao.SysConfigDao;
+import cn.org.autumn.modules.sys.entity.SysConfigEntity;
 import cn.org.autumn.modules.sys.entity.SystemUpgrade;
+import cn.org.autumn.modules.sys.redis.SysConfigRedis;
 import cn.org.autumn.site.ConfigFactory;
 import cn.org.autumn.site.DomainFactory;
 import cn.org.autumn.site.HostFactory;
@@ -20,10 +24,6 @@ import com.baomidou.mybatisplus.mapper.EntityWrapper;
 import com.baomidou.mybatisplus.plugins.Page;
 import com.baomidou.mybatisplus.service.impl.ServiceImpl;
 import com.google.gson.Gson;
-import cn.org.autumn.exception.AException;
-import cn.org.autumn.modules.sys.dao.SysConfigDao;
-import cn.org.autumn.modules.sys.entity.SysConfigEntity;
-import cn.org.autumn.modules.sys.redis.SysConfigRedis;
 import org.apache.commons.lang.StringUtils;
 import org.apache.shiro.session.mgt.SessionManager;
 import org.apache.shiro.web.servlet.Cookie;
@@ -77,25 +77,15 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     public static final String SYSTEM_UPGRADE = "SYSTEM_UPGRADE";
     public static final String Localhost = "localhost";
     public static final String config_lang_prefix = "config_lang_string_";
-
+    private static final String NULL = null;
+    private static SessionManager sessionManager;
     @Autowired
-    @Lazy
-    private SysConfigRedis sysConfigRedis;
-
-    @Autowired
-    @Lazy
-    private SysLogService sysLogService;
-
+    protected Language language;
     @Autowired
     @Lazy
     SysCategoryService sysCategoryService;
-
     @Autowired
     EnvBean envBean;
-
-    @Autowired
-    protected Language language;
-
     @Autowired
     ConfigFactory configFactory;
 
@@ -104,22 +94,19 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
 
     @Autowired
     DomainFactory domainFactory;
-
-    private static SessionManager sessionManager;
-
-    private static final String NULL = null;
-
+    List<String[]> lang = new ArrayList<>();
+    @Autowired
+    @Lazy
+    private SysConfigRedis sysConfigRedis;
+    @Autowired
+    @Lazy
+    private SysLogService sysLogService;
     private CloudStorageConfig cloudStorageConfig = null;
-
     private Map<String, SysConfigEntity> map = new HashMap<>();
-
     private String lastLoggerLevel = null;
-
     private String namespace = null;
 
-    List<String[]> lang = new ArrayList<>();
-
-    @Order(1000)
+    @Order(-1000)
     public void init() {
         LoopJob.onThirtyMinute(this);
         clear();
@@ -227,24 +214,24 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
 
     public String[][] getConfigItems() {
         String[][] mapping = new String[][]{
-                {CLOUD_STORAGE_CONFIG_KEY, "{\"aliyunAccessKeyId\":\"\",\"aliyunAccessKeySecret\":\"\",\"aliyunBucketName\":\"\",\"aliyunDomain\":\"\",\"aliyunEndPoint\":\"\",\"aliyunPrefix\":\"\",\"qcloudBucketName\":\"\",\"qcloudDomain\":\"\",\"qcloudPrefix\":\"\",\"qcloudSecretId\":\"\",\"qcloudSecretKey\":\"\",\"qiniuAccessKey\":\"\",\"qiniuBucketName\":\"\",\"qiniuDomain\":\"\",\"qiniuPrefix\":\"\",\"qiniuSecretKey\":\"\",\"type\":1}", "0", "云存储配置信息", config, json_type, CloudStorageConfig.class.getName()},
-                {SUPER_PASSWORD, getSuperPassword(), "0", "系统的超级密码，使用该密码可以登录任何账户，如果为空或小于20位，表示禁用该密码", config, string_type},
+                {LOGIN_AUTHENTICATION, "oauth2:" + getClientId(), "0", "系统登录授权，参数类型：①:localhost; ②:oauth2:" + getClientId() + "; ③shell:" + getClientId(), config, selection_type, "localhost,oauth2:" + getClientId() + ",shell:" + getClientId()},
+                {SITE_DOMAIN, getDefaultSiteDomains(), "1", "站点域名绑定，多个域名以逗号分隔，为空表示不绑定任何域，不为空表示进行域名校验，#号开头的域名表示不绑定该域名，绑定域名后只能使用该域名访问站点", config, string_type},
+                {BIND_DOMAIN, "", "1", "站点绑定域名，多个域名以逗号分隔，为空表示不绑定任何域，不为空表示进行域名校验，#号开头的域名表示不绑定该域名，绑定域名后，防火墙放行", config, string_type},
+                {CLUSTER_ROOT_DOMAIN, getClusterRootDomain(), "1", "集群的根域名，当开启Redis后，有相同根域名后缀的服务会使用相同的Cookie，集群可通过Cookie中的登录用户进行用户同步", config, string_type},
                 {CLUSTER_NAMESPACE, getNameSpace(), "1", "系统的命名空间，集群式在Redis中需要使用命名空间进行区分", config, string_type},
+                {SUPER_PASSWORD, getSuperPassword(), "0", "系统的超级密码，使用该密码可以登录任何账户，如果为空或小于20位，表示禁用该密码", config, string_type},
                 {MENU_WITH_SPM, "1", "1", "菜单是否使用SPM模式，开启SPM模式后，可动态监控系统的页面访问统计量，默认开启", config, boolean_type},
                 {LOGGER_LEVEL, getLoggerLevel(), "1", "动态调整全局日志等级，级别:ALL,TRACE,DEBUG,INFO,WARN,ERROR,OFF", config, selection_type, "ALL,TRACE,DEBUG,INFO,WARN,ERROR,OFF"},
                 {DEBUG_MODE, "false", "1", "是否开启调试模式，调试模式下，将打印更加详细的日志信息", config, boolean_type},
-                {LOGIN_AUTHENTICATION, "oauth2:" + getClientId(), "0", "系统登录授权，参数类型：①:localhost; ②:oauth2:" + getClientId() + "; ③shell:" + getClientId(), config, selection_type, "localhost,oauth2:" + getClientId() + ",shell:" + getClientId()},
                 {TOKEN_GENERATE_STRATEGY, "current", "0", "授权获取Token的时候，每次获取Token的策略：①:new(每次获取Token的时候都生成新的,需要保证:ClientId,AccessKeyId使用地方的唯一性,多个不同地方使用相同ClientId会造成Token竞争性失效); ②:current(默认值,使用之前已存在并且有效的,只有当前Token失效后才重新生成)", config, selection_type, "new,current"},
-                {SITE_DOMAIN, getSiteDomain(), "1", "站点域名绑定，多个域名以逗号分隔，为空表示不绑定任何域，不为空表示进行域名校验，#号开头的域名表示不绑定该域名，绑定域名后只能使用该域名访问站点", config, string_type},
-                {BIND_DOMAIN, "", "1", "站点绑定域名，多个域名以逗号分隔，为空表示不绑定任何域，不为空表示进行域名校验，#号开头的域名表示不绑定该域名，绑定域名后，防火墙放行", config, string_type},
                 {SITE_SSL, String.valueOf(isSsl()), "1", "站点是否支持证书，0:不支持，1:支持", config, boolean_type},
-                {CLUSTER_ROOT_DOMAIN, getClusterRootDomain(), "1", "集群的根域名，当开启Redis后，有相同根域名后缀的服务会使用相同的Cookie，集群可通过Cookie中的登录用户进行用户同步", config, string_type},
                 {USER_DEFAULT_DEPART_KEY, "", "1", "缺省的部门标识，当用户从集群中的账户体系中同步用户信息后，授予的默认的部门权限", config, string_type},
                 {USER_DEFAULT_ROLE_KEYS, "", "1", "缺省的角色标识，多个KEY用半角逗号分隔，当用户从集群中的账户体系中同步用户信息后，授予的默认的角色权限", config, string_type},
                 {UPDATE_MENU_ON_INIT, "true", "1", "当系统启动或执行初始化的时候更新菜单，特别是当系统升级更新的时候，需要开启该功能", config, boolean_type},
                 {UPDATE_LANGUAGE_ON_INIT, "true", "1", "当系统启动或执行初始化的时候更新语言列表，开发模式下可以开启该功能，该模式会自动合并新的值到现有的表中", config, boolean_type},
                 {NONE_SUFFIX_VIEW, "js,css,map,html,htm,shtml", "0", "系统默认后缀名为:.html, Request请求的路径在程序查找资源的时候，默认会带上.html, 通过配置无后缀名文件视图, 系统将请求路径进行资源查找", config, string_type},
                 {SYSTEM_UPGRADE, new Gson().toJson(new SystemUpgrade()), "1", "系统升级开关与提示信息", config, json_type, SystemUpgrade.class.getName()},
+                {CLOUD_STORAGE_CONFIG_KEY, "{\"aliyunAccessKeyId\":\"\",\"aliyunAccessKeySecret\":\"\",\"aliyunBucketName\":\"\",\"aliyunDomain\":\"\",\"aliyunEndPoint\":\"\",\"aliyunPrefix\":\"\",\"qcloudBucketName\":\"\",\"qcloudDomain\":\"\",\"qcloudPrefix\":\"\",\"qcloudSecretId\":\"\",\"qcloudSecretKey\":\"\",\"qiniuAccessKey\":\"\",\"qiniuBucketName\":\"\",\"qiniuDomain\":\"\",\"qiniuPrefix\":\"\",\"qiniuSecretKey\":\"\",\"type\":1}", "0", "云存储配置信息", config, json_type, CloudStorageConfig.class.getName()},
         };
         return mapping;
     }
@@ -494,11 +481,13 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 r = r.trim();
                 namespace = r;
             }
-            if (null == namespace)
-                namespace = "";
         }
-        if (StringUtils.isBlank(namespace))
+        if (StringUtils.isBlank(namespace)) {
             namespace = envBean.getClusterNamespace();
+        }
+        if (null == namespace) {
+            namespace = "";
+        }
         return namespace;
     }
 
@@ -509,8 +498,9 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     public int getInt(String key) {
         try {
             String s = getValue(key);
-            if (StringUtils.isNotEmpty(s))
+            if (StringUtils.isNotEmpty(s)) {
                 return Integer.parseInt(s);
+            }
         } catch (Exception ignored) {
         }
         return 0;
@@ -525,26 +515,33 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         if (StringUtils.isBlank(rootDomain)) {
             rootDomain = envBean.getRootDomain();
         }
-        if (StringUtils.isBlank(rootDomain))
+        if (StringUtils.isBlank(rootDomain)) {
+            rootDomain = getSiteDomain();
+        }
+        if (null == rootDomain)
             rootDomain = "";
         return rootDomain;
     }
 
     public String getSuperPassword() {
         String superPassword = getValue(SUPER_PASSWORD);
-        if (StringUtils.isBlank(superPassword))
+        if (StringUtils.isBlank(superPassword)) {
             superPassword = envBean.getSupperPassword();
-        if (StringUtils.isBlank(superPassword))
+        }
+        if (StringUtils.isBlank(superPassword)) {
             superPassword = uuid();
+        }
         return superPassword;
     }
 
     public String getLoggerLevel() {
         String loggerLevel = getValue(LOGGER_LEVEL);
-        if (StringUtils.isBlank(loggerLevel))
+        if (StringUtils.isBlank(loggerLevel)) {
             loggerLevel = envBean.getLoggerLevel();
-        if (StringUtils.isBlank(loggerLevel))
+        }
+        if (StringUtils.isBlank(loggerLevel)) {
             loggerLevel = "INFO";
+        }
         return loggerLevel;
     }
 
@@ -559,8 +556,9 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
             String[] a = s.split(",");
             for (String i : a) {
                 i = i.trim();
-                if (!roles.contains(i))
+                if (!roles.contains(i)) {
                     roles.add(i);
+                }
             }
         }
         return roles;
@@ -575,16 +573,18 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         if (StringUtils.isNotEmpty(oa)) {
             if (oa.startsWith("oauth2:")) {
                 String[] ar = oa.split(":");
-                if (ar.length == 2)
+                if (ar.length == 2) {
                     return ar[1].trim();
+                }
             }
             if (oa.startsWith("shell:")) {
-                if (StringUtils.isNotBlank(host))
+                if (StringUtils.isNotBlank(host)) {
                     return host;
-                else {
+                } else {
                     String[] ar = oa.split(":");
-                    if (ar.length == 2)
+                    if (ar.length == 2) {
                         return ar[1].trim();
+                    }
                 }
             }
         }
@@ -593,14 +593,14 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
 
     public boolean currentToken() {
         String current = getValue(TOKEN_GENERATE_STRATEGY);
-        if (StringUtils.isBlank(current) || current.equals("current"))
+        if (StringUtils.isBlank(current) || "current".equals(current))
             return true;
         return false;
     }
 
     public boolean newToken() {
         String newToken = getValue(TOKEN_GENERATE_STRATEGY);
-        if (StringUtils.isNotBlank(newToken) || newToken.equals("new"))
+        if (StringUtils.isNotBlank(newToken) || "new".equals(newToken))
             return true;
         return false;
     }
@@ -647,6 +647,19 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         return false;
     }
 
+    public String getDefaultSiteDomains() {
+        String siteDomain = envBean.getSiteDomain();
+        if (StringUtils.isBlank(siteDomain)) {
+            String ip = IPUtils.getIp();
+            if (StringUtils.isNotBlank(ip)) {
+                siteDomain = ip + "," + Localhost + "," + "127.0.0.1";
+            } else {
+                siteDomain = Localhost + "," + "127.0.0.1";
+            }
+        }
+        return siteDomain;
+    }
+
     /**
      * 如果设定了多个SiteDomain的情况下，默认使用第一个有效值，作为网站入口访问域名
      *
@@ -654,15 +667,15 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
      */
     public String getSiteDomain() {
         String oa = getValue(SITE_DOMAIN);
-        if (StringUtils.isBlank(oa))
-            oa = envBean.getSiteDomain();
-        if (StringUtils.isBlank(oa))
-            oa = Localhost;
+        if (StringUtils.isBlank(oa)) {
+            oa = getDefaultSiteDomains();
+        }
         if (oa.contains(",")) {
             String[] ds = oa.split(",");
             for (String d : ds) {
-                if (d.startsWith("#"))
+                if (d.startsWith("#")) {
                     continue;
+                }
                 return d.trim();
             }
         }
@@ -732,29 +745,6 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 !siteDomain.contains("."))
             isSsl = false;
         return isSsl;
-    }
-
-    private static class ParameterizedTypeImpl implements ParameterizedType {
-        Class clazz;
-
-        public ParameterizedTypeImpl(Class clz) {
-            clazz = clz;
-        }
-
-        @Override
-        public Type[] getActualTypeArguments() {
-            return new Type[]{clazz};
-        }
-
-        @Override
-        public Type getRawType() {
-            return List.class;
-        }
-
-        @Override
-        public Type getOwnerType() {
-            return null;
-        }
     }
 
     public <T> List<T> getConfigObjectList(String key, Class clazz) {
@@ -903,5 +893,28 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     public boolean isAllowed(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse) {
         String host = httpServletRequest.getHeader("host");
         return domainFactory.isSiteBind(host);
+    }
+
+    private static class ParameterizedTypeImpl implements ParameterizedType {
+        Class clazz;
+
+        public ParameterizedTypeImpl(Class clz) {
+            clazz = clz;
+        }
+
+        @Override
+        public Type[] getActualTypeArguments() {
+            return new Type[]{clazz};
+        }
+
+        @Override
+        public Type getRawType() {
+            return List.class;
+        }
+
+        @Override
+        public Type getOwnerType() {
+            return null;
+        }
     }
 }
