@@ -24,15 +24,15 @@ public class JumpService extends ModuleService<JumpDao, JumpEntity> implements L
         Map<String, String> map = new HashMap<>();
         List<JumpEntity> list = baseMapper.gets();
         for (JumpEntity jumpEntity : list) {
-            map.put(jumpEntity.getHost(), jumpEntity.getUrl());
+            map.put(jumpEntity.getHost() + jumpEntity.getUri(), jumpEntity.getUrl());
         }
         return map;
     }
 
-    public String getJump(String host) {
+    public String getJump(String host, String uri) {
         if (null == jumps)
             jumps = getJumps();
-        return jumps.get(host);
+        return jumps.get(host + uri);
     }
 
     public String getHtml(String url) throws IOException {

@@ -93,7 +93,7 @@ public class WallService {
             String refer = request.getHeader("refer");
             if (logEnable)
                 print(request);
-            String jump = jumpService.getJump(host);
+            String jump = jumpService.getJump(host, request.getRequestURI());
             if (StringUtils.isNotBlank(jump)) {
                 response.setStatus(200);
                 response.reset();

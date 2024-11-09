@@ -16,7 +16,7 @@ public class ShieldEntity implements Serializable {
     @Column(isKey = true, type = "bigint", length = 20, isNull = false, isAutoIncrement = true, comment = "id")
     private Long id;
 
-    @Column(comment = "地址", isUnique = true)
+    @Column(comment = "资源", isUnique = true)
     private String uri;
 
     @Column(comment = "开启")
