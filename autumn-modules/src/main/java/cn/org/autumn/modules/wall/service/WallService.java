@@ -61,54 +61,26 @@ public class WallService {
             return true;
         HttpServletRequest request = (HttpServletRequest) servletRequest;
         HttpServletResponse response = (HttpServletResponse) servletResponse;
-        if (shieldService.shield(request)) {
-            if (!shield)
+        String ip = IPUtils.getIp(request);
+        if (shieldService.isAttack()) {
+            if (ipBlackService.isBlack(ip)) {
+                if (null != response) {
+                    response.setStatus(500);
+                }
                 return false;
-            response.setStatus(200);
-
-            response.reset();
-            String html = "<!DOCTYPE html>\n" +
-                    "<html>\n" +
-                    "<head>\n" +
-                    "  <meta charset=\"utf-8\">\n" +
-                    "  <title>人机检测</title>\n" +
-                    "  <style>\n" +
-                    "    .container {\n" +
-                    "      display: flex;\n" +
-                    "      align-items: center;\n" +
-                    "      justify-content: center;\n" +
-                    "    }\n" +
-                    "    .submit {\n" +
-                    "      height: 60px;\n" +
-                    "      width: 200px;\n" +
-                    "      font-size: 40px;\n" +
-                    "      margin-top: 100px;\n" +
-                    "    }\n" +
-                    "    .icon {\n" +
-                    "      display: inline-block;\n" +
-                    "      fill: var(--cb-color-text-brand, #ff6a00);\n" +
-                    "      margin-top: -1px;\n" +
-                    "      height: 40px;\n" +
-                    "      width: 80px;\n" +
-                    "      margin-top: 100px;\n" +
-                    "    }\n" +
-                    "  </style>\n" +
-                    "</head>\n" +
-                    "<body>\n" +
-                    "<form class=\"container\" action=\"/shield/test\" method=\"POST\">\n" +
-                    "  <svg class=\"icon\">\n" +
-                    "    <path d=\"M21.4 22.4h21.2v-4.8H21.4z\"\n" +
-                    "          data-spm-anchor-id=\"5176.2020520102.console-base_top-nav.i0.51e31eb9LNAfzA\"></path>\n" +
-                    "    <path d=\"M53.3 0H39.2l3.4 4.8L52.9 8c1.9.6 3.1 2.3 3.1 4.3v15.4c0 2-1.2 3.7-3.1 4.3l-10.3 3.2-3.4 4.8h14.1c6 0 10.7-4.8 10.7-10.7V10.7C64 4.7 59.2 0 53.3 0M10.7 0h14.1l-3.4 4.8L11.1 8A4.5 4.5 0 0 0 8 12.3v15.4c0 2 1.2 3.7 3.1 4.3l10.3 3.2 3.4 4.8H10.7C4.7 40 0 35.2 0 29.3V10.7C0 4.7 4.8 0 10.7 0\"></path>\n" +
-                    "  </svg>\n" +
-                    "  <input type=\"submit\" class=\"submit\" value=\"人机检测\">\n" +
-                    "</form>\n" +
-                    "</body>\n" +
-                    "</html>\n";
-
-            byte[] data = html.getBytes();
-            IOUtils.write(data, response.getOutputStream());
-            return false;
+            }
+        }
+        if (!ipWhiteService.isWhite(ip)) {
+            if (shieldService.shield(request.getRequestURI(), ip)) {
+                if (!shield)
+                    return false;
+                response.setStatus(200);
+                response.reset();
+                String html = shieldService.getHtml();
+                byte[] data = html.getBytes();
+                IOUtils.write(data, response.getOutputStream());
+                return false;
+            }
         }
         try {
             String remoteip = request.getHeader("remoteip");
@@ -131,8 +103,6 @@ public class WallService {
                 }
                 return false;
             }
-
-            String ip = IPUtils.getIp(request);
             try {
                 SysUserEntity userEntity = ShiroUtils.getUserEntity();
                 if (null != userEntity) {

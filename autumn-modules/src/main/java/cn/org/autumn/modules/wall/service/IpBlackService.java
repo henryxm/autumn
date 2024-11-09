@@ -33,9 +33,9 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
     /**
      * 缓存的黑名单列表，一个刷新周期内，从数据库加载一次
      */
-    private List<String> ipBlackList = new ArrayList<>();
+    private Set<String> ipBlackList = new HashSet<>();
 
-    private List<String> ipBlackSectionList = new ArrayList<>();
+    private Set<String> ipBlackSectionList = new HashSet<>();
 
     /**
      * 一个ip地址统计刷新周期内，统计所有的ip地址及其访问的次数
@@ -52,7 +52,7 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
     public void load() {
         try {
             ipBlackList = baseMapper.getIps(0);
-            List<String> tmpSection = new ArrayList<>();
+            Set<String> tmpSection = new HashSet<>();
             for (String ip : ipBlackList) {
                 if (ip.contains("/")) {
                     tmpSection.add(ip);
@@ -62,6 +62,19 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
         } catch (Exception e) {
             log.error("加载IP黑名单数据出错：", e);
         }
+    }
+
+    public boolean isBlack(String ip) {
+        if (ipBlackList.contains(ip)) {
+            return true;
+        }
+        for (String section : ipBlackSectionList) {
+            boolean is = IPUtils.isInRange(ip, section);
+            if (is) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public boolean isBlack(String ip, String agent) {

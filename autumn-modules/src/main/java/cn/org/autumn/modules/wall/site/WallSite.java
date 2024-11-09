@@ -2,10 +2,11 @@ package cn.org.autumn.modules.wall.site;
 
 import cn.org.autumn.annotation.PageAware;
 import cn.org.autumn.site.SiteFactory;
+import cn.org.autumn.site.TemplateFactory;
 import org.springframework.stereotype.Component;
 
 @Component
-public class WallSite implements SiteFactory.Site {
+public class WallSite implements SiteFactory.Site, TemplateFactory.Template {
     public final static String siteId = "wall";
     public final static String pack = "wall";
 
@@ -26,6 +27,13 @@ public class WallSite implements SiteFactory.Site {
 
     @PageAware(login = true)
     public String shield = "modules/wall/shield";
+
+//    @PageAware(login = false)
+//    public String check = "check";
+//
+//    public String getCheckKey() {
+//        return getKey("check");
+//    }
 
     public String getShieldKey() {
         return getKey("shield");

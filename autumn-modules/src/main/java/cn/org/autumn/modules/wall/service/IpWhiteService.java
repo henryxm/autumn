@@ -61,6 +61,19 @@ public class IpWhiteService extends WallCounter<IpWhiteDao, IpWhiteEntity> imple
         return 0 < baseMapper.hasIp(ip);
     }
 
+    public boolean isWhite(String ip) {
+        if (ipWhiteList.contains(ip)) {
+            return true;
+        }
+        for (String section : ipWhiteSectionList) {
+            boolean is = IPUtils.isInRange(ip, section);
+            if (is) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public boolean isWhite(String ip, String agent) {
         try {
             if (!wallFactory.isIpWhiteEnable())

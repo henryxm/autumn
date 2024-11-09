@@ -7,7 +7,7 @@ import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
+import java.util.Set;
 
 /**
  * IP黑名单
@@ -33,5 +33,5 @@ public interface IpBlackDao extends BaseMapper<IpBlackEntity> {
     Integer clear();
 
     @Select("select wi.ip from wall_ip_black wi where wi.available = #{available}")
-    List<String> getIps(@Param("available") Integer available);
+    Set<String> getIps(@Param("available") Integer available);
 }

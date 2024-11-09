@@ -32,10 +32,15 @@ public class ShieldController extends ShieldControllerGen {
         return shieldService.print() ? "打印日志" : "关闭日志";
     }
 
+    @RequestMapping("/attack")
+    public String attack(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        return shieldService.attack() ? "攻击模式" : "和平模式";
+    }
+
     @RequestMapping("/reset")
     public String reset(HttpServletRequest request, HttpServletResponse response) throws IOException {
         shieldService.onOneMinute();
-        shieldService.onTenMinute();
+        shieldService.onOneDay();
         return "已重置";
     }
 }
