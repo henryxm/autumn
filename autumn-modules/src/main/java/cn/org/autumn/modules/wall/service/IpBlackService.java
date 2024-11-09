@@ -33,7 +33,7 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
     /**
      * 一个ip地址统计刷新周期内，ip访问次数大于该值后，把ip地址加入到黑名单
      */
-    private int lastCount = 100;
+    private int lastCount = 500;
 
     /**
      * 缓存的黑名单列表，一个刷新周期内，从数据库加载一次
@@ -126,10 +126,10 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
             return allIp;
         }
         Map<String, Integer> map = new HashMap<>();
-        if (null != allIp && allIp.size() > 0) {
+        if (null != allIp && !allIp.isEmpty()) {
             for (Map.Entry<String, Integer> kv : allIp.entrySet()) {
                 if (0 == equal) {
-                    if (kv.getValue() == count) {
+                    if (Objects.equals(kv.getValue(), count)) {
                         map.put(kv.getKey(), kv.getValue());
                     }
                 } else if (equal == -1) {
@@ -163,7 +163,7 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
             count++;
             allIp.replace(ip, count);
             if (count > lastCount) {
-                saveBlackIp(ip, agent, count, "触发IP黑名单策略:" + lastCount);
+                saveBlackIp(ip, agent, count, "触发IP黑名单策略:" + lastCount + "次/5秒");
             }
         } else
             allIp.put(ip, 1);
@@ -209,10 +209,32 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
     /**
      * 定时清空对ip地址的检测
      */
-    public void refresh(Integer times) {
-        lastCount = times;
+    public void refresh() {
+        lastCount = getLastCount();
         if (null != allIp)
             allIp.clear();
+    }
+
+    public int getLastCount() {
+        IpBlackEntity black = getByIp("0.0.0.0");
+        if (null == black) {
+            black = selectById(0);
+            if (null == black) {
+                black = new IpBlackEntity();
+                black.setAvailable(1);
+            }
+            black.setIp("0.0.0.0");
+            black.setCount(200L);
+            black.setTag("IP黑名单策略5秒自动拉黑次数");
+            black.setCreateTime(new Date());
+            black.setUserAgent("");
+            insertOrUpdate(black);
+        }
+        if (null == black.getCount() || black.getCount().intValue() < 50) {
+            black.setCount(50L);
+            updateById(black);
+        }
+        return black.getCount().intValue();
     }
 
     @Override
@@ -258,7 +280,7 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
     @Override
     public void onFiveSecond() {
         if (wallFactory.isIpBlackEnable()) {
-            refresh(shieldService.isAttack() ? 50 : 100);
+            refresh();
             load();
         }
     }
