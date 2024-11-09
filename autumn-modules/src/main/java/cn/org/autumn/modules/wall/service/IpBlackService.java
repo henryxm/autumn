@@ -218,20 +218,22 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
     public int getLastCount() {
         IpBlackEntity black = getByIp("0.0.0.0");
         if (null == black) {
-            black = selectById(0);
+            black = selectById(1);
             if (null == black) {
                 black = new IpBlackEntity();
                 black.setAvailable(1);
             }
             black.setIp("0.0.0.0");
-            black.setCount(200L);
+            black.setCount(500L);
             black.setTag("IP黑名单策略5秒自动拉黑次数");
             black.setCreateTime(new Date());
             black.setUserAgent("");
             insertOrUpdate(black);
         }
         if (null == black.getCount() || black.getCount().intValue() < 50) {
-            black.setCount(50L);
+            black.setCount(500L);
+            black.setTag("IP黑名单策略5秒自动拉黑次数");
+            black.setUserAgent("");
             updateById(black);
         }
         return black.getCount().intValue();
