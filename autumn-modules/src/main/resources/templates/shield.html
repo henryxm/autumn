@@ -1,40 +1,48 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8">
-  <title>人机检测</title>
-  <style>
-    .container {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .submit {
-      height: 60px;
-      width: 300px;
-      font-size: 40px;
-      margin-top: 100px;
-    }
-
-    .icon {
-      display: inline-block;
-      fill: var(--cb-color-text-brand, #ff6a00);
-      margin-top: -1px;
-      height: 40px;
-      width: 80px;
-      margin-top: 100px;
-    }
-  </style>
+    <meta charset="utf-8">
+    <title>人机检测</title>
+    <style>
+        .container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+        .submit {
+            height: 60px;
+            width: 300px;
+            font-size: 40px;
+            margin-top: 50px;
+        }
+        .icon {
+            display: inline-block;
+            fill: var(--cb-color-text-brand, #ff6a00);
+            margin-top: -1px;
+            height: 40px;
+            width: 80px;
+            margin-top: 50px;
+        }
+    </style>
 </head>
 <body>
 <form class="container" action="/shield/test" method="POST">
-  <svg class="icon">
-    <path d="M21.4 22.4h21.2v-4.8H21.4z"
-          data-spm-anchor-id="5176.2020520102.console-base_top-nav.i0.51e31eb9LNAfzA"></path>
-    <path d="M53.3 0H39.2l3.4 4.8L52.9 8c1.9.6 3.1 2.3 3.1 4.3v15.4c0 2-1.2 3.7-3.1 4.3l-10.3 3.2-3.4 4.8h14.1c6 0 10.7-4.8 10.7-10.7V10.7C64 4.7 59.2 0 53.3 0M10.7 0h14.1l-3.4 4.8L11.1 8A4.5 4.5 0 0 0 8 12.3v15.4c0 2 1.2 3.7 3.1 4.3l10.3 3.2 3.4 4.8H10.7C4.7 40 0 35.2 0 29.3V10.7C0 4.7 4.8 0 10.7 0"></path>
-  </svg>
-  <input type="submit" class="submit" value="点击: 人机检测">
+    <div style="margin-top: 100px">当前系统遇大规模DDos流量攻击，触发系统防御模式</div>
+    <div style="margin-top: 10px">防御模式下，访问网站可能有延迟， 请耐心等待刷新</div>
+    <div>
+        <svg class="icon">
+            <path d="M21.4 22.4h21.2v-4.8H21.4z"
+                  data-spm-anchor-id="5176.2020520102.console-base_top-nav.i0.51e31eb9LNAfzA"></path>
+            <path d="M53.3 0H39.2l3.4 4.8L52.9 8c1.9.6 3.1 2.3 3.1 4.3v15.4c0 2-1.2 3.7-3.1 4.3l-10.3 3.2-3.4 4.8h14.1c6 0 10.7-4.8 10.7-10.7V10.7C64 4.7 59.2 0 53.3 0M10.7 0h14.1l-3.4 4.8L11.1 8A4.5 4.5 0 0 0 8 12.3v15.4c0 2 1.2 3.7 3.1 4.3l10.3 3.2 3.4 4.8H10.7C4.7 40 0 35.2 0 29.3V10.7C0 4.7 4.8 0 10.7 0"></path>
+        </svg>
+        <input type="submit" class="submit" value="点击: 人机检测">
+    </div>
+    <div style="margin-top: 50px">我已不再年轻，不必担心谁喜欢我，谁不喜欢我</div>
+    <div style="margin-top: 10px">我有更重要的事情要做。如果你爱我，我就爱你</div>
+    <div style="margin-top: 10px">如果你支持我，我支持你。如果你恨我，我不在乎</div>
+    <div style="margin-top: 10px">如果你愿意公平竞争，化敌为友，我永远为你敞开</div>
+    <div style="margin-top: 10px">不管这个世界上有或者是没有你，生活仍将继续</div>
 </form>
 </body>
 </html>

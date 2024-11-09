@@ -62,6 +62,7 @@ public class WallService {
         HttpServletRequest request = (HttpServletRequest) servletRequest;
         HttpServletResponse response = (HttpServletResponse) servletResponse;
         String ip = IPUtils.getIp(request);
+        String userAgent = request.getHeader("user-agent");
         if (shieldService.isAttack()) {
             if (ipBlackService.isBlack(ip)) {
                 if (null != response) {
@@ -79,13 +80,13 @@ public class WallService {
                 String html = shieldService.getHtml();
                 byte[] data = html.getBytes();
                 IOUtils.write(data, response.getOutputStream());
+                ipBlackService.countIp(ip, userAgent);
                 return false;
             }
         }
         try {
             String remoteip = request.getHeader("remoteip");
             String host = request.getHeader("host");
-            String userAgent = request.getHeader("user-agent");
             String refer = request.getHeader("refer");
             if (logEnable)
                 print(request);

@@ -11,6 +11,7 @@ import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -25,10 +26,14 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
     @Autowired
     WallFactory wallFactory;
 
+    @Autowired
+    @Lazy
+    ShieldService shieldService;
+
     /**
      * 一个ip地址统计刷新周期内，ip访问次数大于该值后，把ip地址加入到黑名单
      */
-    private int lastCount = 1000;
+    private int lastCount = 100;
 
     /**
      * 缓存的黑名单列表，一个刷新周期内，从数据库加载一次
@@ -158,7 +163,7 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
             count++;
             allIp.replace(ip, count);
             if (count > lastCount) {
-                saveBlackIp(ip, agent, count, "触发IP黑名单策略");
+                saveBlackIp(ip, agent, count, "触发IP黑名单策略:" + lastCount);
             }
         } else
             allIp.put(ip, 1);
@@ -253,7 +258,7 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
     @Override
     public void onFiveSecond() {
         if (wallFactory.isIpBlackEnable()) {
-            refresh(1000);
+            refresh(shieldService.isAttack() ? 50 : 100);
             load();
         }
     }
