@@ -151,6 +151,7 @@ public class ShiroConfig {
             filterMap.put("/swagger-resources/**", "anon");
         }
 
+        filterMap.put("/shield/**", "anon");
         filterMap.put("/statics/**", "anon");
         filterMap.put("/static/**", "anon");
         filterMap.put("/js/**", "anon");

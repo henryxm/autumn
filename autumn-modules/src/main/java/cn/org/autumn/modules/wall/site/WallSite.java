@@ -24,6 +24,13 @@ public class WallSite implements SiteFactory.Site {
     @PageAware(login = true)
     public String host = "modules/wall/host";
 
+    @PageAware(login = true)
+    public String shield = "modules/wall/shield";
+
+    public String getShieldKey() {
+        return getKey("shield");
+    }
+
     public String getIpVisitKey() {
         return getKey("ipvisit");
     }

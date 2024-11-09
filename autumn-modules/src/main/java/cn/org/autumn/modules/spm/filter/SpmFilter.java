@@ -21,6 +21,7 @@ import org.slf4j.LoggerFactory;
 import javax.servlet.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.util.Map;
 
 public class SpmFilter extends FormAuthenticationFilter {
@@ -31,11 +32,11 @@ public class SpmFilter extends FormAuthenticationFilter {
     private static SuperPositionModelService superPositionModelService;
     private static ClientDetailsService clientDetailsService;
 
-    protected boolean isEnabled(ServletRequest request, ServletResponse response) {
+    protected boolean isEnabled(ServletRequest request, ServletResponse response) throws IOException {
         if (null == wallService)
             wallService = (WallService) Config.getBean("wallService");
         if (null != wallService)
-            return wallService.isEnabled(request, response, false,false);
+            return wallService.isEnabled(request, response, false,false,true);
         return true;
     }
 
