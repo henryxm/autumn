@@ -18,15 +18,14 @@ public abstract class LockOnce extends TagRunnable {
     public void run() {
         if (null == redissonClient)
             redissonClient = (RedissonClient) Config.getBean(RedissonClient.class);
-        if (null != redissonClient && null != getTagValue() && null != getTagValue().type()) {
+        if (null != redissonClient && null != getTagValue()) {
             TagValue value = getTagValue();
             String id = "loopjob:lock:" + value.type().getSimpleName() + ":" + value.method();
             RLock lock = redissonClient.getLock(id);
             try {
                 if (lock.isLocked())
                     return;
-                if (log.isDebugEnabled())
-                    log.debug("锁定任务:{}, ID:{}", value.tag(), id);
+                log.info("锁定任务:{}, ID:{}", value.tag(), id);
                 if (value.time() > 0)
                     lock.lock(value.time(), TimeUnit.MINUTES);
                 else
