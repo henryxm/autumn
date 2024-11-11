@@ -1,5 +1,7 @@
 package cn.org.autumn.thread;
 
+import cn.org.autumn.config.Config;
+import cn.org.autumn.site.UpgradeFactory;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,6 +23,8 @@ public abstract class TagRunnable implements Runnable, Tag {
     Class<?> type = null;
 
     TagValue tagValue = null;
+
+    static UpgradeFactory upgradeFactory;
 
     public TagValue getTagValue() {
         if (null != tagValue)
@@ -104,6 +108,12 @@ public abstract class TagRunnable implements Runnable, Tag {
 
     @Override
     public void run() {
+        if (null == upgradeFactory) {
+            upgradeFactory = (UpgradeFactory) Config.getBean(UpgradeFactory.class);
+        }
+        //如果系统没启动完成，在不执行定时任务线程
+        if (null != upgradeFactory && !upgradeFactory.isDone())
+            return;
         long start = System.currentTimeMillis();
         try {
             exe();
