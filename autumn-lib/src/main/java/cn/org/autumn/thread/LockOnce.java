@@ -16,30 +16,30 @@ public abstract class LockOnce extends TagRunnable {
 
     @Override
     public void run() {
-        if (!can())
-            return;
-        if (null == redissonClient)
-            redissonClient = (RedissonClient) Config.getBean(RedissonClient.class);
-        if (null != redissonClient && null != getTagValue()) {
-            TagValue value = getTagValue();
-            String id = "loopjob:lock:" + value.type().getSimpleName() + ":" + value.method();
-            RLock lock = redissonClient.getLock(id);
-            try {
-                if (lock.isLocked())
-                    return;
-                boolean isLocked = lock.tryLock(0, value.time(), TimeUnit.MINUTES);
-                if (isLocked) {
-                    log.debug("锁定任务:{}, ID:{}", value.tag(), id);
-                    super.run();
+        if (can()) {
+            if (null == redissonClient)
+                redissonClient = (RedissonClient) Config.getBean(RedissonClient.class);
+            if (null != redissonClient && null != getTagValue()) {
+                TagValue value = getTagValue();
+                String id = "loopjob:lock:" + value.type().getSimpleName() + ":" + value.method();
+                RLock lock = redissonClient.getLock(id);
+                try {
+                    if (!lock.isLocked()) {
+                        boolean isLocked = lock.tryLock(0, value.time(), TimeUnit.MINUTES);
+                        if (isLocked) {
+                            log.debug("锁定任务:{}, ID:{}", value.tag(), id);
+                            super.run();
+                        }
+                    }
+                } catch (Exception e) {
+                    log.error("锁定任务:{}", e.getMessage());
+                } finally {
+                    if (null != lock && lock.isHeldByCurrentThread())
+                        lock.unlock();
                 }
-            } catch (Exception e) {
-                log.error("锁定任务:{}", e.getMessage());
-            } finally {
-                if (null != lock && lock.isHeldByCurrentThread())
-                    lock.unlock();
+            } else {
+                super.run();
             }
-        } else {
-            super.run();
         }
         TagTaskExecutor.remove(LockOnce.this);
     }

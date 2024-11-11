@@ -116,23 +116,23 @@ public abstract class TagRunnable implements Runnable, Tag {
 
     @Override
     public void run() {
-        if (!can())
-            return;
-        long start = System.currentTimeMillis();
-        try {
-            exe();
-        } catch (Throwable t) {
-            if (log.isDebugEnabled()) {
-                log.debug("任务名称:{}, 异常信息:{}", getTag(), t.getMessage());
+        if (can()) {
+            long start = System.currentTimeMillis();
+            try {
+                exe();
+            } catch (Throwable t) {
+                if (log.isDebugEnabled()) {
+                    log.debug("任务名称:{}, 异常信息:{}", getTag(), t.getMessage());
+                }
+            } finally {
+                long end = System.currentTimeMillis();
+                long time = (end - start);
+                if (log.isDebugEnabled()) {
+                    log.debug("执行任务:{}, 方法:{}, 用时:{}毫秒, 线程:{}", getTag(), getMethod(), time, getName());
+                }
             }
-        } finally {
-            long end = System.currentTimeMillis();
-            long time = (end - start);
-            if (log.isDebugEnabled()) {
-                log.debug("执行任务:{}, 方法:{}, 用时:{}毫秒, 线程:{}", getTag(), getMethod(), time, getName());
-            }
-            TagTaskExecutor.remove(TagRunnable.this);
         }
+        TagTaskExecutor.remove(TagRunnable.this);
     }
 
     public void exe() {
