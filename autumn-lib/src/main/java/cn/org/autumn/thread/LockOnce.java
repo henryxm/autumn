@@ -31,7 +31,7 @@ public abstract class LockOnce extends TagRunnable {
                     lock.lock(value.time(), TimeUnit.MINUTES);
                 else
                     lock.lock();
-                log.info("锁定任务:{}, ID:{}", value.tag(), id);
+                log.debug("锁定任务:{}, ID:{}", value.tag(), id);
                 super.run();
             } catch (Exception e) {
                 log.error("锁定任务:{}", e.getMessage());
