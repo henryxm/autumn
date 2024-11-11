@@ -56,6 +56,9 @@ public class WallService {
     @Autowired
     ShieldService shieldService;
 
+    @Autowired
+    JumpService jumpService;
+
     public boolean isEnabled(ServletRequest servletRequest, ServletResponse servletResponse, boolean logEnable, boolean counter, boolean shield) throws IOException {
         if (!wallFactory.isOpen())
             return true;
@@ -90,6 +93,16 @@ public class WallService {
             String refer = request.getHeader("refer");
             if (logEnable)
                 print(request);
+            String jump = jumpService.getJump(host, request.getRequestURI());
+            if (StringUtils.isNotBlank(jump)) {
+                response.setStatus(200);
+                response.reset();
+                String html = jumpService.getHtml(jump);
+                byte[] data = html.getBytes();
+                IOUtils.write(data, response.getOutputStream());
+                ipBlackService.countIp(ip, userAgent);
+                return false;
+            }
             if (hostService.isBlack(host) || !hostFactory.isAllowed(request, response)) {
                 if (null != response) {
                     response.setStatus(500);

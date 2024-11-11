@@ -1,23 +1,29 @@
 package cn.org.autumn.modules.wall.entity;
 
-import cn.org.autumn.table.annotation.Column;
-import cn.org.autumn.table.annotation.Table;
+import cn.org.autumn.table.annotation.*;
 import com.baomidou.mybatisplus.annotations.TableId;
 import com.baomidou.mybatisplus.annotations.TableName;
 
 import java.io.Serializable;
 
-@TableName("wall_shield")
-@Table(value = "wall_shield", comment = "攻击防御")
-public class ShieldEntity implements Serializable {
+@TableName("wall_jump")
+@Table(value = "wall_jump", comment = "防御跳转")
+@Indexes({@Index(name = "hosturi", fields = {@IndexField(field = "host"), @IndexField(field = "uri")}, indexType = IndexTypeEnum.UNIQUE, indexMethod = IndexMethodEnum.BTREE)})
+public class JumpEntity implements Serializable {
     private static final long serialVersionUID = 1L;
 
     @TableId
     @Column(isKey = true, type = "bigint", length = 20, isNull = false, isAutoIncrement = true, comment = "id")
     private Long id;
 
-    @Column(comment = "资源", isUnique = true)
+    @Column(comment = "域名", length = 50, defaultValue = "")
+    private String host;
+
+    @Column(comment = "资源", length = 50, defaultValue = "")
     private String uri;
+
+    @Column(comment = "跳转")
+    private String url;
 
     @Column(comment = "开启")
     private boolean enable;
@@ -30,12 +36,28 @@ public class ShieldEntity implements Serializable {
         this.id = id;
     }
 
+    public String getHost() {
+        return host;
+    }
+
+    public void setHost(String host) {
+        this.host = host;
+    }
+
     public String getUri() {
         return uri;
     }
 
     public void setUri(String uri) {
         this.uri = uri;
+    }
+
+    public String getUrl() {
+        return url;
+    }
+
+    public void setUrl(String url) {
+        this.url = url;
     }
 
     public boolean isEnable() {

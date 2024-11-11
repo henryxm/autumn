@@ -28,12 +28,12 @@ public class WallSite implements SiteFactory.Site, TemplateFactory.Template {
     @PageAware(login = true)
     public String shield = "modules/wall/shield";
 
-//    @PageAware(login = false)
-//    public String check = "check";
-//
-//    public String getCheckKey() {
-//        return getKey("check");
-//    }
+    @PageAware(login = true)
+    public String jump = "modules/wall/jump";
+
+    public String getJumpKey() {
+        return getKey("jump");
+    }
 
     public String getShieldKey() {
         return getKey("shield");
