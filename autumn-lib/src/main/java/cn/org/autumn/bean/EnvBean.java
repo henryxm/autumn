@@ -39,6 +39,12 @@ public class EnvBean implements EnvHandler {
     @EnvAware("root.domain")
     String rootDomain;
 
+    @EnvAware("node.name")
+    String nodeName;
+
+    @EnvAware("node.tag")
+    String nodeTag;
+
     @EnvAware("table.init")
     boolean tableInit = true;
 
@@ -120,6 +126,26 @@ public class EnvBean implements EnvHandler {
 
     public void setRootDomain(String rootDomain) {
         this.rootDomain = rootDomain;
+    }
+
+    public String getNodeName() {
+        if (null == nodeName)
+            nodeName = "Name";
+        return nodeName;
+    }
+
+    public void setNodeName(String nodeName) {
+        this.nodeName = nodeName;
+    }
+
+    public String getNodeTag() {
+        if (null == nodeTag)
+            nodeTag = "Tag";
+        return nodeTag;
+    }
+
+    public void setNodeTag(String nodeTag) {
+        this.nodeTag = nodeTag;
     }
 
     public boolean isTableInit() {
