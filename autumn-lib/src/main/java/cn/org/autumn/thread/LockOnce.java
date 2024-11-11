@@ -16,6 +16,8 @@ public abstract class LockOnce extends TagRunnable {
 
     @Override
     public void run() {
+        if (!can())
+            return;
         if (null == redissonClient)
             redissonClient = (RedissonClient) Config.getBean(RedissonClient.class);
         if (null != redissonClient && null != getTagValue()) {
@@ -40,5 +42,6 @@ public abstract class LockOnce extends TagRunnable {
         } else {
             super.run();
         }
+        TagTaskExecutor.remove(LockOnce.this);
     }
 }

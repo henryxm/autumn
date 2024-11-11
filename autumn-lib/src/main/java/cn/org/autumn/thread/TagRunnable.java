@@ -106,13 +106,17 @@ public abstract class TagRunnable implements Runnable, Tag {
         this.type = type;
     }
 
-    @Override
-    public void run() {
+    public boolean can() {
         if (null == upgradeFactory) {
             upgradeFactory = (UpgradeFactory) Config.getBean(UpgradeFactory.class);
         }
         //如果系统没启动完成，在不执行定时任务线程
-        if (null != upgradeFactory && !upgradeFactory.isDone())
+        return null == upgradeFactory || upgradeFactory.isDone();
+    }
+
+    @Override
+    public void run() {
+        if (!can())
             return;
         long start = System.currentTimeMillis();
         try {
