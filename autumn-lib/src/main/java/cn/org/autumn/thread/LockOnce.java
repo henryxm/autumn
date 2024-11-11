@@ -10,7 +10,7 @@ import java.util.concurrent.TimeUnit;
 
 public abstract class LockOnce extends TagRunnable {
 
-    Logger log = LoggerFactory.getLogger(getClass());
+    Logger log = LoggerFactory.getLogger(LockOnce.class);
 
     private static RedissonClient redissonClient;
 
