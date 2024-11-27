@@ -47,7 +47,7 @@ public class SpmFilter extends FormAuthenticationFilter {
         return super.createToken(request, response);
     }
 
-    public String getAccessToken(ServletRequest request) {
+    public static String getAccessToken(ServletRequest request) {
         try {
             OAuthAccessResourceRequest oauthRequest = new OAuthAccessResourceRequest((HttpServletRequest) request, ParameterStyle.QUERY, ParameterStyle.HEADER);
             String accessToken = oauthRequest.getAccessToken();
