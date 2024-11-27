@@ -36,7 +36,7 @@ public class SpmFilter extends FormAuthenticationFilter {
         if (null == wallService)
             wallService = (WallService) Config.getBean("wallService");
         if (null != wallService)
-            return wallService.isEnabled(request, response, false,false,true);
+            return wallService.isEnabled(request, response, false, false, true);
         return true;
     }
 
@@ -51,19 +51,34 @@ public class SpmFilter extends FormAuthenticationFilter {
         try {
             OAuthAccessResourceRequest oauthRequest = new OAuthAccessResourceRequest((HttpServletRequest) request, ParameterStyle.QUERY, ParameterStyle.HEADER);
             String accessToken = oauthRequest.getAccessToken();
-            Object resp = JSON.parse(accessToken);
-            Map map = (Map) resp;
-            String accessTokenKey = "";
-            if (map.containsKey(OAuth.OAUTH_ACCESS_TOKEN)) {
-                accessTokenKey = (String) map.get(OAuth.OAUTH_ACCESS_TOKEN);
+            if (StringUtils.isBlank(accessToken))
+                return "";
+            accessToken = accessToken.trim();
+            if (accessToken.startsWith("{") && accessToken.endsWith("}") && accessToken.contains("\"access_token\":")) {
+                if (log.isDebugEnabled())
+                    log.debug("数据令牌:{}", accessToken);
+                Object resp = JSON.parse(accessToken);
+                Map map = (Map) resp;
+                String accessTokenKey = "";
+                if (map.containsKey(OAuth.OAUTH_ACCESS_TOKEN)) {
+                    accessTokenKey = (String) map.get(OAuth.OAUTH_ACCESS_TOKEN);
+                }
+                return accessTokenKey;
+            } else {
+                if (log.isDebugEnabled())
+                    log.debug("字符令牌:{}", accessToken);
+                if (accessToken.contains("\"") || accessToken.contains("{") || accessToken.contains("}") || accessToken.length() > 100)
+                    return "";
+                else {
+                    return accessToken;
+                }
             }
-            return accessTokenKey;
         } catch (Throwable e) {
             if (request instanceof HttpServletRequest) {
                 HttpServletRequest httpServletRequest = (HttpServletRequest) request;
                 log.debug(httpServletRequest.getServletPath());
             }
-            log.debug("getAccessToken:", e);
+            log.debug("令牌解析:{}", e.getMessage());
         }
         return "";
     }
