@@ -16,11 +16,14 @@ public class ShieldEntity implements Serializable {
     @Column(isKey = true, type = "bigint", length = 20, isNull = false, isAutoIncrement = true, comment = "id")
     private Long id;
 
-    @Column(comment = "资源", isUnique = true)
+    @Column(comment = "资源", isUnique = true, defaultValue = "")
     private String uri;
 
-    @Column(comment = "开启")
+    @Column(comment = "开启", defaultValue = "0")
     private boolean enable;
+
+    @Column(comment = "触发:5秒IP请求次数触发自动防御模式，最低值1000", defaultValue = "1000")
+    private int auto;
 
     public Long getId() {
         return id;
@@ -44,5 +47,13 @@ public class ShieldEntity implements Serializable {
 
     public void setEnable(boolean enable) {
         this.enable = enable;
+    }
+
+    public int getAuto() {
+        return auto;
+    }
+
+    public void setAuto(int auto) {
+        this.auto = auto;
     }
 }
