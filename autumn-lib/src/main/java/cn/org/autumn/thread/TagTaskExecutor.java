@@ -8,7 +8,9 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import java.lang.reflect.Method;
 import java.text.SimpleDateFormat;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.Future;
 
 public class TagTaskExecutor extends ThreadPoolTaskExecutor {
@@ -17,11 +19,21 @@ public class TagTaskExecutor extends ThreadPoolTaskExecutor {
 
     static List<Tag> running = new CopyOnWriteArrayList<>();
 
+    static Set<String> ids = new CopyOnWriteArraySet<>();
+
     public static void remove(Tag task) {
+        if (StringUtils.isNotBlank(task.getId())) {
+            ids.remove(task.getId());
+        }
         running.remove(task);
     }
 
     public void execute(TagRunnable task) {
+        if (StringUtils.isNotBlank(task.getId())) {
+            if (ids.contains(task.getId()))
+                return;
+            ids.add(task.getId());
+        }
         running.add(task);
         super.execute(task);
     }

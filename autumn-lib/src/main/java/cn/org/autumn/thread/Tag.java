@@ -4,6 +4,8 @@ import java.util.Date;
 
 public interface Tag {
 
+    String getId();
+
     String getName();
 
     void setName(String name);

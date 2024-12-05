@@ -18,6 +18,8 @@ public abstract class TagRunnable implements Runnable, Tag {
 
     String tag = "";
 
+    String id = "";
+
     String method = "";
 
     Class<?> type = null;
@@ -25,6 +27,21 @@ public abstract class TagRunnable implements Runnable, Tag {
     TagValue tagValue = null;
 
     static UpgradeFactory upgradeFactory;
+
+    public TagRunnable() {
+    }
+
+    public TagRunnable(String id) {
+        this.id = id;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
 
     public TagValue getTagValue() {
         if (null != tagValue)

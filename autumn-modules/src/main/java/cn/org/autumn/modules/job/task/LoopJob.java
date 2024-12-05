@@ -272,236 +272,210 @@ public class LoopJob extends Factory implements LoadFactory.Must {
     }
 
     public static void runOneSecondJob() {
-        if (oneSecondJobList.size() > 0) {
-            for (Job job : oneSecondJobList) {
-                try {
-                    if (!job.isEnabled())
-                        continue;
-                    log.debug("Run One Second Job:{}", job.getClass().getSimpleName());
-                    if (job instanceof OneSecond)
-                        ((OneSecond) job).onOneSecond();
-                    else
-                        job.runJob();
-                } catch (Exception e) {
-                    print(job, e);
-                }
+        for (Job job : oneSecondJobList) {
+            try {
+                if (!job.isEnabled())
+                    continue;
+                log.debug("Run One Second Job:{}", job.getClass().getSimpleName());
+                if (job instanceof OneSecond)
+                    ((OneSecond) job).onOneSecond();
+                else
+                    job.runJob();
+            } catch (Exception e) {
+                print(job, e);
             }
         }
     }
 
     public static void runThreeSecondJob() {
-        if (threeSecondJobList.size() > 0) {
-            for (Job job : threeSecondJobList) {
-                try {
-                    if (!job.isEnabled())
-                        continue;
-                    log.debug("Run Three Second Job:{}", job.getClass().getSimpleName());
-                    if (job instanceof ThreeSecond)
-                        ((ThreeSecond) job).onThreeSecond();
-                    else
-                        job.runJob();
-                } catch (Exception e) {
-                    print(job, e);
-                }
+        for (Job job : threeSecondJobList) {
+            try {
+                if (!job.isEnabled())
+                    continue;
+                log.debug("Run Three Second Job:{}", job.getClass().getSimpleName());
+                if (job instanceof ThreeSecond)
+                    ((ThreeSecond) job).onThreeSecond();
+                else
+                    job.runJob();
+            } catch (Exception e) {
+                print(job, e);
             }
         }
     }
 
     public static void runFiveSecondJob() {
-        if (fiveSecondJobList.size() > 0) {
-            for (Job job : fiveSecondJobList) {
-                try {
-                    if (!job.isEnabled())
-                        continue;
-                    log.debug("Run Five Second Job:{}", job.getClass().getSimpleName());
-                    if (job instanceof FiveSecond)
-                        ((FiveSecond) job).onFiveSecond();
-                    else
-                        job.runJob();
-                } catch (Exception e) {
-                    print(job, e);
-                }
+        for (Job job : fiveSecondJobList) {
+            try {
+                if (!job.isEnabled())
+                    continue;
+                log.debug("Run Five Second Job:{}", job.getClass().getSimpleName());
+                if (job instanceof FiveSecond)
+                    ((FiveSecond) job).onFiveSecond();
+                else
+                    job.runJob();
+            } catch (Exception e) {
+                print(job, e);
             }
         }
     }
 
     public static void runTenSecondJob() {
-        if (tenSecondJobList.size() > 0) {
-            for (Job job : tenSecondJobList) {
-                try {
-                    if (!job.isEnabled())
-                        continue;
-                    log.debug("Run Ten Second Job:{}", job.getClass().getSimpleName());
-                    if (job instanceof TenSecond)
-                        ((TenSecond) job).onTenSecond();
-                    else
-                        job.runJob();
-                } catch (Exception e) {
-                    print(job, e);
-                }
+        for (Job job : tenSecondJobList) {
+            try {
+                if (!job.isEnabled())
+                    continue;
+                log.debug("Run Ten Second Job:{}", job.getClass().getSimpleName());
+                if (job instanceof TenSecond)
+                    ((TenSecond) job).onTenSecond();
+                else
+                    job.runJob();
+            } catch (Exception e) {
+                print(job, e);
             }
         }
     }
 
     public static void runThirtySecondJob() {
-        if (thirtySecondJobList.size() > 0) {
-            for (Job job : thirtySecondJobList) {
-                try {
-                    if (!job.isEnabled())
-                        continue;
-                    log.debug("Run Thirty Second Job:{}", job.getClass().getSimpleName());
-                    if (job instanceof ThirtySecond)
-                        ((ThirtySecond) job).onThirtySecond();
-                    else
-                        job.runJob();
-                } catch (Exception e) {
-                    print(job, e);
-                }
+        for (Job job : thirtySecondJobList) {
+            try {
+                if (!job.isEnabled())
+                    continue;
+                log.debug("Run Thirty Second Job:{}", job.getClass().getSimpleName());
+                if (job instanceof ThirtySecond)
+                    ((ThirtySecond) job).onThirtySecond();
+                else
+                    job.runJob();
+            } catch (Exception e) {
+                print(job, e);
             }
         }
     }
 
     public static void runOneMinuteJob() {
-        if (oneMinuteJobList.size() > 0) {
-            for (Job job : oneMinuteJobList) {
-                try {
-                    if (!job.isEnabled())
-                        continue;
-                    log.debug("Run One Minute Job:{}", job.getClass().getSimpleName());
-                    if (job instanceof OneMinute)
-                        ((OneMinute) job).onOneMinute();
-                    else
-                        job.runJob();
-                } catch (Exception e) {
-                    print(job, e);
-                }
+        for (Job job : oneMinuteJobList) {
+            try {
+                if (!job.isEnabled())
+                    continue;
+                log.debug("Run One Minute Job:{}", job.getClass().getSimpleName());
+                if (job instanceof OneMinute)
+                    ((OneMinute) job).onOneMinute();
+                else
+                    job.runJob();
+            } catch (Exception e) {
+                print(job, e);
             }
         }
     }
 
     public static void runFiveMinuteJob() {
-        if (fiveMinuteJobList.size() > 0) {
-            for (Job job : fiveMinuteJobList) {
-                try {
-                    if (!job.isEnabled())
-                        continue;
-                    log.debug("Run Five Minute Job:{}", job.getClass().getSimpleName());
-                    if (job instanceof FiveMinute)
-                        ((FiveMinute) job).onFiveMinute();
-                    else
-                        job.runJob();
-                } catch (Exception e) {
-                    print(job, e);
-                }
+        for (Job job : fiveMinuteJobList) {
+            try {
+                if (!job.isEnabled())
+                    continue;
+                log.debug("Run Five Minute Job:{}", job.getClass().getSimpleName());
+                if (job instanceof FiveMinute)
+                    ((FiveMinute) job).onFiveMinute();
+                else
+                    job.runJob();
+            } catch (Exception e) {
+                print(job, e);
             }
         }
     }
 
     public static void runTenMinuteJob() {
-        if (tenMinuteJobList.size() > 0) {
-            for (Job job : tenMinuteJobList) {
-                try {
-                    if (!job.isEnabled())
-                        continue;
-                    log.debug("Run Ten Minute Job:{}", job.getClass().getSimpleName());
-                    if (job instanceof TenMinute)
-                        ((TenMinute) job).onTenMinute();
-                    else
-                        job.runJob();
-                } catch (Exception e) {
-                    print(job, e);
-                }
+        for (Job job : tenMinuteJobList) {
+            try {
+                if (!job.isEnabled())
+                    continue;
+                log.debug("Run Ten Minute Job:{}", job.getClass().getSimpleName());
+                if (job instanceof TenMinute)
+                    ((TenMinute) job).onTenMinute();
+                else
+                    job.runJob();
+            } catch (Exception e) {
+                print(job, e);
             }
         }
     }
 
     public static void runThirtyMinuteJob() {
-        if (thirtyMinuteJobList.size() > 0) {
-            for (Job job : thirtyMinuteJobList) {
-                try {
-                    if (!job.isEnabled())
-                        continue;
-                    log.debug("Run Thirty Minute Job:{}", job.getClass().getSimpleName());
-                    if (job instanceof ThirtyMinute)
-                        ((ThirtyMinute) job).onThirtyMinute();
-                    else
-                        job.runJob();
-                } catch (Exception e) {
-                    print(job, e);
-                }
+        for (Job job : thirtyMinuteJobList) {
+            try {
+                if (!job.isEnabled())
+                    continue;
+                log.debug("Run Thirty Minute Job:{}", job.getClass().getSimpleName());
+                if (job instanceof ThirtyMinute)
+                    ((ThirtyMinute) job).onThirtyMinute();
+                else
+                    job.runJob();
+            } catch (Exception e) {
+                print(job, e);
             }
         }
     }
 
 
     public static void runOneHourJob() {
-        if (oneHourJobList.size() > 0) {
-            for (Job job : oneHourJobList) {
-                try {
-                    if (!job.isEnabled())
-                        continue;
-                    log.debug("Run One Hour Job:{}", job.getClass().getSimpleName());
-                    if (job instanceof OneHour)
-                        ((OneHour) job).onOneHour();
-                    else
-                        job.runJob();
-                } catch (Exception e) {
-                    print(job, e);
-                }
+        for (Job job : oneHourJobList) {
+            try {
+                if (!job.isEnabled())
+                    continue;
+                log.debug("Run One Hour Job:{}", job.getClass().getSimpleName());
+                if (job instanceof OneHour)
+                    ((OneHour) job).onOneHour();
+                else
+                    job.runJob();
+            } catch (Exception e) {
+                print(job, e);
             }
         }
     }
 
     public static void runTenHourJob() {
-        if (tenHourJobList.size() > 0) {
-            for (Job job : tenHourJobList) {
-                try {
-                    if (!job.isEnabled())
-                        continue;
-                    log.debug("Run Ten Hour Job:{}", job.getClass().getSimpleName());
-                    if (job instanceof TenHour)
-                        ((TenHour) job).onTenHour();
-                    else
-                        job.runJob();
-                } catch (Exception e) {
-                    print(job, e);
-                }
+        for (Job job : tenHourJobList) {
+            try {
+                if (!job.isEnabled())
+                    continue;
+                log.debug("Run Ten Hour Job:{}", job.getClass().getSimpleName());
+                if (job instanceof TenHour)
+                    ((TenHour) job).onTenHour();
+                else
+                    job.runJob();
+            } catch (Exception e) {
+                print(job, e);
             }
         }
     }
 
     public static void runOneDayJob() {
-        if (oneDayJobList.size() > 0) {
-            for (Job job : oneDayJobList) {
-                try {
-                    if (!job.isEnabled())
-                        continue;
-                    log.debug("Run Day Job:{}", job.getClass().getSimpleName());
-                    if (job instanceof OneDay)
-                        ((OneDay) job).onOneDay();
-                    else
-                        job.runJob();
-                } catch (Exception e) {
-                    print(job, e);
-                }
+        for (Job job : oneDayJobList) {
+            try {
+                if (!job.isEnabled())
+                    continue;
+                log.debug("Run Day Job:{}", job.getClass().getSimpleName());
+                if (job instanceof OneDay)
+                    ((OneDay) job).onOneDay();
+                else
+                    job.runJob();
+            } catch (Exception e) {
+                print(job, e);
             }
         }
     }
 
     public static void runOneWeekJob() {
-        if (oneWeekJobList.size() > 0) {
-            for (Job job : oneWeekJobList) {
-                try {
-                    if (!job.isEnabled())
-                        continue;
-                    log.debug("Run Week Job:{}", job.getClass().getSimpleName());
-                    if (job instanceof OneWeek)
-                        ((OneWeek) job).onOneWeek();
-                    else
-                        job.runJob();
-                } catch (Exception e) {
-                    print(job, e);
-                }
+        for (Job job : oneWeekJobList) {
+            try {
+                if (!job.isEnabled())
+                    continue;
+                log.debug("Run Week Job:{}", job.getClass().getSimpleName());
+                if (job instanceof OneWeek)
+                    ((OneWeek) job).onOneWeek();
+                else
+                    job.runJob();
+            } catch (Exception e) {
+                print(job, e);
             }
         }
     }

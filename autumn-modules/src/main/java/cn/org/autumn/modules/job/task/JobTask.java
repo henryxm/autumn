@@ -1,12 +1,14 @@
 package cn.org.autumn.modules.job.task;
 
 import cn.org.autumn.annotation.TaskAware;
+import cn.org.autumn.site.UpgradeFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 @Component
-public class JobTask {
+public class JobTask implements UpgradeFactory.Upgrade {
     private final Logger log = LoggerFactory.getLogger(getClass());
 
     private boolean secondJobLock = false;
@@ -35,13 +37,25 @@ public class JobTask {
 
     private boolean weekJobLock = false;
 
+    private static boolean ready = false;
+
+    public static void ready() {
+        ready = true;
+    }
+
+    @Override
+    @Order(Integer.MAX_VALUE / 10)
+    public void upgrade() {
+        ready();
+    }
+
     /**
      * 定时循环任务
      */
     @TaskAware(mode = "all", remark = "一秒定时触发器", cronExpression = "*/1 * * * * ? *")
     public void SecondJob() {
         try {
-            if (secondJobLock)
+            if (secondJobLock || !ready)
                 return;
             secondJobLock = true;
             if (log.isDebugEnabled())
@@ -57,7 +71,7 @@ public class JobTask {
     @TaskAware(mode = "all", remark = "三秒定时触发器", cronExpression = "*/3 * * * * ? *")
     public void ThreeSecondJob() {
         try {
-            if (threeSecondJobLock)
+            if (threeSecondJobLock || !ready)
                 return;
             threeSecondJobLock = true;
             if (log.isDebugEnabled())
@@ -73,7 +87,7 @@ public class JobTask {
     @TaskAware(mode = "all", remark = "五秒定时触发器", cronExpression = "*/5 * * * * ? *")
     public void FiveSecondJob() {
         try {
-            if (fiveSecondJobLock)
+            if (fiveSecondJobLock || !ready)
                 return;
             fiveSecondJobLock = true;
             if (log.isDebugEnabled())
@@ -89,7 +103,7 @@ public class JobTask {
     @TaskAware(mode = "all", remark = "五秒定时触发器", cronExpression = "*/10 * * * * ? *")
     public void TenSecondJob() {
         try {
-            if (tenSecondJobLock)
+            if (tenSecondJobLock || !ready)
                 return;
             tenSecondJobLock = true;
             if (log.isDebugEnabled())
@@ -105,7 +119,7 @@ public class JobTask {
     @TaskAware(mode = "all", remark = "三十秒定时触发器", cronExpression = "*/30 * * * * ? *")
     public void ThirtySecondJob() {
         try {
-            if (thirtySecondJobLock)
+            if (thirtySecondJobLock || !ready)
                 return;
             thirtySecondJobLock = true;
             if (log.isDebugEnabled())
@@ -121,7 +135,7 @@ public class JobTask {
     @TaskAware(mode = "all", remark = "一分钟定时触发器", cronExpression = "0 */1 * * * ? *")
     public void MinuteJob() {
         try {
-            if (minuteJobLock)
+            if (minuteJobLock || !ready)
                 return;
             minuteJobLock = true;
             if (log.isDebugEnabled())
@@ -137,7 +151,7 @@ public class JobTask {
     @TaskAware(mode = "all", remark = "五分钟定时触发器", cronExpression = "0 */5 * * * ? *")
     public void FiveMinuteJob() {
         try {
-            if (fiveMinuteJobLock)
+            if (fiveMinuteJobLock || !ready)
                 return;
             fiveMinuteJobLock = true;
             if (log.isDebugEnabled())
@@ -153,7 +167,7 @@ public class JobTask {
     @TaskAware(mode = "all", remark = "十分钟定时触发器", cronExpression = "0 */10 * * * ? *")
     public void TenMinuteJob() {
         try {
-            if (tenMinuteJobLock)
+            if (tenMinuteJobLock || !ready)
                 return;
             tenMinuteJobLock = true;
             if (log.isDebugEnabled())
@@ -169,7 +183,7 @@ public class JobTask {
     @TaskAware(mode = "all", remark = "三十分钟定时触发器", cronExpression = "0 */30 * * * ? *")
     public void ThirtyMinuteJob() {
         try {
-            if (thirtyMinuteJobLock)
+            if (thirtyMinuteJobLock || !ready)
                 return;
             thirtyMinuteJobLock = true;
             if (log.isDebugEnabled())
@@ -185,7 +199,7 @@ public class JobTask {
     @TaskAware(mode = "all", remark = "一小时定时触发器", cronExpression = "0 0 */1 * * ? *")
     public void HourJob() {
         try {
-            if (hourJobLock)
+            if (hourJobLock || !ready)
                 return;
             hourJobLock = true;
             if (log.isDebugEnabled())
@@ -201,7 +215,7 @@ public class JobTask {
     @TaskAware(mode = "all", remark = "十小时定时触发器", cronExpression = "0 0 */10 * * ? *")
     public void TenHourJob() {
         try {
-            if (tenHourJobLock)
+            if (tenHourJobLock || !ready)
                 return;
             tenHourJobLock = true;
             if (log.isDebugEnabled())
@@ -217,7 +231,7 @@ public class JobTask {
     @TaskAware(mode = "all", remark = "一天定时触发器", cronExpression = "0 0 0 * * ? *")
     public void DayJob() {
         try {
-            if (dayJobLock)
+            if (dayJobLock || !ready)
                 return;
             dayJobLock = true;
             if (log.isDebugEnabled())
@@ -233,7 +247,7 @@ public class JobTask {
     @TaskAware(mode = "all", remark = "一周定时触发器", cronExpression = "0 0 0 ? * MON")
     public void WeekJob() {
         try {
-            if (weekJobLock)
+            if (weekJobLock || !ready)
                 return;
             weekJobLock = true;
             if (log.isDebugEnabled())

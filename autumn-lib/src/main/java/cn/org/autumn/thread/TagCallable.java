@@ -15,9 +15,27 @@ public abstract class TagCallable<V> implements Callable<V>, Tag {
 
     String tag = "";
 
+    String id = "";
+
     String method = "";
 
     Class<?> type = null;
+
+    public TagCallable() {
+    }
+
+    public TagCallable(String id) {
+        this.id = id;
+    }
+
+    @Override
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
 
     @Override
     public String getName() {
