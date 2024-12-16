@@ -14,6 +14,13 @@ public abstract class LockOnce extends TagRunnable {
 
     private static RedissonClient redissonClient;
 
+    public LockOnce() {
+    }
+
+    public LockOnce(String id) {
+        super(id);
+    }
+
     @Override
     public void run() {
         if (can()) {
