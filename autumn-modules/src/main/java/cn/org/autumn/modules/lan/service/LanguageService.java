@@ -11,6 +11,7 @@ import cn.org.autumn.site.LoadFactory;
 import cn.org.autumn.table.utils.HumpConvert;
 import com.google.gson.Gson;
 import io.netty.util.internal.StringUtil;
+import jodd.net.URLDecoder;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -210,6 +211,7 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
         for (int i = 0; i < languages.length; i++) {
             try {
                 String lang = languages[i].trim();
+                lang = URLDecoder.decode(lang);
                 if (lang.contains(":")) {
                     String[] sp = lang.split(":");
                     String lk = sp[0].trim().toLowerCase();
