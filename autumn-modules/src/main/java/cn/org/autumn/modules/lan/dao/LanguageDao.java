@@ -7,6 +7,8 @@ import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 /**
  * 国家语言
  *
@@ -24,4 +26,7 @@ public interface LanguageDao extends BaseMapper<LanguageEntity> {
 
     @Select("select * from sys_language where name = #{name} limit 1")
     LanguageEntity getByKey(@Param("name") String name);
+
+    @Select("select * from sys_language where tag is null or tag = ''")
+    List<LanguageEntity> load();
 }

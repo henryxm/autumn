@@ -11,6 +11,9 @@ import java.util.Objects;
 
 @TableName("sys_language")
 @Table(value = "sys_language", comment = "国家语言")
+@Indexes({
+        @Index(name = "nametag", indexMethod = IndexMethodEnum.BTREE, indexType = IndexTypeEnum.UNIQUE, fields = {@IndexField(field = "name"), @IndexField(field = "tag")}),
+})
 public class LanguageEntity implements Serializable {
     private static final long serialVersionUID = 1L;
 
@@ -18,7 +21,8 @@ public class LanguageEntity implements Serializable {
     @Column(isKey = true, type = "bigint", length = 20, isNull = false, isAutoIncrement = true, comment = "id")
     private Long id;
 
-    @Column(length = 200, isNull = false, isUnique = true, comment = "标识")
+    @Column(length = 200, comment = "标识")
+    @Index
     private String name;
 
     @Column(type = "text", comment = "简体中文(中国)")

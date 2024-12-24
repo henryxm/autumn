@@ -113,7 +113,7 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
         if (loaded)
             return;
         loaded = true;
-        List<LanguageEntity> languageEntityList = baseMapper.selectByMap(new HashMap<>());
+        List<LanguageEntity> languageEntityList = baseMapper.load();
         for (LanguageEntity languageEntity : languageEntityList) {
             f(languageEntity);
         }
