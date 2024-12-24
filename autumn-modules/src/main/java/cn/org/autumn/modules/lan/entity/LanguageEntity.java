@@ -97,9 +97,13 @@ public class LanguageEntity implements Serializable {
     @Column(type = "text", comment = "阿拉伯语(沙特阿拉伯)")
     private String arSa;
 
-    @Column(length = 20, comment = "标签")
+    @Column(length = 20, comment = "标签:用于区分相同Name的不同客户端")
     @Index
     private String tag;
+
+    @Column(length = 10, comment = "固定:通过管理系统修改后，不允许程序动态更新")
+    @Index
+    private String fix;
 
     public Long getId() {
         return id;
@@ -315,6 +319,14 @@ public class LanguageEntity implements Serializable {
 
     public void setTag(String tag) {
         this.tag = tag;
+    }
+
+    public String getFix() {
+        return fix;
+    }
+
+    public void setFix(String fix) {
+        this.fix = fix;
     }
 
     @Override

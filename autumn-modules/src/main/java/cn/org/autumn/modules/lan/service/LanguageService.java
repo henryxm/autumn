@@ -291,7 +291,7 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
         if (null == existed) {
             insert(languageEntity);
         } else {
-            if (update && existed.hashCode() != languageEntity.hashCode()) {
+            if (update && !Objects.equals("1", languageEntity.getFix()) && existed.hashCode() != languageEntity.hashCode()) {
                 existed.merge(languageEntity);
                 updateById(existed);
             }
