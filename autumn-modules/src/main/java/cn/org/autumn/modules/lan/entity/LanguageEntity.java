@@ -319,7 +319,7 @@ public class LanguageEntity implements Serializable {
 
     @Override
     public int hashCode() {
-        return Objects.hash(getName(), getZhCn(), getEnUs(), getZhHk(), getKoKr(), getJaJp(), getTtRu(), getFrFr(), getDeDe(), getViVn(), getThTh(), getMsMy(), getIdId(), getEsEs(), getTrTr(), getUkUk(), getPuPt(), getPlPl(), getMnMn(), getNbNo(), getItIt(), getHeIl(), getElGr(), getFaIr(), getArSa());
+        return Objects.hash(getName(), getZhCn(), getEnUs(), getZhHk(), getKoKr(), getJaJp(), getTtRu(), getFrFr(), getDeDe(), getViVn(), getThTh(), getMsMy(), getIdId(), getEsEs(), getTrTr(), getUkUk(), getPuPt(), getPlPl(), getMnMn(), getNbNo(), getItIt(), getHeIl(), getElGr(), getFaIr(), getArSa(), getTag());
     }
 
     // 合并值

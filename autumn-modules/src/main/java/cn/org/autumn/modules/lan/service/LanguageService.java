@@ -287,7 +287,7 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
     public void put(boolean update, LanguageEntity languageEntity) {
         if (null == languageEntity)
             return;
-        LanguageEntity existed = baseMapper.getByKey(languageEntity.getName());
+        LanguageEntity existed = baseMapper.getByNameTag(languageEntity.getName(), languageEntity.getTag());
         if (null == existed) {
             insert(languageEntity);
         } else {
