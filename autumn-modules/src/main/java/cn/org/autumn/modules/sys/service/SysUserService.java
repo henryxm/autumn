@@ -169,6 +169,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         sysUserEntity.setStatus(1);
         sysUserEntity.setRoleKeys(roleKeys);
         save(sysUserEntity);
+        refresh(sysUserEntity);
         return sysUserEntity;
     }
 
@@ -209,7 +210,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
 
     public SysUserEntity getByUsername(String username) {
         SysUserEntity sysUserEntity = baseMapper.getByUsername(username);
-        if (null == sysUserEntity && null != userHandlers && userHandlers.size() > 0) {
+        if (null == sysUserEntity && null != userHandlers && !userHandlers.isEmpty()) {
             try {
                 for (UserHandler handler : userHandlers) {
                     if (sysConfigService.isSame(handler))
@@ -350,7 +351,9 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
     }
 
     public SysUserEntity getUuid(String uuid) {
-        return baseMapper.getByUuid(uuid);
+        SysUserEntity sysUserEntity = baseMapper.getByUuid(uuid);
+        refresh(sysUserEntity);
+        return sysUserEntity;
     }
 
     public SysUserEntity getByUuid(String uuid) {
@@ -384,6 +387,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
             } catch (Exception e) {
             }
         }
+        refresh(sysUserEntity);
         return sysUserEntity;
     }
 
