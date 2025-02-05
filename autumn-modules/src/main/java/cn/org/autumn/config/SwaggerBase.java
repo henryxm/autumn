@@ -9,7 +9,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class SwaggerBase implements SwaggerHandler {
+public class SwaggerBase {
 
     protected List<GrantType> grantTypes() {
         List<GrantType> grantTypes = new ArrayList<>();
