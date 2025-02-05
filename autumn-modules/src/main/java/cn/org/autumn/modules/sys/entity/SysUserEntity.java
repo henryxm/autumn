@@ -43,6 +43,10 @@ public class SysUserEntity implements Serializable {
     @Column(length = 50, comment = "用户名", isUnique = true)
     private String username;
 
+    @Column(length = 100, comment = "昵称", defaultValue = "")
+    @Index
+    private String nickname;
+
     /**
      * 密码
      */
@@ -291,9 +295,18 @@ public class SysUserEntity implements Serializable {
         this.parent = parent;
     }
 
+    public String getNickname() {
+        return nickname;
+    }
+
+    public void setNickname(String nickname) {
+        this.nickname = nickname;
+    }
+
     public void copy(SysUserEntity entity) {
         this.parentUuid = entity.parentUuid;
         this.username = entity.username;
+        this.nickname = entity.getNickname();
         this.password = entity.password;
         this.salt = entity.salt;
         this.alipay = entity.alipay;
@@ -310,6 +323,7 @@ public class SysUserEntity implements Serializable {
                 getUuid(),
                 getParentUuid(),
                 getUsername(),
+                getNickname(),
                 getPassword(),
                 getSalt(),
                 getEmail(),

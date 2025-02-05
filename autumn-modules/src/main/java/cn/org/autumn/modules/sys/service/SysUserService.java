@@ -7,14 +7,11 @@ import cn.org.autumn.config.Config;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.sys.shiro.SuperPasswordToken;
 import cn.org.autumn.site.InitFactory;
-import cn.org.autumn.utils.Uuid;
+import cn.org.autumn.utils.*;
 import com.baomidou.mybatisplus.mapper.EntityWrapper;
 import com.baomidou.mybatisplus.plugins.Page;
 import com.baomidou.mybatisplus.service.impl.ServiceImpl;
-import cn.org.autumn.utils.Constant;
 import cn.org.autumn.annotation.DataFilter;
-import cn.org.autumn.utils.PageUtils;
-import cn.org.autumn.utils.Query;
 import cn.org.autumn.modules.sys.dao.SysUserDao;
 import cn.org.autumn.modules.sys.entity.SysDeptEntity;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
@@ -303,8 +300,39 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
             sysUserEntity = baseMapper.getByAlipayLike(account);
         if (null == sysUserEntity)
             sysUserEntity = baseMapper.getByIdCardLike(account);
-
+        refresh(sysUserEntity);
         return sysUserEntity;
+    }
+
+    public SysUserEntity getUser(String username) {
+        if (StringUtils.isBlank(username))
+            return null;
+        SysUserEntity sysUserEntity = null;
+        if (Email.isEmail(username)) {
+            sysUserEntity = sysUserDao.getByEmail(username);
+        } else if (Phone.isPhone(username)) {
+            sysUserEntity = sysUserDao.getByPhone(username);
+        } else if (IDCard.isIdCard(username)) {
+            sysUserEntity = sysUserDao.getByIdCard(username);
+        } else if (QQ.isQQ(username)) {
+            sysUserEntity = sysUserDao.getByQq(username);
+        }
+        if (null == sysUserEntity)
+            sysUserEntity = sysUserDao.getByWeixing(username);
+        if (null == sysUserEntity)
+            sysUserEntity = sysUserDao.getByAlipay(username);
+        if (null == sysUserEntity)
+            sysUserEntity = sysUserDao.getByUsername(username);
+        refresh(sysUserEntity);
+        return sysUserEntity;
+    }
+
+    public void refresh(SysUserEntity user) {
+        if (null != user && (StringUtils.isBlank(user.getNickname()) || Objects.equals(user.getUuid(), user.getNickname()))) {
+            String nickname = user.getUuid().substring(0, 6);
+            user.setNickname(nickname);
+            updateById(user);
+        }
     }
 
     public SysUserEntity getUuid(String uuid) {
@@ -384,7 +412,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
 
     @Override
     public void runJob() {
-        if (null != sync && sync.size() > 0) {
+        if (null != sync && !sync.isEmpty()) {
             Iterator<Map.Entry<String, SysUserEntity>> iterator = sync.entrySet().iterator();
             while (iterator.hasNext()) {
                 Map.Entry<String, SysUserEntity> entity = iterator.next();
