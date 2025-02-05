@@ -6,6 +6,8 @@ import cn.org.autumn.cluster.UserMapping;
 import cn.org.autumn.config.Config;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.sys.shiro.SuperPasswordToken;
+import cn.org.autumn.modules.usr.entity.UserProfileEntity;
+import cn.org.autumn.modules.usr.service.UserProfileService;
 import cn.org.autumn.site.InitFactory;
 import cn.org.autumn.utils.*;
 import com.baomidou.mybatisplus.mapper.EntityWrapper;
@@ -60,6 +62,10 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
     @Autowired
     @Lazy
     private SysConfigService sysConfigService;
+
+    @Autowired
+    @Lazy
+    private UserProfileService userProfileService;
 
     @Autowired
     EnvBean envBean;
@@ -329,9 +335,17 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
 
     public void refresh(SysUserEntity user) {
         if (null != user && (StringUtils.isBlank(user.getNickname()) || Objects.equals(user.getUuid(), user.getNickname()))) {
+            UserProfileEntity profile = userProfileService.getByUuid(user.getUuid());
             String nickname = user.getUuid().substring(0, 6);
+            if (null != profile && StringUtils.isNotBlank(profile.getNickname()) && !Objects.equals(profile.getNickname(), user.getUuid())) {
+                nickname = profile.getNickname();
+            }
             user.setNickname(nickname);
             updateById(user);
+            if (null != profile && !Objects.equals(profile.getNickname(), nickname)) {
+                profile.setNickname(nickname);
+                userProfileService.updateById(profile);
+            }
         }
     }
 
