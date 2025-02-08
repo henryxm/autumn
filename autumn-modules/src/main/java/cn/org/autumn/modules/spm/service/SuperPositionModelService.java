@@ -18,13 +18,14 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.lang.reflect.Field;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
-public class SuperPositionModelService extends SuperPositionModelServiceGen implements LoadFactory.Load, LoopJob.OneMinute, LoginFactory.Login {
+public class SuperPositionModelService extends SuperPositionModelServiceGen implements LoadFactory.Load, LoopJob.TenMinute, LoginFactory.Login {
 
     private Logger logger = LoggerFactory.getLogger(getClass());
 
-    private Map<String, SuperPositionModelEntity> sMap = new HashMap<>();
+    private static Map<String, SuperPositionModelEntity> models = new ConcurrentHashMap<>();
 
     @Autowired
     AsyncTaskExecutor asyncTaskExecutor;
@@ -154,13 +155,7 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
                 logger.debug("默认路径:{}", httpServletRequest.getRequestURL());
             return pageFactory.index(httpServletRequest, httpServletResponse, model);
         }
-        String sessionId = httpServletRequest.getSession().getId();
-        SuperPositionModelEntity superPositionModelEntity = sMap.get(sessionId);
-
-        if (null == superPositionModelEntity)
-            superPositionModelEntity = getSpm(httpServletRequest, spm);
-        else
-            sMap.remove(sessionId);
+        SuperPositionModelEntity superPositionModelEntity = getSpm(httpServletRequest, spm);
         if (null != superPositionModelEntity && StringUtils.isNotEmpty(superPositionModelEntity.getResourceId()))
             return superPositionModelEntity.getResourceId();
         if (logger.isDebugEnabled())
@@ -170,19 +165,21 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
 
     /**
      * 判断是否需要登录
-     *
-     * @param httpServletRequest
-     * @param httpServletResponse
-     * @return
      */
     public boolean needLogin(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse) {
         return loginFactory.isNeed(httpServletRequest, httpServletResponse);
     }
 
     public SuperPositionModelEntity getSpm(HttpServletRequest httpServletRequest, String spm) {
-        SuperPositionModelEntity superPositionModelEntity = getSpmInternal(spm);
-        if (null != superPositionModelEntity && null != httpServletRequest)
-            log(httpServletRequest, superPositionModelEntity);
+        SuperPositionModelEntity superPositionModelEntity = models.get(spm);
+        if (null == superPositionModelEntity) {
+            superPositionModelEntity = getSpmInternal(spm);
+            if (null != superPositionModelEntity) {
+                if (null != httpServletRequest)
+                    log(httpServletRequest, superPositionModelEntity);
+                models.put(spm, superPositionModelEntity);
+            }
+        }
         return superPositionModelEntity;
     }
 
@@ -200,9 +197,6 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
 
     /**
      * 获取View的地址
-     *
-     * @param key
-     * @return
      */
     public String getViewByKey(String key) {
         SuperPositionModelEntity superPositionModelEntity = getByUrlKey(key);
@@ -216,9 +210,6 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
 
     /**
      * 根据 key 获取URL包含域名在内的全路径，
-     *
-     * @param key
-     * @return
      */
     public String getUrl(String key) {
         String view = getViewByKey(key);
@@ -241,9 +232,6 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
 
     /**
      * 记录Spm 访问的日志信息
-     *
-     * @param request
-     * @param superPositionModelEntity
      */
     public void log(HttpServletRequest request, SuperPositionModelEntity superPositionModelEntity) {
         asyncTaskExecutor.execute(new Runnable() {
@@ -268,22 +256,20 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
         if (ar.length > 3)
             map.put("product_id", ar[3]);
 
-        String stamp = "";
-
         List<SuperPositionModelEntity> list = selectByMap(map);
-        if (list.size() == 0) {
+        if (list.isEmpty()) {
             map.remove("product_id");
             list = selectByMap(map);
         }
-        if (list.size() == 0) {
+        if (list.isEmpty()) {
             map.remove("channel_id");
             list = selectByMap(map);
         }
-        if (list.size() == 0) {
+        if (list.isEmpty()) {
             map.remove("page_id");
             list = selectByMap(map);
         }
-        if (list.size() > 0) {
+        if (!list.isEmpty()) {
             return list.get(0);
         }
         return null;
@@ -327,7 +313,7 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
             superPositionModelEntity.setNeedLogin(0);
         superPositionModelEntity.setForbidden(0);
         List<SuperPositionModelEntity> list = selectByMap(map);
-        if (list.size() > 0) {
+        if (!list.isEmpty()) {
             return;
         }
         insert(superPositionModelEntity);
@@ -342,17 +328,16 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
     }
 
     @Override
-    public void onOneMinute() {
+    public void onTenMinute() {
         load();
+        models.clear();
     }
 
     @Override
     public boolean isNeed(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse) {
-        String sessionId = httpServletRequest.getSession().getId();
         String spm = httpServletRequest.getParameter("spm");
         SuperPositionModelEntity superPositionModelEntity = getSpm(httpServletRequest, spm);
         if (null != superPositionModelEntity) {
-            sMap.put(sessionId, superPositionModelEntity);
             if (null != superPositionModelEntity.getNeedLogin())
                 return superPositionModelEntity.getNeedLogin() > 0;
         }
