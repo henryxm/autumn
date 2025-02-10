@@ -4,10 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.DependsOn;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
-import org.springframework.web.servlet.config.annotation.InterceptorRegistration;
-import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
-import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.servlet.config.annotation.*;
 
 import java.util.List;
 
@@ -25,17 +22,18 @@ public class WebConfig implements WebMvcConfigurer {
     List<ResolverHandler> resolverHandlers;
 
     @Override
+
     public void addInterceptors(InterceptorRegistry registry) {
-        if (null == interceptorHandlers || interceptorHandlers.size() == 0)
+        if (null == interceptorHandlers || interceptorHandlers.isEmpty())
             return;
         for (InterceptorHandler interceptorHandler : interceptorHandlers) {
             if (null == interceptorHandler.getHandlerInterceptor())
                 continue;
             InterceptorRegistration tmp = registry.addInterceptor(interceptorHandler.getHandlerInterceptor());
-            if (null != interceptorHandler.getPatterns() && interceptorHandler.getPatterns().size() > 0) {
+            if (null != interceptorHandler.getPatterns() && !interceptorHandler.getPatterns().isEmpty()) {
                 tmp.addPathPatterns(interceptorHandler.getPatterns());
             }
-            if (null != interceptorHandler.getExcludePatterns() && interceptorHandler.getExcludePatterns().size() > 0) {
+            if (null != interceptorHandler.getExcludePatterns() && !interceptorHandler.getExcludePatterns().isEmpty()) {
                 tmp.excludePathPatterns(interceptorHandler.getExcludePatterns());
             }
         }
@@ -43,7 +41,7 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addArgumentResolvers(List<HandlerMethodArgumentResolver> argumentResolvers) {
-        if (null != resolverHandlers && resolverHandlers.size() > 0) {
+        if (null != resolverHandlers && !resolverHandlers.isEmpty()) {
             for (ResolverHandler resolverHandler : resolverHandlers) {
                 if (null != resolverHandler.getResolver())
                     argumentResolvers.add(resolverHandler.getResolver());
@@ -58,7 +56,7 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addResourceHandler("/js/**").addResourceLocations("classpath:/js/");
         registry.addResourceHandler("/css/**").addResourceLocations("classpath:/css/");
         registry.addResourceHandler("/images/**").addResourceLocations("classpath:/images/");
-        if (null != resourceHandlers && resourceHandlers.size() > 0) {
+        if (null != resourceHandlers && !resourceHandlers.isEmpty()) {
             for (ResourceHandler resourceHandler : resourceHandlers) {
                 resourceHandler.apply(registry);
             }
