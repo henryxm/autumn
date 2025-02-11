@@ -110,7 +110,7 @@ public class UserProfileService extends UserProfileServiceGen implements LoopJob
             userProfileEntity = new UserProfileEntity();
             userProfileEntity.setPassword(password);
             userProfileEntity.setCreateTime(new Date());
-            userProfileEntity.setNickname(sysUserEntity.getUsername());
+            userProfileEntity.setNickname(sysUserEntity.getNickname());
             userProfileEntity.setUsername(sysUserEntity.getUsername());
             userProfileEntity.setMobile(sysUserEntity.getMobile());
             userProfileEntity.setUuid(sysUserEntity.getUuid());
@@ -211,9 +211,7 @@ public class UserProfileService extends UserProfileServiceGen implements LoopJob
 
     private boolean checkNeedUpdate(UserProfileEntity userProfileEntity) {
         Integer integer = hashUser.get(userProfileEntity.getUuid());
-        if (null == integer || integer != userProfileEntity.hashCode())
-            return true;
-        return false;
+        return null == integer || integer != userProfileEntity.hashCode();
     }
 
     @Override
@@ -229,7 +227,7 @@ public class UserProfileService extends UserProfileServiceGen implements LoopJob
     @Override
     public void onTenSecond() {
         try {
-            if (null != sync && sync.size() > 0) {
+            if (null != sync && !sync.isEmpty()) {
                 Iterator<Map.Entry<String, UserProfileEntity>> iterator = sync.entrySet().iterator();
                 while (iterator.hasNext()) {
                     Map.Entry<String, UserProfileEntity> entity = iterator.next();
