@@ -4,6 +4,7 @@ import cn.org.autumn.config.PageHandler;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.ui.Model;
 
@@ -17,6 +18,10 @@ import java.util.Map;
 @Component
 public class PageFactory extends Factory {
     static final Logger log = LoggerFactory.getLogger(PageFactory.class);
+
+    @Autowired
+    ClearFactory clearFactory;
+
     Map<String, List<PageHandler>> map = new HashMap<>();
 
     private List<PageHandler> getList(String method) {
@@ -117,5 +122,10 @@ public class PageFactory extends Factory {
 
     public String loading(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
         return invoke("loading", "loading", httpServletRequest, httpServletResponse, model);
+    }
+
+    public String clear(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        model.addAttribute("data", clearFactory.clear());
+        return invoke("clear", "clear", httpServletRequest, httpServletResponse, model);
     }
 }

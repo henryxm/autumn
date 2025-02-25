@@ -3,10 +3,7 @@ package cn.org.autumn.modules.sys.service;
 import cn.org.autumn.annotation.ConfigField;
 import cn.org.autumn.bean.EnvBean;
 import cn.org.autumn.cluster.ServiceHandler;
-import cn.org.autumn.config.CategoryHandler;
-import cn.org.autumn.config.Config;
-import cn.org.autumn.config.DomainHandler;
-import cn.org.autumn.config.InputType;
+import cn.org.autumn.config.*;
 import cn.org.autumn.exception.AException;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.lan.service.Language;
@@ -47,7 +44,7 @@ import java.util.*;
 import static cn.org.autumn.utils.Uuid.uuid;
 
 @Service
-public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity> implements LoopJob.Job, LoopJob.OneMinute, HostFactory.Host, InitFactory.Init, InitFactory.After, CategoryHandler, DomainHandler {
+public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity> implements LoopJob.Job, LoopJob.OneMinute, HostFactory.Host, InitFactory.Init, InitFactory.After, CategoryHandler, DomainHandler, ClearHandler {
 
     public static final String string_type = InputType.StringType.getValue();
     public static final String boolean_type = InputType.BooleanType.getValue();

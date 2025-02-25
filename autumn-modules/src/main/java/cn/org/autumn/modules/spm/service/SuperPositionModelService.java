@@ -1,6 +1,7 @@
 package cn.org.autumn.modules.spm.service;
 
 import cn.org.autumn.annotation.PageAware;
+import cn.org.autumn.config.ClearHandler;
 import cn.org.autumn.site.*;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.spm.entity.SuperPositionModelEntity;
@@ -21,7 +22,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
-public class SuperPositionModelService extends SuperPositionModelServiceGen implements LoadFactory.Load, LoopJob.TenMinute, LoginFactory.Login {
+public class SuperPositionModelService extends SuperPositionModelServiceGen implements LoadFactory.Load, LoopJob.TenMinute, LoginFactory.Login, ClearHandler {
 
     private Logger logger = LoggerFactory.getLogger(getClass());
 
@@ -342,5 +343,10 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
                 return superPositionModelEntity.getNeedLogin() > 0;
         }
         return true;
+    }
+
+    @Override
+    public void clear() {
+        models.clear();
     }
 }

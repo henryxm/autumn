@@ -230,4 +230,9 @@ public class SysPageController implements ErrorController {
     public List<Tag> getThreading() {
         return tagTaskExecutor.getRunning();
     }
+
+    @RequestMapping({"clear.html", "clear"})
+    public String clear(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        return pageFactory.clear(httpServletRequest, httpServletResponse, model);
+    }
 }
