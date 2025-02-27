@@ -1,6 +1,7 @@
 package cn.org.autumn.handler;
 
 import cn.org.autumn.exception.AException;
+import cn.org.autumn.exception.CodeException;
 import cn.org.autumn.utils.R;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,6 +27,14 @@ public class AExceptionHandler {
         r.put("code", e.getCode());
         r.put("msg", e.getMessage());
         logger.debug("AException", e);
+        return r;
+    }
+
+    @ExceptionHandler(CodeException.class)
+    public R handleCodeException(CodeException e) {
+        R r = new R();
+        r.put("code", e.getCode());
+        r.put("msg", e.getMessage());
         return r;
     }
 
