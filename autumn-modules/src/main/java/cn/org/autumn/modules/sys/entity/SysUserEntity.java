@@ -91,6 +91,9 @@ public class SysUserEntity implements Serializable {
     @Index
     private String idCard;
 
+    @Column(comment = "头像")
+    private String icon;
+
     @Column(comment = "OPENID")
     @Index
     private String openId;
@@ -303,6 +306,14 @@ public class SysUserEntity implements Serializable {
         this.nickname = nickname;
     }
 
+    public String getIcon() {
+        return icon;
+    }
+
+    public void setIcon(String icon) {
+        this.icon = icon;
+    }
+
     public void copy(SysUserEntity entity) {
         this.parentUuid = entity.parentUuid;
         this.username = entity.username;
@@ -315,6 +326,7 @@ public class SysUserEntity implements Serializable {
         this.qq = entity.qq;
         this.weixing = entity.weixing;
         this.status = entity.status;
+        this.icon = entity.getIcon();
     }
 
     @Override
@@ -332,7 +344,8 @@ public class SysUserEntity implements Serializable {
                 getWeixing(),
                 getAlipay(),
                 getIdCard(),
-                getStatus()
+                getStatus(),
+                getIcon()
         );
     }
 }

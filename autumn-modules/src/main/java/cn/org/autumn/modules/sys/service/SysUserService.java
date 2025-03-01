@@ -335,19 +335,33 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
     }
 
     public void refresh(SysUserEntity user) {
-        if (null != user && (StringUtils.isBlank(user.getNickname()) || Objects.equals(user.getUuid(), user.getNickname()))) {
-            UserProfileEntity profile = userProfileService.getByUuid(user.getUuid());
+        if (null == user)
+            return;
+        boolean update = false;
+        UserProfileEntity profile = null;
+        if (StringUtils.isBlank(user.getNickname()) || Objects.equals(user.getUuid(), user.getNickname())) {
+            profile = userProfileService.getByUuid(user.getUuid());
             String nickname = user.getUuid().substring(0, 6);
             if (null != profile && StringUtils.isNotBlank(profile.getNickname()) && !Objects.equals(profile.getNickname(), user.getUuid())) {
                 nickname = profile.getNickname();
             }
             user.setNickname(nickname);
-            updateById(user);
+            update = true;
             if (null != profile && !Objects.equals(profile.getNickname(), nickname)) {
                 profile.setNickname(nickname);
                 userProfileService.updateById(profile);
             }
         }
+        if (StringUtils.isBlank(user.getIcon())) {
+            if (null == profile)
+                profile = userProfileService.getByUuid(user.getUuid());
+            if (null != profile) {
+                user.setIcon(profile.getIcon());
+                update = true;
+            }
+        }
+        if (update)
+            updateById(user);
     }
 
     public SysUserEntity getUuid(String uuid) {
