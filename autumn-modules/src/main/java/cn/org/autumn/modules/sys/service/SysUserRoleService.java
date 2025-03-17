@@ -11,6 +11,8 @@ import cn.org.autumn.utils.MapUtils;
 import cn.org.autumn.modules.sys.dao.SysUserRoleDao;
 import cn.org.autumn.modules.sys.entity.SysUserRoleEntity;
 import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -25,6 +27,8 @@ import static cn.org.autumn.modules.sys.service.SysRoleService.Role_System_Admin
  */
 @Service
 public class SysUserRoleService extends ServiceImpl<SysUserRoleDao, SysUserRoleEntity> implements InitFactory.Init, InitFactory.After {
+
+    Logger log = LoggerFactory.getLogger(getClass());
 
     @Autowired
     @Lazy
@@ -200,6 +204,7 @@ public class SysUserRoleService extends ServiceImpl<SysUserRoleDao, SysUserRoleE
                     if (null != userRoleEntities && !userRoleEntities.isEmpty()) {
                         for (SysUserRoleEntity sysUserRoleEntity : userRoleEntities) {
                             if (StringUtils.isEmpty(sysUserRoleEntity.getUserUuid()) || !mapping.getUuid().equals(sysUserRoleEntity.getUserUuid())) {
+                                log.info("用户同步:{}, 本地UUID:{}, 同步UUID:{}", userHandler.uri().getHost(), sysUserRoleEntity.getUserUuid(), mapping.getUuid());
                                 sysUserRoleEntity.setUserUuid(mapping.getUuid());
                                 updateById(sysUserRoleEntity);
                             }
