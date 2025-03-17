@@ -120,7 +120,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
                 SysUserEntity sysUserEntity = getByUsername(getAdmin());
                 if (null != sysUserEntity && StringUtils.isNotEmpty(sysUserEntity.getUuid())
                         && !mapping.getUuid().equals(sysUserEntity.getUuid())) {
-                    log.info("用户同步:{}, 本地UUID:{}, 同步UUID:{}", userHandler.uri().getHost(), sysUserEntity.getUuid(), mapping.getUuid());
+                    log.info("同步服务:{}, 主机:{}, 本地:{}, 同步:{}", userHandler.getClass().getSimpleName(), userHandler.uri().getHost(), sysUserEntity.getUuid(), mapping.getUuid());
                     sysUserEntity.setUuid(mapping.getUuid());
                     updateById(sysUserEntity);
                 }

@@ -204,7 +204,7 @@ public class SysUserRoleService extends ServiceImpl<SysUserRoleDao, SysUserRoleE
                     if (null != userRoleEntities && !userRoleEntities.isEmpty()) {
                         for (SysUserRoleEntity sysUserRoleEntity : userRoleEntities) {
                             if (StringUtils.isEmpty(sysUserRoleEntity.getUserUuid()) || !mapping.getUuid().equals(sysUserRoleEntity.getUserUuid())) {
-                                log.info("用户同步:{}, 本地UUID:{}, 同步UUID:{}", userHandler.uri().getHost(), sysUserRoleEntity.getUserUuid(), mapping.getUuid());
+                                log.info("同步服务:{}, 主机:{}, 本地:{}, 同步:{}", userHandler.getClass().getSimpleName(), userHandler.uri().getHost(), mapping.getUuid(), mapping.getUuid());
                                 sysUserRoleEntity.setUserUuid(mapping.getUuid());
                                 updateById(sysUserRoleEntity);
                             }
