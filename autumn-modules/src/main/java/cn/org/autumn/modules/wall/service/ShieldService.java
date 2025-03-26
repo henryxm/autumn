@@ -61,24 +61,32 @@ public class ShieldService extends ModuleService<ShieldDao, ShieldEntity> implem
     }
 
     public boolean shield(String uri, String ip) {
-        if (null == uris)
-            uris = baseMapper.gets();
-        visit.add(ip);
-        if (visit.size() > 1000)
-            enable();
-        if (uris.isEmpty()) {
-            return false;
-        }
-        if (uris.contains(uri)) {
-            if (!ips.contains(ip)) {
-                if (print)
-                    log.info("防御拦截:{}", ip);
-                return true;
-            } else {
-                if (print)
-                    log.info("防御放行:{}", ip);
+        try {
+            if (null == ip) {
+                log.error("空IP地址");
                 return false;
             }
+            if (null == uris)
+                uris = baseMapper.gets();
+            visit.add(ip);
+            if (visit.size() > 1000)
+                enable();
+            if (uris.isEmpty()) {
+                return false;
+            }
+            if (uris.contains(uri)) {
+                if (!ips.contains(ip)) {
+                    if (print)
+                        log.info("防御拦截:{}", ip);
+                    return true;
+                } else {
+                    if (print)
+                        log.info("防御放行:{}", ip);
+                    return false;
+                }
+            }
+        } catch (Exception e) {
+            log.error("防御护盾:{}", e.getMessage());
         }
         return false;
     }
