@@ -239,9 +239,10 @@ public class SysPageController implements ErrorController {
 
     @ResponseBody
     @RequestMapping(value = {"clear"}, method = RequestMethod.POST)
-    public String clearPost(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+    public String clearPost(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) throws Exception {
+        check(httpServletRequest, "clear");
         pageFactory.clear(httpServletRequest, httpServletResponse, model);
-        return "success";
+        return "404";
     }
 
     @RequestMapping(value = {"reinit.html"}, method = RequestMethod.GET)
@@ -251,8 +252,21 @@ public class SysPageController implements ErrorController {
 
     @ResponseBody
     @RequestMapping(value = {"reinit"}, method = RequestMethod.POST)
-    public String reinitPost(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+    public String reinitPost(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) throws Exception {
+        check(httpServletRequest, "reinit");
         pageFactory.reinit(httpServletRequest, httpServletResponse, model);
-        return "success";
+        return "404";
+    }
+
+    public void check(HttpServletRequest request, String method) throws Exception {
+        String token = request.getHeader("x-" + method + "-authentication");
+        if (StringUtils.isBlank(token)) {
+            throw new Exception("Unauthenticated");
+        }
+        List<String> allowed = new ArrayList<>();
+        allowed.add("application/client-" + method);
+        if (!allowed.contains(token)) {
+            throw new Exception("Unauthenticated");
+        }
     }
 }
