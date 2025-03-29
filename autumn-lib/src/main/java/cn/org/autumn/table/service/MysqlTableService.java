@@ -419,9 +419,11 @@ public class MysqlTableService {
                 // 6.验证默认值
                 if (sysColumn.getColumnDefault() == null || sysColumn.getColumnDefault().equals("")) {
                     // 数据库默认值是null，model中注解设置的默认值不为NULL时，那么需要更新该字段
-                    if (!"NULL".equals(createTableParam.getDefaultValue())) {
-                        modifyFieldList.add(createTableParam);
-                        continue;
+                    if(!Objects.equals(sysColumn.getColumnDefault(),createTableParam.getDefaultValue())) {
+                        if (!"NULL".equals(createTableParam.getDefaultValue())) {
+                            modifyFieldList.add(createTableParam);
+                            continue;
+                        }
                     }
                 } else if (!sysColumn.getColumnDefault().equals(createTableParam.getDefaultValue())) {
                     if (createTableParam.getType().equals(DataType.FLOAT) || createTableParam.getType().equals(DataType.DECIMAL) || createTableParam.getType().equals(DataType.DOUBLE)) {

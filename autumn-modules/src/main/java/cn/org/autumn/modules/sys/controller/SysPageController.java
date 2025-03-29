@@ -19,6 +19,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import javax.servlet.http.HttpServletRequest;
@@ -231,13 +232,27 @@ public class SysPageController implements ErrorController {
         return tagTaskExecutor.getRunning();
     }
 
-    @RequestMapping({"clear.html", "clear"})
-    public String clear(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+    @RequestMapping(value = {"clear.html"}, method = RequestMethod.GET)
+    public String clearPage(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
         return pageFactory.clear(httpServletRequest, httpServletResponse, model);
     }
 
-    @RequestMapping({"reinit.html", "reinit"})
+    @ResponseBody
+    @RequestMapping(value = {"clear"}, method = RequestMethod.POST)
+    public String clearPost(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        pageFactory.clear(httpServletRequest, httpServletResponse, model);
+        return "success";
+    }
+
+    @RequestMapping(value = {"reinit.html"}, method = RequestMethod.GET)
     public String reinit(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
         return pageFactory.reinit(httpServletRequest, httpServletResponse, model);
+    }
+
+    @ResponseBody
+    @RequestMapping(value = {"reinit"}, method = RequestMethod.POST)
+    public String reinitPost(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        pageFactory.reinit(httpServletRequest, httpServletResponse, model);
+        return "success";
     }
 }
