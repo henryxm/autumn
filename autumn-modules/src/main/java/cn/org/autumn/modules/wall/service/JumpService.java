@@ -30,6 +30,8 @@ public class JumpService extends ModuleService<JumpDao, JumpEntity> implements L
     }
 
     public String getJump(String host, String uri) {
+        if (null != host && host.contains(":"))
+            host = host.split(":")[0];
         if (null == jumps)
             jumps = getJumps();
         return jumps.get(host + uri);

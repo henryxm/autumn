@@ -889,6 +889,8 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     @Order(0)
     public boolean isAllowed(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse) {
         String host = httpServletRequest.getHeader("host");
+        if (null != host && host.contains(":"))
+            host = host.split(":")[0];
         return domainFactory.isSiteBind(host);
     }
 

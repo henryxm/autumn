@@ -33,6 +33,8 @@ public class HostService extends WallCounter<HostDao, HostEntity> implements Loa
     // 主机访问黑名单
     public boolean isBlack(String host) {
         try {
+            if (null != host && host.contains(":"))
+                host = host.split(":")[0];
             if (wallFactory.isHostEnable() && blackHostList.contains(host)) {
                 count(host, new RData());
                 return true;
@@ -50,11 +52,15 @@ public class HostService extends WallCounter<HostDao, HostEntity> implements Loa
     }
 
     public boolean hasHost(String host) {
+        if (null != host && host.contains(":"))
+            host = host.split(":")[0];
         Integer integer = baseMapper.hasHost(host);
         return null != integer && integer > 0;
     }
 
     public HostEntity getByHost(String host) {
+        if (null != host && host.contains(":"))
+            host = host.split(":")[0];
         return baseMapper.getByHost(host);
     }
 

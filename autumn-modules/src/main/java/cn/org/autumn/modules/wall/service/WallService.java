@@ -90,6 +90,8 @@ public class WallService {
         try {
             String remoteip = request.getHeader("remoteip");
             String host = request.getHeader("host");
+            if (null != host && host.contains(":"))
+                host = host.split(":")[0];
             String refer = request.getHeader("refer");
             if (logEnable)
                 print(request);
