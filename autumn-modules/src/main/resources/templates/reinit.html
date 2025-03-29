@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>重建数据表</title>
+    <style>
+        .container {
+            display: flex;
+            justify-content: center; /* 水平居中 */
+            align-items: center; /* 垂直居中 */
+            height: 100vh; /* 容器高度为视口高度 */
+            flex-direction: column;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <button onclick="reload()">重建数据表</button>
+    <div>
+        ${data}
+    </div>
+    <div>
+        实现了重建数据库表的接口，将在点击重建数据表后，删除原来表，后重新创建，用以清理表数据，释放数据空间
+    </div>
+</div>
+</body>
+<script>
+    function reload() {
+        location.reload();
+    }
+</script>
+</html>

@@ -3,6 +3,7 @@ package cn.org.autumn.table;
 import javax.annotation.PostConstruct;
 
 import cn.org.autumn.bean.EnvBean;
+import cn.org.autumn.table.data.InitType;
 import cn.org.autumn.table.service.MysqlTableService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,11 +30,11 @@ public class TableInit {
     /**
      * Supported database type, value from configuration properties file;
      */
-    @Value("${autumn.database}")
+    @Value("${autumn.database:mysql}")
     private String databaseType = MYSQL;
 
-    @Value("${autumn.table.init}")
-    public boolean init = false;
+    @Value("${autumn.table.init:true}")
+    private boolean init;
 
     public String getDatabaseType() {
         return databaseType;
@@ -54,6 +55,19 @@ public class TableInit {
         if (!envBean.isTableInit())
             return;
         if (MYSQL.equals(databaseType))
-            mysqlTableService.createMysqlTable();
+            mysqlTableService.create();
+    }
+
+    /**
+     * 用于用户重新对单个实体类型进行重新创建表，比如某些日志表，或者临时数据表需要清理后重新创建表
+     *
+     * @param clazz 实体类型
+     */
+    public void reinit(Class<?> clazz) {
+        create(clazz, InitType.create);
+    }
+
+    public void create(Class<?> clazz, InitType type) {
+        mysqlTableService.create(clazz, type);
     }
 }

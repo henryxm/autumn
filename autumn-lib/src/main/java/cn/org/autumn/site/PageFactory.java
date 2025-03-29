@@ -22,6 +22,9 @@ public class PageFactory extends Factory {
     @Autowired
     ClearFactory clearFactory;
 
+    @Autowired
+    TableFactory tableFactory;
+
     Map<String, List<PageHandler>> map = new HashMap<>();
 
     private List<PageHandler> getList(String method) {
@@ -127,5 +130,10 @@ public class PageFactory extends Factory {
     public String clear(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
         model.addAttribute("data", clearFactory.clear());
         return invoke("clear", "clear", httpServletRequest, httpServletResponse, model);
+    }
+
+    public String reinit(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        model.addAttribute("data", tableFactory.reinit());
+        return invoke("reinit", "reinit", httpServletRequest, httpServletResponse, model);
     }
 }

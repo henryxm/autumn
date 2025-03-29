@@ -1,15 +1,14 @@
 package cn.org.autumn.table.service;
 
 import java.lang.reflect.Field;
-import java.math.BigDecimal;
 import java.util.*;
 import java.util.Map.Entry;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 import cn.org.autumn.table.annotation.UniqueKey;
 import cn.org.autumn.table.annotation.UniqueKeys;
 import cn.org.autumn.table.dao.TableDao;
-import cn.org.autumn.table.data.IndexInfo;
-import cn.org.autumn.table.data.TableInfo;
+import cn.org.autumn.table.data.*;
 import cn.org.autumn.table.mysql.ColumnMeta;
 import org.apache.commons.lang.ArrayUtils;
 import org.slf4j.Logger;
@@ -21,9 +20,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import cn.org.autumn.table.annotation.Column;
 import cn.org.autumn.table.annotation.LengthCount;
-import cn.org.autumn.table.data.ColumnInfo;
-import cn.org.autumn.table.data.DataType;
 import cn.org.autumn.table.utils.ClassTools;
+
+import static cn.org.autumn.table.data.InitType.*;
 
 @Transactional
 @Service
@@ -31,7 +30,9 @@ public class MysqlTableService {
 
     private static final Logger log = LoggerFactory.getLogger(MysqlTableService.class);
 
-    private static List<String> ignoreLengthList = new ArrayList<>();
+    private static final List<String> ignoreLengthList = new ArrayList<>();
+
+    private static final String defaultPackage = "cn.org.autumn.modules";
 
     static {
         ignoreLengthList.add("int");
@@ -47,31 +48,59 @@ public class MysqlTableService {
     /**
      * 要扫描的model所在的pack
      */
-    @Value("${autumn.table.pack}")
+    @Value("${autumn.table.pack:" + defaultPackage + "}")
     private String pack;
 
     /**
      * 自动创建模式：update表示更新，create表示删除原表重新创建，none 表示不执行操作
      */
-    @Value("${autumn.table.auto}")
-    private String tableAuto;
+    @Value("${autumn.table.auto:update}")
+    private InitType type;
+
+    public Set<String> getPacks() {
+        return new CopyOnWriteArraySet<>(Arrays.asList(pack.split(",|:|;|-| ")));
+    }
+
+    public Set<Class<?>> getClasses() {
+        Set<Class<?>> classes = new CopyOnWriteArraySet<>();
+        Set<String> packs = getPacks();
+        //添加系统代码的默认包名，防止配置错误
+        packs.add(defaultPackage);
+        for (String pkg : packs) {
+            if (!pkg.isEmpty())
+                classes.addAll(ClassTools.getClasses(pkg));
+        }
+        return classes;
+    }
+
+    public void create() {
+        // 从包package中获取所有的Class
+        Set<Class<?>> classes = getClasses();
+        createMysqlTable(classes, type);
+    }
+
+    public void create(Class<?> clazz, InitType type) {
+        Set<Class<?>> classes = new CopyOnWriteArraySet<>();
+        classes.add(clazz);
+        createMysqlTable(classes, type);
+    }
+
+    public void create(Set<Class<?>> classes, InitType type) {
+        createMysqlTable(classes, type);
+    }
 
     /**
      * 读取配置文件的三种状态（创建表、更新表、不做任何事情）
      */
-    public void createMysqlTable() {
+    private void createMysqlTable(Set<Class<?>> classes, InitType type) {
 
         // 不做任何事情
-        if ("none".equals(tableAuto)) {
+        if (none.equals(type)) {
             return;
         }
 
         // 获取Mysql的类型，以及类型需要设置几个长度
         Map<String, Object> mySqlTypeAndLengthMap = mySqlTypeAndLengthMap();
-
-
-        // 从包package中获取所有的Class
-        Set<Class<?>> classes = ClassTools.getClasses(pack);
 
         // 用于存需要创建的表名+结构
         Map<TableInfo, List<Object>> newTableMap = new HashMap<TableInfo, List<Object>>();
@@ -95,7 +124,7 @@ public class MysqlTableService {
         Map<TableInfo, List<Object>> addIndexTableMap = new HashMap<TableInfo, List<Object>>();
         Map<TableInfo, List<Object>> removeIndexTableMap = new HashMap<TableInfo, List<Object>>();
         // 构建出全部表的增删改的map
-        allTableMapConstruct(mySqlTypeAndLengthMap, classes, newTableMap, modifyTableMap, addTableMap, removeTableMap,
+        allTableMapConstruct(type, mySqlTypeAndLengthMap, classes, newTableMap, modifyTableMap, addTableMap, removeTableMap,
                 dropKeyTableMap, dropUniqueTableMap, addIndexTableMap, removeIndexTableMap);
 
         // 根据传入的map，分别去创建或修改表结构
@@ -115,13 +144,20 @@ public class MysqlTableService {
      * @param dropKeyTableMap       用于存需要删除主键的表名+结构
      * @param dropUniqueTableMap    用于存需要删除唯一约束的表名+结构
      */
-    private void allTableMapConstruct(Map<String, Object> mySqlTypeAndLengthMap, Set<Class<?>> classes,
-                                      Map<TableInfo, List<Object>> newTableMap, Map<TableInfo, List<Object>> modifyTableMap,
-                                      Map<TableInfo, List<Object>> addTableMap, Map<TableInfo, List<Object>> removeTableMap,
-                                      Map<TableInfo, List<Object>> dropKeyTableMap, Map<TableInfo, List<Object>> dropUniqueTableMap, Map<TableInfo, List<Object>> addIndexTableMap, Map<TableInfo, List<Object>> removeIndexTableMap) {
-        for (Class<?> clas : classes) {
+    private void allTableMapConstruct(InitType type,
+                                      Map<String, Object> mySqlTypeAndLengthMap,
+                                      Set<Class<?>> classes,
+                                      Map<TableInfo, List<Object>> newTableMap,
+                                      Map<TableInfo, List<Object>> modifyTableMap,
+                                      Map<TableInfo, List<Object>> addTableMap,
+                                      Map<TableInfo, List<Object>> removeTableMap,
+                                      Map<TableInfo, List<Object>> dropKeyTableMap,
+                                      Map<TableInfo, List<Object>> dropUniqueTableMap,
+                                      Map<TableInfo, List<Object>> addIndexTableMap,
+                                      Map<TableInfo, List<Object>> removeIndexTableMap) {
+        for (Class<?> clazz : classes) {
 
-            TableInfo tableInfo = new TableInfo(clas);
+            TableInfo tableInfo = new TableInfo(clazz);
 
             if (!tableInfo.isValid())
                 continue;
@@ -144,10 +180,10 @@ public class MysqlTableService {
             List<Object> removeIndexList = new ArrayList<Object>();
 
             // 迭代出所有model的所有fields存到newFieldList中
-            tableFieldsConstruct(mySqlTypeAndLengthMap, clas, newFieldList);
+            tableFieldsConstruct(mySqlTypeAndLengthMap, clazz, newFieldList);
 
             // 如果配置文件配置的是create，表示将所有的表删掉重新创建
-            if ("create".equals(tableAuto)) {
+            if (create.equals(type)) {
                 tableDao.dropTable(tableInfo.getName());
             }
 
@@ -196,13 +232,23 @@ public class MysqlTableService {
      * @param columnNames           从sysColumns中取出我们需要比较的列的List
      */
     private void buildAddAndRemoveAndModifyFields(Map<String, Object> mySqlTypeAndLengthMap,
-                                                  Map<TableInfo, List<Object>> modifyTableMap, Map<TableInfo, List<Object>> addTableMap,
-                                                  Map<TableInfo, List<Object>> removeTableMap, Map<TableInfo, List<Object>> dropKeyTableMap,
-                                                  Map<TableInfo, List<Object>> dropUniqueTableMap, Map<TableInfo, List<Object>> addIndexTableMap,
+                                                  Map<TableInfo, List<Object>> modifyTableMap,
+                                                  Map<TableInfo, List<Object>> addTableMap,
+                                                  Map<TableInfo, List<Object>> removeTableMap,
+                                                  Map<TableInfo, List<Object>> dropKeyTableMap,
+                                                  Map<TableInfo, List<Object>> dropUniqueTableMap,
+                                                  Map<TableInfo, List<Object>> addIndexTableMap,
                                                   Map<TableInfo, List<Object>> removeIndexTableMap,
-                                                  TableInfo tableInfo, List<Object> newFieldList,
-                                                  List<Object> removeFieldList, List<Object> addFieldList, List<Object> modifyFieldList,
-                                                  List<Object> dropKeyFieldList, List<Object> dropUniqueFieldList, List<Object> addIndexList, List<Object> removeIndexList, List<ColumnMeta> tableColumnList,
+                                                  TableInfo tableInfo,
+                                                  List<Object> newFieldList,
+                                                  List<Object> removeFieldList,
+                                                  List<Object> addFieldList,
+                                                  List<Object> modifyFieldList,
+                                                  List<Object> dropKeyFieldList,
+                                                  List<Object> dropUniqueFieldList,
+                                                  List<Object> addIndexList,
+                                                  List<Object> removeIndexList,
+                                                  List<ColumnMeta> tableColumnList,
                                                   List<String> columnNames) {
         // 1. 找出增加的字段
         // 根据数据库中表的结构和model中表的结构对比找出新增的字段
@@ -246,7 +292,11 @@ public class MysqlTableService {
         return stringIndexInfoHashMap.values();
     }
 
-    private void buildModifyIndex(TableInfo table, Map<TableInfo, List<Object>> addIndexTableMap, List<Object> addIndexList, Map<TableInfo, List<Object>> removeIndexTableMap, List<Object> removeIndexList) {
+    private void buildModifyIndex(TableInfo table,
+                                  Map<TableInfo, List<Object>> addIndexTableMap,
+                                  List<Object> addIndexList,
+                                  Map<TableInfo, List<Object>> removeIndexTableMap,
+                                  List<Object> removeIndexList) {
         List<IndexInfo> indexInfos = table.getIndexInfosCombine();
         List<IndexInfo> indexInfoList = tableDao.getTableIndex(table.getName());
         Collection<IndexInfo> nn = filter(indexInfoList);
@@ -295,10 +345,18 @@ public class MysqlTableService {
      * @param tableColumnList       已存在时理论上做修改的操作，这里查出该表的结构
      * @param fieldMap              从sysColumns中取出我们需要比较的列的List
      */
-    private void buildModifyFields(Map<String, Object> mySqlTypeAndLengthMap, Map<TableInfo, List<Object>> modifyTableMap,
-                                   Map<TableInfo, List<Object>> dropKeyTableMap, Map<TableInfo, List<Object>> dropUniqueTableMap, Map<TableInfo, List<Object>> addIndexTableMap, TableInfo table,
-                                   List<Object> modifyFieldList, List<Object> dropKeyFieldList, List<Object> dropUniqueFieldList, List<Object> addIndexFieldList,
-                                   List<ColumnMeta> tableColumnList, Map<String, ColumnInfo> fieldMap) {
+    private void buildModifyFields(Map<String, Object> mySqlTypeAndLengthMap,
+                                   Map<TableInfo, List<Object>> modifyTableMap,
+                                   Map<TableInfo, List<Object>> dropKeyTableMap,
+                                   Map<TableInfo, List<Object>> dropUniqueTableMap,
+                                   Map<TableInfo, List<Object>> addIndexTableMap,
+                                   TableInfo table,
+                                   List<Object> modifyFieldList,
+                                   List<Object> dropKeyFieldList,
+                                   List<Object> dropUniqueFieldList,
+                                   List<Object> addIndexFieldList,
+                                   List<ColumnMeta> tableColumnList,
+                                   Map<String, ColumnInfo> fieldMap) {
         for (ColumnMeta sysColumn : tableColumnList) {
             // 数据库中有该字段时
             ColumnInfo createTableParam = fieldMap.get(sysColumn.getColumnName());
@@ -429,8 +487,10 @@ public class MysqlTableService {
      * @param columnNames     数据库中的结构
      * @param fieldMap        model中的字段，字段名为key
      */
-    private void buildRemoveFields(Map<TableInfo, List<Object>> removeTableMap, TableInfo table, List<Object> removeFieldList,
-                                   List<String> columnNames, Map<String, ColumnInfo> fieldMap) {
+    private void buildRemoveFields(Map<TableInfo, List<Object>> removeTableMap,
+                                   TableInfo table, List<Object> removeFieldList,
+                                   List<String> columnNames,
+                                   Map<String, ColumnInfo> fieldMap) {
         for (String fieldNm : columnNames) {
             // 判断该字段在新的model结构中是否存在
 
@@ -453,8 +513,10 @@ public class MysqlTableService {
      * @param addFieldList 用于存新增的字段
      * @param columnNames  数据库中的结构
      */
-    private void buildNewFields(Map<TableInfo, List<Object>> addTableMap, TableInfo table, List<Object> newFieldList,
-                                List<Object> addFieldList, List<String> columnNames) {
+    private void buildNewFields(Map<TableInfo, List<Object>> addTableMap,
+                                TableInfo table, List<Object> newFieldList,
+                                List<Object> addFieldList,
+                                List<String> columnNames) {
         for (Object obj : newFieldList) {
             ColumnInfo createTableParam = (ColumnInfo) obj;
             // 循环新的model中的字段，判断是否在数据库中已经存在
@@ -492,7 +554,8 @@ public class MysqlTableService {
      * @param clas                  准备做为创建表依据的class
      * @param newFieldList          用于存新增表的字段
      */
-    private void tableFieldsConstruct(Map<String, Object> mySqlTypeAndLengthMap, Class<?> clas,
+    private void tableFieldsConstruct(Map<String, Object> mySqlTypeAndLengthMap,
+                                      Class<?> clas,
                                       List<Object> newFieldList) {
         Field[] fields = clas.getDeclaredFields();
 
@@ -548,9 +611,12 @@ public class MysqlTableService {
      * @param dropUniqueTableMap 用于存需要删除唯一约束的表名+结构
      */
     private void createOrModifyTableConstruct(Map<TableInfo, List<Object>> newTableMap,
-                                              Map<TableInfo, List<Object>> modifyTableMap, Map<TableInfo, List<Object>> addTableMap,
-                                              Map<TableInfo, List<Object>> removeTableMap, Map<TableInfo, List<Object>> dropKeyTableMap,
-                                              Map<TableInfo, List<Object>> dropUniqueTableMap, Map<TableInfo, List<Object>> addIndexTableMap,
+                                              Map<TableInfo, List<Object>> modifyTableMap,
+                                              Map<TableInfo, List<Object>> addTableMap,
+                                              Map<TableInfo, List<Object>> removeTableMap,
+                                              Map<TableInfo, List<Object>> dropKeyTableMap,
+                                              Map<TableInfo, List<Object>> dropUniqueTableMap,
+                                              Map<TableInfo, List<Object>> addIndexTableMap,
                                               Map<TableInfo, List<Object>> removeIndexTableMap) {
         // 1. 创建表
         createTableByMap(newTableMap);

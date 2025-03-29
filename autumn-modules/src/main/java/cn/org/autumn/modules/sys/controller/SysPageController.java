@@ -235,4 +235,9 @@ public class SysPageController implements ErrorController {
     public String clear(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
         return pageFactory.clear(httpServletRequest, httpServletResponse, model);
     }
+
+    @RequestMapping({"reinit.html", "reinit"})
+    public String reinit(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        return pageFactory.reinit(httpServletRequest, httpServletResponse, model);
+    }
 }

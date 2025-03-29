@@ -104,7 +104,7 @@ public class InitFactory extends Factory {
     }
 
     public void init() {
-        if (!tableInit.init)
+        if (!tableInit.isInit())
             return;
         if (canBefore())
             invoke(Before.class, "before");
