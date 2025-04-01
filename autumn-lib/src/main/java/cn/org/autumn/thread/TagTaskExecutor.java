@@ -72,8 +72,7 @@ public class TagTaskExecutor extends ThreadPoolTaskExecutor {
                 String tag = value.tag();
                 if (StringUtils.isNotBlank(n))
                     task.setName(n);
-                if (null != t)
-                    task.setType(t);
+                task.setType(t);
                 if (StringUtils.isNotBlank(me))
                     task.setMethod(me);
                 if (StringUtils.isNotBlank(tag))

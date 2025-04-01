@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>系统线程监控信息</title>
+    <style>
+        .container {
+            display: flex;
+            justify-content: center; /* 水平居中 */
+            align-items: center; /* 垂直居中 */
+            height: 100vh; /* 容器高度为视口高度 */
+            flex-direction: column;
+        }
+    </style>
+</head>
+<body>
+<div id="app" v-cloak class="container">
+    <div>
+        <div>
+            活动线程数:{{threading.Executor.ActiveCount}}，核心线程数:{{threading.Executor.CorePoolSize}}，最大线程数:{{threading.Executor.MaxPoolSize}}，池子线程数:{{threading.Executor.PoolSize}}
+        </div>
+    </div>
+    <div>
+        <div v-for="(item,index) in threading.Tags">
+            线程名称:{{item.name}}，启动时间:{{item.time}}，线程标记:{{item.tag}}，调用方法:{{item.method}}，调用来源:{{item.type}}
+        </div>
+    </div>
+</div>
+</body>
+<script src="${request.contextPath}/statics/libs/jquery.min.js"></script>
+<script src="${request.contextPath}/statics/libs/vue.min.js"></script>
+<script>
+    var vm = new Vue({
+        el: '#app',
+        data: {
+            threading: {},
+        },
+        mounted() {
+            $.ajax({
+                type: "POST",
+                url: "threading",
+                success: function (result) {
+                    vm.threading = result;
+                }
+            });
+        },
+        methods: {
+            load: function (event) {
+            },
+        }
+    });
+</script>
+</html>

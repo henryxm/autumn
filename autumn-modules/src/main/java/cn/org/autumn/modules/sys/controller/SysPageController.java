@@ -9,7 +9,6 @@ import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.wall.site.WallDefault;
 import cn.org.autumn.site.PageFactory;
 import cn.org.autumn.site.PluginFactory;
-import cn.org.autumn.thread.Tag;
 import cn.org.autumn.thread.TagTaskExecutor;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,7 +24,9 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Controller
 public class SysPageController implements ErrorController {
@@ -209,8 +210,7 @@ public class SysPageController implements ErrorController {
     @RequestMapping({"firewall.html", "firewall"})
     @ResponseBody
     public WallDefault wall(Boolean open, Boolean white, Boolean black, Boolean host, Boolean visit, Boolean url) {
-        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
-            return null;
+
         if (null != open)
             wallDefault.setOpen(open);
         if (null != white)
@@ -226,35 +226,74 @@ public class SysPageController implements ErrorController {
         return wallDefault;
     }
 
-    @RequestMapping({"threading.html", "threading"})
+    @RequestMapping(value = "threading", method = RequestMethod.POST)
     @ResponseBody
-    public List<Tag> getThreading() {
-        return tagTaskExecutor.getRunning();
+    public Map<String, Object> postThreading() {
+        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
+            return null;
+        return threading();
+    }
+
+    public Map<String, Object> threading() {
+        Map<String, Object> map = new HashMap<>();
+        Map<String, Object> executor = new HashMap<>();
+        executor.put("ActiveCount", tagTaskExecutor.getActiveCount());
+        executor.put("CorePoolSize", tagTaskExecutor.getCorePoolSize());
+        executor.put("MaxPoolSize", tagTaskExecutor.getMaxPoolSize());
+        executor.put("PoolSize", tagTaskExecutor.getPoolSize());
+        map.put("Executor", executor);
+        map.put("Tags", tagTaskExecutor.getRunning());
+        return map;
+    }
+
+    @RequestMapping({"threading.html"})
+    public String getThreading(Model model) {
+        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
+            return "404";
+        return "thread";
     }
 
     @RequestMapping(value = {"clear.html"}, method = RequestMethod.GET)
     public String clearPage(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
-        return pageFactory.clear(httpServletRequest, httpServletResponse, model);
+        if (ShiroUtils.isLogin()) {
+            if (sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
+                return pageFactory.clear(httpServletRequest, httpServletResponse, model);
+            }
+        }
+        return "404";
     }
 
     @ResponseBody
     @RequestMapping(value = {"clear"}, method = RequestMethod.POST)
     public String clearPost(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) throws Exception {
-        check(httpServletRequest, "clear");
-        pageFactory.clear(httpServletRequest, httpServletResponse, model);
+        if (ShiroUtils.isLogin()) {
+            if (sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
+                check(httpServletRequest, "clear");
+                pageFactory.clear(httpServletRequest, httpServletResponse, model);
+            }
+        }
         return "404";
     }
 
     @RequestMapping(value = {"reinit.html"}, method = RequestMethod.GET)
     public String reinit(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
-        return pageFactory.reinit(httpServletRequest, httpServletResponse, model);
+        if (ShiroUtils.isLogin()) {
+            if (sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
+                return pageFactory.reinit(httpServletRequest, httpServletResponse, model);
+            }
+        }
+        return "404";
     }
 
     @ResponseBody
     @RequestMapping(value = {"reinit"}, method = RequestMethod.POST)
     public String reinitPost(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) throws Exception {
-        check(httpServletRequest, "reinit");
-        pageFactory.reinit(httpServletRequest, httpServletResponse, model);
+        if (ShiroUtils.isLogin()) {
+            if (sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
+                check(httpServletRequest, "reinit");
+                pageFactory.reinit(httpServletRequest, httpServletResponse, model);
+            }
+        }
         return "404";
     }
 
