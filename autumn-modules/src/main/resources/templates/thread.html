@@ -33,7 +33,15 @@
     var vm = new Vue({
         el: '#app',
         data: {
-            threading: {},
+            threading: {
+                Executor:{
+                    ActiveCount:0,
+                    CorePoolSize:0,
+                    MaxPoolSize:0,
+                    PoolSize:0,
+                },
+                Tags:[],
+            },
         },
         mounted() {
             $.ajax({
