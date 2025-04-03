@@ -651,7 +651,7 @@ public class MysqlTableService {
                     try {
                         tableDao.modifyColumn(map);
                     } catch (Throwable e) {
-                        log.error("Modify Columns:{}", e.getMessage());
+                        log.debug("Modify Columns:{}", e.getMessage());
                     }
                 }
             }
@@ -673,7 +673,7 @@ public class MysqlTableService {
                     try {
                         tableDao.dropColumn(map);
                     } catch (Throwable e) {
-                        log.error("Drop Columns:{}", e.getMessage());
+                        log.debug("Drop Columns:{}", e.getMessage());
                     }
                 }
             }
@@ -694,7 +694,7 @@ public class MysqlTableService {
                     try {
                         tableDao.addColumns(map);
                     } catch (Throwable e) {
-                        log.error("Add Columns:{}", e.getMessage());
+                        log.debug("Add Columns:{}", e.getMessage());
                     }
                 }
             }
@@ -716,7 +716,7 @@ public class MysqlTableService {
                     try {
                         tableDao.dropPrimaryKey(map);
                     } catch (Throwable e) {
-                        log.error("Drop Primary Key:{}", e.getMessage());
+                        log.debug("Drop Primary Key:{}", e.getMessage());
                     }
                 }
             }
@@ -738,12 +738,12 @@ public class MysqlTableService {
                     try {
                         tableDao.dropIndex(map);
                     } catch (Throwable e) {
-                        log.error("Drop Index:{}", e.getMessage());
+                        log.debug("Drop Index:{}", e.getMessage());
                     }
                     try {
                         tableDao.modifyColumn(map);
                     } catch (Throwable e) {
-                        log.error("Modify Column:{}", e.getMessage());
+                        log.debug("Modify Column:{}", e.getMessage());
                     }
                 }
             }
@@ -765,7 +765,7 @@ public class MysqlTableService {
                     try {
                         tableDao.addIndex(map);
                     } catch (Throwable e) {
-                        log.error("Add Index:{}", e.getMessage());
+                        log.debug("Add Index:{}", e.getMessage());
                     }
                 }
             }
@@ -782,7 +782,7 @@ public class MysqlTableService {
                     try {
                         tableDao.dropIndex(map);
                     } catch (Throwable e) {
-                        log.error("Drop Index:{}", e.getMessage());
+                        log.debug("Drop Index:{}", e.getMessage());
                     }
                 }
             }
@@ -802,7 +802,7 @@ public class MysqlTableService {
                 try {
                     tableDao.createTable(map);
                 } catch (Throwable e) {
-                    log.error("Create Table:{}", e.getMessage());
+                    log.debug("Create Table:{}", e.getMessage());
                 }
             }
         }
@@ -827,7 +827,7 @@ public class MysqlTableService {
         try {
             tableDao.dropTable(tableName);
         } catch (Throwable e) {
-            log.error("Drop Table:{}", e.getMessage());
+            log.debug("Drop Table:{}", e.getMessage());
         }
     }
 }
