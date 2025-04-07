@@ -1,11 +1,16 @@
 package cn.org.autumn.utils;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
 public class AES {
+
+    public static final Logger log = LoggerFactory.getLogger(AES.class);
 
     public static String encrypt(String content, String password) {
         try {
@@ -18,7 +23,7 @@ public class AES {
             byte[] result = cipher.doFinal(bytes);
             return Base64.getEncoder().encodeToString(result);
         } catch (Exception e) {
-            System.out.println(e.getMessage());
+            log.debug("加密失败:{}", e.getMessage());
         }
         return null;
     }
@@ -32,7 +37,7 @@ public class AES {
             byte[] result = cipher.doFinal(bytes);
             return new String(result);
         } catch (Exception e) {
-            System.out.println(e.getMessage());
+            log.debug("解密失败:{}", e.getMessage());
         }
         return "";
     }
