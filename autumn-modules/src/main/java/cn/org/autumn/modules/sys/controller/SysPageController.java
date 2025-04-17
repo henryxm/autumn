@@ -178,11 +178,6 @@ public class SysPageController implements ErrorController {
         return pageFactory._505(httpServletRequest, httpServletResponse, model);
     }
 
-    @Override
-    public String getErrorPath() {
-        return null;
-    }
-
     @RequestMapping({"error.html", "error"})
     public String error(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
         return pageFactory.error(httpServletRequest, httpServletResponse, model);

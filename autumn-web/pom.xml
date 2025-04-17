@@ -2,10 +2,11 @@
     <parent>
         <groupId>cn.org.autumn</groupId>
         <artifactId>autumn</artifactId>
-        <version>1.0.0</version>
+        <version>2.0.0</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <artifactId>autumn-web</artifactId>
+    <version>2.0.0</version>
     <packaging>jar</packaging>
     <description>autumn-web</description>
 
@@ -13,17 +14,17 @@
         <dependency>
             <groupId>cn.org.autumn</groupId>
             <artifactId>autumn-modules</artifactId>
-            <version>1.0.0</version>
+            <version>2.0.0</version>
         </dependency>
         <dependency>
             <groupId>cn.org.autumn</groupId>
             <artifactId>autumn-lib</artifactId>
-            <version>1.0.0</version>
+            <version>2.0.0</version>
         </dependency>
         <dependency>
             <groupId>cn.org.autumn</groupId>
             <artifactId>autumn-demo</artifactId>
-            <version>1.0.0</version>
+            <version>2.0.0</version>
         </dependency>
     </dependencies>
 

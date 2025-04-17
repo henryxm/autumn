@@ -11,7 +11,7 @@ server:
 
 spring:
   application:
-    name: autumn-web
+    name: web
   profiles:
     active: dev
   jackson:
@@ -37,6 +37,11 @@ spring:
   freemarker:
     suffix: .html
     request-context-attribute: request
+  main:
+    allow-circular-references: true
+  mvc:
+    pathmatch:
+      matching-strategy: ANT_PATH_MATCHER
 
 autumn:
   redis:

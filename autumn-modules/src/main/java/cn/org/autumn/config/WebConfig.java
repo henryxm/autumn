@@ -22,7 +22,6 @@ public class WebConfig implements WebMvcConfigurer {
     List<ResolverHandler> resolverHandlers;
 
     @Override
-
     public void addInterceptors(InterceptorRegistry registry) {
         if (null == interceptorHandlers || interceptorHandlers.isEmpty())
             return;
