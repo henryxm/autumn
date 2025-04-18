@@ -10,7 +10,7 @@ import cn.org.autumn.modules.sys.entity.CategoryItem;
 import cn.org.autumn.modules.sys.entity.ConfigItem;
 import cn.org.autumn.modules.sys.entity.SysConfigEntity;
 import com.google.gson.Gson;
-import com.google.gson.internal.LinkedHashTreeMap;
+import com.google.gson.internal.LinkedTreeMap;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -218,7 +218,7 @@ public class SysCategoryService extends ModuleService<SysCategoryDao, SysCategor
             }
         } else
             sysConfigEntities = sysConfigService.selectByMap(null);
-        Map<String, CategoryItem> map = new LinkedHashTreeMap<>();
+        Map<String, CategoryItem> map = new LinkedTreeMap<>();
         if (null == sysConfigEntities)
             return map;
         for (SysConfigEntity sysConfigEntity : sysConfigEntities) {
