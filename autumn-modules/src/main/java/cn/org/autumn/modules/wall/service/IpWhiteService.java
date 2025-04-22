@@ -2,6 +2,7 @@ package cn.org.autumn.modules.wall.service;
 
 import cn.org.autumn.modules.wall.dao.IpWhiteDao;
 import cn.org.autumn.modules.wall.entity.RData;
+import cn.org.autumn.site.InitFactory;
 import cn.org.autumn.site.LoadFactory;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.wall.entity.IpWhiteEntity;
@@ -18,7 +19,7 @@ import java.net.InetAddress;
 import java.util.*;
 
 @Service
-public class IpWhiteService extends WallCounter<IpWhiteDao, IpWhiteEntity> implements LoadFactory.Load, LoopJob.FiveSecond {
+public class IpWhiteService extends WallCounter<IpWhiteDao, IpWhiteEntity> implements InitFactory.Init, LoadFactory.Load, LoopJob.FiveSecond {
 
     private static final Logger log = LoggerFactory.getLogger(IpWhiteService.class);
 
@@ -166,5 +167,11 @@ public class IpWhiteService extends WallCounter<IpWhiteDao, IpWhiteEntity> imple
     @Override
     protected boolean has(String key) {
         return hasIp(key);
+    }
+
+    @Override
+    public void init() {
+        create("127.0.0.1", "", "");
+        create(IPUtils.getIp(), "", "");
     }
 }
