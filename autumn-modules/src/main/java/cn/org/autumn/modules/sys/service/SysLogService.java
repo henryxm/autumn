@@ -15,15 +15,32 @@ import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class SysLogService extends ServiceImpl<SysLogDao, SysLogEntity> implements LoopJob.Job, InitFactory.Init {
+
+    private static final Map<String, String> recent = new ConcurrentHashMap<>();
 
     private Logger logger = LoggerFactory.getLogger(getClass());
 
     public void init() {
         LoopJob.onOneWeek(this);
+    }
+
+    public Map<String, String> getRecent() {
+        return recent;
+    }
+
+    public String recent() {
+        StringBuilder builder = new StringBuilder();
+        for (Map.Entry<String, String> kv : recent.entrySet()) {
+            builder.append(kv.getKey() + ":" + kv.getValue());
+            builder.append("<br/>");
+        }
+        return builder.toString();
     }
 
     public PageUtils queryPage(Map<String, Object> params) {
@@ -57,6 +74,7 @@ public class SysLogService extends ServiceImpl<SysLogDao, SysLogEntity> implemen
                 ch.qos.logback.classic.Logger vLogger = loggerContext.getLogger(singlePath);
                 if (vLogger != null) {
                     vLogger.setLevel(Level.toLevel(singleLevel));
+                    recent.put(singlePath, singleLevel);
                 }
             }
         } catch (Exception e) {

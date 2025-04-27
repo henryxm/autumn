@@ -4,6 +4,7 @@ import cn.org.autumn.modules.client.entity.WebAuthenticationEntity;
 import cn.org.autumn.modules.client.service.WebAuthenticationService;
 import cn.org.autumn.modules.spm.service.SuperPositionModelService;
 import cn.org.autumn.modules.sys.service.SysConfigService;
+import cn.org.autumn.modules.sys.service.SysLogService;
 import cn.org.autumn.modules.sys.service.SysUserRoleService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.wall.site.WallDefault;
@@ -54,6 +55,9 @@ public class SysPageController implements ErrorController {
 
     @Autowired
     SysUserRoleService sysUserRoleService;
+
+    @Autowired
+    private SysLogService sysLogService;
 
     @Autowired
     TagTaskExecutor tagTaskExecutor;
@@ -246,6 +250,14 @@ public class SysPageController implements ErrorController {
         if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
             return "404";
         return "thread";
+    }
+
+    @RequestMapping({"log.html", "logger.html"})
+    public String log(Model model) {
+        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
+            return "404";
+        model.addAttribute("data", sysLogService.recent());
+        return "logger";
     }
 
     @RequestMapping(value = {"clear.html"}, method = RequestMethod.GET)

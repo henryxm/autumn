@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.sys.controller;
 
+import cn.org.autumn.config.Config;
 import cn.org.autumn.modules.sys.service.SysLogService;
 import cn.org.autumn.utils.PageUtils;
 import cn.org.autumn.utils.R;
@@ -8,10 +9,8 @@ import io.swagger.annotations.ApiImplicitParams;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
+
 import java.util.Map;
 
 @Controller
@@ -53,5 +52,16 @@ public class SysLogController {
     @ResponseBody
     public String changeLevel(String rootLevel, String singleLevel, String singlePath) {
         return sysLogService.changeLevel(rootLevel, singleLevel, singlePath);
+    }
+
+    @RequestMapping("changeLevel/{level}/{clazz}")
+    @ResponseBody
+    public String debug(@PathVariable String level, @PathVariable String clazz) {
+        if (null != clazz && clazz.length() > 0) {
+            Object bean = Config.getBean(clazz, true);
+            if (null != bean)
+                return sysLogService.changeLevel(null, level, bean.getClass().getName());
+        }
+        return "Fail";
     }
 }

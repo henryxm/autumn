@@ -112,9 +112,21 @@ public class Config {
     }
 
     public static Object getBean(String beanName) {
+        return getBean(beanName, false);
+    }
+
+    public static Object getBean(String beanName, boolean lowerFirst) {
         try {
-            if (null != getInstance().getApplicationContext()) {
-                return getInstance().getApplicationContext().getBean(beanName);
+            if (null != beanName) {
+                if (lowerFirst) {
+                    beanName = beanName.trim();
+                    if (beanName.length() > 1) {
+                        beanName = beanName.substring(0, 1).toLowerCase() + beanName.substring(1);
+                    }
+                }
+                if (null != getInstance().getApplicationContext()) {
+                    return getInstance().getApplicationContext().getBean(beanName);
+                }
             }
         } catch (Exception e) {
             log.debug("getBean:", e);

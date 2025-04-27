@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>修改日志等级</title>
+    <style>
+        .container {
+            display: flex;
+            justify-content: center; /* 水平居中 */
+            align-items: center; /* 垂直居中 */
+            height: 100vh; /* 容器高度为视口高度 */
+            flex-direction: column;
+        }
+    </style>
+</head>
+<body>
+<div class="container" id="app" v-cloak>
+    <div style="display:flex;">
+        <input type="text" name="clazz" v-model="clazz" style="height: 60px;font-size: 40px" @keyup.enter="debugLevel()">
+        <button @click="debugLevel()">Debug</button>
+        <button @click="infoLevel()">Info</button>
+        <button @click="warnLevel()">Warn</button>
+        <button @click="traceLevel()">Trace</button>
+        <button @click="errorLevel()">Error</button>
+        <button @click="fatalLevel()">Fatal</button>
+        <button @click="offLevel()">Off</button>
+        <button @click="reload()">刷新</button>
+    </div>
+    <div style="margin-top: 30px">
+        {{msg}}
+    </div>
+    <div style="margin-top: 30px">
+        ${data}
+    </div>
+</div>
+</body>
+<script src="${request.contextPath}/statics/libs/jquery.min.js"></script>
+<script src="${request.contextPath}/statics/libs/vue.min.js"></script>
+<script>
+    var vm = new Vue({
+        el: '#app',
+        data: {
+            clazz: "",
+            msg: "",
+        },
+        mounted() {
+        },
+        methods: {
+            infoLevel: function (event) {
+                vm.msg = "";
+                $.ajax({
+                    type: "POST",
+                    url: "sys/log/changeLevel/info/" + vm.clazz,
+                    success: function (result) {
+                        vm.msg = result + ":info:" + vm.clazz;
+                    }
+                });
+            },
+            debugLevel: function (event) {
+                vm.msg = "";
+                $.ajax({
+                    type: "POST",
+                    url: "sys/log/changeLevel/debug/" + vm.clazz,
+                    success: function (result) {
+                        vm.msg = result + ":debug:" + vm.clazz;
+                    }
+                });
+            },
+            warnLevel: function (event) {
+                vm.msg = "";
+                $.ajax({
+                    type: "POST",
+                    url: "sys/log/changeLevel/warn/" + vm.clazz,
+                    success: function (result) {
+                        vm.msg = result + ":warn:" + vm.clazz;
+                    }
+                });
+            },
+            traceLevel: function (event) {
+                vm.msg = "";
+                $.ajax({
+                    type: "POST",
+                    url: "sys/log/changeLevel/trace/" + vm.clazz,
+                    success: function (result) {
+                        vm.msg = result + ":trace:" + vm.clazz;
+                    }
+                });
+            },
+            errorLevel: function (event) {
+                vm.msg = "";
+                $.ajax({
+                    type: "POST",
+                    url: "sys/log/changeLevel/error/" + vm.clazz,
+                    success: function (result) {
+                        vm.msg = result + ":error:" + vm.clazz;
+                    }
+                });
+            },
+            fatalLevel: function (event) {
+                vm.msg = "";
+                $.ajax({
+                    type: "POST",
+                    url: "sys/log/changeLevel/fatal/" + vm.clazz,
+                    success: function (result) {
+                        vm.msg = result + ":fatal:" + vm.clazz;
+                    }
+                });
+            },
+            offLevel: function (event) {
+                vm.msg = "";
+                $.ajax({
+                    type: "POST",
+                    url: "sys/log/changeLevel/off/" + vm.clazz,
+                    success: function (result) {
+                        vm.msg = result + ":off:" + vm.clazz;
+                    }
+                });
+            },
+            reload: function (event) {
+                location.reload();
+            },
+        }
+    });
+</script>
+</html>
