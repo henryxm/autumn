@@ -58,9 +58,25 @@ public class SysLogController {
     @ResponseBody
     public String debug(@PathVariable String level, @PathVariable String clazz) {
         if (null != clazz && clazz.length() > 0) {
-            Object bean = Config.getBean(clazz, true);
-            if (null != bean)
-                return sysLogService.changeLevel(null, level, bean.getClass().getName());
+            Object bean = Config.getBean(clazz);
+            if (null == bean)
+                bean = Config.getBean(clazz, true);
+            Class<?> c = null;
+            if (null == bean) {
+                try {
+                    c = Class.forName(clazz);
+                } catch (ClassNotFoundException ignored) {
+                }
+            } else {
+                c = bean.getClass();
+            }
+            if (null != c) {
+                String name = c.getName();
+                //去除被代理的类型
+                if (name.contains("$"))
+                    name = name.split("\\$")[0];
+                return sysLogService.changeLevel(null, level, name);
+            }
         }
         return "Fail";
     }

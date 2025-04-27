@@ -147,7 +147,7 @@ public class Config {
         return value;
     }
 
-    public static Object getBean(Class clazz) {
+    public static Object getBean(Class<?> clazz) {
         try {
             if (null != getInstance().getApplicationContext()) {
                 return getInstance().getApplicationContext().getBean(clazz);
