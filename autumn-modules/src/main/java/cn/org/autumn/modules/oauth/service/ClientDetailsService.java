@@ -233,7 +233,8 @@ public class ClientDetailsService extends ModuleService<ClientDetailsDao, Client
     }
 
     public ClientDetailsEntity create(String clientId, String secret, String name, String description) {
-        return create(sysConfigService.getBaseUrl(), clientId, secret, ClientType.SiteDefault, name, description);
+        ClientType type = baseMapper.countClientType(ClientType.SiteDefault) > 0 ? null : ClientType.SiteDefault;
+        return create(sysConfigService.getBaseUrl(), clientId, secret, type, name, description);
     }
 
     public ClientDetailsEntity create(String baseUrl, String clientId, String secret, ClientType clientType, String name, String description) {

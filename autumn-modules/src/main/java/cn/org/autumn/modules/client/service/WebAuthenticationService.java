@@ -81,7 +81,8 @@ public class WebAuthenticationService extends ModuleService<WebAuthenticationDao
     public void init() {
         super.init();
         if (!hasClientId(sysConfigService.getClientId())) {
-            create(sysConfigService.getBaseUrl(), sysConfigService.getClientId(), sysConfigService.getClientSecret(), ClientType.SiteDefault, "默认的客户端", "basic", "normal");
+            ClientType type = baseMapper.countClientType(ClientType.SiteDefault) > 0 ? null : ClientType.SiteDefault;
+            create(sysConfigService.getBaseUrl(), sysConfigService.getClientId(), sysConfigService.getClientSecret(), type, "默认的客户端", "basic", "normal");
         }
         updateClientType(sysConfigService.getClientId(), ClientType.SiteDefault);
     }
