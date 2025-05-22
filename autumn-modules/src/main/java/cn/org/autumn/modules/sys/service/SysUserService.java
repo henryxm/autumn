@@ -3,6 +3,7 @@ package cn.org.autumn.modules.sys.service;
 import cn.org.autumn.bean.EnvBean;
 import cn.org.autumn.cluster.UserHandler;
 import cn.org.autumn.cluster.UserMapping;
+import cn.org.autumn.config.ClearHandler;
 import cn.org.autumn.config.Config;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.sys.shiro.SuperPasswordToken;
@@ -32,6 +33,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static cn.org.autumn.modules.sys.service.SysDeptService.Department_System_Administrator;
 import static cn.org.autumn.modules.sys.service.SysRoleService.Role_System_Administrator;
@@ -40,12 +42,14 @@ import static cn.org.autumn.modules.sys.service.SysRoleService.Role_System_Admin
  * 系统用户
  */
 @Service
-public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> implements LoopJob.Job, InitFactory.Init, InitFactory.After {
+public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> implements LoopJob.TenMinute, LoopJob.Job, InitFactory.Init, InitFactory.After, ClearHandler {
 
     Logger log = LoggerFactory.getLogger(getClass());
 
     static Map<String, SysUserEntity> sync = new LinkedHashMap<>();
     static Map<String, Integer> hashUser = new HashMap<>();
+
+    static final Map<String, SysUserEntity> cache = new ConcurrentHashMap<>();
 
     @Autowired
     @Lazy
@@ -369,6 +373,31 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         SysUserEntity sysUserEntity = baseMapper.getByUuid(uuid);
         refresh(sysUserEntity);
         return sysUserEntity;
+    }
+
+    public void clear(String user) {
+        cache.remove(user);
+    }
+
+    public SysUserEntity getCache(String user) {
+        SysUserEntity entity = cache.get(user);
+        if (null == entity) {
+            entity = getUuid(user);
+            if (null != entity) {
+                cache.put(user, entity);
+            }
+        }
+        return entity;
+    }
+
+    @Override
+    public void clear() {
+        cache.clear();
+    }
+
+    @Override
+    public void onTenMinute() {
+        clear();
     }
 
     public SysUserEntity getByUuid(String uuid) {
