@@ -308,6 +308,11 @@ public class SysUserEntity implements Serializable {
         return status >= 1;
     }
 
+    public void checkThrow() throws Exception {
+        if (status < 1)
+            throw new Exception("服务繁忙");
+    }
+
     @Override
     public int hashCode() {
         return Objects.hash(
