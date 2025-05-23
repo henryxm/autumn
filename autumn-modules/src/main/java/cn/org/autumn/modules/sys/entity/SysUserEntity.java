@@ -18,9 +18,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 
-/**
- * 系统用户
- */
 @TableName("sys_user")
 @Table(value = "sys_user", comment = "系统用户")
 public class SysUserEntity implements Serializable {
@@ -36,9 +33,6 @@ public class SysUserEntity implements Serializable {
     @Column(comment = "父级UUID")
     private String parentUuid;
 
-    /**
-     * 用户名
-     */
     @NotBlank(message = "用户名不能为空", groups = {AddGroup.class, UpdateGroup.class})
     @Column(length = 50, comment = "用户名", isUnique = true)
     private String username;
@@ -47,30 +41,18 @@ public class SysUserEntity implements Serializable {
     @Index
     private String nickname;
 
-    /**
-     * 密码
-     */
     @NotBlank(message = "密码不能为空", groups = AddGroup.class)
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @Column(length = 100, comment = "密码")
     private String password;
 
-    /**
-     * 盐
-     */
     @Column(length = 20, comment = "盐")
     private String salt;
 
-    /**
-     * 邮箱
-     */
     @Column(length = 100, comment = "邮箱")
     @Index
     private String email;
 
-    /**
-     * 手机号
-     */
     @Column(length = 100, comment = "手机号")
     @Index
     private String mobile;
@@ -102,25 +84,18 @@ public class SysUserEntity implements Serializable {
     @Index
     private String unionId;
 
-    /**
-     * 状态  0：禁用   1：正常
-     */
-    @Column(length = 4, type = DataType.INT, comment = "状态  0：禁用   1：正常")
-    private Integer status;
+    @Column(comment = "状态:0,禁用;1:正常")
+    private int status;
 
     @TableField(exist = false)
     private List<String> roleKeys;
 
     @Column(length = 100, comment = "部门标识")
     private String deptKey;
-    /**
-     * 创建时间
-     */
-    @Column(length = 20, type = DataType.DATETIME, comment = "创建时间")
+
+    @Column(length = 20, type = DataType.DATETIME, comment = "创建")
     private Date createTime;
-    /**
-     * 部门名称
-     */
+
     @TableField(exist = false)
     private String deptName;
 
@@ -327,6 +302,10 @@ public class SysUserEntity implements Serializable {
         this.weixing = entity.weixing;
         this.status = entity.status;
         this.icon = entity.getIcon();
+    }
+
+    public boolean check() {
+        return status >= 1;
     }
 
     @Override
