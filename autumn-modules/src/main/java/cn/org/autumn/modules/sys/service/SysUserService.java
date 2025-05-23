@@ -397,7 +397,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
     @Override
     public void onTenMinute() {
         clear();
-        runJob();
+        sync();
     }
 
     public SysUserEntity getByUuid(String uuid) {
@@ -472,8 +472,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         return false;
     }
 
-    @Override
-    public void runJob() {
+    public void sync() {
         if (null != sync && !sync.isEmpty()) {
             Iterator<Map.Entry<String, SysUserEntity>> iterator = sync.entrySet().iterator();
             while (iterator.hasNext()) {
