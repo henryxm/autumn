@@ -85,7 +85,7 @@ public class SysUserEntity implements Serializable {
     private String unionId;
 
     @Column(comment = "状态:0,禁用;1:正常")
-    private int status;
+    private int status = 1;
 
     @TableField(exist = false)
     private List<String> roleKeys;

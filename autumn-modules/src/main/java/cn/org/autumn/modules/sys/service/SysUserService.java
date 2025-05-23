@@ -42,7 +42,7 @@ import static cn.org.autumn.modules.sys.service.SysRoleService.Role_System_Admin
  * 系统用户
  */
 @Service
-public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> implements LoopJob.TenMinute, LoopJob.Job, InitFactory.Init, InitFactory.After, ClearHandler {
+public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> implements LoopJob.TenMinute, InitFactory.Init, InitFactory.After, ClearHandler {
 
     Logger log = LoggerFactory.getLogger(getClass());
 
@@ -110,7 +110,6 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
             }
             updateById(current);
         }
-        LoopJob.onTenSecond(this);
     }
 
     private void syncAdminUuid() {
@@ -398,6 +397,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
     @Override
     public void onTenMinute() {
         clear();
+        runJob();
     }
 
     public SysUserEntity getByUuid(String uuid) {
