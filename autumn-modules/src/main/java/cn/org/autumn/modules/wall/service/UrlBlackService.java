@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Map;
 
 @Service
-public class UrlBlackService extends WallCounter<UrlBlackDao, UrlBlackEntity> implements LoadFactory.Load, LoopJob.FiveSecond {
+public class UrlBlackService extends WallCounter<UrlBlackDao, UrlBlackEntity> implements LoadFactory.Load, LoopJob.OneMinute {
 
     private static final Logger log = LoggerFactory.getLogger(UrlBlackService.class);
 
@@ -35,7 +35,7 @@ public class UrlBlackService extends WallCounter<UrlBlackDao, UrlBlackEntity> im
     /**
      * 每个周期的URL访问数大于改值后，将其对应的IP地址拉入黑名单
      */
-    public static Integer lastCount = 500;
+    public static Integer lastCount = 50000;
 
     @Autowired
     IpBlackService ipBlackService;
@@ -77,6 +77,8 @@ public class UrlBlackService extends WallCounter<UrlBlackDao, UrlBlackEntity> im
                 int count = integer + 1;
                 allUrls.replace(hashCode, count);
                 if (count > lastCount) {
+                    if (log.isInfoEnabled())
+                        log.info("URL触发:{}, IP:{}, 频率:{}/5秒, 上限:{}/5秒", url, ip, count, lastCount);
                     ipBlackService.saveBlackIp(ip, agent, 0, "触发URL黑名单策略");
                     allUrls.replace(hashCode, 0);
                 }
@@ -89,11 +91,8 @@ public class UrlBlackService extends WallCounter<UrlBlackDao, UrlBlackEntity> im
 
     /**
      * 定时清空对ip地址的检测
-     *
-     * @param times
      */
-    public void refresh(Integer times) {
-        lastCount = times;
+    public void refresh() {
         if (null != allUrls)
             allUrls.clear();
     }
@@ -114,7 +113,7 @@ public class UrlBlackService extends WallCounter<UrlBlackDao, UrlBlackEntity> im
         return false;
     }
 
-    public UrlBlackEntity creat(String url, String tag) {
+    public UrlBlackEntity create(String url, String tag) {
         UrlBlackEntity urlBlackEntity = null;
         try {
             urlBlackEntity = getByUrl(url);
@@ -134,9 +133,9 @@ public class UrlBlackService extends WallCounter<UrlBlackDao, UrlBlackEntity> im
     }
 
     @Override
-    public void onFiveSecond() {
+    public void onOneMinute() {
         if (wallFactory.isUrlBlack()) {
-            refresh(500);
+            refresh();
             load();
         }
     }
