@@ -137,6 +137,14 @@ public class SysUserEntity implements Serializable {
         this.username = username;
     }
 
+    public String getNickname() {
+        return nickname;
+    }
+
+    public void setNickname(String nickname) {
+        this.nickname = nickname;
+    }
+
     public String getPassword() {
         return password;
     }
@@ -201,6 +209,14 @@ public class SysUserEntity implements Serializable {
         this.idCard = idCard;
     }
 
+    public String getIcon() {
+        return icon;
+    }
+
+    public void setIcon(String icon) {
+        this.icon = icon;
+    }
+
     public String getOpenId() {
         return openId;
     }
@@ -217,11 +233,11 @@ public class SysUserEntity implements Serializable {
         this.unionId = unionId;
     }
 
-    public Integer getStatus() {
+    public int getStatus() {
         return status;
     }
 
-    public void setStatus(Integer status) {
+    public void setStatus(int status) {
         this.status = status;
     }
 
@@ -271,22 +287,6 @@ public class SysUserEntity implements Serializable {
 
     public void setParent(SysUserEntity parent) {
         this.parent = parent;
-    }
-
-    public String getNickname() {
-        return nickname;
-    }
-
-    public void setNickname(String nickname) {
-        this.nickname = nickname;
-    }
-
-    public String getIcon() {
-        return icon;
-    }
-
-    public void setIcon(String icon) {
-        this.icon = icon;
     }
 
     public void copy(SysUserEntity entity) {
