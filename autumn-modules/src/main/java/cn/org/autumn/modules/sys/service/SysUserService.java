@@ -370,7 +370,11 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
 
     public SysUserEntity getUuid(String uuid) {
         SysUserEntity sysUserEntity = baseMapper.getByUuid(uuid);
-        refresh(sysUserEntity);
+        try {
+            refresh(sysUserEntity);
+        } catch (Exception e) {
+            log.error("刷新错误:", e);
+        }
         return sysUserEntity;
     }
 
