@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>版本更新提示</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #333;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px 30px;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            max-width: 400px;
+            width: 90%;
+            animation: slideIn 0.6s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 50%;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            color: white;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .message {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+
+        .countdown {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 25px;
+            border: 2px solid #e9ecef;
+        }
+
+        .countdown-number {
+            font-size: 36px;
+            font-weight: bold;
+            color: #667eea;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .countdown-text {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            margin: 0 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+        }
+
+        .btn-secondary:hover {
+            box-shadow: 0 10px 20px rgba(108, 117, 125, 0.3);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: #e9ecef;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.1s linear;
+        }
+
+        .features {
+            margin-top: 25px;
+            text-align: left;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .feature-icon {
+            color: #28a745;
+            margin-right: 10px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">📱</div>
+        <h1>版本更新提示</h1>
+        <p class="message">
+            检测到您正在使用旧版本APP，为了获得更好的体验和新增的扫码登录功能，请更新到最新版本。
+        </p>
+        
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+        
+        <div class="countdown">
+            <span class="countdown-number" id="countdown">5</span>
+            <span class="countdown-text">秒后自动跳转到下载页面</span>
+        </div>
+        
+        <div>
+            <a href="#" class="btn" id="downloadBtn">立即下载</a>
+            <button class="btn btn-secondary" id="cancelBtn">取消</button>
+        </div>
+        
+        <div class="features">
+            <div class="feature-item">
+                <span class="feature-icon">✓</span>
+                新增扫码登录功能
+            </div>
+            <div class="feature-item">
+                <span class="feature-icon">✓</span>
+                优化用户体验
+            </div>
+            <div class="feature-item">
+                <span class="feature-icon">✓</span>
+                修复已知问题
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 配置参数 - 请根据实际情况修改
+        const DOWNLOAD_URL = '${url}'; // 替换为您的APP下载链接
+        const COUNTDOWN_SECONDS = 5;
+        
+        let countdown = COUNTDOWN_SECONDS;
+        let timer;
+        let progressTimer;
+        
+        // 获取DOM元素
+        const countdownElement = document.getElementById('countdown');
+        const progressFill = document.getElementById('progressFill');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const cancelBtn = document.getElementById('cancelBtn');
+        
+        // 设置下载链接
+        downloadBtn.href = DOWNLOAD_URL;
+        
+        // 开始倒计时
+        function startCountdown() {
+            timer = setInterval(() => {
+                countdown--;
+                countdownElement.textContent = countdown;
+                
+                // 更新进度条
+                const progress = ((COUNTDOWN_SECONDS - countdown) / COUNTDOWN_SECONDS) * 100;
+                progressFill.style.width = progress + '%';
+                
+                if (countdown <= 0) {
+                    clearInterval(timer);
+                    redirectToDownload();
+                }
+            }, 1000);
+        }
+        
+        // 跳转到下载页面
+        function redirectToDownload() {
+            window.location.href = DOWNLOAD_URL;
+        }
+        
+        // 取消倒计时
+        function cancelCountdown() {
+            clearInterval(timer);
+            countdownElement.textContent = '已取消';
+            countdownElement.style.color = '#dc3545';
+            progressFill.style.width = '0%';
+        }
+        
+        // 事件监听
+        downloadBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            redirectToDownload();
+        });
+        
+        cancelBtn.addEventListener('click', cancelCountdown);
+        
+        // 页面加载完成后开始倒计时
+        window.addEventListener('load', () => {
+            // 延迟1秒开始倒计时，让用户有时间阅读内容
+            setTimeout(startCountdown, 1000);
+        });
+        
+        // 页面可见性变化时暂停/恢复倒计时
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                clearInterval(timer);
+            } else {
+                if (countdown > 0) {
+                    startCountdown();
+                }
+            }
+        });
+        
+        // 防止页面被意外关闭
+        window.addEventListener('beforeunload', (e) => {
+            if (countdown > 0) {
+                e.preventDefault();
+                e.returnValue = '您确定要离开吗？页面即将跳转到下载页面。';
+            }
+        });
+    </script>
+</body>
+</html> 

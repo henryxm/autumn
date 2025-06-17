@@ -59,4 +59,8 @@ public interface PageHandler {
     default String loading(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
         return "";
     }
+
+    default String scan(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        return "";
+    }
 }

@@ -59,4 +59,10 @@ public class DefaultPage implements PageHandler {
     public String main(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
         return "main";
     }
+
+    @Override
+    public String scan(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        model.addAttribute("url","/");
+        return "scan";
+    }
 }
