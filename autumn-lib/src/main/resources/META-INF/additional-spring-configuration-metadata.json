@@ -1,0 +1,34 @@
+{
+  "properties": [
+    {
+      "name": "autumn.redis.open",
+      "type": "java.lang.String",
+      "description": "Description for autumn.redis.open."
+    },
+    {
+      "name": "autumn.shiro.redis",
+      "type": "java.lang.String",
+      "description": "Description for autumn.shiro.redis."
+    },
+    {
+      "name": "autumn.database",
+      "type": "java.lang.String",
+      "description": "Description for autumn.database."
+    },
+    {
+      "name": "autumn.table.auto",
+      "type": "java.lang.String",
+      "description": "Description for autumn.table.auto."
+    },
+    {
+      "name": "autumn.table.init",
+      "type": "java.lang.String",
+      "description": "Description for autumn.table.init."
+    },
+    {
+      "name": "autumn.table.pack",
+      "type": "java.lang.String",
+      "description": "Description for autumn.table.pack."
+    }
+  ]
+}

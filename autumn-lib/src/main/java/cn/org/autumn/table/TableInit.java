@@ -22,16 +22,10 @@ public class TableInit {
     @Autowired
     EnvBean envBean;
 
-    /**
-     * constant value for mysql database.
-     */
     public static String MYSQL = "mysql";
 
-    /**
-     * Supported database type, value from configuration properties file;
-     */
     @Value("${autumn.database:mysql}")
-    private String databaseType = MYSQL;
+    private String databaseType;
 
     @Value("${autumn.table.init:true}")
     private boolean init;
@@ -44,9 +38,6 @@ public class TableInit {
         return init;
     }
 
-    /**
-     * link to table create service;
-     */
     @Autowired
     private MysqlTableService mysqlTableService;
 
