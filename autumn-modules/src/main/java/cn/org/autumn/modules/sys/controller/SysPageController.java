@@ -260,6 +260,13 @@ public class SysPageController implements ErrorController {
         return "logger";
     }
 
+    @RequestMapping({"redis.html"})
+    public String redis(HttpServletResponse response) {
+        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
+            return "404";
+        return "redis";
+    }
+
     @RequestMapping(value = {"clear.html"}, method = RequestMethod.GET)
     public String clearPage(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
         if (ShiroUtils.isLogin()) {

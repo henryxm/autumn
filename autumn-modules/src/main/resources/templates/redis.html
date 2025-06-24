@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>Redis缓存管理</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header { background: #007bff; color: white; padding: 20px; border-radius: 5px; margin-bottom: 20px; }
+        .status { background: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+        .main { display: grid; grid-template-columns: 300px 1fr; gap: 20px; }
+        .sidebar { background: white; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
+        .content { background: white; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
+        .db-item { padding: 10px; margin: 5px 0; background: #f8f9fa; border-radius: 3px; cursor: pointer; }
+        .db-item:hover { background: #e9ecef; }
+        .db-item.active { background: #007bff; color: white; }
+        .btn { padding: 8px 16px; border: none; border-radius: 3px; cursor: pointer; margin: 2px; }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-warning { background: #ffc107; color: #212529; }
+        .search { margin-bottom: 20px; }
+        .search input { padding: 8px; width: 300px; margin-right: 10px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background: #f8f9fa; }
+        .loading { text-align: center; padding: 40px; }
+        .alert { padding: 10px; margin: 10px 0; border-radius: 3px; }
+        .alert-success { background: #d4edda; color: #155724; }
+        .alert-danger { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <div class="container" id="app" v-cloak>
+        <div class="header">
+            <h1>Redis缓存管理</h1>
+        </div>
+        
+        <div class="status">
+            <strong>状态:</strong> <span v-text="redisStatus.connected ? '连接正常' : '连接异常'"></span>
+            <span v-if="redisStatus.serverInfo">| 版本: <span v-text="redisStatus.serverInfo.version"></span></span>
+        </div>
+        
+        <div class="main">
+            <div class="sidebar">
+                <h3>数据库列表</h3>
+                <div v-for="db in databases" :key="db.database" 
+                     class="db-item" 
+                     :class="{ active: selectedDatabase === db.database }"
+                     @click="selectDatabase(db.database)">
+                    <div><strong v-text="db.name"></strong></div>
+                    <div v-text="db.keyCount + ' 个键'"></div>
+                    <button class="btn btn-danger" @click.stop="clearDatabase(db.database)">清空</button>
+                </div>
+                <button class="btn btn-warning" @click="clearAllDatabases" style="margin-top: 20px; width: 100%;">
+                    清空所有数据库
+                </button>
+            </div>
+            
+            <div class="content">
+                <div class="search">
+                    <input type="text" v-model="searchPattern" placeholder="搜索键 (支持 * ?)" @keyup.enter="searchKeys">
+                    <button class="btn btn-primary" @click="searchKeys">搜索</button>
+                    <button class="btn btn-primary" @click="refreshKeys">刷新</button>
+                </div>
+                
+                <div v-if="loading" class="loading">加载中...</div>
+                
+                <div v-else>
+                    <p>共 <span v-text="keysData.total"></span> 个键</p>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>键名</th>
+                                <th>类型</th>
+                                <th>大小</th>
+                                <th>过期时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="key in keysData.keys" :key="key.key">
+                                <td v-text="key.key"></td>
+                                <td v-text="key.type"></td>
+                                <td v-text="key.size"></td>
+                                <td v-text="formatTTL(key.ttl)"></td>
+                                <td>
+                                    <button class="btn btn-primary" @click="viewKey(key.key)">查看</button>
+                                    <button class="btn btn-danger" @click="deleteKey(key.key)">删除</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    
+                    <div style="margin-top: 20px; text-align: center;">
+                        <button class="btn btn-primary" @click="changePage(currentPage - 1)" :disabled="currentPage <= 1">上一页</button>
+                        <span>第 <span v-text="currentPage"></span> 页，共 <span v-text="totalPages"></span> 页</span>
+                        <button class="btn btn-primary" @click="changePage(currentPage + 1)" :disabled="currentPage >= totalPages">下一页</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div v-if="message" class="alert" :class="messageType" v-text="message"></div>
+    </div>
+</body>
+
+<script src="/statics/libs/jquery.min.js"></script>
+<script src="/statics/libs/vue.min.js"></script>
+<script>
+    var vm = new Vue({
+        el: '#app',
+        data: {
+            databases: [],
+            selectedDatabase: 0,
+            keysData: { keys: [], total: 0, page: 1, size: 20 },
+            currentPage: 1,
+            searchPattern: '*',
+            loading: false,
+            redisStatus: { connected: false, serverInfo: null },
+            message: '',
+            messageType: 'alert-success'
+        },
+        computed: {
+            totalPages() {
+                return Math.ceil(this.keysData.total / this.keysData.size);
+            }
+        },
+        mounted() {
+            this.loadStatus();
+            this.loadDatabases();
+            this.loadKeys();
+        },
+        methods: {
+            loadStatus() {
+                $.ajax({
+                    url: '/sys/redis/status',
+                    method: 'GET',
+                    success: (response) => {
+                        if (response.code === 0) {
+                            this.redisStatus = response.data;
+                        }
+                    }
+                });
+            },
+            
+            loadDatabases() {
+                $.ajax({
+                    url: '/sys/redis/databases',
+                    method: 'GET',
+                    success: (response) => {
+                        if (response.code === 0) {
+                            this.databases = response.data;
+                        } else {
+                            this.showMessage(response.msg, 'alert-danger');
+                        }
+                    }
+                });
+            },
+            
+            selectDatabase(database) {
+                this.selectedDatabase = database;
+                this.currentPage = 1;
+                this.loadKeys();
+            },
+            
+            loadKeys() {
+                this.loading = true;
+                $.ajax({
+                    url: '/sys/redis/keys/' + this.selectedDatabase,
+                    method: 'GET',
+                    data: {
+                        pattern: this.searchPattern,
+                        page: this.currentPage,
+                        size: this.keysData.size
+                    },
+                    success: (response) => {
+                        this.loading = false;
+                        if (response.code === 0) {
+                            this.keysData = response.data;
+                        } else {
+                            this.showMessage(response.msg, 'alert-danger');
+                        }
+                    }
+                });
+            },
+            
+            searchKeys() {
+                this.currentPage = 1;
+                this.loadKeys();
+            },
+            
+            refreshKeys() {
+                this.loadKeys();
+            },
+            
+            changePage(page) {
+                if (page >= 1 && page <= this.totalPages) {
+                    this.currentPage = page;
+                    this.loadKeys();
+                }
+            },
+            
+            viewKey(key) {
+                $.ajax({
+                    url: '/sys/redis/value/' + encodeURIComponent(key),
+                    method: 'GET',
+                    success: (response) => {
+                        if (response.code === 0) {
+                            alert('键值: ' + JSON.stringify(response.data, null, 2));
+                        } else {
+                            this.showMessage(response.msg, 'alert-danger');
+                        }
+                    }
+                });
+            },
+            
+            deleteKey(key) {
+                if (confirm('确定要删除键 "' + key + '" 吗？')) {
+                    $.ajax({
+                        url: '/sys/redis/key/' + encodeURIComponent(key),
+                        method: 'DELETE',
+                        success: (response) => {
+                            if (response.code === 0) {
+                                this.showMessage(response.msg, 'alert-success');
+                                this.loadKeys();
+                                this.loadDatabases();
+                            } else {
+                                this.showMessage(response.msg, 'alert-danger');
+                            }
+                        }
+                    });
+                }
+            },
+            
+            clearDatabase(database) {
+                if (confirm('确定要清空数据库 ' + database + ' 吗？')) {
+                    $.ajax({
+                        url: '/sys/redis/database/' + database,
+                        method: 'DELETE',
+                        success: (response) => {
+                            if (response.code === 0) {
+                                this.showMessage(response.msg, 'alert-success');
+                                this.loadKeys();
+                                this.loadDatabases();
+                            } else {
+                                this.showMessage(response.msg, 'alert-danger');
+                            }
+                        }
+                    });
+                }
+            },
+            
+            clearAllDatabases() {
+                if (confirm('确定要清空所有数据库吗？')) {
+                    $.ajax({
+                        url: '/sys/redis/all',
+                        method: 'DELETE',
+                        success: (response) => {
+                            if (response.code === 0) {
+                                this.showMessage(response.msg, 'alert-success');
+                                this.loadKeys();
+                                this.loadDatabases();
+                            } else {
+                                this.showMessage(response.msg, 'alert-danger');
+                            }
+                        }
+                    });
+                }
+            },
+            
+            showMessage(message, type) {
+                this.message = message;
+                this.messageType = type;
+                setTimeout(function() { 
+                    vm.message = ''; 
+                }, 3000);
+            },
+            
+            formatTTL(ttl) {
+                if (ttl === null || ttl === -1) return '永不过期';
+                if (ttl === -2) return '已过期';
+                if (ttl < 60) return ttl + '秒';
+                if (ttl < 3600) return Math.floor(ttl / 60) + '分钟';
+                if (ttl < 86400) return Math.floor(ttl / 3600) + '小时';
+                return Math.floor(ttl / 86400) + '天';
+            }
+        }
+    });
+</script>
+</html> 
