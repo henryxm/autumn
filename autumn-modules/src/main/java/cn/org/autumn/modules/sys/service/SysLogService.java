@@ -16,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import javax.validation.constraints.Null;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -60,6 +61,11 @@ public class SysLogService extends ServiceImpl<SysLogDao, SysLogEntity> implemen
     @Override
     public void runJob() {
         baseMapper.clear();
+    }
+
+    @Deprecated()
+    public String changeLevel(@Null String deprecated, String level, String name) {
+        return changeLevel(level, name);
     }
 
     public String changeLevel(String level, String name) {
