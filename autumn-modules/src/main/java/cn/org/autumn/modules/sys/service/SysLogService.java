@@ -16,6 +16,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -59,27 +62,40 @@ public class SysLogService extends ServiceImpl<SysLogDao, SysLogEntity> implemen
         baseMapper.clear();
     }
 
-    public String changeLevel(String rootLevel, String singleLevel, String singlePath) {
+    public String changeLevel(String level, String name) {
         try {
-            LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
-            logger.debug("set log rootLevel:{},singleLevel:{},singlePath:{}", rootLevel, singleLevel,
-                    singlePath);
-            if (!StringUtils.isEmpty(rootLevel)) {
-                // 设置全局日志级别
-                ch.qos.logback.classic.Logger logger = loggerContext.getLogger("root");
-                logger.setLevel(Level.toLevel(rootLevel));
-            }
-            if (!StringUtils.isEmpty(singleLevel)) {
-                // 设置某个类日志级别-可以实现定向日志级别调整
-                ch.qos.logback.classic.Logger vLogger = loggerContext.getLogger(singlePath);
-                if (vLogger != null) {
-                    vLogger.setLevel(Level.toLevel(singleLevel));
-                    recent.put(singlePath, singleLevel);
+            if (StringUtils.isNotBlank(level)) {
+                LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
+                logger.debug("Set log singleLevel:{},singlePath:{}", level, name);
+                if (StringUtils.isEmpty(name)) {
+                    // 设置全局日志级别
+                    ch.qos.logback.classic.Logger logger = loggerContext.getLogger("root");
+                    logger.setLevel(Level.toLevel(level));
+                } else {
+                    // 设置某个类日志级别-可以实现定向日志级别调整
+                    ch.qos.logback.classic.Logger vLogger = loggerContext.getLogger(name);
+                    if (vLogger != null) {
+                        vLogger.setLevel(Level.toLevel(level));
+                        recent.put(name, level);
+                    }
                 }
             }
         } catch (Exception e) {
-
+            logger.error("修改级别:{}", e.getMessage());
         }
         return "success";
+    }
+
+    public List<Map<String, String>> listLoggers() {
+        LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
+        List<ch.qos.logback.classic.Logger> loggers = loggerContext.getLoggerList();
+        List<Map<String, String>> loggerInfoList = new ArrayList<>();
+        for (ch.qos.logback.classic.Logger logger : loggers) {
+            Map<String, String> loggerInfo = new HashMap<>();
+            loggerInfo.put("name", logger.getName());
+            loggerInfo.put("level", logger.getLevel() != null ? logger.getLevel().levelStr : "INHERITED");
+            loggerInfoList.add(loggerInfo);
+        }
+        return loggerInfoList;
     }
 }

@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>日志级别管理</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .recent-searches {
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+        }
+        .recent-searches span {
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .recent-searches button {
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            margin: 2px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .recent-searches button:hover {
+            background-color: #5a6268;
+        }
+        .search-bar {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        .search-bar input[type="text"] {
+            flex-grow: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .search-bar button {
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .search-bar button:hover {
+            background-color: #0056b3;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .level-select {
+            width: 100%;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        .global-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e9ecef;
+            border-radius: 8px;
+        }
+        .global-controls select, .global-controls button {
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+        .global-controls button {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .global-controls button:hover {
+            background-color: #218838;
+        }
+        .message {
+            text-align: center;
+            margin-top: 10px;
+            color: green;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+<div class="container" id="app" v-cloak>
+    <h1>日志级别管理</h1>
+
+    <div class="recent-searches" v-if="recentSearches.length > 0">
+        <span>最近搜索:</span>
+        <button v-for="(item, index) in recentSearches" :key="index" @click="applyRecentSearch(item)">{{ item }}</button>
+    </div>
+
+    <div class="search-bar">
+        <input type="text" v-model="searchTerm" placeholder="搜索日志器名称..." @keyup.enter="filterLoggers">
+        <button @click="filterLoggers">搜索</button>
+        <button @click="resetFilter">重置</button>
+        <button @click="fetchLoggers">刷新列表</button>
+    </div>
+
+    <table>
+        <thead>
+        <tr>
+            <th>日志器名称</th>
+            <th>当前级别</th>
+            <th>操作</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr v-for="logger in filteredLoggers" :key="logger.name">
+            <td>{{ logger.name }}</td>
+            <td>{{ logger.level }}</td>
+            <td>
+                <select class="level-select" v-model="logger.selectedLevel" @change="changeLoggerLevel(logger)">
+                    <option v-for="level in logLevels" :value="level">{{ level }}</option>
+                </select>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+
+    <div class="global-controls">
+        <span>全局日志级别:</span>
+        <select v-model="globalSelectedLevel">
+            <option v-for="level in logLevels" :value="level">{{ level }}</option>
+        </select>
+        <button @click="changeGlobalLevel">设置全局级别</button>
+    </div>
+
+    <div class="message" v-if="message">{{ message }}</div>
+</div>
+
+<script src="${request.contextPath}/statics/libs/jquery.min.js"></script>
+<script src="${request.contextPath}/statics/libs/vue.min.js"></script>
+<script>
+    var vm = new Vue({
+        el: '#app',
+        data: {
+            loggers: [],
+            filteredLoggers: [],
+            searchTerm: '',
+            logLevels: ['ALL', 'TRACE', 'DEBUG', 'INFO', 'WARN', 'ERROR', 'OFF'],
+            globalSelectedLevel: 'INFO',
+            message: '',
+            recentSearches: []
+        },
+        mounted() {
+            this.loadRecentSearches();
+            this.fetchLoggers();
+        },
+        methods: {
+            loadRecentSearches: function() {
+                try {
+                    const storedSearches = localStorage.getItem('recentLogSearches');
+                    if (storedSearches) {
+                        this.recentSearches = JSON.parse(storedSearches);
+                    }
+                } catch (e) {
+                    console.error("Error loading recent searches from localStorage", e);
+                    this.recentSearches = [];
+                }
+            },
+            saveRecentSearches: function() {
+                try {
+                    localStorage.setItem('recentLogSearches', JSON.stringify(this.recentSearches));
+                } catch (e) {
+                    console.error("Error saving recent searches to localStorage", e);
+                }
+            },
+            addRecentSearch: function(loggerName) {
+                if (!this.recentSearches.includes(loggerName)) {
+                    this.recentSearches.unshift(loggerName); // Add to the beginning
+                    if (this.recentSearches.length > 5) { // Keep only the last 5 searches
+                        this.recentSearches.pop();
+                    }
+                    this.saveRecentSearches();
+                }
+            },
+            applyRecentSearch: function(item) {
+                this.searchTerm = item;
+                this.filterLoggers();
+            },
+            fetchLoggers: function () {
+                var self = this;
+                $.ajax({
+                    type: "GET",
+                    url: "sys/log/listLoggers",
+                    success: function (result) {
+                        if (result.code === 0) {
+                            self.loggers = result.loggers.map(logger => {
+                                logger.selectedLevel = logger.level; // Initialize selected level
+                                return logger;
+                            });
+                            self.filterLoggers(); // Apply initial filter
+                        } else {
+                            self.message = '获取日志器列表失败: ' + result.msg;
+                        }
+                    },
+                    error: function (xhr, status, error) {
+                        self.message = '请求失败: ' + error;
+                    }
+                });
+            },
+            filterLoggers: function () {
+                if (this.searchTerm) {
+                    this.filteredLoggers = this.loggers.filter(logger =>
+                        logger.name.toLowerCase().includes(this.searchTerm.toLowerCase())
+                    );
+                } else {
+                    this.filteredLoggers = this.loggers;
+                }
+            },
+            resetFilter: function () {
+                this.searchTerm = '';
+                this.filterLoggers();
+            },
+            changeLoggerLevel: function (logger) {
+                var self = this;
+                self.message = '';
+                $.ajax({
+                    type: "GET",
+                    url: "sys/log/changeLevel",
+                    data: {
+                        loggerName: logger.name,
+                        level: logger.selectedLevel
+                    },
+                    success: function (result) {
+                        if (result === 'success') {
+                            self.message = '日志器 "' + logger.name + '" 级别已更新为 ' + logger.selectedLevel;
+                            logger.level = logger.selectedLevel; // Update displayed level
+                            self.addRecentSearch(logger.name); // Add to recent searches
+                        } else {
+                            self.message = '更新日志器 "' + logger.name + '" 级别失败: ' + result;
+                        }
+                    },
+                    error: function (xhr, status, error) {
+                        self.message = '请求失败: ' + error;
+                    }
+                });
+            },
+            changeGlobalLevel: function () {
+                var self = this;
+                self.message = '';
+                $.ajax({
+                    type: "GET",
+                    url: "sys/log/changeLevel",
+                    data: {
+                        rootLevel: self.globalSelectedLevel,
+                        level: self.globalSelectedLevel // Pass as 'level' for the backend
+                    },
+                    success: function (result) {
+                        if (result === 'success') {
+                            self.message = '全局日志级别已更新为 ' + self.globalSelectedLevel;
+                            self.fetchLoggers(); // Refresh all loggers to reflect global change
+                        } else {
+                            self.message = '更新全局日志级别失败: ' + result;
+                        }
+                    },
+                    error: function (xhr, status, error) {
+                        self.message = '请求失败: ' + error;
+                    }
+                });
+            }
+        }
+    });
+</script>
+</body>
+</html>

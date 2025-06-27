@@ -404,7 +404,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         this.insert(config);
         sysConfigRedis.saveOrUpdate(config);
         if (LOGGER_LEVEL.equalsIgnoreCase(config.getParamKey())) {
-            sysLogService.changeLevel(config.getParamValue(), NULL, NULL);
+            sysLogService.changeLevel(config.getParamValue(), NULL);
         }
     }
 
@@ -413,7 +413,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         this.updateAllColumnById(config);
         sysConfigRedis.saveOrUpdate(config);
         if (LOGGER_LEVEL.equalsIgnoreCase(config.getParamKey())) {
-            sysLogService.changeLevel(config.getParamValue(), NULL, NULL);
+            sysLogService.changeLevel(config.getParamValue(), NULL);
         }
         asyncTaskExecutor.execute(new Runnable() {
             @Override
@@ -433,7 +433,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         if (CLOUD_STORAGE_CONFIG_KEY.equalsIgnoreCase(key))
             cloudStorageConfig = null;
         if (LOGGER_LEVEL.equalsIgnoreCase(key))
-            sysLogService.changeLevel(value, NULL, NULL);
+            sysLogService.changeLevel(value, NULL);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -784,7 +784,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 t.put(sysConfigEntity.getParamKey(), sysConfigEntity);
                 if (LOGGER_LEVEL.equalsIgnoreCase(sysConfigEntity.getParamKey())) {
                     if (null == lastLoggerLevel || !lastLoggerLevel.equalsIgnoreCase(sysConfigEntity.getParamValue()))
-                        sysLogService.changeLevel(sysConfigEntity.getParamValue(), NULL, NULL);
+                        sysLogService.changeLevel(sysConfigEntity.getParamValue(), NULL);
                     lastLoggerLevel = sysConfigEntity.getParamValue();
                 }
             }

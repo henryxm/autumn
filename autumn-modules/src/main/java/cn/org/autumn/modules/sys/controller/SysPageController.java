@@ -252,12 +252,20 @@ public class SysPageController implements ErrorController {
         return "thread";
     }
 
-    @RequestMapping({"log.html", "logger.html"})
-    public String log(Model model) {
+    @RequestMapping({  "logger.html"})
+    public String logger(Model model) {
         if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
             return "404";
         model.addAttribute("data", sysLogService.recent());
         return "logger";
+    }
+
+    @RequestMapping({"log.html"})
+    public String log(Model model) {
+        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
+            return "404";
+        model.addAttribute("data", sysLogService.recent());
+        return "log";
     }
 
     @RequestMapping({"redis.html"})

@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @Controller
@@ -33,29 +34,36 @@ public class SysLogController {
     }
 
     /**
+     * 获取所有日志器及其级别
+     */
+    @ResponseBody
+    @GetMapping("/listLoggers")
+    @RequiresPermissions("sys:log:list")
+    public R listLoggers() {
+        List<Map<String, String>> loggers = sysLogService.listLoggers();
+        return R.ok().put("loggers", loggers);
+    }
+
+    /**
      * 修改项目日志输出级别
      *
-     * @param rootLevel   全局日志级别
-     * @param singleLevel 某个类日志级别
-     * @param singlePath  需要单独设置日志输出级别的类的全限定名（例:cn.org.autumn.modules.sys.controller.SysLogController）
+     * @param level      日志级别:ALL,TRACE,DEBUG,INFO,WARN,ERROR,OFF
+     * @param loggerName 需要单独设置日志输出级别的类的全限定名或包名（例:cn.org.autumn.modules.sys.controller.SysLogController）
      * @return
      */
     @GetMapping("changeLevel")
     @ApiImplicitParams({
-            @ApiImplicitParam(name = "rootLevel",
-                    value = "root,全局级别:ALL,TRACE,DEBUG,INFO,WARN,ERROR,OFF", required = false),
-            @ApiImplicitParam(name = "singleLevel",
-                    value = "单独设置类日志级别:ALL,TRACE,DEBUG,INFO,WARN,ERROR,OFF", required = false),
-            @ApiImplicitParam(name = "singlePath",
-                    value = "单独类路径:cn.org.autumn.modules.sys.controller.SysLogController",
-                    required = false)})
+            @ApiImplicitParam(name = "level", value = "日志级别:ALL,TRACE,DEBUG,INFO,WARN,ERROR,OFF", required = true),
+            @ApiImplicitParam(name = "loggerName", value = "类或包路径:cn.org.autumn.modules.sys.controller.SysLogController", required = false)})
     @ResponseBody
-    public String changeLevel(String rootLevel, String singleLevel, String singlePath) {
-        return sysLogService.changeLevel(rootLevel, singleLevel, singlePath);
+    @RequiresPermissions("sys:log:list")
+    public String changeLevel(String level, String loggerName) {
+        return sysLogService.changeLevel(level, loggerName);
     }
 
     @RequestMapping("changeLevel/{level}/{clazz}")
     @ResponseBody
+    @RequiresPermissions("sys:log:list")
     public String debug(@PathVariable String level, @PathVariable String clazz) {
         if (null != clazz && clazz.length() > 0) {
             Object bean = Config.getBean(clazz);
@@ -75,7 +83,7 @@ public class SysLogController {
                 //去除被代理的类型
                 if (name.contains("$"))
                     name = name.split("\\$")[0];
-                return sysLogService.changeLevel(null, level, name);
+                return sysLogService.changeLevel(level, name);
             }
         }
         return "Fail";
