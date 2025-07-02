@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.sys.entity;
 
+import cn.org.autumn.exception.CodeException;
 import cn.org.autumn.modules.usr.entity.UserProfileEntity;
 import cn.org.autumn.table.annotation.Column;
 import cn.org.autumn.table.annotation.Index;
@@ -310,7 +311,7 @@ public class SysUserEntity implements Serializable {
 
     public void checkThrow() throws Exception {
         if (status < 1)
-            throw new Exception("服务繁忙");
+            throw new CodeException("服务繁忙", -10000);
     }
 
     @Override
