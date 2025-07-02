@@ -3,6 +3,7 @@ package cn.org.autumn.handler;
 import cn.org.autumn.exception.AException;
 import cn.org.autumn.exception.CodeException;
 import cn.org.autumn.utils.R;
+import com.google.gson.Gson;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DuplicateKeyException;
@@ -23,6 +24,8 @@ public class AExceptionHandler {
      */
     @ExceptionHandler(AException.class)
     public R handleRRException(AException e) {
+        if (logger.isDebugEnabled())
+            logger.debug("AException:{}", new Gson().toJson(e));
         R r = new R();
         r.put("code", e.getCode());
         r.put("msg", e.getMessage());
@@ -32,6 +35,8 @@ public class AExceptionHandler {
 
     @ExceptionHandler(CodeException.class)
     public R handleCodeException(CodeException e) {
+        if (logger.isDebugEnabled())
+            logger.debug("CodeException:{}", new Gson().toJson(e));
         R r = new R();
         r.put("code", e.getCode());
         r.put("msg", e.getMessage());
