@@ -252,7 +252,7 @@ public class SysPageController implements ErrorController {
         return "thread";
     }
 
-    @RequestMapping({  "logger.html"})
+    @RequestMapping({"logger.html"})
     public String logger(Model model) {
         if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
             return "404";
@@ -273,6 +273,13 @@ public class SysPageController implements ErrorController {
         if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
             return "404";
         return "redis";
+    }
+
+    @RequestMapping({"exec.html"})
+    public String exec(Model model) {
+        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
+            return "404";
+        return "exec";
     }
 
     @RequestMapping(value = {"clear.html"}, method = RequestMethod.GET)

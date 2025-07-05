@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Spring Bean执行器</title>
+    <link rel="stylesheet" href="/statics/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/statics/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/statics/css/AdminLTE.min.css">
+    <link rel="stylesheet" href="/statics/css/all-skins.min.css">
+    <style>
+        .bean-card {
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .bean-card:hover {
+            border-color: #3c8dbc;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .bean-card.selected {
+            border-color: #3c8dbc;
+            background-color: #f9f9f9;
+        }
+        .method-item {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+        }
+        .method-item:hover {
+            background-color: #f5f5f5;
+        }
+        .method-item.selected {
+            background-color: #e3f2fd;
+        }
+        .param-input {
+            margin-bottom: 10px;
+        }
+        .param-label {
+            font-weight: bold;
+            color: #666;
+        }
+        .execution-result {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        .search-box {
+            margin-bottom: 20px;
+        }
+        .pagination-container {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .complex-param-btn {
+            margin-left: 10px;
+        }
+        .modal-lg {
+            width: 90%;
+            max-width: 1200px;
+        }
+    </style>
+</head>
+<body class="hold-transition skin-blue sidebar-mini">
+<div class="wrapper">
+    <div class="content-wrapper">
+        <section class="content-header">
+            <h1>
+                Spring Bean执行器
+                <small>管理和执行Spring Bean方法</small>
+            </h1>
+        </section>
+
+        <section class="content">
+            <div class="row">
+                <!-- Bean列表 -->
+                <div class="col-md-4">
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <h3 class="box-title">Bean列表</h3>
+                        </div>
+                        <div class="box-body">
+                            <!-- 搜索框 -->
+                            <div class="search-box">
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="beanSearchInput" placeholder="搜索Bean名称或类型...">
+                                    <span class="input-group-btn">
+                                        <button class="btn btn-default" type="button" onclick="searchBeans()">
+                                            <i class="fa fa-search"></i>
+                                        </button>
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <!-- Bean搜索历史记录 -->
+                            <div id="beanSearchHistory" style="display: none;">
+                                <div class="panel panel-default">
+                                    <div class="panel-heading">
+                                        <h6 class="panel-title">
+                                            <i class="fa fa-history"></i> 搜索历史
+                                            <div class="pull-right">
+                                                <button class="btn btn-xs btn-danger" onclick="clearAllBeanHistory()" title="清除所有历史">
+                                                    <i class="fa fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </h6>
+                                    </div>
+                                    <div class="panel-body" style="padding: 5px;">
+                                        <div id="beanHistoryList" style="max-height: 150px; overflow-y: auto;">
+                                            <!-- 历史记录将在这里显示 -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Bean列表容器 -->
+                            <div id="beanListContainer">
+                                <!-- Bean列表将在这里动态加载 -->
+                            </div>
+                            
+                            <!-- 分页 -->
+                            <div class="pagination-container">
+                                <ul class="pagination" id="beanPagination">
+                                    <!-- 分页将在这里动态生成 -->
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 方法列表和执行 -->
+                <div class="col-md-8">
+                    <div class="box box-success">
+                        <div class="box-header with-border">
+                            <h3 class="box-title">方法执行</h3>
+                        </div>
+                        <div class="box-body">
+                            <div id="methodSection" style="display: none;">
+                                <!-- 选中的Bean信息 -->
+                                <div class="alert alert-info">
+                                    <strong>选中的Bean:</strong> <span id="selectedBeanName"></span>
+                                    <br>
+                                    <strong>类型:</strong> <span id="selectedBeanType"></span>
+                                </div>
+                                
+                                <!-- 方法列表 -->
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h4>可用方法</h4>
+                                        <!-- 方法搜索框 -->
+                                        <div class="search-box" style="margin-bottom: 10px;">
+                                            <div class="input-group">
+                                                <input type="text" class="form-control" id="methodSearchInput" placeholder="搜索方法名称...">
+                                                <span class="input-group-btn">
+                                                    <button class="btn btn-default" type="button" onclick="searchMethods()">
+                                                        <i class="fa fa-search"></i>
+                                                    </button>
+                                                </span>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- 方法搜索历史记录 -->
+                                        <div id="methodSearchHistory" style="display: none; margin-bottom: 10px;">
+                                            <div class="panel panel-default">
+                                                <div class="panel-heading">
+                                                    <h6 class="panel-title">
+                                                        <i class="fa fa-history"></i> 搜索历史
+                                                        <div class="pull-right">
+                                                            <button class="btn btn-xs btn-danger" onclick="clearAllMethodHistory()" title="清除所有历史">
+                                                                <i class="fa fa-trash"></i>
+                                                            </button>
+                                                        </div>
+                                                    </h6>
+                                                </div>
+                                                <div class="panel-body" style="padding: 5px;">
+                                                    <div id="methodHistoryList" style="max-height: 150px; overflow-y: auto;">
+                                                        <!-- 历史记录将在这里显示 -->
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div id="methodList" style="max-height: 300px; overflow-y: auto;">
+                                            <!-- 方法列表将在这里动态加载 -->
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- 方法执行区域 -->
+                                    <div class="col-md-6">
+                                        <div id="executionSection" style="display: none;">
+                                            <h4>方法执行</h4>
+                                            <div id="methodInfo">
+                                                <!-- 方法信息将在这里显示 -->
+                                            </div>
+                                            
+                                            <div id="parameterInputs">
+                                                <!-- 参数输入框将在这里动态生成 -->
+                                            </div>
+                                            
+                                            <button class="btn btn-primary" onclick="executeMethod()">
+                                                <i class="fa fa-play"></i> 执行方法
+                                            </button>
+                                            
+                                            <div id="executionResult" class="execution-result" style="display: none;">
+                                                <!-- 执行结果将在这里显示 -->
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div id="noBeanSelected" class="text-center" style="padding: 50px;">
+                                <i class="fa fa-hand-pointer-o fa-3x text-muted"></i>
+                                <p class="text-muted">请从左侧选择一个Bean来查看其方法</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+
+<!-- 复杂参数输入模态框 -->
+<div class="modal fade" id="complexParamModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+                <h4 class="modal-title">复杂参数输入</h4>
+            </div>
+            <div class="modal-body">
+                <div id="complexParamContent">
+                    <!-- 复杂参数输入内容 -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="confirmComplexParam()">确定</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="/statics/libs/jquery.min.js"></script>
+<script src="/statics/libs/bootstrap.min.js"></script>
+<script src="/statics/libs/app.min.js"></script>
+
+<script>
+// 全局变量
+let currentPage = 1;
+let pageSize = 50;
+let currentSearch = '';
+let selectedBeanName = '';
+let selectedMethod = null;
+let currentParamIndex = 0;
+let allMethods = []; // 存储所有方法数据
+let currentMethodSearch = ''; // 当前方法搜索关键词
+let beanSearchHistory = []; // Bean搜索历史记录
+let methodSearchHistory = []; // 方法搜索历史记录
+
+// 页面加载完成后初始化
+$(document).ready(function() {
+    // 从localStorage加载搜索历史
+    loadSearchHistory();
+    
+    loadBeans();
+    
+    // Bean搜索框事件
+    $('#beanSearchInput').on('keypress', function(e) {
+        if (e.which === 13) {
+            searchBeans();
+        }
+    });
+    
+    // Bean搜索框焦点事件 - 显示历史记录
+    $('#beanSearchInput').on('focus', function() {
+        if (beanSearchHistory.length > 0) {
+            showBeanSearchHistory();
+        }
+    });
+    
+    // Bean搜索框失去焦点事件 - 延迟隐藏历史记录
+    $('#beanSearchInput').on('blur', function() {
+        setTimeout(function() {
+            hideBeanSearchHistory();
+        }, 200);
+    });
+    
+    // 方法搜索框回车事件
+    $('#methodSearchInput').on('keypress', function(e) {
+        if (e.which === 13) {
+            searchMethods();
+        }
+    });
+    
+    // 方法搜索框实时搜索
+    $('#methodSearchInput').on('input', function() {
+        currentMethodSearch = $(this).val();
+        filterMethods();
+    });
+    
+    // 方法搜索框焦点事件 - 显示历史记录
+    $('#methodSearchInput').on('focus', function() {
+        if (methodSearchHistory.length > 0) {
+            showMethodSearchHistory();
+        }
+    });
+    
+    // 方法搜索框失去焦点事件 - 延迟隐藏历史记录
+    $('#methodSearchInput').on('blur', function() {
+        setTimeout(function() {
+            hideMethodSearchHistory();
+        }, 200);
+    });
+});
+
+// 加载Bean列表
+function loadBeans(page = 1) {
+    currentPage = page;
+    
+    $.ajax({
+        url: '/sys/exec/beans',
+        method: 'GET',
+        data: {
+            current: page,
+            size: pageSize,
+            search: currentSearch
+        },
+        success: function(response) {
+            if (response) {
+                renderBeanList(response.records);
+                renderPagination(response);
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('加载Bean列表失败:', error);
+            alert('加载Bean列表失败: ' + error);
+        }
+    });
+}
+
+// 渲染Bean列表
+function renderBeanList(beans) {
+    const container = $('#beanListContainer');
+    container.empty();
+    
+    if (beans.length === 0) {
+        container.html('<div class="text-center text-muted">没有找到Bean</div>');
+        return;
+    }
+    
+            beans.forEach(function(bean) {
+            const beanCard = $(`
+                <div class="bean-card" data-bean-name="` + bean.name + `">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <strong>` + bean.name + `</strong>
+                            <br>
+                            <small class="text-muted">` + bean.simpleType + `</small>
+                        </div>
+                        <div class="col-md-4 text-right">
+                            <span class="label ` + (bean.singleton ? 'label-success' : 'label-warning') + `">
+                                ` + (bean.singleton ? '单例' : '原型') + `
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            `);
+            
+            beanCard.click(function() {
+                selectBean(bean.name);
+            });
+            
+            container.append(beanCard);
+        });
+}
+
+// 渲染分页
+function renderPagination(data) {
+    const pagination = $('#beanPagination');
+    pagination.empty();
+    
+    if (data.pages <= 1) {
+        return;
+    }
+    
+    // 上一页
+    if (data.current > 1) {
+        pagination.append(`
+            <li><a href="#" onclick="loadBeans(` + (data.current - 1) + `)">&laquo;</a></li>
+        `);
+    }
+    
+    // 页码
+    const startPage = Math.max(1, data.current - 2);
+    const endPage = Math.min(data.pages, data.current + 2);
+    
+    for (let i = startPage; i <= endPage; i++) {
+        const activeClass = i === data.current ? 'active' : '';
+        pagination.append(`
+            <li class="` + activeClass + `">
+                <a href="#" onclick="loadBeans(` + i + `)">` + i + `</a>
+            </li>
+        `);
+    }
+    
+    // 下一页
+    if (data.current < data.pages) {
+        pagination.append(`
+            <li><a href="#" onclick="loadBeans(` + (data.current + 1) + `)">&raquo;</a></li>
+        `);
+    }
+}
+
+// 搜索Bean
+function searchBeans() {
+    currentSearch = $('#beanSearchInput').val();
+    
+    // 添加到搜索历史
+    if (currentSearch && currentSearch.trim() !== '') {
+        addToBeanSearchHistory(currentSearch.trim());
+    }
+    
+    loadBeans(1);
+}
+
+// 选择Bean
+function selectBean(beanName) {
+    selectedBeanName = beanName;
+    
+    // 更新UI
+    $('.bean-card').removeClass('selected');
+    $('.bean-card[data-bean-name="' + beanName + '"]').addClass('selected');
+    
+    // 显示方法区域
+    $('#noBeanSelected').hide();
+    $('#methodSection').show();
+    
+    // 清空方法搜索框
+    $('#methodSearchInput').val('');
+    currentMethodSearch = '';
+    
+    // 加载Bean方法
+    loadBeanMethods(beanName);
+}
+
+// 加载Bean方法
+function loadBeanMethods(beanName) {
+    $.ajax({
+        url: '/sys/exec/bean/methods',
+        method: 'GET',
+        data: { beanName: beanName },
+        success: function(response) {
+            if (response) {
+                $('#selectedBeanName').text(response.beanName);
+                $('#selectedBeanType').text(response.beanType);
+                renderMethodList(response.methods);
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('加载方法列表失败:', error);
+            alert('加载方法列表失败: ' + error);
+        }
+    });
+}
+
+// 渲染方法列表
+function renderMethodList(methods) {
+    // 保存所有方法数据
+    allMethods = methods;
+    
+    // 过滤并渲染方法
+    filterMethods();
+}
+
+// 过滤方法
+function filterMethods() {
+    const methodList = $('#methodList');
+    methodList.empty();
+    
+    let filteredMethods = allMethods;
+    
+    // 如果有搜索关键词，进行过滤
+    if (currentMethodSearch && currentMethodSearch.trim() !== '') {
+        const searchTerm = currentMethodSearch.toLowerCase();
+        filteredMethods = allMethods.filter(function(method) {
+            return method.name.toLowerCase().includes(searchTerm) ||
+                   method.returnType.toLowerCase().includes(searchTerm) ||
+                   method.fullReturnType.toLowerCase().includes(searchTerm);
+        });
+    }
+    
+    if (filteredMethods.length === 0) {
+        methodList.html('<div class="text-muted">没有找到方法</div>');
+        return;
+    }
+    
+    filteredMethods.forEach(function(method) {
+        const methodItem = $(`
+            <div class="method-item" data-method-name="` + method.name + `">
+                <div class="row">
+                    <div class="col-md-8">
+                        <strong>` + method.name + `</strong>
+                        <br>
+                        <small class="text-muted">` + method.returnType + `</small>
+                    </div>
+                    <div class="col-md-4 text-right">
+                        <span class="label label-info">` + method.parameterCount + `参数</span>
+                    </div>
+                </div>
+            </div>
+        `);
+        
+        methodItem.click(function() {
+            selectMethod(method);
+        });
+        
+        methodList.append(methodItem);
+    });
+}
+
+// 搜索方法
+function searchMethods() {
+    currentMethodSearch = $('#methodSearchInput').val();
+    
+    // 添加到搜索历史
+    if (currentMethodSearch && currentMethodSearch.trim() !== '') {
+        addToMethodSearchHistory(currentMethodSearch.trim());
+    }
+    
+    filterMethods();
+}
+
+// 选择方法
+function selectMethod(method) {
+    selectedMethod = method;
+    
+    // 更新UI
+    $('.method-item').removeClass('selected');
+    $('.method-item[data-method-name="' + method.name + '"]').addClass('selected');
+    
+    // 显示执行区域
+    $('#executionSection').show();
+    
+    // 渲染方法信息和参数输入
+    renderMethodInfo(method);
+    renderParameterInputs(method);
+    
+    // 隐藏之前的执行结果
+    $('#executionResult').hide();
+}
+
+// 渲染方法信息
+function renderMethodInfo(method) {
+    const methodInfo = $('#methodInfo');
+    methodInfo.html(`
+        <div class="alert alert-info">
+            <strong>方法名:</strong> ` + method.name + `<br>
+            <strong>返回类型:</strong> ` + method.fullReturnType + `<br>
+            <strong>参数数量:</strong> ` + method.parameterCount + `
+        </div>
+    `);
+}
+
+// 渲染参数输入框
+function renderParameterInputs(method) {
+    const parameterInputs = $('#parameterInputs');
+    parameterInputs.empty();
+    
+    if (method.parameterCount === 0) {
+        parameterInputs.html('<p class="text-muted">该方法没有参数</p>');
+        return;
+    }
+    
+    method.parameters.forEach(function(param, index) {
+        const paramDiv = $(`
+            <div class="param-input">
+                <label class="param-label">` + param.name + ` (` + param.type + `)</label>
+                <div class="input-group">
+                    <input type="text" class="form-control param-value" 
+                           data-param-index="` + index + `" 
+                           data-param-type="` + param.fullType + `"
+                           placeholder="输入参数值">
+                    <span class="input-group-btn">
+                        <button class="btn btn-default complex-param-btn" 
+                                type="button" 
+                                onclick="openComplexParamInput(` + index + `, '` + param.fullType + `')">
+                            <i class="fa fa-cog"></i>
+                        </button>
+                    </span>
+                </div>
+                <small class="text-muted">类型: ` + param.fullType + `</small>
+            </div>
+        `);
+        
+        parameterInputs.append(paramDiv);
+    });
+}
+
+// 打开复杂参数输入
+function openComplexParamInput(paramIndex, paramType) {
+    currentParamIndex = paramIndex;
+    
+    let inputHtml = '';
+    
+    if (paramType.includes('List') || paramType.includes('Set')) {
+        inputHtml = `
+            <div class="form-group">
+                <label>数组/集合参数 (JSON格式)</label>
+                <textarea class="form-control" id="complexParamValue" rows="5" 
+                          placeholder='例如: ["item1", "item2"] 或 [1, 2, 3]'></textarea>
+                <small class="text-muted">请输入JSON格式的数组或集合</small>
+            </div>
+        `;
+    } else if (paramType.includes('Map')) {
+        inputHtml = `
+            <div class="form-group">
+                <label>Map参数 (JSON格式)</label>
+                <textarea class="form-control" id="complexParamValue" rows="5" 
+                          placeholder='例如: {"key1": "value1", "key2": "value2"}'></textarea>
+                <small class="text-muted">请输入JSON格式的Map</small>
+            </div>
+        `;
+    } else {
+        inputHtml = `
+            <div class="form-group">
+                <label>复杂对象参数 (JSON格式)</label>
+                <textarea class="form-control" id="complexParamValue" rows="5" 
+                          placeholder='请输入JSON格式的对象'></textarea>
+                <small class="text-muted">请输入JSON格式的对象</small>
+            </div>
+        `;
+    }
+    
+    $('#complexParamContent').html(inputHtml);
+    $('#complexParamModal').modal('show');
+}
+
+// 确认复杂参数
+function confirmComplexParam() {
+    const value = $('#complexParamValue').val();
+    if (value.trim()) {
+        try {
+            // 验证JSON格式
+            JSON.parse(value);
+            
+            // 设置到对应的输入框
+            $('.param-value[data-param-index="' + currentParamIndex + '"]').val(value);
+            
+            $('#complexParamModal').modal('hide');
+        } catch (e) {
+            alert('JSON格式错误，请检查输入');
+        }
+    } else {
+        $('#complexParamModal').modal('hide');
+    }
+}
+
+// 执行方法
+function executeMethod() {
+    if (!selectedMethod) {
+        alert('请先选择一个方法');
+        return;
+    }
+    
+    // 收集参数
+    const parameters = [];
+    $('.param-value').each(function() {
+        const value = $(this).val();
+        const type = $(this).data('param-type');
+        
+        if (value.trim() === '') {
+            parameters.push(null);
+        } else {
+            // 尝试解析JSON
+            try {
+                if (value.startsWith('[') || value.startsWith('{')) {
+                    parameters.push(JSON.parse(value));
+                } else {
+                    parameters.push(value);
+                }
+            } catch (e) {
+                parameters.push(value);
+            }
+        }
+    });
+    
+    // 执行请求
+    $.ajax({
+        url: '/sys/exec/bean/execute',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            beanName: selectedBeanName,
+            methodName: selectedMethod.name,
+            parameters: parameters
+        }),
+        success: function(response) {
+            showExecutionResult(response);
+        },
+        error: function(xhr, status, error) {
+            console.error('执行方法失败:', error);
+            showExecutionResult({
+                success: false,
+                message: '执行失败: ' + error
+            });
+        }
+    });
+}
+
+// 显示执行结果
+function showExecutionResult(result) {
+    const resultDiv = $('#executionResult');
+    
+    if (result.success) {
+        let returnValueStr = '';
+        if (result.returnValue !== null) {
+            if (typeof result.returnValue === 'object') {
+                returnValueStr = JSON.stringify(result.returnValue, null, 2);
+            } else {
+                returnValueStr = result.returnValue.toString();
+            }
+        } else {
+            returnValueStr = 'null';
+        }
+        
+        resultDiv.html(`
+            <div class="alert alert-success">
+                <h4><i class="fa fa-check"></i> 执行成功</h4>
+                <p><strong>返回类型:</strong> ` + result.returnType + `</p>
+                <p><strong>返回值:</strong></p>
+                <pre style="background-color: #f8f9fa; padding: 10px; border-radius: 4px; max-height: 200px; overflow-y: auto;">` + returnValueStr + `</pre>
+            </div>
+        `);
+    } else {
+        resultDiv.html(`
+            <div class="alert alert-danger">
+                <h4><i class="fa fa-times"></i> 执行失败</h4>
+                <p>` + result.message + `</p>
+                ` + (result.exception ? '<p><strong>异常类型:</strong> ' + result.exception + '</p>' : '') + `
+            </div>
+        `);
+    }
+    
+    resultDiv.show();
+}
+
+// ==================== 搜索历史记录管理 ====================
+
+// 加载搜索历史
+function loadSearchHistory() {
+    try {
+        const beanHistory = localStorage.getItem('beanSearchHistory');
+        const methodHistory = localStorage.getItem('methodSearchHistory');
+        
+        if (beanHistory) {
+            beanSearchHistory = JSON.parse(beanHistory);
+        }
+        
+        if (methodHistory) {
+            methodSearchHistory = JSON.parse(methodHistory);
+        }
+    } catch (e) {
+        console.error('加载搜索历史失败:', e);
+    }
+}
+
+// 保存搜索历史到localStorage
+function saveBeanSearchHistory() {
+    try {
+        localStorage.setItem('beanSearchHistory', JSON.stringify(beanSearchHistory));
+    } catch (e) {
+        console.error('保存Bean搜索历史失败:', e);
+    }
+}
+
+function saveMethodSearchHistory() {
+    try {
+        localStorage.setItem('methodSearchHistory', JSON.stringify(methodSearchHistory));
+    } catch (e) {
+        console.error('保存方法搜索历史失败:', e);
+    }
+}
+
+// 添加到Bean搜索历史
+function addToBeanSearchHistory(searchTerm) {
+    // 移除已存在的相同搜索词
+    beanSearchHistory = beanSearchHistory.filter(item => item !== searchTerm);
+    
+    // 添加到开头
+    beanSearchHistory.unshift(searchTerm);
+    
+    // 限制历史记录数量为10条
+    if (beanSearchHistory.length > 10) {
+        beanSearchHistory = beanSearchHistory.slice(0, 10);
+    }
+    
+    saveBeanSearchHistory();
+}
+
+// 添加到方法搜索历史
+function addToMethodSearchHistory(searchTerm) {
+    // 移除已存在的相同搜索词
+    methodSearchHistory = methodSearchHistory.filter(item => item !== searchTerm);
+    
+    // 添加到开头
+    methodSearchHistory.unshift(searchTerm);
+    
+    // 限制历史记录数量为10条
+    if (methodSearchHistory.length > 10) {
+        methodSearchHistory = methodSearchHistory.slice(0, 10);
+    }
+    
+    saveMethodSearchHistory();
+}
+
+// 显示Bean搜索历史
+function showBeanSearchHistory() {
+    if (beanSearchHistory.length === 0) {
+        return;
+    }
+    
+    const historyList = $('#beanHistoryList');
+    historyList.empty();
+    
+    beanSearchHistory.forEach(function(term, index) {
+        const historyItem = $(`
+            <div class="history-item" style="padding: 5px; border-bottom: 1px solid #eee; cursor: pointer;">
+                <div class="row">
+                    <div class="col-md-8">
+                        <i class="fa fa-search"></i> ` + term + `
+                    </div>
+                    <div class="col-md-4 text-right">
+                        <button class="btn btn-xs btn-danger" onclick="removeBeanHistoryItem(` + index + `)" title="删除">
+                            <i class="fa fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `);
+        
+        historyItem.click(function(e) {
+            if (!$(e.target).hasClass('btn')) {
+                $('#beanSearchInput').val(term);
+                currentSearch = term;
+                loadBeans(1);
+                hideBeanSearchHistory();
+            }
+        });
+        
+        historyList.append(historyItem);
+    });
+    
+    $('#beanSearchHistory').show();
+}
+
+// 隐藏Bean搜索历史
+function hideBeanSearchHistory() {
+    $('#beanSearchHistory').hide();
+}
+
+// 显示方法搜索历史
+function showMethodSearchHistory() {
+    if (methodSearchHistory.length === 0) {
+        return;
+    }
+    
+    const historyList = $('#methodHistoryList');
+    historyList.empty();
+    
+    methodSearchHistory.forEach(function(term, index) {
+        const historyItem = $(`
+            <div class="history-item" style="padding: 5px; border-bottom: 1px solid #eee; cursor: pointer;">
+                <div class="row">
+                    <div class="col-md-8">
+                        <i class="fa fa-search"></i> ` + term + `
+                    </div>
+                    <div class="col-md-4 text-right">
+                        <button class="btn btn-xs btn-danger" onclick="removeMethodHistoryItem(` + index + `)" title="删除">
+                            <i class="fa fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `);
+        
+        historyItem.click(function(e) {
+            if (!$(e.target).hasClass('btn')) {
+                $('#methodSearchInput').val(term);
+                currentMethodSearch = term;
+                filterMethods();
+                hideMethodSearchHistory();
+            }
+        });
+        
+        historyList.append(historyItem);
+    });
+    
+    $('#methodSearchHistory').show();
+}
+
+// 隐藏方法搜索历史
+function hideMethodSearchHistory() {
+    $('#methodSearchHistory').hide();
+}
+
+// 删除单个Bean历史记录
+function removeBeanHistoryItem(index) {
+    beanSearchHistory.splice(index, 1);
+    saveBeanSearchHistory();
+    showBeanSearchHistory();
+}
+
+// 删除单个方法历史记录
+function removeMethodHistoryItem(index) {
+    methodSearchHistory.splice(index, 1);
+    saveMethodSearchHistory();
+    showMethodSearchHistory();
+}
+
+// 清除所有Bean搜索历史
+function clearAllBeanHistory() {
+    beanSearchHistory = [];
+    saveBeanSearchHistory();
+    hideBeanSearchHistory();
+}
+
+// 清除所有方法搜索历史
+function clearAllMethodHistory() {
+    methodSearchHistory = [];
+    saveMethodSearchHistory();
+    hideMethodSearchHistory();
+}
+</script>
+</body>
+</html>
