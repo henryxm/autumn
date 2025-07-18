@@ -31,12 +31,12 @@ public abstract class LockOnce extends TagRunnable {
                 String id = "loopjob:lock:" + value.type().getSimpleName() + ":" + value.method();
                 RLock lock = redissonClient.getLock(id);
                 try {
-                    if (!lock.isLocked()) {
-                        boolean isLocked = lock.tryLock(0, value.time(), TimeUnit.MINUTES);
-                        if (isLocked) {
-                            log.debug("锁定任务:{}, ID:{}", value.tag(), id);
-                            super.run();
-                        }
+                    boolean isLocked = lock.tryLock(value.time(), TimeUnit.MINUTES);
+                    if (isLocked) {
+                        log.debug("锁定任务:{}, ID:{}", value.tag(), id);
+                        //Sleep for five second to avoid return immediately
+                        Thread.sleep(5000);
+                        super.run();
                     }
                 } catch (Exception e) {
                     log.error("锁定任务:{}", e.getMessage());
