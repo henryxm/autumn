@@ -57,7 +57,8 @@ public class LoginFactory extends Factory {
                             return false;
                         }
                     } catch (Throwable e) {
-                        log.debug("访问异常:{}", login.getClass().getSimpleName(), e);
+                        if (log.isDebugEnabled())
+                            log.debug("访问异常:{}", login.getClass().getSimpleName(), e);
                     }
                 }
             }
