@@ -42,7 +42,7 @@ import static cn.org.autumn.modules.sys.service.SysRoleService.Role_System_Admin
  * 系统用户
  */
 @Service
-public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> implements LoopJob.TenMinute, InitFactory.Init, InitFactory.After, ClearHandler {
+public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> implements LoopJob.OneMinute, LoopJob.TenMinute, InitFactory.Init, InitFactory.After, ClearHandler {
 
     Logger log = LoggerFactory.getLogger(getClass());
 
@@ -77,6 +77,64 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
     @Autowired(required = false)
     List<UserHandler> userHandlers;
 
+    @Autowired
+    private RedisUtils redisUtils;
+
+    private static final String ICON_HOST_KEY = "sys:user:icon:host";
+
+    private static String iconHost = "";
+
+    public void setIconHost(String host) {
+        redisUtils.set(ICON_HOST_KEY, host, -1);
+    }
+
+    public String getIconHost() {
+        try {
+            if (StringUtils.isNotBlank(iconHost))
+                return iconHost;
+            Object val = redisUtils.get(ICON_HOST_KEY);
+            iconHost = val == null ? null : val.toString();
+            return iconHost;
+        } catch (Exception e) {
+            log.error("访问错误:{}", e.getMessage());
+            return "";
+        }
+    }
+
+    /**
+     * 动态替换icon中的host，仅返回时生效，兼容http和https
+     */
+    private SysUserEntity dynamicReplaceIconHost(SysUserEntity user) {
+        try {
+            if (user == null)
+                return null;
+            String icon = user.getIcon();
+            if (StringUtils.isNotBlank(icon) && (icon.startsWith("https://") || icon.startsWith("http://"))) {
+                String newHost = getIconHost();
+                if (StringUtils.isNotBlank(newHost)) {
+                    String protocol = icon.startsWith("https://") ? "https://" : "http://";
+                    int start = protocol.length();
+                    int slashIdx = icon.indexOf('/', start);
+                    if (slashIdx > start) {
+                        String oldHost = icon.substring(start, slashIdx);
+                        if (!newHost.equals(oldHost)) {
+                            String replaced = protocol + newHost + icon.substring(slashIdx);
+                            user.setIcon(replaced);
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("动态替换:{}", e.getMessage());
+        }
+        return user;
+    }
+
+    @Override
+    public void onOneMinute() {
+        iconHost = null;
+    }
+
     public List<String> getMenus(String uuid) {
         return baseMapper.getMenus(uuid);
     }
@@ -110,6 +168,8 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
             }
             updateById(current);
         }
+        if (StringUtils.isBlank(getIconHost()))
+            setIconHost(sysConfigService.getSiteDomain());
     }
 
     private void syncAdminUuid() {
@@ -174,7 +234,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         sysUserEntity.setRoleKeys(roleKeys);
         save(sysUserEntity);
         refresh(sysUserEntity);
-        return sysUserEntity;
+        return dynamicReplaceIconHost(sysUserEntity);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -209,7 +269,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
     }
 
     public SysUserEntity getUsername(String username) {
-        return baseMapper.getByUsername(username);
+        return dynamicReplaceIconHost(baseMapper.getByUsername(username));
     }
 
     public SysUserEntity getByUsername(String username) {
@@ -242,55 +302,55 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
             } catch (Exception ignored) {
             }
         }
-        return sysUserEntity;
+        return dynamicReplaceIconHost(sysUserEntity);
     }
 
     public SysUserEntity getByEmail(String email) {
-        return baseMapper.getByEmail(email);
+        return dynamicReplaceIconHost(baseMapper.getByEmail(email));
     }
 
     public SysUserEntity getByEmailLike(String email) {
-        return baseMapper.getByEmailLike(email);
+        return dynamicReplaceIconHost(baseMapper.getByEmailLike(email));
     }
 
     public SysUserEntity getByPhone(String mobile) {
-        return baseMapper.getByPhone(mobile);
+        return dynamicReplaceIconHost(baseMapper.getByPhone(mobile));
     }
 
     public SysUserEntity getByPhoneLike(String mobile) {
-        return baseMapper.getByPhoneLike(mobile);
+        return dynamicReplaceIconHost(baseMapper.getByPhoneLike(mobile));
     }
 
     public SysUserEntity getByQq(String qq) {
-        return baseMapper.getByQq(qq);
+        return dynamicReplaceIconHost(baseMapper.getByQq(qq));
     }
 
     public SysUserEntity getByQqLike(String qq) {
-        return baseMapper.getByQqLike(qq);
+        return dynamicReplaceIconHost(baseMapper.getByQqLike(qq));
     }
 
     public SysUserEntity getByWeixing(String weixing) {
-        return baseMapper.getByWeixing(weixing);
+        return dynamicReplaceIconHost(baseMapper.getByWeixing(weixing));
     }
 
     public SysUserEntity getByWeixingLike(String weixing) {
-        return baseMapper.getByWeixingLike(weixing);
+        return dynamicReplaceIconHost(baseMapper.getByWeixingLike(weixing));
     }
 
     public SysUserEntity getByAlipay(String alipay) {
-        return baseMapper.getByAlipay(alipay);
+        return dynamicReplaceIconHost(baseMapper.getByAlipay(alipay));
     }
 
     public SysUserEntity getByAlipayLike(String alipay) {
-        return baseMapper.getByAlipayLike(alipay);
+        return dynamicReplaceIconHost(baseMapper.getByAlipayLike(alipay));
     }
 
     public SysUserEntity getByIdCard(String idCard) {
-        return baseMapper.getByIdCard(idCard);
+        return dynamicReplaceIconHost(baseMapper.getByIdCard(idCard));
     }
 
     public SysUserEntity getByIdCardLike(String idCard) {
-        return baseMapper.getByIdCardLike(idCard);
+        return dynamicReplaceIconHost(baseMapper.getByIdCardLike(idCard));
     }
 
     public SysUserEntity getByAccountFuzzySearch(String account) {
@@ -312,7 +372,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         if (null == sysUserEntity)
             sysUserEntity = baseMapper.getByIdCardLike(account);
         refresh(sysUserEntity);
-        return sysUserEntity;
+        return dynamicReplaceIconHost(sysUserEntity);
     }
 
     public SysUserEntity getUser(String username) {
@@ -335,7 +395,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         if (null == sysUserEntity)
             sysUserEntity = sysUserDao.getByUsername(username);
         refresh(sysUserEntity);
-        return sysUserEntity;
+        return dynamicReplaceIconHost(sysUserEntity);
     }
 
     public void refresh(SysUserEntity user) {
@@ -375,7 +435,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         } catch (Exception e) {
             log.error("刷新错误:", e);
         }
-        return sysUserEntity;
+        return dynamicReplaceIconHost(sysUserEntity);
     }
 
     public void clear(String user) {
@@ -390,7 +450,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
                 cache.put(user, entity);
             }
         }
-        return entity;
+        return dynamicReplaceIconHost(entity);
     }
 
     @Override
@@ -436,7 +496,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
             }
         }
         refresh(sysUserEntity);
-        return sysUserEntity;
+        return dynamicReplaceIconHost(sysUserEntity);
     }
 
     public void login(String username, String password, boolean rememberMe) {
