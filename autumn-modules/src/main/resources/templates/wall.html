@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>防火墙管理</title>
+    <link rel="stylesheet" href="https://cdn.staticfile.org/layui/2.7.6/css/layui.min.css">
+    <link rel="stylesheet" href="/statics/css/font-awesome.min.css">
+    <style>
+        body { background: #f6f8fa; }
+        .main-container { max-width: 900px; margin: 40px auto 40px auto; }
+        .layui-card { margin-bottom: 24px; }
+        .layui-card-header { font-size: 18px; font-weight: bold; }
+        .layui-btn { border-radius: 20px; }
+        .layui-input, .layui-input-number { border-radius: 20px; }
+        .layui-table th, .layui-table td { text-align: center; }
+        .layui-table-hover { background: #f5f5f5 !important; }
+        .section-title { font-size: 16px; margin-bottom: 10px; font-weight: bold; }
+        .ip-input { width: 200px; display: inline-block; }
+        .layui-switch { margin-right: 20px; }
+        .layui-btn-icon { padding: 0 10px; }
+        .desc { color: #888; font-size: 13px; margin-bottom: 10px; }
+    </style>
+    <script src="https://cdn.staticfile.org/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdn.staticfile.org/layui/2.7.6/layui.min.js"></script>
+</head>
+<body>
+<div class="main-container">
+    <div class="layui-card">
+        <div class="layui-card-header">
+            <i class="fa fa-shield"></i> 防火墙管理
+        </div>
+        <div class="layui-card-body">
+            <div class="desc">本页面用于动态管理防火墙开关、黑白名单、盾牌防御等安全策略。</div>
+            <form class="layui-form" lay-filter="wallForm">
+                <div class="layui-row layui-col-space20">
+                    <div class="layui-col-md6">
+                        <label>防火墙开关：</label>
+                        <input type="checkbox" id="firewallOpen" lay-skin="switch" lay-text="开启|关闭" lay-filter="firewallOpen">
+                    </div>
+                    <div class="layui-col-md6">
+                        <label>黑名单阈值：</label>
+                        <input type="number" id="firewallCount" class="layui-input-number" style="width:100px;display:inline-block;">
+                        <button class="layui-btn layui-btn-normal" id="setCountBtn" type="button">设置</button>
+                    </div>
+                </div>
+                <div class="layui-row layui-col-space20" style="margin-top:18px;">
+                    <div class="layui-col-md6">
+                        <label>盾牌日志：</label>
+                        <input type="checkbox" id="shieldPrint" lay-skin="switch" lay-text="ON|OFF" lay-filter="shieldPrint">
+                        <label style="margin-left:20px;">攻击模式：</label>
+                        <input type="checkbox" id="shieldAttack" lay-skin="switch" lay-text="ON|OFF" lay-filter="shieldAttack">
+                    </div>
+                    <div class="layui-col-md6">
+                        <button class="layui-btn" id="toggleShield" type="button"><i class="fa" id="shieldIcon"></i> <span id="shieldText"></span></button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="layui-card">
+        <div class="layui-card-header section-title"><i class="fa fa-ban"></i> IP黑名单管理</div>
+        <div class="layui-card-body">
+            <div style="margin-bottom:10px;">
+                <input type="text" id="addBlackIp" class="layui-input ip-input" placeholder="输入IP">
+                <button class="layui-btn layui-btn-danger" id="addBlackBtn" type="button"><i class="fa fa-plus"></i> 添加</button>
+            </div>
+            <table class="layui-table" id="blackTable">
+                <thead><tr><th>IP</th><th>操作</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="layui-card">
+        <div class="layui-card-header section-title"><i class="fa fa-check"></i> IP白名单管理</div>
+        <div class="layui-card-body">
+            <div style="margin-bottom:10px;">
+                <input type="text" id="addWhiteIp" class="layui-input ip-input" placeholder="输入IP">
+                <button class="layui-btn layui-btn-success" id="addWhiteBtn" type="button"><i class="fa fa-plus"></i> 添加</button>
+            </div>
+            <table class="layui-table" id="whiteTable">
+                <thead><tr><th>IP</th><th>操作</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<script>
+layui.use(['form', 'layer'], function(){
+    var form = layui.form, layer = layui.layer;
+
+    function msg(txt, icon=1) { layer.msg(txt, {icon:icon, time:1200}); }
+
+    function loadAll() {
+        // 防火墙开关
+        $.get('/wall/api/firewallOpen', function(res){
+            $('#firewallOpen').prop('checked', res.firewallOpen);
+            form.render('checkbox');
+        });
+        // 黑名单阈值
+        $.get('/wall/api/firewallCount', function(res){
+            $('#firewallCount').val(res.firewallCount);
+        });
+        // 盾牌状态
+        $.get('/wall/api/shieldStatus', function(res){
+            $('#shieldPrint').prop('checked', res.print);
+            $('#shieldAttack').prop('checked', res.attack);
+            form.render('checkbox');
+        });
+        // 盾牌启用状态
+        $.get('/wall/api/shield/enable', function(res){
+            if(res.enable){
+                $('#toggleShield').removeClass('layui-btn-success').addClass('layui-btn-danger');
+                $('#shieldIcon').removeClass('fa-play').addClass('fa-stop');
+                $('#shieldText').text('禁用盾牌');
+            }else{
+                $('#toggleShield').removeClass('layui-btn-danger').addClass('layui-btn-success');
+                $('#shieldIcon').removeClass('fa-stop').addClass('fa-play');
+                $('#shieldText').text('启用盾牌');
+            }
+        });
+        // 黑名单
+        $.get('/wall/api/ipblack/list', function(res){
+            var html = '';
+            $.each(res, function(i, ip){
+                html += '<tr><td>'+ip+'</td><td><button class="layui-btn layui-btn-xs layui-btn-danger del-black" data-ip="'+ip+'" lay-tips="移除"><i class="fa fa-trash"></i></button></td></tr>';
+            });
+            $('#blackTable tbody').html(html);
+        });
+        // 白名单
+        $.get('/wall/api/ipwhite/list', function(res){
+            var html = '';
+            $.each(res, function(i, ip){
+                html += '<tr><td>'+ip+'</td><td><button class="layui-btn layui-btn-xs layui-btn-warm del-white" data-ip="'+ip+'" lay-tips="移除"><i class="fa fa-trash"></i></button></td></tr>';
+            });
+            $('#whiteTable tbody').html(html);
+        });
+    }
+    loadAll();
+
+    // 防火墙开关
+    form.on('switch(firewallOpen)', function(data){
+        $.post('/wall/api/firewallOpen', {open: data.elem.checked}, function(){msg('防火墙已'+(data.elem.checked?'开启':'关闭'));loadAll();});
+    });
+    // 黑名单阈值
+    $('#setCountBtn').click(function(){
+        var count = $('#firewallCount').val();
+        $.post('/wall/api/firewallCount', {count: count}, function(){msg('阈值已更新');loadAll();});
+    });
+    // 盾牌日志
+    form.on('switch(shieldPrint)', function(data){
+        $.post('/wall/api/shieldPrint', {print: data.elem.checked}, function(){msg('日志已'+(data.elem.checked?'开启':'关闭'));loadAll();});
+    });
+    // 攻击模式
+    form.on('switch(shieldAttack)', function(data){
+        $.post('/wall/api/shieldAttack', {attack: data.elem.checked}, function(){msg('攻击模式已'+(data.elem.checked?'开启':'关闭'));loadAll();});
+    });
+    // 盾牌启用/禁用切换
+    $('#toggleShield').click(function(){
+        $.post('/wall/api/shield/toggle', {}, function(res){
+            msg(res.enable ? '盾牌已启用' : '盾牌已禁用', res.enable ? 1 : 2);
+            loadAll();
+        });
+    });
+    // 黑名单添加
+    $('#addBlackBtn').click(function(){
+        var ip = $('#addBlackIp').val();
+        if(ip) {
+            $.post('/wall/api/ipblack/add', {ip: ip}, function(res){
+                if(res.success){
+                    msg('已添加黑名单');
+                    $('#addBlackIp').val('');
+                }else{
+                    msg('添加黑名单失败', 2);
+                }
+                loadAll();
+            });
+        }
+    });
+    // 黑名单删除
+    $('#blackTable').on('click', '.del-black', function(){
+        var ip = $(this).data('ip');
+        $.post('/wall/api/ipblack/remove', {ip: ip}, function(){msg('已移除黑名单',2);loadAll();});
+    });
+    // 白名单添加
+    $('#addWhiteBtn').click(function(){
+        var ip = $('#addWhiteIp').val();
+        if(ip) {
+            $.post('/wall/api/ipwhite/add', {ip: ip}, function(res){
+                if(res.success){
+                    msg('已添加白名单');
+                    $('#addWhiteIp').val('');
+                }else{
+                    msg('添加白名单失败', 2);
+                }
+                loadAll();
+            });
+        }
+    });
+    // 白名单删除
+    $('#whiteTable').on('click', '.del-white', function(){
+        var ip = $(this).data('ip');
+        $.post('/wall/api/ipwhite/remove', {ip: ip}, function(){msg('已移除白名单',2);loadAll();});
+    });
+});
+</script>
+</body>
+</html>

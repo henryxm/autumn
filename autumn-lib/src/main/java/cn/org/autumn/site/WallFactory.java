@@ -1,6 +1,7 @@
 package cn.org.autumn.site;
 
 import cn.org.autumn.config.WallHandler;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -11,7 +12,20 @@ public class WallFactory extends Factory {
 
     WallHandler wallHandler = null;
 
+    @Value("${autumn.firewall.open:true}")
+    private boolean firewallOpen;
+
+    public boolean getFirewallOpen() {
+        return firewallOpen;
+    }
+
+    public void setFirewallOpen(boolean open) {
+        firewallOpen = open;
+    }
+
     public boolean isOpen() {
+        if (!firewallOpen)
+            return false;
         WallHandler handler = getWallHandler();
         if (null != handler)
             return handler.isOpen();
@@ -19,6 +33,8 @@ public class WallFactory extends Factory {
     }
 
     public boolean isIpWhiteEnable() {
+        if (!firewallOpen)
+            return false;
         WallHandler handler = getWallHandler();
         if (null != handler)
             return handler.isOpen() && handler.isIpWhiteEnable();
@@ -26,6 +42,8 @@ public class WallFactory extends Factory {
     }
 
     public boolean isIpBlackEnable() {
+        if (!firewallOpen)
+            return false;
         WallHandler handler = getWallHandler();
         if (null != handler)
             return handler.isOpen() && handler.isIpBlackEnable();
@@ -33,6 +51,8 @@ public class WallFactory extends Factory {
     }
 
     public boolean isHostEnable() {
+        if (!firewallOpen)
+            return false;
         WallHandler handler = getWallHandler();
         if (null != handler)
             return handler.isOpen() && handler.isHostEnable();
@@ -40,6 +60,8 @@ public class WallFactory extends Factory {
     }
 
     public boolean isUrlBlack() {
+        if (!firewallOpen)
+            return false;
         WallHandler handler = getWallHandler();
         if (null != handler)
             return handler.isOpen() && handler.isUrlBlackEnable();
@@ -47,6 +69,8 @@ public class WallFactory extends Factory {
     }
 
     public boolean isVisitEnable() {
+        if (!firewallOpen)
+            return false;
         WallHandler handler = getWallHandler();
         if (null != handler)
             return handler.isOpen() && handler.isVisitEnable();

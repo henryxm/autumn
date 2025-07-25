@@ -136,4 +136,8 @@ public class PageFactory extends Factory {
         model.addAttribute("data", tableFactory.reinit());
         return invoke("reinit", "reinit", httpServletRequest, httpServletResponse, model);
     }
+
+    public String wall(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        return invoke("wall", "wall", httpServletRequest, httpServletResponse, model);
+    }
 }

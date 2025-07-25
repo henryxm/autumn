@@ -11,6 +11,7 @@ import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
@@ -33,7 +34,40 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
     /**
      * 一个ip地址统计刷新周期内，ip访问次数大于该值后，把ip地址加入到黑名单
      */
-    private int lastCount = 500;
+    @Value("${autumn.firewall.count:1000}")
+    private int firewallCount;
+
+    public int getFirewallCount() {
+        return firewallCount;
+    }
+
+    public void setFirewallCount(int count) {
+        this.firewallCount = count;
+    }
+
+    public int getCount() {
+        IpBlackEntity black = getByIp("0.0.0.0");
+        if (null == black) {
+            black = selectById(1);
+            if (null == black) {
+                black = new IpBlackEntity();
+                black.setAvailable(1);
+            }
+            black.setIp("0.0.0.0");
+            black.setCount((long) firewallCount);
+            black.setTag("IP黑名单策略5秒自动拉黑次数");
+            black.setCreateTime(new Date());
+            black.setUserAgent("");
+            insertOrUpdate(black);
+        }
+        if (null == black.getCount() || black.getCount().intValue() < 500) {
+            black.setCount((long) firewallCount);
+            black.setTag("IP黑名单策略5秒自动拉黑次数");
+            black.setUserAgent("");
+            updateById(black);
+        }
+        return black.getCount().intValue();
+    }
 
     /**
      * 缓存的黑名单列表，一个刷新周期内，从数据库加载一次
@@ -41,6 +75,26 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
     private Set<String> ipBlackList = new HashSet<>();
 
     private Set<String> ipBlackSectionList = new HashSet<>();
+
+    public Set<String> getIpBlackList() {
+        return ipBlackList;
+    }
+
+    public void setIpBlackList(Set<String> ipBlackList) {
+        this.ipBlackList = ipBlackList;
+    }
+
+    public Set<String> getIpBlackSectionList() {
+        return ipBlackSectionList;
+    }
+
+    public void setIpBlackSectionList(Set<String> ipBlackSectionList) {
+        this.ipBlackSectionList = ipBlackSectionList;
+    }
+
+    public static void setAllIp(Map<String, Integer> allIp) {
+        IpBlackService.allIp = allIp;
+    }
 
     /**
      * 一个ip地址统计刷新周期内，统计所有的ip地址及其访问的次数
@@ -162,8 +216,8 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
                 return;
             count++;
             allIp.replace(ip, count);
-            if (count > lastCount) {
-                saveBlackIp(ip, agent, count, "触发IP黑名单策略:" + lastCount + "次/5秒");
+            if (count > firewallCount) {
+                saveBlackIp(ip, agent, count, "触发IP黑名单策略:" + firewallCount + "次/5秒");
             }
         } else
             allIp.put(ip, 1);
@@ -210,33 +264,9 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
      * 定时清空对ip地址的检测
      */
     public void refresh() {
-        lastCount = getLastCount();
+        firewallCount = getCount();
         if (null != allIp)
             allIp.clear();
-    }
-
-    public int getLastCount() {
-        IpBlackEntity black = getByIp("0.0.0.0");
-        if (null == black) {
-            black = selectById(1);
-            if (null == black) {
-                black = new IpBlackEntity();
-                black.setAvailable(1);
-            }
-            black.setIp("0.0.0.0");
-            black.setCount(500L);
-            black.setTag("IP黑名单策略5秒自动拉黑次数");
-            black.setCreateTime(new Date());
-            black.setUserAgent("");
-            insertOrUpdate(black);
-        }
-        if (null == black.getCount() || black.getCount().intValue() < 50) {
-            black.setCount(500L);
-            black.setTag("IP黑名单策略5秒自动拉黑次数");
-            black.setUserAgent("");
-            updateById(black);
-        }
-        return black.getCount().intValue();
     }
 
     @Override
@@ -258,23 +288,23 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
     public IpBlackEntity create(String ip, String tag, String description) {
         IpBlackEntity blackEntity = null;
         try {
-            blackEntity = getByIp(ip);
-            if (null == blackEntity) {
-                blackEntity = new IpBlackEntity();
-                blackEntity.setIp(ip);
-                blackEntity.setTag(tag);
-                blackEntity.setDescription(description);
-                blackEntity.setCreateTime(new Date());
-                blackEntity.setAvailable(0);
-                blackEntity.setCount(0L);
-                blackEntity.setToday(0L);
-                if (!ipBlackList.contains(ip)) {
+            if ((IPUtils.isIp(ip) || IPUtils.isIPV6(ip) && !IPUtils.isInternalKeepIp(ip))) {
+                blackEntity = getByIp(ip);
+                if (null == blackEntity) {
+                    blackEntity = new IpBlackEntity();
+                    blackEntity.setIp(ip);
+                    blackEntity.setTag(tag);
+                    blackEntity.setDescription(description);
+                    blackEntity.setCreateTime(new Date());
+                    blackEntity.setAvailable(0);
+                    blackEntity.setCount(0L);
+                    blackEntity.setToday(0L);
                     ipBlackList.add(ip);
+                    insert(blackEntity);
                 }
-                insert(blackEntity);
             }
         } catch (Exception e) {
-            //do nothing
+            log.error("添加黑名单IP:{}", e.getMessage());
         }
         return blackEntity;
     }
@@ -300,5 +330,10 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
     @Override
     protected boolean has(String key) {
         return hasIp(key);
+    }
+
+    public void removeByIp(String ip) {
+        ipBlackList.remove(ip);
+        baseMapper.deleteById(getByIp(ip).getId());
     }
 }

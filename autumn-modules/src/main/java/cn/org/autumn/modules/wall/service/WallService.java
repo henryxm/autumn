@@ -65,6 +65,8 @@ public class WallService {
         HttpServletRequest request = (HttpServletRequest) servletRequest;
         HttpServletResponse response = (HttpServletResponse) servletResponse;
         String ip = IPUtils.getIp(request);
+        if (IPUtils.isInternalKeepIp(ip))
+            return true;
         String userAgent = request.getHeader("user-agent");
         if (shieldService.isAttack()) {
             if (ipBlackService.isBlack(ip)) {

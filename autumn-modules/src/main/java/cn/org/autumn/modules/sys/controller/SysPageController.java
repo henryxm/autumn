@@ -326,6 +326,16 @@ public class SysPageController implements ErrorController {
         return "404";
     }
 
+    @RequestMapping(value = {"wall.html"}, method = RequestMethod.GET)
+    public String wall(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        if (ShiroUtils.isLogin()) {
+            if (sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
+                return pageFactory.wall(httpServletRequest, httpServletResponse, model);
+            }
+        }
+        return "404";
+    }
+
     public void check(HttpServletRequest request, String method) throws Exception {
         String token = request.getHeader("x-" + method + "-authentication");
         if (StringUtils.isBlank(token)) {

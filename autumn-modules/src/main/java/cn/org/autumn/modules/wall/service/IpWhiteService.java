@@ -29,6 +29,19 @@ public class IpWhiteService extends WallCounter<IpWhiteDao, IpWhiteEntity> imple
     @Autowired
     WallFactory wallFactory;
 
+    public List<String> getIpWhiteList() {
+        return ipWhiteList;
+    }
+
+    public void removeIpWhite(String ip) {
+        ipWhiteList.remove(ip);
+    }
+
+    public void removeByIp(String ip) {
+        ipWhiteList.remove(ip);
+        baseMapper.deleteById(getByIp(ip).getId());
+    }
+
     /**
      * 为了提高效率，在黑客大量攻击的时候，不能频繁进行数据库访问，通过定时器定时加载IP地址黑名单数据，提高效率。
      */
@@ -78,7 +91,7 @@ public class IpWhiteService extends WallCounter<IpWhiteDao, IpWhiteEntity> imple
     public boolean isWhite(String ip, String agent) {
         try {
             if (!wallFactory.isIpWhiteEnable())
-                return false;
+                return true;
             if (StringUtils.isEmpty(ip))
                 return false;
             if (ipWhiteList.contains(ip)) {
@@ -124,22 +137,24 @@ public class IpWhiteService extends WallCounter<IpWhiteDao, IpWhiteEntity> imple
 
     public IpWhiteEntity create(String ip, String tag, String description) {
         IpWhiteEntity whiteEntity = null;
-        try {
-            whiteEntity = getByIp(ip);
-            if (null == whiteEntity) {
-                whiteEntity = new IpWhiteEntity();
-                whiteEntity.setIp(ip);
-                whiteEntity.setTag(tag);
-                whiteEntity.setDescription(description);
-                whiteEntity.setCreateTime(new Date());
-                whiteEntity.setForbidden(0);
-                whiteEntity.setCount(0L);
-                whiteEntity.setToday(0L);
-                insert(whiteEntity);
+        if ((IPUtils.isIp(ip) || IPUtils.isIPV6(ip)) && !IPUtils.isInternalKeepIp(ip)) {
+            try {
+                whiteEntity = getByIp(ip);
+                if (null == whiteEntity) {
+                    whiteEntity = new IpWhiteEntity();
+                    whiteEntity.setIp(ip);
+                    whiteEntity.setTag(tag);
+                    whiteEntity.setDescription(description);
+                    whiteEntity.setCreateTime(new Date());
+                    whiteEntity.setForbidden(0);
+                    whiteEntity.setCount(0L);
+                    whiteEntity.setToday(0L);
+                    insert(whiteEntity);
+                }
+                put(ip);
+            } catch (Exception e) {
+                log.error("添加白名单IP:{}", e.getMessage());
             }
-            put(ip);
-        } catch (Exception e) {
-            //do nothing
         }
         return whiteEntity;
     }

@@ -153,4 +153,48 @@ public class IPUtils {
             return null;
         }
     }
+
+    public static boolean isInternalKeepIp(String ip) {
+        if (ip == null) return false;
+        ip = ip.trim();
+        // IPv4 localhost
+        if (ip.equals("127.0.0.1") || ip.equals("0.0.0.0")) return true;
+        // IPv6 localhost
+        if (ip.equals("::1")) return true;
+        // IPv4 private
+        if (ip.startsWith("10.")) return true;
+        if (ip.startsWith("192.168.")) return true;
+        if (ip.startsWith("172.")) {
+            String[] parts = ip.split("\\.");
+            if (parts.length > 1) {
+                try {
+                    int second = Integer.parseInt(parts[1]);
+                    if (second >= 16 && second <= 31) return true;
+                } catch (Exception ignored) {
+                }
+            }
+        }
+        // IPv4 link-local
+        if (ip.startsWith("169.254.")) return true;
+        // IPv4 multicast
+        try {
+            String[] parts = ip.split("\\.");
+            if (parts.length == 4) {
+                int first = Integer.parseInt(parts[0]);
+                if (first >= 224 && first <= 239) return true; // 224.0.0.0 - 239.255.255.255
+                if (first >= 240 && first <= 255) return true; // 240.0.0.0 - 255.255.255.254 (reserved)
+            }
+        } catch (Exception ignored) {
+        }
+        // IPv6 unique local (fc00::/7)
+        if (ip.toLowerCase().startsWith("fc") || ip.toLowerCase().startsWith("fd")) return true;
+        // IPv6 link-local (fe80::/10)
+        if (ip.toLowerCase().startsWith("fe8") || ip.toLowerCase().startsWith("fe9") || ip.toLowerCase().startsWith("fea") || ip.toLowerCase().startsWith("feb"))
+            return true;
+        // IPv6 multicast (ff00::/8)
+        if (ip.toLowerCase().startsWith("ff")) return true;
+        // IPv6 unspecified (::)
+        if (ip.equals("::")) return true;
+        return false;
+    }
 }

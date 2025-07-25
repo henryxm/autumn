@@ -150,10 +150,44 @@ public class ShieldService extends ModuleService<ShieldDao, ShieldEntity> implem
         insert(shield);
     }
 
+    public boolean toggleEnable() {
+        ShieldEntity shield = baseMapper.get();
+        if (shield == null) {
+            create();
+            shield = baseMapper.get();
+        }
+        boolean newEnable = !shield.isEnable();
+        shield.setEnable(newEnable);
+        updateById(shield);
+        uris = baseMapper.gets();
+        return newEnable;
+    }
+
+    public boolean getEnable() {
+        ShieldEntity shield = baseMapper.get();
+        return shield != null && shield.isEnable();
+    }
+
     @Override
     public void init() {
         if (baseMapper.has() > 0)
             return;
         create();
+    }
+
+    public static synchronized boolean getPrint() {
+        return print;
+    }
+
+    public static synchronized void setPrint(boolean value) {
+        print = value;
+    }
+
+    public static synchronized boolean getAttack() {
+        return attack;
+    }
+
+    public static synchronized void setAttack(boolean value) {
+        attack = value;
     }
 }
