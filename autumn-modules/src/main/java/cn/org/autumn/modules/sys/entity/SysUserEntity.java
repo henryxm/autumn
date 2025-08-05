@@ -77,6 +77,9 @@ public class SysUserEntity implements Serializable {
     @Column(comment = "头像")
     private String icon;
 
+    @Column(comment = "头像MD5", length = 128, defaultValue = "")
+    private String iconMd5;
+
     @Column(comment = "OPENID")
     @Index
     private String openId;
@@ -218,6 +221,14 @@ public class SysUserEntity implements Serializable {
         this.icon = icon;
     }
 
+    public String getIconMd5() {
+        return iconMd5;
+    }
+
+    public void setIconMd5(String iconMd5) {
+        this.iconMd5 = iconMd5;
+    }
+
     public String getOpenId() {
         return openId;
     }
@@ -330,7 +341,8 @@ public class SysUserEntity implements Serializable {
                 getAlipay(),
                 getIdCard(),
                 getStatus(),
-                getIcon()
+                getIcon(),
+                getIconMd5()
         );
     }
 }
