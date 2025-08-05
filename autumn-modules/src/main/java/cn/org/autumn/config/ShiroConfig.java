@@ -173,6 +173,7 @@ public class ShiroConfig {
         filterMap.put("/clear", "anon");
         filterMap.put("/reinit", "anon");
         filterMap.put("/sys/login", "anon");
+        filterMap.put("/sys/using", "anon");
         filterMap.put("/plugin/load", "anon");
         filterMap.put("/sys/autologin", "anon");
         filterMap.put("/favicon.ico", "anon");
