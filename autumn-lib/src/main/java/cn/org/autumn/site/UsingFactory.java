@@ -27,9 +27,28 @@ public class UsingFactory extends Factory {
 
     List<UsingHandler> list = null;
 
-    public boolean using(Object value) {
-        if (null == list)
+    public List<UsingHandler> getList() {
+        if (null == list) {
             list = getOrderList(UsingHandler.class);
+        }
+        return list;
+    }
+
+    public int count() {
+        if (null == list) {
+            list = getOrderList(UsingHandler.class);
+        }
+        if (null != list)
+            return list.size();
+        return 0;
+    }
+
+    public boolean using(Object value) {
+        if (null == list) {
+            list = getOrderList(UsingHandler.class);
+        }
+        if (null == list || list.isEmpty())
+            log.debug("无实例");
         for (UsingHandler handler : list) {
             if (handler.using(value))
                 return true;
@@ -47,6 +66,7 @@ public class UsingFactory extends Factory {
         String url = base + "sys/using";
         if (log.isDebugEnabled())
             log.debug("构建URL: base={}, 最终URL={}", base, url);
+        String result = "";
         try {
             URL urlObj = new URL(url);
             HttpURLConnection connection = (HttpURLConnection) urlObj.openConnection();
@@ -75,9 +95,11 @@ public class UsingFactory extends Factory {
                     while ((responseLine = br.readLine()) != null) {
                         response.append(responseLine.trim());
                     }
-                    String result = response.toString();
+                    result = response.toString();
                     if (log.isDebugEnabled())
                         log.debug("响应内容: {}", result);
+                    if (null == gson)
+                        gson = new Gson();
                     return gson.fromJson(result, Using.class);
                 }
             } else {
@@ -89,12 +111,12 @@ public class UsingFactory extends Factory {
                         errorResponse.append(responseLine.trim());
                     }
                     if (log.isDebugEnabled())
-                        log.debug("HTTP错误响应: {}, 错误内容: {}", responseCode, errorResponse.toString());
+                        log.debug("HTTP错误响应: {}, 错误内容: {}", responseCode, errorResponse);
                 }
             }
         } catch (Exception e) {
             if (log.isDebugEnabled())
-                log.debug("HTTP请求异常: URL={}, 错误信息={}", url, e.getMessage(), e);
+                log.debug("HTTP请求异常: URL={}, 错误信息={}, 请求结果:{}", url, e.getMessage(), result, e);
         }
         return null;
     }
