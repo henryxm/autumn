@@ -73,4 +73,29 @@ public class QcloudCloudStorageService extends CloudStorageService {
     public String uploadSuffix(InputStream inputStream, String suffix) {
         return upload(inputStream, getPath(config.getQcloudPrefix(), suffix));
     }
+
+    @Override
+    public void setObjectAcl(String key, AccessControl access) {
+
+    }
+
+    @Override
+    public void setBucketAcl(AccessControl access) {
+
+    }
+
+    @Override
+    public String upload(byte[] data, String path, Object metadata) {
+        return null;
+    }
+
+    @Override
+    public String upload(InputStream inputStream, String path, Object metadata) {
+        return null;
+    }
+
+    @Override
+    public String remove(String path) {
+        return null;
+    }
 }

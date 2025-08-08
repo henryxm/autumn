@@ -15,14 +15,14 @@ public class QiniuCloudStorageService extends CloudStorageService {
     private UploadManager uploadManager;
     private String token;
 
-    public QiniuCloudStorageService(CloudStorageConfig config){
+    public QiniuCloudStorageService(CloudStorageConfig config) {
         this.config = config;
 
         //初始化
         init();
     }
 
-    private void init(){
+    private void init() {
         uploadManager = new UploadManager(new Configuration(Zone.autoZone()));
         token = Auth.create(config.getQiniuAccessKey(), config.getQiniuSecretKey()).
                 uploadToken(config.getQiniuBucketName());
@@ -60,5 +60,30 @@ public class QiniuCloudStorageService extends CloudStorageService {
     @Override
     public String uploadSuffix(InputStream inputStream, String suffix) {
         return upload(inputStream, getPath(config.getQiniuPrefix(), suffix));
+    }
+
+    @Override
+    public void setObjectAcl(String key, AccessControl access) {
+
+    }
+
+    @Override
+    public void setBucketAcl(AccessControl access) {
+
+    }
+
+    @Override
+    public String upload(byte[] data, String path, Object metadata) {
+        return null;
+    }
+
+    @Override
+    public String upload(InputStream inputStream, String path, Object metadata) {
+        return null;
+    }
+
+    @Override
+    public String remove(String path) {
+        return null;
     }
 }
