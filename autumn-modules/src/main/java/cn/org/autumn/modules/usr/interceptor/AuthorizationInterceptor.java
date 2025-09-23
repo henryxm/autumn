@@ -95,7 +95,7 @@ public class AuthorizationInterceptor extends HandlerInterceptorAdapter implemen
         if (null != modelAndView) {
             ModelMap modelMap = modelAndView.getModelMap();
             if (ShiroUtils.isLogin()) {
-                SysUserEntity sysUserEntity = ShiroUtils.getUserEntity();
+                SysUserEntity sysUserEntity = sysUserService.getCache(ShiroUtils.getUserUuid());
                 sysUserEntity = append(sysUserEntity);
                 if (StringUtils.isNotEmpty(sysUserEntity.getParentUuid()) && null == sysUserEntity.getParent()) {
                     SysUserEntity parent = sysUserService.getByUuid(sysUserEntity.getParentUuid());
