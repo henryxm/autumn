@@ -24,51 +24,51 @@ public interface SysUserDao extends BaseMapper<SysUserEntity> {
             "where ur.user_uuid = #{userUuid}")
     List<String> getMenus(@Param("userUuid") String userUuid);
 
-    @Select("select * from sys_user u where u.username = #{username}")
+    @Select("select * from sys_user where `username` = #{username} and `status` >= 0")
     SysUserEntity getByUsername(@Param("username") String username);
 
-    @Select("select * from sys_user where username like concat('%', #{username}, '%') limit 1")
+    @Select("select * from sys_user where `username` like concat('%', #{username}, '%') and `status` >= 0 limit 1")
     SysUserEntity getByUsernameLike(@Param("username") String username);
 
-    @Select("SELECT * FROM sys_user WHERE email = #{email}")
+    @Select("SELECT * FROM sys_user WHERE `email` = #{email} and `status` >= 0")
     SysUserEntity getByEmail(@Param("email") String email);
 
-    @Select("SELECT * FROM sys_user WHERE email like concat('%', #{email}, '%') limit 1")
+    @Select("SELECT * FROM sys_user WHERE `email` like concat('%', #{email}, '%') and `status` >= 0 limit 1")
     SysUserEntity getByEmailLike(@Param("email") String email);
 
-    @Select("SELECT * FROM sys_user WHERE mobile = #{mobile}")
+    @Select("SELECT * FROM sys_user WHERE `mobile` = #{mobile} and `status` >= 0")
     SysUserEntity getByPhone(@Param("mobile") String mobile);
 
-    @Select("SELECT * FROM sys_user WHERE mobile like concat('%', #{mobile}, '%') limit 1")
+    @Select("SELECT * FROM sys_user WHERE `mobile` like concat('%', #{mobile}, '%') and `status` >= 0 limit 1")
     SysUserEntity getByPhoneLike(@Param("mobile") String mobile);
 
-    @Select("SELECT * FROM sys_user WHERE uuid = #{uuid}")
+    @Select("SELECT * FROM sys_user WHERE `uuid` = #{uuid} and `status` >= 0")
     SysUserEntity getByUuid(@Param("uuid") String uuid);
 
-    @Select("SELECT * FROM sys_user WHERE uuid like concat('%', #{uuid}, '%') limit 1")
+    @Select("SELECT * FROM sys_user WHERE `uuid` like concat('%', #{uuid}, '%')  and `status` >= 0 limit 1")
     SysUserEntity getByUuidLike(@Param("uuid") String uuid);
 
-    @Select("SELECT * FROM sys_user WHERE qq = #{qq}")
+    @Select("SELECT * FROM sys_user WHERE `qq` = #{qq} and `status` >= 0")
     SysUserEntity getByQq(@Param("qq") String qq);
 
-    @Select("SELECT * FROM sys_user WHERE qq like concat('%', #{qq}, '%') limit 1")
+    @Select("SELECT * FROM sys_user WHERE `qq` like concat('%', #{qq}, '%') and `status` >= 0 limit 1")
     SysUserEntity getByQqLike(@Param("qq") String qq);
 
-    @Select("SELECT * FROM sys_user WHERE weixing = #{weixing}")
-    SysUserEntity getByWeixing(@Param("weixing") String weixing);
+    @Select("SELECT * FROM sys_user WHERE `weixin` = #{weixin} and `status` >= 0")
+    SysUserEntity getByWeixing(@Param("weixin") String weixin);
 
-    @Select("SELECT * FROM sys_user WHERE weixing like concat('%', #{weixing}, '%') limit 1")
-    SysUserEntity getByWeixingLike(@Param("weixing") String weixing);
+    @Select("SELECT * FROM sys_user WHERE `weixin` like concat('%', #{weixin}, '%') and `status` >= 0 limit 1")
+    SysUserEntity getByWeixingLike(@Param("weixin") String weixin);
 
-    @Select("SELECT * FROM sys_user WHERE alipay = #{alipay}")
+    @Select("SELECT * FROM sys_user WHERE `alipay` = #{alipay} and `status` >= 0")
     SysUserEntity getByAlipay(@Param("alipay") String alipay);
 
-    @Select("SELECT * FROM sys_user WHERE alipay like concat('%', #{alipay}, '%') limit 1")
+    @Select("SELECT * FROM sys_user WHERE `alipay` like concat('%', #{alipay}, '%') and `status` >= 0 limit 1")
     SysUserEntity getByAlipayLike(@Param("alipay") String alipay);
 
-    @Select("SELECT * FROM sys_user WHERE id_card = #{idCard}")
+    @Select("SELECT * FROM sys_user WHERE `id_card` = #{idCard} and `status` >= 0")
     SysUserEntity getByIdCard(@Param("idCard") String idCard);
 
-    @Select("SELECT * FROM sys_user WHERE id_card like concat('%', #{idCard}, '%') limit 1")
+    @Select("SELECT * FROM sys_user WHERE `id_card` like concat('%', #{idCard}, '%') and `status` >= 0 limit 1")
     SysUserEntity getByIdCardLike(@Param("idCard") String idCard);
 }

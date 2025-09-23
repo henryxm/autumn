@@ -9,6 +9,7 @@ import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.sys.shiro.SuperPasswordToken;
 import cn.org.autumn.modules.usr.entity.UserProfileEntity;
 import cn.org.autumn.modules.usr.service.UserProfileService;
+import cn.org.autumn.site.AccountFactory;
 import cn.org.autumn.site.InitFactory;
 import cn.org.autumn.utils.*;
 import com.baomidou.mybatisplus.mapper.EntityWrapper;
@@ -24,6 +25,8 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.shiro.authc.AuthenticationToken;
 import org.apache.shiro.authc.UsernamePasswordToken;
 import org.apache.shiro.subject.Subject;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -70,6 +73,12 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
     @Autowired
     @Lazy
     private UserProfileService userProfileService;
+
+    @Autowired
+    AccountFactory accountFactory;
+
+    @Autowired
+    RedissonClient redissonClient;
 
     @Autowired
     EnvBean envBean;
@@ -577,6 +586,58 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         // 清理缓存，避免过度消耗内存
         if (hashUser.size() > 10000) {
             hashUser.clear();
+        }
+    }
+
+    //注销账号
+    public void cancel(String uuid, String reason) throws Exception {
+        String key = "user:cancel:" + uuid;
+        RLock lock = redissonClient.getLock(key);
+        try {
+            SysUserEntity entity = getByUuid(uuid);
+            if (entity.getStatus() == -1)
+                return;
+            accountFactory.canceling(entity);
+            entity.setStatus(-1);
+            entity.setPassword("");
+            entity.setSalt("");
+            entity.setIcon("");
+            entity.setIconMd5("");
+            entity.setOpenId("");
+            entity.setUnionId("");
+            entity.setDeptKey("");
+            entity.setReason(reason);
+            String prefix = "del-";
+            if (StringUtils.isNotBlank(entity.getUsername())) {
+                entity.setUsername(prefix + entity.getUsername());
+            }
+            if (StringUtils.isNotBlank(entity.getEmail())) {
+                entity.setEmail(prefix + entity.getEmail());
+            }
+            if (StringUtils.isNotBlank(entity.getMobile())) {
+                entity.setMobile(prefix + entity.getMobile());
+            }
+            if (StringUtils.isNotBlank(entity.getQq())) {
+                entity.setQq(prefix + entity.getQq());
+            }
+            if (StringUtils.isNotBlank(entity.getWeixin())) {
+                entity.setWeixin(prefix + entity.getWeixin());
+            }
+            if (StringUtils.isNotBlank(entity.getAlipay())) {
+                entity.setAlipay(prefix + entity.getAlipay());
+            }
+            if (StringUtils.isNotBlank(entity.getIdCard())) {
+                entity.setIdCard(prefix + entity.getIdCard());
+            }
+            entity.setUpdateTime(new Date());
+            updateById(entity);
+            clear(uuid);
+            accountFactory.canceled(entity);
+        } catch (Exception e) {
+            log.error("注销账号:{}", e.getMessage());
+        } finally {
+            if (lock.isLocked())
+                lock.forceUnlock();
         }
     }
 
