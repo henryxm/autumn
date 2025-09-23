@@ -13,7 +13,6 @@ import cn.org.autumn.modules.oauth.store.ValueType;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.modules.sys.service.SysUserService;
-import cn.org.autumn.modules.sys.shiro.RedisShiroSessionDAO;
 import cn.org.autumn.site.UpgradeFactory;
 import cn.org.autumn.utils.RedisUtils;
 import cn.org.autumn.utils.Utils;
@@ -33,9 +32,6 @@ public class ClientDetailsService extends ModuleService<ClientDetailsDao, Client
 
     @Autowired
     RedisUtils redisUtils;
-
-    @Autowired
-    RedisShiroSessionDAO redisShiroSessionDAO;
 
     @Autowired
     @Lazy

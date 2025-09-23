@@ -10,7 +10,6 @@ import cn.org.autumn.modules.spm.service.SuperPositionModelService;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.modules.sys.service.SysUserService;
-import cn.org.autumn.modules.sys.shiro.RedisShiroSessionDAO;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.usr.dto.UserProfile;
 import cn.org.autumn.modules.usr.entity.UserProfileEntity;
@@ -90,9 +89,6 @@ public class AuthorizationController {
 
     @Autowired
     UserLoginLogService userLoginLogService;
-
-    @Autowired
-    RedisShiroSessionDAO redisShiroSessionDAO;
 
     @Autowired
     TokenStoreService tokenStoreService;

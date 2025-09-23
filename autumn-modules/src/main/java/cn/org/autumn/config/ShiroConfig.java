@@ -15,6 +15,7 @@ import org.apache.shiro.web.servlet.Cookie;
 import org.apache.shiro.web.servlet.SimpleCookie;
 import org.apache.shiro.web.session.mgt.DefaultWebSessionManager;
 import org.springframework.aop.framework.autoproxy.DefaultAdvisorAutoProxyCreator;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -28,7 +29,7 @@ import java.util.*;
 public class ShiroConfig {
 
     @Bean("sessionManager")
-    public SessionManager sessionManager(RedisShiroSessionDAO redisShiroSessionDAO,
+    public SessionManager sessionManager(@Autowired RedisShiroSessionDAO redisShiroSessionDAO,
                                          @Value("${autumn.redis.open}") boolean redisOpen,
                                          @Value("${autumn.shiro.redis}") boolean shiroRedis) {
         DefaultWebSessionManager sessionManager = new DefaultWebSessionManager();

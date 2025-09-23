@@ -589,13 +589,13 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         }
     }
 
-    //注销账号
+    //注销账号，账号归档，用户不可恢复，保留最后数据，超过一定时间后，执行物理删除
     public void cancel(String uuid, String reason) throws Exception {
         String key = "user:cancel:" + uuid;
         RLock lock = redissonClient.getLock(key);
         try {
             SysUserEntity entity = getByUuid(uuid);
-            if (entity.getStatus() == -1)
+            if (null == entity || entity.getStatus() == -1)
                 return;
             accountFactory.canceling(entity);
             entity.setStatus(-1);
@@ -638,6 +638,16 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         } finally {
             if (lock.isLocked())
                 lock.forceUnlock();
+        }
+    }
+
+    //彻底删除用户，删除数据记录，无法恢复
+    public void remove(String uuid) throws Exception {
+        SysUserEntity entity = baseMapper.getForDelete(uuid);
+        if (null != entity) {
+            accountFactory.removing(entity);
+            deleteById(entity);
+            accountFactory.removed(entity);
         }
     }
 

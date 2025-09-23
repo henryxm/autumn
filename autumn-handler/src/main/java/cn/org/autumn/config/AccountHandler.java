@@ -12,7 +12,7 @@ public interface AccountHandler {
     }
 
     //账号创建成功
-    default void created(User obj) throws Exception {
+    default void created(User obj) {
     }
 
     //账号正在注销
@@ -20,7 +20,15 @@ public interface AccountHandler {
     }
 
     //账号注销成功
-    default void canceled(User obj) throws Exception {
+    default void canceled(User obj) {
+    }
+
+    //正在删除用户
+    default void removing(User obj) throws Exception {
+    }
+
+    //用户删除成功
+    default void removed(User obj) {
     }
 
     public interface User {

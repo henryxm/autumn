@@ -45,6 +45,9 @@ public interface SysUserDao extends BaseMapper<SysUserEntity> {
     @Select("SELECT * FROM sys_user WHERE `uuid` = #{uuid} and `status` >= 0")
     SysUserEntity getByUuid(@Param("uuid") String uuid);
 
+    @Select("SELECT * FROM sys_user WHERE `uuid` = #{uuid}")
+    SysUserEntity getForDelete(@Param("uuid") String uuid);
+
     @Select("SELECT * FROM sys_user WHERE `uuid` like concat('%', #{uuid}, '%')  and `status` >= 0 limit 1")
     SysUserEntity getByUuidLike(@Param("uuid") String uuid);
 

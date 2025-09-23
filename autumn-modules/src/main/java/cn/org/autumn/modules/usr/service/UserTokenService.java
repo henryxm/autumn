@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.usr.service;
 
+import cn.org.autumn.config.AccountHandler;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.usr.entity.UserTokenEntity;
 import cn.org.autumn.modules.usr.service.gen.UserTokenServiceGen;
@@ -13,7 +14,7 @@ import java.util.Map;
 import java.util.UUID;
 
 @Service
-public class UserTokenService extends UserTokenServiceGen {
+public class UserTokenService extends UserTokenServiceGen implements AccountHandler {
 
     private final static int EXPIRE = 3600 * 12;
 
@@ -91,5 +92,11 @@ public class UserTokenService extends UserTokenServiceGen {
 
     private String generateToken() {
         return UUID.randomUUID().toString().replace("-", "");
+    }
+
+    @Override
+    public void canceled(User obj) {
+        if (null != obj)
+            baseMapper.deleteByUserUuid(obj.getUuid());
     }
 }
