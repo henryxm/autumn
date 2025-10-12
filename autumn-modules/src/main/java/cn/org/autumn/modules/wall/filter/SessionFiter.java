@@ -1,8 +1,7 @@
 package cn.org.autumn.modules.wall.filter;
 
 import cn.org.autumn.modules.wall.service.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.servlet.*;
@@ -11,9 +10,9 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
+@Slf4j
 @WebFilter(urlPatterns = "/*", filterName = "SessionFiter")
 public class SessionFiter implements Filter {
-    protected Logger logger = LoggerFactory.getLogger(getClass());
 
     @Autowired
     WallService wallService;
@@ -22,7 +21,7 @@ public class SessionFiter implements Filter {
     public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
         HttpServletRequest request = (HttpServletRequest) servletRequest;
         HttpServletResponse response = (HttpServletResponse) servletResponse;
-        boolean enable = wallService.isEnabled(servletRequest, servletResponse, false, true, false);
+        boolean enable = wallService.isEnabled(servletRequest, servletResponse, true, false);
         if (enable) {
             String originHeader = request.getHeader("Origin");
             response.setHeader("Access-Control-Allow-Origin", originHeader);

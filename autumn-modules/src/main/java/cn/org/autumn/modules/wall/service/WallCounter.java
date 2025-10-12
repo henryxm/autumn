@@ -4,22 +4,20 @@ import cn.org.autumn.base.ModuleService;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.wall.entity.RData;
 import com.baomidou.mybatisplus.mapper.BaseMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+@Slf4j
 public abstract class WallCounter<M extends BaseMapper<T>, T> extends ModuleService<M, T> implements LoopJob.OneMinute, LoopJob.OneDay {
-
-    private final Logger log = LoggerFactory.getLogger(getClass());
 
     private final Map<String, RData> counter = new ConcurrentHashMap<>();
 
     protected abstract void save(String key, RData rData);
 
-    protected abstract void clear();
+    protected abstract void refresh();
 
     protected abstract boolean has(String key);
 
@@ -70,6 +68,6 @@ public abstract class WallCounter<M extends BaseMapper<T>, T> extends ModuleServ
 
     @Override
     public void onOneDay() {
-        clear();
+        refresh();
     }
 }

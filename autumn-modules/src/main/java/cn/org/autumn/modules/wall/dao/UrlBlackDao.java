@@ -30,7 +30,7 @@ public interface UrlBlackDao extends BaseMapper<UrlBlackEntity> {
     Integer count(@Param("url") String url, @Param("userAgent") String userAgent, @Param("count") Integer count);
 
     @Select("update wall_url_black set today = 0")
-    Integer clear();
+    Integer refresh();
 
     @Select("select wh.url from wall_url_black wh where wh.forbidden = #{forbidden}")
     List<String> getUrls(@Param("forbidden") Integer forbidden);

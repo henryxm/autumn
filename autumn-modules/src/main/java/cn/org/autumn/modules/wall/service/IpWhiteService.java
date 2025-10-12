@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.wall.service;
 
+import cn.org.autumn.config.ClearHandler;
 import cn.org.autumn.modules.wall.dao.IpWhiteDao;
 import cn.org.autumn.modules.wall.entity.RData;
 import cn.org.autumn.site.InitFactory;
@@ -8,9 +9,8 @@ import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.wall.entity.IpWhiteEntity;
 import cn.org.autumn.site.WallFactory;
 import cn.org.autumn.utils.IPUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -18,12 +18,12 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.util.*;
 
+@Slf4j
 @Service
-public class IpWhiteService extends WallCounter<IpWhiteDao, IpWhiteEntity> implements InitFactory.Init, LoadFactory.Load, LoopJob.FiveSecond {
-
-    private static final Logger log = LoggerFactory.getLogger(IpWhiteService.class);
+public class IpWhiteService extends WallCounter<IpWhiteDao, IpWhiteEntity> implements InitFactory.Init, LoadFactory.Load, LoopJob.OneMinute, ClearHandler {
 
     private List<String> ipWhiteList = new ArrayList<>();
+
     private List<String> ipWhiteSectionList = new ArrayList<>();
 
     @Autowired
@@ -130,9 +130,8 @@ public class IpWhiteService extends WallCounter<IpWhiteDao, IpWhiteEntity> imple
     }
 
     @Override
-    public void onFiveSecond() {
-        if (wallFactory.isIpWhiteEnable())
-            load();
+    public void onOneMinute() {
+        clear();
     }
 
     public IpWhiteEntity create(String ip, String tag, String description) {
@@ -175,8 +174,14 @@ public class IpWhiteService extends WallCounter<IpWhiteDao, IpWhiteEntity> imple
     }
 
     @Override
-    protected void clear() {
-        baseMapper.clear();
+    public void refresh() {
+        baseMapper.refresh();
+    }
+
+    @Override
+    public void clear() {
+        if (wallFactory.isIpWhiteEnable())
+            load();
     }
 
     @Override

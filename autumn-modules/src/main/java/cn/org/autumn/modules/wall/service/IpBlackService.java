@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.wall.service;
 
+import cn.org.autumn.config.ClearHandler;
 import cn.org.autumn.modules.wall.dao.IpBlackDao;
 import cn.org.autumn.modules.wall.entity.RData;
 import cn.org.autumn.site.LoadFactory;
@@ -7,9 +8,8 @@ import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.wall.entity.IpBlackEntity;
 import cn.org.autumn.site.WallFactory;
 import cn.org.autumn.utils.IPUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
@@ -17,10 +17,9 @@ import org.springframework.stereotype.Service;
 
 import java.util.*;
 
+@Slf4j
 @Service
-public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> implements LoadFactory.Load, LoopJob.FiveSecond {
-    private static final Logger log = LoggerFactory.getLogger(IpBlackService.class);
-
+public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> implements LoadFactory.Load, LoopJob.OneMinute, ClearHandler {
     @Autowired
     IpWhiteService ipWhiteService;
 
@@ -263,10 +262,13 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
     /**
      * 定时清空对ip地址的检测
      */
-    public void refresh() {
-        firewallCount = getCount();
-        if (null != allIp)
-            allIp.clear();
+    public void clear() {
+        if (wallFactory.isIpBlackEnable()) {
+            firewallCount = getCount();
+            if (null != allIp)
+                allIp.clear();
+            load();
+        }
     }
 
     @Override
@@ -310,11 +312,8 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
     }
 
     @Override
-    public void onFiveSecond() {
-        if (wallFactory.isIpBlackEnable()) {
-            refresh();
-            load();
-        }
+    public void onOneMinute() {
+        clear();
     }
 
     @Override
@@ -323,8 +322,8 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
     }
 
     @Override
-    protected void clear() {
-        baseMapper.clear();
+    protected void refresh() {
+        baseMapper.refresh();
     }
 
     @Override

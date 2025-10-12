@@ -1,6 +1,5 @@
 package cn.org.autumn.modules.wall.dao;
 
-import cn.org.autumn.modules.wall.entity.IpBlackEntity;
 import cn.org.autumn.modules.wall.entity.IpVisitEntity;
 import com.baomidou.mybatisplus.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
@@ -29,5 +28,5 @@ public interface IpVisitDao extends BaseMapper<IpVisitEntity> {
     Integer count(@Param("ip") String ip, @Param("userAgent") String userAgent, @Param("host") String host, @Param("uri") String uri, @Param("refer") String refer, @Param("count") Integer count);
 
     @Select("update wall_ip_visit set today = 0")
-    Integer clear();
+    Integer refresh();
 }

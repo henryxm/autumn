@@ -1,22 +1,21 @@
 package cn.org.autumn.modules.wall.service;
 
+import cn.org.autumn.config.ClearHandler;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.wall.dao.HostDao;
 import cn.org.autumn.modules.wall.entity.RData;
 import cn.org.autumn.site.LoadFactory;
 import cn.org.autumn.modules.wall.entity.HostEntity;
 import cn.org.autumn.site.WallFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
 
+@Slf4j
 @Service
-public class HostService extends WallCounter<HostDao, HostEntity> implements LoadFactory.Load, LoopJob.FiveSecond {
-
-    private static final Logger log = LoggerFactory.getLogger(HostService.class);
+public class HostService extends WallCounter<HostDao, HostEntity> implements LoadFactory.Load, LoopJob.OneMinute, ClearHandler {
 
     @Autowired
     WallFactory wallFactory;
@@ -79,15 +78,14 @@ public class HostService extends WallCounter<HostDao, HostEntity> implements Loa
                 insert(hostEntity);
             }
         } catch (Exception e) {
-            //do nothing
+            log.debug("保存错误:{}", e.getMessage());
         }
         return hostEntity;
     }
 
     @Override
-    public void onFiveSecond() {
-        if (wallFactory.isHostEnable())
-            load();
+    public void onOneMinute() {
+        clear();
     }
 
     @Override
@@ -96,8 +94,8 @@ public class HostService extends WallCounter<HostDao, HostEntity> implements Loa
     }
 
     @Override
-    protected void clear() {
-        baseMapper.clear();
+    protected void refresh() {
+        baseMapper.refresh();
     }
 
     @Override
@@ -113,5 +111,11 @@ public class HostService extends WallCounter<HostDao, HostEntity> implements Loa
     @Override
     protected void create(String key) {
         create(key, "", "自动写入");
+    }
+
+    @Override
+    public void clear() {
+        if (wallFactory.isHostEnable())
+            load();
     }
 }

@@ -1,14 +1,14 @@
 package cn.org.autumn.modules.wall.service;
 
+import cn.org.autumn.config.ClearHandler;
 import cn.org.autumn.modules.wall.dao.UrlBlackDao;
 import cn.org.autumn.modules.wall.entity.RData;
 import cn.org.autumn.site.LoadFactory;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.wall.entity.UrlBlackEntity;
 import cn.org.autumn.site.WallFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -17,19 +17,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @Service
-public class UrlBlackService extends WallCounter<UrlBlackDao, UrlBlackEntity> implements LoadFactory.Load, LoopJob.OneMinute {
-
-    private static final Logger log = LoggerFactory.getLogger(UrlBlackService.class);
-
-    /**
-     * URL 访问计数统计
-     */
+public class UrlBlackService extends WallCounter<UrlBlackDao, UrlBlackEntity> implements LoadFactory.Load, LoopJob.OneMinute, ClearHandler {
     private Map<Integer, Integer> allUrls;
-
-    /**
-     * URL 黑名单列表
-     */
     private List<String> blackUrls = new ArrayList<>();
 
     /**
@@ -92,9 +83,12 @@ public class UrlBlackService extends WallCounter<UrlBlackDao, UrlBlackEntity> im
     /**
      * 定时清空对ip地址的检测
      */
-    public void refresh() {
-        if (null != allUrls)
-            allUrls.clear();
+    public void clear() {
+        if (wallFactory.isUrlBlack()) {
+            if (null != allUrls)
+                allUrls.clear();
+            load();
+        }
     }
 
     @Override
@@ -108,9 +102,7 @@ public class UrlBlackService extends WallCounter<UrlBlackDao, UrlBlackEntity> im
 
     public boolean hasUrl(String url) {
         Integer integer = baseMapper.hasUrl(url);
-        if (null != integer && integer > 0)
-            return true;
-        return false;
+        return null != integer && integer > 0;
     }
 
     public UrlBlackEntity create(String url, String tag) {
@@ -127,17 +119,14 @@ public class UrlBlackService extends WallCounter<UrlBlackDao, UrlBlackEntity> im
                 insert(urlBlackEntity);
             }
         } catch (Exception e) {
-            //do nothing
+            log.debug("保存错误:{}", e.getMessage());
         }
         return urlBlackEntity;
     }
 
     @Override
     public void onOneMinute() {
-        if (wallFactory.isUrlBlack()) {
-            refresh();
-            load();
-        }
+        clear();
     }
 
     @Override
@@ -146,8 +135,8 @@ public class UrlBlackService extends WallCounter<UrlBlackDao, UrlBlackEntity> im
     }
 
     @Override
-    protected void clear() {
-        baseMapper.clear();
+    protected void refresh() {
+        baseMapper.refresh();
     }
 
     @Override

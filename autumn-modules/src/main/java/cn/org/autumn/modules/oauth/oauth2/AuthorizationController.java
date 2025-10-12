@@ -23,6 +23,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.servers.Server;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.tags.Tags;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.apache.oltu.oauth2.as.issuer.MD5Generator;
 import org.apache.oltu.oauth2.as.issuer.OAuthIssuerImpl;
@@ -43,8 +44,6 @@ import org.apache.oltu.oauth2.rs.response.OAuthRSResponse;
 import org.apache.shiro.authc.*;
 import org.apache.shiro.web.util.SavedRequest;
 import org.apache.shiro.web.util.WebUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.stereotype.Controller;
@@ -59,6 +58,7 @@ import org.springframework.web.servlet.ModelAndView;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.net.*;
+import java.util.Enumeration;
 import java.util.Map;
 
 import static javax.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
@@ -68,12 +68,11 @@ import static org.apache.oltu.oauth2.common.OAuth.HttpMethod.POST;
 import static org.apache.oltu.oauth2.common.error.OAuthError.OAUTH_ERROR_URI;
 import static org.apache.oltu.oauth2.common.error.OAuthError.TokenResponse.*;
 
+@Slf4j
 @Controller
 @RequestMapping("/oauth2")
 @Tags({@Tag(name = "oauth", description = "客户端授权登录认证获取Token接口")})
 public class AuthorizationController {
-
-    Logger log = LoggerFactory.getLogger(getClass());
 
     @Autowired
     ClientDetailsService clientDetailsService;
@@ -106,6 +105,12 @@ public class AuthorizationController {
 
     @RequestMapping("login")
     public Object login(HttpServletRequest request, HttpServletResponse response, String username, String password, boolean rememberMe, Model model) {
+        Enumeration<String> enumeration = request.getParameterNames();
+        if (!enumeration.hasMoreElements()) {
+            model.addAttribute("url", "/oauth2/login?redirect=login");
+            return "direct";
+        }
+
         String error = "";
         if (model.containsAttribute("error")) {
             Object obj = model.getAttribute("error");

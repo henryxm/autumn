@@ -30,7 +30,7 @@ public interface IpBlackDao extends BaseMapper<IpBlackEntity> {
     Integer count(@Param("ip") String ip, @Param("userAgent") String userAgent, @Param("count") Integer count);
 
     @Select("update wall_ip_black set today = 0")
-    Integer clear();
+    Integer refresh();
 
     @Select("select wi.ip from wall_ip_black wi where wi.available = #{available}")
     Set<String> getIps(@Param("available") Integer available);

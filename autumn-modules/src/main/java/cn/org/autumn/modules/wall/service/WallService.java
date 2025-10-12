@@ -8,10 +8,9 @@ import cn.org.autumn.modules.wall.entity.RData;
 import cn.org.autumn.site.HostFactory;
 import cn.org.autumn.site.WallFactory;
 import cn.org.autumn.utils.IPUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -22,9 +21,9 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Enumeration;
 
+@Slf4j
 @Component
 public class WallService {
-    private final Logger logger = LoggerFactory.getLogger(getClass());
 
     @Autowired
     IpBlackService ipBlackService;
@@ -59,7 +58,7 @@ public class WallService {
     @Autowired
     JumpService jumpService;
 
-    public boolean isEnabled(ServletRequest servletRequest, ServletResponse servletResponse, boolean logEnable, boolean counter, boolean shield) throws IOException {
+    public boolean isEnabled(ServletRequest servletRequest, ServletResponse servletResponse, boolean counter, boolean shield) throws IOException {
         if (!wallFactory.isOpen())
             return true;
         HttpServletRequest request = (HttpServletRequest) servletRequest;
@@ -95,8 +94,7 @@ public class WallService {
             if (null != host && host.contains(":"))
                 host = host.split(":")[0];
             String refer = request.getHeader("refer");
-            if (logEnable)
-                print(request);
+            print(request);
             String jump = jumpService.getJump(host, request.getRequestURI());
             if (StringUtils.isNotBlank(jump)) {
                 response.setStatus(200);
@@ -136,9 +134,6 @@ public class WallService {
                 return false;
             }
 
-            /**
-             * 黑名单地址
-             */
             String uri = request.getRequestURL().toString();
             String q = request.getQueryString();
             if (StringUtils.isNotEmpty(q)) {
@@ -168,13 +163,13 @@ public class WallService {
                 ipVisitService.count(ip, rData);
             }
         } catch (Exception e) {
-            logger.debug("黑名单过滤错误:{}", e.getMessage());
+            log.debug("黑名单过滤错误:{}", e.getMessage());
         }
         return true;
     }
 
     private void print(HttpServletRequest request) {
-        if (!logger.isDebugEnabled())
+        if (!log.isDebugEnabled())
             return;
         Enumeration<String> e = request.getHeaderNames();
         boolean h = e.hasMoreElements();
@@ -186,6 +181,6 @@ public class WallService {
             stringBuilder.append(",  ");
             h = e.hasMoreElements();
         }
-        logger.debug(stringBuilder.toString());
+        log.debug(stringBuilder.toString());
     }
 }

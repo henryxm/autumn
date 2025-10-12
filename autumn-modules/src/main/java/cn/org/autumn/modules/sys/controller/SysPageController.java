@@ -17,17 +17,11 @@ import org.springframework.boot.web.servlet.error.ErrorController;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Controller
 public class SysPageController implements ErrorController {
@@ -132,11 +126,13 @@ public class SysPageController implements ErrorController {
     }
 
     @RequestMapping("login")
-    public String loginOauth(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
-        /**
-         * 根据系统配置方式进行登录验证
-         */
-        String host = httpServletRequest.getHeader("host");
+    public String loginOauth(HttpServletRequest request, HttpServletResponse httpServletResponse, Model model) {
+        Enumeration<String> enumeration = request.getParameterNames();
+        if (!enumeration.hasMoreElements()) {
+            model.addAttribute("url", "/login?redirect=login");
+            return "direct";
+        }
+        String host = request.getHeader("host");
         WebAuthenticationEntity webAuthenticationEntity = webAuthenticationService.getByClientId(host);
         if (StringUtils.isNotEmpty(host)) {
             if (null == webAuthenticationEntity)
@@ -154,7 +150,7 @@ public class SysPageController implements ErrorController {
                 }
             }
         }
-        return pageFactory.login(httpServletRequest, httpServletResponse, model);
+        return pageFactory.login(request, httpServletResponse, model);
     }
 
     @RequestMapping("main.html")

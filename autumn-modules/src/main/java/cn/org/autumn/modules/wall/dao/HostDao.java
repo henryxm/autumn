@@ -30,7 +30,7 @@ public interface HostDao extends BaseMapper<HostEntity> {
     Integer count(@Param("host") String host, @Param("count") Integer count);
 
     @Select("update wall_host set today = 0")
-    Integer clear();
+    Integer refresh();
 
     @Select("select wh.host from wall_host wh where wh.forbidden = #{forbidden}")
     List<String> getHosts(@Param("forbidden") Integer forbidden);

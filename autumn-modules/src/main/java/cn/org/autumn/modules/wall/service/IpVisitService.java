@@ -56,8 +56,8 @@ public class IpVisitService extends WallCounter<IpVisitDao, IpVisitEntity> {
         baseMapper.count(key, rData.getUserAgent(), rData.getHost(), rData.getUri(), rData.getRefer(), rData.getCount());
     }
 
-    protected void clear() {
-        baseMapper.clear();
+    protected void refresh() {
+        baseMapper.refresh();
     }
 
     @Override

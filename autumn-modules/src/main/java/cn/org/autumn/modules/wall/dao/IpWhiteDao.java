@@ -30,7 +30,7 @@ public interface IpWhiteDao extends BaseMapper<IpWhiteEntity> {
     Integer count(@Param("ip") String ip, @Param("userAgent") String userAgent, @Param("count") Integer count);
 
     @Select("update wall_ip_white set today = 0")
-    Integer clear();
+    Integer refresh();
 
     @Select("select wi.ip from wall_ip_white wi where wi.forbidden = #{forbidden}")
     List<String> getIps(@Param("forbidden") Integer forbidden);

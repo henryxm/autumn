@@ -7,6 +7,7 @@ import cn.org.autumn.modules.sys.shiro.OauthAccessTokenToken;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.wall.service.WallService;
 import com.alibaba.fastjson.JSON;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.apache.oltu.oauth2.common.OAuth;
 import org.apache.oltu.oauth2.common.message.types.ParameterStyle;
@@ -15,8 +16,6 @@ import org.apache.shiro.authc.AuthenticationException;
 import org.apache.shiro.authc.AuthenticationToken;
 import org.apache.shiro.subject.Subject;
 import org.apache.shiro.web.filter.authc.FormAuthenticationFilter;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.servlet.*;
 import javax.servlet.http.HttpServletRequest;
@@ -24,10 +23,8 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Map;
 
+@Slf4j
 public class SpmFilter extends FormAuthenticationFilter {
-
-    private static final Logger log = LoggerFactory.getLogger(SpmFilter.class);
-
     private static WallService wallService;
     private static SuperPositionModelService superPositionModelService;
     private static ClientDetailsService clientDetailsService;
@@ -36,7 +33,7 @@ public class SpmFilter extends FormAuthenticationFilter {
         if (null == wallService)
             wallService = (WallService) Config.getBean("wallService");
         if (null != wallService)
-            return wallService.isEnabled(request, response, false, false, true);
+            return wallService.isEnabled(request, response, false, true);
         return true;
     }
 
