@@ -1,6 +1,7 @@
 package cn.org.autumn.modules.wall.service;
 
 import cn.org.autumn.base.ModuleService;
+import cn.org.autumn.config.ClearHandler;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.wall.site.WallSite;
 import org.apache.commons.io.IOUtils;
@@ -19,7 +20,7 @@ import java.util.List;
 import java.util.Set;
 
 @Service
-public class ShieldService extends ModuleService<ShieldDao, ShieldEntity> implements LoopJob.FiveSecond, LoopJob.OneMinute, LoopJob.OneDay {
+public class ShieldService extends ModuleService<ShieldDao, ShieldEntity> implements LoopJob.FiveSecond, LoopJob.OneMinute, LoopJob.OneDay, ClearHandler {
 
     Logger log = LoggerFactory.getLogger(getClass());
 
@@ -110,6 +111,13 @@ public class ShieldService extends ModuleService<ShieldDao, ShieldEntity> implem
 
     @Override
     public void onOneDay() {
+        ips.clear();
+    }
+
+    @Override
+    public void clear() {
+        visit.clear();
+        uris = null;
         ips.clear();
     }
 

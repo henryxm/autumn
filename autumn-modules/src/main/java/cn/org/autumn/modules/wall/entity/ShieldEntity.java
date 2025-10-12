@@ -22,7 +22,7 @@ public class ShieldEntity implements Serializable {
     @Column(comment = "开启", defaultValue = "0")
     private boolean enable;
 
-    @Column(comment = "触发:5秒IP请求次数触发自动防御模式，最低值1000", defaultValue = "1000")
+    @Column(comment = "触发:5秒IP请求次数触发自动防御模式，最低值1000", defaultValue = "10000")
     private int auto;
 
     public Long getId() {

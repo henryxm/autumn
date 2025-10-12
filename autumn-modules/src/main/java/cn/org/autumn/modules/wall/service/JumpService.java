@@ -1,6 +1,7 @@
 package cn.org.autumn.modules.wall.service;
 
 import cn.org.autumn.base.ModuleService;
+import cn.org.autumn.config.ClearHandler;
 import cn.org.autumn.modules.job.task.LoopJob;
 import org.apache.commons.io.IOUtils;
 import org.springframework.stereotype.Service;
@@ -14,7 +15,7 @@ import java.util.List;
 import java.util.Map;
 
 @Service
-public class JumpService extends ModuleService<JumpDao, JumpEntity> implements LoopJob.OneMinute {
+public class JumpService extends ModuleService<JumpDao, JumpEntity> implements LoopJob.OneMinute, ClearHandler {
 
     static Map<String, String> jumps = null;
 
@@ -46,6 +47,11 @@ public class JumpService extends ModuleService<JumpDao, JumpEntity> implements L
 
     @Override
     public void onOneMinute() {
+        clear();
+    }
+
+    @Override
+    public void clear() {
         jumps = null;
     }
 }

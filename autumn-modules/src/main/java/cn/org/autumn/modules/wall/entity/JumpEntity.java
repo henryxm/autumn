@@ -22,10 +22,10 @@ public class JumpEntity implements Serializable {
     @Column(comment = "资源", length = 50, defaultValue = "")
     private String uri;
 
-    @Column(comment = "跳转")
+    @Column(comment = "跳转", defaultValue = "")
     private String url;
 
-    @Column(comment = "开启")
+    @Column(comment = "开启", defaultValue = "1")
     private boolean enable;
 
     public Long getId() {
