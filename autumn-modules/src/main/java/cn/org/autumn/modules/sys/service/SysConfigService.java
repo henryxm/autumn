@@ -29,6 +29,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.task.AsyncTaskExecutor;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -90,6 +91,9 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     AsyncTaskExecutor asyncTaskExecutor;
 
     @Autowired
+    private StringRedisTemplate stringRedisTemplate;
+
+    @Autowired
     DomainFactory domainFactory;
     List<String[]> lang = new ArrayList<>();
     @Autowired
@@ -126,17 +130,14 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     public void onOneMinute() {
         if (null != map)
             map.clear();
-        clear();
         domainFactory.clear();
     }
 
     public void clear() {
-        List<SysConfigEntity> list = selectByMap(null);
-        if (null != list && !list.isEmpty()) {
-            for (SysConfigEntity sysConfigEntity : list) {
-                sysConfigRedis.delete(sysConfigEntity.getParamKey());
-            }
-        }
+        String configKey = RedisKeys.getConfigPrefix(getNameSpace());
+        Set<String> keys = stringRedisTemplate.keys(configKey + "*");
+        if (null != keys && !keys.isEmpty())
+            stringRedisTemplate.delete(keys);
     }
 
     public String getClientId() {

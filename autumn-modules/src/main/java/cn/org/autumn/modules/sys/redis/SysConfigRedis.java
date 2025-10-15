@@ -23,7 +23,7 @@ public class SysConfigRedis {
             return;
         }
         String key = RedisKeys.getSysConfigKey(sysConfigService.getNameSpace(), config.getParamKey());
-        redisUtils.set(key, config, 120);
+        redisUtils.set(key, config, 600);
     }
 
     public void delete(String configKey) {
