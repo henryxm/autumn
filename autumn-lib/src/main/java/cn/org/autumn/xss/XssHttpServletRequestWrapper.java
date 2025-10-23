@@ -34,14 +34,15 @@ public class XssHttpServletRequestWrapper extends HttpServletRequestWrapper {
         if (!MediaType.APPLICATION_JSON_VALUE.equalsIgnoreCase(super.getHeader(HttpHeaders.CONTENT_TYPE))) {
             return super.getInputStream();
         }
-
+        // 检查是否需要跳过XSS过滤
+        if (shouldSkipXssFilter()) {
+            return super.getInputStream();
+        }
         //为空，直接返回
         String json = IOUtils.toString(super.getInputStream(), "utf-8");
         if (StringUtils.isBlank(json)) {
             return super.getInputStream();
         }
-
-        //xss过滤
         json = xssEncode(json);
         final ByteArrayInputStream bis = new ByteArrayInputStream(json.getBytes("utf-8"));
         return new ServletInputStream() {
@@ -113,6 +114,29 @@ public class XssHttpServletRequestWrapper extends HttpServletRequestWrapper {
 
     private String xssEncode(String input) {
         return htmlFilter.filter(input);
+    }
+
+    /**
+     * 检查是否需要跳过XSS过滤
+     *
+     * @return true-跳过XSS过滤，false-进行XSS过滤
+     */
+    private boolean shouldSkipXssFilter() {
+        try {
+            // 检查请求头中是否有跳过XSS过滤的标识
+            String skipXss = super.getHeader("X-Skip-XSS-Filter");
+            if ("true".equalsIgnoreCase(skipXss)) {
+                return true;
+            }
+            // 检查请求属性中是否有跳过XSS过滤的标识
+            Object skipXssAttr = super.getAttribute("skipXssFilter");
+            if (skipXssAttr instanceof Boolean && (Boolean) skipXssAttr) {
+                return true;
+            }
+        } catch (Exception e) {
+            // 发生异常时，默认进行XSS过滤
+        }
+        return false;
     }
 
     /**
