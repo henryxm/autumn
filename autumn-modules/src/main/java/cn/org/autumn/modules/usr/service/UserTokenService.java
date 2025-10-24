@@ -6,10 +6,12 @@ import cn.org.autumn.modules.usr.entity.UserTokenEntity;
 import cn.org.autumn.modules.usr.service.gen.UserTokenServiceGen;
 import com.alibaba.fastjson.JSON;
 import com.baomidou.mybatisplus.mapper.EntityWrapper;
+import org.apache.commons.lang.StringUtils;
 import org.apache.oltu.oauth2.common.OAuth;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -30,6 +32,24 @@ public class UserTokenService extends UserTokenServiceGen implements AccountHand
 
     public UserTokenEntity queryByToken(String token) {
         return this.selectOne(new EntityWrapper<UserTokenEntity>().eq("token", token));
+    }
+
+    public UserTokenEntity getUuid(String uuid) {
+        if (StringUtils.isBlank(uuid))
+            return null;
+        return baseMapper.getUuid(uuid);
+    }
+
+    public UserTokenEntity getToken(String token) {
+        if (StringUtils.isBlank(token))
+            return null;
+        return baseMapper.getToken(token);
+    }
+
+    public List<UserTokenEntity> getUser(String user) {
+        if (StringUtils.isBlank(user))
+            return null;
+        return baseMapper.getUser(user);
     }
 
     public void saveToken(String token) {
@@ -66,10 +86,8 @@ public class UserTokenService extends UserTokenServiceGen implements AccountHand
         Date now = new Date();
         //过期时间
         Date expireTime = new Date(now.getTime() + EXPIRE * 1000);
-
         //生成token
         String token = generateToken();
-
         //保存或更新用户token
         UserTokenEntity tokenEntity = new UserTokenEntity();
         tokenEntity.setUserUuid(userUuid);
@@ -77,7 +95,6 @@ public class UserTokenService extends UserTokenServiceGen implements AccountHand
         tokenEntity.setUpdateTime(now);
         tokenEntity.setExpireTime(expireTime);
         this.insertOrUpdate(tokenEntity);
-
         return tokenEntity;
     }
 
@@ -90,6 +107,14 @@ public class UserTokenService extends UserTokenServiceGen implements AccountHand
         this.insertOrUpdate(tokenEntity);
     }
 
+    public void deleteUser(String user) {
+        baseMapper.deleteUser(user);
+    }
+
+    public void deleteUuid(String user) {
+        baseMapper.deleteUuid(user);
+    }
+
     private String generateToken() {
         return UUID.randomUUID().toString().replace("-", "");
     }
@@ -97,6 +122,6 @@ public class UserTokenService extends UserTokenServiceGen implements AccountHand
     @Override
     public void canceled(User obj) {
         if (null != obj)
-            baseMapper.deleteByUserUuid(obj.getUuid());
+            baseMapper.deleteUser(obj.getUuid());
     }
 }
