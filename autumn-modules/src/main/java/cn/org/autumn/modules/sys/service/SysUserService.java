@@ -451,6 +451,17 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         cache.remove(user);
     }
 
+    public boolean has(String user) {
+        SysUserEntity entity = cache.get(user);
+        if (null == entity) {
+            entity = getUuid(user);
+            if (null != entity) {
+                cache.put(user, entity);
+            }
+        }
+        return null != entity && entity.check();
+    }
+
     public SysUserEntity getCache(String user) {
         SysUserEntity entity = cache.get(user);
         if (null == entity) {

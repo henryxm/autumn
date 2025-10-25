@@ -4,6 +4,7 @@ import cn.org.autumn.modules.spm.filter.SpmFilter;
 import cn.org.autumn.modules.sys.shiro.RedisShiroSessionDAO;
 import cn.org.autumn.modules.sys.shiro.UserRealm;
 import org.apache.commons.lang.StringUtils;
+import org.apache.shiro.SecurityUtils;
 import org.apache.shiro.mgt.SecurityManager;
 import org.apache.shiro.session.mgt.SessionManager;
 import org.apache.shiro.spring.LifecycleBeanPostProcessor;
@@ -76,6 +77,7 @@ public class ShiroConfig {
     public ShiroFilterFactoryBean shiroFilter(SecurityManager securityManager, List<FilterChainHandler> filterChainHandlers) {
         ShiroFilterFactoryBean shiroFilter = new ShiroFilterFactoryBean();
         shiroFilter.setSecurityManager(securityManager);
+        SecurityUtils.setSecurityManager(securityManager);
 //        shiroFilter.setLoginUrl("");//身份认证失败，则跳转到登录页面的配置 没有登录的用户请求需要登录的页面时自动跳转到登录页面，不是必须的属性，不输入地址的话会自动寻找项目web项目的根目录下的”/login.jsp”页面。
 //        shiroFilter.setSuccessUrl("");//登录成功默认跳转页面，不配置则跳转至”/”。如果登陆前点击的一个需要登录的页面，则在登录自动跳转到那个需要登录的页面。不跳转到此。
 //        shiroFilter.setUnauthorizedUrl("");//没有权限默认跳转的页面

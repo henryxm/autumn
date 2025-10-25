@@ -1,32 +1,36 @@
 package cn.org.autumn.modules.lan.service;
 
 import cn.org.autumn.config.CategoryHandler;
-import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.lan.entity.LanguageEntity;
 import cn.org.autumn.modules.lan.entity.LanguageMetadata;
 import cn.org.autumn.modules.lan.service.gen.LanguageServiceGen;
 import cn.org.autumn.modules.sys.service.SysCategoryService;
 import cn.org.autumn.modules.sys.service.SysConfigService;
+import cn.org.autumn.modules.sys.service.SysMenuService;
 import cn.org.autumn.site.LoadFactory;
+import cn.org.autumn.site.RefreshFactory;
 import cn.org.autumn.table.utils.HumpConvert;
+import cn.org.autumn.thread.TagRunnable;
+import cn.org.autumn.thread.TagTaskExecutor;
+import cn.org.autumn.thread.TagValue;
 import com.google.gson.Gson;
 import io.netty.util.internal.StringUtil;
 import jodd.net.URLDecoder;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.lang.reflect.Field;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static cn.org.autumn.modules.sys.service.SysConfigService.*;
 
+@Slf4j
 @Service
-public class LanguageService extends LanguageServiceGen implements LoadFactory.Load, LoadFactory.Must, LoopJob.TenMinute, CategoryHandler {
-    private static Logger logger = LoggerFactory.getLogger(LanguageService.class);
+public class LanguageService extends LanguageServiceGen implements LoadFactory.Load, LoadFactory.Must, RefreshFactory.Refresh, CategoryHandler {
 
     public static final String MULTIPLE_LANGUAGE_CONFIG_KEY = "MULTIPLE_LANGUAGE_CONFIG_KEY";
     public static final String DEFAULT_USER_LANGUAGE = "DEFAULT_USER_LANGUAGE";
@@ -41,13 +45,14 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
     @Lazy
     SysCategoryService sysCategoryService;
 
-    boolean loaded = false;
+    @Autowired
+    TagTaskExecutor asyncTaskExecutor;
 
-    private static Map<String, Map<String, String>> languages;
+    private static boolean loaded = false;
 
-    static {
-        languages = new LinkedHashMap<>();
-    }
+    private static final Map<String, Map<String, String>> languages = new ConcurrentHashMap<>();
+
+    private static final List<LanguageEntity> post = new ArrayList<>();
 
     @Override
     public int menuOrder() {
@@ -60,16 +65,15 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
     }
 
     public String parentMenu() {
-        return sysMenuService.getSystemMenuKey("SystemManagement");
+        return SysMenuService.getSystemMenuKey("SystemManagement");
     }
 
     public String[][] getMenuItems() {
-        String[][] menus = new String[][]{
+        return new String[][]{
                 //{0:菜单名字,1:URL,2:权限,3:菜单类型,4:ICON,5:排序,6:MenuKey,7:ParentKey,8:Language}
                 {"查看支持语言", null, "lan:language:supportedlist", "2", null, order(), button("SupportedList"), menu(), "sys_string_list_supported_language"},
                 {"修改支持语言", null, "lan:language:updatesupported", "2", null, order(), button("UpdateSupported"), menu(), "sys_string_update_supported_language"},
         };
-        return menus;
     }
 
     public static void f(LanguageEntity languageEntity) {
@@ -110,7 +114,11 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
     }
 
     public void load() {
-        if (loaded)
+        load(false);
+    }
+
+    public void load(boolean force) {
+        if (loaded && !force)
             return;
         loaded = true;
         List<LanguageEntity> languageEntityList = baseMapper.load();
@@ -135,7 +143,7 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
             return new HashMap<>();
         Map<String, String> map = null;
         lang = lang.trim().toLowerCase();
-        if (null != languages && languages.containsKey(lang))
+        if (languages.containsKey(lang))
             map = languages.get(lang);
         if (null == map)
             map = new HashMap<>();
@@ -161,19 +169,17 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
      *
      * @param key
      * @param zhCn
-     * @return
      */
-    public boolean addLanguageColumnItem(String key, String zhCn, String enUs) {
+    public void addLanguageColumnItem(String key, String zhCn, String enUs) {
         if (baseMapper.hasKey(key) > 0) {
-            logger.debug("Duplicate Key: " + key);
-            return false;
+            log.debug("Duplicate Key: " + key);
+            return;
         }
         LanguageEntity languageEntity = new LanguageEntity();
         languageEntity.setName(key);
         languageEntity.setZhCn(zhCn);
         languageEntity.setEnUs(enUs);
         insert(languageEntity);
-        return true;
     }
 
     private static Field getEntityField(Field[] fields, String key) {
@@ -235,7 +241,7 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
                     }
                 }
             } catch (Exception e) {
-                logger.error(e.getMessage());
+                log.error(e.getMessage());
             }
         }
         return languageEntity;
@@ -284,22 +290,33 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
         put(update, languageEntity);
     }
 
-    public void put(boolean update, LanguageEntity languageEntity) {
-        if (null == languageEntity)
+    public void put(boolean update, LanguageEntity entity) {
+        if (null == entity)
             return;
-        LanguageEntity existed = baseMapper.getByNameTag(languageEntity.getName(), languageEntity.getTag());
-        if (null == existed) {
-            insert(languageEntity);
-        } else {
-            if (update && !Objects.equals("1", languageEntity.getFix()) && existed.hashCode() != languageEntity.hashCode()) {
-                existed.merge(languageEntity);
-                updateById(existed);
-            }
-        }
+        entity.setUpdate(update);
+        post.add(entity);
     }
 
-    public boolean addLanguageColumnItem(String key, String zhCn) {
-        return addLanguageColumnItem(key, zhCn, null);
+    public void postRefresh() {
+        Iterator<LanguageEntity> iterator = post.iterator();
+        while (iterator.hasNext()) {
+            LanguageEntity entity = iterator.next();
+            LanguageEntity existed = baseMapper.getByNameTag(entity.getName(), entity.getTag());
+            if (null == existed) {
+                insert(entity);
+            } else {
+                if (entity.isUpdate() && !Objects.equals("1", entity.getFix()) && existed.hashCode() != entity.hashCode()) {
+                    existed.merge(entity);
+                    updateById(existed);
+                }
+            }
+            iterator.remove();
+        }
+        load(true);
+    }
+
+    public void addLanguageColumnItem(String key, String zhCn) {
+        addLanguageColumnItem(key, zhCn, null);
     }
 
     public void init() {
@@ -310,7 +327,7 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
     }
 
     public String[][] getLanguageItems() {
-        String[][] items = new String[][]{
+        return new String[][]{
                 {"lan_language_table_comment", "国家语言", "Language"},
                 {"lan_language_column_name", "标识", "Unique Name"},
                 {"lan_language_column_zh_cn", "简体中文(中国)", "Chinese(China)"},
@@ -462,7 +479,6 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
                 {configName(DEFAULT_USER_LANGUAGE), "默认语言", "Default Language"},
                 {configDescription(DEFAULT_USER_LANGUAGE), "用户默认语言设置", "Default language configuration"},
         };
-        return items;
     }
 
     public String getLanguageMetadataJson() {
@@ -470,28 +486,25 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
     }
 
     public String[][] getCategoryItems() {
-        String[][] mapping = new String[][]{
+        return new String[][]{
                 {config, "1"},
         };
-        return mapping;
     }
 
     public String[][] getConfigItems() {
-        String[][] mapping = new String[][]{
+        return new String[][]{
                 {MULTIPLE_LANGUAGE_CONFIG_KEY, getLanguageMetadataJson(), "0", "多语言配置信息", config, array_type},
                 {DEFAULT_USER_LANGUAGE, "zh_CN", "1", "用户缺省语言设置", config, selection_type, "zh_CN,en_US"},
         };
-        return mapping;
     }
 
     public String getUserDefaultLanguage() {
-        String defaultLang = sysConfigService.getValue(DEFAULT_USER_LANGUAGE);
-        return defaultLang;
+        return sysConfigService.getValue(DEFAULT_USER_LANGUAGE);
     }
 
     public void updateLanguageMetadata(List<LanguageMetadata> languageMetadataList) {
         if (null != languageMetadataList && !languageMetadataList.isEmpty()) {
-            Boolean hasKey = sysConfigService.hasKey(MULTIPLE_LANGUAGE_CONFIG_KEY);
+            boolean hasKey = sysConfigService.hasKey(MULTIPLE_LANGUAGE_CONFIG_KEY);
             if (hasKey) {
                 sysConfigService.updateValueByKey(MULTIPLE_LANGUAGE_CONFIG_KEY, new Gson().toJson(languageMetadataList));
             }
@@ -501,7 +514,7 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
     public List<LanguageMetadata> getLanguageMetadata() {
         List<LanguageMetadata> languageMetadataList = sysConfigService.getConfigObjectList(MULTIPLE_LANGUAGE_CONFIG_KEY, LanguageMetadata.class);
         if (null == languageMetadataList) {
-            Boolean hasKey = sysConfigService.hasKey(MULTIPLE_LANGUAGE_CONFIG_KEY);
+            boolean hasKey = sysConfigService.hasKey(MULTIPLE_LANGUAGE_CONFIG_KEY);
             if (hasKey) {
                 sysConfigService.updateValueByKey(MULTIPLE_LANGUAGE_CONFIG_KEY, getLanguageMetadataJson());
             } else {
@@ -530,13 +543,22 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
     }
 
     @Override
-    public void onTenMinute() {
-        loaded = false;
+    public void must() {
         load();
     }
 
-    @Override
-    public void must() {
-        load();
+    public void refresh() {
+        asyncTaskExecutor.execute(new TagRunnable() {
+            @Override
+            @TagValue(method = "refresh", type = LanguageService.class, tag = "刷新多语言")
+            public void exe() {
+                long start = System.currentTimeMillis();
+                int count = post.size();
+                postRefresh();
+                long end = System.currentTimeMillis();
+                if (log.isDebugEnabled())
+                    log.debug("刷新语言:{}条, 耗时:{}秒", count, (end - start) / 1000);
+            }
+        });
     }
 }

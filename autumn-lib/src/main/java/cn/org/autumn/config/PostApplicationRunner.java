@@ -2,6 +2,7 @@ package cn.org.autumn.config;
 
 import cn.org.autumn.site.InitFactory;
 import cn.org.autumn.site.LoadFactory;
+import cn.org.autumn.site.RefreshFactory;
 import cn.org.autumn.site.UpgradeFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,6 +28,9 @@ public class PostApplicationRunner implements ApplicationRunner {
     @Autowired
     UpgradeFactory upgradeFactory;
 
+    @Autowired
+    RefreshFactory refreshFactory;
+
     @Override
     public void run(ApplicationArguments args) throws Exception {
         long start = System.currentTimeMillis();
@@ -35,6 +39,7 @@ public class PostApplicationRunner implements ApplicationRunner {
             initFactory.init();
             loadFactory.load();
             upgradeFactory.upgrade();
+            refreshFactory.refresh();
         } catch (Exception e) {
             log.error("Application initializing with error:{}", e.getMessage());
         } finally {

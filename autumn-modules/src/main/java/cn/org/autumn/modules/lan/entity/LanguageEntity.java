@@ -2,6 +2,8 @@ package cn.org.autumn.modules.lan.entity;
 
 import com.baomidou.mybatisplus.annotations.*;
 import cn.org.autumn.table.annotation.*;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.io.Serializable;
 import java.lang.reflect.Field;
@@ -9,6 +11,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+@Getter
+@Setter
 @TableName("sys_language")
 @Table(value = "sys_language", comment = "国家语言")
 @Indexes({
@@ -105,229 +109,8 @@ public class LanguageEntity implements Serializable {
     @Index
     private String fix = "";
 
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getZhCn() {
-        return zhCn;
-    }
-
-    public void setZhCn(String zhCn) {
-        this.zhCn = zhCn;
-    }
-
-    public String getEnUs() {
-        return enUs;
-    }
-
-    public void setEnUs(String enUs) {
-        this.enUs = enUs;
-    }
-
-    public String getZhHk() {
-        return zhHk;
-    }
-
-    public void setZhHk(String zhHk) {
-        this.zhHk = zhHk;
-    }
-
-    public String getKoKr() {
-        return koKr;
-    }
-
-    public void setKoKr(String koKr) {
-        this.koKr = koKr;
-    }
-
-    public String getJaJp() {
-        return jaJp;
-    }
-
-    public void setJaJp(String jaJp) {
-        this.jaJp = jaJp;
-    }
-
-    public String getTtRu() {
-        return ttRu;
-    }
-
-    public void setTtRu(String ttRu) {
-        this.ttRu = ttRu;
-    }
-
-    public String getFrFr() {
-        return frFr;
-    }
-
-    public void setFrFr(String frFr) {
-        this.frFr = frFr;
-    }
-
-    public String getDeDe() {
-        return deDe;
-    }
-
-    public void setDeDe(String deDe) {
-        this.deDe = deDe;
-    }
-
-    public String getViVn() {
-        return viVn;
-    }
-
-    public void setViVn(String viVn) {
-        this.viVn = viVn;
-    }
-
-    public String getThTh() {
-        return thTh;
-    }
-
-    public void setThTh(String thTh) {
-        this.thTh = thTh;
-    }
-
-    public String getMsMy() {
-        return msMy;
-    }
-
-    public void setMsMy(String msMy) {
-        this.msMy = msMy;
-    }
-
-    public String getIdId() {
-        return idId;
-    }
-
-    public void setIdId(String idId) {
-        this.idId = idId;
-    }
-
-    public String getEsEs() {
-        return esEs;
-    }
-
-    public void setEsEs(String esEs) {
-        this.esEs = esEs;
-    }
-
-    public String getTrTr() {
-        return trTr;
-    }
-
-    public void setTrTr(String trTr) {
-        this.trTr = trTr;
-    }
-
-    public String getUkUk() {
-        return ukUk;
-    }
-
-    public void setUkUk(String ukUk) {
-        this.ukUk = ukUk;
-    }
-
-    public String getPuPt() {
-        return puPt;
-    }
-
-    public void setPuPt(String puPt) {
-        this.puPt = puPt;
-    }
-
-    public String getPlPl() {
-        return plPl;
-    }
-
-    public void setPlPl(String plPl) {
-        this.plPl = plPl;
-    }
-
-    public String getMnMn() {
-        return mnMn;
-    }
-
-    public void setMnMn(String mnMn) {
-        this.mnMn = mnMn;
-    }
-
-    public String getNbNo() {
-        return nbNo;
-    }
-
-    public void setNbNo(String nbNo) {
-        this.nbNo = nbNo;
-    }
-
-    public String getItIt() {
-        return itIt;
-    }
-
-    public void setItIt(String itIt) {
-        this.itIt = itIt;
-    }
-
-    public String getHeIl() {
-        return heIl;
-    }
-
-    public void setHeIl(String heIl) {
-        this.heIl = heIl;
-    }
-
-    public String getElGr() {
-        return elGr;
-    }
-
-    public void setElGr(String elGr) {
-        this.elGr = elGr;
-    }
-
-    public String getFaIr() {
-        return faIr;
-    }
-
-    public void setFaIr(String faIr) {
-        this.faIr = faIr;
-    }
-
-    public String getArSa() {
-        return arSa;
-    }
-
-    public void setArSa(String arSa) {
-        this.arSa = arSa;
-    }
-
-    public String getTag() {
-        return tag;
-    }
-
-    public void setTag(String tag) {
-        this.tag = tag;
-    }
-
-    public String getFix() {
-        return fix;
-    }
-
-    public void setFix(String fix) {
-        this.fix = fix;
-    }
+    @TableField(exist = false)
+    private boolean update;
 
     @Override
     public int hashCode() {
