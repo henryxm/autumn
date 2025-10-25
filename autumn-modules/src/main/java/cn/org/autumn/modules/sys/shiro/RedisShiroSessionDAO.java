@@ -55,9 +55,11 @@ public class RedisShiroSessionDAO extends EnterpriseCacheSessionDAO implements L
     @Override
     protected Serializable doCreate(Session session) {
         Serializable sessionId = super.doCreate(session);
-        final String key = RedisKeys.getShiroSessionKey(sysConfigService.getNameSpace(), sessionId.toString());
-        setShiroSession(key, session);
-        cache.put(sessionId, session);
+        if (null != session && null != sessionId) {
+            String key = RedisKeys.getShiroSessionKey(sysConfigService.getNameSpace(), sessionId.toString());
+            setShiroSession(key, session);
+            cache.put(sessionId, session);
+        }
         return sessionId;
     }
 
@@ -68,9 +70,10 @@ public class RedisShiroSessionDAO extends EnterpriseCacheSessionDAO implements L
         if (null == session)
             session = cache.get(sessionId);
         if (session == null) {
-            final String key = RedisKeys.getShiroSessionKey(sysConfigService.getNameSpace(), sessionId.toString());
+            String key = RedisKeys.getShiroSessionKey(sysConfigService.getNameSpace(), sessionId.toString());
             session = getShiroSession(key);
-            cache.put(sessionId, session);
+            if (null != session)
+                cache.put(sessionId, session);
         }
         return session;
     }
@@ -79,17 +82,21 @@ public class RedisShiroSessionDAO extends EnterpriseCacheSessionDAO implements L
     @Override
     protected void doUpdate(Session session) {
         super.doUpdate(session);
-        cache.put(session.getId(), session);
-        update.put(session.getId(), session);
+        if (null != session) {
+            cache.put(session.getId(), session);
+            update.put(session.getId(), session);
+        }
     }
 
     //删除session
     @Override
     protected void doDelete(Session session) {
         super.doDelete(session);
-        cache.remove(session.getId());
-        final String key = RedisKeys.getShiroSessionKey(sysConfigService.getNameSpace(), session.getId().toString());
-        redisTemplate.delete(key);
+        if (null != session) {
+            cache.remove(session.getId());
+            String key = RedisKeys.getShiroSessionKey(sysConfigService.getNameSpace(), session.getId().toString());
+            redisTemplate.delete(key);
+        }
     }
 
     @Override
@@ -100,7 +107,7 @@ public class RedisShiroSessionDAO extends EnterpriseCacheSessionDAO implements L
             while (iterator.hasNext()) {
                 Map.Entry<Serializable, Session> entry = iterator.next();
                 Session session = entry.getValue();
-                final String key = RedisKeys.getShiroSessionKey(sysConfigService.getNameSpace(), session.getId().toString());
+                String key = RedisKeys.getShiroSessionKey(sysConfigService.getNameSpace(), session.getId().toString());
                 setShiroSession(key, session);
                 iterator.remove();
             }
