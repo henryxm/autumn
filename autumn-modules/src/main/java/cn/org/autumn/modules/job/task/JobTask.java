@@ -58,8 +58,6 @@ public class JobTask implements UpgradeFactory.Upgrade {
             if (secondJobLock || !ready)
                 return;
             secondJobLock = true;
-            if (log.isDebugEnabled())
-                log.debug("一秒定时任务");
             LoopJob.runOneSecondJob();
         } catch (Exception e) {
             log.error("SecondJob:", e);
@@ -74,8 +72,6 @@ public class JobTask implements UpgradeFactory.Upgrade {
             if (threeSecondJobLock || !ready)
                 return;
             threeSecondJobLock = true;
-            if (log.isDebugEnabled())
-                log.debug("三秒定时任务");
             LoopJob.runThreeSecondJob();
         } catch (Exception e) {
             log.error("三秒任务:", e);
@@ -90,8 +86,6 @@ public class JobTask implements UpgradeFactory.Upgrade {
             if (fiveSecondJobLock || !ready)
                 return;
             fiveSecondJobLock = true;
-            if (log.isDebugEnabled())
-                log.debug("五秒定时任务");
             LoopJob.runFiveSecondJob();
         } catch (Exception e) {
             log.error("五秒任务:", e);
@@ -106,8 +100,6 @@ public class JobTask implements UpgradeFactory.Upgrade {
             if (tenSecondJobLock || !ready)
                 return;
             tenSecondJobLock = true;
-            if (log.isDebugEnabled())
-                log.debug("十秒定时任务");
             LoopJob.runTenSecondJob();
         } catch (Exception e) {
             log.error("十秒任务:", e);
@@ -122,8 +114,6 @@ public class JobTask implements UpgradeFactory.Upgrade {
             if (thirtySecondJobLock || !ready)
                 return;
             thirtySecondJobLock = true;
-            if (log.isDebugEnabled())
-                log.debug("三十秒定时任务");
             LoopJob.runThirtySecondJob();
         } catch (Exception e) {
             log.error("三十秒任务:", e);
@@ -138,8 +128,6 @@ public class JobTask implements UpgradeFactory.Upgrade {
             if (minuteJobLock || !ready)
                 return;
             minuteJobLock = true;
-            if (log.isDebugEnabled())
-                log.debug("一分钟定时任务");
             LoopJob.runOneMinuteJob();
         } catch (Exception e) {
             log.error("一分钟任务:", e);
@@ -154,8 +142,6 @@ public class JobTask implements UpgradeFactory.Upgrade {
             if (fiveMinuteJobLock || !ready)
                 return;
             fiveMinuteJobLock = true;
-            if (log.isDebugEnabled())
-                log.debug("五分钟定时任务");
             LoopJob.runFiveMinuteJob();
         } catch (Exception e) {
             log.error("五分钟任务:", e);
@@ -170,8 +156,6 @@ public class JobTask implements UpgradeFactory.Upgrade {
             if (tenMinuteJobLock || !ready)
                 return;
             tenMinuteJobLock = true;
-            if (log.isDebugEnabled())
-                log.debug("十分钟定时任务");
             LoopJob.runTenMinuteJob();
         } catch (Exception e) {
             log.error("十分钟任务:", e);
@@ -186,8 +170,6 @@ public class JobTask implements UpgradeFactory.Upgrade {
             if (thirtyMinuteJobLock || !ready)
                 return;
             thirtyMinuteJobLock = true;
-            if (log.isDebugEnabled())
-                log.debug("三十分钟定时任务");
             LoopJob.runThirtyMinuteJob();
         } catch (Exception e) {
             log.error("三十分钟任务:", e);
@@ -202,8 +184,6 @@ public class JobTask implements UpgradeFactory.Upgrade {
             if (hourJobLock || !ready)
                 return;
             hourJobLock = true;
-            if (log.isDebugEnabled())
-                log.debug("一小时定时任务");
             LoopJob.runOneHourJob();
         } catch (Exception e) {
             log.error("一小时任务:", e);
@@ -218,8 +198,6 @@ public class JobTask implements UpgradeFactory.Upgrade {
             if (tenHourJobLock || !ready)
                 return;
             tenHourJobLock = true;
-            if (log.isDebugEnabled())
-                log.debug("十小时定时任务");
             LoopJob.runTenHourJob();
         } catch (Exception e) {
             log.error("十小时任务:", e);
@@ -234,8 +212,6 @@ public class JobTask implements UpgradeFactory.Upgrade {
             if (dayJobLock || !ready)
                 return;
             dayJobLock = true;
-            if (log.isDebugEnabled())
-                log.debug("一天定时任务");
             LoopJob.runOneDayJob();
         } catch (Exception e) {
             log.error("一天任务:", e);
@@ -250,8 +226,6 @@ public class JobTask implements UpgradeFactory.Upgrade {
             if (weekJobLock || !ready)
                 return;
             weekJobLock = true;
-            if (log.isDebugEnabled())
-                log.debug("一周定时任务");
             LoopJob.runOneWeekJob();
         } catch (Exception e) {
             log.error("一周任务:", e);

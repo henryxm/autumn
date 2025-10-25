@@ -1,27 +1,34 @@
 package cn.org.autumn.modules.sys.shiro;
 
 import cn.org.autumn.cluster.UserHandler;
+import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.modules.sys.service.SysUserService;
 import cn.org.autumn.modules.usr.service.UserProfileService;
 import cn.org.autumn.utils.RedisKeys;
+import com.google.gson.Gson;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.shiro.session.Session;
-import org.apache.shiro.session.UnknownSessionException;
 import org.apache.shiro.session.mgt.eis.EnterpriseCacheSessionDAO;
 import org.apache.shiro.subject.PrincipalCollection;
+import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
 import java.io.*;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 import static org.apache.shiro.subject.support.DefaultSubjectContext.PRINCIPALS_SESSION_KEY;
 
+@Slf4j
 @Component
-public class RedisShiroSessionDAO extends EnterpriseCacheSessionDAO {
+public class RedisShiroSessionDAO extends EnterpriseCacheSessionDAO implements LoopJob.TenMinute, DisposableBean {
 
     @Autowired
     private RedisTemplate redisTemplate;
@@ -35,8 +42,14 @@ public class RedisShiroSessionDAO extends EnterpriseCacheSessionDAO {
     @Autowired
     SysConfigService sysConfigService;
 
+    @Autowired
+    Gson gson;
+
     @Autowired(required = false)
     List<UserHandler> userHandlers;
+
+    static final Map<Serializable, Session> cache = new ConcurrentHashMap<>();
+    static final Map<Serializable, Session> update = new ConcurrentHashMap<>();
 
     //创建session
     @Override
@@ -44,21 +57,20 @@ public class RedisShiroSessionDAO extends EnterpriseCacheSessionDAO {
         Serializable sessionId = super.doCreate(session);
         final String key = RedisKeys.getShiroSessionKey(sysConfigService.getNameSpace(), sessionId.toString());
         setShiroSession(key, session);
+        cache.put(sessionId, session);
         return sessionId;
-    }
-
-    @Override
-    public Session readSession(Serializable sessionId) throws UnknownSessionException {
-        return doReadSession(sessionId);
     }
 
     //获取session
     @Override
     protected Session doReadSession(Serializable sessionId) {
         Session session = super.doReadSession(sessionId);
+        if (null == session)
+            session = cache.get(sessionId);
         if (session == null) {
             final String key = RedisKeys.getShiroSessionKey(sysConfigService.getNameSpace(), sessionId.toString());
             session = getShiroSession(key);
+            cache.put(sessionId, session);
         }
         return session;
     }
@@ -67,16 +79,34 @@ public class RedisShiroSessionDAO extends EnterpriseCacheSessionDAO {
     @Override
     protected void doUpdate(Session session) {
         super.doUpdate(session);
-        final String key = RedisKeys.getShiroSessionKey(sysConfigService.getNameSpace(), session.getId().toString());
-        setShiroSession(key, session);
+        cache.put(session.getId(), session);
+        update.put(session.getId(), session);
     }
 
     //删除session
     @Override
     protected void doDelete(Session session) {
         super.doDelete(session);
+        cache.remove(session.getId());
         final String key = RedisKeys.getShiroSessionKey(sysConfigService.getNameSpace(), session.getId().toString());
         redisTemplate.delete(key);
+    }
+
+    @Override
+    public void onTenMinute() {
+        cache.clear();
+        try {
+            Iterator<Map.Entry<Serializable, Session>> iterator = update.entrySet().iterator();
+            while (iterator.hasNext()) {
+                Map.Entry<Serializable, Session> entry = iterator.next();
+                Session session = entry.getValue();
+                final String key = RedisKeys.getShiroSessionKey(sysConfigService.getNameSpace(), session.getId().toString());
+                setShiroSession(key, session);
+                iterator.remove();
+            }
+        } catch (Exception e) {
+            log.error("执行异常:{}", e.getMessage());
+        }
     }
 
     private Session getShiroSession(String key) {
@@ -120,5 +150,10 @@ public class RedisShiroSessionDAO extends EnterpriseCacheSessionDAO {
                 }
             }
         }
+    }
+
+    @Override
+    public void destroy() throws Exception {
+        onTenMinute();
     }
 }

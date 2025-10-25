@@ -53,8 +53,8 @@ public class Factory {
             Order order = null;
 
             //获取实例中的排序Order，如果没找到，你从超类中寻找
+            Class<?> clazz = init.getClass();
             try {
-                Class<?> clazz = init.getClass();
                 while (null != clazz && null == order && !clazz.equals(Object.class)) {
                     if (StringUtils.isNotBlank(name)) {
                         method = clazz.getMethod(name, parameterTypes);
@@ -65,10 +65,7 @@ public class Factory {
                     }
                     clazz = clazz.getSuperclass();
                 }
-            } catch (Exception e) {
-                if (log.isDebugEnabled()) {
-                    log.debug("getOrdered", e);
-                }
+            } catch (Exception ignored) {
             }
             //如果从实例中没有找到Order，则寻找接口中的Order
             if (null == order) {
@@ -80,10 +77,7 @@ public class Factory {
                     if (null == order) {
                         order = t.getAnnotation(Order.class);
                     }
-                } catch (Exception e) {
-                    if (log.isDebugEnabled()) {
-                        log.debug("getOrdered", e);
-                    }
+                } catch (Exception ignored) {
                 }
             }
             List<T> list;

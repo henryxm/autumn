@@ -172,6 +172,8 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
     }
 
     public SuperPositionModelEntity getSpm(HttpServletRequest httpServletRequest, String spm) {
+        if (null == spm)
+            return null;
         SuperPositionModelEntity superPositionModelEntity = models.get(spm);
         if (null == superPositionModelEntity) {
             superPositionModelEntity = getSpmInternal(spm);
@@ -337,10 +339,12 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
     @Override
     public boolean isNeed(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse) {
         String spm = httpServletRequest.getParameter("spm");
-        SuperPositionModelEntity superPositionModelEntity = getSpm(httpServletRequest, spm);
-        if (null != superPositionModelEntity) {
-            if (null != superPositionModelEntity.getNeedLogin())
-                return superPositionModelEntity.getNeedLogin() > 0;
+        if (null != spm) {
+            SuperPositionModelEntity superPositionModelEntity = getSpm(httpServletRequest, spm);
+            if (null != superPositionModelEntity) {
+                if (null != superPositionModelEntity.getNeedLogin())
+                    return superPositionModelEntity.getNeedLogin() > 0;
+            }
         }
         return true;
     }

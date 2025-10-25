@@ -6,7 +6,7 @@ import cn.org.autumn.modules.sys.service.SysMenuService;
 import org.springframework.stereotype.Service;
 
 @Service
-public class ScheduleJobLogService extends ScheduleJobLogServiceGen implements LoopJob.Job {
+public class ScheduleJobLogService extends ScheduleJobLogServiceGen implements LoopJob.OneHour {
 
     @Override
     public int menuOrder() {
@@ -18,18 +18,13 @@ public class ScheduleJobLogService extends ScheduleJobLogServiceGen implements L
         return "fa-bars";
     }
 
-    public void init() {
-        super.init();
-        LoopJob.onOneHour(this);
-    }
-
     public String parentMenu() {
         super.parentMenu();
         return SysMenuService.getSystemManagementMenuKey();
     }
 
     public String[][] getLanguageItems() {
-        String[][] items = new String[][]{
+        return new String[][]{
                 {"job_schedulejoblog_table_comment", "任务日志", "Task log"},
                 {"job_schedulejoblog_column_log_id", "任务日志id", "Log ID"},
                 {"job_schedulejoblog_column_job_id", "任务id", "Task ID"},
@@ -41,11 +36,10 @@ public class ScheduleJobLogService extends ScheduleJobLogServiceGen implements L
                 {"job_schedulejoblog_column_times", "耗时(单位：毫秒)", "Duration(unit:millisecond)"},
                 {"job_schedulejoblog_column_create_time", "创建时间", "Create time"},
         };
-        return items;
     }
 
     @Override
-    public void runJob() {
+    public void onOneHour() {
         baseMapper.clear();
     }
 }

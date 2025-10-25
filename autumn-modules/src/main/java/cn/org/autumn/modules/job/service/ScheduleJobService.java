@@ -28,7 +28,7 @@ import static cn.org.autumn.modules.sys.service.SysMenuService.getSystemMenuKey;
 
 @DependsOn("springContextUtils")
 @Service
-public class ScheduleJobService extends ScheduleJobServiceGen implements InitFactory.Must, LoopJob.TenSecond {
+public class ScheduleJobService extends ScheduleJobServiceGen implements InitFactory.Must, LoopJob.TenMinute {
 
     @Autowired
     private Scheduler scheduler;
@@ -231,7 +231,7 @@ public class ScheduleJobService extends ScheduleJobServiceGen implements InitFac
     }
 
     @Override
-    public void onTenSecond() {
+    public void onTenMinute() {
         initScheduler();
     }
 }
