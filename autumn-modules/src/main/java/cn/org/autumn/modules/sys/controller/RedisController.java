@@ -194,6 +194,28 @@ public class RedisController {
     }
 
     /**
+     * 清除搜索结果（按模式删除键）
+     */
+    @PostMapping("/clear-keys")
+    public Response<String> clearKeysByPattern(@RequestParam String pattern, @RequestParam int database) {
+        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
+            return Response.fail("无权限访问");
+        }
+        
+        // 防止误操作：不允许删除所有键
+        if ("*".equals(pattern)) {
+            return Response.fail("不允许删除所有键，请指定具体的搜索模式");
+        }
+        
+        try {
+            long count = redisService.deleteKeysByPattern(pattern, database);
+            return Response.ok("成功删除 " + count + " 个匹配的键");
+        } catch (Exception e) {
+            return Response.fail("删除键失败: " + e.getMessage());
+        }
+    }
+
+    /**
      * 检查Redis连接状态
      */
     @GetMapping("/status")

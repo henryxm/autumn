@@ -564,6 +564,25 @@ public class RedisService {
     }
 
     /**
+     * 按模式删除键
+     */
+    public long deleteKeysByPattern(String pattern, int database) {
+        try {
+            // 由于使用连接池，不支持数据库切换，忽略database参数
+            Set<String> keys = redisTemplate.keys(pattern);
+            if (keys == null || keys.isEmpty()) {
+                return 0;
+            }
+            
+            // 批量删除键
+            return redisTemplate.delete(keys);
+        } catch (Exception e) {
+            System.err.println("按模式删除键失败: " + e.getMessage());
+            return 0;
+        }
+    }
+
+    /**
      * 检查Redis连接状态
      */
     public boolean isConnected() {

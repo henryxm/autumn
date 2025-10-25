@@ -61,6 +61,7 @@
                     <input type="text" v-model="searchPattern" placeholder="搜索键 (支持 * ?)" @keyup.enter="searchKeys">
                     <button class="btn btn-primary" @click="searchKeys">搜索</button>
                     <button class="btn btn-primary" @click="refreshKeys">刷新</button>
+                    <button class="btn btn-warning" @click="clearSearchResults" :disabled="searchPattern === '*'">清除</button>
                 </div>
                 
                 <div v-if="loading" class="loading">加载中...</div>
@@ -191,6 +192,33 @@
             
             refreshKeys() {
                 this.loadKeys();
+            },
+            
+            clearSearchResults() {
+                if (this.searchPattern === '*') {
+                    this.showMessage('搜索模式为 * 时不能清除结果，请先修改搜索条件', 'alert-warning');
+                    return;
+                }
+                
+                if (confirm('确定要清除当前搜索结果吗？这将删除所有匹配的键。')) {
+                    $.ajax({
+                        url: '/sys/redis/clear-keys',
+                        method: 'POST',
+                        data: {
+                            pattern: this.searchPattern,
+                            database: this.selectedDatabase
+                        },
+                        success: (response) => {
+                            if (response.code === 0) {
+                                this.showMessage(response.msg, 'alert-success');
+                                this.loadKeys();
+                                this.loadDatabases();
+                            } else {
+                                this.showMessage(response.msg, 'alert-danger');
+                            }
+                        }
+                    });
+                }
             },
             
             changePage(page) {
