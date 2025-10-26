@@ -85,7 +85,7 @@ public class SpmFilter extends FormAuthenticationFilter implements PathFactory.P
     protected boolean isAccessAllowed(ServletRequest request, ServletResponse response, Object mappedValue) {
         HttpServletRequest httpServletRequest = (HttpServletRequest) request;
         HttpServletResponse httpServletResponse = (HttpServletResponse) response;
-        if (null != request && (isSpm(httpServletRequest) || isRoot(httpServletRequest))) {
+        if (null != request) {
             if (null == superPositionModelService)
                 superPositionModelService = (SuperPositionModelService) Config.getBean("superPositionModelService");
             if (null != superPositionModelService && !superPositionModelService.needLogin(httpServletRequest, httpServletResponse))
