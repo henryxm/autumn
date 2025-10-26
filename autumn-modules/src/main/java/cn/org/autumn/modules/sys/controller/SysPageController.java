@@ -63,7 +63,7 @@ public class SysPageController implements ErrorController {
         if (StringUtils.isNotBlank(lang)) {
             model.addAttribute("locale", lang);
         }
-        return "modules/" + module + "/" + url;
+        return "/modules/" + module + "/" + url;
     }
 
     @RequestMapping("modules/{module}/{url}.js")
@@ -71,7 +71,7 @@ public class SysPageController implements ErrorController {
         if (StringUtils.isNotBlank(lang)) {
             model.addAttribute("locale", lang);
         }
-        return "modules/" + module + "/" + url + ".js";
+        return "/modules/" + module + "/" + url + ".js";
     }
 
     @RequestMapping({"modules/**", "pages/**"})

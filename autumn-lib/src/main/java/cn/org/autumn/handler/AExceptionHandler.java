@@ -97,10 +97,9 @@ public class AExceptionHandler {
         if (ExceptionUtils.isCommonHttpException(e)) {
             if (log.isDebugEnabled())
                 log.debug("常见HTTP异常: {}", ExceptionUtils.formatExceptionForLog(e, request));
-            return R.error("请求格式错误，请检查请求方法和内容类型");
+            return R.error("格式错误");
         }
-
         // 返回通用错误信息，避免暴露敏感信息
-        return R.error("服务器内部错误，请联系管理员");
+        return R.error("访问错误");
     }
 }

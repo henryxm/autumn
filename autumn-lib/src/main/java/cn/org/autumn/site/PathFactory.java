@@ -22,7 +22,9 @@ public class PathFactory extends Factory {
     public interface Path {
 
         @Order(DEFAULT_ORDER)
-        String get(HttpServletRequest request, HttpServletResponse response, Model model);
+        default String get(HttpServletRequest request, HttpServletResponse response, Model model) {
+            return null;
+        }
 
         default boolean isRoot(HttpServletRequest request) {
             String uri = request.getRequestURI();

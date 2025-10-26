@@ -6,6 +6,7 @@ import cn.org.autumn.modules.spm.service.SuperPositionModelService;
 import cn.org.autumn.modules.sys.shiro.OauthAccessTokenToken;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.wall.service.WallService;
+import cn.org.autumn.site.PathFactory;
 import com.alibaba.fastjson.JSON;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
@@ -24,7 +25,7 @@ import java.io.IOException;
 import java.util.Map;
 
 @Slf4j
-public class SpmFilter extends FormAuthenticationFilter {
+public class SpmFilter extends FormAuthenticationFilter implements PathFactory.Path {
     private static WallService wallService;
     private static SuperPositionModelService superPositionModelService;
     private static ClientDetailsService clientDetailsService;
@@ -84,7 +85,7 @@ public class SpmFilter extends FormAuthenticationFilter {
     protected boolean isAccessAllowed(ServletRequest request, ServletResponse response, Object mappedValue) {
         HttpServletRequest httpServletRequest = (HttpServletRequest) request;
         HttpServletResponse httpServletResponse = (HttpServletResponse) response;
-        if (null != request) {
+        if (null != request && isSpm(httpServletRequest)) {
             if (null == superPositionModelService)
                 superPositionModelService = (SuperPositionModelService) Config.getBean("superPositionModelService");
             if (null != superPositionModelService && !superPositionModelService.needLogin(httpServletRequest, httpServletResponse))

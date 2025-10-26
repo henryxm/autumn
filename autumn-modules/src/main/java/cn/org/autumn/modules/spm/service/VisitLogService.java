@@ -22,8 +22,8 @@ public class VisitLogService extends VisitLogServiceGen implements LoopJob.Job {
         String ip = IPUtils.getIp(request);
         if (StringUtils.isBlank(ip) || null == superPositionModelEntity)
             return false;
-        if (map.containsKey(superPositionModelEntity.toString())) {
-            List<String> list = map.get(superPositionModelEntity.toString());
+        if (map.containsKey(superPositionModelEntity.toSpmString())) {
+            List<String> list = map.get(superPositionModelEntity.toSpmString());
             if (list.contains(ip))
                 return false;
             else
@@ -31,7 +31,7 @@ public class VisitLogService extends VisitLogServiceGen implements LoopJob.Job {
         } else {
             List<String> l = new ArrayList<>();
             l.add(ip);
-            map.put(superPositionModelEntity.toString(), l);
+            map.put(superPositionModelEntity.toSpmString(), l);
         }
         return true;
     }

@@ -4,6 +4,7 @@ import cn.org.autumn.modules.lan.interceptor.LanguageInterceptor;
 import cn.org.autumn.modules.lan.service.LanguageService;
 import cn.org.autumn.modules.spm.entity.SuperPositionModelEntity;
 import cn.org.autumn.modules.spm.service.SuperPositionModelService;
+import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.utils.Constant;
 import cn.org.autumn.annotation.SysLog;
 import cn.org.autumn.exception.AException;
@@ -46,7 +47,7 @@ public class SysMenuController extends AbstractController {
 
         if (superPositionModelService.menuWithSpm()) {
             if (StringUtils.isNotEmpty(sysMenuEntity.getUrl()) && spms.containsKey(sysMenuEntity.getUrl())) {
-                sysMenuEntity.setUrl("?spm=" + spms.get(sysMenuEntity.getUrl()).toString());
+                sysMenuEntity.setUrl("?spm=" + spms.get(sysMenuEntity.getUrl()).toSpmString());
             }
         }
 
@@ -65,6 +66,8 @@ public class SysMenuController extends AbstractController {
      */
     @RequestMapping("/nav")
     public R nav(HttpServletRequest request) {
+        if (!ShiroUtils.isLogin())
+            return R.error("未登录");
         List<SysMenuEntity> menuList = sysMenuService.getUserMenuList(getUserUuid());
         Locale locale = LanguageInterceptor.getLocale(request);
         Map<String, String> language = languageService.getLanguage(locale);

@@ -7,9 +7,8 @@ import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.spm.entity.SuperPositionModelEntity;
 import cn.org.autumn.modules.spm.service.gen.SuperPositionModelServiceGen;
 import cn.org.autumn.modules.sys.service.SysConfigService;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.stereotype.Service;
@@ -21,12 +20,11 @@ import java.lang.reflect.Field;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+@Slf4j
 @Service
-public class SuperPositionModelService extends SuperPositionModelServiceGen implements LoadFactory.Load, LoopJob.TenMinute, LoginFactory.Login, ClearHandler {
+public class SuperPositionModelService extends SuperPositionModelServiceGen implements LoadFactory.Load, LoopJob.TenMinute, LoginFactory.Login, PathFactory.Path, ClearHandler {
 
-    private Logger logger = LoggerFactory.getLogger(getClass());
-
-    private static Map<String, SuperPositionModelEntity> models = new ConcurrentHashMap<>();
+    private static final Map<String, SuperPositionModelEntity> models = new ConcurrentHashMap<>();
 
     @Autowired
     AsyncTaskExecutor asyncTaskExecutor;
@@ -52,15 +50,9 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
     @Autowired
     LoadFactory loadFactory;
 
-    private static Map<String, String> spmListForHtml;
-    private static Map<String, SuperPositionModelEntity> spmListForUrlKey;
-    private static Map<String, SuperPositionModelEntity> spmListForResourceID;
-
-    static {
-        spmListForHtml = new LinkedHashMap<>();
-        spmListForUrlKey = new LinkedHashMap<>();
-        spmListForResourceID = new LinkedHashMap<>();
-    }
+    private static final Map<String, String> spmListForHtml = new ConcurrentHashMap<>();
+    private static final Map<String, SuperPositionModelEntity> spmListForUrlKey = new ConcurrentHashMap<>();
+    private static final Map<String, SuperPositionModelEntity> spmListForResourceID = new ConcurrentHashMap<>();
 
     @Override
     public int menuOrder() {
@@ -84,7 +76,7 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
         site();
         List<SuperPositionModelEntity> list = baseMapper.selectByMap(new HashMap<>());
         for (SuperPositionModelEntity superPositionModelEntity : list) {
-            spmListForHtml.put(superPositionModelEntity.getUrlKey(), "spm=" + superPositionModelEntity.toString());
+            spmListForHtml.put(superPositionModelEntity.getUrlKey(), "spm=" + superPositionModelEntity.toSpmString());
             spmListForUrlKey.put(superPositionModelEntity.getUrlKey(), superPositionModelEntity);
             spmListForResourceID.put(superPositionModelEntity.getResourceId(), superPositionModelEntity);
         }
@@ -102,7 +94,6 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
                 if (null == aware)
                     continue;
                 String siteId = site.getId();
-                String pack = site.getPack();
                 String page = field.getName();
 
                 if (StringUtils.isNotEmpty(aware.page()) && !"NULL".equalsIgnoreCase(aware.page()) && !"0".equalsIgnoreCase(aware.page()))
@@ -127,7 +118,7 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
                                 resource = value;
                         }
                     } catch (Exception e) {
-                        logger.error("Error:", e);
+                        log.error("Error:{}", e.getMessage());
                     }
                 }
                 boolean login = aware.login();
@@ -139,28 +130,28 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
 
     public String getResourceId(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model, String spm) {
         if (!loadFactory.isDone()) {
-            if (logger.isDebugEnabled())
-                logger.debug("启动中:{}", httpServletRequest.getRequestURL());
+            if (log.isDebugEnabled())
+                log.debug("启动中:{}", httpServletRequest.getRequestURL());
             return pageFactory.loading(httpServletRequest, httpServletResponse, model);
         }
 
         String path = pathFactory.get(httpServletRequest, httpServletResponse, model);
         if (StringUtils.isNotEmpty(path)) {
-            if (logger.isDebugEnabled())
-                logger.debug("路径:{}, 工厂:{}", httpServletRequest.getRequestURL(), path);
+            if (log.isDebugEnabled())
+                log.debug("路径:{}, 工厂:{}", httpServletRequest.getRequestURL(), path);
             return path;
         }
 
         if (StringUtils.isEmpty(spm)) {
-            if (logger.isDebugEnabled())
-                logger.debug("默认路径:{}", httpServletRequest.getRequestURL());
+            if (log.isDebugEnabled())
+                log.debug("默认路径:{}", httpServletRequest.getRequestURL());
             return pageFactory.index(httpServletRequest, httpServletResponse, model);
         }
         SuperPositionModelEntity superPositionModelEntity = getSpm(httpServletRequest, spm);
         if (null != superPositionModelEntity && StringUtils.isNotEmpty(superPositionModelEntity.getResourceId()))
             return superPositionModelEntity.getResourceId();
-        if (logger.isDebugEnabled())
-            logger.debug("无效路径:{}, 返回:404", httpServletRequest.getRequestURL());
+        if (log.isDebugEnabled())
+            log.debug("无效路径:{}, 返回:404", httpServletRequest.getRequestURL());
         return pageFactory._404(httpServletRequest, httpServletResponse, model);
     }
 
@@ -187,13 +178,13 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
     }
 
     public SuperPositionModelEntity getByResourceId(String resourceId) {
-        if (null != spmListForResourceID && spmListForResourceID.containsKey(resourceId))
+        if (spmListForResourceID.containsKey(resourceId))
             return spmListForResourceID.get(resourceId);
         return baseMapper.getByResourceId(resourceId);
     }
 
     public SuperPositionModelEntity getByUrlKey(String urlKey) {
-        if (null != spmListForUrlKey && spmListForUrlKey.containsKey(urlKey))
+        if (spmListForUrlKey.containsKey(urlKey))
             return spmListForUrlKey.get(urlKey);
         return baseMapper.getByUrlKey(urlKey);
     }
@@ -309,7 +300,7 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
             map.put("url_key", urlKey);
             superPositionModelEntity.setUrlKey(urlKey);
         }
-        superPositionModelEntity.setSpmValue(superPositionModelEntity.toString());
+        superPositionModelEntity.setSpmValue(superPositionModelEntity.toSpmString());
         if (needLogin) {
             superPositionModelEntity.setNeedLogin(1);
         } else
@@ -346,7 +337,7 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
                     return superPositionModelEntity.getNeedLogin() > 0;
             }
         }
-        return true;
+        return isRoot(httpServletRequest);
     }
 
     @Override

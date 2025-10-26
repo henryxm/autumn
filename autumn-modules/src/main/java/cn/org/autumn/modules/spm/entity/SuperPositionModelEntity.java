@@ -228,7 +228,7 @@ public class SuperPositionModelEntity implements Serializable, Spm {
         this.needLogin = needLogin;
     }
 
-    public String toString() {
+    public String toSpmString() {
         String spm = siteId;
         if (StringUtils.isNotEmpty(pageId))
             spm += "." + pageId;
