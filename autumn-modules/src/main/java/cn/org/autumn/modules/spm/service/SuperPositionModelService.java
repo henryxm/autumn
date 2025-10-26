@@ -50,6 +50,9 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
     @Autowired
     LoadFactory loadFactory;
 
+    @Autowired
+    MappingFactory mappingFactory;
+
     private static final Map<String, String> spmListForHtml = new ConcurrentHashMap<>();
     private static final Map<String, SuperPositionModelEntity> spmListForUrlKey = new ConcurrentHashMap<>();
     private static final Map<String, SuperPositionModelEntity> spmListForResourceID = new ConcurrentHashMap<>();
@@ -337,7 +340,14 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
                     return superPositionModelEntity.getNeedLogin() > 0;
             }
         }
-        return isRoot(httpServletRequest);
+        if (isRoot(httpServletRequest))
+            return true;
+        String path = httpServletRequest.getRequestURI();
+        if (null != path)
+            path = path.substring(1);
+        if (StringUtils.isNotBlank(path))
+            return !mappingFactory.can(httpServletRequest, path);
+        return true;
     }
 
     @Override

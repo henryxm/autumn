@@ -28,6 +28,29 @@ public class MappingFactory extends Factory {
         String mapping(HttpServletRequest request, HttpServletResponse response, Model model, String value) throws Exception;
     }
 
+    public boolean can(HttpServletRequest request, String value) {
+        ApplicationContext applicationContext = SpringContextUtils.getApplicationContext();
+        if (null == applicationContext)
+            return false;
+        if (null == map)
+            map = getOrdered(MappingFactory.Mapping.class, "can", HttpServletRequest.class, String.class);
+        if (null != map && map.size() > 0) {
+            for (Map.Entry<Integer, List<MappingFactory.Mapping>> k : map.entrySet()) {
+                List<MappingFactory.Mapping> list = k.getValue();
+                for (MappingFactory.Mapping mapping : list) {
+                    try {
+                        if (mapping.can(request, value)) {
+                            return true;
+                        }
+                    } catch (Throwable e) {
+                        log.error("Mapping Throwable:", e);
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
     public String mapping(HttpServletRequest request, HttpServletResponse response, Model model, String value) {
         ApplicationContext applicationContext = SpringContextUtils.getApplicationContext();
         if (null == applicationContext)
