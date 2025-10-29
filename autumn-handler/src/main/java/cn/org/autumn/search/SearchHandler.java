@@ -23,6 +23,10 @@ public interface SearchHandler {
         return null;
     }
 
+    default boolean can(List<String> types, Class<?> clazz) {
+        return null == types || types.isEmpty() || types.contains(ISearch.getType(clazz));
+    }
+
     default Object search(IPage<ISearch> value) {
         if (null != value)
             return search(value.getData());
