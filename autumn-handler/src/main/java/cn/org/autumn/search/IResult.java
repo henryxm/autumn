@@ -4,4 +4,6 @@ import java.io.Serializable;
 
 public interface IResult extends Serializable {
     Result getResult();
+
+    void setResult(Result result);
 }

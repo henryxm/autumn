@@ -1,13 +1,19 @@
 package cn.org.autumn.search;
 
 public interface IPage<T> {
-    int page();
+    int getPage();
 
-    int size();
+    void setPage(int page);
 
-    default int offset() {
-        return (page() - 1) * size();
+    int getSize();
+
+    void setSize(int size);
+
+    T getData();
+
+    void setData(T t);
+
+    default int getOffset() {
+        return (getPage() - 1) * getSize();
     }
-
-    T data();
 }

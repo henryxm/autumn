@@ -7,20 +7,29 @@ import java.io.Serializable;
 import java.util.List;
 
 public interface ISearch extends Serializable {
-    default List<String> types() {
+    default List<String> getTypes() {
         return null;
     }
 
-    default String text() {
+    default void setTypes(List<String> types) {
+    }
+
+    default String getText() {
         return null;
     }
 
-    default Object param() {
+    default void setText(String text) {
+    }
+
+    default Object getParam() {
         return null;
+    }
+
+    default void setParam(Object obj) {
     }
 
     default boolean isPureDigits() {
-        return isPureDigits(text());
+        return isPureDigits(getText());
     }
 
     static boolean isPureDigits(String text) {

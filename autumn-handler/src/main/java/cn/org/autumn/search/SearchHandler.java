@@ -12,7 +12,7 @@ public interface SearchHandler {
         if (value instanceof IPage) {
             try {
                 IPage<?> page = (IPage<?>) value;
-                if (page.data() instanceof ISearch) {
+                if (page.getData() instanceof ISearch) {
                     return search((IPage<ISearch>) page);
                 }
             } catch (Exception ignored) {
@@ -25,13 +25,13 @@ public interface SearchHandler {
 
     default Object search(IPage<ISearch> value) {
         if (null != value)
-            return search(value.data());
+            return search(value.getData());
         return null;
     }
 
     default Object search(ISearch search) {
         if (null != search)
-            return search(search.types(), search.text());
+            return search(search.getTypes(), search.getText());
         return null;
     }
 
