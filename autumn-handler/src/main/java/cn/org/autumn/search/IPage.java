@@ -1,6 +1,10 @@
 package cn.org.autumn.search;
 
 public interface IPage<T> {
+    String getName();
+
+    void setName(String name);
+
     int getPage();
 
     void setPage(int page);

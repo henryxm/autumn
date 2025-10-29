@@ -21,6 +21,22 @@ public interface ISearch extends Serializable {
     default void setText(String text) {
     }
 
+    //被搜索的用户
+    default String getUser() {
+        return null;
+    }
+
+    default void setUser(String user) {
+    }
+
+    //发起搜索的用户
+    default String getMe() {
+        return null;
+    }
+
+    default void setMe(String me) {
+    }
+
     default Object getParam() {
         return null;
     }
