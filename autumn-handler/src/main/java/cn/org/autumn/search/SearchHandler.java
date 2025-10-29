@@ -3,6 +3,8 @@ package cn.org.autumn.search;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 @Component
 @ConditionalOnMissingBean(SearchHandler.class)
 public interface SearchHandler {
@@ -29,7 +31,7 @@ public interface SearchHandler {
 
     default Object search(ISearch search) {
         if (null != search)
-            return search(search.type(), search.text());
+            return search(search.types(), search.text());
         return null;
     }
 
@@ -37,7 +39,7 @@ public interface SearchHandler {
         return null;
     }
 
-    default Object search(String type, String text) {
+    default Object search(List<String> types, String text) {
         if (null != text)
             return search(text);
         return null;

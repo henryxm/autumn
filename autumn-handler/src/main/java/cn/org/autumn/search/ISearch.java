@@ -1,9 +1,13 @@
 package cn.org.autumn.search;
 
+import cn.org.autumn.annotation.SearchType;
+import org.apache.commons.lang.StringUtils;
+
 import java.io.Serializable;
+import java.util.List;
 
 public interface ISearch extends Serializable {
-    default String type() {
+    default List<String> types() {
         return null;
     }
 
@@ -37,5 +41,14 @@ public interface ISearch extends Serializable {
             }
         }
         return true;
+    }
+
+    static String getType(Class<?> clazz) {
+        if (null == clazz)
+            return null;
+        SearchType searchType = clazz.getDeclaredAnnotation(SearchType.class);
+        if (null != searchType && StringUtils.isNotBlank(searchType.value()))
+            return searchType.value();
+        return clazz.getSimpleName();
     }
 }

@@ -5,5 +5,9 @@ public interface IPage<T> {
 
     int size();
 
+    default int offset() {
+        return (page() - 1) * size();
+    }
+
     T data();
 }
