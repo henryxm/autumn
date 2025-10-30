@@ -11,5 +11,7 @@ public interface IType extends Serializable {
 
     String getDescribe();
 
+    int getOrder();
+
     boolean isShow();
 }

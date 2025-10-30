@@ -20,6 +20,7 @@ public class SearchTypeValue implements IType {
     String name;
     String alias;
     String describe;
+    int order = 0;
     boolean show = true;
 
     public SearchTypeValue(Class<?> clazz) {
