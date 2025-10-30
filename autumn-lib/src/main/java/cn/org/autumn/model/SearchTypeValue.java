@@ -34,6 +34,7 @@ public class SearchTypeValue implements IType {
                 this.alias = searchType.alias();
                 this.describe = searchType.describe();
                 this.admin = searchType.admin();
+                this.order = searchType.order();
                 this.debug = searchType.debug();
                 this.show = searchType.show();
                 if (StringUtils.isBlank(this.type))

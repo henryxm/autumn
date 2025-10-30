@@ -20,6 +20,8 @@ public @interface SearchType {
 
     String describe() default "";
 
+    int order() default 0;
+
     boolean admin() default false;
 
     boolean debug() default false;
