@@ -47,6 +47,7 @@ public class IpWhiteEntity implements Serializable {
      * 标签说明
      */
     @Column(comment = "标签说明")
+    @Index
     private String tag;
 
     @Column(comment = "用户代理", type = DataType.TEXT)

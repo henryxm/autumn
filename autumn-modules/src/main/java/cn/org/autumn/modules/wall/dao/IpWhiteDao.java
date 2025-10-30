@@ -20,6 +20,9 @@ import java.util.List;
 @Repository
 public interface IpWhiteDao extends BaseMapper<IpWhiteEntity> {
 
+    @Select("select count(*) from wall_ip_white where tag = #{tag}")
+    int hasTag(@Param("tag") String tag);
+
     @Select("select * from wall_ip_white where ip = #{ip} limit 1")
     IpWhiteEntity getByIp(@Param("ip") String ip);
 

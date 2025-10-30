@@ -42,6 +42,10 @@ public class IpWhiteService extends WallCounter<IpWhiteDao, IpWhiteEntity> imple
         baseMapper.deleteById(getByIp(ip).getId());
     }
 
+    public boolean hasTag(String tag) {
+        return baseMapper.hasTag(tag) > 0;
+    }
+
     /**
      * 为了提高效率，在黑客大量攻击的时候，不能频繁进行数据库访问，通过定时器定时加载IP地址黑名单数据，提高效率。
      */
@@ -135,6 +139,10 @@ public class IpWhiteService extends WallCounter<IpWhiteDao, IpWhiteEntity> imple
     }
 
     public IpWhiteEntity create(String ip, String tag, String description) {
+        return create(ip, tag, description, false);
+    }
+
+    public IpWhiteEntity create(String ip, String tag, String description, boolean update) {
         IpWhiteEntity whiteEntity = null;
         if ((IPUtils.isIp(ip) || IPUtils.isIPV6(ip)) && !IPUtils.isInternalKeepIp(ip)) {
             try {
@@ -149,6 +157,11 @@ public class IpWhiteService extends WallCounter<IpWhiteDao, IpWhiteEntity> imple
                     whiteEntity.setCount(0L);
                     whiteEntity.setToday(0L);
                     insert(whiteEntity);
+                } else {
+                    whiteEntity.setTag(tag);
+                    whiteEntity.setDescription(description);
+                    whiteEntity.setUpdateTime(new Date());
+                    updateById(whiteEntity);
                 }
                 put(ip);
             } catch (Exception e) {
