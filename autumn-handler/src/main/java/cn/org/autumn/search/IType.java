@@ -13,5 +13,9 @@ public interface IType extends Serializable {
 
     int getOrder();
 
+    boolean isAdmin();
+
+    boolean isDebug();
+
     boolean isShow();
 }

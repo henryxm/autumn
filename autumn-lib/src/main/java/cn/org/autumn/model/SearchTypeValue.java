@@ -16,11 +16,13 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class SearchTypeValue implements IType {
-    String type;
-    String name;
-    String alias;
-    String describe;
+    String type = "";
+    String name = "";
+    String alias = "";
+    String describe = "";
     int order = 0;
+    boolean admin = false;
+    boolean debug = false;
     boolean show = true;
 
     public SearchTypeValue(Class<?> clazz) {
@@ -31,10 +33,14 @@ public class SearchTypeValue implements IType {
                 this.name = searchType.name();
                 this.alias = searchType.alias();
                 this.describe = searchType.describe();
+                this.admin = searchType.admin();
+                this.debug = searchType.debug();
                 this.show = searchType.show();
                 if (StringUtils.isBlank(this.type))
-                    this.type = clazz.getSimpleName();
+                    this.type = searchType.type();
             }
+            if (StringUtils.isBlank(this.type))
+                this.type = clazz.getSimpleName();
         }
     }
 
