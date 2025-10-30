@@ -133,20 +133,22 @@ public class IDCard {
      * 验证身份证是否合法
      */
     public static boolean isIdCard(String idCard) {
-        String card = idCard.trim();
-        if (validateIdCard18(card)) {
-            return true;
-        }
-        if (validateIdCard15(card)) {
-            return true;
-        }
-        String[] cardval = validateIdCard10(card);
-        if (cardval != null) {
-            if (cardval[2].equals("true")) {
+        try {
+            String card = idCard.trim();
+            if (validateIdCard18(card)) {
                 return true;
             }
+            if (validateIdCard15(card)) {
+                return true;
+            }
+            String[] cardval = validateIdCard10(card);
+            if (null != cardval && cardval.length >= 2) {
+                return cardval[2].equals("true");
+            }
+            return false;
+        } catch (Exception e) {
+            return false;
         }
-        return false;
     }
 
 

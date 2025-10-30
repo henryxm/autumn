@@ -12,11 +12,9 @@ import java.io.Serializable;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Result implements Serializable {
-    String name;
-    String type;
+    private String type;
 
     public Result(Class<?> clazz) {
-        this.type = clazz.getSimpleName();
-        this.name = clazz.getName();
+        this.type = ISearch.getType(clazz);
     }
 }

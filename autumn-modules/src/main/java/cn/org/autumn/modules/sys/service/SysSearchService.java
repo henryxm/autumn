@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.sys.service;
 
+import cn.org.autumn.model.DefaultPages;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.entity.User;
 import cn.org.autumn.search.SearchHandler;
@@ -11,6 +12,8 @@ import org.apache.commons.beanutils.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 public class SysSearchService implements SearchHandler {
 
@@ -18,15 +21,17 @@ public class SysSearchService implements SearchHandler {
     SysUserService sysUserService;
 
     @Override
-    public Object search(String text) {
-        if (Email.isEmail(text) || Phone.isPhone(text) || IDCard.isIdCard(text) || QQ.isQQ(text)) {
-            SysUserEntity entity = sysUserService.getUser(text);
-            if (null != entity) {
-                try {
-                    User user = new User();
-                    BeanUtils.copyProperties(user, entity);
-                    return user;
-                } catch (Exception ignored) {
+    public Object search(List<String> types, String text) {
+        if (can(types, User.class)) {
+            if (QQ.isQQ(text) || Email.isEmail(text) || Phone.isPhone(text) || IDCard.isIdCard(text)) {
+                SysUserEntity entity = sysUserService.getUser(text);
+                if (null != entity) {
+                    try {
+                        User user = new User();
+                        BeanUtils.copyProperties(user, entity);
+                        return DefaultPages.single(user);
+                    } catch (Exception ignored) {
+                    }
                 }
             }
         }
