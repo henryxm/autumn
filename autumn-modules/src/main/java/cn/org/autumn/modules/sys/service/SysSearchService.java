@@ -1,8 +1,10 @@
 package cn.org.autumn.modules.sys.service;
 
 import cn.org.autumn.model.DefaultPages;
+import cn.org.autumn.model.SearchTypeValue;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.entity.User;
+import cn.org.autumn.search.IType;
 import cn.org.autumn.search.SearchHandler;
 import cn.org.autumn.utils.Email;
 import cn.org.autumn.utils.IDCard;
@@ -19,6 +21,11 @@ public class SysSearchService implements SearchHandler {
 
     @Autowired
     SysUserService sysUserService;
+
+    @Override
+    public List<IType> types() {
+        return SearchTypeValue.of(User.class);
+    }
 
     @Override
     public Object search(List<String> types, String text) {
