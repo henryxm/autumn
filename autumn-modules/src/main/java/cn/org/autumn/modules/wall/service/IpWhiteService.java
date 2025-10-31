@@ -139,10 +139,14 @@ public class IpWhiteService extends WallCounter<IpWhiteDao, IpWhiteEntity> imple
     }
 
     public IpWhiteEntity create(String ip, String tag, String description) {
-        return create(ip, tag, description, false);
+        return create(ip, tag, description, "", false);
     }
 
     public IpWhiteEntity create(String ip, String tag, String description, boolean update) {
+        return create(ip, tag, description, "", update);
+    }
+
+    public IpWhiteEntity create(String ip, String tag, String description, String userAgent, boolean update) {
         IpWhiteEntity whiteEntity = null;
         if ((IPUtils.isIp(ip) || IPUtils.isIPV6(ip)) && !IPUtils.isInternalKeepIp(ip)) {
             try {
@@ -151,6 +155,7 @@ public class IpWhiteService extends WallCounter<IpWhiteDao, IpWhiteEntity> imple
                     whiteEntity = new IpWhiteEntity();
                     whiteEntity.setIp(ip);
                     whiteEntity.setTag(tag);
+                    whiteEntity.setUserAgent(userAgent);
                     whiteEntity.setDescription(description);
                     whiteEntity.setCreateTime(new Date());
                     whiteEntity.setForbidden(0);
@@ -159,8 +164,11 @@ public class IpWhiteService extends WallCounter<IpWhiteDao, IpWhiteEntity> imple
                     insert(whiteEntity);
                 } else {
                     whiteEntity.setTag(tag);
+                    whiteEntity.setUserAgent(userAgent);
                     whiteEntity.setDescription(description);
                     whiteEntity.setUpdateTime(new Date());
+                    whiteEntity.setCount(whiteEntity.getCount() + 1);
+                    whiteEntity.setToday(whiteEntity.getToday() + 1);
                     updateById(whiteEntity);
                 }
                 put(ip);
