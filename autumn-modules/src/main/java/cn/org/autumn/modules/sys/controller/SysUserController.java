@@ -60,12 +60,8 @@ public class SysUserController extends AbstractController {
      */
     @SysLog("修改密码")
     @RequestMapping("/password")
-    public R password(String password, String newPassword) {
+    public R password(String password, String newPassword) throws Exception {
         Assert.isBlank(newPassword, "新密码不为能空");
-        //原密码
-        password = ShiroUtils.sha256(password, getUser().getSalt());
-        //新密码
-        newPassword = ShiroUtils.sha256(newPassword, getUser().getSalt());
         //更新密码
         boolean flag = sysUserService.updatePassword(getUserUuid(), password, newPassword);
         if (!flag) {

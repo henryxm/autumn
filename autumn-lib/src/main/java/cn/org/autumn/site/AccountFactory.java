@@ -102,4 +102,24 @@ public class AccountFactory extends Factory {
             handler.removed(user);
         }
     }
+
+    public void changing(AccountHandler.User user) throws Exception {
+        if (null == user)
+            return;
+        if (null == list)
+            list = getOrderList(AccountHandler.class);
+        for (AccountHandler handler : list) {
+            handler.changing(user);
+        }
+    }
+
+    public void changed(AccountHandler.User user)   {
+        if (null == user)
+            return;
+        if (null == list)
+            list = getOrderList(AccountHandler.class);
+        for (AccountHandler handler : list) {
+            handler.changed(user);
+        }
+    }
 }

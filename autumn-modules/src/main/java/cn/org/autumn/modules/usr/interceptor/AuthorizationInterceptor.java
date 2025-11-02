@@ -25,6 +25,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * 权限(Token)验证
@@ -96,11 +97,17 @@ public class AuthorizationInterceptor extends HandlerInterceptorAdapter implemen
     public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, @Nullable ModelAndView view) throws Exception {
         try {
             if (null != view) {
-                if (ShiroUtils.isLogin()) {
+                SysUserEntity current = (SysUserEntity) ShiroUtils.getSubject().getPrincipal();
+                if (null != current) {
                     ModelMap model = view.getModelMap();
                     SysUserEntity entity = sysUserService.getCache(ShiroUtils.getUserUuid());
                     if (null == entity) {
                         log.info("无效用户:{}, 已自动退出登录", ShiroUtils.getUserUuid());
+                        ShiroUtils.logout();
+                        return;
+                    }
+                    if (!Objects.equals(current.getPassword(), entity.getPassword())) {
+                        log.info("无效登录:{}, 已自动退出登录", ShiroUtils.getUserUuid());
                         ShiroUtils.logout();
                         return;
                     }

@@ -20,6 +20,7 @@ import cn.org.autumn.modules.sys.dao.SysUserDao;
 import cn.org.autumn.modules.sys.entity.SysDeptEntity;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
+import cn.org.autumn.modules.sys.shiro.ShiroSessionService;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.shiro.authc.AuthenticationToken;
@@ -73,6 +74,10 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
     @Autowired
     @Lazy
     private UserProfileService userProfileService;
+
+    @Autowired
+    @Lazy
+    private ShiroSessionService shiroSessionService;
 
     @Autowired
     AccountFactory accountFactory;
@@ -265,12 +270,26 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         this.updateById(user);
     }
 
-    public boolean updatePassword(String userUuid, String password, String newPassword) {
+    public boolean updatePassword(String userUuid, String password, String newPassword) throws Exception {
         SysUserEntity userEntity = getByUuid(userUuid);
-        if (null == userEntity || !password.equals(userEntity.getPassword()))
+        if (null == userEntity)
             return false;
+        if (!Objects.equals(userEntity.getPassword(), ShiroUtils.sha256(password, userEntity.getSalt())))
+            return false;
+        accountFactory.changing(userEntity);
+        String salt = RandomStringUtils.randomAlphanumeric(20);
+        userEntity.setSalt(salt);
+        //新密码
+        newPassword = ShiroUtils.sha256(newPassword, userEntity.getSalt());
         userEntity.setPassword(newPassword);
-        return insertOrUpdate(userEntity);
+        boolean result = insertOrUpdate(userEntity);
+        // 密码修改成功后，强制该用户的其他会话下线
+        if (result && StringUtils.isNotEmpty(userUuid)) {
+            forceUserLogout(userUuid);
+        }
+        accountFactory.changed(userEntity);
+        clear(userUuid);
+        return result;
     }
 
     public boolean hasUsername(String username) {
@@ -664,6 +683,23 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
 
     public boolean isSystemAdministrator(SysUserEntity sysUserEntity) {
         return sysUserRoleService.isSystemAdministrator(sysUserEntity);
+    }
+
+    /**
+     * 强制用户下线（移除该用户的所有活动会话）
+     *
+     * @param userUuid 用户UUID
+     */
+    private void forceUserLogout(String userUuid) {
+        try {
+            if (shiroSessionService != null && StringUtils.isNotEmpty(userUuid)) {
+                int count = shiroSessionService.forceLogoutByUserUuid(userUuid);
+                if (log.isDebugEnabled())
+                    log.debug("强制下线，用户UUID: {}, 下线会话数: {}", userUuid, count);
+            }
+        } catch (Exception e) {
+            log.error("强制用户下线失败，用户UUID: {}", userUuid, e);
+        }
     }
 
     @Override

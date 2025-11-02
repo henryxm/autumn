@@ -31,6 +31,14 @@ public interface AccountHandler {
     default void removed(User obj) {
     }
 
+    //正在修改用户信息
+    default void changing(User obj) throws Exception {
+    }
+
+    //正在修改用户信息
+    default void changed(User obj) {
+    }
+
     public interface User {
         String getUuid();
 
