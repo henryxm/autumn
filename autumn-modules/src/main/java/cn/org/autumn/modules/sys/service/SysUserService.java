@@ -270,11 +270,31 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         this.updateById(user);
     }
 
-    public boolean updatePassword(String userUuid, String password, String newPassword) throws Exception {
+    public boolean changePassword(String userUuid, String password, String newPassword) throws Exception {
         SysUserEntity userEntity = getByUuid(userUuid);
         if (null == userEntity)
             return false;
         if (!Objects.equals(userEntity.getPassword(), ShiroUtils.sha256(password, userEntity.getSalt())))
+            throw new Exception("原密码错误");
+        accountFactory.changing(userEntity);
+        String salt = RandomStringUtils.randomAlphanumeric(20);
+        userEntity.setSalt(salt);
+        //新密码
+        newPassword = ShiroUtils.sha256(newPassword, userEntity.getSalt());
+        userEntity.setPassword(newPassword);
+        boolean result = insertOrUpdate(userEntity);
+        // 密码修改成功后，强制该用户的其他会话下线
+        if (result && StringUtils.isNotEmpty(userUuid)) {
+            forceUserLogout(userUuid);
+        }
+        accountFactory.changed(userEntity);
+        clear(userUuid);
+        return result;
+    }
+
+    public boolean resetPassword(String userUuid, String newPassword) throws Exception {
+        SysUserEntity userEntity = getByUuid(userUuid);
+        if (null == userEntity)
             return false;
         accountFactory.changing(userEntity);
         String salt = RandomStringUtils.randomAlphanumeric(20);
@@ -406,22 +426,24 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
     public SysUserEntity getUser(String username) {
         if (StringUtils.isBlank(username))
             return null;
-        SysUserEntity sysUserEntity = null;
-        if (Email.isEmail(username)) {
-            sysUserEntity = sysUserDao.getByEmail(username);
-        } else if (Phone.isPhone(username)) {
-            sysUserEntity = sysUserDao.getByPhone(username);
-        } else if (IDCard.isIdCard(username)) {
-            sysUserEntity = sysUserDao.getByIdCard(username);
-        } else if (QQ.isQQ(username)) {
-            sysUserEntity = sysUserDao.getByQq(username);
+        SysUserEntity sysUserEntity = getCache(username);
+        if (null == sysUserEntity) {
+            if (Email.isEmail(username)) {
+                sysUserEntity = sysUserDao.getByEmail(username);
+            } else if (Phone.isPhone(username)) {
+                sysUserEntity = sysUserDao.getByPhone(username);
+            } else if (IDCard.isIdCard(username)) {
+                sysUserEntity = sysUserDao.getByIdCard(username);
+            } else if (QQ.isQQ(username)) {
+                sysUserEntity = sysUserDao.getByQq(username);
+            }
+            if (null == sysUserEntity)
+                sysUserEntity = sysUserDao.getByWeixing(username);
+            if (null == sysUserEntity)
+                sysUserEntity = sysUserDao.getByAlipay(username);
+            if (null == sysUserEntity)
+                sysUserEntity = sysUserDao.getByUsername(username);
         }
-        if (null == sysUserEntity)
-            sysUserEntity = sysUserDao.getByWeixing(username);
-        if (null == sysUserEntity)
-            sysUserEntity = sysUserDao.getByAlipay(username);
-        if (null == sysUserEntity)
-            sysUserEntity = sysUserDao.getByUsername(username);
         refresh(sysUserEntity);
         return dynamicReplaceIconHost(sysUserEntity);
     }

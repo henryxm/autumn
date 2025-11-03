@@ -63,7 +63,7 @@ public class SysUserController extends AbstractController {
     public R password(String password, String newPassword) throws Exception {
         Assert.isBlank(newPassword, "新密码不为能空");
         //更新密码
-        boolean flag = sysUserService.updatePassword(getUserUuid(), password, newPassword);
+        boolean flag = sysUserService.changePassword(getUserUuid(), password, newPassword);
         if (!flag) {
             return R.error("原密码不正确");
         }
