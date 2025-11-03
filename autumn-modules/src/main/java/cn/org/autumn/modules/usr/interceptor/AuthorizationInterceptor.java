@@ -1,14 +1,17 @@
 package cn.org.autumn.modules.usr.interceptor;
 
 import cn.org.autumn.annotation.Login;
+import cn.org.autumn.config.ClearHandler;
 import cn.org.autumn.config.InterceptorHandler;
 import cn.org.autumn.exception.AException;
+import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysUserService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.usr.entity.UserTokenEntity;
 import cn.org.autumn.modules.usr.service.UserProfileService;
 import cn.org.autumn.modules.usr.service.UserTokenService;
+import cn.org.autumn.utils.IPUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,16 +26,14 @@ import org.springframework.web.servlet.handler.HandlerInterceptorAdapter;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 /**
  * 权限(Token)验证
  */
 @Slf4j
 @Component
-public class AuthorizationInterceptor extends HandlerInterceptorAdapter implements InterceptorHandler {
+public class AuthorizationInterceptor extends HandlerInterceptorAdapter implements InterceptorHandler, LoopJob.OneHour, ClearHandler {
     @Autowired
     private UserTokenService userTokenService;
 
@@ -43,6 +44,8 @@ public class AuthorizationInterceptor extends HandlerInterceptorAdapter implemen
     private SysUserService sysUserService;
 
     public static final String USER_KEY = "userUuid";
+
+    private static final Set<String> exceptions = new HashSet<>();
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
@@ -99,16 +102,27 @@ public class AuthorizationInterceptor extends HandlerInterceptorAdapter implemen
             if (null != view) {
                 SysUserEntity current = (SysUserEntity) ShiroUtils.getSubject().getPrincipal();
                 if (null != current) {
-                    ModelMap model = view.getModelMap();
-                    SysUserEntity entity = sysUserService.getCache(ShiroUtils.getUserUuid());
+                    String user = current.getUuid();
+                    SysUserEntity entity = sysUserService.getCache(user);
                     if (null == entity) {
-                        log.info("无效用户:{}, 已自动退出登录", ShiroUtils.getUserUuid());
+                        if (!exceptions.contains(user))
+                            log.info("无效用户:{}, IP:{}, 处理:退出登录", user, IPUtils.getIp(request));
                         ShiroUtils.logout();
+                        exceptions.add(user);
+                        return;
+                    }
+                    if (!entity.check()) {
+                        if (!exceptions.contains(user))
+                            log.info("用户异常:{}, IP:{}, 状态:{}, 处理:退出登录", user, IPUtils.getIp(request), entity.getStatus());
+                        ShiroUtils.logout();
+                        exceptions.add(user);
                         return;
                     }
                     if (!Objects.equals(current.getPassword(), entity.getPassword())) {
-                        log.info("无效登录:{}, 已自动退出登录", ShiroUtils.getUserUuid());
+                        if (!exceptions.contains(user))
+                            log.info("无效登录:{}, IP:{}, 处理:退出登录", user, IPUtils.getIp(request));
                         ShiroUtils.logout();
+                        exceptions.add(user);
                         return;
                     }
                     entity = append(entity);
@@ -119,12 +133,23 @@ public class AuthorizationInterceptor extends HandlerInterceptorAdapter implemen
                             entity.setParent(parent);
                         }
                     }
+                    ModelMap model = view.getModelMap();
                     model.put("user", entity);
                 }
             }
         } catch (Exception e) {
             log.error("权限验证后:{}", e.getMessage());
         }
+    }
+
+    @Override
+    public void clear() {
+        onOneHour();
+    }
+
+    @Override
+    public void onOneHour() {
+        exceptions.clear();
     }
 
     @Override
