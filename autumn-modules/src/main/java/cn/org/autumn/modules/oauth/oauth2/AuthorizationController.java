@@ -356,13 +356,13 @@ public class AuthorizationController {
         TokenStore store = clientDetailsService.get(ValueType.accessToken, accessToken);
         //生成OAuth响应
         OAuthResponse response = OAuthASResponse.tokenResponse(HttpServletResponse.SC_OK).setAccessToken(accessToken).setRefreshToken(refreshToken).setTokenType("bearer").setExpiresIn(String.valueOf(store.getExpireIn())).setScope("basic").buildJSONMessage();
-        return new ResponseEntity(response.getBody(), HttpStatus.valueOf(response.getResponseStatus())).getBody().toString();
+        return new ResponseEntity<>(response.getBody(), HttpStatus.valueOf(response.getResponseStatus())).getBody();
     }
 
     @RequestMapping(value = "/userInfo", produces = "application/json;charset=UTF-8", method = {RequestMethod.GET, RequestMethod.POST})
     @ResponseBody
     @Operation(tags = {"oauth"}, servers = {@Server(url = "https://www.minclouds.com", description = "获取用户信息")}, description = "获取用户信息", summary = "获取用户信息", operationId = "getUserInfo")
-    public HttpEntity authUserInfo(HttpServletRequest request) throws OAuthSystemException {
+    public HttpEntity<?> authUserInfo(HttpServletRequest request) throws OAuthSystemException {
         try {
             // 构建OAuth资源请求
             OAuthAccessResourceRequest oauthRequest = new OAuthAccessResourceRequest(request, ParameterStyle.QUERY, ParameterStyle.HEADER);
@@ -382,7 +382,7 @@ public class AuthorizationController {
 
                 HttpHeaders headers = new HttpHeaders();
                 headers.add(OAuth.HeaderType.WWW_AUTHENTICATE, oauthResponse.getHeader(OAuth.HeaderType.WWW_AUTHENTICATE));
-                return new ResponseEntity(headers, HttpStatus.UNAUTHORIZED);
+                return new ResponseEntity<>(headers, HttpStatus.UNAUTHORIZED);
             }
 
             //返回用户名
@@ -391,12 +391,11 @@ public class AuthorizationController {
                 Object username = tokenStore.getValue();
                 if (username instanceof SysUserEntity) {
                     SysUserEntity sysUserEntity = (SysUserEntity) username;
-                    UserProfileEntity userProfileEntity = userProfileService.from(sysUserEntity, null, null);
-                    UserProfile userProfile = UserProfile.from(userProfileEntity);
-                    username = userProfile;
+                    UserProfileEntity userProfileEntity = userProfileService.from(sysUserEntity, "", null);
+                    username = UserProfile.from(userProfileEntity);
                     userLoginLogService.login(userProfileEntity);
                 }
-                return new ResponseEntity(JSON.toJSONString(username), HttpStatus.OK);
+                return new ResponseEntity<>(JSON.toJSONString(username), HttpStatus.OK);
             }
         } catch (OAuthProblemException e) {
             // 检查是否设置了错误码
@@ -407,7 +406,7 @@ public class AuthorizationController {
                 HttpHeaders headers = new HttpHeaders();
                 headers.add(OAuth.HeaderType.WWW_AUTHENTICATE, oauthResponse.getHeader(OAuth.HeaderType.WWW_AUTHENTICATE));
 
-                return new ResponseEntity(headers, HttpStatus.UNAUTHORIZED);
+                return new ResponseEntity<>(headers, HttpStatus.UNAUTHORIZED);
             }
 
             OAuthResponse oauthResponse = OAuthRSResponse.errorResponse(SC_UNAUTHORIZED).setError(e.getError()).setErrorDescription(e.getDescription()).setErrorUri(e.getUri()).buildHeaderMessage();
@@ -415,8 +414,8 @@ public class AuthorizationController {
             HttpHeaders headers = new HttpHeaders();
             headers.add(OAuth.HeaderType.WWW_AUTHENTICATE, oauthResponse.getHeader(OAuth.HeaderType.WWW_AUTHENTICATE));
 
-            return new ResponseEntity(HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         }
-        return new ResponseEntity(HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
     }
 }

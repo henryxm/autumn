@@ -85,7 +85,7 @@ public class AuthorizationInterceptor extends HandlerInterceptorAdapter implemen
             if (null == sysUserEntity.getProfile())
                 sysUserEntity = userProfileService.setProfile(sysUserEntity);
             if (null == sysUserEntity.getProfile()) {
-                sysUserEntity.setProfile(userProfileService.from(sysUserEntity, sysUserService.getPassword(), null));
+                sysUserEntity.setProfile(userProfileService.from(sysUserEntity, "", null));
             }
             if (null == sysUserEntity.getProfile().getIcon()) {
                 sysUserEntity.getProfile().setIcon("");
