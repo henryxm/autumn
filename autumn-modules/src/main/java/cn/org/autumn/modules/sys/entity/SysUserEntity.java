@@ -123,16 +123,20 @@ public class SysUserEntity implements AccountHandler.User, Serializable {
     public void copy(SysUserEntity entity) {
         this.parentUuid = entity.parentUuid;
         this.username = entity.username;
-        this.nickname = entity.getNickname();
-        this.password = entity.password;
-        this.salt = entity.salt;
+        this.nickname = entity.nickname;
         this.alipay = entity.alipay;
         this.mobile = entity.mobile;
         this.email = entity.email;
         this.qq = entity.qq;
         this.weixin = entity.weixin;
         this.status = entity.status;
-        this.icon = entity.getIcon();
+        this.icon = entity.icon;
+    }
+
+    public SysUserEntity copy() {
+        SysUserEntity clone = new SysUserEntity();
+        clone.copy(this);
+        return clone;
     }
 
     public boolean check() {

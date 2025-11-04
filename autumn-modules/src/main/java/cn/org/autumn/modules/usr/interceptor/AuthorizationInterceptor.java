@@ -119,11 +119,11 @@ public class AuthorizationInterceptor extends HandlerInterceptorAdapter implemen
                         return;
                     }
                     if (!Objects.equals(current.getPassword(), entity.getPassword())) {
-                        //if (!exceptions.contains(user))
-                        log.info("无效登录:{}, IP:{}, 登录秘钥:{}, 实际秘钥:{}, 处理:退出登录", user, IPUtils.getIp(request), current.getPassword(),entity.getPassword() );
-                        //ShiroUtils.logout();
-                        //exceptions.add(user);
-                        //return;
+                        if (!exceptions.contains(user))
+                            log.info("无效登录:{}, IP:{}, 登录秘钥:{}, 实际秘钥:{}, 处理:退出登录", user, IPUtils.getIp(request), current.getPassword(), entity.getPassword());
+                        ShiroUtils.logout();
+                        exceptions.add(user);
+                        return;
                     }
                     entity = append(entity);
                     if (StringUtils.isNotEmpty(entity.getParentUuid()) && null == entity.getParent()) {
