@@ -133,6 +133,7 @@ public class SysUserEntity implements AccountHandler.User, Serializable {
         this.qq = entity.qq;
         this.weixin = entity.weixin;
         this.status = entity.status;
+        this.verify = entity.verify;
         this.icon = entity.icon;
     }
 
