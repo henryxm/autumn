@@ -2,6 +2,7 @@ package cn.org.autumn.handler;
 
 import cn.org.autumn.exception.AException;
 import cn.org.autumn.exception.CodeException;
+import cn.org.autumn.utils.IPUtils;
 import cn.org.autumn.utils.R;
 import cn.org.autumn.utils.ExceptionUtils;
 import com.google.gson.Gson;
@@ -91,6 +92,8 @@ public class AExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public R handleException(Exception e, HttpServletRequest request) {
+        if (log.isDebugEnabled() && null != e && null != request)
+            log.error("访问IP:{}, 错误:{}", IPUtils.getIp(request), e.getMessage());
         // 使用工具类记录详细的异常信息
         ExceptionUtils.logDetailedException("未处理的异常", e, request);
         // 如果是常见的HTTP异常，返回更友好的错误信息
