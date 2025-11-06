@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -23,6 +24,9 @@ public interface SysUserDao extends BaseMapper<SysUserEntity> {
             "LEFT JOIN sys_role_menu rm on ur.role_key = rm.role_key " +
             "where ur.user_uuid = #{userUuid}")
     List<String> getMenus(@Param("userUuid") String userUuid);
+
+    @Update("update sys_user set `verify` = #{verify} where `uuid` = #{uuid}")
+    void verify(@Param("uuid") String uuid, @Param("verify") int verify);
 
     @Select("select * from sys_user where `username` = #{username} and `status` >= 0")
     SysUserEntity getByUsername(@Param("username") String username);

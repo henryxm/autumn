@@ -42,22 +42,48 @@ public interface AccountHandler {
     public interface User {
         String getUuid();
 
-        String getNickname();
+        default String getNickname() {
+            return null;
+        }
 
-        String getPassword();
+        default String getPassword() {
+            return null;
+        }
 
-        String getSalt();
+        default String getSalt() {
+            return null;
+        }
 
-        String getEmail();
+        default String getEmail() {
+            return null;
+        }
 
-        String getMobile();
+        default String getMobile() {
+            return null;
+        }
 
-        String getQq();
+        default String getQq() {
+            return null;
+        }
 
-        String getWeixin();
+        default String getWeixin() {
+            return null;
+        }
 
-        String getIdCard();
+        default String getIdCard() {
+            return null;
+        }
 
-        String getIcon();
+        default String getIcon() {
+            return null;
+        }
+
+        default int getStatus() {
+            return 0;
+        }
+
+        default int getVerify() {
+            return 0;
+        }
     }
 }

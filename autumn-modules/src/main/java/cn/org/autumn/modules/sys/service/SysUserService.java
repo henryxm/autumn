@@ -245,6 +245,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         sysUserEntity.setUsername(username);
         sysUserEntity.setPassword(password);
         sysUserEntity.setStatus(1);
+        sysUserEntity.setVerify(0);
         sysUserEntity.setRoleKeys(roleKeys);
         save(sysUserEntity);
         refresh(sysUserEntity);
@@ -553,7 +554,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
                         insert(sysUserEntity);
                     }
                 }
-            } catch (Exception e) {
+            } catch (Exception ignored) {
             }
         }
         refresh(sysUserEntity);
@@ -568,6 +569,11 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         if (sp)
             token = new SuperPasswordToken(username);
         subject.login(token);
+    }
+
+    public void verified(String uuid) {
+        baseMapper.verify(uuid, 1);
+        clear(uuid);
     }
 
     public void login(AuthenticationToken token) {

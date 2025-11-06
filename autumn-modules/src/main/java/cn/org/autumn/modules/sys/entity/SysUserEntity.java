@@ -93,8 +93,11 @@ public class SysUserEntity implements AccountHandler.User, Serializable {
     @Index
     private String unionId;
 
-    @Column(comment = "状态:-1,注销;0,禁用;1:正常")
+    @Column(comment = "状态:-1,注销;0,禁用;1:正常", defaultValue = "1")
     private int status = 1;
+
+    @Column(comment = "实名:0,未实名;1:已实名", defaultValue = "0")
+    private int verify = 0;
 
     @Column(length = 100, comment = "部门标识")
     private String deptKey;
