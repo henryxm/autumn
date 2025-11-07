@@ -505,6 +505,8 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
     }
 
     public SysUserEntity getCache(String user) {
+        if (null == user)
+            return null;
         SysUserEntity entity = cache.get(user);
         if (null == entity) {
             entity = getUuid(user);
