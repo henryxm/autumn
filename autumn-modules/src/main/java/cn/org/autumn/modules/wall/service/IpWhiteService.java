@@ -1,6 +1,7 @@
 package cn.org.autumn.modules.wall.service;
 
 import cn.org.autumn.config.ClearHandler;
+import cn.org.autumn.config.Config;
 import cn.org.autumn.modules.wall.dao.IpWhiteDao;
 import cn.org.autumn.modules.wall.entity.RData;
 import cn.org.autumn.site.InitFactory;
@@ -148,7 +149,7 @@ public class IpWhiteService extends WallCounter<IpWhiteDao, IpWhiteEntity> imple
 
     public IpWhiteEntity create(String ip, String tag, String description, String userAgent, boolean update) {
         IpWhiteEntity whiteEntity = null;
-        if ((IPUtils.isIp(ip) || IPUtils.isIPV6(ip)) && !IPUtils.isInternalKeepIp(ip)) {
+        if ((IPUtils.isIp(ip) || IPUtils.isIPV6(ip)) && (Config.isDev() || !IPUtils.isInternalKeepIp(ip))) {
             try {
                 whiteEntity = getByIp(ip);
                 if (null == whiteEntity) {

@@ -6,19 +6,58 @@
     <link rel="stylesheet" href="https://cdn.staticfile.org/layui/2.7.6/css/layui.min.css">
     <link rel="stylesheet" href="/statics/css/font-awesome.min.css">
     <style>
-        body { background: #f6f8fa; }
-        .main-container { max-width: 900px; margin: 40px auto 40px auto; }
-        .layui-card { margin-bottom: 24px; }
-        .layui-card-header { font-size: 18px; font-weight: bold; }
+        * { box-sizing: border-box; }
+        html, body { height: 100%; margin: 0; padding: 0; background: #f6f8fa; }
+        .main-container { width: 100%; padding: 10px; height: 100vh; overflow-y: auto; }
+        .layui-card { margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-radius: 8px; }
+        .layui-card-header { font-size: 16px; font-weight: bold; padding: 12px 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px 8px 0 0; }
+        .layui-card-header i { margin-right: 8px; }
+        .layui-card-body { padding: 15px; }
         .layui-btn { border-radius: 20px; }
         .layui-input, .layui-input-number { border-radius: 20px; }
-        .layui-table th, .layui-table td { text-align: center; }
+        .layui-table th { background: #f8f9fa; font-weight: 600; }
+        .layui-table th, .layui-table td { text-align: center; padding: 10px 6px; font-size: 13px; }
+        .layui-table { width: 100% !important; }
         .layui-table-hover { background: #f5f5f5 !important; }
         .section-title { font-size: 16px; margin-bottom: 10px; font-weight: bold; }
         .ip-input { width: 200px; display: inline-block; }
         .layui-switch { margin-right: 20px; }
         .layui-btn-icon { padding: 0 10px; }
-        .desc { color: #888; font-size: 13px; margin-bottom: 10px; }
+        .desc { color: #888; font-size: 12px; margin-bottom: 8px; }
+        .status-badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; }
+        .status-available { background: #5FB878; color: white; }
+        .status-unavailable { background: #FF5722; color: white; }
+        .status-forbidden { background: #FF5722; color: white; }
+        .status-normal { background: #5FB878; color: white; }
+        .count-badge { display: inline-block; padding: 2px 8px; background: #1E9FFF; color: white; border-radius: 10px; font-size: 11px; font-weight: bold; }
+        .tag-badge { display: inline-block; padding: 4px 10px; background: #FFB800; color: white; border-radius: 12px; font-size: 12px; white-space: nowrap; max-width: 100%; overflow: visible; }
+        .text-ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 150px; }
+        .table-wrapper { width: 100%; flex: 1; overflow: hidden; position: relative; }
+        .table-card { display: flex; flex-direction: column; }
+        .table-card .layui-card-body { flex: 1; display: flex; flex-direction: column; padding: 15px 15px 5px 15px; min-height: 0; }
+        .layui-table-view { margin: 0 !important; }
+        .layui-table-body { margin-bottom: 0 !important; padding-bottom: 0 !important; }
+        .layui-table-page { margin-top: 0 !important; margin-bottom: 0 !important; padding: 5px 0 0 0 !important; }
+        .layui-table-view .layui-table-body { overflow: visible !important; }
+        .layui-table-view .layui-table-main { margin-bottom: 0 !important; padding-bottom: 0 !important; }
+        .layui-table-view .layui-table-box { margin-bottom: 0 !important; }
+        .layui-table-view .layui-table-tool { margin-bottom: 0 !important; }
+        .layui-table-view .layui-table-total { margin-bottom: 0 !important; }
+        .layui-table-view .layui-table-cell { padding: 8px 6px !important; }
+        .layui-table-view .layui-table-body table { margin-bottom: 0 !important; }
+        .layui-table-view .layui-table-body tr:last-child td { border-bottom: 1px solid #e6e6e6 !important; }
+        .layui-table-view .layui-table-body .layui-table { margin-bottom: 0 !important; }
+        /* 修复固定列导致的空白栏问题 - 仅修复间距，不影响列显示 */
+        .layui-table-fixed-l { border-right: 1px solid #e6e6e6 !important; }
+        .layui-table-fixed-r { border-left: 1px solid #e6e6e6 !important; }
+        /* 减少固定列和主表格之间的间距 */
+        .layui-table-view .layui-table-main { margin-left: 0 !important; margin-right: 0 !important; }
+        .layui-table-view .layui-table-fixed { box-shadow: none !important; }
+        @media (max-width: 768px) {
+            .main-container { padding: 5px; }
+            .layui-card-body { padding: 10px; }
+            .table-card { height: calc(100vh - 350px); min-height: 300px; }
+        }
     </style>
     <script src="https://cdn.staticfile.org/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdn.staticfile.org/layui/2.7.6/layui.min.js"></script>
@@ -26,7 +65,7 @@
 <body>
 <div class="main-container">
     <div class="layui-card">
-        <div class="layui-card-header">
+        <div class="layui-card-header" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
             <i class="fa fa-shield"></i> 防火墙管理
         </div>
         <div class="layui-card-body">
@@ -59,38 +98,256 @@
     </div>
 
     <div class="layui-card">
-        <div class="layui-card-header section-title"><i class="fa fa-ban"></i> IP黑名单管理</div>
+        <div class="layui-card-header" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+            <i class="fa fa-globe"></i> 当前访问IP操作
+        </div>
         <div class="layui-card-body">
-            <div style="margin-bottom:10px;">
-                <input type="text" id="addBlackIp" class="layui-input ip-input" placeholder="输入IP">
-                <button class="layui-btn layui-btn-danger" id="addBlackBtn" type="button"><i class="fa fa-plus"></i> 添加</button>
+            <div style="margin-bottom:15px;">
+                <label style="font-weight:bold;margin-right:10px;">当前IP：</label>
+                <span id="currentIp" style="color:#1E9FFF;font-size:16px;font-weight:bold;margin-right:20px;">加载中...</span>
+                <button class="layui-btn layui-btn-sm layui-btn-success" id="addCurrentToWhite" type="button"><i class="fa fa-check"></i> 加白</button>
+                <button class="layui-btn layui-btn-sm layui-btn-warm" id="removeCurrentFromWhite" type="button"><i class="fa fa-times"></i> 去白</button>
+                <button class="layui-btn layui-btn-sm layui-btn-danger" id="addCurrentToBlack" type="button"><i class="fa fa-ban"></i> 加黑</button>
+                <button class="layui-btn layui-btn-sm layui-btn-normal" id="removeCurrentFromBlack" type="button"><i class="fa fa-undo"></i> 去黑</button>
             </div>
-            <table class="layui-table" id="blackTable">
-                <thead><tr><th>IP</th><th>操作</th></tr></thead>
-                <tbody></tbody>
-            </table>
         </div>
     </div>
 
-    <div class="layui-card">
-        <div class="layui-card-header section-title"><i class="fa fa-check"></i> IP白名单管理</div>
+    <div class="layui-card table-card">
+        <div class="layui-card-header" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+            <i class="fa fa-ban"></i> IP黑名单管理
+        </div>
         <div class="layui-card-body">
-            <div style="margin-bottom:10px;">
-                <input type="text" id="addWhiteIp" class="layui-input ip-input" placeholder="输入IP">
+            <div style="margin-bottom:10px; flex-shrink: 0;">
+                <input type="text" id="addBlackIp" class="layui-input ip-input" placeholder="输入IP地址">
+                <button class="layui-btn layui-btn-danger" id="addBlackBtn" type="button"><i class="fa fa-plus"></i> 添加</button>
+            </div>
+            <div class="table-wrapper">
+                <table id="blackTable" lay-filter="blackTable"></table>
+            </div>
+        </div>
+    </div>
+
+    <div class="layui-card table-card">
+        <div class="layui-card-header" style="background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);">
+            <i class="fa fa-check"></i> IP白名单管理
+        </div>
+        <div class="layui-card-body">
+            <div style="margin-bottom:10px; flex-shrink: 0;">
+                <input type="text" id="addWhiteIp" class="layui-input ip-input" placeholder="输入IP地址">
                 <button class="layui-btn layui-btn-success" id="addWhiteBtn" type="button"><i class="fa fa-plus"></i> 添加</button>
             </div>
-            <table class="layui-table" id="whiteTable">
-                <thead><tr><th>IP</th><th>操作</th></tr></thead>
-                <tbody></tbody>
-            </table>
+            <div class="table-wrapper">
+                <table id="whiteTable" lay-filter="whiteTable"></table>
+            </div>
         </div>
     </div>
 </div>
+
+<!-- 表格操作栏模板 -->
+<script type="text/html" id="blackBar">
+    <button class="layui-btn layui-btn-xs layui-btn-danger" lay-event="del" lay-tips="移除"><i class="fa fa-trash"></i></button>
+</script>
+<script type="text/html" id="whiteBar">
+    <button class="layui-btn layui-btn-xs layui-btn-warm" lay-event="del" lay-tips="移除"><i class="fa fa-trash"></i></button>
+</script>
+
 <script>
-layui.use(['form', 'layer'], function(){
-    var form = layui.form, layer = layui.layer;
+layui.use(['form', 'layer', 'table'], function(){
+    var form = layui.form, layer = layui.layer, table = layui.table;
+    var currentIp = '';
 
     function msg(txt, icon=1) { layer.msg(txt, {icon:icon, time:1200}); }
+
+    // 获取当前访问IP
+    function loadCurrentIp() {
+        $.get('/wall/api/currentIp', function(res){
+            currentIp = res.ip || res || '';
+            $('#currentIp').text(currentIp || '未知');
+        }).fail(function(){
+            // 如果API不存在，显示提示信息
+            $('#currentIp').text('需要后端API支持');
+            currentIp = '';
+        });
+    }
+
+    // 格式化时间
+    function formatTime(timestamp) {
+        if (!timestamp) return '-';
+        var date = new Date(timestamp);
+        var year = date.getFullYear();
+        var month = ('0' + (date.getMonth() + 1)).slice(-2);
+        var day = ('0' + date.getDate()).slice(-2);
+        var hours = ('0' + date.getHours()).slice(-2);
+        var minutes = ('0' + date.getMinutes()).slice(-2);
+        return year + '-' + month + '-' + day + ' ' + hours + ':' + minutes;
+    }
+
+    // 计算表格高度
+    function getTableHeight() {
+        var windowHeight = $(window).height();
+        // 计算其他元素的实际高度
+        var topCardsHeight = 0;
+        $('.layui-card').not('.table-card').each(function(){
+            topCardsHeight += $(this).outerHeight(true);
+        });
+        var currentCardHeader = $('.table-card').first().find('.layui-card-header').outerHeight(true) || 50;
+        var inputAreaHeight = $('.table-card').first().find('.layui-card-body > div:first-child').outerHeight(true) || 50;
+        var cardBodyPadding = 20; // 卡片body的上下padding（进一步减少）
+        var pagePadding = 20; // 页面容器的padding
+        var pageHeight = 40; // 分页器高度（进一步减少）
+        var tableSpacing = 5; // 表格内部间距
+        var tableHeight = windowHeight - topCardsHeight - currentCardHeader - inputAreaHeight - cardBodyPadding - pagePadding - pageHeight - tableSpacing;
+        return Math.max(tableHeight, 250); // 最小高度250px
+    }
+
+    // 调整表格高度，消除底部空白（只调整一次，避免循环）
+    var adjustedTables = {};
+    function adjustTableHeight(tableId, tableInstance) {
+        if(adjustedTables[tableId]) return; // 已经调整过，不再调整
+        setTimeout(function(){
+            var $tableView = $('#' + tableId).next('.layui-table-view');
+            if($tableView.length){
+                var $tableBody = $tableView.find('.layui-table-body');
+                var $tablePage = $tableView.find('.layui-table-page');
+                if($tableBody.length && $tablePage.length){
+                    // 获取实际内容高度
+                    var bodyHeight = $tableBody[0].scrollHeight;
+                    var pageHeight = $tablePage.outerHeight(true);
+                    var headerHeight = $tableView.find('.layui-table-header').outerHeight(true) || 0;
+                    // 计算实际需要的总高度（只包括内容+分页器+头部）
+                    var actualHeight = bodyHeight + pageHeight + headerHeight + 1;
+                    // 获取当前设置的表格高度
+                    var currentTableHeight = getTableHeight();
+                    // 如果实际高度明显小于当前高度，则调整
+                    if(actualHeight < currentTableHeight - 20){
+                        adjustedTables[tableId] = true;
+                        // 直接设置表格视图的高度，而不是重新加载
+                        $tableBody.css('height', bodyHeight + 'px');
+                    } else {
+                        adjustedTables[tableId] = true;
+                    }
+                }
+            }
+        }, 300);
+    }
+
+    // 初始化黑名单表格
+    var blackTable = table.render({
+        elem: '#blackTable',
+        url: '/wall/api/ipblack/list',
+        page: true,
+        limit: 10,
+        limits: [10, 20, 50, 100],
+        height: getTableHeight(),
+        even: true,
+        done: function(res, curr, count){
+            adjustTableHeight('blackTable', blackTable);
+        },
+        cols: [[
+            {field: 'ip', title: 'IP地址', width: 140, align: 'center', fixed: 'left'},
+            {field: 'count', title: '访问次数', width: 90, align: 'center', templet: function(d){
+                return '<span class="count-badge">' + (d.count || 0) + '</span>';
+            }},
+            {field: 'today', title: '今日次数', width: 90, align: 'center', templet: function(d){
+                return '<span class="count-badge" style="background:#FF9800">' + (d.today || 0) + '</span>';
+            }},
+            {field: 'tag', title: '标签', width: 130, align: 'center', templet: function(d){
+                if(!d.tag) return '-';
+                var tagText = d.tag.length > 12 ? d.tag.substring(0, 12) + '...' : d.tag;
+                return '<span class="tag-badge" title="' + d.tag + '">' + tagText + '</span>';
+            }},
+            {field: 'description', title: '描述', width: 160, align: 'center', templet: function(d){
+                return d.description ? '<span class="text-ellipsis" title="' + d.description + '">' + d.description + '</span>' : '-';
+            }},
+            {field: 'available', title: '状态', width: 90, align: 'center', templet: function(d){
+                var status = d.available == 1 ? 'available' : 'unavailable';
+                var text = d.available == 1 ? '可用' : '不可用';
+                return '<span class="status-badge status-' + status + '">' + text + '</span>';
+            }},
+            {field: 'createTime', title: '创建时间', width: 150, align: 'center', templet: function(d){
+                return formatTime(d.createTime);
+            }},
+            {title: '操作', width: 90, align: 'center', toolbar: '#blackBar', fixed: 'right'}
+        ]]
+    });
+
+    // 初始化白名单表格
+    var whiteTable = table.render({
+        elem: '#whiteTable',
+        url: '/wall/api/ipwhite/list',
+        page: true,
+        limit: 10,
+        limits: [10, 20, 50, 100],
+        height: getTableHeight(),
+        even: true,
+        done: function(res, curr, count){
+            adjustTableHeight('whiteTable', whiteTable);
+        },
+        cols: [[
+            {field: 'ip', title: 'IP地址', width: 140, align: 'center', fixed: 'left'},
+            {field: 'count', title: '访问次数', width: 90, align: 'center', templet: function(d){
+                return '<span class="count-badge">' + (d.count || 0) + '</span>';
+            }},
+            {field: 'today', title: '今日次数', width: 90, align: 'center', templet: function(d){
+                return '<span class="count-badge" style="background:#FF9800">' + (d.today || 0) + '</span>';
+            }},
+            {field: 'tag', title: '标签', width: 130, align: 'center', templet: function(d){
+                if(!d.tag) return '-';
+                var tagText = d.tag.length > 12 ? d.tag.substring(0, 12) + '...' : d.tag;
+                return '<span class="tag-badge" title="' + d.tag + '">' + tagText + '</span>';
+            }},
+            {field: 'description', title: '描述', width: 160, align: 'center', templet: function(d){
+                return d.description ? '<span class="text-ellipsis" title="' + d.description + '">' + d.description + '</span>' : '-';
+            }},
+            {field: 'forbidden', title: '状态', width: 90, align: 'center', templet: function(d){
+                var status = d.forbidden == 0 ? 'normal' : 'forbidden';
+                var text = d.forbidden == 0 ? '正常' : '已禁用';
+                return '<span class="status-badge status-' + status + '">' + text + '</span>';
+            }},
+            {field: 'createTime', title: '创建时间', width: 150, align: 'center', templet: function(d){
+                return formatTime(d.createTime);
+            }},
+            {title: '操作', width: 90, align: 'center', toolbar: '#whiteBar', fixed: 'right'}
+        ]]
+    });
+
+    // 黑名单表格操作
+    table.on('tool(blackTable)', function(obj){
+        var data = obj.data;
+        if(obj.event === 'del'){
+            $.post('/wall/api/ipblack/remove', {ip: data.ip}, function(){
+                msg('已移除黑名单', 2);
+                adjustedTables['blackTable'] = false; // 重置调整标记
+                blackTable.reload();
+            });
+        }
+    });
+    
+    // 监听表格分页切换
+    table.on('page(blackTable)', function(obj){
+        adjustedTables['blackTable'] = false; // 重置调整标记
+        setTimeout(function(){
+            adjustTableHeight('blackTable', blackTable);
+        }, 100);
+    });
+
+    // 白名单表格操作
+    table.on('tool(whiteTable)', function(obj){
+        var data = obj.data;
+        if(obj.event === 'del'){
+            $.post('/wall/api/ipwhite/remove', {ip: data.ip}, function(){
+                msg('已移除白名单', 2);
+                adjustedTables['whiteTable'] = false; // 重置调整标记
+                whiteTable.reload();
+            });
+        }
+    });
+    
+    // 监听表格分页切换
+    table.on('page(whiteTable)', function(obj){
+        adjustedTables['whiteTable'] = false; // 重置调整标记
+    });
 
     function loadAll() {
         // 防火墙开关
@@ -120,24 +377,40 @@ layui.use(['form', 'layer'], function(){
                 $('#shieldText').text('启用盾牌');
             }
         });
-        // 黑名单
-        $.get('/wall/api/ipblack/list', function(res){
-            var html = '';
-            $.each(res, function(i, ip){
-                html += '<tr><td>'+ip+'</td><td><button class="layui-btn layui-btn-xs layui-btn-danger del-black" data-ip="'+ip+'" lay-tips="移除"><i class="fa fa-trash"></i></button></td></tr>';
-            });
-            $('#blackTable tbody').html(html);
-        });
-        // 白名单
-        $.get('/wall/api/ipwhite/list', function(res){
-            var html = '';
-            $.each(res, function(i, ip){
-                html += '<tr><td>'+ip+'</td><td><button class="layui-btn layui-btn-xs layui-btn-warm del-white" data-ip="'+ip+'" lay-tips="移除"><i class="fa fa-trash"></i></button></td></tr>';
-            });
-            $('#whiteTable tbody').html(html);
-        });
+        // 重新加载表格
+        blackTable.reload();
+        whiteTable.reload();
     }
     loadAll();
+    loadCurrentIp();
+
+    // 页面加载完成后重新计算表格高度
+    $(window).on('load', function(){
+        setTimeout(function(){
+            var newHeight = getTableHeight();
+            blackTable.reload({
+                height: newHeight
+            });
+            whiteTable.reload({
+                height: newHeight
+            });
+        }, 100);
+    });
+
+    // 窗口大小改变时重新计算表格高度
+    var resizeTimer;
+    $(window).resize(function(){
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(function(){
+            var newHeight = getTableHeight();
+            blackTable.reload({
+                height: newHeight
+            });
+            whiteTable.reload({
+                height: newHeight
+            });
+        }, 200);
+    });
 
     // 防火墙开关
     form.on('switch(firewallOpen)', function(data){
@@ -174,14 +447,9 @@ layui.use(['form', 'layer'], function(){
                 }else{
                     msg('添加黑名单失败', 2);
                 }
-                loadAll();
+                blackTable.reload();
             });
         }
-    });
-    // 黑名单删除
-    $('#blackTable').on('click', '.del-black', function(){
-        var ip = $(this).data('ip');
-        $.post('/wall/api/ipblack/remove', {ip: ip}, function(){msg('已移除黑名单',2);loadAll();});
     });
     // 白名单添加
     $('#addWhiteBtn').click(function(){
@@ -194,14 +462,62 @@ layui.use(['form', 'layer'], function(){
                 }else{
                     msg('添加白名单失败', 2);
                 }
-                loadAll();
+                whiteTable.reload();
             });
         }
     });
-    // 白名单删除
-    $('#whiteTable').on('click', '.del-white', function(){
-        var ip = $(this).data('ip');
-        $.post('/wall/api/ipwhite/remove', {ip: ip}, function(){msg('已移除白名单',2);loadAll();});
+
+    // 当前IP一键操作
+    $('#addCurrentToWhite').click(function(){
+        if(!currentIp){
+            msg('无法获取当前IP', 2);
+            return;
+        }
+        $.post('/wall/api/ipwhite/add', {ip: currentIp}, function(res){
+            if(res.success){
+                msg('当前IP已加入白名单');
+                whiteTable.reload();
+            }else{
+                msg('添加白名单失败', 2);
+            }
+        });
+    });
+
+    $('#removeCurrentFromWhite').click(function(){
+        if(!currentIp){
+            msg('无法获取当前IP', 2);
+            return;
+        }
+        $.post('/wall/api/ipwhite/remove', {ip: currentIp}, function(res){
+            msg('当前IP已从白名单移除', 2);
+            whiteTable.reload();
+        });
+    });
+
+    $('#addCurrentToBlack').click(function(){
+        if(!currentIp){
+            msg('无法获取当前IP', 2);
+            return;
+        }
+        $.post('/wall/api/ipblack/add', {ip: currentIp}, function(res){
+            if(res.success){
+                msg('当前IP已加入黑名单');
+                blackTable.reload();
+            }else{
+                msg('添加黑名单失败', 2);
+            }
+        });
+    });
+
+    $('#removeCurrentFromBlack').click(function(){
+        if(!currentIp){
+            msg('无法获取当前IP', 2);
+            return;
+        }
+        $.post('/wall/api/ipblack/remove', {ip: currentIp}, function(res){
+            msg('当前IP已从黑名单移除', 2);
+            blackTable.reload();
+        });
     });
 });
 </script>
