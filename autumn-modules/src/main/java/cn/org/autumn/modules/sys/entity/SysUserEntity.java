@@ -152,6 +152,10 @@ public class SysUserEntity implements AccountHandler.User, Serializable {
             throw new CodeException("服务繁忙", -10000);
     }
 
+    public User toUser() {
+        return new User(this);
+    }
+
     @Override
     public int hashCode() {
         return Objects.hash(
