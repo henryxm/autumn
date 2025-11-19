@@ -156,6 +156,14 @@ public class SysUserEntity implements AccountHandler.User, Serializable {
         return new User(this);
     }
 
+    public User toSimple() {
+        User user = new User();
+        user.setUuid(uuid);
+        user.setNickname(nickname);
+        user.setIcon(icon);
+        return user;
+    }
+
     @Override
     public int hashCode() {
         return Objects.hash(
