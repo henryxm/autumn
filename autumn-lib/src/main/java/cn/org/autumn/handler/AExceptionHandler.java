@@ -14,6 +14,7 @@ import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 
 /**
@@ -60,9 +61,7 @@ public class AExceptionHandler {
     @ExceptionHandler(HttpMediaTypeNotAcceptableException.class)
     public R handleHttpMediaTypeNotAcceptableException(HttpMediaTypeNotAcceptableException e, HttpServletRequest request) {
         if (log.isDebugEnabled())
-            log.debug("HttpMediaTypeNotAcceptableException at {} {} - Accept: {}, Content-Type: {}",
-                    request.getMethod(), request.getRequestURI(),
-                    request.getHeader("Accept"), request.getHeader("Content-Type"), e);
+            log.debug("HttpMediaTypeNotAcceptableException at {} {} - Accept: {}, Content-Type: {}", request.getMethod(), request.getRequestURI(), request.getHeader("Accept"), request.getHeader("Content-Type"), e);
         return R.error(406, "请求的媒体类型不被支持");
     }
 
@@ -72,9 +71,7 @@ public class AExceptionHandler {
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public R handleHttpRequestMethodNotSupportedException(HttpRequestMethodNotSupportedException e, HttpServletRequest request) {
         if (log.isDebugEnabled())
-            log.debug("HttpRequestMethodNotSupportedException at {} {} - Method: {}, Supported: {}",
-                    request.getMethod(), request.getRequestURI(),
-                    request.getMethod(), e.getSupportedMethods(), e);
+            log.debug("HttpRequestMethodNotSupportedException at {} {} - Method: {}, Supported: {}", request.getMethod(), request.getRequestURI(), request.getMethod(), e.getSupportedMethods(), e);
         return R.error(405, "请求方法不支持: " + request.getMethod());
     }
 
@@ -88,6 +85,32 @@ public class AExceptionHandler {
                     request.getMethod(), request.getRequestURI(),
                     request.getHeader("Content-Type"), e);
         return R.error(400, "请求数据格式错误");
+    }
+
+    /**
+     * 处理Servlet异常（包括循环视图路径异常）
+     * 屏蔽循环视图路径异常的日志输出，但记录到监控中
+     */
+    @ExceptionHandler(ServletException.class)
+    public R handleServletException(ServletException e, HttpServletRequest request) {
+        String message = e.getMessage();
+        // 判断是否是循环视图路径异常
+        boolean isCircularViewPath = ExceptionUtils.isCircularViewPathException(e);
+        if (isCircularViewPath) {
+            // 循环视图路径异常：静默处理，不输出日志
+            // 只在debug模式下记录基本信息用于调试
+            if (log.isDebugEnabled()) {
+                log.debug("检测到循环视图路径异常 - URI: {}, IP: {}, 已静默处理", request.getRequestURI(), IPUtils.getIp(request));
+            }
+            // 返回友好的错误信息，不暴露异常详情
+            return R.error(400, "视图解析错误");
+        } else {
+            // 其他Servlet异常：正常记录
+            if (log.isDebugEnabled()) {
+                log.debug("ServletException at {} {} - Message: {}", request.getMethod(), request.getRequestURI(), message, e);
+            }
+            return R.error(500, "服务器内部错误");
+        }
     }
 
     @ExceptionHandler(Exception.class)

@@ -1,8 +1,6 @@
 package cn.org.autumn.utils;
 
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.PrintWriter;
@@ -95,6 +93,17 @@ public class ExceptionUtils {
                 e instanceof org.springframework.http.converter.HttpMessageNotReadableException ||
                 e instanceof org.springframework.web.HttpMediaTypeNotSupportedException ||
                 e instanceof org.springframework.web.bind.MissingServletRequestParameterException;
+    }
+
+    /**
+     * 判断是否为循环视图路径异常
+     */
+    public static boolean isCircularViewPathException(Exception e) {
+        if (e == null) {
+            return false;
+        }
+        String message = e.getMessage();
+        return message != null && message.contains("Circular view path");
     }
 
     /**

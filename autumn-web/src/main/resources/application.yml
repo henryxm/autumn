@@ -92,6 +92,8 @@ logging:
   level.org.quartz: warn
   level.org.springframework: fatal
   level.org.springframework.web: warn
+  level.org.springframework.web.servlet.DispatcherServlet: fatal
+  level.org.springframework.web.servlet.view: fatal
   level.org.springframework.jmx: warn
   level.org.springframework.boot.web: warn
   level.org.springframework.boot.web.servlet: warn
