@@ -2,17 +2,19 @@ package cn.org.autumn.modules.sys.service;
 
 import cn.org.autumn.cluster.UserHandler;
 import cn.org.autumn.cluster.UserMapping;
+import cn.org.autumn.config.CacheConfig;
 import cn.org.autumn.config.Config;
+import cn.org.autumn.config.RoleHandler;
+import cn.org.autumn.modules.sys.dao.SysUserRoleDao;
 import cn.org.autumn.modules.sys.entity.SysRoleEntity;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
-import cn.org.autumn.site.InitFactory;
-import com.baomidou.mybatisplus.service.impl.ServiceImpl;
-import cn.org.autumn.utils.MapUtils;
-import cn.org.autumn.modules.sys.dao.SysUserRoleDao;
 import cn.org.autumn.modules.sys.entity.SysUserRoleEntity;
+import cn.org.autumn.service.CacheService;
+import cn.org.autumn.site.InitFactory;
+import cn.org.autumn.utils.MapUtils;
+import com.baomidou.mybatisplus.service.impl.ServiceImpl;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -25,10 +27,9 @@ import static cn.org.autumn.modules.sys.service.SysRoleService.Role_System_Admin
 /**
  * 用户与角色对应关系
  */
+@Slf4j
 @Service
-public class SysUserRoleService extends ServiceImpl<SysUserRoleDao, SysUserRoleEntity> implements InitFactory.Init, InitFactory.After {
-
-    Logger log = LoggerFactory.getLogger(getClass());
+public class SysUserRoleService extends ServiceImpl<SysUserRoleDao, SysUserRoleEntity> implements InitFactory.Init, InitFactory.After, RoleHandler {
 
     @Autowired
     @Lazy
@@ -44,6 +45,27 @@ public class SysUserRoleService extends ServiceImpl<SysUserRoleDao, SysUserRoleE
 
     @Autowired(required = false)
     private List<UserHandler> userHandlers;
+
+    /**
+     * 缓存服务工具类
+     * 使用 CacheService 简化缓存操作
+     */
+    @Autowired
+    private CacheService cacheService;
+
+    private static final CacheConfig cacheConfig = CacheConfig.builder().cacheName("isAdminCache").valueType(Boolean.class).build();
+
+    @Override
+    public boolean isAdmin(String user) {
+        if (StringUtils.isBlank(user)) {
+            return false;
+        }
+        // 使用 CacheService 的 getOrCompute 方法
+        // 如果缓存存在则直接返回，否则调用 isSystemAdministrator 查询并缓存结果
+        // 缓存过期时间：1分钟
+        Boolean result = cacheService.compute(user, () -> isSystemAdministrator(user), cacheConfig);
+        return result != null ? result : false;
+    }
 
     public void init() {
         String[][] mapping = new String[][]{
