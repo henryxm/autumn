@@ -79,10 +79,30 @@ public class EhCacheManager {
             throw new IllegalArgumentException("CacheConfig cannot be null");
         }
         String cacheName = config.getCacheName();
-        // 先检查是否已存在
+        // 先检查本地缓存映射中是否已存在
         Cache<?, ?> existingCache = caches.get(cacheName);
         if (existingCache != null) {
             return (Cache<K, V>) existingCache;
+        }
+        // 尝试从 CacheManager 获取已存在的缓存（可能在其他地方已创建）
+        if (defaultCacheManager != null) {
+            try {
+                Cache<K, V> managerCache = defaultCacheManager.getCache(cacheName, (Class<K>) config.getKeyType(), (Class<V>) config.getValueType());
+                if (managerCache != null) {
+                    // 缓存已存在，添加到本地映射中
+                    caches.put(cacheName, managerCache);
+                    // 确保配置已注册
+                    if (!cacheConfigs.containsKey(cacheName)) {
+                        registerCacheConfig(config);
+                    }
+                    if (log.isDebugEnabled())
+                    log.debug("Cache '{}' already exists in CacheManager, reusing it", cacheName);
+                    return managerCache;
+                }
+            } catch (Exception e) {
+                if (log.isDebugEnabled())
+                log.debug("Cache '{}' not found in CacheManager, will create new one", cacheName);
+            }
         }
         // 注册配置
         registerCacheConfig(config);
@@ -103,10 +123,37 @@ public class EhCacheManager {
                             .build());
         }
         // 在 CacheManager 中创建缓存
+        if (defaultCacheManager == null) {
+            throw new IllegalStateException("CacheManager is not initialized");
+        }
         if (!defaultCacheManager.getStatus().toString().equals("AVAILABLE")) {
             defaultCacheManager.init();
         }
-        Cache<K, V> cache = defaultCacheManager.createCache(cacheName, cacheConfigBuilder.build());
+        Cache<K, V> cache;
+        try {
+            cache = defaultCacheManager.createCache(cacheName, cacheConfigBuilder.build());
+        } catch (IllegalStateException e) {
+            // 如果缓存已存在（可能由于并发创建），尝试获取已存在的缓存
+            if (e.getMessage() != null && e.getMessage().contains("already exists")) {
+                if (log.isDebugEnabled())
+                    log.debug("Cache '{}' already exists, attempting to retrieve existing cache", cacheName);
+                try {
+                    cache = defaultCacheManager.getCache(cacheName, (Class<K>) config.getKeyType(), (Class<V>) config.getValueType());
+                    if (cache != null) {
+                        // 缓存已存在，添加到本地映射中
+                        caches.put(cacheName, cache);
+                        if (log.isDebugEnabled())
+                            log.debug("Successfully retrieved existing cache '{}'", cacheName);
+                        return cache;
+                    }
+                } catch (Exception ex) {
+                    log.error("Failed to retrieve existing cache '{}': {}", cacheName, ex.getMessage());
+                    throw new IllegalStateException("Cache '" + cacheName + "' already exists but cannot be retrieved", e);
+                }
+            }
+            // 其他类型的 IllegalStateException，重新抛出
+            throw e;
+        }
         // 缓存实例
         caches.put(cacheName, cache);
         return cache;

@@ -154,10 +154,10 @@ public class CacheService implements ClearHandler {
      * 获取缓存值，如果不存在则通过 supplier 获取并缓存
      * 支持通过多个参数组合生成字符串 key（使用分隔符连接）
      *
-     * @param cacheName   缓存名称
-     * @param supplier    值提供者（如果缓存不存在时调用）
-     * @param keyParts    key 的组成部分（多个参数）
-     * @param <V>         Value 类型
+     * @param cacheName 缓存名称
+     * @param supplier  值提供者（如果缓存不存在时调用）
+     * @param keyParts  key 的组成部分（多个参数）
+     * @param <V>       Value 类型
      * @return 缓存值
      */
     public <V> V compute(String cacheName, Supplier<V> supplier, Object... keyParts) {
@@ -268,7 +268,8 @@ public class CacheService implements ClearHandler {
      */
     public <K, V> V compute(String cacheName, K key, Supplier<V> supplier, Class<K> keyType, Class<V> valueType, Long expireTime, TimeUnit expireTimeUnit, Long maxEntries, boolean cacheNull) {
         if (ehCacheManager == null) {
-            log.warn("EhCacheManager is not available, returning value from supplier");
+            if (log.isDebugEnabled())
+                log.debug("EhCacheManager is not available, returning value from supplier");
             return supplier.get();
         }
         CacheConfig config = getCacheConfig(cacheName);
@@ -286,14 +287,16 @@ public class CacheService implements ClearHandler {
                 config.validate();
                 ehCacheManager.registerCacheConfig(config);
             } else {
-                log.warn("Cache config not found for: {} and types not specified, returning value from supplier", cacheName);
+                if (log.isDebugEnabled())
+                    log.warn("Cache config not found for: {} and types not specified, returning value from supplier", cacheName);
                 return supplier.get();
             }
         } else if (cacheNull && config.getValueType() != Object.class) {
             // 如果已存在配置但需要缓存 null，且 Value 类型不是 Object
             // 我们需要使用 Object 类型来获取缓存，这样可以兼容存储 NULL_PLACEHOLDER 和实际值
             // 注意：这里不创建新配置，而是直接使用 Object.class 来获取缓存
-            log.debug("Cache config exists for: {} but valueType is not Object, using Object.class for null caching", cacheName);
+            if (log.isDebugEnabled())
+                log.debug("Cache config exists for: {} but valueType is not Object, using Object.class for null caching", cacheName);
         }
         // 如果 cacheNull 为 true，使用 Object.class 作为 Value 类型以支持存储 NULL_PLACEHOLDER
         // 否则使用配置中的 Value 类型
@@ -302,6 +305,7 @@ public class CacheService implements ClearHandler {
         Cache<Object, Object> cache = (Cache<Object, Object>) ehCacheManager.getCache(cacheName, (Class<K>) config.getKeyType(), cacheValueType);
         if (cache == null) {
             // 如果缓存不存在，需要创建。如果 cacheNull 为 true，确保使用 Object.class
+            // getOrCreateCache 方法已经处理了缓存已存在的情况，这里直接调用即可
             if (cacheNull && config.getValueType() != Object.class) {
                 // 创建临时配置，使用 Object.class 作为 Value 类型
                 // 使用传入的最大条目数，如果未指定则使用配置中的值
@@ -318,6 +322,11 @@ public class CacheService implements ClearHandler {
                 cache = ehCacheManager.getOrCreateCache(tempConfig);
             } else {
                 cache = ehCacheManager.getOrCreateCache(config);
+            }
+            // 如果创建后仍然为 null（理论上不应该发生，因为 getOrCreateCache 会抛出异常或返回缓存）
+            if (cache == null) {
+                log.error("Failed to create or retrieve cache '{}', returning value from supplier", cacheName);
+                return supplier.get();
             }
         }
         Object cached = cache.get(key);
