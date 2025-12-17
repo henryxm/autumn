@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
@@ -107,6 +108,144 @@ public class CacheService implements ClearHandler {
     @SuppressWarnings("unchecked")
     public <K, V> V compute(K key, Supplier<V> supplier, CacheConfig config) {
         return compute(config.getCacheName(), key, supplier, (Class<K>) config.getKeyType(), (Class<V>) config.getValueType(), config.getExpireTime(), config.getExpireTimeUnit(), config.getMaxEntries(), config.isCacheNull());
+    }
+
+    /**
+     * 获取缓存值，如果不存在则通过 supplier 获取并缓存
+     * 支持通过 keySupplier 函数动态生成 key
+     *
+     * @param cacheName   缓存名称
+     * @param keySupplier key 生成函数（从参数生成 key）
+     * @param supplier    值提供者（如果缓存不存在时调用）
+     * @param keyType     Key 类型（可选，如果为 null 则自动推断）
+     * @param valueType   Value 类型（可选，如果为 null 则自动推断）
+     * @param <K>         Key 类型
+     * @param <V>         Value 类型
+     * @return 缓存值
+     */
+    public <K, V> V compute(String cacheName, Supplier<K> keySupplier, Supplier<V> supplier, Class<K> keyType, Class<V> valueType) {
+        K key = keySupplier.get();
+        return compute(cacheName, key, supplier, keyType, valueType, null, null, null, false);
+    }
+
+    /**
+     * 获取缓存值，如果不存在则通过 supplier 获取并缓存
+     * 支持通过 keySupplier 函数动态生成 key，并指定过期时间和最大条目数
+     *
+     * @param cacheName      缓存名称
+     * @param keySupplier    key 生成函数（从参数生成 key）
+     * @param supplier       值提供者（如果缓存不存在时调用）
+     * @param keyType        Key 类型（可选，如果为 null 则自动推断）
+     * @param valueType      Value 类型（可选，如果为 null 则自动推断）
+     * @param expireTime     过期时间（可选，如果为 null 则使用默认值或已注册配置的值）
+     * @param expireTimeUnit 过期时间单位（可选，如果为 null 则使用默认值或已注册配置的值）
+     * @param maxEntries     最大条目数（可选，如果为 null 则使用默认值 1000 或已注册配置的值）
+     * @param cacheNull      是否缓存 null 值（true：缓存 null，避免重复查询；false：不缓存 null，每次都重新查询）
+     * @param <K>            Key 类型
+     * @param <V>            Value 类型
+     * @return 缓存值
+     */
+    public <K, V> V compute(String cacheName, Supplier<K> keySupplier, Supplier<V> supplier, Class<K> keyType, Class<V> valueType, Long expireTime, TimeUnit expireTimeUnit, Long maxEntries, boolean cacheNull) {
+        K key = keySupplier.get();
+        return compute(cacheName, key, supplier, keyType, valueType, expireTime, expireTimeUnit, maxEntries, cacheNull);
+    }
+
+    /**
+     * 获取缓存值，如果不存在则通过 supplier 获取并缓存
+     * 支持通过多个参数组合生成字符串 key（使用分隔符连接）
+     *
+     * @param cacheName   缓存名称
+     * @param supplier    值提供者（如果缓存不存在时调用）
+     * @param keyParts    key 的组成部分（多个参数）
+     * @param <V>         Value 类型
+     * @return 缓存值
+     */
+    public <V> V compute(String cacheName, Supplier<V> supplier, Object... keyParts) {
+        String key = buildCompositeKey(keyParts);
+        return compute(cacheName, key, supplier, String.class, null, null, null, null, false);
+    }
+
+    /**
+     * 获取缓存值，如果不存在则通过 supplier 获取并缓存
+     * 支持通过多个参数组合生成字符串 key（使用分隔符连接），并指定过期时间和最大条目数
+     *
+     * @param cacheName      缓存名称
+     * @param supplier       值提供者（如果缓存不存在时调用）
+     * @param valueType      Value 类型（可选，如果为 null 则自动推断）
+     * @param expireTime     过期时间（可选，如果为 null 则使用默认值或已注册配置的值）
+     * @param expireTimeUnit 过期时间单位（可选，如果为 null 则使用默认值或已注册配置的值）
+     * @param maxEntries     最大条目数（可选，如果为 null 则使用默认值 1000 或已注册配置的值）
+     * @param cacheNull      是否缓存 null 值（true：缓存 null，避免重复查询；false：不缓存 null，每次都重新查询）
+     * @param keyParts       key 的组成部分（多个参数）
+     * @param <V>            Value 类型
+     * @return 缓存值
+     */
+    public <V> V compute(String cacheName, Supplier<V> supplier, Class<V> valueType, Long expireTime, TimeUnit expireTimeUnit, Long maxEntries, boolean cacheNull, Object... keyParts) {
+        String key = buildCompositeKey(keyParts);
+        return compute(cacheName, key, supplier, String.class, valueType, expireTime, expireTimeUnit, maxEntries, cacheNull);
+    }
+
+    /**
+     * 获取缓存值，如果不存在则通过 supplier 获取并缓存
+     * 支持通过 keyFunction 函数从参数数组生成 key
+     *
+     * @param cacheName   缓存名称
+     * @param keyFunction key 生成函数（从参数数组生成 key）
+     * @param supplier    值提供者（如果缓存不存在时调用）
+     * @param keyType     Key 类型（可选，如果为 null 则自动推断）
+     * @param valueType   Value 类型（可选，如果为 null 则自动推断）
+     * @param params      用于生成 key 的参数数组
+     * @param <K>         Key 类型
+     * @param <V>         Value 类型
+     * @return 缓存值
+     */
+    public <K, V> V compute(String cacheName, Function<Object[], K> keyFunction, Supplier<V> supplier, Class<K> keyType, Class<V> valueType, Object... params) {
+        K key = keyFunction.apply(params);
+        return compute(cacheName, key, supplier, keyType, valueType, null, null, null, false);
+    }
+
+    /**
+     * 获取缓存值，如果不存在则通过 supplier 获取并缓存
+     * 支持通过 keyFunction 函数从参数数组生成 key，并指定过期时间和最大条目数
+     *
+     * @param cacheName      缓存名称
+     * @param keyFunction    key 生成函数（从参数数组生成 key）
+     * @param supplier       值提供者（如果缓存不存在时调用）
+     * @param keyType        Key 类型（可选，如果为 null 则自动推断）
+     * @param valueType      Value 类型（可选，如果为 null 则自动推断）
+     * @param expireTime     过期时间（可选，如果为 null 则使用默认值或已注册配置的值）
+     * @param expireTimeUnit 过期时间单位（可选，如果为 null 则使用默认值或已注册配置的值）
+     * @param maxEntries     最大条目数（可选，如果为 null 则使用默认值 1000 或已注册配置的值）
+     * @param cacheNull      是否缓存 null 值（true：缓存 null，避免重复查询；false：不缓存 null，每次都重新查询）
+     * @param params         用于生成 key 的参数数组
+     * @param <K>            Key 类型
+     * @param <V>            Value 类型
+     * @return 缓存值
+     */
+    public <K, V> V compute(String cacheName, Function<Object[], K> keyFunction, Supplier<V> supplier, Class<K> keyType, Class<V> valueType, Long expireTime, TimeUnit expireTimeUnit, Long maxEntries, boolean cacheNull, Object... params) {
+        K key = keyFunction.apply(params);
+        return compute(cacheName, key, supplier, keyType, valueType, expireTime, expireTimeUnit, maxEntries, cacheNull);
+    }
+
+    /**
+     * 构建复合 key（将多个参数组合成字符串）
+     * 使用 ":" 作为分隔符
+     *
+     * @param keyParts key 的组成部分
+     * @return 组合后的 key 字符串
+     */
+    private String buildCompositeKey(Object... keyParts) {
+        if (keyParts == null || keyParts.length == 0) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < keyParts.length; i++) {
+            if (i > 0) {
+                sb.append(":");
+            }
+            sb.append(keyParts[i] != null ? keyParts[i].toString() : "null");
+        }
+        return sb.toString();
     }
 
     /**
@@ -217,7 +356,7 @@ public class CacheService implements ClearHandler {
      * @param <V>       Value 类型
      * @return 缓存值，如果不存在返回 null
      */
-    public <K, V> V compute(String cacheName, K key) {
+    public <K, V> V get(String cacheName, K key) {
         if (ehCacheManager == null) {
             return null;
         }
