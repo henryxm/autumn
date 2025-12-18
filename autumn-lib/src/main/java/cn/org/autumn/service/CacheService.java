@@ -38,7 +38,7 @@ public class CacheService implements ClearHandler {
     private EhCacheManager ehCacheManager;
 
     @Autowired
-    private RedisTemplate<Object, Object> redisTemplate;
+    private RedisTemplate redisTemplate;
 
     @Autowired
     private RedisUtils redisUtils;
@@ -642,7 +642,7 @@ public class CacheService implements ClearHandler {
      *
      * @return 如果Redis启用返回true，否则返回false
      */
-    private boolean isRedisEnabled() {
+    public boolean isRedisEnabled() {
         return redisUtils.isOpen() && redisTemplate != null;
     }
 
