@@ -40,10 +40,17 @@ public class CacheConfig {
     private final long expireTime = 10;
 
     /**
+     * Redis二级缓存过期时间倍数，本地缓存会大量消耗内存，并且有最大条目限制，
+     * 因此需要通过Redis进行二级缓存，提高效率，并且不限制最大个数
+     */
+    @Builder.Default
+    private final int redisTime = 3 * 10;
+
+    /**
      * 过期时间单位
      */
     @Builder.Default
-    private final TimeUnit expireTimeUnit = TimeUnit.MINUTES;
+    private final TimeUnit timeUnit = TimeUnit.MINUTES;
 
     /**
      * 缓存null值

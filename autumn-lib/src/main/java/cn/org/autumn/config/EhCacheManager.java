@@ -113,7 +113,7 @@ public class EhCacheManager {
                         (Class<V>) config.getValueType(),
                         ResourcePoolsBuilder.heap(config.getMaxEntries()))
                 .withExpiry(Expirations.timeToLiveExpiration(
-                        Duration.of(config.getExpireTime(), config.getExpireTimeUnit())));
+                        Duration.of(config.getExpireTime(), config.getTimeUnit())));
         // 如果启用磁盘持久化
         if (config.isDiskPersistent() && config.getDiskPath() != null) {
             cacheConfigBuilder = cacheConfigBuilder.withResourcePools(
