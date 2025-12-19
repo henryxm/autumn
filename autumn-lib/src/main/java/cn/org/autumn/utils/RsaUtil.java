@@ -1,5 +1,6 @@
 package cn.org.autumn.utils;
 
+import cn.org.autumn.model.KeyData;
 import cn.org.autumn.model.KeyPair;
 import lombok.extern.slf4j.Slf4j;
 
@@ -56,18 +57,83 @@ public class RsaUtil {
     }
 
     /**
+     * 处理公钥字符串，支持PEM格式和纯Base64格式
+     *
+     * @param publicKey 公钥字符串（PEM格式或Base64格式）
+     * @return Base64解码后的公钥字节数组和是否为PKCS#1格式的标识
+     */
+    private static KeyData parsePublicKey(String publicKey) {
+        if (publicKey == null || publicKey.trim().isEmpty()) {
+            throw new IllegalArgumentException("公钥不能为空");
+        }
+        String key = publicKey.trim();
+        boolean isPKCS1 = false;
+        // 检测是否为PEM格式
+        if (key.contains("-----BEGIN")) {
+            // 检测是否为PKCS#1格式（-----BEGIN RSA PUBLIC KEY-----）
+            if (key.contains("-----BEGIN RSA PUBLIC KEY-----")) {
+                isPKCS1 = true;
+            }
+            // 移除 PEM 格式的头尾标识
+            key = key.replace("-----BEGIN PUBLIC KEY-----", "")
+                    .replace("-----BEGIN RSA PUBLIC KEY-----", "")
+                    .replace("-----END PUBLIC KEY-----", "")
+                    .replace("-----END RSA PUBLIC KEY-----", "")
+                    .replaceAll("\\s", ""); // 移除所有空白字符（空格、换行等）
+        }
+        try {
+            byte[] keyBytes = Base64.getDecoder().decode(key);
+            return new KeyData(keyBytes, isPKCS1);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("公钥Base64格式错误: " + e.getMessage(), e);
+        }
+    }
+
+    /**
      * 使用公钥加密
      *
      * @param data      待加密数据
-     * @param publicKey Base64编码的公钥
+     * @param publicKey Base64编码的公钥（支持PEM格式和纯Base64格式）
      * @return Base64编码的加密数据
      */
     public static String encrypt(String data, String publicKey) {
         try {
-            byte[] keyBytes = Base64.getDecoder().decode(publicKey);
-            X509EncodedKeySpec x509KeySpec = new X509EncodedKeySpec(keyBytes);
+            KeyData keyData = parsePublicKey(publicKey);
+            PublicKey pubKey;
             KeyFactory keyFactory = KeyFactory.getInstance(KEY_ALGORITHM);
-            PublicKey pubKey = keyFactory.generatePublic(x509KeySpec);
+            // 尝试使用X509格式（PKCS#8）解析
+            try {
+                X509EncodedKeySpec x509KeySpec = new X509EncodedKeySpec(keyData.getKeyBytes());
+                pubKey = keyFactory.generatePublic(x509KeySpec);
+                // 如果检测到是PKCS#1格式但成功解析，记录警告（可能是误判）
+                if (keyData.isPKCS1()) {
+                    log.warn("检测到PKCS#1格式标识，但使用X509格式解析成功，可能存在格式误判");
+                }
+            } catch (java.security.spec.InvalidKeySpecException | IllegalArgumentException e) {
+                // 如果X509格式失败，根据isPKCS1标识提供更准确的错误信息
+                String formatHint = keyData.isPKCS1() 
+                    ? "检测到PKCS#1格式（-----BEGIN RSA PUBLIC KEY-----），但Java标准库不支持此格式。"
+                    : "尝试使用PKCS#8格式（X509）解析失败。";
+                String errorMsg = String.format(
+                        "公钥格式错误！\n" +
+                                "错误信息: %s\n" +
+                                "格式检测: %s\n" +
+                                "可能的原因:\n" +
+                                "1. iPhone客户端生成的公钥格式不兼容（%s）\n" +
+                                "2. 公钥Base64编码不正确\n" +
+                                "3. 公钥数据损坏\n\n" +
+                                "解决方案:\n" +
+                                "- 确保iPhone客户端生成PKCS#8格式（X509）的公钥\n" +
+                                "- PKCS#1格式需要转换为PKCS#8格式或使用第三方库（如BouncyCastle）\n" +
+                                "- 或者使用Java后端生成的公钥进行测试\n" +
+                                "- 检查公钥是否包含正确的PEM头尾标识",
+                        e.getMessage(),
+                        formatHint,
+                        keyData.isPKCS1() ? "检测到PKCS#1格式" : "格式不匹配"
+                );
+                log.error("公钥解析失败: {}", errorMsg, e);
+                throw new InvalidKeyException(errorMsg, e);
+            }
             Cipher cipher = Cipher.getInstance(TRANSFORMATION);
             cipher.init(Cipher.ENCRYPT_MODE, pubKey);
             // RSA加密有长度限制，需要分段加密
@@ -90,7 +156,6 @@ public class RsaUtil {
             }
             byte[] encryptedData = out.toByteArray();
             out.close();
-
             return Base64.getEncoder().encodeToString(encryptedData);
         } catch (Exception e) {
             log.error("加密失败: {}", e.getMessage());
