@@ -1,8 +1,14 @@
 package cn.org.autumn.exception;
 
+import cn.org.autumn.model.Error;
+import lombok.Getter;
+import lombok.Setter;
+
 /**
  * 自定义异常
  */
+@Getter
+@Setter
 public class AException extends RuntimeException {
     private static final long serialVersionUID = 1L;
 
@@ -40,19 +46,9 @@ public class AException extends RuntimeException {
         this.code = code;
     }
 
-    public String getMsg() {
-        return msg;
-    }
-
-    public void setMsg(String msg) {
-        this.msg = msg;
-    }
-
-    public int getCode() {
-        return code;
-    }
-
-    public void setCode(int code) {
-        this.code = code;
+    public AException(Error error) {
+        super(error.getMsg());
+        this.code = error.getCode();
+        this.msg = error.getMsg();
     }
 }

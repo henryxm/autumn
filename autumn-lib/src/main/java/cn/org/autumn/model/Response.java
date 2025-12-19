@@ -12,15 +12,13 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
-import java.io.Serializable;
-
 @Slf4j
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Schema(name = "请求响应", description = "请求响应")
-public class Response<T> extends DefaultEncrypt implements IResult, Serializable {
+public class Response<T> extends DefaultEncrypt implements IResult {
     private static final long serialVersionUID = 1L;
 
     Result result = new Result(Response.class);
@@ -34,6 +32,16 @@ public class Response<T> extends DefaultEncrypt implements IResult, Serializable
     @Schema(name = "反馈信息", title = "错误信息", description = "错误信息:成功时为空或为success", required = false)
     private String msg;
 
+    public Response(int code, String msg) {
+        this.code = code;
+        this.msg = msg;
+    }
+
+    public Response(Error error) {
+        this.code = error.getCode();
+        this.msg = error.getMsg();
+    }
+
     public boolean success() {
         return 0 == getCode();
     }
@@ -42,32 +50,133 @@ public class Response<T> extends DefaultEncrypt implements IResult, Serializable
         return success();
     }
 
+    /**
+     * 判断是否为错误响应
+     *
+     * @return true-是错误响应，false-不是错误响应
+     */
+    public boolean isError() {
+        return !success();
+    }
+
+    /**
+     * 判断是否为HTTP标准错误码
+     *
+     * @return true-是HTTP标准错误码，false-不是
+     */
+    public boolean isHttpError() {
+        return code >= 400 && code <= 599;
+    }
+
+    /**
+     * 判断是否为加密相关错误
+     *
+     * @return true-是加密相关错误，false-不是
+     */
+    public boolean isEncryptionError() {
+        return code >= 1000 && code <= 1199;
+    }
+
+    /**
+     * 获取对应的Error枚举
+     *
+     * @return Error枚举，如果未找到返回UNKNOWN_ERROR
+     */
+    public Error getError() {
+        return Error.findByCode(code);
+    }
+
+    /**
+     * 获取客户端操作建议
+     *
+     * @return 客户端操作类型
+     */
+    public Error.ClientAction getClientAction() {
+        return getError().getClientAction();
+    }
+
+    /**
+     * 设置错误码和错误信息（使用Error枚举）
+     *
+     * @param error 错误枚举
+     * @return 当前Response实例（支持链式调用）
+     */
+    public Response<T> setError(Error error) {
+        this.code = error.getCode();
+        this.msg = error.getMsg();
+        return this;
+    }
+
     public static Response<String> fail() {
-        return Response.fail(100000, "fail");
+        return Response.fail(Error.UNKNOWN_ERROR);
     }
 
     public static Response<String> fail(int code) {
-        return Response.fail(code, "fail");
+        Error error = Error.findByCode(code);
+        return Response.fail(error.getCode(), error.getMsg());
     }
 
     public static Response<String> fail(String msg) {
-        return Response.fail(100000, msg);
+        return Response.fail(Error.UNKNOWN_ERROR.getCode(), msg);
     }
 
     public static <T> Response<T> error(String msg) {
-        return fail(null, msg);
+        return fail(null, Error.UNKNOWN_ERROR.getCode(), msg);
     }
 
     public static <T> Response<T> error(int code, String msg) {
         return fail(null, code, msg);
     }
 
+    /**
+     * 使用Error枚举创建错误响应
+     *
+     * @param error 错误枚举
+     * @param <T>   响应数据类型
+     * @return 错误响应
+     */
+    public static <T> Response<T> error(Error error) {
+        return fail(null, error.getCode(), error.getMsg());
+    }
+
+    /**
+     * 使用Error枚举和数据创建错误响应
+     *
+     * @param data  响应数据
+     * @param error 错误枚举
+     * @param <T>   响应数据类型
+     * @return 错误响应
+     */
+    public static <T> Response<T> error(T data, Error error) {
+        return fail(data, error.getCode(), error.getMsg());
+    }
+
+    /**
+     * 根据错误码创建错误响应
+     *
+     * @param code 错误码
+     * @param <T>  响应数据类型
+     * @return 错误响应，如果错误码不存在则使用UNKNOWN_ERROR
+     */
+    public static <T> Response<T> error(int code) {
+        Error error = Error.findByCode(code);
+        return fail(null, error.getCode(), error.getMsg());
+    }
+
     public static <T> Response<T> fail(T data, String msg) {
-        Response<T> response = new Response<>();
-        response.setCode(100000);
-        response.setMsg(msg);
-        response.setData(data);
-        return response;
+        return fail(data, Error.UNKNOWN_ERROR.getCode(), msg);
+    }
+
+    /**
+     * 使用Error枚举创建失败响应
+     *
+     * @param data  响应数据
+     * @param error 错误枚举
+     * @param <T>   响应数据类型
+     * @return 失败响应
+     */
+    public static <T> Response<T> fail(T data, Error error) {
+        return fail(data, error.getCode(), error.getMsg());
     }
 
     public static <T> Response<T> error(Throwable e) {
@@ -93,7 +202,7 @@ public class Response<T> extends DefaultEncrypt implements IResult, Serializable
             return response;
         } else {
             Response<T> response = new Response<>();
-            response.setCode(100000);
+            response.setCode(Error.UNKNOWN_ERROR.getCode());
             response.setMsg("您的访问出错啦，请稍后重试，谢谢！");
             response.setData(data);
             return response;
@@ -106,6 +215,16 @@ public class Response<T> extends DefaultEncrypt implements IResult, Serializable
         response.setMsg(msg);
         response.setData(data);
         return response;
+    }
+
+    /**
+     * 使用Error枚举创建失败响应（String类型）
+     *
+     * @param error 错误枚举
+     * @return 失败响应
+     */
+    public static Response<String> fail(Error error) {
+        return fail(error.getCode(), error.getMsg());
     }
 
     public static Response<String> fail(int code, String msg) {

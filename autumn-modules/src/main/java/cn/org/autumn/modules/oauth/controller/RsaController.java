@@ -1,6 +1,8 @@
 package cn.org.autumn.modules.oauth.controller;
 
 import cn.org.autumn.model.*;
+import cn.org.autumn.model.Error;
+import cn.org.autumn.service.AesService;
 import cn.org.autumn.service.RsaService;
 import cn.org.autumn.utils.IPUtils;
 import com.google.gson.Gson;
@@ -24,6 +26,9 @@ public class RsaController {
 
     @Autowired
     private RsaService rsaService;
+
+    @Autowired
+    private AesService aesService;
 
     @Autowired
     Gson gson;
@@ -80,6 +85,48 @@ public class RsaController {
             return Response.ok(response);
         } catch (Exception e) {
             log.error("上传公钥:{}, IP:{}", e.getMessage(), IPUtils.getIp(servlet));
+            return Response.error(e);
+        }
+    }
+
+    /**
+     * 获取AES加密密钥
+     * 客户端调用此接口获取AES密钥和向量，用于后续的数据加密传输
+     * AES密钥和向量使用客户端公钥进行RSA加密后返回
+     * 客户端需要使用自己的私钥解密获取AES密钥和向量
+     *
+     * @param request 请求参数，包含uuid字段
+     * @return AES密钥响应（包含加密后的密钥、向量和过期时间）
+     */
+    @PostMapping("/aes-key")
+    public Response<AesKeyResponse> getAesKey(@Valid @RequestBody AesKeyRequest request, HttpServletRequest servlet) {
+        try {
+            String uuid = request.getUuid();
+            // 检查客户端公钥是否存在
+            if (!rsaService.hasValidClientPublicKey(uuid)) {
+                return Response.error(Error.RSA_CLIENT_PUBLIC_KEY_NOT_FOUND);
+            }
+            // 生成或获取AES密钥
+            AesKey aesKey = aesService.generate(uuid);
+            // 使用客户端公钥加密AES密钥和向量
+            String encryptedKey = rsaService.encrypt(aesKey.getKey(), uuid);
+            String encryptedVector = rsaService.encrypt(aesKey.getVector(), uuid);
+            // 构建返回结果
+            AesKeyResponse response = new AesKeyResponse();
+            response.setKey(encryptedKey);
+            response.setVector(encryptedVector);
+            response.setUuid(uuid);
+            response.setExpireTime(aesKey.getExpireTime());
+            response.setMessage("AES密钥获取成功");
+            if (log.isDebugEnabled()) {
+                log.debug("获取AES密钥，UUID: {}, 过期时间: {}, IP: {}", uuid, aesKey.getExpireTime(), IPUtils.getIp(servlet));
+            }
+            return Response.ok(response);
+        } catch (cn.org.autumn.exception.CodeException e) {
+            log.error("获取AES密钥失败:{}, IP:{}", e.getMessage(), IPUtils.getIp(servlet));
+            return Response.error(e);
+        } catch (Exception e) {
+            log.error("获取AES密钥失败:{}, IP:{}", e.getMessage(), IPUtils.getIp(servlet), e);
             return Response.error(e);
         }
     }
