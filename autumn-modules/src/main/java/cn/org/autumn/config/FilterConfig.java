@@ -1,5 +1,6 @@
 package cn.org.autumn.config;
 
+import cn.org.autumn.modules.oauth.filter.CachedBodyRequestFilter;
 import cn.org.autumn.xss.XssFilter;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
@@ -30,6 +31,17 @@ public class FilterConfig {
         registration.setFilter(new XssFilter());
         registration.addUrlPatterns("/*");
         registration.setName("xssFilter");
+        registration.setOrder(Integer.MAX_VALUE);
+        return registration;
+    }
+
+    @Bean
+    public FilterRegistrationBean<CachedBodyRequestFilter> cachedBodyRequestFilterRegistration(CachedBodyRequestFilter cachedBodyRequestFilter) {
+        FilterRegistrationBean<CachedBodyRequestFilter> registration = new FilterRegistrationBean<>();
+        registration.setDispatcherTypes(DispatcherType.REQUEST);
+        registration.setFilter(cachedBodyRequestFilter);
+        registration.addUrlPatterns("/*");
+        registration.setName("cachedBodyRequestFilter");
         registration.setOrder(Integer.MAX_VALUE);
         return registration;
     }

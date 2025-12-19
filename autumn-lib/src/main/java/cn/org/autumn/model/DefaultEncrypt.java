@@ -5,13 +5,15 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.io.Serializable;
-
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class EncryptSession implements Serializable {
+public class DefaultEncrypt implements Encrypt {
     private String encrypt;
-    private String session;
+    /**
+     * 客户端UUID标识
+     * 客户端生成并存储，用于关联密钥对
+     */
+    private String uuid;
 }

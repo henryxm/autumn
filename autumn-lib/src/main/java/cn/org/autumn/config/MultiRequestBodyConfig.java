@@ -12,10 +12,11 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 @Configuration
+@org.springframework.core.annotation.Order(org.springframework.core.Ordered.LOWEST_PRECEDENCE)
 public class MultiRequestBodyConfig implements WebMvcConfigurer {
     @Override
     public void addArgumentResolvers(List<HandlerMethodArgumentResolver> argumentResolvers) {
-        // 添加MultiRequestBody参数解析器
+        // 添加MultiRequestBody参数解析器（添加到列表后面，不影响EncryptArgumentResolver的优先级）
         argumentResolvers.add(new MultiRequestBodyArgumentResolver());
     }
 

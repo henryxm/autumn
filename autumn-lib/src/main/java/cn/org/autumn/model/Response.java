@@ -1,12 +1,29 @@
 package cn.org.autumn.model;
 
+import cn.org.autumn.exception.AException;
+import cn.org.autumn.exception.CodeException;
+import cn.org.autumn.search.IResult;
+import cn.org.autumn.search.Result;
+
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.Serializable;
 
+@Slf4j
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @Schema(name = "请求响应", description = "请求响应")
-public class Response<T> implements Serializable {
+public class Response<T> extends DefaultEncrypt implements IResult, Serializable {
     private static final long serialVersionUID = 1L;
+
+    Result result = new Result(Response.class);
 
     @Schema(name = "返回数据", title = "响应数据", description = "响应数据", required = false)
     private T data;
@@ -21,28 +38,8 @@ public class Response<T> implements Serializable {
         return 0 == getCode();
     }
 
-    public T getData() {
-        return data;
-    }
-
-    public void setData(T data) {
-        this.data = data;
-    }
-
-    public int getCode() {
-        return code;
-    }
-
-    public void setCode(int code) {
-        this.code = code;
-    }
-
-    public String getMsg() {
-        return msg;
-    }
-
-    public void setMsg(String msg) {
-        this.msg = msg;
+    public boolean isSuccess() {
+        return success();
     }
 
     public static Response<String> fail() {
@@ -57,6 +54,14 @@ public class Response<T> implements Serializable {
         return Response.fail(100000, msg);
     }
 
+    public static <T> Response<T> error(String msg) {
+        return fail(null, msg);
+    }
+
+    public static <T> Response<T> error(int code, String msg) {
+        return fail(null, code, msg);
+    }
+
     public static <T> Response<T> fail(T data, String msg) {
         Response<T> response = new Response<>();
         response.setCode(100000);
@@ -65,8 +70,34 @@ public class Response<T> implements Serializable {
         return response;
     }
 
-    public static <T> Response<T> Null(String msg) {
-        return fail(null, msg);
+    public static <T> Response<T> error(Throwable e) {
+        return fail(null, e);
+    }
+
+    public static <T> Response<T> fail(T data, Throwable e) {
+        if (log.isDebugEnabled() && null != e)
+            log.debug("监控异常:", e);
+        if (e instanceof AException) {
+            AException exception = (AException) e;
+            Response<T> response = new Response<>();
+            response.setCode(exception.getCode());
+            response.setMsg(exception.getMessage());
+            response.setData(data);
+            return response;
+        } else if (e instanceof CodeException) {
+            CodeException exception = (CodeException) e;
+            Response<T> response = new Response<>();
+            response.setCode(exception.getCode());
+            response.setMsg(exception.getMessage());
+            response.setData(data);
+            return response;
+        } else {
+            Response<T> response = new Response<>();
+            response.setCode(100000);
+            response.setMsg("您的访问出错啦，请稍后重试，谢谢！");
+            response.setData(data);
+            return response;
+        }
     }
 
     public static <T> Response<T> fail(T data, int code, String msg) {

@@ -7,7 +7,16 @@ public class AException extends RuntimeException {
     private static final long serialVersionUID = 1L;
 
     private String msg;
+
     private int code = 500;
+
+    public AException() {
+        super();
+    }
+
+    public AException(Throwable cause) {
+        super(cause);
+    }
 
     public AException(String msg) {
         super(msg);

@@ -12,9 +12,19 @@ import java.io.Serializable;
 @NoArgsConstructor
 @AllArgsConstructor
 public class KeyPair implements Serializable {
+    /**
+     * 公钥，后台生成，发送给客户端
+     */
     String publicKey;
+    /**
+     * 私钥，后台生成，保存在后台，用于解密
+     */
     String privateKey;
-    String session;
+    /**
+     * 客户端UUID标识
+     * 客户端生成并存储，用于关联密钥对
+     */
+    String uuid;
     /**
      * 密钥对过期时间戳（毫秒）
      * 客户端应在此时间之前重新获取新的密钥对
@@ -26,10 +36,10 @@ public class KeyPair implements Serializable {
         this.privateKey = privateKey;
     }
 
-    public KeyPair(String publicKey, String privateKey, String session) {
+    public KeyPair(String publicKey, String privateKey, String uuid) {
         this.publicKey = publicKey;
         this.privateKey = privateKey;
-        this.session = session;
+        this.uuid = uuid;
     }
 
     /**
@@ -38,7 +48,7 @@ public class KeyPair implements Serializable {
      * @return PublicKey对象
      */
     public PublicKey toPublicKey() {
-        return new PublicKey(publicKey, session, expireTime);
+        return new PublicKey(publicKey, uuid, expireTime);
     }
 
     /**

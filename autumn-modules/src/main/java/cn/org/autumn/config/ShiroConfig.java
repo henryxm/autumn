@@ -182,6 +182,7 @@ public class ShiroConfig {
         filterMap.put("/favicon.ico", "anon");
         filterMap.put("/captcha.jpg", "anon");
         filterMap.put("/oauth2/**", "anon");
+        filterMap.put("/rsa/api/v1/**", "anon");
         filterMap.put("/client/**", "anon");
         filterMap.put("/actuator/**", "anon");
         filterMap.put("/**", "spm");

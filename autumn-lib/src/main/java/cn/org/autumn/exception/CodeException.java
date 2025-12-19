@@ -7,7 +7,16 @@ public class CodeException extends Exception {
     private static final long serialVersionUID = 1L;
 
     private String msg;
+
     private int code = 1;
+
+    public CodeException() {
+        super();
+    }
+
+    public CodeException(Throwable cause) {
+        super(cause);
+    }
 
     public CodeException(String msg) {
         super(msg);
