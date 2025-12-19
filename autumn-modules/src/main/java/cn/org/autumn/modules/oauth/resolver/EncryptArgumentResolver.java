@@ -4,7 +4,7 @@ import cn.org.autumn.config.ResolverHandler;
 import cn.org.autumn.exception.CodeException;
 import cn.org.autumn.model.Encrypt;
 import cn.org.autumn.modules.oauth.interceptor.CachedBodyHttpServletRequest;
-import cn.org.autumn.service.RsaService;
+import cn.org.autumn.service.AesService;
 import com.alibaba.fastjson.JSON;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
@@ -27,6 +27,8 @@ import java.nio.charset.StandardCharsets;
 /**
  * Encrypt参数解析器
  * 处理加密请求参数的解密
+ * <p>
+ * 使用AES对称加密算法进行请求数据解密，相比RSA具有更高的性能
  *
  * @author Autumn
  */
@@ -35,7 +37,7 @@ import java.nio.charset.StandardCharsets;
 public class EncryptArgumentResolver implements HandlerMethodArgumentResolver, ResolverHandler {
 
     @Autowired
-    private RsaService rsaService;
+    private AesService aesService;
 
     @Override
     public boolean supportsParameter(@NonNull MethodParameter parameter) {
@@ -54,7 +56,8 @@ public class EncryptArgumentResolver implements HandlerMethodArgumentResolver, R
                 && StringUtils.isNotBlank(encryptObj.getUuid())) {
             // 如果检测到加密对象，必须成功解密，否则抛出异常
             try {
-                String decryptedJson = rsaService.decrypt(encryptObj);
+                // 使用AES密钥解密请求数据
+                String decryptedJson = aesService.decrypt(encryptObj.getEncrypt(), encryptObj.getUuid());
                 return JSON.parseObject(decryptedJson, parameter.getParameterType());
             } catch (CodeException e) {
                 log.error("参数解密失败，UUID: {}, 错误: {}", encryptObj.getUuid(), e.getMessage());

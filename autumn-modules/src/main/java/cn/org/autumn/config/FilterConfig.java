@@ -42,7 +42,9 @@ public class FilterConfig {
         registration.setFilter(cachedBodyRequestFilter);
         registration.addUrlPatterns("/*");
         registration.setName("cachedBodyRequestFilter");
-        registration.setOrder(Integer.MAX_VALUE);
+        // 设置较高的优先级，确保在其他Filter之前执行，避免请求体被其他Filter读取
+        // 但要在XSS Filter之后，因为XSS Filter可能需要读取请求体
+        registration.setOrder(Integer.MAX_VALUE - 10);
         return registration;
     }
 }

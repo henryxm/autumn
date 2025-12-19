@@ -3,7 +3,7 @@ package cn.org.autumn.modules.oauth.interceptor;
 import cn.org.autumn.config.InterceptorHandler;
 import cn.org.autumn.exception.CodeException;
 import cn.org.autumn.model.Encrypt;
-import cn.org.autumn.service.RsaService;
+import cn.org.autumn.service.AesService;
 import com.alibaba.fastjson.JSON;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
@@ -34,8 +34,10 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * RSA加密解密拦截器
+ * AES加密解密拦截器
  * 处理请求解密和响应加密
+ * <p>
+ * 使用AES对称加密算法进行数据传输加密，相比RSA具有更高的性能
  *
  * @author Autumn
  */
@@ -45,7 +47,7 @@ import java.util.List;
 public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandler, ResponseBodyAdvice<Object> {
 
     @Autowired
-    private RsaService rsaService;
+    private AesService aesService;
 
     /**
      * 请求属性键：标记请求是否被加密
@@ -162,7 +164,7 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
         if (httpRequest == null) {
             return body;
         }
-        // 排除RSA相关的接口，避免循环加密
+        // 排除RSA相关的接口（密钥交换接口），避免循环加密
         String requestURI = httpRequest.getRequestURI();
         if (requestURI != null && requestURI.startsWith("/rsa/")) {
             return body;
@@ -179,8 +181,8 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
             try {
                 // 将响应体序列化为JSON
                 String jsonBody = JSON.toJSONString(body);
-                // 使用客户端公钥加密
-                String encryptedData = rsaService.encrypt(jsonBody, uuid);
+                // 使用AES密钥加密响应数据
+                String encryptedData = aesService.encrypt(jsonBody, uuid);
                 // 使用反射创建返回值类型的实例
                 return createEncryptedResponse(body.getClass(), encryptedData, uuid);
             } catch (CodeException e) {
