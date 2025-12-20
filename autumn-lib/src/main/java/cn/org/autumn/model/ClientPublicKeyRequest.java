@@ -1,5 +1,6 @@
 package cn.org.autumn.model;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -18,6 +19,7 @@ import java.io.Serializable;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
 @Schema(name = "上传客户端公钥请求", description = "客户端上传自己的RSA公钥给服务端保存")
 public class ClientPublicKeyRequest implements Serializable {
     private static final long serialVersionUID = 1L;

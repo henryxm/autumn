@@ -3,6 +3,7 @@ package cn.org.autumn.model;
 import cn.org.autumn.annotation.JsonMap;
 import cn.org.autumn.search.IResult;
 import cn.org.autumn.search.Result;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -16,6 +17,7 @@ import org.springframework.data.mongodb.core.index.Indexed;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
 @Schema(name = "客户端信息")
 public class Client extends Phone implements IResult, Encrypt {
     private static final long serialVersionUID = 1L;

@@ -1,6 +1,7 @@
 package cn.org.autumn.model;
 
 import cn.org.autumn.search.IPage;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -11,6 +12,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class Page<T> extends Request<T> implements IPage<T> {
 
     @Schema(name = "页数")

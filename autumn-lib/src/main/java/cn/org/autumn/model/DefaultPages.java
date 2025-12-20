@@ -3,6 +3,7 @@ package cn.org.autumn.model;
 import cn.org.autumn.annotation.SearchType;
 import cn.org.autumn.search.IPages;
 import cn.org.autumn.search.Result;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
@@ -13,6 +14,7 @@ import java.util.List;
 
 @Getter
 @Setter
+@JsonInclude(JsonInclude.Include.NON_NULL)
 @SearchType(value = "Pages")
 public class DefaultPages<T> implements IPages<T>, Serializable {
 

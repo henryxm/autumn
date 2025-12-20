@@ -1,5 +1,6 @@
 package cn.org.autumn.model;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -11,6 +12,7 @@ import java.io.Serializable;
  * @author Autumn
  */
 @Data
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class AesKeyResponse implements Serializable {
     private static final long serialVersionUID = 1L;
 

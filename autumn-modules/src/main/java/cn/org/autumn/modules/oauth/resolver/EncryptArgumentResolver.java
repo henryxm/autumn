@@ -21,7 +21,6 @@ import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.method.support.ModelAndViewContainer;
 
 import javax.servlet.http.HttpServletRequest;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
 /**
@@ -50,25 +49,57 @@ public class EncryptArgumentResolver implements HandlerMethodArgumentResolver, R
         if (request == null) {
             throw new IllegalStateException("无法获取HttpServletRequest");
         }
+        // 检查 @RequestBody 的 required 属性
+        RequestBody requestBodyAnnotation = parameter.getParameterAnnotation(RequestBody.class);
+        boolean required = requestBodyAnnotation == null || requestBodyAnnotation.required();
         CachedBodyHttpServletRequest cachedRequest = request instanceof CachedBodyHttpServletRequest ? (CachedBodyHttpServletRequest) request : null;
         Encrypt encrypt = (Encrypt) request.getAttribute("ENCRYPT_OBJ");
-        if (encrypt != null && StringUtils.isNotBlank(encrypt.getEncrypt())
-                && StringUtils.isNotBlank(encrypt.getUuid())) {
-            // 如果检测到加密对象，必须成功解密，否则抛出异常
-            try {
-                // 使用AES密钥解密请求数据
-                String decryptedJson = aesService.decrypt(encrypt.getEncrypt(), encrypt.getUuid());
-                return JSON.parseObject(decryptedJson, parameter.getParameterType());
-            } catch (CodeException e) {
-                log.error("解密失败，UUID: {}, 错误: {}", encrypt.getUuid(), e.getMessage());
-                throw e;
+        // 如果检测到加密对象，必须成功解密，否则抛出异常
+        if (encrypt != null && StringUtils.isNotBlank(encrypt.getEncrypt())) {
+            // 获取UUID，优先使用encrypt对象中的UUID，如果没有则从请求属性或Session中获取
+            String uuid = encrypt.getUuid();
+            if (StringUtils.isBlank(uuid)) {
+                // 尝试从请求属性中获取（由EncryptInterceptor设置）
+                uuid = (String) request.getAttribute("REQUEST_UUID_ATTR");
+            }
+            if (StringUtils.isBlank(uuid)) {
+                // 如果还是没有，尝试从请求属性或Header中获取
+                uuid = getUuid(request);
+            }
+            if (StringUtils.isNotBlank(uuid) && StringUtils.isNotBlank(encrypt.getEncrypt())) {
+                try {
+                    // 使用AES密钥解密请求数据
+                    String decryptedJson = aesService.decrypt(encrypt.getEncrypt(), uuid);
+                    return JSON.parseObject(decryptedJson, parameter.getParameterType());
+                } catch (CodeException e) {
+                    log.error("解密失败，UUID: {}, 错误: {}", uuid, e.getMessage());
+                    throw e;
+                }
             }
         }
         // 如果没有加密标记，尝试正常解析请求体
         String requestBody = getRequestBody(request, cachedRequest);
+        // 如果请求体为空
         if (StringUtils.isBlank(requestBody)) {
+            // 如果 required = false，允许返回 null
+            if (!required) {
+                if (log.isDebugEnabled()) {
+                    log.debug("请求体为空，但参数为非必填，返回null。请求方式:{}, 路径:{}", request.getMethod(), request.getRequestURI());
+                }
+                return null;
+            }
+            // 如果 required = true，检查是否是GET等无body的请求方法
+            String method = request.getMethod();
+            if ("GET".equalsIgnoreCase(method) || "HEAD".equalsIgnoreCase(method) || "OPTIONS".equalsIgnoreCase(method)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("{}请求通常没有请求体，返回null。路径:{}", method, request.getRequestURI());
+                }
+                return null;
+            }
+            // 其他情况，如果required=true，抛出异常
             throw new IllegalStateException("请求体为空");
         }
+        // 尝试解析请求体
         try {
             return JSON.parseObject(requestBody, parameter.getParameterType());
         } catch (Exception e) {
@@ -77,28 +108,88 @@ public class EncryptArgumentResolver implements HandlerMethodArgumentResolver, R
         }
     }
 
-    private String getRequestBody(HttpServletRequest request, CachedBodyHttpServletRequest cachedRequest) throws IOException {
+    /**
+     * 获取请求体内容
+     * 优先从缓存中获取，如果无法获取则返回null，不抛出异常
+     *
+     * @param request       HTTP请求
+     * @param cachedRequest 缓存的请求包装器
+     * @return 请求体内容，如果无法获取则返回null
+     */
+    private String getRequestBody(HttpServletRequest request, CachedBodyHttpServletRequest cachedRequest) {
+        // 1. 优先从CachedBodyHttpServletRequest获取
         if (cachedRequest != null) {
-            return cachedRequest.getBody();
+            try {
+                String body = cachedRequest.getBody();
+                if (StringUtils.isNotBlank(body)) {
+                    return body;
+                }
+            } catch (Exception e) {
+                if (log.isDebugEnabled()) {
+                    log.debug("从CachedBodyHttpServletRequest读取请求体失败: {}", e.getMessage());
+                }
+            }
         }
-        // 优先使用拦截器缓存的请求体
+        // 2. 从拦截器缓存的请求体获取
         String cachedBody = (String) request.getAttribute("CACHED_REQUEST_BODY");
         if (cachedBody != null) {
             return cachedBody;
         }
-        // 兼容 MultiRequestBodyArgumentResolver 的缓存
+        // 3. 兼容 MultiRequestBodyArgumentResolver 的缓存
         cachedBody = (String) request.getAttribute("JSON_REQUEST_BODY");
         if (cachedBody != null) {
             return cachedBody;
         }
-        // 如果都没有，尝试从 InputStream 读取（可能已经被读取过，会失败）
+        // 4. 尝试从 InputStream 读取（可能已经被读取过，会失败）
+        // 注意：这里不抛出异常，而是返回null，让调用方决定如何处理
         try {
+            // 检查Content-Length，如果为0或-1，说明没有请求体
+            long contentLength = request.getContentLengthLong();
+            if (contentLength <= 0) {
+                if (log.isDebugEnabled()) {
+                    log.debug("请求Content-Length为{}，没有请求体", contentLength);
+                }
+                return null;
+            }
             String body = IOUtils.toString(request.getInputStream(), StandardCharsets.UTF_8);
-            request.setAttribute("JSON_REQUEST_BODY", body);
-            return body;
+            if (StringUtils.isNotBlank(body)) {
+                // 缓存读取到的请求体，供后续使用
+                request.setAttribute("JSON_REQUEST_BODY", body);
+                return body;
+            }
+            return null;
         } catch (Exception e) {
-            throw new IllegalStateException("无法读取请求体，可能已被其他组件读取", e);
+            // 请求体可能已被其他组件读取，或者请求本身就没有body（如GET请求）
+            // 不抛出异常，返回null，让调用方根据required属性决定如何处理
+            if (log.isDebugEnabled()) {
+                log.debug("无法读取请求体，可能已被其他组件读取或请求本身没有body。请求方式:{}, 路径:{}, 错误:{}", request.getMethod(), request.getRequestURI(), e.getMessage());
+            }
+            return null;
         }
+    }
+
+    /**
+     * 获取UUID
+     * 优先级：请求属性（由EncryptInterceptor设置） > X-Encrypt-UUID header
+     * 只有在明确指定了X-Encrypt-UUID header时才返回UUID，避免误判
+     *
+     * @param request HTTP请求
+     * @return UUID，如果未找到则返回null
+     */
+    private String getUuid(HttpServletRequest request) {
+        // 1. 优先从请求属性中获取（由EncryptInterceptor设置）
+        String uuid = (String) request.getAttribute("REQUEST_UUID_ATTR");
+        if (StringUtils.isNotBlank(uuid)) {
+            return uuid;
+        }
+        
+        // 2. 从X-Encrypt-UUID header中获取（只有在明确指定时才返回）
+        uuid = request.getHeader("X-Encrypt-UUID");
+        if (StringUtils.isNotBlank(uuid)) {
+            return uuid.trim();
+        }
+        
+        return null;
     }
 
     @Override

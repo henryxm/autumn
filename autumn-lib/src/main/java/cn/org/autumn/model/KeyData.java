@@ -1,5 +1,6 @@
 package cn.org.autumn.model;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Getter;
 
 /**
@@ -7,6 +8,7 @@ import lombok.Getter;
  * 用于封装解析后的公钥字节数组和格式信息
  */
 @Getter
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class KeyData {
     /**
      * 公钥字节数组（Base64解码后）

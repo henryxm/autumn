@@ -80,6 +80,11 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
                 }
             }
         }
+
+        String uuid = null;
+        boolean isEncryptedRequest = false;
+
+        // 情况1: 从请求体中获取UUID（有body的请求，且有Encrypt参数）
         if (hasEncryptParameter) {
             String requestBody = null;
             if (request instanceof CachedBodyHttpServletRequest) {
@@ -101,8 +106,7 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
                     try {
                         requestBody = org.springframework.util.StreamUtils.copyToString(request.getInputStream(), StandardCharsets.UTF_8);
                     } catch (IOException e2) {
-                        // 无法读取请求体，可能是非JSON请求或已被读取，继续正常流程
-                        return true;
+                        // 无法读取请求体，可能是非JSON请求或已被读取，继续检查其他方式
                     }
                 }
             }
@@ -118,12 +122,12 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
                                 Encrypt encrypt = (Encrypt) JSON.parseObject(requestBody, parameterType);
                                 if (encrypt != null && StringUtils.isNotBlank(encrypt.getEncrypt()) && StringUtils.isNotBlank(encrypt.getUuid())) {
                                     // 标记为加密请求
-                                    request.setAttribute(REQUEST_ENCRYPTED_ATTR, true);
-                                    request.setAttribute(REQUEST_UUID_ATTR, encrypt.getUuid());
+                                    uuid = encrypt.getUuid();
+                                    isEncryptedRequest = true;
                                     request.setAttribute("ENCRYPT_OBJ", encrypt);
                                 }
                             } catch (Exception e) {
-                                // 解析失败，可能不是加密请求，继续正常处理
+                                // 解析失败，可能不是加密请求，继续检查其他方式
                             }
                             break;
                         }
@@ -131,7 +135,60 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
                 }
             }
         }
+
+        // 情况2: 从X-Encrypt-UUID header中获取UUID（无body的请求，如GET请求，或需要加密响应但无Encrypt参数的请求）
+        // 只有在明确指定了X-Encrypt-UUID header时才标记为加密请求，避免所有请求都被误判为加密请求
+        if (!isEncryptedRequest) {
+            uuid = getUuid(request);
+            if (StringUtils.isNotBlank(uuid)) {
+                // 验证UUID对应的AES密钥是否存在且有效
+                // 如果不存在，尝试生成新的（getAesKey会自动生成）
+                if (aesService.hasValidAesKey(uuid)) {
+                    isEncryptedRequest = true;
+                    if (log.isDebugEnabled()) {
+                        log.debug("检测到有效的UUID，标记为加密请求。请求方式:{}, 路径:{}, UUID:{}", request.getMethod(), request.getRequestURI(), uuid);
+                    }
+                } else {
+                    // 如果密钥不存在，尝试生成新的
+                    try {
+                        aesService.getAesKey(uuid); // 这会自动生成新的密钥
+                        isEncryptedRequest = true;
+                        if (log.isDebugEnabled()) {
+                            log.debug("为UUID生成新的AES密钥，标记为加密请求。请求方式:{}, 路径:{}, UUID:{}", request.getMethod(), request.getRequestURI(), uuid);
+                        }
+                    } catch (Exception e) {
+                        if (log.isDebugEnabled()) {
+                            log.debug("无法为UUID生成AES密钥。请求方式:{}, 路径:{}, UUID:{}, 错误:{}", request.getMethod(), request.getRequestURI(), uuid, e.getMessage());
+                        }
+                        uuid = null; // 清除无效的UUID
+                    }
+                }
+            }
+        }
+        // 如果检测到加密请求，设置请求属性
+        if (isEncryptedRequest && StringUtils.isNotBlank(uuid)) {
+            request.setAttribute(REQUEST_ENCRYPTED_ATTR, true);
+            request.setAttribute(REQUEST_UUID_ATTR, uuid);
+        }
         return true;
+    }
+
+    /**
+     * 从请求中获取UUID
+     * 只有在明确指定了X-Encrypt-UUID header时才返回UUID，否则返回null
+     * 这样可以避免所有请求都被误判为加密请求
+     *
+     * @param request HTTP请求
+     * @return UUID，如果未找到则返回null
+     */
+    private String getUuid(HttpServletRequest request) {
+        // 只从X-Encrypt-UUID header中获取UUID
+        // 如果没有这个header，说明不是加密请求，返回null
+        String uuid = request.getHeader("X-Encrypt-UUID");
+        if (StringUtils.isNotBlank(uuid)) {
+            return uuid.trim();
+        }
+        return null;
     }
 
     @Override

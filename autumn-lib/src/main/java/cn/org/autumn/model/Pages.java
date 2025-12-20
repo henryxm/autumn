@@ -3,6 +3,7 @@ package cn.org.autumn.model;
 import cn.org.autumn.annotation.SearchType;
 import cn.org.autumn.search.IPages;
 import cn.org.autumn.search.Result;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -17,6 +18,7 @@ import java.util.List;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
 @Schema(name = "数据列表")
 @SearchType("Pages")
 public class Pages<T> extends DefaultEncrypt implements IPages<T>, Serializable {

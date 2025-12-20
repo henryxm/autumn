@@ -2,6 +2,7 @@ package cn.org.autumn.model;
 
 import cn.org.autumn.annotation.SearchType;
 import cn.org.autumn.search.IType;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -15,6 +16,7 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class SearchTypeValue implements IType {
     String type = "";
     String name = "";
