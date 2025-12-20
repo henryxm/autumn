@@ -1,7 +1,6 @@
 package cn.org.autumn.model;
 
 import cn.org.autumn.search.IPage;
-import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Getter;

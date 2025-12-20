@@ -1,7 +1,6 @@
 package cn.org.autumn.model;
 
 import cn.org.autumn.annotation.JsonMap;
-import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;

@@ -5,8 +5,6 @@ import cn.org.autumn.exception.CodeException;
 import cn.org.autumn.exception.ResponseThrowable;
 import cn.org.autumn.search.IResult;
 import cn.org.autumn.search.Result;
-
-import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
