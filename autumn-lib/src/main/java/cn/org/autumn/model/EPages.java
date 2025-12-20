@@ -11,7 +11,6 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-@JsonInclude(JsonInclude.Include.NON_NULL)
 @Schema(name = "数据列表扩展")
 public class EPages<T, D> extends Pages<T> {
 

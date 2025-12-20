@@ -17,7 +17,6 @@ import org.springframework.data.mongodb.core.index.Indexed;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@JsonInclude(JsonInclude.Include.NON_NULL)
 @Schema(name = "客户端信息")
 public class Client extends Phone implements IResult, Encrypt {
     private static final long serialVersionUID = 1L;

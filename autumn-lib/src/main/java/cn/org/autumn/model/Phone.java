@@ -15,7 +15,6 @@ import java.io.Serializable;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@JsonInclude(JsonInclude.Include.NON_NULL)
 public class Phone implements Serializable {
     private static final long serialVersionUID = 1L;
 

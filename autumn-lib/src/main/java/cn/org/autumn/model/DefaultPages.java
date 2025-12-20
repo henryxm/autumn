@@ -14,7 +14,6 @@ import java.util.List;
 
 @Getter
 @Setter
-@JsonInclude(JsonInclude.Include.NON_NULL)
 @SearchType(value = "Pages")
 public class DefaultPages<T> implements IPages<T>, Serializable {
 

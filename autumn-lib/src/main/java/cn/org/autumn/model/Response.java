@@ -19,7 +19,6 @@ import lombok.extern.slf4j.Slf4j;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@JsonInclude(JsonInclude.Include.NON_NULL)
 @Schema(name = "请求响应", description = "请求响应")
 public class Response<T> extends DefaultEncrypt implements IResult {
     private static final long serialVersionUID = 1L;

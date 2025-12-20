@@ -18,7 +18,6 @@ import java.util.List;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-@JsonInclude(JsonInclude.Include.NON_NULL)
 @Schema(name = "数据列表")
 @SearchType("Pages")
 public class Pages<T> extends DefaultEncrypt implements IPages<T>, Serializable {
