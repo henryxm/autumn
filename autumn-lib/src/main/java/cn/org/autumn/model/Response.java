@@ -21,15 +21,15 @@ import lombok.extern.slf4j.Slf4j;
 public class Response<T> extends DefaultEncrypt implements IResult {
     private static final long serialVersionUID = 1L;
 
-    Result result = new Result(Response.class);
+    private Result result = new Result(Response.class);
 
-    @Schema(name = "返回数据", title = "响应数据", description = "响应数据", required = false)
+    @Schema(name = "返回数据", title = "响应数据", description = "响应数据")
     private T data;
 
     @Schema(name = "状态码", title = "响应代码", description = "响应代码", required = true)
     private int code;
 
-    @Schema(name = "反馈信息", title = "错误信息", description = "错误信息:成功时为空或为success", required = false)
+    @Schema(name = "反馈信息", title = "错误信息", description = "错误信息:成功时为空或为success")
     private String msg;
 
     public Response(int code, String msg) {
@@ -51,33 +51,6 @@ public class Response<T> extends DefaultEncrypt implements IResult {
     }
 
     /**
-     * 判断是否为错误响应
-     *
-     * @return true-是错误响应，false-不是错误响应
-     */
-    public boolean isError() {
-        return !success();
-    }
-
-    /**
-     * 判断是否为HTTP标准错误码
-     *
-     * @return true-是HTTP标准错误码，false-不是
-     */
-    public boolean isHttpError() {
-        return code >= 400 && code <= 599;
-    }
-
-    /**
-     * 判断是否为加密相关错误
-     *
-     * @return true-是加密相关错误，false-不是
-     */
-    public boolean isEncryptionError() {
-        return code >= 1000 && code <= 1199;
-    }
-
-    /**
      * 获取对应的Error枚举
      *
      * @return Error枚举，如果未找到返回UNKNOWN_ERROR
@@ -91,8 +64,8 @@ public class Response<T> extends DefaultEncrypt implements IResult {
      *
      * @return 客户端操作类型
      */
-    public Error.ClientAction getClientAction() {
-        return getError().getClientAction();
+    public Error.Action getAction() {
+        return getError().getAction();
     }
 
     /**
@@ -126,6 +99,14 @@ public class Response<T> extends DefaultEncrypt implements IResult {
 
     public static <T> Response<T> error(int code, String msg) {
         return fail(null, code, msg);
+    }
+
+    public static <T> Response<T> error(CodeException exception) {
+        return fail(null, exception.getCode(), exception.getMsg());
+    }
+
+    public static <T> Response<T> error(AException exception) {
+        return fail(null, exception.getCode(), exception.getMsg());
     }
 
     /**
@@ -192,6 +173,7 @@ public class Response<T> extends DefaultEncrypt implements IResult {
             response.setCode(exception.getCode());
             response.setMsg(exception.getMessage());
             response.setData(data);
+            response.setResult(null);
             return response;
         } else if (e instanceof CodeException) {
             CodeException exception = (CodeException) e;
@@ -199,12 +181,14 @@ public class Response<T> extends DefaultEncrypt implements IResult {
             response.setCode(exception.getCode());
             response.setMsg(exception.getMessage());
             response.setData(data);
+            response.setResult(null);
             return response;
         } else {
             Response<T> response = new Response<>();
             response.setCode(Error.UNKNOWN_ERROR.getCode());
             response.setMsg("您的访问出错啦，请稍后重试，谢谢！");
             response.setData(data);
+            response.setResult(null);
             return response;
         }
     }
@@ -214,6 +198,7 @@ public class Response<T> extends DefaultEncrypt implements IResult {
         response.setCode(code);
         response.setMsg(msg);
         response.setData(data);
+        response.setResult(null);
         return response;
     }
 
@@ -232,6 +217,7 @@ public class Response<T> extends DefaultEncrypt implements IResult {
         response.setCode(code);
         response.setMsg(msg);
         response.setData("fail");
+        response.setResult(null);
         return response;
     }
 

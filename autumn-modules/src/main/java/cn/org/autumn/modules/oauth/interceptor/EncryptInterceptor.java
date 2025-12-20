@@ -3,6 +3,7 @@ package cn.org.autumn.modules.oauth.interceptor;
 import cn.org.autumn.config.InterceptorHandler;
 import cn.org.autumn.exception.CodeException;
 import cn.org.autumn.model.Encrypt;
+import cn.org.autumn.model.Response;
 import cn.org.autumn.service.AesService;
 import com.alibaba.fastjson.JSON;
 import lombok.extern.slf4j.Slf4j;
@@ -98,8 +99,7 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
                     }
                 } catch (Exception e) {
                     try {
-                        requestBody = org.springframework.util.StreamUtils.copyToString(
-                                request.getInputStream(), StandardCharsets.UTF_8);
+                        requestBody = org.springframework.util.StreamUtils.copyToString(request.getInputStream(), StandardCharsets.UTF_8);
                     } catch (IOException e2) {
                         // 无法读取请求体，可能是非JSON请求或已被读取，继续正常流程
                         return true;
@@ -115,13 +115,12 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
                         Class<?> parameterType = parameter.getType();
                         if (Encrypt.class.isAssignableFrom(parameterType)) {
                             try {
-                                Encrypt encryptObj = (Encrypt) JSON.parseObject(requestBody, parameterType);
-                                if (encryptObj != null && StringUtils.isNotBlank(encryptObj.getEncrypt())
-                                        && StringUtils.isNotBlank(encryptObj.getUuid())) {
+                                Encrypt encrypt = (Encrypt) JSON.parseObject(requestBody, parameterType);
+                                if (encrypt != null && StringUtils.isNotBlank(encrypt.getEncrypt()) && StringUtils.isNotBlank(encrypt.getUuid())) {
                                     // 标记为加密请求
                                     request.setAttribute(REQUEST_ENCRYPTED_ATTR, true);
-                                    request.setAttribute(REQUEST_UUID_ATTR, encryptObj.getUuid());
-                                    request.setAttribute("ENCRYPT_OBJ", encryptObj);
+                                    request.setAttribute(REQUEST_UUID_ATTR, encrypt.getUuid());
+                                    request.setAttribute("ENCRYPT_OBJ", encrypt);
                                 }
                             } catch (Exception e) {
                                 // 解析失败，可能不是加密请求，继续正常处理
@@ -171,7 +170,6 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
         }
         Boolean isEncrypted = (Boolean) httpRequest.getAttribute(REQUEST_ENCRYPTED_ATTR);
         String uuid = (String) httpRequest.getAttribute(REQUEST_UUID_ATTR);
-
         // 只有明确标记为加密的请求才加密响应
         if (isEncrypted == null || !isEncrypted || StringUtils.isBlank(uuid)) {
             return body;
@@ -184,13 +182,13 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
                 // 使用AES密钥加密响应数据
                 String encryptedData = aesService.encrypt(jsonBody, uuid);
                 // 使用反射创建返回值类型的实例
-                return createEncryptedResponse(body.getClass(), encryptedData, uuid);
+                return createEncryptedResponse(body, encryptedData, uuid);
             } catch (CodeException e) {
                 log.error("响应加密失败，UUID: {}, 错误: {}", uuid, e.getMessage());
-                return body;
+                return Response.error(e);
             } catch (Exception e) {
-                log.error("响应加密处理失败，UUID: {}", uuid, e);
-                return body;
+                log.error("加密处理失败，UUID: {}", uuid, e);
+                return Response.error(e);
             }
         }
         return body;
@@ -199,12 +197,13 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
     /**
      * 使用反射创建加密响应对象
      *
-     * @param responseClass 响应类型
-     * @param data          加密后的数据
-     * @param uuid          UUID
+     * @param body 响应类型
+     * @param data 加密后的数据
+     * @param uuid UUID
      * @return 加密响应对象
      */
-    private Object createEncryptedResponse(Class<?> responseClass, String data, String uuid) throws Exception {
+    private Object createEncryptedResponse(Object body, String data, String uuid) throws Exception {
+        Class<?> responseClass = body.getClass();
         // 使用反射创建实例
         Object instance = responseClass.getDeclaredConstructor().newInstance();
         // 设置 encrypt 字段
@@ -212,10 +211,12 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
         // 设置 uuid 字段
         setFieldValue(instance, "uuid", uuid);
         // 如果是 Response 类型，设置默认值
-        if (cn.org.autumn.model.Response.class.isAssignableFrom(responseClass)) {
-            setFieldValue(instance, "code", 0);
-            setFieldValue(instance, "msg", null);
+        if (Response.class.isAssignableFrom(responseClass)) {
+            Response<?> original = (Response<?>) body;
+            setFieldValue(instance, "code", original.getCode());
+            setFieldValue(instance, "msg", original.getMsg());
             setFieldValue(instance, "data", null);
+            setFieldValue(instance, "result", null);
         }
         return instance;
     }

@@ -25,6 +25,7 @@ import org.springframework.context.annotation.DependsOn;
 import javax.servlet.Filter;
 import java.util.*;
 
+@SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
 @Configuration
 @DependsOn({"env"})
 public class ShiroConfig {

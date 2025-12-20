@@ -51,20 +51,19 @@ public class EncryptArgumentResolver implements HandlerMethodArgumentResolver, R
             throw new IllegalStateException("无法获取HttpServletRequest");
         }
         CachedBodyHttpServletRequest cachedRequest = request instanceof CachedBodyHttpServletRequest ? (CachedBodyHttpServletRequest) request : null;
-        Encrypt encryptObj = (Encrypt) request.getAttribute("ENCRYPT_OBJ");
-        if (encryptObj != null && StringUtils.isNotBlank(encryptObj.getEncrypt())
-                && StringUtils.isNotBlank(encryptObj.getUuid())) {
+        Encrypt encrypt = (Encrypt) request.getAttribute("ENCRYPT_OBJ");
+        if (encrypt != null && StringUtils.isNotBlank(encrypt.getEncrypt())
+                && StringUtils.isNotBlank(encrypt.getUuid())) {
             // 如果检测到加密对象，必须成功解密，否则抛出异常
             try {
                 // 使用AES密钥解密请求数据
-                String decryptedJson = aesService.decrypt(encryptObj.getEncrypt(), encryptObj.getUuid());
+                String decryptedJson = aesService.decrypt(encrypt.getEncrypt(), encrypt.getUuid());
                 return JSON.parseObject(decryptedJson, parameter.getParameterType());
             } catch (CodeException e) {
-                log.error("参数解密失败，UUID: {}, 错误: {}", encryptObj.getUuid(), e.getMessage());
+                log.error("解密失败，UUID: {}, 错误: {}", encrypt.getUuid(), e.getMessage());
                 throw e;
             }
         }
-        
         // 如果没有加密标记，尝试正常解析请求体
         String requestBody = getRequestBody(request, cachedRequest);
         if (StringUtils.isBlank(requestBody)) {
@@ -73,7 +72,7 @@ public class EncryptArgumentResolver implements HandlerMethodArgumentResolver, R
         try {
             return JSON.parseObject(requestBody, parameter.getParameterType());
         } catch (Exception e) {
-            log.error("参数解析失败", e);
+            log.error("参数解析失败:{}", e.getMessage());
             throw new IllegalStateException("参数解析失败: " + e.getMessage(), e);
         }
     }
@@ -82,19 +81,16 @@ public class EncryptArgumentResolver implements HandlerMethodArgumentResolver, R
         if (cachedRequest != null) {
             return cachedRequest.getBody();
         }
-        
         // 优先使用拦截器缓存的请求体
         String cachedBody = (String) request.getAttribute("CACHED_REQUEST_BODY");
         if (cachedBody != null) {
             return cachedBody;
         }
-        
         // 兼容 MultiRequestBodyArgumentResolver 的缓存
         cachedBody = (String) request.getAttribute("JSON_REQUEST_BODY");
         if (cachedBody != null) {
             return cachedBody;
         }
-        
         // 如果都没有，尝试从 InputStream 读取（可能已经被读取过，会失败）
         try {
             String body = IOUtils.toString(request.getInputStream(), StandardCharsets.UTF_8);

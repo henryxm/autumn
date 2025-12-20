@@ -6,10 +6,15 @@ import lombok.Getter;
  * 错误码枚举
  * 定义系统所有错误码和错误信息
  * <p>
- * 错误码范围：
+ * 状态码范围：
+ * - 0: API调用成功（Response.success()判断code==0为成功）
+ * - 100-199: HTTP标准信息性状态码（RFC 7231）
+ * - 200-299: HTTP标准成功状态码（RFC 7231）
+ * - 300-399: HTTP标准重定向状态码（RFC 7231）
  * - 400-499: HTTP标准客户端错误（RFC 7231）
  * - 500-599: HTTP标准服务器错误（RFC 7231）
  * - 800-899: 业务逻辑错误
+ *   - 814-849: 数据库相关错误
  * - 900-999: 认证授权错误
  * - 1000-1099: RSA加密相关错误（需要客户端执行相应操作）
  * - 1100-1199: AES加密相关错误（需要客户端执行相应操作）
@@ -19,6 +24,154 @@ import lombok.Getter;
  */
 @Getter
 public enum Error {
+    // ==================== 成功状态码 ====================
+    /**
+     * 0 - API调用成功
+     * 特指API调用成功，Response.success()方法判断code==0为成功
+     */
+    SUCCESS(0, "成功"),
+
+    // ==================== HTTP标准信息性状态码 (100-199) ====================
+    /**
+     * 100 Continue - 继续
+     * 服务器已收到请求头，客户端应继续发送请求体
+     */
+    CONTINUE(100, "继续"),
+
+    /**
+     * 101 Switching Protocols - 切换协议
+     * 服务器正在按客户端请求切换协议
+     */
+    SWITCHING_PROTOCOLS(101, "切换协议"),
+
+    /**
+     * 102 Processing - 处理中
+     * WebDAV扩展，服务器已收到并正在处理请求，但无响应可用
+     */
+    PROCESSING(102, "处理中"),
+
+    /**
+     * 103 Early Hints - 早期提示
+     * 用于在最终HTTP消息之前返回一些响应头
+     */
+    EARLY_HINTS(103, "早期提示"),
+
+    // ==================== HTTP标准成功状态码 (200-299) ====================
+    /**
+     * 200 OK - 请求成功
+     * HTTP标准成功状态码，表示请求已成功处理
+     */
+    OK(200, "请求成功"),
+
+    /**
+     * 201 Created - 已创建
+     * 请求已成功处理，并创建了新的资源
+     */
+    CREATED(201, "资源已创建"),
+
+    /**
+     * 202 Accepted - 已接受
+     * 请求已接受处理，但处理尚未完成
+     */
+    ACCEPTED(202, "请求已接受，正在处理"),
+
+    /**
+     * 203 Non-Authoritative Information - 非权威信息
+     * 服务器成功处理了请求，但返回的信息可能来自另一个来源
+     */
+    NON_AUTHORITATIVE_INFORMATION(203, "非权威信息"),
+
+    /**
+     * 204 No Content - 无内容
+     * 服务器成功处理了请求，但不返回任何内容
+     */
+    NO_CONTENT(204, "请求成功，无返回内容"),
+
+    /**
+     * 205 Reset Content - 重置内容
+     * 服务器成功处理了请求，但不返回任何内容，并要求请求者重置文档视图
+     */
+    RESET_CONTENT(205, "请求成功，请重置文档视图"),
+
+    /**
+     * 206 Partial Content - 部分内容
+     * 服务器成功处理了部分GET请求
+     */
+    PARTIAL_CONTENT(206, "部分内容"),
+
+    /**
+     * 207 Multi-Status - 多状态
+     * WebDAV扩展，表示多个资源的状态
+     */
+    MULTI_STATUS(207, "多状态响应"),
+
+    /**
+     * 208 Already Reported - 已报告
+     * WebDAV扩展，表示成员已在之前响应中枚举
+     */
+    ALREADY_REPORTED(208, "已报告"),
+
+    /**
+     * 226 IM Used - IM已使用
+     * 服务器已完成对资源的请求，响应是对当前实例应用的一个或多个实例操作的结果
+     */
+    IM_USED(226, "IM已使用"),
+
+    // ==================== HTTP标准重定向状态码 (300-399) ====================
+    /**
+     * 300 Multiple Choices - 多种选择
+     * 请求有多个可能的响应，用户或用户代理可以选择一个
+     */
+    MULTIPLE_CHOICES(300, "多种选择"),
+
+    /**
+     * 301 Moved Permanently - 永久移动
+     * 请求的资源已永久移动到新URI
+     */
+    MOVED_PERMANENTLY(301, "资源已永久移动"),
+
+    /**
+     * 302 Found - 临时移动
+     * 请求的资源临时位于不同的URI
+     */
+    FOUND(302, "资源临时移动"),
+
+    /**
+     * 303 See Other - 查看其他位置
+     * 可以在不同的URI下找到对请求的响应，应使用GET方法检索
+     */
+    SEE_OTHER(303, "请查看其他位置"),
+
+    /**
+     * 304 Not Modified - 未修改
+     * 自请求头指定的版本以来，资源未被修改
+     */
+    NOT_MODIFIED(304, "资源未修改"),
+
+    /**
+     * 305 Use Proxy - 使用代理
+     * 请求的资源必须通过Location字段给出的代理访问
+     */
+    USE_PROXY(305, "请使用代理访问"),
+
+    /**
+     * 306 (Unused) - 未使用
+     * 此状态码不再使用，保留用于历史目的
+     */
+    // SWITCH_PROXY(306, "切换代理"), // 已废弃，不添加
+
+    /**
+     * 307 Temporary Redirect - 临时重定向
+     * 请求应使用另一个URI重复，但将来的请求仍应使用原始URI
+     */
+    TEMPORARY_REDIRECT(307, "临时重定向"),
+
+    /**
+     * 308 Permanent Redirect - 永久重定向
+     * 请求和所有将来的请求应使用另一个URI重复
+     */
+    PERMANENT_REDIRECT(308, "永久重定向"),
+
     // ==================== HTTP标准客户端错误 (400-499) ====================
     /**
      * 400 Bad Request - 请求参数错误
@@ -319,6 +472,127 @@ public enum Error {
      * 数据约束违反
      */
     DATA_CONSTRAINT_VIOLATION(813, "数据约束违反"),
+
+    // ==================== 数据库相关错误 (814-849) ====================
+    /**
+     * 数据库连接失败
+     */
+    DATABASE_CONNECTION_FAILED(814, "数据库连接失败"),
+
+    /**
+     * 数据库操作失败
+     */
+    DATABASE_OPERATION_FAILED(815, "数据库操作失败"),
+
+    /**
+     * 数据库查询失败
+     */
+    DATABASE_QUERY_FAILED(816, "数据库查询失败"),
+
+    /**
+     * 数据库更新失败
+     */
+    DATABASE_UPDATE_FAILED(817, "数据库更新失败"),
+
+    /**
+     * 数据库插入失败
+     */
+    DATABASE_INSERT_FAILED(818, "数据库插入失败"),
+
+    /**
+     * 数据库删除失败
+     */
+    DATABASE_DELETE_FAILED(819, "数据库删除失败"),
+
+    /**
+     * 主键冲突（唯一键冲突）
+     */
+    DATABASE_DUPLICATE_KEY(820, "数据库中已存在该记录，请勿重复添加"),
+
+    /**
+     * 外键约束违反
+     */
+    DATABASE_FOREIGN_KEY_VIOLATION(821, "外键约束违反，关联数据不存在"),
+
+    /**
+     * 非空约束违反
+     */
+    DATABASE_NOT_NULL_VIOLATION(822, "非空字段不能为空"),
+
+    /**
+     * 唯一约束违反
+     */
+    DATABASE_UNIQUE_CONSTRAINT_VIOLATION(823, "唯一约束违反，该值已存在"),
+
+    /**
+     * 检查约束违反
+     */
+    DATABASE_CHECK_CONSTRAINT_VIOLATION(824, "数据不符合检查约束条件"),
+
+    /**
+     * 数据库事务失败
+     */
+    DATABASE_TRANSACTION_FAILED(825, "数据库事务执行失败"),
+
+    /**
+     * 数据库死锁
+     */
+    DATABASE_DEADLOCK(826, "数据库死锁，请稍后重试"),
+
+    /**
+     * 数据库超时
+     */
+    DATABASE_TIMEOUT(827, "数据库操作超时，请稍后重试"),
+
+    /**
+     * 数据库表不存在
+     */
+    DATABASE_TABLE_NOT_FOUND(828, "数据库表不存在"),
+
+    /**
+     * 数据库字段不存在
+     */
+    DATABASE_COLUMN_NOT_FOUND(829, "数据库字段不存在"),
+
+    /**
+     * 数据库索引不存在
+     */
+    DATABASE_INDEX_NOT_FOUND(830, "数据库索引不存在"),
+
+    /**
+     * SQL语法错误
+     */
+    DATABASE_SQL_SYNTAX_ERROR(831, "SQL语法错误"),
+
+    /**
+     * 数据库权限不足
+     */
+    DATABASE_PERMISSION_DENIED(832, "数据库权限不足"),
+
+    /**
+     * 数据库连接池耗尽
+     */
+    DATABASE_CONNECTION_POOL_EXHAUSTED(833, "数据库连接池已耗尽，请稍后重试"),
+
+    /**
+     * 数据库只读模式
+     */
+    DATABASE_READ_ONLY(834, "数据库处于只读模式，无法执行写操作"),
+
+    /**
+     * 数据库版本不兼容
+     */
+    DATABASE_VERSION_INCOMPATIBLE(835, "数据库版本不兼容"),
+
+    /**
+     * 数据库备份失败
+     */
+    DATABASE_BACKUP_FAILED(836, "数据库备份失败"),
+
+    /**
+     * 数据库恢复失败
+     */
+    DATABASE_RESTORE_FAILED(837, "数据库恢复失败"),
 
     // ==================== 认证授权错误 (900-999) ====================
     /**
@@ -632,7 +906,7 @@ public enum Error {
      * 客户端操作类型
      * 用于指导客户端在收到错误后应该执行的操作
      */
-    public enum ClientAction {
+    public enum Action {
         /**
          * 无需操作
          */
@@ -674,12 +948,12 @@ public enum Error {
      *
      * @return 客户端操作类型
      */
-    public ClientAction getClientAction() {
+    public Action getAction() {
         // RSA相关错误 (1000-1099)
         if (code >= 1000 && code <= 1099) {
             if (code == RSA_CLIENT_PUBLIC_KEY_NOT_FOUND.getCode()
                     || code == RSA_CLIENT_PUBLIC_KEY_EXPIRING_SOON.getCode()) {
-                return ClientAction.UPLOAD_CLIENT_PUBLIC_KEY;
+                return Action.UPLOAD_CLIENT_PUBLIC_KEY;
             }
             if (code == RSA_KEY_PAIR_NOT_FOUND.getCode()
                     || code == RSA_KEY_PAIR_EXPIRING_SOON.getCode()
@@ -687,13 +961,13 @@ public enum Error {
                     || code == RSA_DECRYPT_FAILED.getCode()
                     || code == RSA_KEY_PAIR_MISMATCH.getCode()
                     || code == RSA_PRIVATE_KEY_PARSE_ERROR.getCode()) {
-                return ClientAction.REFRESH_SERVER_PUBLIC_KEY;
+                return Action.REFRESH_SERVER_PUBLIC_KEY;
             }
         }
 
         // AES相关错误 (1100-1199)
         if (code >= 1100 && code <= 1199) {
-            return ClientAction.GET_AES_KEY;
+            return Action.GET_AES_KEY;
         }
 
         // 认证授权错误 (900-999)
@@ -702,21 +976,21 @@ public enum Error {
                     || code == TOKEN_EXPIRED.getCode()
                     || code == REFRESH_TOKEN_EXPIRED.getCode()
                     || code == SESSION_EXPIRED.getCode()) {
-                return ClientAction.RE_LOGIN;
+                return Action.RE_LOGIN;
             }
         }
 
         // 版本不兼容
         if (code == VERSION_INCOMPATIBLE.getCode()) {
-            return ClientAction.UPDATE_CLIENT_VERSION;
+            return Action.UPDATE_CLIENT_VERSION;
         }
 
         // 系统维护或服务不可用
         if (code == SYSTEM_MAINTENANCE.getCode() || code == SERVICE_UNAVAILABLE.getCode()) {
-            return ClientAction.RETRY_LATER;
+            return Action.RETRY_LATER;
         }
 
-        return ClientAction.NONE;
+        return Action.NONE;
     }
 
     /**
@@ -735,12 +1009,39 @@ public enum Error {
     }
 
     /**
-     * 判断是否为HTTP标准状态码
+     * 判断是否为成功状态码
      *
-     * @return true-是HTTP标准状态码，false-不是
+     * @return true-是成功状态码（0或200-299），false-不是
+     */
+    public boolean isSuccess() {
+        return code == 0 || (code >= 200 && code <= 299);
+    }
+
+    /**
+     * 判断是否为信息性状态码
+     *
+     * @return true-是信息性状态码（100-199），false-不是
+     */
+    public boolean isInformational() {
+        return code >= 100 && code <= 199;
+    }
+
+    /**
+     * 判断是否为重定向状态码
+     *
+     * @return true-是重定向状态码（300-399），false-不是
+     */
+    public boolean isRedirection() {
+        return code >= 300 && code <= 399;
+    }
+
+    /**
+     * 判断是否为HTTP标准状态码（包括所有HTTP状态码）
+     *
+     * @return true-是HTTP标准状态码（100-599），false-不是
      */
     public boolean isHttpStatusCode() {
-        return (code >= 400 && code <= 599);
+        return (code >= 100 && code <= 599);
     }
 
     /**
