@@ -218,17 +218,26 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
         // 检查请求是否被加密
         HttpServletRequest httpRequest = getHttpServletRequest(request);
         if (httpRequest == null) {
+            if (log.isDebugEnabled()) {
+                log.debug("返回数据1:{}", JSON.toJSONString(body));
+            }
             return body;
         }
         // 排除RSA相关的接口（密钥交换接口），避免循环加密
         String requestURI = httpRequest.getRequestURI();
         if (requestURI != null && requestURI.startsWith("/rsa/")) {
+            if (log.isDebugEnabled()) {
+                log.debug("返回数据2:{}", JSON.toJSONString(body));
+            }
             return body;
         }
         Boolean isEncrypted = (Boolean) httpRequest.getAttribute(REQUEST_ENCRYPTED_ATTR);
         String uuid = (String) httpRequest.getAttribute(REQUEST_UUID_ATTR);
         // 只有明确标记为加密的请求才加密响应
         if (isEncrypted == null || !isEncrypted || StringUtils.isBlank(uuid)) {
+            if (log.isDebugEnabled()) {
+                log.debug("返回数据3:{}", JSON.toJSONString(body));
+            }
             return body;
         }
         // 只对实现了Encrypt接口的响应进行加密
@@ -236,6 +245,8 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
             try {
                 // 将响应体序列化为JSON
                 String jsonBody = JSON.toJSONString(body);
+                if (log.isDebugEnabled())
+                    log.debug("加密前:{}", jsonBody);
                 // 使用AES密钥加密响应数据
                 String encryptedData = aesService.encrypt(jsonBody, uuid);
                 // 使用反射创建返回值类型的实例
@@ -247,6 +258,9 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
                 log.error("加密处理失败，UUID: {}", uuid, e);
                 return Response.error(e);
             }
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("返回数据4:{}", JSON.toJSONString(body));
         }
         return body;
     }
@@ -275,6 +289,8 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
             setFieldValue(instance, "data", null);
             setFieldValue(instance, "result", null);
         }
+        if (log.isDebugEnabled())
+            log.debug("加密后:{}", JSON.toJSONString(instance));
         return instance;
     }
 
