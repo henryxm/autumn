@@ -11,6 +11,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.MethodParameter;
+import org.springframework.core.ResolvableType;
 import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
@@ -21,6 +22,7 @@ import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.method.support.ModelAndViewContainer;
 
 import javax.servlet.http.HttpServletRequest;
+import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 
 /**
@@ -70,7 +72,9 @@ public class EncryptArgumentResolver implements HandlerMethodArgumentResolver, R
                 try {
                     // 使用AES密钥解密请求数据
                     String decryptedJson = aesService.decrypt(encrypt.getEncrypt(), uuid);
-                    return JSON.parseObject(decryptedJson, parameter.getParameterType());
+                    // 获取包含泛型信息的Type，以正确处理泛型类型（如Page<Window>）
+                    Type parameterType = getParameterType(parameter);
+                    return JSON.parseObject(decryptedJson, parameterType);
                 } catch (CodeException e) {
                     log.error("解密失败，UUID: {}, 错误: {}", uuid, e.getMessage());
                     throw e;
@@ -101,11 +105,34 @@ public class EncryptArgumentResolver implements HandlerMethodArgumentResolver, R
         }
         // 尝试解析请求体
         try {
-            return JSON.parseObject(requestBody, parameter.getParameterType());
+            // 获取包含泛型信息的Type，以正确处理泛型类型（如Page<Client>）
+            Type parameterType = getParameterType(parameter);
+            return JSON.parseObject(requestBody, parameterType);
         } catch (Exception e) {
             log.error("参数解析失败:{}", e.getMessage());
             throw new IllegalStateException("参数解析失败: " + e.getMessage(), e);
         }
+    }
+
+    /**
+     * 获取参数类型，支持泛型类型
+     * 对于泛型类型（如Page<Client>），返回包含泛型信息的Type
+     * 对于普通类型，返回Class
+     *
+     * @param parameter 方法参数
+     * @return 参数类型（Type或Class）
+     */
+    private Type getParameterType(MethodParameter parameter) {
+        // 使用ResolvableType来获取包含泛型信息的Type
+        ResolvableType resolvableType = ResolvableType.forMethodParameter(parameter);
+        Type type = resolvableType.getType();
+        // 如果Type是Class类型（非泛型），直接返回
+        if (type instanceof Class) {
+            return type;
+        }
+        // 如果是ParameterizedType（泛型类型），返回完整的Type信息
+        // 这样Fastjson就能正确解析泛型字段（如Page<Client>中的data字段）
+        return type;
     }
 
     /**
