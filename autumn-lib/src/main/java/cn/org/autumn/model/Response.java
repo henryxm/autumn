@@ -2,6 +2,7 @@ package cn.org.autumn.model;
 
 import cn.org.autumn.exception.AException;
 import cn.org.autumn.exception.CodeException;
+import cn.org.autumn.exception.ResponseThrowable;
 import cn.org.autumn.search.IResult;
 import cn.org.autumn.search.Result;
 
@@ -167,26 +168,14 @@ public class Response<T> extends DefaultEncrypt implements IResult {
     public static <T> Response<T> fail(T data, Throwable e) {
         if (log.isDebugEnabled() && null != e)
             log.debug("监控异常:", e);
-        if (e instanceof AException) {
-            AException exception = (AException) e;
-            Response<T> response = new Response<>();
-            response.setCode(exception.getCode());
-            response.setMsg(exception.getMessage());
-            response.setData(data);
-            response.setResult(null);
-            return response;
-        } else if (e instanceof CodeException) {
-            CodeException exception = (CodeException) e;
-            Response<T> response = new Response<>();
-            response.setCode(exception.getCode());
-            response.setMsg(exception.getMessage());
+        if (e instanceof ResponseThrowable) {
+            ResponseThrowable exception = (ResponseThrowable) e;
+            Response<T> response = new Response<>(exception.getCode(), exception.getMsg());
             response.setData(data);
             response.setResult(null);
             return response;
         } else {
-            Response<T> response = new Response<>();
-            response.setCode(Error.UNKNOWN_ERROR.getCode());
-            response.setMsg("您的访问出错啦，请稍后重试，谢谢！");
+            Response<T> response = new Response<>(Error.UNKNOWN_ERROR.getCode(), "您的访问出错啦，请稍后重试，谢谢！");
             response.setData(data);
             response.setResult(null);
             return response;
@@ -194,9 +183,7 @@ public class Response<T> extends DefaultEncrypt implements IResult {
     }
 
     public static <T> Response<T> fail(T data, int code, String msg) {
-        Response<T> response = new Response<>();
-        response.setCode(code);
-        response.setMsg(msg);
+        Response<T> response = new Response<>(code, msg);
         response.setData(data);
         response.setResult(null);
         return response;
@@ -213,9 +200,7 @@ public class Response<T> extends DefaultEncrypt implements IResult {
     }
 
     public static Response<String> fail(int code, String msg) {
-        Response<String> response = new Response<>();
-        response.setCode(code);
-        response.setMsg(msg);
+        Response<String> response = new Response<>(code, msg);
         response.setData("fail");
         response.setResult(null);
         return response;
@@ -226,9 +211,7 @@ public class Response<T> extends DefaultEncrypt implements IResult {
     }
 
     public static Response<String> ok(String msg) {
-        Response<String> response = new Response<>();
-        response.setCode(0);
-        response.setMsg(msg);
+        Response<String> response = new Response<>(0, msg);
         response.setData("success");
         return response;
     }
@@ -238,9 +221,7 @@ public class Response<T> extends DefaultEncrypt implements IResult {
     }
 
     public static <T> Response<T> ok(T data, String msg) {
-        Response<T> response = new Response<>();
-        response.setCode(0);
-        response.setMsg(msg);
+        Response<T> response = new Response<>(0, msg);
         response.setData(data);
         return response;
     }

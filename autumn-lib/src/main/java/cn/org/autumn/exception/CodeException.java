@@ -9,7 +9,7 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-public class CodeException extends Exception {
+public class CodeException extends Exception implements ResponseThrowable {
     private static final long serialVersionUID = 1L;
 
     private String msg;
