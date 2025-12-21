@@ -1,14 +1,15 @@
 package cn.org.autumn.modules.usr.service;
 
+import cn.org.autumn.base.ModuleService;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysUserService;
 import cn.org.autumn.modules.sys.shiro.OauthUsernameToken;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
+import cn.org.autumn.modules.usr.dao.UserProfileDao;
 import cn.org.autumn.modules.usr.dto.UserProfile;
 import cn.org.autumn.modules.usr.dto.VisitIp;
 import cn.org.autumn.modules.usr.entity.UserProfileEntity;
-import cn.org.autumn.modules.usr.service.gen.UserProfileServiceGen;
 import cn.org.autumn.utils.IPUtils;
 import cn.org.autumn.utils.Uuid;
 import org.apache.commons.lang.StringUtils;
@@ -23,7 +24,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import static cn.org.autumn.utils.Uuid.uuid;
 
 @Service
-public class UserProfileService extends UserProfileServiceGen implements LoopJob.TenSecond, LoopJob.OneMinute {
+public class UserProfileService extends ModuleService<UserProfileDao, UserProfileEntity> implements LoopJob.TenSecond, LoopJob.OneMinute {
 
     Logger log = LoggerFactory.getLogger(getClass());
 
@@ -38,11 +39,6 @@ public class UserProfileService extends UserProfileServiceGen implements LoopJob
     static Map<String, Integer> hashUser = new ConcurrentHashMap<>();
 
     static Map<String, VisitIp> visitIps = new ConcurrentHashMap<>();
-
-    @Override
-    public int menuOrder() {
-        return super.menuOrder();
-    }
 
     @Override
     public String ico() {

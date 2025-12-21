@@ -1,16 +1,17 @@
 $(function () {
     $("#jqGrid").jqGrid({
-        url: baseURL + 'sys/open/list',
+        url: baseURL + 'usr/useropen/list',
         datatype: "json",
         colModel: [			
-			{ label: '${lang.sys_open_column_id}', name: 'id', index: 'id', width: 50, key: true },
-			{ label: '${lang.sys_open_column_uuid}', name: 'uuid', index: 'uuid', width: 80 }, 
-			{ label: '${lang.sys_open_column_platform}', name: 'platform', index: 'platform', width: 80 }, 
-			{ label: '${lang.sys_open_column_appid}', name: 'appid', index: 'appid', width: 80 }, 
-			{ label: '${lang.sys_open_column_openid}', name: 'openid', index: 'openid', width: 80 }, 
-			{ label: '${lang.sys_open_column_unionid}', name: 'unionid', index: 'unionid', width: 80 }, 
-			{ label: '${lang.sys_open_column_create}', name: 'create', index: 'create', width: 80 }, 
-			{ label: '${lang.sys_open_column_update}', name: 'update', index: 'update', width: 80 }, 
+			{ label: '${lang.usr_useropen_column_id}', name: 'id', index: 'id', width: 50, key: true },
+			{ label: '${lang.usr_useropen_column_uuid}', name: 'uuid', index: 'uuid', width: 80 }, 
+			{ label: '${lang.usr_useropen_column_platform}', name: 'platform', index: 'platform', width: 80 }, 
+			{ label: '${lang.usr_useropen_column_appid}', name: 'appid', index: 'appid', width: 80 }, 
+			{ label: '${lang.usr_useropen_column_openid}', name: 'openid', index: 'openid', width: 80 }, 
+			{ label: '${lang.usr_useropen_column_unionid}', name: 'unionid', index: 'unionid', width: 80 }, 
+			{ label: '${lang.usr_useropen_column_deleted}', name: 'deleted', index: 'deleted', width: 80 }, 
+			{ label: '${lang.usr_useropen_column_create}', name: 'create', index: 'create', width: 80 }, 
+			{ label: '${lang.usr_useropen_column_update}', name: 'update', index: 'update', width: 80 }, 
         ],
 		viewrecords: true,
         height: 385,
@@ -44,7 +45,7 @@ var vm = new Vue({
 	data:{
 		showList: true,
 		title: null,
-		open: {}
+		userOpen: {}
 	},
 	methods: {
 		query: function () {
@@ -53,7 +54,7 @@ var vm = new Vue({
 		add: function(){
 			vm.showList = false;
 			vm.title = "${lang.sys_string_add}";
-			vm.open = {};
+			vm.userOpen = {};
 		},
 		update: function (event) {
 			var id = getSelectedRow();
@@ -66,12 +67,12 @@ var vm = new Vue({
             vm.getInfo(id)
 		},
 		saveOrUpdate: function (event) {
-			var url = vm.open.id == null ? "sys/open/save" : "sys/open/update";
+			var url = vm.userOpen.id == null ? "usr/useropen/save" : "usr/useropen/update";
 			$.ajax({
 				type: "POST",
 			    url: baseURL + url,
                 contentType: "application/json",
-			    data: JSON.stringify(vm.open),
+			    data: JSON.stringify(vm.userOpen),
 			    success: function(r){
 			    	if(r.code === 0){
 						alert('${lang.sys_string_successful}', function(index){
@@ -91,7 +92,7 @@ var vm = new Vue({
 			confirm('${lang.sys_string_are_sure_to_delete}？', function(){
 				$.ajax({
 					type: "POST",
-				    url: baseURL + "sys/open/delete",
+				    url: baseURL + "usr/useropen/delete",
                     contentType: "application/json",
 				    data: JSON.stringify(ids),
 				    success: function(r){
@@ -107,8 +108,8 @@ var vm = new Vue({
 			});
 		},
 		getInfo: function(id){
-			$.get(baseURL + "sys/open/info/"+id, function(r){
-                vm.open = r.open;
+			$.get(baseURL + "usr/useropen/info/"+id, function(r){
+                vm.userOpen = r.userOpen;
             });
 		},
 		reload: function (event) {

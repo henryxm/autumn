@@ -9,30 +9,30 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import cn.org.autumn.modules.usr.entity.UserTokenEntity;
-import cn.org.autumn.modules.usr.service.UserTokenService;
+import cn.org.autumn.modules.usr.entity.UserOpenEntity;
+import cn.org.autumn.modules.usr.service.UserOpenService;
 import cn.org.autumn.utils.PageUtils;
 import cn.org.autumn.utils.R;
 
 /**
- * 用户Token
+ * 认证对接
  *
  * @author User
  * @email henryxm@163.com
  * @date 2025-12
  */
-public class UserTokenControllerGen {
+public class UserOpenControllerGen {
 
     @Autowired
-    protected UserTokenService userTokenService;
+    protected UserOpenService userOpenService;
 
     /**
      * 列表
      */
     @RequestMapping("/list")
-    @RequiresPermissions("usr:usertoken:list")
+    @RequiresPermissions("usr:useropen:list")
     public R list(@RequestParam Map<String, Object> params) {
-        PageUtils page = userTokenService.queryPage(params);
+        PageUtils page = userOpenService.queryPage(params);
         return R.ok().put("page" , page);
     }
 
@@ -40,19 +40,19 @@ public class UserTokenControllerGen {
      * 信息
      */
     @RequestMapping("/info/{id}")
-    @RequiresPermissions("usr:usertoken:info")
+    @RequiresPermissions("usr:useropen:info")
     public R info(@PathVariable("id") Long id) {
-        UserTokenEntity userToken = userTokenService.selectById(id);
-        return R.ok().put("userToken" , userToken);
+        UserOpenEntity userOpen = userOpenService.selectById(id);
+        return R.ok().put("userOpen" , userOpen);
     }
 
     /**
      * 保存
      */
     @RequestMapping("/save")
-    @RequiresPermissions("usr:usertoken:save")
-    public R save(@RequestBody UserTokenEntity userToken) {
-        userTokenService.insert(userToken);
+    @RequiresPermissions("usr:useropen:save")
+    public R save(@RequestBody UserOpenEntity userOpen) {
+        userOpenService.insert(userOpen);
         return R.ok();
     }
 
@@ -60,10 +60,10 @@ public class UserTokenControllerGen {
      * 修改
      */
     @RequestMapping("/update")
-    @RequiresPermissions("usr:usertoken:update")
-    public R update(@RequestBody UserTokenEntity userToken) {
-        ValidatorUtils.validateEntity(userToken);
-        userTokenService.updateAllColumnById(userToken);//全部更新
+    @RequiresPermissions("usr:useropen:update")
+    public R update(@RequestBody UserOpenEntity userOpen) {
+        ValidatorUtils.validateEntity(userOpen);
+        userOpenService.updateAllColumnById(userOpen);//全部更新
         return R.ok();
     }
 
@@ -71,9 +71,9 @@ public class UserTokenControllerGen {
      * 删除
      */
     @RequestMapping("/delete")
-    @RequiresPermissions("usr:usertoken:delete")
+    @RequiresPermissions("usr:useropen:delete")
     public R delete(@RequestBody Long[] ids) {
-        userTokenService.deleteBatchIds(Arrays.asList(ids));
+        userOpenService.deleteBatchIds(Arrays.asList(ids));
         return R.ok();
     }
 }

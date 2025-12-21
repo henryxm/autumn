@@ -1,9 +1,10 @@
 package cn.org.autumn.modules.usr.service;
 
+import cn.org.autumn.base.ModuleService;
 import cn.org.autumn.config.AccountHandler;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
+import cn.org.autumn.modules.usr.dao.UserTokenDao;
 import cn.org.autumn.modules.usr.entity.UserTokenEntity;
-import cn.org.autumn.modules.usr.service.gen.UserTokenServiceGen;
 import com.alibaba.fastjson.JSON;
 import com.baomidou.mybatisplus.mapper.EntityWrapper;
 import org.apache.commons.lang.StringUtils;
@@ -16,14 +17,9 @@ import java.util.Map;
 import java.util.UUID;
 
 @Service
-public class UserTokenService extends UserTokenServiceGen implements AccountHandler {
+public class UserTokenService extends ModuleService<UserTokenDao, UserTokenEntity> implements AccountHandler {
 
     private final static int EXPIRE = 3600 * 12;
-
-    @Override
-    public int menuOrder() {
-        return super.menuOrder();
-    }
 
     @Override
     public String ico() {

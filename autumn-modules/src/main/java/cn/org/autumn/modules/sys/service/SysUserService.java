@@ -600,9 +600,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
 
     private boolean checkNeedUpdate(SysUserEntity sysUserEntity) {
         Integer integer = hashUser.get(sysUserEntity.getUuid());
-        if (null == integer || integer != sysUserEntity.hashCode())
-            return true;
-        return false;
+        return null == integer || integer != sysUserEntity.hashCode();
     }
 
     public void sync() {

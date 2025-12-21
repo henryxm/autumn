@@ -1,12 +1,12 @@
-package cn.org.autumn.modules.sys.service;
+package cn.org.autumn.modules.usr.service;
 
 import cn.org.autumn.base.ModuleService;
 import cn.org.autumn.config.AccountHandler;
-import cn.org.autumn.modules.sys.entity.SysOpenEntity;
+import cn.org.autumn.modules.usr.dao.UserOpenDao;
+import cn.org.autumn.modules.usr.entity.UserOpenEntity;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import cn.org.autumn.modules.sys.dao.SysOpenDao;
 
 import java.util.Date;
 import java.util.List;
@@ -25,7 +25,7 @@ import java.util.List;
  * @date 2025-12
  */
 @Service
-public class SysOpenService extends ModuleService<SysOpenDao, SysOpenEntity> implements AccountHandler {
+public class UserOpenService extends ModuleService<UserOpenDao, UserOpenEntity> implements AccountHandler {
 
     /**
      * 平台类型常量
@@ -46,16 +46,14 @@ public class SysOpenService extends ModuleService<SysOpenDao, SysOpenEntity> imp
         if (obj == null || StringUtils.isBlank(obj.getUuid())) {
             return;
         }
-
         // 查询该用户的所有绑定关系
-        List<SysOpenEntity> list = getByUuid(obj.getUuid());
+        List<UserOpenEntity> list = getByUuid(obj.getUuid());
         if (list == null || list.isEmpty()) {
             return;
         }
-
         // 批量进行逻辑删除
         Date now = new Date();
-        for (SysOpenEntity entity : list) {
+        for (UserOpenEntity entity : list) {
             // 只处理未删除的记录
             if (!entity.isDeleted()) {
                 entity.setDeleted(true);
@@ -78,16 +76,13 @@ public class SysOpenService extends ModuleService<SysOpenDao, SysOpenEntity> imp
         if (obj == null || StringUtils.isBlank(obj.getUuid())) {
             return;
         }
-
         // 查询该用户的所有绑定关系（包括已逻辑删除的）
-        List<SysOpenEntity> list = baseMapper.getAllByUuid(obj.getUuid());
-
+        List<UserOpenEntity> list = baseMapper.getAllByUuid(obj.getUuid());
         if (list == null || list.isEmpty()) {
             return;
         }
-
         // 批量物理删除
-        for (SysOpenEntity entity : list) {
+        for (UserOpenEntity entity : list) {
             this.deleteById(entity.getId());
         }
     }
@@ -101,7 +96,7 @@ public class SysOpenService extends ModuleService<SysOpenDao, SysOpenEntity> imp
      * @param appid    应用ID
      * @return 绑定关系实体，如果不存在返回null
      */
-    public SysOpenEntity getByOpenidAndPlatformAndAppid(String openid, String platform, String appid) {
+    public UserOpenEntity getByOpenidAndPlatformAndAppid(String openid, String platform, String appid) {
         if (StringUtils.isBlank(openid) || StringUtils.isBlank(platform) || StringUtils.isBlank(appid)) {
             return null;
         }
@@ -116,7 +111,7 @@ public class SysOpenService extends ModuleService<SysOpenDao, SysOpenEntity> imp
      * @param platform 平台类型
      * @return 绑定关系列表
      */
-    public List<SysOpenEntity> getByOpenidAndPlatform(String openid, String platform) {
+    public List<UserOpenEntity> getByOpenidAndPlatform(String openid, String platform) {
         if (StringUtils.isBlank(openid) || StringUtils.isBlank(platform)) {
             return null;
         }
@@ -132,7 +127,7 @@ public class SysOpenService extends ModuleService<SysOpenDao, SysOpenEntity> imp
      * @param platform 平台类型
      * @return 绑定关系列表
      */
-    public List<SysOpenEntity> getByUnionidAndPlatform(String unionid, String platform) {
+    public List<UserOpenEntity> getByUnionidAndPlatform(String unionid, String platform) {
         if (StringUtils.isBlank(unionid) || StringUtils.isBlank(platform)) {
             return null;
         }
@@ -148,7 +143,7 @@ public class SysOpenService extends ModuleService<SysOpenDao, SysOpenEntity> imp
      * @param appid    应用ID
      * @return 绑定关系实体，如果不存在返回null
      */
-    public SysOpenEntity getByUnionidAndPlatformAndAppid(String unionid, String platform, String appid) {
+    public UserOpenEntity getByUnionidAndPlatformAndAppid(String unionid, String platform, String appid) {
         if (StringUtils.isBlank(unionid) || StringUtils.isBlank(platform) || StringUtils.isBlank(appid)) {
             return null;
         }
@@ -162,7 +157,7 @@ public class SysOpenService extends ModuleService<SysOpenDao, SysOpenEntity> imp
      * @param uuid 系统用户UUID
      * @return 绑定关系列表
      */
-    public List<SysOpenEntity> getByUuid(String uuid) {
+    public List<UserOpenEntity> getByUuid(String uuid) {
         if (StringUtils.isBlank(uuid)) {
             return null;
         }
@@ -177,7 +172,7 @@ public class SysOpenService extends ModuleService<SysOpenDao, SysOpenEntity> imp
      * @param platform 平台类型
      * @return 绑定关系列表
      */
-    public List<SysOpenEntity> getByUuidAndPlatform(String uuid, String platform) {
+    public List<UserOpenEntity> getByUuidAndPlatform(String uuid, String platform) {
         if (StringUtils.isBlank(uuid) || StringUtils.isBlank(platform)) {
             return null;
         }
@@ -191,7 +186,7 @@ public class SysOpenService extends ModuleService<SysOpenDao, SysOpenEntity> imp
      * @param openid 开放ID
      * @return 绑定关系列表
      */
-    public List<SysOpenEntity> getByOpenid(String openid) {
+    public List<UserOpenEntity> getByOpenid(String openid) {
         if (StringUtils.isBlank(openid)) {
             return null;
         }
@@ -205,7 +200,7 @@ public class SysOpenService extends ModuleService<SysOpenDao, SysOpenEntity> imp
      * @param unionid 联合ID
      * @return 绑定关系列表
      */
-    public List<SysOpenEntity> getByUnionid(String unionid) {
+    public List<UserOpenEntity> getByUnionid(String unionid) {
         if (StringUtils.isBlank(unionid)) {
             return null;
         }
@@ -220,27 +215,19 @@ public class SysOpenService extends ModuleService<SysOpenDao, SysOpenEntity> imp
      * @return 保存后的实体
      */
     @Transactional(rollbackFor = Exception.class)
-    public SysOpenEntity saveOrUpdate(SysOpenEntity entity) {
+    public UserOpenEntity saveOrUpdate(UserOpenEntity entity) {
         if (entity == null) {
             return null;
         }
-
         // 检查必填字段
         if (StringUtils.isBlank(entity.getOpenid()) ||
                 StringUtils.isBlank(entity.getPlatform()) ||
                 StringUtils.isBlank(entity.getAppid())) {
             throw new IllegalArgumentException("openid、platform和appid不能为空");
         }
-
         // 查询是否已存在
-        SysOpenEntity existing = getByOpenidAndPlatformAndAppid(
-                entity.getOpenid(),
-                entity.getPlatform(),
-                entity.getAppid()
-        );
-
+        UserOpenEntity existing = getByOpenidAndPlatformAndAppid(entity.getOpenid(), entity.getPlatform(), entity.getAppid());
         Date now = new Date();
-
         if (existing != null) {
             // 更新现有记录
             entity.setId(existing.getId());
@@ -272,8 +259,8 @@ public class SysOpenService extends ModuleService<SysOpenDao, SysOpenEntity> imp
      * @return 保存后的实体
      */
     @Transactional(rollbackFor = Exception.class)
-    public SysOpenEntity saveOrUpdate(String uuid, String platform, String appid, String openid, String unionid) {
-        SysOpenEntity entity = new SysOpenEntity();
+    public UserOpenEntity saveOrUpdate(String uuid, String platform, String appid, String openid, String unionid) {
+        UserOpenEntity entity = new UserOpenEntity();
         entity.setUuid(uuid);
         entity.setPlatform(platform);
         entity.setAppid(appid);
@@ -362,7 +349,7 @@ public class SysOpenService extends ModuleService<SysOpenDao, SysOpenEntity> imp
      * @return 是否存在
      */
     public boolean existsByUnionid(String unionid, String platform) {
-        List<SysOpenEntity> list = getByUnionidAndPlatform(unionid, platform);
+        List<UserOpenEntity> list = getByUnionidAndPlatform(unionid, platform);
         return list != null && !list.isEmpty();
     }
 
@@ -373,7 +360,7 @@ public class SysOpenService extends ModuleService<SysOpenDao, SysOpenEntity> imp
      * @return 是否存在
      */
     public boolean existsByUuid(String uuid) {
-        List<SysOpenEntity> list = getByUuid(uuid);
+        List<UserOpenEntity> list = getByUuid(uuid);
         return list != null && !list.isEmpty();
     }
 
@@ -387,7 +374,7 @@ public class SysOpenService extends ModuleService<SysOpenDao, SysOpenEntity> imp
      * @return 系统用户UUID，如果不存在返回null
      */
     public String getUuidByOpenid(String openid, String platform, String appid) {
-        SysOpenEntity entity = getByOpenidAndPlatformAndAppid(openid, platform, appid);
+        UserOpenEntity entity = getByOpenidAndPlatformAndAppid(openid, platform, appid);
         return entity != null ? entity.getUuid() : null;
     }
 
@@ -401,7 +388,7 @@ public class SysOpenService extends ModuleService<SysOpenDao, SysOpenEntity> imp
      * @return 系统用户UUID，如果不存在返回null
      */
     public String getUuidByUnionid(String unionid, String platform) {
-        List<SysOpenEntity> list = getByUnionidAndPlatform(unionid, platform);
+        List<UserOpenEntity> list = getByUnionidAndPlatform(unionid, platform);
         if (list != null && !list.isEmpty()) {
             return list.get(0).getUuid();
         }
@@ -422,14 +409,13 @@ public class SysOpenService extends ModuleService<SysOpenDao, SysOpenEntity> imp
         if (StringUtils.isBlank(openid) || StringUtils.isBlank(platform)) {
             return 0;
         }
-        List<SysOpenEntity> list = getByOpenidAndPlatform(openid, platform);
+        List<UserOpenEntity> list = getByOpenidAndPlatform(openid, platform);
         if (list == null || list.isEmpty()) {
             return 0;
         }
-
         int count = 0;
         Date now = new Date();
-        for (SysOpenEntity entity : list) {
+        for (UserOpenEntity entity : list) {
             entity.setUnionid(unionid);
             entity.setUpdate(now);
             this.updateById(entity);

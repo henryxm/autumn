@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>${lang.usr_useropen_table_comment}</title>
+	<#include "/header.html">
+</head>
+<body>
+<div id="rrapp" v-cloak>
+    <div v-show="showList">
+        <div class="grid-btn">
+			<!--<#if shiro.hasPermission("usr:useropen:save")>-->
+            <a class="btn btn-primary" @click="add"><i class="fa fa-plus"></i>&nbsp;${lang.sys_string_add}</a>
+			<!--</#if>-->
+			<!--<#if shiro.hasPermission("usr:useropen:update")>-->
+            <a class="btn btn-primary" @click="update"><i class="fa fa-pencil-square-o"></i>&nbsp;${lang.sys_string_change}</a>
+			<!--</#if>-->
+			<!--<#if shiro.hasPermission("usr:useropen:delete")>-->
+            <a class="btn btn-primary" @click="del"><i class="fa fa-trash-o"></i>&nbsp;${lang.sys_string_delete}</a>
+			<!--</#if>-->
+        </div>
+        <table id="jqGrid"></table>
+        <div id="jqGridPager"></div>
+    </div>
+
+    <div v-show="!showList" class="panel panel-default">
+        <div class="panel-heading">{{title}}</div>
+        <form class="form-horizontal">
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.usr_useropen_column_uuid}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="userOpen.uuid" placeholder="${lang.usr_useropen_column_uuid}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.usr_useropen_column_platform}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="userOpen.platform" placeholder="${lang.usr_useropen_column_platform}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.usr_useropen_column_appid}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="userOpen.appid" placeholder="${lang.usr_useropen_column_appid}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.usr_useropen_column_openid}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="userOpen.openid" placeholder="${lang.usr_useropen_column_openid}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.usr_useropen_column_unionid}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="userOpen.unionid" placeholder="${lang.usr_useropen_column_unionid}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.usr_useropen_column_deleted}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="userOpen.deleted" placeholder="${lang.usr_useropen_column_deleted}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.usr_useropen_column_create}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="userOpen.create" placeholder="${lang.usr_useropen_column_create}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.usr_useropen_column_update}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="userOpen.update" placeholder="${lang.usr_useropen_column_update}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label"></div>
+                <input type="button" class="btn btn-primary" @click="saveOrUpdate" value="${lang.sys_string_confirm}"/>
+                &nbsp;&nbsp;<input type="button" class="btn btn-warning" @click="reload" value="${lang.sys_string_back}"/>
+            </div>
+        </form>
+    </div>
+</div>
+<script src="${request.contextPath}/modules/usr/useropen.js?_${.now?long}"></script>
+</body>
+</html>

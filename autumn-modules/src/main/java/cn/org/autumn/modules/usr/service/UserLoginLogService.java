@@ -1,25 +1,19 @@
 package cn.org.autumn.modules.usr.service;
 
-import cn.org.autumn.modules.usr.entity.UserLoginLogEntity;
+import cn.org.autumn.base.ModuleService;
 import cn.org.autumn.modules.usr.entity.UserProfileEntity;
-import cn.org.autumn.modules.usr.service.gen.UserLoginLogServiceGen;
 import org.springframework.stereotype.Service;
+import cn.org.autumn.modules.usr.dao.UserLoginLogDao;
+import cn.org.autumn.modules.usr.entity.UserLoginLogEntity;
 
 import java.util.Date;
 
 @Service
-public class UserLoginLogService extends UserLoginLogServiceGen {
-
-    @Override
-    public int menuOrder() {
-        return super.menuOrder();
-    }
-
+public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLoginLogEntity> {
     @Override
     public String ico() {
         return "fa-sun-o";
     }
-
     public void login(String username) {
         UserLoginLogEntity userLoginLogEntity = new UserLoginLogEntity();
         userLoginLogEntity.setUsername(username);

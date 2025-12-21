@@ -4,6 +4,7 @@ $(function () {
         datatype: "json",
         colModel: [			
 			{ label: '${lang.usr_usertoken_column_id}', name: 'id', index: 'id', width: 50, key: true },
+			{ label: '${lang.usr_usertoken_column_uuid}', name: 'uuid', index: 'uuid', width: 80 }, 
 			{ label: '${lang.usr_usertoken_column_user_uuid}', name: 'userUuid', index: 'user_uuid', width: 80 }, 
 			{ label: '${lang.usr_usertoken_column_token}', name: 'token', index: 'token', width: 80 }, 
 			{ label: '${lang.usr_usertoken_column_refresh_token}', name: 'refreshToken', index: 'refresh_token', width: 80 }, 

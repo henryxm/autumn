@@ -8,15 +8,15 @@
 <div id="rrapp" v-cloak>
     <div v-show="showList">
         <div class="grid-btn">
-			<#if shiro.hasPermission("usr:userprofile:save")>
+			<!--<#if shiro.hasPermission("usr:userprofile:save")>-->
             <a class="btn btn-primary" @click="add"><i class="fa fa-plus"></i>&nbsp;${lang.sys_string_add}</a>
-			</#if>
-			<#if shiro.hasPermission("usr:userprofile:update")>
+			<!--</#if>-->
+			<!--<#if shiro.hasPermission("usr:userprofile:update")>-->
             <a class="btn btn-primary" @click="update"><i class="fa fa-pencil-square-o"></i>&nbsp;${lang.sys_string_change}</a>
-			</#if>
-			<#if shiro.hasPermission("usr:userprofile:delete")>
+			<!--</#if>-->
+			<!--<#if shiro.hasPermission("usr:userprofile:delete")>-->
             <a class="btn btn-primary" @click="del"><i class="fa fa-trash-o"></i>&nbsp;${lang.sys_string_delete}</a>
-			</#if>
+			<!--</#if>-->
         </div>
         <table id="jqGrid"></table>
         <div id="jqGridPager"></div>
@@ -68,9 +68,39 @@
                 </div>
             </div>
             <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.usr_userprofile_column_login_ip}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="userProfile.loginIp" placeholder="${lang.usr_userprofile_column_login_ip}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.usr_userprofile_column_visit_ip}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="userProfile.visitIp" placeholder="${lang.usr_userprofile_column_visit_ip}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.usr_userprofile_column_user_agent}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="userProfile.userAgent" placeholder="${lang.usr_userprofile_column_user_agent}"/>
+                </div>
+            </div>
+            <div class="form-group">
                 <div class="col-sm-2 control-label">${lang.usr_userprofile_column_create_time}</div>
                 <div class="col-sm-10">
                     <input type="text" class="form-control" v-model="userProfile.createTime" placeholder="${lang.usr_userprofile_column_create_time}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.usr_userprofile_column_login_time}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="userProfile.loginTime" placeholder="${lang.usr_userprofile_column_login_time}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.usr_userprofile_column_visit_time}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="userProfile.visitTime" placeholder="${lang.usr_userprofile_column_visit_time}"/>
                 </div>
             </div>
             <div class="form-group">

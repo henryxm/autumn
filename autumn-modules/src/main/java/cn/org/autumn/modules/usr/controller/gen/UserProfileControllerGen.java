@@ -17,9 +17,9 @@ import cn.org.autumn.utils.R;
 /**
  * 用户信息
  *
- * @author Shaohua Xu
+ * @author User
  * @email henryxm@163.com
- * @date 2021-06
+ * @date 2025-12
  */
 public class UserProfileControllerGen {
 

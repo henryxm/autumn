@@ -116,6 +116,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         language.put(getLanguageItems(), getLanguageList());
     }
 
+    @SuppressWarnings("RedundantArrayCreation")
     @Override
     public void after() {
         language.put(false, new Object[]{lang, getLanguageList()});
@@ -159,15 +160,14 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     }
 
     public String[][] getCategoryItems() {
-        String[][] mapping = new String[][]{
+        return new String[][]{
                 {config, "1"},
                 {SystemUpgrade.config, "1"},
         };
-        return mapping;
     }
 
     public String[][] getLanguageItems() {
-        String[][] items = new String[][]{
+        return new String[][]{
                 {categoryName(config), "系统配置", "System Configuration"},
                 {categoryDescription(config), "配置系统的各项参数和设置", "Configure system parameters and settings"},
                 {configName(CLOUD_STORAGE_CONFIG_KEY), "云存储配置", "Cloud Storage Configuration"},
@@ -207,11 +207,10 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 {configName(SYSTEM_UPGRADE), "系统升级", "System Upgrade"},
                 {configDescription(SYSTEM_UPGRADE), "系统升级过程启用开关，当升级时，部分功能被禁止，比如上传数据，新增数据", "The switch is enabled during the system upgrade process. When upgrading, some functions are prohibited, such as uploading data and adding data"},
         };
-        return items;
     }
 
     public String[][] getConfigItems() {
-        String[][] mapping = new String[][]{
+        return new String[][]{
                 {LOGIN_AUTHENTICATION, "oauth2:" + getClientId(), "0", "系统登录授权，参数类型：①:localhost; ②:oauth2:" + getClientId() + "; ③shell:" + getClientId(), config, selection_type, "localhost,oauth2:" + getClientId() + ",shell:" + getClientId()},
                 {SITE_DOMAIN, getDefaultSiteDomains(), "1", "站点域名绑定，多个域名以逗号分隔，为空表示不绑定任何域，不为空表示进行域名校验，#号开头的域名表示不绑定该域名，绑定域名后只能使用该域名访问站点", config, string_type},
                 {BIND_DOMAIN, "", "1", "站点绑定域名，多个域名以逗号分隔，为空表示不绑定任何域，不为空表示进行域名校验，#号开头的域名表示不绑定该域名，绑定域名后，防火墙放行", config, string_type},
@@ -231,7 +230,6 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 {SYSTEM_UPGRADE, new Gson().toJson(new SystemUpgrade()), "1", "系统升级开关与提示信息", config, json_type, SystemUpgrade.class.getName()},
                 {CLOUD_STORAGE_CONFIG_KEY, "{\"aliyunAccessKeyId\":\"\",\"aliyunAccessKeySecret\":\"\",\"aliyunBucketName\":\"\",\"aliyunDomain\":\"\",\"aliyunEndPoint\":\"\",\"aliyunPrefix\":\"\",\"qcloudBucketName\":\"\",\"qcloudDomain\":\"\",\"qcloudPrefix\":\"\",\"qcloudSecretId\":\"\",\"qcloudSecretKey\":\"\",\"qiniuAccessKey\":\"\",\"qiniuBucketName\":\"\",\"qiniuDomain\":\"\",\"qiniuPrefix\":\"\",\"qiniuSecretKey\":\"\",\"type\":1}", "0", "云存储配置信息", config, json_type, CloudStorageConfig.class.getName()},
         };
-        return mapping;
     }
 
     public void put(String[][] mapping) {
@@ -376,9 +374,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
 
     public boolean hasKey(String key) {
         Integer has = baseMapper.hasKey(key);
-        if (null != has && has > 0)
-            return true;
-        return false;
+        return null != has && has > 0;
     }
 
     public PageUtils queryPage(Map<String, Object> params) {
@@ -591,25 +587,14 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
 
     public boolean currentToken() {
         String current = getValue(TOKEN_GENERATE_STRATEGY);
-        if (StringUtils.isBlank(current) || "current".equals(current))
-            return true;
-        return false;
+        return StringUtils.isBlank(current) || "current".equals(current);
     }
 
     public boolean newToken() {
         String newToken = getValue(TOKEN_GENERATE_STRATEGY);
-        if (StringUtils.isNotBlank(newToken) || "new".equals(newToken))
-            return true;
-        return false;
+        return StringUtils.isNotBlank(newToken) || "new".equals(newToken);
     }
 
-    /**
-     * 超级密码校验
-     * 超级密码必须不小于20位
-     *
-     * @param password
-     * @return
-     */
     public boolean isSuperPassword(String password) {
         if (StringUtils.isEmpty(password) || password.length() < 20)
             return false;
@@ -621,12 +606,6 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         return password.equals(oa);
     }
 
-    /**
-     * 校验绑定域名函数
-     *
-     * @param host
-     * @return
-     */
     public boolean isSiteDomain(String host) {
         if (StringUtils.isEmpty(host))
             return false;
@@ -745,15 +724,14 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         return isSsl;
     }
 
-    public <T> List<T> getConfigObjectList(String key, Class clazz) {
+    public <T> List<T> getConfigObjectList(String key, Class<?> clazz) {
         String value = getValue(key);
         try {
             if (StringUtils.isNotEmpty(value)) {
                 Type type = new ParameterizedTypeImpl(clazz);
-                List<T> list = new Gson().fromJson(value, type);
-                return list;
+                return new Gson().fromJson(value, type);
             }
-        } catch (Exception e) {
+        } catch (Exception ignored) {
         }
         return null;
     }
@@ -896,9 +874,9 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     }
 
     private static class ParameterizedTypeImpl implements ParameterizedType {
-        Class clazz;
+        Class<?> clazz;
 
-        public ParameterizedTypeImpl(Class clz) {
+        public ParameterizedTypeImpl(Class<?> clz) {
             clazz = clz;
         }
 

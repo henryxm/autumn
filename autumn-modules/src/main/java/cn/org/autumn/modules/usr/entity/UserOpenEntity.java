@@ -1,4 +1,4 @@
-package cn.org.autumn.modules.sys.entity;
+package cn.org.autumn.modules.usr.entity;
 
 import cn.org.autumn.table.annotation.Column;
 import cn.org.autumn.table.annotation.Table;
@@ -13,9 +13,9 @@ import java.util.Date;
 
 @Getter
 @Setter
-@TableName("sys_open")
-@Table(value = "sys_open", comment = "系统对接")
-public class SysOpenEntity implements Serializable {
+@TableName("usr_user_open")
+@Table(value = "usr_user_open", comment = "认证对接")
+public class UserOpenEntity implements Serializable {
     private static final long serialVersionUID = 1L;
 
     @TableId
