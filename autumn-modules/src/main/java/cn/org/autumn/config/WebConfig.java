@@ -8,6 +8,7 @@ import org.springframework.context.annotation.DependsOn;
 import org.springframework.lang.NonNull;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter;
+import org.springframework.web.servlet.mvc.method.annotation.RequestResponseBodyMethodProcessor;
 import org.springframework.web.servlet.config.annotation.*;
 
 import javax.annotation.PostConstruct;
@@ -16,7 +17,6 @@ import java.util.List;
 @Slf4j
 @Configuration
 @DependsOn({"env"})
-@org.springframework.core.annotation.Order(org.springframework.core.Ordered.HIGHEST_PRECEDENCE)
 public class WebConfig implements WebMvcConfigurer {
 
     @Autowired(required = false)
@@ -41,12 +41,30 @@ public class WebConfig implements WebMvcConfigurer {
                 List<HandlerMethodArgumentResolver> argumentResolvers = requestMappingHandlerAdapter.getArgumentResolvers();
                 if (argumentResolvers != null && !argumentResolvers.isEmpty()) {
                     List<HandlerMethodArgumentResolver> newResolvers = new java.util.ArrayList<>(argumentResolvers);
+                    // 移除已存在的EncryptArgumentResolver（如果存在）
                     newResolvers.removeIf(resolver -> resolver instanceof EncryptArgumentResolver);
-                    newResolvers.add(0, encryptArgumentResolver);
+                    // 查找RequestResponseBodyMethodProcessor的位置
+                    // 注意：EncryptArgumentResolver也继承自RequestResponseBodyMethodProcessor，需要排除
+                    int index = -1;
+                    for (int i = 0; i < newResolvers.size(); i++) {
+                        HandlerMethodArgumentResolver resolver = newResolvers.get(i);
+                        // 只匹配真正的RequestResponseBodyMethodProcessor，排除EncryptArgumentResolver
+                        if (resolver instanceof RequestResponseBodyMethodProcessor && !(resolver instanceof EncryptArgumentResolver)) {
+                            index = i;
+                            break;
+                        }
+                    }
+                    // 如果找到了RequestResponseBodyMethodProcessor，将EncryptArgumentResolver插入到它之前
+                    // 如果没有找到，添加到列表末尾
+                    if (index >= 0) {
+                        newResolvers.add(index, encryptArgumentResolver);
+                    } else {
+                        newResolvers.add(encryptArgumentResolver);
+                    }
                     requestMappingHandlerAdapter.setArgumentResolvers(newResolvers);
                 }
             } catch (Exception e) {
-                log.error("设置解析器失败", e);
+                log.error("设置解析器失败:{}", e.getMessage());
             }
         }
     }
@@ -72,17 +90,8 @@ public class WebConfig implements WebMvcConfigurer {
     public void addArgumentResolvers(@NonNull List<HandlerMethodArgumentResolver> argumentResolvers) {
         if (null != resolverHandlers && !resolverHandlers.isEmpty()) {
             for (ResolverHandler resolverHandler : resolverHandlers) {
-                if (resolverHandler instanceof EncryptArgumentResolver) {
-                    continue;
-                }
-                HandlerMethodArgumentResolver resolver = resolverHandler.getResolver();
-                if (null != resolver) {
-                    argumentResolvers.add(0, resolver);
-                }
+                argumentResolvers.add(resolverHandler.getResolver());
             }
-        }
-        if (encryptArgumentResolver != null) {
-            argumentResolvers.add(0, encryptArgumentResolver);
         }
     }
 

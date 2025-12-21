@@ -19,18 +19,12 @@ import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.ControllerAdvice;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.io.BufferedReader;
-import java.io.IOException;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.lang.reflect.Parameter;
-import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
 
@@ -50,147 +44,6 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
     @Autowired
     private AesService aesService;
 
-    /**
-     * 请求属性键：标记请求是否被加密
-     */
-    private static final String REQUEST_ENCRYPTED_ATTR = "REQUEST_ENCRYPTED";
-    /**
-     * 请求属性键：存储请求的UUID
-     */
-    private static final String REQUEST_UUID_ATTR = "REQUEST_UUID";
-
-    @Override
-    public boolean preHandle(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull Object handler) throws Exception {
-        // 只处理HandlerMethod类型的handler
-        if (!(handler instanceof HandlerMethod)) {
-            return true;
-        }
-        HandlerMethod handlerMethod = (HandlerMethod) handler;
-        Parameter[] parameters = handlerMethod.getMethod().getParameters();
-        // 检查方法参数中是否有Encrypt类型的参数
-        boolean hasEncryptParameter = false;
-        for (Parameter parameter : parameters) {
-            // 检查是否有@RequestBody注解
-            if (parameter.isAnnotationPresent(RequestBody.class)) {
-                Class<?> parameterType = parameter.getType();
-                // 检查是否是Encrypt类型
-                if (Encrypt.class.isAssignableFrom(parameterType)) {
-                    hasEncryptParameter = true;
-                    break;
-                }
-            }
-        }
-
-        String uuid = null;
-        boolean isEncryptedRequest = false;
-
-        // 情况1: 从请求体中获取UUID（有body的请求，且有Encrypt参数）
-        if (hasEncryptParameter) {
-            String requestBody = null;
-            if (request instanceof CachedBodyHttpServletRequest) {
-                requestBody = ((CachedBodyHttpServletRequest) request).getBody();
-            } else {
-                // 后备方案：如果Filter没有包装请求，尝试直接读取请求体
-                // 注意：这只能读取一次，如果请求体已经被读取过，这里会失败
-                try {
-                    BufferedReader reader = request.getReader();
-                    if (reader != null) {
-                        StringBuilder sb = new StringBuilder();
-                        String line;
-                        while ((line = reader.readLine()) != null) {
-                            sb.append(line);
-                        }
-                        requestBody = sb.toString();
-                    }
-                } catch (Exception e) {
-                    try {
-                        requestBody = org.springframework.util.StreamUtils.copyToString(request.getInputStream(), StandardCharsets.UTF_8);
-                    } catch (IOException e2) {
-                        // 无法读取请求体，可能是非JSON请求或已被读取，继续检查其他方式
-                    }
-                }
-            }
-            // 缓存请求体，供参数解析器使用
-            if (StringUtils.isNotBlank(requestBody)) {
-                request.setAttribute("CACHED_REQUEST_BODY", requestBody);
-                // 尝试解析为Encrypt对象，检查是否是加密请求
-                for (Parameter parameter : parameters) {
-                    if (parameter.isAnnotationPresent(RequestBody.class)) {
-                        Class<?> parameterType = parameter.getType();
-                        if (Encrypt.class.isAssignableFrom(parameterType)) {
-                            try {
-                                Encrypt encrypt = (Encrypt) JSON.parseObject(requestBody, parameterType);
-                                if (encrypt != null && StringUtils.isNotBlank(encrypt.getEncrypt()) && StringUtils.isNotBlank(encrypt.getUuid())) {
-                                    // 标记为加密请求
-                                    uuid = encrypt.getUuid();
-                                    isEncryptedRequest = true;
-                                    request.setAttribute("ENCRYPT_OBJ", encrypt);
-                                }
-                            } catch (Exception e) {
-                                // 解析失败，可能不是加密请求，继续检查其他方式
-                            }
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-
-        // 情况2: 从X-Encrypt-UUID header中获取UUID（无body的请求，如GET请求，或需要加密响应但无Encrypt参数的请求）
-        // 只有在明确指定了X-Encrypt-UUID header时才标记为加密请求，避免所有请求都被误判为加密请求
-        if (!isEncryptedRequest) {
-            uuid = getUuid(request);
-            if (StringUtils.isNotBlank(uuid)) {
-                // 验证UUID对应的AES密钥是否存在且有效
-                // 如果不存在，尝试生成新的（getAesKey会自动生成）
-                if (aesService.hasValidAesKey(uuid)) {
-                    isEncryptedRequest = true;
-                    if (log.isDebugEnabled()) {
-                        log.debug("检测到有效的UUID，标记为加密请求。请求方式:{}, 路径:{}, UUID:{}", request.getMethod(), request.getRequestURI(), uuid);
-                    }
-                } else {
-                    // 如果密钥不存在，尝试生成新的
-                    try {
-                        aesService.getAesKey(uuid); // 这会自动生成新的密钥
-                        isEncryptedRequest = true;
-                        if (log.isDebugEnabled()) {
-                            log.debug("为UUID生成新的AES密钥，标记为加密请求。请求方式:{}, 路径:{}, UUID:{}", request.getMethod(), request.getRequestURI(), uuid);
-                        }
-                    } catch (Exception e) {
-                        if (log.isDebugEnabled()) {
-                            log.debug("无法为UUID生成AES密钥。请求方式:{}, 路径:{}, UUID:{}, 错误:{}", request.getMethod(), request.getRequestURI(), uuid, e.getMessage());
-                        }
-                        uuid = null; // 清除无效的UUID
-                    }
-                }
-            }
-        }
-        // 如果检测到加密请求，设置请求属性
-        if (isEncryptedRequest && StringUtils.isNotBlank(uuid)) {
-            request.setAttribute(REQUEST_ENCRYPTED_ATTR, true);
-            request.setAttribute(REQUEST_UUID_ATTR, uuid);
-        }
-        return true;
-    }
-
-    /**
-     * 从请求中获取UUID
-     * 只有在明确指定了X-Encrypt-UUID header时才返回UUID，否则返回null
-     * 这样可以避免所有请求都被误判为加密请求
-     *
-     * @param request HTTP请求
-     * @return UUID，如果未找到则返回null
-     */
-    private String getUuid(HttpServletRequest request) {
-        // 只从X-Encrypt-UUID header中获取UUID
-        // 如果没有这个header，说明不是加密请求，返回null
-        String uuid = request.getHeader("X-Encrypt-UUID");
-        if (StringUtils.isNotBlank(uuid)) {
-            return uuid.trim();
-        }
-        return null;
-    }
-
     @Override
     public HandlerInterceptor getHandlerInterceptor() {
         return this;
@@ -207,37 +60,31 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
     }
 
     @Override
-    public boolean supports(@NonNull MethodParameter returnType, @NonNull Class<? extends HttpMessageConverter<?>> converterType) {
-        return true;
+    public boolean supports(MethodParameter returnType, @NonNull Class<? extends HttpMessageConverter<?>> converterType) {
+        return null != returnType.getMethod() && Encrypt.class.isAssignableFrom(returnType.getMethod().getReturnType());
     }
 
     @Override
     public Object beforeBodyWrite(@Nullable Object body, @NonNull MethodParameter returnType, @NonNull MediaType selectedContentType,
                                   @NonNull Class<? extends HttpMessageConverter<?>> selectedConverterType,
                                   @NonNull ServerHttpRequest request, @NonNull ServerHttpResponse response) {
+        if (null == body)
+            return body;
         // 检查请求是否被加密
-        HttpServletRequest httpRequest = getHttpServletRequest(request);
-        if (httpRequest == null) {
-            if (log.isDebugEnabled()) {
-                log.debug("返回数据1:{}", JSON.toJSONString(body));
-            }
+        HttpServletRequest servlet = getHttpServletRequest(request);
+        if (servlet == null) {
             return body;
         }
         // 排除RSA相关的接口（密钥交换接口），避免循环加密
-        String requestURI = httpRequest.getRequestURI();
+        String requestURI = servlet.getRequestURI();
         if (requestURI != null && requestURI.startsWith("/rsa/")) {
-            if (log.isDebugEnabled()) {
-                log.debug("返回数据2:{}", JSON.toJSONString(body));
-            }
             return body;
         }
-        Boolean isEncrypted = (Boolean) httpRequest.getAttribute(REQUEST_ENCRYPTED_ATTR);
-        String uuid = (String) httpRequest.getAttribute(REQUEST_UUID_ATTR);
-        // 只有明确标记为加密的请求才加密响应
-        if (isEncrypted == null || !isEncrypted || StringUtils.isBlank(uuid)) {
-            if (log.isDebugEnabled()) {
-                log.debug("返回数据3:{}", JSON.toJSONString(body));
-            }
+        // 关键逻辑：只有当header中包含X-Encrypt-UUID时，才进行响应加密
+        // 如果没有这个header，直接返回body，使用之前的流程（完全兼容）
+        String uuid = servlet.getHeader("X-Encrypt-UUID");
+        if (StringUtils.isBlank(uuid)) {
+            // 没有X-Encrypt-UUID header，不进行响应加密，使用之前的流程
             return body;
         }
         // 只对实现了Encrypt接口的响应进行加密
@@ -319,7 +166,7 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
         }
         // 如果没有找到 setter，尝试直接设置字段
         try {
-            java.lang.reflect.Field field = clazz.getDeclaredField(fieldName);
+            Field field = clazz.getDeclaredField(fieldName);
             field.setAccessible(true);
             field.set(obj, value);
         } catch (NoSuchFieldException e) {
@@ -327,7 +174,7 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
             Class<?> superClass = clazz.getSuperclass();
             while (superClass != null) {
                 try {
-                    java.lang.reflect.Field field = superClass.getDeclaredField(fieldName);
+                    Field field = superClass.getDeclaredField(fieldName);
                     field.setAccessible(true);
                     field.set(obj, value);
                     return;
@@ -382,9 +229,6 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
         return false;
     }
 
-    /**
-     * 从ServerHttpRequest获取HttpServletRequest
-     */
     private HttpServletRequest getHttpServletRequest(ServerHttpRequest request) {
         if (request instanceof ServletServerHttpRequest) {
             return ((ServletServerHttpRequest) request).getServletRequest();
