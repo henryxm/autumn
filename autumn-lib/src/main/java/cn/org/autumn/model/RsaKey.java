@@ -15,6 +15,11 @@ import java.io.Serializable;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class RsaKey implements Serializable {
     /**
+     * 客户端UUID标识
+     * 客户端生成并存储，用于关联密钥对
+     */
+    String uuid;
+    /**
      * 公钥，后台生成，发送给客户端
      */
     String publicKey;
@@ -22,11 +27,6 @@ public class RsaKey implements Serializable {
      * 私钥，后台生成，保存在后台，用于解密
      */
     String privateKey;
-    /**
-     * 客户端UUID标识
-     * 客户端生成并存储，用于关联密钥对
-     */
-    String uuid;
     /**
      * 密钥对过期时间戳（毫秒）
      * 客户端应在此时间之前重新获取新的密钥对
@@ -44,13 +44,19 @@ public class RsaKey implements Serializable {
         this.uuid = uuid;
     }
 
+    public RsaKey(String uuid, String publicKey, Long expireTime) {
+        this.uuid = uuid;
+        this.publicKey = publicKey;
+        this.expireTime = expireTime;
+    }
+
     /**
      * 转换为PublicKey对象（用于返回给客户端）
      *
      * @return PublicKey对象
      */
-    public PublicKey toPublicKey() {
-        return new PublicKey(publicKey, uuid, expireTime);
+    public RsaKey copy() {
+        return new RsaKey(uuid, publicKey, expireTime);
     }
 
     /**

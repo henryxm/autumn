@@ -43,11 +43,6 @@ public class AesKey implements Serializable {
     private Long expireTime;
 
     /**
-     * 创建时间（时间戳，毫秒）
-     */
-    private Long createTime;
-
-    /**
      * 检查密钥是否已过期
      *
      * @return true-已过期，false-未过期

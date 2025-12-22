@@ -3,7 +3,6 @@ package cn.org.autumn.service;
 import cn.org.autumn.config.CacheConfig;
 import cn.org.autumn.config.EncryptConfigHandler;
 import cn.org.autumn.exception.CodeException;
-import cn.org.autumn.model.ClientPublicKey;
 import cn.org.autumn.model.Encrypt;
 import cn.org.autumn.model.Error;
 import cn.org.autumn.model.RsaKey;
@@ -65,7 +64,7 @@ public class RsaService {
             clientPublicKeyConfig = CacheConfig.builder()
                     .cacheName("ClientPublicKeyCache")
                     .keyType(String.class)
-                    .valueType(ClientPublicKey.class)
+                    .valueType(RsaKey.class)
                     .expireTime(config.getClientPublicKeyValidMinutes())
                     .timeUnit(TimeUnit.MINUTES)
                     .build();
@@ -109,7 +108,7 @@ public class RsaService {
      * @return 包含过期时间的密钥对
      * @throws CodeException 密钥获取或生成失败时抛出异常
      */
-    public RsaKey getKeyPair(String uuid) throws CodeException {
+    public RsaKey getRsaKey(String uuid) throws CodeException {
         if (StringUtils.isBlank(uuid)) {
             throw new CodeException(Error.RSA_UUID_REQUIRED);
         }
@@ -206,7 +205,7 @@ public class RsaService {
      * @return 保存的客户端公钥信息
      * @throws CodeException 保存失败时抛出异常
      */
-    public ClientPublicKey savePublicKey(String uuid, String publicKey, Long expireTime) throws CodeException {
+    public RsaKey savePublicKey(String uuid, String publicKey, Long expireTime) throws CodeException {
         if (StringUtils.isBlank(uuid)) {
             throw new CodeException(Error.RSA_UUID_REQUIRED);
         }
@@ -233,8 +232,6 @@ public class RsaService {
             log.error("客户端公钥验证失败，UUID: {}, 错误: {}", uuid, e.getMessage());
             throw new CodeException(Error.RSA_KEY_FORMAT_ERROR);
         }
-        // 创建客户端公钥对象
-        ClientPublicKey clientPublicKey = new ClientPublicKey(uuid, publicKey);
         // 处理过期时间
         EncryptConfigHandler.RsaConfig config = getRsaConfig();
         long finalExpireTime;
@@ -261,8 +258,9 @@ public class RsaService {
                 log.debug("使用后端默认过期时间，UUID: {}, 过期时间: {}", uuid, finalExpireTime);
             }
         }
-        clientPublicKey.setExpireTime(finalExpireTime);
-        // 保存到缓存
+        // 创建客户端公钥对象
+        RsaKey clientPublicKey = new RsaKey(uuid, publicKey,finalExpireTime);
+         // 保存到缓存
         cacheService.put(getClientPublicKeyConfig().getCacheName(), uuid, clientPublicKey);
         if (log.isDebugEnabled()) {
             log.debug("保存客户端公钥，UUID: {}, 过期时间: {}", uuid, finalExpireTime);
@@ -276,11 +274,11 @@ public class RsaService {
      * @param uuid 客户端标识
      * @return 客户端公钥信息，如果不存在或已过期返回null
      */
-    public ClientPublicKey getClientPublicKey(String uuid) {
+    public RsaKey getClientPublicKey(String uuid) {
         if (StringUtils.isBlank(uuid)) {
             return null;
         }
-        ClientPublicKey clientPublicKey = cacheService.get(getClientPublicKeyConfig().getCacheName(), uuid);
+        RsaKey clientPublicKey = cacheService.get(getClientPublicKeyConfig().getCacheName(), uuid);
         if (clientPublicKey != null && clientPublicKey.isExpired()) {
             log.warn("客户端公钥已过期，ClientId: {}, 过期时间: {}", uuid, clientPublicKey.getExpireTime());
             // 可以选择删除过期公钥或返回null
@@ -306,7 +304,7 @@ public class RsaService {
             throw new IllegalArgumentException("UUID不能为空");
         }
         // 获取客户端公钥
-        ClientPublicKey clientPublicKey = getClientPublicKey(uuid);
+        RsaKey clientPublicKey = getClientPublicKey(uuid);
         if (clientPublicKey == null) {
             throw new CodeException(Error.RSA_CLIENT_PUBLIC_KEY_NOT_FOUND);
         }
@@ -339,7 +337,7 @@ public class RsaService {
      * @return true表示存在且有效，false表示不存在或已过期
      */
     public boolean hasValidClientPublicKey(String uuid) {
-        ClientPublicKey clientPublicKey = getClientPublicKey(uuid);
+        RsaKey clientPublicKey = getClientPublicKey(uuid);
         return clientPublicKey != null && !clientPublicKey.isExpired();
     }
 }

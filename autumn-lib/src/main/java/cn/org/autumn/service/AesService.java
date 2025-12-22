@@ -100,10 +100,9 @@ public class AesService {
             secureRandom.nextBytes(iv);
             String vectorBase64 = Base64.getEncoder().encodeToString(iv);
             // 计算过期时间
-            long createTime = System.currentTimeMillis();
-            long expireTime = createTime + (config.getKeyValidMinutes() * 60 * 1000L);
+            long expireTime = System.currentTimeMillis() + (config.getKeyValidMinutes() * 60 * 1000L);
             // 创建AES密钥对象
-            AesKey aesKey = AesKey.builder().uuid(uuid).key(keyBase64).vector(vectorBase64).expireTime(expireTime).createTime(createTime).build();
+            AesKey aesKey = AesKey.builder().uuid(uuid).key(keyBase64).vector(vectorBase64).expireTime(expireTime).build();
             // 缓存AES密钥
             cacheService.put(getAesKeyCacheConfig().getCacheName(), uuid, aesKey);
             if (log.isDebugEnabled()) {
