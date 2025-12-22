@@ -23,6 +23,7 @@ import com.baomidou.mybatisplus.mapper.EntityWrapper;
 import com.baomidou.mybatisplus.plugins.Page;
 import com.baomidou.mybatisplus.service.impl.ServiceImpl;
 import com.google.gson.Gson;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.apache.shiro.session.mgt.SessionManager;
 import org.apache.shiro.web.servlet.Cookie;
@@ -46,6 +47,7 @@ import java.util.*;
 
 import static cn.org.autumn.utils.Uuid.uuid;
 
+@Slf4j
 @Service
 public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity> implements LoopJob.Job, LoopJob.OneMinute, HostFactory.Host, InitFactory.Init, InitFactory.After, CategoryHandler, DomainHandler, ClearHandler {
 
@@ -752,6 +754,28 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         } catch (Exception e) {
             throw new AException("获取参数失败");
         }
+    }
+
+    public <T> T getConfigObjectValidate(String key, Class<T> clazz) {
+        T config = getConfigObject(key, clazz);
+        // 对RSA和AES配置进行校验和修正
+        if (config != null) {
+            List<String> fixes = null;
+            if (RsaConfig.class.isAssignableFrom(clazz) && config instanceof RsaConfig) {
+                fixes = ((RsaConfig) config).validateAndFix();
+            } else if (AesConfig.class.isAssignableFrom(clazz) && config instanceof AesConfig) {
+                fixes = ((AesConfig) config).validateAndFix();
+            }
+            // 如果配置被修正，记录日志并更新到数据库
+            if (fixes != null && !fixes.isEmpty()) {
+                for (String fix : fixes) {
+                    log.info("[配置校验] " + fix);
+                }
+                String newValue = new Gson().toJson(config);
+                updateValueByKey(key, newValue);
+            }
+        }
+        return config;
     }
 
     public CloudStorageConfig getCloudStorageConfig() {

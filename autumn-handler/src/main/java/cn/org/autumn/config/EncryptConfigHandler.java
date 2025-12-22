@@ -55,7 +55,7 @@ public interface EncryptConfigHandler {
          * 客户端应在此时间之前重新获取新的密钥对
          */
         default int getClientBufferMinutes() {
-            return 5;
+            return 10;
         }
 
         /**
@@ -82,6 +82,22 @@ public interface EncryptConfigHandler {
          */
         default int getKeyValidMinutes() {
             return 60;
+        }
+
+        /**
+         * 服务端冗余保留时间（分钟），默认10分钟
+         * 密钥过期后，服务端仍保留此时间，用于处理正在传输的加密数据
+         */
+        default int getServerBufferMinutes() {
+            return 10;
+        }
+
+        /**
+         * 客户端建议提前刷新时间（分钟），默认5分钟
+         * 客户端应在此时间之前重新获取新的密钥
+         */
+        default int getClientBufferMinutes() {
+            return 10;
         }
 
         /**

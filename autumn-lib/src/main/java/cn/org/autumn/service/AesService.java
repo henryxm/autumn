@@ -6,14 +6,12 @@ import cn.org.autumn.exception.CodeException;
 import cn.org.autumn.model.AesKey;
 import cn.org.autumn.model.Error;
 import cn.org.autumn.site.EncryptConfigFactory;
-import cn.org.autumn.site.LoadFactory;
 import cn.org.autumn.utils.AES;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.PostConstruct;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import java.security.SecureRandom;
@@ -51,11 +49,13 @@ public class AesService {
 
     public void initCacheConfig() {
         EncryptConfigHandler.AesConfig config = getAesConfig();
+        // 缓存过期时间 = 密钥有效期 + 服务端冗余保留时间
+        // 确保在密钥过期后，服务端仍能解密正在传输的加密数据
         aesKeyCacheConfig = CacheConfig.builder()
                 .cacheName("AesServiceCache")
                 .keyType(String.class)
                 .valueType(AesKey.class)
-                .expireTime(config.getKeyValidMinutes())
+                .expireTime(config.getKeyValidMinutes() + config.getServerBufferMinutes())
                 .timeUnit(TimeUnit.MINUTES)
                 .build();
         if (log.isDebugEnabled()) {
@@ -129,21 +129,34 @@ public class AesService {
         if (StringUtils.isBlank(uuid)) {
             throw new CodeException(Error.RSA_UUID_REQUIRED);
         }
-        // 从缓存中获取
-        AesKey aesKey = cacheService.get(getAesKeyCacheConfig().getCacheName(), uuid);
-        if (aesKey != null && !aesKey.isExpired()) {
-            // 检查密钥格式
-            if (StringUtils.isBlank(aesKey.getKey()) || StringUtils.isBlank(aesKey.getVector())) {
-                if (log.isDebugEnabled())
-                    log.warn("AES密钥格式错误，UUID: {}, 密钥或向量为空", uuid);
-                // 删除无效密钥，重新生成
-                cacheService.remove(getAesKeyCacheConfig().getCacheName(), uuid);
-                return generate(uuid);
+        try {
+            EncryptConfigHandler.AesConfig config = getAesConfig();
+            // 从缓存中获取
+            AesKey aesKey = cacheService.get(getAesKeyCacheConfig().getCacheName(), uuid);
+            if (aesKey != null && !aesKey.isExpired()) {
+                // 检查密钥格式
+                if (StringUtils.isBlank(aesKey.getKey()) || StringUtils.isBlank(aesKey.getVector())) {
+                    if (log.isDebugEnabled())
+                        log.warn("AES密钥格式错误，UUID: {}, 密钥或向量为空", uuid);
+                    // 删除无效密钥，重新生成
+                    cacheService.remove(getAesKeyCacheConfig().getCacheName(), uuid);
+                    return generate(uuid);
+                }
+                // 如果密钥即将过期，生成新的密钥
+                if (aesKey.isExpiringSoon(config.getClientBufferMinutes())) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("AES密钥即将过期，生成新的密钥，UUID: {}", uuid);
+                    }
+                    aesKey = generate(uuid);
+                }
+                return aesKey;
             }
-            return aesKey;
+            // 缓存中不存在或已过期，生成新的
+            return generate(uuid);
+        } catch (Exception e) {
+            log.error("获取AES密钥失败，UUID: {}", uuid, e);
+            throw new CodeException(Error.AES_KEY_NOT_FOUND);
         }
-        // 缓存中不存在或已过期，生成新的
-        return generate(uuid);
     }
 
     /**
@@ -220,8 +233,9 @@ public class AesService {
             log.error("AES向量格式错误，向量为空，UUID: {}", uuid);
             throw new CodeException(Error.AES_VECTOR_FORMAT_ERROR);
         }
+        // 检查密钥是否已过期（但仍在服务端冗余保留时间内）
         if (aesKey.isExpired()) {
-            throw new CodeException(Error.AES_KEY_EXPIRED);
+            log.warn("使用已过期的AES密钥进行解密，UUID: {}, 过期时间: {}", uuid, aesKey.getExpireTime());
         }
         try {
             // AES工具类使用Base64编码的密钥和向量

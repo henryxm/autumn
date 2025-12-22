@@ -45,7 +45,7 @@ public class RsaController {
     public Response<PublicKey> getPublicKey(@Valid @RequestBody PublicKeyRequest request, HttpServletRequest servlet) {
         try {
             // 使用客户端提交的UUID获取或生成服务端密钥对
-            KeyPair keyPair = rsaService.getKeyPair(request.getUuid());
+            RsaKey keyPair = rsaService.getKeyPair(request.getUuid());
             // 转换为PublicKey对象返回给客户端
             PublicKey publicKey = keyPair.toPublicKey();
             if (log.isDebugEnabled()) {

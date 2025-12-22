@@ -13,7 +13,7 @@ import java.io.Serializable;
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class KeyPair implements Serializable {
+public class RsaKey implements Serializable {
     /**
      * 公钥，后台生成，发送给客户端
      */
@@ -33,12 +33,12 @@ public class KeyPair implements Serializable {
      */
     Long expireTime;
 
-    public KeyPair(String publicKey, String privateKey) {
+    public RsaKey(String publicKey, String privateKey) {
         this.publicKey = publicKey;
         this.privateKey = privateKey;
     }
 
-    public KeyPair(String publicKey, String privateKey, String uuid) {
+    public RsaKey(String publicKey, String privateKey, String uuid) {
         this.publicKey = publicKey;
         this.privateKey = privateKey;
         this.uuid = uuid;

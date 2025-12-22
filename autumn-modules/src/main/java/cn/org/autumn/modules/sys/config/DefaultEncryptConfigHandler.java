@@ -31,7 +31,7 @@ public class DefaultEncryptConfigHandler implements EncryptConfigHandler, ClearH
             synchronized (this) {
                 if (rsaConfig == null) {
                     try {
-                        rsaConfig = sysConfigService.getConfigObject("RSA_CONFIG", cn.org.autumn.model.RsaConfig.class);
+                        rsaConfig = sysConfigService.getConfigObjectValidate("RSA_CONFIG", cn.org.autumn.model.RsaConfig.class);
                         if (log.isDebugEnabled()) {
                             log.debug("加载RSA配置: keyPairValidMinutes={}, serverBufferMinutes={}, clientBufferMinutes={}, clientPublicKeyValidMinutes={}, keySize={}", rsaConfig.getKeyPairValidMinutes(), rsaConfig.getServerBufferMinutes(), rsaConfig.getClientBufferMinutes(), rsaConfig.getClientPublicKeyValidMinutes(), rsaConfig.getKeySize());
                         }
@@ -51,7 +51,7 @@ public class DefaultEncryptConfigHandler implements EncryptConfigHandler, ClearH
             synchronized (this) {
                 if (aesConfig == null) {
                     try {
-                        aesConfig = sysConfigService.getConfigObject("AES_CONFIG", cn.org.autumn.model.AesConfig.class);
+                        aesConfig = sysConfigService.getConfigObjectValidate("AES_CONFIG", cn.org.autumn.model.AesConfig.class);
                         if (log.isDebugEnabled()) {
                             log.debug("加载AES配置: keyValidMinutes={}, keySize={}, ivSize={}", aesConfig.getKeyValidMinutes(), aesConfig.getKeySize(), aesConfig.getIvSize());
                         }

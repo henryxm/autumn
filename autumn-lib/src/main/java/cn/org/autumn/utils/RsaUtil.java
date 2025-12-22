@@ -1,7 +1,7 @@
 package cn.org.autumn.utils;
 
 import cn.org.autumn.model.KeyData;
-import cn.org.autumn.model.KeyPair;
+import cn.org.autumn.model.RsaKey;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.crypto.Cipher;
@@ -41,7 +41,7 @@ public class RsaUtil {
      *
      * @return 包含公钥和私钥的KeyPair对象
      */
-    public static KeyPair generate() {
+    public static RsaKey generate() {
         return generate(DEFAULT_KEY_SIZE);
     }
 
@@ -51,7 +51,7 @@ public class RsaUtil {
      * @param keySize 密钥长度（位），支持1024、2048、4096等
      * @return 包含公钥和私钥的KeyPair对象
      */
-    public static KeyPair generate(int keySize) {
+    public static RsaKey generate(int keySize) {
         try {
             KeyPairGenerator keyPairGen = KeyPairGenerator.getInstance(KEY_ALGORITHM);
             keyPairGen.initialize(keySize, new SecureRandom());
@@ -59,7 +59,7 @@ public class RsaUtil {
             RSAPublicKey publicKey = (RSAPublicKey) keyPair.getPublic();
             RSAPrivateKey privateKey = (RSAPrivateKey) keyPair.getPrivate();
             // Base64编码后的公钥和私钥
-            return new KeyPair(Base64.getEncoder().encodeToString(publicKey.getEncoded()), Base64.getEncoder().encodeToString(privateKey.getEncoded()));
+            return new RsaKey(Base64.getEncoder().encodeToString(publicKey.getEncoded()), Base64.getEncoder().encodeToString(privateKey.getEncoded()));
         } catch (Exception e) {
             log.error("生成密钥: {}", e.getMessage());
             throw new RuntimeException("生成RSA密钥对失败", e);
@@ -238,7 +238,7 @@ public class RsaUtil {
     }
 
     public static void test(String[] args) {
-        KeyPair pair = generate();
+        RsaKey pair = generate();
         boolean v = verify(pair.getPublicKey(), pair.getPrivateKey());
         log.info("测试结果:{}", v);
     }

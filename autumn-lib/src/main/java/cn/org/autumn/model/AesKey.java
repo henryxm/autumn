@@ -60,16 +60,26 @@ public class AesKey implements Serializable {
     }
 
     /**
-     * 检查密钥是否即将过期
-     * 在过期前5分钟认为即将过期
+     * 检查密钥是否即将过期（用于客户端提前刷新）
+     * 默认提前5分钟刷新
      *
      * @return true-即将过期，false-未即将过期
      */
     public boolean isExpiringSoon() {
+        return isExpiringSoon(10);
+    }
+
+    /**
+     * 检查密钥是否即将过期（用于客户端提前刷新）
+     *
+     * @param bufferMinutes 缓冲时间（分钟）
+     * @return true-即将过期，false-未即将过期
+     */
+    public boolean isExpiringSoon(int bufferMinutes) {
         if (expireTime == null) {
             return false;
         }
-        long bufferTime = 5 * 60 * 1000; // 5分钟
-        return System.currentTimeMillis() > (expireTime - bufferTime);
+        long bufferMillis = bufferMinutes * 60 * 1000L;
+        return System.currentTimeMillis() > (expireTime - bufferMillis);
     }
 }

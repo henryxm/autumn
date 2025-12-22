@@ -6,7 +6,7 @@ import cn.org.autumn.exception.CodeException;
 import cn.org.autumn.model.ClientPublicKey;
 import cn.org.autumn.model.Encrypt;
 import cn.org.autumn.model.Error;
-import cn.org.autumn.model.KeyPair;
+import cn.org.autumn.model.RsaKey;
 import cn.org.autumn.site.EncryptConfigFactory;
 import cn.org.autumn.utils.RsaUtil;
 import lombok.extern.slf4j.Slf4j;
@@ -51,7 +51,7 @@ public class RsaService {
             serverPrivateKeyConfig = CacheConfig.builder()
                     .cacheName("RsaServiceCache")
                     .keyType(String.class)
-                    .valueType(KeyPair.class)
+                    .valueType(RsaKey.class)
                     .expireTime(config.getKeyPairValidMinutes() + config.getServerBufferMinutes())
                     .timeUnit(TimeUnit.MINUTES)
                     .build();
@@ -80,13 +80,13 @@ public class RsaService {
      * @return 包含过期时间的密钥对
      * @throws CodeException 密钥生成失败时抛出异常
      */
-    public KeyPair generate(String uuid) throws CodeException {
+    public RsaKey generate(String uuid) throws CodeException {
         if (StringUtils.isBlank(uuid)) {
             throw new CodeException(Error.RSA_UUID_REQUIRED);
         }
         try {
             EncryptConfigHandler.RsaConfig config = getRsaConfig();
-            KeyPair pair = RsaUtil.generate(config.getKeySize());
+            RsaKey pair = RsaUtil.generate(config.getKeySize());
             pair.setUuid(uuid);
             // 设置过期时间：当前时间 + 密钥对有效期
             long expireTime = System.currentTimeMillis() + (config.getKeyPairValidMinutes() * 60 * 1000L);
@@ -109,13 +109,13 @@ public class RsaService {
      * @return 包含过期时间的密钥对
      * @throws CodeException 密钥获取或生成失败时抛出异常
      */
-    public KeyPair getKeyPair(String uuid) throws CodeException {
+    public RsaKey getKeyPair(String uuid) throws CodeException {
         if (StringUtils.isBlank(uuid)) {
             throw new CodeException(Error.RSA_UUID_REQUIRED);
         }
         try {
             EncryptConfigHandler.RsaConfig config = getRsaConfig();
-            KeyPair pair = cacheService.compute(uuid, () -> {
+            RsaKey pair = cacheService.compute(uuid, () -> {
                 try {
                     return generate(uuid);
                 } catch (CodeException e) {
@@ -169,7 +169,7 @@ public class RsaService {
             throw new CodeException(Error.RSA_UUID_REQUIRED);
         }
         // 从缓存中获取密钥对
-        KeyPair keyPair = cacheService.get(getServerPrivateKeyConfig().getCacheName(), value.getUuid());
+        RsaKey keyPair = cacheService.get(getServerPrivateKeyConfig().getCacheName(), value.getUuid());
         if (keyPair == null) {
             throw new CodeException(Error.RSA_PRIVATE_KEY_NOT_FOUND);
         }
