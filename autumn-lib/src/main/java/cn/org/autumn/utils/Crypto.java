@@ -96,9 +96,10 @@ public class Crypto {
             byte[] result = cipher.doFinal(bytes);
             return Base64.getEncoder().encodeToString(result);
         } catch (Exception e) {
-            log.debug("加密失败:{}", e.getMessage());
+            if (log.isDebugEnabled())
+                log.debug("加密失败:{}", e.getMessage(), e);
         }
-        return null;
+        return "";
     }
 
     public static String decrypt(String content, String algorithm, String password, String vector) {
@@ -129,7 +130,8 @@ public class Crypto {
             byte[] result = cipher.doFinal(bytes);
             return new String(result, StandardCharsets.UTF_8);
         } catch (Exception e) {
-            log.debug("解密失败:{}", e.getMessage());
+            if (log.isDebugEnabled())
+                log.debug("解密失败:{}", e.getMessage(), e);
         }
         return "";
     }

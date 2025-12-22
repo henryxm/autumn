@@ -59,13 +59,15 @@ public class EncryptArgumentResolver extends RequestResponseBodyMethodProcessor 
         if (object instanceof Encrypt) {
             Encrypt encrypt = (Encrypt) object;
             if (StringUtils.isNotBlank(encrypt.getEncrypt()) && StringUtils.isNotBlank(encrypt.getUuid())) {
-                if (log.isDebugEnabled())
-                    log.debug("解密数据:{}", gson.toJson(object));
+                long start = System.currentTimeMillis();
                 String decrypt = aesService.decrypt(encrypt.getEncrypt(), encrypt.getUuid());
-                if (log.isDebugEnabled())
-                    log.debug("解密数据:{}", decrypt);
                 Type parameterType = getParameterType(parameter);
-                return JSON.parseObject(decrypt, parameterType);
+                object = JSON.parseObject(decrypt, parameterType);
+                long end = System.currentTimeMillis();
+                if (log.isDebugEnabled() && null != decrypt) {
+                    log.debug("解密数据: 长度:{}, 耗时:{}毫秒", decrypt.length(), end - start);
+                    log.debug("解密内容: {}", decrypt);
+                }
             }
         }
         return object;

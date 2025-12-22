@@ -48,13 +48,7 @@ public class AesService {
     /**
      * AES密钥缓存配置
      */
-    private static final CacheConfig aesKeyCacheConfig = CacheConfig.builder()
-            .cacheName("AesServiceCache")
-            .keyType(String.class)
-            .valueType(AesKey.class)
-            .expireTime(AES_KEY_VALID_MINUTES)
-            .timeUnit(TimeUnit.MINUTES)
-            .build();
+    private static final CacheConfig aesKeyCacheConfig = CacheConfig.builder().cacheName("AesServiceCache").keyType(String.class).valueType(AesKey.class).expireTime(AES_KEY_VALID_MINUTES).timeUnit(TimeUnit.MINUTES).build();
 
     /**
      * 生成AES密钥和向量
@@ -88,13 +82,7 @@ public class AesService {
             long createTime = System.currentTimeMillis();
             long expireTime = createTime + (AES_KEY_VALID_MINUTES * 60 * 1000L);
             // 创建AES密钥对象
-            AesKey aesKey = AesKey.builder()
-                    .uuid(uuid)
-                    .key(keyBase64)
-                    .vector(vectorBase64)
-                    .expireTime(expireTime)
-                    .createTime(createTime)
-                    .build();
+            AesKey aesKey = AesKey.builder().uuid(uuid).key(keyBase64).vector(vectorBase64).expireTime(expireTime).createTime(createTime).build();
             // 缓存AES密钥
             cacheService.put(aesKeyCacheConfig.getCacheName(), uuid, aesKey);
             if (log.isDebugEnabled()) {
@@ -120,20 +108,19 @@ public class AesService {
         if (StringUtils.isBlank(uuid)) {
             throw new CodeException(Error.RSA_UUID_REQUIRED);
         }
-
         // 从缓存中获取
         AesKey aesKey = cacheService.get(aesKeyCacheConfig.getCacheName(), uuid);
         if (aesKey != null && !aesKey.isExpired()) {
             // 检查密钥格式
             if (StringUtils.isBlank(aesKey.getKey()) || StringUtils.isBlank(aesKey.getVector())) {
-                log.warn("AES密钥格式错误，UUID: {}, 密钥或向量为空", uuid);
+                if (log.isDebugEnabled())
+                    log.warn("AES密钥格式错误，UUID: {}, 密钥或向量为空", uuid);
                 // 删除无效密钥，重新生成
                 cacheService.remove(aesKeyCacheConfig.getCacheName(), uuid);
                 return generate(uuid);
             }
             return aesKey;
         }
-
         // 缓存中不存在或已过期，生成新的
         return generate(uuid);
     }
@@ -153,7 +140,6 @@ public class AesService {
         if (StringUtils.isBlank(uuid)) {
             throw new CodeException(Error.RSA_UUID_REQUIRED);
         }
-
         AesKey aesKey = getAesKey(uuid);
         if (aesKey == null) {
             throw new CodeException(Error.AES_KEY_NOT_FOUND);
@@ -166,13 +152,12 @@ public class AesService {
             log.error("AES向量格式错误，向量为空，UUID: {}", uuid);
             throw new CodeException(Error.AES_VECTOR_FORMAT_ERROR);
         }
-
         try {
             // AES工具类使用Base64编码的密钥和向量
             // 密钥和向量已经是Base64编码，直接使用
             String encrypted = AES.encrypt(data, aesKey.getKey(), aesKey.getVector());
-            if (encrypted == null || StringUtils.isBlank(encrypted)) {
-                log.error("AES加密结果为空，UUID: {}", uuid);
+            if (StringUtils.isBlank(encrypted)) {
+                log.error("加密为空:{}, 秘钥:{}, 向量:{}, 内容:{}", uuid, aesKey.getKey(), aesKey.getVector(), data);
                 throw new CodeException(Error.AES_ENCRYPT_FAILED);
             }
             return encrypted;
@@ -222,7 +207,7 @@ public class AesService {
             // 密钥和向量已经是Base64编码，直接使用
             String decrypted = AES.decrypt(data, aesKey.getKey(), aesKey.getVector());
             if (StringUtils.isBlank(decrypted)) {
-                log.error("AES解密结果为空，UUID: {}", uuid);
+                log.error("解密为空:{}, 秘钥:{}, 向量:{}, 内容:{}", uuid, aesKey.getKey(), aesKey.getVector(), data);
                 throw new CodeException(Error.AES_DECRYPTED_DATA_EMPTY);
             }
             return decrypted;
@@ -247,7 +232,6 @@ public class AesService {
         if (StringUtils.isBlank(uuid)) {
             return false;
         }
-
         AesKey aesKey = cacheService.get(aesKeyCacheConfig.getCacheName(), uuid);
         return aesKey != null && !aesKey.isExpired();
     }

@@ -65,14 +65,10 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
     }
 
     @Override
-    public Object beforeBodyWrite(@Nullable Object body, @NonNull MethodParameter returnType, @NonNull MediaType selectedContentType,
-                                  @NonNull Class<? extends HttpMessageConverter<?>> selectedConverterType,
-                                  @NonNull ServerHttpRequest request, @NonNull ServerHttpResponse response) {
-        if (null == body)
-            return body;
+    public Object beforeBodyWrite(@Nullable Object body, @NonNull MethodParameter returnType, @NonNull MediaType selectedContentType, @NonNull Class<? extends HttpMessageConverter<?>> selectedConverterType, @NonNull ServerHttpRequest request, @NonNull ServerHttpResponse response) {
         // 检查请求是否被加密
         HttpServletRequest servlet = getHttpServletRequest(request);
-        if (servlet == null) {
+        if (servlet == null || null == body) {
             return body;
         }
         // 排除RSA相关的接口（密钥交换接口），避免循环加密
@@ -90,24 +86,25 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
         // 只对实现了Encrypt接口的响应进行加密
         if (body instanceof Encrypt) {
             try {
+                long start = System.currentTimeMillis();
                 // 将响应体序列化为JSON
-                String jsonBody = JSON.toJSONString(body);
-                if (log.isDebugEnabled())
-                    log.debug("加密前:{}", jsonBody);
+                String json = JSON.toJSONString(body);
                 // 使用AES密钥加密响应数据
-                String encryptedData = aesService.encrypt(jsonBody, uuid);
+                String encrypt = aesService.encrypt(json, uuid);
                 // 使用反射创建返回值类型的实例
-                return createEncryptedResponse(body, encryptedData, uuid);
+                body = createEncryptedResponse(body, encrypt, uuid);
+                long end = System.currentTimeMillis();
+                if (log.isDebugEnabled()) {
+                    log.debug("加密数据: 长度:{}, 耗时:{}毫秒", json.length(), end - start);
+                    log.debug("加密内容: {}", json);
+                }
             } catch (CodeException e) {
-                log.error("响应加密失败，UUID: {}, 错误: {}", uuid, e.getMessage());
+                log.error("加密失败，UUID: {}, 错误: {}", uuid, e.getMessage());
                 return Response.error(e);
             } catch (Exception e) {
-                log.error("加密处理失败，UUID: {}", uuid, e);
+                log.error("处理失败，UUID: {}", uuid, e);
                 return Response.error(e);
             }
-        }
-        if (log.isDebugEnabled()) {
-            log.debug("返回数据4:{}", JSON.toJSONString(body));
         }
         return body;
     }
@@ -136,8 +133,6 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
             setFieldValue(instance, "data", null);
             setFieldValue(instance, "result", null);
         }
-        if (log.isDebugEnabled())
-            log.debug("加密后:{}", JSON.toJSONString(instance));
         return instance;
     }
 
@@ -183,7 +178,8 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
                 }
             }
             // 如果所有父类都没有找到字段，记录警告但不抛出异常
-            log.warn("无法设置字段 {} 的值，字段不存在或无法访问", fieldName);
+            if (log.isDebugEnabled())
+                log.warn("无法设置字段 {} 的值，字段不存在或无法访问", fieldName);
         }
     }
 
