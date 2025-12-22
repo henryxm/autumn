@@ -5,6 +5,8 @@ import cn.org.autumn.bean.EnvBean;
 import cn.org.autumn.cluster.ServiceHandler;
 import cn.org.autumn.config.*;
 import cn.org.autumn.exception.AException;
+import cn.org.autumn.model.AesConfig;
+import cn.org.autumn.model.RsaConfig;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.lan.service.Language;
 import cn.org.autumn.modules.oss.cloud.CloudStorageConfig;
@@ -73,6 +75,8 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     public static final String CLUSTER_NAMESPACE = "CLUSTER_NAMESPACE";
     public static final String NONE_SUFFIX_VIEW = "NONE_SUFFIX_VIEW";
     public static final String SYSTEM_UPGRADE = "SYSTEM_UPGRADE";
+    public static final String RSA_CONFIG = "RSA_CONFIG";
+    public static final String AES_CONFIG = "AES_CONFIG";
     public static final String Localhost = "localhost";
     public static final String config_lang_prefix = "config_lang_string_";
     private static final String NULL = null;
@@ -229,6 +233,8 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 {NONE_SUFFIX_VIEW, "js,css,map,html,htm,shtml", "0", "系统默认后缀名为:.html, Request请求的路径在程序查找资源的时候，默认会带上.html, 通过配置无后缀名文件视图, 系统将请求路径进行资源查找", config, string_type},
                 {SYSTEM_UPGRADE, new Gson().toJson(new SystemUpgrade()), "1", "系统升级开关与提示信息", config, json_type, SystemUpgrade.class.getName()},
                 {CLOUD_STORAGE_CONFIG_KEY, "{\"aliyunAccessKeyId\":\"\",\"aliyunAccessKeySecret\":\"\",\"aliyunBucketName\":\"\",\"aliyunDomain\":\"\",\"aliyunEndPoint\":\"\",\"aliyunPrefix\":\"\",\"qcloudBucketName\":\"\",\"qcloudDomain\":\"\",\"qcloudPrefix\":\"\",\"qcloudSecretId\":\"\",\"qcloudSecretKey\":\"\",\"qiniuAccessKey\":\"\",\"qiniuBucketName\":\"\",\"qiniuDomain\":\"\",\"qiniuPrefix\":\"\",\"qiniuSecretKey\":\"\",\"type\":1}", "0", "云存储配置信息", config, json_type, CloudStorageConfig.class.getName()},
+                {RSA_CONFIG, new Gson().toJson(new RsaConfig()), "1", "RSA加密配置", config, json_type, RsaConfig.class.getName()},
+                {AES_CONFIG, new Gson().toJson(new AesConfig()), "1", "AES加密配置", config, json_type, AesConfig.class.getName()},
         };
     }
 

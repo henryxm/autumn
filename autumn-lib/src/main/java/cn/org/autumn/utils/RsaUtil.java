@@ -24,7 +24,7 @@ public class RsaUtil {
     /**
      * RSA密钥长度，默认1024位
      */
-    private static final int KEY_SIZE = 1024;
+    private static final int DEFAULT_KEY_SIZE = 1024;
 
     /**
      * 密钥算法
@@ -37,14 +37,24 @@ public class RsaUtil {
     private static final String TRANSFORMATION = "RSA/ECB/PKCS1Padding";
 
     /**
-     * 生成RSA密钥对
+     * 生成RSA密钥对（使用默认密钥长度1024位）
      *
-     * @return 包含公钥和私钥的Map，key分别为"publicKey"和"privateKey"
+     * @return 包含公钥和私钥的KeyPair对象
      */
     public static KeyPair generate() {
+        return generate(DEFAULT_KEY_SIZE);
+    }
+
+    /**
+     * 生成RSA密钥对（使用指定的密钥长度）
+     *
+     * @param keySize 密钥长度（位），支持1024、2048、4096等
+     * @return 包含公钥和私钥的KeyPair对象
+     */
+    public static KeyPair generate(int keySize) {
         try {
             KeyPairGenerator keyPairGen = KeyPairGenerator.getInstance(KEY_ALGORITHM);
-            keyPairGen.initialize(KEY_SIZE, new SecureRandom());
+            keyPairGen.initialize(keySize, new SecureRandom());
             java.security.KeyPair keyPair = keyPairGen.generateKeyPair();
             RSAPublicKey publicKey = (RSAPublicKey) keyPair.getPublic();
             RSAPrivateKey privateKey = (RSAPrivateKey) keyPair.getPrivate();
@@ -137,9 +147,11 @@ public class RsaUtil {
             Cipher cipher = Cipher.getInstance(TRANSFORMATION);
             cipher.init(Cipher.ENCRYPT_MODE, pubKey);
             // RSA加密有长度限制，需要分段加密
+            // 从公钥中获取密钥长度
+            int keySize = ((RSAPublicKey) pubKey).getModulus().bitLength();
             byte[] dataBytes = data.getBytes(StandardCharsets.UTF_8);
             int inputLen = dataBytes.length;
-            int maxBlockSize = KEY_SIZE / 8 - 11; // 最大加密块长度
+            int maxBlockSize = keySize / 8 - 11; // 最大加密块长度（PKCS1Padding需要11字节填充）
             int offSet = 0;
             byte[] cache;
             int i = 0;
@@ -179,9 +191,11 @@ public class RsaUtil {
             Cipher cipher = Cipher.getInstance(TRANSFORMATION);
             cipher.init(Cipher.DECRYPT_MODE, priKey);
             // RSA解密需要分段解密
+            // 从私钥中获取密钥长度
+            int keySize = ((RSAPrivateKey) priKey).getModulus().bitLength();
             byte[] encryptedBytes = Base64.getDecoder().decode(data);
             int inputLen = encryptedBytes.length;
-            int maxBlockSize = KEY_SIZE / 8; // 最大解密块长度
+            int maxBlockSize = keySize / 8; // 最大解密块长度
             int offSet = 0;
             byte[] cache;
             int i = 0;

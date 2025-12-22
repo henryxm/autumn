@@ -2,7 +2,6 @@ package cn.org.autumn.modules.oauth.resolver;
 
 import cn.org.autumn.model.Encrypt;
 import cn.org.autumn.service.AesService;
-import com.alibaba.fastjson.JSON;
 import com.google.gson.Gson;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
@@ -62,7 +61,7 @@ public class EncryptArgumentResolver extends RequestResponseBodyMethodProcessor 
                 long start = System.currentTimeMillis();
                 String decrypt = aesService.decrypt(encrypt.getEncrypt(), encrypt.getUuid());
                 Type parameterType = getParameterType(parameter);
-                object = JSON.parseObject(decrypt, parameterType);
+                object = gson.fromJson(decrypt, parameterType);
                 long end = System.currentTimeMillis();
                 if (log.isDebugEnabled() && null != decrypt) {
                     log.debug("解密数据: 长度:{}, 耗时:{}毫秒", decrypt.length(), end - start);

@@ -5,7 +5,7 @@ import cn.org.autumn.exception.CodeException;
 import cn.org.autumn.model.Encrypt;
 import cn.org.autumn.model.Response;
 import cn.org.autumn.service.AesService;
-import com.alibaba.fastjson.JSON;
+import com.google.gson.Gson;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,6 +43,9 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
 
     @Autowired
     private AesService aesService;
+
+    @Autowired
+    Gson gson;
 
     @Override
     public HandlerInterceptor getHandlerInterceptor() {
@@ -88,7 +91,7 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
             try {
                 long start = System.currentTimeMillis();
                 // 将响应体序列化为JSON
-                String json = JSON.toJSONString(body);
+                String json = gson.toJson(body);
                 // 使用AES密钥加密响应数据
                 String encrypt = aesService.encrypt(json, uuid);
                 // 使用反射创建返回值类型的实例

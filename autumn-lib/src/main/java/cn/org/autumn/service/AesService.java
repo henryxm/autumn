@@ -1,15 +1,19 @@
 package cn.org.autumn.service;
 
 import cn.org.autumn.config.CacheConfig;
+import cn.org.autumn.config.EncryptConfigHandler;
 import cn.org.autumn.exception.CodeException;
 import cn.org.autumn.model.AesKey;
 import cn.org.autumn.model.Error;
+import cn.org.autumn.site.EncryptConfigFactory;
+import cn.org.autumn.site.LoadFactory;
 import cn.org.autumn.utils.AES;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.PostConstruct;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import java.security.SecureRandom;
@@ -29,26 +33,41 @@ public class AesService {
     @Autowired
     private CacheService cacheService;
 
-
-    /**
-     * AES密钥有效期（分钟），默认1小时
-     */
-    private static final int AES_KEY_VALID_MINUTES = 60;
-
-    /**
-     * AES密钥长度（位），默认256位
-     */
-    private static final int AES_KEY_SIZE = 256;
-
-    /**
-     * AES向量长度（字节），固定16字节（128位）
-     */
-    private static final int AES_IV_SIZE = 16;
+    @Autowired
+    EncryptConfigFactory encryptConfigFactory;
 
     /**
      * AES密钥缓存配置
      */
-    private static final CacheConfig aesKeyCacheConfig = CacheConfig.builder().cacheName("AesServiceCache").keyType(String.class).valueType(AesKey.class).expireTime(AES_KEY_VALID_MINUTES).timeUnit(TimeUnit.MINUTES).build();
+    private static CacheConfig aesKeyCacheConfig;
+
+    /**
+     * 获取AES配置
+     */
+    private EncryptConfigHandler.AesConfig getAesConfig() {
+        return encryptConfigFactory.getAesConfig();
+    }
+
+
+    public void initCacheConfig() {
+        EncryptConfigHandler.AesConfig config = getAesConfig();
+        aesKeyCacheConfig = CacheConfig.builder()
+                .cacheName("AesServiceCache")
+                .keyType(String.class)
+                .valueType(AesKey.class)
+                .expireTime(config.getKeyValidMinutes())
+                .timeUnit(TimeUnit.MINUTES)
+                .build();
+        if (log.isDebugEnabled()) {
+            log.debug("AES缓存配置初始化完成: expireTime={}", aesKeyCacheConfig.getExpireTime());
+        }
+    }
+
+    public CacheConfig getAesKeyCacheConfig() {
+        if (null == aesKeyCacheConfig)
+            initCacheConfig();
+        return aesKeyCacheConfig;
+    }
 
     /**
      * 生成AES密钥和向量
@@ -62,29 +81,31 @@ public class AesService {
             throw new CodeException(Error.RSA_UUID_REQUIRED);
         }
         try {
+            EncryptConfigHandler.AesConfig config = getAesConfig();
             // 生成AES密钥
             KeyGenerator keyGenerator = KeyGenerator.getInstance("AES");
             SecureRandom secureRandom = new SecureRandom();
-            keyGenerator.init(AES_KEY_SIZE, secureRandom);
+            keyGenerator.init(config.getKeySize(), secureRandom);
             SecretKey secretKey = keyGenerator.generateKey();
             byte[] keyBytes = secretKey.getEncoded();
             // 验证密钥长度
-            if (keyBytes.length != AES_KEY_SIZE / 8) {
-                log.error("AES密钥长度错误，期望: {}字节，实际: {}字节", AES_KEY_SIZE / 8, keyBytes.length);
+            int expectedKeyLength = config.getKeySize() / 8;
+            if (keyBytes.length != expectedKeyLength) {
+                log.error("AES密钥长度错误，期望: {}字节，实际: {}字节", expectedKeyLength, keyBytes.length);
                 throw new CodeException(Error.AES_KEY_LENGTH_ERROR);
             }
             String keyBase64 = Base64.getEncoder().encodeToString(keyBytes);
             // 生成AES向量
-            byte[] iv = new byte[AES_IV_SIZE];
+            byte[] iv = new byte[config.getIvSize()];
             secureRandom.nextBytes(iv);
             String vectorBase64 = Base64.getEncoder().encodeToString(iv);
             // 计算过期时间
             long createTime = System.currentTimeMillis();
-            long expireTime = createTime + (AES_KEY_VALID_MINUTES * 60 * 1000L);
+            long expireTime = createTime + (config.getKeyValidMinutes() * 60 * 1000L);
             // 创建AES密钥对象
             AesKey aesKey = AesKey.builder().uuid(uuid).key(keyBase64).vector(vectorBase64).expireTime(expireTime).createTime(createTime).build();
             // 缓存AES密钥
-            cacheService.put(aesKeyCacheConfig.getCacheName(), uuid, aesKey);
+            cacheService.put(getAesKeyCacheConfig().getCacheName(), uuid, aesKey);
             if (log.isDebugEnabled()) {
                 log.debug("生成AES密钥，UUID: {}, 过期时间: {}", uuid, expireTime);
             }
@@ -109,14 +130,14 @@ public class AesService {
             throw new CodeException(Error.RSA_UUID_REQUIRED);
         }
         // 从缓存中获取
-        AesKey aesKey = cacheService.get(aesKeyCacheConfig.getCacheName(), uuid);
+        AesKey aesKey = cacheService.get(getAesKeyCacheConfig().getCacheName(), uuid);
         if (aesKey != null && !aesKey.isExpired()) {
             // 检查密钥格式
             if (StringUtils.isBlank(aesKey.getKey()) || StringUtils.isBlank(aesKey.getVector())) {
                 if (log.isDebugEnabled())
                     log.warn("AES密钥格式错误，UUID: {}, 密钥或向量为空", uuid);
                 // 删除无效密钥，重新生成
-                cacheService.remove(aesKeyCacheConfig.getCacheName(), uuid);
+                cacheService.remove(getAesKeyCacheConfig().getCacheName(), uuid);
                 return generate(uuid);
             }
             return aesKey;
@@ -232,7 +253,7 @@ public class AesService {
         if (StringUtils.isBlank(uuid)) {
             return false;
         }
-        AesKey aesKey = cacheService.get(aesKeyCacheConfig.getCacheName(), uuid);
+        AesKey aesKey = cacheService.get(getAesKeyCacheConfig().getCacheName(), uuid);
         return aesKey != null && !aesKey.isExpired();
     }
 
@@ -245,6 +266,6 @@ public class AesService {
         if (StringUtils.isBlank(uuid)) {
             return;
         }
-        cacheService.remove(aesKeyCacheConfig.getCacheName(), uuid);
+        cacheService.remove(getAesKeyCacheConfig().getCacheName(), uuid);
     }
 }

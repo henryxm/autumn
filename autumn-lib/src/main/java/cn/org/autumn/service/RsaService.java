@@ -1,11 +1,13 @@
 package cn.org.autumn.service;
 
 import cn.org.autumn.config.CacheConfig;
+import cn.org.autumn.config.EncryptConfigHandler;
 import cn.org.autumn.exception.CodeException;
 import cn.org.autumn.model.ClientPublicKey;
 import cn.org.autumn.model.Encrypt;
 import cn.org.autumn.model.Error;
 import cn.org.autumn.model.KeyPair;
+import cn.org.autumn.site.EncryptConfigFactory;
 import cn.org.autumn.utils.RsaUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
@@ -21,52 +23,55 @@ public class RsaService {
     @Autowired
     CacheService cacheService;
 
-    /**
-     * 密钥对有效期（分钟），默认24小时
-     */
-    private static final int KEY_PAIR_VALID_MINUTES = 24 * 60;
-
-    /**
-     * 服务端冗余保留时间（分钟），默认10分钟
-     * 密钥对过期后，服务端仍保留此时间，用于处理正在传输的加密数据
-     */
-    private static final int SERVER_BUFFER_MINUTES = 10;
-
-    /**
-     * 客户端建议提前刷新时间（分钟），默认5分钟
-     * 客户端应在此时间之前重新获取新的密钥对
-     */
-    private static final int CLIENT_BUFFER_MINUTES = 5;
+    @Autowired
+    EncryptConfigFactory encryptConfigFactory;
 
     /**
      * 服务端密钥对缓存配置
      * 缓存过期时间 = 密钥对有效期 + 服务端冗余保留时间
      * 确保在密钥对过期后，服务端仍能解密正在传输的数据
      */
-    private static final CacheConfig serverPrivateKeyConfig = CacheConfig.builder()
-            .cacheName("RsaServiceCache")
-            .keyType(String.class)
-            .valueType(KeyPair.class)
-            .expireTime(KEY_PAIR_VALID_MINUTES + SERVER_BUFFER_MINUTES)
-            .timeUnit(TimeUnit.MINUTES)
-            .build();
-
-    /**
-     * 客户端公钥缓存配置
-     * 客户端公钥有效期（分钟），默认7天
-     */
-    private static final int CLIENT_PUBLIC_KEY_VALID_MINUTES = 7 * 24 * 60;
+    private static CacheConfig serverPrivateKeyConfig;
 
     /**
      * 客户端公钥缓存配置
      */
-    private static final CacheConfig clientPublicKeyConfig = CacheConfig.builder()
-            .cacheName("ClientPublicKeyCache")
-            .keyType(String.class)
-            .valueType(ClientPublicKey.class)
-            .expireTime(CLIENT_PUBLIC_KEY_VALID_MINUTES)
-            .timeUnit(TimeUnit.MINUTES)
-            .build();
+    private static CacheConfig clientPublicKeyConfig;
+
+    /**
+     * 获取RSA配置
+     */
+    private EncryptConfigHandler.RsaConfig getRsaConfig() {
+        return encryptConfigFactory.getRsaConfig();
+    }
+
+    public CacheConfig getServerPrivateKeyConfig() {
+        if (null == serverPrivateKeyConfig) {
+            EncryptConfigHandler.RsaConfig config = getRsaConfig();
+            serverPrivateKeyConfig = CacheConfig.builder()
+                    .cacheName("RsaServiceCache")
+                    .keyType(String.class)
+                    .valueType(KeyPair.class)
+                    .expireTime(config.getKeyPairValidMinutes() + config.getServerBufferMinutes())
+                    .timeUnit(TimeUnit.MINUTES)
+                    .build();
+        }
+        return serverPrivateKeyConfig;
+    }
+
+    public CacheConfig getClientPublicKeyConfig() {
+        if (null == clientPublicKeyConfig) {
+            EncryptConfigHandler.RsaConfig config = getRsaConfig();
+            clientPublicKeyConfig = CacheConfig.builder()
+                    .cacheName("ClientPublicKeyCache")
+                    .keyType(String.class)
+                    .valueType(ClientPublicKey.class)
+                    .expireTime(config.getClientPublicKeyValidMinutes())
+                    .timeUnit(TimeUnit.MINUTES)
+                    .build();
+        }
+        return clientPublicKeyConfig;
+    }
 
     /**
      * 生成新的密钥对
@@ -80,13 +85,14 @@ public class RsaService {
             throw new CodeException(Error.RSA_UUID_REQUIRED);
         }
         try {
-            KeyPair pair = RsaUtil.generate();
+            EncryptConfigHandler.RsaConfig config = getRsaConfig();
+            KeyPair pair = RsaUtil.generate(config.getKeySize());
             pair.setUuid(uuid);
             // 设置过期时间：当前时间 + 密钥对有效期
-            long expireTime = System.currentTimeMillis() + (KEY_PAIR_VALID_MINUTES * 60 * 1000L);
+            long expireTime = System.currentTimeMillis() + (config.getKeyPairValidMinutes() * 60 * 1000L);
             pair.setExpireTime(expireTime);
             if (log.isDebugEnabled()) {
-                log.debug("生成新的密钥对，UUID: {}, 过期时间: {}", uuid, expireTime);
+                log.debug("生成新的密钥对，UUID: {}, 密钥长度: {}位, 过期时间: {}", uuid, config.getKeySize(), expireTime);
             }
             return pair;
         } catch (Exception e) {
@@ -108,21 +114,22 @@ public class RsaService {
             throw new CodeException(Error.RSA_UUID_REQUIRED);
         }
         try {
+            EncryptConfigHandler.RsaConfig config = getRsaConfig();
             KeyPair pair = cacheService.compute(uuid, () -> {
                 try {
                     return generate(uuid);
                 } catch (CodeException e) {
                     throw new RuntimeException(e);
                 }
-            }, serverPrivateKeyConfig);
+            }, getServerPrivateKeyConfig());
             // 如果密钥对即将过期，生成新的密钥对
-            if (pair != null && pair.isExpiringSoon(CLIENT_BUFFER_MINUTES)) {
+            if (pair != null && pair.isExpiringSoon(config.getClientBufferMinutes())) {
                 if (log.isDebugEnabled()) {
                     log.debug("密钥对即将过期，生成新的密钥对，UUID: {}", uuid);
                 }
                 pair = generate(uuid);
                 // 更新缓存
-                cacheService.put(serverPrivateKeyConfig.getCacheName(), uuid, pair);
+                cacheService.put(getServerPrivateKeyConfig().getCacheName(), uuid, pair);
             }
             if (pair == null) {
                 throw new CodeException(Error.RSA_KEY_PAIR_NOT_FOUND);
@@ -162,7 +169,7 @@ public class RsaService {
             throw new CodeException(Error.RSA_UUID_REQUIRED);
         }
         // 从缓存中获取密钥对
-        KeyPair keyPair = cacheService.get(serverPrivateKeyConfig.getCacheName(), value.getUuid());
+        KeyPair keyPair = cacheService.get(getServerPrivateKeyConfig().getCacheName(), value.getUuid());
         if (keyPair == null) {
             throw new CodeException(Error.RSA_PRIVATE_KEY_NOT_FOUND);
         }
@@ -229,9 +236,10 @@ public class RsaService {
         // 创建客户端公钥对象
         ClientPublicKey clientPublicKey = new ClientPublicKey(uuid, publicKey);
         // 处理过期时间
+        EncryptConfigHandler.RsaConfig config = getRsaConfig();
         long finalExpireTime;
         long currentTime = System.currentTimeMillis();
-        long maxExpireTime = currentTime + (CLIENT_PUBLIC_KEY_VALID_MINUTES * 60 * 1000L); // 最大过期时间（后端默认）
+        long maxExpireTime = currentTime + (config.getClientPublicKeyValidMinutes() * 60 * 1000L); // 最大过期时间（后端默认）
         if (expireTime != null) {
             // 客户端提供了过期时间，进行验证
             if (expireTime <= currentTime) {
@@ -255,7 +263,7 @@ public class RsaService {
         }
         clientPublicKey.setExpireTime(finalExpireTime);
         // 保存到缓存
-        cacheService.put(clientPublicKeyConfig.getCacheName(), uuid, clientPublicKey);
+        cacheService.put(getClientPublicKeyConfig().getCacheName(), uuid, clientPublicKey);
         if (log.isDebugEnabled()) {
             log.debug("保存客户端公钥，UUID: {}, 过期时间: {}", uuid, finalExpireTime);
         }
@@ -272,7 +280,7 @@ public class RsaService {
         if (StringUtils.isBlank(uuid)) {
             return null;
         }
-        ClientPublicKey clientPublicKey = cacheService.get(clientPublicKeyConfig.getCacheName(), uuid);
+        ClientPublicKey clientPublicKey = cacheService.get(getClientPublicKeyConfig().getCacheName(), uuid);
         if (clientPublicKey != null && clientPublicKey.isExpired()) {
             log.warn("客户端公钥已过期，ClientId: {}, 过期时间: {}", uuid, clientPublicKey.getExpireTime());
             // 可以选择删除过期公钥或返回null
@@ -303,7 +311,8 @@ public class RsaService {
             throw new CodeException(Error.RSA_CLIENT_PUBLIC_KEY_NOT_FOUND);
         }
         // 检查公钥是否即将过期
-        if (clientPublicKey.isExpiringSoon(CLIENT_BUFFER_MINUTES)) {
+        EncryptConfigHandler.RsaConfig config = getRsaConfig();
+        if (clientPublicKey.isExpiringSoon(config.getClientBufferMinutes())) {
             log.warn("客户端公钥即将过期，建议客户端更新公钥，UUID: {}, 过期时间: {}", uuid, clientPublicKey.getExpireTime());
         }
         try {
