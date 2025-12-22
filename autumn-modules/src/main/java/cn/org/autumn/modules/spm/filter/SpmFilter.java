@@ -102,6 +102,19 @@ public class SpmFilter extends FormAuthenticationFilter implements PathFactory.P
     }
 
     protected boolean onAccessDenied(ServletRequest request, ServletResponse response) throws Exception {
+        boolean access = onAccessDeniedInternal(request, response);
+        if (!access) {
+            HttpServletRequest httpRequest = (HttpServletRequest) request;
+            // 判断是否为API请求
+            if (isApiRequest(httpRequest)) {
+                // API请求，返回JSON错误响应
+                return handleUnauthorized(httpRequest, (HttpServletResponse) response);
+            }
+        }
+        return access;
+    }
+
+    protected boolean onAccessDeniedInternal(ServletRequest request, ServletResponse response) throws Exception {
         HttpServletRequest httpRequest = (HttpServletRequest) request;
         // 判断是否为API请求
         if (isApiRequest(httpRequest)) {
