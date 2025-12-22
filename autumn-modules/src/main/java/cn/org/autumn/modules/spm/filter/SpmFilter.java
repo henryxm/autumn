@@ -115,22 +115,17 @@ public class SpmFilter extends FormAuthenticationFilter implements PathFactory.P
     }
 
     protected boolean onAccessDeniedInternal(ServletRequest request, ServletResponse response) throws Exception {
-        HttpServletRequest httpRequest = (HttpServletRequest) request;
-        // 判断是否为API请求
-        if (isApiRequest(httpRequest)) {
-            // API请求，返回JSON错误响应
-            return handleUnauthorized(httpRequest, (HttpServletResponse) response);
-        }
         String accessToken = getAccessToken(request);
         if (StringUtils.isEmpty(accessToken)) {
             return super.onAccessDenied(request, response);
         }
         if (null == clientDetailsService)
             clientDetailsService = (ClientDetailsService) Config.getBean("clientDetailsService");
-        assert clientDetailsService != null;
-        boolean valid = clientDetailsService.isValidAccessToken(accessToken);
-        if (valid)
-            return executeLogin(request, response);
+        if (null != clientDetailsService) {
+            boolean valid = clientDetailsService.isValidAccessToken(accessToken);
+            if (valid)
+                return executeLogin(request, response);
+        }
         return super.onAccessDenied(request, response);
     }
 
