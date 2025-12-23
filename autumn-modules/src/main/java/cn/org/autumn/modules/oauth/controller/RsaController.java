@@ -46,11 +46,11 @@ public class RsaController {
     public Response<RsaKey> getPublicKey(@Valid @RequestBody Request<?> request, HttpServletRequest servlet) {
         try {
             // 使用客户端提交的UUID获取或生成服务端密钥对
-            RsaKey rsaKey = rsaService.getRsaKey(request.getUuid());
+            RsaKey rsaKey = rsaService.getRsaKey(request.getSession());
             // 转换为PublicKey对象返回给客户端
             RsaKey copy = rsaKey.copy();
             if (log.isDebugEnabled()) {
-                log.debug("获取公钥，UUID:{}, 过期时间:{}, IP:{}", copy.getUuid(), copy.getExpireTime(), IPUtils.getIp(servlet));
+                log.debug("获取公钥，UUID:{}, 过期时间:{}, IP:{}", copy.getSession(), copy.getExpireTime(), IPUtils.getIp(servlet));
             }
             return Response.ok(copy);
         } catch (Exception e) {
@@ -73,13 +73,13 @@ public class RsaController {
         try {
             // 使用客户端提交的UUID和过期时间保存客户端公钥
             // 如果客户端提供了过期时间则使用客户端的，否则使用后端默认的
-            RsaKey clientPublicKey = rsaService.savePublicKey(request.getUuid(), request.getPublicKey(), request.getExpireTime());
+            RsaKey clientPublicKey = rsaService.savePublicKey(request.getSession(), request.getPublicKey(), request.getExpireTime());
             // 构建返回结果
             RsaKey response = new RsaKey();
-            response.setUuid(clientPublicKey.getUuid());
+            response.setSession(clientPublicKey.getSession());
             response.setExpireTime(clientPublicKey.getExpireTime());
             if (log.isDebugEnabled()) {
-                log.debug("上传公钥，UUID: {}, 过期时间: {}, IP:{}", clientPublicKey.getUuid(), clientPublicKey.getExpireTime(), IPUtils.getIp(servlet));
+                log.debug("上传公钥，UUID: {}, 过期时间: {}, IP:{}", clientPublicKey.getSession(), clientPublicKey.getExpireTime(), IPUtils.getIp(servlet));
             }
             return Response.ok(response);
         } catch (Exception e) {
@@ -100,7 +100,7 @@ public class RsaController {
     @PostMapping("/aes-key")
     public Response<AesKey> getAesKey(@Valid @RequestBody Request<?> request, HttpServletRequest servlet) {
         try {
-            String uuid = request.getUuid();
+            String uuid = request.getSession();
             // 检查客户端公钥是否存在
             if (!rsaService.hasValidClientPublicKey(uuid)) {
                 return Response.error(Error.RSA_CLIENT_PUBLIC_KEY_NOT_FOUND);
@@ -114,7 +114,7 @@ public class RsaController {
             AesKey response = new AesKey();
             response.setKey(encryptedKey);
             response.setVector(encryptedVector);
-            response.setUuid(uuid);
+            response.setSession(uuid);
             response.setExpireTime(aesKey.getExpireTime());
             return Response.ok(response);
         } catch (cn.org.autumn.exception.CodeException e) {
@@ -144,7 +144,7 @@ public class RsaController {
     public Response<Encryption> initEncryption(@Valid @RequestBody Request<InitRequest> request, HttpServletRequest servlet) {
         try {
             InitRequest initRequest = request.getData();
-            String uuid = request.getUuid();
+            String uuid = request.getSession();
             String clientPublicKey = initRequest.getPublicKey();
             Long expireTime = initRequest.getExpireTime();
             // 1. 生成或获取服务端密钥对
@@ -155,7 +155,7 @@ public class RsaController {
             // 3. 生成或获取AES密钥
             AesKey aesKey = aesService.generate(uuid);
             AesKey aes = new AesKey();
-            aes.setUuid(uuid);
+            aes.setSession(uuid);
             aes.setKey(rsaService.encrypt(aesKey.getKey(), uuid));
             aes.setVector(rsaService.encrypt(aesKey.getVector(), uuid));
             aes.setExpireTime(aesKey.getExpireTime());

@@ -25,7 +25,7 @@ public class AesKey implements Serializable {
     /**
      * 客户端UUID标识
      */
-    private String uuid;
+    private String session;
 
     /**
      * AES密钥（Base64编码）

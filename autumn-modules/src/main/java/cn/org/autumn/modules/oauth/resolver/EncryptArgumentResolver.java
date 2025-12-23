@@ -61,7 +61,7 @@ public class EncryptArgumentResolver extends RequestResponseBodyMethodProcessor 
         Object object = super.resolveArgument(parameter, mavContainer, webRequest, binderFactory);
         if (object instanceof Encrypt) {
             Encrypt encrypt = (Encrypt) object;
-            if (StringUtils.isNotBlank(encrypt.getCiphertext()) && StringUtils.isNotBlank(encrypt.getUuid())) {
+            if (StringUtils.isNotBlank(encrypt.getCiphertext()) && StringUtils.isNotBlank(encrypt.getSession())) {
                 long start = System.currentTimeMillis();
                 //当使用RSA解密时，使用服务端的私钥进行解密
                 String decrypt = "RSA".equals(encrypt.getAlgorithm()) ? rsaService.decrypt(encrypt) : aesService.decrypt(encrypt);

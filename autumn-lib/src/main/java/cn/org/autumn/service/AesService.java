@@ -103,7 +103,7 @@ public class AesService {
             // 计算过期时间
             long expireTime = System.currentTimeMillis() + (config.getKeyValidMinutes() * 60 * 1000L);
             // 创建AES密钥对象
-            AesKey aesKey = AesKey.builder().uuid(uuid).key(keyBase64).vector(vectorBase64).expireTime(expireTime).build();
+            AesKey aesKey = AesKey.builder().session(uuid).key(keyBase64).vector(vectorBase64).expireTime(expireTime).build();
             // 缓存AES密钥
             cacheService.put(getAesKeyCacheConfig().getCacheName(), uuid, aesKey);
             if (log.isDebugEnabled()) {
@@ -207,7 +207,7 @@ public class AesService {
     }
 
     public String decrypt(Encrypt encrypt) throws CodeException {
-        return decrypt(encrypt.getCiphertext(), encrypt.getUuid());
+        return decrypt(encrypt.getCiphertext(), encrypt.getSession());
     }
 
     /**

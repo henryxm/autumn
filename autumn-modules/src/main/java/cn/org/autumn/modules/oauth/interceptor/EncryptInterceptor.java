@@ -85,11 +85,11 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
         }
         // 关键逻辑：只有当header中包含X-Encrypt-UUID时，才进行响应加密
         // 如果没有这个header，直接返回body，使用之前的流程（完全兼容）
-        String uuid = servlet.getHeader("X-Encrypt-UUID");
+        String session = servlet.getHeader("X-Encrypt-Session");
         String algorithm = servlet.getHeader("X-Encrypt-Algorithm");
         if (StringUtils.isBlank(algorithm))
             algorithm = "AES";
-        if (StringUtils.isBlank(uuid)) {
+        if (StringUtils.isBlank(session)) {
             // 没有X-Encrypt-UUID header，不进行响应加密，使用之前的流程
             return body;
         }
@@ -101,19 +101,19 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
                 String json = gson.toJson(body);
                 //使用AES密钥加密响应数据 或者使用RSA进行加密
                 //当使用RSA加密时，使用客户端的公钥进行加密
-                String encrypt = "RSA".equals(algorithm) ? rsaService.encrypt(json, uuid) : aesService.encrypt(json, uuid);
+                String encrypt = "RSA".equals(algorithm) ? rsaService.encrypt(json, session) : aesService.encrypt(json, session);
                 // 使用反射创建返回值类型的实例
-                body = createEncryptedResponse(body, encrypt, algorithm, uuid);
+                body = createEncryptedResponse(body, encrypt, algorithm, session);
                 long end = System.currentTimeMillis();
                 if (log.isDebugEnabled()) {
                     log.debug("加密数据: 长度:{}, 耗时:{}毫秒", json.length(), end - start);
                     log.debug("加密内容: {}", json);
                 }
             } catch (CodeException e) {
-                log.error("加密失败，UUID: {}, 错误: {}", uuid, e.getMessage());
+                log.error("加密失败，UUID: {}, 错误: {}", session, e.getMessage());
                 return Response.error(e);
             } catch (Exception e) {
-                log.error("处理失败，UUID: {}", uuid, e);
+                log.error("处理失败，UUID: {}", session, e);
                 return Response.error(e);
             }
         }
@@ -136,7 +136,7 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
         setFieldValue(instance, "ciphertext", data);
         setFieldValue(instance, "algorithm", algorithm);
         // 设置 uuid 字段
-        setFieldValue(instance, "uuid", uuid);
+        setFieldValue(instance, "session", uuid);
         // 如果是 Response 类型，设置默认值
         if (Response.class.isAssignableFrom(responseClass)) {
             Response<?> original = (Response<?>) body;
@@ -230,9 +230,7 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
             if (paramType == short.class && value instanceof Short) {
                 return true;
             }
-            if (paramType == char.class && value instanceof Character) {
-                return true;
-            }
+            return paramType == char.class && value instanceof Character;
         }
         return false;
     }

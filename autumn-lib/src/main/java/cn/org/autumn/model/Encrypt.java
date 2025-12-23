@@ -15,7 +15,7 @@ public interface Encrypt extends Serializable {
      * 客户端UUID标识
      * 客户端生成并存储，用于关联密钥对
      */
-    default String getUuid() {
+    default String getSession() {
         return "";
     }
 }

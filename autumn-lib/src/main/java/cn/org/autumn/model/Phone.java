@@ -14,7 +14,7 @@ import java.io.Serializable;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class Phone implements Serializable {
+public class Phone extends DefaultEncrypt implements Serializable {
     private static final long serialVersionUID = 1L;
 
     private String deviceName = "";

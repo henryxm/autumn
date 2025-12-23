@@ -18,7 +18,7 @@ public class RsaKey implements Serializable {
      * 客户端UUID标识
      * 客户端生成并存储，用于关联密钥对
      */
-    String uuid;
+    String session;
     /**
      * 公钥，后台生成，发送给客户端
      */
@@ -38,14 +38,14 @@ public class RsaKey implements Serializable {
         this.privateKey = privateKey;
     }
 
-    public RsaKey(String publicKey, String privateKey, String uuid) {
+    public RsaKey(String publicKey, String privateKey, String session) {
         this.publicKey = publicKey;
         this.privateKey = privateKey;
-        this.uuid = uuid;
+        this.session = session;
     }
 
-    public RsaKey(String uuid, String publicKey, Long expireTime) {
-        this.uuid = uuid;
+    public RsaKey(String session, String publicKey, Long expireTime) {
+        this.session = session;
         this.publicKey = publicKey;
         this.expireTime = expireTime;
     }
@@ -56,7 +56,7 @@ public class RsaKey implements Serializable {
      * @return PublicKey对象
      */
     public RsaKey copy() {
-        return new RsaKey(uuid, publicKey, expireTime);
+        return new RsaKey(session, publicKey, expireTime);
     }
 
     /**

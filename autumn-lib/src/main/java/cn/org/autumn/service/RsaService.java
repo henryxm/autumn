@@ -86,7 +86,7 @@ public class RsaService {
         try {
             EncryptConfigHandler.RsaConfig config = getRsaConfig();
             RsaKey pair = RsaUtil.generate(config.getKeySize());
-            pair.setUuid(uuid);
+            pair.setSession(uuid);
             // 设置过期时间：当前时间 + 密钥对有效期
             long expireTime = System.currentTimeMillis() + (config.getKeyValidMinutes() * 60 * 1000L);
             pair.setExpireTime(expireTime);
@@ -164,11 +164,11 @@ public class RsaService {
         if (StringUtils.isBlank(value.getCiphertext())) {
             return "";
         }
-        if (StringUtils.isBlank(value.getUuid())) {
+        if (StringUtils.isBlank(value.getSession())) {
             throw new CodeException(Error.RSA_UUID_REQUIRED);
         }
         // 从缓存中获取密钥对
-        RsaKey keyPair = cacheService.get(getServerPrivateKeyConfig().getCacheName(), value.getUuid());
+        RsaKey keyPair = cacheService.get(getServerPrivateKeyConfig().getCacheName(), value.getSession());
         if (keyPair == null) {
             throw new CodeException(Error.RSA_PRIVATE_KEY_NOT_FOUND);
         }
@@ -178,20 +178,20 @@ public class RsaService {
         }
         // 检查密钥对是否已过期（但仍在服务端冗余保留时间内）
         if (keyPair.isExpired()) {
-            log.warn("使用已过期的密钥对进行解密，UUID: {}, 过期时间: {}", value.getUuid(), keyPair.getExpireTime());
+            log.warn("使用已过期的密钥对进行解密，UUID: {}, 过期时间: {}", value.getSession(), keyPair.getExpireTime());
         }
         // 执行解密
         try {
             String decrypted = RsaUtil.decrypt(value.getCiphertext(), privateKey);
             if (StringUtils.isBlank(decrypted)) {
-                log.warn("解密结果为空，UUID: {}", value.getUuid());
+                log.warn("解密结果为空，UUID: {}", value.getSession());
             }
             return decrypted;
         } catch (IllegalArgumentException e) {
-            log.error("RSA密钥格式错误，解密失败，UUID: {}, 错误: {}", value.getUuid(), e.getMessage());
+            log.error("RSA密钥格式错误，解密失败，UUID: {}, 错误: {}", value.getSession(), e.getMessage());
             throw new CodeException(Error.RSA_KEY_FORMAT_ERROR);
         } catch (Exception e) {
-            log.error("RSA解密失败，UUID: {}, 错误: {}", value.getUuid(), e.getMessage(), e);
+            log.error("RSA解密失败，UUID: {}, 错误: {}", value.getSession(), e.getMessage(), e);
             throw new CodeException(Error.RSA_DECRYPT_FAILED);
         }
     }

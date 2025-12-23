@@ -531,7 +531,7 @@ public class EncryptionTest {
             String encrypted4 = RsaUtil.encrypt(testData1, serverPublicKey);
             DefaultEncrypt encryptObj = new DefaultEncrypt();
             encryptObj.setCiphertext(encrypted4);
-            encryptObj.setUuid(uuid);
+            encryptObj.setSession(uuid);
             String decrypted4 = rsaService.decrypt(encryptObj);
             if (!testData1.equals(decrypted4)) {
                 log.error("  测试4.7失败: 使用RsaService解密失败");
