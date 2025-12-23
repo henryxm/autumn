@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.sys.controller;
 
+import cn.org.autumn.annotation.Endpoint;
 import cn.org.autumn.modules.sys.service.RedisService;
 import cn.org.autumn.modules.sys.service.SysUserRoleService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
@@ -13,6 +14,7 @@ import java.util.HashMap;
 
 @RestController
 @RequestMapping("/sys/redis")
+@Endpoint(hidden = true)
 public class RedisController {
 
     @Autowired
@@ -29,7 +31,6 @@ public class RedisController {
         if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
             return Response.fail(null, "无权限访问");
         }
-        
         try {
             List<Map<String, Object>> databases = redisService.getDatabases();
             return Response.ok(databases);
@@ -43,13 +44,12 @@ public class RedisController {
      */
     @GetMapping("/keys/{database}")
     public Response<Map<String, Object>> getKeys(@PathVariable int database,
-                           @RequestParam(defaultValue = "*") String pattern,
-                           @RequestParam(defaultValue = "1") int page,
-                           @RequestParam(defaultValue = "20") int size) {
+                                                 @RequestParam(defaultValue = "*") String pattern,
+                                                 @RequestParam(defaultValue = "1") int page,
+                                                 @RequestParam(defaultValue = "20") int size) {
         if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
             return Response.fail(null, "无权限访问");
         }
-        
         try {
             Map<String, Object> result = redisService.getKeys(database, pattern, page, size);
             return Response.ok(result);
@@ -66,7 +66,6 @@ public class RedisController {
         if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
             return Response.fail(null, "无权限访问");
         }
-        
         try {
             Map<String, Object> keyInfo = redisService.getKeyInfo(key);
             return Response.ok(keyInfo);
@@ -83,7 +82,6 @@ public class RedisController {
         if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
             return Response.fail(null, "无权限访问");
         }
-        
         try {
             Object value = redisService.getKeyValue(key);
             return Response.ok(value);
@@ -100,7 +98,6 @@ public class RedisController {
         if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
             return Response.fail("无权限访问");
         }
-        
         try {
             boolean result = redisService.deleteKey(key);
             if (result) {
@@ -121,7 +118,6 @@ public class RedisController {
         if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
             return Response.fail("无权限访问");
         }
-        
         try {
             long count = redisService.deleteKeys(keys);
             return Response.ok("成功删除 " + count + " 个键");
@@ -138,7 +134,6 @@ public class RedisController {
         if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
             return Response.fail("无权限访问");
         }
-        
         try {
             boolean result = redisService.clearDatabase(database);
             if (result) {
@@ -159,7 +154,6 @@ public class RedisController {
         if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
             return Response.fail("无权限访问");
         }
-        
         try {
             boolean result = redisService.clearAllDatabases();
             if (result) {
@@ -180,7 +174,6 @@ public class RedisController {
         if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
             return Response.fail("无权限访问");
         }
-        
         try {
             boolean result = redisService.setKeyExpire(key, seconds);
             if (result) {
@@ -201,12 +194,10 @@ public class RedisController {
         if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
             return Response.fail("无权限访问");
         }
-        
         // 防止误操作：不允许删除所有键
         if ("*".equals(pattern)) {
             return Response.fail("不允许删除所有键，请指定具体的搜索模式");
         }
-        
         try {
             long count = redisService.deleteKeysByPattern(pattern, database);
             return Response.ok("成功删除 " + count + " 个匹配的键");
@@ -223,7 +214,6 @@ public class RedisController {
         if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
             return Response.fail(null, "无权限访问");
         }
-        
         try {
             boolean connected = redisService.isConnected();
             Map<String, Object> serverInfo = redisService.getServerInfo();

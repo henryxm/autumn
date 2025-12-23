@@ -1,18 +1,26 @@
 package cn.org.autumn.service;
 
+import cn.org.autumn.annotation.Endpoint;
 import cn.org.autumn.config.CacheConfig;
 import cn.org.autumn.config.EncryptConfigHandler;
 import cn.org.autumn.exception.CodeException;
-import cn.org.autumn.model.Encrypt;
+import cn.org.autumn.model.*;
 import cn.org.autumn.model.Error;
-import cn.org.autumn.model.RsaKey;
 import cn.org.autumn.site.EncryptConfigFactory;
 import cn.org.autumn.utils.RsaUtil;
+import cn.org.autumn.utils.SpringContextUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.*;
 
+import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -24,6 +32,11 @@ public class RsaService {
 
     @Autowired
     EncryptConfigFactory encryptConfigFactory;
+
+    /**
+     * 支持加密的类型接口列表
+     */
+    static List<EndpointInfo> result = null;
 
     /**
      * 服务端密钥对缓存配置
@@ -316,5 +329,151 @@ public class RsaService {
     public boolean hasValidClientPublicKey(String uuid) {
         RsaKey clientPublicKey = getClientPublicKey(uuid);
         return clientPublicKey != null && !clientPublicKey.isExpired();
+    }
+
+    public List<EndpointInfo> getEncryptEndpoints() throws CodeException {
+        if (null != result)
+            return result;
+        ApplicationContext context = SpringContextUtils.getApplicationContext();
+        if (context == null) {
+            throw new CodeException(Error.INTERNAL_SERVER_ERROR);
+        }
+        result = new ArrayList<>();
+        // 获取所有RestController类型的Bean
+        Map<String, Object> restControllers = context.getBeansWithAnnotation(RestController.class);
+        for (Map.Entry<String, Object> entry : restControllers.entrySet()) {
+            Object controller = entry.getValue();
+            Class<?> controllerClass = controller.getClass();
+            // 检查类级别的EncryptEndpoint注解
+            Endpoint classEndpoint = controllerClass.getAnnotation(Endpoint.class);
+            boolean classHidden = classEndpoint != null && classEndpoint.hidden();
+            // 如果类级别标记为隐藏，则跳过整个类
+            if (classHidden) {
+                continue;
+            }
+            // 获取类级别的RequestMapping注解
+            RequestMapping classMapping = controllerClass.getAnnotation(RequestMapping.class);
+            String basePath = "";
+            if (classMapping != null && classMapping.value().length > 0) {
+                basePath = classMapping.value()[0];
+            }
+            // 扫描所有方法
+            Method[] methods = controllerClass.getDeclaredMethods();
+            for (Method method : methods) {
+                // 检查方法是否有请求映射注解
+                RequestMapping requestMapping = method.getAnnotation(RequestMapping.class);
+                GetMapping getMapping = method.getAnnotation(GetMapping.class);
+                PostMapping postMapping = method.getAnnotation(PostMapping.class);
+                PutMapping putMapping = method.getAnnotation(PutMapping.class);
+                DeleteMapping deleteMapping = method.getAnnotation(DeleteMapping.class);
+                PatchMapping patchMapping = method.getAnnotation(PatchMapping.class);
+                if (requestMapping == null && getMapping == null && postMapping == null && putMapping == null && deleteMapping == null && patchMapping == null) {
+                    continue; // 跳过没有请求映射注解的方法
+                }
+                // 检查方法级别的隐藏标记（方法级别优先级高于类级别）
+                Endpoint methodEndpoint = method.getAnnotation(Endpoint.class);
+                boolean methodHidden = methodEndpoint != null && methodEndpoint.hidden();
+                // 如果方法级别标记为隐藏，则跳过该方法
+                if (methodHidden) {
+                    continue;
+                }
+                // 获取请求路径
+                String methodPath = "";
+                String httpMethod = "";
+                if (requestMapping != null) {
+                    if (requestMapping.value().length > 0) {
+                        methodPath = requestMapping.value()[0];
+                    }
+                    if (requestMapping.method().length > 0) {
+                        httpMethod = requestMapping.method()[0].name();
+                    }
+                } else if (getMapping != null) {
+                    if (getMapping.value().length > 0) {
+                        methodPath = getMapping.value()[0];
+                    }
+                    httpMethod = "GET";
+                } else if (postMapping != null) {
+                    if (postMapping.value().length > 0) {
+                        methodPath = postMapping.value()[0];
+                    }
+                    httpMethod = "POST";
+                } else if (putMapping != null) {
+                    if (putMapping.value().length > 0) {
+                        methodPath = putMapping.value()[0];
+                    }
+                    httpMethod = "PUT";
+                } else if (deleteMapping != null) {
+                    if (deleteMapping.value().length > 0) {
+                        methodPath = deleteMapping.value()[0];
+                    }
+                    httpMethod = "DELETE";
+                } else {
+                    if (patchMapping.value().length > 0) {
+                        methodPath = patchMapping.value()[0];
+                    }
+                    httpMethod = "PATCH";
+                }
+                // 构建完整路径
+                String fullPath = basePath + methodPath;
+                // 检查请求body参数类型
+                Parameter[] parameters = method.getParameters();
+                List<EncryptRequestBodyType> encryptRequestBodyTypes = new ArrayList<>();
+                for (Parameter parameter : parameters) {
+                    RequestBody requestBody = parameter.getAnnotation(RequestBody.class);
+                    if (requestBody != null) {
+                        Class<?> paramType = parameter.getType();
+                        if (isEncryptType(paramType)) {
+                            EncryptRequestBodyType bodyInfo = new EncryptRequestBodyType();
+                            bodyInfo.setParameterName(parameter.getName());
+                            bodyInfo.setType(paramType.getName());
+                            bodyInfo.setSimpleType(paramType.getSimpleName());
+                            encryptRequestBodyTypes.add(bodyInfo);
+                        }
+                    }
+                }
+                // 检查返回类型
+                Class<?> returnType = method.getReturnType();
+                boolean isEncryptReturnType = isEncryptType(returnType);
+                // 如果请求body或返回值类型是Encrypt，则添加到结果中
+                if (!encryptRequestBodyTypes.isEmpty() || isEncryptReturnType) {
+                    EndpointInfo endpointInfo = new EndpointInfo();
+                    endpointInfo.setPath(fullPath);
+                    endpointInfo.setMethod(httpMethod);
+                    endpointInfo.setEncryptBody(!encryptRequestBodyTypes.isEmpty());
+                    endpointInfo.setEncryptReturn(isEncryptReturnType);
+                    result.add(endpointInfo);
+                }
+            }
+        }
+        return result;
+    }
+
+    /**
+     * 判断类型是否实现了Encrypt接口
+     *
+     * @param type 要检查的类型
+     * @return 如果类型实现了Encrypt接口返回true，否则返回false
+     */
+    private boolean isEncryptType(Class<?> type) {
+        if (type == null) {
+            return false;
+        }
+        // 检查是否直接实现了Encrypt接口
+        if (Encrypt.class.isAssignableFrom(type)) {
+            return true;
+        }
+        // 检查所有实现的接口
+        Class<?>[] interfaces = type.getInterfaces();
+        for (Class<?> iface : interfaces) {
+            if (Encrypt.class.isAssignableFrom(iface)) {
+                return true;
+            }
+        }
+        // 检查父类
+        Class<?> superClass = type.getSuperclass();
+        if (superClass != null && superClass != Object.class) {
+            return isEncryptType(superClass);
+        }
+        return false;
     }
 }

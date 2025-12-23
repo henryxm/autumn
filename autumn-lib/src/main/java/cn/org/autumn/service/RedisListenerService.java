@@ -81,7 +81,8 @@ public class RedisListenerService implements InitFactory.Init {
      */
     private void initMessageListenerContainer() {
         if (!isEnabled() || redisTemplate == null) {
-            log.info("Redis未启用或RedisTemplate为空，跳过Redis Pub/Sub服务初始化");
+            if (log.isDebugEnabled())
+                log.debug("Redis未启用或RedisTemplate为空，跳过Redis Pub/Sub服务初始化");
             return;
         }
         if (initialized) {

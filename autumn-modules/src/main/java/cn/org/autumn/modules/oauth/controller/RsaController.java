@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.oauth.controller;
 
+import cn.org.autumn.annotation.Endpoint;
 import cn.org.autumn.exception.CodeException;
 import cn.org.autumn.model.*;
 import cn.org.autumn.model.Error;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
+import java.util.*;
 
 /**
  * RSA加密接口控制器
@@ -43,6 +45,7 @@ public class RsaController {
      * @return 服务端公钥信息（包含公钥、UUID、过期时间）
      */
     @PostMapping("/public-key")
+    @Endpoint(hidden = true)
     public Response<RsaKey> getPublicKey(@Valid @RequestBody Request<?> request, HttpServletRequest servlet) {
         try {
             // 使用客户端提交的UUID获取或生成服务端密钥对
@@ -69,6 +72,7 @@ public class RsaController {
      * @return 保存结果（包含客户端标识、过期时间等信息）
      */
     @PostMapping("/client/public-key")
+    @Endpoint(hidden = true)
     public Response<RsaKey> uploadPublicKey(@Valid @RequestBody RsaKey request, HttpServletRequest servlet) {
         try {
             // 使用客户端提交的UUID和过期时间保存客户端公钥
@@ -98,6 +102,7 @@ public class RsaController {
      * @return AES密钥响应（包含加密后的密钥、向量和过期时间）
      */
     @PostMapping("/aes-key")
+    @Endpoint(hidden = true)
     public Response<AesKey> getAesKey(@Valid @RequestBody Request<?> request, HttpServletRequest servlet) {
         try {
             String uuid = request.getSession();
@@ -168,6 +173,22 @@ public class RsaController {
             return Response.error(e);
         } catch (Exception e) {
             log.error("初始化失败:{}, IP:{}", e.getMessage(), IPUtils.getIp(servlet), e);
+            return Response.error(e);
+        }
+    }
+
+    /**
+     * 解析所有RestController接口，找出请求body类型和返回值类型是Encrypt的实例
+     *
+     * @return 包含请求body和返回值类型为Encrypt的接口信息列表
+     */
+    @RequestMapping(value = "/endpoints", method = {RequestMethod.POST, RequestMethod.GET})
+    public Response<List<EndpointInfo>> getEncryptEndpoints(@Valid @RequestBody(required = false) Request<?> request, HttpServletRequest servlet) {
+        try {
+            List<EndpointInfo> endpoints = rsaService.getEncryptEndpoints();
+            return Response.ok(endpoints);
+        } catch (Exception e) {
+            log.error("扫描接口: {}", e.getMessage(), e);
             return Response.error(e);
         }
     }
