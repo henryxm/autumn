@@ -22,8 +22,6 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 
-import static cn.org.autumn.modules.sys.service.SysRoleService.Role_System_Administrator;
-
 /**
  * 用户与角色对应关系
  */
@@ -69,7 +67,7 @@ public class SysUserRoleService extends ServiceImpl<SysUserRoleDao, SysUserRoleE
 
     public void init() {
         String[][] mapping = new String[][]{
-                {sysUserService.getAdmin(), Role_System_Administrator},
+                {sysUserService.getAdmin(), SysRoleService.Role_System_Administrator},
         };
         for (String[] map : mapping) {
             SysUserRoleEntity sysUserRoleEntity = new SysUserRoleEntity();
@@ -197,7 +195,7 @@ public class SysUserRoleService extends ServiceImpl<SysUserRoleDao, SysUserRoleE
         if (null != sysUserEntity) {
             List<String> roleKeys = baseMapper.getRoleKeys(sysUserEntity.getUuid());
             if (null != roleKeys && roleKeys.size() > 0) {
-                return roleKeys.contains(Role_System_Administrator);
+                return roleKeys.contains(SysRoleService.Role_System_Administrator);
             }
         }
         return false;
@@ -207,7 +205,7 @@ public class SysUserRoleService extends ServiceImpl<SysUserRoleDao, SysUserRoleE
         if (StringUtils.isNotBlank(uuid)) {
             List<String> roleKeys = baseMapper.getRoleKeys(uuid);
             if (null != roleKeys && roleKeys.size() > 0) {
-                return roleKeys.contains(Role_System_Administrator);
+                return roleKeys.contains(SysRoleService.Role_System_Administrator);
             }
         }
         return false;

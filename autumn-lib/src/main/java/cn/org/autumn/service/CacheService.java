@@ -3,7 +3,10 @@ package cn.org.autumn.service;
 import cn.org.autumn.config.CacheConfig;
 import cn.org.autumn.config.ClearHandler;
 import cn.org.autumn.config.EhCacheManager;
+import cn.org.autumn.model.Invalidation;
+import cn.org.autumn.site.LoadFactory;
 import cn.org.autumn.utils.RedisUtils;
+import com.google.gson.Gson;
 import lombok.extern.slf4j.Slf4j;
 import org.ehcache.Cache;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,7 +24,7 @@ import java.util.function.Supplier;
  */
 @Slf4j
 @Component
-public class CacheService implements ClearHandler {
+public class CacheService implements ClearHandler, LoadFactory.Must {
 
     /**
      * Null 值占位符
@@ -38,10 +41,103 @@ public class CacheService implements ClearHandler {
     private EhCacheManager ehCacheManager;
 
     @Autowired
-    private RedisTemplate redisTemplate;
+    private RedisTemplate<String, Object> redisTemplate;
 
     @Autowired
     private RedisUtils redisUtils;
+
+    @Autowired
+    private RedisListenerService redisListenerService;
+
+    @Autowired
+    private Gson gson;
+
+    /**
+     * Redis Pub/Sub 频道名称
+     */
+    private static final String CACHE_INVALIDATION_CHANNEL = "cache:invalidation";
+
+    /**
+     * 应用上下文刷新完成后订阅缓存失效频道
+     */
+    @Override
+    public void must() {
+        // 订阅缓存失效频道
+        boolean success = redisListenerService.subscribe(CACHE_INVALIDATION_CHANNEL, (channel, messageBody) -> {
+            try {
+                Invalidation invalidationMessage = gson.fromJson(messageBody, Invalidation.class);
+                // 如果是自己发布的消息，忽略
+                if (redisListenerService.getInstanceId().equals(invalidationMessage.getInstanceId())) {
+                    return;
+                }
+                // 处理缓存失效消息
+                handleCacheInvalidation(invalidationMessage);
+            } catch (Exception e) {
+                log.error("处理缓存失效消息失败: {}", e.getMessage(), e);
+            }
+        });
+        if (log.isDebugEnabled()) {
+            if (success) {
+                log.debug("订阅成功，实例ID: {}, 频道: {}", redisListenerService.getInstanceId(), CACHE_INVALIDATION_CHANNEL);
+            } else {
+                log.debug("订阅失败，频道: {}", CACHE_INVALIDATION_CHANNEL);
+            }
+        }
+    }
+
+    /**
+     * 处理缓存失效消息
+     *
+     * @param message 失效消息
+     */
+    private void handleCacheInvalidation(Invalidation message) {
+        if (message == null || ehCacheManager == null) {
+            return;
+        }
+        try {
+            String cacheName = message.getCacheName();
+            String operation = message.getOperation();
+            String key = message.getKey();
+            if (Invalidation.Operation.CLEAR.equals(operation)) {
+                // 清空整个缓存
+                ehCacheManager.clearCache(cacheName);
+            } else if (Invalidation.Operation.REMOVE.equals(operation) || Invalidation.Operation.PUT.equals(operation)) {
+                // 删除指定键
+                Cache<Object, Object> cache = ehCacheManager.getCache(cacheName);
+                if (cache != null && key != null) {
+                    cache.remove(key);
+                }
+                if (log.isDebugEnabled()) {
+                    log.debug("接收变更: cacheName={}, key={}, operation={}", cacheName, key, operation);
+                }
+            }
+        } catch (Exception e) {
+            log.error("处理失败: cacheName={}, key={}, operation={}, error={}", message.getCacheName(), message.getKey(), message.getOperation(), e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 发布缓存失效消息到Redis
+     *
+     * @param cacheName 缓存名称
+     * @param key       缓存键
+     * @param operation 操作类型
+     */
+    private void publishCacheInvalidation(String cacheName, String key, String operation) {
+        try {
+            if (redisListenerService == null || null == key) {
+                return;
+            }
+            Invalidation message = new Invalidation(cacheName, key, operation);
+            message.setInstanceId(redisListenerService.getInstanceId());
+            boolean success = redisListenerService.publish(CACHE_INVALIDATION_CHANNEL, message);
+            if (log.isDebugEnabled() && success) {
+                log.debug("发布失效: cacheName={}, key={}, operation={}", cacheName, key, operation);
+            }
+        } catch (Exception e) {
+            log.error("发布失败: cacheName={}, key={}, operation={}, error={}", cacheName, key, operation, e.getMessage());
+        }
+    }
 
     /**
      * 获取缓存值，如果不存在则通过 supplier 获取并缓存
@@ -356,11 +452,15 @@ public class CacheService implements ClearHandler {
                 // 值不为 null，同时写入本地缓存和Redis缓存
                 cache.put(key, value);
                 putToRedis(cacheName, key, value, config);
+                // 发布缓存失效消息，通知其他实例清除本地缓存（可选，因为其他实例会从Redis读取）
+                publishCacheInvalidation(cacheName, key.toString(), Invalidation.Operation.PUT);
                 return value;
             } else if (cacheNull) {
                 // 值为 null 且允许缓存 null，使用占位符缓存
                 cache.put(key, NULL_PLACEHOLDER);
                 putToRedis(cacheName, key, NULL_PLACEHOLDER, config);
+                // 发布缓存失效消息（可选）
+                publishCacheInvalidation(cacheName, key.toString(), Invalidation.Operation.PUT);
                 return null;
             } else {
                 // 值为 null 但不允许缓存 null，直接返回 null
@@ -379,6 +479,7 @@ public class CacheService implements ClearHandler {
 
     /**
      * 获取缓存值
+     * 如果本地缓存不存在，则从Redis中读取并缓存到本地
      *
      * @param cacheName 缓存名称
      * @param key       缓存键
@@ -386,15 +487,56 @@ public class CacheService implements ClearHandler {
      * @param <V>       Value 类型
      * @return 缓存值，如果不存在返回 null
      */
+    @SuppressWarnings("unchecked")
     public <K, V> V get(String cacheName, K key) {
         if (ehCacheManager == null) {
             return null;
         }
-        Cache<K, V> cache = ehCacheManager.getCache(cacheName);
-        if (cache == null) {
+        CacheConfig config = getCacheConfig(cacheName);
+        if (config == null) {
+            // 如果配置不存在，无法确定类型，直接返回null
             return null;
         }
-        return cache.get(key);
+        // 获取缓存实例
+        Cache<Object, Object> cache = (Cache<Object, Object>) ehCacheManager.getCache(cacheName,
+                (Class<K>) config.getKeyType(),
+                (Class<V>) config.getValueType());
+        if (cache == null) {
+            // 如果缓存不存在，尝试创建
+            cache = ehCacheManager.getOrCreateCache(config);
+            if (cache == null) {
+                return null;
+            }
+        }
+        // 先从本地缓存获取
+        Object cached = cache.get(key);
+        if (cached != null) {
+            // 本地缓存中存在
+            if (cached == NULL_PLACEHOLDER) {
+                // 缓存中是 null 占位符，返回 null
+                return null;
+            } else {
+                // 缓存中存在有效值
+                return (V) cached;
+            }
+        }
+        // 本地缓存中不存在，检查Redis二级缓存
+        V value = getFromRedis(key, config);
+        if (value != null) {
+            // Redis缓存中存在，写入本地缓存并返回
+            cache.put(key, value);
+            return value;
+        } else if (isRedisEnabled() && redisTemplate != null) {
+            // 检查Redis中是否有null占位符
+            Object redisValue = getRedisValue(cacheName, key);
+            if (redisValue != null && redisValue.toString().equals(NULL_PLACEHOLDER.toString())) {
+                // Redis中有null占位符，写入本地缓存并返回null
+                cache.put(key, NULL_PLACEHOLDER);
+                return null;
+            }
+        }
+        // Redis缓存中也不存在，返回null
+        return null;
     }
 
     /**
@@ -434,6 +576,8 @@ public class CacheService implements ClearHandler {
         cache.put(key, value);
         // 同时写入Redis缓存
         putToRedis(cacheName, key, value, config);
+        // 发布缓存失效消息，通知其他实例清除本地缓存
+        publishCacheInvalidation(cacheName, key.toString(), Invalidation.Operation.PUT);
     }
 
     /**
@@ -459,6 +603,8 @@ public class CacheService implements ClearHandler {
                 log.warn("Failed to remove value from Redis cache: {}", e.getMessage());
             }
         }
+        // 发布缓存失效消息，通知其他实例清除本地缓存
+        publishCacheInvalidation(cacheName, key != null ? key.toString() : null, Invalidation.Operation.REMOVE);
     }
 
     /**
@@ -479,6 +625,8 @@ public class CacheService implements ClearHandler {
                 log.warn("Failed to clear Redis cache: {}", e.getMessage());
             }
         }
+        // 发布缓存失效消息，通知其他实例清空本地缓存
+        publishCacheInvalidation(cacheName, null, Invalidation.Operation.CLEAR);
     }
 
     /**

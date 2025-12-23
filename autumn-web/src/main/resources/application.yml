@@ -85,28 +85,30 @@ mybatis-plus:
     call-setters-on-nulls: true
 
 logging:
-  level: info
-  level.cn.org.autumn: info
-  level.com.aliyun.oss: fatal
-  level.springfox.documentation: fatal
-  level.org.quartz: warn
-  level.org.springframework: fatal
-  level.org.springframework.web: warn
-  level.org.springframework.web.servlet.DispatcherServlet: fatal
-  level.org.springframework.web.servlet.view: fatal
-  level.org.springframework.jmx: warn
-  level.org.springframework.boot.web: warn
-  level.org.springframework.boot.web.servlet: warn
-  level.com.netflix.discovery.shared.resolver.aws: fatal
-  level.org.springframework.boot.web.embedded: info
-  level.org.apache.shiro.session: fatal
-  level.com.alibaba.druid: off
-  level.org.mybatis.spring: info
-  level.org.apache.tomcat: info
-  level.org.apache.catalina: info
-  level.sun.rmi.transport.tcp: info
-  level.com.netflix: fatal
-  level.net.sf.ehcache: fatal
+  level:
+    root: info
+    cn.org.autumn: info
+    com.aliyun.oss: fatal
+    springfox.documentation: fatal
+    org.quartz: warn
+    org.springframework: fatal
+    org.springframework.web: warn
+    org.springframework.web.servlet.DispatcherServlet: fatal
+    org.springframework.web.servlet.view: fatal
+    org.springframework.jmx: warn
+    org.springframework.boot.web: warn
+    org.springframework.boot.web.servlet: warn
+    com.netflix.discovery.shared.resolver.aws: fatal
+    org.springframework.boot.web.embedded: info
+    org.apache.shiro.session: fatal
+    com.alibaba.druid: off
+    org.mybatis.spring: info
+    org.apache.tomcat: info
+    org.apache.catalina: info
+    sun.rmi.transport.tcp: info
+    com.netflix: fatal
+    net.sf.ehcache: fatal
+    io.netty.resolver.dns: fatal
 
   file:
     name: file.log
