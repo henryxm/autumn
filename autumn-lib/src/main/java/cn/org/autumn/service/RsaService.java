@@ -413,6 +413,10 @@ public class RsaService {
                     }
                     httpMethod = "PATCH";
                 }
+                if (!basePath.startsWith("/"))
+                    basePath = "/" + basePath;
+                if (!basePath.endsWith("/") && !methodPath.startsWith("/"))
+                    methodPath = "/" + methodPath;
                 // 构建完整路径
                 String fullPath = basePath + methodPath;
                 // 检查请求body参数类型
