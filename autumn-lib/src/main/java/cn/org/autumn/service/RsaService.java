@@ -413,9 +413,9 @@ public class RsaService {
                     }
                     httpMethod = "PATCH";
                 }
-                if (!basePath.startsWith("/"))
+                if (StringUtils.isNotBlank(basePath) && !basePath.startsWith("/"))
                     basePath = "/" + basePath;
-                if (!basePath.endsWith("/") && !methodPath.startsWith("/"))
+                if (StringUtils.isNotBlank(methodPath) && !basePath.endsWith("/") && !methodPath.startsWith("/"))
                     methodPath = "/" + methodPath;
                 // 构建完整路径
                 String fullPath = basePath + methodPath;
