@@ -96,12 +96,12 @@ public class EhCacheManager {
                         registerCacheConfig(config);
                     }
                     if (log.isDebugEnabled())
-                    log.debug("Cache '{}' already exists in CacheManager, reusing it", cacheName);
+                        log.debug("Cache '{}' already exists in CacheManager, reusing it", cacheName);
                     return managerCache;
                 }
             } catch (Exception e) {
                 if (log.isDebugEnabled())
-                log.debug("Cache '{}' not found in CacheManager, will create new one", cacheName);
+                    log.debug("Cache '{}' not found in CacheManager, will create new one", cacheName);
             }
         }
         // 注册配置
@@ -202,7 +202,8 @@ public class EhCacheManager {
     public <K, V> Cache<K, V> getCache(String cacheName) {
         CacheConfig config = cacheConfigs.get(cacheName);
         if (config == null) {
-            log.warn("Cache config not found for: {}", cacheName);
+            if (log.isDebugEnabled())
+                log.debug("Cache config not found for: {}", cacheName);
             return null;
         }
         return getCache(cacheName, (Class<K>) config.getKeyType(), (Class<V>) config.getValueType());

@@ -40,33 +40,19 @@ public class AesService {
      */
     private static CacheConfig aesKeyCacheConfig;
 
-    /**
-     * 获取AES配置
-     */
-    private EncryptConfigHandler.AesConfig getAesConfig() {
-        return encryptConfigFactory.getAesConfig();
-    }
-
-
-    public void initCacheConfig() {
-        EncryptConfigHandler.AesConfig config = getAesConfig();
-        // 缓存过期时间 = 密钥有效期 + 服务端冗余保留时间
-        // 确保在密钥过期后，服务端仍能解密正在传输的加密数据
-        aesKeyCacheConfig = CacheConfig.builder()
-                .cacheName("AesServiceCache")
-                .keyType(String.class)
-                .valueType(AesKey.class)
-                .expireTime(config.getKeyValidMinutes() + config.getServerBufferMinutes())
-                .timeUnit(TimeUnit.MINUTES)
-                .build();
-        if (log.isDebugEnabled()) {
-            log.debug("AES缓存配置初始化完成: expireTime={}", aesKeyCacheConfig.getExpireTime());
-        }
-    }
-
     public CacheConfig getAesKeyCacheConfig() {
-        if (null == aesKeyCacheConfig)
-            initCacheConfig();
+        if (null == aesKeyCacheConfig) {
+            EncryptConfigHandler.AesConfig config = encryptConfigFactory.getAesConfig();
+            // 缓存过期时间 = 密钥有效期 + 服务端冗余保留时间
+            // 确保在密钥过期后，服务端仍能解密正在传输的加密数据
+            aesKeyCacheConfig = CacheConfig.builder()
+                    .cacheName("AesServiceCache")
+                    .keyType(String.class)
+                    .valueType(AesKey.class)
+                    .expireTime(config.getKeyValidMinutes() + config.getServerBufferMinutes())
+                    .timeUnit(TimeUnit.MINUTES)
+                    .build();
+        }
         return aesKeyCacheConfig;
     }
 
@@ -75,14 +61,13 @@ public class AesService {
      *
      * @param uuid 客户端UUID
      * @return AES密钥信息
-     * @throws CodeException 密钥生成失败时抛出异常
      */
-    public AesKey generate(String uuid) throws CodeException {
-        if (StringUtils.isBlank(uuid)) {
-            throw new CodeException(Error.RSA_UUID_REQUIRED);
-        }
+    public AesKey generate(String uuid) {
         try {
-            EncryptConfigHandler.AesConfig config = getAesConfig();
+            if (StringUtils.isBlank(uuid)) {
+                throw new RuntimeException(new CodeException(Error.RSA_UUID_REQUIRED));
+            }
+            EncryptConfigHandler.AesConfig config = encryptConfigFactory.getAesConfig();
             // 生成AES密钥
             KeyGenerator keyGenerator = KeyGenerator.getInstance("AES");
             SecureRandom secureRandom = new SecureRandom();
@@ -104,55 +89,45 @@ public class AesService {
             long expireTime = System.currentTimeMillis() + (config.getKeyValidMinutes() * 60 * 1000L);
             // 创建AES密钥对象
             AesKey aesKey = AesKey.builder().session(uuid).key(keyBase64).vector(vectorBase64).expireTime(expireTime).build();
-            // 缓存AES密钥
-            cacheService.put(getAesKeyCacheConfig().getCacheName(), uuid, aesKey);
             if (log.isDebugEnabled()) {
                 log.debug("生成AES密钥，UUID: {}, 过期时间: {}", uuid, expireTime);
             }
             return aesKey;
-        } catch (CodeException e) {
-            throw e;
         } catch (Exception e) {
             log.error("生成AES密钥失败，UUID: {}", uuid, e);
-            throw new CodeException(Error.AES_KEY_GENERATE_FAILED);
+            throw new RuntimeException(new CodeException(Error.AES_KEY_GENERATE_FAILED));
         }
     }
 
     /**
      * 获取AES密钥（从缓存中获取或生成新的）
+     * 仅在客户端主动请求获取密钥时调用，如果密钥即将过期则生成新的
      *
      * @param uuid 客户端UUID
      * @return AES密钥信息
      * @throws CodeException 密钥获取失败时抛出异常
      */
     public AesKey getAesKey(String uuid) throws CodeException {
-        if (StringUtils.isBlank(uuid)) {
-            throw new CodeException(Error.RSA_UUID_REQUIRED);
-        }
         try {
-            EncryptConfigHandler.AesConfig config = getAesConfig();
-            // 从缓存中获取
-            AesKey aesKey = cacheService.get(getAesKeyCacheConfig().getCacheName(), uuid);
-            if (aesKey != null && !aesKey.isExpired()) {
-                // 检查密钥格式
-                if (StringUtils.isBlank(aesKey.getKey()) || StringUtils.isBlank(aesKey.getVector())) {
-                    if (log.isDebugEnabled())
-                        log.warn("AES密钥格式错误，UUID: {}, 密钥或向量为空", uuid);
-                    // 删除无效密钥，重新生成
-                    cacheService.remove(getAesKeyCacheConfig().getCacheName(), uuid);
-                    return generate(uuid);
-                }
-                // 如果密钥即将过期，生成新的密钥
-                if (aesKey.isExpiringSoon(config.getClientBufferMinutes())) {
-                    if (log.isDebugEnabled()) {
-                        log.debug("AES密钥即将过期，生成新的密钥，UUID: {}", uuid);
-                    }
-                    aesKey = generate(uuid);
-                }
-                return aesKey;
+            if (StringUtils.isBlank(uuid)) {
+                throw new CodeException(Error.RSA_UUID_REQUIRED);
             }
-            // 缓存中不存在或已过期，生成新的
-            return generate(uuid);
+            EncryptConfigHandler.AesConfig config = encryptConfigFactory.getAesConfig();
+            // 使用compute方法：如果缓存不存在则生成，存在则返回
+            AesKey aesKey = cacheService.compute(uuid, () -> generate(uuid), getAesKeyCacheConfig());
+            // 检查密钥是否有效：为null、已过期、格式无效或即将过期时，删除缓存并重新调用compute
+            // 利用短路求值：如果aesKey为null，后面的条件不会执行
+            if (aesKey == null || aesKey.isExpired() || StringUtils.isBlank(aesKey.getKey()) || StringUtils.isBlank(aesKey.getVector()) || aesKey.isExpiringSoon(config.getClientBufferMinutes())) {
+                cacheService.remove(getAesKeyCacheConfig().getCacheName(), uuid);
+                aesKey = cacheService.compute(uuid, () -> generate(uuid), getAesKeyCacheConfig());
+            }
+            return aesKey;
+        } catch (RuntimeException e) {
+            if (e.getCause() instanceof CodeException) {
+                throw (CodeException) e.getCause();
+            }
+            log.error("获取AES密钥失败，UUID: {}", uuid, e);
+            throw new CodeException(Error.AES_KEY_NOT_FOUND);
         } catch (Exception e) {
             log.error("获取AES密钥失败，UUID: {}", uuid, e);
             throw new CodeException(Error.AES_KEY_NOT_FOUND);
@@ -161,6 +136,8 @@ public class AesService {
 
     /**
      * 使用AES加密数据
+     * 注意：此方法不会触发密钥更新，直接使用现有密钥（即使即将过期）
+     * 因为客户端可能还在使用旧的密钥，不应该在加解密过程中动态更新
      *
      * @param data 待加密数据
      * @param uuid 客户端UUID
@@ -174,7 +151,8 @@ public class AesService {
         if (StringUtils.isBlank(uuid)) {
             throw new CodeException(Error.RSA_UUID_REQUIRED);
         }
-        AesKey aesKey = getAesKey(uuid);
+        // 直接从缓存获取密钥，不触发更新（客户端可能还在使用旧密钥）
+        AesKey aesKey = cacheService.get(getAesKeyCacheConfig().getCacheName(), uuid);
         if (aesKey == null) {
             throw new CodeException(Error.AES_KEY_NOT_FOUND);
         }
@@ -212,6 +190,9 @@ public class AesService {
 
     /**
      * 使用AES解密数据
+     * 注意：此方法不会触发密钥更新，直接使用现有密钥（即使即将过期或已过期）
+     * 因为客户端可能还在使用旧的密钥，不应该在加解密过程中动态更新
+     * 支持旧密钥的平滑切换：即使密钥已过期，只要在服务端冗余保留时间内，仍可解密
      *
      * @param data 加密数据（Base64编码）
      * @param uuid 客户端UUID
@@ -225,7 +206,8 @@ public class AesService {
         if (StringUtils.isBlank(uuid)) {
             throw new CodeException(Error.RSA_UUID_REQUIRED);
         }
-        AesKey aesKey = getAesKey(uuid);
+        // 直接从缓存获取密钥，不触发更新（客户端可能还在使用旧密钥）
+        AesKey aesKey = cacheService.get(getAesKeyCacheConfig().getCacheName(), uuid);
         if (aesKey == null) {
             throw new CodeException(Error.AES_KEY_NOT_FOUND);
         }

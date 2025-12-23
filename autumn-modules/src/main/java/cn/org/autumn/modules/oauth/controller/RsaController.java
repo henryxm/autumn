@@ -106,7 +106,7 @@ public class RsaController {
                 return Response.error(Error.RSA_CLIENT_PUBLIC_KEY_NOT_FOUND);
             }
             // 生成或获取AES密钥
-            AesKey aesKey = aesService.generate(uuid);
+            AesKey aesKey = aesService.getAesKey(uuid);
             // 使用客户端公钥加密AES密钥和向量
             String encryptedKey = rsaService.encrypt(aesKey.getKey(), uuid);
             String encryptedVector = rsaService.encrypt(aesKey.getVector(), uuid);
@@ -153,7 +153,7 @@ public class RsaController {
             // 2. 保存客户端公钥
             rsaService.savePublicKey(uuid, clientPublicKey, expireTime);
             // 3. 生成或获取AES密钥
-            AesKey aesKey = aesService.generate(uuid);
+            AesKey aesKey = aesService.getAesKey(uuid);
             AesKey aes = new AesKey();
             aes.setSession(uuid);
             aes.setKey(rsaService.encrypt(aesKey.getKey(), uuid));
