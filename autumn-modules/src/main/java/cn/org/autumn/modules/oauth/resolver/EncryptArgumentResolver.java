@@ -2,6 +2,7 @@ package cn.org.autumn.modules.oauth.resolver;
 
 import cn.org.autumn.model.Encrypt;
 import cn.org.autumn.service.AesService;
+import cn.org.autumn.service.RsaService;
 import com.google.gson.Gson;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
@@ -37,6 +38,9 @@ public class EncryptArgumentResolver extends RequestResponseBodyMethodProcessor 
     private AesService aesService;
 
     @Autowired
+    private RsaService rsaService;
+
+    @Autowired
     Gson gson;
 
     /**
@@ -57,9 +61,10 @@ public class EncryptArgumentResolver extends RequestResponseBodyMethodProcessor 
         Object object = super.resolveArgument(parameter, mavContainer, webRequest, binderFactory);
         if (object instanceof Encrypt) {
             Encrypt encrypt = (Encrypt) object;
-            if (StringUtils.isNotBlank(encrypt.getEncrypt()) && StringUtils.isNotBlank(encrypt.getUuid())) {
+            if (StringUtils.isNotBlank(encrypt.getCiphertext()) && StringUtils.isNotBlank(encrypt.getUuid())) {
                 long start = System.currentTimeMillis();
-                String decrypt = aesService.decrypt(encrypt.getEncrypt(), encrypt.getUuid());
+                //当使用RSA解密时，使用服务端的私钥进行解密
+                String decrypt = "RSA".equals(encrypt.getAlgorithm()) ? rsaService.decrypt(encrypt) : aesService.decrypt(encrypt);
                 Type parameterType = getParameterType(parameter);
                 object = gson.fromJson(decrypt, parameterType);
                 long end = System.currentTimeMillis();

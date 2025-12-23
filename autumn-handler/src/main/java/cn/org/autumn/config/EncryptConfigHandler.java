@@ -38,7 +38,7 @@ public interface EncryptConfigHandler {
         /**
          * 密钥对有效期（分钟），默认24小时
          */
-        default int getKeyPairValidMinutes() {
+        default int getKeyValidMinutes() {
             return 24 * 60;
         }
 

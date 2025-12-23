@@ -4,6 +4,7 @@ import cn.org.autumn.config.CacheConfig;
 import cn.org.autumn.config.EncryptConfigHandler;
 import cn.org.autumn.exception.CodeException;
 import cn.org.autumn.model.AesKey;
+import cn.org.autumn.model.Encrypt;
 import cn.org.autumn.model.Error;
 import cn.org.autumn.site.EncryptConfigFactory;
 import cn.org.autumn.utils.AES;
@@ -203,6 +204,10 @@ public class AesService {
             log.error("AES加密失败，UUID: {}", uuid, e);
             throw new CodeException(Error.AES_ENCRYPT_FAILED);
         }
+    }
+
+    public String decrypt(Encrypt encrypt) throws CodeException {
+        return decrypt(encrypt.getCiphertext(), encrypt.getUuid());
     }
 
     /**

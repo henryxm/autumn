@@ -33,7 +33,7 @@ public class DefaultEncryptConfigHandler implements EncryptConfigHandler, ClearH
                     try {
                         rsaConfig = sysConfigService.getConfigObjectValidate("RSA_CONFIG", cn.org.autumn.model.RsaConfig.class);
                         if (log.isDebugEnabled()) {
-                            log.debug("加载RSA配置: keyPairValidMinutes={}, serverBufferMinutes={}, clientBufferMinutes={}, clientPublicKeyValidMinutes={}, keySize={}", rsaConfig.getKeyPairValidMinutes(), rsaConfig.getServerBufferMinutes(), rsaConfig.getClientBufferMinutes(), rsaConfig.getClientPublicKeyValidMinutes(), rsaConfig.getKeySize());
+                            log.debug("加载RSA配置: keyPairValidMinutes={}, serverBufferMinutes={}, clientBufferMinutes={}, clientPublicKeyValidMinutes={}, keySize={}", rsaConfig.getKeyValidMinutes(), rsaConfig.getServerBufferMinutes(), rsaConfig.getClientBufferMinutes(), rsaConfig.getClientPublicKeyValidMinutes(), rsaConfig.getKeySize());
                         }
                     } catch (Exception e) {
                         log.warn("加载RSA配置失败，使用默认配置: {}", e.getMessage());

@@ -12,7 +12,14 @@ import lombok.Setter;
 @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class DefaultEncrypt implements Encrypt {
-    private String encrypt;
+    /**
+     * 别加密数据的密文
+     */
+    private String ciphertext;
+    /**
+     * 使用的加密算法
+     */
+    private String algorithm;
     /**
      * 客户端UUID标识
      * 客户端生成并存储，用于关联密钥对

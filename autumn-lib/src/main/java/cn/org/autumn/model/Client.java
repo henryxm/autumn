@@ -50,5 +50,8 @@ public class Client extends Phone implements IResult, Encrypt {
     private String bundleId = "";
 
     @Indexed
-    private String encrypt = "";
+    private String ciphertext = "";
+
+    @Indexed
+    private String algorithm;
 }

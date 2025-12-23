@@ -51,7 +51,7 @@ public class RsaService {
                     .cacheName("RsaServiceCache")
                     .keyType(String.class)
                     .valueType(RsaKey.class)
-                    .expireTime(config.getKeyPairValidMinutes() + config.getServerBufferMinutes())
+                    .expireTime(config.getKeyValidMinutes() + config.getServerBufferMinutes())
                     .timeUnit(TimeUnit.MINUTES)
                     .build();
         }
@@ -88,7 +88,7 @@ public class RsaService {
             RsaKey pair = RsaUtil.generate(config.getKeySize());
             pair.setUuid(uuid);
             // 设置过期时间：当前时间 + 密钥对有效期
-            long expireTime = System.currentTimeMillis() + (config.getKeyPairValidMinutes() * 60 * 1000L);
+            long expireTime = System.currentTimeMillis() + (config.getKeyValidMinutes() * 60 * 1000L);
             pair.setExpireTime(expireTime);
             if (log.isDebugEnabled()) {
                 log.debug("生成新的密钥对，UUID: {}, 密钥长度: {}位, 过期时间: {}", uuid, config.getKeySize(), expireTime);
@@ -161,7 +161,7 @@ public class RsaService {
      * @throws CodeException 解密失败时抛出异常
      */
     public String decrypt(Encrypt value) throws CodeException {
-        if (StringUtils.isBlank(value.getEncrypt())) {
+        if (StringUtils.isBlank(value.getCiphertext())) {
             return "";
         }
         if (StringUtils.isBlank(value.getUuid())) {
@@ -182,7 +182,7 @@ public class RsaService {
         }
         // 执行解密
         try {
-            String decrypted = RsaUtil.decrypt(value.getEncrypt(), privateKey);
+            String decrypted = RsaUtil.decrypt(value.getCiphertext(), privateKey);
             if (StringUtils.isBlank(decrypted)) {
                 log.warn("解密结果为空，UUID: {}", value.getUuid());
             }

@@ -5,6 +5,7 @@ import cn.org.autumn.exception.CodeException;
 import cn.org.autumn.model.Encrypt;
 import cn.org.autumn.model.Response;
 import cn.org.autumn.service.AesService;
+import cn.org.autumn.service.RsaService;
 import com.google.gson.Gson;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
@@ -45,6 +46,9 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
     private AesService aesService;
 
     @Autowired
+    private RsaService rsaService;
+
+    @Autowired
     Gson gson;
 
     @Override
@@ -82,6 +86,9 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
         // 关键逻辑：只有当header中包含X-Encrypt-UUID时，才进行响应加密
         // 如果没有这个header，直接返回body，使用之前的流程（完全兼容）
         String uuid = servlet.getHeader("X-Encrypt-UUID");
+        String algorithm = servlet.getHeader("X-Encrypt-Algorithm");
+        if (StringUtils.isBlank(algorithm))
+            algorithm = "AES";
         if (StringUtils.isBlank(uuid)) {
             // 没有X-Encrypt-UUID header，不进行响应加密，使用之前的流程
             return body;
@@ -92,10 +99,11 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
                 long start = System.currentTimeMillis();
                 // 将响应体序列化为JSON
                 String json = gson.toJson(body);
-                // 使用AES密钥加密响应数据
-                String encrypt = aesService.encrypt(json, uuid);
+                //使用AES密钥加密响应数据 或者使用RSA进行加密
+                //当使用RSA加密时，使用客户端的公钥进行加密
+                String encrypt = "RSA".equals(algorithm) ? rsaService.encrypt(json, uuid) : aesService.encrypt(json, uuid);
                 // 使用反射创建返回值类型的实例
-                body = createEncryptedResponse(body, encrypt, uuid);
+                body = createEncryptedResponse(body, encrypt, algorithm, uuid);
                 long end = System.currentTimeMillis();
                 if (log.isDebugEnabled()) {
                     log.debug("加密数据: 长度:{}, 耗时:{}毫秒", json.length(), end - start);
@@ -120,12 +128,13 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
      * @param uuid UUID
      * @return 加密响应对象
      */
-    private Object createEncryptedResponse(Object body, String data, String uuid) throws Exception {
+    private Object createEncryptedResponse(Object body, String data, String algorithm, String uuid) throws Exception {
         Class<?> responseClass = body.getClass();
         // 使用反射创建实例
         Object instance = responseClass.getDeclaredConstructor().newInstance();
         // 设置 encrypt 字段
-        setFieldValue(instance, "encrypt", data);
+        setFieldValue(instance, "ciphertext", data);
+        setFieldValue(instance, "algorithm", algorithm);
         // 设置 uuid 字段
         setFieldValue(instance, "uuid", uuid);
         // 如果是 Response 类型，设置默认值

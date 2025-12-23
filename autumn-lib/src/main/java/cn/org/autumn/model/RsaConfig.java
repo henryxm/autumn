@@ -24,7 +24,7 @@ public class RsaConfig implements EncryptConfigHandler.RsaConfig, Serializable {
      * 密钥对有效期（分钟），默认24小时
      */
     @ConfigField(category = InputType.NumberType, name = "密钥对有效期（分钟）", description = "RSA密钥对的有效期，默认1440分钟（24小时）")
-    private int keyPairValidMinutes = 24 * 60;
+    private int keyValidMinutes = 24 * 60;
 
     /**
      * 服务端冗余保留时间（分钟），默认10分钟
@@ -50,12 +50,12 @@ public class RsaConfig implements EncryptConfigHandler.RsaConfig, Serializable {
     @ConfigField(category = InputType.NumberType, name = "RSA密钥长度（位）", description = "RSA密钥对的长度，默认1024位，可选值：1024、2048、4096")
     private int keySize = 1024;
 
-    public int getKeyPairValidMinutes() {
-        return keyPairValidMinutes;
+    public int getKeyValidMinutes() {
+        return keyValidMinutes;
     }
 
-    public void setKeyPairValidMinutes(int keyPairValidMinutes) {
-        this.keyPairValidMinutes = keyPairValidMinutes;
+    public void setKeyValidMinutes(int keyValidMinutes) {
+        this.keyValidMinutes = keyValidMinutes;
     }
 
     public int getServerBufferMinutes() {
@@ -105,10 +105,10 @@ public class RsaConfig implements EncryptConfigHandler.RsaConfig, Serializable {
             fixes.add(String.format("RSA密钥长度不合理: %d位，已修正为默认值: %d位", oldValue, keySize));
         }
         // 密钥对有效期必须大于0
-        if (keyPairValidMinutes <= 0) {
-            int oldValue = keyPairValidMinutes;
-            keyPairValidMinutes = 24 * 60; // 默认24小时
-            fixes.add(String.format("RSA密钥对有效期不合理: %d分钟，已修正为默认值: %d分钟", oldValue, keyPairValidMinutes));
+        if (keyValidMinutes <= 0) {
+            int oldValue = keyValidMinutes;
+            keyValidMinutes = 24 * 60; // 默认24小时
+            fixes.add(String.format("RSA密钥对有效期不合理: %d分钟，已修正为默认值: %d分钟", oldValue, keyValidMinutes));
         }
         // 服务端冗余保留时间必须大于等于0
         if (serverBufferMinutes < 0) {

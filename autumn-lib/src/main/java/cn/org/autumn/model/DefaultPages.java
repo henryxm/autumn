@@ -14,7 +14,7 @@ import java.util.List;
 @Getter
 @Setter
 @SearchType(value = "Pages")
-public class DefaultPages<T> implements IPages<T>, Serializable {
+public class DefaultPages<T> extends DefaultEncrypt implements IPages<T>, Serializable {
 
     private static final long serialVersionUID = 1L;
 
