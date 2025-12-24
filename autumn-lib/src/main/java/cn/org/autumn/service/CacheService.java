@@ -156,7 +156,7 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
      */
     private void publishCacheInvalidation(String cacheName, String key, String operation) {
         try {
-            if (redisListenerService == null || null == key) {
+            if (null == key) {
                 return;
             }
             Invalidation message = new Invalidation(cacheName, key, operation);

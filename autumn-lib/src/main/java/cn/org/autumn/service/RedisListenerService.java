@@ -20,6 +20,7 @@ import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -32,7 +33,7 @@ import java.util.concurrent.Executors;
  */
 @Slf4j
 @Service
-public class RedisListenerService implements InitFactory.Init {
+public class RedisListenerService {
 
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
@@ -79,16 +80,13 @@ public class RedisListenerService implements InitFactory.Init {
      */
     private static final int MAX_RETRY_COUNT = 3;
 
-    @Override
+    @PostConstruct
     public void init() {
-        log.info("Start Redis listener");
         if (initialized) {
             return;
         }
         if (redisUtils.isOpen())
             new Thread(this::initMessageListenerContainer).start();
-        else
-            log.info("Fail to start Redis listener due to Redis is not open");
     }
 
     /**
@@ -98,7 +96,6 @@ public class RedisListenerService implements InitFactory.Init {
         if (initialized || !redisUtils.isOpen()) {
             return;
         }
-        log.info("Begin to start Redis listener");
         // 先测试Redis连接是否可用
         if (!ping()) {
             retryCount++;
