@@ -871,6 +871,18 @@ public enum Error {
      */
     AES_PADDING_NOT_SUPPORTED(1113, "AES填充模式不支持"),
 
+    /**
+     * 强制加密验证失败：请求数据未加密
+     * 客户端操作：使用加密方式发送请求数据
+     */
+    FORCE_ENCRYPT_REQUEST_REQUIRED(1114, "请求数据必须加密，请使用加密方式发送数据"),
+
+    /**
+     * 强制加密验证失败：Session为空
+     * 客户端操作：在请求头中提供X-Encrypt-Session
+     */
+    FORCE_ENCRYPT_SESSION_REQUIRED(1115, "强制加密接口需要Session，请在请求头中提供X-Encrypt-Session"),
+
     // ==================== 系统错误 (100000+) ====================
     /**
      * 未知错误

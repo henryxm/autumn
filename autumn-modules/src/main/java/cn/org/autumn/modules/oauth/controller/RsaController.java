@@ -167,6 +167,10 @@ public class RsaController {
             Encryption response = new Encryption();
             response.setRas(ras);
             response.setAes(aes);
+            List<EndpointInfo> endpoints = rsaService.getEncryptEndpoints();
+            String json = gson.toJson(endpoints);
+            String end = aesService.encrypt(json, uuid);
+            response.setEndpoints(end);
             return Response.ok(response);
         } catch (CodeException e) {
             log.error("初始化失败:{}, IP:{}", e.getMessage(), IPUtils.getIp(servlet));

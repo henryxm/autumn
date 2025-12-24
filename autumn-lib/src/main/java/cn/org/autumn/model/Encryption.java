@@ -29,4 +29,7 @@ public class Encryption implements Serializable {
 
     @Schema(name = "aes", description = "AES")
     private AesKey aes;
+
+    @Schema(name = "endpoints", description = "支持的加密接口")
+    private String endpoints;
 }

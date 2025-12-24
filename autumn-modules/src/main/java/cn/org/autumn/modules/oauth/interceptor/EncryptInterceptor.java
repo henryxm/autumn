@@ -1,8 +1,10 @@
 package cn.org.autumn.modules.oauth.interceptor;
 
+import cn.org.autumn.annotation.Endpoint;
 import cn.org.autumn.config.InterceptorHandler;
 import cn.org.autumn.exception.CodeException;
 import cn.org.autumn.model.Encrypt;
+import cn.org.autumn.model.Error;
 import cn.org.autumn.model.Response;
 import cn.org.autumn.service.AesService;
 import cn.org.autumn.service.RsaService;
@@ -67,8 +69,9 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
     }
 
     @Override
-    public boolean supports(MethodParameter returnType, @NonNull Class<? extends HttpMessageConverter<?>> converterType) {
-        return null != returnType.getMethod() && Encrypt.class.isAssignableFrom(returnType.getMethod().getReturnType());
+    public boolean supports(@NonNull MethodParameter returnType, @NonNull Class<? extends HttpMessageConverter<?>> converterType) {
+        Method method = returnType.getMethod();
+        return method != null && Encrypt.class.isAssignableFrom(method.getReturnType());
     }
 
     @Override
@@ -83,14 +86,28 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
         if (requestURI != null && requestURI.startsWith("/rsa/")) {
             return body;
         }
-        // 关键逻辑：只有当header中包含X-Encrypt-UUID时，才进行响应加密
+        // 关键逻辑：只有当header中包含X-Encrypt-Session时，才进行响应加密
         // 如果没有这个header，直接返回body，使用之前的流程（完全兼容）
         String session = servlet.getHeader("X-Encrypt-Session");
         String algorithm = servlet.getHeader("X-Encrypt-Algorithm");
         if (StringUtils.isBlank(algorithm))
             algorithm = "AES";
+        
+        // 检查方法上的@Endpoint注解，如果forceEncrypt=true，则强制要求session
+        Method controllerMethod = returnType.getMethod();
+        if (controllerMethod != null) {
+            Endpoint endpointAnnotation = controllerMethod.getAnnotation(Endpoint.class);
+            if (endpointAnnotation != null && endpointAnnotation.force()) {
+                // 强制加密验证：检查session是否为空
+                if (StringUtils.isBlank(session)) {
+                    log.error("强制加密接口缺少Session，方法: {}", controllerMethod.getName());
+                    return Response.error(Error.FORCE_ENCRYPT_SESSION_REQUIRED);
+                }
+            }
+        }
+        
         if (StringUtils.isBlank(session)) {
-            // 没有X-Encrypt-UUID header，不进行响应加密，使用之前的流程
+            // 没有X-Encrypt-Session header，不进行响应加密，使用之前的流程
             return body;
         }
         // 只对实现了Encrypt接口的响应进行加密

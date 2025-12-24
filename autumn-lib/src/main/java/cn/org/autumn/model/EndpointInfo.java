@@ -27,9 +27,9 @@ public class EndpointInfo implements Serializable {
     @Schema(name = "HTTP方法", description = "HTTP请求方法（GET/POST/PUT/DELETE/PATCH）")
     private String method;
 
-    @Schema(name = "是否为Encrypt Body类型", description = "实现了Encrypt接口的请求Body类型")
-    private Boolean encryptBody;
+    @Schema(name = "标注参数是否是支持加密", description = "根据接口规范，标注确认参数是否支持加密的body还是支持返回值加密")
+    private Supported param;
 
-    @Schema(name = "是否为Encrypt返回类型", description = "返回值类型是否实现了Encrypt接口")
-    private Boolean encryptReturn;
+    @Schema(name = "标注参数是否是强制加密", description = "根据接口规范，如果接口参数支持加密功能，如果标记为强制加密，则必须使用强制加密")
+    private Supported force;
 }

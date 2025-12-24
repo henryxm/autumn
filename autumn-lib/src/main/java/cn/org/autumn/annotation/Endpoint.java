@@ -8,7 +8,7 @@ import java.lang.annotation.*;
  * 可以标注在类或方法上
  * 当 hidden = true 时，该接口（或整个类）不会出现在 /rsa/api/v1/endpoints 接口的返回列表中
  * 默认情况下（hidden = false 或不标注此注解），接口会出现在列表中
- * 
+ * <p>
  * 优先级规则：
  * - 方法级别的注解优先级高于类级别
  * - 如果类级别 hidden = true，但方法级别 hidden = false，则该方法会出现在列表中
@@ -16,7 +16,7 @@ import java.lang.annotation.*;
  *
  * @author Autumn
  */
-@Target({ElementType.TYPE, ElementType.METHOD})
+@Target({ElementType.TYPE, ElementType.METHOD, ElementType.PARAMETER})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 public @interface Endpoint {
@@ -28,6 +28,15 @@ public @interface Endpoint {
      * @return 是否隐藏
      */
     boolean hidden() default false;
+
+    /**
+     * 强制加密数据：
+     * 如果标注在参数body上，如果请求的body未包含加密内容，或者session为空，则抛出异常
+     * 如果标注在接口方法上，则表明返回值必须强制加密，如果session为空，则抛出异常
+     *
+     * @return 是否强制加密
+     */
+    boolean force() default false;
 
     /**
      * 隐藏原因（可选）

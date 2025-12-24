@@ -1,6 +1,7 @@
 package cn.org.autumn.service;
 
 import cn.org.autumn.annotation.Endpoint;
+import cn.org.autumn.model.Supported;
 import cn.org.autumn.config.CacheConfig;
 import cn.org.autumn.config.EncryptConfigHandler;
 import cn.org.autumn.exception.CodeException;
@@ -417,30 +418,42 @@ public class RsaService {
                 String fullPath = basePath + methodPath;
                 // 检查请求body参数类型
                 Parameter[] parameters = method.getParameters();
-                List<EncryptRequestBodyType> encryptRequestBodyTypes = new ArrayList<>();
+                boolean hasEncryptBody = false;
+                boolean forceEncryptBody = false;
                 for (Parameter parameter : parameters) {
                     RequestBody requestBody = parameter.getAnnotation(RequestBody.class);
                     if (requestBody != null) {
                         Class<?> paramType = parameter.getType();
                         if (isEncryptType(paramType)) {
-                            EncryptRequestBodyType bodyInfo = new EncryptRequestBodyType();
-                            bodyInfo.setParameterName(parameter.getName());
-                            bodyInfo.setType(paramType.getName());
-                            bodyInfo.setSimpleType(paramType.getSimpleName());
-                            encryptRequestBodyTypes.add(bodyInfo);
+                            hasEncryptBody = true;
+                            // 检查参数上的@Endpoint注解，如果forceEncrypt=true，则设置force.body=true
+                            Endpoint paramEndpoint = parameter.getAnnotation(Endpoint.class);
+                            if (paramEndpoint != null && paramEndpoint.force()) {
+                                forceEncryptBody = true;
+                            }
                         }
                     }
                 }
                 // 检查返回类型
                 Class<?> returnType = method.getReturnType();
                 boolean isEncryptReturnType = isEncryptType(returnType);
+                boolean forceEncryptReturn = methodEndpoint != null && methodEndpoint.force();
+                // 检查方法上的@Endpoint注解，如果forceEncrypt=true，则设置force.ret=true
                 // 如果请求body或返回值类型是Encrypt，则添加到结果中
-                if (!encryptRequestBodyTypes.isEmpty() || isEncryptReturnType) {
+                if (hasEncryptBody || isEncryptReturnType) {
                     EndpointInfo endpointInfo = new EndpointInfo();
                     endpointInfo.setPath(fullPath);
                     endpointInfo.setMethod(httpMethod);
-                    endpointInfo.setEncryptBody(!encryptRequestBodyTypes.isEmpty());
-                    endpointInfo.setEncryptReturn(isEncryptReturnType);
+                    // 设置param支持加密信息
+                    Supported param = new Supported();
+                    param.setBody(hasEncryptBody);
+                    param.setRet(isEncryptReturnType);
+                    endpointInfo.setParam(param);
+                    // 设置force强制加密信息
+                    Supported force = new Supported();
+                    force.setBody(forceEncryptBody);
+                    force.setRet(forceEncryptReturn);
+                    endpointInfo.setForce(force);
                     result.add(endpointInfo);
                 }
             }

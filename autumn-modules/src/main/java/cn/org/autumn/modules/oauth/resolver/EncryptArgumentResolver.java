@@ -1,6 +1,9 @@
 package cn.org.autumn.modules.oauth.resolver;
 
+import cn.org.autumn.annotation.Endpoint;
+import cn.org.autumn.exception.CodeException;
 import cn.org.autumn.model.Encrypt;
+import cn.org.autumn.model.Error;
 import cn.org.autumn.service.AesService;
 import cn.org.autumn.service.RsaService;
 import com.google.gson.Gson;
@@ -61,6 +64,18 @@ public class EncryptArgumentResolver extends RequestResponseBodyMethodProcessor 
         Object object = super.resolveArgument(parameter, mavContainer, webRequest, binderFactory);
         if (object instanceof Encrypt) {
             Encrypt encrypt = (Encrypt) object;
+            // 检查参数上的@Endpoint注解，如果forceEncrypt=true，则强制验证加密内容
+            Endpoint endpointAnnotation = parameter.getParameterAnnotation(Endpoint.class);
+            if (endpointAnnotation != null && endpointAnnotation.force()) {
+                // 强制加密验证：检查ciphertext是否为空
+                if (StringUtils.isBlank(encrypt.getCiphertext())) {
+                    throw new CodeException(Error.FORCE_ENCRYPT_REQUEST_REQUIRED);
+                }
+                // 强制加密验证：检查session是否为空
+                if (StringUtils.isBlank(encrypt.getSession())) {
+                    throw new CodeException(Error.FORCE_ENCRYPT_SESSION_REQUIRED);
+                }
+            }
             if (StringUtils.isNotBlank(encrypt.getCiphertext()) && StringUtils.isNotBlank(encrypt.getSession())) {
                 long start = System.currentTimeMillis();
                 //当使用RSA解密时，使用服务端的私钥进行解密
