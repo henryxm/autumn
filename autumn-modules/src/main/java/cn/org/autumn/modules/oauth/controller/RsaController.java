@@ -146,6 +146,7 @@ public class RsaController {
      * @return 初始化加密响应（包含服务端公钥和加密后的AES密钥）
      */
     @PostMapping("/init")
+    @Endpoint(hidden = true)
     public Response<Encryption> initEncryption(@Valid @RequestBody Request<InitRequest> request, HttpServletRequest servlet) {
         try {
             InitRequest initRequest = request.getData();
@@ -187,6 +188,7 @@ public class RsaController {
      * @return 包含请求body和返回值类型为Encrypt的接口信息列表
      */
     @RequestMapping(value = "/endpoints", method = {RequestMethod.POST, RequestMethod.GET})
+    @Endpoint(hidden = true)
     public Response<List<EndpointInfo>> getEncryptEndpoints(@Valid @RequestBody(required = false) Request<?> request, HttpServletRequest servlet) {
         try {
             List<EndpointInfo> endpoints = rsaService.getEncryptEndpoints();
