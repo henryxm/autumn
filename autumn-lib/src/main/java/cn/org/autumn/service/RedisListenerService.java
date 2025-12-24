@@ -81,20 +81,24 @@ public class RedisListenerService implements InitFactory.Init {
 
     @Override
     public void init() {
+        log.info("Start Redis listener");
         if (initialized) {
             return;
         }
         if (redisUtils.isOpen())
             new Thread(this::initMessageListenerContainer).start();
+        else
+            log.info("Fail to start Redis listener due to Redis is not open");
     }
 
     /**
      * 初始化消息监听容器
      */
-    private void initMessageListenerContainer() {
-        if (initialized) {
+    void initMessageListenerContainer() {
+        if (initialized || redisUtils.isOpen()) {
             return;
         }
+        log.info("Begin to start Redis listener");
         // 先测试Redis连接是否可用
         if (!ping()) {
             retryCount++;

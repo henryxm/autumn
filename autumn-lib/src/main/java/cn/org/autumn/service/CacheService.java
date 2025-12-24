@@ -62,6 +62,8 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
      */
     @Override
     public void must() {
+        log.info("Subscribe Redis message");
+        redisListenerService.initMessageListenerContainer();
         // 订阅缓存失效频道
         boolean success = redisListenerService.subscribe(CACHE_INVALIDATION_CHANNEL, (channel, messageBody) -> {
             try {
