@@ -15,11 +15,11 @@ import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceClientConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -220,6 +220,8 @@ public class RedisListenerService implements InitFactory.Init {
             messageListenerContainer.addMessageListener((message, pattern) -> {
                 try {
                     String messageBody = new String(message.getBody());
+                    if (log.isDebugEnabled())
+                        log.debug("订阅接收:{}", messageBody);
                     handler.handle(channel, messageBody);
                 } catch (Exception e) {
                     log.error("处理频道 {} 的消息失败: {}", channel, e.getMessage(), e);
@@ -269,13 +271,17 @@ public class RedisListenerService implements InitFactory.Init {
         }
         try {
             String messageJson = gson.toJson(message);
-            redisTemplate.convertAndSend(channel, messageJson);
+            // 使用原生Redis连接发送字符串消息，避免被JdkSerializationRedisSerializer再次序列化
+            redisTemplate.execute((RedisCallback<Long>) connection -> {
+                connection.publish(channel.getBytes(), messageJson.getBytes());
+                return 1L;
+            });
             if (log.isDebugEnabled()) {
-                log.debug("发布消息到频道 {}: {}", channel, messageJson);
+                log.debug("发布消息:{}, 内容:{}", channel, messageJson);
             }
             return true;
         } catch (Exception e) {
-            log.error("发布消息到频道 {} 失败: {}", channel, e.getMessage(), e);
+            log.error("发布消息:{}, 失败:{}", channel, e.getMessage(), e);
             return false;
         }
     }

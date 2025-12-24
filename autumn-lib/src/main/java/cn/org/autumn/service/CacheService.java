@@ -65,7 +65,36 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
         // 订阅缓存失效频道
         boolean success = redisListenerService.subscribe(CACHE_INVALIDATION_CHANNEL, (channel, messageBody) -> {
             try {
-                Invalidation invalidationMessage = gson.fromJson(messageBody, Invalidation.class);
+                // 检查消息体是否为空
+                if (messageBody == null || messageBody.trim().isEmpty()) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("收到空的缓存失效消息，忽略");
+                    }
+                    return;
+                }
+                // 尝试解析JSON消息
+                Invalidation invalidationMessage = null;
+                try {
+                    invalidationMessage = gson.fromJson(messageBody, Invalidation.class);
+                } catch (Exception jsonException) {
+                    // 如果JSON解析失败，可能是消息被JDK序列化了，尝试其他方式
+                    if (log.isDebugEnabled()) {
+                        log.debug("JSON解析失败，尝试其他方式解析消息: {}", messageBody.substring(0, Math.min(100, messageBody.length())));
+                    }
+                    // 如果消息不是以{开头，可能是被序列化的字符串，尝试直接反序列化
+                    if (!messageBody.trim().startsWith("{")) {
+                        log.warn("缓存失效消息格式异常，不是有效的JSON格式: {}", messageBody.substring(0, Math.min(200, messageBody.length())));
+                        return;
+                    }
+                    throw jsonException; // 重新抛出异常
+                }
+                // 验证解析后的消息是否有效
+                if (invalidationMessage == null) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("解析后的缓存失效消息为空，忽略");
+                    }
+                    return;
+                }
                 // 如果是自己发布的消息，忽略
                 if (redisListenerService.getInstanceId().equals(invalidationMessage.getInstanceId())) {
                     return;
@@ -73,7 +102,7 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
                 // 处理缓存失效消息
                 handleCacheInvalidation(invalidationMessage);
             } catch (Exception e) {
-                log.error("处理缓存失效消息失败: {}", e.getMessage(), e);
+                log.error("处理缓存失效消息失败: {}, 消息内容: {}", e.getMessage(), messageBody != null ? messageBody.substring(0, Math.min(200, messageBody.length())) : "null", e);
             }
         });
         if (log.isDebugEnabled()) {
