@@ -22,6 +22,7 @@ import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.method.support.ModelAndViewContainer;
 import org.springframework.web.servlet.mvc.method.annotation.RequestResponseBodyMethodProcessor;
 
+import javax.servlet.http.HttpServletRequest;
 import java.lang.reflect.Type;
 import java.util.List;
 
@@ -76,17 +77,26 @@ public class EncryptArgumentResolver extends RequestResponseBodyMethodProcessor 
                     throw new CodeException(Error.FORCE_ENCRYPT_SESSION_REQUIRED);
                 }
             }
-            if (StringUtils.isNotBlank(encrypt.getCiphertext()) && StringUtils.isNotBlank(encrypt.getSession())) {
-                long start = System.currentTimeMillis();
-                //当使用RSA解密时，使用服务端的私钥进行解密
-                String decrypt = "RSA".equals(encrypt.getAlgorithm()) ? rsaService.decrypt(encrypt) : aesService.decrypt(encrypt);
-                Type parameterType = getParameterType(parameter);
-                object = gson.fromJson(decrypt, parameterType);
-                long end = System.currentTimeMillis();
-                if (log.isDebugEnabled() && null != decrypt) {
-                    log.debug("解密数据: 长度:{}, 耗时:{}毫秒", decrypt.length(), end - start);
-                    log.debug("解密内容: {}", decrypt);
+            try {
+                if (StringUtils.isNotBlank(encrypt.getCiphertext()) && StringUtils.isNotBlank(encrypt.getSession())) {
+                    long start = System.currentTimeMillis();
+                    //当使用RSA解密时，使用服务端的私钥进行解密
+                    String decrypt = "RSA".equals(encrypt.getAlgorithm()) ? rsaService.decrypt(encrypt) : aesService.decrypt(encrypt);
+                    Type parameterType = getParameterType(parameter);
+                    object = gson.fromJson(decrypt, parameterType);
+                    long end = System.currentTimeMillis();
+                    if (log.isDebugEnabled() && null != decrypt) {
+                        log.debug("解密数据: 长度:{}, 耗时:{}毫秒", decrypt.length(), end - start);
+                        log.debug("解密内容: {}", decrypt);
+                    }
                 }
+            } catch (Exception e) {
+                HttpServletRequest servlet = getHttpServletRequest(webRequest);
+                if (servlet != null) {
+                    String uri = servlet.getRequestURI();
+                    log.error("解密失败: {}, URI: {}, 错误: {}", encrypt.getSession(), uri, e.getMessage());
+                }
+                throw e;
             }
         }
         return object;
@@ -111,5 +121,25 @@ public class EncryptArgumentResolver extends RequestResponseBodyMethodProcessor 
         // 如果是ParameterizedType（泛型类型），返回完整的Type信息
         // 这样Fastjson就能正确解析泛型字段（如Page<Client>中的data字段）
         return type;
+    }
+
+    /**
+     * 从NativeWebRequest获取HttpServletRequest
+     *
+     * @param request NativeWebRequest实例
+     * @return HttpServletRequest，如果无法获取则返回null
+     */
+    private HttpServletRequest getHttpServletRequest(NativeWebRequest request) {
+        try {
+            if (request == null) {
+                return null;
+            }
+            return request.getNativeRequest(HttpServletRequest.class);
+        } catch (Exception e) {
+            if (log.isDebugEnabled()) {
+                log.debug("无法从NativeWebRequest获取HttpServletRequest: {}", e.getMessage());
+            }
+            return null;
+        }
     }
 }

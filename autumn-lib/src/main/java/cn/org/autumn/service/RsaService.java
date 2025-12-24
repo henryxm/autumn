@@ -88,7 +88,7 @@ public class RsaService {
     public RsaKey generate(String uuid) {
         try {
             if (StringUtils.isBlank(uuid)) {
-                throw new RuntimeException(new CodeException(Error.RSA_UUID_REQUIRED));
+                throw new RuntimeException(new CodeException(Error.RSA_SESSION_REQUIRED));
             }
             EncryptConfigHandler.RsaConfig config = encryptConfigFactory.getRsaConfig();
             RsaKey pair = RsaUtil.generate(config.getKeySize());
@@ -111,34 +111,36 @@ public class RsaService {
      * 返回的密钥对包含过期时间，客户端应在此时间之前重新获取
      * 仅在客户端主动请求获取密钥时调用，如果密钥即将过期则生成新的
      *
-     * @param uuid 客户端UUID标识
+     * @param session 客户端UUID标识
      * @return 包含过期时间的密钥对
      * @throws CodeException 密钥获取或生成失败时抛出异常
      */
-    public RsaKey getRsaKey(String uuid) throws CodeException {
+    public RsaKey getRsaKey(String session) throws CodeException {
         try {
-            if (StringUtils.isBlank(uuid)) {
-                throw new CodeException(Error.RSA_UUID_REQUIRED);
+            if (StringUtils.isBlank(session)) {
+                throw new CodeException(Error.RSA_SESSION_REQUIRED);
             }
             EncryptConfigHandler.RsaConfig config = encryptConfigFactory.getRsaConfig();
             // 使用compute方法：如果缓存不存在则生成，存在则返回
-            RsaKey pair = cacheService.compute(uuid, () -> generate(uuid), getServerPrivateKeyConfig());
+            RsaKey pair = cacheService.compute(session, () -> generate(session), getServerPrivateKeyConfig());
             // 检查密钥对是否有效：为null、已过期、格式无效或即将过期时，删除缓存并重新调用compute
             // 利用短路求值：如果pair为null，后面的条件不会执行
             if (pair == null || pair.isExpired() || StringUtils.isBlank(pair.getPublicKey()) || StringUtils.isBlank(pair.getPrivateKey()) || pair.isExpiringSoon(config.getClientBufferMinutes())) {
                 // 删除缓存并重新调用compute
-                cacheService.remove(getServerPrivateKeyConfig().getCacheName(), uuid);
-                pair = cacheService.compute(uuid, () -> generate(uuid), getServerPrivateKeyConfig());
+                cacheService.remove(getServerPrivateKeyConfig().getCacheName(), session);
+                pair = cacheService.compute(session, () -> generate(session), getServerPrivateKeyConfig());
             }
             return pair;
         } catch (RuntimeException e) {
             if (e.getCause() instanceof CodeException) {
                 throw (CodeException) e.getCause();
             }
-            log.error("获取密钥对失败，UUID: {}", uuid, e);
+            if (log.isDebugEnabled())
+                log.debug("获取密钥对:{}, 错误:{}", session, e.getMessage());
             throw new CodeException(Error.RSA_KEY_PAIR_NOT_FOUND);
         } catch (Exception e) {
-            log.error("获取密钥对失败，UUID: {}", uuid, e);
+            if (log.isDebugEnabled())
+                log.debug("获取密钥对:{}, 异常:{}", session, e.getMessage());
             throw new CodeException(Error.RSA_KEY_PAIR_NOT_FOUND);
         }
     }
@@ -156,7 +158,7 @@ public class RsaService {
             return "";
         }
         if (StringUtils.isBlank(value.getSession())) {
-            throw new CodeException(Error.RSA_UUID_REQUIRED);
+            throw new CodeException(Error.RSA_SESSION_REQUIRED);
         }
         // 从缓存中获取密钥对
         RsaKey keyPair = cacheService.get(getServerPrivateKeyConfig().getCacheName(), value.getSession());
@@ -198,7 +200,7 @@ public class RsaService {
      */
     public RsaKey savePublicKey(String uuid, String publicKey, Long expireTime) throws CodeException {
         if (StringUtils.isBlank(uuid)) {
-            throw new CodeException(Error.RSA_UUID_REQUIRED);
+            throw new CodeException(Error.RSA_SESSION_REQUIRED);
         }
         if (StringUtils.isBlank(publicKey)) {
             throw new CodeException(Error.RSA_KEY_FORMAT_ERROR);
@@ -441,8 +443,8 @@ public class RsaService {
                 // 检查返回类型
                 Class<?> returnType = method.getReturnType();
                 boolean isEncryptReturnType = isEncryptType(returnType);
-                boolean forceEncryptReturn = methodEndpoint != null && methodEndpoint.force();
-                // 检查方法上的@Endpoint注解，如果forceEncrypt=true，则设置force.ret=true
+                boolean forceEncryptReturn = methodEndpoint != null && methodEndpoint.force() && isEncryptReturnType;
+                // 检查方法上的@Endpoint注解，如果force=true，则设置force.ret=true
                 // 如果请求body或返回值类型是Encrypt，则添加到结果中
                 if (hasEncryptBody || isEncryptReturnType) {
                     EndpointInfo endpointInfo = new EndpointInfo();

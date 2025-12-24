@@ -82,8 +82,8 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
             return body;
         }
         // 排除RSA相关的接口（密钥交换接口），避免循环加密
-        String requestURI = servlet.getRequestURI();
-        if (requestURI != null && requestURI.startsWith("/rsa/")) {
+        String uri = servlet.getRequestURI();
+        if (uri != null && uri.startsWith("/rsa/")) {
             return body;
         }
         // 关键逻辑：只有当header中包含X-Encrypt-Session时，才进行响应加密
@@ -92,8 +92,7 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
         String algorithm = servlet.getHeader("X-Encrypt-Algorithm");
         if (StringUtils.isBlank(algorithm))
             algorithm = "AES";
-        
-        // 检查方法上的@Endpoint注解，如果forceEncrypt=true，则强制要求session
+        // 检查方法上的@Endpoint注解，如果force=true，则强制要求session
         Method controllerMethod = returnType.getMethod();
         if (controllerMethod != null) {
             Endpoint endpointAnnotation = controllerMethod.getAnnotation(Endpoint.class);
@@ -105,7 +104,6 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
                 }
             }
         }
-        
         if (StringUtils.isBlank(session)) {
             // 没有X-Encrypt-Session header，不进行响应加密，使用之前的流程
             return body;
@@ -126,11 +124,8 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
                     log.debug("加密数据: 长度:{}, 耗时:{}毫秒", json.length(), end - start);
                     log.debug("加密内容: {}", json);
                 }
-            } catch (CodeException e) {
-                log.error("加密失败，UUID: {}, 错误: {}", session, e.getMessage());
-                return Response.error(e);
             } catch (Exception e) {
-                log.error("处理失败，UUID: {}", session, e);
+                log.error("加密失败: {}, URI: {}, 错误: {}", session, uri, e.getMessage());
                 return Response.error(e);
             }
         }

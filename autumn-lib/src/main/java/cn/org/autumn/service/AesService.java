@@ -65,7 +65,7 @@ public class AesService {
     public AesKey generate(String uuid) {
         try {
             if (StringUtils.isBlank(uuid)) {
-                throw new RuntimeException(new CodeException(Error.RSA_UUID_REQUIRED));
+                throw new RuntimeException(new CodeException(Error.RSA_SESSION_REQUIRED));
             }
             EncryptConfigHandler.AesConfig config = encryptConfigFactory.getAesConfig();
             // 生成AES密钥
@@ -110,7 +110,7 @@ public class AesService {
     public AesKey getAesKey(String uuid) throws CodeException {
         try {
             if (StringUtils.isBlank(uuid)) {
-                throw new CodeException(Error.RSA_UUID_REQUIRED);
+                throw new CodeException(Error.RSA_SESSION_REQUIRED);
             }
             EncryptConfigHandler.AesConfig config = encryptConfigFactory.getAesConfig();
             // 使用compute方法：如果缓存不存在则生成，存在则返回
@@ -149,7 +149,7 @@ public class AesService {
             throw new CodeException(Error.AES_ENCRYPTED_DATA_EMPTY);
         }
         if (StringUtils.isBlank(uuid)) {
-            throw new CodeException(Error.RSA_UUID_REQUIRED);
+            throw new CodeException(Error.RSA_SESSION_REQUIRED);
         }
         // 直接从缓存获取密钥，不触发更新（客户端可能还在使用旧密钥）
         AesKey aesKey = cacheService.get(getAesKeyCacheConfig().getCacheName(), uuid);
@@ -204,7 +204,7 @@ public class AesService {
             throw new CodeException(Error.AES_ENCRYPTED_DATA_EMPTY);
         }
         if (StringUtils.isBlank(uuid)) {
-            throw new CodeException(Error.RSA_UUID_REQUIRED);
+            throw new CodeException(Error.RSA_SESSION_REQUIRED);
         }
         // 直接从缓存获取密钥，不触发更新（客户端可能还在使用旧密钥）
         AesKey aesKey = cacheService.get(getAesKeyCacheConfig().getCacheName(), uuid);

@@ -751,16 +751,16 @@ public enum Error {
     RSA_KEY_LENGTH_ERROR(1008, "RSA密钥长度不符合要求"),
 
     /**
-     * UUID不能为空
-     * 客户端操作：确保请求中包含有效的UUID
+     * Session不能为空
+     * 客户端操作：确保请求中包含有效的Session
      */
-    RSA_UUID_REQUIRED(1009, "UUID不能为空"),
+    RSA_SESSION_REQUIRED(1009, "Session不能为空"),
 
     /**
-     * UUID无效或格式错误
-     * 客户端操作：检查UUID格式，使用有效的UUID
+     * Session无效或格式错误
+     * 客户端操作：检查UUID格式，使用有效的Session
      */
-    RSA_UUID_INVALID(1010, "UUID无效或格式错误"),
+    RSA_SESSION_INVALID(1010, "Session无效或格式错误"),
 
     /**
      * RSA密钥生成失败

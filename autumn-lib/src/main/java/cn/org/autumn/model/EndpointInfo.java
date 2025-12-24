@@ -30,6 +30,6 @@ public class EndpointInfo implements Serializable {
     @Schema(name = "标注参数是否是支持加密", description = "根据接口规范，标注确认参数是否支持加密的body还是支持返回值加密")
     private Supported param;
 
-    @Schema(name = "标注参数是否是强制加密", description = "根据接口规范，如果接口参数支持加密功能，如果标记为强制加密，则必须使用强制加密")
+    @Schema(name = "标注参数是否是强制加密", description = "根据接口规范，如果接口参数支持加密功能，如果标记为强制加密，则必须使用强制加密，另外: 该参数只强制加密，不强制不加密")
     private Supported force;
 }
