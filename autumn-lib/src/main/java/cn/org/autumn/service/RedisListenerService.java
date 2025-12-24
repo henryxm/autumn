@@ -67,7 +67,7 @@ public class RedisListenerService implements InitFactory.Init {
     /**
      * 标记是否已初始化监听器
      */
-    private volatile boolean initialized = false;
+    private boolean initialized = false;
 
     /**
      * Redis连接测试重试次数
@@ -95,7 +95,7 @@ public class RedisListenerService implements InitFactory.Init {
      * 初始化消息监听容器
      */
     void initMessageListenerContainer() {
-        if (initialized || redisUtils.isOpen()) {
+        if (initialized || !redisUtils.isOpen()) {
             return;
         }
         log.info("Begin to start Redis listener");
