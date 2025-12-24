@@ -59,12 +59,12 @@ public class AesService {
     /**
      * 生成AES密钥和向量
      *
-     * @param uuid 客户端UUID
+     * @param session 客户端UUID
      * @return AES密钥信息
      */
-    public AesKey generate(String uuid) {
+    public AesKey generate(String session) {
         try {
-            if (StringUtils.isBlank(uuid)) {
+            if (StringUtils.isBlank(session)) {
                 throw new RuntimeException(new CodeException(Error.RSA_SESSION_REQUIRED));
             }
             EncryptConfigHandler.AesConfig config = encryptConfigFactory.getAesConfig();
@@ -88,13 +88,13 @@ public class AesService {
             // 计算过期时间
             long expireTime = System.currentTimeMillis() + (config.getKeyValidMinutes() * 60 * 1000L);
             // 创建AES密钥对象
-            AesKey aesKey = AesKey.builder().session(uuid).key(keyBase64).vector(vectorBase64).expireTime(expireTime).build();
+            AesKey aesKey = AesKey.builder().session(session).key(keyBase64).vector(vectorBase64).expireTime(expireTime).build();
             if (log.isDebugEnabled()) {
-                log.debug("生成AES密钥，UUID: {}, 过期时间: {}", uuid, expireTime);
+                log.debug("生成AES密钥，Session: {}, 过期时间: {}", session, expireTime);
             }
             return aesKey;
         } catch (Exception e) {
-            log.error("生成AES密钥失败，UUID: {}", uuid, e);
+            log.error("生成AES密钥失败，Session: {}", session, e);
             throw new RuntimeException(new CodeException(Error.AES_KEY_GENERATE_FAILED));
         }
     }
@@ -103,33 +103,33 @@ public class AesService {
      * 获取AES密钥（从缓存中获取或生成新的）
      * 仅在客户端主动请求获取密钥时调用，如果密钥即将过期则生成新的
      *
-     * @param uuid 客户端UUID
+     * @param session 客户端UUID
      * @return AES密钥信息
      * @throws CodeException 密钥获取失败时抛出异常
      */
-    public AesKey getAesKey(String uuid) throws CodeException {
+    public AesKey getAesKey(String session) throws CodeException {
         try {
-            if (StringUtils.isBlank(uuid)) {
+            if (StringUtils.isBlank(session)) {
                 throw new CodeException(Error.RSA_SESSION_REQUIRED);
             }
             EncryptConfigHandler.AesConfig config = encryptConfigFactory.getAesConfig();
             // 使用compute方法：如果缓存不存在则生成，存在则返回
-            AesKey aesKey = cacheService.compute(uuid, () -> generate(uuid), getAesKeyCacheConfig());
+            AesKey aesKey = cacheService.compute(session, () -> generate(session), getAesKeyCacheConfig());
             // 检查密钥是否有效：为null、已过期、格式无效或即将过期时，删除缓存并重新调用compute
             // 利用短路求值：如果aesKey为null，后面的条件不会执行
             if (aesKey == null || aesKey.isExpired() || StringUtils.isBlank(aesKey.getKey()) || StringUtils.isBlank(aesKey.getVector()) || aesKey.isExpiringSoon(config.getClientBufferMinutes())) {
-                cacheService.remove(getAesKeyCacheConfig().getCacheName(), uuid);
-                aesKey = cacheService.compute(uuid, () -> generate(uuid), getAesKeyCacheConfig());
+                cacheService.remove(getAesKeyCacheConfig().getCacheName(), session);
+                aesKey = cacheService.compute(session, () -> generate(session), getAesKeyCacheConfig());
             }
             return aesKey;
         } catch (RuntimeException e) {
             if (e.getCause() instanceof CodeException) {
                 throw (CodeException) e.getCause();
             }
-            log.error("获取AES密钥失败，UUID: {}", uuid, e);
+            log.error("获取密钥失败:{}, 错误:{}", session, e.getMessage());
             throw new CodeException(Error.AES_KEY_NOT_FOUND);
         } catch (Exception e) {
-            log.error("获取AES密钥失败，UUID: {}", uuid, e);
+            log.error("获取密钥失败:{}, 异常:{}", session, e.getMessage());
             throw new CodeException(Error.AES_KEY_NOT_FOUND);
         }
     }
@@ -140,28 +140,28 @@ public class AesService {
      * 因为客户端可能还在使用旧的密钥，不应该在加解密过程中动态更新
      *
      * @param data 待加密数据
-     * @param uuid 客户端UUID
+     * @param session 客户端UUID
      * @return 加密后的数据（Base64编码）
      * @throws CodeException 加密失败时抛出异常
      */
-    public String encrypt(String data, String uuid) throws CodeException {
+    public String encrypt(String data, String session) throws CodeException {
         if (StringUtils.isBlank(data)) {
             throw new CodeException(Error.AES_ENCRYPTED_DATA_EMPTY);
         }
-        if (StringUtils.isBlank(uuid)) {
+        if (StringUtils.isBlank(session)) {
             throw new CodeException(Error.RSA_SESSION_REQUIRED);
         }
         // 直接从缓存获取密钥，不触发更新（客户端可能还在使用旧密钥）
-        AesKey aesKey = cacheService.get(getAesKeyCacheConfig().getCacheName(), uuid);
+        AesKey aesKey = cacheService.get(getAesKeyCacheConfig().getCacheName(), session);
         if (aesKey == null) {
             throw new CodeException(Error.AES_KEY_NOT_FOUND);
         }
         if (StringUtils.isBlank(aesKey.getKey())) {
-            log.error("AES密钥格式错误，密钥为空，UUID: {}", uuid);
+            log.error("AES密钥格式错误，密钥为空，Session: {}", session);
             throw new CodeException(Error.AES_KEY_FORMAT_ERROR);
         }
         if (StringUtils.isBlank(aesKey.getVector())) {
-            log.error("AES向量格式错误，向量为空，UUID: {}", uuid);
+            log.error("AES向量格式错误，向量为空，Session: {}", session);
             throw new CodeException(Error.AES_VECTOR_FORMAT_ERROR);
         }
         try {
@@ -169,17 +169,17 @@ public class AesService {
             // 密钥和向量已经是Base64编码，直接使用
             String encrypted = AES.encrypt(data, aesKey.getKey(), aesKey.getVector());
             if (StringUtils.isBlank(encrypted)) {
-                log.error("加密为空:{}, 秘钥:{}, 向量:{}, 内容:{}", uuid, aesKey.getKey(), aesKey.getVector(), data);
+                log.error("加密为空:{}, 秘钥:{}, 向量:{}, 内容:{}", session, aesKey.getKey(), aesKey.getVector(), data);
                 throw new CodeException(Error.AES_ENCRYPT_FAILED);
             }
             return encrypted;
         } catch (CodeException e) {
             throw e;
         } catch (IllegalArgumentException e) {
-            log.error("AES密钥或向量格式错误，加密失败，UUID: {}, 错误: {}", uuid, e.getMessage());
+            log.error("AES密钥或向量格式错误，加密失败，Session: {}, 错误: {}", session, e.getMessage());
             throw new CodeException(Error.AES_KEY_FORMAT_ERROR);
         } catch (Exception e) {
-            log.error("AES加密失败，UUID: {}", uuid, e);
+            log.error("AES加密失败，Session: {}", session, e);
             throw new CodeException(Error.AES_ENCRYPT_FAILED);
         }
     }
@@ -195,50 +195,50 @@ public class AesService {
      * 支持旧密钥的平滑切换：即使密钥已过期，只要在服务端冗余保留时间内，仍可解密
      *
      * @param data 加密数据（Base64编码）
-     * @param uuid 客户端UUID
+     * @param session 客户端UUID
      * @return 解密后的数据
      * @throws CodeException 解密失败时抛出异常
      */
-    public String decrypt(String data, String uuid) throws CodeException {
+    public String decrypt(String data, String session) throws CodeException {
         if (StringUtils.isBlank(data)) {
             throw new CodeException(Error.AES_ENCRYPTED_DATA_EMPTY);
         }
-        if (StringUtils.isBlank(uuid)) {
+        if (StringUtils.isBlank(session)) {
             throw new CodeException(Error.RSA_SESSION_REQUIRED);
         }
         // 直接从缓存获取密钥，不触发更新（客户端可能还在使用旧密钥）
-        AesKey aesKey = cacheService.get(getAesKeyCacheConfig().getCacheName(), uuid);
+        AesKey aesKey = cacheService.get(getAesKeyCacheConfig().getCacheName(), session);
         if (aesKey == null) {
             throw new CodeException(Error.AES_KEY_NOT_FOUND);
         }
         if (StringUtils.isBlank(aesKey.getKey())) {
-            log.error("AES密钥格式错误，密钥为空，UUID: {}", uuid);
+            log.error("AES密钥格式错误，密钥为空，Session: {}", session);
             throw new CodeException(Error.AES_KEY_FORMAT_ERROR);
         }
         if (StringUtils.isBlank(aesKey.getVector())) {
-            log.error("AES向量格式错误，向量为空，UUID: {}", uuid);
+            log.error("AES向量格式错误，向量为空，Session: {}", session);
             throw new CodeException(Error.AES_VECTOR_FORMAT_ERROR);
         }
         // 检查密钥是否已过期（但仍在服务端冗余保留时间内）
         if (aesKey.isExpired()) {
-            log.warn("使用已过期的AES密钥进行解密，UUID: {}, 过期时间: {}", uuid, aesKey.getExpireTime());
+            log.warn("使用已过期的AES密钥进行解密，Session: {}, 过期时间: {}", session, aesKey.getExpireTime());
         }
         try {
             // AES工具类使用Base64编码的密钥和向量
             // 密钥和向量已经是Base64编码，直接使用
             String decrypted = AES.decrypt(data, aesKey.getKey(), aesKey.getVector());
             if (StringUtils.isBlank(decrypted)) {
-                log.error("解密为空:{}, 秘钥:{}, 向量:{}, 内容:{}", uuid, aesKey.getKey(), aesKey.getVector(), data);
+                log.error("解密为空:{}, 秘钥:{}, 向量:{}, 内容:{}", session, aesKey.getKey(), aesKey.getVector(), data);
                 throw new CodeException(Error.AES_DECRYPTED_DATA_EMPTY);
             }
             return decrypted;
         } catch (CodeException e) {
             throw e;
         } catch (IllegalArgumentException e) {
-            log.error("AES密钥或向量格式错误，解密失败，UUID: {}, 错误: {}", uuid, e.getMessage());
+            log.error("AES密钥或向量格式错误，解密失败，Session: {}, 错误: {}", session, e.getMessage());
             throw new CodeException(Error.AES_KEY_FORMAT_ERROR);
         } catch (Exception e) {
-            log.error("AES解密失败，UUID: {}", uuid, e);
+            log.error("AES解密失败，Session: {}", session, e);
             throw new CodeException(Error.AES_DECRYPT_FAILED);
         }
     }
@@ -246,26 +246,26 @@ public class AesService {
     /**
      * 检查AES密钥是否存在且有效
      *
-     * @param uuid 客户端UUID
+     * @param session 客户端UUID
      * @return true-存在且有效，false-不存在或已过期
      */
-    public boolean hasValidAesKey(String uuid) {
-        if (StringUtils.isBlank(uuid)) {
+    public boolean hasValidAesKey(String session) {
+        if (StringUtils.isBlank(session)) {
             return false;
         }
-        AesKey aesKey = cacheService.get(getAesKeyCacheConfig().getCacheName(), uuid);
+        AesKey aesKey = cacheService.get(getAesKeyCacheConfig().getCacheName(), session);
         return aesKey != null && !aesKey.isExpired();
     }
 
     /**
      * 移除AES密钥
      *
-     * @param uuid 客户端UUID
+     * @param session 客户端UUID
      */
-    public void removeAesKey(String uuid) {
-        if (StringUtils.isBlank(uuid)) {
+    public void removeAesKey(String session) {
+        if (StringUtils.isBlank(session)) {
             return;
         }
-        cacheService.remove(getAesKeyCacheConfig().getCacheName(), uuid);
+        cacheService.remove(getAesKeyCacheConfig().getCacheName(), session);
     }
 }

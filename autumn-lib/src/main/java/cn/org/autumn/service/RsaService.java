@@ -82,26 +82,26 @@ public class RsaService {
     /**
      * 生成新的密钥对
      *
-     * @param uuid 客户端UUID标识
+     * @param session 客户端UUID标识
      * @return 包含过期时间的密钥对
      */
-    public RsaKey generate(String uuid) {
+    public RsaKey generate(String session) {
         try {
-            if (StringUtils.isBlank(uuid)) {
+            if (StringUtils.isBlank(session)) {
                 throw new RuntimeException(new CodeException(Error.RSA_SESSION_REQUIRED));
             }
             EncryptConfigHandler.RsaConfig config = encryptConfigFactory.getRsaConfig();
             RsaKey pair = RsaUtil.generate(config.getKeySize());
-            pair.setSession(uuid);
+            pair.setSession(session);
             // 设置过期时间：当前时间 + 密钥对有效期
             long expireTime = System.currentTimeMillis() + (config.getKeyValidMinutes() * 60 * 1000L);
             pair.setExpireTime(expireTime);
             if (log.isDebugEnabled()) {
-                log.debug("生成新的密钥对，UUID: {}, 密钥长度: {}位, 过期时间: {}", uuid, config.getKeySize(), expireTime);
+                log.debug("生成新的密钥对，Session: {}, 密钥长度: {}位, 过期时间: {}", session, config.getKeySize(), expireTime);
             }
             return pair;
         } catch (Exception e) {
-            log.error("生成RSA密钥对失败，UUID: {}", uuid, e);
+            log.error("生成RSA密钥对失败，Session: {}", session, e);
             throw new RuntimeException(new CodeException(Error.RSA_KEY_GENERATE_FAILED));
         }
     }
@@ -171,20 +171,20 @@ public class RsaService {
         }
         // 检查密钥对是否已过期（但仍在服务端冗余保留时间内）
         if (keyPair.isExpired()) {
-            log.warn("使用已过期的密钥对进行解密，UUID: {}, 过期时间: {}", value.getSession(), keyPair.getExpireTime());
+            log.warn("使用已过期的密钥对进行解密，Session: {}, 过期时间: {}", value.getSession(), keyPair.getExpireTime());
         }
         // 执行解密
         try {
             String decrypted = RsaUtil.decrypt(value.getCiphertext(), privateKey);
             if (StringUtils.isBlank(decrypted)) {
-                log.warn("解密结果为空，UUID: {}", value.getSession());
+                log.warn("解密结果为空，Session: {}", value.getSession());
             }
             return decrypted;
         } catch (IllegalArgumentException e) {
-            log.error("RSA密钥格式错误，解密失败，UUID: {}, 错误: {}", value.getSession(), e.getMessage());
+            log.error("RSA密钥格式错误，解密失败，Session: {}, 错误: {}", value.getSession(), e.getMessage());
             throw new CodeException(Error.RSA_KEY_FORMAT_ERROR);
         } catch (Exception e) {
-            log.error("RSA解密失败，UUID: {}, 错误: {}", value.getSession(), e.getMessage(), e);
+            log.error("RSA解密失败，Session: {}, 错误: {}", value.getSession(), e.getMessage(), e);
             throw new CodeException(Error.RSA_DECRYPT_FAILED);
         }
     }
@@ -192,14 +192,14 @@ public class RsaService {
     /**
      * 保存客户端公钥（使用UUID作为客户端标识）
      *
-     * @param uuid       客户端UUID标识
+     * @param session    客户端UUID标识
      * @param publicKey  客户端公钥
      * @param expireTime 客户端指定的过期时间（毫秒时间戳），如果为null则使用后端默认过期时间
      * @return 保存的客户端公钥信息
      * @throws CodeException 保存失败时抛出异常
      */
-    public RsaKey savePublicKey(String uuid, String publicKey, Long expireTime) throws CodeException {
-        if (StringUtils.isBlank(uuid)) {
+    public RsaKey savePublicKey(String session, String publicKey, Long expireTime) throws CodeException {
+        if (StringUtils.isBlank(session)) {
             throw new CodeException(Error.RSA_SESSION_REQUIRED);
         }
         if (StringUtils.isBlank(publicKey)) {
@@ -210,19 +210,19 @@ public class RsaService {
             String testData = "test";
             RsaUtil.encrypt(testData, publicKey);
         } catch (IllegalArgumentException e) {
-            log.error("客户端公钥格式错误，UUID: {}, 错误: {}", uuid, e.getMessage());
+            log.error("客户端公钥格式错误，Session: {}, 错误: {}", session, e.getMessage());
             throw new CodeException(Error.RSA_KEY_FORMAT_ERROR);
         } catch (RuntimeException e) {
             // RsaUtil.encrypt可能抛出RuntimeException包装的InvalidKeyException
             Throwable cause = e.getCause();
             if (cause instanceof java.security.InvalidKeyException) {
-                log.error("客户端公钥解析失败，UUID: {}, 错误: {}", uuid, cause.getMessage());
+                log.error("客户端公钥解析失败，Session: {}, 错误: {}", session, cause.getMessage());
                 throw new CodeException(Error.RSA_PUBLIC_KEY_PARSE_ERROR);
             }
-            log.error("客户端公钥验证失败，UUID: {}, 错误: {}", uuid, e.getMessage());
+            log.error("客户端公钥验证失败，Session: {}, 错误: {}", session, e.getMessage());
             throw new CodeException(Error.RSA_KEY_FORMAT_ERROR);
         } catch (Exception e) {
-            log.error("客户端公钥验证失败，UUID: {}, 错误: {}", uuid, e.getMessage());
+            log.error("客户端公钥验证失败，Session: {}, 错误: {}", session, e.getMessage());
             throw new CodeException(Error.RSA_KEY_FORMAT_ERROR);
         }
         // 处理过期时间
@@ -236,27 +236,28 @@ public class RsaService {
                 throw new IllegalArgumentException("过期时间不能小于或等于当前时间");
             }
             if (expireTime > maxExpireTime) {
-                log.warn("客户端指定的过期时间超过最大有效期，使用最大有效期。UUID: {}, 客户端指定: {}, 最大有效期: {}", uuid, expireTime, maxExpireTime);
+                if (log.isDebugEnabled())
+                    log.warn("客户端指定的过期时间超过最大有效期，使用最大有效期。Session: {}, 客户端指定: {}, 最大有效期: {}", session, expireTime, maxExpireTime);
                 finalExpireTime = maxExpireTime;
             } else {
                 finalExpireTime = expireTime;
                 if (log.isDebugEnabled()) {
-                    log.debug("使用客户端指定的过期时间，UUID: {}, 过期时间: {}", uuid, finalExpireTime);
+                    log.debug("使用客户端指定的过期时间，Session: {}, 过期时间: {}", session, finalExpireTime);
                 }
             }
         } else {
             // 客户端未提供过期时间，使用后端默认过期时间
             finalExpireTime = maxExpireTime;
             if (log.isDebugEnabled()) {
-                log.debug("使用后端默认过期时间，UUID: {}, 过期时间: {}", uuid, finalExpireTime);
+                log.debug("使用后端默认过期时间，Session: {}, 过期时间: {}", session, finalExpireTime);
             }
         }
         // 创建客户端公钥对象
-        RsaKey clientPublicKey = new RsaKey(uuid, publicKey, finalExpireTime);
+        RsaKey clientPublicKey = new RsaKey(session, publicKey, finalExpireTime);
         // 保存到缓存
-        cacheService.put(getClientPublicKeyConfig().getCacheName(), uuid, clientPublicKey);
+        cacheService.put(getClientPublicKeyConfig().getCacheName(), session, clientPublicKey);
         if (log.isDebugEnabled()) {
-            log.debug("保存客户端公钥，UUID: {}, 过期时间: {}", uuid, finalExpireTime);
+            log.debug("保存客户端公钥，Session: {}, 过期时间: {}", session, finalExpireTime);
         }
         return clientPublicKey;
     }
@@ -264,16 +265,17 @@ public class RsaService {
     /**
      * 获取客户端公钥
      *
-     * @param uuid 客户端标识
+     * @param session 客户端标识
      * @return 客户端公钥信息，如果不存在或已过期返回null
      */
-    public RsaKey getClientPublicKey(String uuid) {
-        if (StringUtils.isBlank(uuid)) {
+    public RsaKey getClientPublicKey(String session) {
+        if (StringUtils.isBlank(session)) {
             return null;
         }
-        RsaKey clientPublicKey = cacheService.get(getClientPublicKeyConfig().getCacheName(), uuid);
+        RsaKey clientPublicKey = cacheService.get(getClientPublicKeyConfig().getCacheName(), session);
         if (clientPublicKey != null && clientPublicKey.isExpired()) {
-            log.warn("客户端公钥已过期，ClientId: {}, 过期时间: {}", uuid, clientPublicKey.getExpireTime());
+            if (log.isDebugEnabled())
+                log.debug("客户端公钥已过期，Session: {}, 过期时间: {}", session, clientPublicKey.getExpireTime());
             // 可以选择删除过期公钥或返回null
             return null;
         }
@@ -284,41 +286,42 @@ public class RsaService {
      * 使用客户端公钥加密数据（使用UUID）
      * 服务端使用客户端的公钥加密数据，返回给客户端，客户端使用自己的私钥解密
      *
-     * @param data 待加密的数据
-     * @param uuid 客户端UUID标识
+     * @param data    待加密的数据
+     * @param session 客户端UUID标识
      * @return Base64编码的加密数据
      * @throws CodeException 加密失败时抛出异常
      */
-    public String encrypt(String data, String uuid) throws CodeException {
+    public String encrypt(String data, String session) throws CodeException {
         if (StringUtils.isBlank(data)) {
             throw new IllegalArgumentException("待加密数据不能为空");
         }
-        if (StringUtils.isBlank(uuid)) {
-            throw new IllegalArgumentException("UUID不能为空");
+        if (StringUtils.isBlank(session)) {
+            throw new IllegalArgumentException("Session不能为空");
         }
         // 获取客户端公钥
-        RsaKey clientPublicKey = getClientPublicKey(uuid);
+        RsaKey clientPublicKey = getClientPublicKey(session);
         if (clientPublicKey == null) {
             throw new CodeException(Error.RSA_CLIENT_PUBLIC_KEY_NOT_FOUND);
         }
         // 检查公钥是否即将过期
         EncryptConfigHandler.RsaConfig config = encryptConfigFactory.getRsaConfig();
         if (clientPublicKey.isExpiringSoon(config.getClientBufferMinutes())) {
-            log.warn("客户端公钥即将过期，建议客户端更新公钥，UUID: {}, 过期时间: {}", uuid, clientPublicKey.getExpireTime());
+            if (log.isDebugEnabled())
+                log.warn("客户端公钥即将过期，建议客户端更新公钥，Session: {}, 过期时间: {}", session, clientPublicKey.getExpireTime());
         }
         try {
             // 使用客户端公钥加密
             String encrypted = RsaUtil.encrypt(data, clientPublicKey.getPublicKey());
             if (StringUtils.isBlank(encrypted)) {
-                log.warn("加密结果为空，UUID: {}", uuid);
+                log.warn("加密结果为空，Session: {}", session);
                 throw new CodeException(Error.RSA_ENCRYPT_FAILED);
             }
             return encrypted;
         } catch (IllegalArgumentException e) {
-            log.error("RSA密钥格式错误，加密失败，UUID: {}, 错误: {}", uuid, e.getMessage());
+            log.error("RSA密钥格式错误，加密失败，Session: {}, 错误: {}", session, e.getMessage());
             throw new CodeException(Error.RSA_KEY_FORMAT_ERROR);
         } catch (Exception e) {
-            log.error("使用客户端公钥加密失败，UUID: {}, 错误: {}", uuid, e.getMessage(), e);
+            log.error("使用客户端公钥加密失败，Session: {}, 错误: {}", session, e.getMessage(), e);
             throw new CodeException(Error.RSA_ENCRYPT_FAILED);
         }
     }
@@ -326,11 +329,11 @@ public class RsaService {
     /**
      * 检查客户端公钥是否存在且有效
      *
-     * @param uuid 客户端标识
+     * @param session 客户端标识
      * @return true表示存在且有效，false表示不存在或已过期
      */
-    public boolean hasValidClientPublicKey(String uuid) {
-        RsaKey clientPublicKey = getClientPublicKey(uuid);
+    public boolean hasValidClientPublicKey(String session) {
+        RsaKey clientPublicKey = getClientPublicKey(session);
         return clientPublicKey != null && !clientPublicKey.isExpired();
     }
 

@@ -19,6 +19,7 @@ import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -68,6 +69,16 @@ public class RedisListenerService implements InitFactory.Init {
      */
     private volatile boolean initialized = false;
 
+    /**
+     * Redis连接测试重试次数
+     */
+    private int retryCount = 0;
+
+    /**
+     * 最大重试次数
+     */
+    private static final int MAX_RETRY_COUNT = 3;
+
     @Override
     public void init() {
         if (initialized) {
@@ -80,17 +91,17 @@ public class RedisListenerService implements InitFactory.Init {
      * 初始化消息监听容器
      */
     private void initMessageListenerContainer() {
-        if (!isEnabled() || redisTemplate == null) {
-            if (log.isDebugEnabled())
-                log.debug("Redis未启用或RedisTemplate为空，跳过Redis Pub/Sub服务初始化");
-            return;
-        }
         if (initialized) {
             return;
         }
         // 先测试Redis连接是否可用
         if (!ping()) {
-            log.warn("Redis连接测试失败，延迟5秒后重试初始化Redis Pub/Sub服务");
+            retryCount++;
+            if (retryCount > MAX_RETRY_COUNT) {
+                log.error("Redis连接测试失败，已重试{}次，放弃初始化Redis Pub/Sub服务", MAX_RETRY_COUNT);
+                return;
+            }
+            log.warn("Redis连接测试失败，延迟5秒后重试初始化Redis Pub/Sub服务（第{}/{}次）", retryCount, MAX_RETRY_COUNT);
             asyncTaskExecutor.execute(() -> {
                 try {
                     Thread.sleep(5000);
@@ -102,6 +113,8 @@ public class RedisListenerService implements InitFactory.Init {
             });
             return;
         }
+        // 连接成功，重置重试计数
+        retryCount = 0;
         try {
             // 创建专用的 Lettuce 连接工厂（Pub/Sub更稳定）
             RedisConnectionFactory connectionFactory = create();
@@ -298,6 +311,7 @@ public class RedisListenerService implements InitFactory.Init {
         }
         subscribedChannels.clear();
         initialized = false;
+        retryCount = 0; // 重置重试计数
     }
 
     /**
