@@ -293,7 +293,7 @@ public class RsaService {
      */
     public String encrypt(String data, String session) throws CodeException {
         if (StringUtils.isBlank(data)) {
-            throw new IllegalArgumentException("待加密数据不能为空");
+            return "";
         }
         if (StringUtils.isBlank(session)) {
             throw new IllegalArgumentException("Session不能为空");

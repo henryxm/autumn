@@ -24,19 +24,19 @@ public class AesConfig implements EncryptConfigHandler.AesConfig, Serializable {
      * AES密钥有效期（分钟），默认1小时
      */
     @ConfigField(category = InputType.NumberType, name = "AES密钥有效期（分钟）", description = "AES密钥的有效期，默认60分钟（1小时）")
-    private int keyValidMinutes = 60;
+    private int keyValidMinutes = 24 * 60;
 
     /**
      * 服务端冗余保留时间（分钟），默认10分钟
      */
     @ConfigField(category = InputType.NumberType, name = "服务端冗余保留时间（分钟）", description = "密钥过期后，服务端仍保留此时间，用于处理正在传输的加密数据，默认10分钟")
-    private int serverBufferMinutes = 10;
+    private int serverBufferMinutes = 60;
 
     /**
      * 客户端建议提前刷新时间（分钟），默认5分钟
      */
     @ConfigField(category = InputType.NumberType, name = "客户端提前刷新时间（分钟）", description = "客户端应在此时间之前重新获取新的密钥，默认5分钟")
-    private int clientBufferMinutes = 10;
+    private int clientBufferMinutes = 60;
 
     /**
      * AES密钥长度（位），默认256位
@@ -105,7 +105,7 @@ public class AesConfig implements EncryptConfigHandler.AesConfig, Serializable {
             fixes.add(String.format("AES密钥长度不合理: %d位，已修正为默认值: %d位", oldValue, keySize));
         }
         // AES向量长度固定为16字节（128位）
-        if (ivSize != 16) {
+        if (ivSize != 16 && ivSize != 0) {
             int oldValue = ivSize;
             ivSize = 16; // 固定值
             fixes.add(String.format("AES向量长度不合理: %d字节，已修正为固定值: %d字节", oldValue, ivSize));
@@ -113,19 +113,19 @@ public class AesConfig implements EncryptConfigHandler.AesConfig, Serializable {
         // 密钥有效期必须大于0
         if (keyValidMinutes <= 0) {
             int oldValue = keyValidMinutes;
-            keyValidMinutes = 60; // 默认1小时
+            keyValidMinutes = 24 * 60; // 默认24小时
             fixes.add(String.format("AES密钥有效期不合理: %d分钟，已修正为默认值: %d分钟", oldValue, keyValidMinutes));
         }
         // 服务端冗余保留时间必须大于等于0
         if (serverBufferMinutes < 0) {
             int oldValue = serverBufferMinutes;
-            serverBufferMinutes = 10; // 默认10分钟
+            serverBufferMinutes = 60; // 默认60分钟
             fixes.add(String.format("AES服务端冗余保留时间不合理: %d分钟，已修正为默认值: %d分钟", oldValue, serverBufferMinutes));
         }
         // 客户端提前刷新时间必须大于等于0
         if (clientBufferMinutes < 0) {
             int oldValue = clientBufferMinutes;
-            clientBufferMinutes = 10; // 默认10分钟
+            clientBufferMinutes = 60; // 默认60分钟
             fixes.add(String.format("AES客户端提前刷新时间不合理: %d分钟，已修正为默认值: %d分钟", oldValue, clientBufferMinutes));
         }
         return fixes;

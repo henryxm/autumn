@@ -139,14 +139,14 @@ public class AesService {
      * 注意：此方法不会触发密钥更新，直接使用现有密钥（即使即将过期）
      * 因为客户端可能还在使用旧的密钥，不应该在加解密过程中动态更新
      *
-     * @param data 待加密数据
+     * @param data    待加密数据
      * @param session 客户端UUID
      * @return 加密后的数据（Base64编码）
      * @throws CodeException 加密失败时抛出异常
      */
     public String encrypt(String data, String session) throws CodeException {
         if (StringUtils.isBlank(data)) {
-            throw new CodeException(Error.AES_ENCRYPTED_DATA_EMPTY);
+            return "";
         }
         if (StringUtils.isBlank(session)) {
             throw new CodeException(Error.RSA_SESSION_REQUIRED);
@@ -185,6 +185,8 @@ public class AesService {
     }
 
     public String decrypt(Encrypt encrypt) throws CodeException {
+        if (null == encrypt)
+            return "";
         return decrypt(encrypt.getCiphertext(), encrypt.getSession());
     }
 
@@ -194,14 +196,14 @@ public class AesService {
      * 因为客户端可能还在使用旧的密钥，不应该在加解密过程中动态更新
      * 支持旧密钥的平滑切换：即使密钥已过期，只要在服务端冗余保留时间内，仍可解密
      *
-     * @param data 加密数据（Base64编码）
+     * @param data    加密数据（Base64编码）
      * @param session 客户端UUID
      * @return 解密后的数据
      * @throws CodeException 解密失败时抛出异常
      */
     public String decrypt(String data, String session) throws CodeException {
         if (StringUtils.isBlank(data)) {
-            throw new CodeException(Error.AES_ENCRYPTED_DATA_EMPTY);
+            return "";
         }
         if (StringUtils.isBlank(session)) {
             throw new CodeException(Error.RSA_SESSION_REQUIRED);

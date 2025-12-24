@@ -68,7 +68,7 @@ public class Crypto {
 
     public static String encrypt(String content, String algorithm, String password, String vector) {
         try {
-            if (content.isEmpty())
+            if (StringUtils.isBlank(content))
                 return "";
             if (StringUtils.isBlank(algorithm))
                 algorithm = "AES";
@@ -104,6 +104,8 @@ public class Crypto {
 
     public static String decrypt(String content, String algorithm, String password, String vector) {
         try {
+            if (StringUtils.isBlank(content))
+                return "";
             byte[] bytes = Base64.getDecoder().decode(content);
             if (StringUtils.isBlank(algorithm))
                 algorithm = "AES";

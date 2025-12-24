@@ -84,7 +84,8 @@ public class RedisListenerService implements InitFactory.Init {
         if (initialized) {
             return;
         }
-        asyncTaskExecutor.execute(this::initMessageListenerContainer);
+        if (redisUtils.isOpen())
+            new Thread(this::initMessageListenerContainer).start();
     }
 
     /**
@@ -104,7 +105,7 @@ public class RedisListenerService implements InitFactory.Init {
             log.warn("Redis连接测试失败，延迟5秒后重试初始化Redis Pub/Sub服务（第{}/{}次）", retryCount, MAX_RETRY_COUNT);
             asyncTaskExecutor.execute(() -> {
                 try {
-                    Thread.sleep(5000);
+                    Thread.sleep(10000);
                     initMessageListenerContainer();
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
@@ -184,9 +185,6 @@ public class RedisListenerService implements InitFactory.Init {
      */
     private boolean ping() {
         try {
-            if (redisTemplate == null) {
-                return false;
-            }
             RedisConnectionFactory connectionFactory = redisTemplate.getConnectionFactory();
             if (connectionFactory == null) {
                 return false;
@@ -264,7 +262,7 @@ public class RedisListenerService implements InitFactory.Init {
         if (channel == null || message == null) {
             return false;
         }
-        if (!isEnabled() || redisTemplate == null) {
+        if (!initialized) {
             if (log.isDebugEnabled())
                 log.debug("Redis未启用，无法发布消息到频道: {}", channel);
             return false;
@@ -292,13 +290,6 @@ public class RedisListenerService implements InitFactory.Init {
 
     public String getInstanceId() {
         return instanceId;
-    }
-
-    /**
-     * 检查Redis是否启用
-     */
-    private boolean isEnabled() {
-        return redisUtils != null && redisUtils.isOpen() && redisTemplate != null;
     }
 
     /**

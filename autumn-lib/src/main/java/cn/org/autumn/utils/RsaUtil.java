@@ -3,6 +3,7 @@ package cn.org.autumn.utils;
 import cn.org.autumn.model.KeyData;
 import cn.org.autumn.model.RsaKey;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang.StringUtils;
 
 import javax.crypto.Cipher;
 import java.io.ByteArrayOutputStream;
@@ -10,6 +11,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.*;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
+import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
@@ -108,6 +110,8 @@ public class RsaUtil {
      */
     public static String encrypt(String data, String publicKey) {
         try {
+            if (StringUtils.isBlank(data))
+                return "";
             KeyData keyData = parsePublicKey(publicKey);
             PublicKey pubKey;
             KeyFactory keyFactory = KeyFactory.getInstance(KEY_ALGORITHM);
@@ -119,11 +123,9 @@ public class RsaUtil {
                 if (keyData.isPKCS1()) {
                     log.warn("检测到PKCS#1格式标识，但使用X509格式解析成功，可能存在格式误判");
                 }
-            } catch (java.security.spec.InvalidKeySpecException | IllegalArgumentException e) {
+            } catch (InvalidKeySpecException | IllegalArgumentException e) {
                 // 如果X509格式失败，根据isPKCS1标识提供更准确的错误信息
-                String formatHint = keyData.isPKCS1() 
-                    ? "检测到PKCS#1格式（-----BEGIN RSA PUBLIC KEY-----），但Java标准库不支持此格式。"
-                    : "尝试使用PKCS#8格式（X509）解析失败。";
+                String formatHint = keyData.isPKCS1() ? "检测到PKCS#1格式（-----BEGIN RSA PUBLIC KEY-----），但Java标准库不支持此格式。" : "尝试使用PKCS#8格式（X509）解析失败。";
                 String errorMsg = String.format(
                         "公钥格式错误！\n" +
                                 "错误信息: %s\n" +
@@ -141,7 +143,7 @@ public class RsaUtil {
                         formatHint,
                         keyData.isPKCS1() ? "检测到PKCS#1格式" : "格式不匹配"
                 );
-                log.error("公钥解析失败: {}", errorMsg, e);
+                log.error("公钥解析: {}", errorMsg);
                 throw new InvalidKeyException(errorMsg, e);
             }
             Cipher cipher = Cipher.getInstance(TRANSFORMATION);
@@ -184,6 +186,8 @@ public class RsaUtil {
      */
     public static String decrypt(String data, String privateKey) {
         try {
+            if (StringUtils.isBlank(data))
+                return "";
             byte[] keyBytes = Base64.getDecoder().decode(privateKey);
             PKCS8EncodedKeySpec pkcs8KeySpec = new PKCS8EncodedKeySpec(keyBytes);
             KeyFactory keyFactory = KeyFactory.getInstance(KEY_ALGORITHM);
