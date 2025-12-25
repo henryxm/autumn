@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -126,10 +127,14 @@ public class RsaService {
             // 检查密钥对是否有效：为null、已过期、格式无效或即将过期时，删除缓存并重新调用compute
             // 利用短路求值：如果pair为null，后面的条件不会执行
             if (pair == null || pair.isExpired() || StringUtils.isBlank(pair.getPublicKey()) || StringUtils.isBlank(pair.getPrivateKey()) || pair.isExpiringSoon(config.getClientBufferMinutes())) {
+                if (pair != null && log.isDebugEnabled())
+                    log.debug("删除重建:{}, KEY:{}, 向量:{}, 过期:{}, 临期:{}, 过期时间:{}", pair.getSession(), pair.getPublicKey(), pair.getPrivateKey(), pair.isExpired(), pair.isExpiringSoon(), null != pair.getExpireTime() ? new Date(pair.getExpireTime()) : "");
                 // 删除缓存并重新调用compute
                 cacheService.remove(getServerPrivateKeyConfig().getCacheName(), session);
                 pair = cacheService.compute(session, () -> generate(session), getServerPrivateKeyConfig());
             }
+            if (log.isDebugEnabled())
+                log.debug("获取密钥:{}, KEY:{}, 向量:{}, 过期:{}, 临期:{}, 过期时间:{}", pair.getSession(), pair.getPublicKey(), pair.getPrivateKey(), pair.isExpired(), pair.isExpiringSoon(), null != pair.getExpireTime() ? new Date(pair.getExpireTime()) : "");
             return pair;
         } catch (RuntimeException e) {
             if (e.getCause() instanceof CodeException) {

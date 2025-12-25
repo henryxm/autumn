@@ -18,6 +18,7 @@ import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import java.security.SecureRandom;
 import java.util.Base64;
+import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -126,10 +127,12 @@ public class AesService {
             // 利用短路求值：如果aesKey为null，后面的条件不会执行
             if (aesKey == null || aesKey.isExpired() || StringUtils.isBlank(aesKey.getKey()) || aesKey.isExpiringSoon(config.getClientBufferMinutes())) {
                 if (null != aesKey && log.isDebugEnabled())
-                    log.debug("删除重建:{}, KEY:{}, 向量:{}, 过期:{}, 临期:{}", aesKey.getSession(), aesKey.getKey(), aesKey.getVector(), aesKey.isExpired(), aesKey.isExpiringSoon());
+                    log.debug("删除重建:{}, KEY:{}, 向量:{}, 过期:{}, 临期:{}, 过期时间:{}", aesKey.getSession(), aesKey.getKey(), aesKey.getVector(), aesKey.isExpired(), aesKey.isExpiringSoon(), null != aesKey.getExpireTime() ? new Date(aesKey.getExpireTime()) : "");
                 cacheService.remove(getAesKeyCacheConfig().getCacheName(), session);
                 aesKey = cacheService.compute(session, () -> generate(session), getAesKeyCacheConfig());
             }
+            if (log.isDebugEnabled())
+                log.debug("获取密钥:{}, KEY:{}, 向量:{}, 过期:{}, 临期:{}, 过期时间:{}", aesKey.getSession(), aesKey.getKey(), aesKey.getVector(), aesKey.isExpired(), aesKey.isExpiringSoon(), null != aesKey.getExpireTime() ? new Date(aesKey.getExpireTime()) : "");
             return aesKey;
         } catch (RuntimeException e) {
             if (e.getCause() instanceof CodeException) {

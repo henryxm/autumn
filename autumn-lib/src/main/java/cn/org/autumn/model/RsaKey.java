@@ -68,6 +68,10 @@ public class RsaKey implements Serializable {
         return expireTime != null && System.currentTimeMillis() > expireTime;
     }
 
+    public boolean isExpiringSoon() {
+        return isExpiringSoon(10);
+    }
+
     /**
      * 检查密钥对是否即将过期（用于客户端提前刷新）
      * 默认提前5分钟刷新
