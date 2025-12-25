@@ -81,10 +81,13 @@ public class AesService {
                 throw new CodeException(Error.AES_KEY_LENGTH_ERROR);
             }
             String keyBase64 = Base64.getEncoder().encodeToString(keyBytes);
-            // 生成AES向量
-            byte[] iv = new byte[config.getIvSize()];
-            secureRandom.nextBytes(iv);
-            String vectorBase64 = Base64.getEncoder().encodeToString(iv);
+            String vectorBase64 = "";
+            if (config.getIvSize() > 0) {
+                // 生成AES向量
+                byte[] iv = new byte[config.getIvSize()];
+                secureRandom.nextBytes(iv);
+                vectorBase64 = Base64.getEncoder().encodeToString(iv);
+            }
             // 计算过期时间
             long expireTime = System.currentTimeMillis() + (config.getKeyValidMinutes() * 60 * 1000L);
             // 创建AES密钥对象
@@ -117,7 +120,7 @@ public class AesService {
             AesKey aesKey = cacheService.compute(session, () -> generate(session), getAesKeyCacheConfig());
             // 检查密钥是否有效：为null、已过期、格式无效或即将过期时，删除缓存并重新调用compute
             // 利用短路求值：如果aesKey为null，后面的条件不会执行
-            if (aesKey == null || aesKey.isExpired() || StringUtils.isBlank(aesKey.getKey()) || StringUtils.isBlank(aesKey.getVector()) || aesKey.isExpiringSoon(config.getClientBufferMinutes())) {
+            if (aesKey == null || aesKey.isExpired() || StringUtils.isBlank(aesKey.getKey()) || aesKey.isExpiringSoon(config.getClientBufferMinutes())) {
                 cacheService.remove(getAesKeyCacheConfig().getCacheName(), session);
                 aesKey = cacheService.compute(session, () -> generate(session), getAesKeyCacheConfig());
             }
