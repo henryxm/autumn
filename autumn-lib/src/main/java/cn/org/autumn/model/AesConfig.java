@@ -47,7 +47,7 @@ public class AesConfig implements EncryptConfigHandler.AesConfig, Serializable {
     /**
      * AES向量长度（字节），固定16字节（128位）
      */
-    @ConfigField(category = InputType.NumberType, name = "AES向量长度（字节）", description = "AES向量的长度，固定16字节（128位）")
+    @ConfigField(category = InputType.NumberType, name = "AES向量长度（字节）", description = "AES向量的长度，可选值：0, 16字节（128位）")
     private int ivSize = 16;
 
     public int getKeyValidMinutes() {

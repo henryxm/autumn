@@ -6,7 +6,7 @@ import org.springframework.stereotype.Component;
 /**
  * 加密配置处理器接口
  * 用于自定义RSA和AES的配置参数
- * 
+ *
  * @author Autumn
  */
 @Component
@@ -15,7 +15,7 @@ public interface EncryptConfigHandler {
 
     /**
      * 获取RSA配置
-     * 
+     *
      * @return RSA配置对象，如果返回null则使用默认配置
      */
     default EncryptConfigHandler.RsaConfig getRsaConfig() {
@@ -24,7 +24,7 @@ public interface EncryptConfigHandler {
 
     /**
      * 获取AES配置
-     * 
+     *
      * @return AES配置对象，如果返回null则使用默认配置
      */
     default EncryptConfigHandler.AesConfig getAesConfig() {
@@ -47,7 +47,7 @@ public interface EncryptConfigHandler {
          * 密钥对过期后，服务端仍保留此时间，用于处理正在传输的加密数据
          */
         default int getServerBufferMinutes() {
-            return 10;
+            return 60;
         }
 
         /**
@@ -55,7 +55,7 @@ public interface EncryptConfigHandler {
          * 客户端应在此时间之前重新获取新的密钥对
          */
         default int getClientBufferMinutes() {
-            return 10;
+            return 60;
         }
 
         /**
@@ -81,7 +81,7 @@ public interface EncryptConfigHandler {
          * AES密钥有效期（分钟），默认1小时
          */
         default int getKeyValidMinutes() {
-            return 60;
+            return 24 * 60;
         }
 
         /**
@@ -89,7 +89,7 @@ public interface EncryptConfigHandler {
          * 密钥过期后，服务端仍保留此时间，用于处理正在传输的加密数据
          */
         default int getServerBufferMinutes() {
-            return 10;
+            return 60;
         }
 
         /**
@@ -97,7 +97,7 @@ public interface EncryptConfigHandler {
          * 客户端应在此时间之前重新获取新的密钥
          */
         default int getClientBufferMinutes() {
-            return 10;
+            return 60;
         }
 
         /**
