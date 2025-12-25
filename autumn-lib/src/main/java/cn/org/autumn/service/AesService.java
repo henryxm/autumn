@@ -8,6 +8,7 @@ import cn.org.autumn.model.Encrypt;
 import cn.org.autumn.model.Error;
 import cn.org.autumn.site.EncryptConfigFactory;
 import cn.org.autumn.utils.AES;
+import com.google.gson.Gson;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +35,9 @@ public class AesService {
 
     @Autowired
     EncryptConfigFactory encryptConfigFactory;
+
+    @Autowired
+    Gson gson;
 
     /**
      * AES密钥缓存配置
@@ -121,6 +125,8 @@ public class AesService {
             // 检查密钥是否有效：为null、已过期、格式无效或即将过期时，删除缓存并重新调用compute
             // 利用短路求值：如果aesKey为null，后面的条件不会执行
             if (aesKey == null || aesKey.isExpired() || StringUtils.isBlank(aesKey.getKey()) || aesKey.isExpiringSoon(config.getClientBufferMinutes())) {
+                if (null != aesKey && log.isDebugEnabled())
+                    log.debug("删除重建:{}, KEY:{}, 向量:{}, 过期:{}, 临期:{}", aesKey.getSession(), aesKey.getKey(), aesKey.getVector(), aesKey.isExpired(), aesKey.isExpiringSoon());
                 cacheService.remove(getAesKeyCacheConfig().getCacheName(), session);
                 aesKey = cacheService.compute(session, () -> generate(session), getAesKeyCacheConfig());
             }
