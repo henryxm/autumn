@@ -77,11 +77,12 @@ public class EncryptArgumentResolver extends RequestResponseBodyMethodProcessor 
                     throw new CodeException(Error.FORCE_ENCRYPT_SESSION_REQUIRED);
                 }
             }
+            String decrypt = "";
             try {
                 if (StringUtils.isNotBlank(encrypt.getCiphertext()) && StringUtils.isNotBlank(encrypt.getSession())) {
                     long start = System.currentTimeMillis();
                     //当使用RSA解密时，使用服务端的私钥进行解密
-                    String decrypt = "RSA".equals(encrypt.getAlgorithm()) ? rsaService.decrypt(encrypt) : aesService.decrypt(encrypt);
+                    decrypt = "RSA".equals(encrypt.getAlgorithm()) ? rsaService.decrypt(encrypt) : aesService.decrypt(encrypt);
                     Type parameterType = getParameterType(parameter);
                     object = gson.fromJson(decrypt, parameterType);
                     long end = System.currentTimeMillis();
@@ -94,7 +95,7 @@ public class EncryptArgumentResolver extends RequestResponseBodyMethodProcessor 
                 HttpServletRequest servlet = getHttpServletRequest(webRequest);
                 if (servlet != null) {
                     String uri = servlet.getRequestURI();
-                    log.error("解密失败: {}, URI: {}, 错误: {}", encrypt.getSession(), uri, e.getMessage());
+                    log.error("解密失败: {}, 数据:{}, URI: {}, 错误: {}", encrypt.getSession(), decrypt, uri, e.getMessage());
                 }
                 throw e;
             }
