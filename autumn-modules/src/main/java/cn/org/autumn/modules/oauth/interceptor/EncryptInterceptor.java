@@ -75,6 +75,9 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
 
     @Override
     public Object beforeBodyWrite(@Nullable Object body, @NonNull MethodParameter returnType, @NonNull MediaType selectedContentType, @NonNull Class<? extends HttpMessageConverter<?>> selectedConverterType, @NonNull ServerHttpRequest request, @NonNull ServerHttpResponse response) {
+        if (null != body && log.isDebugEnabled()) {
+            log.debug("原始返回:{}", gson.toJson(body));
+        }
         // 检查请求是否被加密
         HttpServletRequest servlet = getHttpServletRequest(request);
         if (servlet == null || null == body) {

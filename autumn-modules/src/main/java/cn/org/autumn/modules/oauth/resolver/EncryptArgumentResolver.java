@@ -63,6 +63,9 @@ public class EncryptArgumentResolver extends RequestResponseBodyMethodProcessor 
     @Override
     public Object resolveArgument(@NonNull MethodParameter parameter, @Nullable ModelAndViewContainer mavContainer, @NonNull NativeWebRequest webRequest, @Nullable WebDataBinderFactory binderFactory) throws Exception {
         Object object = super.resolveArgument(parameter, mavContainer, webRequest, binderFactory);
+        if (null != object && log.isDebugEnabled()) {
+            log.debug("原始请求:{}", gson.toJson(object));
+        }
         if (object instanceof Encrypt) {
             Encrypt encrypt = (Encrypt) object;
             // 检查参数上的@Endpoint注解，如果forceEncrypt=true，则强制验证加密内容
