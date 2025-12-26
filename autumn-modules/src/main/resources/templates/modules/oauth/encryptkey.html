@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>${lang.oauth_encryptkey_table_comment}</title>
+	<#include "/header.html">
+</head>
+<body>
+<div id="rrapp" v-cloak>
+    <div v-show="showList">
+        <div class="grid-btn">
+			<!--<#if shiro.hasPermission("oauth:encryptkey:save")>-->
+            <a class="btn btn-primary" @click="add"><i class="fa fa-plus"></i>&nbsp;${lang.sys_string_add}</a>
+			<!--</#if>-->
+			<!--<#if shiro.hasPermission("oauth:encryptkey:update")>-->
+            <a class="btn btn-primary" @click="update"><i class="fa fa-pencil-square-o"></i>&nbsp;${lang.sys_string_change}</a>
+			<!--</#if>-->
+			<!--<#if shiro.hasPermission("oauth:encryptkey:delete")>-->
+            <a class="btn btn-primary" @click="del"><i class="fa fa-trash-o"></i>&nbsp;${lang.sys_string_delete}</a>
+			<!--</#if>-->
+        </div>
+        <table id="jqGrid"></table>
+        <div id="jqGridPager"></div>
+    </div>
+
+    <div v-show="!showList" class="panel panel-default">
+        <div class="panel-heading">{{title}}</div>
+        <form class="form-horizontal">
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.oauth_encryptkey_column_session}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="encryptKey.session" placeholder="${lang.oauth_encryptkey_column_session}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.oauth_encryptkey_column_public_key}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="encryptKey.publicKey" placeholder="${lang.oauth_encryptkey_column_public_key}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.oauth_encryptkey_column_private_key}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="encryptKey.privateKey" placeholder="${lang.oauth_encryptkey_column_private_key}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.oauth_encryptkey_column_client_key}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="encryptKey.clientKey" placeholder="${lang.oauth_encryptkey_column_client_key}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.oauth_encryptkey_column_aes_key}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="encryptKey.aesKey" placeholder="${lang.oauth_encryptkey_column_aes_key}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.oauth_encryptkey_column_aes_iv}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="encryptKey.aesIv" placeholder="${lang.oauth_encryptkey_column_aes_iv}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.oauth_encryptkey_column_expire}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="encryptKey.expire" placeholder="${lang.oauth_encryptkey_column_expire}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.oauth_encryptkey_column_create}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="encryptKey.create" placeholder="${lang.oauth_encryptkey_column_create}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label"></div>
+                <input type="button" class="btn btn-primary" @click="saveOrUpdate" value="${lang.sys_string_confirm}"/>
+                &nbsp;&nbsp;<input type="button" class="btn btn-warning" @click="reload" value="${lang.sys_string_back}"/>
+            </div>
+        </form>
+    </div>
+</div>
+<script src="${request.contextPath}/modules/oauth/encryptkey.js?_${.now?long}"></script>
+</body>
+</html>

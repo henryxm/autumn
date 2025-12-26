@@ -122,7 +122,7 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
      * @param message 失效消息
      */
     private void handleCacheInvalidation(Invalidation message) {
-        if (message == null || ehCacheManager == null) {
+        if (message == null) {
             return;
         }
         try {
@@ -403,11 +403,6 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
      * @return 缓存值
      */
     public <K, V> V compute(String cacheName, K key, Supplier<V> supplier, Class<K> keyType, Class<V> valueType, Long expireTime, TimeUnit expireTimeUnit, Long maxEntries, boolean cacheNull) {
-        if (ehCacheManager == null) {
-            if (log.isDebugEnabled())
-                log.debug("EhCacheManager is not available, returning value from supplier");
-            return supplier.get();
-        }
         CacheConfig config = getCacheConfig(cacheName);
         // 如果配置不存在，尝试根据传入的类型和过期时间创建配置
         if (config == null) {
@@ -520,18 +515,13 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
      */
     @SuppressWarnings("unchecked")
     public <K, V> V get(String cacheName, K key) {
-        if (ehCacheManager == null) {
-            return null;
-        }
         CacheConfig config = getCacheConfig(cacheName);
         if (config == null) {
             // 如果配置不存在，无法确定类型，直接返回null
             return null;
         }
         // 获取缓存实例
-        Cache<Object, Object> cache = (Cache<Object, Object>) ehCacheManager.getCache(cacheName,
-                (Class<K>) config.getKeyType(),
-                (Class<V>) config.getValueType());
+        Cache<Object, Object> cache = (Cache<Object, Object>) ehCacheManager.getCache(cacheName, (Class<K>) config.getKeyType(), (Class<V>) config.getValueType());
         if (cache == null) {
             // 如果缓存不存在，尝试创建
             cache = ehCacheManager.getOrCreateCache(config);
@@ -581,7 +571,7 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
      */
     @SuppressWarnings("unchecked")
     public <K, V> void put(String cacheName, K key, V value) {
-        if (ehCacheManager == null || key == null || value == null) {
+        if (key == null || value == null) {
             return;
         }
         CacheConfig config = getCacheConfig(cacheName);
@@ -619,11 +609,9 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
      * @param <K>       Key 类型
      */
     public <K> void remove(String cacheName, K key) {
-        if (ehCacheManager != null) {
-            Cache<K, ?> cache = ehCacheManager.getCache(cacheName);
-            if (cache != null) {
-                cache.remove(key);
-            }
+        Cache<K, ?> cache = ehCacheManager.getCache(cacheName);
+        if (cache != null) {
+            cache.remove(key);
         }
         // 同时移除Redis缓存
         if (isRedisEnabled()) {
@@ -644,9 +632,7 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
      * @param cacheName 缓存名称
      */
     public void clear(String cacheName) {
-        if (ehCacheManager != null) {
-            ehCacheManager.clearCache(cacheName);
-        }
+        ehCacheManager.clearCache(cacheName);
         // 同时清空Redis缓存
         if (isRedisEnabled()) {
             try {
@@ -669,7 +655,7 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
      * @return 缓存配置，如果无法创建返回 null
      */
     private CacheConfig getCacheConfig(String cacheName) {
-        if (ehCacheManager == null || cacheName == null) {
+        if (cacheName == null) {
             return null;
         }
         // 1. 优先从 EhCacheManager 获取已注册的配置
@@ -721,90 +707,12 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
     }
 
     /**
-     * 创建缓存配置的便捷方法
-     * 使用 Lombok @Builder 生成
-     *
-     * @param cacheName      缓存名称
-     * @param keyType        Key 类型
-     * @param valueType      Value 类型
-     * @param maxEntries     最大条目数
-     * @param expireTime     过期时间
-     * @param expireTimeUnit 过期时间单位
-     * @return 缓存配置
-     */
-    public static CacheConfig createCacheConfig(String cacheName,
-                                                Class<?> keyType,
-                                                Class<?> valueType,
-                                                long maxEntries,
-                                                long expireTime,
-                                                TimeUnit expireTimeUnit) {
-        CacheConfig config = CacheConfig.builder()
-                .cacheName(cacheName)
-                .keyType(keyType)
-                .valueType(valueType)
-                .maxEntries(maxEntries)
-                .expireTime(expireTime)
-                .timeUnit(expireTimeUnit)
-                .build();
-        config.validate();
-        return config;
-    }
-
-    /**
-     * 注册缓存配置
-     * 如果配置已存在，则不会覆盖
-     *
-     * @param config 缓存配置
-     */
-    public void registerCacheConfig(CacheConfig config) {
-        if (ehCacheManager != null && config != null) {
-            if (!ehCacheManager.hasCacheConfig(config.getCacheName())) {
-                ehCacheManager.registerCacheConfig(config);
-            }
-        }
-    }
-
-    /**
-     * 检查缓存是否存在
-     *
-     * @param cacheName 缓存名称
-     * @return 是否存在
-     */
-    public boolean hasCache(String cacheName) {
-        if (ehCacheManager == null) {
-            return false;
-        }
-        return ehCacheManager.hasCacheConfig(cacheName) || ehCacheManager.getCache(cacheName) != null;
-    }
-
-    /**
-     * 获取缓存统计信息（如果支持）
-     *
-     * @param cacheName 缓存名称
-     * @return 缓存大小，如果不支持返回 -1
-     */
-    public long getCacheSize(String cacheName) {
-        if (ehCacheManager == null) {
-            return -1;
-        }
-        Cache<Object, Object> cache = ehCacheManager.getCache(cacheName);
-        if (cache == null) {
-            return -1;
-        }
-        // EhCache 3.x 不直接支持获取大小，需要通过迭代计算
-        // 这里返回 -1 表示不支持，或者可以通过其他方式实现
-        return -1;
-    }
-
-    /**
      * 清空所有缓存
      * 实现 ClearHandler 接口，用于系统级别的缓存清理
      */
     @Override
     public void clear() {
-        if (ehCacheManager != null) {
-            ehCacheManager.clearAllCaches();
-        }
+        ehCacheManager.clearAllCaches();
         // 同时清空所有Redis缓存
         if (isRedisEnabled()) {
             try {

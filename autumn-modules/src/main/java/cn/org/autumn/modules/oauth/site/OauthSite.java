@@ -25,6 +25,9 @@ public class OauthSite implements SiteFactory.Site {
     @PageAware(login = true, resource = "modules/oauth/tokenstore")
     String tokenstore;
 
+    @PageAware(login = true, resource = "modules/oauth/encryptkey")
+    public String encryptkey;
+
     @PageAware(login = false, resource = "modules/oauth/oauth2authorizefail")
     public static String oauth2authorizefail = pack + "_oauth2authorizefail";
 }

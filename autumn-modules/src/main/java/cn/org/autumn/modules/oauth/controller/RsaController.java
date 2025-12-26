@@ -4,6 +4,7 @@ import cn.org.autumn.annotation.Endpoint;
 import cn.org.autumn.exception.CodeException;
 import cn.org.autumn.model.*;
 import cn.org.autumn.model.Error;
+import cn.org.autumn.modules.oauth.service.EncryptKeyService;
 import cn.org.autumn.service.AesService;
 import cn.org.autumn.service.RsaService;
 import cn.org.autumn.utils.IPUtils;
@@ -32,6 +33,9 @@ public class RsaController {
 
     @Autowired
     private AesService aesService;
+
+    @Autowired
+    private EncryptKeyService encryptKeyService;
 
     @Autowired
     Gson gson;
@@ -105,21 +109,21 @@ public class RsaController {
     @Endpoint(hidden = true)
     public Response<AesKey> getAesKey(@Valid @RequestBody Request<?> request, HttpServletRequest servlet) {
         try {
-            String uuid = request.getSession();
+            String session = request.getSession();
             // 检查客户端公钥是否存在
-            if (!rsaService.hasValidClientPublicKey(uuid)) {
+            if (!rsaService.hasValidClientPublicKey(session)) {
                 return Response.error(Error.RSA_CLIENT_PUBLIC_KEY_NOT_FOUND);
             }
             // 生成或获取AES密钥
-            AesKey aesKey = aesService.getAesKey(uuid);
+            AesKey aesKey = aesService.getAesKey(session);
             // 使用客户端公钥加密AES密钥和向量
-            String encryptedKey = rsaService.encrypt(aesKey.getKey(), uuid);
-            String encryptedVector = rsaService.encrypt(aesKey.getVector(), uuid);
+            String encryptedKey = rsaService.encrypt(aesKey.getKey(), session);
+            String encryptedVector = rsaService.encrypt(aesKey.getVector(), session);
             // 构建返回结果
             AesKey response = new AesKey();
             response.setKey(encryptedKey);
             response.setVector(encryptedVector);
-            response.setSession(uuid);
+            response.setSession(session);
             response.setExpireTime(aesKey.getExpireTime());
             return Response.ok(response);
         } catch (cn.org.autumn.exception.CodeException e) {
@@ -150,28 +154,30 @@ public class RsaController {
     public Response<Encryption> initEncryption(@Valid @RequestBody Request<InitRequest> request, HttpServletRequest servlet) {
         try {
             InitRequest initRequest = request.getData();
-            String uuid = request.getSession();
+            String session = request.getSession();
             String clientPublicKey = initRequest.getPublicKey();
             Long expireTime = initRequest.getExpireTime();
             // 1. 生成或获取服务端密钥对
-            RsaKey serverKeyPair = rsaService.getRsaKey(uuid);
-            RsaKey ras = serverKeyPair.copy();
+            RsaKey rsaKey = rsaService.getRsaKey(session);
+            RsaKey ras = rsaKey.copy();
             // 2. 保存客户端公钥
-            rsaService.savePublicKey(uuid, clientPublicKey, expireTime);
+            rsaService.savePublicKey(session, clientPublicKey, expireTime);
             // 3. 生成或获取AES密钥
-            AesKey aesKey = aesService.getAesKey(uuid);
+            AesKey aesKey = aesService.getAesKey(session);
             AesKey aes = new AesKey();
-            aes.setSession(uuid);
-            aes.setKey(rsaService.encrypt(aesKey.getKey(), uuid));
-            aes.setVector(rsaService.encrypt(aesKey.getVector(), uuid));
+            aes.setSession(session);
+            aes.setKey(rsaService.encrypt(aesKey.getKey(), session));
+            aes.setVector(rsaService.encrypt(aesKey.getVector(), session));
             aes.setExpireTime(aesKey.getExpireTime());
             Encryption response = new Encryption();
             response.setRas(ras);
             response.setAes(aes);
             List<EndpointInfo> endpoints = rsaService.getEncryptEndpoints();
             String json = gson.toJson(endpoints);
-            String end = aesService.encrypt(json, uuid);
+            String end = aesService.encrypt(json, session);
             response.setEndpoints(end);
+            // 保存加密密钥信息到数据库
+            encryptKeyService.saveOrUpdate(session, rsaKey, clientPublicKey, aesKey);
             return Response.ok(response);
         } catch (CodeException e) {
             log.error("初始化失败:{}, IP:{}", e.getMessage(), IPUtils.getIp(servlet));
