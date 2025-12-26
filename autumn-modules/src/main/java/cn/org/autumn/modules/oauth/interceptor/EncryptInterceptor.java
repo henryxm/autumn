@@ -2,7 +2,6 @@ package cn.org.autumn.modules.oauth.interceptor;
 
 import cn.org.autumn.annotation.Endpoint;
 import cn.org.autumn.config.InterceptorHandler;
-import cn.org.autumn.exception.CodeException;
 import cn.org.autumn.model.Encrypt;
 import cn.org.autumn.model.Error;
 import cn.org.autumn.model.Response;
@@ -118,11 +117,11 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
                 //当使用RSA加密时，使用客户端的公钥进行加密
                 String encrypt = "RSA".equals(algorithm) ? rsaService.encrypt(json, session) : aesService.encrypt(json, session);
                 // 使用反射创建返回值类型的实例
-                body = createEncryptedResponse(body, encrypt, algorithm, session);
+                body = response(body, encrypt, algorithm, session);
                 long end = System.currentTimeMillis();
                 if (log.isDebugEnabled()) {
-                    log.debug("加密数据: 长度:{}, 耗时:{}毫秒", json.length(), end - start);
-                    log.debug("加密内容: {}", json);
+                    log.debug("加密长度:{}, 耗时:{}毫秒", json.length(), end - start);
+                    log.debug("加密返回:{}, 内容:{}, 密文:{}", session, json, encrypt);
                 }
             } catch (Exception e) {
                 log.error("加密失败: {}, URI: {}, 错误: {}", session, uri, e.getMessage());
@@ -140,7 +139,7 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
      * @param uuid UUID
      * @return 加密响应对象
      */
-    private Object createEncryptedResponse(Object body, String data, String algorithm, String uuid) throws Exception {
+    private Object response(Object body, String data, String algorithm, String uuid) throws Exception {
         Class<?> responseClass = body.getClass();
         // 使用反射创建实例
         Object instance = responseClass.getDeclaredConstructor().newInstance();

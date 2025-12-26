@@ -87,8 +87,8 @@ public class EncryptArgumentResolver extends RequestResponseBodyMethodProcessor 
                     object = gson.fromJson(decrypt, parameterType);
                     long end = System.currentTimeMillis();
                     if (log.isDebugEnabled() && null != decrypt) {
-                        log.debug("解密数据: 长度:{}, 耗时:{}毫秒", decrypt.length(), end - start);
-                        log.debug("解密内容: {}", decrypt);
+                        log.debug("解密长度:{}, 耗时:{}毫秒", decrypt.length(), end - start);
+                        log.debug("解密请求:{}, 结果:{}, 密文:{}", encrypt.getSession(), decrypt, encrypt.getCiphertext());
                     }
                 }
             } catch (Exception e) {
