@@ -31,20 +31,20 @@ public class CacheConfig {
      * 最大条目数
      */
     @Builder.Default
-    private final long maxEntries = 1000;
+    private final long maxEntries = 10000;
 
     /**
      * 过期时间
      */
     @Builder.Default
-    private final long expireTime = 10;
+    private final long expireTime = 60;
 
     /**
      * Redis二级缓存过期时间倍数，本地缓存会大量消耗内存，并且有最大条目限制，
      * 因此需要通过Redis进行二级缓存，提高效率，并且不限制最大个数
      */
     @Builder.Default
-    private final int redisTime = 3 * 10;
+    private final int redisTime = 3 * 60;
 
     /**
      * 过期时间单位

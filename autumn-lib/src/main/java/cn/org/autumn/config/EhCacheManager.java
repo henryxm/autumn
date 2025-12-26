@@ -14,6 +14,9 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -280,5 +283,23 @@ public class EhCacheManager {
      */
     public boolean hasCacheConfig(String cacheName) {
         return cacheConfigs.containsKey(cacheName);
+    }
+
+    /**
+     * 获取所有已注册的缓存名称
+     *
+     * @return 缓存名称集合
+     */
+    public Set<String> getAllCacheNames() {
+        return cacheConfigs.keySet();
+    }
+
+    /**
+     * 获取所有已创建的缓存实例名称
+     *
+     * @return 缓存实例名称集合
+     */
+    public Set<String> getAllCacheInstanceNames() {
+        return caches.keySet();
     }
 }

@@ -278,6 +278,13 @@ public class SysPageController implements ErrorController {
         return "exec";
     }
 
+    @RequestMapping({"cache.html"})
+    public String cache(Model model) {
+        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
+            return "404";
+        return "cache";
+    }
+
     @RequestMapping(value = {"clear.html"}, method = RequestMethod.GET)
     public String clearPage(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
         if (ShiroUtils.isLogin()) {

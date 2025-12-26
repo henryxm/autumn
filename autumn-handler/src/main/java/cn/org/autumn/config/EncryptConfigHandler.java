@@ -78,14 +78,14 @@ public interface EncryptConfigHandler {
      */
     interface AesConfig {
         /**
-         * AES密钥有效期（分钟），默认1小时
+         * AES密钥有效期（分钟），默认24小时
          */
         default int getKeyValidMinutes() {
             return 24 * 60;
         }
 
         /**
-         * 服务端冗余保留时间（分钟），默认10分钟
+         * 服务端冗余保留时间（分钟），默认60分钟
          * 密钥过期后，服务端仍保留此时间，用于处理正在传输的加密数据
          */
         default int getServerBufferMinutes() {
@@ -93,7 +93,7 @@ public interface EncryptConfigHandler {
         }
 
         /**
-         * 客户端建议提前刷新时间（分钟），默认5分钟
+         * 客户端建议提前刷新时间（分钟），默认6分钟
          * 客户端应在此时间之前重新获取新的密钥
          */
         default int getClientBufferMinutes() {

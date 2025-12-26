@@ -2,6 +2,7 @@ package cn.org.autumn.service;
 
 import cn.org.autumn.config.CacheConfig;
 import cn.org.autumn.config.EncryptConfigHandler;
+import cn.org.autumn.config.EncryptionLoader;
 import cn.org.autumn.exception.CodeException;
 import cn.org.autumn.model.AesKey;
 import cn.org.autumn.model.Encrypt;
@@ -37,6 +38,9 @@ public class AesService {
     @Autowired
     EncryptConfigFactory encryptConfigFactory;
 
+    @Autowired(required = false)
+    EncryptionLoader encryptionLoader;
+
     @Autowired
     Gson gson;
 
@@ -54,7 +58,8 @@ public class AesService {
                     .cacheName("AesServiceCache")
                     .keyType(String.class)
                     .valueType(AesKey.class)
-                    .expireTime(config.getKeyValidMinutes() + config.getServerBufferMinutes())
+                    .expireTime(config.getKeyValidMinutes())
+                    .redisTime(config.getKeyValidMinutes() + config.getServerBufferMinutes())
                     .timeUnit(TimeUnit.MINUTES)
                     .build();
         }
@@ -107,6 +112,28 @@ public class AesService {
         }
     }
 
+    private AesKey load(String session) {
+        // 如果缓存中没有，尝试从数据库加载
+        if (encryptionLoader != null) {
+            AesKey loadedKey = encryptionLoader.loadAesKey(session);
+            if (loadedKey != null && !loadedKey.isExpired() && StringUtils.isNotBlank(loadedKey.getKey())) {
+                if (log.isDebugEnabled()) {
+                    log.debug("数据库加载:{}", session);
+                }
+                // 将加载的密钥缓存到Cache和Redis
+                cacheService.put(getAesKeyCacheConfig().getCacheName(), session, loadedKey);
+                return loadedKey;
+            }
+        }
+        return null;
+    }
+
+    private AesKey create(String session) {
+        AesKey aesKey = load(session);
+        // 如果数据库也没有，则生成新的
+        return null != aesKey ? aesKey : generate(session);
+    }
+
     /**
      * 获取AES密钥（从缓存中获取或生成新的）
      * 仅在客户端主动请求获取密钥时调用，如果密钥即将过期则生成新的
@@ -122,14 +149,14 @@ public class AesService {
             }
             EncryptConfigHandler.AesConfig config = encryptConfigFactory.getAesConfig();
             // 使用compute方法：如果缓存不存在则生成，存在则返回
-            AesKey aesKey = cacheService.compute(session, () -> generate(session), getAesKeyCacheConfig());
+            AesKey aesKey = cacheService.compute(session, () -> create(session), getAesKeyCacheConfig());
             // 检查密钥是否有效：为null、已过期、格式无效或即将过期时，删除缓存并重新调用compute
             // 利用短路求值：如果aesKey为null，后面的条件不会执行
             if (aesKey == null || aesKey.isExpired() || StringUtils.isBlank(aesKey.getKey()) || aesKey.isExpiringSoon(config.getClientBufferMinutes())) {
                 if (null != aesKey && log.isDebugEnabled())
                     log.debug("删除重建:{}, KEY:{}, 向量:{}, 过期:{}, 临期:{}, 过期时间:{}", aesKey.getSession(), aesKey.getKey(), aesKey.getVector(), aesKey.isExpired(), aesKey.isExpiringSoon(), null != aesKey.getExpireTime() ? new Date(aesKey.getExpireTime()) : "");
                 cacheService.remove(getAesKeyCacheConfig().getCacheName(), session);
-                aesKey = cacheService.compute(session, () -> generate(session), getAesKeyCacheConfig());
+                aesKey = cacheService.compute(session, () -> create(session), getAesKeyCacheConfig());
             }
             if (log.isDebugEnabled())
                 log.debug("获取密钥:{}, KEY:{}, 向量:{}, 过期:{}, 临期:{}, 过期时间:{}", aesKey.getSession(), aesKey.getKey(), aesKey.getVector(), aesKey.isExpired(), aesKey.isExpiringSoon(), null != aesKey.getExpireTime() ? new Date(aesKey.getExpireTime()) : "");
@@ -166,7 +193,11 @@ public class AesService {
         // 直接从缓存获取密钥，不触发更新（客户端可能还在使用旧密钥）
         AesKey aesKey = cacheService.get(getAesKeyCacheConfig().getCacheName(), session);
         if (aesKey == null) {
-            throw new CodeException(Error.AES_KEY_NOT_FOUND);
+            // 如果缓存中没有，尝试从数据库加载
+            aesKey = load(session);
+            if (aesKey == null) {
+                throw new CodeException(Error.AES_KEY_NOT_FOUND);
+            }
         }
         if (StringUtils.isBlank(aesKey.getKey())) {
             log.error("AES密钥格式错误，密钥为空，Session: {}", session);
@@ -219,7 +250,10 @@ public class AesService {
         // 直接从缓存获取密钥，不触发更新（客户端可能还在使用旧密钥）
         AesKey aesKey = cacheService.get(getAesKeyCacheConfig().getCacheName(), session);
         if (aesKey == null) {
-            throw new CodeException(Error.AES_KEY_NOT_FOUND);
+            aesKey = load(session);
+            if (aesKey == null) {
+                throw new CodeException(Error.AES_KEY_NOT_FOUND);
+            }
         }
         if (StringUtils.isBlank(aesKey.getKey())) {
             log.error("AES密钥格式错误，密钥为空，Session: {}", session);

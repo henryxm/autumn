@@ -4,6 +4,7 @@ import cn.org.autumn.annotation.Endpoint;
 import cn.org.autumn.model.Supported;
 import cn.org.autumn.config.CacheConfig;
 import cn.org.autumn.config.EncryptConfigHandler;
+import cn.org.autumn.config.EncryptionLoader;
 import cn.org.autumn.exception.CodeException;
 import cn.org.autumn.model.*;
 import cn.org.autumn.model.Error;
@@ -35,6 +36,9 @@ public class RsaService {
     @Autowired
     EncryptConfigFactory encryptConfigFactory;
 
+    @Autowired(required = false)
+    EncryptionLoader encryptionLoader;
+
     /**
      * 支持加密的类型接口列表
      */
@@ -59,7 +63,8 @@ public class RsaService {
                     .cacheName("RsaServiceCache")
                     .keyType(String.class)
                     .valueType(RsaKey.class)
-                    .expireTime(config.getKeyValidMinutes() + config.getServerBufferMinutes())
+                    .expireTime(config.getKeyValidMinutes())
+                    .redisTime(config.getKeyValidMinutes() + config.getServerBufferMinutes())
                     .timeUnit(TimeUnit.MINUTES)
                     .build();
         }
@@ -74,6 +79,7 @@ public class RsaService {
                     .keyType(String.class)
                     .valueType(RsaKey.class)
                     .expireTime(config.getClientPublicKeyValidMinutes())
+                    .redisTime(config.getClientPublicKeyValidMinutes() + config.getServerBufferMinutes())
                     .timeUnit(TimeUnit.MINUTES)
                     .build();
         }
@@ -107,6 +113,28 @@ public class RsaService {
         }
     }
 
+    private RsaKey load(String session) {
+        // 如果缓存中没有，尝试从数据库加载
+        if (encryptionLoader != null) {
+            RsaKey loadedKey = encryptionLoader.loadRsaKey(session);
+            if (loadedKey != null && !loadedKey.isExpired() && StringUtils.isNotBlank(loadedKey.getPublicKey()) && StringUtils.isNotBlank(loadedKey.getPrivateKey())) {
+                if (log.isDebugEnabled()) {
+                    log.debug("数据库加载:{}", session);
+                }
+                // 将加载的密钥对缓存到Cache和Redis
+                cacheService.put(getServerPrivateKeyConfig().getCacheName(), session, loadedKey);
+                return loadedKey;
+            }
+        }
+        return null;
+    }
+
+    public RsaKey create(String session) {
+        RsaKey key = load(session);
+        // 如果数据库也没有，则生成新的
+        return null != key ? key : generate(session);
+    }
+
     /**
      * 获取密钥对（如果不存在则生成新的）
      * 返回的密钥对包含过期时间，客户端应在此时间之前重新获取
@@ -123,7 +151,7 @@ public class RsaService {
             }
             EncryptConfigHandler.RsaConfig config = encryptConfigFactory.getRsaConfig();
             // 使用compute方法：如果缓存不存在则生成，存在则返回
-            RsaKey pair = cacheService.compute(session, () -> generate(session), getServerPrivateKeyConfig());
+            RsaKey pair = cacheService.compute(session, () -> create(session), getServerPrivateKeyConfig());
             // 检查密钥对是否有效：为null、已过期、格式无效或即将过期时，删除缓存并重新调用compute
             // 利用短路求值：如果pair为null，后面的条件不会执行
             if (pair == null || pair.isExpired() || StringUtils.isBlank(pair.getPublicKey()) || StringUtils.isBlank(pair.getPrivateKey()) || pair.isExpiringSoon(config.getClientBufferMinutes())) {
@@ -131,7 +159,7 @@ public class RsaService {
                     log.debug("删除重建:{}, KEY:{}, 向量:{}, 过期:{}, 临期:{}, 过期时间:{}", pair.getSession(), pair.getPublicKey(), pair.getPrivateKey(), pair.isExpired(), pair.isExpiringSoon(), null != pair.getExpireTime() ? new Date(pair.getExpireTime()) : "");
                 // 删除缓存并重新调用compute
                 cacheService.remove(getServerPrivateKeyConfig().getCacheName(), session);
-                pair = cacheService.compute(session, () -> generate(session), getServerPrivateKeyConfig());
+                pair = cacheService.compute(session, () -> create(session), getServerPrivateKeyConfig());
             }
             if (log.isDebugEnabled())
                 log.debug("获取密钥:{}, KEY:{}, 向量:{}, 过期:{}, 临期:{}, 过期时间:{}", pair.getSession(), pair.getPublicKey(), pair.getPrivateKey(), pair.isExpired(), pair.isExpiringSoon(), null != pair.getExpireTime() ? new Date(pair.getExpireTime()) : "");
@@ -168,7 +196,9 @@ public class RsaService {
         // 从缓存中获取密钥对
         RsaKey keyPair = cacheService.get(getServerPrivateKeyConfig().getCacheName(), value.getSession());
         if (keyPair == null) {
-            throw new CodeException(Error.RSA_PRIVATE_KEY_NOT_FOUND);
+            keyPair = load(value.getSession());
+            if (null == keyPair)
+                throw new CodeException(Error.RSA_PRIVATE_KEY_NOT_FOUND);
         }
         String privateKey = keyPair.getPrivateKey();
         if (StringUtils.isBlank(privateKey)) {
@@ -277,14 +307,32 @@ public class RsaService {
         if (StringUtils.isBlank(session)) {
             return null;
         }
-        RsaKey clientPublicKey = cacheService.get(getClientPublicKeyConfig().getCacheName(), session);
-        if (clientPublicKey != null && clientPublicKey.isExpired()) {
+        RsaKey rsaKey = cacheService.get(getClientPublicKeyConfig().getCacheName(), session);
+        if (rsaKey == null) {
+            // 如果缓存中没有，尝试从数据库加载
+            if (encryptionLoader != null) {
+                String publicKeyStr = encryptionLoader.loadClientPublicKey(session);
+                if (StringUtils.isNotBlank(publicKeyStr)) {
+                    // 构建RsaKey对象
+                    rsaKey = new RsaKey();
+                    rsaKey.setSession(session);
+                    rsaKey.setPublicKey(publicKeyStr);
+                    // 从数据库加载时，过期时间需要从实体中获取，这里暂时不设置
+                    // 将加载的公钥缓存到Cache和Redis
+                    cacheService.put(getClientPublicKeyConfig().getCacheName(), session, rsaKey);
+                    if (log.isDebugEnabled()) {
+                        log.debug("从数据库加载客户端公钥成功，session: {}", session);
+                    }
+                }
+            }
+        }
+        if (rsaKey != null && rsaKey.isExpired()) {
             if (log.isDebugEnabled())
-                log.debug("客户端公钥已过期，Session: {}, 过期时间: {}", session, clientPublicKey.getExpireTime());
+                log.debug("客户端公钥已过期，Session: {}, 过期时间: {}", session, rsaKey.getExpireTime());
             // 可以选择删除过期公钥或返回null
             return null;
         }
-        return clientPublicKey;
+        return rsaKey;
     }
 
     /**

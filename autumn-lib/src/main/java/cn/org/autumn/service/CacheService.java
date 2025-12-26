@@ -755,10 +755,10 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
      */
     @SuppressWarnings("unchecked")
     private <K, V> V getFromRedis(K key, CacheConfig config) {
-        if (!isRedisEnabled()) {
-            return null;
-        }
         try {
+            if (!isRedisEnabled()) {
+                return null;
+            }
             String redisKey = buildRedisKey(config.getCacheName(), key);
             Object value = redisTemplate.opsForValue().get(redisKey);
             if (value == null) {
@@ -783,10 +783,10 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
      * @return Redis中的值，如果不存在返回null
      */
     private Object getRedisValue(String cacheName, Object key) {
-        if (!isRedisEnabled()) {
-            return null;
-        }
         try {
+            if (!isRedisEnabled()) {
+                return null;
+            }
             String redisKey = buildRedisKey(cacheName, key);
             return redisTemplate.opsForValue().get(redisKey);
         } catch (Exception e) {
@@ -806,17 +806,15 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
      * @param <V>       Value类型
      */
     private <K, V> void putToRedis(String cacheName, K key, V value, CacheConfig config) {
-        if (!isRedisEnabled()) {
-            return;
-        }
         try {
+            if (!isRedisEnabled()) {
+                return;
+            }
             String redisKey = buildRedisKey(cacheName, key);
             // 直接使用redisTime作为时间值，timeUnit作为时间单位
-            long redisExpireTime = config.getRedisTime();
-            TimeUnit redisExpireTimeUnit = config.getTimeUnit();
             redisTemplate.opsForValue().set(redisKey, value, config.getRedisTime(), config.getTimeUnit());
             if (log.isDebugEnabled()) {
-                log.debug("Put value to Redis cache: key={}, expireTime={}, expireTimeUnit={}", redisKey, redisExpireTime, redisExpireTimeUnit);
+                log.debug("Put value to Redis cache: key={}, expireTime={}, expireTimeUnit={}", redisKey, config.getRedisTime(), config.getTimeUnit());
             }
         } catch (Exception e) {
             log.warn("Failed to put value to Redis cache: {}", e.getMessage());
