@@ -47,7 +47,7 @@ public class AesKey implements Serializable {
      *
      * @return true-已过期，false-未过期
      */
-    public boolean isExpired() {
+    public boolean expired() {
         if (expireTime == null) {
             return false;
         }
@@ -60,8 +60,8 @@ public class AesKey implements Serializable {
      *
      * @return true-即将过期，false-未即将过期
      */
-    public boolean isExpiringSoon() {
-        return isExpiringSoon(10);
+    public boolean expiring() {
+        return expiring(10);
     }
 
     /**
@@ -70,7 +70,7 @@ public class AesKey implements Serializable {
      * @param bufferMinutes 缓冲时间（分钟）
      * @return true-即将过期，false-未即将过期
      */
-    public boolean isExpiringSoon(int bufferMinutes) {
+    public boolean expiring(int bufferMinutes) {
         if (expireTime == null) {
             return false;
         }

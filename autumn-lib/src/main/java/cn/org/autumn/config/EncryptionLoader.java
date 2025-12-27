@@ -22,7 +22,7 @@ public interface EncryptionLoader {
      * @param session 客户端会话ID
      * @return AES密钥对象，如果不存在则返回null
      */
-    default AesKey loadAesKey(String session) {
+    default AesKey loadAes(String session) {
         return null;
     }
 
@@ -32,7 +32,7 @@ public interface EncryptionLoader {
      * @param session 客户端会话ID
      * @return RSA密钥对对象，如果不存在则返回null
      */
-    default RsaKey loadRsaKey(String session) {
+    default RsaKey loadRsa(String session) {
         return null;
     }
 
@@ -42,7 +42,7 @@ public interface EncryptionLoader {
      * @param session 客户端会话ID
      * @return 客户端公钥字符串，如果不存在则返回null
      */
-    default String loadClientPublicKey(String session) {
+    default String loadClient(String session) {
         return null;
     }
 }

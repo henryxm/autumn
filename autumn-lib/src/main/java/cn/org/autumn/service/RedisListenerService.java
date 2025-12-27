@@ -1,7 +1,6 @@
 package cn.org.autumn.service;
 
 import cn.org.autumn.handler.MessageHandler;
-import cn.org.autumn.site.InitFactory;
 import cn.org.autumn.utils.RedisUtils;
 import cn.org.autumn.utils.Uuid;
 import com.google.gson.Gson;
@@ -86,13 +85,13 @@ public class RedisListenerService {
             return;
         }
         if (redisUtils.isOpen())
-            new Thread(this::initMessageListenerContainer).start();
+            new Thread(this::initListener).start();
     }
 
     /**
      * 初始化消息监听容器
      */
-    void initMessageListenerContainer() {
+    void initListener() {
         if (initialized || !redisUtils.isOpen()) {
             return;
         }
@@ -107,7 +106,7 @@ public class RedisListenerService {
             asyncTaskExecutor.execute(() -> {
                 try {
                     Thread.sleep(10000);
-                    initMessageListenerContainer();
+                    initListener();
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     log.warn("延迟重试被中断");

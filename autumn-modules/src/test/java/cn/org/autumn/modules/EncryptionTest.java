@@ -238,7 +238,7 @@ public class EncryptionTest {
         try {
             // 1.1 获取服务端公钥（首次获取，应该生成新的密钥对）
             log.debug("  测试1.1: 获取服务端公钥（首次）");
-            RsaKey keyPair1 = rsaService.getRsaKey(uuid);
+            RsaKey keyPair1 = rsaService.getKey(uuid);
             if (keyPair1 == null || StringUtils.isBlank(keyPair1.getPublicKey())) {
                 log.error("  测试1.1失败: 密钥对为空");
                 results.add(TestResult.failure("获取服务端公钥-首次", "密钥对为空", null));
@@ -251,7 +251,7 @@ public class EncryptionTest {
 
             // 1.2 再次获取相同UUID的公钥（应该返回缓存的密钥对）
             log.debug("  测试1.2: 获取服务端公钥（缓存）");
-            RsaKey keyPair2 = rsaService.getRsaKey(uuid);
+            RsaKey keyPair2 = rsaService.getKey(uuid);
             if (keyPair2 == null || !keyPair2.getPublicKey().equals(keyPair1.getPublicKey())) {
                 log.error("  测试1.2失败: 密钥对不一致或为空");
                 results.add(TestResult.failure("获取服务端公钥-缓存", "密钥对不一致或为空", null));
@@ -263,7 +263,7 @@ public class EncryptionTest {
             // 1.3 测试不同UUID生成不同的密钥对
             log.debug("  测试1.3: 不同UUID生成不同密钥对");
             String uuid2 = UUID.randomUUID().toString();
-            RsaKey keyPair3 = rsaService.getRsaKey(uuid2);
+            RsaKey keyPair3 = rsaService.getKey(uuid2);
             if (keyPair3 == null || keyPair3.getPublicKey().equals(keyPair1.getPublicKey())) {
                 log.error("  测试1.3失败: 不同UUID生成了相同的密钥对");
                 results.add(TestResult.failure("获取服务端公钥-不同UUID", "不同UUID生成了相同的密钥对", null));
@@ -399,7 +399,7 @@ public class EncryptionTest {
 
             // 3.2 获取AES密钥（应该返回缓存的密钥）
             log.debug("  测试3.2: 获取AES密钥（缓存）");
-            AesKey aesKey2 = aesService.getAesKey(uuid);
+            AesKey aesKey2 = aesService.getKey(uuid);
             if (aesKey2 == null || !aesKey2.getKey().equals(aesKey1.getKey())) {
                 log.error("  测试3.2失败: 密钥不一致或为空");
                 results.add(TestResult.failure("获取AES密钥-缓存", "密钥不一致或为空", null));
@@ -422,7 +422,7 @@ public class EncryptionTest {
 
             // 3.4 检查AES密钥是否存在
             log.debug("  测试3.4: 检查AES密钥是否存在");
-            boolean hasValidAesKey = aesService.hasValidAesKey(uuid);
+            boolean hasValidAesKey = aesService.has(uuid);
             if (!hasValidAesKey) {
                 log.error("  测试3.4失败: 密钥应该存在但检查失败");
                 results.add(TestResult.failure("检查AES密钥-存在", "密钥应该存在但检查失败", null));
@@ -443,8 +443,8 @@ public class EncryptionTest {
 
             // 3.6 移除AES密钥
             log.debug("  测试3.6: 移除AES密钥");
-            aesService.removeAesKey(uuid);
-            boolean hasKeyAfterRemove = aesService.hasValidAesKey(uuid);
+            aesService.remove(uuid);
+            boolean hasKeyAfterRemove = aesService.has(uuid);
             if (hasKeyAfterRemove) {
                 log.error("  测试3.6失败: 密钥移除失败");
                 results.add(TestResult.failure("移除AES密钥", "密钥移除失败", null));
@@ -472,7 +472,7 @@ public class EncryptionTest {
         try {
             // 4.1 获取服务端密钥对
             log.debug("  测试4.1: 获取服务端密钥对");
-            RsaKey serverKeyPair = rsaService.getRsaKey(uuid);
+            RsaKey serverKeyPair = rsaService.getKey(uuid);
             String serverPublicKey = serverKeyPair.getPublicKey();
             String serverPrivateKey = serverKeyPair.getPrivateKey();
             log.debug("  测试4.1通过: 成功获取服务端密钥对");
@@ -676,7 +676,7 @@ public class EncryptionTest {
             // 6.1 完整流程：获取服务端公钥 -> 上传客户端公钥 -> 获取AES密钥 -> 使用AES加密数据
             // 步骤1: 获取服务端公钥
             log.debug("  测试6.1: 获取服务端公钥");
-            rsaService.getRsaKey(uuid);
+            rsaService.getKey(uuid);
             log.debug("  测试6.1通过: 成功获取服务端公钥");
             results.add(TestResult.success("组合流程-获取服务端公钥", "成功获取服务端公钥"));
 
@@ -782,7 +782,7 @@ public class EncryptionTest {
             // 7.1 测试UUID为空
             log.debug("  测试7.1: UUID为空-RSA");
             try {
-                rsaService.getRsaKey("");
+                rsaService.getKey("");
                 log.error("  测试7.1失败: 应该抛出异常但没有");
                 results.add(TestResult.failure("错误场景-UUID为空-RSA", "应该抛出异常但没有", null));
             } catch (Exception e) {
@@ -1002,7 +1002,7 @@ public class EncryptionTest {
             if (aesKey5 == null) {
                 log.error("  测试8.5失败: 无法生成AES密钥");
                 results.add(TestResult.failure("边界情况-密钥过期检查", "无法生成AES密钥", null));
-            } else if (aesKey5.isExpired()) {
+            } else if (aesKey5.expired()) {
                 log.error("  测试8.5失败: 新生成的密钥不应该过期");
                 results.add(TestResult.failure("边界情况-密钥过期检查", "新生成的密钥不应该过期", null));
             } else {

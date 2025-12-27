@@ -51,7 +51,7 @@ public class SysUserRoleService extends ServiceImpl<SysUserRoleDao, SysUserRoleE
     @Autowired
     private CacheService cacheService;
 
-    private static final CacheConfig cacheConfig = CacheConfig.builder().cacheName("isAdminCache").valueType(Boolean.class).build();
+    private static final CacheConfig config = CacheConfig.builder().name("isadmin").value(Boolean.class).build();
 
     @Override
     public boolean isAdmin(String user) {
@@ -61,7 +61,7 @@ public class SysUserRoleService extends ServiceImpl<SysUserRoleDao, SysUserRoleE
         // 使用 CacheService 的 getOrCompute 方法
         // 如果缓存存在则直接返回，否则调用 isSystemAdministrator 查询并缓存结果
         // 缓存过期时间：1分钟
-        Boolean result = cacheService.compute(user, () -> isSystemAdministrator(user), cacheConfig);
+        Boolean result = cacheService.compute(user, () -> isSystemAdministrator(user), config);
         return result != null ? result : false;
     }
 
@@ -102,10 +102,7 @@ public class SysUserRoleService extends ServiceImpl<SysUserRoleDao, SysUserRoleE
 
     public boolean hasUserRole(String userUuid, String roleKey) {
         Integer i = baseMapper.hasUserRole(userUuid, roleKey);
-        if (null != i && i > 0) {
-            return true;
-        }
-        return false;
+        return null != i && i > 0;
     }
 
     public void saveOrUpdate(Long userId, List<Long> roleIdList) {

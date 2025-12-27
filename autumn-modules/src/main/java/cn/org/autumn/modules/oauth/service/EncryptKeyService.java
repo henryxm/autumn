@@ -108,7 +108,7 @@ public class EncryptKeyService extends ModuleService<EncryptKeyDao, EncryptKeyEn
      * @return AES密钥对象，如果不存在则返回null
      */
     @Override
-    public AesKey loadAesKey(String session) {
+    public AesKey loadAes(String session) {
         try {
             if (StringUtils.isBlank(session)) {
                 return null;
@@ -144,7 +144,7 @@ public class EncryptKeyService extends ModuleService<EncryptKeyDao, EncryptKeyEn
      * @return RSA密钥对对象，如果不存在则返回null
      */
     @Override
-    public RsaKey loadRsaKey(String session) {
+    public RsaKey loadRsa(String session) {
         try {
             if (StringUtils.isBlank(session)) {
                 return null;
@@ -180,7 +180,7 @@ public class EncryptKeyService extends ModuleService<EncryptKeyDao, EncryptKeyEn
      * @return 客户端公钥字符串，如果不存在则返回null
      */
     @Override
-    public String loadClientPublicKey(String session) {
+    public String loadClient(String session) {
         if (StringUtils.isBlank(session)) {
             return null;
         }

@@ -47,23 +47,16 @@ public class AesService {
     /**
      * AES密钥缓存配置
      */
-    private static CacheConfig aesKeyCacheConfig;
+    private static CacheConfig config;
 
-    public CacheConfig getAesKeyCacheConfig() {
-        if (null == aesKeyCacheConfig) {
-            EncryptConfigHandler.AesConfig config = encryptConfigFactory.getAesConfig();
+    public CacheConfig getConfig() {
+        if (null == config) {
+            EncryptConfigHandler.AesConfig aesConfig = encryptConfigFactory.getAesConfig();
             // 缓存过期时间 = 密钥有效期 + 服务端冗余保留时间
             // 确保在密钥过期后，服务端仍能解密正在传输的加密数据
-            aesKeyCacheConfig = CacheConfig.builder()
-                    .cacheName("AesServiceCache")
-                    .keyType(String.class)
-                    .valueType(AesKey.class)
-                    .expireTime(config.getKeyValidMinutes())
-                    .redisTime(config.getKeyValidMinutes() + config.getServerBufferMinutes())
-                    .timeUnit(TimeUnit.MINUTES)
-                    .build();
+            config = CacheConfig.builder().name("aseservice").key(String.class).value(AesKey.class).expire(aesConfig.getKeyValidMinutes()).redis(aesConfig.getKeyValidMinutes() + aesConfig.getServerBufferMinutes()).unit(TimeUnit.MINUTES).build();
         }
-        return aesKeyCacheConfig;
+        return config;
     }
 
     /**
@@ -115,13 +108,13 @@ public class AesService {
     private AesKey load(String session) {
         // 如果缓存中没有，尝试从数据库加载
         if (encryptionLoader != null) {
-            AesKey loadedKey = encryptionLoader.loadAesKey(session);
-            if (loadedKey != null && !loadedKey.isExpired() && StringUtils.isNotBlank(loadedKey.getKey())) {
+            AesKey loadedKey = encryptionLoader.loadAes(session);
+            if (loadedKey != null && !loadedKey.expired() && StringUtils.isNotBlank(loadedKey.getKey())) {
                 if (log.isDebugEnabled()) {
                     log.debug("数据库加载:{}", session);
                 }
                 // 将加载的密钥缓存到Cache和Redis
-                cacheService.put(getAesKeyCacheConfig().getCacheName(), session, loadedKey);
+                cacheService.put(getConfig(), session, loadedKey);
                 return loadedKey;
             }
         }
@@ -142,24 +135,24 @@ public class AesService {
      * @return AES密钥信息
      * @throws CodeException 密钥获取失败时抛出异常
      */
-    public AesKey getAesKey(String session) throws CodeException {
+    public AesKey getKey(String session) throws CodeException {
         try {
             if (StringUtils.isBlank(session)) {
                 throw new CodeException(Error.RSA_SESSION_REQUIRED);
             }
             EncryptConfigHandler.AesConfig config = encryptConfigFactory.getAesConfig();
             // 使用compute方法：如果缓存不存在则生成，存在则返回
-            AesKey aesKey = cacheService.compute(session, () -> create(session), getAesKeyCacheConfig());
+            AesKey aesKey = cacheService.compute(session, () -> create(session), getConfig());
             // 检查密钥是否有效：为null、已过期、格式无效或即将过期时，删除缓存并重新调用compute
             // 利用短路求值：如果aesKey为null，后面的条件不会执行
-            if (aesKey == null || aesKey.isExpired() || StringUtils.isBlank(aesKey.getKey()) || aesKey.isExpiringSoon(config.getClientBufferMinutes())) {
+            if (aesKey == null || aesKey.expired() || StringUtils.isBlank(aesKey.getKey()) || aesKey.expiring(config.getClientBufferMinutes())) {
                 if (null != aesKey && log.isDebugEnabled())
-                    log.debug("删除重建:{}, KEY:{}, 向量:{}, 过期:{}, 临期:{}, 过期时间:{}", aesKey.getSession(), aesKey.getKey(), aesKey.getVector(), aesKey.isExpired(), aesKey.isExpiringSoon(), null != aesKey.getExpireTime() ? new Date(aesKey.getExpireTime()) : "");
-                cacheService.remove(getAesKeyCacheConfig().getCacheName(), session);
-                aesKey = cacheService.compute(session, () -> create(session), getAesKeyCacheConfig());
+                    log.debug("删除重建:{}, KEY:{}, 向量:{}, 过期:{}, 临期:{}, 过期时间:{}", aesKey.getSession(), aesKey.getKey(), aesKey.getVector(), aesKey.expired(), aesKey.expiring(), null != aesKey.getExpireTime() ? new Date(aesKey.getExpireTime()) : "");
+                cacheService.remove(getConfig().getName(), session);
+                aesKey = cacheService.compute(session, () -> create(session), getConfig());
             }
             if (log.isDebugEnabled())
-                log.debug("获取密钥:{}, KEY:{}, 向量:{}, 过期:{}, 临期:{}, 过期时间:{}", aesKey.getSession(), aesKey.getKey(), aesKey.getVector(), aesKey.isExpired(), aesKey.isExpiringSoon(), null != aesKey.getExpireTime() ? new Date(aesKey.getExpireTime()) : "");
+                log.debug("获取密钥:{}, KEY:{}, 向量:{}, 过期:{}, 临期:{}, 过期时间:{}", aesKey.getSession(), aesKey.getKey(), aesKey.getVector(), aesKey.expired(), aesKey.expiring(), null != aesKey.getExpireTime() ? new Date(aesKey.getExpireTime()) : "");
             return aesKey;
         } catch (RuntimeException e) {
             if (e.getCause() instanceof CodeException) {
@@ -191,7 +184,7 @@ public class AesService {
             throw new CodeException(Error.RSA_SESSION_REQUIRED);
         }
         // 直接从缓存获取密钥，不触发更新（客户端可能还在使用旧密钥）
-        AesKey aesKey = cacheService.get(getAesKeyCacheConfig().getCacheName(), session);
+        AesKey aesKey = cacheService.get(getConfig().getName(), session);
         if (aesKey == null) {
             // 如果缓存中没有，尝试从数据库加载
             aesKey = load(session);
@@ -248,7 +241,7 @@ public class AesService {
             throw new CodeException(Error.RSA_SESSION_REQUIRED);
         }
         // 直接从缓存获取密钥，不触发更新（客户端可能还在使用旧密钥）
-        AesKey aesKey = cacheService.get(getAesKeyCacheConfig().getCacheName(), session);
+        AesKey aesKey = cacheService.get(getConfig().getName(), session);
         if (aesKey == null) {
             aesKey = load(session);
             if (aesKey == null) {
@@ -260,7 +253,7 @@ public class AesService {
             throw new CodeException(Error.AES_KEY_FORMAT_ERROR);
         }
         // 检查密钥是否已过期（但仍在服务端冗余保留时间内）
-        if (aesKey.isExpired()) {
+        if (aesKey.expired()) {
             log.warn("密钥过期，Session: {}, 过期时间: {}", session, aesKey.getExpireTime());
         }
         try {
@@ -289,12 +282,12 @@ public class AesService {
      * @param session 客户端UUID
      * @return true-存在且有效，false-不存在或已过期
      */
-    public boolean hasValidAesKey(String session) {
+    public boolean has(String session) {
         if (StringUtils.isBlank(session)) {
             return false;
         }
-        AesKey aesKey = cacheService.get(getAesKeyCacheConfig().getCacheName(), session);
-        return aesKey != null && !aesKey.isExpired();
+        AesKey aesKey = cacheService.get(getConfig().getName(), session);
+        return aesKey != null && !aesKey.expired();
     }
 
     /**
@@ -302,10 +295,10 @@ public class AesService {
      *
      * @param session 客户端UUID
      */
-    public void removeAesKey(String session) {
+    public void remove(String session) {
         if (StringUtils.isBlank(session)) {
             return;
         }
-        cacheService.remove(getAesKeyCacheConfig().getCacheName(), session);
+        cacheService.remove(getConfig().getName(), session);
     }
 }

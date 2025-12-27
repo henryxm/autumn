@@ -15,66 +15,66 @@ public class CacheConfig {
     /**
      * 缓存名称
      */
-    private final String cacheName;
+    private final String name;
 
     /**
      * Key 类型
      */
-    private final Class<?> keyType;
+    private final Class<?> key;
 
     /**
      * Value 类型
      */
-    private final Class<?> valueType;
+    private final Class<?> value;
 
     /**
      * 最大条目数
      */
     @Builder.Default
-    private final long maxEntries = 10000;
+    private final long max = 10000;
 
     /**
      * 过期时间
      */
     @Builder.Default
-    private final long expireTime = 60;
+    private final long expire = 60;
 
     /**
      * Redis二级缓存过期时间倍数，本地缓存会大量消耗内存，并且有最大条目限制，
      * 因此需要通过Redis进行二级缓存，提高效率，并且不限制最大个数
      */
     @Builder.Default
-    private final int redisTime = 3 * 60;
+    private final long redis = 3 * 60;
 
     /**
      * 过期时间单位
      */
     @Builder.Default
-    private final TimeUnit timeUnit = TimeUnit.MINUTES;
+    private final TimeUnit unit = TimeUnit.MINUTES;
 
     /**
      * 缓存null值
      */
     @Builder.Default
-    private final boolean cacheNull = true;
+    private final boolean Null = true;
 
     /**
      * 是否启用磁盘持久化
      */
     @Builder.Default
-    private final boolean diskPersistent = false;
+    private final boolean persistent = false;
 
     /**
      * 磁盘持久化路径（如果启用）
      */
-    private final String diskPath;
+    private final String path;
 
     /**
      * 验证必填字段
      * 在使用 Builder 构建后调用此方法进行验证
      */
     public void validate() {
-        if (cacheName == null || keyType == null || valueType == null) {
+        if (name == null || key == null || value == null) {
             throw new IllegalArgumentException("cacheName, keyType, and valueType are required");
         }
     }

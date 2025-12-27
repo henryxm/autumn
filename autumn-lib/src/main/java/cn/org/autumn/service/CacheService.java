@@ -62,8 +62,7 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
      */
     @Override
     public void must() {
-        log.info("Subscribe Redis message");
-        redisListenerService.initMessageListenerContainer();
+        redisListenerService.initListener();
         // 订阅缓存失效频道
         boolean success = redisListenerService.subscribe(CACHE_INVALIDATION_CHANNEL, (channel, messageBody) -> {
             try {
@@ -75,9 +74,9 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
                     return;
                 }
                 // 尝试解析JSON消息
-                Invalidation invalidationMessage = null;
+                Invalidation invalidation = null;
                 try {
-                    invalidationMessage = gson.fromJson(messageBody, Invalidation.class);
+                    invalidation = gson.fromJson(messageBody, Invalidation.class);
                 } catch (Exception jsonException) {
                     // 如果JSON解析失败，可能是消息被JDK序列化了，尝试其他方式
                     if (log.isDebugEnabled()) {
@@ -91,29 +90,24 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
                     throw jsonException; // 重新抛出异常
                 }
                 // 验证解析后的消息是否有效
-                if (invalidationMessage == null) {
+                if (invalidation == null) {
                     if (log.isDebugEnabled()) {
                         log.debug("解析后的缓存失效消息为空，忽略");
                     }
                     return;
                 }
                 // 如果是自己发布的消息，忽略
-                if (redisListenerService.getInstanceId().equals(invalidationMessage.getInstanceId())) {
+                if (redisListenerService.getInstanceId().equals(invalidation.getInstanceId())) {
                     return;
                 }
                 // 处理缓存失效消息
-                handleCacheInvalidation(invalidationMessage);
+                handle(invalidation);
             } catch (Exception e) {
                 log.error("处理缓存失效消息失败: {}, 消息内容: {}", e.getMessage(), messageBody != null ? messageBody.substring(0, Math.min(200, messageBody.length())) : "null", e);
             }
         });
-        if (log.isDebugEnabled()) {
-            if (success) {
-                log.debug("订阅成功，实例ID: {}, 频道: {}", redisListenerService.getInstanceId(), CACHE_INVALIDATION_CHANNEL);
-            } else {
-                log.debug("订阅失败，频道: {}", CACHE_INVALIDATION_CHANNEL);
-            }
-        }
+        if (success)
+            log.info("Subscribe Redis message");
     }
 
     /**
@@ -121,74 +115,74 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
      *
      * @param message 失效消息
      */
-    private void handleCacheInvalidation(Invalidation message) {
+    private void handle(Invalidation message) {
         if (message == null) {
             return;
         }
         try {
-            String cacheName = message.getCacheName();
+            String name = message.getCacheName();
             String operation = message.getOperation();
             String key = message.getKey();
             if (Invalidation.Operation.CLEAR.equals(operation)) {
                 // 清空整个缓存
-                ehCacheManager.clearCache(cacheName);
+                ehCacheManager.clear(name);
             } else if (Invalidation.Operation.REMOVE.equals(operation) || Invalidation.Operation.PUT.equals(operation)) {
                 // 删除指定键
-                Cache<Object, Object> cache = ehCacheManager.getCache(cacheName);
+                Cache<Object, Object> cache = ehCacheManager.getCache(name);
                 if (cache != null && key != null) {
                     cache.remove(key);
                 }
                 if (log.isDebugEnabled()) {
-                    log.debug("接收变更: cacheName={}, key={}, operation={}", cacheName, key, operation);
+                    log.debug("接收变更: name={}, key={}, operation={}", name, key, operation);
                 }
             }
         } catch (Exception e) {
-            log.error("处理失败: cacheName={}, key={}, operation={}, error={}", message.getCacheName(), message.getKey(), message.getOperation(), e.getMessage(), e);
+            log.error("处理失败: name={}, key={}, operation={}, error={}", message.getCacheName(), message.getKey(), message.getOperation(), e.getMessage(), e);
         }
     }
 
     /**
      * 发布缓存失效消息到Redis
      *
-     * @param cacheName 缓存名称
+     * @param name      缓存名称
      * @param key       缓存键
      * @param operation 操作类型
      */
-    private void publishCacheInvalidation(String cacheName, String key, String operation) {
+    private void publish(String name, String key, String operation) {
         try {
             if (null == key) {
                 return;
             }
-            Invalidation message = new Invalidation(cacheName, key, operation);
+            Invalidation message = new Invalidation(name, key, operation);
             message.setInstanceId(redisListenerService.getInstanceId());
             boolean success = redisListenerService.publish(CACHE_INVALIDATION_CHANNEL, message);
             if (log.isDebugEnabled() && success) {
-                log.debug("发布失效: cacheName={}, key={}, operation={}", cacheName, key, operation);
+                log.debug("发布失效: name={}, key={}, operation={}", name, key, operation);
             }
         } catch (Exception e) {
-            log.error("发布失败: cacheName={}, key={}, operation={}, error={}", cacheName, key, operation, e.getMessage());
+            log.error("发布失败: name={}, key={}, operation={}, error={}", name, key, operation, e.getMessage());
         }
     }
 
     /**
      * 获取缓存值，如果不存在则通过 supplier 获取并缓存
      *
-     * @param cacheName 缓存名称
-     * @param key       缓存键
-     * @param supplier  值提供者（如果缓存不存在时调用）
-     * @param <K>       Key 类型
-     * @param <V>       Value 类型
+     * @param name     缓存名称
+     * @param key      缓存键
+     * @param supplier 值提供者（如果缓存不存在时调用）
+     * @param <K>      Key 类型
+     * @param <V>      Value 类型
      * @return 缓存值
      */
-    public <K, V> V compute(String cacheName, K key, Supplier<V> supplier) {
-        return compute(cacheName, key, supplier, null, null, null, null, null, false);
+    public <K, V> V compute(String name, K key, Supplier<V> supplier) {
+        return compute(name, key, supplier, null, null, null, null, null, false);
     }
 
     /**
      * 获取缓存值，如果不存在则通过 supplier 获取并缓存
      * 支持指定 Key 和 Value 类型，如果未指定则自动推断
      *
-     * @param cacheName 缓存名称
+     * @param name      缓存名称
      * @param key       缓存键
      * @param supplier  值提供者（如果缓存不存在时调用）
      * @param keyType   Key 类型（可选，如果为 null 则自动推断）
@@ -197,27 +191,28 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
      * @param <V>       Value 类型
      * @return 缓存值
      */
-    public <K, V> V compute(String cacheName, K key, Supplier<V> supplier, Class<K> keyType, Class<V> valueType) {
-        return compute(cacheName, key, supplier, keyType, valueType, null, null, null, false);
+    public <K, V> V compute(String name, K key, Supplier<V> supplier, Class<K> keyType, Class<V> valueType) {
+        return compute(name, key, supplier, keyType, valueType, null, null, null, false);
     }
 
     /**
      * 获取缓存值，如果不存在则通过 supplier 获取并缓存
      * 支持指定 Key 和 Value 类型，以及过期时间
      *
-     * @param cacheName      缓存名称
+     * @param name           缓存名称
      * @param key            缓存键
      * @param supplier       值提供者（如果缓存不存在时调用）
      * @param keyType        Key 类型（可选，如果为 null 则自动推断）
      * @param valueType      Value 类型（可选，如果为 null 则自动推断）
      * @param expireTime     过期时间（可选，如果为 null 则使用默认值或已注册配置的值）
+     * @param redisTime      Redis过期时间（可选，如果为 null 则使用默认值或已注册配置的值）
      * @param expireTimeUnit 过期时间单位（可选，如果为 null 则使用默认值或已注册配置的值）
      * @param <K>            Key 类型
      * @param <V>            Value 类型
      * @return 缓存值
      */
-    public <K, V> V compute(String cacheName, K key, Supplier<V> supplier, Class<K> keyType, Class<V> valueType, Long expireTime, TimeUnit expireTimeUnit) {
-        return compute(cacheName, key, supplier, keyType, valueType, expireTime, expireTimeUnit, null, false);
+    public <K, V> V compute(String name, K key, Supplier<V> supplier, Class<K> keyType, Class<V> valueType, Long expireTime, Long redisTime, TimeUnit expireTimeUnit) {
+        return compute(name, key, supplier, keyType, valueType, expireTime, redisTime, expireTimeUnit, null, false);
     }
 
     /**
@@ -225,32 +220,33 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
      * 支持指定 Key 和 Value 类型，以及过期时间
      * 支持缓存 null 值，避免重复查询
      *
-     * @param cacheName      缓存名称
+     * @param name           缓存名称
      * @param key            缓存键
      * @param supplier       值提供者（如果缓存不存在时调用）
      * @param keyType        Key 类型（可选，如果为 null 则自动推断）
      * @param valueType      Value 类型（可选，如果为 null 则自动推断）
      * @param expireTime     过期时间（可选，如果为 null 则使用默认值或已注册配置的值）
+     * @param redisTime      Redis过期时间（可选，如果为 null 则使用默认值或已注册配置的值）
      * @param expireTimeUnit 过期时间单位（可选，如果为 null 则使用默认值或已注册配置的值）
      * @param cacheNull      是否缓存 null 值（true：缓存 null，避免重复查询；false：不缓存 null，每次都重新查询）
      * @param <K>            Key 类型
      * @param <V>            Value 类型
      * @return 缓存值
      */
-    public <K, V> V compute(String cacheName, K key, Supplier<V> supplier, Class<K> keyType, Class<V> valueType, Long expireTime, TimeUnit expireTimeUnit, boolean cacheNull) {
-        return compute(cacheName, key, supplier, keyType, valueType, expireTime, expireTimeUnit, null, cacheNull);
+    public <K, V> V compute(String name, K key, Supplier<V> supplier, Class<K> keyType, Class<V> valueType, Long expireTime, Long redisTime, TimeUnit expireTimeUnit, boolean cacheNull) {
+        return compute(name, key, supplier, keyType, valueType, expireTime, redisTime, expireTimeUnit, null, cacheNull);
     }
 
     @SuppressWarnings("unchecked")
     public <K, V> V compute(K key, Supplier<V> supplier, CacheConfig config) {
-        return compute(config.getCacheName(), key, supplier, (Class<K>) config.getKeyType(), (Class<V>) config.getValueType(), config.getExpireTime(), config.getTimeUnit(), config.getMaxEntries(), config.isCacheNull());
+        return compute(config.getName(), key, supplier, (Class<K>) config.getKey(), (Class<V>) config.getValue(), config.getExpire(), config.getRedis(), config.getUnit(), config.getMax(), config.isNull());
     }
 
     /**
      * 获取缓存值，如果不存在则通过 supplier 获取并缓存
      * 支持通过 keySupplier 函数动态生成 key
      *
-     * @param cacheName   缓存名称
+     * @param name        缓存名称
      * @param keySupplier key 生成函数（从参数生成 key）
      * @param supplier    值提供者（如果缓存不存在时调用）
      * @param keyType     Key 类型（可选，如果为 null 则自动推断）
@@ -259,21 +255,22 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
      * @param <V>         Value 类型
      * @return 缓存值
      */
-    public <K, V> V compute(String cacheName, Supplier<K> keySupplier, Supplier<V> supplier, Class<K> keyType, Class<V> valueType) {
+    public <K, V> V compute(String name, Supplier<K> keySupplier, Supplier<V> supplier, Class<K> keyType, Class<V> valueType) {
         K key = keySupplier.get();
-        return compute(cacheName, key, supplier, keyType, valueType, null, null, null, false);
+        return compute(name, key, supplier, keyType, valueType, null, null, null, false);
     }
 
     /**
      * 获取缓存值，如果不存在则通过 supplier 获取并缓存
      * 支持通过 keySupplier 函数动态生成 key，并指定过期时间和最大条目数
      *
-     * @param cacheName      缓存名称
+     * @param name           缓存名称
      * @param keySupplier    key 生成函数（从参数生成 key）
      * @param supplier       值提供者（如果缓存不存在时调用）
      * @param keyType        Key 类型（可选，如果为 null 则自动推断）
      * @param valueType      Value 类型（可选，如果为 null 则自动推断）
      * @param expireTime     过期时间（可选，如果为 null 则使用默认值或已注册配置的值）
+     * @param redisTime      Redis过期时间（可选，如果为 null 则使用默认值或已注册配置的值）
      * @param expireTimeUnit 过期时间单位（可选，如果为 null 则使用默认值或已注册配置的值）
      * @param maxEntries     最大条目数（可选，如果为 null 则使用默认值 1000 或已注册配置的值）
      * @param cacheNull      是否缓存 null 值（true：缓存 null，避免重复查询；false：不缓存 null，每次都重新查询）
@@ -281,34 +278,35 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
      * @param <V>            Value 类型
      * @return 缓存值
      */
-    public <K, V> V compute(String cacheName, Supplier<K> keySupplier, Supplier<V> supplier, Class<K> keyType, Class<V> valueType, Long expireTime, TimeUnit expireTimeUnit, Long maxEntries, boolean cacheNull) {
+    public <K, V> V compute(String name, Supplier<K> keySupplier, Supplier<V> supplier, Class<K> keyType, Class<V> valueType, Long expireTime, Long redisTime, TimeUnit expireTimeUnit, Long maxEntries, boolean cacheNull) {
         K key = keySupplier.get();
-        return compute(cacheName, key, supplier, keyType, valueType, expireTime, expireTimeUnit, maxEntries, cacheNull);
+        return compute(name, key, supplier, keyType, valueType, expireTime, redisTime, expireTimeUnit, maxEntries, cacheNull);
     }
 
     /**
      * 获取缓存值，如果不存在则通过 supplier 获取并缓存
      * 支持通过多个参数组合生成字符串 key（使用分隔符连接）
      *
-     * @param cacheName 缓存名称
-     * @param supplier  值提供者（如果缓存不存在时调用）
-     * @param keyParts  key 的组成部分（多个参数）
-     * @param <V>       Value 类型
+     * @param name     缓存名称
+     * @param supplier 值提供者（如果缓存不存在时调用）
+     * @param keyParts key 的组成部分（多个参数）
+     * @param <V>      Value 类型
      * @return 缓存值
      */
-    public <V> V compute(String cacheName, Supplier<V> supplier, Object... keyParts) {
+    public <V> V compute(String name, Supplier<V> supplier, Object... keyParts) {
         String key = buildCompositeKey(keyParts);
-        return compute(cacheName, key, supplier, String.class, null, null, null, null, false);
+        return compute(name, key, supplier, String.class, null, null, null, null, null, false);
     }
 
     /**
      * 获取缓存值，如果不存在则通过 supplier 获取并缓存
      * 支持通过多个参数组合生成字符串 key（使用分隔符连接），并指定过期时间和最大条目数
      *
-     * @param cacheName      缓存名称
+     * @param name           缓存名称
      * @param supplier       值提供者（如果缓存不存在时调用）
      * @param valueType      Value 类型（可选，如果为 null 则自动推断）
      * @param expireTime     过期时间（可选，如果为 null 则使用默认值或已注册配置的值）
+     * @param redisTime      Redis过期时间（可选，如果为 null 则使用默认值或已注册配置的值）
      * @param expireTimeUnit 过期时间单位（可选，如果为 null 则使用默认值或已注册配置的值）
      * @param maxEntries     最大条目数（可选，如果为 null 则使用默认值 1000 或已注册配置的值）
      * @param cacheNull      是否缓存 null 值（true：缓存 null，避免重复查询；false：不缓存 null，每次都重新查询）
@@ -316,16 +314,16 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
      * @param <V>            Value 类型
      * @return 缓存值
      */
-    public <V> V compute(String cacheName, Supplier<V> supplier, Class<V> valueType, Long expireTime, TimeUnit expireTimeUnit, Long maxEntries, boolean cacheNull, Object... keyParts) {
+    public <V> V compute(String name, Supplier<V> supplier, Class<V> valueType, Long expireTime, Long redisTime, TimeUnit expireTimeUnit, Long maxEntries, boolean cacheNull, Object... keyParts) {
         String key = buildCompositeKey(keyParts);
-        return compute(cacheName, key, supplier, String.class, valueType, expireTime, expireTimeUnit, maxEntries, cacheNull);
+        return compute(name, key, supplier, String.class, valueType, expireTime, redisTime, expireTimeUnit, maxEntries, cacheNull);
     }
 
     /**
      * 获取缓存值，如果不存在则通过 supplier 获取并缓存
      * 支持通过 keyFunction 函数从参数数组生成 key
      *
-     * @param cacheName   缓存名称
+     * @param name        缓存名称
      * @param keyFunction key 生成函数（从参数数组生成 key）
      * @param supplier    值提供者（如果缓存不存在时调用）
      * @param keyType     Key 类型（可选，如果为 null 则自动推断）
@@ -335,21 +333,22 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
      * @param <V>         Value 类型
      * @return 缓存值
      */
-    public <K, V> V compute(String cacheName, Function<Object[], K> keyFunction, Supplier<V> supplier, Class<K> keyType, Class<V> valueType, Object... params) {
+    public <K, V> V compute(String name, Function<Object[], K> keyFunction, Supplier<V> supplier, Class<K> keyType, Class<V> valueType, Object... params) {
         K key = keyFunction.apply(params);
-        return compute(cacheName, key, supplier, keyType, valueType, null, null, null, false);
+        return compute(name, key, supplier, keyType, valueType, null, null, null, null, false);
     }
 
     /**
      * 获取缓存值，如果不存在则通过 supplier 获取并缓存
      * 支持通过 keyFunction 函数从参数数组生成 key，并指定过期时间和最大条目数
      *
-     * @param cacheName      缓存名称
+     * @param name           缓存名称
      * @param keyFunction    key 生成函数（从参数数组生成 key）
      * @param supplier       值提供者（如果缓存不存在时调用）
      * @param keyType        Key 类型（可选，如果为 null 则自动推断）
      * @param valueType      Value 类型（可选，如果为 null 则自动推断）
      * @param expireTime     过期时间（可选，如果为 null 则使用默认值或已注册配置的值）
+     * @param redisTime      Redis过期时间（可选，如果为 null 则使用默认值或已注册配置的值）
      * @param expireTimeUnit 过期时间单位（可选，如果为 null 则使用默认值或已注册配置的值）
      * @param maxEntries     最大条目数（可选，如果为 null 则使用默认值 1000 或已注册配置的值）
      * @param cacheNull      是否缓存 null 值（true：缓存 null，避免重复查询；false：不缓存 null，每次都重新查询）
@@ -358,9 +357,9 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
      * @param <V>            Value 类型
      * @return 缓存值
      */
-    public <K, V> V compute(String cacheName, Function<Object[], K> keyFunction, Supplier<V> supplier, Class<K> keyType, Class<V> valueType, Long expireTime, TimeUnit expireTimeUnit, Long maxEntries, boolean cacheNull, Object... params) {
+    public <K, V> V compute(String name, Function<Object[], K> keyFunction, Supplier<V> supplier, Class<K> keyType, Class<V> valueType, Long expireTime, Long redisTime, TimeUnit expireTimeUnit, Long maxEntries, boolean cacheNull, Object... params) {
         K key = keyFunction.apply(params);
-        return compute(cacheName, key, supplier, keyType, valueType, expireTime, expireTimeUnit, maxEntries, cacheNull);
+        return compute(name, key, supplier, keyType, valueType, expireTime, redisTime, expireTimeUnit, maxEntries, cacheNull);
     }
 
     /**
@@ -389,12 +388,13 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
      * 支持指定 Key 和 Value 类型，以及过期时间
      * 支持缓存 null 值，避免重复查询
      *
-     * @param cacheName      缓存名称
+     * @param name           缓存名称
      * @param key            缓存键
      * @param supplier       值提供者（如果缓存不存在时调用）
      * @param keyType        Key 类型（可选，如果为 null 则自动推断）
      * @param valueType      Value 类型（可选，如果为 null 则自动推断）
      * @param expireTime     过期时间（可选，如果为 null 则使用默认值或已注册配置的值）
+     * @param redisTime      Redis过期时间（可选，如果为 null 则使用默认值或已注册配置的值）
      * @param expireTimeUnit 过期时间单位（可选，如果为 null 则使用默认值或已注册配置的值）
      * @param cacheNull      是否缓存 null 值（true：缓存 null，避免重复查询；false：不缓存 null，每次都重新查询）
      * @param maxEntries     最大条目数（可选，如果为 null 则使用默认值 1000 或已注册配置的值）
@@ -402,54 +402,55 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
      * @param <V>            Value 类型
      * @return 缓存值
      */
-    public <K, V> V compute(String cacheName, K key, Supplier<V> supplier, Class<K> keyType, Class<V> valueType, Long expireTime, TimeUnit expireTimeUnit, Long maxEntries, boolean cacheNull) {
-        CacheConfig config = getCacheConfig(cacheName);
+    public <K, V> V compute(String name, K key, Supplier<V> supplier, Class<K> keyType, Class<V> valueType, Long expireTime, Long redisTime, TimeUnit expireTimeUnit, Long maxEntries, boolean cacheNull) {
+        CacheConfig config = ehCacheManager.getConfig(name);
         // 如果配置不存在，尝试根据传入的类型和过期时间创建配置
         if (config == null) {
             if (keyType != null && valueType != null) {
                 // 如果 cacheNull 为 true，需要使用 Object 作为 Value 类型以支持存储 NULL_PLACEHOLDER
                 Class<?> finalValueType = cacheNull ? Object.class : valueType;
                 // 使用传入的过期时间，如果未指定则使用默认值
-                long finalExpireTime = expireTime != null ? expireTime : 60;
-                TimeUnit finalExpireTimeUnit = expireTimeUnit != null ? expireTimeUnit : TimeUnit.MINUTES;
+                long expire = expireTime != null ? expireTime : 24 * 60;
+                TimeUnit unit = expireTimeUnit != null ? expireTimeUnit : TimeUnit.MINUTES;
                 // 使用传入的最大条目数，如果未指定则使用默认值 1000
-                long finalMaxEntries = maxEntries != null ? maxEntries : 1000;
-                config = CacheConfig.builder().cacheName(cacheName).keyType(keyType).valueType(finalValueType).maxEntries(finalMaxEntries).expireTime(finalExpireTime).timeUnit(finalExpireTimeUnit).build();
+                long max = maxEntries != null ? maxEntries : 10000;
+                long redis = redisTime != null ? redisTime : 24 * 60;
+                config = CacheConfig.builder().name(name).key(keyType).value(finalValueType).max(max).expire(expire).redis(redis).unit(unit).build();
                 config.validate();
-                ehCacheManager.registerCacheConfig(config);
+                ehCacheManager.register(config);
             } else {
                 if (log.isDebugEnabled())
-                    log.warn("Cache config not found for: {} and types not specified, returning value from supplier", cacheName);
+                    log.warn("Cache config not found for: {} and types not specified, returning value from supplier", name);
                 return supplier.get();
             }
-        } else if (cacheNull && config.getValueType() != Object.class) {
+        } else if (cacheNull && config.getValue() != Object.class) {
             // 如果已存在配置但需要缓存 null，且 Value 类型不是 Object
             // 我们需要使用 Object 类型来获取缓存，这样可以兼容存储 NULL_PLACEHOLDER 和实际值
             // 注意：这里不创建新配置，而是直接使用 Object.class 来获取缓存
             if (log.isDebugEnabled())
-                log.debug("Cache config exists for: {} but valueType is not Object, using Object.class for null caching", cacheName);
+                log.debug("Cache config exists for: {} but valueType is not Object, using Object.class for null caching", name);
         }
         // 如果 cacheNull 为 true，使用 Object.class 作为 Value 类型以支持存储 NULL_PLACEHOLDER
         // 否则使用配置中的 Value 类型
-        Class<?> cacheValueType = cacheNull ? Object.class : config.getValueType();
+        Class<?> cacheValueType = cacheNull ? Object.class : config.getValue();
         @SuppressWarnings("unchecked")
-        Cache<Object, Object> cache = (Cache<Object, Object>) ehCacheManager.getCache(cacheName, (Class<K>) config.getKeyType(), cacheValueType);
+        Cache<Object, Object> cache = (Cache<Object, Object>) ehCacheManager.getCache(name, (Class<K>) config.getKey(), cacheValueType);
         if (cache == null) {
             // 如果缓存不存在，需要创建。如果 cacheNull 为 true，确保使用 Object.class
             // getOrCreateCache 方法已经处理了缓存已存在的情况，这里直接调用即可
-            if (cacheNull && config.getValueType() != Object.class) {
+            if (cacheNull && config.getValue() != Object.class) {
                 // 创建临时配置，使用 Object.class 作为 Value 类型
                 // 使用传入的最大条目数，如果未指定则使用配置中的值
-                long finalMaxEntries = maxEntries != null ? maxEntries : config.getMaxEntries();
-                CacheConfig tempConfig = CacheConfig.builder().cacheName(cacheName).keyType(config.getKeyType()).valueType(Object.class).maxEntries(finalMaxEntries).expireTime(expireTime != null ? expireTime : config.getExpireTime()).timeUnit(expireTimeUnit != null ? expireTimeUnit : config.getTimeUnit()).build();
+                long finalMaxEntries = maxEntries != null ? maxEntries : config.getMax();
+                CacheConfig tempConfig = CacheConfig.builder().name(name).key(config.getKey()).value(Object.class).max(finalMaxEntries).expire(expireTime != null ? expireTime : config.getExpire()).unit(expireTimeUnit != null ? expireTimeUnit : config.getUnit()).build();
                 tempConfig.validate();
-                cache = ehCacheManager.getOrCreateCache(tempConfig);
+                cache = ehCacheManager.getOrCreate(tempConfig);
             } else {
-                cache = ehCacheManager.getOrCreateCache(config);
+                cache = ehCacheManager.getOrCreate(config);
             }
             // 如果创建后仍然为 null（理论上不应该发生，因为 getOrCreateCache 会抛出异常或返回缓存）
             if (cache == null) {
-                log.error("Failed to create or retrieve cache '{}', returning value from supplier", cacheName);
+                log.error("Failed to create or retrieve cache '{}', returning value from supplier", name);
                 return supplier.get();
             }
         }
@@ -461,9 +462,9 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
                 // Redis缓存中存在，写入本地缓存并返回
                 cache.put(key, value);
                 return value;
-            } else if (isRedisEnabled() && redisTemplate != null) {
+            } else if (isRedisEnabled()) {
                 // 检查Redis中是否有null占位符
-                Object redisValue = getRedisValue(cacheName, key);
+                Object redisValue = getRedisValue(name, key);
                 if (redisValue != null && redisValue.toString().equals(NULL_PLACEHOLDER.toString())) {
                     // Redis中有null占位符，写入本地缓存并返回null
                     if (cacheNull) {
@@ -477,16 +478,16 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
             if (value != null) {
                 // 值不为 null，同时写入本地缓存和Redis缓存
                 cache.put(key, value);
-                putToRedis(cacheName, key, value, config);
+                putToRedis(name, key, value, config);
                 // 发布缓存失效消息，通知其他实例清除本地缓存（可选，因为其他实例会从Redis读取）
-                publishCacheInvalidation(cacheName, key.toString(), Invalidation.Operation.PUT);
+                publish(name, key.toString(), Invalidation.Operation.PUT);
                 return value;
             } else if (cacheNull) {
                 // 值为 null 且允许缓存 null，使用占位符缓存
                 cache.put(key, NULL_PLACEHOLDER);
-                putToRedis(cacheName, key, NULL_PLACEHOLDER, config);
+                putToRedis(name, key, NULL_PLACEHOLDER, config);
                 // 发布缓存失效消息（可选）
-                publishCacheInvalidation(cacheName, key.toString(), Invalidation.Operation.PUT);
+                publish(name, key.toString(), Invalidation.Operation.PUT);
                 return null;
             } else {
                 // 值为 null 但不允许缓存 null，直接返回 null
@@ -507,24 +508,24 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
      * 获取缓存值
      * 如果本地缓存不存在，则从Redis中读取并缓存到本地
      *
-     * @param cacheName 缓存名称
-     * @param key       缓存键
-     * @param <K>       Key 类型
-     * @param <V>       Value 类型
+     * @param name 缓存名称
+     * @param key  缓存键
+     * @param <K>  Key 类型
+     * @param <V>  Value 类型
      * @return 缓存值，如果不存在返回 null
      */
     @SuppressWarnings("unchecked")
-    public <K, V> V get(String cacheName, K key) {
-        CacheConfig config = getCacheConfig(cacheName);
+    public <K, V> V get(String name, K key) {
+        CacheConfig config = ehCacheManager.getConfig(name);
         if (config == null) {
             // 如果配置不存在，无法确定类型，直接返回null
             return null;
         }
         // 获取缓存实例
-        Cache<Object, Object> cache = (Cache<Object, Object>) ehCacheManager.getCache(cacheName, (Class<K>) config.getKeyType(), (Class<V>) config.getValueType());
+        Cache<Object, Object> cache = (Cache<Object, Object>) ehCacheManager.getCache(name, (Class<K>) config.getKey(), (Class<V>) config.getValue());
         if (cache == null) {
             // 如果缓存不存在，尝试创建
-            cache = ehCacheManager.getOrCreateCache(config);
+            cache = ehCacheManager.getOrCreate(config);
             if (cache == null) {
                 return null;
             }
@@ -547,9 +548,9 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
             // Redis缓存中存在，写入本地缓存并返回
             cache.put(key, value);
             return value;
-        } else if (isRedisEnabled() && redisTemplate != null) {
+        } else if (isRedisEnabled()) {
             // 检查Redis中是否有null占位符
-            Object redisValue = getRedisValue(cacheName, key);
+            Object redisValue = getRedisValue(name, key);
             if (redisValue != null && redisValue.toString().equals(NULL_PLACEHOLDER.toString())) {
                 // Redis中有null占位符，写入本地缓存并返回null
                 cache.put(key, NULL_PLACEHOLDER);
@@ -563,123 +564,87 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
     /**
      * 设置缓存值
      *
-     * @param cacheName 缓存名称
-     * @param key       缓存键
-     * @param value     缓存值
-     * @param <K>       Key 类型
-     * @param <V>       Value 类型
+     * @param config 缓存配置
+     * @param key    缓存键
+     * @param value  缓存值
+     * @param <K>    Key 类型
+     * @param <V>    Value 类型
      */
     @SuppressWarnings("unchecked")
-    public <K, V> void put(String cacheName, K key, V value) {
-        if (key == null || value == null) {
+    public <K, V> void put(CacheConfig config, K key, V value) {
+        if (key == null || value == null || null == config) {
             return;
         }
-        CacheConfig config = getCacheConfig(cacheName);
-        if (config == null) {
-            // 如果配置不存在，根据实际类型创建配置
-            Class<?> keyType = key.getClass();
-            Class<?> valueType = value.getClass();
-            config = CacheConfig.builder()
-                    .cacheName(cacheName)
-                    .keyType(keyType)
-                    .valueType(valueType)
-                    // 使用默认值：maxEntries=1000, expireTime=10, expireTimeUnit=MINUTES
-                    .build();
-            config.validate();
-            ehCacheManager.registerCacheConfig(config);
-        }
-        Cache<K, V> cache = ehCacheManager.getCache(cacheName,
-                (Class<K>) config.getKeyType(),
-                (Class<V>) config.getValueType());
+        String name = config.getName();
+        Cache<K, V> cache = ehCacheManager.getCache(name, (Class<K>) config.getKey(), (Class<V>) config.getValue());
         if (cache == null) {
-            cache = ehCacheManager.getOrCreateCache(config);
+            cache = ehCacheManager.getOrCreate(config);
         }
         cache.put(key, value);
         // 同时写入Redis缓存
-        putToRedis(cacheName, key, value, config);
+        putToRedis(name, key, value, config);
         // 发布缓存失效消息，通知其他实例清除本地缓存
-        publishCacheInvalidation(cacheName, key.toString(), Invalidation.Operation.PUT);
+        publish(name, key.toString(), Invalidation.Operation.PUT);
     }
 
     /**
      * 移除缓存值
      *
-     * @param cacheName 缓存名称
-     * @param key       缓存键
-     * @param <K>       Key 类型
+     * @param name 缓存名称
+     * @param key  缓存键
+     * @param <K>  Key 类型
      */
-    public <K> void remove(String cacheName, K key) {
-        Cache<K, ?> cache = ehCacheManager.getCache(cacheName);
+    public <K> void remove(String name, K key) {
+        Cache<K, ?> cache = ehCacheManager.getCache(name);
         if (cache != null) {
             cache.remove(key);
         }
         // 同时移除Redis缓存
         if (isRedisEnabled()) {
             try {
-                String redisKey = buildRedisKey(cacheName, key);
+                String redisKey = buildRedisKey(name, key);
                 redisTemplate.delete(redisKey);
             } catch (Exception e) {
                 log.warn("Failed to remove value from Redis cache: {}", e.getMessage());
             }
         }
         // 发布缓存失效消息，通知其他实例清除本地缓存
-        publishCacheInvalidation(cacheName, key != null ? key.toString() : null, Invalidation.Operation.REMOVE);
+        publish(name, key != null ? key.toString() : null, Invalidation.Operation.REMOVE);
     }
 
     /**
      * 清空缓存
      *
-     * @param cacheName 缓存名称
+     * @param name 缓存名称
      */
-    public void clear(String cacheName) {
-        ehCacheManager.clearCache(cacheName);
+    public void clear(String name) {
+        ehCacheManager.clear(name);
         // 同时清空Redis缓存
         if (isRedisEnabled()) {
             try {
-                String pattern = "cache:" + cacheName + ":*";
+                String pattern = "cache:" + name + ":*";
                 redisTemplate.delete(Objects.requireNonNull(redisTemplate.keys(pattern)));
             } catch (Exception e) {
                 log.warn("Failed to clear Redis cache: {}", e.getMessage());
             }
         }
         // 发布缓存失效消息，通知其他实例清空本地缓存
-        publishCacheInvalidation(cacheName, null, Invalidation.Operation.CLEAR);
-    }
-
-    /**
-     * 获取或创建缓存配置
-     * 优先从 EhCacheManager 获取已注册的配置
-     * 如果不存在，根据缓存名称推断类型并创建默认配置
-     *
-     * @param cacheName 缓存名称
-     * @return 缓存配置，如果无法创建返回 null
-     */
-    private CacheConfig getCacheConfig(String cacheName) {
-        if (cacheName == null) {
-            return null;
-        }
-        // 1. 优先从 EhCacheManager 获取已注册的配置
-        CacheConfig registeredConfig = ehCacheManager.getCacheConfig(cacheName);
-        if (registeredConfig != null) {
-            return registeredConfig;
-        }
-        // 2. 如果未注册，尝试根据缓存名称推断类型并创建默认配置
-        return createDefaultCacheConfig(cacheName);
+        publish(name, null, Invalidation.Operation.CLEAR);
     }
 
     /**
      * 根据缓存名称创建默认配置
      * 根据常见的缓存命名模式推断 Key/Value 类型
      *
-     * @param cacheName 缓存名称
+     * @param name 缓存名称
      * @return 默认缓存配置
      */
-    private CacheConfig createDefaultCacheConfig(String cacheName) {
+    private CacheConfig createDefault(String name) {
         // 根据缓存名称推断类型
         Class<?> keyType = String.class; // 默认 Key 类型为 String
         Class<?> valueType = Object.class; // 默认 Value 类型为 Object
         // 根据缓存名称后缀推断 Value 类型
-        String lowerName = cacheName.toLowerCase();
+        String lowerName = name.toLowerCase();
         if (lowerName.endsWith("cache") || lowerName.endsWith("caches")) {
             // 通用缓存，使用 Object 类型
         } else if (lowerName.contains("boolean") || lowerName.contains("bool")) {
@@ -696,12 +661,7 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
             valueType = java.util.Map.class;
         }
         // 创建默认配置
-        CacheConfig config = CacheConfig.builder()
-                .cacheName(cacheName)
-                .keyType(keyType)
-                .valueType(valueType)
-                // 使用 @Builder.Default 设置的默认值：maxEntries=1000, expireTime=60, expireTimeUnit=MINUTES
-                .build();
+        CacheConfig config = CacheConfig.builder().name(name).key(keyType).value(valueType).build();
         config.validate();
         return config;
     }
@@ -712,7 +672,7 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
      */
     @Override
     public void clear() {
-        ehCacheManager.clearAllCaches();
+        ehCacheManager.clear();
         // 同时清空所有Redis缓存
         if (isRedisEnabled()) {
             try {
@@ -730,18 +690,18 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
      * @return 如果Redis启用返回true，否则返回false
      */
     public boolean isRedisEnabled() {
-        return redisUtils.isOpen() && redisTemplate != null;
+        return redisUtils.isOpen();
     }
 
     /**
      * 生成Redis缓存key
      *
-     * @param cacheName 缓存名称
-     * @param key       缓存键
+     * @param name 缓存名称
+     * @param key  缓存键
      * @return Redis key字符串
      */
-    private String buildRedisKey(String cacheName, Object key) {
-        return "cache:" + cacheName + ":" + (key != null ? key.toString() : "null");
+    private String buildRedisKey(String name, Object key) {
+        return "cache:" + name + ":" + (key != null ? key.toString() : "null");
     }
 
     /**
@@ -759,7 +719,7 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
             if (!isRedisEnabled()) {
                 return null;
             }
-            String redisKey = buildRedisKey(config.getCacheName(), key);
+            String redisKey = buildRedisKey(config.getName(), key);
             Object value = redisTemplate.opsForValue().get(redisKey);
             if (value == null) {
                 return null;
@@ -778,16 +738,16 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
     /**
      * 从Redis获取原始值（包括null占位符）
      *
-     * @param cacheName 缓存名称
-     * @param key       缓存键
+     * @param name 缓存名称
+     * @param key  缓存键
      * @return Redis中的值，如果不存在返回null
      */
-    private Object getRedisValue(String cacheName, Object key) {
+    private Object getRedisValue(String name, Object key) {
         try {
             if (!isRedisEnabled()) {
                 return null;
             }
-            String redisKey = buildRedisKey(cacheName, key);
+            String redisKey = buildRedisKey(name, key);
             return redisTemplate.opsForValue().get(redisKey);
         } catch (Exception e) {
             log.warn("Failed to get value from Redis cache: {}", e.getMessage());
@@ -798,23 +758,23 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
     /**
      * 将值写入Redis缓存
      *
-     * @param cacheName 缓存名称
-     * @param key       缓存键
-     * @param value     缓存值
-     * @param config    缓存配置
-     * @param <K>       Key类型
-     * @param <V>       Value类型
+     * @param name   缓存名称
+     * @param key    缓存键
+     * @param value  缓存值
+     * @param config 缓存配置
+     * @param <K>    Key类型
+     * @param <V>    Value类型
      */
-    private <K, V> void putToRedis(String cacheName, K key, V value, CacheConfig config) {
+    private <K, V> void putToRedis(String name, K key, V value, CacheConfig config) {
         try {
             if (!isRedisEnabled()) {
                 return;
             }
-            String redisKey = buildRedisKey(cacheName, key);
+            String redisKey = buildRedisKey(name, key);
             // 直接使用redisTime作为时间值，timeUnit作为时间单位
-            redisTemplate.opsForValue().set(redisKey, value, config.getRedisTime(), config.getTimeUnit());
+            redisTemplate.opsForValue().set(redisKey, value, config.getRedis(), config.getUnit());
             if (log.isDebugEnabled()) {
-                log.debug("Put value to Redis cache: key={}, expireTime={}, expireTimeUnit={}", redisKey, config.getRedisTime(), config.getTimeUnit());
+                log.debug("Put value to Redis cache: key={}, expireTime={}, expireTimeUnit={}", redisKey, config.getRedis(), config.getUnit());
             }
         } catch (Exception e) {
             log.warn("Failed to put value to Redis cache: {}", e.getMessage());

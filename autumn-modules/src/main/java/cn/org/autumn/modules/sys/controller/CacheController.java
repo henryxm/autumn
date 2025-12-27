@@ -62,8 +62,8 @@ public class CacheController {
         try {
             Map<String, Object> status = new HashMap<>();
             status.put("redisEnabled", cacheService.isRedisEnabled());
-            status.put("cacheCount", ehCacheManager.getAllCacheNames().size());
-            status.put("instanceCount", ehCacheManager.getAllCacheInstanceNames().size());
+            status.put("cacheCount", ehCacheManager.getAllNames().size());
+            status.put("instanceCount", ehCacheManager.getAllInstanceNames().size());
             return Response.ok(status);
         } catch (Exception e) {
             log.error("获取缓存状态失败: {}", e.getMessage(), e);
@@ -81,21 +81,21 @@ public class CacheController {
         }
         try {
             List<Map<String, Object>> cacheList = new ArrayList<>();
-            Set<String> cacheNames = ehCacheManager.getAllCacheNames();
+            Set<String> cacheNames = ehCacheManager.getAllNames();
 
             for (String cacheName : cacheNames) {
                 Map<String, Object> cacheInfo = new HashMap<>();
                 cacheInfo.put("name", cacheName);
 
                 // 获取缓存配置
-                CacheConfig config = ehCacheManager.getCacheConfig(cacheName);
+                CacheConfig config = ehCacheManager.getConfig(cacheName);
                 if (config != null) {
-                    cacheInfo.put("keyType", config.getKeyType() != null ? config.getKeyType().getSimpleName() : "Unknown");
-                    cacheInfo.put("valueType", config.getValueType() != null ? config.getValueType().getSimpleName() : "Unknown");
-                    cacheInfo.put("maxEntries", config.getMaxEntries());
-                    cacheInfo.put("expireTime", config.getExpireTime());
-                    cacheInfo.put("redisTime", config.getRedisTime());
-                    cacheInfo.put("timeUnit", config.getTimeUnit() != null ? config.getTimeUnit().name() : "MINUTES");
+                    cacheInfo.put("keyType", config.getKey() != null ? config.getKey().getSimpleName() : "Unknown");
+                    cacheInfo.put("valueType", config.getValue() != null ? config.getValue().getSimpleName() : "Unknown");
+                    cacheInfo.put("maxEntries", config.getMax());
+                    cacheInfo.put("expireTime", config.getExpire());
+                    cacheInfo.put("redisTime", config.getRedis());
+                    cacheInfo.put("timeUnit", config.getUnit() != null ? config.getUnit().name() : "MINUTES");
                 }
 
                 // 获取缓存实例

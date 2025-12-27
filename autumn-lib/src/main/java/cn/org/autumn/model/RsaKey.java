@@ -64,12 +64,12 @@ public class RsaKey implements Serializable {
      *
      * @return true表示已过期，false表示未过期
      */
-    public boolean isExpired() {
+    public boolean expired() {
         return expireTime != null && System.currentTimeMillis() > expireTime;
     }
 
-    public boolean isExpiringSoon() {
-        return isExpiringSoon(10);
+    public boolean expiring() {
+        return expiring(10);
     }
 
     /**
@@ -79,7 +79,7 @@ public class RsaKey implements Serializable {
      * @param bufferMinutes 缓冲时间（分钟），默认5分钟
      * @return true表示即将过期，false表示未过期
      */
-    public boolean isExpiringSoon(int bufferMinutes) {
+    public boolean expiring(int bufferMinutes) {
         if (expireTime == null) {
             return false;
         }

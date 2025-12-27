@@ -53,7 +53,7 @@ public class RsaController {
     public Response<RsaKey> getPublicKey(@Valid @RequestBody Request<?> request, HttpServletRequest servlet) {
         try {
             // 使用客户端提交的UUID获取或生成服务端密钥对
-            RsaKey rsaKey = rsaService.getRsaKey(request.getSession());
+            RsaKey rsaKey = rsaService.getKey(request.getSession());
             // 转换为PublicKey对象返回给客户端
             RsaKey copy = rsaKey.copy();
             if (log.isDebugEnabled()) {
@@ -115,7 +115,7 @@ public class RsaController {
                 return Response.error(Error.RSA_CLIENT_PUBLIC_KEY_NOT_FOUND);
             }
             // 生成或获取AES密钥
-            AesKey aesKey = aesService.getAesKey(session);
+            AesKey aesKey = aesService.getKey(session);
             // 使用客户端公钥加密AES密钥和向量
             String encryptedKey = rsaService.encrypt(aesKey.getKey(), session);
             String encryptedVector = rsaService.encrypt(aesKey.getVector(), session);
@@ -158,12 +158,12 @@ public class RsaController {
             String clientPublicKey = initRequest.getPublicKey();
             Long expireTime = initRequest.getExpireTime();
             // 1. 生成或获取服务端密钥对
-            RsaKey rsaKey = rsaService.getRsaKey(session);
+            RsaKey rsaKey = rsaService.getKey(session);
             RsaKey ras = rsaKey.copy();
             // 2. 保存客户端公钥
             rsaService.savePublicKey(session, clientPublicKey, expireTime);
             // 3. 生成或获取AES密钥
-            AesKey aesKey = aesService.getAesKey(session);
+            AesKey aesKey = aesService.getKey(session);
             AesKey aes = new AesKey();
             aes.setSession(session);
             aes.setKey(rsaService.encrypt(aesKey.getKey(), session));
