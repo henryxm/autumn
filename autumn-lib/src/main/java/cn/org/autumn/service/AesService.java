@@ -184,7 +184,7 @@ public class AesService {
             throw new CodeException(Error.RSA_SESSION_REQUIRED);
         }
         // 直接从缓存获取密钥，不触发更新（客户端可能还在使用旧密钥）
-        AesKey aesKey = cacheService.get(getConfig().getName(), session);
+        AesKey aesKey = cacheService.get(getConfig(), session);
         if (aesKey == null) {
             // 如果缓存中没有，尝试从数据库加载
             aesKey = load(session);
@@ -241,7 +241,7 @@ public class AesService {
             throw new CodeException(Error.RSA_SESSION_REQUIRED);
         }
         // 直接从缓存获取密钥，不触发更新（客户端可能还在使用旧密钥）
-        AesKey aesKey = cacheService.get(getConfig().getName(), session);
+        AesKey aesKey = cacheService.get(getConfig(), session);
         if (aesKey == null) {
             aesKey = load(session);
             if (aesKey == null) {
@@ -286,7 +286,7 @@ public class AesService {
         if (StringUtils.isBlank(session)) {
             return false;
         }
-        AesKey aesKey = cacheService.get(getConfig().getName(), session);
+        AesKey aesKey = cacheService.get(getConfig(), session);
         return aesKey != null && !aesKey.expired();
     }
 

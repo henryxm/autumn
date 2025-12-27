@@ -180,7 +180,7 @@ public class RsaService {
             throw new CodeException(Error.RSA_SESSION_REQUIRED);
         }
         // 从缓存中获取密钥对
-        RsaKey rsaKey = cacheService.get(getServerConfig().getName(), value.getSession());
+        RsaKey rsaKey = cacheService.get(getServerConfig(), value.getSession());
         if (rsaKey == null) {
             rsaKey = load(value.getSession());
             if (null == rsaKey)
@@ -293,7 +293,7 @@ public class RsaService {
         if (StringUtils.isBlank(session)) {
             return null;
         }
-        RsaKey rsaKey = cacheService.get(getClientConfig().getName(), session);
+        RsaKey rsaKey = cacheService.get(getClientConfig(), session);
         if (rsaKey == null) {
             // 如果缓存中没有，尝试从数据库加载
             if (encryptionLoader != null) {

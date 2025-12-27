@@ -383,6 +383,10 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
         return sb.toString();
     }
 
+    public CacheConfig getConfig(String name) {
+        return ehCacheManager.getConfig(name);
+    }
+
     /**
      * 获取缓存值，如果不存在则通过 supplier 获取并缓存
      * 支持指定 Key 和 Value 类型，以及过期时间
@@ -504,23 +508,26 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
         }
     }
 
+    public <K, V> V get(String name, K key) {
+        CacheConfig config = ehCacheManager.getConfig(name);
+        return get(config, key);
+    }
+
     /**
      * 获取缓存值
      * 如果本地缓存不存在，则从Redis中读取并缓存到本地
      *
-     * @param name 缓存名称
-     * @param key  缓存键
-     * @param <K>  Key 类型
-     * @param <V>  Value 类型
+     * @param config 缓存名称
+     * @param key    缓存键
+     * @param <K>    Key 类型
+     * @param <V>    Value 类型
      * @return 缓存值，如果不存在返回 null
      */
     @SuppressWarnings("unchecked")
-    public <K, V> V get(String name, K key) {
-        CacheConfig config = ehCacheManager.getConfig(name);
-        if (config == null) {
-            // 如果配置不存在，无法确定类型，直接返回null
+    public <K, V> V get(CacheConfig config, K key) {
+        if (null == config)
             return null;
-        }
+        String name = config.getName();
         // 获取缓存实例
         Cache<Object, Object> cache = (Cache<Object, Object>) ehCacheManager.getCache(name, (Class<K>) config.getKey(), (Class<V>) config.getValue());
         if (cache == null) {

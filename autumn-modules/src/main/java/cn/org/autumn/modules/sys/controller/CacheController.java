@@ -35,7 +35,7 @@ public class CacheController {
     @Autowired
     private EhCacheManager ehCacheManager;
 
-    @Autowired(required = false)
+    @Autowired
     private RedisTemplate<String, Object> redisTemplate;
 
     @Autowired
@@ -82,11 +82,9 @@ public class CacheController {
         try {
             List<Map<String, Object>> cacheList = new ArrayList<>();
             Set<String> cacheNames = ehCacheManager.getAllNames();
-
             for (String cacheName : cacheNames) {
                 Map<String, Object> cacheInfo = new HashMap<>();
                 cacheInfo.put("name", cacheName);
-
                 // 获取缓存配置
                 CacheConfig config = ehCacheManager.getConfig(cacheName);
                 if (config != null) {
@@ -97,7 +95,6 @@ public class CacheController {
                     cacheInfo.put("redisTime", config.getRedis());
                     cacheInfo.put("timeUnit", config.getUnit() != null ? config.getUnit().name() : "MINUTES");
                 }
-
                 // 获取缓存实例
                 Cache<?, ?> cache = ehCacheManager.getCache(cacheName);
                 if (cache != null) {
@@ -108,10 +105,9 @@ public class CacheController {
                     cacheInfo.put("size", 0);
                     cacheInfo.put("exists", false);
                 }
-
                 // 检查Redis中的缓存数量
                 int redisKeyCount = 0;
-                if (cacheService.isRedisEnabled() && redisTemplate != null) {
+                if (cacheService.isRedisEnabled()) {
                     try {
                         String pattern = "cache:" + cacheName + ":*";
                         Set<String> keys = redisTemplate.keys(pattern);
@@ -124,10 +120,8 @@ public class CacheController {
 
                 cacheList.add(cacheInfo);
             }
-
             // 按名称排序
             cacheList.sort(Comparator.comparing(m -> (String) m.get("name")));
-
             return Response.ok(cacheList);
         } catch (Exception e) {
             log.error("获取缓存列表失败: {}", e.getMessage(), e);
@@ -138,44 +132,33 @@ public class CacheController {
     /**
      * 获取指定缓存的键列表
      */
-    @GetMapping("/keys/{cacheName}")
-    public Response<Map<String, Object>> getCacheKeys(
-            @PathVariable String cacheName,
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "20") int size) {
+    @GetMapping("/keys/{name}")
+    public Response<Map<String, Object>> getCacheKeys(@PathVariable String name, @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "20") int size) {
         if (!checkPermission()) {
             return Response.fail(null, "无权限访问");
         }
         try {
             Map<String, Object> result = new HashMap<>();
             List<Map<String, Object>> keys = new ArrayList<>();
-
             // 从Redis获取键列表
-            if (cacheService.isRedisEnabled() && redisTemplate != null) {
+            if (cacheService.isRedisEnabled()) {
                 try {
-                    String pattern = "cache:" + cacheName + ":*";
+                    String pattern = "cache:" + name + ":*";
                     Set<String> redisKeys = redisTemplate.keys(pattern);
                     if (redisKeys != null) {
                         int total = redisKeys.size();
                         int start = (page - 1) * size;
                         int end = Math.min(start + size, total);
-
-                        List<String> sortedKeys = redisKeys.stream()
-                                .sorted()
-                                .collect(Collectors.toList());
-
+                        List<String> sortedKeys = redisKeys.stream().sorted().collect(Collectors.toList());
                         for (int i = start; i < end && i < sortedKeys.size(); i++) {
                             String redisKey = sortedKeys.get(i);
-                            String key = redisKey.substring(("cache:" + cacheName + ":").length());
-
+                            String key = redisKey.substring(("cache:" + name + ":").length());
                             Map<String, Object> keyInfo = new HashMap<>();
                             keyInfo.put("key", key);
                             keyInfo.put("redisKey", redisKey);
-
                             // 获取键的TTL
                             Long ttl = redisTemplate.getExpire(redisKey);
                             keyInfo.put("ttl", ttl != null ? ttl : -1);
-
                             // 获取值的大小（估算）
                             try {
                                 Object value = redisTemplate.opsForValue().get(redisKey);
@@ -191,7 +174,6 @@ public class CacheController {
 
                             keys.add(keyInfo);
                         }
-
                         result.put("total", total);
                         result.put("page", page);
                         result.put("size", size);
@@ -211,7 +193,6 @@ public class CacheController {
                 result.put("page", page);
                 result.put("size", size);
             }
-
             result.put("keys", keys);
             return Response.ok(result);
         } catch (Exception e) {
@@ -223,16 +204,14 @@ public class CacheController {
     /**
      * 获取缓存键的值
      */
-    @GetMapping("/value/{cacheName}")
-    public Response<Map<String, Object>> getCacheValue(
-            @PathVariable String cacheName,
-            @RequestParam String key) {
+    @GetMapping("/value/{name}")
+    public Response<Map<String, Object>> getCacheValue(@PathVariable String name, @RequestParam String key) {
         if (!checkPermission()) {
             return Response.fail(null, "无权限访问");
         }
         try {
             Map<String, Object> result = new HashMap<>();
-            Object value = cacheService.get(cacheName, key);
+            Object value = cacheService.get(name, key);
             result.put("key", key);
             result.put("value", value);
             result.put("valueType", value != null ? value.getClass().getName() : "null");
@@ -247,15 +226,13 @@ public class CacheController {
     /**
      * 删除缓存键
      */
-    @DeleteMapping("/key/{cacheName}")
-    public Response<String> deleteCacheKey(
-            @PathVariable String cacheName,
-            @RequestParam String key) {
+    @DeleteMapping("/key/{name}")
+    public Response<String> deleteCacheKey(@PathVariable String name, @RequestParam String key) {
         if (!checkPermission()) {
             return Response.fail("无权限访问");
         }
         try {
-            cacheService.remove(cacheName, key);
+            cacheService.remove(name, key);
             return Response.ok("删除成功");
         } catch (Exception e) {
             log.error("删除缓存键失败: {}", e.getMessage(), e);
@@ -266,10 +243,8 @@ public class CacheController {
     /**
      * 批量删除缓存键
      */
-    @DeleteMapping("/keys/{cacheName}")
-    public Response<String> deleteCacheKeys(
-            @PathVariable String cacheName,
-            @RequestBody List<String> keys) {
+    @DeleteMapping("/keys/{name}")
+    public Response<String> deleteCacheKeys(@PathVariable String name, @RequestBody List<String> keys) {
         if (!checkPermission()) {
             return Response.fail("无权限访问");
         }
@@ -277,10 +252,10 @@ public class CacheController {
             int count = 0;
             for (String key : keys) {
                 try {
-                    cacheService.remove(cacheName, key);
+                    cacheService.remove(name, key);
                     count++;
                 } catch (Exception e) {
-                    log.warn("删除缓存键失败: cacheName={}, key={}, error={}", cacheName, key, e.getMessage());
+                    log.warn("删除缓存键失败: cacheName={}, key={}, error={}", name, key, e.getMessage());
                 }
             }
             return Response.ok("成功删除 " + count + " 个键");
@@ -293,13 +268,13 @@ public class CacheController {
     /**
      * 清空指定缓存
      */
-    @DeleteMapping("/clear/{cacheName}")
-    public Response<String> clearCache(@PathVariable String cacheName) {
+    @DeleteMapping("/clear/{name}")
+    public Response<String> clearCache(@PathVariable String name) {
         if (!checkPermission()) {
             return Response.fail("无权限访问");
         }
         try {
-            cacheService.clear(cacheName);
+            cacheService.clear(name);
             return Response.ok("清空缓存成功");
         } catch (Exception e) {
             log.error("清空缓存失败: {}", e.getMessage(), e);
@@ -327,45 +302,33 @@ public class CacheController {
     /**
      * 搜索缓存键
      */
-    @GetMapping("/search/{cacheName}")
-    public Response<Map<String, Object>> searchCacheKeys(
-            @PathVariable String cacheName,
-            @RequestParam String pattern,
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "20") int size) {
+    @GetMapping("/search/{name}")
+    public Response<Map<String, Object>> searchCacheKeys(@PathVariable String name, @RequestParam String pattern, @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "20") int size) {
         if (!checkPermission()) {
             return Response.fail(null, "无权限访问");
         }
         try {
             Map<String, Object> result = new HashMap<>();
             List<Map<String, Object>> keys = new ArrayList<>();
-
             // 从Redis搜索键
-            if (cacheService.isRedisEnabled() && redisTemplate != null) {
+            if (cacheService.isRedisEnabled()) {
                 try {
                     // 将通配符模式转换为Redis模式
-                    String redisPattern = "cache:" + cacheName + ":" + pattern.replace("*", "*");
+                    String redisPattern = "cache:" + name + ":" + pattern.replace("*", "*");
                     Set<String> redisKeys = redisTemplate.keys(redisPattern);
                     if (redisKeys != null) {
                         int total = redisKeys.size();
                         int start = (page - 1) * size;
                         int end = Math.min(start + size, total);
-
-                        List<String> sortedKeys = redisKeys.stream()
-                                .sorted()
-                                .collect(Collectors.toList());
-
+                        List<String> sortedKeys = redisKeys.stream().sorted().collect(Collectors.toList());
                         for (int i = start; i < end && i < sortedKeys.size(); i++) {
                             String redisKey = sortedKeys.get(i);
-                            String key = redisKey.substring(("cache:" + cacheName + ":").length());
-
+                            String key = redisKey.substring(("cache:" + name + ":").length());
                             Map<String, Object> keyInfo = new HashMap<>();
                             keyInfo.put("key", key);
                             keyInfo.put("redisKey", redisKey);
-
                             Long ttl = redisTemplate.getExpire(redisKey);
                             keyInfo.put("ttl", ttl != null ? ttl : -1);
-
                             try {
                                 Object value = redisTemplate.opsForValue().get(redisKey);
                                 if (value != null) {
@@ -380,7 +343,6 @@ public class CacheController {
 
                             keys.add(keyInfo);
                         }
-
                         result.put("total", total);
                         result.put("page", page);
                         result.put("size", size);
@@ -400,7 +362,6 @@ public class CacheController {
                 result.put("page", page);
                 result.put("size", size);
             }
-
             result.put("keys", keys);
             return Response.ok(result);
         } catch (Exception e) {

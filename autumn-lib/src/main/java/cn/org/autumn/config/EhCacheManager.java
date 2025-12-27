@@ -4,19 +4,23 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.ehcache.Cache;
 import org.ehcache.CacheManager;
+import org.ehcache.config.ResourcePools;
 import org.ehcache.config.builders.CacheConfigurationBuilder;
 import org.ehcache.config.builders.CacheManagerBuilder;
 import org.ehcache.config.builders.ResourcePoolsBuilder;
 import org.ehcache.config.units.EntryUnit;
 import org.ehcache.config.units.MemoryUnit;
-import org.ehcache.expiry.Duration;
-import org.ehcache.expiry.Expirations;
+import org.ehcache.expiry.ExpiryPolicy;
+import org.ehcache.config.builders.ExpiryPolicyBuilder;
+
+import java.time.Duration;
+
 import org.springframework.stereotype.Component;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * EhCache 缓存管理器
@@ -24,41 +28,16 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Slf4j
 @Component
-public class EhCacheManager {
-    /**
-     * 默认的 CacheManager 实例
-     */
-    private CacheManager manager;
+public class EhCacheManager implements ClearHandler {
 
-    /**
-     * 缓存配置注册表
-     */
+    private final CacheManager manager = CacheManagerBuilder.newCacheManagerBuilder().build(true);
+
     private final ConcurrentHashMap<String, CacheConfig> configs = new ConcurrentHashMap<>();
 
-    /**
-     * 已创建的缓存实例
-     */
     private final ConcurrentHashMap<String, Cache<?, ?>> caches = new ConcurrentHashMap<>();
 
-    @PostConstruct
-    public void init() {
-        manager = CacheManagerBuilder.newCacheManagerBuilder().build(true);
-    }
+    private final ConcurrentHashMap<String, ReentrantLock> locks = new ConcurrentHashMap<>();
 
-    @PreDestroy
-    public void destroy() {
-        // 关闭所有缓存
-        caches.clear();
-        if (manager != null) {
-            manager.close();
-        }
-    }
-
-    /**
-     * 注册缓存配置
-     *
-     * @param config 缓存配置
-     */
     public void register(CacheConfig config) {
         if (config == null || config.getName() == null) {
             throw new IllegalArgumentException("CacheConfig cannot be null and cacheName is required");
@@ -68,6 +47,7 @@ public class EhCacheManager {
 
     /**
      * 根据配置创建或获取缓存实例
+     * 使用锁机制防止并发创建时的竞态条件
      *
      * @param config 缓存配置
      * @param <K>    Key 类型
@@ -76,94 +56,67 @@ public class EhCacheManager {
      */
     @SuppressWarnings("unchecked")
     public <K, V> Cache<K, V> getOrCreate(CacheConfig config) {
-        if (config == null) {
-            throw new IllegalArgumentException("CacheConfig cannot be null");
+        String name = config.getName();
+        // 第一次检查：快速路径，如果缓存已存在直接返回
+        Cache<?, ?> existing = caches.get(name);
+        if (existing != null) {
+            return (Cache<K, V>) existing;
         }
-        String cacheName = config.getName();
-        // 先检查本地缓存映射中是否已存在
-        Cache<?, ?> existingCache = caches.get(cacheName);
-        if (existingCache != null) {
-            return (Cache<K, V>) existingCache;
-        }
-        // 尝试从 CacheManager 获取已存在的缓存（可能在其他地方已创建）
-        if (manager != null) {
+        // 获取或创建该缓存名称对应的锁
+        ReentrantLock lock = locks.computeIfAbsent(name, k -> new ReentrantLock());
+        lock.lock();
+        try {
+            // 双重检查：在获取锁后再次检查缓存是否已存在（可能被其他线程创建）
+            existing = caches.get(name);
+            if (existing != null) {
+                return (Cache<K, V>) existing;
+            }
+            // 尝试从 CacheManager 获取已存在的缓存（可能在其他地方已创建）
             try {
-                Cache<K, V> managerCache = manager.getCache(cacheName, (Class<K>) config.getKey(), (Class<V>) config.getValue());
-                if (managerCache != null) {
+                Cache<K, V> cache = manager.getCache(name, (Class<K>) config.getKey(), (Class<V>) config.getValue());
+                if (cache != null) {
                     // 缓存已存在，添加到本地映射中
-                    caches.put(cacheName, managerCache);
+                    caches.put(name, cache);
                     // 确保配置已注册
-                    if (!configs.containsKey(cacheName)) {
+                    if (!configs.containsKey(name)) {
                         register(config);
                     }
-                    if (log.isDebugEnabled())
-                        log.debug("Cache '{}' already exists in CacheManager, reusing it", cacheName);
-                    return managerCache;
+                    return cache;
                 }
             } catch (Exception e) {
-                if (log.isDebugEnabled())
-                    log.debug("Cache '{}' not found in CacheManager, will create new one", cacheName);
+                log.error("Cache '{}' not found in CacheManager, will create new one", name);
             }
-        }
-        // 注册配置
-        register(config);
-        // 创建缓存配置
-        CacheConfigurationBuilder<K, V> cacheConfigBuilder = CacheConfigurationBuilder
-                .newCacheConfigurationBuilder(
-                        (Class<K>) config.getKey(),
-                        (Class<V>) config.getValue(),
-                        ResourcePoolsBuilder.heap(config.getMax()))
-                .withExpiry(Expirations.timeToLiveExpiration(
-                        Duration.of(config.getExpire(), config.getUnit())));
-        // 如果启用磁盘持久化
-        if (config.isPersistent() && config.getPath() != null) {
-            cacheConfigBuilder = cacheConfigBuilder.withResourcePools(
-                    ResourcePoolsBuilder.newResourcePoolsBuilder()
-                            .heap(config.getMax(), EntryUnit.ENTRIES)
-                            .disk(100, MemoryUnit.MB, true)
-                            .build());
-        }
-        // 在 CacheManager 中创建缓存
-        if (manager == null) {
-            throw new IllegalStateException("CacheManager is not initialized");
-        }
-        if (!manager.getStatus().toString().equals("AVAILABLE")) {
-            manager.init();
-        }
-        Cache<K, V> cache;
-        try {
-            cache = manager.createCache(cacheName, cacheConfigBuilder.build());
-        } catch (IllegalStateException e) {
-            // 如果缓存已存在（可能由于并发创建），尝试获取已存在的缓存
-            if (e.getMessage() != null && e.getMessage().contains("already exists")) {
-                if (log.isDebugEnabled())
-                    log.debug("Cache '{}' already exists, attempting to retrieve existing cache", cacheName);
-                try {
-                    cache = manager.getCache(cacheName, (Class<K>) config.getKey(), (Class<V>) config.getValue());
-                    if (cache != null) {
-                        // 缓存已存在，添加到本地映射中
-                        caches.put(cacheName, cache);
-                        if (log.isDebugEnabled())
-                            log.debug("Successfully retrieved existing cache '{}'", cacheName);
-                        return cache;
-                    }
-                } catch (Exception ex) {
-                    log.error("Failed to retrieve existing cache '{}': {}", cacheName, ex.getMessage());
-                    throw new IllegalStateException("Cache '" + cacheName + "' already exists but cannot be retrieved", e);
-                }
+            // 注册配置
+            register(config);
+            // 创建缓存配置
+            // 使用新的 ExpiryPolicyBuilder API 替代已废弃的 Expirations
+            // 将 TimeUnit 转换为 java.time.Duration
+            Duration duration = convert(config.getExpire(), config.getUnit());
+            ExpiryPolicy<Object, Object> policy = ExpiryPolicyBuilder.timeToLiveExpiration(duration);
+            CacheConfigurationBuilder<K, V> builder = CacheConfigurationBuilder.newCacheConfigurationBuilder((Class<K>) config.getKey(), (Class<V>) config.getValue(), ResourcePoolsBuilder.heap(config.getMax())).withExpiry(policy);
+            // 如果启用磁盘持久化
+            if (config.isPersistent() && config.getPath() != null) {
+                ResourcePools pools = ResourcePoolsBuilder.newResourcePoolsBuilder().heap(config.getMax(), EntryUnit.ENTRIES).disk(100, MemoryUnit.MB, true).build();
+                builder = builder.withResourcePools(pools);
             }
-            // 其他类型的 IllegalStateException，重新抛出
+            if (!manager.getStatus().toString().equals("AVAILABLE")) {
+                manager.init();
+            }
+            Cache<K, V> cache = manager.createCache(name, builder.build());
+            caches.put(name, cache);
+            return cache;
+        } catch (Exception e) {
+            log.error("创建失败:{}", e.getMessage());
             throw e;
+        } finally {
+            lock.unlock();
         }
-        // 缓存实例
-        caches.put(cacheName, cache);
-        return cache;
     }
 
     /**
      * 根据缓存名称获取缓存实例
      *
-     * @param cacheName 缓存名称
+     * @param name      缓存名称
      * @param keyType   Key 类型
      * @param valueType Value 类型
      * @param <K>       Key 类型
@@ -171,21 +124,21 @@ public class EhCacheManager {
      * @return 缓存实例，如果不存在返回 null
      */
     @SuppressWarnings("unchecked")
-    public <K, V> Cache<K, V> getCache(String cacheName, Class<K> keyType, Class<V> valueType) {
-        Cache<?, ?> cache = caches.get(cacheName);
+    public <K, V> Cache<K, V> getCache(String name, Class<K> keyType, Class<V> valueType) {
+        Cache<?, ?> cache = caches.get(name);
         if (cache != null) {
             return (Cache<K, V>) cache;
         }
         // 尝试从 CacheManager 获取
         if (manager != null) {
             try {
-                Cache<K, V> managerCache = manager.getCache(cacheName, keyType, valueType);
+                Cache<K, V> managerCache = manager.getCache(name, keyType, valueType);
                 if (managerCache != null) {
-                    caches.put(cacheName, managerCache);
+                    caches.put(name, managerCache);
                     return managerCache;
                 }
             } catch (Exception e) {
-                log.debug("Cache {} not found in CacheManager", cacheName);
+                log.debug("Cache {} not found in CacheManager", name);
             }
         }
         return null;
@@ -194,41 +147,41 @@ public class EhCacheManager {
     /**
      * 根据缓存名称获取缓存实例（使用已注册的配置）
      *
-     * @param cacheName 缓存名称
-     * @param <K>       Key 类型
-     * @param <V>       Value 类型
+     * @param name 缓存名称
+     * @param <K>  Key 类型
+     * @param <V>  Value 类型
      * @return 缓存实例，如果不存在返回 null
      */
     @SuppressWarnings("unchecked")
-    public <K, V> Cache<K, V> getCache(String cacheName) {
-        CacheConfig config = configs.get(cacheName);
+    public <K, V> Cache<K, V> getCache(String name) {
+        CacheConfig config = configs.get(name);
         if (config == null) {
             if (log.isDebugEnabled())
-                log.debug("Cache config not found for: {}", cacheName);
+                log.debug("Cache config not found for: {}", name);
             return null;
         }
-        return getCache(cacheName, (Class<K>) config.getKey(), (Class<V>) config.getValue());
+        return getCache(name, (Class<K>) config.getKey(), (Class<V>) config.getValue());
     }
 
     /**
      * 移除缓存
      *
-     * @param cacheName 缓存名称
+     * @param name 缓存名称
      */
-    public void remove(String cacheName) {
-        Cache<?, ?> cache = caches.remove(cacheName);
+    public void remove(String name) {
+        Cache<?, ?> cache = caches.remove(name);
         if (cache != null && manager != null) {
-            manager.removeCache(cacheName);
+            manager.removeCache(name);
         }
     }
 
     /**
      * 清空指定缓存的所有数据
      *
-     * @param cacheName 缓存名称
+     * @param name 缓存名称
      */
-    public void clear(String cacheName) {
-        Cache<?, ?> cache = caches.get(cacheName);
+    public void clear(String name) {
+        Cache<?, ?> cache = caches.get(name);
         if (cache != null) {
             cache.clear();
         }
@@ -239,6 +192,7 @@ public class EhCacheManager {
      * 遍历所有已创建的缓存实例并清空它们
      */
     public void clear() {
+        locks.clear();
         if (caches.isEmpty()) {
             return;
         }
@@ -303,5 +257,33 @@ public class EhCacheManager {
      */
     public Set<String> getAllInstanceNames() {
         return caches.keySet();
+    }
+
+    /**
+     * 将 TimeUnit 转换为 java.time.Duration
+     *
+     * @param amount 时间数量
+     * @param unit   时间单位
+     * @return java.time.Duration
+     */
+    private Duration convert(long amount, TimeUnit unit) {
+        switch (unit) {
+            case NANOSECONDS:
+                return Duration.ofNanos(amount);
+            case MICROSECONDS:
+                return Duration.ofNanos(amount * 1000);
+            case MILLISECONDS:
+                return Duration.ofMillis(amount);
+            case SECONDS:
+                return Duration.ofSeconds(amount);
+            case MINUTES:
+                return Duration.ofMinutes(amount);
+            case HOURS:
+                return Duration.ofHours(amount);
+            case DAYS:
+                return Duration.ofDays(amount);
+            default:
+                return Duration.ofMinutes(amount);
+        }
     }
 }
