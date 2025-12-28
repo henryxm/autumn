@@ -93,7 +93,7 @@ public class SysUserController extends AbstractController {
         String password = user.getPassword();
         ValidatorUtils.validateEntity(user, AddGroup.class);
         sysUserService.save(user);
-        userProfileService.from(user, password, null);
+        userProfileService.from(user);
         return R.ok();
     }
 
@@ -107,7 +107,7 @@ public class SysUserController extends AbstractController {
         String password = user.getPassword();
         ValidatorUtils.validateEntity(user, UpdateGroup.class);
         sysUserService.update(user);
-        userProfileService.from(user, password, null);
+        userProfileService.from(user);
         return R.ok();
     }
 

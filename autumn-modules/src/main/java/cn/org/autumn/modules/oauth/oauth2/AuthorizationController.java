@@ -391,7 +391,7 @@ public class AuthorizationController {
                 Object username = tokenStore.getValue();
                 if (username instanceof SysUserEntity) {
                     SysUserEntity sysUserEntity = (SysUserEntity) username;
-                    UserProfileEntity userProfileEntity = userProfileService.from(sysUserEntity, "", null);
+                    UserProfileEntity userProfileEntity = userProfileService.from(sysUserEntity);
                     username = UserProfile.from(userProfileEntity);
                     userLoginLogService.login(userProfileEntity);
                 }

@@ -48,7 +48,7 @@ public class UserProfileService extends ModuleService<UserProfileDao, UserProfil
     public void init() {
         super.init();
         SysUserEntity sysUserEntity = sysUserService.getByUsername(sysUserService.getAdmin());
-        from(sysUserEntity, sysUserService.getPassword(), null);
+        from(sysUserEntity);
     }
 
     public void updateLoginIp(String uuid, String ip) {
@@ -93,7 +93,9 @@ public class UserProfileService extends ModuleService<UserProfileDao, UserProfil
         }
     }
 
-    public UserProfileEntity from(SysUserEntity sysUserEntity, String password, UserProfile merge) {
+    public UserProfileEntity from(SysUserEntity sysUserEntity) {
+        if (null == sysUserEntity)
+            return null;
         UserProfileEntity userProfileEntity = baseMapper.getByUuid(sysUserEntity.getUuid());
         if (null == userProfileEntity) {
             userProfileEntity = baseMapper.getByUsername(sysUserEntity.getUsername());
@@ -104,20 +106,12 @@ public class UserProfileService extends ModuleService<UserProfileDao, UserProfil
         }
         if (null == userProfileEntity) {
             userProfileEntity = new UserProfileEntity();
-            userProfileEntity.setPassword(password);
             userProfileEntity.setCreateTime(new Date());
             userProfileEntity.setNickname(sysUserEntity.getNickname());
             userProfileEntity.setUsername(sysUserEntity.getUsername());
             userProfileEntity.setMobile(sysUserEntity.getMobile());
             userProfileEntity.setUuid(sysUserEntity.getUuid());
-            userProfileEntity.setIcon("");
-            if (null != merge) {
-                userProfileEntity.setUnionId(merge.getUnionId());
-                userProfileEntity.setOpenId(merge.getOpenId());
-            } else {
-                userProfileEntity.setUnionId(uuid());
-                userProfileEntity.setOpenId(uuid());
-            }
+            userProfileEntity.setIcon(sysUserEntity.getIcon());
             insert(userProfileEntity);
         } else {
             boolean u = false;
@@ -127,10 +121,6 @@ public class UserProfileService extends ModuleService<UserProfileDao, UserProfil
             }
             if ((StringUtils.isNotEmpty(userProfileEntity.getUuid()) && StringUtils.isNotEmpty(sysUserEntity.getUuid())) && !userProfileEntity.getUuid().equals(sysUserEntity.getUuid())) {
                 userProfileEntity.setUuid(sysUserEntity.getUuid());
-                u = true;
-            }
-            if (StringUtils.isNotEmpty(password) && !password.equalsIgnoreCase(userProfileEntity.getPassword())) {
-                userProfileEntity.setPassword(password);
                 u = true;
             }
             if (u)
@@ -156,8 +146,6 @@ public class UserProfileService extends ModuleService<UserProfileDao, UserProfil
                         UserProfileEntity userProfileEntity = baseMapper.getByUuid(sysUserEntity.getUuid());
                         if (null != userProfileEntity) {
                             userProfileEntity.setUuid(userProfile.getUuid());
-                            userProfileEntity.setUnionId(userProfile.getUnionId());
-                            userProfileEntity.setOpenId(userProfile.getOpenId());
                             insertOrUpdate(userProfileEntity);
                         }
                         sysUserEntity.setUuid(userProfile.getUuid());
@@ -167,12 +155,10 @@ public class UserProfileService extends ModuleService<UserProfileDao, UserProfil
                     return;
                 }
             }
-
             UserProfileEntity userProfileEntity = baseMapper.getByUuid(userProfile.getUuid());
             if (null == userProfileEntity) {
-                String randomPassword = Uuid.uuid();
                 sysUserEntity = sysUserService.newUser(userProfile.getUsername(), userProfile.getUuid(), Uuid.uuid(), null);
-                userProfileEntity = from(sysUserEntity, randomPassword, userProfile);
+                userProfileEntity = from(sysUserEntity);
             }
             if (null == sysUserEntity)
                 sysUserEntity = sysUserService.getByUuid(userProfileEntity.getUuid());
