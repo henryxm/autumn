@@ -1,6 +1,7 @@
 package cn.org.autumn.modules.sys.controller;
 
 import cn.org.autumn.annotation.Endpoint;
+import cn.org.autumn.annotation.SkipInterceptor;
 import cn.org.autumn.config.CacheConfig;
 import cn.org.autumn.config.EhCacheManager;
 import cn.org.autumn.model.Response;
@@ -27,6 +28,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/sys/cache")
 @Endpoint(hidden = true)
+@SkipInterceptor
 public class CacheController {
 
     @Autowired

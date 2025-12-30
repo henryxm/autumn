@@ -156,7 +156,6 @@ public class SysPageController implements ErrorController {
     }
 
     @RequestMapping("main.html")
-    @SkipInterceptor
     public String main(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
         return pageFactory.main(httpServletRequest, httpServletResponse, model);
     }

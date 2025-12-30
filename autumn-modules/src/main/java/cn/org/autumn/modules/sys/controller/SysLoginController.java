@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.sys.controller;
 
+import cn.org.autumn.annotation.SkipInterceptor;
 import cn.org.autumn.config.Config;
 import cn.org.autumn.modules.spm.service.SuperPositionModelService;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
@@ -50,6 +51,7 @@ public class SysLoginController {
     UserProfileService userProfileService;
 
     @RequestMapping("captcha.jpg")
+    @SkipInterceptor
     public void captcha(HttpServletResponse response) throws IOException {
         response.setHeader("Cache-Control", "no-store, no-cache");
         response.setContentType("image/jpeg");
@@ -126,6 +128,7 @@ public class SysLoginController {
      * 退出
      */
     @RequestMapping(value = "logout", method = RequestMethod.GET)
+    @SkipInterceptor
     public String logout(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
         ShiroUtils.logout();
         return "redirect:" + pageFactory.logout(httpServletRequest, httpServletResponse, model);

@@ -1,6 +1,7 @@
 package cn.org.autumn.modules.sys.controller;
 
 import cn.org.autumn.annotation.Endpoint;
+import cn.org.autumn.annotation.SkipInterceptor;
 import cn.org.autumn.modules.sys.service.RedisService;
 import cn.org.autumn.modules.sys.service.SysUserRoleService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
@@ -15,6 +16,7 @@ import java.util.HashMap;
 @RestController
 @RequestMapping("/sys/redis")
 @Endpoint(hidden = true)
+@SkipInterceptor
 public class RedisController {
 
     @Autowired
@@ -114,6 +116,7 @@ public class RedisController {
      * 删除多个键
      */
     @DeleteMapping("/keys")
+    @SkipInterceptor
     public Response<String> deleteKeys(@RequestBody List<String> keys) {
         if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
             return Response.fail("无权限访问");
@@ -130,6 +133,7 @@ public class RedisController {
      * 清空指定数据库
      */
     @DeleteMapping("/database/{database}")
+    @SkipInterceptor
     public Response<String> clearDatabase(@PathVariable int database) {
         if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
             return Response.fail("无权限访问");
