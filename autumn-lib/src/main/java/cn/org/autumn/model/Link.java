@@ -22,7 +22,7 @@ public class Link implements Serializable {
     @Schema(name = "地址")
     private String url;
 
-    @Schema(name = "标题")
+    @Schema(name = "图标")
     private String icon;
 
     @Schema(name = "标题")
