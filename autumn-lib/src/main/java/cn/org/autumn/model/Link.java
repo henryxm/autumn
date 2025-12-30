@@ -20,8 +20,8 @@ public class Link implements Serializable {
     @Schema(name = "地址")
     private String url = "";
 
-    @Schema(name = "说明")
-    private String describe = "";
+    @Schema(name = "标题")
+    private String title = "";
 
     public Link(String url) {
         this.url = url;
