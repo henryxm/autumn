@@ -2,6 +2,7 @@ package cn.org.autumn.modules.spm.interceptor;
 
 import cn.org.autumn.config.InterceptorHandler;
 import cn.org.autumn.modules.spm.service.SuperPositionModelService;
+import cn.org.autumn.utils.InterceptorUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
@@ -21,6 +22,9 @@ public class SpmInterceptor extends HandlerInterceptorAdapter implements Interce
     SuperPositionModelService superPositionModelService;
 
     public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, @Nullable ModelAndView modelAndView) throws Exception {
+        if (InterceptorUtils.skip(handler, this.getClass())) {
+            return;
+        }
         if (null != modelAndView) {
             ModelMap modelMap = modelAndView.getModelMap();
             Map<String, String> smps = superPositionModelService.getSpmListForHtml();

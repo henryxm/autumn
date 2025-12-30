@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.sys.controller;
 
+import cn.org.autumn.annotation.SkipInterceptor;
 import cn.org.autumn.modules.client.entity.WebAuthenticationEntity;
 import cn.org.autumn.modules.client.service.WebAuthenticationService;
 import cn.org.autumn.modules.spm.service.SuperPositionModelService;
@@ -126,6 +127,7 @@ public class SysPageController implements ErrorController {
     }
 
     @RequestMapping("login")
+    @SkipInterceptor
     public String loginOauth(HttpServletRequest request, HttpServletResponse httpServletResponse, Model model) {
         Enumeration<String> enumeration = request.getParameterNames();
         if (!enumeration.hasMoreElements()) {
@@ -154,37 +156,44 @@ public class SysPageController implements ErrorController {
     }
 
     @RequestMapping("main.html")
+    @SkipInterceptor
     public String main(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
         return pageFactory.main(httpServletRequest, httpServletResponse, model);
     }
 
     @RequestMapping("loading.html")
+    @SkipInterceptor
     public String loading(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
         return pageFactory.loading(httpServletRequest, httpServletResponse, model);
     }
 
     @RequestMapping({"404.html", "404"})
+    @SkipInterceptor
     public String _404(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
         return pageFactory._404(httpServletRequest, httpServletResponse, model);
     }
 
     @RequestMapping({"500.html", "500"})
+    @SkipInterceptor
     public String _500(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
         return pageFactory._500(httpServletRequest, httpServletResponse, model);
     }
 
     @RequestMapping({"505.html", "505"})
+    @SkipInterceptor
     public String _505(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
         return pageFactory._505(httpServletRequest, httpServletResponse, model);
     }
 
     @RequestMapping({"error.html", "error"})
+    @SkipInterceptor
     public String error(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
         return pageFactory.error(httpServletRequest, httpServletResponse, model);
     }
 
     @RequestMapping({"plugin.html", "plugin"})
     @ResponseBody
+    @SkipInterceptor
     public Object plugin(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
         String unload = httpServletRequest.getParameter("load");
         if (StringUtils.isNotBlank(unload) && unload.equals("unload")) {
@@ -196,6 +205,7 @@ public class SysPageController implements ErrorController {
 
     @RequestMapping({"classpath.html", "classpath"})
     @ResponseBody
+    @SkipInterceptor
     public String getClassPath() {
         if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
             return "";
@@ -204,6 +214,7 @@ public class SysPageController implements ErrorController {
 
     @RequestMapping({"firewall.html", "firewall"})
     @ResponseBody
+    @SkipInterceptor
     public WallDefault wall(Boolean open, Boolean white, Boolean black, Boolean host, Boolean visit, Boolean url) {
 
         if (null != open)
@@ -223,6 +234,7 @@ public class SysPageController implements ErrorController {
 
     @RequestMapping(value = "threading", method = RequestMethod.POST)
     @ResponseBody
+    @SkipInterceptor
     public Map<String, Object> postThreading() {
         if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
             return null;
@@ -242,6 +254,7 @@ public class SysPageController implements ErrorController {
     }
 
     @RequestMapping({"threading.html"})
+    @SkipInterceptor
     public String getThreading(Model model) {
         if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
             return "404";
@@ -249,6 +262,7 @@ public class SysPageController implements ErrorController {
     }
 
     @RequestMapping({"logger.html"})
+    @SkipInterceptor
     public String logger(Model model) {
         if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
             return "404";
@@ -257,6 +271,7 @@ public class SysPageController implements ErrorController {
     }
 
     @RequestMapping({"log.html"})
+    @SkipInterceptor
     public String log(Model model) {
         if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
             return "404";
@@ -265,6 +280,7 @@ public class SysPageController implements ErrorController {
     }
 
     @RequestMapping({"redis.html"})
+    @SkipInterceptor
     public String redis(HttpServletResponse response) {
         if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
             return "404";
@@ -272,6 +288,7 @@ public class SysPageController implements ErrorController {
     }
 
     @RequestMapping({"exec.html"})
+    @SkipInterceptor
     public String exec(Model model) {
         if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
             return "404";
@@ -279,6 +296,7 @@ public class SysPageController implements ErrorController {
     }
 
     @RequestMapping({"cache.html"})
+    @SkipInterceptor
     public String cache(Model model) {
         if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
             return "404";
@@ -286,6 +304,7 @@ public class SysPageController implements ErrorController {
     }
 
     @RequestMapping(value = {"clear.html"}, method = RequestMethod.GET)
+    @SkipInterceptor
     public String clearPage(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
         if (ShiroUtils.isLogin()) {
             if (sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
@@ -297,6 +316,7 @@ public class SysPageController implements ErrorController {
 
     @ResponseBody
     @RequestMapping(value = {"clear"}, method = RequestMethod.POST)
+    @SkipInterceptor
     public String clearPost(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) throws Exception {
         if (ShiroUtils.isLogin()) {
             if (sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
@@ -308,6 +328,7 @@ public class SysPageController implements ErrorController {
     }
 
     @RequestMapping(value = {"reinit.html"}, method = RequestMethod.GET)
+    @SkipInterceptor
     public String reinit(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
         if (ShiroUtils.isLogin()) {
             if (sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
@@ -319,6 +340,7 @@ public class SysPageController implements ErrorController {
 
     @ResponseBody
     @RequestMapping(value = {"reinit"}, method = RequestMethod.POST)
+    @SkipInterceptor
     public String reinitPost(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) throws Exception {
         if (ShiroUtils.isLogin()) {
             if (sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
@@ -330,6 +352,7 @@ public class SysPageController implements ErrorController {
     }
 
     @RequestMapping(value = {"wall.html"}, method = RequestMethod.GET)
+    @SkipInterceptor
     public String wall(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
         if (ShiroUtils.isLogin()) {
             if (sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {

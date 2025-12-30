@@ -12,6 +12,7 @@ import cn.org.autumn.modules.usr.entity.UserTokenEntity;
 import cn.org.autumn.modules.usr.service.UserProfileService;
 import cn.org.autumn.modules.usr.service.UserTokenService;
 import cn.org.autumn.utils.IPUtils;
+import cn.org.autumn.utils.InterceptorUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -99,6 +100,9 @@ public class AuthorizationInterceptor extends HandlerInterceptorAdapter implemen
 
     public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, @Nullable ModelAndView view) throws Exception {
         try {
+            if (InterceptorUtils.skip(handler, this.getClass())) {
+                return;
+            }
             if (null != view) {
                 SysUserEntity current = (SysUserEntity) ShiroUtils.getSubject().getPrincipal();
                 if (null != current) {

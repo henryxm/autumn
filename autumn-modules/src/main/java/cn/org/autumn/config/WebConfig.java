@@ -12,6 +12,7 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestResponseBody
 import org.springframework.web.servlet.config.annotation.*;
 
 import javax.annotation.PostConstruct;
+import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
@@ -73,6 +74,11 @@ public class WebConfig implements WebMvcConfigurer {
     public void addInterceptors(@NonNull InterceptorRegistry registry) {
         if (null == interceptorHandlers || interceptorHandlers.isEmpty())
             return;
+
+        // 统一的排除路径，所有拦截器都会排除这些路径
+        List<String> commonExcludePatterns = new ArrayList<>();
+        commonExcludePatterns.add("/favicon.ico");
+
         for (InterceptorHandler interceptorHandler : interceptorHandlers) {
             if (null == interceptorHandler.getHandlerInterceptor())
                 continue;
@@ -80,8 +86,15 @@ public class WebConfig implements WebMvcConfigurer {
             if (null != interceptorHandler.getPatterns() && !interceptorHandler.getPatterns().isEmpty()) {
                 tmp.addPathPatterns(interceptorHandler.getPatterns());
             }
+
+            // 合并通用排除路径和拦截器自定义的排除路径
+            List<String> allExcludePatterns = new ArrayList<>(commonExcludePatterns);
             if (null != interceptorHandler.getExcludePatterns() && !interceptorHandler.getExcludePatterns().isEmpty()) {
-                tmp.excludePathPatterns(interceptorHandler.getExcludePatterns());
+                allExcludePatterns.addAll(interceptorHandler.getExcludePatterns());
+            }
+
+            if (!allExcludePatterns.isEmpty()) {
+                tmp.excludePathPatterns(allExcludePatterns);
             }
         }
     }

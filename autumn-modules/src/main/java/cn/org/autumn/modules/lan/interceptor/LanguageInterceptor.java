@@ -4,6 +4,7 @@ import cn.org.autumn.config.Config;
 import cn.org.autumn.config.InterceptorHandler;
 import cn.org.autumn.modules.lan.service.Language;
 import cn.org.autumn.modules.lan.service.LanguageService;
+import cn.org.autumn.utils.InterceptorUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -69,7 +70,9 @@ public class LanguageInterceptor extends HandlerInterceptorAdapter implements In
     }
 
     public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, @Nullable ModelAndView modelAndView) throws Exception {
-        String uri = request.getRequestURI();
+        if (InterceptorUtils.skip(handler, this.getClass())) {
+            return;
+        }
         if (null != modelAndView) {
             ModelMap modelMap = modelAndView.getModelMap();
             String locale = null;
