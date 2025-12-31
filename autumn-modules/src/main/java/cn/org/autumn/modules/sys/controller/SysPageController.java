@@ -127,7 +127,6 @@ public class SysPageController implements ErrorController {
     }
 
     @RequestMapping("login")
-    @SkipInterceptor
     public String loginOauth(HttpServletRequest request, HttpServletResponse httpServletResponse, Model model) {
         Enumeration<String> enumeration = request.getParameterNames();
         if (!enumeration.hasMoreElements()) {
