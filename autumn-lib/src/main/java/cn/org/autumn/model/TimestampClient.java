@@ -10,12 +10,10 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class Request<T> extends TimestampClient {
+public class TimestampClient extends Client {
+    @Schema(name = "秘钥过期时间")
+    private long expire = 0;
 
-    @Schema(name = "数据实体")
-    private T data;
-
-    public T data() {
-        return data;
-    }
+    @Schema(name = "客户端时间戳")
+    private long timestamp = 0;
 }
