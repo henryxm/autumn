@@ -204,6 +204,11 @@ public class AesService {
                 log.error("加密为空:{}, 秘钥:{}, 向量:{}, 内容:{}", session, aesKey.getKey(), aesKey.getVector(), data);
                 throw new CodeException(Error.AES_ENCRYPT_FAILED);
             }
+            // 检查密钥是否已过期（但仍在服务端冗余保留时间内）
+            if (aesKey.expired() && log.isWarnEnabled()) {
+                log.warn("密钥过期(加密):{}, 过期时间:{}", session, new Date(aesKey.getExpireTime()));
+                log.warn("加密内容:{}, 秘钥:{}, 向量:{}, 内容:{}", session, aesKey.getKey(), aesKey.getVector(), data);
+            }
             return encrypted;
         } catch (CodeException e) {
             throw e;
@@ -252,10 +257,6 @@ public class AesService {
             log.error("AES密钥格式错误，密钥为空，Session: {}", session);
             throw new CodeException(Error.AES_KEY_FORMAT_ERROR);
         }
-        // 检查密钥是否已过期（但仍在服务端冗余保留时间内）
-        if (aesKey.expired()) {
-            log.warn("密钥过期，Session: {}, 过期时间: {}", session, aesKey.getExpireTime());
-        }
         try {
             // AES工具类使用Base64编码的密钥和向量
             // 密钥和向量已经是Base64编码，直接使用
@@ -263,6 +264,11 @@ public class AesService {
             if (StringUtils.isBlank(decrypted)) {
                 log.error("解密为空:{}, 秘钥:{}, 向量:{}, 内容:{}", session, aesKey.getKey(), aesKey.getVector(), data);
                 throw new CodeException(Error.AES_DECRYPTED_DATA_EMPTY);
+            }
+            // 检查密钥是否已过期（但仍在服务端冗余保留时间内）
+            if (aesKey.expired() && log.isWarnEnabled()) {
+                log.warn("密钥过期(解密):{}, 过期时间:{}", session, new Date(aesKey.getExpireTime()));
+                log.warn("解密内容:{}, 秘钥:{}, 向量:{}, 内容:{}", session, aesKey.getKey(), aesKey.getVector(), decrypted);
             }
             return decrypted;
         } catch (CodeException e) {
