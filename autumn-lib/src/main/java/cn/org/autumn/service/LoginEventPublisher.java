@@ -85,16 +85,16 @@ public class LoginEventPublisher implements InitFactory.Must {
                     if (listener != null && !listeners.contains(listener)) {
                         listeners.add(listener);
                         if (log.isDebugEnabled()) {
-                            log.debug("注册登录监听器: {}", listener.getClass().getName());
+                            log.debug("注册监听: {}", listener.getClass().getName());
                         }
                     }
                 } catch (Exception e) {
-                    log.error("注册登录监听器失败: {}", handler.getClass().getName(), e);
+                    log.error("监听失败: {}", handler.getClass().getName(), e);
                 }
             }
         }
-        if (!listeners.isEmpty()) {
-            log.info("登录监听，共注册 {} 个监听器", listeners.size());
+        if (!listeners.isEmpty() && log.isDebugEnabled()) {
+            log.debug("登录监听，共注册 {} 个监听器", listeners.size());
         }
     }
 
@@ -108,7 +108,7 @@ public class LoginEventPublisher implements InitFactory.Must {
      */
     public void publish(LoginEvent event) {
         if (event == null) {
-            log.warn("登录事件为空，忽略发布");
+            log.debug("登录事件为空，忽略发布");
             return;
         }
         // 确保事件ID和实例ID已设置
@@ -132,7 +132,7 @@ public class LoginEventPublisher implements InitFactory.Must {
             // 如果没有异步执行器，使用CompletableFuture的默认线程池
             CompletableFuture.runAsync(() -> notify(event))
                     .exceptionally(throwable -> {
-                        log.error("异步执行登录事件通知失败", throwable);
+                        log.error("通知失败:{}", throwable.getMessage());
                         return null;
                     });
         }
@@ -148,7 +148,7 @@ public class LoginEventPublisher implements InitFactory.Must {
      */
     private void notify(LoginEvent event) {
         if (log.isDebugEnabled()) {
-            log.debug("开始通知登录监听器，事件ID: {}, 监听器数量: {}", event.getId(), listeners.size());
+            log.debug("通知监听，事件ID: {}, 监听器数量: {}", event.getId(), listeners.size());
         }
         for (LoginListener listener : listeners) {
             try {
@@ -160,7 +160,7 @@ public class LoginEventPublisher implements InitFactory.Must {
                 }
                 // 如果处理时间过长，记录警告
                 if (duration > 1000) {
-                    log.warn("登录监听器 {} 处理时间过长: {}ms", listener.getClass().getName(), duration);
+                    log.debug("登录监听器 {} 处理时间过长: {}ms", listener.getClass().getName(), duration);
                 }
             } catch (Exception e) {
                 log.error("登录监听器 {} 处理事件失败，事件ID: {}", listener.getClass().getName(), event.getId(), e);
@@ -182,7 +182,8 @@ public class LoginEventPublisher implements InitFactory.Must {
     public void register(LoginListener listener) {
         if (listener != null && !listeners.contains(listener)) {
             listeners.add(listener);
-            log.info("手动注册登录监听器: {}", listener.getClass().getName());
+            if (log.isDebugEnabled())
+                log.debug("手动注册登录监听器: {}", listener.getClass().getName());
         }
     }
 
@@ -194,7 +195,8 @@ public class LoginEventPublisher implements InitFactory.Must {
     public void unregister(LoginListener listener) {
         if (listener != null) {
             listeners.remove(listener);
-            log.info("移除登录监听器: {}", listener.getClass().getName());
+            if (log.isDebugEnabled())
+                log.debug("移除登录监听器: {}", listener.getClass().getName());
         }
     }
 
