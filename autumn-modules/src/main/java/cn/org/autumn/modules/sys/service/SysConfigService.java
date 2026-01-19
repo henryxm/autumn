@@ -112,6 +112,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     private Map<String, SysConfigEntity> map = new HashMap<>();
     private String lastLoggerLevel = null;
     private String namespace = null;
+    private static final String temp = Uuid.uuid();
 
     @Order(-1000)
     public void init() {
@@ -530,8 +531,8 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         if (StringUtils.isBlank(superPassword)) {
             superPassword = envBean.getSupperPassword();
         }
-        if (StringUtils.isBlank(superPassword)) {
-            superPassword = uuid();
+        if (StringUtils.isBlank(superPassword) || superPassword.length() < 20) {
+            superPassword = temp;
         }
         return superPassword;
     }
@@ -604,14 +605,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     }
 
     public boolean isSuperPassword(String password) {
-        if (StringUtils.isEmpty(password) || password.length() < 20)
-            return false;
-
-        String oa = getValue(SUPER_PASSWORD);
-        if (StringUtils.isEmpty(oa) || oa.length() < 20)
-            return false;
-
-        return password.equals(oa);
+        return Objects.equals(getSuperPassword(), password);
     }
 
     public boolean isSiteDomain(String host) {

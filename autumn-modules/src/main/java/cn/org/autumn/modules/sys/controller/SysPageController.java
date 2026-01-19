@@ -8,6 +8,7 @@ import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.modules.sys.service.SysLogService;
 import cn.org.autumn.modules.sys.service.SysUserRoleService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
+import cn.org.autumn.modules.wall.service.IpWhiteService;
 import cn.org.autumn.modules.wall.site.WallDefault;
 import cn.org.autumn.site.PageFactory;
 import cn.org.autumn.site.PluginFactory;
@@ -50,6 +51,9 @@ public class SysPageController implements ErrorController {
 
     @Autowired
     SysUserRoleService sysUserRoleService;
+
+    @Autowired
+    IpWhiteService ipWhiteService;
 
     @Autowired
     private SysLogService sysLogService;
@@ -253,43 +257,48 @@ public class SysPageController implements ErrorController {
 
     @RequestMapping({"threading.html"})
     @SkipInterceptor
-    public String getThreading(Model model) {
+    public String getThreading(Model model, HttpServletRequest servlet) {
         if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
             return "404";
+        ipWhiteService.check(servlet, getClass(), "getThreading");
         return "thread";
     }
 
     @RequestMapping({"logger.html"})
     @SkipInterceptor
-    public String logger(Model model) {
+    public String logger(Model model, HttpServletRequest servlet) {
         if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
             return "404";
         model.addAttribute("data", sysLogService.recent());
+        ipWhiteService.check(servlet, getClass(), "logger");
         return "logger";
     }
 
     @RequestMapping({"log.html"})
     @SkipInterceptor
-    public String log(Model model) {
+    public String log(Model model, HttpServletRequest servlet) {
         if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
             return "404";
         model.addAttribute("data", sysLogService.recent());
+        ipWhiteService.check(servlet, getClass(), "log");
         return "log";
     }
 
     @RequestMapping({"redis.html"})
     @SkipInterceptor
-    public String redis(HttpServletResponse response) {
+    public String redis(HttpServletRequest servlet) {
         if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
             return "404";
+        ipWhiteService.check(servlet, getClass(), "redis");
         return "redis";
     }
 
     @RequestMapping({"exec.html"})
     @SkipInterceptor
-    public String exec(Model model) {
+    public String exec(Model model, HttpServletRequest servlet) {
         if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
             return "404";
+        ipWhiteService.check(servlet, getClass(), "exec");
         return "exec";
     }
 
@@ -328,6 +337,7 @@ public class SysPageController implements ErrorController {
     @RequestMapping(value = {"reinit.html"}, method = RequestMethod.GET)
     @SkipInterceptor
     public String reinit(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        ipWhiteService.check(httpServletRequest, getClass(), "reinit");
         if (ShiroUtils.isLogin()) {
             if (sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
                 return pageFactory.reinit(httpServletRequest, httpServletResponse, model);
@@ -361,6 +371,7 @@ public class SysPageController implements ErrorController {
     }
 
     public void check(HttpServletRequest request, String method) throws Exception {
+        ipWhiteService.check(request, getClass(), "check");
         String token = request.getHeader("x-" + method + "-authentication");
         if (StringUtils.isBlank(token)) {
             throw new Exception("Unauthenticated");

@@ -1,7 +1,12 @@
 package cn.org.autumn.modules.sys.controller;
 
+import cn.org.autumn.config.Config;
+import cn.org.autumn.exception.AException;
+import cn.org.autumn.model.IP;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.sys.service.SysUserRoleService;
+import cn.org.autumn.modules.wall.service.IpWhiteService;
+import cn.org.autumn.modules.wall.service.WallService;
 import cn.org.autumn.utils.SpringContextUtils;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
@@ -13,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletRequest;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
@@ -33,14 +39,18 @@ public class SysExecController {
     @Autowired(required = false)
     private Gson gson;
 
+    @Autowired
+    IpWhiteService ipWhiteService;
+
     /**
      * 获取Spring管理的所有Bean列表（分页）
      */
     @RequestMapping(value = "/beans", method = RequestMethod.GET)
-    public Map<String, Object> getBeans(@RequestParam(defaultValue = "1") Integer current, @RequestParam(defaultValue = "50") Integer size, @RequestParam(required = false) String search) {
+    public Map<String, Object> getBeans(@RequestParam(defaultValue = "1") Integer current, @RequestParam(defaultValue = "50") Integer size, @RequestParam(required = false) String search, HttpServletRequest servlet) {
         if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
             return null;
         }
+        ipWhiteService.check(servlet, getClass(), "beans");
         ApplicationContext context = SpringContextUtils.getApplicationContext();
         String[] beanNames = context.getBeanDefinitionNames();
         List<Map<String, Object>> allBeans = new ArrayList<>();
@@ -89,10 +99,11 @@ public class SysExecController {
      * 对于重名方法，通过参数类型和数量进行区分
      */
     @RequestMapping(value = "/bean/methods", method = RequestMethod.GET)
-    public Map<String, Object> getBeanMethods(@RequestParam String beanName) {
+    public Map<String, Object> getBeanMethods(@RequestParam String beanName, HttpServletRequest servlet) {
         if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
             return null;
         }
+        ipWhiteService.check(servlet, getClass(), "getBeanMethods");
         ApplicationContext context = SpringContextUtils.getApplicationContext();
         Object bean = context.getBean(beanName);
         Class<?> beanType = bean.getClass();
@@ -143,10 +154,11 @@ public class SysExecController {
      * 执行Bean方法
      */
     @RequestMapping(value = "/bean/execute", method = RequestMethod.POST)
-    public Map<String, Object> executeBeanMethod(@RequestBody Map<String, Object> request) {
+    public Map<String, Object> executeBeanMethod(@RequestBody Map<String, Object> request, HttpServletRequest servlet) {
         if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
             return null;
         }
+        ipWhiteService.check(servlet, getClass(), "executeBeanMethod");
         Map<String, Object> result = new HashMap<>();
         try {
             String beanName = (String) request.get("beanName");

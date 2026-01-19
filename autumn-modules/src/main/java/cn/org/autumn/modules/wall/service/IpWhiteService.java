@@ -2,6 +2,8 @@ package cn.org.autumn.modules.wall.service;
 
 import cn.org.autumn.config.ClearHandler;
 import cn.org.autumn.config.Config;
+import cn.org.autumn.exception.AException;
+import cn.org.autumn.model.IP;
 import cn.org.autumn.modules.wall.dao.IpWhiteDao;
 import cn.org.autumn.modules.wall.entity.RData;
 import cn.org.autumn.site.InitFactory;
@@ -15,6 +17,7 @@ import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.*;
@@ -187,6 +190,18 @@ public class IpWhiteService extends WallCounter<IpWhiteDao, IpWhiteEntity> imple
             if (!address.isReachable(2000))
                 continue;
             create(address.getHostAddress(), "localhost", "本地IP地址(自动)");
+        }
+    }
+
+    public void check(HttpServletRequest servlet, Class<?> clazz, String method) {
+        if (Config.isDev())
+            return;
+        if (null != servlet) {
+            String ip = IP.getIp(servlet);
+            if (!isWhite(ip)) {
+                log.warn("IP未加白:{}, 入口:{}:{}", ip, clazz.getSimpleName(), method);
+                throw new AException("服务繁忙");
+            }
         }
     }
 
