@@ -205,9 +205,9 @@ public class AesService {
                 throw new CodeException(Error.AES_ENCRYPT_FAILED);
             }
             // 检查密钥是否已过期（但仍在服务端冗余保留时间内）
-            if (aesKey.expired() && log.isWarnEnabled()) {
-                log.warn("密钥过期(加密):{}, 过期时间:{}", session, new Date(aesKey.getExpireTime()));
-                log.warn("加密内容:{}, 秘钥:{}, 向量:{}, 内容:{}", session, aesKey.getKey(), aesKey.getVector(), data);
+            if (aesKey.expired() && log.isDebugEnabled()) {
+                log.debug("密钥过期(加密):{}, 过期时间:{}", session, new Date(aesKey.getExpireTime()));
+                log.debug("加密内容:{}, 秘钥:{}, 向量:{}, 内容:{}", session, aesKey.getKey(), aesKey.getVector(), data);
             }
             return encrypted;
         } catch (CodeException e) {
@@ -266,9 +266,9 @@ public class AesService {
                 throw new CodeException(Error.AES_DECRYPTED_DATA_EMPTY);
             }
             // 检查密钥是否已过期（但仍在服务端冗余保留时间内）
-            if (aesKey.expired() && log.isWarnEnabled()) {
-                log.warn("密钥过期(解密):{}, 过期时间:{}", session, new Date(aesKey.getExpireTime()));
-                log.warn("解密内容:{}, 秘钥:{}, 向量:{}, 内容:{}", session, aesKey.getKey(), aesKey.getVector(), decrypted);
+            if (aesKey.expired() && log.isDebugEnabled()) {
+                log.debug("密钥过期(解密):{}, 过期时间:{}", session, new Date(aesKey.getExpireTime()));
+                log.debug("解密内容:{}, 秘钥:{}, 向量:{}, 内容:{}", session, aesKey.getKey(), aesKey.getVector(), decrypted);
             }
             return decrypted;
         } catch (CodeException e) {
