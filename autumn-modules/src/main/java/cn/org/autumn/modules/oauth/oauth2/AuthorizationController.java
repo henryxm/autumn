@@ -105,6 +105,10 @@ public class AuthorizationController {
 
     @RequestMapping("login")
     public Object login(HttpServletRequest request, HttpServletResponse response, String username, String password, boolean rememberMe, Model model) {
+        return login(request, response, username, password, rememberMe, "login", "系统默认登录", model);
+    }
+
+    public Object login(HttpServletRequest request, HttpServletResponse response, String username, String password, boolean rememberMe, String way, String reason, Model model) {
         Enumeration<String> enumeration = request.getParameterNames();
         if (!enumeration.hasMoreElements()) {
             model.addAttribute("url", "/oauth2/login?redirect=login");
@@ -126,7 +130,7 @@ public class AuthorizationController {
                     else back = callback + "&callback=" + savedRequest.getRequestUrl();
                 }
                 if (StringUtils.isBlank(back)) back = "/";
-                sysUserService.login(username, password, rememberMe, true, "login", "系统默认登录", request);
+                sysUserService.login(username, password, rememberMe, true, way, reason, request);
                 try {
                     String ip = IPUtils.getIp(request);
                     SysUserEntity userEntity = ShiroUtils.getUserEntity();
@@ -261,23 +265,18 @@ public class AuthorizationController {
         if (authClient == null) {
             return error("无效的客户端Id", INVALID_CLIENT, SC_BAD_REQUEST);
         }
-
         if (null == authClient.getTrusted() || 0 == authClient.getTrusted()) {
             return error("不受信任的客户端ID", INVALID_CLIENT, SC_BAD_REQUEST);
         }
-
         if (null != authClient.getArchived() && 1 == authClient.getArchived()) {
             return error("客户端ID已归档，不能使用", INVALID_CLIENT, SC_BAD_REQUEST);
         }
-
         //检查客户端安全KEY是否正确
         if (!clientDetailsService.isValidClientSecret(clientSecret)) {
             return error("客户端安全KEY认证失败！", UNAUTHORIZED_CLIENT, SC_UNAUTHORIZED);
         }
         if (StringUtils.isBlank(grantType)) return error("非法授权", INVALID_GRANT, SC_BAD_REQUEST);
-
         if (!authClient.granted(grantType)) return error("未获得授权", INVALID_GRANT, SC_BAD_REQUEST);
-
         TokenStore tokenStore = null;
         //验证类型，有AUTHORIZATION_CODE/PASSWORD/REFRESH_TOKEN/CLIENT_CREDENTIALS
         //1. 授权码获取Token模式
@@ -287,7 +286,6 @@ public class AuthorizationController {
             }
             tokenStore = clientDetailsService.get(ValueType.authCode, authCode);
         }
-
         //2. 使用Refresh Token 获取Token模式
         if (grantType.equals(GrantType.REFRESH_TOKEN.toString())) {
             if (!clientDetailsService.isValidRefreshToken(refresh)) {
@@ -295,7 +293,6 @@ public class AuthorizationController {
             }
             tokenStore = clientDetailsService.get(ValueType.refreshToken, refresh);
         }
-
         //3.客户端证书授权模式
         if (grantType.equals(GrantType.CLIENT_CREDENTIALS.toString())) {
             SysUserEntity sysUserEntity = sysUserService.getByUsername(authClient.getClientId());
@@ -305,7 +302,6 @@ public class AuthorizationController {
             }
             tokenStore = new TokenStore(sysUserEntity);
         }
-
         //4.密码授权模式
         if (grantType.equals(GrantType.PASSWORD.toString())) {
             sysUserService.login(username, password, false);
@@ -316,16 +312,13 @@ public class AuthorizationController {
                 userProfileService.updateLoginIp(sysUserEntity.getUuid(), IPUtils.getIp(request), request.getHeader("user-agent"));
             }
         }
-
         //5. 简化授权模式
         if (grantType.equals(GrantType.IMPLICIT.toString())) {
 
         }
-
         if (null == tokenStore) {
             return error("非法授权", INVALID_GRANT, SC_BAD_REQUEST);
         }
-
         String accessToken = "";
         String refreshToken = "";
         if (null != tokenStore.getValue() && sysConfigService.currentToken() && tokenStore.getValue() instanceof SysUserEntity) {
@@ -340,7 +333,6 @@ public class AuthorizationController {
                 }
             }
         }
-
         if (StringUtils.isBlank(accessToken) || StringUtils.isBlank(refreshToken)) {
             //生成访问令牌
             OAuthIssuerImpl authIssuerImpl = new OAuthIssuerImpl(new MD5Generator());
@@ -377,7 +369,6 @@ public class AuthorizationController {
             if (!clientDetailsService.isValidAccessToken(accessTokenKey)) {
                 // 如果不存在/过期了，返回未验证错误，需重新验证
                 OAuthResponse oauthResponse = OAuthRSResponse.errorResponse(SC_UNAUTHORIZED).setRealm("Apache Oltu").setError(OAuthError.ResourceResponse.INVALID_TOKEN).buildHeaderMessage();
-
                 HttpHeaders headers = new HttpHeaders();
                 headers.add(OAuth.HeaderType.WWW_AUTHENTICATE, oauthResponse.getHeader(OAuth.HeaderType.WWW_AUTHENTICATE));
                 return new ResponseEntity<>(headers, HttpStatus.UNAUTHORIZED);
