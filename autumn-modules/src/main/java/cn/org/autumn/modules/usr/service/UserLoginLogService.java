@@ -201,7 +201,6 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
         Object logoutObj = params.get("logout");
         String createStart = mapStr(params, "createStart");
         String createEnd = mapStr(params, "createEnd");
-
         ew.like(StringUtils.isNotBlank(uuid), "uuid", uuid);
         ew.like(StringUtils.isNotBlank(ip), "ip", ip);
         ew.like(StringUtils.isNotBlank(account), "account", account);
@@ -273,17 +272,21 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
     }
 
     public void login(String uuid, String account, boolean allow, String way, String reason, String ip, String agent) {
-        UserLoginLogEntity entity = new UserLoginLogEntity();
-        entity.setUuid(uuid);
-        entity.setAccount(account);
-        entity.setLogout(false);
-        entity.setAllow(allow);
-        entity.setIp(ip);
-        entity.setAgent(agent);
-        entity.setWay(way);
-        entity.setReason(reason);
-        entity.setCreate(new Date());
-        insert(entity);
+        try {
+            UserLoginLogEntity entity = new UserLoginLogEntity();
+            entity.setUuid(uuid);
+            entity.setAccount(account);
+            entity.setLogout(false);
+            entity.setAllow(allow);
+            entity.setIp(ip);
+            entity.setAgent(agent);
+            entity.setWay(way);
+            entity.setReason(reason);
+            entity.setCreate(new Date());
+            insert(entity);
+        } catch (Throwable e) {
+            log.error("登录错误:{}, 账号:{}, 允许:{}, 方式:{}, 原因:{}, IP:{}, 代理:{}", uuid, account, allow, way, reason, ip, agent);
+        }
     }
 
     public void login(UserProfileEntity userProfileEntity, String way, String reason, HttpServletRequest request) {
@@ -297,12 +300,16 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
     }
 
     public void logout(String uuid, String ip, String agent) {
-        UserLoginLogEntity entity = new UserLoginLogEntity();
-        entity.setUuid(uuid);
-        entity.setCreate(new Date());
-        entity.setLogout(true);
-        entity.setIp(ip);
-        entity.setAgent(agent);
-        insert(entity);
+        try {
+            UserLoginLogEntity entity = new UserLoginLogEntity();
+            entity.setUuid(uuid);
+            entity.setCreate(new Date());
+            entity.setLogout(true);
+            entity.setIp(ip);
+            entity.setAgent(agent);
+            insert(entity);
+        } catch (Throwable e) {
+            log.error("登录错误:{}, IP:{}, 代理:{}", uuid, ip, agent);
+        }
     }
 }
