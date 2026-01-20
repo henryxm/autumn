@@ -579,15 +579,10 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         subject.login(token);
     }
 
-    public void login(String username, String password, boolean rememberMe, boolean allow, Class<?> clazz, String method, String reason, HttpServletRequest request) {
+    public void login(String username, String password, boolean rememberMe, boolean allow, String way, String reason, HttpServletRequest request) {
         login(username, password, rememberMe);
         SysUserEntity entity = getUser(username);
-        if (null != entity && null != clazz) {
-            String way = clazz.getSimpleName();
-            if (StringUtils.isNotBlank(method))
-                way += "." + method;
-            userLoginLogService.login(entity.getUuid(), username, allow, way, reason, request);
-        }
+        userLoginLogService.login(entity.getUuid(), username, allow, way, reason, request);
     }
 
     public void verified(String uuid) {

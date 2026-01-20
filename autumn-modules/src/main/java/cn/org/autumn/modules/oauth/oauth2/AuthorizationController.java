@@ -126,7 +126,7 @@ public class AuthorizationController {
                     else back = callback + "&callback=" + savedRequest.getRequestUrl();
                 }
                 if (StringUtils.isBlank(back)) back = "/";
-                sysUserService.login(username, password, rememberMe, true, getClass(), "login", "", request);
+                sysUserService.login(username, password, rememberMe, true, "login", "系统默认登录", request);
                 try {
                     String ip = IPUtils.getIp(request);
                     SysUserEntity userEntity = ShiroUtils.getUserEntity();
@@ -367,14 +367,12 @@ public class AuthorizationController {
             // 构建OAuth资源请求
             OAuthAccessResourceRequest oauthRequest = new OAuthAccessResourceRequest(request, ParameterStyle.QUERY, ParameterStyle.HEADER);
             String accessToken = oauthRequest.getAccessToken();
-
             Object resp = JSON.parse(accessToken);
             Map map = (Map) resp;
             String accessTokenKey = "";
             if (map.containsKey(OAuth.OAUTH_ACCESS_TOKEN)) {
                 accessTokenKey = (String) map.get(OAuth.OAUTH_ACCESS_TOKEN);
             }
-
             // 验证访问令牌
             if (!clientDetailsService.isValidAccessToken(accessTokenKey)) {
                 // 如果不存在/过期了，返回未验证错误，需重新验证
@@ -384,7 +382,6 @@ public class AuthorizationController {
                 headers.add(OAuth.HeaderType.WWW_AUTHENTICATE, oauthResponse.getHeader(OAuth.HeaderType.WWW_AUTHENTICATE));
                 return new ResponseEntity<>(headers, HttpStatus.UNAUTHORIZED);
             }
-
             //返回用户名
             TokenStore tokenStore = clientDetailsService.get(ValueType.accessToken, accessTokenKey);
             if (null != tokenStore) {
@@ -393,7 +390,7 @@ public class AuthorizationController {
                     SysUserEntity sysUserEntity = (SysUserEntity) username;
                     UserProfileEntity profile = userProfileService.from(sysUserEntity);
                     username = UserProfile.from(profile);
-                    userLoginLogService.login(profile, "AuthorizationController.getUserInfo", "", request);
+                    userLoginLogService.login(profile, "userInfo", "用户查询", request);
                 }
                 return new ResponseEntity<>(JSON.toJSONString(username), HttpStatus.OK);
             }
@@ -402,18 +399,13 @@ public class AuthorizationController {
             String errorCode = e.getError();
             if (OAuthUtils.isEmpty(errorCode)) {
                 OAuthResponse oauthResponse = OAuthRSResponse.errorResponse(SC_UNAUTHORIZED).buildHeaderMessage();
-
                 HttpHeaders headers = new HttpHeaders();
                 headers.add(OAuth.HeaderType.WWW_AUTHENTICATE, oauthResponse.getHeader(OAuth.HeaderType.WWW_AUTHENTICATE));
-
                 return new ResponseEntity<>(headers, HttpStatus.UNAUTHORIZED);
             }
-
             OAuthResponse oauthResponse = OAuthRSResponse.errorResponse(SC_UNAUTHORIZED).setError(e.getError()).setErrorDescription(e.getDescription()).setErrorUri(e.getUri()).buildHeaderMessage();
-
             HttpHeaders headers = new HttpHeaders();
             headers.add(OAuth.HeaderType.WWW_AUTHENTICATE, oauthResponse.getHeader(OAuth.HeaderType.WWW_AUTHENTICATE));
-
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         }
         return new ResponseEntity<>(HttpStatus.BAD_REQUEST);

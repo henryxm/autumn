@@ -2,6 +2,7 @@ package cn.org.autumn.modules.usr.service;
 
 import cn.org.autumn.base.ModuleService;
 import cn.org.autumn.model.IP;
+import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.usr.entity.UserProfileEntity;
 import cn.org.autumn.utils.PageUtils;
 import cn.org.autumn.utils.Query;
@@ -21,7 +22,7 @@ import java.util.Map;
 
 @Slf4j
 @Service
-public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLoginLogEntity> {
+public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLoginLogEntity> implements LoopJob.OneDay {
     @Override
     public String ico() {
         return "fa-sun-o";
@@ -30,7 +31,7 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
     /**
      * 分页查询，支持按 uuid、ip、way、allow、logout、createStart/createEnd 筛选
      * <p>
-     * - uuid、ip：支持模糊（like）；传入即作为条件
+     * - uuid、ip、account：支持模糊（like）；传入即作为条件
      * - way：精确匹配
      * - allow、logout：传入 "true"/"false" 或 1/0 时作为布尔条件
      * - createStart、createEnd：日期范围，格式 yyyy-MM-dd 或时间戳
@@ -42,6 +43,7 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
             EntityWrapper<UserLoginLogEntity> ew = new EntityWrapper<>();
             String uuid = mapStr(params, "uuid");
             String ip = mapStr(params, "ip");
+            String account = mapStr(params, "account");
             String way = mapStr(params, "way");
             String reason = mapStr(params, "reason");
             String agent = mapStr(params, "agent");
@@ -51,6 +53,7 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
             String createEnd = mapStr(params, "createEnd");
             ew.like(StringUtils.isNotBlank(uuid), "uuid", uuid);
             ew.like(StringUtils.isNotBlank(ip), "ip", ip);
+            ew.like(StringUtils.isNotBlank(account), "account", account);
             ew.eq(StringUtils.isNotBlank(way), "way", way);
             ew.like(StringUtils.isNotBlank(reason), "reason", reason);
             ew.like(StringUtils.isNotBlank(agent), "agent", agent);
@@ -176,6 +179,91 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
         EntityWrapper<UserLoginLogEntity> ew = new EntityWrapper<>();
         ew.eq("ip", ip);
         return baseMapper.selectCount(ew);
+    }
+
+    // ---------- 清理：按条件删除、按天数定时清理 ----------
+
+    /**
+     * 按条件删除，条件与 queryPage 一致（uuid、ip、account、way、allow、logout、createStart/createEnd）。
+     * 至少需指定一项条件，否则返回 0 不执行删除。
+     *
+     * @return 删除条数
+     */
+    public int deleteByParams(Map<String, Object> params) {
+        EntityWrapper<UserLoginLogEntity> ew = new EntityWrapper<>();
+        String uuid = mapStr(params, "uuid");
+        String ip = mapStr(params, "ip");
+        String account = mapStr(params, "account");
+        String way = mapStr(params, "way");
+        String reason = mapStr(params, "reason");
+        String agent = mapStr(params, "agent");
+        Object allowObj = params.get("allow");
+        Object logoutObj = params.get("logout");
+        String createStart = mapStr(params, "createStart");
+        String createEnd = mapStr(params, "createEnd");
+
+        ew.like(StringUtils.isNotBlank(uuid), "uuid", uuid);
+        ew.like(StringUtils.isNotBlank(ip), "ip", ip);
+        ew.like(StringUtils.isNotBlank(account), "account", account);
+        ew.eq(StringUtils.isNotBlank(way), "way", way);
+        ew.like(StringUtils.isNotBlank(reason), "reason", reason);
+        ew.like(StringUtils.isNotBlank(agent), "agent", agent);
+        if (allowObj != null && StringUtils.isNotBlank(allowObj.toString())) {
+            boolean allow = "true".equalsIgnoreCase(allowObj.toString()) || "1".equals(allowObj.toString());
+            ew.eq("allow", allow);
+        }
+        if (logoutObj != null && StringUtils.isNotBlank(logoutObj.toString())) {
+            boolean logout = "true".equalsIgnoreCase(logoutObj.toString()) || "1".equals(logoutObj.toString());
+            ew.eq("logout", logout);
+        }
+        if (StringUtils.isNotBlank(createStart)) {
+            try {
+                Date start = parseDate(createStart);
+                if (start != null) ew.ge("`create`", start);
+            } catch (Exception ignored) {
+            }
+        }
+        if (StringUtils.isNotBlank(createEnd)) {
+            try {
+                Date end = parseDate(createEnd);
+                if (end != null) ew.le("`create`", end);
+            } catch (Exception ignored) {
+            }
+        }
+
+        boolean hasCondition = StringUtils.isNotBlank(uuid) || StringUtils.isNotBlank(ip) || StringUtils.isNotBlank(account)
+                || StringUtils.isNotBlank(way) || StringUtils.isNotBlank(reason) || StringUtils.isNotBlank(agent)
+                || (allowObj != null && StringUtils.isNotBlank(allowObj.toString()))
+                || (logoutObj != null && StringUtils.isNotBlank(logoutObj.toString()))
+                || StringUtils.isNotBlank(createStart) || StringUtils.isNotBlank(createEnd);
+        if (!hasCondition) {
+            return 0;
+        }
+        return baseMapper.delete(ew);
+    }
+
+    /**
+     * 删除创建时间早于指定天数的记录。用于定时清理过期日志。
+     *
+     * @param days 天数，创建时间早于 (now - days) 的记录将被删除
+     * @return 删除条数
+     */
+    public int deleteOlderThanDays(int days) {
+        if (days <= 0) return 0;
+        long cutoff = System.currentTimeMillis() - days * 24L * 3600 * 1000;
+        Date before = new Date(cutoff);
+        EntityWrapper<UserLoginLogEntity> ew = new EntityWrapper<>();
+        ew.lt("`create`", before);
+        int n = baseMapper.delete(ew);
+        if (n > 0 && log.isInfoEnabled()) {
+            log.info("定时清理登录日志：删除 {} 天以前的记录 {} 条", days, n);
+        }
+        return n;
+    }
+
+    @Override
+    public void onOneDay() {
+        deleteOlderThanDays(30);
     }
 
     public void login(String uuid, String account, boolean allow, String way, String reason, HttpServletRequest request) {

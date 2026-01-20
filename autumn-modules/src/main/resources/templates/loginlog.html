@@ -57,6 +57,8 @@
             font-size: 14px;
             min-width: 140px;
         }
+        .form-group-uuid input { min-width: 300px; }
+        .form-date-group { display: flex; flex-wrap: nowrap; gap: 12px; align-items: flex-end; flex-shrink: 0; }
         .form-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
         .btn {
             padding: 8px 16px;
@@ -70,6 +72,8 @@
         .btn-primary:hover { background: #2a5298; }
         .btn-secondary { background: #6c757d; color: #fff; }
         .btn-secondary:hover { background: #5a6268; }
+        .btn-danger { background: #dc3545; color: #fff; }
+        .btn-danger:hover { background: #c82333; }
         .table-wrap { overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; }
         thead { background: #1e3c72; color: #fff; }
@@ -85,6 +89,8 @@
         .cell-ip { font-family: Consolas, monospace; }
         .cell-agent { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .cell-reason { max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .cell-query { cursor: pointer; }
+        .cell-query:hover { color: #1e3c72; text-decoration: underline; }
         .pagination {
             display: flex;
             justify-content: space-between;
@@ -153,9 +159,13 @@
 
         <div class="toolbar">
             <div class="form-row">
-                <div class="form-group">
+                <div class="form-group form-group-uuid">
                     <label>用户 UUID</label>
                     <input type="text" v-model="filters.uuid" placeholder="支持模糊" @keyup.enter="search">
+                </div>
+                <div class="form-group">
+                    <label>登录账号</label>
+                    <input type="text" v-model="filters.account" placeholder="支持模糊" @keyup.enter="search">
                 </div>
                 <div class="form-group">
                     <label>IP</label>
@@ -181,16 +191,66 @@
                         <option value="1">登出</option>
                     </select>
                 </div>
-                <div class="form-group">
-                    <label>开始日期</label>
-                    <input type="date" v-model="filters.createStart">
-                </div>
-                <div class="form-group">
-                    <label>结束日期</label>
-                    <input type="date" v-model="filters.createEnd">
+                <div class="form-date-group">
+                    <div class="form-group">
+                        <label>开始日期</label>
+                        <input type="date" v-model="filters.createStart">
+                    </div>
+                    <div class="form-group">
+                        <label>结束日期</label>
+                        <input type="date" v-model="filters.createEnd">
+                    </div>
                 </div>
                 <button class="btn btn-primary" @click="search">查询</button>
                 <button class="btn btn-secondary" @click="reset">重置</button>
+                <button class="btn btn-danger" @click="openClean">清理</button>
+            </div>
+        </div>
+
+        <div id="cleanModal" class="modal" v-show="cleanModal" @click="closeClean" style="display:none">
+            <div class="modal-content" @click.stop style="max-width: 480px;">
+                <div class="modal-header">
+                    <h2>清理登录日志</h2>
+                    <span class="close" @click="closeClean">&times;</span>
+                </div>
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label>清理方式</label>
+                    <select v-model="cleanType" style="width:100%;">
+                        <option value="ip">按指定 IP</option>
+                        <option value="uuid">按指定 UUID</option>
+                        <option value="time">按时间范围</option>
+                        <option value="query">按当前筛选条件</option>
+                        <option value="page">仅当前页</option>
+                    </select>
+                </div>
+                <div v-if="cleanType === 'ip'" class="form-group" style="margin-bottom: 12px;">
+                    <label>IP</label>
+                    <input type="text" v-model="cleanIp" placeholder="如 192.168.1.1">
+                </div>
+                <div v-if="cleanType === 'uuid'" class="form-group" style="margin-bottom: 12px;">
+                    <label>用户 UUID</label>
+                    <input type="text" v-model="cleanUuid" placeholder="支持模糊">
+                </div>
+                <div v-if="cleanType === 'time'" class="form-date-group" style="margin-bottom: 12px;">
+                    <div class="form-group">
+                        <label>开始日期</label>
+                        <input type="date" v-model="cleanStart">
+                    </div>
+                    <div class="form-group">
+                        <label>结束日期</label>
+                        <input type="date" v-model="cleanEnd">
+                    </div>
+                </div>
+                <div v-if="cleanType === 'query'" class="detail-row" style="margin-bottom: 12px; color: #6c757d;">
+                    将删除当前筛选条件下的所有记录（共 <span v-text="totalCount"></span> 条）
+                </div>
+                <div v-if="cleanType === 'page'" class="detail-row" style="margin-bottom: 12px; color: #6c757d;">
+                    将删除当前页 <span v-text="list.length"></span> 条记录
+                </div>
+                <div style="display:flex; justify-content: flex-end; gap: 10px; margin-top: 16px;">
+                    <button class="btn btn-secondary" @click="closeClean">取消</button>
+                    <button class="btn btn-danger" @click="doClean">执行清理</button>
+                </div>
             </div>
         </div>
 
@@ -216,15 +276,15 @@
                     <tr v-else-if="list.length === 0"><td colspan="11" class="empty-state">暂无记录</td></tr>
                     <tr v-else v-for="r in list" :key="r.id">
                         <td v-text="r.id"></td>
-                        <td class="cell-uuid" :title="r.uuid" v-text="r.uuid || '-'"></td>
-                        <td v-text="r.account || '-'"></td>
+                        <td class="cell-uuid cell-query" :title="(r.uuid || '-') + ' (点击查询)'" v-text="r.uuid || '-'" @click="queryBy('uuid', r.uuid)"></td>
+                        <td class="cell-query" :title="(r.account || '-') + ' (点击查询)'" v-text="r.account || '-'" @click="queryBy('account', r.account)"></td>
                         <td v-text="r.way || '-'"></td>
-                        <td class="cell-ip" v-text="r.ip || '-'"></td>
+                        <td class="cell-ip cell-query" :title="(r.ip || '-') + ' (点击查询)'" v-text="r.ip || '-'" @click="queryBy('ip', r.ip)"></td>
                         <td><span class="badge" :class="r.allow ? 'badge-success' : 'badge-danger'" v-text="r.allow ? '是' : '否'"></span></td>
                         <td><span class="badge" :class="r.logout ? 'badge-info' : 'badge-warning'" v-text="r.logout ? '登出' : '登录'"></span></td>
                         <td v-text="formatDate(r.create)"></td>
                         <td class="cell-reason" :title="r.reason" v-text="r.reason || '-'"></td>
-                        <td class="cell-agent" :title="r.agent" v-text="r.agent || '-'"></td>
+                        <td class="cell-agent cell-query" :title="(r.agent || '-') + ' (点击查询)'" v-text="r.agent || '-'" @click="queryBy('agent', r.agent)"></td>
                         <td><button class="btn btn-secondary" style="padding:4px 10px;font-size:12px" @click="showDetail(r)">详情</button></td>
                     </tr>
                 </tbody>
@@ -268,6 +328,7 @@
     <script>
     (function() {
         var listUrl = '${request.contextPath}/usr/userloginlog/list';
+        var cleanUrl = '${request.contextPath}/usr/userloginlog/clean';
         var vm = new Vue({
             el: '#app',
             data: {
@@ -280,10 +341,18 @@
                 message: '',
                 messageType: 'alert-success',
                 detail: null,
+                cleanModal: false,
+                cleanType: 'ip',
+                cleanIp: '',
+                cleanUuid: '',
+                cleanStart: '',
+                cleanEnd: '',
                 filters: {
                     uuid: '',
+                    account: '',
                     ip: '',
                     way: '',
+                    agent: '',
                     allow: '',
                     logout: '',
                     createStart: '',
@@ -300,8 +369,10 @@
                         limit: vm.pageSize
                     };
                     if (vm.filters.uuid) q.uuid = vm.filters.uuid;
+                    if (vm.filters.account) q.account = vm.filters.account;
                     if (vm.filters.ip) q.ip = vm.filters.ip;
                     if (vm.filters.way) q.way = vm.filters.way;
+                    if (vm.filters.agent) q.agent = vm.filters.agent;
                     if (vm.filters.allow !== '') q.allow = vm.filters.allow;
                     if (vm.filters.logout !== '') q.logout = vm.filters.logout;
                     if (vm.filters.createStart) q.createStart = vm.filters.createStart;
@@ -331,7 +402,13 @@
                 },
                 search: function() { this.currPage = 1; this.load(); },
                 reset: function() {
-                    this.filters = { uuid: '', ip: '', way: '', allow: '', logout: '', createStart: '', createEnd: '' };
+                    this.filters = { uuid: '', account: '', ip: '', way: '', agent: '', allow: '', logout: '', createStart: '', createEnd: '' };
+                    this.currPage = 1;
+                    this.load();
+                },
+                queryBy: function(field, value) {
+                    if (value == null || (typeof value === 'string' && value.trim() === '')) return;
+                    this.filters[field] = String(value).trim();
                     this.currPage = 1;
                     this.load();
                 },
@@ -344,6 +421,58 @@
                 },
                 showDetail: function(r) { this.detail = r; },
                 closeDetail: function() { this.detail = null; },
+                openClean: function() { this.cleanModal = true; this.cleanType = 'ip'; this.cleanIp = ''; this.cleanUuid = ''; this.cleanStart = ''; this.cleanEnd = ''; },
+                closeClean: function() { this.cleanModal = false; },
+                doClean: function() {
+                    var vm = this;
+                    var body = {};
+                    if (vm.cleanType === 'ip') {
+                        if (!vm.cleanIp || !vm.cleanIp.trim()) { vm.showMsg('请输入 IP', 'alert-danger'); return; }
+                        body.ip = vm.cleanIp.trim();
+                    } else if (vm.cleanType === 'uuid') {
+                        if (!vm.cleanUuid || !vm.cleanUuid.trim()) { vm.showMsg('请输入 UUID', 'alert-danger'); return; }
+                        body.uuid = vm.cleanUuid.trim();
+                    } else if (vm.cleanType === 'time') {
+                        body.createStart = vm.cleanStart || '';
+                        body.createEnd = vm.cleanEnd || '';
+                        if (!body.createStart && !body.createEnd) { vm.showMsg('请选择开始或结束日期', 'alert-danger'); return; }
+                    } else if (vm.cleanType === 'query') {
+                        body.uuid = vm.filters.uuid;
+                        body.account = vm.filters.account;
+                        body.ip = vm.filters.ip;
+                        body.way = vm.filters.way;
+                        body.allow = vm.filters.allow;
+                        body.logout = vm.filters.logout;
+                        body.createStart = vm.filters.createStart;
+                        body.createEnd = vm.filters.createEnd;
+                        var has = body.uuid || body.account || body.ip || body.createStart || body.createEnd;
+                        if (!has) { vm.showMsg('按当前筛选清理需至少设置：用户 UUID、登录账号、IP、开始日期、结束日期中的一项', 'alert-danger'); return; }
+                    } else if (vm.cleanType === 'page') {
+                        if (vm.list.length === 0) { vm.showMsg('当前页无记录', 'alert-danger'); return; }
+                        body.ids = vm.list.map(function(r) { return r.id; });
+                    }
+                    if (!confirm('确定要执行清理吗？此操作不可恢复。')) return;
+                    $.ajax({
+                        url: cleanUrl,
+                        method: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify(body),
+                        success: function(res) {
+                            if (res && res.code === 0) {
+                                vm.showMsg(res.msg || ('已清理 ' + (res.deleted || 0) + ' 条'), 'alert-success');
+                                vm.closeClean();
+                                vm.load();
+                            } else {
+                                vm.showMsg((res && res.msg) ? res.msg : '清理失败', 'alert-danger');
+                            }
+                        },
+                        error: function(xhr) {
+                            var m = '清理请求失败';
+                            try { var j = JSON.parse(xhr.responseText); if (j && j.msg) m = j.msg; } catch(e) {}
+                            vm.showMsg(m, 'alert-danger');
+                        }
+                    });
+                },
                 showMsg: function(m, t) { this.message = m; this.messageType = t || 'alert-success'; var self = this; setTimeout(function() { self.message = ''; }, 3000); }
             }
         });
