@@ -29,9 +29,9 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
     }
 
     /**
-     * 分页查询，支持按 uuid、ip、way、allow、logout、createStart/createEnd 筛选
+     * 分页查询，支持按 uuid、ip、host、way、allow、logout、createStart/createEnd 筛选
      * <p>
-     * - uuid、ip、account：支持模糊（like）；传入即作为条件
+     * - uuid、ip、account、host、reason、agent：支持模糊（like）；传入即作为条件
      * - way：精确匹配
      * - allow、logout：传入 "true"/"false" 或 1/0 时作为布尔条件
      * - createStart、createEnd：日期范围，格式 yyyy-MM-dd 或时间戳
@@ -45,6 +45,7 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
             String ip = mapStr(params, "ip");
             String account = mapStr(params, "account");
             String way = mapStr(params, "way");
+            String host = mapStr(params, "host");
             String reason = mapStr(params, "reason");
             String agent = mapStr(params, "agent");
             Object allowObj = params.get("allow");
@@ -55,6 +56,7 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
             ew.like(StringUtils.isNotBlank(ip), "ip", ip);
             ew.like(StringUtils.isNotBlank(account), "account", account);
             ew.eq(StringUtils.isNotBlank(way), "way", way);
+            ew.like(StringUtils.isNotBlank(host), "host", host);
             ew.like(StringUtils.isNotBlank(reason), "reason", reason);
             ew.like(StringUtils.isNotBlank(agent), "agent", agent);
             if (allowObj != null && StringUtils.isNotBlank(allowObj.toString())) {
@@ -184,7 +186,7 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
     // ---------- 清理：按条件删除、按天数定时清理 ----------
 
     /**
-     * 按条件删除，条件与 queryPage 一致（uuid、ip、account、way、allow、logout、createStart/createEnd）。
+     * 按条件删除，条件与 queryPage 一致（uuid、ip、account、host、way、reason、agent、allow、logout、createStart/createEnd）。
      * 至少需指定一项条件，否则返回 0 不执行删除。
      *
      * @return 删除条数
@@ -195,6 +197,7 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
         String ip = mapStr(params, "ip");
         String account = mapStr(params, "account");
         String way = mapStr(params, "way");
+        String host = mapStr(params, "host");
         String reason = mapStr(params, "reason");
         String agent = mapStr(params, "agent");
         Object allowObj = params.get("allow");
@@ -205,6 +208,7 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
         ew.like(StringUtils.isNotBlank(ip), "ip", ip);
         ew.like(StringUtils.isNotBlank(account), "account", account);
         ew.eq(StringUtils.isNotBlank(way), "way", way);
+        ew.like(StringUtils.isNotBlank(host), "host", host);
         ew.like(StringUtils.isNotBlank(reason), "reason", reason);
         ew.like(StringUtils.isNotBlank(agent), "agent", agent);
         if (allowObj != null && StringUtils.isNotBlank(allowObj.toString())) {
@@ -231,7 +235,7 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
         }
 
         boolean hasCondition = StringUtils.isNotBlank(uuid) || StringUtils.isNotBlank(ip) || StringUtils.isNotBlank(account)
-                || StringUtils.isNotBlank(way) || StringUtils.isNotBlank(reason) || StringUtils.isNotBlank(agent)
+                || StringUtils.isNotBlank(way) || StringUtils.isNotBlank(host) || StringUtils.isNotBlank(reason) || StringUtils.isNotBlank(agent)
                 || (allowObj != null && StringUtils.isNotBlank(allowObj.toString()))
                 || (logoutObj != null && StringUtils.isNotBlank(logoutObj.toString()))
                 || StringUtils.isNotBlank(createStart) || StringUtils.isNotBlank(createEnd);

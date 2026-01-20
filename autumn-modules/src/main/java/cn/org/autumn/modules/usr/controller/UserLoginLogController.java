@@ -27,9 +27,9 @@ public class UserLoginLogController extends UserLoginLogControllerGen {
     /**
      * 清理：按指定 IP、UUID、时间范围、当前筛选条件或指定 ID 列表删除。
      * <p>
-     * 请求体：{ ip?, uuid?, account?, way?, allow?, logout?, createStart?, createEnd?, ids? }
+     * 请求体：{ ip?, uuid?, account?, host?, way?, allow?, logout?, createStart?, createEnd?, ids? }
      * - ids 非空时：仅删除这些 ID，忽略其它条件
-     * - 否则：按其它条件删除，IP、UUID、登录账号、开始日期、结束日期至少填一项
+     * - 否则：按其它条件删除，IP、UUID、登录账号、主机、开始日期、结束日期至少填一项
      */
     @RequestMapping(value = "/clean", method = RequestMethod.POST)
     @RequiresPermissions("usr:userloginlog:delete")
@@ -50,10 +50,11 @@ public class UserLoginLogController extends UserLoginLogControllerGen {
         String ip = trim(body.get("ip"));
         String uuid = trim(body.get("uuid"));
         String account = trim(body.get("account"));
+        String host = trim(body.get("host"));
         String createStart = trim(body.get("createStart"));
         String createEnd = trim(body.get("createEnd"));
-        if (ip.isEmpty() && uuid.isEmpty() && account.isEmpty() && createStart.isEmpty() && createEnd.isEmpty()) {
-            return R.error(400, "请指定清理条件：IP、UUID、登录账号、开始日期、结束日期至少填一项");
+        if (ip.isEmpty() && uuid.isEmpty() && account.isEmpty() && host.isEmpty() && createStart.isEmpty() && createEnd.isEmpty()) {
+            return R.error(400, "请指定清理条件：IP、UUID、登录账号、主机、开始日期、结束日期至少填一项");
         }
         int n = userLoginLogService.deleteByParams(body);
         return R.ok().put("deleted", n).put("msg", "已清理 " + n + " 条");

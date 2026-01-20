@@ -105,7 +105,7 @@ public class AuthorizationController {
 
     @RequestMapping("login")
     public Object login(HttpServletRequest request, HttpServletResponse response, String username, String password, boolean rememberMe, Model model) {
-        return login(request, response, username, password, rememberMe, "login", "系统默认登录", model);
+        return login(request, response, username, password, rememberMe, "login", "默认登录", model);
     }
 
     public Object login(HttpServletRequest request, HttpServletResponse response, String username, String password, boolean rememberMe, String way, String reason, Model model) {
