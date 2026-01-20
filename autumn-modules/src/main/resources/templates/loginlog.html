@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录日志</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #fff;
+            padding: 24px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .header h1 { font-size: 24px; font-weight: 600; }
+        .header p { opacity: 0.9; font-size: 13px; margin-top: 4px; }
+        .stats {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        .stat { background: rgba(255,255,255,0.2); padding: 8px 14px; border-radius: 8px; font-size: 13px; }
+        .stat strong { margin-right: 6px; }
+        .toolbar {
+            padding: 20px 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: flex-end;
+        }
+        .form-group { display: flex; flex-direction: column; gap: 4px; }
+        .form-group label { font-size: 12px; color: #6c757d; }
+        .form-group input, .form-group select {
+            padding: 8px 12px;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            font-size: 14px;
+            min-width: 140px;
+        }
+        .form-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .btn-primary { background: #1e3c72; color: #fff; }
+        .btn-primary:hover { background: #2a5298; }
+        .btn-secondary { background: #6c757d; color: #fff; }
+        .btn-secondary:hover { background: #5a6268; }
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        thead { background: #1e3c72; color: #fff; }
+        th { padding: 12px 14px; text-align: left; font-size: 13px; font-weight: 600; }
+        td { padding: 12px 14px; border-bottom: 1px solid #e9ecef; font-size: 13px; }
+        tbody tr:hover { background: #f8f9fa; }
+        .badge { display: inline-block; padding: 3px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+        .badge-success { background: #d4edda; color: #155724; }
+        .badge-danger { background: #f8d7da; color: #721c24; }
+        .badge-info { background: #d1ecf1; color: #0c5460; }
+        .badge-warning { background: #fff3cd; color: #856404; }
+        .cell-uuid { font-family: Consolas, monospace; font-size: 12px; word-break: break-all; max-width: 160px; }
+        .cell-ip { font-family: Consolas, monospace; }
+        .cell-agent { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .cell-reason { max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .pagination {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 30px;
+            background: #f8f9fa;
+            border-top: 1px solid #e9ecef;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .pagination button {
+            padding: 6px 14px;
+            border: 1px solid #dee2e6;
+            background: #fff;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .pagination button:hover:not(:disabled) { background: #1e3c72; color: #fff; border-color: #1e3c72; }
+        .pagination button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .loading { text-align: center; padding: 40px; color: #6c757d; }
+        .empty-state { text-align: center; padding: 50px 20px; color: #999; }
+        .alert { padding: 12px 16px; margin: 0 30px 16px; border-radius: 8px; border-left: 4px solid; }
+        .alert-success { background: #d4edda; border-color: #28a745; color: #155724; }
+        .alert-danger { background: #f8d7da; border-color: #dc3545; color: #721c24; }
+        .detail-row { margin-bottom: 8px; font-size: 13px; }
+        .detail-row strong { display: inline-block; min-width: 80px; color: #495057; }
+        .modal {
+            position: fixed;
+            z-index: 1000;
+            left: 0; top: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.4);
+        }
+        .modal-content {
+            background: #fff;
+            margin: 5% auto;
+            padding: 24px;
+            border-radius: 10px;
+            max-width: 560px;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #e9ecef; }
+        .modal-header h2 { font-size: 18px; }
+        .close { font-size: 24px; cursor: pointer; color: #6c757d; }
+        .close:hover { color: #333; }
+        [v-cloak] { display: none; }
+    </style>
+</head>
+<body>
+    <div class="container" id="app" v-cloak>
+        <div class="header">
+            <div>
+                <h1>登录日志</h1>
+                <p>按用户 UUID、IP、方式、允许/拒绝、登录/登出及时间范围查询</p>
+            </div>
+            <div class="stats">
+                <span class="stat"><strong>总数</strong><span v-text="totalCount"></span></span>
+                <span class="stat"><strong>第</strong><span v-text="currPage"></span> / <span v-text="totalPage"></span> 页</span>
+            </div>
+        </div>
+
+        <div v-if="message" class="alert" :class="messageType" v-text="message"></div>
+
+        <div class="toolbar">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>用户 UUID</label>
+                    <input type="text" v-model="filters.uuid" placeholder="支持模糊" @keyup.enter="search">
+                </div>
+                <div class="form-group">
+                    <label>IP</label>
+                    <input type="text" v-model="filters.ip" placeholder="支持模糊" @keyup.enter="search">
+                </div>
+                <div class="form-group">
+                    <label>方式</label>
+                    <input type="text" v-model="filters.way" placeholder="如 password、oauth">
+                </div>
+                <div class="form-group">
+                    <label>允许</label>
+                    <select v-model="filters.allow">
+                        <option value="">全部</option>
+                        <option value="1">是</option>
+                        <option value="0">否</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>登录/登出</label>
+                    <select v-model="filters.logout">
+                        <option value="">全部</option>
+                        <option value="0">登录</option>
+                        <option value="1">登出</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>开始日期</label>
+                    <input type="date" v-model="filters.createStart">
+                </div>
+                <div class="form-group">
+                    <label>结束日期</label>
+                    <input type="date" v-model="filters.createEnd">
+                </div>
+                <button class="btn btn-primary" @click="search">查询</button>
+                <button class="btn btn-secondary" @click="reset">重置</button>
+            </div>
+        </div>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>用户 UUID</th>
+                        <th>登录账号</th>
+                        <th>方式</th>
+                        <th>IP</th>
+                        <th>允许</th>
+                        <th>登录/登出</th>
+                        <th>创建时间</th>
+                        <th>原因</th>
+                        <th>Agent</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-if="loading"><td colspan="11" class="loading">加载中…</td></tr>
+                    <tr v-else-if="list.length === 0"><td colspan="11" class="empty-state">暂无记录</td></tr>
+                    <tr v-else v-for="r in list" :key="r.id">
+                        <td v-text="r.id"></td>
+                        <td class="cell-uuid" :title="r.uuid" v-text="r.uuid || '-'"></td>
+                        <td v-text="r.account || '-'"></td>
+                        <td v-text="r.way || '-'"></td>
+                        <td class="cell-ip" v-text="r.ip || '-'"></td>
+                        <td><span class="badge" :class="r.allow ? 'badge-success' : 'badge-danger'" v-text="r.allow ? '是' : '否'"></span></td>
+                        <td><span class="badge" :class="r.logout ? 'badge-info' : 'badge-warning'" v-text="r.logout ? '登出' : '登录'"></span></td>
+                        <td v-text="formatDate(r.create)"></td>
+                        <td class="cell-reason" :title="r.reason" v-text="r.reason || '-'"></td>
+                        <td class="cell-agent" :title="r.agent" v-text="r.agent || '-'"></td>
+                        <td><button class="btn btn-secondary" style="padding:4px 10px;font-size:12px" @click="showDetail(r)">详情</button></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="pagination">
+            <div>
+                <button @click="go(1)" :disabled="currPage <= 1">首页</button>
+                <button @click="go(currPage - 1)" :disabled="currPage <= 1">上一页</button>
+                <button @click="go(currPage + 1)" :disabled="currPage >= totalPage">下一页</button>
+                <button @click="go(totalPage)" :disabled="currPage >= totalPage">末页</button>
+            </div>
+            <span>第 <span v-text="currPage"></span> / <span v-text="totalPage"></span> 页，共 <span v-text="totalCount"></span> 条</span>
+        </div>
+
+        <div id="detailModal" class="modal" v-show="detail" @click="closeDetail" style="display:none">
+            <div class="modal-content" @click.stop>
+                <div class="modal-header">
+                    <h2>记录详情</h2>
+                    <span class="close" @click="closeDetail">&times;</span>
+                </div>
+                <div v-if="detail" id="detailBody">
+                    <div class="detail-row"><strong>ID</strong> <span v-text="detail.id"></span></div>
+                    <div class="detail-row"><strong>UUID</strong> <span v-text="detail.uuid || '-'"></span></div>
+                    <div class="detail-row"><strong>登录账号</strong> <span v-text="detail.account || '-'"></span></div>
+                    <div class="detail-row"><strong>方式</strong> <span v-text="detail.way || '-'"></span></div>
+                    <div class="detail-row"><strong>IP</strong> <span v-text="detail.ip || '-'"></span></div>
+                    <div class="detail-row"><strong>允许</strong> <span v-text="detail.allow ? '是' : '否'"></span></div>
+                    <div class="detail-row"><strong>登出</strong> <span v-text="detail.logout ? '是' : '否'"></span></div>
+                    <div class="detail-row"><strong>创建时间</strong> <span v-text="formatDate(detail.create)"></span></div>
+                    <div class="detail-row"><strong>原因</strong> <span v-text="detail.reason || '-'"></span></div>
+                    <div class="detail-row"><strong>Agent</strong> <span style="word-break:break-all" v-text="detail.agent || '-'"></span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="${request.contextPath}/statics/libs/jquery.min.js"></script>
+    <script src="${request.contextPath}/statics/libs/vue.min.js"></script>
+    <script>
+    (function() {
+        var listUrl = '${request.contextPath}/usr/userloginlog/list';
+        var vm = new Vue({
+            el: '#app',
+            data: {
+                list: [],
+                loading: false,
+                totalCount: 0,
+                currPage: 1,
+                totalPage: 1,
+                pageSize: 20,
+                message: '',
+                messageType: 'alert-success',
+                detail: null,
+                filters: {
+                    uuid: '',
+                    ip: '',
+                    way: '',
+                    allow: '',
+                    logout: '',
+                    createStart: '',
+                    createEnd: ''
+                }
+            },
+            mounted: function() { this.load(); },
+            methods: {
+                load: function() {
+                    var vm = this;
+                    vm.loading = true;
+                    var q = {
+                        page: vm.currPage,
+                        limit: vm.pageSize
+                    };
+                    if (vm.filters.uuid) q.uuid = vm.filters.uuid;
+                    if (vm.filters.ip) q.ip = vm.filters.ip;
+                    if (vm.filters.way) q.way = vm.filters.way;
+                    if (vm.filters.allow !== '') q.allow = vm.filters.allow;
+                    if (vm.filters.logout !== '') q.logout = vm.filters.logout;
+                    if (vm.filters.createStart) q.createStart = vm.filters.createStart;
+                    if (vm.filters.createEnd) q.createEnd = vm.filters.createEnd;
+                    $.ajax({
+                        url: listUrl,
+                        method: 'GET',
+                        data: q,
+                        success: function(res) {
+                            vm.loading = false;
+                            if (res && res.code === 0 && res.page) {
+                                vm.list = res.page.list || [];
+                                vm.totalCount = res.page.totalCount || 0;
+                                vm.currPage = res.page.currPage || 1;
+                                vm.totalPage = Math.max(1, res.page.totalPage || 1);
+                            } else {
+                                vm.list = [];
+                                vm.showMsg((res && res.msg) ? res.msg : '加载失败', 'alert-danger');
+                            }
+                        },
+                        error: function() {
+                            vm.loading = false;
+                            vm.list = [];
+                            vm.showMsg('请求失败', 'alert-danger');
+                        }
+                    });
+                },
+                search: function() { this.currPage = 1; this.load(); },
+                reset: function() {
+                    this.filters = { uuid: '', ip: '', way: '', allow: '', logout: '', createStart: '', createEnd: '' };
+                    this.currPage = 1;
+                    this.load();
+                },
+                go: function(p) { if (p >= 1 && p <= this.totalPage) { this.currPage = p; this.load(); } },
+                formatDate: function(d) {
+                    if (!d) return '-';
+                    if (typeof d === 'number') d = new Date(d);
+                    else if (typeof d === 'string') d = new Date(d);
+                    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0') + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + ':' + String(d.getSeconds()).padStart(2, '0');
+                },
+                showDetail: function(r) { this.detail = r; },
+                closeDetail: function() { this.detail = null; },
+                showMsg: function(m, t) { this.message = m; this.messageType = t || 'alert-success'; var self = this; setTimeout(function() { self.message = ''; }, 3000); }
+            }
+        });
+        if (typeof String.prototype.padStart !== 'function') {
+            String.prototype.padStart = function(len, ch) { var s = this; while (s.length < len) s = (ch || ' ') + s; return s; };
+        }
+    })();
+    </script>
+</body>
+</html>

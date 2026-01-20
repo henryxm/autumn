@@ -8,6 +8,7 @@ import cn.org.autumn.config.Config;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.sys.shiro.SuperPasswordToken;
 import cn.org.autumn.modules.usr.entity.UserProfileEntity;
+import cn.org.autumn.modules.usr.service.UserLoginLogService;
 import cn.org.autumn.modules.usr.service.UserProfileService;
 import cn.org.autumn.site.AccountFactory;
 import cn.org.autumn.site.InitFactory;
@@ -36,6 +37,7 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.servlet.http.HttpServletRequest;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -78,6 +80,10 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
     @Autowired
     @Lazy
     private ShiroSessionService shiroSessionService;
+
+    @Autowired
+    @Lazy
+    UserLoginLogService userLoginLogService;
 
     @Autowired
     AccountFactory accountFactory;
@@ -571,6 +577,17 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         if (sp)
             token = new SuperPasswordToken(username);
         subject.login(token);
+    }
+
+    public void login(String username, String password, boolean rememberMe, boolean allow, Class<?> clazz, String method, String reason, HttpServletRequest request) {
+        login(username, password, rememberMe);
+        SysUserEntity entity = getUser(username);
+        if (null != entity && null != clazz) {
+            String way = clazz.getSimpleName();
+            if (StringUtils.isNotBlank(method))
+                way += "." + method;
+            userLoginLogService.login(entity.getUuid(), username, allow, way, reason, request);
+        }
     }
 
     public void verified(String uuid) {

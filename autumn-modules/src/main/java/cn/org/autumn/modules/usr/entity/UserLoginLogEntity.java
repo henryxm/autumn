@@ -2,93 +2,51 @@ package cn.org.autumn.modules.usr.entity;
 
 import com.baomidou.mybatisplus.annotations.*;
 import cn.org.autumn.table.annotation.*;
-import cn.org.autumn.table.data.DataType;
-
+import lombok.Getter;
+import lombok.Setter;
 
 import java.io.Serializable;
 import java.util.Date;
 
-/**
- * 登录日志
- * 
- * @author Shaohua Xu
- * @email henryxm@163.com
- * @date 2020-11
- */
-
+@Getter
+@Setter
 @TableName("usr_user_login_log")
 @Table(value = "usr_user_login_log", comment = "登录日志")
 public class UserLoginLogEntity implements Serializable {
-	private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L;
 
-	/**
-	 * 日志ID
-	 */
-	@TableId
-	@Column(isKey = true, type = "bigint", length = 20, isNull = false, isAutoIncrement = true, comment = "日志ID")
-	private Long id;
-	/**
-	 * 用户名
-	 */
-	@Column(length = 50, comment = "用户名")
-	private String username;
-	/**
-	 * 登录时间
-	 */
-	@Column(type = "datetime", comment = "登录时间")
-	private Date loginTime;
-	/**
-	 * 登出时间
-	 */
-	@Column(type = "datetime", comment = "登出时间")
-	private Date logoutTime;
+    @TableId
+    @Column(isKey = true, type = "bigint", length = 20, isNull = false, isAutoIncrement = true, comment = "ID")
+    private Long id;
 
-	/**
-	 * 设置：日志ID
-	 */
-	public void setId(Long id) {
-		this.id = id;
-	}
-	/**
-	 * 获取：日志ID
-	 */
-	public Long getId() {
-		return id;
-	}
-	/**
-	 * 设置：用户名
-	 */
-	public void setUsername(String username) {
-		this.username = username;
-	}
-	/**
-	 * 获取：用户名
-	 */
-	public String getUsername() {
-		return username;
-	}
-	/**
-	 * 设置：登录时间
-	 */
-	public void setLoginTime(Date loginTime) {
-		this.loginTime = loginTime;
-	}
-	/**
-	 * 获取：登录时间
-	 */
-	public Date getLoginTime() {
-		return loginTime;
-	}
-	/**
-	 * 设置：登出时间
-	 */
-	public void setLogoutTime(Date logoutTime) {
-		this.logoutTime = logoutTime;
-	}
-	/**
-	 * 获取：登出时间
-	 */
-	public Date getLogoutTime() {
-		return logoutTime;
-	}
+    @Column(length = 32, comment = "用户ID")
+    @Index
+    private String uuid;
+
+    @Column(length = 32, comment = "登录账号")
+    @Index
+    private String account;
+
+    @Column(length = 100, comment = "方式:登录方式")
+    @Index
+    private String way;
+
+    @Column(length = 40, comment = "IP地址")
+    @Index
+    private String ip;
+
+    @Column(comment = "退出")
+    private boolean logout;
+
+    @Column(comment = "允许")
+    private boolean allow;
+
+    @Column(comment = "代理")
+    private String agent;
+
+    @Column(comment = "原因")
+    private String reason;
+
+    @Column(comment = "创建")
+    private Date create;
 }

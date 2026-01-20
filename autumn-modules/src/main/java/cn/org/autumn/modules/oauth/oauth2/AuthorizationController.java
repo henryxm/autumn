@@ -126,7 +126,7 @@ public class AuthorizationController {
                     else back = callback + "&callback=" + savedRequest.getRequestUrl();
                 }
                 if (StringUtils.isBlank(back)) back = "/";
-                sysUserService.login(username, password, rememberMe);
+                sysUserService.login(username, password, rememberMe, true, getClass(), "login", "", request);
                 try {
                     String ip = IPUtils.getIp(request);
                     SysUserEntity userEntity = ShiroUtils.getUserEntity();
@@ -391,9 +391,9 @@ public class AuthorizationController {
                 Object username = tokenStore.getValue();
                 if (username instanceof SysUserEntity) {
                     SysUserEntity sysUserEntity = (SysUserEntity) username;
-                    UserProfileEntity userProfileEntity = userProfileService.from(sysUserEntity);
-                    username = UserProfile.from(userProfileEntity);
-                    userLoginLogService.login(userProfileEntity);
+                    UserProfileEntity profile = userProfileService.from(sysUserEntity);
+                    username = UserProfile.from(profile);
+                    userLoginLogService.login(profile, "AuthorizationController.getUserInfo", "", request);
                 }
                 return new ResponseEntity<>(JSON.toJSONString(username), HttpStatus.OK);
             }

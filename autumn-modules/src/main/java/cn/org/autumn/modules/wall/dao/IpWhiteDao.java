@@ -7,7 +7,7 @@ import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
+import java.util.Set;
 
 /**
  * IP白名单
@@ -36,5 +36,5 @@ public interface IpWhiteDao extends BaseMapper<IpWhiteEntity> {
     Integer refresh();
 
     @Select("select wi.ip from wall_ip_white wi where wi.forbidden = #{forbidden}")
-    List<String> getIps(@Param("forbidden") Integer forbidden);
+    Set<String> getIps(@Param("forbidden") Integer forbidden);
 }

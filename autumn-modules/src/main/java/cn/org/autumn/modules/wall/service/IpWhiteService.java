@@ -26,14 +26,14 @@ import java.util.*;
 @Service
 public class IpWhiteService extends WallCounter<IpWhiteDao, IpWhiteEntity> implements InitFactory.Init, LoadFactory.Load, LoopJob.OneMinute, ClearHandler {
 
-    private List<String> ipWhiteList = new ArrayList<>();
+    private Set<String> ipWhiteList = new HashSet<>();
 
-    private List<String> ipWhiteSectionList = new ArrayList<>();
+    private Set<String> ipWhiteSectionList = new HashSet<>();
 
     @Autowired
     WallFactory wallFactory;
 
-    public List<String> getIpWhiteList() {
+    public Set<String> getIpWhiteList() {
         return ipWhiteList;
     }
 
@@ -56,7 +56,7 @@ public class IpWhiteService extends WallCounter<IpWhiteDao, IpWhiteEntity> imple
     public void load() {
         try {
             ipWhiteList = baseMapper.getIps(0);
-            List<String> tmpSection = new ArrayList<>();
+            Set<String> tmpSection = new HashSet<>();
             for (String ip : ipWhiteList) {
                 if (StringUtils.isEmpty(ip))
                     continue;
@@ -71,8 +71,7 @@ public class IpWhiteService extends WallCounter<IpWhiteDao, IpWhiteEntity> imple
     }
 
     public void put(String ip) {
-        if (!ipWhiteList.contains(ip))
-            ipWhiteList.add(ip);
+        ipWhiteList.add(ip);
     }
 
     public IpWhiteEntity getByIp(String ip) {
@@ -198,7 +197,7 @@ public class IpWhiteService extends WallCounter<IpWhiteDao, IpWhiteEntity> imple
             return;
         if (null != servlet) {
             String ip = IP.getIp(servlet);
-            if (!isWhite(ip)) {
+            if (wallFactory.isIpWhiteEnable() && !isWhite(ip)) {
                 log.warn("IP未加白:{}, 入口:{}:{}", ip, clazz.getSimpleName(), method);
                 throw new AException("服务繁忙");
             }

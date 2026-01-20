@@ -310,6 +310,15 @@ public class SysPageController implements ErrorController {
         return "cache";
     }
 
+    @RequestMapping({"loginlog.html"})
+    @SkipInterceptor
+    public String loginlog(HttpServletRequest servlet) {
+        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
+            return "404";
+        ipWhiteService.check(servlet, getClass(), "loginlog");
+        return "loginlog";
+    }
+
     @RequestMapping(value = {"clear.html"}, method = RequestMethod.GET)
     @SkipInterceptor
     public String clearPage(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
