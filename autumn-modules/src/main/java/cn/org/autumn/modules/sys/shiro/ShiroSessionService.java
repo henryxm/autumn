@@ -4,19 +4,20 @@ import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.utils.RedisKeys;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang.StringUtils;
 import org.apache.shiro.session.Session;
 import org.apache.shiro.session.mgt.SessionManager;
 import org.apache.shiro.session.mgt.eis.SessionDAO;
 import org.apache.shiro.subject.PrincipalCollection;
 import org.apache.shiro.web.session.mgt.DefaultWebSessionManager;
+import org.springframework.aop.framework.Advised;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.io.Serializable;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 import static org.apache.shiro.subject.support.DefaultSubjectContext.PRINCIPALS_SESSION_KEY;
 
@@ -38,9 +39,23 @@ public class ShiroSessionService {
     @Autowired
     private SessionManager sessionManager;
 
+    /**
+     * 从 SessionManager 获取 SessionDAO（含 RedisShiroSessionDAO）。
+     * 若 SessionManager 被 Spring AOP 代理（如 JDK 动态代理），instanceof DefaultWebSessionManager 会为 false，
+     * 故先通过 Advised 取出目标对象再判断。
+     */
     private SessionDAO getSessionDAO() {
-        if (sessionManager instanceof DefaultWebSessionManager) {
-            return ((DefaultWebSessionManager) sessionManager).getSessionDAO();
+        Object target = sessionManager;
+        if (sessionManager instanceof Advised) {
+            try {
+                target = ((Advised) sessionManager).getTargetSource().getTarget();
+            } catch (Exception e) {
+                log.debug("获取 SessionManager 目标失败: {}", e.getMessage());
+                return null;
+            }
+        }
+        if (target instanceof DefaultWebSessionManager) {
+            return ((DefaultWebSessionManager) target).getSessionDAO();
         }
         return null;
     }
@@ -69,13 +84,12 @@ public class ShiroSessionService {
                     }
                 }
             }
-
             // 如果是Redis模式，还需要从Redis中查找
             if (isRedisEnabled()) {
                 addSessionsFromRedis(userUuid, sessionIds);
             }
         } catch (Exception e) {
-            log.error("获取用户活动会话失败，用户UUID: {}", userUuid, e);
+            log.error("获取失败:{}, 错误:{}", userUuid, e.getMessage());
         }
         return sessionIds;
     }
@@ -87,7 +101,7 @@ public class ShiroSessionService {
         try {
             String sessionPrefix = RedisKeys.getSessionPrefix(sysConfigService.getNameSpace());
             Set<String> keys = redisTemplate.keys(sessionPrefix + "*");
-            if (!keys.isEmpty()) {
+            if (null != keys && !keys.isEmpty()) {
                 for (String key : keys) {
                     try {
                         Session session = (Session) redisTemplate.opsForValue().get(key);
@@ -104,12 +118,12 @@ public class ShiroSessionService {
                             }
                         }
                     } catch (Exception e) {
-                        log.warn("解析Redis会话失败，key: {}", key, e);
+                        log.warn("解析失败:{}, 异常:{}", key, e.getMessage());
                     }
                 }
             }
         } catch (Exception e) {
-            log.error("从Redis获取用户会话失败", e);
+            log.error("查询失败:{}, 错误:{}", userUuid, e.getMessage());
         }
     }
 
@@ -125,6 +139,165 @@ public class ShiroSessionService {
         } catch (Exception e) {
             return false;
         }
+    }
+
+    /**
+     * 收集所有活动会话（SessionDAO + Redis 去重）
+     */
+    private Map<Serializable, Session> getAllSessionsMap() {
+        Map<Serializable, Session> map = new LinkedHashMap<>();
+        try {
+            SessionDAO sessionDAO = getSessionDAO();
+            if (sessionDAO != null) {
+                Collection<Session> active = sessionDAO.getActiveSessions();
+                if (active != null) {
+                    for (Session s : active) {
+                        if (s != null && s.getId() != null) map.put(s.getId(), s);
+                    }
+                }
+            }
+            if (isRedisEnabled()) {
+                String sessionPrefix = RedisKeys.getSessionPrefix(sysConfigService.getNameSpace());
+                Set<String> keys = redisTemplate.keys(sessionPrefix + "*");
+                if (keys != null && !keys.isEmpty()) {
+                    for (String key : keys) {
+                        try {
+                            Session s = (Session) redisTemplate.opsForValue().get(key);
+                            if (s != null && s.getId() != null && !map.containsKey(s.getId()))
+                                map.put(s.getId(), s);
+                        } catch (Exception e) {
+                            log.warn("解析失败:{}, 错误:{}", key, e.getMessage());
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("收集失败:{}", e.getMessage());
+        }
+        return map;
+    }
+
+    /**
+     * 将会话转为前端展示的 Map
+     *
+     * @param forceLogoutUuids 被标记为「需强制重新登录」的 userUuid 集合，可为 null
+     */
+    private Map<String, Object> sessionToMap(Session s, String currentSessionId, Set<String> forceLogoutUuids) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        String sid = s.getId() != null ? s.getId().toString() : "";
+        m.put("sessionId", sid);
+        m.put("current", sid.equals(currentSessionId));
+        m.put("host", s.getHost() != null ? s.getHost() : "");
+        m.put("startTime", s.getStartTimestamp() != null ? s.getStartTimestamp().getTime() : null);
+        m.put("lastAccessTime", s.getLastAccessTime() != null ? s.getLastAccessTime().getTime() : null);
+        m.put("timeout", s.getTimeout());
+        String userUuid = "";
+        String username = "";
+        PrincipalCollection principals = (PrincipalCollection) s.getAttribute(PRINCIPALS_SESSION_KEY);
+        if (principals != null) {
+            Object p = principals.getPrimaryPrincipal();
+            if (p instanceof SysUserEntity) {
+                SysUserEntity u = (SysUserEntity) p;
+                userUuid = u.getUuid() != null ? u.getUuid() : "";
+                username = u.getUsername() != null ? u.getUsername() : "";
+            }
+        }
+        m.put("userUuid", userUuid);
+        m.put("username", username);
+        m.put("forceLogout", forceLogoutUuids != null && !userUuid.isEmpty() && forceLogoutUuids.contains(userUuid));
+        return m;
+    }
+
+    /**
+     * 从 Redis 中获取当前被标记为「需强制重新登录」的 userUuid 集合
+     */
+    private Set<String> getForceLogoutUserUuids() {
+        Set<String> set = new HashSet<>();
+        try {
+            String prefix = RedisKeys.getForceLogoutPrefix(sysConfigService.getNameSpace());
+            Set<String> keys = redisTemplate.keys(prefix + "*");
+            if (keys != null) {
+                for (String k : keys) {
+                    String suf = k.length() > prefix.length() ? k.substring(prefix.length()) : "";
+                    if (!suf.isEmpty()) set.add(suf);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("getForceLogoutUserUuids: {}", e.getMessage());
+        }
+        return set;
+    }
+
+    /**
+     * 获取活动会话列表，支持按用户 UUID、用户名、会话 ID 筛选
+     *
+     * @param userUuidFilter   用户 UUID，模糊匹配，空则不过滤
+     * @param usernameFilter   用户名，模糊匹配，空则不过滤
+     * @param currentSessionId 当前请求的 sessionId，用于标记「当前会话」
+     * @param sessionIdFilter  会话 ID，精确匹配，空则不过滤
+     * @return 会话信息列表，每项含 sessionId、userUuid、username、host、startTime、lastAccessTime、timeout、current
+     */
+    public List<Map<String, Object>> getActiveSessionList(String userUuidFilter, String usernameFilter, String currentSessionId, String sessionIdFilter) {
+        List<Map<String, Object>> list = new ArrayList<>();
+        Map<Serializable, Session> all = getAllSessionsMap();
+        Set<String> forceLogoutUuids = getForceLogoutUserUuids();
+        for (Session s : all.values()) {
+            String sid = s.getId() != null ? s.getId().toString() : "";
+            if (StringUtils.isNotBlank(sessionIdFilter) && !sessionIdFilter.trim().equals(sid)) continue;
+            Map<String, Object> m = sessionToMap(s, currentSessionId != null ? currentSessionId : "", forceLogoutUuids);
+            String uuid = (String) m.get("userUuid");
+            String uname = (String) m.get("username");
+            if (StringUtils.isNotBlank(userUuidFilter) && (uuid == null || !uuid.contains(userUuidFilter))) continue;
+            if (StringUtils.isNotBlank(usernameFilter) && (uname == null || !uname.contains(usernameFilter))) continue;
+            list.add(m);
+        }
+        list.sort((a, b) -> {
+            Long t1 = (Long) a.get("lastAccessTime");
+            Long t2 = (Long) b.get("lastAccessTime");
+            if (t1 == null && t2 == null) return 0;
+            if (t1 == null) return 1;
+            if (t2 == null) return -1;
+            return Long.compare(t2, t1);
+        });
+        return list;
+    }
+
+    /**
+     * 删除指定会话
+     *
+     * @param sessionId 会话 ID
+     * @return 是否删除成功
+     */
+    public boolean deleteSession(Serializable sessionId) {
+        if (sessionId == null)
+            return false;
+        SessionDAO dao = getSessionDAO();
+        try {
+            Session session = null;
+            if (dao != null)
+                session = dao.readSession(sessionId);
+            if (session == null && isRedisEnabled()) {
+                String key = RedisKeys.getShiroSessionKey(sysConfigService.getNameSpace(), sessionId.toString());
+                session = (Session) redisTemplate.opsForValue().get(key);
+                if (session != null)
+                    redisTemplate.delete(key);
+                if (session != null && dao != null) {
+                    try {
+                        dao.delete(session);
+                    } catch (Exception ignored) {
+                    }
+                }
+                return session != null;
+            }
+            if (session != null) {
+                session.setTimeout(0);
+                dao.delete(session);
+                return true;
+            }
+        } catch (Exception e) {
+            log.error("删除会话:{}, 错误:{}", sessionId, e.getMessage());
+        }
+        return false;
     }
 
     /**
@@ -145,19 +318,45 @@ public class ShiroSessionService {
             try {
                 Session session = sessionDAO.readSession(sessionId);
                 if (session != null) {
-                    // 设置会话为过期状态
-                    session.setTimeout(0);
-                    // 删除会话
-                    sessionDAO.delete(session);
-                    count++;
-                    if (log.isDebugEnabled())
-                        log.debug("强制下线，用户UUID: {}, 会话ID: {}", userUuid, sessionId);
+                    boolean del = deleteSession(sessionId);
+                    if (del)
+                        count++;
                 }
             } catch (Exception e) {
-                log.error("强制用户下线失败，会话ID: {}", sessionId, e);
+                log.error("下线失败:{}, 错误:{}", sessionId, e.getMessage());
             }
         }
+        markForceLogout(userUuid);
         return count;
+    }
+
+    /**
+     * 标记用户为「强制下线」：在 TTL 内禁止其通过 RememberMe 自动登录，必须重新输入密码。
+     * 依赖 Redis；若 Redis 不可用则仅记录日志。
+     */
+    private void markForceLogout(String userUuid) {
+        if (userUuid == null || userUuid.isEmpty())
+            return;
+        try {
+            String key = RedisKeys.getForceLogoutKey(sysConfigService.getNameSpace(), userUuid);
+            redisTemplate.opsForValue().set(key, "1", 7, TimeUnit.DAYS);
+            if (log.isDebugEnabled()) log.debug("已标记强制下线: userUuid={}", userUuid);
+        } catch (Exception e) {
+            log.warn("标记强制下线失败, userUuid={}: {}", userUuid, e.getMessage());
+        }
+    }
+
+    /**
+     * 取消某用户的「强制重新登录」标记，删除 Redis 中的标记后，该用户可再次通过 RememberMe 自动登录。
+     */
+    public void clearForceLogout(String userUuid) {
+        if (userUuid == null || userUuid.isEmpty()) return;
+        try {
+            redisTemplate.delete(RedisKeys.getForceLogoutKey(sysConfigService.getNameSpace(), userUuid));
+            if (log.isDebugEnabled()) log.debug("已取消强制重登: userUuid={}", userUuid);
+        } catch (Exception e) {
+            log.warn("取消强制重登失败, userUuid={}: {}", userUuid, e.getMessage());
+        }
     }
 }
 

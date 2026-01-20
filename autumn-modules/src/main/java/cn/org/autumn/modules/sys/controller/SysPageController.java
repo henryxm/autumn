@@ -319,6 +319,15 @@ public class SysPageController implements ErrorController {
         return "loginlog";
     }
 
+    @RequestMapping({"session.html"})
+    @SkipInterceptor
+    public String session(HttpServletRequest servlet) {
+        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
+            return "404";
+        ipWhiteService.check(servlet, getClass(), "session");
+        return "session";
+    }
+
     @RequestMapping(value = {"clear.html"}, method = RequestMethod.GET)
     @SkipInterceptor
     public String clearPage(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {

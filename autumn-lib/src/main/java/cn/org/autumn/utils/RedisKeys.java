@@ -22,4 +22,16 @@ public class RedisKeys {
     public static String getShiroSessionKey(String namespace, String key) {
         return getSessionPrefix(namespace) + key;
     }
+
+    /**
+     * 强制下线标记 key：该 userUuid 在 TTL 内不允许通过 RememberMe 自动登录，需重新输入密码
+     */
+    public static String getForceLogoutKey(String namespace, String userUuid) {
+        return getForceLogoutPrefix(namespace) + (userUuid != null ? userUuid : "");
+    }
+
+    /** 强制下线 key 的前缀，用于 keys(prefix+"*") 批量查询 */
+    public static String getForceLogoutPrefix(String namespace) {
+        return StringUtils.isBlank(namespace) ? "system:logout:" : namespace.trim() + ":system:logout:";
+    }
 }

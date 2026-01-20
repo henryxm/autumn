@@ -1,6 +1,7 @@
 package cn.org.autumn.modules.usr.service;
 
 import cn.org.autumn.base.ModuleService;
+import cn.org.autumn.exception.AException;
 import cn.org.autumn.model.IP;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.usr.entity.UserProfileEntity;
@@ -15,10 +16,7 @@ import cn.org.autumn.modules.usr.dao.UserLoginLogDao;
 import cn.org.autumn.modules.usr.entity.UserLoginLogEntity;
 
 import javax.servlet.http.HttpServletRequest;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -29,11 +27,11 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
     }
 
     /**
-     * 分页查询，支持按 uuid、ip、host、way、allow、logout、createStart/createEnd 筛选
+     * 分页查询，支持按 uuid、ip、host、way、allow、logout、limit、createStart/createEnd 筛选
      * <p>
-     * - uuid、ip、account、host、reason、agent：支持模糊（like）；传入即作为条件
+     * - uuid、ip、account、host、reason、agent、session、path：支持模糊（like）
      * - way：精确匹配
-     * - allow、logout：传入 "true"/"false" 或 1/0 时作为布尔条件
+     * - allow、logout、limit：传入 "true"/"false" 或 1/0 时作为布尔条件
      * - createStart、createEnd：日期范围，格式 yyyy-MM-dd 或时间戳
      */
     @Override
@@ -46,10 +44,13 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
             String account = mapStr(params, "account");
             String way = mapStr(params, "way");
             String host = mapStr(params, "host");
+            String session = mapStr(params, "session");
+            String path = mapStr(params, "path");
             String reason = mapStr(params, "reason");
             String agent = mapStr(params, "agent");
             Object allowObj = params.get("allow");
             Object logoutObj = params.get("logout");
+            Object whiteObj = params.get("white");
             String createStart = mapStr(params, "createStart");
             String createEnd = mapStr(params, "createEnd");
             ew.like(StringUtils.isNotBlank(uuid), "uuid", uuid);
@@ -57,6 +58,8 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
             ew.like(StringUtils.isNotBlank(account), "account", account);
             ew.eq(StringUtils.isNotBlank(way), "way", way);
             ew.like(StringUtils.isNotBlank(host), "host", host);
+            ew.like(StringUtils.isNotBlank(session), "session", session);
+            ew.like(StringUtils.isNotBlank(path), "path", path);
             ew.like(StringUtils.isNotBlank(reason), "reason", reason);
             ew.like(StringUtils.isNotBlank(agent), "agent", agent);
             if (allowObj != null && StringUtils.isNotBlank(allowObj.toString())) {
@@ -66,6 +69,10 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
             if (logoutObj != null && StringUtils.isNotBlank(logoutObj.toString())) {
                 boolean logout = "true".equalsIgnoreCase(logoutObj.toString()) || "1".equals(logoutObj.toString());
                 ew.eq("logout", logout);
+            }
+            if (whiteObj != null && StringUtils.isNotBlank(whiteObj.toString())) {
+                boolean limit = "true".equalsIgnoreCase(whiteObj.toString()) || "1".equals(whiteObj.toString());
+                ew.eq("`white`", limit);
             }
             if (StringUtils.isNotBlank(createStart)) {
                 try {
@@ -198,10 +205,13 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
         String account = mapStr(params, "account");
         String way = mapStr(params, "way");
         String host = mapStr(params, "host");
+        String session = mapStr(params, "session");
+        String path = mapStr(params, "path");
         String reason = mapStr(params, "reason");
         String agent = mapStr(params, "agent");
         Object allowObj = params.get("allow");
         Object logoutObj = params.get("logout");
+        Object limitObj = params.get("limit");
         String createStart = mapStr(params, "createStart");
         String createEnd = mapStr(params, "createEnd");
         ew.like(StringUtils.isNotBlank(uuid), "uuid", uuid);
@@ -209,6 +219,8 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
         ew.like(StringUtils.isNotBlank(account), "account", account);
         ew.eq(StringUtils.isNotBlank(way), "way", way);
         ew.like(StringUtils.isNotBlank(host), "host", host);
+        ew.like(StringUtils.isNotBlank(session), "session", session);
+        ew.like(StringUtils.isNotBlank(path), "path", path);
         ew.like(StringUtils.isNotBlank(reason), "reason", reason);
         ew.like(StringUtils.isNotBlank(agent), "agent", agent);
         if (allowObj != null && StringUtils.isNotBlank(allowObj.toString())) {
@@ -218,6 +230,10 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
         if (logoutObj != null && StringUtils.isNotBlank(logoutObj.toString())) {
             boolean logout = "true".equalsIgnoreCase(logoutObj.toString()) || "1".equals(logoutObj.toString());
             ew.eq("logout", logout);
+        }
+        if (limitObj != null && StringUtils.isNotBlank(limitObj.toString())) {
+            boolean limit = "true".equalsIgnoreCase(limitObj.toString()) || "1".equals(limitObj.toString());
+            ew.eq("`limit`", limit);
         }
         if (StringUtils.isNotBlank(createStart)) {
             try {
@@ -233,11 +249,12 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
             } catch (Exception ignored) {
             }
         }
-
         boolean hasCondition = StringUtils.isNotBlank(uuid) || StringUtils.isNotBlank(ip) || StringUtils.isNotBlank(account)
-                || StringUtils.isNotBlank(way) || StringUtils.isNotBlank(host) || StringUtils.isNotBlank(reason) || StringUtils.isNotBlank(agent)
+                || StringUtils.isNotBlank(way) || StringUtils.isNotBlank(host) || StringUtils.isNotBlank(session) || StringUtils.isNotBlank(path)
+                || StringUtils.isNotBlank(reason) || StringUtils.isNotBlank(agent)
                 || (allowObj != null && StringUtils.isNotBlank(allowObj.toString()))
                 || (logoutObj != null && StringUtils.isNotBlank(logoutObj.toString()))
+                || (limitObj != null && StringUtils.isNotBlank(limitObj.toString()))
                 || StringUtils.isNotBlank(createStart) || StringUtils.isNotBlank(createEnd);
         if (!hasCondition) {
             return 0;
@@ -269,22 +286,40 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
         deleteOlderThanDays(30);
     }
 
-    public void login(String uuid, String account, boolean allow, String way, String reason, HttpServletRequest request) {
-        String ip = null != request ? IP.getIp(request) : "";
-        String agent = null != request ? request.getHeader("user-agent") : "";
-        String host = null != request ? request.getHeader("host") : "";
-        login(uuid, account, allow, way, reason, host, ip, agent);
+    public void login(String uuid, String account, String way, String reason, HttpServletRequest request) {
+        login(uuid, account, true, way, reason, request);
     }
 
-    public void login(String uuid, String account, boolean allow, String way, String reason, String host, String ip, String agent) {
+    public void login(String uuid, String account, boolean allow, String way, String reason, HttpServletRequest request) {
+        String ip = "";
+        String agent = "";
+        String host = "";
+        String session = "";
+        String path = "";
+        if (null != request) {
+            ip = IP.getIp(request);
+            agent = request.getHeader("user-agent");
+            host = request.getHeader("host");
+            session = request.getSession().getId();
+            path = request.getServletPath();
+        }
+        login(uuid, account, allow, way, reason, host, ip, session, path, agent);
+    }
+
+    public void login(String uuid, String account, boolean allow, String way, String reason, String host, String ip, String session, String path, String agent) {
         try {
+            if (!isIpAllowed(uuid, ip))
+                allow = false;
             UserLoginLogEntity entity = new UserLoginLogEntity();
             entity.setUuid(uuid);
             entity.setAccount(account);
             entity.setLogout(false);
             entity.setAllow(allow);
+            entity.setWhite(false);
             entity.setHost(host);
             entity.setIp(ip);
+            entity.setPath(path);
+            entity.setSession(session);
             entity.setAgent(agent);
             entity.setWay(way);
             entity.setReason(reason);
@@ -293,6 +328,37 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
         } catch (Throwable e) {
             log.error("登录错误:{}, 账号:{}, 允许:{}, 方式:{}, 原因:{}, IP:{}, 代理:{}", uuid, account, allow, way, reason, ip, agent);
         }
+        if (!allow) {
+            throw new AException("登录限制");
+        }
+    }
+
+    /**
+     * 按用户 uuid 与 limit=true 查询出允许登录的 IP 列表。列表为空表示不限制；不为空表示仅这些 IP 可登录。
+     */
+    public Set<String> getAllowedIpsByUserUuid(String uuid) {
+        if (StringUtils.isBlank(uuid))
+            return new HashSet<>();
+        EntityWrapper<UserLoginLogEntity> ew = new EntityWrapper<>();
+        ew.eq("uuid", uuid).eq("`white`", true);
+        List<UserLoginLogEntity> list = selectList(ew);
+        Set<String> ips = new HashSet<>();
+        for (UserLoginLogEntity e : list) {
+            if (e.getIp() != null && !e.getIp().trim().isEmpty()) ips.add(e.getIp().trim());
+        }
+        return ips;
+    }
+
+    /**
+     * 当前 IP 是否允许该用户登录。根据 uuid 与 limit=true 查询允许的 IP 列表：空表示不限制；否则当前 IP 须在列表中。
+     */
+    public boolean isIpAllowed(String uuid, String ip) {
+        Set<String> allowed = getAllowedIpsByUserUuid(uuid);
+        if (allowed.isEmpty())
+            return true;
+        if (ip == null || ip.trim().isEmpty())
+            return false;
+        return allowed.contains(ip.trim());
     }
 
     public void login(UserProfileEntity userProfileEntity, String way, String reason, HttpServletRequest request) {
@@ -303,17 +369,21 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
         String ip = null != request ? IP.getIp(request) : "";
         String agent = null != request ? request.getHeader("user-agent") : "";
         String host = null != request ? request.getHeader("host") : "";
-        logout(uuid, host, ip, agent);
+        String session = null != request ? request.getSession().getId() : "";
+        logout(uuid, host, ip, session, agent);
     }
 
-    public void logout(String uuid, String host, String ip, String agent) {
+    public void logout(String uuid, String host, String ip, String session, String agent) {
         try {
             UserLoginLogEntity entity = new UserLoginLogEntity();
             entity.setUuid(uuid);
             entity.setCreate(new Date());
+            entity.setAllow(true);
+            entity.setWhite(false);
             entity.setLogout(true);
             entity.setHost(host);
             entity.setIp(ip);
+            entity.setSession(session);
             entity.setAgent(agent);
             insert(entity);
         } catch (Throwable e) {

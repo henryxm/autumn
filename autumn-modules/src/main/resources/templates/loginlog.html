@@ -75,21 +75,27 @@
         .btn-danger { background: #dc3545; color: #fff; }
         .btn-danger:hover { background: #c82333; }
         .table-wrap { overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; }
+        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
         thead { background: #1e3c72; color: #fff; }
-        th { padding: 12px 14px; text-align: left; font-size: 13px; font-weight: 600; }
-        td { padding: 12px 14px; border-bottom: 1px solid #e9ecef; font-size: 13px; }
+        th { padding: 12px 14px; text-align: left; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        td { padding: 12px 14px; border-bottom: 1px solid #e9ecef; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         tbody tr:hover { background: #f8f9fa; }
+        .col-id { width: 50px; min-width: 50px; }
+        .col-ops { min-width: 72px; width: 72px; }
+        td.col-ops { overflow: visible; }
         .badge { display: inline-block; padding: 3px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
         .badge-success { background: #d4edda; color: #155724; }
         .badge-danger { background: #f8d7da; color: #721c24; }
         .badge-info { background: #d1ecf1; color: #0c5460; }
         .badge-warning { background: #fff3cd; color: #856404; }
-        .cell-uuid { font-family: Consolas, monospace; font-size: 12px; word-break: break-all; max-width: 160px; }
-        .cell-host { font-family: Consolas, monospace; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .badge-secondary { background: #e2e3e5; color: #383d41; }
+        .cell-uuid { font-family: Consolas, monospace; font-size: 12px; }
+        .cell-host { font-family: Consolas, monospace; }
         .cell-ip { font-family: Consolas, monospace; }
-        .cell-agent { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .cell-reason { max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .cell-session { font-family: Consolas, monospace; font-size: 11px; }
+        .cell-path { font-family: Consolas, monospace; }
+        .link-jump { margin-left: 6px; font-size: 11px; color: #1e3c72; text-decoration: none; white-space: nowrap; }
+        .link-jump:hover { text-decoration: underline; }
         .cell-query { cursor: pointer; }
         .cell-query:hover { color: #1e3c72; text-decoration: underline; }
         .pagination {
@@ -140,6 +146,15 @@
         .modal-header h2 { font-size: 18px; }
         .close { font-size: 24px; cursor: pointer; color: #6c757d; }
         .close:hover { color: #333; }
+        .ops-dropdown { display: inline-block; }
+        .ops-dropdown .btn-sm { padding: 4px 10px; font-size: 12px; }
+        .ops-menu { background: #fff; border: 1px solid #dee2e6; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 88px; z-index: 9999; }
+        .ops-menu-fixed { position: fixed; margin-top: 0; }
+        .ops-menu a { display: block; padding: 8px 12px; font-size: 13px; color: #333; text-decoration: none; white-space: nowrap; }
+        .ops-menu a:hover { background: #f8f9fa; }
+        .ops-menu a:first-child { border-radius: 5px 5px 0 0; }
+        .ops-menu a:last-child { border-radius: 0 0 5px 5px; }
+        .ops-menu a.danger { color: #dc3545; }
         [v-cloak] { display: none; }
     </style>
 </head>
@@ -148,7 +163,7 @@
         <div class="header">
             <div>
                 <h1>登录日志</h1>
-                <p>按用户 UUID、IP、主机、方式、允许/拒绝、登录/登出及时间范围查询</p>
+                <p>按用户 UUID、IP、主机、会话、路径、方式、允许/拒绝、登录/登出及时间范围查询；会话可跳转会话管理，路径可新窗口打开</p>
             </div>
             <div class="stats">
                 <span class="stat"><strong>总数</strong><span v-text="totalCount"></span></span>
@@ -161,11 +176,11 @@
         <div class="toolbar">
             <div class="form-row">
                 <div class="form-group form-group-uuid">
-                    <label>用户 UUID</label>
+                    <label>UUID</label>
                     <input type="text" v-model="filters.uuid" placeholder="支持模糊" @keyup.enter="search">
                 </div>
                 <div class="form-group">
-                    <label>登录账号</label>
+                    <label>账号</label>
                     <input type="text" v-model="filters.account" placeholder="支持模糊" @keyup.enter="search">
                 </div>
                 <div class="form-group">
@@ -175,6 +190,14 @@
                 <div class="form-group">
                     <label>主机</label>
                     <input type="text" v-model="filters.host" placeholder="支持模糊" @keyup.enter="search">
+                </div>
+                <div class="form-group">
+                    <label>会话</label>
+                    <input type="text" v-model="filters.session" placeholder="支持模糊" @keyup.enter="search">
+                </div>
+                <div class="form-group">
+                    <label>路径</label>
+                    <input type="text" v-model="filters.path" placeholder="支持模糊" @keyup.enter="search">
                 </div>
                 <div class="form-group">
                     <label>方式</label>
@@ -189,20 +212,28 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>登录/登出</label>
+                    <label>登录</label>
                     <select v-model="filters.logout">
                         <option value="">全部</option>
                         <option value="0">登录</option>
                         <option value="1">登出</option>
                     </select>
                 </div>
+                <div class="form-group">
+                    <label>加白</label>
+                    <select v-model="filters.white">
+                        <option value="">全部</option>
+                        <option value="1">是</option>
+                        <option value="0">否</option>
+                    </select>
+                </div>
                 <div class="form-date-group">
                     <div class="form-group">
-                        <label>开始日期</label>
+                        <label>开始</label>
                         <input type="date" v-model="filters.createStart">
                     </div>
                     <div class="form-group">
-                        <label>结束日期</label>
+                        <label>结束</label>
                         <input type="date" v-model="filters.createEnd">
                     </div>
                 </div>
@@ -233,16 +264,16 @@
                     <input type="text" v-model="cleanIp" placeholder="如 192.168.1.1">
                 </div>
                 <div v-if="cleanType === 'uuid'" class="form-group" style="margin-bottom: 12px;">
-                    <label>用户 UUID</label>
+                    <label>用户ID</label>
                     <input type="text" v-model="cleanUuid" placeholder="支持模糊">
                 </div>
                 <div v-if="cleanType === 'time'" class="form-date-group" style="margin-bottom: 12px;">
                     <div class="form-group">
-                        <label>开始日期</label>
+                        <label>开始</label>
                         <input type="date" v-model="cleanStart">
                     </div>
                     <div class="form-group">
-                        <label>结束日期</label>
+                        <label>结束</label>
                         <input type="date" v-model="cleanEnd">
                     </div>
                 </div>
@@ -263,36 +294,53 @@
             <table>
                 <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>用户 UUID</th>
-                        <th>登录账号</th>
+                        <th class="col-id">ID</th>
+                        <th>用户ID</th>
+                        <th>账号</th>
                         <th>方式</th>
                         <th>主机</th>
                         <th>IP</th>
+                        <th>会话</th>
+                        <th>路径</th>
+                        <th>加白</th>
                         <th>允许</th>
-                        <th>登录/登出</th>
-                        <th>创建时间</th>
+                        <th>登录</th>
+                        <th>创建</th>
                         <th>原因</th>
-                        <th>Agent</th>
-                        <th>操作</th>
+                        <th>代理</th>
+                        <th class="col-ops">操作</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-if="loading"><td colspan="12" class="loading">加载中…</td></tr>
-                    <tr v-else-if="list.length === 0"><td colspan="12" class="empty-state">暂无记录</td></tr>
+                    <tr v-if="loading"><td colspan="15" class="loading">加载中…</td></tr>
+                    <tr v-else-if="list.length === 0"><td colspan="15" class="empty-state">暂无记录</td></tr>
                     <tr v-else v-for="r in list" :key="r.id">
-                        <td v-text="r.id"></td>
+                        <td class="col-id" v-text="r.id"></td>
                         <td class="cell-uuid cell-query" :title="(r.uuid || '-') + ' (点击查询)'" v-text="r.uuid || '-'" @click="queryBy('uuid', r.uuid)"></td>
                         <td class="cell-query" :title="(r.account || '-') + ' (点击查询)'" v-text="r.account || '-'" @click="queryBy('account', r.account)"></td>
                         <td v-text="r.way || '-'"></td>
                         <td class="cell-host cell-query" :title="(r.host || '-') + ' (点击查询)'" v-text="r.host || '-'" @click="queryBy('host', r.host)"></td>
                         <td class="cell-ip cell-query" :title="(r.ip || '-') + ' (点击查询)'" v-text="r.ip || '-'" @click="queryBy('ip', r.ip)"></td>
+                        <td class="cell-session">
+                            <span v-if="r.session" class="cell-query" :title="r.session + ' (点击跳转会话管理)'" v-text="r.session" @click="goSession(r.session)"></span>
+                            <span v-else v-text="'-'"></span>
+                            <a v-if="r.session" href="#" @click.prevent="goSession(r.session)" class="link-jump" title="跳转会话管理">→会话</a>
+                        </td>
+                        <td class="cell-path">
+                            <span class="cell-query" :title="(r.path || '-') + ' (点击查询)'" v-text="r.path || '-'" @click="queryBy('path', r.path)"></span>
+                            <a v-if="r.path" href="#" @click.prevent="goPath(r.path)" class="link-jump" title="新窗口打开">→打开</a>
+                        </td>
+                        <td><span class="badge" :class="r.white ? 'badge-info' : 'badge-secondary'" v-text="r.white ? '是' : '否'" :title="r.white ? '该记录IP为允许登录IP' : ''"></span></td>
                         <td><span class="badge" :class="r.allow ? 'badge-success' : 'badge-danger'" v-text="r.allow ? '是' : '否'"></span></td>
                         <td><span class="badge" :class="r.logout ? 'badge-info' : 'badge-warning'" v-text="r.logout ? '登出' : '登录'"></span></td>
                         <td v-text="formatDate(r.create)"></td>
                         <td class="cell-reason" :title="r.reason" v-text="r.reason || '-'"></td>
                         <td class="cell-agent cell-query" :title="(r.agent || '-') + ' (点击查询)'" v-text="r.agent || '-'" @click="queryBy('agent', r.agent)"></td>
-                        <td><button class="btn btn-secondary" style="padding:4px 10px;font-size:12px" @click="showDetail(r)">详情</button></td>
+                        <td class="col-ops">
+                            <div class="ops-dropdown" @click.stop>
+                                <button class="btn btn-secondary btn-sm" @click="toggleOps(r, $event)">操作 ▾</button>
+                            </div>
+                        </td>
                     </tr>
                 </tbody>
             </table>
@@ -316,18 +364,27 @@
                 </div>
                 <div v-if="detail" id="detailBody">
                     <div class="detail-row"><strong>ID</strong> <span v-text="detail.id"></span></div>
-                    <div class="detail-row"><strong>UUID</strong> <span v-text="detail.uuid || '-'"></span></div>
-                    <div class="detail-row"><strong>登录账号</strong> <span v-text="detail.account || '-'"></span></div>
+                    <div class="detail-row"><strong>用户ID</strong> <span v-text="detail.uuid || '-'"></span></div>
+                    <div class="detail-row"><strong>账号</strong> <span v-text="detail.account || '-'"></span></div>
                     <div class="detail-row"><strong>方式</strong> <span v-text="detail.way || '-'"></span></div>
                     <div class="detail-row"><strong>主机</strong> <span v-text="detail.host || '-'"></span></div>
                     <div class="detail-row"><strong>IP</strong> <span v-text="detail.ip || '-'"></span></div>
+                    <div class="detail-row"><strong>会话</strong> <span v-if="detail.session" class="cell-query" :title="detail.session + ' (点击跳转会话管理)'" v-text="detail.session" @click="goSession(detail.session)"></span><span v-else>-</span></div>
+                    <div class="detail-row"><strong>路径</strong> <span v-text="detail.path || '-'"></span></div>
+                    <div class="detail-row"><strong>加白</strong> <span v-text="detail.white ? '是（该记录IP为允许登录IP）' : '否'"></span></div>
                     <div class="detail-row"><strong>允许</strong> <span v-text="detail.allow ? '是' : '否'"></span></div>
                     <div class="detail-row"><strong>登出</strong> <span v-text="detail.logout ? '是' : '否'"></span></div>
-                    <div class="detail-row"><strong>创建时间</strong> <span v-text="formatDate(detail.create)"></span></div>
+                    <div class="detail-row"><strong>创建</strong> <span v-text="formatDate(detail.create)"></span></div>
                     <div class="detail-row"><strong>原因</strong> <span v-text="detail.reason || '-'"></span></div>
-                    <div class="detail-row"><strong>Agent</strong> <span style="word-break:break-all" v-text="detail.agent || '-'"></span></div>
+                    <div class="detail-row"><strong>代理</strong> <span style="word-break:break-all" v-text="detail.agent || '-'"></span></div>
                 </div>
             </div>
+        </div>
+        <div v-show="openOpsId" class="ops-menu ops-menu-fixed" :style="{ top: menuTop+'px', left: menuLeft+'px' }" @click.stop>
+            <a href="#" @click.prevent="selectDetail">详情</a>
+            <a v-if="openOpsRow && !openOpsRow.white" href="#" @click.prevent="selectToggleWhite(true)">加白</a>
+            <a v-if="openOpsRow && openOpsRow.white" href="#" @click.prevent="selectToggleWhite(false)">去白</a>
+            <a href="#" class="danger" @click.prevent="selectDelete">删除</a>
         </div>
     </div>
 
@@ -335,8 +392,11 @@
     <script src="${request.contextPath}/statics/libs/vue.min.js"></script>
     <script>
     (function() {
-        var listUrl = '${request.contextPath}/usr/userloginlog/list';
-        var cleanUrl = '${request.contextPath}/usr/userloginlog/clean';
+        var contextPath = '${request.contextPath}';
+        var listUrl = contextPath + '/usr/userloginlog/list';
+        var cleanUrl = contextPath + '/usr/userloginlog/clean';
+        var deleteUrl = contextPath + '/usr/userloginlog/delete';
+        var updateWhiteUrl = contextPath + '/usr/userloginlog/updateWhite';
         var vm = new Vue({
             el: '#app',
             data: {
@@ -355,20 +415,35 @@
                 cleanUuid: '',
                 cleanStart: '',
                 cleanEnd: '',
+                openOpsId: null,
+                openOpsRow: null,
+                menuTop: 0,
+                menuLeft: 0,
                 filters: {
                     uuid: '',
                     account: '',
                     ip: '',
                     host: '',
+                    session: '',
+                    path: '',
                     way: '',
                     agent: '',
                     allow: '',
                     logout: '',
+                    white: '',
                     createStart: '',
                     createEnd: ''
                 }
             },
-            mounted: function() { this.load(); },
+            mounted: function() {
+                var vm = this;
+                vm.load();
+                vm._closeOps = function() { vm.openOpsId = null; vm.openOpsRow = null; };
+                document.addEventListener('click', vm._closeOps);
+            },
+            beforeDestroy: function() {
+                if (this._closeOps) { document.removeEventListener('click', this._closeOps); }
+            },
             methods: {
                 load: function() {
                     var vm = this;
@@ -381,10 +456,13 @@
                     if (vm.filters.account) q.account = vm.filters.account;
                     if (vm.filters.ip) q.ip = vm.filters.ip;
                     if (vm.filters.host) q.host = vm.filters.host;
+                    if (vm.filters.session) q.session = vm.filters.session;
+                    if (vm.filters.path) q.path = vm.filters.path;
                     if (vm.filters.way) q.way = vm.filters.way;
                     if (vm.filters.agent) q.agent = vm.filters.agent;
                     if (vm.filters.allow !== '') q.allow = vm.filters.allow;
                     if (vm.filters.logout !== '') q.logout = vm.filters.logout;
+                    if (vm.filters.white !== '') q.white = vm.filters.white;
                     if (vm.filters.createStart) q.createStart = vm.filters.createStart;
                     if (vm.filters.createEnd) q.createEnd = vm.filters.createEnd;
                     $.ajax({
@@ -412,7 +490,7 @@
                 },
                 search: function() { this.currPage = 1; this.load(); },
                 reset: function() {
-                    this.filters = { uuid: '', account: '', ip: '', host: '', way: '', agent: '', allow: '', logout: '', createStart: '', createEnd: '' };
+                    this.filters = { uuid: '', account: '', ip: '', host: '', session: '', path: '', way: '', agent: '', allow: '', logout: '', white: '', createStart: '', createEnd: '' };
                     this.currPage = 1;
                     this.load();
                 },
@@ -422,6 +500,16 @@
                     this.currPage = 1;
                     this.load();
                 },
+                goSession: function(s) {
+                    if (!s || (typeof s === 'string' && s.trim() === '')) return;
+                    window.open(contextPath + '/session.html?sessionId=' + encodeURIComponent(String(s).trim()), '_blank');
+                },
+                goPath: function(p) {
+                    p = (p || '').trim();
+                    if (!p) return;
+                    if (!p.startsWith('/')) p = '/' + p;
+                    window.open(contextPath + p, '_blank');
+                },
                 go: function(p) { if (p >= 1 && p <= this.totalPage) { this.currPage = p; this.load(); } },
                 formatDate: function(d) {
                     if (!d) return '-';
@@ -429,8 +517,66 @@
                     else if (typeof d === 'string') d = new Date(d);
                     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0') + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + ':' + String(d.getSeconds()).padStart(2, '0');
                 },
+                toggleOps: function(r, ev) {
+                    if (this.openOpsId === r.id) { this.openOpsId = null; this.openOpsRow = null; return; }
+                    var btn = ev && ev.target;
+                    if (btn) { var rect = btn.getBoundingClientRect(); this.menuTop = rect.bottom + 2; this.menuLeft = rect.left; }
+                    this.openOpsId = r.id; this.openOpsRow = r;
+                },
+                selectDetail: function() { var r = this.openOpsRow; this.openOpsId = null; this.openOpsRow = null; if (r) this.showDetail(r); },
+                selectToggleWhite: function(white) { var r = this.openOpsRow; this.openOpsId = null; this.openOpsRow = null; if (r) this.toggleWhite(r, white); },
+                selectDelete: function() { var r = this.openOpsRow; this.openOpsId = null; this.openOpsRow = null; if (r) this.deleteOne(r); },
                 showDetail: function(r) { this.detail = r; },
                 closeDetail: function() { this.detail = null; },
+                toggleWhite: function(r, white) {
+                    var vm = this;
+                    if (!r || r.id == null) return;
+                    $.ajax({
+                        url: updateWhiteUrl,
+                        method: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({ id: r.id, white: white }),
+                        success: function(res) {
+                            if (res && res.code === 0) {
+                                r.white = white;
+                                if (vm.detail && vm.detail.id === r.id) vm.detail.white = white;
+                                vm.showMsg(white ? '已开启白名单' : '已关闭白名单', 'alert-success');
+                            } else {
+                                vm.showMsg((res && res.msg) || '操作失败', 'alert-danger');
+                            }
+                        },
+                        error: function(xhr) {
+                            var m = '操作失败';
+                            try { var j = JSON.parse(xhr.responseText); if (j && j.msg) m = j.msg; } catch(e) {}
+                            vm.showMsg(m, 'alert-danger');
+                        }
+                    });
+                },
+                deleteOne: function(r) {
+                    var vm = this;
+                    if (!r || r.id == null) return;
+                    if (!confirm('确定要删除该条记录吗？')) return;
+                    $.ajax({
+                        url: deleteUrl,
+                        method: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify([r.id]),
+                        success: function(res) {
+                            if (res && res.code === 0) {
+                                vm.showMsg('已删除', 'alert-success');
+                                if (vm.detail && vm.detail.id === r.id) vm.detail = null;
+                                vm.load();
+                            } else {
+                                vm.showMsg((res && res.msg) || '删除失败', 'alert-danger');
+                            }
+                        },
+                        error: function(xhr) {
+                            var m = '删除失败';
+                            try { var j = JSON.parse(xhr.responseText); if (j && j.msg) m = j.msg; } catch(e) {}
+                            vm.showMsg(m, 'alert-danger');
+                        }
+                    });
+                },
                 openClean: function() { this.cleanModal = true; this.cleanType = 'ip'; this.cleanIp = ''; this.cleanUuid = ''; this.cleanStart = ''; this.cleanEnd = ''; },
                 closeClean: function() { this.cleanModal = false; },
                 doClean: function() {
@@ -451,13 +597,16 @@
                         body.account = vm.filters.account;
                         body.ip = vm.filters.ip;
                         body.host = vm.filters.host;
+                        body.session = vm.filters.session;
+                        body.path = vm.filters.path;
                         body.way = vm.filters.way;
                         body.allow = vm.filters.allow;
                         body.logout = vm.filters.logout;
+                        body.white = vm.filters.white;
                         body.createStart = vm.filters.createStart;
                         body.createEnd = vm.filters.createEnd;
-                        var has = body.uuid || body.account || body.ip || body.host || body.createStart || body.createEnd;
-                        if (!has) { vm.showMsg('按当前筛选清理需至少设置：用户 UUID、登录账号、IP、主机、开始日期、结束日期中的一项', 'alert-danger'); return; }
+                        var has = body.uuid || body.account || body.ip || body.host || body.session || body.path || body.white || body.createStart || body.createEnd;
+                        if (!has) { vm.showMsg('按当前筛选清理需至少设置：用户 UUID、登录账号、IP、主机、会话、路径、加白、开始日期、结束日期中的一项', 'alert-danger'); return; }
                     } else if (vm.cleanType === 'page') {
                         if (vm.list.length === 0) { vm.showMsg('当前页无记录', 'alert-danger'); return; }
                         body.ids = vm.list.map(function(r) { return r.id; });

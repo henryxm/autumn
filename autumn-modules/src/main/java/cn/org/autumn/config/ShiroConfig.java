@@ -1,16 +1,18 @@
 package cn.org.autumn.config;
 
 import cn.org.autumn.modules.spm.filter.SpmFilter;
+import cn.org.autumn.modules.sys.service.SysConfigService;
+import cn.org.autumn.modules.sys.shiro.ForceLogoutRememberMeManager;
 import cn.org.autumn.modules.sys.shiro.RedisShiroSessionDAO;
 import cn.org.autumn.modules.sys.shiro.UserRealm;
 import org.apache.commons.lang.StringUtils;
 import org.apache.shiro.SecurityUtils;
 import org.apache.shiro.mgt.SecurityManager;
+import org.apache.shiro.mgt.RememberMeManager;
 import org.apache.shiro.session.mgt.SessionManager;
 import org.apache.shiro.spring.LifecycleBeanPostProcessor;
 import org.apache.shiro.spring.security.interceptor.AuthorizationAttributeSourceAdvisor;
 import org.apache.shiro.spring.web.ShiroFilterFactoryBean;
-import org.apache.shiro.web.mgt.CookieRememberMeManager;
 import org.apache.shiro.web.mgt.DefaultWebSecurityManager;
 import org.apache.shiro.web.servlet.Cookie;
 import org.apache.shiro.web.servlet.SimpleCookie;
@@ -21,6 +23,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.DependsOn;
+import org.springframework.data.redis.core.RedisTemplate;
 
 import javax.servlet.Filter;
 import java.util.*;
@@ -50,10 +53,14 @@ public class ShiroConfig {
     }
 
     @Bean
-    public CookieRememberMeManager rememberMeManager(SimpleCookie rememberMeCookie) {
-        CookieRememberMeManager manager = new CookieRememberMeManager();
+    public RememberMeManager rememberMeManager(SimpleCookie rememberMeCookie,
+                                               @Autowired(required = false) RedisTemplate redisTemplate,
+                                               SysConfigService sysConfigService) {
+        ForceLogoutRememberMeManager manager = new ForceLogoutRememberMeManager();
         manager.setCipherKey(Base64.getDecoder().decode("Z3VucwAAAAAAAAAAAAAAAA=="));
         manager.setCookie(rememberMeCookie);
+        manager.setRedisTemplate(redisTemplate);
+        manager.setSysConfigService(sysConfigService);
         return manager;
     }
 
@@ -66,7 +73,7 @@ public class ShiroConfig {
     }
 
     @Bean("securityManager")
-    public SecurityManager securityManager(UserRealm userRealm, SessionManager sessionManager, CookieRememberMeManager rememberMeManager) {
+    public SecurityManager securityManager(UserRealm userRealm, SessionManager sessionManager, RememberMeManager rememberMeManager) {
         DefaultWebSecurityManager securityManager = new DefaultWebSecurityManager();
         securityManager.setRealm(userRealm);
         securityManager.setSessionManager(sessionManager);

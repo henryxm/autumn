@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>会话管理</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+            color: #fff;
+            padding: 24px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .header h1 { font-size: 24px; font-weight: 600; }
+        .header p { opacity: 0.9; font-size: 13px; margin-top: 4px; }
+        .stats { display: flex; gap: 16px; flex-wrap: wrap; }
+        .stat { background: rgba(255,255,255,0.15); padding: 8px 14px; border-radius: 8px; font-size: 13px; }
+        .stat strong { margin-right: 6px; }
+        .toolbar {
+            padding: 20px 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: flex-end;
+        }
+        .form-group { display: flex; flex-direction: column; gap: 4px; }
+        .form-group label { font-size: 12px; color: #6c757d; }
+        .form-group input {
+            padding: 8px 12px;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            font-size: 14px;
+            min-width: 160px;
+        }
+        .form-group-wide input { min-width: 300px; }
+        .form-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .btn-primary { background: #2c5364; color: #fff; }
+        .btn-primary:hover { background: #203a43; }
+        .btn-secondary { background: #6c757d; color: #fff; }
+        .btn-secondary:hover { background: #5a6268; }
+        .btn-danger { background: #dc3545; color: #fff; }
+        .btn-danger:hover { background: #c82333; }
+        .btn-warning { background: #e0a800; color: #000; }
+        .btn-warning:hover { background: #c99400; }
+        .btn-sm { padding: 4px 10px; font-size: 12px; }
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        thead { background: linear-gradient(135deg, #0f2027 0%, #203a43 100%); color: #fff; }
+        th { padding: 12px 14px; text-align: left; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        td { padding: 12px 14px; border-bottom: 1px solid #e9ecef; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        tbody tr:hover { background: #f8f9fa; }
+        tbody tr.row-current { background: #e8f4f8; }
+        .col-current { width: 60px; min-width: 60px; }
+        .col-ops { min-width: 72px; width: 72px; }
+        td.col-ops { overflow: visible; }
+        .ops-dropdown { display: inline-block; }
+        .ops-dropdown .btn-sm { padding: 4px 10px; font-size: 12px; }
+        .ops-menu { background: #fff; border: 1px solid #dee2e6; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 88px; z-index: 9999; }
+        .ops-menu-fixed { position: fixed; margin-top: 0; }
+        .ops-menu a { display: block; padding: 8px 12px; font-size: 13px; color: #333; text-decoration: none; white-space: nowrap; }
+        .ops-menu a:hover { background: #f8f9fa; }
+        .ops-menu a:first-child { border-radius: 5px 5px 0 0; }
+        .ops-menu a:last-child { border-radius: 0 0 5px 5px; }
+        .ops-menu a.danger { color: #dc3545; }
+        .ops-menu a.warning { color: #856404; }
+        .badge { display: inline-block; padding: 3px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+        .badge-current { background: #17a2b8; color: #fff; }
+        .badge-user { background: #e2e3e5; color: #383d41; }
+        .badge-forcelogout { background: #f8d7da; color: #721c24; }
+        .cell-id { font-family: Consolas, monospace; font-size: 11px; }
+        .cell-uuid { font-family: Consolas, monospace; font-size: 12px; }
+        .cell-host { font-family: Consolas, monospace; }
+        .cell-query { cursor: pointer; }
+        .cell-query:hover { color: #2c5364; text-decoration: underline; }
+        .loading { text-align: center; padding: 40px; color: #6c757d; }
+        .empty-state { text-align: center; padding: 50px 20px; color: #999; }
+        .alert { padding: 12px 16px; margin: 0 30px 16px; border-radius: 8px; border-left: 4px solid; }
+        .alert-success { background: #d4edda; border-color: #28a745; color: #155724; }
+        .alert-danger { background: #f8d7da; border-color: #dc3545; color: #721c24; }
+        .footer-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 30px;
+            background: #f8f9fa;
+            border-top: 1px solid #e9ecef;
+        }
+        [v-cloak] { display: none; }
+    </style>
+</head>
+<body>
+    <div class="container" id="app" v-cloak>
+        <div class="header">
+            <div>
+                <h1>会话管理</h1>
+                <p>按用户ID、用户名查询活动会话，支持删除单个会话或踢出用户全部会话</p>
+            </div>
+            <div class="stats">
+                <span class="stat"><strong>会话数</strong><span v-text="list.length"></span></span>
+            </div>
+        </div>
+
+        <div v-if="message" class="alert" :class="messageType" v-text="message"></div>
+
+        <div class="toolbar">
+            <div class="form-row">
+                <div class="form-group form-group-wide">
+                    <label>会话ID</label>
+                    <input type="text" v-model="filters.sessionId" placeholder="精确匹配" @keyup.enter="load">
+                </div>
+                <div class="form-group form-group-wide">
+                    <label>用户ID</label>
+                    <input type="text" v-model="filters.userUuid" placeholder="支持模糊" @keyup.enter="load">
+                </div>
+                <div class="form-group">
+                    <label>用户名</label>
+                    <input type="text" v-model="filters.username" placeholder="支持模糊" @keyup.enter="load">
+                </div>
+                <button class="btn btn-primary" @click="load">查询</button>
+                <button class="btn btn-secondary" @click="reset">重置</button>
+            </div>
+        </div>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th class="col-current">当前</th>
+                        <th>会话ID</th>
+                        <th>用户ID</th>
+                        <th>用户名</th>
+                        <th>创建</th>
+                        <th>最后</th>
+                        <th>主机</th>
+                        <th>重登</th>
+                        <th class="col-ops">操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-if="loading"><td colspan="9" class="loading">加载中…</td></tr>
+                    <tr v-else-if="list.length === 0"><td colspan="9" class="empty-state">暂无活动会话</td></tr>
+                    <tr v-else v-for="r in list" :key="r.sessionId" :class="{ 'row-current': r.current }">
+                        <td class="col-current">
+                            <span v-if="r.current" class="badge badge-current">当前</span>
+                            <span v-else class="badge badge-user">-</span>
+                        </td>
+                        <td class="cell-id cell-query" :title="(r.sessionId || '-') + ' (点击查询)'" v-text="r.sessionId" @click="queryBySessionId(r.sessionId)"></td>
+                        <td class="cell-uuid cell-query" :title="(r.userUuid || '-') + ' (点击查询)'" v-text="r.userUuid || '-'" @click="queryByUuid(r.userUuid)"></td>
+                        <td class="cell-query" :title="(r.username || '-') + ' (点击查询)'" v-text="r.username || '-'" @click="queryByUsername(r.username)"></td>
+                        <td v-text="formatTime(r.startTime)"></td>
+                        <td v-text="formatTime(r.lastAccessTime)"></td>
+                        <td class="cell-host" :title="r.host" v-text="r.host || '-'"></td>
+                        <td>
+                            <span v-if="r.forceLogout" class="badge badge-forcelogout">是</span>
+                            <span v-else>-</span>
+                        </td>
+                        <td class="col-ops">
+                            <div class="ops-dropdown" @click.stop>
+                                <button class="btn btn-secondary btn-sm" @click="toggleOps(r, $event)">操作 ▾</button>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="footer-bar">
+            <span style="color:#6c757d; font-size:13px;">当前会话 ID：<code v-text="currentSessionId || '-'"></code></span>
+        </div>
+        <div v-show="openOpsId" class="ops-menu ops-menu-fixed" :style="{ top: menuTop+'px', left: menuLeft+'px' }" @click.stop>
+            <a href="#" @click.prevent="selectDelete">删除</a>
+            <a v-if="openOpsRow && openOpsRow.userUuid" href="#" class="warning" @click.prevent="selectForceLogout" title="踢出该用户全部会话">踢出全部</a>
+            <a v-if="openOpsRow && openOpsRow.forceLogout && openOpsRow.userUuid" href="#" @click.prevent="selectClearForceLogout" title="取消后该用户可再次通过「记住我」自动登录">取消重登</a>
+        </div>
+    </div>
+
+    <script src="${request.contextPath}/statics/libs/jquery.min.js"></script>
+    <script src="${request.contextPath}/statics/libs/vue.min.js"></script>
+    <script>
+    (function() {
+        var listUrl = '${request.contextPath}/sys/session/list';
+        var deleteUrl = '${request.contextPath}/sys/session/delete';
+        var forceLogoutUrl = '${request.contextPath}/sys/session/forceLogout';
+        var clearForceLogoutUrl = '${request.contextPath}/sys/session/clearForceLogout';
+        var loginUrl = '${request.contextPath}/login.html';
+        var vm = new Vue({
+            el: '#app',
+            data: {
+                list: [],
+                loading: false,
+                currentSessionId: null,
+                message: '',
+                messageType: 'alert-success',
+                filters: { sessionId: '', userUuid: '', username: '' },
+                openOpsId: null,
+                openOpsRow: null,
+                menuTop: 0,
+                menuLeft: 0
+            },
+            mounted: function() {
+                var vm = this;
+                var m = window.location.search.match(/[?&]sessionId=([^&]*)/);
+                if (m && m[1]) { try { vm.filters.sessionId = decodeURIComponent(m[1]).trim(); } catch(e) { vm.filters.sessionId = m[1].trim(); } }
+                vm.load();
+                vm._closeOps = function() { vm.openOpsId = null; vm.openOpsRow = null; };
+                document.addEventListener('click', vm._closeOps);
+            },
+            beforeDestroy: function() {
+                if (this._closeOps) { document.removeEventListener('click', this._closeOps); }
+            },
+            methods: {
+                load: function() {
+                    var vm = this;
+                    vm.loading = true;
+                    var q = {};
+                    if (vm.filters.sessionId) q.sessionId = vm.filters.sessionId;
+                    if (vm.filters.userUuid) q.userUuid = vm.filters.userUuid;
+                    if (vm.filters.username) q.username = vm.filters.username;
+                    $.ajax({
+                        url: listUrl,
+                        method: 'GET',
+                        data: q,
+                        success: function(res) {
+                            vm.loading = false;
+                            if (res && res.code === 0) {
+                                vm.list = res.list || [];
+                                vm.currentSessionId = res.currentSessionId || null;
+                            } else {
+                                vm.list = [];
+                                vm.showMsg((res && res.msg) ? res.msg : '加载失败', 'alert-danger');
+                            }
+                        },
+                        error: function(xhr) {
+                            vm.loading = false;
+                            vm.list = [];
+                            var m = '请求失败';
+                            try { var j = JSON.parse(xhr.responseText); if (j && j.msg) m = j.msg; } catch(e) {}
+                            vm.showMsg(m, 'alert-danger');
+                        }
+                    });
+                },
+                reset: function() {
+                    this.filters = { sessionId: '', userUuid: '', username: '' };
+                    this.load();
+                },
+                formatTime: function(ts) {
+                    if (ts == null) return '-';
+                    var d = new Date(typeof ts === 'number' ? ts : parseInt(ts, 10));
+                    if (isNaN(d.getTime())) return '-';
+                    var pad = function(n) { return (n < 10 ? '0' : '') + n; };
+                    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+                },
+                copy: function(s) {
+                    if (!s) return;
+                    try {
+                        if (navigator.clipboard && navigator.clipboard.writeText) {
+                            navigator.clipboard.writeText(s);
+                            this.showMsg('已复制', 'alert-success');
+                        } else {
+                            var ta = document.createElement('textarea'); ta.value = s; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+                            this.showMsg('已复制', 'alert-success');
+                        }
+                    } catch (e) { this.showMsg('复制失败', 'alert-danger'); }
+                },
+                queryBySessionId: function(v) {
+                    if (v == null || (typeof v === 'string' && v.trim() === '')) return;
+                    this.filters.sessionId = String(v).trim();
+                    this.load();
+                },
+                queryByUuid: function(v) {
+                    if (v == null || (typeof v === 'string' && v.trim() === '')) return;
+                    this.filters.userUuid = String(v).trim();
+                    this.filters.username = '';
+                    this.load();
+                },
+                queryByUsername: function(v) {
+                    if (v == null || (typeof v === 'string' && v.trim() === '')) return;
+                    this.filters.username = String(v).trim();
+                    this.filters.userUuid = '';
+                    this.load();
+                },
+                toggleOps: function(r, ev) {
+                    if (this.openOpsId === r.sessionId) { this.openOpsId = null; this.openOpsRow = null; return; }
+                    var btn = ev && ev.target;
+                    if (btn) { var rect = btn.getBoundingClientRect(); this.menuTop = rect.bottom + 2; this.menuLeft = rect.left; }
+                    this.openOpsId = r.sessionId; this.openOpsRow = r;
+                },
+                selectDelete: function() { var r = this.openOpsRow; this.openOpsId = null; this.openOpsRow = null; if (r) this.deleteOne(r); },
+                selectForceLogout: function() { var r = this.openOpsRow; this.openOpsId = null; this.openOpsRow = null; if (r && r.userUuid) this.forceLogoutUser(r.userUuid, r.username); },
+                selectClearForceLogout: function() { var r = this.openOpsRow; this.openOpsId = null; this.openOpsRow = null; if (r && r.userUuid) this.clearForceLogout(r.userUuid); },
+                deleteOne: function(r) {
+                    var vm = this;
+                    var msg = '确定要删除该会话吗？';
+                    if (r.current) msg = '正在删除当前会话，执行后将被退出登录，是否继续？';
+                    if (!confirm(msg)) return;
+                    $.ajax({
+                        url: deleteUrl,
+                        method: 'DELETE',
+                        contentType: 'application/json',
+                        data: JSON.stringify({ sessionId: r.sessionId }),
+                        success: function(res) {
+                            if (res && res.code === 0) {
+                                vm.showMsg(res.msg || '已删除', 'alert-success');
+                                if (r.current) {
+                                    setTimeout(function() { window.location.href = loginUrl; }, 800);
+                                    return;
+                                }
+                                vm.load();
+                            } else {
+                                vm.showMsg((res && res.msg) || '删除失败', 'alert-danger');
+                            }
+                        },
+                        error: function(xhr) {
+                            var m = '删除失败';
+                            try { var j = JSON.parse(xhr.responseText); if (j && j.msg) m = j.msg; } catch(e) {}
+                            vm.showMsg(m, 'alert-danger');
+                        }
+                    });
+                },
+                forceLogoutUser: function(userUuid, username) {
+                    var vm = this;
+                    var who = username || userUuid || '该用户';
+                    if (!confirm('确定要踢出 ' + who + ' 的全部会话吗？')) return;
+                    $.ajax({
+                        url: forceLogoutUrl,
+                        method: 'DELETE',
+                        contentType: 'application/json',
+                        data: JSON.stringify({ userUuid: userUuid }),
+                        success: function(res) {
+                            if (res && res.code === 0) {
+                                vm.showMsg(res.msg || '已踢出', 'alert-success');
+                                vm.load();
+                            } else {
+                                vm.showMsg((res && res.msg) || '操作失败', 'alert-danger');
+                            }
+                        },
+                        error: function(xhr) {
+                            var m = '操作失败';
+                            try { var j = JSON.parse(xhr.responseText); if (j && j.msg) m = j.msg; } catch(e) {}
+                            vm.showMsg(m, 'alert-danger');
+                        }
+                    });
+                },
+                clearForceLogout: function(userUuid) {
+                    var vm = this;
+                    if (!userUuid) return;
+                    $.ajax({
+                        url: clearForceLogoutUrl,
+                        method: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({ userUuid: userUuid }),
+                        success: function(res) {
+                            if (res && res.code === 0) {
+                                vm.showMsg(res.msg || '已取消强制重新登录', 'alert-success');
+                                vm.load();
+                            } else {
+                                vm.showMsg((res && res.msg) || '操作失败', 'alert-danger');
+                            }
+                        },
+                        error: function(xhr) {
+                            var m = '操作失败';
+                            try { var j = JSON.parse(xhr.responseText); if (j && j.msg) m = j.msg; } catch(e) {}
+                            vm.showMsg(m, 'alert-danger');
+                        }
+                    });
+                },
+                showMsg: function(m, t) {
+                    this.message = m;
+                    this.messageType = t || 'alert-success';
+                    var self = this;
+                    setTimeout(function() { self.message = ''; }, 3000);
+                }
+            }
+        });
+    })();
+    </script>
+</body>
+</html>
