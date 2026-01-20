@@ -268,16 +268,18 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
     public void login(String uuid, String account, boolean allow, String way, String reason, HttpServletRequest request) {
         String ip = null != request ? IP.getIp(request) : "";
         String agent = null != request ? request.getHeader("user-agent") : "";
-        login(uuid, account, allow, way, reason, ip, agent);
+        String host = null != request ? request.getHeader("host") : "";
+        login(uuid, account, allow, way, reason, host, ip, agent);
     }
 
-    public void login(String uuid, String account, boolean allow, String way, String reason, String ip, String agent) {
+    public void login(String uuid, String account, boolean allow, String way, String reason, String host, String ip, String agent) {
         try {
             UserLoginLogEntity entity = new UserLoginLogEntity();
             entity.setUuid(uuid);
             entity.setAccount(account);
             entity.setLogout(false);
             entity.setAllow(allow);
+            entity.setHost(host);
             entity.setIp(ip);
             entity.setAgent(agent);
             entity.setWay(way);
@@ -296,15 +298,17 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
     public void logout(String uuid, HttpServletRequest request) {
         String ip = null != request ? IP.getIp(request) : "";
         String agent = null != request ? request.getHeader("user-agent") : "";
-        logout(uuid, ip, agent);
+        String host = null != request ? request.getHeader("host") : "";
+        logout(uuid, host, ip, agent);
     }
 
-    public void logout(String uuid, String ip, String agent) {
+    public void logout(String uuid, String host, String ip, String agent) {
         try {
             UserLoginLogEntity entity = new UserLoginLogEntity();
             entity.setUuid(uuid);
             entity.setCreate(new Date());
             entity.setLogout(true);
+            entity.setHost(host);
             entity.setIp(ip);
             entity.setAgent(agent);
             insert(entity);

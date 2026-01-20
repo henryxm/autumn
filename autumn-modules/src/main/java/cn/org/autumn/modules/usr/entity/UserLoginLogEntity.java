@@ -31,18 +31,22 @@ public class UserLoginLogEntity implements Serializable {
     @Index
     private String way;
 
+    @Column(length = 64, comment = "主机")
+    @Index
+    private String host;
+
     @Column(length = 40, comment = "IP地址")
     @Index
     private String ip;
+
+    @Column(comment = "代理")
+    private String agent;
 
     @Column(comment = "退出")
     private boolean logout;
 
     @Column(comment = "允许")
     private boolean allow;
-
-    @Column(comment = "代理")
-    private String agent;
 
     @Column(comment = "原因")
     private String reason;

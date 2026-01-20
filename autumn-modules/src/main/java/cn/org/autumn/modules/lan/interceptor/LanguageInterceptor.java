@@ -5,16 +5,15 @@ import cn.org.autumn.config.InterceptorHandler;
 import cn.org.autumn.modules.lan.service.Language;
 import cn.org.autumn.modules.lan.service.LanguageService;
 import cn.org.autumn.utils.InterceptorUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
 import org.springframework.ui.ModelMap;
+import org.springframework.web.servlet.AsyncHandlerInterceptor;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.ModelAndView;
-import org.springframework.web.servlet.handler.HandlerInterceptorAdapter;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -22,10 +21,9 @@ import javax.servlet.http.HttpSession;
 import java.util.Locale;
 import java.util.Map;
 
+@Slf4j
 @Component
-public class LanguageInterceptor extends HandlerInterceptorAdapter implements InterceptorHandler {
-
-    private static Logger logger = LoggerFactory.getLogger(LanguageInterceptor.class);
+public class LanguageInterceptor implements InterceptorHandler, AsyncHandlerInterceptor {
 
     @Autowired
     LanguageService languageService;
@@ -63,7 +61,7 @@ public class LanguageInterceptor extends HandlerInterceptorAdapter implements In
                     }
                 }
             } catch (Exception e) {
-                logger.debug("LanguageInterceptor.getLocale error: " + e.getMessage());
+                log.debug("LanguageInterceptor.getLocale error: " + e.getMessage());
             }
         }
         return locale;
