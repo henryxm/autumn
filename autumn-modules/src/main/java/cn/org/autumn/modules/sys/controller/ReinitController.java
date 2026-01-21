@@ -91,6 +91,9 @@ public class ReinitController {
         } catch (Exception e) {
             return R.error(400, "initType 不合法，可选：create、update、none");
         }
+        if (initType == InitType.create) {
+            return R.ok().put("msg", "仅支持:update");
+        }
         if (initType == InitType.none) {
             return R.ok().put("msg", "initType 为 none，未执行任何操作");
         }
