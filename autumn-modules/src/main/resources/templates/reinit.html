@@ -1,32 +1,401 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>重建数据表</title>
     <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; overflow: hidden; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+        }
         .container {
+            width: 100%;
+            height: 100vh;
+            max-width: none;
+            margin: 0;
+            background: #fff;
+            overflow: hidden;
             display: flex;
-            justify-content: center; /* 水平居中 */
-            align-items: center; /* 垂直居中 */
-            height: 100vh; /* 容器高度为视口高度 */
             flex-direction: column;
         }
+        .header {
+            flex-shrink: 0;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #fff;
+            padding: 24px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .header h1 { font-size: 24px; font-weight: 600; }
+        .header p { opacity: 0.9; font-size: 13px; margin-top: 4px; }
+        .toolbar {
+            flex-shrink: 0;
+            padding: 20px 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: flex-end;
+        }
+        .form-group { display: flex; flex-direction: column; gap: 4px; }
+        .form-group label { font-size: 12px; color: #6c757d; }
+        .form-group input, .form-group select {
+            padding: 8px 12px;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            font-size: 14px;
+            min-width: 140px;
+        }
+        .form-group input { min-width: 180px; }
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .btn-primary { background: #1e3c72; color: #fff; }
+        .btn-primary:hover { background: #2a5298; }
+        .btn-secondary { background: #6c757d; color: #fff; }
+        .btn-secondary:hover { background: #5a6268; }
+        .btn-danger { background: #dc3545; color: #fff; }
+        .btn-danger:hover { background: #c82333; }
+        .btn-sm { padding: 4px 10px; font-size: 12px; }
+        .table-wrap { flex: 1; min-height: 0; overflow: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        thead { background: #1e3c72; color: #fff; position: sticky; top: 0; z-index: 1; }
+        th { padding: 12px 14px; text-align: left; font-size: 13px; font-weight: 600; white-space: nowrap; }
+        td { padding: 12px 14px; border-bottom: 1px solid #e9ecef; font-size: 13px; }
+        tbody tr:hover { background: #f8f9fa; }
+        .col-ops { width: 90px; min-width: 90px; }
+        td.col-ops { overflow: visible; }
+        .cell-name { font-family: Consolas, monospace; font-size: 12px; }
+        .ops-dropdown { display: inline-block; }
+        .ops-menu { background: #fff; border: 1px solid #dee2e6; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 100px; z-index: 9999; }
+        .ops-menu-fixed { position: fixed; margin-top: 0; }
+        .ops-menu a { display: block; padding: 8px 12px; font-size: 13px; color: #333; text-decoration: none; white-space: nowrap; }
+        .ops-menu a:hover { background: #f8f9fa; }
+        .ops-menu a.danger { color: #dc3545; }
+        .loading { text-align: center; padding: 40px; color: #6c757d; }
+        .empty-state { text-align: center; padding: 50px 20px; color: #999; }
+        .alert { flex-shrink: 0; padding: 12px 16px; margin: 0 30px 16px; border-radius: 8px; border-left: 4px solid; }
+        .alert-success { background: #d4edda; border-color: #28a745; color: #155724; }
+        .alert-danger { background: #f8d7da; border-color: #dc3545; color: #721c24; }
+        .expand-btn { cursor: pointer; color: #1e3c72; user-select: none; display: inline-block; min-width: 20px; text-align: center; padding: 2px 0; }
+        .expand-btn:hover { text-decoration: underline; }
+        .expand-cell { width: 36px; min-width: 36px; text-align: center; }
+        .sub-table { margin: 8px 0 0 20px; font-size: 12px; }
+        .sub-table th { background: #e9ecef; color: #333; padding: 6px 10px; }
+        .sub-table td { padding: 6px 10px; }
+        .default-init-result { flex-shrink: 0; margin: 0 30px 16px; padding: 12px 16px; background: #e7f3ff; border: 1px solid #b3d9ff; border-radius: 8px; font-size: 13px; }
+        .default-init-result .result-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .default-init-result .result-head strong { color: #004085; }
+        .default-init-result .result-body { color: #333; line-height: 1.6; }
+        [v-cloak] { display: none; }
     </style>
 </head>
 <body>
-<div class="container">
-    <button onclick="reload()">重建数据表</button>
-    <div>
-        ${data}
+    <div class="container" id="app" v-cloak>
+        <div class="header">
+            <div>
+                <h1>重建数据表</h1>
+                <p>扫描项目中带 @Table 注解的实体，选择 InitType 后执行单表或全部重建；建表通过 TableInit.create 实现</p>
+            </div>
+            <div style="font-size:13px; opacity:0.9;">共 <span v-text="list.length"></span> 个实体<span v-if="hasFilter">，符合 <span v-text="filteredList.length"></span> 条</span></div>
+        </div>
+
+        <div v-if="message" class="alert" :class="messageType" v-text="message"></div>
+
+        <div class="toolbar">
+            <div class="form-group">
+                <label>类名</label>
+                <input type="text" v-model="filters.className" placeholder="支持模糊" @keyup.enter="applyFilter">
+            </div>
+            <div class="form-group">
+                <label>表名</label>
+                <input type="text" v-model="filters.tableName" placeholder="支持模糊" @keyup.enter="applyFilter">
+            </div>
+            <button class="btn btn-primary" @click="applyFilter">查询</button>
+            <button class="btn btn-secondary" @click="resetFilter">重置</button>
+            <div class="form-group">
+                <label>InitType</label>
+                <select v-model="initType">
+                    <option value="create">create（删表重建）</option>
+                    <option value="update">update（增量更新）</option>
+                    <option value="none">none（不操作）</option>
+                </select>
+            </div>
+            <button class="btn btn-primary" @click="createAll">重建全部</button>
+            <button class="btn btn-secondary" @click="doDefaultInit" title="调用 tableFactory.reinit()，遍历 TableHandler 执行 reinit">执行默认</button>
+        </div>
+
+        <div v-if="defaultInitResult !== null" class="default-init-result">
+            <div class="result-head">
+                <strong>系统默认初始化结果</strong>
+                <button class="btn btn-secondary btn-sm" @click="closeDefaultInitResult">关闭</button>
+            </div>
+            <div class="result-body" v-html="defaultInitResult || '（无）'"></div>
+        </div>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th class="expand-cell"></th>
+                        <th>表名</th>
+                        <th>类名</th>
+                        <th>注释</th>
+                        <th>引擎</th>
+                        <th>字符集</th>
+                        <th>前缀</th>
+                        <th>列数</th>
+                        <th class="col-ops">操作</th>
+                    </tr>
+                </thead>
+                <tbody v-if="loading || list.length === 0 || filteredList.length === 0">
+                    <tr v-if="loading"><td colspan="9" class="loading">加载中…</td></tr>
+                    <tr v-else-if="list.length === 0"><td colspan="9" class="empty-state">暂无 @Table 实体</td></tr>
+                    <tr v-else-if="filteredList.length === 0"><td colspan="9" class="empty-state">暂无符合条件的数据</td></tr>
+                </tbody>
+                <tbody v-for="r in filteredList" v-else :key="r.classFullName">
+                    <tr>
+                        <td class="expand-cell">
+                            <span v-if="(r.columns||[]).length>0" class="expand-btn" @click.stop="toggleExpand(r.classFullName)" v-text="isExpanded(r.classFullName) ? '▼' : '▶'"></span>
+                            <span v-else>-</span>
+                        </td>
+                        <td class="cell-name" v-text="r.tableName || '-'"></td>
+                        <td class="cell-name" :title="r.classFullName" v-text="r.className || '-'"></td>
+                        <td v-text="r.comment || '-'"></td>
+                        <td v-text="r.engine || '-'"></td>
+                        <td v-text="r.charset || '-'"></td>
+                        <td v-text="r.prefix || '-'"></td>
+                        <td v-text="(r.columns||[]).length"></td>
+                        <td class="col-ops">
+                            <div class="ops-dropdown" @click.stop>
+                                <button class="btn btn-secondary btn-sm" @click="toggleOps(r, $event)">操作 ▾</button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr v-if="isExpanded(r.classFullName) && (r.columns||[]).length>0">
+                        <td colspan="9" style="padding:0 14px 12px; background:#fafafa; border-bottom:1px solid #e9ecef; vertical-align:top;">
+                            <div class="sub-table">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>列名</th>
+                                            <th>类型</th>
+                                            <th>长度</th>
+                                            <th>小数位</th>
+                                            <th>主键</th>
+                                            <th>可空</th>
+                                            <th>自增</th>
+                                            <th>唯一</th>
+                                            <th>默认值</th>
+                                            <th>注释</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="c in r.columns" :key="c.name">
+                                            <td class="cell-name" v-text="c.name"></td>
+                                            <td v-text="c.type"></td>
+                                            <td v-text="c.length || '-'"></td>
+                                            <td v-text="c.decimalLength || '-'"></td>
+                                            <td v-text="c.isKey ? '是' : '-'"></td>
+                                            <td v-text="c.isNull ? '是' : '否'"></td>
+                                            <td v-text="c.isAutoIncrement ? '是' : '-'"></td>
+                                            <td v-text="c.isUnique ? '是' : '-'"></td>
+                                            <td v-text="c.defaultValue || '-'"></td>
+                                            <td v-text="c.comment || '-'"></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div v-show="openOpsClass" class="ops-menu ops-menu-fixed" :style="{ top: menuTop+'px', left: menuLeft+'px' }" @click.stop>
+            <a href="#" @click.prevent="selectCreateOne">重建该表</a>
+        </div>
     </div>
-    <div>
-    </div>
-</div>
+
+    <script src="${request.contextPath}/statics/libs/jquery.min.js"></script>
+    <script src="${request.contextPath}/statics/libs/vue.min.js"></script>
+    <script>
+    (function() {
+        var contextPath = '${request.contextPath}';
+        var listUrl = contextPath + '/sys/reinit/list';
+        var createUrl = contextPath + '/sys/reinit/create';
+        var defaultInitUrl = contextPath + '/sys/reinit/defaultInit';
+        var vm = new Vue({
+            el: '#app',
+            data: {
+                list: [],
+                loading: false,
+                initType: 'update',
+                filters: { className: '', tableName: '' },
+                message: '',
+                messageType: 'alert-success',
+                expanded: {},
+                openOpsClass: null,
+                openOpsRow: null,
+                menuTop: 0,
+                menuLeft: 0,
+                defaultInitResult: null
+            },
+            computed: {
+                filteredList: function() {
+                    var list = this.list;
+                    var cn = (this.filters.className || '').trim().toLowerCase();
+                    var tn = (this.filters.tableName || '').trim().toLowerCase();
+                    if (!cn && !tn) return list;
+                    return list.filter(function(r) {
+                        if (cn) {
+                            var a = (r.className || '').toLowerCase();
+                            var b = (r.classFullName || '').toLowerCase();
+                            if (a.indexOf(cn) < 0 && b.indexOf(cn) < 0) return false;
+                        }
+                        if (tn) {
+                            if ((r.tableName || '').toLowerCase().indexOf(tn) < 0) return false;
+                        }
+                        return true;
+                    });
+                },
+                hasFilter: function() {
+                    return !!((this.filters.className || '').trim()) || !!((this.filters.tableName || '').trim());
+                }
+            },
+            mounted: function() {
+                var v = this;
+                v.load();
+                v._closeOps = function() { v.openOpsClass = null; v.openOpsRow = null; };
+                document.addEventListener('click', v._closeOps);
+            },
+            beforeDestroy: function() {
+                if (this._closeOps) document.removeEventListener('click', this._closeOps);
+            },
+            methods: {
+                applyFilter: function() {},
+                resetFilter: function() {
+                    this.filters = { className: '', tableName: '' };
+                },
+                closeDefaultInitResult: function() {
+                    this.defaultInitResult = null;
+                },
+                doDefaultInit: function() {
+                    var v = this;
+                    if (!confirm('确定要执行系统默认初始化吗？将调用 tableFactory.reinit() 遍历 TableHandler 执行。')) return;
+                    $.ajax({
+                        url: defaultInitUrl,
+                        method: 'POST',
+                        success: function(res) {
+                            if (res && res.code === 0) {
+                                v.defaultInitResult = res.data != null ? res.data : '';
+                                v.showMsg('执行完成', 'alert-success');
+                            } else {
+                                v.defaultInitResult = (res && res.msg) ? res.msg : '执行失败';
+                                v.showMsg((res && res.msg) || '执行失败', 'alert-danger');
+                            }
+                        },
+                        error: function(xhr) {
+                            var m = '请求失败';
+                            try { var j = JSON.parse(xhr.responseText); if (j && j.msg) m = j.msg; } catch(e) {}
+                            v.defaultInitResult = m;
+                            v.showMsg(m, 'alert-danger');
+                        }
+                    });
+                },
+                load: function() {
+                    var v = this;
+                    v.loading = true;
+                    $.ajax({
+                        url: listUrl,
+                        method: 'GET',
+                        success: function(res) {
+                            v.loading = false;
+                            if (res && res.code === 0 && res.list) {
+                                v.list = res.list;
+                            } else {
+                                v.list = [];
+                                v.showMsg((res && res.msg) ? res.msg : '加载失败', 'alert-danger');
+                            }
+                        },
+                        error: function(xhr) {
+                            v.loading = false;
+                            v.list = [];
+                            var m = '请求失败';
+                            try { var j = JSON.parse(xhr.responseText); if (j && j.msg) m = j.msg; } catch(e) {}
+                            v.showMsg(m, 'alert-danger');
+                        }
+                    });
+                },
+                toggleExpand: function(classFullName) {
+                    this.$set(this.expanded, classFullName, !this.expanded[classFullName]);
+                },
+                isExpanded: function(classFullName) {
+                    return !!this.expanded[classFullName];
+                },
+                toggleOps: function(r, ev) {
+                    if (this.openOpsClass === r.classFullName) { this.openOpsClass = null; this.openOpsRow = null; return; }
+                    var btn = ev && ev.target;
+                    if (btn) { var rect = btn.getBoundingClientRect(); this.menuTop = rect.bottom + 2; this.menuLeft = rect.left; }
+                    this.openOpsClass = r.classFullName;
+                    this.openOpsRow = r;
+                },
+                selectCreateOne: function() {
+                    var r = this.openOpsRow;
+                    this.openOpsClass = null;
+                    this.openOpsRow = null;
+                    if (r) this.doCreate([r.classFullName]);
+                },
+                createAll: function() {
+                    var v = this;
+                    if (v.initType === 'none') { v.showMsg('InitType 为 none 时不执行', 'alert-danger'); return; }
+                    if (!confirm('确定要按 InitType「' + v.initType + '」重建全部表吗？')) return;
+                    v.doCreate(null);
+                },
+                doCreate: function(classFullNames) {
+                    var v = this;
+                    var body = { initType: v.initType };
+                    if (classFullNames != null && classFullNames.length > 0) body.classFullNames = classFullNames;
+                    $.ajax({
+                        url: createUrl,
+                        method: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify(body),
+                        success: function(res) {
+                            if (res && res.code === 0) {
+                                v.showMsg(res.msg || '操作成功', 'alert-success');
+                            } else {
+                                v.showMsg((res && res.msg) || '操作失败', 'alert-danger');
+                            }
+                        },
+                        error: function(xhr) {
+                            var m = '操作失败';
+                            try { var j = JSON.parse(xhr.responseText); if (j && j.msg) m = j.msg; } catch(e) {}
+                            v.showMsg(m, 'alert-danger');
+                        }
+                    });
+                },
+                showMsg: function(m, t) {
+                    this.message = m;
+                    this.messageType = t || 'alert-success';
+                    var self = this;
+                    setTimeout(function() { self.message = ''; }, 4000);
+                }
+            }
+        });
+    })();
+    </script>
 </body>
-<script>
-    function reload() {
-        location.reload();
-    }
-</script>
 </html>

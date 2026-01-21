@@ -419,7 +419,7 @@ public class MysqlTableService {
                 // 6.验证默认值
                 if (sysColumn.getColumnDefault() == null || sysColumn.getColumnDefault().equals("")) {
                     // 数据库默认值是null，model中注解设置的默认值不为NULL时，那么需要更新该字段
-                    if(!Objects.equals(sysColumn.getColumnDefault(),createTableParam.getDefaultValue())) {
+                    if (!Objects.equals(sysColumn.getColumnDefault(), createTableParam.getDefaultValue())) {
                         if (!"NULL".equals(createTableParam.getDefaultValue())) {
                             modifyFieldList.add(createTableParam);
                             continue;
@@ -559,31 +559,73 @@ public class MysqlTableService {
     private void tableFieldsConstruct(Map<String, Object> mySqlTypeAndLengthMap,
                                       Class<?> clas,
                                       List<Object> newFieldList) {
-        Field[] fields = clas.getDeclaredFields();
+        newFieldList.addAll(collectColumnInfos(clas, mySqlTypeAndLengthMap));
+    }
 
-        // 判断是否有父类，如果有拉取父类的field，这里只支持多层继承
-        fields = recursionParents(clas, fields);
-
-        UniqueKeys uniqueKeys = clas.getAnnotation(UniqueKeys.class);
-        UniqueKey uniqueKey = clas.getAnnotation(UniqueKey.class);
-
+    /**
+     * 收集实体类的 @Column 字段信息，用于建表或列表展示
+     */
+    private List<ColumnInfo> collectColumnInfos(Class<?> clazz, Map<String, Object> mySqlTypeAndLengthMap) {
+        List<ColumnInfo> list = new ArrayList<>();
+        Field[] fields = clazz.getDeclaredFields();
+        fields = recursionParents(clazz, fields);
+        UniqueKeys uniqueKeys = clazz.getAnnotation(UniqueKeys.class);
+        UniqueKey uniqueKey = clazz.getAnnotation(UniqueKey.class);
         for (Field field : fields) {
-            // 判断方法中是否有指定注解类型的注解
-            boolean hasAnnotation = field.isAnnotationPresent(Column.class);
-            if (hasAnnotation) {
-                // 根据注解类型返回方法的指定类型注解
-                Column column = field.getAnnotation(Column.class);
-                ColumnInfo columnInfo = new ColumnInfo(field, uniqueKeys, uniqueKey);
-                int length = 0;
-                try {
-                    length = (Integer) mySqlTypeAndLengthMap.get(columnInfo.getType());
-                } catch (Exception e) {
-                    log.error("未知的Mysql数据类型字段:" + column.type());
-                }
-                columnInfo.setTypeLength(length);
-                newFieldList.add(columnInfo);
+            if (!field.isAnnotationPresent(Column.class)) continue;
+            Column column = field.getAnnotation(Column.class);
+            ColumnInfo columnInfo = new ColumnInfo(field, uniqueKeys, uniqueKey);
+            int length = 0;
+            try {
+                Object o = mySqlTypeAndLengthMap.get(columnInfo.getType());
+                if (o != null) length = (Integer) o;
+            } catch (Exception e) {
+                log.error("未知的Mysql数据类型字段:{}", column.type());
             }
+            columnInfo.setTypeLength(length);
+            list.add(columnInfo);
         }
+        return list;
+    }
+
+    /**
+     * 列出所有带 @Table 注解的实体及其基本属性、列信息，用于 reinit 页面展示
+     */
+    public List<Map<String, Object>> listTableEntities() {
+        Set<Class<?>> classes = getClasses();
+        Map<String, Object> typeMap = mySqlTypeAndLengthMap();
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (Class<?> clazz : classes) {
+            TableInfo ti = new TableInfo(clazz);
+            if (!ti.isValid()) continue;
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("className", clazz.getSimpleName());
+            m.put("classFullName", clazz.getName());
+            m.put("tableName", ti.getName());
+            m.put("comment", ti.getComment() != null ? ti.getComment() : "");
+            m.put("engine", ti.getEngine() != null ? ti.getEngine() : "");
+            m.put("charset", ti.getCharset() != null ? ti.getCharset() : "");
+            m.put("prefix", ti.getPrefix() != null ? ti.getPrefix() : "");
+            List<Map<String, Object>> cols = new ArrayList<>();
+            for (ColumnInfo c : collectColumnInfos(clazz, typeMap)) {
+                Map<String, Object> cm = new LinkedHashMap<>();
+                cm.put("name", c.getName());
+                cm.put("type", c.getType());
+                cm.put("length", c.getLength());
+                cm.put("decimalLength", c.getDecimalLength());
+                cm.put("isKey", c.isKey());
+                cm.put("isNull", c.isNull());
+                cm.put("isAutoIncrement", c.isAutoIncrement());
+                cm.put("isUnique", c.isUnique());
+                cm.put("defaultValue", c.getDefaultValue() != null ? c.getDefaultValue() : "");
+                cm.put("comment", c.getComment() != null ? c.getComment() : "");
+                cols.add(cm);
+            }
+            m.put("columns", cols);
+            out.add(m);
+        }
+        out.sort(Comparator.comparing(m -> String.valueOf(m.get("tableName")).toLowerCase()));
+        return out;
     }
 
     /**

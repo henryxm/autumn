@@ -6,21 +6,27 @@
     <title>会话管理</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
             background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
-            min-height: 100vh;
-            padding: 20px;
         }
         .container {
-            max-width: 1400px;
-            margin: 0 auto;
+            width: 100%;
+            height: 100vh;
+            max-width: none;
+            margin: 0;
             background: #fff;
-            border-radius: 12px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+            border-radius: 0;
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
         }
         .header {
+            flex-shrink: 0;
             background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
             color: #fff;
             padding: 24px 30px;
@@ -36,6 +42,7 @@
         .stat { background: rgba(255,255,255,0.15); padding: 8px 14px; border-radius: 8px; font-size: 13px; }
         .stat strong { margin-right: 6px; }
         .toolbar {
+            flex-shrink: 0;
             padding: 20px 30px;
             background: #f8f9fa;
             border-bottom: 1px solid #e9ecef;
@@ -72,7 +79,7 @@
         .btn-warning { background: #e0a800; color: #000; }
         .btn-warning:hover { background: #c99400; }
         .btn-sm { padding: 4px 10px; font-size: 12px; }
-        .table-wrap { overflow-x: auto; }
+        .table-wrap { flex: 1; min-height: 0; overflow: auto; }
         table { width: 100%; border-collapse: collapse; table-layout: fixed; }
         thead { background: linear-gradient(135deg, #0f2027 0%, #203a43 100%); color: #fff; }
         th { padding: 12px 14px; text-align: left; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -103,10 +110,11 @@
         .cell-query:hover { color: #2c5364; text-decoration: underline; }
         .loading { text-align: center; padding: 40px; color: #6c757d; }
         .empty-state { text-align: center; padding: 50px 20px; color: #999; }
-        .alert { padding: 12px 16px; margin: 0 30px 16px; border-radius: 8px; border-left: 4px solid; }
+        .alert { flex-shrink: 0; padding: 12px 16px; margin: 0 30px 16px; border-radius: 8px; border-left: 4px solid; }
         .alert-success { background: #d4edda; border-color: #28a745; color: #155724; }
         .alert-danger { background: #f8d7da; border-color: #dc3545; color: #721c24; }
         .footer-bar {
+            flex-shrink: 0;
             display: flex;
             justify-content: space-between;
             align-items: center;

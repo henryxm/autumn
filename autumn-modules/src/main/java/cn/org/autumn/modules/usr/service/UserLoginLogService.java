@@ -320,13 +320,15 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
             entity.setIp(ip);
             entity.setPath(path);
             entity.setSession(session);
+            if (null != agent && agent.length() > 500)
+                agent = agent.substring(0, 500);
             entity.setAgent(agent);
             entity.setWay(way);
             entity.setReason(reason);
             entity.setCreate(new Date());
             insert(entity);
         } catch (Throwable e) {
-            log.error("登录错误:{}, 账号:{}, 允许:{}, 方式:{}, 原因:{}, IP:{}, 代理:{}", uuid, account, allow, way, reason, ip, agent);
+            log.warn("保存错误:{}, 账号:{}, 允许:{}, 方式:{}, 原因:{}, IP:{}, 代理:{}, 错误:{}", uuid, account, allow, way, reason, ip, agent, e.getMessage());
         }
         if (!allow) {
             throw new AException("登录限制");
@@ -384,10 +386,12 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
             entity.setHost(host);
             entity.setIp(ip);
             entity.setSession(session);
+            if (null != agent && agent.length() > 500)
+                agent = agent.substring(0, 500);
             entity.setAgent(agent);
             insert(entity);
         } catch (Throwable e) {
-            log.error("登录错误:{}, IP:{}, 代理:{}", uuid, ip, agent);
+            log.warn("退出错误:{}, IP:{}, 代理:{}, 错误:{}", uuid, ip, agent, e.getMessage());
         }
     }
 }

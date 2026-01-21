@@ -47,7 +47,7 @@ public class UserLoginLogEntity implements Serializable {
     @Index
     private String path;
 
-    @Column(comment = "代理", defaultValue = "")
+    @Column(length = 500, comment = "代理", defaultValue = "")
     private String agent;
 
     @Column(comment = "白名单:开启限制后，该记录对应的指定IP可登录，其它IP被限制登录", defaultValue = "0")
@@ -59,7 +59,7 @@ public class UserLoginLogEntity implements Serializable {
     @Column(comment = "允许", defaultValue = "1")
     private boolean allow;
 
-    @Column(comment = "原因", defaultValue = "")
+    @Column(length = 50, comment = "原因", defaultValue = "")
     private String reason;
 
     @Column(comment = "创建")

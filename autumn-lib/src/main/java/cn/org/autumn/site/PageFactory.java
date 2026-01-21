@@ -133,7 +133,6 @@ public class PageFactory extends Factory {
     }
 
     public String reinit(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
-        model.addAttribute("data", tableFactory.reinit());
         return invoke("reinit", "reinit", httpServletRequest, httpServletResponse, model);
     }
 
