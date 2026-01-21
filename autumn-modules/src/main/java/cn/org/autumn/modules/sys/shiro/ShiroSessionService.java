@@ -229,15 +229,17 @@ public class ShiroSessionService {
     }
 
     /**
-     * 获取活动会话列表，支持按用户 UUID、用户名、会话 ID 筛选
+     * 获取活动会话列表（分页），支持按用户 UUID、用户名、会话 ID 筛选
      *
      * @param userUuidFilter   用户 UUID，模糊匹配，空则不过滤
      * @param usernameFilter   用户名，模糊匹配，空则不过滤
      * @param currentSessionId 当前请求的 sessionId，用于标记「当前会话」
      * @param sessionIdFilter  会话 ID，精确匹配，空则不过滤
-     * @return 会话信息列表，每项含 sessionId、userUuid、username、host、startTime、lastAccessTime、timeout、current
+     * @param page             页码，从 1 开始
+     * @param limit            每页条数
+     * @return Map：list=当前页列表，totalCount=总数，currPage=当前页，totalPage=总页数；每项含 sessionId、userUuid、username、host、startTime、lastAccessTime、timeout、current
      */
-    public List<Map<String, Object>> getActiveSessionList(String userUuidFilter, String usernameFilter, String currentSessionId, String sessionIdFilter) {
+    public Map<String, Object> getActiveSessionList(String userUuidFilter, String usernameFilter, String currentSessionId, String sessionIdFilter, int page, int limit) {
         List<Map<String, Object>> list = new ArrayList<>();
         Map<Serializable, Session> all = getAllSessionsMap();
         Set<String> forceLogoutUuids = getForceLogoutUserUuids();
@@ -259,7 +261,18 @@ public class ShiroSessionService {
             if (t2 == null) return -1;
             return Long.compare(t2, t1);
         });
-        return list;
+        int totalCount = list.size();
+        int totalPage = totalCount <= 0 ? 1 : (totalCount + limit - 1) / limit;
+        int currPage = Math.max(1, Math.min(page, totalPage));
+        int from = (currPage - 1) * limit;
+        int to = Math.min(from + limit, totalCount);
+        List<Map<String, Object>> sub = (from < to) ? new ArrayList<>(list.subList(from, to)) : new ArrayList<>();
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("list", sub);
+        out.put("totalCount", totalCount);
+        out.put("currPage", currPage);
+        out.put("totalPage", totalPage);
+        return out;
     }
 
     /**

@@ -113,7 +113,20 @@
             padding: 16px 30px;
             background: #f8f9fa;
             border-top: 1px solid #e9ecef;
+            flex-wrap: wrap;
+            gap: 12px;
         }
+        .pagination-wrap { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 13px; color: #6c757d; }
+        .pagination-wrap button {
+            padding: 6px 14px;
+            border: 1px solid #dee2e6;
+            background: #fff;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .pagination-wrap button:hover:not(:disabled) { background: #2c5364; color: #fff; border-color: #2c5364; }
+        .pagination-wrap button:disabled { opacity: 0.5; cursor: not-allowed; }
         [v-cloak] { display: none; }
     </style>
 </head>
@@ -125,7 +138,8 @@
                 <p>按用户ID、用户名查询活动会话，支持删除单个会话或踢出用户全部会话</p>
             </div>
             <div class="stats">
-                <span class="stat"><strong>会话数</strong><span v-text="list.length"></span></span>
+                <span class="stat"><strong>会话数</strong><span v-text="totalCount"></span></span>
+                <span class="stat"><strong>第</strong><span v-text="currPage"></span> / <span v-text="totalPage"></span> 页</span>
             </div>
         </div>
 
@@ -195,6 +209,13 @@
 
         <div class="footer-bar">
             <span style="color:#6c757d; font-size:13px;">当前会话 ID：<code v-text="currentSessionId || '-'"></code></span>
+            <div class="pagination-wrap">
+                <button @click="go(1)" :disabled="currPage <= 1">首页</button>
+                <button @click="go(currPage - 1)" :disabled="currPage <= 1">上一页</button>
+                <button @click="go(currPage + 1)" :disabled="currPage >= totalPage">下一页</button>
+                <button @click="go(totalPage)" :disabled="currPage >= totalPage">末页</button>
+                <span>第 <span v-text="currPage"></span> / <span v-text="totalPage"></span> 页，共 <span v-text="totalCount"></span> 条</span>
+            </div>
         </div>
         <div v-show="openOpsId" class="ops-menu ops-menu-fixed" :style="{ top: menuTop+'px', left: menuLeft+'px' }" @click.stop>
             <a href="#" @click.prevent="selectDelete">删除</a>
@@ -217,6 +238,10 @@
             data: {
                 list: [],
                 loading: false,
+                totalCount: 0,
+                currPage: 1,
+                totalPage: 1,
+                pageSize: 20,
                 currentSessionId: null,
                 message: '',
                 messageType: 'alert-success',
@@ -241,7 +266,7 @@
                 load: function() {
                     var vm = this;
                     vm.loading = true;
-                    var q = {};
+                    var q = { page: vm.currPage, limit: vm.pageSize };
                     if (vm.filters.sessionId) q.sessionId = vm.filters.sessionId;
                     if (vm.filters.userUuid) q.userUuid = vm.filters.userUuid;
                     if (vm.filters.username) q.username = vm.filters.username;
@@ -253,23 +278,36 @@
                             vm.loading = false;
                             if (res && res.code === 0) {
                                 vm.list = res.list || [];
+                                vm.totalCount = res.totalCount || 0;
+                                vm.currPage = res.currPage || 1;
+                                vm.totalPage = Math.max(1, res.totalPage || 1);
                                 vm.currentSessionId = res.currentSessionId || null;
                             } else {
                                 vm.list = [];
+                                vm.totalCount = 0;
+                                vm.currPage = 1;
+                                vm.totalPage = 1;
                                 vm.showMsg((res && res.msg) ? res.msg : '加载失败', 'alert-danger');
                             }
                         },
                         error: function(xhr) {
                             vm.loading = false;
                             vm.list = [];
+                            vm.totalCount = 0;
+                            vm.currPage = 1;
+                            vm.totalPage = 1;
                             var m = '请求失败';
                             try { var j = JSON.parse(xhr.responseText); if (j && j.msg) m = j.msg; } catch(e) {}
                             vm.showMsg(m, 'alert-danger');
                         }
                     });
                 },
+                go: function(p) {
+                    if (p >= 1 && p <= this.totalPage) { this.currPage = p; this.load(); }
+                },
                 reset: function() {
                     this.filters = { sessionId: '', userUuid: '', username: '' };
+                    this.currPage = 1;
                     this.load();
                 },
                 formatTime: function(ts) {
@@ -294,18 +332,21 @@
                 queryBySessionId: function(v) {
                     if (v == null || (typeof v === 'string' && v.trim() === '')) return;
                     this.filters.sessionId = String(v).trim();
+                    this.currPage = 1;
                     this.load();
                 },
                 queryByUuid: function(v) {
                     if (v == null || (typeof v === 'string' && v.trim() === '')) return;
                     this.filters.userUuid = String(v).trim();
                     this.filters.username = '';
+                    this.currPage = 1;
                     this.load();
                 },
                 queryByUsername: function(v) {
                     if (v == null || (typeof v === 'string' && v.trim() === '')) return;
                     this.filters.username = String(v).trim();
                     this.filters.userUuid = '';
+                    this.currPage = 1;
                     this.load();
                 },
                 toggleOps: function(r, ev) {

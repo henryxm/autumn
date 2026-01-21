@@ -8,7 +8,6 @@ import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -25,12 +24,14 @@ public class SysSessionController {
     private SysUserRoleService sysUserRoleService;
 
     /**
-     * 活动会话列表，支持按用户 UUID、用户名筛选
+     * 活动会话列表（分页），支持按用户 UUID、用户名、会话 ID 筛选；每页默认 20 条
      */
     @GetMapping("/list")
     public R list(@RequestParam(required = false) String userUuid,
                   @RequestParam(required = false) String username,
-                  @RequestParam(required = false) String sessionId) {
+                  @RequestParam(required = false) String sessionId,
+                  @RequestParam(required = false, defaultValue = "1") int page,
+                  @RequestParam(required = false, defaultValue = "20") int limit) {
         if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
             return R.error(403, "无权限");
         }
@@ -39,12 +40,19 @@ public class SysSessionController {
             if (ShiroUtils.isLogin()) currentId = ShiroUtils.getSession().getId() != null ? ShiroUtils.getSession().getId().toString() : null;
         } catch (Exception ignored) {
         }
-        List<Map<String, Object>> list = shiroSessionService.getActiveSessionList(
+        Map<String, Object> pageResult = shiroSessionService.getActiveSessionList(
                 StringUtils.trimToEmpty(userUuid),
                 StringUtils.trimToEmpty(username),
                 currentId,
-                StringUtils.trimToEmpty(sessionId));
-        return R.ok().put("list", list).put("currentSessionId", currentId);
+                StringUtils.trimToEmpty(sessionId),
+                Math.max(1, page),
+                Math.max(1, Math.min(limit, 500)));
+        return R.ok()
+                .put("list", pageResult.get("list"))
+                .put("totalCount", pageResult.get("totalCount"))
+                .put("currPage", pageResult.get("currPage"))
+                .put("totalPage", pageResult.get("totalPage"))
+                .put("currentSessionId", currentId);
     }
 
     /**
