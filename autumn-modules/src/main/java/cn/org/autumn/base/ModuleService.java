@@ -1,5 +1,6 @@
 package cn.org.autumn.base;
 
+import cn.org.autumn.config.CacheConfig;
 import cn.org.autumn.config.Config;
 import cn.org.autumn.exception.AException;
 import cn.org.autumn.menu.BaseMenu;
@@ -9,8 +10,13 @@ import cn.org.autumn.modules.sys.entity.SysMenuEntity;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.modules.sys.service.SysMenuService;
 import cn.org.autumn.service.BaseService;
+import cn.org.autumn.service.CacheService;
 import com.baomidou.mybatisplus.mapper.BaseMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+
+import java.io.Serializable;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 模块示例基础服务类
@@ -33,7 +39,12 @@ public abstract class ModuleService<M extends BaseMapper<T>, T> extends BaseServ
     @Autowired
     protected SysConfigService sysConfigService;
 
+    @Autowired
+    protected CacheService cacheService;
+
     protected BaseMenu baseMenu;
+
+    static final Map<String, CacheConfig> configs = new ConcurrentHashMap<>();
 
     public BaseMenu getBaseMenu() {
         if (null != baseMenu)
@@ -70,5 +81,26 @@ public abstract class ModuleService<M extends BaseMapper<T>, T> extends BaseServ
     public void init() {
         sysMenuService.put(getMenuItemsInternal(), getMenuItems(), getMenuList());
         language.put(getLanguageItemsInternal(), getLanguageItems(), getLanguageList());
+    }
+
+    public long expire() {
+        return 60;
+    }
+
+    public CacheConfig getCacheConfig() {
+        String name = getModelClass().getSimpleName().replace("Entity", "").toLowerCase();
+        CacheConfig config = configs.get(name);
+        if (null == config) {
+            config = CacheConfig.builder().name(name).key(String.class).value(getModelClass()).expire(expire()).build();
+        }
+        return config;
+    }
+
+    public T getCache(Object key) {
+        return cacheService.compute(key, () -> getEntity(key), getCacheConfig());
+    }
+
+    public T getEntity(Object key) {
+        return null;
     }
 }
