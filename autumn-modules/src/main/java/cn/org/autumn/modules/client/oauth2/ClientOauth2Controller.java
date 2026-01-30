@@ -148,8 +148,7 @@ public class ClientOauth2Controller {
             authUserRequest = new OAuthBearerClientRequest(userInfo).setAccessToken(accessToken).buildQueryMessage();
             OAuthResourceResponse resourceResponse = oAuthClient.resource(authUserRequest, OAuth.HttpMethod.GET, OAuthResourceResponse.class);
             String userinfo = resourceResponse.getBody();
-            UserProfile userProfile = JSON.parseObject(userinfo, UserProfile.class);
-            return userProfile;
+            return JSON.parseObject(userinfo, UserProfile.class);
         } catch (Exception e) {
             log.error("getUserInfo error：" + e.getMessage());
         }
@@ -159,8 +158,7 @@ public class ClientOauth2Controller {
     @ResponseBody
     @RequestMapping(value = {"/myip"})
     public String myip(HttpServletRequest request) {
-        String ip = IPUtils.getIp(request);
-        return ip;
+        return IPUtils.getIp(request);
     }
 
     @ResponseBody

@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.lan.entity;
 
+import cn.org.autumn.annotation.Cache;
 import com.baomidou.mybatisplus.annotations.*;
 import cn.org.autumn.table.annotation.*;
 import lombok.Getter;
@@ -18,6 +19,7 @@ import java.util.Objects;
 @Indexes({
         @Index(name = "nametag", indexMethod = IndexMethodEnum.BTREE, indexType = IndexTypeEnum.UNIQUE, fields = {@IndexField(field = "name"), @IndexField(field = "tag")}),
 })
+@Cache({"name", "tag"})
 public class LanguageEntity implements Serializable {
     private static final long serialVersionUID = 1L;
 

@@ -13,6 +13,7 @@ import cn.org.autumn.modules.sys.service.SysMenuService;
 import cn.org.autumn.service.BaseService;
 import cn.org.autumn.service.CacheService;
 import cn.org.autumn.table.utils.HumpConvert;
+import cn.org.autumn.table.utils.Escape;
 import com.baomidou.mybatisplus.mapper.BaseMapper;
 import com.baomidou.mybatisplus.mapper.EntityWrapper;
 import com.baomidou.mybatisplus.mapper.Wrapper;
@@ -23,6 +24,7 @@ import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -93,15 +95,26 @@ public abstract class ModuleService<M extends BaseMapper<T>, T> extends BaseServ
         language.put(getLanguageItemsInternal(), getLanguageItems(), getLanguageList());
     }
 
-    public long expire() {
+    public long cacheExpire() {
         return 10;
     }
 
+    public boolean cacheNull() {
+        return false;
+    }
+
+    public CacheConfig getConfig() {
+        return null;
+    }
+
     public CacheConfig getCacheConfig() {
-        String name = getModelClass().getSimpleName().replace("Entity", "").toLowerCase();
-        CacheConfig config = configs.get(name);
+        CacheConfig config = getConfig();
         if (null == config) {
-            config = CacheConfig.builder().name(name).key(String.class).value(getModelClass()).expire(expire()).build();
+            String name = getModelClass().getSimpleName().replace("Entity", "").toLowerCase();
+            config = configs.get(name);
+            if (null == config) {
+                config = CacheConfig.builder().name(name).key(String.class).value(getModelClass()).expire(cacheExpire()).Null(cacheNull()).build();
+            }
         }
         return config;
     }
@@ -280,21 +293,167 @@ public abstract class ModuleService<M extends BaseMapper<T>, T> extends BaseServ
     }
 
     /**
+     * 获取缓存，如果不存在则查询并缓存（单个参数版本，高效）
      * 获取一条缓存值，如果未能获取到该值，则调用getEntity函数，通过查询数据库获取，实现类可以实现getEntity来提高效率
      * 也可以通过@Cache来标注其字段，通过反射来获取对应字段的实例
      *
-     * @param key 缓存值的Key
-     * @return 缓存的数据对象
+     * @param key 缓存 key（单个值）
+     * @return 实体对象
      */
     public T getCache(Object key) {
-        return cacheService.compute(key, () -> getEntity(key), getCacheConfig());
+        if (key == null) {
+            return null;
+        }
+        // 构建缓存 key
+        Object cacheKey = buildCacheKey(key);
+        if (cacheKey == null) {
+            return null;
+        }
+        // 调用单参数版本的 getEntity
+        return cacheService.compute(cacheKey, () -> getEntity(key), getCacheConfig());
     }
 
     /**
-     * 通过反射获取对象实体，具体实现类可以实现该方法，可提高消息，如果实例类为实现该方法，可以使用@Cache标注对应字段，系统将通过该字段，使用反射获取一条实例
+     * 获取缓存，如果不存在则查询并缓存（可变参数版本，兼容性）
+     * 获取一条缓存值，如果未能获取到该值，则调用getEntity函数，通过查询数据库获取，实现类可以实现getEntity来提高效率
+     * 也可以通过@Cache来标注其字段，通过反射来获取对应字段的实例
+     * <p>
+     * 支持两种方式：
+     * 1. 单个字段缓存：getCache(key) - key 为单个值（推荐使用单参数版本 getCache(Object key)）
+     * 2. 复合字段缓存：getCache(value1, value2, ...) - 多个值按 @Cache 注解中字段顺序对应
+     *
+     * @param keys 缓存 key，可以是单个值或多个值（可变参数）
+     * @return 实体对象
+     */
+    public T getCache(Object... keys) {
+        if (keys == null || keys.length == 0) {
+            return null;
+        }
+        // 如果只有一个参数，调用单参数版本（更高效）
+        if (keys.length == 1) {
+            return getCache(keys[0]);
+        }
+        // 构建缓存 key
+        Object cacheKey = buildCacheKey(keys);
+        if (cacheKey == null) {
+            return null;
+        }
+        // 调用可变参数版本的 getEntity
+        return cacheService.compute(cacheKey, () -> getEntity(keys), getCacheConfig());
+    }
+
+    /**
+     * 构建缓存 key（单个参数版本）
+     *
+     * @param key 单个 key
+     * @return 缓存 key
+     */
+    private Object buildCacheKey(Object key) {
+        if (key == null) {
+            return null;
+        }
+        Class<?> entityClass = getModelClass();
+        if (entityClass == null) {
+            return key;
+        }
+        // 检查类上是否有 @Cache 注解（复合字段缓存）
+        Cache classCache = entityClass.getAnnotation(Cache.class);
+        if (classCache != null && classCache.value().length > 0) {
+            // 单个参数在复合字段模式下，如果是 Map，从 Map 中提取值构建字符串 key
+            if (key instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> keyMap = (Map<String, Object>) key;
+                String[] fieldNames = classCache.value();
+                Object[] values = new Object[fieldNames.length];
+                for (int i = 0; i < fieldNames.length; i++) {
+                    values[i] = keyMap.get(fieldNames[i]);
+                }
+                return buildCompositeKeyString(values);
+            }
+            // 单个参数在复合字段模式下，参数数量不匹配，返回 null
+            return null;
+        }
+        // 单个字段缓存，直接返回 key
+        return key;
+    }
+
+    /**
+     * 构建缓存 key（可变参数版本）
+     * 对于复合字段，将可变参数转换为字符串 key（使用分隔符连接）
+     *
+     * @param keys 可变参数数组
+     * @return 缓存 key（字符串或单个值）
+     */
+    private Object buildCacheKey(Object... keys) {
+        if (keys == null || keys.length == 0) {
+            return null;
+        }
+        Class<?> entityClass = getModelClass();
+        if (entityClass == null) {
+            return keys.length == 1 ? keys[0] : buildCompositeKeyString(keys);
+        }
+        // 检查类上是否有 @Cache 注解（复合字段缓存）
+        Cache classCache = entityClass.getAnnotation(Cache.class);
+        if (classCache != null && classCache.value().length > 0) {
+            String[] fieldNames = classCache.value();
+            // 如果只有一个参数且是 Map，从 Map 中提取值构建字符串 key
+            if (keys.length == 1 && keys[0] instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> keyMap = (Map<String, Object>) keys[0];
+                Object[] values = new Object[fieldNames.length];
+                for (int i = 0; i < fieldNames.length; i++) {
+                    values[i] = keyMap.get(fieldNames[i]);
+                }
+                return buildCompositeKeyString(values);
+            }
+            // 将可变参数值与字段名对应，按字段顺序构建字符串 key
+            Object[] values = new Object[fieldNames.length];
+            int paramCount = Math.min(keys.length, fieldNames.length);
+            for (int i = 0; i < paramCount; i++) {
+                if (keys[i] != null) {
+                    values[i] = keys[i];
+                } else {
+                    // 如果参数数量与字段数量不匹配，返回 null
+                    return null;
+                }
+            }
+            // 如果参数数量与字段数量不匹配，返回 null
+            if (paramCount != fieldNames.length) {
+                return null;
+            }
+            return buildCompositeKeyString(values);
+        }
+        // 单个字段缓存，返回第一个参数
+        return keys[0];
+    }
+
+    /**
+     * 构建复合 key 字符串
+     * 使用 ":" 作为分隔符连接多个值
+     *
+     * @param values 值数组
+     * @return 组合后的 key 字符串
+     */
+    private String buildCompositeKeyString(Object... values) {
+        if (values == null || values.length == 0) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < values.length; i++) {
+            if (i > 0) {
+                sb.append(":");
+            }
+            sb.append(values[i] != null ? values[i].toString() : "null");
+        }
+        return sb.toString();
+    }
+
+    /**
+     * 通过反射获取对象实体（单个参数版本，高效）
+     * 具体实现类可以实现该方法，可提高消息，如果实例类为实现该方法，可以使用@Cache标注对应字段，系统将通过该字段，使用反射获取一条实例
      * 应保证使用@Cache标注的字段值的唯一性，因为默认实现只会去一条有效值
      *
-     * @param key 指定的实体key
+     * @param key 指定的实体key（单个值）
      * @return 返回实体类型的对象， 如果未使用@Cache指定字段，则返回null
      */
     public T getEntity(Object key) {
@@ -305,12 +464,23 @@ public abstract class ModuleService<M extends BaseMapper<T>, T> extends BaseServ
         if (entityClass == null) {
             return null;
         }
-        // 查找 @Cache 标注的字段
+        // 检查类上是否有 @Cache 注解（复合字段缓存）
+        Cache classCache = entityClass.getAnnotation(Cache.class);
+        if (classCache != null && classCache.value().length > 0) {
+            String[] fieldNames = classCache.value();
+            // 如果是 Map，使用 Map 方式
+            if (key instanceof Map) {
+                return getEntityByCompositeFields(key, entityClass, fieldNames);
+            }
+            // 单个参数在复合字段模式下，参数数量不匹配，返回 null
+            return null;
+        }
+        // 查找 @Cache 标注的字段（单个字段缓存）
         Field cacheField = findCacheField(entityClass);
         if (cacheField == null) {
             return null;
         }
-        // 将 key 转换为字段类型
+        // 将参数转换为字段类型
         Object convertedKey = convert(key, cacheField.getType());
         if (convertedKey == null) {
             return null;
@@ -319,8 +489,170 @@ public abstract class ModuleService<M extends BaseMapper<T>, T> extends BaseServ
         String fieldName = cacheField.getName();
         String columnName = HumpConvert.HumpToUnderline(fieldName);
         EntityWrapper<T> wrapper = new EntityWrapper<>();
-        wrapper.eq(columnName, convertedKey);
+        wrapper.eq(Escape.escape(columnName), convertedKey);
         return selectOne(wrapper);
+    }
+
+    /**
+     * 通过反射获取对象实体（可变参数版本，兼容性）
+     * 具体实现类可以实现该方法，可提高消息，如果实例类为实现该方法，可以使用@Cache标注对应字段，系统将通过该字段，使用反射获取一条实例
+     * 应保证使用@Cache标注的字段值的唯一性，因为默认实现只会去一条有效值
+     * <p>
+     * 支持两种方式：
+     * 1. 在字段上标注 @Cache：使用单个字段作为缓存 key - getEntity(key)（推荐使用单参数版本 getEntity(Object key)）
+     * 2. 在类上标注 @Cache(value = {"field1", "field2"})：使用多个字段组合作为复合缓存 key - getEntity(value1, value2, ...)
+     *
+     * @param keys 指定的实体key，可以是单个值（单个字段）或多个值（复合字段，按 @Cache 注解中字段顺序对应）
+     * @return 返回实体类型的对象， 如果未使用@Cache指定字段，则返回null
+     */
+    public T getEntity(Object... keys) {
+        if (keys == null || keys.length == 0) {
+            return null;
+        }
+        // 如果只有一个参数，调用单参数版本（更高效）
+        if (keys.length == 1) {
+            return getEntity(keys[0]);
+        }
+        Class<?> entityClass = getModelClass();
+        if (entityClass == null) {
+            return null;
+        }
+        // 检查类上是否有 @Cache 注解（复合字段缓存）
+        Cache classCache = entityClass.getAnnotation(Cache.class);
+        if (classCache != null && classCache.value().length > 0) {
+            String[] fieldNames = classCache.value();
+            // 如果只有一个参数且是 Map，使用 Map 方式
+            // 将可变参数值与字段名对应构建 Map
+            Map<String, Object> fieldValues = new HashMap<>();
+            int paramCount = Math.min(keys.length, fieldNames.length);
+            for (int i = 0; i < paramCount; i++) {
+                if (keys[i] != null) {
+                    fieldValues.put(fieldNames[i], keys[i]);
+                }
+            }
+            // 如果参数数量与字段数量不匹配，返回 null
+            if (fieldValues.size() != fieldNames.length) {
+                return null;
+            }
+            // 使用复合字段查询
+            return getEntityByCompositeFields(fieldValues, entityClass, fieldNames);
+        }
+        // 查找 @Cache 标注的字段（单个字段缓存）
+        Field cacheField = findCacheField(entityClass);
+        if (cacheField == null) {
+            return null;
+        }
+        // 将第一个参数转换为字段类型
+        Object convertedKey = convert(keys[0], cacheField.getType());
+        if (convertedKey == null) {
+            return null;
+        }
+        // 使用 EntityWrapper 查询
+        String fieldName = cacheField.getName();
+        String columnName = HumpConvert.HumpToUnderline(fieldName);
+        EntityWrapper<T> wrapper = new EntityWrapper<>();
+        wrapper.eq(Escape.escape(columnName), convertedKey);
+        return selectOne(wrapper);
+    }
+
+    /**
+     * 使用复合字段查询实体
+     *
+     * @param key         缓存 key，可以是 Map（key 为字段名）或对象（从中提取字段值）
+     * @param entityClass 实体类
+     * @param fieldNames  字段名数组
+     * @return 实体对象
+     */
+    private T getEntityByCompositeFields(Object key, Class<?> entityClass, String[] fieldNames) {
+        Map<String, Object> fieldValues = extractFieldValues(key, entityClass, fieldNames);
+        if (fieldValues.isEmpty()) {
+            return null;
+        }
+        // 构建查询条件
+        EntityWrapper<T> wrapper = new EntityWrapper<>();
+        for (String fieldName : fieldNames) {
+            Object value = fieldValues.get(fieldName);
+            if (value == null) {
+                return null; // 复合 key 的所有字段都必须有值
+            }
+            String columnName = HumpConvert.HumpToUnderline(fieldName);
+            wrapper.eq(Escape.escape(columnName), value);
+        }
+        return selectOne(wrapper);
+    }
+
+    /**
+     * 从 key 中提取字段值
+     *
+     * @param key         缓存 key，可以是 Map 或对象
+     * @param entityClass 实体类
+     * @param fieldNames  字段名数组
+     * @return 字段值 Map，key 为字段名，value 为字段值
+     */
+    private Map<String, Object> extractFieldValues(Object key, Class<?> entityClass, String[] fieldNames) {
+        Map<String, Object> fieldValues = new java.util.HashMap<>();
+        // 如果 key 是 Map，直接使用
+        if (key instanceof Map) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> keyMap = (Map<String, Object>) key;
+            for (String fieldName : fieldNames) {
+                Object value = keyMap.get(fieldName);
+                if (value != null) {
+                    fieldValues.put(fieldName, value);
+                }
+            }
+            return fieldValues;
+        }
+        // 如果 key 是实体类型，从实体中提取字段值
+        if (entityClass.isInstance(key)) {
+            @SuppressWarnings("unchecked")
+            T entity = (T) key;
+            for (String fieldName : fieldNames) {
+                Field field = findField(entityClass, fieldName);
+                if (field != null) {
+                    Object value = getFieldValue(entity, field);
+                    if (value != null) {
+                        fieldValues.put(fieldName, value);
+                    }
+                }
+            }
+            return fieldValues;
+        }
+        // 尝试从普通对象中提取字段值
+        Class<?> keyClass = key.getClass();
+        for (String fieldName : fieldNames) {
+            Field field = findField(keyClass, fieldName);
+            if (field != null) {
+                try {
+                    field.setAccessible(true);
+                    Object value = field.get(key);
+                    if (value != null) {
+                        fieldValues.put(fieldName, value);
+                    }
+                } catch (IllegalAccessException e) {
+                    // 忽略无法访问的字段
+                }
+            }
+        }
+        return fieldValues;
+    }
+
+    /**
+     * 查找字段（包括父类）
+     */
+    private Field findField(Class<?> clazz, String fieldName) {
+        try {
+            Field field = clazz.getDeclaredField(fieldName);
+            field.setAccessible(true);
+            return field;
+        } catch (NoSuchFieldException e) {
+            // 检查父类
+            Class<?> superClass = clazz.getSuperclass();
+            if (superClass != null && !superClass.equals(Object.class)) {
+                return findField(superClass, fieldName);
+            }
+            return null;
+        }
     }
 
     /**
@@ -361,7 +693,8 @@ public abstract class ModuleService<M extends BaseMapper<T>, T> extends BaseServ
 
     /**
      * 根据实体对象删除缓存
-     * 从实体中提取 @Unique 或 @TableId 字段的值作为缓存 key
+     * 从实体中提取 @Cache 标注的字段值作为缓存 key
+     * 支持单个字段和复合字段两种方式
      */
     private void removeCacheByEntity(T entity) {
         if (entity == null) {
@@ -372,13 +705,46 @@ public abstract class ModuleService<M extends BaseMapper<T>, T> extends BaseServ
             if (entityClass == null) {
                 return;
             }
-            // 查找 @Unique 标注的字段
-            Field uniqueField = findCacheField(entityClass);
-            if (uniqueField == null) {
+            // 检查类上是否有 @Cache 注解（复合字段缓存）
+            Cache classCache = entityClass.getAnnotation(Cache.class);
+            if (classCache != null && classCache.value().length > 0) {
+                // 使用复合字段构建字符串缓存 key（与 buildCacheKey 保持一致）
+                String[] fieldNames = classCache.value();
+                Object[] values = new Object[fieldNames.length];
+                boolean allValuesPresent = true;
+
+                for (int i = 0; i < fieldNames.length; i++) {
+                    Field field = findField(entityClass, fieldNames[i]);
+                    if (field != null) {
+                        Object value = getFieldValue(entity, field);
+                        if (value != null) {
+                            values[i] = value;
+                        } else {
+                            allValuesPresent = false;
+                            break;
+                        }
+                    } else {
+                        allValuesPresent = false;
+                        break;
+                    }
+                }
+
+                // 只有当所有字段值都存在时，才构建字符串 key 并删除缓存
+                if (allValuesPresent) {
+                    String compositeKeyString = buildCompositeKeyString(values);
+                    if (!compositeKeyString.isEmpty()) {
+                        removeCacheByKey(compositeKeyString);
+                    }
+                }
+                return;
+            }
+            // 查找 @Cache 标注的字段（单个字段缓存）
+            Field cacheField = findCacheField(entityClass);
+            if (cacheField == null) {
                 return;
             }
             // 获取字段值作为缓存 key
-            Object key = getFieldValue(entity, uniqueField);
+            Object key = getFieldValue(entity, cacheField);
             if (key != null) {
                 removeCacheByKey(key);
             }
