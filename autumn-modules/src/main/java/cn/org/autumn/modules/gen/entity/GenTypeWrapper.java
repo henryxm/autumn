@@ -7,8 +7,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class GenTypeWrapper {
-    private GenTypeEntity entity;
-    private SysMenuEntity menuEntity;
+    private final GenTypeEntity entity;
+    private final SysMenuEntity menuEntity;
 
     public GenTypeWrapper(GenTypeEntity entity, SysMenuEntity sysMenuEntity) {
         this.mapping = new LinkedHashMap<>();
