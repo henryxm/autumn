@@ -104,17 +104,10 @@ public abstract class ModuleService<M extends BaseMapper<T>, T> extends BaseServ
     }
 
     public CacheConfig getConfig() {
-        return null;
-    }
-
-    public CacheConfig getCacheConfig() {
-        CacheConfig config = getConfig();
+        String name = getModelClass().getSimpleName().replace("Entity", "").toLowerCase();
+        CacheConfig config = configs.get(name);
         if (null == config) {
-            String name = getModelClass().getSimpleName().replace("Entity", "").toLowerCase();
-            config = configs.get(name);
-            if (null == config) {
-                config = CacheConfig.builder().name(name).key(String.class).value(getModelClass()).expire(cacheExpire()).Null(cacheNull()).build();
-            }
+            config = CacheConfig.builder().name(name).key(String.class).value(getModelClass()).expire(cacheExpire()).Null(cacheNull()).build();
         }
         return config;
     }
@@ -310,7 +303,7 @@ public abstract class ModuleService<M extends BaseMapper<T>, T> extends BaseServ
             return null;
         }
         // 调用单参数版本的 getEntity
-        return cacheService.compute(cacheKey, () -> getEntity(key), getCacheConfig());
+        return cacheService.compute(cacheKey, () -> getEntity(key), getConfig());
     }
 
     /**
@@ -339,7 +332,7 @@ public abstract class ModuleService<M extends BaseMapper<T>, T> extends BaseServ
             return null;
         }
         // 调用可变参数版本的 getEntity
-        return cacheService.compute(cacheKey, () -> getEntity(keys), getCacheConfig());
+        return cacheService.compute(cacheKey, () -> getEntity(keys), getConfig());
     }
 
     /**
@@ -682,7 +675,7 @@ public abstract class ModuleService<M extends BaseMapper<T>, T> extends BaseServ
             return;
         }
         try {
-            CacheConfig config = getCacheConfig();
+            CacheConfig config = getConfig();
             String cacheName = config.getName();
             cacheService.remove(cacheName, key);
         } catch (Throwable e) {
