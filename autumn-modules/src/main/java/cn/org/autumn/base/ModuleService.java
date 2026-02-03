@@ -95,19 +95,77 @@ public abstract class ModuleService<M extends BaseMapper<T>, T> extends BaseServ
         language.put(getLanguageItemsInternal(), getLanguageItems(), getLanguageList());
     }
 
-    public long cacheExpire() {
+    public long getCacheExpire() {
         return 10;
     }
 
-    public boolean cacheNull() {
+    public boolean isCacheNull() {
         return false;
+    }
+
+    /**
+     * 获取缓存Key的类型
+     * 1. 如果类上有@Cache注解（复合字段缓存），返回String.class
+     * 2. 如果字段上有@Cache注解，返回该字段的类型
+     * 3. 如果字段类型是复合类型（数组、集合、Map等），返回String.class
+     * 4. 否则返回字段的类型
+     *
+     * @return Key类型
+     */
+    public Class<?> getCacheKeyType() {
+        Class<?> entityClass = getModelClass();
+        if (entityClass == null) {
+            return String.class;
+        }
+        // 检查类上是否有 @Cache 注解（复合字段缓存）
+        Cache classCache = entityClass.getAnnotation(Cache.class);
+        if (classCache != null && classCache.value().length > 0) {
+            // 复合字段缓存，使用String类型作为key
+            return String.class;
+        }
+        // 查找字段上的 @Cache 注解（单个字段缓存）
+        Field cacheField = findCacheField(entityClass);
+        if (cacheField == null) {
+            // 如果没有找到@Cache注解的字段，默认使用String类型
+            return String.class;
+        }
+        Class<?> fieldType = cacheField.getType();
+        // 判断是否是复合类型
+        if (isCompositeType(fieldType)) {
+            return String.class;
+        }
+        return fieldType;
+    }
+
+    /**
+     * 判断是否是复合类型
+     * 复合类型包括：数组、集合（Collection）、Map等
+     *
+     * @param type 类型
+     * @return 如果是复合类型返回true，否则返回false
+     */
+    private boolean isCompositeType(Class<?> type) {
+        if (type == null) {
+            return false;
+        }
+        // 数组类型
+        if (type.isArray()) {
+            return true;
+        }
+        // 集合类型
+        if (Collection.class.isAssignableFrom(type)) {
+            return true;
+        }
+        // Map类型
+        return Map.class.isAssignableFrom(type);
     }
 
     public CacheConfig getConfig() {
         String name = getModelClass().getSimpleName().replace("Entity", "").toLowerCase();
         CacheConfig config = configs.get(name);
         if (null == config) {
-            config = CacheConfig.builder().name(name).key(String.class).value(getModelClass()).expire(cacheExpire()).Null(cacheNull()).build();
+            config = CacheConfig.builder().name(name).key(getCacheKeyType()).value(getModelClass()).expire(getCacheExpire()).Null(isCacheNull()).build();
+            configs.put(name, config);
         }
         return config;
     }
