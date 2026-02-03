@@ -13,4 +13,11 @@ public @interface Cache {
      * @return 字段名数组
      */
     String[] value() default {};
+
+    /**
+     * 当有多个不同的字段都有唯一值的时候，可以使用name来区分
+     *
+     * @return 返回一个指定字段的名字
+     */
+    String name() default "";
 }

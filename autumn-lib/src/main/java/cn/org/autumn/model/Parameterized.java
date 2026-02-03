@@ -1,5 +1,6 @@
 package cn.org.autumn.model;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.Map;
@@ -7,13 +8,18 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public interface Parameterized {
 
-    Map<Integer, Class<?>> _types = new ConcurrentHashMap<>();
+    Map<String, Class<?>> _types = new ConcurrentHashMap<>();
 
     default Class<?> type(int index) {
-        Class<?> type = _types.get(index);
+        return type(index, null);
+    }
+
+    default <T extends Annotation> Class<?> type(int index, Class<T> annotation) {
+        Class<?> clazz = getClass();
+        String key = clazz.getName() + "." + index;
+        Class<?> type = _types.get(key);
         if (null != type)
             return type;
-        Class<?> clazz = getClass();
         while (true) {
             // 首先检查实现的接口中的泛型类型
             Type[] genericInterfaces = clazz.getGenericInterfaces();
@@ -22,8 +28,16 @@ public interface Parameterized {
                     ParameterizedType parameterizedType = (ParameterizedType) genericInterface;
                     Type[] types = parameterizedType.getActualTypeArguments();
                     if (types.length >= index + 1 && types[index] instanceof Class) {
-                        type = (Class<?>) types[index];
-                        break;
+                        Class<?> tmp = (Class<?>) types[1];
+                        if (null == annotation)
+                            type = tmp;
+                        else {
+                            T table = tmp.getAnnotation(annotation);
+                            if (null != table) {
+                                type = tmp;
+                                break;
+                            }
+                        }
                     }
                 }
             }
@@ -35,15 +49,23 @@ public interface Parameterized {
                 ParameterizedType parameterizedType = (ParameterizedType) parameterized;
                 Type[] types = parameterizedType.getActualTypeArguments();
                 if (types.length >= index + 1 && types[index] instanceof Class) {
-                    type = (Class<?>) types[index];
-                    break;
+                    Class<?> tmp = (Class<?>) types[1];
+                    if (null == annotation)
+                        type = tmp;
+                    else {
+                        T table = tmp.getAnnotation(annotation);
+                        if (null != table) {
+                            type = tmp;
+                            break;
+                        }
+                    }
                 }
             }
             clazz = clazz.getSuperclass();
             if (clazz == null || clazz.equals(Object.class))
                 break;
         }
-        _types.put(index, type);
+        _types.put(key, type);
         return type;
     }
 }

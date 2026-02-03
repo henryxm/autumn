@@ -137,6 +137,25 @@ public abstract class ModuleService<M extends BaseMapper<T>, T> extends BaseServ
         return fieldType;
     }
 
+    public Class<?> getCacheKeyType(String name) {
+        Class<?> entityClass = getModelClass();
+        if (entityClass == null) {
+            return String.class;
+        }
+        // 查找字段上的 @Cache 注解（单个字段缓存）
+        Field cacheField = findCacheField(entityClass, name);
+        if (cacheField == null) {
+            // 如果没有找到@Cache注解的字段，默认使用String类型
+            return String.class;
+        }
+        Class<?> fieldType = cacheField.getType();
+        // 判断是否是复合类型
+        if (isCompositeType(fieldType)) {
+            return String.class;
+        }
+        return fieldType;
+    }
+
     /**
      * 判断是否是复合类型
      * 复合类型包括：数组、集合（Collection）、Map等
@@ -165,6 +184,28 @@ public abstract class ModuleService<M extends BaseMapper<T>, T> extends BaseServ
         CacheConfig config = configs.get(name);
         if (null == config) {
             config = CacheConfig.builder().name(name).key(getCacheKeyType()).value(getModelClass()).expire(getCacheExpire()).Null(isCacheNull()).build();
+            configs.put(name, config);
+        }
+        return config;
+    }
+
+    /**
+     * 根据name属性获取缓存配置
+     * 如果name为空或null，返回默认配置（等同于getConfig()）
+     *
+     * @param naming name属性值，如果为空则使用默认配置
+     * @return 缓存配置
+     */
+    public CacheConfig getConfig(String naming) {
+        // 如果name为空，使用默认配置
+        if (naming == null || naming.isEmpty()) {
+            return getConfig();
+        }
+        String name = getModelClass().getSimpleName().replace("Entity", "") + naming;
+        name = name.toLowerCase();
+        CacheConfig config = configs.get(name);
+        if (null == config) {
+            config = CacheConfig.builder().name(name).key(getCacheKeyType(naming)).value(getModelClass()).expire(getCacheExpire()).Null(isCacheNull()).build();
             configs.put(name, config);
         }
         return config;
@@ -365,6 +406,23 @@ public abstract class ModuleService<M extends BaseMapper<T>, T> extends BaseServ
     }
 
     /**
+     * 根据name属性获取缓存，如果不存在则查询并缓存
+     * 用于支持多个不同字段都有唯一值的情况，通过name来区分不同的缓存字段
+     *
+     * @param name name属性值，用于区分不同的缓存字段
+     * @param key  缓存key（字段值）
+     * @return 实体对象
+     */
+    public T getNameCache(String name, Object key) {
+        if (key == null || name == null) {
+            return null;
+        }
+        // 对于单个字段缓存，直接使用key作为缓存key
+        // 使用name对应的配置
+        return cacheService.compute(key, () -> getNameEntity(name, key), getConfig(name));
+    }
+
+    /**
      * 获取缓存，如果不存在则查询并缓存（可变参数版本，兼容性）
      * 获取一条缓存值，如果未能获取到该值，则调用getEntity函数，通过查询数据库获取，实现类可以实现getEntity来提高效率
      * 也可以通过@Cache来标注其字段，通过反射来获取对应字段的实例
@@ -544,6 +602,32 @@ public abstract class ModuleService<M extends BaseMapper<T>, T> extends BaseServ
         return selectOne(wrapper);
     }
 
+    public T getNameEntity(String name, Object key) {
+        if (key == null) {
+            return null;
+        }
+        Class<?> entityClass = getModelClass();
+        if (entityClass == null) {
+            return null;
+        }
+        // 查找 @Cache 标注的字段（单个字段缓存）
+        Field cacheField = findCacheField(entityClass, name);
+        if (cacheField == null) {
+            return null;
+        }
+        // 将参数转换为字段类型
+        Object convertedKey = convert(key, cacheField.getType());
+        if (convertedKey == null) {
+            return null;
+        }
+        // 使用 EntityWrapper 查询
+        String fieldName = cacheField.getName();
+        String columnName = HumpConvert.HumpToUnderline(fieldName);
+        EntityWrapper<T> wrapper = new EntityWrapper<>();
+        wrapper.eq(Escape.escape(columnName), convertedKey);
+        return selectOne(wrapper);
+    }
+
     /**
      * 通过反射获取对象实体（可变参数版本，兼容性）
      * 具体实现类可以实现该方法，可提高消息，如果实例类为实现该方法，可以使用@Cache标注对应字段，系统将通过该字段，使用反射获取一条实例
@@ -707,45 +791,132 @@ public abstract class ModuleService<M extends BaseMapper<T>, T> extends BaseServ
     }
 
     /**
-     * 查找实体类中标注了 @Unique 的字段
+     * 查找实体类中标注了 @Cache 的字段（不带name或name为空）
      */
     private Field findCacheField(Class<?> clazz) {
+        return findCacheField(clazz, "");
+    }
+
+    /**
+     * 查找实体类中标注了 @Cache 的字段（通过name或字段名匹配）
+     *
+     * @param clazz 实体类
+     * @param name  name属性值或字段名，如果为空则查找不带name的字段
+     * @return 匹配的字段，如果未找到返回null
+     */
+    private Field findCacheField(Class<?> clazz, String name) {
         Field[] fields = clazz.getDeclaredFields();
         for (Field field : fields) {
-            if (field.getAnnotation(Cache.class) != null) {
-                field.setAccessible(true);
-                return field;
+            Cache cache = field.getAnnotation(Cache.class);
+            if (cache != null) {
+                String cacheName = cache.name();
+                String fieldName = field.getName();
+                boolean cacheNameEmpty = cacheName.isEmpty();
+                // 如果name为空，只匹配不带name的字段
+                if (name == null || name.isEmpty()) {
+                    if (cacheNameEmpty) {
+                        field.setAccessible(true);
+                        return field;
+                    }
+                } else {
+                    // 如果name不为空，匹配name属性或字段名
+                    // 1. 如果字段有name属性，必须匹配name属性
+                    // 2. 如果字段没有name属性，匹配字段名
+                    if (!cacheNameEmpty && name.equalsIgnoreCase(cacheName)) {
+                        field.setAccessible(true);
+                        return field;
+                    } else if (cacheNameEmpty && name.equalsIgnoreCase(fieldName)) {
+                        field.setAccessible(true);
+                        return field;
+                    }
+                }
             }
         }
         // 检查父类
         Class<?> superClass = clazz.getSuperclass();
         if (superClass != null && !superClass.equals(Object.class)) {
-            return findCacheField(superClass);
+            return findCacheField(superClass, name);
         }
         return null;
     }
 
     /**
-     * 根据 key 删除缓存
+     * 查找实体类中所有标注了 @Cache 的字段
+     *
+     * @param clazz 实体类
+     * @return 所有带@Cache注解的字段列表，key为name属性值（如果为空则使用字段名），value为字段对象
+     */
+    private Map<String, Field> findAllCacheFields(Class<?> clazz) {
+        Map<String, Field> cacheFields = new HashMap<>();
+        findAllCacheFields(clazz, cacheFields);
+        return cacheFields;
+    }
+
+    /**
+     * 递归查找所有带@Cache注解的字段（包括父类）
+     *
+     * @param clazz       实体类
+     * @param cacheFields 结果Map
+     */
+    private void findAllCacheFields(Class<?> clazz, Map<String, Field> cacheFields) {
+        if (clazz == null || clazz.equals(Object.class)) {
+            return;
+        }
+        Field[] fields = clazz.getDeclaredFields();
+        for (Field field : fields) {
+            Cache cache = field.getAnnotation(Cache.class);
+            if (cache != null) {
+                field.setAccessible(true);
+                String cacheName = cache.name();
+                // 如果name为空，使用字段名作为key；否则使用name作为key
+                String key = cacheName.isEmpty() ? field.getName() : cacheName;
+                // 如果key已存在，跳过（子类的字段优先）
+                if (!cacheFields.containsKey(key)) {
+                    cacheFields.put(key, field);
+                }
+            }
+        }
+        // 检查父类
+        Class<?> superClass = clazz.getSuperclass();
+        if (superClass != null && !superClass.equals(Object.class)) {
+            findAllCacheFields(superClass, cacheFields);
+        }
+    }
+
+    /**
+     * 根据 key 删除缓存（使用默认配置）
      */
     private void removeCacheByKey(Object key) {
+        removeCacheByKey("", key);
+    }
+
+    /**
+     * 根据 name 和 key 删除缓存
+     *
+     * @param name name属性值，如果为空则使用默认配置
+     * @param key  缓存key
+     */
+    private void removeCacheByKey(String name, Object key) {
         if (key == null) {
             return;
         }
         try {
-            CacheConfig config = getConfig();
+            CacheConfig config = (name == null || name.isEmpty()) ? getConfig() : getConfig(name);
             String cacheName = config.getName();
             cacheService.remove(cacheName, key);
         } catch (Throwable e) {
             if (log.isWarnEnabled())
-                log.warn("删除缓存:{}", e.getMessage());
+                log.warn("删除缓存失败: name={}, key={}, error={}", name, key, e.getMessage());
         }
     }
 
     /**
      * 根据实体对象删除缓存
      * 从实体中提取 @Cache 标注的字段值作为缓存 key
-     * 支持单个字段和复合字段两种方式
+     * 支持以下方式：
+     * 1. 类上的复合字段缓存（@Cache(value = {"field1", "field2"})）
+     * 2. 字段上的单个字段缓存（@Cache 或 @Cache(name = "xxx")）
+     * 3. 多个不同name的字段缓存（会删除所有匹配的缓存）
      */
     private void removeCacheByEntity(T entity) {
         if (entity == null) {
@@ -756,52 +927,75 @@ public abstract class ModuleService<M extends BaseMapper<T>, T> extends BaseServ
             if (entityClass == null) {
                 return;
             }
-            // 检查类上是否有 @Cache 注解（复合字段缓存）
+            // 1. 检查类上是否有 @Cache 注解（复合字段缓存）
             Cache classCache = entityClass.getAnnotation(Cache.class);
             if (classCache != null && classCache.value().length > 0) {
-                // 使用复合字段构建字符串缓存 key（与 buildCacheKey 保持一致）
-                String[] fieldNames = classCache.value();
-                Object[] values = new Object[fieldNames.length];
-                boolean allValuesPresent = true;
-
-                for (int i = 0; i < fieldNames.length; i++) {
-                    Field field = findField(entityClass, fieldNames[i]);
-                    if (field != null) {
-                        Object value = getFieldValue(entity, field);
-                        if (value != null) {
-                            values[i] = value;
-                        } else {
-                            allValuesPresent = false;
-                            break;
-                        }
-                    } else {
-                        allValuesPresent = false;
-                        break;
-                    }
-                }
-
-                // 只有当所有字段值都存在时，才构建字符串 key 并删除缓存
-                if (allValuesPresent) {
-                    String compositeKeyString = buildCompositeKeyString(values);
-                    if (!compositeKeyString.isEmpty()) {
-                        removeCacheByKey(compositeKeyString);
-                    }
-                }
-                return;
+                removeCompositeCache(entity, entityClass, classCache.value());
             }
-            // 查找 @Cache 标注的字段（单个字段缓存）
-            Field cacheField = findCacheField(entityClass);
-            if (cacheField == null) {
-                return;
-            }
-            // 获取字段值作为缓存 key
-            Object key = getFieldValue(entity, cacheField);
-            if (key != null) {
-                removeCacheByKey(key);
-            }
+            // 2. 删除所有字段上带 @Cache 注解的缓存（包括带name和不带name的）
+            removeFieldCaches(entity, entityClass);
         } catch (Throwable e) {
             if (log.isWarnEnabled())
-                log.warn("清除实体:{}", e.getMessage());
+                log.warn("清除实体缓存失败: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 删除复合字段缓存
+     *
+     * @param entity      实体对象
+     * @param entityClass 实体类
+     * @param fieldNames  字段名数组
+     */
+    private void removeCompositeCache(T entity, Class<?> entityClass, String[] fieldNames) {
+        Object[] values = new Object[fieldNames.length];
+        boolean allValuesPresent = true;
+
+        for (int i = 0; i < fieldNames.length; i++) {
+            Field field = findField(entityClass, fieldNames[i]);
+            if (field != null) {
+                Object value = getFieldValue(entity, field);
+                if (value != null) {
+                    values[i] = value;
+                } else {
+                    allValuesPresent = false;
+                    break;
+                }
+            } else {
+                allValuesPresent = false;
+                break;
+            }
+        }
+
+        // 只有当所有字段值都存在时，才构建字符串 key 并删除缓存
+        if (allValuesPresent) {
+            String compositeKeyString = buildCompositeKeyString(values);
+            if (!compositeKeyString.isEmpty()) {
+                removeCacheByKey(compositeKeyString);
+            }
+        }
+    }
+
+    /**
+     * 删除所有字段上带 @Cache 注解的缓存
+     *
+     * @param entity      实体对象
+     * @param entityClass 实体类
+     */
+    private void removeFieldCaches(T entity, Class<?> entityClass) {
+        Map<String, Field> cacheFields = findAllCacheFields(entityClass);
+        for (Map.Entry<String, Field> entry : cacheFields.entrySet()) {
+            Field field = entry.getValue();
+            Cache cache = field.getAnnotation(Cache.class);
+            if (cache != null) {
+                Object key = getFieldValue(entity, field);
+                if (key != null) {
+                    // 获取name属性值，如果为空则使用空字符串（表示使用默认配置）
+                    String cacheName = cache.name();
+                    String nameForConfig = cacheName.isEmpty() ? "" : cacheName;
+                    removeCacheByKey(nameForConfig, key);
+                }
+            }
         }
     }
 

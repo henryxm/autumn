@@ -1,6 +1,7 @@
 package cn.org.autumn.service;
 
 import cn.org.autumn.menu.BaseMenu;
+import cn.org.autumn.model.Parameterized;
 import cn.org.autumn.table.annotation.Column;
 import cn.org.autumn.table.annotation.Table;
 import cn.org.autumn.table.utils.HumpConvert;
@@ -14,8 +15,6 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.WordUtils;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
 import java.util.*;
 
 /**
@@ -24,38 +23,12 @@ import java.util.*;
  * @param <M> Mapper
  * @param <T> Entity
  */
-public abstract class BaseService<M extends BaseMapper<T>, T> extends ServiceImpl<M, T> implements BaseMenu {
+public abstract class BaseService<M extends BaseMapper<T>, T> extends ServiceImpl<M, T> implements BaseMenu, Parameterized {
 
-    private Class<?> modelClass = null;
     private String prefix = null;
 
-    public void setModelClass(Class<?> modelClass) {
-        this.modelClass = modelClass;
-    }
-
     public Class<?> getModelClass() {
-        if (null != modelClass)
-            return modelClass;
-        Class<?> clazz = getClass();
-        while (true) {
-            Type type = clazz.getGenericSuperclass();
-            if (type instanceof ParameterizedType) {
-                ParameterizedType parameterizedType = (ParameterizedType) type;
-                Type[] types = parameterizedType.getActualTypeArguments();
-                if (types.length == 2 && types[1] instanceof Class) {
-                    Class<?> tmp = (Class<?>) types[1];
-                    Table table = tmp.getAnnotation(Table.class);
-                    if (null != table) {
-                        modelClass = tmp;
-                        break;
-                    }
-                }
-            }
-            clazz = clazz.getSuperclass();
-            if (clazz.equals(BaseService.class))
-                break;
-        }
-        return modelClass;
+        return type(1, Table.class);
     }
 
     /**
