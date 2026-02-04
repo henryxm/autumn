@@ -10,7 +10,8 @@ public interface EntityModel<T> extends Parameterized {
             T t = (T) clazz.newInstance();
             BeanUtils.copyProperties(t, this);
             return t;
-        } catch (Throwable ignored) {
+        } catch (Throwable e) {
+            System.out.println(e.getMessage());
         }
         return null;
     }

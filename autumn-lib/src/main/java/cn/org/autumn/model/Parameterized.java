@@ -28,7 +28,7 @@ public interface Parameterized {
                     ParameterizedType parameterizedType = (ParameterizedType) genericInterface;
                     Type[] types = parameterizedType.getActualTypeArguments();
                     if (types.length >= index + 1 && types[index] instanceof Class) {
-                        Class<?> tmp = (Class<?>) types[1];
+                        Class<?> tmp = (Class<?>) types[index];
                         if (null == annotation)
                             type = tmp;
                         else {
@@ -49,7 +49,7 @@ public interface Parameterized {
                 ParameterizedType parameterizedType = (ParameterizedType) parameterized;
                 Type[] types = parameterizedType.getActualTypeArguments();
                 if (types.length >= index + 1 && types[index] instanceof Class) {
-                    Class<?> tmp = (Class<?>) types[1];
+                    Class<?> tmp = (Class<?>) types[index];
                     if (null == annotation)
                         type = tmp;
                     else {
