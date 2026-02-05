@@ -20,4 +20,11 @@ public @interface Cache {
      * @return 返回一个指定字段的名字
      */
     String name() default "";
+
+    /**
+     * 指明缓存的数据是否具有唯一性，如果不是唯一的，应返回数据格式
+     *
+     * @return 是否是唯一的缓存对象，否则返回数据
+     */
+    boolean unique() default true;
 }

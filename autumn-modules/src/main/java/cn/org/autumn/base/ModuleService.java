@@ -242,6 +242,43 @@ public abstract class ModuleService<M extends BaseMapper<T>, T> extends BaseServ
     }
 
     /**
+     * 获取非唯一缓存的配置（用于List列表缓存）
+     * 缓存名称后缀添加 "list" 以区分唯一和非唯一缓存
+     *
+     * @return 非唯一缓存配置
+     */
+    public CacheConfig getListConfig() {
+        String name = getModelClass().getSimpleName().replace("Entity", "").toLowerCase() + "list";
+        CacheConfig config = configs.get(name);
+        if (null == config) {
+            config = CacheConfig.builder().name(name).key(getCacheKeyType()).value(List.class).expire(getCacheExpire()).Null(isCacheNull()).build();
+            configs.put(name, config);
+        }
+        return config;
+    }
+
+    /**
+     * 根据name属性获取非唯一缓存的配置（用于List列表缓存）
+     * 缓存名称后缀添加 "list" 以区分唯一和非唯一缓存
+     *
+     * @param naming name属性值，如果为空则使用默认配置
+     * @return 非唯一缓存配置
+     */
+    public CacheConfig getListConfig(String naming) {
+        if (naming == null || naming.isEmpty()) {
+            return getListConfig();
+        }
+        String name = getModelClass().getSimpleName().replace("Entity", "") + naming + "list";
+        name = name.toLowerCase();
+        CacheConfig config = configs.get(name);
+        if (null == config) {
+            config = CacheConfig.builder().name(name).key(getCacheKeyType(naming)).value(List.class).expire(getCacheExpire()).Null(isCacheNull()).build();
+            configs.put(name, config);
+        }
+        return config;
+    }
+
+    /**
      * 查找类上的@Caches注解
      *
      * @param entityClass 实体类
@@ -502,14 +539,20 @@ public abstract class ModuleService<M extends BaseMapper<T>, T> extends BaseServ
      * 获取缓存，如果不存在则查询并缓存（单个参数版本，高效）
      * 获取一条缓存值，如果未能获取到该值，则调用getEntity函数，通过查询数据库获取，实现类可以实现getEntity来提高效率
      * 也可以通过@Cache来标注其字段，通过反射来获取对应字段的实例
+     * <p>
+     * 注意：此方法要求 @Cache 注解的 unique 属性为 true（默认值）。
+     * 如果需要获取非唯一字段的数据列表，请使用 getListCache 方法。
      *
      * @param key 缓存 key（单个值）
      * @return 实体对象
+     * @throws IllegalStateException 如果 @Cache 注解的 unique=false
      */
     public T getCache(Object key) {
         if (key == null) {
             return null;
         }
+        // 校验 unique 必须为 true
+        checkCacheUnique(true);
         // 构建缓存 key
         Object cacheKey = buildCacheKey(key);
         if (cacheKey == null) {
@@ -523,15 +566,21 @@ public abstract class ModuleService<M extends BaseMapper<T>, T> extends BaseServ
      * 根据name属性获取缓存，如果不存在则查询并缓存
      * 用于支持多个不同字段都有唯一值的情况，通过name来区分不同的缓存字段
      * 支持单个字段缓存和复合字段缓存（通过@Caches注解定义）
+     * <p>
+     * 注意：此方法要求 @Cache 注解的 unique 属性为 true（默认值）。
+     * 如果需要获取非唯一字段的数据列表，请使用 getNameListCache 方法。
      *
      * @param name name属性值，用于区分不同的缓存字段或复合key
      * @param key  缓存key（字段值或Map）
      * @return 实体对象
+     * @throws IllegalStateException 如果 @Cache 注解的 unique=false
      */
     public T getNameCache(String name, Object key) {
         if (key == null || name == null) {
             return null;
         }
+        // 校验 unique 必须为 true
+        checkCacheUnique(name, true);
         // 构建缓存 key（支持复合字段）
         Object cacheKey = buildCacheKey(name, key);
         if (cacheKey == null) {
@@ -544,19 +593,25 @@ public abstract class ModuleService<M extends BaseMapper<T>, T> extends BaseServ
     /**
      * 根据name属性获取复合key缓存，如果不存在则查询并缓存
      * 用于支持@Caches注解中定义的多个复合key缓存
+     * <p>
+     * 注意：此方法要求 @Cache 注解的 unique 属性为 true（默认值）。
+     * 如果需要获取非唯一字段的数据列表，请使用 getNameListCache 方法。
      *
      * @param name name属性值，用于区分不同的复合key
      * @param keys 复合key的值数组，按@Cache注解中字段顺序对应
      * @return 实体对象
+     * @throws IllegalStateException 如果 @Cache 注解的 unique=false
      */
     public T getNameCache(String name, Object... keys) {
         if (keys == null || keys.length == 0 || name == null) {
             return null;
         }
-        // 如果只有一个参数，调用单参数版本
+        // 如果只有一个参数，调用单参数版本（已包含校验）
         if (keys.length == 1) {
             return getNameCache(name, keys[0]);
         }
+        // 校验 unique 必须为 true
+        checkCacheUnique(name, true);
         // 构建缓存 key（复合字段）
         Object cacheKey = buildCacheKey(name, keys);
         if (cacheKey == null) {
@@ -574,18 +629,24 @@ public abstract class ModuleService<M extends BaseMapper<T>, T> extends BaseServ
      * 支持两种方式：
      * 1. 单个字段缓存：getCache(key) - key 为单个值（推荐使用单参数版本 getCache(Object key)）
      * 2. 复合字段缓存：getCache(value1, value2, ...) - 多个值按 @Cache 注解中字段顺序对应
+     * <p>
+     * 注意：此方法要求 @Cache 注解的 unique 属性为 true（默认值）。
+     * 如果需要获取非唯一字段的数据列表，请使用 getListCache 方法。
      *
      * @param keys 缓存 key，可以是单个值或多个值（可变参数）
      * @return 实体对象
+     * @throws IllegalStateException 如果 @Cache 注解的 unique=false
      */
     public T getCache(Object... keys) {
         if (keys == null || keys.length == 0) {
             return null;
         }
-        // 如果只有一个参数，调用单参数版本（更高效）
+        // 如果只有一个参数，调用单参数版本（更高效，已包含校验）
         if (keys.length == 1) {
             return getCache(keys[0]);
         }
+        // 校验 unique 必须为 true
+        checkCacheUnique(true);
         // 构建缓存 key
         Object cacheKey = buildCacheKey(keys);
         if (cacheKey == null) {
@@ -593,6 +654,124 @@ public abstract class ModuleService<M extends BaseMapper<T>, T> extends BaseServ
         }
         // 调用可变参数版本的 getEntity
         return cacheService.compute(cacheKey, () -> getEntity(keys), getConfig());
+    }
+
+    /**
+     * 获取List列表缓存，如果不存在则查询并缓存（单个参数版本）
+     * 用于缓存非唯一字段（unique=false）的数据，返回符合条件的所有记录
+     * <p>
+     * 注意：此方法要求 @Cache 注解的 unique 属性为 false。
+     * 如果需要获取唯一字段的单个数据，请使用 getCache 方法。
+     *
+     * @param key 缓存 key（单个值）
+     * @return 实体对象列表
+     * @throws IllegalStateException 如果 @Cache 注解的 unique=true
+     */
+    @SuppressWarnings("unchecked")
+    public List<T> getListCache(Object key) {
+        if (key == null) {
+            return null;
+        }
+        // 校验 unique 必须为 false
+        checkCacheUnique(false);
+        // 构建缓存 key
+        Object cacheKey = buildCacheKey(key);
+        if (cacheKey == null) {
+            return null;
+        }
+        // 调用单参数版本的 getListEntity
+        return (List<T>) cacheService.compute(cacheKey, () -> getListEntity(key), getListConfig());
+    }
+
+    /**
+     * 获取List列表缓存，如果不存在则查询并缓存（可变参数版本）
+     * 用于缓存非唯一字段（unique=false）的数据，返回符合条件的所有记录
+     * <p>
+     * 注意：此方法要求 @Cache 注解的 unique 属性为 false。
+     * 如果需要获取唯一字段的单个数据，请使用 getCache 方法。
+     *
+     * @param keys 缓存 key，可以是单个值或多个值（可变参数）
+     * @return 实体对象列表
+     * @throws IllegalStateException 如果 @Cache 注解的 unique=true
+     */
+    @SuppressWarnings("unchecked")
+    public List<T> getListCache(Object... keys) {
+        if (keys == null || keys.length == 0) {
+            return null;
+        }
+        // 如果只有一个参数，调用单参数版本（更高效，已包含校验）
+        if (keys.length == 1) {
+            return getListCache(keys[0]);
+        }
+        // 校验 unique 必须为 false
+        checkCacheUnique(false);
+        // 构建缓存 key
+        Object cacheKey = buildCacheKey(keys);
+        if (cacheKey == null) {
+            return null;
+        }
+        // 调用可变参数版本的 getListEntity
+        return (List<T>) cacheService.compute(cacheKey, () -> getListEntity(keys), getListConfig());
+    }
+
+    /**
+     * 根据name属性获取List列表缓存，如果不存在则查询并缓存
+     * 用于支持多个不同字段都有非唯一值的情况，通过name来区分不同的缓存字段
+     * <p>
+     * 注意：此方法要求 @Cache 注解的 unique 属性为 false。
+     * 如果需要获取唯一字段的单个数据，请使用 getNameCache 方法。
+     *
+     * @param name name属性值，用于区分不同的缓存字段或复合key
+     * @param key  缓存key（字段值或Map）
+     * @return 实体对象列表
+     * @throws IllegalStateException 如果 @Cache 注解的 unique=true
+     */
+    @SuppressWarnings("unchecked")
+    public List<T> getNameListCache(String name, Object key) {
+        if (key == null || name == null) {
+            return null;
+        }
+        // 校验 unique 必须为 false
+        checkCacheUnique(name, false);
+        // 构建缓存 key（支持复合字段）
+        Object cacheKey = buildCacheKey(name, key);
+        if (cacheKey == null) {
+            return null;
+        }
+        // 使用name对应的配置和getNameListEntity方法
+        return (List<T>) cacheService.compute(cacheKey, () -> getNameListEntity(name, key), getListConfig(name));
+    }
+
+    /**
+     * 根据name属性获取复合key的List列表缓存，如果不存在则查询并缓存
+     * 用于支持@Caches注解中定义的多个复合key缓存（unique=false）
+     * <p>
+     * 注意：此方法要求 @Cache 注解的 unique 属性为 false。
+     * 如果需要获取唯一字段的单个数据，请使用 getNameCache 方法。
+     *
+     * @param name name属性值，用于区分不同的复合key
+     * @param keys 复合key的值数组，按@Cache注解中字段顺序对应
+     * @return 实体对象列表
+     * @throws IllegalStateException 如果 @Cache 注解的 unique=true
+     */
+    @SuppressWarnings("unchecked")
+    public List<T> getNameListCache(String name, Object... keys) {
+        if (keys == null || keys.length == 0 || name == null) {
+            return null;
+        }
+        // 如果只有一个参数，调用单参数版本（已包含校验）
+        if (keys.length == 1) {
+            return getNameListCache(name, keys[0]);
+        }
+        // 校验 unique 必须为 false
+        checkCacheUnique(name, false);
+        // 构建缓存 key（复合字段）
+        Object cacheKey = buildCacheKey(name, keys);
+        if (cacheKey == null) {
+            return null;
+        }
+        // 使用name对应的配置和getNameListEntity方法
+        return (List<T>) cacheService.compute(cacheKey, () -> getNameListEntity(name, keys), getListConfig(name));
     }
 
     /**
@@ -634,8 +813,6 @@ public abstract class ModuleService<M extends BaseMapper<T>, T> extends BaseServ
                 }
                 return buildCompositeKeyString(values);
             }
-            // 单个参数在复合字段模式下，参数数量不匹配，返回 null
-            return null;
         }
         // 单个字段缓存，直接返回 key
         return key;
@@ -933,6 +1110,188 @@ public abstract class ModuleService<M extends BaseMapper<T>, T> extends BaseServ
     }
 
     /**
+     * 通过反射获取对象实体列表（单个参数版本，用于非唯一字段）
+     * 当@Cache注解的unique=false时，使用此方法获取符合条件的所有记录
+     *
+     * @param key 指定的实体key（单个值）
+     * @return 返回实体类型的对象列表，如果未使用@Cache指定字段，则返回null
+     */
+    public List<T> getListEntity(Object key) {
+        return getListEntity("", key);
+    }
+
+    /**
+     * 通过反射获取对象实体列表（带name参数版本，用于非唯一字段）
+     *
+     * @param name name属性值，如果为空则使用默认的@Cache注解
+     * @param key  指定的实体key（单个值）
+     * @return 返回实体类型的对象列表，如果未使用@Cache指定字段，则返回null
+     */
+    private List<T> getListEntity(String name, Object key) {
+        if (key == null) {
+            return null;
+        }
+        Class<?> entityClass = getModelClass();
+        if (entityClass == null) {
+            return null;
+        }
+        // 查找复合字段缓存配置（支持@Cache和@Caches注解）
+        Cache compositeCache = findCompositeCache(entityClass, name);
+        if (compositeCache != null && compositeCache.value().length > 0) {
+            String[] fieldNames = compositeCache.value();
+            // 如果是 Map，使用 Map 方式
+            if (key instanceof Map) {
+                return getListEntityByCompositeFields(key, entityClass, fieldNames);
+            }
+            // 单个参数在复合字段模式下，参数数量不匹配，返回 null
+            return null;
+        }
+        // 查找 @Cache 标注的字段（单个字段缓存）
+        Field cacheField = findCacheField(entityClass, name);
+        if (cacheField == null) {
+            return null;
+        }
+        // 将参数转换为字段类型
+        Object convertedKey = convert(key, cacheField.getType());
+        if (convertedKey == null) {
+            return null;
+        }
+        // 使用 EntityWrapper 查询列表
+        String fieldName = cacheField.getName();
+        String columnName = HumpConvert.HumpToUnderline(fieldName);
+        EntityWrapper<T> wrapper = new EntityWrapper<>();
+        wrapper.eq(Escape.escape(columnName), convertedKey);
+        return selectList(wrapper);
+    }
+
+    /**
+     * 根据name属性获取实体列表（支持单个字段和复合字段）
+     * 支持@Caches注解中定义的复合key缓存（unique=false）
+     *
+     * @param name name属性值，用于区分不同的缓存字段或复合key
+     * @param key  缓存key（字段值、Map或可变参数）
+     * @return 实体对象列表
+     */
+    public List<T> getNameListEntity(String name, Object key) {
+        if (key == null || name == null) {
+            return null;
+        }
+        return getListEntity(name, key);
+    }
+
+    /**
+     * 根据name属性获取实体列表（可变参数版本，支持复合key）
+     *
+     * @param name name属性值，用于区分不同的复合key
+     * @param keys 复合key的值数组，按@Cache注解中字段顺序对应
+     * @return 实体对象列表
+     */
+    public List<T> getNameListEntity(String name, Object... keys) {
+        if (keys == null || keys.length == 0 || name == null) {
+            return null;
+        }
+        // 如果只有一个参数，调用单参数版本
+        if (keys.length == 1) {
+            return getNameListEntity(name, keys[0]);
+        }
+        Class<?> entityClass = getModelClass();
+        if (entityClass == null) {
+            return null;
+        }
+        // 查找复合字段缓存配置（支持@Caches注解）
+        Cache compositeCache = findCompositeCache(entityClass, name);
+        if (compositeCache != null && compositeCache.value().length > 0) {
+            String[] fieldNames = compositeCache.value();
+            // 将可变参数值与字段名对应构建 Map
+            Map<String, Object> fieldValues = new HashMap<>();
+            int paramCount = Math.min(keys.length, fieldNames.length);
+            for (int i = 0; i < paramCount; i++) {
+                if (keys[i] != null) {
+                    fieldValues.put(fieldNames[i], keys[i]);
+                }
+            }
+            // 如果参数数量与字段数量不匹配，返回 null
+            if (fieldValues.size() != fieldNames.length) {
+                return null;
+            }
+            // 使用复合字段查询列表
+            return getListEntityByCompositeFields(fieldValues, entityClass, fieldNames);
+        }
+        // 查找 @Cache 标注的字段（单个字段缓存）
+        Field cacheField = findCacheField(entityClass, name);
+        if (cacheField == null) {
+            return null;
+        }
+        // 将第一个参数转换为字段类型
+        Object convertedKey = convert(keys[0], cacheField.getType());
+        if (convertedKey == null) {
+            return null;
+        }
+        // 使用 EntityWrapper 查询列表
+        String fieldName = cacheField.getName();
+        String columnName = HumpConvert.HumpToUnderline(fieldName);
+        EntityWrapper<T> wrapper = new EntityWrapper<>();
+        wrapper.eq(Escape.escape(columnName), convertedKey);
+        return selectList(wrapper);
+    }
+
+    /**
+     * 通过反射获取对象实体列表（可变参数版本，用于非唯一字段）
+     * 当@Cache注解的unique=false时，使用此方法获取符合条件的所有记录
+     *
+     * @param keys 指定的实体key，可以是单个值（单个字段）或多个值（复合字段，按 @Cache 注解中字段顺序对应）
+     * @return 返回实体类型的对象列表，如果未使用@Cache指定字段，则返回null
+     */
+    public List<T> getListEntity(Object... keys) {
+        if (keys == null || keys.length == 0) {
+            return null;
+        }
+        // 如果只有一个参数，调用单参数版本（更高效）
+        if (keys.length == 1) {
+            return getListEntity(keys[0]);
+        }
+        Class<?> entityClass = getModelClass();
+        if (entityClass == null) {
+            return null;
+        }
+        // 查找复合字段缓存配置（支持@Cache和@Caches注解，默认使用不带name的）
+        Cache compositeCache = findCompositeCache(entityClass, "");
+        if (compositeCache != null && compositeCache.value().length > 0) {
+            String[] fieldNames = compositeCache.value();
+            // 将可变参数值与字段名对应构建 Map
+            Map<String, Object> fieldValues = new HashMap<>();
+            int paramCount = Math.min(keys.length, fieldNames.length);
+            for (int i = 0; i < paramCount; i++) {
+                if (keys[i] != null) {
+                    fieldValues.put(fieldNames[i], keys[i]);
+                }
+            }
+            // 如果参数数量与字段数量不匹配，返回 null
+            if (fieldValues.size() != fieldNames.length) {
+                return null;
+            }
+            // 使用复合字段查询列表
+            return getListEntityByCompositeFields(fieldValues, entityClass, fieldNames);
+        }
+        // 查找 @Cache 标注的字段（单个字段缓存）
+        Field cacheField = findCacheField(entityClass);
+        if (cacheField == null) {
+            return null;
+        }
+        // 将第一个参数转换为字段类型
+        Object convertedKey = convert(keys[0], cacheField.getType());
+        if (convertedKey == null) {
+            return null;
+        }
+        // 使用 EntityWrapper 查询列表
+        String fieldName = cacheField.getName();
+        String columnName = HumpConvert.HumpToUnderline(fieldName);
+        EntityWrapper<T> wrapper = new EntityWrapper<>();
+        wrapper.eq(Escape.escape(columnName), convertedKey);
+        return selectList(wrapper);
+    }
+
+    /**
      * 使用复合字段查询实体
      *
      * @param key         缓存 key，可以是 Map（key 为字段名）或对象（从中提取字段值）
@@ -956,6 +1315,32 @@ public abstract class ModuleService<M extends BaseMapper<T>, T> extends BaseServ
             wrapper.eq(Escape.escape(columnName), value);
         }
         return selectOne(wrapper);
+    }
+
+    /**
+     * 使用复合字段查询实体列表（用于非唯一字段）
+     *
+     * @param key         缓存 key，可以是 Map（key 为字段名）或对象（从中提取字段值）
+     * @param entityClass 实体类
+     * @param fieldNames  字段名数组
+     * @return 实体对象列表
+     */
+    private List<T> getListEntityByCompositeFields(Object key, Class<?> entityClass, String[] fieldNames) {
+        Map<String, Object> fieldValues = extractFieldValues(key, entityClass, fieldNames);
+        if (fieldValues.isEmpty()) {
+            return null;
+        }
+        // 构建查询条件
+        EntityWrapper<T> wrapper = new EntityWrapper<>();
+        for (String fieldName : fieldNames) {
+            Object value = fieldValues.get(fieldName);
+            if (value == null) {
+                return null; // 复合 key 的所有字段都必须有值
+            }
+            String columnName = HumpConvert.HumpToUnderline(fieldName);
+            wrapper.eq(Escape.escape(columnName), value);
+        }
+        return selectList(wrapper);
     }
 
     /**
@@ -1126,26 +1511,83 @@ public abstract class ModuleService<M extends BaseMapper<T>, T> extends BaseServ
     }
 
     /**
-     * 根据 key 删除缓存（使用默认配置）
+     * 校验 @Cache 注解的 unique 属性是否符合预期
+     * 用于在运行时检查缓存方法的调用是否正确
+     *
+     * @param name         name属性值，如果为空则使用默认的@Cache注解
+     * @param expectUnique 期望的unique值，true表示期望唯一缓存，false表示期望非唯一缓存
+     * @throws IllegalStateException 如果unique值不符合预期
      */
-    private void removeCacheByKey(Object key) {
+    private void checkCacheUnique(String name, boolean expectUnique) {
+        Class<?> entityClass = getModelClass();
+        if (entityClass == null) {
+            return;
+        }
+        // 查找复合字段缓存配置
+        Cache compositeCache = findCompositeCache(entityClass, name);
+        if (compositeCache != null && compositeCache.value().length > 0) {
+            boolean actualUnique = compositeCache.unique();
+            if (actualUnique != expectUnique) {
+                String methodType = expectUnique ? "getCache/getNameCache" : "getListCache/getNameListCache";
+                String expectedType = expectUnique ? "unique=true" : "unique=false";
+                String actualType = actualUnique ? "unique=true" : "unique=false";
+                throw new IllegalStateException(String.format("缓存方法调用错误: %s 方法要求 %s，但 @Cache 注解配置为 %s。" + "请使用 %s 方法代替。", methodType, expectedType, actualType, expectUnique ? "getListCache/getNameListCache" : "getCache/getNameCache"));
+            }
+            return;
+        }
+        // 查找字段上的 @Cache 注解
+        Field cacheField = findCacheField(entityClass, name);
+        if (cacheField != null) {
+            Cache cache = cacheField.getAnnotation(Cache.class);
+            if (cache != null) {
+                boolean actualUnique = cache.unique();
+                if (actualUnique != expectUnique) {
+                    String methodType = expectUnique ? "getCache/getNameCache" : "getListCache/getNameListCache";
+                    String expectedType = expectUnique ? "unique=true" : "unique=false";
+                    String actualType = actualUnique ? "unique=true" : "unique=false";
+                    String fieldName = cacheField.getName();
+                    throw new IllegalStateException(String.format("缓存方法调用错误: %s 方法要求 %s，但字段 '%s' 的 @Cache 注解配置为 %s。" + "请使用 %s 方法代替。", methodType, expectedType, fieldName, actualType, expectUnique ? "getListCache/getNameListCache" : "getCache/getNameCache"));
+                }
+            }
+        }
+    }
+
+    /**
+     * 校验默认 @Cache 注解的 unique 属性（无name参数）
+     *
+     * @param expectUnique 期望的unique值
+     * @throws IllegalStateException 如果unique值不符合预期
+     */
+    protected void checkCacheUnique(boolean expectUnique) {
+        checkCacheUnique("", expectUnique);
+    }
+
+    /**
+     * 根据 key 删除缓存（使用默认配置，同时删除唯一和非唯一缓存）
+     */
+    protected void removeCacheByKey(Object key) {
         removeCacheByKey("", key);
     }
 
     /**
-     * 根据 name 和 key 删除缓存
+     * 根据 name 和 key 删除缓存（同时删除唯一和非唯一缓存）
      *
      * @param name name属性值，如果为空则使用默认配置
      * @param key  缓存key
      */
-    private void removeCacheByKey(String name, Object key) {
+    protected void removeCacheByKey(String name, Object key) {
         if (key == null) {
             return;
         }
         try {
+            // 删除唯一缓存
             CacheConfig config = (name == null || name.isEmpty()) ? getConfig() : getConfig(name);
             String cacheName = config.getName();
             cacheService.remove(cacheName, key);
+            // 删除非唯一缓存（List缓存）
+            CacheConfig listConfig = (name == null || name.isEmpty()) ? getListConfig() : getListConfig(name);
+            String listCacheName = listConfig.getName();
+            cacheService.remove(listCacheName, key);
         } catch (Throwable e) {
             if (log.isWarnEnabled())
                 log.warn("删除缓存失败: name={}, key={}, error={}", name, key, e.getMessage());
@@ -1161,7 +1603,7 @@ public abstract class ModuleService<M extends BaseMapper<T>, T> extends BaseServ
      * 3. 字段上的单个字段缓存（@Cache 或 @Cache(name = "xxx")）
      * 4. 多个不同name的字段缓存（会删除所有匹配的缓存）
      */
-    private void removeCacheByEntity(T entity) {
+    protected void removeCacheByEntity(T entity) {
         if (entity == null) {
             return;
         }
@@ -1183,10 +1625,10 @@ public abstract class ModuleService<M extends BaseMapper<T>, T> extends BaseServ
     /**
      * 删除所有复合字段缓存（支持@Cache和@Caches注解）
      *
-     * @param entity     实体对象
+     * @param entity      实体对象
      * @param entityClass 实体类
      */
-    private void removeAllCompositeCaches(T entity, Class<?> entityClass) {
+    protected void removeAllCompositeCaches(T entity, Class<?> entityClass) {
         Map<String, Cache> compositeCaches = findAllCompositeCaches(entityClass);
         for (Map.Entry<String, Cache> entry : compositeCaches.entrySet()) {
             String name = entry.getKey();
@@ -1205,7 +1647,7 @@ public abstract class ModuleService<M extends BaseMapper<T>, T> extends BaseServ
      * @param entityClass 实体类
      * @param fieldNames  字段名数组
      */
-    private void removeCompositeCache(T entity, Class<?> entityClass, String[] fieldNames) {
+    protected void removeCompositeCache(T entity, Class<?> entityClass, String[] fieldNames) {
         removeCompositeCache(entity, entityClass, fieldNames, "");
     }
 
@@ -1217,7 +1659,7 @@ public abstract class ModuleService<M extends BaseMapper<T>, T> extends BaseServ
      * @param fieldNames  字段名数组
      * @param name        name属性值，如果为空则使用默认配置
      */
-    private void removeCompositeCache(T entity, Class<?> entityClass, String[] fieldNames, String name) {
+    protected void removeCompositeCache(T entity, Class<?> entityClass, String[] fieldNames, String name) {
         Object[] values = new Object[fieldNames.length];
         boolean allValuesPresent = true;
 
@@ -1252,7 +1694,7 @@ public abstract class ModuleService<M extends BaseMapper<T>, T> extends BaseServ
      * @param entity      实体对象
      * @param entityClass 实体类
      */
-    private void removeFieldCaches(T entity, Class<?> entityClass) {
+    protected void removeFieldCaches(T entity, Class<?> entityClass) {
         Map<String, Field> cacheFields = findAllCacheFields(entityClass);
         for (Map.Entry<String, Field> entry : cacheFields.entrySet()) {
             Field field = entry.getValue();
@@ -1272,7 +1714,7 @@ public abstract class ModuleService<M extends BaseMapper<T>, T> extends BaseServ
     /**
      * 获取实体字段的值
      */
-    private Object getFieldValue(T entity, Field field) {
+    protected Object getFieldValue(T entity, Field field) {
         try {
             field.setAccessible(true);
             return field.get(entity);
@@ -1286,7 +1728,7 @@ public abstract class ModuleService<M extends BaseMapper<T>, T> extends BaseServ
     /**
      * 将值转换为目标类型
      */
-    private Object convert(Object value, Class<?> target) {
+    protected Object convert(Object value, Class<?> target) {
         if (value == null) {
             return null;
         }
