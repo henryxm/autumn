@@ -310,6 +310,14 @@ public class SysPageController implements ErrorController {
         return "cache";
     }
 
+    @RequestMapping({"queue.html"})
+    @SkipInterceptor
+    public String queue(Model model) {
+        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
+            return "404";
+        return "queue";
+    }
+
     @RequestMapping({"loginlog.html"})
     @SkipInterceptor
     public String loginlog(HttpServletRequest servlet) {

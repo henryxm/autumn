@@ -1,0 +1,1348 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>队列管理</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .stats-bar {
+            background: #f8f9fa;
+            padding: 20px 30px;
+            border-bottom: 1px solid #e9ecef;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: #11998e;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 0;
+            min-height: 600px;
+        }
+
+        .sidebar {
+            background: #f8f9fa;
+            border-right: 1px solid #e9ecef;
+            padding: 20px;
+            overflow-y: auto;
+            max-height: calc(100vh - 280px);
+        }
+
+        .sidebar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #11998e;
+        }
+
+        .sidebar-header h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .queue-item {
+            background: white;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .queue-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-color: #11998e;
+        }
+
+        .queue-item.active {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            border-color: #11998e;
+        }
+
+        .queue-item.active .queue-name,
+        .queue-item.active .queue-meta {
+            color: white;
+        }
+
+        .queue-item.active .queue-count,
+        .queue-item.active .queue-type {
+            background: rgba(255, 255, 255, 0.3);
+            color: white;
+        }
+
+        .queue-name {
+            font-weight: 600;
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 8px;
+            word-break: break-all;
+        }
+
+        .queue-meta {
+            font-size: 12px;
+            color: #666;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .queue-count {
+            background: #d4edda;
+            color: #155724;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .queue-type {
+            background: #e9ecef;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+        }
+
+        .queue-status {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .queue-status.running {
+            background: #28a745;
+            animation: pulse 1.5s infinite;
+        }
+
+        .queue-status.stopped {
+            background: #6c757d;
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+            100% {
+                opacity: 1;
+            }
+        }
+
+        .content {
+            padding: 30px;
+            overflow-y: auto;
+            max-height: calc(100vh - 280px);
+        }
+
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(17, 153, 142, 0.4);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a5a 100%);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #f39c12 0%, #f1c40f 100%);
+            color: white;
+        }
+
+        .btn-info {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #e9ecef;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+            font-weight: 500;
+            color: #666;
+            transition: all 0.3s;
+        }
+
+        .tab:hover {
+            color: #11998e;
+        }
+
+        .tab.active {
+            color: #11998e;
+            border-bottom-color: #11998e;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .info-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .info-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .info-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #333;
+            position: sticky;
+            top: 0;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        .message-body {
+            max-width: 400px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 12px;
+            background: #f1f3f4;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .badge-success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .badge-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .badge-danger {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .badge-info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+        }
+
+        .modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            max-height: calc(80vh - 140px);
+        }
+
+        .modal-footer {
+            padding: 15px 20px;
+            border-top: 1px solid #e9ecef;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 10px 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #11998e;
+        }
+
+        textarea.form-control {
+            min-height: 120px;
+            resize: vertical;
+            font-family: 'Monaco', 'Consolas', monospace;
+        }
+
+        select.form-control {
+            cursor: pointer;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+            margin-top: 20px;
+        }
+
+        .pagination button {
+            padding: 8px 12px;
+            border: 1px solid #e9ecef;
+            background: white;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        .pagination button.active {
+            background: #11998e;
+            color: white;
+            border-color: #11998e;
+        }
+
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #11998e;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            z-index: 2000;
+            animation: slideIn 0.3s ease;
+        }
+
+        .toast.success {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        }
+
+        .toast.error {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a5a 100%);
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .json-viewer {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 13px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .json-key {
+            color: #9cdcfe;
+        }
+
+        .json-string {
+            color: #ce9178;
+        }
+
+        .json-number {
+            color: #b5cea8;
+        }
+
+        .json-boolean {
+            color: #569cd6;
+        }
+
+        .json-null {
+            color: #569cd6;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>队列管理</h1>
+        <p>Queue Management - 消息队列监控与管理平台</p>
+    </div>
+
+    <div class="stats-bar" id="statsBar">
+        <div class="stat-item">
+            <div class="stat-value" id="statTotalQueues">0</div>
+            <div class="stat-label">队列总数</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value" id="statTotalMessages">0</div>
+            <div class="stat-label">消息总数</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value" id="statRunningConsumers">0</div>
+            <div class="stat-label">运行中消费者</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value" id="statRedisStatus">-</div>
+            <div class="stat-label">Redis状态</div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h3>队列列表</h3>
+                <button class="btn btn-primary btn-sm" onclick="showCreateModal()">+ 新建</button>
+            </div>
+            <div id="queueList">
+                <div class="loading">加载中</div>
+            </div>
+        </div>
+
+        <div class="content">
+            <div id="welcomePanel">
+                <div class="empty-state">
+                    <div class="empty-state-icon">📬</div>
+                    <h3>欢迎使用队列管理</h3>
+                    <p>请从左侧选择一个队列查看详情，或创建新队列</p>
+                    <button class="btn btn-primary" style="margin-top: 20px" onclick="showCreateModal()">创建队列</button>
+                </div>
+            </div>
+
+            <div id="queueDetail" style="display: none;">
+                <div class="toolbar">
+                    <h2 id="currentQueueName" style="font-size: 20px;"></h2>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="showSendModal()">发送消息</button>
+                        <button class="btn btn-info" onclick="refreshMessages()">刷新</button>
+                        <button class="btn btn-warning" id="btnConsumer" onclick="toggleConsumer()">启动消费者</button>
+                        <button class="btn btn-danger" onclick="clearQueue()">清空队列</button>
+                    </div>
+                </div>
+
+                <div class="tabs">
+                    <div class="tab active" data-tab="info">队列信息</div>
+                    <div class="tab" data-tab="messages">消息列表</div>
+                    <div class="tab" data-tab="deadletter">死信队列</div>
+                </div>
+
+                <!-- 队列信息 -->
+                <div class="tab-content active" id="tabInfo">
+                    <div class="info-grid" id="queueInfoGrid"></div>
+                </div>
+
+                <!-- 消息列表 -->
+                <div class="tab-content" id="tabMessages">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                            <tr>
+                                <th>消息ID</th>
+                                <th>消息内容</th>
+                                <th>优先级</th>
+                                <th>重试次数</th>
+                                <th>创建时间</th>
+                                <th>操作</th>
+                            </tr>
+                            </thead>
+                            <tbody id="messageList"></tbody>
+                        </table>
+                    </div>
+                    <div class="pagination" id="messagePagination"></div>
+                </div>
+
+                <!-- 死信队列 -->
+                <div class="tab-content" id="tabDeadletter">
+                    <div class="toolbar">
+                        <span>死信队列中的消息</span>
+                        <button class="btn btn-warning btn-sm" onclick="retryDeadLetter()">重试所有</button>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                            <tr>
+                                <th>消息ID</th>
+                                <th>消息内容</th>
+                                <th>重试次数</th>
+                                <th>创建时间</th>
+                            </tr>
+                            </thead>
+                            <tbody id="deadLetterList"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 创建队列弹窗 -->
+<div class="modal" id="createModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>创建队列</h3>
+            <button class="modal-close" onclick="hideModal('createModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>队列名称 *</label>
+                <input type="text" class="form-control" id="createName" placeholder="请输入队列名称">
+            </div>
+            <div class="form-group">
+                <label>队列类型</label>
+                <select class="form-control" id="createType">
+                    <option value="MEMORY">内存队列 - 高性能单机</option>
+                    <option value="REDIS_LIST">Redis List - 分布式简单队列</option>
+                    <option value="REDIS_STREAM">Redis Stream - 消费者组支持</option>
+                    <option value="DELAY">延迟队列 - 定时任务</option>
+                    <option value="PRIORITY">优先级队列 - 按优先级消费</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>最大容量</label>
+                <input type="number" class="form-control" id="createCapacity" value="10000" placeholder="0表示无限制">
+            </div>
+            <div class="form-group">
+                <label>最大重试次数</label>
+                <input type="number" class="form-control" id="createMaxRetries" value="3">
+            </div>
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="createDeadLetter"> 启用死信队列
+                </label>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="hideModal('createModal')">取消</button>
+            <button class="btn btn-primary" onclick="createQueue()">创建</button>
+        </div>
+    </div>
+</div>
+
+<!-- 发送消息弹窗 -->
+<div class="modal" id="sendModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>发送消息</h3>
+            <button class="modal-close" onclick="hideModal('sendModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>目标队列</label>
+                <input type="text" class="form-control" id="sendQueueName" readonly>
+            </div>
+            <div class="form-group">
+                <label>消息内容 (JSON格式) *</label>
+                <textarea class="form-control" id="sendMessage" placeholder='{"key": "value"}'></textarea>
+            </div>
+            <div class="form-group">
+                <label>优先级 (仅优先级队列有效)</label>
+                <input type="number" class="form-control" id="sendPriority" value="5" min="1" max="10">
+            </div>
+            <div class="form-group">
+                <label>延迟时间 (毫秒，仅延迟队列有效)</label>
+                <input type="number" class="form-control" id="sendDelay" value="0" min="0">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="hideModal('sendModal')">取消</button>
+            <button class="btn btn-primary" onclick="sendMessage()">发送</button>
+        </div>
+    </div>
+</div>
+
+<!-- 消息详情弹窗 -->
+<div class="modal" id="messageModal">
+    <div class="modal-content" style="max-width: 800px;">
+        <div class="modal-header">
+            <h3>消息详情</h3>
+            <button class="modal-close" onclick="hideModal('messageModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div id="messageDetail"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="hideModal('messageModal')">关闭</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    //<#noparse>
+    const API_BASE = '/sys/queue';
+    let currentQueue = null;
+    let currentPage = 1;
+    let pageSize = 20;
+
+    // 初始化
+    document.addEventListener('DOMContentLoaded', function () {
+        loadStats();
+        loadQueueList();
+
+        // 定期刷新
+        setInterval(loadStats, 10000);
+        setInterval(() => {
+            if (currentQueue) {
+                loadQueueInfo(currentQueue, true);
+            }
+        }, 5000);
+
+        // Tab切换
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', function () {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                this.classList.add('active');
+                document.getElementById('tab' + capitalize(this.dataset.tab)).classList.add('active');
+
+                if (this.dataset.tab === 'messages') {
+                    loadMessages();
+                } else if (this.dataset.tab === 'deadletter') {
+                    loadDeadLetterMessages();
+                }
+            });
+        });
+    });
+
+    // 加载统计信息
+    async function loadStats() {
+        try {
+            const res = await fetch(`${API_BASE}/stats`);
+            const data = await res.json();
+            if (data.code === 0) {
+                const stats = data.stats;
+                document.getElementById('statTotalQueues').textContent = stats.totalQueues || 0;
+                document.getElementById('statTotalMessages').textContent = stats.totalMessages || 0;
+                document.getElementById('statRunningConsumers').textContent = stats.runningConsumers || 0;
+                document.getElementById('statRedisStatus').textContent = stats.redisEnabled ? '已连接' : '未连接';
+                document.getElementById('statRedisStatus').style.color = stats.redisEnabled ? '#28a745' : '#dc3545';
+            }
+        } catch (e) {
+            console.error('Load stats failed:', e);
+        }
+    }
+
+    // 加载队列列表
+    async function loadQueueList() {
+        try {
+            const res = await fetch(`${API_BASE}/list`);
+            const data = await res.json();
+            if (data.code === 0) {
+                renderQueueList(data.list || []);
+            }
+        } catch (e) {
+            console.error('Load queue list failed:', e);
+            document.getElementById('queueList').innerHTML = '<div class="empty-state">加载失败</div>';
+        }
+    }
+
+    // 渲染队列列表
+    function renderQueueList(queues) {
+        const container = document.getElementById('queueList');
+        if (queues.length === 0) {
+            container.innerHTML = '<div class="empty-state">暂无队列</div>';
+            return;
+        }
+
+        container.innerHTML = queues.map(q => `
+            <div class="queue-item ${currentQueue === q.name ? 'active' : ''}" onclick="selectQueue('${q.name}')">
+                <div class="queue-name">
+                    <span class="queue-status ${q.consumerRunning ? 'running' : 'stopped'}"></span>
+                    ${q.name}
+                </div>
+                <div class="queue-meta">
+                    <span class="queue-type">${getTypeLabel(q.queueType)}</span>
+                    <span class="queue-count">${q.size} 条</span>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // 选择队列
+    function selectQueue(name) {
+        currentQueue = name;
+        currentPage = 1;
+        document.getElementById('welcomePanel').style.display = 'none';
+        document.getElementById('queueDetail').style.display = 'block';
+        document.getElementById('currentQueueName').textContent = name;
+
+        // 更新列表选中状态
+        document.querySelectorAll('.queue-item').forEach(item => {
+            item.classList.remove('active');
+            if (item.querySelector('.queue-name').textContent.trim().includes(name)) {
+                item.classList.add('active');
+            }
+        });
+
+        loadQueueInfo(name);
+        loadMessages();
+    }
+
+    // 加载队列信息
+    async function loadQueueInfo(name, silent = false) {
+        try {
+            const res = await fetch(`${API_BASE}/info/${encodeURIComponent(name)}`);
+            const data = await res.json();
+            if (data.code === 0) {
+                renderQueueInfo(data.info);
+                updateConsumerButton(data.info.consumerRunning);
+            }
+        } catch (e) {
+            if (!silent) {
+                showToast('加载队列信息失败', 'error');
+            }
+        }
+    }
+
+    // 渲染队列信息
+    function renderQueueInfo(info) {
+        const grid = document.getElementById('queueInfoGrid');
+        grid.innerHTML = `
+            <div class="info-card">
+                <div class="info-label">队列类型</div>
+                <div class="info-value">${getTypeLabel(info.queueType)}</div>
+            </div>
+            <div class="info-card">
+                <div class="info-label">消息数量</div>
+                <div class="info-value">${info.size}</div>
+            </div>
+            <div class="info-card">
+                <div class="info-label">消费者状态</div>
+                <div class="info-value">
+                    <span class="badge ${info.consumerRunning ? 'badge-success' : 'badge-warning'}">
+                        ${info.consumerRunning ? '运行中' : '已停止'}
+                    </span>
+                </div>
+            </div>
+            <div class="info-card">
+                <div class="info-label">最大容量</div>
+                <div class="info-value">${info.capacity || '无限制'}</div>
+            </div>
+            <div class="info-card">
+                <div class="info-label">最大重试次数</div>
+                <div class="info-value">${info.maxRetries}</div>
+            </div>
+            <div class="info-card">
+                <div class="info-label">消息类型</div>
+                <div class="info-value">${info.messageType}</div>
+            </div>
+            <div class="info-card">
+                <div class="info-label">死信队列</div>
+                <div class="info-value">
+                    ${info.deadLetterEnabled ?
+            `<span class="badge badge-info">已启用</span> (${info.deadLetterSize || 0}条)` :
+            '<span class="badge badge-secondary">未启用</span>'}
+                </div>
+            </div>
+            <div class="info-card">
+                <div class="info-label">消费超时</div>
+                <div class="info-value">${info.timeout} ${info.timeoutUnit}</div>
+            </div>
+        `;
+    }
+
+    // 加载消息列表
+    async function loadMessages() {
+        if (!currentQueue) return;
+
+        const tbody = document.getElementById('messageList');
+        tbody.innerHTML = '<tr><td colspan="6" class="loading">加载中</td></tr>';
+
+        try {
+            const res = await fetch(`${API_BASE}/messages/${encodeURIComponent(currentQueue)}?page=${currentPage}&limit=${pageSize}`);
+            const data = await res.json();
+            if (data.code === 0) {
+                renderMessages(data.list || [], data.total);
+            }
+        } catch (e) {
+            tbody.innerHTML = '<tr><td colspan="6">加载失败</td></tr>';
+        }
+    }
+
+    // 渲染消息列表
+    function renderMessages(messages, total) {
+        const tbody = document.getElementById('messageList');
+        if (messages.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;">暂无消息</td></tr>';
+            document.getElementById('messagePagination').innerHTML = '';
+            return;
+        }
+
+        tbody.innerHTML = messages.map(msg => `
+            <tr>
+                <td><code>${msg.id ? msg.id.substring(0, 8) + '...' : '-'}</code></td>
+                <td><div class="message-body">${escapeHtml(JSON.stringify(msg.body || msg))}</div></td>
+                <td>${msg.priority || 5}</td>
+                <td>${msg.retry || 0}</td>
+                <td>${formatTime(msg.timestamp)}</td>
+                <td>
+                    <button class="btn btn-info btn-sm" onclick='showMessageDetail(${JSON.stringify(msg).replace(/'/g, "\\'")})'>查看</button>
+                </td>
+            </tr>
+        `).join('');
+
+        renderPagination(total);
+    }
+
+    // 渲染分页
+    function renderPagination(total) {
+        const totalPages = Math.ceil(total / pageSize);
+        const container = document.getElementById('messagePagination');
+
+        if (totalPages <= 1) {
+            container.innerHTML = '';
+            return;
+        }
+
+        let html = `
+            <button ${currentPage === 1 ? 'disabled' : ''} onclick="goToPage(${currentPage - 1})">上一页</button>
+        `;
+
+        for (let i = 1; i <= totalPages && i <= 10; i++) {
+            html += `<button class="${currentPage === i ? 'active' : ''}" onclick="goToPage(${i})">${i}</button>`;
+        }
+
+        html += `
+            <button ${currentPage === totalPages ? 'disabled' : ''} onclick="goToPage(${currentPage + 1})">下一页</button>
+        `;
+
+        container.innerHTML = html;
+    }
+
+    function goToPage(page) {
+        currentPage = page;
+        loadMessages();
+    }
+
+    // 加载死信队列消息
+    async function loadDeadLetterMessages() {
+        if (!currentQueue) return;
+
+        const deadLetterName = currentQueue + ':dead';
+        const tbody = document.getElementById('deadLetterList');
+        tbody.innerHTML = '<tr><td colspan="4" class="loading">加载中</td></tr>';
+
+        try {
+            const res = await fetch(`${API_BASE}/messages/${encodeURIComponent(deadLetterName)}?page=1&limit=50`);
+            const data = await res.json();
+            if (data.code === 0) {
+                const messages = data.list || [];
+                if (messages.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:40px;">暂无死信消息</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = messages.map(msg => `
+                    <tr>
+                        <td><code>${msg.id ? msg.id.substring(0, 8) + '...' : '-'}</code></td>
+                        <td><div class="message-body">${escapeHtml(JSON.stringify(msg.body || msg))}</div></td>
+                        <td>${msg.retry || 0}</td>
+                        <td>${formatTime(msg.timestamp)}</td>
+                    </tr>
+                `).join('');
+            }
+        } catch (e) {
+            tbody.innerHTML = '<tr><td colspan="4">加载失败</td></tr>';
+        }
+    }
+
+    // 显示消息详情
+    function showMessageDetail(msg) {
+        const detail = document.getElementById('messageDetail');
+        detail.innerHTML = `<div class="json-viewer">${formatJson(msg)}</div>`;
+        showModal('messageModal');
+    }
+
+    // 创建队列
+    async function createQueue() {
+        const name = document.getElementById('createName').value.trim();
+        const type = document.getElementById('createType').value;
+        const capacity = parseInt(document.getElementById('createCapacity').value) || 10000;
+        const maxRetries = parseInt(document.getElementById('createMaxRetries').value) || 3;
+        const deadLetterEnabled = document.getElementById('createDeadLetter').checked;
+
+        if (!name) {
+            showToast('请输入队列名称', 'error');
+            return;
+        }
+
+        try {
+            const res = await fetch(`${API_BASE}/create`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({name, type, capacity, maxRetries, deadLetterEnabled})
+            });
+            const data = await res.json();
+            if (data.code === 0) {
+                showToast('创建成功');
+                hideModal('createModal');
+                loadQueueList();
+                loadStats();
+            } else {
+                showToast(data.msg || '创建失败', 'error');
+            }
+        } catch (e) {
+            showToast('创建失败', 'error');
+        }
+    }
+
+    // 发送消息
+    async function sendMessage() {
+        const queueName = document.getElementById('sendQueueName').value;
+        const messageStr = document.getElementById('sendMessage').value.trim();
+        const priority = parseInt(document.getElementById('sendPriority').value) || 5;
+        const delay = parseInt(document.getElementById('sendDelay').value) || 0;
+
+        if (!messageStr) {
+            showToast('请输入消息内容', 'error');
+            return;
+        }
+
+        let message;
+        try {
+            message = JSON.parse(messageStr);
+        } catch (e) {
+            message = messageStr;
+        }
+
+        try {
+            const res = await fetch(`${API_BASE}/send`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({queueName, message, priority, delay: delay > 0 ? delay : null})
+            });
+            const data = await res.json();
+            if (data.code === 0) {
+                showToast('发送成功');
+                hideModal('sendModal');
+                loadMessages();
+                loadQueueList();
+            } else {
+                showToast(data.msg || '发送失败', 'error');
+            }
+        } catch (e) {
+            showToast('发送失败', 'error');
+        }
+    }
+
+    // 清空队列
+    async function clearQueue() {
+        if (!confirm(`确定要清空队列 "${currentQueue}" 吗？此操作不可恢复！`)) return;
+
+        try {
+            const res = await fetch(`${API_BASE}/clear/${encodeURIComponent(currentQueue)}`, {method: 'POST'});
+            const data = await res.json();
+            if (data.code === 0) {
+                showToast(`已清空 ${data.cleared} 条消息`);
+                loadMessages();
+                loadQueueList();
+                loadStats();
+            } else {
+                showToast(data.msg || '清空失败', 'error');
+            }
+        } catch (e) {
+            showToast('清空失败', 'error');
+        }
+    }
+
+    // 切换消费者
+    async function toggleConsumer() {
+        const btn = document.getElementById('btnConsumer');
+        const isRunning = btn.textContent.includes('停止');
+
+        try {
+            const url = isRunning
+                ? `${API_BASE}/consumer/stop/${encodeURIComponent(currentQueue)}`
+                : `${API_BASE}/consumer/start/${encodeURIComponent(currentQueue)}?concurrency=1`;
+
+            const res = await fetch(url, {method: 'POST'});
+            const data = await res.json();
+            if (data.code === 0) {
+                showToast(isRunning ? '消费者已停止' : '消费者已启动');
+                updateConsumerButton(!isRunning);
+                loadQueueList();
+            } else {
+                showToast(data.msg || '操作失败', 'error');
+            }
+        } catch (e) {
+            showToast('操作失败', 'error');
+        }
+    }
+
+    function updateConsumerButton(isRunning) {
+        const btn = document.getElementById('btnConsumer');
+        if (isRunning) {
+            btn.textContent = '停止消费者';
+            btn.classList.remove('btn-warning');
+            btn.classList.add('btn-danger');
+        } else {
+            btn.textContent = '启动消费者';
+            btn.classList.remove('btn-danger');
+            btn.classList.add('btn-warning');
+        }
+    }
+
+    // 重试死信消息
+    async function retryDeadLetter() {
+        if (!confirm('确定要重试所有死信消息吗？')) return;
+
+        try {
+            const res = await fetch(`${API_BASE}/deadletter/retry/${encodeURIComponent(currentQueue)}`, {method: 'POST'});
+            const data = await res.json();
+            if (data.code === 0) {
+                showToast(`已重试 ${data.count} 条消息`);
+                loadDeadLetterMessages();
+                loadMessages();
+            } else {
+                showToast(data.msg || '重试失败', 'error');
+            }
+        } catch (e) {
+            showToast('重试失败', 'error');
+        }
+    }
+
+    // 刷新消息
+    function refreshMessages() {
+        loadMessages();
+        loadQueueInfo(currentQueue);
+        showToast('已刷新');
+    }
+
+    // 显示发送弹窗
+    function showSendModal() {
+        document.getElementById('sendQueueName').value = currentQueue;
+        document.getElementById('sendMessage').value = '';
+        document.getElementById('sendPriority').value = 5;
+        document.getElementById('sendDelay').value = 0;
+        showModal('sendModal');
+    }
+
+    // 显示创建弹窗
+    function showCreateModal() {
+        document.getElementById('createName').value = '';
+        document.getElementById('createType').value = 'MEMORY';
+        document.getElementById('createCapacity').value = 10000;
+        document.getElementById('createMaxRetries').value = 3;
+        document.getElementById('createDeadLetter').checked = false;
+        showModal('createModal');
+    }
+
+    // Modal操作
+    function showModal(id) {
+        document.getElementById(id).classList.add('show');
+    }
+
+    function hideModal(id) {
+        document.getElementById(id).classList.remove('show');
+    }
+
+    // Toast提示
+    function showToast(msg, type = 'success') {
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.textContent = msg;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+    }
+
+    // 工具函数
+    function getTypeLabel(type) {
+        const labels = {
+            'MEMORY': '内存',
+            'REDIS_LIST': 'Redis List',
+            'REDIS_STREAM': 'Redis Stream',
+            'DELAY': '延迟',
+            'PRIORITY': '优先级'
+        };
+        return labels[type] || type;
+    }
+
+    function formatTime(timestamp) {
+        if (!timestamp) return '-';
+        return new Date(timestamp).toLocaleString('zh-CN');
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str).replace(/[&<>"']/g, m => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        })[m]);
+    }
+
+    function capitalize(str) {
+        return str.charAt(0).toUpperCase() + str.slice(1);
+    }
+
+    function formatJson(obj) {
+        const json = JSON.stringify(obj, null, 2);
+        return json
+            .replace(/(".*?"):/g, '<span class="json-key">$1</span>:')
+            .replace(/: (".*?")/g, ': <span class="json-string">$1</span>')
+            .replace(/: (\d+)/g, ': <span class="json-number">$1</span>')
+            .replace(/: (true|false)/g, ': <span class="json-boolean">$1</span>')
+            .replace(/: (null)/g, ': <span class="json-null">$1</span>');
+    }
+    //</#noparse>
+</script>
+</body>
+</html>

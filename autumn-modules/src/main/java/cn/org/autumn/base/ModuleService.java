@@ -4,8 +4,10 @@ import cn.org.autumn.annotation.Cache;
 import cn.org.autumn.annotation.Caches;
 import cn.org.autumn.config.CacheConfig;
 import cn.org.autumn.config.Config;
+import cn.org.autumn.config.QueueConfig;
 import cn.org.autumn.exception.AException;
 import cn.org.autumn.menu.BaseMenu;
+import cn.org.autumn.model.QueueMessage;
 import cn.org.autumn.modules.lan.service.Language;
 import cn.org.autumn.modules.lan.service.LanguageService;
 import cn.org.autumn.modules.sys.entity.SysMenuEntity;
@@ -13,6 +15,7 @@ import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.modules.sys.service.SysMenuService;
 import cn.org.autumn.service.BaseService;
 import cn.org.autumn.service.CacheService;
+import cn.org.autumn.service.QueueService;
 import cn.org.autumn.table.utils.HumpConvert;
 import cn.org.autumn.table.utils.Escape;
 import com.baomidou.mybatisplus.mapper.BaseMapper;
@@ -27,6 +30,9 @@ import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 /**
  * 模块示例基础服务类
@@ -53,9 +59,14 @@ public abstract class ModuleService<M extends BaseMapper<T>, T> extends BaseServ
     @Autowired
     protected CacheService cacheService;
 
+    @Autowired
+    protected QueueService queueService;
+
     protected BaseMenu baseMenu;
 
     static final Map<String, CacheConfig> configs = new ConcurrentHashMap<>();
+
+    static final Map<String, QueueConfig> queues = new ConcurrentHashMap<>();
 
     public BaseMenu getBaseMenu() {
         if (null != baseMenu)
@@ -2180,5 +2191,587 @@ public abstract class ModuleService<M extends BaseMapper<T>, T> extends BaseServ
             return null;
         }
         return null;
+    }
+
+    // ==================== 队列服务相关方法 ====================
+
+    public long getIdleTime() {
+        return 60L;
+    }
+
+    public TimeUnit getIdleUnit() {
+        return TimeUnit.SECONDS;
+    }
+
+    public boolean isAutoQueue() {
+        return true;
+    }
+
+    public <X> long getIdleTime(Class<X> clazz) {
+        return 60L;
+    }
+
+    public <X> TimeUnit getIdleUnit(Class<X> clazz) {
+        return TimeUnit.SECONDS;
+    }
+
+    public <X> boolean isAutoQueue(Class<X> clazz) {
+        return true;
+    }
+
+
+    /**
+     * 获取默认队列名称
+     * 基于实体类名称自动生成，格式：{entityName}Queue
+     *
+     * @return 队列名称
+     */
+    public String getQueueName() {
+        return getModelClass().getSimpleName().replace("Entity", "").toLowerCase() + "queue";
+    }
+
+    /**
+     * 获取指定后缀的队列名称
+     *
+     * @param suffix 队列名称后缀
+     * @return 队列名称
+     */
+    public String getQueueName(String suffix) {
+        String baseName = getModelClass().getSimpleName().replace("Entity", "").toLowerCase();
+        return baseName + (suffix != null && !suffix.isEmpty() ? ":" + suffix : "") + "queue";
+    }
+
+    /**
+     * 获取队列配置
+     * 如果配置不存在，则创建默认配置
+     *
+     * @return 队列配置
+     */
+    public QueueConfig getQueueConfig() {
+        String name = getQueueName();
+        return queues.computeIfAbsent(name, k -> QueueConfig.builder().name(name).type(getModelClass()).auto(isAutoQueue()).idleTime(getIdleTime()).idleUnit(getIdleUnit()).build());
+    }
+
+    public <X> QueueConfig getQueueConfig(Class<X> clazz) {
+        String name = getQueueName();
+        return queues.computeIfAbsent(name, k -> QueueConfig.builder().name(name).type(clazz).auto(isAutoQueue()).idleTime(getIdleTime()).idleUnit(getIdleUnit()).build());
+    }
+
+    /**
+     * 注册队列配置和消费者处理器
+     * 当 autoStart=true 时，发送消息会自动启动消费者
+     * 子类需要重写 onQueueMessage 方法来处理消息
+     *
+     * @param config 队列配置（建议使用 getQueueConfig 创建）
+     */
+    public void register(QueueConfig config) {
+        queues.put(config.getName(), config);
+        if (!config.isAuto())
+            queueService.register(config);
+        else {
+            queueService.register(config, message -> {
+                try {
+                    @SuppressWarnings("unchecked")
+                    T entity = (T) message.getBody();
+                    return onQueue(entity);
+                } catch (Exception e) {
+                    log.error("Queue message processing failed: {}", e.getMessage(), e);
+                    return false;
+                }
+            });
+        }
+    }
+
+    /**
+     * 注册默认的自动启动/停止队列
+     * 使用默认的60秒空闲超时
+     * 子类需要重写 onQueue 方法来处理消息
+     */
+    public void register() {
+        register(getQueueConfig());
+    }
+
+    /**
+     * 注册自定义类型的自动启动/停止队列
+     * 子类需要重写 onQueueMessage(Class, X) 方法来处理消息
+     *
+     * @param suffix 队列后缀
+     * @param clazz  消息类型
+     * @param <X>    消息类型泛型
+     */
+    public <X> void register(String suffix, Class<X> clazz) {
+        String name = getQueueName(suffix);
+        String configKey = name + ":" + clazz.getSimpleName().toLowerCase();
+        QueueConfig config = QueueConfig.builder().name(name).type(clazz).auto(isAutoQueue(clazz)).idleTime(getIdleTime(clazz)).idleUnit(getIdleUnit(clazz)).build();
+        queues.put(configKey, config);
+        queueService.register(config, message -> {
+            try {
+                @SuppressWarnings("unchecked")
+                X body = (X) message.getBody();
+                return onQueue(clazz, body);
+            } catch (Exception e) {
+                log.error("Queue message processing failed: {}", e.getMessage(), e);
+                return false;
+            }
+        });
+    }
+
+    /**
+     * 注册自定义类型的自动启动/停止队列（带处理器）
+     *
+     * @param suffix  队列后缀
+     * @param clazz   消息类型
+     * @param handler 消息处理器
+     * @param <X>     消息类型泛型
+     */
+    public <X> void register(String suffix, Class<X> clazz, Function<X, Boolean> handler) {
+        String name = getQueueName(suffix);
+        String configKey = name + ":" + clazz.getSimpleName().toLowerCase();
+        QueueConfig config = QueueConfig.builder().name(name).type(clazz).auto(true).idleTime(getIdleTime(clazz)).build();
+        queues.put(configKey, config);
+        queueService.register(config, message -> {
+            try {
+                @SuppressWarnings("unchecked")
+                X body = (X) message.getBody();
+                return handler.apply(body);
+            } catch (Exception e) {
+                log.error("Queue message processing failed: {}", e.getMessage(), e);
+                return false;
+            }
+        });
+    }
+
+    /**
+     * 注册自定义类型的自动启动/停止队列（默认后缀为空）
+     *
+     * @param type 消息类型
+     * @param <X>  消息类型泛型
+     */
+    public <X> void register(Class<X> type) {
+        register("", type);
+    }
+
+    /**
+     * 注册自定义类型的自动启动/停止队列（带处理器，默认后缀为空）
+     *
+     * @param type    消息类型
+     * @param handler 消息处理器
+     * @param <X>     消息类型泛型
+     */
+    public <X> void register(Class<X> type, Function<X, Boolean> handler) {
+        register("", type, handler);
+    }
+
+    // ==================== 发送消息方法 ====================
+
+    /**
+     * 发送实体到自动队列（自动启动消费者，空闲后自动停止）
+     * 使用此方法前需要先调用 registerAutoQueue() 注册消费者处理器
+     *
+     * @param entity 实体对象
+     * @return 是否发送成功
+     */
+    public boolean queue(T entity) {
+        QueueConfig config = queues.get(getQueueName());
+        if (config != null) {
+            return queueService.send(config, QueueMessage.of(entity));
+        }
+        // 如果没有注册自动队列配置，回退到普通发送
+        return queueService.send(getQueueName(), entity);
+    }
+
+    /**
+     * 发送实体到指定后缀的自动队列
+     *
+     * @param suffix 队列后缀
+     * @param entity 实体对象
+     * @return 是否发送成功
+     */
+    public boolean queue(String suffix, T entity) {
+        QueueConfig config = queues.get(getQueueName(suffix));
+        if (config != null) {
+            return queueService.send(config, QueueMessage.of(entity));
+        }
+        return queueService.send(getQueueName(suffix), entity);
+    }
+
+    /**
+     * 发送任意消息到默认队列
+     *
+     * @param message 消息对象
+     * @param <V>     消息类型
+     * @return 是否发送成功
+     */
+    public <V> boolean sendMessage(V message) {
+        return queueService.send(getQueueName(), message);
+    }
+
+    /**
+     * 发送任意消息到指定后缀的队列
+     *
+     * @param suffix  队列后缀
+     * @param message 消息对象
+     * @param <V>     消息类型
+     * @return 是否发送成功
+     */
+    public <V> boolean sendMessage(String suffix, V message) {
+        return queueService.send(getQueueName(suffix), message);
+    }
+
+    /**
+     * 发送自定义类型消息到自动队列（支持自动启动/停止）
+     * 使用此方法前需要先调用 registerAutoQueue(suffix, type, idleTimeoutSeconds) 注册
+     *
+     * @param suffix  队列后缀
+     * @param type    消息类型
+     * @param message 消息对象
+     * @param <X>     消息类型泛型
+     * @return 是否发送成功
+     */
+    public <X> boolean queue(String suffix, Class<X> type, X message) {
+        String configKey = getQueueName(suffix) + ":" + type.getSimpleName().toLowerCase();
+        QueueConfig config = queues.get(configKey);
+        if (config != null) {
+            return queueService.send(config, QueueMessage.of(message));
+        }
+        // 如果没有注册自动队列配置，回退到普通发送
+        return queueService.send(getQueueName(suffix), message);
+    }
+
+    /**
+     * 发送自定义类型消息到默认自动队列（支持自动启动/停止）
+     *
+     * @param type    消息类型
+     * @param message 消息对象
+     * @param <X>     消息类型泛型
+     * @return 是否发送成功
+     */
+    public <X> boolean queue(Class<X> type, X message) {
+        return queue("", type, message);
+    }
+
+    /**
+     * 发送延迟消息到默认队列
+     *
+     * @param entity      实体对象
+     * @param delayMillis 延迟毫秒数
+     * @return 是否发送成功
+     */
+    public boolean sendDelay(T entity, long delayMillis) {
+        return queueService.sendDelay(getQueueName(), entity, delayMillis);
+    }
+
+    /**
+     * 发送延迟消息到指定后缀的队列
+     *
+     * @param suffix      队列后缀
+     * @param entity      实体对象
+     * @param delayMillis 延迟毫秒数
+     * @return 是否发送成功
+     */
+    public boolean sendDelay(String suffix, T entity, long delayMillis) {
+        return queueService.sendDelay(getQueueName(suffix), entity, delayMillis);
+    }
+
+    /**
+     * 发送定时消息到默认队列
+     *
+     * @param entity    实体对象
+     * @param executeAt 执行时间戳（毫秒）
+     * @return 是否发送成功
+     */
+    public boolean sendScheduled(T entity, long executeAt) {
+        return queueService.sendScheduled(getQueueName(), entity, executeAt);
+    }
+
+    /**
+     * 发送优先级消息到默认队列
+     *
+     * @param entity   实体对象
+     * @param priority 优先级（数字越小优先级越高）
+     * @return 是否发送成功
+     */
+    public boolean sendPriority(T entity, int priority) {
+        return queueService.sendPriority(getQueueName(), entity, priority);
+    }
+
+    /**
+     * 批量发送实体到默认队列
+     *
+     * @param entities 实体列表
+     * @return 成功发送的数量
+     */
+    public int queue(List<T> entities) {
+        return queueService.sendBatch(getQueueName(), entities);
+    }
+
+    /**
+     * 批量发送实体到指定后缀的队列
+     *
+     * @param suffix   队列后缀
+     * @param entities 实体列表
+     * @return 成功发送的数量
+     */
+    public int queue(String suffix, List<T> entities) {
+        return queueService.sendBatch(getQueueName(suffix), entities);
+    }
+
+    // ==================== 消费消息方法 ====================
+
+    /**
+     * 从默认队列消费一条消息
+     *
+     * @return 实体对象，如果队列为空返回null
+     */
+    @SuppressWarnings("unchecked")
+    public T pollQueue() {
+        QueueMessage<T> message = queueService.poll(getQueueName());
+        return message != null ? message.getBody() : null;
+    }
+
+    /**
+     * 从指定后缀的队列消费一条消息
+     *
+     * @param suffix 队列后缀
+     * @return 实体对象，如果队列为空返回null
+     */
+    @SuppressWarnings("unchecked")
+    public T pollQueue(String suffix) {
+        QueueMessage<T> message = queueService.poll(getQueueName(suffix));
+        return message != null ? message.getBody() : null;
+    }
+
+    /**
+     * 从默认队列消费一条消息（带超时）
+     *
+     * @param timeout 超时时间
+     * @param unit    时间单位
+     * @return 实体对象，如果超时返回null
+     */
+    @SuppressWarnings("unchecked")
+    public T pollQueue(long timeout, TimeUnit unit) {
+        QueueMessage<T> message = queueService.poll(getQueueName(), timeout, unit);
+        return message != null ? message.getBody() : null;
+    }
+
+    /**
+     * 从默认队列批量消费消息
+     *
+     * @param maxCount 最大消费数量
+     * @return 实体列表
+     */
+    @SuppressWarnings("unchecked")
+    public List<T> pollBatch(int maxCount) {
+        List<QueueMessage<T>> messages = queueService.pollBatch(getQueueName(), maxCount);
+        List<T> result = new ArrayList<>();
+        for (QueueMessage<T> message : messages) {
+            if (message != null && message.getBody() != null) {
+                result.add(message.getBody());
+            }
+        }
+        return result;
+    }
+
+    /**
+     * 使用 Consumer 处理队列消息
+     * 如果队列中有消息则用 consumer 处理
+     *
+     * @param consumer 消息处理器
+     * @return 是否处理了消息
+     */
+    public boolean consume(Consumer<T> consumer) {
+        return queueService.consume(getQueueName(), consumer);
+    }
+
+    /**
+     * 使用 Consumer 处理指定后缀队列的消息
+     *
+     * @param suffix   队列后缀
+     * @param consumer 消息处理器
+     * @return 是否处理了消息
+     */
+    public boolean consume(String suffix, Consumer<T> consumer) {
+        return queueService.consume(getQueueName(suffix), consumer);
+    }
+
+    // ==================== 异步消费者方法 ====================
+
+    /**
+     * 启动默认队列的异步消费者
+     * 子类需要重写 onQueueMessage 方法来处理消息
+     */
+    public void startQueue() {
+        startQueue(1);
+    }
+
+    /**
+     * 启动默认队列的异步消费者（指定并发数）
+     *
+     * @param concurrency 并发消费者数量
+     */
+    public void startQueue(int concurrency) {
+        queueService.start(getQueueName(), message -> {
+            try {
+                @SuppressWarnings("unchecked")
+                T entity = (T) message.getBody();
+                return onQueue(entity);
+            } catch (Exception e) {
+                log.error("Queue message processing failed: {}", e.getMessage(), e);
+                return false;
+            }
+        }, concurrency);
+    }
+
+    /**
+     * 启动指定后缀队列的异步消费者
+     *
+     * @param suffix      队列后缀
+     * @param concurrency 并发消费者数量
+     * @param handler     消息处理器
+     */
+    public void startQueue(String suffix, int concurrency, Function<T, Boolean> handler) {
+        queueService.start(getQueueName(suffix), message -> {
+            try {
+                @SuppressWarnings("unchecked")
+                T entity = (T) message.getBody();
+                return handler.apply(entity);
+            } catch (Exception e) {
+                log.error("Queue message processing failed: {}", e.getMessage(), e);
+                return false;
+            }
+        }, concurrency);
+    }
+
+    /**
+     * 启动支持自定义类型的异步消费者
+     *
+     * @param suffix      队列后缀
+     * @param clazz       消息类型
+     * @param concurrency 并发消费者数量
+     * @param <X>         消息类型泛型
+     */
+    public <X> void startQueue(String suffix, Class<X> clazz, int concurrency) {
+        queueService.start(getQueueName(suffix), message -> {
+            try {
+                @SuppressWarnings("unchecked")
+                X body = (X) message.getBody();
+                return onQueue(clazz, body);
+            } catch (Exception e) {
+                log.error("Queue message processing failed: {}", e.getMessage(), e);
+                return false;
+            }
+        }, concurrency);
+    }
+
+    /**
+     * 启动支持自定义类型的异步消费者（带处理器）
+     *
+     * @param suffix      队列后缀
+     * @param clazz       消息类型
+     * @param concurrency 并发消费者数量
+     * @param handler     消息处理器
+     * @param <X>         消息类型泛型
+     */
+    public <X> void startQueue(String suffix, Class<X> clazz, int concurrency, Function<X, Boolean> handler) {
+        queueService.start(getQueueName(suffix), message -> {
+            try {
+                @SuppressWarnings("unchecked")
+                X body = (X) message.getBody();
+                return handler.apply(body);
+            } catch (Exception e) {
+                log.error("Queue message processing failed: {}", e.getMessage(), e);
+                return false;
+            }
+        }, concurrency);
+    }
+
+    /**
+     * 停止默认队列的消费者
+     */
+    public void stopQueue() {
+        queueService.stop(getQueueName());
+    }
+
+    /**
+     * 停止指定后缀队列的消费者
+     *
+     * @param suffix 队列后缀
+     */
+    public void stopQueue(String suffix) {
+        queueService.stop(getQueueName(suffix));
+    }
+
+    /**
+     * 队列消息处理回调方法（实体类型）
+     * 子类可以重写此方法来处理队列消息
+     * 当使用 startQueueConsumer() 启动消费者时，消息会回调到此方法
+     *
+     * @param entity 实体对象
+     * @return 处理结果：true 表示成功，false 表示失败（将触发重试）
+     */
+    protected boolean onQueue(T entity) {
+        log.warn("Queue message received but onQueueMessage not implemented: {}", entity);
+        return true;
+    }
+
+    /**
+     * 队列消息处理回调方法（自定义类型）
+     * 子类可以重写此方法来处理不同类型的队列消息
+     * 当使用 startQueueConsumer(suffix, type, concurrency) 启动消费者时，消息会回调到此方法
+     *
+     * @param type    消息类型
+     * @param message 消息对象
+     * @param <X>     消息类型泛型
+     * @return 处理结果：true 表示成功，false 表示失败（将触发重试）
+     */
+    protected <X> boolean onQueue(Class<X> type, X message) {
+        log.warn("Queue message received but onQueueMessage(Class, X) not implemented: type={}, message={}", type.getSimpleName(), message);
+        return true;
+    }
+
+    // ==================== 队列管理方法 ====================
+
+    /**
+     * 获取默认队列长度
+     *
+     * @return 队列长度
+     */
+    public long getQueueSize() {
+        return queueService.size(getQueueName());
+    }
+
+    /**
+     * 获取指定后缀队列的长度
+     *
+     * @param suffix 队列后缀
+     * @return 队列长度
+     */
+    public long getQueueSize(String suffix) {
+        return queueService.size(getQueueName(suffix));
+    }
+
+    /**
+     * 检查默认队列是否为空
+     *
+     * @return 是否为空
+     */
+    public boolean isQueueEmpty() {
+        return queueService.isEmpty(getQueueName());
+    }
+
+    /**
+     * 清空默认队列
+     */
+    public void clearQueue() {
+        queueService.clear(getQueueName());
+    }
+
+    /**
+     * 清空指定后缀的队列
+     *
+     * @param suffix 队列后缀
+     */
+    public void clearQueue(String suffix) {
+        queueService.clear(getQueueName(suffix));
     }
 }
