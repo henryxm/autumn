@@ -1,19 +1,20 @@
 $(function () {
     $("#jqGrid").jqGrid({
-        url: baseURL + 'db/databasebackupstrategy/list',
+        url: baseURL + 'db/databasebackupupload/list',
         datatype: "json",
         colModel: [			
-			{ label: '${lang.db_databasebackupstrategy_column_id}', name: 'id', index: 'id', width: 50, key: true },
-			{ label: '${lang.db_databasebackupstrategy_column_name}', name: 'name', index: 'name', width: 80 }, 
-			{ label: '${lang.db_databasebackupstrategy_column_enable}', name: 'enable', index: 'enable', width: 80 }, 
-			{ label: '${lang.db_databasebackupstrategy_column_mode}', name: 'mode', index: 'mode', width: 80 }, 
-			{ label: '${lang.db_databasebackupstrategy_column_tables}', name: 'tables', index: 'tables', width: 80 }, 
-			{ label: '${lang.db_databasebackupstrategy_column_schedule}', name: 'schedule', index: 'schedule', width: 80 }, 
-			{ label: '${lang.db_databasebackupstrategy_column_rolling_enabled}', name: 'rollingEnabled', index: 'rolling_enabled', width: 80 }, 
-			{ label: '${lang.db_databasebackupstrategy_column_max_keep}', name: 'maxKeep', index: 'max_keep', width: 80 }, 
-			{ label: '${lang.db_databasebackupstrategy_column_remark}', name: 'remark', index: 'remark', width: 80 }, 
-			{ label: '${lang.db_databasebackupstrategy_column_last_run_time}', name: 'lastRunTime', index: 'last_run_time', width: 80 }, 
-			{ label: '${lang.db_databasebackupstrategy_column_create_time}', name: 'createTime', index: 'create_time', width: 80 }, 
+			{ label: '${lang.db_databasebackupupload_column_id}', name: 'id', index: 'id', width: 50, key: true },
+			{ label: '${lang.db_databasebackupupload_column_original_filename}', name: 'originalFilename', index: 'original_filename', width: 80 }, 
+			{ label: '${lang.db_databasebackupupload_column_filename}', name: 'filename', index: 'filename', width: 80 }, 
+			{ label: '${lang.db_databasebackupupload_column_filepath}', name: 'filepath', index: 'filepath', width: 80 }, 
+			{ label: '${lang.db_databasebackupupload_column_filesize}', name: 'filesize', index: 'filesize', width: 80 }, 
+			{ label: '${lang.db_databasebackupupload_column_database}', name: 'database', index: 'database', width: 80 }, 
+			{ label: '${lang.db_databasebackupupload_column_remark}', name: 'remark', index: 'remark', width: 80 }, 
+			{ label: '${lang.db_databasebackupupload_column_status}', name: 'status', index: 'status', width: 80 }, 
+			{ label: '${lang.db_databasebackupupload_column_error}', name: 'error', index: 'error', width: 80 }, 
+			{ label: '${lang.db_databasebackupupload_column_restore_duration}', name: 'restoreDuration', index: 'restore_duration', width: 80 }, 
+			{ label: '${lang.db_databasebackupupload_column_restore_time}', name: 'restoreTime', index: 'restore_time', width: 80 }, 
+			{ label: '${lang.db_databasebackupupload_column_create_time}', name: 'createTime', index: 'create_time', width: 80 }, 
         ],
 		viewrecords: true,
         height: 385,
@@ -47,7 +48,7 @@ var vm = new Vue({
 	data:{
 		showList: true,
 		title: null,
-		databaseBackupStrategy: {}
+		databaseBackupUpload: {}
 	},
 	methods: {
 		query: function () {
@@ -56,7 +57,7 @@ var vm = new Vue({
 		add: function(){
 			vm.showList = false;
 			vm.title = "${lang.sys_string_add}";
-			vm.databaseBackupStrategy = {};
+			vm.databaseBackupUpload = {};
 		},
 		update: function (event) {
 			var id = getSelectedRow();
@@ -69,12 +70,12 @@ var vm = new Vue({
             vm.getInfo(id)
 		},
 		saveOrUpdate: function (event) {
-			var url = vm.databaseBackupStrategy.id == null ? "db/databasebackupstrategy/save" : "db/databasebackupstrategy/update";
+			var url = vm.databaseBackupUpload.id == null ? "db/databasebackupupload/save" : "db/databasebackupupload/update";
 			$.ajax({
 				type: "POST",
 			    url: baseURL + url,
                 contentType: "application/json",
-			    data: JSON.stringify(vm.databaseBackupStrategy),
+			    data: JSON.stringify(vm.databaseBackupUpload),
 			    success: function(r){
 			    	if(r.code === 0){
 						alert('${lang.sys_string_successful}', function(index){
@@ -94,7 +95,7 @@ var vm = new Vue({
 			confirm('${lang.sys_string_are_sure_to_delete}？', function(){
 				$.ajax({
 					type: "POST",
-				    url: baseURL + "db/databasebackupstrategy/delete",
+				    url: baseURL + "db/databasebackupupload/delete",
                     contentType: "application/json",
 				    data: JSON.stringify(ids),
 				    success: function(r){
@@ -110,8 +111,8 @@ var vm = new Vue({
 			});
 		},
 		getInfo: function(id){
-			$.get(baseURL + "db/databasebackupstrategy/info/"+id, function(r){
-                vm.databaseBackupStrategy = r.databaseBackupStrategy;
+			$.get(baseURL + "db/databasebackupupload/info/"+id, function(r){
+                vm.databaseBackupUpload = r.databaseBackupUpload;
             });
 		},
 		reload: function (event) {

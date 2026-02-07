@@ -4,6 +4,9 @@ import cn.org.autumn.base.ModuleService;
 import cn.org.autumn.modules.db.dao.DatabaseBackupStrategyDao;
 import cn.org.autumn.modules.db.entity.DatabaseBackupStrategyEntity;
 import cn.org.autumn.modules.job.task.LoopJob;
+import cn.org.autumn.thread.TagRunnable;
+import cn.org.autumn.thread.TagTaskExecutor;
+import cn.org.autumn.thread.TagValue;
 import cn.org.autumn.utils.PageUtils;
 import com.baomidou.mybatisplus.mapper.EntityWrapper;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +24,9 @@ public class DatabaseBackupStrategyService extends ModuleService<DatabaseBackupS
     @Autowired
     private DatabaseBackupService databaseBackupService;
 
+    @Autowired
+    TagTaskExecutor asyncTaskExecutor;
+
     /**
      * 分页查询策略
      */
@@ -33,7 +39,13 @@ public class DatabaseBackupStrategyService extends ModuleService<DatabaseBackupS
      */
     @Override
     public void onOneHour() {
-        executeScheduledStrategies("HOURLY");
+        asyncTaskExecutor.execute(new TagRunnable() {
+            @Override
+            @TagValue(method = "onOneHour", type = DatabaseBackupService.class, tag = "每小时备份策略")
+            public void exe() {
+                executeScheduledStrategies("HOURLY");
+            }
+        });
     }
 
     /**
@@ -41,8 +53,14 @@ public class DatabaseBackupStrategyService extends ModuleService<DatabaseBackupS
      */
     @Override
     public void onOneDay() {
-        executeScheduledStrategies("DAILY");
-        executeScheduledStrategies("WEEKLY");
+        asyncTaskExecutor.execute(new TagRunnable() {
+            @Override
+            @TagValue(method = "onOneDay", type = DatabaseBackupService.class, tag = "每天备份策略")
+            public void exe() {
+                executeScheduledStrategies("DAILY");
+                executeScheduledStrategies("WEEKLY");
+            }
+        });
     }
 
     /**

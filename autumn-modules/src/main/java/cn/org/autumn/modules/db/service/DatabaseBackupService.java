@@ -4,6 +4,10 @@ import cn.org.autumn.base.ModuleService;
 import cn.org.autumn.modules.db.dao.DatabaseBackupDao;
 import cn.org.autumn.modules.db.entity.DatabaseBackupEntity;
 import cn.org.autumn.modules.db.entity.DatabaseBackupStrategyEntity;
+import cn.org.autumn.modules.db.entity.DatabaseBackupUploadEntity;
+import cn.org.autumn.thread.TagRunnable;
+import cn.org.autumn.thread.TagTaskExecutor;
+import cn.org.autumn.thread.TagValue;
 import cn.org.autumn.utils.PageUtils;
 import com.baomidou.mybatisplus.mapper.EntityWrapper;
 import lombok.extern.slf4j.Slf4j;
@@ -11,7 +15,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.sql.DataSource;
 import java.io.*;
@@ -23,8 +26,7 @@ import java.sql.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.Date;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Service
@@ -33,42 +35,43 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
     @Autowired
     private DataSource dataSource;
 
-    @Value("${autumn.backup.dir:backups}")
+    @Autowired
+    private DatabaseBackupUploadService databaseBackupUploadService;
+
+    @Autowired
+    TagTaskExecutor asyncTaskExecutor;
+
+    @Value("${autumn.backup.dir:#{systemProperties['user.home'] + '/database'}}")
     private String backupDir;
 
-    private String databaseName;
-
-    /**
-     * 备份任务执行线程池，支持并行备份
-     */
-    private final ExecutorService backupExecutor = Executors.newCachedThreadPool(r -> {
-        Thread t = new Thread(r, "backup-worker-" + new AtomicInteger().incrementAndGet());
-        t.setDaemon(true);
-        return t;
-    });
+    private volatile String databaseName;
+    private volatile boolean initialized = false;
 
     /**
      * 运行中的备份任务: backupId -> BackupTask
      */
     private final ConcurrentHashMap<Long, BackupTask> runningTasks = new ConcurrentHashMap<>();
 
-    @PostConstruct
-    public void initBackupDir() {
+    /**
+     * 懒初始化：首次使用时自动创建目录、获取数据库名、清理中断任务
+     * 线程安全，仅执行一次
+     */
+    private synchronized void ensureInitialized() {
+        if (initialized) return;
         try {
-            Path path = Paths.get(backupDir);
+            Path path = Paths.get(backupDir, "backups");
             if (!Files.exists(path)) {
                 Files.createDirectories(path);
                 if (log.isDebugEnabled())
                     log.debug("Backup directory created: {}", path.toAbsolutePath());
             }
-            // 获取数据库名称
             try (Connection conn = dataSource.getConnection()) {
                 databaseName = conn.getCatalog();
                 if (log.isDebugEnabled())
                     log.debug("Database backup service initialized, database: {}, backupDir: {}", databaseName, path.toAbsolutePath());
             }
-            // 将之前未完成的任务标记为失败（应用重启场景）
             markInterruptedTasks();
+            initialized = true;
         } catch (Exception e) {
             log.error("Failed to initialize backup directory: {}", e.getMessage(), e);
         }
@@ -76,11 +79,9 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
 
     @PreDestroy
     public void shutdown() {
-        // 停止所有运行中的任务
         for (Map.Entry<Long, BackupTask> entry : runningTasks.entrySet()) {
             entry.getValue().stop();
         }
-        backupExecutor.shutdownNow();
     }
 
     /**
@@ -122,6 +123,7 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
      * @param strategyId 关联策略ID，可为null
      */
     public DatabaseBackupEntity backupAsync(String remark, String mode, String tableList, Long strategyId) {
+        ensureInitialized();
         DatabaseBackupEntity entity = new DatabaseBackupEntity();
         entity.setDatabase(databaseName);
         entity.setRemark(remark);
@@ -135,20 +137,24 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
         String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss_SSS").format(new Date());
         String filename = databaseName + "_" + timestamp + ".sql";
         entity.setFilename(filename);
-        Path filePath = Paths.get(backupDir, filename);
+        Path filePath = Paths.get(backupDir, "backups", filename);
         entity.setFilepath(filePath.toAbsolutePath().toString());
         // 先保存记录
         insert(entity);
         // 提交异步执行
         BackupTask task = new BackupTask(entity.getId(), entity.getFilepath(), entity.getMode(), entity.getBackupTables());
         runningTasks.put(entity.getId(), task);
-        backupExecutor.submit(() -> {
-            try {
-                executeBackupTask(task);
-            } catch (Exception e) {
-                log.error("Backup task failed unexpectedly: id={}", task.backupId, e);
-            } finally {
-                runningTasks.remove(task.backupId);
+        asyncTaskExecutor.execute(new TagRunnable() {
+            @Override
+            @TagValue(method = "backupAsync", type = DatabaseBackupService.class, tag = "数据库备份")
+            public void exe() {
+                try {
+                    executeBackupTask(task);
+                } catch (Exception e) {
+                    log.error("Backup task failed unexpectedly: id={}", task.backupId, e);
+                } finally {
+                    runningTasks.remove(task.backupId);
+                }
             }
         });
         return entity;
@@ -432,6 +438,12 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
     /**
      * 导出表数据
      */
+    /**
+     * 单条 INSERT 语句的最大字节数限制（2MB），远小于 MySQL 默认 max_allowed_packet(4MB)
+     * 确保生成的 SQL 在恢复时不会触发 Packet too large 错误
+     */
+    private static final int MAX_INSERT_BYTES = 2 * 1024 * 1024;
+
     private int exportTableData(Connection conn, BufferedWriter writer, String table, BackupTask task) throws Exception {
         int count = 0;
         try (Statement stmt = conn.createStatement();
@@ -451,8 +463,7 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
                 if (i > 1) columns.append(", ");
                 columns.append("`").append(meta.getColumnName(i)).append("`");
             }
-            // 批量INSERT，每100条一批
-            int batchSize = 100;
+            String insertPrefix = "INSERT INTO `" + table + "` (" + columns + ") VALUES\n";
             int batchCount = 0;
             StringBuilder values = new StringBuilder();
             while (rs.next()) {
@@ -460,36 +471,50 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
                 if (task.isStopped()) return count;
                 task.waitIfPaused();
                 if (task.isStopped()) return count;
+
+                // 先构建当前行的值
+                StringBuilder row = new StringBuilder();
+                row.append("(");
+                for (int i = 1; i <= columnCount; i++) {
+                    if (i > 1) row.append(", ");
+                    Object val = rs.getObject(i);
+                    if (val == null) {
+                        row.append("NULL");
+                    } else if (val instanceof Boolean) {
+                        row.append((Boolean) val ? 1 : 0);
+                    } else if (val instanceof Number) {
+                        row.append(val);
+                    } else if (val instanceof byte[]) {
+                        row.append("X'").append(bytesToHex((byte[]) val)).append("'");
+                    } else {
+                        row.append("'").append(escapeSQL(val.toString())).append("'");
+                    }
+                }
+                row.append(")");
+
+                // 预估加入此行后的总大小
+                int projectedSize = values.length() + row.length() + 3; // +3 for ",\n" or ";\n"
                 if (batchCount == 0) {
-                    values = new StringBuilder();
-                    values.append("INSERT INTO `").append(table).append("` (")
-                            .append(columns).append(") VALUES\n");
+                    projectedSize += insertPrefix.length();
+                }
+
+                // 如果当前批次已有数据，且加入此行后会超限，先刷出当前批次
+                if (batchCount > 0 && projectedSize > MAX_INSERT_BYTES) {
+                    values.append(";\n");
+                    writer.write(values.toString());
+                    values.setLength(0);
+                    batchCount = 0;
+                }
+
+                // 添加行到当前批次
+                if (batchCount == 0) {
+                    values.append(insertPrefix);
                 } else {
                     values.append(",\n");
                 }
-                values.append("(");
-                for (int i = 1; i <= columnCount; i++) {
-                    if (i > 1) values.append(", ");
-                    Object val = rs.getObject(i);
-                    if (val == null) {
-                        values.append("NULL");
-                    } else if (val instanceof Number) {
-                        values.append(val);
-                    } else if (val instanceof byte[]) {
-                        values.append("X'").append(bytesToHex((byte[]) val)).append("'");
-                    } else {
-                        values.append("'").append(escapeSQL(val.toString())).append("'");
-                    }
-                }
-                values.append(")");
+                values.append(row);
                 count++;
                 batchCount++;
-
-                if (batchCount >= batchSize) {
-                    values.append(";\n");
-                    writer.write(values.toString());
-                    batchCount = 0;
-                }
             }
             // 写入剩余数据
             if (batchCount > 0) {
@@ -522,6 +547,209 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
             sb.append(String.format("%02X", b));
         }
         return sb.toString();
+    }
+
+    // ========================================
+    // 布尔值兼容处理（备份/恢复兼容性）
+    // ========================================
+
+    /**
+     * 判断 SQLException 是否为布尔字符串导致的整数列不兼容错误
+     * MySQL Error 1366: Incorrect integer value: 'false'/'true' for column ...
+     */
+    private boolean isBooleanCompatError(SQLException e) {
+        String msg = e.getMessage();
+        if (msg == null) return false;
+        return (e.getErrorCode() == 1366 || msg.contains("Incorrect integer value"))
+                && (msg.contains("'false'") || msg.contains("'true'"));
+    }
+
+    /**
+     * 检查 SQL 中是否包含布尔字面量字符串
+     */
+    private boolean containsBooleanLiterals(String sql) {
+        return sql.contains("'false'") || sql.contains("'true'")
+                || sql.contains("'FALSE'") || sql.contains("'TRUE'");
+    }
+
+    /**
+     * 将 SQL 中 VALUES 子句里的 'false'/'true' 替换为 0/1
+     * 仅对 INSERT ... VALUES 语句生效，安全地处理布尔兼容问题
+     */
+    private String fixBooleanLiterals(String sql) {
+        // 只对 INSERT 语句做替换，避免误改 WHERE 条件中的合法字符串
+        String upper = sql.toUpperCase();
+        if (!upper.contains("INSERT") || !upper.contains("VALUES")) {
+            return sql;
+        }
+        // 在 VALUES 部分进行替换
+        int valuesIdx = upper.indexOf("VALUES");
+        if (valuesIdx < 0) return sql;
+        String prefix = sql.substring(0, valuesIdx);
+        String valuesPart = sql.substring(valuesIdx);
+        // 替换布尔字面量（大小写不敏感）
+        valuesPart = valuesPart.replace("'false'", "0").replace("'FALSE'", "0").replace("'False'", "0");
+        valuesPart = valuesPart.replace("'true'", "1").replace("'TRUE'", "1").replace("'True'", "1");
+        return prefix + valuesPart;
+    }
+
+    // ========================================
+    // Packet too large 兼容处理
+    // ========================================
+
+    /**
+     * 判断是否为 Packet too large 错误
+     * MySQL Error 1153 / ER_NET_PACKET_TOO_LARGE
+     */
+    private boolean isPacketTooLargeError(SQLException e) {
+        String msg = e.getMessage();
+        if (msg == null) return false;
+        return e.getErrorCode() == 1153
+                || msg.contains("Packet for query is too large")
+                || msg.contains("max_allowed_packet");
+    }
+
+    /**
+     * 判断 SQL 是否为可拆分的 INSERT...VALUES 多行语句
+     */
+    private boolean isSplittableInsert(String sql) {
+        String upper = sql.trim().toUpperCase();
+        if (!upper.startsWith("INSERT")) return false;
+        int valuesIdx = upper.indexOf("VALUES");
+        if (valuesIdx < 0) return false;
+        // 检查 VALUES 后面是否有多组 (...),(...) 值
+        String valuesPart = sql.substring(valuesIdx + 6).trim();
+        // 至少应该有两个 '(' 才能拆分
+        int firstParen = valuesPart.indexOf('(');
+        if (firstParen < 0) return false;
+        // 找到第一个完整的值组的结尾 ')' 后面是否有 ','
+        int depth = 0;
+        boolean inString = false;
+        char prev = 0;
+        for (int i = firstParen; i < valuesPart.length(); i++) {
+            char c = valuesPart.charAt(i);
+            if (inString) {
+                if (c == '\'' && prev != '\\') inString = false;
+            } else {
+                if (c == '\'') inString = true;
+                else if (c == '(') depth++;
+                else if (c == ')') {
+                    depth--;
+                    if (depth == 0) {
+                        // 找到第一组值的结尾，看后面是否有逗号（即更多组）
+                        for (int j = i + 1; j < valuesPart.length(); j++) {
+                            char nc = valuesPart.charAt(j);
+                            if (nc == ',') return true;  // 多组值，可拆分
+                            if (!Character.isWhitespace(nc)) break;
+                        }
+                        return false; // 只有一组值，无法拆分
+                    }
+                }
+            }
+            prev = c;
+        }
+        return false;
+    }
+
+    /**
+     * 将大的 INSERT...VALUES (...),(...),... 拆分为多条小 INSERT 语句执行
+     * 使用二分法递归拆分，确保每条子语句都在 max_allowed_packet 范围内
+     */
+    private int executeSplitInsert(Connection conn, String sql, RestoreTask task, long currentLine) {
+        String upper = sql.trim().toUpperCase();
+        int valuesIdx = upper.indexOf("VALUES");
+        String insertPrefix = sql.substring(0, valuesIdx + 6).trim(); // "INSERT INTO ... VALUES"
+
+        // 解析出所有值组
+        String valuesPart = sql.substring(valuesIdx + 6).trim();
+        List<String> valueGroups = parseValueGroups(valuesPart);
+
+        if (valueGroups.size() <= 1) {
+            // 只有一组值但仍然太大，说明单行数据就超限，无法进一步拆分
+            task.addWarning("Line " + currentLine + ": 单行数据超过 max_allowed_packet 限制，无法执行");
+            log.warn("Single row exceeds max_allowed_packet at line {}", currentLine);
+            return 0;
+        }
+
+        // 二分拆分执行
+        return executeSplitBatch(conn, insertPrefix, valueGroups, 0, valueGroups.size(), task, currentLine);
+    }
+
+    /**
+     * 递归二分执行拆分后的 INSERT 批次
+     */
+    private int executeSplitBatch(Connection conn, String insertPrefix, List<String> groups, int from, int to,
+                                  RestoreTask task, long currentLine) {
+        if (from >= to) return 0;
+
+        // 构建子 INSERT
+        StringBuilder sb = new StringBuilder(insertPrefix);
+        sb.append("\n");
+        for (int i = from; i < to; i++) {
+            if (i > from) sb.append(",\n");
+            sb.append(groups.get(i));
+        }
+        String subSql = sb.toString();
+
+        try (Statement stmt = conn.createStatement()) {
+            stmt.execute(subSql);
+            return to - from; // 成功执行的行数
+        } catch (SQLException e) {
+            if (isPacketTooLargeError(e) && (to - from) > 1) {
+                // 继续拆成两半
+                int mid = from + (to - from) / 2;
+                int left = executeSplitBatch(conn, insertPrefix, groups, from, mid, task, currentLine);
+                int right = executeSplitBatch(conn, insertPrefix, groups, mid, to, task, currentLine);
+                return left + right;
+            } else if (isBooleanCompatError(e) && containsBooleanLiterals(subSql)) {
+                // 处理布尔兼容
+                String fixed = fixBooleanLiterals(subSql);
+                try (Statement retryStmt = conn.createStatement()) {
+                    retryStmt.execute(fixed);
+                    return to - from;
+                } catch (SQLException retryEx) {
+                    task.addWarning("Line " + currentLine + " (split): " + retryEx.getMessage());
+                    return 0;
+                }
+            } else {
+                task.addWarning("Line " + currentLine + " (split): " + e.getMessage());
+                return 0;
+            }
+        }
+    }
+
+    /**
+     * 从 VALUES 部分解析出各个值组: (val1, val2, ...), (val1, val2, ...), ...
+     * 正确处理字符串中的括号、逗号和转义引号
+     */
+    private List<String> parseValueGroups(String valuesPart) {
+        List<String> groups = new ArrayList<>();
+        int depth = 0;
+        boolean inString = false;
+        char prev = 0;
+        int groupStart = -1;
+
+        for (int i = 0; i < valuesPart.length(); i++) {
+            char c = valuesPart.charAt(i);
+            if (inString) {
+                if (c == '\'' && prev != '\\') inString = false;
+            } else {
+                if (c == '\'') {
+                    inString = true;
+                } else if (c == '(') {
+                    if (depth == 0) groupStart = i;
+                    depth++;
+                } else if (c == ')') {
+                    depth--;
+                    if (depth == 0 && groupStart >= 0) {
+                        groups.add(valuesPart.substring(groupStart, i + 1));
+                        groupStart = -1;
+                    }
+                }
+            }
+            prev = c;
+        }
+        return groups;
     }
 
     // ========================================
@@ -594,6 +822,7 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
      * 获取备份统计信息
      */
     public Map<String, Object> getStatistics() {
+        ensureInitialized();
         Map<String, Object> stats = new HashMap<>();
         int total = selectCount(new EntityWrapper<>());
         stats.put("total", total);
@@ -612,7 +841,7 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
         }
         stats.put("totalSize", totalSize);
         stats.put("database", databaseName);
-        stats.put("backupDir", Paths.get(backupDir).toAbsolutePath().toString());
+        stats.put("backupDir", Paths.get(backupDir, "backups").toAbsolutePath().toString());
         return stats;
     }
 
@@ -677,6 +906,368 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
                 if (log.isDebugEnabled())
                     log.info("Rolling cleanup old backup: strategyId={}, backupId={}, filename={}", strategyId, backups.get(i).getId(), backups.get(i).getFilename());
             }
+        }
+    }
+
+    // ========================================
+    // 数据库恢复逻辑
+    // ========================================
+
+    /**
+     * 运行中的恢复任务: entityId -> Future
+     */
+    private final ConcurrentHashMap<String, RestoreTask> runningRestoreTasks = new ConcurrentHashMap<>();
+
+    /**
+     * 从已有备份恢复（异步）
+     */
+    public Map<String, Object> restoreFromBackup(Long backupId) {
+        DatabaseBackupEntity entity = selectById(backupId);
+        if (entity == null) {
+            throw new RuntimeException("备份记录不存在");
+        }
+        if (entity.getStatus() != 1) {
+            throw new RuntimeException("只能从成功的备份中恢复");
+        }
+        File file = new File(entity.getFilepath());
+        if (!file.exists()) {
+            throw new RuntimeException("备份文件不存在: " + entity.getFilepath());
+        }
+        String taskKey = "backup_" + backupId;
+        if (runningRestoreTasks.containsKey(taskKey)) {
+            throw new RuntimeException("该备份正在恢复中，请勿重复操作");
+        }
+        RestoreTask task = new RestoreTask(taskKey, file.getAbsolutePath());
+        runningRestoreTasks.put(taskKey, task);
+        asyncTaskExecutor.execute(new TagRunnable("restore-backup-" + backupId) {
+            @Override
+            public void exe() {
+                try {
+                    executeRestore(task, null, backupId);
+                } catch (Exception e) {
+                    log.error("Restore from backup failed: backupId={}", backupId, e);
+                } finally {
+                    runningRestoreTasks.remove(taskKey);
+                }
+            }
+        });
+        Map<String, Object> result = new HashMap<>();
+        result.put("taskKey", taskKey);
+        result.put("sourceType", "backup");
+        result.put("sourceId", backupId);
+        return result;
+    }
+
+    /**
+     * 从上传的SQL文件恢复（异步）
+     */
+    public Map<String, Object> restoreFromUpload(Long uploadId) {
+        DatabaseBackupUploadEntity entity = databaseBackupUploadService.selectById(uploadId);
+        if (entity == null) {
+            throw new RuntimeException("上传记录不存在");
+        }
+        if (entity.getStatus() != null && entity.getStatus() == 1) {
+            throw new RuntimeException("该文件正在恢复中，请勿重复操作");
+        }
+        File file = new File(entity.getFilepath());
+        if (!file.exists()) {
+            throw new RuntimeException("上传文件不存在: " + entity.getFilepath());
+        }
+        String taskKey = "upload_" + uploadId;
+        if (runningRestoreTasks.containsKey(taskKey)) {
+            throw new RuntimeException("该文件正在恢复中，请勿重复操作");
+        }
+        // 更新上传记录状态为恢复中
+        entity.setStatus(1);
+        entity.setError(null);
+        databaseBackupUploadService.updateById(entity);
+        RestoreTask task = new RestoreTask(taskKey, file.getAbsolutePath());
+        runningRestoreTasks.put(taskKey, task);
+        asyncTaskExecutor.execute(new TagRunnable("restore-upload-" + uploadId) {
+            @Override
+            public void exe() {
+                try {
+                    executeRestore(task, uploadId, null);
+                } catch (Exception e) {
+                    log.error("Restore from upload failed: uploadId={}", uploadId, e);
+                } finally {
+                    runningRestoreTasks.remove(taskKey);
+                }
+            }
+        });
+        Map<String, Object> result = new HashMap<>();
+        result.put("taskKey", taskKey);
+        result.put("sourceType", "upload");
+        result.put("sourceId", uploadId);
+        return result;
+    }
+
+    /**
+     * 执行SQL恢复
+     */
+    private void executeRestore(RestoreTask task, Long uploadId, Long backupId) {
+        long startTime = System.currentTimeMillis();
+        try {
+            executeSqlFile(task);
+            long duration = System.currentTimeMillis() - startTime;
+            task.setCompleted(true);
+            // 更新上传记录状态
+            if (uploadId != null) {
+                DatabaseBackupUploadEntity uploadEntity = databaseBackupUploadService.selectById(uploadId);
+                if (uploadEntity != null) {
+                    uploadEntity.setStatus(2); // 恢复成功
+                    uploadEntity.setRestoreDuration(duration);
+                    uploadEntity.setRestoreTime(new Date());
+                    uploadEntity.setError(null);
+                    databaseBackupUploadService.updateById(uploadEntity);
+                }
+            }
+            log.info("Database restore completed: taskKey={}, duration={}ms, statements={}", task.taskKey, duration, task.getExecutedStatements());
+        } catch (Exception e) {
+            long duration = System.currentTimeMillis() - startTime;
+            task.setError(e.getMessage());
+            // 更新上传记录状态
+            if (uploadId != null) {
+                DatabaseBackupUploadEntity uploadEntity = databaseBackupUploadService.selectById(uploadId);
+                if (uploadEntity != null) {
+                    uploadEntity.setStatus(3); // 恢复失败
+                    uploadEntity.setRestoreDuration(duration);
+                    uploadEntity.setRestoreTime(new Date());
+                    uploadEntity.setError(e.getMessage());
+                    databaseBackupUploadService.updateById(uploadEntity);
+                }
+            }
+            log.error("Database restore failed: taskKey={}, error={}", task.taskKey, e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 执行SQL文件
+     */
+    private void executeSqlFile(RestoreTask task) throws Exception {
+        try (Connection conn = dataSource.getConnection();
+             BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(task.filePath), StandardCharsets.UTF_8))) {
+            conn.setAutoCommit(false);
+            StringBuilder statement = new StringBuilder();
+            String line;
+            int executedCount = 0;
+            boolean inMultiLineComment = false;
+            // 先统计总行数用于进度
+            long totalLines = 0;
+            try (BufferedReader countReader = new BufferedReader(new InputStreamReader(new FileInputStream(task.filePath), StandardCharsets.UTF_8))) {
+                while (countReader.readLine() != null) totalLines++;
+            }
+            task.setTotalLines(totalLines);
+            long currentLine = 0;
+            while ((line = reader.readLine()) != null) {
+                currentLine++;
+                task.setCurrentLine(currentLine);
+                // 跳过空行
+                String trimmedLine = line.trim();
+                if (trimmedLine.isEmpty()) continue;
+                // 处理多行注释
+                if (inMultiLineComment) {
+                    if (trimmedLine.contains("*/")) {
+                        inMultiLineComment = false;
+                    }
+                    continue;
+                }
+                if (trimmedLine.startsWith("/*")) {
+                    if (!trimmedLine.contains("*/")) {
+                        inMultiLineComment = true;
+                    }
+                    continue;
+                }
+                // 跳过单行注释
+                if (trimmedLine.startsWith("--") || trimmedLine.startsWith("#")) {
+                    continue;
+                }
+                statement.append(line);
+                // 检查语句是否结束（以分号结尾）
+                if (trimmedLine.endsWith(";")) {
+                    String sql = statement.toString().trim();
+                    // 去掉末尾分号
+                    if (sql.endsWith(";")) {
+                        sql = sql.substring(0, sql.length() - 1).trim();
+                    }
+                    if (!sql.isEmpty()) {
+                        executedCount += executeWithCompatFix(conn, sql, task, currentLine);
+                        task.setExecutedStatements(executedCount);
+                    }
+                    statement.setLength(0);
+                    // 每100条语句提交一次
+                    if (executedCount % 100 == 0) {
+                        conn.commit();
+                    }
+                } else {
+                    statement.append("\n");
+                }
+            }
+            // 处理最后一条没有分号的语句
+            String lastSql = statement.toString().trim();
+            if (!lastSql.isEmpty()) {
+                executedCount += executeWithCompatFix(conn, lastSql, task, currentLine);
+                task.setExecutedStatements(executedCount);
+            }
+            conn.commit();
+            conn.setAutoCommit(true);
+            log.info("SQL file executed: file={}, statements={}", task.filePath, executedCount);
+        }
+    }
+
+    /**
+     * 统一的 SQL 执行方法，自动处理：
+     * 1. Packet too large -> 拆分 INSERT 重试
+     * 2. Boolean 兼容 -> 替换 'false'/'true' 重试
+     *
+     * @return 成功执行的语句数（1=成功, 0=失败/跳过, >1=拆分执行）
+     */
+    private int executeWithCompatFix(Connection conn, String sql, RestoreTask task, long currentLine) {
+        try (Statement stmt = conn.createStatement()) {
+            stmt.execute(sql);
+            return 1;
+        } catch (SQLException e) {
+            // 1. Packet too large -> 拆分 INSERT 重试
+            if (isPacketTooLargeError(e) && isSplittableInsert(sql)) {
+                if (log.isDebugEnabled())
+                    log.debug("Packet too large at line {}, splitting INSERT into smaller batches", currentLine);
+                int count = executeSplitInsert(conn, sql, task, currentLine);
+                if (count > 0) return count;
+                // 拆分也全部失败了，记录警告
+                task.addWarning("Line " + currentLine + ": " + e.getMessage());
+                return 0;
+            }
+            // 2. Boolean 兼容问题 -> 替换后重试
+            if (isBooleanCompatError(e) && containsBooleanLiterals(sql)) {
+                String fixedSql = fixBooleanLiterals(sql);
+                try (Statement retryStmt = conn.createStatement()) {
+                    retryStmt.execute(fixedSql);
+                    if (log.isDebugEnabled())
+                        log.debug("SQL fixed boolean literals and retried at line {}", currentLine);
+                    return 1;
+                } catch (SQLException retryEx) {
+                    // 修复后仍然太大？尝试拆分
+                    if (isPacketTooLargeError(retryEx) && isSplittableInsert(fixedSql)) {
+                        int count = executeSplitInsert(conn, fixedSql, task, currentLine);
+                        if (count > 0) return count;
+                    }
+                    log.warn("SQL execution warning at line {} (after compat fix): {}", currentLine, retryEx.getMessage());
+                    task.addWarning("Line " + currentLine + ": " + retryEx.getMessage());
+                    return 0;
+                }
+            }
+            // 3. 其他错误
+            log.warn("SQL execution warning at line {}: {}", currentLine, e.getMessage());
+            task.addWarning("Line " + currentLine + ": " + e.getMessage());
+            return 0;
+        }
+    }
+
+    /**
+     * 获取恢复任务进度
+     */
+    public Map<String, Object> getRestoreProgress(String taskKey) {
+        RestoreTask task = runningRestoreTasks.get(taskKey);
+        Map<String, Object> info = new HashMap<>();
+        if (task == null) {
+            info.put("running", false);
+            return info;
+        }
+        info.put("running", true);
+        info.put("taskKey", task.taskKey);
+        info.put("totalLines", task.getTotalLines());
+        info.put("currentLine", task.getCurrentLine());
+        info.put("executedStatements", task.getExecutedStatements());
+        info.put("completed", task.isCompleted());
+        info.put("error", task.getError());
+        info.put("warnings", task.getWarnings());
+        if (task.getTotalLines() > 0) {
+            info.put("progress", (int) ((task.getCurrentLine() * 100.0) / task.getTotalLines()));
+        } else {
+            info.put("progress", 0);
+        }
+        return info;
+    }
+
+    /**
+     * 获取所有运行中的恢复任务
+     */
+    public List<Map<String, Object>> getRunningRestoreTasks() {
+        List<Map<String, Object>> list = new ArrayList<>();
+        for (Map.Entry<String, RestoreTask> entry : runningRestoreTasks.entrySet()) {
+            list.add(getRestoreProgress(entry.getKey()));
+        }
+        return list;
+    }
+
+    // ========================================
+    // 内部类：恢复任务控制
+    // ========================================
+
+    /**
+     * 恢复任务状态
+     */
+    static class RestoreTask {
+        final String taskKey;
+        final String filePath;
+        private volatile long totalLines = 0;
+        private volatile long currentLine = 0;
+        private volatile int executedStatements = 0;
+        private volatile boolean completed = false;
+        private volatile String error = null;
+        private final List<String> warnings = Collections.synchronizedList(new ArrayList<>());
+
+        RestoreTask(String taskKey, String filePath) {
+            this.taskKey = taskKey;
+            this.filePath = filePath;
+        }
+
+        long getTotalLines() {
+            return totalLines;
+        }
+
+        void setTotalLines(long totalLines) {
+            this.totalLines = totalLines;
+        }
+
+        long getCurrentLine() {
+            return currentLine;
+        }
+
+        void setCurrentLine(long currentLine) {
+            this.currentLine = currentLine;
+        }
+
+        int getExecutedStatements() {
+            return executedStatements;
+        }
+
+        void setExecutedStatements(int executedStatements) {
+            this.executedStatements = executedStatements;
+        }
+
+        boolean isCompleted() {
+            return completed;
+        }
+
+        void setCompleted(boolean completed) {
+            this.completed = completed;
+        }
+
+        String getError() {
+            return error;
+        }
+
+        void setError(String error) {
+            this.error = error;
+        }
+
+        List<String> getWarnings() {
+            return new ArrayList<>(warnings.size() > 50 ? warnings.subList(warnings.size() - 50, warnings.size()) : warnings);
+        }
+
+        void addWarning(String warning) {
+            if (warnings.size() < 200) warnings.add(warning);
         }
     }
 

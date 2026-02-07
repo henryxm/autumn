@@ -26,6 +26,12 @@
         <div class="panel-heading">{{title}}</div>
         <form class="form-horizontal">
             <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.db_databasebackup_column_strategy_id}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="databaseBackup.strategyId" placeholder="${lang.db_databasebackup_column_strategy_id}"/>
+                </div>
+            </div>
+            <div class="form-group">
                 <div class="col-sm-2 control-label">${lang.db_databasebackup_column_filename}</div>
                 <div class="col-sm-10">
                     <input type="text" class="form-control" v-model="databaseBackup.filename" placeholder="${lang.db_databasebackup_column_filename}"/>
@@ -50,6 +56,18 @@
                 </div>
             </div>
             <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.db_databasebackup_column_mode}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="databaseBackup.mode" placeholder="${lang.db_databasebackup_column_mode}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.db_databasebackup_column_backup_tables}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="databaseBackup.backupTables" placeholder="${lang.db_databasebackup_column_backup_tables}"/>
+                </div>
+            </div>
+            <div class="form-group">
                 <div class="col-sm-2 control-label">${lang.db_databasebackup_column_tables}</div>
                 <div class="col-sm-10">
                     <input type="text" class="form-control" v-model="databaseBackup.tables" placeholder="${lang.db_databasebackup_column_tables}"/>
@@ -68,6 +86,12 @@
                 </div>
             </div>
             <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.db_databasebackup_column_permanent}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="databaseBackup.permanent" placeholder="${lang.db_databasebackup_column_permanent}"/>
+                </div>
+            </div>
+            <div class="form-group">
                 <div class="col-sm-2 control-label">${lang.db_databasebackup_column_status}</div>
                 <div class="col-sm-10">
                     <input type="text" class="form-control" v-model="databaseBackup.status" placeholder="${lang.db_databasebackup_column_status}"/>
@@ -83,6 +107,30 @@
                 <div class="col-sm-2 control-label">${lang.db_databasebackup_column_duration}</div>
                 <div class="col-sm-10">
                     <input type="text" class="form-control" v-model="databaseBackup.duration" placeholder="${lang.db_databasebackup_column_duration}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.db_databasebackup_column_total_tables}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="databaseBackup.totalTables" placeholder="${lang.db_databasebackup_column_total_tables}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.db_databasebackup_column_completed_tables}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="databaseBackup.completedTables" placeholder="${lang.db_databasebackup_column_completed_tables}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.db_databasebackup_column_current_table}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="databaseBackup.currentTable" placeholder="${lang.db_databasebackup_column_current_table}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.db_databasebackup_column_progress}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="databaseBackup.progress" placeholder="${lang.db_databasebackup_column_progress}"/>
                 </div>
             </div>
             <div class="form-group">

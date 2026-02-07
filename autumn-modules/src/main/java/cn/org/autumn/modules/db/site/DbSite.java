@@ -16,6 +16,13 @@ public class DbSite implements SiteFactory.Site, TemplateFactory.Template {
     @PageAware(login = true)
     public String databasebackup = "modules/db/databasebackup";
 
+    @PageAware(login = true)
+    public String databasebackupupload = "modules/db/databasebackupupload";
+
+    public String getDatabaseBackupUploadKey() {
+        return getKey("databasebackupupload");
+    }
+
     public String getDatabaseBackupStrategyKey() {
         return getKey("databasebackupstrategy");
     }

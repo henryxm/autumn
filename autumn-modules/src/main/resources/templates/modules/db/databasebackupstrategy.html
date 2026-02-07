@@ -26,6 +26,66 @@
         <div class="panel-heading">{{title}}</div>
         <form class="form-horizontal">
             <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.db_databasebackupstrategy_column_name}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="databaseBackupStrategy.name" placeholder="${lang.db_databasebackupstrategy_column_name}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.db_databasebackupstrategy_column_enable}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="databaseBackupStrategy.enable" placeholder="${lang.db_databasebackupstrategy_column_enable}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.db_databasebackupstrategy_column_mode}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="databaseBackupStrategy.mode" placeholder="${lang.db_databasebackupstrategy_column_mode}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.db_databasebackupstrategy_column_tables}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="databaseBackupStrategy.tables" placeholder="${lang.db_databasebackupstrategy_column_tables}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.db_databasebackupstrategy_column_schedule}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="databaseBackupStrategy.schedule" placeholder="${lang.db_databasebackupstrategy_column_schedule}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.db_databasebackupstrategy_column_rolling_enabled}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="databaseBackupStrategy.rollingEnabled" placeholder="${lang.db_databasebackupstrategy_column_rolling_enabled}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.db_databasebackupstrategy_column_max_keep}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="databaseBackupStrategy.maxKeep" placeholder="${lang.db_databasebackupstrategy_column_max_keep}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.db_databasebackupstrategy_column_remark}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="databaseBackupStrategy.remark" placeholder="${lang.db_databasebackupstrategy_column_remark}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.db_databasebackupstrategy_column_last_run_time}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="databaseBackupStrategy.lastRunTime" placeholder="${lang.db_databasebackupstrategy_column_last_run_time}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.db_databasebackupstrategy_column_create_time}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="databaseBackupStrategy.createTime" placeholder="${lang.db_databasebackupstrategy_column_create_time}"/>
+                </div>
+            </div>
+            <div class="form-group">
                 <div class="col-sm-2 control-label"></div>
                 <input type="button" class="btn btn-primary" @click="saveOrUpdate" value="${lang.sys_string_confirm}"/>
                 &nbsp;&nbsp;<input type="button" class="btn btn-warning" @click="reload" value="${lang.sys_string_back}"/>

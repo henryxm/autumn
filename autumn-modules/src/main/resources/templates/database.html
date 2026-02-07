@@ -170,6 +170,7 @@
     <!-- Tabs -->
     <div class="tabs">
         <div class="tab active" onclick="switchTab('backup')">备份管理</div>
+        <div class="tab" onclick="switchTab('upload')">上传管理</div>
         <div class="tab" onclick="switchTab('strategy')">备份策略</div>
     </div>
 
@@ -212,6 +213,31 @@
                 </table>
             </div>
             <div class="pagination" id="pagination"></div>
+        </div>
+    </div>
+
+    <!-- ============ 上传管理面板 ============ -->
+    <div class="tab-panel" id="panelUpload">
+        <div class="content">
+            <div class="toolbar">
+                <h2>上传的备份文件</h2>
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="showUploadModal()">上传SQL文件</button>
+                    <button class="btn btn-info" onclick="loadUploadList()">刷新</button>
+                </div>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead><tr>
+                        <th>ID</th><th>原始文件名</th><th>文件大小</th><th>目标数据库</th>
+                        <th>状态</th><th>恢复耗时</th><th>备注</th><th>上传时间</th><th>恢复时间</th><th>操作</th>
+                    </tr></thead>
+                    <tbody id="uploadList">
+                        <tr><td colspan="10" style="text-align:center;padding:60px;">加载中...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="pagination" id="uploadPagination"></div>
         </div>
     </div>
 
@@ -394,6 +420,73 @@
     </div>
 </div>
 
+<!-- ============ 上传SQL文件弹窗 ============ -->
+<div class="modal" id="uploadModal">
+    <div class="modal-content" style="max-width:500px;">
+        <div class="modal-header">
+            <h3>上传SQL备份文件</h3>
+            <button class="modal-close" onclick="cancelUploadAndClose()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>选择SQL文件</label>
+                <input type="file" class="form-control" id="uploadFile" accept=".sql" style="padding:8px;">
+                <div class="form-hint">支持大文件分片上传，无大小限制</div>
+            </div>
+            <div class="form-group">
+                <label>备注说明（可选）</label>
+                <textarea class="form-control" id="uploadRemark" placeholder="例如：来自生产环境的备份"></textarea>
+            </div>
+            <div id="uploadProgress" style="display:none;">
+                <div style="display:flex;justify-content:space-between;font-size:12px;color:#888;margin-bottom:4px;">
+                    <span id="uploadStatusText">准备上传...</span>
+                    <span id="uploadSpeedText"></span>
+                </div>
+                <div class="progress-bar-outer" style="height:22px;">
+                    <div class="progress-bar-inner" id="uploadProgressBar" style="width:0%"></div>
+                    <div class="progress-text" id="uploadProgressText" style="line-height:22px;">0%</div>
+                </div>
+                <div style="display:flex;justify-content:space-between;font-size:12px;color:#888;margin-top:4px;">
+                    <span id="uploadChunkInfo"></span>
+                    <span id="uploadSizeInfo"></span>
+                </div>
+            </div>
+            <div style="background:#fff3cd;padding:12px;border-radius:8px;font-size:13px;color:#856404;margin-top:12px;">
+                <strong>提示：</strong>上传的SQL文件将保存到服务器，您可以之后选择手动恢复执行。恢复操作会直接在数据库上执行SQL，请确保文件安全可靠。
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" id="btnUploadCancel" onclick="cancelUploadAndClose()">取消</button>
+            <button class="btn btn-primary" id="btnUpload" onclick="executeUpload()">上传</button>
+        </div>
+    </div>
+</div>
+
+<!-- ============ 恢复进度弹窗 ============ -->
+<div class="modal" id="restoreModal">
+    <div class="modal-content" style="max-width:550px;">
+        <div class="modal-header">
+            <h3>数据库恢复</h3>
+            <button class="modal-close" onclick="closeRestoreModal()">&times;</button>
+        </div>
+        <div class="modal-body" id="restoreBody">
+            <div style="text-align:center;padding:30px;">
+                <div style="font-size:36px;margin-bottom:15px;">&#9881;</div>
+                <p id="restoreStatusText" style="font-size:16px;font-weight:600;color:#333;">正在恢复数据库...</p>
+                <div class="progress-bar-outer" style="height:24px;margin:20px 0;">
+                    <div class="progress-bar-inner" id="restoreProgressBar" style="width:0%"></div>
+                    <div class="progress-text" id="restoreProgressText" style="line-height:24px;">0%</div>
+                </div>
+                <div id="restoreDetail" style="font-size:13px;color:#888;margin-top:10px;"></div>
+                <div id="restoreWarnings" style="display:none;text-align:left;margin-top:15px;max-height:150px;overflow-y:auto;background:#fff3cd;padding:10px;border-radius:6px;font-size:12px;color:#856404;"></div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" id="btnRestoreClose" onclick="closeRestoreModal()">关闭</button>
+        </div>
+    </div>
+</div>
+
 <script>
 //<#noparse>
 const API_BASE = '/db/backup';
@@ -417,11 +510,16 @@ document.addEventListener('DOMContentLoaded', function() {
 // ========================
 function switchTab(tab) {
     document.querySelectorAll('.tab').forEach((t, i) => {
-        t.classList.toggle('active', (tab === 'backup' ? i === 0 : i === 1));
+        t.classList.toggle('active',
+            (tab === 'backup' && i === 0) ||
+            (tab === 'upload' && i === 1) ||
+            (tab === 'strategy' && i === 2));
     });
     document.getElementById('panelBackup').classList.toggle('active', tab === 'backup');
+    document.getElementById('panelUpload').classList.toggle('active', tab === 'upload');
     document.getElementById('panelStrategy').classList.toggle('active', tab === 'strategy');
     if (tab === 'strategy') loadStrategyList();
+    if (tab === 'upload') loadUploadList();
 }
 
 // ========================
@@ -602,6 +700,7 @@ function renderList(list, total, totalPages) {
             '<td><div class="action-btns">' +
                 '<button class="btn btn-info btn-sm" onclick="showDetail(' + item.id + ')">详情</button>' +
                 (item.status === 1 ? '<button class="btn btn-success btn-sm" onclick="downloadBackup(' + item.id + ')">下载</button>' : '') +
+                (item.status === 1 ? '<button class="btn btn-warning btn-sm" onclick="restoreBackup(' + item.id + ', \'' + escapeAttr(item.filename || '') + '\')">恢复</button>' : '') +
                 '<button class="btn btn-danger btn-sm" onclick="deleteBackup(' + item.id + ')">删除</button>' +
             '</div></td></tr>';
     }).join('');
@@ -965,6 +1064,453 @@ async function executeStrategy(id) {
 }
 
 // ========================
+// 上传管理（分片上传）
+// ========================
+let uploadPage = 1, uploadPageSize = 10;
+const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB per chunk
+let currentUploadToken = null;
+let uploadCancelled = false;
+
+function showUploadModal() {
+    document.getElementById('uploadFile').value = '';
+    document.getElementById('uploadRemark').value = '';
+    document.getElementById('uploadProgress').style.display = 'none';
+    document.getElementById('btnUpload').disabled = false;
+    document.getElementById('btnUpload').textContent = '上传';
+    document.getElementById('btnUploadCancel').textContent = '取消';
+    currentUploadToken = null;
+    uploadCancelled = false;
+    showModal('uploadModal');
+}
+
+function cancelUploadAndClose() {
+    if (currentUploadToken) {
+        uploadCancelled = true;
+        // 通知后端取消
+        fetch(API_BASE + '/upload/chunk/cancel', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({uploadToken: currentUploadToken})
+        }).catch(function(){});
+        currentUploadToken = null;
+    }
+    hideModal('uploadModal');
+}
+
+async function executeUpload() {
+    var fileInput = document.getElementById('uploadFile');
+    var remark = document.getElementById('uploadRemark').value.trim();
+    if (!fileInput.files || fileInput.files.length === 0) {
+        showToast('请选择要上传的SQL文件', 'error');
+        return;
+    }
+    var file = fileInput.files[0];
+    if (!file.name.toLowerCase().endsWith('.sql')) {
+        showToast('只支持上传.sql格式的文件', 'error');
+        return;
+    }
+
+    uploadCancelled = false;
+    document.getElementById('btnUpload').disabled = true;
+    document.getElementById('uploadProgress').style.display = 'block';
+    document.getElementById('uploadProgressBar').style.width = '0%';
+    document.getElementById('uploadProgressText').textContent = '0%';
+    document.getElementById('uploadStatusText').textContent = '正在初始化...';
+    document.getElementById('uploadSpeedText').textContent = '';
+    document.getElementById('uploadChunkInfo').textContent = '';
+    document.getElementById('uploadSizeInfo').textContent = formatSize(file.size);
+
+    var totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+
+    try {
+        // 1. 初始化分片上传
+        var initRes = await fetch(API_BASE + '/upload/chunk/init', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                filename: file.name,
+                totalSize: file.size,
+                totalChunks: totalChunks,
+                remark: remark
+            })
+        });
+        var initData = await initRes.json();
+        if (initData.code !== 0) {
+            throw new Error(initData.msg || '初始化失败');
+        }
+        currentUploadToken = initData.data.uploadToken;
+
+        // 2. 逐片上传（串行，可靠；支持失败重试）
+        var uploadedBytes = 0;
+        var startTime = Date.now();
+        var maxRetries = 3;
+
+        for (var i = 0; i < totalChunks; i++) {
+            if (uploadCancelled) {
+                resetUploadUI();
+                return;
+            }
+
+            var start = i * CHUNK_SIZE;
+            var end = Math.min(start + CHUNK_SIZE, file.size);
+            var chunkBlob = file.slice(start, end);
+
+            var success = false;
+            for (var retry = 0; retry < maxRetries; retry++) {
+                if (uploadCancelled) { resetUploadUI(); return; }
+                try {
+                    var formData = new FormData();
+                    formData.append('uploadToken', currentUploadToken);
+                    formData.append('chunkIndex', i);
+                    formData.append('chunk', chunkBlob, 'chunk_' + i);
+
+                    var chunkRes = await fetch(API_BASE + '/upload/chunk/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    var chunkData = await chunkRes.json();
+                    if (chunkData.code !== 0) {
+                        throw new Error(chunkData.msg || '分片上传失败');
+                    }
+                    success = true;
+                    break;
+                } catch (chunkErr) {
+                    if (retry < maxRetries - 1) {
+                        document.getElementById('uploadStatusText').textContent =
+                            '分片 ' + (i+1) + ' 上传失败，正在重试 (' + (retry+2) + '/' + maxRetries + ')...';
+                        await new Promise(function(r) { setTimeout(r, 1000 * (retry + 1)); });
+                    } else {
+                        throw new Error('分片 ' + (i+1) + ' 上传失败，已重试 ' + maxRetries + ' 次: ' + chunkErr.message);
+                    }
+                }
+            }
+
+            uploadedBytes += (end - start);
+            var pct = Math.round((uploadedBytes / file.size) * 100);
+            var elapsed = (Date.now() - startTime) / 1000;
+            var speed = elapsed > 0 ? uploadedBytes / elapsed : 0;
+
+            document.getElementById('uploadProgressBar').style.width = pct + '%';
+            document.getElementById('uploadProgressText').textContent = pct + '%';
+            document.getElementById('uploadStatusText').textContent = '正在上传...';
+            document.getElementById('uploadSpeedText').textContent = formatSize(speed) + '/s';
+            document.getElementById('uploadChunkInfo').textContent = '分片 ' + (i+1) + '/' + totalChunks;
+        }
+
+        if (uploadCancelled) { resetUploadUI(); return; }
+
+        // 3. 合并分片
+        document.getElementById('uploadStatusText').textContent = '正在合并文件...';
+        document.getElementById('uploadProgressBar').style.width = '100%';
+        document.getElementById('uploadProgressText').textContent = '合并中';
+
+        var mergeRes = await fetch(API_BASE + '/upload/chunk/merge', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({uploadToken: currentUploadToken})
+        });
+        var mergeData = await mergeRes.json();
+        if (mergeData.code !== 0) {
+            throw new Error(mergeData.msg || '合并失败');
+        }
+
+        currentUploadToken = null;
+        document.getElementById('uploadProgressText').textContent = '100%';
+        document.getElementById('uploadStatusText').textContent = '上传完成';
+        showToast('上传成功');
+        setTimeout(function() {
+            hideModal('uploadModal');
+            loadUploadList();
+        }, 500);
+
+    } catch (e) {
+        if (!uploadCancelled) {
+            showToast('上传失败: ' + e.message, 'error');
+        }
+        resetUploadUI();
+        // 如果有 token 则通知后端清理
+        if (currentUploadToken) {
+            fetch(API_BASE + '/upload/chunk/cancel', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({uploadToken: currentUploadToken})
+            }).catch(function(){});
+            currentUploadToken = null;
+        }
+    }
+}
+
+function resetUploadUI() {
+    document.getElementById('btnUpload').disabled = false;
+    document.getElementById('uploadProgress').style.display = 'none';
+}
+
+async function loadUploadList() {
+    var tbody = document.getElementById('uploadList');
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:40px;">加载中...</td></tr>';
+    try {
+        var res = await fetch(API_BASE + '/upload/list?page=' + uploadPage + '&limit=' + uploadPageSize);
+        var data = await res.json();
+        if (data.code === 0 && data.page) {
+            renderUploadList(data.page.list || [], data.page.totalCount || 0, data.page.totalPage || 0);
+        } else {
+            tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:40px;">加载失败</td></tr>';
+        }
+    } catch(e) {
+        console.error('Load upload list failed:', e);
+        tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:40px;">加载失败</td></tr>';
+    }
+}
+
+function renderUploadList(list, total, totalPages) {
+    var tbody = document.getElementById('uploadList');
+    if (list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="10"><div class="empty-state"><div class="empty-state-icon">&#128228;</div><h3>暂无上传的备份文件</h3><p>点击"上传SQL文件"按钮上传外部备份</p></div></td></tr>';
+        document.getElementById('uploadPagination').innerHTML = '';
+        return;
+    }
+    tbody.innerHTML = list.map(function(item) {
+        return '<tr>' +
+            '<td>' + item.id + '</td>' +
+            '<td><code style="font-size:12px;">' + escapeHtml(item.originalFilename || item.filename || '-') + '</code></td>' +
+            '<td>' + (item.filesize ? formatSize(item.filesize) : '-') + '</td>' +
+            '<td>' + escapeHtml(item.database || '-') + '</td>' +
+            '<td>' + renderUploadStatus(item.status) + '</td>' +
+            '<td>' + (item.restoreDuration != null ? formatDuration(item.restoreDuration) : '-') + '</td>' +
+            '<td>' + (item.remark ? escapeHtml(item.remark) : '<span style="color:#aaa;">无</span>') + '</td>' +
+            '<td>' + formatTime(item.createTime) + '</td>' +
+            '<td>' + formatTime(item.restoreTime) + '</td>' +
+            '<td><div class="action-btns">' +
+                (item.status === 0 || item.status === 2 || item.status === 3
+                    ? '<button class="btn btn-warning btn-sm" onclick="restoreUpload(' + item.id + ', \'' + escapeAttr(item.originalFilename || item.filename || '') + '\')">恢复</button>'
+                    : '') +
+                (item.status === 1
+                    ? '<span class="badge badge-primary">恢复中</span>'
+                    : '') +
+                '<button class="btn btn-info btn-sm" onclick="downloadUpload(' + item.id + ')">下载</button>' +
+                (item.status !== 1 ? '<button class="btn btn-danger btn-sm" onclick="deleteUpload(' + item.id + ')">删除</button>' : '') +
+            '</div></td></tr>';
+    }).join('');
+
+    // 上传分页
+    var container = document.getElementById('uploadPagination');
+    if (totalPages <= 1) {
+        container.innerHTML = total > 0 ? '<span class="page-info">共 ' + total + ' 条记录</span>' : '';
+        return;
+    }
+    var html = '<span class="page-info">共 ' + total + ' 条</span>';
+    html += '<button ' + (uploadPage === 1 ? 'disabled' : '') + ' onclick="goToUploadPage(1)">首页</button>';
+    html += '<button ' + (uploadPage === 1 ? 'disabled' : '') + ' onclick="goToUploadPage(' + (uploadPage-1) + ')">上一页</button>';
+    var start = Math.max(1, uploadPage - 2);
+    var end = Math.min(totalPages, start + 4);
+    start = Math.max(1, end - 4);
+    for (var i = start; i <= end; i++) {
+        html += '<button class="' + (uploadPage === i ? 'active' : '') + '" onclick="goToUploadPage(' + i + ')">' + i + '</button>';
+    }
+    html += '<button ' + (uploadPage === totalPages ? 'disabled' : '') + ' onclick="goToUploadPage(' + (uploadPage+1) + ')">下一页</button>';
+    html += '<button ' + (uploadPage === totalPages ? 'disabled' : '') + ' onclick="goToUploadPage(' + totalPages + ')">末页</button>';
+    container.innerHTML = html;
+}
+
+function goToUploadPage(page) { uploadPage = page; loadUploadList(); }
+
+function downloadUpload(id) { window.open(API_BASE + '/upload/download/' + id, '_blank'); }
+
+async function deleteUpload(id) {
+    if (!confirm('确定要删除此上传备份吗？文件也将被删除，此操作不可恢复！')) return;
+    try {
+        var res = await fetch(API_BASE + '/upload/delete/' + id, {method:'POST'});
+        var data = await res.json();
+        if (data.code === 0) { showToast('删除成功'); loadUploadList(); }
+        else { showToast(data.msg || '删除失败', 'error'); }
+    } catch(e) { showToast('删除失败', 'error'); }
+}
+
+// ========================
+// 恢复功能
+// ========================
+let restorePollingTimer = null;
+let activeRestoreTaskKey = null;   // 当前正在执行的恢复任务 key
+let activeRestoreSourceType = null; // 当前恢复来源类型
+let restoreFinished = false;        // 当前任务是否已完成
+
+function restoreBackup(id, filename) {
+    // 先检查是否有正在运行的恢复任务
+    checkAndShowRunningRestore(function() {
+        if (!confirm('确定要从备份 "' + filename + '" 恢复数据库吗？\n\n⚠️ 警告：此操作将执行备份文件中的所有SQL语句，可能会覆盖现有数据。建议在恢复前先创建一个新的备份。\n\n是否继续？')) return;
+        doRestore(API_BASE + '/restore/' + id, 'backup');
+    });
+}
+
+function restoreUpload(id, filename) {
+    checkAndShowRunningRestore(function() {
+        if (!confirm('确定要从上传文件 "' + filename + '" 恢复数据库吗？\n\n⚠️ 警告：此操作将执行上传文件中的所有SQL语句，可能会覆盖现有数据。请确保文件来源可靠。\n\n是否继续？')) return;
+        doRestore(API_BASE + '/upload/restore/' + id, 'upload');
+    });
+}
+
+/**
+ * 检查是否有正在运行的恢复任务：
+ * 1. 如果有本页面记住的活跃任务（弹窗被关闭但任务仍在跑），直接重新打开弹窗并恢复轮询
+ * 2. 如果没有本地记录，再查后端是否有运行中的任务
+ * 3. 都没有则执行 callback 发起新恢复
+ */
+async function checkAndShowRunningRestore(callback) {
+    // 情况1: 本页面有记住的活跃任务key且未完成
+    if (activeRestoreTaskKey && !restoreFinished) {
+        reopenRestoreModal(activeRestoreTaskKey, activeRestoreSourceType);
+        return;
+    }
+    // 情况2: 查后端是否有运行中的恢复任务
+    try {
+        var res = await fetch(API_BASE + '/restore/running');
+        var data = await res.json();
+        if (data.code === 0 && data.tasks && data.tasks.length > 0) {
+            // 有运行中的任务，取第一个显示
+            var t = data.tasks[0];
+            var taskKey = t.taskKey || '';
+            var sourceType = taskKey.startsWith('upload_') ? 'upload' : 'backup';
+            activeRestoreTaskKey = taskKey;
+            activeRestoreSourceType = sourceType;
+            restoreFinished = false;
+            reopenRestoreModal(taskKey, sourceType);
+            return;
+        }
+    } catch(e) { /* 查询失败则继续允许新建 */ }
+    // 没有正在运行的任务，执行新恢复
+    callback();
+}
+
+/**
+ * 重新打开恢复弹窗，接续显示已有任务的进度
+ */
+function reopenRestoreModal(taskKey, sourceType) {
+    showModal('restoreModal');
+    document.getElementById('restoreStatusText').textContent = '正在恢复数据库...';
+    document.getElementById('restoreStatusText').style.color = '#333';
+    document.getElementById('restoreProgressBar').style.background = '';
+    document.getElementById('restoreWarnings').style.display = 'none';
+    document.getElementById('btnRestoreClose').textContent = '关闭';
+    startRestorePolling(taskKey, sourceType);
+}
+
+async function doRestore(url, sourceType) {
+    // 重置状态
+    restoreFinished = false;
+    activeRestoreTaskKey = null;
+    activeRestoreSourceType = sourceType;
+
+    // 显示恢复进度弹窗
+    showModal('restoreModal');
+    document.getElementById('restoreStatusText').textContent = '正在提交恢复任务...';
+    document.getElementById('restoreStatusText').style.color = '#333';
+    document.getElementById('restoreProgressBar').style.width = '0%';
+    document.getElementById('restoreProgressBar').style.background = '';
+    document.getElementById('restoreProgressText').textContent = '0%';
+    document.getElementById('restoreDetail').textContent = '';
+    document.getElementById('restoreWarnings').style.display = 'none';
+    document.getElementById('restoreWarnings').innerHTML = '';
+    document.getElementById('btnRestoreClose').textContent = '关闭';
+
+    try {
+        var res = await fetch(url, {method: 'POST'});
+        var data = await res.json();
+        if (data.code === 0 && data.restore) {
+            var taskKey = data.restore.taskKey;
+            activeRestoreTaskKey = taskKey;
+            document.getElementById('restoreStatusText').textContent = '正在恢复数据库...';
+            startRestorePolling(taskKey, sourceType);
+        } else {
+            document.getElementById('restoreStatusText').textContent = '恢复失败';
+            document.getElementById('restoreStatusText').style.color = '#dc3545';
+            document.getElementById('restoreDetail').textContent = data.msg || '提交恢复任务失败';
+        }
+    } catch(e) {
+        document.getElementById('restoreStatusText').textContent = '恢复失败';
+        document.getElementById('restoreStatusText').style.color = '#dc3545';
+        document.getElementById('restoreDetail').textContent = '网络请求失败: ' + e.message;
+    }
+}
+
+function startRestorePolling(taskKey, sourceType) {
+    if (restorePollingTimer) clearInterval(restorePollingTimer);
+    restorePollingTimer = setInterval(function() { pollRestoreProgress(taskKey, sourceType); }, 1000);
+    pollRestoreProgress(taskKey, sourceType);
+}
+
+async function pollRestoreProgress(taskKey, sourceType) {
+    try {
+        var res = await fetch(API_BASE + '/restore/progress/' + taskKey);
+        var data = await res.json();
+        if (data.code === 0 && data.progress) {
+            var p = data.progress;
+            var pct = p.progress || 0;
+            document.getElementById('restoreProgressBar').style.width = pct + '%';
+            document.getElementById('restoreProgressText').textContent = pct + '%';
+            document.getElementById('restoreDetail').textContent =
+                '已执行 ' + (p.executedStatements || 0) + ' 条SQL语句' +
+                (p.totalLines ? '，已处理 ' + (p.currentLine || 0) + '/' + p.totalLines + ' 行' : '');
+
+            if (p.warnings && p.warnings.length > 0) {
+                document.getElementById('restoreWarnings').style.display = 'block';
+                document.getElementById('restoreWarnings').innerHTML =
+                    '<strong>警告信息 (' + p.warnings.length + '):</strong><br>' +
+                    p.warnings.slice(-10).map(function(w) { return escapeHtml(w); }).join('<br>');
+            }
+
+            if (p.completed) {
+                onRestoreFinished('恢复成功！', '#28a745', '数据库恢复成功', sourceType);
+            } else if (p.error) {
+                onRestoreFailed(p.error, sourceType);
+            } else if (!p.running) {
+                onRestoreFinished('恢复完成！', '#28a745', '数据库恢复完成', sourceType);
+            }
+        }
+    } catch(e) { /* silent */ }
+}
+
+function onRestoreFinished(statusText, color, toastMsg, sourceType) {
+    clearInterval(restorePollingTimer);
+    restorePollingTimer = null;
+    restoreFinished = true;
+    document.getElementById('restoreStatusText').textContent = statusText;
+    document.getElementById('restoreStatusText').style.color = color;
+    document.getElementById('restoreProgressBar').style.width = '100%';
+    document.getElementById('restoreProgressBar').style.background = 'linear-gradient(90deg, #11998e, #38ef7d)';
+    document.getElementById('restoreProgressText').textContent = '100%';
+    showToast(toastMsg);
+    if (sourceType === 'upload') loadUploadList();
+}
+
+function onRestoreFailed(errorMsg, sourceType) {
+    clearInterval(restorePollingTimer);
+    restorePollingTimer = null;
+    restoreFinished = true;
+    document.getElementById('restoreStatusText').textContent = '恢复失败';
+    document.getElementById('restoreStatusText').style.color = '#dc3545';
+    document.getElementById('restoreDetail').textContent = '错误: ' + errorMsg;
+    if (sourceType === 'upload') loadUploadList();
+}
+
+function closeRestoreModal() {
+    // 只停止轮询定时器，不清除 activeRestoreTaskKey
+    // 这样关闭弹窗后再次点恢复能找回正在运行的任务
+    if (restorePollingTimer) {
+        clearInterval(restorePollingTimer);
+        restorePollingTimer = null;
+    }
+    hideModal('restoreModal');
+    // 如果任务已完成，清除记录
+    if (restoreFinished) {
+        activeRestoreTaskKey = null;
+        activeRestoreSourceType = null;
+    }
+    // 重置样式
+    document.getElementById('restoreStatusText').style.color = '#333';
+    document.getElementById('restoreProgressBar').style.background = '';
+}
+
+// ========================
 // 渲染辅助
 // ========================
 function renderStatus(status) {
@@ -984,6 +1530,16 @@ function renderModeLabel(mode) {
         case 'FULL': return '<span class="badge badge-info">全量</span>';
         case 'TABLES': return '<span class="badge badge-warning">指定表</span>';
         default: return '<span class="badge badge-secondary">' + escapeHtml(mode || '-') + '</span>';
+    }
+}
+
+function renderUploadStatus(status) {
+    switch(status) {
+        case 0: return '<span class="badge badge-success">已上传</span>';
+        case 1: return '<span class="badge badge-primary">恢复中</span>';
+        case 2: return '<span class="badge badge-info">已恢复</span>';
+        case 3: return '<span class="badge badge-danger">恢复失败</span>';
+        default: return '<span class="badge badge-secondary">未知</span>';
     }
 }
 
