@@ -34,7 +34,7 @@ public interface QueueConsumer<T> {
      *
      * @param message 队列消息
      */
-    default void onDeadLetter(QueueMessage<T> message) {
+    default void onDead(QueueMessage<T> message) {
         // 默认空实现
     }
 }

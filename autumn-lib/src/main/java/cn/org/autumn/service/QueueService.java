@@ -313,7 +313,6 @@ public class QueueService {
      * @param <T>  消息类型
      * @return 消息对象，如果超时返回null
      */
-    @SuppressWarnings("unchecked")
     public <T> QueueMessage<T> poll(String name) {
         return poll(name, 0, TimeUnit.MILLISECONDS);
     }
@@ -327,7 +326,6 @@ public class QueueService {
      * @param <T>     消息类型
      * @return 消息对象，如果超时返回null
      */
-    @SuppressWarnings("unchecked")
     public <T> QueueMessage<T> poll(String name, long timeout, TimeUnit unit) {
         QueueConfig config = getConfig(name, Object.class);
         try {
@@ -880,20 +878,16 @@ public class QueueService {
             // 发送到死信队列
             log.warn("Message sent to dead letter queue: queue={}, messageId={}", config.getName(), message.getId());
             dead(config, message);
-            consumer.onDeadLetter(message);
+            consumer.onDead(message);
         } else {
-            log.error("Message discarded after max retries: queue={}, messageId={}", config.getName(), message.getId());
+            log.error("Message discarded after max retries: queue={}, messageId={}, error={}", config.getName(), message.getId(), error.getMessage());
         }
     }
 
     private <T> void dead(QueueConfig config, QueueMessage<T> message) {
-        String deadLetterName = config.getDeadLetterQueueName();
-        QueueConfig deadLetterConfig = QueueConfig.builder()
-                .name(deadLetterName)
-                .type(config.getType())
-                .queueType(config.getQueueType())
-                .build();
-        send(deadLetterConfig, message);
+        String deadName = config.getDeadName();
+        QueueConfig deadConfig = QueueConfig.builder().name(deadName).type(config.getType()).queueType(config.getQueueType()).build();
+        send(deadConfig, message);
     }
 
     // ==================== 管理方法 ====================
@@ -903,19 +897,16 @@ public class QueueService {
      */
     public List<Map<String, Object>> getAllQueueInfo() {
         List<Map<String, Object>> result = new ArrayList<>();
-
         // 添加已注册的配置队列
         for (Map.Entry<String, QueueConfig> entry : configs.entrySet()) {
             result.add(buildQueueInfo(entry.getKey(), entry.getValue()));
         }
-
         // 添加内存队列（未注册配置的）
         for (String name : queues.keySet()) {
             if (!configs.containsKey(name)) {
                 result.add(buildQueueInfo(name, null));
             }
         }
-
         // 添加优先级队列（未注册配置的）
         for (String name : priorities.keySet()) {
             if (!configs.containsKey(name)) {
@@ -924,7 +915,6 @@ public class QueueService {
                 result.add(info);
             }
         }
-
         return result;
     }
 
@@ -947,13 +937,12 @@ public class QueueService {
         info.put("name", name);
         info.put("size", size(name));
         info.put("consumerRunning", isConsumerRunning(name));
-
         if (config != null) {
             info.put("queueType", config.getQueueType().name());
             info.put("capacity", config.getCapacity());
             info.put("maxRetries", config.getRetries());
             info.put("deadLetterEnabled", config.isDeadLetter());
-            info.put("deadLetterQueue", config.getDeadLetterQueueName());
+            info.put("deadLetterQueue", config.getDeadName());
             info.put("timeout", config.getTimeout());
             info.put("timeoutUnit", config.getUnit().name());
             info.put("messageType", config.getType() != null ? config.getType().getSimpleName() : "Object");
@@ -964,12 +953,10 @@ public class QueueService {
             info.put("deadLetterEnabled", false);
             info.put("messageType", "Object");
         }
-
         // 死信队列大小
         if (config != null && config.isDeadLetter()) {
-            info.put("deadLetterSize", size(config.getDeadLetterQueueName()));
+            info.put("deadLetterSize", size(config.getDeadName()));
         }
-
         return info;
     }
 
@@ -989,7 +976,6 @@ public class QueueService {
         Map<String, Object> result = new HashMap<>();
         List<Object> messages = new ArrayList<>();
         long total = 0;
-
         BlockingQueue<QueueMessage<?>> memoryQueue = queues.get(name);
         if (memoryQueue != null) {
             List<QueueMessage<?>> list = new ArrayList<>(memoryQueue);
@@ -1000,7 +986,6 @@ public class QueueService {
                 messages.addAll(list.subList(start, end));
             }
         }
-
         PriorityBlockingQueue<QueueMessage<?>> priorityQueue = priorities.get(name);
         if (priorityQueue != null) {
             List<QueueMessage<?>> list = new ArrayList<>(priorityQueue);
@@ -1012,7 +997,6 @@ public class QueueService {
                 messages.addAll(list.subList(start, end));
             }
         }
-
         // Redis队列预览
         if (isRedisEnabled() && messages.isEmpty()) {
             try {
@@ -1039,7 +1023,6 @@ public class QueueService {
                 log.warn("Failed to peek Redis messages: {}", e.getMessage());
             }
         }
-
         result.put("list", messages);
         result.put("total", total);
         return result;

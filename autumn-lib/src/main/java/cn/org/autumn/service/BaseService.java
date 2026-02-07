@@ -1,7 +1,6 @@
 package cn.org.autumn.service;
 
 import cn.org.autumn.menu.BaseMenu;
-import cn.org.autumn.model.Parameterized;
 import cn.org.autumn.table.annotation.Column;
 import cn.org.autumn.table.annotation.Table;
 import cn.org.autumn.table.utils.HumpConvert;
@@ -10,7 +9,7 @@ import cn.org.autumn.utils.Query;
 import com.baomidou.mybatisplus.mapper.BaseMapper;
 import com.baomidou.mybatisplus.mapper.EntityWrapper;
 import com.baomidou.mybatisplus.plugins.Page;
-import com.baomidou.mybatisplus.service.impl.ServiceImpl;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.WordUtils;
 
@@ -23,13 +22,10 @@ import java.util.*;
  * @param <M> Mapper
  * @param <T> Entity
  */
-public abstract class BaseService<M extends BaseMapper<T>, T> extends ServiceImpl<M, T> implements BaseMenu, Parameterized {
+@Slf4j
+public abstract class BaseService<M extends BaseMapper<T>, T> extends BaseCacheService<M, T> implements BaseMenu {
 
     private String prefix = null;
-
-    public Class<?> getModelClass() {
-        return type(1, Table.class);
-    }
 
     /**
      * 将查询条件过滤并转换为数据库中的字段条件进行查询

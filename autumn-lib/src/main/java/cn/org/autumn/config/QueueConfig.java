@@ -85,7 +85,7 @@ public class QueueConfig {
     /**
      * 死信队列名称
      */
-    private final String deadLetterQueue;
+    private final String deadQueue;
 
     /**
      * 是否启用自动启动消费者
@@ -166,9 +166,9 @@ public class QueueConfig {
     /**
      * 获取死信队列名称，如果未设置则使用默认名称
      */
-    public String getDeadLetterQueueName() {
-        if (deadLetterQueue != null && !deadLetterQueue.isEmpty()) {
-            return deadLetterQueue;
+    public String getDeadName() {
+        if (deadQueue != null && !deadQueue.isEmpty()) {
+            return deadQueue;
         }
         return name + ":dead";
     }
