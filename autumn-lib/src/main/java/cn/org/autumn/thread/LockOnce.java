@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit;
  *
  * <h3>核心策略</h3>
  * <ul>
- *   <li>使用 Redisson 分布式锁 {@code tryLock(0, leaseTime, MINUTES)}，非阻塞 + 自动过期</li>
+ *   <li>使用 Redisson 分布式锁 {@code tryLock(0, leaseTime, SECONDS)}，非阻塞 + 自动过期</li>
  *   <li>成功执行后<b>不主动释放锁</b>，让锁自然过期，防止同一时间窗口内其他节点再次执行</li>
  *   <li>执行失败后<b>主动释放锁</b>，允许其他节点接管重试（故障转移）</li>
  *   <li>Redis 不可用时默认跳过执行，避免多节点重复执行；子类可覆写 {@link #onRedisUnavailable()} 自定义行为</li>
@@ -25,16 +25,16 @@ import java.util.concurrent.TimeUnit;
  * 普通 {@link TagRunnable} 上实现相同的分布式锁效果。</p>
  *
  * <h3>时间窗口</h3>
- * <p>通过 {@link TagValue#time()} 配置锁的租约时间（单位：分钟，默认10分钟）。
+ * <p>通过 {@link TagValue#time()} 配置锁的租约时间（单位：秒，默认10秒）。
  * 在此时间窗口内，无论有多少个节点/多少次调度触发，任务最多执行一次。</p>
  *
  * <h3>用法示例</h3>
  * <pre>
  * asyncTaskExecutor.execute(new LockOnce("unique-task-id") {
  *     &#64;Override
- *     &#64;TagValue(method = "dailyCleanup", type = MyService.class, tag = "每日清理", time = 60, delay = 10)
+ *     &#64;TagValue(method = "dailyCleanup", type = MyService.class, tag = "每日清理", time = 3600, delay = 10)
  *     public void exe() {
- *         // 业务逻辑，保证60分钟内只执行一次，各节点错开10秒内随机启动
+ *         // 业务逻辑，保证3600秒（1小时）内只执行一次，各节点错开10秒内随机启动
  *     }
  * });
  * </pre>
@@ -57,11 +57,15 @@ public abstract class LockOnce extends TagRunnable {
         bindThread();
         try {
             // 1. 检查系统就绪状态
-            if (!can())
+            if (!can()) {
+                TagTaskExecutor.recordSkipped(this, "系统尚未就绪");
                 return;
+            }
             // 2. 错峰延迟 — 在获取锁之前延迟，减少多节点同时争抢 Redis 锁的压力
-            if (!applyStaggerDelay())
+            if (!applyStaggerDelay()) {
+                TagTaskExecutor.recordSkipped(this, "错峰延迟中断");
                 return;
+            }
             // 3. 获取 Redisson 客户端并执行
             TagValue value = getTagValue();
             RedissonClient client = DistributedLockHelper.getRedissonClient();
@@ -69,6 +73,7 @@ public abstract class LockOnce extends TagRunnable {
                 executeWithDistributedLock(client, value);
             } else if (client == null) {
                 onRedisUnavailable();
+                TagTaskExecutor.recordSkipped(this, "Redis不可用");
             } else {
                 // TagValue 为空，无法构建锁键，直接执行
                 executeDirectly();
@@ -92,31 +97,28 @@ public abstract class LockOnce extends TagRunnable {
      */
     private void executeWithDistributedLock(RedissonClient client, TagValue value) {
         String lockKey = DistributedLockHelper.buildLockKey(value, getClass());
-        long leaseMinutes = Math.max(1, value.time());
+        long leaseSeconds = Math.max(1, value.time());
         RLock lock = client.getLock(lockKey);
-        boolean acquired = false;
+        boolean acquired;
         try {
-            acquired = lock.tryLock(0, leaseMinutes, TimeUnit.MINUTES);
+            acquired = lock.tryLock(0, leaseSeconds, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             if (log.isDebugEnabled())
                 log.debug("获取分布式锁被中断: key={}, tag={}", lockKey, safeTag(value));
-            clearThread();
-            TagTaskExecutor.remove(this);
+            TagTaskExecutor.recordSkipped(this, "获取锁被中断");
             return;
         } catch (Exception e) {
             if (log.isDebugEnabled())
                 log.debug("获取分布式锁异常: key={}, error={}", lockKey, e.getMessage(), e);
-            clearThread();
-            TagTaskExecutor.remove(this);
+            TagTaskExecutor.recordSkipped(this, "获取锁异常:" + e.getMessage());
             return;
         }
         if (!acquired) {
             if (log.isDebugEnabled()) {
                 log.debug("分布式锁未获取（其他节点执行中）: key={}, tag={}", lockKey, safeTag(value));
             }
-            clearThread();
-            TagTaskExecutor.remove(this);
+            TagTaskExecutor.recordSkipped(this, "未能获取到锁");
             return;
         }
         // ---- 锁已获取，执行任务 ----
@@ -125,7 +127,7 @@ public abstract class LockOnce extends TagRunnable {
         String errorMsg = null;
         try {
             if (log.isDebugEnabled())
-                log.debug("分布式锁已获取，开始执行: key={}, tag={}, lease={}min", lockKey, safeTag(value), leaseMinutes);
+                log.debug("分布式锁已获取，开始执行: key={}, tag={}, lease={}s", lockKey, safeTag(value), leaseSeconds);
             exe();
             if (log.isDebugEnabled())
                 log.debug("任务执行成功: key={}, tag={}, 耗时={}ms", lockKey, safeTag(value), System.currentTimeMillis() - start);

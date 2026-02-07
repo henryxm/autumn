@@ -169,6 +169,8 @@ public class ThreadController {
     @ResponseBody
     public R updateConfig(@RequestParam(required = false) Integer corePoolSize,
                           @RequestParam(required = false) Integer maxPoolSize,
+                          @RequestParam(required = false) Integer keepAliveSeconds,
+                          @RequestParam(required = false) Boolean allowCoreThreadTimeOut,
                           @RequestParam(required = false) Long staggerSeconds,
                           @RequestParam(required = false) Integer maxHistorySize) {
         if (!checkPermission()) {
@@ -187,6 +189,15 @@ public class ThreadController {
                 }
                 tagTaskExecutor.updateMaxPoolSize(maxPoolSize);
             }
+            if (keepAliveSeconds != null) {
+                if (keepAliveSeconds < 1 || keepAliveSeconds > 3600) {
+                    return R.error("保活时间范围: 1 - 3600 秒");
+                }
+                tagTaskExecutor.updateKeepAliveSeconds(keepAliveSeconds);
+            }
+            if (allowCoreThreadTimeOut != null) {
+                tagTaskExecutor.updateAllowCoreThreadTimeOut(allowCoreThreadTimeOut);
+            }
             if (staggerSeconds != null) {
                 if (staggerSeconds < 0 || staggerSeconds > 3600) {
                     return R.error("全局错峰延迟范围: 0 - 3600 秒");
@@ -200,7 +211,7 @@ public class ThreadController {
                 TagTaskExecutor.setMaxHistorySize(maxHistorySize);
             }
             if (log.isDebugEnabled())
-                log.debug("线程池配置已更新 - corePoolSize:{}, maxPoolSize:{}, staggerSeconds:{}, maxHistorySize:{}", corePoolSize, maxPoolSize, staggerSeconds, maxHistorySize);
+                log.debug("线程池配置已更新 - corePoolSize:{}, maxPoolSize:{}, keepAlive:{}, coreTimeout:{}, stagger:{}, maxHistory:{}", corePoolSize, maxPoolSize, keepAliveSeconds, allowCoreThreadTimeOut, staggerSeconds, maxHistorySize);
             return R.ok("配置更新成功").put("pool", tagTaskExecutor.getPoolInfo());
         } catch (Exception e) {
             log.error("更新线程池配置失败:{}", e.getMessage());

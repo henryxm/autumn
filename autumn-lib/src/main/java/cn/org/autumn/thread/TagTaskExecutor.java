@@ -40,6 +40,7 @@ public class TagTaskExecutor extends ThreadPoolTaskExecutor {
     private static final AtomicLong totalFailed = new AtomicLong(0);
     private static final AtomicLong totalRejected = new AtomicLong(0);
     private static final AtomicLong totalInterrupted = new AtomicLong(0);
+    private static final AtomicLong totalSkipped = new AtomicLong(0);
     private static final AtomicLong totalExecutionTime = new AtomicLong(0);
 
     /**
@@ -130,6 +131,30 @@ public class TagTaskExecutor extends ThreadPoolTaskExecutor {
      */
     public static void recordRejected() {
         totalRejected.incrementAndGet();
+    }
+
+    /**
+     * 记录跳过的任务 — 任务已提交但未实际执行业务逻辑。
+     * <p>跳过原因包括：系统未就绪、错峰延迟被中断、Redis 不可用、未获取到分布式锁、获取锁异常等。</p>
+     * <p>调用此方法后 {@code totalSubmitted = totalCompleted + totalFailed + totalInterrupted + totalRejected + totalSkipped + runningCount}。</p>
+     *
+     * @param task   被跳过的任务
+     * @param reason 跳过原因描述
+     */
+    public static void recordSkipped(Tag task, String reason) {
+        if (task == null) return;
+        try {
+            totalSkipped.incrementAndGet();
+            TaskRecord record = TaskRecord.fromTag(task, 0, "SKIPPED", reason);
+            history.add(record);
+            int currentMax = maxHistorySize;
+            if (history.size() > currentMax + Math.max(currentMax / 4, 10)) {
+                trimHistoryIfNeeded(currentMax);
+            }
+        } catch (Exception e) {
+            if (log.isDebugEnabled())
+                log.debug("记录跳过任务状态失败: {}", e.getMessage());
+        }
     }
 
     public void execute(TagRunnable task) {
@@ -354,6 +379,7 @@ public class TagTaskExecutor extends ThreadPoolTaskExecutor {
         info.put("totalFailed", totalFailed.get());
         info.put("totalInterrupted", totalInterrupted.get());
         info.put("totalRejected", totalRejected.get());
+        info.put("totalSkipped", totalSkipped.get());
         info.put("runningCount", running.size());
         info.put("historyCount", history.size());
         info.put("startTime", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(startTime));
@@ -384,6 +410,14 @@ public class TagTaskExecutor extends ThreadPoolTaskExecutor {
         info.put("totalSweptCount", totalSweptCount.get());
         info.put("lastSweepRemovedCount", lastSweepRemovedCount);
         info.put("idsCount", ids.size());
+        // 队列和线程回收配置
+        info.put("allowCoreThreadTimeOut", executor.allowsCoreThreadTimeOut());
+        // 系统资源信息
+        Runtime rt = Runtime.getRuntime();
+        info.put("cpuCores", rt.availableProcessors());
+        info.put("heapMaxMB", rt.maxMemory() / (1024 * 1024));
+        info.put("heapUsedMB", (rt.totalMemory() - rt.freeMemory()) / (1024 * 1024));
+        info.put("heapTotalMB", rt.totalMemory() / (1024 * 1024));
         return info;
     }
 
@@ -459,12 +493,39 @@ public class TagTaskExecutor extends ThreadPoolTaskExecutor {
         log.info("最大线程数已更新为: {}", maxPoolSize);
     }
 
+    /**
+     * 动态调整非核心线程空闲存活时间。
+     * <p>运行时立即生效，影响后续空闲线程的回收判断。</p>
+     *
+     * @param seconds 存活时间（秒），最小 1
+     */
+    public void updateKeepAliveSeconds(int seconds) {
+        int old = (int) getThreadPoolExecutor().getKeepAliveTime(TimeUnit.SECONDS);
+        setKeepAliveSeconds(seconds);
+        getThreadPoolExecutor().setKeepAliveTime(seconds, TimeUnit.SECONDS);
+        log.info("保活时间已更新: {}s -> {}s", old, seconds);
+    }
+
+    /**
+     * 动态切换核心线程超时回收。
+     * <p>{@code true}: 核心线程空闲超过 keepAliveSeconds 后被回收（节省资源）。</p>
+     * <p>{@code false}: 核心线程永不回收（低延迟）。</p>
+     *
+     * @param allow 是否允许核心线程超时
+     */
+    public void updateAllowCoreThreadTimeOut(boolean allow) {
+        boolean old = getThreadPoolExecutor().allowsCoreThreadTimeOut();
+        getThreadPoolExecutor().allowCoreThreadTimeOut(allow);
+        log.info("核心线程超时回收已更新: {} -> {}", old, allow);
+    }
+
     public void resetStats() {
         totalSubmitted.set(0);
         totalCompleted.set(0);
         totalFailed.set(0);
         totalInterrupted.set(0);
         totalRejected.set(0);
+        totalSkipped.set(0);
         totalExecutionTime.set(0);
         log.info("线程池统计数据已重置");
     }

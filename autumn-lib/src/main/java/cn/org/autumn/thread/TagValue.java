@@ -26,9 +26,9 @@ import java.lang.annotation.*;
  * // 声明式分布式锁（无需继承 LockOnce）
  * asyncTaskExecutor.execute(new TagRunnable("task-id") {
  *     &#64;Override
- *     &#64;TagValue(lock = true, time = 60, tag = "每日清理", type = MyService.class, method = "dailyCleanup")
- *     public void exe() {
- *         // 自动获取分布式锁，60分钟内只执行一次
+     *     &#64;TagValue(lock = true, time = 3600, tag = "每日清理", type = MyService.class, method = "dailyCleanup")
+     *     public void exe() {
+     *         // 自动获取分布式锁，3600秒（1小时）内只执行一次
  *     }
  * });
  * </pre>
@@ -66,7 +66,7 @@ public @interface TagValue {
      *
      * <h4>执行策略</h4>
      * <ul>
-     *   <li>使用 {@code tryLock(0, leaseTime, MINUTES)} — 非阻塞获取 + 自动过期</li>
+     *   <li>使用 {@code tryLock(0, leaseTime, SECONDS)} — 非阻塞获取 + 自动过期</li>
      *   <li>执行<b>成功不释放锁</b>（防止时间窗口内重复执行）</li>
      *   <li>执行<b>失败主动释放锁</b>（允许其他节点故障转移重试）</li>
      *   <li>Redis 不可用时跳过执行</li>
@@ -83,8 +83,9 @@ public @interface TagValue {
     boolean lock() default false;
 
     /**
-     * 锁的租约时间，单位：分钟。仅在 {@link #lock()}{@code = true} 或 {@link LockOnce} 中生效。
+     * 锁的租约时间，单位：秒。仅在 {@link #lock()}{@code = true} 或 {@link LockOnce} 中生效。
      * <p>在此时间窗口内，无论有多少个节点或多少次调度触发，任务最多执行一次。</p>
+     * <p>默认 10 秒。常见配置：60（1分钟）、600（10分钟）、3600（1小时）。</p>
      */
     long time() default 10;
 

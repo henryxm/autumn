@@ -138,6 +138,7 @@
         .badge-running { background: #e3f2fd; color: #1565c0; }
         .badge-completed { background: #e8f5e9; color: #2e7d32; }
         .badge-failed { background: #fce4ec; color: #c62828; }
+        .badge-skipped { background: #eceff1; color: #546e7a; }
 
         /* Config Form */
         .config-form { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end; }
@@ -528,6 +529,14 @@
                     <div class="stat-label">拒绝次数</div>
                 </div>
             </div>
+            <div class="stat-card" :style="(pool.totalSkipped || 0) > 0 ? {borderLeft: '3px solid #78909c'} : {}">
+                <div class="stat-icon teal"><i class="fa fa-forward"></i></div>
+                <div class="stat-info">
+                    <div class="stat-value">{{pool.totalSkipped || 0}}</div>
+                    <div class="stat-label">跳过次数</div>
+                    <div class="text-muted" title="未获取锁/Redis不可用/系统未就绪等">含锁竞争跳过</div>
+                </div>
+            </div>
             <div class="stat-card" :style="(pool.timeoutCount || 0) > 0 ? {borderLeft: '3px solid #e65100'} : {}">
                 <div class="stat-icon orange"><i class="fa fa-exclamation-triangle"></i></div>
                 <div class="stat-info">
@@ -693,6 +702,7 @@
                             <option value="COMPLETED">已完成</option>
                             <option value="FAILED">失败</option>
                             <option value="INTERRUPTED">已中断</option>
+                            <option value="SKIPPED">已跳过</option>
                         </select>
                         <button class="btn-outline btn-sm" @click="loadHistory"><i class="fa fa-search"></i> 搜索</button>
                         <button class="btn-danger-outline btn-sm" @click="clearHistory"><i class="fa fa-trash-o"></i> 清除历史</button>
@@ -759,6 +769,7 @@
             <!-- Config Tab -->
             <div v-show="activeTab === 'config'">
                 <div class="panel-body">
+                    <!-- ====== 动态参数调整表单 ====== -->
                     <h4 style="margin-bottom:16px;color:#333;font-size:15px;">
                         <i class="fa fa-wrench" style="color:#1a73e8;margin-right:6px;"></i>动态调整线程池参数
                     </h4>
@@ -772,6 +783,21 @@
                             <input type="number" v-model.number="configForm.maxPoolSize" min="1" max="100000" placeholder="输入最大线程数">
                         </div>
                         <div class="config-group">
+                            <label>保活时间（当前: {{pool.keepAliveSeconds}}秒）</label>
+                            <input type="number" v-model.number="configForm.keepAliveSeconds" min="1" max="3600" placeholder="1~3600秒">
+                        </div>
+                        <div class="config-group">
+                            <label>核心线程超时回收</label>
+                            <div style="display:flex;align-items:center;height:34px;gap:8px;">
+                                <span style="font-size:12px;color:#888;">当前: <b :style="{color: pool.allowCoreThreadTimeOut ? '#2e7d32' : '#e65100'}">{{pool.allowCoreThreadTimeOut ? '开启' : '关闭'}}</b></span>
+                                <select v-model="configForm.allowCoreThreadTimeOut" style="border:1px solid #ddd;border-radius:6px;padding:5px 10px;font-size:13px;outline:none;width:100px;">
+                                    <option value="">不修改</option>
+                                    <option value="true">开启</option>
+                                    <option value="false">关闭</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="config-group">
                             <label>全局错峰延迟（当前: {{pool.globalStaggerSeconds || 0}}秒）</label>
                             <input type="number" v-model.number="configForm.staggerSeconds" min="0" max="3600" placeholder="0=不延迟">
                         </div>
@@ -779,6 +805,8 @@
                             <label>最大历史记录数（当前: {{pool.maxHistorySize || 500}}）</label>
                             <input type="number" v-model.number="configForm.maxHistorySize" min="10" max="100000" placeholder="10~100000">
                         </div>
+                    </div>
+                    <div style="margin-top:12px;display:flex;gap:8px;">
                         <button class="btn-primary-custom" @click="updateConfig">
                             <i class="fa fa-save"></i> 应用配置
                         </button>
@@ -786,29 +814,87 @@
                             <i class="fa fa-refresh"></i> 重置统计
                         </button>
                     </div>
-                    <div style="margin-top:12px;padding:12px;background:#e8eaf6;border-radius:6px;border-left:3px solid #283593;font-size:13px;color:#333;">
+                    <div style="margin-top:16px;padding:12px;background:#e8eaf6;border-radius:6px;border-left:3px solid #283593;font-size:13px;color:#333;">
                         <i class="fa fa-info-circle" style="color:#283593;margin-right:6px;"></i>
-                        <b>错峰延迟说明：</b>任务执行前随机延迟 [0, N) 秒，将整点瞬间的资源争抢分散到时间窗口内。
-                        单任务可通过 <code>@TagValue(delay=30)</code> 独立配置，未配置的任务使用全局值。
+                        <b>参数说明：</b>
+                        <b>核心线程数</b>=常驻工作线程；<b>最大线程数</b>=队列满后弹性扩容上限；
+                        <b>保活时间</b>=非核心线程空闲后回收等待秒数；<b>核心线程超时</b>=开启后核心线程空闲也会被回收。
+                        <b>错峰延迟</b>=任务执行前随机延迟 [0, N) 秒，单任务可通过 <code>@TagValue(delay=30)</code> 独立配置。
                     </div>
+
+                    <!-- ====== 系统资源信息 ====== -->
+                    <div style="margin-top:20px;padding:16px;background:#e8f5e9;border-radius:6px;border-left:3px solid #2e7d32;">
+                        <h5 style="margin-bottom:8px;font-size:14px;color:#333;"><i class="fa fa-microchip" style="color:#2e7d32;margin-right:6px;"></i>系统资源</h5>
+                        <table style="font-size:13px;color:#555;">
+                            <tr><td style="padding:4px 20px 4px 0;font-weight:500;">CPU 核数</td><td>{{pool.cpuCores}} 核</td></tr>
+                            <tr>
+                                <td style="padding:4px 20px 4px 0;font-weight:500;">JVM 堆内存</td>
+                                <td>
+                                    已用 {{pool.heapUsedMB || 0}} MB / 已分配 {{pool.heapTotalMB || 0}} MB / 最大 {{pool.heapMaxMB || 0}} MB
+                                    <div class="pool-progress" style="width:200px;margin-top:4px;">
+                                        <div class="pool-progress-bar" :class="heapUsageClass" :style="{width: heapUsagePercent + '%'}"></div>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding:4px 20px 4px 0;font-weight:500;">建议线程数</td>
+                                <td>
+                                    核心: {{pool.cpuCores * 2}} (CPU×2) &nbsp;|&nbsp;
+                                    上限: {{Math.min(Math.floor((pool.heapMaxMB || 512) * 0.15), 500)}} (堆×15%/1MB)
+                                    <span style="color:#888;margin-left:8px;font-size:12px;">— 基于当前系统资源自动计算参考值</span>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <!-- ====== 线程池配置详情 ====== -->
                     <div style="margin-top:20px;padding:16px;background:#f8f9fa;border-radius:6px;border-left:3px solid #1a73e8;">
-                        <h5 style="margin-bottom:8px;font-size:14px;color:#333;">当前线程池配置详情</h5>
+                        <h5 style="margin-bottom:8px;font-size:14px;color:#333;"><i class="fa fa-cog" style="color:#1a73e8;margin-right:6px;"></i>线程池配置详情</h5>
                         <table style="font-size:13px;color:#555;">
                             <tr><td style="padding:4px 20px 4px 0;font-weight:500;">核心线程数</td><td>{{pool.corePoolSize}}</td></tr>
                             <tr><td style="padding:4px 20px 4px 0;font-weight:500;">最大线程数</td><td>{{pool.maxPoolSize}}</td></tr>
                             <tr><td style="padding:4px 20px 4px 0;font-weight:500;">当前池大小</td><td>{{pool.poolSize}}</td></tr>
                             <tr><td style="padding:4px 20px 4px 0;font-weight:500;">活跃线程数</td><td>{{pool.activeCount}}</td></tr>
                             <tr><td style="padding:4px 20px 4px 0;font-weight:500;">最大记录池大小</td><td>{{pool.largestPoolSize}}</td></tr>
-                            <tr><td style="padding:4px 20px 4px 0;font-weight:500;">队列大小</td><td>{{pool.queueSize}}</td></tr>
-                            <tr><td style="padding:4px 20px 4px 0;font-weight:500;">累计任务数（JVM）</td><td>{{pool.taskCount}}</td></tr>
-                            <tr><td style="padding:4px 20px 4px 0;font-weight:500;">已完成任务数（JVM）</td><td>{{pool.completedTaskCount}}</td></tr>
-                            <tr><td style="padding:4px 20px 4px 0;font-weight:500;">保活时间</td><td>{{pool.keepAliveSeconds}}秒</td></tr>
+                            <tr><td style="padding:4px 20px 4px 0;font-weight:500;">队列使用 / 容量</td><td>{{pool.queueSize}} / {{pool.queueCapacity}}</td></tr>
+                            <tr><td style="padding:4px 20px 4px 0;font-weight:500;">保活时间</td><td>{{pool.keepAliveSeconds}} 秒</td></tr>
+                            <tr>
+                                <td style="padding:4px 20px 4px 0;font-weight:500;">核心线程超时回收</td>
+                                <td>
+                                    <span v-if="pool.allowCoreThreadTimeOut" style="color:#2e7d32;font-weight:500;">开启</span>
+                                    <span v-else style="color:#e65100;font-weight:500;">关闭</span>
+                                    <span style="color:#999;margin-left:8px;font-size:12px;">（开启 = 空闲核心线程也会被回收，节省资源）</span>
+                                </td>
+                            </tr>
                             <tr><td style="padding:4px 20px 4px 0;font-weight:500;">全局错峰延迟</td><td>{{pool.globalStaggerSeconds || 0}}秒<span v-if="pool.globalStaggerSeconds > 0" style="color:#283593;margin-left:8px;">（已启用）</span><span v-else style="color:#999;margin-left:8px;">（未启用）</span></td></tr>
                             <tr><td style="padding:4px 20px 4px 0;font-weight:500;">延迟等待中</td><td>{{pool.delayingCount || 0}} 个任务</td></tr>
+                        </table>
+                    </div>
+
+                    <!-- ====== 统计与监控信息 ====== -->
+                    <div style="margin-top:20px;padding:16px;background:#f8f9fa;border-radius:6px;border-left:3px solid #7b1fa2;">
+                        <h5 style="margin-bottom:8px;font-size:14px;color:#333;"><i class="fa fa-bar-chart" style="color:#7b1fa2;margin-right:6px;"></i>统计与监控</h5>
+                        <table style="font-size:13px;color:#555;">
+                            <tr><td style="padding:4px 20px 4px 0;font-weight:500;">累计任务数（JVM）</td><td>{{pool.taskCount}}</td></tr>
+                            <tr><td style="padding:4px 20px 4px 0;font-weight:500;">已完成任务数（JVM）</td><td>{{pool.completedTaskCount}}</td></tr>
                             <tr><td style="padding:4px 20px 4px 0;font-weight:500;">最大历史记录数</td><td>{{pool.maxHistorySize || 500}}</td></tr>
                             <tr><td style="padding:4px 20px 4px 0;font-weight:500;">当前历史记录数</td><td>{{pool.historyCount || 0}}</td></tr>
                             <tr><td style="padding:4px 20px 4px 0;font-weight:500;">ID 缓存数</td><td>{{pool.idsCount || 0}}</td></tr>
                             <tr><td style="padding:4px 20px 4px 0;font-weight:500;">累计清理死条目</td><td>{{pool.totalSweptCount || 0}} 个<span v-if="pool.lastSweepRemovedCount > 0" style="color:#e65100;margin-left:8px;">（上轮清理: {{pool.lastSweepRemovedCount}}）</span></td></tr>
+                            <tr><td style="padding:4px 20px 4px 0;font-weight:500;">累计跳过</td><td>{{pool.totalSkipped || 0}} 个<span style="color:#78909c;margin-left:8px;">（未获取锁/Redis不可用/系统未就绪等）</span></td></tr>
+                            <tr><td style="padding:4px 20px 4px 0;font-weight:500;">任务核算</td>
+                                <td>
+                                    <span>提交: {{pool.totalSubmitted || 0}}</span> =
+                                    <span style="color:#2e7d32;">完成: {{pool.totalCompleted || 0}}</span> +
+                                    <span style="color:#c62828;">失败: {{pool.totalFailed || 0}}</span> +
+                                    <span style="color:#e65100;">中断: {{pool.totalInterrupted || 0}}</span> +
+                                    <span style="color:#7b1fa2;">拒绝: {{pool.totalRejected || 0}}</span> +
+                                    <span style="color:#78909c;">跳过: {{pool.totalSkipped || 0}}</span> +
+                                    <span style="color:#1a73e8;">运行中: {{pool.runningCount || 0}}</span>
+                                    <span v-if="(pool.totalSubmitted || 0) === (pool.totalCompleted || 0) + (pool.totalFailed || 0) + (pool.totalInterrupted || 0) + (pool.totalRejected || 0) + (pool.totalSkipped || 0) + (pool.runningCount || 0)" style="color:#2e7d32;margin-left:8px;font-weight:500;"><i class="fa fa-check-circle"></i> 平衡</span>
+                                    <span v-else style="color:#c62828;margin-left:8px;font-weight:500;"><i class="fa fa-exclamation-circle"></i> 不平衡</span>
+                                </td>
+                            </tr>
                         </table>
                     </div>
                 </div>
@@ -849,6 +935,8 @@ var vm = new Vue({
         configForm: {
             corePoolSize: null,
             maxPoolSize: null,
+            keepAliveSeconds: null,
+            allowCoreThreadTimeOut: '',
             staggerSeconds: null,
             maxHistorySize: null
         },
@@ -873,6 +961,16 @@ var vm = new Vue({
             var pct = this.poolUsagePercent;
             if (pct < 50) return 'progress-safe';
             if (pct < 80) return 'progress-warn';
+            return 'progress-danger';
+        },
+        heapUsagePercent: function() {
+            if (!this.pool.heapMaxMB || this.pool.heapMaxMB === 0) return 0;
+            return Math.min(100, Math.round((this.pool.heapUsedMB || 0) / this.pool.heapMaxMB * 100));
+        },
+        heapUsageClass: function() {
+            var pct = this.heapUsagePercent;
+            if (pct < 60) return 'progress-safe';
+            if (pct < 85) return 'progress-warn';
             return 'progress-danger';
         }
     },
@@ -954,14 +1052,16 @@ var vm = new Vue({
         updateConfig: function() {
             var self = this;
             var data = {};
-            if (self.configForm.corePoolSize) data.corePoolSize = self.configForm.corePoolSize;
-            if (self.configForm.maxPoolSize) data.maxPoolSize = self.configForm.maxPoolSize;
+            var hasConfig = false;
+            if (self.configForm.corePoolSize) { data.corePoolSize = self.configForm.corePoolSize; hasConfig = true; }
+            if (self.configForm.maxPoolSize) { data.maxPoolSize = self.configForm.maxPoolSize; hasConfig = true; }
+            if (self.configForm.keepAliveSeconds) { data.keepAliveSeconds = self.configForm.keepAliveSeconds; hasConfig = true; }
+            if (self.configForm.allowCoreThreadTimeOut !== '') { data.allowCoreThreadTimeOut = self.configForm.allowCoreThreadTimeOut; hasConfig = true; }
             if (self.configForm.staggerSeconds !== null && self.configForm.staggerSeconds !== '') {
-                data.staggerSeconds = self.configForm.staggerSeconds;
+                data.staggerSeconds = self.configForm.staggerSeconds; hasConfig = true;
             }
-            if (self.configForm.maxHistorySize) data.maxHistorySize = self.configForm.maxHistorySize;
+            if (self.configForm.maxHistorySize) { data.maxHistorySize = self.configForm.maxHistorySize; hasConfig = true; }
 
-            var hasConfig = data.corePoolSize || data.maxPoolSize || data.staggerSeconds !== undefined || data.maxHistorySize;
             if (!hasConfig) {
                 alert('请至少填写一项配置');
                 return;
@@ -982,6 +1082,8 @@ var vm = new Vue({
                         self.pool = res.pool || self.pool;
                         self.configForm.corePoolSize = null;
                         self.configForm.maxPoolSize = null;
+                        self.configForm.keepAliveSeconds = null;
+                        self.configForm.allowCoreThreadTimeOut = '';
                         self.configForm.staggerSeconds = null;
                         self.configForm.maxHistorySize = null;
                         alert('配置更新成功');
@@ -1088,7 +1190,7 @@ var vm = new Vue({
                 grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
                 xAxis: {
                     type: 'category',
-                    data: ['提交', '完成', '失败', '中断', '拒绝', '运行中'],
+                    data: ['提交', '完成', '失败', '中断', '拒绝', '跳过', '运行中'],
                     axisLabel: { fontSize: 12, color: '#666' },
                     axisLine: { lineStyle: { color: '#ddd' } }
                 },
@@ -1103,7 +1205,7 @@ var vm = new Vue({
                     itemStyle: {
                         borderRadius: [4, 4, 0, 0],
                         color: function(params) {
-                            var colors = ['#1a73e8', '#34a853', '#ea4335', '#e65100', '#7b1fa2', '#f9a825'];
+                            var colors = ['#1a73e8', '#34a853', '#ea4335', '#e65100', '#7b1fa2', '#78909c', '#f9a825'];
                             return colors[params.dataIndex];
                         }
                     },
@@ -1113,6 +1215,7 @@ var vm = new Vue({
                         pool.totalFailed || 0,
                         pool.totalInterrupted || 0,
                         pool.totalRejected || 0,
+                        pool.totalSkipped || 0,
                         pool.runningCount || 0
                     ]
                 }]
@@ -1203,10 +1306,11 @@ var vm = new Vue({
         getHistoryStatusClass: function(status) {
             if (status === 'COMPLETED') return 'badge-completed';
             if (status === 'INTERRUPTED') return 'badge-interrupted';
+            if (status === 'SKIPPED') return 'badge-skipped';
             return 'badge-failed';
         },
         translateStatus: function(status) {
-            var map = { 'COMPLETED': '成功', 'FAILED': '失败', 'INTERRUPTED': '已中断' };
+            var map = { 'COMPLETED': '成功', 'FAILED': '失败', 'INTERRUPTED': '已中断', 'SKIPPED': '已跳过' };
             return map[status] || status;
         }
     }

@@ -120,11 +120,15 @@ public abstract class TagRunnable implements Runnable, Tag {
         bindThread();
         try {
             // 1. 检查系统就绪状态
-            if (!can())
+            if (!can()) {
+                TagTaskExecutor.recordSkipped(this, "系统未就绪");
                 return;
+            }
             // 2. 错峰延迟
-            if (!applyStaggerDelay())
+            if (!applyStaggerDelay()) {
+                TagTaskExecutor.recordSkipped(this, "错峰延迟被中断");
                 return;
+            }
             // 3. 分支：需要分布式锁 vs 直接执行
             if (this.lock) {
                 runWithDistributedLock();
@@ -207,37 +211,33 @@ public abstract class TagRunnable implements Runnable, Tag {
         if (client == null) {
             if (log.isDebugEnabled())
                 log.warn("RedissonClient 不可用，跳过需要分布式锁的任务: tag={}, method={}", getTag(), getMethod());
-            clearThread();
-            TagTaskExecutor.remove(this);
+            TagTaskExecutor.recordSkipped(this, "Redis不可用");
             return;
         }
         TagValue value = getTagValue();
         String lockKey = DistributedLockHelper.buildLockKey(value, getClass());
-        long leaseMinutes = (value != null) ? Math.max(1, value.time()) : 10;
+        long leaseSeconds = (value != null) ? Math.max(1, value.time()) : 10;
         RLock rlock = client.getLock(lockKey);
         boolean acquired;
         try {
-            acquired = rlock.tryLock(0, leaseMinutes, TimeUnit.MINUTES);
+            acquired = rlock.tryLock(0, leaseSeconds, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             if (log.isDebugEnabled())
                 log.warn("获取分布式锁被中断: key={}, tag={}", lockKey, getTag());
-            clearThread();
-            TagTaskExecutor.remove(this);
+            TagTaskExecutor.recordSkipped(this, "获取锁被中断");
             return;
         } catch (Exception e) {
             if (log.isDebugEnabled())
                 log.error("获取分布式锁异常: key={}, error={}", lockKey, e.getMessage(), e);
-            clearThread();
-            TagTaskExecutor.remove(this);
+            TagTaskExecutor.recordSkipped(this, "获取锁异常: " + e.getMessage());
             return;
         }
         if (!acquired) {
             if (log.isDebugEnabled()) {
                 log.debug("分布式锁未获取（其他节点执行中）: key={}, tag={}", lockKey, getTag());
             }
-            clearThread();
-            TagTaskExecutor.remove(this);
+            TagTaskExecutor.recordSkipped(this, "未获取到锁(其他节点执行中)");
             return;
         }
         // ---- 锁已获取，执行任务 ----
@@ -246,7 +246,7 @@ public abstract class TagRunnable implements Runnable, Tag {
         String errorMsg = null;
         try {
             if (log.isDebugEnabled())
-                log.info("分布式锁已获取，开始执行: key={}, tag={}, lease={}min", lockKey, getTag(), leaseMinutes);
+                log.info("分布式锁已获取，开始执行: key={}, tag={}, lease={}s", lockKey, getTag(), leaseSeconds);
             exe();
             if (log.isDebugEnabled())
                 log.info("任务执行成功: key={}, tag={}, 耗时={}ms", lockKey, getTag(), System.currentTimeMillis() - start);
