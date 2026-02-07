@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据库备份管理</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .stats-bar {
+            background: #f8f9fa;
+            padding: 20px 30px;
+            border-bottom: 1px solid #e9ecef;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .toolbar h2 {
+            font-size: 20px;
+            color: #333;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a5a 100%);
+            color: white;
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
+        }
+
+        .btn-info {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+        }
+
+        .btn-info:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+        }
+
+        .btn-success:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(17, 153, 142, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-sm {
+            padding: 6px 14px;
+            font-size: 12px;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #333;
+            position: sticky;
+            top: 0;
+            white-space: nowrap;
+        }
+
+        th.check-col {
+            width: 40px;
+            text-align: center;
+        }
+
+        td.check-col {
+            text-align: center;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        .badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .badge-success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .badge-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .badge-danger {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .badge-info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .remark-text {
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            cursor: pointer;
+            color: #333;
+        }
+
+        .remark-text:hover {
+            color: #667eea;
+            text-decoration: underline;
+        }
+
+        .action-btns {
+            display: flex;
+            gap: 6px;
+            white-space: nowrap;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: modalIn 0.3s ease;
+        }
+
+        @keyframes modalIn {
+            from {
+                transform: scale(0.9);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+            line-height: 1;
+        }
+
+        .modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            max-height: calc(80vh - 140px);
+        }
+
+        .modal-footer {
+            padding: 15px 20px;
+            border-top: 1px solid #e9ecef;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 10px 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        textarea.form-control {
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 5px;
+            margin-top: 20px;
+        }
+
+        .pagination button {
+            padding: 8px 12px;
+            border: 1px solid #e9ecef;
+            background: white;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        .pagination button.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .pagination .page-info {
+            font-size: 13px;
+            color: #666;
+            margin: 0 10px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            z-index: 2000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+
+        .loading-overlay.show {
+            display: flex;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #e9ecef;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .loading-text {
+            margin-top: 15px;
+            font-size: 16px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            z-index: 3000;
+            animation: slideIn 0.3s ease;
+            max-width: 400px;
+        }
+
+        .toast.success {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        }
+
+        .toast.error {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a5a 100%);
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .detail-item {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 6px;
+        }
+
+        .detail-item.full {
+            grid-column: 1 / -1;
+        }
+
+        .detail-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 4px;
+        }
+
+        .detail-value {
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1>数据库备份管理</h1>
+        <p>Database Backup Management - 数据安全保障</p>
+    </div>
+
+    <div class="stats-bar" id="statsBar">
+        <div class="stat-item">
+            <div class="stat-value" id="statDatabase">-</div>
+            <div class="stat-label">数据库</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value" id="statTotal">0</div>
+            <div class="stat-label">备份总数</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value" id="statSuccess">0</div>
+            <div class="stat-label">成功</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value" id="statFailed">0</div>
+            <div class="stat-label">失败</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value" id="statTotalSize">0</div>
+            <div class="stat-label">总占用空间</div>
+        </div>
+    </div>
+
+    <div class="content">
+        <div class="toolbar">
+            <h2>备份记录</h2>
+            <div class="btn-group">
+                <button class="btn btn-primary" id="btnBackup" onclick="showBackupModal()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="7 10 12 15 17 10"/>
+                        <line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                    立即备份
+                </button>
+                <button class="btn btn-info" onclick="loadList()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="23 4 23 10 17 10"/>
+                        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                    </svg>
+                    刷新
+                </button>
+                <button class="btn btn-danger" id="btnBatchDelete" onclick="batchDelete()" disabled>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3 6 5 6 21 6"/>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                    </svg>
+                    批量删除
+                </button>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                <tr>
+                    <th class="check-col"><input type="checkbox" id="checkAll" onchange="toggleCheckAll()"></th>
+                    <th>ID</th>
+                    <th>文件名</th>
+                    <th>文件大小</th>
+                    <th>表数量</th>
+                    <th>记录数</th>
+                    <th>耗时</th>
+                    <th>状态</th>
+                    <th>备注</th>
+                    <th>创建时间</th>
+                    <th>操作</th>
+                </tr>
+                </thead>
+                <tbody id="backupList">
+                <tr>
+                    <td colspan="11" style="text-align:center;padding:60px;">
+                        <div class="empty-state-icon">🗄️</div>
+                        <p>加载中...</p>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="pagination" id="pagination"></div>
+    </div>
+</div>
+
+<!-- 备份弹窗 -->
+<div class="modal" id="backupModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>执行数据库备份</h3>
+            <button class="modal-close" onclick="hideModal('backupModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>备注说明（可选）</label>
+                <textarea class="form-control" id="backupRemark" placeholder="请输入备注说明，如：上线前备份、日常备份等"></textarea>
+            </div>
+            <div style="background:#fff3cd;padding:12px;border-radius:8px;font-size:13px;color:#856404;">
+                <strong>提示：</strong>备份操作将导出当前数据库的全部表结构和数据，可能需要较长时间，请耐心等待。
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="hideModal('backupModal')">取消</button>
+            <button class="btn btn-primary" id="btnConfirmBackup" onclick="executeBackup()">开始备份</button>
+        </div>
+    </div>
+</div>
+
+<!-- 备注编辑弹窗 -->
+<div class="modal" id="remarkModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>编辑备注</h3>
+            <button class="modal-close" onclick="hideModal('remarkModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="remarkId">
+            <div class="form-group">
+                <label>备注说明</label>
+                <textarea class="form-control" id="remarkText" placeholder="请输入备注说明"></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="hideModal('remarkModal')">取消</button>
+            <button class="btn btn-primary" onclick="saveRemark()">保存</button>
+        </div>
+    </div>
+</div>
+
+<!-- 详情弹窗 -->
+<div class="modal" id="detailModal">
+    <div class="modal-content" style="max-width:600px;">
+        <div class="modal-header">
+            <h3>备份详情</h3>
+            <button class="modal-close" onclick="hideModal('detailModal')">&times;</button>
+        </div>
+        <div class="modal-body" id="detailBody"></div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="hideModal('detailModal')">关闭</button>
+        </div>
+    </div>
+</div>
+
+<!-- 加载遮罩 -->
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+    <div class="loading-text" id="loadingText">正在备份数据库，请稍候...</div>
+</div>
+
+<script>
+    //<#noparse>
+    const API_BASE = '/db/backup';
+    let currentPage = 1;
+    let pageSize = 10;
+    let selectedIds = new Set();
+
+    // 初始化
+    document.addEventListener('DOMContentLoaded', function () {
+        loadStats();
+        loadList();
+    });
+
+    // 加载统计信息
+    async function loadStats() {
+        try {
+            const res = await fetch(`${API_BASE}/stats`);
+            const data = await res.json();
+            if (data.code === 0) {
+                const s = data.stats;
+                document.getElementById('statDatabase').textContent = s.database || '-';
+                document.getElementById('statTotal').textContent = s.total || 0;
+                document.getElementById('statSuccess').textContent = s.success || 0;
+                document.getElementById('statFailed').textContent = s.failed || 0;
+                document.getElementById('statTotalSize').textContent = formatSize(s.totalSize || 0);
+            }
+        } catch (e) {
+            console.error('Load stats failed:', e);
+        }
+    }
+
+    // 加载备份列表
+    async function loadList() {
+        const tbody = document.getElementById('backupList');
+        tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:40px;">加载中...</td></tr>';
+
+        try {
+            const res = await fetch(`${API_BASE}/list?page=${currentPage}&limit=${pageSize}`);
+            const data = await res.json();
+            if (data.code === 0 && data.page) {
+                renderList(data.page.list || [], data.page.totalCount || 0, data.page.totalPage || 0);
+            } else {
+                tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:40px;">加载失败</td></tr>';
+            }
+        } catch (e) {
+            console.error('Load list failed:', e);
+            tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:40px;">加载失败</td></tr>';
+        }
+    }
+
+    // 渲染列表
+    function renderList(list, total, totalPages) {
+        const tbody = document.getElementById('backupList');
+        selectedIds.clear();
+        updateBatchButton();
+        document.getElementById('checkAll').checked = false;
+
+        if (list.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="11">
+                <div class="empty-state">
+                    <div class="empty-state-icon">🗄️</div>
+                    <h3>暂无备份记录</h3>
+                    <p>点击"立即备份"按钮创建第一个数据库备份</p>
+                </div>
+            </td></tr>`;
+            document.getElementById('pagination').innerHTML = '';
+            return;
+        }
+
+        tbody.innerHTML = list.map(item => `
+            <tr>
+                <td class="check-col">
+                    <input type="checkbox" value="${item.id}" onchange="toggleCheck(${item.id})"
+                        ${selectedIds.has(item.id) ? 'checked' : ''}>
+                </td>
+                <td>${item.id}</td>
+                <td><code style="font-size:12px;">${escapeHtml(item.filename || '-')}</code></td>
+                <td>${item.filesize ? formatSize(item.filesize) : '-'}</td>
+                <td>${item.tables != null ? item.tables : '-'}</td>
+                <td>${item.records != null ? formatNumber(item.records) : '-'}</td>
+                <td>${item.duration != null ? formatDuration(item.duration) : '-'}</td>
+                <td>${renderStatus(item.status)}</td>
+                <td>
+                    <span class="remark-text" onclick="editRemark(${item.id}, '${escapeAttr(item.remark || '')}')"
+                          title="${escapeAttr(item.remark || '点击添加备注')}">
+                        ${item.remark ? escapeHtml(item.remark) : '<span style="color:#aaa;">点击添加备注</span>'}
+                    </span>
+                </td>
+                <td>${formatTime(item.createTime)}</td>
+                <td>
+                    <div class="action-btns">
+                        <button class="btn btn-info btn-sm" onclick="showDetail(${item.id})">详情</button>
+                        ${item.status === 1 ? `<button class="btn btn-success btn-sm" onclick="downloadBackup(${item.id})">下载</button>` : ''}
+                        <button class="btn btn-danger btn-sm" onclick="deleteBackup(${item.id})">删除</button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+
+        renderPagination(total, totalPages);
+    }
+
+    // 渲染分页
+    function renderPagination(total, totalPages) {
+        const container = document.getElementById('pagination');
+        if (totalPages <= 1) {
+            container.innerHTML = total > 0 ? `<span class="page-info">共 ${total} 条记录</span>` : '';
+            return;
+        }
+
+        let html = `<span class="page-info">共 ${total} 条</span>`;
+        html += `<button ${currentPage === 1 ? 'disabled' : ''} onclick="goToPage(1)">首页</button>`;
+        html += `<button ${currentPage === 1 ? 'disabled' : ''} onclick="goToPage(${currentPage - 1})">上一页</button>`;
+
+        let start = Math.max(1, currentPage - 2);
+        let end = Math.min(totalPages, start + 4);
+        start = Math.max(1, end - 4);
+
+        for (let i = start; i <= end; i++) {
+            html += `<button class="${currentPage === i ? 'active' : ''}" onclick="goToPage(${i})">${i}</button>`;
+        }
+
+        html += `<button ${currentPage === totalPages ? 'disabled' : ''} onclick="goToPage(${currentPage + 1})">下一页</button>`;
+        html += `<button ${currentPage === totalPages ? 'disabled' : ''} onclick="goToPage(${totalPages})">末页</button>`;
+
+        container.innerHTML = html;
+    }
+
+    function goToPage(page) {
+        currentPage = page;
+        loadList();
+    }
+
+    // 显示备份弹窗
+    function showBackupModal() {
+        document.getElementById('backupRemark').value = '';
+        showModal('backupModal');
+    }
+
+    // 执行备份
+    async function executeBackup() {
+        const remark = document.getElementById('backupRemark').value.trim();
+        hideModal('backupModal');
+
+        // 显示加载遮罩
+        showLoading('正在备份数据库，请稍候...');
+
+        try {
+            const res = await fetch(`${API_BASE}/execute`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({remark})
+            });
+            const data = await res.json();
+            hideLoading();
+
+            if (data.code === 0) {
+                showToast('数据库备份成功！');
+                loadList();
+                loadStats();
+            } else {
+                showToast(data.msg || '备份失败', 'error');
+            }
+        } catch (e) {
+            hideLoading();
+            showToast('备份请求失败: ' + e.message, 'error');
+        }
+    }
+
+    // 下载备份
+    function downloadBackup(id) {
+        window.open(`${API_BASE}/download/${id}`, '_blank');
+    }
+
+    // 编辑备注
+    function editRemark(id, remark) {
+        document.getElementById('remarkId').value = id;
+        document.getElementById('remarkText').value = remark;
+        showModal('remarkModal');
+    }
+
+    // 保存备注
+    async function saveRemark() {
+        const id = document.getElementById('remarkId').value;
+        const remark = document.getElementById('remarkText').value.trim();
+
+        try {
+            const res = await fetch(`${API_BASE}/remark`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({id: parseInt(id), remark})
+            });
+            const data = await res.json();
+            if (data.code === 0) {
+                showToast('备注已更新');
+                hideModal('remarkModal');
+                loadList();
+            } else {
+                showToast(data.msg || '更新失败', 'error');
+            }
+        } catch (e) {
+            showToast('更新失败', 'error');
+        }
+    }
+
+    // 显示详情
+    async function showDetail(id) {
+        try {
+            const res = await fetch(`${API_BASE}/info/${id}`);
+            const data = await res.json();
+            if (data.code === 0 && data.info) {
+                const info = data.info;
+                document.getElementById('detailBody').innerHTML = `
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <div class="detail-label">ID</div>
+                            <div class="detail-value">${info.id}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">状态</div>
+                            <div class="detail-value">${renderStatus(info.status)}</div>
+                        </div>
+                        <div class="detail-item full">
+                            <div class="detail-label">文件名</div>
+                            <div class="detail-value">${escapeHtml(info.filename || '-')}</div>
+                        </div>
+                        <div class="detail-item full">
+                            <div class="detail-label">文件路径</div>
+                            <div class="detail-value">${escapeHtml(info.filepath || '-')}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">数据库</div>
+                            <div class="detail-value">${escapeHtml(info.database || '-')}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">文件大小</div>
+                            <div class="detail-value">${info.filesize ? formatSize(info.filesize) : '-'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">备份表数量</div>
+                            <div class="detail-value">${info.tables != null ? info.tables + ' 张表' : '-'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">备份记录数</div>
+                            <div class="detail-value">${info.records != null ? formatNumber(info.records) + ' 条' : '-'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">耗时</div>
+                            <div class="detail-value">${info.duration != null ? formatDuration(info.duration) : '-'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">创建时间</div>
+                            <div class="detail-value">${formatTime(info.createTime)}</div>
+                        </div>
+                        <div class="detail-item full">
+                            <div class="detail-label">备注</div>
+                            <div class="detail-value">${info.remark ? escapeHtml(info.remark) : '<span style="color:#aaa;">无</span>'}</div>
+                        </div>
+                        ${info.error ? `<div class="detail-item full">
+                            <div class="detail-label">错误信息</div>
+                            <div class="detail-value" style="color:#dc3545;">${escapeHtml(info.error)}</div>
+                        </div>` : ''}
+                    </div>
+                `;
+                showModal('detailModal');
+            } else {
+                showToast('获取详情失败', 'error');
+            }
+        } catch (e) {
+            showToast('获取详情失败', 'error');
+        }
+    }
+
+    // 删除备份
+    async function deleteBackup(id) {
+        if (!confirm('确定要删除此备份吗？备份文件也将被删除，此操作不可恢复！')) return;
+
+        try {
+            const res = await fetch(`${API_BASE}/delete/${id}`, {method: 'POST'});
+            const data = await res.json();
+            if (data.code === 0) {
+                showToast('删除成功');
+                loadList();
+                loadStats();
+            } else {
+                showToast(data.msg || '删除失败', 'error');
+            }
+        } catch (e) {
+            showToast('删除失败', 'error');
+        }
+    }
+
+    // 批量删除
+    async function batchDelete() {
+        if (selectedIds.size === 0) {
+            showToast('请先选择要删除的备份', 'error');
+            return;
+        }
+        if (!confirm(`确定要删除选中的 ${selectedIds.size} 个备份吗？此操作不可恢复！`)) return;
+
+        try {
+            const res = await fetch(`${API_BASE}/deleteBatch`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(Array.from(selectedIds))
+            });
+            const data = await res.json();
+            if (data.code === 0) {
+                showToast('批量删除成功');
+                selectedIds.clear();
+                loadList();
+                loadStats();
+            } else {
+                showToast(data.msg || '删除失败', 'error');
+            }
+        } catch (e) {
+            showToast('删除失败', 'error');
+        }
+    }
+
+    // 复选框操作
+    function toggleCheckAll() {
+        const checked = document.getElementById('checkAll').checked;
+        document.querySelectorAll('#backupList input[type="checkbox"]').forEach(cb => {
+            cb.checked = checked;
+            const id = parseInt(cb.value);
+            if (checked) {
+                selectedIds.add(id);
+            } else {
+                selectedIds.delete(id);
+            }
+        });
+        updateBatchButton();
+    }
+
+    function toggleCheck(id) {
+        if (selectedIds.has(id)) {
+            selectedIds.delete(id);
+        } else {
+            selectedIds.add(id);
+        }
+        updateBatchButton();
+    }
+
+    function updateBatchButton() {
+        const btn = document.getElementById('btnBatchDelete');
+        btn.disabled = selectedIds.size === 0;
+        btn.textContent = selectedIds.size > 0 ? `批量删除 (${selectedIds.size})` : '批量删除';
+    }
+
+    // 状态渲染
+    function renderStatus(status) {
+        switch (status) {
+            case 0:
+                return '<span class="badge badge-warning">进行中</span>';
+            case 1:
+                return '<span class="badge badge-success">成功</span>';
+            case 2:
+                return '<span class="badge badge-danger">失败</span>';
+            default:
+                return '<span class="badge badge-info">未知</span>';
+        }
+    }
+
+    // Modal操作
+    function showModal(id) {
+        document.getElementById(id).classList.add('show');
+    }
+
+    function hideModal(id) {
+        document.getElementById(id).classList.remove('show');
+    }
+
+    function showLoading(text) {
+        document.getElementById('loadingText').textContent = text || '处理中...';
+        document.getElementById('loadingOverlay').classList.add('show');
+    }
+
+    function hideLoading() {
+        document.getElementById('loadingOverlay').classList.remove('show');
+    }
+
+    // Toast提示
+    function showToast(msg, type) {
+        type = type || 'success';
+        const toast = document.createElement('div');
+        toast.className = 'toast ' + type;
+        toast.textContent = msg;
+        document.body.appendChild(toast);
+        setTimeout(function () {
+            toast.remove();
+        }, 3000);
+    }
+
+    // 工具函数
+    function formatSize(bytes) {
+        if (!bytes || bytes === 0) return '0 B';
+        const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(1024));
+        return (bytes / Math.pow(1024, i)).toFixed(i > 0 ? 2 : 0) + ' ' + units[i];
+    }
+
+    function formatDuration(ms) {
+        if (ms < 1000) return ms + ' ms';
+        if (ms < 60000) return (ms / 1000).toFixed(1) + ' 秒';
+        return (ms / 60000).toFixed(1) + ' 分钟';
+    }
+
+    function formatNumber(num) {
+        if (num == null) return '-';
+        return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    }
+
+    function formatTime(timestamp) {
+        if (!timestamp) return '-';
+        return new Date(timestamp).toLocaleString('zh-CN');
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str).replace(/[&<>"']/g, function (m) {
+            return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[m];
+        });
+    }
+
+    function escapeAttr(str) {
+        if (!str) return '';
+        return String(str).replace(/'/g, "\\'").replace(/"/g, '\\"');
+    }
+    //</#noparse>
+</script>
+</body>
+</html>

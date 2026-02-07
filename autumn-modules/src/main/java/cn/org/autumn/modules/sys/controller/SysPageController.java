@@ -318,6 +318,14 @@ public class SysPageController implements ErrorController {
         return "queue";
     }
 
+    @RequestMapping({"database.html"})
+    @SkipInterceptor
+    public String database(Model model) {
+        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
+            return "404";
+        return "database";
+    }
+
     @RequestMapping({"loginlog.html"})
     @SkipInterceptor
     public String loginlog(HttpServletRequest servlet) {
