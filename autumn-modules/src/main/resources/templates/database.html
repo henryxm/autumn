@@ -6,52 +6,53 @@
     <title>数据库备份管理</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
+        html, body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh; padding: 20px;
+            height: 100%; width: 100%; overflow: hidden;
+            background: #f0f2f5;
         }
         .container {
-            max-width: 1200px; margin: 0 auto; background: white;
-            border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); overflow: hidden;
+            width: 100%; height: 100vh; background: white;
+            display: flex; flex-direction: column; overflow: hidden;
         }
         .header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white; padding: 30px; text-align: center;
+            color: white; padding: 14px 24px; text-align: center; flex-shrink: 0;
         }
-        .header h1 { font-size: 32px; font-weight: 600; margin-bottom: 10px; }
-        .header p { opacity: 0.9; font-size: 14px; }
+        .header h1 { font-size: 22px; font-weight: 600; margin-bottom: 2px; }
+        .header p { opacity: 0.9; font-size: 12px; }
         /* Tabs */
-        .tabs { display: flex; background: #f8f9fa; border-bottom: 2px solid #e9ecef; }
+        .tabs { display: flex; background: #f8f9fa; border-bottom: 2px solid #e9ecef; flex-shrink: 0; }
         .tab {
-            padding: 14px 28px; cursor: pointer; font-size: 14px; font-weight: 500;
+            padding: 12px 28px; cursor: pointer; font-size: 14px; font-weight: 500;
             color: #666; border-bottom: 2px solid transparent; margin-bottom: -2px;
             transition: all 0.3s;
         }
         .tab:hover { color: #667eea; }
         .tab.active { color: #667eea; border-bottom-color: #667eea; background: white; }
         .tab-panel { display: none; }
-        .tab-panel.active { display: block; }
+        .tab-panel.active { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
         /* Stats bar */
         .stats-bar {
-            background: #f8f9fa; padding: 20px 30px; border-bottom: 1px solid #e9ecef;
-            display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 15px;
+            background: #f8f9fa; padding: 12px 20px; border-bottom: 1px solid #e9ecef;
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px;
+            flex-shrink: 0;
         }
-        .stat-item { text-align: center; padding: 12px; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-        .stat-value { font-size: 24px; font-weight: 700; color: #667eea; }
-        .stat-label { font-size: 12px; color: #666; margin-top: 4px; }
+        .stat-item { text-align: center; padding: 8px; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .stat-value { font-size: 20px; font-weight: 700; color: #667eea; }
+        .stat-label { font-size: 11px; color: #666; margin-top: 2px; }
         /* Running tasks panel */
-        .running-panel { background: #eef0ff; padding: 20px 30px; border-bottom: 1px solid #d6daf0; }
-        .running-panel h3 { font-size: 16px; color: #333; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
+        .running-panel { background: #eef0ff; padding: 12px 20px; border-bottom: 1px solid #d6daf0; flex-shrink: 0; max-height: 180px; overflow-y: auto; }
+        .running-panel h3 { font-size: 14px; color: #333; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
         .running-panel h3 .dot { width: 8px; height: 8px; background: #38ef7d; border-radius: 50%; animation: pulse 1.5s infinite; }
         @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
         .task-card {
-            background: white; border-radius: 8px; padding: 16px; margin-bottom: 10px;
+            background: white; border-radius: 8px; padding: 12px 16px; margin-bottom: 8px;
             box-shadow: 0 2px 6px rgba(0,0,0,0.06); display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
         }
         .task-info { flex: 1; min-width: 200px; }
-        .task-info .task-name { font-weight: 600; font-size: 14px; color: #333; }
-        .task-info .task-meta { font-size: 12px; color: #888; margin-top: 4px; }
+        .task-info .task-name { font-weight: 600; font-size: 13px; color: #333; }
+        .task-info .task-meta { font-size: 12px; color: #888; margin-top: 2px; }
         .progress-bar-container { flex: 2; min-width: 200px; }
         .progress-bar-outer { background: #e9ecef; border-radius: 10px; height: 20px; overflow: hidden; position: relative; }
         .progress-bar-inner {
@@ -62,12 +63,12 @@
         .progress-text { position: absolute; top: 0; left: 0; right: 0; text-align: center; line-height: 20px; font-size: 11px; font-weight: 600; color: white; }
         .task-controls { display: flex; gap: 6px; }
         /* Content */
-        .content { padding: 30px; }
-        .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px; }
-        .toolbar h2 { font-size: 20px; color: #333; }
+        .content { padding: 16px 20px; flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px; flex-shrink: 0; }
+        .toolbar h2 { font-size: 18px; color: #333; }
         .btn-group { display: flex; gap: 10px; flex-wrap: wrap; }
         .btn {
-            padding: 10px 20px; border: none; border-radius: 8px; font-size: 14px;
+            padding: 8px 18px; border: none; border-radius: 8px; font-size: 13px;
             font-weight: 500; cursor: pointer; transition: all 0.3s ease;
             display: inline-flex; align-items: center; gap: 6px;
         }
@@ -83,17 +84,17 @@
         .btn-warning { background: linear-gradient(135deg, #f7971e 0%, #ffd200 100%); color: #333; }
         .btn-warning:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(247,151,30,0.4); }
         .btn-secondary { background: #6c757d; color: white; }
-        .btn-sm { padding: 6px 14px; font-size: 12px; }
+        .btn-sm { padding: 5px 12px; font-size: 12px; }
         .btn-xs { padding: 4px 10px; font-size: 11px; }
         /* Table */
-        .table-container { overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; font-size: 14px; }
-        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #e9ecef; }
-        th { background: #f8f9fa; font-weight: 600; color: #333; position: sticky; top: 0; white-space: nowrap; }
+        .table-container { flex: 1; overflow: auto; border: 1px solid #e9ecef; border-radius: 6px; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid #e9ecef; }
+        th { background: #f8f9fa; font-weight: 600; color: #333; position: sticky; top: 0; white-space: nowrap; z-index: 1; }
         th.check-col { width: 40px; text-align: center; }
         td.check-col { text-align: center; }
         tr:hover { background: #f8f9fa; }
-        .badge { padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+        .badge { padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; white-space: nowrap; }
         .badge-success { background: #d4edda; color: #155724; }
         .badge-warning { background: #fff3cd; color: #856404; }
         .badge-danger { background: #f8d7da; color: #721c24; }
@@ -102,17 +103,17 @@
         .badge-primary { background: #cce5ff; color: #004085; }
         .remark-text { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; color: #333; }
         .remark-text:hover { color: #667eea; text-decoration: underline; }
-        .action-btns { display: flex; gap: 6px; white-space: nowrap; }
+        .action-btns { display: flex; gap: 5px; white-space: nowrap; }
         /* Modal */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
         .modal.show { display: flex; }
         .modal-content { background: white; border-radius: 12px; width: 90%; max-width: 600px; max-height: 85vh; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: modalIn 0.3s ease; }
         @keyframes modalIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-        .modal-header { padding: 20px; border-bottom: 1px solid #e9ecef; display: flex; justify-content: space-between; align-items: center; }
+        .modal-header { padding: 16px 20px; border-bottom: 1px solid #e9ecef; display: flex; justify-content: space-between; align-items: center; }
         .modal-header h3 { font-size: 18px; font-weight: 600; }
         .modal-close { background: none; border: none; font-size: 24px; cursor: pointer; color: #666; line-height: 1; }
-        .modal-body { padding: 20px; overflow-y: auto; max-height: calc(85vh - 140px); }
-        .modal-footer { padding: 15px 20px; border-top: 1px solid #e9ecef; display: flex; justify-content: flex-end; gap: 10px; }
+        .modal-body { padding: 20px; overflow-y: auto; max-height: calc(85vh - 130px); }
+        .modal-footer { padding: 12px 20px; border-top: 1px solid #e9ecef; display: flex; justify-content: flex-end; gap: 10px; }
         .form-group { margin-bottom: 16px; }
         .form-group label { display: block; font-weight: 500; margin-bottom: 6px; color: #333; font-size: 14px; }
         .form-control {
@@ -131,11 +132,11 @@
         .table-selector label input { margin-right: 8px; }
         .table-select-actions { display: flex; gap: 8px; margin-bottom: 8px; }
         /* Pagination */
-        .pagination { display: flex; justify-content: center; align-items: center; gap: 5px; margin-top: 20px; }
-        .pagination button { padding: 8px 12px; border: 1px solid #e9ecef; background: white; cursor: pointer; border-radius: 4px; font-size: 13px; }
+        .pagination { display: flex; justify-content: center; align-items: center; gap: 5px; padding-top: 12px; flex-shrink: 0; }
+        .pagination button { padding: 6px 10px; border: 1px solid #e9ecef; background: white; cursor: pointer; border-radius: 4px; font-size: 12px; }
         .pagination button.active { background: #667eea; color: white; border-color: #667eea; }
         .pagination button:disabled { opacity: 0.5; cursor: not-allowed; }
-        .pagination .page-info { font-size: 13px; color: #666; margin: 0 10px; }
+        .pagination .page-info { font-size: 12px; color: #666; margin: 0 8px; }
         .empty-state { text-align: center; padding: 60px 20px; color: #666; }
         .empty-state-icon { font-size: 64px; margin-bottom: 20px; opacity: 0.5; }
         /* Toast */

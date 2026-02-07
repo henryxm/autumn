@@ -11,120 +11,170 @@
             box-sizing: border-box;
         }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
-            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        .container {
-            max-width: 1600px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        html, body {
+            height: 100%;
             overflow: hidden;
         }
 
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: #f0f2f5;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background: white;
+            overflow: hidden;
+        }
+
+        /* Header */
         .header {
             background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
             color: white;
-            padding: 30px;
-            text-align: center;
+            padding: 16px 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
         }
 
         .header h1 {
-            font-size: 32px;
+            font-size: 22px;
             font-weight: 600;
-            margin-bottom: 10px;
         }
 
         .header p {
-            opacity: 0.9;
-            font-size: 14px;
+            opacity: 0.85;
+            font-size: 13px;
         }
 
+        .header-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .header-actions .btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(4px);
+        }
+
+        .header-actions .btn:hover {
+            background: rgba(255, 255, 255, 0.35);
+        }
+
+        /* Stats Bar */
         .stats-bar {
             background: #f8f9fa;
-            padding: 20px 30px;
+            padding: 12px 24px;
             border-bottom: 1px solid #e9ecef;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 20px;
+            display: flex;
+            gap: 16px;
+            flex-shrink: 0;
+            align-items: stretch;
         }
 
         .stat-item {
+            flex: 1;
             text-align: center;
-            padding: 15px;
+            padding: 10px 12px;
             background: white;
             border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
         }
 
         .stat-value {
-            font-size: 28px;
+            font-size: 24px;
             font-weight: 700;
             color: #11998e;
+            line-height: 1;
         }
 
         .stat-label {
             font-size: 12px;
-            color: #666;
-            margin-top: 5px;
+            color: #888;
+            white-space: nowrap;
         }
 
+        /* Main Content */
         .main-content {
-            display: grid;
-            grid-template-columns: 350px 1fr;
-            gap: 0;
-            min-height: 600px;
+            display: flex;
+            flex: 1;
+            min-height: 0;
+            overflow: hidden;
         }
 
+        /* Sidebar */
         .sidebar {
+            width: 300px;
+            min-width: 300px;
             background: #f8f9fa;
             border-right: 1px solid #e9ecef;
-            padding: 20px;
-            overflow-y: auto;
-            max-height: calc(100vh - 280px);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
         }
 
         .sidebar-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #11998e;
+            padding: 14px 16px;
+            border-bottom: 1px solid #e9ecef;
+            flex-shrink: 0;
+            background: white;
         }
 
         .sidebar-header h3 {
-            font-size: 16px;
+            font-size: 15px;
             font-weight: 600;
             color: #333;
         }
 
+        .sidebar-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
         .queue-item {
             background: white;
-            padding: 15px;
-            margin-bottom: 10px;
+            padding: 12px 14px;
+            margin-bottom: 6px;
             border-radius: 8px;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
             border: 2px solid transparent;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
         }
 
         .queue-item:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            transform: translateY(-1px);
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
             border-color: #11998e;
         }
 
         .queue-item.active {
             background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
             color: white;
-            border-color: #11998e;
+            border-color: transparent;
+            box-shadow: 0 4px 12px rgba(17, 153, 142, 0.3);
         }
 
         .queue-item.active .queue-name,
@@ -134,25 +184,28 @@
 
         .queue-item.active .queue-count,
         .queue-item.active .queue-type {
-            background: rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.25);
             color: white;
         }
 
         .queue-name {
             font-weight: 600;
-            font-size: 14px;
+            font-size: 13px;
             color: #333;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             word-break: break-all;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
 
         .queue-meta {
             font-size: 12px;
-            color: #666;
+            color: #888;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
         }
 
         .queue-count {
@@ -176,61 +229,77 @@
             height: 8px;
             border-radius: 50%;
             display: inline-block;
+            flex-shrink: 0;
         }
 
         .queue-status.running {
             background: #28a745;
+            box-shadow: 0 0 6px rgba(40, 167, 69, 0.5);
             animation: pulse 1.5s infinite;
         }
 
         .queue-status.stopped {
-            background: #6c757d;
+            background: #adb5bd;
         }
 
         @keyframes pulse {
-            0% {
-                opacity: 1;
-            }
-            50% {
-                opacity: 0.5;
-            }
-            100% {
-                opacity: 1;
-            }
+            0% { opacity: 1; }
+            50% { opacity: 0.4; }
+            100% { opacity: 1; }
         }
 
+        /* Content Area */
         .content {
-            padding: 30px;
-            overflow-y: auto;
-            max-height: calc(100vh - 280px);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            min-width: 0;
         }
 
+        .content-inner {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 24px;
+        }
+
+        /* Toolbar */
         .toolbar {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
             flex-wrap: wrap;
-            gap: 15px;
+            gap: 12px;
         }
 
         .btn-group {
             display: flex;
-            gap: 10px;
+            gap: 8px;
             flex-wrap: wrap;
         }
 
         .btn {
-            padding: 10px 20px;
+            padding: 8px 16px;
             border: none;
-            border-radius: 8px;
-            font-size: 14px;
+            border-radius: 6px;
+            font-size: 13px;
             font-weight: 500;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            gap: 5px;
+            white-space: nowrap;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn:active {
+            transform: translateY(0);
         }
 
         .btn-primary {
@@ -238,19 +307,9 @@
             color: white;
         }
 
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(17, 153, 142, 0.4);
-        }
-
         .btn-danger {
             background: linear-gradient(135deg, #ff6b6b 0%, #ee5a5a 100%);
             color: white;
-        }
-
-        .btn-danger:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
         }
 
         .btn-warning {
@@ -269,28 +328,33 @@
         }
 
         .btn-sm {
-            padding: 6px 12px;
+            padding: 5px 10px;
             font-size: 12px;
         }
 
+        /* Tabs */
         .tabs {
             display: flex;
             border-bottom: 2px solid #e9ecef;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
+            flex-shrink: 0;
         }
 
         .tab {
-            padding: 12px 24px;
+            padding: 10px 20px;
             cursor: pointer;
             border-bottom: 3px solid transparent;
             margin-bottom: -2px;
             font-weight: 500;
-            color: #666;
-            transition: all 0.3s;
+            font-size: 14px;
+            color: #888;
+            transition: all 0.2s;
+            user-select: none;
         }
 
         .tab:hover {
             color: #11998e;
+            background: rgba(17, 153, 142, 0.04);
         }
 
         .tab.active {
@@ -306,57 +370,77 @@
             display: block;
         }
 
+        /* Info Grid */
         .info-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 12px;
+            margin-bottom: 16px;
         }
 
         .info-card {
             background: #f8f9fa;
-            padding: 15px;
+            padding: 14px 16px;
             border-radius: 8px;
+            border: 1px solid #eef0f2;
+            transition: box-shadow 0.2s;
+        }
+
+        .info-card:hover {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
         }
 
         .info-label {
             font-size: 12px;
-            color: #666;
-            margin-bottom: 5px;
+            color: #888;
+            margin-bottom: 4px;
         }
 
         .info-value {
-            font-size: 16px;
+            font-size: 15px;
             font-weight: 600;
             color: #333;
         }
 
+        /* Table */
         .table-container {
             overflow-x: auto;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 14px;
+            font-size: 13px;
         }
 
         th, td {
-            padding: 12px 15px;
+            padding: 10px 14px;
             text-align: left;
             border-bottom: 1px solid #e9ecef;
         }
 
         th {
-            background: #f8f9fa;
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
             font-weight: 600;
-            color: #333;
+            color: white;
             position: sticky;
             top: 0;
+            z-index: 1;
+            font-size: 13px;
         }
 
-        tr:hover {
-            background: #f8f9fa;
+        tbody tr {
+            transition: background-color 0.15s;
+        }
+
+        tbody tr:hover {
+            background: #f0faf8;
+        }
+
+        tbody tr:last-child td {
+            border-bottom: none;
         }
 
         .message-body {
@@ -371,11 +455,13 @@
             border-radius: 4px;
         }
 
+        /* Badge */
         .badge {
-            padding: 4px 10px;
+            padding: 3px 10px;
             border-radius: 12px;
             font-size: 11px;
             font-weight: 600;
+            display: inline-block;
         }
 
         .badge-success {
@@ -398,6 +484,11 @@
             color: #0c5460;
         }
 
+        .badge-secondary {
+            background: #e9ecef;
+            color: #6c757d;
+        }
+
         /* Modal */
         .modal {
             display: none;
@@ -406,14 +497,20 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.5);
+            background: rgba(0, 0, 0, 0.45);
             z-index: 1000;
             align-items: center;
             justify-content: center;
+            animation: fadeIn 0.2s ease;
         }
 
         .modal.show {
             display: flex;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
 
         .modal-content {
@@ -423,11 +520,17 @@
             max-width: 600px;
             max-height: 80vh;
             overflow: hidden;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .modal-header {
-            padding: 20px;
+            padding: 18px 20px;
             border-bottom: 1px solid #e9ecef;
             display: flex;
             justify-content: space-between;
@@ -435,59 +538,70 @@
         }
 
         .modal-header h3 {
-            font-size: 18px;
+            font-size: 17px;
             font-weight: 600;
         }
 
         .modal-close {
             background: none;
             border: none;
-            font-size: 24px;
+            font-size: 22px;
             cursor: pointer;
-            color: #666;
+            color: #999;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .modal-close:hover {
+            background: #f0f0f0;
+            color: #333;
         }
 
         .modal-body {
             padding: 20px;
             overflow-y: auto;
-            max-height: calc(80vh - 140px);
+            max-height: calc(80vh - 130px);
         }
 
         .modal-footer {
-            padding: 15px 20px;
+            padding: 14px 20px;
             border-top: 1px solid #e9ecef;
             display: flex;
             justify-content: flex-end;
-            gap: 10px;
+            gap: 8px;
         }
 
+        /* Form */
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 16px;
         }
 
         .form-group label {
             display: block;
             font-weight: 500;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             color: #333;
+            font-size: 13px;
         }
 
         .form-control {
             width: 100%;
-            padding: 10px 15px;
+            padding: 9px 14px;
             border: 2px solid #e9ecef;
             border-radius: 8px;
             font-size: 14px;
-            transition: border-color 0.3s;
+            transition: border-color 0.2s;
         }
 
         .form-control:focus {
             outline: none;
             border-color: #11998e;
+            box-shadow: 0 0 0 3px rgba(17, 153, 142, 0.1);
         }
 
         textarea.form-control {
-            min-height: 120px;
+            min-height: 100px;
             resize: vertical;
             font-family: 'Monaco', 'Consolas', monospace;
         }
@@ -496,31 +610,53 @@
             cursor: pointer;
         }
 
+        /* Empty State */
         .empty-state {
             text-align: center;
             padding: 60px 20px;
-            color: #666;
+            color: #999;
         }
 
         .empty-state-icon {
-            font-size: 64px;
-            margin-bottom: 20px;
+            font-size: 56px;
+            margin-bottom: 16px;
             opacity: 0.5;
         }
 
+        .empty-state h3 {
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .empty-state p {
+            font-size: 14px;
+            color: #999;
+        }
+
+        /* Pagination */
         .pagination {
             display: flex;
             justify-content: center;
             gap: 5px;
-            margin-top: 20px;
+            margin-top: 16px;
+            padding-bottom: 8px;
         }
 
         .pagination button {
-            padding: 8px 12px;
+            padding: 6px 12px;
             border: 1px solid #e9ecef;
             background: white;
             cursor: pointer;
             border-radius: 4px;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+
+        .pagination button:hover:not(:disabled) {
+            background: #11998e;
+            color: white;
+            border-color: #11998e;
         }
 
         .pagination button.active {
@@ -534,41 +670,44 @@
             cursor: not-allowed;
         }
 
+        /* Loading */
         .loading {
             text-align: center;
             padding: 40px;
-            color: #666;
+            color: #999;
+            font-size: 14px;
         }
 
         .loading::after {
             content: '';
             display: inline-block;
-            width: 20px;
-            height: 20px;
+            width: 16px;
+            height: 16px;
             border: 2px solid #11998e;
             border-radius: 50%;
             border-top-color: transparent;
-            animation: spin 1s linear infinite;
-            margin-left: 10px;
+            animation: spin 0.8s linear infinite;
+            margin-left: 8px;
             vertical-align: middle;
         }
 
         @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
+            to { transform: rotate(360deg); }
         }
 
+        /* Toast */
         .toast {
             position: fixed;
             top: 20px;
             right: 20px;
-            padding: 15px 25px;
+            padding: 12px 22px;
             border-radius: 8px;
             color: white;
             font-weight: 500;
+            font-size: 14px;
             z-index: 2000;
-            animation: slideIn 0.3s ease;
+            animation: toastIn 0.3s ease;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
         }
 
         .toast.success {
@@ -579,73 +718,118 @@
             background: linear-gradient(135deg, #ff6b6b 0%, #ee5a5a 100%);
         }
 
-        @keyframes slideIn {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
+        @keyframes toastIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
         }
 
+        /* JSON Viewer */
         .json-viewer {
             background: #1e1e1e;
             color: #d4d4d4;
-            padding: 15px;
+            padding: 16px;
             border-radius: 8px;
             font-family: 'Monaco', 'Consolas', monospace;
             font-size: 13px;
             overflow-x: auto;
             white-space: pre-wrap;
             word-break: break-all;
+            line-height: 1.6;
         }
 
-        .json-key {
-            color: #9cdcfe;
+        .json-key { color: #9cdcfe; }
+        .json-string { color: #ce9178; }
+        .json-number { color: #b5cea8; }
+        .json-boolean { color: #569cd6; }
+        .json-null { color: #569cd6; }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
         }
 
-        .json-string {
-            color: #ce9178;
+        ::-webkit-scrollbar-track {
+            background: transparent;
         }
 
-        .json-number {
-            color: #b5cea8;
+        ::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 3px;
         }
 
-        .json-boolean {
-            color: #569cd6;
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a0a0a0;
         }
 
-        .json-null {
-            color: #569cd6;
+        /* Responsive */
+        @media (max-width: 768px) {
+            .main-content {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                min-width: 100%;
+                max-height: 200px;
+                border-right: none;
+                border-bottom: 1px solid #e9ecef;
+            }
+
+            .header {
+                flex-direction: column;
+                gap: 10px;
+                text-align: center;
+            }
+
+            .stats-bar {
+                flex-wrap: wrap;
+            }
+
+            .stat-item {
+                min-width: 120px;
+            }
         }
     </style>
 </head>
 <body>
 <div class="container">
     <div class="header">
-        <h1>队列管理</h1>
-        <p>Queue Management - 消息队列监控与管理平台</p>
+        <div class="header-left">
+            <div>
+                <h1>队列管理</h1>
+                <p>Queue Management - 消息队列监控与管理平台</p>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="btn" onclick="loadStats(); loadQueueList(); showToast('已刷新');">刷新全部</button>
+        </div>
     </div>
 
     <div class="stats-bar" id="statsBar">
         <div class="stat-item">
-            <div class="stat-value" id="statTotalQueues">0</div>
-            <div class="stat-label">队列总数</div>
+            <div>
+                <div class="stat-value" id="statTotalQueues">0</div>
+                <div class="stat-label">队列总数</div>
+            </div>
         </div>
         <div class="stat-item">
-            <div class="stat-value" id="statTotalMessages">0</div>
-            <div class="stat-label">消息总数</div>
+            <div>
+                <div class="stat-value" id="statTotalMessages">0</div>
+                <div class="stat-label">消息总数</div>
+            </div>
         </div>
         <div class="stat-item">
-            <div class="stat-value" id="statRunningConsumers">0</div>
-            <div class="stat-label">运行中消费者</div>
+            <div>
+                <div class="stat-value" id="statRunningConsumers">0</div>
+                <div class="stat-label">运行中消费者</div>
+            </div>
         </div>
         <div class="stat-item">
-            <div class="stat-value" id="statRedisStatus">-</div>
-            <div class="stat-label">Redis状态</div>
+            <div>
+                <div class="stat-value" id="statRedisStatus">-</div>
+                <div class="stat-label">Redis状态</div>
+            </div>
         </div>
     </div>
 
@@ -655,81 +839,83 @@
                 <h3>队列列表</h3>
                 <button class="btn btn-primary btn-sm" onclick="showCreateModal()">+ 新建</button>
             </div>
-            <div id="queueList">
+            <div class="sidebar-list" id="queueList">
                 <div class="loading">加载中</div>
             </div>
         </div>
 
         <div class="content">
-            <div id="welcomePanel">
-                <div class="empty-state">
-                    <div class="empty-state-icon">📬</div>
-                    <h3>欢迎使用队列管理</h3>
-                    <p>请从左侧选择一个队列查看详情，或创建新队列</p>
-                    <button class="btn btn-primary" style="margin-top: 20px" onclick="showCreateModal()">创建队列</button>
-                </div>
-            </div>
-
-            <div id="queueDetail" style="display: none;">
-                <div class="toolbar">
-                    <h2 id="currentQueueName" style="font-size: 20px;"></h2>
-                    <div class="btn-group">
-                        <button class="btn btn-primary" onclick="showSendModal()">发送消息</button>
-                        <button class="btn btn-info" onclick="refreshMessages()">刷新</button>
-                        <button class="btn btn-warning" id="btnConsumer" onclick="toggleConsumer()">启动消费者</button>
-                        <button class="btn btn-danger" onclick="clearQueue()">清空队列</button>
+            <div class="content-inner">
+                <div id="welcomePanel">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📬</div>
+                        <h3>欢迎使用队列管理</h3>
+                        <p>请从左侧选择一个队列查看详情，或创建新队列</p>
+                        <button class="btn btn-primary" style="margin-top: 20px" onclick="showCreateModal()">创建队列</button>
                     </div>
                 </div>
 
-                <div class="tabs">
-                    <div class="tab active" data-tab="info">队列信息</div>
-                    <div class="tab" data-tab="messages">消息列表</div>
-                    <div class="tab" data-tab="deadletter">死信队列</div>
-                </div>
-
-                <!-- 队列信息 -->
-                <div class="tab-content active" id="tabInfo">
-                    <div class="info-grid" id="queueInfoGrid"></div>
-                </div>
-
-                <!-- 消息列表 -->
-                <div class="tab-content" id="tabMessages">
-                    <div class="table-container">
-                        <table>
-                            <thead>
-                            <tr>
-                                <th>消息ID</th>
-                                <th>消息内容</th>
-                                <th>优先级</th>
-                                <th>重试次数</th>
-                                <th>创建时间</th>
-                                <th>操作</th>
-                            </tr>
-                            </thead>
-                            <tbody id="messageList"></tbody>
-                        </table>
-                    </div>
-                    <div class="pagination" id="messagePagination"></div>
-                </div>
-
-                <!-- 死信队列 -->
-                <div class="tab-content" id="tabDeadletter">
+                <div id="queueDetail" style="display: none;">
                     <div class="toolbar">
-                        <span>死信队列中的消息</span>
-                        <button class="btn btn-warning btn-sm" onclick="retryDeadLetter()">重试所有</button>
+                        <h2 id="currentQueueName" style="font-size: 18px; font-weight: 600; color: #333;"></h2>
+                        <div class="btn-group">
+                            <button class="btn btn-primary btn-sm" onclick="showSendModal()">发送消息</button>
+                            <button class="btn btn-info btn-sm" onclick="refreshMessages()">刷新</button>
+                            <button class="btn btn-warning btn-sm" id="btnConsumer" onclick="toggleConsumer()">启动消费者</button>
+                            <button class="btn btn-danger btn-sm" onclick="clearQueue()">清空队列</button>
+                        </div>
                     </div>
-                    <div class="table-container">
-                        <table>
-                            <thead>
-                            <tr>
-                                <th>消息ID</th>
-                                <th>消息内容</th>
-                                <th>重试次数</th>
-                                <th>创建时间</th>
-                            </tr>
-                            </thead>
-                            <tbody id="deadLetterList"></tbody>
-                        </table>
+
+                    <div class="tabs">
+                        <div class="tab active" data-tab="info">队列信息</div>
+                        <div class="tab" data-tab="messages">消息列表</div>
+                        <div class="tab" data-tab="deadletter">死信队列</div>
+                    </div>
+
+                    <!-- 队列信息 -->
+                    <div class="tab-content active" id="tabInfo">
+                        <div class="info-grid" id="queueInfoGrid"></div>
+                    </div>
+
+                    <!-- 消息列表 -->
+                    <div class="tab-content" id="tabMessages">
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                <tr>
+                                    <th>消息ID</th>
+                                    <th>消息内容</th>
+                                    <th>优先级</th>
+                                    <th>重试次数</th>
+                                    <th>创建时间</th>
+                                    <th>操作</th>
+                                </tr>
+                                </thead>
+                                <tbody id="messageList"></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="messagePagination"></div>
+                    </div>
+
+                    <!-- 死信队列 -->
+                    <div class="tab-content" id="tabDeadletter">
+                        <div class="toolbar">
+                            <span style="font-size: 14px; color: #666;">死信队列中的消息</span>
+                            <button class="btn btn-warning btn-sm" onclick="retryDeadLetter()">重试所有</button>
+                        </div>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                <tr>
+                                    <th>消息ID</th>
+                                    <th>消息内容</th>
+                                    <th>重试次数</th>
+                                    <th>创建时间</th>
+                                </tr>
+                                </thead>
+                                <tbody id="deadLetterList"></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -768,7 +954,7 @@
                 <input type="number" class="form-control" id="createMaxRetries" value="3">
             </div>
             <div class="form-group">
-                <label>
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
                     <input type="checkbox" id="createDeadLetter"> 启用死信队列
                 </label>
             </div>
@@ -790,7 +976,7 @@
         <div class="modal-body">
             <div class="form-group">
                 <label>目标队列</label>
-                <input type="text" class="form-control" id="sendQueueName" readonly>
+                <input type="text" class="form-control" id="sendQueueName" readonly style="background: #f8f9fa;">
             </div>
             <div class="form-group">
                 <label>消息内容 (JSON格式) *</label>
@@ -893,7 +1079,7 @@
             }
         } catch (e) {
             console.error('Load queue list failed:', e);
-            document.getElementById('queueList').innerHTML = '<div class="empty-state">加载失败</div>';
+            document.getElementById('queueList').innerHTML = '<div class="empty-state"><p>加载失败</p></div>';
         }
     }
 
@@ -901,7 +1087,7 @@
     function renderQueueList(queues) {
         const container = document.getElementById('queueList');
         if (queues.length === 0) {
-            container.innerHTML = '<div class="empty-state">暂无队列</div>';
+            container.innerHTML = '<div class="empty-state"><p>暂无队列</p></div>';
             return;
         }
 
@@ -1024,14 +1210,14 @@
     function renderMessages(messages, total) {
         const tbody = document.getElementById('messageList');
         if (messages.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;">暂无消息</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:#999;">暂无消息</td></tr>';
             document.getElementById('messagePagination').innerHTML = '';
             return;
         }
 
         tbody.innerHTML = messages.map(msg => `
             <tr>
-                <td><code>${msg.id ? msg.id.substring(0, 8) + '...' : '-'}</code></td>
+                <td><code style="font-size:12px;background:#f1f3f4;padding:2px 6px;border-radius:4px;">${msg.id ? msg.id.substring(0, 8) + '...' : '-'}</code></td>
                 <td><div class="message-body">${escapeHtml(JSON.stringify(msg.body || msg))}</div></td>
                 <td>${msg.priority || 5}</td>
                 <td>${msg.retry || 0}</td>
@@ -1089,12 +1275,12 @@
             if (data.code === 0) {
                 const messages = data.list || [];
                 if (messages.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:40px;">暂无死信消息</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:40px;color:#999;">暂无死信消息</td></tr>';
                     return;
                 }
                 tbody.innerHTML = messages.map(msg => `
                     <tr>
-                        <td><code>${msg.id ? msg.id.substring(0, 8) + '...' : '-'}</code></td>
+                        <td><code style="font-size:12px;background:#f1f3f4;padding:2px 6px;border-radius:4px;">${msg.id ? msg.id.substring(0, 8) + '...' : '-'}</code></td>
                         <td><div class="message-body">${escapeHtml(JSON.stringify(msg.body || msg))}</div></td>
                         <td>${msg.retry || 0}</td>
                         <td>${formatTime(msg.timestamp)}</td>
