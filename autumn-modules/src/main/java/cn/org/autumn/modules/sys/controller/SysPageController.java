@@ -326,6 +326,14 @@ public class SysPageController implements ErrorController {
         return "database";
     }
 
+    @RequestMapping({"loopjob.html"})
+    @SkipInterceptor
+    public String loopjob(Model model) {
+        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
+            return "404";
+        return "loopjob";
+    }
+
     @RequestMapping({"loginlog.html"})
     @SkipInterceptor
     public String loginlog(HttpServletRequest servlet) {

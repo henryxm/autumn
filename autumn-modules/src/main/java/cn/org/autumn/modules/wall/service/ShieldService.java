@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.wall.service;
 
+import cn.org.autumn.annotation.JobMeta;
 import cn.org.autumn.base.ModuleService;
 import cn.org.autumn.config.ClearHandler;
 import cn.org.autumn.modules.job.task.LoopJob;
@@ -20,6 +21,7 @@ import java.util.List;
 import java.util.Set;
 
 @Service
+@JobMeta(name = "防御盾牌")
 public class ShieldService extends ModuleService<ShieldDao, ShieldEntity> implements LoopJob.FiveSecond, LoopJob.OneMinute, LoopJob.OneDay, ClearHandler {
 
     Logger log = LoggerFactory.getLogger(getClass());
@@ -100,16 +102,19 @@ public class ShieldService extends ModuleService<ShieldDao, ShieldEntity> implem
     }
 
     @Override
+    @JobMeta(name = "清空访问记录")
     public void onFiveSecond() {
         visit.clear();
     }
 
     @Override
+    @JobMeta(name = "刷新URI规则", timeout = 5000)
     public void onOneMinute() {
         uris = null;
     }
 
     @Override
+    @JobMeta(name = "清空IP白名单", maxConsecutiveErrors = 3)
     public void onOneDay() {
         ips.clear();
     }

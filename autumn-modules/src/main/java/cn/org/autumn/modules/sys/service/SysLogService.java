@@ -3,7 +3,6 @@ package cn.org.autumn.modules.sys.service;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
 import cn.org.autumn.modules.job.task.LoopJob;
-import cn.org.autumn.site.InitFactory;
 import com.baomidou.mybatisplus.mapper.EntityWrapper;
 import com.baomidou.mybatisplus.plugins.Page;
 import com.baomidou.mybatisplus.service.impl.ServiceImpl;
@@ -11,8 +10,8 @@ import cn.org.autumn.utils.PageUtils;
 import cn.org.autumn.utils.Query;
 import cn.org.autumn.modules.sys.dao.SysLogDao;
 import cn.org.autumn.modules.sys.entity.SysLogEntity;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
@@ -23,16 +22,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+@Slf4j
 @Service
-public class SysLogService extends ServiceImpl<SysLogDao, SysLogEntity> implements LoopJob.Job, InitFactory.Init {
+public class SysLogService extends ServiceImpl<SysLogDao, SysLogEntity> implements LoopJob.OneWeek {
 
     private static final Map<String, String> recent = new ConcurrentHashMap<>();
-
-    private Logger logger = LoggerFactory.getLogger(getClass());
-
-    public void init() {
-        LoopJob.onOneWeek(this);
-    }
 
     public Map<String, String> getRecent() {
         return recent;
@@ -41,7 +35,7 @@ public class SysLogService extends ServiceImpl<SysLogDao, SysLogEntity> implemen
     public String recent() {
         StringBuilder builder = new StringBuilder();
         for (Map.Entry<String, String> kv : recent.entrySet()) {
-            builder.append(kv.getKey() + ":" + kv.getValue());
+            builder.append(kv.getKey()).append(":").append(kv.getValue());
             builder.append("<br/>");
         }
         return builder.toString();
@@ -59,7 +53,7 @@ public class SysLogService extends ServiceImpl<SysLogDao, SysLogEntity> implemen
     }
 
     @Override
-    public void runJob() {
+    public void onOneWeek() {
         baseMapper.clear();
     }
 
@@ -72,7 +66,7 @@ public class SysLogService extends ServiceImpl<SysLogDao, SysLogEntity> implemen
         try {
             if (StringUtils.isNotBlank(level)) {
                 LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
-                logger.debug("Set log singleLevel:{},singlePath:{}", level, name);
+                log.debug("Set log singleLevel:{},singlePath:{}", level, name);
                 if (StringUtils.isEmpty(name)) {
                     // 设置全局日志级别
                     ch.qos.logback.classic.Logger logger = loggerContext.getLogger("root");
@@ -87,7 +81,7 @@ public class SysLogService extends ServiceImpl<SysLogDao, SysLogEntity> implemen
                 }
             }
         } catch (Exception e) {
-            logger.error("修改级别:{}", e.getMessage());
+            log.error("修改级别:{}", e.getMessage());
         }
         return "success";
     }

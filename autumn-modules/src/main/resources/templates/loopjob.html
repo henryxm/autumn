@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>定时任务管理</title>
+    <style>
+        :root {
+            --primary: #4f6ef7; --primary-hover: #3b5de7; --primary-light: #eef2ff;
+            --success: #22c55e; --success-bg: #f0fdf4;
+            --danger: #ef4444; --danger-bg: #fef2f2;
+            --warning: #f59e0b; --warning-bg: #fffbeb;
+            --info: #3b82f6; --info-bg: #eff6ff;
+            --purple: #8b5cf6; --purple-bg: #f5f3ff;
+            --gray-50: #f9fafb; --gray-100: #f3f4f6; --gray-200: #e5e7eb; --gray-300: #d1d5db;
+            --gray-400: #9ca3af; --gray-500: #6b7280; --gray-600: #4b5563; --gray-700: #374151;
+            --gray-800: #1f2937; --gray-900: #111827;
+            --radius: 8px;
+            --shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--gray-50); color: var(--gray-800); line-height: 1.6; }
+        .container { max-width: 1440px; margin: 0 auto; padding: 20px; }
+
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 18px 24px; background: white; border-radius: var(--radius); box-shadow: var(--shadow); }
+        .header-left h1 { font-size: 20px; font-weight: 600; color: var(--gray-900); }
+        .header-left p { font-size: 12px; color: var(--gray-500); margin-top: 1px; }
+        .header-right { display: flex; gap: 10px; align-items: center; }
+
+        .global-status { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+        .global-status.running { background: var(--success-bg); color: #16a34a; }
+        .global-status.paused { background: var(--danger-bg); color: #dc2626; }
+        .global-status .dot { width: 7px; height: 7px; border-radius: 50%; }
+        .global-status.running .dot { background: var(--success); }
+        .global-status.paused .dot { background: var(--danger); }
+
+        .btn { display: inline-flex; align-items: center; gap: 5px; padding: 7px 14px; border: none; border-radius: var(--radius); font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+        .btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); }
+        .btn:active { transform: translateY(0); }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-success { background: var(--success); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-warning { background: var(--warning); color: white; }
+        .btn-outline { background: white; color: var(--gray-700); border: 1px solid var(--gray-300); }
+        .btn-outline:hover { background: var(--gray-50); }
+        .btn-sm { padding: 3px 8px; font-size: 11px; }
+        .btn-xs { padding: 2px 6px; font-size: 10px; border-radius: 4px; }
+
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 20px; }
+        .stat-card { background: white; padding: 16px; border-radius: var(--radius); box-shadow: var(--shadow); }
+        .stat-card .stat-label { font-size: 11px; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
+        .stat-card .stat-value { font-size: 24px; font-weight: 700; color: var(--gray-900); margin-top: 2px; font-variant-numeric: tabular-nums; }
+        .stat-card .stat-detail { font-size: 11px; color: var(--gray-400); margin-top: 2px; }
+        .stat-card.success .stat-value { color: #16a34a; }
+        .stat-card.danger .stat-value { color: #dc2626; }
+        .stat-card.info .stat-value { color: #2563eb; }
+        .stat-card.warning .stat-value { color: #d97706; }
+        .stat-card.purple .stat-value { color: #7c3aed; }
+
+        .section { background: white; border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 20px; }
+        .section-header { display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; border-bottom: 1px solid var(--gray-200); }
+        .section-title { font-size: 15px; font-weight: 600; color: var(--gray-800); }
+        .section-body { padding: 16px 18px; }
+
+        .category-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
+        .category-card { padding: 12px; border: 1px solid var(--gray-200); border-radius: var(--radius); transition: all 0.15s; }
+        .category-card:hover { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary); }
+        .category-card.disabled { background: var(--gray-50); opacity: 0.7; }
+        .category-card .cat-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+        .category-card .cat-name { font-size: 14px; font-weight: 600; }
+        .category-card .cat-stats { display: flex; gap: 10px; font-size: 11px; color: var(--gray-500); }
+        .category-card .cat-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
+        .category-card .cat-count { font-size: 11px; color: var(--gray-400); }
+
+        .toggle { position: relative; width: 36px; height: 20px; cursor: pointer; }
+        .toggle input { opacity: 0; width: 0; height: 0; }
+        .toggle .slider { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: var(--gray-300); border-radius: 20px; transition: 0.2s; }
+        .toggle .slider:before { content: ""; position: absolute; height: 14px; width: 14px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.2s; }
+        .toggle input:checked + .slider { background: var(--primary); }
+        .toggle input:checked + .slider:before { transform: translateX(16px); }
+
+        .filter-bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+        .filter-bar .search-input { flex: 1; min-width: 180px; padding: 7px 12px; border: 1px solid var(--gray-300); border-radius: var(--radius); font-size: 12px; outline: none; }
+        .filter-bar .search-input:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(79,110,247,0.15); }
+        .filter-bar select { padding: 7px 26px 7px 10px; border: 1px solid var(--gray-300); border-radius: var(--radius); font-size: 12px; background: white; outline: none; cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' stroke='%236b7280' stroke-width='1.5' fill='none'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 8px center; }
+
+        .table-wrapper { overflow-x: auto; }
+        .job-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .job-table thead th { padding: 8px 10px; text-align: left; font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--gray-500); background: var(--gray-50); border-bottom: 1px solid var(--gray-200); white-space: nowrap; }
+        .job-table tbody td { padding: 8px 10px; border-bottom: 1px solid var(--gray-100); vertical-align: middle; }
+        .job-table tbody tr:hover { background: var(--gray-50); }
+        .job-table tbody tr.disabled-row { opacity: 0.55; }
+
+        .job-name { font-weight: 600; color: var(--gray-800); font-size: 13px; }
+        .job-desc { font-size: 11px; color: var(--gray-400); margin-top: 1px; }
+        .job-class { font-size: 10px; color: var(--gray-400); word-break: break-all; max-width: 220px; }
+
+        .badge { display: inline-flex; align-items: center; padding: 1px 7px; border-radius: 10px; font-size: 10px; font-weight: 500; white-space: nowrap; }
+        .badge-success { background: var(--success-bg); color: #16a34a; }
+        .badge-danger { background: var(--danger-bg); color: #dc2626; }
+        .badge-warning { background: var(--warning-bg); color: #92400e; }
+        .badge-info { background: var(--info-bg); color: #1d4ed8; }
+        .badge-purple { background: var(--purple-bg); color: #6d28d9; }
+        .badge-gray { background: var(--gray-100); color: var(--gray-600); }
+        .badge-running { background: #dbeafe; color: #1e40af; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
+
+        .tag { display: inline-block; padding: 0 5px; border-radius: 3px; font-size: 10px; background: var(--gray-100); color: var(--gray-600); margin: 1px 2px 1px 0; }
+        .config-badges { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+        .actions-cell { display: flex; gap: 4px; align-items: center; flex-wrap: nowrap; }
+
+        /* Modal */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 9000; align-items: center; justify-content: center; }
+        .modal-overlay.active { display: flex; }
+        .modal { background: white; border-radius: 12px; box-shadow: var(--shadow-lg); width: 520px; max-width: 95vw; max-height: 90vh; overflow-y: auto; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--gray-200); }
+        .modal-header h3 { font-size: 16px; font-weight: 600; }
+        .modal-close { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--gray-400); padding: 4px; line-height: 1; }
+        .modal-close:hover { color: var(--gray-700); }
+        .modal-body { padding: 20px; }
+        .modal-footer { padding: 14px 20px; border-top: 1px solid var(--gray-200); display: flex; justify-content: flex-end; gap: 8px; }
+        .form-group { margin-bottom: 16px; }
+        .form-group:last-child { margin-bottom: 0; }
+        .form-label { display: block; font-size: 12px; font-weight: 600; color: var(--gray-700); margin-bottom: 4px; }
+        .form-label .form-hint { font-weight: 400; color: var(--gray-400); margin-left: 4px; }
+        .form-input { width: 100%; padding: 8px 12px; border: 1px solid var(--gray-300); border-radius: var(--radius); font-size: 13px; outline: none; }
+        .form-input:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(79,110,247,0.15); }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .info-grid { display: grid; grid-template-columns: 100px 1fr; gap: 4px 12px; font-size: 12px; margin-bottom: 16px; padding: 12px; background: var(--gray-50); border-radius: var(--radius); }
+        .info-grid .info-label { color: var(--gray-500); font-weight: 500; }
+        .info-grid .info-value { color: var(--gray-800); word-break: break-all; }
+        .toggle-inline { display: flex; align-items: center; gap: 8px; }
+        .toggle-inline span { font-size: 13px; }
+
+        .auto-refresh { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--gray-500); }
+        .auto-refresh select { padding: 3px 6px; border: 1px solid var(--gray-300); border-radius: 4px; font-size: 11px; background: white; }
+
+        .toast-container { position: fixed; top: 16px; right: 16px; z-index: 10000; display: flex; flex-direction: column; gap: 6px; }
+        .toast { padding: 10px 16px; border-radius: var(--radius); font-size: 12px; font-weight: 500; color: white; box-shadow: var(--shadow-md); animation: slideIn 0.3s ease; max-width: 320px; }
+        .toast.success { background: #16a34a; }
+        .toast.error { background: #dc2626; }
+        .toast.info { background: #2563eb; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .spinning { animation: spin 1s linear infinite; }
+
+        .empty-state { text-align: center; padding: 30px 20px; color: var(--gray-400); font-size: 13px; }
+        .count-num { font-variant-numeric: tabular-nums; }
+
+        @media (max-width: 768px) {
+            .container { padding: 10px; }
+            .header { flex-direction: column; gap: 10px; align-items: flex-start; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .category-grid { grid-template-columns: repeat(2, 1fr); }
+            .filter-bar { flex-direction: column; }
+            .form-row { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <div class="header-left">
+            <h1>定时任务管理</h1>
+            <p>管理和监控所有循环定时任务的运行状态、配置参数</p>
+        </div>
+        <div class="header-right">
+            <div class="auto-refresh">
+                <span>自动刷新</span>
+                <select id="refreshInterval" onchange="setAutoRefresh(this.value)">
+                    <option value="0">关闭</option>
+                    <option value="3000">3秒</option>
+                    <option value="5000" selected>5秒</option>
+                    <option value="10000">10秒</option>
+                    <option value="30000">30秒</option>
+                </select>
+            </div>
+            <button class="btn btn-outline" onclick="refreshAll()"><svg id="refreshIcon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg> 刷新</button>
+            <span id="globalStatus" class="global-status running"><span class="dot"></span><span id="globalStatusText">运行中</span></span>
+            <button id="globalToggleBtn" class="btn btn-danger" onclick="toggleGlobal()">全局暂停</button>
+        </div>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card info"><div class="stat-label">总任务数</div><div class="stat-value" id="statTotal">-</div><div class="stat-detail"><span id="statCategories">-</span> 个分类</div></div>
+        <div class="stat-card success"><div class="stat-label">运行中</div><div class="stat-value" id="statEnabled">-</div><div class="stat-detail"><span id="statActiveCategories">-</span> 个活跃分类</div></div>
+        <div class="stat-card danger"><div class="stat-label">已禁用</div><div class="stat-value" id="statDisabled">-</div><div class="stat-detail">自动禁用 <span id="statAutoDisabled">0</span></div></div>
+        <div class="stat-card purple"><div class="stat-label">执行中</div><div class="stat-value" id="statRunning">-</div></div>
+        <div class="stat-card"><div class="stat-label">总执行</div><div class="stat-value" id="statExec">-</div></div>
+        <div class="stat-card warning"><div class="stat-label">错误</div><div class="stat-value" id="statErrors">-</div></div>
+        <div class="stat-card"><div class="stat-label">跳过</div><div class="stat-value" id="statSkipped">-</div><div class="stat-detail">防重入跳过</div></div>
+        <div class="stat-card"><div class="stat-label">超时</div><div class="stat-value" id="statTimeouts">-</div></div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <span class="section-title">分类管理</span>
+            <div style="display:flex;gap:6px;"><button class="btn btn-sm btn-success" onclick="enableAllCategories()">全部启用</button><button class="btn btn-sm btn-danger" onclick="disableAllCategories()">全部禁用</button></div>
+        </div>
+        <div class="section-body"><div class="category-grid" id="categoryGrid"></div></div>
+    </div>
+
+    <div class="section">
+        <div class="section-header"><span class="section-title">任务列表</span></div>
+        <div class="section-body" style="padding-top:10px;">
+            <div class="filter-bar">
+                <input type="text" class="search-input" id="searchInput" placeholder="搜索名称、类名、分组、标签..." oninput="filterJobs()">
+                <select id="categoryFilter" onchange="filterJobs()"><option value="">全部分类</option></select>
+                <select id="groupFilter" onchange="filterJobs()"><option value="">全部分组</option></select>
+                <select id="statusFilter" onchange="filterJobs()">
+                    <option value="">全部状态</option>
+                    <option value="enabled">运行中</option>
+                    <option value="disabled">已禁用</option>
+                    <option value="running">执行中</option>
+                    <option value="autoDisabled">自动禁用</option>
+                </select>
+            </div>
+            <div class="table-wrapper">
+                <table class="job-table">
+                    <thead><tr>
+                        <th>任务</th>
+                        <th>分组</th>
+                        <th>分类</th>
+                        <th>状态</th>
+                        <th>配置</th>
+                        <th>执行/错误/跳过</th>
+                        <th>最近执行</th>
+                        <th>操作</th>
+                    </tr></thead>
+                    <tbody id="jobTableBody"><tr><td colspan="8" class="empty-state">加载中...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Config Modal -->
+<div class="modal-overlay" id="configModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 id="modalTitle">任务配置</h3>
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="info-grid" id="modalInfo"></div>
+            <div class="form-group">
+                <div class="toggle-inline">
+                    <label class="toggle"><input type="checkbox" id="cfgSkipIfRunning"><span class="slider"></span></label>
+                    <span><b>防重入</b> — 上次未完成时跳过本次触发</span>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">超时警告 (ms) <span class="form-hint">0=不限制</span></label>
+                    <input type="number" class="form-input" id="cfgTimeout" min="0" step="1000" placeholder="0">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">连续错误自动禁用 <span class="form-hint">0=不自动</span></label>
+                    <input type="number" class="form-input" id="cfgMaxErrors" min="0" step="1" placeholder="0">
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">优先级 <span class="form-hint">值越小越先执行</span></label>
+                <input type="number" class="form-input" id="cfgOrder" min="0" step="1" placeholder="100">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeModal()">取消</button>
+            <button class="btn btn-primary" onclick="saveConfig()">保存配置</button>
+        </div>
+    </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+    //<#noparse>
+    const API = '/job/loop';
+    let allJobs = [], currentJobId = null, autoTimer = null;
+
+    async function apiGet(u) { return (await fetch(API + u)).json(); }
+    async function apiPost(u, b) { return (await fetch(API + u, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(b||{}) })).json(); }
+
+    async function loadStats() {
+        try {
+            const d = await apiGet('/stats');
+            if (d.code !== 0 || !d.stats) return;
+            const s = d.stats;
+            document.getElementById('statTotal').textContent = fmt(s.totalJobs);
+            document.getElementById('statCategories').textContent = s.totalCategories;
+            document.getElementById('statEnabled').textContent = fmt(s.enabledJobs);
+            document.getElementById('statActiveCategories').textContent = s.activeCategoryCount;
+            document.getElementById('statDisabled').textContent = fmt(s.disabledJobs);
+            document.getElementById('statAutoDisabled').textContent = fmt(s.autoDisabledCount);
+            document.getElementById('statRunning').textContent = fmt(s.runningCount);
+            document.getElementById('statExec').textContent = fmt(s.totalExecutions);
+            document.getElementById('statErrors').textContent = fmt(s.totalErrors);
+            document.getElementById('statSkipped').textContent = fmt(s.totalSkipped);
+            document.getElementById('statTimeouts').textContent = fmt(s.totalTimeouts);
+            updateGlobalStatus(s.globalPaused);
+        } catch(e) { console.error(e); }
+    }
+
+    async function loadCategories() {
+        try {
+            const d = await apiGet('/categories');
+            if (d.code !== 0 || !d.categories) return;
+            renderCategories(d.categories);
+            updateCategoryFilter(d.categories);
+        } catch(e) { console.error(e); }
+    }
+
+    async function loadJobs() {
+        try {
+            const d = await apiGet('/list');
+            if (d.code !== 0 || !d.jobs) return;
+            allJobs = d.jobs;
+            updateGroupFilter();
+            filterJobs();
+        } catch(e) { console.error(e); }
+    }
+
+    async function refreshAll() {
+        const icon = document.getElementById('refreshIcon');
+        icon.classList.add('spinning');
+        await Promise.all([loadStats(), loadCategories(), loadJobs()]);
+        setTimeout(() => icon.classList.remove('spinning'), 400);
+    }
+
+    function updateGlobalStatus(paused) {
+        const st = document.getElementById('globalStatus'), tx = document.getElementById('globalStatusText'), bt = document.getElementById('globalToggleBtn');
+        if (paused) { st.className='global-status paused'; tx.textContent='已暂停'; bt.textContent='恢复运行'; bt.className='btn btn-success'; }
+        else { st.className='global-status running'; tx.textContent='运行中'; bt.textContent='全局暂停'; bt.className='btn btn-danger'; }
+    }
+
+    function renderCategories(cats) {
+        document.getElementById('categoryGrid').innerHTML = cats.map(c => `
+            <div class="category-card ${c.enabled?'':'disabled'}">
+                <div class="cat-header">
+                    <span class="cat-name">${c.displayName}</span>
+                    <label class="toggle"><input type="checkbox" ${c.enabled?'checked':''} onchange="toggleCategory('${c.name}',this.checked)"><span class="slider"></span></label>
+                </div>
+                <div class="cat-stats">
+                    <span>${c.enabledCount}/${c.jobCount} 任务</span>
+                    <span>${fmt(c.totalExecutions)} 次</span>
+                    ${c.totalErrors>0?`<span style="color:var(--danger)">${c.totalErrors} 错</span>`:''}
+                    ${c.totalSkipped>0?`<span style="color:var(--purple)">${c.totalSkipped} 跳</span>`:''}
+                </div>
+                <div class="cat-footer">
+                    <span class="cat-count">${c.name}</span>
+                    <button class="btn btn-xs btn-outline" onclick="filterByCategory('${c.name}')">查看</button>
+                </div>
+            </div>`).join('');
+    }
+
+    function updateCategoryFilter(cats) {
+        const sel = document.getElementById('categoryFilter'), cur = sel.value;
+        sel.innerHTML = '<option value="">全部分类</option>' + cats.map(c => `<option value="${c.name}" ${c.name===cur?'selected':''}>${c.displayName} (${c.jobCount})</option>`).join('');
+    }
+
+    function updateGroupFilter() {
+        const groups = [...new Set(allJobs.map(j => j.group).filter(g => g))].sort();
+        const sel = document.getElementById('groupFilter'), cur = sel.value;
+        sel.innerHTML = '<option value="">全部分组</option>' + groups.map(g => `<option value="${g}" ${g===cur?'selected':''}>${g}</option>`).join('');
+    }
+
+    function renderJobs(jobs) {
+        const tbody = document.getElementById('jobTableBody');
+        if (!jobs || !jobs.length) { tbody.innerHTML = '<tr><td colspan="8" class="empty-state">暂无匹配的任务</td></tr>'; return; }
+        tbody.innerHTML = jobs.map(j => {
+            let st;
+            if (j.autoDisabled) st = '<span class="badge badge-danger">自动禁用</span>';
+            else if (!j.enabled) st = '<span class="badge badge-danger">已禁用</span>';
+            else if (!j.categoryEnabled) st = '<span class="badge badge-warning">分类禁用</span>';
+            else if (j.running) st = '<span class="badge badge-running">执行中</span>';
+            else st = '<span class="badge badge-success">运行中</span>';
+
+            const tags = (j.tags||[]).map(t => `<span class="tag">${esc(t)}</span>`).join('');
+            const cfgs = [];
+            if (j.skipIfRunning) cfgs.push('<span class="badge badge-purple" title="防重入：上次未完成时跳过">防重入</span>');
+            if (j.timeout > 0) cfgs.push(`<span class="badge badge-info" title="超时警告阈值">${j.timeout}ms</span>`);
+            if (j.maxConsecutiveErrors > 0) cfgs.push(`<span class="badge badge-warning" title="连续错误${j.maxConsecutiveErrors}次自动禁用">错误${j.maxConsecutiveErrors}禁</span>`);
+            const cfgHtml = cfgs.length ? cfgs.join(' ') : '<span style="color:var(--gray-300)">-</span>';
+
+            const errStyle = j.errorCount > 0 ? 'color:var(--danger);font-weight:600' : '';
+            const skipStyle = j.skippedCount > 0 ? 'color:var(--purple);font-weight:600' : '';
+
+            return `<tr class="${j.effectiveEnabled?'':'disabled-row'}">
+                <td>
+                    <div class="job-name">${esc(j.displayName)}</div>
+                    ${j.description?`<div class="job-desc">${esc(j.description)}</div>`:''}
+                    <div class="job-class">${esc(j.className)}</div>
+                    ${tags?`<div style="margin-top:2px">${tags}</div>`:''}
+                </td>
+                <td>${j.group?`<span class="badge badge-gray">${esc(j.group)}</span>`:'-'}</td>
+                <td><span class="badge badge-info">${j.categoryDisplayName}</span></td>
+                <td>${st}${j.consecutiveErrorCount>0?`<div style="font-size:10px;color:var(--danger);margin-top:2px">连续错误 ${j.consecutiveErrorCount}</div>`:''}</td>
+                <td><div class="config-badges">${cfgHtml}</div></td>
+                <td class="count-num">
+                    <span title="执行次数">${fmt(j.executionCount)}</span>
+                    / <span style="${errStyle}" title="错误次数">${fmt(j.errorCount)}</span>
+                    / <span style="${skipStyle}" title="跳过次数">${fmt(j.skippedCount)}</span>
+                    ${j.timeoutCount>0?`<br><span style="font-size:10px;color:var(--info)" title="超时次数">超时 ${j.timeoutCount}</span>`:''}
+                </td>
+                <td style="font-size:11px;white-space:nowrap">${j.lastExecutionTime>0?fmtTime(j.lastExecutionTime):'-'}${j.lastExecutionDuration>0?`<br><span style="color:var(--gray-400)">${j.lastExecutionDuration}ms</span>`:''}</td>
+                <td><div class="actions-cell">
+                    ${j.enabled
+                        ?`<button class="btn btn-xs btn-outline" onclick="disableJob('${escJs(j.id)}')">禁用</button>`
+                        :`<button class="btn btn-xs btn-success" onclick="enableJob('${escJs(j.id)}')">启用</button>`}
+                    <button class="btn btn-xs btn-primary" onclick="triggerJob('${escJs(j.id)}')">触发</button>
+                    <button class="btn btn-xs btn-outline" onclick="openConfig('${escJs(j.id)}')">配置</button>
+                </div></td>
+            </tr>`;
+        }).join('');
+    }
+
+    function filterJobs() {
+        const q = document.getElementById('searchInput').value.toLowerCase();
+        const cat = document.getElementById('categoryFilter').value;
+        const grp = document.getElementById('groupFilter').value;
+        const st = document.getElementById('statusFilter').value;
+        let f = allJobs;
+        if (q) f = f.filter(j => j.displayName.toLowerCase().includes(q) || j.simpleName.toLowerCase().includes(q) || j.className.toLowerCase().includes(q) || (j.group||'').toLowerCase().includes(q) || (j.tags||[]).some(t => t.toLowerCase().includes(q)));
+        if (cat) f = f.filter(j => j.category === cat);
+        if (grp) f = f.filter(j => j.group === grp);
+        if (st === 'enabled') f = f.filter(j => j.effectiveEnabled);
+        else if (st === 'disabled') f = f.filter(j => !j.effectiveEnabled);
+        else if (st === 'running') f = f.filter(j => j.running);
+        else if (st === 'autoDisabled') f = f.filter(j => j.autoDisabled);
+        renderJobs(f);
+    }
+
+    function filterByCategory(c) { document.getElementById('categoryFilter').value = c; filterJobs(); document.getElementById('searchInput').scrollIntoView({behavior:'smooth'}); }
+
+    // ========== Config Modal ==========
+
+    function openConfig(jobId) {
+        const job = allJobs.find(j => j.id === jobId);
+        if (!job) return;
+        currentJobId = jobId;
+        document.getElementById('modalTitle').textContent = job.displayName + ' - 配置';
+        document.getElementById('modalInfo').innerHTML = `
+            <span class="info-label">类名</span><span class="info-value">${esc(job.className)}</span>
+            <span class="info-label">分类</span><span class="info-value">${job.categoryDisplayName} (${job.category})</span>
+            ${job.group?`<span class="info-label">分组</span><span class="info-value">${esc(job.group)}</span>`:''}
+            ${job.description?`<span class="info-label">描述</span><span class="info-value">${esc(job.description)}</span>`:''}
+            <span class="info-label">执行次数</span><span class="info-value">${fmt(job.executionCount)}</span>
+            <span class="info-label">错误 / 跳过</span><span class="info-value">${fmt(job.errorCount)} / ${fmt(job.skippedCount)}</span>
+            ${job.lastErrorMessage?`<span class="info-label">最近错误</span><span class="info-value" style="color:var(--danger)">${esc(job.lastErrorMessage)}</span>`:''}
+            ${(job.tags||[]).length?`<span class="info-label">标签</span><span class="info-value">${job.tags.map(t=>'<span class="tag">'+esc(t)+'</span>').join(' ')}</span>`:''}
+        `;
+        document.getElementById('cfgSkipIfRunning').checked = job.skipIfRunning;
+        document.getElementById('cfgTimeout').value = job.timeout;
+        document.getElementById('cfgMaxErrors').value = job.maxConsecutiveErrors;
+        document.getElementById('cfgOrder').value = job.order;
+        document.getElementById('configModal').classList.add('active');
+    }
+
+    function closeModal() { document.getElementById('configModal').classList.remove('active'); currentJobId = null; }
+
+    async function saveConfig() {
+        if (!currentJobId) return;
+        try {
+            const d = await apiPost('/updateConfig', {
+                jobId: currentJobId,
+                skipIfRunning: document.getElementById('cfgSkipIfRunning').checked,
+                timeout: parseInt(document.getElementById('cfgTimeout').value) || 0,
+                maxConsecutiveErrors: parseInt(document.getElementById('cfgMaxErrors').value) || 0,
+                order: parseInt(document.getElementById('cfgOrder').value) || 100
+            });
+            if (d.code === 0) { showToast(d.msg, 'success'); closeModal(); await refreshAll(); }
+            else showToast(d.msg || '保存失败', 'error');
+        } catch(e) { showToast('保存失败: ' + e.message, 'error'); }
+    }
+
+    // ========== Actions ==========
+
+    async function toggleGlobal() {
+        const p = document.getElementById('globalStatus').classList.contains('paused');
+        const d = await apiPost(p ? '/resumeAll' : '/pauseAll');
+        if (d.code===0) { showToast(d.msg,'success'); await refreshAll(); } else showToast(d.msg||'失败','error');
+    }
+    async function toggleCategory(c, en) {
+        const d = await apiPost(en?'/enableCategory':'/disableCategory', {category:c});
+        if (d.code===0) { showToast(d.msg,'success'); await refreshAll(); } else showToast(d.msg||'失败','error');
+    }
+    async function enableAllCategories() {
+        const d = await apiGet('/categories');
+        if (d.code===0) { for (const c of d.categories) if (!c.enabled) await apiPost('/enableCategory',{category:c.name}); showToast('已启用所有分类','success'); await refreshAll(); }
+    }
+    async function disableAllCategories() {
+        if (!confirm('确定禁用所有分类？')) return;
+        const d = await apiGet('/categories');
+        if (d.code===0) { for (const c of d.categories) if (c.enabled) await apiPost('/disableCategory',{category:c.name}); showToast('已禁用所有分类','success'); await refreshAll(); }
+    }
+    async function enableJob(id) { const d = await apiPost('/enable',{jobId:id}); if(d.code===0){showToast(d.msg,'success');await refreshAll();}else showToast(d.msg||'失败','error'); }
+    async function disableJob(id) { const d = await apiPost('/disable',{jobId:id}); if(d.code===0){showToast(d.msg,'success');await refreshAll();}else showToast(d.msg||'失败','error'); }
+    async function triggerJob(id) { const d = await apiPost('/trigger',{jobId:id}); if(d.code===0){showToast(d.msg,'success');setTimeout(()=>refreshAll(),400);}else showToast(d.msg||'失败','error'); }
+
+    // ========== Utils ==========
+
+    function setAutoRefresh(v) { if(autoTimer){clearInterval(autoTimer);autoTimer=null;} const ms=parseInt(v); if(ms>0) autoTimer=setInterval(refreshAll,ms); }
+    function fmt(n) { return (n===undefined||n===null)?'0':n.toLocaleString(); }
+    function fmtTime(ts) {
+        if(!ts) return '-';
+        const d=new Date(ts), now=new Date(), diff=now-d;
+        if(diff<60000) return Math.floor(diff/1000)+'秒前';
+        if(diff<3600000) return Math.floor(diff/60000)+'分钟前';
+        if(diff<86400000) return Math.floor(diff/3600000)+'小时前';
+        const p=n=>String(n).padStart(2,'0');
+        return d.toDateString()===now.toDateString() ? p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds()) : (d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes());
+    }
+    function esc(s) { return s?String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'):''; }
+    function escJs(s) { return s?s.replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\$/g,'\\$'):''; }
+    function showToast(msg, type) {
+        const c=document.getElementById('toastContainer'), t=document.createElement('div');
+        t.className='toast '+(type||'info'); t.textContent=msg; c.appendChild(t);
+        setTimeout(()=>{t.style.opacity='0';t.style.transition='opacity 0.3s';setTimeout(()=>t.remove(),300);},3000);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => { refreshAll(); setAutoRefresh(document.getElementById('refreshInterval').value); });
+    document.getElementById('configModal').addEventListener('click', e => { if(e.target===e.currentTarget) closeModal(); });
+    //</#noparse>
+</script>
+</body>
+</html>
