@@ -2,13 +2,20 @@ package cn.org.autumn.service;
 
 import cn.org.autumn.config.QueueConfig;
 import cn.org.autumn.model.QueueMessage;
+import cn.org.autumn.thread.TagValue;
 import cn.org.autumn.utils.RedisUtils;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.connection.stream.MapRecord;
+import org.springframework.data.redis.connection.stream.StreamOffset;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
+
+import cn.org.autumn.thread.TagRunnable;
+import cn.org.autumn.thread.TagTaskExecutor;
+import org.springframework.context.annotation.Lazy;
 
 import javax.annotation.PreDestroy;
 import java.lang.reflect.Type;
@@ -36,6 +43,14 @@ public class QueueService {
     private Gson gson;
 
     /**
+     * 统一线程池 — 消费者线程通过 TagTaskExecutor 执行，纳入线程管理体系。
+     * <p>消费者任务会显示在线程池管理界面，支持查看状态、堆栈和中断操作。</p>
+     */
+    @Autowired
+    @Lazy
+    private TagTaskExecutor tagTaskExecutor;
+
+    /**
      * 内存队列容器
      */
     private final Map<String, BlockingQueue<QueueMessage<?>>> queues = new ConcurrentHashMap<>();
@@ -51,24 +66,19 @@ public class QueueService {
     private final Map<String, QueueConfig> configs = new ConcurrentHashMap<>();
 
     /**
-     * 消费者线程池
+     * 空闲检测调度器 — 轻量级单线程，仅用于定期检查消费者是否空闲超时。
+     * <p>业务线程（消费者）已交由 {@link TagTaskExecutor} 管理，此调度器只负责定时触发检查逻辑。</p>
      */
-    private final ExecutorService executor = Executors.newCachedThreadPool(r -> {
-        Thread t = new Thread(r);
-        t.setName("queue-consumer-" + t.getId());
+    private final ScheduledExecutorService idleCheckScheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+        Thread t = new Thread(r, "queue-idle-checker");
         t.setDaemon(true);
         return t;
     });
 
     /**
-     * 延迟队列调度器
+     * 空闲检测任务 Future 映射 — 用于优雅取消定时检测（替代异常中断方式）
      */
-    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2, r -> {
-        Thread t = new Thread(r);
-        t.setName("queue-delay-scheduler-" + t.getId());
-        t.setDaemon(true);
-        return t;
-    });
+    private final Map<String, ScheduledFuture<?>> idleCheckerFutures = new ConcurrentHashMap<>();
 
     /**
      * 消费者运行状态
@@ -396,6 +406,7 @@ public class QueueService {
 
     /**
      * 启动消费者（支持空闲自动停止）
+     * <p>消费者线程通过 {@link TagTaskExecutor} 执行，在线程池管理界面中可查看、监控和中断。</p>
      *
      * @param config      队列配置
      * @param consumer    消费者
@@ -413,24 +424,52 @@ public class QueueService {
                 checker(name, config);
             for (int i = 0; i < concurrency; i++) {
                 final int consumerId = i;
-                executor.submit(() -> {
-                    if (log.isDebugEnabled())
-                        log.debug("Consumer started (auto-stop enabled): queue={}, consumerId={}, idleTimeout={}{}", name, consumerId, config.getIdleTime(), config.getIdleUnit().name().toLowerCase());
-                    while (running.get()) {
-                        try {
-                            QueueMessage<T> message = poll(name, config.getTimeout(), config.getUnit());
-                            if (message != null) {
-                                // 更新最后消息处理时间
-                                last.put(name, System.currentTimeMillis());
-                                process(config, message, consumer);
-                            }
-                        } catch (Exception e) {
-                            log.error("Consumer error: queue={}, consumerId={}, error={}", name, consumerId, e.getMessage(), e);
-                        }
+                // 使用 TagRunnable 包装消费者循环，纳入 TagTaskExecutor 统一管理
+                TagRunnable task = new TagRunnable() {
+                    @Override
+                    public boolean can() {
+                        // 队列消费者不受系统启动状态限制 — 消费者只在有消息时才启动
+                        return true;
                     }
-                    if (log.isDebugEnabled())
-                        log.debug("Consumer stopped: queue={}, consumerId={}", name, consumerId);
-                });
+
+                    @Override
+                    protected boolean applyStaggerDelay() {
+                        // 队列消费者无需错峰延迟 — 消费者应立即开始消费
+                        return true;
+                    }
+
+                    @Override
+                    @TagValue(type = QueueService.class, method = "start", tag = "队列任务处理")
+                    public void exe() {
+                        if (log.isDebugEnabled())
+                            log.debug("Consumer started: queue={}, consumerId={}, idleTimeout={}{}", name, consumerId, config.getIdleTime(), config.getIdleUnit().name().toLowerCase());
+                        while (running.get() && !isCancelled()) {
+                            try {
+                                QueueMessage<T> message = poll(name, config.getTimeout(), config.getUnit());
+                                if (message != null) {
+                                    // 更新最后消息处理时间
+                                    last.put(name, System.currentTimeMillis());
+                                    process(config, message, consumer);
+                                }
+                            } catch (Exception e) {
+                                if (isCancelled()) {
+                                    if (log.isDebugEnabled())
+                                        log.debug("Consumer interrupted: queue={}, consumerId={}", name, consumerId);
+                                    break;
+                                }
+                                log.error("Consumer error: queue={}, consumerId={}, error={}", name, consumerId, e.getMessage(), e);
+                            }
+                        }
+                        if (log.isDebugEnabled())
+                            log.debug("Consumer stopped: queue={}, consumerId={}", name, consumerId);
+                    }
+                };
+                // 设置任务元数据 — 在管理界面中识别消费者
+                task.setTag("队列消费者");
+                task.setName(name + "#" + consumerId);
+                task.setMethod(name);
+                task.setType(QueueService.class);
+                tagTaskExecutor.execute(task);
             }
         } else {
             // 消费者已运行，只需更新最后消息时间（触发活跃状态）
@@ -442,21 +481,25 @@ public class QueueService {
 
     /**
      * 启动空闲检测器
-     * 定期检查消费者是否空闲超时，如果超时则自动停止消费者
+     * <p>定期检查消费者是否空闲超时，如果超时则自动停止消费者。
+     * 使用 {@link ScheduledFuture#cancel(boolean)} 优雅停止检测（替代异常中断方式）。</p>
      *
      * @param name   队列名称
      * @param config 队列配置
      */
     private void checker(String name, QueueConfig config) {
+        // 取消已有的检测器（防止重复创建）
+        cancelChecker(name);
         long idleTimeoutMillis = config.getIdleUnit().toMillis(config.getIdleTime());
         // 检查间隔为空闲超时的一半，最小1秒，最大30秒
         long checkIntervalMillis = Math.max(1000, Math.min(idleTimeoutMillis / 2, 30000));
-        scheduler.scheduleAtFixedRate(() -> {
+        ScheduledFuture<?> future = idleCheckScheduler.scheduleAtFixedRate(() -> {
             try {
                 AtomicBoolean running = this.running.get(name);
                 if (running == null || !running.get()) {
-                    // 消费者已停止，取消检测任务（通过抛出异常结束）
-                    throw new RuntimeException("Consumer stopped, cancelling idle checker");
+                    // 消费者已停止，取消此检测器
+                    cancelChecker(name);
+                    return;
                 }
                 Long lastTime = last.get(name);
                 if (lastTime == null) {
@@ -469,20 +512,28 @@ public class QueueService {
                     if (log.isDebugEnabled())
                         log.debug("Consumer idle timeout, auto stopping: queue={}, idleTime={}ms, threshold={}ms", name, idleTime, idleTimeoutMillis);
                     stop(name);
-                    // 停止后抛出异常结束定时任务
-                    throw new RuntimeException("Idle timeout, consumer stopped");
                 }
-            } catch (RuntimeException e) {
-                // 预期的异常，用于结束定时任务
-                throw e;
             } catch (Exception e) {
                 log.error("Idle checker error: queue={}, error={}", name, e.getMessage(), e);
             }
         }, checkIntervalMillis, checkIntervalMillis, TimeUnit.MILLISECONDS);
+        idleCheckerFutures.put(name, future);
+    }
+
+    /**
+     * 取消指定队列的空闲检测器
+     */
+    private void cancelChecker(String name) {
+        ScheduledFuture<?> future = idleCheckerFutures.remove(name);
+        if (future != null) {
+            future.cancel(false);
+        }
     }
 
     /**
      * 停止消费者
+     * <p>设置运行标志为 false，消费者线程将在下次循环检查时优雅退出。
+     * 同时取消该队列的空闲检测器。</p>
      *
      * @param name 队列名称
      */
@@ -493,6 +544,8 @@ public class QueueService {
             if (log.isDebugEnabled())
                 log.debug("Consumer stop requested: queue={}", name);
         }
+        // 取消空闲检测器
+        cancelChecker(name);
     }
 
     /**
@@ -800,8 +853,7 @@ public class QueueService {
         try {
             String key = "queue:stream:" + config.getName();
             // 简化实现：使用 XREAD 而非消费者组
-            List<?> records = redisTemplate.opsForStream().read(
-                    org.springframework.data.redis.connection.stream.StreamOffset.fromStart(key));
+            List<?> records = redisTemplate.opsForStream().read(StreamOffset.fromStart(key));
             if (records == null || records.isEmpty()) {
                 if (timeout > 0) {
                     Thread.sleep(Math.min(unit.toMillis(timeout), 100));
@@ -810,8 +862,7 @@ public class QueueService {
             }
             // 获取第一条记录并删除
             @SuppressWarnings("unchecked")
-            org.springframework.data.redis.connection.stream.MapRecord<String, Object, Object> record =
-                    (org.springframework.data.redis.connection.stream.MapRecord<String, Object, Object>) records.get(0);
+            MapRecord<String, Object, Object> record = (MapRecord<String, Object, Object>) records.get(0);
             redisTemplate.opsForStream().delete(key, record.getId());
             Object data = record.getValue().get("data");
             if (data != null) {
@@ -1159,23 +1210,22 @@ public class QueueService {
     public void shutdown() {
         if (log.isDebugEnabled())
             log.debug("Shutting down QueueService...");
-        // 停止所有消费者
-        running.values().forEach(running -> running.set(false));
-        // 关闭线程池
-        executor.shutdown();
-        scheduler.shutdown();
+        // 停止所有消费者（设置运行标志为 false，消费者线程将优雅退出）
+        running.values().forEach(r -> r.set(false));
+        // 取消所有空闲检测器
+        idleCheckerFutures.values().forEach(f -> f.cancel(false));
+        idleCheckerFutures.clear();
+        // 关闭空闲检测调度器
+        idleCheckScheduler.shutdown();
         try {
-            if (!executor.awaitTermination(10, TimeUnit.SECONDS)) {
-                executor.shutdownNow();
-            }
-            if (!scheduler.awaitTermination(10, TimeUnit.SECONDS)) {
-                scheduler.shutdownNow();
+            if (!idleCheckScheduler.awaitTermination(5, TimeUnit.SECONDS)) {
+                idleCheckScheduler.shutdownNow();
             }
         } catch (InterruptedException e) {
-            executor.shutdownNow();
-            scheduler.shutdownNow();
+            idleCheckScheduler.shutdownNow();
             Thread.currentThread().interrupt();
         }
+        // 注意：消费者线程由 TagTaskExecutor 管理，其生命周期由 TagTaskExecutor.destroy() 处理
         if (log.isDebugEnabled())
             log.debug("QueueService shutdown completed");
     }

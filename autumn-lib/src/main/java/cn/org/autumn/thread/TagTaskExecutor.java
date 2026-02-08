@@ -483,14 +483,16 @@ public class TagTaskExecutor extends ThreadPoolTaskExecutor {
         setCorePoolSize(corePoolSize);
         ThreadPoolExecutor executor = getThreadPoolExecutor();
         executor.setCorePoolSize(corePoolSize);
-        log.info("核心线程数已更新为: {}", corePoolSize);
+        if (log.isDebugEnabled())
+            log.debug("核心线程数已更新为: {}", corePoolSize);
     }
 
     public void updateMaxPoolSize(int maxPoolSize) {
         setMaxPoolSize(maxPoolSize);
         ThreadPoolExecutor executor = getThreadPoolExecutor();
         executor.setMaximumPoolSize(maxPoolSize);
-        log.info("最大线程数已更新为: {}", maxPoolSize);
+        if (log.isDebugEnabled())
+            log.debug("最大线程数已更新为: {}", maxPoolSize);
     }
 
     /**
@@ -503,7 +505,8 @@ public class TagTaskExecutor extends ThreadPoolTaskExecutor {
         int old = (int) getThreadPoolExecutor().getKeepAliveTime(TimeUnit.SECONDS);
         setKeepAliveSeconds(seconds);
         getThreadPoolExecutor().setKeepAliveTime(seconds, TimeUnit.SECONDS);
-        log.info("保活时间已更新: {}s -> {}s", old, seconds);
+        if (log.isDebugEnabled())
+            log.debug("保活时间已更新: {}s -> {}s", old, seconds);
     }
 
     /**
@@ -516,7 +519,8 @@ public class TagTaskExecutor extends ThreadPoolTaskExecutor {
     public void updateAllowCoreThreadTimeOut(boolean allow) {
         boolean old = getThreadPoolExecutor().allowsCoreThreadTimeOut();
         getThreadPoolExecutor().allowCoreThreadTimeOut(allow);
-        log.info("核心线程超时回收已更新: {} -> {}", old, allow);
+        if (log.isDebugEnabled())
+            log.debug("核心线程超时回收已更新: {} -> {}", old, allow);
     }
 
     public void resetStats() {
@@ -527,7 +531,8 @@ public class TagTaskExecutor extends ThreadPoolTaskExecutor {
         totalRejected.set(0);
         totalSkipped.set(0);
         totalExecutionTime.set(0);
-        log.info("线程池统计数据已重置");
+        if (log.isDebugEnabled())
+            log.debug("线程池统计数据已重置");
     }
 
     // ======================== 全局错峰延迟 ========================
@@ -551,7 +556,8 @@ public class TagTaskExecutor extends ThreadPoolTaskExecutor {
     public static void setGlobalStaggerSeconds(long seconds) {
         long old = globalStaggerSeconds;
         globalStaggerSeconds = Math.max(0, seconds);
-        log.info("全局错峰延迟已更新: {}s -> {}s", old, globalStaggerSeconds);
+        if (log.isDebugEnabled())
+            log.debug("全局错峰延迟已更新: {}s -> {}s", old, globalStaggerSeconds);
     }
 
     // ======================== 格式化工具 ========================
@@ -606,7 +612,8 @@ public class TagTaskExecutor extends ThreadPoolTaskExecutor {
     public static void setMaxHistorySize(int size) {
         int old = maxHistorySize;
         maxHistorySize = Math.max(10, Math.min(100000, size));
-        log.info("最大历史记录数已更新: {} -> {}", old, maxHistorySize);
+        if (log.isDebugEnabled())
+            log.debug("最大历史记录数已更新: {} -> {}", old, maxHistorySize);
         // 如果新上限比当前记录数小，立即触发裁剪
         if (history.size() > maxHistorySize) {
             trimHistoryIfNeeded(maxHistorySize);
@@ -641,6 +648,7 @@ public class TagTaskExecutor extends ThreadPoolTaskExecutor {
     }
 
     // ======================== 死条目清理线程 (Sweeper) ========================
+
     /**
      * 启动死条目清理线程。
      * <p>在 Spring 容器初始化后自动启动（通过 {@link #afterPropertiesSet()}），
