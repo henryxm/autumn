@@ -194,7 +194,7 @@ public abstract class BaseQueueService<M extends BaseMapper<T>, T> extends Servi
             public boolean consume(QueueMessage<T> message) {
                 try {
                     T body = message.getBody();
-                    return onQueueMessage(body);
+                    return onQueueMessage(suffix, body);
                 } catch (Exception e) {
                     log.error("Queue message processing failed: {}", e.getMessage());
                     return false;
@@ -205,7 +205,7 @@ public abstract class BaseQueueService<M extends BaseMapper<T>, T> extends Servi
             public void onError(QueueMessage<T> message, Throwable throwable) {
                 try {
                     T body = message.getBody();
-                    onErrorMessage(body, throwable);
+                    onErrorMessage(suffix, body, throwable);
                 } catch (Exception e) {
                     log.error("Queue error message processing failed: {}", e.getMessage());
                 }
@@ -215,7 +215,7 @@ public abstract class BaseQueueService<M extends BaseMapper<T>, T> extends Servi
             public void onDead(QueueMessage<T> message) {
                 try {
                     T body = message.getBody();
-                    onDeadMessage(body);
+                    onDeadMessage(suffix, body);
                 } catch (Exception e) {
                     log.error("Queue dead message processing failed: {}", e.getMessage());
                 }
@@ -280,7 +280,7 @@ public abstract class BaseQueueService<M extends BaseMapper<T>, T> extends Servi
             public boolean consume(QueueMessage<X> message) {
                 try {
                     X body = message.getBody();
-                    return onQueueMessage(clazz, body);
+                    return onQueueMessage(suffix, clazz, body);
                 } catch (Exception e) {
                     log.error("Queue message processing failed: {}", e.getMessage());
                     return false;
@@ -291,7 +291,7 @@ public abstract class BaseQueueService<M extends BaseMapper<T>, T> extends Servi
             public void onError(QueueMessage<X> message, Throwable throwable) {
                 try {
                     X body = message.getBody();
-                    onErrorMessage(clazz, body, throwable);
+                    onErrorMessage(suffix, clazz, body, throwable);
                 } catch (Exception e) {
                     log.error("Queue error message processing failed: {}", e.getMessage());
                 }
@@ -301,7 +301,7 @@ public abstract class BaseQueueService<M extends BaseMapper<T>, T> extends Servi
             public void onDead(QueueMessage<X> message) {
                 try {
                     X body = message.getBody();
-                    onDeadMessage(clazz, body);
+                    onDeadMessage(suffix, clazz, body);
                 } catch (Exception e) {
                     log.error("Queue dead message processing failed: {}", e.getMessage());
                 }
@@ -335,7 +335,7 @@ public abstract class BaseQueueService<M extends BaseMapper<T>, T> extends Servi
             public void onError(QueueMessage<X> message, Throwable throwable) {
                 try {
                     X body = message.getBody();
-                    onErrorMessage(clazz, body, throwable);
+                    onErrorMessage(suffix, clazz, body, throwable);
                 } catch (Exception e) {
                     log.error("Queue error message processing failed: {}", e.getMessage());
                 }
@@ -345,7 +345,7 @@ public abstract class BaseQueueService<M extends BaseMapper<T>, T> extends Servi
             public void onDead(QueueMessage<X> message) {
                 try {
                     X body = message.getBody();
-                    onDeadMessage(clazz, body);
+                    onDeadMessage(suffix, clazz, body);
                 } catch (Exception e) {
                     log.error("Queue dead message processing failed: {}", e.getMessage());
                 }
@@ -937,7 +937,7 @@ public abstract class BaseQueueService<M extends BaseMapper<T>, T> extends Servi
             public void onError(QueueMessage<T> message, Throwable throwable) {
                 try {
                     T body = message.getBody();
-                    onErrorMessage(body, throwable);
+                    onErrorMessage(suffix, body, throwable);
                 } catch (Exception e) {
                     log.error("Queue error message processing failed: {}", e.getMessage());
                 }
@@ -947,7 +947,7 @@ public abstract class BaseQueueService<M extends BaseMapper<T>, T> extends Servi
             public void onDead(QueueMessage<T> message) {
                 try {
                     T body = message.getBody();
-                    onDeadMessage(body);
+                    onDeadMessage(suffix, body);
                 } catch (Exception e) {
                     log.error("Queue dead message processing failed: {}", e.getMessage());
                 }
@@ -1079,6 +1079,19 @@ public abstract class BaseQueueService<M extends BaseMapper<T>, T> extends Servi
         log.warn("Queue dead message received but onDeadMessage not implemented: {}", entity);
     }
 
+    protected <X> boolean onQueueMessage(String suffix, X message) {
+        log.warn("Queue message received but onQueueMessage(String) not implemented: suffix={}, message={}", suffix, message);
+        return true;
+    }
+
+    protected <X> void onErrorMessage(String suffix, X message, Throwable throwable) {
+        log.warn("Queue error message received but onErrorMessage(String, Throwable) not implemented: suffix={}, message={}", suffix, message);
+    }
+
+    protected <X> void onDeadMessage(String suffix, X message) {
+        log.warn("Queue message received but onDeadMessage(String) not implemented: suffix={}, message={}", suffix, message);
+    }
+
     /**
      * 队列消息处理回调方法（自定义类型）
      * 子类可以重写此方法来处理不同类型的队列消息
@@ -1100,6 +1113,19 @@ public abstract class BaseQueueService<M extends BaseMapper<T>, T> extends Servi
 
     protected <X> void onDeadMessage(Class<X> type, X message) {
         log.warn("Queue message received but onDeadMessage(Class, X) not implemented: type={}, message={}", type.getSimpleName(), message);
+    }
+
+    protected <X> boolean onQueueMessage(String suffix, Class<X> type, X message) {
+        log.warn("Queue message received but onQueueMessage(Class, X) not implemented: suffix={}, type={}, message={}", suffix, type.getSimpleName(), message);
+        return true;
+    }
+
+    protected <X> void onErrorMessage(String suffix, Class<X> type, X message, Throwable throwable) {
+        log.warn("Queue error message received but onErrorMessage(Class, X, Throwable) not implemented: suffix={}, type={}, message={}", suffix, type.getSimpleName(), message);
+    }
+
+    protected <X> void onDeadMessage(String suffix, Class<X> type, X message) {
+        log.warn("Queue message received but onDeadMessage(Class, X) not implemented: suffix={}, type={}, message={}", suffix, type.getSimpleName(), message);
     }
     // ==================== 队列管理方法 ====================
 
