@@ -1,14 +1,11 @@
 package cn.org.autumn.modules.wall.service;
 
-import cn.org.autumn.annotation.JobMeta;
 import cn.org.autumn.base.ModuleService;
 import cn.org.autumn.config.ClearHandler;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.wall.site.WallSite;
-import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import cn.org.autumn.modules.wall.dao.ShieldDao;
@@ -21,11 +18,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+@Slf4j
 @Service
-@JobMeta(name = "防御盾牌")
 public class ShieldService extends ModuleService<ShieldDao, ShieldEntity> implements LoopJob.FiveSecond, LoopJob.OneMinute, LoopJob.OneDay, ClearHandler {
-
-    Logger log = LoggerFactory.getLogger(getClass());
 
     static boolean print = false;
 
@@ -102,22 +97,17 @@ public class ShieldService extends ModuleService<ShieldDao, ShieldEntity> implem
         return html;
     }
 
-    @SneakyThrows
     @Override
-    @JobMeta(name = "清空访问记录")
     public void onFiveSecond() {
-        Thread.sleep(5000);
         visit.clear();
     }
 
     @Override
-    @JobMeta(name = "刷新URI规则")
     public void onOneMinute() {
         uris = null;
     }
 
     @Override
-    @JobMeta(name = "清空IP白名单")
     public void onOneDay() {
         ips.clear();
     }

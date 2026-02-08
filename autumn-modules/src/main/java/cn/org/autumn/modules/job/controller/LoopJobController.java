@@ -12,7 +12,7 @@ import java.util.Map;
 /**
  * 定时任务管理控制器
  * <p>
- * 提供定时任务的查看、启停、手动触发等管理功能
+ * 提供定时任务的查看、启停、手动触发、健康预警等管理功能
  */
 @Slf4j
 @Controller
@@ -43,7 +43,7 @@ public class LoopJobController {
     }
 
     /**
-     * 获取分类列表及统计
+     * 获取分类列表及统计（包含批量执行耗时数据）
      */
     @GetMapping("/categories")
     @ResponseBody
@@ -58,9 +58,7 @@ public class LoopJobController {
     }
 
     /**
-     * 获取任务列表，可按分类过滤
-     *
-     * @param category 分类名称（可选），如 OneSecond、ThreeSecond 等
+     * 获取任务列表
      */
     @GetMapping("/list")
     @ResponseBody
@@ -75,10 +73,20 @@ public class LoopJobController {
     }
 
     /**
-     * 启用指定任务
-     *
-     * @param params 包含 jobId 字段
+     * 获取健康预警列表
      */
+    @GetMapping("/alerts")
+    @ResponseBody
+    public R alerts() {
+        try {
+            List<Map<String, Object>> alerts = LoopJob.getAlerts();
+            return R.ok().put("alerts", alerts).put("count", alerts.size());
+        } catch (Exception e) {
+            log.error("获取告警信息失败:", e);
+            return R.error("获取告警信息失败: " + e.getMessage());
+        }
+    }
+
     @PostMapping("/enable")
     @ResponseBody
     public R enable(@RequestBody Map<String, Object> params) {
@@ -99,11 +107,6 @@ public class LoopJobController {
         }
     }
 
-    /**
-     * 禁用指定任务
-     *
-     * @param params 包含 jobId 字段
-     */
     @PostMapping("/disable")
     @ResponseBody
     public R disable(@RequestBody Map<String, Object> params) {
@@ -124,11 +127,6 @@ public class LoopJobController {
         }
     }
 
-    /**
-     * 手动触发指定任务
-     *
-     * @param params 包含 jobId 字段
-     */
     @PostMapping("/trigger")
     @ResponseBody
     public R trigger(@RequestBody Map<String, Object> params) {
@@ -141,7 +139,7 @@ public class LoopJobController {
             if (result) {
                 return R.ok("任务已触发执行");
             } else {
-                return R.error("未找到指定任务");
+                return R.error("未找到指定任务或任务正在执行中");
             }
         } catch (Exception e) {
             log.error("触发任务失败:", e);
@@ -149,11 +147,6 @@ public class LoopJobController {
         }
     }
 
-    /**
-     * 启用指定分类的所有任务
-     *
-     * @param params 包含 category 字段
-     */
     @PostMapping("/enableCategory")
     @ResponseBody
     public R enableCategory(@RequestBody Map<String, Object> params) {
@@ -170,11 +163,6 @@ public class LoopJobController {
         }
     }
 
-    /**
-     * 禁用指定分类的所有任务
-     *
-     * @param params 包含 category 字段
-     */
     @PostMapping("/disableCategory")
     @ResponseBody
     public R disableCategory(@RequestBody Map<String, Object> params) {
@@ -191,9 +179,6 @@ public class LoopJobController {
         }
     }
 
-    /**
-     * 全局暂停所有定时任务
-     */
     @PostMapping("/pauseAll")
     @ResponseBody
     public R pauseAll() {
@@ -206,9 +191,6 @@ public class LoopJobController {
         }
     }
 
-    /**
-     * 恢复所有定时任务
-     */
     @PostMapping("/resumeAll")
     @ResponseBody
     public R resumeAll() {
@@ -223,8 +205,6 @@ public class LoopJobController {
 
     /**
      * 动态更新任务运行时配置
-     *
-     * @param params 包含 jobId 及需要更新的配置参数（skipIfRunning, timeout, maxConsecutiveErrors, order）
      */
     @PostMapping("/updateConfig")
     @ResponseBody
@@ -243,6 +223,49 @@ public class LoopJobController {
         } catch (Exception e) {
             log.error("更新配置失败:", e);
             return R.error("更新配置失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 重置指定任务的统计数据
+     */
+    @PostMapping("/resetStats")
+    @ResponseBody
+    public R resetStats(@RequestBody Map<String, Object> params) {
+        try {
+            String jobId = (String) params.get("jobId");
+            if (jobId == null || jobId.isEmpty()) {
+                return R.error("任务ID不能为空");
+            }
+            boolean result = LoopJob.resetJobStats(jobId);
+            if (result) {
+                return R.ok("统计数据已重置");
+            } else {
+                return R.error("未找到指定任务");
+            }
+        } catch (Exception e) {
+            log.error("重置统计失败:", e);
+            return R.error("重置统计失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 切换并行执行模式
+     */
+    @PostMapping("/toggleParallel")
+    @ResponseBody
+    public R toggleParallel(@RequestBody Map<String, Object> params) {
+        try {
+            Boolean enabled = (Boolean) params.get("enabled");
+            if (enabled == null) {
+                // 无参数则切换
+                enabled = !LoopJob.isParallelExecution();
+            }
+            LoopJob.setParallelExecution(enabled);
+            return R.ok("并行执行已" + (enabled ? "启用" : "关闭"));
+        } catch (Exception e) {
+            log.error("切换并行执行失败:", e);
+            return R.error("切换并行执行失败: " + e.getMessage());
         }
     }
 

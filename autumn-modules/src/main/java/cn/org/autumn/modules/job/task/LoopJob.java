@@ -11,8 +11,7 @@ import org.springframework.util.ClassUtils;
 
 import java.lang.reflect.Method;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -22,8 +21,6 @@ public class LoopJob extends Factory implements LoadFactory.Must {
 
     /**
      * 已禁用的任务ID集合，key 格式为 category|className
-     * <p>
-     * 使用 jobId 而非对象 hashCode 作为标识，实现同一个类中不同分类任务的独立启停控制。
      */
     static final Set<String> disabledJobIds = ConcurrentHashMap.newKeySet();
 
@@ -36,7 +33,7 @@ public class LoopJob extends Factory implements LoadFactory.Must {
     private static final Map<String, JobInfo> jobInfoMap = new ConcurrentHashMap<>();
 
     /**
-     * 分类名称与显示名称的映射（有序）
+     * 分类名称与显示名称的映射
      */
     private static final LinkedHashMap<String, String> CATEGORY_DISPLAY = new LinkedHashMap<>();
 
@@ -56,6 +53,68 @@ public class LoopJob extends Factory implements LoadFactory.Must {
         CATEGORY_DISPLAY.put("OneDay", "1天");
         CATEGORY_DISPLAY.put("OneWeek", "1周");
     }
+
+    /**
+     * 每个分类对应的触发间隔（毫秒），用于检测执行超限
+     */
+    private static final LinkedHashMap<String, Long> CATEGORY_INTERVAL = new LinkedHashMap<>();
+
+    static {
+        CATEGORY_INTERVAL.put("OneSecond", 1000L);
+        CATEGORY_INTERVAL.put("ThreeSecond", 3000L);
+        CATEGORY_INTERVAL.put("FiveSecond", 5000L);
+        CATEGORY_INTERVAL.put("TenSecond", 10000L);
+        CATEGORY_INTERVAL.put("ThirtySecond", 30000L);
+        CATEGORY_INTERVAL.put("OneMinute", 60000L);
+        CATEGORY_INTERVAL.put("FiveMinute", 300000L);
+        CATEGORY_INTERVAL.put("TenMinute", 600000L);
+        CATEGORY_INTERVAL.put("ThirtyMinute", 1800000L);
+        CATEGORY_INTERVAL.put("OneHour", 3600000L);
+        CATEGORY_INTERVAL.put("TenHour", 36000000L);
+        CATEGORY_INTERVAL.put("ThirtyHour", 108000000L);
+        CATEGORY_INTERVAL.put("OneDay", 86400000L);
+        CATEGORY_INTERVAL.put("OneWeek", 604800000L);
+    }
+
+    // ========== 批量执行追踪 ==========
+
+    /**
+     * 分类最近一次批量执行耗时（ms）
+     */
+    private static final ConcurrentHashMap<String, Long> categoryLastBatchDuration = new ConcurrentHashMap<>();
+
+    /**
+     * 分类最近一次批量执行开始时间
+     */
+    private static final ConcurrentHashMap<String, Long> categoryLastBatchTime = new ConcurrentHashMap<>();
+
+    /**
+     * 分类批量执行超限计数（单次批量耗时 > 分类间隔）
+     */
+    private static final ConcurrentHashMap<String, AtomicLong> categoryOverrunCount = new ConcurrentHashMap<>();
+
+    // ========== 并行执行引擎 ==========
+
+    /**
+     * 并行执行开关：启用后同一分类的多个任务将通过线程池并行执行，
+     * 大幅降低秒级任务的批量执行耗时
+     */
+    private static volatile boolean parallelExecution = false;
+
+    /**
+     * 任务执行线程池，daemon 线程，自动扩缩
+     */
+    private static final ExecutorService jobExecutor = new ThreadPoolExecutor(
+            4, Math.max(8, Runtime.getRuntime().availableProcessors() * 2),
+            60L, TimeUnit.SECONDS,
+            new LinkedBlockingQueue<>(1024),
+            r -> {
+                Thread t = new Thread(r, "loop-job-worker");
+                t.setDaemon(true);
+                return t;
+            },
+            new ThreadPoolExecutor.CallerRunsPolicy()
+    );
 
     // ========== 任务信息跟踪类 ==========
 
@@ -158,24 +217,19 @@ public class LoopJob extends Factory implements LoadFactory.Must {
 
     // ========== 工具方法 ==========
 
-    /**
-     * 获取 Job 的原始类（去除 Spring CGLIB 动态代理后缀）
-     */
     private static Class<?> getUserClass(Job job) {
         return ClassUtils.getUserClass(job.getClass());
     }
 
     /**
-     * 解析 @LoopJobMeta 注解，方法级别优先于类级别
+     * 解析 @JobMeta 注解，方法级别优先于类级别
      */
     private static void resolveAnnotation(JobInfo info, Job job, String category) {
         Class<?> userClass = getUserClass(job);
-        // 1. 读取类级别注解作为默认值
         JobMeta classMeta = userClass.getAnnotation(JobMeta.class);
         if (classMeta != null) {
             applyAnnotation(info, classMeta, userClass.getSimpleName());
         }
-        // 2. 尝试读取方法级别注解（优先级更高，覆盖类级别）
         String methodName = "on" + category;
         try {
             Method method = userClass.getMethod(methodName);
@@ -184,7 +238,6 @@ public class LoopJob extends Factory implements LoadFactory.Must {
                 applyAnnotation(info, methodMeta, userClass.getSimpleName() + "." + methodName);
             }
         } catch (NoSuchMethodException ignored) {
-            // 该方法不存在（可能是通过 runJob() 注册的），忽略
         }
     }
 
@@ -220,7 +273,7 @@ public class LoopJob extends Factory implements LoadFactory.Must {
         if (disabledJobIds.contains(key)) return;
         JobInfo info = jobInfoMap.get(key);
         if (info == null) return;
-        // 防重入检查：上次任务尚未完成则跳过
+        // 防重入检查
         if (info.skipIfRunning) {
             if (!info.running.compareAndSet(false, true)) {
                 info.skippedCount.incrementAndGet();
@@ -246,7 +299,6 @@ public class LoopJob extends Factory implements LoadFactory.Must {
             info.errorCount.incrementAndGet();
             info.lastErrorTime = System.currentTimeMillis();
             info.lastErrorMessage = e.getMessage();
-            // 连续错误计数，达到阈值自动禁用
             long consecutive = info.consecutiveErrorCount.incrementAndGet();
             if (info.maxConsecutiveErrors > 0 && consecutive >= info.maxConsecutiveErrors) {
                 disabledJobIds.add(key);
@@ -258,7 +310,6 @@ public class LoopJob extends Factory implements LoadFactory.Must {
             info.executionCount.incrementAndGet();
             info.lastExecutionTime = start;
             info.lastExecutionDuration = System.currentTimeMillis() - start;
-            // 释放运行标记
             if (info.skipIfRunning) {
                 info.running.set(false);
             }
@@ -266,7 +317,7 @@ public class LoopJob extends Factory implements LoadFactory.Must {
     }
 
     /**
-     * 根据分类执行任务的具体方法
+     * 根据分类调用具体接口方法
      */
     private static void runJobByCategory(Job job, String category) {
         switch (category) {
@@ -332,6 +383,51 @@ public class LoopJob extends Factory implements LoadFactory.Must {
         }
     }
 
+    // ========== 批量执行引擎（核心优化） ==========
+
+    /**
+     * 统一的分类批量执行方法。
+     * <p>
+     * 1. 支持并行/串行两种模式，parallelExecution=true 时利用线程池并行执行同分类所有任务。
+     * 2. 追踪每次批量执行的总耗时，与分类间隔对比检测执行超限。
+     * 3. CallerRunsPolicy 背压策略：线程池队列满时在调用线程执行，防止任务丢失。
+     *
+     * @param category 分类名称
+     * @param jobList  该分类的任务列表
+     */
+    private static void runCategoryJobs(String category, List<Job> jobList) {
+        long batchStart = System.currentTimeMillis();
+        if (parallelExecution && jobList.size() > 1) {
+            // 并行执行：使用 CompletableFuture + 线程池
+            List<CompletableFuture<Void>> futures = new ArrayList<>(jobList.size());
+            for (Job job : jobList) {
+                futures.add(CompletableFuture.runAsync(
+                        () -> executeJob(job, category, () -> runJobByCategory(job, category)),
+                        jobExecutor));
+            }
+            try {
+                CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+            } catch (Exception e) {
+                log.error("Parallel batch error [{}]: {}", category, e.getMessage());
+            }
+        } else {
+            // 串行执行
+            for (Job job : jobList) {
+                executeJob(job, category, () -> runJobByCategory(job, category));
+            }
+        }
+        long batchDuration = System.currentTimeMillis() - batchStart;
+        // 记录批量执行耗时
+        categoryLastBatchDuration.put(category, batchDuration);
+        categoryLastBatchTime.put(category, batchStart);
+        // 超限检测
+        Long interval = CATEGORY_INTERVAL.get(category);
+        if (interval != null && batchDuration > interval) {
+            categoryOverrunCount.computeIfAbsent(category, k -> new AtomicLong(0)).incrementAndGet();
+            log.warn("Category [{}] batch overrun: {}ms > {}ms interval", category, batchDuration, interval);
+        }
+    }
+
     // ========== 管理方法 ==========
 
     public static boolean isGlobalPaused() {
@@ -366,9 +462,6 @@ public class LoopJob extends Factory implements LoadFactory.Must {
             log.info("Category [{}] disabled", category);
     }
 
-    /**
-     * 启用指定任务（按 jobId 精确控制，同一个类的不同分类可独立启停）
-     */
     public static boolean enableJob(String jobId) {
         JobInfo info = jobInfoMap.get(jobId);
         if (info == null) return false;
@@ -380,9 +473,6 @@ public class LoopJob extends Factory implements LoadFactory.Must {
         return true;
     }
 
-    /**
-     * 禁用指定任务（按 jobId 精确控制，同一个类的不同分类可独立启停）
-     */
     public static boolean disableJob(String jobId) {
         if (!jobInfoMap.containsKey(jobId)) return false;
         disabledJobIds.add(jobId);
@@ -391,9 +481,6 @@ public class LoopJob extends Factory implements LoadFactory.Must {
         return true;
     }
 
-    /**
-     * 动态更新任务运行时配置参数
-     */
     public static boolean updateJobConfig(String jobId, Map<String, Object> config) {
         JobInfo info = jobInfoMap.get(jobId);
         if (info == null) return false;
@@ -418,7 +505,6 @@ public class LoopJob extends Factory implements LoadFactory.Must {
         if (info == null) return false;
         Job job = info.getJob();
         String category = info.getCategory();
-        // 防重入检查
         if (info.skipIfRunning && info.running.get()) {
             log.warn("Manual trigger skipped for Job [{}] (still running)", jobId);
             return false;
@@ -444,8 +530,40 @@ public class LoopJob extends Factory implements LoadFactory.Must {
     }
 
     /**
-     * 获取任务列表，可按分类过滤，按 order 排序
+     * 重置指定任务的统计数据
      */
+    public static boolean resetJobStats(String jobId) {
+        JobInfo info = jobInfoMap.get(jobId);
+        if (info == null) return false;
+        info.executionCount.set(0);
+        info.errorCount.set(0);
+        info.skippedCount.set(0);
+        info.timeoutCount.set(0);
+        info.consecutiveErrorCount.set(0);
+        info.lastExecutionTime = 0;
+        info.lastExecutionDuration = 0;
+        info.lastErrorTime = 0;
+        info.lastErrorMessage = null;
+        info.autoDisabled = false;
+        disabledJobIds.remove(jobId);
+        if (log.isDebugEnabled())
+            log.info("Job [{}] stats reset", jobId);
+        return true;
+    }
+
+    // ========== 并行执行控制 ==========
+
+    public static boolean isParallelExecution() {
+        return parallelExecution;
+    }
+
+    public static void setParallelExecution(boolean parallel) {
+        parallelExecution = parallel;
+        log.info("Parallel execution {}", parallel ? "enabled" : "disabled");
+    }
+
+    // ========== 查询方法 ==========
+
     public static List<Map<String, Object>> getJobList(String category) {
         List<Map<String, Object>> list = new ArrayList<>();
         for (JobInfo info : jobInfoMap.values()) {
@@ -466,19 +584,12 @@ public class LoopJob extends Factory implements LoadFactory.Must {
         return list;
     }
 
-    /**
-     * 获取分类列表及统计信息
-     */
     public static List<Map<String, Object>> getCategoryList() {
         List<Map<String, Object>> list = new ArrayList<>();
         for (Map.Entry<String, String> entry : CATEGORY_DISPLAY.entrySet()) {
             String category = entry.getKey();
             String displayName = entry.getValue();
-            long jobCount = 0;
-            long enabledCount = 0;
-            long totalExec = 0;
-            long totalErrors = 0;
-            long totalSkipped = 0;
+            long jobCount = 0, enabledCount = 0, totalExec = 0, totalErrors = 0, totalSkipped = 0;
             for (JobInfo info : jobInfoMap.values()) {
                 if (info.getCategory().equals(category)) {
                     jobCount++;
@@ -497,24 +608,22 @@ public class LoopJob extends Factory implements LoadFactory.Must {
             catMap.put("totalExecutions", totalExec);
             catMap.put("totalErrors", totalErrors);
             catMap.put("totalSkipped", totalSkipped);
+            // 批量执行追踪数据
+            catMap.put("lastBatchDuration", categoryLastBatchDuration.getOrDefault(category, 0L));
+            catMap.put("intervalMs", CATEGORY_INTERVAL.getOrDefault(category, 0L));
+            long overrunCount = 0;
+            AtomicLong counter = categoryOverrunCount.get(category);
+            if (counter != null) overrunCount = counter.get();
+            catMap.put("overrunCount", overrunCount);
             list.add(catMap);
         }
         return list;
     }
 
-    /**
-     * 获取全局统计信息
-     */
     public static Map<String, Object> getStats() {
         long totalJobs = jobInfoMap.size();
-        long enabledJobs = 0;
-        long disabledJobs = 0;
-        long totalExec = 0;
-        long totalErrors = 0;
-        long totalSkipped = 0;
-        long totalTimeouts = 0;
-        long runningCount = 0;
-        long autoDisabledCount = 0;
+        long enabledJobs = 0, disabledJobs = 0, totalExec = 0, totalErrors = 0;
+        long totalSkipped = 0, totalTimeouts = 0, runningCount = 0, autoDisabledCount = 0;
         long activeCategoryCount = 0;
         for (JobInfo info : jobInfoMap.values()) {
             if (info.isEnabled() && isCategoryEnabled(info.getCategory())) {
@@ -534,8 +643,11 @@ public class LoopJob extends Factory implements LoadFactory.Must {
                 activeCategoryCount++;
             }
         }
+        long totalOverruns = 0;
+        for (AtomicLong count : categoryOverrunCount.values()) totalOverruns += count.get();
         Map<String, Object> stats = new LinkedHashMap<>();
         stats.put("globalPaused", globalPaused);
+        stats.put("parallelExecution", parallelExecution);
         stats.put("totalJobs", totalJobs);
         stats.put("enabledJobs", enabledJobs);
         stats.put("disabledJobs", disabledJobs);
@@ -545,9 +657,156 @@ public class LoopJob extends Factory implements LoadFactory.Must {
         stats.put("totalErrors", totalErrors);
         stats.put("totalSkipped", totalSkipped);
         stats.put("totalTimeouts", totalTimeouts);
+        stats.put("totalOverruns", totalOverruns);
         stats.put("totalCategories", CATEGORY_DISPLAY.size());
         stats.put("activeCategoryCount", activeCategoryCount);
         return stats;
+    }
+
+    // ========== 健康预警系统 ==========
+
+    /**
+     * 自动检测所有任务和分类的运行时健康状况，返回分级告警列表。
+     * <p>
+     * 检测维度：
+     * <ul>
+     *   <li><b>CATEGORY_OVERRUN (CRITICAL)</b>: 分类批量执行耗时超过触发间隔</li>
+     *   <li><b>AUTO_DISABLED (CRITICAL)</b>: 任务因连续错误已自动禁用</li>
+     *   <li><b>JOB_STUCK (WARNING)</b>: 任务可能卡死（running 时长 > 3 倍间隔）</li>
+     *   <li><b>HIGH_ERROR_RATE (WARNING)</b>: 错误率超过 50%</li>
+     *   <li><b>APPROACHING_AUTO_DISABLE (WARNING)</b>: 连续错误接近自动禁用阈值 70%</li>
+     *   <li><b>LONG_DURATION (WARNING)</b>: 单次执行耗时超过分类间隔 80%</li>
+     *   <li><b>FREQUENT_SKIP (INFO)</b>: 跳过率超过 30%</li>
+     * </ul>
+     */
+    public static List<Map<String, Object>> getAlerts() {
+        List<Map<String, Object>> alerts = new ArrayList<>();
+        long now = System.currentTimeMillis();
+
+        // 分类超限检测
+        for (Map.Entry<String, Long> entry : CATEGORY_INTERVAL.entrySet()) {
+            String category = entry.getKey();
+            long interval = entry.getValue();
+            Long lastDuration = categoryLastBatchDuration.get(category);
+            if (lastDuration != null && lastDuration > interval) {
+                Map<String, Object> alert = new LinkedHashMap<>();
+                alert.put("level", "critical");
+                alert.put("type", "CATEGORY_OVERRUN");
+                alert.put("target", category);
+                alert.put("message", "分类 [" + CATEGORY_DISPLAY.getOrDefault(category, category) + "] 批量执行耗时 " + lastDuration + "ms，超过间隔 " + interval + "ms");
+                alert.put("value", lastDuration);
+                alert.put("threshold", interval);
+                AtomicLong cnt = categoryOverrunCount.get(category);
+                alert.put("overrunCount", cnt != null ? cnt.get() : 0);
+                alert.put("suggestion", "建议启用并行执行或优化慢任务");
+                alerts.add(alert);
+            }
+        }
+
+        // 任务级别检测
+        for (JobInfo info : jobInfoMap.values()) {
+            long execCount = info.executionCount.get();
+            long errCount = info.errorCount.get();
+            long skipCount = info.skippedCount.get();
+
+            // 自动禁用告警
+            if (info.autoDisabled) {
+                Map<String, Object> alert = new LinkedHashMap<>();
+                alert.put("level", "critical");
+                alert.put("type", "AUTO_DISABLED");
+                alert.put("target", info.id);
+                alert.put("message", "任务 [" + info.displayName + "] 因连续错误 " + info.consecutiveErrorCount.get() + " 次已自动禁用");
+                if (info.lastErrorMessage != null) {
+                    alert.put("detail", info.lastErrorMessage);
+                }
+                alert.put("suggestion", "检查错误原因，修复后在管理页面重新启用");
+                alerts.add(alert);
+            }
+
+            // 卡死检测
+            if (info.running.get() && info.lastExecutionTime > 0) {
+                Long interval = CATEGORY_INTERVAL.get(info.category);
+                if (interval != null) {
+                    long runningFor = now - info.lastExecutionTime;
+                    if (runningFor > interval * 3) {
+                        Map<String, Object> alert = new LinkedHashMap<>();
+                        alert.put("level", "warning");
+                        alert.put("type", "JOB_STUCK");
+                        alert.put("target", info.id);
+                        alert.put("message", "任务 [" + info.displayName + "] 可能卡死，已持续运行 " + (runningFor / 1000) + " 秒");
+                        alert.put("value", runningFor);
+                        alert.put("suggestion", "检查任务是否存在死锁、网络阻塞或无限循环");
+                        alerts.add(alert);
+                    }
+                }
+            }
+
+            // 高错误率
+            if (execCount > 10 && errCount > 0) {
+                double errorRate = (double) errCount / execCount;
+                if (errorRate > 0.5) {
+                    Map<String, Object> alert = new LinkedHashMap<>();
+                    alert.put("level", "warning");
+                    alert.put("type", "HIGH_ERROR_RATE");
+                    alert.put("target", info.id);
+                    alert.put("message", "任务 [" + info.displayName + "] 错误率 " + String.format("%.0f%%", errorRate * 100) + " (" + errCount + "/" + execCount + ")");
+                    alert.put("suggestion", "检查近期错误日志，考虑重置统计或修复根因");
+                    alerts.add(alert);
+                }
+            }
+
+            // 接近自动禁用阈值
+            if (info.maxConsecutiveErrors > 0 && !info.autoDisabled) {
+                long consecutive = info.consecutiveErrorCount.get();
+                if (consecutive > 0 && (double) consecutive / info.maxConsecutiveErrors >= 0.7) {
+                    Map<String, Object> alert = new LinkedHashMap<>();
+                    alert.put("level", "warning");
+                    alert.put("type", "APPROACHING_AUTO_DISABLE");
+                    alert.put("target", info.id);
+                    alert.put("message", "任务 [" + info.displayName + "] 连续错误 " + consecutive + "/" + info.maxConsecutiveErrors + "，即将触发自动禁用");
+                    alert.put("suggestion", "立即检查并修复该任务");
+                    alerts.add(alert);
+                }
+            }
+
+            // 单次执行耗时过长
+            if (info.lastExecutionDuration > 0) {
+                Long interval = CATEGORY_INTERVAL.get(info.category);
+                if (interval != null && info.lastExecutionDuration > interval * 0.8) {
+                    Map<String, Object> alert = new LinkedHashMap<>();
+                    alert.put("level", "warning");
+                    alert.put("type", "LONG_DURATION");
+                    alert.put("target", info.id);
+                    alert.put("message", "任务 [" + info.displayName + "] 上次执行 " + info.lastExecutionDuration + "ms，接近间隔上限 " + interval + "ms");
+                    alert.put("suggestion", "优化任务执行逻辑或将任务迁移到更长间隔的分类");
+                    alerts.add(alert);
+                }
+            }
+
+            // 频繁跳过
+            long totalAttempts = execCount + skipCount;
+            if (totalAttempts > 10 && skipCount > 0) {
+                double skipRate = (double) skipCount / totalAttempts;
+                if (skipRate > 0.3) {
+                    Map<String, Object> alert = new LinkedHashMap<>();
+                    alert.put("level", "info");
+                    alert.put("type", "FREQUENT_SKIP");
+                    alert.put("target", info.id);
+                    alert.put("message", "任务 [" + info.displayName + "] 跳过率 " + String.format("%.0f%%", skipRate * 100) + "，任务执行可能过慢");
+                    alert.put("suggestion", "优化任务执行速度或将任务迁移到更长间隔分类");
+                    alerts.add(alert);
+                }
+            }
+        }
+
+        // 按严重级别排序：critical > warning > info
+        alerts.sort((a, b) -> {
+            int la = "critical".equals(a.get("level")) ? 0 : "warning".equals(a.get("level")) ? 1 : 2;
+            int lb = "critical".equals(b.get("level")) ? 0 : "warning".equals(b.get("level")) ? 1 : 2;
+            return Integer.compare(la, lb);
+        });
+
+        return alerts;
     }
 
     // ========== 原有代码 ==========
@@ -810,132 +1069,62 @@ public class LoopJob extends Factory implements LoadFactory.Must {
         log.error("Job(" + getUserClass(job).getName() + "):" + e.getMessage());
     }
 
-    // ========== 定时任务执行方法（带统计跟踪） ==========
+    // ========== 定时任务执行方法（使用统一批量引擎） ==========
 
     public static void runOneSecondJob() {
-        for (Job job : oneSecondJobList) {
-            executeJob(job, "OneSecond", () -> {
-                if (job instanceof OneSecond) ((OneSecond) job).onOneSecond();
-                else job.onJob();
-            });
-        }
+        runCategoryJobs("OneSecond", oneSecondJobList);
     }
 
     public static void runThreeSecondJob() {
-        for (Job job : threeSecondJobList) {
-            executeJob(job, "ThreeSecond", () -> {
-                if (job instanceof ThreeSecond) ((ThreeSecond) job).onThreeSecond();
-                else job.onJob();
-            });
-        }
+        runCategoryJobs("ThreeSecond", threeSecondJobList);
     }
 
     public static void runFiveSecondJob() {
-        for (Job job : fiveSecondJobList) {
-            executeJob(job, "FiveSecond", () -> {
-                if (job instanceof FiveSecond) ((FiveSecond) job).onFiveSecond();
-                else job.onJob();
-            });
-        }
+        runCategoryJobs("FiveSecond", fiveSecondJobList);
     }
 
     public static void runTenSecondJob() {
-        for (Job job : tenSecondJobList) {
-            executeJob(job, "TenSecond", () -> {
-                if (job instanceof TenSecond) ((TenSecond) job).onTenSecond();
-                else job.onJob();
-            });
-        }
+        runCategoryJobs("TenSecond", tenSecondJobList);
     }
 
     public static void runThirtySecondJob() {
-        for (Job job : thirtySecondJobList) {
-            executeJob(job, "ThirtySecond", () -> {
-                if (job instanceof ThirtySecond) ((ThirtySecond) job).onThirtySecond();
-                else job.onJob();
-            });
-        }
+        runCategoryJobs("ThirtySecond", thirtySecondJobList);
     }
 
     public static void runOneMinuteJob() {
-        for (Job job : oneMinuteJobList) {
-            executeJob(job, "OneMinute", () -> {
-                if (job instanceof OneMinute) ((OneMinute) job).onOneMinute();
-                else job.onJob();
-            });
-        }
+        runCategoryJobs("OneMinute", oneMinuteJobList);
     }
 
     public static void runFiveMinuteJob() {
-        for (Job job : fiveMinuteJobList) {
-            executeJob(job, "FiveMinute", () -> {
-                if (job instanceof FiveMinute) ((FiveMinute) job).onFiveMinute();
-                else job.onJob();
-            });
-        }
+        runCategoryJobs("FiveMinute", fiveMinuteJobList);
     }
 
     public static void runTenMinuteJob() {
-        for (Job job : tenMinuteJobList) {
-            executeJob(job, "TenMinute", () -> {
-                if (job instanceof TenMinute) ((TenMinute) job).onTenMinute();
-                else job.onJob();
-            });
-        }
+        runCategoryJobs("TenMinute", tenMinuteJobList);
     }
 
     public static void runThirtyMinuteJob() {
-        for (Job job : thirtyMinuteJobList) {
-            executeJob(job, "ThirtyMinute", () -> {
-                if (job instanceof ThirtyMinute) ((ThirtyMinute) job).onThirtyMinute();
-                else job.onJob();
-            });
-        }
+        runCategoryJobs("ThirtyMinute", thirtyMinuteJobList);
     }
 
     public static void runOneHourJob() {
-        for (Job job : oneHourJobList) {
-            executeJob(job, "OneHour", () -> {
-                if (job instanceof OneHour) ((OneHour) job).onOneHour();
-                else job.onJob();
-            });
-        }
+        runCategoryJobs("OneHour", oneHourJobList);
     }
 
     public static void runTenHourJob() {
-        for (Job job : tenHourJobList) {
-            executeJob(job, "TenHour", () -> {
-                if (job instanceof TenHour) ((TenHour) job).onTenHour();
-                else job.onJob();
-            });
-        }
+        runCategoryJobs("TenHour", tenHourJobList);
     }
 
     public static void runThirtyHourJob() {
-        for (Job job : thirtyHourJobList) {
-            executeJob(job, "ThirtyHour", () -> {
-                if (job instanceof ThirtyHour) ((ThirtyHour) job).onThirtyHour();
-                else job.onJob();
-            });
-        }
+        runCategoryJobs("ThirtyHour", thirtyHourJobList);
     }
 
     public static void runOneDayJob() {
-        for (Job job : oneDayJobList) {
-            executeJob(job, "OneDay", () -> {
-                if (job instanceof OneDay) ((OneDay) job).onOneDay();
-                else job.onJob();
-            });
-        }
+        runCategoryJobs("OneDay", oneDayJobList);
     }
 
     public static void runOneWeekJob() {
-        for (Job job : oneWeekJobList) {
-            executeJob(job, "OneWeek", () -> {
-                if (job instanceof OneWeek) ((OneWeek) job).onOneWeek();
-                else job.onJob();
-            });
-        }
+        runCategoryJobs("OneWeek", oneWeekJobList);
     }
 
     /**

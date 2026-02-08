@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.wall.entity;
 
+import cn.org.autumn.annotation.Cache;
 import cn.org.autumn.table.annotation.Column;
 import cn.org.autumn.table.annotation.Table;
 import com.baomidou.mybatisplus.annotations.TableId;
@@ -16,6 +17,7 @@ public class ShieldEntity implements Serializable {
     @Column(isKey = true, type = "bigint", length = 20, isNull = false, isAutoIncrement = true, comment = "id")
     private Long id;
 
+    @Cache
     @Column(comment = "资源", isUnique = true, defaultValue = "")
     private String uri;
 

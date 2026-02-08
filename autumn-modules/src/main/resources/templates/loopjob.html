@@ -25,9 +25,9 @@
         .container { max-width: 1440px; margin: 0 auto; padding: 20px; }
 
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 18px 24px; background: white; border-radius: var(--radius); box-shadow: var(--shadow); }
-        .header-left h1 { font-size: 20px; font-weight: 600; color: var(--gray-900); }
+        .header-left h1 { font-size: 20px; font-weight: 600; color: var(--gray-900); display: flex; align-items: center; gap: 8px; }
         .header-left p { font-size: 12px; color: var(--gray-500); margin-top: 1px; }
-        .header-right { display: flex; gap: 10px; align-items: center; }
+        .header-right { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 
         .global-status { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; }
         .global-status.running { background: var(--success-bg); color: #16a34a; }
@@ -35,6 +35,11 @@
         .global-status .dot { width: 7px; height: 7px; border-radius: 50%; }
         .global-status.running .dot { background: var(--success); }
         .global-status.paused .dot { background: var(--danger); }
+
+        .parallel-status { display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 20px; font-size: 11px; font-weight: 500; cursor: pointer; transition: all 0.15s; border: 1px solid var(--gray-200); }
+        .parallel-status:hover { border-color: var(--primary); }
+        .parallel-status.on { background: var(--purple-bg); color: #6d28d9; border-color: var(--purple); }
+        .parallel-status.off { background: var(--gray-100); color: var(--gray-500); }
 
         .btn { display: inline-flex; align-items: center; gap: 5px; padding: 7px 14px; border: none; border-radius: var(--radius); font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
         .btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); }
@@ -48,11 +53,11 @@
         .btn-sm { padding: 3px 8px; font-size: 11px; }
         .btn-xs { padding: 2px 6px; font-size: 10px; border-radius: 4px; }
 
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 20px; }
-        .stat-card { background: white; padding: 16px; border-radius: var(--radius); box-shadow: var(--shadow); }
-        .stat-card .stat-label { font-size: 11px; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
-        .stat-card .stat-value { font-size: 24px; font-weight: 700; color: var(--gray-900); margin-top: 2px; font-variant-numeric: tabular-nums; }
-        .stat-card .stat-detail { font-size: 11px; color: var(--gray-400); margin-top: 2px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px; }
+        .stat-card { background: white; padding: 14px; border-radius: var(--radius); box-shadow: var(--shadow); }
+        .stat-card .stat-label { font-size: 10px; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
+        .stat-card .stat-value { font-size: 22px; font-weight: 700; color: var(--gray-900); margin-top: 2px; font-variant-numeric: tabular-nums; }
+        .stat-card .stat-detail { font-size: 10px; color: var(--gray-400); margin-top: 2px; }
         .stat-card.success .stat-value { color: #16a34a; }
         .stat-card.danger .stat-value { color: #dc2626; }
         .stat-card.info .stat-value { color: #2563eb; }
@@ -61,20 +66,50 @@
 
         .section { background: white; border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 20px; }
         .section-header { display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; border-bottom: 1px solid var(--gray-200); }
-        .section-title { font-size: 15px; font-weight: 600; color: var(--gray-800); }
+        .section-title { font-size: 15px; font-weight: 600; color: var(--gray-800); display: flex; align-items: center; gap: 8px; }
         .section-body { padding: 16px 18px; }
 
-        .category-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
+        /* Alert Panel */
+        .alert-item { padding: 10px 14px; border-radius: 6px; margin-bottom: 8px; border-left: 4px solid; font-size: 12px; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; animation: fadeIn 0.3s ease; }
+        .alert-item:last-child { margin-bottom: 0; }
+        .alert-item.critical { background: var(--danger-bg); border-color: var(--danger); }
+        .alert-item.warning { background: var(--warning-bg); border-color: var(--warning); }
+        .alert-item.info { background: var(--info-bg); border-color: var(--info); }
+        .alert-content { flex: 1; }
+        .alert-level { display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase; padding: 1px 5px; border-radius: 3px; margin-right: 6px; color: white; }
+        .alert-level.critical { background: var(--danger); }
+        .alert-level.warning { background: var(--warning); }
+        .alert-level.info { background: var(--info); }
+        .alert-message { font-weight: 500; }
+        .alert-suggestion { font-size: 11px; color: var(--gray-500); margin-top: 3px; }
+        .alert-dismiss { background: none; border: none; color: var(--gray-400); cursor: pointer; font-size: 16px; line-height: 1; padding: 2px; flex-shrink: 0; }
+        .alert-dismiss:hover { color: var(--gray-600); }
+        .alert-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; font-size: 10px; font-weight: 700; color: white; background: var(--danger); }
+        .alert-badge.warning-bg { background: var(--warning); }
+        .alert-badge.zero { background: var(--gray-300); }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+
+        .category-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
         .category-card { padding: 12px; border: 1px solid var(--gray-200); border-radius: var(--radius); transition: all 0.15s; }
         .category-card:hover { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary); }
         .category-card.disabled { background: var(--gray-50); opacity: 0.7; }
-        .category-card .cat-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+        .category-card.overrun { border-color: var(--danger); background: var(--danger-bg); }
+        .category-card .cat-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
         .category-card .cat-name { font-size: 14px; font-weight: 600; }
-        .category-card .cat-stats { display: flex; gap: 10px; font-size: 11px; color: var(--gray-500); }
-        .category-card .cat-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
+        .category-card .cat-stats { display: flex; gap: 8px; font-size: 11px; color: var(--gray-500); flex-wrap: wrap; }
+        .category-card .cat-timing { font-size: 10px; margin-top: 4px; padding: 3px 6px; border-radius: 4px; display: flex; align-items: center; gap: 4px; }
+        .category-card .cat-timing.ok { background: var(--success-bg); color: #16a34a; }
+        .category-card .cat-timing.warn { background: var(--warning-bg); color: #92400e; }
+        .category-card .cat-timing.danger { background: var(--danger-bg); color: #dc2626; }
+        .timing-bar { height: 3px; border-radius: 2px; background: var(--gray-200); flex: 1; min-width: 40px; overflow: hidden; }
+        .timing-bar-fill { height: 100%; border-radius: 2px; transition: width 0.3s; }
+        .timing-bar-fill.ok { background: var(--success); }
+        .timing-bar-fill.warn { background: var(--warning); }
+        .timing-bar-fill.danger { background: var(--danger); }
+        .category-card .cat-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; }
         .category-card .cat-count { font-size: 11px; color: var(--gray-400); }
 
-        .toggle { position: relative; width: 36px; height: 20px; cursor: pointer; }
+        .toggle { position: relative; width: 36px; height: 20px; cursor: pointer; flex-shrink: 0; }
         .toggle input { opacity: 0; width: 0; height: 0; }
         .toggle .slider { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: var(--gray-300); border-radius: 20px; transition: 0.2s; }
         .toggle .slider:before { content: ""; position: absolute; height: 14px; width: 14px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.2s; }
@@ -82,7 +117,7 @@
         .toggle input:checked + .slider:before { transform: translateX(16px); }
 
         .filter-bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
-        .filter-bar .search-input { flex: 1; min-width: 180px; padding: 7px 12px; border: 1px solid var(--gray-300); border-radius: var(--radius); font-size: 12px; outline: none; }
+        .filter-bar .search-input { flex: 1; min-width: 160px; padding: 7px 12px; border: 1px solid var(--gray-300); border-radius: var(--radius); font-size: 12px; outline: none; }
         .filter-bar .search-input:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(79,110,247,0.15); }
         .filter-bar select { padding: 7px 26px 7px 10px; border: 1px solid var(--gray-300); border-radius: var(--radius); font-size: 12px; background: white; outline: none; cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' stroke='%236b7280' stroke-width='1.5' fill='none'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 8px center; }
 
@@ -111,7 +146,6 @@
         .config-badges { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
         .actions-cell { display: flex; gap: 4px; align-items: center; flex-wrap: nowrap; }
 
-        /* Modal */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 9000; align-items: center; justify-content: center; }
         .modal-overlay.active { display: flex; }
         .modal { background: white; border-radius: 12px; box-shadow: var(--shadow-lg); width: 520px; max-width: 95vw; max-height: 90vh; overflow-y: auto; }
@@ -120,7 +154,9 @@
         .modal-close { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--gray-400); padding: 4px; line-height: 1; }
         .modal-close:hover { color: var(--gray-700); }
         .modal-body { padding: 20px; }
-        .modal-footer { padding: 14px 20px; border-top: 1px solid var(--gray-200); display: flex; justify-content: flex-end; gap: 8px; }
+        .modal-footer { padding: 14px 20px; border-top: 1px solid var(--gray-200); display: flex; justify-content: space-between; gap: 8px; }
+        .modal-footer-left { display: flex; gap: 6px; }
+        .modal-footer-right { display: flex; gap: 6px; }
         .form-group { margin-bottom: 16px; }
         .form-group:last-child { margin-bottom: 0; }
         .form-label { display: block; font-size: 12px; font-weight: 600; color: var(--gray-700); margin-bottom: 4px; }
@@ -128,7 +164,7 @@
         .form-input { width: 100%; padding: 8px 12px; border: 1px solid var(--gray-300); border-radius: var(--radius); font-size: 13px; outline: none; }
         .form-input:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(79,110,247,0.15); }
         .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .info-grid { display: grid; grid-template-columns: 100px 1fr; gap: 4px 12px; font-size: 12px; margin-bottom: 16px; padding: 12px; background: var(--gray-50); border-radius: var(--radius); }
+        .info-grid { display: grid; grid-template-columns: 90px 1fr; gap: 4px 12px; font-size: 12px; margin-bottom: 16px; padding: 12px; background: var(--gray-50); border-radius: var(--radius); }
         .info-grid .info-label { color: var(--gray-500); font-weight: 500; }
         .info-grid .info-value { color: var(--gray-800); word-break: break-all; }
         .toggle-inline { display: flex; align-items: center; gap: 8px; }
@@ -163,8 +199,8 @@
 <div class="container">
     <div class="header">
         <div class="header-left">
-            <h1>定时任务管理</h1>
-            <p>管理和监控所有循环定时任务的运行状态、配置参数</p>
+            <h1>定时任务管理 <span id="alertBadgeHeader" class="alert-badge zero" style="display:none">0</span></h1>
+            <p>管理和监控所有循环定时任务的运行状态、配置参数和健康预警</p>
         </div>
         <div class="header-right">
             <div class="auto-refresh">
@@ -178,6 +214,7 @@
                 </select>
             </div>
             <button class="btn btn-outline" onclick="refreshAll()"><svg id="refreshIcon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg> 刷新</button>
+            <span id="parallelStatus" class="parallel-status off" onclick="toggleParallel()" title="点击切换并行/串行执行模式">串行</span>
             <span id="globalStatus" class="global-status running"><span class="dot"></span><span id="globalStatusText">运行中</span></span>
             <button id="globalToggleBtn" class="btn btn-danger" onclick="toggleGlobal()">全局暂停</button>
         </div>
@@ -192,6 +229,24 @@
         <div class="stat-card warning"><div class="stat-label">错误</div><div class="stat-value" id="statErrors">-</div></div>
         <div class="stat-card"><div class="stat-label">跳过</div><div class="stat-value" id="statSkipped">-</div><div class="stat-detail">防重入跳过</div></div>
         <div class="stat-card"><div class="stat-label">超时</div><div class="stat-value" id="statTimeouts">-</div></div>
+        <div class="stat-card danger"><div class="stat-label">超限</div><div class="stat-value" id="statOverruns">-</div><div class="stat-detail">分类批量超限</div></div>
+    </div>
+
+    <!-- Health Alert Panel -->
+    <div class="section" id="alertsSection" style="display:none">
+        <div class="section-header">
+            <span class="section-title">
+                健康预警
+                <span id="alertBadge" class="alert-badge zero">0</span>
+            </span>
+            <div style="display:flex;gap:8px;align-items:center;">
+                <label style="font-size:11px;color:var(--gray-500);display:flex;align-items:center;gap:4px;cursor:pointer;">
+                    <input type="checkbox" id="alertSound" style="accent-color:var(--danger)"> 声音告警
+                </label>
+                <button class="btn btn-xs btn-outline" onclick="dismissedAlerts={}; refreshAll();">重置通知</button>
+            </div>
+        </div>
+        <div class="section-body" id="alertsBody"></div>
     </div>
 
     <div class="section">
@@ -267,8 +322,13 @@
             </div>
         </div>
         <div class="modal-footer">
-            <button class="btn btn-outline" onclick="closeModal()">取消</button>
-            <button class="btn btn-primary" onclick="saveConfig()">保存配置</button>
+            <div class="modal-footer-left">
+                <button class="btn btn-outline" onclick="resetStats()" title="清除该任务的所有执行统计数据">重置统计</button>
+            </div>
+            <div class="modal-footer-right">
+                <button class="btn btn-outline" onclick="closeModal()">取消</button>
+                <button class="btn btn-primary" onclick="saveConfig()">保存配置</button>
+            </div>
         </div>
     </div>
 </div>
@@ -279,9 +339,14 @@
     //<#noparse>
     const API = '/job/loop';
     let allJobs = [], currentJobId = null, autoTimer = null;
+    let dismissedAlerts = {};
+    let prevAlertCount = 0;
+    let audioCtx = null;
 
     async function apiGet(u) { return (await fetch(API + u)).json(); }
     async function apiPost(u, b) { return (await fetch(API + u, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(b||{}) })).json(); }
+
+    // ========== Data Loading ==========
 
     async function loadStats() {
         try {
@@ -299,7 +364,9 @@
             document.getElementById('statErrors').textContent = fmt(s.totalErrors);
             document.getElementById('statSkipped').textContent = fmt(s.totalSkipped);
             document.getElementById('statTimeouts').textContent = fmt(s.totalTimeouts);
+            document.getElementById('statOverruns').textContent = fmt(s.totalOverruns);
             updateGlobalStatus(s.globalPaused);
+            updateParallelStatus(s.parallelExecution);
         } catch(e) { console.error(e); }
     }
 
@@ -322,12 +389,22 @@
         } catch(e) { console.error(e); }
     }
 
+    async function loadAlerts() {
+        try {
+            const d = await apiGet('/alerts');
+            if (d.code !== 0) return;
+            renderAlerts(d.alerts || []);
+        } catch(e) { console.error(e); }
+    }
+
     async function refreshAll() {
         const icon = document.getElementById('refreshIcon');
         icon.classList.add('spinning');
-        await Promise.all([loadStats(), loadCategories(), loadJobs()]);
+        await Promise.all([loadStats(), loadCategories(), loadJobs(), loadAlerts()]);
         setTimeout(() => icon.classList.remove('spinning'), 400);
     }
+
+    // ========== Rendering ==========
 
     function updateGlobalStatus(paused) {
         const st = document.getElementById('globalStatus'), tx = document.getElementById('globalStatusText'), bt = document.getElementById('globalToggleBtn');
@@ -335,9 +412,66 @@
         else { st.className='global-status running'; tx.textContent='运行中'; bt.textContent='全局暂停'; bt.className='btn btn-danger'; }
     }
 
+    function updateParallelStatus(enabled) {
+        const el = document.getElementById('parallelStatus');
+        if (enabled) { el.className = 'parallel-status on'; el.textContent = '并行'; el.title = '并行模式已启用，点击切换为串行'; }
+        else { el.className = 'parallel-status off'; el.textContent = '串行'; el.title = '串行模式，点击启用并行以提高高频任务吞吐量'; }
+    }
+
+    function renderAlerts(alerts) {
+        const section = document.getElementById('alertsSection');
+        const body = document.getElementById('alertsBody');
+        const badge = document.getElementById('alertBadge');
+        const headerBadge = document.getElementById('alertBadgeHeader');
+
+        // Filter out dismissed alerts
+        const visible = alerts.filter(a => !dismissedAlerts[a.type + '|' + (a.target||'')]);
+
+        if (visible.length === 0) {
+            section.style.display = 'none';
+            headerBadge.style.display = 'none';
+        } else {
+            section.style.display = '';
+            headerBadge.style.display = 'inline-flex';
+            headerBadge.textContent = visible.length;
+
+            const hasCritical = visible.some(a => a.level === 'critical');
+            headerBadge.className = 'alert-badge' + (hasCritical ? '' : ' warning-bg');
+            badge.textContent = visible.length;
+            badge.className = 'alert-badge' + (hasCritical ? '' : ' warning-bg');
+
+            // Play sound for new critical alerts
+            if (visible.length > prevAlertCount && hasCritical && document.getElementById('alertSound').checked) {
+                playAlertBeep();
+            }
+
+            body.innerHTML = visible.map(a => {
+                const key = a.type + '|' + (a.target||'');
+                return `<div class="alert-item ${a.level}">
+                    <div class="alert-content">
+                        <span class="alert-level ${a.level}">${a.level === 'critical' ? '严重' : a.level === 'warning' ? '警告' : '信息'}</span>
+                        <span class="alert-message">${esc(a.message)}</span>
+                        ${a.suggestion ? `<div class="alert-suggestion">${esc(a.suggestion)}</div>` : ''}
+                    </div>
+                    <button class="alert-dismiss" onclick="dismissAlert('${escJs(key)}')" title="忽略此告警">&times;</button>
+                </div>`;
+            }).join('');
+        }
+        prevAlertCount = visible.length;
+    }
+
     function renderCategories(cats) {
-        document.getElementById('categoryGrid').innerHTML = cats.map(c => `
-            <div class="category-card ${c.enabled?'':'disabled'}">
+        document.getElementById('categoryGrid').innerHTML = cats.map(c => {
+            const dur = c.lastBatchDuration || 0;
+            const interval = c.intervalMs || 1;
+            const ratio = dur / interval;
+            let timingClass = 'ok', timingBarClass = 'ok';
+            if (ratio > 1) { timingClass = 'danger'; timingBarClass = 'danger'; }
+            else if (ratio > 0.7) { timingClass = 'warn'; timingBarClass = 'warn'; }
+            const pct = Math.min(ratio * 100, 100);
+            const overrun = ratio > 1;
+
+            return `<div class="category-card ${c.enabled?'':'disabled'} ${overrun?'overrun':''}">
                 <div class="cat-header">
                     <span class="cat-name">${c.displayName}</span>
                     <label class="toggle"><input type="checkbox" ${c.enabled?'checked':''} onchange="toggleCategory('${c.name}',this.checked)"><span class="slider"></span></label>
@@ -346,13 +480,18 @@
                     <span>${c.enabledCount}/${c.jobCount} 任务</span>
                     <span>${fmt(c.totalExecutions)} 次</span>
                     ${c.totalErrors>0?`<span style="color:var(--danger)">${c.totalErrors} 错</span>`:''}
-                    ${c.totalSkipped>0?`<span style="color:var(--purple)">${c.totalSkipped} 跳</span>`:''}
                 </div>
+                ${dur > 0 ? `<div class="cat-timing ${timingClass}">
+                    <span>${dur}ms / ${interval}ms</span>
+                    <div class="timing-bar"><div class="timing-bar-fill ${timingBarClass}" style="width:${pct}%"></div></div>
+                    ${c.overrunCount > 0 ? `<span style="font-weight:600">超限${c.overrunCount}</span>` : ''}
+                </div>` : ''}
                 <div class="cat-footer">
                     <span class="cat-count">${c.name}</span>
                     <button class="btn btn-xs btn-outline" onclick="filterByCategory('${c.name}')">查看</button>
                 </div>
-            </div>`).join('');
+            </div>`;
+        }).join('');
     }
 
     function updateCategoryFilter(cats) {
@@ -379,9 +518,9 @@
 
             const tags = (j.tags||[]).map(t => `<span class="tag">${esc(t)}</span>`).join('');
             const cfgs = [];
-            if (j.skipIfRunning) cfgs.push('<span class="badge badge-purple" title="防重入：上次未完成时跳过">防重入</span>');
-            if (j.timeout > 0) cfgs.push(`<span class="badge badge-info" title="超时警告阈值">${j.timeout}ms</span>`);
-            if (j.maxConsecutiveErrors > 0) cfgs.push(`<span class="badge badge-warning" title="连续错误${j.maxConsecutiveErrors}次自动禁用">错误${j.maxConsecutiveErrors}禁</span>`);
+            if (j.skipIfRunning) cfgs.push('<span class="badge badge-purple" title="防重入">防重入</span>');
+            if (j.timeout > 0) cfgs.push(`<span class="badge badge-info" title="超时警告">${j.timeout}ms</span>`);
+            if (j.maxConsecutiveErrors > 0) cfgs.push(`<span class="badge badge-warning" title="连续错误自动禁用">错误${j.maxConsecutiveErrors}禁</span>`);
             const cfgHtml = cfgs.length ? cfgs.join(' ') : '<span style="color:var(--gray-300)">-</span>';
 
             const errStyle = j.errorCount > 0 ? 'color:var(--danger);font-weight:600' : '';
@@ -402,7 +541,7 @@
                     <span title="执行次数">${fmt(j.executionCount)}</span>
                     / <span style="${errStyle}" title="错误次数">${fmt(j.errorCount)}</span>
                     / <span style="${skipStyle}" title="跳过次数">${fmt(j.skippedCount)}</span>
-                    ${j.timeoutCount>0?`<br><span style="font-size:10px;color:var(--info)" title="超时次数">超时 ${j.timeoutCount}</span>`:''}
+                    ${j.timeoutCount>0?`<br><span style="font-size:10px;color:var(--info)">超时 ${j.timeoutCount}</span>`:''}
                 </td>
                 <td style="font-size:11px;white-space:nowrap">${j.lastExecutionTime>0?fmtTime(j.lastExecutionTime):'-'}${j.lastExecutionDuration>0?`<br><span style="color:var(--gray-400)">${j.lastExecutionDuration}ms</span>`:''}</td>
                 <td><div class="actions-cell">
@@ -415,6 +554,8 @@
             </tr>`;
         }).join('');
     }
+
+    // ========== Filtering ==========
 
     function filterJobs() {
         const q = document.getElementById('searchInput').value.toLowerCase();
@@ -434,6 +575,42 @@
 
     function filterByCategory(c) { document.getElementById('categoryFilter').value = c; filterJobs(); document.getElementById('searchInput').scrollIntoView({behavior:'smooth'}); }
 
+    // ========== Alert System ==========
+
+    function dismissAlert(key) {
+        dismissedAlerts[key] = true;
+        loadAlerts();
+    }
+
+    function playAlertBeep() {
+        try {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.frequency.value = 880;
+            osc.type = 'sine';
+            gain.gain.value = 0.3;
+            osc.start();
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+            osc.stop(audioCtx.currentTime + 0.3);
+            // Second beep
+            setTimeout(() => {
+                const osc2 = audioCtx.createOscillator();
+                const gain2 = audioCtx.createGain();
+                osc2.connect(gain2);
+                gain2.connect(audioCtx.destination);
+                osc2.frequency.value = 1100;
+                osc2.type = 'sine';
+                gain2.gain.value = 0.3;
+                osc2.start();
+                gain2.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                osc2.stop(audioCtx.currentTime + 0.3);
+            }, 200);
+        } catch(e) { /* Audio not available */ }
+    }
+
     // ========== Config Modal ==========
 
     function openConfig(jobId) {
@@ -447,7 +624,8 @@
             ${job.group?`<span class="info-label">分组</span><span class="info-value">${esc(job.group)}</span>`:''}
             ${job.description?`<span class="info-label">描述</span><span class="info-value">${esc(job.description)}</span>`:''}
             <span class="info-label">执行次数</span><span class="info-value">${fmt(job.executionCount)}</span>
-            <span class="info-label">错误 / 跳过</span><span class="info-value">${fmt(job.errorCount)} / ${fmt(job.skippedCount)}</span>
+            <span class="info-label">错误/跳过</span><span class="info-value">${fmt(job.errorCount)} / ${fmt(job.skippedCount)}</span>
+            ${job.timeoutCount > 0 ? `<span class="info-label">超时次数</span><span class="info-value" style="color:var(--info)">${fmt(job.timeoutCount)}</span>` : ''}
             ${job.lastErrorMessage?`<span class="info-label">最近错误</span><span class="info-value" style="color:var(--danger)">${esc(job.lastErrorMessage)}</span>`:''}
             ${(job.tags||[]).length?`<span class="info-label">标签</span><span class="info-value">${job.tags.map(t=>'<span class="tag">'+esc(t)+'</span>').join(' ')}</span>`:''}
         `;
@@ -475,6 +653,15 @@
         } catch(e) { showToast('保存失败: ' + e.message, 'error'); }
     }
 
+    async function resetStats() {
+        if (!currentJobId || !confirm('确定要重置该任务的所有统计数据吗？')) return;
+        try {
+            const d = await apiPost('/resetStats', { jobId: currentJobId });
+            if (d.code === 0) { showToast(d.msg, 'success'); closeModal(); await refreshAll(); }
+            else showToast(d.msg || '重置失败', 'error');
+        } catch(e) { showToast('重置失败: ' + e.message, 'error'); }
+    }
+
     // ========== Actions ==========
 
     async function toggleGlobal() {
@@ -482,6 +669,15 @@
         const d = await apiPost(p ? '/resumeAll' : '/pauseAll');
         if (d.code===0) { showToast(d.msg,'success'); await refreshAll(); } else showToast(d.msg||'失败','error');
     }
+
+    async function toggleParallel() {
+        try {
+            const d = await apiPost('/toggleParallel', {});
+            if (d.code === 0) { showToast(d.msg, 'success'); await refreshAll(); }
+            else showToast(d.msg || '失败', 'error');
+        } catch(e) { showToast('失败: ' + e.message, 'error'); }
+    }
+
     async function toggleCategory(c, en) {
         const d = await apiPost(en?'/enableCategory':'/disableCategory', {category:c});
         if (d.code===0) { showToast(d.msg,'success'); await refreshAll(); } else showToast(d.msg||'失败','error');
