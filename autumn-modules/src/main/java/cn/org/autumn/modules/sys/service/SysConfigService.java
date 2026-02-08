@@ -45,11 +45,9 @@ import java.math.BigDecimal;
 import java.net.URI;
 import java.util.*;
 
-import static cn.org.autumn.utils.Uuid.uuid;
-
 @Slf4j
 @Service
-public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity> implements LoopJob.Job, LoopJob.OneMinute, HostFactory.Host, InitFactory.Init, InitFactory.After, CategoryHandler, DomainHandler, ClearHandler {
+public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity> implements LoopJob.ThirtyMinute, LoopJob.OneMinute, HostFactory.Host, InitFactory.Init, InitFactory.After, CategoryHandler, DomainHandler, ClearHandler {
 
     public static final String string_type = InputType.StringType.getValue();
     public static final String boolean_type = InputType.BooleanType.getValue();
@@ -116,7 +114,6 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
 
     @Order(-1000)
     public void init() {
-        LoopJob.onThirtyMinute(this);
         clear();
         put(getConfigItems());
         updateCookieDomain();
@@ -424,7 +421,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         asyncTaskExecutor.execute(new Runnable() {
             @Override
             public void run() {
-                runJob();
+                onThirtyMinute();
                 configFactory.update(config.getParamKey(), config.getParamValue());
             }
         });
@@ -449,7 +446,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
             sysConfigRedis.delete(config.getParamKey());
         }
         this.deleteBatchIds(Arrays.asList(ids));
-        runJob();
+        onThirtyMinute();
     }
 
     public String getValue(String key) {
@@ -779,7 +776,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     }
 
     @Override
-    public void runJob() {
+    public void onThirtyMinute() {
         List<SysConfigEntity> list = selectByMap(new HashMap<>());
         if (null != list && list.size() > 0) {
             Map<String, SysConfigEntity> t = new HashMap<>();

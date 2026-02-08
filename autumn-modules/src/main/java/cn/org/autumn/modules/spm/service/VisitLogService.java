@@ -14,7 +14,7 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 
 @Service
-public class VisitLogService extends VisitLogServiceGen implements LoopJob.Job {
+public class VisitLogService extends VisitLogServiceGen implements LoopJob.OneDay {
 
     public Map<String, List<String>> map = new HashMap<>();
 
@@ -78,11 +78,6 @@ public class VisitLogService extends VisitLogServiceGen implements LoopJob.Job {
         insertOrUpdate(visitLogEntity);
     }
 
-    public void init() {
-        super.init();
-        LoopJob.onOneDay(this);
-    }
-
     @Override
     public int menuOrder() {
         return super.menuOrder();
@@ -94,7 +89,7 @@ public class VisitLogService extends VisitLogServiceGen implements LoopJob.Job {
     }
 
     @Override
-    public void runJob() {
+    public void onOneDay() {
         map.clear();
     }
 }

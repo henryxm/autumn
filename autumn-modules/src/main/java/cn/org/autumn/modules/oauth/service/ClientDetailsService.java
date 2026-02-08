@@ -59,18 +59,6 @@ public class ClientDetailsService extends ModuleService<ClientDetailsDao, Client
 
     Map<String, TokenStore> cache = new HashMap<>();
 
-    @Override
-    public void runJob() {
-        Iterator<String> iterator = cache.keySet().iterator();
-        while (iterator.hasNext()) {
-            String key = iterator.next();
-            TokenStore od = cache.get(key);
-            if (od.isExpired()) {
-                iterator.remove();
-            }
-        }
-    }
-
     public String getKey(ValueType type, String code) {
         return type.getValue() + code;
     }
@@ -209,11 +197,18 @@ public class ClientDetailsService extends ModuleService<ClientDetailsDao, Client
     @Order(2000)
     public void init() {
         super.init();
-        onOneHour();
     }
 
     @Override
     public void onOneHour() {
+        Iterator<String> iterator = cache.keySet().iterator();
+        while (iterator.hasNext()) {
+            String key = iterator.next();
+            TokenStore od = cache.get(key);
+            if (od.isExpired()) {
+                iterator.remove();
+            }
+        }
         create(sysConfigService.getClientId(), sysConfigService.getClientSecret(), "默认的客户端", "默认的客户端");
         updateClientType(sysConfigService.getClientId(), ClientType.SiteDefault);
     }

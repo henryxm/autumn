@@ -5,6 +5,7 @@ import cn.org.autumn.base.ModuleService;
 import cn.org.autumn.config.ClearHandler;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.wall.site.WallSite;
+import lombok.SneakyThrows;
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -101,20 +102,22 @@ public class ShieldService extends ModuleService<ShieldDao, ShieldEntity> implem
         return html;
     }
 
+    @SneakyThrows
     @Override
     @JobMeta(name = "清空访问记录")
     public void onFiveSecond() {
+        Thread.sleep(5000);
         visit.clear();
     }
 
     @Override
-    @JobMeta(name = "刷新URI规则", timeout = 5000)
+    @JobMeta(name = "刷新URI规则")
     public void onOneMinute() {
         uris = null;
     }
 
     @Override
-    @JobMeta(name = "清空IP白名单", maxConsecutiveErrors = 3)
+    @JobMeta(name = "清空IP白名单")
     public void onOneDay() {
         ips.clear();
     }

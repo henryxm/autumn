@@ -100,17 +100,15 @@ public class LoopJob extends Factory implements LoadFactory.Must {
             this.category = category;
             this.categoryDisplayName = CATEGORY_DISPLAY.getOrDefault(category, category);
             this.job = job;
-
             // 默认值
             this.displayName = userClass.getSimpleName();
             this.description = "";
             this.group = "";
             this.order = 100;
-            this.skipIfRunning = false;
+            this.skipIfRunning = true;
             this.timeout = 0;
             this.maxConsecutiveErrors = 0;
             this.tags = new String[0];
-
             // 解析注解
             resolveAnnotation(this, job, category);
         }
@@ -172,13 +170,11 @@ public class LoopJob extends Factory implements LoadFactory.Must {
      */
     private static void resolveAnnotation(JobInfo info, Job job, String category) {
         Class<?> userClass = getUserClass(job);
-
         // 1. 读取类级别注解作为默认值
         JobMeta classMeta = userClass.getAnnotation(JobMeta.class);
         if (classMeta != null) {
             applyAnnotation(info, classMeta, userClass.getSimpleName());
         }
-
         // 2. 尝试读取方法级别注解（优先级更高，覆盖类级别）
         String methodName = "on" + category;
         try {
@@ -224,7 +220,6 @@ public class LoopJob extends Factory implements LoadFactory.Must {
         if (disabledJobIds.contains(key)) return;
         JobInfo info = jobInfoMap.get(key);
         if (info == null) return;
-
         // 防重入检查：上次任务尚未完成则跳过
         if (info.skipIfRunning) {
             if (!info.running.compareAndSet(false, true)) {
@@ -234,16 +229,13 @@ public class LoopJob extends Factory implements LoadFactory.Must {
                 return;
             }
         }
-
         long start = System.currentTimeMillis();
         try {
             if (log.isDebugEnabled())
                 log.debug("Run {} Job:{}", category, userClass.getSimpleName());
             action.run();
-
             // 执行成功：重置连续错误计数
             info.consecutiveErrorCount.set(0);
-
             // 超时警告检查
             long duration = System.currentTimeMillis() - start;
             if (info.timeout > 0 && duration > info.timeout) {
@@ -254,21 +246,18 @@ public class LoopJob extends Factory implements LoadFactory.Must {
             info.errorCount.incrementAndGet();
             info.lastErrorTime = System.currentTimeMillis();
             info.lastErrorMessage = e.getMessage();
-
             // 连续错误计数，达到阈值自动禁用
             long consecutive = info.consecutiveErrorCount.incrementAndGet();
             if (info.maxConsecutiveErrors > 0 && consecutive >= info.maxConsecutiveErrors) {
                 disabledJobIds.add(key);
                 info.autoDisabled = true;
-                log.error("Job [{}] auto-disabled after {} consecutive errors: {}",
-                        key, consecutive, e.getMessage());
+                log.error("Job [{}] auto-disabled after {} consecutive errors: {}", key, consecutive, e.getMessage());
             }
             print(job, e);
         } finally {
             info.executionCount.incrementAndGet();
             info.lastExecutionTime = start;
             info.lastExecutionDuration = System.currentTimeMillis() - start;
-
             // 释放运行标记
             if (info.skipIfRunning) {
                 info.running.set(false);
@@ -283,62 +272,62 @@ public class LoopJob extends Factory implements LoadFactory.Must {
         switch (category) {
             case "OneSecond":
                 if (job instanceof OneSecond) ((OneSecond) job).onOneSecond();
-                else job.runJob();
+                else job.onJob();
                 break;
             case "ThreeSecond":
                 if (job instanceof ThreeSecond) ((ThreeSecond) job).onThreeSecond();
-                else job.runJob();
+                else job.onJob();
                 break;
             case "FiveSecond":
                 if (job instanceof FiveSecond) ((FiveSecond) job).onFiveSecond();
-                else job.runJob();
+                else job.onJob();
                 break;
             case "TenSecond":
                 if (job instanceof TenSecond) ((TenSecond) job).onTenSecond();
-                else job.runJob();
+                else job.onJob();
                 break;
             case "ThirtySecond":
                 if (job instanceof ThirtySecond) ((ThirtySecond) job).onThirtySecond();
-                else job.runJob();
+                else job.onJob();
                 break;
             case "OneMinute":
                 if (job instanceof OneMinute) ((OneMinute) job).onOneMinute();
-                else job.runJob();
+                else job.onJob();
                 break;
             case "FiveMinute":
                 if (job instanceof FiveMinute) ((FiveMinute) job).onFiveMinute();
-                else job.runJob();
+                else job.onJob();
                 break;
             case "TenMinute":
                 if (job instanceof TenMinute) ((TenMinute) job).onTenMinute();
-                else job.runJob();
+                else job.onJob();
                 break;
             case "ThirtyMinute":
                 if (job instanceof ThirtyMinute) ((ThirtyMinute) job).onThirtyMinute();
-                else job.runJob();
+                else job.onJob();
                 break;
             case "OneHour":
                 if (job instanceof OneHour) ((OneHour) job).onOneHour();
-                else job.runJob();
+                else job.onJob();
                 break;
             case "TenHour":
                 if (job instanceof TenHour) ((TenHour) job).onTenHour();
-                else job.runJob();
+                else job.onJob();
                 break;
             case "ThirtyHour":
                 if (job instanceof ThirtyHour) ((ThirtyHour) job).onThirtyHour();
-                else job.runJob();
+                else job.onJob();
                 break;
             case "OneDay":
                 if (job instanceof OneDay) ((OneDay) job).onOneDay();
-                else job.runJob();
+                else job.onJob();
                 break;
             case "OneWeek":
                 if (job instanceof OneWeek) ((OneWeek) job).onOneWeek();
-                else job.runJob();
+                else job.onJob();
                 break;
             default:
-                job.runJob();
+                job.onJob();
                 break;
         }
     }
@@ -429,17 +418,15 @@ public class LoopJob extends Factory implements LoadFactory.Must {
         if (info == null) return false;
         Job job = info.getJob();
         String category = info.getCategory();
-
         // 防重入检查
         if (info.skipIfRunning && info.running.get()) {
             log.warn("Manual trigger skipped for Job [{}] (still running)", jobId);
             return false;
         }
-
         long start = System.currentTimeMillis();
         try {
             if (log.isDebugEnabled())
-                log.info("Manual trigger Job: {} [{}]", getUserClass(job).getSimpleName(), category);
+                log.debug("Manual trigger Job: {} [{}]", getUserClass(job).getSimpleName(), category);
             runJobByCategory(job, category);
             info.consecutiveErrorCount.set(0);
         } catch (Exception e) {
@@ -643,7 +630,7 @@ public class LoopJob extends Factory implements LoadFactory.Must {
     }
 
     public interface Job {
-        default void runJob() {
+        default void onJob() {
         }
     }
 
@@ -829,7 +816,7 @@ public class LoopJob extends Factory implements LoadFactory.Must {
         for (Job job : oneSecondJobList) {
             executeJob(job, "OneSecond", () -> {
                 if (job instanceof OneSecond) ((OneSecond) job).onOneSecond();
-                else job.runJob();
+                else job.onJob();
             });
         }
     }
@@ -838,7 +825,7 @@ public class LoopJob extends Factory implements LoadFactory.Must {
         for (Job job : threeSecondJobList) {
             executeJob(job, "ThreeSecond", () -> {
                 if (job instanceof ThreeSecond) ((ThreeSecond) job).onThreeSecond();
-                else job.runJob();
+                else job.onJob();
             });
         }
     }
@@ -847,7 +834,7 @@ public class LoopJob extends Factory implements LoadFactory.Must {
         for (Job job : fiveSecondJobList) {
             executeJob(job, "FiveSecond", () -> {
                 if (job instanceof FiveSecond) ((FiveSecond) job).onFiveSecond();
-                else job.runJob();
+                else job.onJob();
             });
         }
     }
@@ -856,7 +843,7 @@ public class LoopJob extends Factory implements LoadFactory.Must {
         for (Job job : tenSecondJobList) {
             executeJob(job, "TenSecond", () -> {
                 if (job instanceof TenSecond) ((TenSecond) job).onTenSecond();
-                else job.runJob();
+                else job.onJob();
             });
         }
     }
@@ -865,7 +852,7 @@ public class LoopJob extends Factory implements LoadFactory.Must {
         for (Job job : thirtySecondJobList) {
             executeJob(job, "ThirtySecond", () -> {
                 if (job instanceof ThirtySecond) ((ThirtySecond) job).onThirtySecond();
-                else job.runJob();
+                else job.onJob();
             });
         }
     }
@@ -874,7 +861,7 @@ public class LoopJob extends Factory implements LoadFactory.Must {
         for (Job job : oneMinuteJobList) {
             executeJob(job, "OneMinute", () -> {
                 if (job instanceof OneMinute) ((OneMinute) job).onOneMinute();
-                else job.runJob();
+                else job.onJob();
             });
         }
     }
@@ -883,7 +870,7 @@ public class LoopJob extends Factory implements LoadFactory.Must {
         for (Job job : fiveMinuteJobList) {
             executeJob(job, "FiveMinute", () -> {
                 if (job instanceof FiveMinute) ((FiveMinute) job).onFiveMinute();
-                else job.runJob();
+                else job.onJob();
             });
         }
     }
@@ -892,7 +879,7 @@ public class LoopJob extends Factory implements LoadFactory.Must {
         for (Job job : tenMinuteJobList) {
             executeJob(job, "TenMinute", () -> {
                 if (job instanceof TenMinute) ((TenMinute) job).onTenMinute();
-                else job.runJob();
+                else job.onJob();
             });
         }
     }
@@ -901,7 +888,7 @@ public class LoopJob extends Factory implements LoadFactory.Must {
         for (Job job : thirtyMinuteJobList) {
             executeJob(job, "ThirtyMinute", () -> {
                 if (job instanceof ThirtyMinute) ((ThirtyMinute) job).onThirtyMinute();
-                else job.runJob();
+                else job.onJob();
             });
         }
     }
@@ -910,7 +897,7 @@ public class LoopJob extends Factory implements LoadFactory.Must {
         for (Job job : oneHourJobList) {
             executeJob(job, "OneHour", () -> {
                 if (job instanceof OneHour) ((OneHour) job).onOneHour();
-                else job.runJob();
+                else job.onJob();
             });
         }
     }
@@ -919,7 +906,7 @@ public class LoopJob extends Factory implements LoadFactory.Must {
         for (Job job : tenHourJobList) {
             executeJob(job, "TenHour", () -> {
                 if (job instanceof TenHour) ((TenHour) job).onTenHour();
-                else job.runJob();
+                else job.onJob();
             });
         }
     }
@@ -928,7 +915,7 @@ public class LoopJob extends Factory implements LoadFactory.Must {
         for (Job job : thirtyHourJobList) {
             executeJob(job, "ThirtyHour", () -> {
                 if (job instanceof ThirtyHour) ((ThirtyHour) job).onThirtyHour();
-                else job.runJob();
+                else job.onJob();
             });
         }
     }
@@ -937,7 +924,7 @@ public class LoopJob extends Factory implements LoadFactory.Must {
         for (Job job : oneDayJobList) {
             executeJob(job, "OneDay", () -> {
                 if (job instanceof OneDay) ((OneDay) job).onOneDay();
-                else job.runJob();
+                else job.onJob();
             });
         }
     }
@@ -946,7 +933,7 @@ public class LoopJob extends Factory implements LoadFactory.Must {
         for (Job job : oneWeekJobList) {
             executeJob(job, "OneWeek", () -> {
                 if (job instanceof OneWeek) ((OneWeek) job).onOneWeek();
-                else job.runJob();
+                else job.onJob();
             });
         }
     }
@@ -956,7 +943,6 @@ public class LoopJob extends Factory implements LoadFactory.Must {
      */
     public static Map<String, List<String>> print() {
         Map<String, List<String>> map = new LinkedHashMap<>();
-
         map.put("OneSecondJob", collectNames(oneSecondJobList));
         map.put("ThreeSecondJob", collectNames(threeSecondJobList));
         map.put("FiveSecondJob", collectNames(fiveSecondJobList));
@@ -971,7 +957,6 @@ public class LoopJob extends Factory implements LoadFactory.Must {
         map.put("ThirtyHourJob", collectNames(thirtyHourJobList));
         map.put("OneDayJob", collectNames(oneDayJobList));
         map.put("OneWeekJob", collectNames(oneWeekJobList));
-
         return map;
     }
 
