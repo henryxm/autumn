@@ -121,17 +121,15 @@ public abstract class BaseQueueService<M extends BaseMapper<T>, T> extends Servi
     }
 
     public <X> QueueConfig getQueueConfig(String suffix) {
-        String name = getQueueName(suffix);
-        return QueueConfig.builder().name(name).type(getModelClass()).auto(isAutoQueue(suffix)).idleTime(getIdleTime(suffix)).idleUnit(getIdleUnit(suffix)).build();
+        return QueueConfig.builder().name(getQueueName(suffix)).type(getModelClass()).auto(isAutoQueue(suffix)).idleTime(getIdleTime(suffix)).idleUnit(getIdleUnit(suffix)).build();
     }
 
     public <X> QueueConfig getQueueConfig(Class<X> clazz) {
-        return QueueConfig.builder().name(getQueueName()).type(clazz).auto(isAutoQueue(clazz)).idleTime(getIdleTime(clazz)).idleUnit(getIdleUnit(clazz)).build();
+        return QueueConfig.builder().name(getQueueName(clazz)).type(clazz).auto(isAutoQueue(clazz)).idleTime(getIdleTime(clazz)).idleUnit(getIdleUnit(clazz)).build();
     }
 
     public <X> QueueConfig getQueueConfig(String suffix, Class<X> clazz) {
-        String name = getQueueName(suffix);
-        return QueueConfig.builder().name(name).type(clazz).auto(isAutoQueue(suffix, clazz)).idleTime(getIdleTime(suffix, clazz)).idleUnit(getIdleUnit(suffix, clazz)).build();
+        return QueueConfig.builder().name(getQueueName(suffix, clazz)).type(clazz).auto(isAutoQueue(suffix, clazz)).idleTime(getIdleTime(suffix, clazz)).idleUnit(getIdleUnit(suffix, clazz)).build();
     }
 
     /**
@@ -189,6 +187,84 @@ public abstract class BaseQueueService<M extends BaseMapper<T>, T> extends Servi
         register(getQueueConfig());
     }
 
+    public void register(String suffix) {
+        QueueConfig config = getQueueConfig(suffix);
+        queueService.register(config, new QueueConsumer<T>() {
+            @Override
+            public boolean consume(QueueMessage<T> message) {
+                try {
+                    T body = message.getBody();
+                    return onQueueMessage(body);
+                } catch (Exception e) {
+                    log.error("Queue message processing failed: {}", e.getMessage());
+                    return false;
+                }
+            }
+
+            @Override
+            public void onError(QueueMessage<T> message, Throwable throwable) {
+                try {
+                    T body = message.getBody();
+                    onErrorMessage(body, throwable);
+                } catch (Exception e) {
+                    log.error("Queue error message processing failed: {}", e.getMessage());
+                }
+            }
+
+            @Override
+            public void onDead(QueueMessage<T> message) {
+                try {
+                    T body = message.getBody();
+                    onDeadMessage(body);
+                } catch (Exception e) {
+                    log.error("Queue dead message processing failed: {}", e.getMessage());
+                }
+            }
+        });
+    }
+
+    /**
+     * 注册自定义类型的自动启动/停止队列（默认后缀为空）
+     *
+     * @param clazz 消息类型
+     * @param <X>   消息类型泛型
+     */
+    public <X> void register(Class<X> clazz) {
+        QueueConfig config = getQueueConfig(clazz);
+        queueService.register(config, new QueueConsumer<X>() {
+            @Override
+            public boolean consume(QueueMessage<X> message) {
+                try {
+                    X body = message.getBody();
+                    return onQueueMessage(clazz, body);
+                } catch (Exception e) {
+                    log.error("Queue message processing failed: {}", e.getMessage());
+                    return false;
+                }
+            }
+
+            @Override
+            public void onError(QueueMessage<X> message, Throwable throwable) {
+                try {
+                    X body = message.getBody();
+                    onErrorMessage(clazz, body, throwable);
+                } catch (Exception e) {
+                    log.error("Queue error message processing failed: {}", e.getMessage());
+                }
+            }
+
+            @Override
+            public void onDead(QueueMessage<X> message) {
+                try {
+                    X body = message.getBody();
+                    onDeadMessage(clazz, body);
+                } catch (Exception e) {
+                    log.error("Queue dead message processing failed: {}", e.getMessage());
+                }
+            }
+        });
+    }
+
     /**
      * 注册自定义类型的自动启动/停止队列
      * 子类需要重写 onQueueMessage(Class, X) 方法来处理消息
@@ -198,7 +274,7 @@ public abstract class BaseQueueService<M extends BaseMapper<T>, T> extends Servi
      * @param <X>    消息类型泛型
      */
     public <X> void register(String suffix, Class<X> clazz) {
-        QueueConfig config = QueueConfig.builder().name(getQueueName(suffix, clazz)).type(clazz).auto(isAutoQueue(suffix, clazz)).idleTime(getIdleTime(suffix, clazz)).idleUnit(getIdleUnit(suffix, clazz)).build();
+        QueueConfig config = getQueueConfig(suffix, clazz);
         queueService.register(config, new QueueConsumer<X>() {
             @Override
             public boolean consume(QueueMessage<X> message) {
@@ -242,7 +318,7 @@ public abstract class BaseQueueService<M extends BaseMapper<T>, T> extends Servi
      * @param <X>     消息类型泛型
      */
     public <X> void register(String suffix, Class<X> clazz, Function<X, Boolean> handler) {
-        QueueConfig config = QueueConfig.builder().name(getQueueName(suffix, clazz)).type(clazz).auto(isAutoQueue(suffix, clazz)).idleTime(getIdleTime(suffix, clazz)).idleUnit(getIdleUnit(suffix, clazz)).build();
+        QueueConfig config = getQueueConfig(suffix, clazz);
         queueService.register(config, new QueueConsumer<X>() {
             @Override
             public boolean consume(QueueMessage<X> message) {
@@ -278,24 +354,46 @@ public abstract class BaseQueueService<M extends BaseMapper<T>, T> extends Servi
     }
 
     /**
-     * 注册自定义类型的自动启动/停止队列（默认后缀为空）
-     *
-     * @param type 消息类型
-     * @param <X>  消息类型泛型
-     */
-    public <X> void register(Class<X> type) {
-        register("", type);
-    }
-
-    /**
      * 注册自定义类型的自动启动/停止队列（带处理器，默认后缀为空）
      *
-     * @param type    消息类型
+     * @param clazz   消息类型
      * @param handler 消息处理器
      * @param <X>     消息类型泛型
      */
-    public <X> void register(Class<X> type, Function<X, Boolean> handler) {
-        register("", type, handler);
+    public <X> void register(Class<X> clazz, Function<X, Boolean> handler) {
+        QueueConfig config = getQueueConfig(clazz);
+        queueService.register(config, new QueueConsumer<X>() {
+            @Override
+            public boolean consume(QueueMessage<X> message) {
+                try {
+                    X body = message.getBody();
+                    return handler.apply(body);
+                } catch (Exception e) {
+                    log.error("Queue message processing failed: {}", e.getMessage(), e);
+                    return false;
+                }
+            }
+
+            @Override
+            public void onError(QueueMessage<X> message, Throwable throwable) {
+                try {
+                    X body = message.getBody();
+                    onErrorMessage(clazz, body, throwable);
+                } catch (Exception e) {
+                    log.error("Queue error message processing failed: {}", e.getMessage());
+                }
+            }
+
+            @Override
+            public void onDead(QueueMessage<X> message) {
+                try {
+                    X body = message.getBody();
+                    onDeadMessage(clazz, body);
+                } catch (Exception e) {
+                    log.error("Queue dead message processing failed: {}", e.getMessage());
+                }
+            }
+        });
     }
 
     // ==================== 发送消息方法 ====================
@@ -308,14 +406,15 @@ public abstract class BaseQueueService<M extends BaseMapper<T>, T> extends Servi
      * @return 是否发送成功
      */
     public boolean sendQueue(T entity) {
-        QueueConfig config = queueService.getConfig(getQueueName());
+        String name = getQueueName();
+        QueueConfig config = queueService.getConfig(name);
         if (config == null) {
             config = getQueueConfig();
             if (config.isAuto())
                 register(config);
         }
         // 如果没有注册自动队列配置，回退到普通发送
-        return queueService.send(getQueueName(), entity);
+        return queueService.send(name, entity);
     }
 
     /**
@@ -326,13 +425,14 @@ public abstract class BaseQueueService<M extends BaseMapper<T>, T> extends Servi
      * @return 是否发送成功
      */
     public boolean sendQueue(String suffix, T entity) {
-        QueueConfig config = queueService.getConfig(getQueueName(suffix));
+        String name = getQueueName(suffix);
+        QueueConfig config = queueService.getConfig(name);
         if (config == null) {
             config = getQueueConfig(suffix);
             if (config.isAuto())
-                register(config);
+                register(suffix);
         }
-        return queueService.send(getQueueName(suffix), entity);
+        return queueService.send(name, entity);
     }
 
     /**
@@ -343,13 +443,14 @@ public abstract class BaseQueueService<M extends BaseMapper<T>, T> extends Servi
      * @return 是否发送成功
      */
     public <V> boolean sendMessage(V message) {
-        QueueConfig config = queueService.getConfig(getQueueName());
+        String name = getQueueName();
+        QueueConfig config = queueService.getConfig(name);
         if (null == config) {
             config = getQueueConfig();
             if (config.isAuto())
                 register(config);
         }
-        return queueService.send(getQueueName(), message);
+        return queueService.send(name, message);
     }
 
     /**
@@ -361,25 +462,36 @@ public abstract class BaseQueueService<M extends BaseMapper<T>, T> extends Servi
      * @return 是否发送成功
      */
     public <V> boolean sendMessage(String suffix, V message) {
-        QueueConfig config = queueService.getConfig(getQueueName(suffix));
+        String name = getQueueName(suffix);
+        QueueConfig config = queueService.getConfig(name);
         if (null == config) {
             config = getQueueConfig(suffix);
             if (config.isAuto())
-                register(config);
+                register(suffix);
         }
-        return queueService.send(getQueueName(suffix), message);
+        return queueService.send(name, message);
     }
 
     /**
      * 发送自定义类型消息到默认自动队列（支持自动启动/停止）
      *
-     * @param type    消息类型
+     * @param clazz   消息类型
      * @param message 消息对象
      * @param <X>     消息类型泛型
      * @return 是否发送成功
      */
-    public <X> boolean sendQueue(Class<X> type, X message) {
-        return sendQueue("", type, message);
+    public <X> boolean sendQueue(Class<X> clazz, X message) {
+        String name = getQueueName(clazz);
+        QueueConfig config = queueService.getConfig(name);
+        if (config != null) {
+            return queueService.send(config, QueueMessage.of(message));
+        } else {
+            config = getQueueConfig(clazz);
+            if (config.isAuto())
+                register(clazz);
+        }
+        // 如果没有注册自动队列配置，回退到普通发送
+        return queueService.send(name, message);
     }
 
     /**
@@ -393,16 +505,17 @@ public abstract class BaseQueueService<M extends BaseMapper<T>, T> extends Servi
      * @return 是否发送成功
      */
     public <X> boolean sendQueue(String suffix, Class<X> clazz, X entity) {
-        QueueConfig config = queueService.getConfig(getQueueName(suffix, clazz));
+        String name = getQueueName(suffix, clazz);
+        QueueConfig config = queueService.getConfig(name);
         if (config != null) {
             return queueService.send(config, QueueMessage.of(entity));
         } else {
             config = getQueueConfig(suffix, clazz);
             if (config.isAuto())
-                register(config);
+                register(suffix, clazz);
         }
         // 如果没有注册自动队列配置，回退到普通发送
-        return queueService.send(getQueueName(suffix), entity);
+        return queueService.send(name, entity);
     }
 
     /**
@@ -413,7 +526,14 @@ public abstract class BaseQueueService<M extends BaseMapper<T>, T> extends Servi
      * @return 是否发送成功
      */
     public boolean sendDelay(T entity, long delayMillis) {
-        return sendDelay("", null, entity, delayMillis);
+        String name = getQueueName();
+        QueueConfig config = queueService.getConfig(name);
+        if (config == null) {
+            config = getQueueConfig();
+            if (config.isAuto())
+                register(config);
+        }
+        return queueService.sendDelay(name, entity, delayMillis);
     }
 
     /**
@@ -425,21 +545,36 @@ public abstract class BaseQueueService<M extends BaseMapper<T>, T> extends Servi
      * @return 是否发送成功
      */
     public boolean sendDelay(String suffix, T entity, long delayMillis) {
-        return sendDelay(suffix, null, entity, delayMillis);
-    }
-
-    public <X> boolean sendDelay(Class<X> clazz, X entity, long delayMillis) {
-        return sendDelay("", clazz, entity, delayMillis);
-    }
-
-    public <X> boolean sendDelay(String suffix, Class<X> clazz, X entity, long delayMillis) {
-        QueueConfig config = queueService.getConfig(getQueueName(suffix, clazz));
+        String name = getQueueName(suffix);
+        QueueConfig config = queueService.getConfig(name);
         if (config == null) {
             config = getQueueConfig();
             if (config.isAuto())
-                register(config);
+                register(suffix);
         }
-        return queueService.sendDelay(getQueueName(suffix, clazz), entity, delayMillis);
+        return queueService.sendDelay(name, entity, delayMillis);
+    }
+
+    public <X> boolean sendDelay(Class<X> clazz, X entity, long delayMillis) {
+        String name = getQueueName(clazz);
+        QueueConfig config = queueService.getConfig(name);
+        if (config == null) {
+            config = getQueueConfig();
+            if (config.isAuto())
+                register(clazz);
+        }
+        return queueService.sendDelay(name, entity, delayMillis);
+    }
+
+    public <X> boolean sendDelay(String suffix, Class<X> clazz, X entity, long delayMillis) {
+        String name = getQueueName(suffix, clazz);
+        QueueConfig config = queueService.getConfig(name);
+        if (config == null) {
+            config = getQueueConfig();
+            if (config.isAuto())
+                register(suffix, clazz);
+        }
+        return queueService.sendDelay(name, entity, delayMillis);
     }
 
     /**
@@ -450,25 +585,47 @@ public abstract class BaseQueueService<M extends BaseMapper<T>, T> extends Servi
      * @return 是否发送成功
      */
     public boolean sendScheduled(T entity, long executeAt) {
-        return sendScheduled("", null, entity, executeAt);
-    }
-
-    public boolean sendScheduled(String suffix, T entity, long executeAt) {
-        return sendScheduled(suffix, null, entity, executeAt);
-    }
-
-    public <X> boolean sendScheduled(Class<X> clazz, X entity, long executeAt) {
-        return sendScheduled("", clazz, entity, executeAt);
-    }
-
-    public <X> boolean sendScheduled(String suffix, Class<X> clazz, X entity, long executeAt) {
-        QueueConfig config = queueService.getConfig(getQueueName(suffix, clazz));
+        String name = getQueueName();
+        QueueConfig config = queueService.getConfig(name);
         if (config == null) {
             config = getQueueConfig();
             if (config.isAuto())
                 register(config);
         }
-        return queueService.sendScheduled(getQueueName(suffix, clazz), entity, executeAt);
+        return queueService.sendScheduled(name, entity, executeAt);
+    }
+
+    public boolean sendScheduled(String suffix, T entity, long executeAt) {
+        String name = getQueueName(suffix);
+        QueueConfig config = queueService.getConfig(name);
+        if (config == null) {
+            config = getQueueConfig();
+            if (config.isAuto())
+                register(suffix);
+        }
+        return queueService.sendScheduled(name, entity, executeAt);
+    }
+
+    public <X> boolean sendScheduled(Class<X> clazz, X entity, long executeAt) {
+        String name = getQueueName(clazz);
+        QueueConfig config = queueService.getConfig(name);
+        if (config == null) {
+            config = getQueueConfig();
+            if (config.isAuto())
+                register(clazz);
+        }
+        return queueService.sendScheduled(name, entity, executeAt);
+    }
+
+    public <X> boolean sendScheduled(String suffix, Class<X> clazz, X entity, long executeAt) {
+        String name = getQueueName(suffix, clazz);
+        QueueConfig config = queueService.getConfig(name);
+        if (config == null) {
+            config = getQueueConfig();
+            if (config.isAuto())
+                register(suffix, clazz);
+        }
+        return queueService.sendScheduled(name, entity, executeAt);
     }
 
     /**
@@ -479,25 +636,47 @@ public abstract class BaseQueueService<M extends BaseMapper<T>, T> extends Servi
      * @return 是否发送成功
      */
     public boolean sendPriority(T entity, int priority) {
-        return sendPriority("", null, entity, priority);
-    }
-
-    public boolean sendPriority(String suffix, T entity, int priority) {
-        return sendPriority(suffix, null, entity, priority);
-    }
-
-    public <X> boolean sendPriority(Class<X> clazz, T entity, int priority) {
-        return sendPriority("", clazz, entity, priority);
-    }
-
-    public <X> boolean sendPriority(String suffix, Class<X> clazz, T entity, int priority) {
-        QueueConfig config = queueService.getConfig(getQueueName(suffix, clazz));
+        String name = getQueueName();
+        QueueConfig config = queueService.getConfig(name);
         if (config == null) {
             config = getQueueConfig();
             if (config.isAuto())
                 register(config);
         }
-        return queueService.sendPriority(getQueueName(suffix, clazz), entity, priority);
+        return queueService.sendPriority(name, entity, priority);
+    }
+
+    public boolean sendPriority(String suffix, T entity, int priority) {
+        String name = getQueueName(suffix);
+        QueueConfig config = queueService.getConfig(name);
+        if (config == null) {
+            config = getQueueConfig();
+            if (config.isAuto())
+                register(suffix);
+        }
+        return queueService.sendPriority(name, entity, priority);
+    }
+
+    public <X> boolean sendPriority(Class<X> clazz, T entity, int priority) {
+        String name = getQueueName(clazz);
+        QueueConfig config = queueService.getConfig(name);
+        if (config == null) {
+            config = getQueueConfig();
+            if (config.isAuto())
+                register(clazz);
+        }
+        return queueService.sendPriority(name, entity, priority);
+    }
+
+    public <X> boolean sendPriority(String suffix, Class<X> clazz, T entity, int priority) {
+        String name = getQueueName(suffix, clazz);
+        QueueConfig config = queueService.getConfig(name);
+        if (config == null) {
+            config = getQueueConfig();
+            if (config.isAuto())
+                register(suffix, clazz);
+        }
+        return queueService.sendPriority(name, entity, priority);
     }
 
     /**
@@ -507,7 +686,14 @@ public abstract class BaseQueueService<M extends BaseMapper<T>, T> extends Servi
      * @return 成功发送的数量
      */
     public int sendBatch(List<T> entities) {
-        return sendBatch("", null, entities);
+        String name = getQueueName();
+        QueueConfig config = queueService.getConfig(name);
+        if (config == null) {
+            config = getQueueConfig();
+            if (config.isAuto())
+                register();
+        }
+        return queueService.sendBatch(name, entities);
     }
 
     /**
@@ -518,21 +704,36 @@ public abstract class BaseQueueService<M extends BaseMapper<T>, T> extends Servi
      * @return 成功发送的数量
      */
     public int sendBatch(String suffix, List<T> entities) {
-        return sendBatch(suffix, null, entities);
-    }
-
-    public <X> int sendBatch(Class<X> clazz, List<X> entities) {
-        return sendBatch("", clazz, entities);
-    }
-
-    public <X> int sendBatch(String suffix, Class<X> clazz, List<X> entities) {
-        QueueConfig config = queueService.getConfig(getQueueName(suffix, clazz));
+        String name = getQueueName(suffix);
+        QueueConfig config = queueService.getConfig(name);
         if (config == null) {
             config = getQueueConfig();
             if (config.isAuto())
-                register(config);
+                register(suffix);
         }
-        return queueService.sendBatch(getQueueName(suffix, clazz), entities);
+        return queueService.sendBatch(name, entities);
+    }
+
+    public <X> int sendBatch(Class<X> clazz, List<X> entities) {
+        String name = getQueueName(clazz);
+        QueueConfig config = queueService.getConfig(name);
+        if (config == null) {
+            config = getQueueConfig();
+            if (config.isAuto())
+                register(clazz);
+        }
+        return queueService.sendBatch(name, entities);
+    }
+
+    public <X> int sendBatch(String suffix, Class<X> clazz, List<X> entities) {
+        String name = getQueueName(suffix, clazz);
+        QueueConfig config = queueService.getConfig(name);
+        if (config == null) {
+            config = getQueueConfig();
+            if (config.isAuto())
+                register(suffix, clazz);
+        }
+        return queueService.sendBatch(name, entities);
     }
 
     // ==================== 消费消息方法 ====================
@@ -553,7 +754,8 @@ public abstract class BaseQueueService<M extends BaseMapper<T>, T> extends Servi
      * @return 实体对象，如果队列为空返回null
      */
     public T pollQueue(String suffix) {
-        QueueMessage<T> message = queueService.poll(getQueueName(suffix));
+        String name = getQueueName(suffix);
+        QueueMessage<T> message = queueService.poll(name);
         return message != null ? message.getBody() : null;
     }
 
@@ -578,7 +780,8 @@ public abstract class BaseQueueService<M extends BaseMapper<T>, T> extends Servi
     }
 
     public T pollQueue(String suffix, long timeout, TimeUnit unit) {
-        QueueMessage<T> message = queueService.poll(getQueueName(suffix), timeout, unit);
+        String name = getQueueName(suffix);
+        QueueMessage<T> message = queueService.poll(name, timeout, unit);
         return message != null ? message.getBody() : null;
     }
 
@@ -587,7 +790,8 @@ public abstract class BaseQueueService<M extends BaseMapper<T>, T> extends Servi
     }
 
     public <X> X pollQueue(String suffix, Class<X> clazz, long timeout, TimeUnit unit) {
-        QueueMessage<X> message = queueService.poll(getQueueName(suffix, clazz), timeout, unit);
+        String name = getQueueName(suffix, clazz);
+        QueueMessage<X> message = queueService.poll(name, timeout, unit);
         return message != null ? message.getBody() : null;
     }
 
@@ -602,7 +806,8 @@ public abstract class BaseQueueService<M extends BaseMapper<T>, T> extends Servi
     }
 
     public List<T> pollBatch(String suffix, int maxCount) {
-        List<QueueMessage<T>> messages = queueService.pollBatch(getQueueName(suffix), maxCount);
+        String name = getQueueName(suffix);
+        List<QueueMessage<T>> messages = queueService.pollBatch(name, maxCount);
         List<T> result = new ArrayList<>();
         for (QueueMessage<T> message : messages) {
             if (message != null && message.getBody() != null) {
@@ -617,7 +822,8 @@ public abstract class BaseQueueService<M extends BaseMapper<T>, T> extends Servi
     }
 
     public <X> List<X> pollBatch(String suffix, Class<X> clazz, int maxCount) {
-        List<QueueMessage<X>> messages = queueService.pollBatch(getQueueName(suffix, clazz), maxCount);
+        String name = getQueueName(suffix, clazz);
+        List<QueueMessage<X>> messages = queueService.pollBatch(name, maxCount);
         List<X> result = new ArrayList<>();
         for (QueueMessage<X> message : messages) {
             if (message != null && message.getBody() != null) {
