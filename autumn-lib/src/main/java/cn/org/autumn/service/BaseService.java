@@ -23,7 +23,7 @@ import java.util.*;
  * @param <T> Entity
  */
 @Slf4j
-public abstract class BaseService<M extends BaseMapper<T>, T> extends BaseCacheService<M, T> implements BaseMenu {
+public abstract class BaseService<M extends BaseMapper<T>, T> extends ShareCacheService<M, T> implements BaseMenu {
 
     private String prefix = null;
 
