@@ -48,6 +48,10 @@ public class SysMenuService extends ServiceImpl<SysMenuDao, SysMenuEntity> imple
         return getSystemMenuKey("SystemManagement");
     }
 
+    public static String getOperationsMenuKey() {
+        return getSystemMenuKey("OperationsMonitoring");
+    }
+
     @Order(-1)
     public void init() {
         String[][] menus = new String[][]{
@@ -82,6 +86,23 @@ public class SysMenuService extends ServiceImpl<SysMenuDao, SysMenuEntity> imple
                 {"新增", NULL, "sys:dict:save", "2", NULL, "6", getSystemMenuKey("DictionaryManagementSave"), getSystemMenuKey("DictionaryManagement"), "sys_string_add"},
                 {"修改", NULL, "sys:dict:update", "2", NULL, "6", getSystemMenuKey("DictionaryManagementUpdate"), getSystemMenuKey("DictionaryManagement"), "sys_string_change"},
                 {"删除", NULL, "sys:dict:delete", "2", NULL, "6", getSystemMenuKey("DictionaryManagementDelete"), getSystemMenuKey("DictionaryManagement"), "sys_string_delete"},
+
+                // 运维监控菜单
+                {"运维监控", NULL, NULL, "0", "fa fa-dashboard", "999998", getOperationsMenuKey(), "", "sys_string_operations_monitoring"},
+                {"缓存管理", "cache.html", NULL, "1", "fa fa-database", "1", getSystemMenuKey("CacheManagement"), getOperationsMenuKey(), "sys_string_cache_management"},
+                {"数据库备份", "database.html", NULL, "1", "fa fa-hdd-o", "2", getSystemMenuKey("DatabaseManagement"), getOperationsMenuKey(), "sys_string_database_management"},
+                {"队列管理", "queue.html", NULL, "1", "fa fa-tasks", "3", getSystemMenuKey("QueueManagement"), getOperationsMenuKey(), "sys_string_queue_management"},
+                {"定时任务", "loopjob.html", NULL, "1", "fa fa-clock-o", "4", getSystemMenuKey("LoopJobManagement"), getOperationsMenuKey(), "sys_string_loopjob_management"},
+                {"登录日志", "loginlog.html", NULL, "1", "fa fa-sign-in", "5", getSystemMenuKey("LoginLogManagement"), getOperationsMenuKey(), "sys_string_loginlog_management"},
+                {"日志级别", "log.html", NULL, "1", "fa fa-file-text-o", "6", getSystemMenuKey("LogLevelManagement"), getOperationsMenuKey(), "sys_string_loglevel_management"},
+                {"Bean执行器", "exec.html", NULL, "1", "fa fa-terminal", "7", getSystemMenuKey("ExecManagement"), getOperationsMenuKey(), "sys_string_exec_management"},
+                {"防火墙", "wall.html", NULL, "1", "fa fa-shield", "8", getSystemMenuKey("WallManagement"), getOperationsMenuKey(), "sys_string_wall_management"},
+                {"会话管理", "session.html", NULL, "1", "fa fa-users", "9", getSystemMenuKey("SessionManagement"), getOperationsMenuKey(), "sys_string_session_management"},
+                {"Redis管理", "redis.html", NULL, "1", "fa fa-server", "10", getSystemMenuKey("RedisManagement"), getOperationsMenuKey(), "sys_string_redis_management"},
+                {"线程池管理", "threading.html", NULL, "1", "fa fa-cogs", "11", getSystemMenuKey("ThreadManagement"), getOperationsMenuKey(), "sys_string_thread_management"},
+                {"重建数据表", "reinit.html", NULL, "1", "fa fa-refresh", "12", getSystemMenuKey("ReinitManagement"), getOperationsMenuKey(), "sys_string_reinit_management"},
+                {"人机检测", "shield.html", NULL, "1", "fa fa-user-secret", "13", getSystemMenuKey("ShieldManagement"), getOperationsMenuKey(), "sys_string_shield_management"},
+                {"版本更新", "scan.html", NULL, "1", "fa fa-mobile", "14", getSystemMenuKey("ScanManagement"), getOperationsMenuKey(), "sys_string_scan_management"},
         };
         put(menus);
     }

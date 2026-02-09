@@ -352,6 +352,24 @@ public class SysPageController implements ErrorController {
         return "session";
     }
 
+    @RequestMapping(value = {"scan.html"}, method = RequestMethod.GET)
+    @SkipInterceptor
+    public String scan(Model model) {
+        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
+            return "404";
+        model.addAttribute("url", "/");
+        return "scan";
+    }
+
+    @RequestMapping(value = {"shield.html"}, method = RequestMethod.GET)
+    @SkipInterceptor
+    public String shield(HttpServletRequest servlet) {
+        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
+            return "404";
+        ipWhiteService.check(servlet, getClass(), "shield");
+        return "shield";
+    }
+
     @RequestMapping(value = {"clear.html"}, method = RequestMethod.GET)
     @SkipInterceptor
     public String clearPage(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {

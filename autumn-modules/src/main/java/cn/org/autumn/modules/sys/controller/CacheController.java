@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
@@ -74,6 +75,51 @@ public class CacheController {
     }
 
     /**
+     * 将字符串类型的key转换为缓存配置中声明的实际key类型
+     * 前端传入的key始终为String，但缓存可能使用Long、Integer等类型作为key
+     *
+     * @param name 缓存名称
+     * @param key  字符串形式的key
+     * @return 转换后的key对象，如果转换失败则返回原始字符串
+     */
+    private Object convertKey(String name, String key) {
+        if (key == null) {
+            return null;
+        }
+        CacheConfig config = ehCacheManager.getConfig(name);
+        if (config == null) {
+            return key;
+        }
+        Class<?> keyType = config.getKey();
+        if (keyType == null || keyType == String.class) {
+            return key;
+        }
+        try {
+            String trimmed = key.trim();
+            if (keyType == Long.class || keyType == long.class) {
+                return Long.parseLong(trimmed);
+            } else if (keyType == Integer.class || keyType == int.class) {
+                return Integer.parseInt(trimmed);
+            } else if (keyType == Double.class || keyType == double.class) {
+                return Double.parseDouble(trimmed);
+            } else if (keyType == Float.class || keyType == float.class) {
+                return Float.parseFloat(trimmed);
+            } else if (keyType == Short.class || keyType == short.class) {
+                return Short.parseShort(trimmed);
+            } else if (keyType == Byte.class || keyType == byte.class) {
+                return Byte.parseByte(trimmed);
+            } else if (keyType == Boolean.class || keyType == boolean.class) {
+                return Boolean.parseBoolean(trimmed);
+            } else if (keyType == BigDecimal.class) {
+                return new BigDecimal(trimmed);
+            }
+        } catch (NumberFormatException e) {
+            log.warn("缓存key类型转换失败: name={}, key={}, targetType={}, error={}", name, key, keyType.getSimpleName(), e.getMessage());
+        }
+        return key;
+    }
+
+    /**
      * 将通配符模式转换为正则表达式进行匹配
      */
     private boolean matchWildcard(String text, String pattern) {
@@ -102,7 +148,7 @@ public class CacheController {
      * 构建合并的键信息列表
      */
     private Map<String, Object> buildMergedKeysResult(String cacheName, Set<String> localKeys, Set<String> filteredLocalKeys,
-                                                       Map<String, Long> redisKeyTTLMap, int page, int size) {
+                                                      Map<String, Long> redisKeyTTLMap, int page, int size) {
         Map<String, Object> result = new HashMap<>();
         CacheConfig config = ehCacheManager.getConfig(cacheName);
         long localExpireSeconds = config != null ? convertToSeconds(config.getExpire(), config.getUnit()) : -1;
@@ -288,7 +334,8 @@ public class CacheController {
         }
         try {
             Map<String, Object> result = new HashMap<>();
-            Object value = cacheService.get(name, key);
+            Object convertedKey = convertKey(name, key);
+            Object value = cacheService.get(name, convertedKey);
             result.put("key", key);
             result.put("value", value);
             result.put("valueType", value != null ? value.getClass().getName() : "null");
@@ -309,7 +356,8 @@ public class CacheController {
             return Response.fail("无权限访问");
         }
         try {
-            cacheService.remove(name, key);
+            Object convertedKey = convertKey(name, key);
+            cacheService.remove(name, convertedKey);
             return Response.ok("删除成功");
         } catch (Exception e) {
             log.error("删除缓存键失败: {}", e.getMessage(), e);
@@ -329,7 +377,8 @@ public class CacheController {
             int count = 0;
             for (String key : keys) {
                 try {
-                    cacheService.remove(name, key);
+                    Object convertedKey = convertKey(name, key);
+                    cacheService.remove(name, convertedKey);
                     count++;
                 } catch (Exception e) {
                     log.warn("删除缓存键失败: cacheName={}, key={}, error={}", name, key, e.getMessage());
