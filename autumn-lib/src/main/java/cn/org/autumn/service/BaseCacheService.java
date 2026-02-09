@@ -3,6 +3,7 @@ package cn.org.autumn.service;
 import cn.org.autumn.annotation.Cache;
 import cn.org.autumn.annotation.Caches;
 import cn.org.autumn.config.CacheConfig;
+import cn.org.autumn.model.CacheParam;
 import cn.org.autumn.table.utils.Escape;
 import cn.org.autumn.table.utils.HumpConvert;
 import com.baomidou.mybatisplus.mapper.BaseMapper;
@@ -162,8 +163,22 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         return Map.class.isAssignableFrom(type);
     }
 
+    /**
+     * 获取当前实体的缓存名称前缀
+     * 所有与该实体相关的缓存配置名称都以此前缀开头
+     *
+     * @return 实体缓存名称前缀
+     */
+    protected String getEntityBaseName() {
+        Class<?> clazz = getModelClass();
+        if (clazz == null) {
+            return null;
+        }
+        return clazz.getSimpleName().replace("Entity", "").toLowerCase();
+    }
+
     public CacheConfig getConfig() {
-        String name = getModelClass().getSimpleName().replace("Entity", "").toLowerCase();
+        String name = getEntityBaseName();
         CacheConfig config = configs.get(name);
         if (null == config) {
             config = CacheConfig.builder().name(name).key(getCacheKeyType()).value(getModelClass()).expire(getCacheExpire()).Null(isCacheNull()).build();
@@ -181,7 +196,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
      * @return 缓存配置
      */
     public <X> CacheConfig getConfig(Class<X> clazz) {
-        String name = getModelClass().getSimpleName().replace("Entity", "").toLowerCase();
+        String name = getEntityBaseName();
         name += clazz.getSimpleName().toLowerCase();
         CacheConfig config = configs.get(name);
         if (null == config) {
@@ -206,7 +221,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         if (naming == null || naming.isEmpty()) {
             return getConfig(clazz);
         }
-        String name = getModelClass().getSimpleName().replace("Entity", "") + naming;
+        String name = getEntityBaseName() + naming;
         name = name.toLowerCase() + clazz.getSimpleName().toLowerCase();
         CacheConfig config = configs.get(name);
         if (null == config) {
@@ -229,7 +244,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         if (naming == null || naming.isEmpty()) {
             return getConfig();
         }
-        String name = getModelClass().getSimpleName().replace("Entity", "") + naming;
+        String name = getEntityBaseName() + naming;
         name = name.toLowerCase();
         CacheConfig config = configs.get(name);
         if (null == config) {
@@ -246,7 +261,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
      * @return 非唯一缓存配置
      */
     public CacheConfig getListConfig() {
-        String name = getModelClass().getSimpleName().replace("Entity", "").toLowerCase() + "list";
+        String name = getEntityBaseName() + "list";
         CacheConfig config = configs.get(name);
         if (null == config) {
             config = CacheConfig.builder().name(name).key(getCacheKeyType()).value(List.class).expire(getCacheExpire()).Null(isCacheNull()).build();
@@ -264,7 +279,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
      * @return 非唯一缓存配置
      */
     public <X> CacheConfig getListConfig(Class<X> clazz) {
-        String name = getModelClass().getSimpleName().replace("Entity", "").toLowerCase() + "list";
+        String name = getEntityBaseName() + "list";
         name += clazz.getSimpleName().toLowerCase();
         CacheConfig config = configs.get(name);
         if (null == config) {
@@ -288,7 +303,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         if (naming == null || naming.isEmpty()) {
             return getListConfig(clazz);
         }
-        String name = getModelClass().getSimpleName().replace("Entity", "") + naming + "list";
+        String name = getEntityBaseName() + naming + "list";
         name = name.toLowerCase() + clazz.getSimpleName().toLowerCase();
         CacheConfig config = configs.get(name);
         if (null == config) {
@@ -309,7 +324,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         if (naming == null || naming.isEmpty()) {
             return getListConfig();
         }
-        String name = getModelClass().getSimpleName().replace("Entity", "") + naming + "list";
+        String name = getEntityBaseName() + naming + "list";
         name = name.toLowerCase();
         CacheConfig config = configs.get(name);
         if (null == config) {
@@ -1071,6 +1086,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
 
     /**
      * 构建缓存 key（带name参数版本，支持Caches注解）
+     * 支持 {@link CacheParam} 包装：透传参数返回 null，自定义 key 返回 toKey()
      *
      * @param name name属性值，如果为空则使用默认的@Cache注解
      * @param key  单个 key
@@ -1080,9 +1096,13 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         if (key == null) {
             return null;
         }
+        // CacheParam 透传参数，不参与缓存，返回 null
+        if (key instanceof CacheParam && ((CacheParam<?>) key).isTransparent()) {
+            return null;
+        }
         Class<?> clazz = getModelClass();
         if (clazz == null) {
-            return key;
+            return unwrapCacheParam(key);
         }
         // 查找复合字段缓存配置
         Cache compositeCache = findCompositeCache(clazz, name);
@@ -1096,11 +1116,11 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
                 for (int i = 0; i < fieldNames.length; i++) {
                     values[i] = keyMap.get(fieldNames[i]);
                 }
-                return buildCompositeKeyString(values);
+                return buildCompositeKey(values);
             }
         }
-        // 单个字段缓存，直接返回 key
-        return key;
+        // 单个字段缓存，直接返回 key（解包 CacheParam）
+        return unwrapCacheParam(key);
     }
 
     /**
@@ -1135,6 +1155,8 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
 
     /**
      * 构建缓存 key（带name参数的可变参数版本，支持Caches注解）
+     * <p>
+     * 支持 {@link CacheParam} 包装：透传参数不占用字段位置，不参与 key 计算
      *
      * @param name name属性值，如果为空则使用默认的@Cache注解
      * @param keys 可变参数数组
@@ -1144,64 +1166,174 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         if (keys == null || keys.length == 0) {
             return null;
         }
+        // 过滤出有效 key 参数（排除透传参数）
+        Object[] effectiveKeys = filterEffectiveKeys(keys);
+        if (effectiveKeys.length == 0) {
+            return null;
+        }
         Class<?> clazz = getModelClass();
         if (clazz == null) {
-            return keys.length == 1 ? keys[0] : buildCompositeKeyString(keys);
+            if (effectiveKeys.length == 1) {
+                return unwrapCacheParam(effectiveKeys[0]);
+            }
+            return buildCompositeKey(effectiveKeys);
         }
         // 查找复合字段缓存配置
         Cache compositeCache = findCompositeCache(clazz, name);
         if (compositeCache != null && compositeCache.value().length > 0) {
             String[] fieldNames = compositeCache.value();
-            // 如果只有一个参数且是 Map，从 Map 中提取值构建字符串 key
-            if (keys.length == 1 && keys[0] instanceof Map) {
+            // 如果只有一个有效参数且是 Map，从 Map 中提取值构建字符串 key
+            if (effectiveKeys.length == 1 && effectiveKeys[0] instanceof Map) {
                 @SuppressWarnings("unchecked")
-                Map<String, Object> keyMap = (Map<String, Object>) keys[0];
+                Map<String, Object> keyMap = (Map<String, Object>) effectiveKeys[0];
                 Object[] values = new Object[fieldNames.length];
                 for (int i = 0; i < fieldNames.length; i++) {
                     values[i] = keyMap.get(fieldNames[i]);
                 }
-                return buildCompositeKeyString(values);
+                return buildCompositeKey(values);
             }
-            // 将可变参数值与字段名对应，按字段顺序构建字符串 key
+            // 将有效参数值与字段名对应，按字段顺序构建字符串 key
             Object[] values = new Object[fieldNames.length];
-            int paramCount = Math.min(keys.length, fieldNames.length);
+            int paramCount = Math.min(effectiveKeys.length, fieldNames.length);
             for (int i = 0; i < paramCount; i++) {
-                if (keys[i] != null) {
-                    values[i] = keys[i];
+                if (effectiveKeys[i] != null) {
+                    values[i] = effectiveKeys[i];
                 } else {
-                    // 如果参数数量与字段数量不匹配，返回 null
+                    // 参数值为 null，返回 null
                     return null;
                 }
             }
-            // 如果参数数量与字段数量不匹配，返回 null
+            // 如果有效参数数量与字段数量不匹配，返回 null
             if (paramCount != fieldNames.length) {
                 return null;
             }
-            return buildCompositeKeyString(values);
+            return buildCompositeKey(values);
         }
-        // 单个字段缓存，返回第一个参数
-        return keys[0];
+        // 单个字段缓存，返回第一个有效参数（解包 CacheParam）
+        return unwrapCacheParam(effectiveKeys[0]);
     }
 
     /**
      * 构建复合 key 字符串
      * 使用 ":" 作为分隔符连接多个值
+     * <p>
+     * 支持 {@link CacheParam} 包装：
+     * <ul>
+     *   <li>CacheParam.pass(value) — 透传参数，跳过不参与 key 计算</li>
+     *   <li>CacheParam.key(value, customKey) — 使用自定义 key 参与计算</li>
+     * </ul>
      *
      * @param values 值数组
      * @return 组合后的 key 字符串
      */
-    private String buildCompositeKeyString(Object... values) {
+    protected String buildCompositeKey(Object... values) {
         if (values == null || values.length == 0) {
             return "";
         }
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < values.length; i++) {
-            if (i > 0) {
+        boolean first = true;
+        for (Object value : values) {
+            // CacheParam 透传参数，跳过不参与 key 计算
+            if (value instanceof CacheParam && ((CacheParam<?>) value).isTransparent()) {
+                continue;
+            }
+            if (!first) {
                 sb.append(":");
             }
-            sb.append(values[i] != null ? values[i].toString() : "null");
+            first = false;
+            if (value instanceof CacheParam) {
+                // CacheParam 自定义 key
+                sb.append(((CacheParam<?>) value).toKey());
+            } else if (null == value) {
+                sb.append("null");
+            } else {
+                sb.append(value);
+            }
         }
         return sb.toString();
+    }
+
+    /**
+     * 过滤出有效 key 参数（排除 {@link CacheParam} 透传参数）
+     *
+     * @param keys 原始参数数组
+     * @return 仅包含参与 key 计算的参数数组
+     */
+    private Object[] filterEffectiveKeys(Object[] keys) {
+        if (keys == null || keys.length == 0) {
+            return new Object[0];
+        }
+        int count = 0;
+        for (Object key : keys) {
+            if (!(key instanceof CacheParam && ((CacheParam<?>) key).isTransparent())) {
+                count++;
+            }
+        }
+        if (count == keys.length) {
+            return keys; // 无透传参数，直接返回原数组，避免拷贝
+        }
+        Object[] result = new Object[count];
+        int idx = 0;
+        for (Object key : keys) {
+            if (!(key instanceof CacheParam && ((CacheParam<?>) key).isTransparent())) {
+                result[idx++] = key;
+            }
+        }
+        return result;
+    }
+
+    /**
+     * 解包 CacheParam 获取缓存 key 值
+     * <ul>
+     *   <li>CacheParam 自定义 key：返回自定义 key 字符串</li>
+     *   <li>CacheParam 透传：返回 null</li>
+     *   <li>CacheKey（向后兼容）：返回 toKey()</li>
+     *   <li>其他：返回原值</li>
+     * </ul>
+     *
+     * @param value 原始值
+     * @return 用于缓存的 key 值
+     */
+    private Object unwrapCacheParam(Object value) {
+        if (value instanceof CacheParam) {
+            CacheParam<?> param = (CacheParam<?>) value;
+            if (param.isTransparent()) {
+                return null;
+            }
+            return param.toKey();
+        }
+        return value;
+    }
+
+    /**
+     * 解包参数获取原始业务值（供子类在业务逻辑中使用）
+     * 如果参数是 {@link CacheParam} 包装，返回其内部的原始值；否则返回参数本身
+     *
+     * @param param 可能被 CacheParam 包装的参数
+     * @return 原始业务值
+     */
+    protected Object unwrapValue(Object param) {
+        if (param instanceof CacheParam) {
+            return ((CacheParam<?>) param).get();
+        }
+        return param;
+    }
+
+    /**
+     * 批量解包参数获取原始业务值（供子类在业务逻辑中使用）
+     *
+     * @param params 可能包含 CacheParam 包装的参数数组
+     * @return 全部解包后的原始值数组
+     */
+    protected Object[] unwrapValues(Object... params) {
+        if (params == null) {
+            return null;
+        }
+        Object[] result = new Object[params.length];
+        for (int i = 0; i < params.length; i++) {
+            result[i] = unwrapValue(params[i]);
+        }
+        return result;
     }
 
     /**
@@ -1898,6 +2030,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
 
     /**
      * 根据 name 和 key 删除缓存（同时删除唯一和非唯一缓存）
+     * 同时会扫描并删除所有与该 name 相关的类型特定缓存
      *
      * @param name name属性值，如果为空则使用默认配置
      * @param key  缓存key
@@ -1915,9 +2048,85 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             CacheConfig listConfig = (name == null || name.isEmpty()) ? getListConfig() : getListConfig(name);
             String listCacheName = listConfig.getName();
             cacheService.remove(listCacheName, key);
+            // 删除所有类型特定缓存（如 DTO、VO 等转换类型的缓存）
+            removeTypedCacheByKey(cacheName, listCacheName, key);
         } catch (Throwable e) {
             if (log.isWarnEnabled())
                 log.warn("删除缓存失败: name={}, key={}, error={}", name, key, e.getMessage());
+        }
+    }
+
+    /**
+     * 删除所有类型特定缓存
+     * 扫描 configs 中所有以基础缓存名称为前缀的配置，删除其中的 key
+     * <p>
+     * 例如：基础缓存名称为 "user"，则会扫描并删除 "useruserdto"、"userlistuserdto" 等类型特定缓存
+     *
+     * @param baseCacheName     基础单值缓存名称（如 "user" 或 "userlocation"）
+     * @param baseListCacheName 基础List缓存名称（如 "userlist" 或 "userlocationlist"）
+     * @param key               缓存key
+     */
+    private void removeTypedCacheByKey(String baseCacheName, String baseListCacheName, Object key) {
+        for (Map.Entry<String, CacheConfig> entry : configs.entrySet()) {
+            String configName = entry.getKey();
+            // 跳过已经处理过的基础配置
+            if (configName.equals(baseCacheName) || configName.equals(baseListCacheName)) {
+                continue;
+            }
+            // 匹配以基础缓存名称为前缀的类型特定配置（如 "useruserdto"、"userlistuserdto"）
+            if (configName.startsWith(baseCacheName) || configName.startsWith(baseListCacheName)) {
+                try {
+                    cacheService.remove(configName, key);
+                } catch (Throwable e) {
+                    if (log.isWarnEnabled())
+                        log.warn("删除类型特定缓存失败: config={}, key={}, error={}", configName, key, e.getMessage());
+                }
+            }
+        }
+    }
+
+    /**
+     * 根据类型和 key 删除缓存（同时删除类型特定的唯一和非唯一缓存）
+     *
+     * @param clazz 目标类型
+     * @param key   缓存key
+     * @param <X>   类型泛型
+     */
+    protected <X> void removeCacheByKey(Class<X> clazz, Object key) {
+        if (key == null || clazz == null) {
+            return;
+        }
+        try {
+            CacheConfig config = getConfig(clazz);
+            cacheService.remove(config.getName(), key);
+            CacheConfig listConfig = getListConfig(clazz);
+            cacheService.remove(listConfig.getName(), key);
+        } catch (Throwable e) {
+            if (log.isWarnEnabled())
+                log.warn("删除类型缓存失败: clazz={}, key={}, error={}", clazz.getSimpleName(), key, e.getMessage());
+        }
+    }
+
+    /**
+     * 根据类型、name 和 key 删除缓存（同时删除类型+name特定的唯一和非唯一缓存）
+     *
+     * @param clazz 目标类型
+     * @param name  name属性值，如果为空则使用默认配置
+     * @param key   缓存key
+     * @param <X>   类型泛型
+     */
+    protected <X> void removeCacheByKey(Class<X> clazz, String name, Object key) {
+        if (key == null || clazz == null) {
+            return;
+        }
+        try {
+            CacheConfig config = getConfig(clazz, name);
+            cacheService.remove(config.getName(), key);
+            CacheConfig listConfig = getListConfig(clazz, name);
+            cacheService.remove(listConfig.getName(), key);
+        } catch (Throwable e) {
+            if (log.isWarnEnabled())
+                log.warn("删除类型命名缓存失败: clazz={}, name={}, key={}, error={}", clazz.getSimpleName(), name, key, e.getMessage());
         }
     }
 
@@ -2008,7 +2217,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
 
         // 只有当所有字段值都存在时，才构建字符串 key 并删除缓存
         if (allValuesPresent) {
-            String compositeKeyString = buildCompositeKeyString(values);
+            String compositeKeyString = buildCompositeKey(values);
             if (!compositeKeyString.isEmpty()) {
                 removeCacheByKey(name, compositeKeyString);
             }
@@ -2033,6 +2242,211 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
                     String cacheName = cache.name();
                     String nameForConfig = cacheName.isEmpty() ? "" : cacheName;
                     removeCacheByKey(nameForConfig, key);
+                }
+            }
+        }
+    }
+
+    // ==================== 清空缓存 - 单值缓存 ====================
+
+    /**
+     * 清空默认单值缓存
+     */
+    public void clearCache() {
+        try {
+            CacheConfig config = getConfig();
+            cacheService.clear(config.getName());
+        } catch (Throwable e) {
+            if (log.isWarnEnabled())
+                log.warn("清空缓存失败: error={}", e.getMessage());
+        }
+    }
+
+    /**
+     * 清空指定命名的单值缓存
+     *
+     * @param naming name属性值，如果为空则清空默认缓存
+     */
+    public void clearCache(String naming) {
+        try {
+            CacheConfig config = getConfig(naming);
+            cacheService.clear(config.getName());
+        } catch (Throwable e) {
+            if (log.isWarnEnabled())
+                log.warn("清空命名缓存失败: naming={}, error={}", naming, e.getMessage());
+        }
+    }
+
+    /**
+     * 清空指定类型的单值缓存
+     *
+     * @param clazz 目标类型
+     * @param <X>   类型泛型
+     */
+    public <X> void clearCache(Class<X> clazz) {
+        if (clazz == null) {
+            return;
+        }
+        try {
+            CacheConfig config = getConfig(clazz);
+            cacheService.clear(config.getName());
+        } catch (Throwable e) {
+            if (log.isWarnEnabled())
+                log.warn("清空类型缓存失败: clazz={}, error={}", clazz.getSimpleName(), e.getMessage());
+        }
+    }
+
+    /**
+     * 清空指定类型和命名的单值缓存
+     *
+     * @param clazz  目标类型
+     * @param naming name属性值，如果为空则清空默认类型缓存
+     * @param <X>    类型泛型
+     */
+    public <X> void clearCache(Class<X> clazz, String naming) {
+        if (clazz == null) {
+            return;
+        }
+        try {
+            CacheConfig config = getConfig(clazz, naming);
+            cacheService.clear(config.getName());
+        } catch (Throwable e) {
+            if (log.isWarnEnabled())
+                log.warn("清空类型命名缓存失败: clazz={}, naming={}, error={}", clazz.getSimpleName(), naming, e.getMessage());
+        }
+    }
+
+    // ==================== 清空缓存 - List缓存 ====================
+
+    /**
+     * 清空默认List缓存
+     */
+    public void clearListCache() {
+        try {
+            CacheConfig config = getListConfig();
+            cacheService.clear(config.getName());
+        } catch (Throwable e) {
+            if (log.isWarnEnabled())
+                log.warn("清空List缓存失败: error={}", e.getMessage());
+        }
+    }
+
+    /**
+     * 清空指定命名的List缓存
+     *
+     * @param naming name属性值，如果为空则清空默认List缓存
+     */
+    public void clearListCache(String naming) {
+        try {
+            CacheConfig config = getListConfig(naming);
+            cacheService.clear(config.getName());
+        } catch (Throwable e) {
+            if (log.isWarnEnabled())
+                log.warn("清空命名List缓存失败: naming={}, error={}", naming, e.getMessage());
+        }
+    }
+
+    /**
+     * 清空指定类型的List缓存
+     *
+     * @param clazz 目标类型
+     * @param <X>   类型泛型
+     */
+    public <X> void clearListCache(Class<X> clazz) {
+        if (clazz == null) {
+            return;
+        }
+        try {
+            CacheConfig config = getListConfig(clazz);
+            cacheService.clear(config.getName());
+        } catch (Throwable e) {
+            if (log.isWarnEnabled())
+                log.warn("清空类型List缓存失败: clazz={}, error={}", clazz.getSimpleName(), e.getMessage());
+        }
+    }
+
+    /**
+     * 清空指定类型和命名的List缓存
+     *
+     * @param clazz  目标类型
+     * @param naming name属性值，如果为空则清空默认类型List缓存
+     * @param <X>    类型泛型
+     */
+    public <X> void clearListCache(Class<X> clazz, String naming) {
+        if (clazz == null) {
+            return;
+        }
+        try {
+            CacheConfig config = getListConfig(clazz, naming);
+            cacheService.clear(config.getName());
+        } catch (Throwable e) {
+            if (log.isWarnEnabled())
+                log.warn("清空类型命名List缓存失败: clazz={}, naming={}, error={}", clazz.getSimpleName(), naming, e.getMessage());
+        }
+    }
+
+    // ==================== 清空缓存 - 同时清空单值+List ====================
+
+    /**
+     * 清空默认单值缓存和List缓存
+     */
+    public void clearCacheAll() {
+        clearCache();
+        clearListCache();
+    }
+
+    /**
+     * 清空指定命名的单值缓存和List缓存
+     *
+     * @param naming name属性值，如果为空则清空默认缓存
+     */
+    public void clearCacheAll(String naming) {
+        clearCache(naming);
+        clearListCache(naming);
+    }
+
+    /**
+     * 清空指定类型的单值缓存和List缓存
+     *
+     * @param clazz 目标类型
+     * @param <X>   类型泛型
+     */
+    public <X> void clearCacheAll(Class<X> clazz) {
+        clearCache(clazz);
+        clearListCache(clazz);
+    }
+
+    /**
+     * 清空指定类型和命名的单值缓存和List缓存
+     *
+     * @param clazz  目标类型
+     * @param naming name属性值
+     * @param <X>    类型泛型
+     */
+    public <X> void clearCacheAll(Class<X> clazz, String naming) {
+        clearCache(clazz, naming);
+        clearListCache(clazz, naming);
+    }
+
+    /**
+     * 清空当前实体相关的所有缓存（包括所有维度：默认/命名/类型/命名+类型，单值+List）
+     * <p>
+     * 通过扫描 configs 中所有以当前实体基础名称为前缀的配置，清空所有相关缓存。
+     * 适用于需要完全重置某个实体所有缓存的场景。
+     */
+    public void clearCacheComplete() {
+        String baseName = getEntityBaseName();
+        if (baseName == null) {
+            return;
+        }
+        for (Map.Entry<String, CacheConfig> entry : configs.entrySet()) {
+            String configName = entry.getKey();
+            if (configName.startsWith(baseName)) {
+                try {
+                    cacheService.clear(configName);
+                } catch (Throwable e) {
+                    if (log.isWarnEnabled())
+                        log.warn("清空缓存失败: config={}, error={}", configName, e.getMessage());
                 }
             }
         }

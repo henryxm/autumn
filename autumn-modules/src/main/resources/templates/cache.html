@@ -15,57 +15,68 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            padding: 20px;
+            padding: 16px;
         }
 
         .container {
             max-width: 1400px;
             margin: 0 auto;
             background: white;
-            border-radius: 12px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
             overflow: hidden;
         }
 
         .header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 30px;
-            text-align: center;
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
         }
 
         .header h1 {
-            font-size: 32px;
+            font-size: 20px;
             font-weight: 600;
-            margin-bottom: 10px;
         }
 
         .header p {
-            opacity: 0.9;
-            font-size: 14px;
+            opacity: 0.85;
+            font-size: 13px;
         }
 
         .status-bar {
             background: #f8f9fa;
-            padding: 20px 30px;
+            padding: 10px 20px;
             border-bottom: 1px solid #e9ecef;
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
-            gap: 15px;
+            gap: 10px;
+        }
+
+        .status-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
         }
 
         .status-item {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
+            font-size: 13px;
+            color: #555;
         }
 
         .status-badge {
-            padding: 6px 12px;
+            padding: 3px 10px;
             border-radius: 20px;
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 600;
         }
 
@@ -86,42 +97,42 @@
 
         .main-content {
             display: grid;
-            grid-template-columns: 320px 1fr;
+            grid-template-columns: 260px 1fr;
             gap: 0;
-            min-height: 600px;
+            min-height: 550px;
         }
 
         .sidebar {
             background: #f8f9fa;
             border-right: 1px solid #e9ecef;
-            padding: 20px;
+            padding: 14px;
             overflow-y: auto;
-            max-height: calc(100vh - 200px);
+            max-height: calc(100vh - 160px);
         }
 
         .sidebar h3 {
-            font-size: 16px;
+            font-size: 14px;
             font-weight: 600;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
             color: #333;
-            padding-bottom: 10px;
+            padding-bottom: 8px;
             border-bottom: 2px solid #667eea;
         }
 
         .cache-item {
             background: white;
-            padding: 15px;
-            margin-bottom: 10px;
-            border-radius: 8px;
+            padding: 10px 12px;
+            margin-bottom: 6px;
+            border-radius: 6px;
             cursor: pointer;
-            transition: all 0.3s ease;
-            border: 2px solid transparent;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            transition: all 0.2s ease;
+            border: 1.5px solid transparent;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
         }
 
         .cache-item:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            transform: translateY(-1px);
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.08);
             border-color: #667eea;
         }
 
@@ -136,65 +147,64 @@
         }
 
         .cache-item.active .cache-meta {
-            color: rgba(255, 255, 255, 0.9);
+            color: rgba(255, 255, 255, 0.85);
         }
 
         .cache-name {
             font-weight: 600;
-            font-size: 14px;
+            font-size: 13px;
             color: #333;
-            margin-bottom: 8px;
+            margin-bottom: 4px;
             word-break: break-all;
+            line-height: 1.3;
         }
 
         .cache-meta {
-            font-size: 12px;
-            color: #666;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            font-size: 11px;
+            color: #888;
+            line-height: 1.4;
         }
 
         .cache-count {
             background: #e9ecef;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 11px;
+            padding: 1px 6px;
+            border-radius: 10px;
+            font-size: 10px;
         }
 
         .cache-item.active .cache-count {
-            background: rgba(255, 255, 255, 0.3);
-            color: white;
+            background: rgba(255, 255, 255, 0.3) !important;
+            color: white !important;
         }
 
         .content {
-            padding: 30px;
+            padding: 16px 20px;
             overflow-y: auto;
-            max-height: calc(100vh - 200px);
+            max-height: calc(100vh - 160px);
         }
 
         .toolbar {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 14px;
             flex-wrap: wrap;
-            gap: 15px;
+            gap: 10px;
         }
 
         .search-box {
             display: flex;
-            gap: 10px;
+            gap: 6px;
             flex: 1;
-            min-width: 300px;
+            min-width: 240px;
         }
 
         .search-box input {
             flex: 1;
-            padding: 10px 15px;
-            border: 2px solid #e9ecef;
-            border-radius: 8px;
-            font-size: 14px;
+            padding: 6px 12px;
+            border: 1.5px solid #dde1e6;
+            border-radius: 6px;
+            font-size: 13px;
             transition: border-color 0.3s;
         }
 
@@ -203,26 +213,29 @@
             border-color: #667eea;
         }
 
+        /* === 按钮基础样式（紧凑版） === */
         .btn {
-            padding: 10px 20px;
+            padding: 5px 12px;
             border: none;
-            border-radius: 8px;
+            border-radius: 6px;
             cursor: pointer;
-            font-size: 14px;
-            font-weight: 600;
-            transition: all 0.3s ease;
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.2s ease;
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            gap: 4px;
+            white-space: nowrap;
+            line-height: 1.5;
         }
 
         .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #667eea;
             color: white;
         }
 
@@ -246,48 +259,64 @@
             color: white;
         }
 
+        .btn-sm {
+            padding: 3px 8px;
+            font-size: 12px;
+            border-radius: 4px;
+        }
+
         .btn-group {
             display: flex;
-            gap: 10px;
+            gap: 6px;
             flex-wrap: wrap;
         }
 
+        /* === 表格样式 === */
         .table-container {
             background: white;
-            border-radius: 8px;
+            border-radius: 6px;
             overflow: hidden;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+            border: 1px solid #e9ecef;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
+            table-layout: fixed;
         }
 
         thead {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            background: #f0f2f5;
         }
 
         th {
-            padding: 15px;
+            padding: 10px 12px;
             text-align: left;
             font-weight: 600;
-            font-size: 14px;
+            font-size: 12px;
+            color: #555;
+            border-bottom: 2px solid #dde1e6;
+            white-space: nowrap;
         }
 
         td {
-            padding: 15px;
-            border-bottom: 1px solid #e9ecef;
-            font-size: 14px;
+            padding: 8px 12px;
+            border-bottom: 1px solid #f0f2f5;
+            font-size: 13px;
+            vertical-align: middle;
         }
 
         tbody tr {
-            transition: background-color 0.2s;
+            transition: background-color 0.15s;
         }
 
         tbody tr:hover {
-            background: #f8f9fa;
+            background: #f8f9fb;
         }
 
         tbody tr:last-child td {
@@ -297,15 +326,19 @@
         .key-cell {
             font-family: 'Courier New', monospace;
             word-break: break-all;
-            max-width: 400px;
+            font-size: 12px;
+            line-height: 1.4;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .badge {
             display: inline-block;
-            padding: 4px 10px;
-            border-radius: 12px;
-            font-size: 11px;
+            padding: 2px 7px;
+            border-radius: 10px;
+            font-size: 10px;
             font-weight: 600;
+            white-space: nowrap;
         }
 
         .badge-primary {
@@ -323,22 +356,75 @@
             color: #856404;
         }
 
+        .badge-danger {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .badge-local {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .badge-redis {
+            background: #fce4ec;
+            color: #c62828;
+        }
+
+        .cache-counts {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+            margin-top: 4px;
+        }
+
+        .cache-counts .cache-count {
+            font-size: 10px;
+            padding: 1px 5px;
+        }
+
+        .ttl-cell {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .ttl-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 11px;
+        }
+
+        .ttl-label {
+            font-size: 10px;
+            color: #999;
+            min-width: 28px;
+        }
+
+        .source-badges {
+            display: flex;
+            gap: 3px;
+        }
+
         .pagination {
             display: flex;
             justify-content: center;
             align-items: center;
-            gap: 10px;
-            margin-top: 20px;
-            padding: 20px;
+            gap: 8px;
+            margin-top: 14px;
+            padding: 12px;
+            font-size: 13px;
         }
 
         .pagination button {
-            padding: 8px 16px;
-            border: 1px solid #e9ecef;
+            padding: 5px 12px;
+            border: 1px solid #dde1e6;
             background: white;
-            border-radius: 6px;
+            border-radius: 5px;
             cursor: pointer;
-            transition: all 0.3s;
+            font-size: 12px;
+            transition: all 0.2s;
         }
 
         .pagination button:hover:not(:disabled) {
@@ -348,26 +434,28 @@
         }
 
         .pagination button:disabled {
-            opacity: 0.5;
+            opacity: 0.4;
             cursor: not-allowed;
         }
 
         .loading {
             text-align: center;
-            padding: 60px;
-            color: #666;
+            padding: 40px;
+            color: #999;
+            font-size: 13px;
         }
 
         .loading::after {
             content: '';
             display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #667eea;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #667eea;
             border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-left: 10px;
+            animation: spin 0.8s linear infinite;
+            margin-left: 8px;
+            vertical-align: middle;
         }
 
         @keyframes spin {
@@ -376,11 +464,12 @@
         }
 
         .alert {
-            padding: 15px 20px;
-            margin-bottom: 20px;
-            border-radius: 8px;
-            border-left: 4px solid;
+            padding: 10px 16px;
+            margin: 0 20px 0;
+            border-radius: 6px;
+            border-left: 3px solid;
             animation: slideIn 0.3s ease;
+            font-size: 13px;
         }
 
         @keyframes slideIn {
@@ -414,15 +503,16 @@
 
         .empty-state {
             text-align: center;
-            padding: 60px 20px;
-            color: #999;
+            padding: 40px 16px;
+            color: #aaa;
+            font-size: 13px;
         }
 
         .empty-state svg {
-            width: 80px;
-            height: 80px;
-            margin-bottom: 20px;
-            opacity: 0.5;
+            width: 60px;
+            height: 60px;
+            margin-bottom: 14px;
+            opacity: 0.4;
         }
 
         .modal {
@@ -433,8 +523,8 @@
             top: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            animation: fadeIn 0.3s;
+            background: rgba(0, 0, 0, 0.45);
+            animation: fadeIn 0.25s;
         }
 
         @keyframes fadeIn {
@@ -444,21 +534,21 @@
 
         .modal-content {
             background: white;
-            margin: 5% auto;
-            padding: 30px;
-            border-radius: 12px;
+            margin: 6% auto;
+            padding: 24px;
+            border-radius: 10px;
             width: 90%;
-            max-width: 800px;
+            max-width: 780px;
             max-height: 80vh;
             overflow-y: auto;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-            animation: slideUp 0.3s ease;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+            animation: slideUp 0.25s ease;
         }
 
         @keyframes slideUp {
             from {
                 opacity: 0;
-                transform: translateY(50px);
+                transform: translateY(40px);
             }
             to {
                 opacity: 1;
@@ -470,22 +560,23 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid #e9ecef;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #e9ecef;
         }
 
         .modal-header h2 {
             color: #333;
-            font-size: 24px;
+            font-size: 18px;
         }
 
         .close {
-            font-size: 28px;
+            font-size: 24px;
             font-weight: bold;
             color: #999;
             cursor: pointer;
-            transition: color 0.3s;
+            transition: color 0.2s;
+            line-height: 1;
         }
 
         .close:hover {
@@ -494,51 +585,66 @@
 
         .value-display {
             background: #f8f9fa;
-            padding: 15px;
-            border-radius: 8px;
+            padding: 14px;
+            border-radius: 6px;
             font-family: 'Courier New', monospace;
-            font-size: 13px;
+            font-size: 12px;
             max-height: 400px;
             overflow-y: auto;
             word-break: break-all;
             white-space: pre-wrap;
+            border: 1px solid #e9ecef;
         }
 
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 14px;
         }
 
         .stat-card {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 20px;
+            padding: 12px 14px;
             border-radius: 8px;
             text-align: center;
         }
 
         .stat-card h4 {
-            font-size: 12px;
-            opacity: 0.9;
-            margin-bottom: 10px;
-            text-transform: uppercase;
+            font-size: 11px;
+            opacity: 0.85;
+            margin-bottom: 4px;
+            font-weight: 500;
         }
 
         .stat-card .value {
-            font-size: 32px;
+            font-size: 22px;
             font-weight: 700;
         }
 
+        /* === 操作按钮（图标式紧凑按钮） === */
         .action-buttons {
             display: flex;
-            gap: 8px;
+            gap: 4px;
         }
 
         .action-buttons .btn {
-            padding: 6px 12px;
+            padding: 4px 8px;
             font-size: 12px;
+            border-radius: 4px;
+        }
+
+        .batch-bar {
+            margin-top: 14px;
+            padding: 10px 14px;
+            background: #fff8e1;
+            border: 1px solid #ffe082;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 13px;
         }
 
         [v-cloak] {
@@ -549,28 +655,30 @@
 <body>
     <div class="container" id="app" v-cloak>
         <div class="header">
-            <h1>🚀 缓存管理系统</h1>
+            <h1>缓存管理系统</h1>
             <p>统一管理 EhCache 和 Redis 二级缓存</p>
         </div>
 
         <div class="status-bar">
-            <div class="status-item">
-                <span>Redis状态:</span>
-                <span class="status-badge" :class="status.redisEnabled ? 'success' : 'danger'">
-                    <span v-text="status.redisEnabled ? '已启用' : '未启用'"></span>
-                </span>
-            </div>
-            <div class="status-item">
-                <span>缓存配置数:</span>
-                <span class="status-badge info" v-text="status.cacheCount"></span>
-            </div>
-            <div class="status-item">
-                <span>缓存实例数:</span>
-                <span class="status-badge info" v-text="status.instanceCount"></span>
+            <div class="status-left">
+                <div class="status-item">
+                    <span>Redis:</span>
+                    <span class="status-badge" :class="status.redisEnabled ? 'success' : 'danger'">
+                        <span v-text="status.redisEnabled ? '已启用' : '未启用'"></span>
+                    </span>
+                </div>
+                <div class="status-item">
+                    <span>配置:</span>
+                    <span class="status-badge info" v-text="status.cacheCount"></span>
+                </div>
+                <div class="status-item">
+                    <span>实例:</span>
+                    <span class="status-badge info" v-text="status.instanceCount"></span>
+                </div>
             </div>
             <div class="btn-group">
-                <button class="btn btn-success" @click="refreshAll">🔄 刷新全部</button>
-                <button class="btn btn-danger" @click="clearAll" v-if="selectedCache">🗑️ 清空所有缓存</button>
+                <button class="btn btn-success btn-sm" @click="refreshAll">刷新全部</button>
+                <button class="btn btn-danger btn-sm" @click="clearAll" v-if="selectedCache">清空所有</button>
             </div>
         </div>
 
@@ -578,7 +686,7 @@
 
         <div class="main-content">
             <div class="sidebar">
-                <h3>📦 缓存列表</h3>
+                <h3>缓存列表</h3>
                 <div v-if="loading" class="loading">加载中</div>
                 <div v-else-if="cacheList.length === 0" class="empty-state">
                     <p>暂无缓存配置</p>
@@ -590,9 +698,10 @@
                          :class="{ active: selectedCache === cache.name }"
                          @click="selectCache(cache.name)">
                         <div class="cache-name" v-text="cache.name"></div>
-                        <div class="cache-meta">
-                            <span v-text="cache.keyType + ' → ' + cache.valueType"></span>
-                            <span class="cache-count" v-text="cache.redisKeyCount + ' 键'"></span>
+                        <div class="cache-meta" v-text="cache.keyType + ' → ' + cache.valueType"></div>
+                        <div class="cache-counts">
+                            <span class="cache-count" style="background:#e8f5e9;color:#2e7d32;" v-text="'本地 ' + cache.localKeyCount"></span>
+                            <span class="cache-count" style="background:#fce4ec;color:#c62828;" v-text="'Redis ' + cache.redisKeyCount"></span>
                         </div>
                     </div>
                 </div>
@@ -605,12 +714,12 @@
                                v-model="searchPattern" 
                                placeholder="搜索键 (支持 * 通配符)" 
                                @keyup.enter="searchKeys">
-                        <button class="btn btn-primary" @click="searchKeys">🔍 搜索</button>
+                        <button class="btn btn-primary" @click="searchKeys">搜索</button>
                         <button class="btn btn-secondary" @click="clearSearch">清除</button>
                     </div>
                     <div class="btn-group">
-                        <button class="btn btn-primary" @click="loadKeys">🔄 刷新</button>
-                        <button class="btn btn-warning" @click="clearCache" v-if="selectedCache">🗑️ 清空缓存</button>
+                        <button class="btn btn-primary" @click="loadKeys">刷新</button>
+                        <button class="btn btn-warning" @click="clearCache" v-if="selectedCache">清空</button>
                     </div>
                 </div>
 
@@ -619,13 +728,17 @@
                         <h4>总键数</h4>
                         <div class="value" v-text="keysData.total"></div>
                     </div>
+                    <div class="stat-card" style="background: linear-gradient(135deg, #43a047 0%, #2e7d32 100%);">
+                        <h4>本地缓存键数</h4>
+                        <div class="value" v-text="keysData.localKeyCount || 0"></div>
+                    </div>
+                    <div class="stat-card" style="background: linear-gradient(135deg, #e53935 0%, #c62828 100%);">
+                        <h4>Redis缓存键数</h4>
+                        <div class="value" v-text="keysData.redisKeyCount || 0"></div>
+                    </div>
                     <div class="stat-card">
                         <h4>当前页</h4>
                         <div class="value" v-text="keysData.page + '/' + totalPages"></div>
-                    </div>
-                    <div class="stat-card">
-                        <h4>每页大小</h4>
-                        <div class="value" v-text="keysData.size"></div>
                     </div>
                 </div>
 
@@ -634,41 +747,54 @@
                     <div v-else-if="keysData.keys.length === 0" class="empty-state">
                         <p>暂无缓存键</p>
                     </div>
-                    <table v-else>
-                        <thead>
-                            <tr>
-                                <th style="width: 50px;">
-                                    <input type="checkbox" @change="toggleSelectAll" :checked="isAllSelected">
-                                </th>
-                                <th>键名</th>
-                                <th style="width: 120px;">大小</th>
-                                <th style="width: 150px;">过期时间</th>
-                                <th style="width: 200px;">操作</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr v-for="key in keysData.keys" :key="key.key">
-                                <td>
-                                    <input type="checkbox" :value="key.key" v-model="selectedKeys">
-                                </td>
-                                <td class="key-cell" v-text="key.key"></td>
-                                <td>
-                                    <span class="badge badge-primary" v-text="formatSize(key.size)"></span>
-                                </td>
-                                <td>
-                                    <span class="badge" 
-                                          :class="getTTLBadgeClass(key.ttl)"
-                                          v-text="formatTTL(key.ttl)"></span>
-                                </td>
-                                <td>
-                                    <div class="action-buttons">
-                                        <button class="btn btn-primary" @click="viewValue(key.key)">👁️ 查看</button>
-                                        <button class="btn btn-danger" @click="deleteKey(key.key)">🗑️ 删除</button>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                    <div v-else class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width: 36px;">
+                                        <input type="checkbox" @change="toggleSelectAll" :checked="isAllSelected">
+                                    </th>
+                                    <th>键名</th>
+                                    <th style="width: 76px;">来源</th>
+                                    <th style="width: 72px;">大小</th>
+                                    <th style="width: 110px;">本地过期</th>
+                                    <th style="width: 110px;">Redis过期</th>
+                                    <th style="width: 90px;">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="key in keysData.keys" :key="key.key">
+                                    <td>
+                                        <input type="checkbox" :value="key.key" v-model="selectedKeys">
+                                    </td>
+                                    <td class="key-cell" :title="key.key" v-text="key.key"></td>
+                                    <td>
+                                        <div class="source-badges">
+                                            <span v-if="key.inLocal" class="badge badge-local">本地</span>
+                                            <span v-if="key.inRedis" class="badge badge-redis">Redis</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-primary" v-text="formatSize(key.size)"></span>
+                                    </td>
+                                    <td>
+                                        <span v-if="key.inLocal" class="badge badge-success" v-text="formatTTL(key.localExpire)"></span>
+                                        <span v-else class="badge badge-warning">未缓存</span>
+                                    </td>
+                                    <td>
+                                        <span v-if="key.inRedis" class="badge" :class="getTTLBadgeClass(key.redisTtl)" v-text="formatTTL(key.redisTtl)"></span>
+                                        <span v-else class="badge badge-warning">未缓存</span>
+                                    </td>
+                                    <td>
+                                        <div class="action-buttons">
+                                            <button class="btn btn-primary btn-sm" @click="viewValue(key.key)" title="查看">查看</button>
+                                            <button class="btn btn-danger btn-sm" @click="deleteKey(key.key)" title="删除">删除</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
                 <div class="pagination" v-if="totalPages > 1">
@@ -677,9 +803,9 @@
                     <button @click="changePage(currentPage + 1)" :disabled="currentPage >= totalPages">下一页</button>
                 </div>
 
-                <div v-if="selectedKeys.length > 0" style="margin-top: 20px; padding: 15px; background: #fff3cd; border-radius: 8px;">
-                    <p style="margin-bottom: 10px;">已选择 <span v-text="selectedKeys.length"></span> 个键</p>
-                    <button class="btn btn-danger" @click="deleteSelectedKeys">批量删除</button>
+                <div v-if="selectedKeys.length > 0" class="batch-bar">
+                    <span>已选择 <strong v-text="selectedKeys.length"></strong> 个键</span>
+                    <button class="btn btn-danger btn-sm" @click="deleteSelectedKeys">批量删除</button>
                 </div>
             </div>
 
@@ -723,7 +849,9 @@
                     keys: [],
                     total: 0,
                     page: 1,
-                    size: 20
+                    size: 20,
+                    localKeyCount: 0,
+                    redisKeyCount: 0
                 },
                 currentPage: 1,
                 searchPattern: '',
@@ -968,7 +1096,8 @@
                     return 'badge-success';
                 },
                 formatSize(size) {
-                    if (size === 0 || size === null) return '0 B';
+                    if (size === -1 || size === null || size === undefined) return 'N/A';
+                    if (size === 0) return '0 B';
                     if (size < 1024) return size + ' B';
                     if (size < 1024 * 1024) return (size / 1024).toFixed(2) + ' KB';
                     return (size / (1024 * 1024)).toFixed(2) + ' MB';

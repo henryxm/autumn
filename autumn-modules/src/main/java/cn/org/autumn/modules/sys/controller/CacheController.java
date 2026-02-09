@@ -16,7 +16,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
-import java.util.stream.Collectors;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 缓存管理控制器
@@ -51,6 +51,115 @@ public class CacheController {
      */
     private boolean checkPermission() {
         return ShiroUtils.isLogin() && sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid());
+    }
+
+    /**
+     * 获取本地缓存中的所有键（字符串形式）
+     */
+    private Set<String> getLocalCacheKeys(String cacheName) {
+        Set<String> localKeys = new LinkedHashSet<>();
+        try {
+            Cache<?, ?> cache = ehCacheManager.getCache(cacheName);
+            if (cache != null) {
+                for (Cache.Entry<?, ?> entry : cache) {
+                    if (entry.getKey() != null) {
+                        localKeys.add(String.valueOf(entry.getKey()));
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.debug("遍历本地缓存失败: cacheName={}, error={}", cacheName, e.getMessage());
+        }
+        return localKeys;
+    }
+
+    /**
+     * 将通配符模式转换为正则表达式进行匹配
+     */
+    private boolean matchWildcard(String text, String pattern) {
+        if (pattern == null || pattern.isEmpty() || "*".equals(pattern)) {
+            return true;
+        }
+        String regex = "^" + pattern.replace(".", "\\.").replace("*", ".*").replace("?", ".") + "$";
+        try {
+            return text.matches(regex);
+        } catch (Exception e) {
+            return text.contains(pattern.replace("*", ""));
+        }
+    }
+
+    /**
+     * 将配置的过期时间转换为秒
+     */
+    private long convertToSeconds(long time, TimeUnit unit) {
+        if (unit == null) {
+            unit = TimeUnit.MINUTES;
+        }
+        return unit.toSeconds(time);
+    }
+
+    /**
+     * 构建合并的键信息列表
+     */
+    private Map<String, Object> buildMergedKeysResult(String cacheName, Set<String> localKeys, Set<String> filteredLocalKeys,
+                                                       Map<String, Long> redisKeyTTLMap, int page, int size) {
+        Map<String, Object> result = new HashMap<>();
+        CacheConfig config = ehCacheManager.getConfig(cacheName);
+        long localExpireSeconds = config != null ? convertToSeconds(config.getExpire(), config.getUnit()) : -1;
+        long redisExpireSeconds = config != null ? convertToSeconds(config.getRedis(), config.getUnit()) : -1;
+
+        // 合并所有键
+        Set<String> allKeys = new TreeSet<>();
+        allKeys.addAll(filteredLocalKeys);
+        allKeys.addAll(redisKeyTTLMap.keySet());
+
+        int total = allKeys.size();
+        int start = (page - 1) * size;
+        int end = Math.min(start + size, total);
+
+        List<String> sortedKeys = new ArrayList<>(allKeys);
+        List<Map<String, Object>> keys = new ArrayList<>();
+
+        for (int i = start; i < end && i < sortedKeys.size(); i++) {
+            String key = sortedKeys.get(i);
+            Map<String, Object> keyInfo = new HashMap<>();
+            keyInfo.put("key", key);
+            boolean inLocal = localKeys.contains(key);
+            boolean inRedis = redisKeyTTLMap.containsKey(key);
+            keyInfo.put("inLocal", inLocal);
+            keyInfo.put("inRedis", inRedis);
+            keyInfo.put("localExpire", localExpireSeconds);
+            keyInfo.put("redisTtl", inRedis ? redisKeyTTLMap.get(key) : -1L);
+            keyInfo.put("redisExpire", redisExpireSeconds);
+
+            // 获取值大小（优先从Redis获取）
+            if (inRedis) {
+                try {
+                    String redisKey = "cache:" + cacheName + ":" + key;
+                    Object value = redisTemplate.opsForValue().get(redisKey);
+                    if (value != null) {
+                        String valueStr = gson.toJson(value);
+                        keyInfo.put("size", valueStr.length());
+                    } else {
+                        keyInfo.put("size", 0);
+                    }
+                } catch (Exception e) {
+                    keyInfo.put("size", 0);
+                }
+            } else {
+                keyInfo.put("size", -1);
+            }
+            keys.add(keyInfo);
+        }
+
+        result.put("keys", keys);
+        result.put("total", total);
+        result.put("page", page);
+        result.put("size", size);
+        result.put("localKeyCount", filteredLocalKeys.size());
+        result.put("redisKeyCount", redisKeyTTLMap.size());
+
+        return result;
     }
 
     /**
@@ -97,14 +206,14 @@ public class CacheController {
                     cacheInfo.put("redisTime", config.getRedis());
                     cacheInfo.put("timeUnit", config.getUnit() != null ? config.getUnit().name() : "MINUTES");
                 }
-                // 获取缓存实例
+                // 获取本地缓存实例和键数量
                 Cache<?, ?> cache = ehCacheManager.getCache(cacheName);
                 if (cache != null) {
-                    // 尝试获取缓存大小（EhCache 3.x 不直接支持，这里返回-1表示不支持）
-                    cacheInfo.put("size", -1);
+                    Set<String> localKeys = getLocalCacheKeys(cacheName);
+                    cacheInfo.put("localKeyCount", localKeys.size());
                     cacheInfo.put("exists", true);
                 } else {
-                    cacheInfo.put("size", 0);
+                    cacheInfo.put("localKeyCount", 0);
                     cacheInfo.put("exists", false);
                 }
                 // 检查Redis中的缓存数量
@@ -132,7 +241,7 @@ public class CacheController {
     }
 
     /**
-     * 获取指定缓存的键列表
+     * 获取指定缓存的键列表（合并本地缓存和Redis缓存）
      */
     @GetMapping("/keys/{name}")
     public Response<Map<String, Object>> getCacheKeys(@PathVariable String name, @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "20") int size) {
@@ -140,62 +249,28 @@ public class CacheController {
             return Response.fail(null, "无权限访问");
         }
         try {
-            Map<String, Object> result = new HashMap<>();
-            List<Map<String, Object>> keys = new ArrayList<>();
-            // 从Redis获取键列表
+            // 获取本地缓存键
+            Set<String> localKeys = getLocalCacheKeys(name);
+
+            // 获取Redis缓存键及TTL
+            Map<String, Long> redisKeyTTLMap = new LinkedHashMap<>();
             if (cacheService.isRedisEnabled()) {
                 try {
                     String pattern = "cache:" + name + ":*";
                     Set<String> redisKeys = redisTemplate.keys(pattern);
                     if (redisKeys != null) {
-                        int total = redisKeys.size();
-                        int start = (page - 1) * size;
-                        int end = Math.min(start + size, total);
-                        List<String> sortedKeys = redisKeys.stream().sorted().collect(Collectors.toList());
-                        for (int i = start; i < end && i < sortedKeys.size(); i++) {
-                            String redisKey = sortedKeys.get(i);
-                            String key = redisKey.substring(("cache:" + name + ":").length());
-                            Map<String, Object> keyInfo = new HashMap<>();
-                            keyInfo.put("key", key);
-                            keyInfo.put("redisKey", redisKey);
-                            // 获取键的TTL
-                            Long ttl = redisTemplate.getExpire(redisKey);
-                            keyInfo.put("ttl", ttl != null ? ttl : -1);
-                            // 获取值的大小（估算）
-                            try {
-                                Object value = redisTemplate.opsForValue().get(redisKey);
-                                if (value != null) {
-                                    String valueStr = gson.toJson(value);
-                                    keyInfo.put("size", valueStr.length());
-                                } else {
-                                    keyInfo.put("size", 0);
-                                }
-                            } catch (Exception e) {
-                                keyInfo.put("size", 0);
-                            }
-
-                            keys.add(keyInfo);
+                        for (String rk : redisKeys) {
+                            String key = rk.substring(("cache:" + name + ":").length());
+                            Long ttl = redisTemplate.getExpire(rk);
+                            redisKeyTTLMap.put(key, ttl != null ? ttl : -1L);
                         }
-                        result.put("total", total);
-                        result.put("page", page);
-                        result.put("size", size);
-                    } else {
-                        result.put("total", 0);
-                        result.put("page", page);
-                        result.put("size", size);
                     }
                 } catch (Exception e) {
                     log.error("获取Redis键列表失败: {}", e.getMessage(), e);
-                    result.put("total", 0);
-                    result.put("page", page);
-                    result.put("size", size);
                 }
-            } else {
-                result.put("total", 0);
-                result.put("page", page);
-                result.put("size", size);
             }
-            result.put("keys", keys);
+
+            Map<String, Object> result = buildMergedKeysResult(name, localKeys, localKeys, redisKeyTTLMap, page, size);
             return Response.ok(result);
         } catch (Exception e) {
             log.error("获取缓存键列表失败: {}", e.getMessage(), e);
@@ -302,7 +377,7 @@ public class CacheController {
     }
 
     /**
-     * 搜索缓存键
+     * 搜索缓存键（同时搜索本地缓存和Redis缓存）
      */
     @GetMapping("/search/{name}")
     public Response<Map<String, Object>> searchCacheKeys(@PathVariable String name, @RequestParam String pattern, @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "20") int size) {
@@ -310,61 +385,34 @@ public class CacheController {
             return Response.fail(null, "无权限访问");
         }
         try {
-            Map<String, Object> result = new HashMap<>();
-            List<Map<String, Object>> keys = new ArrayList<>();
+            // 获取本地缓存键并按模式过滤
+            Set<String> allLocalKeys = getLocalCacheKeys(name);
+            Set<String> filteredLocalKeys = new LinkedHashSet<>();
+            for (String key : allLocalKeys) {
+                if (matchWildcard(key, pattern)) {
+                    filteredLocalKeys.add(key);
+                }
+            }
+
             // 从Redis搜索键
+            Map<String, Long> redisKeyTTLMap = new LinkedHashMap<>();
             if (cacheService.isRedisEnabled()) {
                 try {
-                    // 将通配符模式转换为Redis模式
-                    String redisPattern = "cache:" + name + ":" + pattern.replace("*", "*");
+                    String redisPattern = "cache:" + name + ":" + pattern;
                     Set<String> redisKeys = redisTemplate.keys(redisPattern);
                     if (redisKeys != null) {
-                        int total = redisKeys.size();
-                        int start = (page - 1) * size;
-                        int end = Math.min(start + size, total);
-                        List<String> sortedKeys = redisKeys.stream().sorted().collect(Collectors.toList());
-                        for (int i = start; i < end && i < sortedKeys.size(); i++) {
-                            String redisKey = sortedKeys.get(i);
-                            String key = redisKey.substring(("cache:" + name + ":").length());
-                            Map<String, Object> keyInfo = new HashMap<>();
-                            keyInfo.put("key", key);
-                            keyInfo.put("redisKey", redisKey);
-                            Long ttl = redisTemplate.getExpire(redisKey);
-                            keyInfo.put("ttl", ttl != null ? ttl : -1);
-                            try {
-                                Object value = redisTemplate.opsForValue().get(redisKey);
-                                if (value != null) {
-                                    String valueStr = gson.toJson(value);
-                                    keyInfo.put("size", valueStr.length());
-                                } else {
-                                    keyInfo.put("size", 0);
-                                }
-                            } catch (Exception e) {
-                                keyInfo.put("size", 0);
-                            }
-
-                            keys.add(keyInfo);
+                        for (String rk : redisKeys) {
+                            String key = rk.substring(("cache:" + name + ":").length());
+                            Long ttl = redisTemplate.getExpire(rk);
+                            redisKeyTTLMap.put(key, ttl != null ? ttl : -1L);
                         }
-                        result.put("total", total);
-                        result.put("page", page);
-                        result.put("size", size);
-                    } else {
-                        result.put("total", 0);
-                        result.put("page", page);
-                        result.put("size", size);
                     }
                 } catch (Exception e) {
                     log.error("搜索Redis键失败: {}", e.getMessage(), e);
-                    result.put("total", 0);
-                    result.put("page", page);
-                    result.put("size", size);
                 }
-            } else {
-                result.put("total", 0);
-                result.put("page", page);
-                result.put("size", size);
             }
-            result.put("keys", keys);
+
+            Map<String, Object> result = buildMergedKeysResult(name, allLocalKeys, filteredLocalKeys, redisKeyTTLMap, page, size);
             return Response.ok(result);
         } catch (Exception e) {
             log.error("搜索缓存键失败: {}", e.getMessage(), e);
