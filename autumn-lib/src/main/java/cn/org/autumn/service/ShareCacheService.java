@@ -496,7 +496,20 @@ public abstract class ShareCacheService<M extends BaseMapper<T>, T> extends Base
     }
 
     /**
-     * 指定Value类型的共享缓存数据提供者
+     * 使用默认缓存名称、指定Value类型的共享缓存数据提供者
+     * 默认委托给 getShareEntity(getShareCacheName(), valueType, key)。
+     *
+     * @param valueType 值类型
+     * @param key       缓存key
+     * @param <V>       值类型泛型
+     * @return 数据值
+     */
+    public <V> V getShareEntity(Class<V> valueType, Object key) {
+        return getShareEntity(getShareCacheName(valueType), valueType, key);
+    }
+
+    /**
+     * 指定缓存名称和Value类型的共享缓存数据提供者
      * <p>
      * 子类可覆盖此方法，根据不同的类型提供类型安全的数据。
      * 默认委托给 getShareEntity(shareName, key)。
@@ -518,19 +531,6 @@ public abstract class ShareCacheService<M extends BaseMapper<T>, T> extends Base
      */
     public <V> V getShareEntity(String shareName, Class<V> valueType, Object key) {
         return getShareEntity(shareName, key);
-    }
-
-    /**
-     * 使用默认缓存名称、指定Value类型的共享缓存数据提供者
-     * 默认委托给 getShareEntity(getShareCacheName(), valueType, key)。
-     *
-     * @param valueType 值类型
-     * @param key       缓存key
-     * @param <V>       值类型泛型
-     * @return 数据值
-     */
-    public <V> V getShareEntity(Class<V> valueType, Object key) {
-        return getShareEntity(getShareCacheName(valueType), valueType, key);
     }
 
     /**
@@ -657,6 +657,19 @@ public abstract class ShareCacheService<M extends BaseMapper<T>, T> extends Base
     }
 
     /**
+     * 使用默认缓存名称、指定Value类型的共享List缓存数据提供者
+     * 默认委托给 getShareListEntity(getShareCacheName(), valueType, key)。
+     *
+     * @param valueType 列表元素类型
+     * @param key       缓存key
+     * @param <V>       列表元素类型泛型
+     * @return 列表数据
+     */
+    public <V> List<V> getShareListEntity(Class<V> valueType, Object key) {
+        return getShareListEntity(getShareCacheName(valueType), valueType, key);
+    }
+
+    /**
      * 指定缓存名称和Value类型的共享List缓存数据提供者
      * <p>
      * 子类可覆盖此方法，根据不同的类型提供类型安全的列表数据。
@@ -670,19 +683,6 @@ public abstract class ShareCacheService<M extends BaseMapper<T>, T> extends Base
      */
     public <V> List<V> getShareListEntity(String shareName, Class<V> valueType, Object key) {
         return getShareListEntity(shareName, key);
-    }
-
-    /**
-     * 使用默认缓存名称、指定Value类型的共享List缓存数据提供者
-     * 默认委托给 getShareListEntity(getShareCacheName(), valueType, key)。
-     *
-     * @param valueType 列表元素类型
-     * @param key       缓存key
-     * @param <V>       列表元素类型泛型
-     * @return 列表数据
-     */
-    public <V> List<V> getShareListEntity(Class<V> valueType, Object key) {
-        return getShareListEntity(getShareCacheName(valueType), valueType, key);
     }
 
     /**
@@ -923,6 +923,47 @@ public abstract class ShareCacheService<M extends BaseMapper<T>, T> extends Base
     }
 
     /**
+     * 获取使用默认缓存名称、指定Value类型的共享缓存值
+     * <p>
+     * 如果缓存未命中，会调用 getShareEntity(valueType, key) 获取数据并缓存。
+     *
+     * @param valueType 值类型
+     * @param key       缓存key
+     * @param <V>       值类型泛型
+     * @return 缓存值
+     */
+    public <V> V getShareCache(Class<V> valueType, Object key) {
+        if (key == null || valueType == null) {
+            return null;
+        }
+        CacheConfig config = getShareConfig(getShareCacheName(valueType), valueType);
+        if (config == null) {
+            return null;
+        }
+        return cacheService.compute(key, () -> getShareEntity(valueType, key), config);
+    }
+
+    /**
+     * 获取使用默认缓存名称、指定Value类型的共享缓存值，如果不存在则通过supplier获取并缓存
+     *
+     * @param valueType 值类型
+     * @param key       缓存key
+     * @param supplier  值提供者
+     * @param <V>       值类型泛型
+     * @return 缓存值
+     */
+    public <V> V getShareCache(Class<V> valueType, Object key, Supplier<V> supplier) {
+        if (key == null || valueType == null) {
+            return null;
+        }
+        CacheConfig config = getShareConfig(getShareCacheName(valueType), valueType);
+        if (config == null) {
+            return supplier != null ? supplier.get() : null;
+        }
+        return cacheService.compute(key, supplier, config);
+    }
+
+    /**
      * 获取指定名称和Value类型的共享缓存值
      * <p>
      * 如果缓存未命中，会调用 getShareEntity(shareName, valueType, key) 获取数据并缓存。
@@ -968,46 +1009,6 @@ public abstract class ShareCacheService<M extends BaseMapper<T>, T> extends Base
         return cacheService.compute(key, supplier, config);
     }
 
-    /**
-     * 获取使用默认缓存名称、指定Value类型的共享缓存值
-     * <p>
-     * 如果缓存未命中，会调用 getShareEntity(valueType, key) 获取数据并缓存。
-     *
-     * @param valueType 值类型
-     * @param key       缓存key
-     * @param <V>       值类型泛型
-     * @return 缓存值
-     */
-    public <V> V getShareCache(Class<V> valueType, Object key) {
-        if (key == null || valueType == null) {
-            return null;
-        }
-        CacheConfig config = getShareConfig(getShareCacheName(valueType), valueType);
-        if (config == null) {
-            return null;
-        }
-        return cacheService.compute(key, () -> getShareEntity(valueType, key), config);
-    }
-
-    /**
-     * 获取使用默认缓存名称、指定Value类型的共享缓存值，如果不存在则通过supplier获取并缓存
-     *
-     * @param valueType 值类型
-     * @param key       缓存key
-     * @param supplier  值提供者
-     * @param <V>       值类型泛型
-     * @return 缓存值
-     */
-    public <V> V getShareCache(Class<V> valueType, Object key, Supplier<V> supplier) {
-        if (key == null || valueType == null) {
-            return null;
-        }
-        CacheConfig config = getShareConfig(getShareCacheName(valueType), valueType);
-        if (config == null) {
-            return supplier != null ? supplier.get() : null;
-        }
-        return cacheService.compute(key, supplier, config);
-    }
 
     // ==================== 获取共享缓存 - 单值可变参数 ====================
 
@@ -1205,8 +1206,6 @@ public abstract class ShareCacheService<M extends BaseMapper<T>, T> extends Base
         return cacheService.compute(key, supplier, config);
     }
 
-    // ==================== 获取共享缓存 - List带类型 ====================
-
     /**
      * 获取指定Value类型的共享List缓存值（使用默认名称）
      * <p>
@@ -1345,8 +1344,6 @@ public abstract class ShareCacheService<M extends BaseMapper<T>, T> extends Base
         String compositeKey = buildCompositeKey(keys);
         return cacheService.compute(compositeKey, () -> getShareListEntity(shareName, keys), config);
     }
-
-    // ==================== 获取共享缓存 - List可变参数带类型 ====================
 
     /**
      * 获取指定Value类型的共享List缓存值（可变参数版本，使用默认名称）
@@ -1555,6 +1552,26 @@ public abstract class ShareCacheService<M extends BaseMapper<T>, T> extends Base
     }
 
     /**
+     * 写入使用默认缓存名称、指定Value类型的共享缓存值
+     * 使用独立的缓存配置，与其他类型的缓存隔离
+     *
+     * @param valueType 值类型
+     * @param key       缓存key
+     * @param value     缓存值
+     * @param <V>       值类型泛型
+     */
+    public <V> void putShareCache(Class<V> valueType, Object key, V value) {
+        if (key == null || value == null || valueType == null) {
+            return;
+        }
+        CacheConfig config = getShareConfig(getShareCacheName(valueType), valueType);
+        if (config == null) {
+            return;
+        }
+        cacheService.put(config, key, value);
+    }
+
+    /**
      * 写入指定名称和Value类型的共享缓存值
      * 使用独立的缓存配置，与其他类型的缓存隔离
      *
@@ -1569,26 +1586,6 @@ public abstract class ShareCacheService<M extends BaseMapper<T>, T> extends Base
             return;
         }
         CacheConfig config = getShareConfig(shareName, valueType);
-        if (config == null) {
-            return;
-        }
-        cacheService.put(config, key, value);
-    }
-
-    /**
-     * 写入使用默认缓存名称、指定Value类型的共享缓存值
-     * 使用独立的缓存配置，与其他类型的缓存隔离
-     *
-     * @param valueType 值类型
-     * @param key       缓存key
-     * @param value     缓存值
-     * @param <V>       值类型泛型
-     */
-    public <V> void putShareCache(Class<V> valueType, Object key, V value) {
-        if (key == null || value == null || valueType == null) {
-            return;
-        }
-        CacheConfig config = getShareConfig(getShareCacheName(valueType), valueType);
         if (config == null) {
             return;
         }
@@ -1847,6 +1844,59 @@ public abstract class ShareCacheService<M extends BaseMapper<T>, T> extends Base
         cacheService.put(config, compositeKey, value);
     }
 
+    /**
+     * 使用复合Key写入默认名称、指定Value类型的共享List缓存值
+     * <p>
+     * 多个 keys 会被组合为复合Key。如果只有一个key，委托给单参数版本。
+     *
+     * @param valueType 列表元素类型
+     * @param value     列表值
+     * @param keys      可变参数key
+     * @param <V>       列表元素类型泛型
+     */
+    public <V> void putShareListCache(Class<V> valueType, List<V> value, Object... keys) {
+        if (keys == null || keys.length == 0 || value == null || valueType == null) {
+            return;
+        }
+        if (keys.length == 1) {
+            putShareListCache(valueType, keys[0], value);
+            return;
+        }
+        CacheConfig config = getShareListConfig(valueType);
+        if (config == null) {
+            return;
+        }
+        String compositeKey = buildCompositeKey(keys);
+        cacheService.put(config, compositeKey, value);
+    }
+
+    /**
+     * 使用复合Key写入指定名称和Value类型的共享List缓存值
+     * <p>
+     * 多个 keys 会被组合为复合Key。如果只有一个key，委托给单参数版本。
+     *
+     * @param shareName 共享缓存名称
+     * @param valueType 列表元素类型
+     * @param value     列表值
+     * @param keys      可变参数key
+     * @param <V>       列表元素类型泛型
+     */
+    public <V> void putShareListCache(String shareName, Class<V> valueType, List<V> value, Object... keys) {
+        if (keys == null || keys.length == 0 || value == null || shareName == null || valueType == null) {
+            return;
+        }
+        if (keys.length == 1) {
+            putShareListCache(shareName, valueType, keys[0], value);
+            return;
+        }
+        CacheConfig config = getShareListConfig(shareName, valueType);
+        if (config == null) {
+            return;
+        }
+        String compositeKey = buildCompositeKey(keys);
+        cacheService.put(config, compositeKey, value);
+    }
+
     // ==================== 删除共享缓存 ====================
 
     /**
@@ -1883,6 +1933,24 @@ public abstract class ShareCacheService<M extends BaseMapper<T>, T> extends Base
     }
 
     /**
+     * 删除使用默认缓存名称、指定Value类型的共享缓存值
+     *
+     * @param valueType 值类型
+     * @param key       缓存key
+     * @param <V>       值类型泛型
+     */
+    public <V> void removeShareCache(Class<V> valueType, Object key) {
+        if (key == null || valueType == null) {
+            return;
+        }
+        CacheConfig config = getShareConfig(getShareCacheName(valueType), valueType);
+        if (config == null) {
+            return;
+        }
+        cacheService.remove(config.getName(), key);
+    }
+
+    /**
      * 删除指定名称和Value类型的共享缓存值
      *
      * @param shareName 共享缓存名称
@@ -1895,24 +1963,6 @@ public abstract class ShareCacheService<M extends BaseMapper<T>, T> extends Base
             return;
         }
         CacheConfig config = getShareConfig(shareName, valueType);
-        if (config == null) {
-            return;
-        }
-        cacheService.remove(config.getName(), key);
-    }
-
-    /**
-     * 删除使用默认缓存名称、指定Value类型的共享缓存值
-     *
-     * @param valueType 值类型
-     * @param key       缓存key
-     * @param <V>       值类型泛型
-     */
-    public <V> void removeShareCache(Class<V> valueType, Object key) {
-        if (key == null || valueType == null) {
-            return;
-        }
-        CacheConfig config = getShareConfig(getShareCacheName(valueType), valueType);
         if (config == null) {
             return;
         }

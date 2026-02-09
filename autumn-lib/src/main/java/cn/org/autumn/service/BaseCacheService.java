@@ -18,6 +18,7 @@ import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
 
 @Slf4j
 public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQueueService<M, T> {
@@ -473,8 +474,8 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
                 // 如果是实体类型，调用 removeCacheByEntity
                 removeCacheByEntity((T) id);
             } else {
-                // 否则，使用 id 作为 key 删除缓存
-                removeCacheByKey(id);
+                // 否则，使用 id 作为 key 删除所有相关缓存
+                removeAllCacheByKey(id);
             }
         }
         return result;
@@ -518,8 +519,8 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
                     // 如果是实体类型，调用 removeCacheByEntity
                     removeCacheByEntity((T) id);
                 } else {
-                    // 否则，使用 id 作为 key 删除缓存
-                    removeCacheByKey(id);
+                    // 否则，使用 id 作为 key 删除所有相关缓存
+                    removeAllCacheByKey(id);
                 }
             }
         }
@@ -607,8 +608,8 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         if (key == null) {
             return null;
         }
-        // 校验 unique 必须为 true
-        checkCacheUnique(true);
+        // 校验字段级 @Cache 的 unique 必须为 true
+        checkFieldCacheUnique(true);
         // 构建缓存 key
         Object cacheKey = buildCacheKey(key);
         if (cacheKey == null) {
@@ -616,6 +617,33 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         }
         // 调用单参数版本的 getEntity
         return cacheService.compute(cacheKey, () -> getEntity(key), getConfig());
+    }
+
+    /**
+     * 获取缓存，如果不存在则通过supplier获取并缓存（单个参数版本）
+     * <p>
+     * 显式传入的 supplier 优先级高于 getEntity 方法。
+     * 当调用方需要自定义数据获取逻辑时使用此方法。
+     * <p>
+     * 注意：此方法要求 @Cache 注解的 unique 属性为 true（默认值）。
+     *
+     * @param key      缓存 key（单个值）
+     * @param supplier 值提供者，缓存未命中时调用（优先于 getEntity）
+     * @return 实体对象
+     * @throws IllegalStateException 如果 @Cache 注解的 unique=false
+     */
+    public T getCache(Object key, Supplier<T> supplier) {
+        if (key == null) {
+            return null;
+        }
+        // 校验字段级 @Cache 的 unique 必须为 true
+        checkFieldCacheUnique(true);
+        // 构建缓存 key
+        Object cacheKey = buildCacheKey(key);
+        if (cacheKey == null) {
+            return null;
+        }
+        return cacheService.compute(cacheKey, supplier, getConfig());
     }
 
     /**
@@ -637,8 +665,8 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         if (key == null || clazz == null) {
             return null;
         }
-        // 校验 unique 必须为 true
-        checkCacheUnique(true);
+        // 校验字段级 @Cache 的 unique 必须为 true
+        checkFieldCacheUnique(true);
         // 构建缓存 key
         Object cacheKey = buildCacheKey(key);
         if (cacheKey == null) {
@@ -649,125 +677,32 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
     }
 
     /**
-     * 根据name属性获取缓存，如果不存在则查询并缓存
-     * 用于支持多个不同字段都有唯一值的情况，通过name来区分不同的缓存字段
-     * 支持单个字段缓存和复合字段缓存（通过@Caches注解定义）
+     * 获取自定义类型的缓存，如果不存在则通过supplier获取并缓存（单个参数版本）
      * <p>
-     * 注意：此方法要求 @Cache 注解的 unique 属性为 true（默认值）。
-     * 如果需要获取非唯一字段的数据列表，请使用 getNameListCache 方法。
-     *
-     * @param name name属性值，用于区分不同的缓存字段或复合key
-     * @param key  缓存key（字段值或Map）
-     * @return 实体对象
-     * @throws IllegalStateException 如果 @Cache 注解的 unique=false
-     */
-    public T getNameCache(String name, Object key) {
-        if (key == null || name == null) {
-            return null;
-        }
-        // 校验 unique 必须为 true
-        checkCacheUnique(name, true);
-        // 构建缓存 key（支持复合字段）
-        Object cacheKey = buildCacheKey(name, key);
-        if (cacheKey == null) {
-            return null;
-        }
-        // 使用name对应的配置和getEntity方法
-        return cacheService.compute(cacheKey, () -> getNameEntity(name, key), getConfig(name));
-    }
-
-    /**
-     * 根据name属性获取自定义类型的缓存，如果不存在则查询并缓存
-     * 用于支持多个不同字段都有唯一值的情况，通过name来区分不同的缓存字段
-     * 支持单个字段缓存和复合字段缓存（通过@Caches注解定义）
-     * 缓存名称格式为：{entityName}{naming}{clazzName}
+     * 显式传入的 supplier 优先级高于 getEntity 方法。
+     * 缓存名称格式为：{entityName}{clazzName}，与原始实体缓存分开存储
      * <p>
      * 注意：此方法要求 @Cache 注解的 unique 属性为 true（默认值）
      *
-     * @param clazz 目标类型，不能为空
-     * @param name  name属性值，用于区分不同的缓存字段或复合key
-     * @param key   缓存key（字段值或Map）
-     * @param <X>   目标类型泛型
+     * @param clazz    目标类型，不能为空
+     * @param key      缓存 key（单个值）
+     * @param supplier 值提供者，缓存未命中时调用（优先于 getEntity）
+     * @param <X>      目标类型泛型
      * @return 目标类型对象
      * @throws IllegalStateException 如果 @Cache 注解的 unique=false
      */
-    public <X> X getNameCache(Class<X> clazz, String name, Object key) {
-        if (key == null || name == null || clazz == null) {
+    public <X> X getCache(Class<X> clazz, Object key, Supplier<X> supplier) {
+        if (key == null || clazz == null) {
             return null;
         }
-        // 校验 unique 必须为 true
-        checkCacheUnique(name, true);
-        // 构建缓存 key（支持复合字段）
-        Object cacheKey = buildCacheKey(name, key);
+        // 校验字段级 @Cache 的 unique 必须为 true
+        checkFieldCacheUnique(true);
+        // 构建缓存 key
+        Object cacheKey = buildCacheKey(key);
         if (cacheKey == null) {
             return null;
         }
-        // 使用自定义类型和name对应的配置
-        return cacheService.compute(cacheKey, () -> getNameEntity(clazz, name, key), getConfig(clazz, name));
-    }
-
-    /**
-     * 根据name属性获取复合key缓存，如果不存在则查询并缓存
-     * 用于支持@Caches注解中定义的多个复合key缓存
-     * <p>
-     * 注意：此方法要求 @Cache 注解的 unique 属性为 true（默认值）。
-     * 如果需要获取非唯一字段的数据列表，请使用 getNameListCache 方法。
-     *
-     * @param name name属性值，用于区分不同的复合key
-     * @param keys 复合key的值数组，按@Cache注解中字段顺序对应
-     * @return 实体对象
-     * @throws IllegalStateException 如果 @Cache 注解的 unique=false
-     */
-    public T getNameCache(String name, Object... keys) {
-        if (keys == null || keys.length == 0 || name == null) {
-            return null;
-        }
-        // 如果只有一个参数，调用单参数版本（已包含校验）
-        if (keys.length == 1) {
-            return getNameCache(name, keys[0]);
-        }
-        // 校验 unique 必须为 true
-        checkCacheUnique(name, true);
-        // 构建缓存 key（复合字段）
-        Object cacheKey = buildCacheKey(name, keys);
-        if (cacheKey == null) {
-            return null;
-        }
-        // 使用name对应的配置和getEntity方法
-        return cacheService.compute(cacheKey, () -> getNameEntity(name, keys), getConfig(name));
-    }
-
-    /**
-     * 根据name属性获取自定义类型的复合key缓存，如果不存在则查询并缓存
-     * 用于支持@Caches注解中定义的多个复合key缓存
-     * 缓存名称格式为：{entityName}{naming}{clazzName}
-     * <p>
-     * 注意：此方法要求 @Cache 注解的 unique 属性为 true（默认值）
-     *
-     * @param clazz 目标类型，不能为空
-     * @param name  name属性值，用于区分不同的复合key
-     * @param keys  复合key的值数组，按@Cache注解中字段顺序对应
-     * @param <X>   目标类型泛型
-     * @return 目标类型对象
-     * @throws IllegalStateException 如果 @Cache 注解的 unique=false
-     */
-    public <X> X getNameCache(Class<X> clazz, String name, Object... keys) {
-        if (keys == null || keys.length == 0 || name == null || clazz == null) {
-            return null;
-        }
-        // 如果只有一个参数，调用单参数版本（已包含校验）
-        if (keys.length == 1) {
-            return getNameCache(clazz, name, keys[0]);
-        }
-        // 校验 unique 必须为 true
-        checkCacheUnique(name, true);
-        // 构建缓存 key（复合字段）
-        Object cacheKey = buildCacheKey(name, keys);
-        if (cacheKey == null) {
-            return null;
-        }
-        // 使用自定义类型和name对应的配置
-        return cacheService.compute(cacheKey, () -> getNameEntity(clazz, name, keys), getConfig(clazz, name));
+        return cacheService.compute(cacheKey, supplier, getConfig(clazz));
     }
 
     /**
@@ -794,8 +729,8 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         if (keys.length == 1) {
             return getCache(keys[0]);
         }
-        // 校验 unique 必须为 true
-        checkCacheUnique(true);
+        // 校验复合 @Cache 的 unique 必须为 true
+        checkCompositeCacheUnique(true);
         // 构建缓存 key
         Object cacheKey = buildCacheKey(keys);
         if (cacheKey == null) {
@@ -829,8 +764,8 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         if (keys.length == 1) {
             return getCache(clazz, keys[0]);
         }
-        // 校验 unique 必须为 true
-        checkCacheUnique(true);
+        // 校验复合 @Cache 的 unique 必须为 true
+        checkCompositeCacheUnique(true);
         // 构建缓存 key
         Object cacheKey = buildCacheKey(keys);
         if (cacheKey == null) {
@@ -838,6 +773,186 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         }
         // 使用自定义类型的配置进行缓存
         return cacheService.compute(cacheKey, () -> getEntity(clazz, keys), getConfig(clazz));
+    }
+
+
+    /**
+     * 根据name属性获取缓存，如果不存在则查询并缓存
+     * 用于支持多个不同字段都有唯一值的情况，通过name来区分不同的缓存字段
+     * 支持单个字段缓存和复合字段缓存（通过@Caches注解定义）
+     * <p>
+     * 注意：此方法要求 @Cache 注解的 unique 属性为 true（默认值）。
+     * 如果需要获取非唯一字段的数据列表，请使用 getNameListCache 方法。
+     *
+     * @param name name属性值，用于区分不同的缓存字段或复合key
+     * @param key  缓存key（字段值或Map）
+     * @return 实体对象
+     * @throws IllegalStateException 如果 @Cache 注解的 unique=false
+     */
+    public T getNameCache(String name, Object key) {
+        if (key == null || name == null) {
+            return null;
+        }
+        // 校验字段级 @Cache 的 unique 必须为 true
+        checkFieldCacheUnique(name, true);
+        // 构建缓存 key（支持复合字段）
+        Object cacheKey = buildCacheKey(name, key);
+        if (cacheKey == null) {
+            return null;
+        }
+        // 使用name对应的配置和getEntity方法
+        return cacheService.compute(cacheKey, () -> getNameEntity(name, key), getConfig(name));
+    }
+
+    /**
+     * 根据name属性获取缓存，如果不存在则通过supplier获取并缓存
+     * <p>
+     * 显式传入的 supplier 优先级高于 getNameEntity 方法。
+     * <p>
+     * 注意：此方法要求 @Cache 注解的 unique 属性为 true（默认值）。
+     *
+     * @param name     name属性值，用于区分不同的缓存字段或复合key
+     * @param key      缓存key（字段值或Map）
+     * @param supplier 值提供者，缓存未命中时调用（优先于 getNameEntity）
+     * @return 实体对象
+     * @throws IllegalStateException 如果 @Cache 注解的 unique=false
+     */
+    public T getNameCache(String name, Object key, Supplier<T> supplier) {
+        if (key == null || name == null) {
+            return null;
+        }
+        // 校验字段级 @Cache 的 unique 必须为 true
+        checkFieldCacheUnique(name, true);
+        // 构建缓存 key（支持复合字段）
+        Object cacheKey = buildCacheKey(name, key);
+        if (cacheKey == null) {
+            return null;
+        }
+        return cacheService.compute(cacheKey, supplier, getConfig(name));
+    }
+
+    /**
+     * 根据name属性获取自定义类型的缓存，如果不存在则查询并缓存
+     * 用于支持多个不同字段都有唯一值的情况，通过name来区分不同的缓存字段
+     * 支持单个字段缓存和复合字段缓存（通过@Caches注解定义）
+     * 缓存名称格式为：{entityName}{naming}{clazzName}
+     * <p>
+     * 注意：此方法要求 @Cache 注解的 unique 属性为 true（默认值）
+     *
+     * @param clazz 目标类型，不能为空
+     * @param name  name属性值，用于区分不同的缓存字段或复合key
+     * @param key   缓存key（字段值或Map）
+     * @param <X>   目标类型泛型
+     * @return 目标类型对象
+     * @throws IllegalStateException 如果 @Cache 注解的 unique=false
+     */
+    public <X> X getNameCache(Class<X> clazz, String name, Object key) {
+        if (key == null || name == null || clazz == null) {
+            return null;
+        }
+        // 校验字段级 @Cache 的 unique 必须为 true
+        checkFieldCacheUnique(name, true);
+        // 构建缓存 key（支持复合字段）
+        Object cacheKey = buildCacheKey(name, key);
+        if (cacheKey == null) {
+            return null;
+        }
+        // 使用自定义类型和name对应的配置
+        return cacheService.compute(cacheKey, () -> getNameEntity(clazz, name, key), getConfig(clazz, name));
+    }
+
+    /**
+     * 根据name属性获取自定义类型的缓存，如果不存在则通过supplier获取并缓存
+     * <p>
+     * 显式传入的 supplier 优先级高于 getNameEntity 方法。
+     * 缓存名称格式为：{entityName}{naming}{clazzName}
+     * <p>
+     * 注意：此方法要求 @Cache 注解的 unique 属性为 true（默认值）
+     *
+     * @param clazz    目标类型，不能为空
+     * @param name     name属性值，用于区分不同的缓存字段或复合key
+     * @param key      缓存key（字段值或Map）
+     * @param supplier 值提供者，缓存未命中时调用（优先于 getNameEntity）
+     * @param <X>      目标类型泛型
+     * @return 目标类型对象
+     * @throws IllegalStateException 如果 @Cache 注解的 unique=false
+     */
+    public <X> X getNameCache(Class<X> clazz, String name, Object key, Supplier<X> supplier) {
+        if (key == null || name == null || clazz == null) {
+            return null;
+        }
+        // 校验字段级 @Cache 的 unique 必须为 true
+        checkFieldCacheUnique(name, true);
+        // 构建缓存 key（支持复合字段）
+        Object cacheKey = buildCacheKey(name, key);
+        if (cacheKey == null) {
+            return null;
+        }
+        return cacheService.compute(cacheKey, supplier, getConfig(clazz, name));
+    }
+
+    /**
+     * 根据name属性获取复合key缓存，如果不存在则查询并缓存
+     * 用于支持@Caches注解中定义的多个复合key缓存
+     * <p>
+     * 注意：此方法要求 @Cache 注解的 unique 属性为 true（默认值）。
+     * 如果需要获取非唯一字段的数据列表，请使用 getNameListCache 方法。
+     *
+     * @param name name属性值，用于区分不同的复合key
+     * @param keys 复合key的值数组，按@Cache注解中字段顺序对应
+     * @return 实体对象
+     * @throws IllegalStateException 如果 @Cache 注解的 unique=false
+     */
+    public T getNameCache(String name, Object... keys) {
+        if (keys == null || keys.length == 0 || name == null) {
+            return null;
+        }
+        // 如果只有一个参数，调用单参数版本（已包含校验）
+        if (keys.length == 1) {
+            return getNameCache(name, keys[0]);
+        }
+        // 校验复合 @Cache 的 unique 必须为 true
+        checkCompositeCacheUnique(name, true);
+        // 构建缓存 key（复合字段）
+        Object cacheKey = buildCacheKey(name, keys);
+        if (cacheKey == null) {
+            return null;
+        }
+        // 使用name对应的配置和getEntity方法
+        return cacheService.compute(cacheKey, () -> getNameEntity(name, keys), getConfig(name));
+    }
+
+    /**
+     * 根据name属性获取自定义类型的复合key缓存，如果不存在则查询并缓存
+     * 用于支持@Caches注解中定义的多个复合key缓存
+     * 缓存名称格式为：{entityName}{naming}{clazzName}
+     * <p>
+     * 注意：此方法要求 @Cache 注解的 unique 属性为 true（默认值）
+     *
+     * @param clazz 目标类型，不能为空
+     * @param name  name属性值，用于区分不同的复合key
+     * @param keys  复合key的值数组，按@Cache注解中字段顺序对应
+     * @param <X>   目标类型泛型
+     * @return 目标类型对象
+     * @throws IllegalStateException 如果 @Cache 注解的 unique=false
+     */
+    public <X> X getNameCache(Class<X> clazz, String name, Object... keys) {
+        if (keys == null || keys.length == 0 || name == null || clazz == null) {
+            return null;
+        }
+        // 如果只有一个参数，调用单参数版本（已包含校验）
+        if (keys.length == 1) {
+            return getNameCache(clazz, name, keys[0]);
+        }
+        // 校验复合 @Cache 的 unique 必须为 true
+        checkCompositeCacheUnique(name, true);
+        // 构建缓存 key（复合字段）
+        Object cacheKey = buildCacheKey(name, keys);
+        if (cacheKey == null) {
+            return null;
+        }
+        // 使用自定义类型和name对应的配置
+        return cacheService.compute(cacheKey, () -> getNameEntity(clazz, name, keys), getConfig(clazz, name));
     }
 
     /**
@@ -855,8 +970,8 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         if (key == null) {
             return null;
         }
-        // 校验 unique 必须为 false
-        checkCacheUnique(false);
+        // 校验字段级 @Cache 的 unique 必须为 false
+        checkFieldCacheUnique(false);
         // 构建缓存 key
         Object cacheKey = buildCacheKey(key);
         if (cacheKey == null) {
@@ -864,6 +979,32 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         }
         // 调用单参数版本的 getListEntity
         return cacheService.compute(cacheKey, () -> getListEntity(key), getListConfig());
+    }
+
+    /**
+     * 获取List列表缓存，如果不存在则通过supplier获取并缓存（单个参数版本）
+     * <p>
+     * 显式传入的 supplier 优先级高于 getListEntity 方法。
+     * <p>
+     * 注意：此方法要求 @Cache 注解的 unique 属性为 false。
+     *
+     * @param key      缓存 key（单个值）
+     * @param supplier 列表值提供者，缓存未命中时调用（优先于 getListEntity）
+     * @return 实体对象列表
+     * @throws IllegalStateException 如果 @Cache 注解的 unique=true
+     */
+    public List<T> getListCache(Object key, Supplier<List<T>> supplier) {
+        if (key == null) {
+            return null;
+        }
+        // 校验字段级 @Cache 的 unique 必须为 false
+        checkFieldCacheUnique(false);
+        // 构建缓存 key
+        Object cacheKey = buildCacheKey(key);
+        if (cacheKey == null) {
+            return null;
+        }
+        return cacheService.compute(cacheKey, supplier, getListConfig());
     }
 
     /**
@@ -883,8 +1024,8 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         if (key == null || clazz == null) {
             return null;
         }
-        // 校验 unique 必须为 false
-        checkCacheUnique(false);
+        // 校验字段级 @Cache 的 unique 必须为 false
+        checkFieldCacheUnique(false);
         // 构建缓存 key
         Object cacheKey = buildCacheKey(key);
         if (cacheKey == null) {
@@ -892,6 +1033,65 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         }
         // 使用自定义类型的 List 配置进行缓存
         return cacheService.compute(cacheKey, () -> getListEntity(clazz, key), getListConfig(clazz));
+    }
+
+    /**
+     * 获取自定义类型的List列表缓存，如果不存在则通过supplier获取并缓存（单个参数版本）
+     * <p>
+     * 显式传入的 supplier 优先级高于 getListEntity 方法。
+     * 缓存名称格式为：{entityName}list{clazzName}
+     * <p>
+     * 注意：此方法要求 @Cache 注解的 unique 属性为 false
+     *
+     * @param clazz    目标类型，不能为空
+     * @param key      缓存 key（单个值）
+     * @param supplier 列表值提供者，缓存未命中时调用（优先于 getListEntity）
+     * @param <X>      目标类型泛型
+     * @return 目标类型对象列表
+     * @throws IllegalStateException 如果 @Cache 注解的 unique=true
+     */
+    public <X> List<X> getListCache(Class<X> clazz, Object key, Supplier<List<X>> supplier) {
+        if (key == null || clazz == null) {
+            return null;
+        }
+        // 校验字段级 @Cache 的 unique 必须为 false
+        checkFieldCacheUnique(false);
+        // 构建缓存 key
+        Object cacheKey = buildCacheKey(key);
+        if (cacheKey == null) {
+            return null;
+        }
+        return cacheService.compute(cacheKey, supplier, getListConfig(clazz));
+    }
+
+    /**
+     * 获取List列表缓存，如果不存在则查询并缓存（可变参数版本）
+     * 用于缓存非唯一字段（unique=false）的数据，返回符合条件的所有记录
+     * <p>
+     * 注意：此方法要求 @Cache 注解的 unique 属性为 false。
+     * 如果需要获取唯一字段的单个数据，请使用 getCache 方法。
+     *
+     * @param keys 缓存 key，可以是单个值或多个值（可变参数）
+     * @return 实体对象列表
+     * @throws IllegalStateException 如果 @Cache 注解的 unique=true
+     */
+    public List<T> getListCache(Object... keys) {
+        if (keys == null || keys.length == 0) {
+            return null;
+        }
+        // 如果只有一个参数，调用单参数版本（更高效，已包含校验）
+        if (keys.length == 1) {
+            return getListCache(keys[0]);
+        }
+        // 校验复合 @Cache 的 unique 必须为 false
+        checkCompositeCacheUnique(false);
+        // 构建缓存 key
+        Object cacheKey = buildCacheKey(keys);
+        if (cacheKey == null) {
+            return null;
+        }
+        // 调用可变参数版本的 getListEntity
+        return cacheService.compute(cacheKey, () -> getListEntity(keys), getListConfig());
     }
 
     /**
@@ -914,8 +1114,8 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         if (keys.length == 1) {
             return getListCache(clazz, keys[0]);
         }
-        // 校验 unique 必须为 false
-        checkCacheUnique(false);
+        // 校验复合 @Cache 的 unique 必须为 false
+        checkCompositeCacheUnique(false);
         // 构建缓存 key
         Object cacheKey = buildCacheKey(keys);
         if (cacheKey == null) {
@@ -923,36 +1123,6 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         }
         // 使用自定义类型的 List 配置进行缓存
         return cacheService.compute(cacheKey, () -> getListEntity(clazz, keys), getListConfig(clazz));
-    }
-
-    /**
-     * 获取List列表缓存，如果不存在则查询并缓存（可变参数版本）
-     * 用于缓存非唯一字段（unique=false）的数据，返回符合条件的所有记录
-     * <p>
-     * 注意：此方法要求 @Cache 注解的 unique 属性为 false。
-     * 如果需要获取唯一字段的单个数据，请使用 getCache 方法。
-     *
-     * @param keys 缓存 key，可以是单个值或多个值（可变参数）
-     * @return 实体对象列表
-     * @throws IllegalStateException 如果 @Cache 注解的 unique=true
-     */
-    public List<T> getListCache(Object... keys) {
-        if (keys == null || keys.length == 0) {
-            return null;
-        }
-        // 如果只有一个参数，调用单参数版本（更高效，已包含校验）
-        if (keys.length == 1) {
-            return getListCache(keys[0]);
-        }
-        // 校验 unique 必须为 false
-        checkCacheUnique(false);
-        // 构建缓存 key
-        Object cacheKey = buildCacheKey(keys);
-        if (cacheKey == null) {
-            return null;
-        }
-        // 调用可变参数版本的 getListEntity
-        return cacheService.compute(cacheKey, () -> getListEntity(keys), getListConfig());
     }
 
     /**
@@ -971,8 +1141,8 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         if (key == null || name == null) {
             return null;
         }
-        // 校验 unique 必须为 false
-        checkCacheUnique(name, false);
+        // 校验字段级 @Cache 的 unique 必须为 false
+        checkFieldCacheUnique(name, false);
         // 构建缓存 key（支持复合字段）
         Object cacheKey = buildCacheKey(name, key);
         if (cacheKey == null) {
@@ -980,6 +1150,33 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         }
         // 使用name对应的配置和getNameListEntity方法
         return cacheService.compute(cacheKey, () -> getNameListEntity(name, key), getListConfig(name));
+    }
+
+    /**
+     * 根据name属性获取List列表缓存，如果不存在则通过supplier获取并缓存
+     * <p>
+     * 显式传入的 supplier 优先级高于 getNameListEntity 方法。
+     * <p>
+     * 注意：此方法要求 @Cache 注解的 unique 属性为 false。
+     *
+     * @param name     name属性值，用于区分不同的缓存字段或复合key
+     * @param key      缓存key（字段值或Map）
+     * @param supplier 列表值提供者，缓存未命中时调用（优先于 getNameListEntity）
+     * @return 实体对象列表
+     * @throws IllegalStateException 如果 @Cache 注解的 unique=true
+     */
+    public List<T> getNameListCache(String name, Object key, Supplier<List<T>> supplier) {
+        if (key == null || name == null) {
+            return null;
+        }
+        // 校验字段级 @Cache 的 unique 必须为 false
+        checkFieldCacheUnique(name, false);
+        // 构建缓存 key（支持复合字段）
+        Object cacheKey = buildCacheKey(name, key);
+        if (cacheKey == null) {
+            return null;
+        }
+        return cacheService.compute(cacheKey, supplier, getListConfig(name));
     }
 
     /**
@@ -1000,8 +1197,8 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         if (key == null || name == null || clazz == null) {
             return null;
         }
-        // 校验 unique 必须为 false
-        checkCacheUnique(name, false);
+        // 校验字段级 @Cache 的 unique 必须为 false
+        checkFieldCacheUnique(name, false);
         // 构建缓存 key（支持复合字段）
         Object cacheKey = buildCacheKey(name, key);
         if (cacheKey == null) {
@@ -1009,6 +1206,67 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         }
         // 使用自定义类型和name对应的 List 配置
         return cacheService.compute(cacheKey, () -> getNameListEntity(clazz, name, key), getListConfig(clazz, name));
+    }
+
+    /**
+     * 根据name属性获取自定义类型的List列表缓存，如果不存在则通过supplier获取并缓存
+     * <p>
+     * 显式传入的 supplier 优先级高于 getNameListEntity 方法。
+     * 缓存名称格式为：{entityName}{naming}list{clazzName}
+     * <p>
+     * 注意：此方法要求 @Cache 注解的 unique 属性为 false
+     *
+     * @param clazz    目标类型，不能为空
+     * @param name     name属性值，用于区分不同的缓存字段或复合key
+     * @param key      缓存key（字段值或Map）
+     * @param supplier 列表值提供者，缓存未命中时调用（优先于 getNameListEntity）
+     * @param <X>      目标类型泛型
+     * @return 目标类型对象列表
+     * @throws IllegalStateException 如果 @Cache 注解的 unique=true
+     */
+    public <X> List<X> getNameListCache(Class<X> clazz, String name, Object key, Supplier<List<X>> supplier) {
+        if (key == null || name == null || clazz == null) {
+            return null;
+        }
+        // 校验字段级 @Cache 的 unique 必须为 false
+        checkFieldCacheUnique(name, false);
+        // 构建缓存 key（支持复合字段）
+        Object cacheKey = buildCacheKey(name, key);
+        if (cacheKey == null) {
+            return null;
+        }
+        return cacheService.compute(cacheKey, supplier, getListConfig(clazz, name));
+    }
+
+    /**
+     * 根据name属性获取复合key的List列表缓存，如果不存在则查询并缓存
+     * 用于支持@Caches注解中定义的多个复合key缓存（unique=false）
+     * <p>
+     * 注意：此方法要求 @Cache 注解的 unique 属性为 false。
+     * 如果需要获取唯一字段的单个数据，请使用 getNameCache 方法。
+     *
+     * @param name name属性值，用于区分不同的复合key
+     * @param keys 复合key的值数组，按@Cache注解中字段顺序对应
+     * @return 实体对象列表
+     * @throws IllegalStateException 如果 @Cache 注解的 unique=true
+     */
+    public List<T> getNameListCache(String name, Object... keys) {
+        if (keys == null || keys.length == 0 || name == null) {
+            return null;
+        }
+        // 如果只有一个参数，调用单参数版本（已包含校验）
+        if (keys.length == 1) {
+            return getNameListCache(name, keys[0]);
+        }
+        // 校验复合 @Cache 的 unique 必须为 false
+        checkCompositeCacheUnique(name, false);
+        // 构建缓存 key（复合字段）
+        Object cacheKey = buildCacheKey(name, keys);
+        if (cacheKey == null) {
+            return null;
+        }
+        // 使用name对应的配置和getNameListEntity方法
+        return cacheService.compute(cacheKey, () -> getNameListEntity(name, keys), getListConfig(name));
     }
 
     /**
@@ -1032,8 +1290,8 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         if (keys.length == 1) {
             return getNameListCache(clazz, name, keys[0]);
         }
-        // 校验 unique 必须为 false
-        checkCacheUnique(name, false);
+        // 校验复合 @Cache 的 unique 必须为 false
+        checkCompositeCacheUnique(name, false);
         // 构建缓存 key（复合字段）
         Object cacheKey = buildCacheKey(name, keys);
         if (cacheKey == null) {
@@ -1041,37 +1299,6 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         }
         // 使用自定义类型和name对应的 List 配置
         return cacheService.compute(cacheKey, () -> getNameListEntity(clazz, name, keys), getListConfig(clazz, name));
-    }
-
-    /**
-     * 根据name属性获取复合key的List列表缓存，如果不存在则查询并缓存
-     * 用于支持@Caches注解中定义的多个复合key缓存（unique=false）
-     * <p>
-     * 注意：此方法要求 @Cache 注解的 unique 属性为 false。
-     * 如果需要获取唯一字段的单个数据，请使用 getNameCache 方法。
-     *
-     * @param name name属性值，用于区分不同的复合key
-     * @param keys 复合key的值数组，按@Cache注解中字段顺序对应
-     * @return 实体对象列表
-     * @throws IllegalStateException 如果 @Cache 注解的 unique=true
-     */
-    public List<T> getNameListCache(String name, Object... keys) {
-        if (keys == null || keys.length == 0 || name == null) {
-            return null;
-        }
-        // 如果只有一个参数，调用单参数版本（已包含校验）
-        if (keys.length == 1) {
-            return getNameListCache(name, keys[0]);
-        }
-        // 校验 unique 必须为 false
-        checkCacheUnique(name, false);
-        // 构建缓存 key（复合字段）
-        Object cacheKey = buildCacheKey(name, keys);
-        if (cacheKey == null) {
-            return null;
-        }
-        // 使用name对应的配置和getNameListEntity方法
-        return cacheService.compute(cacheKey, () -> getNameListEntity(name, keys), getListConfig(name));
     }
 
     /**
@@ -1970,31 +2197,20 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
     }
 
     /**
-     * 校验 @Cache 注解的 unique 属性是否符合预期
-     * 用于在运行时检查缓存方法的调用是否正确
+     * 校验字段级 @Cache 注解的 unique 属性是否符合预期（单key场景）
+     * <p>
+     * 只检查字段上的 @Cache 注解，不检查类级别的复合 @Cache/@Caches 注解。
+     * 用于 getCache(Object key) / getListCache(Object key) 等单 key 方法。
      *
-     * @param name         name属性值，如果为空则使用默认的@Cache注解
+     * @param name         name属性值，如果为空则匹配不带name的@Cache字段
      * @param expectUnique 期望的unique值，true表示期望唯一缓存，false表示期望非唯一缓存
      * @throws IllegalStateException 如果unique值不符合预期
      */
-    private void checkCacheUnique(String name, boolean expectUnique) {
+    private void checkFieldCacheUnique(String name, boolean expectUnique) {
         Class<?> clazz = getModelClass();
         if (clazz == null) {
             return;
         }
-        // 查找复合字段缓存配置
-        Cache compositeCache = findCompositeCache(clazz, name);
-        if (compositeCache != null && compositeCache.value().length > 0) {
-            boolean actualUnique = compositeCache.unique();
-            if (actualUnique != expectUnique) {
-                String methodType = expectUnique ? "getCache/getNameCache" : "getListCache/getNameListCache";
-                String expectedType = expectUnique ? "unique=true" : "unique=false";
-                String actualType = actualUnique ? "unique=true" : "unique=false";
-                throw new IllegalStateException(String.format("缓存方法调用错误: %s 方法要求 %s，但 @Cache 注解配置为 %s。" + "请使用 %s 方法代替。", methodType, expectedType, actualType, expectUnique ? "getListCache/getNameListCache" : "getCache/getNameCache"));
-            }
-            return;
-        }
-        // 查找字段上的 @Cache 注解
         Field cacheField = findCacheField(clazz, name);
         if (cacheField != null) {
             Cache cache = cacheField.getAnnotation(Cache.class);
@@ -2012,40 +2228,498 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
     }
 
     /**
-     * 校验默认 @Cache 注解的 unique 属性（无name参数）
+     * 校验字段级 @Cache 注解的 unique 属性（无name参数，单key场景）
      *
      * @param expectUnique 期望的unique值
      * @throws IllegalStateException 如果unique值不符合预期
      */
-    protected void checkCacheUnique(boolean expectUnique) {
-        checkCacheUnique("", expectUnique);
+    private void checkFieldCacheUnique(boolean expectUnique) {
+        checkFieldCacheUnique("", expectUnique);
     }
 
     /**
-     * 根据 key 删除缓存（使用默认配置，同时删除唯一和非唯一缓存）
-     */
-    protected void removeCacheByKey(Object key) {
-        removeCacheByKey("", key);
-    }
-
-    /**
-     * 根据 name 和 key 删除缓存（同时删除唯一和非唯一缓存）
-     * 同时会扫描并删除所有与该 name 相关的类型特定缓存
+     * 校验复合 @Cache/@Caches 注解的 unique 属性是否符合预期（复合key场景）
+     * <p>
+     * 只检查类级别的复合 @Cache 注解或 @Caches 中的对应注解，不检查字段级 @Cache 注解。
+     * 用于 getCache(Object... keys) / getListCache(Object... keys) 等可变参数方法（keys.length > 1）。
      *
-     * @param name name属性值，如果为空则使用默认配置
-     * @param key  缓存key
+     * @param name         name属性值，如果为空则检查类级别的@Cache注解
+     * @param expectUnique 期望的unique值，true表示期望唯一缓存，false表示期望非唯一缓存
+     * @throws IllegalStateException 如果unique值不符合预期
      */
-    protected void removeCacheByKey(String name, Object key) {
+    private void checkCompositeCacheUnique(String name, boolean expectUnique) {
+        Class<?> clazz = getModelClass();
+        if (clazz == null) {
+            return;
+        }
+        Cache compositeCache = findCompositeCache(clazz, name);
+        if (compositeCache != null && compositeCache.value().length > 0) {
+            boolean actualUnique = compositeCache.unique();
+            if (actualUnique != expectUnique) {
+                String methodType = expectUnique ? "getCache/getNameCache" : "getListCache/getNameListCache";
+                String expectedType = expectUnique ? "unique=true" : "unique=false";
+                String actualType = actualUnique ? "unique=true" : "unique=false";
+                throw new IllegalStateException(String.format("缓存方法调用错误: %s 方法要求 %s，但复合 @Cache 注解配置为 %s。" + "请使用 %s 方法代替。", methodType, expectedType, actualType, expectUnique ? "getListCache/getNameListCache" : "getCache/getNameCache"));
+            }
+        }
+    }
+
+    /**
+     * 校验复合 @Cache/@Caches 注解的 unique 属性（无name参数，复合key场景）
+     *
+     * @param expectUnique 期望的unique值
+     * @throws IllegalStateException 如果unique值不符合预期
+     */
+    private void checkCompositeCacheUnique(boolean expectUnique) {
+        checkCompositeCacheUnique("", expectUnique);
+    }
+
+    // ==================== 删除缓存 - 单值缓存 (对应 getCache) ====================
+
+    /**
+     * 删除默认单值缓存（对应 {@link #getCache(Object)}）
+     *
+     * @param key 缓存 key（单个值）
+     */
+    public void removeCache(Object key) {
         if (key == null) {
             return;
         }
         try {
-            // 删除唯一缓存
-            CacheConfig config = (name == null || name.isEmpty()) ? getConfig() : getConfig(name);
+            Object cacheKey = buildCacheKey(key);
+            if (cacheKey == null) {
+                return;
+            }
+            CacheConfig config = getConfig();
+            cacheService.remove(config.getName(), cacheKey);
+        } catch (Throwable e) {
+            if (log.isWarnEnabled())
+                log.warn("删除缓存失败: key={}, error={}", key, e.getMessage());
+        }
+    }
+
+    /**
+     * 删除指定类型的单值缓存（对应 {@link #getCache(Class, Object)}）
+     *
+     * @param clazz 目标类型
+     * @param key   缓存 key（单个值）
+     * @param <X>   类型泛型
+     */
+    public <X> void removeCache(Class<X> clazz, Object key) {
+        if (key == null || clazz == null) {
+            return;
+        }
+        try {
+            Object cacheKey = buildCacheKey(key);
+            if (cacheKey == null) {
+                return;
+            }
+            CacheConfig config = getConfig(clazz);
+            cacheService.remove(config.getName(), cacheKey);
+        } catch (Throwable e) {
+            if (log.isWarnEnabled())
+                log.warn("删除类型缓存失败: clazz={}, key={}, error={}", clazz.getSimpleName(), key, e.getMessage());
+        }
+    }
+
+    /**
+     * 删除默认单值缓存（可变参数版本，对应 {@link #getCache(Object[])}）
+     *
+     * @param keys 缓存 key，可以是单个值或多个值（可变参数）
+     */
+    public void removeCache(Object... keys) {
+        if (keys == null || keys.length == 0) {
+            return;
+        }
+        if (keys.length == 1) {
+            removeCache(keys[0]);
+            return;
+        }
+        try {
+            Object cacheKey = buildCacheKey(keys);
+            if (cacheKey == null) {
+                return;
+            }
+            CacheConfig config = getConfig();
+            cacheService.remove(config.getName(), cacheKey);
+        } catch (Throwable e) {
+            if (log.isWarnEnabled())
+                log.warn("删除缓存失败: error={}", e.getMessage());
+        }
+    }
+
+    /**
+     * 删除指定类型的单值缓存（可变参数版本，对应 {@link #getCache(Class, Object[])}）
+     *
+     * @param clazz 目标类型
+     * @param keys  缓存 key，可以是单个值或多个值（可变参数）
+     * @param <X>   类型泛型
+     */
+    public <X> void removeCache(Class<X> clazz, Object... keys) {
+        if (keys == null || keys.length == 0 || clazz == null) {
+            return;
+        }
+        if (keys.length == 1) {
+            removeCache(clazz, keys[0]);
+            return;
+        }
+        try {
+            Object cacheKey = buildCacheKey(keys);
+            if (cacheKey == null) {
+                return;
+            }
+            CacheConfig config = getConfig(clazz);
+            cacheService.remove(config.getName(), cacheKey);
+        } catch (Throwable e) {
+            if (log.isWarnEnabled())
+                log.warn("删除类型缓存失败: clazz={}, error={}", clazz.getSimpleName(), e.getMessage());
+        }
+    }
+
+    // ==================== 删除缓存 - 命名单值缓存 (对应 getNameCache) ====================
+
+    /**
+     * 删除指定命名的单值缓存（对应 {@link #getNameCache(String, Object)}）
+     *
+     * @param name name属性值，用于区分不同的缓存字段或复合key
+     * @param key  缓存 key（单个值）
+     */
+    public void removeNameCache(String name, Object key) {
+        if (key == null || name == null) {
+            return;
+        }
+        try {
+            Object cacheKey = buildCacheKey(name, key);
+            if (cacheKey == null) {
+                return;
+            }
+            CacheConfig config = getConfig(name);
+            cacheService.remove(config.getName(), cacheKey);
+        } catch (Throwable e) {
+            if (log.isWarnEnabled())
+                log.warn("删除命名缓存失败: name={}, key={}, error={}", name, key, e.getMessage());
+        }
+    }
+
+    /**
+     * 删除指定类型和命名的单值缓存（对应 {@link #getNameCache(Class, String, Object)}）
+     *
+     * @param clazz 目标类型
+     * @param name  name属性值
+     * @param key   缓存 key（单个值）
+     * @param <X>   类型泛型
+     */
+    public <X> void removeNameCache(Class<X> clazz, String name, Object key) {
+        if (key == null || name == null || clazz == null) {
+            return;
+        }
+        try {
+            Object cacheKey = buildCacheKey(name, key);
+            if (cacheKey == null) {
+                return;
+            }
+            CacheConfig config = getConfig(clazz, name);
+            cacheService.remove(config.getName(), cacheKey);
+        } catch (Throwable e) {
+            if (log.isWarnEnabled())
+                log.warn("删除类型命名缓存失败: clazz={}, name={}, key={}, error={}", clazz.getSimpleName(), name, key, e.getMessage());
+        }
+    }
+
+    /**
+     * 删除指定命名的单值缓存（可变参数版本，对应 {@link #getNameCache(String, Object[])}）
+     *
+     * @param name name属性值
+     * @param keys 复合key的值数组
+     */
+    public void removeNameCache(String name, Object... keys) {
+        if (keys == null || keys.length == 0 || name == null) {
+            return;
+        }
+        if (keys.length == 1) {
+            removeNameCache(name, keys[0]);
+            return;
+        }
+        try {
+            Object cacheKey = buildCacheKey(name, keys);
+            if (cacheKey == null) {
+                return;
+            }
+            CacheConfig config = getConfig(name);
+            cacheService.remove(config.getName(), cacheKey);
+        } catch (Throwable e) {
+            if (log.isWarnEnabled())
+                log.warn("删除命名缓存失败: name={}, error={}", name, e.getMessage());
+        }
+    }
+
+    /**
+     * 删除指定类型和命名的单值缓存（可变参数版本，对应 {@link #getNameCache(Class, String, Object[])}）
+     *
+     * @param clazz 目标类型
+     * @param name  name属性值
+     * @param keys  复合key的值数组
+     * @param <X>   类型泛型
+     */
+    public <X> void removeNameCache(Class<X> clazz, String name, Object... keys) {
+        if (keys == null || keys.length == 0 || name == null || clazz == null) {
+            return;
+        }
+        if (keys.length == 1) {
+            removeNameCache(clazz, name, keys[0]);
+            return;
+        }
+        try {
+            Object cacheKey = buildCacheKey(name, keys);
+            if (cacheKey == null) {
+                return;
+            }
+            CacheConfig config = getConfig(clazz, name);
+            cacheService.remove(config.getName(), cacheKey);
+        } catch (Throwable e) {
+            if (log.isWarnEnabled())
+                log.warn("删除类型命名缓存失败: clazz={}, name={}, error={}", clazz.getSimpleName(), name, e.getMessage());
+        }
+    }
+
+    // ==================== 删除缓存 - 列表缓存 (对应 getListCache) ====================
+
+    /**
+     * 删除默认列表缓存（对应 {@link #getListCache(Object)}）
+     *
+     * @param key 缓存 key（单个值）
+     */
+    public void removeListCache(Object key) {
+        if (key == null) {
+            return;
+        }
+        try {
+            Object cacheKey = buildCacheKey(key);
+            if (cacheKey == null) {
+                return;
+            }
+            CacheConfig config = getListConfig();
+            cacheService.remove(config.getName(), cacheKey);
+        } catch (Throwable e) {
+            if (log.isWarnEnabled())
+                log.warn("删除列表缓存失败: key={}, error={}", key, e.getMessage());
+        }
+    }
+
+    /**
+     * 删除指定类型的列表缓存（对应 {@link #getListCache(Class, Object)}）
+     *
+     * @param clazz 目标类型
+     * @param key   缓存 key（单个值）
+     * @param <X>   类型泛型
+     */
+    public <X> void removeListCache(Class<X> clazz, Object key) {
+        if (key == null || clazz == null) {
+            return;
+        }
+        try {
+            Object cacheKey = buildCacheKey(key);
+            if (cacheKey == null) {
+                return;
+            }
+            CacheConfig config = getListConfig(clazz);
+            cacheService.remove(config.getName(), cacheKey);
+        } catch (Throwable e) {
+            if (log.isWarnEnabled())
+                log.warn("删除类型列表缓存失败: clazz={}, key={}, error={}", clazz.getSimpleName(), key, e.getMessage());
+        }
+    }
+
+    /**
+     * 删除默认列表缓存（可变参数版本，对应 {@link #getListCache(Object[])}）
+     *
+     * @param keys 缓存 key，可以是单个值或多个值（可变参数）
+     */
+    public void removeListCache(Object... keys) {
+        if (keys == null || keys.length == 0) {
+            return;
+        }
+        if (keys.length == 1) {
+            removeListCache(keys[0]);
+            return;
+        }
+        try {
+            Object cacheKey = buildCacheKey(keys);
+            if (cacheKey == null) {
+                return;
+            }
+            CacheConfig config = getListConfig();
+            cacheService.remove(config.getName(), cacheKey);
+        } catch (Throwable e) {
+            if (log.isWarnEnabled())
+                log.warn("删除列表缓存失败: error={}", e.getMessage());
+        }
+    }
+
+    /**
+     * 删除指定类型的列表缓存（可变参数版本，对应 {@link #getListCache(Class, Object[])}）
+     *
+     * @param clazz 目标类型
+     * @param keys  缓存 key，可以是单个值或多个值（可变参数）
+     * @param <X>   类型泛型
+     */
+    public <X> void removeListCache(Class<X> clazz, Object... keys) {
+        if (keys == null || keys.length == 0 || clazz == null) {
+            return;
+        }
+        if (keys.length == 1) {
+            removeListCache(clazz, keys[0]);
+            return;
+        }
+        try {
+            Object cacheKey = buildCacheKey(keys);
+            if (cacheKey == null) {
+                return;
+            }
+            CacheConfig config = getListConfig(clazz);
+            cacheService.remove(config.getName(), cacheKey);
+        } catch (Throwable e) {
+            if (log.isWarnEnabled())
+                log.warn("删除类型列表缓存失败: clazz={}, error={}", clazz.getSimpleName(), e.getMessage());
+        }
+    }
+
+    // ==================== 删除缓存 - 命名列表缓存 (对应 getNameListCache) ====================
+
+    /**
+     * 删除指定命名的列表缓存（对应 {@link #getNameListCache(String, Object)}）
+     *
+     * @param name name属性值
+     * @param key  缓存 key（单个值）
+     */
+    public void removeNameListCache(String name, Object key) {
+        if (key == null || name == null) {
+            return;
+        }
+        try {
+            Object cacheKey = buildCacheKey(name, key);
+            if (cacheKey == null) {
+                return;
+            }
+            CacheConfig config = getListConfig(name);
+            cacheService.remove(config.getName(), cacheKey);
+        } catch (Throwable e) {
+            if (log.isWarnEnabled())
+                log.warn("删除命名列表缓存失败: name={}, key={}, error={}", name, key, e.getMessage());
+        }
+    }
+
+    /**
+     * 删除指定类型和命名的列表缓存（对应 {@link #getNameListCache(Class, String, Object)}）
+     *
+     * @param clazz 目标类型
+     * @param name  name属性值
+     * @param key   缓存 key（单个值）
+     * @param <X>   类型泛型
+     */
+    public <X> void removeNameListCache(Class<X> clazz, String name, Object key) {
+        if (key == null || name == null || clazz == null) {
+            return;
+        }
+        try {
+            Object cacheKey = buildCacheKey(name, key);
+            if (cacheKey == null) {
+                return;
+            }
+            CacheConfig config = getListConfig(clazz, name);
+            cacheService.remove(config.getName(), cacheKey);
+        } catch (Throwable e) {
+            if (log.isWarnEnabled())
+                log.warn("删除类型命名列表缓存失败: clazz={}, name={}, key={}, error={}", clazz.getSimpleName(), name, key, e.getMessage());
+        }
+    }
+
+    /**
+     * 删除指定命名的列表缓存（可变参数版本，对应 {@link #getNameListCache(String, Object[])}）
+     *
+     * @param name name属性值
+     * @param keys 复合key的值数组
+     */
+    public void removeNameListCache(String name, Object... keys) {
+        if (keys == null || keys.length == 0 || name == null) {
+            return;
+        }
+        if (keys.length == 1) {
+            removeNameListCache(name, keys[0]);
+            return;
+        }
+        try {
+            Object cacheKey = buildCacheKey(name, keys);
+            if (cacheKey == null) {
+                return;
+            }
+            CacheConfig config = getListConfig(name);
+            cacheService.remove(config.getName(), cacheKey);
+        } catch (Throwable e) {
+            if (log.isWarnEnabled())
+                log.warn("删除命名列表缓存失败: name={}, error={}", name, e.getMessage());
+        }
+    }
+
+    /**
+     * 删除指定类型和命名的列表缓存（可变参数版本，对应 {@link #getNameListCache(Class, String, Object[])}）
+     *
+     * @param clazz 目标类型
+     * @param name  name属性值
+     * @param keys  复合key的值数组
+     * @param <X>   类型泛型
+     */
+    public <X> void removeNameListCache(Class<X> clazz, String name, Object... keys) {
+        if (keys == null || keys.length == 0 || name == null || clazz == null) {
+            return;
+        }
+        if (keys.length == 1) {
+            removeNameListCache(clazz, name, keys[0]);
+            return;
+        }
+        try {
+            Object cacheKey = buildCacheKey(name, keys);
+            if (cacheKey == null) {
+                return;
+            }
+            CacheConfig config = getListConfig(clazz, name);
+            cacheService.remove(config.getName(), cacheKey);
+        } catch (Throwable e) {
+            if (log.isWarnEnabled())
+                log.warn("删除类型命名列表缓存失败: clazz={}, name={}, error={}", clazz.getSimpleName(), name, e.getMessage());
+        }
+    }
+
+    // ==================== 删除缓存 - 内部方法（数据变更时全量失效） ====================
+
+    /**
+     * 内部方法：根据 key 删除所有相关缓存（单值+列表+类型特定）
+     * 用于数据变更时（insert/update/delete）的缓存全量失效
+     *
+     * @param key 缓存 key
+     */
+    private void removeAllCacheByKey(Object key) {
+        removeAllCacheByNameAndKey("", key);
+    }
+
+    /**
+     * 内部方法：根据 name 和 key 删除所有相关缓存（单值+列表+类型特定）
+     * 用于数据变更时（insert/update/delete）的缓存全量失效
+     *
+     * @param name name属性值，如果为空则使用默认配置
+     * @param key  缓存 key
+     */
+    private void removeAllCacheByNameAndKey(String name, Object key) {
+        if (key == null) {
+            return;
+        }
+        try {
+            // 删除单值缓存
+            CacheConfig config = getConfig(name);
             String cacheName = config.getName();
             cacheService.remove(cacheName, key);
-            // 删除非唯一缓存（List缓存）
-            CacheConfig listConfig = (name == null || name.isEmpty()) ? getListConfig() : getListConfig(name);
+            // 删除列表缓存
+            CacheConfig listConfig = getListConfig(name);
             String listCacheName = listConfig.getName();
             cacheService.remove(listCacheName, key);
             // 删除所有类型特定缓存（如 DTO、VO 等转换类型的缓存）
@@ -2059,21 +2733,17 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
     /**
      * 删除所有类型特定缓存
      * 扫描 configs 中所有以基础缓存名称为前缀的配置，删除其中的 key
-     * <p>
-     * 例如：基础缓存名称为 "user"，则会扫描并删除 "useruserdto"、"userlistuserdto" 等类型特定缓存
      *
-     * @param baseCacheName     基础单值缓存名称（如 "user" 或 "userlocation"）
-     * @param baseListCacheName 基础List缓存名称（如 "userlist" 或 "userlocationlist"）
-     * @param key               缓存key
+     * @param baseCacheName     基础单值缓存名称
+     * @param baseListCacheName 基础列表缓存名称
+     * @param key               缓存 key
      */
     private void removeTypedCacheByKey(String baseCacheName, String baseListCacheName, Object key) {
         for (Map.Entry<String, CacheConfig> entry : configs.entrySet()) {
             String configName = entry.getKey();
-            // 跳过已经处理过的基础配置
             if (configName.equals(baseCacheName) || configName.equals(baseListCacheName)) {
                 continue;
             }
-            // 匹配以基础缓存名称为前缀的类型特定配置（如 "useruserdto"、"userlistuserdto"）
             if (configName.startsWith(baseCacheName) || configName.startsWith(baseListCacheName)) {
                 try {
                     cacheService.remove(configName, key);
@@ -2085,54 +2755,11 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         }
     }
 
-    /**
-     * 根据类型和 key 删除缓存（同时删除类型特定的唯一和非唯一缓存）
-     *
-     * @param clazz 目标类型
-     * @param key   缓存key
-     * @param <X>   类型泛型
-     */
-    protected <X> void removeCacheByKey(Class<X> clazz, Object key) {
-        if (key == null || clazz == null) {
-            return;
-        }
-        try {
-            CacheConfig config = getConfig(clazz);
-            cacheService.remove(config.getName(), key);
-            CacheConfig listConfig = getListConfig(clazz);
-            cacheService.remove(listConfig.getName(), key);
-        } catch (Throwable e) {
-            if (log.isWarnEnabled())
-                log.warn("删除类型缓存失败: clazz={}, key={}, error={}", clazz.getSimpleName(), key, e.getMessage());
-        }
-    }
+    // ==================== 删除缓存 - 根据实体删除（数据变更时使用） ====================
 
     /**
-     * 根据类型、name 和 key 删除缓存（同时删除类型+name特定的唯一和非唯一缓存）
-     *
-     * @param clazz 目标类型
-     * @param name  name属性值，如果为空则使用默认配置
-     * @param key   缓存key
-     * @param <X>   类型泛型
-     */
-    protected <X> void removeCacheByKey(Class<X> clazz, String name, Object key) {
-        if (key == null || clazz == null) {
-            return;
-        }
-        try {
-            CacheConfig config = getConfig(clazz, name);
-            cacheService.remove(config.getName(), key);
-            CacheConfig listConfig = getListConfig(clazz, name);
-            cacheService.remove(listConfig.getName(), key);
-        } catch (Throwable e) {
-            if (log.isWarnEnabled())
-                log.warn("删除类型命名缓存失败: clazz={}, name={}, key={}, error={}", clazz.getSimpleName(), name, key, e.getMessage());
-        }
-    }
-
-    /**
-     * 根据实体对象删除缓存
-     * 从实体中提取 @Cache 标注的字段值作为缓存 key
+     * 根据实体对象删除所有相关缓存
+     * 从实体中提取 @Cache 标注的字段值作为缓存 key，删除所有维度的缓存
      * 支持以下方式：
      * 1. 类上的单个复合字段缓存（@Cache(value = {"field1", "field2"})，向前兼容）
      * 2. 类上的多个复合字段缓存（@Caches，内部Cache需要指明name）
@@ -2170,7 +2797,6 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             String name = entry.getKey();
             Cache cache = entry.getValue();
             if (cache != null && cache.value().length > 0) {
-                // 删除复合字段缓存
                 removeCompositeCache(entity, clazz, cache.value(), name);
             }
         }
@@ -2219,7 +2845,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         if (allValuesPresent) {
             String compositeKeyString = buildCompositeKey(values);
             if (!compositeKeyString.isEmpty()) {
-                removeCacheByKey(name, compositeKeyString);
+                removeAllCacheByNameAndKey(name, compositeKeyString);
             }
         }
     }
@@ -2241,7 +2867,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
                     // 获取name属性值，如果为空则使用空字符串（表示使用默认配置）
                     String cacheName = cache.name();
                     String nameForConfig = cacheName.isEmpty() ? "" : cacheName;
-                    removeCacheByKey(nameForConfig, key);
+                    removeAllCacheByNameAndKey(nameForConfig, key);
                 }
             }
         }
@@ -2259,21 +2885,6 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         } catch (Throwable e) {
             if (log.isWarnEnabled())
                 log.warn("清空缓存失败: error={}", e.getMessage());
-        }
-    }
-
-    /**
-     * 清空指定命名的单值缓存
-     *
-     * @param naming name属性值，如果为空则清空默认缓存
-     */
-    public void clearCache(String naming) {
-        try {
-            CacheConfig config = getConfig(naming);
-            cacheService.clear(config.getName());
-        } catch (Throwable e) {
-            if (log.isWarnEnabled())
-                log.warn("清空命名缓存失败: naming={}, error={}", naming, e.getMessage());
         }
     }
 
@@ -2297,29 +2908,44 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
     }
 
     /**
+     * 清空指定命名的单值缓存（对应 getNameCache 系列的命名维度）
+     *
+     * @param name name属性值，如果为空则清空默认缓存
+     */
+    public void clearNameCache(String name) {
+        try {
+            CacheConfig config = getConfig(name);
+            cacheService.clear(config.getName());
+        } catch (Throwable e) {
+            if (log.isWarnEnabled())
+                log.warn("清空命名缓存失败: name={}, error={}", name, e.getMessage());
+        }
+    }
+
+    /**
      * 清空指定类型和命名的单值缓存
      *
-     * @param clazz  目标类型
-     * @param naming name属性值，如果为空则清空默认类型缓存
-     * @param <X>    类型泛型
+     * @param clazz 目标类型
+     * @param name  name属性值，如果为空则清空默认类型缓存
+     * @param <X>   类型泛型
      */
-    public <X> void clearCache(Class<X> clazz, String naming) {
+    public <X> void clearNameCache(Class<X> clazz, String name) {
         if (clazz == null) {
             return;
         }
         try {
-            CacheConfig config = getConfig(clazz, naming);
+            CacheConfig config = getConfig(clazz, name);
             cacheService.clear(config.getName());
         } catch (Throwable e) {
             if (log.isWarnEnabled())
-                log.warn("清空类型命名缓存失败: clazz={}, naming={}, error={}", clazz.getSimpleName(), naming, e.getMessage());
+                log.warn("清空类型命名缓存失败: clazz={}, name={}, error={}", clazz.getSimpleName(), name, e.getMessage());
         }
     }
 
-    // ==================== 清空缓存 - List缓存 ====================
+    // ==================== 清空缓存 - 列表缓存 ====================
 
     /**
-     * 清空默认List缓存
+     * 清空默认列表缓存
      */
     public void clearListCache() {
         try {
@@ -2327,27 +2953,12 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             cacheService.clear(config.getName());
         } catch (Throwable e) {
             if (log.isWarnEnabled())
-                log.warn("清空List缓存失败: error={}", e.getMessage());
+                log.warn("清空列表缓存失败: error={}", e.getMessage());
         }
     }
 
     /**
-     * 清空指定命名的List缓存
-     *
-     * @param naming name属性值，如果为空则清空默认List缓存
-     */
-    public void clearListCache(String naming) {
-        try {
-            CacheConfig config = getListConfig(naming);
-            cacheService.clear(config.getName());
-        } catch (Throwable e) {
-            if (log.isWarnEnabled())
-                log.warn("清空命名List缓存失败: naming={}, error={}", naming, e.getMessage());
-        }
-    }
-
-    /**
-     * 清空指定类型的List缓存
+     * 清空指定类型的列表缓存
      *
      * @param clazz 目标类型
      * @param <X>   类型泛型
@@ -2361,34 +2972,49 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             cacheService.clear(config.getName());
         } catch (Throwable e) {
             if (log.isWarnEnabled())
-                log.warn("清空类型List缓存失败: clazz={}, error={}", clazz.getSimpleName(), e.getMessage());
+                log.warn("清空类型列表缓存失败: clazz={}, error={}", clazz.getSimpleName(), e.getMessage());
         }
     }
 
     /**
-     * 清空指定类型和命名的List缓存
+     * 清空指定命名的列表缓存（对应 getNameListCache 系列的命名维度）
      *
-     * @param clazz  目标类型
-     * @param naming name属性值，如果为空则清空默认类型List缓存
-     * @param <X>    类型泛型
+     * @param name name属性值，如果为空则清空默认列表缓存
      */
-    public <X> void clearListCache(Class<X> clazz, String naming) {
+    public void clearNameListCache(String name) {
+        try {
+            CacheConfig config = getListConfig(name);
+            cacheService.clear(config.getName());
+        } catch (Throwable e) {
+            if (log.isWarnEnabled())
+                log.warn("清空命名列表缓存失败: name={}, error={}", name, e.getMessage());
+        }
+    }
+
+    /**
+     * 清空指定类型和命名的列表缓存
+     *
+     * @param clazz 目标类型
+     * @param name  name属性值，如果为空则清空默认类型列表缓存
+     * @param <X>   类型泛型
+     */
+    public <X> void clearNameListCache(Class<X> clazz, String name) {
         if (clazz == null) {
             return;
         }
         try {
-            CacheConfig config = getListConfig(clazz, naming);
+            CacheConfig config = getListConfig(clazz, name);
             cacheService.clear(config.getName());
         } catch (Throwable e) {
             if (log.isWarnEnabled())
-                log.warn("清空类型命名List缓存失败: clazz={}, naming={}, error={}", clazz.getSimpleName(), naming, e.getMessage());
+                log.warn("清空类型命名列表缓存失败: clazz={}, name={}, error={}", clazz.getSimpleName(), name, e.getMessage());
         }
     }
 
-    // ==================== 清空缓存 - 同时清空单值+List ====================
+    // ==================== 清空缓存 - 同时清空单值+列表 ====================
 
     /**
-     * 清空默认单值缓存和List缓存
+     * 清空默认单值缓存和列表缓存
      */
     public void clearCacheAll() {
         clearCache();
@@ -2396,17 +3022,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
     }
 
     /**
-     * 清空指定命名的单值缓存和List缓存
-     *
-     * @param naming name属性值，如果为空则清空默认缓存
-     */
-    public void clearCacheAll(String naming) {
-        clearCache(naming);
-        clearListCache(naming);
-    }
-
-    /**
-     * 清空指定类型的单值缓存和List缓存
+     * 清空指定类型的单值缓存和列表缓存
      *
      * @param clazz 目标类型
      * @param <X>   类型泛型
@@ -2417,19 +3033,29 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
     }
 
     /**
-     * 清空指定类型和命名的单值缓存和List缓存
+     * 清空指定命名的单值缓存和列表缓存
      *
-     * @param clazz  目标类型
-     * @param naming name属性值
-     * @param <X>    类型泛型
+     * @param name name属性值
      */
-    public <X> void clearCacheAll(Class<X> clazz, String naming) {
-        clearCache(clazz, naming);
-        clearListCache(clazz, naming);
+    public void clearNameCacheAll(String name) {
+        clearNameCache(name);
+        clearNameListCache(name);
     }
 
     /**
-     * 清空当前实体相关的所有缓存（包括所有维度：默认/命名/类型/命名+类型，单值+List）
+     * 清空指定类型和命名的单值缓存和列表缓存
+     *
+     * @param clazz 目标类型
+     * @param name  name属性值
+     * @param <X>   类型泛型
+     */
+    public <X> void clearNameCacheAll(Class<X> clazz, String name) {
+        clearNameCache(clazz, name);
+        clearNameListCache(clazz, name);
+    }
+
+    /**
+     * 清空当前实体相关的所有缓存（包括所有维度：默认/命名/类型/命名+类型，单值+列表）
      * <p>
      * 通过扫描 configs 中所有以当前实体基础名称为前缀的配置，清空所有相关缓存。
      * 适用于需要完全重置某个实体所有缓存的场景。
