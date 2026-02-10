@@ -1,6 +1,7 @@
 package cn.org.autumn.service;
 
 import cn.org.autumn.config.QueueConfig;
+import cn.org.autumn.model.DefaultEntity;
 import cn.org.autumn.model.Parameterized;
 import cn.org.autumn.model.QueueMessage;
 import cn.org.autumn.table.annotation.Table;
@@ -22,7 +23,12 @@ public abstract class BaseQueueService<M extends BaseMapper<T>, T> extends Servi
     protected QueueService queueService;
 
     public Class<?> getModelClass() {
-        return type(1, Table.class);
+        try {
+            return type(1, Table.class);
+        } catch (Exception e) {
+            log.error("解析错误:{}", e.getMessage());
+            return DefaultEntity.class;
+        }
     }
 
     // ==================== 队列服务相关方法 ====================
