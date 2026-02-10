@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
+import java.io.Serializable;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -27,15 +28,30 @@ import java.util.function.Supplier;
 public class CacheService implements ClearHandler, LoadFactory.Must {
 
     /**
-     * Null 值占位符
+     * Null 值占位符（可序列化）
      * 用于在缓存中表示 null 值，因为 EhCache 不支持直接存储 null
+     * 使用静态内部类实现 Serializable，以支持 Redis 序列化
      */
-    private static final Object NULL_PLACEHOLDER = new Object() {
+    private static final class NullPlaceholder implements Serializable {
+        private static final long serialVersionUID = 1L;
+
         @Override
         public String toString() {
             return "NULL_PLACEHOLDER";
         }
-    };
+
+        @Override
+        public boolean equals(Object obj) {
+            return obj instanceof NullPlaceholder;
+        }
+
+        @Override
+        public int hashCode() {
+            return NullPlaceholder.class.hashCode();
+        }
+    }
+
+    private static final NullPlaceholder NULL_PLACEHOLDER = new NullPlaceholder();
 
     @Autowired
     private EhCacheManager ehCacheManager;
@@ -212,7 +228,7 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
      * @return 缓存值
      */
     public <K, V> V compute(String name, K key, Supplier<V> supplier, Class<K> keyType, Class<V> valueType, Long expireTime, Long redisTime, TimeUnit expireTimeUnit) {
-        return compute(name, key, supplier, keyType, valueType, expireTime, redisTime, expireTimeUnit, null, false);
+        return compute(name, key, supplier, keyType, valueType, expireTime, redisTime, expireTimeUnit, null, false, null, null);
     }
 
     /**
@@ -234,12 +250,100 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
      * @return 缓存值
      */
     public <K, V> V compute(String name, K key, Supplier<V> supplier, Class<K> keyType, Class<V> valueType, Long expireTime, Long redisTime, TimeUnit expireTimeUnit, boolean cacheNull) {
-        return compute(name, key, supplier, keyType, valueType, expireTime, redisTime, expireTimeUnit, null, cacheNull);
+        return compute(name, key, supplier, keyType, valueType, expireTime, redisTime, expireTimeUnit, null, cacheNull, null, null);
     }
 
+    /**
+     * 获取缓存值，如果不存在则通过 supplier 获取并缓存
+     * 这是核心实现方法，直接使用 CacheConfig 配置实例，避免参数的二次转换
+     *
+     * @param key      缓存键
+     * @param supplier 值提供者（如果缓存不存在时调用）
+     * @param config   缓存配置
+     * @param <K>      Key 类型
+     * @param <V>      Value 类型
+     * @return 缓存值
+     */
     @SuppressWarnings("unchecked")
     public <K, V> V compute(K key, Supplier<V> supplier, CacheConfig config) {
-        return compute(config.getName(), key, supplier, (Class<K>) config.getKey(), (Class<V>) config.getValue(), config.getExpire(), config.getRedis(), config.getUnit(), config.getMax(), config.isNull());
+        if (config == null) {
+            log.warn("CacheConfig is null, returning value from supplier");
+            return supplier.get();
+        }
+        String name = config.getName();
+        boolean cacheNull = config.isNull();
+        // 如果 cacheNull 为 true，需要使用 Object 作为 Value 类型以支持存储 NULL_PLACEHOLDER
+        // 否则使用配置中的 Value 类型
+        Class<?> cacheValueType = cacheNull ? Object.class : config.getValue();
+        if (cacheNull && config.getValue() != Object.class) {
+            // 如果已存在配置但需要缓存 null，且 Value 类型不是 Object
+            // 我们需要使用 Object 类型来获取缓存，这样可以兼容存储 NULL_PLACEHOLDER 和实际值
+            if (log.isDebugEnabled())
+                log.debug("Cache config exists for: {} but valueType is not Object, using Object.class for null caching", name);
+        }
+        Cache<Object, Object> cache = (Cache<Object, Object>) ehCacheManager.getCache(name, (Class<K>) config.getKey(), cacheValueType);
+        if (cache == null) {
+            // 如果缓存不存在，需要创建
+            if (cacheNull && config.getValue() != Object.class) {
+                // 创建临时配置，使用 Object.class 作为 Value 类型
+                CacheConfig tempConfig = config.toBuilder().value(Object.class).build();
+                tempConfig.validate();
+                cache = ehCacheManager.getOrCreate(tempConfig);
+            } else {
+                cache = ehCacheManager.getOrCreate(config);
+            }
+            // 如果创建后仍然为 null（理论上不应该发生）
+            if (cache == null) {
+                log.error("Failed to create or retrieve cache '{}', returning value from supplier", name);
+                return supplier.get();
+            }
+        }
+        Object cached = cache.get(key);
+        if (cached == null) {
+            // 本地缓存中不存在，检查Redis二级缓存
+            V value = getFromRedis(key, config);
+            if (value != null) {
+                // Redis缓存中存在，写入本地缓存并返回
+                cache.put(key, value);
+                return value;
+            } else if (isRedisEnabled()) {
+                // 检查Redis中是否有null占位符
+                Object redisValue = getRedisValue(name, key);
+                if (redisValue != null && redisValue.toString().equals(NULL_PLACEHOLDER.toString())) {
+                    // Redis中有null占位符，写入本地缓存并返回null
+                    if (cacheNull) {
+                        cache.put(key, NULL_PLACEHOLDER);
+                    }
+                    return null;
+                }
+            }
+            // Redis缓存中也不存在，调用 supplier 获取值
+            value = supplier.get();
+            if (value != null) {
+                // 值不为 null，同时写入本地缓存和Redis缓存
+                cache.put(key, value);
+                putToRedis(name, key, value, config);
+                // 发布缓存失效消息，通知其他实例清除本地缓存
+                publish(name, key.toString(), Invalidation.Operation.PUT);
+                return value;
+            } else if (cacheNull) {
+                // 值为 null 且允许缓存 null，使用占位符缓存
+                cache.put(key, NULL_PLACEHOLDER);
+                putToRedis(name, key, NULL_PLACEHOLDER, config);
+                // 发布缓存失效消息
+                publish(name, key.toString(), Invalidation.Operation.PUT);
+                return null;
+            } else {
+                // 值为 null 但不允许缓存 null，直接返回 null
+                return null;
+            }
+        } else if (cached == NULL_PLACEHOLDER) {
+            // 缓存中是 null 占位符，返回 null
+            return null;
+        } else {
+            // 缓存中存在有效值
+            return (V) cached;
+        }
     }
 
     /**
@@ -280,7 +384,7 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
      */
     public <K, V> V compute(String name, Supplier<K> keySupplier, Supplier<V> supplier, Class<K> keyType, Class<V> valueType, Long expireTime, Long redisTime, TimeUnit expireTimeUnit, Long maxEntries, boolean cacheNull) {
         K key = keySupplier.get();
-        return compute(name, key, supplier, keyType, valueType, expireTime, redisTime, expireTimeUnit, maxEntries, cacheNull);
+        return compute(name, key, supplier, keyType, valueType, expireTime, redisTime, expireTimeUnit, maxEntries, cacheNull, null, null);
     }
 
     /**
@@ -295,7 +399,7 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
      */
     public <V> V compute(String name, Supplier<V> supplier, Object... keyParts) {
         String key = buildCompositeKey(keyParts);
-        return compute(name, key, supplier, String.class, null, null, null, null, null, false);
+        return compute(name, key, supplier, String.class, null, null, null, null, null, false, null, null);
     }
 
     /**
@@ -316,7 +420,7 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
      */
     public <V> V compute(String name, Supplier<V> supplier, Class<V> valueType, Long expireTime, Long redisTime, TimeUnit expireTimeUnit, Long maxEntries, boolean cacheNull, Object... keyParts) {
         String key = buildCompositeKey(keyParts);
-        return compute(name, key, supplier, String.class, valueType, expireTime, redisTime, expireTimeUnit, maxEntries, cacheNull);
+        return compute(name, key, supplier, String.class, valueType, expireTime, redisTime, expireTimeUnit, maxEntries, cacheNull, null, null);
     }
 
     /**
@@ -335,7 +439,7 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
      */
     public <K, V> V compute(String name, Function<Object[], K> keyFunction, Supplier<V> supplier, Class<K> keyType, Class<V> valueType, Object... params) {
         K key = keyFunction.apply(params);
-        return compute(name, key, supplier, keyType, valueType, null, null, null, null, false);
+        return compute(name, key, supplier, keyType, valueType, null, null, null, null, false, null, null);
     }
 
     /**
@@ -359,7 +463,7 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
      */
     public <K, V> V compute(String name, Function<Object[], K> keyFunction, Supplier<V> supplier, Class<K> keyType, Class<V> valueType, Long expireTime, Long redisTime, TimeUnit expireTimeUnit, Long maxEntries, boolean cacheNull, Object... params) {
         K key = keyFunction.apply(params);
-        return compute(name, key, supplier, keyType, valueType, expireTime, redisTime, expireTimeUnit, maxEntries, cacheNull);
+        return compute(name, key, supplier, keyType, valueType, expireTime, redisTime, expireTimeUnit, maxEntries, cacheNull, null, null);
     }
 
     /**
@@ -389,8 +493,8 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
 
     /**
      * 获取缓存值，如果不存在则通过 supplier 获取并缓存
-     * 支持指定 Key 和 Value 类型，以及过期时间
-     * 支持缓存 null 值，避免重复查询
+     * 支持指定 Key 和 Value 类型，以及过期时间和最大条目数
+     * 将参数包装为 CacheConfig 后委托给核心实现 {@link #compute(Object, Supplier, CacheConfig)}
      *
      * @param name           缓存名称
      * @param key            缓存键
@@ -400,112 +504,81 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
      * @param expireTime     过期时间（可选，如果为 null 则使用默认值或已注册配置的值）
      * @param redisTime      Redis过期时间（可选，如果为 null 则使用默认值或已注册配置的值）
      * @param expireTimeUnit 过期时间单位（可选，如果为 null 则使用默认值或已注册配置的值）
+     * @param maxEntries     最大条目数（可选，如果为 null 则使用默认值 10000 或已注册配置的值）
      * @param cacheNull      是否缓存 null 值（true：缓存 null，避免重复查询；false：不缓存 null，每次都重新查询）
-     * @param maxEntries     最大条目数（可选，如果为 null 则使用默认值 1000 或已注册配置的值）
+     * @param persistent     是否启用磁盘持久化（可选，如果为 null 则使用默认值 false 或已注册配置的值）
+     * @param path           磁盘持久化路径（可选，如果为 null 则使用已注册配置的值）
      * @param <K>            Key 类型
      * @param <V>            Value 类型
      * @return 缓存值
      */
-    public <K, V> V compute(String name, K key, Supplier<V> supplier, Class<K> keyType, Class<V> valueType, Long expireTime, Long redisTime, TimeUnit expireTimeUnit, Long maxEntries, boolean cacheNull) {
-        CacheConfig config = ehCacheManager.getConfig(name);
-        // 如果配置不存在，尝试根据传入的类型和过期时间创建配置
+    public <K, V> V compute(String name, K key, Supplier<V> supplier, Class<K> keyType, Class<V> valueType, Long expireTime, Long redisTime, TimeUnit expireTimeUnit, Long maxEntries, boolean cacheNull, Boolean persistent, String path) {
+        CacheConfig config = resolveConfig(name, keyType, valueType, expireTime, redisTime, expireTimeUnit, maxEntries, cacheNull, persistent, path);
         if (config == null) {
-            if (keyType != null && valueType != null) {
-                // 如果 cacheNull 为 true，需要使用 Object 作为 Value 类型以支持存储 NULL_PLACEHOLDER
-                Class<?> finalValueType = cacheNull ? Object.class : valueType;
-                // 使用传入的过期时间，如果未指定则使用默认值
-                long expire = expireTime != null ? expireTime : 24 * 60;
-                TimeUnit unit = expireTimeUnit != null ? expireTimeUnit : TimeUnit.MINUTES;
-                // 使用传入的最大条目数，如果未指定则使用默认值 1000
-                long max = maxEntries != null ? maxEntries : 10000;
-                long redis = redisTime != null ? redisTime : 24 * 60;
-                config = CacheConfig.builder().name(name).key(keyType).value(finalValueType).max(max).expire(expire).redis(redis).unit(unit).build();
-                config.validate();
-                ehCacheManager.register(config);
-            } else {
-                if (log.isDebugEnabled())
-                    log.warn("Cache config not found for: {} and types not specified, returning value from supplier", name);
-                return supplier.get();
-            }
-        } else if (cacheNull && config.getValue() != Object.class) {
-            // 如果已存在配置但需要缓存 null，且 Value 类型不是 Object
-            // 我们需要使用 Object 类型来获取缓存，这样可以兼容存储 NULL_PLACEHOLDER 和实际值
-            // 注意：这里不创建新配置，而是直接使用 Object.class 来获取缓存
             if (log.isDebugEnabled())
-                log.debug("Cache config exists for: {} but valueType is not Object, using Object.class for null caching", name);
+                log.warn("Cache config not found for: {} and types not specified, returning value from supplier", name);
+            return supplier.get();
         }
-        // 如果 cacheNull 为 true，使用 Object.class 作为 Value 类型以支持存储 NULL_PLACEHOLDER
-        // 否则使用配置中的 Value 类型
-        Class<?> cacheValueType = cacheNull ? Object.class : config.getValue();
-        @SuppressWarnings("unchecked")
-        Cache<Object, Object> cache = (Cache<Object, Object>) ehCacheManager.getCache(name, (Class<K>) config.getKey(), cacheValueType);
-        if (cache == null) {
-            // 如果缓存不存在，需要创建。如果 cacheNull 为 true，确保使用 Object.class
-            // getOrCreateCache 方法已经处理了缓存已存在的情况，这里直接调用即可
-            if (cacheNull && config.getValue() != Object.class) {
-                // 创建临时配置，使用 Object.class 作为 Value 类型
-                // 使用传入的最大条目数，如果未指定则使用配置中的值
-                long finalMaxEntries = maxEntries != null ? maxEntries : config.getMax();
-                CacheConfig tempConfig = CacheConfig.builder().name(name).key(config.getKey()).value(Object.class).max(finalMaxEntries).expire(expireTime != null ? expireTime : config.getExpire()).unit(expireTimeUnit != null ? expireTimeUnit : config.getUnit()).build();
-                tempConfig.validate();
-                cache = ehCacheManager.getOrCreate(tempConfig);
-            } else {
-                cache = ehCacheManager.getOrCreate(config);
+        return compute(key, supplier, config);
+    }
+
+    /**
+     * 根据参数解析或创建缓存配置
+     * 先从 ehCacheManager 获取已注册配置，如果不存在且有足够的类型信息则创建新配置
+     * 支持 CacheConfig 中的所有配置项，确保不遗漏配置信息
+     *
+     * @param name           缓存名称
+     * @param keyType        Key 类型（可选）
+     * @param valueType      Value 类型（可选）
+     * @param expireTime     过期时间（可选）
+     * @param redisTime      Redis过期时间（可选）
+     * @param expireTimeUnit 过期时间单位（可选）
+     * @param maxEntries     最大条目数（可选）
+     * @param cacheNull      是否缓存 null 值
+     * @param persistent     是否启用磁盘持久化（可选，如果为 null 则使用默认值 false 或已注册配置的值）
+     * @param path           磁盘持久化路径（可选，如果为 null 则使用已注册配置的值）
+     * @return 缓存配置，如果无法创建返回 null
+     */
+    private CacheConfig resolveConfig(String name, Class<?> keyType, Class<?> valueType,
+                                      Long expireTime, Long redisTime, TimeUnit expireTimeUnit,
+                                      Long maxEntries, boolean cacheNull,
+                                      Boolean persistent, String path) {
+        CacheConfig config = ehCacheManager.getConfig(name);
+        if (config != null) {
+            // 已有注册配置，检查是否需要覆盖某些设置
+            boolean needsOverride = (config.isNull() != cacheNull)
+                    || (persistent != null && config.isPersistent() != persistent)
+                    || (path != null && !path.equals(config.getPath()));
+            if (needsOverride) {
+                CacheConfig.CacheConfigBuilder builder = config.toBuilder().Null(cacheNull);
+                if (persistent != null) builder.persistent(persistent);
+                if (path != null) builder.path(path);
+                return builder.build();
             }
-            // 如果创建后仍然为 null（理论上不应该发生，因为 getOrCreateCache 会抛出异常或返回缓存）
-            if (cache == null) {
-                log.error("Failed to create or retrieve cache '{}', returning value from supplier", name);
-                return supplier.get();
-            }
+            return config;
         }
-        Object cached = cache.get(key);
-        if (cached == null) {
-            // 本地缓存中不存在，检查Redis二级缓存
-            V value = getFromRedis(key, config);
-            if (value != null) {
-                // Redis缓存中存在，写入本地缓存并返回
-                cache.put(key, value);
-                return value;
-            } else if (isRedisEnabled()) {
-                // 检查Redis中是否有null占位符
-                Object redisValue = getRedisValue(name, key);
-                if (redisValue != null && redisValue.toString().equals(NULL_PLACEHOLDER.toString())) {
-                    // Redis中有null占位符，写入本地缓存并返回null
-                    if (cacheNull) {
-                        cache.put(key, NULL_PLACEHOLDER);
-                    }
-                    return null;
-                }
-            }
-            // Redis缓存中也不存在，调用 supplier 获取值
-            value = supplier.get();
-            if (value != null) {
-                // 值不为 null，同时写入本地缓存和Redis缓存
-                cache.put(key, value);
-                putToRedis(name, key, value, config);
-                // 发布缓存失效消息，通知其他实例清除本地缓存（可选，因为其他实例会从Redis读取）
-                publish(name, key.toString(), Invalidation.Operation.PUT);
-                return value;
-            } else if (cacheNull) {
-                // 值为 null 且允许缓存 null，使用占位符缓存
-                cache.put(key, NULL_PLACEHOLDER);
-                putToRedis(name, key, NULL_PLACEHOLDER, config);
-                // 发布缓存失效消息（可选）
-                publish(name, key.toString(), Invalidation.Operation.PUT);
-                return null;
-            } else {
-                // 值为 null 但不允许缓存 null，直接返回 null
-                return null;
-            }
-        } else if (cached == NULL_PLACEHOLDER) {
-            // 缓存中是 null 占位符，返回 null
-            return null;
-        } else {
-            // 缓存中存在有效值
-            @SuppressWarnings("unchecked")
-            V value = (V) cached;
-            return value;
+        // 配置不存在，尝试根据传入的类型和过期时间创建新配置
+        if (keyType != null && valueType != null) {
+            // 如果 cacheNull 为 true，需要使用 Object 作为 Value 类型以支持存储 NULL_PLACEHOLDER
+            Class<?> finalValueType = cacheNull ? Object.class : valueType;
+            // 使用传入的过期时间，如果未指定则使用默认值
+            long expire = expireTime != null ? expireTime : 24 * 60;
+            TimeUnit unit = expireTimeUnit != null ? expireTimeUnit : TimeUnit.MINUTES;
+            // 使用传入的最大条目数，如果未指定则使用默认值 10000
+            long max = maxEntries != null ? maxEntries : 10000;
+            long redis = redisTime != null ? redisTime : 24 * 60;
+            config = CacheConfig.builder()
+                    .name(name).key(keyType).value(finalValueType)
+                    .max(max).expire(expire).redis(redis).unit(unit)
+                    .Null(cacheNull)
+                    .persistent(persistent != null ? persistent : false)
+                    .path(path)
+                    .build();
+            config.validate();
+            ehCacheManager.register(config);
+            return config;
         }
+        return null;
     }
 
     public <K, V> V get(String name, K key) {

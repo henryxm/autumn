@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.ehcache.Cache;
 import org.ehcache.CacheManager;
+import org.ehcache.PersistentCacheManager;
 import org.ehcache.config.ResourcePools;
 import org.ehcache.config.builders.CacheConfigurationBuilder;
 import org.ehcache.config.builders.CacheManagerBuilder;
@@ -12,7 +13,9 @@ import org.ehcache.config.units.EntryUnit;
 import org.ehcache.config.units.MemoryUnit;
 import org.ehcache.expiry.ExpiryPolicy;
 import org.ehcache.config.builders.ExpiryPolicyBuilder;
+import org.ehcache.impl.serialization.PlainJavaSerializer;
 
+import java.io.File;
 import java.time.Duration;
 
 import org.springframework.stereotype.Component;
@@ -30,7 +33,16 @@ import java.util.concurrent.locks.ReentrantLock;
 @Component
 public class EhCacheManager implements ClearHandler {
 
+    /**
+     * 内存缓存管理器（不支持磁盘持久化）
+     */
     private final CacheManager manager = CacheManagerBuilder.newCacheManagerBuilder().build(true);
+
+    /**
+     * 持久化缓存管理器映射，按磁盘路径分组
+     * 每个不同的 path 对应一个独立的 PersistentCacheManager
+     */
+    private final ConcurrentHashMap<String, PersistentCacheManager> persistentManagers = new ConcurrentHashMap<>();
 
     private final ConcurrentHashMap<String, CacheConfig> configs = new ConcurrentHashMap<>();
 
@@ -94,15 +106,28 @@ public class EhCacheManager implements ClearHandler {
             Duration duration = convert(config.getExpire(), config.getUnit());
             ExpiryPolicy<Object, Object> policy = ExpiryPolicyBuilder.timeToLiveExpiration(duration);
             CacheConfigurationBuilder<K, V> builder = CacheConfigurationBuilder.newCacheConfigurationBuilder((Class<K>) config.getKey(), (Class<V>) config.getValue(), ResourcePoolsBuilder.heap(config.getMax())).withExpiry(policy);
+
+            Cache<K, V> cache;
             // 如果启用磁盘持久化
-            if (config.isPersistent() && config.getPath() != null) {
-                ResourcePools pools = ResourcePoolsBuilder.newResourcePoolsBuilder().heap(config.getMax(), EntryUnit.ENTRIES).disk(100, MemoryUnit.MB, true).build();
+            if (config.isPersistent() && StringUtils.isNotBlank(config.getPath())) {
+                // 配置堆内存 + 磁盘持久化的资源池
+                ResourcePools pools = ResourcePoolsBuilder.newResourcePoolsBuilder()
+                        .heap(config.getMax(), EntryUnit.ENTRIES)
+                        .disk(1000, MemoryUnit.MB, true)
+                        .build();
                 builder = builder.withResourcePools(pools);
+                // 获取或创建该路径对应的持久化 CacheManager
+                PersistentCacheManager persistentMgr = getOrCreatePersistentManager(config.getPath());
+                cache = persistentMgr.createCache(name, builder.build());
+                if (log.isDebugEnabled())
+                    log.debug("Created persistent cache '{}' with disk path: {}", name, config.getPath());
+            } else {
+                // 非持久化缓存，使用内存缓存管理器
+                if (!manager.getStatus().toString().equals("AVAILABLE")) {
+                    manager.init();
+                }
+                cache = manager.createCache(name, builder.build());
             }
-            if (!manager.getStatus().toString().equals("AVAILABLE")) {
-                manager.init();
-            }
-            Cache<K, V> cache = manager.createCache(name, builder.build());
             caches.put(name, cache);
             return cache;
         } catch (Exception e) {
@@ -129,7 +154,23 @@ public class EhCacheManager implements ClearHandler {
         if (cache != null) {
             return (Cache<K, V>) cache;
         }
-        // 尝试从 CacheManager 获取
+        // 先检查是否是持久化缓存，从对应的 PersistentCacheManager 中查找
+        CacheConfig config = configs.get(name);
+        if (config != null && config.isPersistent() && StringUtils.isNotBlank(config.getPath())) {
+            PersistentCacheManager pcm = persistentManagers.get(config.getPath());
+            if (pcm != null) {
+                try {
+                    Cache<K, V> pcmCache = pcm.getCache(name, keyType, valueType);
+                    if (pcmCache != null) {
+                        caches.put(name, pcmCache);
+                        return pcmCache;
+                    }
+                } catch (Exception e) {
+                    log.debug("Cache {} not found in PersistentCacheManager", name);
+                }
+            }
+        }
+        // 尝试从内存 CacheManager 获取
         if (manager != null) {
             try {
                 Cache<K, V> managerCache = manager.getCache(name, keyType, valueType);
@@ -170,8 +211,27 @@ public class EhCacheManager implements ClearHandler {
      */
     public void remove(String name) {
         Cache<?, ?> cache = caches.remove(name);
-        if (cache != null && manager != null) {
-            manager.removeCache(name);
+        if (cache == null) {
+            return;
+        }
+        // 先尝试从配置中判断是否是持久化缓存
+        CacheConfig config = configs.get(name);
+        if (config != null && config.isPersistent() && StringUtils.isNotBlank(config.getPath())) {
+            // 从对应的持久化 CacheManager 中移除
+            PersistentCacheManager pcm = persistentManagers.get(config.getPath());
+            if (pcm != null) {
+                try {
+                    pcm.removeCache(name);
+                } catch (Exception e) {
+                    log.warn("Failed to remove persistent cache '{}': {}", name, e.getMessage());
+                }
+            }
+        } else if (manager != null) {
+            try {
+                manager.removeCache(name);
+            } catch (Exception e) {
+                log.warn("Failed to remove cache '{}': {}", name, e.getMessage());
+            }
         }
     }
 
@@ -205,7 +265,8 @@ public class EhCacheManager implements ClearHandler {
                 }
             }
         }
-        log.info("Cleared all caches, total: {}", caches.size());
+        if (log.isDebugEnabled())
+            log.debug("Cleared all caches, total: {}", caches.size());
     }
 
     /**
@@ -257,6 +318,37 @@ public class EhCacheManager implements ClearHandler {
      */
     public Set<String> getAllInstanceNames() {
         return caches.keySet();
+    }
+
+    /**
+     * 获取或创建指定路径对应的持久化 CacheManager
+     * 同一个路径共享同一个 PersistentCacheManager
+     *
+     * @param path 磁盘持久化路径
+     * @return PersistentCacheManager 实例
+     */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private PersistentCacheManager getOrCreatePersistentManager(String path) {
+        return persistentManagers.computeIfAbsent(path, p -> {
+            File diskDir = new File(p);
+            if (!diskDir.exists()) {
+                boolean created = diskDir.mkdirs();
+                if (created && log.isDebugEnabled()) {
+                    log.debug("Created disk persistence directory: {}", p);
+                }
+            }
+            // 注册 Object.class 的序列化器，解决磁盘持久化时 Object 类型无默认序列化器的问题
+            // 当 cacheNull=true 时 value 类型会被替换为 Object.class 以支持存储 NULL_PLACEHOLDER
+            // PlainJavaSerializer 使用 Java 标准序列化，要求实际存储的对象实现 Serializable 接口
+            // 注意：withSerializer 使用 raw type 会擦除泛型信息，因此需要显式强转 build 的返回值
+            PersistentCacheManager pcm = (PersistentCacheManager) CacheManagerBuilder.newCacheManagerBuilder()
+                    .with(CacheManagerBuilder.persistence(diskDir))
+                    .withSerializer(Object.class, (Class) PlainJavaSerializer.class)
+                    .build(true);
+            if (log.isDebugEnabled())
+                log.debug("Created PersistentCacheManager for path: {}", p);
+            return pcm;
+        });
     }
 
     /**

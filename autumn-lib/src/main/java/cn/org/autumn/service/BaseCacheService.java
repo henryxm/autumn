@@ -18,6 +18,7 @@ import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 @Slf4j
@@ -28,6 +29,18 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
 
     static final Map<String, CacheConfig> configs = new ConcurrentHashMap<>();
 
+    /**
+     * 标记该实体类型是否有数据被缓存过
+     * <p>
+     * 使用 volatile 确保多线程可见性，读取无需同步，开销极低。
+     * 当 getCache / getListCache 等方法被调用时设为 true；
+     * 当 clearCacheComplete 清空所有缓存时重置为 false。
+     * <p>
+     * 优化原理：大多数实体类型从未被缓存，delete / update 操作无需每次
+     * 都调用 removeCacheByEntity 进行反射解析与缓存删除。
+     */
+    private volatile boolean cached = false;
+
     public long getCacheExpire() {
         return 10;
     }
@@ -36,12 +49,60 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         return 10;
     }
 
+    public <X> long getCacheExpire(Class<X> clazz) {
+        return 10;
+    }
+
     public <X> long getCacheExpire(Class<X> clazz, String naming) {
         return 10;
     }
 
-    public <X> long getCacheExpire(Class<X> clazz) {
-        return 10;
+    public long getRedisExpire() {
+        return 3 * getCacheExpire();
+    }
+
+    public long getRedisExpire(String naming) {
+        return 3 * getCacheExpire(naming);
+    }
+
+    public <X> long getRedisExpire(Class<X> clazz) {
+        return 3 * getCacheExpire(clazz);
+    }
+
+    public <X> long getRedisExpire(Class<X> clazz, String naming) {
+        return 3 * getCacheExpire(clazz, naming);
+    }
+
+    public long getCacheMax() {
+        return 1000L;
+    }
+
+    public long getCacheMax(String naming) {
+        return 1000L;
+    }
+
+    public <X> long getCacheMax(Class<X> clazz) {
+        return 1000L;
+    }
+
+    public <X> long getCacheMax(Class<X> clazz, String naming) {
+        return 1000L;
+    }
+
+    public TimeUnit getCacheUnit() {
+        return TimeUnit.MINUTES;
+    }
+
+    public TimeUnit getCacheUnit(String naming) {
+        return TimeUnit.MINUTES;
+    }
+
+    public <X> TimeUnit getCacheUnit(Class<X> clazz) {
+        return TimeUnit.MINUTES;
+    }
+
+    public <X> TimeUnit getCacheUnit(Class<X> clazz, String naming) {
+        return TimeUnit.MINUTES;
     }
 
     public boolean isCacheNull() {
@@ -58,6 +119,38 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
 
     public <X> boolean isCacheNull(Class<X> clazz, String naming) {
         return false;
+    }
+
+    public boolean isCachePersistent() {
+        return false;
+    }
+
+    public boolean isCachePersistent(String naming) {
+        return false;
+    }
+
+    public <X> boolean isCachePersistent(Class<X> clazz) {
+        return false;
+    }
+
+    public <X> boolean isCachePersistent(Class<X> clazz, String naming) {
+        return false;
+    }
+
+    public String getCachePath() {
+        return System.getProperty("user.home") + "/ehcache";
+    }
+
+    public String getCachePath(String naming) {
+        return getCachePath();
+    }
+
+    public <X> String getCachePath(Class<X> clazz) {
+        return getCachePath();
+    }
+
+    public <X> String getCachePath(Class<X> clazz, String naming) {
+        return getCachePath();
     }
 
     /**
@@ -178,11 +271,40 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         return clazz.getSimpleName().replace("Entity", "").toLowerCase();
     }
 
+    /**
+     * 包装 cacheService.compute 调用，并标记该实体类型已有缓存数据
+     * <p>
+     * 所有 getCache / getListCache 系列方法统一通过此方法调用 compute，
+     * 从而在首次缓存数据时自动设置 hasCachedData = true。
+     * delete / update 操作可据此标记跳过不必要的 removeCache 调用。
+     *
+     * @param cacheKey 缓存 key
+     * @param supplier 值提供者
+     * @param config   缓存配置
+     * @param <R>      返回值类型
+     * @return 缓存值
+     */
+    private <R> R compute(Object cacheKey, Supplier<R> supplier, CacheConfig config) {
+        if (!cached) {
+            cached = true;
+        }
+        return cacheService.compute(cacheKey, supplier, config);
+    }
+
+    /**
+     * 检查该实体类型是否有数据被缓存过
+     *
+     * @return 如果有缓存数据返回 true，否则返回 false
+     */
+    protected boolean isCached() {
+        return cached;
+    }
+
     public CacheConfig getConfig() {
         String name = getEntityBaseName();
         CacheConfig config = configs.get(name);
         if (null == config) {
-            config = CacheConfig.builder().name(name).key(getCacheKeyType()).value(getModelClass()).expire(getCacheExpire()).Null(isCacheNull()).build();
+            config = CacheConfig.builder().name(name).key(getCacheKeyType()).value(getModelClass()).expire(getCacheExpire()).redis(getRedisExpire()).max(getCacheMax()).unit(getCacheUnit()).Null(isCacheNull()).persistent(isCachePersistent()).path(getCachePath()).build();
             configs.put(name, config);
         }
         return config;
@@ -201,7 +323,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         name += clazz.getSimpleName().toLowerCase();
         CacheConfig config = configs.get(name);
         if (null == config) {
-            config = CacheConfig.builder().name(name).key(getCacheKeyType()).value(clazz).expire(getCacheExpire(clazz)).Null(isCacheNull(clazz)).build();
+            config = CacheConfig.builder().name(name).key(getCacheKeyType()).value(clazz).expire(getCacheExpire(clazz)).redis(getRedisExpire(clazz)).max(getCacheMax(clazz)).unit(getCacheUnit(clazz)).Null(isCacheNull(clazz)).persistent(isCachePersistent(clazz)).path(getCachePath(clazz)).build();
             configs.put(name, config);
         }
         return config;
@@ -226,7 +348,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         name = name.toLowerCase() + clazz.getSimpleName().toLowerCase();
         CacheConfig config = configs.get(name);
         if (null == config) {
-            config = CacheConfig.builder().name(name).key(getCacheKeyType(naming)).value(clazz).expire(getCacheExpire(clazz, naming)).Null(isCacheNull(clazz, naming)).build();
+            config = CacheConfig.builder().name(name).key(getCacheKeyType(naming)).value(clazz).expire(getCacheExpire(clazz, naming)).redis(getRedisExpire(clazz, naming)).max(getCacheMax(clazz, naming)).unit(getCacheUnit(clazz, naming)).Null(isCacheNull(clazz, naming)).persistent(isCachePersistent(clazz, naming)).path(getCachePath(clazz, naming)).build();
             configs.put(name, config);
         }
         return config;
@@ -249,7 +371,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         name = name.toLowerCase();
         CacheConfig config = configs.get(name);
         if (null == config) {
-            config = CacheConfig.builder().name(name).key(getCacheKeyType(naming)).value(getModelClass()).expire(getCacheExpire(naming)).Null(isCacheNull(naming)).build();
+            config = CacheConfig.builder().name(name).key(getCacheKeyType(naming)).value(getModelClass()).expire(getCacheExpire(naming)).redis(getRedisExpire(naming)).max(getCacheMax(naming)).unit(getCacheUnit(naming)).Null(isCacheNull(naming)).persistent(isCachePersistent(naming)).path(getCachePath(naming)).build();
             configs.put(name, config);
         }
         return config;
@@ -265,7 +387,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         String name = getEntityBaseName() + "list";
         CacheConfig config = configs.get(name);
         if (null == config) {
-            config = CacheConfig.builder().name(name).key(getCacheKeyType()).value(List.class).expire(getCacheExpire()).Null(isCacheNull()).build();
+            config = CacheConfig.builder().name(name).key(getCacheKeyType()).value(List.class).expire(getCacheExpire()).redis(getRedisExpire()).max(getCacheMax()).unit(getCacheUnit()).Null(isCacheNull()).persistent(isCachePersistent()).path(getCachePath()).build();
             configs.put(name, config);
         }
         return config;
@@ -284,7 +406,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         name += clazz.getSimpleName().toLowerCase();
         CacheConfig config = configs.get(name);
         if (null == config) {
-            config = CacheConfig.builder().name(name).key(getCacheKeyType()).value(List.class).expire(getCacheExpire(clazz)).Null(isCacheNull(clazz)).build();
+            config = CacheConfig.builder().name(name).key(getCacheKeyType()).value(List.class).expire(getCacheExpire(clazz)).redis(getRedisExpire(clazz)).max(getCacheMax(clazz)).unit(getCacheUnit(clazz)).Null(isCacheNull(clazz)).persistent(isCachePersistent(clazz)).path(getCachePath(clazz)).build();
             configs.put(name, config);
         }
         return config;
@@ -308,7 +430,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         name = name.toLowerCase() + clazz.getSimpleName().toLowerCase();
         CacheConfig config = configs.get(name);
         if (null == config) {
-            config = CacheConfig.builder().name(name).key(getCacheKeyType(naming)).value(List.class).expire(getCacheExpire(clazz, naming)).Null(isCacheNull(clazz, naming)).build();
+            config = CacheConfig.builder().name(name).key(getCacheKeyType(naming)).value(List.class).expire(getCacheExpire(clazz, naming)).redis(getRedisExpire(clazz, naming)).max(getCacheMax(clazz, naming)).unit(getCacheUnit(clazz, naming)).Null(isCacheNull(clazz, naming)).persistent(isCachePersistent(clazz, naming)).path(getCachePath(clazz, naming)).build();
             configs.put(name, config);
         }
         return config;
@@ -329,7 +451,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         name = name.toLowerCase();
         CacheConfig config = configs.get(name);
         if (null == config) {
-            config = CacheConfig.builder().name(name).key(getCacheKeyType(naming)).value(List.class).expire(getCacheExpire(naming)).Null(isCacheNull(naming)).build();
+            config = CacheConfig.builder().name(name).key(getCacheKeyType(naming)).value(List.class).expire(getCacheExpire(naming)).redis(getRedisExpire(naming)).max(getCacheMax(naming)).unit(getCacheUnit(naming)).Null(isCacheNull(naming)).persistent(isCachePersistent(naming)).path(getCachePath(naming)).build();
             configs.put(name, config);
         }
         return config;
@@ -388,7 +510,11 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
     }
 
     /**
-     * 获取所有@Caches注解中定义的复合key缓存配置
+     * 获取所有复合key缓存配置（合并@Cache和@Caches注解）
+     * <p>
+     * 优先级规则：单个@Cache注解优先于@Caches中同名的配置。
+     * 1. 优先加入单个@Cache注解（向前兼容，name为空）
+     * 2. 再补充@Caches注解中的配置，如果name已存在则不覆盖（以single为准）
      *
      * @param clazz 实体类
      * @return Cache注解数组，key为name属性值，value为Cache注解
@@ -398,23 +524,20 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         if (clazz == null) {
             return compositeCaches;
         }
-        // 检查@Caches注解
+        // 1. 优先查找单个@Cache注解（向前兼容），以single为准
+        Cache singleCache = findSingleCacheAnnotation(clazz);
+        if (singleCache != null) {
+            compositeCaches.put("", singleCache);
+        }
+        // 2. 补充@Caches注解中的配置
+        // 如果@Caches中有name与singleCache相同的配置（特别是name为空时），以single为准，不覆盖
         Caches caches = findCachesAnnotation(clazz);
         if (caches != null) {
             for (Cache cache : caches.value()) {
-                if (cache.value().length > 0) {
-                    String name = cache.name();
-                    if (!name.isEmpty()) {
-                        compositeCaches.put(name, cache);
-                    }
+                if (cache.value().length > 0 && !compositeCaches.containsKey(cache.name())) {
+                    compositeCaches.put(cache.name(), cache);
                 }
             }
-        }
-        // 检查单个@Cache注解（向前兼容，不带name）
-        Cache singleCache = findSingleCacheAnnotation(clazz);
-        if (singleCache != null) {
-            // 单个@Cache注解不带name，使用空字符串作为key
-            compositeCaches.put("", singleCache);
         }
         return compositeCaches;
     }
@@ -616,7 +739,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             return null;
         }
         // 调用单参数版本的 getEntity
-        return cacheService.compute(cacheKey, () -> getEntity(key), getConfig());
+        return compute(cacheKey, () -> getEntity(key), getConfig());
     }
 
     /**
@@ -643,7 +766,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         if (cacheKey == null) {
             return null;
         }
-        return cacheService.compute(cacheKey, supplier, getConfig());
+        return compute(cacheKey, supplier, getConfig());
     }
 
     /**
@@ -673,7 +796,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             return null;
         }
         // 使用自定义类型的配置进行缓存，确保与原始实体缓存分离
-        return cacheService.compute(cacheKey, () -> getEntity(clazz, key), getConfig(clazz));
+        return compute(cacheKey, () -> getEntity(clazz, key), getConfig(clazz));
     }
 
     /**
@@ -702,7 +825,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         if (cacheKey == null) {
             return null;
         }
-        return cacheService.compute(cacheKey, supplier, getConfig(clazz));
+        return compute(cacheKey, supplier, getConfig(clazz));
     }
 
     /**
@@ -737,7 +860,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             return null;
         }
         // 调用可变参数版本的 getEntity
-        return cacheService.compute(cacheKey, () -> getEntity(keys), getConfig());
+        return compute(cacheKey, () -> getEntity(keys), getConfig());
     }
 
     /**
@@ -772,7 +895,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             return null;
         }
         // 使用自定义类型的配置进行缓存
-        return cacheService.compute(cacheKey, () -> getEntity(clazz, keys), getConfig(clazz));
+        return compute(cacheKey, () -> getEntity(clazz, keys), getConfig(clazz));
     }
 
 
@@ -801,7 +924,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             return null;
         }
         // 使用name对应的配置和getEntity方法
-        return cacheService.compute(cacheKey, () -> getNameEntity(name, key), getConfig(name));
+        return compute(cacheKey, () -> getNameEntity(name, key), getConfig(name));
     }
 
     /**
@@ -828,7 +951,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         if (cacheKey == null) {
             return null;
         }
-        return cacheService.compute(cacheKey, supplier, getConfig(name));
+        return compute(cacheKey, supplier, getConfig(name));
     }
 
     /**
@@ -858,7 +981,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             return null;
         }
         // 使用自定义类型和name对应的配置
-        return cacheService.compute(cacheKey, () -> getNameEntity(clazz, name, key), getConfig(clazz, name));
+        return compute(cacheKey, () -> getNameEntity(clazz, name, key), getConfig(clazz, name));
     }
 
     /**
@@ -888,7 +1011,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         if (cacheKey == null) {
             return null;
         }
-        return cacheService.compute(cacheKey, supplier, getConfig(clazz, name));
+        return compute(cacheKey, supplier, getConfig(clazz, name));
     }
 
     /**
@@ -919,7 +1042,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             return null;
         }
         // 使用name对应的配置和getEntity方法
-        return cacheService.compute(cacheKey, () -> getNameEntity(name, keys), getConfig(name));
+        return compute(cacheKey, () -> getNameEntity(name, keys), getConfig(name));
     }
 
     /**
@@ -952,7 +1075,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             return null;
         }
         // 使用自定义类型和name对应的配置
-        return cacheService.compute(cacheKey, () -> getNameEntity(clazz, name, keys), getConfig(clazz, name));
+        return compute(cacheKey, () -> getNameEntity(clazz, name, keys), getConfig(clazz, name));
     }
 
     /**
@@ -978,7 +1101,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             return null;
         }
         // 调用单参数版本的 getListEntity
-        return cacheService.compute(cacheKey, () -> getListEntity(key), getListConfig());
+        return compute(cacheKey, () -> getListEntity(key), getListConfig());
     }
 
     /**
@@ -1004,7 +1127,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         if (cacheKey == null) {
             return null;
         }
-        return cacheService.compute(cacheKey, supplier, getListConfig());
+        return compute(cacheKey, supplier, getListConfig());
     }
 
     /**
@@ -1032,7 +1155,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             return null;
         }
         // 使用自定义类型的 List 配置进行缓存
-        return cacheService.compute(cacheKey, () -> getListEntity(clazz, key), getListConfig(clazz));
+        return compute(cacheKey, () -> getListEntity(clazz, key), getListConfig(clazz));
     }
 
     /**
@@ -1061,7 +1184,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         if (cacheKey == null) {
             return null;
         }
-        return cacheService.compute(cacheKey, supplier, getListConfig(clazz));
+        return compute(cacheKey, supplier, getListConfig(clazz));
     }
 
     /**
@@ -1091,7 +1214,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             return null;
         }
         // 调用可变参数版本的 getListEntity
-        return cacheService.compute(cacheKey, () -> getListEntity(keys), getListConfig());
+        return compute(cacheKey, () -> getListEntity(keys), getListConfig());
     }
 
     /**
@@ -1122,7 +1245,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             return null;
         }
         // 使用自定义类型的 List 配置进行缓存
-        return cacheService.compute(cacheKey, () -> getListEntity(clazz, keys), getListConfig(clazz));
+        return compute(cacheKey, () -> getListEntity(clazz, keys), getListConfig(clazz));
     }
 
     /**
@@ -1149,7 +1272,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             return null;
         }
         // 使用name对应的配置和getNameListEntity方法
-        return cacheService.compute(cacheKey, () -> getNameListEntity(name, key), getListConfig(name));
+        return compute(cacheKey, () -> getNameListEntity(name, key), getListConfig(name));
     }
 
     /**
@@ -1176,7 +1299,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         if (cacheKey == null) {
             return null;
         }
-        return cacheService.compute(cacheKey, supplier, getListConfig(name));
+        return compute(cacheKey, supplier, getListConfig(name));
     }
 
     /**
@@ -1205,7 +1328,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             return null;
         }
         // 使用自定义类型和name对应的 List 配置
-        return cacheService.compute(cacheKey, () -> getNameListEntity(clazz, name, key), getListConfig(clazz, name));
+        return compute(cacheKey, () -> getNameListEntity(clazz, name, key), getListConfig(clazz, name));
     }
 
     /**
@@ -1235,7 +1358,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         if (cacheKey == null) {
             return null;
         }
-        return cacheService.compute(cacheKey, supplier, getListConfig(clazz, name));
+        return compute(cacheKey, supplier, getListConfig(clazz, name));
     }
 
     /**
@@ -1266,7 +1389,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             return null;
         }
         // 使用name对应的配置和getNameListEntity方法
-        return cacheService.compute(cacheKey, () -> getNameListEntity(name, keys), getListConfig(name));
+        return compute(cacheKey, () -> getNameListEntity(name, keys), getListConfig(name));
     }
 
     /**
@@ -1298,7 +1421,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             return null;
         }
         // 使用自定义类型和name对应的 List 配置
-        return cacheService.compute(cacheKey, () -> getNameListEntity(clazz, name, keys), getListConfig(clazz, name));
+        return compute(cacheKey, () -> getNameListEntity(clazz, name, keys), getListConfig(clazz, name));
     }
 
     /**
@@ -1361,9 +1484,22 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         if (clazz == null) {
             return null;
         }
-        // 如果name为空，查找单个@Cache注解（向前兼容）
         if (name == null || name.isEmpty()) {
-            return findSingleCacheAnnotation(clazz);
+            // 优先查找单个@Cache注解（向前兼容），以single为准
+            Cache singleCache = findSingleCacheAnnotation(clazz);
+            if (singleCache != null) {
+                return singleCache;
+            }
+            // 回退：进一步分析@Caches注解，查找其中name为空的复合缓存配置
+            Caches caches = findCachesAnnotation(clazz);
+            if (caches != null) {
+                for (Cache cache : caches.value()) {
+                    if (cache.value().length > 0 && cache.name().isEmpty()) {
+                        return cache;
+                    }
+                }
+            }
+            return null;
         }
         // 如果name不为空，查找@Caches注解中指定name的@Cache注解
         return findCacheInCaches(clazz, name);
@@ -2699,6 +2835,9 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
      * @param key 缓存 key
      */
     private void removeAllCacheByKey(Object key) {
+        if (!cached) {
+            return;
+        }
         removeAllCacheByNameAndKey("", key);
     }
 
@@ -2767,7 +2906,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
      * 4. 多个不同name的字段缓存（会删除所有匹配的缓存）
      */
     protected void removeCacheByEntity(T entity) {
-        if (entity == null) {
+        if (entity == null || !cached) {
             return;
         }
         try {
@@ -3076,6 +3215,8 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
                 }
             }
         }
+        // 重置缓存数据标记，所有缓存已清空
+        cached = false;
     }
 
     /**

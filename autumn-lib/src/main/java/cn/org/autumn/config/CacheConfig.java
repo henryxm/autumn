@@ -10,7 +10,7 @@ import java.util.concurrent.TimeUnit;
  * 用于定义缓存的元数据信息
  */
 @Getter
-@Builder
+@Builder(toBuilder = true)
 public class CacheConfig {
     /**
      * 缓存名称
