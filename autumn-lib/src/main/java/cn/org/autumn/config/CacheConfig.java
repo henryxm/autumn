@@ -74,8 +74,14 @@ public class CacheConfig {
      * 在使用 Builder 构建后调用此方法进行验证
      */
     public void validate() {
-        if (name == null || key == null || value == null) {
-            throw new IllegalArgumentException("cacheName, keyType, and valueType are required");
+        if (name == null) {
+            throw new IllegalArgumentException("cacheName are required");
+        }
+        if (key == null) {
+            throw new IllegalArgumentException("keyType are required");
+        }
+        if (value == null) {
+            throw new IllegalArgumentException("valueType are required");
         }
     }
 }
