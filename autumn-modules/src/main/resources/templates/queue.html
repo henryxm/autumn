@@ -827,6 +827,12 @@
         </div>
         <div class="stat-item">
             <div>
+                <div class="stat-value" id="statTotalProcessed">0</div>
+                <div class="stat-label">已处理总数</div>
+            </div>
+        </div>
+        <div class="stat-item">
+            <div>
                 <div class="stat-value" id="statRedisStatus">-</div>
                 <div class="stat-label">Redis状态</div>
             </div>
@@ -861,6 +867,7 @@
                         <div class="btn-group">
                             <button class="btn btn-primary btn-sm" onclick="showSendModal()">发送消息</button>
                             <button class="btn btn-info btn-sm" onclick="refreshMessages()">刷新</button>
+                            <button class="btn btn-secondary btn-sm" onclick="showEditConfigModal()">修改配置</button>
                             <button class="btn btn-warning btn-sm" id="btnConsumer" onclick="toggleConsumer()">启动消费者</button>
                             <button class="btn btn-danger btn-sm" onclick="clearQueue()">清空队列</button>
                         </div>
@@ -869,6 +876,7 @@
                     <div class="tabs">
                         <div class="tab active" data-tab="info">队列信息</div>
                         <div class="tab" data-tab="messages">消息列表</div>
+                        <div class="tab" data-tab="history">历史消息</div>
                         <div class="tab" data-tab="deadletter">死信队列</div>
                     </div>
 
@@ -895,6 +903,33 @@
                             </table>
                         </div>
                         <div class="pagination" id="messagePagination"></div>
+                    </div>
+
+                    <!-- 历史消息 -->
+                    <div class="tab-content" id="tabHistory">
+                        <div class="toolbar">
+                            <span style="font-size: 14px; color: #666;">已消费的历史消息记录（最新在前）</span>
+                            <div class="btn-group">
+                                <button class="btn btn-info btn-sm" onclick="loadHistoryMessages()">刷新</button>
+                                <button class="btn btn-danger btn-sm" onclick="clearHistoryMessages()">清空历史</button>
+                            </div>
+                        </div>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                <tr>
+                                    <th>消息ID</th>
+                                    <th>消息内容</th>
+                                    <th>处理结果</th>
+                                    <th>重试次数</th>
+                                    <th>处理时间</th>
+                                    <th>操作</th>
+                                </tr>
+                                </thead>
+                                <tbody id="historyList"></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="historyPagination"></div>
                     </div>
 
                     <!-- 死信队列 -->
@@ -1014,6 +1049,99 @@
     </div>
 </div>
 
+<!-- 修改配置弹窗 -->
+<div class="modal" id="editConfigModal">
+    <div class="modal-content" style="max-width: 650px;">
+        <div class="modal-header">
+            <h3>修改队列配置</h3>
+            <button class="modal-close" onclick="hideModal('editConfigModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>队列名称</label>
+                <input type="text" class="form-control" id="editConfigName" readonly style="background: #f8f9fa;">
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div class="form-group">
+                    <label>最大容量 (capacity)</label>
+                    <input type="number" class="form-control" id="editCapacity" min="0" placeholder="0表示无限制">
+                </div>
+                <div class="form-group">
+                    <label>最大重试次数 (retries)</label>
+                    <input type="number" class="form-control" id="editRetries" min="0">
+                </div>
+                <div class="form-group">
+                    <label>消费超时时间 (timeout)</label>
+                    <input type="number" class="form-control" id="editTimeout" min="1">
+                </div>
+                <div class="form-group">
+                    <label>超时时间单位</label>
+                    <select class="form-control" id="editTimeoutUnit">
+                        <option value="MILLISECONDS">毫秒</option>
+                        <option value="SECONDS">秒</option>
+                        <option value="MINUTES">分钟</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>消息过期时间 (秒)</label>
+                    <input type="number" class="form-control" id="editExpire" min="0" placeholder="0表示永不过期">
+                </div>
+                <div class="form-group">
+                    <label>并发消费者数量</label>
+                    <input type="number" class="form-control" id="editConcurrency" min="1" max="64">
+                </div>
+                <div class="form-group">
+                    <label>历史消息保留数量</label>
+                    <input type="number" class="form-control" id="editHistory" min="0" placeholder="0表示不保留">
+                </div>
+                <div class="form-group">
+                    <label>空闲超时时间 (idleTime)</label>
+                    <input type="number" class="form-control" id="editIdleTime" min="1">
+                </div>
+                <div class="form-group">
+                    <label>空闲超时单位</label>
+                    <select class="form-control" id="editIdleUnit">
+                        <option value="SECONDS">秒</option>
+                        <option value="MINUTES">分钟</option>
+                        <option value="HOURS">小时</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="checkbox" id="editDeadLetter"> 启用死信队列
+                </label>
+            </div>
+            <div class="form-group">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="checkbox" id="editAuto"> 启用自动启动/停止消费者
+                </label>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="hideModal('editConfigModal')">取消</button>
+            <button class="btn btn-primary" onclick="saveConfig()">保存配置</button>
+        </div>
+    </div>
+</div>
+
+<!-- 配置详情弹窗 -->
+<div class="modal" id="configDetailModal">
+    <div class="modal-content" style="max-width: 700px;">
+        <div class="modal-header">
+            <h3>队列配置详情</h3>
+            <button class="modal-close" onclick="hideModal('configDetailModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div id="configDetailContent"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="hideModal('configDetailModal')">关闭</button>
+            <button class="btn btn-primary" onclick="hideModal('configDetailModal'); showEditConfigModal();">编辑配置</button>
+        </div>
+    </div>
+</div>
+
 <script>
     //<#noparse>
     const API_BASE = '/sys/queue';
@@ -1044,6 +1172,8 @@
 
                 if (this.dataset.tab === 'messages') {
                     loadMessages();
+                } else if (this.dataset.tab === 'history') {
+                    loadHistoryMessages();
                 } else if (this.dataset.tab === 'deadletter') {
                     loadDeadLetterMessages();
                 }
@@ -1061,6 +1191,7 @@
                 document.getElementById('statTotalQueues').textContent = stats.totalQueues || 0;
                 document.getElementById('statTotalMessages').textContent = stats.totalMessages || 0;
                 document.getElementById('statRunningConsumers').textContent = stats.runningConsumers || 0;
+                document.getElementById('statTotalProcessed').textContent = stats.totalProcessed || 0;
                 document.getElementById('statRedisStatus').textContent = stats.redisEnabled ? '已连接' : '未连接';
                 document.getElementById('statRedisStatus').style.color = stats.redisEnabled ? '#28a745' : '#dc3545';
             }
@@ -1109,6 +1240,7 @@
     function selectQueue(name) {
         currentQueue = name;
         currentPage = 1;
+        historyPage = 1;
         document.getElementById('welcomePanel').style.display = 'none';
         document.getElementById('queueDetail').style.display = 'block';
         document.getElementById('currentQueueName').textContent = name;
@@ -1154,6 +1286,10 @@
                 <div class="info-value">${info.size}</div>
             </div>
             <div class="info-card">
+                <div class="info-label">已处理总数</div>
+                <div class="info-value" style="color: #11998e;">${info.processedCount || 0}</div>
+            </div>
+            <div class="info-card">
                 <div class="info-label">消费者状态</div>
                 <div class="info-value">
                     <span class="badge ${info.consumerRunning ? 'badge-success' : 'badge-warning'}">
@@ -1170,8 +1306,36 @@
                 <div class="info-value">${info.maxRetries}</div>
             </div>
             <div class="info-card">
+                <div class="info-label">消费超时</div>
+                <div class="info-value">${info.timeout} ${getUnitLabel(info.timeoutUnit)}</div>
+            </div>
+            <div class="info-card">
+                <div class="info-label">消息过期时间</div>
+                <div class="info-value">${info.expire ? info.expire + ' 秒' : '永不过期'}</div>
+            </div>
+            <div class="info-card">
+                <div class="info-label">并发消费者数</div>
+                <div class="info-value">${info.concurrency || 1}</div>
+            </div>
+            <div class="info-card">
+                <div class="info-label">空闲超时</div>
+                <div class="info-value">${info.idleTime || 60} ${getUnitLabel(info.idleUnit)}</div>
+            </div>
+            <div class="info-card">
+                <div class="info-label">自动启停</div>
+                <div class="info-value">
+                    <span class="badge ${info.auto ? 'badge-success' : 'badge-secondary'}">
+                        ${info.auto ? '已启用' : '未启用'}
+                    </span>
+                </div>
+            </div>
+            <div class="info-card">
                 <div class="info-label">消息类型</div>
                 <div class="info-value">${info.messageType}</div>
+            </div>
+            <div class="info-card">
+                <div class="info-label">历史消息</div>
+                <div class="info-value">${info.historyCount || 0} / ${info.history || 100}</div>
             </div>
             <div class="info-card">
                 <div class="info-label">死信队列</div>
@@ -1181,9 +1345,9 @@
             '<span class="badge badge-secondary">未启用</span>'}
                 </div>
             </div>
-            <div class="info-card">
-                <div class="info-label">消费超时</div>
-                <div class="info-value">${info.timeout} ${info.timeoutUnit}</div>
+            <div class="info-card" style="cursor:pointer;" onclick="showConfigDetail()">
+                <div class="info-label">查看完整配置</div>
+                <div class="info-value" style="color: #3498db; font-size: 13px;">点击查看详情 &rarr;</div>
             </div>
         `;
     }
@@ -1527,6 +1691,301 @@
             .replace(/: (\d+)/g, ': <span class="json-number">$1</span>')
             .replace(/: (true|false)/g, ': <span class="json-boolean">$1</span>')
             .replace(/: (null)/g, ': <span class="json-null">$1</span>');
+    }
+
+    function getUnitLabel(unit) {
+        const labels = {
+            'MILLISECONDS': '毫秒',
+            'SECONDS': '秒',
+            'MINUTES': '分钟',
+            'HOURS': '小时',
+            'DAYS': '天'
+        };
+        return labels[unit] || unit || '秒';
+    }
+
+    // 显示修改配置弹窗
+    async function showEditConfigModal() {
+        if (!currentQueue) {
+            showToast('请先选择一个队列', 'error');
+            return;
+        }
+        try {
+            const res = await fetch(`${API_BASE}/config/${encodeURIComponent(currentQueue)}`);
+            const data = await res.json();
+            if (data.code === 0) {
+                const config = data.config;
+                document.getElementById('editConfigName').value = config.name;
+                document.getElementById('editCapacity').value = config.capacity;
+                document.getElementById('editRetries').value = config.retries;
+                document.getElementById('editTimeout').value = config.timeout;
+                document.getElementById('editTimeoutUnit').value = config.timeoutUnit || 'SECONDS';
+                document.getElementById('editExpire').value = config.expire;
+                document.getElementById('editConcurrency').value = config.concurrency;
+                document.getElementById('editHistory').value = config.history != null ? config.history : 100;
+                document.getElementById('editIdleTime').value = config.idleTime;
+                document.getElementById('editIdleUnit').value = config.idleUnit || 'SECONDS';
+                document.getElementById('editDeadLetter').checked = config.deadLetter;
+                document.getElementById('editAuto').checked = config.auto;
+                showModal('editConfigModal');
+            } else {
+                showToast(data.msg || '获取配置失败', 'error');
+            }
+        } catch (e) {
+            showToast('获取配置失败', 'error');
+        }
+    }
+
+    // 保存配置
+    async function saveConfig() {
+        const name = document.getElementById('editConfigName').value;
+        const params = {
+            capacity: parseInt(document.getElementById('editCapacity').value) || 0,
+            retries: parseInt(document.getElementById('editRetries').value) || 3,
+            timeout: parseInt(document.getElementById('editTimeout').value) || 30,
+            timeoutUnit: document.getElementById('editTimeoutUnit').value,
+            expire: parseInt(document.getElementById('editExpire').value) || 0,
+            concurrency: parseInt(document.getElementById('editConcurrency').value) || 1,
+            history: parseInt(document.getElementById('editHistory').value) || 0,
+            idleTime: parseInt(document.getElementById('editIdleTime').value) || 60,
+            idleUnit: document.getElementById('editIdleUnit').value,
+            deadLetter: document.getElementById('editDeadLetter').checked,
+            auto: document.getElementById('editAuto').checked
+        };
+
+        try {
+            const res = await fetch(`${API_BASE}/config/update/${encodeURIComponent(name)}`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(params)
+            });
+            const data = await res.json();
+            if (data.code === 0) {
+                showToast('配置更新成功');
+                hideModal('editConfigModal');
+                loadQueueInfo(currentQueue);
+                loadQueueList();
+            } else {
+                showToast(data.msg || '配置更新失败', 'error');
+            }
+        } catch (e) {
+            showToast('配置更新失败', 'error');
+        }
+    }
+
+    // ==================== 历史消息 ====================
+
+    let historyPage = 1;
+    const historyPageSize = 20;
+
+    // 加载历史消息
+    async function loadHistoryMessages() {
+        if (!currentQueue) return;
+
+        const tbody = document.getElementById('historyList');
+        tbody.innerHTML = '<tr><td colspan="6" class="loading">加载中</td></tr>';
+
+        try {
+            const res = await fetch(`${API_BASE}/history/${encodeURIComponent(currentQueue)}?page=${historyPage}&limit=${historyPageSize}`);
+            const data = await res.json();
+            if (data.code === 0) {
+                renderHistoryMessages(data.list || [], data.total);
+            }
+        } catch (e) {
+            tbody.innerHTML = '<tr><td colspan="6">加载失败</td></tr>';
+        }
+    }
+
+    // 渲染历史消息列表
+    function renderHistoryMessages(messages, total) {
+        const tbody = document.getElementById('historyList');
+        if (messages.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:#999;">暂无历史消息</td></tr>';
+            document.getElementById('historyPagination').innerHTML = '';
+            return;
+        }
+
+        tbody.innerHTML = messages.map(msg => `
+            <tr>
+                <td><code style="font-size:12px;background:#f1f3f4;padding:2px 6px;border-radius:4px;">${msg.id ? msg.id.substring(0, 8) + '...' : '-'}</code></td>
+                <td><div class="message-body">${escapeHtml(JSON.stringify(msg.body || msg))}</div></td>
+                <td>
+                    <span class="badge ${msg.success ? 'badge-success' : 'badge-danger'}">
+                        ${msg.success ? '成功' : '失败'}
+                    </span>
+                    ${msg.error ? '<span style="font-size:11px;color:#dc3545;margin-left:4px;" title="' + escapeHtml(msg.error) + '">(!)</span>' : ''}
+                </td>
+                <td>${msg.retry || 0}</td>
+                <td>${formatTime(msg.processedAt)}</td>
+                <td>
+                    <button class="btn btn-info btn-sm" onclick='showMessageDetail(${JSON.stringify(msg).replace(/'/g, "\\'")})'>查看</button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteHistoryMessage('${msg.id}')">删除</button>
+                </td>
+            </tr>
+        `).join('');
+
+        renderHistoryPagination(total);
+    }
+
+    // 渲染历史消息分页
+    function renderHistoryPagination(total) {
+        const totalPages = Math.ceil(total / historyPageSize);
+        const container = document.getElementById('historyPagination');
+
+        if (totalPages <= 1) {
+            container.innerHTML = '';
+            return;
+        }
+
+        let html = `
+            <button ${historyPage === 1 ? 'disabled' : ''} onclick="goToHistoryPage(${historyPage - 1})">上一页</button>
+        `;
+
+        for (let i = 1; i <= totalPages && i <= 10; i++) {
+            html += `<button class="${historyPage === i ? 'active' : ''}" onclick="goToHistoryPage(${i})">${i}</button>`;
+        }
+
+        html += `
+            <button ${historyPage === totalPages ? 'disabled' : ''} onclick="goToHistoryPage(${historyPage + 1})">下一页</button>
+        `;
+
+        container.innerHTML = html;
+    }
+
+    function goToHistoryPage(page) {
+        historyPage = page;
+        loadHistoryMessages();
+    }
+
+    // 删除单条历史消息
+    async function deleteHistoryMessage(messageId) {
+        if (!confirm('确定要删除这条历史消息吗？')) return;
+
+        try {
+            const res = await fetch(`${API_BASE}/history/delete/${encodeURIComponent(currentQueue)}/${encodeURIComponent(messageId)}`, {method: 'POST'});
+            const data = await res.json();
+            if (data.code === 0) {
+                showToast('已删除');
+                loadHistoryMessages();
+            } else {
+                showToast(data.msg || '删除失败', 'error');
+            }
+        } catch (e) {
+            showToast('删除失败', 'error');
+        }
+    }
+
+    // 清空历史消息
+    async function clearHistoryMessages() {
+        if (!confirm(`确定要清空队列 "${currentQueue}" 的所有历史消息吗？`)) return;
+
+        try {
+            const res = await fetch(`${API_BASE}/history/clear/${encodeURIComponent(currentQueue)}`, {method: 'POST'});
+            const data = await res.json();
+            if (data.code === 0) {
+                showToast(`已清空 ${data.cleared} 条历史消息`);
+                loadHistoryMessages();
+                loadQueueInfo(currentQueue);
+            } else {
+                showToast(data.msg || '清空失败', 'error');
+            }
+        } catch (e) {
+            showToast('清空失败', 'error');
+        }
+    }
+
+    // 显示配置详情
+    async function showConfigDetail() {
+        if (!currentQueue) return;
+        try {
+            const res = await fetch(`${API_BASE}/config/${encodeURIComponent(currentQueue)}`);
+            const data = await res.json();
+            if (data.code === 0) {
+                const config = data.config;
+                const content = document.getElementById('configDetailContent');
+                content.innerHTML = `
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div class="info-card">
+                            <div class="info-label">队列名称</div>
+                            <div class="info-value" style="word-break:break-all;">${config.name}</div>
+                        </div>
+                        <div class="info-card">
+                            <div class="info-label">队列类型</div>
+                            <div class="info-value">${getTypeLabel(config.queueType)}</div>
+                        </div>
+                        <div class="info-card">
+                            <div class="info-label">最大容量</div>
+                            <div class="info-value">${config.capacity || '无限制'}</div>
+                        </div>
+                        <div class="info-card">
+                            <div class="info-label">消费超时时间</div>
+                            <div class="info-value">${config.timeout} ${getUnitLabel(config.timeoutUnit)}</div>
+                        </div>
+                        <div class="info-card">
+                            <div class="info-label">消息过期时间</div>
+                            <div class="info-value">${config.expire ? config.expire + ' 秒' : '永不过期'}</div>
+                        </div>
+                        <div class="info-card">
+                            <div class="info-label">最大重试次数</div>
+                            <div class="info-value">${config.retries}</div>
+                        </div>
+                        <div class="info-card">
+                            <div class="info-label">并发消费者数量</div>
+                            <div class="info-value">${config.concurrency}</div>
+                        </div>
+                        <div class="info-card">
+                            <div class="info-label">空闲超时时间</div>
+                            <div class="info-value">${config.idleTime} ${getUnitLabel(config.idleUnit)}</div>
+                        </div>
+                        <div class="info-card">
+                            <div class="info-label">自动启停消费者</div>
+                            <div class="info-value">
+                                <span class="badge ${config.auto ? 'badge-success' : 'badge-secondary'}">
+                                    ${config.auto ? '已启用' : '未启用'}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="info-card">
+                            <div class="info-label">历史消息保留数量</div>
+                            <div class="info-value">${config.history != null ? config.history : 100}</div>
+                        </div>
+                        <div class="info-card">
+                            <div class="info-label">死信队列</div>
+                            <div class="info-value">
+                                <span class="badge ${config.deadLetter ? 'badge-info' : 'badge-secondary'}">
+                                    ${config.deadLetter ? '已启用' : '未启用'}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="info-card">
+                            <div class="info-label">死信队列名称</div>
+                            <div class="info-value" style="font-size:12px;word-break:break-all;">${config.deadLetterQueue || '-'}</div>
+                        </div>
+                        <div class="info-card">
+                            <div class="info-label">持久化</div>
+                            <div class="info-value">
+                                <span class="badge ${config.persistent ? 'badge-success' : 'badge-secondary'}">
+                                    ${config.persistent ? '已启用' : '未启用'}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="info-card">
+                            <div class="info-label">消息类型</div>
+                            <div class="info-value">${config.messageType}</div>
+                        </div>
+                        <div class="info-card">
+                            <div class="info-label">已处理消息总数</div>
+                            <div class="info-value" style="color: #11998e;">${config.processedCount || 0}</div>
+                        </div>
+                    </div>
+                `;
+                showModal('configDetailModal');
+            } else {
+                showToast(data.msg || '获取配置失败', 'error');
+            }
+        } catch (e) {
+            showToast('获取配置失败', 'error');
+        }
     }
     //</#noparse>
 </script>

@@ -22,6 +22,7 @@ import java.lang.reflect.Type;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -100,6 +101,17 @@ public class QueueService {
      */
     private final Map<String, Integer> concurrency = new ConcurrentHashMap<>();
 
+    /**
+     * 已处理消息计数器（成功 + 失败）
+     */
+    private final Map<String, AtomicLong> processedCount = new ConcurrentHashMap<>();
+
+    /**
+     * 历史消息列表（已消费的消息记录，按时间倒序）
+     * 每个队列维护一个有界的历史列表，超过 QueueConfig.history 时自动淘汰最早的记录
+     */
+    private final Map<String, LinkedList<Map<String, Object>>> historyMessages = new ConcurrentHashMap<>();
+
     // ==================== 配置管理 ====================
 
     /**
@@ -163,6 +175,86 @@ public class QueueService {
      */
     public QueueConfig getConfig(String name, Class<?> type) {
         return configs.computeIfAbsent(name, k -> QueueConfig.builder().name(name).type(type).build());
+    }
+
+    /**
+     * 更新队列配置（支持动态修改参数）
+     *
+     * @param name   队列名称
+     * @param params 需要更新的参数
+     * @return 是否更新成功
+     */
+    public boolean updateConfig(String name, Map<String, Object> params) {
+        QueueConfig config = configs.get(name);
+        if (config == null) {
+            log.warn("Queue config not found: {}", name);
+            return false;
+        }
+        if (params.containsKey("capacity")) {
+            config.setCapacity(((Number) params.get("capacity")).intValue());
+        }
+        if (params.containsKey("timeout")) {
+            config.setTimeout(((Number) params.get("timeout")).longValue());
+        }
+        if (params.containsKey("timeoutUnit")) {
+            config.setUnit(TimeUnit.valueOf((String) params.get("timeoutUnit")));
+        }
+        if (params.containsKey("expire")) {
+            config.setExpire(((Number) params.get("expire")).longValue());
+        }
+        if (params.containsKey("retries")) {
+            config.setRetries(((Number) params.get("retries")).intValue());
+        }
+        if (params.containsKey("concurrency")) {
+            int newConcurrency = ((Number) params.get("concurrency")).intValue();
+            config.setConcurrency(newConcurrency);
+            this.concurrency.put(name, newConcurrency);
+        }
+        if (params.containsKey("idleTime")) {
+            config.setIdleTime(((Number) params.get("idleTime")).longValue());
+        }
+        if (params.containsKey("idleUnit")) {
+            config.setIdleUnit(TimeUnit.valueOf((String) params.get("idleUnit")));
+        }
+        if (params.containsKey("deadLetter")) {
+            config.setDeadLetter((Boolean) params.get("deadLetter"));
+        }
+        if (params.containsKey("auto")) {
+            config.setAuto((Boolean) params.get("auto"));
+        }
+        if (params.containsKey("history")) {
+            int newHistory = ((Number) params.get("history")).intValue();
+            config.setHistory(newHistory);
+            // 如果调小了上限，立即裁剪现有历史
+            trimHistory(name, newHistory);
+        }
+        log.info("Queue config updated: name={}, params={}", name, params);
+        return true;
+    }
+
+    /**
+     * 裁剪历史消息列表到指定上限
+     */
+    private void trimHistory(String name, int maxHistory) {
+        LinkedList<Map<String, Object>> history = historyMessages.get(name);
+        if (history == null) return;
+        synchronized (history) {
+            if (maxHistory <= 0) {
+                history.clear();
+            } else {
+                while (history.size() > maxHistory) {
+                    history.removeLast();
+                }
+            }
+        }
+    }
+
+    /**
+     * 获取队列已处理消息总数
+     */
+    public long getProcessedCount(String name) {
+        AtomicLong count = processedCount.get(name);
+        return count != null ? count.get() : 0;
     }
 
     // ==================== 生产者方法 ====================
@@ -907,15 +999,53 @@ public class QueueService {
     // ==================== 私有方法 - 消息处理 ====================
 
     private <T> void process(QueueConfig config, QueueMessage<T> message, QueueConsumer<T> consumer) {
+        // 递增已处理消息计数
+        processedCount.computeIfAbsent(config.getName(), k -> new AtomicLong(0)).incrementAndGet();
+        boolean success = false;
+        String errorMsg = null;
         try {
-            boolean success = consumer.consume(message);
+            success = consumer.consume(message);
             if (!success) {
                 failed(config, message, consumer, null);
             }
         } catch (Exception e) {
+            errorMsg = e.getMessage();
             log.error("Message processing failed: queue={}, messageId={}, error={}", config.getName(), message.getId(), e.getMessage(), e);
             consumer.onError(message, e);
             failed(config, message, consumer, e);
+        }
+        // 记录到历史消息列表
+        addHistory(config, message, success, errorMsg);
+    }
+
+    /**
+     * 将已处理的消息记录到历史列表
+     * 当历史记录超过配置的上限时，自动删除最早的记录
+     */
+    private <T> void addHistory(QueueConfig config, QueueMessage<T> message, boolean success, String errorMsg) {
+        int maxHistory = config.getHistory();
+        if (maxHistory <= 0) {
+            return;
+        }
+        String name = config.getName();
+        LinkedList<Map<String, Object>> history = historyMessages.computeIfAbsent(name, k -> new LinkedList<>());
+        Map<String, Object> record = new HashMap<>();
+        record.put("id", message.getId());
+        record.put("body", message.getBody());
+        record.put("priority", message.getPriority());
+        record.put("retry", message.getRetry());
+        record.put("timestamp", message.getTimestamp());
+        record.put("processedAt", System.currentTimeMillis());
+        record.put("success", success);
+        if (errorMsg != null) {
+            record.put("error", errorMsg);
+        }
+        synchronized (history) {
+            history.addFirst(record);  // 最新的在前面
+            // 滚动淘汰：超过上限时删除最早的记录
+            while (history.size() > maxHistory) {
+                history.removeLast();
+            }
         }
     }
 
@@ -988,6 +1118,7 @@ public class QueueService {
         info.put("name", name);
         info.put("size", size(name));
         info.put("consumerRunning", isConsumerRunning(name));
+        info.put("processedCount", getProcessedCount(name));
         if (config != null) {
             info.put("queueType", config.getQueueType().name());
             info.put("capacity", config.getCapacity());
@@ -997,17 +1128,34 @@ public class QueueService {
             info.put("timeout", config.getTimeout());
             info.put("timeoutUnit", config.getUnit().name());
             info.put("messageType", config.getType() != null ? config.getType().getSimpleName() : "Object");
+            info.put("expire", config.getExpire());
+            info.put("concurrency", config.getConcurrency());
+            info.put("idleTime", config.getIdleTime());
+            info.put("idleUnit", config.getIdleUnit().name());
+            info.put("auto", config.isAuto());
+            info.put("persistent", config.isPersistent());
+            info.put("history", config.getHistory());
         } else {
             info.put("queueType", "MEMORY");
             info.put("capacity", 0);
             info.put("maxRetries", 3);
             info.put("deadLetterEnabled", false);
             info.put("messageType", "Object");
+            info.put("expire", 0);
+            info.put("concurrency", 1);
+            info.put("idleTime", 60);
+            info.put("idleUnit", "SECONDS");
+            info.put("auto", true);
+            info.put("persistent", false);
+            info.put("history", 100);
         }
         // 死信队列大小
         if (config != null && config.isDeadLetter()) {
             info.put("deadLetterSize", size(config.getDeadName()));
         }
+        // 历史消息数量
+        LinkedList<Map<String, Object>> history = historyMessages.get(name);
+        info.put("historyCount", history != null ? history.size() : 0);
         return info;
     }
 
@@ -1022,7 +1170,6 @@ public class QueueService {
     /**
      * 预览消息（不消费）
      */
-    @SuppressWarnings("unchecked")
     public Map<String, Object> peekMessages(String name, int page, int limit) {
         Map<String, Object> result = new HashMap<>();
         List<Object> messages = new ArrayList<>();
@@ -1092,8 +1239,75 @@ public class QueueService {
         // 移除内存队列
         queues.remove(name);
         priorities.remove(name);
+        // 移除历史消息
+        historyMessages.remove(name);
         if (log.isDebugEnabled())
             log.debug("Queue deleted: {}", name);
+    }
+
+    // ==================== 历史消息管理 ====================
+
+    /**
+     * 获取历史消息列表（分页）
+     *
+     * @param name  队列名称
+     * @param page  页码（从1开始）
+     * @param limit 每页数量
+     * @return 包含 list 和 total 的结果
+     */
+    public Map<String, Object> getHistoryMessages(String name, int page, int limit) {
+        Map<String, Object> result = new HashMap<>();
+        LinkedList<Map<String, Object>> history = historyMessages.get(name);
+        if (history == null || history.isEmpty()) {
+            result.put("list", Collections.emptyList());
+            result.put("total", 0);
+            return result;
+        }
+        synchronized (history) {
+            int total = history.size();
+            int start = (page - 1) * limit;
+            int end = Math.min(start + limit, total);
+            List<Map<String, Object>> list;
+            if (start >= total) {
+                list = Collections.emptyList();
+            } else {
+                list = new ArrayList<>(history.subList(start, end));
+            }
+            result.put("list", list);
+            result.put("total", total);
+        }
+        return result;
+    }
+
+    /**
+     * 删除单条历史消息
+     *
+     * @param name      队列名称
+     * @param messageId 消息ID
+     * @return 是否删除成功
+     */
+    public boolean deleteHistoryMessage(String name, String messageId) {
+        LinkedList<Map<String, Object>> history = historyMessages.get(name);
+        if (history == null) return false;
+        synchronized (history) {
+            return history.removeIf(record -> messageId.equals(record.get("id")));
+        }
+    }
+
+    /**
+     * 清空队列的所有历史消息
+     *
+     * @param name 队列名称
+     * @return 清空的数量
+     */
+    public int clearHistory(String name) {
+        LinkedList<Map<String, Object>> history = historyMessages.get(name);
+        if (history == null) return 0;
+        synchronized (history) {
+            int count = history.size();
+            history.clear();
+            return count;
+        }
     }
 
     /**
@@ -1112,14 +1326,24 @@ public class QueueService {
     }
 
     /**
-     * 启动简单消费者（用于管理页面测试）
+     * 启动消费者
+     * 优先使用已注册的 QueueConsumer，如果没有注册过则回退到简单日志消费者
      */
+    @SuppressWarnings("unchecked")
     public void start(String name, int concurrency) {
         QueueConfig config = getConfig(name, Object.class);
-        start(config, message -> {
-            log.info("Simple consumer processed message: queue={}, id={}, body={}", name, message.getId(), message.getBody());
-            return true;
-        }, concurrency);
+        QueueConsumer<?> handler = handlers.get(name);
+        if (handler != null) {
+            if (log.isDebugEnabled())
+                log.debug("Restarting consumer with registered handler: queue={}, concurrency={}", name, concurrency);
+            start(config, (QueueConsumer<Object>) handler, concurrency);
+        } else {
+            log.info("No registered handler found, using simple consumer: queue={}", name);
+            start(config, message -> {
+                log.info("Simple consumer processed message: queue={}, id={}, body={}", name, message.getId(), message.getBody());
+                return true;
+            }, concurrency);
+        }
     }
 
     /**
@@ -1157,6 +1381,9 @@ public class QueueService {
         }
         typeStats.put("MEMORY", typeStats.getOrDefault("MEMORY", 0) + memoryOnlyCount);
         stats.put("typeStats", typeStats);
+        // 已处理消息总数
+        long totalProcessed = processedCount.values().stream().mapToLong(AtomicLong::get).sum();
+        stats.put("totalProcessed", totalProcessed);
         // Redis状态
         stats.put("redisEnabled", isRedisEnabled());
         return stats;

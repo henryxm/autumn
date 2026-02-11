@@ -2,6 +2,7 @@ package cn.org.autumn.config;
 
 import lombok.Builder;
 import lombok.Getter;
+import lombok.Setter;
 
 import java.util.concurrent.TimeUnit;
 
@@ -33,20 +34,32 @@ public class QueueConfig {
      * 队列最大容量（仅对内存队列有效）
      * 0 表示无限制
      */
+    @Setter
     @Builder.Default
-    private final int capacity = 100000;
+    private int capacity = 100000;
+
+    /**
+     * 历史消息保留数量
+     * 已消费的消息会记录到历史列表，超过此数量时自动删除最早的记录
+     * 0 表示不保留历史消息
+     */
+    @Setter
+    @Builder.Default
+    private int history = 100;
 
     /**
      * 消费超时时间
      */
+    @Setter
     @Builder.Default
-    private final long timeout = 30;
+    private long timeout = 30;
 
     /**
      * 超时时间单位
      */
+    @Setter
     @Builder.Default
-    private final TimeUnit unit = TimeUnit.SECONDS;
+    private TimeUnit unit = TimeUnit.SECONDS;
 
     /**
      * 是否启用持久化（仅对Redis队列有效）
@@ -57,8 +70,9 @@ public class QueueConfig {
     /**
      * 消息过期时间（秒），0表示永不过期
      */
+    @Setter
     @Builder.Default
-    private final long expire = 0;
+    private long expire = 0;
 
     /**
      * 消费者组名称（仅对Redis Stream有效）
@@ -73,14 +87,16 @@ public class QueueConfig {
     /**
      * 最大重试次数
      */
+    @Setter
     @Builder.Default
-    private final int retries = 3;
+    private int retries = 3;
 
     /**
      * 是否启用死信队列
      */
+    @Setter
     @Builder.Default
-    private final boolean deadLetter = false;
+    private boolean deadLetter = false;
 
     /**
      * 死信队列名称
@@ -91,27 +107,31 @@ public class QueueConfig {
      * 是否启用自动启动消费者
      * 当发送消息时，如果消费者未运行，自动启动消费者
      */
+    @Setter
     @Builder.Default
-    private final boolean auto = true;
+    private boolean auto = true;
 
     /**
      * 空闲超时时间（配合 autoStop 使用）
      * 当消费者在此时间内没有处理任何消息，将自动停止
      */
+    @Setter
     @Builder.Default
-    private final long idleTime = 60;
+    private long idleTime = 30;
 
     /**
      * 空闲超时时间单位
      */
+    @Setter
     @Builder.Default
-    private final TimeUnit idleUnit = TimeUnit.SECONDS;
+    private TimeUnit idleUnit = TimeUnit.SECONDS;
 
     /**
      * 自动启动时的并发消费者数量
      */
+    @Setter
     @Builder.Default
-    private final int concurrency = 1;
+    private int concurrency = 1;
 
     /**
      * 队列类型枚举
