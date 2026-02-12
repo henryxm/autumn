@@ -1,11 +1,18 @@
 package cn.org.autumn.modules.job.task;
 
+import cn.org.autumn.annotation.JobAssign;
 import cn.org.autumn.annotation.JobMeta;
+import cn.org.autumn.bean.EnvBean;
+import cn.org.autumn.config.Config;
 import cn.org.autumn.site.Factory;
 import cn.org.autumn.site.LoadFactory;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.util.ClassUtils;
 
@@ -19,10 +26,36 @@ import java.util.concurrent.atomic.AtomicLong;
 @Component
 public class LoopJob extends Factory implements LoadFactory.Must {
 
+    @Autowired
+    EnvBean envBean;
+
     /**
      * 已禁用的任务ID集合，key 格式为 category|className
      */
     static final Set<String> disabledJobIds = ConcurrentHashMap.newKeySet();
+
+    // ========== 服务器标签 ==========
+
+    /**
+     * 当前服务器标签，从环境变量 server.tag 读取。
+     * 用于判断定时任务是否应该在当前服务器上执行。
+     * 值为 "*" 时表示运行所有任务（忽略分配限制）。
+     */
+    @Getter
+    private static volatile String serverTag = "";
+
+    /**
+     * 服务器分配功能是否已初始化（数据库配置已加载）
+     */
+    private static volatile boolean assignInitialized = false;
+
+    static {
+        // 从环境变量或系统属性读取服务器标签
+        String tag = Config.getEnv("server.tag");
+        if (StringUtils.isNotBlank(tag)) {
+            serverTag = tag.trim();
+        }
+    }
 
     // ========== 全局管理状态 ==========
 
@@ -128,7 +161,7 @@ public class LoopJob extends Factory implements LoadFactory.Must {
         private final String categoryDisplayName;
         private final Job job;
 
-        // ---- 来自 @LoopJobMeta 注解 ----
+        // ---- 来自 @JobMeta 注解 ----
         private String displayName;
         private String description;
         private String group;
@@ -137,6 +170,17 @@ public class LoopJob extends Factory implements LoadFactory.Must {
         private long timeout;
         private int maxConsecutiveErrors;
         private String[] tags;
+
+        // ---- 来自 @JobAssign 注解 / 数据库配置 ----
+        /**
+         * 当前生效的服务器分配标签（逗号分隔），为空表示在所有服务器运行。
+         * 初始值来自注解，启动后可被数据库配置覆盖。
+         */
+        private volatile String assignTag = "";
+        /**
+         * 注解中定义的默认分配标签，不可通过管理界面修改，仅供参考。
+         */
+        private String defaultAssignTag = "";
 
         // ---- 运行时统计 ----
         private final AtomicLong executionCount = new AtomicLong(0);
@@ -200,6 +244,9 @@ public class LoopJob extends Factory implements LoadFactory.Must {
             map.put("timeout", timeout);
             map.put("maxConsecutiveErrors", maxConsecutiveErrors);
             map.put("tags", tags);
+            map.put("assignTag", assignTag);
+            map.put("defaultAssignTag", defaultAssignTag);
+            map.put("assignedToThisServer", isAssignedToThisServer(this));
             map.put("running", running.get());
             map.put("autoDisabled", autoDisabled);
             map.put("executionCount", executionCount.get());
@@ -222,20 +269,42 @@ public class LoopJob extends Factory implements LoadFactory.Must {
     }
 
     /**
-     * 解析 @JobMeta 注解，方法级别优先于类级别
+     * 解析 @JobMeta 和 @JobAssign 注解，方法级别优先于类级别
      */
     private static void resolveAnnotation(JobInfo info, Job job, String category) {
         Class<?> userClass = getUserClass(job);
+        // 类级别 @JobMeta
         JobMeta classMeta = userClass.getAnnotation(JobMeta.class);
         if (classMeta != null) {
             applyAnnotation(info, classMeta, userClass.getSimpleName());
         }
+        // 类级别 @JobAssign
+        JobAssign classAssign = userClass.getAnnotation(JobAssign.class);
+        if (classAssign != null && classAssign.value().length > 0) {
+            String tags = String.join(",", classAssign.value());
+            info.defaultAssignTag = tags;
+            info.assignTag = tags;
+        }
         String methodName = "on" + category;
         try {
             Method method = userClass.getMethod(methodName);
+            // 方法级别 @JobMeta
             JobMeta methodMeta = method.getAnnotation(JobMeta.class);
             if (methodMeta != null) {
                 applyAnnotation(info, methodMeta, userClass.getSimpleName() + "." + methodName);
+            }
+            // 方法级别 @JobAssign（覆盖类级别）
+            JobAssign methodAssign = method.getAnnotation(JobAssign.class);
+            if (methodAssign != null) {
+                if (methodAssign.value().length > 0) {
+                    String tags = String.join(",", methodAssign.value());
+                    info.defaultAssignTag = tags;
+                    info.assignTag = tags;
+                } else {
+                    // 方法上标注了空 @JobAssign，清除类级别的分配（表示在所有服务器运行）
+                    info.defaultAssignTag = "";
+                    info.assignTag = "";
+                }
             }
         } catch (NoSuchMethodException ignored) {
         }
@@ -273,6 +342,12 @@ public class LoopJob extends Factory implements LoadFactory.Must {
         if (disabledJobIds.contains(key)) return;
         JobInfo info = jobInfoMap.get(key);
         if (info == null) return;
+        // 服务器分配检查
+        if (!isAssignedToThisServer(info)) {
+            if (log.isDebugEnabled())
+                log.debug("Skip {} Job:{} (not assigned to server tag '{}')", category, userClass.getSimpleName(), serverTag);
+            return;
+        }
         // 防重入检查
         if (info.skipIfRunning) {
             if (!info.running.compareAndSet(false, true)) {
@@ -559,7 +634,88 @@ public class LoopJob extends Factory implements LoadFactory.Must {
 
     public static void setParallelExecution(boolean parallel) {
         parallelExecution = parallel;
-        log.info("Parallel execution {}", parallel ? "enabled" : "disabled");
+        if (log.isDebugEnabled())
+            log.debug("Parallel execution {}", parallel ? "enabled" : "disabled");
+    }
+
+    // ========== 服务器分配管理 ==========
+
+    /**
+     * 判断指定任务是否分配给当前服务器执行
+     *
+     * @param info 任务信息
+     * @return true: 应该在当前服务器执行; false: 不应该执行
+     */
+    private static boolean isAssignedToThisServer(JobInfo info) {
+        String assignTag = info.getAssignTag();
+        // 无分配限制 → 在所有服务器运行
+        if (StringUtils.isBlank(assignTag)) {
+            return true;
+        }
+        // 当前服务器标签为 "*" → 运行所有任务
+        if ("*".equals(serverTag)) {
+            return true;
+        }
+        // 当前服务器没有标签 → 不运行有分配限制的任务
+        if (StringUtils.isBlank(serverTag)) {
+            return false;
+        }
+        // 检查当前服务器标签是否在分配列表中
+        String[] tags = assignTag.split(",");
+        for (String tag : tags) {
+            if (tag.trim().equalsIgnoreCase(serverTag.trim())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 设置服务器标签（通常从环境变量读取，也支持运行时修改）
+     */
+    public static void setServerTag(String tag) {
+        serverTag = tag != null ? tag.trim() : "";
+        if (log.isDebugEnabled())
+            log.debug("Server tag set to: '{}'", serverTag);
+    }
+
+    /**
+     * 标记分配功能已初始化（数据库配置已加载）
+     */
+    public static void markAssignInitialized() {
+        assignInitialized = true;
+        if (log.isDebugEnabled())
+            log.debug("Schedule assign initialized, server tag: '{}'", serverTag);
+    }
+
+    /**
+     * 分配功能是否已初始化
+     */
+    public static boolean isAssignInitialized() {
+        return assignInitialized;
+    }
+
+    /**
+     * 获取所有任务信息的只读视图（供 ScheduleAssignService 扫描使用）
+     */
+    public static Map<String, JobInfo> getJobInfoMap() {
+        return Collections.unmodifiableMap(jobInfoMap);
+    }
+
+    /**
+     * 更新指定任务的服务器分配标签
+     *
+     * @param jobId     任务ID
+     * @param assignTag 分配标签（逗号分隔），为空表示在所有服务器运行
+     * @return true: 更新成功; false: 未找到任务
+     */
+    public static boolean updateJobAssign(String jobId, String assignTag) {
+        JobInfo info = jobInfoMap.get(jobId);
+        if (info == null) return false;
+        info.setAssignTag(assignTag != null ? assignTag.trim() : "");
+        if (log.isDebugEnabled())
+            log.debug("Job [{}] assign tag updated to: '{}'", jobId, info.getAssignTag());
+        return true;
     }
 
     // ========== 查询方法 ==========
@@ -645,9 +801,19 @@ public class LoopJob extends Factory implements LoadFactory.Must {
         }
         long totalOverruns = 0;
         for (AtomicLong count : categoryOverrunCount.values()) totalOverruns += count.get();
+        // 统计未分配到当前服务器的任务数
+        long notAssignedCount = 0;
+        for (JobInfo info : jobInfoMap.values()) {
+            if (!isAssignedToThisServer(info)) {
+                notAssignedCount++;
+            }
+        }
+
         Map<String, Object> stats = new LinkedHashMap<>();
         stats.put("globalPaused", globalPaused);
         stats.put("parallelExecution", parallelExecution);
+        stats.put("serverTag", serverTag);
+        stats.put("assignInitialized", assignInitialized);
         stats.put("totalJobs", totalJobs);
         stats.put("enabledJobs", enabledJobs);
         stats.put("disabledJobs", disabledJobs);
@@ -660,6 +826,7 @@ public class LoopJob extends Factory implements LoadFactory.Must {
         stats.put("totalOverruns", totalOverruns);
         stats.put("totalCategories", CATEGORY_DISPLAY.size());
         stats.put("activeCategoryCount", activeCategoryCount);
+        stats.put("notAssignedCount", notAssignedCount);
         return stats;
     }
 
@@ -816,7 +983,10 @@ public class LoopJob extends Factory implements LoadFactory.Must {
     }
 
     @Override
+    @Order(0)
     public void must() {
+        if (StringUtils.isBlank(serverTag) && StringUtils.isNotBlank(envBean.getNodeTag()))
+            serverTag = envBean.getNodeTag();
         List<OneSecond> oneSeconds = getOrderList(OneSecond.class, "onOneSecond");
         for (OneSecond oneSecond : oneSeconds) {
             onOneSecond(oneSecond);

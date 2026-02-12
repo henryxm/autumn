@@ -1,8 +1,11 @@
 package cn.org.autumn.modules.job.controller;
 
+import cn.org.autumn.modules.job.entity.ScheduleAssignEntity;
+import cn.org.autumn.modules.job.service.ScheduleAssignService;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.utils.R;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
@@ -12,12 +15,15 @@ import java.util.Map;
 /**
  * 定时任务管理控制器
  * <p>
- * 提供定时任务的查看、启停、手动触发、健康预警等管理功能
+ * 提供定时任务的查看、启停、手动触发、健康预警、服务器分配等管理功能
  */
 @Slf4j
 @Controller
 @RequestMapping("/job/loop")
 public class LoopJobController {
+
+    @Autowired
+    private ScheduleAssignService scheduleAssignService;
 
     /**
      * 管理页面
@@ -28,7 +34,7 @@ public class LoopJobController {
     }
 
     /**
-     * 获取全局统计信息
+     * 获取全局统计信息（包含服务器标签信息）
      */
     @GetMapping("/stats")
     @ResponseBody
@@ -58,7 +64,7 @@ public class LoopJobController {
     }
 
     /**
-     * 获取任务列表
+     * 获取任务列表（包含服务器分配信息）
      */
     @GetMapping("/list")
     @ResponseBody
@@ -204,7 +210,7 @@ public class LoopJobController {
     }
 
     /**
-     * 动态更新任务运行时配置
+     * 动态更新任务运行时配置（包括服务器分配标签）
      */
     @PostMapping("/updateConfig")
     @ResponseBody
@@ -214,15 +220,79 @@ public class LoopJobController {
             if (jobId == null || jobId.isEmpty()) {
                 return R.error("任务ID不能为空");
             }
+            // 更新内存中的运行时配置
             boolean result = LoopJob.updateJobConfig(jobId, params);
-            if (result) {
-                return R.ok("配置已更新");
-            } else {
+            if (!result) {
                 return R.error("未找到指定任务");
             }
+
+            // 如果包含 assignTag，同时持久化到数据库
+            if (params.containsKey("assignTag")) {
+                String assignTag = (String) params.get("assignTag");
+                scheduleAssignService.updateAssignment(jobId, assignTag);
+            }
+
+            return R.ok("配置已更新");
         } catch (Exception e) {
             log.error("更新配置失败:", e);
             return R.error("更新配置失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 更新任务的服务器分配标签
+     */
+    @PostMapping("/updateAssign")
+    @ResponseBody
+    public R updateAssign(@RequestBody Map<String, Object> params) {
+        try {
+            String jobId = (String) params.get("jobId");
+            if (jobId == null || jobId.isEmpty()) {
+                return R.error("任务ID不能为空");
+            }
+            String assignTag = (String) params.get("assignTag");
+            boolean result = scheduleAssignService.updateAssignment(jobId, assignTag);
+            if (result) {
+                return R.ok("分配已更新");
+            } else {
+                return R.error("更新分配失败");
+            }
+        } catch (Exception e) {
+            log.error("更新分配失败:", e);
+            return R.error("更新分配失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 获取所有任务的分配信息
+     */
+    @GetMapping("/assigns")
+    @ResponseBody
+    public R assigns() {
+        try {
+            List<ScheduleAssignEntity> assignments = scheduleAssignService.getAllAssignments();
+            return R.ok()
+                    .put("assignments", assignments)
+                    .put("serverTag", LoopJob.getServerTag())
+                    .put("assignInitialized", LoopJob.isAssignInitialized());
+        } catch (Exception e) {
+            log.error("获取分配信息失败:", e);
+            return R.error("获取分配信息失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 手动触发重新扫描同步
+     */
+    @PostMapping("/rescan")
+    @ResponseBody
+    public R rescan() {
+        try {
+            scheduleAssignService.triggerRescan();
+            return R.ok("已触发重新扫描");
+        } catch (Exception e) {
+            log.error("触发扫描失败:", e);
+            return R.error("触发扫描失败: " + e.getMessage());
         }
     }
 
@@ -266,6 +336,22 @@ public class LoopJobController {
         } catch (Exception e) {
             log.error("切换并行执行失败:", e);
             return R.error("切换并行执行失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 修改当前服务器标签（运行时修改，重启后恢复环境变量值）
+     */
+    @PostMapping("/updateServerTag")
+    @ResponseBody
+    public R updateServerTag(@RequestBody Map<String, Object> params) {
+        try {
+            String tag = (String) params.get("serverTag");
+            LoopJob.setServerTag(tag != null ? tag : "");
+            return R.ok("服务器标签已更新为: " + LoopJob.getServerTag());
+        } catch (Exception e) {
+            log.error("更新服务器标签失败:", e);
+            return R.error("更新服务器标签失败: " + e.getMessage());
         }
     }
 

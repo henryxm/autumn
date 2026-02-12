@@ -214,6 +214,7 @@
                 </select>
             </div>
             <button class="btn btn-outline" onclick="refreshAll()"><svg id="refreshIcon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg> 刷新</button>
+            <span id="serverTagBadge" class="parallel-status off" onclick="editServerTag()" title="当前服务器标签，点击修改">标签: -</span>
             <span id="parallelStatus" class="parallel-status off" onclick="toggleParallel()" title="点击切换并行/串行执行模式">串行</span>
             <span id="globalStatus" class="global-status running"><span class="dot"></span><span id="globalStatusText">运行中</span></span>
             <button id="globalToggleBtn" class="btn btn-danger" onclick="toggleGlobal()">全局暂停</button>
@@ -230,6 +231,7 @@
         <div class="stat-card"><div class="stat-label">跳过</div><div class="stat-value" id="statSkipped">-</div><div class="stat-detail">防重入跳过</div></div>
         <div class="stat-card"><div class="stat-label">超时</div><div class="stat-value" id="statTimeouts">-</div></div>
         <div class="stat-card danger"><div class="stat-label">超限</div><div class="stat-value" id="statOverruns">-</div><div class="stat-detail">分类批量超限</div></div>
+        <div class="stat-card warning"><div class="stat-label">未分配</div><div class="stat-value" id="statNotAssigned">-</div><div class="stat-detail">非当前服务器任务</div></div>
     </div>
 
     <!-- Health Alert Panel -->
@@ -270,6 +272,8 @@
                     <option value="disabled">已禁用</option>
                     <option value="running">执行中</option>
                     <option value="autoDisabled">自动禁用</option>
+                    <option value="assigned">已分配到本机</option>
+                    <option value="notAssigned">未分配到本机</option>
                 </select>
             </div>
             <div class="table-wrapper">
@@ -278,13 +282,14 @@
                         <th>任务</th>
                         <th>分组</th>
                         <th>分类</th>
+                        <th>分配</th>
                         <th>状态</th>
                         <th>配置</th>
                         <th>执行/错误/跳过</th>
                         <th>最近执行</th>
                         <th>操作</th>
                     </tr></thead>
-                    <tbody id="jobTableBody"><tr><td colspan="8" class="empty-state">加载中...</td></tr></tbody>
+                    <tbody id="jobTableBody"><tr><td colspan="9" class="empty-state">加载中...</td></tr></tbody>
                 </table>
             </div>
         </div>
@@ -320,6 +325,11 @@
                 <label class="form-label">优先级 <span class="form-hint">值越小越先执行</span></label>
                 <input type="number" class="form-input" id="cfgOrder" min="0" step="1" placeholder="100">
             </div>
+            <div class="form-group" style="border-top:1px solid var(--gray-200);padding-top:16px;margin-top:16px;">
+                <label class="form-label">服务器分配 <span class="form-hint">逗号分隔的服务器标签，留空表示所有服务器都执行</span></label>
+                <input type="text" class="form-input" id="cfgAssignTag" placeholder="例如: master,worker-1">
+                <div id="cfgAssignHint" style="font-size:11px;margin-top:4px;color:var(--gray-400);"></div>
+            </div>
         </div>
         <div class="modal-footer">
             <div class="modal-footer-left">
@@ -342,6 +352,7 @@
     let dismissedAlerts = {};
     let prevAlertCount = 0;
     let audioCtx = null;
+    let currentServerTag = '';
 
     async function apiGet(u) { return (await fetch(API + u)).json(); }
     async function apiPost(u, b) { return (await fetch(API + u, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(b||{}) })).json(); }
@@ -365,6 +376,9 @@
             document.getElementById('statSkipped').textContent = fmt(s.totalSkipped);
             document.getElementById('statTimeouts').textContent = fmt(s.totalTimeouts);
             document.getElementById('statOverruns').textContent = fmt(s.totalOverruns);
+            document.getElementById('statNotAssigned').textContent = fmt(s.notAssignedCount || 0);
+            currentServerTag = s.serverTag || '';
+            updateServerTagBadge(currentServerTag, s.assignInitialized);
             updateGlobalStatus(s.globalPaused);
             updateParallelStatus(s.parallelExecution);
         } catch(e) { console.error(e); }
@@ -416,6 +430,29 @@
         const el = document.getElementById('parallelStatus');
         if (enabled) { el.className = 'parallel-status on'; el.textContent = '并行'; el.title = '并行模式已启用，点击切换为串行'; }
         else { el.className = 'parallel-status off'; el.textContent = '串行'; el.title = '串行模式，点击启用并行以提高高频任务吞吐量'; }
+    }
+
+    function updateServerTagBadge(tag, initialized) {
+        const el = document.getElementById('serverTagBadge');
+        if (tag && tag !== '') {
+            el.className = 'parallel-status on';
+            el.textContent = '标签: ' + tag;
+            el.title = '当前服务器标签: ' + tag + (initialized ? '' : ' (未初始化)') + '，点击修改';
+        } else {
+            el.className = 'parallel-status off';
+            el.textContent = '标签: 未设置';
+            el.title = '服务器标签未设置，所有无分配限制的任务都会执行。点击设置';
+        }
+    }
+
+    async function editServerTag() {
+        const newTag = prompt('请输入服务器标签\n\n当前标签: ' + (currentServerTag || '(未设置)') + '\n\n说明:\n- 留空表示未设置标签\n- 设置 * 表示运行所有任务\n- 环境变量 server.tag 设置持久标签', currentServerTag);
+        if (newTag === null) return; // 取消
+        try {
+            const d = await apiPost('/updateServerTag', { serverTag: newTag });
+            if (d.code === 0) { showToast(d.msg, 'success'); await refreshAll(); }
+            else showToast(d.msg || '修改失败', 'error');
+        } catch(e) { showToast('修改失败: ' + e.message, 'error'); }
     }
 
     function renderAlerts(alerts) {
@@ -507,7 +544,7 @@
 
     function renderJobs(jobs) {
         const tbody = document.getElementById('jobTableBody');
-        if (!jobs || !jobs.length) { tbody.innerHTML = '<tr><td colspan="8" class="empty-state">暂无匹配的任务</td></tr>'; return; }
+        if (!jobs || !jobs.length) { tbody.innerHTML = '<tr><td colspan="9" class="empty-state">暂无匹配的任务</td></tr>'; return; }
         tbody.innerHTML = jobs.map(j => {
             let st;
             if (j.autoDisabled) st = '<span class="badge badge-danger">自动禁用</span>';
@@ -515,6 +552,20 @@
             else if (!j.categoryEnabled) st = '<span class="badge badge-warning">分类禁用</span>';
             else if (j.running) st = '<span class="badge badge-running">执行中</span>';
             else st = '<span class="badge badge-success">运行中</span>';
+
+            // 服务器分配标签渲染
+            let assignHtml;
+            const assignTag = j.assignTag || '';
+            if (!assignTag) {
+                assignHtml = '<span class="badge badge-gray" title="在所有服务器上运行">全部</span>';
+            } else if (j.assignedToThisServer) {
+                assignHtml = `<span class="badge badge-success" title="已分配到当前服务器">${esc(assignTag)}</span>`;
+            } else {
+                assignHtml = `<span class="badge badge-danger" title="未分配到当前服务器，此任务不会在本机执行">${esc(assignTag)}</span>`;
+            }
+            if (j.defaultAssignTag && j.defaultAssignTag !== assignTag) {
+                assignHtml += `<div style="font-size:10px;color:var(--gray-400);margin-top:1px" title="注解默认值">默认: ${esc(j.defaultAssignTag)}</div>`;
+            }
 
             const tags = (j.tags||[]).map(t => `<span class="tag">${esc(t)}</span>`).join('');
             const cfgs = [];
@@ -526,7 +577,9 @@
             const errStyle = j.errorCount > 0 ? 'color:var(--danger);font-weight:600' : '';
             const skipStyle = j.skippedCount > 0 ? 'color:var(--purple);font-weight:600' : '';
 
-            return `<tr class="${j.effectiveEnabled?'':'disabled-row'}">
+            const notAssignedClass = (!j.assignedToThisServer && assignTag) ? ' style="opacity:0.5"' : '';
+
+            return `<tr class="${j.effectiveEnabled?'':'disabled-row'}"${notAssignedClass}>
                 <td>
                     <div class="job-name">${esc(j.displayName)}</div>
                     ${j.description?`<div class="job-desc">${esc(j.description)}</div>`:''}
@@ -535,6 +588,7 @@
                 </td>
                 <td>${j.group?`<span class="badge badge-gray">${esc(j.group)}</span>`:'-'}</td>
                 <td><span class="badge badge-info">${j.categoryDisplayName}</span></td>
+                <td>${assignHtml}</td>
                 <td>${st}${j.consecutiveErrorCount>0?`<div style="font-size:10px;color:var(--danger);margin-top:2px">连续错误 ${j.consecutiveErrorCount}</div>`:''}</td>
                 <td><div class="config-badges">${cfgHtml}</div></td>
                 <td class="count-num">
@@ -570,6 +624,8 @@
         else if (st === 'disabled') f = f.filter(j => !j.effectiveEnabled);
         else if (st === 'running') f = f.filter(j => j.running);
         else if (st === 'autoDisabled') f = f.filter(j => j.autoDisabled);
+        else if (st === 'assigned') f = f.filter(j => j.assignedToThisServer);
+        else if (st === 'notAssigned') f = f.filter(j => !j.assignedToThisServer && j.assignTag);
         renderJobs(f);
     }
 
@@ -628,11 +684,18 @@
             ${job.timeoutCount > 0 ? `<span class="info-label">超时次数</span><span class="info-value" style="color:var(--info)">${fmt(job.timeoutCount)}</span>` : ''}
             ${job.lastErrorMessage?`<span class="info-label">最近错误</span><span class="info-value" style="color:var(--danger)">${esc(job.lastErrorMessage)}</span>`:''}
             ${(job.tags||[]).length?`<span class="info-label">标签</span><span class="info-value">${job.tags.map(t=>'<span class="tag">'+esc(t)+'</span>').join(' ')}</span>`:''}
+            <span class="info-label">分配状态</span><span class="info-value">${job.assignedToThisServer ? '<span class="badge badge-success">已分配到本机</span>' : (job.assignTag ? '<span class="badge badge-danger">未分配到本机</span>' : '<span class="badge badge-gray">全部服务器</span>')}</span>
         `;
         document.getElementById('cfgSkipIfRunning').checked = job.skipIfRunning;
         document.getElementById('cfgTimeout').value = job.timeout;
         document.getElementById('cfgMaxErrors').value = job.maxConsecutiveErrors;
         document.getElementById('cfgOrder').value = job.order;
+        // 服务器分配标签
+        document.getElementById('cfgAssignTag').value = job.assignTag || '';
+        const hintEl = document.getElementById('cfgAssignHint');
+        let hint = '当前服务器标签: ' + (currentServerTag || '(未设置)');
+        if (job.defaultAssignTag) hint += ' | 注解默认值: ' + job.defaultAssignTag;
+        hintEl.textContent = hint;
         document.getElementById('configModal').classList.add('active');
     }
 
@@ -646,7 +709,8 @@
                 skipIfRunning: document.getElementById('cfgSkipIfRunning').checked,
                 timeout: parseInt(document.getElementById('cfgTimeout').value) || 0,
                 maxConsecutiveErrors: parseInt(document.getElementById('cfgMaxErrors').value) || 0,
-                order: parseInt(document.getElementById('cfgOrder').value) || 100
+                order: parseInt(document.getElementById('cfgOrder').value) || 100,
+                assignTag: document.getElementById('cfgAssignTag').value.trim()
             });
             if (d.code === 0) { showToast(d.msg, 'success'); closeModal(); await refreshAll(); }
             else showToast(d.msg || '保存失败', 'error');
