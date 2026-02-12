@@ -1,9 +1,7 @@
 package cn.org.autumn.modules.job.controller.gen;
 
 import java.util.Arrays;
-import java.util.Date;
 import java.util.Map;
-
 import cn.org.autumn.validator.ValidatorUtils;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,21 +9,17 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-
 import cn.org.autumn.modules.job.entity.ScheduleJobLogEntity;
 import cn.org.autumn.modules.job.service.ScheduleJobLogService;
 import cn.org.autumn.utils.PageUtils;
 import cn.org.autumn.utils.R;
 
-
-
 /**
- * 定时任务日志
+ * 任务日志
  *
- * @author Shaohua Xu
+ * @author User
  * @email henryxm@163.com
- * @date 2020-10
+ * @date 2026-02
  */
 public class ScheduleJobLogControllerGen {
 
@@ -37,20 +31,19 @@ public class ScheduleJobLogControllerGen {
      */
     @RequestMapping("/list")
     @RequiresPermissions("job:schedulejoblog:list")
-    public R list(@RequestParam Map<String, Object> params){
+    public R list(@RequestParam Map<String, Object> params) {
         PageUtils page = scheduleJobLogService.queryPage(params);
-        return R.ok().put("page", page);
+        return R.ok().put("page" , page);
     }
-
 
     /**
      * 信息
      */
     @RequestMapping("/info/{logId}")
     @RequiresPermissions("job:schedulejoblog:info")
-    public R info(@PathVariable("logId") Long logId){
+    public R info(@PathVariable("logId") Long logId) {
         ScheduleJobLogEntity scheduleJobLog = scheduleJobLogService.selectById(logId);
-        return R.ok().put("scheduleJobLog", scheduleJobLog);
+        return R.ok().put("scheduleJobLog" , scheduleJobLog);
     }
 
     /**
@@ -58,7 +51,7 @@ public class ScheduleJobLogControllerGen {
      */
     @RequestMapping("/save")
     @RequiresPermissions("job:schedulejoblog:save")
-    public R save(@RequestBody ScheduleJobLogEntity scheduleJobLog){
+    public R save(@RequestBody ScheduleJobLogEntity scheduleJobLog) {
         scheduleJobLogService.insert(scheduleJobLog);
         return R.ok();
     }
@@ -68,7 +61,7 @@ public class ScheduleJobLogControllerGen {
      */
     @RequestMapping("/update")
     @RequiresPermissions("job:schedulejoblog:update")
-    public R update(@RequestBody ScheduleJobLogEntity scheduleJobLog){
+    public R update(@RequestBody ScheduleJobLogEntity scheduleJobLog) {
         ValidatorUtils.validateEntity(scheduleJobLog);
         scheduleJobLogService.updateAllColumnById(scheduleJobLog);//全部更新
         return R.ok();
@@ -79,9 +72,8 @@ public class ScheduleJobLogControllerGen {
      */
     @RequestMapping("/delete")
     @RequiresPermissions("job:schedulejoblog:delete")
-    public R delete(@RequestBody Long[] logIds){
+    public R delete(@RequestBody Long[] logIds) {
         scheduleJobLogService.deleteBatchIds(Arrays.asList(logIds));
         return R.ok();
     }
-
 }

@@ -8,14 +8,15 @@ $(function () {
 			{ label: '${lang.job_schedulejob_column_method_name}', name: 'methodName', width: 100 },
 			{ label: '${lang.job_schedulejob_column_params}', name: 'params', width: 100 },
 			{ label: '${lang.job_schedulejob_column_cron_expression} ', name: 'cronExpression', width: 100 },
-			{ label: '${lang.job_schedulejob_column_mode}', name: 'mode', index: 'mode', width: 80 },
-			{ label: '${lang.job_schedulejob_column_remark} ', name: 'remark', width: 100 },
 			{ label: '${lang.job_schedulejob_column_status}', name: 'status', width: 60, formatter: function(value, options, row){
-				return value === 0 ? 
+				return value === 0 ?
 					'<span class="label label-success">${lang.sys_string_normal}</span>' :
 					'<span class="label label-danger">${lang.sys_string_suspend}</span>';
-			}}
-        ],
+			}},
+			{ label: '${lang.job_schedulejob_column_mode}', name: 'mode', index: 'mode', width: 80 },
+			{ label: '${lang.job_schedulejob_column_remark} ', name: 'remark', width: 100 },
+			{ label: '${lang.job_schedulejob_column_create_time}', name: 'createTime', index: 'create_time', width: 80 },
+		],
 		viewrecords: true,
         height: 385,
         rowNum: 10,
@@ -67,7 +68,7 @@ var vm = new Vue({
 			if(jobId == null){
 				return ;
 			}
-			
+
 			$.get(baseURL + "job/schedulejob/info/"+jobId, function(r){
 				vm.showList = false;
                 vm.title = "${lang.sys_string_change}";
@@ -97,7 +98,7 @@ var vm = new Vue({
 			if(jobIds == null){
 				return ;
 			}
-			
+
 			confirm('${lang.sys_string_are_sure_to_delete}？', function(){
 				$.ajax({
 					type: "POST",
@@ -121,7 +122,7 @@ var vm = new Vue({
 			if(jobIds == null){
 				return ;
 			}
-			
+
 			confirm('${lang.sys_string_are_sure_to_pause}？', function(){
 				$.ajax({
 					type: "POST",
@@ -145,7 +146,7 @@ var vm = new Vue({
 			if(jobIds == null){
 				return ;
 			}
-			
+
 			confirm('${lang.sys_string_are_sure_to_resume}？', function(){
 				$.ajax({
 					type: "POST",
@@ -169,7 +170,7 @@ var vm = new Vue({
 			if(jobIds == null){
 				return ;
 			}
-			
+
 			confirm('${lang.sys_string_are_sure_to_execute}？', function(){
 				$.ajax({
 					type: "POST",
@@ -192,8 +193,7 @@ var vm = new Vue({
 			vm.showList = true;
 			var page = $("#jqGrid").jqGrid('getGridParam','page');
 			$("#jqGrid").jqGrid('setGridParam',{ 
-                postData:{'beanName': vm.q.beanName},
-                page:page 
+                page:page
             }).trigger("reloadGrid");
 		}
 	}

@@ -11,13 +11,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * 定时任务
- *
- * @author Shaohua Xu
- * @email henryxm@163.com
- * @date 2020-10
- */
 @RestController
 @RequestMapping("job/schedulejob")
 public class ScheduleJobController extends ScheduleJobControllerGen {

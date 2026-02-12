@@ -1,7 +1,6 @@
 package cn.org.autumn.base;
 
 import cn.org.autumn.config.Config;
-import cn.org.autumn.exception.AException;
 import cn.org.autumn.menu.BaseMenu;
 import cn.org.autumn.modules.lan.service.Language;
 import cn.org.autumn.modules.lan.service.LanguageService;
@@ -44,17 +43,18 @@ public abstract class ModuleService<M extends BaseMapper<T>, T> extends BaseServ
         Object o = Config.getBean(bean);
         if (o instanceof BaseMenu)
             baseMenu = (BaseMenu) o;
-        if (null == baseMenu)
-            throw new AException("Module menu default class name is missing, You should implement getBaseMenu by yourself.");
         return baseMenu;
     }
 
     @Override
     public String parentMenu() {
-        getBaseMenu().init();
-        SysMenuEntity sysMenuEntity = sysMenuService.getByMenuKey(getBaseMenu().getMenu());
-        if (null != sysMenuEntity)
-            return sysMenuEntity.getMenuKey();
+        BaseMenu menu = getBaseMenu();
+        if (null != menu) {
+            menu.init();
+            SysMenuEntity sysMenuEntity = sysMenuService.getByMenuKey(menu.getMenu());
+            if (null != sysMenuEntity)
+                return sysMenuEntity.getMenuKey();
+        }
         return "";
     }
 
@@ -65,7 +65,10 @@ public abstract class ModuleService<M extends BaseMapper<T>, T> extends BaseServ
         if (menuKey.toLowerCase().endsWith("entity")) {
             menuKey = menuKey.substring(0, menuKey.length() - 6);
         }
-        return SysMenuService.getMenuKey(getBaseMenu().getNamespace(), menuKey);
+        BaseMenu menu = getBaseMenu();
+        if (null != menu)
+            return SysMenuService.getMenuKey(menu.getNamespace(), menuKey);
+        return "";
     }
 
     @Override

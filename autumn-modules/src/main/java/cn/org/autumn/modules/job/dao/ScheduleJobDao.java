@@ -6,6 +6,13 @@ import com.baomidou.mybatisplus.mapper.BaseMapper;
 import org.apache.ibatis.annotations.*;
 import org.springframework.stereotype.Repository;
 
+/**
+ * 定时任务
+ *
+ * @author User
+ * @email henryxm@163.com
+ * @date 2026-02
+ */
 @Mapper
 @Repository
 public interface ScheduleJobDao extends BaseMapper<ScheduleJobEntity> {

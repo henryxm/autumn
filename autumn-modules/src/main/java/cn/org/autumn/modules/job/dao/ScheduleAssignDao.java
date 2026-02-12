@@ -1,13 +1,12 @@
 package cn.org.autumn.modules.job.dao;
 
-import cn.org.autumn.modules.job.entity.ScheduleJobLogEntity;
+import cn.org.autumn.modules.job.entity.ScheduleAssignEntity;
 import com.baomidou.mybatisplus.mapper.BaseMapper;
-import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Mapper;
 import org.springframework.stereotype.Repository;
 
 /**
- * 任务日志
+ * 定时分配
  * 
  * @author User
  * @email henryxm@163.com
@@ -15,8 +14,6 @@ import org.springframework.stereotype.Repository;
  */
 @Mapper
 @Repository
-public interface ScheduleJobLogDao extends BaseMapper<ScheduleJobLogEntity> {
-
-    @Delete("truncate table sys_schedule_job_log")
-    void clear();
+public interface ScheduleAssignDao extends BaseMapper<ScheduleAssignEntity> {
+	
 }
