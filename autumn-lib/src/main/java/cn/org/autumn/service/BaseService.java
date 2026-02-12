@@ -3,6 +3,7 @@ package cn.org.autumn.service;
 import cn.org.autumn.menu.BaseMenu;
 import cn.org.autumn.table.annotation.Column;
 import cn.org.autumn.table.annotation.Table;
+import cn.org.autumn.table.data.TableInfo;
 import cn.org.autumn.table.utils.HumpConvert;
 import cn.org.autumn.utils.PageUtils;
 import cn.org.autumn.utils.Query;
@@ -26,6 +27,8 @@ import java.util.*;
 public abstract class BaseService<M extends BaseMapper<T>, T> extends ShareCacheService<M, T> implements BaseMenu {
 
     private String prefix = null;
+
+    private String module = null;
 
     /**
      * 将查询条件过滤并转换为数据库中的字段条件进行查询
@@ -103,18 +106,39 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends ShareCache
     public String getPrefix() {
         if (null == prefix) {
             Class<?> clazz = getModelClass();
-            Table table = clazz.getAnnotation(Table.class);
-            String tmp = table.prefix();
-            if (StringUtils.isBlank(tmp) && StringUtils.isNotBlank(table.value()) && table.value().contains("_")) {
-                tmp = table.value().split("_")[0];
+            if (null != clazz) {
+                Table table = clazz.getAnnotation(Table.class);
+                String tmp = table.prefix();
+                if (StringUtils.isBlank(tmp) && StringUtils.isNotBlank(table.value()) && table.value().contains("_")) {
+                    tmp = table.value().split("_")[0];
+                }
+                prefix = tmp;
             }
-            prefix = tmp;
         }
         return prefix;
     }
 
+    public String getModule() {
+        if (null == module) {
+            Class<?> clazz = getModelClass();
+            if (null != clazz) {
+                Table table = clazz.getAnnotation(Table.class);
+                String tmp = table.module();
+                if (StringUtils.isBlank(tmp) && StringUtils.isNotBlank(table.value()) && table.value().contains("_")) {
+                    tmp = table.value().split("_")[0];
+                }
+                module = tmp;
+            }
+        }
+        return module;
+    }
+
     public void setPrefix(String prefix) {
         this.prefix = prefix;
+    }
+
+    public void setModule(String module) {
+        this.module = module;
     }
 
     public static String toJava(String value) {
@@ -154,22 +178,24 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends ShareCache
     }
 
     protected List<String[]> getLanguageItemsInternal() {
-        String pre = getPrefix();
+        String module = getModule();
+        String prefix = getPrefix();
         Class<?> clazz = getModelClass();
         String name = clazz.getSimpleName().toLowerCase();
+        String tableName = TableInfo.getTableName(clazz);
         Table table = clazz.getAnnotation(Table.class);
         if (null == table)
             return null;
         if (name.endsWith("entity")) {
             name = name.substring(0, name.length() - 6);
         }
-        String lang = table.value().replace(getPrefix() + "_", "");
+        String lang = tableName.startsWith(prefix) ? tableName : tableName.replace(prefix + "_", "");
         List<String[]> items = new ArrayList<>();
         String tableComment = table.comment();
         if (StringUtils.isNotBlank(tableComment) && tableComment.contains(":")) {
             tableComment = tableComment.split(":")[0];
         }
-        items.add(new String[]{pre + "_" + name + "_table_comment", tableComment, toLang(lang)});
+        items.add(new String[]{module + "_" + name + "_table_comment", tableComment, toLang(lang)});
         Field[] fields = clazz.getDeclaredFields();
         for (Field field : fields) {
             Column column = field.getAnnotation(Column.class);
@@ -183,13 +209,13 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends ShareCache
             if (StringUtils.isBlank(columnComment)) {
                 columnComment = HumpConvert.HumpToName(field.getName());
             }
-            items.add(new String[]{pre + "_" + name + "_column_" + underline, columnComment, toLang(underline)});
+            items.add(new String[]{module + "_" + name + "_column_" + underline, columnComment, toLang(underline)});
         }
         return items;
     }
 
     protected String[][] getMenuItemsInternal() {
-        String pre = getPrefix();
+        String module = getModule();
         Class<?> clazz = getModelClass();
         String name = clazz.getSimpleName().toLowerCase();
         Table table = clazz.getAnnotation(Table.class);
@@ -207,11 +233,11 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends ShareCache
             ico = "fa " + ico;
         String[][] menus = new String[][]{
                 //{0:菜单名字,1:URL,2:权限,3:菜单类型,4:ICON,5:排序,6:MenuKey,7:ParentKey,8:Language}
-                {tableComment, "modules/" + pre + "/" + name, pre + ":" + name + ":list," + pre + ":" + name + ":info," + pre + ":" + name + ":save," + pre + ":" + name + ":update," + pre + ":" + name + ":delete", "1", ico, order(), menu(), parentMenu(), pre + "_" + name + "_table_comment"},
-                {"查看", null, pre + ":" + name + ":list," + pre + ":" + name + ":info", "2", null, order(), button("List"), menu(), "sys_string_lookup"},
-                {"新增", null, pre + ":" + name + ":save", "2", null, order(), button("Save"), menu(), "sys_string_add"},
-                {"修改", null, pre + ":" + name + ":update", "2", null, order(), button("Update"), menu(), "sys_string_change"},
-                {"删除", null, pre + ":" + name + ":delete", "2", null, order(), button("Delete"), menu(), "sys_string_delete"},
+                {tableComment, "modules/" + module + "/" + name, module + ":" + name + ":list," + module + ":" + name + ":info," + module + ":" + name + ":save," + module + ":" + name + ":update," + module + ":" + name + ":delete", "1", ico, order(), menu(), parentMenu(), module + "_" + name + "_table_comment"},
+                {"查看", null, module + ":" + name + ":list," + module + ":" + name + ":info", "2", null, order(), button("List"), menu(), "sys_string_lookup"},
+                {"新增", null, module + ":" + name + ":save", "2", null, order(), button("Save"), menu(), "sys_string_add"},
+                {"修改", null, module + ":" + name + ":update", "2", null, order(), button("Update"), menu(), "sys_string_change"},
+                {"删除", null, module + ":" + name + ":delete", "2", null, order(), button("Delete"), menu(), "sys_string_delete"},
         };
         return menus;
     }

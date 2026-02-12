@@ -1,14 +1,16 @@
 package cn.org.autumn.modules.job.entity;
 
-import cn.org.autumn.table.annotation.Column;
-import cn.org.autumn.table.annotation.Table;
-import com.baomidou.mybatisplus.annotations.TableId;
-import com.baomidou.mybatisplus.annotations.TableName;
+import com.baomidou.mybatisplus.annotations.*;
+import cn.org.autumn.table.annotation.*;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.io.Serializable;
 
+@Getter
+@Setter
 @TableName("sys_schedule_assign")
-@Table(prefix = "job", value = "sys_schedule_assign", comment = "定时分配")
+@Table(module = "job", value = "sys_schedule_assign", comment = "定时分配")
 public class ScheduleAssignEntity implements Serializable {
     private static final long serialVersionUID = 1L;
 

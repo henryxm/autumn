@@ -3,16 +3,21 @@ package cn.org.autumn.table.data;
 import cn.org.autumn.table.annotation.*;
 import cn.org.autumn.table.mysql.TableMeta;
 import cn.org.autumn.table.utils.HumpConvert;
+import com.baomidou.mybatisplus.annotations.TableName;
+import lombok.Getter;
+import lombok.Setter;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.WordUtils;
 
 import java.lang.reflect.Field;
 import java.util.*;
 
+@Getter
+@Setter
 public class TableInfo {
-
     private String name;
     private String prefix;
+    private String module;
     private String comment;
     private String engine;
     private String charset;
@@ -83,78 +88,87 @@ public class TableInfo {
         return new TableInfo(clazz);
     }
 
-    public void initFrom(Class<?> clas) {
-        Table table = clas.getAnnotation(Table.class);
+    public static String getTableName(Class<?> clazz) {
+        Table table = clazz.getAnnotation(Table.class);
+        TableName tableName = clazz.getAnnotation(TableName.class);
         if (null == table) {
-            return;
+            return "";
         }
-
-        String tableName = table.value();
-        if (StringUtils.isEmpty(tableName)) {
-            String entityName = clas.getSimpleName();
+        String name = table.value();
+        String prefix = table.prefix();
+        if (StringUtils.isBlank(name) && null != tableName)
+            name = tableName.value();
+        if (StringUtils.isEmpty(name)) {
+            String entityName = clazz.getSimpleName();
             // remove for the end of entity
             if (entityName.endsWith("Entity")) {
                 entityName = entityName.substring(0, entityName.length() - 6);
             }
             // Camel to underline
             entityName = HumpConvert.HumpToUnderline(entityName);
-
-            if (!entityName.startsWith("_") && !StringUtils.isEmpty(table.prefix()) && !table.prefix().endsWith("_"))
-                tableName = "_" + entityName;
+            if (!entityName.startsWith("_") && !StringUtils.isEmpty(prefix) && !prefix.endsWith("_"))
+                name = "_" + entityName;
             else
-                tableName = entityName;
-            if (StringUtils.isEmpty(table.prefix()) && tableName.startsWith("_"))
-                tableName = tableName.substring(1);
+                name = entityName;
+            if (StringUtils.isEmpty(prefix) && name.startsWith("_"))
+                name = name.substring(1);
+            else {
+                if (entityName.startsWith(prefix))
+                    name = entityName;
+                else
+                    name = prefix + entityName;
+            }
+        } else {
+            if (table.value().startsWith(prefix))
+                name = table.value();
             else
-                tableName = table.prefix() + entityName;
-        } else
-            tableName = table.prefix() + table.value();
+                name = prefix + table.value();
+        }
+        return name;
+    }
 
+    public void initFrom(Class<?> clazz) {
+        Table table = clazz.getAnnotation(Table.class);
+        if (null == table)
+            return;
+        String name = getTableName(clazz);
+        if (StringUtils.isBlank(name))
+            return;
         this.uniqueKeyInfos = new ArrayList<>();
-        UniqueKey uniqueKey = clas.getAnnotation(UniqueKey.class);
+        UniqueKey uniqueKey = clazz.getAnnotation(UniqueKey.class);
         if (null != uniqueKey) {
             uniqueKeyInfos.add(new UniqueKeyInfo(uniqueKey));
         }
-
-        UniqueKeys uniqueKeys = clas.getAnnotation(UniqueKeys.class);
-
+        UniqueKeys uniqueKeys = clazz.getAnnotation(UniqueKeys.class);
         if (null != uniqueKeys && uniqueKeys.value().length > 0) {
             for (UniqueKey u : uniqueKeys.value()) {
                 uniqueKeyInfos.add(new UniqueKeyInfo(u));
             }
         }
-
-
         this.indexInfos = new ArrayList<>();
-        Index index = clas.getAnnotation(Index.class);
+        Index index = clazz.getAnnotation(Index.class);
         if (null != index) {
             indexInfos.add(new IndexInfo(index));
         }
-
-        Indexes indexes = clas.getAnnotation(Indexes.class);
-
+        Indexes indexes = clazz.getAnnotation(Indexes.class);
         if (null != indexes && indexes.value().length > 0) {
             for (Index u : indexes.value()) {
                 indexInfos.add(new IndexInfo(u));
             }
         }
-
-        Field[] fields = clas.getDeclaredFields();
-
+        Field[] fields = clazz.getDeclaredFields();
         this.indexColumn = new ArrayList<>();
         for (Field field : fields) {
             Index k = field.getAnnotation(Index.class);
             if (null != k) {
                 indexInfos.add(new IndexInfo(k, field));
             }
-
             Column column = field.getAnnotation(Column.class);
             if (null != column && column.isUnique()) {
                 indexColumn.add(new IndexInfo(column, field));
             }
         }
-
-        this.name = tableName;
+        this.name = name;
         this.charset = table.charset();
         this.comment = table.comment();
         this.engine = table.engine();
@@ -168,20 +182,20 @@ public class TableInfo {
             while (uniqueKeyInfoIterator.hasNext()) {
                 stringBuilder.append("UNIQUE KEY ");
                 UniqueKeyInfo uniqueKeyInfo = uniqueKeyInfoIterator.next();
-                stringBuilder.append("`" + uniqueKeyInfo.getName() + "` (");
+                stringBuilder.append("`").append(uniqueKeyInfo.getName()).append("` (");
                 Iterator<Map.Entry<String, Integer>> iterator = uniqueKeyInfo.getFields().entrySet().iterator();
                 while (iterator.hasNext()) {
                     Map.Entry<String, Integer> kv = iterator.next();
                     if (kv.getValue() > 0)
-                        stringBuilder.append("`" + kv.getKey() + "`(" + kv.getValue() + ")");
+                        stringBuilder.append("`").append(kv.getKey()).append("`(").append(kv.getValue()).append(")");
                     else
-                        stringBuilder.append("`" + kv.getKey() + "`");
+                        stringBuilder.append("`").append(kv.getKey()).append("`");
                     if (iterator.hasNext()) {
                         stringBuilder.append(",");
                     }
                 }
                 stringBuilder.append(")");
-                stringBuilder.append(" USING " + uniqueKeyInfo.getIndexMethod().toUpperCase());
+                stringBuilder.append(" USING ").append(uniqueKeyInfo.getIndexMethod().toUpperCase());
                 if (uniqueKeyInfoIterator.hasNext()) {
                     stringBuilder.append(", ");
                 }
@@ -197,22 +211,22 @@ public class TableInfo {
             while (indexKeyInfoIterator.hasNext()) {
                 IndexInfo indexInfo = indexKeyInfoIterator.next();
                 if (!IndexTypeEnum.NORMAL.toString().equals(indexInfo.getIndexType()))
-                    stringBuilder.append(indexInfo.getIndexType() + " ");
+                    stringBuilder.append(indexInfo.getIndexType()).append(" ");
                 stringBuilder.append("INDEX ");
-                stringBuilder.append("`" + indexInfo.getName() + "` (");
+                stringBuilder.append("`").append(indexInfo.getName()).append("` (");
                 Iterator<Map.Entry<String, Integer>> iterator = indexInfo.getFields().entrySet().iterator();
                 while (iterator.hasNext()) {
                     Map.Entry<String, Integer> kv = iterator.next();
                     if (kv.getValue() > 0)
-                        stringBuilder.append("`" + kv.getKey() + "`(" + kv.getValue() + ")");
+                        stringBuilder.append("`").append(kv.getKey()).append("`(").append(kv.getValue()).append(")");
                     else
-                        stringBuilder.append("`" + kv.getKey() + "`");
+                        stringBuilder.append("`").append(kv.getKey()).append("`");
                     if (iterator.hasNext()) {
                         stringBuilder.append(",");
                     }
                 }
                 stringBuilder.append(")");
-                stringBuilder.append(" USING " + indexInfo.getIndexMethod().toUpperCase());
+                stringBuilder.append(" USING ").append(indexInfo.getIndexMethod().toUpperCase());
                 if (indexKeyInfoIterator.hasNext()) {
                     stringBuilder.append(", ");
                 }
@@ -249,14 +263,14 @@ public class TableInfo {
             while (indexKeyInfoIterator.hasNext()) {
                 IndexInfo indexInfo = indexKeyInfoIterator.next();
                 indexInfo.resolve();
-                stringBuilder.append("@Index(name = \"" + indexInfo.getName() + "\"" + ", indexType = IndexTypeEnum." + indexInfo.getIndexType() + ", indexMethod = IndexMethodEnum." + indexInfo.getIndexMethod() + ", fields = {");
+                stringBuilder.append("@Index(name = \"").append(indexInfo.getName()).append("\"").append(", indexType = IndexTypeEnum.").append(indexInfo.getIndexType()).append(", indexMethod = IndexMethodEnum.").append(indexInfo.getIndexMethod()).append(", fields = {");
                 Iterator<Map.Entry<String, Integer>> iterator = indexInfo.getFields().entrySet().iterator();
                 while (iterator.hasNext()) {
                     Map.Entry<String, Integer> kv = iterator.next();
                     if (kv.getValue() > 0)
-                        stringBuilder.append("@IndexField(field = \"" + kv.getKey() + "\", length = " + kv.getValue() + ")");
+                        stringBuilder.append("@IndexField(field = \"").append(kv.getKey()).append("\", length = ").append(kv.getValue()).append(")");
                     else
-                        stringBuilder.append("@IndexField(field = \"" + kv.getKey() + "\")");
+                        stringBuilder.append("@IndexField(field = \"").append(kv.getKey()).append("\")");
                     if (iterator.hasNext()) {
                         stringBuilder.append(",");
                     }
@@ -269,38 +283,6 @@ public class TableInfo {
             stringBuilder.append("})");
         }
         return stringBuilder.toString();
-    }
-
-    public boolean isValid() {
-        return StringUtils.isEmpty(name) ? false : true;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-        setClassName(tableToJava(this.name, prefix));
-        setEnLang(tableToLang(this.name, prefix));
-        setClassname(StringUtils.uncapitalize(className));
-        setFilename(className.toLowerCase());
-    }
-
-    public ColumnInfo getPk() {
-        return pk;
-    }
-
-    public void setPk(ColumnInfo pk) {
-        this.pk = pk;
-    }
-
-    public List<ColumnInfo> getColumns() {
-        return columns;
-    }
-
-    public void setColumns(List<ColumnInfo> columns) {
-        this.columns = columns;
     }
 
     public String getClassName() {
@@ -319,41 +301,21 @@ public class TableInfo {
         this.classname = classname;
     }
 
-    public String getFilename() {
-        return filename;
+    public boolean isValid() {
+        return !StringUtils.isEmpty(name);
     }
 
-    public void setFilename(String filename) {
-        this.filename = filename;
-    }
-
-    public String getEnLang() {
-        return enLang;
-    }
-
-    public void setEnLang(String enLang) {
-        this.enLang = enLang;
-    }
-
-    public String getPrefix() {
-        return prefix;
+    public void setName(String name) {
+        this.name = name;
+        setClassName(tableToJava(this.name, prefix));
+        setEnLang(tableToLang(this.name, prefix));
+        setClassname(StringUtils.uncapitalize(className));
+        setFilename(className.toLowerCase());
     }
 
     public void setPrefix(String prefix) {
         this.prefix = prefix;
         setName(name);
-    }
-
-    public List<UniqueKeyInfo> getUniqueKeyInfos() {
-        return uniqueKeyInfos;
-    }
-
-    public void setUniqueKeyInfos(List<UniqueKeyInfo> uniqueKeyInfos) {
-        this.uniqueKeyInfos = uniqueKeyInfos;
-    }
-
-    public List<IndexInfo> getIndexInfos() {
-        return indexInfos;
     }
 
     public List<IndexInfo> getIndexInfosCombine() {
@@ -363,55 +325,8 @@ public class TableInfo {
             }
         }
         if (null != indexColumn && indexColumn.size() > 0) {
-            for (IndexInfo indexInfo : indexColumn) {
-                indexInfos.add(indexInfo);
-            }
+            indexInfos.addAll(indexColumn);
         }
         return indexInfos;
-    }
-
-
-    public void setIndexInfos(List<IndexInfo> indexInfos) {
-        this.indexInfos = indexInfos;
-    }
-
-    public List<IndexInfo> getIndexColumn() {
-        return indexColumn;
-    }
-
-    public void setIndexColumn(List<IndexInfo> indexColumn) {
-        this.indexColumn = indexColumn;
-    }
-
-    public String getComment() {
-        return comment;
-    }
-
-    public void setComment(String comment) {
-        this.comment = comment;
-    }
-
-    public String getEngine() {
-        return engine;
-    }
-
-    public void setEngine(String engine) {
-        this.engine = engine;
-    }
-
-    public String getCharset() {
-        return charset;
-    }
-
-    public void setCharset(String charset) {
-        this.charset = charset;
-    }
-
-    public Boolean getHasBigDecimal() {
-        return hasBigDecimal;
-    }
-
-    public void setHasBigDecimal(Boolean hasBigDecimal) {
-        this.hasBigDecimal = hasBigDecimal;
     }
 }

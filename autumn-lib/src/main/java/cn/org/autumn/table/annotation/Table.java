@@ -22,36 +22,29 @@ public @interface Table {
 
     /**
      * 表名
-     *
-     * @return
      */
-    public String value() default "";
+    String value() default "";
 
     /**
      * 表前缀
-     *
-     * @return
      */
-    public String prefix() default "";
+    String prefix() default "";
 
     /**
      * 表注释
-     *
-     * @return
      */
-    public String comment() default "";
+    String comment() default "";
 
     /**
      * 表的引擎
-     *
-     * @return
      */
-    public String engine() default "InnoDB";
+    String engine() default "InnoDB";
 
     /**
      * 表字符编码
-     *
-     * @return
      */
-    public String charset() default "utf8";
+    String charset() default "utf8";
+
+    //模块名
+    String module() default "";
 }

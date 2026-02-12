@@ -134,6 +134,8 @@ public class GeneratorService implements InitFactory.Init {
         List<Map<String, Object>> tables = new ArrayList<>();
         for (String tableName : tableNames) {
             TableInfo tableInfo = build(tableName, wrapper);
+            tableInfo.setModule(null != entity.getModuleName() ? entity.getModuleName() : "");
+            tableInfo.setPrefix(null != entity.getTablePrefix() ? entity.getTablePrefix() : "");
             //生成代码
             GenUtils.generatorCode(tableInfo, wrapper, zip, GenUtils.getTemplates(), tables);
         }

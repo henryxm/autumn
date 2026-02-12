@@ -39,7 +39,7 @@ public abstract class ModuleService<M extends BaseMapper<T>, T> extends BaseServ
     public BaseMenu getBaseMenu() {
         if (null != baseMenu)
             return baseMenu;
-        String bean = getPrefix() + "Menu";
+        String bean = getModule() + "Menu";
         Object o = Config.getBean(bean);
         if (o instanceof BaseMenu)
             baseMenu = (BaseMenu) o;

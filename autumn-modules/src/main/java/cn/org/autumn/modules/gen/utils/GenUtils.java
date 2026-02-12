@@ -51,6 +51,8 @@ public class GenUtils {
             map.put("tableName", tableInfo.getName());
             map.put("comment", tableInfo.getComment());
             map.put("pk", tableInfo.getPk());
+            map.put("module", tableInfo.getModule());
+            map.put("prefix", tableInfo.getPrefix());
             map.put("className", tableInfo.getClassName());
             map.put("classname", tableInfo.getClassname());
             map.put("filename", tableInfo.getFilename());

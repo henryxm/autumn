@@ -16,7 +16,7 @@ import java.util.Date;
 @Getter
 @Setter
 @TableName("sys_schedule_job")
-@Table(prefix = "job", value = "sys_schedule_job", comment = "定时任务")
+@Table(module = "job", value = "sys_schedule_job", comment = "定时任务")
 public class ScheduleJobEntity implements Serializable {
     private static final long serialVersionUID = 1L;
 

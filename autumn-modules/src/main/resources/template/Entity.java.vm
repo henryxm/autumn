@@ -15,7 +15,7 @@ ${index}
 @Getter
 @Setter
 @TableName("${tableName}")
-@Table(value = "${tableName}", comment = "${comment}")
+@Table(value = "${tableName}", module = "${module}", prefix = "${prefix}", comment = "${comment}")
 public class ${className}Entity implements Serializable {
 	private static final long serialVersionUID = 1L;
 #foreach ($column in $columns)
