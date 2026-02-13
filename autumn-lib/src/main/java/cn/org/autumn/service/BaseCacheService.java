@@ -743,6 +743,30 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
     }
 
     /**
+     * 获取缓存，如果未命中则查询数据库，仍未命中则自动创建新实体并插入
+     * <p>
+     * 创建时会将 key 值设置到 @Cache 标注的字段上。
+     * 仅支持返回单个实例（@Cache 的 unique=true 时使用）。
+     *
+     * @param key 缓存 key（单个值）
+     * @return 实体对象（查到或新创建的）
+     * @throws IllegalStateException 如果 @Cache 注解的 unique=false
+     */
+    public T getCached(Object key) {
+        if (key == null) {
+            return null;
+        }
+        // 校验字段级 @Cache 的 unique 必须为 true
+        checkFieldCacheUnique(true);
+        // 构建缓存 key
+        Object cacheKey = buildCacheKey(key);
+        if (cacheKey == null) {
+            return null;
+        }
+        return compute(cacheKey, () -> getEntitied(key), getConfig());
+    }
+
+    /**
      * 获取缓存，如果不存在则通过supplier获取并缓存（单个参数版本）
      * <p>
      * 显式传入的 supplier 优先级高于 getEntity 方法。
@@ -861,6 +885,36 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         }
         // 调用可变参数版本的 getEntity
         return compute(cacheKey, () -> getEntity(keys), getConfig());
+    }
+
+    /**
+     * 获取缓存，如果不存在则查询并缓存，未命中且 create=true 时自动创建新实体（可变参数版本）
+     * <p>
+     * 支持复合字段缓存：多个值按 @Cache 注解中字段顺序对应。
+     * 创建时会将各 key 值设置到对应的 @Cache 字段上，并插入数据库。
+     * <p>
+     * 注意：此方法要求 @Cache 注解的 unique 属性为 true（默认值）。
+     *
+     * @param keys 缓存 key，可以是单个值或多个值（可变参数）
+     * @return 实体对象（查到或新创建的）
+     * @throws IllegalStateException 如果 @Cache 注解的 unique=false
+     */
+    public T getCached(Object... keys) {
+        if (keys == null || keys.length == 0) {
+            return null;
+        }
+        // 如果只有一个参数，调用单参数版本
+        if (keys.length == 1) {
+            return getCached(keys[0]);
+        }
+        // 校验复合 @Cache 的 unique 必须为 true
+        checkCompositeCacheUnique(true);
+        // 构建缓存 key
+        Object cacheKey = buildCacheKey(keys);
+        if (cacheKey == null) {
+            return null;
+        }
+        return compute(cacheKey, () -> getEntitied(keys), getConfig());
     }
 
     /**
@@ -1712,21 +1766,52 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         return getNameEntity("", key);
     }
 
+    /**
+     * 获取实体，如果未查到则自动创建新实体、设置 key 字段值并插入数据库（单 key 版本）
+     *
+     * @param key 实体 key
+     * @return 实体对象（查到或新创建的）
+     */
+    public T getEntitied(Object key) {
+        return getNameEntitied("", key);
+    }
+
     public <X> X getEntity(Class<X> clazz, Object key) {
         return getNameEntity(clazz, "", key);
     }
 
-    public <X> X getNameEntity(Class<X> clazz, String name, Object key) {
-        T entity = getNameEntity(name, key);
-        return convert(clazz, entity);
+    /**
+     * 获取自定义类型实体，如果未查到则自动创建并插入（单 key 版本）
+     */
+    public <X> X getEntitied(Class<X> clazz, Object key) {
+        return getNameEntitied(clazz, "", key);
     }
 
     /**
-     * 通过反射获取对象实体（带name参数版本，支持Caches注解）
+     * 获取实体，如果未查到则自动创建新实体、设置各 key 字段值并插入数据库（复合 key 版本）
      *
-     * @param name name属性值，如果为空则使用默认的@Cache注解
-     * @param key  指定的实体key（单个值）
-     * @return 返回实体类型的对象， 如果未使用@Cache指定字段，则返回null
+     * @param keys 复合 key 值数组
+     * @return 实体对象（查到或新创建的）
+     */
+    public T getEntitied(Object... keys) {
+        return getNameEntitied("", keys);
+    }
+
+    /**
+     * 通过反射获取对象实体（单个参数版本）
+     * <p>
+     * 如果 @Cache 注解配置了 create=true，则在查询未命中时自动创建新实体、
+     * 设置 key 值到对应的 @Cache 字段上并插入数据库。
+     * <p>
+     * 支持两种 key 模式：
+     * <ul>
+     *   <li>单字段：key 为单个值，设置到 @Cache 标注的字段上</li>
+     *   <li>复合字段：key 为 Map，按字段名映射设置到 @Cache(value={"field1","field2"}) 指定的多个字段上</li>
+     * </ul>
+     *
+     * @param name name属性值，如果为空则使用默认的 @Cache 注解
+     * @param key  指定的实体 key（单个值或 Map 类型的复合 key）
+     * @return 实体对象，如果未使用 @Cache 指定字段则返回 null
      */
     public T getNameEntity(String name, Object key) {
         if (key == null) {
@@ -1740,9 +1825,15 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         Cache compositeCache = findCompositeCache(clazz, name);
         if (compositeCache != null && compositeCache.value().length > 0) {
             String[] fieldNames = compositeCache.value();
-            // 如果是 Map，使用 Map 方式
+            // 如果是 Map，使用 Map 方式查询
             if (key instanceof Map) {
-                return getEntityByCompositeFields(key, clazz, fieldNames);
+                T t = getEntityByCompositeFields(key, clazz, fieldNames);
+                if (t == null && compositeCache.create()) {
+                    // @Cache(create=true): 从 Map 中提取字段值，创建新实体
+                    Map<String, Object> fieldValues = extractFieldValues(key, clazz, fieldNames);
+                    t = createEntityWithFields(clazz, fieldValues);
+                }
+                return t;
             }
             // 单个参数在复合字段模式下，参数数量不匹配，返回 null
             return null;
@@ -1762,7 +1853,96 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         String columnName = HumpConvert.HumpToUnderline(fieldName);
         EntityWrapper<T> wrapper = new EntityWrapper<>();
         wrapper.eq(Escape.escape(columnName), convertedKey);
-        return selectOne(wrapper);
+        T t = selectOne(wrapper);
+        if (t == null) {
+            // 检查 @Cache 注解是否配置了 create=true
+            Cache cache = cacheField.getAnnotation(Cache.class);
+            if (cache != null && cache.create()) {
+                Map<String, Object> fieldValues = new HashMap<>();
+                fieldValues.put(fieldName, convertedKey);
+                t = createEntityWithFields(clazz, fieldValues);
+            }
+        }
+        return t;
+    }
+
+    public <X> X getNameEntity(Class<X> clazz, String name, Object key) {
+        T entity = getNameEntity(name, key);
+        return convert(clazz, entity);
+    }
+
+    /**
+     * 获取自定义类型实体，如果未查到则自动创建并插入（带 name，单 key 版本）
+     */
+    public <X> X getNameEntitied(Class<X> clazz, String name, Object key) {
+        T entity = getNameEntitied(name, key);
+        return convert(clazz, entity);
+    }
+
+    /**
+     * 获取实体，如果未查到则自动创建新实体、设置 key 值到对应的 @Cache 字段上并插入数据库
+     * <p>
+     * 仅支持返回单个实例（@Cache 的 unique=true 时使用）。
+     * getCached/getEntitied 系列始终创建，不受 @Cache.create() 影响。
+     * <p>
+     * 支持两种 key 模式：
+     * <ul>
+     *   <li>单字段：key 为单个值，设置到 @Cache 标注的字段上</li>
+     *   <li>复合字段：key 为 Map，按字段名映射设置到 @Cache(value={"field1","field2"}) 指定的多个字段上</li>
+     * </ul>
+     *
+     * @param name name属性值，如果为空则使用默认的 @Cache 注解
+     * @param key  指定的实体 key（单个值或 Map 类型的复合 key）
+     * @return 实体对象（查到或新创建的）
+     */
+    public T getNameEntitied(String name, Object key) {
+        if (key == null) {
+            return null;
+        }
+        Class<?> clazz = getModelClass();
+        if (clazz == null) {
+            return null;
+        }
+        // 查找复合字段缓存配置（支持@Cache和@Caches注解）
+        Cache compositeCache = findCompositeCache(clazz, name);
+        if (compositeCache != null && compositeCache.value().length > 0) {
+            String[] fieldNames = compositeCache.value();
+            // 如果是 Map，使用 Map 方式查询
+            if (key instanceof Map) {
+                T t = getEntityByCompositeFields(key, clazz, fieldNames);
+                if (t == null) {
+                    // 从 Map 中提取字段值，创建新实体
+                    Map<String, Object> fieldValues = extractFieldValues(key, clazz, fieldNames);
+                    t = createEntityWithFields(clazz, fieldValues);
+                }
+                return t;
+            }
+            // 单个参数在复合字段模式下，参数数量不匹配，返回 null
+            return null;
+        }
+        // 查找 @Cache 标注的字段（单个字段缓存）
+        Field cacheField = findCacheField(clazz, name);
+        if (cacheField == null) {
+            return null;
+        }
+        // 将参数转换为字段类型
+        Object convertedKey = convert(key, cacheField.getType());
+        if (convertedKey == null) {
+            return null;
+        }
+        // 使用 EntityWrapper 查询
+        String fieldName = cacheField.getName();
+        String columnName = HumpConvert.HumpToUnderline(fieldName);
+        EntityWrapper<T> wrapper = new EntityWrapper<>();
+        wrapper.eq(Escape.escape(columnName), convertedKey);
+        T t = selectOne(wrapper);
+        if (t == null) {
+            // 创建新实体，将 key 值设置到对应的缓存字段上
+            Map<String, Object> fieldValues = new HashMap<>();
+            fieldValues.put(fieldName, convertedKey);
+            t = createEntityWithFields(clazz, fieldValues);
+        }
+        return t;
     }
 
     public <X> X getNameEntity(Class<X> clazz, String name, Object... keys) {
@@ -1772,6 +1952,9 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
 
     /**
      * 根据name属性获取实体（可变参数版本，支持复合key）
+     * <p>
+     * 如果 @Cache 注解配置了 create=true，则在查询未命中时自动创建新实体、
+     * 将各 key 值设置到对应字段上并插入数据库。
      *
      * @param name name属性值，用于区分不同的复合key
      * @param keys 复合key的值数组，按@Cache注解中字段顺序对应
@@ -1806,7 +1989,12 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
                 return null;
             }
             // 使用复合字段查询
-            return getEntityByCompositeFields(fieldValues, clazz, fieldNames);
+            T t = getEntityByCompositeFields(fieldValues, clazz, fieldNames);
+            if (t == null && compositeCache.create()) {
+                // @Cache(create=true): 自动创建新实体
+                t = createEntityWithFields(clazz, fieldValues);
+            }
+            return t;
         }
         // 查找 @Cache 标注的字段（单个字段缓存）
         Field cacheField = findCacheField(clazz, name);
@@ -1823,7 +2011,85 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         String columnName = HumpConvert.HumpToUnderline(fieldName);
         EntityWrapper<T> wrapper = new EntityWrapper<>();
         wrapper.eq(Escape.escape(columnName), convertedKey);
-        return selectOne(wrapper);
+        T t = selectOne(wrapper);
+        if (t == null) {
+            // 检查 @Cache 注解是否配置了 create=true
+            Cache cache = cacheField.getAnnotation(Cache.class);
+            if (cache != null && cache.create()) {
+                Map<String, Object> fieldValues = new HashMap<>();
+                fieldValues.put(fieldName, convertedKey);
+                t = createEntityWithFields(clazz, fieldValues);
+            }
+        }
+        return t;
+    }
+
+    /**
+     * 获取实体，如果未查到则自动创建新实体、将各 key 值设置到对应字段上并插入数据库（复合 key 版本）
+     * <p>
+     * 仅支持返回单个实例（@Cache 的 unique=true 时使用）。
+     *
+     * @param name name属性值，用于区分不同的复合key
+     * @param keys 复合key的值数组，按@Cache注解中字段顺序对应
+     * @return 实体对象（查到或新创建的）
+     */
+    public T getNameEntitied(String name, Object... keys) {
+        if (keys == null || keys.length == 0 || name == null) {
+            return null;
+        }
+        // 如果只有一个参数，调用单参数版本
+        if (keys.length == 1) {
+            return getNameEntitied(name, keys[0]);
+        }
+        Class<?> clazz = getModelClass();
+        if (clazz == null) {
+            return null;
+        }
+        // 查找复合字段缓存配置（支持@Caches注解）
+        Cache compositeCache = findCompositeCache(clazz, name);
+        if (compositeCache != null && compositeCache.value().length > 0) {
+            String[] fieldNames = compositeCache.value();
+            // 将可变参数值与字段名对应构建 Map
+            Map<String, Object> fieldValues = new HashMap<>();
+            int paramCount = Math.min(keys.length, fieldNames.length);
+            for (int i = 0; i < paramCount; i++) {
+                if (keys[i] != null) {
+                    fieldValues.put(fieldNames[i], keys[i]);
+                }
+            }
+            // 如果参数数量与字段数量不匹配，返回 null
+            if (fieldValues.size() != fieldNames.length) {
+                return null;
+            }
+            // 使用复合字段查询
+            T t = getEntityByCompositeFields(fieldValues, clazz, fieldNames);
+            if (t == null) {
+                t = createEntityWithFields(clazz, fieldValues);
+            }
+            return t;
+        }
+        // 查找 @Cache 标注的字段（单个字段缓存）
+        Field cacheField = findCacheField(clazz, name);
+        if (cacheField == null) {
+            return null;
+        }
+        // 将第一个参数转换为字段类型
+        Object convertedKey = convert(keys[0], cacheField.getType());
+        if (convertedKey == null) {
+            return null;
+        }
+        // 使用 EntityWrapper 查询
+        String fieldName = cacheField.getName();
+        String columnName = HumpConvert.HumpToUnderline(fieldName);
+        EntityWrapper<T> wrapper = new EntityWrapper<>();
+        wrapper.eq(Escape.escape(columnName), convertedKey);
+        T t = selectOne(wrapper);
+        if (t == null) {
+            Map<String, Object> fieldValues = new HashMap<>();
+            fieldValues.put(fieldName, convertedKey);
+            t = createEntityWithFields(clazz, fieldValues);
+        }
+        return t;
     }
 
     public <X> X getEntity(Class<X> clazz, Object... keys) {
@@ -2137,6 +2403,41 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             wrapper.eq(Escape.escape(columnName), value);
         }
         return selectOne(wrapper);
+    }
+
+    /**
+     * 创建新实体实例，将指定字段值设置到对应字段上，并插入数据库
+     * <p>
+     * 此方法用于 getCache/getEntity 系列方法中 create=true 时的自动创建逻辑。
+     * 会对每个字段值进行类型转换（通过 {@link #convert(Object, Class)} 方法），
+     * 确保值与字段类型匹配后再赋值。
+     *
+     * @param clazz       实体类
+     * @param fieldValues 字段名→值的映射（字段名为 Java 属性名，非数据库列名）
+     * @return 新创建并已插入数据库的实体对象；如果创建失败返回 null
+     */
+    @SuppressWarnings("unchecked")
+    private T createEntityWithFields(Class<?> clazz, Map<String, Object> fieldValues) {
+        try {
+            T entity = (T) clazz.newInstance();
+            for (Map.Entry<String, Object> entry : fieldValues.entrySet()) {
+                Field field = findField(clazz, entry.getKey());
+                if (field != null) {
+                    field.setAccessible(true);
+                    Object converted = convert(entry.getValue(), field.getType());
+                    if (converted != null) {
+                        field.set(entity, converted);
+                    }
+                }
+            }
+            insert(entity);
+            return entity;
+        } catch (Exception e) {
+            if (log.isWarnEnabled()) {
+                log.warn("自动创建实体失败: {}", e.getMessage());
+            }
+            return null;
+        }
     }
 
     /**
