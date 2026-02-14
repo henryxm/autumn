@@ -18,7 +18,7 @@ import java.lang.annotation.*;
  * 使用示例：
  * <pre>{@code
  * @Service
- * @JobMeta(name = "防御护盾", group = "security")
+ * @JobMeta(name = "防御护盾", group = "security", assign = {"master"})
  * public class ShieldService implements LoopJob.FiveSecond, LoopJob.OneMinute, LoopJob.OneDay {
  *
  *     @Override
@@ -28,14 +28,14 @@ import java.lang.annotation.*;
  *     }
  *
  *     @Override
- *     @JobMeta(name = "刷新URI规则", timeout = 5000)
+ *     @JobMeta(name = "刷新URI规则", timeout = 5000, assign = {"master", "backup"})
  *     public void onOneMinute() {
  *         uris = null;
  *     }
  *
  *     @Override
  *     @JobMeta(name = "清空IP白名单", maxConsecutiveErrors = 3)
- *     public void onOneDay() {
+ *     public void onOneDay() {  // 使用类级别 assign: master
  *         ips.clear();
  *     }
  * }
@@ -107,4 +107,55 @@ public @interface JobMeta {
      * 支持多个标签，例如 {"core", "security", "cleanup"}
      */
     String[] tags() default {};
+
+    /**
+     * 允许执行此任务的服务器标签列表（服务器分配）
+     * <p>
+     * 用于指定定时任务应该在哪些服务器上执行。通过环境变量 {@code server.tag}
+     * 读取当前服务器的标签，与注解中指定的标签进行匹配，只有匹配的服务器才会执行该任务。
+     * <p>
+     * 与环境变量 {@code server.tag} 的值进行匹配（不区分大小写）。
+     * 空数组表示在所有服务器上运行（默认）。
+     * <p>
+     * 规则：
+     * <ul>
+     *   <li>未设置（空数组） —— 任务在所有服务器上运行（默认行为）</li>
+     *   <li>设置了值 —— 只在标签匹配的服务器上运行</li>
+     *   <li>服务器标签为 {@code *} —— 运行所有任务（忽略分配限制）</li>
+     *   <li>数据库中的分配配置优先于注解配置（注解值作为默认值）</li>
+     * </ul>
+     * <p>
+     * 示例：{@code @JobMeta(name = "数据同步", assign = {"master", "worker-1"})}
+     */
+    String[] assign() default {};
+
+    /**
+     * 延迟执行时间（秒）
+     * <p>
+     * 当值大于 0 时，任务将通过 TagTaskExecutor 异步提交，并在延迟指定秒数后执行，
+     * 不阻塞调度线程。
+     * <p>
+     * 注意：{@code delay > 0} 会自动强制异步执行（隐含 {@code async=true}）。
+     * <p>
+     * 0 表示不延迟（默认），任务按正常流程执行。
+     * <p>
+     * 示例：{@code @JobMeta(name = "数据清理", delay = 10)} 表示延迟 10 秒后异步执行
+     */
+    int delay() default 0;
+
+    /**
+     * 异步执行：任务提交到 TagTaskExecutor 线程池异步执行，不阻塞调度线程
+     * <p>
+     * 适用于执行耗时较长、不需要阻塞调度周期的任务。
+     * 异步任务由 TagTaskExecutor 统一管理，支持任务追踪、中断、堆栈诊断等能力。
+     * <p>
+     * 规则：
+     * <ul>
+     *   <li>{@code async=true} —— 任务一定异步执行</li>
+     *   <li>{@code delay > 0} —— 隐含异步，等同于同时设置 {@code async=true}，并延迟指定秒数后执行</li>
+     * </ul>
+     * <p>
+     * 默认 false（同步执行）。
+     */
+    boolean async() default false;
 }

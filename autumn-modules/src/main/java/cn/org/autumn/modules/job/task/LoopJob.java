@@ -1,17 +1,17 @@
 package cn.org.autumn.modules.job.task;
 
-import cn.org.autumn.annotation.JobAssign;
 import cn.org.autumn.annotation.JobMeta;
 import cn.org.autumn.bean.EnvBean;
 import cn.org.autumn.config.Config;
 import cn.org.autumn.site.Factory;
 import cn.org.autumn.site.LoadFactory;
+import cn.org.autumn.thread.TagRunnable;
+import cn.org.autumn.thread.TagTaskExecutor;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.util.ClassUtils;
@@ -28,6 +28,15 @@ public class LoopJob extends Factory implements LoadFactory.Must {
 
     @Autowired
     EnvBean envBean;
+
+    @Autowired
+    TagTaskExecutor asyncTaskExecutor;
+
+    /**
+     * TagTaskExecutor 的静态引用，供 static 方法使用。
+     * 在 {@link #must()} 初始化时赋值。
+     */
+    private static volatile TagTaskExecutor taskExecutor;
 
     /**
      * 已禁用的任务ID集合，key 格式为 category|className
@@ -134,21 +143,6 @@ public class LoopJob extends Factory implements LoadFactory.Must {
      */
     private static volatile boolean parallelExecution = false;
 
-    /**
-     * 任务执行线程池，daemon 线程，自动扩缩
-     */
-    private static final ExecutorService jobExecutor = new ThreadPoolExecutor(
-            4, Math.max(8, Runtime.getRuntime().availableProcessors() * 2),
-            60L, TimeUnit.SECONDS,
-            new LinkedBlockingQueue<>(1024),
-            r -> {
-                Thread t = new Thread(r, "loop-job-worker");
-                t.setDaemon(true);
-                return t;
-            },
-            new ThreadPoolExecutor.CallerRunsPolicy()
-    );
-
     // ========== 任务信息跟踪类 ==========
 
     @Getter
@@ -170,8 +164,10 @@ public class LoopJob extends Factory implements LoadFactory.Must {
         private long timeout;
         private int maxConsecutiveErrors;
         private String[] tags;
+        private int delay;
+        private boolean async;
 
-        // ---- 来自 @JobAssign 注解 / 数据库配置 ----
+        // ---- 来自 @JobMeta.assign / 数据库配置 ----
         /**
          * 当前生效的服务器分配标签（逗号分隔），为空表示在所有服务器运行。
          * 初始值来自注解，启动后可被数据库配置覆盖。
@@ -212,6 +208,8 @@ public class LoopJob extends Factory implements LoadFactory.Must {
             this.timeout = 0;
             this.maxConsecutiveErrors = 0;
             this.tags = new String[0];
+            this.delay = 0;
+            this.async = false;
             // 解析注解
             resolveAnnotation(this, job, category);
         }
@@ -244,6 +242,8 @@ public class LoopJob extends Factory implements LoadFactory.Must {
             map.put("timeout", timeout);
             map.put("maxConsecutiveErrors", maxConsecutiveErrors);
             map.put("tags", tags);
+            map.put("delay", delay);
+            map.put("async", async);
             map.put("assignTag", assignTag);
             map.put("defaultAssignTag", defaultAssignTag);
             map.put("assignedToThisServer", isAssignedToThisServer(this));
@@ -269,7 +269,13 @@ public class LoopJob extends Factory implements LoadFactory.Must {
     }
 
     /**
-     * 解析 @JobMeta 和 @JobAssign 注解，方法级别优先于类级别
+     * 解析 @JobMeta 注解，方法级别优先于类级别。
+     * <p>
+     * 服务器分配（assignTag）的优先级从低到高：
+     * <ol>
+     *   <li>类级别 {@code @JobMeta(assign=...)}</li>
+     *   <li>方法级别 {@code @JobMeta(assign=...)}（覆盖类级别）</li>
+     * </ol>
      */
     private static void resolveAnnotation(JobInfo info, Job job, String category) {
         Class<?> userClass = getUserClass(job);
@@ -278,33 +284,13 @@ public class LoopJob extends Factory implements LoadFactory.Must {
         if (classMeta != null) {
             applyAnnotation(info, classMeta, userClass.getSimpleName());
         }
-        // 类级别 @JobAssign
-        JobAssign classAssign = userClass.getAnnotation(JobAssign.class);
-        if (classAssign != null && classAssign.value().length > 0) {
-            String tags = String.join(",", classAssign.value());
-            info.defaultAssignTag = tags;
-            info.assignTag = tags;
-        }
         String methodName = "on" + category;
         try {
             Method method = userClass.getMethod(methodName);
-            // 方法级别 @JobMeta
+            // 方法级别 @JobMeta（覆盖类级别）
             JobMeta methodMeta = method.getAnnotation(JobMeta.class);
             if (methodMeta != null) {
                 applyAnnotation(info, methodMeta, userClass.getSimpleName() + "." + methodName);
-            }
-            // 方法级别 @JobAssign（覆盖类级别）
-            JobAssign methodAssign = method.getAnnotation(JobAssign.class);
-            if (methodAssign != null) {
-                if (methodAssign.value().length > 0) {
-                    String tags = String.join(",", methodAssign.value());
-                    info.defaultAssignTag = tags;
-                    info.assignTag = tags;
-                } else {
-                    // 方法上标注了空 @JobAssign，清除类级别的分配（表示在所有服务器运行）
-                    info.defaultAssignTag = "";
-                    info.assignTag = "";
-                }
             }
         } catch (NoSuchMethodException ignored) {
         }
@@ -323,6 +309,15 @@ public class LoopJob extends Factory implements LoadFactory.Must {
         info.timeout = meta.timeout();
         info.maxConsecutiveErrors = meta.maxConsecutiveErrors();
         if (meta.tags().length > 0) info.tags = meta.tags();
+        // 处理 assign（服务器分配）
+        if (meta.assign().length > 0) {
+            String assignTags = String.join(",", meta.assign());
+            info.defaultAssignTag = assignTags;
+            info.assignTag = assignTags;
+        }
+        // 处理 delay 和 async（delay > 0 隐含异步）
+        info.delay = Math.max(0, meta.delay());
+        info.async = meta.async() || info.delay > 0;
     }
 
     // ========== 任务注册 ==========
@@ -357,6 +352,47 @@ public class LoopJob extends Factory implements LoadFactory.Must {
                 return;
             }
         }
+        // 异步执行路径：async=true 或 delay>0（delay>0 隐含 async）
+        if (info.async && taskExecutor != null) {
+            final int delaySeconds = info.delay;
+            taskExecutor.execute(new TagRunnable() {
+                @Override
+                public void exe() {
+                    // delay > 0 时，先延迟指定秒数再执行
+                    if (delaySeconds > 0) {
+                        try {
+                            if (log.isDebugEnabled())
+                                log.debug("Delay {} Job:{} for {}s", category, userClass.getSimpleName(), delaySeconds);
+                            Thread.sleep(delaySeconds * 1000L);
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            if (log.isDebugEnabled())
+                                log.debug("Delay interrupted for {} Job:{}", category, userClass.getSimpleName());
+                            // 延迟被中断，释放 running 标志后退出
+                            if (info.skipIfRunning) {
+                                info.running.set(false);
+                            }
+                            return;
+                        }
+                    }
+                    doExecuteJob(info, key, category, userClass, action);
+                }
+
+                @Override
+                public boolean can() {
+                    return true;
+                }
+            });
+        } else {
+            // 同步执行路径
+            doExecuteJob(info, key, category, userClass, action);
+        }
+    }
+
+    /**
+     * 实际执行任务逻辑（统计追踪、错误处理），同步和异步路径共用
+     */
+    private static void doExecuteJob(JobInfo info, String key, String category, Class<?> userClass, Runnable action) {
         long start = System.currentTimeMillis();
         try {
             if (log.isDebugEnabled())
@@ -380,7 +416,7 @@ public class LoopJob extends Factory implements LoadFactory.Must {
                 info.autoDisabled = true;
                 log.error("Job [{}] auto-disabled after {} consecutive errors: {}", key, consecutive, e.getMessage());
             }
-            print(job, e);
+            print(info.job, e);
         } finally {
             info.executionCount.incrementAndGet();
             info.lastExecutionTime = start;
@@ -471,14 +507,16 @@ public class LoopJob extends Factory implements LoadFactory.Must {
      * @param jobList  该分类的任务列表
      */
     private static void runCategoryJobs(String category, List<Job> jobList) {
+        if (jobList.isEmpty())
+            return;
         long batchStart = System.currentTimeMillis();
-        if (parallelExecution && jobList.size() > 1) {
-            // 并行执行：使用 CompletableFuture + 线程池
+        if (parallelExecution && jobList.size() > 1 && taskExecutor != null) {
+            // 并行执行：使用 CompletableFuture + TagTaskExecutor
             List<CompletableFuture<Void>> futures = new ArrayList<>(jobList.size());
             for (Job job : jobList) {
                 futures.add(CompletableFuture.runAsync(
                         () -> executeJob(job, category, () -> runJobByCategory(job, category)),
-                        jobExecutor));
+                        taskExecutor));
             }
             try {
                 CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
@@ -985,6 +1023,7 @@ public class LoopJob extends Factory implements LoadFactory.Must {
     @Override
     @Order(0)
     public void must() {
+        taskExecutor = asyncTaskExecutor;
         if (StringUtils.isBlank(serverTag) && StringUtils.isNotBlank(envBean.getNodeTag()))
             serverTag = envBean.getNodeTag();
         List<OneSecond> oneSeconds = getOrderList(OneSecond.class, "onOneSecond");
