@@ -25,6 +25,9 @@ public class TaskRecord implements Serializable {
     private long duration; // 毫秒
     private String status; // COMPLETED, FAILED
     private String errorMessage;
+    private long timeout;  // 超时阈值（秒），0=不限制
+    private long delay;    // 错峰延迟窗口（秒），0=不延迟
+    private boolean locked; // 是否使用分布式锁
 
     public TaskRecord() {
     }
@@ -38,6 +41,9 @@ public class TaskRecord implements Serializable {
             record.setTypeName("Unknown");
             record.setId("");
             record.setStartTime(new Date());
+            record.setTimeout(0);
+            record.setDelay(0);
+            record.setLocked(false);
         } else {
             record.setName(nullSafe(tag.getName(), "Unknown"));
             record.setTag(nullSafe(tag.getTag(), ""));
@@ -46,6 +52,9 @@ public class TaskRecord implements Serializable {
             record.setTypeName(type != null ? type.getSimpleName() : "Unknown");
             record.setId(nullSafe(tag.getId(), ""));
             record.setStartTime(tag.getTime() != null ? tag.getTime() : new Date());
+            record.setTimeout(tag.getTimeout());
+            record.setDelay(tag.getDelay());
+            record.setLocked(tag.isLocked());
         }
         record.setEndTime(new Date());
         record.setDuration(Math.max(0, duration));

@@ -598,6 +598,20 @@
 
             <!-- Running Tasks Tab -->
             <div v-show="activeTab === 'running'">
+                <div class="panel-body" style="border-bottom:1px solid #f0f0f0;" v-if="runningList.length > 0">
+                    <div class="filter-bar">
+                        <input type="text" v-model="runningKeyword" placeholder="搜索任务名称/标记/来源/方法..." style="width:240px;">
+                        <select v-model="runningFilter" style="min-width:120px;">
+                            <option value="">全部任务</option>
+                            <option value="delaying">延迟等待中</option>
+                            <option value="timeout">已超时</option>
+                            <option value="hasDelay">配置了延迟</option>
+                            <option value="hasTimeout">配置了超时</option>
+                            <option value="locked">使用分布式锁</option>
+                        </select>
+                        <span style="font-size:12px;color:#888;" v-if="filteredRunningList.length !== runningList.length">显示 {{filteredRunningList.length}} / {{runningList.length}}</span>
+                    </div>
+                </div>
                 <div class="panel-body no-padding">
                     <table class="data-table">
                         <thead>
@@ -615,13 +629,18 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="(item, index) in runningList" :key="index" :class="{'row-timeout': item.isTimeout, 'row-delaying': item.isDelaying}">
+                            <tr v-for="(item, index) in filteredRunningList" :key="index" :class="{'row-timeout': item.isTimeout, 'row-delaying': item.isDelaying}">
                                 <td>{{index + 1}}</td>
                                 <td>
                                     <i class="fa fa-hourglass-half" style="color:#283593;margin-right:4px;" v-if="item.isDelaying" title="错峰延迟等待中"></i>
                                     <i class="fa fa-exclamation-triangle timeout-icon" v-if="item.isTimeout" title="任务已超时！"></i>
                                     <span class="text-ellipsis" :title="item.name">{{item.name || '-'}}</span>
                                     <span class="badge-lock" v-if="item.isLocked" title="使用分布式锁"><i class="fa fa-lock" style="margin-right:2px;"></i>锁</span>
+                                    <div style="margin-top:3px;display:flex;gap:4px;flex-wrap:wrap;" v-if="item.timeout > 0 || item.delay > 0 || (item.isLocked && item.lockLeaseTime > 0)">
+                                        <span v-if="item.timeout > 0" class="badge-state" :style="{background: item.isTimeout ? '#fff3e0' : '#e3f2fd', color: item.isTimeout ? '#e65100' : '#1565c0', fontSize:'10px'}" :title="'超时阈值: ' + item.timeout + '秒'"><i class="fa fa-clock-o" style="margin-right:2px;"></i>超时{{item.timeout}}s</span>
+                                        <span v-if="item.delay > 0" class="badge-state" style="background:#e8eaf6;color:#283593;font-size:10px;" :title="'错峰延迟窗口: 0~' + item.delay + '秒'"><i class="fa fa-hourglass-half" style="margin-right:2px;"></i>延迟{{item.delay}}s</span>
+                                        <span v-if="item.isLocked && item.lockLeaseTime > 0" class="badge-state" style="background:#fce4ec;color:#c62828;font-size:10px;" :title="'锁租约: ' + item.lockLeaseTime + '秒内只执行一次'"><i class="fa fa-lock" style="margin-right:2px;"></i>锁{{item.lockLeaseTime}}s</span>
+                                    </div>
                                 </td>
                                 <td>{{item.tag || '-'}}</td>
                                 <td>{{item.type || '-'}}</td>
@@ -635,7 +654,11 @@
                                 <td>{{item.time || '-'}}</td>
                                 <td>
                                     <span style="color:#1a73e8;font-weight:500;">{{item.runningTime || '-'}}</span>
-                                    <span v-if="item.isTimeout" style="color:#e65100;font-size:11px;margin-left:4px;">(超时)</span>
+                                    <span v-if="item.isTimeout" style="color:#e65100;font-size:11px;margin-left:4px;">(超过{{item.timeout}}s)</span>
+                                    <div v-if="item.delay > 0" style="margin-top:2px;font-size:11px;">
+                                        <span v-if="item.isDelaying" style="color:#283593;"><i class="fa fa-hourglass-half" style="margin-right:2px;"></i>延迟等待中 ({{item.delay}}s窗口)</span>
+                                        <span v-else style="color:#888;">延迟{{item.delay}}s 已过</span>
+                                    </div>
                                 </td>
                                 <td style="white-space:nowrap;">
                                     <button class="btn-action btn-stack" @click="showStackTrace(item.index)" title="查看线程堆栈">
@@ -646,10 +669,10 @@
                                     </button>
                                 </td>
                             </tr>
-                            <tr v-if="runningList.length === 0">
+                            <tr v-if="filteredRunningList.length === 0">
                                 <td colspan="10" class="no-data">
                                     <i class="fa fa-inbox" style="font-size:30px;color:#ddd;display:block;margin-bottom:8px;"></i>
-                                    当前没有运行中的任务
+                                    {{runningList.length === 0 ? '当前没有运行中的任务' : '没有匹配的任务'}}
                                 </td>
                             </tr>
                         </tbody>
@@ -667,13 +690,16 @@
                     <div class="modal-body">
                         <div class="task-info-row" v-if="modalTask">
                             <div class="task-info-item"><label>任务:</label><span>{{modalTask.tag || modalTask.name || '-'}}</span></div>
+                            <div class="task-info-item"><label>来源:</label><span>{{modalTask.type || '-'}}</span></div>
                             <div class="task-info-item"><label>方法:</label><span>{{modalTask.method || '-'}}</span></div>
                             <div class="task-info-item"><label>线程:</label><span>{{modalTask.threadName || '-'}}</span></div>
                             <div class="task-info-item"><label>状态:</label>
                                 <span class="badge-state" :class="getStateClass(modalTask.threadState)">{{translateState(modalTask.threadState)}}</span>
                             </div>
                             <div class="task-info-item"><label>已运行:</label><span>{{modalTask.runningTime || '-'}}</span></div>
-                            <div class="task-info-item" v-if="modalTask.isLocked"><label>分布式锁:</label><span style="color:#c62828;"><i class="fa fa-lock"></i> 已启用</span></div>
+                            <div class="task-info-item" v-if="modalTask.isLocked"><label>分布式锁:</label><span style="color:#c62828;"><i class="fa fa-lock"></i> 已启用<span v-if="modalTask.lockLeaseTime > 0">（租约{{modalTask.lockLeaseTime}}秒）</span></span></div>
+                            <div class="task-info-item" v-if="modalTask.timeout > 0"><label>超时阈值:</label><span :style="{color: modalTask.isTimeout ? '#e65100' : '#1565c0', fontWeight: modalTask.isTimeout ? '600' : '500'}">{{modalTask.timeout}}秒<span v-if="modalTask.isTimeout" style="color:#e65100;margin-left:4px;">（已超时！）</span></span></div>
+                            <div class="task-info-item" v-if="modalTask.delay > 0"><label>延迟窗口:</label><span style="color:#283593;">0~{{modalTask.delay}}秒<span v-if="modalTask.isDelaying" style="margin-left:4px;">（等待中）</span></span></div>
                         </div>
                         <div class="stack-trace" v-if="modalStack">{{modalStack}}</div>
                         <div v-else style="text-align:center;padding:30px;color:#aaa;">
@@ -727,7 +753,14 @@
                         <tbody>
                             <tr v-for="(item, index) in historyList" :key="index">
                                 <td>{{historyPage * historySize + index + 1}}</td>
-                                <td><span class="text-ellipsis" :title="item.name">{{item.name || '-'}}</span></td>
+                                <td>
+                                    <span class="text-ellipsis" :title="item.name">{{item.name || '-'}}</span>
+                                    <div style="margin-top:2px;display:flex;gap:3px;flex-wrap:wrap;" v-if="item.timeout > 0 || item.delay > 0 || item.locked">
+                                        <span v-if="item.timeout > 0" class="badge-state" style="background:#e3f2fd;color:#1565c0;font-size:10px;" :title="'超时阈值: ' + item.timeout + '秒'">超时{{item.timeout}}s</span>
+                                        <span v-if="item.delay > 0" class="badge-state" style="background:#e8eaf6;color:#283593;font-size:10px;" :title="'延迟窗口: ' + item.delay + '秒'">延迟{{item.delay}}s</span>
+                                        <span v-if="item.locked" class="badge-state" style="background:#fce4ec;color:#c62828;font-size:10px;">锁</span>
+                                    </div>
+                                </td>
                                 <td>{{item.tag || '-'}}</td>
                                 <td>{{item.typeName || '-'}}</td>
                                 <td>{{item.method || '-'}}</td>
@@ -921,6 +954,8 @@ var vm = new Vue({
 
         // Running tasks
         runningList: [],
+        runningKeyword: '',
+        runningFilter: '',
 
         // History
         historyList: [],
@@ -953,6 +988,29 @@ var vm = new Vue({
         modalLoading: false
     },
     computed: {
+        filteredRunningList: function() {
+            var self = this;
+            var list = this.runningList;
+            // 关键字搜索
+            if (self.runningKeyword) {
+                var kw = self.runningKeyword.toLowerCase();
+                list = list.filter(function(item) {
+                    return (item.name || '').toLowerCase().indexOf(kw) >= 0
+                        || (item.tag || '').toLowerCase().indexOf(kw) >= 0
+                        || (item.type || '').toLowerCase().indexOf(kw) >= 0
+                        || (item.method || '').toLowerCase().indexOf(kw) >= 0
+                        || (item.threadName || '').toLowerCase().indexOf(kw) >= 0;
+                });
+            }
+            // 条件筛选
+            var f = self.runningFilter;
+            if (f === 'delaying') list = list.filter(function(i) { return i.isDelaying; });
+            else if (f === 'timeout') list = list.filter(function(i) { return i.isTimeout; });
+            else if (f === 'hasDelay') list = list.filter(function(i) { return i.delay > 0; });
+            else if (f === 'hasTimeout') list = list.filter(function(i) { return i.timeout > 0; });
+            else if (f === 'locked') list = list.filter(function(i) { return i.isLocked; });
+            return list;
+        },
         poolUsagePercent: function() {
             if (!this.pool.maxPoolSize || this.pool.maxPoolSize === 0) return 0;
             return Math.min(100, Math.round((this.pool.activeCount || 0) / this.pool.maxPoolSize * 100));

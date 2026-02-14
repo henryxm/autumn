@@ -97,6 +97,18 @@ public interface Tag {
      */
     boolean isLocked();
 
+    /**
+     * 获取分布式锁的租约时间（秒）。
+     * <p>
+     * 在此时间窗口内，无论有多少个节点或多少次调度触发，任务最多执行一次。
+     * 仅在 {@link #isLocked()} 为 true 时有意义。
+     * </p>
+     *
+     * @return 锁租约秒数，默认 0（未配置锁时）
+     * @see TagValue#time()
+     */
+    long getLockLeaseTime();
+
     // ======================== 错峰延迟 ========================
 
     /**

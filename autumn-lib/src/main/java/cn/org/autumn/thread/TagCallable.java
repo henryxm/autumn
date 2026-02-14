@@ -44,6 +44,7 @@ public abstract class TagCallable<V> implements Callable<V>, Tag {
     private long delay = 0;
     private volatile boolean delaying = false;
     private boolean lock = false;
+    private long lockLeaseTime = 0;
 
     // ======================== 系统依赖 ========================
 
@@ -266,6 +267,7 @@ public abstract class TagCallable<V> implements Callable<V>, Tag {
         this.timeout = Math.max(0, value.timeout());
         this.delay = Math.max(0, value.delay());
         this.lock = value.lock();
+        this.lockLeaseTime = Math.max(0, value.time());
     }
 
     public TagValue getTagValue() {
@@ -462,6 +464,11 @@ public abstract class TagCallable<V> implements Callable<V>, Tag {
     @Override
     public boolean isLocked() {
         return lock;
+    }
+
+    @Override
+    public long getLockLeaseTime() {
+        return lockLeaseTime;
     }
 
     @Override

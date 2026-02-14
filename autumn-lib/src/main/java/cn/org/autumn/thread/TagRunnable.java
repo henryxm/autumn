@@ -95,6 +95,12 @@ public abstract class TagRunnable implements Runnable, Tag {
     private boolean lock = false;
 
     /**
+     * 锁租约时间（秒）。从 @TagValue.time() 解析。
+     * <p>在此时间窗口内，同一任务最多执行一次。仅在 lock=true 时有意义。</p>
+     */
+    private long lockLeaseTime = 0;
+
+    /**
      * 是否正处于错峰延迟等待中
      */
     private volatile boolean delaying = false;
@@ -361,6 +367,7 @@ public abstract class TagRunnable implements Runnable, Tag {
         this.timeout = Math.max(0, value.timeout());
         this.delay = Math.max(0, value.delay());
         this.lock = value.lock();
+        this.lockLeaseTime = Math.max(0, value.time());
     }
 
     public TagValue getTagValue() {
@@ -561,6 +568,11 @@ public abstract class TagRunnable implements Runnable, Tag {
     @Override
     public boolean isLocked() {
         return lock;
+    }
+
+    @Override
+    public long getLockLeaseTime() {
+        return lockLeaseTime;
     }
 
     @Override

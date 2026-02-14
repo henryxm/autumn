@@ -457,6 +457,7 @@ public class TagTaskExecutor extends ThreadPoolTaskExecutor {
                 map.put("cancelled", task.isCancelled());
                 // 分布式锁信息
                 map.put("isLocked", task.isLocked());
+                map.put("lockLeaseTime", task.getLockLeaseTime());
                 // 错峰延迟信息
                 map.put("isDelaying", task.isDelaying());
                 map.put("delay", task.getDelay());
