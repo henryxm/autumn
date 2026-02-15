@@ -13,17 +13,17 @@ import cn.org.autumn.modules.usr.service.UserProfileService;
 import cn.org.autumn.site.AccountFactory;
 import cn.org.autumn.site.InitFactory;
 import cn.org.autumn.utils.*;
-import com.baomidou.mybatisplus.mapper.EntityWrapper;
-import com.baomidou.mybatisplus.plugins.Page;
-import com.baomidou.mybatisplus.service.impl.ServiceImpl;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import cn.org.autumn.annotation.DataFilter;
 import cn.org.autumn.modules.sys.dao.SysUserDao;
 import cn.org.autumn.modules.sys.entity.SysDeptEntity;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.sys.shiro.ShiroSessionService;
-import org.apache.commons.lang.RandomStringUtils;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.shiro.authc.AuthenticationToken;
 import org.apache.shiro.authc.UsernamePasswordToken;
 import org.apache.shiro.subject.Subject;
@@ -37,7 +37,7 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -88,7 +88,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
     @Autowired
     AccountFactory accountFactory;
 
-    @Autowired
+    @Autowired(required = false)
     RedissonClient redissonClient;
 
     @Autowired
@@ -177,7 +177,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
     public void init() {
         SysUserEntity admin = new SysUserEntity();
         admin.setUsername(getAdmin());
-        SysUserEntity current = sysUserDao.selectOne(admin);
+        SysUserEntity current = sysUserDao.selectOne(new QueryWrapper<SysUserEntity>().eq("username", getAdmin()));
         if (null == current) {
             List<String> roleKeys = new ArrayList<>();
             roleKeys.add(Role_System_Administrator);
@@ -214,12 +214,12 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
     @DataFilter(subDept = true, user = false)
     public PageUtils queryPage(Map<String, Object> params) {
         String username = (String) params.get("username");
-        EntityWrapper<SysUserEntity> entityEntityWrapper = new EntityWrapper<>();
-        Page<SysUserEntity> page = this.selectPage(
+        QueryWrapper<SysUserEntity> entityEntityWrapper = new QueryWrapper<>();
+        Page<SysUserEntity> page = this.page(
                 new Query<SysUserEntity>(params).getPage(),
-                new EntityWrapper<SysUserEntity>()
+                new QueryWrapper<SysUserEntity>()
                         .like(StringUtils.isNotBlank(username), "username", username)
-                        .addFilterIfNeed(params.get(Constant.SQL_FILTER) != null, (String) params.get(Constant.SQL_FILTER))
+                        .apply(params.get(Constant.SQL_FILTER) != null, (String) params.get(Constant.SQL_FILTER))
         );
 
         for (SysUserEntity sysUserEntity : page.getRecords()) {
@@ -232,7 +232,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void save(SysUserEntity user) {
+    public boolean save(SysUserEntity user) {
         String password = user.getPassword();
         user.setCreateTime(new Date());
         //sha256加密
@@ -241,8 +241,9 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         user.setPassword(ShiroUtils.sha256(password, user.getSalt()));
         if (StringUtils.isEmpty(user.getUuid()))
             user.setUuid(Uuid.uuid());
-        this.insert(user);
+        boolean result = super.save(user);
         sysUserRoleService.saveOrUpdate(user.getUuid(), user.getRoleKeys());
+        return result;
     }
 
     public SysUserEntity newUser(String username, String uuid, String password, List<String> roleKeys) {
@@ -289,7 +290,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         //新密码
         newPassword = ShiroUtils.sha256(newPassword, userEntity.getSalt());
         userEntity.setPassword(newPassword);
-        boolean result = insertOrUpdate(userEntity);
+        boolean result = saveOrUpdate(userEntity);
         // 密码修改成功后，强制该用户的其他会话下线
         if (result && StringUtils.isNotEmpty(userUuid)) {
             forceUserLogout(userUuid);
@@ -309,7 +310,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         //新密码
         newPassword = ShiroUtils.sha256(newPassword, userEntity.getSalt());
         userEntity.setPassword(newPassword);
-        boolean result = insertOrUpdate(userEntity);
+        boolean result = saveOrUpdate(userEntity);
         // 密码修改成功后，强制该用户的其他会话下线
         if (result && StringUtils.isNotEmpty(userUuid)) {
             forceUserLogout(userUuid);
@@ -350,7 +351,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
                             sysUserEntity = new SysUserEntity();
                             sysUserEntity.setUsername(mapping.getUsername());
                             sysUserEntity.setUuid(mapping.getUuid());
-                            insert(sysUserEntity);
+                            save(sysUserEntity);
                         }
                     }
                 }
@@ -559,7 +560,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
                             sysUserEntity.setUsername(mapping.getUsername());
                         }
                         sysUserEntity.setUuid(mapping.getUuid());
-                        insert(sysUserEntity);
+                        save(sysUserEntity);
                     }
                 }
             } catch (Exception ignored) {
@@ -642,7 +643,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
                                 sysUserEntity.setDeptKey(sysDeptEntity.getDeptKey());
                             }
                             sysUserEntity.setUserId(null);
-                            insert(sysUserEntity);
+                            save(sysUserEntity);
                             // 设定缺省的角色
                             sysUserRoleService.saveOrUpdate(sysUserEntity.getUuid(), sysConfigService.getDefaultRoleKeys());
                         }
@@ -663,7 +664,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
     //注销账号，账号归档，用户不可恢复，保留最后数据，超过一定时间后，执行物理删除
     public void cancel(String uuid, String reason) throws Exception {
         String key = "user:cancel:" + uuid;
-        RLock lock = redissonClient.getLock(key);
+        RLock lock = redissonClient != null ? redissonClient.getLock(key) : null;
         try {
             SysUserEntity entity = getByUuid(uuid);
             if (null == entity || entity.getStatus() == -1)
@@ -707,7 +708,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         } catch (Exception e) {
             log.error("注销账号:{}", e.getMessage());
         } finally {
-            if (lock.isLocked())
+            if (lock != null && lock.isLocked())
                 lock.forceUnlock();
         }
     }
@@ -717,7 +718,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         SysUserEntity entity = baseMapper.getForDelete(uuid);
         if (null != entity) {
             accountFactory.removing(entity);
-            deleteById(entity);
+            removeById(entity);
             accountFactory.removed(entity);
         }
     }

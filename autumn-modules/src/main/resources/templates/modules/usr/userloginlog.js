@@ -4,9 +4,32 @@ $(function () {
         datatype: "json",
         colModel: [			
 			{ label: '${lang.usr_userloginlog_column_id}', name: 'id', index: 'id', width: 50, key: true },
-			{ label: '${lang.usr_userloginlog_column_username}', name: 'username', index: 'username', width: 80 }, 
-			{ label: '${lang.usr_userloginlog_column_login_time}', name: 'loginTime', index: 'login_time', width: 80 }, 
-			{ label: '${lang.usr_userloginlog_column_logout_time}', name: 'logoutTime', index: 'logout_time', width: 80 }, 
+			{ label: '${lang.usr_userloginlog_column_uuid}', name: 'uuid', index: 'uuid', width: 80 }, 
+
+			{ label: '${lang.usr_userloginlog_column_account}', name: 'account', index: 'account', width: 80 }, 
+
+			{ label: '${lang.usr_userloginlog_column_way}', name: 'way', index: 'way', width: 80 }, 
+
+			{ label: '${lang.usr_userloginlog_column_host}', name: 'host', index: 'host', width: 80 }, 
+
+			{ label: '${lang.usr_userloginlog_column_ip}', name: 'ip', index: 'ip', width: 80 }, 
+
+			{ label: '${lang.usr_userloginlog_column_session}', name: 'session', index: 'session', width: 80 }, 
+
+			{ label: '${lang.usr_userloginlog_column_path}', name: 'path', index: 'path', width: 80 }, 
+
+			{ label: '${lang.usr_userloginlog_column_agent}', name: 'agent', index: 'agent', width: 80 }, 
+
+			{ label: '${lang.usr_userloginlog_column_white}', name: 'white', index: 'white', width: 80 }, 
+
+			{ label: '${lang.usr_userloginlog_column_logout}', name: 'logout', index: 'logout', width: 80 }, 
+
+			{ label: '${lang.usr_userloginlog_column_allow}', name: 'allow', index: 'allow', width: 80 }, 
+
+			{ label: '${lang.usr_userloginlog_column_reason}', name: 'reason', index: 'reason', width: 80 }, 
+
+			{ label: '${lang.usr_userloginlog_column_create}', name: 'create', index: 'create', width: 80 }, 
+
         ],
 		viewrecords: true,
         height: 385,

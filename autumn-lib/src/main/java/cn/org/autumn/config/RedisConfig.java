@@ -11,6 +11,9 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 /**
  * Redis配置
+ * Redisson 自动配置已通过 application.yml 排除（避免启动时急切连接），
+ * 由 Lettuce (Spring Boot 默认) 提供 RedisConnectionFactory。
+ * 当 autumn.redis.open=false 时，RedisUtils 不会执行实际 Redis 操作。
  */
 @Configuration
 public class RedisConfig {

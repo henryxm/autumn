@@ -8,9 +8,9 @@ import cn.org.autumn.site.LoadFactory;
 import cn.org.autumn.thread.TagRunnable;
 import cn.org.autumn.thread.TagTaskExecutor;
 import cn.org.autumn.thread.TagValue;
-import com.baomidou.mybatisplus.mapper.EntityWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -101,7 +101,7 @@ public class ScheduleAssignService extends ModuleService<ScheduleAssignDao, Sche
         // 加载数据库中已有的分配记录，以 jobId 为 key
         Map<String, ScheduleAssignEntity> existingMap = new HashMap<>();
         try {
-            List<ScheduleAssignEntity> existingList = this.selectList(null);
+            List<ScheduleAssignEntity> existingList = this.list();
             if (existingList != null) {
                 for (ScheduleAssignEntity entity : existingList) {
                     if (entity.getJobId() != null) {
@@ -132,7 +132,7 @@ public class ScheduleAssignService extends ModuleService<ScheduleAssignDao, Sche
                     entity.setDescription(info.getDescription());
                     entity.setEnabled(info.isEnabled() ? 1 : 0);
                     entity.setUpdateTime(new Date());
-                    this.insert(entity);
+                    this.save(entity);
                     created++;
                 } catch (Exception e) {
                     log.error("Failed to create assignment for job [{}]: {}", jobId, e.getMessage());
@@ -197,7 +197,7 @@ public class ScheduleAssignService extends ModuleService<ScheduleAssignDao, Sche
      */
     public void refreshAssignments() {
         try {
-            List<ScheduleAssignEntity> list = this.selectList(null);
+            List<ScheduleAssignEntity> list = this.list();
             if (list == null || list.isEmpty()) return;
             int refreshed = 0;
             for (ScheduleAssignEntity entity : list) {
@@ -234,7 +234,7 @@ public class ScheduleAssignService extends ModuleService<ScheduleAssignDao, Sche
         }
         // 更新数据库
         try {
-            ScheduleAssignEntity entity = this.selectOne(new EntityWrapper<ScheduleAssignEntity>().eq("job_id", jobId));
+            ScheduleAssignEntity entity = this.getOne(new QueryWrapper<ScheduleAssignEntity>().eq("job_id", jobId));
             if (entity != null) {
                 entity.setAssignTag(tag);
                 entity.setUpdateTime(new Date());
@@ -260,7 +260,7 @@ public class ScheduleAssignService extends ModuleService<ScheduleAssignDao, Sche
                     newEntity.setDescription(info.getDescription());
                     newEntity.setEnabled(info.isEnabled() ? 1 : 0);
                     newEntity.setUpdateTime(new Date());
-                    this.insert(newEntity);
+                    this.save(newEntity);
                     return true;
                 }
                 return false;
@@ -276,7 +276,7 @@ public class ScheduleAssignService extends ModuleService<ScheduleAssignDao, Sche
      */
     public List<ScheduleAssignEntity> getAllAssignments() {
         try {
-            List<ScheduleAssignEntity> list = this.selectList(null);
+            List<ScheduleAssignEntity> list = this.list();
             return list != null ? list : Collections.emptyList();
         } catch (Exception e) {
             log.error("Failed to get all assignments: {}", e.getMessage(), e);
@@ -290,7 +290,7 @@ public class ScheduleAssignService extends ModuleService<ScheduleAssignDao, Sche
     public ScheduleAssignEntity getByJobId(String jobId) {
         if (StringUtils.isBlank(jobId)) return null;
         try {
-            return this.selectOne(new EntityWrapper<ScheduleAssignEntity>().eq("job_id", jobId));
+            return this.getOne(new QueryWrapper<ScheduleAssignEntity>().eq("job_id", jobId));
         } catch (Exception e) {
             log.error("Failed to get assignment for job [{}]: {}", jobId, e.getMessage(), e);
             return null;

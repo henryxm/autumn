@@ -2,7 +2,6 @@ package cn.org.autumn.annotation;
 
 import org.springframework.core.annotation.AliasFor;
 
-import javax.validation.constraints.NotEmpty;
 import java.lang.annotation.*;
 
 @Target(ElementType.FIELD)

@@ -1,7 +1,7 @@
 package cn.org.autumn.service;
 
 import cn.org.autumn.config.CacheConfig;
-import com.baomidou.mybatisplus.mapper.BaseMapper;
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;

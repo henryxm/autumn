@@ -49,7 +49,7 @@ public class LanguageControllerGen {
     @RequestMapping("/info/{id}")
     @RequiresPermissions("lan:language:info")
     public R info(@PathVariable("id") Long id){
-        LanguageEntity language = languageService.selectById(id);
+        LanguageEntity language = languageService.getById(id);
         return R.ok().put("language", language);
     }
 
@@ -59,7 +59,7 @@ public class LanguageControllerGen {
     @RequestMapping("/save")
     @RequiresPermissions("lan:language:save")
     public R save(@RequestBody LanguageEntity language){
-        languageService.insert(language);
+        languageService.save(language);
         return R.ok();
     }
 
@@ -70,7 +70,7 @@ public class LanguageControllerGen {
     @RequiresPermissions("lan:language:update")
     public R update(@RequestBody LanguageEntity language){
         ValidatorUtils.validateEntity(language);
-        languageService.updateAllColumnById(language);//全部更新
+        languageService.updateById(language);//全部更新
         return R.ok();
     }
 
@@ -80,7 +80,7 @@ public class LanguageControllerGen {
     @RequestMapping("/delete")
     @RequiresPermissions("lan:language:delete")
     public R delete(@RequestBody Long[] ids){
-        languageService.deleteBatchIds(Arrays.asList(ids));
+        languageService.removeBatchByIds(Arrays.asList(ids));
         return R.ok();
     }
 

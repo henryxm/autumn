@@ -14,7 +14,7 @@ import cn.org.autumn.modules.usr.service.UserTokenService;
 import cn.org.autumn.utils.IPUtils;
 import cn.org.autumn.utils.InterceptorUtils;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
@@ -22,10 +22,9 @@ import org.springframework.ui.ModelMap;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.ModelAndView;
-import org.springframework.web.servlet.handler.HandlerInterceptorAdapter;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 import java.util.*;
 
@@ -34,7 +33,7 @@ import java.util.*;
  */
 @Slf4j
 @Component
-public class AuthorizationInterceptor extends HandlerInterceptorAdapter implements InterceptorHandler, LoopJob.OneHour, ClearHandler {
+public class AuthorizationInterceptor implements HandlerInterceptor, InterceptorHandler, LoopJob.OneHour, ClearHandler {
     @Autowired
     private UserTokenService userTokenService;
 
@@ -98,6 +97,7 @@ public class AuthorizationInterceptor extends HandlerInterceptorAdapter implemen
         return sysUserEntity;
     }
 
+    @Override
     public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, @Nullable ModelAndView view) throws Exception {
         try {
             if (InterceptorUtils.skip(handler, this.getClass())) {

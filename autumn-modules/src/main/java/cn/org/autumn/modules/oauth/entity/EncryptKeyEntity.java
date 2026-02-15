@@ -3,8 +3,9 @@ package cn.org.autumn.modules.oauth.entity;
 import cn.org.autumn.table.annotation.Column;
 import cn.org.autumn.table.annotation.Table;
 import cn.org.autumn.table.data.DataType;
-import com.baomidou.mybatisplus.annotations.TableId;
-import com.baomidou.mybatisplus.annotations.TableName;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -44,5 +45,6 @@ public class EncryptKeyEntity implements Serializable {
     private Date expire;
 
     @Column(comment = "创建时间")
+    @TableField("`create`")
     private Date create;
 }

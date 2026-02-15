@@ -71,7 +71,7 @@ public class TokenStoreService extends ModuleService<TokenStoreDao, TokenStoreEn
         tokenStoreEntity.setAccessTokenExpiredIn(accessTokenExpiredIn);
         tokenStoreEntity.setRefreshTokenExpiredIn(refreshTokenExpiredIn);
         tokenStoreEntity.setUpdateTime(new Date());
-        insertOrUpdate(tokenStoreEntity);
+        saveOrUpdate(tokenStoreEntity);
         return tokenStoreEntity;
     }
 
@@ -87,7 +87,7 @@ public class TokenStoreService extends ModuleService<TokenStoreDao, TokenStoreEn
         if (null == tokenStoreEntity.getCreateTime())
             tokenStoreEntity.setCreateTime(new Date());
         tokenStoreEntity.setUpdateTime(new Date());
-        insertOrUpdate(tokenStoreEntity);
+        saveOrUpdate(tokenStoreEntity);
         return tokenStoreEntity;
     }
 
@@ -144,9 +144,9 @@ public class TokenStoreService extends ModuleService<TokenStoreDao, TokenStoreEn
     }
 
     public void load() {
-        List<TokenStoreEntity> list = selectByMap(null);
+        List<TokenStoreEntity> list = list();
         for (TokenStoreEntity tokenStoreEntity : list) {
-            SysUserEntity sysUserEntity = sysUserService.selectById(tokenStoreEntity.getUserUuid());
+            SysUserEntity sysUserEntity = sysUserService.getById(tokenStoreEntity.getUserUuid());
             if (null != sysUserEntity) {
                 Long at = getAccessTokenExpiredIn(tokenStoreEntity);
                 if (at > 0)

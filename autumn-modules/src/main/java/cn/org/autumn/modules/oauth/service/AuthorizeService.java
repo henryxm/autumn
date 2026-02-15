@@ -1,9 +1,10 @@
 package cn.org.autumn.modules.oauth.service;
 
+import cn.org.autumn.modules.oauth.util.JakartaToJavaxRequestAdapter;
 import cn.org.autumn.modules.oauth.store.TokenStore;
 import cn.org.autumn.modules.oauth.store.ValueType;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
-import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson2.JSON;
 import org.apache.oltu.oauth2.common.OAuth;
 import org.apache.oltu.oauth2.common.message.types.ParameterStyle;
 import org.apache.oltu.oauth2.rs.request.OAuthAccessResourceRequest;
@@ -12,7 +13,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.Map;
 
 @Service
@@ -24,7 +25,7 @@ public class AuthorizeService {
 
     public SysUserEntity getAuthorized(HttpServletRequest request) {
         try {
-            OAuthAccessResourceRequest oauthRequest = new OAuthAccessResourceRequest(request, ParameterStyle.QUERY, ParameterStyle.HEADER);
+            OAuthAccessResourceRequest oauthRequest = new OAuthAccessResourceRequest(JakartaToJavaxRequestAdapter.adapt(request), ParameterStyle.QUERY, ParameterStyle.HEADER);
             String accessToken = oauthRequest.getAccessToken();
             Object resp = JSON.parse(accessToken);
             Map map = (Map) resp;

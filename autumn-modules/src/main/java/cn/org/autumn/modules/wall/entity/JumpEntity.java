@@ -1,8 +1,8 @@
 package cn.org.autumn.modules.wall.entity;
 
 import cn.org.autumn.table.annotation.*;
-import com.baomidou.mybatisplus.annotations.TableId;
-import com.baomidou.mybatisplus.annotations.TableName;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 
 import java.io.Serializable;
 

@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.sys.service;
 
+import org.springframework.beans.factory.annotation.Value;
 import cn.org.autumn.annotation.ConfigField;
 import cn.org.autumn.bean.EnvBean;
 import cn.org.autumn.cluster.ServiceHandler;
@@ -19,12 +20,12 @@ import cn.org.autumn.site.DomainFactory;
 import cn.org.autumn.site.HostFactory;
 import cn.org.autumn.site.InitFactory;
 import cn.org.autumn.utils.*;
-import com.baomidou.mybatisplus.mapper.EntityWrapper;
-import com.baomidou.mybatisplus.plugins.Page;
-import com.baomidou.mybatisplus.service.impl.ServiceImpl;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.google.gson.Gson;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.shiro.session.mgt.SessionManager;
 import org.apache.shiro.web.servlet.Cookie;
 import org.apache.shiro.web.session.mgt.DefaultWebSessionManager;
@@ -36,8 +37,8 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -94,8 +95,11 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     @Autowired
     AsyncTaskExecutor asyncTaskExecutor;
 
-    @Autowired
+    @Autowired(required = false)
     private StringRedisTemplate stringRedisTemplate;
+
+    @Value("${autumn.redis.open:false}")
+    private boolean redisOpen;
 
     @Autowired
     DomainFactory domainFactory;
@@ -139,10 +143,16 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     }
 
     public void clear() {
-        String configKey = RedisKeys.getConfigPrefix(getNameSpace());
-        Set<String> keys = stringRedisTemplate.keys(configKey + "*");
-        if (null != keys && !keys.isEmpty())
-            stringRedisTemplate.delete(keys);
+        if (!redisOpen || stringRedisTemplate == null)
+            return;
+        try {
+            String configKey = RedisKeys.getConfigPrefix(getNameSpace());
+            Set<String> keys = stringRedisTemplate.keys(configKey + "*");
+            if (null != keys && !keys.isEmpty())
+                stringRedisTemplate.delete(keys);
+        } catch (Exception e) {
+            log.debug("Redis clear failed: {}", e.getMessage());
+        }
     }
 
     public String getClientId() {
@@ -389,31 +399,32 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
 
     public PageUtils queryPage(Map<String, Object> params, int status) {
         String paramKey = (String) params.get("paramKey");
-        EntityWrapper<SysConfigEntity> entityEntityWrapper = new EntityWrapper<>();
+        QueryWrapper<SysConfigEntity> entityEntityWrapper = new QueryWrapper<>();
         entityEntityWrapper.like(StringUtils.isNotBlank(paramKey), "param_key", paramKey);
         if (status == 2) {
             entityEntityWrapper.isNotNull("name");
             entityEntityWrapper.isNotNull("type");
         }
         entityEntityWrapper.eq("status", status);
-        Page<SysConfigEntity> page = this.selectPage(
+        Page<SysConfigEntity> page = this.page(
                 new Query<SysConfigEntity>(params).getPage(), entityEntityWrapper
         );
         page.setTotal(baseMapper.selectCount(entityEntityWrapper));
         return new PageUtils(page);
     }
 
-    public void save(SysConfigEntity config) {
-        this.insert(config);
+    public boolean save(SysConfigEntity config) {
+        boolean result = super.save(config);
         sysConfigRedis.saveOrUpdate(config);
         if (LOGGER_LEVEL.equalsIgnoreCase(config.getParamKey())) {
             sysLogService.changeLevel(config.getParamValue(), NULL);
         }
+        return result;
     }
 
     @Transactional(rollbackFor = Exception.class)
     public void update(SysConfigEntity config) {
-        this.updateAllColumnById(config);
+        this.updateById(config);
         sysConfigRedis.saveOrUpdate(config);
         if (LOGGER_LEVEL.equalsIgnoreCase(config.getParamKey())) {
             sysLogService.changeLevel(config.getParamValue(), NULL);
@@ -442,10 +453,10 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     @Transactional(rollbackFor = Exception.class)
     public void deleteBatch(Long[] ids) {
         for (Long id : ids) {
-            SysConfigEntity config = this.selectById(id);
+            SysConfigEntity config = this.getById(id);
             sysConfigRedis.delete(config.getParamKey());
         }
-        this.deleteBatchIds(Arrays.asList(ids));
+        this.removeBatchByIds(Arrays.asList(ids));
         onThirtyMinute();
     }
 
@@ -777,7 +788,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
 
     @Override
     public void onThirtyMinute() {
-        List<SysConfigEntity> list = selectByMap(new HashMap<>());
+        List<SysConfigEntity> list = listByMap(new HashMap<>());
         if (null != list && list.size() > 0) {
             Map<String, SysConfigEntity> t = new HashMap<>();
             for (SysConfigEntity sysConfigEntity : list) {

@@ -42,7 +42,7 @@ public class IpWhiteControllerGen {
     @RequestMapping("/info/{id}")
     @RequiresPermissions("wall:ipwhite:info")
     public R info(@PathVariable("id") Long id) {
-        IpWhiteEntity ipWhite = ipWhiteService.selectById(id);
+        IpWhiteEntity ipWhite = ipWhiteService.getById(id);
         return R.ok().put("ipWhite" , ipWhite);
     }
 
@@ -52,7 +52,7 @@ public class IpWhiteControllerGen {
     @RequestMapping("/save")
     @RequiresPermissions("wall:ipwhite:save")
     public R save(@RequestBody IpWhiteEntity ipWhite) {
-        ipWhiteService.insert(ipWhite);
+        ipWhiteService.save(ipWhite);
         return R.ok();
     }
 
@@ -63,7 +63,7 @@ public class IpWhiteControllerGen {
     @RequiresPermissions("wall:ipwhite:update")
     public R update(@RequestBody IpWhiteEntity ipWhite) {
         ValidatorUtils.validateEntity(ipWhite);
-        ipWhiteService.updateAllColumnById(ipWhite);//全部更新
+        ipWhiteService.updateById(ipWhite);//全部更新
         return R.ok();
     }
 
@@ -73,7 +73,7 @@ public class IpWhiteControllerGen {
     @RequestMapping("/delete")
     @RequiresPermissions("wall:ipwhite:delete")
     public R delete(@RequestBody Long[] ids) {
-        ipWhiteService.deleteBatchIds(Arrays.asList(ids));
+        ipWhiteService.removeBatchByIds(Arrays.asList(ids));
         return R.ok();
     }
 }

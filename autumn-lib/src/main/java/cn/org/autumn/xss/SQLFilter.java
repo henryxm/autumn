@@ -1,7 +1,7 @@
 package cn.org.autumn.xss;
 
 import cn.org.autumn.exception.AException;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * SQL过滤

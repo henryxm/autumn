@@ -1,6 +1,6 @@
 package cn.org.autumn.modules.oauth.entity;
 
-import com.baomidou.mybatisplus.annotations.*;
+import com.baomidou.mybatisplus.annotation.*;
 import cn.org.autumn.table.annotation.*;
 import cn.org.autumn.table.data.DataType;
 

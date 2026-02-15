@@ -1,6 +1,6 @@
 package cn.org.autumn.table;
 
-import javax.annotation.PostConstruct;
+import jakarta.annotation.PostConstruct;
 
 import cn.org.autumn.bean.EnvBean;
 import cn.org.autumn.table.data.InitType;

@@ -5,9 +5,9 @@ import cn.org.autumn.config.AccountHandler;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.usr.dao.UserTokenDao;
 import cn.org.autumn.modules.usr.entity.UserTokenEntity;
-import com.alibaba.fastjson.JSON;
-import com.baomidou.mybatisplus.mapper.EntityWrapper;
-import org.apache.commons.lang.StringUtils;
+import com.alibaba.fastjson2.JSON;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.oltu.oauth2.common.OAuth;
 import org.springframework.stereotype.Service;
 
@@ -27,7 +27,7 @@ public class UserTokenService extends ModuleService<UserTokenDao, UserTokenEntit
     }
 
     public UserTokenEntity queryByToken(String token) {
-        return this.selectOne(new EntityWrapper<UserTokenEntity>().eq("token", token));
+        return this.getOne(new QueryWrapper<UserTokenEntity>().eq("token", token));
     }
 
     public UserTokenEntity getUuid(String uuid) {
@@ -74,7 +74,7 @@ public class UserTokenService extends ModuleService<UserTokenDao, UserTokenEntit
             userTokenEntity.setExpireTime(date);
             userTokenEntity.setUpdateTime(date);
         }
-        insertOrUpdate(userTokenEntity);
+        saveOrUpdate(userTokenEntity);
     }
 
     public UserTokenEntity createToken(String userUuid) {
@@ -90,7 +90,7 @@ public class UserTokenService extends ModuleService<UserTokenDao, UserTokenEntit
         tokenEntity.setToken(token);
         tokenEntity.setUpdateTime(now);
         tokenEntity.setExpireTime(expireTime);
-        this.insertOrUpdate(tokenEntity);
+        this.saveOrUpdate(tokenEntity);
         return tokenEntity;
     }
 
@@ -100,7 +100,7 @@ public class UserTokenService extends ModuleService<UserTokenDao, UserTokenEntit
         tokenEntity.setUserUuid(userUuid);
         tokenEntity.setUpdateTime(now);
         tokenEntity.setExpireTime(now);
-        this.insertOrUpdate(tokenEntity);
+        this.saveOrUpdate(tokenEntity);
     }
 
     public void deleteUser(String user) {

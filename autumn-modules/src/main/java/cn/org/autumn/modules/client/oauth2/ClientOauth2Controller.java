@@ -13,8 +13,8 @@ import cn.org.autumn.site.VersionFactory;
 import cn.org.autumn.utils.HttpClientUtils;
 import cn.org.autumn.utils.IPUtils;
 import cn.org.autumn.utils.R;
-import com.alibaba.fastjson.JSON;
-import org.apache.commons.lang.StringUtils;
+import com.alibaba.fastjson2.JSON;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.oltu.oauth2.as.response.OAuthASResponse;
 import org.apache.oltu.oauth2.client.OAuthClient;
 import org.apache.oltu.oauth2.client.URLConnectionClient;
@@ -36,8 +36,9 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -174,7 +175,7 @@ public class ClientOauth2Controller {
     @ResponseBody
     @RequestMapping(value = {"/version"})
     public R version() {
-        Map<String, Object> o = versionFactory.getVersion();
+        Map<String, String> o = versionFactory.getVersions();
         if (null != o && !o.isEmpty())
             return R.ok().put("data", o);
         else

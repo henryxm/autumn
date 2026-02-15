@@ -1,13 +1,13 @@
 package cn.org.autumn.utils;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.util.Enumeration;
 import java.util.Locale;
 
-import static com.baomidou.mybatisplus.toolkit.StringUtils.UTF8;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class Utils {
     public static boolean parseBoolean(String s) {
@@ -45,7 +45,7 @@ public class Utils {
                 if (b.startsWith("callback=")) {
                     String[] a = b.split("=");
                     if (a.length == 2)
-                        return URLDecoder.decode(a[1], UTF8);
+                        return URLDecoder.decode(a[1], UTF_8);
                 }
             }
         } catch (Exception ignored) {

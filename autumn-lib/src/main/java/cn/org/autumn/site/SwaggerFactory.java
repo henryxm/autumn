@@ -5,6 +5,10 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 
+/**
+ * Swagger 工厂。
+ * <p>已迁移至 springdoc-openapi，保留此类以兼容工厂体系。</p>
+ */
 @Component
 public class SwaggerFactory extends Factory {
     List<SwaggerHandler> swaggerHandlers = null;

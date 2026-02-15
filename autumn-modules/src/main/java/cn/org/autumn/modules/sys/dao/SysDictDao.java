@@ -1,7 +1,7 @@
 package cn.org.autumn.modules.sys.dao;
 
 import cn.org.autumn.modules.sys.entity.SysDictEntity;
-import com.baomidou.mybatisplus.mapper.BaseMapper;
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;

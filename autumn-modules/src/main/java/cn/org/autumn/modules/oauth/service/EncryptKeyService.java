@@ -10,7 +10,7 @@ import cn.org.autumn.modules.oauth.dao.EncryptKeyDao;
 import cn.org.autumn.modules.oauth.entity.EncryptKeyEntity;
 import cn.org.autumn.site.EncryptConfigFactory;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -80,7 +80,7 @@ public class EncryptKeyService extends ModuleService<EncryptKeyDao, EncryptKeyEn
                     }
                 }
             }
-            insertOrUpdate(entity);
+            saveOrUpdate(entity);
             return entity;
         } catch (Exception e) {
             return null;

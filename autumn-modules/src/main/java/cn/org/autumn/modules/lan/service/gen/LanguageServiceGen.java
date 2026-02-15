@@ -1,14 +1,14 @@
 package cn.org.autumn.modules.lan.service.gen;
 
 import cn.org.autumn.site.InitFactory;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import com.baomidou.mybatisplus.mapper.EntityWrapper;
-import com.baomidou.mybatisplus.plugins.Page;
-import com.baomidou.mybatisplus.service.impl.ServiceImpl;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import cn.org.autumn.utils.PageUtils;
 import cn.org.autumn.utils.Query;
 import cn.org.autumn.modules.lan.service.LanMenu;
@@ -37,7 +37,7 @@ public class LanguageServiceGen extends ServiceImpl<LanguageDao, LanguageEntity>
 
     public PageUtils queryPage(Map<String, Object> params) {
         Page<LanguageEntity> _page = new Query<LanguageEntity>(params).getPage();
-        EntityWrapper<LanguageEntity> entityEntityWrapper = new EntityWrapper<>();
+        QueryWrapper<LanguageEntity> entityEntityWrapper = new QueryWrapper<>();
         Map<String, Object> condition = new HashMap<>();
         if (params.containsKey("id") && null != params.get("id") && StringUtils.isNotEmpty(params.get("id").toString())) {
             condition.put("id", params.get("id"));
@@ -117,8 +117,7 @@ public class LanguageServiceGen extends ServiceImpl<LanguageDao, LanguageEntity>
         if (params.containsKey("arSa") && null != params.get("arSa") && StringUtils.isNotEmpty(params.get("arSa").toString())) {
             condition.put("ar_sa", params.get("arSa"));
         }
-        _page.setCondition(condition);
-        Page<LanguageEntity> page = this.selectPage(_page, entityEntityWrapper);
+        Page<LanguageEntity> page = this.page(_page, entityEntityWrapper);
         page.setTotal(baseMapper.selectCount(entityEntityWrapper));
         return new PageUtils(page);
     }

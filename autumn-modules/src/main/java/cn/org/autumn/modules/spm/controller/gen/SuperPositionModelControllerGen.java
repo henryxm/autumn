@@ -42,7 +42,7 @@ public class SuperPositionModelControllerGen {
     @RequestMapping("/info/{id}")
     @RequiresPermissions("spm:superpositionmodel:info")
     public R info(@PathVariable("id") Long id) {
-        SuperPositionModelEntity superPositionModel = superPositionModelService.selectById(id);
+        SuperPositionModelEntity superPositionModel = superPositionModelService.getById(id);
         return R.ok().put("superPositionModel" , superPositionModel);
     }
 
@@ -52,7 +52,7 @@ public class SuperPositionModelControllerGen {
     @RequestMapping("/save")
     @RequiresPermissions("spm:superpositionmodel:save")
     public R save(@RequestBody SuperPositionModelEntity superPositionModel) {
-        superPositionModelService.insert(superPositionModel);
+        superPositionModelService.save(superPositionModel);
         return R.ok();
     }
 
@@ -63,7 +63,7 @@ public class SuperPositionModelControllerGen {
     @RequiresPermissions("spm:superpositionmodel:update")
     public R update(@RequestBody SuperPositionModelEntity superPositionModel) {
         ValidatorUtils.validateEntity(superPositionModel);
-        superPositionModelService.updateAllColumnById(superPositionModel);//全部更新
+        superPositionModelService.updateById(superPositionModel);//全部更新
         return R.ok();
     }
 
@@ -73,7 +73,7 @@ public class SuperPositionModelControllerGen {
     @RequestMapping("/delete")
     @RequiresPermissions("spm:superpositionmodel:delete")
     public R delete(@RequestBody Long[] ids) {
-        superPositionModelService.deleteBatchIds(Arrays.asList(ids));
+        superPositionModelService.removeBatchByIds(Arrays.asList(ids));
         return R.ok();
     }
 }

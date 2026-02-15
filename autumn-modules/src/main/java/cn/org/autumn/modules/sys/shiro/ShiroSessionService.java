@@ -4,7 +4,7 @@ import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.utils.RedisKeys;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.shiro.session.Session;
 import org.apache.shiro.session.mgt.SessionManager;
 import org.apache.shiro.session.mgt.eis.SessionDAO;

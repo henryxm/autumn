@@ -7,12 +7,12 @@ import cn.org.autumn.table.data.TableInfo;
 import cn.org.autumn.table.utils.HumpConvert;
 import cn.org.autumn.utils.PageUtils;
 import cn.org.autumn.utils.Query;
-import com.baomidou.mybatisplus.mapper.BaseMapper;
-import com.baomidou.mybatisplus.mapper.EntityWrapper;
-import com.baomidou.mybatisplus.plugins.Page;
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.lang.WordUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.text.WordUtils;
 
 import java.lang.reflect.Field;
 import java.util.*;
@@ -61,13 +61,12 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends ShareCache
     }
 
     public PageUtils queryPage(Page<T> _page) {
-        EntityWrapper<T> entityEntityWrapper = new EntityWrapper<>();
+        QueryWrapper<T> entityEntityWrapper = new QueryWrapper<>();
         return queryPage(_page, entityEntityWrapper);
     }
 
-    public PageUtils queryPage(Page<T> _page, EntityWrapper<T> entityEntityWrapper) {
-        Page<T> page = this.selectPage(_page, entityEntityWrapper);
-        page.setTotal(baseMapper.selectCount(entityEntityWrapper));
+    public PageUtils queryPage(Page<T> _page, QueryWrapper<T> entityEntityWrapper) {
+        Page<T> page = this.page(_page, entityEntityWrapper);
         return new PageUtils(page);
     }
 
@@ -85,17 +84,16 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends ShareCache
 
     public Page<T> getPage(Map<String, Object> params) {
         Page<T> _page = new Query<T>(params).getPage();
-        Map<String, Object> condition = getCondition(params);
-        _page.setCondition(condition);
         return _page;
     }
 
     public Page<T> getPage(Map<String, Object> params, List<String> descs) {
         Page<T> _page = new Query<T>(params).getPage();
-        Map<String, Object> condition = getCondition(params);
-        _page.setCondition(condition);
-        if (null != descs && descs.size() > 0)
-            _page.setDescs(descs);
+        if (null != descs && descs.size() > 0) {
+            for (String desc : descs) {
+                _page.addOrder(com.baomidou.mybatisplus.core.metadata.OrderItem.desc(desc));
+            }
+        }
         return _page;
     }
 

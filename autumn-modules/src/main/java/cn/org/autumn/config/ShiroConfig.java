@@ -5,7 +5,7 @@ import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.modules.sys.shiro.ForceLogoutRememberMeManager;
 import cn.org.autumn.modules.sys.shiro.RedisShiroSessionDAO;
 import cn.org.autumn.modules.sys.shiro.UserRealm;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.shiro.SecurityUtils;
 import org.apache.shiro.mgt.SecurityManager;
 import org.apache.shiro.mgt.RememberMeManager;
@@ -25,7 +25,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.DependsOn;
 import org.springframework.data.redis.core.RedisTemplate;
 
-import javax.servlet.Filter;
+import jakarta.servlet.Filter;
 import java.util.*;
 
 @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")

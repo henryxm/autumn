@@ -2,7 +2,7 @@ package cn.org.autumn.modules.oauth.dao;
 
 import cn.org.autumn.config.ClientType;
 import cn.org.autumn.modules.oauth.entity.ClientDetailsEntity;
-import com.baomidou.mybatisplus.mapper.BaseMapper;
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;

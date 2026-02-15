@@ -13,11 +13,11 @@ import cn.org.autumn.modules.wall.entity.IpWhiteEntity;
 import cn.org.autumn.site.WallFactory;
 import cn.org.autumn.utils.IPUtils;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.*;
@@ -164,7 +164,7 @@ public class IpWhiteService extends WallCounter<IpWhiteDao, IpWhiteEntity> imple
                     whiteEntity.setForbidden(0);
                     whiteEntity.setCount(0L);
                     whiteEntity.setToday(0L);
-                    insert(whiteEntity);
+                    save(whiteEntity);
                 } else {
                     whiteEntity.setTag(tag);
                     whiteEntity.setUserAgent(userAgent);

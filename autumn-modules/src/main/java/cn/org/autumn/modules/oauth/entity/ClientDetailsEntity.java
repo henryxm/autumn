@@ -2,9 +2,9 @@ package cn.org.autumn.modules.oauth.entity;
 
 import cn.org.autumn.config.ClientType;
 import cn.org.autumn.table.data.DataType;
-import com.baomidou.mybatisplus.annotations.*;
+import com.baomidou.mybatisplus.annotation.*;
 import cn.org.autumn.table.annotation.*;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 
 
 import java.io.Serializable;

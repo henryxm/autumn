@@ -16,11 +16,11 @@ public class DataSourceTestService {
     private SysUserService sysUserService;
 
     public SysUserEntity queryUser(Long userId) {
-        return sysUserService.selectById(userId);
+        return sysUserService.getById(userId);
     }
 
     @DataSource(name = DataSourceNames.SECOND)
     public SysUserEntity queryUser2(Long userId) {
-        return sysUserService.selectById(userId);
+        return sysUserService.getById(userId);
     }
 }

@@ -42,7 +42,7 @@ public class VisitLogControllerGen {
     @RequestMapping("/info/{id}")
     @RequiresPermissions("spm:visitlog:info")
     public R info(@PathVariable("id") Long id) {
-        VisitLogEntity visitLog = visitLogService.selectById(id);
+        VisitLogEntity visitLog = visitLogService.getById(id);
         return R.ok().put("visitLog" , visitLog);
     }
 
@@ -52,7 +52,7 @@ public class VisitLogControllerGen {
     @RequestMapping("/save")
     @RequiresPermissions("spm:visitlog:save")
     public R save(@RequestBody VisitLogEntity visitLog) {
-        visitLogService.insert(visitLog);
+        visitLogService.save(visitLog);
         return R.ok();
     }
 
@@ -63,7 +63,7 @@ public class VisitLogControllerGen {
     @RequiresPermissions("spm:visitlog:update")
     public R update(@RequestBody VisitLogEntity visitLog) {
         ValidatorUtils.validateEntity(visitLog);
-        visitLogService.updateAllColumnById(visitLog);//全部更新
+        visitLogService.updateById(visitLog);//全部更新
         return R.ok();
     }
 
@@ -73,7 +73,7 @@ public class VisitLogControllerGen {
     @RequestMapping("/delete")
     @RequiresPermissions("spm:visitlog:delete")
     public R delete(@RequestBody Long[] ids) {
-        visitLogService.deleteBatchIds(Arrays.asList(ids));
+        visitLogService.removeBatchByIds(Arrays.asList(ids));
         return R.ok();
     }
 }

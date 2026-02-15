@@ -42,7 +42,7 @@ public class DatabaseBackupStrategyControllerGen {
     @RequestMapping("/info/{id}")
     @RequiresPermissions("db:databasebackupstrategy:info")
     public R info(@PathVariable("id") Long id) {
-        DatabaseBackupStrategyEntity databaseBackupStrategy = databaseBackupStrategyService.selectById(id);
+        DatabaseBackupStrategyEntity databaseBackupStrategy = databaseBackupStrategyService.getById(id);
         return R.ok().put("databaseBackupStrategy" , databaseBackupStrategy);
     }
 
@@ -52,7 +52,7 @@ public class DatabaseBackupStrategyControllerGen {
     @RequestMapping("/save")
     @RequiresPermissions("db:databasebackupstrategy:save")
     public R save(@RequestBody DatabaseBackupStrategyEntity databaseBackupStrategy) {
-        databaseBackupStrategyService.insert(databaseBackupStrategy);
+        databaseBackupStrategyService.save(databaseBackupStrategy);
         return R.ok();
     }
 
@@ -63,7 +63,7 @@ public class DatabaseBackupStrategyControllerGen {
     @RequiresPermissions("db:databasebackupstrategy:update")
     public R update(@RequestBody DatabaseBackupStrategyEntity databaseBackupStrategy) {
         ValidatorUtils.validateEntity(databaseBackupStrategy);
-        databaseBackupStrategyService.updateAllColumnById(databaseBackupStrategy);//全部更新
+        databaseBackupStrategyService.updateById(databaseBackupStrategy);//全部更新
         return R.ok();
     }
 
@@ -73,7 +73,7 @@ public class DatabaseBackupStrategyControllerGen {
     @RequestMapping("/delete")
     @RequiresPermissions("db:databasebackupstrategy:delete")
     public R delete(@RequestBody Long[] ids) {
-        databaseBackupStrategyService.deleteBatchIds(Arrays.asList(ids));
+        databaseBackupStrategyService.removeBatchByIds(Arrays.asList(ids));
         return R.ok();
     }
 }

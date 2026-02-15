@@ -2,7 +2,7 @@ package cn.org.autumn.modules.user.service;
 
 import cn.org.autumn.utils.RedisUtils;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
-import org.apache.commons.lang.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;

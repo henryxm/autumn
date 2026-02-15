@@ -5,7 +5,7 @@ import cn.org.autumn.table.data.IndexInfo;
 import cn.org.autumn.table.data.TableInfo;
 import cn.org.autumn.table.data.ColumnInfo;
 import cn.org.autumn.table.utils.HumpConvert;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import java.lang.reflect.Field;
 import java.util.Iterator;

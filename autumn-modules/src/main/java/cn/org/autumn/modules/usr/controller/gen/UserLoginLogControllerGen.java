@@ -19,7 +19,7 @@ import cn.org.autumn.utils.R;
  *
  * @author User
  * @email henryxm@163.com
- * @date 2025-12
+ * @date 2026-02
  */
 public class UserLoginLogControllerGen {
 
@@ -42,7 +42,7 @@ public class UserLoginLogControllerGen {
     @RequestMapping("/info/{id}")
     @RequiresPermissions("usr:userloginlog:info")
     public R info(@PathVariable("id") Long id) {
-        UserLoginLogEntity userLoginLog = userLoginLogService.selectById(id);
+        UserLoginLogEntity userLoginLog = userLoginLogService.getById(id);
         return R.ok().put("userLoginLog" , userLoginLog);
     }
 
@@ -52,7 +52,7 @@ public class UserLoginLogControllerGen {
     @RequestMapping("/save")
     @RequiresPermissions("usr:userloginlog:save")
     public R save(@RequestBody UserLoginLogEntity userLoginLog) {
-        userLoginLogService.insert(userLoginLog);
+        userLoginLogService.save(userLoginLog);
         return R.ok();
     }
 
@@ -63,7 +63,7 @@ public class UserLoginLogControllerGen {
     @RequiresPermissions("usr:userloginlog:update")
     public R update(@RequestBody UserLoginLogEntity userLoginLog) {
         ValidatorUtils.validateEntity(userLoginLog);
-        userLoginLogService.updateAllColumnById(userLoginLog);//全部更新
+        userLoginLogService.updateById(userLoginLog);
         return R.ok();
     }
 
@@ -73,7 +73,7 @@ public class UserLoginLogControllerGen {
     @RequestMapping("/delete")
     @RequiresPermissions("usr:userloginlog:delete")
     public R delete(@RequestBody Long[] ids) {
-        userLoginLogService.deleteBatchIds(Arrays.asList(ids));
+        userLoginLogService.removeBatchByIds(Arrays.asList(ids));
         return R.ok();
     }
 }

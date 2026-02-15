@@ -12,7 +12,7 @@ import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysUserRoleService;
 import cn.org.autumn.modules.sys.service.SysUserService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
-import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -124,7 +124,7 @@ public class SysUserController extends AbstractController {
         if (ArrayUtils.contains(uuids, getUserUuid())) {
             return R.error("当前用户不能删除");
         }
-        sysUserService.deleteBatchIds(Arrays.asList(uuids));
+        sysUserService.removeBatchByIds(Arrays.asList(uuids));
         return R.ok();
     }
 }

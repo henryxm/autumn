@@ -20,14 +20,14 @@ import cn.org.autumn.utils.Email;
 import cn.org.autumn.utils.IDCard;
 import cn.org.autumn.utils.Phone;
 import cn.org.autumn.utils.QQ;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.shiro.authc.*;
 import org.apache.shiro.authc.credential.CredentialsMatcher;
 import org.apache.shiro.authz.AuthorizationInfo;
 import org.apache.shiro.authz.SimpleAuthorizationInfo;
 import org.apache.shiro.realm.AuthorizingRealm;
 import org.apache.shiro.subject.PrincipalCollection;
-import org.apache.shiro.util.ByteSource;
+import org.apache.shiro.lang.util.ByteSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -107,11 +107,9 @@ public class UserRealm extends AuthorizingRealm {
             user = (SysUserEntity) clientDetailsService.get(ValueType.accessToken, username).getValue();
         } else {
             //查询用户信息
-            if (token instanceof OauthUsernameToken)
-                user.setUuid(username);
-            else
-                user.setUsername(username);
-            user = sysUserDao.selectOne(user);
+            user = (token instanceof OauthUsernameToken)
+                ? sysUserDao.selectOne(new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<SysUserEntity>().eq("uuid", username))
+                : sysUserDao.selectOne(new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<SysUserEntity>().eq("username", username));
         }
         if (null == user && Email.isEmail(username)) {
             user = sysUserDao.getByEmail(username);

@@ -4,19 +4,26 @@ $(function () {
         datatype: "json",
         colModel: [			
 			{ label: '${lang.usr_userprofile_column_uuid}', name: 'uuid', index: 'uuid', width: 50, key: true },
-			{ label: '${lang.usr_userprofile_column_open_id}', name: 'openId', index: 'open_id', width: 80 }, 
-			{ label: '${lang.usr_userprofile_column_union_id}', name: 'unionId', index: 'union_id', width: 80 }, 
 			{ label: '${lang.usr_userprofile_column_icon}', name: 'icon', index: 'icon', width: 80 }, 
+
 			{ label: '${lang.usr_userprofile_column_username}', name: 'username', index: 'username', width: 80 }, 
+
 			{ label: '${lang.usr_userprofile_column_nickname}', name: 'nickname', index: 'nickname', width: 80 }, 
+
 			{ label: '${lang.usr_userprofile_column_mobile}', name: 'mobile', index: 'mobile', width: 80 }, 
-			{ label: '${lang.usr_userprofile_column_password}', name: 'password', index: 'password', width: 80 }, 
+
 			{ label: '${lang.usr_userprofile_column_login_ip}', name: 'loginIp', index: 'login_ip', width: 80 }, 
+
 			{ label: '${lang.usr_userprofile_column_visit_ip}', name: 'visitIp', index: 'visit_ip', width: 80 }, 
+
 			{ label: '${lang.usr_userprofile_column_user_agent}', name: 'userAgent', index: 'user_agent', width: 80 }, 
-			{ label: '${lang.usr_userprofile_column_create_time}', name: 'createTime', index: 'create_time', width: 80 }, 
+
 			{ label: '${lang.usr_userprofile_column_login_time}', name: 'loginTime', index: 'login_time', width: 80 }, 
+
 			{ label: '${lang.usr_userprofile_column_visit_time}', name: 'visitTime', index: 'visit_time', width: 80 }, 
+
+			{ label: '${lang.usr_userprofile_column_create_time}', name: 'createTime', index: 'create_time', width: 80 }, 
+
         ],
 		viewrecords: true,
         height: 385,

@@ -1,14 +1,14 @@
 package cn.org.autumn.modules.spm.service.gen;
 
 import cn.org.autumn.site.InitFactory;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import com.baomidou.mybatisplus.mapper.EntityWrapper;
-import com.baomidou.mybatisplus.plugins.Page;
-import com.baomidou.mybatisplus.service.impl.ServiceImpl;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import cn.org.autumn.utils.PageUtils;
 import cn.org.autumn.utils.Query;
 import cn.org.autumn.modules.spm.service.SpmMenu;
@@ -42,7 +42,7 @@ public class SuperPositionModelServiceGen extends ServiceImpl<SuperPositionModel
 
     public PageUtils queryPage(Map<String, Object> params) {
         Page<SuperPositionModelEntity> _page = new Query<SuperPositionModelEntity>(params).getPage();
-        EntityWrapper<SuperPositionModelEntity> entityEntityWrapper = new EntityWrapper<>();
+        QueryWrapper<SuperPositionModelEntity> entityEntityWrapper = new QueryWrapper<>();
         Map<String,Object> condition = new HashMap<>();
         if(params.containsKey("id") && null != params.get("id") && StringUtils.isNotEmpty(params.get("id").toString())) {
             condition.put("id", params.get("id"));
@@ -77,8 +77,7 @@ public class SuperPositionModelServiceGen extends ServiceImpl<SuperPositionModel
         if(params.containsKey("needLogin") && null != params.get("needLogin") && StringUtils.isNotEmpty(params.get("needLogin").toString())) {
             condition.put("need_login", params.get("needLogin"));
         }
-        _page.setCondition(condition);
-        Page<SuperPositionModelEntity> page = this.selectPage(_page, entityEntityWrapper);
+        Page<SuperPositionModelEntity> page = this.page(_page, entityEntityWrapper);
         page.setTotal(baseMapper.selectCount(entityEntityWrapper));
         return new PageUtils(page);
     }

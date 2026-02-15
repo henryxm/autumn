@@ -3,15 +3,13 @@ package cn.org.autumn.plugin;
 import cn.org.autumn.loader.ClassLoaderUtil;
 import cn.org.autumn.table.utils.HumpConvert;
 import cn.org.autumn.utils.SpringContextUtils;
-import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Controller;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RestController;
-import sun.misc.Launcher;
 
 import java.io.*;
 import java.lang.annotation.Annotation;
@@ -19,10 +17,9 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.*;
 
+@Slf4j
 @Component
 public class PluginManager {
-
-    Logger log = LoggerFactory.getLogger(getClass());
 
     public static String pluginDir;
 
@@ -79,7 +76,7 @@ public class PluginManager {
     public boolean isComponent(Class<?> clazz) {
         Annotation[] annotations = clazz.getDeclaredAnnotations();
         for (Annotation annotation : annotations) {
-            Class ac = annotation.annotationType();
+            Class<?> ac = annotation.annotationType();
             if (ac.equals(Component.class)
                     || ac.equals(Controller.class)
                     || ac.equals(RestController.class)
@@ -118,13 +115,15 @@ public class PluginManager {
                 http.disconnect();
             }
             return file.getAbsolutePath();
-        } catch (Throwable e) {
+        } catch (Throwable ignored) {
         }
         return "";
     }
 
     public PluginEntry load(PluginEntry pluginEntry) throws IOException {
-        if (null == pluginEntry || StringUtils.isBlank(pluginEntry.getUrl()) || StringUtils.isBlank(pluginEntry.getUuid())) {
+        if (null == pluginEntry)
+            return null;
+        if (StringUtils.isBlank(pluginEntry.getUrl()) || StringUtils.isBlank(pluginEntry.getUuid())) {
             pluginEntry.setCode(500);
             pluginEntry.setMsg("数据不完整");
             return pluginEntry;
@@ -148,7 +147,6 @@ public class PluginManager {
         String classPath = System.getProperty("java.class.path");
         if (!classPath.contains(file))
             System.setProperty("java.class.path", classPath + ":" + file);
-        Launcher.getBootstrapClassPath().addURL(new URL("file:" + file));
         List<String> classes = ClassLoaderUtil.getClasses(new File(file));
         List<String> beans = new ArrayList<>();
         Plugin plugin = null;

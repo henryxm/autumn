@@ -6,9 +6,9 @@ import cn.org.autumn.config.CacheConfig;
 import cn.org.autumn.model.CacheParam;
 import cn.org.autumn.table.utils.Escape;
 import cn.org.autumn.table.utils.HumpConvert;
-import com.baomidou.mybatisplus.mapper.BaseMapper;
-import com.baomidou.mybatisplus.mapper.EntityWrapper;
-import com.baomidou.mybatisplus.mapper.Wrapper;
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.beanutils.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -543,53 +543,47 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
     }
 
     @Override
-    public boolean insertOrUpdate(T entity) {
+    public boolean saveOrUpdate(T entity) {
         removeCacheByEntity(entity);
-        return super.insertOrUpdate(entity);
+        return super.saveOrUpdate(entity);
     }
 
     @Override
-    public boolean insertOrUpdateAllColumn(T entity) {
-        removeCacheByEntity(entity);
-        return super.insertOrUpdateAllColumn(entity);
-    }
-
-    @Override
-    public boolean insertOrUpdateBatch(List<T> entityList) {
+    public boolean saveBatch(Collection<T> entityList) {
         for (T entity : entityList) {
             removeCacheByEntity(entity);
         }
-        return super.insertOrUpdateBatch(entityList);
+        return super.saveBatch(entityList);
     }
 
     @Override
-    public boolean insertOrUpdateBatch(List<T> entityList, int batchSize) {
+    public boolean saveBatch(Collection<T> entityList, int batchSize) {
         for (T entity : entityList) {
             removeCacheByEntity(entity);
         }
-        return super.insertOrUpdateBatch(entityList, batchSize);
+        return super.saveBatch(entityList, batchSize);
     }
 
     @Override
-    public boolean insertOrUpdateAllColumnBatch(List<T> entityList) {
+    public boolean saveOrUpdateBatch(Collection<T> entityList) {
         for (T entity : entityList) {
             removeCacheByEntity(entity);
         }
-        return super.insertOrUpdateAllColumnBatch(entityList);
+        return super.saveOrUpdateBatch(entityList);
     }
 
     @Override
-    public boolean insertOrUpdateAllColumnBatch(List<T> entityList, int batchSize) {
+    public boolean saveOrUpdateBatch(Collection<T> entityList, int batchSize) {
         for (T entity : entityList) {
             removeCacheByEntity(entity);
         }
-        return super.insertOrUpdateAllColumnBatch(entityList, batchSize);
+        return super.saveOrUpdateBatch(entityList, batchSize);
     }
 
     @Override
     @SuppressWarnings("unchecked")
-    public boolean deleteById(Serializable id) {
-        boolean result = super.deleteById(id);
+    public boolean removeById(Serializable id) {
+        boolean result = super.removeById(id);
         if (result) {
             // 检查 id 是否是实体类型 T 的实例
             Class<?> clazz = getModelClass();
@@ -605,10 +599,10 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
     }
 
     @Override
-    public boolean deleteByMap(Map<String, Object> columnMap) {
+    public boolean removeByMap(Map<String, Object> columnMap) {
         // 先查询要删除的实体，以便删除缓存
-        List<T> entities = selectByMap(columnMap);
-        boolean result = super.deleteByMap(columnMap);
+        List<T> entities = listByMap(columnMap);
+        boolean result = super.removeByMap(columnMap);
         if (result && entities != null) {
             for (T entity : entities) {
                 removeCacheByEntity(entity);
@@ -618,10 +612,10 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
     }
 
     @Override
-    public boolean delete(Wrapper<T> wrapper) {
+    public boolean remove(Wrapper<T> wrapper) {
         // 先查询要删除的实体，以便删除缓存
-        List<T> entities = selectList(wrapper);
-        boolean result = super.delete(wrapper);
+        List<T> entities = list(wrapper);
+        boolean result = super.remove(wrapper);
         if (result && entities != null) {
             for (T entity : entities) {
                 removeCacheByEntity(entity);
@@ -632,18 +626,15 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
 
     @Override
     @SuppressWarnings("unchecked")
-    public boolean deleteBatchIds(Collection<? extends Serializable> idList) {
-        boolean result = super.deleteBatchIds(idList);
+    public boolean removeByIds(Collection<?> idList) {
+        boolean result = super.removeByIds(idList);
         if (result && idList != null) {
             Class<?> clazz = getModelClass();
-            for (Serializable id : idList) {
-                // 检查 id 是否是实体类型 T 的实例
+            for (Object id : idList) {
                 if (clazz != null && clazz.isInstance(id)) {
-                    // 如果是实体类型，调用 removeCacheByEntity
                     removeCacheByEntity((T) id);
-                } else {
-                    // 否则，使用 id 作为 key 删除所有相关缓存
-                    removeAllCacheByKey(id);
+                } else if (id instanceof Serializable) {
+                    removeAllCacheByKey((Serializable) id);
                 }
             }
         }
@@ -657,12 +648,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         return super.updateById(entity);
     }
 
-    @Override
-    public boolean updateAllColumnById(T entity) {
-        // 更新前先删除缓存
-        removeCacheByEntity(entity);
-        return super.updateAllColumnById(entity);
-    }
+    /* updateAllColumnById 在 MyBatis-Plus 3.x 中已移除，请使用 updateById 替代 */
 
     @Override
     public boolean update(T entity, Wrapper<T> wrapper) {
@@ -672,7 +658,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
     }
 
     @Override
-    public boolean updateBatchById(List<T> entityList) {
+    public boolean updateBatchById(Collection<T> entityList) {
         // 更新前先删除缓存
         if (entityList != null) {
             for (T entity : entityList) {
@@ -683,7 +669,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
     }
 
     @Override
-    public boolean updateBatchById(List<T> entityList, int batchSize) {
+    public boolean updateBatchById(Collection<T> entityList, int batchSize) {
         // 更新前先删除缓存
         if (entityList != null) {
             for (T entity : entityList) {
@@ -693,27 +679,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         return super.updateBatchById(entityList, batchSize);
     }
 
-    @Override
-    public boolean updateAllColumnBatchById(List<T> entityList) {
-        // 更新前先删除缓存
-        if (entityList != null) {
-            for (T entity : entityList) {
-                removeCacheByEntity(entity);
-            }
-        }
-        return super.updateAllColumnBatchById(entityList);
-    }
-
-    @Override
-    public boolean updateAllColumnBatchById(List<T> entityList, int batchSize) {
-        // 更新前先删除缓存
-        if (entityList != null) {
-            for (T entity : entityList) {
-                removeCacheByEntity(entity);
-            }
-        }
-        return super.updateAllColumnBatchById(entityList, batchSize);
-    }
+    /* updateAllColumnBatchById 在 MyBatis-Plus 3.x 中已移除，请使用 updateBatchById 替代 */
 
     /**
      * 获取缓存，如果不存在则查询并缓存（单个参数版本，高效）
@@ -1848,12 +1814,12 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         if (convertedKey == null) {
             return null;
         }
-        // 使用 EntityWrapper 查询
+        // 使用 QueryWrapper 查询
         String fieldName = cacheField.getName();
         String columnName = HumpConvert.HumpToUnderline(fieldName);
-        EntityWrapper<T> wrapper = new EntityWrapper<>();
+        QueryWrapper<T> wrapper = new QueryWrapper<>();
         wrapper.eq(Escape.escape(columnName), convertedKey);
-        T t = selectOne(wrapper);
+        T t = getOne(wrapper);
         if (t == null) {
             // 检查 @Cache 注解是否配置了 create=true
             Cache cache = cacheField.getAnnotation(Cache.class);
@@ -1930,12 +1896,12 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         if (convertedKey == null) {
             return null;
         }
-        // 使用 EntityWrapper 查询
+        // 使用 QueryWrapper 查询
         String fieldName = cacheField.getName();
         String columnName = HumpConvert.HumpToUnderline(fieldName);
-        EntityWrapper<T> wrapper = new EntityWrapper<>();
+        QueryWrapper<T> wrapper = new QueryWrapper<>();
         wrapper.eq(Escape.escape(columnName), convertedKey);
-        T t = selectOne(wrapper);
+        T t = getOne(wrapper);
         if (t == null) {
             // 创建新实体，将 key 值设置到对应的缓存字段上
             Map<String, Object> fieldValues = new HashMap<>();
@@ -2006,12 +1972,12 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         if (convertedKey == null) {
             return null;
         }
-        // 使用 EntityWrapper 查询
+        // 使用 QueryWrapper 查询
         String fieldName = cacheField.getName();
         String columnName = HumpConvert.HumpToUnderline(fieldName);
-        EntityWrapper<T> wrapper = new EntityWrapper<>();
+        QueryWrapper<T> wrapper = new QueryWrapper<>();
         wrapper.eq(Escape.escape(columnName), convertedKey);
-        T t = selectOne(wrapper);
+        T t = getOne(wrapper);
         if (t == null) {
             // 检查 @Cache 注解是否配置了 create=true
             Cache cache = cacheField.getAnnotation(Cache.class);
@@ -2078,12 +2044,12 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         if (convertedKey == null) {
             return null;
         }
-        // 使用 EntityWrapper 查询
+        // 使用 QueryWrapper 查询
         String fieldName = cacheField.getName();
         String columnName = HumpConvert.HumpToUnderline(fieldName);
-        EntityWrapper<T> wrapper = new EntityWrapper<>();
+        QueryWrapper<T> wrapper = new QueryWrapper<>();
         wrapper.eq(Escape.escape(columnName), convertedKey);
-        T t = selectOne(wrapper);
+        T t = getOne(wrapper);
         if (t == null) {
             Map<String, Object> fieldValues = new HashMap<>();
             fieldValues.put(fieldName, convertedKey);
@@ -2161,12 +2127,12 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         if (convertedKey == null) {
             return null;
         }
-        // 使用 EntityWrapper 查询
+        // 使用 QueryWrapper 查询
         String fieldName = cacheField.getName();
         String columnName = HumpConvert.HumpToUnderline(fieldName);
-        EntityWrapper<T> wrapper = new EntityWrapper<>();
+        QueryWrapper<T> wrapper = new QueryWrapper<>();
         wrapper.eq(Escape.escape(columnName), convertedKey);
-        return selectOne(wrapper);
+        return getOne(wrapper);
     }
 
     /**
@@ -2228,12 +2194,12 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         if (convertedKey == null) {
             return null;
         }
-        // 使用 EntityWrapper 查询列表
+        // 使用 QueryWrapper 查询列表
         String fieldName = cacheField.getName();
         String columnName = HumpConvert.HumpToUnderline(fieldName);
-        EntityWrapper<T> wrapper = new EntityWrapper<>();
+        QueryWrapper<T> wrapper = new QueryWrapper<>();
         wrapper.eq(Escape.escape(columnName), convertedKey);
-        return selectList(wrapper);
+        return list(wrapper);
     }
 
     public <X> List<X> getNameListEntity(Class<X> clazz, String name, Object... keys) {
@@ -2292,12 +2258,12 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         if (convertedKey == null) {
             return null;
         }
-        // 使用 EntityWrapper 查询列表
+        // 使用 QueryWrapper 查询列表
         String fieldName = cacheField.getName();
         String columnName = HumpConvert.HumpToUnderline(fieldName);
-        EntityWrapper<T> wrapper = new EntityWrapper<>();
+        QueryWrapper<T> wrapper = new QueryWrapper<>();
         wrapper.eq(Escape.escape(columnName), convertedKey);
-        return selectList(wrapper);
+        return list(wrapper);
     }
 
     public <X> List<X> convert(Class<X> clazz, List<T> list) {
@@ -2371,12 +2337,12 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         if (convertedKey == null) {
             return null;
         }
-        // 使用 EntityWrapper 查询列表
+        // 使用 QueryWrapper 查询列表
         String fieldName = cacheField.getName();
         String columnName = HumpConvert.HumpToUnderline(fieldName);
-        EntityWrapper<T> wrapper = new EntityWrapper<>();
+        QueryWrapper<T> wrapper = new QueryWrapper<>();
         wrapper.eq(Escape.escape(columnName), convertedKey);
-        return selectList(wrapper);
+        return list(wrapper);
     }
 
     /**
@@ -2393,7 +2359,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             return null;
         }
         // 构建查询条件
-        EntityWrapper<T> wrapper = new EntityWrapper<>();
+        QueryWrapper<T> wrapper = new QueryWrapper<>();
         for (String fieldName : fieldNames) {
             Object value = fieldValues.get(fieldName);
             if (value == null) {
@@ -2402,7 +2368,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             String columnName = HumpConvert.HumpToUnderline(fieldName);
             wrapper.eq(Escape.escape(columnName), value);
         }
-        return selectOne(wrapper);
+        return getOne(wrapper);
     }
 
     /**
@@ -2430,7 +2396,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
                     }
                 }
             }
-            insert(entity);
+            save(entity);
             return entity;
         } catch (Exception e) {
             if (log.isWarnEnabled()) {
@@ -2454,7 +2420,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             return null;
         }
         // 构建查询条件
-        EntityWrapper<T> wrapper = new EntityWrapper<>();
+        QueryWrapper<T> wrapper = new QueryWrapper<>();
         for (String fieldName : fieldNames) {
             Object value = fieldValues.get(fieldName);
             if (value == null) {
@@ -2463,7 +2429,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             String columnName = HumpConvert.HumpToUnderline(fieldName);
             wrapper.eq(Escape.escape(columnName), value);
         }
-        return selectList(wrapper);
+        return list(wrapper);
     }
 
     /**

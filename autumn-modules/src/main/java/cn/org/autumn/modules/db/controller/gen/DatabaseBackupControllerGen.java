@@ -42,7 +42,7 @@ public class DatabaseBackupControllerGen {
     @RequestMapping("/info/{id}")
     @RequiresPermissions("db:databasebackup:info")
     public R info(@PathVariable("id") Long id) {
-        DatabaseBackupEntity databaseBackup = databaseBackupService.selectById(id);
+        DatabaseBackupEntity databaseBackup = databaseBackupService.getById(id);
         return R.ok().put("databaseBackup" , databaseBackup);
     }
 
@@ -52,7 +52,7 @@ public class DatabaseBackupControllerGen {
     @RequestMapping("/save")
     @RequiresPermissions("db:databasebackup:save")
     public R save(@RequestBody DatabaseBackupEntity databaseBackup) {
-        databaseBackupService.insert(databaseBackup);
+        databaseBackupService.save(databaseBackup);
         return R.ok();
     }
 
@@ -63,7 +63,7 @@ public class DatabaseBackupControllerGen {
     @RequiresPermissions("db:databasebackup:update")
     public R update(@RequestBody DatabaseBackupEntity databaseBackup) {
         ValidatorUtils.validateEntity(databaseBackup);
-        databaseBackupService.updateAllColumnById(databaseBackup);//全部更新
+        databaseBackupService.updateById(databaseBackup);//全部更新
         return R.ok();
     }
 
@@ -73,7 +73,7 @@ public class DatabaseBackupControllerGen {
     @RequestMapping("/delete")
     @RequiresPermissions("db:databasebackup:delete")
     public R delete(@RequestBody Long[] ids) {
-        databaseBackupService.deleteBatchIds(Arrays.asList(ids));
+        databaseBackupService.removeBatchByIds(Arrays.asList(ids));
         return R.ok();
     }
 }

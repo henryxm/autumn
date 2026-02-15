@@ -15,15 +15,15 @@ import cn.org.autumn.validator.ValidatorUtils;
 import cn.org.autumn.modules.sys.entity.SysConfigEntity;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import com.google.gson.Gson;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.util.*;
 
 import static cn.org.autumn.modules.sys.service.SysConfigService.*;
@@ -71,7 +71,7 @@ public class SysConfigController extends AbstractController {
     @RequestMapping("/info/{id}")
     @RequiresPermissions("sys:config:info")
     public R info(@PathVariable("id") Long id) {
-        SysConfigEntity config = sysConfigService.selectById(id);
+        SysConfigEntity config = sysConfigService.getById(id);
 
         return R.ok().put("config", config);
     }

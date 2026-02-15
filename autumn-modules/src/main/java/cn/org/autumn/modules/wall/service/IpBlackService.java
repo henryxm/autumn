@@ -9,7 +9,7 @@ import cn.org.autumn.modules.wall.entity.IpBlackEntity;
 import cn.org.autumn.site.WallFactory;
 import cn.org.autumn.utils.IPUtils;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
@@ -47,7 +47,7 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
     public int getCount() {
         IpBlackEntity black = getByIp("0.0.0.0");
         if (null == black) {
-            black = selectById(1);
+            black = getById(1);
             if (null == black) {
                 black = new IpBlackEntity();
                 black.setAvailable(1);
@@ -57,7 +57,7 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
             black.setTag("IP黑名单策略5秒自动拉黑次数");
             black.setCreateTime(new Date());
             black.setUserAgent("");
-            insertOrUpdate(black);
+            saveOrUpdate(black);
         }
         if (null == black.getCount() || black.getCount().intValue() < 500) {
             black.setCount((long) firewallCount);
@@ -249,7 +249,7 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
             ipBlackEntity.setAvailable(0);
             ipBlackEntity.setTag(tag);
             ipBlackEntity.setCreateTime(new Date());
-            insertOrUpdate(ipBlackEntity);
+            saveOrUpdate(ipBlackEntity);
             if (!ipBlackList.contains(ip)) {
                 ipBlackList.add(ip);
             }
@@ -302,7 +302,7 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
                     blackEntity.setCount(0L);
                     blackEntity.setToday(0L);
                     ipBlackList.add(ip);
-                    insert(blackEntity);
+                    save(blackEntity);
                 }
             }
         } catch (Exception e) {

@@ -4,7 +4,7 @@ import cn.org.autumn.base.ModuleService;
 import cn.org.autumn.config.AccountHandler;
 import cn.org.autumn.modules.usr.dao.UserOpenDao;
 import cn.org.autumn.modules.usr.entity.UserOpenEntity;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -83,7 +83,7 @@ public class UserOpenService extends ModuleService<UserOpenDao, UserOpenEntity> 
         }
         // 批量物理删除
         for (UserOpenEntity entity : list) {
-            this.deleteById(entity.getId());
+            this.removeById(entity.getId());
         }
     }
 
@@ -215,7 +215,7 @@ public class UserOpenService extends ModuleService<UserOpenDao, UserOpenEntity> 
      * @return 保存后的实体
      */
     @Transactional(rollbackFor = Exception.class)
-    public UserOpenEntity saveOrUpdate(UserOpenEntity entity) {
+    public UserOpenEntity saveOrUpdateEntity(UserOpenEntity entity) {
         if (entity == null) {
             return null;
         }
@@ -242,7 +242,7 @@ public class UserOpenService extends ModuleService<UserOpenDao, UserOpenEntity> 
             // 创建新记录
             entity.setCreate(now);
             entity.setUpdate(now);
-            this.insert(entity);
+            this.save(entity);
             return entity;
         }
     }
@@ -259,14 +259,14 @@ public class UserOpenService extends ModuleService<UserOpenDao, UserOpenEntity> 
      * @return 保存后的实体
      */
     @Transactional(rollbackFor = Exception.class)
-    public UserOpenEntity saveOrUpdate(String uuid, String platform, String appid, String openid, String unionid) {
+    public UserOpenEntity saveOrUpdateEntity(String uuid, String platform, String appid, String openid, String unionid) {
         UserOpenEntity entity = new UserOpenEntity();
         entity.setUuid(uuid);
         entity.setPlatform(platform);
         entity.setAppid(appid);
         entity.setOpenid(openid);
         entity.setUnionid(unionid);
-        return saveOrUpdate(entity);
+        return saveOrUpdateEntity(entity);
     }
 
     /**

@@ -6,8 +6,8 @@ import cn.org.autumn.table.annotation.UniqueKeyFields;
 import cn.org.autumn.table.annotation.UniqueKeys;
 import cn.org.autumn.table.mysql.ColumnMeta;
 import cn.org.autumn.table.utils.HumpConvert;
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.lang.WordUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.text.WordUtils;
 
 import java.lang.reflect.Field;
 import java.math.BigDecimal;

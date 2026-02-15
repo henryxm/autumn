@@ -2,8 +2,8 @@ package cn.org.autumn.modules.sys.service;
 
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.site.InitFactory;
-import com.aliyuncs.utils.StringUtils;
-import com.baomidou.mybatisplus.service.impl.ServiceImpl;
+import org.apache.commons.lang3.StringUtils;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import cn.org.autumn.utils.Constant;
 import cn.org.autumn.utils.MapUtils;
 import cn.org.autumn.modules.sys.dao.SysMenuDao;
@@ -187,7 +187,7 @@ public class SysMenuService extends ServiceImpl<SysMenuDao, SysMenuEntity> imple
             current.copy(sysMenuEntity);
         } else
             current = sysMenuEntity;
-        return insertOrUpdate(current);
+        return saveOrUpdate(current);
     }
 
     //{0:菜单名字,1:URL,2:权限,3:菜单类型,4:ICON,5:排序,6:MenuKey,7:ParentKey,8:Language}
@@ -272,7 +272,7 @@ public class SysMenuService extends ServiceImpl<SysMenuDao, SysMenuEntity> imple
         //删除菜单
         this.deleteByMenuKeys(new String[]{menuKey});
         //删除菜单与角色关联
-        sysRoleMenuService.deleteByMap(new MapUtils().put("menu_key", menuKey));
+        sysRoleMenuService.removeByMap(new MapUtils().put("menu_key", menuKey));
     }
 
     public int deleteByMenuKeys(String[] menuKeys) {

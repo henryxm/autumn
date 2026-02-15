@@ -6,10 +6,10 @@ import cn.org.autumn.modules.spm.entity.VisitLogEntity;
 import cn.org.autumn.modules.spm.service.gen.VisitLogServiceGen;
 
 import cn.org.autumn.utils.IPUtils;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -66,7 +66,7 @@ public class VisitLogService extends VisitLogServiceGen implements LoopJob.OneDa
         visitLogEntity.setDayString(day);
         visitLogEntity.setCreateTime(new Date());
 
-        List<VisitLogEntity> logEntities = selectByMap(map);
+        List<VisitLogEntity> logEntities = listByMap(map);
 
         if (logEntities.size() > 0)
             visitLogEntity = logEntities.get(0);
@@ -75,7 +75,7 @@ public class VisitLogService extends VisitLogServiceGen implements LoopJob.OneDa
         if (isUv(request, superPositionModelEntity))
             visitLogEntity.setUniqueVisitor(visitLogEntity.getUniqueVisitor() + 1);
 
-        insertOrUpdate(visitLogEntity);
+        saveOrUpdate(visitLogEntity);
     }
 
     @Override

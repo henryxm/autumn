@@ -7,15 +7,15 @@ import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.usr.entity.UserProfileEntity;
 import cn.org.autumn.utils.PageUtils;
 import cn.org.autumn.utils.Query;
-import com.baomidou.mybatisplus.mapper.EntityWrapper;
-import com.baomidou.mybatisplus.plugins.Page;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import cn.org.autumn.modules.usr.dao.UserLoginLogDao;
 import cn.org.autumn.modules.usr.entity.UserLoginLogEntity;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.*;
 
 @Slf4j
@@ -38,7 +38,7 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
     public PageUtils queryPage(Map<String, Object> params) {
         try {
             Page<UserLoginLogEntity> _page = new Query<UserLoginLogEntity>(params).getPage();
-            EntityWrapper<UserLoginLogEntity> ew = new EntityWrapper<>();
+            QueryWrapper<UserLoginLogEntity> ew = new QueryWrapper<>();
             String uuid = mapStr(params, "uuid");
             String ip = mapStr(params, "ip");
             String account = mapStr(params, "account");
@@ -88,8 +88,8 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
                 } catch (Exception ignored) {
                 }
             }
-            ew.orderBy("`create`", false);
-            Page<UserLoginLogEntity> page = selectPage(_page, ew);
+            ew.orderByDesc("`create`");
+            Page<UserLoginLogEntity> page = page(_page, ew);
             page.setTotal(baseMapper.selectCount(ew));
             return new PageUtils(page);
         } catch (Exception e) {
@@ -154,20 +154,20 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
      * 某用户最近若干条登录/登出记录，按创建时间倒序
      */
     public List<UserLoginLogEntity> listRecentByUuid(String uuid, int limit) {
-        EntityWrapper<UserLoginLogEntity> ew = new EntityWrapper<>();
-        ew.eq("uuid", uuid).orderBy("`create`", false);
+        QueryWrapper<UserLoginLogEntity> ew = new QueryWrapper<>();
+        ew.eq("uuid", uuid).orderByDesc("`create`");
         Page<UserLoginLogEntity> p = new Page<>(1, Math.max(1, Math.min(limit, 500)));
-        return selectPage(p, ew).getRecords();
+        return page(p, ew).getRecords();
     }
 
     /**
      * 某 IP 最近若干条记录，按创建时间倒序
      */
     public List<UserLoginLogEntity> listRecentByIp(String ip, int limit) {
-        EntityWrapper<UserLoginLogEntity> ew = new EntityWrapper<>();
-        ew.eq("ip", ip).orderBy("`create`", false);
+        QueryWrapper<UserLoginLogEntity> ew = new QueryWrapper<>();
+        ew.eq("ip", ip).orderByDesc("`create`");
         Page<UserLoginLogEntity> p = new Page<>(1, Math.max(1, Math.min(limit, 500)));
-        return selectPage(p, ew).getRecords();
+        return page(p, ew).getRecords();
     }
 
     /**
@@ -175,7 +175,7 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
      */
     public long countByUuid(String uuid) {
         if (StringUtils.isBlank(uuid)) return 0;
-        EntityWrapper<UserLoginLogEntity> ew = new EntityWrapper<>();
+        QueryWrapper<UserLoginLogEntity> ew = new QueryWrapper<>();
         ew.eq("uuid", uuid);
         return baseMapper.selectCount(ew);
     }
@@ -185,7 +185,7 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
      */
     public long countByIp(String ip) {
         if (StringUtils.isBlank(ip)) return 0;
-        EntityWrapper<UserLoginLogEntity> ew = new EntityWrapper<>();
+        QueryWrapper<UserLoginLogEntity> ew = new QueryWrapper<>();
         ew.eq("ip", ip);
         return baseMapper.selectCount(ew);
     }
@@ -199,7 +199,7 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
      * @return 删除条数
      */
     public int deleteByParams(Map<String, Object> params) {
-        EntityWrapper<UserLoginLogEntity> ew = new EntityWrapper<>();
+        QueryWrapper<UserLoginLogEntity> ew = new QueryWrapper<>();
         String uuid = mapStr(params, "uuid");
         String ip = mapStr(params, "ip");
         String account = mapStr(params, "account");
@@ -272,7 +272,7 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
         if (days <= 0) return 0;
         long cutoff = System.currentTimeMillis() - days * 24L * 3600 * 1000;
         Date before = new Date(cutoff);
-        EntityWrapper<UserLoginLogEntity> ew = new EntityWrapper<>();
+        QueryWrapper<UserLoginLogEntity> ew = new QueryWrapper<>();
         ew.lt("`create`", before);
         int n = baseMapper.delete(ew);
         if (n > 0 && log.isInfoEnabled()) {
@@ -326,7 +326,7 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
             entity.setWay(way);
             entity.setReason(reason);
             entity.setCreate(new Date());
-            insert(entity);
+            save(entity);
         } catch (Throwable e) {
             log.warn("保存错误:{}, 账号:{}, 允许:{}, 方式:{}, 原因:{}, IP:{}, 代理:{}, 错误:{}", uuid, account, allow, way, reason, ip, agent, e.getMessage());
         }
@@ -341,9 +341,9 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
     public Set<String> getAllowedIpsByUserUuid(String uuid) {
         if (StringUtils.isBlank(uuid))
             return new HashSet<>();
-        EntityWrapper<UserLoginLogEntity> ew = new EntityWrapper<>();
+        QueryWrapper<UserLoginLogEntity> ew = new QueryWrapper<>();
         ew.eq("uuid", uuid).eq("`white`", true);
-        List<UserLoginLogEntity> list = selectList(ew);
+        List<UserLoginLogEntity> list = this.list(ew);
         Set<String> ips = new HashSet<>();
         for (UserLoginLogEntity e : list) {
             if (e.getIp() != null && !e.getIp().trim().isEmpty()) ips.add(e.getIp().trim());
@@ -389,7 +389,7 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
             if (null != agent && agent.length() > 500)
                 agent = agent.substring(0, 500);
             entity.setAgent(agent);
-            insert(entity);
+            save(entity);
         } catch (Throwable e) {
             log.warn("退出错误:{}, IP:{}, 代理:{}, 错误:{}", uuid, ip, agent, e.getMessage());
         }

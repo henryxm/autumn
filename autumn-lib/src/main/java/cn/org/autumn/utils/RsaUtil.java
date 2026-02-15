@@ -3,7 +3,7 @@ package cn.org.autumn.utils;
 import cn.org.autumn.model.KeyData;
 import cn.org.autumn.model.RsaKey;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import javax.crypto.Cipher;
 import java.io.ByteArrayOutputStream;

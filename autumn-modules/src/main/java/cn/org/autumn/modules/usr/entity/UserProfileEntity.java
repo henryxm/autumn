@@ -1,9 +1,9 @@
 package cn.org.autumn.modules.usr.entity;
 
 import cn.org.autumn.table.data.DataType;
-import com.baomidou.mybatisplus.annotations.*;
+import com.baomidou.mybatisplus.annotation.*;
 import cn.org.autumn.table.annotation.*;
-import com.baomidou.mybatisplus.enums.IdType;
+import com.baomidou.mybatisplus.annotation.IdType;
 import lombok.Getter;
 import lombok.Setter;
 

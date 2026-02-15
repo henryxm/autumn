@@ -1,7 +1,7 @@
 package cn.org.autumn.modules.gen.entity;
 
 import cn.org.autumn.modules.sys.entity.SysMenuEntity;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.LinkedHashMap;
 import java.util.Map;

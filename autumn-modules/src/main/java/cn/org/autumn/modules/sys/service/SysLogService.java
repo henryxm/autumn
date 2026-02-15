@@ -3,19 +3,19 @@ package cn.org.autumn.modules.sys.service;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
 import cn.org.autumn.modules.job.task.LoopJob;
-import com.baomidou.mybatisplus.mapper.EntityWrapper;
-import com.baomidou.mybatisplus.plugins.Page;
-import com.baomidou.mybatisplus.service.impl.ServiceImpl;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import cn.org.autumn.utils.PageUtils;
 import cn.org.autumn.utils.Query;
 import cn.org.autumn.modules.sys.dao.SysLogDao;
 import cn.org.autumn.modules.sys.entity.SysLogEntity;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import javax.validation.constraints.Null;
+import jakarta.validation.constraints.Null;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -43,10 +43,10 @@ public class SysLogService extends ServiceImpl<SysLogDao, SysLogEntity> implemen
 
     public PageUtils queryPage(Map<String, Object> params) {
         String key = (String) params.get("key");
-        EntityWrapper<SysLogEntity> entityEntityWrapper = new EntityWrapper<>();
-        Page<SysLogEntity> page = this.selectPage(
+        QueryWrapper<SysLogEntity> entityEntityWrapper = new QueryWrapper<>();
+        Page<SysLogEntity> page = this.page(
                 new Query<SysLogEntity>(params).getPage(),
-                new EntityWrapper<SysLogEntity>().like(StringUtils.isNotBlank(key), "username", key)
+                new QueryWrapper<SysLogEntity>().like(StringUtils.isNotBlank(key), "username", key)
         );
         page.setTotal(baseMapper.selectCount(entityEntityWrapper));
         return new PageUtils(page);

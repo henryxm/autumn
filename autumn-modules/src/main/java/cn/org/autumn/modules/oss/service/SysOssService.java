@@ -2,8 +2,8 @@ package cn.org.autumn.modules.oss.service;
 
 import cn.org.autumn.modules.lan.service.LanguageService;
 import cn.org.autumn.site.InitFactory;
-import com.baomidou.mybatisplus.plugins.Page;
-import com.baomidou.mybatisplus.service.impl.ServiceImpl;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import cn.org.autumn.utils.PageUtils;
 import cn.org.autumn.utils.Query;
 import cn.org.autumn.modules.oss.dao.SysOssDao;
@@ -19,7 +19,7 @@ public class SysOssService extends ServiceImpl<SysOssDao, SysOssEntity> implemen
     protected LanguageService languageService;
 
     public PageUtils queryPage(Map<String, Object> params) {
-        Page<SysOssEntity> page = this.selectPage(
+        Page<SysOssEntity> page = this.page(
                 new Query<SysOssEntity>(params).getPage()
         );
         return new PageUtils(page);

@@ -1,14 +1,14 @@
 package cn.org.autumn.modules.spm.service.gen;
 
 import cn.org.autumn.site.InitFactory;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import com.baomidou.mybatisplus.mapper.EntityWrapper;
-import com.baomidou.mybatisplus.plugins.Page;
-import com.baomidou.mybatisplus.service.impl.ServiceImpl;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import cn.org.autumn.utils.PageUtils;
 import cn.org.autumn.utils.Query;
 import cn.org.autumn.modules.spm.service.SpmMenu;
@@ -42,7 +42,7 @@ public class VisitLogServiceGen extends ServiceImpl<VisitLogDao, VisitLogEntity>
 
     public PageUtils queryPage(Map<String, Object> params) {
         Page<VisitLogEntity> _page = new Query<VisitLogEntity>(params).getPage();
-        EntityWrapper<VisitLogEntity> entityEntityWrapper = new EntityWrapper<>();
+        QueryWrapper<VisitLogEntity> entityEntityWrapper = new QueryWrapper<>();
         Map<String,Object> condition = new HashMap<>();
         if(params.containsKey("id") && null != params.get("id") && StringUtils.isNotEmpty(params.get("id").toString())) {
             condition.put("id", params.get("id"));
@@ -71,8 +71,7 @@ public class VisitLogServiceGen extends ServiceImpl<VisitLogDao, VisitLogEntity>
         if(params.containsKey("createTime") && null != params.get("createTime") && StringUtils.isNotEmpty(params.get("createTime").toString())) {
             condition.put("create_time", params.get("createTime"));
         }
-        _page.setCondition(condition);
-        Page<VisitLogEntity> page = this.selectPage(_page, entityEntityWrapper);
+        Page<VisitLogEntity> page = this.page(_page, entityEntityWrapper);
         page.setTotal(baseMapper.selectCount(entityEntityWrapper));
         return new PageUtils(page);
     }

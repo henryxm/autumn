@@ -1,9 +1,9 @@
 package cn.org.autumn.bean;
 
 import cn.org.autumn.annotation.MultiRequestBody;
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONException;
-import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson2.JSON;
+import com.alibaba.fastjson2.JSONException;
+import com.alibaba.fastjson2.JSONObject;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.util.TextUtils;
 import org.springframework.core.MethodParameter;
@@ -12,7 +12,7 @@ import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.method.support.ModelAndViewContainer;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.HashSet;

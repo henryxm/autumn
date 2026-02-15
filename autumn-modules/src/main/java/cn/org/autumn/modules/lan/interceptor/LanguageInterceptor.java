@@ -6,7 +6,7 @@ import cn.org.autumn.modules.lan.service.Language;
 import cn.org.autumn.modules.lan.service.LanguageService;
 import cn.org.autumn.utils.InterceptorUtils;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
@@ -15,9 +15,9 @@ import org.springframework.web.servlet.AsyncHandlerInterceptor;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.ModelAndView;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import java.util.Locale;
 import java.util.Map;
 

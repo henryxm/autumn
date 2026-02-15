@@ -9,13 +9,13 @@ import cn.org.autumn.thread.TagRunnable;
 import cn.org.autumn.thread.TagTaskExecutor;
 import cn.org.autumn.thread.TagValue;
 import cn.org.autumn.utils.PageUtils;
-import com.baomidou.mybatisplus.mapper.EntityWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.PreDestroy;
+import jakarta.annotation.PreDestroy;
 import javax.sql.DataSource;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -89,7 +89,7 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
      */
     private void markInterruptedTasks() {
         try {
-            List<DatabaseBackupEntity> interrupted = selectList(new EntityWrapper<DatabaseBackupEntity>().in("status", Arrays.asList(0, 3, 4)));
+            List<DatabaseBackupEntity> interrupted = list(new QueryWrapper<DatabaseBackupEntity>().in("status", Arrays.asList(0, 3, 4)));
             for (DatabaseBackupEntity entity : interrupted) {
                 entity.setStatus(2);
                 entity.setError("应用重启导致任务中断");
@@ -140,7 +140,7 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
         Path filePath = Paths.get(backupDir, "backups", filename);
         entity.setFilepath(filePath.toAbsolutePath().toString());
         // 先保存记录
-        insert(entity);
+        save(entity);
         // 提交异步执行
         BackupTask task = new BackupTask(entity.getId(), entity.getFilepath(), entity.getMode(), entity.getBackupTables());
         runningTasks.put(entity.getId(), task);
@@ -178,14 +178,14 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
      * 实际执行备份任务
      */
     private void executeBackupTask(BackupTask task) {
-        DatabaseBackupEntity entity = selectById(task.backupId);
+        DatabaseBackupEntity entity = getById(task.backupId);
         if (entity == null) return;
         entity.setStatus(3); // 进行中
         updateById(entity);
         long startTime = System.currentTimeMillis();
         try {
             int[] result = exportDatabase(task);
-            entity = selectById(task.backupId);
+            entity = getById(task.backupId);
             if (entity == null)
                 return;
             if (task.isStopped()) {
@@ -208,7 +208,7 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
                 log.debug("Backup completed: id={}, tables={}, records={}, duration={}ms", task.backupId, result[0], result[1], entity.getDuration());
             }
         } catch (Exception e) {
-            entity = selectById(task.backupId);
+            entity = getById(task.backupId);
             if (entity != null) {
                 entity.setStatus(2); // 失败
                 entity.setError(e.getMessage());
@@ -227,7 +227,7 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
         BackupTask task = runningTasks.get(backupId);
         if (task == null) return false;
         task.pause();
-        DatabaseBackupEntity entity = selectById(backupId);
+        DatabaseBackupEntity entity = getById(backupId);
         if (entity != null) {
             entity.setStatus(4); // 已暂停
             updateById(entity);
@@ -244,7 +244,7 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
         BackupTask task = runningTasks.get(backupId);
         if (task == null) return false;
         task.resume();
-        DatabaseBackupEntity entity = selectById(backupId);
+        DatabaseBackupEntity entity = getById(backupId);
         if (entity != null) {
             entity.setStatus(3); // 进行中
             updateById(entity);
@@ -273,7 +273,7 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
         List<Map<String, Object>> list = new ArrayList<>();
         for (Map.Entry<Long, BackupTask> entry : runningTasks.entrySet()) {
             BackupTask task = entry.getValue();
-            DatabaseBackupEntity entity = selectById(entry.getKey());
+            DatabaseBackupEntity entity = getById(entry.getKey());
             if (entity != null) {
                 Map<String, Object> info = new HashMap<>();
                 info.put("id", entity.getId());
@@ -296,7 +296,7 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
      * 获取单个任务进度
      */
     public Map<String, Object> getTaskProgress(Long backupId) {
-        DatabaseBackupEntity entity = selectById(backupId);
+        DatabaseBackupEntity entity = getById(backupId);
         if (entity == null) return null;
         Map<String, Object> info = new HashMap<>();
         info.put("id", entity.getId());
@@ -340,7 +340,7 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
             }
             tableCount = tablesToBackup.size();
             // 更新总表数
-            DatabaseBackupEntity entity = selectById(task.backupId);
+            DatabaseBackupEntity entity = getById(task.backupId);
             if (entity != null) {
                 entity.setTotalTables(tableCount);
                 entity.setTables(tableCount);
@@ -398,7 +398,7 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
      * 更新备份进度
      */
     private void updateProgress(Long backupId, int completed, int total, String currentTable) {
-        DatabaseBackupEntity entity = selectById(backupId);
+        DatabaseBackupEntity entity = getById(backupId);
         if (entity == null) return;
         entity.setCompletedTables(completed);
         entity.setTotalTables(total);
@@ -760,7 +760,7 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
      * 获取备份文件
      */
     public File getBackupFile(Long id) {
-        DatabaseBackupEntity entity = selectById(id);
+        DatabaseBackupEntity entity = getById(id);
         if (entity == null || entity.getFilepath() == null) {
             return null;
         }
@@ -775,7 +775,7 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
      * 更新备注
      */
     public boolean updateRemark(Long id, String remark) {
-        DatabaseBackupEntity entity = selectById(id);
+        DatabaseBackupEntity entity = getById(id);
         if (entity == null) {
             return false;
         }
@@ -793,7 +793,7 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
             task.stop();
             runningTasks.remove(id);
         }
-        DatabaseBackupEntity entity = selectById(id);
+        DatabaseBackupEntity entity = getById(id);
         if (entity == null) {
             return false;
         }
@@ -805,7 +805,7 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
                 log.warn("Failed to delete backup file: {}", entity.getFilepath(), e);
             }
         }
-        return deleteById(id);
+        return removeById(id);
     }
 
     /**
@@ -824,15 +824,15 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
     public Map<String, Object> getStatistics() {
         ensureInitialized();
         Map<String, Object> stats = new HashMap<>();
-        int total = selectCount(new EntityWrapper<>());
+        long total = count(new QueryWrapper<>());
         stats.put("total", total);
-        int success = selectCount(new EntityWrapper<DatabaseBackupEntity>().eq("status", 1));
+        long success = count(new QueryWrapper<DatabaseBackupEntity>().eq("status", 1));
         stats.put("success", success);
-        int failed = selectCount(new EntityWrapper<DatabaseBackupEntity>().eq("status", 2));
+        long failed = count(new QueryWrapper<DatabaseBackupEntity>().eq("status", 2));
         stats.put("failed", failed);
         int running = runningTasks.size();
         stats.put("running", running);
-        List<DatabaseBackupEntity> list = selectList(new EntityWrapper<DatabaseBackupEntity>().eq("status", 1));
+        List<DatabaseBackupEntity> list = list(new QueryWrapper<DatabaseBackupEntity>().eq("status", 1));
         long totalSize = 0;
         for (DatabaseBackupEntity e : list) {
             if (e.getFilesize() != null) {
@@ -861,7 +861,7 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
      * 切换备份永久存储状态
      */
     public boolean togglePermanent(Long id) {
-        DatabaseBackupEntity entity = selectById(id);
+        DatabaseBackupEntity entity = getById(id);
         if (entity == null) return false;
         boolean newVal = !Boolean.TRUE.equals(entity.getPermanent());
         entity.setPermanent(newVal);
@@ -875,7 +875,7 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
      * 设置备份永久存储状态
      */
     public boolean setPermanent(Long id, boolean permanent) {
-        DatabaseBackupEntity entity = selectById(id);
+        DatabaseBackupEntity entity = getById(id);
         if (entity == null) return false;
         entity.setPermanent(permanent);
         updateById(entity);
@@ -891,15 +891,12 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
     public void cleanupByStrategy(Long strategyId, int maxKeep) {
         if (maxKeep <= 0) return;
         // 查询该策略下所有成功的、非永久存储的备份，按创建时间降序
-        List<DatabaseBackupEntity> backups = selectList(
-                new EntityWrapper<DatabaseBackupEntity>()
+        List<DatabaseBackupEntity> backups = list(
+                new QueryWrapper<DatabaseBackupEntity>()
                         .eq("strategy_id", strategyId)
                         .eq("status", 1)
-                        .andNew()
-                        .eq("permanent", false)
-                        .or()
-                        .isNull("permanent")
-                        .orderBy("create_time", false));
+                        .and(i -> i.eq("permanent", false).or().isNull("permanent"))
+                        .orderByDesc("create_time"));
         if (backups.size() > maxKeep) {
             for (int i = maxKeep; i < backups.size(); i++) {
                 deleteBackup(backups.get(i).getId());
@@ -922,7 +919,7 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
      * 从已有备份恢复（异步）
      */
     public Map<String, Object> restoreFromBackup(Long backupId) {
-        DatabaseBackupEntity entity = selectById(backupId);
+        DatabaseBackupEntity entity = getById(backupId);
         if (entity == null) {
             throw new RuntimeException("备份记录不存在");
         }
@@ -962,7 +959,7 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
      * 从上传的SQL文件恢复（异步）
      */
     public Map<String, Object> restoreFromUpload(Long uploadId) {
-        DatabaseBackupUploadEntity entity = databaseBackupUploadService.selectById(uploadId);
+        DatabaseBackupUploadEntity entity = databaseBackupUploadService.getById(uploadId);
         if (entity == null) {
             throw new RuntimeException("上传记录不存在");
         }
@@ -1013,7 +1010,7 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
             task.setCompleted(true);
             // 更新上传记录状态
             if (uploadId != null) {
-                DatabaseBackupUploadEntity uploadEntity = databaseBackupUploadService.selectById(uploadId);
+                DatabaseBackupUploadEntity uploadEntity = databaseBackupUploadService.getById(uploadId);
                 if (uploadEntity != null) {
                     uploadEntity.setStatus(2); // 恢复成功
                     uploadEntity.setRestoreDuration(duration);
@@ -1028,7 +1025,7 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
             task.setError(e.getMessage());
             // 更新上传记录状态
             if (uploadId != null) {
-                DatabaseBackupUploadEntity uploadEntity = databaseBackupUploadService.selectById(uploadId);
+                DatabaseBackupUploadEntity uploadEntity = databaseBackupUploadService.getById(uploadId);
                 if (uploadEntity != null) {
                     uploadEntity.setStatus(3); // 恢复失败
                     uploadEntity.setRestoreDuration(duration);

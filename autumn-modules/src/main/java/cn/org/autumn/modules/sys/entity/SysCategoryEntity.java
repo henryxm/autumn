@@ -3,9 +3,9 @@ package cn.org.autumn.modules.sys.entity;
 import cn.org.autumn.table.annotation.Column;
 import cn.org.autumn.table.annotation.Table;
 import cn.org.autumn.table.data.DataType;
-import com.baomidou.mybatisplus.annotations.TableField;
-import com.baomidou.mybatisplus.annotations.TableId;
-import com.baomidou.mybatisplus.annotations.TableName;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 
 import java.io.Serializable;
 import java.util.List;
@@ -30,6 +30,7 @@ public class SysCategoryEntity implements Serializable {
     private int status;
 
     @Column(comment = "排序:值越大,显示靠前", defaultValue = "0")
+    @TableField("`order`")
     private int order;
 
     @Column(comment = "冻结:冻结后不更新状态和描述", defaultValue = "0")

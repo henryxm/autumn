@@ -2,7 +2,7 @@ package cn.org.autumn.modules.client.entity;
 
 import cn.org.autumn.annotation.Cache;
 import cn.org.autumn.config.ClientType;
-import com.baomidou.mybatisplus.annotations.*;
+import com.baomidou.mybatisplus.annotation.*;
 import cn.org.autumn.table.annotation.*;
 import lombok.Getter;
 import lombok.Setter;

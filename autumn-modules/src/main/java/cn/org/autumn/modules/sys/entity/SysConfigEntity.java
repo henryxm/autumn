@@ -3,11 +3,11 @@ package cn.org.autumn.modules.sys.entity;
 import cn.org.autumn.table.annotation.Column;
 import cn.org.autumn.table.annotation.Table;
 import cn.org.autumn.table.data.DataType;
-import com.baomidou.mybatisplus.annotations.TableField;
-import com.baomidou.mybatisplus.annotations.TableId;
-import com.baomidou.mybatisplus.annotations.TableName;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 
-import javax.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotBlank;
 import java.io.Serializable;
 
 /**
@@ -56,6 +56,7 @@ public class SysConfigEntity implements Serializable {
     private boolean readonly;
 
     @Column(comment = "排序:值越大,显示靠前", defaultValue = "0")
+    @TableField("`order`")
     private int order;
 
     @TableField(exist = false)

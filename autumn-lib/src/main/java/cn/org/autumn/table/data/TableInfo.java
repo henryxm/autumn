@@ -3,11 +3,11 @@ package cn.org.autumn.table.data;
 import cn.org.autumn.table.annotation.*;
 import cn.org.autumn.table.mysql.TableMeta;
 import cn.org.autumn.table.utils.HumpConvert;
-import com.baomidou.mybatisplus.annotations.TableName;
+import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Getter;
 import lombok.Setter;
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.lang.WordUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.text.WordUtils;
 
 import java.lang.reflect.Field;
 import java.util.*;

@@ -48,7 +48,7 @@ public class WebOauthCombineService extends ModuleService<WebOauthCombineDao, We
     }
 
     @Override
-    public boolean insert(WebOauthCombineEntity entity) {
+    public boolean save(WebOauthCombineEntity entity) {
         WebOauthCombineEntity combineEntity = baseMapper.getByClientId(entity.getClientId());
         if (null != combineEntity)
             return false;
@@ -60,12 +60,12 @@ public class WebOauthCombineService extends ModuleService<WebOauthCombineDao, We
         entity.setClientDetailsUuid(details.getUuid());
         entity.setWebAuthenticationUuid(webAuthentication.getUuid());
         entity.setCreateTime(new Date());
-        return super.insert(entity);
+        return super.save(entity);
     }
 
     @Override
-    public boolean updateAllColumnById(WebOauthCombineEntity entity) {
-        WebOauthCombineEntity current = selectById(entity.getId());
+    public boolean updateById(WebOauthCombineEntity entity) {
+        WebOauthCombineEntity current = getById(entity.getId());
         if (null == current)
             return false;
         if (!Objects.equals(entity.getClientId(), current.getClientId())) {
@@ -75,7 +75,7 @@ public class WebOauthCombineService extends ModuleService<WebOauthCombineDao, We
         if (null == entity.getCreateTime())
             entity.setCreateTime(new Date());
         entity.setUpdateTime(new Date());
-        return super.updateAllColumnById(entity);
+        return super.updateById(entity);
     }
 
     @Override

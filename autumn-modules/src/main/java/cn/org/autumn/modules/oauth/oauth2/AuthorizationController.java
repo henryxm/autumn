@@ -18,15 +18,16 @@ import cn.org.autumn.modules.usr.service.UserProfileService;
 import cn.org.autumn.site.PageFactory;
 import cn.org.autumn.utils.IPUtils;
 import cn.org.autumn.utils.Utils;
-import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson2.JSON;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.servers.Server;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.tags.Tags;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.oltu.oauth2.as.issuer.MD5Generator;
 import org.apache.oltu.oauth2.as.issuer.OAuthIssuerImpl;
+import cn.org.autumn.modules.oauth.util.JakartaToJavaxRequestAdapter;
 import org.apache.oltu.oauth2.as.request.OAuthAuthzRequest;
 import org.apache.oltu.oauth2.as.request.OAuthTokenRequest;
 import org.apache.oltu.oauth2.as.response.OAuthASResponse;
@@ -55,14 +56,14 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.ModelAndView;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.net.*;
 import java.util.Enumeration;
 import java.util.Map;
 
-import static javax.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
-import static javax.servlet.http.HttpServletResponse.SC_UNAUTHORIZED;
+import static jakarta.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
+import static jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED;
 import static org.apache.oltu.oauth2.common.OAuth.*;
 import static org.apache.oltu.oauth2.common.OAuth.HttpMethod.POST;
 import static org.apache.oltu.oauth2.common.error.OAuthError.OAUTH_ERROR_URI;
@@ -181,7 +182,7 @@ public class AuthorizationController {
         }
 
         //构建OAuth请求
-        OAuthAuthzRequest oAuthzRequest = new OAuthAuthzRequest(request);
+        OAuthAuthzRequest oAuthzRequest = new OAuthAuthzRequest(JakartaToJavaxRequestAdapter.adapt(request));
         //获取OAuth客户端Id
         String clientId = oAuthzRequest.getClientId();
         //校验客户端Id是否正确
@@ -209,7 +210,7 @@ public class AuthorizationController {
         }
 
         //构建OAuth响应
-        OAuthASResponse.OAuthAuthorizationResponseBuilder builder = OAuthASResponse.authorizationResponse(request, HttpServletResponse.SC_FOUND);
+        OAuthASResponse.OAuthAuthorizationResponseBuilder builder = OAuthASResponse.authorizationResponse(JakartaToJavaxRequestAdapter.adapt(request), HttpServletResponse.SC_FOUND);
 
         //设置授权码
         builder.setCode(authCode);
@@ -246,7 +247,7 @@ public class AuthorizationController {
         String authCode = null;
         String grantType = null;
         try {
-            OAuthTokenRequest tokenRequest = new OAuthTokenRequest(request);
+            OAuthTokenRequest tokenRequest = new OAuthTokenRequest(JakartaToJavaxRequestAdapter.adapt(request));
             clientId = tokenRequest.getClientId();
             clientSecret = tokenRequest.getClientSecret();
             grantType = tokenRequest.getParam(OAuth.OAUTH_GRANT_TYPE);
@@ -357,7 +358,7 @@ public class AuthorizationController {
     public HttpEntity<?> authUserInfo(HttpServletRequest request) throws OAuthSystemException {
         try {
             // 构建OAuth资源请求
-            OAuthAccessResourceRequest oauthRequest = new OAuthAccessResourceRequest(request, ParameterStyle.QUERY, ParameterStyle.HEADER);
+            OAuthAccessResourceRequest oauthRequest = new OAuthAccessResourceRequest(JakartaToJavaxRequestAdapter.adapt(request), ParameterStyle.QUERY, ParameterStyle.HEADER);
             String accessToken = oauthRequest.getAccessToken();
             Object resp = JSON.parse(accessToken);
             Map map = (Map) resp;

@@ -12,9 +12,9 @@ import cn.org.autumn.modules.sys.entity.SysUserRoleEntity;
 import cn.org.autumn.service.CacheService;
 import cn.org.autumn.site.InitFactory;
 import cn.org.autumn.utils.MapUtils;
-import com.baomidou.mybatisplus.service.impl.ServiceImpl;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -92,7 +92,7 @@ public class SysUserRoleService extends ServiceImpl<SysUserRoleDao, SysUserRoleE
                 continue;
             SysRoleEntity sysRoleEntity = sysRoleService.getByRoleKey(roleKey);
             sysUserRoleEntity.setRoleKey(roleKey);
-            insert(sysUserRoleEntity);
+            save(sysUserRoleEntity);
         }
     }
 
@@ -107,20 +107,20 @@ public class SysUserRoleService extends ServiceImpl<SysUserRoleDao, SysUserRoleE
 
     public void saveOrUpdate(Long userId, List<Long> roleIdList) {
         //先删除用户与角色关系
-        this.deleteByMap(new MapUtils().put("user_id", userId));
+        this.removeByMap(new MapUtils().put("user_id", userId));
 
         if (roleIdList == null || roleIdList.size() == 0) {
             return;
         }
 
-        SysUserEntity sysUserEntity = sysUserService.selectById(userId);
+        SysUserEntity sysUserEntity = sysUserService.getById(userId);
         if (null == sysUserEntity)
             return;
 
         //保存用户与角色关系
         List<SysUserRoleEntity> list = new ArrayList<>(roleIdList.size());
         for (Long roleId : roleIdList) {
-            SysRoleEntity sysRoleEntity = sysRoleService.selectById(roleId);
+            SysRoleEntity sysRoleEntity = sysRoleService.getById(roleId);
             if (null == sysRoleEntity)
                 continue;
             SysUserRoleEntity sysUserRoleEntity = new SysUserRoleEntity();
@@ -129,13 +129,13 @@ public class SysUserRoleService extends ServiceImpl<SysUserRoleDao, SysUserRoleE
             sysUserRoleEntity.setUserUuid(sysUserEntity.getUuid());
             list.add(sysUserRoleEntity);
         }
-        this.insertBatch(list);
+        this.saveBatch(list);
     }
 
     public void saveOrUpdate(String userUuid, List<String> roleKeys) {
         //情况角色关系
         if (roleKeys == null || roleKeys.size() == 0) {
-            this.deleteByMap(new MapUtils().put("user_uuid", userUuid));
+            this.removeByMap(new MapUtils().put("user_uuid", userUuid));
             return;
         }
         List<String> existed = getRoleKeys(userUuid);
@@ -177,7 +177,7 @@ public class SysUserRoleService extends ServiceImpl<SysUserRoleDao, SysUserRoleE
             list.add(sysUserRoleEntity);
         }
         if (list.size() > 0)
-            this.insertBatch(list);
+            this.saveBatch(list);
     }
 
     public List<String> getRoleKeys(String userUuid) {

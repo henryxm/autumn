@@ -19,7 +19,7 @@ import cn.org.autumn.utils.R;
  *
  * @author User
  * @email henryxm@163.com
- * @date 2025-12
+ * @date 2026-02
  */
 public class UserTokenControllerGen {
 
@@ -42,7 +42,7 @@ public class UserTokenControllerGen {
     @RequestMapping("/info/{id}")
     @RequiresPermissions("usr:usertoken:info")
     public R info(@PathVariable("id") Long id) {
-        UserTokenEntity userToken = userTokenService.selectById(id);
+        UserTokenEntity userToken = userTokenService.getById(id);
         return R.ok().put("userToken" , userToken);
     }
 
@@ -52,7 +52,7 @@ public class UserTokenControllerGen {
     @RequestMapping("/save")
     @RequiresPermissions("usr:usertoken:save")
     public R save(@RequestBody UserTokenEntity userToken) {
-        userTokenService.insert(userToken);
+        userTokenService.save(userToken);
         return R.ok();
     }
 
@@ -63,7 +63,7 @@ public class UserTokenControllerGen {
     @RequiresPermissions("usr:usertoken:update")
     public R update(@RequestBody UserTokenEntity userToken) {
         ValidatorUtils.validateEntity(userToken);
-        userTokenService.updateAllColumnById(userToken);//全部更新
+        userTokenService.updateById(userToken);
         return R.ok();
     }
 
@@ -73,7 +73,7 @@ public class UserTokenControllerGen {
     @RequestMapping("/delete")
     @RequiresPermissions("usr:usertoken:delete")
     public R delete(@RequestBody Long[] ids) {
-        userTokenService.deleteBatchIds(Arrays.asList(ids));
+        userTokenService.removeBatchByIds(Arrays.asList(ids));
         return R.ok();
     }
 }

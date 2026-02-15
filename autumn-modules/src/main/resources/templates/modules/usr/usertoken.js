@@ -5,11 +5,17 @@ $(function () {
         colModel: [			
 			{ label: '${lang.usr_usertoken_column_id}', name: 'id', index: 'id', width: 50, key: true },
 			{ label: '${lang.usr_usertoken_column_uuid}', name: 'uuid', index: 'uuid', width: 80 }, 
+
 			{ label: '${lang.usr_usertoken_column_user_uuid}', name: 'userUuid', index: 'user_uuid', width: 80 }, 
+
 			{ label: '${lang.usr_usertoken_column_token}', name: 'token', index: 'token', width: 80 }, 
+
 			{ label: '${lang.usr_usertoken_column_refresh_token}', name: 'refreshToken', index: 'refresh_token', width: 80 }, 
+
 			{ label: '${lang.usr_usertoken_column_expire_time}', name: 'expireTime', index: 'expire_time', width: 80 }, 
+
 			{ label: '${lang.usr_usertoken_column_update_time}', name: 'updateTime', index: 'update_time', width: 80 }, 
+
         ],
 		viewrecords: true,
         height: 385,

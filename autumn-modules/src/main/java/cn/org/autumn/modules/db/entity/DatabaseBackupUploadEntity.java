@@ -2,8 +2,9 @@ package cn.org.autumn.modules.db.entity;
 
 import cn.org.autumn.table.annotation.Column;
 import cn.org.autumn.table.annotation.Table;
-import com.baomidou.mybatisplus.annotations.TableId;
-import com.baomidou.mybatisplus.annotations.TableName;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -34,6 +35,7 @@ public class DatabaseBackupUploadEntity implements Serializable {
     private Long filesize;
 
     @Column(comment = "目标数据库名称")
+    @TableField("`database`")
     private String database;
 
     @Column(comment = "备注说明")

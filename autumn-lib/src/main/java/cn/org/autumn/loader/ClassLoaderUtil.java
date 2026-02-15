@@ -1,14 +1,12 @@
 package cn.org.autumn.loader;
 
 import cn.org.autumn.utils.SpringContextUtils;
-import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.*;
@@ -17,9 +15,8 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
 import java.util.jar.Manifest;
 
+@Slf4j
 public class ClassLoaderUtil {
-
-    static final Logger log = LoggerFactory.getLogger(ClassLoaderUtil.class);
 
     private static String getClassName(JarEntry entry) {
         String name = entry.getName();
@@ -28,19 +25,16 @@ public class ClassLoaderUtil {
         //System.out.println("entry name=" + name);
         // 加载某个class文件，并实现动态运行某个class
         if (name.endsWith(".class")) {
-            String replace = name.replace(".class", "").replace("/", ".");
-            return replace;
+            return name.replace(".class", "").replace("/", ".");
         }
         return null;
     }
 
-    public static void pringManifestFile(Manifest manifest) {
+    public static void printManifestFile(Manifest manifest) {
         Attributes mainAttributes = manifest.getMainAttributes();
         Set<Map.Entry<Object, Object>> entrySet = mainAttributes.entrySet();
-        Iterator<Map.Entry<Object, Object>> iterator = entrySet.iterator();
         // 打印并显示当前的MAINFEST.MF文件中的信息
-        while (iterator.hasNext()) {
-            Map.Entry<Object, Object> next = iterator.next();
+        for (Map.Entry<Object, Object> next : entrySet) {
             Object key = next.getKey();
             Object value = next.getValue();
             // 这里可以获取到Class-Path,或者某个执行的Main-Class
@@ -82,12 +76,10 @@ public class ClassLoaderUtil {
 
     public static ClassLoader getClassLoader(String url) {
         try {
-            Method method = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
-            if (!method.isAccessible()) {
-                method.setAccessible(true);
-            }
-            URLClassLoader classLoader = new URLClassLoader(new URL[]{}, SpringContextUtils.getApplicationContext().getClassLoader());
-            method.invoke(classLoader, new URL(url));
+            URLClassLoader classLoader = new URLClassLoader(
+                    new URL[]{new URL(url)},
+                    SpringContextUtils.getApplicationContext().getClassLoader()
+            );
             return classLoader;
         } catch (Exception e) {
             log.error("getClassLoader-error", e);

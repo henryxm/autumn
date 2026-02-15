@@ -5,6 +5,7 @@ import cn.org.autumn.modules.gen.entity.GenTypeWrapper;
 import cn.org.autumn.modules.gen.service.gen.GenTypeServiceGen;
 import cn.org.autumn.modules.sys.entity.SysMenuEntity;
 import cn.org.autumn.modules.sys.service.SysMenuService;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -68,7 +69,9 @@ public class GenTypeService extends GenTypeServiceGen {
             if (null != temp)
                 entity.setMappingString(temp);
             try {
-                GenTypeEntity et = baseMapper.selectOne(entity);
+                QueryWrapper<GenTypeEntity> qw = new QueryWrapper<>();
+                qw.eq("database_type", entity.getDatabaseType());
+                GenTypeEntity et = baseMapper.selectOne(qw);
                 if (null == et)
                     baseMapper.insert(entity);
             } catch (Exception e) {
@@ -106,18 +109,18 @@ public class GenTypeService extends GenTypeServiceGen {
     }
 
     public GenTypeWrapper getGenType(String databaseType) {
-        GenTypeEntity entity = new GenTypeEntity();
-        entity.setDatabaseType(databaseType);
-        entity = baseMapper.selectOne(entity);
+        QueryWrapper<GenTypeEntity> qw = new QueryWrapper<>();
+        qw.eq("database_type", databaseType);
+        GenTypeEntity entity = baseMapper.selectOne(qw);
         SysMenuEntity sysMenuEntity = sysMenuService.getByMenuKey(entity.getModuleId());
         return new GenTypeWrapper(entity, sysMenuEntity);
     }
 
     public void copy(Long[] ids) {
         for (Long id : ids) {
-            GenTypeEntity genTypeEntity = selectById(id);
+            GenTypeEntity genTypeEntity = getById(id);
             genTypeEntity.setId(null);
-            insert(genTypeEntity);
+            save(genTypeEntity);
         }
     }
 }

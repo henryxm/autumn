@@ -5,8 +5,8 @@ import cn.org.autumn.model.DefaultEntity;
 import cn.org.autumn.model.Parameterized;
 import cn.org.autumn.model.QueueMessage;
 import cn.org.autumn.table.annotation.Table;
-import com.baomidou.mybatisplus.mapper.BaseMapper;
-import com.baomidou.mybatisplus.service.impl.ServiceImpl;
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 

@@ -3,7 +3,7 @@ package cn.org.autumn.modules.sys.service;
 import cn.org.autumn.modules.sys.entity.SysDeptEntity;
 import cn.org.autumn.modules.sys.entity.SysRoleEntity;
 import cn.org.autumn.site.InitFactory;
-import com.baomidou.mybatisplus.service.impl.ServiceImpl;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import cn.org.autumn.modules.sys.dao.SysRoleDeptDao;
 import cn.org.autumn.modules.sys.entity.SysRoleDeptEntity;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -56,7 +56,7 @@ public class SysRoleDeptService extends ServiceImpl<SysRoleDeptDao, SysRoleDeptE
             list.add(sysRoleDeptEntity);
         }
         if (!list.isEmpty())
-            this.insertBatch(list);
+            this.saveBatch(list);
     }
 
     public List<String> getDeptKeys(String[] roleKeys) {

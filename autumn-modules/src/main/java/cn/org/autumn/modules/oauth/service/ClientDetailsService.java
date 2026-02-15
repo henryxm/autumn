@@ -18,7 +18,7 @@ import cn.org.autumn.utils.RedisUtils;
 import cn.org.autumn.utils.Utils;
 import cn.org.autumn.utils.Uuid;
 import com.qiniu.util.Md5;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.core.annotation.Order;
@@ -252,7 +252,7 @@ public class ClientDetailsService extends ModuleService<ClientDetailsDao, Client
             clientDetailsEntity.setRoles("user");
             clientDetailsEntity.setClientType(clientType);
             clientDetailsEntity.setCreateTime(new Date());
-            insert(clientDetailsEntity);
+            save(clientDetailsEntity);
             clientToUser(clientDetailsEntity);
         }
         return clientDetailsEntity;
@@ -278,7 +278,7 @@ public class ClientDetailsService extends ModuleService<ClientDetailsDao, Client
             clientDetailsEntity.setTrusted(1);
             clientDetailsEntity.setRoles("user");
             clientDetailsEntity.setCreateTime(new Date());
-            insert(clientDetailsEntity);
+            save(clientDetailsEntity);
             clientToUser(clientDetailsEntity);
             return clientDetailsEntity;
         } else
@@ -312,7 +312,7 @@ public class ClientDetailsService extends ModuleService<ClientDetailsDao, Client
     public void onDomainChanged() {
         String host = sysConfigService.getSiteDomain();
         String scheme = sysConfigService.getScheme();
-        List<ClientDetailsEntity> entities = selectByMap(null);
+        List<ClientDetailsEntity> entities = list();
         for (ClientDetailsEntity entity : entities) {
             update(entity, scheme, host, false);
         }

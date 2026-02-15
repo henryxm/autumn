@@ -4,7 +4,7 @@ import cn.org.autumn.modules.usr.entity.UserProfileEntity;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import lombok.Getter;
 import lombok.Setter;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import java.io.Serializable;
 

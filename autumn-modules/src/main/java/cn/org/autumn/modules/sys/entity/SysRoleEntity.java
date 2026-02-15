@@ -3,13 +3,13 @@ package cn.org.autumn.modules.sys.entity;
 import cn.org.autumn.table.annotation.Column;
 import cn.org.autumn.table.annotation.Table;
 import cn.org.autumn.table.data.DataType;
-import com.baomidou.mybatisplus.annotations.TableField;
-import com.baomidou.mybatisplus.annotations.TableId;
-import com.baomidou.mybatisplus.annotations.TableName;
-import com.baomidou.mybatisplus.enums.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.IdType;
 import com.fasterxml.jackson.annotation.JsonFormat;
 
-import javax.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotBlank;
 import java.io.Serializable;
 import java.util.Date;
 import java.util.List;

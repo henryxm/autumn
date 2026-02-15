@@ -4,7 +4,7 @@ import cn.org.autumn.annotation.EnvAware;
 import cn.org.autumn.config.EnvHandler;
 import org.springframework.stereotype.Component;
 
-import javax.annotation.PostConstruct;
+import jakarta.annotation.PostConstruct;
 
 @Component
 public class EnvBean implements EnvHandler {

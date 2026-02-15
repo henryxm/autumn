@@ -2,7 +2,7 @@ package cn.org.autumn.modules.job.utils;
 
 import cn.org.autumn.exception.AException;
 import cn.org.autumn.utils.SpringContextUtils;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.util.ReflectionUtils;
 
 import java.lang.reflect.Method;

@@ -5,7 +5,7 @@ import com.aliyun.oss.model.CannedAccessControlList;
 import com.aliyun.oss.model.ObjectMetadata;
 import com.aliyun.oss.model.SetBucketAclRequest;
 import com.aliyun.oss.model.SetObjectAclRequest;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import java.io.InputStream;
 import java.util.Date;

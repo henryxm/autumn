@@ -11,8 +11,9 @@ import cn.org.autumn.modules.usr.dto.UserProfile;
 import cn.org.autumn.modules.usr.dto.VisitIp;
 import cn.org.autumn.modules.usr.entity.UserProfileEntity;
 import cn.org.autumn.utils.IPUtils;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import cn.org.autumn.utils.Uuid;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -112,7 +113,7 @@ public class UserProfileService extends ModuleService<UserProfileDao, UserProfil
             userProfileEntity.setMobile(sysUserEntity.getMobile());
             userProfileEntity.setUuid(sysUserEntity.getUuid());
             userProfileEntity.setIcon(sysUserEntity.getIcon());
-            insert(userProfileEntity);
+            save(userProfileEntity);
         } else {
             boolean u = false;
             if ((StringUtils.isEmpty(userProfileEntity.getUuid()) && StringUtils.isNotEmpty(sysUserEntity.getUuid()))) {
@@ -130,9 +131,8 @@ public class UserProfileService extends ModuleService<UserProfileDao, UserProfil
     }
 
     public UserProfileEntity queryByMobile(String mobile) {
-        UserProfileEntity userEntity = new UserProfileEntity();
-        userEntity.setMobile(mobile);
-        return baseMapper.selectOne(userEntity);
+        if (StringUtils.isBlank(mobile)) return null;
+        return getOne(new QueryWrapper<UserProfileEntity>().eq("mobile", mobile));
     }
 
     public void login(UserProfile userProfile) {
@@ -146,10 +146,10 @@ public class UserProfileService extends ModuleService<UserProfileDao, UserProfil
                         UserProfileEntity userProfileEntity = baseMapper.getByUuid(sysUserEntity.getUuid());
                         if (null != userProfileEntity) {
                             userProfileEntity.setUuid(userProfile.getUuid());
-                            insertOrUpdate(userProfileEntity);
+                            saveOrUpdate(userProfileEntity);
                         }
                         sysUserEntity.setUuid(userProfile.getUuid());
-                        sysUserService.insertOrUpdate(sysUserEntity);
+                        sysUserService.saveOrUpdate(sysUserEntity);
                     }
                     sysUserService.login(new OauthUsernameToken(sysUserEntity.getUuid()));
                     return;
@@ -226,7 +226,7 @@ public class UserProfileService extends ModuleService<UserProfileDao, UserProfil
                             UserProfileEntity username = baseMapper.getByUsername(userProfileEntity.getUsername());
                             if (null != username)
                                 continue;
-                            insertOrUpdate(userProfileEntity);
+                            saveOrUpdate(userProfileEntity);
                         }
                     } catch (Exception e) {
                         log.debug("UserProfile Synchronize Error, User uuid:" + userProfileEntity.getUuid() + ", Msg:" + e.getMessage());

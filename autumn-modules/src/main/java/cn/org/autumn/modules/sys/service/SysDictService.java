@@ -1,14 +1,14 @@
 package cn.org.autumn.modules.sys.service;
 
 import cn.org.autumn.site.InitFactory;
-import com.baomidou.mybatisplus.mapper.EntityWrapper;
-import com.baomidou.mybatisplus.plugins.Page;
-import com.baomidou.mybatisplus.service.impl.ServiceImpl;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import cn.org.autumn.utils.PageUtils;
 import cn.org.autumn.utils.Query;
 import cn.org.autumn.modules.sys.dao.SysDictDao;
 import cn.org.autumn.modules.sys.entity.SysDictEntity;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.util.List;
@@ -56,7 +56,9 @@ public class SysDictService extends ServiceImpl<SysDictDao, SysDictEntity> imple
             temp = map[7];
             if (NULL != temp)
                 entity.setDelFlag(Integer.valueOf(temp));
-            SysDictEntity et = sysDictDao.selectOne(entity);
+            QueryWrapper<SysDictEntity> qw = new QueryWrapper<>();
+            qw.eq("name", entity.getName()).eq("type", entity.getType()).eq("code", entity.getCode());
+            SysDictEntity et = sysDictDao.selectOne(qw);
             if (null == et)
                 sysDictDao.insert(entity);
         }
@@ -65,10 +67,10 @@ public class SysDictService extends ServiceImpl<SysDictDao, SysDictEntity> imple
 
     public PageUtils queryPage(Map<String, Object> params) {
         String name = (String) params.get("name");
-        EntityWrapper<SysDictEntity> entityEntityWrapper = new EntityWrapper<>();
-        Page<SysDictEntity> page = this.selectPage(
+        QueryWrapper<SysDictEntity> entityEntityWrapper = new QueryWrapper<>();
+        Page<SysDictEntity> page = this.page(
                 new Query<SysDictEntity>(params).getPage(),
-                new EntityWrapper<SysDictEntity>()
+                new QueryWrapper<SysDictEntity>()
                         .like(StringUtils.isNotBlank(name), "name", name)
         );
         page.setTotal(baseMapper.selectCount(entityEntityWrapper));

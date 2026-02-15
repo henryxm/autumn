@@ -17,7 +17,7 @@ import com.google.gson.Gson;
 import io.netty.util.internal.StringUtil;
 import jodd.net.URLDecoder;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -179,7 +179,7 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
         languageEntity.setName(key);
         languageEntity.setZhCn(zhCn);
         languageEntity.setEnUs(enUs);
-        insert(languageEntity);
+        save(languageEntity);
     }
 
     private static Field getEntityField(Field[] fields, String key) {
@@ -303,7 +303,7 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
             LanguageEntity entity = iterator.next();
             LanguageEntity existed = baseMapper.getByNameTag(entity.getName(), entity.getTag());
             if (null == existed) {
-                insert(entity);
+                save(entity);
             } else {
                 if (entity.isUpdate() && !Objects.equals("1", entity.getFix()) && existed.hashCode() != entity.hashCode()) {
                     existed.merge(entity);

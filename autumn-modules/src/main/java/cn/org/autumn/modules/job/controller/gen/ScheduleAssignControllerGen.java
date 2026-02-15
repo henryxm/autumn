@@ -42,7 +42,7 @@ public class ScheduleAssignControllerGen {
     @RequestMapping("/info/{id}")
     @RequiresPermissions("job:scheduleassign:info")
     public R info(@PathVariable("id") Long id) {
-        ScheduleAssignEntity scheduleAssign = scheduleAssignService.selectById(id);
+        ScheduleAssignEntity scheduleAssign = scheduleAssignService.getById(id);
         return R.ok().put("scheduleAssign" , scheduleAssign);
     }
 
@@ -52,7 +52,7 @@ public class ScheduleAssignControllerGen {
     @RequestMapping("/save")
     @RequiresPermissions("job:scheduleassign:save")
     public R save(@RequestBody ScheduleAssignEntity scheduleAssign) {
-        scheduleAssignService.insert(scheduleAssign);
+        scheduleAssignService.save(scheduleAssign);
         return R.ok();
     }
 
@@ -63,7 +63,7 @@ public class ScheduleAssignControllerGen {
     @RequiresPermissions("job:scheduleassign:update")
     public R update(@RequestBody ScheduleAssignEntity scheduleAssign) {
         ValidatorUtils.validateEntity(scheduleAssign);
-        scheduleAssignService.updateAllColumnById(scheduleAssign);//全部更新
+        scheduleAssignService.updateById(scheduleAssign);//全部更新
         return R.ok();
     }
 
@@ -73,7 +73,7 @@ public class ScheduleAssignControllerGen {
     @RequestMapping("/delete")
     @RequiresPermissions("job:scheduleassign:delete")
     public R delete(@RequestBody Long[] ids) {
-        scheduleAssignService.deleteBatchIds(Arrays.asList(ids));
+        scheduleAssignService.removeBatchByIds(Arrays.asList(ids));
         return R.ok();
     }
 }

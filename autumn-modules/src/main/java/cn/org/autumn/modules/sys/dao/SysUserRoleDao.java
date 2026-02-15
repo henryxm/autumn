@@ -2,7 +2,7 @@ package cn.org.autumn.modules.sys.dao;
 
 import cn.org.autumn.modules.sys.entity.SysUserRoleEntity;
 import cn.org.autumn.mybatis.SelectInLangDriver;
-import com.baomidou.mybatisplus.mapper.BaseMapper;
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.*;
 import org.springframework.stereotype.Repository;
 

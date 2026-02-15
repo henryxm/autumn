@@ -2,11 +2,11 @@ package cn.org.autumn.site;
 
 import cn.org.autumn.annotation.PageAware;
 import cn.org.autumn.utils.SpringContextUtils;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotNull;
 
 import java.lang.reflect.Field;
 import java.util.Collection;

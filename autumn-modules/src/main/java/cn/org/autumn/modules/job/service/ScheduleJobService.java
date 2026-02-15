@@ -12,9 +12,9 @@ import cn.org.autumn.utils.Constant;
 import cn.org.autumn.utils.PageUtils;
 import cn.org.autumn.utils.Query;
 import cn.org.autumn.utils.SpringContextUtils;
-import com.baomidou.mybatisplus.mapper.EntityWrapper;
-import com.baomidou.mybatisplus.plugins.Page;
-import org.apache.commons.lang.StringUtils;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import org.apache.commons.lang3.StringUtils;
 import org.quartz.CronTrigger;
 import org.quartz.Scheduler;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,7 +46,9 @@ public class ScheduleJobService extends ModuleService<ScheduleJobDao, ScheduleJo
                         ScheduleJobEntity scheduleJobEntity = new ScheduleJobEntity();
                         scheduleJobEntity.setBeanName(beanName);
                         scheduleJobEntity.setMethodName(method.getName());
-                        ScheduleJobEntity entity = baseMapper.selectOne(scheduleJobEntity);
+                        QueryWrapper<ScheduleJobEntity> qw = new QueryWrapper<>();
+                        qw.eq("bean_name", scheduleJobEntity.getBeanName()).eq("method_name", scheduleJobEntity.getMethodName());
+                        ScheduleJobEntity entity = baseMapper.selectOne(qw);
                         if (null == entity) {
                             scheduleJobEntity.setStatus(taskAware.status());
                             scheduleJobEntity.setCronExpression(taskAware.cronExpression());
@@ -81,7 +83,7 @@ public class ScheduleJobService extends ModuleService<ScheduleJobDao, ScheduleJo
      * 项目启动时，初始化定时器
      */
     public void initScheduler() {
-        List<ScheduleJobEntity> scheduleJobList = this.selectList(null);
+        List<ScheduleJobEntity> scheduleJobList = this.list();
         for (ScheduleJobEntity scheduleJob : scheduleJobList) {
             CronTrigger cronTrigger = ScheduleUtils.getCronTrigger(scheduler, scheduleJob.getJobId());
             //如果不存在，则创建
@@ -95,24 +97,24 @@ public class ScheduleJobService extends ModuleService<ScheduleJobDao, ScheduleJo
 
     public PageUtils queryPage(Map<String, Object> params) {
         Page<ScheduleJobEntity> _page = new Query<ScheduleJobEntity>(params).getPage();
-        EntityWrapper<ScheduleJobEntity> entityEntityWrapper = new EntityWrapper<>();
+        QueryWrapper<ScheduleJobEntity> entityEntityWrapper = new QueryWrapper<>();
         Map<String, Object> condition = new HashMap<>();
 
         String beanName = (String) params.get("beanName");
         entityEntityWrapper.like(StringUtils.isNotBlank(beanName), "bean_name", beanName);
 
-        _page.setCondition(condition);
-        Page<ScheduleJobEntity> page = this.selectPage(_page, entityEntityWrapper);
+        Page<ScheduleJobEntity> page = this.page(_page, entityEntityWrapper);
         page.setTotal(baseMapper.selectCount(entityEntityWrapper));
         return new PageUtils(page);
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void save(ScheduleJobEntity scheduleJob) {
+    public boolean save(ScheduleJobEntity scheduleJob) {
         scheduleJob.setCreateTime(new Date());
         scheduleJob.setStatus(Constant.ScheduleStatus.NORMAL.getValue());
-        this.insert(scheduleJob);
+        boolean result = super.save(scheduleJob);
         ScheduleUtils.createScheduleJob(scheduler, scheduleJob);
+        return result;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -126,7 +128,7 @@ public class ScheduleJobService extends ModuleService<ScheduleJobDao, ScheduleJo
         for (Long jobId : jobIds) {
             ScheduleUtils.deleteScheduleJob(scheduler, jobId);
         }
-        this.deleteBatchIds(Arrays.asList(jobIds));
+        this.removeBatchByIds(Arrays.asList(jobIds));
     }
 
     public int updateBatch(Long[] jobIds, int status) {
@@ -136,7 +138,7 @@ public class ScheduleJobService extends ModuleService<ScheduleJobDao, ScheduleJo
     @Transactional(rollbackFor = Exception.class)
     public void run(Long[] jobIds) {
         for (Long jobId : jobIds) {
-            ScheduleUtils.run(scheduler, this.selectById(jobId));
+            ScheduleUtils.run(scheduler, this.getById(jobId));
         }
     }
 

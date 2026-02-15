@@ -3,7 +3,7 @@ package cn.org.autumn.modules.sys.entity;
 import cn.org.autumn.annotation.ConfigField;
 import cn.org.autumn.annotation.ConfigParam;
 import cn.org.autumn.utils.Utils;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import java.io.Serializable;
 import java.lang.reflect.Field;

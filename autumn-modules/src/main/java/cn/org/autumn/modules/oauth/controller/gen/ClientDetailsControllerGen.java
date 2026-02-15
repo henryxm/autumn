@@ -42,7 +42,7 @@ public class ClientDetailsControllerGen {
     @RequestMapping("/info/{id}")
     @RequiresPermissions("oauth:clientdetails:info")
     public R info(@PathVariable("id") Long id) {
-        ClientDetailsEntity clientDetails = clientDetailsService.selectById(id);
+        ClientDetailsEntity clientDetails = clientDetailsService.getById(id);
         return R.ok().put("clientDetails" , clientDetails);
     }
 
@@ -52,7 +52,7 @@ public class ClientDetailsControllerGen {
     @RequestMapping("/save")
     @RequiresPermissions("oauth:clientdetails:save")
     public R save(@RequestBody ClientDetailsEntity clientDetails) {
-        clientDetailsService.insert(clientDetails);
+        clientDetailsService.save(clientDetails);
         return R.ok();
     }
 
@@ -63,7 +63,7 @@ public class ClientDetailsControllerGen {
     @RequiresPermissions("oauth:clientdetails:update")
     public R update(@RequestBody ClientDetailsEntity clientDetails) {
         ValidatorUtils.validateEntity(clientDetails);
-        clientDetailsService.updateAllColumnById(clientDetails);//全部更新
+        clientDetailsService.updateById(clientDetails);//全部更新
         return R.ok();
     }
 
@@ -73,7 +73,7 @@ public class ClientDetailsControllerGen {
     @RequestMapping("/delete")
     @RequiresPermissions("oauth:clientdetails:delete")
     public R delete(@RequestBody Long[] ids) {
-        clientDetailsService.deleteBatchIds(Arrays.asList(ids));
+        clientDetailsService.removeBatchByIds(Arrays.asList(ids));
         return R.ok();
     }
 }

@@ -42,7 +42,7 @@ public class IpVisitControllerGen {
     @RequestMapping("/info/{id}")
     @RequiresPermissions("wall:ipvisit:info")
     public R info(@PathVariable("id") Long id) {
-        IpVisitEntity ipVisit = ipVisitService.selectById(id);
+        IpVisitEntity ipVisit = ipVisitService.getById(id);
         return R.ok().put("ipVisit" , ipVisit);
     }
 
@@ -52,7 +52,7 @@ public class IpVisitControllerGen {
     @RequestMapping("/save")
     @RequiresPermissions("wall:ipvisit:save")
     public R save(@RequestBody IpVisitEntity ipVisit) {
-        ipVisitService.insert(ipVisit);
+        ipVisitService.save(ipVisit);
         return R.ok();
     }
 
@@ -63,7 +63,7 @@ public class IpVisitControllerGen {
     @RequiresPermissions("wall:ipvisit:update")
     public R update(@RequestBody IpVisitEntity ipVisit) {
         ValidatorUtils.validateEntity(ipVisit);
-        ipVisitService.updateAllColumnById(ipVisit);//全部更新
+        ipVisitService.updateById(ipVisit);//全部更新
         return R.ok();
     }
 
@@ -73,7 +73,7 @@ public class IpVisitControllerGen {
     @RequestMapping("/delete")
     @RequiresPermissions("wall:ipvisit:delete")
     public R delete(@RequestBody Long[] ids) {
-        ipVisitService.deleteBatchIds(Arrays.asList(ids));
+        ipVisitService.removeBatchByIds(Arrays.asList(ids));
         return R.ok();
     }
 }

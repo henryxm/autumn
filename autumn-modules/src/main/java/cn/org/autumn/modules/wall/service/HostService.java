@@ -75,7 +75,7 @@ public class HostService extends WallCounter<HostDao, HostEntity> implements Loa
                 hostEntity.setTag(tag);
                 hostEntity.setCreateTime(new Date());
                 hostEntity.setDescription(description);
-                insert(hostEntity);
+                save(hostEntity);
             }
         } catch (Exception e) {
             log.debug("保存错误:{}", e.getMessage());

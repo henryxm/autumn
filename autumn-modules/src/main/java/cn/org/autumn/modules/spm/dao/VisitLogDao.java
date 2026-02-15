@@ -1,7 +1,7 @@
 package cn.org.autumn.modules.spm.dao;
 
 import cn.org.autumn.modules.spm.entity.VisitLogEntity;
-import com.baomidou.mybatisplus.mapper.BaseMapper;
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.springframework.stereotype.Repository;
 

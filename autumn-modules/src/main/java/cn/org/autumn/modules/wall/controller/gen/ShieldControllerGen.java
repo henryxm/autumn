@@ -42,7 +42,7 @@ public class ShieldControllerGen {
     @RequestMapping("/info/{id}")
     @RequiresPermissions("wall:shield:info")
     public R info(@PathVariable("id") Long id) {
-        ShieldEntity shield = shieldService.selectById(id);
+        ShieldEntity shield = shieldService.getById(id);
         return R.ok().put("shield" , shield);
     }
 
@@ -52,7 +52,7 @@ public class ShieldControllerGen {
     @RequestMapping("/save")
     @RequiresPermissions("wall:shield:save")
     public R save(@RequestBody ShieldEntity shield) {
-        shieldService.insert(shield);
+        shieldService.save(shield);
         return R.ok();
     }
 
@@ -63,7 +63,7 @@ public class ShieldControllerGen {
     @RequiresPermissions("wall:shield:update")
     public R update(@RequestBody ShieldEntity shield) {
         ValidatorUtils.validateEntity(shield);
-        shieldService.updateAllColumnById(shield);//全部更新
+        shieldService.updateById(shield);//全部更新
         return R.ok();
     }
 
@@ -73,7 +73,7 @@ public class ShieldControllerGen {
     @RequestMapping("/delete")
     @RequiresPermissions("wall:shield:delete")
     public R delete(@RequestBody Long[] ids) {
-        shieldService.deleteBatchIds(Arrays.asList(ids));
+        shieldService.removeBatchByIds(Arrays.asList(ids));
         return R.ok();
     }
 }

@@ -1,13 +1,13 @@
 package cn.org.autumn.modules.sys.service;
 
 import cn.org.autumn.site.InitFactory;
-import com.baomidou.mybatisplus.mapper.EntityWrapper;
-import com.baomidou.mybatisplus.service.impl.ServiceImpl;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import cn.org.autumn.utils.Constant;
 import cn.org.autumn.annotation.DataFilter;
 import cn.org.autumn.modules.sys.dao.SysDeptDao;
 import cn.org.autumn.modules.sys.entity.SysDeptEntity;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
@@ -61,11 +61,11 @@ public class SysDeptService extends ServiceImpl<SysDeptDao, SysDeptEntity> imple
             temp = map[5];
             if (NULL != temp)
                 sysDeptEntity.setRemark(temp);
-            sysDeptDao.insert(sysDeptEntity);
+            save(sysDeptEntity);
         }
     }
 
-    public void save(SysDeptEntity dept) {
+    public boolean save(SysDeptEntity dept) {
         if (null != dept.getParentKey()) {
             SysDeptEntity parent = getByDeptKey(dept.getParentKey());
             if (null != parent)
@@ -76,7 +76,7 @@ public class SysDeptService extends ServiceImpl<SysDeptDao, SysDeptEntity> imple
         if (null == dept.getDelFlag()) {
             dept.setDelFlag(0);
         }
-        insertOrUpdate(dept);
+        return saveOrUpdate(dept);
     }
 
     public SysDeptEntity getByDeptKey(String deptKey) {
@@ -86,8 +86,8 @@ public class SysDeptService extends ServiceImpl<SysDeptDao, SysDeptEntity> imple
     @DataFilter(subDept = true, user = false)
     public List<SysDeptEntity> queryList(Map<String, Object> params) {
         List<SysDeptEntity> deptList =
-                this.selectList(new EntityWrapper<SysDeptEntity>()
-                        .addFilterIfNeed(params.get(Constant.SQL_FILTER) != null, (String) params.get(Constant.SQL_FILTER)));
+                this.list(new QueryWrapper<SysDeptEntity>()
+                        .apply(params.get(Constant.SQL_FILTER) != null, (String) params.get(Constant.SQL_FILTER)));
 
         for (SysDeptEntity sysDeptEntity : deptList) {
             SysDeptEntity parentDeptEntity = getByDeptKey(sysDeptEntity.getParentKey());

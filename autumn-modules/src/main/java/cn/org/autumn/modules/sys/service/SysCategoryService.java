@@ -11,7 +11,7 @@ import cn.org.autumn.modules.sys.entity.ConfigItem;
 import cn.org.autumn.modules.sys.entity.SysConfigEntity;
 import com.google.gson.Gson;
 import com.google.gson.internal.LinkedTreeMap;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -118,7 +118,7 @@ public class SysCategoryService extends ModuleService<SysCategoryDao, SysCategor
         categoryEntity.setName(name);
         categoryEntity.setFrozen(false);
         categoryEntity.setDescription(description);
-        insertOrUpdate(categoryEntity);
+        saveOrUpdate(categoryEntity);
     }
 
 
@@ -213,11 +213,11 @@ public class SysCategoryService extends ModuleService<SysCategoryDao, SysCategor
             else {
                 categoryEntity = getByCategory(key, language);
                 if (null != categoryEntity) {
-                    sysConfigEntities = sysConfigService.selectByMap(null);
+                    sysConfigEntities = sysConfigService.listByMap(null);
                 }
             }
         } else
-            sysConfigEntities = sysConfigService.selectByMap(null);
+            sysConfigEntities = sysConfigService.listByMap(null);
         Map<String, CategoryItem> map = new LinkedTreeMap<>();
         if (null == sysConfigEntities)
             return map;

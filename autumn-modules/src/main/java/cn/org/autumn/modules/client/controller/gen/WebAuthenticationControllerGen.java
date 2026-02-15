@@ -42,7 +42,7 @@ public class WebAuthenticationControllerGen {
     @RequestMapping("/info/{id}")
     @RequiresPermissions("client:webauthentication:info")
     public R info(@PathVariable("id") Long id) {
-        WebAuthenticationEntity webAuthentication = webAuthenticationService.selectById(id);
+        WebAuthenticationEntity webAuthentication = webAuthenticationService.getById(id);
         return R.ok().put("webAuthentication" , webAuthentication);
     }
 
@@ -52,7 +52,7 @@ public class WebAuthenticationControllerGen {
     @RequestMapping("/save")
     @RequiresPermissions("client:webauthentication:save")
     public R save(@RequestBody WebAuthenticationEntity webAuthentication) {
-        webAuthenticationService.insert(webAuthentication);
+        webAuthenticationService.save(webAuthentication);
         return R.ok();
     }
 
@@ -63,7 +63,7 @@ public class WebAuthenticationControllerGen {
     @RequiresPermissions("client:webauthentication:update")
     public R update(@RequestBody WebAuthenticationEntity webAuthentication) {
         ValidatorUtils.validateEntity(webAuthentication);
-        webAuthenticationService.updateAllColumnById(webAuthentication);//全部更新
+        webAuthenticationService.updateById(webAuthentication);//全部更新
         return R.ok();
     }
 
@@ -73,7 +73,7 @@ public class WebAuthenticationControllerGen {
     @RequestMapping("/delete")
     @RequiresPermissions("client:webauthentication:delete")
     public R delete(@RequestBody Long[] ids) {
-        webAuthenticationService.deleteBatchIds(Arrays.asList(ids));
+        webAuthenticationService.removeBatchByIds(Arrays.asList(ids));
         return R.ok();
     }
 }

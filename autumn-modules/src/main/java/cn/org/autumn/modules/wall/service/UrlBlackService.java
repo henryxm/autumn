@@ -8,7 +8,7 @@ import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.wall.entity.UrlBlackEntity;
 import cn.org.autumn.site.WallFactory;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -116,7 +116,7 @@ public class UrlBlackService extends WallCounter<UrlBlackDao, UrlBlackEntity> im
                 urlBlackEntity.setToday(0L);
                 urlBlackEntity.setForbidden(1);
                 urlBlackEntity.setTag(tag);
-                insert(urlBlackEntity);
+                save(urlBlackEntity);
             }
         } catch (Exception e) {
             log.debug("保存错误:{}", e.getMessage());

@@ -19,7 +19,7 @@ import cn.org.autumn.utils.R;
  *
  * @author User
  * @email henryxm@163.com
- * @date 2025-12
+ * @date 2026-02
  */
 public class UserOpenControllerGen {
 
@@ -42,7 +42,7 @@ public class UserOpenControllerGen {
     @RequestMapping("/info/{id}")
     @RequiresPermissions("usr:useropen:info")
     public R info(@PathVariable("id") Long id) {
-        UserOpenEntity userOpen = userOpenService.selectById(id);
+        UserOpenEntity userOpen = userOpenService.getById(id);
         return R.ok().put("userOpen" , userOpen);
     }
 
@@ -52,7 +52,7 @@ public class UserOpenControllerGen {
     @RequestMapping("/save")
     @RequiresPermissions("usr:useropen:save")
     public R save(@RequestBody UserOpenEntity userOpen) {
-        userOpenService.insert(userOpen);
+        userOpenService.save(userOpen);
         return R.ok();
     }
 
@@ -63,7 +63,7 @@ public class UserOpenControllerGen {
     @RequiresPermissions("usr:useropen:update")
     public R update(@RequestBody UserOpenEntity userOpen) {
         ValidatorUtils.validateEntity(userOpen);
-        userOpenService.updateAllColumnById(userOpen);//全部更新
+        userOpenService.updateById(userOpen);
         return R.ok();
     }
 
@@ -73,7 +73,7 @@ public class UserOpenControllerGen {
     @RequestMapping("/delete")
     @RequiresPermissions("usr:useropen:delete")
     public R delete(@RequestBody Long[] ids) {
-        userOpenService.deleteBatchIds(Arrays.asList(ids));
+        userOpenService.removeBatchByIds(Arrays.asList(ids));
         return R.ok();
     }
 }

@@ -1,6 +1,6 @@
 package cn.org.autumn.utils;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * Redis所有Keys

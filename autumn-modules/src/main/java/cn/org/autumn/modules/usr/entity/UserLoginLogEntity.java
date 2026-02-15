@@ -1,6 +1,6 @@
 package cn.org.autumn.modules.usr.entity;
 
-import com.baomidou.mybatisplus.annotations.*;
+import com.baomidou.mybatisplus.annotation.*;
 import cn.org.autumn.table.annotation.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -63,5 +63,6 @@ public class UserLoginLogEntity implements Serializable {
     private String reason;
 
     @Column(comment = "创建")
+    @TableField("`create`")
     private Date create;
 }

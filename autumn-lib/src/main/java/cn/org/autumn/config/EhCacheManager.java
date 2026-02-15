@@ -1,7 +1,7 @@
 package cn.org.autumn.config;
 
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.ehcache.Cache;
 import org.ehcache.CacheManager;
 import org.ehcache.PersistentCacheManager;

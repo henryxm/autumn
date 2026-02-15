@@ -9,18 +9,18 @@ import org.springframework.stereotype.Component;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.ModelAndView;
-import org.springframework.web.servlet.handler.HandlerInterceptorAdapter;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.util.Map;
 
 @Component
-public class SpmInterceptor extends HandlerInterceptorAdapter implements InterceptorHandler {
+public class SpmInterceptor implements HandlerInterceptor, InterceptorHandler {
 
     @Autowired
     SuperPositionModelService superPositionModelService;
 
+    @Override
     public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, @Nullable ModelAndView modelAndView) throws Exception {
         if (InterceptorUtils.skip(handler, this.getClass())) {
             return;

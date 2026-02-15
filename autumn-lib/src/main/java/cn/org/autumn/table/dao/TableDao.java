@@ -56,9 +56,7 @@ public interface TableDao {
      */
     @SelectProvider(type = QuerySql.class, method = getTableMetas)
     @ResultType(List.class)
-    List<TableMeta> getTableMetas(@Param(paramName) String tableName,
-                                  @Param("offset") int offset,
-                                  @Param("rows") int rows);
+    List<TableMeta> getTableMetasPage(@Param(paramName) String tableName, @Param("offset") int offset, @Param("rows") int rows);
 
     /**
      * @param tableName

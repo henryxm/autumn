@@ -2,7 +2,7 @@ package cn.org.autumn.utils;
 
 import lombok.extern.slf4j.Slf4j;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Enumeration;

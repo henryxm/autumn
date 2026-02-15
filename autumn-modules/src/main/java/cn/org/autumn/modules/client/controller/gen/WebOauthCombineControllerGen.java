@@ -42,7 +42,7 @@ public class WebOauthCombineControllerGen {
     @RequestMapping("/info/{id}")
     @RequiresPermissions("client:weboauthcombine:info")
     public R info(@PathVariable("id") Long id) {
-        WebOauthCombineEntity webOauthCombine = webOauthCombineService.selectById(id);
+        WebOauthCombineEntity webOauthCombine = webOauthCombineService.getById(id);
         return R.ok().put("webOauthCombine" , webOauthCombine);
     }
 
@@ -52,7 +52,7 @@ public class WebOauthCombineControllerGen {
     @RequestMapping("/save")
     @RequiresPermissions("client:weboauthcombine:save")
     public R save(@RequestBody WebOauthCombineEntity webOauthCombine) {
-        webOauthCombineService.insert(webOauthCombine);
+        webOauthCombineService.save(webOauthCombine);
         return R.ok();
     }
 
@@ -63,7 +63,7 @@ public class WebOauthCombineControllerGen {
     @RequiresPermissions("client:weboauthcombine:update")
     public R update(@RequestBody WebOauthCombineEntity webOauthCombine) {
         ValidatorUtils.validateEntity(webOauthCombine);
-        webOauthCombineService.updateAllColumnById(webOauthCombine);//全部更新
+        webOauthCombineService.updateById(webOauthCombine);//全部更新
         return R.ok();
     }
 
@@ -73,7 +73,7 @@ public class WebOauthCombineControllerGen {
     @RequestMapping("/delete")
     @RequiresPermissions("client:weboauthcombine:delete")
     public R delete(@RequestBody Long[] ids) {
-        webOauthCombineService.deleteBatchIds(Arrays.asList(ids));
+        webOauthCombineService.removeBatchByIds(Arrays.asList(ids));
         return R.ok();
     }
 }

@@ -3,26 +3,33 @@
     <parent>
         <groupId>cn.org.autumn</groupId>
         <artifactId>autumn</artifactId>
-        <version>2.0.0</version>
+        <version>3.0.0</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <artifactId>autumn-lib</artifactId>
-    <version>2.0.0</version>
+    <version>3.0.0</version>
     <packaging>jar</packaging>
     <name>autumn-lib</name>
     <url>http://autumn.org.cn</url>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.source>1.8</maven.compiler.source>
-        <maven.compiler.target>1.8</maven.compiler.target>
-        <maven.compiler.compilerVersion>1.8</maven.compiler.compilerVersion>
     </properties>
     <dependencies>
         <dependency>
             <groupId>cn.org.autumn</groupId>
             <artifactId>autumn-handler</artifactId>
-            <version>2.0.0</version>
+            <version>3.0.0</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.baomidou</groupId>
+                    <artifactId>mybatis-plus</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.baomidou</groupId>
+                    <artifactId>mybatisplus-spring-boot-starter</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -37,12 +44,11 @@
         <dependency>
             <groupId>javax.cache</groupId>
             <artifactId>cache-api</artifactId>
-            <version>1.1.0</version>
+            <version>1.1.1</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.data</groupId>
             <artifactId>spring-data-mongodb</artifactId>
-            <version>3.4.18</version>
             <scope>compile</scope>
         </dependency>
         <dependency>
@@ -58,7 +64,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>2.18.1</version>
+                <version>3.5.2</version>
                 <configuration>
                     <skipTests>true</skipTests>
                     <testFailureIgnore>true</testFailureIgnore>

@@ -5,8 +5,7 @@ import freemarker.cache.ClassTemplateLoader;
 import freemarker.cache.MultiTemplateLoader;
 import freemarker.cache.StatefulTemplateLoader;
 import freemarker.cache.TemplateLoader;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.File;
 import java.io.IOException;
@@ -16,13 +15,12 @@ import java.net.URL;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+@Slf4j
 public class DynamicTemplateLoader extends MultiTemplateLoader {
 
-    Logger log = LoggerFactory.getLogger(getClass());
+    private final Map<String, TemplateLoader> templateLoaders = new ConcurrentHashMap<>();
 
-    private final Map<String, TemplateLoader> templateLoaders = new ConcurrentHashMap();
-
-    private final Map<String, TemplateLoader> lastTemplateLoaderForName = new ConcurrentHashMap();
+    private final Map<String, TemplateLoader> lastTemplateLoaderForName = new ConcurrentHashMap<>();
     private boolean sticky = true;
 
     public DynamicTemplateLoader(TemplateLoader[] templateLoaders) {
@@ -39,8 +37,7 @@ public class DynamicTemplateLoader extends MultiTemplateLoader {
     public void remove(TemplateLoader templateLoader) {
         ClassTemplateLoader classTemplateLoader = (ClassTemplateLoader) templateLoader;
         String name = classTemplateLoader.getResourceLoaderClass().getName();
-        if (templateLoaders.containsKey(name))
-            templateLoaders.remove(name);
+        templateLoaders.remove(name);
     }
 
     public boolean exists(Object obj) {
@@ -54,8 +51,7 @@ public class DynamicTemplateLoader extends MultiTemplateLoader {
                         Field urlField = source.getClass().getDeclaredField("url");
                         urlField.setAccessible(true);
                         Object url = urlField.get(source);
-                        if (url instanceof URL) {
-                            URL a = (URL) url;
+                        if (url instanceof URL a) {
                             if (a.getFile().startsWith("file:")) {
                                 String file = a.getFile().replace("file:", "");
                                 if (file.startsWith(PluginManager.getPluginBaseDir()) && file.contains("!")) {
@@ -182,10 +178,9 @@ public class DynamicTemplateLoader extends MultiTemplateLoader {
         }
 
         public boolean equals(Object o) {
-            if (!(o instanceof DynamicTemplateLoader.DynamicSource)) {
+            if (!(o instanceof DynamicSource m)) {
                 return false;
             } else {
-                DynamicTemplateLoader.DynamicSource m = (DynamicTemplateLoader.DynamicSource) o;
                 return m.loader.equals(this.loader) && m.source.equals(this.source);
             }
         }

@@ -2,7 +2,7 @@ package cn.org.autumn.thread;
 
 import cn.org.autumn.config.Config;
 import cn.org.autumn.site.UpgradeFactory;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -44,7 +44,7 @@ public class UserLoginLogController extends UserLoginLogControllerGen {
                 }
             }
             if (!idList.isEmpty()) {
-                userLoginLogService.deleteBatchIds(idList);
+                userLoginLogService.removeBatchByIds(idList);
                 return R.ok().put("deleted", idList.size()).put("msg", "已清理 " + idList.size() + " 条");
             }
         }
@@ -76,7 +76,7 @@ public class UserLoginLogController extends UserLoginLogControllerGen {
         if (idObj == null) return R.error(400, "缺少 id");
         Long id = idObj instanceof Number ? ((Number) idObj).longValue() : Long.parseLong(idObj.toString());
         boolean white = whiteObj != null && ("true".equalsIgnoreCase(String.valueOf(whiteObj)) || Boolean.TRUE.equals(whiteObj) || "1".equals(String.valueOf(whiteObj)));
-        UserLoginLogEntity e = userLoginLogService.selectById(id);
+        UserLoginLogEntity e = userLoginLogService.getById(id);
         if (e == null) return R.error(404, "记录不存在");
         e.setWhite(white);
         userLoginLogService.updateById(e);

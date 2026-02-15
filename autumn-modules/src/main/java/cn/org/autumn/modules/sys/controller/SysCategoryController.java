@@ -42,7 +42,7 @@ public class SysCategoryController {
     @RequestMapping("/info/{id}")
     @RequiresPermissions("sys:category:info")
     public R info(@PathVariable("id") Long id) {
-        SysCategoryEntity category = sysCategoryService.selectById(id);
+        SysCategoryEntity category = sysCategoryService.getById(id);
         return R.ok().put("category" , category);
     }
 
@@ -52,7 +52,7 @@ public class SysCategoryController {
     @RequestMapping("/save")
     @RequiresPermissions("sys:category:save")
     public R save(@RequestBody SysCategoryEntity category) {
-        sysCategoryService.insert(category);
+        sysCategoryService.save(category);
         return R.ok();
     }
 
@@ -63,7 +63,7 @@ public class SysCategoryController {
     @RequiresPermissions("sys:category:update")
     public R update(@RequestBody SysCategoryEntity category) {
         ValidatorUtils.validateEntity(category);
-        sysCategoryService.updateAllColumnById(category);//全部更新
+        sysCategoryService.updateById(category);//全部更新
         return R.ok();
     }
 
@@ -73,7 +73,7 @@ public class SysCategoryController {
     @RequestMapping("/delete")
     @RequiresPermissions("sys:category:delete")
     public R delete(@RequestBody Long[] ids) {
-        sysCategoryService.deleteBatchIds(Arrays.asList(ids));
+        sysCategoryService.removeBatchByIds(Arrays.asList(ids));
         return R.ok();
     }
 }

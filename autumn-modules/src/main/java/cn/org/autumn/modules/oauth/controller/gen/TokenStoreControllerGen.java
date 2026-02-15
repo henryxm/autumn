@@ -42,7 +42,7 @@ public class TokenStoreControllerGen {
     @RequestMapping("/info/{id}")
     @RequiresPermissions("oauth:tokenstore:info")
     public R info(@PathVariable("id") Long id) {
-        TokenStoreEntity tokenStore = tokenStoreService.selectById(id);
+        TokenStoreEntity tokenStore = tokenStoreService.getById(id);
         return R.ok().put("tokenStore" , tokenStore);
     }
 
@@ -52,7 +52,7 @@ public class TokenStoreControllerGen {
     @RequestMapping("/save")
     @RequiresPermissions("oauth:tokenstore:save")
     public R save(@RequestBody TokenStoreEntity tokenStore) {
-        tokenStoreService.insert(tokenStore);
+        tokenStoreService.save(tokenStore);
         return R.ok();
     }
 
@@ -63,7 +63,7 @@ public class TokenStoreControllerGen {
     @RequiresPermissions("oauth:tokenstore:update")
     public R update(@RequestBody TokenStoreEntity tokenStore) {
         ValidatorUtils.validateEntity(tokenStore);
-        tokenStoreService.updateAllColumnById(tokenStore);//全部更新
+        tokenStoreService.updateById(tokenStore);//全部更新
         return R.ok();
     }
 
@@ -73,7 +73,7 @@ public class TokenStoreControllerGen {
     @RequestMapping("/delete")
     @RequiresPermissions("oauth:tokenstore:delete")
     public R delete(@RequestBody Long[] ids) {
-        tokenStoreService.deleteBatchIds(Arrays.asList(ids));
+        tokenStoreService.removeBatchByIds(Arrays.asList(ids));
         return R.ok();
     }
 }

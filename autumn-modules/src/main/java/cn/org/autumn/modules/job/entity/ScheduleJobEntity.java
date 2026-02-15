@@ -3,13 +3,14 @@ package cn.org.autumn.modules.job.entity;
 import cn.org.autumn.table.annotation.Column;
 import cn.org.autumn.table.annotation.Table;
 import cn.org.autumn.table.data.DataType;
-import com.baomidou.mybatisplus.annotations.TableId;
-import com.baomidou.mybatisplus.annotations.TableName;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Getter;
 import lombok.Setter;
 
-import javax.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotBlank;
 import java.io.Serializable;
 import java.util.Date;
 
@@ -45,6 +46,7 @@ public class ScheduleJobEntity implements Serializable {
     private Integer status;
 
     @Column(comment = "任务执行模式")
+    @TableField("`mode`")
     private String mode;
 
     @Column(comment = "备注")

@@ -19,7 +19,7 @@ import cn.org.autumn.utils.R;
  *
  * @author User
  * @email henryxm@163.com
- * @date 2025-12
+ * @date 2026-02
  */
 public class UserProfileControllerGen {
 
@@ -42,7 +42,7 @@ public class UserProfileControllerGen {
     @RequestMapping("/info/{uuid}")
     @RequiresPermissions("usr:userprofile:info")
     public R info(@PathVariable("uuid") String uuid) {
-        UserProfileEntity userProfile = userProfileService.selectById(uuid);
+        UserProfileEntity userProfile = userProfileService.getById(uuid);
         return R.ok().put("userProfile" , userProfile);
     }
 
@@ -52,7 +52,7 @@ public class UserProfileControllerGen {
     @RequestMapping("/save")
     @RequiresPermissions("usr:userprofile:save")
     public R save(@RequestBody UserProfileEntity userProfile) {
-        userProfileService.insert(userProfile);
+        userProfileService.save(userProfile);
         return R.ok();
     }
 
@@ -63,7 +63,7 @@ public class UserProfileControllerGen {
     @RequiresPermissions("usr:userprofile:update")
     public R update(@RequestBody UserProfileEntity userProfile) {
         ValidatorUtils.validateEntity(userProfile);
-        userProfileService.updateAllColumnById(userProfile);//全部更新
+        userProfileService.updateById(userProfile);
         return R.ok();
     }
 
@@ -73,7 +73,7 @@ public class UserProfileControllerGen {
     @RequestMapping("/delete")
     @RequiresPermissions("usr:userprofile:delete")
     public R delete(@RequestBody String[] uuids) {
-        userProfileService.deleteBatchIds(Arrays.asList(uuids));
+        userProfileService.removeBatchByIds(Arrays.asList(uuids));
         return R.ok();
     }
 }

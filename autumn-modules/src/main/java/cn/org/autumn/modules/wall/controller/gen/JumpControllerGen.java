@@ -42,7 +42,7 @@ public class JumpControllerGen {
     @RequestMapping("/info/{id}")
     @RequiresPermissions("wall:jump:info")
     public R info(@PathVariable("id") Long id) {
-        JumpEntity jump = jumpService.selectById(id);
+        JumpEntity jump = jumpService.getById(id);
         return R.ok().put("jump" , jump);
     }
 
@@ -52,7 +52,7 @@ public class JumpControllerGen {
     @RequestMapping("/save")
     @RequiresPermissions("wall:jump:save")
     public R save(@RequestBody JumpEntity jump) {
-        jumpService.insert(jump);
+        jumpService.save(jump);
         return R.ok();
     }
 
@@ -63,7 +63,7 @@ public class JumpControllerGen {
     @RequiresPermissions("wall:jump:update")
     public R update(@RequestBody JumpEntity jump) {
         ValidatorUtils.validateEntity(jump);
-        jumpService.updateAllColumnById(jump);//全部更新
+        jumpService.updateById(jump);//全部更新
         return R.ok();
     }
 
@@ -73,7 +73,7 @@ public class JumpControllerGen {
     @RequestMapping("/delete")
     @RequiresPermissions("wall:jump:delete")
     public R delete(@RequestBody Long[] ids) {
-        jumpService.deleteBatchIds(Arrays.asList(ids));
+        jumpService.removeBatchByIds(Arrays.asList(ids));
         return R.ok();
     }
 }

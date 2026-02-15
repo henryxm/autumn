@@ -1,7 +1,7 @@
 package cn.org.autumn.site;
 
 import cn.org.autumn.config.DomainHandler;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;

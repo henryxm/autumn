@@ -4,8 +4,8 @@ import cn.org.autumn.config.Config;
 import cn.org.autumn.modules.sys.service.SysLogService;
 import cn.org.autumn.utils.PageUtils;
 import cn.org.autumn.utils.R;
-import io.swagger.annotations.ApiImplicitParam;
-import io.swagger.annotations.ApiImplicitParams;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.Parameters;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -52,9 +52,9 @@ public class SysLogController {
      * @return
      */
     @GetMapping("changeLevel")
-    @ApiImplicitParams({
-            @ApiImplicitParam(name = "level", value = "日志级别:ALL,TRACE,DEBUG,INFO,WARN,ERROR,OFF", required = true),
-            @ApiImplicitParam(name = "loggerName", value = "类或包路径:cn.org.autumn.modules.sys.controller.SysLogController", required = false)})
+    @Parameters({
+            @Parameter(name = "level", description = "日志级别:ALL,TRACE,DEBUG,INFO,WARN,ERROR,OFF", required = true),
+            @Parameter(name = "loggerName", description = "类或包路径:cn.org.autumn.modules.sys.controller.SysLogController", required = false)})
     @ResponseBody
     @RequiresPermissions("sys:log:list")
     public String changeLevel(String level, String loggerName) {

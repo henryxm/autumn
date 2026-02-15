@@ -1,9 +1,9 @@
 package cn.org.autumn.modules.sys.service;
 
 import cn.org.autumn.site.InitFactory;
-import com.baomidou.mybatisplus.mapper.EntityWrapper;
-import com.baomidou.mybatisplus.plugins.Page;
-import com.baomidou.mybatisplus.service.impl.ServiceImpl;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import cn.org.autumn.utils.Constant;
 import cn.org.autumn.annotation.DataFilter;
 import cn.org.autumn.utils.PageUtils;
@@ -11,7 +11,7 @@ import cn.org.autumn.utils.Query;
 import cn.org.autumn.modules.sys.dao.SysRoleDao;
 import cn.org.autumn.modules.sys.entity.SysDeptEntity;
 import cn.org.autumn.modules.sys.entity.SysRoleEntity;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.core.annotation.Order;
@@ -66,7 +66,7 @@ public class SysRoleService extends ServiceImpl<SysRoleDao, SysRoleEntity> imple
                 if (NULL != temp)
                     sysRoleEntity.setRemark(temp);
                 sysRoleEntity.setCreateTime(new Date());
-                insert(sysRoleEntity);
+                save(sysRoleEntity);
             }
         }
     }
@@ -78,12 +78,12 @@ public class SysRoleService extends ServiceImpl<SysRoleDao, SysRoleEntity> imple
     @DataFilter(subDept = true, user = false)
     public PageUtils queryPage(Map<String, Object> params) {
         String roleName = (String) params.get("roleName");
-        EntityWrapper<SysRoleEntity> entityEntityWrapper = new EntityWrapper<>();
-        Page<SysRoleEntity> page = this.selectPage(
+        QueryWrapper<SysRoleEntity> entityEntityWrapper = new QueryWrapper<SysRoleEntity>()
+                .like(StringUtils.isNotBlank(roleName), "role_name", roleName)
+                .apply(params.get(Constant.SQL_FILTER) != null, (String) params.get(Constant.SQL_FILTER));
+        Page<SysRoleEntity> page = this.page(
                 new Query<SysRoleEntity>(params).getPage(),
-                new EntityWrapper<SysRoleEntity>()
-                        .like(StringUtils.isNotBlank(roleName), "role_name", roleName)
-                        .addFilterIfNeed(params.get(Constant.SQL_FILTER) != null, (String) params.get(Constant.SQL_FILTER))
+                entityEntityWrapper
         );
 
         for (SysRoleEntity sysRoleEntity : page.getRecords()) {
@@ -97,13 +97,13 @@ public class SysRoleService extends ServiceImpl<SysRoleDao, SysRoleEntity> imple
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void save(SysRoleEntity role) {
+    public boolean save(SysRoleEntity role) {
         SysRoleEntity o = getByRoleKey(role.getRoleKey());
         if (null != o) {
             updateById(role);
         } else {
             role.setCreateTime(new Date());
-            insert(role);
+            super.save(role);
         }
 
         //保存角色与菜单关系
@@ -111,12 +111,13 @@ public class SysRoleService extends ServiceImpl<SysRoleDao, SysRoleEntity> imple
 
         //保存角色与部门关系
         sysRoleDeptService.saveOrUpdate(role.getRoleKey(), role.getDeptKeys());
+        return true;
     }
 
     @Transactional(rollbackFor = Exception.class)
     public void deleteBatch(String[] roleKeys) {
         //删除角色
-        this.deleteBatchIds(Arrays.asList(roleKeys));
+        this.removeBatchByIds(Arrays.asList(roleKeys));
         //删除角色与菜单关联
         sysRoleMenuService.deleteBatch(roleKeys);
         //删除角色与部门关联

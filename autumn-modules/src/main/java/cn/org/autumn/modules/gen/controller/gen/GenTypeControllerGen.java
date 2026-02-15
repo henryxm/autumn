@@ -49,7 +49,7 @@ public class GenTypeControllerGen {
     @RequestMapping("/info/{id}")
     @RequiresPermissions("gen:gentype:info")
     public R info(@PathVariable("id") Long id){
-        GenTypeEntity genType = genTypeService.selectById(id);
+        GenTypeEntity genType = genTypeService.getById(id);
         return R.ok().put("genType", genType);
     }
 
@@ -59,7 +59,7 @@ public class GenTypeControllerGen {
     @RequestMapping("/save")
     @RequiresPermissions("gen:gentype:save")
     public R save(@RequestBody GenTypeEntity genType){
-        genTypeService.insert(genType);
+        genTypeService.save(genType);
         return R.ok();
     }
 
@@ -70,7 +70,7 @@ public class GenTypeControllerGen {
     @RequiresPermissions("gen:gentype:update")
     public R update(@RequestBody GenTypeEntity genType){
         ValidatorUtils.validateEntity(genType);
-        genTypeService.updateAllColumnById(genType);//全部更新
+        genTypeService.updateById(genType);//全部更新
         return R.ok();
     }
 
@@ -80,7 +80,7 @@ public class GenTypeControllerGen {
     @RequestMapping("/delete")
     @RequiresPermissions("gen:gentype:delete")
     public R delete(@RequestBody Long[] ids){
-        genTypeService.deleteBatchIds(Arrays.asList(ids));
+        genTypeService.removeBatchByIds(Arrays.asList(ids));
         return R.ok();
     }
 

@@ -11,7 +11,7 @@ import cn.org.autumn.exception.AException;
 import cn.org.autumn.utils.R;
 import cn.org.autumn.modules.sys.entity.SysMenuEntity;
 import cn.org.autumn.modules.sys.service.SysMenuService;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -86,7 +86,7 @@ public class SysMenuController extends AbstractController {
     @RequestMapping("/list")
     @RequiresPermissions("sys:menu:list")
     public List<SysMenuEntity> list() {
-        List<SysMenuEntity> menuList = sysMenuService.selectList(null);
+        List<SysMenuEntity> menuList = sysMenuService.list();
         for (SysMenuEntity sysMenuEntity : menuList) {
             SysMenuEntity parentMenuEntity = sysMenuService.getByMenuKey(sysMenuEntity.getParentKey());
             if (parentMenuEntity != null) {
@@ -144,7 +144,7 @@ public class SysMenuController extends AbstractController {
         verifyForm(menu);
         if (null == menu.getParentKey())
             menu.setParentKey("");
-        sysMenuService.insertOrUpdate(menu);
+        sysMenuService.saveOrUpdate(menu);
         return R.ok();
     }
 

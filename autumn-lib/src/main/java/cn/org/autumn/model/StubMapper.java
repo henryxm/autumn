@@ -1,107 +1,72 @@
 package cn.org.autumn.model;
 
 import cn.org.autumn.service.DefaultMapper;
-import com.baomidou.mybatisplus.mapper.Wrapper;
-import org.apache.ibatis.session.RowBounds;
+import com.baomidou.mybatisplus.core.conditions.Wrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import org.apache.ibatis.session.ResultHandler;
 
 import java.io.Serializable;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
+/**
+ * BaseMapper 的空实现（stub），用于不需要数据库操作的场景。
+ * 已适配 MyBatis-Plus 3.5.x API。
+ */
 public class StubMapper implements DefaultMapper {
     @Override
-    public Integer insert(DefaultEntity entity) {
-        return null;
-    }
+    public int insert(DefaultEntity entity) { return 0; }
 
     @Override
-    public Integer insertAllColumn(DefaultEntity entity) {
-        return null;
-    }
+    public int deleteById(DefaultEntity entity) { return 0; }
 
     @Override
-    public Integer deleteById(Serializable id) {
-        return null;
-    }
+    public int delete(Wrapper<DefaultEntity> wrapper) { return 0; }
 
     @Override
-    public Integer deleteByMap(Map<String, Object> columnMap) {
-        return null;
-    }
+    public int updateById(DefaultEntity entity) { return 0; }
 
     @Override
-    public Integer delete(Wrapper<DefaultEntity> wrapper) {
-        return null;
-    }
+    public int update(DefaultEntity entity, Wrapper<DefaultEntity> wrapper) { return 0; }
 
     @Override
-    public Integer deleteBatchIds(Collection<? extends Serializable> idList) {
-        return null;
-    }
+    public DefaultEntity selectById(Serializable id) { return null; }
 
     @Override
-    public Integer updateById(DefaultEntity entity) {
-        return null;
-    }
+    public List<DefaultEntity> selectByIds(Collection<? extends Serializable> idList) { return Collections.emptyList(); }
 
     @Override
-    public Integer updateAllColumnById(DefaultEntity entity) {
-        return null;
-    }
+    public void selectByIds(Collection<? extends Serializable> idList, ResultHandler<DefaultEntity> handler) {}
 
     @Override
-    public Integer update(DefaultEntity entity, Wrapper<DefaultEntity> wrapper) {
-        return null;
-    }
+    public Long selectCount(Wrapper<DefaultEntity> wrapper) { return 0L; }
 
     @Override
-    public DefaultEntity selectById(Serializable id) {
-        return null;
-    }
+    public List<DefaultEntity> selectList(Wrapper<DefaultEntity> wrapper) { return Collections.emptyList(); }
 
     @Override
-    public List<DefaultEntity> selectBatchIds(Collection<? extends Serializable> idList) {
-        return null;
-    }
+    public void selectList(Wrapper<DefaultEntity> wrapper, ResultHandler<DefaultEntity> handler) {}
 
     @Override
-    public List<DefaultEntity> selectByMap(Map<String, Object> columnMap) {
-        return null;
-    }
+    public List<DefaultEntity> selectList(IPage<DefaultEntity> page, Wrapper<DefaultEntity> wrapper) { return Collections.emptyList(); }
 
     @Override
-    public DefaultEntity selectOne(DefaultEntity entity) {
-        return null;
-    }
+    public void selectList(IPage<DefaultEntity> page, Wrapper<DefaultEntity> wrapper, ResultHandler<DefaultEntity> handler) {}
 
     @Override
-    public Integer selectCount(Wrapper<DefaultEntity> wrapper) {
-        return null;
-    }
+    public List<Map<String, Object>> selectMaps(Wrapper<DefaultEntity> wrapper) { return Collections.emptyList(); }
 
     @Override
-    public List<DefaultEntity> selectList(Wrapper<DefaultEntity> wrapper) {
-        return null;
-    }
+    public void selectMaps(Wrapper<DefaultEntity> wrapper, ResultHandler<Map<String, Object>> handler) {}
 
     @Override
-    public List<Map<String, Object>> selectMaps(Wrapper<DefaultEntity> wrapper) {
-        return null;
-    }
+    public List<Map<String, Object>> selectMaps(IPage<? extends Map<String, Object>> page, Wrapper<DefaultEntity> wrapper) { return Collections.emptyList(); }
 
     @Override
-    public List<Object> selectObjs(Wrapper<DefaultEntity> wrapper) {
-        return null;
-    }
+    public void selectMaps(IPage<? extends Map<String, Object>> page, Wrapper<DefaultEntity> wrapper, ResultHandler<Map<String, Object>> handler) {}
 
     @Override
-    public List<DefaultEntity> selectPage(RowBounds rowBounds, Wrapper<DefaultEntity> wrapper) {
-        return null;
-    }
+    public <E> List<E> selectObjs(Wrapper<DefaultEntity> wrapper) { return Collections.emptyList(); }
 
     @Override
-    public List<Map<String, Object>> selectMapsPage(RowBounds rowBounds, Wrapper<DefaultEntity> wrapper) {
-        return null;
-    }
+    public <E> void selectObjs(Wrapper<DefaultEntity> wrapper, ResultHandler<E> handler) {}
 }

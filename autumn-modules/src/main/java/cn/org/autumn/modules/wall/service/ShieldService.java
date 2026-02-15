@@ -153,7 +153,7 @@ public class ShieldService extends ModuleService<ShieldDao, ShieldEntity> implem
         shield.setEnable(false);
         shield.setUri("/");
         shield.setAuto(10000);
-        insert(shield);
+        save(shield);
     }
 
     public boolean toggleEnable() {

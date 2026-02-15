@@ -17,7 +17,7 @@ import cn.org.autumn.thread.TagRunnable;
 import cn.org.autumn.thread.TagTaskExecutor;
 import org.springframework.context.annotation.Lazy;
 
-import javax.annotation.PreDestroy;
+import jakarta.annotation.PreDestroy;
 import java.lang.reflect.Type;
 import java.util.*;
 import java.util.concurrent.*;

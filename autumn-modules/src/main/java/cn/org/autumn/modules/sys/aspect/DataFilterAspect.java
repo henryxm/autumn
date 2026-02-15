@@ -8,7 +8,7 @@ import cn.org.autumn.modules.sys.service.SysRoleDeptService;
 import cn.org.autumn.modules.sys.service.SysUserRoleService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.exception.AException;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;

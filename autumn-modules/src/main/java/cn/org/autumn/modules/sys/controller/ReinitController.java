@@ -11,11 +11,11 @@ import cn.org.autumn.table.data.TableInfo;
 import cn.org.autumn.table.service.MysqlTableService;
 import cn.org.autumn.utils.R;
 import cn.org.autumn.site.TableFactory;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;

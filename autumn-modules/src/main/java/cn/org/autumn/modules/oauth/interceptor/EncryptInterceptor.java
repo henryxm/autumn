@@ -9,7 +9,7 @@ import cn.org.autumn.service.AesService;
 import cn.org.autumn.service.RsaService;
 import com.google.gson.Gson;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.MediaType;
@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Collections;

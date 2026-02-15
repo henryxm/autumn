@@ -42,7 +42,7 @@ public class IpBlackControllerGen {
     @RequestMapping("/info/{id}")
     @RequiresPermissions("wall:ipblack:info")
     public R info(@PathVariable("id") Long id) {
-        IpBlackEntity ipBlack = ipBlackService.selectById(id);
+        IpBlackEntity ipBlack = ipBlackService.getById(id);
         return R.ok().put("ipBlack" , ipBlack);
     }
 
@@ -52,7 +52,7 @@ public class IpBlackControllerGen {
     @RequestMapping("/save")
     @RequiresPermissions("wall:ipblack:save")
     public R save(@RequestBody IpBlackEntity ipBlack) {
-        ipBlackService.insert(ipBlack);
+        ipBlackService.save(ipBlack);
         return R.ok();
     }
 
@@ -63,7 +63,7 @@ public class IpBlackControllerGen {
     @RequiresPermissions("wall:ipblack:update")
     public R update(@RequestBody IpBlackEntity ipBlack) {
         ValidatorUtils.validateEntity(ipBlack);
-        ipBlackService.updateAllColumnById(ipBlack);//全部更新
+        ipBlackService.updateById(ipBlack);//全部更新
         return R.ok();
     }
 
@@ -73,7 +73,7 @@ public class IpBlackControllerGen {
     @RequestMapping("/delete")
     @RequiresPermissions("wall:ipblack:delete")
     public R delete(@RequestBody Long[] ids) {
-        ipBlackService.deleteBatchIds(Arrays.asList(ids));
+        ipBlackService.removeBatchByIds(Arrays.asList(ids));
         return R.ok();
     }
 }

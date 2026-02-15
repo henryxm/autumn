@@ -10,7 +10,7 @@ import cn.org.autumn.site.UpgradeFactory;
 import cn.org.autumn.utils.Utils;
 import cn.org.autumn.utils.Uuid;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
@@ -72,7 +72,7 @@ public class WebAuthenticationService extends ModuleService<WebAuthenticationDao
             webAuthClientEntity.setState(state);
             webAuthClientEntity.setClientType(clientType);
             webAuthClientEntity.setCreateTime(new Date());
-            insert(webAuthClientEntity);
+            save(webAuthClientEntity);
             return webAuthClientEntity;
         } catch (Exception ignored) {
         }
@@ -97,7 +97,7 @@ public class WebAuthenticationService extends ModuleService<WebAuthenticationDao
     public void onDomainChanged() {
         String host = sysConfigService.getSiteDomain();
         String scheme = sysConfigService.getScheme();
-        List<WebAuthenticationEntity> entities = selectByMap(null);
+        List<WebAuthenticationEntity> entities = listByMap(null);
         for (WebAuthenticationEntity entity : entities) {
             try {
                 update(entity, scheme, host, false);

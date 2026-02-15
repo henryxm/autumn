@@ -3,7 +3,7 @@ package cn.org.autumn.modules.sys.service;
 import cn.org.autumn.modules.sys.entity.SysMenuEntity;
 import cn.org.autumn.modules.sys.entity.SysRoleEntity;
 import cn.org.autumn.site.InitFactory;
-import com.baomidou.mybatisplus.service.impl.ServiceImpl;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import cn.org.autumn.modules.sys.dao.SysRoleMenuDao;
 import cn.org.autumn.modules.sys.entity.SysRoleMenuEntity;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,7 +36,7 @@ public class SysRoleMenuService extends ServiceImpl<SysRoleMenuDao, SysRoleMenuE
         //先删除角色与菜单关系
         deleteMenus(new String[]{roleKey});
 
-        if (menuKeys.size() == 0) {
+        if (null == menuKeys || menuKeys.size() == 0) {
             return;
         }
         SysRoleEntity sysRoleEntity = sysRoleService.getByRoleKey(roleKey);
@@ -55,7 +55,7 @@ public class SysRoleMenuService extends ServiceImpl<SysRoleMenuDao, SysRoleMenuE
             list.add(sysRoleMenuEntity);
         }
         if (!list.isEmpty())
-            this.insertBatch(list);
+            this.saveBatch(list);
     }
 
     public int deleteBatch(String[] roleKeys) {

@@ -5,13 +5,21 @@ $(function () {
         colModel: [			
 			{ label: '${lang.usr_useropen_column_id}', name: 'id', index: 'id', width: 50, key: true },
 			{ label: '${lang.usr_useropen_column_uuid}', name: 'uuid', index: 'uuid', width: 80 }, 
+
 			{ label: '${lang.usr_useropen_column_platform}', name: 'platform', index: 'platform', width: 80 }, 
+
 			{ label: '${lang.usr_useropen_column_appid}', name: 'appid', index: 'appid', width: 80 }, 
+
 			{ label: '${lang.usr_useropen_column_openid}', name: 'openid', index: 'openid', width: 80 }, 
+
 			{ label: '${lang.usr_useropen_column_unionid}', name: 'unionid', index: 'unionid', width: 80 }, 
+
 			{ label: '${lang.usr_useropen_column_deleted}', name: 'deleted', index: 'deleted', width: 80 }, 
+
 			{ label: '${lang.usr_useropen_column_create}', name: 'create', index: 'create', width: 80 }, 
+
 			{ label: '${lang.usr_useropen_column_update}', name: 'update', index: 'update', width: 80 }, 
+
         ],
 		viewrecords: true,
         height: 385,

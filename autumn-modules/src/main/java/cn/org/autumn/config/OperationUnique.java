@@ -1,33 +1,26 @@
 package cn.org.autumn.config;
 
 import io.swagger.v3.oas.annotations.Operation;
+import org.springdoc.core.customizers.OperationCustomizer;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import springfox.documentation.spi.DocumentationType;
-import springfox.documentation.spi.service.OperationBuilderPlugin;
-import springfox.documentation.spi.service.contexts.OperationContext;
-import springfox.documentation.swagger.common.SwaggerPluginSupport;
+import org.springframework.web.method.HandlerMethod;
 
-import java.util.Optional;
-
+/**
+ * 自定义 operationId 去重：如果 @Operation 注解指定了 operationId，则使用该值。
+ */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE + 1000)
-public class OperationUnique implements OperationBuilderPlugin {
+public class OperationUnique implements OperationCustomizer {
 
-    public void apply(OperationContext context) {
-        Optional<Operation> methodAnnotation = context.findAnnotation(Operation.class);
-        if (methodAnnotation.isPresent()) {
-            Operation operation = methodAnnotation.get();
-            if (StringUtils.hasText(operation.operationId())) {
-                context.operationBuilder().uniqueId(operation.operationId());
-                context.operationBuilder().codegenMethodNameStem(operation.operationId());
-            }
+    @Override
+    public io.swagger.v3.oas.models.Operation customize(io.swagger.v3.oas.models.Operation operation, HandlerMethod handlerMethod) {
+        Operation annotation = handlerMethod.getMethodAnnotation(Operation.class);
+        if (annotation != null && StringUtils.hasText(annotation.operationId())) {
+            operation.setOperationId(annotation.operationId());
         }
-    }
-
-    public boolean supports(DocumentationType delimiter) {
-        return SwaggerPluginSupport.pluginDoesApply(delimiter);
+        return operation;
     }
 }

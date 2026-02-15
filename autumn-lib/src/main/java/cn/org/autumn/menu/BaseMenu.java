@@ -1,7 +1,7 @@
 package cn.org.autumn.menu;
 
 import cn.org.autumn.site.InitFactory;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 
 public interface BaseMenu extends InitFactory.Init {
     default String order() {

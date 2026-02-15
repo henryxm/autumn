@@ -2,7 +2,7 @@ package cn.org.autumn.modules.job.dao;
 
 import cn.org.autumn.modules.job.entity.ScheduleJobEntity;
 import cn.org.autumn.mybatis.SelectInLangDriver;
-import com.baomidou.mybatisplus.mapper.BaseMapper;
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.*;
 import org.springframework.stereotype.Repository;
 

@@ -1,8 +1,9 @@
 package cn.org.autumn.utils;
 
-import com.baomidou.mybatisplus.plugins.Page;
+import com.baomidou.mybatisplus.core.metadata.OrderItem;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import cn.org.autumn.xss.SQLFilter;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -49,10 +50,13 @@ public class Query<T> extends LinkedHashMap<String, Object> {
         //mybatis-plus分页
         this.page = new Page<>(currPage, limit);
 
-        //排序
+        //排序 (MyBatis-Plus 3.x 使用 OrderItem 替代 setOrderByField)
         if(StringUtils.isNotBlank(sidx) && StringUtils.isNotBlank(order)){
-            this.page.setOrderByField(sidx);
-            this.page.setAsc("ASC".equalsIgnoreCase(order));
+            if("ASC".equalsIgnoreCase(order)){
+                this.page.addOrder(OrderItem.asc(sidx));
+            } else {
+                this.page.addOrder(OrderItem.desc(sidx));
+            }
         }
 
     }

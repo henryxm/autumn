@@ -16,7 +16,7 @@ import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import java.lang.reflect.Method;
 import java.util.Date;
 
@@ -85,6 +85,6 @@ public class SysLogAspect {
         sysLog.setTime(time);
         sysLog.setCreateDate(new Date());
         //保存系统日志
-        sysLogService.insert(sysLog);
+        sysLogService.save(sysLog);
     }
 }

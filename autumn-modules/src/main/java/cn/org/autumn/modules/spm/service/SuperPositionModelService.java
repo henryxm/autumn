@@ -8,14 +8,14 @@ import cn.org.autumn.modules.spm.entity.SuperPositionModelEntity;
 import cn.org.autumn.modules.spm.service.gen.SuperPositionModelServiceGen;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.stereotype.Service;
 import org.springframework.ui.Model;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.lang.reflect.Field;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -253,18 +253,18 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
         if (ar.length > 3)
             map.put("product_id", ar[3]);
 
-        List<SuperPositionModelEntity> list = selectByMap(map);
+        List<SuperPositionModelEntity> list = listByMap(map);
         if (list.isEmpty()) {
             map.remove("product_id");
-            list = selectByMap(map);
+            list = listByMap(map);
         }
         if (list.isEmpty()) {
             map.remove("channel_id");
-            list = selectByMap(map);
+            list = listByMap(map);
         }
         if (list.isEmpty()) {
             map.remove("page_id");
-            list = selectByMap(map);
+            list = listByMap(map);
         }
         if (!list.isEmpty()) {
             return list.get(0);
@@ -309,11 +309,11 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
         } else
             superPositionModelEntity.setNeedLogin(0);
         superPositionModelEntity.setForbidden(0);
-        List<SuperPositionModelEntity> list = selectByMap(map);
+        List<SuperPositionModelEntity> list = listByMap(map);
         if (!list.isEmpty()) {
             return;
         }
-        insert(superPositionModelEntity);
+        save(superPositionModelEntity);
     }
 
     public boolean menuWithSpm() {

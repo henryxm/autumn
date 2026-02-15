@@ -42,7 +42,7 @@ public class ${className}ControllerGen {
     @RequestMapping("/info/{${pk.attrname}}")
     @RequiresPermissions("${moduleName}:${pathName}:info")
     public R info(@PathVariable("${pk.attrname}") ${pk.attrType} ${pk.attrname}) {
-        ${className}Entity ${classname} = ${classname}Service.selectById(${pk.attrname});
+        ${className}Entity ${classname} = ${classname}Service.getById(${pk.attrname});
         return R.ok().put("${classname}" , ${classname});
     }
 
@@ -52,7 +52,7 @@ public class ${className}ControllerGen {
     @RequestMapping("/save")
     @RequiresPermissions("${moduleName}:${pathName}:save")
     public R save(@RequestBody ${className}Entity ${classname}) {
-        ${classname}Service.insert(${classname});
+        ${classname}Service.save(${classname});
         return R.ok();
     }
 
@@ -63,7 +63,7 @@ public class ${className}ControllerGen {
     @RequiresPermissions("${moduleName}:${pathName}:update")
     public R update(@RequestBody ${className}Entity ${classname}) {
         ValidatorUtils.validateEntity(${classname});
-        ${classname}Service.updateAllColumnById(${classname});//全部更新
+        ${classname}Service.updateById(${classname});
         return R.ok();
     }
 
@@ -73,7 +73,7 @@ public class ${className}ControllerGen {
     @RequestMapping("/delete")
     @RequiresPermissions("${moduleName}:${pathName}:delete")
     public R delete(@RequestBody ${pk.attrType}[] ${pk.attrname}s) {
-        ${classname}Service.deleteBatchIds(Arrays.asList(${pk.attrname}s));
+        ${classname}Service.removeBatchByIds(Arrays.asList(${pk.attrname}s));
         return R.ok();
     }
 }

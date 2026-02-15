@@ -26,21 +26,81 @@
         <div class="panel-heading">{{title}}</div>
         <form class="form-horizontal">
             <div class="form-group">
-                <div class="col-sm-2 control-label">${lang.usr_userloginlog_column_username}</div>
+                <div class="col-sm-2 control-label">${lang.usr_userloginlog_column_uuid}</div>
                 <div class="col-sm-10">
-                    <input type="text" class="form-control" v-model="userLoginLog.username" placeholder="${lang.usr_userloginlog_column_username}"/>
+                    <input type="text" class="form-control" v-model="userLoginLog.uuid" placeholder="${lang.usr_userloginlog_column_uuid}"/>
                 </div>
             </div>
             <div class="form-group">
-                <div class="col-sm-2 control-label">${lang.usr_userloginlog_column_login_time}</div>
+                <div class="col-sm-2 control-label">${lang.usr_userloginlog_column_account}</div>
                 <div class="col-sm-10">
-                    <input type="text" class="form-control" v-model="userLoginLog.loginTime" placeholder="${lang.usr_userloginlog_column_login_time}"/>
+                    <input type="text" class="form-control" v-model="userLoginLog.account" placeholder="${lang.usr_userloginlog_column_account}"/>
                 </div>
             </div>
             <div class="form-group">
-                <div class="col-sm-2 control-label">${lang.usr_userloginlog_column_logout_time}</div>
+                <div class="col-sm-2 control-label">${lang.usr_userloginlog_column_way}</div>
                 <div class="col-sm-10">
-                    <input type="text" class="form-control" v-model="userLoginLog.logoutTime" placeholder="${lang.usr_userloginlog_column_logout_time}"/>
+                    <input type="text" class="form-control" v-model="userLoginLog.way" placeholder="${lang.usr_userloginlog_column_way}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.usr_userloginlog_column_host}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="userLoginLog.host" placeholder="${lang.usr_userloginlog_column_host}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.usr_userloginlog_column_ip}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="userLoginLog.ip" placeholder="${lang.usr_userloginlog_column_ip}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.usr_userloginlog_column_session}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="userLoginLog.session" placeholder="${lang.usr_userloginlog_column_session}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.usr_userloginlog_column_path}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="userLoginLog.path" placeholder="${lang.usr_userloginlog_column_path}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.usr_userloginlog_column_agent}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="userLoginLog.agent" placeholder="${lang.usr_userloginlog_column_agent}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.usr_userloginlog_column_white}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="userLoginLog.white" placeholder="${lang.usr_userloginlog_column_white}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.usr_userloginlog_column_logout}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="userLoginLog.logout" placeholder="${lang.usr_userloginlog_column_logout}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.usr_userloginlog_column_allow}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="userLoginLog.allow" placeholder="${lang.usr_userloginlog_column_allow}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.usr_userloginlog_column_reason}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="userLoginLog.reason" placeholder="${lang.usr_userloginlog_column_reason}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.usr_userloginlog_column_create}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="userLoginLog.create" placeholder="${lang.usr_userloginlog_column_create}"/>
                 </div>
             </div>
             <div class="form-group">

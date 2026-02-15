@@ -8,7 +8,7 @@ import cn.org.autumn.thread.TagRunnable;
 import cn.org.autumn.thread.TagTaskExecutor;
 import cn.org.autumn.thread.TagValue;
 import cn.org.autumn.utils.PageUtils;
-import com.baomidou.mybatisplus.mapper.EntityWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -68,7 +68,7 @@ public class DatabaseBackupStrategyService extends ModuleService<DatabaseBackupS
      */
     private void executeScheduledStrategies(String schedule) {
         try {
-            List<DatabaseBackupStrategyEntity> strategies = selectList(new EntityWrapper<DatabaseBackupStrategyEntity>().eq("enable", true).eq("schedule", schedule));
+            List<DatabaseBackupStrategyEntity> strategies = list(new QueryWrapper<DatabaseBackupStrategyEntity>().eq("enable", true).eq("schedule", schedule));
             for (DatabaseBackupStrategyEntity strategy : strategies) {
                 // WEEKLY 策略：检查距离上次执行是否超过7天
                 if ("WEEKLY".equals(schedule) && strategy.getLastRunTime() != null) {
@@ -101,7 +101,7 @@ public class DatabaseBackupStrategyService extends ModuleService<DatabaseBackupS
      * 手动执行策略
      */
     public void executeStrategy(Long strategyId) {
-        DatabaseBackupStrategyEntity strategy = selectById(strategyId);
+        DatabaseBackupStrategyEntity strategy = getById(strategyId);
         if (strategy == null) {
             throw new RuntimeException("策略不存在");
         }

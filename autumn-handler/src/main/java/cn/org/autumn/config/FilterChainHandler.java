@@ -3,7 +3,7 @@ package cn.org.autumn.config;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.stereotype.Component;
 
-import javax.servlet.Filter;
+import jakarta.servlet.Filter;
 import java.util.Map;
 
 @Component

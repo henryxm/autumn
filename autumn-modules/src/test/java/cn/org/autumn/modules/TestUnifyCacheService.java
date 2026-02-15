@@ -71,7 +71,7 @@ public class TestUnifyCacheService {
         entity.setUpdateTime(new Date());
         
         // 2. 插入数据
-        boolean inserted = webOauthCombineService.insert(entity);
+        boolean inserted = webOauthCombineService.save(entity);
         assertTrue("插入数据失败", inserted);
         log.info("插入数据成功，uuid: {}", uuid);
         
@@ -107,7 +107,7 @@ public class TestUnifyCacheService {
         log.info("更新后缓存已删除，重新从数据库查询");
         
         // 8. 测试删除后缓存删除
-        boolean deleted = webOauthCombineService.deleteById(cached3.getId());
+        boolean deleted = webOauthCombineService.removeById(cached3.getId());
         assertTrue("删除应该成功", deleted);
         log.info("删除数据成功");
         
@@ -137,7 +137,7 @@ public class TestUnifyCacheService {
         entity.setFix("");
         
         // 2. 插入数据
-        boolean inserted = testLanguageService.insert(entity);
+        boolean inserted = testLanguageService.save(entity);
         assertTrue("插入数据失败", inserted);
         log.info("插入数据成功，name: {}, tag: {}", name, tag);
         
@@ -183,7 +183,7 @@ public class TestUnifyCacheService {
         log.info("更新后缓存已删除，重新从数据库查询");
         
         // 9. 测试删除后缓存删除
-        boolean deleted = testLanguageService.deleteById(cached3.getId());
+        boolean deleted = testLanguageService.removeById(cached3.getId());
         assertTrue("删除应该成功", deleted);
         log.info("删除数据成功");
         
@@ -218,7 +218,7 @@ public class TestUnifyCacheService {
             entity.setUpdateTime(new Date());
             entities[i] = entity;
             
-            webOauthCombineService.insert(entity);
+            webOauthCombineService.save(entity);
             log.info("插入数据 {}: uuid = {}", i, uuid);
         }
         
@@ -249,7 +249,7 @@ public class TestUnifyCacheService {
         for (WebOauthCombineEntity entity : entities) {
             ids.add(entity.getId());
         }
-        boolean batchDeleted = webOauthCombineService.deleteBatchIds(ids);
+        boolean batchDeleted = webOauthCombineService.removeBatchByIds(ids);
         assertTrue("批量删除应该成功", batchDeleted);
         log.info("批量删除完成");
         
@@ -284,7 +284,7 @@ public class TestUnifyCacheService {
             entity.setFix("");
             entities[i] = entity;
             
-            testLanguageService.insert(entity);
+            testLanguageService.save(entity);
             log.info("插入数据 {}: name = {}, tag = {}", i, name, tags[i]);
         }
         
@@ -305,7 +305,7 @@ public class TestUnifyCacheService {
         
         // 4. 清理测试数据
         for (LanguageEntity entity : entities) {
-            testLanguageService.deleteById(entity.getId());
+            testLanguageService.removeById(entity.getId());
         }
         
         log.info("=== 复合 key 缓存的不同参数组合测试完成 ===");
@@ -329,7 +329,7 @@ public class TestUnifyCacheService {
         entity1.setClientDetailsUuid(Uuid.uuid());
         entity1.setCreateTime(new Date());
         entity1.setUpdateTime(new Date());
-        webOauthCombineService.insert(entity1);
+        webOauthCombineService.save(entity1);
         
         WebOauthCombineEntity entity2 = new WebOauthCombineEntity();
         entity2.setUuid(uuid2);
@@ -338,7 +338,7 @@ public class TestUnifyCacheService {
         entity2.setClientDetailsUuid(Uuid.uuid());
         entity2.setCreateTime(new Date());
         entity2.setUpdateTime(new Date());
-        webOauthCombineService.insert(entity2);
+        webOauthCombineService.save(entity2);
         
         // 2. 验证不同的 key 返回不同的数据
         WebOauthCombineEntity cached1 = webOauthCombineService.getCache(uuid1);
@@ -362,7 +362,7 @@ public class TestUnifyCacheService {
         lang1.setZhCn("中文A");
         lang1.setEnUs("EnglishA");
         lang1.setFix("");
-        testLanguageService.insert(lang1);
+        testLanguageService.save(lang1);
         
         LanguageEntity lang2 = new LanguageEntity();
         lang2.setName(name);
@@ -370,7 +370,7 @@ public class TestUnifyCacheService {
         lang2.setZhCn("中文B");
         lang2.setEnUs("EnglishB");
         lang2.setFix("");
-        testLanguageService.insert(lang2);
+        testLanguageService.save(lang2);
         
         // 4. 验证不同的复合 key 返回不同的数据
         LanguageEntity cachedLang1 = testLanguageService.getCache(name, tag1);
@@ -385,10 +385,10 @@ public class TestUnifyCacheService {
         log.info("复合 key 缓存构建正确");
         
         // 5. 清理测试数据
-        webOauthCombineService.deleteById(entity1.getId());
-        webOauthCombineService.deleteById(entity2.getId());
-        testLanguageService.deleteById(lang1.getId());
-        testLanguageService.deleteById(lang2.getId());
+        webOauthCombineService.removeById(entity1.getId());
+        webOauthCombineService.removeById(entity2.getId());
+        testLanguageService.removeById(lang1.getId());
+        testLanguageService.removeById(lang2.getId());
         
         log.info("=== 缓存 key 构建测试完成 ===");
     }

@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.spm.filter;
 
+import cn.org.autumn.modules.oauth.util.JakartaToJavaxRequestAdapter;
 import cn.org.autumn.config.Config;
 import cn.org.autumn.model.Error;
 import cn.org.autumn.model.Response;
@@ -10,9 +11,9 @@ import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.wall.service.WallService;
 import cn.org.autumn.site.PathFactory;
 import cn.org.autumn.utils.IPUtils;
-import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson2.JSON;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.oltu.oauth2.common.OAuth;
 import org.apache.oltu.oauth2.common.message.types.ParameterStyle;
 import org.apache.oltu.oauth2.rs.request.OAuthAccessResourceRequest;
@@ -21,9 +22,9 @@ import org.apache.shiro.authc.AuthenticationToken;
 import org.apache.shiro.subject.Subject;
 import org.apache.shiro.web.filter.authc.FormAuthenticationFilter;
 
-import javax.servlet.*;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.*;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Map;
@@ -51,7 +52,7 @@ public class SpmFilter extends FormAuthenticationFilter implements PathFactory.P
 
     public static String getAccessToken(ServletRequest request) {
         try {
-            OAuthAccessResourceRequest oauthRequest = new OAuthAccessResourceRequest((HttpServletRequest) request, ParameterStyle.QUERY, ParameterStyle.HEADER);
+            OAuthAccessResourceRequest oauthRequest = new OAuthAccessResourceRequest(JakartaToJavaxRequestAdapter.adapt((HttpServletRequest) request), ParameterStyle.QUERY, ParameterStyle.HEADER);
             String accessToken = oauthRequest.getAccessToken();
             if (StringUtils.isBlank(accessToken))
                 return "";

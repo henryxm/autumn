@@ -1,7 +1,7 @@
 package cn.org.autumn.modules.usr.dao;
 
 import cn.org.autumn.modules.usr.entity.UserTokenEntity;
-import com.baomidou.mybatisplus.mapper.BaseMapper;
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;

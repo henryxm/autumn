@@ -43,7 +43,7 @@ public class IpVisitService extends WallCounter<IpVisitDao, IpVisitEntity> {
                 visitEntity.setCreateTime(new Date());
                 visitEntity.setCount(0L);
                 visitEntity.setToday(0L);
-                insert(visitEntity);
+                save(visitEntity);
             }
         } catch (Exception e) {
             //do nothing

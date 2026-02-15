@@ -1,14 +1,14 @@
 package cn.org.autumn.modules.gen.service.gen;
 
 import cn.org.autumn.site.InitFactory;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import com.baomidou.mybatisplus.mapper.EntityWrapper;
-import com.baomidou.mybatisplus.plugins.Page;
-import com.baomidou.mybatisplus.service.impl.ServiceImpl;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import cn.org.autumn.utils.PageUtils;
 import cn.org.autumn.utils.Query;
 import cn.org.autumn.modules.gen.service.GenMenu;
@@ -42,7 +42,7 @@ public class GenTypeServiceGen extends ServiceImpl<GenTypeDao, GenTypeEntity> im
 
     public PageUtils queryPage(Map<String, Object> params) {
         Page<GenTypeEntity> _page = new Query<GenTypeEntity>(params).getPage();
-        EntityWrapper<GenTypeEntity> entityEntityWrapper = new EntityWrapper<>();
+        QueryWrapper<GenTypeEntity> entityEntityWrapper = new QueryWrapper<>();
         Map<String,Object> condition = new HashMap<>();
         if(params.containsKey("id") && null != params.get("id") && StringUtils.isNotEmpty(params.get("id").toString())) {
             condition.put("id", params.get("id"));
@@ -77,8 +77,7 @@ public class GenTypeServiceGen extends ServiceImpl<GenTypeDao, GenTypeEntity> im
         if(params.containsKey("mappingString") && null != params.get("mappingString") && StringUtils.isNotEmpty(params.get("mappingString").toString())) {
             condition.put("mapping_string", params.get("mappingString"));
         }
-        _page.setCondition(condition);
-        Page<GenTypeEntity> page = this.selectPage(_page, entityEntityWrapper);
+        Page<GenTypeEntity> page = this.page(_page, entityEntityWrapper);
         page.setTotal(baseMapper.selectCount(entityEntityWrapper));
         return new PageUtils(page);
     }

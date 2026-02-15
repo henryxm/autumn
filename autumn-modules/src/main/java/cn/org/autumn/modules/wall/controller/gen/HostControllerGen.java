@@ -42,7 +42,7 @@ public class HostControllerGen {
     @RequestMapping("/info/{id}")
     @RequiresPermissions("wall:host:info")
     public R info(@PathVariable("id") Long id) {
-        HostEntity host = hostService.selectById(id);
+        HostEntity host = hostService.getById(id);
         return R.ok().put("host" , host);
     }
 
@@ -52,7 +52,7 @@ public class HostControllerGen {
     @RequestMapping("/save")
     @RequiresPermissions("wall:host:save")
     public R save(@RequestBody HostEntity host) {
-        hostService.insert(host);
+        hostService.save(host);
         return R.ok();
     }
 
@@ -63,7 +63,7 @@ public class HostControllerGen {
     @RequiresPermissions("wall:host:update")
     public R update(@RequestBody HostEntity host) {
         ValidatorUtils.validateEntity(host);
-        hostService.updateAllColumnById(host);//全部更新
+        hostService.updateById(host);//全部更新
         return R.ok();
     }
 
@@ -73,7 +73,7 @@ public class HostControllerGen {
     @RequestMapping("/delete")
     @RequiresPermissions("wall:host:delete")
     public R delete(@RequestBody Long[] ids) {
-        hostService.deleteBatchIds(Arrays.asList(ids));
+        hostService.removeBatchByIds(Arrays.asList(ids));
         return R.ok();
     }
 }

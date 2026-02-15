@@ -59,7 +59,7 @@ public class DatabaseBackupUploadService extends ModuleService<DatabaseBackupUpl
         entity.setRemark(remark);
         entity.setStatus(0);
         entity.setCreateTime(new Date());
-        insert(entity);
+        save(entity);
         log.info("SQL backup file uploaded: originalName={}, storedName={}, size={}", originalFilename, storedFilename, file.getSize());
         return entity;
     }
@@ -165,7 +165,7 @@ public class DatabaseBackupUploadService extends ModuleService<DatabaseBackupUpl
         entity.setRemark(session.remark);
         entity.setStatus(0);
         entity.setCreateTime(new Date());
-        insert(entity);
+        save(entity);
         // 移除会话
         uploadSessions.remove(uploadToken);
         log.info("Chunk upload merged: token={}, file={}, size={}", uploadToken, session.originalFilename, fileSize);
@@ -228,7 +228,7 @@ public class DatabaseBackupUploadService extends ModuleService<DatabaseBackupUpl
      * 删除上传的备份（含文件）
      */
     public boolean deleteUpload(Long id) {
-        DatabaseBackupUploadEntity entity = selectById(id);
+        DatabaseBackupUploadEntity entity = getById(id);
         if (entity == null) {
             return false;
         }
@@ -242,14 +242,14 @@ public class DatabaseBackupUploadService extends ModuleService<DatabaseBackupUpl
                 log.warn("Failed to delete uploaded file: {}", entity.getFilepath(), e);
             }
         }
-        return deleteById(id);
+        return removeById(id);
     }
 
     /**
      * 获取上传的备份文件
      */
     public File getUploadFile(Long id) {
-        DatabaseBackupUploadEntity entity = selectById(id);
+        DatabaseBackupUploadEntity entity = getById(id);
         if (entity == null || entity.getFilepath() == null) {
             return null;
         }

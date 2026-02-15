@@ -1,17 +1,16 @@
 package cn.org.autumn.modules.usr.form;
 
-import io.swagger.annotations.ApiModel;
-import io.swagger.annotations.ApiModelProperty;
+import io.swagger.v3.oas.annotations.media.Schema;
 
-import javax.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotBlank;
 
-@ApiModel(value = "登录表单")
+@Schema(description = "登录表单")
 public class LoginForm {
-    @ApiModelProperty(value = "手机号")
+    @Schema(description = "手机号")
     @NotBlank(message="手机号不能为空")
     private String mobile;
 
-    @ApiModelProperty(value = "密码")
+    @Schema(description = "密码")
     @NotBlank(message="密码不能为空")
     private String password;
 

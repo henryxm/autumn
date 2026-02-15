@@ -8,7 +8,7 @@ import cn.org.autumn.modules.sys.entity.SysMenuEntity;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.modules.sys.service.SysMenuService;
 import cn.org.autumn.service.BaseService;
-import com.baomidou.mybatisplus.mapper.BaseMapper;
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 

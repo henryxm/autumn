@@ -4,7 +4,7 @@ import cn.org.autumn.modules.sys.service.SysUserRoleService;
 import cn.org.autumn.modules.sys.shiro.ShiroSessionService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.utils.R;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 

@@ -5,7 +5,7 @@ import cn.org.autumn.modules.job.entity.ScheduleJobLogEntity;
 import cn.org.autumn.modules.job.entity.ScheduleJobEntity;
 import cn.org.autumn.modules.job.service.ScheduleJobLogService;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.quartz.JobExecutionContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.quartz.QuartzJobBean;
@@ -91,7 +91,7 @@ public class ScheduleJob extends QuartzJobBean {
             }
         } finally {
             if (enable && null != scheduleJobLogService && null != log)
-                scheduleJobLogService.insert(log);
+                scheduleJobLogService.save(log);
         }
     }
 }

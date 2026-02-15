@@ -16,8 +16,7 @@ import cn.org.autumn.table.mysql.ColumnMeta;
 import cn.org.autumn.table.mysql.TableMeta;
 import cn.org.autumn.utils.PageUtils;
 import cn.org.autumn.utils.Query;
-import com.baomidou.mybatisplus.plugins.Page;
-import com.baomidou.mybatisplus.plugins.pagination.PageHelper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.apache.commons.io.IOUtils;
 import org.apache.velocity.app.Velocity;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -58,7 +57,6 @@ public class GeneratorService implements InitFactory.Init {
     }
 
     public List<TableMeta> queryList(Query query) {
-        PageHelper.startPage(query.getPage().getSize(), query.getLimit());
         String tableName = "";
         int offset = 0;
         int limit = 10;
@@ -68,10 +66,7 @@ public class GeneratorService implements InitFactory.Init {
             offset = (int) query.get("offset");
         if (query.containsKey("tableName"))
             tableName = (String) query.get("tableName");
-
-        List<TableMeta> list = generatorDao.getTableMetas(tableName, offset, limit);
-
-        return list;
+        return generatorDao.getTableMetasPage(tableName, offset, limit);
     }
 
     public List<TableMeta> queryTable(String tableName) {
@@ -127,7 +122,7 @@ public class GeneratorService implements InitFactory.Init {
     public byte[] generatorCode(String[] tableNames, String genId) {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         ZipOutputStream zip = new ZipOutputStream(outputStream);
-        GenTypeEntity entity = genTypeService.selectById(genId);
+        GenTypeEntity entity = genTypeService.getById(genId);
         String menuKey = entity.getModuleId();
         SysMenuEntity sysMenuEntity = sysMenuService.getByMenuKey(menuKey);
         wrapper = new GenTypeWrapper(entity, sysMenuEntity);
@@ -185,8 +180,8 @@ public class GeneratorService implements InitFactory.Init {
 
     public void initVelocity() {
         Properties prop = new Properties();
-        prop.setProperty("resource.loader", "class");
-        prop.setProperty("class.resource.loader.class", "org.apache.velocity.runtime.resource.loader.ClasspathResourceLoader");
+        prop.setProperty("resource.loaders", "class");
+        prop.setProperty("resource.loader.class.class", "org.apache.velocity.runtime.resource.loader.ClasspathResourceLoader");
         Velocity.init(prop);
     }
 }

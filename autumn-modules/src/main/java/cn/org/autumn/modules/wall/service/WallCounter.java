@@ -3,7 +3,7 @@ package cn.org.autumn.modules.wall.service;
 import cn.org.autumn.base.ModuleService;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.wall.entity.RData;
-import com.baomidou.mybatisplus.mapper.BaseMapper;
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Iterator;
@@ -44,7 +44,7 @@ public abstract class WallCounter<M extends BaseMapper<T>, T> extends ModuleServ
         }
     }
 
-    public void count() {
+    public void flushCounter() {
         Iterator<Map.Entry<String, RData>> iterator = counter.entrySet().iterator();
         if (iterator.hasNext()) {
             Map.Entry<String, RData> entry = iterator.next();
@@ -59,7 +59,7 @@ public abstract class WallCounter<M extends BaseMapper<T>, T> extends ModuleServ
     @Override
     public void onOneMinute() {
         try {
-            count();
+            flushCounter();
         } catch (Exception e) {
             if (log.isDebugEnabled())
                 log.debug("Wall Counter:" + getClass().getSimpleName() + ", Exception:" + e.getClass().getSimpleName() + ", Msg:" + e.getMessage());

@@ -16,7 +16,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.*;
 import java.net.URLEncoder;
 import java.util.Date;
@@ -68,7 +68,7 @@ public class DatabaseController {
     @ResponseBody
     public R info(@PathVariable("id") Long id) {
         try {
-            DatabaseBackupEntity entity = databaseBackupService.selectById(id);
+            DatabaseBackupEntity entity = databaseBackupService.getById(id);
             if (entity == null) {
                 return R.error("备份记录不存在");
             }
@@ -111,7 +111,7 @@ public class DatabaseController {
     @GetMapping("/download/{id}")
     public void download(@PathVariable("id") Long id, HttpServletResponse response) {
         try {
-            DatabaseBackupEntity entity = databaseBackupService.selectById(id);
+            DatabaseBackupEntity entity = databaseBackupService.getById(id);
             if (entity == null) {
                 response.sendError(404, "备份记录不存在");
                 return;
@@ -152,7 +152,7 @@ public class DatabaseController {
         try {
             boolean success = databaseBackupService.togglePermanent(id);
             if (success) {
-                DatabaseBackupEntity entity = databaseBackupService.selectById(id);
+                DatabaseBackupEntity entity = databaseBackupService.getById(id);
                 return R.ok(Boolean.TRUE.equals(entity.getPermanent()) ? "已设为永久存储" : "已取消永久存储")
                         .put("permanent", entity.getPermanent());
             } else {
@@ -338,7 +338,7 @@ public class DatabaseController {
     @ResponseBody
     public R strategyInfo(@PathVariable("id") Long id) {
         try {
-            DatabaseBackupStrategyEntity entity = databaseBackupStrategyService.selectById(id);
+            DatabaseBackupStrategyEntity entity = databaseBackupStrategyService.getById(id);
             if (entity == null) {
                 return R.error("策略不存在");
             }
@@ -355,7 +355,7 @@ public class DatabaseController {
         try {
             if (entity.getId() == null) {
                 entity.setCreateTime(new Date());
-                databaseBackupStrategyService.insert(entity);
+                databaseBackupStrategyService.save(entity);
             } else {
                 databaseBackupStrategyService.updateById(entity);
             }
@@ -370,7 +370,7 @@ public class DatabaseController {
     @ResponseBody
     public R strategyDelete(@PathVariable("id") Long id) {
         try {
-            boolean success = databaseBackupStrategyService.deleteById(id);
+            boolean success = databaseBackupStrategyService.removeById(id);
             return success ? R.ok("删除成功") : R.error("策略不存在");
         } catch (Exception e) {
             log.error("删除策略失败:{}", e.getMessage());
@@ -541,7 +541,7 @@ public class DatabaseController {
     @GetMapping("/upload/download/{id}")
     public void uploadDownload(@PathVariable("id") Long id, HttpServletResponse response) {
         try {
-            DatabaseBackupUploadEntity entity = databaseBackupUploadService.selectById(id);
+            DatabaseBackupUploadEntity entity = databaseBackupUploadService.getById(id);
             if (entity == null) {
                 response.sendError(404, "记录不存在");
                 return;

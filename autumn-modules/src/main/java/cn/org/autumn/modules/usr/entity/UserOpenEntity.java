@@ -3,8 +3,9 @@ package cn.org.autumn.modules.usr.entity;
 import cn.org.autumn.table.annotation.Column;
 import cn.org.autumn.table.annotation.Table;
 import cn.org.autumn.table.data.DataType;
-import com.baomidou.mybatisplus.annotations.TableId;
-import com.baomidou.mybatisplus.annotations.TableName;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -41,8 +42,10 @@ public class UserOpenEntity implements Serializable {
     private boolean deleted;
 
     @Column(comment = "创建")
+    @TableField("`create`")
     private Date create;
 
     @Column(comment = "更新")
+    @TableField("`update`")
     private Date update;
 }

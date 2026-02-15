@@ -42,7 +42,7 @@ public class EncryptKeyControllerGen {
     @RequestMapping("/info/{id}")
     @RequiresPermissions("oauth:encryptkey:info")
     public R info(@PathVariable("id") Long id) {
-        EncryptKeyEntity encryptKey = encryptKeyService.selectById(id);
+        EncryptKeyEntity encryptKey = encryptKeyService.getById(id);
         return R.ok().put("encryptKey" , encryptKey);
     }
 
@@ -52,7 +52,7 @@ public class EncryptKeyControllerGen {
     @RequestMapping("/save")
     @RequiresPermissions("oauth:encryptkey:save")
     public R save(@RequestBody EncryptKeyEntity encryptKey) {
-        encryptKeyService.insert(encryptKey);
+        encryptKeyService.save(encryptKey);
         return R.ok();
     }
 
@@ -63,7 +63,7 @@ public class EncryptKeyControllerGen {
     @RequiresPermissions("oauth:encryptkey:update")
     public R update(@RequestBody EncryptKeyEntity encryptKey) {
         ValidatorUtils.validateEntity(encryptKey);
-        encryptKeyService.updateAllColumnById(encryptKey);//全部更新
+        encryptKeyService.updateById(encryptKey);//全部更新
         return R.ok();
     }
 
@@ -73,7 +73,7 @@ public class EncryptKeyControllerGen {
     @RequestMapping("/delete")
     @RequiresPermissions("oauth:encryptkey:delete")
     public R delete(@RequestBody Long[] ids) {
-        encryptKeyService.deleteBatchIds(Arrays.asList(ids));
+        encryptKeyService.removeBatchByIds(Arrays.asList(ids));
         return R.ok();
     }
 }

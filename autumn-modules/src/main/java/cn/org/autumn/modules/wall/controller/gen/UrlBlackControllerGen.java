@@ -42,7 +42,7 @@ public class UrlBlackControllerGen {
     @RequestMapping("/info/{id}")
     @RequiresPermissions("wall:urlblack:info")
     public R info(@PathVariable("id") Long id) {
-        UrlBlackEntity urlBlack = urlBlackService.selectById(id);
+        UrlBlackEntity urlBlack = urlBlackService.getById(id);
         return R.ok().put("urlBlack" , urlBlack);
     }
 
@@ -52,7 +52,7 @@ public class UrlBlackControllerGen {
     @RequestMapping("/save")
     @RequiresPermissions("wall:urlblack:save")
     public R save(@RequestBody UrlBlackEntity urlBlack) {
-        urlBlackService.insert(urlBlack);
+        urlBlackService.save(urlBlack);
         return R.ok();
     }
 
@@ -63,7 +63,7 @@ public class UrlBlackControllerGen {
     @RequiresPermissions("wall:urlblack:update")
     public R update(@RequestBody UrlBlackEntity urlBlack) {
         ValidatorUtils.validateEntity(urlBlack);
-        urlBlackService.updateAllColumnById(urlBlack);//全部更新
+        urlBlackService.updateById(urlBlack);//全部更新
         return R.ok();
     }
 
@@ -73,7 +73,7 @@ public class UrlBlackControllerGen {
     @RequestMapping("/delete")
     @RequiresPermissions("wall:urlblack:delete")
     public R delete(@RequestBody Long[] ids) {
-        urlBlackService.deleteBatchIds(Arrays.asList(ids));
+        urlBlackService.removeBatchByIds(Arrays.asList(ids));
         return R.ok();
     }
 }
