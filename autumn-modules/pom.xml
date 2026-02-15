@@ -2,11 +2,11 @@
 	<parent>
 		<groupId>cn.org.autumn</groupId>
 		<artifactId>autumn</artifactId>
-		<version>3.0.0</version>
+		<version>4.0.0</version>
 	</parent>
 	<modelVersion>4.0.0</modelVersion>
 	<artifactId>autumn-modules</artifactId>
-	<version>3.0.0</version>
+	<version>4.0.0</version>
 	<packaging>jar</packaging>
 	<description>autumn-modules</description>
 
@@ -21,7 +21,7 @@
 		<dependency>
 			<groupId>cn.org.autumn</groupId>
 			<artifactId>autumn-lib</artifactId>
-			<version>3.0.0</version>
+			<version>4.0.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

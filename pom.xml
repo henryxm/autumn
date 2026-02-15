@@ -4,7 +4,7 @@
 
     <groupId>cn.org.autumn</groupId>
     <artifactId>autumn</artifactId>
-    <version>3.0.0</version>
+    <version>4.0.0</version>
     <packaging>pom</packaging>
 
     <name>autumn</name>
@@ -13,7 +13,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.4.4</version>
+        <version>4.0.2</version>
     </parent>
 
     <properties>
@@ -22,7 +22,7 @@
         <java.version>23</java.version>
 
         <!-- ==================== Spring 生态 ==================== -->
-        <spring-cloud.version>2024.0.3</spring-cloud.version>
+        <spring-cloud.version>2025.1.0</spring-cloud.version>
         <spring-ai.version>1.1.2</spring-ai.version>
 
         <!-- ==================== 微服务 ==================== -->
@@ -42,15 +42,15 @@
         <joda.time.version>2.13.0</joda.time.version>
 
         <!-- ==================== 安全 & 认证 ==================== -->
-        <shiro.version>2.0.5</shiro.version>
+        <shiro.version>2.1.0</shiro.version>
         <oltu.version>1.0.2</oltu.version>
 
         <!-- ==================== 中间件 ==================== -->
-        <redisson.version>3.40.2</redisson.version>
+        <redisson.version>4.2.0</redisson.version>
         <pagehelper.spring.boot.version>2.1.1</pagehelper.spring.boot.version>
 
         <!-- ==================== API 文档 ==================== -->
-        <springdoc.version>2.8.5</springdoc.version>
+        <springdoc.version>3.0.1</springdoc.version>
 
         <!-- ==================== 测试 ==================== -->
         <junit.version>4.13.2</junit.version>
@@ -121,9 +121,10 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
+        <!-- Spring Boot 4 将 starter-aop 重命名为 starter-aspectj -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-aop</artifactId>
+            <artifactId>spring-boot-starter-aspectj</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework</groupId>
@@ -167,17 +168,30 @@
         </dependency>
 
         <!-- ==================== 数据源 & ORM ==================== -->
-        <!-- Druid Spring Boot 3 专用 starter (Jakarta 兼容) -->
+        <!-- Druid 核心 (不使用 starter, 因 druid-spring-boot-3-starter 不兼容 Spring Boot 4) -->
         <dependency>
             <groupId>com.alibaba</groupId>
-            <artifactId>druid-spring-boot-3-starter</artifactId>
+            <artifactId>druid</artifactId>
             <version>${druid.version}</version>
         </dependency>
-        <!-- MyBatis-Plus Spring Boot 3 专用 starter (Jakarta 兼容) -->
+        <!-- MyBatis-Plus Spring Boot 4 专用 starter -->
         <dependency>
             <groupId>com.baomidou</groupId>
-            <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+            <artifactId>mybatis-plus-spring-boot4-starter</artifactId>
             <version>${mybatisplus.version}</version>
+            <exclusions>
+                <!-- 排除旧版 mybatis-spring-boot (2.3.2), 其内部引用了已废弃的包路径 -->
+                <exclusion>
+                    <groupId>org.mybatis.spring.boot</groupId>
+                    <artifactId>mybatis-spring-boot-starter</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <!-- MyBatis Spring Boot 4.0.0 (兼容 Spring Boot 4 / Spring Framework 7) -->
+        <dependency>
+            <groupId>org.mybatis.spring.boot</groupId>
+            <artifactId>mybatis-spring-boot-starter</artifactId>
+            <version>4.0.0</version>
         </dependency>
         <!-- MyBatis-Plus 分页插件 (PaginationInnerInterceptor) -->
         <dependency>

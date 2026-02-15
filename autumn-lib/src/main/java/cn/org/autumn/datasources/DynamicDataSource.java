@@ -33,5 +33,4 @@ public class DynamicDataSource extends AbstractRoutingDataSource {
     public static void clearDataSource() {
         contextHolder.remove();
     }
-
 }

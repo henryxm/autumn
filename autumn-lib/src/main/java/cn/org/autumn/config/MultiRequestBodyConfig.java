@@ -26,8 +26,14 @@ public class MultiRequestBodyConfig implements WebMvcConfigurer {
         return new StringHttpMessageConverter(StandardCharsets.UTF_8);
     }
 
+    /**
+     * 使用 extendMessageConverters 追加转换器，而非 configureMessageConverters。
+     * configureMessageConverters 一旦向列表添加元素，Spring MVC 会跳过默认转换器注册
+     * （包括 Jackson 3 JSON 转换器），导致 @RestController 返回对象时
+     * 触发 HttpMediaTypeNotAcceptableException。
+     */
     @Override
-    public void configureMessageConverters(List<HttpMessageConverter<?>> converters) {
-        converters.add(responseBodyConverter());
+    public void extendMessageConverters(List<HttpMessageConverter<?>> converters) {
+        converters.add(0, responseBodyConverter());
     }
 }

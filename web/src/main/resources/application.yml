@@ -40,9 +40,14 @@ spring:
     request-context-attribute: request
   main:
     allow-circular-references: true
-  mvc:
-    pathmatch:
-      matching-strategy: ANT_PATH_MATCHER
+  # Spring Boot 4 仅支持 PathPatternParser，已移除 ANT_PATH_MATCHER 选项
+
+# SpringDoc OpenAPI 配置 — 显式声明以消除启动警告
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
 
 autumn:
   redis:

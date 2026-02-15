@@ -5,11 +5,11 @@
     <parent>
         <artifactId>autumn</artifactId>
         <groupId>cn.org.autumn</groupId>
-        <version>3.0.0</version>
+        <version>4.0.0</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <artifactId>autumn-handler</artifactId>
-    <version>3.0.0</version>
+    <version>4.0.0</version>
     <packaging>jar</packaging>
     <properties>
     </properties>

@@ -3,7 +3,7 @@ package cn.org.autumn.config;
 import cn.org.autumn.bean.QuotStringHttpMessageConverter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.bind.Binder;
-import org.springframework.boot.web.servlet.server.Encoding;
+import org.springframework.boot.servlet.autoconfigure.ServletEncodingProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
@@ -32,7 +32,7 @@ public class RestTemplateConfig {
     @Bean
     @ConditionalOnMissingBean
     public StringHttpMessageConverter stringHttpMessageConverter(Environment environment) {
-        Encoding encoding = Binder.get(environment).bindOrCreate("server.servlet.encoding", Encoding.class);
+        ServletEncodingProperties encoding = Binder.get(environment).bindOrCreate("server.servlet.encoding", ServletEncodingProperties.class);
         StringHttpMessageConverter converter = new QuotStringHttpMessageConverter(encoding.getCharset());
         converter.setWriteAcceptCharset(false);
         return converter;

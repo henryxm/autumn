@@ -3,11 +3,11 @@
     <parent>
         <groupId>cn.org.autumn</groupId>
         <artifactId>autumn</artifactId>
-        <version>3.0.0</version>
+        <version>4.0.0</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <artifactId>autumn-lib</artifactId>
-    <version>3.0.0</version>
+    <version>4.0.0</version>
     <packaging>jar</packaging>
     <name>autumn-lib</name>
     <url>http://autumn.org.cn</url>
@@ -19,7 +19,7 @@
         <dependency>
             <groupId>cn.org.autumn</groupId>
             <artifactId>autumn-handler</artifactId>
-            <version>3.0.0</version>
+            <version>4.0.0</version>
             <exclusions>
                 <exclusion>
                     <groupId>com.baomidou</groupId>

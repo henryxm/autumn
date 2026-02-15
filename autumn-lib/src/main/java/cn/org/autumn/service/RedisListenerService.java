@@ -6,7 +6,7 @@ import cn.org.autumn.utils.Uuid;
 import com.google.gson.Gson;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.data.redis.RedisProperties;
+import org.springframework.boot.data.redis.autoconfigure.DataRedisProperties;
 import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -38,7 +38,7 @@ public class RedisListenerService {
     private RedisTemplate<String, Object> redisTemplate;
 
     @Autowired
-    private RedisProperties redisProperties;
+    private DataRedisProperties redisProperties;
 
     @Autowired
     private AsyncTaskExecutor asyncTaskExecutor;

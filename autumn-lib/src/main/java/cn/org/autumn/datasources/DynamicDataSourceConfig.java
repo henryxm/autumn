@@ -1,8 +1,8 @@
 package cn.org.autumn.datasources;
 
-import com.alibaba.druid.spring.boot3.autoconfigure.DruidDataSourceBuilder;
+import com.alibaba.druid.pool.DruidDataSource;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
+import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -14,6 +14,8 @@ import java.util.Map;
 
 /**
  * 配置多数据源
+ * <p>
+ * Spring Boot 4 无 druid-spring-boot-4-starter, 使用原生 DruidDataSource 手动配置。
  */
 @Configuration
 @EnableAutoConfiguration(exclude = {DataSourceAutoConfiguration.class})
@@ -21,14 +23,14 @@ public class DynamicDataSourceConfig {
 
     @Bean
     @ConfigurationProperties("spring.datasource.druid.first")
-    public DataSource firstDataSource(){
-        return DruidDataSourceBuilder.create().build();
+    public DataSource firstDataSource() {
+        return new DruidDataSource();
     }
 
     @Bean
     @ConfigurationProperties("spring.datasource.druid.second")
-    public DataSource secondDataSource(){
-        return DruidDataSourceBuilder.create().build();
+    public DataSource secondDataSource() {
+        return new DruidDataSource();
     }
 
     @Bean

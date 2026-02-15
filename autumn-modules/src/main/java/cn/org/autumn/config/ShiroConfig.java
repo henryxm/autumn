@@ -26,6 +26,7 @@ import org.springframework.context.annotation.DependsOn;
 import org.springframework.data.redis.core.RedisTemplate;
 
 import jakarta.servlet.Filter;
+
 import java.util.*;
 
 @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
@@ -155,11 +156,13 @@ public class ShiroConfig {
         if (StringUtils.isNotBlank(success))
             shiroFilter.setSuccessUrl(success);
         if (Config.isDev()) {
-            filterMap.put("/swagger/**", "anon");
-            filterMap.put("/v2/api-docs", "anon");
+            // SpringDoc OpenAPI 3.x 路径放行
+            filterMap.put("/swagger-ui/**", "anon");
             filterMap.put("/swagger-ui.html", "anon");
+            filterMap.put("/v3/api-docs/**", "anon");
             filterMap.put("/webjars/**", "anon");
-            filterMap.put("/swagger-resources/**", "anon");
+            // Druid 监控页面放行
+            filterMap.put("/druid/**", "anon");
         }
 
         filterMap.put("/shield/**", "anon");

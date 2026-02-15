@@ -36,7 +36,7 @@ public class SysRoleDeptService extends ServiceImpl<SysRoleDeptDao, SysRoleDeptE
         //先删除角色与部门关系
         deleteBatch(new String[]{roleKey});
 
-        if (deptKeys.size() == 0) {
+        if (null == deptKeys || deptKeys.size() == 0) {
             return;
         }
 

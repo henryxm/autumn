@@ -6,5 +6,4 @@ package cn.org.autumn.datasources;
 public interface DataSourceNames {
     String FIRST = "first";
     String SECOND = "second";
-
 }
