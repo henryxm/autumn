@@ -1,7 +1,7 @@
 version: '3'
 services:
   web:
-    build: ./autumn-web
+    build: ./web
     container_name: autumn
     environment:
       - "--spring.profiles.active=dev"
