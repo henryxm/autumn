@@ -19,7 +19,7 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <java.version>23</java.version>
+        <java.version>21</java.version>
 
         <!-- ==================== Spring 生态 ==================== -->
         <spring-cloud.version>2025.0.1</spring-cloud.version>
@@ -284,8 +284,6 @@
                     <compilerArgs>
                         <arg>-parameters</arg>
                     </compilerArgs>
-                    <!-- JDK 22+ 默认禁用注解处理，需显式启用 (JEP 463) -->
-                    <proc>full</proc>
                     <annotationProcessorPaths>
                         <path>
                             <groupId>org.projectlombok</groupId>
@@ -347,4 +345,25 @@
             <url>https://git.minclouds.com/nexus/content/repositories/releases</url>
         </repository>
     </distributionManagement>
+
+    <profiles>
+        <!-- JDK 22+ 默认禁用注解处理，需显式启用 (JEP 463) -->
+        <profile>
+            <id>jdk22-plus-proc-full</id>
+            <activation>
+                <jdk>[22,)</jdk>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-compiler-plugin</artifactId>
+                        <configuration>
+                            <proc>full</proc>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>
