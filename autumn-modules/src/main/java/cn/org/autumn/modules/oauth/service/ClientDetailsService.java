@@ -197,6 +197,7 @@ public class ClientDetailsService extends ModuleService<ClientDetailsDao, Client
     @Order(2000)
     public void init() {
         super.init();
+        onOneHour();
     }
 
     @Override
