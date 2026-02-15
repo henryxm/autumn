@@ -1,7 +1,5 @@
 package cn.org.autumn.annotation;
 
-import org.springframework.core.annotation.AliasFor;
-
 import java.lang.annotation.*;
 
 @Target({ElementType.FIELD, ElementType.TYPE})
@@ -9,7 +7,6 @@ import java.lang.annotation.*;
 @Documented
 public @interface SearchType {
 
-    @AliasFor("type")
     String value() default "";
 
     String type() default "";
