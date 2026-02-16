@@ -1,4 +1,5 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
         <groupId>cn.org.autumn</groupId>
         <artifactId>autumn</artifactId>
@@ -6,30 +7,17 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <artifactId>web</artifactId>
-    <version>3.0.0</version>
     <packaging>jar</packaging>
-    <description>web</description>
+    <description>Autumn Web 应用入口</description>
 
     <dependencies>
         <dependency>
             <groupId>cn.org.autumn</groupId>
-            <artifactId>autumn-modules</artifactId>
-            <version>3.0.0</version>
-        </dependency>
-        <dependency>
-            <groupId>cn.org.autumn</groupId>
-            <artifactId>autumn-lib</artifactId>
-            <version>3.0.0</version>
+            <artifactId>autumn-spring-boot-starter</artifactId>
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <scope>compile</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <scope>compile</scope>
         </dependency>
     </dependencies>
 
@@ -42,9 +30,15 @@
                 <configuration>
                     <!-- JDK 23 class 文件格式较新，插件无法自动检测，需显式指定主类 -->
                     <mainClass>cn.org.autumn.Web</mainClass>
+                    <excludes>
+                        <!-- Lombok 仅编译期使用，排除出运行时 JAR -->
+                        <exclude>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                        </exclude>
+                    </excludes>
                 </configuration>
             </plugin>
-            <!-- 跳过单元测试 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
@@ -67,7 +61,6 @@
                         </resource>
                     </resources>
                 </configuration>
-                <!-- 运行命令 mvn clean package docker:build 打包并生成docker镜像 -->
             </plugin>
         </plugins>
     </build>

@@ -9,7 +9,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.index.Indexed;
 
 @JsonMap
 @Getter
@@ -25,27 +24,19 @@ public class Client extends Phone implements IResult, Encrypt {
     @Id
     private String uuid = "";
 
-    @Indexed
     private String name = "";
 
-    @Indexed
     private String udid = "";
 
-    @Indexed
     private String mode = "";
 
-    @Indexed
     private String install = "";
 
-    @Indexed
     private String channel = "";
 
-    @Indexed
     private String profile = "";
 
-    @Indexed
     private String version = "";
 
-    @Indexed
     private String bundleId = "";
 }

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <groupId>cn.org.autumn</groupId>
+        <artifactId>autumn</artifactId>
+        <version>3.0.0</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+    <artifactId>autumn-starter</artifactId>
+    <packaging>jar</packaging>
+    <name>autumn-starter</name>
+    <description>Autumn Framework Spring Boot Starter - 一站式引入 Autumn 框架所有功能， 外部项目只需添加此依赖即可获得完整的 Autumn 基础设施支持
+    </description>
+
+    <dependencies>
+        <!--
+            autumn-modules 传递依赖链:
+            autumn-modules → autumn-lib → autumn-handler
+            因此只需声明 autumn-modules，即可获得全部 Autumn 模块
+        -->
+        <dependency>
+            <groupId>cn.org.autumn</groupId>
+            <artifactId>autumn-modules</artifactId>
+        </dependency>
+
+        <!-- Spring Boot 自动配置支持 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-autoconfigure</artifactId>
+        </dependency>
+    </dependencies>
+</project>

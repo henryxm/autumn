@@ -5,7 +5,6 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.springframework.data.mongodb.core.index.Indexed;
 
 import java.io.Serializable;
 
@@ -19,7 +18,6 @@ public class Phone extends DefaultEncrypt implements Serializable {
 
     private String deviceName = "";
 
-    @Indexed
     private String systemVersion = "";
 
     private String systemName = "";
@@ -28,7 +26,6 @@ public class Phone extends DefaultEncrypt implements Serializable {
 
     private String localizedModel = "";
 
-    @Indexed
     private String identifierForVendor = "";
 
     private String product;
