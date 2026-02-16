@@ -8,7 +8,6 @@ $(function () {
 			{ label: '${${lang}${moduleName}_${pathName}_column_${column.name}}', name: '${column.attrname}', index: '${column.name}', width: 50, key: true },
 #else
 			{ label: '${${lang}${moduleName}_${pathName}_column_${column.name}}', name: '${column.attrname}', index: '${column.name}', width: 80 }#if($velocityCount != $columns.size()), #end
-
 #end
 #end
         ],

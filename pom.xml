@@ -117,7 +117,7 @@
             </dependency>
             <dependency>
                 <groupId>cn.org.autumn</groupId>
-                <artifactId>autumn-spring-boot-starter</artifactId>
+                <artifactId>autumn-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>
 

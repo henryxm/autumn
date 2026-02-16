@@ -13,7 +13,7 @@
     <dependencies>
         <dependency>
             <groupId>cn.org.autumn</groupId>
-            <artifactId>autumn-spring-boot-starter</artifactId>
+            <artifactId>autumn-starter</artifactId>
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
