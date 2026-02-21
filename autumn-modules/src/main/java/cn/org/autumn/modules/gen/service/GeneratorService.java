@@ -180,8 +180,9 @@ public class GeneratorService implements InitFactory.Init {
 
     public void initVelocity() {
         Properties prop = new Properties();
-        prop.setProperty("resource.loaders", "class");
+        prop.setProperty(Velocity.RESOURCE_LOADERS, "class");
         prop.setProperty("resource.loader.class.class", "org.apache.velocity.runtime.resource.loader.ClasspathResourceLoader");
+        prop.setProperty(Velocity.INPUT_ENCODING, "UTF-8");
         Velocity.init(prop);
     }
 }
