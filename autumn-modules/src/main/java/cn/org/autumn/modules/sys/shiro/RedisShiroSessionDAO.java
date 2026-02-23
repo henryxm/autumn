@@ -1,6 +1,7 @@
 package cn.org.autumn.modules.sys.shiro;
 
 import cn.org.autumn.cluster.UserHandler;
+import cn.org.autumn.utils.RedisExpireUtil;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysConfigService;
@@ -123,7 +124,7 @@ public class RedisShiroSessionDAO extends EnterpriseCacheSessionDAO implements L
     private void setShiroSession(String key, Session session) {
         redisTemplate.opsForValue().set(key, session);
         //60分钟过期
-        redisTemplate.expire(key, 60, TimeUnit.MINUTES);
+        RedisExpireUtil.expire(redisTemplate, key, 60, TimeUnit.MINUTES);
 
         //如果没找到userHandler 则不需要同步用户
         if (null == userHandlers || userHandlers.size() == 0)

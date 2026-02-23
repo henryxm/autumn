@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.sys.service;
 
+import cn.org.autumn.utils.RedisExpireUtil;
 import cn.org.autumn.utils.RedisUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -28,7 +29,7 @@ public class RedisService {
      */
     public List<Map<String, Object>> getDatabases() {
         List<Map<String, Object>> databases = new ArrayList<>();
-        
+
         // 由于使用连接池，不支持数据库切换，只返回当前数据库信息
         Map<String, Object> dbInfo = new HashMap<>();
         dbInfo.put("database", 0);
@@ -36,7 +37,7 @@ public class RedisService {
         dbInfo.put("keyCount", getKeyCount());
         dbInfo.put("size", getDatabaseSize());
         databases.add(dbInfo);
-        
+
         return databases;
     }
 
@@ -45,7 +46,7 @@ public class RedisService {
      */
     public Map<String, Object> getKeys(int database, String pattern, int page, int size) {
         Map<String, Object> result = new HashMap<>();
-        
+
         // 由于使用连接池，不支持数据库切换，忽略database参数
         Set<String> keys;
         if (pattern == null || pattern.trim().isEmpty()) {
@@ -53,33 +54,33 @@ public class RedisService {
         } else {
             keys = redisTemplate.keys(pattern);
         }
-        
+
         if (keys == null) {
             keys = new HashSet<>();
         }
-        
+
         List<String> keyList = new ArrayList<>(keys);
         Collections.sort(keyList);
-        
+
         // 分页
         int total = keyList.size();
         int start = (page - 1) * size;
         int end = Math.min(start + size, total);
-        
+
         List<String> pageKeys = keyList.subList(start, end);
-        
+
         // 获取键的详细信息
         List<Map<String, Object>> keyDetails = new ArrayList<>();
         for (String key : pageKeys) {
             Map<String, Object> keyInfo = getKeyInfo(key);
             keyDetails.add(keyInfo);
         }
-        
+
         result.put("total", total);
         result.put("keys", keyDetails);
         result.put("page", page);
         result.put("size", size);
-        
+
         return result;
     }
 
@@ -89,16 +90,16 @@ public class RedisService {
     public Map<String, Object> getKeyInfo(String key) {
         Map<String, Object> keyInfo = new HashMap<>();
         keyInfo.put("key", key);
-        
+
         try {
             // 获取键的类型
             String type = redisTemplate.type(key).name();
             keyInfo.put("type", type);
-            
+
             // 获取过期时间
             Long ttl = redisTemplate.getExpire(key);
             keyInfo.put("ttl", ttl);
-            
+
             // 获取值的大小
             long size = getKeySize(key, type);
             keyInfo.put("size", size);
@@ -108,7 +109,7 @@ public class RedisService {
             keyInfo.put("size", 0);
             keyInfo.put("error", e.getMessage());
         }
-        
+
         return keyInfo;
     }
 
@@ -170,7 +171,7 @@ public class RedisService {
         try {
             // 获取键的类型
             String type = redisTemplate.type(key).name();
-            
+
             switch (type) {
                 case "STRING":
                     return getStringValue(key);
@@ -209,7 +210,8 @@ public class RedisService {
                     if ((str.startsWith("{") && str.endsWith("}")) || (str.startsWith("[") && str.endsWith("]"))) {
                         try {
                             return JSON.parse(str);
-                        } catch (Exception ignore) {}
+                        } catch (Exception ignore) {
+                        }
                     }
                     return str;
                 }
@@ -227,7 +229,8 @@ public class RedisService {
             if ((str.startsWith("{") && str.endsWith("}")) || (str.startsWith("[") && str.endsWith("]"))) {
                 try {
                     return JSON.parse(str);
-                } catch (Exception ignore) {}
+                } catch (Exception ignore) {
+                }
             }
             return str;
         } catch (Exception ex) {
@@ -244,13 +247,13 @@ public class RedisService {
             if (hash == null || hash.isEmpty()) {
                 return new HashMap<>();
             }
-            
+
             // 尝试转换为字符串键值对
             Map<String, Object> result = new HashMap<>();
             for (Map.Entry<Object, Object> entry : hash.entrySet()) {
                 String fieldKey = String.valueOf(entry.getKey());
                 Object fieldValue = entry.getValue();
-                
+
                 // 如果值是字节数组，尝试转换为字符串
                 if (fieldValue instanceof byte[]) {
                     String str = new String((byte[]) fieldValue);
@@ -276,15 +279,15 @@ public class RedisService {
                 if (hash == null || hash.isEmpty()) {
                     return new HashMap<>();
                 }
-                
+
                 Map<String, Object> result = new HashMap<>();
                 for (Map.Entry<Object, Object> entry : hash.entrySet()) {
                     String fieldKey = String.valueOf(entry.getKey());
                     String fieldValue = String.valueOf(entry.getValue());
-                    
+
                     // 尝试解析为JSON
-                    if ((fieldValue.startsWith("{") && fieldValue.endsWith("}")) || 
-                        (fieldValue.startsWith("[") && fieldValue.endsWith("]"))) {
+                    if ((fieldValue.startsWith("{") && fieldValue.endsWith("}")) ||
+                            (fieldValue.startsWith("[") && fieldValue.endsWith("]"))) {
                         try {
                             result.put(fieldKey, JSON.parse(fieldValue));
                         } catch (Exception ignore) {
@@ -310,7 +313,7 @@ public class RedisService {
             if (list == null || list.isEmpty()) {
                 return new ArrayList<>();
             }
-            
+
             // 处理列表中的每个元素
             List<Object> result = new ArrayList<>();
             for (Object item : list) {
@@ -338,12 +341,12 @@ public class RedisService {
                 if (list == null || list.isEmpty()) {
                     return new ArrayList<>();
                 }
-                
+
                 List<Object> result = new ArrayList<>();
                 for (String item : list) {
                     // 尝试解析为JSON
-                    if ((item.startsWith("{") && item.endsWith("}")) || 
-                        (item.startsWith("[") && item.endsWith("]"))) {
+                    if ((item.startsWith("{") && item.endsWith("}")) ||
+                            (item.startsWith("[") && item.endsWith("]"))) {
                         try {
                             result.add(JSON.parse(item));
                         } catch (Exception ignore) {
@@ -369,7 +372,7 @@ public class RedisService {
             if (set == null || set.isEmpty()) {
                 return new HashSet<>();
             }
-            
+
             // 处理集合中的每个元素
             Set<Object> result = new HashSet<>();
             for (Object item : set) {
@@ -397,12 +400,12 @@ public class RedisService {
                 if (set == null || set.isEmpty()) {
                     return new HashSet<>();
                 }
-                
+
                 Set<Object> result = new HashSet<>();
                 for (String item : set) {
                     // 尝试解析为JSON
-                    if ((item.startsWith("{") && item.endsWith("}")) || 
-                        (item.startsWith("[") && item.endsWith("]"))) {
+                    if ((item.startsWith("{") && item.endsWith("}")) ||
+                            (item.startsWith("[") && item.endsWith("]"))) {
                         try {
                             result.add(JSON.parse(item));
                         } catch (Exception ignore) {
@@ -424,19 +427,19 @@ public class RedisService {
      */
     private Object getZSetValue(String key) {
         try {
-            Set<org.springframework.data.redis.core.ZSetOperations.TypedTuple<Object>> zset = 
-                redisTemplate.opsForZSet().rangeWithScores(key, 0, -1);
+            Set<org.springframework.data.redis.core.ZSetOperations.TypedTuple<Object>> zset =
+                    redisTemplate.opsForZSet().rangeWithScores(key, 0, -1);
             if (zset == null || zset.isEmpty()) {
                 return new ArrayList<>();
             }
-            
+
             // 处理有序集合中的每个元素
             List<Map<String, Object>> result = new ArrayList<>();
             for (org.springframework.data.redis.core.ZSetOperations.TypedTuple<Object> tuple : zset) {
                 Map<String, Object> tupleMap = new HashMap<>();
                 Object value = tuple.getValue();
                 Double score = tuple.getScore();
-                
+
                 // 处理值
                 if (value instanceof byte[]) {
                     String str = new String((byte[]) value);
@@ -453,7 +456,7 @@ public class RedisService {
                 } else {
                     tupleMap.put("value", value);
                 }
-                
+
                 tupleMap.put("score", score);
                 result.add(tupleMap);
             }
@@ -461,21 +464,21 @@ public class RedisService {
         } catch (Exception e) {
             // 如果RedisTemplate读取失败，尝试用StringRedisTemplate读取
             try {
-                Set<org.springframework.data.redis.core.ZSetOperations.TypedTuple<String>> zset = 
-                    stringRedisTemplate.opsForZSet().rangeWithScores(key, 0, -1);
+                Set<org.springframework.data.redis.core.ZSetOperations.TypedTuple<String>> zset =
+                        stringRedisTemplate.opsForZSet().rangeWithScores(key, 0, -1);
                 if (zset == null || zset.isEmpty()) {
                     return new ArrayList<>();
                 }
-                
+
                 List<Map<String, Object>> result = new ArrayList<>();
                 for (org.springframework.data.redis.core.ZSetOperations.TypedTuple<String> tuple : zset) {
                     Map<String, Object> tupleMap = new HashMap<>();
                     String value = tuple.getValue();
                     Double score = tuple.getScore();
-                    
+
                     // 尝试解析为JSON
-                    if ((value.startsWith("{") && value.endsWith("}")) || 
-                        (value.startsWith("[") && value.endsWith("]"))) {
+                    if ((value.startsWith("{") && value.endsWith("}")) ||
+                            (value.startsWith("[") && value.endsWith("]"))) {
                         try {
                             tupleMap.put("value", JSON.parse(value));
                         } catch (Exception ignore) {
@@ -484,7 +487,7 @@ public class RedisService {
                     } else {
                         tupleMap.put("value", value);
                     }
-                    
+
                     tupleMap.put("score", score);
                     result.add(tupleMap);
                 }
@@ -500,7 +503,7 @@ public class RedisService {
      */
     public boolean setKeyExpire(String key, long seconds) {
         try {
-            return redisTemplate.expire(key, seconds, TimeUnit.SECONDS);
+            return RedisExpireUtil.expire(redisTemplate, key, seconds, TimeUnit.SECONDS);
         } catch (Exception e) {
             System.err.println("设置过期时间失败: " + e.getMessage());
             return false;
@@ -526,7 +529,7 @@ public class RedisService {
         try {
             Set<String> keys = redisTemplate.keys("*");
             if (keys == null) return 0;
-            
+
             long totalSize = 0;
             for (String key : keys) {
                 totalSize += getKeySize(key, redisTemplate.type(key).name());
@@ -573,7 +576,7 @@ public class RedisService {
             if (keys == null || keys.isEmpty()) {
                 return 0;
             }
-            
+
             // 批量删除键
             return redisTemplate.delete(keys);
         } catch (Exception e) {

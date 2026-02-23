@@ -1,12 +1,14 @@
 package cn.org.autumn.utils;
 
 import com.alibaba.fastjson2.JSON;
+import lombok.Getter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.*;
 import org.springframework.stereotype.Component;
 
 import jakarta.annotation.Resource;
+
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -36,18 +38,15 @@ public class RedisUtils {
      */
     public final static long NOT_EXPIRE = -1;
 
+    @Getter
     @Value("${autumn.redis.open: false}")
     private boolean open;
-
-    public boolean isOpen() {
-        return open;
-    }
 
     public void set(String key, Object value, long expire) {
         if (open) {
             valueOperations.set(key, value);
             if (expire != NOT_EXPIRE) {
-                redisTemplate.expire(key, expire, TimeUnit.SECONDS);
+                RedisExpireUtil.expire(redisTemplate, key, expire, TimeUnit.SECONDS);
             }
         }
     }
