@@ -3,6 +3,7 @@ package cn.org.autumn.autoconfigure;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.web.servlet.ServletComponentScan;
+import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.scheduling.annotation.EnableAsync;
@@ -23,8 +24,9 @@ import org.springframework.scheduling.annotation.EnableAsync;
 @AutoConfiguration
 @ComponentScan("cn.org.autumn")
 @ServletComponentScan("cn.org.autumn")
-@EnableAspectJAutoProxy(exposeProxy = true)
-@EnableAsync
+@EnableAspectJAutoProxy(proxyTargetClass = true, exposeProxy = true)
+@EnableAsync(proxyTargetClass = true)
+@EnableCaching(proxyTargetClass = true)
 @MapperScan(basePackages = {"cn.org.autumn.modules.*.dao", "cn.org.autumn.table.dao"})
 public class AutumnAutoConfiguration {
 }
