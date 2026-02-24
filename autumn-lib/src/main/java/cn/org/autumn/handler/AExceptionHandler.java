@@ -107,8 +107,8 @@ public class AExceptionHandler {
      */
     @ExceptionHandler(Exception.class)
     public Response<?> handleException(Exception e, HttpServletRequest request) {
-        if (log.isDebugEnabled() && null != e && null != request) {
-            log.debug("请求方式:{}, 路径:{}, IP:{}, 错误:{}", request.getMethod(), request.getRequestURI(), IPUtils.getIp(request), e.getMessage(), e);
+        if (null != e && null != request) {
+            log.warn("请求方式:{}, 路径:{}, IP:{}, 错误:{}", request.getMethod(), request.getRequestURI(), IPUtils.getIp(request), e.getMessage(), e);
         }
         // 使用工具类记录详细的异常信息
         ExceptionUtils.logDetailedException("未处理的异常", e, request);
