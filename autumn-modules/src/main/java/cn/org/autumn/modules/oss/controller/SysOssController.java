@@ -1,9 +1,9 @@
 package cn.org.autumn.modules.oss.controller;
 
+import cn.org.autumn.config.GsonConfig;
 import cn.org.autumn.modules.oss.entity.SysOssEntity;
 import cn.org.autumn.modules.oss.service.SysOssService;
 import cn.org.autumn.modules.sys.service.SysConfigService;
-import com.google.gson.Gson;
 import cn.org.autumn.utils.Constant;
 import cn.org.autumn.exception.AException;
 import cn.org.autumn.utils.PageUtils;
@@ -75,7 +75,7 @@ public class SysOssController {
             //校验腾讯云数据
             ValidatorUtils.validateEntity(config, QcloudGroup.class);
         }
-        sysConfigService.updateValueByKey(KEY, new Gson().toJson(config));
+        sysConfigService.updateValueByKey(KEY, GsonConfig.getGson().toJson(config));
         return R.ok();
     }
 

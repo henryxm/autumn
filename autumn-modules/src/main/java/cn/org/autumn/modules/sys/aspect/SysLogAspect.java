@@ -1,7 +1,7 @@
 package cn.org.autumn.modules.sys.aspect;
 
+import cn.org.autumn.config.GsonConfig;
 import cn.org.autumn.annotation.SysLog;
-import com.google.gson.Gson;
 import cn.org.autumn.modules.sys.entity.SysLogEntity;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysLogService;
@@ -67,7 +67,7 @@ public class SysLogAspect {
         //请求的参数
         Object[] args = joinPoint.getArgs();
         try {
-            String params = new Gson().toJson(args[0]);
+            String params = GsonConfig.getGson().toJson(args[0]);
             sysLog.setParams(params);
         } catch (Exception e) {
 

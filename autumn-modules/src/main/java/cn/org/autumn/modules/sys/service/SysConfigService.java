@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.sys.service;
 
+import cn.org.autumn.config.GsonConfig;
 import org.springframework.beans.factory.annotation.Value;
 import cn.org.autumn.annotation.ConfigField;
 import cn.org.autumn.bean.EnvBean;
@@ -241,10 +242,10 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 {UPDATE_MENU_ON_INIT, "true", "1", "当系统启动或执行初始化的时候更新菜单，特别是当系统升级更新的时候，需要开启该功能", config, boolean_type},
                 {UPDATE_LANGUAGE_ON_INIT, "true", "1", "当系统启动或执行初始化的时候更新语言列表，开发模式下可以开启该功能，该模式会自动合并新的值到现有的表中", config, boolean_type},
                 {NONE_SUFFIX_VIEW, "js,css,map,html,htm,shtml", "0", "系统默认后缀名为:.html, Request请求的路径在程序查找资源的时候，默认会带上.html, 通过配置无后缀名文件视图, 系统将请求路径进行资源查找", config, string_type},
-                {SYSTEM_UPGRADE, new Gson().toJson(new SystemUpgrade()), "1", "系统升级开关与提示信息", config, json_type, SystemUpgrade.class.getName()},
+                {SYSTEM_UPGRADE, GsonConfig.getGson().toJson(new SystemUpgrade()), "1", "系统升级开关与提示信息", config, json_type, SystemUpgrade.class.getName()},
                 {CLOUD_STORAGE_CONFIG_KEY, "{\"aliyunAccessKeyId\":\"\",\"aliyunAccessKeySecret\":\"\",\"aliyunBucketName\":\"\",\"aliyunDomain\":\"\",\"aliyunEndPoint\":\"\",\"aliyunPrefix\":\"\",\"qcloudBucketName\":\"\",\"qcloudDomain\":\"\",\"qcloudPrefix\":\"\",\"qcloudSecretId\":\"\",\"qcloudSecretKey\":\"\",\"qiniuAccessKey\":\"\",\"qiniuBucketName\":\"\",\"qiniuDomain\":\"\",\"qiniuPrefix\":\"\",\"qiniuSecretKey\":\"\",\"type\":1}", "0", "云存储配置信息", config, json_type, CloudStorageConfig.class.getName()},
-                {RSA_CONFIG, new Gson().toJson(new RsaConfig()), "1", "RSA加密配置", config, json_type, RsaConfig.class.getName()},
-                {AES_CONFIG, new Gson().toJson(new AesConfig()), "1", "AES加密配置", config, json_type, AesConfig.class.getName()},
+                {RSA_CONFIG, GsonConfig.getGson().toJson(new RsaConfig()), "1", "RSA加密配置", config, json_type, RsaConfig.class.getName()},
+                {AES_CONFIG, GsonConfig.getGson().toJson(new AesConfig()), "1", "AES加密配置", config, json_type, AesConfig.class.getName()},
         };
     }
 
@@ -739,7 +740,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         try {
             if (StringUtils.isNotEmpty(value)) {
                 Type type = new ParameterizedTypeImpl(clazz);
-                return new Gson().fromJson(value, type);
+                return GsonConfig.getGson().fromJson(value, type);
             }
         } catch (Exception ignored) {
         }
@@ -749,7 +750,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     public <T> T getConfigObject(String key, Class<T> clazz) {
         String value = getValue(key);
         if (StringUtils.isNotBlank(value)) {
-            return new Gson().fromJson(value, clazz);
+            return GsonConfig.getGson().fromJson(value, clazz);
         }
         try {
             return clazz.newInstance();
@@ -773,7 +774,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 for (String fix : fixes) {
                     log.info("[配置校验] " + fix);
                 }
-                String newValue = new Gson().toJson(config);
+                String newValue = GsonConfig.getGson().toJson(config);
                 updateValueByKey(key, newValue);
             }
         }

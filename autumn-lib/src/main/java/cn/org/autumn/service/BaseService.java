@@ -10,6 +10,7 @@ import cn.org.autumn.utils.Query;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.WordUtils;
@@ -26,9 +27,13 @@ import java.util.*;
 @Slf4j
 public abstract class BaseService<M extends BaseMapper<T>, T> extends ShareCacheService<M, T> implements BaseMenu {
 
+    @Setter
     private String prefix = null;
 
+    @Setter
     private String module = null;
+
+    private final Map<Page<T>, Map<String, Object>> pageConditionStore = Collections.synchronizedMap(new WeakHashMap<>());
 
     /**
      * 将查询条件过滤并转换为数据库中的字段条件进行查询
@@ -61,11 +66,11 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends ShareCache
     }
 
     public PageUtils queryPage(Page<T> _page) {
-        QueryWrapper<T> entityEntityWrapper = new QueryWrapper<>();
-        return queryPage(_page, entityEntityWrapper);
+        return queryPage(_page, new QueryWrapper<>());
     }
 
     public PageUtils queryPage(Page<T> _page, QueryWrapper<T> entityEntityWrapper) {
+        applyPageCondition(_page, entityEntityWrapper);
         Page<T> page = this.page(_page, entityEntityWrapper);
         return new PageUtils(page);
     }
@@ -84,17 +89,50 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends ShareCache
 
     public Page<T> getPage(Map<String, Object> params) {
         Page<T> _page = new Query<T>(params).getPage();
+        bindPageCondition(_page, getCondition(params));
         return _page;
     }
 
     public Page<T> getPage(Map<String, Object> params, List<String> descs) {
         Page<T> _page = new Query<T>(params).getPage();
-        if (null != descs && descs.size() > 0) {
+        bindPageCondition(_page, getCondition(params));
+        if (null != descs && !descs.isEmpty()) {
             for (String desc : descs) {
                 _page.addOrder(com.baomidou.mybatisplus.core.metadata.OrderItem.desc(desc));
             }
         }
         return _page;
+    }
+
+    protected void bindPageCondition(Page<T> page, Map<String, Object> condition) {
+        if (page == null) {
+            return;
+        }
+        if (condition == null || condition.isEmpty()) {
+            pageConditionStore.remove(page);
+            return;
+        }
+        pageConditionStore.put(page, new HashMap<>(condition));
+    }
+
+    protected void applyPageCondition(Page<T> page, QueryWrapper<T> wrapper) {
+        if (page == null || wrapper == null) {
+            return;
+        }
+        Map<String, Object> condition = pageConditionStore.remove(page);
+        if (condition == null || condition.isEmpty()) {
+            return;
+        }
+        for (Map.Entry<String, Object> entry : condition.entrySet()) {
+            Object value = entry.getValue();
+            if (value == null) {
+                continue;
+            }
+            if (value instanceof String && StringUtils.isBlank((String) value)) {
+                continue;
+            }
+            wrapper.eq(entry.getKey(), value);
+        }
     }
 
     public Page<T> getPage(Map<String, Object> params, String... descs) {
@@ -129,14 +167,6 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends ShareCache
             }
         }
         return module;
-    }
-
-    public void setPrefix(String prefix) {
-        this.prefix = prefix;
-    }
-
-    public void setModule(String module) {
-        this.module = module;
     }
 
     public static String toJava(String value) {
@@ -229,7 +259,8 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends ShareCache
         String ico = ico();
         if (!ico.startsWith("fa "))
             ico = "fa " + ico;
-        String[][] menus = new String[][]{
+        //{0:菜单名字,1:URL,2:权限,3:菜单类型,4:ICON,5:排序,6:MenuKey,7:ParentKey,8:Language}
+        return new String[][]{
                 //{0:菜单名字,1:URL,2:权限,3:菜单类型,4:ICON,5:排序,6:MenuKey,7:ParentKey,8:Language}
                 {tableComment, "modules/" + module + "/" + name, module + ":" + name + ":list," + module + ":" + name + ":info," + module + ":" + name + ":save," + module + ":" + name + ":update," + module + ":" + name + ":delete", "1", ico, order(), menu(), parentMenu(), module + "_" + name + "_table_comment"},
                 {"查看", null, module + ":" + name + ":list," + module + ":" + name + ":info", "2", null, order(), button("List"), menu(), "sys_string_lookup"},
@@ -237,6 +268,5 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends ShareCache
                 {"修改", null, module + ":" + name + ":update", "2", null, order(), button("Update"), menu(), "sys_string_change"},
                 {"删除", null, module + ":" + name + ":delete", "2", null, order(), button("Delete"), menu(), "sys_string_delete"},
         };
-        return menus;
     }
 }

@@ -1,5 +1,6 @@
 package cn.org.autumn.site;
 
+import cn.org.autumn.config.GsonConfig;
 import cn.org.autumn.config.UsingHandler;
 import cn.org.autumn.model.Using;
 import com.google.gson.Gson;
@@ -99,7 +100,7 @@ public class UsingFactory extends Factory {
                     if (log.isDebugEnabled())
                         log.debug("响应内容: {}", result);
                     if (null == gson)
-                        gson = new Gson();
+                        gson = GsonConfig.getGson();
                     return gson.fromJson(result, Using.class);
                 }
             } else {

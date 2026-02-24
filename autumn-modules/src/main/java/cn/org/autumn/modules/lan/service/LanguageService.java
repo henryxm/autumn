@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.lan.service;
 
+import cn.org.autumn.config.GsonConfig;
 import cn.org.autumn.config.CategoryHandler;
 import cn.org.autumn.modules.lan.entity.LanguageEntity;
 import cn.org.autumn.modules.lan.entity.LanguageMetadata;
@@ -499,7 +500,7 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
     }
 
     public String getLanguageMetadataJson() {
-        return new Gson().toJson(LanguageEntity.getLanguageMetadata());
+        return GsonConfig.getGson().toJson(LanguageEntity.getLanguageMetadata());
     }
 
     public String[][] getCategoryItems() {
@@ -523,7 +524,7 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
         if (null != languageMetadataList && !languageMetadataList.isEmpty()) {
             boolean hasKey = sysConfigService.hasKey(MULTIPLE_LANGUAGE_CONFIG_KEY);
             if (hasKey) {
-                sysConfigService.updateValueByKey(MULTIPLE_LANGUAGE_CONFIG_KEY, new Gson().toJson(languageMetadataList));
+                sysConfigService.updateValueByKey(MULTIPLE_LANGUAGE_CONFIG_KEY, GsonConfig.getGson().toJson(languageMetadataList));
             }
         }
     }

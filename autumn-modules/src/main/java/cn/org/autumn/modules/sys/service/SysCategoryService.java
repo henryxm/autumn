@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.sys.service;
 
+import cn.org.autumn.config.GsonConfig;
 import cn.org.autumn.annotation.ConfigField;
 import cn.org.autumn.annotation.ConfigParam;
 import cn.org.autumn.base.ModuleService;
@@ -179,7 +180,7 @@ public class SysCategoryService extends ModuleService<SysCategoryDao, SysCategor
         try {
             if (sysConfigEntity.getType().equals(InputType.JsonType.getValue()) && StringUtils.isNotBlank(sysConfigEntity.getOptions())) {
                 Class<?> clazz = Class.forName(sysConfigEntity.getOptions());
-                Object o = new Gson().fromJson(sysConfigEntity.getParamValue(), clazz);
+                Object o = GsonConfig.getGson().fromJson(sysConfigEntity.getParamValue(), clazz);
                 return reverse(clazz, "", o, language);
             }
         } catch (ClassNotFoundException e) {

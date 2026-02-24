@@ -1,11 +1,10 @@
 package cn.org.autumn.modules.sys.controller;
 
+import cn.org.autumn.config.GsonConfig;
 import cn.org.autumn.annotation.SysLog;
 import cn.org.autumn.modules.lan.service.Language;
 import cn.org.autumn.modules.spm.entity.Spm;
 import cn.org.autumn.modules.spm.service.SpmService;
-import cn.org.autumn.modules.spm.service.SuperPositionModelService;
-import cn.org.autumn.modules.sys.entity.SystemUpgrade;
 import cn.org.autumn.modules.sys.service.SysCategoryService;
 import cn.org.autumn.modules.sys.service.SysUserRoleService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
@@ -19,11 +18,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import java.util.*;
 
 import static cn.org.autumn.modules.sys.service.SysConfigService.*;
@@ -107,7 +104,7 @@ public class SysConfigController extends AbstractController {
             if (entity.getType().equals(json_type) && StringUtils.isNotBlank(entity.getOptions())) {
                 try {
                     Class<?> clazz = Class.forName(entity.getOptions());
-                    Gson gson = new Gson();
+                    Gson gson = GsonConfig.getGson();
                     Object o = gson.fromJson(entity.getParamValue(), clazz);
                     List<String> list = Arrays.asList(config.getFieldName().split("\\."));
                     if (!list.isEmpty()) {
