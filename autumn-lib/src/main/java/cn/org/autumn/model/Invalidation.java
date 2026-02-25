@@ -26,7 +26,7 @@ public class Invalidation implements Serializable {
     /**
      * 缓存键
      */
-    private String key;
+    private Object key;
 
     /**
      * 操作类型：PUT（更新）、REMOVE（删除）、CLEAR（清空）
@@ -43,7 +43,7 @@ public class Invalidation implements Serializable {
      */
     private String instanceId;
 
-    public Invalidation(String cacheName, String key, String operation) {
+    public Invalidation(String cacheName, Object key, String operation) {
         this.cacheName = cacheName;
         this.key = key;
         this.operation = operation;
