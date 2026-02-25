@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.io.Serializable;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
@@ -138,7 +139,7 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
         try {
             String name = message.getCacheName();
             String operation = message.getOperation();
-            String key = message.getKey();
+            Object key = convertInvalidationKey(name, message.getKey());
             if (Invalidation.Operation.CLEAR.equals(operation)) {
                 // 清空整个缓存
                 ehCacheManager.clear(name);
@@ -164,7 +165,7 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
      * @param key       缓存键
      * @param operation 操作类型
      */
-    private void publish(String name, String key, String operation) {
+    private void publish(String name, Object key, String operation) {
         try {
             if (null == key) {
                 return;
@@ -324,14 +325,14 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
                 cache.put(key, value);
                 putToRedis(name, key, value, config);
                 // 发布缓存失效消息，通知其他实例清除本地缓存
-                publish(name, key.toString(), Invalidation.Operation.PUT);
+                publish(name, key, Invalidation.Operation.PUT);
                 return value;
             } else if (cacheNull) {
                 // 值为 null 且允许缓存 null，使用占位符缓存
                 cache.put(key, NULL_PLACEHOLDER);
                 putToRedis(name, key, NULL_PLACEHOLDER, config);
                 // 发布缓存失效消息
-                publish(name, key.toString(), Invalidation.Operation.PUT);
+                publish(name, key, Invalidation.Operation.PUT);
                 return null;
             } else {
                 // 值为 null 但不允许缓存 null，直接返回 null
@@ -664,7 +665,7 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
         // 同时写入Redis缓存
         putToRedis(name, key, value, config);
         // 发布缓存失效消息，通知其他实例清除本地缓存
-        publish(name, key.toString(), Invalidation.Operation.PUT);
+        publish(name, key, Invalidation.Operation.PUT);
     }
 
     /**
@@ -689,7 +690,7 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
             }
         }
         // 发布缓存失效消息，通知其他实例清除本地缓存
-        publish(name, key != null ? key.toString() : null, Invalidation.Operation.REMOVE);
+        publish(name, key, Invalidation.Operation.REMOVE);
     }
 
     /**
@@ -782,6 +783,64 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
      */
     private String buildRedisKey(String name, Object key) {
         return "cache:" + name + ":" + (key != null ? key.toString() : "null");
+    }
+
+    /**
+     * 将失效消息中的 key 转换为缓存定义的 Key 类型，避免消息反序列化后类型不匹配。
+     */
+    private Object convertInvalidationKey(String cacheName, Object rawKey) {
+        if (rawKey == null || cacheName == null) {
+            return rawKey;
+        }
+        CacheConfig config = ehCacheManager.getConfig(cacheName);
+        if (config == null || config.getKey() == null) {
+            return rawKey;
+        }
+        Class<?> keyType = toWrapperType(config.getKey());
+        if (keyType.isInstance(rawKey)) {
+            return rawKey;
+        }
+        try {
+            if (String.class == keyType) {
+                return String.valueOf(rawKey);
+            }
+            if (rawKey instanceof Number) {
+                Number number = (Number) rawKey;
+                if (Long.class == keyType) return number.longValue();
+                if (Integer.class == keyType) return number.intValue();
+                if (Short.class == keyType) return number.shortValue();
+                if (Byte.class == keyType) return number.byteValue();
+                if (Double.class == keyType) return number.doubleValue();
+                if (Float.class == keyType) return number.floatValue();
+            }
+            String stringValue = String.valueOf(rawKey);
+            if (Long.class == keyType) return new BigDecimal(stringValue).longValue();
+            if (Integer.class == keyType) return new BigDecimal(stringValue).intValue();
+            if (Short.class == keyType) return new BigDecimal(stringValue).shortValue();
+            if (Byte.class == keyType) return new BigDecimal(stringValue).byteValue();
+            if (Double.class == keyType) return Double.parseDouble(stringValue);
+            if (Float.class == keyType) return Float.parseFloat(stringValue);
+            if (Boolean.class == keyType) return Boolean.parseBoolean(stringValue);
+            if (Character.class == keyType && !stringValue.isEmpty()) return stringValue.charAt(0);
+        } catch (Exception e) {
+            log.warn("缓存key类型转换失败: cache={}, key={}, expectedType={}, error={}", cacheName, rawKey, keyType.getName(), e.getMessage());
+        }
+        return rawKey;
+    }
+
+    private Class<?> toWrapperType(Class<?> type) {
+        if (!type.isPrimitive()) {
+            return type;
+        }
+        if (type == int.class) return Integer.class;
+        if (type == long.class) return Long.class;
+        if (type == short.class) return Short.class;
+        if (type == byte.class) return Byte.class;
+        if (type == float.class) return Float.class;
+        if (type == double.class) return Double.class;
+        if (type == boolean.class) return Boolean.class;
+        if (type == char.class) return Character.class;
+        return type;
     }
 
     /**
