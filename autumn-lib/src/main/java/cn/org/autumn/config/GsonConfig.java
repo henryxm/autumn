@@ -1,6 +1,7 @@
 package cn.org.autumn.config;
 
 import com.google.gson.*;
+import lombok.Getter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -34,8 +35,15 @@ public class GsonConfig {
      */
     private static final String TIME_ZONE = "GMT+8";
 
+    @Getter
+    private static final Gson gson = build();
+
     @Bean
     public Gson gson() {
+        return gson;
+    }
+
+    private static Gson build() {
         // 创建SimpleDateFormat并设置时区
         SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_TIME_PATTERN);
         dateFormat.setTimeZone(TimeZone.getTimeZone(TIME_ZONE));
