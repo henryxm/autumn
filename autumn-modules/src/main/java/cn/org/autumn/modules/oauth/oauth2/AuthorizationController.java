@@ -59,6 +59,7 @@ import org.springframework.web.servlet.ModelAndView;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.net.*;
+import java.nio.charset.StandardCharsets;
 import java.util.Enumeration;
 import java.util.Map;
 
@@ -155,9 +156,9 @@ public class AuthorizationController {
             if (StringUtils.isNotBlank(error)) {
                 if (error.length() > 200) error = error.substring(0, 200);
                 if (StringUtils.isBlank(callback))
-                    return "redirect:/oauth2/login?error=" + URLEncoder.encode(error, "utf-8");
+                    return "redirect:/oauth2/login?error=" + URLEncoder.encode(error, StandardCharsets.UTF_8);
                 else
-                    return "redirect:/oauth2/login?callback=" + URLEncoder.encode(callback, "utf-8") + "&error=" + URLEncoder.encode(error, "utf-8");
+                    return "redirect:/oauth2/login?callback=" + URLEncoder.encode(callback, StandardCharsets.UTF_8) + "&error=" + URLEncoder.encode(error, StandardCharsets.UTF_8);
             }
         } catch (Exception ignored) {
         }

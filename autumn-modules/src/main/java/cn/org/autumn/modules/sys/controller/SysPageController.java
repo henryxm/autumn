@@ -159,7 +159,7 @@ public class SysPageController implements ErrorController {
     }
 
     @RequestMapping("main.html")
-    public String main(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+    public String _main(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
         return pageFactory.main(httpServletRequest, httpServletResponse, model);
     }
 
@@ -218,7 +218,6 @@ public class SysPageController implements ErrorController {
     @ResponseBody
     @SkipInterceptor
     public WallDefault wall(Boolean open, Boolean white, Boolean black, Boolean host, Boolean visit, Boolean url) {
-
         if (null != open)
             wallDefault.setOpen(open);
         if (null != white)
