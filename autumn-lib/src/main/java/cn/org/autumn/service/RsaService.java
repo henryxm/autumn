@@ -9,6 +9,7 @@ import cn.org.autumn.exception.CodeException;
 import cn.org.autumn.model.*;
 import cn.org.autumn.model.Error;
 import cn.org.autumn.site.EncryptConfigFactory;
+import cn.org.autumn.site.LoadFactory;
 import cn.org.autumn.utils.RsaUtil;
 import cn.org.autumn.utils.SpringContextUtils;
 import lombok.extern.slf4j.Slf4j;
@@ -28,7 +29,7 @@ import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
-public class RsaService {
+public class RsaService implements LoadFactory.Must {
 
     @Autowired
     CacheService cacheService;
@@ -376,9 +377,19 @@ public class RsaService {
         return clientPublicKey != null && !clientPublicKey.expired();
     }
 
+    @Override
+    public void must() {
+        try {
+            List<EndpointInfo> list = getEncryptEndpoints();
+            log.info("Scan encrypt endpoints:{}", list.size());
+        } catch (CodeException e) {
+            log.error("加密端点:{}", e.getMessage());
+        }
+    }
+
     public List<EndpointInfo> getEncryptEndpoints() throws CodeException {
         if (null != result)
-            return result;
+            return new ArrayList<>(result);
         ApplicationContext context = SpringContextUtils.getApplicationContext();
         if (context == null) {
             throw new CodeException(Error.INTERNAL_SERVER_ERROR);

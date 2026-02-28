@@ -180,10 +180,13 @@ public class RsaController {
             encryptKeyService.saveOrUpdate(session, rsaKey, clientPublicKey, aesKey);
             return Response.ok(response);
         } catch (CodeException e) {
-            log.error("初始化失败:{}, IP:{}", e.getMessage(), IPUtils.getIp(servlet));
+            log.error("初始化失败:{}, IP:{}", e.getMessage(), IPUtils.getIp(servlet), e);
             return Response.error(e);
         } catch (Exception e) {
-            log.error("初始化失败:{}, IP:{}", e.getMessage(), IPUtils.getIp(servlet), e);
+            log.error("初始化异常:{}, IP:{}", e.getMessage(), IPUtils.getIp(servlet), e);
+            return Response.error(e);
+        } catch (Throwable e) {
+            log.error("初始化错误:{}, IP:{}", e.getMessage(), IPUtils.getIp(servlet), e);
             return Response.error(e);
         }
     }
