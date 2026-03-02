@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Autumn 文档 - 版本路线图</title>
+<#include "/header.html">
+<style>
+    .doc-page { padding: 15px; }
+    .doc-layout { display: flex; align-items: flex-start; }
+    .doc-sidebar { width: 260px; position: sticky; top: 12px; background: #fff; border: 1px solid #d2d6de; border-radius: 3px; padding: 10px 0; margin-right: 15px; }
+    .doc-sidebar-title { font-size: 14px; color: #666; padding: 0 14px 8px; margin: 0 0 8px; border-bottom: 1px solid #f0f0f0; }
+    .doc-nav { list-style: none; margin: 0; padding: 0; }
+    .doc-nav-link { display: block; padding: 8px 14px; color: #333; text-decoration: none; border-left: 3px solid transparent; }
+    .doc-nav-link:hover { background: #f7f7f7; text-decoration: none; }
+    .doc-nav-link.active { color: #3c8dbc; background: #f0f7fb; border-left-color: #3c8dbc; font-weight: 600; }
+    .doc-content { flex: 1; background: #fff; border: 1px solid #d2d6de; border-radius: 3px; padding: 18px; }
+    .doc-content h2 { margin-top: 0; }
+    .doc-content h3 { margin-top: 20px; font-size: 20px; }
+    .doc-plan { border-left: 3px solid #3c8dbc; background: #f0f7fb; padding: 10px 12px; margin-bottom: 12px; }
+    .doc-content ul { padding-left: 20px; }
+    @media (max-width: 992px) { .doc-layout { display: block; } .doc-sidebar { width: 100%; position: static; margin-right: 0; margin-bottom: 12px; } }
+</style>
+</head>
+<body>
+<div class="doc-page">
+    <div class="doc-layout">
+        <aside class="doc-sidebar">
+            <#assign currentDoc = "roadmap">
+            <#include "/modules/docs/_sidebar.html">
+        </aside>
+        <main class="doc-content">
+            <h2>版本路线图</h2>
+            <p>本页用于记录“已完成能力”和“计划中能力”，帮助团队形成统一预期。</p>
+
+            <h3>v1：现有功能文档化</h3>
+            <div class="doc-plan">
+                <ul>
+                    <li>目标：覆盖所有已上线功能模块</li>
+                    <li>范围：入口、流程、配置项、FAQ、扩展点</li>
+                    <li>验收：新同学按文档可独立完成一条业务链路</li>
+                </ul>
+            </div>
+
+            <h3>v2：增强可执行文档</h3>
+            <div class="doc-plan">
+                <ul>
+                    <li>补齐 API 示例与权限矩阵</li>
+                    <li>补齐运维排查手册与故障演练步骤</li>
+                    <li>补齐部署与升级注意事项</li>
+                </ul>
+            </div>
+
+            <h3>v3：新功能规划管理</h3>
+            <div class="doc-plan">
+                <ul>
+                    <li>每个新功能包含背景、方案、风险、回滚、DoD</li>
+                    <li>将规划任务与版本里程碑绑定</li>
+                    <li>形成变更日志与发布说明模板</li>
+                </ul>
+            </div>
+        </main>
+    </div>
+</div>
+</body>
+</html>

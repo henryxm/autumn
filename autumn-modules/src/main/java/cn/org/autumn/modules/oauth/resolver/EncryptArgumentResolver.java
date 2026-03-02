@@ -2,6 +2,7 @@ package cn.org.autumn.modules.oauth.resolver;
 
 import cn.org.autumn.annotation.Endpoint;
 import cn.org.autumn.exception.CodeException;
+import cn.org.autumn.model.CompatibleRequest;
 import cn.org.autumn.model.Encrypt;
 import cn.org.autumn.model.Error;
 import cn.org.autumn.service.AesService;
@@ -24,6 +25,7 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestResponseBody
 
 import javax.servlet.http.HttpServletRequest;
 import java.lang.reflect.Type;
+import java.util.Map;
 import java.util.List;
 
 /**
@@ -88,6 +90,23 @@ public class EncryptArgumentResolver extends RequestResponseBodyMethodProcessor 
                     decrypt = "RSA".equals(encrypt.getAlgorithm()) ? rsaService.decrypt(encrypt) : aesService.decrypt(encrypt);
                     Type parameterType = getParameterType(parameter);
                     object = gson.fromJson(decrypt, parameterType);
+                    // 兼容模式：
+                    // 当参数是 CompatibleRequest<T> 且解密后不是标准 Request(data) 结构时，
+                    // 自动将解密JSON回填到 legacyBody，供 resolveBody() 回退解析旧协议字段。
+                    if (object instanceof CompatibleRequest) {
+                        CompatibleRequest<?> compatible = (CompatibleRequest<?>) object;
+                        if (compatible.getData() == null && (compatible.getLegacyBody() == null || compatible.getLegacyBody().isEmpty())) {
+                            Map<?, ?> map = gson.fromJson(decrypt, Map.class);
+                            if (map != null && !map.isEmpty()) {
+                                for (Map.Entry<?, ?> entry : map.entrySet()) {
+                                    Object k = entry.getKey();
+                                    if (k != null) {
+                                        compatible.putLegacyField(String.valueOf(k), entry.getValue());
+                                    }
+                                }
+                            }
+                        }
+                    }
                     long end = System.currentTimeMillis();
                     if (log.isDebugEnabled() && null != decrypt) {
                         log.debug("解密长度:{}, 耗时:{}毫秒", decrypt.length(), end - start);
@@ -114,7 +133,7 @@ public class EncryptArgumentResolver extends RequestResponseBodyMethodProcessor 
      * @param parameter 方法参数
      * @return 参数类型（Type或Class）
      */
-    private Type getParameterType(MethodParameter parameter) {
+    private Type getParameterType(@NonNull MethodParameter parameter) {
         // 使用ResolvableType来获取包含泛型信息的Type
         ResolvableType resolvableType = ResolvableType.forMethodParameter(parameter);
         Type type = resolvableType.getType();

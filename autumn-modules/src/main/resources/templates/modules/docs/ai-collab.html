@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Autumn 文档 - AI 协作开发（多项目）</title>
+<#include "/header.html">
+<style>
+    .doc-page { padding: 15px; }
+    .doc-layout { display: flex; align-items: flex-start; }
+    .doc-sidebar { width: 260px; position: sticky; top: 12px; background: #fff; border: 1px solid #d2d6de; border-radius: 3px; padding: 10px 0; margin-right: 15px; }
+    .doc-sidebar-title { font-size: 14px; color: #666; padding: 0 14px 8px; margin: 0 0 8px; border-bottom: 1px solid #f0f0f0; }
+    .doc-nav { list-style: none; margin: 0; padding: 0; }
+    .doc-nav-link { display: block; padding: 8px 14px; color: #333; text-decoration: none; border-left: 3px solid transparent; }
+    .doc-nav-link:hover { background: #f7f7f7; text-decoration: none; }
+    .doc-nav-link.active { color: #3c8dbc; background: #f0f7fb; border-left-color: #3c8dbc; font-weight: 600; }
+    .doc-content { flex: 1; background: #fff; border: 1px solid #d2d6de; border-radius: 3px; padding: 18px; }
+    .doc-content h2 { margin-top: 0; }
+    .doc-content h3 { margin-top: 20px; font-size: 20px; }
+    .doc-content ul, .doc-content ol { padding-left: 20px; }
+    .doc-code { margin-top: 8px; padding: 10px; background: #f7f7f7; border: 1px solid #e5e5e5; border-radius: 3px; font-family: Menlo, Consolas, monospace; font-size: 12px; white-space: pre-wrap; }
+    .doc-tip { margin-top: 10px; padding: 10px 12px; background: #f0f7fb; border-left: 3px solid #3c8dbc; color: #666; }
+    @media (max-width: 992px) { .doc-layout { display: block; } .doc-sidebar { width: 100%; position: static; margin-right: 0; margin-bottom: 12px; } }
+</style>
+</head>
+<body>
+<div class="doc-page">
+    <div class="doc-layout">
+        <aside class="doc-sidebar">
+            <#assign currentDoc = "ai-collab">
+            <#include "/modules/docs/_sidebar.html">
+        </aside>
+        <main class="doc-content">
+            <h2>AI 协作开发（多项目）</h2>
+            <p>本章用于“与 AI 一起开发业务功能”时的统一作业规范。适用于 <code>/Users/mac/Idea</code> 下多个基于 Autumn 的项目。</p>
+
+            <h3>目标</h3>
+            <ul>
+                <li>让 AI 快速理解 Autumn 框架能力边界，避免重复造轮子。</li>
+                <li>让 AI 在实现业务时优先复用框架既有机制（缓存/队列/加密/Handler）。</li>
+                <li>统一多项目协作提示词，提升交付一致性。</li>
+            </ul>
+
+            <h3>推荐的 3 层上下文喂给法</h3>
+            <ol>
+                <li><strong>框架层（固定）</strong>：先提供 Autumn 能力地图。</li>
+                <li><strong>项目层（变化）</strong>：提供当前业务项目 README、模块目录、关键配置。</li>
+                <li><strong>任务层（变化）</strong>：明确目标、约束、验收标准、禁止事项。</li>
+            </ol>
+            <div class="doc-tip">建议每次都先喂“框架层”，再喂“项目层+任务层”，不要直接只给功能需求。</div>
+
+            <h3>在 Cursor 中使用 <code>@/Users/mac/Idea</code> 的推荐写法</h3>
+            <div class="doc-code">请先阅读这些上下文再实现：
+- @/Users/mac/Idea/autumn/AI_MAP.md
+- @/Users/mac/Idea/autumn/AI_GUIDE.md
+- @/Users/mac/Idea/&lt;当前业务项目&gt;/README.md
+- @/Users/mac/Idea/&lt;当前业务项目&gt;/&lt;目标模块目录&gt;
+
+需求目标：
+- &lt;一句话描述&gt;
+
+实现约束：
+- 必须优先复用 Autumn 框架能力，不允许重复造轮子
+- 不破坏现有接口、权限和加解密语义
+- 涉及缓存/队列/加密时必须遵循框架既有流程</div>
+
+            <h3>能力专项补充（按任务附加）</h3>
+            <ul>
+                <li>缓存任务：附加 <code>/modules/docs/cache</code> 章节。</li>
+                <li>队列任务：附加 <code>/modules/docs/queue</code> 章节。</li>
+                <li>加解密任务：附加 <code>/modules/docs/hybrid-crypto</code> 章节。</li>
+                <li>扩展机制任务：附加 <code>/modules/docs/handler</code> 章节。</li>
+            </ul>
+
+            <h3>标准提问模板（新增功能）</h3>
+            <div class="doc-code">你是我的 Autumn 架构开发助手。
+
+先阅读：
+- @/Users/mac/Idea/autumn/AI_MAP.md
+- @/Users/mac/Idea/autumn/AI_GUIDE.md
+- @/Users/mac/Idea/&lt;project&gt;/README.md
+- @/Users/mac/Idea/&lt;project&gt;/&lt;模块目录&gt;
+
+现在要实现：
+- &lt;功能目标&gt;
+
+请按顺序输出：
+1) 实现方案（复用哪些 Autumn 能力、涉及哪些类）
+2) 代码改动清单（最小改动）
+3) 测试清单与回归风险
+
+强约束：
+- 不重复实现已有基础能力
+- 缓存/队列/加解密必须走框架既有机制
+- 若需求与框架冲突，先给冲突点和可选方案，不要直接改内核</div>
+
+            <h3>标准提问模板（修 Bug）</h3>
+            <div class="doc-code">先读取：
+- @/Users/mac/Idea/autumn/AI_MAP.md
+- @/Users/mac/Idea/&lt;project&gt;/&lt;报错相关目录&gt;
+
+问题现象：
+- &lt;错误日志/复现步骤&gt;
+
+要求：
+- 先判断是否违反 Autumn 既有机制（缓存失效、队列重试、加密触发条件等）
+- 给 root cause
+- 给最小修复 + 回归点</div>
+
+            <h3>AI 开发硬约束（建议固定）</h3>
+            <ul>
+                <li>优先复用：<code>BaseCacheService/CacheService/ShareCacheService</code>、<code>BaseQueueService/QueueService</code>、<code>EncryptArgumentResolver/EncryptInterceptor</code>。</li>
+                <li>禁止新增并行基础设施（重复缓存层、重复队列框架、绕开现有加解密协议）。</li>
+                <li>输出必须包含“为什么符合 Autumn 机制”的解释与验证步骤。</li>
+            </ul>
+
+            <h3>多项目落地建议</h3>
+            <ul>
+                <li>每个业务项目建议新增本地 <code>AGENTS.md</code>（简版），指向统一框架地图。</li>
+                <li>简版仅保留：统一框架引用 + 本项目禁改范围 + 发布规范。</li>
+                <li>统一框架规则放在 <code>/Users/mac/Idea/autumn/AI_MAP.md</code>，避免多项目漂移。</li>
+            </ul>
+
+            <div style="margin-top: 16px;">
+                <a class="btn btn-default btn-sm" href="${request.contextPath}/modules/docs/index">返回首页</a>
+                <a class="btn btn-success btn-sm" href="${request.contextPath}/modules/docs/index?done=ai-collab">返回首页并标记本章完成</a>
+            </div>
+        </main>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Autumn 文档 - 系统管理（sys）</title>
+<#include "/header.html">
+<style>
+    .doc-page { padding: 15px; }
+    .doc-layout { display: flex; align-items: flex-start; }
+    .doc-sidebar { width: 260px; position: sticky; top: 12px; background: #fff; border: 1px solid #d2d6de; border-radius: 3px; padding: 10px 0; margin-right: 15px; }
+    .doc-sidebar-title { font-size: 14px; color: #666; padding: 0 14px 8px; margin: 0 0 8px; border-bottom: 1px solid #f0f0f0; }
+    .doc-nav { list-style: none; margin: 0; padding: 0; }
+    .doc-nav-link { display: block; padding: 8px 14px; color: #333; text-decoration: none; border-left: 3px solid transparent; }
+    .doc-nav-link:hover { background: #f7f7f7; text-decoration: none; }
+    .doc-nav-link.active { color: #3c8dbc; background: #f0f7fb; border-left-color: #3c8dbc; font-weight: 600; }
+    .doc-content { flex: 1; background: #fff; border: 1px solid #d2d6de; border-radius: 3px; padding: 18px; }
+    .doc-content h2 { margin-top: 0; }
+    .doc-content h3 { margin-top: 20px; font-size: 20px; }
+    .doc-content ul { padding-left: 20px; }
+    .doc-panel { border: 1px solid #e5e5e5; border-radius: 3px; padding: 10px 12px; margin-bottom: 12px; }
+    .doc-tag { display: inline-block; background: #ecf0f5; border-radius: 10px; padding: 2px 10px; margin-right: 6px; font-size: 12px; color: #666; }
+    .doc-code { margin-top: 8px; padding: 10px; background: #f7f7f7; border: 1px solid #e5e5e5; border-radius: 3px; font-family: Menlo, Consolas, monospace; font-size: 12px; }
+    @media (max-width: 992px) { .doc-layout { display: block; } .doc-sidebar { width: 100%; position: static; margin-right: 0; margin-bottom: 12px; } }
+</style>
+</head>
+<body>
+<div class="doc-page">
+    <div class="doc-layout">
+        <aside class="doc-sidebar">
+            <#assign currentDoc = "sys">
+            <#include "/modules/docs/_sidebar.html">
+        </aside>
+        <main class="doc-content">
+            <h2>系统管理（sys）</h2>
+            <p><span class="doc-tag">核心模块</span><span class="doc-tag">权限中心</span><span class="doc-tag">系统配置</span></p>
+
+            <h3>功能入口</h3>
+            <ul>
+                <li>用户：<code>/sys/user/*</code>（list/info/password/save/update/delete）</li>
+                <li>配置：<code>/sys/config/*</code>（list/basic/info/save/update/delete/data）</li>
+                <li>菜单与角色：<code>/sys/menu/*</code>、<code>/sys/role/*</code>、<code>/sys/dept/*</code></li>
+                <li>运维工具：<code>/sys/cache/*</code>、<code>/sys/redis/*</code>、<code>/sys/thread/*</code>、<code>/sys/queue/*</code></li>
+            </ul>
+
+            <h3>核心功能点</h3>
+            <div class="doc-panel">
+                <ul>
+                    <li>权限模型：角色-菜单-用户绑定</li>
+                    <li>组织模型：部门层级与数据范围联动</li>
+                    <li>系统配置：参数化管理与运行时读取</li>
+                    <li>日志审计：关键行为可追踪</li>
+                </ul>
+            </div>
+
+            <h3>文档补充清单</h3>
+            <ul>
+                <li>补“新增管理员账号并授权”的完整流程</li>
+                <li>补“新增菜单 + 绑定权限 + 挂角色”的流程图</li>
+                <li>补常见问题：菜单不显示、按钮无权限、数据越权检查</li>
+            </ul>
+
+            <h3>关键配置项（来自 sys_config.param_key）</h3>
+            <table class="table table-bordered table-striped">
+                <thead>
+                <tr>
+                    <th>配置键</th>
+                    <th>默认值</th>
+                    <th>说明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>LOGIN_AUTHENTICATION</td>
+                    <td>oauth2:{clientId}</td>
+                    <td>登录授权模式：localhost / oauth2:clientId / shell:clientId</td>
+                </tr>
+                <tr>
+                    <td>TOKEN_GENERATE_STRATEGY</td>
+                    <td>current</td>
+                    <td>Token 策略：current(复用有效token) / new(每次新建)</td>
+                </tr>
+                <tr>
+                    <td>LOGGER_LEVEL</td>
+                    <td>INFO</td>
+                    <td>动态日志级别：ALL/TRACE/DEBUG/INFO/WARN/ERROR/OFF</td>
+                </tr>
+                <tr>
+                    <td>DEBUG_MODE</td>
+                    <td>false</td>
+                    <td>调试模式开关</td>
+                </tr>
+                </tbody>
+            </table>
+
+            <h3>API 示例（真实路径）</h3>
+            <div class="doc-code">GET /sys/user/list?page=1&amp;limit=10</div>
+            <div class="doc-code">POST /sys/user/password?password=oldPass&amp;newPassword=newPass</div>
+            <div class="doc-code">POST /sys/config/update {"paramKey":"LOGGER_LEVEL","paramValue":"DEBUG"}</div>
+            <div class="doc-code">GET /sys/menu/nav</div>
+
+            <h3>返回结构示例</h3>
+            <div class="doc-code">{"code":0,"msg":"success","page":{"list":[...],"currPage":1,"totalPage":3,"totalCount":24}}</div>
+
+            <h3>页面入口（templates）</h3>
+            <ul>
+                <li><code>/modules/sys/user</code> -> <code>templates/modules/sys/user.html</code></li>
+                <li><code>/modules/sys/role</code> -> <code>templates/modules/sys/role.html</code></li>
+                <li><code>/modules/sys/dept</code> -> <code>templates/modules/sys/dept.html</code></li>
+                <li><code>/modules/sys/menu</code> -> <code>templates/modules/sys/menu.html</code></li>
+                <li><code>/modules/sys/config</code> -> <code>templates/modules/sys/config.html</code></li>
+                <li><code>/modules/sys/log</code> -> <code>templates/modules/sys/log.html</code></li>
+            </ul>
+
+            <h3>权限码清单</h3>
+            <div class="doc-code">sys:user:list|info|save|update|delete</div>
+            <div class="doc-code">sys:config:list|info|save|update|delete</div>
+            <div class="doc-code">sys:menu:list|select|info|save|delete</div>
+            <div class="doc-code">sys:role:list|select|info|save|delete</div>
+            <div class="doc-code">sys:dept:list|select|info|save|update|delete</div>
+            <div class="doc-code">sys:dict:list|info|save|update|delete, sys:category:list|info|save|update|delete, sys:log:list</div>
+
+            <h3>最小可跑通用例</h3>
+            <ol>
+                <li>以管理员登录系统，确认角色包含 <code>sys:user:list</code> 与 <code>sys:config:list</code>。</li>
+                <li>访问 <code>/modules/sys/user</code>，确认用户列表正常加载。</li>
+                <li>调用 <code>GET /sys/user/list?page=1&amp;limit=10</code>，确认返回 <code>code=0</code> 且包含 <code>page.list</code>。</li>
+                <li>调用 <code>POST /sys/config/update</code> 更新一项配置（如 <code>LOGGER_LEVEL</code>），确认返回成功。</li>
+            </ol>
+
+            <h3>常见故障排查模板</h3>
+            <table class="table table-bordered table-striped">
+                <thead>
+                <tr>
+                    <th>现象</th>
+                    <th>可能原因</th>
+                    <th>处理建议</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>菜单看不到</td>
+                    <td>角色未绑定菜单或缓存未刷新</td>
+                    <td>检查角色权限并清理权限缓存</td>
+                </tr>
+                <tr>
+                    <td>配置更新未生效</td>
+                    <td>修改了错误的 paramKey 或类型不匹配</td>
+                    <td>检查 <code>/sys/config/update</code> 请求体与配置类型</td>
+                </tr>
+                <tr>
+                    <td>接口返回“权限不足”</td>
+                    <td>缺少 @RequiresPermissions 对应权限</td>
+                    <td>检查角色是否包含如 <code>sys:user:list</code> 等权限码</td>
+                </tr>
+                </tbody>
+            </table>
+
+            <div style="margin-top: 16px;">
+                <a class="btn btn-default btn-sm" href="${request.contextPath}/modules/docs/index">返回首页</a>
+                <a class="btn btn-success btn-sm" href="${request.contextPath}/modules/docs/index?done=sys">返回首页并标记本章完成</a>
+            </div>
+        </main>
+    </div>
+</div>
+</body>
+</html>

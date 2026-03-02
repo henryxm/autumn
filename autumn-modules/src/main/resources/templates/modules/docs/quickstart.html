@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Autumn 文档 - 快速开始</title>
+<#include "/header.html">
+<style>
+    .doc-page { padding: 15px; }
+    .doc-layout { display: flex; align-items: flex-start; }
+    .doc-sidebar {
+        width: 260px;
+        position: sticky;
+        top: 12px;
+        background: #fff;
+        border: 1px solid #d2d6de;
+        border-radius: 3px;
+        padding: 10px 0;
+        margin-right: 15px;
+    }
+    .doc-sidebar-title {
+        font-size: 14px;
+        color: #666;
+        padding: 0 14px 8px 14px;
+        margin: 0 0 8px 0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    .doc-nav { list-style: none; margin: 0; padding: 0; }
+    .doc-nav-link {
+        display: block;
+        padding: 8px 14px;
+        color: #333;
+        text-decoration: none;
+        border-left: 3px solid transparent;
+    }
+    .doc-nav-link:hover { background: #f7f7f7; text-decoration: none; }
+    .doc-nav-link.active {
+        color: #3c8dbc;
+        background: #f0f7fb;
+        border-left-color: #3c8dbc;
+        font-weight: 600;
+    }
+    .doc-content {
+        flex: 1;
+        background: #fff;
+        border: 1px solid #d2d6de;
+        border-radius: 3px;
+        padding: 18px;
+    }
+    .doc-content h2 { margin-top: 0; }
+    .doc-content h3 { margin-top: 20px; font-size: 20px; }
+    .doc-content ul { padding-left: 20px; }
+    .doc-tip {
+        padding: 10px 12px;
+        border-left: 3px solid #f39c12;
+        background: #fdf8e5;
+        color: #666;
+        margin-top: 12px;
+    }
+    .doc-code {
+        margin-top: 8px;
+        padding: 10px;
+        background: #f7f7f7;
+        border-radius: 3px;
+        border: 1px solid #e5e5e5;
+        font-family: Menlo, Consolas, monospace;
+        font-size: 12px;
+    }
+    @media (max-width: 992px) {
+        .doc-layout { display: block; }
+        .doc-sidebar { width: 100%; position: static; margin-right: 0; margin-bottom: 12px; }
+    }
+</style>
+</head>
+<body>
+<div class="doc-page">
+    <div class="doc-layout">
+        <aside class="doc-sidebar">
+            <#assign currentDoc = "quickstart">
+            <#include "/modules/docs/_sidebar.html">
+        </aside>
+
+        <main class="doc-content">
+            <h2>快速开始</h2>
+            <p>目标：让新开发者在最短时间内完成本地启动，并知道下一步看哪里。</p>
+
+            <h3>1. 环境准备</h3>
+            <ul>
+                <li>JDK 1.8+</li>
+                <li>MySQL 5.5+</li>
+                <li>Maven 3.0+</li>
+                <li>Redis（可选，分布式部署时启用）</li>
+            </ul>
+
+            <h3>2. 本地启动步骤</h3>
+            <ul>
+                <li>创建数据库并配置连接信息</li>
+                <li>在启动模块执行构建命令</li>
+                <li>运行启动类并检查启动日志</li>
+                <li>浏览器访问登录页面完成验证</li>
+            </ul>
+            <div class="doc-code">mvn clean install</div>
+
+            <h3>3. 验证入口</h3>
+            <ul>
+                <li>管理后台：/autumn</li>
+                <li>API 文档：/autumn/swagger/index.html</li>
+                <li>默认账户：admin/admin（首次部署后请立即修改）</li>
+            </ul>
+
+            <h3>4. 常见问题排查</h3>
+            <ul>
+                <li>数据库连接失败：检查用户名密码、字符集、网络权限</li>
+                <li>端口占用：修改配置端口后重启</li>
+                <li>页面空白：检查静态资源路径与上下文路径</li>
+                <li>登录异常：检查验证码、会话与缓存配置</li>
+            </ul>
+            <div class="doc-tip">建议在该页后续补充“新同学首日操作清单”，包括创建菜单、配置角色、生成一套模块代码。</div>
+
+            <h3>配置项模板（待补齐）</h3>
+            <table class="table table-bordered table-striped">
+                <thead>
+                <tr>
+                    <th>配置键</th>
+                    <th>建议值</th>
+                    <th>说明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>spring.datasource.url</td>
+                    <td>jdbc:mysql://127.0.0.1:3306/autumn</td>
+                    <td>本地数据库连接</td>
+                </tr>
+                <tr>
+                    <td>server.servlet.context-path</td>
+                    <td>/autumn</td>
+                    <td>系统访问上下文路径</td>
+                </tr>
+                </tbody>
+            </table>
+
+            <h3>验证接口模板</h3>
+            <div class="doc-code">GET /swagger/index.html</div>
+            <div class="doc-code">POST /sys/login</div>
+
+            <div style="margin-top: 16px;">
+                <a class="btn btn-default btn-sm" href="${request.contextPath}/modules/docs/index">返回首页</a>
+                <a class="btn btn-success btn-sm" href="${request.contextPath}/modules/docs/index?done=quickstart">返回首页并标记本章完成</a>
+            </div>
+        </main>
+    </div>
+</div>
+</body>
+</html>

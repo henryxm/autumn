@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Autumn 文档 - 代码生成（gen）</title>
+<#include "/header.html">
+<style>
+    .doc-page { padding: 15px; }
+    .doc-layout { display: flex; align-items: flex-start; }
+    .doc-sidebar { width: 260px; position: sticky; top: 12px; background: #fff; border: 1px solid #d2d6de; border-radius: 3px; padding: 10px 0; margin-right: 15px; }
+    .doc-sidebar-title { font-size: 14px; color: #666; padding: 0 14px 8px; margin: 0 0 8px; border-bottom: 1px solid #f0f0f0; }
+    .doc-nav { list-style: none; margin: 0; padding: 0; }
+    .doc-nav-link { display: block; padding: 8px 14px; color: #333; text-decoration: none; border-left: 3px solid transparent; }
+    .doc-nav-link:hover { background: #f7f7f7; text-decoration: none; }
+    .doc-nav-link.active { color: #3c8dbc; background: #f0f7fb; border-left-color: #3c8dbc; font-weight: 600; }
+    .doc-content { flex: 1; background: #fff; border: 1px solid #d2d6de; border-radius: 3px; padding: 18px; }
+    .doc-content h2 { margin-top: 0; }
+    .doc-content h3 { margin-top: 20px; font-size: 20px; }
+    .doc-content ul { padding-left: 20px; }
+    .doc-note { margin-top: 10px; padding: 10px 12px; background: #f0f7fb; border-left: 3px solid #3c8dbc; color: #666; }
+    .doc-code { margin-top: 8px; padding: 10px; background: #f7f7f7; border: 1px solid #e5e5e5; border-radius: 3px; font-family: Menlo, Consolas, monospace; font-size: 12px; }
+    @media (max-width: 992px) { .doc-layout { display: block; } .doc-sidebar { width: 100%; position: static; margin-right: 0; margin-bottom: 12px; } }
+</style>
+</head>
+<body>
+<div class="doc-page">
+    <div class="doc-layout">
+        <aside class="doc-sidebar">
+            <#assign currentDoc = "gen">
+            <#include "/modules/docs/_sidebar.html">
+        </aside>
+        <main class="doc-content">
+            <h2>代码生成（gen）</h2>
+            <p>用于通过数据表快速生成基础代码结构，降低 CRUD 开发成本。</p>
+            <h3>功能入口</h3>
+            <ul>
+                <li>生成器：<code>/gen/generator/list</code>、<code>/gen/generator/code</code>、<code>/gen/generator/reset</code></li>
+                <li>生成类型：<code>/gen/gentype/list</code>、<code>/gen/gentype/save</code>、<code>/gen/gentype/copy</code></li>
+                <li>模板文件（resources/template/*.vm）</li>
+            </ul>
+            <h3>推荐使用流程</h3>
+            <ul>
+                <li>先定义数据表和命名规范</li>
+                <li>配置模块名、包名、表前缀</li>
+                <li>执行生成并检查输出代码</li>
+                <li>在生成代码上补业务逻辑，不直接改模板默认输出结构</li>
+            </ul>
+            <div class="doc-note">建议补充“表设计规范”和“模板定制规范”，避免不同开发者生成风格不一致。</div>
+
+            <h3>关键配置/参数</h3>
+            <table class="table table-bordered table-striped">
+                <thead>
+                <tr>
+                    <th>参数/配置</th>
+                    <th>示例</th>
+                    <th>说明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>moduleName</td>
+                    <td>order</td>
+                    <td>生成目标模块名</td>
+                </tr>
+                <tr>
+                    <td>tablePrefix</td>
+                    <td>tb_</td>
+                    <td>表名前缀过滤</td>
+                </tr>
+                <tr>
+                    <td>moduleText</td>
+                    <td>系统管理模块</td>
+                    <td>生成类型中展示名称，用于区分不同业务模板</td>
+                </tr>
+                </tbody>
+            </table>
+
+            <h3>API 示例（真实路径）</h3>
+            <div class="doc-code">GET /gen/generator/list?page=1&amp;limit=10&amp;tableName=sys_user</div>
+            <div class="doc-code">POST /gen/generator/code {"tables":["sys_user"],"moduleName":"sys"}</div>
+            <div class="doc-code">POST /gen/gentype/copy {"id":1,"moduleName":"demo"}</div>
+            <div class="doc-code">{"code":0,"msg":"success","page":{"list":[...],"currPage":1}}</div>
+
+            <h3>页面入口（templates）</h3>
+            <ul>
+                <li><code>/modules/gen/generator</code> -> <code>templates/modules/gen/generator.html</code></li>
+                <li><code>/modules/gen/gentype</code> -> <code>templates/modules/gen/gentype.html</code></li>
+            </ul>
+
+            <h3>权限码清单</h3>
+            <div class="doc-code">gen:generator:list, gen:generator:code, gen:generator:reset</div>
+            <div class="doc-code">gen:gentype:list, gen:gentype:info, gen:gentype:save, gen:gentype:update, gen:gentype:delete, gen:gentype:copy</div>
+
+            <h3>最小可跑通用例</h3>
+            <ol>
+                <li>确认当前账号具备 <code>gen:generator:list</code> 与 <code>gen:generator:code</code>。</li>
+                <li>访问 <code>/modules/gen/generator</code>，输入表名执行查询。</li>
+                <li>调用 <code>GET /gen/generator/list?page=1&amp;limit=10&amp;tableName=sys_user</code>，确认返回表信息。</li>
+                <li>选择一张表执行代码生成，确认下载或返回内容成功。</li>
+            </ol>
+
+            <h3>故障排查</h3>
+            <table class="table table-bordered table-striped">
+                <thead>
+                <tr><th>现象</th><th>可能原因</th><th>处理建议</th></tr>
+                </thead>
+                <tbody>
+                <tr><td>生成失败</td><td>表不存在或无访问权限</td><td>先在数据库校验表结构与连接账号权限</td></tr>
+                <tr><td>生成代码不可编译</td><td>模板与当前实体字段不匹配</td><td>检查 vm 模板变量与字段命名</td></tr>
+                </tbody>
+            </table>
+
+            <div style="margin-top: 16px;">
+                <a class="btn btn-default btn-sm" href="${request.contextPath}/modules/docs/index">返回首页</a>
+                <a class="btn btn-success btn-sm" href="${request.contextPath}/modules/docs/index?done=gen">返回首页并标记本章完成</a>
+            </div>
+        </main>
+    </div>
+</div>
+</body>
+</html>

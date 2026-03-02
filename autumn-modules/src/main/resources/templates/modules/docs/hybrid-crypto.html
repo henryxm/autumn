@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Autumn 文档 - 混合加解密（RSA+AES）</title>
+<#include "/header.html">
+<style>
+    .doc-page { padding: 15px; }
+    .doc-layout { display: flex; align-items: flex-start; }
+    .doc-sidebar { width: 260px; position: sticky; top: 12px; background: #fff; border: 1px solid #d2d6de; border-radius: 3px; padding: 10px 0; margin-right: 15px; }
+    .doc-sidebar-title { font-size: 14px; color: #666; padding: 0 14px 8px; margin: 0 0 8px; border-bottom: 1px solid #f0f0f0; }
+    .doc-nav { list-style: none; margin: 0; padding: 0; }
+    .doc-nav-link { display: block; padding: 8px 14px; color: #333; text-decoration: none; border-left: 3px solid transparent; }
+    .doc-nav-link:hover { background: #f7f7f7; text-decoration: none; }
+    .doc-nav-link.active { color: #3c8dbc; background: #f0f7fb; border-left-color: #3c8dbc; font-weight: 600; }
+    .doc-content { flex: 1; background: #fff; border: 1px solid #d2d6de; border-radius: 3px; padding: 18px; }
+    .doc-content h2 { margin-top: 0; }
+    .doc-content h3 { margin-top: 20px; font-size: 20px; }
+    .doc-content ul, .doc-content ol { padding-left: 20px; }
+    .doc-tip { margin-top: 10px; padding: 10px 12px; background: #f0f7fb; border-left: 3px solid #3c8dbc; color: #666; }
+    .doc-code { margin-top: 8px; padding: 10px; background: #f7f7f7; border: 1px solid #e5e5e5; border-radius: 3px; font-family: Menlo, Consolas, monospace; font-size: 12px; }
+    @media (max-width: 992px) { .doc-layout { display: block; } .doc-sidebar { width: 100%; position: static; margin-right: 0; margin-bottom: 12px; } }
+</style>
+</head>
+<body>
+<div class="doc-page">
+    <div class="doc-layout">
+        <aside class="doc-sidebar">
+            <#assign currentDoc = "hybrid-crypto">
+            <#include "/modules/docs/_sidebar.html">
+        </aside>
+        <main class="doc-content">
+            <h2>混合加解密（RSA + AES）</h2>
+            <p>该能力由 <code>RsaController</code>、<code>RsaService</code>、<code>AesService</code> 共同实现。核心目标是：用 RSA 做密钥交换，用 AES 做业务数据加密，兼顾安全与性能。</p>
+
+            <h3>设计思路</h3>
+            <ul>
+                <li>RSA 负责：服务端密钥对生成、客户端公钥管理、AES 密钥安全下发。</li>
+                <li>AES 负责：业务报文高频加解密（性能优于纯 RSA）。</li>
+                <li>通过 <code>session</code> 关联一套密钥上下文，支持密钥过期与缓冲期平滑切换。</li>
+            </ul>
+            <div class="doc-tip">推荐优先使用 <code>/rsa/api/v1/init</code> 一次性握手接口，可减少客户端交互次数。</div>
+
+            <h3>核心接口</h3>
+            <ul>
+                <li><code>POST /rsa/api/v1/public-key</code>：获取服务端 RSA 公钥。</li>
+                <li><code>POST /rsa/api/v1/client/public-key</code>：上传客户端 RSA 公钥。</li>
+                <li><code>POST /rsa/api/v1/aes-key</code>：获取用客户端公钥加密后的 AES key/vector。</li>
+                <li><code>POST /rsa/api/v1/init</code>：合并握手（服务端公钥 + 客户端公钥登记 + AES 密钥下发）。</li>
+                <li><code>GET/POST /rsa/api/v1/endpoints</code>：获取加密端点描述（由服务端扫描）。</li>
+            </ul>
+
+            <h3>推荐接入流程（客户端）</h3>
+            <ol>
+                <li>客户端生成本地 RSA 密钥对，并生成唯一 <code>session</code>。</li>
+                <li>调用 <code>/rsa/api/v1/init</code> 提交 <code>session + clientPublicKey</code>。</li>
+                <li>从返回中拿到：
+                    <ul>
+                        <li>服务端公钥（后续客户端可用来加密上行敏感内容）</li>
+                        <li>加密后的 AES key/vector（用客户端私钥解密）</li>
+                        <li>加密端点描述（用于判定哪些接口要走加密）</li>
+                    </ul>
+                </li>
+                <li>业务请求改为 AES 加密报文，服务端使用同一 <code>session</code> 解密。</li>
+                <li>若返回密钥相关错误码，重新执行握手流程。</li>
+            </ol>
+
+            <h3>触发条件（请求解密 / 响应加密）</h3>
+            <ul>
+                <li><strong>请求解密（EncryptArgumentResolver.resolveArgument）</strong>：仅当请求体可解析为 <code>Encrypt</code>，且 <code>ciphertext</code> 与 <code>session</code> 都非空时才执行解密。</li>
+                <li><strong>请求不解密的情况</strong>：缺少 <code>ciphertext</code> 或缺少 <code>session</code> 时，不会解密，保留原始对象继续流程。</li>
+                <li><strong>响应加密（EncryptInterceptor.beforeBodyWrite）</strong>：当请求头包含 <code>X-Encrypt-Session</code> 时进入加密流程。</li>
+                <li><strong>返回值兼容增强</strong>：若返回体不是 <code>Encrypt</code>，且是 JSON 响应，会先自动包装为 <code>Response.ok(body)</code> 再加密。</li>
+                <li><strong>响应不加密的情况</strong>：缺少 <code>X-Encrypt-Session</code> 时直接返回原始 body；<code>/rsa/*</code> 接口显式排除，不做响应加密；非 JSON 响应（文件/文本）不做自动包装。</li>
+                <li><strong>算法选择</strong>：响应侧读取 <code>X-Encrypt-Algorithm</code>，默认 <code>AES</code>；若为 <code>RSA</code> 则走 RSA 加密。</li>
+            </ul>
+            <div class="doc-tip">关键判断不是“所有请求都解密/所有响应都加密”，而是“是否携带加密上下文（session/ciphertext/header）”。</div>
+
+            <h3>force 约束说明</h3>
+            <ul>
+                <li>请求侧：解析器中存在 <code>force</code> 校验逻辑，开启后会强制要求 <code>ciphertext</code> 与 <code>session</code> 不可为空。</li>
+                <li>响应侧：拦截器检查方法上的 <code>@Endpoint(force=true)</code>，若未携带 <code>X-Encrypt-Session</code>，返回 <code>FORCE_ENCRYPT_SESSION_REQUIRED</code>。</li>
+            </ul>
+
+            <h3>老接口兼容方案（同接口支持明文 + 加密）</h3>
+            <p>当存量客户端仍走旧明文协议，而新客户端要走加密协议时，建议在请求参数层做兼容，而不是拆两套接口。</p>
+            <ul>
+                <li>新客户端：使用 <code>Request&lt;T&gt;</code> 包装业务数据，按框架规则携带 <code>ciphertext/session</code>。</li>
+                <li>旧客户端：仍提交旧的明文字段。</li>
+                <li>服务端：统一接收 <code>cn.org.autumn.model.CompatibleRequest&lt;T&gt;</code>，优先取 <code>data</code>（新协议），否则回退到旧字段映射。</li>
+                <li>返回值：统一使用 <code>Response&lt;T&gt;</code>，由拦截器依据 <code>X-Encrypt-Session</code> 决定是否加密返回体。</li>
+            </ul>
+            <div class="doc-code">// 示例（xsign）：同一个 hyper 接口同时兼容新旧协议
+@RequestMapping(value = "hyper", method = RequestMethod.POST)
+public Response&lt;Hyper&gt; hyper(@RequestBody(required = false) CompatibleRequest&lt;Hyper&gt; request, HttpServletRequest servlet) {
+    Hyper hyper = request != null ? request.resolveBody(Hyper.class, gson) : null;
+    if (hyper == null) return Response.error("非法请求");
+    Hyper ex = xSignChaoCodeService.exchange(hyper);
+    return ex == null ? Response.error("无效兑换码") : Response.ok(ex);
+}</div>
+
+            <h3>混合模式组合分析（请求/返回）</h3>
+            <table class="table table-bordered table-striped">
+                <thead>
+                <tr>
+                    <th>请求参数形态</th>
+                    <th>返回值形态</th>
+                    <th>行为结果</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td><code>Request&lt;T&gt;</code>（含密文）</td>
+                    <td><code>Response&lt;X&gt;</code></td>
+                    <td>请求解密 + 响应加密（标准推荐路径）</td>
+                </tr>
+                <tr>
+                    <td><code>CompatibleRequest&lt;T&gt;</code>（密文或明文）</td>
+                    <td><code>Response&lt;X&gt;</code></td>
+                    <td>请求兼容解析 + 响应按 header 加密</td>
+                </tr>
+                <tr>
+                    <td>老 DTO（非 Request）</td>
+                    <td><code>Response&lt;X&gt;</code></td>
+                    <td>请求侧无法自动解密；响应可按 header 加密</td>
+                </tr>
+                <tr>
+                    <td><code>CompatibleRequest&lt;T&gt;</code></td>
+                    <td>老返回对象（非 Encrypt）</td>
+                    <td>若带 <code>X-Encrypt-Session</code> 且为 JSON，自动包装后加密</td>
+                </tr>
+                <tr>
+                    <td>任意请求</td>
+                    <td>文件/非 JSON 响应</td>
+                    <td>不做自动包装，保持原返回</td>
+                </tr>
+                </tbody>
+            </table>
+            <div class="doc-tip">你提到的“请求不用 Request 但返回用 Response”的组合是支持的：请求不自动解密，响应仍可依据 <code>X-Encrypt-Session</code> 加密。</div>
+
+            <h3>控制器改造最小模板（3 类接口）</h3>
+            <p>下面给出可直接落地的最小改造方式，优先保证“兼容老客户端 + 支持新加密客户端”，并减少一次性大改风险。</p>
+            <div class="doc-code">// 模板A：推荐新接口（请求兼容 + 返回标准）
+@PostMapping("/biz/create")
+public Response&lt;BizVO&gt; create(@RequestBody(required = false) CompatibleRequest&lt;BizDTO&gt; request) {
+    BizDTO dto = request != null ? request.resolveBody(BizDTO.class, gson) : null;
+    if (dto == null) return Response.error("非法请求");
+    return Response.ok(service.create(dto));
+}</div>
+            <div class="doc-code">// 模板B：老请求对象保留（不走自动解密）+ 返回标准Response
+@PostMapping("/biz/update")
+public Response&lt;Boolean&gt; update(@RequestBody BizDTO dto) {
+    if (dto == null) return Response.error("参数为空");
+    return Response.ok(service.update(dto));
+}</div>
+            <div class="doc-code">// 模板C：老返回对象保留（拦截器会在有X-Encrypt-Session且JSON时自动包装再加密）
+@PostMapping("/biz/get")
+public BizVO get(@RequestBody(required = false) CompatibleRequest&lt;BizQuery&gt; request) {
+    BizQuery query = request != null ? request.resolveBody(BizQuery.class, gson) : null;
+    return service.get(query);
+}</div>
+            <ul>
+                <li><strong>优先级建议</strong>：优先改“高频写接口”和“敏感数据接口”，先用模板A；低风险读接口可先用模板C过渡。</li>
+                <li><strong>一致性建议</strong>：最终目标是全部收敛到模板A（<code>CompatibleRequest&lt;T&gt; + Response&lt;T&gt;</code>）。</li>
+            </ul>
+
+            <h3>批量迁移清单（按控制器执行）</h3>
+            <ol>
+                <li>扫描控制器，分组标记：<code>Request/CompatibleRequest</code> 参数、老 DTO 参数、<code>Response</code> 返回、老对象返回。</li>
+                <li>先改“入参复杂 + 返回敏感”的接口：参数改 <code>CompatibleRequest&lt;T&gt;</code>，返回改 <code>Response&lt;T&gt;</code>。</li>
+                <li>保留老返回对象的接口，验证带 <code>X-Encrypt-Session</code> 时是否已自动包装加密。</li>
+                <li>对下载/导出接口单独核对，确认其 <code>Content-Type</code> 为非 JSON，避免错误包装。</li>
+                <li>逐批灰度，每批完成后回归“明文请求 + 加密请求”两套路径。</li>
+            </ol>
+
+            <h3>验收用例（每个接口至少覆盖）</h3>
+            <ul>
+                <li>明文请求 + 无 <code>X-Encrypt-Session</code>：结果应保持历史行为。</li>
+                <li>加密请求（含 <code>ciphertext/session</code>）+ 有 <code>X-Encrypt-Session</code>：应正确解密并加密返回。</li>
+                <li>明文请求 + 有 <code>X-Encrypt-Session</code>：请求不解密，返回按规则加密（或自动包装后加密）。</li>
+                <li>文件下载接口 + 有 <code>X-Encrypt-Session</code>：不应被包装为 <code>Response</code>。</li>
+                <li><code>@Endpoint(force=true)</code> 接口缺少 session：应返回 <code>FORCE_ENCRYPT_SESSION_REQUIRED</code>。</li>
+            </ul>
+
+            <h3>请求示例</h3>
+            <div class="doc-code">POST /rsa/api/v1/init
+{
+  "session": "device-001",
+  "data": {
+    "publicKey": "-----BEGIN PUBLIC KEY-----...-----END PUBLIC KEY-----",
+    "expireTime": 1760000000000
+  }
+}</div>
+            <div class="doc-code">响应（结构示意）
+{
+  "code": 0,
+  "data": {
+    "ras": {"publicKey":"...", "session":"device-001", "expireTime": ...},
+    "aes": {"key":"<RSA加密后>", "vector":"<RSA加密后>", "session":"device-001", "expireTime": ...},
+    "endpoints": "<AES加密后的JSON字符串>"
+  }
+}</div>
+
+            <h3>关键错误码（常见）</h3>
+            <ul>
+                <li><code>RSA_CLIENT_PUBLIC_KEY_NOT_FOUND (1005)</code>：客户端公钥不存在或过期。</li>
+                <li><code>RSA_KEY_FORMAT_ERROR (1007)</code>：RSA 密钥格式错误。</li>
+                <li><code>RSA_SESSION_REQUIRED (1009)</code>：session 为空。</li>
+                <li><code>AES_KEY_NOT_FOUND (1100)</code>：AES 密钥不存在或过期。</li>
+                <li><code>AES_KEY_FORMAT_ERROR (1105)</code>：AES key/vector 格式异常。</li>
+            </ul>
+
+            <h3>实现细节说明</h3>
+            <ul>
+                <li><code>RsaService.getKey()</code> 与 <code>AesService.getKey()</code> 都带“临期重建”逻辑（客户端缓冲时间）。</li>
+                <li><code>encrypt/decrypt</code> 过程优先使用现有缓存，不在高频路径主动刷新密钥，避免客户端与服务端密钥不同步。</li>
+                <li>服务端配置了“有效期 + 服务端冗余保留时间”，用于密钥轮换期间平滑解密。</li>
+            </ul>
+
+            <h3>安全使用建议</h3>
+            <ul>
+                <li>每个终端/会话使用独立 <code>session</code>，不要多个客户端复用。</li>
+                <li>客户端私钥只保存在本地安全区，不出端。</li>
+                <li>检测到 1005/1100/1003/1103 等错误时，立即重新握手。</li>
+                <li>生产环境建议启用 HTTPS，与报文加密形成双层保护。</li>
+            </ul>
+
+            <div style="margin-top: 16px;">
+                <a class="btn btn-default btn-sm" href="${request.contextPath}/modules/docs/index">返回首页</a>
+                <a class="btn btn-success btn-sm" href="${request.contextPath}/modules/docs/index?done=oauth">返回首页并标记相关章节完成</a>
+            </div>
+        </main>
+    </div>
+</div>
+</body>
+</html>

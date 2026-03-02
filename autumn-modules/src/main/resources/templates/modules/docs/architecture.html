@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Autumn 文档 - 架构与模块</title>
+<#include "/header.html">
+<style>
+    .doc-page { padding: 15px; }
+    .doc-layout { display: flex; align-items: flex-start; }
+    .doc-sidebar { width: 260px; position: sticky; top: 12px; background: #fff; border: 1px solid #d2d6de; border-radius: 3px; padding: 10px 0; margin-right: 15px; }
+    .doc-sidebar-title { font-size: 14px; color: #666; padding: 0 14px 8px; margin: 0 0 8px; border-bottom: 1px solid #f0f0f0; }
+    .doc-nav { list-style: none; margin: 0; padding: 0; }
+    .doc-nav-link { display: block; padding: 8px 14px; color: #333; text-decoration: none; border-left: 3px solid transparent; }
+    .doc-nav-link:hover { background: #f7f7f7; text-decoration: none; }
+    .doc-nav-link.active { color: #3c8dbc; background: #f0f7fb; border-left-color: #3c8dbc; font-weight: 600; }
+    .doc-content { flex: 1; background: #fff; border: 1px solid #d2d6de; border-radius: 3px; padding: 18px; }
+    .doc-content h2 { margin-top: 0; }
+    .doc-content h3 { margin-top: 20px; font-size: 20px; }
+    .doc-content ul { padding-left: 20px; }
+    .doc-block { border: 1px solid #e5e5e5; border-radius: 3px; padding: 10px 12px; margin-bottom: 10px; }
+    .doc-code { margin-top: 8px; padding: 10px; background: #f7f7f7; border: 1px solid #e5e5e5; border-radius: 3px; font-family: Menlo, Consolas, monospace; font-size: 12px; }
+    @media (max-width: 992px) { .doc-layout { display: block; } .doc-sidebar { width: 100%; position: static; margin-right: 0; margin-bottom: 12px; } }
+</style>
+</head>
+<body>
+<div class="doc-page">
+    <div class="doc-layout">
+        <aside class="doc-sidebar">
+            <#assign currentDoc = "architecture">
+            <#include "/modules/docs/_sidebar.html">
+        </aside>
+        <main class="doc-content">
+            <h2>架构与模块</h2>
+            <p>本页用于让开发者先理解系统边界，再进入各模块细节。</p>
+
+            <h3>工程分层</h3>
+            <div class="doc-block">
+                <ul>
+                    <li>autumn-lib：公共能力与基础工具</li>
+                    <li>autumn-modules：业务核心模块（sys/gen/job/oauth/wall 等）</li>
+                    <li>autumn-web：系统启动入口与页面承载</li>
+                </ul>
+            </div>
+
+            <h3>典型请求链路</h3>
+            <div class="doc-block">
+                <ul>
+                    <li>前端页面（templates/modules/...）</li>
+                    <li>Controller 接口路由</li>
+                    <li>Service 业务处理</li>
+                    <li>Dao 数据访问</li>
+                </ul>
+            </div>
+
+            <h3>权限与数据权限</h3>
+            <ul>
+                <li>菜单权限控制到页面与按钮级</li>
+                <li>数据权限按角色、部门和本人数据范围控制</li>
+                <li>管理员具备系统级操作能力</li>
+            </ul>
+
+            <h3>文档补齐建议</h3>
+            <ul>
+                <li>补充系统上下文图（模块依赖关系）</li>
+                <li>补充权限矩阵（角色 x 菜单 x 接口）</li>
+                <li>补充配置项索引（按模块归类）</li>
+            </ul>
+
+            <h3>配置项分层模板（待补齐）</h3>
+            <table class="table table-bordered table-striped">
+                <thead>
+                <tr>
+                    <th>层级</th>
+                    <th>典型配置</th>
+                    <th>说明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>基础设施层</td>
+                    <td>数据库/缓存/消息中间件</td>
+                    <td>运行环境依赖配置</td>
+                </tr>
+                <tr>
+                    <td>业务模块层</td>
+                    <td>sys/gen/job/wall 等模块开关</td>
+                    <td>模块行为控制配置</td>
+                </tr>
+                </tbody>
+            </table>
+
+            <h3>接口分层模板</h3>
+            <div class="doc-code">页面路由: /modules/{module}/{url}</div>
+            <div class="doc-code">业务接口: /{module}/{resource}/{action}</div>
+
+            <div style="margin-top: 16px;">
+                <a class="btn btn-default btn-sm" href="${request.contextPath}/modules/docs/index">返回首页</a>
+                <a class="btn btn-success btn-sm" href="${request.contextPath}/modules/docs/index?done=architecture">返回首页并标记本章完成</a>
+            </div>
+        </main>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Autumn 文档 - 超级位置模型（spm）</title>
+<#include "/header.html">
+<style>
+    .doc-page { padding: 15px; }
+    .doc-layout { display: flex; align-items: flex-start; }
+    .doc-sidebar { width: 260px; position: sticky; top: 12px; background: #fff; border: 1px solid #d2d6de; border-radius: 3px; padding: 10px 0; margin-right: 15px; }
+    .doc-sidebar-title { font-size: 14px; color: #666; padding: 0 14px 8px; margin: 0 0 8px; border-bottom: 1px solid #f0f0f0; }
+    .doc-nav { list-style: none; margin: 0; padding: 0; }
+    .doc-nav-link { display: block; padding: 8px 14px; color: #333; text-decoration: none; border-left: 3px solid transparent; }
+    .doc-nav-link:hover { background: #f7f7f7; text-decoration: none; }
+    .doc-nav-link.active { color: #3c8dbc; background: #f0f7fb; border-left-color: #3c8dbc; font-weight: 600; }
+    .doc-content { flex: 1; background: #fff; border: 1px solid #d2d6de; border-radius: 3px; padding: 18px; }
+    .doc-content h2 { margin-top: 0; }
+    .doc-content h3 { margin-top: 20px; font-size: 20px; }
+    .doc-content ul { padding-left: 20px; }
+    .doc-note { margin-top: 10px; padding: 10px 12px; background: #f0f7fb; border-left: 3px solid #3c8dbc; color: #666; }
+    .doc-code { margin-top: 8px; padding: 10px; background: #f7f7f7; border: 1px solid #e5e5e5; border-radius: 3px; font-family: Menlo, Consolas, monospace; font-size: 12px; }
+    @media (max-width: 992px) { .doc-layout { display: block; } .doc-sidebar { width: 100%; position: static; margin-right: 0; margin-bottom: 12px; } }
+</style>
+</head>
+<body>
+<div class="doc-page">
+    <div class="doc-layout">
+        <aside class="doc-sidebar">
+            <#assign currentDoc = "spm">
+            <#include "/modules/docs/_sidebar.html">
+        </aside>
+        <main class="doc-content">
+            <h2>超级位置模型（spm）</h2>
+            <p>用于埋点建模与访问日志分析，支持业务点击/访问统计场景。</p>
+            <h3>功能入口</h3>
+            <ul>
+                <li>模型管理：<code>/spm/superpositionmodel/list|save|update|delete</code></li>
+                <li>访问日志：<code>/spm/visitlog/list|info</code></li>
+                <li>页面资源映射：<code>/admin</code>、<code>/</code>、<code>/{value}</code>（SpmController）</li>
+            </ul>
+            <h3>建议补充</h3>
+            <ul>
+                <li>埋点字段规范（事件名、来源、位置、上下文）</li>
+                <li>指标口径定义（PV/UV/转化）</li>
+                <li>从埋点到报表的全链路示例</li>
+            </ul>
+            <div class="doc-note">建议补充“埋点版本变更策略”，确保老数据可兼容解析。</div>
+
+            <h3>关键配置项（来自 sys_config.param_key）</h3>
+            <table class="table table-bordered table-striped">
+                <thead>
+                <tr>
+                    <th>配置键</th>
+                    <th>默认值</th>
+                    <th>说明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>MENU_WITH_SPM</td>
+                    <td>1</td>
+                    <td>菜单是否启用 SPM 模式统计（默认开启）</td>
+                </tr>
+                <tr>
+                    <td>SITE_DOMAIN</td>
+                    <td>localhost,127.0.0.1,...</td>
+                    <td>影响 SPM 页面域名匹配与访问入口</td>
+                </tr>
+                </tbody>
+            </table>
+
+            <h3>API 示例（真实路径）</h3>
+            <div class="doc-code">GET /spm/superpositionmodel/list?page=1&amp;limit=10</div>
+            <div class="doc-code">GET /spm/visitlog/list?page=1&amp;limit=20</div>
+            <div class="doc-code">GET /spm/superpositionmodel/info/1</div>
+            <div class="doc-code">GET /admin?spm=home.dashboard</div>
+            <div class="doc-code">{"code":0,"msg":"success","page":{"list":[...]}}</div>
+
+            <h3>页面入口（templates）</h3>
+            <ul>
+                <li><code>/modules/spm/superpositionmodel</code> -> <code>templates/modules/spm/superpositionmodel.html</code></li>
+                <li><code>/modules/spm/visitlog</code> -> <code>templates/modules/spm/visitlog.html</code></li>
+            </ul>
+
+            <h3>权限码清单</h3>
+            <div class="doc-code">spm:superpositionmodel:list|info|save|update|delete</div>
+            <div class="doc-code">spm:visitlog:list|info|save|update|delete</div>
+
+            <h3>最小可跑通用例</h3>
+            <ol>
+                <li>确认账号具备 <code>spm:superpositionmodel:list</code> 和 <code>spm:visitlog:list</code>。</li>
+                <li>访问 <code>/modules/spm/superpositionmodel</code>，确认模型列表可加载。</li>
+                <li>调用 <code>GET /spm/visitlog/list?page=1&amp;limit=20</code>，查看访问日志。</li>
+                <li>以带 <code>spm</code> 参数访问页面（如 <code>/admin?spm=home.dashboard</code>）后复查日志新增记录。</li>
+            </ol>
+
+            <h3>故障排查模板</h3>
+            <table class="table table-bordered table-striped">
+                <thead>
+                <tr>
+                    <th>现象</th>
+                    <th>可能原因</th>
+                    <th>处理建议</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>埋点无数据</td>
+                    <td>采集开关关闭或上报失败</td>
+                    <td>检查采集配置与上报日志</td>
+                </tr>
+                <tr>
+                    <td>统计数据异常</td>
+                    <td>指标口径不一致</td>
+                    <td>统一口径并回溯计算逻辑</td>
+                </tr>
+                </tbody>
+            </table>
+
+            <div style="margin-top: 16px;">
+                <a class="btn btn-default btn-sm" href="${request.contextPath}/modules/docs/index">返回首页</a>
+                <a class="btn btn-success btn-sm" href="${request.contextPath}/modules/docs/index?done=spm">返回首页并标记本章完成</a>
+            </div>
+        </main>
+    </div>
+</div>
+</body>
+</html>
