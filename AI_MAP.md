@@ -63,11 +63,15 @@
   - `cn.org.autumn.model.CompatibleRequest`
   - `cn.org.autumn.modules.oauth.resolver.EncryptArgumentResolver`
   - `cn.org.autumn.modules.oauth.interceptor.EncryptInterceptor`
+- 适用边界（务必遵守）：
+  - 如果请求参数类型已经是 `Encrypt` 接口实现类，则不需要做 `CompatibleRequest<T>` 兼容处理。
+  - 如果返回参数类型已经是 `Encrypt` 接口实现类，则不需要做额外兼容性包装处理。
 - 行为矩阵（给 AI 的判断规则）：
   - `CompatibleRequest<T> + Response<T>`：请求可明文/密文兼容，响应按 `X-Encrypt-Session` 决定是否加密（推荐）。
   - 老 DTO + `Response<T>`：请求不自动解密，响应可按 header 加密（过渡可用）。
   - `CompatibleRequest<T> + 老返回对象`：若带 `X-Encrypt-Session` 且为 JSON，自动包装后加密（过渡可用）。
   - 任意请求 + 文件下载/非 JSON 返回：不自动包装，不做强制加密包装。
+  - `请求或返回已实现 Encrypt`：保持原有入参与出参类型，不新增兼容层。
 - 控制器最小模板（跨项目直接套用）：
 
 ```java
@@ -153,6 +157,7 @@ public class DemoJob implements LoopJob.OneMinute {
 - 改业务逻辑优先“覆盖扩展点”而非修改内核流程。
 - 涉及缓存更新必须同步考虑失效策略（删除单值 + 列表缓存）。
 - 涉及加解密必须先判断触发条件（header/请求体字段/接口排除）。
+- 涉及兼容改造时，先判断请求/返回类型是否已实现 `Encrypt`；若已实现则禁止再做兼容包装。
 - 涉及队列消费必须给出失败、重试、死信处理策略。
 - 涉及定时任务时，优先接口式任务（`LoopJob.OneMinute/FiveMinute/...`），避免不必要的 cron 表达式。
 

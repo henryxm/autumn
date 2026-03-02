@@ -1,5 +1,6 @@
 package cn.org.autumn.model;
 
+import cn.org.autumn.config.GsonConfig;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.google.gson.Gson;
@@ -23,16 +24,16 @@ public class CompatibleRequest<T> extends Request<T> {
     /**
      * 旧协议明文请求体字段（非 Request 标准字段）
      */
-    private Map<String, Object> legacyBody = new LinkedHashMap<>();
+    private Map<String, Object> legacy = new LinkedHashMap<>();
 
     @JsonAnySetter
-    public void putLegacyField(String key, Object value) {
-        legacyBody.put(key, value);
+    public void putLegacy(String key, Object value) {
+        legacy.put(key, value);
     }
 
     @JsonIgnore
-    public boolean hasLegacyBody() {
-        return legacyBody != null && !legacyBody.isEmpty();
+    public boolean hasLegacy() {
+        return legacy != null && !legacy.isEmpty();
     }
 
     /**
@@ -46,7 +47,7 @@ public class CompatibleRequest<T> extends Request<T> {
      * @return 业务对象；无法解析时返回 null
      */
     @JsonIgnore
-    public <X> X resolveBody(Class<X> clazz, Gson gson) {
+    public <X> X resolve(Class<X> clazz, Gson gson) {
         if (clazz == null || gson == null) {
             return null;
         }
@@ -57,9 +58,13 @@ public class CompatibleRequest<T> extends Request<T> {
             }
             return gson.fromJson(gson.toJson(data), clazz);
         }
-        if (hasLegacyBody()) {
-            return gson.fromJson(gson.toJson(legacyBody), clazz);
+        if (hasLegacy()) {
+            return gson.fromJson(gson.toJson(legacy), clazz);
         }
         return null;
+    }
+
+    public static <X> X resolve(CompatibleRequest<X> request, Class<X> clazz) {
+        return request != null ? request.resolve(clazz, GsonConfig.getGson()) : null;
     }
 }

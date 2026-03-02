@@ -65,7 +65,7 @@ public class EncryptArgumentResolver extends RequestResponseBodyMethodProcessor 
     @Override
     public Object resolveArgument(@NonNull MethodParameter parameter, @Nullable ModelAndViewContainer mavContainer, @NonNull NativeWebRequest webRequest, @Nullable WebDataBinderFactory binderFactory) throws Exception {
         Object object = super.resolveArgument(parameter, mavContainer, webRequest, binderFactory);
-        if (null != object && log.isDebugEnabled()) {
+        if (log.isDebugEnabled()) {
             log.debug("原始请求:{}", gson.toJson(object));
         }
         if (object instanceof Encrypt) {
@@ -95,13 +95,13 @@ public class EncryptArgumentResolver extends RequestResponseBodyMethodProcessor 
                     // 自动将解密JSON回填到 legacyBody，供 resolveBody() 回退解析旧协议字段。
                     if (object instanceof CompatibleRequest) {
                         CompatibleRequest<?> compatible = (CompatibleRequest<?>) object;
-                        if (compatible.getData() == null && (compatible.getLegacyBody() == null || compatible.getLegacyBody().isEmpty())) {
+                        if (compatible.getData() == null && (compatible.getLegacy() == null || compatible.getLegacy().isEmpty())) {
                             Map<?, ?> map = gson.fromJson(decrypt, Map.class);
                             if (map != null && !map.isEmpty()) {
                                 for (Map.Entry<?, ?> entry : map.entrySet()) {
                                     Object k = entry.getKey();
                                     if (k != null) {
-                                        compatible.putLegacyField(String.valueOf(k), entry.getValue());
+                                        compatible.putLegacy(String.valueOf(k), entry.getValue());
                                     }
                                 }
                             }
