@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Autumn 文档 - Handler 机制</title>
+<#include "/header.html">
+<style>
+    .doc-page { padding: 15px; }
+    .doc-layout { display: flex; align-items: flex-start; }
+    .doc-sidebar { width: 260px; position: sticky; top: 12px; background: #fff; border: 1px solid #d2d6de; border-radius: 3px; padding: 10px 0; margin-right: 15px; }
+    .doc-sidebar-title { font-size: 14px; color: #666; padding: 0 14px 8px; margin: 0 0 8px; border-bottom: 1px solid #f0f0f0; }
+    .doc-nav { list-style: none; margin: 0; padding: 0; }
+    .doc-nav-link { display: block; padding: 8px 14px; color: #333; text-decoration: none; border-left: 3px solid transparent; }
+    .doc-nav-link:hover { background: #f7f7f7; text-decoration: none; }
+    .doc-nav-link.active { color: #3c8dbc; background: #f0f7fb; border-left-color: #3c8dbc; font-weight: 600; }
+    .doc-content { flex: 1; background: #fff; border: 1px solid #d2d6de; border-radius: 3px; padding: 18px; }
+    .doc-content h2 { margin-top: 0; }
+    .doc-content h3 { margin-top: 20px; font-size: 20px; }
+    .doc-content ul { padding-left: 20px; }
+    .doc-code { margin-top: 8px; padding: 10px; background: #f7f7f7; border: 1px solid #e5e5e5; border-radius: 3px; font-family: Menlo, Consolas, monospace; font-size: 12px; }
+    .doc-tip { margin-top: 10px; padding: 10px 12px; background: #f0f7fb; border-left: 3px solid #3c8dbc; color: #666; }
+    .doc-table td code { white-space: nowrap; }
+    @media (max-width: 992px) { .doc-layout { display: block; } .doc-sidebar { width: 100%; position: static; margin-right: 0; margin-bottom: 12px; } }
+</style>
+</head>
+<body>
+<div class="doc-page">
+    <div class="doc-layout">
+        <aside class="doc-sidebar">
+            <#assign currentDoc = "handler">
+            <#include "/modules/docs/_sidebar.html">
+        </aside>
+        <main class="doc-content">
+            <h2>Handler 机制（autumn-handler）</h2>
+            <p>本章用于说明 Autumn 在分模块开发模式下，如何通过 Handler 接口把“模块业务能力”接入“框架主流程”。</p>
+
+            <h3>为什么需要 Handler</h3>
+            <ul>
+                <li>将框架流程与模块实现解耦：框架定义接口，模块按需实现。</li>
+                <li>支持可插拔扩展：默认接口通常通过 <code>@ConditionalOnMissingBean</code> 提供兜底。</li>
+                <li>支持顺序控制：部分 Handler 通过 <code>@Order</code> 参与优先级编排。</li>
+            </ul>
+            <div class="doc-tip">典型场景：模块希望定制登录页、鉴权链、资源解析、插件装载、集群用户映射等能力，不改核心框架代码即可接入。</div>
+
+            <h3>按职责分组的核心 Handler</h3>
+            <table class="table table-bordered table-striped doc-table">
+                <thead>
+                <tr><th>分组</th><th>接口示例</th><th>用途</th></tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>页面与视图</td>
+                    <td><code>PageHandler</code> / <code>ViewHandler</code></td>
+                    <td>定制 login/index/main/error 等页面路由与视图解析。</td>
+                </tr>
+                <tr>
+                    <td>安全与拦截链</td>
+                    <td><code>FilterChainHandler</code> / <code>InterceptorHandler</code> / <code>WallHandler</code></td>
+                    <td>定义过滤链、拦截器匹配规则、墙策略关联点。</td>
+                </tr>
+                <tr>
+                    <td>配置与初始化</td>
+                    <td><code>InitHandler</code> / <code>RefreshHandler</code> / <code>ResolverHandler</code></td>
+                    <td>初始化、刷新、参数解析等生命周期扩展点。</td>
+                </tr>
+                <tr>
+                    <td>插件与资源</td>
+                    <td><code>PluginHandler</code> / <code>ResourceHandler</code> / <code>LoadHandler</code></td>
+                    <td>插件装载、资源暴露和加载策略扩展。</td>
+                </tr>
+                <tr>
+                    <td>集群与用户映射</td>
+                    <td><code>ServiceHandler</code> / <code>UserHandler</code> / <code>PermissionHandler</code></td>
+                    <td>服务地址、跨系统用户映射、权限映射能力。</td>
+                </tr>
+                <tr>
+                    <td>检索与监听</td>
+                    <td><code>SearchHandler</code> / <code>LoginListenerHandler</code></td>
+                    <td>统一检索入口与登录事件监听扩展。</td>
+                </tr>
+                </tbody>
+            </table>
+
+            <h3>分模块开发中的调用关系（示例）</h3>
+            <ol>
+                <li>模块实现某个 Handler（例如 <code>PageHandler</code>）并注册为 Spring Bean。</li>
+                <li>框架在执行流程节点时按接口查找实现（无实现时使用默认行为）。</li>
+                <li>若有多个实现，按 <code>@Order</code> 或框架策略挑选有效实现。</li>
+                <li>最终输出进入 Controller/Filter/View 等主流程执行。</li>
+            </ol>
+            <div class="doc-code">模块实现 Handler -> Spring 注入 -> 框架节点回调 -> 返回控制结果（路由/配置/映射）</div>
+
+            <h3>项目实现地图（当前代码）</h3>
+            <table class="table table-bordered table-striped doc-table">
+                <thead>
+                <tr><th>Handler接口</th><th>主要实现类</th><th>位置</th><th>作用</th></tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td><code>PageHandler</code></td>
+                    <td><code>DefaultPage</code></td>
+                    <td><code>autumn-modules/.../site/DefaultPage.java</code></td>
+                    <td>默认 login/index/main/error 页面分发。</td>
+                </tr>
+                <tr>
+                    <td><code>InterceptorHandler</code></td>
+                    <td><code>LanguageInterceptor</code> / <code>SpmInterceptor</code> / <code>EncryptInterceptor</code></td>
+                    <td><code>autumn-modules/.../interceptor/*.java</code></td>
+                    <td>多语言、SPM、加密拦截等横切流程接入。</td>
+                </tr>
+                <tr>
+                    <td><code>SearchHandler</code></td>
+                    <td><code>SysSearchService</code></td>
+                    <td><code>autumn-modules/.../sys/service/SysSearchService.java</code></td>
+                    <td>统一搜索入口与类型分发。</td>
+                </tr>
+                <tr>
+                    <td><code>WallHandler</code></td>
+                    <td><code>WallDefault</code></td>
+                    <td><code>autumn-modules/.../wall/site/WallDefault.java</code></td>
+                    <td>防火墙总开关及子能力开关状态承载。</td>
+                </tr>
+                <tr>
+                    <td><code>ResolverHandler</code></td>
+                    <td><code>LoginUserHandlerMethodArgumentResolver</code></td>
+                    <td><code>autumn-modules/.../usr/resolver/*.java</code></td>
+                    <td>Controller 参数解析扩展（登录用户注入）。</td>
+                </tr>
+                <tr>
+                    <td><code>DomainHandler</code></td>
+                    <td><code>WebAuthenticationService</code> / <code>ClientDetailsService</code> 等</td>
+                    <td><code>autumn-modules/.../service/*.java</code></td>
+                    <td>域名与认证/客户端能力协同。</td>
+                </tr>
+                <tr>
+                    <td><code>CategoryHandler</code></td>
+                    <td><code>SysCategoryService</code> / <code>LanguageService</code></td>
+                    <td><code>autumn-modules/.../service/*.java</code></td>
+                    <td>分类与配置分类数据提供。</td>
+                </tr>
+                <tr>
+                    <td><code>ClearHandler</code></td>
+                    <td>多处服务实现（如 <code>SysConfigService</code>、<code>IpBlackService</code>）</td>
+                    <td><code>autumn-modules/.../service/*.java</code></td>
+                    <td>缓存/状态清理与重置流程接入。</td>
+                </tr>
+                </tbody>
+            </table>
+
+            <h3>推荐阅读顺序（从流程到实现）</h3>
+            <ol>
+                <li>先看 <code>PageHandler</code> 与 <code>DefaultPage</code>，理解页面入口如何被接管。</li>
+                <li>再看 <code>InterceptorHandler</code> 系列实现，理解请求链路中的横切处理。</li>
+                <li>再看 <code>DomainHandler/CategoryHandler/ClearHandler</code>，理解模块如何介入配置与运维流程。</li>
+                <li>最后看 <code>SearchHandler/ResolverHandler</code>，理解通用能力如何被统一抽象。</li>
+            </ol>
+
+            <h3>Handler 接口索引（含实现状态）</h3>
+            <table class="table table-bordered table-striped doc-table">
+                <thead>
+                <tr><th>分组</th><th>接口</th><th>状态</th><th>当前实现示例</th></tr>
+                </thead>
+                <tbody>
+                <tr><td>config</td><td><code>PageHandler</code></td><td>已实现</td><td><code>DefaultPage</code></td></tr>
+                <tr><td>config</td><td><code>InterceptorHandler</code></td><td>已实现</td><td><code>LanguageInterceptor</code> / <code>SpmInterceptor</code> / <code>EncryptInterceptor</code></td></tr>
+                <tr><td>config</td><td><code>ViewHandler</code></td><td>已实现</td><td><code>NoneSuffixViewHandler</code></td></tr>
+                <tr><td>config</td><td><code>DomainHandler</code></td><td>已实现</td><td><code>SysConfigService</code> / <code>WebAuthenticationService</code></td></tr>
+                <tr><td>config</td><td><code>CategoryHandler</code></td><td>已实现</td><td><code>SysCategoryService</code> / <code>LanguageService</code></td></tr>
+                <tr><td>config</td><td><code>RoleHandler</code></td><td>已实现</td><td><code>SysUserRoleService</code></td></tr>
+                <tr><td>config</td><td><code>ResourceHandler</code></td><td>已实现</td><td><code>StaticsResourceHandler</code></td></tr>
+                <tr><td>config</td><td><code>ResolverHandler</code></td><td>已实现</td><td><code>LoginUserHandlerMethodArgumentResolver</code></td></tr>
+                <tr><td>config</td><td><code>AccountHandler</code></td><td>已实现</td><td><code>UserOpenService</code> / <code>UserTokenService</code></td></tr>
+                <tr><td>config</td><td><code>WallHandler</code></td><td>已实现</td><td><code>WallDefault</code></td></tr>
+                <tr><td>config</td><td><code>ClearHandler</code></td><td>已实现</td><td><code>SysConfigService</code> / <code>EhCacheManager</code> 等</td></tr>
+                <tr><td>config</td><td><code>VariablesHandler</code></td><td>已实现</td><td><code>Shiro</code> / <code>SpmService</code></td></tr>
+                <tr><td>config</td><td><code>EncryptConfigHandler</code></td><td>已实现</td><td><code>DefaultEncryptConfigHandler</code></td></tr>
+                <tr><td>config</td><td><code>DeleteHandler</code></td><td>已实现</td><td><code>DeleteFactory</code></td></tr>
+                <tr><td>config</td><td><code>VersionHandler</code></td><td>已实现</td><td><code>AutumnVersionHandler</code> / <code>SpringBootVersionHandler</code></td></tr>
+                <tr><td>config</td><td><code>FilterChainHandler</code></td><td>待扩展</td><td>（当前未发现直接实现）</td></tr>
+                <tr><td>config</td><td><code>PluginHandler</code> / <code>LoadHandler</code> / <code>InitHandler</code></td><td>待扩展</td><td>（可按业务模块实现）</td></tr>
+                <tr><td>config</td><td><code>RefreshHandler</code> / <code>UsingHandler</code> / <code>UserTokenHandler</code> / <code>SwaggerHandler</code> / <code>TableHandler</code> / <code>RejectedHandler</code> / <code>LoginListenerHandler</code> / <code>AllInOneHandler</code></td><td>待扩展</td><td>（接口预留）</td></tr>
+                <tr><td>cluster</td><td><code>HealthHandler</code></td><td>已实现</td><td><code>AutumnVersionHandler</code></td></tr>
+                <tr><td>cluster</td><td><code>ServiceHandler</code> / <code>UserHandler</code> / <code>PermissionHandler</code></td><td>待扩展</td><td>（用于集群用户与权限映射）</td></tr>
+                <tr><td>search</td><td><code>SearchHandler</code></td><td>已实现</td><td><code>SysSearchService</code></td></tr>
+                </tbody>
+            </table>
+            <div class="doc-tip">说明：这里的“待扩展”表示当前仓库未发现直接实现类，接口依然可在模块中按需实现并由框架自动接入。</div>
+
+            <h3>源码定位清单（可直接在 IDE 搜索）</h3>
+            <ul>
+                <li><code>PageHandler</code>：<code>autumn-handler/src/main/java/cn/org/autumn/config/PageHandler.java</code>，实现：<code>autumn-modules/src/main/java/cn/org/autumn/site/DefaultPage.java</code></li>
+                <li><code>InterceptorHandler</code>：<code>autumn-handler/src/main/java/cn/org/autumn/config/InterceptorHandler.java</code>，实现目录：<code>autumn-modules/src/main/java/cn/org/autumn/modules/**/interceptor/</code></li>
+                <li><code>SearchHandler</code>：<code>autumn-handler/src/main/java/cn/org/autumn/search/SearchHandler.java</code>，实现：<code>autumn-modules/src/main/java/cn/org/autumn/modules/sys/service/SysSearchService.java</code></li>
+                <li><code>WallHandler</code>：<code>autumn-handler/src/main/java/cn/org/autumn/config/WallHandler.java</code>，实现：<code>autumn-modules/src/main/java/cn/org/autumn/modules/wall/site/WallDefault.java</code></li>
+                <li><code>ResolverHandler</code>：<code>autumn-handler/src/main/java/cn/org/autumn/config/ResolverHandler.java</code>，实现：<code>autumn-modules/src/main/java/cn/org/autumn/modules/usr/resolver/LoginUserHandlerMethodArgumentResolver.java</code></li>
+            </ul>
+            <div class="doc-code">推荐检索1：implements .*Handler</div>
+            <div class="doc-code">推荐检索2：@ConditionalOnMissingBean(.*Handler.class)</div>
+            <div class="doc-code">推荐检索3：@Order(</div>
+
+            <h3>命名注意点</h3>
+            <ul>
+                <li>项目中存在两个 <code>VersionHandler</code>：<code>cn.org.autumn.config.VersionHandler</code> 与 <code>cn.org.autumn.cluster.VersionHandler</code>，阅读和实现时需注意导包。</li>
+                <li>部分能力通过扩展工厂接口（如 <code>InitFactory.Init</code>、<code>LoadFactory.Load</code>）介入，不完全以 “*Handler” 命名出现。</li>
+            </ul>
+
+            <h3>新增模块接入 Handler 标准模板</h3>
+            <p>以下模板可作为团队统一规范，新增模块时优先采用“最小覆写 + 清晰优先级 + 可验证日志”策略。</p>
+
+            <h4>模板一：页面路由接入（PageHandler）</h4>
+            <div class="doc-code">package cn.org.autumn.modules.demo.site;
+
+import cn.org.autumn.config.PageHandler;
+import org.springframework.core.annotation.Order;
+import org.springframework.stereotype.Component;
+import org.springframework.ui.Model;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+
+@Component
+@Order(100)
+public class DemoPageHandler implements PageHandler {
+    @Override
+    public String login(HttpServletRequest req, HttpServletResponse resp, Model model) {
+        // 仅在需要接管登录页时返回具体视图；否则返回空字符串交给后续处理
+        return "";
+    }
+}</div>
+
+            <h4>模板二：请求拦截接入（InterceptorHandler）</h4>
+            <div class="doc-code">package cn.org.autumn.modules.demo.interceptor;
+
+import cn.org.autumn.config.InterceptorHandler;
+import org.springframework.stereotype.Component;
+import org.springframework.web.servlet.HandlerInterceptor;
+import java.util.Arrays;
+import java.util.List;
+
+@Component
+public class DemoInterceptorHandler implements InterceptorHandler {
+    @Override
+    public HandlerInterceptor getHandlerInterceptor() {
+        return new DemoInterceptor();
+    }
+
+    @Override
+    public List<String> getPatterns() {
+        return Arrays.asList("/modules/demo/**", "/api/demo/**");
+    }
+
+    @Override
+    public List<String> getExcludePatterns() {
+        return Arrays.asList("/api/demo/health");
+    }
+}</div>
+
+            <h4>模板三：参数解析接入（ResolverHandler）</h4>
+            <div class="doc-code">package cn.org.autumn.modules.demo.resolver;
+
+import cn.org.autumn.config.ResolverHandler;
+import org.springframework.core.MethodParameter;
+import org.springframework.stereotype.Component;
+import org.springframework.web.bind.support.WebDataBinderFactory;
+import org.springframework.web.context.request.NativeWebRequest;
+import org.springframework.web.method.support.HandlerMethodArgumentResolver;
+import org.springframework.web.method.support.ModelAndViewContainer;
+
+@Component
+public class DemoArgumentResolver implements HandlerMethodArgumentResolver, ResolverHandler {
+    @Override
+    public boolean supportsParameter(MethodParameter parameter) {
+        return parameter.getParameterType().equals(DemoContext.class);
+    }
+
+    @Override
+    public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer,
+                                  NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
+        return new DemoContext();
+    }
+}</div>
+
+            <h3>接入验证清单（建议在 PR 中勾选）</h3>
+            <ul>
+                <li>实现类已加 <code>@Component</code>，并确认启动扫描路径可覆盖。</li>
+                <li>若存在多个实现，已明确 <code>@Order</code> 并记录排序理由。</li>
+                <li>关键方法有最小日志（至少能确认是否命中实现）。</li>
+                <li>已在文档页登记“接口名 -> 实现类 -> 作用 -> 验证方式”。</li>
+                <li>已完成一次端到端验证（页面访问/接口调用/返回结果）。</li>
+            </ul>
+
+            <h3>提交前检查（避免常见回归）</h3>
+            <table class="table table-bordered table-striped">
+                <thead><tr><th>检查项</th><th>风险</th><th>建议</th></tr></thead>
+                <tbody>
+                <tr><td>返回空字符串语义错误</td><td>可能导致错误抢占或流程短路</td><td>只有“明确接管”才返回非空，其他情况返回空字符串</td></tr>
+                <tr><td>拦截路径过宽</td><td>误伤静态资源与登录流程</td><td>先限定到模块路径，再逐步扩大</td></tr>
+                <tr><td>多个实现优先级冲突</td><td>行为不稳定、环境差异大</td><td>统一在团队内约定 Order 区间</td></tr>
+                </tbody>
+            </table>
+
+            <h3>最小接入步骤</h3>
+            <ol>
+                <li>在业务模块中新建实现类（例如实现 <code>PageHandler</code>）。</li>
+                <li>只覆写必要方法（例如 <code>login()</code>、<code>index()</code>）。</li>
+                <li>添加 <code>@Component</code> 并设置合适 <code>@Order</code>（若需优先级）。</li>
+                <li>启动后访问对应页面，验证是否命中你的实现。</li>
+            </ol>
+            <div class="doc-code">public class CustomPageHandler implements PageHandler { public String login(...) { return "oauth2/login"; } }</div>
+
+            <h3>常见问题</h3>
+            <table class="table table-bordered table-striped">
+                <thead><tr><th>现象</th><th>可能原因</th><th>处理建议</th></tr></thead>
+                <tbody>
+                <tr><td>实现未生效</td><td>Bean 未被扫描或包路径不在扫描范围</td><td>确认启动类扫描路径与实现类注解</td></tr>
+                <tr><td>命中错误实现</td><td>多实现并存且优先级不明确</td><td>通过 <code>@Order</code> 明确顺序，保留一个主实现</td></tr>
+                <tr><td>流程回调参数为空</td><td>调用节点与预期不一致</td><td>先在实现中加日志，确认实际调用时机与上下文</td></tr>
+                </tbody>
+            </table>
+
+            <div style="margin-top: 16px;">
+                <a class="btn btn-default btn-sm" href="${request.contextPath}/modules/docs/index">返回首页</a>
+                <a class="btn btn-success btn-sm" href="${request.contextPath}/modules/docs/index?done=handler">返回首页并标记本章完成</a>
+            </div>
+        </main>
+    </div>
+</div>
+</body>
+</html>

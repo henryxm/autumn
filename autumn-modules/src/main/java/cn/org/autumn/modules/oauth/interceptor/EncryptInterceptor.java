@@ -69,8 +69,9 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
 
     @Override
     public boolean supports(@NonNull MethodParameter returnType, @NonNull Class<? extends HttpMessageConverter<?>> converterType) {
-        Method method = returnType.getMethod();
-        return method != null && Encrypt.class.isAssignableFrom(method.getReturnType());
+        // 兼容模式：不再依赖“方法声明返回类型必须是 Encrypt”。
+        // 统一进入 beforeBodyWrite 后按运行时 body 与 header 决定是否加密。
+        return true;
     }
 
     @Override
@@ -110,26 +111,35 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
             // 没有X-Encrypt-Session header，不进行响应加密，使用之前的流程
             return body;
         }
-        // 只对实现了Encrypt接口的响应进行加密
-        if (body instanceof Encrypt) {
-            try {
-                long start = System.currentTimeMillis();
-                // 将响应体序列化为JSON
-                String json = gson.toJson(body);
-                //使用AES密钥加密响应数据 或者使用RSA进行加密
-                //当使用RSA加密时，使用客户端的公钥进行加密
-                String encrypt = "RSA".equals(algorithm) ? rsaService.encrypt(json, session) : aesService.encrypt(json, session);
-                // 使用反射创建返回值类型的实例
-                body = response(body, encrypt, algorithm, session);
-                long end = System.currentTimeMillis();
-                if (log.isDebugEnabled()) {
-                    log.debug("加密长度:{}, 耗时:{}毫秒", json.length(), end - start);
-                    log.debug("加密返回:{}, 内容:{}, 密文:{}", session, json, encrypt);
-                }
-            } catch (Exception e) {
-                log.error("加密失败: {}, URI: {}, 错误: {}", session, uri, e.getMessage());
-                return Response.error(e);
+        // 兼容模式：
+        // 当客户端要求加密（有X-Encrypt-Session）但接口返回的不是Encrypt类型时，
+        // 对JSON响应自动包装为Response，确保老接口也可进入统一加密链路。
+        if (!(body instanceof Encrypt)) {
+            if (isJsonLike(selectedContentType)) {
+                body = Response.ok(body);
+            } else {
+                // 非JSON响应（文件流/文本等）维持原样，避免破坏下载类接口
+                return body;
             }
+        }
+        // 只对实现了Encrypt接口的响应进行加密
+        try {
+            long start = System.currentTimeMillis();
+            // 将响应体序列化为JSON
+            String json = gson.toJson(body);
+            //使用AES密钥加密响应数据 或者使用RSA进行加密
+            //当使用RSA加密时，使用客户端的公钥进行加密
+            String encrypt = "RSA".equals(algorithm) ? rsaService.encrypt(json, session) : aesService.encrypt(json, session);
+            // 使用反射创建返回值类型的实例
+            body = response(body, encrypt, algorithm, session);
+            long end = System.currentTimeMillis();
+            if (log.isDebugEnabled()) {
+                log.debug("加密长度:{}, 耗时:{}毫秒", json.length(), end - start);
+                log.debug("加密返回:{}, 内容:{}, 密文:{}", session, json, encrypt);
+            }
+        } catch (Exception e) {
+            log.error("加密失败: {}, URI: {}, 错误: {}", session, uri, e.getMessage());
+            return Response.error(e);
         }
         return body;
     }
@@ -247,6 +257,13 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
             return paramType == char.class && value instanceof Character;
         }
         return false;
+    }
+
+    private boolean isJsonLike(MediaType mediaType) {
+        if (mediaType == null) {
+            return true;
+        }
+        return MediaType.APPLICATION_JSON.includes(mediaType) || mediaType.getSubtype().toLowerCase().contains("json");
     }
 
     private HttpServletRequest getHttpServletRequest(ServerHttpRequest request) {

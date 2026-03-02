@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Autumn 文档 - 定时任务（job）</title>
+<#include "/header.html">
+<style>
+    .doc-page { padding: 15px; }
+    .doc-layout { display: flex; align-items: flex-start; }
+    .doc-sidebar { width: 260px; position: sticky; top: 12px; background: #fff; border: 1px solid #d2d6de; border-radius: 3px; padding: 10px 0; margin-right: 15px; }
+    .doc-sidebar-title { font-size: 14px; color: #666; padding: 0 14px 8px; margin: 0 0 8px; border-bottom: 1px solid #f0f0f0; }
+    .doc-nav { list-style: none; margin: 0; padding: 0; }
+    .doc-nav-link { display: block; padding: 8px 14px; color: #333; text-decoration: none; border-left: 3px solid transparent; }
+    .doc-nav-link:hover { background: #f7f7f7; text-decoration: none; }
+    .doc-nav-link.active { color: #3c8dbc; background: #f0f7fb; border-left-color: #3c8dbc; font-weight: 600; }
+    .doc-content { flex: 1; background: #fff; border: 1px solid #d2d6de; border-radius: 3px; padding: 18px; }
+    .doc-content h2 { margin-top: 0; }
+    .doc-content h3 { margin-top: 20px; font-size: 20px; }
+    .doc-content ul { padding-left: 20px; }
+    .doc-warn { margin-top: 10px; padding: 10px 12px; background: #fdf8e5; border-left: 3px solid #f39c12; color: #666; }
+    .doc-code { margin-top: 8px; padding: 10px; background: #f7f7f7; border: 1px solid #e5e5e5; border-radius: 3px; font-family: Menlo, Consolas, monospace; font-size: 12px; }
+    @media (max-width: 992px) { .doc-layout { display: block; } .doc-sidebar { width: 100%; position: static; margin-right: 0; margin-bottom: 12px; } }
+</style>
+</head>
+<body>
+<div class="doc-page">
+    <div class="doc-layout">
+        <aside class="doc-sidebar">
+            <#assign currentDoc = "job">
+            <#include "/modules/docs/_sidebar.html">
+        </aside>
+        <main class="doc-content">
+            <h2>定时任务（job）</h2>
+            <p>Autumn 提供两套调度能力：传统 <code>schedulejob</code>（cron 表达式）与接口式 <code>LoopJob</code>（固定周期接口）。在业务开发中，建议优先使用接口式任务，能显著降低表达式配置错误。</p>
+
+            <h3>为什么推荐接口式定时任务（LoopJob）</h3>
+            <table class="table table-bordered table-striped">
+                <thead>
+                <tr>
+                    <th>方案</th>
+                    <th>触发方式</th>
+                    <th>常见风险</th>
+                    <th>适用建议</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>cron 表达式任务</td>
+                    <td><code>cronExpression</code></td>
+                    <td>表达式写错、粒度难读、维护成本高</td>
+                    <td>历史任务兼容、复杂时间规则</td>
+                </tr>
+                <tr>
+                    <td>LoopJob 接口任务</td>
+                    <td>实现 <code>OneMinute</code>/<code>FiveMinute</code> 等接口</td>
+                    <td>基本无表达式错误风险</td>
+                    <td>业务常规定时任务（推荐）</td>
+                </tr>
+                </tbody>
+            </table>
+            <div class="doc-warn">核心收益：用“接口语义”替代“字符串表达式”，把“写错 cron”问题前置消除。</div>
+
+            <h3>选型决策图（先看这个）</h3>
+            <div class="doc-code">是否是固定周期任务？
+  ├─ 是 -> 直接用 LoopJob 接口（OneMinute/FiveMinute/...）
+  │      ├─ 需要防重入？-> @JobMeta(skipIfRunning = true)
+  │      ├─ 需要超时观测？-> @JobMeta(timeout = xxx)
+  │      └─ 多节点分配？-> assignTag + server.tag
+  └─ 否 -> 用 schedulejob（cronExpression）
+         ├─ 时间规则复杂（如每月/节假日）-> cron
+         └─ 仍建议配置 run/pause/resume 与日志审计</div>
+
+            <h3>接口周期速查表（LoopJob）</h3>
+            <table class="table table-bordered table-striped">
+                <thead>
+                <tr>
+                    <th>接口</th>
+                    <th>典型用途</th>
+                    <th>建议</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td><code>OneSecond/ThreeSecond/FiveSecond</code></td>
+                    <td>轻量状态轮询、快速缓冲刷新</td>
+                    <td>必须幂等，关注 overrun 与并行开关</td>
+                </tr>
+                <tr>
+                    <td><code>TenSecond/ThirtySecond</code></td>
+                    <td>短周期同步、近实时汇总</td>
+                    <td>优先开启防重入，避免任务堆积</td>
+                </tr>
+                <tr>
+                    <td><code>OneMinute/FiveMinute/TenMinute</code></td>
+                    <td>常规业务任务（推荐主力周期）</td>
+                    <td>默认优先选择这一层级</td>
+                </tr>
+                <tr>
+                    <td><code>ThirtyMinute/OneHour</code></td>
+                    <td>报表聚合、缓存预热、对账</td>
+                    <td>建议配置 <code>timeout</code> 和错误阈值</td>
+                </tr>
+                <tr>
+                    <td><code>OneDay/OneWeek</code></td>
+                    <td>归档、清理、周期报表</td>
+                    <td>建议绑定服务器标签，避免多节点重复</td>
+                </tr>
+                </tbody>
+            </table>
+
+            <h3>功能入口</h3>
+            <ul>
+                <li>任务管理：<code>/job/schedulejob/*</code>（save/update/delete/run/pause/resume）</li>
+                <li>执行日志：<code>/job/schedulejoblog/list</code>、<code>/job/schedulejoblog/toggle</code></li>
+                <li>任务分配：<code>/job/scheduleassign/list|save|update|delete</code></li>
+                <li>接口式任务（统一管理）：<code>/job/loop/*</code>（stats/list/alerts/enable/disable/trigger/updateConfig 等）</li>
+            </ul>
+
+            <h3>接口式任务接入（推荐路径）</h3>
+            <div class="doc-code">@Component
+@JobMeta(
+    name = "用户缓存刷新任务",
+    description = "每分钟刷新热点用户缓存",
+    group = "user",
+    skipIfRunning = true,
+    timeout = 15000,
+    maxConsecutiveErrors = 5,
+    delay = 0,
+    async = false
+)
+public class UserCacheRefreshJob implements LoopJob.OneMinute {
+
+    @Override
+    public void onOneMinute() {
+        // 业务逻辑
+    }
+}</div>
+            <ul>
+                <li>周期选择：直接实现 <code>OneSecond/ThreeSecond/FiveSecond/TenSecond/ThirtySecond/OneMinute/.../OneWeek</code> 对应接口。</li>
+                <li>任务元信息：通过 <code>@JobMeta</code> 配置显示名、分组、超时、连续错误阈值、是否防重入、延迟与异步。</li>
+                <li>调度注册：框架启动时自动扫描并注册，无需手写 cron 表达式。</li>
+            </ul>
+
+            <h3>统一管理能力（LoopJob）</h3>
+            <ul>
+                <li>全局控制：<code>/job/loop/pauseAll</code>、<code>/job/loop/resumeAll</code>。</li>
+                <li>任务控制：<code>/job/loop/enable</code>、<code>/job/loop/disable</code>、<code>/job/loop/trigger</code>。</li>
+                <li>分类控制：<code>/job/loop/enableCategory</code>、<code>/job/loop/disableCategory</code>。</li>
+                <li>配置管理：<code>/job/loop/updateConfig</code>（<code>skipIfRunning/timeout/maxConsecutiveErrors/order</code> 等）。</li>
+                <li>服务器分配：<code>/job/loop/updateAssign</code>、<code>/job/loop/assigns</code>（配合 <code>server.tag</code>）。</li>
+                <li>运行观测：<code>/job/loop/stats</code>、<code>/job/loop/categories</code>、<code>/job/loop/list</code>、<code>/job/loop/alerts</code>。</li>
+            </ul>
+            <div class="doc-warn">统一管理价值：同一套接口覆盖任务启停、告警、分配、统计，显著降低运维复杂度。</div>
+
+            <h3>关键配置/参数</h3>
+            <table class="table table-bordered table-striped">
+                <thead>
+                <tr>
+                    <th>参数</th>
+                    <th>示例</th>
+                    <th>说明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>cronExpression</td>
+                    <td>0 */5 * * * ?</td>
+                    <td>传统 cron 任务配置（接口式任务可不使用）</td>
+                </tr>
+                <tr>
+                    <td>status</td>
+                    <td>0/1</td>
+                    <td>任务状态（暂停/运行）</td>
+                </tr>
+                <tr>
+                    <td>skipIfRunning</td>
+                    <td>true</td>
+                    <td>防重入，避免同一任务并发执行</td>
+                </tr>
+                <tr>
+                    <td>timeout</td>
+                    <td>15000</td>
+                    <td>超时阈值（毫秒），用于慢任务告警</td>
+                </tr>
+                <tr>
+                    <td>maxConsecutiveErrors</td>
+                    <td>5</td>
+                    <td>连续失败自动禁用阈值</td>
+                </tr>
+                <tr>
+                    <td>assignTag / server.tag</td>
+                    <td>node-a / node-b</td>
+                    <td>多节点任务分配，避免重复执行</td>
+                </tr>
+                <tr>
+                    <td>parallelExecution</td>
+                    <td>true/false</td>
+                    <td>同分类任务并行执行开关（秒级任务建议评估后启用）</td>
+                </tr>
+                </tbody>
+            </table>
+
+            <h3>API 示例（真实路径）</h3>
+            <div class="doc-code">GET /job/schedulejob/list?page=1&amp;limit=10</div>
+            <div class="doc-code">POST /job/schedulejob/save {"beanName":"demoJob","cronExpression":"0 */5 * * * ?"}</div>
+            <div class="doc-code">POST /job/schedulejob/run [1,2]</div>
+            <div class="doc-code">GET /job/loop/stats</div>
+            <div class="doc-code">GET /job/loop/list?category=OneMinute</div>
+            <div class="doc-code">GET /job/loop/alerts</div>
+            <div class="doc-code">POST /job/loop/trigger {"jobId":"OneMinute|cn.xxx.UserCacheRefreshJob"}</div>
+            <div class="doc-code">POST /job/loop/updateConfig {"jobId":"OneMinute|cn.xxx.UserCacheRefreshJob","timeout":20000,"maxConsecutiveErrors":3}</div>
+            <div class="doc-code">{"code":0,"msg":"success","data":{...}}</div>
+
+            <h3>上线前检查清单（任务专项）</h3>
+            <ol>
+                <li>确认任务是否必须用 cron；若固定周期优先改为 LoopJob 接口。</li>
+                <li>所有任务补齐幂等保障，避免重复执行副作用。</li>
+                <li>秒级/分钟级任务设置 <code>skipIfRunning=true</code>，并设置合理 <code>timeout</code>。</li>
+                <li>关键任务设置 <code>maxConsecutiveErrors</code>，并验证自动停用后的恢复流程。</li>
+                <li>多节点环境校验 <code>assignTag</code> 与 <code>server.tag</code> 匹配。</li>
+                <li>上线后观察 <code>/job/loop/alerts</code> 与分类 overrun 指标至少 1 个周期。</li>
+            </ol>
+
+            <h3>按业务类型选周期模板（可直接套用）</h3>
+            <table class="table table-bordered table-striped">
+                <thead>
+                <tr>
+                    <th>业务类型</th>
+                    <th>推荐周期接口</th>
+                    <th>建议参数</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>热点缓存刷新</td>
+                    <td><code>OneMinute</code> / <code>FiveMinute</code></td>
+                    <td><code>skipIfRunning=true</code>, <code>timeout=5000~15000</code></td>
+                </tr>
+                <tr>
+                    <td>支付/订单补偿轮询</td>
+                    <td><code>ThirtySecond</code> / <code>OneMinute</code></td>
+                    <td><code>skipIfRunning=true</code>, <code>maxConsecutiveErrors=3~5</code></td>
+                </tr>
+                <tr>
+                    <td>报表汇总/统计聚合</td>
+                    <td><code>ThirtyMinute</code> / <code>OneHour</code></td>
+                    <td><code>timeout=30000+</code>, 必须幂等</td>
+                </tr>
+                <tr>
+                    <td>历史数据清理/归档</td>
+                    <td><code>OneDay</code> / <code>OneWeek</code></td>
+                    <td>绑定 <code>assignTag</code>，避免多节点重复执行</td>
+                </tr>
+                <tr>
+                    <td>近实时轻量状态同步</td>
+                    <td><code>ThreeSecond</code> / <code>FiveSecond</code></td>
+                    <td>评估 <code>parallelExecution</code>，关注 overrun</td>
+                </tr>
+                </tbody>
+            </table>
+
+            <h3>回滚与降级策略（任务发布）</h3>
+            <ul>
+                <li>发布后异常升高：先执行 <code>/job/loop/disable</code> 停掉单任务，避免扩大影响。</li>
+                <li>系统级异常：执行 <code>/job/loop/pauseAll</code>，待恢复后 <code>/job/loop/resumeAll</code>。</li>
+                <li>节点热点问题：临时调整 <code>assignTag</code>，把任务迁移到指定节点执行。</li>
+                <li>性能瓶颈：先关闭并行执行（或反向启用）进行 A/B 观察，再决定长期配置。</li>
+            </ul>
+            <div class="doc-warn">建议为关键任务保留“手动触发补偿”能力，回滚后可通过 <code>/job/loop/trigger</code> 做定点修复。</div>
+
+            <h3>页面入口（templates）</h3>
+            <ul>
+                <li><code>/modules/job/schedulejob</code> -> <code>templates/modules/job/schedulejob.html</code></li>
+                <li><code>/modules/job/schedulejoblog</code> -> <code>templates/modules/job/schedulejoblog.html</code></li>
+                <li><code>/modules/job/scheduleassign</code> -> <code>templates/modules/job/scheduleassign.html</code></li>
+                <li><code>/job/loop</code> -> <code>templates/loopjob.html</code></li>
+            </ul>
+
+            <h3>权限码清单</h3>
+            <div class="doc-code">job:schedulejob:list|info|save|update|delete|run|pause|resume</div>
+            <div class="doc-code">job:schedulejoblog:list|info|save|update|delete</div>
+            <div class="doc-code">job:scheduleassign:list|info|save|update|delete</div>
+
+            <h3>最小可跑通用例</h3>
+            <ol>
+                <li>确认账号具备 <code>job:schedulejob:list</code> 和 <code>job:schedulejob:run</code>。</li>
+                <li>创建一个实现 <code>LoopJob.OneMinute</code> 的任务类并启动服务。</li>
+                <li>访问 <code>GET /job/loop/list?category=OneMinute</code>，确认任务被注册。</li>
+                <li>调用 <code>POST /job/loop/trigger</code> 手动触发，确认返回成功。</li>
+                <li>访问 <code>GET /job/loop/stats</code> 与 <code>GET /job/loop/alerts</code>，确认统计与告警可读。</li>
+            </ol>
+
+            <h3>故障排查模板</h3>
+            <table class="table table-bordered table-striped">
+                <thead>
+                <tr>
+                    <th>现象</th>
+                    <th>可能原因</th>
+                    <th>处理建议</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>任务未执行</td>
+                    <td>任务被禁用、分类被禁用、全局暂停或分配标签不匹配</td>
+                    <td>依次检查 <code>globalPaused/categoryEnabled/enabled/assignTag</code></td>
+                </tr>
+                <tr>
+                    <td>任务重复执行</td>
+                    <td>多节点都在执行或未开启防重入</td>
+                    <td>设置 <code>skipIfRunning=true</code> 并校验 <code>assignTag/server.tag</code></td>
+                </tr>
+                <tr>
+                    <td>任务自动被停用</td>
+                    <td>连续错误超过阈值</td>
+                    <td>检查 <code>maxConsecutiveErrors</code> 和错误日志，修复后执行 <code>/job/loop/enable</code></td>
+                </tr>
+                <tr>
+                    <td>秒级任务频繁超限</td>
+                    <td>批量耗时大于分类间隔</td>
+                    <td>查看 <code>/job/loop/categories</code> 的 overrun 指标，必要时启用并行执行</td>
+                </tr>
+                </tbody>
+            </table>
+
+            <div style="margin-top: 16px;">
+                <a class="btn btn-default btn-sm" href="${request.contextPath}/modules/docs/index">返回首页</a>
+                <a class="btn btn-success btn-sm" href="${request.contextPath}/modules/docs/index?done=job">返回首页并标记本章完成</a>
+            </div>
+        </main>
+    </div>
+</div>
+</body>
+</html>

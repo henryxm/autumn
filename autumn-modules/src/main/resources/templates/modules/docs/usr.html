@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Autumn 文档 - 用户域能力（usr）</title>
+<#include "/header.html">
+<style>
+    .doc-page { padding: 15px; }
+    .doc-layout { display: flex; align-items: flex-start; }
+    .doc-sidebar { width: 260px; position: sticky; top: 12px; background: #fff; border: 1px solid #d2d6de; border-radius: 3px; padding: 10px 0; margin-right: 15px; }
+    .doc-sidebar-title { font-size: 14px; color: #666; padding: 0 14px 8px; margin: 0 0 8px; border-bottom: 1px solid #f0f0f0; }
+    .doc-nav { list-style: none; margin: 0; padding: 0; }
+    .doc-nav-link { display: block; padding: 8px 14px; color: #333; text-decoration: none; border-left: 3px solid transparent; }
+    .doc-nav-link:hover { background: #f7f7f7; text-decoration: none; }
+    .doc-nav-link.active { color: #3c8dbc; background: #f0f7fb; border-left-color: #3c8dbc; font-weight: 600; }
+    .doc-content { flex: 1; background: #fff; border: 1px solid #d2d6de; border-radius: 3px; padding: 18px; }
+    .doc-content h2 { margin-top: 0; }
+    .doc-content h3 { margin-top: 20px; font-size: 20px; }
+    .doc-content ul { padding-left: 20px; }
+    .doc-code { margin-top: 8px; padding: 10px; background: #f7f7f7; border: 1px solid #e5e5e5; border-radius: 3px; font-family: Menlo, Consolas, monospace; font-size: 12px; }
+    @media (max-width: 992px) { .doc-layout { display: block; } .doc-sidebar { width: 100%; position: static; margin-right: 0; margin-bottom: 12px; } }
+</style>
+</head>
+<body>
+<div class="doc-page">
+    <div class="doc-layout">
+        <aside class="doc-sidebar">
+            <#assign currentDoc = "usr">
+            <#include "/modules/docs/_sidebar.html">
+        </aside>
+        <main class="doc-content">
+            <h2>用户域能力（usr）</h2>
+            <p>负责用户开放能力、用户令牌与登录行为追踪。</p>
+            <h3>功能入口</h3>
+            <ul>
+                <li>用户开放能力：<code>/usr/useropen/*</code></li>
+                <li>用户令牌管理：<code>/usr/usertoken/*</code></li>
+                <li>登录日志：<code>/usr/userloginlog/*</code>（含 <code>/clean</code> 与 <code>/updateWhite</code>）</li>
+                <li>用户资料：<code>/usr/userprofile/*</code></li>
+            </ul>
+            <h3>建议补充</h3>
+            <ul>
+                <li>Token 生命周期与撤销策略</li>
+                <li>异地登录与高风险行为识别规则</li>
+                <li>用户隐私字段处理规范</li>
+            </ul>
+
+            <h3>关键配置/参数</h3>
+            <table class="table table-bordered table-striped">
+                <thead>
+                <tr>
+                    <th>配置键</th>
+                    <th>默认值</th>
+                    <th>说明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>USER_DEFAULT_DEPART_KEY</td>
+                    <td>空</td>
+                    <td>集群用户同步后的默认部门标识</td>
+                </tr>
+                <tr>
+                    <td>USER_DEFAULT_ROLE_KEYS</td>
+                    <td>空</td>
+                    <td>集群用户同步后的默认角色（逗号分隔）</td>
+                </tr>
+                </tbody>
+            </table>
+
+            <h3>API 示例（真实路径）</h3>
+            <div class="doc-code">GET /usr/usertoken/list?page=1&amp;limit=10</div>
+            <div class="doc-code">GET /usr/userloginlog/list?page=1&amp;limit=20</div>
+            <div class="doc-code">POST /usr/userloginlog/clean</div>
+            <div class="doc-code">POST /usr/userloginlog/updateWhite {"id":1,"white":1}</div>
+            <div class="doc-code">{"code":0,"msg":"success","page":{"list":[...]}}</div>
+
+            <h3>页面入口（templates）</h3>
+            <ul>
+                <li><code>/modules/usr/usertoken</code> -> <code>templates/modules/usr/usertoken.html</code></li>
+                <li><code>/modules/usr/useropen</code> -> <code>templates/modules/usr/useropen.html</code></li>
+                <li><code>/modules/usr/userloginlog</code> -> <code>templates/modules/usr/userloginlog.html</code></li>
+                <li><code>/modules/usr/userprofile</code> -> <code>templates/modules/usr/userprofile.html</code></li>
+            </ul>
+
+            <h3>权限码清单</h3>
+            <div class="doc-code">usr:usertoken:list|info|save|update|delete</div>
+            <div class="doc-code">usr:useropen:list|info|save|update|delete</div>
+            <div class="doc-code">usr:userprofile:list|info|save|update|delete</div>
+            <div class="doc-code">usr:userloginlog:list|info|save|update|delete</div>
+
+            <h3>最小可跑通用例</h3>
+            <ol>
+                <li>确认账号具备 <code>usr:userloginlog:list</code> 与 <code>usr:usertoken:list</code>。</li>
+                <li>访问 <code>/modules/usr/userloginlog</code>，确认日志列表加载。</li>
+                <li>调用 <code>GET /usr/usertoken/list?page=1&amp;limit=10</code>，确认返回 token 列表。</li>
+                <li>执行 <code>POST /usr/userloginlog/clean</code>（测试环境）验证清理能力。</li>
+            </ol>
+
+            <h3>故障排查模板</h3>
+            <table class="table table-bordered table-striped">
+                <thead>
+                <tr>
+                    <th>现象</th>
+                    <th>可能原因</th>
+                    <th>处理建议</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>用户频繁掉线</td>
+                    <td>Token 过期时间过短</td>
+                    <td>调整有效期并增加刷新策略</td>
+                </tr>
+                <tr>
+                    <td>登录日志缺失</td>
+                    <td>日志采集开关关闭</td>
+                    <td>检查采集逻辑与存储可用性</td>
+                </tr>
+                </tbody>
+            </table>
+
+            <div style="margin-top: 16px;">
+                <a class="btn btn-default btn-sm" href="${request.contextPath}/modules/docs/index">返回首页</a>
+                <a class="btn btn-success btn-sm" href="${request.contextPath}/modules/docs/index?done=usr">返回首页并标记本章完成</a>
+            </div>
+        </main>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Autumn 文档 - 文件存储（oss）</title>
+<#include "/header.html">
+<style>
+    .doc-page { padding: 15px; }
+    .doc-layout { display: flex; align-items: flex-start; }
+    .doc-sidebar { width: 260px; position: sticky; top: 12px; background: #fff; border: 1px solid #d2d6de; border-radius: 3px; padding: 10px 0; margin-right: 15px; }
+    .doc-sidebar-title { font-size: 14px; color: #666; padding: 0 14px 8px; margin: 0 0 8px; border-bottom: 1px solid #f0f0f0; }
+    .doc-nav { list-style: none; margin: 0; padding: 0; }
+    .doc-nav-link { display: block; padding: 8px 14px; color: #333; text-decoration: none; border-left: 3px solid transparent; }
+    .doc-nav-link:hover { background: #f7f7f7; text-decoration: none; }
+    .doc-nav-link.active { color: #3c8dbc; background: #f0f7fb; border-left-color: #3c8dbc; font-weight: 600; }
+    .doc-content { flex: 1; background: #fff; border: 1px solid #d2d6de; border-radius: 3px; padding: 18px; }
+    .doc-content h2 { margin-top: 0; }
+    .doc-content h3 { margin-top: 20px; font-size: 20px; }
+    .doc-content ul { padding-left: 20px; }
+    .doc-code { margin-top: 8px; padding: 10px; background: #f7f7f7; border: 1px solid #e5e5e5; border-radius: 3px; font-family: Menlo, Consolas, monospace; font-size: 12px; }
+    @media (max-width: 992px) { .doc-layout { display: block; } .doc-sidebar { width: 100%; position: static; margin-right: 0; margin-bottom: 12px; } }
+</style>
+</head>
+<body>
+<div class="doc-page">
+    <div class="doc-layout">
+        <aside class="doc-sidebar">
+            <#assign currentDoc = "oss">
+            <#include "/modules/docs/_sidebar.html">
+        </aside>
+        <main class="doc-content">
+            <h2>文件存储（oss）</h2>
+            <p>用于统一文件上传、存储配置与访问策略。</p>
+            <h3>功能入口</h3>
+            <ul>
+                <li>对象存储管理：<code>/sys/oss/list</code>、<code>/sys/oss/upload</code>、<code>/sys/oss/delete</code></li>
+                <li>云存储配置：<code>/sys/oss/config</code>、<code>/sys/oss/saveConfig</code></li>
+            </ul>
+            <h3>实践建议</h3>
+            <ul>
+                <li>按环境隔离 bucket/目录</li>
+                <li>对外链资源设置过期与权限控制</li>
+                <li>为大文件上传补充分片策略</li>
+            </ul>
+
+            <h3>关键配置项（来自 sys_config.param_key）</h3>
+            <table class="table table-bordered table-striped">
+                <thead>
+                <tr>
+                    <th>配置键</th>
+                    <th>默认值</th>
+                    <th>说明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>CLOUD_STORAGE_CONFIG_KEY</td>
+                    <td>{json}</td>
+                    <td>云存储统一配置（阿里云/腾讯云/七牛及类型）</td>
+                </tr>
+                <tr>
+                    <td>SYSTEM_UPGRADE</td>
+                    <td>{json}</td>
+                    <td>系统升级时可能限制上传能力，需联动检查</td>
+                </tr>
+                </tbody>
+            </table>
+
+            <h3>API 示例（真实路径）</h3>
+            <div class="doc-code">GET /sys/oss/list?page=1&amp;limit=10</div>
+            <div class="doc-code">GET /sys/oss/config</div>
+            <div class="doc-code">POST /sys/oss/saveConfig {"type":1,"qiniuDomain":"https://cdn.example.com"}</div>
+            <div class="doc-code">POST /sys/oss/upload (multipart/form-data)</div>
+            <div class="doc-code">{"code":0,"msg":"success","url":"https://cdn.example.com/a.png"}</div>
+
+            <h3>页面入口（templates）</h3>
+            <ul>
+                <li><code>/modules/oss/oss</code> -> <code>templates/modules/oss/oss.html</code></li>
+            </ul>
+
+            <h3>权限码清单</h3>
+            <div class="doc-code">sys:oss:all</div>
+
+            <h3>最小可跑通用例</h3>
+            <ol>
+                <li>确认账号有 <code>sys:oss:all</code> 权限。</li>
+                <li>访问 <code>/modules/oss/oss</code>，查看对象存储列表。</li>
+                <li>调用 <code>GET /sys/oss/config</code> 确认当前存储配置可读。</li>
+                <li>上传一个测试文件到 <code>/sys/oss/upload</code>，确认返回地址可访问。</li>
+            </ol>
+
+            <h3>故障排查模板</h3>
+            <table class="table table-bordered table-striped">
+                <thead>
+                <tr>
+                    <th>现象</th>
+                    <th>可能原因</th>
+                    <th>处理建议</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>上传失败</td>
+                    <td>存储凭据无效或大小超限</td>
+                    <td>检查密钥配置与上传限制</td>
+                </tr>
+                <tr>
+                    <td>文件无法访问</td>
+                    <td>访问域名或权限策略错误</td>
+                    <td>检查对象 ACL 与域名绑定</td>
+                </tr>
+                </tbody>
+            </table>
+
+            <div style="margin-top: 16px;">
+                <a class="btn btn-default btn-sm" href="${request.contextPath}/modules/docs/index">返回首页</a>
+                <a class="btn btn-success btn-sm" href="${request.contextPath}/modules/docs/index?done=oss">返回首页并标记本章完成</a>
+            </div>
+        </main>
+    </div>
+</div>
+</body>
+</html>

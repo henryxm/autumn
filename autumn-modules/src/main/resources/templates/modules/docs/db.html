@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Autumn 文档 - 数据库运维（db）</title>
+<#include "/header.html">
+<style>
+    .doc-page { padding: 15px; }
+    .doc-layout { display: flex; align-items: flex-start; }
+    .doc-sidebar { width: 260px; position: sticky; top: 12px; background: #fff; border: 1px solid #d2d6de; border-radius: 3px; padding: 10px 0; margin-right: 15px; }
+    .doc-sidebar-title { font-size: 14px; color: #666; padding: 0 14px 8px; margin: 0 0 8px; border-bottom: 1px solid #f0f0f0; }
+    .doc-nav { list-style: none; margin: 0; padding: 0; }
+    .doc-nav-link { display: block; padding: 8px 14px; color: #333; text-decoration: none; border-left: 3px solid transparent; }
+    .doc-nav-link:hover { background: #f7f7f7; text-decoration: none; }
+    .doc-nav-link.active { color: #3c8dbc; background: #f0f7fb; border-left-color: #3c8dbc; font-weight: 600; }
+    .doc-content { flex: 1; background: #fff; border: 1px solid #d2d6de; border-radius: 3px; padding: 18px; }
+    .doc-content h2 { margin-top: 0; }
+    .doc-content h3 { margin-top: 20px; font-size: 20px; }
+    .doc-content ul { padding-left: 20px; }
+    .doc-note { margin-top: 10px; padding: 10px 12px; background: #f0f7fb; border-left: 3px solid #3c8dbc; color: #666; }
+    .doc-code { margin-top: 8px; padding: 10px; background: #f7f7f7; border: 1px solid #e5e5e5; border-radius: 3px; font-family: Menlo, Consolas, monospace; font-size: 12px; }
+    @media (max-width: 992px) { .doc-layout { display: block; } .doc-sidebar { width: 100%; position: static; margin-right: 0; margin-bottom: 12px; } }
+</style>
+</head>
+<body>
+<div class="doc-page">
+    <div class="doc-layout">
+        <aside class="doc-sidebar">
+            <#assign currentDoc = "db">
+            <#include "/modules/docs/_sidebar.html">
+        </aside>
+        <main class="doc-content">
+            <h2>数据库运维（db）</h2>
+            <p>用于管理数据库备份、备份策略、备份上传与恢复流程。</p>
+            <h3>功能入口</h3>
+            <ul>
+                <li>基础CRUD：<code>/db/databasebackup/*</code>、<code>/db/databasebackupstrategy/*</code>、<code>/db/databasebackupupload/*</code></li>
+                <li>统一备份中心：<code>/db/backup/*</code>（list/execute/download/restore/upload/chunk）</li>
+                <li>任务控制：<code>/db/backup/task/*</code> 与 <code>/db/backup/restore/*</code></li>
+            </ul>
+            <h3>推荐流程</h3>
+            <ul>
+                <li>先制定策略，再执行备份任务</li>
+                <li>备份文件统一归档并校验可恢复性</li>
+                <li>恢复操作要求双人复核</li>
+            </ul>
+            <div class="doc-note">建议补充“恢复演练模板”和“故障场景恢复RTO/RPO目标”。</div>
+
+            <h3>关键配置/参数</h3>
+            <table class="table table-bordered table-striped">
+                <thead>
+                <tr>
+                    <th>参数</th>
+                    <th>示例</th>
+                    <th>说明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>id</td>
+                    <td>123</td>
+                    <td>备份记录主键，用于下载/恢复/删除</td>
+                </tr>
+                <tr>
+                    <td>taskKey</td>
+                    <td>restore-20260302-001</td>
+                    <td>恢复任务标识，用于进度查询</td>
+                </tr>
+                </tbody>
+            </table>
+
+            <h3>API 示例（真实路径）</h3>
+            <div class="doc-code">GET /db/backup/list?page=1&amp;limit=10</div>
+            <div class="doc-code">POST /db/backup/execute {"strategyId":1}</div>
+            <div class="doc-code">GET /db/backup/download/123</div>
+            <div class="doc-code">POST /db/backup/restore/123</div>
+            <div class="doc-code">GET /db/backup/restore/progress/restore-20260302-001</div>
+            <div class="doc-code">{"code":0,"msg":"success","data":{"running":false}}</div>
+
+            <h3>页面入口（templates）</h3>
+            <ul>
+                <li><code>/modules/db/databasebackup</code> -> <code>templates/modules/db/databasebackup.html</code></li>
+                <li><code>/modules/db/databasebackupstrategy</code> -> <code>templates/modules/db/databasebackupstrategy.html</code></li>
+                <li><code>/modules/db/databasebackupupload</code> -> <code>templates/modules/db/databasebackupupload.html</code></li>
+            </ul>
+
+            <h3>权限码清单</h3>
+            <div class="doc-code">db:databasebackup:list|info|save|update|delete</div>
+            <div class="doc-code">db:databasebackupstrategy:list|info|save|update|delete</div>
+            <div class="doc-code">db:databasebackupupload:list|info|save|update|delete</div>
+
+            <h3>最小可跑通用例</h3>
+            <ol>
+                <li>确认账号具备 <code>db:databasebackup:list</code> 与策略相关权限。</li>
+                <li>访问 <code>/modules/db/databasebackup</code>，查看备份列表。</li>
+                <li>调用 <code>POST /db/backup/execute</code> 执行一次备份任务。</li>
+                <li>调用 <code>GET /db/backup/list?page=1&amp;limit=10</code>，确认新增备份记录。</li>
+            </ol>
+
+            <h3>故障排查模板</h3>
+            <table class="table table-bordered table-striped">
+                <thead>
+                <tr>
+                    <th>现象</th>
+                    <th>可能原因</th>
+                    <th>处理建议</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>备份失败</td>
+                    <td>磁盘空间不足或权限不足</td>
+                    <td>检查磁盘容量与目录权限</td>
+                </tr>
+                <tr>
+                    <td>恢复失败</td>
+                    <td>备份文件损坏或版本不兼容</td>
+                    <td>校验备份完整性并核对数据库版本</td>
+                </tr>
+                </tbody>
+            </table>
+
+            <div style="margin-top: 16px;">
+                <a class="btn btn-default btn-sm" href="${request.contextPath}/modules/docs/index">返回首页</a>
+                <a class="btn btn-success btn-sm" href="${request.contextPath}/modules/docs/index?done=db">返回首页并标记本章完成</a>
+            </div>
+        </main>
+    </div>
+</div>
+</body>
+</html>

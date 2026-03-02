@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Autumn 文档 - 队列体系（queue）</title>
+<#include "/header.html">
+<style>
+    .doc-page { padding: 15px; }
+    .doc-layout { display: flex; align-items: flex-start; }
+    .doc-sidebar { width: 260px; position: sticky; top: 12px; background: #fff; border: 1px solid #d2d6de; border-radius: 3px; padding: 10px 0; margin-right: 15px; }
+    .doc-sidebar-title { font-size: 14px; color: #666; padding: 0 14px 8px; margin: 0 0 8px; border-bottom: 1px solid #f0f0f0; }
+    .doc-nav { list-style: none; margin: 0; padding: 0; }
+    .doc-nav-link { display: block; padding: 8px 14px; color: #333; text-decoration: none; border-left: 3px solid transparent; }
+    .doc-nav-link:hover { background: #f7f7f7; text-decoration: none; }
+    .doc-nav-link.active { color: #3c8dbc; background: #f0f7fb; border-left-color: #3c8dbc; font-weight: 600; }
+    .doc-content { flex: 1; background: #fff; border: 1px solid #d2d6de; border-radius: 3px; padding: 18px; }
+    .doc-content h2 { margin-top: 0; }
+    .doc-content h3 { margin-top: 20px; font-size: 20px; }
+    .doc-content ul, .doc-content ol { padding-left: 20px; }
+    .doc-panel { border: 1px solid #e5e5e5; border-radius: 3px; padding: 10px 12px; margin-bottom: 12px; }
+    .doc-tag { display: inline-block; background: #ecf0f5; border-radius: 10px; padding: 2px 10px; margin-right: 6px; font-size: 12px; color: #666; }
+    .doc-code { margin-top: 8px; padding: 10px; background: #f7f7f7; border: 1px solid #e5e5e5; border-radius: 3px; font-family: Menlo, Consolas, monospace; font-size: 12px; white-space: pre-wrap; }
+    @media (max-width: 992px) { .doc-layout { display: block; } .doc-sidebar { width: 100%; position: static; margin-right: 0; margin-bottom: 12px; } }
+</style>
+</head>
+<body>
+<div class="doc-page">
+    <div class="doc-layout">
+        <aside class="doc-sidebar">
+            <#assign currentDoc = "queue">
+            <#include "/modules/docs/_sidebar.html">
+        </aside>
+        <main class="doc-content">
+            <h2>队列体系（queue）</h2>
+            <p><span class="doc-tag">BaseQueueService</span><span class="doc-tag">QueueService</span><span class="doc-tag">死信与历史</span><span class="doc-tag">自动启停消费者</span></p>
+
+            <h3>功能入口</h3>
+            <ul>
+                <li>业务接入基类：<code>cn.org.autumn.service.BaseQueueService</code></li>
+                <li>队列内核服务：<code>cn.org.autumn.service.QueueService</code></li>
+                <li>运维管理接口：<code>/sys/queue/*</code>（<code>QueueController</code>）</li>
+                <li>管理页面入口：<code>/sys/queue/</code> -> <code>templates/queue.html</code></li>
+            </ul>
+
+            <h3>核心能力说明</h3>
+            <div class="doc-panel">
+                <ul>
+                    <li>支持多种队列类型：<code>MEMORY</code>、<code>REDIS_LIST</code>、<code>REDIS_STREAM</code>、<code>DELAY</code>、<code>PRIORITY</code>。</li>
+                    <li>支持多发送模式：普通、延迟、定时、优先级、批量发送。</li>
+                    <li>支持自动消费者：可自动启动，空闲超时后自动停止。</li>
+                    <li>支持失败处理：重试次数、死信队列、历史消息保留与回查。</li>
+                </ul>
+            </div>
+
+            <h3>关键配置项（QueueConfig）</h3>
+            <table class="table table-bordered table-striped">
+                <thead>
+                <tr>
+                    <th>字段</th>
+                    <th>默认值</th>
+                    <th>说明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>queueType</td>
+                    <td>MEMORY</td>
+                    <td>队列实现类型</td>
+                </tr>
+                <tr>
+                    <td>capacity</td>
+                    <td>100000</td>
+                    <td>队列容量上限（内存队列有效）</td>
+                </tr>
+                <tr>
+                    <td>retries</td>
+                    <td>3</td>
+                    <td>失败重试次数</td>
+                </tr>
+                <tr>
+                    <td>deadLetter</td>
+                    <td>false</td>
+                    <td>是否启用死信队列</td>
+                </tr>
+                <tr>
+                    <td>history</td>
+                    <td>100</td>
+                    <td>历史消息保留数量（已消费）</td>
+                </tr>
+                <tr>
+                    <td>auto / idleTime / idleUnit</td>
+                    <td>true / 30 / SECONDS</td>
+                    <td>自动启停及空闲超时策略</td>
+                </tr>
+                </tbody>
+            </table>
+
+            <h3>API 示例（真实路径）</h3>
+            <div class="doc-code">GET  /sys/queue/list
+GET  /sys/queue/info/{name}
+GET  /sys/queue/messages/{name}?page=1&amp;limit=20
+POST /sys/queue/send
+POST /sys/queue/sendBatch
+POST /sys/queue/consume/{name}?count=1
+POST /sys/queue/create
+POST /sys/queue/clear/{name}
+POST /sys/queue/delete/{name}
+GET  /sys/queue/consumers
+POST /sys/queue/consumer/start/{name}?concurrency=1
+POST /sys/queue/consumer/stop/{name}
+GET  /sys/queue/stats
+GET  /sys/queue/config/{name}
+POST /sys/queue/config/update/{name}
+GET  /sys/queue/history/{name}?page=1&amp;limit=20
+POST /sys/queue/history/delete/{name}/{messageId}
+POST /sys/queue/history/clear/{name}
+POST /sys/queue/deadletter/retry/{name}
+POST /sys/queue/move</div>
+
+            <h3>请求/返回示例</h3>
+            <div class="doc-code">POST /sys/queue/create
+{
+  "name": "order:pay:queue",
+  "type": "REDIS_STREAM",
+  "capacity": 10000,
+  "maxRetries": 5,
+  "deadLetterEnabled": true
+}</div>
+            <div class="doc-code">POST /sys/queue/send
+{
+  "queueName": "order:pay:queue",
+  "message": {"orderId":"A1001","event":"PAY_SUCCESS"},
+  "priority": 5,
+  "delay": null
+}</div>
+            <div class="doc-code">{"code":0,"msg":"success","stats":{"totalQueues":6,"totalMessages":28,"runningConsumers":2}}</div>
+
+            <h3>服务端接入模板（BaseQueueService）</h3>
+            <div class="doc-code">public class OrderQueueService extends BaseQueueService&lt;OrderMapper, OrderEntity&gt; {
+
+    @Override
+    public String getQueueName() {
+        return "order:pay:queue";
+    }
+
+    @Override
+    protected boolean onQueueMessage(OrderEntity entity) {
+        // 处理业务消息，返回 false 会触发重试逻辑
+        return handlePay(entity);
+    }
+
+    @Override
+    protected void onDeadMessage(OrderEntity entity) {
+        // 死信补偿逻辑（告警/人工处理）
+        notifyDeadLetter(entity);
+    }
+}</div>
+            <div class="doc-code">// 发送消息
+sendQueue(entity);
+sendDelay(entity, 5000);
+sendPriority(entity, 1);
+
+// 管理队列
+startQueue(2);
+long queueSize = getQueueSize();
+clearQueue();</div>
+
+            <h3>页面入口（templates）</h3>
+            <ul>
+                <li><code>/sys/queue/</code> -> <code>templates/queue.html</code>（独立队列管理控制台）</li>
+            </ul>
+
+            <h3>权限码清单</h3>
+            <div class="doc-code">当前控制器未声明 @RequiresPermissions，且标注了 @SkipInterceptor。
+建议生产环境通过网关/IP 白名单/管理员鉴权二次加固后再开放。</div>
+
+            <h3>最小可跑通用例</h3>
+            <ol>
+                <li>访问 <code>/sys/queue/</code>，确认可以看到队列管理页。</li>
+                <li>调用 <code>POST /sys/queue/create</code> 创建测试队列（建议开启 deadLetter）。</li>
+                <li>调用 <code>POST /sys/queue/send</code> 发送一条 JSON 消息。</li>
+                <li>调用 <code>GET /sys/queue/messages/{name}</code> 或页面“消息列表”确认消息入队。</li>
+                <li>调用 <code>POST /sys/queue/consumer/start/{name}</code> 启动消费者，再观察 <code>stats</code> 和 <code>history</code> 变化。</li>
+            </ol>
+
+            <h3>常见故障排查</h3>
+            <table class="table table-bordered table-striped">
+                <thead>
+                <tr>
+                    <th>现象</th>
+                    <th>可能原因</th>
+                    <th>处理建议</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>消息堆积不消费</td>
+                    <td>消费者未启动或被空闲自动停止</td>
+                    <td>检查 <code>/sys/queue/consumers</code>，必要时手动 start consumer</td>
+                </tr>
+                <tr>
+                    <td>消息重复失败</td>
+                    <td>业务处理异常持续发生</td>
+                    <td>查看历史消息错误，修复后执行 <code>/deadletter/retry/{name}</code></td>
+                </tr>
+                <tr>
+                    <td>队列配置更新不生效</td>
+                    <td>参数类型不正确或队列不存在</td>
+                    <td>先用 <code>/config/{name}</code> 校验，再执行 <code>/config/update/{name}</code></td>
+                </tr>
+                </tbody>
+            </table>
+
+            <div style="margin-top: 16px;">
+                <a class="btn btn-default btn-sm" href="${request.contextPath}/modules/docs/index">返回首页</a>
+                <a class="btn btn-success btn-sm" href="${request.contextPath}/modules/docs/index?done=queue">返回首页并标记本章完成</a>
+            </div>
+        </main>
+    </div>
+</div>
+</body>
+</html>

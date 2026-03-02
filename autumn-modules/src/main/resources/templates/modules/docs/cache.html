@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Autumn 文档 - 缓存体系（Cache）</title>
+<#include "/header.html">
+<style>
+    .doc-page { padding: 15px; }
+    .doc-layout { display: flex; align-items: flex-start; }
+    .doc-sidebar { width: 260px; position: sticky; top: 12px; background: #fff; border: 1px solid #d2d6de; border-radius: 3px; padding: 10px 0; margin-right: 15px; }
+    .doc-sidebar-title { font-size: 14px; color: #666; padding: 0 14px 8px; margin: 0 0 8px; border-bottom: 1px solid #f0f0f0; }
+    .doc-nav { list-style: none; margin: 0; padding: 0; }
+    .doc-nav-link { display: block; padding: 8px 14px; color: #333; text-decoration: none; border-left: 3px solid transparent; }
+    .doc-nav-link:hover { background: #f7f7f7; text-decoration: none; }
+    .doc-nav-link.active { color: #3c8dbc; background: #f0f7fb; border-left-color: #3c8dbc; font-weight: 600; }
+    .doc-content { flex: 1; background: #fff; border: 1px solid #d2d6de; border-radius: 3px; padding: 18px; }
+    .doc-content h2 { margin-top: 0; }
+    .doc-content h3 { margin-top: 20px; font-size: 20px; }
+    .doc-content ul, .doc-content ol { padding-left: 20px; }
+    .doc-panel { border: 1px solid #e5e5e5; border-radius: 3px; padding: 10px 12px; margin-bottom: 12px; }
+    .doc-tag { display: inline-block; background: #ecf0f5; border-radius: 10px; padding: 2px 10px; margin-right: 6px; font-size: 12px; color: #666; }
+    .doc-code { margin-top: 8px; padding: 10px; background: #f7f7f7; border: 1px solid #e5e5e5; border-radius: 3px; font-family: Menlo, Consolas, monospace; font-size: 12px; white-space: pre-wrap; }
+    @media (max-width: 992px) { .doc-layout { display: block; } .doc-sidebar { width: 100%; position: static; margin-right: 0; margin-bottom: 12px; } }
+</style>
+</head>
+<body>
+<div class="doc-page">
+    <div class="doc-layout">
+        <aside class="doc-sidebar">
+            <#assign currentDoc = "cache">
+            <#include "/modules/docs/_sidebar.html">
+        </aside>
+        <main class="doc-content">
+            <h2>缓存体系（Cache）</h2>
+            <p><span class="doc-tag">EhCache</span><span class="doc-tag">Redis 二级缓存</span><span class="doc-tag">失效广播</span><span class="doc-tag">运维接口</span></p>
+
+            <h3>功能入口</h3>
+            <ul>
+                <li>缓存核心服务：<code>cn.org.autumn.service.CacheService</code></li>
+                <li>共享缓存抽象：<code>cn.org.autumn.service.ShareCacheService</code>（<code>BaseService</code> 继承）</li>
+                <li>运维控制器：<code>/sys/cache/*</code>（<code>CacheController</code>）</li>
+                <li>失效同步通道：<code>cache:invalidation</code>（Redis Pub/Sub）</li>
+            </ul>
+
+            <h3>核心能力说明</h3>
+            <div class="doc-panel">
+                <ul>
+                    <li>两级缓存：先查本地 EhCache，未命中再查 Redis。</li>
+                    <li>跨实例一致性：写入/删除后发布失效消息，其他实例删除本地缓存键。</li>
+                    <li>空值缓存：通过 <code>NULL_PLACEHOLDER</code> 支持缓存 null，防止缓存穿透。</li>
+                    <li>类型安全：根据 <code>CacheConfig</code> 对 key 类型进行转换，避免 Long/String 类型不一致。</li>
+                </ul>
+            </div>
+
+            <h3>关键配置项</h3>
+            <table class="table table-bordered table-striped">
+                <thead>
+                <tr>
+                    <th>配置来源</th>
+                    <th>字段</th>
+                    <th>默认值/策略</th>
+                    <th>说明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>CacheConfig</td>
+                    <td>expire / unit</td>
+                    <td>1440 + MINUTES</td>
+                    <td>本地缓存过期时间（当未注册配置且动态创建时）</td>
+                </tr>
+                <tr>
+                    <td>CacheConfig</td>
+                    <td>redis / unit</td>
+                    <td>1440 + MINUTES</td>
+                    <td>Redis 二级缓存过期时间</td>
+                </tr>
+                <tr>
+                    <td>CacheConfig</td>
+                    <td>max</td>
+                    <td>10000</td>
+                    <td>最大条目数（动态创建配置时）</td>
+                </tr>
+                <tr>
+                    <td>CacheConfig</td>
+                    <td>Null</td>
+                    <td>false</td>
+                    <td>是否缓存 null 值</td>
+                </tr>
+                <tr>
+                    <td>ShareCacheService</td>
+                    <td>getShareCacheExpire()</td>
+                    <td>10（分钟）</td>
+                    <td>共享缓存默认过期策略（可被子类覆盖）</td>
+                </tr>
+                </tbody>
+            </table>
+
+            <h3>API 示例（真实路径）</h3>
+            <div class="doc-code">GET /sys/cache/status
+GET /sys/cache/list
+GET /sys/cache/keys/{name}?page=1&amp;size=20
+GET /sys/cache/search/{name}?pattern=*&amp;page=1&amp;size=20
+GET /sys/cache/value/{name}?key=someKey
+DELETE /sys/cache/key/{name}?key=someKey
+DELETE /sys/cache/keys/{name}  Body: ["k1","k2"]
+DELETE /sys/cache/clear/{name}
+DELETE /sys/cache/clear/all</div>
+
+            <h3>返回结构示例</h3>
+            <div class="doc-code">{"code":0,"msg":"success","data":{"redisEnabled":true,"cacheCount":12,"instanceCount":2}}</div>
+            <div class="doc-code">{"code":0,"msg":"success","data":{"key":"user:1","value":{"id":1},"valueType":"cn.org.autumn.modules.sys.entity.SysUserEntity","valueJson":"{\"id\":1}"}}</div>
+
+            <h3>服务端调用示例（ShareCacheService / BaseService）</h3>
+            <div class="doc-code">// 读取：未命中时自动回源并写入缓存
+UserDto dto = getShareCache("user_profile", UserDto.class, userUuid, () -&gt; loadFromDb(userUuid));
+
+// 写入
+putShareCache("user_profile", UserDto.class, userUuid, dto);
+
+// 删除（同时删单值+列表缓存）
+removeShareCacheAll("user_profile", UserDto.class, userUuid);</div>
+
+            <h3>BaseCacheService 重点：getCache / getEntity 调用链</h3>
+            <div class="doc-code">// BaseCacheService#getCache(Object key) 核心逻辑
+// 1) 校验 @Cache(unique=true)
+// 2) 构建缓存 key
+// 3) compute(...) 缓存未命中时调用 getEntity(key)
+public T getCache(Object key) {
+    checkFieldCacheUnique(true);
+    Object cacheKey = buildCacheKey(key);
+    return compute(cacheKey, () -&gt; getEntity(key), getConfig());
+}
+
+// BaseCacheService#getEntity(Object key) 默认实现
+public T getEntity(Object key) {
+    return getNameEntity("", key);
+}</div>
+            <ul>
+                <li><code>getCache*</code> 系列是统一入口：优先读缓存，未命中才回源加载。</li>
+                <li><code>getEntity*</code> 系列是“回源策略”入口：默认通过注解+反射组装查询条件并查库。</li>
+                <li>因此：不重写也可用（依赖默认实现）；有复杂业务时可重写 <code>getEntity</code> / <code>getNameEntity</code> 精准控制回源。</li>
+            </ul>
+
+            <h3>默认实现方式（注解 + 反射）</h3>
+            <ul>
+                <li>单字段模式：在字段上标注 <code>@Cache</code>，默认实现会定位该字段并按字段值查询。</li>
+                <li>复合 key 模式：在类上使用 <code>@Cache(value={"f1","f2"})</code> 或 <code>@Caches</code>，按字段顺序/名称构造条件查询。</li>
+                <li>命名缓存模式：通过 <code>name</code> 区分多个缓存定义，使用 <code>getNameCache(name,...)</code> / <code>getNameEntity(name,...)</code>。</li>
+                <li>唯一性约束：<code>getCache*</code> 会校验 <code>unique=true</code>；非唯一字段应使用 <code>getListCache*</code>。</li>
+                <li>自动创建：默认 <code>getEntity*</code> 仅在注解 <code>create=true</code> 时未命中可自动建实体；<code>getCached/getEntitied</code> 系列是“强制可创建”语义。</li>
+            </ul>
+
+            <h3>BaseCacheService 配置接口（可在实现类覆写）</h3>
+            <p>BaseCacheService 提供了一组可覆写配置方法，支持按“默认 / 命名缓存 / 类型 / 类型+命名”四个维度定制缓存策略。</p>
+            <table class="table table-bordered table-striped">
+                <thead>
+                <tr>
+                    <th>配置函数</th>
+                    <th>默认值</th>
+                    <th>作用</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td><code>getCacheExpire*</code></td>
+                    <td>10</td>
+                    <td>本地缓存过期时间</td>
+                </tr>
+                <tr>
+                    <td><code>getRedisExpire*</code></td>
+                    <td><code>3 * getCacheExpire*</code></td>
+                    <td>Redis 二级缓存过期时间（默认是本地 3 倍）</td>
+                </tr>
+                <tr>
+                    <td><code>getCacheMax*</code></td>
+                    <td>1000</td>
+                    <td>本地缓存最大条目数</td>
+                </tr>
+                <tr>
+                    <td><code>getCacheUnit*</code></td>
+                    <td><code>TimeUnit.MINUTES</code></td>
+                    <td>过期时间单位</td>
+                </tr>
+                <tr>
+                    <td><code>isCacheNull*</code></td>
+                    <td>false</td>
+                    <td>是否缓存 null 值</td>
+                </tr>
+                <tr>
+                    <td><code>isCachePersistent*</code></td>
+                    <td>false</td>
+                    <td>是否启用持久化（磁盘）</td>
+                </tr>
+                <tr>
+                    <td><code>getCachePath*</code></td>
+                    <!--<#noparse>-->
+                    <td><code><#noparse>${user.home}/ehcache</code></td>
+                    <!--</#noparse>-->
+                    <td>持久化目录</td>
+                </tr>
+                </tbody>
+            </table>
+
+            <h3>方法使用决策图（getCache / getEntity / getCached / getListCache / getNameCache）</h3>
+            <div class="doc-code">开始
+ ├─ 你是“读缓存入口”吗？
+ │   ├─ 是
+ │   │   ├─ 是否需要按 name 区分多套缓存？
+ │   │   │   ├─ 是 -> 用 getNameCache(name, ...)
+ │   │   │   └─ 否
+ │   │   │       ├─ 字段是否 unique=false（一对多）？
+ │   │   │       │   ├─ 是 -> 用 getListCache(...)
+ │   │   │       │   └─ 否
+ │   │   │       │       ├─ 未命中时是否要“强制创建”实体？
+ │   │   │       │       │   ├─ 是 -> 用 getCached(...)
+ │   │   │       │       │   └─ 否 -> 用 getCache(...)
+ │   └─ 否（你在实现回源逻辑）
+ │       ├─ 标准回源（注解+反射）-> 用默认 getEntity(...)
+ │       └─ 复杂回源（联表/状态过滤/租户隔离）-> 在实现类覆盖 getEntity(...) / getNameEntity(...)</div>
+
+            <table class="table table-bordered table-striped">
+                <thead>
+                <tr>
+                    <th>方法</th>
+                    <th>典型场景</th>
+                    <th>未命中行为</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td><code>getCache(key)</code></td>
+                    <td>唯一键读缓存（默认入口）</td>
+                    <td>自动调用 <code>getEntity(key)</code> 回源并写缓存</td>
+                </tr>
+                <tr>
+                    <td><code>getCached(key)</code></td>
+                    <td>唯一键读缓存且必须返回实体</td>
+                    <td>未命中时尝试创建实体（强制创建语义）</td>
+                </tr>
+                <tr>
+                    <td><code>getListCache(key)</code></td>
+                    <td>非唯一字段（一对多列表）</td>
+                    <td>自动调用 <code>getListEntity(key)</code> 回源列表</td>
+                </tr>
+                <tr>
+                    <td><code>getNameCache(name, ...)</code></td>
+                    <td>同一 Service 多套命名缓存</td>
+                    <td>按 <code>name</code> 选择对应注解定义并回源</td>
+                </tr>
+                <tr>
+                    <td><code>getEntity(...)</code></td>
+                    <td>回源实现点（非缓存入口）</td>
+                    <td>默认注解+反射查询；可由实现类覆盖</td>
+                </tr>
+                </tbody>
+            </table>
+            <ul>
+                <li><strong>一句话记忆：</strong>先选“缓存入口方法”（getCache/getListCache/getNameCache/getCached），再决定是否覆盖 getEntity 回源策略。</li>
+            </ul>
+
+            <h3>覆写示例（按业务场景调优）</h3>
+            <div class="doc-code">public class UserCacheService extends BaseCacheService&lt;UserDao, UserEntity&gt; {
+
+    // 默认缓存：15分钟
+    @Override
+    public long getCacheExpire() {
+        return 15;
+    }
+
+    // 命名缓存：黑名单缓存更短，避免脏数据滞留
+    @Override
+    public long getCacheExpire(String naming) {
+        if ("blacklist".equals(naming)) {
+            return 2;
+        }
+        return 15;
+    }
+
+    // Redis 设置更长，降低跨实例回源
+    @Override
+    public long getRedisExpire() {
+        return 60;
+    }
+
+    // 热点不存在用户缓存空值，防止穿透
+    @Override
+    public boolean isCacheNull(String naming) {
+        return "user_profile".equals(naming);
+    }
+
+    // 开启持久化并指定目录
+    @Override
+    public boolean isCachePersistent() {
+        return true;
+    }
+
+    @Override
+    public String getCachePath() {
+        return "/data/cache/ehcache";
+    }
+}</div>
+            <ul>
+                <li>优先覆写“最小范围”函数：如只对某个命名缓存生效，优先覆写 <code>getCacheExpire(String naming)</code>。</li>
+                <li>建议保持 Redis 过期时间大于本地过期时间，减少多实例重复回源。</li>
+                <li>仅对高价值“空查询热点”开启 <code>isCacheNull*</code>，避免无意义占用。</li>
+                <li>开启持久化时，请确保目录可写且有容量监控。</li>
+            </ul>
+
+            <h3>配置接口选择矩阵（覆写哪一个）</h3>
+            <table class="table table-bordered table-striped">
+                <thead>
+                <tr>
+                    <th>需求场景</th>
+                    <th>推荐覆写接口</th>
+                    <th>说明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>整个 Service 的缓存策略统一调整</td>
+                    <td><code>getCacheExpire()</code> / <code>getRedisExpire()</code> / <code>isCacheNull()</code></td>
+                    <td>最简单，影响该 Service 下所有缓存</td>
+                </tr>
+                <tr>
+                    <td>仅某个命名缓存策略不同</td>
+                    <td><code>getCacheExpire(String naming)</code> / <code>isCacheNull(String naming)</code></td>
+                    <td>按缓存名精细化控制，推荐优先使用</td>
+                </tr>
+                <tr>
+                    <td>按返回类型/模型类型区分缓存策略</td>
+                    <td><code>getCacheExpire(Class&lt;X&gt; clazz)</code> / <code>getCacheMax(Class&lt;X&gt; clazz)</code></td>
+                    <td>适合同一业务中 DTO/VO/实体多类型缓存并存</td>
+                </tr>
+                <tr>
+                    <td>同一类型下还要按 naming 再细分</td>
+                    <td><code>getCacheExpire(Class&lt;X&gt; clazz, String naming)</code></td>
+                    <td>粒度最细，适合复杂场景，注意可维护性</td>
+                </tr>
+                <tr>
+                    <td>仅磁盘持久化策略需要差异</td>
+                    <td><code>isCachePersistent*</code> + <code>getCachePath*</code></td>
+                    <td>建议与容量监控、磁盘清理策略配套</td>
+                </tr>
+                </tbody>
+            </table>
+
+            <h3>选型顺序建议</h3>
+            <ol>
+                <li>先用默认版（无参数）跑通，保证策略简单统一。</li>
+                <li>出现单个缓存特殊需求时，再引入 <code>String naming</code> 版本。</li>
+                <li>只有在“同缓存名多类型策略冲突”时再引入 <code>Class&lt;X&gt;</code> 版本。</li>
+                <li>避免一开始就使用 <code>Class&lt;X&gt; + naming</code>，否则配置复杂度会快速升高。</li>
+            </ol>
+
+            <h3>最小覆写模板（推荐）</h3>
+            <div class="doc-code">public class DemoService extends BaseCacheService&lt;DemoDao, DemoEntity&gt; {
+
+    // 1) 全局默认
+    @Override
+    public long getCacheExpire() { return 10; }
+
+    // 2) 仅命名缓存差异
+    @Override
+    public long getCacheExpire(String naming) {
+        if ("hot_user".equals(naming)) return 2;
+        return getCacheExpire();
+    }
+
+    // 3) 仅在必要时按类型细分
+    @Override
+    public &lt;X&gt; long getCacheExpire(Class&lt;X&gt; clazz) {
+        if (clazz != null && "UserDTO".equals(clazz.getSimpleName())) return 5;
+        return getCacheExpire();
+    }
+}</div>
+
+            <h3>实现类覆盖建议</h3>
+            <div class="doc-code">public class UserService extends BaseCacheService&lt;UserDao, UserEntity&gt; {
+
+    // 覆盖回源逻辑：复杂查询、联表、过滤逻辑可放这里
+    @Override
+    public UserEntity getEntity(Object key) {
+        String userUuid = String.valueOf(key);
+        return baseMapper.selectByUuidAndStatus(userUuid, 1);
+    }
+}</div>
+            <ul>
+                <li>推荐只覆盖回源方法，不改 <code>getCache*</code> 主流程，保持缓存策略统一。</li>
+                <li>若覆盖了 <code>getEntity(Object... keys)</code>，请保持参数顺序与缓存 key 构建规则一致。</li>
+                <li>对于多套 key 方案，优先使用 <code>getNameEntity(name,...)</code> 明确语义，避免混用。</li>
+            </ul>
+
+            <h3>缓存接入模板（建议直接复用）</h3>
+            <div class="doc-code">// 示例：在业务 Service 中统一定义缓存名和失效策略
+public class UserProfileService extends BaseService&lt;UserMapper, UserEntity&gt; {
+
+    private static final String CACHE_USER_PROFILE = "user_profile";
+
+    // 统一读取入口（cache-aside）
+    public UserDto getByUuid(String userUuid) {
+        return getShareCache(CACHE_USER_PROFILE, UserDto.class, userUuid,
+                () -&gt; loadFromDb(userUuid));
+    }
+
+    // 更新后主动失效，避免脏读
+    public void updateProfile(String userUuid, UserDto dto) {
+        saveToDb(userUuid, dto);
+        removeShareCacheAll(CACHE_USER_PROFILE, UserDto.class, userUuid);
+    }
+}</div>
+            <ul>
+                <li>命名建议：<code>{domain}_{entity}_{scene}</code>，如 <code>usr_profile_detail</code>。</li>
+                <li>Key 建议：单值 key 用业务唯一标识（如 <code>userUuid</code>）；多维条件使用复合 key（如 <code>tenant:user:locale</code>）。</li>
+                <li>失效建议：写操作后优先 <code>removeShareCacheAll</code>，确保单值缓存和列表缓存一起失效。</li>
+                <li>空值策略：热点空查询场景开启 null 缓存，其余场景默认关闭，避免占用过多缓存。</li>
+            </ul>
+
+            <h3>预发布检查清单（缓存专项）</h3>
+            <ul>
+                <li>确认缓存名未与其他模块冲突，且命名可读。</li>
+                <li>确认更新/删除流程都包含失效动作，不会只写库不清缓存。</li>
+                <li>确认 Redis 开启/关闭两种模式下都能正常回退。</li>
+                <li>确认 key 类型与 <code>CacheConfig.key</code> 一致（避免 String/Long 混用）。</li>
+            </ul>
+
+            <h3>性能调优建议（生产场景）</h3>
+            <table class="table table-bordered table-striped">
+                <thead>
+                <tr>
+                    <th>场景</th>
+                    <th>风险</th>
+                    <th>建议做法</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>缓存穿透（大量不存在 key）</td>
+                    <td>频繁打到数据库</td>
+                    <td>热点空数据开启 <code>cacheNull/Null=true</code>，并设置较短 TTL</td>
+                </tr>
+                <tr>
+                    <td>缓存击穿（单热点 key 过期）</td>
+                    <td>瞬时高并发回源</td>
+                    <td>热点 key 提前续期，或在业务层增加单飞/互斥重建</td>
+                </tr>
+                <tr>
+                    <td>缓存雪崩（同批 key 同时过期）</td>
+                    <td>数据库突增</td>
+                    <td>TTL 增加随机抖动，避免统一过期时间</td>
+                </tr>
+                <tr>
+                    <td>跨实例短暂脏读</td>
+                    <td>实例间本地缓存不一致</td>
+                    <td>写后立即发布失效（当前已内置），并监控 Redis Pub/Sub 订阅状态</td>
+                </tr>
+                <tr>
+                    <td>缓存 key 数量膨胀</td>
+                    <td>内存上涨、淘汰变频繁</td>
+                    <td>收敛 key 维度，按业务场景拆分缓存名并合理设置 <code>max</code></td>
+                </tr>
+                </tbody>
+            </table>
+
+            <h3>TTL 分层建议（示例）</h3>
+            <div class="doc-code">L1 热点且稳定数据：30~120 分钟（可叠加随机 0~15 分钟）
+L2 一般查询结果：10~30 分钟
+L3 空值缓存：1~5 分钟（防穿透）
+L4 事务敏感数据：短 TTL + 写后强制失效</div>
+
+            <h3>运维排障操作建议</h3>
+            <ul>
+                <li>先看整体：<code>GET /sys/cache/status</code>、<code>GET /sys/cache/list</code>。</li>
+                <li>再看目标缓存：<code>GET /sys/cache/keys/{name}</code> + <code>GET /sys/cache/value/{name}?key=...</code>。</li>
+                <li>异常 key 精准清理：<code>DELETE /sys/cache/key/{name}?key=...</code>。</li>
+                <li>批量异常时按缓存名清理：<code>DELETE /sys/cache/clear/{name}</code>，避免直接全量清空。</li>
+                <li>仅在紧急场景执行：<code>DELETE /sys/cache/clear/all</code>。</li>
+            </ul>
+
+            <h3>监控指标与告警阈值建议</h3>
+            <table class="table table-bordered table-striped">
+                <thead>
+                <tr>
+                    <th>指标</th>
+                    <th>建议阈值</th>
+                    <th>触发后动作</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>缓存命中率（按缓存名）</td>
+                    <td>连续 10 分钟低于 85%</td>
+                    <td>排查 key 设计、TTL 过短、是否存在大量空值回源</td>
+                </tr>
+                <tr>
+                    <td>数据库回源率</td>
+                    <td>较日常基线提升 2 倍以上</td>
+                    <td>检查是否出现击穿/雪崩，必要时临时延长热点缓存 TTL</td>
+                </tr>
+                <tr>
+                    <td>Redis 缓存键增长率</td>
+                    <td>30 分钟内增长超过 50%</td>
+                    <td>检查 key 维度是否失控，必要时按缓存名清理并限流写入路径</td>
+                </tr>
+                <tr>
+                    <td>缓存管理接口失败率（5xx）</td>
+                    <td>5 分钟内超过 1%</td>
+                    <td>优先检查 Redis 可用性、网络抖动、序列化异常</td>
+                </tr>
+                <tr>
+                    <td>失效广播异常率（Pub/Sub）</td>
+                    <td>出现持续错误日志或订阅中断</td>
+                    <td>校验实例订阅状态，观察跨实例读取是否出现旧值</td>
+                </tr>
+                </tbody>
+            </table>
+
+            <h3>告警分级建议</h3>
+            <ul>
+                <li>P1：缓存雪崩导致核心接口大面积超时（需要立即降级/限流并批量修复 TTL）。</li>
+                <li>P2：单个核心缓存命中率骤降（需要 30 分钟内修复 key 或失效策略）。</li>
+                <li>P3：缓存键增长异常但业务未受损（需要当日完成容量与策略复盘）。</li>
+            </ul>
+
+            <h3>上线后一小时观察清单</h3>
+            <ul>
+                <li>对比发布前后：命中率、回源率、接口 RT，确认无明显退化。</li>
+                <li>抽查 1~2 个核心缓存名，确认 <code>/sys/cache/keys/{name}</code> 与实际业务量匹配。</li>
+                <li>抽查更新链路：写操作后读取，确认没有跨实例陈旧数据。</li>
+                <li>确认没有出现连续的 key 类型转换告警日志。</li>
+            </ul>
+
+            <h3>页面入口（templates）</h3>
+            <ul>
+                <li>当前系统未提供独立缓存管理页面模板（<code>templates/modules/sys/</code> 下无 <code>cache.html</code>）。</li>
+                <li>缓存运维以接口方式提供，建议通过管理端二次封装页面或 API 调试工具调用。</li>
+            </ul>
+
+            <h3>权限码清单</h3>
+            <div class="doc-code">无 @RequiresPermissions 权限码；接口采用控制器内权限判断：
+ShiroUtils.isLogin() &amp;&amp; sysUserRoleService.isSystemAdministrator(userUuid)</div>
+
+            <h3>最小可跑通用例</h3>
+            <ol>
+                <li>前置条件：使用系统管理员账号登录（非管理员会返回“无权限访问”）。</li>
+                <li>调用 <code>GET /sys/cache/status</code>，确认返回 <code>redisEnabled</code>、<code>cacheCount</code>。</li>
+                <li>调用 <code>GET /sys/cache/list</code> 选择一个缓存名（如 <code>sysconfig</code>）。</li>
+                <li>调用 <code>GET /sys/cache/keys/sysconfig?page=1&amp;size=20</code> 获取键列表，再用 <code>GET /sys/cache/value/sysconfig?key=...</code> 查看值。</li>
+                <li>调用 <code>DELETE /sys/cache/key/sysconfig?key=...</code> 删除后再次查询，确认键已失效。</li>
+            </ol>
+
+            <h3>常见故障排查</h3>
+            <table class="table table-bordered table-striped">
+                <thead>
+                <tr>
+                    <th>现象</th>
+                    <th>可能原因</th>
+                    <th>处理建议</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>查询不到值但业务刚写入</td>
+                    <td>写入实例与读取实例本地缓存尚未同步</td>
+                    <td>确认 Redis Pub/Sub 可用，并检查 <code>cache:invalidation</code> 订阅日志</td>
+                </tr>
+                <tr>
+                    <td>删除 key 无效</td>
+                    <td>key 类型不匹配（如 Long 被当作 String）</td>
+                    <td>核对缓存配置中的 keyType，必要时使用控制器转换规则</td>
+                </tr>
+                <tr>
+                    <td>缓存穿透导致频繁回源</td>
+                    <td>未开启 null 缓存</td>
+                    <td>在配置中启用 <code>Null=true</code> 或在热点空数据场景开启 <code>cacheNull</code></td>
+                </tr>
+                </tbody>
+            </table>
+
+            <div style="margin-top: 16px;">
+                <a class="btn btn-default btn-sm" href="${request.contextPath}/modules/docs/index">返回首页</a>
+                <a class="btn btn-success btn-sm" href="${request.contextPath}/modules/docs/index?done=cache">返回首页并标记本章完成</a>
+            </div>
+        </main>
+    </div>
+</div>
+</body>
+</html>

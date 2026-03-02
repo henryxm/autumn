@@ -84,6 +84,11 @@ public class SysPageController implements ErrorController {
         return httpServletRequest.getRequestURI();
     }
 
+    @RequestMapping("docs/index.html")
+    public String docs(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        return "/modules/docs/index";
+    }
+
     @RequestMapping(value = {"index.html"})
     public String index(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model, String spm) {
         active(httpServletRequest);

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Autumn 文档 - 多语言（lan）</title>
+<#include "/header.html">
+<style>
+    .doc-page { padding: 15px; }
+    .doc-layout { display: flex; align-items: flex-start; }
+    .doc-sidebar { width: 260px; position: sticky; top: 12px; background: #fff; border: 1px solid #d2d6de; border-radius: 3px; padding: 10px 0; margin-right: 15px; }
+    .doc-sidebar-title { font-size: 14px; color: #666; padding: 0 14px 8px; margin: 0 0 8px; border-bottom: 1px solid #f0f0f0; }
+    .doc-nav { list-style: none; margin: 0; padding: 0; }
+    .doc-nav-link { display: block; padding: 8px 14px; color: #333; text-decoration: none; border-left: 3px solid transparent; }
+    .doc-nav-link:hover { background: #f7f7f7; text-decoration: none; }
+    .doc-nav-link.active { color: #3c8dbc; background: #f0f7fb; border-left-color: #3c8dbc; font-weight: 600; }
+    .doc-content { flex: 1; background: #fff; border: 1px solid #d2d6de; border-radius: 3px; padding: 18px; }
+    .doc-content h2 { margin-top: 0; }
+    .doc-content h3 { margin-top: 20px; font-size: 20px; }
+    .doc-content ul { padding-left: 20px; }
+    .doc-code { margin-top: 8px; padding: 10px; background: #f7f7f7; border: 1px solid #e5e5e5; border-radius: 3px; font-family: Menlo, Consolas, monospace; font-size: 12px; }
+    @media (max-width: 992px) { .doc-layout { display: block; } .doc-sidebar { width: 100%; position: static; margin-right: 0; margin-bottom: 12px; } }
+</style>
+</head>
+<body>
+<div class="doc-page">
+    <div class="doc-layout">
+        <aside class="doc-sidebar">
+            <#assign currentDoc = "lan">
+            <#include "/modules/docs/_sidebar.html">
+        </aside>
+        <main class="doc-content">
+            <h2>多语言（lan）</h2>
+            <p>用于管理系统支持语言、语言资源与界面切换。</p>
+            <h3>功能入口</h3>
+            <ul>
+                <li>语言管理：<code>/lan/language/list|save|update|delete</code></li>
+                <li>支持语言：<code>/lan/language/supportedlist</code>、<code>/lan/language/updatesupportedlanguage</code></li>
+                <li>语言写入：<code>POST /lan/language/put</code></li>
+                <li>开放接口：<code>/api/getsupportedlanguage</code></li>
+            </ul>
+            <h3>规范建议</h3>
+            <ul>
+                <li>统一翻译键命名风格（模块_页面_含义）</li>
+                <li>新增语言时先补核心页面与错误提示</li>
+                <li>建立缺失翻译扫描机制</li>
+            </ul>
+
+            <h3>关键配置项（来自 sys_config.param_key）</h3>
+            <table class="table table-bordered table-striped">
+                <thead>
+                <tr>
+                    <th>配置键</th>
+                    <th>默认值</th>
+                    <th>说明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>UPDATE_LANGUAGE_ON_INIT</td>
+                    <td>true</td>
+                    <td>系统启动或初始化时自动更新语言项</td>
+                </tr>
+                <tr>
+                    <td>NONE_SUFFIX_VIEW</td>
+                    <td>js,css,map,html...</td>
+                    <td>影响静态/视图资源查找，对多语言页面加载有影响</td>
+                </tr>
+                </tbody>
+            </table>
+
+            <h3>API 示例（真实路径）</h3>
+            <div class="doc-code">GET /lan/language/list?page=1&amp;limit=20</div>
+            <div class="doc-code">GET /lan/language/supportedlist</div>
+            <div class="doc-code">POST /lan/language/updatesupportedlanguage {"name":"en_US","enable":1}</div>
+            <div class="doc-code">GET /api/getsupportedlanguage</div>
+            <div class="doc-code">{"code":0,"msg":"success","data":[{"locale":"zh_CN","name":"中文"}]}</div>
+
+            <h3>页面入口（templates）</h3>
+            <ul>
+                <li><code>/modules/lan/language</code> -> <code>templates/modules/lan/language.html</code></li>
+                <li><code>/modules/lan/supportedlanguage</code> -> <code>templates/modules/lan/supportedlanguage.html</code></li>
+            </ul>
+
+            <h3>权限码清单</h3>
+            <div class="doc-code">lan:language:list|info|save|update|delete</div>
+            <div class="doc-code">lan:language:supportedlist, lan:language:updatesupported</div>
+
+            <h3>最小可跑通用例</h3>
+            <ol>
+                <li>确认账号具备 <code>lan:language:list</code> 与 <code>lan:language:updatesupported</code>。</li>
+                <li>访问 <code>/modules/lan/language</code>，查看语言资源列表。</li>
+                <li>调用 <code>GET /lan/language/supportedlist</code>，确认返回支持语言集合。</li>
+                <li>调用 <code>POST /lan/language/updatesupportedlanguage</code> 开关一门语言并验证界面切换。</li>
+            </ol>
+
+            <h3>故障排查模板</h3>
+            <table class="table table-bordered table-striped">
+                <thead>
+                <tr>
+                    <th>现象</th>
+                    <th>可能原因</th>
+                    <th>处理建议</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>部分文案未翻译</td>
+                    <td>翻译键缺失</td>
+                    <td>补齐语言包并做缺失扫描</td>
+                </tr>
+                <tr>
+                    <td>语言切换无效</td>
+                    <td>会话语言未更新</td>
+                    <td>检查切换接口与前端缓存</td>
+                </tr>
+                </tbody>
+            </table>
+
+            <div style="margin-top: 16px;">
+                <a class="btn btn-default btn-sm" href="${request.contextPath}/modules/docs/index">返回首页</a>
+                <a class="btn btn-success btn-sm" href="${request.contextPath}/modules/docs/index?done=lan">返回首页并标记本章完成</a>
+            </div>
+        </main>
+    </div>
+</div>
+</body>
+</html>

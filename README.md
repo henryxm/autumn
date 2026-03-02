@@ -1,109 +1,110 @@
 # Autumn
 
-#### 项目介绍
-- 采用Spring、Spring Boot、Redis、MyBatis、Shiro、Druid框架开发,搭载mysql数据。
-- 如果你厌烦了MyBatis中需要手动创建表的事情，这个项目非常适合你，自动为你生成表。
-- 从此你不在需要导入sql文件了，项目初始化变得异常简单，结构清晰，易于开发，真正拿来可用。
-- 全注解MyBatis开发，没有任何mapper文件，一切sql 映射都用代码实现，全程无xml配置，对xml编写mapper有恐惧症的人的福音。
+Autumn 是一个可扩展的后台基础框架，覆盖权限、系统管理、代码生成、缓存、队列、加解密、定时任务、对象存储、防火墙等常见能力，并提供在线文档与 AI 协作指引。
 
-- 提供双向生成功能：
-  1. 实体类自动生成数据库表，全过程不需要任何SQL语句，所有表自动生成
-  2. 通过表生成基础结构代码，生成代码中已包含CRUD功能，表级别的API接口全部都有
-  3. 基本实例数据全自动通过代码初始化，无需干预
-  4. 仅仅只需要修改数据库连接地址，用户名，密码，即可启动运行。
+## 1. 当前版本与定位
 
-#### 具有如下特点
-- 灵活的权限控制，可控制到页面或按钮，满足绝大部分的权限需求
-- 完善的部门管理及数据权限，通过注解实现数据权限的控制
-- 完善的XSS防范及脚本过滤，彻底杜绝XSS攻击
-- 支持分布式部署，session存储在redis中
-- 友好的代码结构及注释，便于阅读及二次开发
-- 引入quartz定时任务，可动态完成任务的添加、修改、删除、暂停、恢复及日志查看等功能
-- 页面交互使用Vue2.x，极大的提高了开发效率
-- 引入swagger文档支持，方便编写API接口文档
+- 当前版本：`2.0.0`
+- 技术基座：Spring Boot 3.x、MyBatis-Plus、Shiro、Redis、EhCache、Vue2、FreeMarker
+- 设计目标：
+  - 提供可复用的通用能力，减少业务项目重复造轮子
+  - 通过 `autumn-handler` 做框架扩展解耦
+  - 支持“传统模式 + AI 协作开发模式”并行
 
+## 2. 核心能力总览
 
-#### 数据权限设计思想
-- 管理员管理、角色管理、部门管理，可操作本部门及子部门数据
-- 菜单管理、定时任务、参数管理、字典管理、系统日志，没有数据权限
-- 业务功能，按照用户数据权限，查询、操作数据【没有本部门数据权限，也能查询本人数据】
+- 系统模块：`sys / gen / job / db / oauth / usr / oss / lan / spm / wall`
+- 框架能力：
+  - 缓存：两级缓存（EhCache + Redis）、共享缓存抽象、失效同步
+  - 队列：Memory/Redis List/Redis Stream/Delay/Priority，支持重试与死信
+  - 加解密：RSA + AES 混合模式，支持请求/返回兼容改造
+  - 定时任务：`schedulejob(cron)` + `LoopJob(接口周期)`，支持统一管理与告警
+  - Handler 扩展：默认实现 + 条件注入 + 顺序控制
 
+## 3. 在线文档入口（推荐先看）
 
-#### 项目结构
-```
-Autumn
-├─autumn-lib     公共模块
-│ 
-├─autumn-modules      系统核心模块
-│    │ 
-│    ├─modules  模块
-│    │    ├─gen 代码生成
-│    │    ├─job 定时任务
-│    │    ├─lan 多语言
-│    │    ├─oss 文件存储
-│    │    ├─spm 超级位置模型
-│    │    ├─sys 系统管理(核心)
-│    │    ├─user 普通用户
-│    │    └─wall 防火墙
-│    │ 
-│    └─resources 
-│        ├─statics 静态文件
-│        ├─template 代码生成模板文件
-│        └─templates 生成的模块代码
-│
-├─autumn-web    系统启动入口
-│        ├─statics  静态资源
-│        ├─templates 系统页面
-│        │    ├─modules      模块页面
-│        │    ├─index.html   AdminLTE主题风格（默认主题）
-│        │    └─index1.html  Layui主题风格
-│        └─application.yml   全局配置文件
-│
-├─autumn-demo    生成的代码
+项目已内置完整在线文档，建议新同学优先通过文档入门：
+
+- 文档首页：`/modules/docs/index`
+- 推荐阅读顺序：
+  1. `quickstart`
+  2. `architecture`
+  3. `ai-collab`
+  4. `handler`
+  5. `sys`
+  6. `cache / queue / job / oauth / hybrid-crypto`
+
+文档模板目录：`autumn-modules/src/main/resources/templates/modules/docs/`
+
+## 4. AI 协作入口（多项目）
+
+当你在 `/Users/mac/Idea` 下维护多个基于 Autumn 的项目时，建议固定引用以下文档：
+
+- `AI_MAP.md`：框架能力地图（给 AI 的硬约束）
+- `AI_GUIDE.md`：多项目提示词模板与实操规则
+
+## 5. 工程结构
+
+```text
+autumn
+├─autumn-handler    # Handler 扩展接口与默认实现
+├─autumn-lib        # 基础能力（缓存/队列/加解密/通用模型）
+├─autumn-modules    # 业务模块与控制器实现
+└─autumn-web        # Web 启动入口（主类：cn.org.autumn.Web）
 ```
 
-#### 技术选型
-- 核心框架：Spring Boot 2.0
-- 安全框架：Apache Shiro 1.4
-- 视图框架：Spring MVC 5.0
-- 持久层框架：MyBatis 3.3
-- 定时器：Quartz 2.3
-- 数据库连接池：Druid 1.1
-- 日志管理：SLF4J 1.7、Log4j
-- 页面交互：Vue2.x
+## 6. 环境要求
 
-#### 超级位置模型
-- 增加对超级位置模型的支持，方便统计网站点击埋点的统计
+- JDK：`1.8`
+- Maven：`3.8+`
+- MySQL：`5.7+`（建议 8.x）
+- Redis：建议开启（缓存、分布式会话、队列/加密等场景更完整）
 
-#### 防火墙
-- 增加IP防火墙
-- 增加URL防火墙
-- 增加主机访问统计
-- 增加IP,URL启动禁用功能
+## 7. 快速启动
 
-#### 定时任务
-- 增加对定时任务代码级支持
+1. 创建数据库 `autumn`（UTF-8/utf8mb4）。
+2. 修改数据库配置：`web/src/main/resources/application-dev.yml`。
+3. 如需 Redis，确认 `web/src/main/resources/application.yml` 中 Redis 参数可连接。
+4. 在项目根目录执行：
 
-#### 软件需求
-- JDK1.8
-- MySQL5.5+
-- Maven3.0+
+```bash
+mvn clean package -DskipTests
+```
 
-#### 本地部署
-- 通过git下载源码
-- 创建数据库autumn，用户名：autumn， 密码：autumn，数据库编码为UTF-8
-- 修改application-dev.yml文件，更新MySQL账号和密码
-- 在autumn-web目录下，执行mvn clean install
+5. 启动方式二选一：
+   - IDE 启动主类：`web/src/main/java/cn/org/autumn/Web.java`
+   - 命令行启动：`java -jar web/target/web.jar`
 
-- Eclipse、IDEA运行AdminApplication.java，则可启动项目【autumn-web】
-- admin访问路径：http://localhost/autumn
-- swagger文档路径：http://localhost/autumn/swagger/index.html
-- 账号密码：admin/admin
+默认配置参考：
 
-#### 分布式部署
-- 分布式部署，需要安装redis，并配置config.properties里的redis信息
-- 需要配置【autumn.redis.open=true】，表示开启redis缓存
-- 需要配置【autumn.shiro.redis=true】，表示把shiro session存到redis里
+- 服务端口：`80`
+- 上下文路径：`/`
+- 管理后台：`http://localhost/`
+- 文档首页：`http://localhost/modules/docs/index`
+- API 文档：`http://localhost/swagger/index.html`
+- 默认账号：`admin/admin`
 
-#### 如何交流、反馈、参与贡献？
-- github仓库：https://github.com/henryxm/autumn
+## 8. 定时任务选型建议（重点）
+
+Autumn 提供两类任务机制：
+
+- `schedulejob`：cron 表达式任务（复杂时间规则适用）
+- `LoopJob`：接口式固定周期任务（推荐常规业务优先）
+
+建议规则：
+
+- 固定周期任务优先 `LoopJob.OneMinute/FiveMinute/...`，可显著降低 cron 表达式错误率。
+- 复杂日历规则（如每月指定日、节假日）再使用 cron。
+- 上线前至少校验：幂等、防重入（`skipIfRunning`）、超时（`timeout`）、连续错误阈值（`maxConsecutiveErrors`）、多节点分配（`assignTag/server.tag`）。
+
+## 9. 分布式与运维说明
+
+- 建议开启：
+  - `autumn.redis.open=true`
+  - `autumn.shiro.redis=true`
+- 多节点任务建议结合 `LoopJob` 分配能力统一管理，避免重复执行。
+- 缓存、队列、加密能力建议统一复用框架内置服务，避免项目内重复实现。
+
+## 10. 贡献与反馈
+
+- GitHub：`https://github.com/henryxm/autumn`

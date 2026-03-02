@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Autumn 在线文档</title>
+<#include "/header.html">
+<style>
+    .doc-page { padding: 15px; }
+    .doc-layout { display: flex; align-items: flex-start; }
+    .doc-sidebar {
+        width: 260px;
+        position: sticky;
+        top: 12px;
+        background: #fff;
+        border: 1px solid #d2d6de;
+        border-radius: 3px;
+        padding: 10px 0;
+        margin-right: 15px;
+        max-height: calc(100vh - 24px);
+        overflow-y: auto;
+    }
+    .doc-sidebar-title {
+        font-size: 14px;
+        color: #666;
+        padding: 0 14px 8px 14px;
+        margin: 0 0 8px 0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    .doc-nav { list-style: none; margin: 0; padding: 0; }
+    .doc-nav-link {
+        display: block;
+        padding: 8px 14px;
+        color: #333;
+        text-decoration: none;
+        border-left: 3px solid transparent;
+    }
+    .doc-nav-link:hover { background: #f7f7f7; text-decoration: none; }
+    .doc-nav-link.active {
+        color: #3c8dbc;
+        background: #f0f7fb;
+        border-left-color: #3c8dbc;
+        font-weight: 600;
+    }
+    .doc-content { flex: 1; min-width: 0; }
+    .doc-section {
+        background: #fff;
+        border: 1px solid #d2d6de;
+        border-radius: 3px;
+        margin-bottom: 15px;
+        padding: 16px;
+    }
+    .doc-header h2 { margin: 0 0 10px 0; font-size: 24px; }
+    .doc-header p { margin: 0; color: #666; }
+    .doc-section h3 { margin-top: 0; margin-bottom: 12px; font-size: 20px; }
+
+    .doc-module-block {
+        border: 1px solid #e5e5e5;
+        border-radius: 4px;
+        margin-bottom: 12px;
+        padding: 12px;
+    }
+    .doc-module-block h4 { margin: 0 0 8px 0; font-size: 16px; }
+    .doc-module-block ul { margin-bottom: 8px; padding-left: 18px; }
+    .doc-module-block li { margin-bottom: 4px; }
+    .doc-module-actions { margin-top: 8px; }
+    .doc-module-actions .btn { margin-right: 8px; }
+    .doc-path-grid { display: flex; flex-wrap: wrap; margin-left: -8px; margin-right: -8px; }
+    .doc-path-card { width: 33.33%; padding: 8px; }
+    .doc-path-inner { border: 1px solid #e5e5e5; border-radius: 4px; padding: 12px; min-height: 210px; }
+    .doc-path-inner h4 { margin: 0 0 8px 0; font-size: 16px; }
+    .doc-path-label { margin-bottom: 8px; }
+    .doc-checklist { margin: 0; padding-left: 18px; }
+    .doc-checklist li { margin-bottom: 6px; }
+    .doc-progress {
+        margin-bottom: 10px;
+        border: 1px solid #e5e5e5;
+        border-radius: 4px;
+        background: #fafafa;
+        overflow: hidden;
+    }
+    .doc-progress-bar {
+        height: 18px;
+        line-height: 18px;
+        background: #3c8dbc;
+        color: #fff;
+        text-align: center;
+        font-size: 12px;
+        transition: width .2s ease;
+    }
+    .doc-checklist-actions { margin-top: 8px; }
+    .doc-checklist-actions .btn { margin-right: 8px; }
+    .doc-check-item.done { color: #3c763d; text-decoration: line-through; }
+    .doc-module-progress-list { margin: 0; padding-left: 18px; }
+    .doc-module-progress-list li { margin-bottom: 6px; }
+    .doc-module-item.done { color: #3c763d; text-decoration: line-through; }
+    .doc-todo {
+        margin-top: 8px;
+        padding: 8px 10px;
+        background: #f7f7f7;
+        border-left: 3px solid #f39c12;
+    }
+    .doc-todo p { margin: 0 0 6px 0; color: #666; font-size: 12px; }
+    .doc-todo ul { margin-bottom: 0; padding-left: 18px; }
+    @media (max-width: 992px) {
+        .doc-layout { display: block; }
+        .doc-path-card { width: 100%; }
+        .doc-sidebar {
+            width: 100%;
+            position: static;
+            max-height: none;
+            margin-right: 0;
+            margin-bottom: 12px;
+        }
+    }
+</style>
+</head>
+<body>
+<div id="rrapp" class="doc-page" v-cloak>
+    <div class="doc-layout">
+        <aside class="doc-sidebar">
+            <#assign currentDoc = "index">
+            <#include "/modules/docs/_sidebar.html">
+        </aside>
+
+        <main class="doc-content">
+            <div id="overview" class="doc-section doc-header doc-anchor">
+                <h2>Autumn 在线教程与功能文档</h2>
+                <p>面向新开发者的文档入口：先跑通，再理解模块，再按模块逐步深入二次开发。</p>
+            </div>
+
+            <div id="quickstart" class="doc-section doc-anchor">
+                <h3>学习路径看板</h3>
+                <div class="doc-path-grid">
+                    <div class="doc-path-card" v-for="path in learningPaths" :key="path.title">
+                        <div class="doc-path-inner">
+                            <h4>{{ path.title }}</h4>
+                            <div class="doc-path-label">
+                                <span class="label label-primary">{{ path.label }}</span>
+                            </div>
+                            <ol>
+                                <li v-for="step in path.steps" :key="step.name">
+                                    <a :href="baseURL + 'modules/docs/' + step.page">{{ step.name }}</a>
+                                </li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="checklist" class="doc-section doc-anchor">
+                <h3>Onboarding 完成清单</h3>
+                <div class="doc-progress">
+                    <div class="doc-progress-bar" :style="{width: completionRate + '%'}">
+                        {{ completedCount }}/{{ onboardingChecklist.length }}（{{ completionRate }}%）
+                    </div>
+                </div>
+                <ul class="doc-checklist">
+                    <li v-for="(task, idx) in onboardingChecklist" :key="task.item">
+                        <label>
+                            <input type="checkbox" v-model="task.done" @change="toggleChecklist" />
+                            <span class="doc-check-item" :class="{done: task.done}">{{ task.item }}</span>
+                        </label>
+                        <a :href="baseURL + 'modules/docs/' + task.page">查看章节</a>
+                    </li>
+                </ul>
+                <div class="doc-checklist-actions">
+                    <a class="btn btn-default btn-sm" @click.prevent="resetChecklist">重置清单</a>
+                </div>
+            </div>
+
+            <div id="architecture" class="doc-section doc-anchor">
+                <h3>章节进度看板</h3>
+                <div class="doc-progress">
+                    <div class="doc-progress-bar" :style="{width: moduleCompletionRate + '%'}">
+                        {{ moduleCompletedCount }}/{{ moduleProgress.length }}（{{ moduleCompletionRate }}%）
+                    </div>
+                </div>
+                <ul class="doc-module-progress-list">
+                    <li v-for="m in moduleProgress" :key="m.key">
+                        <label>
+                            <input type="checkbox" v-model="m.done" @change="toggleModuleProgress" />
+                            <span class="doc-module-item" :class="{done: m.done}">{{ m.title }}</span>
+                        </label>
+                        <a :href="baseURL + 'modules/docs/' + m.page">进入章节</a>
+                    </li>
+                </ul>
+                <div class="doc-checklist-actions">
+                    <a class="btn btn-default btn-sm" @click.prevent="resetModuleProgress">重置章节进度</a>
+                </div>
+            </div>
+
+            <div id="architecture-map" class="doc-section doc-anchor">
+                <h3>架构与工程骨架</h3>
+                <ul>
+                    <li>工程结构：autumn-lib / autumn-modules / autumn-web</li>
+                    <li>请求链路：页面 -> Controller -> Service -> Dao</li>
+                    <li>权限与数据权限设计</li>
+                    <li>配置体系与环境隔离</li>
+                    <li>AI 协作入口：先读 AI 协作开发章节，再进入具体模块章节</li>
+                </ul>
+            </div>
+
+            <div id="module-overview" class="doc-section doc-anchor">
+                <h3>核心功能模块总览</h3>
+                <ul>
+                    <li>系统能力：sys / cache / queue / gen / job / db / oauth / client / usr / oss</li>
+                    <li>平台能力：lan / spm / wall</li>
+                    <li>文档编写顺序建议：先 sys，再 gen/job，再 oauth/wall</li>
+                </ul>
+            </div>
+
+            <div id="module-detail" class="doc-section doc-anchor">
+                <h3>模块详解（按代码现状梳理）</h3>
+                <p>每个模块先写“功能入口、核心流程、配置项、FAQ、扩展点”，再补 API 示例。</p>
+            </div>
+
+            <div
+                class="doc-section doc-anchor doc-module-block"
+                v-for="feature in features"
+                :id="'module-' + feature.key"
+                :key="feature.key">
+                <h4>
+                    {{ feature.title }}
+                    <span class="label label-success" v-if="feature.status === 'stable'">已上线</span>
+                    <span class="label label-warning" v-if="feature.status === 'iterating'">迭代中</span>
+                    <span class="label label-info" v-if="feature.status === 'planned'">规划中</span>
+                    <span class="label label-primary" v-if="isModuleDone(feature.detailPage)">已完成学习</span>
+                </h4>
+                <ul>
+                    <li v-for="item in feature.items" :key="item">{{ item }}</li>
+                </ul>
+                <div class="doc-todo">
+                    <p>下一步补充建议</p>
+                    <ul>
+                        <li v-for="todo in feature.todo" :key="todo">{{ todo }}</li>
+                    </ul>
+                </div>
+                <div class="doc-module-actions" v-if="feature.detailPage">
+                    <a class="btn btn-default btn-sm" :href="baseURL + 'modules/docs/' + feature.detailPage">查看章节页</a>
+                    <a class="btn btn-success btn-sm" @click.prevent="toggleFeatureDone(feature.detailPage)">
+                        {{ isModuleDone(feature.detailPage) ? '标记未完成' : '标记已完成' }}
+                    </a>
+                </div>
+            </div>
+
+            <div id="ops" class="doc-section doc-anchor">
+                <h3>运维与诊断</h3>
+                <ul>
+                    <li>缓存、线程、队列、会话管理</li>
+                    <li>在线日志与在线执行能力（管理员）</li>
+                    <li>系统重初始化与安全校验</li>
+                    <li>防火墙策略联动与访问限制</li>
+                </ul>
+            </div>
+
+            <div id="roadmap" class="doc-section doc-anchor">
+                <h3>版本路线图（文档模板）</h3>
+                <ul>
+                    <li>v1：补齐现有功能的“入口 + 流程 + 配置 + FAQ”</li>
+                    <li>v2：补齐 API 示例、权限矩阵、异常场景</li>
+                    <li>v3：补齐新功能规划与验收标准（DoD）</li>
+                </ul>
+            </div>
+        </main>
+    </div>
+</div>
+
+<script src="${request.contextPath}/modules/docs/index.js?_${.now?long}"></script>
+</body>
+</html>
