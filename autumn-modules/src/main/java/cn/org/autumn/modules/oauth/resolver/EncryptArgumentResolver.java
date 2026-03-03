@@ -5,9 +5,12 @@ import cn.org.autumn.exception.CodeException;
 import cn.org.autumn.model.CompatibleRequest;
 import cn.org.autumn.model.Encrypt;
 import cn.org.autumn.model.Error;
+import cn.org.autumn.model.Request;
 import cn.org.autumn.service.AesService;
 import cn.org.autumn.service.RsaService;
 import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,7 +28,6 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestResponseBody
 
 import jakarta.servlet.http.HttpServletRequest;
 import java.lang.reflect.Type;
-import java.util.Map;
 import java.util.List;
 
 /**
@@ -39,7 +41,6 @@ import java.util.List;
 @Slf4j
 @Component
 public class EncryptArgumentResolver extends RequestResponseBodyMethodProcessor {
-
     @Autowired
     private AesService aesService;
 
@@ -63,6 +64,7 @@ public class EncryptArgumentResolver extends RequestResponseBodyMethodProcessor 
     }
 
     @Override
+    @SuppressWarnings("null")
     public Object resolveArgument(@NonNull MethodParameter parameter, @Nullable ModelAndViewContainer mavContainer, @NonNull NativeWebRequest webRequest, @Nullable WebDataBinderFactory binderFactory) throws Exception {
         Object object = super.resolveArgument(parameter, mavContainer, webRequest, binderFactory);
         if (log.isDebugEnabled()) {
@@ -89,23 +91,9 @@ public class EncryptArgumentResolver extends RequestResponseBodyMethodProcessor 
                     //当使用RSA解密时，使用服务端的私钥进行解密
                     decrypt = "RSA".equals(encrypt.getAlgorithm()) ? rsaService.decrypt(encrypt) : aesService.decrypt(encrypt);
                     Type parameterType = getParameterType(parameter);
-                    object = gson.fromJson(decrypt, parameterType);
-                    // 兼容模式：
-                    // 当参数是 CompatibleRequest<T> 且解密后不是标准 Request(data) 结构时，
-                    // 自动将解密JSON回填到 legacyBody，供 resolveBody() 回退解析旧协议字段。
+                    object = deserializeByParameterType(parameter, parameterType, decrypt);
                     if (object instanceof CompatibleRequest) {
-                        CompatibleRequest<?> compatible = (CompatibleRequest<?>) object;
-                        if (compatible.getData() == null && (compatible.getLegacy() == null || compatible.getLegacy().isEmpty())) {
-                            Map<?, ?> map = gson.fromJson(decrypt, Map.class);
-                            if (map != null && !map.isEmpty()) {
-                                for (Map.Entry<?, ?> entry : map.entrySet()) {
-                                    Object k = entry.getKey();
-                                    if (k != null) {
-                                        compatible.putLegacy(String.valueOf(k), entry.getValue());
-                                    }
-                                }
-                            }
-                        }
+                        setCompatibleData((CompatibleRequest<?>) object, parameter, decrypt);
                     }
                     long end = System.currentTimeMillis();
                     if (log.isDebugEnabled() && null != decrypt) {
@@ -144,6 +132,91 @@ public class EncryptArgumentResolver extends RequestResponseBodyMethodProcessor 
         // 如果是ParameterizedType（泛型类型），返回完整的Type信息
         // 这样Fastjson就能正确解析泛型字段（如Page<Client>中的data字段）
         return type;
+    }
+
+    private Object deserializeByParameterType(MethodParameter parameter, Type parameterType, String decrypt) {
+        try {
+            return gson.fromJson(decrypt, parameterType);
+        } catch (Exception ex) {
+            // 常规反序列化失败时，仅对 Request 体系做兜底（基础类型、数组、直接值等）
+            if (!Request.class.isAssignableFrom(parameter.getParameterType())) {
+                throw ex;
+            }
+            if (log.isDebugEnabled()) {
+                log.debug("按参数类型反序列化失败，尝试Request兼容兜底。type:{}, body:{}", parameterType, decrypt);
+            }
+            return fallbackForRequest(parameter, parameterType, decrypt);
+        }
+    }
+
+    private Object fallbackForRequest(@NonNull MethodParameter parameter, Type parameterType, String decrypt) {
+        Object requestObj = gson.fromJson("{}", parameterType);
+        Type dataType = getRequestDataType(parameter);
+        Object data = parseAsDataValue(decrypt, dataType);
+        if (requestObj instanceof CompatibleRequest) {
+            @SuppressWarnings("unchecked")
+            CompatibleRequest<Object> compatible = (CompatibleRequest<Object>) requestObj;
+            compatible.setData(data);
+            return compatible;
+        }
+        if (requestObj instanceof Request) {
+            @SuppressWarnings("unchecked")
+            Request<Object> request = (Request<Object>) requestObj;
+            request.setData(data);
+            return request;
+        }
+        return requestObj;
+    }
+
+    private Type getRequestDataType(@NonNull MethodParameter parameter) {
+        ResolvableType resolvableType = ResolvableType.forMethodParameter(parameter);
+        Type dataType = resolvableType.getGeneric(0).getType();
+        if (dataType == Object.class) {
+            return Object.class;
+        }
+        return dataType;
+    }
+
+    private Object parseAsDataValue(String json, Type dataType) {
+        JsonElement element = parseJsonElement(json);
+        if (element != null) {
+            return gson.fromJson(element, dataType);
+        }
+        // 非标准JSON时尽量按字符串回退，保证不丢数据
+        if (dataType == String.class || dataType == Object.class) {
+            return json;
+        }
+        return gson.fromJson(gson.toJson(json), dataType);
+    }
+
+    private JsonElement parseJsonElement(String json) {
+        try {
+            return JsonParser.parseString(json);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private void setCompatibleData(CompatibleRequest<?> compatible, @NonNull MethodParameter parameter, String decrypt) {
+        if (compatible.getData() != null) {
+            return;
+        }
+        Type dataType = getRequestDataType(parameter);
+        JsonElement element = parseJsonElement(decrypt);
+        if (element == null) {
+            @SuppressWarnings("unchecked")
+            CompatibleRequest<Object> request = (CompatibleRequest<Object>) compatible;
+            request.setData(parseAsDataValue(decrypt, dataType));
+            return;
+        }
+        JsonElement dataElement = element;
+        // 标准Request结构优先读取data，非标准结构则把整个body作为data
+        if (element.isJsonObject() && element.getAsJsonObject().has("data")) {
+            dataElement = element.getAsJsonObject().get("data");
+        }
+        @SuppressWarnings("unchecked")
+        CompatibleRequest<Object> request = (CompatibleRequest<Object>) compatible;
+        request.setData(gson.fromJson(dataElement, dataType));
     }
 
     /**
