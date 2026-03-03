@@ -1,6 +1,7 @@
 package cn.org.autumn.service;
 
 import cn.org.autumn.annotation.Endpoint;
+import cn.org.autumn.config.Config;
 import cn.org.autumn.model.Supported;
 import cn.org.autumn.config.CacheConfig;
 import cn.org.autumn.config.EncryptConfigHandler;
@@ -479,10 +480,14 @@ public class RsaService implements LoadFactory.Must {
                 Parameter[] parameters = method.getParameters();
                 boolean hasEncryptBody = false;
                 boolean forceEncryptBody = false;
+                boolean wrapRequest = false;
                 for (Parameter parameter : parameters) {
                     RequestBody requestBody = parameter.getAnnotation(RequestBody.class);
                     if (requestBody != null) {
                         Class<?> paramType = parameter.getType();
+                        if (Request.class.isAssignableFrom(paramType)) {
+                            wrapRequest = true;
+                        }
                         if (isEncryptType(paramType)) {
                             hasEncryptBody = true;
                             // 检查参数上的@Endpoint注解，如果forceEncrypt=true，则设置force.body=true
@@ -493,10 +498,14 @@ public class RsaService implements LoadFactory.Must {
                         }
                     }
                 }
-                // 检查返回类型
+                // 检查返回类型：支持两种方式
+                // 1) 返回类型实现 Encrypt（CompatibleResponse 继承自 Response，最终也实现 Encrypt）
+                // 2) 方法显式标注 @Endpoint(compatible = true)
                 Class<?> returnType = method.getReturnType();
-                boolean isEncryptReturnType = isEncryptType(returnType);
+                boolean methodCompatible = methodEndpoint != null && methodEndpoint.compatible();
+                boolean isEncryptReturnType = isEncryptType(returnType) || methodCompatible;
                 boolean forceEncryptReturn = methodEndpoint != null && methodEndpoint.force() && isEncryptReturnType;
+                boolean wrapResponse = Response.class.isAssignableFrom(returnType);
                 // 检查方法上的@Endpoint注解，如果force=true，则设置force.ret=true
                 // 如果请求body或返回值类型是Encrypt，则添加到结果中
                 if (hasEncryptBody || isEncryptReturnType) {
@@ -513,6 +522,11 @@ public class RsaService implements LoadFactory.Must {
                     force.setBody(forceEncryptBody);
                     force.setRet(forceEncryptReturn);
                     endpointInfo.setForce(force);
+                    // 设置请求与返回是否使用 Request/Response 包装
+                    Wrap wrap = new Wrap();
+                    wrap.setRequest(wrapRequest);
+                    wrap.setResponse(wrapResponse);
+                    endpointInfo.setWrap(wrap);
                     result.add(endpointInfo);
                 }
             }
@@ -521,16 +535,18 @@ public class RsaService implements LoadFactory.Must {
     }
 
     /**
-     * 判断类型是否实现了Encrypt接口
+     * 判断类型是否支持加密返回。
+     * 支持标记：
+     * 1) 实现 Encrypt 接口（含其子类/子接口）。
      *
      * @param type 要检查的类型
-     * @return 如果类型实现了Encrypt接口返回true，否则返回false
+     * @return 如果类型支持加密返回则返回 true，否则返回 false
      */
     private boolean isEncryptType(Class<?> type) {
         if (type == null) {
             return false;
         }
-        // 检查是否直接实现了Encrypt接口
+        // 检查是否直接实现了 Encrypt 接口（或其子类型）
         if (Encrypt.class.isAssignableFrom(type)) {
             return true;
         }

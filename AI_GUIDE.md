@@ -108,7 +108,27 @@
 
 ---
 
-## 4.1 定时任务专项提示词（可直接复制）
+## 4.1 加解密兼容专项提示词（可直接复制）
+
+```md
+涉及 Autumn 加解密兼容改造时，请严格按以下约束实现：
+
+- 入参兼容统一使用 `CompatibleRequest<T>`，业务侧直接使用 `request.getData()`。
+- 参数解析由 `EncryptArgumentResolver` 统一归一化：
+  - 解密后是标准 `{"data": ...}` 时，取 `data` 写入 `CompatibleRequest.data`
+  - 解密后是对象/数组/基础类型时，直接作为 `CompatibleRequest.data`
+- 出参优先使用 `CompatibleResponse<T>`（其继承 `Response` 并实现 `Encrypt`）：
+  - `X-Encrypt-Session` 不为空：按整个 `CompatibleResponse` 加密返回
+  - `X-Encrypt-Session` 为空：降级返回 `CompatibleResponse.data`（旧客户端兼容）
+- 端点能力探测依赖 `EndpointInfo.wrap`：
+  - `wrap.request=true`：请求是 `Request`/`CompatibleRequest` 包装
+  - `wrap.response=true`：返回是 `Response`/`CompatibleResponse` 包装
+  - 客户端可据此模板化请求/响应数据映射
+```
+
+---
+
+## 4.2 定时任务专项提示词（可直接复制）
 
 ```md
 请优先按 Autumn 的接口式定时任务实现，不要先写 cron。

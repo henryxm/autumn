@@ -39,6 +39,16 @@ public @interface Endpoint {
     boolean force() default false;
 
     /**
+     * 兼容加密返回标记：
+     * 当接口返回类型本身不实现 Encrypt 时，可通过该标记声明“返回值支持加密兼容”。
+     * 响应是否实际加密仍由请求头（如 X-Encrypt-Session）决定，
+     * 老客户端不携带加密头时仍返回原始明文对象。
+     *
+     * @return 是否支持兼容加密返回
+     */
+    boolean compatible() default false;
+
+    /**
      * 隐藏原因（可选）
      * 当 hidden = true 时，用于说明为什么隐藏该端点，便于代码维护
      *

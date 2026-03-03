@@ -2,6 +2,7 @@ package cn.org.autumn.modules.oauth.interceptor;
 
 import cn.org.autumn.annotation.Endpoint;
 import cn.org.autumn.config.InterceptorHandler;
+import cn.org.autumn.model.CompatibleResponse;
 import cn.org.autumn.model.Encrypt;
 import cn.org.autumn.model.Error;
 import cn.org.autumn.model.Response;
@@ -108,15 +109,19 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
             }
         }
         if (StringUtils.isBlank(session)) {
-            // 没有X-Encrypt-Session header，不进行响应加密，使用之前的流程
+            // 没有 X-Encrypt-Session header，不进行响应加密。
+            // 但如果接口声明返回 CompatibleResponse，则降级为仅返回其 data（T）内容。
+            if (isJsonLike(selectedContentType) && isCompatible(returnType)) {
+                return toLegacy(body);
+            }
             return body;
         }
         // 兼容模式：
         // 当客户端要求加密（有X-Encrypt-Session）但接口返回的不是Encrypt类型时，
-        // 对JSON响应自动包装为Response，确保老接口也可进入统一加密链路。
+        // 对JSON响应自动包装为 CompatibleResponse，确保老接口也可进入统一加密链路。
         if (!(body instanceof Encrypt)) {
             if (isJsonLike(selectedContentType)) {
-                body = Response.ok(body);
+                body = toResponse(body);
             } else {
                 // 非JSON响应（文件流/文本等）维持原样，避免破坏下载类接口
                 return body;
@@ -142,6 +147,28 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
             return Response.error(e);
         }
         return body;
+    }
+
+    private Object toResponse(Object body) {
+        if (body instanceof Encrypt) {
+            return body;
+        }
+        return Response.ok(body);
+    }
+
+    private Object toLegacy(Object body) {
+        if (body instanceof CompatibleResponse) {
+            return ((CompatibleResponse<?>) body).unwrap();
+        }
+        return body;
+    }
+
+    private boolean isCompatible(MethodParameter returnType) {
+        Method method = returnType.getMethod();
+        if (method != null) {
+            return CompatibleResponse.class.isAssignableFrom(method.getReturnType());
+        }
+        return CompatibleResponse.class.isAssignableFrom(returnType.getParameterType());
     }
 
     /**
