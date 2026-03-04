@@ -20,13 +20,24 @@ import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.support.WebDataBinderFactory;
 import org.springframework.web.context.request.NativeWebRequest;
+import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.method.support.ModelAndViewContainer;
 import org.springframework.web.servlet.mvc.method.annotation.RequestResponseBodyMethodProcessor;
+import org.springframework.util.StreamUtils;
 
+import javax.servlet.ReadListener;
+import javax.servlet.ServletInputStream;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletRequestWrapper;
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.lang.reflect.Type;
 import java.util.List;
 
@@ -66,7 +77,21 @@ public class EncryptArgumentResolver extends RequestResponseBodyMethodProcessor 
     @Override
     @SuppressWarnings("null")
     public Object resolveArgument(@NonNull MethodParameter parameter, @Nullable ModelAndViewContainer mavContainer, @NonNull NativeWebRequest webRequest, @Nullable WebDataBinderFactory binderFactory) throws Exception {
-        Object object = super.resolveArgument(parameter, mavContainer, webRequest, binderFactory);
+        NativeWebRequest effectiveWebRequest = webRequest;
+        if (CompatibleRequest.class.isAssignableFrom(parameter.getParameterType())) {
+            // 仅对CompatibleRequest启用可重复读取，最大限度降低对其它请求类型的兼容影响
+            effectiveWebRequest = ensureCachingWebRequest(webRequest);
+        }
+        Object object;
+        try {
+            // 优先复用Spring默认解析，避免自定义解析带来的数值精度偏差
+            object = super.resolveArgument(parameter, mavContainer, effectiveWebRequest, binderFactory);
+        } catch (HttpMessageNotReadableException ex) {
+            if (!Request.class.isAssignableFrom(parameter.getParameterType())) {
+                throw ex;
+            }
+            object = resolveRequestFallback(parameter, effectiveWebRequest, ex);
+        }
         if (log.isDebugEnabled()) {
             log.debug("原始请求:{}", gson.toJson(object));
         }
@@ -102,7 +127,7 @@ public class EncryptArgumentResolver extends RequestResponseBodyMethodProcessor 
                     }
                 }
             } catch (Exception e) {
-                HttpServletRequest servlet = getHttpServletRequest(webRequest);
+                HttpServletRequest servlet = getHttpServletRequest(effectiveWebRequest);
                 if (servlet != null) {
                     String uri = servlet.getRequestURI();
                     log.error("解密失败: {}, 数据:{}, URI: {}, 错误: {}", encrypt.getSession(), decrypt, uri, e.getMessage());
@@ -110,7 +135,74 @@ public class EncryptArgumentResolver extends RequestResponseBodyMethodProcessor 
                 throw e;
             }
         }
+        if (object instanceof CompatibleRequest && !hasEncryptedEnvelope(object)) {
+            trySetCompatibleData(parameter, effectiveWebRequest, (CompatibleRequest<?>) object);
+        }
         return object;
+    }
+
+    private NativeWebRequest ensureCachingWebRequest(@NonNull NativeWebRequest webRequest) {
+        HttpServletRequest request = getHttpServletRequest(webRequest);
+        if (request == null || request instanceof CachedBodyHttpServletRequest) {
+            return webRequest;
+        }
+        CachedBodyHttpServletRequest wrapper;
+        try {
+            wrapper = new CachedBodyHttpServletRequest(request);
+        } catch (IOException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("包装可重复读取请求体失败，回退原始request: {}", e.getMessage());
+            }
+            return webRequest;
+        }
+        if (webRequest instanceof ServletWebRequest) {
+            ServletWebRequest servletWebRequest = (ServletWebRequest) webRequest;
+            if (servletWebRequest.getResponse() != null) {
+                return new ServletWebRequest(wrapper, servletWebRequest.getResponse());
+            }
+        }
+        return new ServletWebRequest(wrapper);
+    }
+
+    private Object resolveRequestFallback(@NonNull MethodParameter parameter, @NonNull NativeWebRequest webRequest, @NonNull Exception ex) throws Exception {
+        String rawBody = readRequestBody(webRequest);
+        if (StringUtils.isBlank(rawBody)) {
+            throw ex;
+        }
+        Type parameterType = getParameterType(parameter);
+        Object object;
+        try {
+            object = gson.fromJson(rawBody, parameterType);
+        } catch (Exception parseEx) {
+            if (log.isDebugEnabled()) {
+                log.debug("原始请求按参数类型反序列化失败，尝试Request兼容兜底。type:{}, body:{}", parameterType, rawBody);
+            }
+            object = fallbackForRequest(parameter, parameterType, rawBody);
+        }
+        return object;
+    }
+
+    private void trySetCompatibleData(
+            @NonNull MethodParameter parameter,
+            @NonNull NativeWebRequest webRequest,
+            @NonNull CompatibleRequest<?> compatibleRequest
+    ) {
+        if (compatibleRequest.getData() != null) {
+            return;
+        }
+        String rawBody = readRequestBody(webRequest);
+        if (StringUtils.isBlank(rawBody)) {
+            return;
+        }
+        setCompatibleData(compatibleRequest, parameter, rawBody);
+    }
+
+    private boolean hasEncryptedEnvelope(Object object) {
+        if (!(object instanceof Encrypt)) {
+            return false;
+        }
+        Encrypt encrypt = (Encrypt) object;
+        return StringUtils.isNotBlank(encrypt.getCiphertext()) && StringUtils.isNotBlank(encrypt.getSession());
     }
 
     /**
@@ -236,6 +328,75 @@ public class EncryptArgumentResolver extends RequestResponseBodyMethodProcessor 
                 log.debug("无法从NativeWebRequest获取HttpServletRequest: {}", e.getMessage());
             }
             return null;
+        }
+    }
+
+    private String readRequestBody(@NonNull NativeWebRequest webRequest) {
+        HttpServletRequest request = getHttpServletRequest(webRequest);
+        if (request == null) {
+            return "";
+        }
+        if (request instanceof CachedBodyHttpServletRequest) {
+            return ((CachedBodyHttpServletRequest) request).getBodyAsString();
+        }
+        try {
+            StringBuilder builder = new StringBuilder();
+            BufferedReader reader = request.getReader();
+            char[] buffer = new char[1024];
+            int len;
+            while ((len = reader.read(buffer)) != -1) {
+                builder.append(buffer, 0, len);
+            }
+            return builder.toString();
+        } catch (Exception e) {
+            if (log.isDebugEnabled()) {
+                log.debug("读取请求体失败: {}", e.getMessage());
+            }
+            return "";
+        }
+    }
+
+    private static class CachedBodyHttpServletRequest extends HttpServletRequestWrapper {
+        private final byte[] body;
+
+        CachedBodyHttpServletRequest(HttpServletRequest request) throws IOException {
+            super(request);
+            this.body = StreamUtils.copyToByteArray(request.getInputStream());
+        }
+
+        String getBodyAsString() {
+            return new String(body, StandardCharsets.UTF_8);
+        }
+
+        @Override
+        public ServletInputStream getInputStream() {
+            ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(body);
+            return new ServletInputStream() {
+                @Override
+                public int read() {
+                    return byteArrayInputStream.read();
+                }
+
+                @Override
+                public boolean isFinished() {
+                    return byteArrayInputStream.available() == 0;
+                }
+
+                @Override
+                public boolean isReady() {
+                    return true;
+                }
+
+                @Override
+                public void setReadListener(ReadListener readListener) {
+                    // sync read only
+                }
+            };
+        }
+
+        @Override
+        public BufferedReader getReader() {
+            return new BufferedReader(new InputStreamReader(getInputStream(), StandardCharsets.UTF_8));
         }
     }
 }
