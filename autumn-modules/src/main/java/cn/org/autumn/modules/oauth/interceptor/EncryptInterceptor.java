@@ -3,6 +3,7 @@ package cn.org.autumn.modules.oauth.interceptor;
 import cn.org.autumn.annotation.Endpoint;
 import cn.org.autumn.config.InterceptorHandler;
 import cn.org.autumn.model.CompatibleResponse;
+import cn.org.autumn.model.DefaultEncrypt;
 import cn.org.autumn.model.Encrypt;
 import cn.org.autumn.model.Error;
 import cn.org.autumn.model.Response;
@@ -96,6 +97,9 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
         String algorithm = servlet.getHeader("X-Encrypt-Algorithm");
         if (StringUtils.isBlank(algorithm))
             algorithm = "AES";
+        boolean compatible = isCompatible(returnType);
+        boolean wrappedReturn = isWrappedReturn(returnType);
+        boolean compatibleWrappedReturn = isCompatibleWrappedReturn(returnType);
         // 检查方法上的@Endpoint注解，如果force=true，则强制要求session
         Method controllerMethod = returnType.getMethod();
         if (controllerMethod != null) {
@@ -110,33 +114,38 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
         }
         if (StringUtils.isBlank(session)) {
             // 没有 X-Encrypt-Session header，不进行响应加密。
-            // 但如果接口声明返回 CompatibleResponse，则降级为仅返回其 data（T）内容。
-            if (isJsonLike(selectedContentType) && isCompatible(returnType)) {
-                return toLegacy(body);
-            }
-            return body;
+            // 无论是否声明 compatible=true，都返回原始对象值；
+            // 若当前是 CompatibleResponse 包装，则降级解包为 data（T）。
+            return toLegacy(body);
         }
-        // 兼容模式：
-        // 当客户端要求加密（有X-Encrypt-Session）但接口返回的不是Encrypt类型时，
-        // 对JSON响应自动包装为 CompatibleResponse，确保老接口也可进入统一加密链路。
-        if (!(body instanceof Encrypt)) {
+        // 需要被加密的原始业务内容
+        Object sourceBody = body;
+        // 输出对象模板（决定加密后返回的类型）
+        Object targetBody = body;
+        if (!(targetBody instanceof Encrypt)) {
             if (isJsonLike(selectedContentType)) {
-                body = toResponse(body);
+                // compatible=true 时，返回包装形态由声明返回类型决定。
+                // 非 Response 返回类型使用非包装加密体（DefaultEncrypt）。
+                if (compatible && !wrappedReturn) {
+                    targetBody = new DefaultEncrypt();
+                } else {
+                    targetBody = toResponse(sourceBody, compatibleWrappedReturn);
+                }
             } else {
                 // 非JSON响应（文件流/文本等）维持原样，避免破坏下载类接口
-                return body;
+                return sourceBody;
             }
         }
         // 只对实现了Encrypt接口的响应进行加密
         try {
             long start = System.currentTimeMillis();
             // 将响应体序列化为JSON
-            String json = gson.toJson(body);
+            String json = gson.toJson(sourceBody);
             //使用AES密钥加密响应数据 或者使用RSA进行加密
             //当使用RSA加密时，使用客户端的公钥进行加密
             String encrypt = "RSA".equals(algorithm) ? rsaService.encrypt(json, session) : aesService.encrypt(json, session);
             // 使用反射创建返回值类型的实例
-            body = response(body, encrypt, algorithm, session);
+            body = response(targetBody, encrypt, algorithm, session);
             long end = System.currentTimeMillis();
             if (log.isDebugEnabled()) {
                 log.debug("加密长度:{}, 耗时:{}毫秒", json.length(), end - start);
@@ -149,9 +158,12 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
         return body;
     }
 
-    private Object toResponse(Object body) {
+    private Object toResponse(Object body, boolean compatibleWrappedReturn) {
         if (body instanceof Encrypt) {
             return body;
+        }
+        if (compatibleWrappedReturn) {
+            return toCompatibleResponse(body);
         }
         return Response.ok(body);
     }
@@ -163,7 +175,40 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
         return body;
     }
 
+    private CompatibleResponse<?> toCompatibleResponse(Object body) {
+        if (body instanceof CompatibleResponse) {
+            return (CompatibleResponse<?>) body;
+        }
+        if (body instanceof Response<?>) {
+            Response<?> response = (Response<?>) body;
+            CompatibleResponse<Object> compatible = new CompatibleResponse<>();
+            compatible.setCode(response.getCode());
+            compatible.setMsg(response.getMsg());
+            compatible.setData(response.getData());
+            compatible.setResult(response.getResult());
+            return compatible;
+        }
+        return CompatibleResponse.ok(body);
+    }
+
     private boolean isCompatible(MethodParameter returnType) {
+        Method method = returnType.getMethod();
+        if (method != null) {
+            Endpoint endpointAnnotation = method.getAnnotation(Endpoint.class);
+            return endpointAnnotation != null && endpointAnnotation.compatible();
+        }
+        return false;
+    }
+
+    private boolean isWrappedReturn(MethodParameter returnType) {
+        Method method = returnType.getMethod();
+        if (method != null) {
+            return Response.class.isAssignableFrom(method.getReturnType());
+        }
+        return Response.class.isAssignableFrom(returnType.getParameterType());
+    }
+
+    private boolean isCompatibleWrappedReturn(MethodParameter returnType) {
         Method method = returnType.getMethod();
         if (method != null) {
             return CompatibleResponse.class.isAssignableFrom(method.getReturnType());

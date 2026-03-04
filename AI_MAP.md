@@ -46,7 +46,9 @@
 - 关键点（务必准确）：
   - 请求解密不是全量触发：仅当请求体包含 `ciphertext + session` 时解密。
   - 响应加密不是全量触发：仅当请求头有 `X-Encrypt-Session` 时进入加密流程。
-  - 返回兼容增强：若返回体不是 `Encrypt` 但为 JSON，拦截器会自动包装为 `Response.ok(body)` 后再加密。
+  - 返回兼容增强：若返回体不是 `Encrypt` 但为 JSON，拦截器会按返回类型规则决定包装后再加密（`Response`/`CompatibleResponse`/`DefaultEncrypt`）。
+  - `@Endpoint(compatible=true)` 表示“支持兼容加密”，不直接决定包装与否；包装形态由声明返回类型决定。
+  - 无 `X-Encrypt-Session` 时一律不加密并返回原始值；若实际返回为 `CompatibleResponse`，会解包为 `data` 返回（旧客户端兼容）。
   - `/rsa/*` 接口在响应侧排除加密（避免密钥交换循环加密）。
   - 非 JSON 响应（文件流/文本）不会做自动包装，保持原语义。
   - `@Endpoint(force=true)` 接口缺少 `X-Encrypt-Session` 时返回 `FORCE_ENCRYPT_SESSION_REQUIRED`。
@@ -58,30 +60,43 @@
   - 通过统一拦截与解析，避免拆分双接口。
 - 推荐组合（最终收敛）：
   - 入参：`CompatibleRequest<T>`
-  - 出参：`Response<T>`
+  - 出参：`CompatibleResponse<T>`（需要显示包装时）或原始 DTO（不包装返回时）
 - 关键类：
   - `cn.org.autumn.model.CompatibleRequest`
+  - `cn.org.autumn.model.CompatibleResponse`
+  - `cn.org.autumn.model.Wrap`
+  - `cn.org.autumn.model.EndpointInfo`
   - `cn.org.autumn.modules.oauth.resolver.EncryptArgumentResolver`
   - `cn.org.autumn.modules.oauth.interceptor.EncryptInterceptor`
+  - `cn.org.autumn.service.RsaService`（`getEncryptEndpoints` 计算 `wrap`）
 - 适用边界（务必遵守）：
   - 如果请求参数类型已经是 `Encrypt` 接口实现类，则不需要做 `CompatibleRequest<T>` 兼容处理。
   - 如果返回参数类型已经是 `Encrypt` 接口实现类，则不需要做额外兼容性包装处理。
+- `CompatibleRequest` 约定：
+  - 不再使用 `legacy/resolve`；业务侧统一通过 `request.getData()` 取值。
+  - `EncryptArgumentResolver` 负责归一化：标准 `{"data":...}` 取 `data`，非标准对象/数组/基础类型直接写入 `data`。
+- `wrap` 参数（端点能力探测）：
+  - `wrap.request=true`：请求参数是 `Request`/`CompatibleRequest` 包装。
+  - `wrap.response=true`：返回类型是 `Response`/`CompatibleResponse` 包装。
 - 行为矩阵（给 AI 的判断规则）：
-  - `CompatibleRequest<T> + Response<T>`：请求可明文/密文兼容，响应按 `X-Encrypt-Session` 决定是否加密（推荐）。
-  - 老 DTO + `Response<T>`：请求不自动解密，响应可按 header 加密（过渡可用）。
-  - `CompatibleRequest<T> + 老返回对象`：若带 `X-Encrypt-Session` 且为 JSON，自动包装后加密（过渡可用）。
+  - `CompatibleRequest<T> + CompatibleResponse<T>`：有 session 时加密整个兼容包装；无 session 时解包返回 `data`（推荐）。
+  - `CompatibleRequest<T> + Response<T>`：请求可明文/密文兼容；响应按 header 决定是否加密（通用可用）。
+  - `CompatibleRequest<T> + 老返回对象`：若带 `X-Encrypt-Session` 且为 JSON，会按兼容规则加密；无 session 直接返回原值。
   - 任意请求 + 文件下载/非 JSON 返回：不自动包装，不做强制加密包装。
   - `请求或返回已实现 Encrypt`：保持原有入参与出参类型，不新增兼容层。
 - 控制器最小模板（跨项目直接套用）：
 
 ```java
 @PostMapping("/biz/action")
-public Response<BizVO> action(@RequestBody(required = false) CompatibleRequest<BizDTO> request) {
-    BizDTO dto = request != null ? request.resolveBody(BizDTO.class, gson) : null;
+public CompatibleResponse<BizVO> action(@RequestBody(required = false) CompatibleRequest<BizDTO> request) {
+    BizDTO dto = request != null ? request.getData() : null;
     if (dto == null) {
-        return Response.error("非法请求");
+        CompatibleResponse<BizVO> fail = new CompatibleResponse<>();
+        fail.setCode(-1);
+        fail.setMsg("非法请求");
+        return fail;
     }
-    return Response.ok(service.action(dto));
+    return CompatibleResponse.ok(service.action(dto));
 }
 ```
 
