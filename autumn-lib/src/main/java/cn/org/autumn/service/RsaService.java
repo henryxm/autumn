@@ -442,7 +442,14 @@ public class RsaService implements LoadFactory.Must {
                         methodPath = requestMapping.value()[0];
                     }
                     if (requestMapping.method().length > 0) {
-                        httpMethod = requestMapping.method()[0].name();
+                        StringBuilder httpMethods = new StringBuilder();
+                        for (RequestMethod methodType : requestMapping.method()) {
+                            if (httpMethods.length() > 0) {
+                                httpMethods.append(",");
+                            }
+                            httpMethods.append(methodType.name());
+                        }
+                        httpMethod = httpMethods.toString();
                     }
                 } else if (getMapping != null) {
                     if (getMapping.value().length > 0) {
