@@ -119,7 +119,8 @@
   - 解密后是对象/数组/基础类型时，直接作为 `CompatibleRequest.data`
 - 出参优先使用 `CompatibleResponse<T>`（其继承 `Response` 并实现 `Encrypt`）：
   - `X-Encrypt-Session` 不为空：按整个 `CompatibleResponse` 加密返回
-  - `X-Encrypt-Session` 为空：降级返回 `CompatibleResponse.data`（旧客户端兼容）
+  - `X-Encrypt-Session` 为空：一律不加密并返回原始值；若返回体是 `CompatibleResponse`，则解包为 `data`
+- `@Endpoint(compatible=true)` 仅表示“支持兼容加密”，不直接决定包装形态；是否包装由接口返回类型（`Response`/`CompatibleResponse`/原始DTO）决定。
 - 端点能力探测依赖 `EndpointInfo.wrap`：
   - `wrap.request=true`：请求是 `Request`/`CompatibleRequest` 包装
   - `wrap.response=true`：返回是 `Response`/`CompatibleResponse` 包装
