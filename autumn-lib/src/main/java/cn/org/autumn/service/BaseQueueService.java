@@ -2,11 +2,9 @@ package cn.org.autumn.service;
 
 import cn.org.autumn.config.QueueConfig;
 import cn.org.autumn.model.DefaultEntity;
-import cn.org.autumn.model.Parameterized;
 import cn.org.autumn.model.QueueMessage;
 import cn.org.autumn.table.annotation.Table;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -17,7 +15,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 @Slf4j
-public abstract class BaseQueueService<M extends BaseMapper<T>, T> extends ServiceImpl<M, T> implements Parameterized {
+public abstract class BaseQueueService<M extends BaseMapper<T>, T> extends CompatibleService<M, T> {
 
     @Autowired
     protected QueueService queueService;

@@ -2,10 +2,9 @@ package cn.org.autumn.modules.oauth.entity;
 
 import cn.org.autumn.annotation.Cache;
 import cn.org.autumn.table.annotation.Column;
-import cn.org.autumn.table.annotation.Index;
 import cn.org.autumn.table.annotation.Table;
-import com.baomidou.mybatisplus.annotations.TableId;
-import com.baomidou.mybatisplus.annotations.TableName;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Getter;
 import lombok.Setter;
 

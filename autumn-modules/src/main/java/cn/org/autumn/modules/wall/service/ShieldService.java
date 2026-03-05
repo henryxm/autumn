@@ -6,7 +6,7 @@ import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.wall.site.WallSite;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import cn.org.autumn.modules.wall.dao.ShieldDao;

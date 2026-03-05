@@ -5,7 +5,7 @@ import cn.org.autumn.modules.oauth.dao.SecurityRequestDao;
 import cn.org.autumn.modules.oauth.entity.SecurityRequestEntity;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.utils.Uuid;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.Mac;
