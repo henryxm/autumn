@@ -2,6 +2,7 @@ package cn.org.autumn.modules.wall.service;
 
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysConfigService;
+import cn.org.autumn.modules.oauth.service.SecurityRequestService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.usr.service.UserProfileService;
 import cn.org.autumn.modules.wall.entity.RData;
@@ -56,6 +57,9 @@ public class WallService {
     ShieldService shieldService;
 
     @Autowired
+    SecurityRequestService securityRequestService;
+
+    @Autowired
     JumpService jumpService;
 
     public boolean isEnabled(ServletRequest servletRequest, ServletResponse servletResponse, boolean counter, boolean shield) throws IOException {
@@ -67,6 +71,30 @@ public class WallService {
         if (IPUtils.isInternalKeepIp(ip))
             return true;
         String userAgent = request.getHeader("user-agent");
+        String agent = request.getHeader(SecurityRequestService.AGENT_HEADER);
+        String uri = request.getRequestURI();
+        if (shieldService.isAttack() && needStrongValidate(uri)) {
+            String auth = request.getHeader(SecurityRequestService.AUTH_HEADER);
+            String timestamp = request.getHeader(SecurityRequestService.TIMESTAMP_HEADER);
+            String nonce = request.getHeader(SecurityRequestService.NONCE_HEADER);
+            String signature = request.getHeader(SecurityRequestService.SIGNATURE_HEADER);
+            String query = request.getQueryString();
+            String uriWithQuery = StringUtils.isBlank(query) ? uri : (uri + "?" + query);
+            if (!securityRequestService.verifyStrong(
+                    userAgent, agent, auth,
+                    request.getMethod(), uriWithQuery,
+                    timestamp, nonce, signature)) {
+                if (shieldService.isPrint()) {
+                    log.info("强力校验拦截: ip={}, uri={}, auth={}, agentHeader={}, ts={}, nonce={}",
+                            ip, uriWithQuery, auth, agent, timestamp, nonce);
+                }
+                if (null != response) {
+                    response.setStatus(403);
+                }
+                ipBlackService.countIp(ip, userAgent);
+                return false;
+            }
+        }
         if (shieldService.isAttack()) {
             if (ipBlackService.isBlack(ip)) {
                 if (null != response) {
@@ -134,18 +162,18 @@ public class WallService {
                 return false;
             }
 
-            String uri = request.getRequestURL().toString();
+            String url = request.getRequestURL().toString();
             String q = request.getQueryString();
             if (StringUtils.isNotEmpty(q)) {
-                uri = uri + "?" + q;
+                url = url + "?" + q;
             }
-            if (urlBlackService.isBlack(uri)) {
+            if (urlBlackService.isBlack(url)) {
                 if (null != response) {
                     response.setStatus(500);
                 }
                 return false;
             } else
-                urlBlackService.countUrl(uri, ip, userAgent);
+                urlBlackService.countUrl(url, ip, userAgent);
             if (!ipWhiteService.isWhite(ip, userAgent)) {
                 ipBlackService.countIp(ip, userAgent);
             }
@@ -156,7 +184,7 @@ public class WallService {
                 RData rData = new RData();
                 rData.setHost(host);
                 rData.setIp(ip);
-                rData.setUri(uri);
+                rData.setUri(url);
                 rData.setRefer(refer);
                 rData.setUserAgent(userAgent);
                 hostService.count(host, rData);
@@ -166,6 +194,27 @@ public class WallService {
             log.debug("黑名单过滤错误:{}", e.getMessage());
         }
         return true;
+    }
+
+    private boolean needStrongValidate(String uri) {
+        if (StringUtils.isBlank(uri)) {
+            return false;
+        }
+        if (isBypassUri(uri)) {
+            return false;
+        }
+        return shieldService.matchUri(uri);
+    }
+
+    private boolean isBypassUri(String uri) {
+        return uri.startsWith("/rsa/api/v1/init")
+                || uri.startsWith("/rsa/api/v1/public-key")
+                || uri.startsWith("/rsa/api/v1/client/public-key")
+                || uri.startsWith("/rsa/api/v1/aes-key")
+                || uri.startsWith("/rsa/api/v1/endpoints")
+                || uri.startsWith("/wall/api")
+                || uri.startsWith("/wall/shield")
+                || uri.startsWith("/shield");
     }
 
     private void print(HttpServletRequest request) {

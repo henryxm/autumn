@@ -28,6 +28,13 @@ public class OauthSite implements SiteFactory.Site {
     @PageAware(login = true, resource = "modules/oauth/encryptkey")
     public String encryptkey;
 
+    @PageAware(login = true)
+    public String securityrequest = "modules/oauth/securityrequest";
+
+    public String getSecurityRequestKey() {
+        return getKey("securityrequest");
+    }
+
     @PageAware(login = false, resource = "modules/oauth/oauth2authorizefail")
     public static String oauth2authorizefail = pack + "_oauth2authorizefail";
 }

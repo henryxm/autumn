@@ -4,7 +4,9 @@ import cn.org.autumn.annotation.Endpoint;
 import cn.org.autumn.exception.CodeException;
 import cn.org.autumn.model.*;
 import cn.org.autumn.model.Error;
+import cn.org.autumn.modules.oauth.entity.SecurityRequestEntity;
 import cn.org.autumn.modules.oauth.service.EncryptKeyService;
+import cn.org.autumn.modules.oauth.service.SecurityRequestService;
 import cn.org.autumn.service.AesService;
 import cn.org.autumn.service.RsaService;
 import cn.org.autumn.utils.IPUtils;
@@ -36,6 +38,9 @@ public class RsaController {
 
     @Autowired
     private EncryptKeyService encryptKeyService;
+
+    @Autowired
+    private SecurityRequestService securityRequestService;
 
     @Autowired
     Gson gson;
@@ -176,6 +181,11 @@ public class RsaController {
             String json = gson.toJson(endpoints);
             String end = aesService.encrypt(json, session);
             response.setEndpoints(end);
+            // 返回动态安全请求特征值（客户端附加到User-Agent和X-Encrypt-Auth）
+            // 使用AES会话密钥加密传输，避免明文泄露
+            SecurityRequestEntity security = securityRequestService.ensureCurrent();
+            response.setAgent(aesService.encrypt(security.getAgent(), session));
+            response.setAuth(aesService.encrypt(security.getAuth(), session));
             // 保存加密密钥信息到数据库
             encryptKeyService.saveOrUpdate(session, rsaKey, clientPublicKey, aesKey);
             return Response.ok(response);

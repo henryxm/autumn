@@ -27,7 +27,7 @@ public class SessionFiter implements Filter {
             response.setHeader("Access-Control-Allow-Origin", originHeader);
             response.setHeader("Access-Control-Allow-Methods", "PUT, POST, GET, OPTIONS, DELETE");
             response.setHeader("Access-Control-Max-Age", "0");
-            response.setHeader("Access-Control-Allow-Headers", "Authorization,Origin, No-Cache, X-Requested-With, If-Modified-Since, Pragma, Last-Modified, Cache-Control, Expires, Content-Type, X-E4M-With,userId,token");
+            response.setHeader("Access-Control-Allow-Headers", "Authorization,Origin, No-Cache, X-Requested-With, If-Modified-Since, Pragma, Last-Modified, Cache-Control, Expires, Content-Type, X-E4M-With,userId,token,X-Encrypt-Session,X-Encrypt-Auth,X-Encrypt-Agent,X-Encrypt-Timestamp,X-Encrypt-Nonce,X-Encrypt-Signature");
             response.setHeader("Access-Control-Allow-Credentials", "true");
             response.setHeader("XDomainRequestAllowed", "1");
             response.setHeader("XDomainRequestAllowed", "1");
