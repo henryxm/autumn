@@ -32,4 +32,10 @@ public class Encryption implements Serializable {
 
     @Schema(name = "endpoints", description = "支持的加密接口")
     private String endpoints;
+
+    @Schema(name = "user-agent", description = "浏览器代理特征值，使用AES key加密返回")
+    private String agent;
+
+    @Schema(name = "Auth", description = "通用认证header请求，防止非法请求，使用AES key加密返回")
+    private String auth;
 }

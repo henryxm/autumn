@@ -6,6 +6,7 @@ import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.wall.site.WallSite;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import cn.org.autumn.modules.wall.dao.ShieldDao;
@@ -14,6 +15,7 @@ import cn.org.autumn.modules.wall.entity.ShieldEntity;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -88,6 +90,27 @@ public class ShieldService extends ModuleService<ShieldDao, ShieldEntity> implem
             log.error("防御护盾:{}", e.getMessage());
         }
         return false;
+    }
+
+    public boolean matchUri(String uri) {
+        if (StringUtils.isBlank(uri)) {
+            return false;
+        }
+        if (null == uris) {
+            uris = baseMapper.gets();
+        }
+        if (uris == null || uris.isEmpty()) {
+            return false;
+        }
+        // "/" 作为全局接口匹配开关
+        return uris.contains("/") || uris.contains(uri);
+    }
+
+    public Set<String> getEnabledUris() {
+        if (null == uris) {
+            uris = baseMapper.gets();
+        }
+        return uris == null ? Collections.emptySet() : new HashSet<>(uris);
     }
 
     public String getHtml() throws IOException {

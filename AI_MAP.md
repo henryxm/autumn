@@ -1,6 +1,32 @@
 # Autumn AI 框架能力地图
 
+> 首轮建议先读：`@AI_BOOT.md`（最小启动上下文）
+> 全量索引入口：`@AI_INDEX.md`
+
 > 目标：给 AI 提供统一、结构化的框架上下文，减少“不了解项目能力”导致的误判与重复实现。
+
+## 0. AI 最小上下文（先读这段再开发）
+
+- 一句话原则：
+  - 优先复用平台能力，禁止重复造轮子；默认从 `ModuleService` 继承链出发实现业务。
+- Service 默认能力：
+  - `ModuleService -> BaseService -> ShareCacheService -> BaseCacheService -> BaseQueueService`
+  - 即：CRUD + 菜单/多语言初始化 + 缓存 + 队列（开箱可用）。
+- 接口默认模式：
+  - 普通：`Request<T> -> Response<T>`
+  - 兼容：`CompatibleRequest<T> -> CompatibleResponse<T> + @Endpoint(compatible=true)`
+- 混合加密触发条件：
+  - 请求解密：请求体含 `ciphertext + session`
+  - 响应加密：请求头含 `X-Encrypt-Session`
+  - 握手入口：`/rsa/api/v1/init`（仅握手，不混入业务）
+- 定时任务默认模式：
+  - 固定周期优先 `LoopJob.*`，复杂日历才使用 cron。
+- 生成代码默认模式：
+  - 实体注解驱动建表 -> gen 模块模板生成 -> 业务只写非 gen 层（防覆盖）。
+- 开发前 3 问（AI 自检）：
+  - 1) 现有基类/模块能力是否已覆盖？
+  - 2) 是否会破坏缓存一致性、加密语义、权限语义？
+  - 3) 生成后业务代码是否放在可维护层（非 `controller/gen`）？
 
 ## 1. 项目结构（AI 先看）
 
@@ -55,55 +81,13 @@
 
 ### 2.4 加密兼容方案（跨项目复用）
 
-- 核心目标：
-  - 同一接口同时兼容“新加密协议（`Request<T>`）”和“旧明文协议（平铺字段）”。
-  - 通过统一拦截与解析，避免拆分双接口。
-- 推荐组合（最终收敛）：
-  - 入参：`CompatibleRequest<T>`
-  - 出参：`CompatibleResponse<T>`（需要显示包装时）或原始 DTO（不包装返回时）
-- 关键类：
-  - `cn.org.autumn.model.CompatibleRequest`
-  - `cn.org.autumn.model.CompatibleResponse`
-  - `cn.org.autumn.model.Wrap`
-  - `cn.org.autumn.model.EndpointInfo`
-  - `cn.org.autumn.modules.oauth.resolver.EncryptArgumentResolver`
-  - `cn.org.autumn.modules.oauth.interceptor.EncryptInterceptor`
-  - `cn.org.autumn.service.RsaService`（`getEncryptEndpoints` 计算 `wrap`）
-- 适用边界（务必遵守）：
-  - 如果请求参数类型已经是 `Encrypt` 接口实现类，则不需要做 `CompatibleRequest<T>` 兼容处理。
-  - 如果返回参数类型已经是 `Encrypt` 接口实现类，则不需要做额外兼容性包装处理。
-- `CompatibleRequest` 约定：
-  - 不再使用 `legacy/resolve`；业务侧统一通过 `request.getData()` 取值。
-  - `EncryptArgumentResolver` 负责归一化：标准 `{"data":...}` 取 `data`，非标准对象/数组/基础类型直接写入 `data`。
-- `wrap` 参数（端点能力探测）：
-  - `wrap.request=true`：请求参数是 `Request`/`CompatibleRequest` 包装。
-  - `wrap.response=true`：返回类型是 `Response`/`CompatibleResponse` 包装。
-- 行为矩阵（给 AI 的判断规则）：
-  - `CompatibleRequest<T> + CompatibleResponse<T>`：有 session 时加密整个兼容包装；无 session 时解包返回 `data`（推荐）。
-  - `CompatibleRequest<T> + Response<T>`：请求可明文/密文兼容；响应按 header 决定是否加密（通用可用）。
-  - `CompatibleRequest<T> + 老返回对象`：若带 `X-Encrypt-Session` 且为 JSON，会按兼容规则加密；无 session 直接返回原值。
-  - 任意请求 + 文件下载/非 JSON 返回：不自动包装，不做强制加密包装。
-  - `请求或返回已实现 Encrypt`：保持原有入参与出参类型，不新增兼容层。
-- 控制器最小模板（跨项目直接套用）：
-
-```java
-@PostMapping("/biz/action")
-public CompatibleResponse<BizVO> action(@RequestBody(required = false) CompatibleRequest<BizDTO> request) {
-    BizDTO dto = request != null ? request.getData() : null;
-    if (dto == null) {
-        CompatibleResponse<BizVO> fail = new CompatibleResponse<>();
-        fail.setCode(-1);
-        fail.setMsg("非法请求");
-        return fail;
-    }
-    return CompatibleResponse.ok(service.action(dto));
-}
-```
-
-- 迁移顺序建议：
-  - 先改高频写接口、敏感数据接口。
-  - 再改普通读接口；下载导出接口最后单独核对 `Content-Type`。
-  - 每批次都回归“明文请求 + 加密请求 + header 有/无”的组合。
+- 本节已拆分为独立专项文档：`@AI_CRYPTO.md`。
+- 日常开发只需记住 4 条：
+  - 默认接口：`Request<T> -> Response<T>`，兼容场景再用 `CompatibleRequest/CompatibleResponse`。
+  - 触发条件：请求体含 `ciphertext + session` 才解密；请求头含 `X-Encrypt-Session` 才加密响应。
+  - 约束：不要自建平行加密协议；握手接口与业务接口分离。
+  - 回归：至少覆盖“明文/密文/header有无”三组调用路径。
+- 安全强校验（`agent/auth/签名/灰度/演练`）请看：`@AI_SECURITY.md`。
 
 ### 2.5 接口式定时任务（LoopJob，常用推荐）
 
@@ -153,6 +137,110 @@ public class DemoJob implements LoopJob.OneMinute {
   - 常见接口：页面、拦截器、解析器、插件、过滤链等。
   - 常见模式：默认实现 + `@ConditionalOnMissingBean` + `@Order`。
 
+### 2.7 ModuleService 默认继承能力（AI 必看）
+
+- 继承链（非常关键）：
+  - `ModuleService` -> `BaseService` -> `ShareCacheService` -> `BaseCacheService` -> `BaseQueueService` -> `ServiceImpl`
+- 结论：
+  - 任何 `extends ModuleService<Dao, Entity>` 的业务 Service，默认就有 CRUD + 缓存 + 队列 + 菜单语言初始化能力。
+  - 定时任务不需要额外基类，直接在 Service 上 `implements LoopJob.OneMinute/...` 即可接入调度。
+- `ModuleService` 提供的模块化能力：
+  - 自动菜单与多语言初始化：`init()` 会调用 `sysMenuService.put(...)` 和 `language.put(...)`。
+  - 自动解析模块信息：根据实体 `@Table(module/prefix/value)` 解析模块、前缀、菜单 key。
+  - 约定优于配置：生成模块时，默认可通过实体命名与注解推导菜单、语言、权限基础项。
+- `BaseCacheService` 默认可用能力（无需重复封装）：
+  - 单值缓存：`getCache(...) / putCache(...) / removeCache(...) / clearCache(...)`。
+  - 列表缓存：`getListCache(...) / putListCache(...) / removeListCache(...) / clearListCache(...)`。
+  - 命名缓存与类型缓存：支持 `name` 维度和 `Class<X>` 维度。
+  - 回源约定：缓存未命中自动调用 `getEntity* / getListEntity*`，业务只需覆写回源方法。
+  - 一致性约定：写操作后优先调用缓存失效方法（至少同时处理单值和列表缓存）。
+- `ShareCacheService` 默认可用能力（跨项目共享缓存）：
+  - 共享单值/列表/Map：`getShareCache/getShareListCache/getShareMapCache`。
+  - 支持 `shareName`、泛型类型、复合 key、supplier 回源。
+  - 适用于子项目间共享数据，不要再单独造“跨模块缓存工具类”。
+- `BaseQueueService` 默认可用能力（无需再封装消息中间层）：
+  - 发送：`sendQueue / sendMessage / sendDelay / sendScheduled / sendPriority / sendBatch`。
+  - 消费：`pollQueue / pollBatch / consume / startQueue / stopQueue`。
+  - 自动队列配置：可通过 `getQueueConfig()/register()` 自动注册与自动启停消费者。
+  - 失败处理扩展点：`onQueueMessage / onErrorMessage / onDeadMessage`。
+- `LoopJob` 接入约定（Service 级）：
+  - 固定周期任务：在 Service 直接 `implements LoopJob.OneSecond...OneWeek` 并覆写对应 `onXxx()`。
+  - 任务治理：可结合 `@JobMeta` 使用 `skipIfRunning/timeout/maxConsecutiveErrors/assign`。
+  - 仅复杂时间表达式场景才退回 `schedulejob + cronExpression`。
+- 给 AI 的硬约束：
+  - 新建 Service 时默认继承 `ModuleService`，禁止绕开继承链重复实现缓存/队列/分页/菜单语言初始化。
+  - 需要缓存时，先选 `getCache/getListCache/getShareCache` 体系；需要异步时，先选 `BaseQueueService` 体系。
+  - 需要周期任务时，先让当前 Service `implements LoopJob.*`，不要先设计新的调度器或线程轮询器。
+
+### 2.8 ModuleService 实战模板（AI 直接套用）
+
+- 目标：
+  - 让 AI 在新增业务 Service 时直接复用平台能力，一次性完成“缓存 + 队列 + 周期任务 + 业务扩展点”。
+- Service 骨架模板（建议优先）：
+
+```java
+@Service
+public class DemoService extends ModuleService<DemoDao, DemoEntity> implements LoopJob.OneMinute {
+
+    @Override
+    public boolean onQueueMessage(DemoEntity entity) {
+        // 队列消息消费逻辑（失败返回 false，触发重试/死信链路）
+        return true;
+    }
+
+    @Override
+    public void onOneMinute() {
+        // 周期任务逻辑（固定周期优先）
+    }
+
+    @Override
+    public DemoEntity getEntity(Object key) {
+        // 单值缓存回源（key -> entity）
+        return baseMapper.selectById((Long) key);
+    }
+}
+```
+
+- 缓存调用优先级（AI 必须遵守）：
+  - 单实体查询：优先 `getCache(key)`，命中失败由 `getEntity` 回源。
+  - 列表查询：优先 `getListCache(key)`，命中失败由 `getListEntity` 回源。
+  - 变更后失效：优先 `removeCache/removeListCache/removeCacheAll`，禁止只改库不清缓存。
+  - 跨项目共享：优先 `getShareCache/getShareListCache/getShareMapCache`，不要新增自定义共享缓存组件。
+- 队列调用优先级（AI 必须遵守）：
+  - 普通异步：`sendQueue/sendMessage`。
+  - 延迟/定时/优先级：`sendDelay/sendScheduled/sendPriority`。
+  - 批处理：`sendBatch`。
+  - 消费端优先覆写：`onQueueMessage/onErrorMessage/onDeadMessage`，或使用 `startQueue(..., handler)`。
+- 定时任务调用优先级（AI 必须遵守）：
+  - 固定周期：`implements LoopJob.OneSecond...OneWeek` + `onXxx`。
+  - 任务治理：按需增加 `@JobMeta(skipIfRunning/timeout/maxConsecutiveErrors/assign)`。
+  - 复杂日历规则才使用 cron，且要说明为何 LoopJob 不适用。
+- 生成代码后的扩展落点（防覆盖）：
+  - 可重生层：`controller/gen/*`（尽量不放业务）
+  - 可维护层：`controller/*` + `service/*`（业务逻辑放这里）
+  - 页面入口层：`site/*Site` + `site/*Menu`
+  - 前端页面层：`templates/modules/{module}/*.html|*.js`
+
+### 2.9 多项目模板资源聚合（TemplateFactory 方案）
+
+- 目标：
+  - 支持“多项目独立开发、运行时统一装配模板资源”。
+  - 每个项目可将自身 `templates` 资源打包进本项目 jar，无需集中到单一入口工程。
+- 关键实现：
+  - `TemplateFactory.Template`：每个 artifact 仅需提供一个实现即可参与模板装载。
+  - 默认模板根路径：`/templates`（可覆写 `getBasePackagePath()`）。
+  - `TemplateFactory` 会收集所有 `TemplateFactory.Template` Bean，并按 `@Order` 从小到大装配为 `TemplateLoader` 链。
+  - 最终使用 `DynamicTemplateLoader` 做统一查找；同时兼容 `LoaderFactory.Loader`（旧扩展方式，已废弃）。
+- 运行时整合能力：
+  - `Plugin` 默认继承 `TemplateFactory.Template`，插件安装/卸载时可动态 `add/remove` 模板加载器。
+  - 卸载后调用 `resetState()` 清理缓存，避免读取到失效模板源。
+  - `DynamicTemplateLoader.exists(...)` 会校验插件 jar 是否仍存在，防止“模板源句柄存在但文件已删除”的脏引用。
+- 冲突与覆盖约定（AI 必须遵守）：
+  - 多项目存在同名模板时，优先通过 `@Order` 显式控制优先级，不要依赖隐式加载顺序。
+  - 若业务需要覆盖框架默认模板，使用“同名模板 + 更高优先级（更小 order 值）”实现。
+  - 新项目接入时，不要要求把模板复制到主工程；应在本项目内提供 `TemplateFactory.Template` 实现并随 jar 发布。
+  - 非必要不要继续扩展 `LoaderFactory.Loader`，新代码统一走 `TemplateFactory.Template`。
+
 ## 3. 模块能力总览（业务域）
 
 - `sys`：用户/角色/菜单/部门/配置/日志/系统运维能力。
@@ -175,13 +263,37 @@ public class DemoJob implements LoopJob.OneMinute {
 - 涉及兼容改造时，先判断请求/返回类型是否已实现 `Encrypt`；若已实现则禁止再做兼容包装。
 - 涉及队列消费必须给出失败、重试、死信处理策略。
 - 涉及定时任务时，优先接口式任务（`LoopJob.OneMinute/FiveMinute/...`），避免不必要的 cron 表达式。
+- 所有 `ModuleService` 子类默认具备缓存/队列/基础 CRUD 能力，禁止重复封装同类基础组件。
+- 新增基础能力前，先检查 `BaseCacheService/ShareCacheService/BaseQueueService/LoopJob` 是否已覆盖需求。
+- 涉及页面/模板资源扩展时，优先通过 `TemplateFactory.Template` 在本项目 jar 内提供模板，不要求集中拷贝到入口工程。
 
 ## 5. AI 交互输入模板（建议每次需求都带）
 
-将以下模板复制给 AI，并按任务填写：
+### 5.1 需求描述模板（给开发者/产品）
 
 ```md
-你是 Autumn 项目的开发助手。
+项目：Autumn
+
+需求目标：
+- （一句话描述业务目标）
+
+业务范围：
+- 模块：（如 sys / oauth / usr / job）
+- 实体：（如 XxxEntity）
+- 页面/接口：（如 modules/xxx/yyy、/xxx/yyy/*）
+
+关键约束：
+- 是否涉及缓存：（是/否，若是说明缓存键与失效时机）
+- 是否涉及队列：（是/否，若是说明发送点与消费点）
+- 是否涉及定时任务：（是/否，若是说明周期与超时要求）
+- 是否涉及加解密兼容：（是/否）
+- 是否必须兼容旧接口：（是/否）
+```
+
+### 5.2 执行指令模板（给 AI）
+
+```md
+你是 Autumn 项目的开发助手，必须优先复用现有框架能力，不得重复造轮子。
 
 任务目标：
 - （一句话描述）
@@ -190,18 +302,22 @@ public class DemoJob implements LoopJob.OneMinute {
 - （如 sys / oauth / cache / queue / job）
 
 需要复用的框架能力（必须优先）：
+- Service 继承链：ModuleService -> BaseService -> ShareCacheService -> BaseCacheService -> BaseQueueService
+- 默认能力：CRUD + 菜单/多语言初始化 + 缓存 + 队列（无需重复造轮子）
 - 缓存：BaseCacheService / CacheService / ShareCacheService（若需要）
 - 队列：BaseQueueService / QueueService（若需要）
 - 加密：EncryptArgumentResolver / EncryptInterceptor / RsaService / AesService（若需要）
 - 协议兼容：CompatibleRequest + Response（同接口支持明文/密文）
 - 定时任务：LoopJob 接口周期（固定周期优先，复杂规则再 cron）
 
-约束：
+执行约束：
 - 不要新增重复基础设施
 - 不要破坏现有接口返回结构
 - 保持权限、缓存、加密、队列语义一致
+- 新 Service 默认继承 ModuleService；除非明确说明，否则不要新建平行基础层
 - 涉及接口改造时，优先采用 CompatibleRequest<T> + Response<T> 组合
 - 涉及定时任务时，优先 LoopJob 接口，不要默认写 cronExpression
+- 若未复用 ModuleService 继承能力，必须先解释原因并给替代方案
 
 输出要求：
 - 先给实现方案（涉及类、接口、复用点）
@@ -209,30 +325,96 @@ public class DemoJob implements LoopJob.OneMinute {
 - 最后给测试与回归检查点
 ```
 
-## 6. 文档入口（已有在线文档）
+### 5.3 最小填写示例（可直接复制）
 
-- 在线文档目录模板：`autumn-modules/src/main/resources/templates/modules/docs/`
-- 推荐先阅读章节：
-  - `architecture` / `handler`
-  - `cache` / `queue`
-  - `oauth` / `hybrid-crypto`
-  - `sys`
+```md
+项目：Autumn
+需求目标：新增安全请求审计能力，支持缓存加速与异步落库。
+业务范围：模块 oauth；实体 SecurityRequestEntity；接口 /oauth/securityrequest/*
+关键约束：涉及缓存（按id与auth失效）；涉及队列（save后异步审计）；不涉及加解密协议改造。
+```
 
-## 7. 维护约定（建议）
+## 6. AI 开发执行清单（落地顺序）
 
-- 新增框架能力时，同步更新：
-  - 本文件（AI 能力地图）
-  - 对应在线章节（`modules/docs/*.html`）
-- 每个能力至少补齐：
-  - 功能入口
-  - 触发条件/约束
-  - 最小可跑通用例
-  - 常见故障排查
+- 第一步：确认目标 Service 是否继承 `ModuleService`；若不是，优先改为继承后再开发。
+- 第二步：按需求映射能力：
+  - 查缓存：`getCache/getListCache/getShareCache`
+  - 异步消息：`sendQueue/sendMessage/sendDelay/sendScheduled/sendPriority`
+  - 周期任务：`LoopJob.* + onXxx`
+- 第三步：实现回源与失效：
+  - 覆写 `getEntity/getListEntity`（必要时）
+  - 写操作后执行 `removeCache/removeListCache/removeCacheAll`
+- 第四步：补全治理能力：
+  - 队列失败处理 `onErrorMessage/onDeadMessage`
+  - 任务治理 `@JobMeta`（超时/重入/连续错误阈值）
+- 第五步：回归检查：
+  - 缓存命中/失效是否正确
+  - 队列发送/消费/重试是否正确
+  - 定时任务是否按周期执行、是否可观测（list/stats/alerts）
 
-## 8. 多项目使用入口
+## 7. AI 常见反模式（禁止）
 
-- 如果你在 `Idea` 目录下有多个 Autumn 系项目，请先阅读：
-  - `AI_GUIDE.md`
-- 推荐在提示词中固定引用：
-  - `@/Users/mac/Idea/autumn/AI_MAP.md`
-  - 再补当前业务项目路径上下文（README + 目标模块目录）
+- 缓存反模式：
+  - 直接 `baseMapper` 查询后手写 `Map` 缓存，绕过 `getCache/getListCache/getShareCache`。
+  - 写库后不做 `removeCache/removeListCache/removeCacheAll`，导致脏读。
+- 队列反模式：
+  - 业务中手动新建线程池或阻塞队列替代 `BaseQueueService`。
+  - 仅发送消息不定义失败处理策略（`onErrorMessage/onDeadMessage`）。
+- 定时任务反模式：
+  - 固定周期任务直接上 cron，不实现 `LoopJob.*` 周期接口。
+  - 任务无超时、无防重入、无连续错误保护，不配置 `@JobMeta`。
+- 分层反模式：
+  - 把业务逻辑堆在 `controller/gen/*` 可重生层，导致再次生成被覆盖。
+  - 新建与 `ModuleService` 平行的基础服务层，重复平台能力。
+
+## 8. 一页式速查卡（Cheat Sheet）
+
+- 标准 Service 继承：
+  - `class XxxService extends ModuleService<XxxDao, XxxEntity>`
+  - 固定周期任务直接 `implements LoopJob.OneMinute/...`
+- 标准接口签名：
+  - 默认：`Request<T> -> Response<R>`
+  - 兼容：`CompatibleRequest<T> -> CompatibleResponse<R> + @Endpoint(compatible=true)`
+- 加密握手顺序（客户端）：
+  - `POST /rsa/api/v1/init` -> 保存 `session/AES`
+  - `POST|GET /rsa/api/v1/endpoints` -> 保存端点能力映射
+  - 业务请求按映射决定是否加密并携带 `X-Encrypt-Session`
+- 响应加密触发：
+  - 有 `X-Encrypt-Session` -> 响应按 JSON 加密返回
+  - 无 `X-Encrypt-Session` -> 返回明文；`CompatibleResponse` 自动降级为 `data`
+- 缓存最小实践：
+  - 查：优先 `getCache/getListCache/getShareCache`
+  - 改：写库后必须 `removeCache/removeListCache/removeCacheAll`
+- 队列最小实践：
+  - 发：`sendQueue/sendDelay/sendScheduled/sendPriority/sendBatch`
+  - 消：覆写 `onQueueMessage`，并补 `onErrorMessage/onDeadMessage`
+- 错误恢复（客户端）：
+  - `FORCE_ENCRYPT_SESSION_REQUIRED` / `RSA_CLIENT_PUBLIC_KEY_NOT_FOUND` -> 重新执行 `/rsa/api/v1/init`
+  - 解密失败 -> 清理本地会话与 AES 缓存后重握手
+- 提测前 8 项检查：
+  - 1) 是否复用 `ModuleService` 继承链
+  - 2) 是否使用 `Request/Response` 或 `Compatible*`
+  - 3) 是否验证明文调用路径
+  - 4) 是否验证密文调用路径
+  - 5) 是否验证 header 有/无两种响应
+  - 6) 是否覆盖缓存命中与失效
+  - 7) 是否覆盖队列失败/重试/死信路径
+  - 8) 是否覆盖 LoopJob 周期执行与可观测接口（list/stats/alerts）
+## 9. 按需扩展索引（低频，不默认加载）
+
+- 模板库（模块任务指令、组合索引）：
+  - `@AI_TEMPLATES.md`
+- 加解密兼容专项（接口迁移与客户端对接）：
+  - `@AI_CRYPTO.md`
+- 治理与维护（规则优先级、术语、多项目协作、维护规范）：
+  - `@AI_GOVERNANCE.md`
+- 安全专项（签名接入、灰度上线、攻防演练）：
+  - `@AI_SECURITY.md`
+- 提问模板库（可复制指令）：
+  - `@AI_PROMPTS.md`
+- 默认加载建议：
+  - 日常开发：仅 `AI_MAP.md`
+  - 接口加解密改造：`AI_MAP.md + AI_CRYPTO.md`
+  - 模块新建/批量生成：`AI_MAP.md + AI_TEMPLATES.md`
+  - 规范梳理/文档治理：`AI_MAP.md + AI_GOVERNANCE.md`
+  - 安全改造/演练：`AI_MAP.md + AI_SECURITY.md`
