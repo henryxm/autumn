@@ -20,7 +20,6 @@ import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
-import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.support.WebDataBinderFactory;
 import org.springframework.web.context.request.NativeWebRequest;
@@ -86,7 +85,9 @@ public class EncryptArgumentResolver extends RequestResponseBodyMethodProcessor 
         try {
             // 优先复用Spring默认解析，避免自定义解析带来的数值精度偏差
             object = super.resolveArgument(parameter, mavContainer, effectiveWebRequest, binderFactory);
-        } catch (HttpMessageNotReadableException ex) {
+        } catch (Exception ex) {
+            if (log.isDebugEnabled())
+                log.debug(ex.getMessage(), ex);
             if (!Request.class.isAssignableFrom(parameter.getParameterType())) {
                 throw ex;
             }
@@ -182,11 +183,7 @@ public class EncryptArgumentResolver extends RequestResponseBodyMethodProcessor 
         return object;
     }
 
-    private void trySetCompatibleData(
-            @NonNull MethodParameter parameter,
-            @NonNull NativeWebRequest webRequest,
-            @NonNull CompatibleRequest<?> compatibleRequest
-    ) {
+    private void trySetCompatibleData(@NonNull MethodParameter parameter, @NonNull NativeWebRequest webRequest, @NonNull CompatibleRequest<?> compatibleRequest) {
         if (compatibleRequest.getData() != null) {
             return;
         }
