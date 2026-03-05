@@ -91,6 +91,8 @@ public class SysUserRoleService extends ServiceImpl<SysUserRoleDao, SysUserRoleE
             if (hasRole)
                 continue;
             SysRoleEntity sysRoleEntity = sysRoleService.getByRoleKey(roleKey);
+            if (sysRoleEntity == null)
+                continue;
             sysUserRoleEntity.setRoleKey(roleKey);
             save(sysUserRoleEntity);
         }

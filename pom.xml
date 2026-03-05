@@ -20,6 +20,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <java.version>17</java.version>
+        <skipTests>true</skipTests>
         <!-- ==================== Spring 生态 ==================== -->
         <spring-cloud.version>2025.0.1</spring-cloud.version>
         <spring-ai.version>1.1.2</spring-ai.version>

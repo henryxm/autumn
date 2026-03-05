@@ -2,6 +2,7 @@ package cn.org.autumn.modules.user.service;
 
 
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
+import org.junit.Ignore;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -12,6 +13,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest
+@Ignore("依赖多数据源集成环境，默认构建环境跳过")
 public class DynamicDataSourceTest {
     @Autowired
     private DataSourceTestService dataSourceTestService;

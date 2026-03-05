@@ -1,6 +1,7 @@
 package cn.org.autumn.modules;
 
 import cn.org.autumn.modules.sys.service.RedisService;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,6 +14,7 @@ import java.util.Map;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest
+@Ignore("需要本地Redis与完整SpringBoot上下文，默认构建环境跳过")
 public class RedisServiceTest {
 
     @Autowired
