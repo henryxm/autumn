@@ -114,7 +114,7 @@ public class SysMenuService extends ServiceImpl<SysMenuDao, SysMenuEntity> imple
                 if (null == o)
                     continue;
                 if (o instanceof List) {
-                    List l = (List) o;
+                    List<?> l = (List<?>) o;
                     if (l.isEmpty())
                         continue;
                     for (Object b : l) {

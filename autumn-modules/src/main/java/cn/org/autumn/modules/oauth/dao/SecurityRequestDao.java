@@ -21,12 +21,12 @@ import java.util.Date;
 @Repository
 public interface SecurityRequestDao extends BaseMapper<SecurityRequestEntity> {
 
-    @Select("select * from oauth_security_request where enabled = 1 order by create desc limit 1")
+    @Select("select * from oauth_security_request where enabled = 1 order by `create` desc limit 1")
     SecurityRequestEntity getLatestEnabled();
 
     @Select("select * from oauth_security_request where enabled = 1 and auth = #{auth} limit 1")
     SecurityRequestEntity getByAuth(@Param("auth") String auth);
 
-    @Delete("delete from oauth_security_request where create < #{deadline}")
+    @Delete("delete from oauth_security_request where `create` < #{deadline}")
     int deleteByCreateBefore(@Param("deadline") Date deadline);
 }

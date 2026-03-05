@@ -565,7 +565,7 @@ public abstract class BaseQueueService<M extends BaseMapper<T>, T> extends Servi
         String name = getQueueName(clazz);
         QueueConfig config = queueService.getConfig(name);
         if (config == null) {
-            config = getQueueConfig();
+            config = getQueueConfig(clazz);
             if (config.isAuto())
                 register(clazz);
         }
@@ -576,7 +576,7 @@ public abstract class BaseQueueService<M extends BaseMapper<T>, T> extends Servi
         String name = getQueueName(suffix, clazz);
         QueueConfig config = queueService.getConfig(name);
         if (config == null) {
-            config = getQueueConfig();
+            config = getQueueConfig(suffix, clazz);
             if (config.isAuto())
                 register(suffix, clazz);
         }
@@ -616,7 +616,7 @@ public abstract class BaseQueueService<M extends BaseMapper<T>, T> extends Servi
         String name = getQueueName(clazz);
         QueueConfig config = queueService.getConfig(name);
         if (config == null) {
-            config = getQueueConfig();
+            config = getQueueConfig(clazz);
             if (config.isAuto())
                 register(clazz);
         }
@@ -627,7 +627,7 @@ public abstract class BaseQueueService<M extends BaseMapper<T>, T> extends Servi
         String name = getQueueName(suffix, clazz);
         QueueConfig config = queueService.getConfig(name);
         if (config == null) {
-            config = getQueueConfig();
+            config = getQueueConfig(suffix, clazz);
             if (config.isAuto())
                 register(suffix, clazz);
         }
@@ -663,22 +663,22 @@ public abstract class BaseQueueService<M extends BaseMapper<T>, T> extends Servi
         return queueService.sendPriority(name, entity, priority);
     }
 
-    public <X> boolean sendPriority(Class<X> clazz, T entity, int priority) {
+    public <X> boolean sendPriority(Class<X> clazz, X entity, int priority) {
         String name = getQueueName(clazz);
         QueueConfig config = queueService.getConfig(name);
         if (config == null) {
-            config = getQueueConfig();
+            config = getQueueConfig(clazz);
             if (config.isAuto())
                 register(clazz);
         }
         return queueService.sendPriority(name, entity, priority);
     }
 
-    public <X> boolean sendPriority(String suffix, Class<X> clazz, T entity, int priority) {
+    public <X> boolean sendPriority(String suffix, Class<X> clazz, X entity, int priority) {
         String name = getQueueName(suffix, clazz);
         QueueConfig config = queueService.getConfig(name);
         if (config == null) {
-            config = getQueueConfig();
+            config = getQueueConfig(suffix, clazz);
             if (config.isAuto())
                 register(suffix, clazz);
         }
@@ -724,7 +724,7 @@ public abstract class BaseQueueService<M extends BaseMapper<T>, T> extends Servi
         String name = getQueueName(clazz);
         QueueConfig config = queueService.getConfig(name);
         if (config == null) {
-            config = getQueueConfig();
+            config = getQueueConfig(clazz);
             if (config.isAuto())
                 register(clazz);
         }
@@ -735,7 +735,7 @@ public abstract class BaseQueueService<M extends BaseMapper<T>, T> extends Servi
         String name = getQueueName(suffix, clazz);
         QueueConfig config = queueService.getConfig(name);
         if (config == null) {
-            config = getQueueConfig();
+            config = getQueueConfig(suffix, clazz);
             if (config.isAuto())
                 register(suffix, clazz);
         }

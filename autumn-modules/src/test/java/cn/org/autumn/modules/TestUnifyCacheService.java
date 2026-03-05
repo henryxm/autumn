@@ -5,6 +5,7 @@ import cn.org.autumn.modules.client.service.WebOauthCombineService;
 import cn.org.autumn.modules.lan.entity.LanguageEntity;
 import cn.org.autumn.utils.Uuid;
 import lombok.extern.slf4j.Slf4j;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,6 +31,7 @@ import static org.junit.Assert.*;
 @RunWith(SpringRunner.class)
 @SpringBootTest
 @Transactional
+@Ignore("需要数据库/缓存等集成环境，默认构建环境跳过")
 public class TestUnifyCacheService {
 
     @Autowired
