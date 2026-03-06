@@ -7,6 +7,7 @@ import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.spm.entity.SuperPositionModelEntity;
 import cn.org.autumn.modules.spm.service.gen.SuperPositionModelServiceGen;
 import cn.org.autumn.modules.sys.service.SysConfigService;
+import cn.org.autumn.utils.IPUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -231,10 +232,11 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
      * 记录Spm 访问的日志信息
      */
     public void log(HttpServletRequest request, SuperPositionModelEntity superPositionModelEntity) {
+        final String ip = IPUtils.getIp(request);
         asyncTaskExecutor.execute(new Runnable() {
             @Override
             public void run() {
-                visitLogService.put(request, superPositionModelEntity);
+                visitLogService.put(ip, superPositionModelEntity);
             }
         });
     }
