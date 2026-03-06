@@ -80,13 +80,9 @@ public class WallService {
             String signature = request.getHeader(SecurityRequestService.SIGNATURE_HEADER);
             String query = request.getQueryString();
             String uriWithQuery = StringUtils.isBlank(query) ? uri : (uri + "?" + query);
-            if (!securityRequestService.verifyStrong(
-                    userAgent, agent, auth,
-                    request.getMethod(), uriWithQuery,
-                    timestamp, nonce, signature)) {
+            if (!securityRequestService.verifyStrong(userAgent, agent, auth, request.getMethod(), uriWithQuery, timestamp, nonce, signature)) {
                 if (shieldService.isPrint()) {
-                    log.info("强力校验拦截: ip={}, uri={}, auth={}, agentHeader={}, ts={}, nonce={}",
-                            ip, uriWithQuery, auth, agent, timestamp, nonce);
+                    log.info("强力校验拦截: ip={}, uri={}, auth={}, agentHeader={}, ts={}, nonce={}", ip, uriWithQuery, auth, agent, timestamp, nonce);
                 }
                 if (null != response) {
                     response.setStatus(403);
