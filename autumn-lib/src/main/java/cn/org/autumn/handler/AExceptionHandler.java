@@ -14,10 +14,12 @@ import org.springframework.web.HttpMediaTypeNotAcceptableException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.HandlerMapping;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.util.Collections;
 
 /**
  * 异常处理器
@@ -30,7 +32,7 @@ public class AExceptionHandler {
      */
     @ExceptionHandler(AException.class)
     public Response<?> handleRRException(AException e, HttpServletRequest request, HttpServletResponse response) {
-        ensureJsonContentType(response);
+        ensureJsonContentType(request, response);
         if (log.isDebugEnabled())
             log.debug("请求方式:{}, 路径:{}, 代码:{}, 错误:{}", request.getMethod(), request.getRequestURI(), e.getCode(), e.getMessage(), e);
         return Response.error(e);
@@ -38,7 +40,7 @@ public class AExceptionHandler {
 
     @ExceptionHandler(CodeException.class)
     public Response<?> handleCodeException(CodeException e, HttpServletRequest request, HttpServletResponse response) {
-        ensureJsonContentType(response);
+        ensureJsonContentType(request, response);
         if (log.isDebugEnabled())
             log.debug("请求方式:{}, 路径:{}, 代码:{}, 错误:{}", request.getMethod(), request.getRequestURI(), e.getCode(), e.getMessage(), e);
         return Response.error(e);
@@ -46,7 +48,7 @@ public class AExceptionHandler {
 
     @ExceptionHandler(DuplicateKeyException.class)
     public Response<?> handleDuplicateKeyException(DuplicateKeyException e, HttpServletRequest request, HttpServletResponse response) {
-        ensureJsonContentType(response);
+        ensureJsonContentType(request, response);
         if (log.isDebugEnabled())
             log.debug("请求方式:{}, 路径:{}, 错误:{}", request.getMethod(), request.getRequestURI(), e.getMessage(), e);
         return Response.error(Error.DATABASE_DUPLICATE_KEY);
@@ -57,7 +59,7 @@ public class AExceptionHandler {
      */
     @ExceptionHandler(HttpMediaTypeNotAcceptableException.class)
     public Response<?> handleHttpMediaTypeNotAcceptableException(HttpMediaTypeNotAcceptableException e, HttpServletRequest request, HttpServletResponse response) {
-        ensureJsonContentType(response);
+        ensureJsonContentType(request, response);
         if (log.isDebugEnabled())
             log.debug("请求方式:{}, 路径:{}, Accept:{}, Content-Type:{}, 错误:{}", request.getMethod(), request.getRequestURI(), request.getHeader("Accept"), request.getHeader("Content-Type"), e.getMessage(), e);
         return Response.error(Error.NOT_ACCEPTABLE);
@@ -68,7 +70,7 @@ public class AExceptionHandler {
      */
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public Response<?> handleHttpRequestMethodNotSupportedException(HttpRequestMethodNotSupportedException e, HttpServletRequest request, HttpServletResponse response) {
-        ensureJsonContentType(response);
+        ensureJsonContentType(request, response);
         if (log.isDebugEnabled())
             log.debug("请求方式:{}, 路径:{}, 方法:{}, 支持的方法:{}, 错误:{}", request.getMethod(), request.getRequestURI(), request.getMethod(), e.getSupportedMethods(), e.getMessage(), e);
         return Response.error(Error.METHOD_NOT_ALLOWED);
@@ -79,7 +81,7 @@ public class AExceptionHandler {
      */
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public Response<?> handleHttpMessageNotReadableException(HttpMessageNotReadableException e, HttpServletRequest request, HttpServletResponse response) {
-        ensureJsonContentType(response);
+        ensureJsonContentType(request, response);
         if (log.isDebugEnabled())
             log.debug("请求方式:{}, 路径:{}, Content-Type:{}, 错误:{}", request.getMethod(), request.getRequestURI(), request.getHeader("Content-Type"), e.getMessage(), e);
         return Response.error(Error.BAD_REQUEST);
@@ -91,7 +93,7 @@ public class AExceptionHandler {
      */
     @ExceptionHandler(ServletException.class)
     public Response<?> handleServletException(ServletException e, HttpServletRequest request, HttpServletResponse response) {
-        ensureJsonContentType(response);
+        ensureJsonContentType(request, response);
         // 判断是否是循环视图路径异常
         boolean isCircularViewPath = ExceptionUtils.isCircularViewPathException(e);
         if (isCircularViewPath) {
@@ -116,7 +118,7 @@ public class AExceptionHandler {
      */
     @ExceptionHandler(Exception.class)
     public Response<?> handleException(Exception e, HttpServletRequest request, HttpServletResponse response) {
-        ensureJsonContentType(response);
+        ensureJsonContentType(request, response);
         if (log.isDebugEnabled() && null != e && null != request) {
             log.debug("请求方式:{}, 路径:{}, IP:{}, 错误:{}", request.getMethod(), request.getRequestURI(), IPUtils.getIp(request), e.getMessage(), e);
         }
@@ -136,7 +138,10 @@ public class AExceptionHandler {
     /**
      * 统一异常响应类型，避免上游预设 Content-Type 导致消息转换失败。
      */
-    private void ensureJsonContentType(HttpServletResponse response) {
+    private void ensureJsonContentType(HttpServletRequest request, HttpServletResponse response) {
+        if (request != null) {
+            request.setAttribute(HandlerMapping.PRODUCIBLE_MEDIA_TYPES_ATTRIBUTE, Collections.singleton(MediaType.APPLICATION_JSON));
+        }
         if (response != null) {
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         }

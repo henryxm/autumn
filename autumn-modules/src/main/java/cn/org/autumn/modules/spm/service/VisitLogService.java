@@ -4,7 +4,6 @@ import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.spm.entity.SuperPositionModelEntity;
 import cn.org.autumn.modules.spm.entity.VisitLogEntity;
 import cn.org.autumn.modules.spm.service.gen.VisitLogServiceGen;
-
 import cn.org.autumn.utils.IPUtils;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.stereotype.Service;
@@ -12,31 +11,27 @@ import org.springframework.stereotype.Service;
 import javax.servlet.http.HttpServletRequest;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class VisitLogService extends VisitLogServiceGen implements LoopJob.OneDay {
 
-    public Map<String, List<String>> map = new HashMap<>();
+    public Map<String, Set<String>> map = new ConcurrentHashMap<>();
 
-    private boolean isUv(HttpServletRequest request, SuperPositionModelEntity superPositionModelEntity) {
-        String ip = IPUtils.getIp(request);
+    private boolean isUv(String ip, SuperPositionModelEntity superPositionModelEntity) {
         if (StringUtils.isBlank(ip) || null == superPositionModelEntity)
             return false;
-        if (map.containsKey(superPositionModelEntity.toSpmString())) {
-            List<String> list = map.get(superPositionModelEntity.toSpmString());
-            if (list.contains(ip))
-                return false;
-            else
-                list.add(ip);
-        } else {
-            List<String> l = new ArrayList<>();
-            l.add(ip);
-            map.put(superPositionModelEntity.toSpmString(), l);
-        }
-        return true;
+        String key = superPositionModelEntity.toSpmString();
+        Set<String> ipSet = map.computeIfAbsent(key, k -> ConcurrentHashMap.newKeySet());
+        return ipSet.add(ip);
     }
 
     public void put(HttpServletRequest request, SuperPositionModelEntity superPositionModelEntity) {
+        String ip = IPUtils.getIp(request);
+        put(ip, superPositionModelEntity);
+    }
+
+    public void put(String ip, SuperPositionModelEntity superPositionModelEntity) {
         VisitLogEntity visitLogEntity = new VisitLogEntity();
         visitLogEntity.setUniqueVisitor(0);
         visitLogEntity.setPageView(0);
@@ -72,7 +67,7 @@ public class VisitLogService extends VisitLogServiceGen implements LoopJob.OneDa
             visitLogEntity = logEntities.get(0);
 
         visitLogEntity.setPageView(visitLogEntity.getPageView() + 1);
-        if (isUv(request, superPositionModelEntity))
+        if (isUv(ip, superPositionModelEntity))
             visitLogEntity.setUniqueVisitor(visitLogEntity.getUniqueVisitor() + 1);
 
         insertOrUpdate(visitLogEntity);
