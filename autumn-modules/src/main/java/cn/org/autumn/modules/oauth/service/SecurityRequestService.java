@@ -6,17 +6,24 @@ import cn.org.autumn.modules.oauth.entity.SecurityRequestEntity;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.utils.Uuid;
 import org.apache.commons.lang3.StringUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.Deque;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentHashMap;
 
+@Slf4j
 @Service
 public class SecurityRequestService extends ModuleService<SecurityRequestDao, SecurityRequestEntity> implements LoopJob.OneDay {
 
@@ -32,6 +39,8 @@ public class SecurityRequestService extends ModuleService<SecurityRequestDao, Se
     private static final long NONCE_TTL_MILLIS = 120000L;
     private static final int NONCE_GC_THRESHOLD = 10000;
     private static final Map<String, Long> NONCE_REPLAY_GUARD = new ConcurrentHashMap<>();
+    private static final int VERIFY_LOG_ROLLING_LIMIT = 100;
+    private static final Deque<Map<String, Object>> VERIFY_STRONG_LOGS = new ConcurrentLinkedDeque<>();
 
     public synchronized SecurityRequestEntity ensureCurrent() {
         SecurityRequestEntity latest = baseMapper.getLatestEnabled();
@@ -58,31 +67,82 @@ public class SecurityRequestService extends ModuleService<SecurityRequestDao, Se
         return verifyAgent(request, userAgent, agentHeader);
     }
 
-    public boolean verifyStrong(String userAgent, String agentHeader, String auth,
-                                String method, String uri,
-                                String timestampHeader, String nonce, String signature) {
+    public boolean verifyStrong(String userAgent, String agentHeader, String auth, String method, String uri, String timestampHeader, String nonce, String signature) {
+        long now = System.currentTimeMillis();
         SecurityRequestEntity request = getEnabledByAuth(auth);
+        boolean userAgentMatched = false;
+        boolean agentHeaderMatched = false;
+        long skew = -1L;
+        boolean nonceAccepted = false;
+        boolean signatureMatched = false;
+        String reason = "ok";
+        if (log.isDebugEnabled()) {
+            log.debug("verifyStrong.start auth={}, method={}, uri={}, ts={}, nonce={}, sign={}, ua={}, agentHeader={}", mask(auth), method, uri, timestampHeader, mask(nonce), mask(signature), brief(userAgent), mask(agentHeader));
+            log.debug("verifyStrong.system requestFound={}, requestEnabled={}, expectedAgent={}", request != null, request != null && request.isEnabled(), request == null ? "-" : mask(request.getAgent()));
+        }
         if (request == null || !request.isEnabled() || StringUtils.isBlank(request.getAgent())) {
+            reason = "auth_or_request_invalid";
+            if (log.isDebugEnabled()) {
+                log.debug("verifyStrong.fail reason=auth_or_request_invalid auth={}", mask(auth));
+            }
+            appendVerifyStrongLog(now, false, reason, auth, method, uri, userAgent, agentHeader, null, userAgentMatched, agentHeaderMatched, skew, nonceAccepted, signatureMatched);
             return false;
         }
-        if (!verifyAgent(request, userAgent, agentHeader)) {
+        userAgentMatched = StringUtils.isNotBlank(userAgent) && userAgent.contains(request.getAgent());
+        agentHeaderMatched = StringUtils.isNotBlank(agentHeader) && request.getAgent().equals(agentHeader);
+        if (log.isDebugEnabled()) {
+            log.debug("verifyStrong.agentCompare uaContainsExpected={}, headerEqualsExpected={}, expectedAgent={}, requestAgentHeader={}", userAgentMatched, agentHeaderMatched, mask(request.getAgent()), mask(agentHeader));
+        }
+        if (!(userAgentMatched || agentHeaderMatched)) {
+            reason = "agent_mismatch";
+            if (log.isDebugEnabled()) {
+                log.debug("verifyStrong.fail reason=agent_mismatch expectedAgent={}, ua={}, agentHeader={}", mask(request.getAgent()), brief(userAgent), mask(agentHeader));
+            }
+            appendVerifyStrongLog(now, false, reason, auth, method, uri, userAgent, agentHeader, request.getAgent(), userAgentMatched, agentHeaderMatched, skew, nonceAccepted, signatureMatched);
             return false;
         }
         if (StringUtils.isBlank(method) || StringUtils.isBlank(uri)
                 || StringUtils.isBlank(timestampHeader)
                 || StringUtils.isBlank(nonce)
                 || StringUtils.isBlank(signature)) {
+            reason = "required_field_missing";
+            if (log.isDebugEnabled()) {
+                log.debug("verifyStrong.fail reason=required_field_missing methodBlank={}, uriBlank={}, tsBlank={}, nonceBlank={}, signBlank={}", StringUtils.isBlank(method), StringUtils.isBlank(uri), StringUtils.isBlank(timestampHeader), StringUtils.isBlank(nonce), StringUtils.isBlank(signature));
+            }
+            appendVerifyStrongLog(now, false, reason, auth, method, uri, userAgent, agentHeader, request.getAgent(), userAgentMatched, agentHeaderMatched, skew, nonceAccepted, signatureMatched);
             return false;
         }
         long timestamp = parseTimestamp(timestampHeader);
         if (timestamp <= 0L) {
+            reason = "timestamp_invalid";
+            if (log.isDebugEnabled()) {
+                log.debug("verifyStrong.fail reason=timestamp_invalid rawTs={}", timestampHeader);
+            }
+            appendVerifyStrongLog(now, false, reason, auth, method, uri, userAgent, agentHeader, request.getAgent(), userAgentMatched, agentHeaderMatched, skew, nonceAccepted, signatureMatched);
             return false;
         }
-        long now = System.currentTimeMillis();
-        if (Math.abs(now - timestamp) > MAX_SKEW_MILLIS) {
+        skew = Math.abs(now - timestamp);
+        if (log.isDebugEnabled()) {
+            log.debug("verifyStrong.timeCompare now={}, requestTs={}, skewMs={}, maxSkewMs={}", now, timestamp, skew, MAX_SKEW_MILLIS);
+        }
+        if (skew > MAX_SKEW_MILLIS) {
+            reason = "timestamp_skew_exceeded";
+            if (log.isDebugEnabled()) {
+                log.debug("verifyStrong.fail reason=timestamp_skew_exceeded skewMs={}, maxSkewMs={}", skew, MAX_SKEW_MILLIS);
+            }
+            appendVerifyStrongLog(now, false, reason, auth, method, uri, userAgent, agentHeader, request.getAgent(), userAgentMatched, agentHeaderMatched, skew, nonceAccepted, signatureMatched);
             return false;
         }
-        if (!registerNonceOnce(auth, nonce, now)) {
+        nonceAccepted = registerNonceOnce(auth, nonce, now);
+        if (log.isDebugEnabled()) {
+            log.debug("verifyStrong.nonceCompare accepted={}, nonce={}", nonceAccepted, mask(nonce));
+        }
+        if (!nonceAccepted) {
+            reason = "nonce_replay_or_invalid";
+            if (log.isDebugEnabled()) {
+                log.debug("verifyStrong.fail reason=nonce_replay_or_invalid nonce={}", mask(nonce));
+            }
+            appendVerifyStrongLog(now, false, reason, auth, method, uri, userAgent, agentHeader, request.getAgent(), userAgentMatched, agentHeaderMatched, skew, nonceAccepted, signatureMatched);
             return false;
         }
         String canonical = method.toUpperCase() + "\n"
@@ -91,7 +151,31 @@ public class SecurityRequestService extends ModuleService<SecurityRequestDao, Se
                 + nonce + "\n"
                 + request.getAgent();
         String expect = signHmacSha256(auth, canonical);
-        return StringUtils.equalsIgnoreCase(expect, signature);
+        signatureMatched = StringUtils.equalsIgnoreCase(expect, signature);
+        reason = signatureMatched ? "ok" : "signature_not_match";
+        if (log.isDebugEnabled()) {
+            log.debug("verifyStrong.signatureCompare matched={}, expected={}, request={}", signatureMatched, mask(expect), mask(signature));
+        }
+        appendVerifyStrongLog(now, signatureMatched, reason, auth, method, uri, userAgent, agentHeader, request.getAgent(), userAgentMatched, agentHeaderMatched, skew, nonceAccepted, signatureMatched);
+        return signatureMatched;
+    }
+
+    public List<Map<String, Object>> getVerifyStrongLogs(int limit) {
+        int size = limit <= 0 ? VERIFY_LOG_ROLLING_LIMIT : Math.min(limit, VERIFY_LOG_ROLLING_LIMIT);
+        List<Map<String, Object>> result = new ArrayList<>();
+        int i = 0;
+        for (Map<String, Object> item : VERIFY_STRONG_LOGS) {
+            result.add(item);
+            i++;
+            if (i >= size) {
+                break;
+            }
+        }
+        return result;
+    }
+
+    public void clearVerifyStrongLogs() {
+        VERIFY_STRONG_LOGS.clear();
     }
 
     private SecurityRequestEntity getEnabledByAuth(String auth) {
@@ -175,8 +259,8 @@ public class SecurityRequestService extends ModuleService<SecurityRequestDao, Se
     public SecurityRequestEntity createNew() {
         Date now = new Date();
         SecurityRequestEntity entity = new SecurityRequestEntity();
-        entity.setAgent("AUTUMN-AGENT-" + Uuid.uuid().replace("-", ""));
-        entity.setAuth("AUTUMN-AUTH-" + Uuid.uuid().replace("-", ""));
+        entity.setAgent("," + Uuid.uuid().replace("-", "").substring(0, 8));
+        entity.setAuth("x-auth-" + Uuid.uuid().replace("-", ""));
         entity.setEnabled(true);
         entity.setCreate(now);
         entity.setExpire(offsetDay(now, ROTATE_DAYS));
@@ -208,4 +292,53 @@ public class SecurityRequestService extends ModuleService<SecurityRequestDao, Se
         return calendar.getTime();
     }
 
+    private void appendVerifyStrongLog(long now,
+                                       boolean pass,
+                                       String reason,
+                                       String auth,
+                                       String method,
+                                       String uri,
+                                       String userAgent,
+                                       String agentHeader,
+                                       String expectedAgent,
+                                       boolean userAgentMatched,
+                                       boolean agentHeaderMatched,
+                                       long skew,
+                                       boolean nonceAccepted,
+                                       boolean signatureMatched) {
+        Map<String, Object> item = new HashMap<>();
+        item.put("time", now);
+        item.put("pass", pass);
+        item.put("reason", reason);
+        item.put("auth", mask(auth));
+        item.put("method", StringUtils.defaultString(method, "-"));
+        item.put("uri", StringUtils.defaultString(uri, "-"));
+        item.put("userAgent", brief(userAgent));
+        item.put("agentHeader", mask(agentHeader));
+        item.put("expectedAgent", mask(expectedAgent));
+        item.put("userAgentMatched", userAgentMatched);
+        item.put("agentHeaderMatched", agentHeaderMatched);
+        item.put("skewMs", skew);
+        item.put("nonceAccepted", nonceAccepted);
+        item.put("signatureMatched", signatureMatched);
+        VERIFY_STRONG_LOGS.addFirst(item);
+        while (VERIFY_STRONG_LOGS.size() > VERIFY_LOG_ROLLING_LIMIT) {
+            VERIFY_STRONG_LOGS.pollLast();
+        }
+    }
+
+    private String mask(String value) {
+        if (StringUtils.isBlank(value)) {
+            return "-";
+        }
+        int keep = Math.min(8, value.length());
+        return value.substring(0, keep) + "...(len=" + value.length() + ")";
+    }
+
+    private String brief(String value) {
+        if (StringUtils.isBlank(value)) {
+            return "-";
+        }
+        return value.length() <= 120 ? value : value.substring(0, 120) + "...";
+    }
 }
