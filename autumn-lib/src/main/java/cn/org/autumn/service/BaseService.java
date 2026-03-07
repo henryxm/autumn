@@ -86,9 +86,13 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends ShareCache
     }
 
     public PageUtils queryPage(Page<T> _page, QueryWrapper<T> entityEntityWrapper) {
-        applyPageCondition(_page, entityEntityWrapper);
         Page<T> page = this.page(_page, entityEntityWrapper);
         return new PageUtils(page);
+    }
+
+    public Page<T> page(Page<T> _page, QueryWrapper<T> entityEntityWrapper) {
+        applyPageCondition(_page, entityEntityWrapper);
+        return super.page(_page, entityEntityWrapper);
     }
 
     public PageUtils queryPage(Map<String, Object> params) {
