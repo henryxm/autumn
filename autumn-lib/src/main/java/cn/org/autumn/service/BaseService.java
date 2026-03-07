@@ -33,7 +33,23 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends ShareCache
     @Setter
     private String module = null;
 
-    private final Map<Page<T>, Map<String, Object>> pageConditionStore = Collections.synchronizedMap(new WeakHashMap<>());
+    private static final int MAX_PAGE_CONDITION_STORE_SIZE = 20;
+
+    /**
+     * 使用 WeakHashMap 避免“已失去引用但未执行查询”的 Page 持续占用内存。
+     * 同时配合上限淘汰，防止极端场景下短时间大量堆积。
+     */
+    private final Map<Page<T>, PageConditionHolder> pageConditionStore = Collections.synchronizedMap(new WeakHashMap<>());
+
+    private static class PageConditionHolder {
+        private final Map<String, Object> condition;
+        private final long bindAt;
+
+        private PageConditionHolder(Map<String, Object> condition) {
+            this.condition = condition;
+            this.bindAt = System.nanoTime();
+        }
+    }
 
     /**
      * 将查询条件过滤并转换为数据库中的字段条件进行查询
@@ -54,9 +70,9 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends ShareCache
                 continue;
             String fieldName = field.getName();
             String columnName = HumpConvert.HumpToUnderline(fieldName);
-            Object value = params.get(fieldName);
+            Object value = normalizeParamValue(params.get(fieldName));
             if (null == value) {
-                value = params.get(columnName);
+                value = normalizeParamValue(params.get(columnName));
             }
             if (null != value && !condition.containsKey(columnName)) {
                 condition.put(columnName, value);
@@ -88,14 +104,16 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends ShareCache
     }
 
     public Page<T> getPage(Map<String, Object> params) {
-        Page<T> _page = new Query<T>(params).getPage();
-        bindPageCondition(_page, getCondition(params));
+        Map<String, Object> normalized = normalizeQueryParams(params);
+        Page<T> _page = new Query<T>(normalized).getPage();
+        bindPageCondition(_page, getCondition(normalized));
         return _page;
     }
 
     public Page<T> getPage(Map<String, Object> params, List<String> descs) {
-        Page<T> _page = new Query<T>(params).getPage();
-        bindPageCondition(_page, getCondition(params));
+        Map<String, Object> normalized = normalizeQueryParams(params);
+        Page<T> _page = new Query<T>(normalized).getPage();
+        bindPageCondition(_page, getCondition(normalized));
         if (null != descs && !descs.isEmpty()) {
             for (String desc : descs) {
                 _page.addOrder(com.baomidou.mybatisplus.core.metadata.OrderItem.desc(desc));
@@ -112,14 +130,16 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends ShareCache
             pageConditionStore.remove(page);
             return;
         }
-        pageConditionStore.put(page, new HashMap<>(condition));
+        pageConditionStore.put(page, new PageConditionHolder(new HashMap<>(condition)));
+        evictPageConditionStoreIfNeeded();
     }
 
     protected void applyPageCondition(Page<T> page, QueryWrapper<T> wrapper) {
         if (page == null || wrapper == null) {
             return;
         }
-        Map<String, Object> condition = pageConditionStore.remove(page);
+        PageConditionHolder holder = pageConditionStore.remove(page);
+        Map<String, Object> condition = holder == null ? null : holder.condition;
         if (condition == null || condition.isEmpty()) {
             return;
         }
@@ -135,8 +155,100 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends ShareCache
         }
     }
 
+    private void evictPageConditionStoreIfNeeded() {
+        synchronized (pageConditionStore) {
+            int overflow = pageConditionStore.size() - MAX_PAGE_CONDITION_STORE_SIZE;
+            while (overflow > 0 && !pageConditionStore.isEmpty()) {
+                Page<T> oldestPage = null;
+                long oldestBindAt = Long.MAX_VALUE;
+                for (Map.Entry<Page<T>, PageConditionHolder> entry : pageConditionStore.entrySet()) {
+                    PageConditionHolder holder = entry.getValue();
+                    if (holder != null && holder.bindAt < oldestBindAt) {
+                        oldestBindAt = holder.bindAt;
+                        oldestPage = entry.getKey();
+                    }
+                }
+                if (oldestPage == null) {
+                    break;
+                }
+                pageConditionStore.remove(oldestPage);
+                overflow--;
+            }
+        }
+    }
+
     public Page<T> getPage(Map<String, Object> params, String... descs) {
         return getPage(params, new ArrayList<>(Arrays.asList(descs)));
+    }
+
+    /**
+     * 统一兼容 Spring/Servlet 在不同版本下的参数绑定差异：
+     * 1) String / String[] / Collection 统一取首值
+     * 2) rows -> limit, sord -> order
+     * 3) Query 依赖的分页排序参数强制转为 String
+     */
+    protected Map<String, Object> normalizeQueryParams(Map<String, Object> params) {
+        Map<String, Object> normalized = new HashMap<>();
+        if (params == null || params.isEmpty()) {
+            return normalized;
+        }
+        for (Map.Entry<String, Object> entry : params.entrySet()) {
+            String key = entry.getKey();
+            if (StringUtils.isBlank(key)) {
+                continue;
+            }
+            Object value = normalizeParamValue(entry.getValue());
+            if (value == null) {
+                continue;
+            }
+            normalized.put(key, value);
+        }
+        // jqGrid 兼容参数
+        if (!normalized.containsKey("limit") && normalized.containsKey("rows")) {
+            normalized.put("limit", normalized.get("rows"));
+        }
+        if (!normalized.containsKey("order") && normalized.containsKey("sord")) {
+            normalized.put("order", normalized.get("sord"));
+        }
+        normalizeToString(normalized, "page");
+        normalizeToString(normalized, "limit");
+        normalizeToString(normalized, "rows");
+        normalizeToString(normalized, "sidx");
+        normalizeToString(normalized, "order");
+        normalizeToString(normalized, "sord");
+        return normalized;
+    }
+
+    protected Object normalizeParamValue(Object value) {
+        if (value == null) {
+            return null;
+        }
+        Object normalized = value;
+        if (normalized instanceof String[]) {
+            String[] values = (String[]) normalized;
+            normalized = values.length > 0 ? values[0] : null;
+        } else if (normalized instanceof Object[]) {
+            Object[] values = (Object[]) normalized;
+            normalized = values.length > 0 ? values[0] : null;
+        } else if (normalized instanceof Collection) {
+            Collection<?> values = (Collection<?>) normalized;
+            normalized = values.isEmpty() ? null : values.iterator().next();
+        }
+        if (normalized instanceof String) {
+            String text = ((String) normalized).trim();
+            return StringUtils.isBlank(text) ? null : text;
+        }
+        return normalized;
+    }
+
+    protected void normalizeToString(Map<String, Object> params, String key) {
+        if (!params.containsKey(key) || params.get(key) == null) {
+            return;
+        }
+        Object value = params.get(key);
+        if (!(value instanceof String)) {
+            params.put(key, String.valueOf(value));
+        }
     }
 
     public String getPrefix() {

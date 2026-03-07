@@ -1,9 +1,11 @@
 package cn.org.autumn.config;
 
+import cn.org.autumn.handler.EnumTypeHandler;
 import cn.org.autumn.model.StubMapper;
 import cn.org.autumn.service.DefaultMapper;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
+import org.mybatis.spring.boot.autoconfigure.ConfigurationCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -20,5 +22,10 @@ public class MybatisPlusConfig {
     @Bean
     public DefaultMapper defaultMapper() {
         return new StubMapper();
+    }
+
+    @Bean
+    public ConfigurationCustomizer mybatisConfigurationCustomizer() {
+        return configuration -> configuration.setDefaultEnumTypeHandler(EnumTypeHandler.class);
     }
 }

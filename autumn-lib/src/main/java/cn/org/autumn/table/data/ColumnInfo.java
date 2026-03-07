@@ -12,6 +12,8 @@ import org.apache.commons.text.WordUtils;
 import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.util.Date;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 /**
  * 用于存放创建表的字段信息
@@ -91,6 +93,16 @@ public class ColumnInfo {
     private String extra;
 
     private String genAnnotation;
+
+    /**
+     * 是否为枚举字段
+     */
+    private boolean enumType;
+
+    /**
+     * 枚举字段可用的常量集合（仅在 enumType=true 时有效）
+     */
+    private Set<String> enumConstants;
 
 
     public ColumnInfo(Field field, UniqueKeys uniqueKeys, UniqueKey uniqueKey) {
@@ -280,6 +292,19 @@ public class ColumnInfo {
         if (StringUtils.isBlank(this.comment)) {
             this.comment = HumpConvert.HumpToName(field.getName());
         }
+
+        if (field.getType().isEnum()) {
+            this.enumType = true;
+            this.enumConstants = new LinkedHashSet<>();
+            Object[] constants = field.getType().getEnumConstants();
+            if (constants != null) {
+                for (Object constant : constants) {
+                    if (constant instanceof Enum<?>) {
+                        this.enumConstants.add(((Enum<?>) constant).name());
+                    }
+                }
+            }
+        }
     }
 
 
@@ -424,5 +449,13 @@ public class ColumnInfo {
 
     public boolean hasUniqueKey() {
         return hasUniqueKey;
+    }
+
+    public boolean isEnumType() {
+        return enumType;
+    }
+
+    public Set<String> getEnumConstants() {
+        return enumConstants;
     }
 }

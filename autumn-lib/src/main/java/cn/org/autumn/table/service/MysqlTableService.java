@@ -416,6 +416,13 @@ public class MysqlTableService {
                     continue;
                 }
 
+                // 枚举字段数据库默认值自愈：非法值(含空字符串)强制改为NULL
+                if (isInvalidEnumDefault(createTableParam, sysColumn.getColumnDefault())) {
+                    createTableParam.setDefaultValue("NULL");
+                    modifyFieldList.add(createTableParam);
+                    continue;
+                }
+
                 // 6.验证默认值
                 if (sysColumn.getColumnDefault() == null || sysColumn.getColumnDefault().equals("")) {
                     // 数据库默认值是null，model中注解设置的默认值不为NULL时，那么需要更新该字段
@@ -583,9 +590,83 @@ public class MysqlTableService {
                 log.error("未知的Mysql数据类型字段:{}", column.type());
             }
             columnInfo.setTypeLength(length);
+            normalizeEnumDefaultValue(clazz, field, columnInfo);
             list.add(columnInfo);
         }
         return list;
+    }
+
+    /**
+     * 枚举字段的默认值强制校验：非法值统一重置为 NULL。
+     */
+    private void normalizeEnumDefaultValue(Class<?> clazz, Field field, ColumnInfo columnInfo) {
+        if (!field.getType().isEnum()) {
+            return;
+        }
+
+        String defaultValue = columnInfo.getDefaultValue();
+        if (defaultValue == null) {
+            columnInfo.setDefaultValue("NULL");
+            return;
+        }
+
+        String normalized = stripQuote(defaultValue.trim());
+        if (normalized.isEmpty() || "NULL".equalsIgnoreCase(normalized)) {
+            columnInfo.setDefaultValue("NULL");
+            return;
+        }
+
+        Object[] enumConstants = field.getType().getEnumConstants();
+        boolean matched = false;
+        if (enumConstants != null) {
+            for (Object enumConstant : enumConstants) {
+                if (enumConstant instanceof Enum<?>) {
+                    Enum<?> e = (Enum<?>) enumConstant;
+                    if (e.name().equals(normalized)) {
+                        matched = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (!matched) {
+            log.warn("枚举字段默认值非法，已强制重置为NULL: {}.{} defaultValue={}", clazz.getName(), field.getName(), defaultValue);
+            columnInfo.setDefaultValue("NULL");
+            return;
+        }
+
+        // 合法值统一去掉外层引号，避免后续SQL拼接重复引号
+        columnInfo.setDefaultValue(normalized);
+    }
+
+    private String stripQuote(String value) {
+        if (value.length() >= 2) {
+            boolean single = value.startsWith("'") && value.endsWith("'");
+            boolean dbl = value.startsWith("\"") && value.endsWith("\"");
+            if (single || dbl) {
+                return value.substring(1, value.length() - 1);
+            }
+        }
+        return value;
+    }
+
+    private boolean isInvalidEnumDefault(ColumnInfo columnInfo, String dbDefaultValue) {
+        if (columnInfo == null || !columnInfo.isEnumType()) {
+            return false;
+        }
+        if (dbDefaultValue == null) {
+            return false;
+        }
+        String normalized = stripQuote(dbDefaultValue.trim());
+        if (normalized.isEmpty()) {
+            return true;
+        }
+        if ("NULL".equalsIgnoreCase(normalized)) {
+            return false;
+        }
+        Set<String> enumConstants = columnInfo.getEnumConstants();
+        return enumConstants != null && !enumConstants.isEmpty() && !enumConstants.contains(normalized);
     }
 
     /**
