@@ -3,16 +3,18 @@ package cn.org.autumn.annotation;
 import java.lang.annotation.*;
 
 /**
- * 加密端点注解
- * 用于标注加密相关的接口端点
- * 可以标注在类或方法上
- * 当 hidden = true 时，该接口（或整个类）不会出现在 /rsa/api/v1/endpoints 接口的返回列表中
- * 默认情况下（hidden = false 或不标注此注解），接口会出现在列表中
+ * 加密端点元数据注解。
  * <p>
- * 优先级规则：
- * - 方法级别的注解优先级高于类级别
- * - 如果类级别 hidden = true，但方法级别 hidden = false，则该方法会出现在列表中
- * - 如果类级别 hidden = false，但方法级别 hidden = true，则该方法不会出现在列表中
+ * 用于声明接口在加解密体系中的行为，可标注在类、方法、参数上。
+ * 典型用途：
+ * <ul>
+ *   <li>控制端点是否出现在 {@code /rsa/api/v1/endpoints} 列表</li>
+ *   <li>约束请求/响应是否必须携带加密会话并走密文链路</li>
+ *   <li>声明普通返回对象是否支持“兼容加密”封装</li>
+ * </ul>
+ * <p>
+ * 层级优先级：方法级配置优先于类级配置。
+ * 例如类上 {@code hidden=true}，方法上 {@code hidden=false}，则该方法最终可见。
  *
  * @author Autumn
  */
@@ -21,18 +23,20 @@ import java.lang.annotation.*;
 @Documented
 public @interface Endpoint {
     /**
-     * 是否隐藏该端点
-     * true: 该接口不会出现在 endpoints 列表中
-     * false: 该接口会出现在 endpoints 列表中（默认值）
+     * 是否隐藏该端点。
+     * <p>
+     * {@code true}：接口不会出现在 endpoints 列表中。<br>
+     * {@code false}：接口默认可见。
      *
      * @return 是否隐藏
      */
     boolean hidden() default false;
 
     /**
-     * 强制加密数据：
-     * 如果标注在参数body上，如果请求的body未包含加密内容，或者session为空，则抛出异常
-     * 如果标注在接口方法上，则表明返回值必须强制加密，如果session为空，则抛出异常
+     * 强制加密开关。
+     * <p>
+     * 作用在参数（通常是请求体参数）上：请求必须携带有效加密内容与会话。<br>
+     * 作用在方法上：响应必须走加密输出，缺少会话时抛出异常。
      *
      * @return 是否强制加密
      */
