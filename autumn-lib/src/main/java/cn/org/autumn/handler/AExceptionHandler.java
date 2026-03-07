@@ -9,6 +9,7 @@ import cn.org.autumn.utils.ExceptionUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.HttpMediaTypeNotAcceptableException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
@@ -31,60 +32,60 @@ public class AExceptionHandler {
      * 处理自定义异常
      */
     @ExceptionHandler(AException.class)
-    public Response<?> handleRRException(AException e, HttpServletRequest request, HttpServletResponse response) {
-        ensureJsonContentType(request, response);
+    public ResponseEntity<Response<?>> handleRRException(AException e, HttpServletRequest request, HttpServletResponse response) {
+        forceJsonContentType(request, response);
         if (log.isDebugEnabled())
             log.debug("请求方式:{}, 路径:{}, 代码:{}, 错误:{}", request.getMethod(), request.getRequestURI(), e.getCode(), e.getMessage(), e);
-        return Response.error(e);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(Response.error(e));
     }
 
     @ExceptionHandler(CodeException.class)
-    public Response<?> handleCodeException(CodeException e, HttpServletRequest request, HttpServletResponse response) {
-        ensureJsonContentType(request, response);
+    public ResponseEntity<Response<?>> handleCodeException(CodeException e, HttpServletRequest request, HttpServletResponse response) {
+        forceJsonContentType(request, response);
         if (log.isDebugEnabled())
             log.debug("请求方式:{}, 路径:{}, 代码:{}, 错误:{}", request.getMethod(), request.getRequestURI(), e.getCode(), e.getMessage(), e);
-        return Response.error(e);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(Response.error(e));
     }
 
     @ExceptionHandler(DuplicateKeyException.class)
-    public Response<?> handleDuplicateKeyException(DuplicateKeyException e, HttpServletRequest request, HttpServletResponse response) {
-        ensureJsonContentType(request, response);
+    public ResponseEntity<Response<?>> handleDuplicateKeyException(DuplicateKeyException e, HttpServletRequest request, HttpServletResponse response) {
+        forceJsonContentType(request, response);
         if (log.isDebugEnabled())
             log.debug("请求方式:{}, 路径:{}, 错误:{}", request.getMethod(), request.getRequestURI(), e.getMessage(), e);
-        return Response.error(Error.DATABASE_DUPLICATE_KEY);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(Response.error(Error.DATABASE_DUPLICATE_KEY));
     }
 
     /**
      * 处理媒体类型不可接受异常
      */
     @ExceptionHandler(HttpMediaTypeNotAcceptableException.class)
-    public Response<?> handleHttpMediaTypeNotAcceptableException(HttpMediaTypeNotAcceptableException e, HttpServletRequest request, HttpServletResponse response) {
-        ensureJsonContentType(request, response);
+    public ResponseEntity<Response<?>> handleHttpMediaTypeNotAcceptableException(HttpMediaTypeNotAcceptableException e, HttpServletRequest request, HttpServletResponse response) {
+        forceJsonContentType(request, response);
         if (log.isDebugEnabled())
             log.debug("请求方式:{}, 路径:{}, Accept:{}, Content-Type:{}, 错误:{}", request.getMethod(), request.getRequestURI(), request.getHeader("Accept"), request.getHeader("Content-Type"), e.getMessage(), e);
-        return Response.error(Error.NOT_ACCEPTABLE);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(Response.error(Error.NOT_ACCEPTABLE));
     }
 
     /**
      * 处理HTTP请求方法不支持异常
      */
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
-    public Response<?> handleHttpRequestMethodNotSupportedException(HttpRequestMethodNotSupportedException e, HttpServletRequest request, HttpServletResponse response) {
-        ensureJsonContentType(request, response);
+    public ResponseEntity<Response<?>> handleHttpRequestMethodNotSupportedException(HttpRequestMethodNotSupportedException e, HttpServletRequest request, HttpServletResponse response) {
+        forceJsonContentType(request, response);
         if (log.isDebugEnabled())
             log.debug("请求方式:{}, 路径:{}, 方法:{}, 支持的方法:{}, 错误:{}", request.getMethod(), request.getRequestURI(), request.getMethod(), e.getSupportedMethods(), e.getMessage(), e);
-        return Response.error(Error.METHOD_NOT_ALLOWED);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(Response.error(Error.METHOD_NOT_ALLOWED));
     }
 
     /**
      * 处理HTTP消息不可读异常
      */
     @ExceptionHandler(HttpMessageNotReadableException.class)
-    public Response<?> handleHttpMessageNotReadableException(HttpMessageNotReadableException e, HttpServletRequest request, HttpServletResponse response) {
-        ensureJsonContentType(request, response);
+    public ResponseEntity<Response<?>> handleHttpMessageNotReadableException(HttpMessageNotReadableException e, HttpServletRequest request, HttpServletResponse response) {
+        forceJsonContentType(request, response);
         if (log.isDebugEnabled())
             log.debug("请求方式:{}, 路径:{}, Content-Type:{}, 错误:{}", request.getMethod(), request.getRequestURI(), request.getHeader("Content-Type"), e.getMessage(), e);
-        return Response.error(Error.BAD_REQUEST);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(Response.error(Error.BAD_REQUEST));
     }
 
     /**
@@ -92,8 +93,8 @@ public class AExceptionHandler {
      * 屏蔽循环视图路径异常的日志输出，但记录到监控中
      */
     @ExceptionHandler(ServletException.class)
-    public Response<?> handleServletException(ServletException e, HttpServletRequest request, HttpServletResponse response) {
-        ensureJsonContentType(request, response);
+    public ResponseEntity<Response<?>> handleServletException(ServletException e, HttpServletRequest request, HttpServletResponse response) {
+        forceJsonContentType(request, response);
         // 判断是否是循环视图路径异常
         boolean isCircularViewPath = ExceptionUtils.isCircularViewPathException(e);
         if (isCircularViewPath) {
@@ -103,13 +104,13 @@ public class AExceptionHandler {
                 log.debug("请求方式:{}, 路径:{}, IP:{}, 错误:循环视图路径异常，已静默处理", request.getMethod(), request.getRequestURI(), IPUtils.getIp(request));
             }
             // 返回友好的错误信息，不暴露异常详情
-            return Response.error(Error.BAD_REQUEST);
+            return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(Response.error(Error.BAD_REQUEST));
         } else {
             // 其他Servlet异常：正常记录
             if (log.isDebugEnabled()) {
                 log.debug("请求方式:{}, 路径:{}, 错误:{}", request.getMethod(), request.getRequestURI(), e.getMessage(), e);
             }
-            return Response.error(Error.INTERNAL_SERVER_ERROR);
+            return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(Response.error(Error.INTERNAL_SERVER_ERROR));
         }
     }
 
@@ -117,8 +118,8 @@ public class AExceptionHandler {
      * 处理所有未捕获的异常
      */
     @ExceptionHandler(Exception.class)
-    public Response<?> handleException(Exception e, HttpServletRequest request, HttpServletResponse response) {
-        ensureJsonContentType(request, response);
+    public ResponseEntity<Response<?>> handleException(Exception e, HttpServletRequest request, HttpServletResponse response) {
+        forceJsonContentType(request, response);
         if (log.isDebugEnabled() && null != e && null != request) {
             log.debug("请求方式:{}, 路径:{}, IP:{}, 错误:{}", request.getMethod(), request.getRequestURI(), IPUtils.getIp(request), e.getMessage(), e);
         }
@@ -129,20 +130,23 @@ public class AExceptionHandler {
             if (log.isDebugEnabled()) {
                 log.debug("常见HTTP异常: {}", ExceptionUtils.formatExceptionForLog(e, request));
             }
-            return Response.error(Error.BAD_REQUEST);
+            return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(Response.error(Error.BAD_REQUEST));
         }
         // 返回通用错误信息，避免暴露敏感信息
-        return Response.error(Error.UNKNOWN_ERROR);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(Response.error(Error.UNKNOWN_ERROR));
     }
 
     /**
      * 统一异常响应类型，避免上游预设 Content-Type 导致消息转换失败。
      */
-    private void ensureJsonContentType(HttpServletRequest request, HttpServletResponse response) {
+    private void forceJsonContentType(HttpServletRequest request, HttpServletResponse response) {
         if (request != null) {
             request.setAttribute(HandlerMapping.PRODUCIBLE_MEDIA_TYPES_ATTRIBUTE, Collections.singleton(MediaType.APPLICATION_JSON));
         }
         if (response != null) {
+            if (!response.isCommitted()) {
+                response.reset();
+            }
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         }
     }
