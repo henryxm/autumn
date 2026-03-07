@@ -68,7 +68,7 @@ mybatis-plus:
       #全局列名加反引号，防止 MySQL 保留关键字冲突
       column-format: "`%s`"
       #字段验证策略 NEVER:"忽略判断", NOT_NULL:"非NULL判断", NOT_EMPTY:"非空判断", ALWAYS:"总是加入"
-      insert-strategy: NOT_NULL
+      insert-strategy: ALWAYS
       update-strategy: NOT_NULL
       select-strategy: NOT_NULL
       #驼峰下划线转换
@@ -118,4 +118,4 @@ pagehelper:
   params: count=countSql
 
 mybatis:
-  mapperLocations: classpath:mapper/**/*.xml
+  mapperLocations: classpath*:mapper/**/*.xml
