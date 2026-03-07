@@ -20,20 +20,39 @@
 - 任务：固定周期优先 `LoopJob.*`，复杂日历规则才用 cron。
 - 生成链路：实体注解驱动建表 -> gen 生成骨架 -> 业务补在非 gen 层。
 
-## 3. 加密最小约束
+## 3. 注解能力速查（高频）
+
+- `@JobMeta`（任务治理）
+  - 作用域：类 + 方法（方法级覆盖类级）。
+  - 核心参数：`skipIfRunning`（防重入）、`timeout`（超时观测）、`maxConsecutiveErrors`（连续错误自动禁用）、`assign`（多节点分配）、`delay/async`（异步调度）。
+  - 建议：秒级/分钟级任务默认开启 `skipIfRunning=true`，并设置合理 `timeout`。
+- `@TaskAware`（任务触发）
+  - 定义 cron 触发、环境模式（`mode`）、展示备注（`remark`）。
+  - 职责边界：负责“什么时候触发”；运行治理交给 `@JobMeta`。
+- `@Endpoint`（接口加解密语义）
+  - `force=true`：强制密文会话（入参或出参）。
+  - `compatible=true`：普通对象也允许按请求头走兼容加密返回。
+  - `hidden/reason`：控制是否对外暴露在端点清单中。
+- `@Cache / @Caches`（缓存索引）
+  - 声明缓存键字段、唯一性、是否未命中自动创建（`create=true`）。
+  - 约束：写操作后必须做缓存失效，避免脏读。
+- `@EnvAware`（配置注入）
+  - 在配置 Bean 字段上声明配置键（如 `site.domain`、`node.tag`）。
+
+## 4. 加密最小约束
 
 - 请求解密触发：请求体包含 `ciphertext + session`。
 - 响应加密触发：请求头包含 `X-Encrypt-Session`。
 - 握手入口：`/rsa/api/v1/init`（仅握手，不混入业务）。
 - 无 `X-Encrypt-Session` 时返回明文；兼容响应可降级为 `data`。
 
-## 4. 开发前 AI 自检（每次执行）
+## 5. 开发前 AI 自检（每次执行）
 
 - 现有基类/模块能力是否已覆盖需求？
-- 变更是否破坏缓存一致性、加密语义、权限语义？
+- 变更是否破坏缓存一致性、加密语义、权限语义、任务治理语义？
 - 是否给出回归点（明文/密文/header 有无、缓存失效、队列失败、任务观测）？
 
-## 5. 按需追加文档（不要全量加载）
+## 6. 按需追加文档（不要全量加载）
 
 - 核心能力详解：`@AI_MAP.md`
 - 加解密兼容专项：`@AI_CRYPTO.md`
@@ -42,7 +61,7 @@
 - 安全专项（签名/灰度/演练）：`@AI_SECURITY.md`
 - 提问模板库：`@AI_PROMPTS.md`
 
-## 6. 推荐加载组合
+## 7. 推荐加载组合
 
 - 日常开发：`AI_BOOT.md + AI_MAP.md`
 - 接口加解密改造：`AI_BOOT.md + AI_MAP.md + AI_CRYPTO.md`

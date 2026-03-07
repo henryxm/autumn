@@ -3,17 +3,17 @@ package cn.org.autumn.annotation;
 import java.lang.annotation.*;
 
 /**
- * 定时任务元数据注解
+ * 定时任务治理元数据注解。
  * <p>
- * 用于标注实现了 LoopJob 接口的类或方法，提供任务名称、描述、分组、
- * 优先级、防重入、超时告警、连续错误自动禁用等控制能力。
+ * 用于标注实现 {@code LoopJob.*} 的类或方法，为任务提供可观测、可治理、可分配的运行参数：
+ * 展示名、分组、优先级、防重入、超时观测、连续错误自动禁用、服务器分配、延迟与异步执行。
  * <p>
- * 支持两种标注方式：
+ * 标注层级与覆盖规则：
  * <ul>
- *   <li><b>方法级别</b>（推荐）—— 标注在 onFiveSecond()、onOneMinute() 等方法上，
- *       对该分类任务单独配置，优先级高于类级别</li>
- *   <li><b>类级别</b> —— 标注在实现类上，作为该类所有任务的默认配置</li>
+ *   <li><b>类级别</b>：作为该任务类的默认配置</li>
+ *   <li><b>方法级别</b>：作为具体分类任务（如 {@code onOneMinute()}）的覆盖配置，优先级高于类级别</li>
  * </ul>
+ * 建议：通用参数放类级别，分类差异参数放方法级别。
  * <p>
  * 使用示例：
  * <pre>{@code
@@ -35,7 +35,7 @@ import java.lang.annotation.*;
  *
  *     @Override
  *     @JobMeta(name = "清空IP白名单", maxConsecutiveErrors = 3)
- *     public void onOneDay() {  // 使用类级别 assign: master
+ *     public void onOneDay() { // 此方法沿用类级别 assign=master
  *         ips.clear();
  *     }
  * }
@@ -77,7 +77,7 @@ public @interface JobMeta {
      * 适用于执行耗时可能超过触发间隔的任务（如1秒任务但执行需2秒），
      * 避免同一个任务实例被并发抢占式执行。
      * <p>
-     * 默认 true（不跳过，允许并发触发）。
+     * 默认 true（开启防重入：正在执行时跳过本次触发）。
      */
     boolean skipIfRunning() default true;
 

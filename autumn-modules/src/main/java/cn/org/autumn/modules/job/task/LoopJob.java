@@ -7,6 +7,7 @@ import cn.org.autumn.site.Factory;
 import cn.org.autumn.site.LoadFactory;
 import cn.org.autumn.thread.TagRunnable;
 import cn.org.autumn.thread.TagTaskExecutor;
+import cn.org.autumn.thread.TagValue;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -357,6 +358,7 @@ public class LoopJob extends Factory implements LoadFactory.Must {
             final int delaySeconds = info.delay;
             taskExecutor.execute(new TagRunnable() {
                 @Override
+                @TagValue(method = "executeJob", type = LoopJob.class, tag = "异步定时任务")
                 public void exe() {
                     // delay > 0 时，先延迟指定秒数再执行
                     if (delaySeconds > 0) {
