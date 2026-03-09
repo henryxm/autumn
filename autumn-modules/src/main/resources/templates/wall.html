@@ -1396,18 +1396,10 @@ $(function(){
     });
 
     $('#addJumpBtn').click(function(){
-        var host = $.trim($('#addJumpHost').val()) || '*';
-        var uri = $.trim($('#addJumpUri').val());
+        var host = normalizeJumpHost($('#addJumpHost').val());
+        var uri = normalizeJumpUri($('#addJumpUri').val());
         var url = $.trim($('#addJumpUrl').val());
         var enable = $('#addJumpEnable').is(':checked');
-        if (!uri) {
-            msg('请输入URI', 'warn');
-            return;
-        }
-        if (!uri.startsWith('/')) {
-            msg('URI 必须以 / 开头', 'warn');
-            return;
-        }
         if (!url) {
             msg('请输入跳转URL', 'warn');
             return;
@@ -1427,8 +1419,15 @@ $(function(){
             resetJumpQuickMatch(false);
             pageState.jump.curr = 1;
             loadJumpList();
-        }, function(){
-            msg('添加跳转规则失败（可能 host+uri 重复或无权限）', 'error');
+        }, function(res){
+            var detailMsg = '';
+            if (res && res.msg) {
+                detailMsg = res.msg;
+            } else if (res && res.responseJSON && res.responseJSON.msg) {
+                detailMsg = res.responseJSON.msg;
+            }
+            var detail = detailMsg ? ('：' + detailMsg) : '';
+            msg('添加跳转规则失败（可能无权限）' + detail, 'error');
         });
     });
 
