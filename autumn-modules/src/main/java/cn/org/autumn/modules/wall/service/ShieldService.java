@@ -199,6 +199,7 @@ public class ShieldService extends ModuleService<ShieldDao, ShieldEntity> implem
 
     @Override
     public void init() {
+        super.init();
         if (baseMapper.has() > 0)
             return;
         create();
