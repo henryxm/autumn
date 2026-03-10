@@ -20,6 +20,7 @@ public class FilterConfig {
         registration.setEnabled(true);
         registration.setOrder(Integer.MAX_VALUE - 1);
         registration.addUrlPatterns("/*");
+        registration.setAsyncSupported(true);
         return registration;
     }
 
@@ -31,6 +32,7 @@ public class FilterConfig {
         registration.addUrlPatterns("/*");
         registration.setName("xssFilter");
         registration.setOrder(Integer.MAX_VALUE);
+        registration.setAsyncSupported(true);
         return registration;
     }
 }
