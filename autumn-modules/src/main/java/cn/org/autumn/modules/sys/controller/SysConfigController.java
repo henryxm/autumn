@@ -4,8 +4,6 @@ import cn.org.autumn.annotation.SysLog;
 import cn.org.autumn.modules.lan.service.Language;
 import cn.org.autumn.modules.spm.entity.Spm;
 import cn.org.autumn.modules.spm.service.SpmService;
-import cn.org.autumn.modules.spm.service.SuperPositionModelService;
-import cn.org.autumn.modules.sys.entity.SystemUpgrade;
 import cn.org.autumn.modules.sys.service.SysCategoryService;
 import cn.org.autumn.modules.sys.service.SysUserRoleService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
@@ -19,18 +17,16 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import java.util.*;
 
 import static cn.org.autumn.modules.sys.service.SysConfigService.*;
 
 @RestController
 @RequestMapping("/sys/config")
-public class SysConfigController extends AbstractController {
+public class SysConfigController extends SysAbstractController {
     @Autowired
     @Lazy
     private SysConfigService sysConfigService;

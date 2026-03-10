@@ -27,7 +27,7 @@ import java.util.Set;
 @RestController
 @RequestMapping("sys/reinit")
 @SkipInterceptor
-public class ReinitController {
+public class SysReinitController {
 
     @Autowired
     private MysqlTableService mysqlTableService;

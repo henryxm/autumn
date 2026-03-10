@@ -17,7 +17,7 @@ import java.util.HashMap;
 @RequestMapping("/sys/redis")
 @Endpoint(hidden = true)
 @SkipInterceptor
-public class RedisController {
+public class SysRedisController {
 
     @Autowired
     private RedisService redisService;

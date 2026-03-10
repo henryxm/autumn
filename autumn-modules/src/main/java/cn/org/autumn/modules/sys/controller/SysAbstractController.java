@@ -5,7 +5,7 @@ import org.apache.shiro.SecurityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class AbstractController {
+public abstract class SysAbstractController {
     protected Logger logger = LoggerFactory.getLogger(getClass());
 
     protected SysUserEntity getUser() {

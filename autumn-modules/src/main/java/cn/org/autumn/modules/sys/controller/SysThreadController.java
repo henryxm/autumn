@@ -20,7 +20,7 @@ import java.util.*;
 @RequestMapping("/sys/thread")
 @Endpoint(hidden = true)
 @SkipInterceptor
-public class ThreadController {
+public class SysThreadController {
 
     @Autowired
     @Lazy

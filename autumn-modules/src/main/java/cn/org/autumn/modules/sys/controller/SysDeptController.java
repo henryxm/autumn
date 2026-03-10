@@ -17,7 +17,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/sys/dept")
-public class SysDeptController extends AbstractController {
+public class SysDeptController extends SysAbstractController {
     @Autowired
     @Lazy
     private SysDeptService sysDeptService;

@@ -11,7 +11,6 @@ import cn.org.autumn.validator.group.UpdateGroup;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysUserRoleService;
 import cn.org.autumn.modules.sys.service.SysUserService;
-import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,7 +23,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/sys/user")
-public class SysUserController extends AbstractController {
+public class SysUserController extends SysAbstractController {
     @Autowired
     @Lazy
     private SysUserService sysUserService;

@@ -13,7 +13,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("plugin")
-public class PluginController {
+public class SysPluginController {
 
     @Autowired
     PluginManager pluginManager;

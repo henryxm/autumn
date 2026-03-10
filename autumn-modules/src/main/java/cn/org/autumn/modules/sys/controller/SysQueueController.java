@@ -19,7 +19,7 @@ import java.util.concurrent.TimeUnit;
 @RequestMapping("/sys/queue")
 @Endpoint(hidden = true)
 @SkipInterceptor
-public class QueueController {
+public class SysQueueController {
 
     @Autowired
     private QueueService queueService;
