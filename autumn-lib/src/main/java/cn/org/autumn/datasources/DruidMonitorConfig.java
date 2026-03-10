@@ -43,6 +43,7 @@ public class DruidMonitorConfig {
     public FilterRegistrationBean<WebStatFilter> druidWebStatFilter() {
         FilterRegistrationBean<WebStatFilter> registration = new FilterRegistrationBean<>(new WebStatFilter());
         registration.addUrlPatterns("/*");
+        registration.setAsyncSupported(true);
         // 排除不需要统计的路径
         registration.addInitParameter("exclusions", "*.js,*.gif,*.jpg,*.png,*.css,*.ico,/druid/*");
         return registration;
