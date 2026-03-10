@@ -11,7 +11,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
 @Slf4j
-@WebFilter(urlPatterns = "/*", filterName = "SessionFiter")
+@WebFilter(urlPatterns = "/*", filterName = "SessionFiter", asyncSupported = true)
 public class SessionFiter implements Filter {
 
     @Autowired
