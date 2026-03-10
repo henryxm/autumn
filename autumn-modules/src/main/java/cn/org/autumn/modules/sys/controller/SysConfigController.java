@@ -27,7 +27,7 @@ import static cn.org.autumn.modules.sys.service.SysConfigService.*;
 
 @RestController
 @RequestMapping("/sys/config")
-public class SysConfigController extends AbstractController {
+public class SysConfigController extends SysAbstractController {
     @Autowired
     @Lazy
     private SysConfigService sysConfigService;

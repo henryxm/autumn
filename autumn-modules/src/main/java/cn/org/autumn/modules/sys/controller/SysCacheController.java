@@ -30,7 +30,7 @@ import java.util.concurrent.TimeUnit;
 @RequestMapping("/sys/cache")
 @Endpoint(hidden = true)
 @SkipInterceptor
-public class CacheController {
+public class SysCacheController {
 
     @Autowired
     private CacheService cacheService;

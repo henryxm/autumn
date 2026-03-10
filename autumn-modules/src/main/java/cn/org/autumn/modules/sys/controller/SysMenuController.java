@@ -27,7 +27,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/sys/menu")
-public class SysMenuController extends AbstractController {
+public class SysMenuController extends SysAbstractController {
     @Autowired
     @Lazy
     private SysMenuService sysMenuService;
