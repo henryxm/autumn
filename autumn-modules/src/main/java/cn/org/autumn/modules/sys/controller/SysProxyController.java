@@ -10,6 +10,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
 import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -43,7 +44,7 @@ public class SysProxyController {
     /**
      * 默认目标基础 URL（可以动态覆盖）
      */
-    private static String base = "";
+    private static String base = "https://coding.dashscope.aliyuncs.com/v1";
 
     private final ExecutorService executorService = Executors.newCachedThreadPool();
 
@@ -322,6 +323,7 @@ public class SysProxyController {
                 // 逐行读取流式响应
                 if (log.isDebugEnabled())
                     log.debug("开始读取流式响应数据");
+
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8))) {
                     String line;
                     while ((line = reader.readLine()) != null) {
@@ -341,11 +343,18 @@ public class SysProxyController {
                             break;
                         }
 
-                        // 完全透明地转发每一行，不做任何修改
-                        // 目标服务器返回什么就发送什么
+                        // 完全透明地转发每一行，包括换行符
+                        // 目标服务器返回的格式已经是 SSE 标准格式（每行以 \n 结尾）
+                        // readLine() 会去掉换行符
                         if (log.isDebugEnabled())
                             log.debug("[转发数据] 发送原始行：{}", line);
-                        emitter.send(line + "\n", MediaType.TEXT_PLAIN);
+                        // 只转发非空行，空行会导致 SSE 解析错误
+                        if (!line.trim().isEmpty()) {
+                            //emitter.send时会自动附带data:前缀和换行符:\n
+                            if (line.startsWith("data:"))
+                                line = line.substring(5);
+                            emitter.send(line, MediaType.TEXT_PLAIN);
+                        }
                     }
                     if (log.isDebugEnabled())
                         log.debug("流式响应读取完成，总共 {} 行", messageCount);
@@ -409,26 +418,155 @@ public class SysProxyController {
      * <p>
      * 为了完全透明，只过滤掉绝对不能转发的头，其他所有头都原样转发
      * 包括：Cookie, Authorization, User-Agent, Referer, Origin 等
+     * <p>
+     * 特殊处理：
+     * - Referer: 修改为目标服务器的域名，让目标服务器认为请求直接来自客户端
+     * - X-Forwarded-For: 传递客户端真实 IP
+     * - X-Real-IP: 传递客户端真实 IP
      */
     private void copyRequestHeaders(HttpServletRequest request, HttpURLConnection connection) {
+        String clientIp = getClientIp(request);
+        String targetHost = extractHost(connection.getURL().getHost());
+
         // 复制所有请求头（完全透明）
         Enumeration<String> headerNames = request.getHeaderNames();
         while (headerNames.hasMoreElements()) {
             String headerName = headerNames.nextElement();
-            // 只过滤掉绝对不能转发的头
+
+            // 跳过绝对不能转发的头
             if (shouldSkipHeader(headerName)) {
                 log.debug("跳过请求头：{}", headerName);
                 continue;
             }
+
+            // 特殊处理 Referer - 修改为目标服务器域名
+            if ("Referer".equalsIgnoreCase(headerName)) {
+                String referer = request.getHeader(headerName);
+                // 将 Referer 中的代理服务器地址替换为目标服务器地址
+                String modifiedReferer = modifyReferer(referer, targetHost);
+                connection.setRequestProperty(headerName, modifiedReferer);
+                log.debug("修改 Referer: {} -> {}", referer, modifiedReferer);
+                continue;
+            }
+
+            // 跳过代理特定的头，由我们重新设置
+            if (headerName.toLowerCase().startsWith("x-forwarded-") ||
+                    headerName.toLowerCase().startsWith("x-real-ip")) {
+                continue;
+            }
+
             String headerValue = request.getHeader(headerName);
             if (StringUtils.isNotBlank(headerValue)) {
                 // 完全透明地转发所有头
                 connection.setRequestProperty(headerName, headerValue);
-                log.trace("转发请求头：{} = {}", headerName, headerValue);
+                if (log.isTraceEnabled()) {
+                    log.trace("转发请求头：{} = {}", headerName, headerValue);
+                }
             }
         }
-        // 注意：不设置 User-Agent，让客户端的 User-Agent 完全透明传递
-        // connection.setRequestProperty("User-Agent", "Universal-Proxy/1.0");
+
+        // 添加客户端真实 IP 信息（标准代理头）
+        connection.setRequestProperty("X-Forwarded-For", clientIp);
+        connection.setRequestProperty("X-Real-IP", clientIp);
+        connection.setRequestProperty("X-Forwarded-Proto", getProtocol(request));
+
+        log.debug("添加代理头 - X-Forwarded-For: {}, X-Real-IP: {}, X-Forwarded-Proto: {}", clientIp, clientIp, getProtocol(request));
+    }
+
+    /**
+     * 获取客户端真实 IP
+     */
+    private String getClientIp(HttpServletRequest request) {
+        // 按优先级检查各种 IP 头
+        String ip = request.getHeader("X-Forwarded-For");
+        if (StringUtils.isBlank(ip) || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("X-Real-IP");
+        }
+        if (StringUtils.isBlank(ip) || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("Proxy-Client-IP");
+        }
+        if (StringUtils.isBlank(ip) || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("WL-Proxy-Client-IP");
+        }
+        if (StringUtils.isBlank(ip) || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getRemoteAddr();
+        }
+
+        // 如果有多个 IP（逗号分隔），取第一个
+        if (ip != null && ip.contains(",")) {
+            ip = ip.split(",")[0].trim();
+        }
+
+        return ip;
+    }
+
+    /**
+     * 修改 Referer，将代理服务器地址替换为目标服务器地址
+     */
+    private String modifyReferer(String originalReferer, String targetHost) {
+        if (StringUtils.isBlank(originalReferer)) {
+            return originalReferer;
+        }
+
+        try {
+            URI uri = new URI(originalReferer);
+            String scheme = uri.getScheme();
+            @SuppressWarnings("unused")
+            String host = uri.getHost();  // 保留变量，可能将来使用
+            int port = uri.getPort();
+            String path = uri.getPath();
+            String query = uri.getQuery();
+
+            // 如果是相对路径，直接返回
+            if (scheme == null) {
+                return originalReferer;
+            }
+
+            // 构建新的 Referer，使用目标服务器的主机
+            StringBuilder newReferer = new StringBuilder();
+            newReferer.append(scheme).append("://").append(targetHost);
+
+            if (port > 0 &&
+                    !((scheme.equals("http") && port == 80) ||
+                            (scheme.equals("https") && port == 443))) {
+                newReferer.append(":").append(port);
+            }
+
+            if (StringUtils.isNotBlank(path)) {
+                newReferer.append(path);
+            }
+
+            if (StringUtils.isNotBlank(query)) {
+                newReferer.append("?").append(query);
+            }
+
+            return newReferer.toString();
+
+        } catch (Exception e) {
+            log.warn("修改 Referer 失败，使用原始值：{}", originalReferer, e);
+            return originalReferer;
+        }
+    }
+
+    /**
+     * 获取协议（http 或 https）
+     */
+    private String getProtocol(HttpServletRequest request) {
+        String scheme = request.getScheme();
+        String forwardedProto = request.getHeader("X-Forwarded-Proto");
+
+        if (StringUtils.isNotBlank(forwardedProto)) {
+            return forwardedProto.toLowerCase();
+        }
+
+        return scheme.toLowerCase();
+    }
+
+    /**
+     * 提取主机名
+     */
+    private String extractHost(String host) {
+        return host != null ? host : "";
     }
 
     /**
