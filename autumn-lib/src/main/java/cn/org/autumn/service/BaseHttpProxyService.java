@@ -4,9 +4,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -14,13 +12,10 @@ import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /**
  * 通用透明反向代理控制器
@@ -52,97 +47,83 @@ public class BaseHttpProxyService {
     @Setter
     private static String base = "";
 
-    private final ExecutorService executorService = Executors.newCachedThreadPool();
-
     public Object proxyAllRequests(String target, HttpServletRequest request, HttpServletResponse response) {
-        // 直接从 InputStream 读取原始请求体，避免 Spring Converter 导致数据丢失
-        byte[] requestBody = readRequestBody(request);
         // 构建完整的代理路径
         String proxyPath = buildProxyPath(request);
+        int contentLength = request.getContentLength();
+        boolean hasBody = hasRequestBody(request, contentLength);
+
+        InputStream bodyStream = null;
+        if (hasBody) {
+            try {
+                bodyStream = request.getInputStream();
+            } catch (IOException e) {
+                log.error("读取请求体失败", e);
+                return createErrorResponse(response, "读取请求体失败", "body_read_error", 400);
+            }
+        }
+
         if (log.isDebugEnabled()) {
-            // 记录详细请求日志（生产环境可以调整日志级别）
             log.debug("===== 代理请求开始 =====");
             log.debug("方法:{}", request.getMethod());
             log.debug("路径:{}", proxyPath);
             log.debug("目标URL:{}", determineTargetUrl(target, request, proxyPath));
             log.debug("Content-Type: {}", request.getContentType());
-            log.debug("Content-Length:{}, 实际读取字节数:{}", request.getContentLength(), requestBody.length);
-            // 记录关键请求头（包括 Cookie、Authorization 等）
+            log.debug("Content-Length:{}, hasBody:{}", contentLength, hasBody);
             log.debug("===== 请求头 =====");
             Enumeration<String> headerNames = request.getHeaderNames();
             while (headerNames.hasMoreElements()) {
                 String headerName = headerNames.nextElement();
                 String headerValue = request.getHeader(headerName);
-                // 对敏感信息进行脱敏
                 if ("Cookie".equalsIgnoreCase(headerName) || "Authorization".equalsIgnoreCase(headerName)) {
                     log.debug("{}: {}", headerName, maskSensitiveValue(headerValue));
                 } else {
                     log.debug("{}: {}", headerName, headerValue);
                 }
             }
-
-            // 将原始请求体写入文件，并在日志中仅输出 sessionId
-            String sessionId = null;
-            try {
-                sessionId = request.getSession(true).getId();
-            } catch (IllegalStateException e) {
-                // 获取 session 失败时，使用随机 ID，避免影响主流程
-                sessionId = UUID.randomUUID().toString();
-            }
-
-            if (requestBody.length > 0) {
-                try {
-                    String userHome = System.getProperty("user.home");
-                    Path dir = Paths.get(userHome, "proxy");
-                    if (!dir.toFile().exists())
-                        Files.createDirectories(dir);
-                    Path file = dir.resolve(sessionId);
-                    Files.write(file, requestBody);
-                    log.debug("请求体已写入文件，sessionId: {}", sessionId);
-                } catch (Exception e) {
-                    log.warn("写入请求体到文件失败，sessionId: {}", sessionId, e);
-                }
-            } else {
-                log.debug("请求体为空，sessionId: {}", sessionId);
-            }
         }
 
+        String sessionId = getSessionId(request);
+
         try {
-            // 确定目标 URL（优先级：参数 > Header > 默认）
             String finalTargetUrl = determineTargetUrl(target, request, proxyPath);
             if (StringUtils.isBlank(finalTargetUrl)) {
                 return createErrorResponse(response, "缺少目标 URL", "missing_target_url", 400);
             }
-            if (log.isDebugEnabled())
+            if (log.isDebugEnabled()) {
                 log.debug("最终目标 URL: {}", finalTargetUrl);
-            // 判断是否是流式请求
-            boolean isStreaming = isStreamingRequest(requestBody, request);
-            // 判断是否是二进制请求
-            boolean isBinary = isBinaryRequest(request);
-            Object result;
-            if (isStreaming) {
-                // 流式请求
-                if (log.isDebugEnabled())
-                    log.debug("检测到流式请求，使用 SSE 处理");
-                result = handleStreamingRequest(finalTargetUrl, request, requestBody, response);
-            } else if (isBinary) {
-                // 二进制请求
-                if (log.isDebugEnabled())
-                    log.debug("检测到二进制请求，使用二进制处理");
-                result = handleBinaryRequest(finalTargetUrl, request, requestBody, response);
-            } else {
-                // 普通请求
-                if (log.isDebugEnabled())
-                    log.debug("使用标准处理");
-                result = handleStandardRequest(finalTargetUrl, request, requestBody, response);
             }
-            if (log.isDebugEnabled())
+            // 不再在“请求阶段”区分流式/非流式/二进制，统一按透明反向代理处理：
+            // - 请求体：使用 bodyStream 直接流式写入上游，同时可保存副本到 user.home/proxy
+            // - 响应体：直接从上游 InputStream 拷贝到下游 HttpServletResponse OutputStream，同时可保存副本
+            handleTransparentProxy(finalTargetUrl, request, bodyStream, contentLength, response, sessionId);
+            if (log.isDebugEnabled()) {
                 log.debug("===== 代理请求完成 =====");
-            return result;
+            }
+            // 响应已直接写入 HttpServletResponse，Controller 层返回 null 即可
+            return null;
         } catch (Exception e) {
             log.error("===== 代理请求失败 =====", e);
             return createErrorResponse(response, "代理请求失败：" + e.getMessage(), "proxy_error", 500);
         }
+    }
+
+    /**
+     * 是否有请求体（根据方法和 Content-Length/Transfer-Encoding 判断）
+     */
+    private boolean hasRequestBody(HttpServletRequest request, int contentLength) {
+        String method = request.getMethod();
+        if ("GET".equalsIgnoreCase(method) || "HEAD".equalsIgnoreCase(method)) {
+            return false;
+        }
+        if (contentLength == 0) {
+            return false;
+        }
+        if (contentLength > 0) {
+            return true;
+        }
+        String te = request.getHeader("Transfer-Encoding");
+        return te != null && te.toLowerCase().contains("chunked");
     }
 
     /**
@@ -160,251 +141,180 @@ public class BaseHttpProxyService {
     }
 
     /**
-     * 处理标准请求（文本/JSON/XML 等）- 添加详细日志
+     * 统一的透明反向代理处理：
+     * - 不区分流式 / 非流式 / 二进制，完全依赖上游响应头、状态码和 body。
+     * - 请求体通过 bodyPeek + bodyStream 流式写入上游。
+     * - 响应体从上游 InputStream 直接复制到下游 HttpServletResponse OutputStream。
+     * <p>
+     * 这样可以最大程度保证“透明”和“完整性”，避免因为错误的流式判断导致请求体或响应体被截断。
      */
-    private Object handleStandardRequest(String targetUrl, HttpServletRequest request, byte[] requestBody, HttpServletResponse response) throws Exception {
+    private void handleTransparentProxy(String targetUrl,
+                                        HttpServletRequest request,
+                                        InputStream bodyStream,
+                                        int contentLength,
+                                        HttpServletResponse response,
+                                        String sessionId) throws Exception {
         if (log.isDebugEnabled()) {
-            log.debug("===== 开始处理标准请求 =====");
+            log.debug("===== 开始透明代理 =====");
             log.debug("目标 URL: {}", targetUrl);
         }
 
         HttpURLConnection connection = null;
         try {
-            connection = createConnection(targetUrl, request, requestBody);
-            if (log.isDebugEnabled())
-                log.debug("连接已建立");
-
-            // 获取响应码
-            int statusCode = connection.getResponseCode();
-            if (log.isDebugEnabled())
-                log.debug("响应状态码：{}", statusCode);
-
-            // 记录响应头
+            connection = createConnection(targetUrl, request, bodyStream, contentLength, sessionId);
             if (log.isDebugEnabled()) {
-                log.debug("===== 响应头 =====");
-                Map<String, List<String>> headers = connection.getHeaderFields();
-                headers.forEach((name, values) -> {
-                    if (name != null && values != null) {
-                        values.forEach(value -> log.debug("{}: {}", name, value));
-                    }
-                });
+                log.debug("上游连接已建立");
             }
 
-            // 复制响应头
-            copyResponseHeaders(connection, response);
-
-            // 读取响应
-            InputStream inputStream = (statusCode >= 400) ? connection.getErrorStream() : connection.getInputStream();
-            byte[] responseData;
-            if (inputStream != null) {
-                responseData = readAllBytes(inputStream);
-                if (log.isDebugEnabled())
-                    log.debug("响应体长度：{} 字节", responseData.length);
-
-                // 记录响应体（如果是 JSON，格式化输出）
-                String responseStr = new String(responseData, StandardCharsets.UTF_8);
-                if (log.isDebugEnabled()) {
-                    if (responseStr.startsWith("{") || responseStr.startsWith("[")) {
-                        log.debug("===== 响应体 (JSON) =====\n{}", responseStr);
-                    } else {
-                        log.debug("===== 响应体 =====\n{}", responseStr.length() > 1000 ? responseStr.substring(0, 1000) + "..." : responseStr);
-                    }
-                }
-
-                return responseData;
-            } else {
-                if (log.isDebugEnabled())
-                    log.debug("响应体：空");
-                return new byte[0];
-            }
-        } finally {
-            if (connection != null) {
-                connection.disconnect();
-            }
-        }
-    }
-
-    /**
-     * 处理二进制请求（图片、文件等）
-     */
-    private Object handleBinaryRequest(String targetUrl, HttpServletRequest request, byte[] requestBody, HttpServletResponse response) throws Exception {
-        if (log.isDebugEnabled())
-            log.debug("处理二进制请求：{}", targetUrl);
-        HttpURLConnection connection = null;
-        try {
-            connection = createConnection(targetUrl, request, requestBody);
-
-            // 获取响应码
             int statusCode = connection.getResponseCode();
-            if (log.isDebugEnabled())
-                log.debug("响应状态码：{}", statusCode);
+            if (log.isDebugEnabled()) {
+                log.debug("上游响应状态码：{}", statusCode);
+            }
 
+            // 设置下游状态码
             response.setStatus(statusCode);
 
-            // 复制响应头
+            // 复制上游响应头到下游
             copyResponseHeaders(connection, response);
 
-            // 设置内容类型
-            String contentType = connection.getContentType();
-            if (StringUtils.isNotBlank(contentType)) {
-                response.setContentType(contentType);
-            }
-
-            // 读取响应
-            InputStream inputStream = (statusCode >= 400) ? connection.getErrorStream() : connection.getInputStream();
-            if (inputStream != null) {
-                byte[] responseData = readAllBytes(inputStream);
-                if (log.isDebugEnabled())
-                    log.debug("响应体长度：{} 字节", responseData.length);
-                return responseData;
-            } else {
-                if (log.isDebugEnabled())
-                    log.debug("响应体：空");
-                return new byte[0];
+            // 透传响应体，并保存副本到 user.home/proxy/{sessionId}-response（副本失败不影响主流）
+            InputStream upstream = (statusCode >= 400) ? connection.getErrorStream() : connection.getInputStream();
+            if (upstream != null) {
+                OutputStream downstream = response.getOutputStream();
+                OutputStream copyOut = openProxyCopyStream(resolveProxyPath(sessionId, "response"));
+                byte[] buffer = new byte[8192];
+                int n;
+                long total = 0L;
+                try {
+                    while ((n = upstream.read(buffer)) != -1) {
+                        downstream.write(buffer, 0, n);
+                        downstream.flush();
+                        if (copyOut != null) {
+                            try {
+                                copyOut.write(buffer, 0, n);
+                                copyOut.flush();
+                            } catch (IOException e) {
+                                log.warn("保存响应副本失败，sessionId: {}", sessionId, e);
+                                closeQuietly(copyOut);
+                                copyOut = null;
+                            }
+                        }
+                        total += n;
+                    }
+                    if (log.isDebugEnabled()) {
+                        log.debug("已透传响应体：{} 字节", total);
+                    }
+                } finally {
+                    closeQuietly(copyOut);
+                }
+            } else if (log.isDebugEnabled()) {
+                log.debug("上游响应体为空");
             }
         } finally {
             if (connection != null) {
                 connection.disconnect();
             }
+            closeQuietly(bodyStream);
         }
     }
 
-    /**
-     * 处理流式请求 - 添加详细日志
-     */
-    private SseEmitter handleStreamingRequest(String targetUrl, HttpServletRequest request, byte[] requestBody, HttpServletResponse response) throws IOException {
-        if (log.isDebugEnabled()) {
-            log.debug("===== 开始处理流式请求 =====");
-            log.debug("目标 URL: {}", targetUrl);
-        }
-
-        // 设置 SSE 响应头
-        response.setContentType("text/event-stream");
-        response.setCharacterEncoding("UTF-8");
-        response.setHeader("Cache-Control", "no-cache");
-        response.setHeader("Connection", "keep-alive");
-        response.setHeader("X-Accel-Buffering", "no");
-
-        SseEmitter emitter = new SseEmitter(0L);
-
-        executorService.execute(() -> {
-            HttpURLConnection connection = null;
-            int messageCount = 0;
+    private static void closeQuietly(InputStream in) {
+        if (in != null) {
             try {
-                connection = createConnection(targetUrl, request, requestBody);
-                if (log.isDebugEnabled())
-                    log.debug("流式请求连接已建立");
-
-                // 读取流式响应
-                int statusCode = connection.getResponseCode();
-                if (log.isDebugEnabled())
-                    log.debug("流式响应状态码：{}", statusCode);
-
-                if (statusCode >= 400) {
-                    log.error("流式请求错误，状态码：{}", statusCode);
-                    // 错误响应
-                    try (InputStream errorStream = connection.getErrorStream()) {
-                        if (errorStream != null) {
-                            String errorBody = new String(readAllBytes(errorStream), StandardCharsets.UTF_8);
-                            if (log.isDebugEnabled())
-                                log.debug("错误响应体：{}", errorBody);
-                            emitter.send(errorBody, MediaType.TEXT_PLAIN);
-                        }
-                    }
-                    emitter.complete();
-                    return;
-                }
-
-                // 逐行读取流式响应
-                if (log.isDebugEnabled())
-                    log.debug("开始读取流式响应数据");
-
-                try (BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8))) {
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        messageCount++;
-
-                        // 记录原始响应行
-                        if (log.isDebugEnabled()) {
-                            log.debug("[原始响应] 行 {}: {}", messageCount, line);
-                        }
-
-                        // 检查客户端是否断开连接
-                        try {
-                            Thread.sleep(1);
-                        } catch (InterruptedException e) {
-                            if (log.isDebugEnabled())
-                                log.warn("流式传输被中断，客户端可能已断开连接");
-                            break;
-                        }
-
-                        // 完全透明地转发每一行，包括换行符
-                        // 目标服务器返回的格式已经是 SSE 标准格式（每行以 \n 结尾）
-                        // readLine() 会去掉换行符
-                        if (log.isDebugEnabled())
-                            log.debug("[转发数据] 发送原始行：{}", line);
-                        // 只转发非空行，空行会导致 SSE 解析错误
-                        if (!line.trim().isEmpty()) {
-                            //emitter.send时会自动附带data:前缀和换行符:\n
-                            if (line.startsWith("data:"))
-                                line = line.substring(5);
-                            emitter.send(line, MediaType.TEXT_PLAIN);
-                        }
-                    }
-                    if (log.isDebugEnabled())
-                        log.debug("流式响应读取完成，总共 {} 行", messageCount);
-                }
-
-                // 注意：不再手动发送 [DONE]，因为目标服务器已经发送了
-                if (log.isDebugEnabled())
-                    log.debug("流式请求处理完成");
-                emitter.complete();
-
-            } catch (Exception e) {
-                log.error("===== 流式处理失败 =====", e);
-                try {
-                    String errorJson = "{\"error\": {\"message\": \"" + e.getMessage() + "\"}}";
-                    if (log.isDebugEnabled())
-                        log.debug("流式处理失败:{}", e.getMessage());
-                    emitter.send(errorJson, MediaType.TEXT_PLAIN);
-                    emitter.completeWithError(e);
-                } catch (IOException ex) {
-                    log.error("发送错误消息失败", ex);
-                }
-            } finally {
-                if (connection != null) {
-                    connection.disconnect();
-                    if (log.isDebugEnabled())
-                        log.debug("连接已关闭");
-                }
+                in.close();
+            } catch (IOException ignored) {
             }
-        });
+        }
+    }
 
-        if (log.isDebugEnabled())
-            log.debug("===== 流式请求初始化完成 =====");
-        return emitter;
+    private static void closeQuietly(OutputStream out) {
+        if (out != null) {
+            try {
+                out.close();
+            } catch (IOException ignored) {
+            }
+        }
     }
 
     /**
-     * 创建 HTTP 连接
+     * 获取当前请求的 sessionId，用于保存请求/响应副本的文件名；无 session 时使用 UUID。
      */
-    private HttpURLConnection createConnection(String targetUrl, HttpServletRequest request, byte[] requestBody) throws Exception {
+    private static String getSessionId(HttpServletRequest request) {
+        try {
+            return request.getSession(true).getId();
+        } catch (IllegalStateException e) {
+            return UUID.randomUUID().toString();
+        }
+    }
+
+    /**
+     * user.home/proxy 目录下按 sessionId 命名的副本文件名，suffix 为 "request" 或 "response"。
+     */
+    private static Path resolveProxyPath(String sessionId, String suffix) {
+        String dir = System.getProperty("user.home");
+        return Paths.get(dir, "proxy", sessionId + "." + suffix);
+    }
+
+    /**
+     * 打开写入 proxy 目录的副本流；目录不存在会先创建。失败时返回 null，不影响主流程。
+     */
+    private OutputStream openProxyCopyStream(Path filePath) {
+        if (filePath == null) return null;
+        try {
+            Files.createDirectories(filePath.getParent());
+            return Files.newOutputStream(filePath);
+        } catch (IOException e) {
+            log.debug("无法创建代理副本文件: {}", filePath, e);
+            return null;
+        }
+    }
+
+    /**
+     * 创建 HTTP 连接并发送请求体：将 bodyStream 流式写入上游，同时可选保存副本到 user.home/proxy/{sessionId}-request。
+     *
+     * @param bodyStream    请求体输入流，可为 null（表示无 body）
+     * @param contentLength 请求头 Content-Length，-1 表示未知或 chunked
+     * @param sessionId     会话 ID，用于保存请求体副本文件名
+     */
+    private HttpURLConnection createConnection(String targetUrl, HttpServletRequest request, InputStream bodyStream, int contentLength, String sessionId) throws Exception {
+        boolean hasBody = (bodyStream != null);
         URL url = new URL(targetUrl);
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-        // 基本设置
         connection.setRequestMethod(request.getMethod());
         connection.setDoInput(true);
-        connection.setDoOutput(requestBody != null && requestBody.length > 0);
-        connection.setConnectTimeout(60000); // 60 秒连接超时
-        connection.setReadTimeout(300000);   // 5 分钟读取超时
-        connection.setInstanceFollowRedirects(false); // 不自动重定向
-        // 复制请求头
+        connection.setDoOutput(hasBody);
+        connection.setConnectTimeout(60000);
+        connection.setReadTimeout(300000);
+        connection.setInstanceFollowRedirects(false);
+
+        if (hasBody && contentLength > 0) {
+            connection.setFixedLengthStreamingMode(contentLength);
+        }
+
         copyRequestHeaders(request, connection);
-        // 发送请求体
-        if (requestBody != null && requestBody.length > 0) {
-            try (OutputStream os = connection.getOutputStream()) {
-                os.write(requestBody);
-                os.flush();
+
+        if (hasBody) {
+            OutputStream connOut = connection.getOutputStream();
+            OutputStream copyOut = openProxyCopyStream(resolveProxyPath(sessionId, "request"));
+            byte[] buf = new byte[8192];
+            int n;
+            try {
+                while ((n = bodyStream.read(buf)) != -1) {
+                    connOut.write(buf, 0, n);
+                    if (copyOut != null) {
+                        try {
+                            copyOut.write(buf, 0, n);
+                            copyOut.flush();
+                        } catch (IOException e) {
+                            log.warn("保存请求副本失败，sessionId: {}", sessionId, e);
+                            closeQuietly(copyOut);
+                            copyOut = null;
+                        }
+                    }
+                }
+                connOut.flush();
+            } finally {
+                closeQuietly(copyOut);
             }
         }
         return connection;
@@ -657,41 +567,6 @@ public class BaseHttpProxyService {
     }
 
     /**
-     * 判断是否是流式请求
-     */
-    private boolean isStreamingRequest(byte[] requestBody, HttpServletRequest request) {
-        // 检查 Accept 头
-        String accept = request.getHeader("Accept");
-        if (StringUtils.isNotBlank(accept) && accept.contains("text/event-stream")) {
-            return true;
-        }
-        // 检查请求体
-        if (requestBody != null && requestBody.length > 0) {
-            String body = new String(requestBody, StandardCharsets.UTF_8);
-            return body.contains("\"stream\":true") || body.contains("\"stream\": true");
-        }
-        return false;
-    }
-
-    /**
-     * 判断是否是二进制请求
-     */
-    private boolean isBinaryRequest(HttpServletRequest request) {
-        String contentType = request.getContentType();
-        if (StringUtils.isBlank(contentType)) {
-            return false;
-        }
-        // 常见的二进制内容类型
-        return contentType.contains("image/") ||
-                contentType.contains("audio/") ||
-                contentType.contains("video/") ||
-                contentType.contains("application/octet-stream") ||
-                contentType.contains("application/pdf") ||
-                contentType.contains("application/zip") ||
-                contentType.contains("multipart/");
-    }
-
-    /**
      * 是否跳过某个请求头
      * <p>
      * 为了完全透明代理，只过滤掉绝对不能转发的头：
@@ -746,56 +621,6 @@ public class BaseHttpProxyService {
         // 其他所有头都透明转发
         // 包括：Cookie, Authorization, User-Agent, Referer, Origin, X-* 等
         return skipHeaders.contains(headerName);
-    }
-
-    /**
-     * 读取所有字节
-     */
-    private byte[] readAllBytes(InputStream inputStream) throws IOException {
-        if (inputStream == null) {
-            return new byte[0];
-        }
-        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-        byte[] data = new byte[4096];
-        int n;
-        while ((n = inputStream.read(data, 0, data.length)) != -1) {
-            buffer.write(data, 0, n);
-        }
-        return buffer.toByteArray();
-    }
-
-    /**
-     * 直接从 HttpServletRequest 的 InputStream 读取原始请求体
-     * 这样可以避免 Spring HttpMessageConverter 处理导致的数据丢失
-     */
-    private byte[] readRequestBody(HttpServletRequest request) {
-        try {
-            String contentLength = request.getHeader("Content-Length");
-            if (contentLength != null && "0".equals(contentLength.trim())) {
-                return new byte[0];
-            }
-
-            InputStream inputStream = request.getInputStream();
-            if (inputStream == null) {
-                return new byte[0];
-            }
-
-            ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-            byte[] data = new byte[8192];
-            int n;
-            while ((n = inputStream.read(data, 0, data.length)) != -1) {
-                buffer.write(data, 0, n);
-            }
-
-            byte[] result = buffer.toByteArray();
-            if (log.isTraceEnabled()) {
-                log.trace("从 InputStream 读取请求体，总字节数：{}", result.length);
-            }
-            return result;
-        } catch (IOException e) {
-            log.error("读取请求体失败", e);
-            return new byte[0];
-        }
     }
 
     /**
