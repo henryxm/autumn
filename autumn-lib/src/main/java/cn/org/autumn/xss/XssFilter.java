@@ -1,6 +1,7 @@
 package cn.org.autumn.xss;
 
 import cn.org.autumn.annotation.DisableXssFilter;
+import cn.org.autumn.service.BaseHttpProxyService;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerExecutionChain;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
@@ -10,68 +11,93 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
 
 /**
- * XSS过滤器
- * 支持通过@DisableXssFilter注解跳过XSS过滤
+ * XSS 过滤器
+ * <p>
+ * 支持通过 @DisableXssFilter 注解、请求头 X-Skip-XSS-Filter: true、或路径排除跳过 XSS 过滤。
+ * 以下路径默认不进行 XSS 过滤，避免影响业务且提高效率：
+ * - 代理接口：{@link BaseHttpProxyService#proxy}（需透传原始 body，不能包装/改写）
+ * - 静态资源：/static/**, /js/**, /css/**, /images/**, /favicon.ico 等
  */
 public class XssFilter implements Filter {
 
+    /**
+     * 不进行 XSS 过滤的路径前缀（去掉 contextPath 后匹配）
+     */
+    private static final String[] SKIP_PATH_PREFIXES = {
+            BaseHttpProxyService.proxy,  // 代理需透传原始流，不能包装
+            "/static/",
+            "/statics/",
+            "/js/",
+            "/css/",
+            "/images/",
+            "/files/",
+            "/actuator/",
+    };
+
     @Override
-    public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
-            throws IOException, ServletException {
+    public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
         HttpServletRequest httpRequest = (HttpServletRequest) request;
-        // 检查是否需要跳过XSS过滤
         if (shouldSkipXssFilter(httpRequest)) {
-            // 跳过XSS过滤，直接传递原始请求
             chain.doFilter(request, response);
         } else {
-            // 进行XSS过滤
-            XssHttpServletRequestWrapper xssRequest = new XssHttpServletRequestWrapper(httpRequest);
-            chain.doFilter(xssRequest, response);
+            chain.doFilter(new XssHttpServletRequestWrapper(httpRequest), response);
         }
     }
 
     /**
-     * 检查是否需要跳过XSS过滤
+     * 检查是否需要跳过 XSS 过滤
      *
-     * @param request HTTP请求
-     * @return true-跳过XSS过滤，false-进行XSS过滤
+     * @param request HTTP 请求
+     * @return true 跳过，false 进行 XSS 过滤
      */
     private boolean shouldSkipXssFilter(HttpServletRequest request) {
         try {
-            // 获取请求的URI
             String requestURI = request.getRequestURI();
-            // 获取HandlerMapping
-            ServletContext servletContext = request.getServletContext();
-            RequestMappingHandlerMapping handlerMapping =
-                    (RequestMappingHandlerMapping) servletContext.getAttribute("org.springframework.web.servlet.DispatcherServlet.HANDLER_MAPPING");
-            if (handlerMapping != null) {
-                try {
-                    // 获取HandlerExecutionChain
-                    HandlerExecutionChain handlerChain = handlerMapping.getHandler(request);
-                    if (handlerChain != null && handlerChain.getHandler() instanceof HandlerMethod) {
-                        HandlerMethod handlerMethod = (HandlerMethod) handlerChain.getHandler();
-                        // 检查方法上的注解
-                        DisableXssFilter methodAnnotation = handlerMethod.getMethodAnnotation(DisableXssFilter.class);
-                        if (methodAnnotation != null && methodAnnotation.value()) {
-                            return true;
-                        }
-                        // 检查类上的注解
-                        DisableXssFilter classAnnotation = handlerMethod.getBeanType().getAnnotation(DisableXssFilter.class);
-                        if (classAnnotation != null && classAnnotation.value()) {
-                            return true;
-                        }
-                    }
-                } catch (Exception e) {
-                    // 如果获取Handler失败，继续执行XSS过滤
+            String contextPath = request.getContextPath();
+            if (contextPath != null && !contextPath.isEmpty() && requestURI.startsWith(contextPath)) {
+                requestURI = requestURI.substring(contextPath.length());
+            }
+            if (requestURI == null) {
+                requestURI = "";
+            }
+            // 1. 路径排除：代理、静态资源等不需要 XSS 且可能受包装影响的请求
+            for (String prefix : SKIP_PATH_PREFIXES) {
+                if (requestURI.startsWith(prefix)) {
+                    return true;
                 }
             }
-            // 检查请求头中是否有跳过XSS过滤的标识
-            String skipXss = request.getHeader("X-Skip-XSS-Filter");
-            if ("true".equalsIgnoreCase(skipXss)) {
+            if (requestURI.equals("/favicon.ico")) {
                 return true;
             }
-        } catch (Exception e) {
-            // 发生异常时，默认进行XSS过滤
+            // 2. 请求头显式跳过
+            if ("true".equalsIgnoreCase(request.getHeader("X-Skip-XSS-Filter"))) {
+                return true;
+            }
+            // 3. Controller 上 @DisableXssFilter（需能解析到 Handler 时才生效）
+            ServletContext servletContext = request.getServletContext();
+            if (servletContext != null) {
+                RequestMappingHandlerMapping handlerMapping = (RequestMappingHandlerMapping) servletContext.getAttribute("org.springframework.web.servlet.DispatcherServlet.HANDLER_MAPPING");
+                if (handlerMapping != null) {
+                    try {
+                        HandlerExecutionChain handlerChain = handlerMapping.getHandler(request);
+                        if (handlerChain != null && handlerChain.getHandler() instanceof HandlerMethod) {
+                            HandlerMethod handlerMethod = (HandlerMethod) handlerChain.getHandler();
+                            DisableXssFilter methodAnnotation = handlerMethod.getMethodAnnotation(DisableXssFilter.class);
+                            if (methodAnnotation != null && methodAnnotation.value()) {
+                                return true;
+                            }
+                            DisableXssFilter classAnnotation = handlerMethod.getBeanType().getAnnotation(DisableXssFilter.class);
+                            if (classAnnotation != null && classAnnotation.value()) {
+                                return true;
+                            }
+                        }
+                    } catch (Exception ignored) {
+                        // 解析不到 Handler 时继续走 XSS 过滤
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+            // 异常时执行 XSS 过滤
         }
         return false;
     }

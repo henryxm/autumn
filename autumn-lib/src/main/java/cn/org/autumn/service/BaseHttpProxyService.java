@@ -287,13 +287,7 @@ public class BaseHttpProxyService {
         connection.setConnectTimeout(60000);
         connection.setReadTimeout(300000);
         connection.setInstanceFollowRedirects(false);
-
-        if (hasBody && contentLength > 0) {
-            connection.setFixedLengthStreamingMode(contentLength);
-        }
-
         copyRequestHeaders(request, connection);
-
         if (hasBody) {
             OutputStream connOut = connection.getOutputStream();
             OutputStream copyOut = openProxyCopyStream(resolveProxyPath(sessionId, "request"));
