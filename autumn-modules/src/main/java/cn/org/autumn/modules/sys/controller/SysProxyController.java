@@ -86,7 +86,8 @@ public class SysProxyController {
             log.debug("路径：{}", proxyPath);
             log.debug("目标 URL: {}", determineTargetUrl(target, request, proxyPath));
             log.debug("Content-Type: {}", request.getContentType());
-            log.debug("Content-Length: {}", request.getContentLength());
+            int bodyLength = requestBody != null ? requestBody.length : 0;
+            log.debug("Content-Length: {}, 实际读取字节数: {}", request.getContentLength(), bodyLength);
             // 记录关键请求头（包括 Cookie、Authorization 等）
             log.debug("===== 请求头 =====");
             Enumeration<String> headerNames = request.getHeaderNames();
