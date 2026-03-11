@@ -5,6 +5,8 @@ server:
     threads:
       min-spare: 30
       max: 1000
+    max-http-form-post-size: -1      # 表单 POST 最大大小（-1 表示不限制）
+    max-swallow-size: -1             # 防止超大请求体被静默吞掉（-1 表示不限制）
   port: 80
   servlet:
     context-path: /
@@ -19,8 +21,8 @@ spring:
     time-zone: GMT+8
   servlet:
     multipart:
-      max-file-size: 100MB
-      max-request-size: 100MB
+      max-file-size: -1              # 单个文件大小不限制
+      max-request-size: -1           # 整个 multipart 请求体大小不限制
       enabled: true
   redis:
     database: 0
