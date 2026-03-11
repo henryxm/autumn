@@ -104,9 +104,36 @@ public class BaseHttpProxyService {
             // 响应已直接写入 HttpServletResponse，Controller 层返回 null 即可
             return null;
         } catch (Exception e) {
+            if (isClientDisconnect(e)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("流式响应过程中客户端断开连接，视为正常结束");
+                }
+                return null;
+            }
             log.error("===== 代理请求失败 =====", e);
-            return createErrorResponse(response, "代理请求失败：" + e.getMessage(), "proxy_error", 500);
+            if (!response.isCommitted()) {
+                return createErrorResponse(response, "代理请求失败：" + e.getMessage(), "proxy_error", 500);
+            }
+            return null;
         }
+    }
+
+    /**
+     * 判断异常是否由客户端/对端关闭连接导致（Connection reset by peer、Broken pipe、AsyncRequestNotUsableException 等），
+     * 此类情况不应视为服务端错误。
+     */
+    private static boolean isClientDisconnect(Throwable t) {
+        for (Throwable x = t; x != null; x = x.getCause()) {
+            String msg = x.getMessage();
+            if (msg != null && (msg.contains("Connection reset by peer") || msg.contains("Broken pipe"))) {
+                return true;
+            }
+            String name = x.getClass().getName();
+            if (name.contains("AsyncRequestNotUsableException") || name.contains("ClientAbortException")) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -186,10 +213,22 @@ public class BaseHttpProxyService {
                 byte[] buffer = new byte[8192];
                 int n;
                 long total = 0L;
+                boolean clientClosed = false;
                 try {
                     while ((n = upstream.read(buffer)) != -1) {
-                        downstream.write(buffer, 0, n);
-                        downstream.flush();
+                        try {
+                            downstream.write(buffer, 0, n);
+                            downstream.flush();
+                        } catch (IOException e) {
+                            if (isClientDisconnect(e)) {
+                                if (log.isDebugEnabled()) {
+                                    log.debug("透传响应时客户端已断开，已发送约 {} 字节", total);
+                                }
+                                clientClosed = true;
+                                break;
+                            }
+                            throw e;
+                        }
                         if (copyOut != null) {
                             try {
                                 copyOut.write(buffer, 0, n);
@@ -202,7 +241,7 @@ public class BaseHttpProxyService {
                         }
                         total += n;
                     }
-                    if (log.isDebugEnabled()) {
+                    if (!clientClosed && log.isDebugEnabled()) {
                         log.debug("已透传响应体：{} 字节", total);
                     }
                 } finally {
