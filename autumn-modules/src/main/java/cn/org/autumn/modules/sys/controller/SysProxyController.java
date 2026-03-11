@@ -1,5 +1,7 @@
 package cn.org.autumn.modules.sys.controller;
 
+import cn.org.autumn.annotation.DisableXssFilter;
+import cn.org.autumn.annotation.SkipInterceptor;
 import cn.org.autumn.service.BaseHttpProxyService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +29,8 @@ import javax.servlet.http.HttpServletResponse;
  */
 @Slf4j
 @RestController
+@SkipInterceptor
+@DisableXssFilter
 @RequestMapping(BaseHttpProxyService.proxy)
 public class SysProxyController {
 
