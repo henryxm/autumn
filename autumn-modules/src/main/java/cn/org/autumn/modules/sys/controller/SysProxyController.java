@@ -13,6 +13,9 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -98,17 +101,29 @@ public class SysProxyController {
                 }
             }
 
-            // 记录请求体（如果是流式请求，特别标注）
+            // 将原始请求体写入文件，并在日志中仅输出 sessionId
+            String sessionId = null;
+            try {
+                sessionId = request.getSession(true).getId();
+            } catch (IllegalStateException e) {
+                // 获取 session 失败时，使用随机 ID，避免影响主流程
+                sessionId = UUID.randomUUID().toString();
+            }
+
             if (requestBody != null && requestBody.length > 0) {
-                String requestBodyStr = new String(requestBody, StandardCharsets.UTF_8);
-                boolean isStreaming = requestBodyStr.contains("\"stream\":true") || requestBodyStr.contains("\"stream\": true");
-                if (isStreaming) {
-                    log.debug("===== 请求体 (流式) =====\n{}", requestBodyStr);
-                } else {
-                    log.debug("===== 请求体 =====\n{}", requestBodyStr);
+                try {
+                    String userHome = System.getProperty("user.home");
+                    Path dir = Paths.get(userHome, "proxy");
+                    if (!dir.toFile().exists())
+                        Files.createDirectories(dir);
+                    Path file = dir.resolve(sessionId);
+                    Files.write(file, requestBody);
+                    log.debug("请求体已写入文件，sessionId: {}", sessionId);
+                } catch (Exception e) {
+                    log.warn("写入请求体到文件失败，sessionId: {}", sessionId, e);
                 }
             } else {
-                log.debug("请求体：空");
+                log.debug("请求体为空，sessionId: {}", sessionId);
             }
         }
 
@@ -313,7 +328,7 @@ public class SysProxyController {
                             String errorBody = new String(readAllBytes(errorStream), StandardCharsets.UTF_8);
                             if (log.isDebugEnabled())
                                 log.debug("错误响应体：{}", errorBody);
-                            emitter.send("data: " + errorBody + "\n\n", MediaType.TEXT_PLAIN);
+                            emitter.send(errorBody, MediaType.TEXT_PLAIN);
                         }
                     }
                     emitter.complete();
@@ -369,7 +384,9 @@ public class SysProxyController {
                 log.error("===== 流式处理失败 =====", e);
                 try {
                     String errorJson = "{\"error\": {\"message\": \"" + e.getMessage() + "\"}}";
-                    emitter.send("data: " + errorJson + "\n\n", MediaType.TEXT_PLAIN);
+                    if (log.isDebugEnabled())
+                        log.debug("流式处理失败:{}", e.getMessage());
+                    emitter.send(errorJson, MediaType.TEXT_PLAIN);
                     emitter.completeWithError(e);
                 } catch (IOException ex) {
                     log.error("发送错误消息失败", ex);
@@ -450,8 +467,7 @@ public class SysProxyController {
             }
 
             // 跳过代理特定的头，由我们重新设置
-            if (headerName.toLowerCase().startsWith("x-forwarded-") ||
-                    headerName.toLowerCase().startsWith("x-real-ip")) {
+            if (headerName.toLowerCase().startsWith("x-forwarded-") || headerName.toLowerCase().startsWith("x-real-ip")) {
                 continue;
             }
 
