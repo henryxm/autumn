@@ -15,7 +15,7 @@ import java.io.IOException;
  * <p>
  * 支持通过 @DisableXssFilter 注解、请求头 X-Skip-XSS-Filter: true、或路径排除跳过 XSS 过滤。
  * 以下路径默认不进行 XSS 过滤，避免影响业务且提高效率：
- * - 代理接口：{@link BaseHttpProxyService#proxy}（需透传原始 body，不能包装/改写）
+ * - 代理接口：{@link BaseHttpProxyService#DEFAULT}（需透传原始 body，不能包装/改写）
  * - 静态资源：/static/**, /js/**, /css/**, /images/**, /favicon.ico 等
  */
 public class XssFilter implements Filter {
@@ -24,7 +24,7 @@ public class XssFilter implements Filter {
      * 不进行 XSS 过滤的路径前缀（去掉 contextPath 后匹配）
      */
     private static final String[] SKIP_PATH_PREFIXES = {
-            BaseHttpProxyService.proxy,  // 代理需透传原始流，不能包装
+            BaseHttpProxyService.DEFAULT,  // 代理需透传原始流，不能包装
             "/static/",
             "/statics/",
             "/js/",
