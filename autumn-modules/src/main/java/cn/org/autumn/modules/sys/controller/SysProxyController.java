@@ -31,7 +31,7 @@ import jakarta.servlet.http.HttpServletResponse;
 @RestController
 @SkipInterceptor
 @DisableXssFilter
-@RequestMapping(BaseHttpProxyService.proxy)
+@RequestMapping(BaseHttpProxyService.DEFAULT)
 public class SysProxyController {
 
     @Autowired
@@ -43,8 +43,8 @@ public class SysProxyController {
      * 完全透明的代理所有 HTTP/HTTPS 请求
      */
     @RequestMapping(value = "/**", method = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.PATCH, RequestMethod.HEAD, RequestMethod.OPTIONS, RequestMethod.TRACE})
-    public Object proxyAllRequests(@RequestParam(value = "target", required = false) String target, HttpServletRequest request, HttpServletResponse response) {
-        return baseHttpProxyService.proxyAllRequests(target, request, response);
+    public Object proxy(@RequestParam(value = "target", required = false) String target, HttpServletRequest request, HttpServletResponse response) {
+        return baseHttpProxyService.proxy("", "", target, request, response);
     }
 
     /**
@@ -54,7 +54,7 @@ public class SysProxyController {
      * 然后完全透明地返回给客户端
      */
     @RequestMapping(value = "/**", method = RequestMethod.OPTIONS)
-    public Object handleOptions(@RequestParam(value = "target", required = false) String target, HttpServletRequest request, HttpServletResponse response) {
-        return baseHttpProxyService.handleOptions(target, request, response);
+    public Object options(@RequestParam(value = "target", required = false) String target, HttpServletRequest request, HttpServletResponse response) {
+        return baseHttpProxyService.options("", "", target, request, response);
     }
 }

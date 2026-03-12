@@ -39,36 +39,37 @@ import java.util.*;
 @Service
 public class BaseHttpProxyService {
 
-    public static final String proxy = "/http/proxy/v1";
+    public static final String DEFAULT = "/http/proxy/v1";
 
     /**
      * 默认目标基础 URL（可以动态覆盖）
      */
     @Getter
     @Setter
-    private static String base = "";
+    private static String BASE = "";
 
-    public Object proxyAllRequests(String target, HttpServletRequest request, HttpServletResponse response) {
+    public Object proxy(String prefix, String base, String target, HttpServletRequest request, HttpServletResponse response) {
         // 构建完整的代理路径
-        String proxyPath = buildProxyPath(request);
+        String proxyPath = buildProxyPath(prefix, request);
         int contentLength = request.getContentLength();
-        boolean hasBody = hasRequestBody(request, contentLength);
-
+        boolean hasBody = hasBody(request, contentLength);
         InputStream bodyStream = null;
         if (hasBody) {
             try {
                 bodyStream = request.getInputStream();
             } catch (IOException e) {
-                log.error("读取请求体失败", e);
-                return createErrorResponse(response, "读取请求体失败", "body_read_error", 400);
+                if (log.isDebugEnabled())
+                    log.debug("读取失败:{}", e.getMessage(), e);
+                else
+                    log.error("读取失败:{}", e.getMessage());
+                return createErrorResponse(response, "读取失败", "body_read_error", 400);
             }
         }
-
         if (log.isDebugEnabled()) {
             log.debug("===== 代理请求开始 =====");
             log.debug("方法:{}", request.getMethod());
             log.debug("路径:{}", proxyPath);
-            log.debug("目标URL:{}", determineTargetUrl(target, request, proxyPath));
+            log.debug("目标URL:{}", determineTargetUrl(base, target, request, proxyPath));
             log.debug("Content-Type: {}", request.getContentType());
             log.debug("Content-Length:{}, hasBody:{}", contentLength, hasBody);
             log.debug("===== 请求头 =====");
@@ -83,13 +84,11 @@ public class BaseHttpProxyService {
                 }
             }
         }
-
         String sessionId = getSessionId(request);
-
         try {
-            String finalTargetUrl = determineTargetUrl(target, request, proxyPath);
+            String finalTargetUrl = determineTargetUrl(base, target, request, proxyPath);
             if (StringUtils.isBlank(finalTargetUrl)) {
-                return createErrorResponse(response, "缺少目标 URL", "missing_target_url", 400);
+                return createErrorResponse(response, "缺少目标", "missing_target_url", 400);
             }
             if (log.isDebugEnabled()) {
                 log.debug("最终目标 URL: {}", finalTargetUrl);
@@ -97,7 +96,7 @@ public class BaseHttpProxyService {
             // 不再在“请求阶段”区分流式/非流式/二进制，统一按透明反向代理处理：
             // - 请求体：使用 bodyStream 直接流式写入上游，同时可保存副本到 user.home/proxy
             // - 响应体：直接从上游 InputStream 拷贝到下游 HttpServletResponse OutputStream，同时可保存副本
-            handleTransparentProxy(finalTargetUrl, request, bodyStream, contentLength, response, sessionId);
+            handle(finalTargetUrl, request, bodyStream, contentLength, response, sessionId);
             if (log.isDebugEnabled()) {
                 log.debug("===== 代理请求完成 =====");
             }
@@ -110,9 +109,12 @@ public class BaseHttpProxyService {
                 }
                 return null;
             }
-            log.error("===== 代理请求失败 =====", e);
+            if (log.isDebugEnabled())
+                log.debug("代理失败:{}", e.getMessage(), e);
+            else
+                log.error("代理失败:{}", e.getMessage());
             if (!response.isCommitted()) {
-                return createErrorResponse(response, "代理请求失败：" + e.getMessage(), "proxy_error", 500);
+                return createErrorResponse(response, "请求失败：" + e.getMessage(), "error", 500);
             }
             return null;
         }
@@ -122,7 +124,7 @@ public class BaseHttpProxyService {
      * 判断异常是否由客户端/对端关闭连接导致（Connection reset by peer、Broken pipe、AsyncRequestNotUsableException 等），
      * 此类情况不应视为服务端错误。
      */
-    private static boolean isClientDisconnect(Throwable t) {
+    protected static boolean isClientDisconnect(Throwable t) {
         for (Throwable x = t; x != null; x = x.getCause()) {
             String msg = x.getMessage();
             if (msg != null && (msg.contains("Connection reset by peer") || msg.contains("Broken pipe"))) {
@@ -139,7 +141,7 @@ public class BaseHttpProxyService {
     /**
      * 是否有请求体（根据方法和 Content-Length/Transfer-Encoding 判断）
      */
-    private boolean hasRequestBody(HttpServletRequest request, int contentLength) {
+    protected boolean hasBody(HttpServletRequest request, int contentLength) {
         String method = request.getMethod();
         if ("GET".equalsIgnoreCase(method) || "HEAD".equalsIgnoreCase(method)) {
             return false;
@@ -157,7 +159,7 @@ public class BaseHttpProxyService {
     /**
      * 脱敏敏感信息
      */
-    private String maskSensitiveValue(String value) {
+    protected String maskSensitiveValue(String value) {
         if (StringUtils.isBlank(value)) {
             return value;
         }
@@ -176,40 +178,29 @@ public class BaseHttpProxyService {
      * <p>
      * 这样可以最大程度保证“透明”和“完整性”，避免因为错误的流式判断导致请求体或响应体被截断。
      */
-    private void handleTransparentProxy(String targetUrl,
-                                        HttpServletRequest request,
-                                        InputStream bodyStream,
-                                        int contentLength,
-                                        HttpServletResponse response,
-                                        String sessionId) throws Exception {
+    protected void handle(String target, HttpServletRequest request, InputStream bodyStream, int length, HttpServletResponse response, String sessionId) throws Exception {
         if (log.isDebugEnabled()) {
-            log.debug("===== 开始透明代理 =====");
-            log.debug("目标 URL: {}", targetUrl);
+            log.debug("目标URL: {}", target);
         }
-
         HttpURLConnection connection = null;
         try {
-            connection = createConnection(targetUrl, request, bodyStream, contentLength, sessionId);
+            connection = connection(target, request, bodyStream, length, sessionId);
             if (log.isDebugEnabled()) {
                 log.debug("上游连接已建立");
             }
-
             int statusCode = connection.getResponseCode();
             if (log.isDebugEnabled()) {
                 log.debug("上游响应状态码：{}", statusCode);
             }
-
             // 设置下游状态码
             response.setStatus(statusCode);
-
             // 复制上游响应头到下游
             copyResponseHeaders(connection, response);
-
             // 透传响应体，并保存副本到 user.home/proxy/{sessionId}-response（副本失败不影响主流）
             InputStream upstream = (statusCode >= 400) ? connection.getErrorStream() : connection.getInputStream();
             if (upstream != null) {
-                OutputStream downstream = response.getOutputStream();
-                OutputStream copyOut = openProxyCopyStream(resolveProxyPath(sessionId, "response"));
+                OutputStream out = response.getOutputStream();
+                OutputStream copy = getResponseCopyStream(getResponseCopyPath(sessionId, "response"));
                 byte[] buffer = new byte[8192];
                 int n;
                 long total = 0L;
@@ -217,8 +208,8 @@ public class BaseHttpProxyService {
                 try {
                     while ((n = upstream.read(buffer)) != -1) {
                         try {
-                            downstream.write(buffer, 0, n);
-                            downstream.flush();
+                            out.write(buffer, 0, n);
+                            out.flush();
                         } catch (IOException e) {
                             if (isClientDisconnect(e)) {
                                 if (log.isDebugEnabled()) {
@@ -229,14 +220,14 @@ public class BaseHttpProxyService {
                             }
                             throw e;
                         }
-                        if (copyOut != null) {
+                        if (copy != null) {
                             try {
-                                copyOut.write(buffer, 0, n);
-                                copyOut.flush();
+                                copy.write(buffer, 0, n);
+                                copy.flush();
                             } catch (IOException e) {
                                 log.warn("保存响应副本失败，sessionId: {}", sessionId, e);
-                                closeQuietly(copyOut);
-                                copyOut = null;
+                                closeQuietly(copy);
+                                copy = null;
                             }
                         }
                         total += n;
@@ -245,7 +236,7 @@ public class BaseHttpProxyService {
                         log.debug("已透传响应体：{} 字节", total);
                     }
                 } finally {
-                    closeQuietly(copyOut);
+                    closeQuietly(copy);
                 }
             } else if (log.isDebugEnabled()) {
                 log.debug("上游响应体为空");
@@ -258,20 +249,24 @@ public class BaseHttpProxyService {
         }
     }
 
-    private static void closeQuietly(InputStream in) {
+    protected static void closeQuietly(InputStream in) {
         if (in != null) {
             try {
                 in.close();
-            } catch (IOException ignored) {
+            } catch (IOException e) {
+                if (log.isDebugEnabled())
+                    log.error("关闭输入:{}", e.getMessage(), e);
             }
         }
     }
 
-    private static void closeQuietly(OutputStream out) {
+    protected static void closeQuietly(OutputStream out) {
         if (out != null) {
             try {
                 out.close();
-            } catch (IOException ignored) {
+            } catch (IOException e) {
+                if (log.isDebugEnabled())
+                    log.error("关闭输出:{}", e.getMessage(), e);
             }
         }
     }
@@ -279,7 +274,7 @@ public class BaseHttpProxyService {
     /**
      * 获取当前请求的 sessionId，用于保存请求/响应副本的文件名；无 session 时使用 UUID。
      */
-    private static String getSessionId(HttpServletRequest request) {
+    protected static String getSessionId(HttpServletRequest request) {
         try {
             return request.getSession(true).getId();
         } catch (IllegalStateException e) {
@@ -290,33 +285,42 @@ public class BaseHttpProxyService {
     /**
      * user.home/proxy 目录下按 sessionId 命名的副本文件名，suffix 为 "request" 或 "response"。
      */
-    private static Path resolveProxyPath(String sessionId, String suffix) {
+    protected Path getRequestCopyPath(String sessionId, String suffix) {
         String dir = System.getProperty("user.home");
         return Paths.get(dir, "proxy", sessionId + "." + suffix);
+    }
+
+    protected Path getResponseCopyPath(String sessionId, String suffix) {
+        return getRequestCopyPath(sessionId, suffix);
     }
 
     /**
      * 打开写入 proxy 目录的副本流；目录不存在会先创建。失败时返回 null，不影响主流程。
      */
-    private OutputStream openProxyCopyStream(Path filePath) {
+    protected OutputStream getRequestCopyStream(Path filePath) {
         if (filePath == null) return null;
         try {
             Files.createDirectories(filePath.getParent());
             return Files.newOutputStream(filePath);
         } catch (IOException e) {
-            log.debug("无法创建代理副本文件: {}", filePath, e);
+            if (log.isDebugEnabled())
+                log.debug("无法创建代理副本文件: {}", filePath, e);
             return null;
         }
+    }
+
+    protected OutputStream getResponseCopyStream(Path filePath) {
+        return getRequestCopyStream(filePath);
     }
 
     /**
      * 创建 HTTP 连接并发送请求体：将 bodyStream 流式写入上游，同时可选保存副本到 user.home/proxy/{sessionId}-request。
      *
-     * @param bodyStream    请求体输入流，可为 null（表示无 body）
-     * @param contentLength 请求头 Content-Length，-1 表示未知或 chunked
-     * @param sessionId     会话 ID，用于保存请求体副本文件名
+     * @param bodyStream 请求体输入流，可为 null（表示无 body）
+     * @param length     请求头 Content-Length，-1 表示未知或 chunked
+     * @param sessionId  会话 ID，用于保存请求体副本文件名
      */
-    private HttpURLConnection createConnection(String targetUrl, HttpServletRequest request, InputStream bodyStream, int contentLength, String sessionId) throws Exception {
+    protected HttpURLConnection connection(String targetUrl, HttpServletRequest request, InputStream bodyStream, int length, String sessionId) throws Exception {
         boolean hasBody = (bodyStream != null);
         URL url = new URL(targetUrl);
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -328,27 +332,31 @@ public class BaseHttpProxyService {
         connection.setInstanceFollowRedirects(false);
         copyRequestHeaders(request, connection);
         if (hasBody) {
-            OutputStream connOut = connection.getOutputStream();
-            OutputStream copyOut = openProxyCopyStream(resolveProxyPath(sessionId, "request"));
+            OutputStream out = connection.getOutputStream();
+            OutputStream copy = getRequestCopyStream(getRequestCopyPath(sessionId, "request"));
             byte[] buf = new byte[8192];
-            int n;
+            int n, total = 0;
             try {
                 while ((n = bodyStream.read(buf)) != -1) {
-                    connOut.write(buf, 0, n);
-                    if (copyOut != null) {
+                    total += n;
+                    out.write(buf, 0, n);
+                    if (copy != null) {
                         try {
-                            copyOut.write(buf, 0, n);
-                            copyOut.flush();
+                            copy.write(buf, 0, n);
+                            copy.flush();
                         } catch (IOException e) {
                             log.warn("保存请求副本失败，sessionId: {}", sessionId, e);
-                            closeQuietly(copyOut);
-                            copyOut = null;
+                            closeQuietly(copy);
+                            copy = null;
                         }
                     }
                 }
-                connOut.flush();
+                out.flush();
+                if (log.isDebugEnabled()) {
+                    log.debug("请求长度:{}, 实际长度:{}", length, total);
+                }
             } finally {
-                closeQuietly(copyOut);
+                closeQuietly(copy);
             }
         }
         return connection;
@@ -365,36 +373,33 @@ public class BaseHttpProxyService {
      * - X-Forwarded-For: 传递客户端真实 IP
      * - X-Real-IP: 传递客户端真实 IP
      */
-    private void copyRequestHeaders(HttpServletRequest request, HttpURLConnection connection) {
+    protected void copyRequestHeaders(HttpServletRequest request, HttpURLConnection connection) {
         String clientIp = getClientIp(request);
         String targetHost = extractHost(connection.getURL().getHost());
-
         // 复制所有请求头（完全透明）
         Enumeration<String> headerNames = request.getHeaderNames();
         while (headerNames.hasMoreElements()) {
             String headerName = headerNames.nextElement();
-
             // 跳过绝对不能转发的头
             if (shouldSkipHeader(headerName)) {
-                log.debug("跳过请求头：{}", headerName);
+                if (log.isDebugEnabled())
+                    log.debug("跳过请求头：{}", headerName);
                 continue;
             }
-
             // 特殊处理 Referer - 修改为目标服务器域名
             if ("Referer".equalsIgnoreCase(headerName)) {
                 String referer = request.getHeader(headerName);
                 // 将 Referer 中的代理服务器地址替换为目标服务器地址
                 String modifiedReferer = modifyReferer(referer, targetHost);
                 connection.setRequestProperty(headerName, modifiedReferer);
-                log.debug("修改 Referer: {} -> {}", referer, modifiedReferer);
+                if (log.isDebugEnabled())
+                    log.debug("修改 Referer: {} -> {}", referer, modifiedReferer);
                 continue;
             }
-
             // 跳过代理特定的头，由我们重新设置
             if (headerName.toLowerCase().startsWith("x-forwarded-") || headerName.toLowerCase().startsWith("x-real-ip")) {
                 continue;
             }
-
             String headerValue = request.getHeader(headerName);
             if (StringUtils.isNotBlank(headerValue)) {
                 // 完全透明地转发所有头
@@ -404,19 +409,18 @@ public class BaseHttpProxyService {
                 }
             }
         }
-
         // 添加客户端真实 IP 信息（标准代理头）
         connection.setRequestProperty("X-Forwarded-For", clientIp);
         connection.setRequestProperty("X-Real-IP", clientIp);
         connection.setRequestProperty("X-Forwarded-Proto", getProtocol(request));
-
-        log.debug("添加代理头 - X-Forwarded-For: {}, X-Real-IP: {}, X-Forwarded-Proto: {}", clientIp, clientIp, getProtocol(request));
+        if (log.isDebugEnabled())
+            log.debug("添加代理头 - X-Forwarded-For: {}, X-Real-IP: {}, X-Forwarded-Proto: {}", clientIp, clientIp, getProtocol(request));
     }
 
     /**
      * 获取客户端真实 IP
      */
-    private String getClientIp(HttpServletRequest request) {
+    protected String getClientIp(HttpServletRequest request) {
         // 按优先级检查各种 IP 头
         String ip = request.getHeader("X-Forwarded-For");
         if (StringUtils.isBlank(ip) || "unknown".equalsIgnoreCase(ip)) {
@@ -431,23 +435,20 @@ public class BaseHttpProxyService {
         if (StringUtils.isBlank(ip) || "unknown".equalsIgnoreCase(ip)) {
             ip = request.getRemoteAddr();
         }
-
         // 如果有多个 IP（逗号分隔），取第一个
         if (ip != null && ip.contains(",")) {
             ip = ip.split(",")[0].trim();
         }
-
         return ip;
     }
 
     /**
      * 修改 Referer，将代理服务器地址替换为目标服务器地址
      */
-    private String modifyReferer(String originalReferer, String targetHost) {
+    protected String modifyReferer(String originalReferer, String targetHost) {
         if (StringUtils.isBlank(originalReferer)) {
             return originalReferer;
         }
-
         try {
             URI uri = new URI(originalReferer);
             String scheme = uri.getScheme();
@@ -456,32 +457,23 @@ public class BaseHttpProxyService {
             int port = uri.getPort();
             String path = uri.getPath();
             String query = uri.getQuery();
-
             // 如果是相对路径，直接返回
             if (scheme == null) {
                 return originalReferer;
             }
-
             // 构建新的 Referer，使用目标服务器的主机
             StringBuilder newReferer = new StringBuilder();
             newReferer.append(scheme).append("://").append(targetHost);
-
-            if (port > 0 &&
-                    !((scheme.equals("http") && port == 80) ||
-                            (scheme.equals("https") && port == 443))) {
+            if (port > 0 && !((scheme.equals("http") && port == 80) || (scheme.equals("https") && port == 443))) {
                 newReferer.append(":").append(port);
             }
-
             if (StringUtils.isNotBlank(path)) {
                 newReferer.append(path);
             }
-
             if (StringUtils.isNotBlank(query)) {
                 newReferer.append("?").append(query);
             }
-
             return newReferer.toString();
-
         } catch (Exception e) {
             log.warn("修改 Referer 失败，使用原始值：{}", originalReferer, e);
             return originalReferer;
@@ -491,21 +483,19 @@ public class BaseHttpProxyService {
     /**
      * 获取协议（http 或 https）
      */
-    private String getProtocol(HttpServletRequest request) {
+    protected String getProtocol(HttpServletRequest request) {
         String scheme = request.getScheme();
         String forwardedProto = request.getHeader("X-Forwarded-Proto");
-
         if (StringUtils.isNotBlank(forwardedProto)) {
             return forwardedProto.toLowerCase();
         }
-
         return scheme.toLowerCase();
     }
 
     /**
      * 提取主机名
      */
-    private String extractHost(String host) {
+    protected String extractHost(String host) {
         return host != null ? host : "";
     }
 
@@ -517,7 +507,7 @@ public class BaseHttpProxyService {
      * - WWW-Authenticate（认证相关）
      * - 所有其他响应头
      */
-    private void copyResponseHeaders(HttpURLConnection connection, HttpServletResponse response) {
+    protected void copyResponseHeaders(HttpURLConnection connection, HttpServletResponse response) {
         // 复制所有响应头（完全透明）
         Map<String, List<String>> headers = connection.getHeaderFields();
         headers.forEach((name, values) -> {
@@ -526,7 +516,8 @@ public class BaseHttpProxyService {
             }
             for (String value : values) {
                 response.addHeader(name, value);
-                log.trace("转发响应头：{} = {}", name, value);
+                if (log.isTraceEnabled())
+                    log.trace("转发响应头：{} = {}", name, value);
             }
         });
         // 注意：不添加 CORS 头，让目标服务器的 CORS 设置完全透明传递
@@ -539,7 +530,7 @@ public class BaseHttpProxyService {
     /**
      * 是否跳过某个响应头
      */
-    private boolean shouldSkipResponseHeader(String headerName) {
+    protected boolean shouldSkipResponseHeader(String headerName) {
         if (headerName == null) {
             return true;
         }
@@ -557,16 +548,19 @@ public class BaseHttpProxyService {
     /**
      * 构建代理路径
      */
-    private String buildProxyPath(HttpServletRequest request) {
+    protected String buildProxyPath(String prefix, HttpServletRequest request) {
         String requestUri = request.getRequestURI();
         String contextPath = request.getContextPath();
         // 移除上下文路径
         if (StringUtils.isNotBlank(contextPath) && requestUri.startsWith(contextPath)) {
             requestUri = requestUri.substring(contextPath.length());
         }
+        if (StringUtils.isBlank(prefix)) {
+            prefix = DEFAULT;
+        }
         // 移除代理前缀
-        if (requestUri.startsWith(proxy)) {
-            requestUri = requestUri.substring(proxy.length());
+        if (requestUri.startsWith(prefix)) {
+            requestUri = requestUri.substring(prefix.length());
         }
         return requestUri;
     }
@@ -574,10 +568,10 @@ public class BaseHttpProxyService {
     /**
      * 确定目标 URL
      */
-    private String determineTargetUrl(String targetParam, HttpServletRequest request, String proxyPath) {
+    protected String determineTargetUrl(String base, String target, HttpServletRequest request, String proxyPath) {
         // 1. 优先使用参数中的目标 URL
-        if (StringUtils.isNotBlank(targetParam)) {
-            return targetParam;
+        if (StringUtils.isNotBlank(target)) {
+            return target;
         }
         // 2. 从 Header 获取目标 URL
         String targetHeader = request.getHeader("X-Target-URL");
@@ -589,6 +583,8 @@ public class BaseHttpProxyService {
         if (StringUtils.isNotBlank(baseHeader)) {
             return baseHeader + proxyPath;
         }
+        if (StringUtils.isBlank(base))
+            base = BASE;
         // 4. 使用默认 Base URL
         if (StringUtils.isNotBlank(base)) {
             return base + proxyPath;
@@ -615,7 +611,7 @@ public class BaseHttpProxyService {
      * - Origin（完全透明传递）
      * - 所有其他自定义头
      */
-    private boolean shouldSkipHeader(String headerName) {
+    protected boolean shouldSkipHeader(String headerName) {
         if (headerName == null) {
             return true;
         }
@@ -647,9 +643,7 @@ public class BaseHttpProxyService {
             return true;
         }
         // 跳过代理配置相关的头
-        if (lowerName.startsWith("x-target-") ||
-                lowerName.startsWith("x-base-") ||
-                lowerName.equals("target")) {
+        if (lowerName.startsWith("x-target-") || lowerName.startsWith("x-base-") || lowerName.equals("target")) {
             return true;
         }
         // 其他所有头都透明转发
@@ -660,7 +654,7 @@ public class BaseHttpProxyService {
     /**
      * 创建错误响应
      */
-    private Map<String, Object> createErrorResponse(HttpServletResponse response, String message, String type, int statusCode) {
+    protected Map<String, Object> createErrorResponse(HttpServletResponse response, String message, String type, int statusCode) {
         response.setStatus(statusCode);
         response.setContentType("application/json; charset=UTF-8");
         Map<String, Object> error = new LinkedHashMap<>();
@@ -677,10 +671,10 @@ public class BaseHttpProxyService {
      * 对于 OPTIONS 请求，先转发到目标服务器获取响应，
      * 然后完全透明地返回给客户端
      */
-    public Object handleOptions(String target, HttpServletRequest request, HttpServletResponse response) {
+    public Object options(String prefix, String base, String target, HttpServletRequest request, HttpServletResponse response) {
         // 构建目标 URL
-        String proxyPath = buildProxyPath(request);
-        String finalTargetUrl = determineTargetUrl(target, request, proxyPath);
+        String proxyPath = buildProxyPath(prefix, request);
+        String finalTargetUrl = determineTargetUrl(target, base, request, proxyPath);
         if (StringUtils.isBlank(finalTargetUrl)) {
             // 如果没有目标 URL，返回默认的 CORS 头
             response.setStatus(HttpServletResponse.SC_OK);
@@ -691,6 +685,6 @@ public class BaseHttpProxyService {
             return null;
         }
         // 转发 OPTIONS 请求到目标服务器
-        return proxyAllRequests(target, request, response);
+        return proxy(prefix, base, target, request, response);
     }
 }

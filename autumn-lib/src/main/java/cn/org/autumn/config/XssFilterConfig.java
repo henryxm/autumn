@@ -20,7 +20,7 @@ public class XssFilterConfig implements WebMvcConfigurer {
         registry.addInterceptor(new XssFilterInterceptor())
                 .addPathPatterns("/**")
                 .excludePathPatterns(
-                        BaseHttpProxyService.proxy + "/**",
+                        BaseHttpProxyService.DEFAULT + "/**",
                         "/static/**",
                         "/statics/**",
                         "/js/**",
