@@ -1,10 +1,10 @@
 package cn.org.autumn.config;
 
 import cn.org.autumn.bean.MultiRequestBodyArgumentResolver;
+import cn.org.autumn.bean.QuotStringHttpMessageConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.converter.HttpMessageConverter;
-import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -22,12 +22,14 @@ public class MultiRequestBodyConfig implements WebMvcConfigurer {
 
     @Bean
     public HttpMessageConverter<String> responseBodyConverter() {
-        // 解决中文乱码问题
-        return new StringHttpMessageConverter(StandardCharsets.UTF_8);
+        // 使用 QuotStringHttpMessageConverter：读取 @RequestBody String 时去掉首尾双引号/单引号，
+        // 避免客户端发送 JSON 字符串（如 "hello"）时收到带引号的值，兼容升级后行为
+        return new QuotStringHttpMessageConverter(StandardCharsets.UTF_8);
     }
 
     @Override
     public void configureMessageConverters(List<HttpMessageConverter<?>> converters) {
-        converters.add(responseBodyConverter());
+        // 插入到最前，使 @RequestBody String 优先使用本 converter，统一去掉首尾引号
+        converters.add(0, responseBodyConverter());
     }
 }
