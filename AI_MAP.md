@@ -241,6 +241,56 @@ public class DemoService extends ModuleService<DemoDao, DemoEntity> implements L
   - 新项目接入时，不要要求把模板复制到主工程；应在本项目内提供 `TemplateFactory.Template` 实现并随 jar 发布。
   - 非必要不要继续扩展 `LoaderFactory.Loader`，新代码统一走 `TemplateFactory.Template`。
 
+### 2.10 实体建表注解（`@Table` / `@Column` / `@Index` / `@Indexes`）
+
+> 包名：`cn.org.autumn.table.annotation.*`；收集与 SQL 拼装入口：`TableInfo`、`QuerySql`、`IndexInfo`。
+
+#### 2.10.1 注解职责速览
+
+- **`@Table`（类）**：表名、前缀、模块、注释、存储引擎、字符集等；与 MyBatis-Plus `@TableName` 等共同参与表名推导（见 `TableInfo.getTableName`）。
+- **`@Column`（字段）**：列名、类型、长度、是否可空、主键/自增、默认值、注释；**`isUnique = true`** 时在建表 SQL 中会额外生成该列的 `UNIQUE KEY`（见 `QuerySql.createTable` 中对 `columnInfo.isUnique()` 的处理）。
+- **`@Index`（类 / 字段 / 方法 / 注解类型）**：声明二级索引或唯一索引、全文/空间索引等；属性包括 `name`、`fields`（`@IndexField` 数组）、`indexType`（`IndexTypeEnum`）、`indexMethod`（`IndexMethodEnum`）、`comment`。
+- **`@Indexes`（类）**：打包多个 `@Index`，用于组合索引或一次声明多组索引。
+- **`@IndexField`**：`field` 为 Java 属性名（框架内会转为下划线列名），`length` 为索引前缀长度；**`length = 0` 表示不对列加前缀长度**（整列参与索引）。
+
+#### 2.10.2 框架如何收集索引（避免重复声明）
+
+`TableInfo.initFrom(Class)` 会合并以下来源的索引定义，全部进入 `indexInfos`，最终由 `buildIndexSql()` 拼进建表语句：
+
+- 类上的单个 `@Index`、以及 `@Indexes` 里的每一个 `@Index`；
+- 字段上的 `@Index`（通过 `new IndexInfo(k, field)` 解析）。
+
+同时，`@Column(isUnique = true)` 会把对应列记入 **`indexColumn`**（`IndexInfo` 视为唯一索引形态），在 **`getIndexInfosCombine()`** 中还会与 `indexInfos` 合并，供迁移阶段比对索引差异（`MysqlTableService.buildModifyIndex`）。
+
+因此：
+
+1. **`@Column(isUnique = true)` 与字段 `@Index` 不要叠在同一列**  
+   建表时：`isUnique` 已在列定义处生成 `UNIQUE KEY`；若再对该字段加 `@Index`（尤其是 `indexType = UNIQUE` 或普通 INDEX），会产生**重复约束/重复二级索引**，增加存储与维护成本，且让索引比对更难读。
+
+2. **字段上已有 `@Index` 时，不要在类级 `@Indexes` / 类级 `@Index` 里再包含同一列的等价索引**  
+   否则同一列会被注册两次，建表或变更时可能生成两条含义重叠的 `INDEX`，属于重复声明。
+
+3. **与 `@UniqueKey` / `@UniqueKeys` 的边界**  
+   多列唯一约束应优先用 `@UniqueKey(s)`；若已与 `@Column(isUnique)` 或 `@Index` 表达同一约束，不要再用另一套注解重复描述。
+
+#### 2.10.3 字段级 `@Index` 与列类型（前缀长度陷阱）
+
+**说明**：MySQL 对数值、日期时间、`DECIMAL` 等类型**支持** B-tree 索引；容易出问题的是本框架生成 DDL 的方式，而不是“非字符串不能建索引”。
+
+字段上标注 `@Index` 且**未**使用 `fields = { ... }` 时，`IndexInfo(Index, Field)` 会用 **`@Column.length()`**（默认 **255**）作为该列在索引中的**前缀长度**写入 `buildIndexSql()`：当长度大于 0 时会生成 `` `column_name`(n) `` 形式。该形式适用于 **CHAR / VARCHAR / TEXT** 等字符串类列；对 **INT、BIGINT、BOOLEAN、FLOAT、DATE/DATETIME、`BigDecimal` 映射的 DECIMAL** 等，在默认 `length = 255` 下会得到**非法或不符合预期**的建表/加索引语句。
+
+**给 AI / 开发者的硬约束**：
+
+- 字段级 `@Index`（无自定义 `fields`）**仅用于** `String`，以及落库为字符串类型、且 `@Column.length` 与实际索引前缀语义一致的枚举（或其它字符串映射字段）。
+- **不要**在 `int`/`long`/`boolean`/`BigDecimal`/`Date` 等字段上直接使用字段级 `@Index`（除非你能保证不会带入错误的非零前缀长度；默认注解做不到）。
+- 若确需对上述类型建普通/唯一索引，使用**类级** `@Index` 或 `@Indexes`，并在 `@IndexField` 上显式设置 **`length = 0`**，避免生成前缀索引片段。
+
+#### 2.10.4 `IndexTypeEnum` / `IndexMethodEnum` 提示
+
+- **`FULLTEXT`**：仅适用于 MySQL 全文索引支持的字符型列；不要对数值/日期列使用。
+- **`SPATIAL`**：空间索引需列类型与 MySQL 空间类型语义一致（本框架不替你校验业务是否匹配）。
+- **`HASH`**：与存储引擎及 MySQL 版本能力相关；默认 **`BTREE`** 为最常见选择。
+
 ## 3. 模块能力总览（业务域）
 
 - `sys`：用户/角色/菜单/部门/配置/日志/系统运维能力。
@@ -366,6 +416,10 @@ public class DemoService extends ModuleService<DemoDao, DemoEntity> implements L
 - 分层反模式：
   - 把业务逻辑堆在 `controller/gen/*` 可重生层，导致再次生成被覆盖。
   - 新建与 `ModuleService` 平行的基础服务层，重复平台能力。
+- 建表注解反模式：
+  - `Column(isUnique = true)` 与同一列的 `@Index` / `@Indexes` 重复声明。
+  - 字段 `@Index` 与类级 `@Indexes` 对同一列重复声明。
+  - 在数值/日期等列上使用字段级 `@Index`，依赖默认 `@Column.length`，触发非法 `` `col`(255) `` 类索引 DDL（见 2.10.3）。
 
 ## 8. 一页式速查卡（Cheat Sheet）
 
