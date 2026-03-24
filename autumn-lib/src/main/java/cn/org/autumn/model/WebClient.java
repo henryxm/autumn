@@ -13,7 +13,6 @@ import lombok.Setter;
 @Schema(name = "浏览器客户端")
 public class WebClient extends Client {
     private String userAgent;
-    private String platform;
     private String language;
     private String appVersion;
     private String vendor;
