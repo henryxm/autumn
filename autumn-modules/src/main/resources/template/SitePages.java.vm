@@ -1,0 +1,34 @@
+package ${package}.${moduleName}.site;
+
+import cn.org.autumn.annotation.PageAware;
+import cn.org.autumn.site.SiteFactory;
+import cn.org.autumn.site.TemplateFactory;
+
+/**
+ * 由代码生成器生成，请勿手动编辑。自定义页面请在 ${upperModuleName}Site 中扩展。
+ */
+public abstract class ${upperModuleName}Pages implements SiteFactory.Site, TemplateFactory.Template {
+    public final static String siteId = "${moduleName}";
+    public final static String pack = "${moduleName}";
+
+#foreach ($table in $tables)
+    @PageAware(login = true)
+    public String ${table.filename} = "modules/${moduleName}/${table.filename}";
+
+#end
+#foreach ($table in $tables)
+    public String get${table.className}Key() {
+        return getKey("${table.filename}");
+    }
+
+#end
+    @Override
+    public String getId() {
+        return siteId;
+    }
+
+    @Override
+    public String getPack() {
+        return pack;
+    }
+}

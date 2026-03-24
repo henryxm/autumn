@@ -91,43 +91,44 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
         if (null == sites)
             return;
         for (SiteFactory.Site site : sites) {
+            for (Class<?> clazz = site.getClass(); clazz != null && clazz != Object.class; clazz = clazz.getSuperclass()) {
+                Field[] fields = clazz.getDeclaredFields();
+                for (Field field : fields) {
+                    PageAware aware = field.getAnnotation(PageAware.class);
+                    if (null == aware)
+                        continue;
+                    String siteId = site.getId();
+                    String page = field.getName();
 
-            Field[] fields = site.getClass().getDeclaredFields();
-            for (Field field : fields) {
-                PageAware aware = field.getAnnotation(PageAware.class);
-                if (null == aware)
-                    continue;
-                String siteId = site.getId();
-                String page = field.getName();
+                    if (StringUtils.isNotEmpty(aware.page()) && !"NULL".equalsIgnoreCase(aware.page()) && !"0".equalsIgnoreCase(aware.page()))
+                        page = aware.page();
 
-                if (StringUtils.isNotEmpty(aware.page()) && !"NULL".equalsIgnoreCase(aware.page()) && !"0".equalsIgnoreCase(aware.page()))
-                    page = aware.page();
+                    String channel = aware.channel();
+                    String product = aware.product();
 
-                String channel = aware.channel();
-                String product = aware.product();
-
-                String resource = page;
-                if (StringUtils.isNotEmpty(aware.resource()))
-                    resource = aware.resource();
-                String url = resource;
-                if (StringUtils.isNotEmpty(aware.url()))
-                    url = aware.url();
-                if (StringUtils.isEmpty(resource) || page.equals(resource)) {
-                    try {
-                        field.setAccessible(true);
-                        Object v = field.get(site);
-                        if (v instanceof String) {
-                            String value = (String) v;
-                            if (StringUtils.isNotEmpty(value))
-                                resource = value;
+                    String resource = page;
+                    if (StringUtils.isNotEmpty(aware.resource()))
+                        resource = aware.resource();
+                    String url = resource;
+                    if (StringUtils.isNotEmpty(aware.url()))
+                        url = aware.url();
+                    if (StringUtils.isEmpty(resource) || page.equals(resource)) {
+                        try {
+                            field.setAccessible(true);
+                            Object v = field.get(site);
+                            if (v instanceof String) {
+                                String value = (String) v;
+                                if (StringUtils.isNotEmpty(value))
+                                    resource = value;
+                            }
+                        } catch (Exception e) {
+                            log.error("Error:{}", e.getMessage());
                         }
-                    } catch (Exception e) {
-                        log.error("Error:{}", e.getMessage());
                     }
+                    boolean login = aware.login();
+                    String key = site.getKey(field.getName());
+                    put(siteId, page, channel, product, resource, url, key, login);
                 }
-                boolean login = aware.login();
-                String key = site.getKey(field.getName());
-                put(siteId, page, channel, product, resource, url, key, login);
             }
         }
     }

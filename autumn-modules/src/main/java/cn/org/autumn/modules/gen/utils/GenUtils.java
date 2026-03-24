@@ -38,6 +38,7 @@ public class GenUtils {
 
     public static List<String> getSiteTemplates() {
         List<String> templates = new ArrayList<String>();
+        templates.add("template/SitePages.java.vm");
         templates.add("template/Site.java.vm");
         templates.add("template/Menu.java.vm");
         return templates;
@@ -130,6 +131,10 @@ public class GenUtils {
 
         if (template.contains("Menu.java.vm")) {
             return packagePath + "site" + File.separator + HumpConvert.toFirstStringUpper(moduleName) + "Menu.java";
+        }
+
+        if (template.contains("SitePages.java.vm")) {
+            return packagePath + "site" + File.separator + HumpConvert.toFirstStringUpper(moduleName) + "Pages.java";
         }
 
         if (template.contains("Site.java.vm")) {
