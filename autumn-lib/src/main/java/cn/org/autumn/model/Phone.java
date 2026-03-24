@@ -6,14 +6,12 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.io.Serializable;
-
 @JsonMap
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class Phone extends DefaultEncrypt implements Serializable {
+public class Phone extends Platform {
     private static final long serialVersionUID = 1L;
 
     private String deviceName = "";
