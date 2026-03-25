@@ -46,6 +46,10 @@ public class GeneratorService implements InitFactory.Init {
 
     private GenTypeWrapper wrapper;
 
+    static {
+        initVelocity();
+    }
+
     public PageUtils queryPage(Map<String, Object> params) {
         Page<TableMeta> page = new Page<>();
         Query query = new Query(params);
@@ -175,10 +179,9 @@ public class GeneratorService implements InitFactory.Init {
                 {"重置表", null, "gen:generator:reset", "2", null, order(), SysMenuService.getMenuKey("Gen", "ResetTable"), keyMenu, "sys_string_reset_table"},
         };
         sysMenuService.put(menus);
-        initVelocity();
     }
 
-    public void initVelocity() {
+    public static void initVelocity() {
         Properties prop = new Properties();
         prop.setProperty(Velocity.RESOURCE_LOADERS, "class");
         prop.setProperty("resource.loader.class.class", "org.apache.velocity.runtime.resource.loader.ClasspathResourceLoader");
