@@ -6,7 +6,7 @@
 
 ### 1.1 特性
 
-- **透明转发**：请求体、响应体均以流式读写，不预读、不按类型区分，避免大 body 截断或内存溢出。
+- **透明转发**：请求体、响应体默认以流式读写；**例外**见下文「OpenAI 流式对话与 `stream_options`」。
 - **全方法支持**：GET、POST、PUT、DELETE、PATCH、HEAD、OPTIONS、TRACE。
 - **流式友好**：支持 SSE、长轮询等长时间流式响应；客户端中途断开时不会误报为服务端错误。
 - **请求头透传**：Cookie、Authorization、Content-Type 等按需转发，并自动附加 X-Forwarded-For、X-Real-IP、X-Forwarded-Proto。
@@ -77,8 +77,21 @@ Authorization: Bearer sk-xxx
 
 ### 3.1 请求体与响应体处理
 
-- **请求体**：有 body 时仅取 `request.getInputStream()`，按块（如 8KB）写入上游 `HttpURLConnection.getOutputStream()`，不预读整包、不设固定 Content-Length，避免“实际发送少于声明”导致的 `insufficient data written`。
+- **请求体**：有 body 时一般从 `request.getInputStream()` 按块写入上游；**OpenAI 兼容流式对话**见下节。
 - **响应体**：上游 `InputStream` 按块读到下游 `HttpServletResponse.getOutputStream()`，流式透传；不区分 SSE/JSON/二进制，统一按字节流处理。
+
+### 3.1.1 OpenAI 流式对话与 `stream_options`（`BaseHttpProxyService`）
+
+为与 [OpenAI Chat Completions](https://platform.openai.com/docs/api-reference/chat/create) 流式语义一致，并便于上游（如 Ollama `/v1/chat/completions`）在 SSE 末尾返回 `usage`：
+
+- **条件**：`POST`、代理路径以 **`/chat/completions`** 结尾、`Content-Type` 含 **`application/json`**。
+- **行为**：将请求体**缓冲**（上限 **16MB**，超限返回错误），解析 JSON；若 `"stream": true` 且
+  - 无 `stream_options` 字段 → 增加 `"stream_options": { "include_usage": true }`；
+  - 已有 `stream_options` 对象但**没有** `include_usage` 键 → 补充 `"include_usage": true`；
+  - 已显式包含 `include_usage`（含 `false`）→ **不修改**，尊重客户端。
+- **非流式**（`stream` 为 false 或缺省）或其它路径：**不缓冲**，行为与原先一致。
+
+客户端若未传 `stream_options`，代理会自动补齐，便于在流式响应最后一个 chunk 中解析 token 用量。
 
 ### 3.2 客户端断开
 
