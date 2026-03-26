@@ -1,5 +1,7 @@
 package cn.org.autumn.service;
 
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -13,6 +15,7 @@ import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -48,6 +51,11 @@ public class BaseHttpProxyService {
     @Setter
     private static String BASE = "";
 
+    /**
+     * OpenAI 兼容流式对话请求补齐 {@code stream_options} 时，允许缓冲的最大 body 字节数（防 OOM）。
+     */
+    private static final int OPENAI_CHAT_BODY_MAX_BYTES = 16 * 1024 * 1024;
+
     public Object proxy(String prefix, String base, String target, HttpServletRequest request, HttpServletResponse response) {
         // 构建完整的代理路径
         String proxyPath = buildProxyPath(prefix, request);
@@ -57,6 +65,13 @@ public class BaseHttpProxyService {
         if (hasBody) {
             try {
                 bodyStream = request.getInputStream();
+                if (shouldBufferForOpenAiStreamOptions(request, proxyPath)) {
+                    byte[] raw = readAllBytesCapped(bodyStream, OPENAI_CHAT_BODY_MAX_BYTES);
+                    closeQuietly(bodyStream);
+                    byte[] patched = injectOpenAiStreamOptionsIfNeeded(raw);
+                    bodyStream = new ByteArrayInputStream(patched);
+                    contentLength = patched.length;
+                }
             } catch (IOException e) {
                 if (log.isDebugEnabled())
                     log.debug("读取失败:{}", e.getMessage(), e);
@@ -136,6 +151,82 @@ public class BaseHttpProxyService {
             }
         }
         return false;
+    }
+
+    /**
+     * 是否缓冲 body 以便注入 OpenAI 兼容的 {@code stream_options}（POST + chat/completions + JSON）。
+     */
+    protected boolean shouldBufferForOpenAiStreamOptions(HttpServletRequest request, String proxyPath) {
+        if (!"POST".equalsIgnoreCase(request.getMethod())) {
+            return false;
+        }
+        if (StringUtils.isBlank(proxyPath) || !proxyPath.endsWith("/chat/completions")) {
+            return false;
+        }
+        String ct = request.getContentType();
+        return ct != null && ct.toLowerCase(Locale.ROOT).contains("application/json");
+    }
+
+    /**
+     * 读取输入流直到 EOF，超过 maxBytes 则抛出 {@link IOException}。
+     */
+    protected static byte[] readAllBytesCapped(InputStream in, int maxBytes) throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        byte[] buf = new byte[8192];
+        int n;
+        while ((n = in.read(buf)) != -1) {
+            if (baos.size() + n > maxBytes) {
+                throw new IOException("request body exceeds max bytes: " + maxBytes);
+            }
+            baos.write(buf, 0, n);
+        }
+        return baos.toByteArray();
+    }
+
+    /**
+     * 对流式 {@code /chat/completions} 请求补齐 {@code stream_options}（与 OpenAI 一致）：
+     * 无 {@code stream_options} 时增加 {@code include_usage:true}；已有对象但缺少 {@code include_usage} 时补上 {@code true}。
+     * 非 JSON、非流式、解析失败时原样返回。
+     */
+    protected byte[] injectOpenAiStreamOptionsIfNeeded(byte[] body) {
+        if (body == null || body.length == 0) {
+            return body;
+        }
+        try {
+            JSONObject root = JSON.parseObject(new String(body, StandardCharsets.UTF_8));
+            if (root == null || root.isEmpty()) {
+                return body;
+            }
+            if (!root.getBooleanValue("stream")) {
+                return body;
+            }
+            Object so = root.get("stream_options");
+            if (so == null) {
+                JSONObject opts = new JSONObject();
+                opts.put("include_usage", true);
+                root.put("stream_options", opts);
+                if (log.isDebugEnabled()) {
+                    log.debug("已注入 stream_options.include_usage=true（原请求无 stream_options）");
+                }
+                return JSON.toJSONString(root).getBytes(StandardCharsets.UTF_8);
+            }
+            if (so instanceof JSONObject) {
+                JSONObject opts = (JSONObject) so;
+                if (!opts.containsKey("include_usage")) {
+                    opts.put("include_usage", true);
+                    if (log.isDebugEnabled()) {
+                        log.debug("已注入 stream_options.include_usage=true（原 stream_options 未包含 include_usage）");
+                    }
+                    return JSON.toJSONString(root).getBytes(StandardCharsets.UTF_8);
+                }
+            }
+            return body;
+        } catch (Exception e) {
+            if (log.isDebugEnabled()) {
+                log.debug("跳过 stream_options 注入（非 JSON 或解析失败）: {}", e.getMessage());
+            }
+            return body;
+        }
     }
 
     /**
