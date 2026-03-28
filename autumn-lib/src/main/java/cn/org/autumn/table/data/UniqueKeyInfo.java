@@ -40,6 +40,13 @@ public class UniqueKeyInfo {
         }
     }
 
+    /**
+     * 按实体字段与 {@link cn.org.autumn.table.annotation.Column} 收敛前缀长度，避免非字符串列误带 {@code col(n)}。
+     */
+    public void applyPrefixLengthPolicy(Class<?> entityClass) {
+        IndexPrefixRules.applyPrefixLengthPolicy(fields, entityClass);
+    }
+
     public String getName() {
         return name;
     }

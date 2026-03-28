@@ -30,8 +30,11 @@ public @interface Column{
 	public String type() default DataType.VARCHAR;
 
 	/**
-	 * 字段长度，默认是255
-	 * 
+	 * 字段长度，默认 255（表示「未显式指定」时常用占位）。
+	 * <p>对基本类型 / 包装类型字段，建表时由 {@link cn.org.autumn.table.data.ColumnLengthCorrection}
+	 * 与 {@link cn.org.autumn.table.data.ColumnInfo} 按 MySQL 规范自动收敛（如 int→11、bigint→20），
+	 * 可不写本属性；若写了超出合理范围的值也会被校正。
+	 *
 	 * @return 字段长度，默认是255
 	 */
 	public int length() default 255;

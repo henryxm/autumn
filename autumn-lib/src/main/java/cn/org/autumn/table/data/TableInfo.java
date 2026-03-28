@@ -168,6 +168,12 @@ public class TableInfo {
                 indexColumn.add(new IndexInfo(column, field));
             }
         }
+        for (IndexInfo ii : indexInfos) {
+            ii.applyPrefixLengthPolicy(clazz);
+        }
+        for (UniqueKeyInfo uk : uniqueKeyInfos) {
+            uk.applyPrefixLengthPolicy(clazz);
+        }
         this.name = name;
         this.charset = table.charset();
         this.comment = table.comment();

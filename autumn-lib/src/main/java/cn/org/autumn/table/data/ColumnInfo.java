@@ -216,47 +216,48 @@ public class ColumnInfo {
         this.name = columnName;
         this.type = column.type().toLowerCase();
         this.length = column.length();
-        if (boolean.class.equals(field.getType()) || Boolean.class.equals(field.getType())) {
+        this.decimalLength = column.decimalLength();
+
+        Class<?> ft = field.getType();
+        if (boolean.class.equals(ft) || Boolean.class.equals(ft)) {
             this.type = DataType.TINYINT;
             this.length = 1;
-        }
-        if (Date.class.equals(field.getType()) || java.sql.Date.class.equals(field.getType())) {
+        } else if (Date.class.equals(ft) || java.sql.Date.class.equals(ft)) {
             this.type = DataType.DATETIME;
-        }
-        if (Long.class.equals(field.getType())) {
-            if (column.length() == 255)
-                this.length = 20;
+        } else if (long.class.equals(ft) || Long.class.equals(ft)) {
             this.type = DataType.BIGINT;
-        }
-        if (int.class.equals(field.getType()) || Integer.class.equals(field.getType())) {
-            if (column.length() == 255)
-                this.length = 11;
+            this.length = ColumnLengthCorrection.normalizeBigInt(column.length());
+        } else if (int.class.equals(ft) || Integer.class.equals(ft)) {
             this.type = DataType.INT;
-        }
-        this.decimalLength = column.decimalLength();
-        if (float.class.equals(field.getType()) || Float.class.equals(field.getType())) {
-            if (column.length() == 255)
-                this.length = 11;
+            this.length = ColumnLengthCorrection.normalizeInt(column.length());
+        } else if (short.class.equals(ft) || Short.class.equals(ft)) {
+            this.type = DataType.SMALLINT;
+            this.length = ColumnLengthCorrection.normalizeSmallInt(column.length());
+        } else if (byte.class.equals(ft) || Byte.class.equals(ft)) {
+            this.type = DataType.TINYINT;
+            this.length = ColumnLengthCorrection.normalizeTinyInt(column.length());
+        } else if (float.class.equals(ft) || Float.class.equals(ft)) {
             this.type = DataType.FLOAT;
-            if (decimalLength < 0 || decimalLength > 8)
-                decimalLength = 2;
-        }
-        if (double.class.equals(field.getType()) || Double.class.equals(field.getType())) {
-            if (column.length() == 255)
-                this.length = 11;
+            this.length = ColumnLengthCorrection.normalizeFloat(column.length());
+            if (this.decimalLength < 0 || this.decimalLength > 8) {
+                this.decimalLength = 2;
+            }
+        } else if (double.class.equals(ft) || Double.class.equals(ft)) {
             this.type = DataType.DOUBLE;
-            if (decimalLength < 0 || decimalLength > 15)
-                decimalLength = 2;
-        }
-        if (BigDecimal.class.equals(field.getType())) {
-            if (column.length() == 255)
-                this.length = 20;
+            this.length = ColumnLengthCorrection.normalizeDouble(column.length());
+            if (this.decimalLength < 0 || this.decimalLength > 15) {
+                this.decimalLength = 2;
+            }
+        } else if (BigDecimal.class.equals(ft)) {
             this.type = DataType.DECIMAL;
-            if (decimalLength < 0 || decimalLength > 28)
-                decimalLength = 2;
+            if (this.decimalLength < 0 || this.decimalLength > 28) {
+                this.decimalLength = 2;
+            }
+            this.length = ColumnLengthCorrection.normalizeDecimalM(column.length(), this.decimalLength);
         }
-        if (decimalLength < 0)
+        if (this.decimalLength < 0) {
             this.decimalLength = 0;
+        }
         // 主键或唯一键时设置必须不为null
         if (column.isKey() || column.isUnique())
             this.isNull = false;

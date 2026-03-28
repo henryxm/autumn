@@ -108,12 +108,9 @@ public class IndexInfo {
         this.name = index.name();
         if (name.isEmpty() && null != field) {
             name = HumpConvert.HumpToUnderline(field.getName());
-            int length = 0;
             Column column = field.getAnnotation(Column.class);
-            if (null != column) {
-                length = column.length();
-            }
-            fields.put(name, length);
+            int rawLen = column != null ? column.length() : 0;
+            fields.put(name, IndexPrefixRules.effectivePrefixLength(field, column, rawLen));
         }
         this.indexMethod = index.indexMethod().toString();
         this.indexType = index.indexType().toString();
@@ -126,13 +123,20 @@ public class IndexInfo {
         }
     }
 
-    public IndexInfo(Column index, Field field) {
+    public IndexInfo(Column columnAnn, Field field) {
         fields = new HashMap<>();
         this.indexMethod = "BTREE";
         this.indexType = "UNIQUE";
-        this.comment = index.comment();
+        this.comment = columnAnn.comment();
         this.name = HumpConvert.HumpToUnderline(field.getName());
-        fields.put(name, index.length());
+        fields.put(name, IndexPrefixRules.effectivePrefixLength(field, columnAnn, columnAnn.length()));
+    }
+
+    /**
+     * 类级 {@link Index}（无字段上下文）中显式的 {@link cn.org.autumn.table.annotation.IndexField#length()} 可能误用于数值列，此处按实体字段类型与 {@link Column#type()} 收敛。
+     */
+    public void applyPrefixLengthPolicy(Class<?> entityClass) {
+        IndexPrefixRules.applyPrefixLengthPolicy(fields, entityClass);
     }
 
     public String getName() {
