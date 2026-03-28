@@ -31,7 +31,9 @@ public @interface Table {
     String prefix() default "";
 
     /**
-     * 表注释
+     * 表注释（会写入库表 COMMENT 与生成实体等）。
+     * <p>与 {@link Column#comment()} 相同：若含英文冒号 {@code :}，{@code BaseService#getLanguageItemsInternal()} /
+     * {@code getMenuItemsInternal()} 等对<strong>第一个冒号之前</strong>作为菜单/多语言展示短标题，之后为详述。
      */
     String comment() default "";
 

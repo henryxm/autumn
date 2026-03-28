@@ -248,7 +248,7 @@ public class DemoService extends ModuleService<DemoDao, DemoEntity> implements L
 #### 2.10.1 注解职责速览
 
 - **`@Table`（类）**：表名、前缀、模块、注释、存储引擎、字符集等；与 MyBatis-Plus `@TableName` 等共同参与表名推导（见 `TableInfo.getTableName`）。
-- **`@Column`（字段）**：列名、类型、长度、是否可空、主键/自增、默认值、注释；**`isUnique = true`** 时在建表 SQL 中会额外生成该列的 `UNIQUE KEY`（见 `QuerySql.createTable` 中对 `columnInfo.isUnique()` 的处理）。
+- **`@Column`（字段）**：列名、类型、长度、是否可空、主键/自增、默认值、**`comment`（建议「短标题：详述」格式，见 2.10.5）**；**`isUnique = true`** 时在建表 SQL 中会额外生成该列的 `UNIQUE KEY`（见 `QuerySql.createTable` 中对 `columnInfo.isUnique()` 的处理）。
 - **`@Index`（类 / 字段 / 方法 / 注解类型）**：声明二级索引或唯一索引、全文/空间索引等；属性包括 `name`、`fields`（`@IndexField` 数组）、`indexType`（`IndexTypeEnum`）、`indexMethod`（`IndexMethodEnum`）、`comment`。
 - **`@Indexes`（类）**：打包多个 `@Index`，用于组合索引或一次声明多组索引。
 - **`@IndexField`**：`field` 为 Java 属性名（框架内会转为下划线列名），`length` 为索引前缀长度；**`length = 0` 表示不对列加前缀长度**（整列参与索引）。
@@ -290,6 +290,21 @@ public class DemoService extends ModuleService<DemoDao, DemoEntity> implements L
 - **`FULLTEXT`**：仅适用于 MySQL 全文索引支持的字符型列；不要对数值/日期列使用。
 - **`SPATIAL`**：空间索引需列类型与 MySQL 空间类型语义一致（本框架不替你校验业务是否匹配）。
 - **`HASH`**：与存储引擎及 MySQL 版本能力相关；默认 **`BTREE`** 为最常见选择。
+
+#### 2.10.5 `@Column.comment` / `@Table.comment` 与「短标题：详述」约定（多语言 / 生成列表表头）
+
+**代码依据**：`BaseService.getLanguageItemsInternal()`、`BaseService.getMenuItemsInternal()`（`autumn-lib`）。
+
+- 当 `comment` **含有英文冒号 `:`** 时，框架在注册多语言条目、菜单展示名时，只取 **第一个 `:` 之前** 的片段作为**短标题**（用于列表/表单列头、菜单名等生成链路中的「展示用名称」）；**冒号之后**的整段视为**详述**（说明字段含义、业务规则、注意事项等），**不会**作为上述短标题展示。
+- **`@Table(comment = "...")`** 与 **`@Column(comment = "...")`** 使用**同一套规则**（表级、字段级均按 `:` 分割）。
+
+**给 AI / 开发者的写法约定（建议）**：
+
+- **短标题**：放在 **`:` 之前**，一般用 **1～4 个汉字**（或同等长度的简短词组），保证列表/表头不换行、不溢出。
+- **详述**：放在 **`:` 之后**，用完整句子说明字段用途、取值含义、与其它字段关系等。
+- **示例**：`状态：0=禁用 1=启用，同步上游审核结果`、`邮箱：用于登录与找回密码，唯一`。
+
+**注意**：完整字符串仍会进入实体上的 `@Column(comment = "...")` / 表注释（如 `ColumnInfo.buildAnnotation`、库表 COMMENT），详述不会丢失；仅**自动多语言初始化、菜单名等**使用冒号前段，避免把长说明塞进「表头」位。
 
 ## 3. 模块能力总览（业务域）
 
@@ -420,6 +435,7 @@ public class DemoService extends ModuleService<DemoDao, DemoEntity> implements L
   - `Column(isUnique = true)` 与同一列的 `@Index` / `@Indexes` 重复声明。
   - 字段 `@Index` 与类级 `@Indexes` 对同一列重复声明。
   - 在数值/日期等列上使用字段级 `@Index`，依赖默认 `@Column.length`，触发非法 `` `col`(255) `` 类索引 DDL（见 2.10.3）。
+  - `@Column.comment` / `@Table.comment` 写成整段长说明却**无冒号**，或**冒号前**写成整句长标题，导致多语言/列表表头位展示过长或难以对齐（见 2.10.5）。
 
 ## 8. 一页式速查卡（Cheat Sheet）
 

@@ -39,6 +39,7 @@
 - `@EnvAware`（配置注入）
   - 在配置 Bean 字段上声明配置键（如 `site.domain`、`node.tag`）。
 - `@Table` / `@Column` / `@Index` / `@Indexes` / `@IndexField`（注解驱动建表，见 `AI_MAP.md` 2.10 节）
+  - `@Table.comment` / `@Column.comment`：`BaseService` 多语言初始化在注释含 **`:`** 时**只取冒号前**作为列表/菜单等处的**短标题**；冒号后为详述。建议 **`短标题（约 1～4 字）：详细说明`**，避免表头被长文案撑满（详见 `AI_MAP.md` 2.10.5）。
   - `@Column(isUnique = true)`：已在 DDL 中为该列生成唯一约束；**禁止**再在同一字段上叠 `@Index`，也避免用 `@Indexes` 再声明同一单列唯一/普通索引，以免重复索引与迁移对比噪音。
   - 字段上已用 `@Index` 的列：**不要**在类级 `@Indexes`（或类级 `@Index` 的 `fields`）里再声明同列的同用途索引，避免 `TableInfo` 收集到重复 `IndexInfo`、建表/变更阶段生成重复索引。
   - 字段级 `@Index`（无 `fields` 时）会把 `@Column.length`（默认 `255`）当作索引**前缀长度**写入 SQL；前缀语法仅适用于字符串类列。除 `String`、以及落库为字符串类型的枚举等字段外，**不要**使用字段级 `@Index`；若确需对数值/日期等列建索引，请用类级 `@Indexes` + `@IndexField(field = "...", length = 0)`。`IndexTypeEnum.FULLTEXT` 仅适用于字符型列（MySQL 全文索引语义）。
