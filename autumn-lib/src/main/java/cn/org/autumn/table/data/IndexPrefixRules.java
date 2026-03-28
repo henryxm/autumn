@@ -2,7 +2,7 @@ package cn.org.autumn.table.data;
 
 import cn.org.autumn.table.annotation.Column;
 import cn.org.autumn.table.utils.HumpConvert;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
