@@ -273,17 +273,17 @@ public class DemoService extends ModuleService<DemoDao, DemoEntity> implements L
 3. **与 `@UniqueKey` / `@UniqueKeys` 的边界**  
    多列唯一约束应优先用 `@UniqueKey(s)`；若已与 `@Column(isUnique)` 或 `@Index` 表达同一约束，不要再用另一套注解重复描述。
 
-#### 2.10.3 字段级 `@Index` 与列类型（前缀长度陷阱）
+#### 2.10.3 字段级 `@Index` 与列类型（前缀长度）
 
-**说明**：MySQL 对数值、日期时间、`DECIMAL` 等类型**支持** B-tree 索引；容易出问题的是本框架生成 DDL 的方式，而不是“非字符串不能建索引”。
+**说明**：MySQL 对数值、日期时间、`DECIMAL` 等类型**支持** B-tree 整列索引；**仅** CHAR/VARCHAR/TEXT/BLOB/BINARY 等类型支持索引定义中的**前缀**语法 `` `col`(n) ``。旧实现曾把 `@Column.length()`（默认 255）误当前缀，导致数值列生成非法 DDL。
 
-字段上标注 `@Index` 且**未**使用 `fields = { ... }` 时，`IndexInfo(Index, Field)` 会用 **`@Column.length()`**（默认 **255**）作为该列在索引中的**前缀长度**写入 `buildIndexSql()`：当长度大于 0 时会生成 `` `column_name`(n) `` 形式。该形式适用于 **CHAR / VARCHAR / TEXT** 等字符串类列；对 **INT、BIGINT、BOOLEAN、FLOAT、DATE/DATETIME、`BigDecimal` 映射的 DECIMAL** 等，在默认 `length = 255` 下会得到**非法或不符合预期**的建表/加索引语句。
+**当前实现**（`IndexPrefixRules` + `TableInfo.initFrom` 末尾对 `IndexInfo` / `UniqueKeyInfo` 的 `applyPrefixLengthPolicy`）：
 
-**给 AI / 开发者的硬约束**：
+- 根据 **`@Column.type()`**（若有）判断是否允许前缀；不允许时前缀长度强制为 **0**，生成 `` `col` ``，**可在任意可索引列上声明 `@Index` / `@Indexes` / `@UniqueKey`** 而不因前缀报错。
+- 无 `Column.type` 时，按 Java 类型保守处理：`String` / `byte[]` 可保留前缀长度，其余类型前缀为 0。
+- 类级 `@IndexField` / `UniqueKeyFields` 上误写的非零 `length` 也会按实体字段与 `Column` 收敛。
 
-- 字段级 `@Index`（无自定义 `fields`）**仅用于** `String`，以及落库为字符串类型、且 `@Column.length` 与实际索引前缀语义一致的枚举（或其它字符串映射字段）。
-- **不要**在 `int`/`long`/`boolean`/`BigDecimal`/`Date` 等字段上直接使用字段级 `@Index`（除非你能保证不会带入错误的非零前缀长度；默认注解做不到）。
-- 若确需对上述类型建普通/唯一索引，使用**类级** `@Index` 或 `@Indexes`，并在 `@IndexField` 上显式设置 **`length = 0`**，避免生成前缀索引片段。
+**仍建议**：需要前缀索引时显式在 `@IndexField` 中写 `length`；字符串列用 `@Column.length` 参与字段级 `@Index` 时，确保 `type` 为字符串类，避免歧义。
 
 #### 2.10.4 `IndexTypeEnum` / `IndexMethodEnum` 提示
 
@@ -434,7 +434,7 @@ public class DemoService extends ModuleService<DemoDao, DemoEntity> implements L
 - 建表注解反模式：
   - `Column(isUnique = true)` 与同一列的 `@Index` / `@Indexes` 重复声明。
   - 字段 `@Index` 与类级 `@Indexes` 对同一列重复声明。
-  - 在数值/日期等列上使用字段级 `@Index`，依赖默认 `@Column.length`，触发非法 `` `col`(255) `` 类索引 DDL（见 2.10.3）。
+  - `@Column.type()` 与真实库类型不一致，导致前缀长度收敛不符合预期（见 2.10.3、`IndexPrefixRules`）。
   - `@Column.comment` / `@Table.comment` 写成整段长说明却**无冒号**，或**冒号前**写成整句长标题，导致多语言/列表表头位展示过长或难以对齐（见 2.10.5）。
 
 ## 8. 一页式速查卡（Cheat Sheet）
