@@ -6,12 +6,16 @@ import cn.org.autumn.table.utils.HumpConvert;
 import com.baomidou.mybatisplus.annotations.TableName;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.WordUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Field;
 import java.util.*;
 
+@Slf4j
 @Getter
 @Setter
 public class TableInfo {
@@ -158,16 +162,23 @@ public class TableInfo {
         }
         Field[] fields = clazz.getDeclaredFields();
         this.indexColumn = new ArrayList<>();
+        Set<String> isUniqueColumnNames = new LinkedHashSet<>();
         for (Field field : fields) {
+            Column column = field.getAnnotation(Column.class);
             Index k = field.getAnnotation(Index.class);
             if (null != k) {
-                indexInfos.add(new IndexInfo(k, field));
+                if (null != column && column.isUnique()) {
+                    log.warn("实体 [{}] 字段 [{}] 已使用 @Column(isUnique=true)，字段上的 @Index 已忽略且不参与建表索引收集；" + "isUnique 优先级更高，请删除该字段上冗余的 @Index 以免误导。", clazz.getName(), field.getName());
+                } else {
+                    indexInfos.add(new IndexInfo(k, field));
+                }
             }
-            Column column = field.getAnnotation(Column.class);
             if (null != column && column.isUnique()) {
+                isUniqueColumnNames.add(resolveEntityColumnName(column, field));
                 indexColumn.add(new IndexInfo(column, field));
             }
         }
+        stripIsUniqueColumnsFromClassLevelIndexes(clazz, indexInfos, isUniqueColumnNames);
         for (IndexInfo ii : indexInfos) {
             ii.applyPrefixLengthPolicy(clazz);
         }
@@ -183,7 +194,7 @@ public class TableInfo {
 
     public String buildUniqueSql() {
         StringBuilder stringBuilder = new StringBuilder();
-        if (null != uniqueKeyInfos && uniqueKeyInfos.size() > 0) {
+        if (null != uniqueKeyInfos && !uniqueKeyInfos.isEmpty()) {
             Iterator<UniqueKeyInfo> uniqueKeyInfoIterator = uniqueKeyInfos.iterator();
             while (uniqueKeyInfoIterator.hasNext()) {
                 stringBuilder.append("UNIQUE KEY ");
@@ -263,7 +274,7 @@ public class TableInfo {
     public String buildIndexKey() {
         StringBuilder stringBuilder = new StringBuilder();
         Collection<IndexInfo> merged = merged();
-        if (null != merged && merged.size() > 0) {
+        if (null != merged && !merged.isEmpty()) {
             stringBuilder.append("@Indexes({");
             Iterator<IndexInfo> indexKeyInfoIterator = merged.iterator();
             while (indexKeyInfoIterator.hasNext()) {
@@ -325,14 +336,71 @@ public class TableInfo {
     }
 
     public List<IndexInfo> getIndexInfosCombine() {
-        if (null != uniqueKeyInfos && uniqueKeyInfos.size() > 0) {
+        if (null != uniqueKeyInfos && !uniqueKeyInfos.isEmpty()) {
             for (UniqueKeyInfo uniqueKeyInfo : uniqueKeyInfos) {
                 indexInfos.add(IndexInfo.copy(uniqueKeyInfo));
             }
         }
-        if (null != indexColumn && indexColumn.size() > 0) {
+        if (null != indexColumn && !indexColumn.isEmpty()) {
             indexInfos.addAll(indexColumn);
         }
         return indexInfos;
+    }
+
+    /**
+     * 与 {@link Column#value()} 或属性名推导一致的下划线列名，用于与 {@link IndexInfo} 中字段键比对。
+     */
+    private static String resolveEntityColumnName(Column column, Field field) {
+        if (column == null || field == null) {
+            return "";
+        }
+        if (StringUtils.isNotBlank(column.value())) {
+            return column.value();
+        }
+        return HumpConvert.HumpToUnderline(field.getName());
+    }
+
+    private static boolean columnMarkedIsUnique(String indexFieldKey, Set<String> isUniqueColumnNames) {
+        if (StringUtils.isBlank(indexFieldKey) || isUniqueColumnNames == null || isUniqueColumnNames.isEmpty()) {
+            return false;
+        }
+        for (String u : isUniqueColumnNames) {
+            if (u != null && u.equalsIgnoreCase(indexFieldKey)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 类级 / 复合 {@link Index} 中若包含已由 {@code @Column(isUnique=true)} 表达唯一性的列，则从索引定义中移除该列；
+     * 移除后若无剩余列则丢弃整段索引，并打 WARN 提示清理注解。
+     */
+    private void stripIsUniqueColumnsFromClassLevelIndexes(Class<?> clazz, List<IndexInfo> infos, Set<String> isUniqueColumnNames) {
+        if (infos == null || infos.isEmpty() || isUniqueColumnNames == null || isUniqueColumnNames.isEmpty()) {
+            return;
+        }
+        Iterator<IndexInfo> it = infos.iterator();
+        while (it.hasNext()) {
+            IndexInfo ii = it.next();
+            Map<String, Integer> f = ii.getFields();
+            if (f == null || f.isEmpty()) {
+                continue;
+            }
+            List<String> toRemove = new ArrayList<>();
+            for (String colKey : f.keySet()) {
+                if (columnMarkedIsUnique(colKey, isUniqueColumnNames)) {
+                    toRemove.add(colKey);
+                }
+            }
+            for (String colKey : toRemove) {
+                f.remove(colKey);
+                log.warn("实体 [{}] 索引 [{}] 中的列 [{}] 已由 @Column(isUnique=true) 表达唯一约束，已从该索引定义中移除（isUnique 优先）；" + "请从类上 @Index/@Indexes 的 fields 中删除该列以免误导。", clazz.getName(), ii.getName(), colKey);
+            }
+            if (f.isEmpty()) {
+                it.remove();
+                log.warn("实体 [{}] 索引 [{}] 在移除 isUnique 列后无剩余列，整段索引已忽略；请删除或修正类上的 @Index/@Indexes。", clazz.getName(), ii.getName());
+            }
+        }
     }
 }

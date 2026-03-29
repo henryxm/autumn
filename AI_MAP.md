@@ -264,8 +264,8 @@ public class DemoService extends ModuleService<DemoDao, DemoEntity> implements L
 
 因此：
 
-1. **`@Column(isUnique = true)` 与字段 `@Index` 不要叠在同一列**  
-   建表时：`isUnique` 已在列定义处生成 `UNIQUE KEY`；若再对该字段加 `@Index`（尤其是 `indexType = UNIQUE` 或普通 INDEX），会产生**重复约束/重复二级索引**，增加存储与维护成本，且让索引比对更难读。
+1. **`@Column(isUnique = true)` 与 `@Index` 不要叠在同一列**  
+   建表时：`isUnique` 已在列定义处生成 `UNIQUE KEY`。**字段级**仍写 `@Index` 时，`TableInfo` 会**忽略**该 `@Index` 并打 **WARN**。**类级** `@Index` / `@Indexes` 的 `fields` 若包含已 `isUnique` 的列，会从该索引定义中**剔除**该列（`isUnique` 优先）并 **WARN**；剔除后若索引无剩余列则整段索引忽略并 **WARN**。
 
 2. **字段上已有 `@Index` 时，不要在类级 `@Indexes` / 类级 `@Index` 里再包含同一列的等价索引**  
    否则同一列会被注册两次，建表或变更时可能生成两条含义重叠的 `INDEX`，属于重复声明。
