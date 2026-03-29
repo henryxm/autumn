@@ -75,8 +75,10 @@ public @interface Column{
 	public String defaultValue() default "NULL";
 	
 	/**
-	 * 是否是唯一，默认false
-	 * 
+	 * 是否是唯一，默认 false。
+	 * <p>与同字段上的 {@link cn.org.autumn.table.annotation.Index} 同时存在时，以本属性为准：{@code isUnique=true}
+	 * 时字段级 {@code @Index} 会被 {@link cn.org.autumn.table.data.TableInfo} 忽略，并打日志提示删除冗余 {@code @Index}。
+	 *
 	 * @return 是否是唯一，默认false
 	 */
 	public boolean isUnique() default false;
