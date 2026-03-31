@@ -1,5 +1,7 @@
 package cn.org.autumn.table.annotation;
 
+import cn.org.autumn.table.annotation.sql.CharacterSet;
+import cn.org.autumn.table.annotation.sql.Collation;
 import cn.org.autumn.table.data.DataType;
 
 import java.lang.annotation.Documented;
@@ -92,4 +94,14 @@ public @interface Column{
 	 * @return 字段注释
 	 */
 	public String comment() default "";
+
+	/**
+	 * 列字符集；{@link CharacterSet#INHERIT} 表示继承表默认，不在列上生成 {@code CHARACTER SET}。
+	 */
+	CharacterSet charset() default CharacterSet.INHERIT;
+
+	/**
+	 * 列排序规则；{@link Collation#INHERIT} 表示继承表默认，不在列上生成 {@code COLLATE}。
+	 */
+	Collation collation() default Collation.INHERIT;
 }

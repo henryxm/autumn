@@ -37,6 +37,18 @@ public interface TableDao {
     boolean hasTable(@Param(paramName) String tableName);
 
     /**
+     * 当前库中表的字符集名（与 {@link cn.org.autumn.table.annotation.Table#charset()} 语义对齐，含 utf8 / utf8mb3 等由服务端返回）。
+     */
+    @SelectProvider(type = QuerySql.class, method = getTableCharacterSetName)
+    String getTableCharacterSetName(@Param(paramName) String tableName);
+
+    /**
+     * 将表及字符列转换为指定字符集（CONVERT TO），大表可能长时间锁表。
+     */
+    @SelectProvider(type = QuerySql.class, method = convertTableCharset)
+    void convertTableCharset(@Param(paramName) String tableName, @Param("charset") String charset, @Param("collation") String collation);
+
+    /**
      * 查询表的字段
      *
      * @param tableName

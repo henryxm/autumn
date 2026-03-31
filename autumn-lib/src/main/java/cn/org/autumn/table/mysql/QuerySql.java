@@ -4,7 +4,6 @@ import cn.org.autumn.table.annotation.IndexTypeEnum;
 import cn.org.autumn.table.data.IndexInfo;
 import cn.org.autumn.table.data.TableInfo;
 import cn.org.autumn.table.data.ColumnInfo;
-import cn.org.autumn.table.utils.HumpConvert;
 import org.apache.commons.lang.StringUtils;
 
 import java.lang.reflect.Field;
@@ -25,6 +24,8 @@ public class QuerySql {
     public static final String dropTable = "dropTable";
     public static final String addIndex = "addIndex";
     public static final String getTableMetas = "getTableMetas";
+    public static final String getTableCharacterSetName = "getTableCharacterSetName";
+    public static final String convertTableCharset = "convertTableCharset";
     public static final String getTableCount = "getTableCount";
     public static final String showKeys = "showKeys";
     public static final String showIndex = "showIndex";
@@ -62,6 +63,36 @@ public class QuerySql {
                 " where table_name = #{" + paramName + "} and table_schema = (select database())";
     }
 
+    /**
+     * 当前库中该表的逻辑字符集名（经表级 collation 关联得到），用于与 @Table.charset 比较。
+     */
+    public String getTableCharacterSetName() {
+        return "SELECT C.CHARACTER_SET_NAME FROM information_schema.TABLES T "
+                + "INNER JOIN information_schema.COLLATION_CHARACTER_SET_APPLICABILITY C "
+                + "ON T.TABLE_COLLATION = C.COLLATION_NAME "
+                + "WHERE T.TABLE_SCHEMA = (SELECT DATABASE()) AND T.TABLE_NAME = #{" + paramName + "}";
+    }
+
+    /**
+     * 整表转换为指定字符集及可选排序规则（含列级转换，可能锁表、大表耗时）。
+     */
+    public String convertTableCharset(Map<String, Object> map) {
+        String tableName = (String) map.get(paramName);
+        String charset = (String) map.get("charset");
+        String collation = (String) map.get("collation");
+        if (tableName == null || charset == null || charset.isEmpty()) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append("ALTER TABLE `").append(tableName).append("` CONVERT TO CHARACTER SET ");
+        sb.append(charset);
+        if (StringUtils.isNotBlank(collation)) {
+            sb.append(" COLLATE ").append(collation);
+        }
+        sb.append(";");
+        return sb.toString();
+    }
+
     public String dropTable(Map<String, String> map) {
         String tableName = map.get(paramName);
         return "DROP TABLE IF EXISTS " + tableName;
@@ -77,6 +108,20 @@ public class QuerySql {
         return "SHOW INDEX FROM " + tableName;
     }
 
+    private void appendColumnCharsetCollation(ColumnInfo columnInfo, StringBuilder sb) {
+        if (!columnInfo.supportsSqlCharsetClause()) {
+            return;
+        }
+        String cs = columnInfo.getExplicitCharset();
+        String co = columnInfo.getExplicitCollation();
+        if (StringUtils.isNotEmpty(cs)) {
+            sb.append(" CHARACTER SET ").append(cs);
+        }
+        if (StringUtils.isNotEmpty(co)) {
+            sb.append(" COLLATE ").append(co);
+        }
+    }
+
     private void appendCommon(ColumnInfo columnInfo, StringBuilder sb) {
         if (columnInfo.getTypeLength() == 0)
             sb.append("`" + columnInfo.getName() + "` " + columnInfo.getType());
@@ -86,6 +131,7 @@ public class QuerySql {
             sb.append("`" + columnInfo.getName() + "` ");
             sb.append(columnInfo.getType() + "(" + columnInfo.getLength() + "," + columnInfo.getDecimalLength() + ")");
         }
+        appendColumnCharsetCollation(columnInfo, sb);
         if (columnInfo.isNull())
             sb.append(" NULL");
         else
@@ -236,6 +282,9 @@ public class QuerySql {
             stringBuilder.append(")");
             stringBuilder.append(" ENGINE=" + tableInfo.getEngine());
             stringBuilder.append(" DEFAULT CHARACTER SET " + tableInfo.getCharset());
+            if (StringUtils.isNotBlank(tableInfo.getCollation())) {
+                stringBuilder.append(" COLLATE ").append(tableInfo.getCollation());
+            }
             if (!StringUtils.isEmpty(tableInfo.getComment()))
                 stringBuilder.append(" COMMENT='" + tableInfo.getComment() + "'");
             stringBuilder.append(";");

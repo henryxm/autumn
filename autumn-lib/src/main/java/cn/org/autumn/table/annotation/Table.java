@@ -1,5 +1,9 @@
 package cn.org.autumn.table.annotation;
 
+import cn.org.autumn.table.annotation.sql.CharacterSet;
+import cn.org.autumn.table.annotation.sql.Collation;
+import cn.org.autumn.table.annotation.sql.Engine;
+
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;
@@ -21,7 +25,7 @@ import java.lang.annotation.Target;
 public @interface Table {
 
     /**
-     * 表名
+     * 物理表名；留空时依次尝试：MyBatis-Plus {@code @TableName} 的值 → 再按 {@link #prefix()} 与类名推导（去 {@code Entity} 后缀、驼峰转下划线）。
      */
     String value() default "";
 
@@ -38,14 +42,20 @@ public @interface Table {
     String comment() default "";
 
     /**
-     * 表的引擎
+     * 存储引擎（语义见 {@link Engine}；非 MySQL 方言可能忽略或另行映射）。
      */
-    String engine() default "InnoDB";
+    Engine engine() default Engine.INNODB;
 
     /**
-     * 表字符编码
+     * 表默认字符集（建表 {@code DEFAULT CHARACTER SET}，更新表时若与库中不一致则 {@code CONVERT TO}，主实现为 MySQL/MariaDB）。
+     * <p>请勿使用 {@link CharacterSet#INHERIT}；若误用，框架将按 {@link CharacterSet#UTF8} 处理。
      */
-    String charset() default "utf8";
+    CharacterSet charset() default CharacterSet.UTF8;
+
+    /**
+     * 表默认排序规则；{@link Collation#INHERIT} 表示不写 COLLATE，由服务器按字符集默认处理。
+     */
+    Collation collation() default Collation.INHERIT;
 
     //模块名
     String module() default "";

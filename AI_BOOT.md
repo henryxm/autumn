@@ -38,11 +38,73 @@
   - 约束：写操作后必须做缓存失效，避免脏读。
 - `@EnvAware`（配置注入）
   - 在配置 Bean 字段上声明配置键（如 `site.domain`、`node.tag`）。
-- `@Table` / `@Column` / `@Index` / `@Indexes` / `@IndexField`（注解驱动建表，见 `AI_MAP.md` 2.10 节）
+- `@Table` / `@Column` / `@Index` / `@Indexes` / `@IndexField`（注解驱动建表，见 `AI_MAP.md` 2.10 节；**表名 / 前缀**见 **§3.2**，**存储引擎 / 字符集 / 排序规则**见 **§3.1**）
   - `@Table.comment` / `@Column.comment`：`BaseService` 多语言初始化在注释含 **`:`** 时**只取冒号前**作为列表/菜单等处的**短标题**；冒号后为详述。建议 **`短标题（约 1～4 字）：详细说明`**，避免表头被长文案撑满（详见 `AI_MAP.md` 2.10.5）。
   - `@Column(isUnique = true)`：已在 DDL 中为该列生成唯一约束；**禁止**再在同一字段上叠 `@Index`，也避免用 `@Indexes` 再声明同一单列唯一/普通索引，以免重复索引与迁移对比噪音。
   - 字段上已用 `@Index` 的列：**不要**在类级 `@Indexes`（或类级 `@Index` 的 `fields`）里再声明同列的同用途索引，避免 `TableInfo` 收集到重复 `IndexInfo`、建表/变更阶段生成重复索引。
   - 索引前缀：`IndexPrefixRules` 会按 `@Column.type()` 与 Java 类型收敛前缀长度，非字符串/二进制串列不会生成非法 `` `col`(n) ``；数值、日期等列可正常加 `@Index`（整列索引）。`IndexTypeEnum.FULLTEXT` 仍仅适用于字符型列（MySQL 全文索引语义）。详见 `AI_MAP.md` 2.10.3。
+
+### 3.1 表结构 SQL 语义枚举（`annotation.sql`）与字符集约定
+
+包路径：`cn.org.autumn.table.annotation.sql`。注解层使用**语义化枚举**，`getSqlName()` 在**当前实现**下给出 **MySQL/MariaDB** DDL 字面量；其它方言由后续适配映射或忽略（见各枚举类注释与 `Dialect`）。
+
+| 枚举 | 用途 |
+|------|------|
+| `Engine` | `@Table.engine()`：InnoDB、MyISAM 等；非 MySQL 系数据库可忽略或另行映射。 |
+| `CharacterSet` | `@Table.charset()` / `@Column.charset()`：utf8、utf8mb4、gbk 等。 |
+| `Collation` | `@Table.collation()` / `@Column.collation()`：具体排序规则名，或 **不写**（见默认）。 |
+| `Dialect` | 预留：目标 SQL 方言路由（与 `autumn.database` 等配置协同扩展）。 |
+
+**`@Table` 默认（未写属性时）**
+
+- `engine = Engine.INNODB`
+- `charset = CharacterSet.UTF8`（historic utf8 / utf8mb3 语义，**不含 Emoji**）
+- `collation = Collation.INHERIT` → DDL **不拼** `COLLATE`，由服务器按字符集默认处理
+
+**表级 `CharacterSet.INHERIT`**：请勿使用；若误写，`TableInfo` **回退为 `UTF8`**，避免表无字符集。
+
+**`@Column` 默认**
+
+- `charset = CharacterSet.INHERIT` → 列上**不生成** `CHARACTER SET`，继承表默认
+- `collation = Collation.INHERIT` → 列上**不生成** `COLLATE`，继承表默认
+
+**运行时行为（`MysqlTableService` + `QuerySql`，`autumn.table.auto=update`）**
+
+- 新建表：`CREATE TABLE ... ENGINE= ... DEFAULT CHARACTER SET ...`（`Collation` 非 `INHERIT` 时带 `COLLATE`）；列上仅在显式指定时追加 `CHARACTER SET` / `COLLATE`。
+- 表字符集与实体不一致：`autumn.table.sync-charset`（默认 `true`）下对已有表执行 `ALTER TABLE ... CONVERT TO ...`（大表可能锁表，可关开关后改手动迁移）。
+- 列级字符串类型：与库中 `information_schema` 比较字符集/排序规则，不一致则 `MODIFY` 对齐。
+
+**与 JDBC 的关系（存储 ≠ 连接编码名）**
+
+- URL 使用 **`characterEncoding=UTF-8`**（Java 标准名）；**不要**写 `characterEncoding=utf8mb4`。
+- 需要会话级 **utf8mb4**（Emoji 等）时，在 URL 增加例如 **`connectionCollation=utf8mb4_unicode_ci`** 或 **`utf8mb4_0900_ai_ci`**（MySQL 8），与表上 `CharacterSet.UTF8MB4` 对齐。
+- 仅部分表需要 Emoji：连接统一 utf8mb4 会话通常**不影响**仅 utf8 列的存量数据；表/列仍应用 `UTF8MB4` 存 4 字节字符。
+
+**兼容与注意**
+
+- 比较字符集时 **`utf8` 与 `utf8mb3` 视为等价**（MySQL 8 元数据可能返回 `utf8mb3`）。
+- 升级到 `utf8mb4` 时注意 **索引字节长度**（如 `VARCHAR(255)` 唯一索引）与 DDL 耗时；生产大表谨慎使用自动 `CONVERT`。
+- 标识符经校验后再拼入 DDL，降低注入风险。
+
+### 3.2 表名（`@Table` / `@TableName`）约定
+
+**推荐物理表名形态**：`{模块短前缀}_{实体核心蛇形}`。
+
+- **模块短前缀**：与 Maven 模块及包路径 `cn.org.autumn.modules.<模块>/` 对应，通常取目录名 + 下划线，如 `spm` → **`spm_`**、`sys` → **`sys_`**，用于区分业务域、避免跨模块撞表名。
+- **实体核心蛇形**：类名去掉后缀 **`Entity`**，再将剩余驼峰转为**小写 + 下划线**（`TableInfo.getTableName` 与 `HumpConvert` 规则一致）。
+
+**示例**（`SuperPositionModelEntity`，模块 `spm`）：
+
+- 去后缀 → `SuperPositionModel` → 蛇形 → `super_position_model`
+- 加前缀 → **`spm_super_position_model`**
+
+**定义方式（按团队习惯选一；推荐减少重复）**
+
+1. **单点表名（推荐）**：只写一处物理表名——**`@Table` 的 `value` 留空**，并写 MyBatis-Plus 的 **`@TableName("spm_super_position_model")`**。Autumn 的 `TableInfo.getTableName` 在 `value` 为空时会**读取 `@TableName` 的值**作为物理表名，与 MP 一致，无需两段相同字符串。仍需保留 **`@Table`**（至少带 `comment` 等），否则不参与注解建表扫描。
+2. **显式双写**：`@Table(value = "spm_super_position_model", comment = "...")` 与 `@TableName("spm_super_position_model")` 相同；适合不依赖 MP 表名、或希望 Autumn 侧自包含表名的场景。
+3. **前缀 + 推导**：`@Table(prefix = "spm_", comment = "...")` 且 **`value` 与 `@TableName` 均留空**时，按「前缀 + 去 `Entity` 蛇形」生成；若只填了 `@TableName` 则同 **1**。
+
+**`@Table.module()`**：可选，多用于生成/展示元数据，**不参与**物理表名字符串拼接；表名前缀以 `prefix` / `value` 为准。
 
 ## 4. 加密最小约束
 

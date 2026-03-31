@@ -1,6 +1,7 @@
 package cn.org.autumn.modules.oauth.entity;
 
 import cn.org.autumn.config.ClientType;
+import cn.org.autumn.table.annotation.sql.CharacterSet;
 import cn.org.autumn.table.data.DataType;
 import com.baomidou.mybatisplus.annotations.*;
 import cn.org.autumn.table.annotation.*;
@@ -71,7 +72,7 @@ public class ClientDetailsEntity implements Serializable {
     @Column(length = 100, comment = "类型")
     private ClientType clientType;
 
-    @Column(length = 500, comment = "描述信息")
+    @Column(length = 500, comment = "描述信息", charset = CharacterSet.UTF8MB4)
     private String description;
 
     @Column(type = "datetime", comment = "创建时间")
