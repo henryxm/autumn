@@ -10,7 +10,7 @@ import cn.org.autumn.table.annotation.UniqueKeys;
 import cn.org.autumn.table.dao.TableDao;
 import cn.org.autumn.table.data.*;
 import cn.org.autumn.table.mysql.ColumnMeta;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
