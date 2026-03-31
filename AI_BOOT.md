@@ -19,6 +19,7 @@
 - 队列：优先 `BaseQueueService`（发送、消费、重试、死信）。
 - 任务：固定周期优先 `LoopJob.*`，复杂日历规则才用 cron。
 - 生成链路：实体注解驱动建表 -> gen 生成骨架 -> 业务补在非 gen 层。
+- 生成分层约束：`ControllerGen/SitePages/list.html/list.js` 属于可重生层（默认不改）；业务开发优先落在 `Controller/Service/Site/Menu` 可维护层。
 
 ## 3. 注解能力速查（高频）
 

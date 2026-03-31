@@ -221,6 +221,58 @@ public class DemoService extends ModuleService<DemoDao, DemoEntity> implements L
   - 页面入口层：`site/*Site` + `site/*Menu`
   - 前端页面层：`templates/modules/{module}/*.html|*.js`
 
+### 2.8A 代码生成模板分层约束（MVC 生成骨架）
+
+> 模板目录：`autumn-modules/src/main/resources/template/*`。
+
+#### 2.8A.1 生成产物分层（必须区分）
+
+- **可重生层（生成覆盖层，禁止业务改动）**：
+  - 后端：`ControllerGen.java.vm` -> `controller/gen/*ControllerGen.java`
+  - 页面聚合：`SitePages.java.vm` -> `site/*Pages.java`
+  - 前端 CRUD 页面：`list.html.vm` / `list.js.vm` -> `templates/modules/{module}/{entity}.html|.js`
+- **可维护层（业务扩展层，允许改动）**：
+  - 后端控制器壳：`Controller.java.vm` -> `controller/*Controller.java`
+  - 服务层：`Service.java.vm` -> `service/*Service.java`
+  - 站点入口：`Site.java.vm` -> `site/*Site.java`
+  - 菜单入口：`Menu.java.vm` -> `site/*Menu.java`
+- **基础结构模板（按实体重生成，谨慎手改）**：
+  - `Entity.java.vm`、`Dao.java.vm`、`menu.sql.vm`
+
+#### 2.8A.2 AI 开发硬约束（生成体系）
+
+- `controller/gen/*` 与 `site/*Pages.java` 视为**生成源**：默认不承载业务逻辑，不在其上做需求改造。
+- 业务接口改造放在 `controller/*Controller.java`（或新增业务 Controller），通过继承/覆盖调用 `*ControllerGen`。
+- 页面业务改造优先放在自定义页面/组件；若必须改生成页，需在需求中明确“允许改模板并接受重生成影响”。
+- 生成后允许 AI 自动更新的优先顺序：`Service` -> `Controller` -> `Site` -> `Menu`；避免先改 `gen` 层。
+
+#### 2.8A.3 典型落地方式（建议）
+
+- 新增查询/聚合接口：在 `controller/*Controller.java` 增加新 API，不改 `*ControllerGen`。
+- 复杂表单/交互：新增独立页面而非直接改 `list.html.js` 模板产物。
+- 通用 CRUD 能力升级：改模板文件（`*.vm`）并统一重生成，而不是逐个改生成结果文件。
+
+#### 2.8A.4 模板文件级速查表（11 个模板）
+
+| 模板文件 | 典型生成产物 | 分层 | 默认策略 | 备注 |
+|---|---|---|---|---|
+| `ControllerGen.java.vm` | `controller/gen/*ControllerGen.java` | 可重生 | **不改生成结果**；需统一行为时改模板 | CRUD 细节与权限注解在此 |
+| `SitePages.java.vm` | `site/*Pages.java` | 可重生 | **不改生成结果**；改模板后重生成 | 页面 key 聚合层 |
+| `list.html.vm` | `templates/modules/{module}/{entity}.html` | 可重生 | 默认不直接改生成页；复杂需求建独立页 | CRUD 列表与表单壳 |
+| `list.js.vm` | `templates/modules/{module}/{entity}.js` | 可重生 | 默认不直接改生成脚本；需统一改模板 | jqGrid + Vue 通用交互 |
+| `Controller.java.vm` | `controller/*Controller.java` | 可维护 | **可改**（业务 API 落点） | 继承 `*ControllerGen` |
+| `Service.java.vm` | `service/*Service.java` | 可维护 | **可改**（业务逻辑首选） | 默认继承 `ModuleService` |
+| `Site.java.vm` | `site/*Site.java` | 可维护 | **可改**（自定义页面入口） | 继承 `*Pages` |
+| `Menu.java.vm` | `site/*Menu.java` | 可维护 | **可改**（模块菜单扩展） | 菜单入口定义 |
+| `Entity.java.vm` | `entity/*Entity.java` | 结构层 | 谨慎改；若改模板需评估全量重生成影响 | 注解驱动建表基础 |
+| `Dao.java.vm` | `dao/*Dao.java` | 结构层 | 谨慎改；优先保持稳定 | `BaseMapper` 基础访问层 |
+| `menu.sql.vm` | 菜单初始化 SQL 片段 | 结构层 | 谨慎改；仅框架级规则变化时改模板 | 生成菜单与按钮权限骨架 |
+
+> 判定原则：  
+> 1) 单模块业务改造，优先改可维护层；  
+> 2) 多模块统一行为升级，改 `*.vm` 并重生成；  
+> 3) 避免在可重生层写业务逻辑，防止后续生成覆盖。
+
 ### 2.9 多项目模板资源聚合（TemplateFactory 方案）
 
 - 目标：
