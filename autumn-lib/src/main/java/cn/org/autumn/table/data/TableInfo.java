@@ -1,6 +1,7 @@
 package cn.org.autumn.table.data;
 
 import cn.org.autumn.table.annotation.*;
+import cn.org.autumn.table.annotation.sql.CharacterSet;
 import cn.org.autumn.table.mysql.TableMeta;
 import cn.org.autumn.table.utils.HumpConvert;
 import com.baomidou.mybatisplus.annotation.TableName;
@@ -23,6 +24,8 @@ public class TableInfo {
     private String comment;
     private String engine;
     private String charset;
+    /** 表排序规则，空表示使用 MySQL 默认 */
+    private String collation;
     private Boolean hasBigDecimal;
 
     //表的主键
@@ -121,10 +124,13 @@ public class TableInfo {
                     name = prefix + entityName;
             }
         } else {
-            if (table.value().startsWith(prefix))
-                name = table.value();
-            else
-                name = prefix + table.value();
+            // 仅当 @Table.value 显式非空时才做 prefix 拼接；value 为空时 name 可能来自 @TableName，不得被覆盖
+            if (StringUtils.isNotBlank(table.value())) {
+                if (table.value().startsWith(prefix))
+                    name = table.value();
+                else
+                    name = prefix + table.value();
+            }
         }
         return name;
     }
@@ -184,9 +190,15 @@ public class TableInfo {
             uk.applyPrefixLengthPolicy(clazz);
         }
         this.name = name;
-        this.charset = table.charset();
+        CharacterSet cs = table.charset();
+        if (cs == CharacterSet.INHERIT) {
+            this.charset = CharacterSet.UTF8.getSqlName();
+        } else {
+            this.charset = cs.getSqlName();
+        }
+        this.collation = table.collation().getSqlName();
         this.comment = table.comment();
-        this.engine = table.engine();
+        this.engine = table.engine().getSqlName();
         this.prefix = table.prefix();
     }
 

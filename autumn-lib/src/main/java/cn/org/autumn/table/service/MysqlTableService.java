@@ -10,6 +10,7 @@ import cn.org.autumn.table.annotation.UniqueKeys;
 import cn.org.autumn.table.dao.TableDao;
 import cn.org.autumn.table.data.*;
 import cn.org.autumn.table.mysql.ColumnMeta;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import cn.org.autumn.table.annotation.Column;
 import cn.org.autumn.table.annotation.LengthCount;
 import cn.org.autumn.table.utils.ClassTools;
+import cn.org.autumn.table.utils.TableCharsetUtils;
 
 import static cn.org.autumn.table.data.InitType.*;
 
@@ -56,6 +58,12 @@ public class MysqlTableService {
      */
     @Value("${autumn.table.auto:update}")
     private InitType type;
+
+    /**
+     * 是否在 update 模式下根据 @Table 同步表字符集（不匹配则 CONVERT TO）。大表可能耗时锁表，可设为 false 后改用手动迁移。
+     */
+    @Value("${autumn.table.sync-charset:true}")
+    private boolean syncTableCharset;
 
     public Set<String> getPacks() {
         return new CopyOnWriteArraySet<>(Arrays.asList(pack.split(",|:|;|-| ")));
@@ -193,6 +201,9 @@ public class MysqlTableService {
             if (!exist) {
                 newTableMap.put(tableInfo, newFieldList);
             } else {
+                if (syncTableCharset) {
+                    syncTableCharsetIfNeeded(tableInfo);
+                }
                 List<ColumnMeta> tableColumnList = tableDao.getColumnMetas(tableInfo.getName());
 
 //                List<TableMeta> tableMetas = tableDao.getTableMetas("sys");
@@ -209,6 +220,49 @@ public class MysqlTableService {
                         modifyFieldList, dropKeyFieldList, dropUniqueFieldList, addIndexList, removeIndexList, tableColumnList, columnNames);
 
             }
+        }
+    }
+
+    /**
+     * 若库表字符集与 @Table.charset 不一致，则执行 {@code ALTER TABLE ... CONVERT TO}。
+     * <p>名称经校验后拼接，非法则跳过；utf8 与 utf8mb3 视为一致不升级。
+     */
+    private void syncTableCharsetIfNeeded(TableInfo tableInfo) {
+        if (tableInfo == null || StringUtils.isBlank(tableInfo.getName())) {
+            return;
+        }
+        String raw = tableInfo.getCharset();
+        if (StringUtils.isBlank(raw)) {
+            return;
+        }
+        String desired = raw.trim();
+        if (!TableCharsetUtils.isSafeSqlCharsetOrCollationName(desired)) {
+            log.warn("实体表 [{}] @Table.charset 非法，已跳过字符集同步: {}", tableInfo.getName(), raw);
+            return;
+        }
+        String coll = tableInfo.getCollation();
+        String collationArg = null;
+        if (StringUtils.isNotBlank(coll)) {
+            String c = coll.trim();
+            if (!TableCharsetUtils.isSafeSqlCharsetOrCollationName(c)) {
+                log.warn("实体表 [{}] @Table.collation 非法，已跳过字符集同步: {}", tableInfo.getName(), coll);
+                return;
+            }
+            collationArg = c;
+        }
+        try {
+            String dbCharset = tableDao.getTableCharacterSetName(tableInfo.getName());
+            if (StringUtils.isBlank(dbCharset)) {
+                log.debug("无法解析表 [{}] 的字符集，跳过字符集同步", tableInfo.getName());
+                return;
+            }
+            if (TableCharsetUtils.sameCharset(desired, dbCharset)) {
+                return;
+            }
+            log.info("表 [{}] 字符集与实体不一致（库: {}，实体: {}），执行 CONVERT TO", tableInfo.getName(), dbCharset, desired);
+            tableDao.convertTableCharset(tableInfo.getName(), desired, collationArg);
+        } catch (Throwable e) {
+            log.warn("表 [{}] 字符集同步失败: {}", tableInfo.getName(), e.getMessage());
         }
     }
 
@@ -332,6 +386,33 @@ public class MysqlTableService {
     }
 
     /**
+     * 字符串相关列：字符集或与表一致的排序规则是否与库中不一致（含列继承表 collation 的情形）。
+     */
+    private boolean needsCharsetCollationModify(ColumnInfo col, ColumnMeta sys, TableInfo tableInfo) {
+        if (!col.supportsSqlCharsetClause()) {
+            return false;
+        }
+        String dbCs = sys.getCharacterSetName();
+        String dbCo = sys.getCollationName();
+        boolean hasExCs = StringUtils.isNotBlank(col.getExplicitCharset());
+        boolean hasExCo = StringUtils.isNotBlank(col.getExplicitCollation());
+        String desCs = hasExCs ? col.getExplicitCharset() : tableInfo.getCharset();
+        if (!TableCharsetUtils.sameCharset(desCs, dbCs)) {
+            return true;
+        }
+        if (hasExCo) {
+            return !TableCharsetUtils.sameCollation(col.getExplicitCollation(), dbCo);
+        }
+        if (hasExCs) {
+            return false;
+        }
+        if (StringUtils.isNotBlank(tableInfo.getCollation())) {
+            return !TableCharsetUtils.sameCollation(tableInfo.getCollation(), dbCo);
+        }
+        return false;
+    }
+
+    /**
      * 根据数据库中表的结构和model中表的结构对比找出修改类型默认值等属性的字段
      *
      * @param mySqlTypeAndLengthMap 获取Mysql的类型，以及类型需要设置几个长度
@@ -401,6 +482,11 @@ public class MysqlTableService {
                         modifyFieldList.add(createTableParam);
                         continue;
                     }
+                }
+
+                if (needsCharsetCollationModify(createTableParam, sysColumn, table)) {
+                    modifyFieldList.add(createTableParam);
+                    continue;
                 }
 
                 // 4.验证主键
@@ -686,6 +772,7 @@ public class MysqlTableService {
             m.put("comment", ti.getComment() != null ? ti.getComment() : "");
             m.put("engine", ti.getEngine() != null ? ti.getEngine() : "");
             m.put("charset", ti.getCharset() != null ? ti.getCharset() : "");
+            m.put("collation", ti.getCollation() != null ? ti.getCollation() : "");
             m.put("prefix", ti.getPrefix() != null ? ti.getPrefix() : "");
             List<Map<String, Object>> cols = new ArrayList<>();
             for (ColumnInfo c : collectColumnInfos(clazz, typeMap)) {
@@ -700,6 +787,8 @@ public class MysqlTableService {
                 cm.put("isUnique", c.isUnique());
                 cm.put("defaultValue", c.getDefaultValue() != null ? c.getDefaultValue() : "");
                 cm.put("comment", c.getComment() != null ? c.getComment() : "");
+                cm.put("explicitCharset", c.getExplicitCharset());
+                cm.put("explicitCollation", c.getExplicitCollation());
                 cols.add(cm);
             }
             m.put("columns", cols);

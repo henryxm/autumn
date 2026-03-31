@@ -2,6 +2,8 @@ package cn.org.autumn.table.data;
 
 import cn.org.autumn.table.annotation.Column;
 import cn.org.autumn.table.annotation.UniqueKey;
+import cn.org.autumn.table.annotation.sql.CharacterSet;
+import cn.org.autumn.table.annotation.sql.Collation;
 import cn.org.autumn.table.annotation.UniqueKeyFields;
 import cn.org.autumn.table.annotation.UniqueKeys;
 import cn.org.autumn.table.mysql.ColumnMeta;
@@ -14,6 +16,7 @@ import java.math.BigDecimal;
 import java.util.Date;
 import java.util.LinkedHashSet;
 import java.util.Set;
+import java.util.Locale;
 
 /**
  * 用于存放创建表的字段信息
@@ -93,6 +96,11 @@ public class ColumnInfo {
     private String extra;
 
     private String genAnnotation;
+
+    /** 列显式字符集（DDL），空表示继承表默认 */
+    private String explicitCharset = "";
+    /** 列显式排序规则（DDL），空表示继承表默认 */
+    private String explicitCollation = "";
 
     /**
      * 是否为枚举字段
@@ -293,6 +301,18 @@ public class ColumnInfo {
         if (StringUtils.isBlank(this.comment)) {
             this.comment = HumpConvert.HumpToName(field.getName());
         }
+        CharacterSet mcs = column.charset();
+        if (mcs != null && !mcs.isInherit()) {
+            this.explicitCharset = mcs.getSqlName();
+        } else {
+            this.explicitCharset = "";
+        }
+        Collation mco = column.collation();
+        if (mco != null && mco != Collation.INHERIT) {
+            this.explicitCollation = mco.getSqlName();
+        } else {
+            this.explicitCollation = "";
+        }
 
         if (field.getType().isEnum()) {
             this.enumType = true;
@@ -450,6 +470,46 @@ public class ColumnInfo {
 
     public boolean hasUniqueKey() {
         return hasUniqueKey;
+    }
+
+    public String getExplicitCharset() {
+        return explicitCharset == null ? "" : explicitCharset;
+    }
+
+    public void setExplicitCharset(String explicitCharset) {
+        this.explicitCharset = explicitCharset;
+    }
+
+    public String getExplicitCollation() {
+        return explicitCollation == null ? "" : explicitCollation;
+    }
+
+    public void setExplicitCollation(String explicitCollation) {
+        this.explicitCollation = explicitCollation;
+    }
+
+    /**
+     * 是否可在列定义上指定 CHARACTER SET / COLLATE（字符串相关类型）。
+     */
+    public boolean supportsSqlCharsetClause() {
+        if (type == null) {
+            return false;
+        }
+        String t = type.toLowerCase(Locale.ROOT);
+        switch (t) {
+            case "varchar":
+            case "char":
+            case "text":
+            case "tinytext":
+            case "mediumtext":
+            case "longtext":
+            case "enum":
+            case "set":
+            case "json":
+                return true;
+            default:
+                return false;
+        }
     }
 
     public boolean isEnumType() {

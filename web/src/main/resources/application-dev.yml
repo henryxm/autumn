@@ -4,11 +4,12 @@ spring:
     driverClassName: com.mysql.cj.jdbc.Driver
     druid:
       first:  #数据源1
-        url: jdbc:mysql://localhost:3306/autumn?serverTimezone=Asia/Shanghai&useSSL=false&allowMultiQueries=true&useUnicode=true&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
+        # Java 侧仍用 UTF-8；connectionCollation 让 MySQL 会话使用 utf8mb4（Emoji 等）。MySQL 8 可改为 utf8mb4_0900_ai_ci
+        url: jdbc:mysql://localhost:3306/autumn?serverTimezone=Asia/Shanghai&useSSL=false&allowMultiQueries=true&useUnicode=true&characterEncoding=UTF-8&connectionCollation=utf8mb4_unicode_ci&allowPublicKeyRetrieval=true
         username: autumn
         password: autumn
       second:  #数据源2
-        url: jdbc:mysql://localhost:3306/autumn?serverTimezone=Asia/Shanghai&useSSL=false&allowMultiQueries=true&useUnicode=true&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
+        url: jdbc:mysql://localhost:3306/autumn?serverTimezone=Asia/Shanghai&useSSL=false&allowMultiQueries=true&useUnicode=true&characterEncoding=UTF-8&connectionCollation=utf8mb4_unicode_ci&allowPublicKeyRetrieval=true
         username: autumn
         password: autumn
       initial-size: 10
