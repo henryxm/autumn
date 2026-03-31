@@ -34,6 +34,15 @@
 - 多人协作/规范治理：`AI_BOOT.md + AI_MAP.md + AI_GOVERNANCE.md`
 - 快速发起任务：在以上组合基础上追加 `AI_PROMPTS.md`
 
+## 3.1 代码生成模板边界（MVC 约束）
+
+- 可重生（默认不改）：`ControllerGen.java`、`*Pages.java`、`list.html`、`list.js`（由模板重生成）。
+- 可维护（业务落点）：`Controller.java`、`Service.java`、`Site.java`、`Menu.java`。
+- 先判定修改类型：
+  - 单模块业务需求 -> 改可维护层；
+  - 框架级批量行为统一 -> 改 `template/*.vm` 后重生成。
+- 向 AI 下达任务时应显式声明：`禁止修改 gen 层` 或 `允许修改模板并重生成`，避免误改被覆盖。
+
 ## 4. 相对路径最小示例
 
 ```md
