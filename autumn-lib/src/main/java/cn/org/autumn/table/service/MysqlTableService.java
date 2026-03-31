@@ -205,6 +205,7 @@ public class MysqlTableService {
                     syncTableCharsetIfNeeded(tableInfo);
                 }
                 List<ColumnMeta> tableColumnList = tableDao.getColumnMetas(tableInfo.getName());
+                warnOnLargeInformationSchemaLengths(tableInfo.getName(), tableColumnList);
 
 //                List<TableMeta> tableMetas = tableDao.getTableMetas("sys");
 
@@ -410,6 +411,38 @@ public class MysqlTableService {
             return !TableCharsetUtils.sameCollation(tableInfo.getCollation(), dbCo);
         }
         return false;
+    }
+
+    /**
+     * 监控 information_schema 中的超大长度值（如 LONGTEXT 的 4294967295），
+     * 便于排查 JDBC/驱动在旧版本整数映射上的溢出风险。
+     */
+    private void warnOnLargeInformationSchemaLengths(String tableName, List<ColumnMeta> tableColumnList) {
+        if (tableColumnList == null || tableColumnList.isEmpty()) {
+            return;
+        }
+        long maxInt = Integer.MAX_VALUE;
+        for (ColumnMeta c : tableColumnList) {
+            if (c == null) {
+                continue;
+            }
+            Long maxLen = c.getCharacterMaximumLength();
+            Long octLen = c.getCharacterOctetLength();
+            Long numPrecision = c.getNumericPrecision();
+            if ((maxLen != null && maxLen > maxInt)
+                    || (octLen != null && octLen > maxInt)
+                    || (numPrecision != null && numPrecision > maxInt)) {
+                log.warn("表 [{}] 字段 [{}] 元数据存在超大长度/精度值: characterMaximumLength={}, characterOctetLength={}, numericPrecision={}, dataType={}, columnType={}; "
+                                + "已使用 Long 映射兼容，避免 Integer 溢出。",
+                        tableName,
+                        c.getColumnName(),
+                        maxLen,
+                        octLen,
+                        numPrecision,
+                        c.getDataType(),
+                        c.getColumnType());
+            }
+        }
     }
 
     /**

@@ -12,11 +12,14 @@ public class ColumnMeta {
     private String columnDefault;
     private String isNullable;
     private String dataType;
-    private Integer characterMaximumLength;
-    private Integer characterOctetLength;
-    private Integer numericPrecision;
-    private Integer numericScale;
-    private Integer datetimePrecision;
+    /**
+     * information_schema 中长度/精度列可能返回 unsigned 大值（如 LONGTEXT=4294967295），使用 Long 避免 Integer 溢出。
+     */
+    private Long characterMaximumLength;
+    private Long characterOctetLength;
+    private Long numericPrecision;
+    private Long numericScale;
+    private Long datetimePrecision;
     private String characterSetName;
     private String collationName;
     private String columnType;
@@ -103,43 +106,43 @@ public class ColumnMeta {
         this.dataType = dataType;
     }
 
-    public Integer getCharacterMaximumLength() {
+    public Long getCharacterMaximumLength() {
         return characterMaximumLength;
     }
 
-    public void setCharacterMaximumLength(Integer characterMaximumLength) {
+    public void setCharacterMaximumLength(Long characterMaximumLength) {
         this.characterMaximumLength = characterMaximumLength;
     }
 
-    public Integer getCharacterOctetLength() {
+    public Long getCharacterOctetLength() {
         return characterOctetLength;
     }
 
-    public void setCharacterOctetLength(Integer characterOctetLength) {
+    public void setCharacterOctetLength(Long characterOctetLength) {
         this.characterOctetLength = characterOctetLength;
     }
 
-    public Integer getNumericPrecision() {
+    public Long getNumericPrecision() {
         return numericPrecision;
     }
 
-    public void setNumericPrecision(Integer numericPrecision) {
+    public void setNumericPrecision(Long numericPrecision) {
         this.numericPrecision = numericPrecision;
     }
 
-    public Integer getNumericScale() {
+    public Long getNumericScale() {
         return numericScale;
     }
 
-    public void setNumericScale(Integer numericScale) {
+    public void setNumericScale(Long numericScale) {
         this.numericScale = numericScale;
     }
 
-    public Integer getDatetimePrecision() {
+    public Long getDatetimePrecision() {
         return datetimePrecision;
     }
 
-    public void setDatetimePrecision(Integer datetimePrecision) {
+    public void setDatetimePrecision(Long datetimePrecision) {
         this.datetimePrecision = datetimePrecision;
     }
 
