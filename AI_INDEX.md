@@ -5,7 +5,7 @@
 ## 1. 文档职责一览
 
 - `AI_BOOT.md`：最小启动上下文（首轮必读）
-- `AI_MAP.md`：高频开发能力主图
+- `AI_MAP.md`：高频开发能力主图（含生成模板分层与可改/不可改边界）
 - `AI_CRYPTO.md`：接口加解密兼容与迁移
 - `AI_SECURITY.md`：安全强校验、灰度、演练
 - `AI_TEMPLATES.md`：模块任务模板库
@@ -16,7 +16,7 @@
 ## 2. 推荐加载矩阵（按场景）
 
 - 日常开发：`AI_BOOT.md + AI_MAP.md`
-- 新模块/代码生成：`AI_BOOT.md + AI_MAP.md + AI_TEMPLATES.md`
+- 新模块/代码生成：`AI_BOOT.md + AI_MAP.md + AI_TEMPLATES.md`（先确认生成层约束，再落业务层）
 - 多项目模板整合（TemplateFactory）：`AI_BOOT.md + AI_MAP.md + AI_GOVERNANCE.md`
 - 接口加解密改造：`AI_BOOT.md + AI_MAP.md + AI_CRYPTO.md`
 - 安全改造/攻防演练：`AI_BOOT.md + AI_MAP.md + AI_SECURITY.md`
