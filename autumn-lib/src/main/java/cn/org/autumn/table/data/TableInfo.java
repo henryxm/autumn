@@ -26,7 +26,9 @@ public class TableInfo {
     private String comment;
     private String engine;
     private String charset;
-    /** 表排序规则，空表示使用 MySQL 默认 */
+    /**
+     * 表排序规则，空表示使用 MySQL 默认
+     */
     private String collation;
     private Boolean hasBigDecimal;
 
@@ -385,8 +387,15 @@ public class TableInfo {
     }
 
     /**
-     * 类级 / 复合 {@link Index} 中若包含已由 {@code @Column(isUnique=true)} 表达唯一性的列，则从索引定义中移除该列；
-     * 移除后若无剩余列则丢弃整段索引，并打 WARN 提示清理注解。
+     * 类级 / 复合 {@link Index} 中若包含已由 {@code @Column(isUnique=true)} 表达唯一性的列，则从索引定义中移除该列。
+     * <p>
+     * 规则：
+     * <ul>
+     *     <li>isUnique 优先于同列索引定义；</li>
+     *     <li>单字段索引冲突时打印告警；</li>
+     *     <li>多字段索引（fields &gt; 1）不参与该冲突处理；</li>
+     *     <li>移除后若索引无剩余列则丢弃该索引。</li>
+     * </ul>
      */
     private void stripIsUniqueColumnsFromClassLevelIndexes(Class<?> clazz, List<IndexInfo> infos, Set<String> isUniqueColumnNames) {
         if (infos == null || infos.isEmpty() || isUniqueColumnNames == null || isUniqueColumnNames.isEmpty()) {
@@ -397,6 +406,11 @@ public class TableInfo {
             IndexInfo ii = it.next();
             Map<String, Integer> f = ii.getFields();
             if (f == null || f.isEmpty()) {
+                continue;
+            }
+            int originalFieldCount = f.size();
+            if (originalFieldCount > 1) {
+                // 复合索引不与字段上的 isUnique 冲突，按原定义保留。
                 continue;
             }
             List<String> toRemove = new ArrayList<>();
