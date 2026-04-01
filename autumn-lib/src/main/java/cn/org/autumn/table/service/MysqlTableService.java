@@ -432,15 +432,16 @@ public class MysqlTableService {
             if ((maxLen != null && maxLen > maxInt)
                     || (octLen != null && octLen > maxInt)
                     || (numPrecision != null && numPrecision > maxInt)) {
-                log.warn("表 [{}] 字段 [{}] 元数据存在超大长度/精度值: characterMaximumLength={}, characterOctetLength={}, numericPrecision={}, dataType={}, columnType={}; "
-                                + "已使用 Long 映射兼容，避免 Integer 溢出。",
-                        tableName,
-                        c.getColumnName(),
-                        maxLen,
-                        octLen,
-                        numPrecision,
-                        c.getDataType(),
-                        c.getColumnType());
+                if (log.isDebugEnabled())
+                    log.debug("表 [{}] 字段 [{}] 元数据存在超大长度/精度值: characterMaximumLength={}, characterOctetLength={}, numericPrecision={}, dataType={}, columnType={}; "
+                                    + "已使用 Long 映射兼容，避免 Integer 溢出。",
+                            tableName,
+                            c.getColumnName(),
+                            maxLen,
+                            octLen,
+                            numPrecision,
+                            c.getDataType(),
+                            c.getColumnType());
             }
         }
     }
