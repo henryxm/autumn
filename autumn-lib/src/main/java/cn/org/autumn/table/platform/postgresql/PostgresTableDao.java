@@ -28,10 +28,11 @@ public interface PostgresTableDao {
     @SelectProvider(type = PostgresQuerySql.class, method = getColumnMetas)
     List<ColumnMeta> getColumnMetas(@Param(paramName) String tableName);
 
+    /** 分页表元数据；勿与 {@link #getTableMetas(String)} 重载同名，否则 MyBatis statement id 冲突。 */
     @SelectProvider(type = PostgresQuerySql.class, method = getTableMetas)
-    List<TableMeta> getTableMetas(@Param(paramName) String tableName,
-                                 @Param("offset") int offset,
-                                 @Param("rows") int rows);
+    List<TableMeta> getTableMetasPage(@Param(paramName) String tableName,
+                                      @Param("offset") int offset,
+                                      @Param("rows") int rows);
 
     @SelectProvider(type = PostgresQuerySql.class, method = getTableMetas)
     List<TableMeta> getTableMetas(@Param(paramName) String tableName);
