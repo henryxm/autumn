@@ -6,7 +6,6 @@ import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.usr.dao.UserTokenDao;
 import cn.org.autumn.modules.usr.entity.UserTokenEntity;
 import com.alibaba.fastjson.JSON;
-import com.baomidou.mybatisplus.mapper.EntityWrapper;
 import org.apache.commons.lang.StringUtils;
 import org.apache.oltu.oauth2.common.OAuth;
 import org.springframework.stereotype.Service;
@@ -27,7 +26,7 @@ public class UserTokenService extends ModuleService<UserTokenDao, UserTokenEntit
     }
 
     public UserTokenEntity queryByToken(String token) {
-        return this.selectOne(new EntityWrapper<UserTokenEntity>().eq("token", token));
+        return getToken(token);
     }
 
     public UserTokenEntity getUuid(String uuid) {

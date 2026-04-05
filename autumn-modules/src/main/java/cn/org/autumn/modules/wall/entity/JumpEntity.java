@@ -25,8 +25,9 @@ public class JumpEntity implements Serializable {
     @Column(comment = "跳转", defaultValue = "")
     private String url;
 
+    /** 0/1，与 PG smallint / MySQL tinyint 一致 */
     @Column(comment = "开启", defaultValue = "1")
-    private boolean enable;
+    private int enable;
 
     public Long getId() {
         return id;
@@ -60,11 +61,15 @@ public class JumpEntity implements Serializable {
         this.url = url;
     }
 
-    public boolean isEnable() {
+    public int getEnable() {
         return enable;
     }
 
-    public void setEnable(boolean enable) {
+    public void setEnable(int enable) {
         this.enable = enable;
+    }
+
+    public boolean isEnabled() {
+        return enable != 0;
     }
 }

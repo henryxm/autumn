@@ -6,6 +6,8 @@
 
 - `AI_BOOT.md`：最小启动上下文（首轮必读）
 - `AI_MAP.md`：高频开发能力主图（含生成模板分层与可改/不可改边界）
+- `AI_POSTGRESQL.md`：PostgreSQL 支持方案、变更清单、兼容性与迁移策略（多库适配）
+- `AI_UPGRADE.md`：依赖方升级 autumn 时的清单、一键扫描脚本说明与自动化边界
 - `AI_CRYPTO.md`：接口加解密兼容与迁移
 - `AI_SECURITY.md`：安全强校验、灰度、演练
 - `AI_TEMPLATES.md`：模块任务模板库
@@ -22,6 +24,8 @@
 - 安全改造/攻防演练：`AI_BOOT.md + AI_MAP.md + AI_SECURITY.md`
 - 文档治理/多人协作：`AI_BOOT.md + AI_MAP.md + AI_GOVERNANCE.md`
 - 快速起任务：在以上任一组合追加 `AI_PROMPTS.md`
+- PostgreSQL / 方言与类型兼容排查：`AI_BOOT.md + AI_MAP.md + AI_POSTGRESQL.md`
+- 业务工程升级 autumn 版本：`AI_BOOT.md + AI_UPGRADE.md`（必要时叠加 `AI_POSTGRESQL.md`）
 
 ## 3. 标准引用顺序
 
@@ -37,7 +41,7 @@
 - @../autumn/AI_INDEX.md
 - @../autumn/AI_BOOT.md
 - @../autumn/AI_MAP.md
-- （按需）@../autumn/AI_CRYPTO.md / @../autumn/AI_TEMPLATES.md / @../autumn/AI_GOVERNANCE.md / @../autumn/AI_SECURITY.md / @../autumn/AI_PROMPTS.md
+- （按需）@../autumn/AI_POSTGRESQL.md / @../autumn/AI_UPGRADE.md / @../autumn/AI_CRYPTO.md / @../autumn/AI_TEMPLATES.md / @../autumn/AI_GOVERNANCE.md / @../autumn/AI_SECURITY.md / @../autumn/AI_PROMPTS.md
 - @./README.md
 - @./<目标模块目录>
 ```

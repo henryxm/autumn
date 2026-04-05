@@ -11,7 +11,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Controller;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RestController;
-import sun.misc.Launcher;
 
 import java.io.*;
 import java.lang.annotation.Annotation;
@@ -148,7 +147,7 @@ public class PluginManager {
         String classPath = System.getProperty("java.class.path");
         if (!classPath.contains(file))
             System.setProperty("java.class.path", classPath + ":" + file);
-        Launcher.getBootstrapClassPath().addURL(new URL("file:" + file));
+        appendBootstrapClasspathUnchecked(file);
         List<String> classes = ClassLoaderUtil.getClasses(new File(file));
         List<String> beans = new ArrayList<>();
         Plugin plugin = null;
@@ -218,6 +217,18 @@ public class PluginManager {
                 plugin.uninstall();
             }
             clearClassPath(pluginEntry);
+        }
+    }
+
+    /**
+     * JDK 8：尝试把插件 jar 挂到 bootstrap class path（历史逻辑）。JDK 9+ 无 {@code sun.misc.Launcher}，跳过并依赖 URLClassLoader。
+     */
+    private static void appendBootstrapClasspathUnchecked(String absoluteJarPath) {
+        try {
+            Class<?> launcher = Class.forName("sun.misc.Launcher");
+            Object bcp = launcher.getMethod("getBootstrapClassPath").invoke(null);
+            bcp.getClass().getMethod("addURL", URL.class).invoke(bcp, new URL("file:" + absoluteJarPath));
+        } catch (Throwable ignored) {
         }
     }
 

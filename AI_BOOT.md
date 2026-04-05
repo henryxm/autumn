@@ -123,6 +123,8 @@
 ## 6. 按需追加文档（不要全量加载）
 
 - 核心能力详解：`@AI_MAP.md`
+- **PostgreSQL 支持（完整方案、兼容性、变更清单）：`@AI_POSTGRESQL.md`**
+- **依赖方升级 autumn（清单、扫描脚本、自动化边界）：`@AI_UPGRADE.md`**
 - 加解密兼容专项：`@AI_CRYPTO.md`
 - 模块任务模板：`@AI_TEMPLATES.md`
 - 治理与协作规范：`@AI_GOVERNANCE.md`
@@ -136,3 +138,18 @@
 - 模块新建/代码生成：`AI_BOOT.md + AI_MAP.md + AI_TEMPLATES.md`
 - 规范梳理/团队协作：`AI_BOOT.md + AI_MAP.md + AI_GOVERNANCE.md`
 - 安全改造/攻防演练：`AI_BOOT.md + AI_MAP.md + AI_SECURITY.md`
+- **PostgreSQL / 多库适配排查：`AI_BOOT.md + AI_MAP.md + AI_POSTGRESQL.md`**
+- **业务仓库升级 autumn：`AI_BOOT.md + AI_UPGRADE.md`（多库/PG 时叠加 `AI_POSTGRESQL.md`）**
+- 仅对照 PG 清单与兼容性、少读其它文档时：可直接打开 `AI_POSTGRESQL.md`（仍建议与 `AI_MAP.md` 中表结构/方言章节交叉核对）。
+
+## 8. PostgreSQL 支持（摘要）
+
+> **完整说明、变更过程与兼容性矩阵见 `AI_POSTGRESQL.md`。**
+
+- **配置**：`autumn.database: postgresql`，数据源与 `pagehelper` 方言对齐；示例见 `application-postgresql.yml`。
+- **路由**：`AutumnDatabaseType` + `RoutingRelationalTableOperations` / `RoutingRuntimeSqlDialect`；注解建表仅对 mysql/mariadb/postgresql 执行同步。
+- **方言与 SQL**：`RuntimeSqlDialect`（引号、`LIMIT`、`FIND_IN_SET` 替代等）；`PostgresQuerySql` 负责 PG DDL/元数据；业务侧逐步用 `*Sql` Provider 替换非移植 SQL。
+- **类型兼容**：新建 PG 库时 `tinyint(1)` 布尔元数据可落 **`boolean`** 列；**已有 `smallint` 列**可与实体 **`int` 0/1** 对齐，或 **`ALTER ... TYPE boolean USING (...)`**。
+- **MyBatis**：避免同一字段 **`getX(int)` + `boolean isX()`** 并存导致 `Reflector` 冲突；分页 **`COUNT` 不带 `ORDER BY`**（见 `BaseService.selectCountWithoutOrderBy`）。
+- **构建**：JDK 9+ 需 Lombok **`annotationProcessorPaths`**；多模块运行前建议 **`mvn clean install -pl … -am`**，避免本地仓库旧 JAR 与源码不一致。
+- **备份**：内置导出仍以 MySQL 为主；PG 生产备份建议 **`pg_dump`** 等外部方案。

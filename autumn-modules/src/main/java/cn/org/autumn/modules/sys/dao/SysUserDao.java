@@ -1,11 +1,13 @@
 package cn.org.autumn.modules.sys.dao;
 
+import cn.org.autumn.modules.sys.dao.sql.SysUserDaoSql;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import com.baomidou.mybatisplus.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
-import org.apache.ibatis.annotations.Update;
+import org.apache.ibatis.annotations.SelectProvider;
+import org.apache.ibatis.annotations.UpdateProvider;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -25,57 +27,57 @@ public interface SysUserDao extends BaseMapper<SysUserEntity> {
             "where ur.user_uuid = #{userUuid}")
     List<String> getMenus(@Param("userUuid") String userUuid);
 
-    @Update("update sys_user set `verify` = #{verify} where `uuid` = #{uuid}")
+    @UpdateProvider(type = SysUserDaoSql.class, method = "verify")
     void verify(@Param("uuid") String uuid, @Param("verify") int verify);
 
-    @Select("select * from sys_user where `username` = #{username} and `status` >= 0")
+    @SelectProvider(type = SysUserDaoSql.class, method = "getByUsername")
     SysUserEntity getByUsername(@Param("username") String username);
 
-    @Select("select * from sys_user where `username` like concat('%', #{username}, '%') and `status` >= 0 limit 1")
+    @SelectProvider(type = SysUserDaoSql.class, method = "getByUsernameLike")
     SysUserEntity getByUsernameLike(@Param("username") String username);
 
-    @Select("SELECT * FROM sys_user WHERE `email` = #{email} and `status` >= 0")
+    @SelectProvider(type = SysUserDaoSql.class, method = "getByEmail")
     SysUserEntity getByEmail(@Param("email") String email);
 
-    @Select("SELECT * FROM sys_user WHERE `email` like concat('%', #{email}, '%') and `status` >= 0 limit 1")
+    @SelectProvider(type = SysUserDaoSql.class, method = "getByEmailLike")
     SysUserEntity getByEmailLike(@Param("email") String email);
 
-    @Select("SELECT * FROM sys_user WHERE `mobile` = #{mobile} and `status` >= 0")
+    @SelectProvider(type = SysUserDaoSql.class, method = "getByPhone")
     SysUserEntity getByPhone(@Param("mobile") String mobile);
 
-    @Select("SELECT * FROM sys_user WHERE `mobile` like concat('%', #{mobile}, '%') and `status` >= 0 limit 1")
+    @SelectProvider(type = SysUserDaoSql.class, method = "getByPhoneLike")
     SysUserEntity getByPhoneLike(@Param("mobile") String mobile);
 
-    @Select("SELECT * FROM sys_user WHERE `uuid` = #{uuid} and `status` >= 0")
+    @SelectProvider(type = SysUserDaoSql.class, method = "getByUuid")
     SysUserEntity getByUuid(@Param("uuid") String uuid);
 
-    @Select("SELECT * FROM sys_user WHERE `uuid` = #{uuid}")
+    @SelectProvider(type = SysUserDaoSql.class, method = "getForDelete")
     SysUserEntity getForDelete(@Param("uuid") String uuid);
 
-    @Select("SELECT * FROM sys_user WHERE `uuid` like concat('%', #{uuid}, '%')  and `status` >= 0 limit 1")
+    @SelectProvider(type = SysUserDaoSql.class, method = "getByUuidLike")
     SysUserEntity getByUuidLike(@Param("uuid") String uuid);
 
-    @Select("SELECT * FROM sys_user WHERE `qq` = #{qq} and `status` >= 0")
+    @SelectProvider(type = SysUserDaoSql.class, method = "getByQq")
     SysUserEntity getByQq(@Param("qq") String qq);
 
-    @Select("SELECT * FROM sys_user WHERE `qq` like concat('%', #{qq}, '%') and `status` >= 0 limit 1")
+    @SelectProvider(type = SysUserDaoSql.class, method = "getByQqLike")
     SysUserEntity getByQqLike(@Param("qq") String qq);
 
-    @Select("SELECT * FROM sys_user WHERE `weixin` = #{weixin} and `status` >= 0")
+    @SelectProvider(type = SysUserDaoSql.class, method = "getByWeixing")
     SysUserEntity getByWeixing(@Param("weixin") String weixin);
 
-    @Select("SELECT * FROM sys_user WHERE `weixin` like concat('%', #{weixin}, '%') and `status` >= 0 limit 1")
+    @SelectProvider(type = SysUserDaoSql.class, method = "getByWeixingLike")
     SysUserEntity getByWeixingLike(@Param("weixin") String weixin);
 
-    @Select("SELECT * FROM sys_user WHERE `alipay` = #{alipay} and `status` >= 0")
+    @SelectProvider(type = SysUserDaoSql.class, method = "getByAlipay")
     SysUserEntity getByAlipay(@Param("alipay") String alipay);
 
-    @Select("SELECT * FROM sys_user WHERE `alipay` like concat('%', #{alipay}, '%') and `status` >= 0 limit 1")
+    @SelectProvider(type = SysUserDaoSql.class, method = "getByAlipayLike")
     SysUserEntity getByAlipayLike(@Param("alipay") String alipay);
 
-    @Select("SELECT * FROM sys_user WHERE `id_card` = #{idCard} and `status` >= 0")
+    @SelectProvider(type = SysUserDaoSql.class, method = "getByIdCard")
     SysUserEntity getByIdCard(@Param("idCard") String idCard);
 
-    @Select("SELECT * FROM sys_user WHERE `id_card` like concat('%', #{idCard}, '%') and `status` >= 0 limit 1")
+    @SelectProvider(type = SysUserDaoSql.class, method = "getByIdCardLike")
     SysUserEntity getByIdCardLike(@Param("idCard") String idCard);
 }

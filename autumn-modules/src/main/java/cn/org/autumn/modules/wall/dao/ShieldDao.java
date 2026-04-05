@@ -2,8 +2,9 @@ package cn.org.autumn.modules.wall.dao;
 
 import cn.org.autumn.modules.wall.entity.ShieldEntity;
 import com.baomidou.mybatisplus.mapper.BaseMapper;
+import cn.org.autumn.modules.wall.dao.sql.WallDaoSql;
 import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.SelectProvider;
 import org.springframework.stereotype.Repository;
 
 import java.util.Set;
@@ -19,12 +20,12 @@ import java.util.Set;
 @Repository
 public interface ShieldDao extends BaseMapper<ShieldEntity> {
 
-    @Select("select s.uri from wall_shield as s where enable = 1")
+    @SelectProvider(type = WallDaoSql.class, method = "shieldUris")
     Set<String> gets();
 
-    @Select("select * from wall_shield where uri = '/'")
+    @SelectProvider(type = WallDaoSql.class, method = "shieldDefault")
     ShieldEntity get();
 
-    @Select("select count(*) from wall_shield where uri = '/'")
+    @SelectProvider(type = WallDaoSql.class, method = "shieldHasDefault")
     int has();
 }

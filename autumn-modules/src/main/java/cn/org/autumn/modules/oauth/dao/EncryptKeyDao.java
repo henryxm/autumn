@@ -5,7 +5,8 @@ import com.baomidou.mybatisplus.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
+import cn.org.autumn.modules.oauth.dao.sql.OauthInlineSql;
+import org.apache.ibatis.annotations.SelectProvider;
 import org.springframework.stereotype.Repository;
 
 import java.util.Date;
@@ -21,7 +22,7 @@ import java.util.Date;
 @Repository
 public interface EncryptKeyDao extends BaseMapper<EncryptKeyEntity> {
 
-    @Select("select * from oauth_encrypt_key where `session` = #{session}")
+    @SelectProvider(type = OauthInlineSql.class, method = "encryptKeyBySession")
     EncryptKeyEntity getBySession(@Param("session") String session);
 
     /**

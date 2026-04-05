@@ -43,6 +43,8 @@
         <pagehelper.spring.boot.version>1.2.5</pagehelper.spring.boot.version>
         <velocity.version>2.0</velocity.version>
         <oltu.version>1.0.2</oltu.version>
+        <!-- 显式声明：JDK 9+ 编译时 Lombok 需走 annotationProcessorPaths，否则 @Slf4j/@Data/@Builder 等不生成代码 -->
+        <lombok.version>1.18.34</lombok.version>
     </properties>
 
     <modules>
@@ -252,6 +254,13 @@
                     </compilerArgs>
                     <!-- 确保依赖模块先编译 -->
                     <useIncrementalCompilation>false</useIncrementalCompilation>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
                 </configuration>
             </plugin>
             <!-- Maven Clean 插件 -->

@@ -52,8 +52,9 @@ public class SysConfigEntity implements Serializable {
     @Column(type = DataType.TEXT, comment = "可选项")
     private String options;
 
+    /** 0/1，与 PG smallint / MySQL tinyint 一致；勿用 boolean 以免 JDBC 在 PG 上绑成 boolean */
     @Column(comment = "只读", defaultValue = "0")
-    private boolean readonly;
+    private int readonly;
 
     @Column(comment = "排序:值越大,显示靠前", defaultValue = "0")
     private int order;
@@ -141,11 +142,11 @@ public class SysConfigEntity implements Serializable {
         this.options = options;
     }
 
-    public boolean isReadonly() {
+    public int getReadonly() {
         return readonly;
     }
 
-    public void setReadonly(boolean readonly) {
+    public void setReadonly(int readonly) {
         this.readonly = readonly;
     }
 

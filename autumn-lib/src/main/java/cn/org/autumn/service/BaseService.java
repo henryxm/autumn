@@ -66,9 +66,41 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends ShareCache
     }
 
     public PageUtils queryPage(Page<T> _page, EntityWrapper<T> entityEntityWrapper) {
+        if (entityEntityWrapper == null) {
+            entityEntityWrapper = new EntityWrapper<>();
+        }
         Page<T> page = this.selectPage(_page, entityEntityWrapper);
-        page.setTotal(baseMapper.selectCount(entityEntityWrapper));
+        // selectPage 内 SqlHelper.fillWrapper 会把 Page 排序写入 Wrapper，导致 COUNT 带 ORDER BY；
+        // PostgreSQL 报错：column "…id" must appear in the GROUP BY or be used in an aggregate function
+        page.setTotal(selectCountWithoutOrderBy(entityEntityWrapper));
         return new PageUtils(page);
+    }
+
+    /**
+     * 统计条数：去掉 Wrapper 中的 ORDER BY（及分页填充带来的排序），供 PostgreSQL 等严格方言使用。
+     */
+    private int selectCountWithoutOrderBy(EntityWrapper<T> ew) {
+        EntityWrapper<T> countEw = new EntityWrapper<>();
+        String seg = ew.getSqlSegment();
+        if (StringUtils.isBlank(seg)) {
+            return baseMapper.selectCount(countEw);
+        }
+        String s = seg.trim();
+        int ob = s.toUpperCase(Locale.ROOT).lastIndexOf("ORDER BY");
+        if (ob >= 0) {
+            s = s.substring(0, ob).trim();
+        }
+        if (StringUtils.isBlank(s)) {
+            return baseMapper.selectCount(new EntityWrapper<>());
+        }
+        if (s.toUpperCase(Locale.ROOT).startsWith("WHERE ")) {
+            s = s.substring(6).trim();
+        }
+        if (StringUtils.isBlank(s)) {
+            return baseMapper.selectCount(new EntityWrapper<>());
+        }
+        countEw.where(s);
+        return baseMapper.selectCount(countEw);
     }
 
     public PageUtils queryPage(Map<String, Object> params) {

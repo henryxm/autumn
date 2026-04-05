@@ -34,6 +34,9 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <mainClass>cn.org.autumn.AutumnApplication</mainClass>
+                </configuration>
             </plugin>
             <!-- 跳过单元测试 -->
             <plugin>

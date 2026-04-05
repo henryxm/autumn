@@ -32,8 +32,9 @@ public class SysCategoryEntity implements Serializable {
     @Column(comment = "排序:值越大,显示靠前", defaultValue = "0")
     private int order;
 
+    /** 0/1，与 PG smallint 一致 */
     @Column(comment = "冻结:冻结后不更新状态和描述", defaultValue = "0")
-    private boolean frozen;
+    private int frozen;
 
     @Column(comment = "描述")
     private String description;
@@ -78,11 +79,11 @@ public class SysCategoryEntity implements Serializable {
         this.order = order;
     }
 
-    public boolean isFrozen() {
+    public int getFrozen() {
         return frozen;
     }
 
-    public void setFrozen(boolean frozen) {
+    public void setFrozen(int frozen) {
         this.frozen = frozen;
     }
 

@@ -149,7 +149,7 @@ public class ShieldService extends ModuleService<ShieldDao, ShieldEntity> implem
                 shield.setAuto(10000);
             if (visit.size() < shield.getAuto())
                 return;
-            shield.setEnable(true);
+            shield.setEnable(1);
             updateById(shield);
         } else {
             create();
@@ -161,7 +161,7 @@ public class ShieldService extends ModuleService<ShieldDao, ShieldEntity> implem
     public void disable() {
         ShieldEntity shield = baseMapper.get();
         if (null != shield) {
-            shield.setEnable(false);
+            shield.setEnable(0);
             if (shield.getAuto() < 10000)
                 shield.setAuto(10000);
             updateById(shield);
@@ -173,7 +173,7 @@ public class ShieldService extends ModuleService<ShieldDao, ShieldEntity> implem
 
     public void create() {
         ShieldEntity shield = new ShieldEntity();
-        shield.setEnable(false);
+        shield.setEnable(0);
         shield.setUri("/");
         shield.setAuto(10000);
         insert(shield);
@@ -185,8 +185,8 @@ public class ShieldService extends ModuleService<ShieldDao, ShieldEntity> implem
             create();
             shield = baseMapper.get();
         }
-        boolean newEnable = !shield.isEnable();
-        shield.setEnable(newEnable);
+        boolean newEnable = !shield.isEnabled();
+        shield.setEnable(newEnable ? 1 : 0);
         updateById(shield);
         uris = baseMapper.gets();
         return newEnable;
@@ -194,7 +194,7 @@ public class ShieldService extends ModuleService<ShieldDao, ShieldEntity> implem
 
     public boolean getEnable() {
         ShieldEntity shield = baseMapper.get();
-        return shield != null && shield.isEnable();
+        return shield != null && shield.isEnabled();
     }
 
     @Override

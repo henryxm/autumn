@@ -1,6 +1,7 @@
 package cn.org.autumn.modules.sys.aspect;
 
 import cn.org.autumn.annotation.DataFilter;
+import cn.org.autumn.database.runtime.RuntimeSqlDialect;
 import cn.org.autumn.utils.Constant;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysDeptService;
@@ -31,6 +32,9 @@ public class DataFilterAspect {
     private SysUserRoleService sysUserRoleService;
     @Autowired
     private SysRoleDeptService sysRoleDeptService;
+
+    @Autowired
+    private RuntimeSqlDialect runtimeSqlDialect;
 
     @Pointcut("@annotation(cn.org.autumn.annotation.DataFilter)")
     public void dataFilterCut() {
@@ -87,7 +91,8 @@ public class DataFilterAspect {
         sqlFilter.append(" (");
 
         if (deptIdList.size() > 0) {
-            sqlFilter.append(tableAlias).append(" find_in_set(").append(dataFilter.deptId()).append(", '").append(StringUtils.join(deptIdList, ",")).append("')");
+            String deptCol = tableAlias + dataFilter.deptId();
+            sqlFilter.append(runtimeSqlDialect.columnValueInCommaSeparatedList(deptCol, StringUtils.join(deptIdList, ",")));
         }
 
         //没有本部门数据权限，也能查询本人数据

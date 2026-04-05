@@ -4,7 +4,10 @@ import cn.org.autumn.modules.wall.entity.HostEntity;
 import com.baomidou.mybatisplus.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
+import cn.org.autumn.modules.wall.dao.sql.WallCounterSql;
+import cn.org.autumn.modules.wall.dao.sql.WallDaoSql;
+import org.apache.ibatis.annotations.SelectProvider;
+import org.apache.ibatis.annotations.UpdateProvider;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -20,18 +23,18 @@ import java.util.List;
 @Repository
 public interface HostDao extends BaseMapper<HostEntity> {
 
-    @Select("select * from wall_host where host = #{host} limit 1")
+    @SelectProvider(type = WallDaoSql.class, method = "hostGetByHost")
     HostEntity getByHost(@Param("host") String host);
 
-    @Select("select count(*) from wall_host where host = #{host} limit 1")
+    @SelectProvider(type = WallDaoSql.class, method = "hostHasHost")
     Integer hasHost(@Param("host") String host);
 
-    @Select("update wall_host set `count` = ifnull(`count`,0) + #{count}, today = ifnull(today,0) + #{count}, update_time = now() where host = #{host}")
+    @SelectProvider(type = WallCounterSql.class, method = "hostBump")
     Integer count(@Param("host") String host, @Param("count") Integer count);
 
-    @Select("update wall_host set today = 0")
+    @UpdateProvider(type = WallDaoSql.class, method = "hostRefreshToday")
     Integer refresh();
 
-    @Select("select wh.host from wall_host wh where wh.forbidden = #{forbidden}")
+    @SelectProvider(type = WallDaoSql.class, method = "hostGetHosts")
     List<String> getHosts(@Param("forbidden") Integer forbidden);
 }

@@ -17,6 +17,6 @@ public interface SysDeptDao extends BaseMapper<SysDeptEntity> {
     @Select("select dept_key from sys_dept where parent_key = #{value} and del_flag = 0")
     List<String> getByParentKey(@Param("value") String parentKey);
 
-    @Select("select * from sys_dept where dept_Key = #{deptKey}")
+    @Select("select * from sys_dept where dept_key = #{deptKey}")
     SysDeptEntity getByDeptKey(@Param("deptKey") String deptKey);
 }

@@ -13,7 +13,11 @@ import org.springframework.scheduling.annotation.EnableAsync;
 @ServletComponentScan
 @EnableAsync
 @SpringBootApplication
-@MapperScan(basePackages = {"cn.org.autumn.modules.*.dao", "cn.org.autumn.table.dao",})
+@MapperScan(basePackages = {
+        "cn.org.autumn.modules.*.dao",
+        "cn.org.autumn.table.dao",
+        "cn.org.autumn.table.platform.postgresql",
+})
 public class AutumnApplication extends SpringBootServletInitializer implements TemplateFactory.Template {
     public static void main(String[] args) {
         new SpringApplication(AutumnApplication.class).run(args);
