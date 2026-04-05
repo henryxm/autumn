@@ -34,14 +34,12 @@ public class DatabaseBackupEntity implements Serializable {
     private Long filesize;
 
     @Column(comment = "数据库名称")
-    @TableField("`database`")
     private String database;
 
     /**
      * 备份模式: FULL-全量, TABLES-指定表
      */
     @Column(comment = "备份模式:FULL-全量,TABLES-指定表", defaultValue = "FULL")
-    @TableField("`mode`")
     private String mode;
 
     /**

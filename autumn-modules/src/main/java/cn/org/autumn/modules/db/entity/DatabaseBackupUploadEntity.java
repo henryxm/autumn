@@ -35,7 +35,6 @@ public class DatabaseBackupUploadEntity implements Serializable {
     private Long filesize;
 
     @Column(comment = "目标数据库名称")
-    @TableField("`database`")
     private String database;
 
     @Column(comment = "备注说明")

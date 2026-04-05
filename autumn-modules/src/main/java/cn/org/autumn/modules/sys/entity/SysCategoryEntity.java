@@ -30,7 +30,6 @@ public class SysCategoryEntity implements Serializable {
     private int status;
 
     @Column(comment = "排序:值越大,显示靠前", defaultValue = "0")
-    @TableField("`order`")
     private int order;
 
     /** 0/1，与 PG smallint 一致 */

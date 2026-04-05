@@ -47,6 +47,9 @@ spring:
       matching-strategy: ANT_PATH_MATCHER
 
 autumn:
+  # MyBatis-Plus 列名包装：下方 mybatis-plus.global-config.db-config.column-format 为 MySQL 默认；
+  # cn.org.autumn.config.MybatisPlusConfig#mybatisPlusColumnFormatCustomizer 按 autumn.database 覆盖（PG/Oracle/SQL Server）。
+  # 物理列名为 SQL 保留字（如 order）时：实体 Java 属性勿用保留字，用 sortOrder + @TableField("order")，见 SysConfigEntity。
   redis:
     open: true  # 是否开启redis缓存  true开启   false关闭
   shiro:
@@ -68,7 +71,7 @@ mybatis-plus:
     db-config:
       #主键类型 AUTO:"数据库ID自增", INPUT:"用户输入ID", ASSIGN_ID:"雪花算法ID", ASSIGN_UUID:"UUID"
       id-type: AUTO
-      #全局列名加反引号，防止 MySQL 保留关键字冲突
+      # 占位符；MySQL/MariaDB 反引号。PG/Oracle/SQL Server 在 MybatisPlusConfig 中按 autumn.database 覆盖，勿仅依赖本行。
       column-format: "`%s`"
       #字段验证策略 NEVER:"忽略判断", NOT_NULL:"非NULL判断", NOT_EMPTY:"非空判断", ALWAYS:"总是加入"
       insert-strategy: ALWAYS

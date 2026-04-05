@@ -64,6 +64,5 @@ public class UserLoginLogEntity implements Serializable {
     private String reason;
 
     @Column(comment = "创建")
-    @TableField("`create`")
     private Date create;
 }

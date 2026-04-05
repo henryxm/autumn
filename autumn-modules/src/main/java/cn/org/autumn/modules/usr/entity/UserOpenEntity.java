@@ -43,10 +43,8 @@ public class UserOpenEntity implements Serializable {
     private int deleted;
 
     @Column(comment = "创建")
-    @TableField("`create`")
     private Date create;
 
     @Column(comment = "更新")
-    @TableField("`update`")
     private Date update;
 }

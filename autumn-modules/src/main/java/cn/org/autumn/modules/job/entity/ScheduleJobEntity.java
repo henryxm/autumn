@@ -46,7 +46,6 @@ public class ScheduleJobEntity implements Serializable {
     private Integer status;
 
     @Column(comment = "任务执行模式")
-    @TableField("`mode`")
     private String mode;
 
     @Column(comment = "备注")

@@ -32,7 +32,6 @@ public class DatabaseBackupStrategyEntity implements Serializable {
      * 备份模式: FULL-全量, TABLES-指定表
      */
     @Column(comment = "备份模式:FULL-全量,TABLES-指定表", defaultValue = "FULL")
-    @TableField("`mode`")
     private String mode;
 
     /**

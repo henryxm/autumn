@@ -45,6 +45,5 @@ public class EncryptKeyEntity implements Serializable {
     private Date expire;
 
     @Column(comment = "创建时间")
-    @TableField("`create`")
     private Date create;
 }

@@ -31,7 +31,19 @@
 - **取值**：`mysql`（默认）、`mariadb`、`postgresql`、`oracle`、`sqlserver`、`other`。
 - **作用**：驱动 `AutumnDatabaseType`、分页方言、`RoutingRelationalTableOperations`、注解建表是否执行、运行时 SQL 方言等。
 
-### 2.2 数据源与分页
+### 2.2 保留字物理列名（如 `order`）— 不改库列名
+
+- **现象**：Java 属性名为 `order` 时，MyBatis-Plus 在部分 SQL 中对列名未套 `column-format`，PostgreSQL 会出现 `order=?` 未加双引号而报错。
+- **约定（推荐）**：**物理列名仍为 `order`**；Java 字段改为 **`sortOrder`**，并显式 **`@TableField("order")`**、**`@Column(value = "order", …)`**，对外仍提供 **`getOrder()` / `setOrder()`**（JSON 仍为 `order`）。参见 `SysConfigEntity`、`SysCategoryEntity`。
+- **列名包装**：`application.yml` 中 `column-format` 为 MySQL 默认；**`MybatisPlusConfig#mybatisPlusColumnFormatCustomizer`** 按 **`autumn.database`** 覆盖为 PG/Oracle/SQL Server 所需格式（见 §2.3）。
+
+### 2.3 MyBatis-Plus 全局列名包装（`column-format`）
+
+- `application.yml` 中默认 `column-format` 为 MySQL **反引号**占位；若在 PostgreSQL 上**仅**依赖本行、不经 Java 覆盖，会触发反引号语法错误。
+- **处理**：`MybatisPlusConfig` 注册 `MybatisPlusPropertiesCustomizer`，按 `autumn.database` 覆盖为 PostgreSQL/Oracle 的 `"%s"`（双引号）、SQL Server 的 `[%s]`、MySQL/MariaDB 的 `` `%s` ``。
+- **实体**：`@TableField` 中勿手写 MySQL 专用 `` `列名` ``；保留字物理列用「非保留 Java 名 + `@TableField("保留字列名")`」配合上条覆盖。
+
+### 2.4 数据源与分页
 
 - 示例：`application-postgresql.yml`
   - `spring.datasource.driver-class-name: org.postgresql.Driver`
@@ -39,7 +51,7 @@
   - `pagehelper.helper-dialect: postgresql`
 - **说明**：内置「数据库备份导出」仍仅支持 MySQL/MariaDB；PG 请使用 `pg_dump` 等外部工具。
 
-### 2.3 生产环境仅用 `prod` + 环境变量（推荐）
+### 2.5 生产环境仅用 `prod` + 环境变量（推荐）
 
 线上若固定 `spring.profiles.active=prod`，**不必**再挂 `postgresql` profile：在 `application-prod.yml` 中已通过 **`SPRING_DATASOURCE_DRUID_FIRST_URL` / `SPRING_DATASOURCE_DRUID_SECOND_URL`、`SPRING_DATASOURCE_DRIVER_CLASS_NAME`、`AUTUMN_DATABASE`、`PAGEHELPER_DIALECT`、`DRUID_VALIDATION_QUERY`** 等与 `dev` / `application-postgresql.yml` **同名变量**切换库；文件顶部注释有 MySQL / PostgreSQL 示例。`postgresql` profile 仍可用于本地 `dev,postgresql` 等组合，与上述变量一致。
 

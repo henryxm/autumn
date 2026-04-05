@@ -57,7 +57,6 @@ public class SysConfigEntity implements Serializable {
     private int readonly;
 
     @Column(comment = "排序:值越大,显示靠前", defaultValue = "0")
-    @TableField("`order`")
     private int order;
 
     @TableField(exist = false)
