@@ -27,6 +27,6 @@ import org.springframework.scheduling.annotation.EnableAsync;
 @EnableAspectJAutoProxy(proxyTargetClass = true, exposeProxy = true)
 @EnableAsync(proxyTargetClass = true)
 @EnableCaching(proxyTargetClass = true)
-@MapperScan(basePackages = {"cn.org.autumn.modules.*.dao", "cn.org.autumn.table.dao"})
+@MapperScan(basePackages = {"cn.org.autumn.modules.*.dao", "cn.org.autumn.table.dao", "cn.org.autumn.table.platform.postgresql"})
 public class AutumnAutoConfiguration {
 }
