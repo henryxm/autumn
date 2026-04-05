@@ -10,7 +10,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 注解驱动建表与结构同步所需的数据库操作，按库类型由 {@link cn.org.autumn.table.platform.RoutingRelationalTableOperations} 路由到 MySQL 或 PostgreSQL 实现。
+ * 注解驱动建表与结构同步所需的数据库操作，由 {@link cn.org.autumn.table.platform.RoutingRelationalTableOperations} 路由到
+ * MySQL/MariaDB、PostgreSQL，或 Oracle/SQL Server 的 JDBC 元数据实现（后两者未开放完整 DDL）。
  */
 public interface RelationalTableOperations {
 

@@ -25,6 +25,8 @@ public class MybatisPlusConfig {
             p.setDialectType("oracle");
         } else if (t == AutumnDatabaseType.SQLSERVER) {
             p.setDialectType("sqlserver");
+        } else if (t == AutumnDatabaseType.MARIADB) {
+            p.setDialectType("mariadb");
         } else {
             p.setDialectType("mysql");
         }

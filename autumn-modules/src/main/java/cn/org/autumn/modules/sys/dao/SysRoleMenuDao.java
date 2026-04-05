@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.sys.dao;
 
+import cn.org.autumn.modules.sys.dao.sql.SysRoleMenuDaoSql;
 import cn.org.autumn.modules.sys.entity.SysRoleMenuEntity;
 import cn.org.autumn.mybatis.SelectInLangDriver;
 import com.baomidou.mybatisplus.mapper.BaseMapper;
@@ -12,14 +13,14 @@ import java.util.List;
 @Repository
 public interface SysRoleMenuDao extends BaseMapper<SysRoleMenuEntity> {
 
-    @Delete("DELETE FROM sys_role_menu WHERE role_key IN (#{roleKeys})")
+    @DeleteProvider(type = SysRoleMenuDaoSql.class, method = "deleteByRoleKeys")
     @Lang(SelectInLangDriver.class)
     int deleteBatch(@Param("roleKeys") String[] roleKeys);
 
-    @Select("select menu_key from sys_role_menu where role_key = #{roleKey}")
+    @SelectProvider(type = SysRoleMenuDaoSql.class, method = "getMenuKeys")
     List<String> getMenuKeys(@Param("roleKey") String roleKey);
 
-    @Delete("DELETE FROM sys_role_menu WHERE role_key IN (#{roleKeys})")
+    @DeleteProvider(type = SysRoleMenuDaoSql.class, method = "deleteByRoleKeys")
     @Lang(SelectInLangDriver.class)
     int deleteMenus(@Param("roleKeys") String[] roleKeys);
 }

@@ -3,8 +3,12 @@ package cn.org.autumn.database;
 import org.apache.commons.lang.StringUtils;
 
 /**
- * 应用主库类型（与 {@code autumn.database} 对齐）。MySQL/MariaDB 共用一套 JDBC 方言实现；PostgreSQL 独立实现。
- * Oracle、SQL Server 等可先配置类型以便跳过注解建表，后续再接 {@link cn.org.autumn.table.platform.RelationalTableOperations} 实现。
+ * 应用主库类型（与 {@code autumn.database} 对齐）。
+ * <ul>
+ *   <li>MySQL / MariaDB：共用 {@link cn.org.autumn.table.platform.mysql.MysqlRelationalTableOperations} 与 {@link cn.org.autumn.database.runtime.MysqlRuntimeSqlDialect}；分页方言 MariaDB 单独为 {@code mariadb}。</li>
+ *   <li>PostgreSQL：独立建表与运行时方言。</li>
+ *   <li>Oracle / SQL Server：运行时方言与 JDBC 元数据/DROP；注解建表 DDL 未接入，见 {@link #supportsAnnotationTableSync()}。</li>
+ * </ul>
  */
 public enum AutumnDatabaseType {
 
@@ -25,6 +29,18 @@ public enum AutumnDatabaseType {
 
     public boolean isPostgresql() {
         return this == POSTGRESQL;
+    }
+
+    public boolean isMariaDb() {
+        return this == MARIADB;
+    }
+
+    public boolean isOracle() {
+        return this == ORACLE;
+    }
+
+    public boolean isSqlServer() {
+        return this == SQLSERVER;
     }
 
     public boolean isMysqlFamily() {

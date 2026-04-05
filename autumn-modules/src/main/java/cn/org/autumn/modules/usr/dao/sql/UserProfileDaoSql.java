@@ -5,6 +5,9 @@ import cn.org.autumn.database.runtime.RuntimeSqlDialectRegistry;
 
 /**
  * {@link cn.org.autumn.modules.usr.dao.UserProfileDao} 的可移植 SQL。
+ * <p>
+ * 列名统一 {@link RuntimeSqlDialect#quote(String)}；时间戳 {@link RuntimeSqlDialect#currentTimestamp()}；
+ * 单行 {@link RuntimeSqlDialect#limitOne()}，避免保留字与各库标识符规则差异。
  */
 public class UserProfileDaoSql {
 
@@ -13,31 +16,33 @@ public class UserProfileDaoSql {
     }
 
     public String getByUuid() {
-        return "select * from usr_user_profile where uuid = #{uuid}" + d().limitOne();
+        return "select * from usr_user_profile where " + d().quote("uuid") + " = #{uuid}" + d().limitOne();
     }
 
     public String getByOpenId() {
-        return "select * from usr_user_profile where open_id = #{openId}" + d().limitOne();
+        return "select * from usr_user_profile where " + d().quote("open_id") + " = #{openId}" + d().limitOne();
     }
 
     public String getByUnionId() {
-        return "select * from usr_user_profile where union_id = #{unionId}" + d().limitOne();
+        return "select * from usr_user_profile where " + d().quote("union_id") + " = #{unionId}" + d().limitOne();
     }
 
     public String getByUsername() {
-        return "select * from usr_user_profile where username = #{username}" + d().limitOne();
+        return "select * from usr_user_profile where " + d().quote("username") + " = #{username}" + d().limitOne();
     }
 
     public String setUuid() {
-        return "update usr_user_profile set uuid = #{uuid} where username = #{username}";
+        return "update usr_user_profile set " + d().quote("uuid") + " = #{uuid} where " + d().quote("username") + " = #{username}";
     }
 
     public String touchLogin() {
-        return "update usr_user_profile set login_ip = #{ip}, visit_ip = #{ip}, user_agent = #{userAgent}, login_time = " + d().currentTimestamp()
-                + ", visit_time = " + d().currentTimestamp() + " where uuid = #{uuid}";
+        return "update usr_user_profile set " + d().quote("login_ip") + " = #{ip}, " + d().quote("visit_ip") + " = #{ip}, "
+                + d().quote("user_agent") + " = #{userAgent}, " + d().quote("login_time") + " = " + d().currentTimestamp()
+                + ", " + d().quote("visit_time") + " = " + d().currentTimestamp() + " where " + d().quote("uuid") + " = #{uuid}";
     }
 
     public String touchVisit() {
-        return "update usr_user_profile set visit_ip = #{ip}, user_agent = #{userAgent}, visit_time = " + d().currentTimestamp() + " where uuid = #{uuid}";
+        return "update usr_user_profile set " + d().quote("visit_ip") + " = #{ip}, " + d().quote("user_agent") + " = #{userAgent}, "
+                + d().quote("visit_time") + " = " + d().currentTimestamp() + " where " + d().quote("uuid") + " = #{uuid}";
     }
 }

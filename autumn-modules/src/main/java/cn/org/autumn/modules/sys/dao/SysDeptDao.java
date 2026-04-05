@@ -1,11 +1,11 @@
 package cn.org.autumn.modules.sys.dao;
 
+import cn.org.autumn.modules.sys.dao.sql.SysDeptDaoSql;
 import cn.org.autumn.modules.sys.entity.SysDeptEntity;
-import cn.org.autumn.modules.sys.entity.SysRoleEntity;
 import com.baomidou.mybatisplus.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.SelectProvider;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -14,9 +14,9 @@ import java.util.List;
 @Repository
 public interface SysDeptDao extends BaseMapper<SysDeptEntity> {
 
-    @Select("select dept_key from sys_dept where parent_key = #{value} and del_flag = 0")
+    @SelectProvider(type = SysDeptDaoSql.class, method = "getByParentKey")
     List<String> getByParentKey(@Param("value") String parentKey);
 
-    @Select("select * from sys_dept where dept_key = #{deptKey}")
+    @SelectProvider(type = SysDeptDaoSql.class, method = "getByDeptKey")
     SysDeptEntity getByDeptKey(@Param("deptKey") String deptKey);
 }

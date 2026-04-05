@@ -5,6 +5,8 @@ import cn.org.autumn.database.runtime.RuntimeSqlDialectRegistry;
 
 /**
  * OAuth 模块中带保留字列名的可移植 SQL。
+ * <p>
+ * 列名经 {@link RuntimeSqlDialect#quote(String)}；单行限制 {@link RuntimeSqlDialect#limitOne()}。
  */
 public class OauthInlineSql {
 
@@ -13,7 +15,7 @@ public class OauthInlineSql {
     }
 
     public String securityRequestLatest() {
-        return "select * from oauth_security_request where enabled = 1 order by " + d().quote("create") + " desc" + d().limitOne();
+        return "select * from oauth_security_request where " + d().quote("enabled") + " = 1 order by " + d().quote("create") + " desc" + d().limitOne();
     }
 
     public String securityRequestDeleteBefore() {
@@ -25,6 +27,11 @@ public class OauthInlineSql {
     }
 
     public String securityRequestByAuth() {
-        return "select * from oauth_security_request where enabled = 1 and auth = #{auth}" + d().limitOne();
+        return "select * from oauth_security_request where " + d().quote("enabled") + " = 1 and " + d().quote("auth") + " = #{auth}" + d().limitOne();
+    }
+
+    public String deleteExpiredKeys() {
+        return "DELETE FROM " + d().quote("oauth_encrypt_key") + " WHERE " + d().quote("expire") + " IS NOT NULL AND " + d().quote("expire")
+                + " < #{cleanBeforeTime}";
     }
 }

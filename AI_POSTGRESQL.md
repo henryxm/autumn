@@ -77,12 +77,12 @@
 
 | 组件 | 说明 |
 |------|------|
-| `RuntimeSqlDialect` | `quote`、`columnInWrapper`、`currentTimestamp`、`limitOne`、`columnValueInCommaSeparatedList` 等 |
+| `RuntimeSqlDialect` | `quote`、`columnInWrapper`、`currentTimestamp`、`truncateTable`（`TRUNCATE TABLE` + 引用）、`limitOne`（**勿**用于 `COUNT(*)` 等聚合）、`likeContainsAny`（替代三参 `concat` 模糊匹配）、`columnValueInCommaSeparatedList` 等 |
 | `MysqlRuntimeSqlDialect` / `PostgresqlRuntimeSqlDialect` | 各库实现 |
 | `RoutingRuntimeSqlDialect`（`@Primary`） | 按 `AutumnDatabaseHolder` 委托 |
 | `RuntimeSqlDialectRegistry` + `RuntimeSqlDialectBootstrap` | Provider 非 Spring 托管时通过静态注册表取当前方言 |
 
-**业务侧已接入示例**：`SysUserDaoSql`、`WallCounterSql`、`UserTokenDaoSql`、`UserProfileDaoSql`、`OauthInlineSql`、`EncryptKeyDao`、`SecurityRequestDao`、`WallDaoSql`、`DataFilterAspect`（`FIND_IN_SET` 替代）等。
+**业务侧已接入示例**：各模块 `**/dao/sql/*DaoSql`（含 `UserOpenDaoSql`、`SysMenuDaoSql`、`TokenStoreDaoSql`、`ClientDetailsDaoSql`、`SuperPositionModelDaoSql`、`LanguageDaoSql`、`WebOauthCombineDaoSql`、`WebAuthenticationDaoSql` 等与 `SysUserDaoSql`、`WallDaoSql` 并列）、`WallCounterSql`、`OauthInlineSql`、`DataFilterAspect`（`FIND_IN_SET` 替代）等。原先 Mapper 上硬编码 `limit 1` / `LIMIT 1` 的 `@Select` 已逐步改为 `@SelectProvider` + `RuntimeSqlDialect#limitOne()`。
 
 ### 3.5 MyBatis-Plus 分页
 

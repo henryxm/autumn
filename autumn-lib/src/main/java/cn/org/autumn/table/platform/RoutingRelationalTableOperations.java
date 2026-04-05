@@ -7,6 +7,8 @@ import cn.org.autumn.table.data.TableInfo;
 import cn.org.autumn.table.data.UniqueKeyInfo;
 import cn.org.autumn.table.mysql.ColumnMeta;
 import cn.org.autumn.table.mysql.TableMeta;
+import cn.org.autumn.table.platform.jdbc.OracleJdbcRelationalTableOperations;
+import cn.org.autumn.table.platform.jdbc.SqlServerJdbcRelationalTableOperations;
 import cn.org.autumn.table.platform.mysql.MysqlRelationalTableOperations;
 import cn.org.autumn.table.platform.postgresql.PostgresRelationalTableOperations;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,7 +19,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 按 {@code autumn.database} 在 MySQL 系与 PostgreSQL 之间路由建表/结构同步操作。
+ * 按 {@code autumn.database} 路由：PostgreSQL、Oracle、SQL Server、MySQL/MariaDB（后两者共用 MySQL 实现）。
  */
 @Primary
 @Component
@@ -32,10 +34,22 @@ public class RoutingRelationalTableOperations implements RelationalTableOperatio
     @Autowired
     private PostgresRelationalTableOperations postgresRelationalTableOperations;
 
+    @Autowired
+    private OracleJdbcRelationalTableOperations oracleJdbcRelationalTableOperations;
+
+    @Autowired
+    private SqlServerJdbcRelationalTableOperations sqlServerJdbcRelationalTableOperations;
+
     private RelationalTableOperations delegate() {
         AutumnDatabaseType t = databaseHolder.getType();
         if (t == AutumnDatabaseType.POSTGRESQL) {
             return postgresRelationalTableOperations;
+        }
+        if (t == AutumnDatabaseType.ORACLE) {
+            return oracleJdbcRelationalTableOperations;
+        }
+        if (t == AutumnDatabaseType.SQLSERVER) {
+            return sqlServerJdbcRelationalTableOperations;
         }
         return mysqlRelationalTableOperations;
     }

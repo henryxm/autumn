@@ -3,6 +3,11 @@ package cn.org.autumn.modules.usr.dao.sql;
 import cn.org.autumn.database.runtime.RuntimeSqlDialect;
 import cn.org.autumn.database.runtime.RuntimeSqlDialectRegistry;
 
+/**
+ * {@link cn.org.autumn.modules.usr.dao.UserTokenDao} 的可移植 SQL。
+ * <p>
+ * 列名经 {@link RuntimeSqlDialect#quote(String)}；取单行用 {@link RuntimeSqlDialect#limitOne()}，与各库方言一致。
+ */
 public class UserTokenDaoSql {
 
     private RuntimeSqlDialect d() {

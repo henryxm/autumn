@@ -4,7 +4,8 @@ import cn.org.autumn.modules.oauth.entity.TokenStoreEntity;
 import com.baomidou.mybatisplus.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
+import cn.org.autumn.modules.oauth.dao.sql.TokenStoreDaoSql;
+import org.apache.ibatis.annotations.SelectProvider;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -18,15 +19,15 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface TokenStoreDao extends BaseMapper<TokenStoreEntity> {
 
-    @Select("select * from oauth_token_store where auth_code = #{authCode} limit 1")
+    @SelectProvider(type = TokenStoreDaoSql.class, method = "findByAuthCode")
     TokenStoreEntity findByAuthCode(@Param("authCode") String authCode);
 
-    @Select("select * from oauth_token_store where user_uuid = #{userUuid} limit 1")
+    @SelectProvider(type = TokenStoreDaoSql.class, method = "findByUserUuid")
     TokenStoreEntity findByUserUuid(@Param("userUuid") String userUuid);
 
-    @Select("select * from oauth_token_store where access_token = #{accessToken} limit 1")
+    @SelectProvider(type = TokenStoreDaoSql.class, method = "findByAccessToken")
     TokenStoreEntity findByAccessToken(@Param("accessToken") String accessToken);
 
-    @Select("select * from oauth_token_store where refresh_token = #{refreshToken} limit 1")
+    @SelectProvider(type = TokenStoreDaoSql.class, method = "findByRefreshToken")
     TokenStoreEntity findByRefreshToken(@Param("refreshToken") String refreshToken);
 }

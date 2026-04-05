@@ -114,7 +114,26 @@ scan_pattern() {
     if have_rg; then
       n=$( (rg -l "$pat" "$d" 2>/dev/null || true) | wc -l | tr -d ' ')
     else
-      n=$( (grep -rl "$pat" --include='*.java' "$d" 2>/dev/null || true) | wc -l | tr -d ' ')
+      n=$( (grep -Erl "$pat" --include='*.java' "$d" 2>/dev/null || true) | wc -l | tr -d ' ')
+    fi
+    hits=$((hits + n))
+  done < <(find "$ROOT" -type d \( -path '*/src/main/java' -o -path '*/src/test/java' \) ! -path '*/target/*' ! -path '*/.git/*' -print0 2>/dev/null)
+  if [[ "$hits" -gt 0 ]]; then
+    warn "$msg (约 $hits 个文件命中，请人工复核)"
+  fi
+}
+
+# 固定子串（避免 grep BRE 对括号解析问题）
+scan_fixed() {
+  local pat="$1"
+  local msg="$2"
+  local hits=0
+  local d
+  while IFS= read -r -d '' d; do
+    if have_rg; then
+      n=$( (rg -l -F "$pat" "$d" 2>/dev/null || true) | wc -l | tr -d ' ')
+    else
+      n=$( (grep -rlF "$pat" --include='*.java' "$d" 2>/dev/null || true) | wc -l | tr -d ' ')
     fi
     hits=$((hits + n))
   done < <(find "$ROOT" -type d \( -path '*/src/main/java' -o -path '*/src/test/java' \) ! -path '*/target/*' ! -path '*/.git/*' -print0 2>/dev/null)
@@ -126,6 +145,8 @@ scan_pattern() {
 if find "$ROOT" -path '*/src/main/java' ! -path '*/target/*' 2>/dev/null | head -1 | grep -q .; then
   scan_pattern 'sun\.misc\.Launcher' '发现 sun.misc.Launcher 引用（JDK9+ 模块问题）'
   scan_pattern 'FIND_IN_SET' '发现 FIND_IN_SET（MySQL 专有，PG 需改造）'
+  scan_fixed "concat('%'" '发现 concat 三参模糊写法（宜改用 likeContainsAny；注释/文档亦会命中）'
+  scan_pattern 'count\(\*\).*limitOne' '发现 COUNT 与 limitOne 同句（聚合勿追加 limitOne）'
   scan_pattern 'LIMIT[[:space:]]+[0-9]' '发现可能手写 LIMIT（多库时注意方言）'
 else
   info "未发现 src/main/java，跳过源码模式扫描。"

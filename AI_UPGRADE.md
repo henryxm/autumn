@@ -47,7 +47,7 @@
 | # | 项 | 说明 |
 |---|-----|------|
 | 11 | **二方扩展** | 依赖方若 **继承/实现** autumn 的 `ModuleService`、`BaseMenu`、`LoopJob` 等，对照 **CHANGELOG** 或 **Diff** 检查重载签名、废弃方法。 |
-| 12 | **手写 SQL** | Mapper 中硬编码 `LIMIT`/`FIND_IN_SET`/保留字列名等，升级 autumn 后应逐步迁到 **方言 Provider** 模式（见 `AI_POSTGRESQL.md`）。 |
+| 12 | **手写 SQL** | 硬编码 `LIMIT`/`FIND_IN_SET`/三参 `concat('%',#{x},'%')`/保留字列名等，在多库下易出错；应迁到 **`RuntimeSqlDialect` + SqlProvider**（见下「跨库手写 SQL 约定」与 `AI_POSTGRESQL.md`）。 |
 | 13 | **实体布尔与 MyBatis** | 避免同一字段 **`getX(int)` + `boolean isX()`** 引发 `Reflector` 冲突；分页若自定义 count，避免 **`COUNT(...) ORDER BY`**（PG 非法）。 |
 
 ### 2.5 回归与发布
@@ -57,6 +57,15 @@
 | 14 | **冒烟用例** | 登录、权限、核心 CRUD、定时任务、文件/备份（若使用）等与业务相关的路径。 |
 | 15 | **灰度** | 生产环境建议先 **单实例 / 低流量** 验证再全量。 |
 
+#### 跨库手写 SQL 约定（依赖方与框架内 SqlProvider 一致）
+
+- **列/表引用**：`RuntimeSqlDialect#quote`（或 `columnInWrapper`），勿手写 `` ` `` / `"` / `[]`。
+- **取一行**：`RuntimeSqlDialect#limitOne()`，勿手写 `LIMIT 1`（Oracle 12c+ 为 `FETCH FIRST`，SQL Server 为 `OFFSET/FETCH`，由路由方言生成）。**`SELECT COUNT(*)`、`MAX/MIN` 等聚合勿再追加** `limitOne()`（结果已单行；多余子句在 SQL Server 上会多一层 `ORDER BY … OFFSET/FETCH`）。Mapper 上勿再写 `@Select("... limit 1")`，应改为 `@SelectProvider` 调用含 `limitOne()` 的 Sql 构建类。
+- **逗号列表成员判断**（替代 MySQL `FIND_IN_SET`）：`columnValueInCommaSeparatedList(qualifiedColumn, csvInner)`。
+- **清空表**：`truncateTable("表名")`（`TRUNCATE TABLE` + 引用），勿手写 `truncate table ...`；外键/复制等环境下各库行为不同，需自行评估。
+- **LIKE 两端 `%` 模糊**：`likeContainsAny("#{param}")`，**勿**手写 `concat('%', #{param}, '%')`（Oracle `CONCAT` 仅双参；本仓库 `SysUserDaoSql` 已按此改造）。
+- 仍须人工审：动态 SQL 中的函数名、日期格式、分页子句是否与目标库一致。
+
 ---
 
 ## 3. 「一键升级」可行性说明
@@ -65,7 +74,7 @@
 
 - 在 **依赖方仓库根目录** 扫描所有 `pom.xml` / `*.gradle`，检查 `cn.org.autumn` **版本号是否统一**、是否缺失 **Lombok 注解处理器** 配置（启发式 grep）。
 - 扫描 `application*.yml` / `application*.properties` 是否包含 **`autumn.database`**、数据源驱动与方言关键词（**提示性**，不修改文件）。
-- **Grep 级** 规则：如 `sun.misc.Launcher`、`@Select("update` 误用、明显 `FIND_IN_SET` 等（**仅报告**，不自动改代码）。
+- **Grep 级** 规则：如 `sun.misc.Launcher`、`@Select("update` 误用、明显 `FIND_IN_SET`、三参 `concat('%'` 等（**仅报告**，不自动改代码）；依赖方宜全局检索并改为 `RuntimeSqlDialect` API。
 
 ### 3.2 难以或不应「一键」自动完成
 
@@ -91,7 +100,7 @@ AUTUMN_SCAN_ROOT=/path/to/business-repo bash /path/to/autumn/scripts/autumn-depe
 ```
 
 - **行为**：只读；输出 **WARN / INFO**；**不修改** 任何文件。
-- **覆盖**：`pom.xml` 中 `cn.org.autumn` 版本、多版本冲突；`application*.yml|yaml|properties` 中 `autumn.database`、jdbc postgresql/mysql 线索；源码中若干 **高风险模式** grep（启发式）。
+- **覆盖**：`pom.xml` 中 `cn.org.autumn` 版本、多版本冲突；`application*.yml|yaml|properties` 中 `autumn.database`、jdbc 线索；源码启发式规则含：`FIND_IN_SET`、固定串 `concat('%'`（三参模糊）、`COUNT` 与 `limitOne` 同句、手写 `LIMIT n`、`sun.misc.Launcher` 等（**grep -E / 固定串**，注释亦可能命中，需人工判断）。
 
 升级 autumn 版本号仍建议在依赖方使用 **IDE / sed / 脚本** 在 **评审后** 批量替换，本扫描脚本不包含默认改写。
 

@@ -1,11 +1,11 @@
 package cn.org.autumn.modules.spm.dao;
 
+import cn.org.autumn.modules.spm.dao.sql.SuperPositionModelDaoSql;
 import cn.org.autumn.modules.spm.entity.SuperPositionModelEntity;
 import com.baomidou.mybatisplus.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
-import org.apache.ibatis.annotations.Update;
+import org.apache.ibatis.annotations.SelectProvider;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -19,9 +19,9 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface SuperPositionModelDao extends BaseMapper<SuperPositionModelEntity> {
 
-    @Select("select * from spm_super_position_model where resource_id = #{resourceId} limit 1")
+    @SelectProvider(type = SuperPositionModelDaoSql.class, method = "getByResourceId")
     SuperPositionModelEntity getByResourceId(@Param("resourceId") String resourceId);
 
-    @Select("select * from spm_super_position_model where url_key = #{urlKey} limit 1")
+    @SelectProvider(type = SuperPositionModelDaoSql.class, method = "getByUrlKey")
     SuperPositionModelEntity getByUrlKey(@Param("urlKey") String urlKey);
 }

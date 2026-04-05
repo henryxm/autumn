@@ -5,7 +5,6 @@ import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import com.baomidou.mybatisplus.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.SelectProvider;
 import org.apache.ibatis.annotations.UpdateProvider;
 import org.springframework.stereotype.Repository;
@@ -16,15 +15,10 @@ import java.util.List;
 @Repository
 public interface SysUserDao extends BaseMapper<SysUserEntity> {
 
-    @Select("select m.perms from sys_user_role ur " +
-            "LEFT JOIN sys_role_menu rm on ur.role_key = rm.role_key " +
-            "LEFT JOIN sys_menu m on rm.menu_key = m.menu_key " +
-            "where ur.user_uuid = #{userUuid}")
+    @SelectProvider(type = SysUserDaoSql.class, method = "getPermsByUserUuid")
     List<String> getPermsByUserUuid(@Param("userUuid") String userUuid);
 
-    @Select("select distinct rm.menu_key from sys_user_role ur " +
-            "LEFT JOIN sys_role_menu rm on ur.role_key = rm.role_key " +
-            "where ur.user_uuid = #{userUuid}")
+    @SelectProvider(type = SysUserDaoSql.class, method = "getMenus")
     List<String> getMenus(@Param("userUuid") String userUuid);
 
     @UpdateProvider(type = SysUserDaoSql.class, method = "verify")

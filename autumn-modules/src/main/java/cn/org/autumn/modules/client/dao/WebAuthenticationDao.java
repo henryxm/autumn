@@ -1,12 +1,13 @@
 package cn.org.autumn.modules.client.dao;
 
 import cn.org.autumn.config.ClientType;
+import cn.org.autumn.modules.client.dao.sql.WebAuthenticationDaoSql;
 import cn.org.autumn.modules.client.entity.WebAuthenticationEntity;
 import com.baomidou.mybatisplus.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
-import org.apache.ibatis.annotations.Update;
+import org.apache.ibatis.annotations.SelectProvider;
+import org.apache.ibatis.annotations.UpdateProvider;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -20,21 +21,21 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface WebAuthenticationDao extends BaseMapper<WebAuthenticationEntity> {
 
-    @Select("select * from client_web_authentication where client_id = #{clientId} limit 1")
+    @SelectProvider(type = WebAuthenticationDaoSql.class, method = "getByClientId")
     WebAuthenticationEntity getByClientId(@Param("clientId") String clientId);
 
-    @Select("select count(*) from client_web_authentication where client_id = #{clientId}")
+    @SelectProvider(type = WebAuthenticationDaoSql.class, method = "count")
     int count(@Param("clientId") String clientId);
 
-    @Select("select count(*) from client_web_authentication where client_type = #{clientType}")
+    @SelectProvider(type = WebAuthenticationDaoSql.class, method = "countClientType")
     int countClientType(@Param("clientType") ClientType clientType);
 
-    @Select("select * from client_web_authentication where uuid = #{uuid} limit 1")
+    @SelectProvider(type = WebAuthenticationDaoSql.class, method = "getByUuid")
     WebAuthenticationEntity getByUuid(@Param("uuid") String uuid);
 
-    @Select("select count(*) from client_web_authentication where client_id = #{clientId}")
+    @SelectProvider(type = WebAuthenticationDaoSql.class, method = "hasClientId")
     Integer hasClientId(@Param("clientId") String clientId);
 
-    @Update("update client_web_authentication set client_type = #{clientType} where client_id = #{clientId}")
+    @UpdateProvider(type = WebAuthenticationDaoSql.class, method = "updateClientType")
     void updateClientType(@Param("clientId") String clientId, @Param("clientType") ClientType clientType);
 }
