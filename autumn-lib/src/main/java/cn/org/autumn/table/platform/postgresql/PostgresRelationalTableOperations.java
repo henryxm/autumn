@@ -78,7 +78,7 @@ public class PostgresRelationalTableOperations implements RelationalTableOperati
 
     @Override
     public List<TableMeta> getTableMetas(String tableName, int offset, int rows) {
-        return postgresTableDao.getTableMetas(tableName, offset, rows);
+        return postgresTableDao.getTableMetasPage(tableName, offset, rows);
     }
 
     @Override
