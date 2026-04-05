@@ -1,0 +1,75 @@
+package cn.org.autumn.database;
+
+import org.apache.commons.lang3.StringUtils;
+
+/**
+ * 应用主库类型（与 {@code autumn.database} 对齐）。
+ * <ul>
+ *   <li>MySQL / MariaDB：共用 {@link cn.org.autumn.table.platform.mysql.MysqlRelationalTableOperations} 与 {@link cn.org.autumn.database.runtime.MysqlRuntimeSqlDialect}；分页方言 MariaDB 单独为 {@code mariadb}。</li>
+ *   <li>PostgreSQL：独立建表与运行时方言。</li>
+ *   <li>Oracle / SQL Server：运行时方言与 JDBC 元数据/DROP；注解建表 DDL 未接入，见 {@link #supportsAnnotationTableSync()}。</li>
+ * </ul>
+ */
+public enum AutumnDatabaseType {
+
+    MYSQL,
+    MARIADB,
+    POSTGRESQL,
+    ORACLE,
+    SQLSERVER,
+    /** 未识别的配置值 */
+    OTHER;
+
+    /**
+     * 是否走注解驱动建表（{@code MysqlTableService} + 路由后的 {@link cn.org.autumn.table.platform.RelationalTableOperations}）。
+     */
+    public boolean supportsAnnotationTableSync() {
+        return this == MYSQL || this == MARIADB || this == POSTGRESQL;
+    }
+
+    public boolean isPostgresql() {
+        return this == POSTGRESQL;
+    }
+
+    public boolean isMariaDb() {
+        return this == MARIADB;
+    }
+
+    public boolean isOracle() {
+        return this == ORACLE;
+    }
+
+    public boolean isSqlServer() {
+        return this == SQLSERVER;
+    }
+
+    public boolean isMysqlFamily() {
+        return this == MYSQL || this == MARIADB;
+    }
+
+    /**
+     * 解析配置值：mysql、mariadb、postgresql、postgres、oracle、sqlserver、mssql；其余为 {@link #OTHER}。
+     */
+    public static AutumnDatabaseType fromConfig(String raw) {
+        if (StringUtils.isBlank(raw)) {
+            return MYSQL;
+        }
+        String v = raw.trim().toLowerCase();
+        switch (v) {
+            case "mariadb":
+                return MARIADB;
+            case "postgresql":
+            case "postgres":
+                return POSTGRESQL;
+            case "oracle":
+                return ORACLE;
+            case "sqlserver":
+            case "mssql":
+                return SQLSERVER;
+            case "mysql":
+                return MYSQL;
+            default:
+                return OTHER;
+        }
+    }
+}

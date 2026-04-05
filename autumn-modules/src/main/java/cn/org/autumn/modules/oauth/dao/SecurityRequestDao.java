@@ -1,11 +1,12 @@
 package cn.org.autumn.modules.oauth.dao;
 
+import cn.org.autumn.modules.oauth.dao.sql.OauthInlineSql;
 import cn.org.autumn.modules.oauth.entity.SecurityRequestEntity;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import org.apache.ibatis.annotations.Delete;
+import org.apache.ibatis.annotations.DeleteProvider;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.SelectProvider;
 import org.springframework.stereotype.Repository;
 
 import java.util.Date;
@@ -21,12 +22,12 @@ import java.util.Date;
 @Repository
 public interface SecurityRequestDao extends BaseMapper<SecurityRequestEntity> {
 
-    @Select("select * from oauth_security_request where enabled = 1 order by `create` desc limit 1")
+    @SelectProvider(type = OauthInlineSql.class, method = "securityRequestLatest")
     SecurityRequestEntity getLatestEnabled();
 
-    @Select("select * from oauth_security_request where enabled = 1 and auth = #{auth} limit 1")
+    @SelectProvider(type = OauthInlineSql.class, method = "securityRequestByAuth")
     SecurityRequestEntity getByAuth(@Param("auth") String auth);
 
-    @Delete("delete from oauth_security_request where `create` < #{deadline}")
+    @DeleteProvider(type = OauthInlineSql.class, method = "securityRequestDeleteBefore")
     int deleteByCreateBefore(@Param("deadline") Date deadline);
 }

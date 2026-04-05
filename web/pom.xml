@@ -32,7 +32,7 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
-                    <!-- JDK 23 class 文件格式较新，插件无法自动检测，需显式指定主类 -->
+                    <!-- JDK 17+ 建议显式指定主类 -->
                     <mainClass>cn.org.autumn.Web</mainClass>
                     <excludes>
                         <!-- Lombok 仅编译期使用，排除出运行时 JAR -->

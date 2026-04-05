@@ -67,6 +67,7 @@
         <kaptcha.version>0.0.9</kaptcha.version>
         <!-- ==================== 测试 ==================== -->
         <junit.version>4.13.2</junit.version>
+        <!-- JDK 9+ 编译时 Lombok 需走 annotationProcessorPaths（见 maven-compiler-plugin） -->
     </properties>
 
     <modules>
@@ -402,14 +403,14 @@
                     <compilerArgs>
                         <arg>-parameters</arg>
                     </compilerArgs>
+                    <useIncrementalCompilation>false</useIncrementalCompilation>
                     <annotationProcessorPaths>
                         <path>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
-                            <version>1.18.42</version>
+                            <version>${lombok.version}</version>
                         </path>
                     </annotationProcessorPaths>
-                    <useIncrementalCompilation>false</useIncrementalCompilation>
                 </configuration>
             </plugin>
             <!-- Maven Clean 插件 -->

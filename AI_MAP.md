@@ -34,6 +34,10 @@
 - `autumn-modules`：业务模块与控制器实现（sys/gen/job/db/oauth/usr/oss/lan/spm/wall 等）。
 - `autumn-web`：启动与页面入口。
 
+### 1.1 多数据库（PostgreSQL）
+
+- **`autumn.database`** 与 MySQL 基线并存；注解建表、分页方言、运行时 SQL 方言、实体 `tinyint`/`boolean`/`smallint` 兼容、`BaseService` 分页 `COUNT` 等与 PG 相关的约定与变更过程，见 **`AI_POSTGRESQL.md`**（与 `AI_BOOT.md` §8 摘要互补）。业务工程 **升级 autumn 版本** 的通用流程与只读扫描脚本见 **`AI_UPGRADE.md`**。
+
 ## 2. 核心能力索引（按开发高频）
 
 ### 2.1 缓存体系

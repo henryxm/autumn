@@ -1,10 +1,11 @@
 package cn.org.autumn.modules.client.dao;
 
+import cn.org.autumn.modules.client.dao.sql.WebOauthCombineDaoSql;
 import cn.org.autumn.modules.client.entity.WebOauthCombineEntity;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.SelectProvider;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -18,9 +19,9 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface WebOauthCombineDao extends BaseMapper<WebOauthCombineEntity> {
 
-    @Select("select * from client_web_oauth_combine where client_id = #{clientId} limit 1")
+    @SelectProvider(type = WebOauthCombineDaoSql.class, method = "getByClientId")
     WebOauthCombineEntity getByClientId(@Param("clientId") String clientId);
 
-    @Select("select count(*) from client_web_oauth_combine where client_id = #{clientId}")
+    @SelectProvider(type = WebOauthCombineDaoSql.class, method = "count")
     int count(@Param("clientId") String clientId);
 }

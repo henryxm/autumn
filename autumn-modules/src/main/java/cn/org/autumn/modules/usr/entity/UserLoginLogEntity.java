@@ -50,14 +50,15 @@ public class UserLoginLogEntity implements Serializable {
     @Column(length = 500, comment = "代理", defaultValue = "")
     private String agent;
 
+    /** 0/1，与 PG smallint 一致 */
     @Column(comment = "白名单:开启限制后，该记录对应的指定IP可登录，其它IP被限制登录", defaultValue = "0")
-    private boolean white;
+    private int white;
 
     @Column(comment = "退出", defaultValue = "0")
-    private boolean logout;
+    private int logout;
 
     @Column(comment = "允许", defaultValue = "1")
-    private boolean allow;
+    private int allow;
 
     @Column(length = 50, comment = "原因", defaultValue = "")
     private String reason;

@@ -13,7 +13,7 @@
     {
       "name": "autumn.database",
       "type": "java.lang.String",
-      "description": "Description for autumn.database."
+      "description": "主库类型：mysql、mariadb、postgresql（或 postgres）。与 RelationalTableOperations 路由及 MyBatis-Plus 分页方言一致。"
     },
     {
       "name": "autumn.table.auto",

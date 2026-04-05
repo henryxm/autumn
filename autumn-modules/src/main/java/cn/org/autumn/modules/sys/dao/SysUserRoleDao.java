@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.sys.dao;
 
+import cn.org.autumn.modules.sys.dao.sql.SysUserRoleDaoSql;
 import cn.org.autumn.modules.sys.entity.SysUserRoleEntity;
 import cn.org.autumn.mybatis.SelectInLangDriver;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
@@ -12,16 +13,16 @@ import java.util.List;
 @Repository
 public interface SysUserRoleDao extends BaseMapper<SysUserRoleEntity> {
 
-    @Select("select role_key from sys_user_role where user_uuid = #{userUuid}")
+    @SelectProvider(type = SysUserRoleDaoSql.class, method = "getRoleKeys")
     List<String> getRoleKeys(@Param("userUuid") String userUuid);
 
-    @Select("select * from sys_user_role where username = #{username}")
+    @SelectProvider(type = SysUserRoleDaoSql.class, method = "getByUsername")
     List<SysUserRoleEntity> getByUsername(@Param("username") String username);
 
-    @Select("select count(*) from sys_user_role where user_uuid = #{userUuid} and role_key = #{roleKey}")
+    @SelectProvider(type = SysUserRoleDaoSql.class, method = "hasUserRole")
     Integer hasUserRole(@Param("userUuid") String userUuid, @Param("roleKey") String roleKey);
 
-    @Delete("DELETE FROM sys_user_role WHERE role_key IN (#{roleKeys})")
+    @DeleteProvider(type = SysUserRoleDaoSql.class, method = "deleteByRoleKeys")
     @Lang(SelectInLangDriver.class)
     int deleteByRoleKeys(@Param("roleKeys") String[] roleKeys);
 }

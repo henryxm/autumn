@@ -1,17 +1,20 @@
+# 与 application-prod.yml 使用相同环境变量名；默认本地 MySQL，不设环境变量即可开发。
+# 本地试 PostgreSQL 时可只设 SPRING_DATASOURCE_DRUID_*_URL、AUTUMN_DATABASE 等，无需改文件。
+
 spring:
   datasource:
     type: com.alibaba.druid.pool.DruidDataSource
-    driverClassName: com.mysql.cj.jdbc.Driver
+    driverClassName: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:com.mysql.cj.jdbc.Driver}
     druid:
       first:  #数据源1
         # Java 侧仍用 UTF-8；connectionCollation 让 MySQL 会话使用 utf8mb4（Emoji 等）。MySQL 8 可改为 utf8mb4_0900_ai_ci
-        url: jdbc:mysql://localhost:3306/autumn?serverTimezone=Asia/Shanghai&useSSL=false&allowMultiQueries=true&useUnicode=true&characterEncoding=UTF-8&connectionCollation=utf8mb4_unicode_ci&allowPublicKeyRetrieval=true
-        username: autumn
-        password: autumn
+        url: ${SPRING_DATASOURCE_DRUID_FIRST_URL:jdbc:mysql://localhost:3306/autumn?serverTimezone=Asia/Shanghai&useSSL=false&allowMultiQueries=true&useUnicode=true&characterEncoding=UTF-8&connectionCollation=utf8mb4_unicode_ci&allowPublicKeyRetrieval=true}
+        username: ${SPRING_DATASOURCE_DRUID_FIRST_USERNAME:autumn}
+        password: ${SPRING_DATASOURCE_DRUID_FIRST_PASSWORD:autumn}
       second:  #数据源2
-        url: jdbc:mysql://localhost:3306/autumn?serverTimezone=Asia/Shanghai&useSSL=false&allowMultiQueries=true&useUnicode=true&characterEncoding=UTF-8&connectionCollation=utf8mb4_unicode_ci&allowPublicKeyRetrieval=true
-        username: autumn
-        password: autumn
+        url: ${SPRING_DATASOURCE_DRUID_SECOND_URL:jdbc:mysql://localhost:3306/autumn?serverTimezone=Asia/Shanghai&useSSL=false&allowMultiQueries=true&useUnicode=true&characterEncoding=UTF-8&connectionCollation=utf8mb4_unicode_ci&allowPublicKeyRetrieval=true}
+        username: ${SPRING_DATASOURCE_DRUID_SECOND_USERNAME:autumn}
+        password: ${SPRING_DATASOURCE_DRUID_SECOND_PASSWORD:autumn}
       initial-size: 10
       max-active: 100
       min-idle: 10
@@ -20,7 +23,7 @@ spring:
       max-pool-prepared-statement-per-connection-size: 20
       time-between-eviction-runs-millis: 60000
       min-evictable-idle-time-millis: 300000
-      validation-query: SELECT 1 FROM DUAL
+      validation-query: ${DRUID_VALIDATION_QUERY:SELECT 1 FROM DUAL}
       test-while-idle: true
       test-on-borrow: false
       test-on-return: false
@@ -37,3 +40,9 @@ spring:
         wall:
           config:
             multi-statement-allow: true
+
+autumn:
+  database: ${AUTUMN_DATABASE:mysql}
+
+pagehelper:
+  helper-dialect: ${PAGEHELPER_DIALECT:mysql}

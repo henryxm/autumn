@@ -1,11 +1,12 @@
 package cn.org.autumn.modules.oauth.dao;
 
+import cn.org.autumn.modules.oauth.dao.sql.OauthInlineSql;
 import cn.org.autumn.modules.oauth.entity.EncryptKeyEntity;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import org.apache.ibatis.annotations.Delete;
+import org.apache.ibatis.annotations.DeleteProvider;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.SelectProvider;
 import org.springframework.stereotype.Repository;
 
 import java.util.Date;
@@ -21,7 +22,7 @@ import java.util.Date;
 @Repository
 public interface EncryptKeyDao extends BaseMapper<EncryptKeyEntity> {
 
-    @Select("select * from oauth_encrypt_key where `session` = #{session}")
+    @SelectProvider(type = OauthInlineSql.class, method = "encryptKeyBySession")
     EncryptKeyEntity getBySession(@Param("session") String session);
 
     /**
@@ -31,6 +32,6 @@ public interface EncryptKeyDao extends BaseMapper<EncryptKeyEntity> {
      * @param cleanBeforeTime 清理时间点，expire小于此时间的记录将被删除
      * @return 删除的记录数量
      */
-    @Delete("DELETE FROM oauth_encrypt_key WHERE expire IS NOT NULL AND expire < #{cleanBeforeTime}")
+    @DeleteProvider(type = OauthInlineSql.class, method = "deleteExpiredKeys")
     int deleteExpiredKeys(@Param("cleanBeforeTime") Date cleanBeforeTime);
 }

@@ -6,7 +6,6 @@ import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.usr.dao.UserTokenDao;
 import cn.org.autumn.modules.usr.entity.UserTokenEntity;
 import com.alibaba.fastjson2.JSON;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.oltu.oauth2.common.OAuth;
 import org.springframework.stereotype.Service;
@@ -27,7 +26,7 @@ public class UserTokenService extends ModuleService<UserTokenDao, UserTokenEntit
     }
 
     public UserTokenEntity queryByToken(String token) {
-        return this.getOne(new QueryWrapper<UserTokenEntity>().eq("token", token));
+        return getToken(token);
     }
 
     public UserTokenEntity getUuid(String uuid) {
@@ -49,7 +48,8 @@ public class UserTokenService extends ModuleService<UserTokenDao, UserTokenEntit
     }
 
     public void saveToken(String token) {
-        Map map = (Map) JSON.parse(token);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> map = (Map<String, Object>) JSON.parseObject(token);
         UserTokenEntity userTokenEntity = null;
         if (map.containsKey(OAuth.OAUTH_ACCESS_TOKEN)) {
             String tk = (String) map.get(OAuth.OAUTH_ACCESS_TOKEN);

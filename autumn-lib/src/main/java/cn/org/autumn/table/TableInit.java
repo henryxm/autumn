@@ -4,6 +4,8 @@ import jakarta.annotation.PostConstruct;
 
 import cn.org.autumn.bean.EnvBean;
 import cn.org.autumn.table.data.InitType;
+import cn.org.autumn.database.AutumnDatabaseHolder;
+import cn.org.autumn.database.AutumnDatabaseType;
 import cn.org.autumn.table.service.MysqlTableService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,16 +24,17 @@ public class TableInit {
     @Autowired
     EnvBean envBean;
 
-    public static String MYSQL = "mysql";
-
     @Value("${autumn.database:mysql}")
     private String databaseType;
+
+    @Autowired
+    private AutumnDatabaseHolder autumnDatabaseHolder;
 
     @Value("${autumn.table.init:true}")
     private boolean init;
 
     public String getDatabaseType() {
-        return databaseType;
+        return databaseType != null ? databaseType : autumnDatabaseHolder.getType().name().toLowerCase();
     }
 
     public boolean isInit() {
@@ -45,8 +48,12 @@ public class TableInit {
     public void start() {
         if (!envBean.isTableInit())
             return;
-        if (MYSQL.equals(databaseType))
+        AutumnDatabaseType t = autumnDatabaseHolder.getType();
+        if (t.supportsAnnotationTableSync()) {
             mysqlTableService.create();
+        } else {
+            log.warn("当前 autumn.database={} 未接入注解建表，已跳过 TableInit（请使用 Flyway/手工 DDL 或后续扩展方言）。", databaseType);
+        }
     }
 
     /**
@@ -59,6 +66,10 @@ public class TableInit {
     }
 
     public void create(Class<?> clazz, InitType type) {
+        if (!autumnDatabaseHolder.getType().supportsAnnotationTableSync()) {
+            log.warn("跳过单表 {} 的注解建表：当前库类型未支持", clazz.getName());
+            return;
+        }
         mysqlTableService.create(clazz, type);
     }
 }

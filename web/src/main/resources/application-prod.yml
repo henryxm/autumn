@@ -1,18 +1,37 @@
+# 生产环境固定 spring.profiles.active=prod 时，仅通过环境变量切换数据库（无需再挂 postgresql profile）。
+# 与 application-dev.yml、application-postgresql.yml 共用同一套变量名，便于本地与线上一致。
+#
+# 常用（MySQL 默认，可不设）：
+#   AUTUMN_DATABASE=mysql
+#   PAGEHELPER_DIALECT=mysql
+#   DRUID_VALIDATION_QUERY=SELECT 1 FROM DUAL
+#
+# 切 PostgreSQL 时至少设置（示例）：
+#   SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
+#   SPRING_DATASOURCE_DRUID_FIRST_URL=jdbc:postgresql://host:5432/dbname?stringtype=unspecified
+#   SPRING_DATASOURCE_DRUID_SECOND_URL=jdbc:postgresql://host:5432/dbname?stringtype=unspecified
+#   AUTUMN_DATABASE=postgresql
+#   PAGEHELPER_DIALECT=postgresql
+#   DRUID_VALIDATION_QUERY=SELECT 1
+# 账号密码仍可用 database.username / database.password（或下方 *_USERNAME / *_PASSWORD 覆盖）。
+#
+# Spring Boot 2.x 绑定：spring.datasource.druid.first.url -> SPRING_DATASOURCE_DRUID_FIRST_URL
+
 spring:
   application:
     name: ${site.domain}
   datasource:
     type: com.alibaba.druid.pool.DruidDataSource
-    driverClassName: com.mysql.cj.jdbc.Driver
+    driverClassName: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:com.mysql.cj.jdbc.Driver}
     druid:
       first:  #数据源1
-        url: jdbc:mysql://${database.host}:${database.port}/${database.database}?serverTimezone=Asia/Shanghai&useSSL=false&allowMultiQueries=true&useUnicode=true&characterEncoding=UTF-8&connectionCollation=utf8mb4_unicode_ci&allowPublicKeyRetrieval=true
-        username: ${database.username}
-        password: ${database.password}
+        url: ${SPRING_DATASOURCE_DRUID_FIRST_URL:jdbc:mysql://${database.host}:${database.port}/${database.database}?serverTimezone=Asia/Shanghai&useSSL=false&allowMultiQueries=true&useUnicode=true&characterEncoding=UTF-8&connectionCollation=utf8mb4_unicode_ci&allowPublicKeyRetrieval=true}
+        username: ${SPRING_DATASOURCE_DRUID_FIRST_USERNAME:${database.username}}
+        password: ${SPRING_DATASOURCE_DRUID_FIRST_PASSWORD:${database.password}}
       second:  #数据源2
-        url: jdbc:mysql://${database2.host}:${database2.port}/${database2.database}?serverTimezone=Asia/Shanghai&useSSL=false&allowMultiQueries=true&useUnicode=true&characterEncoding=UTF-8&connectionCollation=utf8mb4_unicode_ci&allowPublicKeyRetrieval=true
-        username: ${database2.username}
-        password: ${database2.password}
+        url: ${SPRING_DATASOURCE_DRUID_SECOND_URL:jdbc:mysql://${database2.host}:${database2.port}/${database2.database}?serverTimezone=Asia/Shanghai&useSSL=false&allowMultiQueries=true&useUnicode=true&characterEncoding=UTF-8&connectionCollation=utf8mb4_unicode_ci&allowPublicKeyRetrieval=true}
+        username: ${SPRING_DATASOURCE_DRUID_SECOND_USERNAME:${database2.username}}
+        password: ${SPRING_DATASOURCE_DRUID_SECOND_PASSWORD:${database2.password}}
       initial-size: 10
       max-active: 100
       min-idle: 10
@@ -21,7 +40,7 @@ spring:
       max-pool-prepared-statement-per-connection-size: 20
       time-between-eviction-runs-millis: 60000
       min-evictable-idle-time-millis: 300000
-      validation-query: SELECT 1 FROM DUAL
+      validation-query: ${DRUID_VALIDATION_QUERY:SELECT 1 FROM DUAL}
       test-while-idle: true
       test-on-borrow: false
       test-on-return: false
@@ -44,3 +63,11 @@ spring:
       database: ${redis.database}
       port: ${redis.port}
       password: ${redis.password}
+
+# 与 application.yml 中其它 autumn.* 合并，仅覆盖 database
+autumn:
+  database: ${AUTUMN_DATABASE:mysql}
+
+# 与 application.yml 中 pagehelper 合并，补充方言（MySQL 可不设）
+pagehelper:
+  helper-dialect: ${PAGEHELPER_DIALECT:mysql}

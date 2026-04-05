@@ -1,0 +1,23 @@
+# 可选 profile：spring.profiles.active=dev,postgresql（或 prod,postgresql）时加载。
+# 生产环境若已仅用 prod + 环境变量切换库（见 application-prod.yml），可不使用本 profile。
+# 变量名与 prod/dev 一致，便于同一套 docker/k8s env 在本地与线上复用。
+
+spring:
+  datasource:
+    driver-class-name: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:org.postgresql.Driver}
+    druid:
+      first:
+        url: ${SPRING_DATASOURCE_DRUID_FIRST_URL:jdbc:postgresql://localhost:5432/autumn?stringtype=unspecified}
+        username: ${SPRING_DATASOURCE_DRUID_FIRST_USERNAME:postgres}
+        password: ${SPRING_DATASOURCE_DRUID_FIRST_PASSWORD:111111}
+      second:
+        url: ${SPRING_DATASOURCE_DRUID_SECOND_URL:jdbc:postgresql://localhost:5432/autumn?stringtype=unspecified}
+        username: ${SPRING_DATASOURCE_DRUID_SECOND_USERNAME:postgres}
+        password: ${SPRING_DATASOURCE_DRUID_SECOND_PASSWORD:111111}
+      validation-query: ${DRUID_VALIDATION_QUERY:SELECT 1}
+
+autumn:
+  database: ${AUTUMN_DATABASE:postgresql}
+
+pagehelper:
+  helper-dialect: ${PAGEHELPER_DIALECT:postgresql}

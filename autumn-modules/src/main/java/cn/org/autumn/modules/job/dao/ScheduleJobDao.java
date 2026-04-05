@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.job.dao;
 
+import cn.org.autumn.modules.job.dao.sql.ScheduleJobDaoSql;
 import cn.org.autumn.modules.job.entity.ScheduleJobEntity;
 import cn.org.autumn.mybatis.SelectInLangDriver;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
@@ -17,7 +18,7 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface ScheduleJobDao extends BaseMapper<ScheduleJobEntity> {
 
-    @Update("UPDATE sys_schedule_job SET status = #{status} where job_id IN (#{jobIds})")
+    @UpdateProvider(type = ScheduleJobDaoSql.class, method = "updateBatch")
     @Lang(SelectInLangDriver.class)
     int updateBatch(@Param("jobIds") Long[] jobIds, @Param("status") int status);
 }

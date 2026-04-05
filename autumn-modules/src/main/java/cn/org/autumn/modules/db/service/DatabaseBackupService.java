@@ -1,5 +1,7 @@
 package cn.org.autumn.modules.db.service;
 
+import cn.org.autumn.database.AutumnDatabaseHolder;
+import cn.org.autumn.database.AutumnDatabaseType;
 import cn.org.autumn.base.ModuleService;
 import cn.org.autumn.modules.db.dao.DatabaseBackupDao;
 import cn.org.autumn.modules.db.entity.DatabaseBackupEntity;
@@ -34,6 +36,9 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
 
     @Autowired
     private DataSource dataSource;
+
+    @Autowired
+    private AutumnDatabaseHolder autumnDatabaseHolder;
 
     @Autowired
     private DatabaseBackupUploadService databaseBackupUploadService;
@@ -323,6 +328,13 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
     private int[] exportDatabase(BackupTask task) throws Exception {
         int tableCount = 0;
         int totalRecords = 0;
+        AutumnDatabaseType dbType = autumnDatabaseHolder.getType();
+        if (dbType != AutumnDatabaseType.MYSQL && dbType != AutumnDatabaseType.MARIADB) {
+            throw new UnsupportedOperationException(
+                    "内置 SQL 备份仅实现 MySQL/MariaDB（SHOW CREATE TABLE 等）。当前 autumn.database="
+                            + dbType.name().toLowerCase()
+                            + "：PostgreSQL 请使用 pg_dump；Oracle/SQL Server 请使用各库官方工具；后续可在 cn.org.autumn.modules.db 下按库扩展导出实现。");
+        }
         try (Connection conn = dataSource.getConnection(); BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(task.outputPath), StandardCharsets.UTF_8))) {
             String dbName = conn.getCatalog();
             // 确定要备份的表

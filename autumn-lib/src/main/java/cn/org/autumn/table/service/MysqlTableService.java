@@ -7,7 +7,7 @@ import java.util.concurrent.CopyOnWriteArraySet;
 
 import cn.org.autumn.table.annotation.UniqueKey;
 import cn.org.autumn.table.annotation.UniqueKeys;
-import cn.org.autumn.table.dao.TableDao;
+import cn.org.autumn.table.platform.RelationalTableOperations;
 import cn.org.autumn.table.data.*;
 import cn.org.autumn.table.mysql.ColumnMeta;
 import org.apache.commons.lang3.StringUtils;
@@ -45,7 +45,7 @@ public class MysqlTableService {
     }
 
     @Autowired
-    private TableDao tableDao;
+    private RelationalTableOperations tableDao;
 
     /**
      * 要扫描的model所在的pack

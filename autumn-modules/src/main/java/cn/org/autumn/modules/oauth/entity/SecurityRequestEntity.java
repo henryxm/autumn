@@ -30,8 +30,9 @@ public class SecurityRequestEntity implements Serializable {
     @Cache(name = "auth")
     private String auth;
 
+    /** 0/1，与 PG smallint 一致 */
     @Column(comment = "开启")
-    private boolean enabled;
+    private int enabled;
 
     @Column(comment = "过期")
     private Date expire;

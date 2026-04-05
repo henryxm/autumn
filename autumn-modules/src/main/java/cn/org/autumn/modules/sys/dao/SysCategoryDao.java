@@ -1,10 +1,11 @@
 package cn.org.autumn.modules.sys.dao;
 
+import cn.org.autumn.modules.sys.dao.sql.SysCategoryDaoSql;
 import cn.org.autumn.modules.sys.entity.SysCategoryEntity;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.SelectProvider;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -18,9 +19,9 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface SysCategoryDao extends BaseMapper<SysCategoryEntity> {
 
-    @Select("select count(*) from sys_category where category = #{category}")
+    @SelectProvider(type = SysCategoryDaoSql.class, method = "has")
     int has(@Param("category") String category);
 
-    @Select("select * from sys_category where category = #{category}")
+    @SelectProvider(type = SysCategoryDaoSql.class, method = "getByCategory")
     SysCategoryEntity getByCategory(@Param("category") String category);
 }

@@ -2,6 +2,7 @@ package cn.org.autumn;
 
 import cn.org.autumn.site.TemplateFactory;
 import cn.org.autumn.version.Autumn;
+import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.web.servlet.ServletComponentScan;
@@ -19,6 +20,11 @@ import org.springframework.scheduling.annotation.EnableAsync;
 @ServletComponentScan
 @EnableAsync
 @SpringBootApplication
+@MapperScan(basePackages = {
+        "cn.org.autumn.modules",
+        "cn.org.autumn.table.dao",
+        "cn.org.autumn.table.platform.postgresql",
+})
 public class Web extends SpringBootServletInitializer implements TemplateFactory.Template {
 
     public static void main(String[] args) {

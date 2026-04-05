@@ -51,6 +51,7 @@ autumn:
     open: true  # 是否开启redis缓存  true开启   false关闭
   shiro:
     redis: true # true表示shiro session存到redis里，需要开启redis，才会生效【分布式场景】
+  # mysql | mariadb | postgresql | oracle | sqlserver（仅影响分页方言；注解建表仅 mysql 系与 postgresql）
   database: mysql
   table:
     auto: update

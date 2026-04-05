@@ -86,13 +86,48 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends ShareCache
     }
 
     public PageUtils queryPage(Page<T> _page, QueryWrapper<T> entityEntityWrapper) {
+        if (entityEntityWrapper == null) {
+            entityEntityWrapper = new QueryWrapper<>();
+        }
+        _page.setSearchCount(false);
         Page<T> page = this.page(_page, entityEntityWrapper);
+        page.setTotal(selectCountWithoutOrderBy(entityEntityWrapper));
         return new PageUtils(page);
     }
 
     public Page<T> page(Page<T> _page, QueryWrapper<T> entityEntityWrapper) {
         applyPageCondition(_page, entityEntityWrapper);
         return super.page(_page, entityEntityWrapper);
+    }
+
+    /**
+     * 分页 COUNT 时去掉 ORDER BY，避免 PostgreSQL 等对 COUNT 带 ORDER BY 报错。
+     */
+    protected long selectCountWithoutOrderBy(QueryWrapper<T> ew) {
+        if (ew == null) {
+            return baseMapper.selectCount(new QueryWrapper<>());
+        }
+        String seg = ew.getSqlSegment();
+        if (StringUtils.isBlank(seg)) {
+            return baseMapper.selectCount(new QueryWrapper<>());
+        }
+        String s = seg.trim();
+        int ob = s.toUpperCase(Locale.ROOT).lastIndexOf("ORDER BY");
+        if (ob >= 0) {
+            s = s.substring(0, ob).trim();
+        }
+        if (StringUtils.isBlank(s)) {
+            return baseMapper.selectCount(new QueryWrapper<>());
+        }
+        if (s.toUpperCase(Locale.ROOT).startsWith("WHERE ")) {
+            s = s.substring(6).trim();
+        }
+        if (StringUtils.isBlank(s)) {
+            return baseMapper.selectCount(new QueryWrapper<>());
+        }
+        QueryWrapper<T> countEw = new QueryWrapper<>();
+        countEw.apply(s);
+        return baseMapper.selectCount(countEw);
     }
 
     public PageUtils queryPage(Map<String, Object> params) {

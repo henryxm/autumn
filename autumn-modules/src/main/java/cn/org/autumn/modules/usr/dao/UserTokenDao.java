@@ -1,11 +1,12 @@
 package cn.org.autumn.modules.usr.dao;
 
+import cn.org.autumn.modules.usr.dao.sql.UserTokenDaoSql;
 import cn.org.autumn.modules.usr.entity.UserTokenEntity;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import org.apache.ibatis.annotations.Delete;
+import org.apache.ibatis.annotations.DeleteProvider;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.SelectProvider;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -21,18 +22,18 @@ import java.util.List;
 @Repository
 public interface UserTokenDao extends BaseMapper<UserTokenEntity> {
 
-    @Select("select * from usr_user_token where `token` = #{token}")
+    @SelectProvider(type = UserTokenDaoSql.class, method = "getToken")
     UserTokenEntity getToken(@Param("token") String token);
 
-    @Select("select * from usr_user_token where `uuid` = #{uuid} LIMIT 1")
+    @SelectProvider(type = UserTokenDaoSql.class, method = "getUuid")
     UserTokenEntity getUuid(@Param("uuid") String uuid);
 
-    @Select("select * from usr_user_token where `user_uuid` = #{userUuid}")
+    @SelectProvider(type = UserTokenDaoSql.class, method = "getUser")
     List<UserTokenEntity> getUser(@Param("userUuid") String userUuid);
 
-    @Delete("delete from usr_user_token where `user_uuid` = #{userUuid}")
+    @DeleteProvider(type = UserTokenDaoSql.class, method = "deleteUser")
     void deleteUser(@Param("userUuid") String userUuid);
 
-    @Delete("delete from usr_user_token where `uuid` = #{uuid}")
+    @DeleteProvider(type = UserTokenDaoSql.class, method = "deleteUuid")
     void deleteUuid(@Param("uuid") String uuid);
 }
