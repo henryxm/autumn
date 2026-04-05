@@ -63,4 +63,14 @@ public interface RuntimeSqlDialect {
      * @param csvInner        逗号分隔的若干 id，<b>不含</b>外层单引号
      */
     String columnValueInCommaSeparatedList(String qualifiedColumn, String csvInner);
+
+    /**
+     * 手写 SQL 中与「开关」列比较时使用的字面量（无 {@code #{}} 占位符场景）。
+     * <p>
+     * PostgreSQL 原生 {@code boolean} 列需 {@code TRUE}，不能与整型 {@code 1} 比较；
+     * MySQL / MariaDB 等常用 {@code tinyint(1)/smallint} 存 0/1，使用 {@code 1}。
+     */
+    default String enabledTrueSqlLiteral() {
+        return "1";
+    }
 }

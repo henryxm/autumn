@@ -55,7 +55,7 @@ public class ConfigItem implements Serializable {
             this.options = options.split(",");
         } else
             this.options = entity.getOptions();
-        this.readonly = entity.getReadonly() != 0;
+        this.readonly = entity.isReadonly();
         this.order = entity.getOrder();
     }
 

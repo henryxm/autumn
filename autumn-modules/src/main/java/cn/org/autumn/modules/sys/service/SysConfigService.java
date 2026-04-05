@@ -286,9 +286,9 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 if (map.length > 7) {
                     temp = map[7];
                     if (null != temp)
-                        config.setReadonly(Utils.parseBoolean(temp) ? 1 : 0);
+                        config.setReadonly(Utils.parseBoolean(temp));
                 } else {
-                    config.setReadonly(0);
+                    config.setReadonly(false);
                 }
                 config.setName(configName(config.getParamKey()));
                 config.setDescription(configDescription(config.getParamKey()));
@@ -337,7 +337,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 if (map.length > 7) {
                     temp = map[7];
                     if (null != temp) {
-                        entity.setReadonly(Utils.parseBoolean(temp) ? 1 : 0);
+                        entity.setReadonly(Utils.parseBoolean(temp));
                         update = true;
                     }
                 }

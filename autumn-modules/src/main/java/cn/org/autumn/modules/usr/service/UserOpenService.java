@@ -55,8 +55,8 @@ public class UserOpenService extends ModuleService<UserOpenDao, UserOpenEntity> 
         Date now = new Date();
         for (UserOpenEntity entity : list) {
             // 只处理未删除的记录
-            if (entity.getDeleted() == 0) {
-                entity.setDeleted(1);
+            if (!entity.isDeleted()) {
+                entity.setDeleted(true);
                 entity.setUpdate(now);
                 this.updateById(entity);
             }

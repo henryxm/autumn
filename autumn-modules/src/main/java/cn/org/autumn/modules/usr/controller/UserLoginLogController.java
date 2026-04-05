@@ -78,7 +78,7 @@ public class UserLoginLogController extends UserLoginLogControllerGen {
         boolean white = whiteObj != null && ("true".equalsIgnoreCase(String.valueOf(whiteObj)) || Boolean.TRUE.equals(whiteObj) || "1".equals(String.valueOf(whiteObj)));
         UserLoginLogEntity e = userLoginLogService.selectById(id);
         if (e == null) return R.error(404, "记录不存在");
-        e.setWhite(white ? 1 : 0);
+        e.setWhite(white);
         userLoginLogService.updateById(e);
         return R.ok();
     }

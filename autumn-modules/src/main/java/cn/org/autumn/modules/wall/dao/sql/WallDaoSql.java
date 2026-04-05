@@ -96,7 +96,7 @@ public class WallDaoSql {
     }
 
     public String shieldUris() {
-        return "select s." + d().quote("uri") + " from wall_shield as s where " + d().quote("enable") + " = 1";
+        return "select s." + d().quote("uri") + " from wall_shield as s where " + d().quote("enable") + " = " + d().enabledTrueSqlLiteral();
     }
 
     public String shieldDefault() {
@@ -108,6 +108,6 @@ public class WallDaoSql {
     }
 
     public String jumpEnabled() {
-        return "select * from wall_jump where " + d().quote("enable") + " = 1";
+        return "select * from wall_jump where " + d().quote("enable") + " = " + d().enabledTrueSqlLiteral();
     }
 }

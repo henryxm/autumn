@@ -37,9 +37,9 @@ public class UserOpenEntity implements Serializable {
     @Column(comment = "联合ID")
     private String unionid;
 
-    /** 0/1，与 PG smallint 一致 */
-    @Column(comment = "删除", defaultValue = "0")
-    private int deleted;
+    /** 0/1 存库；Java boolean，见 {@link cn.org.autumn.config.BooleanNumericTypeHandler} */
+    @Column(type = DataType.TINYINT, length = 1, comment = "删除", defaultValue = "0")
+    private boolean deleted;
 
     @Column(comment = "创建")
     private Date create;

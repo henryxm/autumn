@@ -18,4 +18,9 @@ public class PostgresqlRuntimeSqlDialect implements RuntimeSqlDialect {
         String esc = csvInner == null ? "" : csvInner.replace("'", "''");
         return "CAST(" + qualifiedColumn + " AS VARCHAR) = ANY(string_to_array('" + esc + "', ','))";
     }
+
+    @Override
+    public String enabledTrueSqlLiteral() {
+        return "TRUE";
+    }
 }

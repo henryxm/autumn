@@ -72,4 +72,9 @@ public class RoutingRuntimeSqlDialect implements RuntimeSqlDialect {
     public String columnValueInCommaSeparatedList(String qualifiedColumn, String csvInner) {
         return delegate().columnValueInCommaSeparatedList(qualifiedColumn, csvInner);
     }
+
+    @Override
+    public String enabledTrueSqlLiteral() {
+        return delegate().enabledTrueSqlLiteral();
+    }
 }

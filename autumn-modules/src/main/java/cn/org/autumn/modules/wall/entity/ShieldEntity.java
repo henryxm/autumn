@@ -3,6 +3,7 @@ package cn.org.autumn.modules.wall.entity;
 import cn.org.autumn.annotation.Cache;
 import cn.org.autumn.table.annotation.Column;
 import cn.org.autumn.table.annotation.Table;
+import cn.org.autumn.table.data.DataType;
 import com.baomidou.mybatisplus.annotations.TableId;
 import com.baomidou.mybatisplus.annotations.TableName;
 
@@ -21,9 +22,9 @@ public class ShieldEntity implements Serializable {
     @Column(comment = "资源", isUnique = true, defaultValue = "")
     private String uri;
 
-    /** 0/1，与 PG smallint / MySQL tinyint 一致；勿用 boolean，否则 JDBC 在 PostgreSQL 上会绑成 boolean 类型与列不兼容 */
-    @Column(comment = "开启", defaultValue = "0")
-    private int enable;
+    /** 0/1 存库；Java boolean，见 {@link cn.org.autumn.config.BooleanNumericTypeHandler} */
+    @Column(type = DataType.TINYINT, length = 1, comment = "开启", defaultValue = "0")
+    private boolean enable;
 
     @Column(comment = "触发:5秒IP请求次数触发自动防御模式，最低值1000", defaultValue = "10000")
     private int auto;
@@ -44,17 +45,12 @@ public class ShieldEntity implements Serializable {
         this.uri = uri;
     }
 
-    public int getEnable() {
+    public boolean isEnable() {
         return enable;
     }
 
-    public void setEnable(int enable) {
+    public void setEnable(boolean enable) {
         this.enable = enable;
-    }
-
-    /** 勿命名为 isEnable，会与 getEnable 在 MyBatis Reflector 中冲突 */
-    public boolean isEnabled() {
-        return enable != 0;
     }
 
     public int getAuto() {
