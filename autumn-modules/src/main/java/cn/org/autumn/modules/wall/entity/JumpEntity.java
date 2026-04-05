@@ -3,6 +3,7 @@ package cn.org.autumn.modules.wall.entity;
 import cn.org.autumn.table.annotation.*;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import cn.org.autumn.table.data.DataType;
 
 import java.io.Serializable;
 
@@ -25,9 +26,9 @@ public class JumpEntity implements Serializable {
     @Column(comment = "跳转", defaultValue = "")
     private String url;
 
-    /** 0/1，与 PG smallint / MySQL tinyint 一致 */
-    @Column(comment = "开启", defaultValue = "1")
-    private int enable;
+    /** 0/1 存库；Java boolean，见 {@link cn.org.autumn.config.BooleanNumericTypeHandler} */
+    @Column(type = DataType.TINYINT, length = 1, comment = "开启", defaultValue = "1")
+    private boolean enable;
 
     public Long getId() {
         return id;
@@ -61,15 +62,11 @@ public class JumpEntity implements Serializable {
         this.url = url;
     }
 
-    public int getEnable() {
+    public boolean isEnable() {
         return enable;
     }
 
-    public void setEnable(int enable) {
+    public void setEnable(boolean enable) {
         this.enable = enable;
-    }
-
-    public boolean isEnabled() {
-        return enable != 0;
     }
 }

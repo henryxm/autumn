@@ -111,13 +111,13 @@ public class SysCategoryService extends ModuleService<SysCategoryDao, SysCategor
         if (null == categoryEntity) {
             categoryEntity = new SysCategoryEntity();
         } else {
-            if (categoryEntity.getFrozen() != 0)
+            if (categoryEntity.isFrozen())
                 return;
         }
         categoryEntity.setCategory(category);
         categoryEntity.setStatus(status);
         categoryEntity.setName(name);
-        categoryEntity.setFrozen(0);
+        categoryEntity.setFrozen(false);
         categoryEntity.setDescription(description);
         saveOrUpdate(categoryEntity);
     }

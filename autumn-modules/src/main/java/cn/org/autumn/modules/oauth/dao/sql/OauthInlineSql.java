@@ -10,12 +10,16 @@ import cn.org.autumn.database.runtime.RuntimeSqlDialectRegistry;
  */
 public class OauthInlineSql {
 
+    /** MyBatis 占位符 #{auth}；拆写避免部分解析器误判 */
+    private static final String MB_AUTH = "#" + "{" + "auth" + "}";
+
     private RuntimeSqlDialect d() {
         return RuntimeSqlDialectRegistry.get();
     }
 
     public String securityRequestLatest() {
-        return "select * from oauth_security_request where " + d().quote("enabled") + " = 1 order by " + d().quote("create") + " desc" + d().limitOne();
+        return "select * from oauth_security_request where " + d().quote("enabled") + " = " + d().enabledTrueSqlLiteral()
+                + " order by " + d().quote("create") + " desc" + d().limitOne();
     }
 
     public String securityRequestDeleteBefore() {
@@ -27,7 +31,9 @@ public class OauthInlineSql {
     }
 
     public String securityRequestByAuth() {
-        return "select * from oauth_security_request where " + d().quote("enabled") + " = 1 and " + d().quote("auth") + " = #{auth}" + d().limitOne();
+        String on = d().enabledTrueSqlLiteral();
+        return "select * from oauth_security_request where " + d().quote("enabled") + " = " + on
+                + " and " + d().quote("auth") + " = " + MB_AUTH + d().limitOne();
     }
 
     public String deleteExpiredKeys() {

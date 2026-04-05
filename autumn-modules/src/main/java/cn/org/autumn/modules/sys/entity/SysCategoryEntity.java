@@ -3,12 +3,10 @@ package cn.org.autumn.modules.sys.entity;
 import cn.org.autumn.table.annotation.Column;
 import cn.org.autumn.table.annotation.Table;
 import cn.org.autumn.table.data.DataType;
-import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 
 import java.io.Serializable;
-import java.util.List;
 
 @TableName("sys_category")
 @Table(value = "sys_category", comment = "系统配置类型表")
@@ -32,9 +30,9 @@ public class SysCategoryEntity implements Serializable {
     @Column(comment = "排序:值越大,显示靠前", defaultValue = "0")
     private int order;
 
-    /** 0/1，与 PG smallint 一致 */
-    @Column(comment = "冻结:冻结后不更新状态和描述", defaultValue = "0")
-    private int frozen;
+    /** 0/1 存库；Java boolean，见 {@link cn.org.autumn.config.BooleanNumericTypeHandler} */
+    @Column(type = DataType.TINYINT, length = 1, comment = "冻结:冻结后不更新状态和描述", defaultValue = "0")
+    private boolean frozen;
 
     @Column(comment = "描述")
     private String description;
@@ -79,11 +77,11 @@ public class SysCategoryEntity implements Serializable {
         this.order = order;
     }
 
-    public int getFrozen() {
+    public boolean isFrozen() {
         return frozen;
     }
 
-    public void setFrozen(int frozen) {
+    public void setFrozen(boolean frozen) {
         this.frozen = frozen;
     }
 

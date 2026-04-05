@@ -2,6 +2,7 @@ package cn.org.autumn.modules.usr.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
 import cn.org.autumn.table.annotation.*;
+import cn.org.autumn.table.data.DataType;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -50,15 +51,15 @@ public class UserLoginLogEntity implements Serializable {
     @Column(length = 500, comment = "代理", defaultValue = "")
     private String agent;
 
-    /** 0/1，与 PG smallint 一致 */
-    @Column(comment = "白名单:开启限制后，该记录对应的指定IP可登录，其它IP被限制登录", defaultValue = "0")
-    private int white;
+    /** 0/1 存库；Java boolean，见 {@link cn.org.autumn.config.BooleanNumericTypeHandler} */
+    @Column(type = DataType.TINYINT, length = 1, comment = "白名单:开启限制后，该记录对应的指定IP可登录，其它IP被限制登录", defaultValue = "0")
+    private boolean white;
 
-    @Column(comment = "退出", defaultValue = "0")
-    private int logout;
+    @Column(type = DataType.TINYINT, length = 1, comment = "退出", defaultValue = "0")
+    private boolean logout;
 
-    @Column(comment = "允许", defaultValue = "1")
-    private int allow;
+    @Column(type = DataType.TINYINT, length = 1, comment = "允许", defaultValue = "1")
+    private boolean allow;
 
     @Column(length = 50, comment = "原因", defaultValue = "")
     private String reason;

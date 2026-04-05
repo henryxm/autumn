@@ -3,6 +3,7 @@ package cn.org.autumn.modules.oauth.entity;
 import cn.org.autumn.annotation.Cache;
 import cn.org.autumn.table.annotation.Column;
 import cn.org.autumn.table.annotation.Table;
+import cn.org.autumn.table.data.DataType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Getter;
@@ -30,9 +31,9 @@ public class SecurityRequestEntity implements Serializable {
     @Cache(name = "auth")
     private String auth;
 
-    /** 0/1，与 PG smallint 一致 */
-    @Column(comment = "开启")
-    private int enabled;
+    /** 0/1 存库；Java boolean，见 {@link cn.org.autumn.config.BooleanNumericTypeHandler} */
+    @Column(type = DataType.TINYINT, length = 1, comment = "开启")
+    private boolean enabled;
 
     @Column(comment = "过期")
     private Date expire;

@@ -61,7 +61,7 @@ public class SecurityRequestService extends ModuleService<SecurityRequestDao, Se
 
     public boolean verify(String userAgent, String agentHeader, String auth) {
         SecurityRequestEntity request = getEnabledByAuth(auth);
-        if (request == null || request.getEnabled() == 0 || StringUtils.isBlank(request.getAgent())) {
+        if (request == null || !request.isEnabled() || StringUtils.isBlank(request.getAgent())) {
             return false;
         }
         return verifyAgent(request, userAgent, agentHeader);
@@ -78,9 +78,9 @@ public class SecurityRequestService extends ModuleService<SecurityRequestDao, Se
         String reason = "ok";
         if (log.isDebugEnabled()) {
             log.debug("verifyStrong.start auth={}, method={}, uri={}, ts={}, nonce={}, sign={}, ua={}, agentHeader={}", mask(auth), method, uri, timestampHeader, mask(nonce), mask(signature), brief(userAgent), mask(agentHeader));
-            log.debug("verifyStrong.system requestFound={}, requestEnabled={}, expectedAgent={}", request != null, request != null && request.getEnabled() != 0, request == null ? "-" : mask(request.getAgent()));
+            log.debug("verifyStrong.system requestFound={}, requestEnabled={}, expectedAgent={}", request != null, request != null && request.isEnabled(), request == null ? "-" : mask(request.getAgent()));
         }
-        if (request == null || request.getEnabled() == 0 || StringUtils.isBlank(request.getAgent())) {
+        if (request == null || !request.isEnabled() || StringUtils.isBlank(request.getAgent())) {
             reason = "auth_or_request_invalid";
             if (log.isDebugEnabled()) {
                 log.debug("verifyStrong.fail reason=auth_or_request_invalid auth={}", mask(auth));
@@ -183,7 +183,7 @@ public class SecurityRequestService extends ModuleService<SecurityRequestDao, Se
             return null;
         }
         SecurityRequestEntity request = baseMapper.getByAuth(auth);
-        if (request == null || request.getEnabled() == 0 || StringUtils.isBlank(request.getAgent())) {
+        if (request == null || !request.isEnabled() || StringUtils.isBlank(request.getAgent())) {
             return null;
         }
         return request;
@@ -261,7 +261,7 @@ public class SecurityRequestService extends ModuleService<SecurityRequestDao, Se
         SecurityRequestEntity entity = new SecurityRequestEntity();
         entity.setAgent("," + Uuid.uuid().replace("-", "").substring(0, 8));
         entity.setAuth("x-auth-" + Uuid.uuid().replace("-", ""));
-        entity.setEnabled(1);
+        entity.setEnabled(true);
         entity.setCreate(now);
         entity.setExpire(offsetDay(now, ROTATE_DAYS));
         insert(entity);

@@ -70,15 +70,15 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
             ew.like(StringUtils.isNotBlank(agent), "agent", agent);
             if (allowObj != null && StringUtils.isNotBlank(allowObj.toString())) {
                 boolean allow = "true".equalsIgnoreCase(allowObj.toString()) || "1".equals(allowObj.toString());
-                ew.eq("allow", allow ? 1 : 0);
+                ew.eq("allow", allow);
             }
             if (logoutObj != null && StringUtils.isNotBlank(logoutObj.toString())) {
                 boolean logout = "true".equalsIgnoreCase(logoutObj.toString()) || "1".equals(logoutObj.toString());
-                ew.eq("logout", logout ? 1 : 0);
+                ew.eq("logout", logout);
             }
             if (whiteObj != null && StringUtils.isNotBlank(whiteObj.toString())) {
                 boolean limit = "true".equalsIgnoreCase(whiteObj.toString()) || "1".equals(whiteObj.toString());
-                ew.eq(sqlDialect.columnInWrapper("white"), limit ? 1 : 0);
+                ew.eq(sqlDialect.columnInWrapper("white"), limit);
             }
             if (StringUtils.isNotBlank(createStart)) {
                 try {
@@ -317,9 +317,9 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
             UserLoginLogEntity entity = new UserLoginLogEntity();
             entity.setUuid(uuid);
             entity.setAccount(account);
-            entity.setLogout(0);
-            entity.setAllow(allow ? 1 : 0);
-            entity.setWhite(0);
+            entity.setLogout(false);
+            entity.setAllow(allow);
+            entity.setWhite(false);
             entity.setHost(host);
             entity.setIp(ip);
             entity.setPath(path);
@@ -346,7 +346,7 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
         if (StringUtils.isBlank(uuid))
             return new HashSet<>();
         QueryWrapper<UserLoginLogEntity> ew = new QueryWrapper<>();
-        ew.eq("uuid", uuid).eq(sqlDialect.columnInWrapper("white"), 1);
+        ew.eq("uuid", uuid).eq(sqlDialect.columnInWrapper("white"), true);
         List<UserLoginLogEntity> list = this.list(ew);
         Set<String> ips = new HashSet<>();
         for (UserLoginLogEntity e : list) {
@@ -384,9 +384,9 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
             UserLoginLogEntity entity = new UserLoginLogEntity();
             entity.setUuid(uuid);
             entity.setCreate(new Date());
-            entity.setAllow(1);
-            entity.setWhite(0);
-            entity.setLogout(1);
+            entity.setAllow(true);
+            entity.setWhite(false);
+            entity.setLogout(true);
             entity.setHost(host);
             entity.setIp(ip);
             entity.setSession(session);
