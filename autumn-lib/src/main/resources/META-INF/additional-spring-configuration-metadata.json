@@ -13,7 +13,7 @@
     {
       "name": "autumn.database",
       "type": "java.lang.String",
-      "description": "主库类型：mysql、mariadb、postgresql（或 postgres）。与 RelationalTableOperations 路由及 MyBatis-Plus 分页方言一致。"
+      "description": "可选。主库类型：mysql、mariadb、postgresql、oracle、sqlserver。未配置时由 spring.datasource.druid.first.url 推断；与 RuntimeSqlDialect、PageHelper 对齐。"
     },
     {
       "name": "autumn.table.auto",

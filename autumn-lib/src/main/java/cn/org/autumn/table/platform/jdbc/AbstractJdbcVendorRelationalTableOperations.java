@@ -1,5 +1,6 @@
 package cn.org.autumn.table.platform.jdbc;
 
+import cn.org.autumn.database.DatabaseType;
 import cn.org.autumn.table.data.IndexInfo;
 import cn.org.autumn.table.data.TableInfo;
 import cn.org.autumn.table.data.UniqueKeyInfo;
@@ -22,7 +23,7 @@ import java.util.Map;
 
 /**
  * Oracle / SQL Server：基于 JDBC {@link DatabaseMetaData} 的元数据与 {@code DROP TABLE}；
- * 注解建表（CREATE/ALTER 等）未实现，与 {@link cn.org.autumn.database.AutumnDatabaseType#supportsAnnotationTableSync()} 为 false 配合使用。
+ * 注解建表（CREATE/ALTER 等）未实现，与 {@link DatabaseType#supportsAnnotationTableSync()} 为 false 配合使用。
  */
 public abstract class AbstractJdbcVendorRelationalTableOperations implements RelationalTableOperations {
 

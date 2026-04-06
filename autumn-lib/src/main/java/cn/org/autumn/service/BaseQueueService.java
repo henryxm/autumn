@@ -17,7 +17,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 @Slf4j
-public abstract class BaseQueueService<M extends BaseMapper<T>, T> extends ServiceImpl<M, T> implements Parameterized {
+public abstract class BaseQueueService<M extends BaseMapper<T>, T> extends DialectService<M, T> implements Parameterized {
 
     @Autowired
     protected QueueService queueService;

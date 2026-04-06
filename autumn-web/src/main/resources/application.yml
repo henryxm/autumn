@@ -50,8 +50,8 @@ autumn:
     open: false  # 是否开启redis缓存  true开启   false关闭
   shiro:
     redis: false # true表示shiro session存到redis里，需要开启redis，才会生效【分布式场景】
-  # mysql | mariadb | postgresql | oracle | sqlserver（仅影响分页方言；注解建表仅 mysql 系与 postgresql）
-  database: mysql
+  # 可选：无 URL 时指定库类型；通常由 spring.datasource.druid.first.url 推断，无需配置。
+  # database: postgresql
   table:
     auto: update
     init: true

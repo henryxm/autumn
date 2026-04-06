@@ -16,8 +16,4 @@ spring:
         password: ${SPRING_DATASOURCE_DRUID_SECOND_PASSWORD:111111}
       validation-query: ${DRUID_VALIDATION_QUERY:SELECT 1}
 
-autumn:
-  database: ${AUTUMN_DATABASE:postgresql}
-
-pagehelper:
-  helper-dialect: ${PAGEHELPER_DIALECT:postgresql}
+# autumn.database 可选；未配置时由上方 JDBC URL 推断为 postgresql。

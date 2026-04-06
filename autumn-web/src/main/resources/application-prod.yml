@@ -2,17 +2,14 @@
 # 与 application-dev.yml、application-postgresql.yml 共用同一套变量名，便于本地与线上一致。
 #
 # 常用（MySQL 默认，可不设）：
-#   AUTUMN_DATABASE=mysql
-#   PAGEHELPER_DIALECT=mysql
 #   DRUID_VALIDATION_QUERY=SELECT 1 FROM DUAL
 #
-# 切 PostgreSQL 时至少设置（示例）：
+# 切 PostgreSQL 时至少设置（示例）；库类型与 PageHelper 方言由 JDBC URL 自动推断，一般无需 AUTUMN_DATABASE / PAGEHELPER_DIALECT：
 #   SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
 #   SPRING_DATASOURCE_DRUID_FIRST_URL=jdbc:postgresql://host:5432/dbname?stringtype=unspecified
 #   SPRING_DATASOURCE_DRUID_SECOND_URL=jdbc:postgresql://host:5432/dbname?stringtype=unspecified
-#   AUTUMN_DATABASE=postgresql
-#   PAGEHELPER_DIALECT=postgresql
 #   DRUID_VALIDATION_QUERY=SELECT 1
+# 仅在 URL 无法识别时可用 AUTUMN_DATABASE、PAGEHELPER_DIALECT 手工覆盖。
 # 账号密码仍可用 database.username / database.password（或下方 *_USERNAME / *_PASSWORD 覆盖）。
 #
 # Spring Boot 2.x 绑定：spring.datasource.druid.first.url -> SPRING_DATASOURCE_DRUID_FIRST_URL
@@ -63,10 +60,4 @@ spring:
     port: ${redis.port}
     password: ${redis.password}
 
-# 与 application.yml 中其它 autumn.* 合并，仅覆盖 database
-autumn:
-  database: ${AUTUMN_DATABASE:mysql}
-
-# 与 application.yml 中 pagehelper 合并，补充方言（MySQL 可不设）
-pagehelper:
-  helper-dialect: ${PAGEHELPER_DIALECT:mysql}
+# autumn.database / pagehelper.helper-dialect 可选；未配置时由 JDBC URL 推断。

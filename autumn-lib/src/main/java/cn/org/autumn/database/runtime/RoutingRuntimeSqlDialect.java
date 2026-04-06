@@ -1,20 +1,20 @@
 package cn.org.autumn.database.runtime;
 
-import cn.org.autumn.database.AutumnDatabaseHolder;
-import cn.org.autumn.database.AutumnDatabaseType;
+import cn.org.autumn.database.DatabaseHolder;
+import cn.org.autumn.database.DatabaseType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
 /**
- * 根据 {@code autumn.database} 选择具体方言；PostgreSQL / Oracle / SQL Server 使用独立实现；MySQL、MariaDB 及其它回退到 MySQL 规则。
+ * 根据 {@link DatabaseHolder#getType()} 选择具体方言（优先 JDBC URL，其次 {@code autumn.database}）；PostgreSQL / Oracle / SQL Server 使用独立实现；MySQL、MariaDB 及其它回退到 MySQL 规则。
  */
 @Primary
 @Component
 public class RoutingRuntimeSqlDialect implements RuntimeSqlDialect {
 
     @Autowired
-    private AutumnDatabaseHolder autumnDatabaseHolder;
+    private DatabaseHolder databaseHolder;
 
     @Autowired
     private MysqlRuntimeSqlDialect mysqlRuntimeSqlDialect;
@@ -29,14 +29,14 @@ public class RoutingRuntimeSqlDialect implements RuntimeSqlDialect {
     private SqlServerRuntimeSqlDialect sqlServerRuntimeSqlDialect;
 
     private RuntimeSqlDialect delegate() {
-        AutumnDatabaseType t = autumnDatabaseHolder.getType();
-        if (t == AutumnDatabaseType.POSTGRESQL) {
+        DatabaseType t = databaseHolder.getType();
+        if (t == DatabaseType.POSTGRESQL) {
             return postgresqlRuntimeSqlDialect;
         }
-        if (t == AutumnDatabaseType.ORACLE) {
+        if (t == DatabaseType.ORACLE) {
             return oracleRuntimeSqlDialect;
         }
-        if (t == AutumnDatabaseType.SQLSERVER) {
+        if (t == DatabaseType.SQLSERVER) {
             return sqlServerRuntimeSqlDialect;
         }
         // MYSQL、MARIADB、OTHER 等与 MySQL 规则一致（MariaDB 与 MySQL 共用 FIND_IN_SET / 反引号）

@@ -1,6 +1,5 @@
 package cn.org.autumn.modules.usr.service;
 
-import cn.org.autumn.database.runtime.RuntimeSqlDialect;
 import cn.org.autumn.base.ModuleService;
 import cn.org.autumn.exception.AException;
 import cn.org.autumn.model.IP;
@@ -12,7 +11,6 @@ import com.baomidou.mybatisplus.mapper.EntityWrapper;
 import com.baomidou.mybatisplus.plugins.Page;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import cn.org.autumn.modules.usr.dao.UserLoginLogDao;
 import cn.org.autumn.modules.usr.entity.UserLoginLogEntity;
@@ -23,9 +21,6 @@ import java.util.*;
 @Slf4j
 @Service
 public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLoginLogEntity> implements LoopJob.OneDay {
-
-    @Autowired
-    private RuntimeSqlDialect sqlDialect;
 
     @Override
     public String ico() {
@@ -78,25 +73,27 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
             }
             if (whiteObj != null && StringUtils.isNotBlank(whiteObj.toString())) {
                 boolean limit = "true".equalsIgnoreCase(whiteObj.toString()) || "1".equals(whiteObj.toString());
-                ew.eq(sqlDialect.columnInWrapper("white"), limit);
+                ew.eq(columnInWrapper("white"), limit);
             }
             if (StringUtils.isNotBlank(createStart)) {
                 try {
                     Date start = parseDate(createStart);
-                    if (start != null) ew.ge(sqlDialect.columnInWrapper("create"), start);
+                    if (start != null) ew.ge(columnInWrapper("create"), start);
                 } catch (Exception ignored) {
                 }
             }
             if (StringUtils.isNotBlank(createEnd)) {
                 try {
                     Date end = parseDate(createEnd);
-                    if (end != null) ew.le(sqlDialect.columnInWrapper("create"), end);
+                    if (end != null) ew.le(columnInWrapper("create"), end);
                 } catch (Exception ignored) {
                 }
             }
-            ew.orderBy(sqlDialect.columnInWrapper("create"), false);
+            // PostgreSQL：COUNT 查询不能带 ORDER BY（MySQL 常忽略）；先统计再排序分页
+            int total = baseMapper.selectCount(ew);
+            ew.orderBy(columnInWrapper("create"), false);
             Page<UserLoginLogEntity> page = selectPage(_page, ew);
-            page.setTotal(baseMapper.selectCount(ew));
+            page.setTotal(total);
             return new PageUtils(page);
         } catch (Exception e) {
             log.error("查询错误:{}", e.getMessage());
@@ -161,7 +158,7 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
      */
     public List<UserLoginLogEntity> listRecentByUuid(String uuid, int limit) {
         EntityWrapper<UserLoginLogEntity> ew = new EntityWrapper<>();
-        ew.eq("uuid", uuid).orderBy(sqlDialect.columnInWrapper("create"), false);
+        ew.eq("uuid", uuid).orderBy(columnInWrapper("create"), false);
         Page<UserLoginLogEntity> p = new Page<>(1, Math.max(1, Math.min(limit, 500)));
         return selectPage(p, ew).getRecords();
     }
@@ -171,7 +168,7 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
      */
     public List<UserLoginLogEntity> listRecentByIp(String ip, int limit) {
         EntityWrapper<UserLoginLogEntity> ew = new EntityWrapper<>();
-        ew.eq("ip", ip).orderBy(sqlDialect.columnInWrapper("create"), false);
+        ew.eq("ip", ip).orderBy(columnInWrapper("create"), false);
         Page<UserLoginLogEntity> p = new Page<>(1, Math.max(1, Math.min(limit, 500)));
         return selectPage(p, ew).getRecords();
     }
@@ -231,27 +228,27 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
         ew.like(StringUtils.isNotBlank(agent), "agent", agent);
         if (allowObj != null && StringUtils.isNotBlank(allowObj.toString())) {
             boolean allow = "true".equalsIgnoreCase(allowObj.toString()) || "1".equals(allowObj.toString());
-            ew.eq("allow", allow ? 1 : 0);
+            ew.eq("allow", allow);
         }
         if (logoutObj != null && StringUtils.isNotBlank(logoutObj.toString())) {
             boolean logout = "true".equalsIgnoreCase(logoutObj.toString()) || "1".equals(logoutObj.toString());
-            ew.eq("logout", logout ? 1 : 0);
+            ew.eq("logout", logout);
         }
         if (limitObj != null && StringUtils.isNotBlank(limitObj.toString())) {
             boolean limit = "true".equalsIgnoreCase(limitObj.toString()) || "1".equals(limitObj.toString());
-            ew.eq(sqlDialect.columnInWrapper("limit"), limit ? 1 : 0);
+            ew.eq(columnInWrapper("white"), limit);
         }
         if (StringUtils.isNotBlank(createStart)) {
             try {
                 Date start = parseDate(createStart);
-                if (start != null) ew.ge(sqlDialect.columnInWrapper("create"), start);
+                if (start != null) ew.ge(columnInWrapper("create"), start);
             } catch (Exception ignored) {
             }
         }
         if (StringUtils.isNotBlank(createEnd)) {
             try {
                 Date end = parseDate(createEnd);
-                if (end != null) ew.le(sqlDialect.columnInWrapper("create"), end);
+                if (end != null) ew.le(columnInWrapper("create"), end);
             } catch (Exception ignored) {
             }
         }
@@ -279,7 +276,7 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
         long cutoff = System.currentTimeMillis() - days * 24L * 3600 * 1000;
         Date before = new Date(cutoff);
         EntityWrapper<UserLoginLogEntity> ew = new EntityWrapper<>();
-        ew.lt(sqlDialect.columnInWrapper("create"), before);
+        ew.lt(columnInWrapper("create"), before);
         int n = baseMapper.delete(ew);
         if (n > 0 && log.isInfoEnabled()) {
             log.info("定时清理登录日志：删除 {} 天以前的记录 {} 条", days, n);
@@ -348,7 +345,7 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
         if (StringUtils.isBlank(uuid))
             return new HashSet<>();
         EntityWrapper<UserLoginLogEntity> ew = new EntityWrapper<>();
-        ew.eq("uuid", uuid).eq(sqlDialect.columnInWrapper("white"), true);
+        ew.eq("uuid", uuid).eq(columnInWrapper("white"), true);
         List<UserLoginLogEntity> list = selectList(ew);
         Set<String> ips = new HashSet<>();
         for (UserLoginLogEntity e : list) {
