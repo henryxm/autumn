@@ -77,16 +77,56 @@
 
 | 组件 | 说明 |
 |------|------|
-| `RuntimeSqlDialect` | `quote`、`columnInWrapper`、`currentTimestamp`、`truncateTable`（`TRUNCATE TABLE` + 引用）、`limitOne`（**勿**用于 `COUNT(*)` 等聚合）、`likeContainsAny`（替代三参 `concat` 模糊匹配）、`columnValueInCommaSeparatedList` 等 |
+| **`RuntimeSql`**（**依赖方推荐入口**） | 基类：`cn.org.autumn.database.runtime.RuntimeSql`。业务 `*DaoSql` 类 **`extends RuntimeSql`**，在实例方法里调用 **`quote`、`limitOne`、`likeContainsAny`、`enabledTrueSqlLiteral`、`currentTimestamp`、`truncateTable`、`columnInWrapper`、`columnValueInCommaSeparatedList`** 等；内部通过 **`dialect()`** → `RuntimeSqlDialectRegistry.get()` 取当前方言，**避免**每个类重复编写 `RuntimeSqlDialectRegistry.get()` 样板代码。 |
+| `RuntimeSqlDialect` | 底层接口：`quote`、`columnInWrapper`、`currentTimestamp`、`truncateTable`、`limitOne`（**勿**用于 `COUNT(*)` 等聚合）、`likeContainsAny`、`enabledTrueSqlLiteral`、`columnValueInCommaSeparatedList` 等 |
 | `MysqlRuntimeSqlDialect` / `PostgresqlRuntimeSqlDialect` | 各库实现 |
 | `RoutingRuntimeSqlDialect`（`@Primary`） | 按 `AutumnDatabaseHolder` 委托 |
-| `RuntimeSqlDialectRegistry` + `RuntimeSqlDialectBootstrap` | Provider 非 Spring 托管时通过静态注册表取当前方言 |
+| `RuntimeSqlDialectRegistry` + `RuntimeSqlDialectBootstrap` | MyBatis 实例化 Provider 类时通常非 Spring 注入；通过静态注册表在运行期解析当前方言（与 `RuntimeSql` / 直接 `get()` 一致） |
 
-**业务侧已接入示例**：各模块 `**/dao/sql/*DaoSql`（含 `UserOpenDaoSql`、`SysMenuDaoSql`、`TokenStoreDaoSql`、`ClientDetailsDaoSql`、`SuperPositionModelDaoSql`、`LanguageDaoSql`、`WebOauthCombineDaoSql`、`WebAuthenticationDaoSql` 等与 `SysUserDaoSql`、`WallDaoSql` 并列）、`WallCounterSql`、`OauthInlineSql`、`DataFilterAspect`（`FIND_IN_SET` 替代）等。原先 Mapper 上硬编码 `limit 1` / `LIMIT 1` 的 `@Select` 已逐步改为 `@SelectProvider` + `RuntimeSqlDialect#limitOne()`。
+#### RuntimeSql 与 MyBatis Provider（给「以本仓库为基础项目」的依赖方）
+
+**目的**：多库（至少 MySQL + PostgreSQL）下，手写 SQL 的标识符引号、单行限制、LIKE 模糊、`TRUE`/`1` 开关字面量等必须随 **`autumn.database`** 变化；统一继承 **`RuntimeSql`** 可减少重复、降低漏改风险。
+
+**典型写法**：
+
+```java
+package com.example.biz.dao.sql;
+
+import cn.org.autumn.database.runtime.RuntimeSql;
+
+public class FooDaoSql extends RuntimeSql {
+
+    public String findOne() {
+        return "SELECT * FROM " + quote("foo") + " WHERE " + quote("id") + " = #{id}" + limitOne();
+    }
+
+    public String searchName() {
+        return "SELECT * FROM " + quote("foo") + " WHERE " + quote("name")
+                + " LIKE " + likeContainsAny("#{name}");
+    }
+}
+```
+
+```java
+// Mapper
+@SelectProvider(type = FooDaoSql.class, method = "findOne")
+FooEntity findOne(@Param("id") Long id);
+```
+
+**约定**：
+
+- Provider 方法使用 **实例方法**（`public String xxx()`）。MyBatis 会 `new` 一次 SQL 构建类再反射调用；**不要**在 `static` 方法里调用实例上的 `quote()`（编译失败）。若未继承 `RuntimeSql` 且使用 `static`，需在方法内自行 `RuntimeSqlDialectRegistry.get()`。
+- **`limitOne()`** 仅用于「可能返回多行」的 `SELECT` 需要单行时；**不要**在 `SELECT COUNT(*)`、`MAX`/`MIN` 等聚合 SQL 后追加（见接口注释与各仓库已修案例）。
+- **`enabledTrueSqlLiteral()`** 用于手写 SQL 中与开关列比较（无 `#{param}` 时）；PostgreSQL `boolean` 与 MySQL 整型列语义不同，由方言返回 `TRUE` 或 `1`。
+- 需要完整方言 API 时调用 **`dialect()`**，与 `RuntimeSqlDialectRegistry.get()` 等价。
+
+**业务侧已接入示例（本仓库）**：各模块 `**/dao/sql/*DaoSql`（如 `SysUserDaoSql`、`SysConfigDaoSql`、`WallDaoSql`、`OauthInlineSql`、`UserOpenDaoSql` 等）均继承 **`RuntimeSql`**；切面等处的 `FIND_IN_SET` 替代见 `DataFilterAspect`。原先 Mapper 上硬编码 `limit 1` / `LIMIT 1` 的 `@Select` 已逐步改为 `@SelectProvider` + **`limitOne()`**。
+
+**依赖方升级与清单**：见 **`AI_UPGRADE.md`**「跨库手写 SQL 与 `RuntimeSql`」。
 
 ### 3.5 MyBatis-Plus 分页
 
-- `MybatisPlusConfig`：`PaginationInterceptor.setDialectType` 按 `autumn.database` 设置（含 `postgresql` / `oracle` / `sqlserver` / `mysql`）。
+- `MybatisPlusConfig`：分页插件（如 `MybatisPlusInterceptor` + `PaginationInnerInterceptor`）按 `autumn.database` 设置 `DbType`（含 `POSTGRE_SQL` / `ORACLE` / `SQL_SERVER` / `MYSQL` 等），与 `autumn.database` 对齐。
 
 ### 3.6 备份服务
 
@@ -107,7 +147,7 @@
 
 ### 4.1 防火墙 / Wall
 
-- `WallDaoSql` 等：`LIMIT 1` 经 `RuntimeSqlDialectRegistry.get().limitOne()`。
+- `WallDaoSql` / `WallCounterSql` 等：继承 **`RuntimeSql`**，`limitOne()`、`currentTimestamp()`、`enabledTrueSqlLiteral()` 等经 **`dialect()`** 路由。
 - 各 Wall DAO：`@UpdateProvider` 修正误用 `@Select` 执行 `UPDATE`。
 - `ShieldEntity` / `JumpEntity` 的 `enable`：使用 **`int` 0/1** + `isEnabled()` 语义方法，避免 **`getEnable` + `isEnable` 双 getter** 触发 MyBatis `Reflector` 冲突。
 
@@ -182,7 +222,7 @@
 |------|------|
 | `application-postgresql.yml` | PG 可选 profile；与 prod/dev 共用环境变量名 |
 | `application-prod.yml` | 生产数据源与 `AUTUMN_DATABASE` 等可由环境变量覆盖（见文件内注释） |
-| `AI_BOOT.md` | PostgreSQL 摘要 + 指向本文件 |
+| `AI_BOOT.md` | PostgreSQL 摘要、`RuntimeSql` 索引 + 指向本文件 |
 | `AI_INDEX.md` / `AI_GUIDE.md` | 索引与导航中增加本文件条目 |
 | `AI_UPGRADE.md` | 依赖方升级 autumn 的通用清单、只读扫描脚本与自动化边界（不限于 PG） |
 

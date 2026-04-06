@@ -1,22 +1,17 @@
 package cn.org.autumn.modules.spm.dao.sql;
 
-import cn.org.autumn.database.runtime.RuntimeSqlDialect;
-import cn.org.autumn.database.runtime.RuntimeSqlDialectRegistry;
+import cn.org.autumn.database.runtime.RuntimeSql;
 
 /**
  * {@link cn.org.autumn.modules.spm.dao.SuperPositionModelDao} 可移植 SQL。
  */
-public class SuperPositionModelDaoSql {
-
-    private RuntimeSqlDialect d() {
-        return RuntimeSqlDialectRegistry.get();
-    }
+public class SuperPositionModelDaoSql extends RuntimeSql {
 
     public String getByResourceId() {
-        return "select * from spm_super_position_model where resource_id = #{resourceId}" + d().limitOne();
+        return "select * from spm_super_position_model where resource_id = #{resourceId}" + limitOne();
     }
 
     public String getByUrlKey() {
-        return "select * from spm_super_position_model where url_key = #{urlKey}" + d().limitOne();
+        return "select * from spm_super_position_model where url_key = #{urlKey}" + limitOne();
     }
 }

@@ -1,39 +1,34 @@
 package cn.org.autumn.modules.oauth.dao.sql;
 
-import cn.org.autumn.database.runtime.RuntimeSqlDialect;
-import cn.org.autumn.database.runtime.RuntimeSqlDialectRegistry;
+import cn.org.autumn.database.runtime.RuntimeSql;
 
 /**
  * {@link cn.org.autumn.modules.oauth.dao.ClientDetailsDao} 可移植 SQL。
  */
-public class ClientDetailsDaoSql {
-
-    private RuntimeSqlDialect d() {
-        return RuntimeSqlDialectRegistry.get();
-    }
+public class ClientDetailsDaoSql extends RuntimeSql {
 
     public String findByClientId() {
-        return "SELECT * FROM " + d().quote("oauth_client_details") + " WHERE " + d().quote("client_id") + " = #{clientId}" + d().limitOne();
+        return "SELECT * FROM " + quote("oauth_client_details") + " WHERE " + quote("client_id") + " = #{clientId}" + limitOne();
     }
 
     public String getByUuid() {
-        return "SELECT * FROM " + d().quote("oauth_client_details") + " WHERE " + d().quote("uuid") + " = #{uuid}" + d().limitOne();
+        return "SELECT * FROM " + quote("oauth_client_details") + " WHERE " + quote("uuid") + " = #{uuid}" + limitOne();
     }
 
     public String findByClientSecret() {
-        return "SELECT * FROM " + d().quote("oauth_client_details") + " WHERE " + d().quote("client_secret") + " = #{clientSecret}" + d().limitOne();
+        return "SELECT * FROM " + quote("oauth_client_details") + " WHERE " + quote("client_secret") + " = #{clientSecret}" + limitOne();
     }
 
     public String count() {
-        return "SELECT COUNT(*) FROM " + d().quote("oauth_client_details") + " WHERE " + d().quote("client_id") + " = #{clientId}";
+        return "SELECT COUNT(*) FROM " + quote("oauth_client_details") + " WHERE " + quote("client_id") + " = #{clientId}";
     }
 
     public String countClientType() {
-        return "SELECT COUNT(*) FROM " + d().quote("oauth_client_details") + " WHERE " + d().quote("client_type") + " = #{clientType}";
+        return "SELECT COUNT(*) FROM " + quote("oauth_client_details") + " WHERE " + quote("client_type") + " = #{clientType}";
     }
 
     public String updateClientType() {
-        return "UPDATE " + d().quote("oauth_client_details") + " SET " + d().quote("client_type") + " = #{clientType} WHERE " + d().quote("client_id")
+        return "UPDATE " + quote("oauth_client_details") + " SET " + quote("client_type") + " = #{clientType} WHERE " + quote("client_id")
                 + " = #{clientId}";
     }
 }

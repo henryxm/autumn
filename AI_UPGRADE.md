@@ -47,7 +47,7 @@
 | # | 项 | 说明 |
 |---|-----|------|
 | 11 | **二方扩展** | 依赖方若 **继承/实现** autumn 的 `ModuleService`、`BaseMenu`、`LoopJob` 等，对照 **CHANGELOG** 或 **Diff** 检查重载签名、废弃方法。 |
-| 12 | **手写 SQL** | 硬编码 `LIMIT`/`FIND_IN_SET`/三参 `concat('%',#{x},'%')`/保留字列名等，在多库下易出错；应迁到 **`RuntimeSqlDialect` + SqlProvider**（见下「跨库手写 SQL 约定」与 `AI_POSTGRESQL.md`）。 |
+| 12 | **手写 SQL** | 硬编码 `LIMIT`/`FIND_IN_SET`/三参 `concat('%',#{x},'%')`/保留字列名等，在多库下易出错；应迁到 **`RuntimeSql`（推荐）+ `@SelectProvider`/`@UpdateProvider`**（见下「跨库手写 SQL 与 RuntimeSql」与 `AI_POSTGRESQL.md`）。 |
 | 13 | **实体布尔与 MyBatis** | 避免同一字段 **`getX(int)` + `boolean isX()`** 引发 `Reflector` 冲突；分页若自定义 count，避免 **`COUNT(...) ORDER BY`**（PG 非法）。 |
 
 ### 2.5 回归与发布
@@ -57,14 +57,33 @@
 | 14 | **冒烟用例** | 登录、权限、核心 CRUD、定时任务、文件/备份（若使用）等与业务相关的路径。 |
 | 15 | **灰度** | 生产环境建议先 **单实例 / 低流量** 验证再全量。 |
 
-#### 跨库手写 SQL 约定（依赖方与框架内 SqlProvider 一致）
+#### 跨库手写 SQL 与 `RuntimeSql`（依赖方与基础项目一致）
 
-- **列/表引用**：`RuntimeSqlDialect#quote`（或 `columnInWrapper`），勿手写 `` ` `` / `"` / `[]`。
-- **取一行**：`RuntimeSqlDialect#limitOne()`，勿手写 `LIMIT 1`（Oracle 12c+ 为 `FETCH FIRST`，SQL Server 为 `OFFSET/FETCH`，由路由方言生成）。**`SELECT COUNT(*)`、`MAX/MIN` 等聚合勿再追加** `limitOne()`（结果已单行；多余子句在 SQL Server 上会多一层 `ORDER BY … OFFSET/FETCH`）。Mapper 上勿再写 `@Select("... limit 1")`，应改为 `@SelectProvider` 调用含 `limitOne()` 的 Sql 构建类。
-- **逗号列表成员判断**（替代 MySQL `FIND_IN_SET`）：`columnValueInCommaSeparatedList(qualifiedColumn, csvInner)`。
-- **清空表**：`truncateTable("表名")`（`TRUNCATE TABLE` + 引用），勿手写 `truncate table ...`；外键/复制等环境下各库行为不同，需自行评估。
-- **LIKE 两端 `%` 模糊**：`likeContainsAny("#{param}")`，**勿**手写 `concat('%', #{param}, '%')`（Oracle `CONCAT` 仅双参；本仓库 `SysUserDaoSql` 已按此改造）。
-- 仍须人工审：动态 SQL 中的函数名、日期格式、分页子句是否与目标库一致。
+**推荐写法（以本仓库 `autumn-lib` 为依赖时）**
+
+1. 新建 SQL 构建类：`public class XxxDaoSql extends cn.org.autumn.database.runtime.RuntimeSql`（与 Mapper 同模块、常放 `.../dao/sql/`）。
+2. Mapper 使用：`@SelectProvider(type = XxxDaoSql.class, method = "方法名")`（或 `@UpdateProvider` / `@DeleteProvider` 等同理）。
+3. Provider **方法**：**实例方法**、`public String xxx()`，返回拼接好的 SQL 字符串；**不要**写成 `static` 后仍调用实例上的 `quote()`（无法编译）；若坚持 `static`，须在方法内显式 `RuntimeSqlDialectRegistry.get().quote(...)`，一般无必要。
+4. 在构建类中优先使用 **`RuntimeSql`** 的封装（内部经 `RuntimeSqlDialectRegistry` 取当前方言）：
+   - **`quote("列或表名")`**：标识符引用，勿手写反引号/双引号/方括号。
+   - **`limitOne()`**：仅用于「可能多行」的 `SELECT` 取单行；**勿**与 `COUNT(*)`、`MAX/MIN` 等聚合同用（见下）。
+   - **`likeContainsAny("#{param}")`**：LIKE 两端 `%`，勿手写三参 `concat('%',#{x},'%')`（Oracle 仅双参 `CONCAT`）。
+   - **`enabledTrueSqlLiteral()`**：手写 SQL 中与开关列比较时的字面量（PG `boolean` 与 MySQL 整型 0/1 差异）。
+   - **`currentTimestamp()`**、**`truncateTable("表名")`**、**`columnInWrapper("列名")`**、**`columnValueInCommaSeparatedList(qualifiedColumn, csvInner)`**（替代 `FIND_IN_SET`）。
+   - 需要直接访问方言实现时：**`dialect()`** 返回 `RuntimeSqlDialect`（与直接 `RuntimeSqlDialectRegistry.get()` 等价，择一即可）。
+
+**与仅使用 `RuntimeSqlDialect` 的关系**：`RuntimeSql` 是对方言的薄封装，**不替代** `RuntimeSqlDialect` 接口；依赖方若从旧代码迁移，把「每类重复的 `private ... d() { return RuntimeSqlDialectRegistry.get(); }`」收敛为 **`extends RuntimeSql`** 即可。
+
+**仍须人工审**：动态 SQL 中的函数名、日期格式、分页子句是否与目标库一致。
+
+---
+
+#### 跨库手写 SQL 约定（要点速查，与 `AI_POSTGRESQL.md` 一致）
+
+- **列/表引用**：`quote` / `columnInWrapper`，勿手写 `` ` `` / `"` / `[]`。
+- **取一行**：`limitOne()`，勿手写固定 `LIMIT 1`。**`SELECT COUNT(*)`、`MAX/MIN` 等聚合勿再追加** `limitOne()`。Mapper 上勿再写 `@Select("... limit 1")`，应改为 `@SelectProvider` + 含 `limitOne()` 的构建类。
+- **逗号列表成员判断**：`columnValueInCommaSeparatedList(qualifiedColumn, csvInner)`。
+- **清空表**：`truncateTable("表名")`；外键/复制等环境下各库行为不同，需自行评估。
 
 ---
 
@@ -110,8 +129,8 @@ AUTUMN_SCAN_ROOT=/path/to/business-repo bash /path/to/autumn/scripts/autumn-depe
 
 | 文档 | 内容 |
 |------|------|
-| `AI_POSTGRESQL.md` | 多库、方言、实体类型、`BaseService` 分页 count 等 |
-| `AI_BOOT.md` | 最小上下文；含 PostgreSQL 摘要 |
+| `AI_POSTGRESQL.md` | 多库、方言、`RuntimeSql` 与 Provider、`BaseService` 分页 count 等 |
+| `AI_BOOT.md` | 最小上下文；含 PostgreSQL 摘要与 `RuntimeSql` 索引 |
 | `AI_MAP.md` | 框架能力与模块边界 |
 
 ---
