@@ -3,7 +3,7 @@ package cn.org.autumn.database.runtime;
 import cn.org.autumn.config.Config;
 import cn.org.autumn.database.DatabaseHolder;
 import cn.org.autumn.database.DatabaseType;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.core.env.Environment;
 
 /**
