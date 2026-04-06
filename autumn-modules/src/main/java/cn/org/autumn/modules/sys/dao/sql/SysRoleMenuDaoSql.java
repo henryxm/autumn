@@ -1,22 +1,17 @@
 package cn.org.autumn.modules.sys.dao.sql;
 
-import cn.org.autumn.database.runtime.RuntimeSqlDialect;
-import cn.org.autumn.database.runtime.RuntimeSqlDialectRegistry;
+import cn.org.autumn.database.runtime.RuntimeSql;
 
 /**
  * {@link cn.org.autumn.modules.sys.dao.SysRoleMenuDao} 可移植 SQL；{@code IN (#{roleKeys})} 由 {@link cn.org.autumn.mybatis.SelectInLangDriver} 展开。
  */
-public class SysRoleMenuDaoSql {
-
-    private RuntimeSqlDialect d() {
-        return RuntimeSqlDialectRegistry.get();
-    }
+public class SysRoleMenuDaoSql extends RuntimeSql {
 
     public String getMenuKeys() {
-        return "SELECT " + d().quote("menu_key") + " FROM " + d().quote("sys_role_menu") + " WHERE " + d().quote("role_key") + " = #{roleKey}";
+        return "SELECT " + quote("menu_key") + " FROM " + quote("sys_role_menu") + " WHERE " + quote("role_key") + " = #{roleKey}";
     }
 
     public String deleteByRoleKeys() {
-        return "DELETE FROM " + d().quote("sys_role_menu") + " WHERE " + d().quote("role_key") + " IN (#{roleKeys})";
+        return "DELETE FROM " + quote("sys_role_menu") + " WHERE " + quote("role_key") + " IN (#{roleKeys})";
     }
 }

@@ -139,6 +139,7 @@
 - 规范梳理/团队协作：`AI_BOOT.md + AI_MAP.md + AI_GOVERNANCE.md`
 - 安全改造/攻防演练：`AI_BOOT.md + AI_MAP.md + AI_SECURITY.md`
 - **PostgreSQL / 多库适配排查：`AI_BOOT.md + AI_MAP.md + AI_POSTGRESQL.md`**
+- **新增 Mapper 手写 SQL / SqlProvider：`AI_BOOT.md + AI_POSTGRESQL.md`（§ RuntimeSql）**
 - **业务仓库升级 autumn：`AI_BOOT.md + AI_UPGRADE.md`（多库/PG 时叠加 `AI_POSTGRESQL.md`）**
 - 仅对照 PG 清单与兼容性、少读其它文档时：可直接打开 `AI_POSTGRESQL.md`（仍建议与 `AI_MAP.md` 中表结构/方言章节交叉核对）。
 
@@ -148,7 +149,7 @@
 
 - **配置**：`autumn.database: postgresql`，数据源与 `pagehelper` 方言对齐；示例见 `application-postgresql.yml`。
 - **路由**：`AutumnDatabaseType` + `RoutingRelationalTableOperations` / `RoutingRuntimeSqlDialect`；注解建表仅对 mysql/mariadb/postgresql 执行同步。
-- **方言与 SQL**：`RuntimeSqlDialect`（引号、`LIMIT`、`FIND_IN_SET` 替代等）；`PostgresQuerySql` 负责 PG DDL/元数据；业务侧逐步用 `*Sql` Provider 替换非移植 SQL。
+- **方言与 SQL**：底层为 `RuntimeSqlDialect`（引号、`LIMIT`、`FIND_IN_SET` 替代等）；**业务手写 SQL 推荐**继承 **`RuntimeSql`**（`cn.org.autumn.database.runtime.RuntimeSql`），在 `*DaoSql` 中调用 `quote`、`limitOne`、`likeContainsAny` 等，避免各处重复 `RuntimeSqlDialectRegistry.get()`。详见 **`AI_POSTGRESQL.md` §「RuntimeSql 与 MyBatis Provider」** 与 **`AI_UPGRADE.md` 跨库手写 SQL**。`PostgresQuerySql` 负责 PG DDL/元数据；业务侧逐步用 `*Sql` Provider 替换非移植 SQL。
 - **类型兼容**：新建 PG 库时 `tinyint(1)` 布尔元数据可落 **`boolean`** 列；**已有 `smallint` 列**可与实体 **`int` 0/1** 对齐，或 **`ALTER ... TYPE boolean USING (...)`**。
 - **MyBatis**：避免同一字段 **`getX(int)` + `boolean isX()`** 并存导致 `Reflector` 冲突；分页 **`COUNT` 不带 `ORDER BY`**（见 `BaseService.selectCountWithoutOrderBy`）。
 - **构建**：JDK 9+ 需 Lombok **`annotationProcessorPaths`**；多模块运行前建议 **`mvn clean install -pl … -am`**，避免本地仓库旧 JAR 与源码不一致。
