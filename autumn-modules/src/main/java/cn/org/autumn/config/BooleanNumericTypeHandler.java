@@ -1,7 +1,7 @@
 package cn.org.autumn.config;
 
-import cn.org.autumn.database.AutumnDatabaseHolder;
-import cn.org.autumn.database.AutumnDatabaseType;
+import cn.org.autumn.database.DatabaseHolder;
+import cn.org.autumn.database.DatabaseType;
 import org.apache.ibatis.type.BaseTypeHandler;
 import org.apache.ibatis.type.JdbcType;
 
@@ -21,17 +21,17 @@ import java.sql.SQLException;
  * 同一 PostgreSQL 库若混用 {@code boolean} 与整型开关列，无法仅靠本类区分，请统一 DDL（或升级 MyBatis-Plus 做字段级 {@code typeHandler}）。
  * 须与 {@link MybatisPlusConfig}、{@link BooleanNumericParameterInterceptor} 配合。
  * <p>
- * {@link AutumnDatabaseHolder} 为 null 时（如单测）按非 PG 处理，使用整型绑定。
+ * {@link DatabaseHolder} 为 null 时（如单测）按非 PG 处理，使用整型绑定。
  */
 public class BooleanNumericTypeHandler extends BaseTypeHandler<Boolean> {
 
-    private final AutumnDatabaseHolder databaseHolder;
+    private final DatabaseHolder databaseHolder;
 
     public BooleanNumericTypeHandler() {
         this(null);
     }
 
-    public BooleanNumericTypeHandler(AutumnDatabaseHolder databaseHolder) {
+    public BooleanNumericTypeHandler(DatabaseHolder databaseHolder) {
         this.databaseHolder = databaseHolder;
     }
 
@@ -39,7 +39,7 @@ public class BooleanNumericTypeHandler extends BaseTypeHandler<Boolean> {
         if (databaseHolder == null) {
             return false;
         }
-        return databaseHolder.getType() == AutumnDatabaseType.POSTGRESQL;
+        return databaseHolder.getType() == DatabaseType.POSTGRESQL;
     }
 
     @Override

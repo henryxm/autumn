@@ -1,7 +1,7 @@
 package cn.org.autumn.modules.db.service;
 
-import cn.org.autumn.database.AutumnDatabaseHolder;
-import cn.org.autumn.database.AutumnDatabaseType;
+import cn.org.autumn.database.DatabaseHolder;
+import cn.org.autumn.database.DatabaseType;
 import cn.org.autumn.base.ModuleService;
 import cn.org.autumn.modules.db.dao.DatabaseBackupDao;
 import cn.org.autumn.modules.db.entity.DatabaseBackupEntity;
@@ -38,7 +38,7 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
     private DataSource dataSource;
 
     @Autowired
-    private AutumnDatabaseHolder autumnDatabaseHolder;
+    private DatabaseHolder databaseHolder;
 
     @Autowired
     private DatabaseBackupUploadService databaseBackupUploadService;
@@ -328,8 +328,8 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
     private int[] exportDatabase(BackupTask task) throws Exception {
         int tableCount = 0;
         int totalRecords = 0;
-        AutumnDatabaseType dbType = autumnDatabaseHolder.getType();
-        if (dbType != AutumnDatabaseType.MYSQL && dbType != AutumnDatabaseType.MARIADB) {
+        DatabaseType dbType = databaseHolder.getType();
+        if (dbType != DatabaseType.MYSQL && dbType != DatabaseType.MARIADB) {
             throw new UnsupportedOperationException(
                     "内置 SQL 备份仅实现 MySQL/MariaDB（SHOW CREATE TABLE 等）。当前 autumn.database="
                             + dbType.name().toLowerCase()

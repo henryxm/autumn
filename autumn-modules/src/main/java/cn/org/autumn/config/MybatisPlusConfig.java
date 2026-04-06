@@ -1,7 +1,7 @@
 package cn.org.autumn.config;
 
-import cn.org.autumn.database.AutumnDatabaseHolder;
-import cn.org.autumn.database.AutumnDatabaseType;
+import cn.org.autumn.database.DatabaseHolder;
+import cn.org.autumn.database.DatabaseType;
 import cn.org.autumn.handler.EnumTypeHandler;
 import cn.org.autumn.model.StubMapper;
 import cn.org.autumn.service.DefaultMapper;
@@ -22,18 +22,18 @@ import org.springframework.context.annotation.Configuration;
 public class MybatisPlusConfig {
 
     @Autowired
-    private AutumnDatabaseHolder autumnDatabaseHolder;
+    private DatabaseHolder databaseHolder;
 
     /**
-     * 与 {@link BooleanNumericTypeHandler} 单例绑定 {@link AutumnDatabaseHolder}：
+     * 与 {@link BooleanNumericTypeHandler} 单例绑定 {@link DatabaseHolder}：
      * PostgreSQL 走 {@code setBoolean} 适配原生 boolean 列；其它库走 {@code setInt(0/1)} 适配整型列。
      * <p>
      * 另见 {@link BooleanNumericParameterInterceptor}：替换已解析进 {@link org.apache.ibatis.mapping.ParameterMapping} 的
      * {@link org.apache.ibatis.type.BooleanTypeHandler}。
      */
     @Bean
-    public BooleanNumericTypeHandler booleanNumericTypeHandler(AutumnDatabaseHolder autumnDatabaseHolder) {
-        return new BooleanNumericTypeHandler(autumnDatabaseHolder);
+    public BooleanNumericTypeHandler booleanNumericTypeHandler(DatabaseHolder databaseHolder) {
+        return new BooleanNumericTypeHandler(databaseHolder);
     }
 
     @Bean
@@ -65,7 +65,7 @@ public class MybatisPlusConfig {
 
     /**
      * 与 {@code application.yml} 中 {@code mybatis-plus.global-config.db-config.column-format} 配合：
-     * YAML 为 MySQL 默认；此处按 {@link cn.org.autumn.database.AutumnDatabaseHolder} 覆盖，避免 PG 等收到反引号。
+     * YAML 为 MySQL 默认；此处按 {@link DatabaseHolder} 覆盖，避免 PG 等收到反引号。
      * 物理列名为保留字（如 {@code order}）时，实体侧用非保留 Java 名 + {@code @TableField("order")}，见 {@code SysConfigEntity}。
      */
     @Bean
@@ -81,10 +81,10 @@ public class MybatisPlusConfig {
                 db = new GlobalConfig.DbConfig();
                 gc.setDbConfig(db);
             }
-            AutumnDatabaseType t = autumnDatabaseHolder.getType();
-            if (t == AutumnDatabaseType.POSTGRESQL || t == AutumnDatabaseType.ORACLE) {
+            DatabaseType t = databaseHolder.getType();
+            if (t == DatabaseType.POSTGRESQL || t == DatabaseType.ORACLE) {
                 db.setColumnFormat("\"%s\"");
-            } else if (t == AutumnDatabaseType.SQLSERVER) {
+            } else if (t == DatabaseType.SQLSERVER) {
                 db.setColumnFormat("[%s]");
             } else {
                 db.setColumnFormat("`%s`");
@@ -95,14 +95,14 @@ public class MybatisPlusConfig {
     @Bean
     public MybatisPlusInterceptor mybatisPlusInterceptor() {
         PaginationInnerInterceptor paginationInnerInterceptor = new PaginationInnerInterceptor();
-        AutumnDatabaseType t = autumnDatabaseHolder.getType();
-        if (t == AutumnDatabaseType.POSTGRESQL) {
+        DatabaseType t = databaseHolder.getType();
+        if (t == DatabaseType.POSTGRESQL) {
             paginationInnerInterceptor.setDbType(DbType.POSTGRE_SQL);
-        } else if (t == AutumnDatabaseType.ORACLE) {
+        } else if (t == DatabaseType.ORACLE) {
             paginationInnerInterceptor.setDbType(DbType.ORACLE);
-        } else if (t == AutumnDatabaseType.SQLSERVER) {
+        } else if (t == DatabaseType.SQLSERVER) {
             paginationInnerInterceptor.setDbType(DbType.SQL_SERVER);
-        } else if (t == AutumnDatabaseType.MARIADB) {
+        } else if (t == DatabaseType.MARIADB) {
             paginationInnerInterceptor.setDbType(DbType.MARIADB);
         } else {
             paginationInnerInterceptor.setDbType(DbType.MYSQL);

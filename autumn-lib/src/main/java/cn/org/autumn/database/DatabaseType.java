@@ -3,14 +3,14 @@ package cn.org.autumn.database;
 import org.apache.commons.lang3.StringUtils;
 
 /**
- * 应用主库类型（与 {@code autumn.database} 对齐）。
+ * 应用主库类型（优先由 JDBC URL 推断，其次 {@code autumn.database}）。
  * <ul>
  *   <li>MySQL / MariaDB：共用 {@link cn.org.autumn.table.platform.mysql.MysqlRelationalTableOperations} 与 {@link cn.org.autumn.database.runtime.MysqlRuntimeSqlDialect}；分页方言 MariaDB 单独为 {@code mariadb}。</li>
  *   <li>PostgreSQL：独立建表与运行时方言。</li>
  *   <li>Oracle / SQL Server：运行时方言与 JDBC 元数据/DROP；注解建表 DDL 未接入，见 {@link #supportsAnnotationTableSync()}。</li>
  * </ul>
  */
-public enum AutumnDatabaseType {
+public enum DatabaseType {
 
     MYSQL,
     MARIADB,
@@ -48,9 +48,29 @@ public enum AutumnDatabaseType {
     }
 
     /**
+     * PageHelper {@code helper-dialect} 取值，与 JDBC URL 推断结果一致时无需再配 {@code pagehelper.helper-dialect}。
+     */
+    public String pageHelperDialectName() {
+        switch (this) {
+            case MYSQL:
+                return "mysql";
+            case MARIADB:
+                return "mariadb";
+            case POSTGRESQL:
+                return "postgresql";
+            case ORACLE:
+                return "oracle";
+            case SQLSERVER:
+                return "sqlserver";
+            default:
+                return "mysql";
+        }
+    }
+
+    /**
      * 解析配置值：mysql、mariadb、postgresql、postgres、oracle、sqlserver、mssql；其余为 {@link #OTHER}。
      */
-    public static AutumnDatabaseType fromConfig(String raw) {
+    public static DatabaseType fromConfig(String raw) {
         if (StringUtils.isBlank(raw)) {
             return MYSQL;
         }

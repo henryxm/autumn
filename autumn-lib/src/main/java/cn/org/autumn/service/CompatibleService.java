@@ -1,13 +1,11 @@
 package cn.org.autumn.service;
 
-import cn.org.autumn.model.Parameterized;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 
 import java.io.Serializable;
 import java.util.List;
 
-public class CompatibleService<M extends BaseMapper<T>, T> extends ServiceImpl<M, T> implements Parameterized {
+public class CompatibleService<M extends BaseMapper<T>, T> extends DialectService<M, T> {
 
     public T selectById(Serializable id) {
         return baseMapper.selectById(id);

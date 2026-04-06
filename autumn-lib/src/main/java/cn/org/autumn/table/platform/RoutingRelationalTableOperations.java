@@ -1,7 +1,7 @@
 package cn.org.autumn.table.platform;
 
-import cn.org.autumn.database.AutumnDatabaseHolder;
-import cn.org.autumn.database.AutumnDatabaseType;
+import cn.org.autumn.database.DatabaseHolder;
+import cn.org.autumn.database.DatabaseType;
 import cn.org.autumn.table.data.IndexInfo;
 import cn.org.autumn.table.data.TableInfo;
 import cn.org.autumn.table.data.UniqueKeyInfo;
@@ -26,7 +26,7 @@ import java.util.Map;
 public class RoutingRelationalTableOperations implements RelationalTableOperations {
 
     @Autowired
-    private AutumnDatabaseHolder databaseHolder;
+    private DatabaseHolder databaseHolder;
 
     @Autowired
     private MysqlRelationalTableOperations mysqlRelationalTableOperations;
@@ -41,14 +41,14 @@ public class RoutingRelationalTableOperations implements RelationalTableOperatio
     private SqlServerJdbcRelationalTableOperations sqlServerJdbcRelationalTableOperations;
 
     private RelationalTableOperations delegate() {
-        AutumnDatabaseType t = databaseHolder.getType();
-        if (t == AutumnDatabaseType.POSTGRESQL) {
+        DatabaseType t = databaseHolder.getType();
+        if (t == DatabaseType.POSTGRESQL) {
             return postgresRelationalTableOperations;
         }
-        if (t == AutumnDatabaseType.ORACLE) {
+        if (t == DatabaseType.ORACLE) {
             return oracleJdbcRelationalTableOperations;
         }
-        if (t == AutumnDatabaseType.SQLSERVER) {
+        if (t == DatabaseType.SQLSERVER) {
             return sqlServerJdbcRelationalTableOperations;
         }
         return mysqlRelationalTableOperations;

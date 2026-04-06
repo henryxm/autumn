@@ -1,5 +1,6 @@
 package cn.org.autumn.config;
 
+import cn.org.autumn.database.DatabaseHolder;
 import org.apache.ibatis.executor.parameter.ParameterHandler;
 import org.apache.ibatis.mapping.BoundSql;
 import org.apache.ibatis.mapping.ParameterMapping;
@@ -22,7 +23,7 @@ import java.util.Properties;
  * MyBatis 在解析 #{...} 时会把 {@link BooleanTypeHandler} 固化进 {@link ParameterMapping}，
  * 后续 {@link org.apache.ibatis.scripting.defaults.DefaultParameterHandler} 不再查 {@link org.apache.ibatis.type.TypeHandlerRegistry}，
  * 因此在 {@link ParameterHandler#setParameters} 前把仍使用 {@link BooleanTypeHandler} 的映射替换为
- * 与 Spring 容器一致的 {@link BooleanNumericTypeHandler}（含 {@link cn.org.autumn.database.AutumnDatabaseHolder}，以区分 PG boolean 列与 MySQL 整型列）。
+ * 与 Spring 容器一致的 {@link BooleanNumericTypeHandler}（含 {@link DatabaseHolder}，以区分 PG boolean 列与 MySQL 整型列）。
  */
 @Intercepts({
         @Signature(type = ParameterHandler.class, method = "setParameters", args = {PreparedStatement.class})

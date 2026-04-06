@@ -1,5 +1,5 @@
 # 与 application-prod.yml 使用相同环境变量名；默认本地 MySQL，不设环境变量即可开发。
-# 本地试 PostgreSQL 时可只设 SPRING_DATASOURCE_DRUID_*_URL、AUTUMN_DATABASE 等，无需改文件。
+# 本地试 PostgreSQL：可设 SPRING_DATASOURCE_DRUID_*_URL 与驱动；库类型与 pagehelper 方言由 JDBC URL 推断（与 RuntimeSqlDialect 一致）。
 
 spring:
   datasource:
@@ -41,8 +41,4 @@ spring:
           config:
             multi-statement-allow: true
 
-autumn:
-  database: ${AUTUMN_DATABASE:mysql}
-
-pagehelper:
-  helper-dialect: ${PAGEHELPER_DIALECT:mysql}
+# autumn.database / pagehelper.helper-dialect 可选；未配置时由 JDBC URL 推断。
