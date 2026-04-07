@@ -7,7 +7,7 @@ import cn.org.autumn.table.data.TableInfo;
 import cn.org.autumn.table.utils.HumpConvert;
 import cn.org.autumn.utils.PageUtils;
 import cn.org.autumn.utils.Query;
-import com.baomidou.mybatisplus.annotations.TableName;
+import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
