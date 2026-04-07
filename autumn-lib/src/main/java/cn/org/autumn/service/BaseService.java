@@ -7,6 +7,7 @@ import cn.org.autumn.table.data.TableInfo;
 import cn.org.autumn.table.utils.HumpConvert;
 import cn.org.autumn.utils.PageUtils;
 import cn.org.autumn.utils.Query;
+import com.baomidou.mybatisplus.annotations.TableName;
 import com.baomidou.mybatisplus.mapper.BaseMapper;
 import com.baomidou.mybatisplus.mapper.EntityWrapper;
 import com.baomidou.mybatisplus.plugins.Page;
@@ -140,9 +141,11 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends ShareCache
             Class<?> clazz = getModelClass();
             if (null != clazz) {
                 Table table = clazz.getAnnotation(Table.class);
+                TableName tableName = clazz.getAnnotation(TableName.class);
+                String tableValue = TableInfo.resolveTableValue(table, tableName);
                 String tmp = table.prefix();
-                if (StringUtils.isBlank(tmp) && StringUtils.isNotBlank(table.value()) && table.value().contains("_")) {
-                    tmp = table.value().split("_")[0];
+                if (StringUtils.isBlank(tmp) && StringUtils.isNotBlank(tableValue) && tableValue.contains("_")) {
+                    tmp = tableValue.split("_")[0];
                 }
                 prefix = tmp;
             }
@@ -155,9 +158,11 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends ShareCache
             Class<?> clazz = getModelClass();
             if (null != clazz) {
                 Table table = clazz.getAnnotation(Table.class);
+                TableName tableName = clazz.getAnnotation(TableName.class);
+                String tableValue = TableInfo.resolveTableValue(table, tableName);
                 String tmp = table.module();
-                if (StringUtils.isBlank(tmp) && StringUtils.isNotBlank(table.value()) && table.value().contains("_")) {
-                    tmp = table.value().split("_")[0];
+                if (StringUtils.isBlank(tmp) && StringUtils.isNotBlank(tableValue) && tableValue.contains("_")) {
+                    tmp = tableValue.split("_")[0];
                 }
                 module = tmp;
             }

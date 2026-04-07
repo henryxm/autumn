@@ -103,10 +103,9 @@ public class TableInfo {
         if (null == table) {
             return "";
         }
-        String name = table.value();
+        String tableValue = resolveTableValue(table, tableName);
+        String name = tableValue;
         String prefix = table.prefix();
-        if (StringUtils.isBlank(name) && null != tableName)
-            name = tableName.value();
         if (StringUtils.isEmpty(name)) {
             String entityName = clazz.getSimpleName();
             // remove for the end of entity
@@ -129,14 +128,32 @@ public class TableInfo {
             }
         } else {
             // 仅当 @Table.value 显式非空时才做 prefix 拼接；value 为空时 name 可能来自 @TableName，不得被覆盖
-            if (StringUtils.isNotBlank(table.value())) {
-                if (table.value().startsWith(prefix))
-                    name = table.value();
+            if (StringUtils.isNotBlank(tableValue) && StringUtils.isNotBlank(table.value())) {
+                if (tableValue.startsWith(prefix))
+                    name = tableValue;
                 else
-                    name = prefix + table.value();
+                    name = prefix + tableValue;
             }
         }
         return name;
+    }
+
+    /**
+     * 统一解析实体映射表名：
+     * 1) 优先 {@link Table#value()}；
+     * 2) 若为空则回退到 MyBatis-Plus {@link TableName#value()}。
+     */
+    public static String resolveTableValue(Table table, TableName tableName) {
+        if (table == null) {
+            return "";
+        }
+        if (StringUtils.isNotBlank(table.value())) {
+            return table.value();
+        }
+        if (tableName != null && StringUtils.isNotBlank(tableName.value())) {
+            return tableName.value();
+        }
+        return "";
     }
 
     public void initFrom(Class<?> clazz) {
