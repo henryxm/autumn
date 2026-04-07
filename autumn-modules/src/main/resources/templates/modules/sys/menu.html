@@ -15,20 +15,20 @@
 <div id="rrapp" v-cloak>
 	<div v-show="showList">
 		<div class="grid-btn">
-			<#if shiro.hasPermission("sys:menu:save")>
+			<!--<#if shiro.hasPermission("sys:menu:save")>-->
 			<a class="btn btn-primary" @click="add"><i class="fa fa-plus"></i>&nbsp;${lang.sys_string_add}</a>
-			</#if>
-			<#if shiro.hasPermission("sys:menu:update")>
+			<!--</#if>-->
+			<!--<#if shiro.hasPermission("sys:menu:update")>-->
 			<a class="btn btn-primary" @click="update"><i class="fa fa-pencil-square-o"></i>&nbsp;${lang.sys_string_change}</a>
-			</#if>
-			<#if shiro.hasPermission("sys:menu:delete")>
+			<!--</#if>-->
+			<!--<#if shiro.hasPermission("sys:menu:delete")>-->
 			<a class="btn btn-primary" @click="del"><i class="fa fa-trash-o"></i>&nbsp;${lang.sys_string_delete}</a>
-			</#if>
+			<!--</#if>-->
 		</div>
-		<table id="menuTable" data-mobile-responsive="true" data-click-to-select="true">
+		<table id="menuTable" class="table table-bordered table-striped table-hover" data-mobile-responsive="true" data-click-to-select="true">
 			<thead>
 			<tr>
-				<th data-field="selectItem" data-checkbox="true"></th>
+				<th data-field="selectItem" data-radio="true"></th>
 			</tr>
 			</thead>
 		</table>
