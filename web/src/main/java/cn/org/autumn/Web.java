@@ -20,10 +20,6 @@ import org.springframework.scheduling.annotation.EnableAsync;
 @ServletComponentScan
 @EnableAsync
 @SpringBootApplication
-@MapperScan(basePackages = {
-        "cn.org.autumn.modules.*.dao",
-        "cn.org.autumn.table.dao",
-})
 public class Web extends SpringBootServletInitializer implements TemplateFactory.Template {
     public static void main(String[] args) {
         new SpringApplication(Web.class).run(args);
