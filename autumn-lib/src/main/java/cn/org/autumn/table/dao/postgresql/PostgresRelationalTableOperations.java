@@ -1,4 +1,4 @@
-package cn.org.autumn.table.platform.postgresql;
+package cn.org.autumn.table.dao.postgresql;
 
 import cn.org.autumn.table.data.ColumnInfo;
 import cn.org.autumn.table.data.IndexInfo;

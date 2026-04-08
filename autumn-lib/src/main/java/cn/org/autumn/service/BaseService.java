@@ -7,9 +7,12 @@ import cn.org.autumn.table.data.TableInfo;
 import cn.org.autumn.table.utils.HumpConvert;
 import cn.org.autumn.utils.PageUtils;
 import cn.org.autumn.utils.Query;
+import com.baomidou.mybatisplus.MybatisAbstractSQL;
 import com.baomidou.mybatisplus.annotations.TableName;
 import com.baomidou.mybatisplus.mapper.BaseMapper;
 import com.baomidou.mybatisplus.mapper.EntityWrapper;
+import com.baomidou.mybatisplus.mapper.SqlPlus;
+import com.baomidou.mybatisplus.mapper.Wrapper;
 import com.baomidou.mybatisplus.plugins.Page;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
@@ -78,30 +81,87 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends ShareCache
     }
 
     /**
-     * 统计条数：去掉 Wrapper 中的 ORDER BY（及分页填充带来的排序），供 PostgreSQL 等严格方言使用。
+     * 统计条数：去掉 ORDER BY 再 count，避免 PostgreSQL 等对 {@code COUNT(...) ... ORDER BY} 报错。
+     * <p>
+     * <b>禁止</b>使用「新 {@link EntityWrapper} + 拼接 {@link EntityWrapper#getSqlSegment()}」：
+     * 条件里的占位符形如 {@code #{ew.paramNameValuePairs.MPGENVALn}}，绑定在<b>原</b> {@link Wrapper} 私有
+     * {@code paramNameValuePairs} 上；新 Wrapper 无参数会导致条件恒假、count 恒为 0。
+     * <p>
+     * 做法：反射临时清空 {@link MybatisAbstractSQL} 内部 {@code SQLCondition#orderBy}，在同一 {@code ew} 上
+     * {@link BaseMapper#selectCount}，最后在 {@code finally} 中复原排序片段。
+     * <p>
+     * <b>与数据库类型的关系</b>：不在此拼接方言 SQL，只去掉条件构造器里的 ORDER 片段；最终 {@code COUNT} 仍由 MP + JDBC
+     * 按当前数据源生成。对 MySQL、MariaDB、PostgreSQL、Oracle、SQL Server 等，语义均为「与原条件相同、无 {@code ORDER BY}
+     * 的总行数统计」。最敏感的是 PostgreSQL 等对 {@code COUNT(*) ... ORDER BY} 校验较严的库，本路径正是为对齐其规则。
+     * 若 {@link #tryDetachOrderByClauses} 反射失败，会回退为带 ORDER BY 的 {@code selectCount}，此类库仍可能报错（与是否「兼容库类型」无关，属回退路径限制）。
+     * <p>
+     * <b>版本风险</b>：依赖 MP 2.1.x 中 {@code Wrapper#sql} → {@code SqlPlus} → {@code SQLCondition#orderBy} 结构；
+     * 升级 mybatis-plus 大版本或替换 Wrapper 实现时需回归本方法。
      */
     private int selectCountWithoutOrderBy(EntityWrapper<T> ew) {
-        EntityWrapper<T> countEw = new EntityWrapper<>();
-        String seg = ew.getSqlSegment();
-        if (StringUtils.isBlank(seg)) {
-            return baseMapper.selectCount(countEw);
-        }
-        String s = seg.trim();
-        int ob = s.toUpperCase(Locale.ROOT).lastIndexOf("ORDER BY");
-        if (ob >= 0) {
-            s = s.substring(0, ob).trim();
-        }
-        if (StringUtils.isBlank(s)) {
+        if (ew == null) {
             return baseMapper.selectCount(new EntityWrapper<>());
         }
-        if (s.toUpperCase(Locale.ROOT).startsWith("WHERE ")) {
-            s = s.substring(6).trim();
+        final List<String> orderBackup = tryDetachOrderByClauses(ew);
+        try {
+            return baseMapper.selectCount(ew);
+        } catch (Exception ex) {
+            log.error(
+                    "selectCountWithoutOrderBy 失败，entity={}",
+                    getModelClass() != null ? getModelClass().getName() : "?",
+                    ex);
+            throw ex;
+        } finally {
+            if (orderBackup != null) {
+                restoreOrderByClauses(ew, orderBackup);
+            }
         }
-        if (StringUtils.isBlank(s)) {
-            return baseMapper.selectCount(new EntityWrapper<>());
+    }
+
+    /**
+     * @return 非 null 表示已成功卸下 ORDER BY，调用方必须在 finally 中 {@link #restoreOrderByClauses}；
+     *         null 表示反射失败未改原 Wrapper（将带 ORDER BY 统计，部分库可能报错）
+     */
+    @SuppressWarnings("unchecked")
+    private List<String> tryDetachOrderByClauses(EntityWrapper<T> ew) {
+        try {
+            Field sqlField = Wrapper.class.getDeclaredField("sql");
+            sqlField.setAccessible(true);
+            SqlPlus sqlPlus = (SqlPlus) sqlField.get(ew);
+            Field innerSqlField = MybatisAbstractSQL.class.getDeclaredField("sql");
+            innerSqlField.setAccessible(true);
+            Object sqlCondition = innerSqlField.get(sqlPlus);
+            Field orderByField = sqlCondition.getClass().getDeclaredField("orderBy");
+            orderByField.setAccessible(true);
+            List<String> orderBy = (List<String>) orderByField.get(sqlCondition);
+            List<String> backup = new ArrayList<>(orderBy);
+            orderBy.clear();
+            return backup;
+        } catch (ReflectiveOperationException e) {
+            log.warn(
+                    "selectCountWithoutOrderBy：无法反射清空 ORDER BY，将使用原 Wrapper 统计（PostgreSQL 等可能对 COUNT+ORDER BY 报错）：{}",
+                    e.toString());
+            return null;
         }
-        countEw.where(s);
-        return baseMapper.selectCount(countEw);
+    }
+
+    @SuppressWarnings("unchecked")
+    private void restoreOrderByClauses(EntityWrapper<T> ew, List<String> backup) {
+        try {
+            Field sqlField = Wrapper.class.getDeclaredField("sql");
+            sqlField.setAccessible(true);
+            SqlPlus sqlPlus = (SqlPlus) sqlField.get(ew);
+            Field innerSqlField = MybatisAbstractSQL.class.getDeclaredField("sql");
+            innerSqlField.setAccessible(true);
+            Object sqlCondition = innerSqlField.get(sqlPlus);
+            Field orderByField = sqlCondition.getClass().getDeclaredField("orderBy");
+            orderByField.setAccessible(true);
+            List<String> orderBy = (List<String>) orderByField.get(sqlCondition);
+            orderBy.clear();
+            orderBy.addAll(backup);
+        } catch (ReflectiveOperationException e) {
+            log.warn("selectCountWithoutOrderBy：恢复 ORDER BY 失败：{}", e.toString());
+        }
     }
 
     public PageUtils queryPage(Map<String, Object> params) {
@@ -127,7 +187,7 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends ShareCache
         Page<T> _page = new Query<T>(params).getPage();
         Map<String, Object> condition = getCondition(params);
         _page.setCondition(condition);
-        if (null != descs && descs.size() > 0)
+        if (null != descs && !descs.isEmpty())
             _page.setDescs(descs);
         return _page;
     }
