@@ -1,9 +1,9 @@
-package cn.org.autumn.table.platform.postgresql;
+package cn.org.autumn.table.dao.postgresql;
 
-import cn.org.autumn.table.data.IndexInfo;
-import cn.org.autumn.table.data.UniqueKeyInfo;
 import cn.org.autumn.table.mysql.ColumnMeta;
 import cn.org.autumn.table.mysql.TableMeta;
+import cn.org.autumn.table.data.IndexInfo;
+import cn.org.autumn.table.data.UniqueKeyInfo;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.ResultType;
@@ -12,7 +12,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
-import static cn.org.autumn.table.platform.postgresql.PostgresQuerySql.*;
+import static cn.org.autumn.table.dao.postgresql.PostgresQuerySql.*;
 
 /**
  * PostgreSQL 元数据查询（DDL 由 {@link PostgresRelationalTableOperations} 通过脚本执行）。

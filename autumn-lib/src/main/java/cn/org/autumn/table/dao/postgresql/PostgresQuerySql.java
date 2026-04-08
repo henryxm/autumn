@@ -1,4 +1,4 @@
-package cn.org.autumn.table.platform.postgresql;
+package cn.org.autumn.table.dao.postgresql;
 
 import cn.org.autumn.table.annotation.IndexTypeEnum;
 import cn.org.autumn.table.data.ColumnInfo;

@@ -10,7 +10,7 @@ import cn.org.autumn.table.mysql.TableMeta;
 import cn.org.autumn.table.platform.jdbc.OracleJdbcRelationalTableOperations;
 import cn.org.autumn.table.platform.jdbc.SqlServerJdbcRelationalTableOperations;
 import cn.org.autumn.table.platform.mysql.MysqlRelationalTableOperations;
-import cn.org.autumn.table.platform.postgresql.PostgresRelationalTableOperations;
+import cn.org.autumn.table.dao.postgresql.PostgresRelationalTableOperations;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;

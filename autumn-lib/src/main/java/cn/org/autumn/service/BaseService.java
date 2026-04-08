@@ -8,8 +8,9 @@ import cn.org.autumn.table.utils.HumpConvert;
 import cn.org.autumn.utils.PageUtils;
 import cn.org.autumn.utils.Query;
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.baomidou.mybatisplus.core.metadata.OrderItem;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -103,32 +104,50 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends ShareCache
 
     /**
      * 分页 COUNT 时去掉 ORDER BY，避免 PostgreSQL 等对 COUNT 带 ORDER BY 报错。
+     * <p>
+     * MP 3.x {@link QueryWrapper}：去掉 {@code ORDER BY} 段后对剩余片段 {@code apply} 到新 {@link QueryWrapper}，
+     * 由 MP 重新绑定参数（勿复用 MP2「新 EntityWrapper + 纯字符串」方式，会丢失 {@code paramNameValuePairs}）。
      */
     protected long selectCountWithoutOrderBy(QueryWrapper<T> ew) {
         if (ew == null) {
             return baseMapper.selectCount(new QueryWrapper<>());
         }
-        String seg = ew.getSqlSegment();
-        if (StringUtils.isBlank(seg)) {
-            return baseMapper.selectCount(new QueryWrapper<>());
+        try {
+            String seg = ew.getSqlSegment();
+            if (StringUtils.isBlank(seg)) {
+                return baseMapper.selectCount(new QueryWrapper<>());
+            }
+            String s = seg.trim();
+            int ob = s.toUpperCase(Locale.ROOT).lastIndexOf("ORDER BY");
+            if (ob >= 0) {
+                s = s.substring(0, ob).trim();
+            }
+            if (StringUtils.isBlank(s)) {
+                return baseMapper.selectCount(new QueryWrapper<>());
+            }
+            if (s.toUpperCase(Locale.ROOT).startsWith("WHERE ")) {
+                s = s.substring(6).trim();
+            } else if (s.toUpperCase(Locale.ROOT).startsWith("AND ")) {
+                s = s.substring(4).trim();
+            }
+            if (StringUtils.isBlank(s)) {
+                return baseMapper.selectCount(new QueryWrapper<>());
+            }
+            QueryWrapper<T> countEw = new QueryWrapper<>();
+            countEw.apply(s);
+            return baseMapper.selectCount(countEw);
+        } catch (Exception ex) {
+            log.error(
+                    "selectCountWithoutOrderBy 失败，entity={}",
+                    getModelClass() != null ? getModelClass().getName() : "?",
+                    ex);
+            try {
+                return baseMapper.selectCount(ew);
+            } catch (Exception fallback) {
+                log.error("selectCountWithoutOrderBy 降级仍失败", fallback);
+                throw ex;
+            }
         }
-        String s = seg.trim();
-        int ob = s.toUpperCase(Locale.ROOT).lastIndexOf("ORDER BY");
-        if (ob >= 0) {
-            s = s.substring(0, ob).trim();
-        }
-        if (StringUtils.isBlank(s)) {
-            return baseMapper.selectCount(new QueryWrapper<>());
-        }
-        if (s.toUpperCase(Locale.ROOT).startsWith("WHERE ")) {
-            s = s.substring(6).trim();
-        }
-        if (StringUtils.isBlank(s)) {
-            return baseMapper.selectCount(new QueryWrapper<>());
-        }
-        QueryWrapper<T> countEw = new QueryWrapper<>();
-        countEw.apply(s);
-        return baseMapper.selectCount(countEw);
     }
 
     public PageUtils queryPage(Map<String, Object> params) {
@@ -156,7 +175,7 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends ShareCache
         bindPageCondition(_page, getCondition(normalized));
         if (null != descs && !descs.isEmpty()) {
             for (String desc : descs) {
-                _page.addOrder(com.baomidou.mybatisplus.core.metadata.OrderItem.desc(desc));
+                _page.addOrder(OrderItem.desc(desc));
             }
         }
         return _page;
