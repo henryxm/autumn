@@ -7,6 +7,7 @@
 
 - 先复制对应模块模板，再替换 `{}` 占位符。
 - 需求跨模块时，先选主模板，再补从模板约束。
+- **实体扫描与注解建表、禁止常规 DDL `.sql`、Dao 仅经 Provider 写 SQL、gen/Pages/html/js 不可改、`statics`/`pages`/`Site`/`@PageAware` 等**：以 **`AI_STANDARDS.md`** §8～§14 为强制约束，模板任务不得与之冲突。
 
 ## 2. 模块任务指令模板
 
