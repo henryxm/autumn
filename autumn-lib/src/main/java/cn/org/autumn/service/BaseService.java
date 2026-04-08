@@ -8,7 +8,9 @@ import cn.org.autumn.table.utils.HumpConvert;
 import cn.org.autumn.utils.PageUtils;
 import cn.org.autumn.utils.Query;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.core.conditions.AbstractWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.segments.MergeSegments;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.OrderItem;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -18,6 +20,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.WordUtils;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.*;
 
 /**
@@ -103,50 +106,71 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends ShareCache
     }
 
     /**
-     * 分页 COUNT 时去掉 ORDER BY，避免 PostgreSQL 等对 COUNT 带 ORDER BY 报错。
+     * 分页 COUNT 时去掉 ORDER BY（及分页插件写入的 {@code LIMIT/OFFSET}），避免 PostgreSQL 等对 {@code COUNT} 带排序/分页尾句报错。
      * <p>
-     * MP 3.x {@link QueryWrapper}：去掉 {@code ORDER BY} 段后对剩余片段 {@code apply} 到新 {@link QueryWrapper}，
-     * 由 MP 重新绑定参数（勿复用 MP2「新 EntityWrapper + 纯字符串」方式，会丢失 {@code paramNameValuePairs}）。
+     * 勿对 {@code getSqlSegment()} 截断后再 {@code new QueryWrapper().apply(s)}：片段里的 {@code #{ew.paramNameValuePairs.xxx}}
+     * 仍指向原序列化名，新 Wrapper 无对应参数会导致条件失效、count 恒为 0。
+     * 做法：{@link QueryWrapper#clone()} 后仅在副本上 {@link MergeSegments#getOrderBy()}{@code .clear()}，并失效 {@link MergeSegments}
+     * 的片段缓存，再清空副本的 {@code lastSql}（常见为 {@code LIMIT}）。
      */
     protected long selectCountWithoutOrderBy(QueryWrapper<T> ew) {
         if (ew == null) {
             return baseMapper.selectCount(new QueryWrapper<>());
         }
         try {
-            String seg = ew.getSqlSegment();
-            if (StringUtils.isBlank(seg)) {
-                return baseMapper.selectCount(new QueryWrapper<>());
+            QueryWrapper<T> countEw = ew.clone();
+            MergeSegments exp = countEw.getExpression();
+            if (exp != null) {
+                exp.getOrderBy().clear();
+                invalidateMergeSegmentsSqlCache(exp);
             }
-            String s = seg.trim();
-            int ob = s.toUpperCase(Locale.ROOT).lastIndexOf("ORDER BY");
-            if (ob >= 0) {
-                s = s.substring(0, ob).trim();
-            }
-            if (StringUtils.isBlank(s)) {
-                return baseMapper.selectCount(new QueryWrapper<>());
-            }
-            if (s.toUpperCase(Locale.ROOT).startsWith("WHERE ")) {
-                s = s.substring(6).trim();
-            } else if (s.toUpperCase(Locale.ROOT).startsWith("AND ")) {
-                s = s.substring(4).trim();
-            }
-            if (StringUtils.isBlank(s)) {
-                return baseMapper.selectCount(new QueryWrapper<>());
-            }
-            QueryWrapper<T> countEw = new QueryWrapper<>();
-            countEw.apply(s);
+            clearQueryWrapperLastSql(countEw);
             return baseMapper.selectCount(countEw);
         } catch (Exception ex) {
-            log.error(
-                    "selectCountWithoutOrderBy 失败，entity={}",
+            log.warn(
+                    "selectCountWithoutOrderBy：clone/去排序失败，降级用原 Wrapper 统计（严格库可能对 COUNT+ORDER BY 报错），entity={}，cause={}",
                     getModelClass() != null ? getModelClass().getName() : "?",
-                    ex);
+                    ex.toString());
             try {
                 return baseMapper.selectCount(ew);
             } catch (Exception fallback) {
                 log.error("selectCountWithoutOrderBy 降级仍失败", fallback);
                 throw ex;
             }
+        }
+    }
+
+    /**
+     * {@link MergeSegments#getSqlSegment()} 在 {@code cacheSqlSegment==true} 时直接返回旧串；仅 clear orderBy 后必须失效缓存。
+     */
+    private static void invalidateMergeSegmentsSqlCache(MergeSegments merge) {
+        if (merge == null) {
+            return;
+        }
+        try {
+            Field cache = MergeSegments.class.getDeclaredField("cacheSqlSegment");
+            cache.setAccessible(true);
+            cache.setBoolean(merge, false);
+        } catch (ReflectiveOperationException ignored) {
+        }
+    }
+
+    /**
+     * 分页插件常把 LIMIT 写在 {@code lastSql}，COUNT 需去掉。
+     */
+    private static <E> void clearQueryWrapperLastSql(QueryWrapper<E> w) {
+        if (w == null) {
+            return;
+        }
+        try {
+            Field f = AbstractWrapper.class.getDeclaredField("lastSql");
+            f.setAccessible(true);
+            Object shared = f.get(w);
+            if (shared != null) {
+                Method toEmpty = shared.getClass().getMethod("toEmpty");
+                toEmpty.invoke(shared);
+            }
+        } catch (ReflectiveOperationException ignored) {
         }
     }
 
