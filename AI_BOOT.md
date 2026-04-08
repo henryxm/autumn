@@ -9,6 +9,7 @@
 - 默认从 `ModuleService` 继承链出发实现业务：
   - `ModuleService -> BaseService -> ShareCacheService -> BaseCacheService -> BaseQueueService`
 - 业务逻辑放可维护层（`controller/*`、`service/*`），避免放 `controller/gen/*` 可重生层。
+- **应用层与数据访问强制规范**（高内聚低耦合、内外 API、gen 路由隔离、禁止生产 `@Scheduled`、新接口禁用 `@RequiresPermissions`、FreeMarker、**禁止常规 DDL `.sql`、注解建表**、**Dao 仅经 Provider 写 SQL**、**Controller 禁用 Dao**、**statics/pages/Site/PageAware** 等）见 **`AI_STANDARDS.md`**，与本文同步遵守。
 
 ## 2. 默认技术路径（高频）
 
@@ -122,6 +123,7 @@
 
 ## 6. 按需追加文档（不要全量加载）
 
+- 应用层开发规范：`@AI_STANDARDS.md`
 - 核心能力详解：`@AI_MAP.md`
 - **PostgreSQL 支持（完整方案、兼容性、变更清单）：`@AI_POSTGRESQL.md`**
 - **依赖方升级 autumn（清单、扫描脚本、自动化边界）：`@AI_UPGRADE.md`**
@@ -133,14 +135,14 @@
 
 ## 7. 推荐加载组合
 
-- 日常开发：`AI_BOOT.md + AI_MAP.md`
-- 接口加解密改造：`AI_BOOT.md + AI_MAP.md + AI_CRYPTO.md`
-- 模块新建/代码生成：`AI_BOOT.md + AI_MAP.md + AI_TEMPLATES.md`
-- 规范梳理/团队协作：`AI_BOOT.md + AI_MAP.md + AI_GOVERNANCE.md`
-- 安全改造/攻防演练：`AI_BOOT.md + AI_MAP.md + AI_SECURITY.md`
-- **PostgreSQL / 多库适配排查：`AI_BOOT.md + AI_MAP.md + AI_POSTGRESQL.md`**
+- 日常开发：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md`
+- 接口加解密改造：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md + AI_CRYPTO.md`
+- 模块新建/代码生成：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md + AI_TEMPLATES.md`
+- 规范梳理/团队协作：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md + AI_GOVERNANCE.md`
+- 安全改造/攻防演练：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md + AI_SECURITY.md`
+- **PostgreSQL / 多库适配排查：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md + AI_POSTGRESQL.md`**
 - **新增 Mapper 手写 SQL / SqlProvider：`AI_BOOT.md + AI_POSTGRESQL.md`（§ RuntimeSql）**
-- **业务仓库升级 autumn：`AI_BOOT.md + AI_UPGRADE.md`（多库/PG 时叠加 `AI_POSTGRESQL.md`）**
+- **业务仓库升级 autumn：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md + AI_UPGRADE.md`（多库/PG 时叠加 `AI_POSTGRESQL.md`）**
 - 仅对照 PG 清单与兼容性、少读其它文档时：可直接打开 `AI_POSTGRESQL.md`（仍建议与 `AI_MAP.md` 中表结构/方言章节交叉核对）。
 
 ## 8. PostgreSQL 支持（摘要）

@@ -42,12 +42,14 @@
 ## 4. 规则优先级与去重口径
 
 - 规则优先级（高 -> 低）：
+  - `AI_STANDARDS.md`：分层、API、gen 路由、定时任务、`@RequiresPermissions`、FTL、实体/注解建表/禁止 DDL、Dao+Provider、Controller–Service–Dao、statics/pages/Site
   - `AI_MAP: 0. AI 最小上下文`
   - `AI_MAP: 4. 开发决策规则`
   - `AI_MAP: 2.x 能力章节`
   - `AI_TEMPLATES: 模板库`
 - 去重约定：
   - 多处冲突时，取“更具体且更新”的约束。
+  - **应用层与数据访问纪律**（Controller/Service/Dao、SQL Provider、实体与库表、资源与 Site 等）以 **`AI_STANDARDS.md`** 为准；框架机制细节以 **`AI_MAP.md`** 为准。
   - 模板与能力冲突时，以能力语义约束为准。
   - 仍无法判断时，优先“复用现有基类/接口”的实现路径。
 - 输出口径统一：
@@ -64,10 +66,18 @@
 - 任务调度：
   - 固定周期：`LoopJob.*`
   - 复杂日历：`cronExpression`（仅必要时）
+- 后台权限注解：
+  - `@RequiresPermissions`：仅**代码生成/管理端**链路；**新编写接口禁用**，普通用户接口用登录态鉴权（见 `AI_STANDARDS.md` §6）
 - 生成链路：
   - 模板目录：`resources/template/*.vm`
   - 可重生层：`controller/gen/*`
   - 可维护层：`controller/*`、`service/*`
+- 库表与 SQL：
+  - 结构演进：实体注解 + `autumn.table.*`，**禁止**常规随仓 `DDL .sql`（见 `AI_STANDARDS.md` §8）
+  - 自定义 SQL：**Provider**（`*Sql` / `@SelectProvider`），禁止 Dao 方法上内联 SQL 字符串（新代码，`AI_STANDARDS.md` §12）
+- 静态与页面：
+  - 公共静态：`resources/statics/`（匿名可访问，优先复用框架已有）
+  - 后台页：模块下 `pages` + `site/*Site.java` 字段 `@PageAware`（`AI_STANDARDS.md` §14）
 
 ## 6. 推荐阅读路径（按角色）
 

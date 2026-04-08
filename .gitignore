@@ -26,3 +26,4 @@ nbdist/
 
 logs/
 .storage/
+/.vscode/settings.json

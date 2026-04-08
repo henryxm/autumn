@@ -9,6 +9,7 @@
 请先阅读这些上下文再实现：
 - @../autumn/AI_BOOT.md
 - @../autumn/AI_MAP.md
+- @../autumn/AI_STANDARDS.md
 - （接口加解密改造）@../autumn/AI_CRYPTO.md
 - （模块新建/生成链路）@../autumn/AI_TEMPLATES.md
 - （规范治理/多人协作）@../autumn/AI_GOVERNANCE.md
@@ -23,6 +24,7 @@
 - 必须优先复用 Autumn 框架能力，不允许重复造轮子
 - 不破坏现有接口与权限语义
 - 涉及缓存/队列/加密时必须遵循框架默认流程
+- 遵守 `AI_STANDARDS.md`（分层、API、gen 隔离、定时任务、`@RequiresPermissions`、FTL、**禁止 DDL .sql**、**Dao 只用 Provider**、**Controller 禁用 Dao**、**statics/pages/Site**）
 ```
 
 ## 2. 标准提问模板
@@ -35,6 +37,7 @@
 先阅读：
 - @../autumn/AI_BOOT.md
 - @../autumn/AI_MAP.md
+- @../autumn/AI_STANDARDS.md
 - （接口加解密改造）@../autumn/AI_CRYPTO.md
 - （模块新建/生成链路）@../autumn/AI_TEMPLATES.md
 - （仅安全专项任务需要）@../autumn/AI_SECURITY.md
@@ -53,6 +56,7 @@
 - 不重复实现已有基础能力
 - 缓存/队列/加解密必须走框架既有机制
 - 若发现需求与框架冲突，先提出冲突点与可选方案，不要硬改内核
+- 遵守 `AI_STANDARDS.md` 应用层规范
 ```
 
 ### 2.2 修 Bug
@@ -61,6 +65,7 @@
 先读取：
 - @../autumn/AI_BOOT.md
 - @../autumn/AI_MAP.md
+- @../autumn/AI_STANDARDS.md
 - （规范治理/多人协作）@../autumn/AI_GOVERNANCE.md
 - （仅安全专项任务需要）@../autumn/AI_SECURITY.md
 - @./<报错相关目录>
