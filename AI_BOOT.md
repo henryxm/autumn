@@ -9,6 +9,7 @@
 - 默认从 `ModuleService` 继承链出发实现业务：
   - `ModuleService -> BaseService -> ShareCacheService -> BaseCacheService -> BaseQueueService`
 - 业务逻辑放可维护层（`controller/*`、`service/*`），避免放 `controller/gen/*` 可重生层。
+- 页面开发默认使用**用户视角**描述功能与交互；除非需求有特殊说明，禁止在页面文案中出现开发术语、后台表名/函数名、技术架构描述。
 - **应用层与数据访问强制规范**（高内聚低耦合、内外 API、gen 路由隔离、禁止生产 `@Scheduled`、新接口禁用 `@RequiresPermissions`、FreeMarker、**禁止常规 DDL `.sql`、注解建表**、**Dao 仅经 Provider 写 SQL**、**Controller 禁用 Dao**、**statics/pages/Site/PageAware** 等）见 **`AI_STANDARDS.md`**，与本文同步遵守。
 
 ## 2. 默认技术路径（高频）
