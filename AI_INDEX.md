@@ -11,6 +11,7 @@
 - `AI_UPGRADE.md`：依赖方升级 autumn 时的清单、一键扫描脚本说明与自动化边界
 - `AI_CRYPTO.md`：接口加解密兼容与迁移
 - `AI_SECURITY.md`：安全强校验、灰度、演练
+- `AI_CODEGEN.md`：**代码生成链路（gen / GenUtils / 模板 / 库表反射）**与**推荐三步开发流程**（实体 → 生成骨架 → 业务与页面）；**`BaseCacheService` / `ShareCacheService` / `BaseQueueService`** 能力说明
 - `AI_TEMPLATES.md`：模块任务模板库
 - `AI_GOVERNANCE.md`：治理协作、术语、维护口径
 - `AI_PROMPTS.md`：可复制提示词模板
@@ -19,7 +20,7 @@
 ## 2. 推荐加载矩阵（按场景）
 
 - 日常开发：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md`
-- 新模块/代码生成：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md + AI_TEMPLATES.md`（先确认生成层约束，再落业务层）
+- 新模块/代码生成：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md + AI_CODEGEN.md + AI_TEMPLATES.md`（先读代码生成流程与三步节奏，再确认生成层约束，后落业务层）
 - 多项目模板整合（TemplateFactory）：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md + AI_GOVERNANCE.md`
 - 接口加解密改造：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md + AI_CRYPTO.md`
 - 安全改造/攻防演练：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md + AI_SECURITY.md`
@@ -32,7 +33,7 @@
 
 - 第一步：`@AI_BOOT.md`
 - 第二步：`@AI_MAP.md`
-- 第三步：读取 `AI_STANDARDS.md`（应用层强制规范），再按场景追加专项文档（`CRYPTO/TEMPLATES/GOVERNANCE/SECURITY/PROMPTS`）
+- 第三步：读取 `AI_STANDARDS.md`（应用层强制规范），再按场景追加专项文档（`CODEGEN/CRYPTO/TEMPLATES/GOVERNANCE/SECURITY/PROMPTS` 等）
 - 第四步：追加当前项目上下文（README + 目标模块目录）
 
 ## 4. 相对路径示例（可复制）
@@ -43,7 +44,7 @@
 - @../autumn/AI_BOOT.md
 - @../autumn/AI_MAP.md
 - @../autumn/AI_STANDARDS.md
-- （按需）@../autumn/AI_POSTGRESQL.md / @../autumn/AI_UPGRADE.md / @../autumn/AI_CRYPTO.md / @../autumn/AI_TEMPLATES.md / @../autumn/AI_GOVERNANCE.md / @../autumn/AI_SECURITY.md / @../autumn/AI_PROMPTS.md
+- （按需）@../autumn/AI_POSTGRESQL.md / @../autumn/AI_UPGRADE.md / @../autumn/AI_CRYPTO.md / @../autumn/AI_CODEGEN.md / @../autumn/AI_TEMPLATES.md / @../autumn/AI_GOVERNANCE.md / @../autumn/AI_SECURITY.md / @../autumn/AI_PROMPTS.md
 - @./README.md
 - @./<目标模块目录>
 ```

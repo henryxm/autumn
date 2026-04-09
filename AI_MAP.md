@@ -7,7 +7,7 @@
 
 ## 0. AI 最小上下文（先读这段再开发）
 
-- **应用层强制规范**：分层、子项目解耦、内外 API、与 gen 路由隔离、禁止生产 `@Scheduled`、**新接口禁止 `@RequiresPermissions`**、**注解建表且禁止常规 DDL `.sql`**、**Dao 只用 Provider 写 SQL**、**Controller 禁用 Dao / Service 禁用他域 Dao**、**gen 与生成 html/js 不改**、**statics/pages/Site/@PageAware** — 全文见 **`AI_STANDARDS.md`**。
+- **应用层强制规范**：分层、子项目解耦、内外 API、与 gen 路由隔离、禁止生产 `@Scheduled`、**新接口禁止 `@RequiresPermissions`**、**注解建表且禁止常规 DDL `.sql`**、**Dao 只用 Provider 写 SQL**、**Controller 禁用 Dao / Service 禁用他域 Dao**、**gen 与生成 html/js 不改**、**statics/pages/Site/@PageAware** — 全文见 **`AI_STANDARDS.md`**。**代码生成链路、库表反射生成、三步流程与 `@Cache`/基类缓存队列详解**见 **`AI_CODEGEN.md`**。
 - 一句话原则：
   - 优先复用平台能力，禁止重复造轮子；默认从 `ModuleService` 继承链出发实现业务。
 - Service 默认能力：
@@ -23,7 +23,7 @@
 - 定时任务默认模式：
   - 固定周期优先 `LoopJob.*`，复杂日历才使用 cron。
 - 生成代码默认模式：
-  - 实体注解驱动建表 -> gen 模块模板生成 -> 业务只写非 gen 层（防覆盖）。
+  - 实体注解驱动建表 -> gen 模块模板生成 -> 业务只写非 gen 层（防覆盖）。**生成链路（`GeneratorService`、`TableDao` 反射、`GenUtils`、`template/*.vm`）、优先后台 ZIP、三步流程**见 **`AI_CODEGEN.md`**。
 - 开发前 3 问（AI 自检）：
   - 1) 现有基类/模块能力是否已覆盖？
   - 2) 是否会破坏缓存一致性、加密语义、权限语义？
@@ -228,6 +228,7 @@ public class DemoService extends ModuleService<DemoDao, DemoEntity> implements L
 
 ### 2.8A 代码生成模板分层约束（MVC 生成骨架）
 
+> **端到端说明**（`GeneratorService` → `TableDao` 反射 → `GenUtils` → Velocity、三步开发节奏、`@Cache` 与基类能力）：见 **`AI_CODEGEN.md`**。  
 > 模板目录：`autumn-modules/src/main/resources/template/*`。
 
 #### 2.8A.1 生成产物分层（必须区分）
