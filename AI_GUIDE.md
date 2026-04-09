@@ -9,7 +9,7 @@
    - 首轮必读：`@<autumn-root>/AI_BOOT.md`
    - 核心能力：`@<autumn-root>/AI_MAP.md`
    - 应用层强制规范：`@<autumn-root>/AI_STANDARDS.md`
-   - 按需追加：`@<autumn-root>/AI_POSTGRESQL.md` / `@<autumn-root>/AI_UPGRADE.md` / `@<autumn-root>/AI_CRYPTO.md` / `@<autumn-root>/AI_TEMPLATES.md` / `@<autumn-root>/AI_GOVERNANCE.md` / `@<autumn-root>/AI_SECURITY.md` / `@<autumn-root>/AI_PROMPTS.md`
+   - 按需追加：`@<autumn-root>/AI_POSTGRESQL.md` / `@<autumn-root>/AI_UPGRADE.md` / `@<autumn-root>/AI_CRYPTO.md` / `@<autumn-root>/AI_CODEGEN.md` / `@<autumn-root>/AI_TEMPLATES.md` / `@<autumn-root>/AI_GOVERNANCE.md` / `@<autumn-root>/AI_SECURITY.md` / `@<autumn-root>/AI_PROMPTS.md`
 2. **当前项目层（变化）**
    - 当前项目 `README`、模块目录、关键配置
 3. **当前任务层（变化）**
@@ -24,6 +24,7 @@
 - `AI_UPGRADE.md`：依赖方升级清单、`scripts/autumn-dependency-scan.sh` 与「一键升级」可执行边界
 - `AI_CRYPTO.md`：接口加解密兼容专项
 - `AI_SECURITY.md`：签名/灰度/演练专项
+- `AI_CODEGEN.md`：代码生成链路（gen、GenUtils、模板、库表反射）、推荐三步开发流程、`BaseCacheService` / `ShareCacheService` / `BaseQueueService` 能力说明
 - `AI_TEMPLATES.md`：模块任务模板库
 - `AI_GOVERNANCE.md`：治理、术语、协作约定
 - `AI_PROMPTS.md`：可复制提问模板
@@ -32,7 +33,7 @@
 
 - 日常开发：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md`
 - 接口加解密改造：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md + AI_CRYPTO.md`
-- 模块新建/代码生成：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md + AI_TEMPLATES.md`
+- 模块新建/代码生成：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md + AI_CODEGEN.md + AI_TEMPLATES.md`
 - 多项目模板整合（TemplateFactory）：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md + AI_GOVERNANCE.md`
 - 安全改造/攻防演练：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md + AI_SECURITY.md`
 - 多人协作/规范治理：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md + AI_GOVERNANCE.md`
@@ -65,6 +66,10 @@
 - **调用链**：**Controller** 只用 **Service**；**Service** 用 **`baseMapper`**，**勿**再注入本 Dao；跨域 **调别的 Service**，**勿**用他域 **Dao**（§13）。
 - **资源**：**`statics/`** 公共静态、匿名可访问、优先复用框架资源；新后台页放模块 **`pages`**；**`site/*Site`** 字段上 **`@PageAware(login=false)`**（匿名）或 **`login=true`**（需登录）注册 SPM 路径（§14）。
 
+## 3.3 代码生成流程与三步开发（详细）
+
+端到端链路（`GeneratorService`、`TableDao` 反射、`GenUtils`、Velocity 模板）、**优先后台生成 ZIP**、AI 生成须与生成器目录一致、以及 **`@Cache` / 基类缓存队列** 用法：见 **`AI_CODEGEN.md`**。
+
 ## 4. 相对路径最小示例
 
 ```md
@@ -72,7 +77,7 @@
 - @../autumn/AI_BOOT.md
 - @../autumn/AI_MAP.md
 - @../autumn/AI_STANDARDS.md
-- （按需）@../autumn/AI_POSTGRESQL.md / @../autumn/AI_UPGRADE.md / @../autumn/AI_CRYPTO.md / @../autumn/AI_TEMPLATES.md / @../autumn/AI_GOVERNANCE.md / @../autumn/AI_SECURITY.md / @../autumn/AI_PROMPTS.md
+- （按需）@../autumn/AI_POSTGRESQL.md / @../autumn/AI_UPGRADE.md / @../autumn/AI_CRYPTO.md / @../autumn/AI_CODEGEN.md / @../autumn/AI_TEMPLATES.md / @../autumn/AI_GOVERNANCE.md / @../autumn/AI_SECURITY.md / @../autumn/AI_PROMPTS.md
 - @./README.md
 - @./<目标模块目录>
 
@@ -82,4 +87,4 @@
 
 ## 5. 一句话工作流
 
-每次提需求时固定：`BOOT -> MAP -> STANDARDS -> 按需专项 -> 项目目录 -> 目标与约束`。
+每次提需求时固定：`BOOT -> MAP -> STANDARDS -> 按需专项（含 CODEGEN） -> 项目目录 -> 目标与约束`。

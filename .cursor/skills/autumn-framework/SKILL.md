@@ -13,8 +13,10 @@ description: >-
   statics/ for shared static assets; new admin pages under module pages/ with
   site/*Site @PageAware(login true/false); plus prior rules (Request/Response,
   no @Scheduled production, no @RequiresPermissions on new APIs, FreeMarker
-  HTML/JS, LoopJob). Use for autumn repo or dependents, or mentions of
-  cn.org.autumn, gen, Provider, statics, PageAware.
+  HTML/JS, LoopJob). Read AI_CODEGEN for gen pipeline (GenUtils, templates, DB
+  reflection) and three-step workflow (entities → codegen → business). Use for
+  autumn repo or dependents, or mentions of cn.org.autumn, gen, Provider,
+  statics, PageAware.
 ---
 
 # Autumn 框架开发（全局）
@@ -27,7 +29,14 @@ description: >-
 ## 文档加载顺序
 
 1. `AI_INDEX.md` → 2. `AI_BOOT.md` → 3. `AI_MAP.md` → 4. **`AI_STANDARDS.md`**（强制全文，含 §8～§14 实体/库/SQL/资源）  
+5. **新模块 / 代码生成 / AI 搭骨架**：追加 **`AI_CODEGEN.md`**（`GeneratorService` → `TableDao` → **`GenUtils`** → `resources/template/*.vm`；优先后台生成 ZIP；三步：实体与 `@Cache` → 生成空壳 → 业务与页面；`BaseCacheService` / `ShareCacheService` / `BaseQueueService` 能力，禁止重复造轮子）  
 按需：`AI_POSTGRESQL.md`（Provider/RuntimeSql）、`AI_TEMPLATES.md`、`AI_CRYPTO.md` 等。
+
+## 规范开发三步（与 AI_CODEGEN 一致）
+
+1. **先实体**：按 `AI_STANDARDS` 建实体与索引注释；用 **`@Cache` / `@Caches`**（`name` 区分多套缓存）；业务 Service 继承 **`ModuleService`**，用继承链上的缓存/队列/`LoopJob`，勿自建平行组件。
+2. **再生成**：**优先开发者**在后台「代码生成」导出 ZIP，路径与 **`GenUtils.getFileName`** 一致；**仅**在非 gen 空壳里写业务；**禁止**在 `controller/gen`、`*Pages`、`list.html/js` 上堆逻辑。若 AI 生成骨架，须与模板产出**同目录同结构**，避免日后重生成不一致。
+3. **后业务**：`Service` 实现规则与失效；可维护 `Controller` 独立 URL 空间；`pages` + `site/*Site` + `@PageAware` 接页面。
 
 ## 实体与数据库（§8～§10）
 
@@ -56,15 +65,16 @@ description: >-
 ## 既有纪律（摘要）
 
 - **§2～§7**：分层、内外 API、**禁止生产 `@Scheduled`**、新接口**不用 `@RequiresPermissions`**（登录态鉴权）、**FreeMarker**（`<!-- -->`、JS 安全、`<#noparse>`）。
-- **框架能力**：`ModuleService` 链、缓存队列、**`LoopJob`**、加解密见 **`AI_MAP.md`**。
+- **框架能力**：`ModuleService` 链、缓存队列、**`LoopJob`**、加解密见 **`AI_MAP.md`**；缓存/队列/复合键细节见 **`AI_CODEGEN.md`** 第 4 节。
 
 ## 自检清单
 
 - 是否新增无意义的 **`schema.sql` / `init.sql`**？  
 - 新 SQL 是否误写在 **Dao 注解**上？ **Controller** 是否碰了 **Dao**？  
 - 是否改了 **gen** 或生成的 **html/js**？  
-- 新页面是否有 **`Site` + `@PageAware`**？ **`statics`** 是否重复造轮子？
+- 新页面是否有 **`Site` + `@PageAware`**？ **`statics`** 是否重复造轮子？  
+- 生成骨架是否由后台或**与 GenUtils 路径一致**的 AI 产出，避免双轨目录？
 
 ## 多项目一句话
 
-**BOOT → MAP → STANDARDS → 专项 → README / 模块目录 → 任务约束**。
+**BOOT → MAP → STANDARDS → CODEGEN（生成场景）→ 专项 → README / 模块目录 → 任务约束**。

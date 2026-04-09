@@ -162,11 +162,12 @@
 | `@Table` / `@Column` / 字符集 / 表名推导细节 | `AI_BOOT.md` §3 |
 | 多库、`RuntimeSql`、Provider 写法 | `AI_POSTGRESQL.md`、`AI_UPGRADE.md` |
 | ModuleService、缓存、队列、LoopJob、生成矩阵 | `AI_MAP.md` |
+| 代码生成端到端流程、三步开发节奏、缓存/队列基类详解 | `AI_CODEGEN.md` |
 | 加解密 | `AI_CRYPTO.md` |
 | 多项目协作与术语 | `AI_GOVERNANCE.md` |
 | 索引与加载组合 | `AI_INDEX.md` |
 
 ## 16. 维护约定
 
-- 新增与「实体/库表/Dao/资源/页面」相关的团队规则时，**优先更新本文**，并同步 `AI_INDEX.md`、`AI_GUIDE.md` 摘要。
+- 新增与「实体/库表/Dao/资源/页面」相关的团队规则时，**优先更新本文**，并同步 `AI_INDEX.md`、`AI_GUIDE.md` 摘要；与代码生成流程或三步节奏相关的补充可落在 **`AI_CODEGEN.md`**。
 - 若与 `AI_MAP.md` §4「开发决策规则」表述重叠，以**本文 §2～§14** 为应用层与数据访问纪律的权威表述；MAP 保留框架能力级硬约束与类索引。

@@ -129,6 +129,7 @@
 - **依赖方升级 autumn（清单、扫描脚本、自动化边界）：`@AI_UPGRADE.md`**
 - 加解密兼容专项：`@AI_CRYPTO.md`
 - 模块任务模板：`@AI_TEMPLATES.md`
+- 代码生成流程与三步开发、基类缓存/队列说明：`@AI_CODEGEN.md`
 - 治理与协作规范：`@AI_GOVERNANCE.md`
 - 安全专项（签名/灰度/演练）：`@AI_SECURITY.md`
 - 提问模板库：`@AI_PROMPTS.md`
@@ -137,7 +138,7 @@
 
 - 日常开发：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md`
 - 接口加解密改造：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md + AI_CRYPTO.md`
-- 模块新建/代码生成：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md + AI_TEMPLATES.md`
+- 模块新建/代码生成：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md + AI_CODEGEN.md + AI_TEMPLATES.md`
 - 规范梳理/团队协作：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md + AI_GOVERNANCE.md`
 - 安全改造/攻防演练：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md + AI_SECURITY.md`
 - **PostgreSQL / 多库适配排查：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md + AI_POSTGRESQL.md`**
