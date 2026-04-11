@@ -12,98 +12,98 @@ import cn.org.autumn.database.runtime.RuntimeSqlDialect;
 public class WallDaoSql extends RuntimeSql {
 
     public String urlBlackGetByUrl() {
-        return "select * from wall_url_black where " + quote("url") + " = #{url}" + limitOne();
+        return "SELECT * FROM " + quote("wall_url_black") + " WHERE " + quote("url") + " = #{url}" + limitOne();
     }
 
     public String urlBlackHasUrl() {
-        return "select count(*) from wall_url_black where " + quote("url") + " = #{url}";
+        return "SELECT COUNT(*) FROM " + quote("wall_url_black") + " WHERE " + quote("url") + " = #{url}";
     }
 
     public String urlBlackRefreshToday() {
-        return "update wall_url_black set " + quote("today") + " = 0";
+        return "UPDATE " + quote("wall_url_black") + " SET " + quote("today") + " = 0";
     }
 
     public String urlBlackGetUrls() {
-        return "select wh." + quote("url") + " from wall_url_black wh where wh." + quote("forbidden") + " = #{forbidden}";
+        return "SELECT wh." + quote("url") + " FROM " + quote("wall_url_black") + " wh WHERE wh." + quote("forbidden") + " = #{forbidden}";
     }
 
     public String ipWhiteHasTag() {
-        return "select count(*) from wall_ip_white where " + quote("tag") + " = #{tag}";
+        return "SELECT COUNT(*) FROM " + quote("wall_ip_white") + " WHERE " + quote("tag") + " = #{tag}";
     }
 
     public String ipWhiteGetByIp() {
-        return "select * from wall_ip_white where " + quote("ip") + " = #{ip}" + limitOne();
+        return "SELECT * FROM " + quote("wall_ip_white") + " WHERE " + quote("ip") + " = #{ip}" + limitOne();
     }
 
     public String ipWhiteHasIp() {
-        return "select count(*) from wall_ip_white where " + quote("ip") + " = #{ip}";
+        return "SELECT COUNT(*) FROM " + quote("wall_ip_white") + " WHERE " + quote("ip") + " = #{ip}";
     }
 
     public String ipWhiteRefreshToday() {
-        return "update wall_ip_white set " + quote("today") + " = 0";
+        return "UPDATE " + quote("wall_ip_white") + " SET " + quote("today") + " = 0";
     }
 
     public String ipWhiteGetIps() {
-        return "select wi." + quote("ip") + " from wall_ip_white wi where wi." + quote("forbidden") + " = #{forbidden}";
+        return "SELECT wi." + quote("ip") + " FROM " + quote("wall_ip_white") + " wi WHERE wi." + quote("forbidden") + " = #{forbidden}";
     }
 
     public String ipVisitGetByIp() {
-        return "select * from wall_ip_visit where " + quote("ip") + " = #{ip}" + limitOne();
+        return "SELECT * FROM " + quote("wall_ip_visit") + " WHERE " + quote("ip") + " = #{ip}" + limitOne();
     }
 
     public String ipVisitHasIp() {
-        return "select count(*) from wall_ip_visit where " + quote("ip") + " = #{ip}";
+        return "SELECT COUNT(*) FROM " + quote("wall_ip_visit") + " WHERE " + quote("ip") + " = #{ip}";
     }
 
     public String ipVisitRefreshToday() {
-        return "update wall_ip_visit set " + quote("today") + " = 0";
+        return "UPDATE " + quote("wall_ip_visit") + " SET " + quote("today") + " = 0";
     }
 
     public String ipBlackGetByIp() {
-        return "select * from wall_ip_black where " + quote("ip") + " = #{ip}" + limitOne();
+        return "SELECT * FROM " + quote("wall_ip_black") + " WHERE " + quote("ip") + " = #{ip}" + limitOne();
     }
 
     public String ipBlackHasIp() {
-        return "select count(*) from wall_ip_black where " + quote("ip") + " = #{ip}";
+        return "SELECT COUNT(*) FROM " + quote("wall_ip_black") + " WHERE " + quote("ip") + " = #{ip}";
     }
 
     public String ipBlackRefreshToday() {
-        return "update wall_ip_black set " + quote("today") + " = 0";
+        return "UPDATE " + quote("wall_ip_black") + " SET " + quote("today") + " = 0";
     }
 
     public String ipBlackGetIps() {
-        return "select wi." + quote("ip") + " from wall_ip_black wi where wi." + quote("available") + " = #{available}";
+        return "SELECT wi." + quote("ip") + " FROM " + quote("wall_ip_black") + " wi WHERE wi." + quote("available") + " = #{available}";
     }
 
     public String hostGetByHost() {
-        return "select * from wall_host where " + quote("host") + " = #{host}" + limitOne();
+        return "SELECT * FROM " + quote("wall_host") + " WHERE " + quote("host") + " = #{host}" + limitOne();
     }
 
     public String hostHasHost() {
-        return "select count(*) from wall_host where " + quote("host") + " = #{host}";
+        return "SELECT COUNT(*) FROM " + quote("wall_host") + " WHERE " + quote("host") + " = #{host}";
     }
 
     public String hostRefreshToday() {
-        return "update wall_host set " + quote("today") + " = 0";
+        return "UPDATE " + quote("wall_host") + " SET " + quote("today") + " = 0";
     }
 
     public String hostGetHosts() {
-        return "select wh." + quote("host") + " from wall_host wh where wh." + quote("forbidden") + " = #{forbidden}";
+        return "SELECT wh." + quote("host") + " FROM " + quote("wall_host") + " wh WHERE wh." + quote("forbidden") + " = #{forbidden}";
     }
 
     public String shieldUris() {
-        return "select s." + quote("uri") + " from wall_shield as s where " + quote("enable") + " = " + enabledTrueSqlLiteral();
+        return "SELECT s." + quote("uri") + " FROM " + quote("wall_shield") + " s WHERE s." + quote("enable") + " = " + enabledTrueSqlLiteral();
     }
 
     public String shieldDefault() {
-        return "select * from wall_shield where " + quote("uri") + " = '/'";
+        return "SELECT * FROM " + quote("wall_shield") + " WHERE " + quote("uri") + " = '/'";
     }
 
     public String shieldHasDefault() {
-        return "select count(*) from wall_shield where " + quote("uri") + " = '/'";
+        return "SELECT COUNT(*) FROM " + quote("wall_shield") + " WHERE " + quote("uri") + " = '/'";
     }
 
     public String jumpEnabled() {
-        return "select * from wall_jump where " + quote("enable") + " = " + enabledTrueSqlLiteral();
+        return "SELECT * FROM " + quote("wall_jump") + " WHERE " + quote("enable") + " = " + enabledTrueSqlLiteral();
     }
 }

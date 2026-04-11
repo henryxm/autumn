@@ -11,6 +11,10 @@ import cn.org.autumn.database.runtime.RuntimeSqlDialect;
  */
 public class SysUserDaoSql extends RuntimeSql {
 
+    private String tbl() {
+        return quote("sys_user");
+    }
+
     /**
      * 权限菜单 JOIN：表名/列名均经方言引用。
      */
@@ -28,74 +32,74 @@ public class SysUserDaoSql extends RuntimeSql {
     }
 
     public String verify() {
-        return "update sys_user set " + quote("verify") + " = #{verify} where " + quote("uuid") + " = #{uuid}";
+        return "UPDATE " + tbl() + " SET " + quote("verify") + " = #{verify} WHERE " + quote("uuid") + " = #{uuid}";
     }
 
     public String getByUsername() {
-        return "select * from sys_user where " + quote("username") + " = #{username} and " + quote("status") + " >= 0";
+        return "SELECT * FROM " + tbl() + " WHERE " + quote("username") + " = #{username} AND " + quote("status") + " >= 0";
     }
 
     public String getByUsernameLike() {
-        return "select * from sys_user where " + quote("username") + " like " + likeContainsAny("#{username}") + " and " + quote("status") + " >= 0" + limitOne();
+        return "SELECT * FROM " + tbl() + " WHERE " + quote("username") + " LIKE " + likeContainsAny("#{username}") + " AND " + quote("status") + " >= 0" + limitOne();
     }
 
     public String getByEmail() {
-        return "SELECT * FROM sys_user WHERE " + quote("email") + " = #{email} and " + quote("status") + " >= 0";
+        return "SELECT * FROM " + tbl() + " WHERE " + quote("email") + " = #{email} AND " + quote("status") + " >= 0";
     }
 
     public String getByEmailLike() {
-        return "SELECT * FROM sys_user WHERE " + quote("email") + " like " + likeContainsAny("#{email}") + " and " + quote("status") + " >= 0" + limitOne();
+        return "SELECT * FROM " + tbl() + " WHERE " + quote("email") + " LIKE " + likeContainsAny("#{email}") + " AND " + quote("status") + " >= 0" + limitOne();
     }
 
     public String getByPhone() {
-        return "SELECT * FROM sys_user WHERE " + quote("mobile") + " = #{mobile} and " + quote("status") + " >= 0";
+        return "SELECT * FROM " + tbl() + " WHERE " + quote("mobile") + " = #{mobile} AND " + quote("status") + " >= 0";
     }
 
     public String getByPhoneLike() {
-        return "SELECT * FROM sys_user WHERE " + quote("mobile") + " like " + likeContainsAny("#{mobile}") + " and " + quote("status") + " >= 0" + limitOne();
+        return "SELECT * FROM " + tbl() + " WHERE " + quote("mobile") + " LIKE " + likeContainsAny("#{mobile}") + " AND " + quote("status") + " >= 0" + limitOne();
     }
 
     public String getByUuid() {
-        return "SELECT * FROM sys_user WHERE " + quote("uuid") + " = #{uuid} and " + quote("status") + " >= 0";
+        return "SELECT * FROM " + tbl() + " WHERE " + quote("uuid") + " = #{uuid} AND " + quote("status") + " >= 0";
     }
 
     public String getForDelete() {
-        return "SELECT * FROM sys_user WHERE " + quote("uuid") + " = #{uuid}";
+        return "SELECT * FROM " + tbl() + " WHERE " + quote("uuid") + " = #{uuid}";
     }
 
     public String getByUuidLike() {
-        return "SELECT * FROM sys_user WHERE " + quote("uuid") + " like " + likeContainsAny("#{uuid}") + "  and " + quote("status") + " >= 0" + limitOne();
+        return "SELECT * FROM " + tbl() + " WHERE " + quote("uuid") + " LIKE " + likeContainsAny("#{uuid}") + " AND " + quote("status") + " >= 0" + limitOne();
     }
 
     public String getByQq() {
-        return "SELECT * FROM sys_user WHERE " + quote("qq") + " = #{qq} and " + quote("status") + " >= 0";
+        return "SELECT * FROM " + tbl() + " WHERE " + quote("qq") + " = #{qq} AND " + quote("status") + " >= 0";
     }
 
     public String getByQqLike() {
-        return "SELECT * FROM sys_user WHERE " + quote("qq") + " like " + likeContainsAny("#{qq}") + " and " + quote("status") + " >= 0" + limitOne();
+        return "SELECT * FROM " + tbl() + " WHERE " + quote("qq") + " LIKE " + likeContainsAny("#{qq}") + " AND " + quote("status") + " >= 0" + limitOne();
     }
 
     public String getByWeixing() {
-        return "SELECT * FROM sys_user WHERE " + quote("weixin") + " = #{weixin} and " + quote("status") + " >= 0";
+        return "SELECT * FROM " + tbl() + " WHERE " + quote("weixin") + " = #{weixin} AND " + quote("status") + " >= 0";
     }
 
     public String getByWeixingLike() {
-        return "SELECT * FROM sys_user WHERE " + quote("weixin") + " like " + likeContainsAny("#{weixin}") + " and " + quote("status") + " >= 0" + limitOne();
+        return "SELECT * FROM " + tbl() + " WHERE " + quote("weixin") + " LIKE " + likeContainsAny("#{weixin}") + " AND " + quote("status") + " >= 0" + limitOne();
     }
 
     public String getByAlipay() {
-        return "SELECT * FROM sys_user WHERE " + quote("alipay") + " = #{alipay} and " + quote("status") + " >= 0";
+        return "SELECT * FROM " + tbl() + " WHERE " + quote("alipay") + " = #{alipay} AND " + quote("status") + " >= 0";
     }
 
     public String getByAlipayLike() {
-        return "SELECT * FROM sys_user WHERE " + quote("alipay") + " like " + likeContainsAny("#{alipay}") + " and " + quote("status") + " >= 0" + limitOne();
+        return "SELECT * FROM " + tbl() + " WHERE " + quote("alipay") + " LIKE " + likeContainsAny("#{alipay}") + " AND " + quote("status") + " >= 0" + limitOne();
     }
 
     public String getByIdCard() {
-        return "SELECT * FROM sys_user WHERE " + quote("id_card") + " = #{idCard} and " + quote("status") + " >= 0";
+        return "SELECT * FROM " + tbl() + " WHERE " + quote("id_card") + " = #{idCard} AND " + quote("status") + " >= 0";
     }
 
     public String getByIdCardLike() {
-        return "SELECT * FROM sys_user WHERE " + quote("id_card") + " like " + likeContainsAny("#{idCard}") + " and " + quote("status") + " >= 0" + limitOne();
+        return "SELECT * FROM " + tbl() + " WHERE " + quote("id_card") + " LIKE " + likeContainsAny("#{idCard}") + " AND " + quote("status") + " >= 0" + limitOne();
     }
 }

@@ -256,6 +256,6 @@ public abstract class AbstractJdbcVendorRelationalTableOperations implements Rel
 
     private void unsupportedDdl() {
         throw new UnsupportedOperationException(
-                "当前库类型未接入注解建表 DDL，请使用 Flyway/Liquibase/手工脚本；参见 AutumnDatabaseType.supportsAnnotationTableSync()");
+                "当前库类型未接入注解建表 DDL，请使用 Flyway/Liquibase/手工脚本；参见 DatabaseType.supportsAnnotationTableSync()");
     }
 }

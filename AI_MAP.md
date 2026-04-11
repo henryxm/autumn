@@ -37,7 +37,7 @@
 
 ### 1.1 多数据库（PostgreSQL）
 
-- **`autumn.database`** 与 MySQL 基线并存；注解建表、分页方言、运行时 SQL 方言、实体 `tinyint`/`boolean`/`smallint` 兼容、`BaseService` 分页 `COUNT` 等与 PG 相关的约定与变更过程，见 **`AI_POSTGRESQL.md`**（与 `AI_BOOT.md` §8 摘要互补）。业务工程 **升级 autumn 版本** 的通用流程与只读扫描脚本见 **`AI_UPGRADE.md`**。
+- **`autumn.database`** 与 JDBC URL 决定 **`DatabaseType`**；**多库 SQL 纪律、Wrapper 边界、Provider 强制、已支持库类型清单**见 **`AI_DATABASE.md`**（与 `AI_BOOT.md` §8 摘要互补）。PostgreSQL **专项**（DDL、元数据、类型、分页 `COUNT`）见 **`AI_POSTGRESQL.md`**。业务工程 **升级 autumn 版本** 见 **`AI_UPGRADE.md`**。
 
 ## 2. 核心能力索引（按开发高频）
 
@@ -384,7 +384,7 @@ public class DemoService extends ModuleService<DemoDao, DemoEntity> implements L
 - **FreeMarker 页面**：避免与 FTL 冲突；条件等可用 **`<!-- -->`** 包裹以保持 HTML 规范；**`<script>`** 内 FTL 插值须保证渲染后 JS 合法；无法避免冲突时用 **`<#noparse>`**（`AI_STANDARDS.md` §7）。
 - **实体与库表**：依赖框架实体扫描与 **`autumn.table.*` 开关**做建表/更新；**禁止**把**常规初始化 DDL `.sql`** 作为默认交付物（`AI_STANDARDS.md` §8）。
 - **模块名 = 包段 = 表前缀**：**禁止**把模块名当作**实体类名前缀**造成生成错乱；物理表名惯例见 `AI_BOOT.md` §3.2 与 `AI_STANDARDS.md` §9。
-- **新代码 SQL**：**禁止**在 Dao 接口注解上**硬编码 SQL**；**必须**用 **Provider**（多库见 `AI_POSTGRESQL.md`）（`AI_STANDARDS.md` §12）。
+- **新代码 SQL**：**禁止**在 Dao 接口注解上**硬编码 SQL**；**必须**用 **Provider**（跨库见 **`AI_DATABASE.md`**，PG 细节见 **`AI_POSTGRESQL.md`**）（`AI_STANDARDS.md` §12）。
 - **Controller / Service / Dao**：Controller **禁止**用 Dao；本实体 Service 用 **`baseMapper`**、**禁止**再注入本 Dao；跨实体 **注入 Service** 而非他域 Dao（`AI_STANDARDS.md` §13）。
 - **资源与页面**：静态资源放 **`resources/statics/`** 并优先复用框架已有文件；新后台页放模块 **`pages`**；**`site/*Site.java`** 配 **`@PageAware(login=true/false)`** 做 SPM 指引（`AI_STANDARDS.md` §14）。
 - **生成物**：**gen**、`SitePages` 生成的 **Pages/html/js** **禁止改、禁止加逻辑**（`AI_STANDARDS.md` §11）。

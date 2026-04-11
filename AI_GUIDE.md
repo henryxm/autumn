@@ -9,7 +9,7 @@
    - 首轮必读：`@<autumn-root>/AI_BOOT.md`
    - 核心能力：`@<autumn-root>/AI_MAP.md`
    - 应用层强制规范：`@<autumn-root>/AI_STANDARDS.md`
-   - 按需追加：`@<autumn-root>/AI_POSTGRESQL.md` / `@<autumn-root>/AI_UPGRADE.md` / `@<autumn-root>/AI_CRYPTO.md` / `@<autumn-root>/AI_CODEGEN.md` / `@<autumn-root>/AI_TEMPLATES.md` / `@<autumn-root>/AI_GOVERNANCE.md` / `@<autumn-root>/AI_SECURITY.md` / `@<autumn-root>/AI_PROMPTS.md`
+   - 按需追加：`@<autumn-root>/AI_DATABASE.md`（多库 SQL / Wrapper / Provider）/ `@<autumn-root>/AI_POSTGRESQL.md` / `@<autumn-root>/AI_UPGRADE.md` / `@<autumn-root>/AI_CRYPTO.md` / `@<autumn-root>/AI_CODEGEN.md` / `@<autumn-root>/AI_TEMPLATES.md` / `@<autumn-root>/AI_GOVERNANCE.md` / `@<autumn-root>/AI_SECURITY.md` / `@<autumn-root>/AI_PROMPTS.md`
 2. **当前项目层（变化）**
    - 当前项目 `README`、模块目录、关键配置
 3. **当前任务层（变化）**
@@ -20,7 +20,8 @@
 - `AI_BOOT.md`：最小启动上下文（首轮固定）
 - `AI_MAP.md`：高频开发能力主图
 - `AI_STANDARDS.md`：约束性开发规范（分层、API、定时任务、权限、FTL、实体与库表、Dao/Provider、资源与 Site）
-- `AI_POSTGRESQL.md`：PostgreSQL 支持与多库兼容（配置、方言、类型、分页 count、迁移）
+- **`AI_DATABASE.md`**：多数据库落地（`DatabaseType` 清单、全库兼容默认、Wrapper 边界、Dao 必须 Provider、`RuntimeSql`、推荐分层；**§8** 注解 Dao / 方言 Wrapper 升级步骤与 `rg` 检索示例）
+- `AI_POSTGRESQL.md`：PostgreSQL 专项（DDL、元数据、类型、分页 count、迁移）；通用跨库以 `AI_DATABASE.md` 为准
 - `AI_UPGRADE.md`：依赖方升级清单、`scripts/autumn-dependency-scan.sh` 与「一键升级」可执行边界
 - `AI_CRYPTO.md`：接口加解密兼容专项
 - `AI_SECURITY.md`：签名/灰度/演练专项
@@ -31,14 +32,15 @@
 
 ## 3. 常用加载组合
 
-- 日常开发：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md`
+- 日常开发：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md`（写 SQL / Wrapper 时加 `AI_DATABASE.md`）
 - 接口加解密改造：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md + AI_CRYPTO.md`
 - 模块新建/代码生成：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md + AI_CODEGEN.md + AI_TEMPLATES.md`
 - 多项目模板整合（TemplateFactory）：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md + AI_GOVERNANCE.md`
 - 安全改造/攻防演练：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md + AI_SECURITY.md`
 - 多人协作/规范治理：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md + AI_GOVERNANCE.md`
-- PostgreSQL / 多库适配：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md + AI_POSTGRESQL.md`
-- 升级 autumn 基线版本：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md + AI_UPGRADE.md`
+- 多库 / Wrapper / Provider：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md + AI_DATABASE.md`（PG 专项再叠 `AI_POSTGRESQL.md`）
+- **老旧 Dao 注解 SQL / Wrapper 方言化改造**：`AI_DATABASE.md` §8 + `AI_UPGRADE.md` §3.3；体检运行 `scripts/autumn-dependency-scan.sh`
+- 升级 autumn 基线版本：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md + AI_UPGRADE.md`（多库 SQL 债叠加 `AI_DATABASE.md` §8）
 - 快速发起任务：在以上组合基础上追加 `AI_PROMPTS.md`
 
 ## 3.1 代码生成模板边界（MVC 约束）

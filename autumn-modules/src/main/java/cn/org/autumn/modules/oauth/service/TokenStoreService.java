@@ -146,7 +146,7 @@ public class TokenStoreService extends ModuleService<TokenStoreDao, TokenStoreEn
     public void load() {
         List<TokenStoreEntity> list = selectByMap(null);
         for (TokenStoreEntity tokenStoreEntity : list) {
-            SysUserEntity sysUserEntity = sysUserService.selectById(tokenStoreEntity.getUserUuid());
+            SysUserEntity sysUserEntity = sysUserService.getByUuid(tokenStoreEntity.getUserUuid());
             if (null != sysUserEntity) {
                 Long at = getAccessTokenExpiredIn(tokenStoreEntity);
                 if (at > 0)

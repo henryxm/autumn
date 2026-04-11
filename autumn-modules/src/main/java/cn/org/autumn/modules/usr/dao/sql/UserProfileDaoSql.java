@@ -11,34 +11,38 @@ import cn.org.autumn.database.runtime.RuntimeSqlDialect;
  */
 public class UserProfileDaoSql extends RuntimeSql {
 
+    private String tbl() {
+        return quote("usr_user_profile");
+    }
+
     public String getByUuid() {
-        return "select * from usr_user_profile where " + quote("uuid") + " = #{uuid}" + limitOne();
+        return "SELECT * FROM " + tbl() + " WHERE " + quote("uuid") + " = #{uuid}" + limitOne();
     }
 
     public String getByOpenId() {
-        return "select * from usr_user_profile where " + quote("open_id") + " = #{openId}" + limitOne();
+        return "SELECT * FROM " + tbl() + " WHERE " + quote("open_id") + " = #{openId}" + limitOne();
     }
 
     public String getByUnionId() {
-        return "select * from usr_user_profile where " + quote("union_id") + " = #{unionId}" + limitOne();
+        return "SELECT * FROM " + tbl() + " WHERE " + quote("union_id") + " = #{unionId}" + limitOne();
     }
 
     public String getByUsername() {
-        return "select * from usr_user_profile where " + quote("username") + " = #{username}" + limitOne();
+        return "SELECT * FROM " + tbl() + " WHERE " + quote("username") + " = #{username}" + limitOne();
     }
 
     public String setUuid() {
-        return "update usr_user_profile set " + quote("uuid") + " = #{uuid} where " + quote("username") + " = #{username}";
+        return "UPDATE " + tbl() + " SET " + quote("uuid") + " = #{uuid} WHERE " + quote("username") + " = #{username}";
     }
 
     public String touchLogin() {
-        return "update usr_user_profile set " + quote("login_ip") + " = #{ip}, " + quote("visit_ip") + " = #{ip}, "
+        return "UPDATE " + tbl() + " SET " + quote("login_ip") + " = #{ip}, " + quote("visit_ip") + " = #{ip}, "
                 + quote("user_agent") + " = #{userAgent}, " + quote("login_time") + " = " + currentTimestamp()
-                + ", " + quote("visit_time") + " = " + currentTimestamp() + " where " + quote("uuid") + " = #{uuid}";
+                + ", " + quote("visit_time") + " = " + currentTimestamp() + " WHERE " + quote("uuid") + " = #{uuid}";
     }
 
     public String touchVisit() {
-        return "update usr_user_profile set " + quote("visit_ip") + " = #{ip}, " + quote("user_agent") + " = #{userAgent}, "
-                + quote("visit_time") + " = " + currentTimestamp() + " where " + quote("uuid") + " = #{uuid}";
+        return "UPDATE " + tbl() + " SET " + quote("visit_ip") + " = #{ip}, " + quote("user_agent") + " = #{userAgent}, "
+                + quote("visit_time") + " = " + currentTimestamp() + " WHERE " + quote("uuid") + " = #{uuid}";
     }
 }

@@ -3,12 +3,12 @@ package cn.org.autumn.database;
 import org.apache.commons.lang.StringUtils;
 
 /**
- * 应用主库类型（优先由 JDBC URL 推断，其次 {@code autumn.database}）。
- * <ul>
- *   <li>MySQL / MariaDB：共用 {@link cn.org.autumn.table.platform.mysql.MysqlRelationalTableOperations} 与 {@link cn.org.autumn.database.runtime.MysqlRuntimeSqlDialect}；分页方言 MariaDB 单独为 {@code mariadb}。</li>
- *   <li>PostgreSQL：独立建表与运行时方言。</li>
- *   <li>Oracle / SQL Server：运行时方言与 JDBC 元数据/DROP；注解建表 DDL 未接入，见 {@link #supportsAnnotationTableSync()}。</li>
- * </ul>
+ * 应用主库类型（优先由 JDBC URL 推断，其次 {@code autumn.database}；部分类型需二者配合，见各枚举常量说明）。
+ * <p>
+ * 注解驱动建表仅对 MySQL / MariaDB / PostgreSQL 开放，见 {@link #supportsAnnotationTableSync()}。
+ * <p>
+ * PageHelper 5.1.x 方言别名与 {@link #pageHelperDialectName()} 对齐。
+ * 团队规范与全库 SQL 纪律见仓库根目录 {@code AI_DATABASE.md}；{@link cn.org.autumn.database.DatabaseHolder#resolveType} 为统一解析入口。
  */
 public enum DatabaseType {
 
@@ -17,6 +17,41 @@ public enum DatabaseType {
     POSTGRESQL,
     ORACLE,
     SQLSERVER,
+    /** SQLite（含 {@code jdbc:sqlite::memory:} 等） */
+    SQLITE,
+    /** H2 */
+    H2,
+    /** HyperSQL */
+    HSQLDB,
+    /** IBM DB2 */
+    DB2,
+    /** Apache Derby */
+    DERBY,
+    /** Firebird 3+（JDBC 多为 {@code jdbc:firebirdsql:}） */
+    FIREBIRD,
+    /** Informix（{@code jdbc:informix-sqli:} 等） */
+    INFORMIX,
+    /** 达梦 DM（{@code jdbc:dm:}） */
+    DAMENG,
+    /**
+     * 人大金仓 KingbaseES：官方 {@code jdbc:kingbase8:} / {@code jdbc:kingbase86:}（见 KingbaseES JDBC 手册）。
+     */
+    KINGBASE,
+    /**
+     * PingCAP TiDB：官方推荐 {@code jdbc:mysql://...}（MySQL 协议）；推断为 {@link #TIDB} 需配置 {@code autumn.database=tidb}
+     *（或 {@code pingcap}），或使用生态中的 {@code jdbc:tidb://}。
+     */
+    TIDB,
+    /**
+     * OceanBase MySQL 兼容模式：官方 {@code jdbc:oceanbase://...} 且非 Oracle 兼容参数；或用 {@code jdbc:mysql://} 连 OB MySQL 租户时需
+     * {@code autumn.database=oceanbase_mysql}（或 {@code ob_mysql} 等别名）。
+     */
+    OCEANBASE_MYSQL,
+    /**
+     * OceanBase Oracle 兼容模式：{@code jdbc:oceanbase://...} 且 URL 中含 {@code compatibleMode=oracle} 或 {@code compatible-mode=oracle}，
+     * 或配置 {@code autumn.database=oceanbase_oracle}。
+     */
+    OCEANBASE_ORACLE,
     /** 未识别的配置值 */
     OTHER;
 
@@ -44,11 +79,59 @@ public enum DatabaseType {
     }
 
     public boolean isMysqlFamily() {
-        return this == MYSQL || this == MARIADB;
+        return this == MYSQL || this == MARIADB || this == TIDB || this == OCEANBASE_MYSQL;
+    }
+
+    public boolean isSqlite() {
+        return this == SQLITE;
+    }
+
+    public boolean isH2() {
+        return this == H2;
+    }
+
+    public boolean isHsqldb() {
+        return this == HSQLDB;
+    }
+
+    public boolean isDb2() {
+        return this == DB2;
+    }
+
+    public boolean isDerby() {
+        return this == DERBY;
+    }
+
+    public boolean isFirebird() {
+        return this == FIREBIRD;
+    }
+
+    public boolean isInformix() {
+        return this == INFORMIX;
+    }
+
+    public boolean isDameng() {
+        return this == DAMENG;
+    }
+
+    public boolean isKingbase() {
+        return this == KINGBASE;
+    }
+
+    public boolean isTidb() {
+        return this == TIDB;
+    }
+
+    public boolean isOceanBaseMysql() {
+        return this == OCEANBASE_MYSQL;
+    }
+
+    public boolean isOceanBaseOracle() {
+        return this == OCEANBASE_ORACLE;
     }
 
     /**
-     * PageHelper {@code helper-dialect} 取值，与 JDBC URL 推断结果一致时无需再配 {@code pagehelper.helper-dialect}。
+     * PageHelper {@code helper-dialect} 取值（与 5.1.x {@code PageAutoDialect} 注册别名一致）。
      */
     public String pageHelperDialectName() {
         switch (this) {
@@ -62,13 +145,36 @@ public enum DatabaseType {
                 return "oracle";
             case SQLSERVER:
                 return "sqlserver";
+            case SQLITE:
+                return "sqlite";
+            case H2:
+                return "h2";
+            case HSQLDB:
+                return "hsqldb";
+            case DB2:
+                return "db2";
+            case DERBY:
+                return "derby";
+            case FIREBIRD:
+                return "sqlserver2012";
+            case INFORMIX:
+                return "informix-sqli";
+            case DAMENG:
+                return "dm";
+            case KINGBASE:
+                return "postgresql";
+            case TIDB:
+            case OCEANBASE_MYSQL:
+                return "mysql";
+            case OCEANBASE_ORACLE:
+                return "oracle";
             default:
                 return "mysql";
         }
     }
 
     /**
-     * 解析配置值：mysql、mariadb、postgresql、postgres、oracle、sqlserver、mssql；其余为 {@link #OTHER}。
+     * 解析配置值；无法列举的别名归入 {@link #OTHER}。
      */
     public static DatabaseType fromConfig(String raw) {
         if (StringUtils.isBlank(raw)) {
@@ -86,6 +192,44 @@ public enum DatabaseType {
             case "sqlserver":
             case "mssql":
                 return SQLSERVER;
+            case "sqlite":
+            case "sqlite3":
+                return SQLITE;
+            case "h2":
+                return H2;
+            case "hsqldb":
+            case "hypersonic":
+                return HSQLDB;
+            case "db2":
+                return DB2;
+            case "derby":
+            case "apache_derby":
+                return DERBY;
+            case "firebird":
+            case "firebirdsql":
+                return FIREBIRD;
+            case "informix":
+            case "informix-sqli":
+                return INFORMIX;
+            case "dm":
+            case "dameng":
+                return DAMENG;
+            case "kingbase":
+            case "kingbase8":
+            case "kingbase86":
+            case "kingbasees":
+                return KINGBASE;
+            case "tidb":
+            case "pingcap":
+                return TIDB;
+            case "oceanbase":
+            case "ob":
+            case "oceanbase_mysql":
+            case "ob_mysql":
+                return OCEANBASE_MYSQL;
+            case "oceanbase_oracle":
+            case "ob_oracle":
+                return OCEANBASE_ORACLE;
             case "mysql":
                 return MYSQL;
             default:

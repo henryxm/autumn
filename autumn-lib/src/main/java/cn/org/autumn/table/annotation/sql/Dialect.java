@@ -20,8 +20,41 @@ public enum Dialect {
     /** Microsoft SQL Server */
     SQLSERVER,
 
-    /** H2 等嵌入式库 */
+    /** SQLite */
+    SQLITE,
+
+    /** H2 */
     H2,
+
+    /** HyperSQL */
+    HSQLDB,
+
+    /** IBM DB2 */
+    DB2,
+
+    /** Apache Derby */
+    DERBY,
+
+    /** Firebird */
+    FIREBIRD,
+
+    /** Informix */
+    INFORMIX,
+
+    /** 达梦 DM */
+    DAMENG,
+
+    /** 人大金仓 KingbaseES */
+    KINGBASE,
+
+    /** PingCAP TiDB */
+    TIDB,
+
+    /** OceanBase MySQL 兼容模式 */
+    OCEANBASE_MYSQL,
+
+    /** OceanBase Oracle 兼容模式 */
+    OCEANBASE_ORACLE,
 
     /** 其他或未分类 */
     OTHER

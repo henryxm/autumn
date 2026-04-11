@@ -17,7 +17,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -116,14 +115,16 @@ public class SysUserController extends SysAbstractController {
     @SysLog("删除用户")
     @RequestMapping("/delete")
     @RequiresPermissions("sys:user:delete")
-    public R delete(@RequestBody String[] uuids) {
+    public R delete(@RequestBody String[] uuids) throws Exception {
         if (ArrayUtils.contains(uuids, "admin")) {
             return R.error("系统管理员不能删除");
         }
         if (ArrayUtils.contains(uuids, getUserUuid())) {
             return R.error("当前用户不能删除");
         }
-        sysUserService.deleteBatchIds(Arrays.asList(uuids));
+        for (String uuid : uuids) {
+            sysUserService.remove(uuid);
+        }
         return R.ok();
     }
 }

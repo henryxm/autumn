@@ -1,7 +1,7 @@
 # Autumn 应用层开发规范（约束性）
 
 > 用途：约定**业务与数据访问分层、实体与库表、生成层边界、资源与页面**等纪律。  
-> 与 `AI_BOOT.md`、`AI_MAP.md` 互补：**注解建表细节、方言与 `RuntimeSql` 以 BOOT / `AI_POSTGRESQL.md` 为准**；**团队强制口径以本文为准**。
+> 与 `AI_BOOT.md`、`AI_MAP.md` 互补：**多库 SQL、Wrapper 与 Provider 落地以 `AI_DATABASE.md` 为准**；**PostgreSQL 专项实现见 `AI_POSTGRESQL.md`**；**团队强制口径以本文为准**。
 
 ## 1. 适用范围
 
@@ -125,9 +125,13 @@
 
 ## 12. Dao、Provider 与多数据库 SQL
 
+- **默认目标**：除非在代码中**明确声明**仅支持某一种库，业务 SQL 与持久化写法应对框架已接入的 **`DatabaseType` 全量兼容**（见 **`AI_DATABASE.md`** §1、§2）。
+
 - **禁止**在 **Dao 接口**的方法上**内联硬编码 SQL**（如 **`@Select`/`@Update` 等注解中直接写死 SQL 字符串**）作为**新代码**的默认写法。
 
-- **必须**通过与之对应的 **MyBatis `Provider`**（如 **`XxxDaoSql`**、`*Provider` 类及 `@SelectProvider` 等）拼接与维护 SQL，便于统一做多库方言、引用 `RuntimeSql` 等（见 **`AI_POSTGRESQL.md`**、`AI_UPGRADE.md` 中 Provider 约定）。
+- **必须**通过与之对应的 **MyBatis `Provider`**（如 **`XxxDaoSql`**、`*Provider` 类及 `@SelectProvider` 等）拼接与维护 SQL；推荐 **`extends RuntimeSql`**，统一使用 **`quote`、`limitOne`、`likeContainsAny`、`columnValueInCommaSeparatedList`** 等可移植片段（见 **`AI_DATABASE.md`** §3、§5 与 **`AI_POSTGRESQL.md`** 示例）。
+
+- **EntityWrapper / Condition**：仅使用跨库相对安全的条件（等值、范围、`in`、空值、简单 `orderBy`）；**禁止**在 `apply` / 自定义片段中写死单库函数（`FIND_IN_SET`、`IFNULL`、`DATE_FORMAT` 等）。复杂查询、JOIN、报表、强依赖方言的模糊/列表匹配 **必须** 改为 **Dao + Provider**（**`AI_DATABASE.md`** §4～§5）。
 
 - **例外**：仅框架内置或历史存量可在治理计划中逐步迁移；**新开发一律走 Provider**。
 
@@ -166,7 +170,9 @@
 | 主题 | 文档 |
 |------|------|
 | `@Table` / `@Column` / 字符集 / 表名推导细节 | `AI_BOOT.md` §3 |
-| 多库、`RuntimeSql`、Provider 写法 | `AI_POSTGRESQL.md`、`AI_UPGRADE.md` |
+| 多库兼容、Wrapper 边界、Provider 标准写法 | **`AI_DATABASE.md`**（权威） |
+| PostgreSQL 专项 DDL/元数据、`RuntimeSql` 示例 | `AI_POSTGRESQL.md` |
+| 升级扫描与迁移 | `AI_UPGRADE.md` |
 | ModuleService、缓存、队列、LoopJob、生成矩阵 | `AI_MAP.md` |
 | 代码生成端到端流程、三步开发节奏、缓存/队列基类详解 | `AI_CODEGEN.md` |
 | 加解密 | `AI_CRYPTO.md` |
@@ -175,5 +181,5 @@
 
 ## 16. 维护约定
 
-- 新增与「实体/库表/Dao/资源/页面」相关的团队规则时，**优先更新本文**，并同步 `AI_INDEX.md`、`AI_GUIDE.md` 摘要；与代码生成流程或三步节奏相关的补充可落在 **`AI_CODEGEN.md`**。
+- 新增与「实体/库表/Dao/资源/页面」相关的团队规则时，**优先更新本文**，并同步 `AI_INDEX.md`、`AI_GUIDE.md` 摘要；**多库类型、方言、Wrapper/Provider 纪律**以 **`AI_DATABASE.md`** 为落地专篇，变更时同步该文 §2；**老旧项目注解 Dao / 方言 Wrapper 迁移与扫描清单**见 **`AI_DATABASE.md` §8** 与 **`AI_UPGRADE.md` §3.3**；与代码生成流程或三步节奏相关的补充可落在 **`AI_CODEGEN.md`**。
 - 若与 `AI_MAP.md` §4「开发决策规则」表述重叠，以**本文 §2～§14** 为应用层与数据访问纪律的权威表述；MAP 保留框架能力级硬约束与类索引。

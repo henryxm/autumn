@@ -28,8 +28,12 @@ public class JdbcEnvironmentPostProcessor implements EnvironmentPostProcessor {
         if (StringUtils.isBlank(url)) {
             url = environment.getProperty("spring.datasource.url");
         }
-        DatabaseType t = DatabaseHolder.inferFromJdbcUrl(url);
-        if (t == null) {
+        String autumnDb = environment.getProperty("autumn.database");
+        if (StringUtils.isBlank(url) && StringUtils.isBlank(autumnDb)) {
+            return;
+        }
+        DatabaseType t = DatabaseHolder.resolveType(url, autumnDb);
+        if (t == DatabaseType.OTHER) {
             return;
         }
         Map<String, Object> map = new HashMap<>(2);

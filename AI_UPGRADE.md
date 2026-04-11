@@ -47,7 +47,7 @@
 | # | 项 | 说明 |
 |---|-----|------|
 | 11 | **二方扩展** | 依赖方若 **继承/实现** autumn 的 `ModuleService`、`BaseMenu`、`LoopJob` 等，对照 **CHANGELOG** 或 **Diff** 检查重载签名、废弃方法。 |
-| 12 | **手写 SQL** | 硬编码 `LIMIT`/`FIND_IN_SET`/三参 `concat('%',#{x},'%')`/保留字列名等，在多库下易出错；应迁到 **`RuntimeSql`（推荐）+ `@SelectProvider`/`@UpdateProvider`**（见下「跨库手写 SQL 与 RuntimeSql」与 `AI_POSTGRESQL.md`）。 |
+| 12 | **手写 SQL** | 硬编码 `LIMIT`/`FIND_IN_SET`/三参 `concat('%',#{x},'%')`/保留字列名等，在多库下易出错；**老旧 Dao 上 `@Select`/`@Update`/`@Insert`/`@Delete` 内联字符串**、**Wrapper 中反引号/`apply` 拼方言**须按 **`AI_DATABASE.md` §8** 迁到 **`RuntimeSql` + Provider** 或安全 Wrapper（见下「跨库手写 SQL 与 RuntimeSql」）。 |
 | 13 | **实体布尔与 MyBatis** | 避免同一字段 **`getX(int)` + `boolean isX()`** 引发 `Reflector` 冲突；分页若自定义 count，避免 **`COUNT(...) ORDER BY`**（PG 非法）。 |
 
 ### 2.5 回归与发布
@@ -93,7 +93,8 @@
 
 - 在 **依赖方仓库根目录** 扫描所有 `pom.xml` / `*.gradle`，检查 `cn.org.autumn` **版本号是否统一**、是否缺失 **Lombok 注解处理器** 配置（启发式 grep）。
 - 扫描 `application*.yml` / `application*.properties` 是否包含 **`autumn.database`**、数据源驱动与方言关键词（**提示性**，不修改文件）。
-- **Grep 级** 规则：如 `sun.misc.Launcher`、`@Select("update` 误用、明显 `FIND_IN_SET`、三参 `concat('%'` 等（**仅报告**，不自动改代码）；依赖方宜全局检索并改为 `RuntimeSqlDialect` API。
+- **Grep 级** 规则（**仅报告**，不自动改代码）：`sun.misc.Launcher`、明显 `FIND_IN_SET`、三参 `concat('%'`、手写 `LIMIT`、**`@Select`/`@Update`/`@Insert`/`@Delete` 后紧跟字符串 SQL**、**`.apply(` / `.last(` / `.having(`**、常见 MySQL 函数 **`IFNULL`/`DATE_FORMAT`/`GROUP_CONCAT`/`LAST_INSERT_ID`** 等。依赖方宜对照 **`AI_DATABASE.md` §8** 分批改为 **`RuntimeSql` + Provider** 或标准 Wrapper。
+- **本仓库脚本**：`scripts/autumn-dependency-scan.sh` 已包含部分上述规则；**§8.5** 提供可复制 `rg` 命令作为补充。
 
 ### 3.2 难以或不应「一键」自动完成
 
@@ -103,6 +104,18 @@
 - **全项目语义搜索**：「所有手写 SQL 已移植」无法仅靠正则 **证明**，需测试与代码评审。
 
 **结论**：可提供 **一键扫描报告（只读）** + **可选的版本号批量替换（需显式确认）**；所谓「一键升级」在工程上应理解为 **一键体检 + 清单勾选**，而非无人值守替换全部代码与数据。
+
+---
+
+### 3.3 老旧项目：注解 Dao 与方言化 Wrapper（升级路径摘要）
+
+| 阶段 | 动作 | 产出 |
+|------|------|------|
+| 体检 | 运行 **`autumn-dependency-scan.sh`** + **`AI_DATABASE.md` §8.5** 检索 | 待改造文件列表 |
+| 改造 | 按 **`AI_DATABASE.md` §8.2～§8.3** 逐项替换为 Provider / 安全 Wrapper | 可编译、可回归的 PR |
+| 验收 | 在 **目标 `DatabaseType`**（含非 MySQL）下冒烟与核心用例 | 合并门禁 |
+
+**详细对照表、单方法迁移步骤、Wrapper 策略**以 **`AI_DATABASE.md` §8** 为准。
 
 ---
 

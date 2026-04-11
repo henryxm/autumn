@@ -7,6 +7,7 @@ import cn.org.autumn.table.data.TableInfo;
 import cn.org.autumn.table.data.UniqueKeyInfo;
 import cn.org.autumn.table.mysql.ColumnMeta;
 import cn.org.autumn.table.mysql.TableMeta;
+import cn.org.autumn.table.platform.jdbc.DoubleQuotedJdbcRelationalTableOperations;
 import cn.org.autumn.table.platform.jdbc.OracleJdbcRelationalTableOperations;
 import cn.org.autumn.table.platform.jdbc.SqlServerJdbcRelationalTableOperations;
 import cn.org.autumn.table.platform.mysql.MysqlRelationalTableOperations;
@@ -19,7 +20,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 按 {@code autumn.database} 路由：PostgreSQL、Oracle、SQL Server、MySQL/MariaDB（后两者共用 MySQL 实现）。
+ * 按 {@link DatabaseHolder#getType()} 路由：PostgreSQL、Oracle、SQL Server、MySQL/MariaDB、
+ * 以及双引号标识符系（SQLite/H2/DB2 等）的 JDBC 元数据实现。
  */
 @Primary
 @Component
@@ -40,16 +42,33 @@ public class RoutingRelationalTableOperations implements RelationalTableOperatio
     @Autowired
     private SqlServerJdbcRelationalTableOperations sqlServerJdbcRelationalTableOperations;
 
+    @Autowired
+    private DoubleQuotedJdbcRelationalTableOperations doubleQuotedJdbcRelationalTableOperations;
+
     private RelationalTableOperations delegate() {
         DatabaseType t = databaseHolder.getType();
         if (t == DatabaseType.POSTGRESQL) {
             return postgresRelationalTableOperations;
         }
+        if (t == DatabaseType.KINGBASE) {
+            return doubleQuotedJdbcRelationalTableOperations;
+        }
         if (t == DatabaseType.ORACLE) {
+            return oracleJdbcRelationalTableOperations;
+        }
+        if (t == DatabaseType.OCEANBASE_ORACLE) {
             return oracleJdbcRelationalTableOperations;
         }
         if (t == DatabaseType.SQLSERVER) {
             return sqlServerJdbcRelationalTableOperations;
+        }
+        if (t == DatabaseType.TIDB || t == DatabaseType.OCEANBASE_MYSQL) {
+            return mysqlRelationalTableOperations;
+        }
+        if (t == DatabaseType.SQLITE || t == DatabaseType.H2 || t == DatabaseType.HSQLDB
+                || t == DatabaseType.DB2 || t == DatabaseType.DERBY || t == DatabaseType.FIREBIRD
+                || t == DatabaseType.INFORMIX || t == DatabaseType.DAMENG) {
+            return doubleQuotedJdbcRelationalTableOperations;
         }
         return mysqlRelationalTableOperations;
     }
