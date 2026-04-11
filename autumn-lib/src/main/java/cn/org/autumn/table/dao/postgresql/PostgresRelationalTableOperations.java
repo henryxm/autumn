@@ -4,8 +4,9 @@ import cn.org.autumn.table.data.ColumnInfo;
 import cn.org.autumn.table.data.IndexInfo;
 import cn.org.autumn.table.data.TableInfo;
 import cn.org.autumn.table.data.UniqueKeyInfo;
-import cn.org.autumn.table.mysql.ColumnMeta;
-import cn.org.autumn.table.mysql.TableMeta;
+import cn.org.autumn.table.relational.dialect.postgresql.PostgresRelationalSchemaSql;
+import cn.org.autumn.table.relational.model.ColumnMeta;
+import cn.org.autumn.table.relational.model.TableMeta;
 import cn.org.autumn.table.platform.RelationalTableOperations;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -38,13 +39,13 @@ public class PostgresRelationalTableOperations implements RelationalTableOperati
     @Autowired
     private DataSource dataSource;
 
-    private final PostgresQuerySql ddl = new PostgresQuerySql();
+    private final PostgresRelationalSchemaSql ddl = PostgresRelationalSchemaSql.INSTANCE;
 
     @Override
     public void createTable(Map<TableInfo, List<Object>> map) {
         Map<TableInfo, List<ColumnInfo>> typed = castColumnMap(map);
         Map<String, Map<TableInfo, List<ColumnInfo>>> wrap = new HashMap<>();
-        wrap.put(PostgresQuerySql.paramName, typed);
+        wrap.put(PostgresRelationalSchemaSql.paramName, typed);
         executeScript(ddl.createTable(wrap));
     }
 
@@ -116,7 +117,7 @@ public class PostgresRelationalTableOperations implements RelationalTableOperati
             m.put(e.getKey(), (ColumnInfo) e.getValue());
         }
         Map<String, Map<TableInfo, ColumnInfo>> wrap = new HashMap<>();
-        wrap.put(PostgresQuerySql.paramName, m);
+        wrap.put(PostgresRelationalSchemaSql.paramName, m);
         executeScript(ddl.addColumns(wrap));
     }
 
@@ -127,7 +128,7 @@ public class PostgresRelationalTableOperations implements RelationalTableOperati
             m.put(e.getKey(), (ColumnInfo) e.getValue());
         }
         Map<String, Map<TableInfo, ColumnInfo>> wrap = new HashMap<>();
-        wrap.put(PostgresQuerySql.paramName, m);
+        wrap.put(PostgresRelationalSchemaSql.paramName, m);
         executeScript(ddl.modifyColumn(wrap));
     }
 
@@ -138,7 +139,7 @@ public class PostgresRelationalTableOperations implements RelationalTableOperati
             m.put(e.getKey(), (String) e.getValue());
         }
         Map<String, Map<TableInfo, String>> wrap = new HashMap<>();
-        wrap.put(PostgresQuerySql.paramName, m);
+        wrap.put(PostgresRelationalSchemaSql.paramName, m);
         executeScript(ddl.dropColumn(wrap));
     }
 
@@ -158,7 +159,7 @@ public class PostgresRelationalTableOperations implements RelationalTableOperati
     @Override
     public void dropIndex(Map<TableInfo, Object> map) {
         Map<String, Map<TableInfo, Object>> wrap = new HashMap<>();
-        wrap.put(PostgresQuerySql.paramName, map);
+        wrap.put(PostgresRelationalSchemaSql.paramName, map);
         try {
             executeScript(ddl.dropIndex(wrap));
         } catch (Exception ex) {
@@ -169,7 +170,7 @@ public class PostgresRelationalTableOperations implements RelationalTableOperati
     @Override
     public void dropTable(String tableName) {
         Map<String, String> m = new HashMap<>();
-        m.put(PostgresQuerySql.paramName, tableName);
+        m.put(PostgresRelationalSchemaSql.paramName, tableName);
         executeScript(ddl.dropTable(m));
     }
 
@@ -180,7 +181,7 @@ public class PostgresRelationalTableOperations implements RelationalTableOperati
         for (Map.Entry<TableInfo, Object> e : map.entrySet()) {
             inner.put(e.getKey(), (IndexInfo) e.getValue());
         }
-        wrap.put(PostgresQuerySql.paramName, inner);
+        wrap.put(PostgresRelationalSchemaSql.paramName, inner);
         executeScript(ddl.addIndex(wrap));
     }
 

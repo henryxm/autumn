@@ -1,0 +1,33 @@
+# =============================================================================
+# 内嵌 H2（MySQL 兼容模式）：零外部 MySQL 即可启动，表结构由注解同步（走 MySQL DDL 适配分支）。
+#
+# 使用方式：
+#   --spring.profiles.active=dev,embedded
+#   或 SPRING_PROFILES_ACTIVE=dev,embedded
+#
+# 存储：
+#   默认 jdbc:h2:file:./embedded/h2 —— 会在运行目录生成 h2.mv.db 等文件（首启自动建目录）。
+#   若需纯内存（无文件、进程结束即清空），将两处 url 改为：
+#   jdbc:h2:mem:h2;MODE=MySQL;DATABASE_TO_LOWER=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+#
+# 初始化数据：InitFactory（部门/角色/管理员等），非 spring.sql.init。
+# MySQL 兼容须保留 URL 中 MODE=MySQL（运行期 DatabaseType 与建表方言由此识别）。
+# =============================================================================
+
+spring:
+  datasource:
+    driverClassName: org.h2.Driver
+    druid:
+      first:
+        url: jdbc:h2:file:./embedded/h2;MODE=MySQL;DATABASE_TO_LOWER=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE;AUTO_SERVER=FALSE
+        username: sa
+        password: ""
+      second:
+        url: jdbc:h2:file:./embedded/h2;MODE=MySQL;DATABASE_TO_LOWER=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE;AUTO_SERVER=FALSE
+        username: sa
+        password: ""
+      validation-query: SELECT 1
+
+autumn:
+  table:
+    sync-charset: false

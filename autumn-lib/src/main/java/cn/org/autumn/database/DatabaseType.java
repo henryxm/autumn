@@ -5,7 +5,7 @@ import org.apache.commons.lang.StringUtils;
 /**
  * 应用主库类型（优先由 JDBC URL 推断，其次 {@code autumn.database}；部分类型需二者配合，见各枚举常量说明）。
  * <p>
- * 注解驱动建表仅对 MySQL / MariaDB / PostgreSQL 开放，见 {@link #supportsAnnotationTableSync()}。
+ * 注解驱动建表范围见 {@link #supportsAnnotationTableSync()} 与 {@link AnnotationTableSyncSupport}。
  * <p>
  * PageHelper 5.1.x 方言别名与 {@link #pageHelperDialectName()} 对齐。
  * 团队规范与全库 SQL 纪律见仓库根目录 {@code AI_DATABASE.md}；{@link cn.org.autumn.database.DatabaseHolder#resolveType} 为统一解析入口。
@@ -57,9 +57,11 @@ public enum DatabaseType {
 
     /**
      * 是否走注解驱动建表（{@code MysqlTableService} + 路由后的 {@link cn.org.autumn.table.platform.RelationalTableOperations}）。
+     *
+     * @see AnnotationTableSyncSupport
      */
     public boolean supportsAnnotationTableSync() {
-        return this == MYSQL || this == MARIADB || this == POSTGRESQL;
+        return AnnotationTableSyncSupport.supports(this);
     }
 
     public boolean isPostgresql() {
@@ -171,6 +173,25 @@ public enum DatabaseType {
             default:
                 return "mysql";
         }
+    }
+
+    /**
+     * MyBatis-Plus 2.x 全局 {@code GlobalConfiguration#setIdentifierQuote} 用的格式串（{@link String#format}，单占位符为列名）。
+     * MP 内置枚举对 H2 的 quote 为 null，会导致 {@code order} 等保留字列不转义，此处按 Autumn 解析到的库类型补全。
+     * 返回 {@code null} 表示不注入，由用户自行配置 {@code mybatis-plus.global-config.identifier-quote}。
+     */
+    public String mybatisPlusIdentifierQuotePattern() {
+        if (isPostgresql()) {
+            return "\"%s\"";
+        }
+        if (isMysqlFamily()) {
+            return "`%s`";
+        }
+        // SQLite / H2 / DB2 / Derby：与各自 RuntimeSqlDialect#quote（双引号）及 JDBC 双引号路径一致；勿与 MySQL 反引号混用。
+        if (this == SQLITE || this == H2 || this == DB2 || this == DERBY) {
+            return "\"%s\"";
+        }
+        return null;
     }
 
     /**

@@ -1,0 +1,85 @@
+# =============================================================================
+# Apache Derby（嵌入式）：零外部数据库即可本地运行；运行期由 JDBC URL 推断为 derby（PageHelper、
+# Db2DerbyRuntimeSqlDialect、RelationalTableOperations 双引号路径、DerbyRelationalSchemaSql）。
+# MyBatis-Plus 全局 dbType 在 Derby 下被设为 postgresql：仅为让 MP 2.x 对所有列名加双引号，与注解 DDL 一致；
+# 真实库仍是 Derby，分页方言仍走 derby（DatabaseHolder），并非把库当成 PostgreSQL。
+# Derby 版本由 Spring Boot BOM 决定（2.7 默认 10.14.x，与项目 Java 8 一致）。注解 DDL 已按 10.14 省略 IF NOT EXISTS；
+# 若单独升级到 Derby 10.16+ 且需该语法，需在代码侧区分方言版本（当前 DERBY 一律按 10.14 输出）。
+# JDK 17+ 且使用 Derby 10.16+ 时请将驱动改为 org.apache.derby.iapi.jdbc.AutoloadedDriver（10.14 用 EmbeddedDriver）。
+#
+# 激活方式（与 dev 等组合）：
+#   --spring.profiles.active=dev,derby
+#   或 SPRING_PROFILES_ACTIVE=dev,derby
+#
+# ---------------------------------------------------------------------------
+# 三种存储场景（改 spring.datasource.druid.first.url / second.url 即可）
+# ---------------------------------------------------------------------------
+#
+# 1) 文件库 / 目录式嵌入式（默认，本文件已配置）
+#    数据库以目录形式落在磁盘上（内含 seg0 等 Derby 文件），重启后数据仍在。
+#    默认：jdbc:derby:embedded/derby/autumn;create=true
+#    说明：embedded/derby/autumn 为相对于进程工作目录的数据库路径（勿与 jar 内 classpath 混淆）。
+#    create=true 表示库不存在时自动创建；若已存在则直接打开。
+#    可改为绝对路径，例如：jdbc:derby:/var/data/autumn/derby-db;create=true
+#
+# 2) 纯内存（单元测试、临时演示）
+#    jdbc:derby:memory:autumn;create=true
+#    不同 JVM 或进程之间不共享；进程结束数据即失。
+#
+# 3) 嵌入式 classpath 资源（只读演示库，少见）
+#    需将 Derby 库文件打包进 classpath 并按官方文档使用 classpath: 子协议；
+#    日常开发优先使用「文件库」或「内存」两种 URL。
+#
+# 环境变量可覆盖 URL：
+#   SPRING_DATASOURCE_DRUID_FIRST_URL / SPRING_DATASOURCE_DRUID_SECOND_URL
+#
+# ---------------------------------------------------------------------------
+# 认证与默认 schema（必读）
+# ---------------------------------------------------------------------------
+# Derby 会将 JDBC 用户名映射为默认 schema。使用常见用户名 sa 时，驱动会尝试使用 schema「SA」，而嵌入式库
+# 默认并不存在该 schema，会出现：Schema 'SA' does not exist。
+# 本文件默认用户名/密码为 APP（Derby 文档中的典型嵌入式账号），对应默认 schema APP。
+# 若曾用错误账号建过库，请删除 embedded/derby 下对应目录后重启，或改用新的数据库路径。
+#
+# MyBatis-Plus 2.x 无法从 jdbc:derby URL 推断库类型；项目内通过 ConfigurationCustomizer +
+# MybatisPlusDerbyDbTypeConfigurer 将全局类型按 db2 注册，与 Db2DerbyRuntimeSqlDialect 一致。
+#
+# 关闭应用：嵌入式库一般随 JVM 退出；若需显式关闭数据库可在文档外单独执行 SHUTDOWN（见 Derby 手册）。
+# 双数据源：first 与 second 若指向同一嵌入式路径，框架会共用一个物理连接池，避免 ERROR XSDB6（重复 boot）。
+# 若仍报 XSDB6：检查是否有另一 Java 进程占用该目录，或删除库目录下 derby.log / 残留锁后重试。
+#
+# 注解整库同步：Derby 走双引号 JDBC 路径 + DerbyRelationalSchemaSql DDL；请使用用户名 APP 避免 schema SA 不存在。
+# =============================================================================
+
+spring:
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    # Boot 默认 10.14：org.apache.derby.jdbc.EmbeddedDriver；若单独升级到 Derby 10.16+ 且 JDK17+，可换 AutoloadedDriver
+    driverClassName: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:org.apache.derby.jdbc.EmbeddedDriver}
+    druid:
+      first:
+        url: ${SPRING_DATASOURCE_DRUID_FIRST_URL:jdbc:derby:embedded/derby/autumn;create=true}
+        username: ${SPRING_DATASOURCE_DRUID_FIRST_USERNAME:APP}
+        password: ${SPRING_DATASOURCE_DRUID_FIRST_PASSWORD:APP}
+      second:
+        url: ${SPRING_DATASOURCE_DRUID_SECOND_URL:jdbc:derby:embedded/derby/autumn;create=true}
+        username: ${SPRING_DATASOURCE_DRUID_SECOND_USERNAME:APP}
+        password: ${SPRING_DATASOURCE_DRUID_SECOND_PASSWORD:APP}
+      initial-size: 5
+      max-active: 50
+      min-idle: 2
+      max-wait: 60000
+      validation-query: ${DRUID_VALIDATION_QUERY:SELECT 1 FROM SYSIBM.SYSDUMMY1}
+      test-while-idle: true
+      test-on-borrow: false
+      test-on-return: false
+      pool-prepared-statements: true
+      max-pool-prepared-statement-per-connection-size: 20
+      filter:
+        wall:
+          config:
+            multi-statement-allow: true
+
+autumn:
+  table:
+    sync-charset: false

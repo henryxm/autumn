@@ -6,7 +6,7 @@ import cn.org.autumn.table.annotation.sql.CharacterSet;
 import cn.org.autumn.table.annotation.sql.Collation;
 import cn.org.autumn.table.annotation.UniqueKeyFields;
 import cn.org.autumn.table.annotation.UniqueKeys;
-import cn.org.autumn.table.mysql.ColumnMeta;
+import cn.org.autumn.table.relational.model.ColumnMeta;
 import cn.org.autumn.table.utils.HumpConvert;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.WordUtils;

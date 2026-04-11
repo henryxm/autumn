@@ -6,8 +6,8 @@ import org.springframework.stereotype.Component;
 import javax.sql.DataSource;
 
 /**
- * SQLite / H2 / HSQLDB / DB2 / Derby / Firebird / Informix / 达梦 / KingbaseES 等：标识符双引号，
- * 元数据与 {@code DROP TABLE} 走 JDBC；注解建表未开放（与 {@link cn.org.autumn.database.DatabaseType#supportsAnnotationTableSync()} 为 false 配合）。
+ * SQLite / H2 / HSQLDB / DB2 / Derby / Firebird / Informix / 达梦 等：标识符双引号，
+ * 元数据、索引与 DDL 走 JDBC + {@link cn.org.autumn.table.relational.RoutingRelationalSchemaSql}。
  */
 @Component
 public class DoubleQuotedJdbcRelationalTableOperations extends AbstractJdbcVendorRelationalTableOperations {

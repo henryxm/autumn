@@ -44,6 +44,8 @@
 
 **备份**：内置 SQL 导出仍仅 **MySQL/MariaDB**；其余库使用各厂商工具。
 
+**内嵌演示库（H2）**：`autumn-web` 提供 **`application-h2.yml`** 等 profile（URL 须含 **`MODE=MySQL`**），运行期由 **`H2EmbeddedMysqlDialect`** 将 **`DatabaseType` 视为 `MYSQL`**；**`QuerySql#createTable` 在该组合下会剥离 H2 不支持的表级 DDL、索引 `USING …`，并将 MySQL 索引前缀长度 `` `col`(n) `` 改为整列 `` `col` ``**（见 `QuerySql#embeddedH2MysqlCompatDdl`）。`TableInit` 启动前会确保 **`Config` 已绑定 `Environment`**。种子数据仍来自 **`InitFactory`**；建表失败在内嵌模式下 **`WARN`** 日志。
+
 ---
 
 ## 3. Dao 与 Provider（强制）

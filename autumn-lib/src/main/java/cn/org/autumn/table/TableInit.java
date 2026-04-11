@@ -4,6 +4,7 @@ import javax.annotation.PostConstruct;
 import java.util.Locale;
 
 import cn.org.autumn.bean.EnvBean;
+import cn.org.autumn.config.Config;
 import cn.org.autumn.table.data.InitType;
 import cn.org.autumn.database.DatabaseHolder;
 import cn.org.autumn.database.DatabaseType;
@@ -13,6 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 
 /**
@@ -49,8 +51,14 @@ public class TableInit {
     @Autowired
     private MysqlTableService mysqlTableService;
 
+    @Autowired
+    private Environment springEnvironment;
+
     @PostConstruct
     public void start() {
+        if (Config.getInstance().getEnvironment() == null && springEnvironment != null) {
+            Config.getInstance().setEnv(springEnvironment);
+        }
         if (!envBean.isTableInit())
             return;
         DatabaseType t = databaseHolder.getType();

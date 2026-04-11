@@ -9,7 +9,7 @@ import cn.org.autumn.table.annotation.UniqueKey;
 import cn.org.autumn.table.annotation.UniqueKeys;
 import cn.org.autumn.table.platform.RelationalTableOperations;
 import cn.org.autumn.table.data.*;
-import cn.org.autumn.table.mysql.ColumnMeta;
+import cn.org.autumn.table.relational.model.ColumnMeta;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.Logger;
@@ -358,7 +358,7 @@ public class MysqlTableService {
         for (IndexInfo indexInfo : indexInfos) {
             boolean has = false;
             for (IndexInfo indexInfo1 : nn) {
-                has = indexInfo.equals(indexInfo1);
+                has = indexInfo.matchesForRelationalSchemaScopedIndex(table.getName(), indexInfo1);
                 if (has)
                     break;
             }
@@ -371,7 +371,7 @@ public class MysqlTableService {
         for (IndexInfo indexInfo : nn) {
             boolean has = false;
             for (IndexInfo indexInfo1 : indexInfos) {
-                has = indexInfo.equals(indexInfo1);
+                has = indexInfo1.matchesForRelationalSchemaScopedIndex(table.getName(), indexInfo);
                 if (has)
                     break;
             }
@@ -473,8 +473,8 @@ public class MysqlTableService {
                                    List<ColumnMeta> tableColumnList,
                                    Map<String, ColumnInfo> fieldMap) {
         for (ColumnMeta sysColumn : tableColumnList) {
-            // 数据库中有该字段时
-            ColumnInfo createTableParam = fieldMap.get(sysColumn.getColumnName());
+            // 数据库中有该字段时（JDBC/Oracle 等可能返回大写列名，与实体 @Column 蛇形小写对齐）
+            ColumnInfo createTableParam = columnInfoByNameIgnoreCase(fieldMap, sysColumn.getColumnName());
             if (createTableParam != null) {
                 // 检查是否要删除已有主键和是否要删除已有唯一约束的代码必须放在其他检查的最前面
                 // 原本是主键，现在不是了，那么要去做删除主键的操作
@@ -667,6 +667,22 @@ public class MysqlTableService {
                 return true;
         }
         return false;
+    }
+
+    private ColumnInfo columnInfoByNameIgnoreCase(Map<String, ColumnInfo> fieldMap, String columnName) {
+        if (columnName == null || fieldMap == null) {
+            return null;
+        }
+        ColumnInfo direct = fieldMap.get(columnName);
+        if (direct != null) {
+            return direct;
+        }
+        for (Map.Entry<String, ColumnInfo> e : fieldMap.entrySet()) {
+            if (e.getKey() != null && e.getKey().equalsIgnoreCase(columnName)) {
+                return e.getValue();
+            }
+        }
+        return null;
     }
 
     /**
@@ -967,7 +983,7 @@ public class MysqlTableService {
                 try {
                     tableDao.createTable(map);
                 } catch (Throwable e) {
-                    log.debug("Create Table:{}", e.getMessage());
+                    log.warn("注解建表失败 [{}]: {}", entry.getKey().getName(), e.toString(), e);
                 }
             }
         }

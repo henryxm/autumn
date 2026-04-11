@@ -26,5 +26,7 @@ nbdist/
 
 logs/
 .storage/
+# 内嵌 H2 文件库（application-h2.yml 默认路径）
+embedded/
 /.vscode/settings.json
 /.env

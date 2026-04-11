@@ -3,7 +3,9 @@ package cn.org.autumn.database.runtime;
 import org.springframework.stereotype.Component;
 
 /**
- * SQLite：双引号标识符；无 {@code TRUNCATE TABLE} 时用 {@code DELETE FROM}；逗号列表判断用 {@code instr}。
+ * SQLite：双引号标识符；{@code LIMIT 1} 单行限制；无 {@code TRUNCATE TABLE} 时用 {@code DELETE FROM}；逗号列表用 {@code instr}。
+ * <p>
+ * 与 {@link cn.org.autumn.database.DatabaseType#SQLITE}、{@link cn.org.autumn.table.relational.dialect.sqlite.SqliteRelationalSchemaSql} 对齐；单行限制沿用接口默认 {@code LIMIT 1}。
  */
 @Component
 public class SqliteRuntimeSqlDialect implements RuntimeSqlDialect {

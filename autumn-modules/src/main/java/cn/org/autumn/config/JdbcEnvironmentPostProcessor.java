@@ -12,18 +12,22 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * 未显式配置 {@code pagehelper.helper-dialect} 时，按主数据源 JDBC URL 推断并注入，
- * 与 {@link DatabaseHolder#getType()}、MyBatis-Plus {@link MybatisPlusConfig#paginationInterceptor()} 对齐。
+ * 按主数据源 JDBC URL（及 {@code autumn.database}、H2 URL 中 {@code MODE=MySQL}）推断并注入：
+ * <ul>
+ *   <li>{@code pagehelper.helper-dialect}（未显式配置时）</li>
+ *   <li>{@code mybatis-plus.global-config.identifier-quote}（未显式配置时）：供 MP 2.x
+ *   {@code SqlReservedWords} 对保留字列名按库转义，避免在实体上写死 {@code @TableField("`order`")} 等与 PostgreSQL 等不兼容的写法</li>
+ * </ul>
+ * 与 {@link DatabaseHolder#getType()}、{@link MybatisPlusConfig#paginationInterceptor()} 对齐。
  */
 public class JdbcEnvironmentPostProcessor implements EnvironmentPostProcessor {
 
     private static final String PAGEHELPER_HELPER_DIALECT = "pagehelper.helper-dialect";
 
+    private static final String MYBATIS_PLUS_IDENTIFIER_QUOTE = "mybatis-plus.global-config.identifier-quote";
+
     @Override
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
-        if (StringUtils.isNotBlank(environment.getProperty(PAGEHELPER_HELPER_DIALECT))) {
-            return;
-        }
         String url = environment.getProperty("spring.datasource.druid.first.url");
         if (StringUtils.isBlank(url)) {
             url = environment.getProperty("spring.datasource.url");
@@ -33,11 +37,20 @@ public class JdbcEnvironmentPostProcessor implements EnvironmentPostProcessor {
             return;
         }
         DatabaseType t = DatabaseHolder.resolveType(url, autumnDb);
-        if (t == DatabaseType.OTHER) {
+
+        Map<String, Object> map = new HashMap<>(4);
+        if (StringUtils.isBlank(environment.getProperty(PAGEHELPER_HELPER_DIALECT)) && t != DatabaseType.OTHER) {
+            map.put(PAGEHELPER_HELPER_DIALECT, t.pageHelperDialectName());
+        }
+        if (StringUtils.isBlank(environment.getProperty(MYBATIS_PLUS_IDENTIFIER_QUOTE))) {
+            String quotePattern = t.mybatisPlusIdentifierQuotePattern();
+            if (quotePattern != null) {
+                map.put(MYBATIS_PLUS_IDENTIFIER_QUOTE, quotePattern);
+            }
+        }
+        if (map.isEmpty()) {
             return;
         }
-        Map<String, Object> map = new HashMap<>(2);
-        map.put(PAGEHELPER_HELPER_DIALECT, t.pageHelperDialectName());
         environment.getPropertySources().addFirst(new MapPropertySource("jdbcInferredPageHelper", map));
     }
 }

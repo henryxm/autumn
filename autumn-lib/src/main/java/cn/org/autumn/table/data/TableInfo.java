@@ -2,7 +2,7 @@ package cn.org.autumn.table.data;
 
 import cn.org.autumn.table.annotation.*;
 import cn.org.autumn.table.annotation.sql.CharacterSet;
-import cn.org.autumn.table.mysql.TableMeta;
+import cn.org.autumn.table.relational.model.TableMeta;
 import cn.org.autumn.table.utils.HumpConvert;
 import com.baomidou.mybatisplus.annotations.TableName;
 import lombok.Getter;
@@ -10,8 +10,6 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.WordUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Field;
 import java.util.*;

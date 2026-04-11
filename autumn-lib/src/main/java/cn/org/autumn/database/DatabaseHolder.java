@@ -33,9 +33,14 @@ public class DatabaseHolder {
 
     /**
      * 与 {@link #getType()} 相同解析规则，供无 Spring 注入场景（如 {@link cn.org.autumn.database.runtime.RuntimeSqlDialectRegistry}）使用。
+     * <p>
+     * {@code jdbc:h2:...} 且 URL 含 {@code MODE=MySQL} 时返回 {@link DatabaseType#MYSQL}（内嵌 MySQL 兼容 H2）。
      */
     public static DatabaseType resolveType(String jdbcUrl, String autumnDatabaseRaw) {
         String u = jdbcUrl == null ? "" : jdbcUrl.trim();
+        if (H2EmbeddedMysqlDialect.isActive(u)) {
+            return DatabaseType.MYSQL;
+        }
         DatabaseType fromUrl = inferFromJdbcUrl(u);
         if (StringUtils.isNotBlank(autumnDatabaseRaw)) {
             DatabaseType cfg = DatabaseType.fromConfig(autumnDatabaseRaw);
