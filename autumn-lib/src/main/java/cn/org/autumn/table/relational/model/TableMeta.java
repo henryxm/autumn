@@ -1,7 +1,10 @@
-package cn.org.autumn.table.mysql;
+package cn.org.autumn.table.relational.model;
 
 import java.util.Date;
 
+/**
+ * 表级元数据（与 JDBC / information_schema 风格字段对齐）。
+ */
 public class TableMeta {
 
     private String tableCatalog;

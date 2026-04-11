@@ -21,6 +21,15 @@ public final class RuntimeSqlDialectRegistry {
     private static final RuntimeSqlDialect POSTGRESQL_STATELESS = new PostgresqlRuntimeSqlDialect();
     private static final RuntimeSqlDialect ORACLE_STATELESS = new OracleRuntimeSqlDialect();
     private static final RuntimeSqlDialect SQLSERVER_STATELESS = new SqlServerRuntimeSqlDialect();
+    private static final RuntimeSqlDialect SQLITE_STATELESS = new SqliteRuntimeSqlDialect();
+    private static final RuntimeSqlDialect H2_STATELESS = new H2RuntimeSqlDialect();
+    private static final RuntimeSqlDialect DB2_DERBY_STATELESS = new Db2DerbyRuntimeSqlDialect();
+    private static final RuntimeSqlDialect FIREBIRD_STATELESS = new FirebirdRuntimeSqlDialect();
+    private static final RuntimeSqlDialect INFORMIX_STATELESS = new InformixRuntimeSqlDialect();
+    private static final RuntimeSqlDialect KINGBASE_STATELESS = new KingbaseRuntimeSqlDialect();
+    private static final RuntimeSqlDialect TIDB_STATELESS = new TidbRuntimeSqlDialect();
+    private static final RuntimeSqlDialect OCEANBASE_MYSQL_STATELESS = new OceanBaseMysqlRuntimeSqlDialect();
+    private static final RuntimeSqlDialect OCEANBASE_ORACLE_STATELESS = new OceanBaseOracleRuntimeSqlDialect();
 
     private static volatile RuntimeSqlDialect dialect = MYSQL_STATELESS;
 
@@ -47,7 +56,7 @@ public final class RuntimeSqlDialectRegistry {
     }
 
     /**
-     * 与 {@link DatabaseHolder#getType()} 对齐：先 JDBC URL，再 {@code autumn.database}。
+     * 与 {@link DatabaseHolder#getType()} 对齐。
      */
     private static RuntimeSqlDialect resolveStatelessFromEnvironment() {
         try {
@@ -59,8 +68,7 @@ public final class RuntimeSqlDialectRegistry {
             if (StringUtils.isBlank(url)) {
                 url = env.getProperty("spring.datasource.url");
             }
-            DatabaseType fromUrl = DatabaseHolder.inferFromJdbcUrl(url);
-            DatabaseType t = fromUrl != null ? fromUrl : DatabaseType.fromConfig(env.getProperty("autumn.database"));
+            DatabaseType t = DatabaseHolder.resolveType(url, env.getProperty("autumn.database"));
             return statelessForType(t);
         } catch (Exception ignored) {
             return null;
@@ -74,10 +82,32 @@ public final class RuntimeSqlDialectRegistry {
         switch (t) {
             case POSTGRESQL:
                 return POSTGRESQL_STATELESS;
+            case KINGBASE:
+                return KINGBASE_STATELESS;
             case ORACLE:
                 return ORACLE_STATELESS;
+            case OCEANBASE_ORACLE:
+                return OCEANBASE_ORACLE_STATELESS;
             case SQLSERVER:
                 return SQLSERVER_STATELESS;
+            case DAMENG:
+                return ORACLE_STATELESS;
+            case TIDB:
+                return TIDB_STATELESS;
+            case OCEANBASE_MYSQL:
+                return OCEANBASE_MYSQL_STATELESS;
+            case SQLITE:
+                return SQLITE_STATELESS;
+            case H2:
+            case HSQLDB:
+                return H2_STATELESS;
+            case DB2:
+            case DERBY:
+                return DB2_DERBY_STATELESS;
+            case FIREBIRD:
+                return FIREBIRD_STATELESS;
+            case INFORMIX:
+                return INFORMIX_STATELESS;
             case MYSQL:
             case MARIADB:
             case OTHER:

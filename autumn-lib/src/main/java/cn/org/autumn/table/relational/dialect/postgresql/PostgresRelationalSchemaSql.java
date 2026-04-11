@@ -1,6 +1,7 @@
-package cn.org.autumn.table.dao.postgresql;
+package cn.org.autumn.table.relational.dialect.postgresql;
 
 import cn.org.autumn.table.annotation.IndexTypeEnum;
+import cn.org.autumn.table.relational.RelationalSchemaSql;
 import cn.org.autumn.table.data.ColumnInfo;
 import cn.org.autumn.table.data.IndexInfo;
 import cn.org.autumn.table.data.TableInfo;
@@ -15,11 +16,13 @@ import java.util.Map.Entry;
 
 /**
  * PostgreSQL 方言：供 {@link PostgresTableDao} 的 {@code @SelectProvider} 使用。
- * 与 {@link cn.org.autumn.table.mysql.QuerySql} 方法名保持一致，便于共享调用约定。
+ * 实现 {@link RelationalSchemaSql}，与 MySQL 族、H2-MySQL 兼容实现平级。
  */
-public class PostgresQuerySql {
+public class PostgresRelationalSchemaSql implements RelationalSchemaSql {
 
-    public static final String paramName = "paramName";
+    public static final PostgresRelationalSchemaSql INSTANCE = new PostgresRelationalSchemaSql();
+
+    public static final String paramName = RelationalSchemaSql.paramName;
     public static final String createTable = "createTable";
     public static final String hasTable = "hasTable";
     public static final String getColumnMetas = "getColumnMetas";
@@ -200,7 +203,7 @@ public class PostgresQuerySql {
     }
 
     public String getTableMetas(Map<String, Object> map) {
-        String tableName = (String) map.get(paramName);
+        String tableName = (String) map.get(RelationalSchemaSql.paramName);
         int offset = 0;
         if (map.containsKey("offset")) {
             offset = (int) map.get("offset");
@@ -254,13 +257,13 @@ public class PostgresQuerySql {
     }
 
     public String dropTable(Map<String, String> map) {
-        String tableName = map.get(paramName);
+        String tableName = map.get(RelationalSchemaSql.paramName);
         return "DROP TABLE IF EXISTS " + qi(tableName) + " CASCADE";
     }
 
     public String createTable(final Map<String, Map<TableInfo, List<ColumnInfo>>> map) {
         StringBuilder all = new StringBuilder();
-        Map<TableInfo, List<ColumnInfo>> parameter = map.get(paramName);
+        Map<TableInfo, List<ColumnInfo>> parameter = map.get(RelationalSchemaSql.paramName);
         for (Entry<TableInfo, List<ColumnInfo>> kv : parameter.entrySet()) {
             TableInfo tableInfo = kv.getKey();
             List<ColumnInfo> list = kv.getValue();
@@ -368,7 +371,7 @@ public class PostgresQuerySql {
 
     private String alterColumns(final Map<String, Map<TableInfo, ColumnInfo>> map, String action) {
         StringBuilder sb = new StringBuilder();
-        Map<TableInfo, ColumnInfo> parameter = map.get(paramName);
+        Map<TableInfo, ColumnInfo> parameter = map.get(RelationalSchemaSql.paramName);
         for (Entry<TableInfo, ColumnInfo> kv : parameter.entrySet()) {
             TableInfo tableInfo = kv.getKey();
             ColumnInfo c = kv.getValue();
@@ -392,7 +395,7 @@ public class PostgresQuerySql {
 
     public String dropColumn(final Map<String, Map<TableInfo, String>> map) {
         StringBuilder sb = new StringBuilder();
-        Map<TableInfo, String> parameter = map.get(paramName);
+        Map<TableInfo, String> parameter = map.get(RelationalSchemaSql.paramName);
         for (Entry<TableInfo, String> kv : parameter.entrySet()) {
             sb.append("ALTER TABLE ").append(qi(kv.getKey().getName()))
                     .append(" DROP COLUMN IF EXISTS ").append(qi(kv.getValue())).append(";");
@@ -406,7 +409,7 @@ public class PostgresQuerySql {
 
     public String dropIndex(final Map<String, Map<TableInfo, Object>> map) throws NoSuchFieldException, IllegalAccessException {
         StringBuilder sb = new StringBuilder();
-        Map<TableInfo, Object> parameter = map.get(paramName);
+        Map<TableInfo, Object> parameter = map.get(RelationalSchemaSql.paramName);
         for (Entry<TableInfo, Object> kv : parameter.entrySet()) {
             Object indexInfo = kv.getValue();
             Field field = indexInfo.getClass().getDeclaredField("name");
@@ -419,7 +422,7 @@ public class PostgresQuerySql {
 
     public String addIndex(final Map<String, Map<TableInfo, IndexInfo>> map) {
         StringBuilder sb = new StringBuilder();
-        Map<TableInfo, IndexInfo> parameter = map.get(paramName);
+        Map<TableInfo, IndexInfo> parameter = map.get(RelationalSchemaSql.paramName);
         for (Entry<TableInfo, IndexInfo> ii : parameter.entrySet()) {
             TableInfo table = ii.getKey();
             IndexInfo indexInfo = ii.getValue();

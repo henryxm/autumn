@@ -2,6 +2,8 @@ package cn.org.autumn.service;
 
 import cn.org.autumn.database.runtime.RuntimeSql;
 import cn.org.autumn.database.runtime.RuntimeSqlDialect;
+import cn.org.autumn.database.runtime.RuntimeSqlDialectRegistry;
+import cn.org.autumn.database.runtime.WrapperColumns;
 import cn.org.autumn.model.Parameterized;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -11,7 +13,8 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
  * 避免在具体 Service 中重复 {@code RuntimeSqlDialectRegistry.get()} 与样板方法。
  * <p>
  * 已接入继承链：{@code BaseQueueService} → … → {@link cn.org.autumn.base.ModuleService}，
- * 业务实现类可直接调用 {@link #columnInWrapper(String)}、{@link #quote(String)}、{@link #sql()} 等。
+ * 业务实现类可直接调用 {@link #columnInWrapper(String)}、{@link #quote(String)}、{@link #sql()} 等；
+ * {@link #columnInWrapper(String)} 与 {@link cn.org.autumn.database.runtime.WrapperColumns#columnInWrapper(String)} 同源。
  *
  * @see RuntimeSql
  * @see cn.org.autumn.database.runtime.RuntimeSqlDialectRegistry
@@ -38,7 +41,11 @@ public abstract class DialectService<M extends BaseMapper<T>, T> extends Service
      * MyBatis-Plus {@code EntityWrapper} / {@code orderBy} 等使用的列片段（已含方言引号，处理保留字列名）。
      */
     public String columnInWrapper(String name) {
-        return sql.columnInWrapper(name);
+        return WrapperColumns.columnInWrapper(name);
+    }
+
+    public String column(String name) {
+        return RuntimeSqlDialectRegistry.get().columnInWrapper(name);
     }
 
     /**

@@ -3,16 +3,16 @@ package cn.org.autumn.table.dao;
 import cn.org.autumn.table.data.IndexInfo;
 import cn.org.autumn.table.data.TableInfo;
 import cn.org.autumn.table.data.UniqueKeyInfo;
-import cn.org.autumn.table.mysql.ColumnMeta;
-import cn.org.autumn.table.mysql.QuerySql;
-import cn.org.autumn.table.mysql.TableMeta;
+import cn.org.autumn.table.relational.model.ColumnMeta;
+import cn.org.autumn.table.relational.model.TableMeta;
+import cn.org.autumn.table.relational.provider.QuerySql;
 import org.apache.ibatis.annotations.*;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Map;
 
-import static cn.org.autumn.table.mysql.QuerySql.*;
+import static cn.org.autumn.table.relational.provider.QuerySql.*;
 
 @Mapper
 @Repository

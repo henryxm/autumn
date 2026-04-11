@@ -9,48 +9,48 @@ public class WallCounterSql extends RuntimeSql {
 
     public String urlBlackBump() {
         String c = quote("count");
-        return "update wall_url_black set " + c + " = COALESCE(" + c + ",0) + #{count}, "
+        return "UPDATE " + quote("wall_url_black") + " SET " + c + " = COALESCE(" + c + ",0) + #{count}, "
                 + quote("user_agent") + " = #{userAgent}, "
                 + quote("today") + " = COALESCE(" + quote("today") + ",0) + #{count}, "
                 + quote("update_time") + " = " + currentTimestamp()
-                + " where " + quote("url") + " = #{url}";
+                + " WHERE " + quote("url") + " = #{url}";
     }
 
     public String ipWhiteBump() {
         String c = quote("count");
-        return "update wall_ip_white set " + c + " = COALESCE(" + c + ",0) + #{count}, "
+        return "UPDATE " + quote("wall_ip_white") + " SET " + c + " = COALESCE(" + c + ",0) + #{count}, "
                 + quote("user_agent") + " = #{userAgent}, "
                 + quote("today") + " = COALESCE(" + quote("today") + ",0) + #{count}, "
                 + quote("update_time") + " = " + currentTimestamp()
-                + " where " + quote("ip") + " = #{ip}";
+                + " WHERE " + quote("ip") + " = #{ip}";
     }
 
     public String ipVisitBump() {
         String c = quote("count");
-        return "update wall_ip_visit set " + c + " = COALESCE(" + c + ",0) + #{count}, "
+        return "UPDATE " + quote("wall_ip_visit") + " SET " + c + " = COALESCE(" + c + ",0) + #{count}, "
                 + quote("user_agent") + " = #{userAgent}, "
                 + quote("host") + " = #{host}, "
                 + quote("uri") + " = #{uri}, "
                 + quote("refer") + " = #{refer}, "
                 + quote("today") + " = COALESCE(" + quote("today") + ",0) + #{count}, "
                 + quote("update_time") + " = " + currentTimestamp()
-                + " where " + quote("ip") + " = #{ip}";
+                + " WHERE " + quote("ip") + " = #{ip}";
     }
 
     public String ipBlackBump() {
         String c = quote("count");
-        return "update wall_ip_black set " + c + " = COALESCE(" + c + ",0) + #{count}, "
+        return "UPDATE " + quote("wall_ip_black") + " SET " + c + " = COALESCE(" + c + ",0) + #{count}, "
                 + quote("user_agent") + " = #{userAgent}, "
                 + quote("today") + " = COALESCE(" + quote("today") + ",0) + #{count}, "
                 + quote("update_time") + " = " + currentTimestamp()
-                + " where " + quote("ip") + " = #{ip}";
+                + " WHERE " + quote("ip") + " = #{ip}";
     }
 
     public String hostBump() {
         String c = quote("count");
-        return "update wall_host set " + c + " = COALESCE(" + c + ",0) + #{count}, "
+        return "UPDATE " + quote("wall_host") + " SET " + c + " = COALESCE(" + c + ",0) + #{count}, "
                 + quote("today") + " = COALESCE(" + quote("today") + ",0) + #{count}, "
                 + quote("update_time") + " = " + currentTimestamp()
-                + " where " + quote("host") + " = #{host}";
+                + " WHERE " + quote("host") + " = #{host}";
     }
 }

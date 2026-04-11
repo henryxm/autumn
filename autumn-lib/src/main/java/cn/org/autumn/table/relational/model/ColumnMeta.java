@@ -1,5 +1,8 @@
-package cn.org.autumn.table.mysql;
+package cn.org.autumn.table.relational.model;
 
+/**
+ * 表列元数据（与 JDBC / information_schema 风格字段对齐），供各关系库方言共用。
+ */
 public class ColumnMeta {
 
     public static final String COLUMN_NAME_KEY = "columnName";
@@ -81,8 +84,9 @@ public class ColumnMeta {
     }
 
     public Boolean getNullable() {
-        if (null == isNullable || "y".equalsIgnoreCase(isNullable) || "yes".equalsIgnoreCase(isNullable) || "true".equalsIgnoreCase(isNullable) || "1".equalsIgnoreCase(isNullable))
+        if (null == isNullable || "y".equalsIgnoreCase(isNullable) || "yes".equalsIgnoreCase(isNullable) || "true".equalsIgnoreCase(isNullable) || "1".equalsIgnoreCase(isNullable)) {
             return true;
+        }
         return false;
     }
 

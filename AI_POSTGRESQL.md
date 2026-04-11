@@ -1,7 +1,8 @@
 # Autumn PostgreSQL 支持方案（实现说明与兼容性）
 
 > 目标：在**不破坏现有 MySQL/MariaDB 基线**的前提下，为 PostgreSQL 提供可运行的元数据、DDL、分页、手写 SQL 方言与运行时类型兼容。  
-> 关联启动说明摘要：见 `AI_BOOT.md` §「PostgreSQL 支持（摘要）」。
+> **通用多库纪律**（全库兼容默认、`DatabaseType` 清单、Wrapper 边界、Dao **必须 Provider**）：见 **`AI_DATABASE.md`**。  
+> 关联启动说明摘要：见 `AI_BOOT.md` §8「多数据库支持（摘要）」。
 
 ## 1. 背景与问题模型
 
@@ -17,7 +18,7 @@
 
 ### 1.2 设计原则
 
-1. **按库拆分实现**：MySQL 与 PostgreSQL 各自实现类，通过 **`autumn.database`** 与 **`AutumnDatabaseHolder`** 路由。
+1. **按库拆分实现**：MySQL 与 PostgreSQL 各自实现类，通过 **`autumn.database`**、JDBC URL 与 **`DatabaseHolder`**（`resolveType`）路由；全库类型见 **`AI_DATABASE.md` §2**。
 2. **扩展点清晰**：方言接口、表操作接口、Provider SQL 类可独立演进。
 3. **兼容优先**：未单独实现的数据库类型可回退到 MySQL 风格（仅保证启动，语义需后续核对）。
 
@@ -28,8 +29,8 @@
 ### 2.1 `autumn.database`
 
 - **位置**：`application.yml` 注释 + `additional-spring-configuration-metadata.json` 说明。
-- **取值**：`mysql`（默认）、`mariadb`、`postgresql`、`oracle`、`sqlserver`、`other`。
-- **作用**：驱动 `AutumnDatabaseType`、分页方言、`RoutingRelationalTableOperations`、注解建表是否执行、运行时 SQL 方言等。
+- **取值**：以 `DatabaseType#fromConfig` 为准（含 `mysql`、`mariadb`、`postgresql`、`oracle`、`sqlserver`、`sqlite`、`h2`、`kingbase`、`tidb`、`oceanbase_mysql`、`oceanbase_oracle`、`dm` 等）；完整表见 **AI_DATABASE.md** §2。
+- **作用**：驱动 **`DatabaseType`**、分页方言、`RoutingRelationalTableOperations`、注解建表是否执行、运行时 SQL 方言等（与 **`DatabaseHolder`** 联用）。
 
 ### 2.2 保留字物理列名（如 `order`）— 不改库列名
 
@@ -63,8 +64,8 @@
 
 | 组件 | 说明 |
 |------|------|
-| `AutumnDatabaseType` | 枚举：库类型 + `supportsAnnotationTableSync()`（仅 mysql/mariadb/postgresql 为 true） |
-| `AutumnDatabaseHolder` | 读取 `autumn.database` 配置 |
+| `DatabaseType` | 枚举：库类型 + `supportsAnnotationTableSync()`（仅 mysql/mariadb/postgresql 为 true）；全量见 **`AI_DATABASE.md` §2** |
+| `DatabaseHolder` | `getType()` / `resolveType`：JDBC URL + `autumn.database` |
 
 ### 3.2 注解建表与表操作路由
 
@@ -73,7 +74,7 @@
 | `RelationalTableOperations` | 抽象：表是否存在、列元数据、索引、DDL 执行等 |
 | `MysqlRelationalTableOperations` | 委托原 `TableDao` / MySQL 路径 |
 | `PostgresRelationalTableOperations` | 委托 `PostgresTableDao` + PG 脚本执行 |
-| `RoutingRelationalTableOperations`（`@Primary`） | 按 `AutumnDatabaseHolder` 选择实现 |
+| `RoutingRelationalTableOperations`（`@Primary`） | 按 `DatabaseHolder` 选择实现 |
 | `MysqlTableService` | 注入 `RelationalTableOperations` 而非直接使用 `TableDao` |
 | `TableInit` | 仅在 `supportsAnnotationTableSync()` 为 true 时执行同步；否则告警跳过 |
 
@@ -92,7 +93,7 @@
 | **`RuntimeSql`**（**依赖方推荐入口**） | 基类：`cn.org.autumn.database.runtime.RuntimeSql`。业务 `*DaoSql` 类 **`extends RuntimeSql`**，在实例方法里调用 **`quote`、`limitOne`、`likeContainsAny`、`enabledTrueSqlLiteral`、`currentTimestamp`、`truncateTable`、`columnInWrapper`、`columnValueInCommaSeparatedList`** 等；内部通过 **`dialect()`** → `RuntimeSqlDialectRegistry.get()` 取当前方言，**避免**每个类重复编写 `RuntimeSqlDialectRegistry.get()` 样板代码。 |
 | `RuntimeSqlDialect` | 底层接口：`quote`、`columnInWrapper`、`currentTimestamp`、`truncateTable`、`limitOne`（**勿**用于 `COUNT(*)` 等聚合）、`likeContainsAny`、`enabledTrueSqlLiteral`、`columnValueInCommaSeparatedList` 等 |
 | `MysqlRuntimeSqlDialect` / `PostgresqlRuntimeSqlDialect` | 各库实现 |
-| `RoutingRuntimeSqlDialect`（`@Primary`） | 按 `AutumnDatabaseHolder` 委托 |
+| `RoutingRuntimeSqlDialect`（`@Primary`） | 按 `DatabaseHolder` 委托 |
 | `RuntimeSqlDialectRegistry` + `RuntimeSqlDialectBootstrap` | MyBatis 实例化 Provider 类时通常非 Spring 注入；通过静态注册表在运行期解析当前方言（与 `RuntimeSql` / 直接 `get()` 一致） |
 
 #### RuntimeSql 与 MyBatis Provider（给「以本仓库为基础项目」的依赖方）
@@ -211,7 +212,7 @@ FooEntity findOne(@Param("id") Long id);
 
 ## 6. 变更过程（时间线式归纳）
 
-1. **基础设施**：`AutumnDatabaseType`、`AutumnDatabaseHolder`、路由表操作、PG 包、`TableInit` 条件执行、`MapperScan`、示例 `application-postgresql.yml`。
+1. **基础设施**：`DatabaseType`、`DatabaseHolder`、路由表操作、PG 包、`TableInit` 条件执行、`MapperScan`、示例 `application-postgresql.yml`；多库规范见 **`AI_DATABASE.md`**。
 2. **运行时方言**：`RuntimeSqlDialect` 体系与业务 Provider/SQL 分批替换 `limit`、`FIND_IN_SET`、保留字列名等。
 3. **实体与 JDBC**：PG 上 `smallint` vs `boolean` 问题 → 注解层 **`tinyint(1)`→`boolean` DDL** + 存量/业务侧 **`int` 标志位** 双轨。
 4. **MyBatis 反射**：避免 **`getX`/`isX`** 对同一逻辑列冲突。

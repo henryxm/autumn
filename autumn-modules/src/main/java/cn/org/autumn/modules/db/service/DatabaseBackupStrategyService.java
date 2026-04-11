@@ -31,7 +31,7 @@ public class DatabaseBackupStrategyService extends ModuleService<DatabaseBackupS
      * 分页查询策略
      */
     public PageUtils queryPage(Map<String, Object> params) {
-        return queryPage(params, "id");
+        return queryPage(params, columnInWrapper("id"));
     }
 
     /**
@@ -68,7 +68,8 @@ public class DatabaseBackupStrategyService extends ModuleService<DatabaseBackupS
      */
     private void executeScheduledStrategies(String schedule) {
         try {
-            List<DatabaseBackupStrategyEntity> strategies = list(new QueryWrapper<DatabaseBackupStrategyEntity>().eq("enable", true).eq("schedule", schedule));
+            List<DatabaseBackupStrategyEntity> strategies = list(new QueryWrapper<DatabaseBackupStrategyEntity>()
+                    .eq(columnInWrapper("enable"), true).eq(columnInWrapper("schedule"), schedule));
             for (DatabaseBackupStrategyEntity strategy : strategies) {
                 // WEEKLY 策略：检查距离上次执行是否超过7天
                 if ("WEEKLY".equals(schedule) && strategy.getLastRunTime() != null) {

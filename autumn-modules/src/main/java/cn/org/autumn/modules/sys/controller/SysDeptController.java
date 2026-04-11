@@ -120,7 +120,11 @@ public class SysDeptController extends SysAbstractController {
         if (deptList.size() > 0) {
             return R.error("请先删除子部门");
         }
-        sysDeptService.removeById(deptKey);
+        SysDeptEntity dept = sysDeptService.getByDeptKey(deptKey);
+        if (dept == null) {
+            return R.error("部门不存在");
+        }
+        sysDeptService.removeById(dept.getDeptId());
         return R.ok();
     }
 }

@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.sys.service;
 
+import cn.org.autumn.database.runtime.WrapperColumns;
 import cn.org.autumn.site.InitFactory;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -18,7 +19,6 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Arrays;
 import java.util.Date;
 import java.util.Map;
 
@@ -79,7 +79,7 @@ public class SysRoleService extends ServiceImpl<SysRoleDao, SysRoleEntity> imple
     public PageUtils queryPage(Map<String, Object> params) {
         String roleName = (String) params.get("roleName");
         QueryWrapper<SysRoleEntity> entityEntityWrapper = new QueryWrapper<SysRoleEntity>()
-                .like(StringUtils.isNotBlank(roleName), "role_name", roleName)
+                .like(StringUtils.isNotBlank(roleName), WrapperColumns.columnInWrapper("role_name"), roleName)
                 .apply(params.get(Constant.SQL_FILTER) != null, (String) params.get(Constant.SQL_FILTER));
         Page<SysRoleEntity> page = this.page(
                 new Query<SysRoleEntity>(params).getPage(),
@@ -116,8 +116,12 @@ public class SysRoleService extends ServiceImpl<SysRoleDao, SysRoleEntity> imple
 
     @Transactional(rollbackFor = Exception.class)
     public void deleteBatch(String[] roleKeys) {
-        //删除角色
-        this.removeBatchByIds(Arrays.asList(roleKeys));
+        for (String roleKey : roleKeys) {
+            SysRoleEntity role = getByRoleKey(roleKey);
+            if (role != null) {
+                this.removeById(role.getRoleId());
+            }
+        }
         //删除角色与菜单关联
         sysRoleMenuService.deleteBatch(roleKeys);
         //删除角色与部门关联

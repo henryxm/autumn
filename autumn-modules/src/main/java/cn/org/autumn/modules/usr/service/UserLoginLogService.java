@@ -54,22 +54,22 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
             Object whiteObj = params.get("white");
             String createStart = mapStr(params, "createStart");
             String createEnd = mapStr(params, "createEnd");
-            ew.like(StringUtils.isNotBlank(uuid), "uuid", uuid);
-            ew.like(StringUtils.isNotBlank(ip), "ip", ip);
-            ew.like(StringUtils.isNotBlank(account), "account", account);
-            ew.eq(StringUtils.isNotBlank(way), "way", way);
-            ew.like(StringUtils.isNotBlank(host), "host", host);
-            ew.like(StringUtils.isNotBlank(session), "session", session);
-            ew.like(StringUtils.isNotBlank(path), "path", path);
-            ew.like(StringUtils.isNotBlank(reason), "reason", reason);
-            ew.like(StringUtils.isNotBlank(agent), "agent", agent);
+            ew.like(StringUtils.isNotBlank(uuid), columnInWrapper("uuid"), uuid);
+            ew.like(StringUtils.isNotBlank(ip), columnInWrapper("ip"), ip);
+            ew.like(StringUtils.isNotBlank(account), columnInWrapper("account"), account);
+            ew.eq(StringUtils.isNotBlank(way), columnInWrapper("way"), way);
+            ew.like(StringUtils.isNotBlank(host), columnInWrapper("host"), host);
+            ew.like(StringUtils.isNotBlank(session), columnInWrapper("session"), session);
+            ew.like(StringUtils.isNotBlank(path), columnInWrapper("path"), path);
+            ew.like(StringUtils.isNotBlank(reason), columnInWrapper("reason"), reason);
+            ew.like(StringUtils.isNotBlank(agent), columnInWrapper("agent"), agent);
             if (allowObj != null && StringUtils.isNotBlank(allowObj.toString())) {
                 boolean allow = "true".equalsIgnoreCase(allowObj.toString()) || "1".equals(allowObj.toString());
-                ew.eq("allow", allow);
+                ew.eq(columnInWrapper("allow"), allow);
             }
             if (logoutObj != null && StringUtils.isNotBlank(logoutObj.toString())) {
                 boolean logout = "true".equalsIgnoreCase(logoutObj.toString()) || "1".equals(logoutObj.toString());
-                ew.eq("logout", logout);
+                ew.eq(columnInWrapper("logout"), logout);
             }
             if (whiteObj != null && StringUtils.isNotBlank(whiteObj.toString())) {
                 boolean limit = "true".equalsIgnoreCase(whiteObj.toString()) || "1".equals(whiteObj.toString());
@@ -154,7 +154,7 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
      */
     public List<UserLoginLogEntity> listRecentByUuid(String uuid, int limit) {
         QueryWrapper<UserLoginLogEntity> ew = new QueryWrapper<>();
-        ew.eq("uuid", uuid).orderByDesc(columnInWrapper("create"));
+        ew.eq(columnInWrapper("uuid"), uuid).orderByDesc(columnInWrapper("create"));
         Page<UserLoginLogEntity> p = new Page<>(1, Math.max(1, Math.min(limit, 500)));
         return page(p, ew).getRecords();
     }
@@ -164,7 +164,7 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
      */
     public List<UserLoginLogEntity> listRecentByIp(String ip, int limit) {
         QueryWrapper<UserLoginLogEntity> ew = new QueryWrapper<>();
-        ew.eq("ip", ip).orderByDesc(columnInWrapper("create"));
+        ew.eq(columnInWrapper("ip"), ip).orderByDesc(columnInWrapper("create"));
         Page<UserLoginLogEntity> p = new Page<>(1, Math.max(1, Math.min(limit, 500)));
         return page(p, ew).getRecords();
     }
@@ -175,7 +175,7 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
     public long countByUuid(String uuid) {
         if (StringUtils.isBlank(uuid)) return 0;
         QueryWrapper<UserLoginLogEntity> ew = new QueryWrapper<>();
-        ew.eq("uuid", uuid);
+        ew.eq(columnInWrapper("uuid"), uuid);
         return baseMapper.selectCount(ew);
     }
 
@@ -185,7 +185,7 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
     public long countByIp(String ip) {
         if (StringUtils.isBlank(ip)) return 0;
         QueryWrapper<UserLoginLogEntity> ew = new QueryWrapper<>();
-        ew.eq("ip", ip);
+        ew.eq(columnInWrapper("ip"), ip);
         return baseMapper.selectCount(ew);
     }
 
@@ -213,22 +213,22 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
         Object limitObj = params.get("limit");
         String createStart = mapStr(params, "createStart");
         String createEnd = mapStr(params, "createEnd");
-        ew.like(StringUtils.isNotBlank(uuid), "uuid", uuid);
-        ew.like(StringUtils.isNotBlank(ip), "ip", ip);
-        ew.like(StringUtils.isNotBlank(account), "account", account);
-        ew.eq(StringUtils.isNotBlank(way), "way", way);
-        ew.like(StringUtils.isNotBlank(host), "host", host);
-        ew.like(StringUtils.isNotBlank(session), "session", session);
-        ew.like(StringUtils.isNotBlank(path), "path", path);
-        ew.like(StringUtils.isNotBlank(reason), "reason", reason);
-        ew.like(StringUtils.isNotBlank(agent), "agent", agent);
+        ew.like(StringUtils.isNotBlank(uuid), columnInWrapper("uuid"), uuid);
+        ew.like(StringUtils.isNotBlank(ip), columnInWrapper("ip"), ip);
+        ew.like(StringUtils.isNotBlank(account), columnInWrapper("account"), account);
+        ew.eq(StringUtils.isNotBlank(way), columnInWrapper("way"), way);
+        ew.like(StringUtils.isNotBlank(host), columnInWrapper("host"), host);
+        ew.like(StringUtils.isNotBlank(session), columnInWrapper("session"), session);
+        ew.like(StringUtils.isNotBlank(path), columnInWrapper("path"), path);
+        ew.like(StringUtils.isNotBlank(reason), columnInWrapper("reason"), reason);
+        ew.like(StringUtils.isNotBlank(agent), columnInWrapper("agent"), agent);
         if (allowObj != null && StringUtils.isNotBlank(allowObj.toString())) {
             boolean allow = "true".equalsIgnoreCase(allowObj.toString()) || "1".equals(allowObj.toString());
-            ew.eq("allow", allow);
+            ew.eq(columnInWrapper("allow"), allow);
         }
         if (logoutObj != null && StringUtils.isNotBlank(logoutObj.toString())) {
             boolean logout = "true".equalsIgnoreCase(logoutObj.toString()) || "1".equals(logoutObj.toString());
-            ew.eq("logout", logout);
+            ew.eq(columnInWrapper("logout"), logout);
         }
         if (limitObj != null && StringUtils.isNotBlank(limitObj.toString())) {
             boolean limit = "true".equalsIgnoreCase(limitObj.toString()) || "1".equals(limitObj.toString());
@@ -341,7 +341,7 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
         if (StringUtils.isBlank(uuid))
             return new HashSet<>();
         QueryWrapper<UserLoginLogEntity> ew = new QueryWrapper<>();
-        ew.eq("uuid", uuid).eq(columnInWrapper("white"), true);
+        ew.eq(columnInWrapper("uuid"), uuid).eq(columnInWrapper("white"), true);
         List<UserLoginLogEntity> list = this.list(ew);
         Set<String> ips = new HashSet<>();
         for (UserLoginLogEntity e : list) {

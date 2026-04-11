@@ -148,6 +148,13 @@ if find "$ROOT" -path '*/src/main/java' ! -path '*/target/*' 2>/dev/null | head 
   scan_fixed "concat('%'" '发现 concat 三参模糊写法（宜改用 likeContainsAny；注释/文档亦会命中）'
   scan_pattern 'count\(\*\).*limitOne' '发现 COUNT 与 limitOne 同句（聚合勿追加 limitOne）'
   scan_pattern 'LIMIT[[:space:]]+[0-9]' '发现可能手写 LIMIT（多库时注意方言）'
+  # 老旧 Dao：MyBatis 注解内联 SQL（建议改为 @*Provider + RuntimeSql，见 AI_DATABASE.md §8）
+  scan_pattern '@(Select|Update|Insert|Delete)\(\s*"' '发现 Dao/Mapper 注解内联 SQL 字符串（建议 Provider + RuntimeSql）'
+  scan_pattern '@(Select|Update|Insert|Delete)\(\s*\{' '发现 Dao/Mapper 注解多行 SQL 块 { ... }（建议 Provider + RuntimeSql）'
+  # Wrapper / 链式调用中塞自定义 SQL 片段（需人工判断是否含方言）
+  scan_pattern '\.(apply|last|having)\(' '发现 Wrapper.apply/last/having（请审是否含反引号/单库函数；见 AI_DATABASE.md §8.3）'
+  # 常见 MySQL 专有函数（非 MySQL 族需改造）
+  scan_pattern 'IFNULL\(|DATE_FORMAT\(|GROUP_CONCAT\(|LAST_INSERT_ID\(|STR_TO_DATE\(' '发现疑似 MySQL 专有函数（多库请改写或单库声明）'
 else
   info "未发现 src/main/java，跳过源码模式扫描。"
 fi

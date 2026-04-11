@@ -4,6 +4,8 @@ package cn.org.autumn.database.runtime;
  * 手写 SQL / MyBatis {@code *Provider} 的基类：统一从 {@link RuntimeSqlDialectRegistry} 取当前方言，
  * 子类通过 {@link #quote(String)}、{@link #limitOne()}、{@link #likeContainsAny(String)} 等拼装可移植 SQL，
  * 避免在每个 Provider 中重复 {@code RuntimeSqlDialectRegistry.get()} 与 {@code d()} 样板代码。
+ * <p>
+ * 多库兼容纪律、Wrapper 边界与推荐分层见仓库根目录 {@code AI_DATABASE.md}；PostgreSQL 专项见 {@code AI_POSTGRESQL.md}。
  *
  * @see RuntimeSqlDialect
  */
@@ -25,6 +27,8 @@ public class RuntimeSql {
 
     /**
      * 供 Wrapper 等传入的列片段（已含方言引号）。
+     *
+     * @see WrapperColumns 仅继承 {@link com.baomidou.mybatisplus.service.impl.ServiceImpl} 时用静态入口
      */
     public String columnInWrapper(String name) {
         return dialect().columnInWrapper(name);

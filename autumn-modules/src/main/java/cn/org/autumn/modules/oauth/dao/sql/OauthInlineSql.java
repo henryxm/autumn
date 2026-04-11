@@ -13,27 +13,35 @@ public class OauthInlineSql extends RuntimeSql {
     /** MyBatis 占位符 #{auth}；拆写避免部分解析器误判 */
     private static final String MB_AUTH = "#" + "{" + "auth" + "}";
 
+    private String tblSecurityRequest() {
+        return quote("oauth_security_request");
+    }
+
+    private String tblEncryptKey() {
+        return quote("oauth_encrypt_key");
+    }
+
     public String securityRequestLatest() {
-        return "select * from oauth_security_request where " + quote("enabled") + " = " + enabledTrueSqlLiteral()
-                + " order by " + quote("create") + " desc" + limitOne();
+        return "SELECT * FROM " + tblSecurityRequest() + " WHERE " + quote("enabled") + " = " + enabledTrueSqlLiteral()
+                + " ORDER BY " + quote("create") + " DESC" + limitOne();
     }
 
     public String securityRequestDeleteBefore() {
-        return "delete from oauth_security_request where " + quote("create") + " < #{deadline}";
+        return "DELETE FROM " + tblSecurityRequest() + " WHERE " + quote("create") + " < #{deadline}";
     }
 
     public String encryptKeyBySession() {
-        return "select * from oauth_encrypt_key where " + quote("session") + " = #{session}";
+        return "SELECT * FROM " + tblEncryptKey() + " WHERE " + quote("session") + " = #{session}";
     }
 
     public String securityRequestByAuth() {
         String on = enabledTrueSqlLiteral();
-        return "select * from oauth_security_request where " + quote("enabled") + " = " + on
-                + " and " + quote("auth") + " = " + MB_AUTH + limitOne();
+        return "SELECT * FROM " + tblSecurityRequest() + " WHERE " + quote("enabled") + " = " + on
+                + " AND " + quote("auth") + " = " + MB_AUTH + limitOne();
     }
 
     public String deleteExpiredKeys() {
-        return "DELETE FROM " + quote("oauth_encrypt_key") + " WHERE " + quote("expire") + " IS NOT NULL AND " + quote("expire")
+        return "DELETE FROM " + tblEncryptKey() + " WHERE " + quote("expire") + " IS NOT NULL AND " + quote("expire")
                 + " < #{cleanBeforeTime}";
     }
 }

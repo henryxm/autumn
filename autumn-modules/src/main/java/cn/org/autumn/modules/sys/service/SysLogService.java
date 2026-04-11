@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.sys.service;
 
+import cn.org.autumn.database.runtime.WrapperColumns;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
 import cn.org.autumn.modules.job.task.LoopJob;
@@ -44,9 +45,10 @@ public class SysLogService extends ServiceImpl<SysLogDao, SysLogEntity> implemen
     public PageUtils queryPage(Map<String, Object> params) {
         String key = (String) params.get("key");
         QueryWrapper<SysLogEntity> entityEntityWrapper = new QueryWrapper<>();
+        entityEntityWrapper.like(StringUtils.isNotBlank(key), WrapperColumns.columnInWrapper("username"), key);
         Page<SysLogEntity> page = this.page(
                 new Query<SysLogEntity>(params).getPage(),
-                new QueryWrapper<SysLogEntity>().like(StringUtils.isNotBlank(key), "username", key)
+                entityEntityWrapper
         );
         page.setTotal(baseMapper.selectCount(entityEntityWrapper));
         return new PageUtils(page);

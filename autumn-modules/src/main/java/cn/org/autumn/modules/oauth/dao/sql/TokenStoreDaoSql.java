@@ -7,19 +7,23 @@ import cn.org.autumn.database.runtime.RuntimeSql;
  */
 public class TokenStoreDaoSql extends RuntimeSql {
 
+    private String tbl() {
+        return quote("oauth_token_store");
+    }
+
     public String findByAuthCode() {
-        return "select * from oauth_token_store where auth_code = #{authCode}" + limitOne();
+        return "SELECT * FROM " + tbl() + " WHERE " + quote("auth_code") + " = #{authCode}" + limitOne();
     }
 
     public String findByUserUuid() {
-        return "select * from oauth_token_store where user_uuid = #{userUuid}" + limitOne();
+        return "SELECT * FROM " + tbl() + " WHERE " + quote("user_uuid") + " = #{userUuid}" + limitOne();
     }
 
     public String findByAccessToken() {
-        return "select * from oauth_token_store where access_token = #{accessToken}" + limitOne();
+        return "SELECT * FROM " + tbl() + " WHERE " + quote("access_token") + " = #{accessToken}" + limitOne();
     }
 
     public String findByRefreshToken() {
-        return "select * from oauth_token_store where refresh_token = #{refreshToken}" + limitOne();
+        return "SELECT * FROM " + tbl() + " WHERE " + quote("refresh_token") + " = #{refreshToken}" + limitOne();
     }
 }

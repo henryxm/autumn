@@ -1,9 +1,10 @@
-package cn.org.autumn.table.mysql;
+package cn.org.autumn.table.relational.dialect.mysql;
 
 import cn.org.autumn.table.annotation.IndexTypeEnum;
+import cn.org.autumn.table.relational.RelationalSchemaSql;
+import cn.org.autumn.table.data.ColumnInfo;
 import cn.org.autumn.table.data.IndexInfo;
 import cn.org.autumn.table.data.TableInfo;
-import cn.org.autumn.table.data.ColumnInfo;
 import cn.org.autumn.table.utils.HumpConvert;
 import org.apache.commons.lang3.StringUtils;
 
@@ -12,73 +13,68 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-public class QuerySql {
-    public static final String paramName = "paramName";
-    public static final String createTable = "createTable";
-    public static final String hasTable = "hasTable";
-    public static final String getColumnMetas = "getColumnMetas";
-    public static final String addColumns = "addColumns";
-    public static final String modifyColumn = "modifyColumn";
-    public static final String dropColumn = "dropColumn";
-    public static final String dropPrimaryKey = "dropPrimaryKey";
-    public static final String dropIndex = "dropIndex";
-    public static final String dropTable = "dropTable";
-    public static final String addIndex = "addIndex";
-    public static final String getTableMetas = "getTableMetas";
-    public static final String getTableCharacterSetName = "getTableCharacterSetName";
-    public static final String convertTableCharset = "convertTableCharset";
-    public static final String getTableCount = "getTableCount";
-    public static final String showKeys = "showKeys";
-    public static final String showIndex = "showIndex";
-    public static final String getTableMetasWithMap = "getTableMetasWithMap";
+/**
+ * MySQL / MariaDB / TiDB / OceanBase MySQL 等主路径：不含内嵌 H2 兼容分支。
+ */
+public class MysqlSchemaSql implements RelationalSchemaSql {
 
-    public String getColumnMetas() {
-        return "select * from information_schema.columns where table_name = #{" + paramName + "} and table_schema = (select database()) order by ordinal_position";
+    public static final MysqlSchemaSql INSTANCE = new MysqlSchemaSql();
+
+    protected MysqlSchemaSql() {
     }
 
+    @Override
+    public String getColumnMetas() {
+        return "select * from information_schema.columns where table_name = #{" + RelationalSchemaSql.paramName + "} and table_schema = (select database()) order by ordinal_position";
+    }
+
+    @Override
     public String getTableMetas(Map<String, Object> map) {
-        String tableName = (String) map.get(paramName);
+        String tableName = (String) map.get(RelationalSchemaSql.paramName);
         int offset = 0;
-        if (map.containsKey("offset"))
+        if (map.containsKey("offset")) {
             offset = (int) map.get("offset");
-        if (offset < 0)
+        }
+        if (offset < 0) {
             offset = 0;
+        }
 
         int rows = 0;
-        if (map.containsKey("rows"))
+        if (map.containsKey("rows")) {
             rows = (int) map.get("rows");
-        if (rows <= 0)
+        }
+        if (rows <= 0) {
             rows = Integer.MAX_VALUE;
+        }
         String whereClause = "";
-        if (!StringUtils.isEmpty(tableName))
-            whereClause = " table_name = #{" + paramName + "} and";
+        if (!StringUtils.isEmpty(tableName)) {
+            whereClause = " table_name = #{" + RelationalSchemaSql.paramName + "} and";
+        }
         return "select * from information_schema.tables where" + whereClause + " table_schema = (select database()) order by create_time desc limit " + offset + ", " + rows;
     }
 
+    @Override
     public String getTableCount() {
         return "select count( * ) from information_schema.tables where table_schema = (select database())";
     }
 
+    @Override
     public String hasTable() {
-        return "select count(1) from information_schema.tables" +
-                " where table_name = #{" + paramName + "} and table_schema = (select database())";
+        return "select count(1) from information_schema.tables"
+                + " where table_name = #{" + RelationalSchemaSql.paramName + "} and table_schema = (select database())";
     }
 
-    /**
-     * 当前库中该表的逻辑字符集名（经表级 collation 关联得到），用于与 @Table.charset 比较。
-     */
+    @Override
     public String getTableCharacterSetName() {
         return "SELECT C.CHARACTER_SET_NAME FROM information_schema.TABLES T "
                 + "INNER JOIN information_schema.COLLATION_CHARACTER_SET_APPLICABILITY C "
                 + "ON T.TABLE_COLLATION = C.COLLATION_NAME "
-                + "WHERE T.TABLE_SCHEMA = (SELECT DATABASE()) AND T.TABLE_NAME = #{" + paramName + "}";
+                + "WHERE T.TABLE_SCHEMA = (SELECT DATABASE()) AND T.TABLE_NAME = #{" + RelationalSchemaSql.paramName + "}";
     }
 
-    /**
-     * 整表转换为指定字符集及可选排序规则（含列级转换，可能锁表、大表耗时）。
-     */
+    @Override
     public String convertTableCharset(Map<String, Object> map) {
-        String tableName = (String) map.get(paramName);
+        String tableName = (String) map.get(RelationalSchemaSql.paramName);
         String charset = (String) map.get("charset");
         String collation = (String) map.get("collation");
         if (tableName == null || charset == null || charset.isEmpty()) {
@@ -94,22 +90,55 @@ public class QuerySql {
         return sb.toString();
     }
 
+    @Override
     public String dropTable(Map<String, String> map) {
-        String tableName = map.get(paramName);
+        String tableName = map.get(RelationalSchemaSql.paramName);
         return "DROP TABLE IF EXISTS " + tableName;
     }
 
+    @Override
     public String showKeys(Map<String, String> map) {
-        String tableName = map.get(paramName);
+        String tableName = map.get(RelationalSchemaSql.paramName);
         return "SHOW KEYS FROM " + tableName;
     }
 
+    @Override
     public String showIndex(Map<String, String> map) {
-        String tableName = map.get(paramName);
+        String tableName = map.get(RelationalSchemaSql.paramName);
         return "SHOW INDEX FROM " + tableName;
     }
 
-    private void appendColumnCharsetCollation(ColumnInfo columnInfo, StringBuilder sb) {
+    protected static String stripIndexUsingClauses(String fragment) {
+        if (StringUtils.isBlank(fragment)) {
+            return fragment;
+        }
+        return fragment.replaceAll(" USING [A-Za-z0-9_]+", "");
+    }
+
+    protected static String stripMysqlIndexPrefixLengths(String fragment) {
+        if (StringUtils.isBlank(fragment)) {
+            return fragment;
+        }
+        return fragment.replaceAll("`([^`]+)`\\(\\d+\\)", "`$1`");
+    }
+
+    protected static String h2IndexTablePrefix(String tableName) {
+        if (StringUtils.isBlank(tableName)) {
+            return "t";
+        }
+        return tableName.replaceAll("[^a-zA-Z0-9_]", "_");
+    }
+
+    protected static String flattenH2SecondaryIndexNames(String fragment, String tableName) {
+        if (StringUtils.isBlank(fragment)) {
+            return fragment;
+        }
+        String tab = h2IndexTablePrefix(tableName);
+        String s = fragment.replaceAll("INDEX `([^`]+)` \\(", "INDEX `ix_" + tab + "_$1` (");
+        return s.replaceAll("UNIQUE KEY `([^`]+)` \\(", "UNIQUE KEY `uk_" + tab + "_$1` (");
+    }
+
+    protected void appendColumnCharsetCollation(ColumnInfo columnInfo, StringBuilder sb) {
         if (!columnInfo.supportsSqlCharsetClause()) {
             return;
         }
@@ -123,52 +152,80 @@ public class QuerySql {
         }
     }
 
-    private void appendCommon(ColumnInfo columnInfo, StringBuilder sb) {
-        if (columnInfo.getTypeLength() == 0)
+    protected void appendCommon(ColumnInfo columnInfo, StringBuilder sb) {
+        if (columnInfo.getTypeLength() == 0) {
             sb.append("`" + columnInfo.getName() + "` " + columnInfo.getType());
-        if (columnInfo.getTypeLength() == 1)
+        }
+        if (columnInfo.getTypeLength() == 1) {
             sb.append("`" + columnInfo.getName() + "` " + columnInfo.getType() + "(" + columnInfo.getLength() + ")");
+        }
         if (columnInfo.getTypeLength() == 2) {
             sb.append("`" + columnInfo.getName() + "` ");
             sb.append(columnInfo.getType() + "(" + columnInfo.getLength() + "," + columnInfo.getDecimalLength() + ")");
         }
         appendColumnCharsetCollation(columnInfo, sb);
-        if (columnInfo.isNull())
+        if (columnInfo.isNull()) {
             sb.append(" NULL");
-        else
+        } else {
             sb.append(" NOT NULL");
-        if (columnInfo.isAutoIncrement())
+        }
+        if (columnInfo.isAutoIncrement()) {
             sb.append(" AUTO_INCREMENT");
-//        if (!columnInfo.isAutoIncrement()) {
-//            if (!columnInfo.isNull() && !"NULL".equals(columnInfo.getDefaultValue())) {
-//                sb.append(" DEFAULT " + columnInfo.getDefaultValue());
-//            }
-//        }
+        }
         if (!"NULL".equals(columnInfo.getDefaultValue())) {
             sb.append(" DEFAULT '" + columnInfo.getDefaultValue() + "'");
         }
-        if (!StringUtils.isEmpty(columnInfo.getComment()))
+        if (!StringUtils.isEmpty(columnInfo.getComment())) {
             sb.append(" COMMENT '" + columnInfo.getComment() + "'");
+        }
+    }
+
+    protected void appendCommonEmbeddedH2(ColumnInfo columnInfo, StringBuilder sb) {
+        if (columnInfo.getTypeLength() == 0) {
+            sb.append("`").append(columnInfo.getName()).append("` ").append(columnInfo.getType());
+        }
+        if (columnInfo.getTypeLength() == 1) {
+            sb.append("`").append(columnInfo.getName()).append("` ").append(columnInfo.getType())
+                    .append("(").append(columnInfo.getLength()).append(")");
+        }
+        if (columnInfo.getTypeLength() == 2) {
+            sb.append("`").append(columnInfo.getName()).append("` ");
+            sb.append(columnInfo.getType()).append("(").append(columnInfo.getLength()).append(",")
+                    .append(columnInfo.getDecimalLength()).append(")");
+        }
+        if (columnInfo.isNull()) {
+            sb.append(" NULL");
+        } else {
+            sb.append(" NOT NULL");
+        }
+        if (columnInfo.isAutoIncrement()) {
+            sb.append(" AUTO_INCREMENT");
+        }
+        if (!"NULL".equals(columnInfo.getDefaultValue())) {
+            sb.append(" DEFAULT '").append(columnInfo.getDefaultValue()).append("'");
+        }
     }
 
     private String addColumnsInternal(final Map<String, Map<TableInfo, ColumnInfo>> map, String action) {
         StringBuilder sb = new StringBuilder();
-        Map<TableInfo, ColumnInfo> parameter = map.get(paramName);
+        Map<TableInfo, ColumnInfo> parameter = map.get(RelationalSchemaSql.paramName);
         for (Map.Entry<TableInfo, ColumnInfo> kv : parameter.entrySet()) {
             TableInfo tableInfo = kv.getKey();
             sb.append("ALTER TABLE `" + tableInfo.getName() + "` " + action + " ");
             ColumnInfo columnInfo = kv.getValue();
             appendCommon(columnInfo, sb);
-            if (columnInfo.isKey())
+            if (columnInfo.isKey()) {
                 sb.append(" PRIMARY KEY");
+            }
             sb.append(";");
         }
         return sb.toString();
     }
 
+    @Override
     public String dropColumn(final Map<String, Map<TableInfo, String>> map) {
         StringBuilder stringBuilder = new StringBuilder();
-        Map<TableInfo, String> parameter = map.get(paramName);
+        Map<TableInfo, String> parameter = map.get(RelationalSchemaSql.paramName);
         for (Map.Entry<TableInfo, String> kv : parameter.entrySet()) {
             TableInfo tableInfo = kv.getKey();
             stringBuilder.append("ALTER TABLE `" + tableInfo.getName() + "`");
@@ -179,10 +236,10 @@ public class QuerySql {
         return stringBuilder.toString();
     }
 
-
+    @Override
     public String dropPrimaryKey(final Map<String, Map<TableInfo, ColumnInfo>> map) {
         StringBuilder stringBuilder = new StringBuilder();
-        Map<TableInfo, ColumnInfo> parameter = map.get(paramName);
+        Map<TableInfo, ColumnInfo> parameter = map.get(RelationalSchemaSql.paramName);
         for (Map.Entry<TableInfo, ColumnInfo> kv : parameter.entrySet()) {
             TableInfo tableInfo = kv.getKey();
             stringBuilder.append("ALTER TABLE `" + tableInfo.getName() + "` MODIFY");
@@ -194,9 +251,10 @@ public class QuerySql {
         return stringBuilder.toString();
     }
 
+    @Override
     public String dropIndex(final Map<String, Map<TableInfo, Object>> map) throws NoSuchFieldException, IllegalAccessException {
         StringBuilder stringBuilder = new StringBuilder();
-        Map<TableInfo, Object> parameter = map.get(paramName);
+        Map<TableInfo, Object> parameter = map.get(RelationalSchemaSql.paramName);
         for (Map.Entry<TableInfo, Object> kv : parameter.entrySet()) {
             TableInfo tableInfo = kv.getKey();
             stringBuilder.append("ALTER TABLE `" + tableInfo.getName() + "` DROP INDEX");
@@ -210,84 +268,93 @@ public class QuerySql {
         return stringBuilder.toString();
     }
 
+    @Override
     public String addIndex(final Map<String, Map<TableInfo, IndexInfo>> map) {
         StringBuilder stringBuilder = new StringBuilder();
-        Map<TableInfo, IndexInfo> parameter = map.get(paramName);
+        Map<TableInfo, IndexInfo> parameter = map.get(RelationalSchemaSql.paramName);
         for (Map.Entry<TableInfo, IndexInfo> ii : parameter.entrySet()) {
             stringBuilder.append("ALTER TABLE `" + ii.getKey().getName() + "` ADD ");
             IndexInfo indexInfo = ii.getValue();
-            if (!IndexTypeEnum.NORMAL.toString().equals(indexInfo.getIndexType()))
+            if (!IndexTypeEnum.NORMAL.toString().equals(indexInfo.getIndexType())) {
                 stringBuilder.append(indexInfo.getIndexType() + " ");
+            }
             stringBuilder.append("INDEX ");
-            stringBuilder.append("`" + indexInfo.getName() + "` (");
+            stringBuilder.append("`").append(indexInfo.getName()).append("` (");
             Iterator<Map.Entry<String, Integer>> iterator = indexInfo.getFields().entrySet().iterator();
             while (iterator.hasNext()) {
                 Map.Entry<String, Integer> kv = iterator.next();
-                if (kv.getValue() > 0)
-                    stringBuilder.append("`" + kv.getKey() + "`(" + kv.getValue() + ")");
-                else
-                    stringBuilder.append("`" + kv.getKey() + "`");
+                if (kv.getValue() > 0) {
+                    stringBuilder.append("`").append(kv.getKey()).append("`(").append(kv.getValue()).append(")");
+                } else {
+                    stringBuilder.append("`").append(kv.getKey()).append("`");
+                }
                 if (iterator.hasNext()) {
                     stringBuilder.append(",");
                 }
             }
             stringBuilder.append(")");
-            stringBuilder.append(" USING " + indexInfo.getIndexMethod().toUpperCase() + ";");
+            stringBuilder.append(" USING ").append(indexInfo.getIndexMethod().toUpperCase());
+            stringBuilder.append(";");
         }
         return stringBuilder.toString();
     }
 
-
+    @Override
     public String addColumns(final Map<String, Map<TableInfo, ColumnInfo>> map) {
         return addColumnsInternal(map, "ADD");
     }
 
+    @Override
     public String modifyColumn(final Map<String, Map<TableInfo, ColumnInfo>> map) {
         return addColumnsInternal(map, "MODIFY");
     }
 
+    @Override
     public String createTable(final Map<String, Map<TableInfo, List<ColumnInfo>>> map) {
         StringBuilder stringBuilder = new StringBuilder();
-        Map<TableInfo, List<ColumnInfo>> parameter = map.get(paramName);
+        Map<TableInfo, List<ColumnInfo>> parameter = map.get(RelationalSchemaSql.paramName);
         for (Map.Entry<TableInfo, List<ColumnInfo>> kv : parameter.entrySet()) {
             TableInfo tableInfo = kv.getKey();
-            stringBuilder.append("CREATE TABLE `" + tableInfo.getName() + "`(");
+            stringBuilder.append("CREATE TABLE `").append(tableInfo.getName()).append("`(");
             List<ColumnInfo> list = kv.getValue();
             String primaryKey = "";
-            String uniqueKey = "";
             for (ColumnInfo columnInfo : list) {
                 appendCommon(columnInfo, stringBuilder);
                 if (columnInfo.isKey()) {
                     String split = ",";
-                    if (StringUtils.isBlank(primaryKey))
+                    if (StringUtils.isBlank(primaryKey)) {
                         split = "";
+                    }
                     primaryKey = primaryKey + split + "`" + columnInfo.getName() + "`";
                 }
-                if (columnInfo.isUnique())
-                    stringBuilder.append(", UNIQUE KEY (`" + columnInfo.getName() + "`)");
-
-                if (list.indexOf(columnInfo) != list.size() - 1)
+                if (columnInfo.isUnique()) {
+                    stringBuilder.append(", UNIQUE KEY (`").append(columnInfo.getName()).append("`)");
+                }
+                if (list.indexOf(columnInfo) != list.size() - 1) {
                     stringBuilder.append(", ");
+                }
             }
 
             if (!StringUtils.isBlank(primaryKey)) {
-                stringBuilder.append(", PRIMARY KEY (" + primaryKey + ") USING BTREE");
+                stringBuilder.append(", PRIMARY KEY (").append(primaryKey).append(")");
+                stringBuilder.append(" USING BTREE");
             }
             if (tableInfo.getUniqueKeyInfos().size() > 0) {
-                stringBuilder.append(", " + tableInfo.buildUniqueSql());
+                stringBuilder.append(", ").append(tableInfo.buildUniqueSql());
             }
             if (tableInfo.getIndexInfos().size() > 0) {
-                stringBuilder.append(", " + tableInfo.buildIndexSql());
+                stringBuilder.append(", ").append(tableInfo.buildIndexSql());
             }
 
             stringBuilder.append(")");
-            stringBuilder.append(" ENGINE=" + tableInfo.getEngine());
-            stringBuilder.append(" DEFAULT CHARACTER SET " + tableInfo.getCharset());
+            stringBuilder.append(" ENGINE=").append(tableInfo.getEngine());
+            stringBuilder.append(" DEFAULT CHARACTER SET ").append(tableInfo.getCharset());
             if (StringUtils.isNotBlank(tableInfo.getCollation())) {
                 stringBuilder.append(" COLLATE ").append(tableInfo.getCollation());
             }
-            if (!StringUtils.isEmpty(tableInfo.getComment()))
-                stringBuilder.append(" COMMENT='" + tableInfo.getComment() + "'");
+            if (!StringUtils.isEmpty(tableInfo.getComment())) {
+                stringBuilder.append(" COMMENT='").append(tableInfo.getComment()).append("'");
+            }
             stringBuilder.append(";");
         }
         return stringBuilder.toString();

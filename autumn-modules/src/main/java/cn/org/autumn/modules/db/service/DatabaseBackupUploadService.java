@@ -34,7 +34,7 @@ public class DatabaseBackupUploadService extends ModuleService<DatabaseBackupUpl
      * 分页查询上传记录
      */
     public PageUtils queryPage(Map<String, Object> params) {
-        return queryPage(params, "id");
+        return queryPage(params, columnInWrapper("id"));
     }
 
     /**

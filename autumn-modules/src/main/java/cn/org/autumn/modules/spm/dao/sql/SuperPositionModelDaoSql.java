@@ -7,11 +7,15 @@ import cn.org.autumn.database.runtime.RuntimeSql;
  */
 public class SuperPositionModelDaoSql extends RuntimeSql {
 
+    private String tbl() {
+        return quote("spm_super_position_model");
+    }
+
     public String getByResourceId() {
-        return "select * from spm_super_position_model where resource_id = #{resourceId}" + limitOne();
+        return "SELECT * FROM " + tbl() + " WHERE " + quote("resource_id") + " = #{resourceId}" + limitOne();
     }
 
     public String getByUrlKey() {
-        return "select * from spm_super_position_model where url_key = #{urlKey}" + limitOne();
+        return "SELECT * FROM " + tbl() + " WHERE " + quote("url_key") + " = #{urlKey}" + limitOne();
     }
 }

@@ -94,7 +94,7 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
      */
     private void markInterruptedTasks() {
         try {
-            List<DatabaseBackupEntity> interrupted = list(new QueryWrapper<DatabaseBackupEntity>().in("status", Arrays.asList(0, 3, 4)));
+            List<DatabaseBackupEntity> interrupted = list(new QueryWrapper<DatabaseBackupEntity>().in(columnInWrapper("status"), Arrays.asList(0, 3, 4)));
             for (DatabaseBackupEntity entity : interrupted) {
                 entity.setStatus(2);
                 entity.setError("应用重启导致任务中断");
@@ -112,7 +112,7 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
      * 分页查询备份记录
      */
     public PageUtils queryPage(Map<String, Object> params) {
-        return queryPage(params, "id");
+        return queryPage(params, columnInWrapper("id"));
     }
 
     // ========================================
@@ -838,13 +838,13 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
         Map<String, Object> stats = new HashMap<>();
         long total = count(new QueryWrapper<>());
         stats.put("total", total);
-        long success = count(new QueryWrapper<DatabaseBackupEntity>().eq("status", 1));
+        long success = count(new QueryWrapper<DatabaseBackupEntity>().eq(columnInWrapper("status"), 1));
         stats.put("success", success);
-        long failed = count(new QueryWrapper<DatabaseBackupEntity>().eq("status", 2));
+        long failed = count(new QueryWrapper<DatabaseBackupEntity>().eq(columnInWrapper("status"), 2));
         stats.put("failed", failed);
         int running = runningTasks.size();
         stats.put("running", running);
-        List<DatabaseBackupEntity> list = list(new QueryWrapper<DatabaseBackupEntity>().eq("status", 1));
+        List<DatabaseBackupEntity> list = list(new QueryWrapper<DatabaseBackupEntity>().eq(columnInWrapper("status"), 1));
         long totalSize = 0;
         for (DatabaseBackupEntity e : list) {
             if (e.getFilesize() != null) {
@@ -905,10 +905,10 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
         // 查询该策略下所有成功的、非永久存储的备份，按创建时间降序
         List<DatabaseBackupEntity> backups = list(
                 new QueryWrapper<DatabaseBackupEntity>()
-                        .eq("strategy_id", strategyId)
-                        .eq("status", 1)
-                        .and(i -> i.eq("permanent", false).or().isNull("permanent"))
-                        .orderByDesc("create_time"));
+                        .eq(columnInWrapper("strategy_id"), strategyId)
+                        .eq(columnInWrapper("status"), 1)
+                        .and(i -> i.eq(columnInWrapper("permanent"), false).or().isNull(columnInWrapper("permanent")))
+                        .orderByDesc(columnInWrapper("create_time")));
         if (backups.size() > maxKeep) {
             for (int i = maxKeep; i < backups.size(); i++) {
                 deleteBackup(backups.get(i).getId());

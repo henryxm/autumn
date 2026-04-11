@@ -6,7 +6,7 @@ import org.springframework.stereotype.Component;
 import javax.sql.DataSource;
 
 /**
- * Oracle：元数据/DROP 走 JDBC；注解同步未开放。
+ * Oracle：JDBC 元数据 + {@link cn.org.autumn.table.relational.RoutingRelationalSchemaSql} 生成的 DDL。
  */
 @Component
 public class OracleJdbcRelationalTableOperations extends AbstractJdbcVendorRelationalTableOperations {

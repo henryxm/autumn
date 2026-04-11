@@ -7,7 +7,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
 /**
- * 根据 {@link DatabaseHolder#getType()} 选择具体方言（优先 JDBC URL，其次 {@code autumn.database}）；PostgreSQL / Oracle / SQL Server 使用独立实现；MySQL、MariaDB 及其它回退到 MySQL 规则。
+ * 根据 {@link DatabaseHolder#getType()} 选择具体方言（优先 JDBC URL，其次 {@code autumn.database}）。
  */
 @Primary
 @Component
@@ -28,18 +28,75 @@ public class RoutingRuntimeSqlDialect implements RuntimeSqlDialect {
     @Autowired
     private SqlServerRuntimeSqlDialect sqlServerRuntimeSqlDialect;
 
+    @Autowired
+    private SqliteRuntimeSqlDialect sqliteRuntimeSqlDialect;
+
+    @Autowired
+    private H2RuntimeSqlDialect h2RuntimeSqlDialect;
+
+    @Autowired
+    private Db2DerbyRuntimeSqlDialect db2DerbyRuntimeSqlDialect;
+
+    @Autowired
+    private FirebirdRuntimeSqlDialect firebirdRuntimeSqlDialect;
+
+    @Autowired
+    private InformixRuntimeSqlDialect informixRuntimeSqlDialect;
+
+    @Autowired
+    private KingbaseRuntimeSqlDialect kingbaseRuntimeSqlDialect;
+
+    @Autowired
+    private TidbRuntimeSqlDialect tidbRuntimeSqlDialect;
+
+    @Autowired
+    private OceanBaseMysqlRuntimeSqlDialect oceanBaseMysqlRuntimeSqlDialect;
+
+    @Autowired
+    private OceanBaseOracleRuntimeSqlDialect oceanBaseOracleRuntimeSqlDialect;
+
     private RuntimeSqlDialect delegate() {
         DatabaseType t = databaseHolder.getType();
         if (t == DatabaseType.POSTGRESQL) {
             return postgresqlRuntimeSqlDialect;
         }
+        if (t == DatabaseType.KINGBASE) {
+            return kingbaseRuntimeSqlDialect;
+        }
         if (t == DatabaseType.ORACLE) {
             return oracleRuntimeSqlDialect;
+        }
+        if (t == DatabaseType.OCEANBASE_ORACLE) {
+            return oceanBaseOracleRuntimeSqlDialect;
         }
         if (t == DatabaseType.SQLSERVER) {
             return sqlServerRuntimeSqlDialect;
         }
-        // MYSQL、MARIADB、OTHER 等与 MySQL 规则一致（MariaDB 与 MySQL 共用 FIND_IN_SET / 反引号）
+        if (t == DatabaseType.DAMENG) {
+            return oracleRuntimeSqlDialect;
+        }
+        if (t == DatabaseType.TIDB) {
+            return tidbRuntimeSqlDialect;
+        }
+        if (t == DatabaseType.OCEANBASE_MYSQL) {
+            return oceanBaseMysqlRuntimeSqlDialect;
+        }
+        if (t == DatabaseType.SQLITE) {
+            return sqliteRuntimeSqlDialect;
+        }
+        if (t == DatabaseType.H2 || t == DatabaseType.HSQLDB) {
+            return h2RuntimeSqlDialect;
+        }
+        if (t == DatabaseType.DB2 || t == DatabaseType.DERBY) {
+            return db2DerbyRuntimeSqlDialect;
+        }
+        if (t == DatabaseType.FIREBIRD) {
+            return firebirdRuntimeSqlDialect;
+        }
+        if (t == DatabaseType.INFORMIX) {
+            return informixRuntimeSqlDialect;
+        }
+        // MYSQL、MARIADB、OTHER 等与 MySQL 规则一致
         return mysqlRuntimeSqlDialect;
     }
 
@@ -61,6 +118,11 @@ public class RoutingRuntimeSqlDialect implements RuntimeSqlDialect {
     @Override
     public String currentTimestamp() {
         return delegate().currentTimestamp();
+    }
+
+    @Override
+    public String truncateTable(String tableName) {
+        return delegate().truncateTable(tableName);
     }
 
     @Override

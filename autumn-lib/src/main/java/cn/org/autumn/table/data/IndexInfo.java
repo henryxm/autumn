@@ -63,25 +63,83 @@ public class IndexInfo {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof IndexInfo)) return false;
-        IndexInfo indexInfo = (IndexInfo) o;
-        Map<String, Integer> f = indexInfo.getFields();
-        List<String> dd = new ArrayList<>();
-        for (Map.Entry<String, Integer> k : f.entrySet()) {
-            dd.add(k.getKey().replace("_", "").toLowerCase().trim());
+        if (this == o) {
+            return true;
         }
-
-        if (f.size() != getFields().size())
+        if (!(o instanceof IndexInfo)) {
             return false;
-        for (String s : getFields().keySet()) {
-            if (!dd.contains(s.replace("_", "").toLowerCase().trim()))
-                return false;
         }
+        IndexInfo that = (IndexInfo) o;
+        return sameIndexColumnsAndKind(that)
+                && indexNamesEqualIgnoreCase(this.getName(), that.getName());
+    }
 
-        return getName().replace("_", "").equalsIgnoreCase(indexInfo.getName().replace("_", "")) &&
-                getIndexType().equals(indexInfo.getIndexType()) &&
-                getIndexMethod().equals(indexInfo.getIndexMethod());
+    /**
+     * Derby / DB2 / PostgreSQL / SQLite 等：索引名在 schema（或库）内全局唯一；注解默认名为列名（如 {@code tag}）会在多表冲突。
+     * DDL 使用 {@code 表名_逻辑名} 落库后，JDBC 读回物理名，与注解 {@link #getName()} 需用本方法比对。
+     */
+    public static boolean relationalSchemaScopedIndexNamesMatch(String tableName, String a, String b) {
+        if (tableName == null) {
+            tableName = "";
+        }
+        if (a == null) {
+            a = "";
+        }
+        if (b == null) {
+            b = "";
+        }
+        if (a.equalsIgnoreCase(b)) {
+            return true;
+        }
+        String prefix = tableName + "_";
+        return a.equalsIgnoreCase(prefix + b) || b.equalsIgnoreCase(prefix + a);
+    }
+
+    /** 与 {@link #equals} 相同的列集合与索引类型/方法约束，不比较名称。 */
+    public boolean sameIndexColumnsAndKind(IndexInfo that) {
+        if (that == null) {
+            return false;
+        }
+        Map<String, Integer> fThis = this.getFields();
+        Map<String, Integer> fThat = that.getFields();
+        if (fThis == null) {
+            fThis = Collections.emptyMap();
+        }
+        if (fThat == null) {
+            fThat = Collections.emptyMap();
+        }
+        if (fThis.size() != fThat.size()) {
+            return false;
+        }
+        Set<String> normThat = new HashSet<>();
+        for (Map.Entry<String, Integer> k : fThat.entrySet()) {
+            normThat.add(normalizeIndexFieldKey(k.getKey()));
+        }
+        for (String s : fThis.keySet()) {
+            if (!normThat.contains(normalizeIndexFieldKey(s))) {
+                return false;
+            }
+        }
+        return Objects.equals(this.getIndexType(), that.getIndexType())
+                && Objects.equals(this.getIndexMethod(), that.getIndexMethod());
+    }
+
+    public boolean matchesForRelationalSchemaScopedIndex(String tableName, IndexInfo that) {
+        return that != null && sameIndexColumnsAndKind(that)
+                && relationalSchemaScopedIndexNamesMatch(tableName, this.getName(), that.getName());
+    }
+
+    private static String normalizeIndexFieldKey(String key) {
+        if (key == null) {
+            return "";
+        }
+        return key.replace("_", "").toLowerCase(Locale.ROOT).trim();
+    }
+
+    private static boolean indexNamesEqualIgnoreCase(String a, String b) {
+        String aa = a == null ? "" : a.replace("_", "");
+        String bb = b == null ? "" : b.replace("_", "");
+        return aa.equalsIgnoreCase(bb);
     }
 
     @Override

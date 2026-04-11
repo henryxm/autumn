@@ -126,7 +126,8 @@
 
 - 应用层开发规范：`@AI_STANDARDS.md`
 - 核心能力详解：`@AI_MAP.md`
-- **PostgreSQL 支持（完整方案、兼容性、变更清单）：`@AI_POSTGRESQL.md`**
+- **多数据库与 SQL 落地（`DatabaseType`、Wrapper 边界、Provider 强制）：`@AI_DATABASE.md`**
+- **PostgreSQL 专项（DDL/元数据、迁移）：`@AI_POSTGRESQL.md`**
 - **依赖方升级 autumn（清单、扫描脚本、自动化边界）：`@AI_UPGRADE.md`**
 - 加解密兼容专项：`@AI_CRYPTO.md`
 - 模块任务模板：`@AI_TEMPLATES.md`
@@ -137,23 +138,24 @@
 
 ## 7. 推荐加载组合
 
-- 日常开发：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md`
+- 日常开发：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md`（写 SQL / Wrapper 时加 `AI_DATABASE.md`）
 - 接口加解密改造：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md + AI_CRYPTO.md`
 - 模块新建/代码生成：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md + AI_CODEGEN.md + AI_TEMPLATES.md`
 - 规范梳理/团队协作：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md + AI_GOVERNANCE.md`
 - 安全改造/攻防演练：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md + AI_SECURITY.md`
-- **PostgreSQL / 多库适配排查：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md + AI_POSTGRESQL.md`**
-- **新增 Mapper 手写 SQL / SqlProvider：`AI_BOOT.md + AI_POSTGRESQL.md`（§ RuntimeSql）**
-- **业务仓库升级 autumn：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md + AI_UPGRADE.md`（多库/PG 时叠加 `AI_POSTGRESQL.md`）**
+- **多库 / Wrapper / Provider / 换库排查：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md + AI_DATABASE.md`（PG 专项再叠 `AI_POSTGRESQL.md`）**
+- **新增 Mapper 手写 SQL / SqlProvider：`AI_BOOT.md + AI_DATABASE.md`（§3～§5）+ `AI_POSTGRESQL.md`（PG 细节）**
+- **业务仓库升级 autumn：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md + AI_UPGRADE.md`（多库时叠 `AI_DATABASE.md`；PG 再叠 `AI_POSTGRESQL.md`）**
 - 仅对照 PG 清单与兼容性、少读其它文档时：可直接打开 `AI_POSTGRESQL.md`（仍建议与 `AI_MAP.md` 中表结构/方言章节交叉核对）。
 
-## 8. PostgreSQL 支持（摘要）
+## 8. 多数据库支持（摘要）
 
-> **完整说明、变更过程与兼容性矩阵见 `AI_POSTGRESQL.md`。**
+> **跨库 SQL 纪律、已支持类型清单、Wrapper 与 Provider 标准：`AI_DATABASE.md`（权威）。**  
+> **PostgreSQL 专项（DDL、`PostgresQuerySql`、迁移）：`AI_POSTGRESQL.md`。**
 
-- **配置**：`autumn.database: postgresql`，数据源与 `pagehelper` 方言对齐；示例见 `application-postgresql.yml`。
-- **路由**：`AutumnDatabaseType` + `RoutingRelationalTableOperations` / `RoutingRuntimeSqlDialect`；注解建表仅对 mysql/mariadb/postgresql 执行同步。
-- **方言与 SQL**：底层为 `RuntimeSqlDialect`（引号、`LIMIT`、`FIND_IN_SET` 替代等）；**业务手写 SQL 推荐**继承 **`RuntimeSql`**（`cn.org.autumn.database.runtime.RuntimeSql`），在 `*DaoSql` 中调用 `quote`、`limitOne`、`likeContainsAny` 等，避免各处重复 `RuntimeSqlDialectRegistry.get()`。详见 **`AI_POSTGRESQL.md` §「RuntimeSql 与 MyBatis Provider」** 与 **`AI_UPGRADE.md` 跨库手写 SQL**。`PostgresQuerySql` 负责 PG DDL/元数据；业务侧逐步用 `*Sql` Provider 替换非移植 SQL。
+- **配置**：`autumn.database` 与主数据源 **JDBC URL** 共同决定 `DatabaseType`（`DatabaseHolder#resolveType`）；TiDB / OceanBase MySQL 等与 `jdbc:mysql` 重叠时须按 **`AI_DATABASE.md` §2** 配置。
+- **路由**：`DatabaseType` + `RoutingRelationalTableOperations` / `RoutingRuntimeSqlDialect`；注解建表仅对 **mysql / mariadb / postgresql** 执行同步。
+- **方言与 SQL**：底层为 `RuntimeSqlDialect`；**默认**业务 SQL 应对已支持类型全量兼容（**`AI_DATABASE.md` §1**）。**手写 SQL 必须**走 **Provider**，并推荐 **`extends RuntimeSql`**，使用 `quote`、`limitOne`、`likeContainsAny`、`columnValueInCommaSeparatedList` 等（**`AI_DATABASE.md` §3～§5**；示例见 **`AI_POSTGRESQL.md`**）。`PostgresQuerySql` 负责 PG DDL/元数据。
 - **类型兼容**：新建 PG 库时 `tinyint(1)` 布尔元数据可落 **`boolean`** 列；**已有 `smallint` 列**可与实体 **`int` 0/1** 对齐，或 **`ALTER ... TYPE boolean USING (...)`**。
 - **MyBatis**：避免同一字段 **`getX(int)` + `boolean isX()`** 并存导致 `Reflector` 冲突；分页 **`COUNT` 不带 `ORDER BY`**（见 `BaseService.selectCountWithoutOrderBy`）。
 - **构建**：JDK 9+ 需 Lombok **`annotationProcessorPaths`**；多模块运行前建议 **`mvn clean install -pl … -am`**，避免本地仓库旧 JAR 与源码不一致。

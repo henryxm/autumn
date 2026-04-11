@@ -1,0 +1,66 @@
+# =============================================================================
+# SQLite：零外部数据库即可本地运行；运行期由 JDBC URL 推断为 sqlite（PageHelper、RuntimeSqlDialect、
+# RelationalTableOperations 双引号路径、SqliteRelationalSchemaSql）。
+#
+# 激活方式（与 dev 等组合）：
+#   --spring.profiles.active=dev,sqlite
+#   或 SPRING_PROFILES_ACTIVE=dev,sqlite
+#
+# ---------------------------------------------------------------------------
+# 三种存储场景（改 spring.datasource.druid.first.url / second.url 即可）
+# ---------------------------------------------------------------------------
+#
+# 1) 文件库（默认，本文件已配置）
+#    数据文件落在运行目录下，进程重启后数据仍在。
+#    默认：./embedded/sqlite/autumn.db
+#    注意：请保证父目录存在（例如 embedded/sqlite）；若不存在请先创建目录，否则部分环境建库会失败。
+#    也可改为绝对路径，例如：jdbc:sqlite:/var/data/sqlite/autumn.db
+#
+# 2) 纯内存（单元测试、临时演示）
+#    jdbc:sqlite::memory:
+#    或命名内存库（多连接可共享）：jdbc:sqlite:file:mem1?mode=memory&cache=shared
+#    进程结束即清空；勿与「需要落盘」的业务混用。
+#
+# 3) 嵌入式 / 只读资源库（少见）
+#    将 .db 打进 classpath 时可用只读形式，例如：
+#    jdbc:sqlite::resource:schema.db
+#    具体以 org.xerial sqlite-jdbc 文档为准；一般本地开发优先用「文件库」。
+#
+# 环境变量可覆盖 URL（与 application-dev.yml 风格一致）：
+#   SPRING_DATASOURCE_DRUID_FIRST_URL / SPRING_DATASOURCE_DRUID_SECOND_URL
+#
+# 注解整库同步：DatabaseType#supportsAnnotationTableSync 对 SQLite 为 false，表结构走 JDBC 元数据路径；
+# autumn.table.* 仍控制是否尝试初始化，与 H2 原生 profile 类似。
+# =============================================================================
+
+spring:
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    driverClassName: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:org.sqlite.JDBC}
+    druid:
+      first:
+        url: ${SPRING_DATASOURCE_DRUID_FIRST_URL:jdbc:sqlite:./embedded/sqlite/autumn.db}
+        username: ${SPRING_DATASOURCE_DRUID_FIRST_USERNAME:sa}
+        password: ${SPRING_DATASOURCE_DRUID_FIRST_PASSWORD:}
+      second:
+        url: ${SPRING_DATASOURCE_DRUID_SECOND_URL:jdbc:sqlite:./embedded/sqlite/autumn.db}
+        username: ${SPRING_DATASOURCE_DRUID_SECOND_USERNAME:sa}
+        password: ${SPRING_DATASOURCE_DRUID_SECOND_PASSWORD:}
+      initial-size: 5
+      max-active: 50
+      min-idle: 2
+      max-wait: 60000
+      validation-query: ${DRUID_VALIDATION_QUERY:SELECT 1}
+      test-while-idle: true
+      test-on-borrow: false
+      test-on-return: false
+      pool-prepared-statements: true
+      max-pool-prepared-statement-per-connection-size: 20
+      filter:
+        wall:
+          config:
+            multi-statement-allow: true
+
+autumn:
+  table:
+    sync-charset: false

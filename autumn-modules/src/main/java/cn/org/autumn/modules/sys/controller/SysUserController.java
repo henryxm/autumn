@@ -117,7 +117,7 @@ public class SysUserController extends SysAbstractController {
     @SysLog("删除用户")
     @RequestMapping("/delete")
     @RequiresPermissions("sys:user:delete")
-    public R delete(@RequestBody String[] uuids) {
+    public R delete(@RequestBody String[] uuids) throws Exception {
         if (ArrayUtils.contains(uuids, "admin")) {
             return R.error("系统管理员不能删除");
         }

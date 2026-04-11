@@ -72,7 +72,7 @@ mybatis-plus:
     db-config:
       #主键类型 AUTO:"数据库ID自增", INPUT:"用户输入ID", ASSIGN_ID:"雪花算法ID", ASSIGN_UUID:"UUID"
       id-type: AUTO
-      # 占位符；MySQL/MariaDB 反引号。PG/Oracle/SQL Server 在 MybatisPlusConfig 中按 autumn.database 覆盖，勿仅依赖本行。
+      # 占位符；MySQL/MariaDB 反引号。PG/Oracle/SQL Server 与 Derby 等在 MybatisPlusConfig 中按数据源类型覆盖，勿仅依赖本行。
       column-format: "`%s`"
       #字段验证策略 NEVER:"忽略判断", NOT_NULL:"非NULL判断", NOT_EMPTY:"非空判断", ALWAYS:"总是加入"
       insert-strategy: ALWAYS

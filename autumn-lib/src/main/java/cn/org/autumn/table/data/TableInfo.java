@@ -2,7 +2,7 @@ package cn.org.autumn.table.data;
 
 import cn.org.autumn.table.annotation.*;
 import cn.org.autumn.table.annotation.sql.CharacterSet;
-import cn.org.autumn.table.mysql.TableMeta;
+import cn.org.autumn.table.relational.model.TableMeta;
 import cn.org.autumn.table.utils.HumpConvert;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Getter;

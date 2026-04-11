@@ -4,7 +4,6 @@ import cn.org.autumn.annotation.Cache;
 import cn.org.autumn.annotation.Caches;
 import cn.org.autumn.config.CacheConfig;
 import cn.org.autumn.model.CacheParam;
-import cn.org.autumn.table.utils.Escape;
 import cn.org.autumn.table.utils.HumpConvert;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -1818,7 +1817,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         String fieldName = cacheField.getName();
         String columnName = HumpConvert.HumpToUnderline(fieldName);
         QueryWrapper<T> wrapper = new QueryWrapper<>();
-        wrapper.eq(Escape.escape(columnName), convertedKey);
+        wrapper.eq(columnInWrapper(columnName), convertedKey);
         T t = getOne(wrapper);
         if (t == null) {
             // 检查 @Cache 注解是否配置了 create=true
@@ -1900,7 +1899,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         String fieldName = cacheField.getName();
         String columnName = HumpConvert.HumpToUnderline(fieldName);
         QueryWrapper<T> wrapper = new QueryWrapper<>();
-        wrapper.eq(Escape.escape(columnName), convertedKey);
+        wrapper.eq(columnInWrapper(columnName), convertedKey);
         T t = getOne(wrapper);
         if (t == null) {
             // 创建新实体，将 key 值设置到对应的缓存字段上
@@ -1976,7 +1975,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         String fieldName = cacheField.getName();
         String columnName = HumpConvert.HumpToUnderline(fieldName);
         QueryWrapper<T> wrapper = new QueryWrapper<>();
-        wrapper.eq(Escape.escape(columnName), convertedKey);
+        wrapper.eq(columnInWrapper(columnName), convertedKey);
         T t = getOne(wrapper);
         if (t == null) {
             // 检查 @Cache 注解是否配置了 create=true
@@ -2048,7 +2047,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         String fieldName = cacheField.getName();
         String columnName = HumpConvert.HumpToUnderline(fieldName);
         QueryWrapper<T> wrapper = new QueryWrapper<>();
-        wrapper.eq(Escape.escape(columnName), convertedKey);
+        wrapper.eq(columnInWrapper(columnName), convertedKey);
         T t = getOne(wrapper);
         if (t == null) {
             Map<String, Object> fieldValues = new HashMap<>();
@@ -2131,7 +2130,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         String fieldName = cacheField.getName();
         String columnName = HumpConvert.HumpToUnderline(fieldName);
         QueryWrapper<T> wrapper = new QueryWrapper<>();
-        wrapper.eq(Escape.escape(columnName), convertedKey);
+        wrapper.eq(columnInWrapper(columnName), convertedKey);
         return getOne(wrapper);
     }
 
@@ -2198,7 +2197,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         String fieldName = cacheField.getName();
         String columnName = HumpConvert.HumpToUnderline(fieldName);
         QueryWrapper<T> wrapper = new QueryWrapper<>();
-        wrapper.eq(Escape.escape(columnName), convertedKey);
+        wrapper.eq(columnInWrapper(columnName), convertedKey);
         return list(wrapper);
     }
 
@@ -2262,7 +2261,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         String fieldName = cacheField.getName();
         String columnName = HumpConvert.HumpToUnderline(fieldName);
         QueryWrapper<T> wrapper = new QueryWrapper<>();
-        wrapper.eq(Escape.escape(columnName), convertedKey);
+        wrapper.eq(columnInWrapper(columnName), convertedKey);
         return list(wrapper);
     }
 
@@ -2341,7 +2340,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         String fieldName = cacheField.getName();
         String columnName = HumpConvert.HumpToUnderline(fieldName);
         QueryWrapper<T> wrapper = new QueryWrapper<>();
-        wrapper.eq(Escape.escape(columnName), convertedKey);
+        wrapper.eq(columnInWrapper(columnName), convertedKey);
         return list(wrapper);
     }
 
@@ -2366,7 +2365,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
                 return null; // 复合 key 的所有字段都必须有值
             }
             String columnName = HumpConvert.HumpToUnderline(fieldName);
-            wrapper.eq(Escape.escape(columnName), value);
+            wrapper.eq(columnInWrapper(columnName), value);
         }
         return getOne(wrapper);
     }
@@ -2427,7 +2426,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
                 return null; // 复合 key 的所有字段都必须有值
             }
             String columnName = HumpConvert.HumpToUnderline(fieldName);
-            wrapper.eq(Escape.escape(columnName), value);
+            wrapper.eq(columnInWrapper(columnName), value);
         }
         return list(wrapper);
     }

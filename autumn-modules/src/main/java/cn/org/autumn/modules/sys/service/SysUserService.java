@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.sys.service;
 
+import cn.org.autumn.database.runtime.WrapperColumns;
 import cn.org.autumn.bean.EnvBean;
 import cn.org.autumn.cluster.UserHandler;
 import cn.org.autumn.cluster.UserMapping;
@@ -214,12 +215,12 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
     @DataFilter(subDept = true, user = false)
     public PageUtils queryPage(Map<String, Object> params) {
         String username = (String) params.get("username");
-        QueryWrapper<SysUserEntity> entityEntityWrapper = new QueryWrapper<>();
+        QueryWrapper<SysUserEntity> entityEntityWrapper = new QueryWrapper<SysUserEntity>()
+                .like(StringUtils.isNotBlank(username), WrapperColumns.columnInWrapper("username"), username)
+                .apply(params.get(Constant.SQL_FILTER) != null, (String) params.get(Constant.SQL_FILTER));
         Page<SysUserEntity> page = this.page(
                 new Query<SysUserEntity>(params).getPage(),
-                new QueryWrapper<SysUserEntity>()
-                        .like(StringUtils.isNotBlank(username), "username", username)
-                        .apply(params.get(Constant.SQL_FILTER) != null, (String) params.get(Constant.SQL_FILTER))
+                entityEntityWrapper
         );
 
         for (SysUserEntity sysUserEntity : page.getRecords()) {

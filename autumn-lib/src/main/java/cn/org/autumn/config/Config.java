@@ -1,5 +1,7 @@
 package cn.org.autumn.config;
 
+import lombok.Getter;
+import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -7,6 +9,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.core.env.Environment;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -17,12 +20,21 @@ public class Config {
     public static final String TEST = "test";
     public static final String PROD = "prod";
 
+    public static final String DERBY = "derby";
+    public static final String H2 = "h2";
+    public static final String SQLITE = "sqlite";
+
     public static final String DEV_DOCKER = "dev-docker";
     public static final String TEST_DOCKER = "test-docker";
     public static final String PROD_DOCKER = "prod-docker";
 
     private static Config instance = null;
+
+    @Getter
+    @Setter
     private ApplicationContext applicationContext;
+
+    @Getter
     private Environment environment;
 
     private Config() {
@@ -42,58 +54,34 @@ public class Config {
     public void setEnv(Environment environment) {
         this.environment = environment;
         ENVs.clear();
-        for (String e : environment.getActiveProfiles()) {
-            ENVs.add(e);
-        }
-    }
-
-    public Environment getEnvironment() {
-        return this.environment;
+        ENVs.addAll(Arrays.asList(environment.getActiveProfiles()));
     }
 
     public static boolean isProd() {
-        if (getInstance().ENVs.contains(Config.PROD) || getInstance().ENVs.contains(Config.PROD_DOCKER))
-            return true;
-        else
-            return false;
+        return getInstance().ENVs.contains(Config.PROD) || getInstance().ENVs.contains(Config.PROD_DOCKER);
     }
 
     public static boolean isDev() {
-        if (getInstance().ENVs.contains(Config.DEV) || getInstance().ENVs.contains(Config.DEV_DOCKER))
-            return true;
-        else
-            return false;
+        return getInstance().ENVs.contains(Config.DEV) || getInstance().ENVs.contains(Config.DEV_DOCKER) || getInstance().ENVs.contains(Config.DERBY) || getInstance().ENVs.contains(Config.H2) || getInstance().ENVs.contains(Config.SQLITE);
     }
 
     public static boolean isTest() {
-        if (getInstance().ENVs.contains(Config.TEST) || getInstance().ENVs.contains(Config.TEST_DOCKER))
-            return true;
-        else
-            return false;
+        return getInstance().ENVs.contains(Config.TEST) || getInstance().ENVs.contains(Config.TEST_DOCKER);
     }
 
     public static boolean linux() {
         String os = System.getProperty("os.name");
-        if (os.toLowerCase().startsWith("linux")) {
-            return true;
-        }
-        return false;
+        return os.toLowerCase().startsWith("linux");
     }
 
     public static boolean windows() {
         String os = System.getProperty("os.name");
-        if (os.toLowerCase().startsWith("win")) {
-            return true;
-        }
-        return false;
+        return os.toLowerCase().startsWith("win");
     }
 
     public static boolean mac() {
         String os = System.getProperty("os.name");
-        if (os.toLowerCase().startsWith("mac")) {
-            return true;
-        }
-        return false;
+        return os.toLowerCase().startsWith("mac");
     }
 
     public static String home() {
@@ -101,14 +89,6 @@ public class Config {
         if (!home.endsWith("/"))
             home = home + "/";
         return home;
-    }
-
-    public void setApplicationContext(ApplicationContext applicationContext) {
-        this.applicationContext = applicationContext;
-    }
-
-    public ApplicationContext getApplicationContext() {
-        return applicationContext;
     }
 
     public static Object getBean(String beanName) {
