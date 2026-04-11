@@ -30,6 +30,10 @@ public class MybatisPlusConfig {
      * {@link com.baomidou.mybatisplus.toolkit.SqlReservedWords#convert} 加引号；若用 {@code db2} 则只转义保留字，
      * {@code param_key} 会变成 {@code PARAM_KEY} 与库表不一致。分页方言仍由 {@link PaginationInterceptor#setDialectType}
      * 的 {@link DatabaseHolder} 决定（derby），不受此处影响。
+     * <p>
+     * Derby 不支持 {@code setNull(i, Types.OTHER)}（MyBatis 默认 {@link JdbcType#OTHER}），也不支持
+     * {@link JdbcType#NULL}（{@code Types.NULL}，驱动报 data type '0'）。未声明 {@code jdbcType} 的空参数需改用
+     * {@link JdbcType#VARCHAR} 等与驱动兼容的类型（与常见嵌入式 Derby + MyBatis 配置一致）。
      */
     private static void applyDerbyDbTypeFromEnvironment(Environment environment, org.apache.ibatis.session.Configuration configuration) {
         String url = environment.getProperty("spring.datasource.druid.first.url");
@@ -39,6 +43,7 @@ public class MybatisPlusConfig {
         if (StringUtils.isBlank(url) || !url.trim().toLowerCase(Locale.ROOT).startsWith("jdbc:derby:")) {
             return;
         }
+        configuration.setJdbcTypeForNull(JdbcType.VARCHAR);
         GlobalConfiguration gc = GlobalConfigUtils.getGlobalConfig(configuration);
         if (gc != null) {
             gc.setDbType("postgresql");

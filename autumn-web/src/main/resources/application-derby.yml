@@ -1,8 +1,9 @@
 # =============================================================================
 # Apache Derby（嵌入式）：零外部数据库即可本地运行；运行期由 JDBC URL 推断为 derby（PageHelper、
 # Db2DerbyRuntimeSqlDialect、RelationalTableOperations 双引号路径、DerbyRelationalSchemaSql）。
-# MyBatis-Plus 全局 dbType 在 Derby 下被设为 postgresql：仅为让 MP 2.x 对所有列名加双引号，与注解 DDL 一致；
-# 真实库仍是 Derby，分页方言仍走 derby（DatabaseHolder），并非把库当成 PostgreSQL。
+# MyBatis-Plus：Derby 在 MP 2.x 中常被推断为 OTHER；需在 SqlInjector 等路径将 dbType 视为 postgresql，
+# 方能使 SqlReservedWords 对所有列加双引号，与注解 DDL 小写列一致（真实库仍是 Derby，分页仍走 derby）。
+# MyBatis 默认 jdbcTypeForNull=OTHER，Derby 不支持；NULL(Types.NULL) 亦不支持；MybatisPlusConfig 在 jdbc:derby 下改为 VARCHAR。
 # Derby 版本由 Spring Boot BOM 决定（2.7 默认 10.14.x，与项目 Java 8 一致）。注解 DDL 已按 10.14 省略 IF NOT EXISTS；
 # 若单独升级到 Derby 10.16+ 且需该语法，需在代码侧区分方言版本（当前 DERBY 一律按 10.14 输出）。
 # JDK 17+ 且使用 Derby 10.16+ 时请将驱动改为 org.apache.derby.iapi.jdbc.AutoloadedDriver（10.14 用 EmbeddedDriver）。
@@ -41,8 +42,8 @@
 # 本文件默认用户名/密码为 APP（Derby 文档中的典型嵌入式账号），对应默认 schema APP。
 # 若曾用错误账号建过库，请删除 embedded/derby 下对应目录后重启，或改用新的数据库路径。
 #
-# MyBatis-Plus 2.x 无法从 jdbc:derby URL 推断库类型；项目内通过 ConfigurationCustomizer +
-# MybatisPlusDerbyDbTypeConfigurer 将全局类型按 db2 注册，与 Db2DerbyRuntimeSqlDialect 一致。
+# MyBatis-Plus 2.x 无法从 jdbc:derby URL 推断库类型；见 AutumnQuotedTableSqlInjector 与 ConfigurationCustomizer /
+# MybatisPlusDerbyDbTypeConfigurer（列名全量双引号与 Db2DerbyRuntimeSqlDialect 等对齐）。
 #
 # 关闭应用：嵌入式库一般随 JVM 退出；若需显式关闭数据库可在文档外单独执行 SHUTDOWN（见 Derby 手册）。
 # 双数据源：first 与 second 若指向同一嵌入式路径，框架会共用一个物理连接池，避免 ERROR XSDB6（重复 boot）。

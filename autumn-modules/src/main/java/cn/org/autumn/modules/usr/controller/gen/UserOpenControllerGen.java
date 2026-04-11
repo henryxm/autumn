@@ -19,7 +19,7 @@ import cn.org.autumn.utils.R;
  *
  * @author User
  * @email henryxm@163.com
- * @date 2025-12
+ * @date 2026-04
  */
 public class UserOpenControllerGen {
 

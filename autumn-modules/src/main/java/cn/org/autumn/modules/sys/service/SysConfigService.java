@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.sys.service;
 
+import cn.org.autumn.database.runtime.WrapperColumns;
 import cn.org.autumn.annotation.ConfigField;
 import cn.org.autumn.bean.EnvBean;
 import cn.org.autumn.cluster.ServiceHandler;
@@ -390,12 +391,12 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     public PageUtils queryPage(Map<String, Object> params, int status) {
         String paramKey = (String) params.get("paramKey");
         EntityWrapper<SysConfigEntity> entityEntityWrapper = new EntityWrapper<>();
-        entityEntityWrapper.like(StringUtils.isNotBlank(paramKey), "param_key", paramKey);
+        entityEntityWrapper.like(StringUtils.isNotBlank(paramKey), WrapperColumns.columnInWrapper("param_key"), paramKey);
         if (status == 2) {
-            entityEntityWrapper.isNotNull("name");
-            entityEntityWrapper.isNotNull("type");
+            entityEntityWrapper.isNotNull(WrapperColumns.columnInWrapper("name"));
+            entityEntityWrapper.isNotNull(WrapperColumns.columnInWrapper("type"));
         }
-        entityEntityWrapper.eq("status", status);
+        entityEntityWrapper.eq(WrapperColumns.columnInWrapper("status"), status);
         Page<SysConfigEntity> page = this.selectPage(
                 new Query<SysConfigEntity>(params).getPage(), entityEntityWrapper
         );

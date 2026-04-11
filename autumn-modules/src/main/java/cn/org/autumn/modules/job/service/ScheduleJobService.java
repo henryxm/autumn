@@ -99,7 +99,7 @@ public class ScheduleJobService extends ModuleService<ScheduleJobDao, ScheduleJo
         Map<String, Object> condition = new HashMap<>();
 
         String beanName = (String) params.get("beanName");
-        entityEntityWrapper.like(StringUtils.isNotBlank(beanName), "bean_name", beanName);
+        entityEntityWrapper.like(StringUtils.isNotBlank(beanName), columnInWrapper("bean_name"), beanName);
 
         _page.setCondition(condition);
         Page<ScheduleJobEntity> page = this.selectPage(_page, entityEntityWrapper);

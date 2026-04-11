@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.sys.service;
 
+import cn.org.autumn.database.runtime.WrapperColumns;
 import cn.org.autumn.site.InitFactory;
 import com.baomidou.mybatisplus.mapper.EntityWrapper;
 import com.baomidou.mybatisplus.plugins.Page;
@@ -78,11 +79,11 @@ public class SysRoleService extends ServiceImpl<SysRoleDao, SysRoleEntity> imple
     public PageUtils queryPage(Map<String, Object> params) {
         String roleName = (String) params.get("roleName");
         EntityWrapper<SysRoleEntity> entityEntityWrapper = new EntityWrapper<>();
+        entityEntityWrapper.like(StringUtils.isNotBlank(roleName), WrapperColumns.columnInWrapper("role_name"), roleName);
+        entityEntityWrapper.addFilterIfNeed(params.get(Constant.SQL_FILTER) != null, (String) params.get(Constant.SQL_FILTER));
         Page<SysRoleEntity> page = this.selectPage(
                 new Query<SysRoleEntity>(params).getPage(),
-                new EntityWrapper<SysRoleEntity>()
-                        .like(StringUtils.isNotBlank(roleName), "role_name", roleName)
-                        .addFilterIfNeed(params.get(Constant.SQL_FILTER) != null, (String) params.get(Constant.SQL_FILTER))
+                entityEntityWrapper
         );
 
         for (SysRoleEntity sysRoleEntity : page.getRecords()) {

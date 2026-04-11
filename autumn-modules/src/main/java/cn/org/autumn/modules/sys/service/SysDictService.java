@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.sys.service;
 
+import cn.org.autumn.database.runtime.WrapperColumns;
 import cn.org.autumn.site.InitFactory;
 import com.baomidou.mybatisplus.mapper.EntityWrapper;
 import com.baomidou.mybatisplus.plugins.Page;
@@ -66,10 +67,10 @@ public class SysDictService extends ServiceImpl<SysDictDao, SysDictEntity> imple
     public PageUtils queryPage(Map<String, Object> params) {
         String name = (String) params.get("name");
         EntityWrapper<SysDictEntity> entityEntityWrapper = new EntityWrapper<>();
+        entityEntityWrapper.like(StringUtils.isNotBlank(name), WrapperColumns.columnInWrapper("name"), name);
         Page<SysDictEntity> page = this.selectPage(
                 new Query<SysDictEntity>(params).getPage(),
-                new EntityWrapper<SysDictEntity>()
-                        .like(StringUtils.isNotBlank(name), "name", name)
+                entityEntityWrapper
         );
         page.setTotal(baseMapper.selectCount(entityEntityWrapper));
         return new PageUtils(page);

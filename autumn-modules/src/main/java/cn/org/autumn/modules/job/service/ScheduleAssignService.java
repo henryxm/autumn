@@ -234,7 +234,7 @@ public class ScheduleAssignService extends ModuleService<ScheduleAssignDao, Sche
         }
         // 更新数据库
         try {
-            ScheduleAssignEntity entity = this.selectOne(new EntityWrapper<ScheduleAssignEntity>().eq("job_id", jobId));
+            ScheduleAssignEntity entity = this.selectOne(new EntityWrapper<ScheduleAssignEntity>().eq(columnInWrapper("job_id"), jobId));
             if (entity != null) {
                 entity.setAssignTag(tag);
                 entity.setUpdateTime(new Date());
@@ -290,7 +290,7 @@ public class ScheduleAssignService extends ModuleService<ScheduleAssignDao, Sche
     public ScheduleAssignEntity getByJobId(String jobId) {
         if (StringUtils.isBlank(jobId)) return null;
         try {
-            return this.selectOne(new EntityWrapper<ScheduleAssignEntity>().eq("job_id", jobId));
+            return this.selectOne(new EntityWrapper<ScheduleAssignEntity>().eq(columnInWrapper("job_id"), jobId));
         } catch (Exception e) {
             log.error("Failed to get assignment for job [{}]: {}", jobId, e.getMessage(), e);
             return null;

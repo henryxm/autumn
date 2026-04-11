@@ -27,6 +27,8 @@ public class RuntimeSql {
 
     /**
      * 供 Wrapper 等传入的列片段（已含方言引号）。
+     *
+     * @see WrapperColumns 仅继承 {@link com.baomidou.mybatisplus.service.impl.ServiceImpl} 时用静态入口
      */
     public String columnInWrapper(String name) {
         return dialect().columnInWrapper(name);
