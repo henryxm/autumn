@@ -13,7 +13,7 @@
 # 1) 文件库（默认，本文件已配置）
 #    数据文件落在运行目录下，进程重启后数据仍在。
 #    默认：./embedded/sqlite/autumn.db
-#    注意：请保证父目录存在（例如 embedded/sqlite）；若不存在请先创建目录，否则部分环境建库会失败。
+#    父目录可由 JdbcEnvironmentPostProcessor 在启动早期自动创建；若仍失败请检查磁盘权限与路径。
 #    也可改为绝对路径，例如：jdbc:sqlite:/var/data/sqlite/autumn.db
 #
 # 2) 纯内存（单元测试、临时演示）
@@ -29,6 +29,10 @@
 # 环境变量可覆盖 URL（与 application-dev.yml 风格一致）：
 #   SPRING_DATASOURCE_DRUID_FIRST_URL / SPRING_DATASOURCE_DRUID_SECOND_URL
 #
+# 连接池参数必须写在 druid.first / druid.second 下（与 @ConfigurationProperties 前缀一致）。
+# 写在 druid 与 first 同级时不会绑定到数据源 Bean，易导致 Druid 默认行为与 SQLite 不兼容（启动卡住等）。
+# first、second 指向同一物理库时，DynamicDataSourceConfig 会共用一个 Druid 池。
+#
 # 注解整库同步：DatabaseType#supportsAnnotationTableSync 对 SQLite 为 false，表结构走 JDBC 元数据路径；
 # autumn.table.* 仍控制是否尝试初始化，与 H2 原生 profile 类似。
 # =============================================================================
@@ -42,20 +46,33 @@ spring:
         url: ${SPRING_DATASOURCE_DRUID_FIRST_URL:jdbc:sqlite:./embedded/sqlite/autumn.db}
         username: ${SPRING_DATASOURCE_DRUID_FIRST_USERNAME:sa}
         password: ${SPRING_DATASOURCE_DRUID_FIRST_PASSWORD:}
+        initial-size: 1
+        min-idle: 1
+        max-active: 16
+        max-wait: 10000
+        validation-query: ${DRUID_VALIDATION_QUERY:SELECT 1}
+        test-while-idle: true
+        test-on-borrow: false
+        test-on-return: false
+        pool-prepared-statements: false
+        max-pool-prepared-statement-per-connection-size: 0
+        # 必须为 false：async-init 时池在后台建连，MyBatis-Plus 刷新阶段取连接会等到 max-wait 超时（active/creating 均为 0）
+        async-init: false
       second:
         url: ${SPRING_DATASOURCE_DRUID_SECOND_URL:jdbc:sqlite:./embedded/sqlite/autumn.db}
         username: ${SPRING_DATASOURCE_DRUID_SECOND_USERNAME:sa}
         password: ${SPRING_DATASOURCE_DRUID_SECOND_PASSWORD:}
-      initial-size: 5
-      max-active: 50
-      min-idle: 2
-      max-wait: 60000
-      validation-query: ${DRUID_VALIDATION_QUERY:SELECT 1}
-      test-while-idle: true
-      test-on-borrow: false
-      test-on-return: false
-      pool-prepared-statements: true
-      max-pool-prepared-statement-per-connection-size: 20
+        initial-size: 1
+        min-idle: 1
+        max-active: 16
+        max-wait: 10000
+        validation-query: ${DRUID_VALIDATION_QUERY:SELECT 1}
+        test-while-idle: true
+        test-on-borrow: false
+        test-on-return: false
+        pool-prepared-statements: false
+        max-pool-prepared-statement-per-connection-size: 0
+        async-init: false
       filter:
         wall:
           config:

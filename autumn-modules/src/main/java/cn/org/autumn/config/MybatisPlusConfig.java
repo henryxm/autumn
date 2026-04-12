@@ -11,6 +11,8 @@ import org.apache.ibatis.plugin.Interceptor;
 import org.apache.ibatis.type.JdbcType;
 import org.apache.ibatis.type.TypeHandlerRegistry;
 import org.mybatis.spring.boot.autoconfigure.ConfigurationCustomizer;
+
+import java.util.Date;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -48,6 +50,25 @@ public class MybatisPlusConfig {
         if (gc != null) {
             gc.setDbType("postgresql");
         }
+    }
+
+    /**
+     * SQLite 日期时间列多为 TEXT，默认 {@link org.apache.ibatis.type.DateTypeHandler} 走 {@link java.sql.ResultSet#getTimestamp} 会解析失败。
+     */
+    private static void applySqliteDateTypeHandlers(Environment environment, org.apache.ibatis.session.Configuration configuration) {
+        String url = environment.getProperty("spring.datasource.druid.first.url");
+        if (StringUtils.isBlank(url)) {
+            url = environment.getProperty("spring.datasource.url");
+        }
+        if (StringUtils.isBlank(url) || !url.trim().toLowerCase(Locale.ROOT).startsWith("jdbc:sqlite:")) {
+            return;
+        }
+        SqliteDateTypeHandler h = new SqliteDateTypeHandler();
+        TypeHandlerRegistry registry = configuration.getTypeHandlerRegistry();
+        registry.register(Date.class, JdbcType.TIMESTAMP, h);
+        registry.register(Date.class, JdbcType.DATE, h);
+        registry.register(Date.class, JdbcType.TIME, h);
+        registry.register(Date.class, h);
     }
 
     /**
@@ -89,6 +110,14 @@ public class MybatisPlusConfig {
         return new BooleanNumericParameterInterceptor(handler);
     }
 
+    /**
+     * SQLite TEXT 日期列：在 ResultSetHandler 入口包装 Statement/ResultSet，保证走 {@code getTimestamp} 的 MP 默认映射也能读库。
+     */
+    @Bean
+    public Interceptor sqliteJdbcResultAccessInterceptor(DatabaseHolder databaseHolder) {
+        return new SqliteJdbcResultAccessInterceptor(databaseHolder);
+    }
+
     @Bean
     public PaginationInterceptor paginationInterceptor() {
         PaginationInterceptor p = new PaginationInterceptor();
@@ -101,8 +130,10 @@ public class MybatisPlusConfig {
      */
     @Bean
     public ConfigurationCustomizer derbyMybatisPlusDbTypeCustomizer(Environment environment) {
-        return (org.apache.ibatis.session.Configuration configuration) ->
-                applyDerbyDbTypeFromEnvironment(environment, configuration);
+        return (org.apache.ibatis.session.Configuration configuration) -> {
+            applyDerbyDbTypeFromEnvironment(environment, configuration);
+            applySqliteDateTypeHandlers(environment, configuration);
+        };
     }
 
     /**
@@ -112,8 +143,10 @@ public class MybatisPlusConfig {
     @Bean
     public com.baomidou.mybatisplus.spring.boot.starter.ConfigurationCustomizer derbyMybatisPlusDbTypeCustomizerForMpStarter(
             Environment environment) {
-        return (org.apache.ibatis.session.Configuration configuration) ->
-                applyDerbyDbTypeFromEnvironment(environment, configuration);
+        return (org.apache.ibatis.session.Configuration configuration) -> {
+            applyDerbyDbTypeFromEnvironment(environment, configuration);
+            applySqliteDateTypeHandlers(environment, configuration);
+        };
     }
 
     @Bean

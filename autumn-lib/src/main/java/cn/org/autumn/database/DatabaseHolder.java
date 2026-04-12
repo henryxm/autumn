@@ -9,7 +9,14 @@ import org.springframework.stereotype.Component;
 import java.util.Locale;
 
 /**
- * 持有当前生效的 {@link DatabaseType}，供路由数据源、分页方言、建表适配等使用。
+ * 持有「应用级」{@link DatabaseType}，供路由数据源、分页方言、Provider SQL、部分 MyBatis 插件等使用。
+ * <p>
+ * <b>范围（重要）</b>：{@link #getType()} 仅由 {@code spring.datasource.druid.first.url}（或回退
+ * {@code spring.datasource.url}）与 {@code autumn.database} 解析得到，表示<b>首数据源（默认库）</b>的方言，
+ * <b>不是</b> {@link cn.org.autumn.datasources.DynamicDataSource} 线程上当前选中的 second 数据源。
+ * 因此「first=MySQL、second=PostgreSQL」等异构双源时，全局仍只会看到 first 的方言；SQLite 专用拦截器等也仅在
+ * first 为 SQLite 时启用。若需按线程/路由键切换方言，应单独设计（例如与 {@code DynamicDataSource} 的
+ * {@code ThreadLocal} 联动扩展本类及 {@link cn.org.autumn.database.runtime.RoutingRuntimeSqlDialect}）。
  */
 @Component
 public class DatabaseHolder {

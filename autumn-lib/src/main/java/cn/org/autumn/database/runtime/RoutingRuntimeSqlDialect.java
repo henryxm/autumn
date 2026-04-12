@@ -7,7 +7,11 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
 /**
- * 根据 {@link DatabaseHolder#getType()} 选择具体方言（优先 JDBC URL，其次 {@code autumn.database}）。
+ * 根据 {@link DatabaseHolder#getType()} 选择具体 {@link RuntimeSqlDialect} 实现。
+ * <p>
+ * 与 {@link DatabaseHolder} 一致：反映的是<b>首数据源</b>方言，非多数据源路由下的「当前连接」方言。
+ * 异构 second 源上的 SQL 仍可能按 first 方言生成（限 Provider/工具层调用路径）；线程级方言属增强需求，见
+ * {@link DatabaseHolder} 类注释。
  */
 @Primary
 @Component
