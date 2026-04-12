@@ -21,9 +21,9 @@ import java.util.Map;
  *   <li>{@code pagehelper.helper-dialect}（未显式配置时）</li>
  *   <li>{@code mybatis-plus.global-config.identifier-quote}（未显式配置时）：供 MP 2.x
  *   {@code SqlReservedWords} 对保留字列名按库转义，避免在实体上写死 {@code @TableField("`order`")} 等与 PostgreSQL 等不兼容的写法</li>
- *   <li><b>仅 SQLite</b>：主数据源 URL 解析为 SQLite 时，若 {@code spring.datasource.druid.first.*} / {@code second.*}
- *   未配置连接池项，则注入 Druid 安全默认值（关闭 PSCache、小池、同步初始化），避免池参数写在 druid 与 first 同级不生效</li>
- *   <li><b>仅 SQLite 文件库</b>：在 Spring 刷新前按 JDBC URL 创建 .db 父目录；非 SQLite 不执行</li>
+ *   <li><b>SQLite</b>：first 或 second 经 URL 解析为 SQLite 时，仅对对应前缀 {@code druid.first.*} / {@code druid.second.*}
+ *   注入 Druid 安全默认值（避免 first=MySQL、second=SQLite 时误改 first 池参数）</li>
+ *   <li><b>SQLite 文件库</b>：对解析为 SQLite 的 JDBC URL 在刷新前创建 .db 父目录</li>
  * </ul>
  * 与 {@link DatabaseHolder#getType()}、{@link MybatisPlusConfig#paginationInterceptor()} 对齐。
  */
@@ -47,25 +47,36 @@ public class JdbcEnvironmentPostProcessor implements EnvironmentPostProcessor {
         if (StringUtils.isBlank(url) && StringUtils.isBlank(autumnDb)) {
             return;
         }
-        DatabaseType t = DatabaseHolder.resolveType(url, autumnDb);
+        DatabaseType tFirst = DatabaseHolder.resolveType(url, autumnDb);
 
         Map<String, Object> map = new HashMap<>(24);
-        if (StringUtils.isBlank(environment.getProperty(PAGEHELPER_HELPER_DIALECT)) && t != DatabaseType.OTHER) {
-            map.put(PAGEHELPER_HELPER_DIALECT, t.pageHelperDialectName());
+        if (StringUtils.isBlank(environment.getProperty(PAGEHELPER_HELPER_DIALECT)) && tFirst != DatabaseType.OTHER) {
+            map.put(PAGEHELPER_HELPER_DIALECT, tFirst.pageHelperDialectName());
         }
         if (StringUtils.isBlank(environment.getProperty(MYBATIS_PLUS_IDENTIFIER_QUOTE))) {
-            String quotePattern = t.mybatisPlusIdentifierQuotePattern();
+            String quotePattern = tFirst.mybatisPlusIdentifierQuotePattern();
             if (quotePattern != null) {
                 map.put(MYBATIS_PLUS_IDENTIFIER_QUOTE, quotePattern);
             }
         }
-        if (t == DatabaseType.SQLITE) {
-            ensureSqliteFileParentDirectories(url);
-            String secondUrl = environment.getProperty("spring.datasource.druid.second.url");
-            if (StringUtils.isNotBlank(secondUrl)) {
-                ensureSqliteFileParentDirectories(secondUrl);
+
+        String secondUrlRaw = environment.getProperty("spring.datasource.druid.second.url");
+        String secondEffectiveUrl = StringUtils.isBlank(secondUrlRaw) ? url : secondUrlRaw;
+        DatabaseType tSecond = DatabaseHolder.resolveType(secondEffectiveUrl, autumnDb);
+
+        if (tFirst == DatabaseType.SQLITE || tSecond == DatabaseType.SQLITE) {
+            if (tFirst == DatabaseType.SQLITE && StringUtils.isNotBlank(url)) {
+                ensureSqliteFileParentDirectories(url);
             }
-            putSqliteDruidDefaultsIfAbsent(environment, map);
+            if (tSecond == DatabaseType.SQLITE && StringUtils.isNotBlank(secondUrlRaw)) {
+                ensureSqliteFileParentDirectories(secondUrlRaw);
+            }
+            if (tFirst == DatabaseType.SQLITE) {
+                putSqliteDruidDefaultsForPrefix(environment, map, DRUID_FIRST_PREFIX);
+            }
+            if (tSecond == DatabaseType.SQLITE) {
+                putSqliteDruidDefaultsForPrefix(environment, map, DRUID_SECOND_PREFIX);
+            }
         }
         if (map.isEmpty()) {
             return;
@@ -74,25 +85,16 @@ public class JdbcEnvironmentPostProcessor implements EnvironmentPostProcessor {
     }
 
     /**
-     * 仅当对应 {@code spring.datasource.druid.first.*} / {@code second.*} 键未配置时写入，
-     * 不覆盖 application 中已写在正确前缀下的值。
+     * 仅当 {@code prefix} 下对应键未配置时写入，不覆盖 application 中已写在正确前缀下的值。
      */
-    private static void putSqliteDruidDefaultsIfAbsent(ConfigurableEnvironment environment, Map<String, Object> map) {
-        putIfPropertyBlank(environment, map, DRUID_FIRST_PREFIX + "initial-size", 1);
-        putIfPropertyBlank(environment, map, DRUID_FIRST_PREFIX + "min-idle", 1);
-        putIfPropertyBlank(environment, map, DRUID_FIRST_PREFIX + "max-active", 16);
-        putIfPropertyBlank(environment, map, DRUID_FIRST_PREFIX + "max-wait", 10000);
-        putIfPropertyBlank(environment, map, DRUID_FIRST_PREFIX + "pool-prepared-statements", false);
-        putIfPropertyBlank(environment, map, DRUID_FIRST_PREFIX + "max-pool-prepared-statement-per-connection-size", 0);
-        putIfPropertyBlank(environment, map, DRUID_FIRST_PREFIX + "async-init", false);
-
-        putIfPropertyBlank(environment, map, DRUID_SECOND_PREFIX + "initial-size", 1);
-        putIfPropertyBlank(environment, map, DRUID_SECOND_PREFIX + "min-idle", 1);
-        putIfPropertyBlank(environment, map, DRUID_SECOND_PREFIX + "max-active", 16);
-        putIfPropertyBlank(environment, map, DRUID_SECOND_PREFIX + "max-wait", 10000);
-        putIfPropertyBlank(environment, map, DRUID_SECOND_PREFIX + "pool-prepared-statements", false);
-        putIfPropertyBlank(environment, map, DRUID_SECOND_PREFIX + "max-pool-prepared-statement-per-connection-size", 0);
-        putIfPropertyBlank(environment, map, DRUID_SECOND_PREFIX + "async-init", false);
+    private static void putSqliteDruidDefaultsForPrefix(ConfigurableEnvironment environment, Map<String, Object> map, String prefix) {
+        putIfPropertyBlank(environment, map, prefix + "initial-size", 1);
+        putIfPropertyBlank(environment, map, prefix + "min-idle", 1);
+        putIfPropertyBlank(environment, map, prefix + "max-active", 16);
+        putIfPropertyBlank(environment, map, prefix + "max-wait", 10000);
+        putIfPropertyBlank(environment, map, prefix + "pool-prepared-statements", false);
+        putIfPropertyBlank(environment, map, prefix + "max-pool-prepared-statement-per-connection-size", 0);
+        putIfPropertyBlank(environment, map, prefix + "async-init", false);
     }
 
     /**

@@ -31,8 +31,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * {@link ResultSet#getString} 并解析。
  * <p>
  * 仅在 {@link cn.org.autumn.database.DatabaseHolder#getType()} 为 {@link cn.org.autumn.database.DatabaseType#SQLITE} 时生效，
- * 不污染其它方言；因 Holder 表示首源，若 second 为 SQLite 而 first 非 SQLite，本拦截不会对 second 上的结果集生效
- * （与 {@link cn.org.autumn.database.DatabaseHolder} 的「首源方言」模型一致，异构线程级方言需另行设计）。
+ * 不污染其它方言。{@link DatabaseHolder#getType()} 在多源场景下与 {@link cn.org.autumn.datasources.DynamicDataSource}
+ * 当前线程 lookup key 及 {@link cn.org.autumn.datasources.DataSourceDialectRegistry} 对齐，故在 {@code @DataSource(SECOND)}
+ * 且 second 为 SQLite 时，本拦截器会对该连接上的结果集生效。
  */
 @Intercepts({
         @Signature(type = ResultSetHandler.class, method = "handleResultSets", args = {Statement.class}),

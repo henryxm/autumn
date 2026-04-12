@@ -19,6 +19,9 @@ import org.springframework.stereotype.Component;
  * 与 {@code "param_key"} 等不匹配。分页方言仍由 {@link cn.org.autumn.database.DatabaseHolder} 的 derby 方言提供。
  * <p>
  * Derby 对 {@code setNull(..., OTHER)} 与 {@code Types.NULL} 均不支持，故将 {@code jdbcTypeForNull} 设为 {@link JdbcType#VARCHAR}。
+ * <p>
+ * <b>限制</b>：{@link GlobalConfiguration#setDbType} 与 {@link org.apache.ibatis.session.Configuration} 为进程级单例，
+ * 首源为 Derby、second 为其它库时，MP 列引号策略无法按线程切换；异构场景需接受该限制或避免在 second 上依赖 MP 自动引号。
  */
 @Component
 public class MybatisPlusDerbyDbTypeConfigurer implements InitializingBean {

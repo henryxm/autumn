@@ -9,9 +9,8 @@ import org.springframework.stereotype.Component;
 /**
  * 根据 {@link DatabaseHolder#getType()} 选择具体 {@link RuntimeSqlDialect} 实现。
  * <p>
- * 与 {@link DatabaseHolder} 一致：反映的是<b>首数据源</b>方言，非多数据源路由下的「当前连接」方言。
- * 异构 second 源上的 SQL 仍可能按 first 方言生成（限 Provider/工具层调用路径）；线程级方言属增强需求，见
- * {@link DatabaseHolder} 类注释。
+ * 与 {@link DatabaseHolder#getType()} 一致：在配置了 {@link cn.org.autumn.datasources.DataSourceDialectRegistry} 时，
+ * 随 {@link cn.org.autumn.datasources.DynamicDataSource} 当前线程 lookup key 切换具体方言实现。
  */
 @Primary
 @Component

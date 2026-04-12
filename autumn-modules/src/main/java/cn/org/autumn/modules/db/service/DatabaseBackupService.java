@@ -31,6 +31,10 @@ import java.util.Date;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
+/**
+ * 使用注入的 {@link DataSource}（通常为动态路由数据源）；连接与 {@link DatabaseHolder#getType()} 均受
+ * {@link cn.org.autumn.datasources.DynamicDataSource} 线程 lookup key 影响，请在异步/定时任务中注意与切面一致的清理。
+ */
 @Slf4j
 @Service
 public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, DatabaseBackupEntity> {
@@ -353,10 +357,12 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
      * 使用纯JDBC导出数据库
      */
     private int[] exportDatabase(BackupTask task) throws Exception {
-        DatabaseType dbType = databaseHolder.getType();
+        DatabaseType logicalType = databaseHolder.getType();
         try (Connection conn = dataSource.getConnection();
              BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(task.outputPath), StandardCharsets.UTF_8))) {
-            List<String> tablesToBackup = DatabaseBackupSqlExportSupport.resolveTableList(conn, dbType, task.mode, task.tableList);
+            DatabaseType physicalType = DatabaseBackupSqlExportSupport.inferPhysicalJdbcType(conn);
+            DatabaseType exportType = physicalType != null ? physicalType : logicalType;
+            List<String> tablesToBackup = DatabaseBackupSqlExportSupport.resolveTableList(conn, exportType, task.mode, task.tableList);
             int tableCount = tablesToBackup.size();
             DatabaseBackupEntity entity = selectById(task.backupId);
             if (entity != null) {
@@ -364,10 +370,10 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
                 entity.setTables(tableCount);
                 updateById(entity);
             }
-            if (DatabaseBackupSqlExportSupport.usesShowCreateTable(dbType)) {
-                return DatabaseBackupSqlExportSupport.exportMysqlFamily(conn, writer, task, tablesToBackup, dbType, this::updateProgress);
+            if (DatabaseBackupSqlExportSupport.usesShowCreateTable(logicalType, conn)) {
+                return DatabaseBackupSqlExportSupport.exportMysqlFamily(conn, writer, task, tablesToBackup, logicalType, this::updateProgress);
             }
-            return DatabaseBackupSqlExportSupport.exportJdbcMetadata(conn, writer, task, tablesToBackup, dbType, this::updateProgress);
+            return DatabaseBackupSqlExportSupport.exportJdbcMetadata(conn, writer, task, tablesToBackup, exportType, this::updateProgress);
         }
     }
 

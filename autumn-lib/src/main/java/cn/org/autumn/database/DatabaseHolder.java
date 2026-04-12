@@ -1,6 +1,8 @@
 package cn.org.autumn.database;
 
 import org.apache.commons.lang.StringUtils;
+import cn.org.autumn.datasources.DataSourceDialectRegistry;
+import cn.org.autumn.datasources.DynamicDataSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
@@ -9,14 +11,12 @@ import org.springframework.stereotype.Component;
 import java.util.Locale;
 
 /**
- * 持有「应用级」{@link DatabaseType}，供路由数据源、分页方言、Provider SQL、部分 MyBatis 插件等使用。
+ * 持有当前线程（及配置）下的 {@link DatabaseType}，供路由数据源、分页方言、Provider SQL、部分 MyBatis 插件等使用。
  * <p>
- * <b>范围（重要）</b>：{@link #getType()} 仅由 {@code spring.datasource.druid.first.url}（或回退
- * {@code spring.datasource.url}）与 {@code autumn.database} 解析得到，表示<b>首数据源（默认库）</b>的方言，
- * <b>不是</b> {@link cn.org.autumn.datasources.DynamicDataSource} 线程上当前选中的 second 数据源。
- * 因此「first=MySQL、second=PostgreSQL」等异构双源时，全局仍只会看到 first 的方言；SQLite 专用拦截器等也仅在
- * first 为 SQLite 时启用。若需按线程/路由键切换方言，应单独设计（例如与 {@code DynamicDataSource} 的
- * {@code ThreadLocal} 联动扩展本类及 {@link cn.org.autumn.database.runtime.RoutingRuntimeSqlDialect}）。
+ * <b>解析顺序</b>：若存在 {@link DataSourceDialectRegistry}，且 {@link DynamicDataSource#getDataSource()} 非空，
+ * 则按路由 key 解析为对应数据源的方言；key 为空或空白时与「默认目标源」（first）一致。若无 Registry（极端场景），
+ * 回退为仅根据 {@code spring.datasource.druid.first.url} / {@code spring.datasource.url} 与 {@code autumn.database}
+ * 解析，与历史行为一致。
  */
 @Component
 public class DatabaseHolder {
@@ -27,7 +27,14 @@ public class DatabaseHolder {
     @Autowired(required = false)
     private Environment environment;
 
+    @Autowired(required = false)
+    private DataSourceDialectRegistry dataSourceDialectRegistry;
+
     public DatabaseType getType() {
+        if (dataSourceDialectRegistry != null) {
+            String key = DynamicDataSource.getDataSource();
+            return dataSourceDialectRegistry.resolveForLookupKey(key);
+        }
         if (environment != null) {
             String url = environment.getProperty("spring.datasource.druid.first.url");
             if (StringUtils.isBlank(url)) {

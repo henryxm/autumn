@@ -53,7 +53,8 @@ public class MybatisPlusConfig {
     }
 
     /**
-     * SQLite 日期时间列多为 TEXT，默认 {@link org.apache.ibatis.type.DateTypeHandler} 走 {@link java.sql.ResultSet#getTimestamp} 会解析失败。
+     * 仅在 <b>首数据源</b> 为 SQLite 时全局注册：避免 first=MySQL、second=SQLite 时错误覆盖 MySQL 的 {@link Date} 映射；
+     * second 独 SQLite 时读路径依赖 {@link SqliteJdbcResultAccessInterceptor}。
      */
     private static void applySqliteDateTypeHandlers(Environment environment, org.apache.ibatis.session.Configuration configuration) {
         String url = environment.getProperty("spring.datasource.druid.first.url");
@@ -120,7 +121,7 @@ public class MybatisPlusConfig {
 
     @Bean
     public PaginationInterceptor paginationInterceptor() {
-        PaginationInterceptor p = new PaginationInterceptor();
+        ThreadLocalPaginationInterceptor p = new ThreadLocalPaginationInterceptor(databaseHolder);
         p.setDialectType(databaseHolder.getType().pageHelperDialectName());
         return p;
     }

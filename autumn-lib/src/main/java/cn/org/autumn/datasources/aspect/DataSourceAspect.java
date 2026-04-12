@@ -3,6 +3,7 @@ package cn.org.autumn.datasources.aspect;
 import cn.org.autumn.datasources.annotation.DataSource;
 import cn.org.autumn.datasources.DataSourceNames;
 import cn.org.autumn.datasources.DynamicDataSource;
+import org.apache.commons.lang.StringUtils;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -34,12 +35,16 @@ public class DataSourceAspect implements Ordered {
         Method method = signature.getMethod();
 
         DataSource ds = method.getAnnotation(DataSource.class);
-        if(ds == null){
+        if (ds == null) {
             DynamicDataSource.setDataSource(DataSourceNames.FIRST);
             logger.debug("set datasource is " + DataSourceNames.FIRST);
-        }else {
-            DynamicDataSource.setDataSource(ds.name());
-            logger.debug("set datasource is " + ds.name());
+        } else {
+            String key = ds.name();
+            if (StringUtils.isBlank(key)) {
+                key = DataSourceNames.FIRST;
+            }
+            DynamicDataSource.setDataSource(key);
+            logger.debug("set datasource is {}", key);
         }
 
         try {

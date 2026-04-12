@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.db.service;
 
+import cn.org.autumn.database.DatabaseHolder;
 import cn.org.autumn.database.DatabaseType;
 import cn.org.autumn.database.runtime.RuntimeSqlDialect;
 import cn.org.autumn.database.runtime.RuntimeSqlDialectRegistry;
@@ -14,7 +15,8 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 
 /**
- * 数据库逻辑备份：MySQL 系走 {@code SHOW CREATE TABLE}；其它库走 JDBC {@link DatabaseMetaData} 拼装 DDL + INSERT，
+ * 数据库逻辑备份：真实 MySQL 协议库走 {@code SHOW CREATE TABLE}；其它库（含内嵌 H2 的 {@code MODE=MySQL}，此时
+ * {@link DatabaseType} 可能仍为 {@link DatabaseType#MYSQL}）走 JDBC {@link DatabaseMetaData} 拼装 DDL + INSERT，
  * 标识符引用与 {@link RuntimeSqlDialectRegistry} 对齐，避免破坏各库方言规则。
  */
 public final class DatabaseBackupSqlExportSupport {
@@ -48,9 +50,46 @@ public final class DatabaseBackupSqlExportSupport {
         void waitIfPaused();
     }
 
-    public static boolean usesShowCreateTable(DatabaseType t) {
-        return t == DatabaseType.MYSQL || t == DatabaseType.MARIADB
-                || t == DatabaseType.TIDB || t == DatabaseType.OCEANBASE_MYSQL;
+    /**
+     * 从当前 JDBC 连接 URL 推断物理库类型；无法识别时返回 {@code null}。
+     * 用于 H2 {@code MODE=MySQL} 等场景：逻辑 {@link DatabaseType} 可能为 {@link DatabaseType#MYSQL}，导出仍须按 H2 规则引用标识符。
+     */
+    public static DatabaseType inferPhysicalJdbcType(Connection conn) throws SQLException {
+        if (conn == null) {
+            return null;
+        }
+        DatabaseMetaData meta = conn.getMetaData();
+        if (meta == null) {
+            return null;
+        }
+        String url = meta.getURL();
+        if (url == null || url.trim().isEmpty()) {
+            return null;
+        }
+        return DatabaseHolder.inferFromJdbcUrl(url.trim());
+    }
+
+    /**
+     * 是否对<b>当前连接</b>使用 MySQL {@code SHOW CREATE TABLE} 快速路径。
+     * <p>
+     * 内嵌 {@code jdbc:h2:…;MODE=MySQL} 时框架常将类型解析为 {@link DatabaseType#MYSQL}，但 H2 不支持
+     * {@code SHOW CREATE TABLE}，须返回 {@code false} 以走 {@link #exportJdbcMetadata}。
+     */
+    public static boolean usesShowCreateTable(DatabaseType t, Connection conn) throws SQLException {
+        if (!(t == DatabaseType.MYSQL || t == DatabaseType.MARIADB
+                || t == DatabaseType.TIDB || t == DatabaseType.OCEANBASE_MYSQL)) {
+            return false;
+        }
+        if (conn != null) {
+            DatabaseMetaData meta = conn.getMetaData();
+            if (meta != null) {
+                String url = meta.getURL();
+                if (url != null && url.trim().toLowerCase(Locale.ROOT).startsWith("jdbc:h2:")) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     public static List<String> listTableNames(Connection conn, DatabaseType dbType) throws SQLException {
@@ -132,7 +171,7 @@ public final class DatabaseBackupSqlExportSupport {
     public static int[] exportJdbcMetadata(Connection conn, BufferedWriter writer, BackupExportTaskHandle task,
                                            List<String> tablesToBackup, DatabaseType dbType,
                                            ExportProgressConsumer onProgress) throws Exception {
-        RuntimeSqlDialect dialect = RuntimeSqlDialectRegistry.get();
+        RuntimeSqlDialect dialect = RuntimeSqlDialectRegistry.statelessDialectFor(dbType);
         int tableCount = tablesToBackup.size();
         int totalRecords = 0;
         String dbLabel = safeGetCatalog(conn);
@@ -143,7 +182,9 @@ public final class DatabaseBackupSqlExportSupport {
         List<TableRef> allRefs = listTableRefs(conn, dbType);
         Map<String, TableRef> refByName = new HashMap<>();
         for (TableRef r : allRefs) {
-            refByName.putIfAbsent(r.name, r);
+            if (r.name != null) {
+                refByName.putIfAbsent(r.name.toLowerCase(Locale.ROOT), r);
+            }
         }
         writeHeader(writer, dbLabel, task, tableCount, false, dbType);
         int completedCount = 0;
@@ -157,11 +198,19 @@ public final class DatabaseBackupSqlExportSupport {
                 break;
             }
             onProgress.accept(task.getBackupId(), completedCount, tableCount, table);
-            TableRef ref = refByName.get(table);
+            TableRef ref = table != null ? refByName.get(table.toLowerCase(Locale.ROOT)) : null;
+            if (ref == null) {
+                for (TableRef r : allRefs) {
+                    if (r.name != null && table != null && r.name.equalsIgnoreCase(table)) {
+                        ref = r;
+                        break;
+                    }
+                }
+            }
             if (ref == null) {
                 ref = new TableRef(safeGetCatalog(conn), safeGetSchema(conn), table);
             }
-            String quotedTable = dialect.quote(table);
+            String quotedTable = qualifiedQuotedTable(ref, dbType, dialect);
             writer.write("-- ----------------------------\n");
             writer.write("-- Table structure for " + table + "\n");
             writer.write("-- ----------------------------\n");
@@ -169,7 +218,7 @@ public final class DatabaseBackupSqlExportSupport {
             String ddl = buildCreateTableFromMetadata(conn, ref, dbType, dialect);
             writer.write(ddl);
             writer.write(";\n\n");
-            int records = exportTableDataJdbc(conn, writer, quotedTable, task, dbType);
+            int records = exportTableDataJdbc(conn, writer, quotedTable, task, dbType, dialect);
             totalRecords += records;
             writer.write("\n");
             completedCount++;
@@ -223,6 +272,22 @@ public final class DatabaseBackupSqlExportSupport {
         }
     }
 
+    /**
+     * H2 / HSQLDB 下无 schema 限定时，{@code SELECT * FROM "name"} 可能与元数据返回的大小写不一致导致找不到表；
+     * 使用元数据中的 schema + name，并与 {@link H2RuntimeSqlDialect} 双引号规则一致。
+     */
+    private static String qualifiedQuotedTable(TableRef ref, DatabaseType dbType, RuntimeSqlDialect dialect) {
+        if (ref == null || ref.name == null) {
+            return dialect.quote("");
+        }
+        if (ref.schema != null && !ref.schema.trim().isEmpty()) {
+            if (dbType == DatabaseType.H2 || dbType == DatabaseType.HSQLDB) {
+                return dialect.quote(ref.schema) + "." + dialect.quote(ref.name);
+            }
+        }
+        return dialect.quote(ref.name);
+    }
+
     private static String getCreateTableSqlMysql(Connection conn, String table) throws SQLException {
         try (Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery("SHOW CREATE TABLE `" + table + "`")) {
@@ -236,21 +301,23 @@ public final class DatabaseBackupSqlExportSupport {
     private static int exportTableDataMysql(Connection conn, BufferedWriter writer, String table, BackupExportTaskHandle task) throws Exception {
         try (Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery("SELECT * FROM `" + table + "`")) {
-            return writeInsertResultSet(writer, rs, task, DatabaseType.MYSQL, "`" + table + "`", true);
+            return writeInsertResultSet(writer, rs, task, DatabaseType.MYSQL, "`" + table + "`", true, null);
         }
     }
 
     private static int exportTableDataJdbc(Connection conn, BufferedWriter writer, String quotedTable,
-                                             BackupExportTaskHandle task, DatabaseType dbType) throws Exception {
+                                           BackupExportTaskHandle task, DatabaseType dbType,
+                                           RuntimeSqlDialect columnQuoteDialect) throws Exception {
         String sql = "SELECT * FROM " + quotedTable;
         try (Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
-            return writeInsertResultSet(writer, rs, task, dbType, quotedTable, false);
+            return writeInsertResultSet(writer, rs, task, dbType, quotedTable, false, columnQuoteDialect);
         }
     }
 
     private static int writeInsertResultSet(BufferedWriter writer, ResultSet rs, BackupExportTaskHandle task,
-                                            DatabaseType dbType, String quotedTableForInsert, boolean mysqlStyleColumns) throws Exception {
+                                            DatabaseType dbType, String quotedTableForInsert, boolean mysqlStyleColumns,
+                                            RuntimeSqlDialect columnQuoteDialect) throws Exception {
         int count = 0;
         ResultSetMetaData meta = rs.getMetaData();
         int columnCount = meta.getColumnCount();
@@ -270,7 +337,8 @@ public final class DatabaseBackupSqlExportSupport {
             if (mysqlStyleColumns) {
                 columns.append("`").append(colName).append("`");
             } else {
-                columns.append(RuntimeSqlDialectRegistry.get().quote(colName));
+                columns.append(columnQuoteDialect != null ? columnQuoteDialect.quote(colName)
+                        : RuntimeSqlDialectRegistry.statelessDialectFor(dbType).quote(colName));
             }
         }
         String insertPrefix = "INSERT INTO " + quotedTableForInsert + " (" + columns + ") VALUES\n";
