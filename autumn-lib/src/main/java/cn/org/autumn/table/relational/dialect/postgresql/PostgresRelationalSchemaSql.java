@@ -337,15 +337,18 @@ public class PostgresRelationalSchemaSql implements RelationalSchemaSql {
         return all.toString();
     }
 
+    /**
+     * 仅输出列名。MySQL 风格索引前缀 {@code "col"(n)} 在 PostgreSQL 中会被解析为函数调用（如 {@code user_uuid(50)}），
+     * 导致 {@code function user_uuid(integer) does not exist}；前缀长度仅适用于 MySQL 路径，见 {@link cn.org.autumn.table.data.IndexPrefixRules}。
+     */
     private void appendIndexFields(StringBuilder sb, Map<String, Integer> fields) {
+        if (fields == null) {
+            return;
+        }
         Iterator<Entry<String, Integer>> it = fields.entrySet().iterator();
         while (it.hasNext()) {
             Entry<String, Integer> e = it.next();
-            if (e.getValue() != null && e.getValue() > 0) {
-                sb.append(qi(e.getKey())).append("(").append(e.getValue()).append(")");
-            } else {
-                sb.append(qi(e.getKey()));
-            }
+            sb.append(qi(e.getKey()));
             if (it.hasNext()) {
                 sb.append(", ");
             }

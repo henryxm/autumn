@@ -10,7 +10,10 @@ import org.springframework.stereotype.Component;
 
 /**
  * 根据<strong>当前路由数据源</strong>的 JDBC URL（{@link DatabaseHolder#readCurrentRoutingJdbcUrl(Environment)}）与
- * {@link DatabaseHolder#resolveType(String, String)} 选择具体方言；无 {@link Environment} 时退化为 {@link DatabaseHolder#getType()}（主库）。
+ * {@link DatabaseHolder#resolveType(String, String)} 选择具体方言；无 {@link Environment} 时退化为 {@link DatabaseHolder#getType()}。
+ * <p>
+ * 与 {@link DatabaseHolder#getType()} 一致：在配置了 {@link cn.org.autumn.datasources.DataSourceDialectRegistry} 时，
+ * 随 {@link cn.org.autumn.datasources.DynamicDataSource} 当前线程 lookup key 切换具体方言实现。
  * <p>
  * <b>内嵌 H2 + {@code MODE=MySQL}</b>：对该 URL 必须选用 {@link H2RuntimeSqlDialect} 的双引号与 H2 函数形态，勿用
  * {@link MysqlRuntimeSqlDialect} 的反引号 / {@code FIND_IN_SET}。

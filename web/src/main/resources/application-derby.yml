@@ -47,7 +47,7 @@
 # Db2DerbyRuntimeSqlDialect（Wrapper 列引用）等，与双引号小写 DDL 对齐。
 #
 # 关闭应用：嵌入式库一般随 JVM 退出；若需显式关闭数据库可在文档外单独执行 SHUTDOWN（见 Derby 手册）。
-# 双数据源：first 与 second 若指向同一嵌入式路径，框架会共用一个物理连接池，避免 ERROR XSDB6（重复 boot）。
+# 双数据源：first 与 second 若指向同一物理库，DynamicDataSourceConfig 统一共用一个 Druid 池，避免 ERROR XSDB6（重复 boot）等双池问题。
 # 若仍报 XSDB6：检查是否有另一 Java 进程占用该目录，或删除库目录下 derby.log / 残留锁后重试。
 #
 # 注解整库同步：Derby 走双引号 JDBC 路径 + DerbyRelationalSchemaSql DDL；请使用用户名 APP 避免 schema SA 不存在。

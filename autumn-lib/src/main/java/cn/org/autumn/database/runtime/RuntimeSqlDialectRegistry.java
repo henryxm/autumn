@@ -16,7 +16,13 @@ import org.springframework.core.env.Environment;
  * 回退（与 {@link DatabaseHolder#readPrimaryJdbcUrl} 一致），因彼时通常尚无路由上下文。
  * <p>
  * MyBatis 在构建 {@code SqlSessionFactory} 时可能早于 {@link RoutingRuntimeSqlDialect} 的初始化解析并缓存 Provider SQL；
- * 此时若仍使用默认 MySQL 方言会生成反引号等错误语法。
+ * 此时若仍使用默认 MySQL 方言会生成反引号等错误语法。故在尚未注入 {@link RoutingRuntimeSqlDialect} 时，根据
+ * {@link Config#getEnvironment()} 中的 JDBC URL / {@code autumn.database} 回退到无状态的具体方言实例（与
+ * {@link DatabaseHolder#getType()} 解析顺序一致）。
+ * <p>
+ * {@link #resolveStatelessFromEnvironment()} 仅使用<b>首数据源</b> URL，与 {@link cn.org.autumn.datasources.DynamicDataSource} 线程 key 无关；
+ * 与 {@link DatabaseHolder} 在线程已绑定路由键时的行为并存：启动期 Provider 解析仍按首源，运行期经 Spring Bean 的
+ * {@link RoutingRuntimeSqlDialect} 则随线程变化。
  */
 public final class RuntimeSqlDialectRegistry {
 
@@ -76,6 +82,18 @@ public final class RuntimeSqlDialectRegistry {
         } catch (Exception ignored) {
             return null;
         }
+    }
+
+    /**
+     * 与 {@link DatabaseType} 对应的<b>无状态</b> {@link RuntimeSqlDialect}，不依赖 {@link DatabaseHolder} 线程路由。
+     * 供逻辑库类型与物理 JDBC 不一致时的导出/工具（例如 H2 {@code MODE=MySQL}）使用。
+     */
+    public static RuntimeSqlDialect statelessDialectFor(DatabaseType t) {
+        if (t == null) {
+            return MYSQL_STATELESS;
+        }
+        RuntimeSqlDialect d = statelessForType(t);
+        return d != null ? d : MYSQL_STATELESS;
     }
 
     private static RuntimeSqlDialect statelessForType(DatabaseType t) {

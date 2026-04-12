@@ -1,5 +1,6 @@
 package cn.org.autumn.database;
 
+import cn.org.autumn.datasources.DataSourceDialectRegistry;
 import cn.org.autumn.datasources.DataSourceNames;
 import cn.org.autumn.datasources.DynamicDataSource;
 import org.apache.commons.lang3.StringUtils;
@@ -11,14 +12,17 @@ import org.springframework.stereotype.Component;
 import java.util.Locale;
 
 /**
- * 持有当前应用的 {@link DatabaseType}（默认与<strong>主数据源</strong>一致），供分页插件全局配置、建表、部分 TypeHandler 等使用。
+ * 持有当前应用的 {@link DatabaseType}，供分页插件、建表、Provider SQL、部分 TypeHandler 等使用。
  * <p>
- * 多数据源下：{@link #getType()} 仍解析<strong>主库</strong> JDBC URL（与 {@link #readPrimaryJdbcUrl} 一致），因为 MyBatis-Plus
- * 全局 {@code column-format}、{@link com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor} 等仅为
- * 单工厂配置，无法按连接切换。运行期手写 SQL / {@link cn.org.autumn.database.runtime.RuntimeSqlDialect} 则须按<strong>当前线程路由</strong>
- * 取 URL：{@link #readCurrentRoutingJdbcUrl(Environment)}、{@link #resolveTypeForCurrentRouting()}，避免把主库方言套在从库连接上。
+ * <b>解析顺序</b>：若存在 {@link DataSourceDialectRegistry}，则按 {@link DynamicDataSource} 当前线程 lookup key 解析；
+ * key 为空或空白时与首数据源一致。若无 Registry，则根据 {@code spring.datasource.druid.first.url} /
+ * {@code spring.datasource.url} 与 {@code autumn.database} 解析，与历史行为一致。
  * <p>
- * <b>内嵌 H2 + {@code MODE=MySQL}</b>：{@link #resolveType(String, String)} 仍可对应该 URL 返回 {@link DatabaseType#MYSQL}（注解建表）；
+ * 全局 {@code column-format} 等仍为单工厂配置；运行期手写 SQL / {@link cn.org.autumn.database.runtime.RuntimeSqlDialect} 宜按
+ * <strong>当前线程路由</strong> 使用 {@link #readCurrentRoutingJdbcUrl(Environment)}、{@link #resolveTypeForCurrentRouting()}，
+ * 避免把主库方言套在从库连接上（见 {@link cn.org.autumn.database.runtime.RoutingRuntimeSqlDialect}）。
+ * <p>
+ * <b>内嵌 H2 + {@code MODE=MySQL}</b>：{@link #resolveType(String, String)} 仍可返回 {@link DatabaseType#MYSQL}（注解建表）；
  * 运行期引用由 {@link cn.org.autumn.database.runtime.RoutingRuntimeSqlDialect} 按 URL 选用 {@link cn.org.autumn.database.runtime.H2RuntimeSqlDialect}。
  */
 @Component
@@ -29,6 +33,9 @@ public class DatabaseHolder {
 
     @Autowired(required = false)
     private Environment environment;
+
+    @Autowired(required = false)
+    private DataSourceDialectRegistry dataSourceDialectRegistry;
 
     /**
      * 与 {@link #getType()} 使用相同属性键读取主数据源 JDBC URL；供 {@link cn.org.autumn.database.runtime.RuntimeSqlDialectRegistry}、
@@ -66,6 +73,10 @@ public class DatabaseHolder {
     }
 
     public DatabaseType getType() {
+        if (dataSourceDialectRegistry != null) {
+            String key = DynamicDataSource.getDataSource();
+            return dataSourceDialectRegistry.resolveForLookupKey(key);
+        }
         if (environment != null) {
             return resolveType(readPrimaryJdbcUrl(environment), databaseRaw);
         }

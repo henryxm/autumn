@@ -22,6 +22,7 @@ import java.sql.SQLException;
  * 须与 {@link MybatisPlusConfig}、{@link BooleanNumericParameterInterceptor} 配合。
  * <p>
  * {@link DatabaseHolder} 为 null 时（如单测）按非 PG 处理，使用整型绑定。
+ * 多源场景下 {@link DatabaseHolder#getType()} 随当前线程数据源键变化，与 {@code @DataSource(SECOND)} 路由一致。
  */
 public class BooleanNumericTypeHandler extends BaseTypeHandler<Boolean> {
 

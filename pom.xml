@@ -39,6 +39,8 @@
         <commons.text.version>1.15.0</commons.text.version>
         <commons.io.version>2.18.0</commons.io.version>
         <commons.beanutils.version>1.11.0</commons.beanutils.version>
+        <!-- 固定版本：范围 [1.3.3,) 在 reactor 中可被解析为不同结果，触发 enforcer dependencyConvergence -->
+        <commons.fileupload.version>1.6.0</commons.fileupload.version>
         <httpclient.version>4.5.14</httpclient.version>
         <velocity.version>2.4.1</velocity.version>
         <joda.time.version>2.13.0</joda.time.version>
@@ -365,6 +367,11 @@
                 <groupId>com.github.axet</groupId>
                 <artifactId>kaptcha</artifactId>
                 <version>${kaptcha.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>commons-fileupload</groupId>
+                <artifactId>commons-fileupload</artifactId>
+                <version>${commons.fileupload.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

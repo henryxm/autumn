@@ -37,6 +37,12 @@ public class DatabaseBackupEntity implements Serializable {
     private String database;
 
     /**
+     * 备份时主库方言:与 {@link cn.org.autumn.database.DatabaseType} 枚举名一致，用于列表展示与恢复前校验
+     */
+    @Column(length = 48, comment = "备份方言:DatabaseType枚举名")
+    private String backupDialect;
+
+    /**
      * 备份模式: FULL-全量, TABLES-指定表
      */
     @Column(comment = "备份模式:FULL-全量,TABLES-指定表", defaultValue = "FULL")

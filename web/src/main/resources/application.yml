@@ -105,6 +105,7 @@ logging:
     com.netflix.discovery.shared.resolver.aws: fatal
     org.springframework.boot.web.embedded: info
     com.baomidou.mybatisplus: fatal
+    com.baomidou.mybatisplus.toolkit: error
     org.apache.shiro.session: fatal
     com.alibaba.druid: off
     org.mybatis.spring: info

@@ -8,6 +8,7 @@ import cn.org.autumn.table.relational.dialect.postgresql.PostgresRelationalSchem
 import cn.org.autumn.table.relational.model.ColumnMeta;
 import cn.org.autumn.table.relational.model.TableMeta;
 import cn.org.autumn.table.platform.RelationalTableOperations;
+import cn.org.autumn.table.platform.jdbc.RelationalDdlStatementSplitter;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,7 +27,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * PostgreSQL：元数据走 {@link PostgresTableDao}；DDL 脚本拆分执行（兼容 PG JDBC 单语句默认行为）。
+ * PostgreSQL：元数据走 {@link PostgresTableDao}；DDL 多语句拆分执行（分号不在单引号字符串内截断，见 {@link RelationalDdlStatementSplitter}）。
  */
 @Component
 public class PostgresRelationalTableOperations implements RelationalTableOperations {
@@ -209,7 +210,7 @@ public class PostgresRelationalTableOperations implements RelationalTableOperati
             return;
         }
         try (Connection cn = dataSource.getConnection(); Statement st = cn.createStatement()) {
-            for (String part : sql.split(";")) {
+            for (String part : RelationalDdlStatementSplitter.split(sql)) {
                 String s = part.trim();
                 if (s.isEmpty()) {
                     continue;

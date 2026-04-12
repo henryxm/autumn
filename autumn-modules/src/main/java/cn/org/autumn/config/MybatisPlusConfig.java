@@ -6,21 +6,20 @@ import cn.org.autumn.database.H2EmbeddedMysqlDialect;
 import cn.org.autumn.handler.EnumTypeHandler;
 import cn.org.autumn.model.StubMapper;
 import cn.org.autumn.service.DefaultMapper;
-import com.baomidou.mybatisplus.annotation.DbType;
 import com.baomidou.mybatisplus.autoconfigure.MybatisPlusPropertiesCustomizer;
 import com.baomidou.mybatisplus.core.config.GlobalConfig;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
-import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.ibatis.plugin.Interceptor;
 import org.apache.ibatis.type.JdbcType;
 import org.apache.ibatis.type.TypeHandlerRegistry;
 import org.mybatis.spring.boot.autoconfigure.ConfigurationCustomizer;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
 
+import java.util.Date;
 import java.util.Locale;
 
 @Configuration
@@ -47,6 +46,26 @@ public class MybatisPlusConfig {
             return;
         }
         configuration.setJdbcTypeForNull(JdbcType.VARCHAR);
+    }
+
+    /**
+     * 仅在 <b>首数据源</b> 为 SQLite 时全局注册：避免 first=MySQL、second=SQLite 时错误覆盖 MySQL 的 {@link Date} 映射；
+     * second 独 SQLite 时读路径依赖 {@link SqliteJdbcResultAccessInterceptor}。
+     */
+    private static void applySqliteDateTypeHandlers(Environment environment, org.apache.ibatis.session.Configuration configuration) {
+        String url = environment.getProperty("spring.datasource.druid.first.url");
+        if (StringUtils.isBlank(url)) {
+            url = environment.getProperty("spring.datasource.url");
+        }
+        if (StringUtils.isBlank(url) || !url.trim().toLowerCase(Locale.ROOT).startsWith("jdbc:sqlite:")) {
+            return;
+        }
+        SqliteDateTypeHandler h = new SqliteDateTypeHandler();
+        TypeHandlerRegistry registry = configuration.getTypeHandlerRegistry();
+        registry.register(Date.class, JdbcType.TIMESTAMP, h);
+        registry.register(Date.class, JdbcType.DATE, h);
+        registry.register(Date.class, JdbcType.TIME, h);
+        registry.register(Date.class, h);
     }
 
     /**
@@ -89,13 +108,21 @@ public class MybatisPlusConfig {
     }
 
     /**
+     * SQLite TEXT 日期列：在 ResultSetHandler 入口包装 Statement/ResultSet，保证走 {@code getTimestamp} 的 MP 默认映射也能读库。
+     */
+    @Bean
+    public Interceptor sqliteJdbcResultAccessInterceptor(DatabaseHolder databaseHolder) {
+        return new SqliteJdbcResultAccessInterceptor(databaseHolder);
+    }
+
+    /**
      * 与 {@code application.yml} 中 {@code mybatis-plus.global-config.db-config.column-format} 配合：
      * YAML 为 MySQL 默认；此处按 {@link DatabaseHolder} 覆盖，避免 PG 等收到反引号。
      * <p>
      * <b>任意 {@code jdbc:h2:}</b>（含 {@code MODE=MySQL}）：{@link DatabaseHolder} 可能仍解析为 {@link DatabaseType#MYSQL} 以便注解建表；
      * 但 MyBatis-Plus 若按 MySQL 使用反引号（或由 {@link JdbcEnvironmentPostProcessor} 误注入 MYSQL 的 identifier-quote），会在 H2 上触发
      * {@code Column "`id`" not found}。故凡主库为 H2 即强制列名为双引号，与 {@link #mybatisPlusInterceptor(Environment)} 中分页
-     * {@link DbType#H2}（{@link H2EmbeddedMysqlDialect#isActive(String)} 分支）一致。
+     * {@link com.baomidou.mybatisplus.annotation.DbType#H2}（{@link H2EmbeddedMysqlDialect#isActive(String)} 分支）一致。
      * <p>
      * <b>表名</b>：Derby 等注解 DDL 使用双引号小写表名；须同步 {@link GlobalConfig.DbConfig#setTableFormat(String)}，
      * 否则 MP 生成无引号的 {@code INSERT INTO sys_config}，Derby 会折叠为 {@code SYS_CONFIG}，与 {@code "sys_config"} 不符。
@@ -144,47 +171,19 @@ public class MybatisPlusConfig {
 
     @Bean
     public MybatisPlusInterceptor mybatisPlusInterceptor(Environment environment) {
-        PaginationInnerInterceptor paginationInnerInterceptor = new PaginationInnerInterceptor();
-        if (H2EmbeddedMysqlDialect.isActive(primaryDataSourceUrl(environment))) {
-            paginationInnerInterceptor.setDbType(DbType.H2);
-        } else {
-            DatabaseType t = databaseHolder.getType();
-            if (t == DatabaseType.POSTGRESQL || t == DatabaseType.KINGBASE) {
-                paginationInnerInterceptor.setDbType(DbType.POSTGRE_SQL);
-            } else if (t == DatabaseType.ORACLE || t == DatabaseType.OCEANBASE_ORACLE || t == DatabaseType.DAMENG) {
-                paginationInnerInterceptor.setDbType(DbType.ORACLE);
-            } else if (t == DatabaseType.SQLSERVER) {
-                paginationInnerInterceptor.setDbType(DbType.SQL_SERVER);
-            } else if (t == DatabaseType.DERBY) {
-                paginationInnerInterceptor.setDbType(DbType.DERBY);
-            } else if (t == DatabaseType.DB2) {
-                paginationInnerInterceptor.setDbType(DbType.DB2);
-            } else if (t == DatabaseType.SQLITE) {
-                paginationInnerInterceptor.setDbType(DbType.SQLITE);
-            } else if (t == DatabaseType.H2 || t == DatabaseType.HSQLDB) {
-                paginationInnerInterceptor.setDbType(DbType.H2);
-            } else if (t == DatabaseType.MARIADB) {
-                paginationInnerInterceptor.setDbType(DbType.MARIADB);
-            } else if (t == DatabaseType.TIDB) {
-                paginationInnerInterceptor.setDbType(DbType.MYSQL);
-            } else if (t == DatabaseType.OCEANBASE_MYSQL) {
-                paginationInnerInterceptor.setDbType(DbType.MYSQL);
-            } else if (t == DatabaseType.FIREBIRD) {
-                paginationInnerInterceptor.setDbType(DbType.FIREBIRD);
-            } else if (t == DatabaseType.INFORMIX) {
-                paginationInnerInterceptor.setDbType(DbType.INFORMIX);
-            } else {
-                paginationInnerInterceptor.setDbType(DbType.MYSQL);
-            }
-        }
+        RoutingPaginationInnerInterceptor paginationInnerInterceptor =
+                new RoutingPaginationInnerInterceptor(databaseHolder, environment);
         MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
         interceptor.addInnerInterceptor(paginationInnerInterceptor);
         return interceptor;
     }
 
     @Bean
-    public ConfigurationCustomizer derbyJdbcTypeForNullCustomizer(Environment environment) {
-        return configuration -> applyDerbyJdbcTypeForNull(environment, configuration);
+    public ConfigurationCustomizer derbyAndSqliteMybatisConfigurationCustomizer(Environment environment) {
+        return configuration -> {
+            applyDerbyJdbcTypeForNull(environment, configuration);
+            applySqliteDateTypeHandlers(environment, configuration);
+        };
     }
 
     @Bean

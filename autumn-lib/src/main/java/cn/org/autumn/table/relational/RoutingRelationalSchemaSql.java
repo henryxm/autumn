@@ -13,6 +13,8 @@ import org.springframework.stereotype.Component;
  * Spring 运行期：{@link TableDao} 路径仅在 MySQL 协议族上启用；内嵌 H2 且<strong>当前路由</strong> URL 声明 {@code MODE=MySQL} 时走
  * {@link H2MysqlCompatSchemaSql}。
  * <p>
+ * {@link DatabaseHolder#getType()} 与多数据源线程路由一致时，本类选用的方言与当前连接目标一致
+ * （见 {@link cn.org.autumn.datasources.DataSourceDialectRegistry}）。
  * 其它 {@link DatabaseType} 的完整 {@link RelationalSchemaSql} 见 {@link RelationalSchemaSqlCatalog}（如 {@code PostgresTableDao} 直连 PG 实现类）。
  */
 @Primary
