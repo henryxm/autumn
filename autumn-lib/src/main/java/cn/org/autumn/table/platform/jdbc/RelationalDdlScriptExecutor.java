@@ -9,7 +9,8 @@ import java.sql.Statement;
 
 /**
  * 将方言 {@link cn.org.autumn.table.relational.RelationalSchemaSql} 生成的多语句脚本按分号拆分执行。
- * 与 {@link cn.org.autumn.table.dao.postgresql.PostgresRelationalTableOperations} 行为一致；勿在字符串字面量中嵌入未转义的分号。
+ * 与 {@link cn.org.autumn.table.dao.postgresql.PostgresRelationalTableOperations} 行为一致；
+ * 拆分规则见 {@link RelationalDdlStatementSplitter}（单引号字符串内的分号不截断语句）。
  */
 public final class RelationalDdlScriptExecutor {
 
@@ -21,7 +22,7 @@ public final class RelationalDdlScriptExecutor {
             return;
         }
         try (Connection cn = dataSource.getConnection(); Statement st = cn.createStatement()) {
-            for (String part : sql.split(";")) {
+            for (String part : RelationalDdlStatementSplitter.split(sql)) {
                 String s = part.trim();
                 if (s.isEmpty()) {
                     continue;

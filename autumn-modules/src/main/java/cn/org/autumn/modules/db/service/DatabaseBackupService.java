@@ -29,10 +29,13 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.Date;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
 
 @Slf4j
 @Service
 public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, DatabaseBackupEntity> {
+
+    private static final Pattern DERBY_DROP_IF_EXISTS = Pattern.compile("(?i)\\bIF\\s+EXISTS\\s+");
 
     @Autowired
     private DataSource dataSource;
@@ -71,7 +74,14 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
                     log.debug("Backup directory created: {}", path.toAbsolutePath());
             }
             try (Connection conn = dataSource.getConnection()) {
-                databaseName = conn.getCatalog();
+                try {
+                    databaseName = conn.getCatalog();
+                } catch (SQLException e) {
+                    databaseName = "default";
+                }
+                if (databaseName == null || databaseName.isEmpty()) {
+                    databaseName = "default";
+                }
                 if (log.isDebugEnabled())
                     log.debug("Database backup service initialized, database: {}, backupDir: {}", databaseName, path.toAbsolutePath());
             }
@@ -131,6 +141,7 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
         ensureInitialized();
         DatabaseBackupEntity entity = new DatabaseBackupEntity();
         entity.setDatabase(databaseName);
+        entity.setBackupDialect(databaseHolder.getType().name());
         entity.setRemark(remark);
         entity.setMode(mode != null ? mode : "FULL");
         entity.setBackupTables(tableList);
@@ -284,11 +295,19 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
                 info.put("id", entity.getId());
                 info.put("filename", entity.getFilename());
                 info.put("status", entity.getStatus());
-                info.put("progress", entity.getProgress());
-                info.put("totalTables", entity.getTotalTables());
-                info.put("completedTables", entity.getCompletedTables());
-                info.put("currentTable", entity.getCurrentTable());
+                if (task.getLiveTotalTables() > 0) {
+                    info.put("progress", task.getLiveProgress());
+                    info.put("totalTables", task.getLiveTotalTables());
+                    info.put("completedTables", task.getLiveCompletedTables());
+                    info.put("currentTable", task.getLiveCurrentTable());
+                } else {
+                    info.put("progress", entity.getProgress());
+                    info.put("totalTables", entity.getTotalTables());
+                    info.put("completedTables", entity.getCompletedTables());
+                    info.put("currentTable", entity.getCurrentTable());
+                }
                 info.put("mode", entity.getMode());
+                info.put("backupDialect", entity.getBackupDialect());
                 info.put("paused", task.isPaused());
                 info.put("createTime", entity.getCreateTime());
                 list.add(info);
@@ -307,12 +326,20 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
         info.put("id", entity.getId());
         info.put("filename", entity.getFilename());
         info.put("status", entity.getStatus());
-        info.put("progress", entity.getProgress());
-        info.put("totalTables", entity.getTotalTables());
-        info.put("completedTables", entity.getCompletedTables());
-        info.put("currentTable", entity.getCurrentTable());
-        info.put("mode", entity.getMode());
         BackupTask task = runningTasks.get(backupId);
+        if (task != null && task.getLiveTotalTables() > 0) {
+            info.put("progress", task.getLiveProgress());
+            info.put("totalTables", task.getLiveTotalTables());
+            info.put("completedTables", task.getLiveCompletedTables());
+            info.put("currentTable", task.getLiveCurrentTable());
+        } else {
+            info.put("progress", entity.getProgress());
+            info.put("totalTables", entity.getTotalTables());
+            info.put("completedTables", entity.getCompletedTables());
+            info.put("currentTable", entity.getCurrentTable());
+        }
+        info.put("mode", entity.getMode());
+        info.put("backupDialect", entity.getBackupDialect());
         info.put("paused", task != null && task.isPaused());
         info.put("running", task != null);
         return info;
@@ -326,90 +353,32 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
      * 使用纯JDBC导出数据库
      */
     private int[] exportDatabase(BackupTask task) throws Exception {
-        int tableCount = 0;
-        int totalRecords = 0;
         DatabaseType dbType = databaseHolder.getType();
-        if (dbType != DatabaseType.MYSQL && dbType != DatabaseType.MARIADB) {
-            throw new UnsupportedOperationException(
-                    "内置 SQL 备份仅实现 MySQL/MariaDB（SHOW CREATE TABLE 等）。当前 autumn.database="
-                            + dbType.name().toLowerCase()
-                            + "：PostgreSQL 请使用 pg_dump；Oracle/SQL Server 请使用各库官方工具；后续可在 cn.org.autumn.modules.db 下按库扩展导出实现。");
-        }
-        try (Connection conn = dataSource.getConnection(); BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(task.outputPath), StandardCharsets.UTF_8))) {
-            String dbName = conn.getCatalog();
-            // 确定要备份的表
-            List<String> tablesToBackup;
-            if ("TABLES".equals(task.mode) && task.tableList != null && !task.tableList.isEmpty()) {
-                tablesToBackup = new ArrayList<>();
-                for (String t : task.tableList.split(",")) {
-                    String trimmed = t.trim();
-                    if (!trimmed.isEmpty()) {
-                        tablesToBackup.add(trimmed);
-                    }
-                }
-            } else {
-                tablesToBackup = getAllTables(conn);
-            }
-            tableCount = tablesToBackup.size();
-            // 更新总表数
+        try (Connection conn = dataSource.getConnection();
+             BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(task.outputPath), StandardCharsets.UTF_8))) {
+            List<String> tablesToBackup = DatabaseBackupSqlExportSupport.resolveTableList(conn, dbType, task.mode, task.tableList);
+            int tableCount = tablesToBackup.size();
             DatabaseBackupEntity entity = selectById(task.backupId);
             if (entity != null) {
                 entity.setTotalTables(tableCount);
                 entity.setTables(tableCount);
                 updateById(entity);
             }
-            // 写入文件头
-            writer.write("-- ========================================\n");
-            writer.write("-- Database Backup\n");
-            writer.write("-- Database: " + dbName + "\n");
-            writer.write("-- Date: " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "\n");
-            writer.write("-- Mode: " + task.mode + "\n");
-            writer.write("-- Tables: " + tableCount + "\n");
-            writer.write("-- ========================================\n\n");
-            writer.write("SET NAMES utf8mb4;\n");
-            writer.write("SET FOREIGN_KEY_CHECKS = 0;\n\n");
-            int completedCount = 0;
-            for (String table : tablesToBackup) {
-                // 检查是否被停止
-                if (task.isStopped()) {
-                    log.info("Backup task stopped during export: id={}, completedTables={}/{}", task.backupId, completedCount, tableCount);
-                    break;
-                }
-                // 检查暂停，等待恢复
-                task.waitIfPaused();
-                // 再次检查停止（暂停恢复后可能被停止了）
-                if (task.isStopped()) break;
-                // 更新当前表进度
-                updateProgress(task.backupId, completedCount, tableCount, table);
-                writer.write("-- ----------------------------\n");
-                writer.write("-- Table structure for " + table + "\n");
-                writer.write("-- ----------------------------\n");
-                writer.write("DROP TABLE IF EXISTS `" + table + "`;\n");
-                // 导出建表语句
-                String createTableSql = getCreateTableSql(conn, table);
-                writer.write(createTableSql + ";\n\n");
-                // 导出表数据
-                int records = exportTableData(conn, writer, table, task);
-                totalRecords += records;
-                writer.write("\n");
-                completedCount++;
+            if (DatabaseBackupSqlExportSupport.usesShowCreateTable(dbType)) {
+                return DatabaseBackupSqlExportSupport.exportMysqlFamily(conn, writer, task, tablesToBackup, dbType, this::updateProgress);
             }
-            if (!task.isStopped()) {
-                writer.write("SET FOREIGN_KEY_CHECKS = 1;\n");
-            }
-            writer.flush();
-            // 最终更新进度
-            if (!task.isStopped()) {
-                updateProgress(task.backupId, tableCount, tableCount, null);
-            }
+            return DatabaseBackupSqlExportSupport.exportJdbcMetadata(conn, writer, task, tablesToBackup, dbType, this::updateProgress);
         }
-        return new int[]{tableCount, totalRecords};
     }
 
     /**
      * 更新备份进度
      */
     private void updateProgress(Long backupId, int completed, int total, String currentTable) {
+        BackupTask task = runningTasks.get(backupId);
+        if (task != null) {
+            task.recordLiveProgress(completed, total, currentTable);
+        }
         DatabaseBackupEntity entity = selectById(backupId);
         if (entity == null) return;
         entity.setCompletedTables(completed);
@@ -417,148 +386,6 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
         entity.setCurrentTable(currentTable);
         entity.setProgress(total > 0 ? (int) ((completed * 100.0) / total) : 0);
         updateById(entity);
-    }
-
-    /**
-     * 获取所有表名
-     */
-    private List<String> getAllTables(Connection conn) throws SQLException {
-        List<String> tables = new ArrayList<>();
-        DatabaseMetaData meta = conn.getMetaData();
-        try (ResultSet rs = meta.getTables(conn.getCatalog(), null, "%", new String[]{"TABLE"})) {
-            while (rs.next()) {
-                tables.add(rs.getString("TABLE_NAME"));
-            }
-        }
-        Collections.sort(tables);
-        return tables;
-    }
-
-    /**
-     * 获取建表语句
-     */
-    private String getCreateTableSql(Connection conn, String table) throws SQLException {
-        try (Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery("SHOW CREATE TABLE `" + table + "`")) {
-            if (rs.next()) {
-                return rs.getString(2);
-            }
-        }
-        return "";
-    }
-
-    /**
-     * 导出表数据
-     */
-    /**
-     * 单条 INSERT 语句的最大字节数限制（2MB），远小于 MySQL 默认 max_allowed_packet(4MB)
-     * 确保生成的 SQL 在恢复时不会触发 Packet too large 错误
-     */
-    private static final int MAX_INSERT_BYTES = 2 * 1024 * 1024;
-
-    private int exportTableData(Connection conn, BufferedWriter writer, String table, BackupTask task) throws Exception {
-        int count = 0;
-        try (Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery("SELECT * FROM `" + table + "`")) {
-            ResultSetMetaData meta = rs.getMetaData();
-            int columnCount = meta.getColumnCount();
-            if (!rs.isBeforeFirst()) {
-                writer.write("-- No data for table `" + table + "`\n");
-                return 0;
-            }
-            writer.write("-- ----------------------------\n");
-            writer.write("-- Records of " + table + "\n");
-            writer.write("-- ----------------------------\n");
-            // 构建列名
-            StringBuilder columns = new StringBuilder();
-            for (int i = 1; i <= columnCount; i++) {
-                if (i > 1) columns.append(", ");
-                columns.append("`").append(meta.getColumnName(i)).append("`");
-            }
-            String insertPrefix = "INSERT INTO `" + table + "` (" + columns + ") VALUES\n";
-            int batchCount = 0;
-            StringBuilder values = new StringBuilder();
-            while (rs.next()) {
-                // 检查暂停/停止
-                if (task.isStopped()) return count;
-                task.waitIfPaused();
-                if (task.isStopped()) return count;
-
-                // 先构建当前行的值
-                StringBuilder row = new StringBuilder();
-                row.append("(");
-                for (int i = 1; i <= columnCount; i++) {
-                    if (i > 1) row.append(", ");
-                    Object val = rs.getObject(i);
-                    if (val == null) {
-                        row.append("NULL");
-                    } else if (val instanceof Boolean) {
-                        row.append((Boolean) val ? 1 : 0);
-                    } else if (val instanceof Number) {
-                        row.append(val);
-                    } else if (val instanceof byte[]) {
-                        row.append("X'").append(bytesToHex((byte[]) val)).append("'");
-                    } else {
-                        row.append("'").append(escapeSQL(val.toString())).append("'");
-                    }
-                }
-                row.append(")");
-
-                // 预估加入此行后的总大小
-                int projectedSize = values.length() + row.length() + 3; // +3 for ",\n" or ";\n"
-                if (batchCount == 0) {
-                    projectedSize += insertPrefix.length();
-                }
-
-                // 如果当前批次已有数据，且加入此行后会超限，先刷出当前批次
-                if (batchCount > 0 && projectedSize > MAX_INSERT_BYTES) {
-                    values.append(";\n");
-                    writer.write(values.toString());
-                    values.setLength(0);
-                    batchCount = 0;
-                }
-
-                // 添加行到当前批次
-                if (batchCount == 0) {
-                    values.append(insertPrefix);
-                } else {
-                    values.append(",\n");
-                }
-                values.append(row);
-                count++;
-                batchCount++;
-            }
-            // 写入剩余数据
-            if (batchCount > 0) {
-                values.append(";\n");
-                writer.write(values.toString());
-            }
-        }
-        return count;
-    }
-
-    /**
-     * 转义SQL字符串
-     */
-    private String escapeSQL(String str) {
-        if (str == null) return "";
-        return str.replace("\\", "\\\\")
-                .replace("'", "\\'")
-                .replace("\r", "\\r")
-                .replace("\n", "\\n")
-                .replace("\t", "\\t")
-                .replace("\0", "\\0");
-    }
-
-    /**
-     * 字节数组转十六进制
-     */
-    private String bytesToHex(byte[] bytes) {
-        StringBuilder sb = new StringBuilder();
-        for (byte b : bytes) {
-            sb.append(String.format("%02X", b));
-        }
-        return sb.toString();
     }
 
     // ========================================
@@ -836,24 +663,33 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
     public Map<String, Object> getStatistics() {
         ensureInitialized();
         Map<String, Object> stats = new HashMap<>();
-        int total = selectCount(new EntityWrapper<>());
-        stats.put("total", total);
-        int success = selectCount(new EntityWrapper<DatabaseBackupEntity>().eq(columnInWrapper("status"), 1));
-        stats.put("success", success);
-        int failed = selectCount(new EntityWrapper<DatabaseBackupEntity>().eq(columnInWrapper("status"), 2));
-        stats.put("failed", failed);
-        int running = runningTasks.size();
-        stats.put("running", running);
-        List<DatabaseBackupEntity> list = selectList(new EntityWrapper<DatabaseBackupEntity>().eq(columnInWrapper("status"), 1));
-        long totalSize = 0;
-        for (DatabaseBackupEntity e : list) {
-            if (e.getFilesize() != null) {
-                totalSize += e.getFilesize();
-            }
-        }
-        stats.put("totalSize", totalSize);
         stats.put("database", databaseName);
         stats.put("backupDir", Paths.get(backupDir, "backups").toAbsolutePath().toString());
+        try {
+            int total = selectCount(new EntityWrapper<>());
+            stats.put("total", total);
+            int success = selectCount(new EntityWrapper<DatabaseBackupEntity>().eq(columnInWrapper("status"), 1));
+            stats.put("success", success);
+            int failed = selectCount(new EntityWrapper<DatabaseBackupEntity>().eq(columnInWrapper("status"), 2));
+            stats.put("failed", failed);
+            List<DatabaseBackupEntity> list = selectList(new EntityWrapper<DatabaseBackupEntity>().eq(columnInWrapper("status"), 1));
+            long totalSize = 0;
+            for (DatabaseBackupEntity e : list) {
+                if (e.getFilesize() != null) {
+                    totalSize += e.getFilesize();
+                }
+            }
+            stats.put("totalSize", totalSize);
+        } catch (Exception e) {
+            // 恢复备份若 DROP 了业务库表（含 db_database_backup），统计查询会失败，避免整页不可用
+            log.warn("Backup statistics unavailable (missing table or DB error): {}", e.getMessage());
+            stats.put("total", 0);
+            stats.put("success", 0);
+            stats.put("failed", 0);
+            stats.put("totalSize", 0L);
+            stats.put("statsDegraded", true);
+        }
+        stats.put("running", runningTasks.size());
         return stats;
     }
 
@@ -862,7 +698,7 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
      */
     public List<String> getDatabaseTables() {
         try (Connection conn = dataSource.getConnection()) {
-            return getAllTables(conn);
+            return DatabaseBackupSqlExportSupport.listTableNames(conn, databaseHolder.getType());
         } catch (Exception e) {
             log.error("Failed to get database tables: {}", e.getMessage(), e);
             return Collections.emptyList();
@@ -931,6 +767,12 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
     private final ConcurrentHashMap<String, RestoreTask> runningRestoreTasks = new ConcurrentHashMap<>();
 
     /**
+     * 恢复线程结束后会从 {@link #runningRestoreTasks} 移除任务，若前端最后一次轮询发生在移除之后，
+     * 会拿不到 executedStatements/completed；此处保留终态快照直至同一 taskKey 再次发起恢复。
+     */
+    private final ConcurrentHashMap<String, Map<String, Object>> finishedRestoreProgress = new ConcurrentHashMap<>();
+
+    /**
      * 从已有备份恢复（异步）
      */
     public Map<String, Object> restoreFromBackup(Long backupId) {
@@ -950,6 +792,7 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
             throw new RuntimeException("该备份正在恢复中，请勿重复操作");
         }
         RestoreTask task = new RestoreTask(taskKey, file.getAbsolutePath());
+        finishedRestoreProgress.remove(taskKey);
         runningRestoreTasks.put(taskKey, task);
         asyncTaskExecutor.execute(new TagRunnable("restore-backup-" + backupId) {
             @Override
@@ -959,6 +802,7 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
                 } catch (Exception e) {
                     log.error("Restore from backup failed: backupId={}", backupId, e);
                 } finally {
+                    finishedRestoreProgress.put(taskKey, snapshotRestoreProgress(task));
                     runningRestoreTasks.remove(taskKey);
                 }
             }
@@ -994,6 +838,7 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
         entity.setError(null);
         databaseBackupUploadService.updateById(entity);
         RestoreTask task = new RestoreTask(taskKey, file.getAbsolutePath());
+        finishedRestoreProgress.remove(taskKey);
         runningRestoreTasks.put(taskKey, task);
         asyncTaskExecutor.execute(new TagRunnable("restore-upload-" + uploadId) {
             @Override
@@ -1003,6 +848,7 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
                 } catch (Exception e) {
                     log.error("Restore from upload failed: uploadId={}", uploadId, e);
                 } finally {
+                    finishedRestoreProgress.put(taskKey, snapshotRestoreProgress(task));
                     runningRestoreTasks.remove(taskKey);
                 }
             }
@@ -1020,6 +866,14 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
     private void executeRestore(RestoreTask task, Long uploadId, Long backupId) {
         long startTime = System.currentTimeMillis();
         try {
+            if (backupId != null) {
+                DatabaseBackupEntity src = selectById(backupId);
+                if (src != null && src.getBackupDialect() != null
+                        && !src.getBackupDialect().equals(databaseHolder.getType().name())) {
+                    task.addWarning("备份方言为 " + src.getBackupDialect() + "，当前数据源为 " + databaseHolder.getType().name()
+                            + "，建议在相同方言库上恢复以避免 SQL 不兼容");
+                }
+            }
             executeSqlFile(task);
             long duration = System.currentTimeMillis() - startTime;
             task.setCompleted(true);
@@ -1057,9 +911,11 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
      * 执行SQL文件
      */
     private void executeSqlFile(RestoreTask task) throws Exception {
+        DatabaseType restoreDbType = databaseHolder.getType();
+        boolean autocommitPerStatement = restoreUsesAutocommitPerStatement(restoreDbType);
         try (Connection conn = dataSource.getConnection();
              BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(task.filePath), StandardCharsets.UTF_8))) {
-            conn.setAutoCommit(false);
+            conn.setAutoCommit(autocommitPerStatement);
             StringBuilder statement = new StringBuilder();
             String line;
             int executedCount = 0;
@@ -1107,8 +963,8 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
                         task.setExecutedStatements(executedCount);
                     }
                     statement.setLength(0);
-                    // 每100条语句提交一次
-                    if (executedCount % 100 == 0) {
+                    // PostgreSQL 等: 事务内任一条失败会中止整个事务；按语句自动提交，单条失败不影响后续
+                    if (!autocommitPerStatement && executedCount % 100 == 0) {
                         conn.commit();
                     }
                 } else {
@@ -1121,10 +977,19 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
                 executedCount += executeWithCompatFix(conn, lastSql, task, currentLine);
                 task.setExecutedStatements(executedCount);
             }
-            conn.commit();
+            if (!autocommitPerStatement) {
+                conn.commit();
+            }
             conn.setAutoCommit(true);
-            log.info("SQL file executed: file={}, statements={}", task.filePath, executedCount);
+            log.info("SQL file executed: file={}, statements={}, autocommitPerStatement={}", task.filePath, executedCount, autocommitPerStatement);
         }
+    }
+
+    /**
+     * 恢复时是否按语句独立提交。PostgreSQL/Kingbase 在事务失败后会拒绝同事务内后续语句，需避免长事务+忽略错误混用。
+     */
+    private static boolean restoreUsesAutocommitPerStatement(DatabaseType t) {
+        return t == DatabaseType.POSTGRESQL || t == DatabaseType.KINGBASE;
     }
 
     /**
@@ -1139,6 +1004,15 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
             stmt.execute(sql);
             return 1;
         } catch (SQLException e) {
+            // Derby：DROP TABLE（无 IF EXISTS）在表不存在时期望忽略；含 IF EXISTS 的旧备份先去掉子句再执行
+            if (databaseHolder.getType() == DatabaseType.DERBY && isDropTableStatement(sql)) {
+                if (isDerbyDropTargetMissing(e)) {
+                    return 1;
+                }
+                if (tryDerbyDropWithoutIfExists(conn, sql, currentLine)) {
+                    return 1;
+                }
+            }
             // 1. Packet too large -> 拆分 INSERT 重试
             if (isPacketTooLargeError(e) && isSplittableInsert(sql)) {
                 if (log.isDebugEnabled())
@@ -1175,30 +1049,95 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
         }
     }
 
+    private static boolean isDropTableStatement(String sql) {
+        if (sql == null) {
+            return false;
+        }
+        String t = sql.trim();
+        return t.regionMatches(true, 0, "DROP TABLE", 0, "DROP TABLE".length());
+    }
+
+    private static boolean isDerbyDropTargetMissing(SQLException e) {
+        if (e == null) {
+            return false;
+        }
+        if ("42X05".equals(e.getSQLState())) {
+            return true;
+        }
+        String m = e.getMessage();
+        if (m == null) {
+            return false;
+        }
+        String u = m.toUpperCase(Locale.ROOT);
+        return u.contains("DOES NOT EXIST") || u.contains("NOT FOUND");
+    }
+
+    /**
+     * Derby 对 {@code DROP TABLE IF EXISTS} 常报语法错；去掉 IF EXISTS 后执行，表已不存在则视为成功。
+     */
+    private boolean tryDerbyDropWithoutIfExists(Connection conn, String sql, long currentLine) {
+        if (databaseHolder.getType() != DatabaseType.DERBY) {
+            return false;
+        }
+        String trimmed = sql.trim();
+        if (!trimmed.toUpperCase(Locale.ROOT).contains("IF EXISTS")) {
+            return false;
+        }
+        String simplified = DERBY_DROP_IF_EXISTS.matcher(trimmed).replaceFirst("");
+        if (simplified.equals(trimmed)) {
+            return false;
+        }
+        try (Statement st = conn.createStatement()) {
+            st.execute(simplified);
+            if (log.isDebugEnabled()) {
+                log.debug("Derby restore: DROP retried without IF EXISTS at line {}", currentLine);
+            }
+            return true;
+        } catch (SQLException e2) {
+            return isDerbyDropTargetMissing(e2);
+        }
+    }
+
     /**
      * 获取恢复任务进度
      */
     public Map<String, Object> getRestoreProgress(String taskKey) {
         RestoreTask task = runningRestoreTasks.get(taskKey);
-        Map<String, Object> info = new HashMap<>();
-        if (task == null) {
-            info.put("running", false);
-            return info;
+        if (task != null) {
+            return buildRestoreProgressMap(task, true);
         }
-        info.put("running", true);
+        Map<String, Object> done = finishedRestoreProgress.get(taskKey);
+        if (done != null) {
+            return new HashMap<>(done);
+        }
+        return Collections.singletonMap("running", false);
+    }
+
+    private static Map<String, Object> buildRestoreProgressMap(RestoreTask task, boolean running) {
+        Map<String, Object> info = new HashMap<>();
+        info.put("running", running);
         info.put("taskKey", task.taskKey);
         info.put("totalLines", task.getTotalLines());
         info.put("currentLine", task.getCurrentLine());
         info.put("executedStatements", task.getExecutedStatements());
         info.put("completed", task.isCompleted());
         info.put("error", task.getError());
-        info.put("warnings", task.getWarnings());
-        if (task.getTotalLines() > 0) {
-            info.put("progress", (int) ((task.getCurrentLine() * 100.0) / task.getTotalLines()));
+        info.put("warnings", running ? task.getWarnings() : new ArrayList<>(task.getWarnings()));
+        int pct;
+        if (task.isCompleted() && task.getError() == null) {
+            pct = 100;
+        } else if (task.getTotalLines() > 0) {
+            pct = (int) ((task.getCurrentLine() * 100.0) / task.getTotalLines());
         } else {
-            info.put("progress", 0);
+            pct = 0;
         }
+        info.put("progress", pct);
         return info;
+    }
+
+    /** 终态快照（供 {@link #finishedRestoreProgress}），与 {@link #buildRestoreProgressMap} 一致但固定 running=false。 */
+    private static Map<String, Object> snapshotRestoreProgress(RestoreTask task) {
+        return buildRestoreProgressMap(task, false);
     }
 
     /**
@@ -1290,7 +1229,7 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
     /**
      * 备份任务状态控制
      */
-    static class BackupTask {
+    static class BackupTask implements DatabaseBackupSqlExportSupport.BackupExportTaskHandle {
         final Long backupId;
         final String outputPath;
         final String mode;
@@ -1298,12 +1237,40 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
         private volatile boolean stopped = false;
         private volatile boolean paused = false;
         private final Object pauseLock = new Object();
+        /** 与导出线程同步的进度快照，供轮询接口读取，避免依赖实体缓存或读库延迟 */
+        private volatile int liveProgress = 0;
+        private volatile int liveCompletedTables = 0;
+        private volatile int liveTotalTables = 0;
+        private volatile String liveCurrentTable = null;
 
         BackupTask(Long backupId, String outputPath, String mode, String tableList) {
             this.backupId = backupId;
             this.outputPath = outputPath;
             this.mode = mode;
             this.tableList = tableList;
+        }
+
+        void recordLiveProgress(int completed, int total, String currentTable) {
+            this.liveCompletedTables = completed;
+            this.liveTotalTables = total;
+            this.liveCurrentTable = currentTable;
+            this.liveProgress = total > 0 ? (int) ((completed * 100.0) / total) : 0;
+        }
+
+        int getLiveProgress() {
+            return liveProgress;
+        }
+
+        int getLiveCompletedTables() {
+            return liveCompletedTables;
+        }
+
+        int getLiveTotalTables() {
+            return liveTotalTables;
+        }
+
+        String getLiveCurrentTable() {
+            return liveCurrentTable;
         }
 
         void pause() {
@@ -1327,14 +1294,14 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
             return paused;
         }
 
-        boolean isStopped() {
+        public boolean isStopped() {
             return stopped;
         }
 
         /**
          * 如果暂停则等待恢复
          */
-        void waitIfPaused() {
+        public void waitIfPaused() {
             synchronized (pauseLock) {
                 while (paused && !stopped) {
                     try {
@@ -1345,6 +1312,21 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
                     }
                 }
             }
+        }
+
+        @Override
+        public Long getBackupId() {
+            return backupId;
+        }
+
+        @Override
+        public String getMode() {
+            return mode;
+        }
+
+        @Override
+        public String getTableList() {
+            return tableList;
         }
     }
 }

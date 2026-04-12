@@ -30,3 +30,4 @@ logs/
 embedded/
 /.vscode/settings.json
 /.env
+/derby.log
