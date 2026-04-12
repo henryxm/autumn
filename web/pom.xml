@@ -1,0 +1,77 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <groupId>cn.org.autumn</groupId>
+        <artifactId>autumn</artifactId>
+        <version>2.0.0</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+    <artifactId>web</artifactId>
+    <version>2.0.0</version>
+    <packaging>jar</packaging>
+    <description>web</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>cn.org.autumn</groupId>
+            <artifactId>autumn-starter</artifactId>
+            <version>2.0.0</version>
+        </dependency>
+        <!-- 内嵌 profile（application-h2.yml）：H2，与 dev 等组合使用 -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <!-- profile：application-sqlite.yml -->
+        <dependency>
+            <groupId>org.xerial</groupId>
+            <artifactId>sqlite-jdbc</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <!-- profile：application-derby.yml；版本随 Spring Boot BOM（2.7 为 10.14.x，字节码 52，可在 Java 8 运行）。
+             Derby 10.16+ 需 Java 17+，若在 JDK17+ 环境且需要 IF NOT EXISTS 等 10.16 语法，可在本模块 pom 显式覆盖 derby 版本并改用 AutoloadedDriver。 -->
+        <dependency>
+            <groupId>org.apache.derby</groupId>
+            <artifactId>derby</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <finalName>${project.artifactId}</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <mainClass>cn.org.autumn.Web</mainClass>
+                </configuration>
+            </plugin>
+            <!-- 跳过单元测试 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <skipTests>${skipTests}</skipTests>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>com.spotify</groupId>
+                <artifactId>docker-maven-plugin</artifactId>
+                <version>0.4.14</version>
+                <configuration>
+                    <imageName>autumn/admin</imageName>
+                    <dockerDirectory>${project.basedir}</dockerDirectory>
+                    <resources>
+                        <resource>
+                            <targetPath>/</targetPath>
+                            <directory>${project.build.directory}</directory>
+                            <include>${project.build.finalName}.jar</include>
+                        </resource>
+                    </resources>
+                </configuration>
+                <!-- 运行命令 mvn clean package docker:build 打包并生成docker镜像 -->
+            </plugin>
+        </plugins>
+    </build>
+</project>

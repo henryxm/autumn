@@ -56,7 +56,8 @@ autumn
 ├─autumn-handler    # Handler 扩展接口与默认实现
 ├─autumn-lib        # 基础能力（缓存/队列/加解密/通用模型）
 ├─autumn-modules    # 业务模块与控制器实现
-└─autumn-web        # Web 启动入口（主类：cn.org.autumn.Web）
+├─autumn-starter    # 一站式引入Autumn框架所有功能
+└─web        # Web 启动入口（主类：cn.org.autumn.Web）
 ```
 
 ## 6. 环境要求
@@ -110,7 +111,3 @@ Autumn 提供两类任务机制：
   - `autumn.shiro.redis=true`
 - 多节点任务建议结合 `LoopJob` 分配能力统一管理，避免重复执行。
 - 缓存、队列、加密能力建议统一复用框架内置服务，避免项目内重复实现。
-
-## 10. 贡献与反馈
-
-- GitHub：`https://github.com/henryxm/autumn`

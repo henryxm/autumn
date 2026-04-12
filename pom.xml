@@ -51,8 +51,8 @@
         <module>autumn-handler</module>
         <module>autumn-lib</module>
         <module>autumn-modules</module>
-        <module>autumn-web</module>
-        <module>autumn-demo</module>
+        <module>autumn-starter</module>
+        <module>web</module>
     </modules>
     <dependencies>
         <dependency>
