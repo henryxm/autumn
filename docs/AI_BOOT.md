@@ -1,7 +1,7 @@
 # Autumn AI 启动上下文（首轮必读）
 
 > 用途：给 AI 的最小启动上下文。默认只读本文件，再按任务类型追加其他文档。
-> 统一索引：`@AI_INDEX.md`
+> 统一索引：`@docs/AI_INDEX.md`（仓库根下 `docs/` 目录）
 
 ## 1. 核心原则（必须遵守）
 
@@ -10,7 +10,7 @@
   - `ModuleService -> BaseService -> ShareCacheService -> BaseCacheService -> BaseQueueService`
 - 业务逻辑放可维护层（`controller/*`、`service/*`），避免放 `controller/gen/*` 可重生层。
 - 页面开发默认使用**用户视角**描述功能与交互；除非需求有特殊说明，禁止在页面文案中出现开发术语、后台表名/函数名、技术架构描述。
-- **应用层与数据访问强制规范**（高内聚低耦合、内外 API、gen 路由隔离、禁止生产 `@Scheduled`、新接口禁用 `@RequiresPermissions`、FreeMarker、**禁止常规 DDL `.sql`、注解建表**、**Dao 仅经 Provider 写 SQL**、**Controller 禁用 Dao**、**statics/pages/Site/PageAware** 等）见 **`AI_STANDARDS.md`**，与本文同步遵守。
+- **应用层与数据访问强制规范**（高内聚低耦合、内外 API、gen 路由隔离、禁止生产 `@Scheduled`、新接口禁用 `@RequiresPermissions`、FreeMarker、**禁止常规 DDL `.sql`、注解建表**、**Dao 仅经 Provider 写 SQL**、**Controller 禁用 Dao**、**statics/pages/Site/PageAware** 等）见 **`docs/AI_STANDARDS.md`**，与本文同步遵守。
 
 ## 2. 默认技术路径（高频）
 
@@ -41,11 +41,11 @@
   - 约束：写操作后必须做缓存失效，避免脏读。
 - `@EnvAware`（配置注入）
   - 在配置 Bean 字段上声明配置键（如 `site.domain`、`node.tag`）。
-- `@Table` / `@Column` / `@Index` / `@Indexes` / `@IndexField`（注解驱动建表，见 `AI_MAP.md` 2.10 节；**表名 / 前缀**见 **§3.2**，**存储引擎 / 字符集 / 排序规则**见 **§3.1**）
-  - `@Table.comment` / `@Column.comment`：`BaseService` 多语言初始化在注释含 **`:`** 时**只取冒号前**作为列表/菜单等处的**短标题**；冒号后为详述。建议 **`短标题（约 1～4 字）：详细说明`**，避免表头被长文案撑满（详见 `AI_MAP.md` 2.10.5）。
+- `@Table` / `@Column` / `@Index` / `@Indexes` / `@IndexField`（注解驱动建表，见 `docs/AI_MAP.md` 2.10 节；**表名 / 前缀**见 **§3.2**，**存储引擎 / 字符集 / 排序规则**见 **§3.1**）
+  - `@Table.comment` / `@Column.comment`：`BaseService` 多语言初始化在注释含 **`:`** 时**只取冒号前**作为列表/菜单等处的**短标题**；冒号后为详述。建议 **`短标题（约 1～4 字）：详细说明`**，避免表头被长文案撑满（详见 `docs/AI_MAP.md` 2.10.5）。
   - `@Column(isUnique = true)`：已在 DDL 中为该列生成唯一约束；**禁止**再在同一字段上叠 `@Index`，也避免用 `@Indexes` 再声明同一单列唯一/普通索引，以免重复索引与迁移对比噪音。
   - 字段上已用 `@Index` 的列：**不要**在类级 `@Indexes`（或类级 `@Index` 的 `fields`）里再声明同列的同用途索引，避免 `TableInfo` 收集到重复 `IndexInfo`、建表/变更阶段生成重复索引。
-  - 索引前缀：`IndexPrefixRules` 会按 `@Column.type()` 与 Java 类型收敛前缀长度，非字符串/二进制串列不会生成非法 `` `col`(n) ``；数值、日期等列可正常加 `@Index`（整列索引）。`IndexTypeEnum.FULLTEXT` 仍仅适用于字符型列（MySQL 全文索引语义）。详见 `AI_MAP.md` 2.10.3。
+  - 索引前缀：`IndexPrefixRules` 会按 `@Column.type()` 与 Java 类型收敛前缀长度，非字符串/二进制串列不会生成非法 `` `col`(n) ``；数值、日期等列可正常加 `@Index`（整列索引）。`IndexTypeEnum.FULLTEXT` 仍仅适用于字符型列（MySQL 全文索引语义）。详见 `docs/AI_MAP.md` 2.10.3。
 
 ### 3.1 表结构 SQL 语义枚举（`annotation.sql`）与字符集约定
 
@@ -124,38 +124,38 @@
 
 ## 6. 按需追加文档（不要全量加载）
 
-- 应用层开发规范：`@AI_STANDARDS.md`
-- 核心能力详解：`@AI_MAP.md`
-- **多数据库与 SQL 落地（`DatabaseType`、Wrapper 边界、Provider 强制）：`@AI_DATABASE.md`**
-- **PostgreSQL 专项（DDL/元数据、迁移）：`@AI_POSTGRESQL.md`**
-- **依赖方升级 autumn（清单、扫描脚本、自动化边界）：`@AI_UPGRADE.md`**
-- 加解密兼容专项：`@AI_CRYPTO.md`
-- 模块任务模板：`@AI_TEMPLATES.md`
-- 代码生成流程与三步开发、基类缓存/队列说明：`@AI_CODEGEN.md`
-- 治理与协作规范：`@AI_GOVERNANCE.md`
-- 安全专项（签名/灰度/演练）：`@AI_SECURITY.md`
-- 提问模板库：`@AI_PROMPTS.md`
+- 应用层开发规范：`@docs/AI_STANDARDS.md`
+- 核心能力详解：`@docs/AI_MAP.md`
+- **多数据库与 SQL 落地（`DatabaseType`、Wrapper 边界、Provider 强制）：`@docs/AI_DATABASE.md`**
+- **PostgreSQL 专项（DDL/元数据、迁移）：`@docs/AI_POSTGRESQL.md`**
+- **依赖方升级 autumn（清单、扫描脚本、自动化边界）：`@docs/AI_UPGRADE.md`**
+- 加解密兼容专项：`@docs/AI_CRYPTO.md`
+- 模块任务模板：`@docs/AI_TEMPLATES.md`
+- 代码生成流程与三步开发、基类缓存/队列说明：`@docs/AI_CODEGEN.md`
+- 治理与协作规范：`@docs/AI_GOVERNANCE.md`
+- 安全专项（签名/灰度/演练）：`@docs/AI_SECURITY.md`
+- 提问模板库：`@docs/AI_PROMPTS.md`
 
 ## 7. 推荐加载组合
 
-- 日常开发：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md`（写 SQL / Wrapper 时加 `AI_DATABASE.md`）
-- 接口加解密改造：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md + AI_CRYPTO.md`
-- 模块新建/代码生成：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md + AI_CODEGEN.md + AI_TEMPLATES.md`
-- 规范梳理/团队协作：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md + AI_GOVERNANCE.md`
-- 安全改造/攻防演练：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md + AI_SECURITY.md`
-- **多库 / Wrapper / Provider / 换库排查：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md + AI_DATABASE.md`（PG 专项再叠 `AI_POSTGRESQL.md`）**
-- **新增 Mapper 手写 SQL / SqlProvider：`AI_BOOT.md + AI_DATABASE.md`（§3～§5）+ `AI_POSTGRESQL.md`（PG 细节）**
-- **业务仓库升级 autumn：`AI_BOOT.md + AI_MAP.md + AI_STANDARDS.md + AI_UPGRADE.md`（多库时叠 `AI_DATABASE.md`；PG 再叠 `AI_POSTGRESQL.md`）**
-- 仅对照 PG 清单与兼容性、少读其它文档时：可直接打开 `AI_POSTGRESQL.md`（仍建议与 `AI_MAP.md` 中表结构/方言章节交叉核对）。
+- 日常开发：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md`（写 SQL / Wrapper 时加 `docs/AI_DATABASE.md`）
+- 接口加解密改造：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md + docs/AI_CRYPTO.md`
+- 模块新建/代码生成：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md + docs/AI_CODEGEN.md + docs/AI_TEMPLATES.md`
+- 规范梳理/团队协作：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md + docs/AI_GOVERNANCE.md`
+- 安全改造/攻防演练：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md + docs/AI_SECURITY.md`
+- **多库 / Wrapper / Provider / 换库排查：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md + docs/AI_DATABASE.md`（PG 专项再叠 `docs/AI_POSTGRESQL.md`）**
+- **新增 Mapper 手写 SQL / SqlProvider：`docs/AI_BOOT.md + docs/AI_DATABASE.md`（§3～§5）+ `docs/AI_POSTGRESQL.md`（PG 细节）**
+- **业务仓库升级 autumn：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md + docs/AI_UPGRADE.md`（多库时叠 `docs/AI_DATABASE.md`；PG 再叠 `docs/AI_POSTGRESQL.md`）**
+- 仅对照 PG 清单与兼容性、少读其它文档时：可直接打开 `docs/AI_POSTGRESQL.md`（仍建议与 `docs/AI_MAP.md` 中表结构/方言章节交叉核对）。
 
 ## 8. 多数据库支持（摘要）
 
-> **跨库 SQL 纪律、已支持类型清单、Wrapper 与 Provider 标准：`AI_DATABASE.md`（权威）。**  
-> **PostgreSQL 专项（DDL、`PostgresQuerySql`、迁移）：`AI_POSTGRESQL.md`。**
+> **跨库 SQL 纪律、已支持类型清单、Wrapper 与 Provider 标准：`docs/AI_DATABASE.md`（权威）。**  
+> **PostgreSQL 专项（DDL、`PostgresQuerySql`、迁移）：`docs/AI_POSTGRESQL.md`。**
 
-- **配置**：`autumn.database` 与主数据源 **JDBC URL** 共同决定 `DatabaseType`（`DatabaseHolder#resolveType`）；TiDB / OceanBase MySQL 等与 `jdbc:mysql` 重叠时须按 **`AI_DATABASE.md` §2** 配置。
+- **配置**：`autumn.database` 与主数据源 **JDBC URL** 共同决定 `DatabaseType`（`DatabaseHolder#resolveType`）；TiDB / OceanBase MySQL 等与 `jdbc:mysql` 重叠时须按 **`docs/AI_DATABASE.md` §2** 配置。
 - **路由**：`DatabaseType` + `RoutingRelationalTableOperations` / `RoutingRuntimeSqlDialect`；注解建表仅对 **mysql / mariadb / postgresql** 执行同步。
-- **方言与 SQL**：底层为 `RuntimeSqlDialect`；**默认**业务 SQL 应对已支持类型全量兼容（**`AI_DATABASE.md` §1**）。**手写 SQL 必须**走 **Provider**，并推荐 **`extends RuntimeSql`**，使用 `quote`、`limitOne`、`likeContainsAny`、`columnValueInCommaSeparatedList` 等（**`AI_DATABASE.md` §3～§5**；示例见 **`AI_POSTGRESQL.md`**）。`PostgresQuerySql` 负责 PG DDL/元数据。
+- **方言与 SQL**：底层为 `RuntimeSqlDialect`；**默认**业务 SQL 应对已支持类型全量兼容（**`docs/AI_DATABASE.md` §1**）。**手写 SQL 必须**走 **Provider**，并推荐 **`extends RuntimeSql`**，使用 `quote`、`limitOne`、`likeContainsAny`、`columnValueInCommaSeparatedList` 等（**`docs/AI_DATABASE.md` §3～§5**；示例见 **`docs/AI_POSTGRESQL.md`**）。`PostgresQuerySql` 负责 PG DDL/元数据。
 - **类型兼容**：新建 PG 库时 `tinyint(1)` 布尔元数据可落 **`boolean`** 列；**已有 `smallint` 列**可与实体 **`int` 0/1** 对齐，或 **`ALTER ... TYPE boolean USING (...)`**。
 - **MyBatis**：避免同一字段 **`getX(int)` + `boolean isX()`** 并存导致 `Reflector` 冲突；分页 **`COUNT` 不带 `ORDER BY`**（见 `BaseService.selectCountWithoutOrderBy`）。
 - **构建**：JDK 9+ 需 Lombok **`annotationProcessorPaths`**；多模块运行前建议 **`mvn clean install -pl … -am`**，避免本地仓库旧 JAR 与源码不一致。

@@ -99,4 +99,4 @@ public Response<DemoVO> action(@Valid @RequestBody Request<DemoDTO> request) {
 
 - 强校验（`X-Encrypt-Auth`、`X-Encrypt-Agent`、`X-Encrypt-Timestamp`、`X-Encrypt-Nonce`、`X-Encrypt-Signature`）
 - 灰度上线、攻防演练
-- 以上统一见：`@AI_SECURITY.md`
+- 以上统一见：`@docs/AI_SECURITY.md`

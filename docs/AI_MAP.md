@@ -1,13 +1,13 @@
 # Autumn AI 框架能力地图
 
-> 首轮建议先读：`@AI_BOOT.md`（最小启动上下文）
-> 全量索引入口：`@AI_INDEX.md`
+> 首轮建议先读：`@docs/AI_BOOT.md`（最小启动上下文）
+> 全量索引入口：`@docs/AI_INDEX.md`
 
 > 目标：给 AI 提供统一、结构化的框架上下文，减少“不了解项目能力”导致的误判与重复实现。
 
 ## 0. AI 最小上下文（先读这段再开发）
 
-- **应用层强制规范**：分层、子项目解耦、内外 API、与 gen 路由隔离、禁止生产 `@Scheduled`、**新接口禁止 `@RequiresPermissions`**、**注解建表且禁止常规 DDL `.sql`**、**Dao 只用 Provider 写 SQL**、**Controller 禁用 Dao / Service 禁用他域 Dao**、**gen 与生成 html/js 不改**、**statics/pages/Site/@PageAware** — 全文见 **`AI_STANDARDS.md`**。**代码生成链路、库表反射生成、三步流程与 `@Cache`/基类缓存队列详解**见 **`AI_CODEGEN.md`**。
+- **应用层强制规范**：分层、子项目解耦、内外 API、与 gen 路由隔离、禁止生产 `@Scheduled`、**新接口禁止 `@RequiresPermissions`**、**注解建表且禁止常规 DDL `.sql`**、**Dao 只用 Provider 写 SQL**、**Controller 禁用 Dao / Service 禁用他域 Dao**、**gen 与生成 html/js 不改**、**statics/pages/Site/@PageAware** — 全文见 **`docs/AI_STANDARDS.md`**。**代码生成链路、库表反射生成、三步流程与 `@Cache`/基类缓存队列详解**见 **`docs/AI_CODEGEN.md`**。
 - 一句话原则：
   - 优先复用平台能力，禁止重复造轮子；默认从 `ModuleService` 继承链出发实现业务。
 - Service 默认能力：
@@ -23,7 +23,7 @@
 - 定时任务默认模式：
   - 固定周期优先 `LoopJob.*`，复杂日历才使用 cron。
 - 生成代码默认模式：
-  - 实体注解驱动建表 -> gen 模块模板生成 -> 业务只写非 gen 层（防覆盖）。**生成链路（`GeneratorService`、`TableDao` 反射、`GenUtils`、`template/*.vm`）、优先后台 ZIP、三步流程**见 **`AI_CODEGEN.md`**。
+  - 实体注解驱动建表 -> gen 模块模板生成 -> 业务只写非 gen 层（防覆盖）。**生成链路（`GeneratorService`、`TableDao` 反射、`GenUtils`、`template/*.vm`）、优先后台 ZIP、三步流程**见 **`docs/AI_CODEGEN.md`**。
 - 开发前 3 问（AI 自检）：
   - 1) 现有基类/模块能力是否已覆盖？
   - 2) 是否会破坏缓存一致性、加密语义、权限语义？
@@ -37,7 +37,7 @@
 
 ### 1.1 多数据库（PostgreSQL）
 
-- **`autumn.database`** 与 JDBC URL 决定 **`DatabaseType`**；**多库 SQL 纪律、Wrapper 边界、Provider 强制、已支持库类型清单**见 **`AI_DATABASE.md`**（与 `AI_BOOT.md` §8 摘要互补）。PostgreSQL **专项**（DDL、元数据、类型、分页 `COUNT`）见 **`AI_POSTGRESQL.md`**。业务工程 **升级 autumn 版本** 见 **`AI_UPGRADE.md`**。
+- **`autumn.database`** 与 JDBC URL 决定 **`DatabaseType`**；**多库 SQL 纪律、Wrapper 边界、Provider 强制、已支持库类型清单**见 **`docs/AI_DATABASE.md`**（与 `docs/AI_BOOT.md` §8 摘要互补）。PostgreSQL **专项**（DDL、元数据、类型、分页 `COUNT`）见 **`docs/AI_POSTGRESQL.md`**。业务工程 **升级 autumn 版本** 见 **`docs/AI_UPGRADE.md`**。
 
 ## 2. 核心能力索引（按开发高频）
 
@@ -86,13 +86,13 @@
 
 ### 2.4 加密兼容方案（跨项目复用）
 
-- 本节已拆分为独立专项文档：`@AI_CRYPTO.md`。
+- 本节已拆分为独立专项文档：`@docs/AI_CRYPTO.md`。
 - 日常开发只需记住 4 条：
   - 默认接口：`Request<T> -> Response<T>`，兼容场景再用 `CompatibleRequest/CompatibleResponse`。
   - 触发条件：请求体含 `ciphertext + session` 才解密；请求头含 `X-Encrypt-Session` 才加密响应。
   - 约束：不要自建平行加密协议；握手接口与业务接口分离。
   - 回归：至少覆盖“明文/密文/header有无”三组调用路径。
-- 安全强校验（`agent/auth/签名/灰度/演练`）请看：`@AI_SECURITY.md`。
+- 安全强校验（`agent/auth/签名/灰度/演练`）请看：`@docs/AI_SECURITY.md`。
 
 ### 2.5 接口式定时任务（LoopJob，常用推荐）
 
@@ -228,7 +228,7 @@ public class DemoService extends ModuleService<DemoDao, DemoEntity> implements L
 
 ### 2.8A 代码生成模板分层约束（MVC 生成骨架）
 
-> **端到端说明**（`GeneratorService` → `TableDao` 反射 → `GenUtils` → Velocity、三步开发节奏、`@Cache` 与基类能力）：见 **`AI_CODEGEN.md`**。  
+> **端到端说明**（`GeneratorService` → `TableDao` 反射 → `GenUtils` → Velocity、三步开发节奏、`@Cache` 与基类能力）：见 **`docs/AI_CODEGEN.md`**。  
 > 模板目录：`autumn-modules/src/main/resources/template/*`。
 
 #### 2.8A.1 生成产物分层（必须区分）
@@ -379,22 +379,22 @@ public class DemoService extends ModuleService<DemoDao, DemoEntity> implements L
 
 ## 4. 开发决策规则（给 AI 的硬约束）
 
-- **应用层纪律**（实体域 Service 内聚、可维护 Controller 薄层、子项目解耦、对内接口与 `ControllerGen` 路由隔离、对外独立 API Controller、`Request`/`Response` 与加解密、**禁止生产 `@Scheduled`**、**新接口不得使用 `@RequiresPermissions`**、**FTL 页面与 JS 插值规范**）：以 **`AI_STANDARDS.md`** 全文为准；本节补充框架能力级约束。
-- **新增接口禁止**在 Controller 上使用 **`@RequiresPermissions`**（该注解保留给代码生成/后台管理语义）；普通用户可访问接口用**登录态**鉴权（`AI_STANDARDS.md` §6）。
-- **FreeMarker 页面**：避免与 FTL 冲突；条件等可用 **`<!-- -->`** 包裹以保持 HTML 规范；**`<script>`** 内 FTL 插值须保证渲染后 JS 合法；无法避免冲突时用 **`<#noparse>`**（`AI_STANDARDS.md` §7）。
-- **实体与库表**：依赖框架实体扫描与 **`autumn.table.*` 开关**做建表/更新；**禁止**把**常规初始化 DDL `.sql`** 作为默认交付物（`AI_STANDARDS.md` §8）。
-- **模块名 = 包段 = 表前缀**：**禁止**把模块名当作**实体类名前缀**造成生成错乱；物理表名惯例见 `AI_BOOT.md` §3.2 与 `AI_STANDARDS.md` §9。
-- **新代码 SQL**：**禁止**在 Dao 接口注解上**硬编码 SQL**；**必须**用 **Provider**（跨库见 **`AI_DATABASE.md`**，PG 细节见 **`AI_POSTGRESQL.md`**）（`AI_STANDARDS.md` §12）。
-- **Controller / Service / Dao**：Controller **禁止**用 Dao；本实体 Service 用 **`baseMapper`**、**禁止**再注入本 Dao；跨实体 **注入 Service** 而非他域 Dao（`AI_STANDARDS.md` §13）。
-- **资源与页面**：静态资源放 **`resources/statics/`** 并优先复用框架已有文件；新后台页放模块 **`pages`**；**`site/*Site.java`** 配 **`@PageAware(login=true/false)`** 做 SPM 指引（`AI_STANDARDS.md` §14）。
-- **生成物**：**gen**、`SitePages` 生成的 **Pages/html/js** **禁止改、禁止加逻辑**（`AI_STANDARDS.md` §11）。
+- **应用层纪律**（实体域 Service 内聚、可维护 Controller 薄层、子项目解耦、对内接口与 `ControllerGen` 路由隔离、对外独立 API Controller、`Request`/`Response` 与加解密、**禁止生产 `@Scheduled`**、**新接口不得使用 `@RequiresPermissions`**、**FTL 页面与 JS 插值规范**）：以 **`docs/AI_STANDARDS.md`** 全文为准；本节补充框架能力级约束。
+- **新增接口禁止**在 Controller 上使用 **`@RequiresPermissions`**（该注解保留给代码生成/后台管理语义）；普通用户可访问接口用**登录态**鉴权（`docs/AI_STANDARDS.md` §6）。
+- **FreeMarker 页面**：避免与 FTL 冲突；条件等可用 **`<!-- -->`** 包裹以保持 HTML 规范；**`<script>`** 内 FTL 插值须保证渲染后 JS 合法；无法避免冲突时用 **`<#noparse>`**（`docs/AI_STANDARDS.md` §7）。
+- **实体与库表**：依赖框架实体扫描与 **`autumn.table.*` 开关**做建表/更新；**禁止**把**常规初始化 DDL `.sql`** 作为默认交付物（`docs/AI_STANDARDS.md` §8）。
+- **模块名 = 包段 = 表前缀**：**禁止**把模块名当作**实体类名前缀**造成生成错乱；物理表名惯例见 `docs/AI_BOOT.md` §3.2 与 `docs/AI_STANDARDS.md` §9。
+- **新代码 SQL**：**禁止**在 Dao 接口注解上**硬编码 SQL**；**必须**用 **Provider**（跨库见 **`docs/AI_DATABASE.md`**，PG 细节见 **`docs/AI_POSTGRESQL.md`**）（`docs/AI_STANDARDS.md` §12）。
+- **Controller / Service / Dao**：Controller **禁止**用 Dao；本实体 Service 用 **`baseMapper`**、**禁止**再注入本 Dao；跨实体 **注入 Service** 而非他域 Dao（`docs/AI_STANDARDS.md` §13）。
+- **资源与页面**：静态资源放 **`resources/statics/`** 并优先复用框架已有文件；新后台页放模块 **`pages`**；**`site/*Site.java`** 配 **`@PageAware(login=true/false)`** 做 SPM 指引（`docs/AI_STANDARDS.md` §14）。
+- **生成物**：**gen**、`SitePages` 生成的 **Pages/html/js** **禁止改、禁止加逻辑**（`docs/AI_STANDARDS.md` §11）。
 - 能复用框架能力时，禁止重复造轮子（优先找 `Base*Service` / `*Service` 现有能力）。
 - 改业务逻辑优先“覆盖扩展点”而非修改内核流程。
 - 涉及缓存更新必须同步考虑失效策略（删除单值 + 列表缓存）。
 - 涉及加解密必须先判断触发条件（header/请求体字段/接口排除）。
 - 涉及兼容改造时，先判断请求/返回类型是否已实现 `Encrypt`；若已实现则禁止再做兼容包装。
 - 涉及队列消费必须给出失败、重试、死信处理策略。
-- 涉及定时任务时，优先接口式任务（`LoopJob.OneMinute/FiveMinute/...`），避免不必要的 cron 表达式；**生产代码禁止 Spring `@Scheduled`**（见 `AI_STANDARDS.md` §5）。
+- 涉及定时任务时，优先接口式任务（`LoopJob.OneMinute/FiveMinute/...`），避免不必要的 cron 表达式；**生产代码禁止 Spring `@Scheduled`**（见 `docs/AI_STANDARDS.md` §5）。
 - 所有 `ModuleService` 子类默认具备缓存/队列/基础 CRUD 能力，禁止重复封装同类基础组件。
 - 新增基础能力前，先检查 `BaseCacheService/ShareCacheService/BaseQueueService/LoopJob` 是否已覆盖需求。
 - 涉及页面/模板资源扩展时，优先通过 `TemplateFactory.Template` 在本项目 jar 内提供模板，不要求集中拷贝到入口工程。
@@ -540,18 +540,18 @@ public class DemoService extends ModuleService<DemoDao, DemoEntity> implements L
 ## 9. 按需扩展索引（低频，不默认加载）
 
 - 模板库（模块任务指令、组合索引）：
-  - `@AI_TEMPLATES.md`
+  - `@docs/AI_TEMPLATES.md`
 - 加解密兼容专项（接口迁移与客户端对接）：
-  - `@AI_CRYPTO.md`
+  - `@docs/AI_CRYPTO.md`
 - 治理与维护（规则优先级、术语、多项目协作、维护规范）：
-  - `@AI_GOVERNANCE.md`
+  - `@docs/AI_GOVERNANCE.md`
 - 安全专项（签名接入、灰度上线、攻防演练）：
-  - `@AI_SECURITY.md`
+  - `@docs/AI_SECURITY.md`
 - 提问模板库（可复制指令）：
-  - `@AI_PROMPTS.md`
+  - `@docs/AI_PROMPTS.md`
 - 默认加载建议：
-  - 日常开发：仅 `AI_MAP.md`
-  - 接口加解密改造：`AI_MAP.md + AI_CRYPTO.md`
-  - 模块新建/批量生成：`AI_MAP.md + AI_TEMPLATES.md`
-  - 规范梳理/文档治理：`AI_MAP.md + AI_GOVERNANCE.md`
-  - 安全改造/演练：`AI_MAP.md + AI_SECURITY.md`
+  - 日常开发：仅 `docs/AI_MAP.md`
+  - 接口加解密改造：`docs/AI_MAP.md + docs/AI_CRYPTO.md`
+  - 模块新建/批量生成：`docs/AI_MAP.md + docs/AI_TEMPLATES.md`
+  - 规范梳理/文档治理：`docs/AI_MAP.md + docs/AI_GOVERNANCE.md`
+  - 安全改造/演练：`docs/AI_MAP.md + docs/AI_SECURITY.md`

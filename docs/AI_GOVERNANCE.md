@@ -15,7 +15,7 @@
 ## 2. 维护约定
 
 - 新增框架能力时，同步更新：
-  - `AI_MAP.md`（核心能力地图）
+  - `docs/AI_MAP.md`（核心能力地图）
   - 对应在线章节（`modules/docs/*.html`）
 - 每个能力至少补齐：
   - 功能入口
@@ -25,9 +25,9 @@
 
 ## 3. 多项目使用入口
 
-- 多个 Autumn 系项目并行时，先阅读：`AI_GUIDE.md`
+- 多个 Autumn 系项目并行时，先阅读：`docs/AI_GUIDE.md`
 - 推荐提示词固定引用：
-  - `@AI_MAP.md`
+  - `@docs/AI_MAP.md`
   - 再补当前业务项目路径上下文（README + 目标模块目录）
 
 ### 3.1 多项目模板资源打包约定（TemplateFactory）
@@ -42,14 +42,14 @@
 ## 4. 规则优先级与去重口径
 
 - 规则优先级（高 -> 低）：
-  - `AI_STANDARDS.md`：分层、API、gen 路由、定时任务、`@RequiresPermissions`、FTL、实体/注解建表/禁止 DDL、Dao+Provider、Controller–Service–Dao、statics/pages/Site
-  - `AI_MAP: 0. AI 最小上下文`
-  - `AI_MAP: 4. 开发决策规则`
-  - `AI_MAP: 2.x 能力章节`
-  - `AI_TEMPLATES: 模板库`
+  - `docs/AI_STANDARDS.md`：分层、API、gen 路由、定时任务、`@RequiresPermissions`、FTL、实体/注解建表/禁止 DDL、Dao+Provider、Controller–Service–Dao、statics/pages/Site
+  - `docs/AI_MAP.md`：§0「AI 最小上下文」
+  - `docs/AI_MAP.md`：§4「开发决策规则」
+  - `docs/AI_MAP.md`：第 2 章能力小节
+  - `docs/AI_TEMPLATES.md`：模板库
 - 去重约定：
   - 多处冲突时，取“更具体且更新”的约束。
-  - **应用层与数据访问纪律**（Controller/Service/Dao、SQL Provider、实体与库表、资源与 Site 等）以 **`AI_STANDARDS.md`** 为准；框架机制细节以 **`AI_MAP.md`** 为准。
+  - **应用层与数据访问纪律**（Controller/Service/Dao、SQL Provider、实体与库表、资源与 Site 等）以 **`docs/AI_STANDARDS.md`** 为准；框架机制细节以 **`docs/AI_MAP.md`** 为准。
   - 模板与能力冲突时，以能力语义约束为准。
   - 仍无法判断时，优先“复用现有基类/接口”的实现路径。
 - 输出口径统一：
@@ -67,30 +67,30 @@
   - 固定周期：`LoopJob.*`
   - 复杂日历：`cronExpression`（仅必要时）
 - 后台权限注解：
-  - `@RequiresPermissions`：仅**代码生成/管理端**链路；**新编写接口禁用**，普通用户接口用登录态鉴权（见 `AI_STANDARDS.md` §6）
+  - `@RequiresPermissions`：仅**代码生成/管理端**链路；**新编写接口禁用**，普通用户接口用登录态鉴权（见 `docs/AI_STANDARDS.md` §6）
 - 生成链路：
   - 模板目录：`resources/template/*.vm`
   - 可重生层：`controller/gen/*`
   - 可维护层：`controller/*`、`service/*`
 - 库表与 SQL：
-  - 结构演进：实体注解 + `autumn.table.*`，**禁止**常规随仓 `DDL .sql`（见 `AI_STANDARDS.md` §8）
-  - 自定义 SQL：**Provider**（`*Sql` / `@SelectProvider`），禁止 Dao 方法上内联 SQL 字符串（新代码，`AI_STANDARDS.md` §12）
+  - 结构演进：实体注解 + `autumn.table.*`，**禁止**常规随仓 `DDL .sql`（见 `docs/AI_STANDARDS.md` §8）
+  - 自定义 SQL：**Provider**（`*Sql` / `@SelectProvider`），禁止 Dao 方法上内联 SQL 字符串（新代码，`docs/AI_STANDARDS.md` §12）
 - 静态与页面：
   - 公共静态：`resources/statics/`（匿名可访问，优先复用框架已有）
-  - 后台页：模块下 `pages` + `site/*Site.java` 字段 `@PageAware`（`AI_STANDARDS.md` §14）
+  - 后台页：模块下 `pages` + `site/*Site.java` 字段 `@PageAware`（`docs/AI_STANDARDS.md` §14）
 
 ## 6. 推荐阅读路径（按角色）
 
-- AI/Agent 首次接入：`AI_MAP 0 -> 4 -> 8 -> 9`
-- 后端开发：`AI_MAP 2.4 -> 2.7 -> 2.8 -> 6 -> 7`
-- 前端/客户端开发：`AI_MAP 2.4 -> 8`
-- 平台维护者：`AI_MAP 1 -> 2 -> 本文 2/4/5`
+- AI/Agent 首次接入：`docs/AI_MAP.md` §0 → §4 → §8 → §9
+- 后端开发：`docs/AI_MAP.md` §2.4 → §2.7 → §2.8 → §6 → §7
+- 前端/客户端开发：`docs/AI_MAP.md` §2.4 → §8
+- 平台维护者：`docs/AI_MAP.md` §1 → §2 → 本文 §2/§4/§5
 
 ## 7. 精简维护规则（防膨胀）
 
 - 新内容优先归并到已有章节，避免平行规则。
 - 同一规则出现 2 处以上时，仅保留“最具体一处”，其他改引用。
-- 模板解释放 `AI_MAP 2.x`，可复制指令放 `AI_TEMPLATES.md`。
+- 模板解释放 `docs/AI_MAP.md` 第 2 章，可复制指令放 `docs/AI_TEMPLATES.md`。
 - 每次大改后检查：
   - 编号是否连续
   - 术语是否统一（Request/Response、LoopJob、ModuleService）
