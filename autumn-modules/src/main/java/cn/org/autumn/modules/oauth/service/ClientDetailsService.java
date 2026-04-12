@@ -296,7 +296,7 @@ public class ClientDetailsService extends ModuleService<ClientDetailsDao, Client
             list = new ArrayList<>();
             list.add(detailsEntity);
         } else
-            list = baseMapper.selectByMap(null);
+            list = list();
         for (ClientDetailsEntity clientDetailsEntity : list) {
             SysUserEntity sysUserEntity = sysUserService.getUsername(clientDetailsEntity.getClientId());
             if (null == sysUserEntity) {

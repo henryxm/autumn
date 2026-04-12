@@ -5,7 +5,7 @@ import cn.org.autumn.modules.gen.entity.GenTypeWrapper;
 import cn.org.autumn.modules.gen.service.gen.GenTypeServiceGen;
 import cn.org.autumn.modules.sys.entity.SysMenuEntity;
 import cn.org.autumn.modules.sys.service.SysMenuService;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -69,9 +69,8 @@ public class GenTypeService extends GenTypeServiceGen {
             if (null != temp)
                 entity.setMappingString(temp);
             try {
-                QueryWrapper<GenTypeEntity> qw = new QueryWrapper<>();
-                qw.eq("database_type", entity.getDatabaseType());
-                GenTypeEntity et = baseMapper.selectOne(qw);
+                GenTypeEntity et = baseMapper.selectOne(new LambdaQueryWrapper<GenTypeEntity>()
+                        .eq(GenTypeEntity::getDatabaseType, entity.getDatabaseType()));
                 if (null == et)
                     baseMapper.insert(entity);
             } catch (Exception e) {
@@ -109,9 +108,8 @@ public class GenTypeService extends GenTypeServiceGen {
     }
 
     public GenTypeWrapper getGenType(String databaseType) {
-        QueryWrapper<GenTypeEntity> qw = new QueryWrapper<>();
-        qw.eq("database_type", databaseType);
-        GenTypeEntity entity = baseMapper.selectOne(qw);
+        GenTypeEntity entity = baseMapper.selectOne(new LambdaQueryWrapper<GenTypeEntity>()
+                .eq(GenTypeEntity::getDatabaseType, databaseType));
         SysMenuEntity sysMenuEntity = sysMenuService.getByMenuKey(entity.getModuleId());
         return new GenTypeWrapper(entity, sysMenuEntity);
     }

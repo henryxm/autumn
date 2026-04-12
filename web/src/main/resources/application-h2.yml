@@ -2,8 +2,8 @@
 # 内嵌 H2（MySQL 兼容模式）：零外部 MySQL 即可启动，表结构由注解同步（走 MySQL DDL 适配分支）。
 #
 # 使用方式：
-#   --spring.profiles.active=dev,embedded
-#   或 SPRING_PROFILES_ACTIVE=dev,embedded
+#   --spring.profiles.active=dev,h2
+#   或 SPRING_PROFILES_ACTIVE=dev,h2
 #
 # 存储：
 #   默认 jdbc:h2:file:./embedded/h2 —— 会在运行目录生成 h2.mv.db 等文件（首启自动建目录）。
@@ -31,3 +31,10 @@ spring:
 autumn:
   table:
     sync-charset: false
+
+# MyBatis-Plus：内嵌 H2 若沿用主配置中的 MySQL 反引号 column-format，主键回填阶段会报 Column "`id`" not found；
+# 此处显式改为双引号（与 MybatisPlusConfig 中 H2EmbeddedMysqlDialect 分支一致，且保证绑定顺序下一定生效）。
+mybatis-plus:
+  global-config:
+    db-config:
+      column-format: '"%s"'

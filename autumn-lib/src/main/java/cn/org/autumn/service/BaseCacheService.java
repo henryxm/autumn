@@ -1,6 +1,7 @@
 package cn.org.autumn.service;
 
 import cn.org.autumn.annotation.Cache;
+import cn.org.autumn.database.runtime.WrapperColumns;
 import cn.org.autumn.annotation.Caches;
 import cn.org.autumn.config.CacheConfig;
 import cn.org.autumn.model.CacheParam;
@@ -599,9 +600,12 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
 
     @Override
     public boolean removeByMap(Map<String, Object> columnMap) {
-        // 先查询要删除的实体，以便删除缓存
-        List<T> entities = listByMap(columnMap);
-        boolean result = super.removeByMap(columnMap);
+        if (columnMap == null || columnMap.isEmpty()) {
+            return super.removeByMap(columnMap);
+        }
+        QueryWrapper<T> w = WrapperColumns.queryWrapperAllEqQuoted(columnMap);
+        List<T> entities = list(w);
+        boolean result = remove(w);
         if (result && entities != null) {
             for (T entity : entities) {
                 removeCacheByEntity(entity);

@@ -39,7 +39,7 @@ public class BooleanNumericTypeHandler extends BaseTypeHandler<Boolean> {
         if (databaseHolder == null) {
             return false;
         }
-        DatabaseType t = databaseHolder.getType();
+        DatabaseType t = databaseHolder.resolveTypeForCurrentRouting();
         return t == DatabaseType.POSTGRESQL || t == DatabaseType.KINGBASE;
     }
 

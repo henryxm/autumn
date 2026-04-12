@@ -9,6 +9,7 @@ import cn.org.autumn.utils.PageUtils;
 import cn.org.autumn.utils.Query;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.core.conditions.AbstractWrapper;
+import com.baomidou.mybatisplus.core.conditions.ISqlSegment;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.segments.MergeSegments;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
@@ -18,6 +19,7 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.WordUtils;
+import org.springframework.util.ReflectionUtils;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -111,14 +113,23 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends ShareCache
      * 勿对 {@code getSqlSegment()} 截断后再 {@code new QueryWrapper().apply(s)}：片段里的 {@code #{ew.paramNameValuePairs.xxx}}
      * 仍指向原序列化名，新 Wrapper 无对应参数会导致条件失效、count 恒为 0。
      * 做法：{@link QueryWrapper#clone()} 后仅在副本上 {@link MergeSegments#getOrderBy()}{@code .clear()}，并失效 {@link MergeSegments}
-     * 的片段缓存，再清空副本的 {@code lastSql}（常见为 {@code LIMIT}）。
+     * 的片段缓存（否则仍返回含 ORDER BY 的旧 {@code sqlSegment}），再清空副本的 {@code lastSql}（常见为 {@code LIMIT}）。
      */
     protected long selectCountWithoutOrderBy(QueryWrapper<T> ew) {
         if (ew == null) {
             return baseMapper.selectCount(new QueryWrapper<>());
         }
+        final QueryWrapper<T> countEw;
         try {
-            QueryWrapper<T> countEw = ew.clone();
+            countEw = ew.clone();
+        } catch (Exception ex) {
+            log.warn(
+                    "selectCountWithoutOrderBy：QueryWrapper.clone 失败，改为在原 Wrapper 上临时去掉 ORDER BY 后统计，entity={}，cause={}",
+                    getModelClass() != null ? getModelClass().getName() : "?",
+                    ex.toString());
+            return selectCountWithOrderByStrippedTemporarily(ew);
+        }
+        try {
             MergeSegments exp = countEw.getExpression();
             if (exp != null) {
                 exp.getOrderBy().clear();
@@ -128,14 +139,34 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends ShareCache
             return baseMapper.selectCount(countEw);
         } catch (Exception ex) {
             log.warn(
-                    "selectCountWithoutOrderBy：clone/去排序失败，降级用原 Wrapper 统计（严格库可能对 COUNT+ORDER BY 报错），entity={}，cause={}",
+                    "selectCountWithoutOrderBy：去排序后 selectCount 仍失败，改为在原 Wrapper 上临时去掉 ORDER BY 后统计，entity={}，cause={}",
                     getModelClass() != null ? getModelClass().getName() : "?",
                     ex.toString());
-            try {
-                return baseMapper.selectCount(ew);
-            } catch (Exception fallback) {
-                log.error("selectCountWithoutOrderBy 降级仍失败", fallback);
-                throw ex;
+            return selectCountWithOrderByStrippedTemporarily(ew);
+        }
+    }
+
+    /**
+     * 在已执行完分页列表查询后，临时清空 ORDER BY 做 COUNT，再还原，避免 Derby 等对 {@code COUNT(*) ... ORDER BY} 报错。
+     * <p>
+     * 典型调用链中 {@code ew} 在 {@link #queryPage(Page, QueryWrapper)} 内于 {@link #page(Page, QueryWrapper)} 之后仅用于本方法，还原后可继续安全复用。
+     */
+    private long selectCountWithOrderByStrippedTemporarily(QueryWrapper<T> ew) {
+        MergeSegments exp = ew != null ? ew.getExpression() : null;
+        List<ISqlSegment> savedOrder = null;
+        if (exp != null) {
+            savedOrder = new ArrayList<>(exp.getOrderBy());
+            exp.getOrderBy().clear();
+            invalidateMergeSegmentsSqlCache(exp);
+        }
+        clearQueryWrapperLastSql(ew);
+        try {
+            return baseMapper.selectCount(ew);
+        } finally {
+            if (exp != null && savedOrder != null) {
+                exp.getOrderBy().clear();
+                exp.getOrderBy().addAll(savedOrder);
+                invalidateMergeSegmentsSqlCache(exp);
             }
         }
     }
@@ -147,11 +178,16 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends ShareCache
         if (merge == null) {
             return;
         }
-        try {
-            Field cache = MergeSegments.class.getDeclaredField("cacheSqlSegment");
-            cache.setAccessible(true);
-            cache.setBoolean(merge, false);
-        } catch (ReflectiveOperationException ignored) {
+        Field cache = ReflectionUtils.findField(MergeSegments.class, "cacheSqlSegment");
+        if (cache != null) {
+            ReflectionUtils.makeAccessible(cache);
+            ReflectionUtils.setField(cache, merge, false);
+        }
+        // 子列表 clear 后父级仍可能 cacheSqlSegment==true 并返回含 ORDER BY 的旧串，导致 COUNT 带排序（Derby 等报错）
+        Field seg = ReflectionUtils.findField(MergeSegments.class, "sqlSegment");
+        if (seg != null) {
+            ReflectionUtils.makeAccessible(seg);
+            ReflectionUtils.setField(seg, merge, "");
         }
     }
 
@@ -163,9 +199,12 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends ShareCache
             return;
         }
         try {
-            Field f = AbstractWrapper.class.getDeclaredField("lastSql");
-            f.setAccessible(true);
-            Object shared = f.get(w);
+            Field f = ReflectionUtils.findField(AbstractWrapper.class, "lastSql");
+            if (f == null) {
+                return;
+            }
+            ReflectionUtils.makeAccessible(f);
+            Object shared = ReflectionUtils.getField(f, w);
             if (shared != null) {
                 Method toEmpty = shared.getClass().getMethod("toEmpty");
                 toEmpty.invoke(shared);
@@ -178,12 +217,35 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends ShareCache
         return queryPage(getPage(params));
     }
 
+    /**
+     * 默认逆序字段须为方言引用后的列名（如 {@code columnInWrapper("id")}）。
+     * <p>
+     * 排序写在 {@link Page#addOrder} 而非 {@link QueryWrapper#orderByDesc}：分页插件只在带 {@code IPage} 的查询上拼接
+     * {@code ORDER BY}；{@link #selectCountWithoutOrderBy} 使用的 {@code ew} 无排序，Derby/DB2 等不会对 {@code COUNT(*)} 附加非法
+     * {@code ORDER BY}。若仅清 Wrapper 的 orderBy 列表，{@link MergeSegments} 父级缓存仍可能返回旧片段，单靠反射易漏。
+     * <p>
+     * 须使用 {@link OrderItem#withExpression(String, boolean)}：{@link OrderItem#desc(String)} / {@link OrderItem#asc(String)} 会经
+     * {@code setColumn} 调用 {@code replaceAllBlank} 去掉引号，Derby 等会得到 {@code ORDER BY id} 而非 {@code ORDER BY "id"}。
+     */
     public PageUtils queryPage(Map<String, Object> params, List<String> descs) {
-        return queryPage(getPage(params, descs));
+        Map<String, Object> normalized = normalizeQueryParams(params);
+        Page<T> _page = new Query<T>(normalized).getPage();
+        bindPageCondition(_page, getCondition(normalized));
+        if (descs != null) {
+            for (String desc : descs) {
+                if (StringUtils.isNotBlank(desc)) {
+                    _page.addOrder(OrderItem.withExpression(desc.trim(), false));
+                }
+            }
+        }
+        return queryPage(_page, new QueryWrapper<>());
     }
 
     public PageUtils queryPage(Map<String, Object> params, String... descs) {
-        return queryPage(getPage(params, descs));
+        if (descs == null || descs.length == 0) {
+            return queryPage(params, (List<String>) null);
+        }
+        return queryPage(params, Arrays.asList(descs));
     }
 
     public Page<T> getPage(Map<String, Object> params) {
@@ -193,15 +255,15 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends ShareCache
         return _page;
     }
 
+    /**
+     * @param descs 已忽略。{@link Page#addOrder} 产生的 {@code ORDER BY} 不经 {@code column-format}，在 Derby/DB2/H2 双引号标识符下会与
+     * {@code SELECT} 列引用不一致。请使用 {@link #queryPage(Map, List)} / {@link #queryPage(Map, String...)}，或
+     * {@code queryPage(getPage(params), new QueryWrapper<>().orderByDesc(...))}。
+     */
     public Page<T> getPage(Map<String, Object> params, List<String> descs) {
         Map<String, Object> normalized = normalizeQueryParams(params);
         Page<T> _page = new Query<T>(normalized).getPage();
         bindPageCondition(_page, getCondition(normalized));
-        if (null != descs && !descs.isEmpty()) {
-            for (String desc : descs) {
-                _page.addOrder(OrderItem.desc(desc));
-            }
-        }
         return _page;
     }
 

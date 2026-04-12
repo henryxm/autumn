@@ -10,7 +10,8 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
 /**
- * Spring 运行期：{@link TableDao} 路径仅在 MySQL 协议族上启用；内嵌 H2 且 URL 声明 {@code MODE=MySQL} 时走 {@link H2MysqlCompatSchemaSql}。
+ * Spring 运行期：{@link TableDao} 路径仅在 MySQL 协议族上启用；内嵌 H2 且<strong>当前路由</strong> URL 声明 {@code MODE=MySQL} 时走
+ * {@link H2MysqlCompatSchemaSql}。
  * <p>
  * 其它 {@link DatabaseType} 的完整 {@link RelationalSchemaSql} 见 {@link RelationalSchemaSqlCatalog}（如 {@code PostgresTableDao} 直连 PG 实现类）。
  */
@@ -28,7 +29,7 @@ public class RoutingRelationalSchemaSql {
         if (EmbeddedH2MysqlMode.active()) {
             return H2MysqlCompatSchemaSql.INSTANCE;
         }
-        DatabaseType t = databaseHolder.getType();
+        DatabaseType t = databaseHolder.resolveTypeForCurrentRouting();
         if (t == DatabaseType.MARIADB || t == DatabaseType.TIDB || t == DatabaseType.OCEANBASE_MYSQL) {
             return RelationalSchemaSqlCatalog.forType(t);
         }
@@ -42,6 +43,6 @@ public class RoutingRelationalSchemaSql {
         if (EmbeddedH2MysqlMode.active()) {
             return H2MysqlCompatSchemaSql.INSTANCE;
         }
-        return RelationalSchemaSqlCatalog.forType(databaseHolder.getType());
+        return RelationalSchemaSqlCatalog.forType(databaseHolder.resolveTypeForCurrentRouting());
     }
 }

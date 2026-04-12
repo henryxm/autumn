@@ -1,5 +1,7 @@
 package cn.org.autumn.database;
 
+import cn.org.autumn.datasources.DataSourceNames;
+import cn.org.autumn.datasources.DynamicDataSource;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -9,7 +11,15 @@ import org.springframework.stereotype.Component;
 import java.util.Locale;
 
 /**
- * 持有当前生效的 {@link DatabaseType}，供路由数据源、分页方言、建表适配等使用。
+ * 持有当前应用的 {@link DatabaseType}（默认与<strong>主数据源</strong>一致），供分页插件全局配置、建表、部分 TypeHandler 等使用。
+ * <p>
+ * 多数据源下：{@link #getType()} 仍解析<strong>主库</strong> JDBC URL（与 {@link #readPrimaryJdbcUrl} 一致），因为 MyBatis-Plus
+ * 全局 {@code column-format}、{@link com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor} 等仅为
+ * 单工厂配置，无法按连接切换。运行期手写 SQL / {@link cn.org.autumn.database.runtime.RuntimeSqlDialect} 则须按<strong>当前线程路由</strong>
+ * 取 URL：{@link #readCurrentRoutingJdbcUrl(Environment)}、{@link #resolveTypeForCurrentRouting()}，避免把主库方言套在从库连接上。
+ * <p>
+ * <b>内嵌 H2 + {@code MODE=MySQL}</b>：{@link #resolveType(String, String)} 仍可对应该 URL 返回 {@link DatabaseType#MYSQL}（注解建表）；
+ * 运行期引用由 {@link cn.org.autumn.database.runtime.RoutingRuntimeSqlDialect} 按 URL 选用 {@link cn.org.autumn.database.runtime.H2RuntimeSqlDialect}。
  */
 @Component
 public class DatabaseHolder {
@@ -20,15 +30,63 @@ public class DatabaseHolder {
     @Autowired(required = false)
     private Environment environment;
 
+    /**
+     * 与 {@link #getType()} 使用相同属性键读取主数据源 JDBC URL；供 {@link cn.org.autumn.database.runtime.RuntimeSqlDialectRegistry}、
+     * {@link cn.org.autumn.database.runtime.RoutingRuntimeSqlDialect} 等与 {@code DatabaseType} 解耦的场合复用。
+     */
+    public static String readPrimaryJdbcUrl(Environment environment) {
+        if (environment == null) {
+            return "";
+        }
+        String url = environment.getProperty("spring.datasource.druid.first.url");
+        if (StringUtils.isBlank(url)) {
+            url = environment.getProperty("spring.datasource.url");
+        }
+        return url == null ? "" : url.trim();
+    }
+
+    /**
+     * 当前线程在 {@link DynamicDataSource} 下选中的数据源的 JDBC URL：{@link DataSourceNames#SECOND} 且配置了
+     * {@code spring.datasource.druid.second.url} 时用从库 URL，否则与 {@link #readPrimaryJdbcUrl(Environment)} 相同。
+     * <p>
+     * 未进入路由切面、ThreadLocal 为空时视为使用主数据源。
+     */
+    public static String readCurrentRoutingJdbcUrl(Environment environment) {
+        if (environment == null) {
+            return "";
+        }
+        String key = DynamicDataSource.getDataSource();
+        if (DataSourceNames.SECOND.equals(key)) {
+            String second = environment.getProperty("spring.datasource.druid.second.url");
+            if (StringUtils.isNotBlank(second)) {
+                return second.trim();
+            }
+        }
+        return readPrimaryJdbcUrl(environment);
+    }
+
     public DatabaseType getType() {
         if (environment != null) {
-            String url = environment.getProperty("spring.datasource.druid.first.url");
-            if (StringUtils.isBlank(url)) {
-                url = environment.getProperty("spring.datasource.url");
-            }
-            return resolveType(url, databaseRaw);
+            return resolveType(readPrimaryJdbcUrl(environment), databaseRaw);
         }
         return resolveType(null, databaseRaw);
+    }
+
+    /**
+     * 按 {@link #readCurrentRoutingJdbcUrl(Environment)} 与 {@code autumn.database} 解析类型，供运行期 SQL / TypeHandler 与主库聚合类型区分时使用。
+     */
+    public DatabaseType resolveTypeForCurrentRouting() {
+        if (environment != null) {
+            return resolveType(readCurrentRoutingJdbcUrl(environment), databaseRaw);
+        }
+        return getType();
+    }
+
+    /**
+     * 供同模块内其它 Bean 在仅有 {@link DatabaseHolder} 引用时取得 {@link Environment}（如方言路由退化路径）。
+     */
+    public Environment getEnvironment() {
+        return environment;
     }
 
     /**

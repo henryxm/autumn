@@ -97,7 +97,7 @@ public class WebAuthenticationService extends ModuleService<WebAuthenticationDao
     public void onDomainChanged() {
         String host = sysConfigService.getSiteDomain();
         String scheme = sysConfigService.getScheme();
-        List<WebAuthenticationEntity> entities = listByMap(null);
+        List<WebAuthenticationEntity> entities = list();
         for (WebAuthenticationEntity entity : entities) {
             try {
                 update(entity, scheme, host, false);

@@ -6,7 +6,8 @@
 # MyBatis 默认 jdbcTypeForNull=OTHER，Derby 不支持；NULL(Types.NULL) 亦不支持；MybatisPlusConfig 在 jdbc:derby 下改为 VARCHAR。
 # Derby 版本由 Spring Boot BOM 决定（2.7 默认 10.14.x，与项目 Java 8 一致）。注解 DDL 已按 10.14 省略 IF NOT EXISTS；
 # 若单独升级到 Derby 10.16+ 且需该语法，需在代码侧区分方言版本（当前 DERBY 一律按 10.14 输出）。
-# JDK 17+ 且使用 Derby 10.16+ 时请将驱动改为 org.apache.derby.iapi.jdbc.AutoloadedDriver（10.14 用 EmbeddedDriver）。
+# Spring Boot 3.5 随 BOM 引入 Derby 10.16+：已无 org.apache.derby.jdbc.EmbeddedDriver，须使用
+# org.apache.derby.iapi.jdbc.AutoloadedDriver。若自行降级到 Derby 10.14.x，可改回 EmbeddedDriver。
 #
 # 激活方式（与 dev 等组合）：
 #   --spring.profiles.active=dev,derby
@@ -55,8 +56,8 @@
 spring:
   datasource:
     type: com.alibaba.druid.pool.DruidDataSource
-    # Boot 默认 10.14：org.apache.derby.jdbc.EmbeddedDriver；若单独升级到 Derby 10.16+ 且 JDK17+，可换 AutoloadedDriver
-    driverClassName: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:org.apache.derby.jdbc.EmbeddedDriver}
+    # Boot 3.5 / Derby 10.16+：AutoloadedDriver（10.14 及以下为 org.apache.derby.jdbc.EmbeddedDriver）
+    driverClassName: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:org.apache.derby.iapi.jdbc.AutoloadedDriver}
     druid:
       first:
         url: ${SPRING_DATASOURCE_DRUID_FIRST_URL:jdbc:derby:embedded/derby/autumn;create=true}

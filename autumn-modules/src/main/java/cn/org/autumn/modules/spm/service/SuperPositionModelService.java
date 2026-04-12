@@ -2,6 +2,7 @@ package cn.org.autumn.modules.spm.service;
 
 import cn.org.autumn.annotation.PageAware;
 import cn.org.autumn.config.ClearHandler;
+import cn.org.autumn.database.runtime.WrapperColumns;
 import cn.org.autumn.site.*;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.spm.entity.SuperPositionModelEntity;
@@ -78,7 +79,7 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
 
     public void load() {
         site();
-        List<SuperPositionModelEntity> list = baseMapper.selectByMap(new HashMap<>());
+        List<SuperPositionModelEntity> list = list();
         for (SuperPositionModelEntity superPositionModelEntity : list) {
             spmListForHtml.put(superPositionModelEntity.getUrlKey(), "spm=" + superPositionModelEntity.toSpmString());
             spmListForUrlKey.put(superPositionModelEntity.getUrlKey(), superPositionModelEntity);
@@ -256,18 +257,18 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
         if (ar.length > 3)
             map.put("product_id", ar[3]);
 
-        List<SuperPositionModelEntity> list = listByMap(map);
+        List<SuperPositionModelEntity> list = list(WrapperColumns.queryWrapperAllEqQuoted(map));
         if (list.isEmpty()) {
             map.remove("product_id");
-            list = listByMap(map);
+            list = list(WrapperColumns.queryWrapperAllEqQuoted(map));
         }
         if (list.isEmpty()) {
             map.remove("channel_id");
-            list = listByMap(map);
+            list = list(WrapperColumns.queryWrapperAllEqQuoted(map));
         }
         if (list.isEmpty()) {
             map.remove("page_id");
-            list = listByMap(map);
+            list = list(WrapperColumns.queryWrapperAllEqQuoted(map));
         }
         if (!list.isEmpty()) {
             return list.get(0);
@@ -312,7 +313,7 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
         } else
             superPositionModelEntity.setNeedLogin(0);
         superPositionModelEntity.setForbidden(0);
-        List<SuperPositionModelEntity> list = listByMap(map);
+        List<SuperPositionModelEntity> list = list(WrapperColumns.queryWrapperAllEqQuoted(map));
         if (!list.isEmpty()) {
             return;
         }

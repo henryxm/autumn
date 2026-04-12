@@ -14,6 +14,7 @@ import cn.org.autumn.modules.usr.service.UserProfileService;
 import cn.org.autumn.site.AccountFactory;
 import cn.org.autumn.site.InitFactory;
 import cn.org.autumn.utils.*;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -176,9 +177,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
 
     @Order(10)
     public void init() {
-        SysUserEntity admin = new SysUserEntity();
-        admin.setUsername(getAdmin());
-        SysUserEntity current = sysUserDao.selectOne(new QueryWrapper<SysUserEntity>().eq("username", getAdmin()));
+        SysUserEntity current = sysUserDao.selectOne(new LambdaQueryWrapper<SysUserEntity>().eq(SysUserEntity::getUsername, getAdmin()));
         if (null == current) {
             List<String> roleKeys = new ArrayList<>();
             roleKeys.add(Role_System_Administrator);

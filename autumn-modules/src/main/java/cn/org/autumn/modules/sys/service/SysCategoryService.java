@@ -214,11 +214,11 @@ public class SysCategoryService extends ModuleService<SysCategoryDao, SysCategor
             else {
                 categoryEntity = getByCategory(key, language);
                 if (null != categoryEntity) {
-                    sysConfigEntities = sysConfigService.listByMap(null);
+                    sysConfigEntities = sysConfigService.list();
                 }
             }
         } else
-            sysConfigEntities = sysConfigService.listByMap(null);
+            sysConfigEntities = sysConfigService.list();
         Map<String, CategoryItem> map = new LinkedTreeMap<>();
         if (null == sysConfigEntities)
             return map;

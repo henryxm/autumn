@@ -790,7 +790,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
 
     @Override
     public void onThirtyMinute() {
-        List<SysConfigEntity> list = listByMap(new HashMap<>());
+        List<SysConfigEntity> list = list();
         if (null != list && list.size() > 0) {
             Map<String, SysConfigEntity> t = new HashMap<>();
             for (SysConfigEntity sysConfigEntity : list) {

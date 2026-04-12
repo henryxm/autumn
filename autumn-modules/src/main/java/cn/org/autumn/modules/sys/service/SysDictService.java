@@ -2,6 +2,7 @@ package cn.org.autumn.modules.sys.service;
 
 import cn.org.autumn.database.runtime.WrapperColumns;
 import cn.org.autumn.site.InitFactory;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -57,9 +58,10 @@ public class SysDictService extends ServiceImpl<SysDictDao, SysDictEntity> imple
             temp = map[7];
             if (NULL != temp)
                 entity.setDelFlag(Integer.valueOf(temp));
-            QueryWrapper<SysDictEntity> qw = new QueryWrapper<>();
-            qw.eq("name", entity.getName()).eq("type", entity.getType()).eq("code", entity.getCode());
-            SysDictEntity et = sysDictDao.selectOne(qw);
+            SysDictEntity et = sysDictDao.selectOne(new LambdaQueryWrapper<SysDictEntity>()
+                    .eq(SysDictEntity::getName, entity.getName())
+                    .eq(SysDictEntity::getType, entity.getType())
+                    .eq(SysDictEntity::getCode, entity.getCode()));
             if (null == et)
                 sysDictDao.insert(entity);
         }

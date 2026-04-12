@@ -16,6 +16,7 @@ import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.dao.SysMenuDao;
 import cn.org.autumn.modules.sys.dao.SysUserDao;
 import cn.org.autumn.modules.sys.entity.SysMenuEntity;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import cn.org.autumn.utils.Email;
 import cn.org.autumn.utils.IDCard;
 import cn.org.autumn.utils.Phone;
@@ -106,10 +107,10 @@ public class UserRealm extends AuthorizingRealm {
         if (token instanceof OauthAccessTokenToken) {
             user = (SysUserEntity) clientDetailsService.get(ValueType.accessToken, username).getValue();
         } else {
-            //查询用户信息
-            user = (token instanceof OauthUsernameToken)
-                ? sysUserDao.selectOne(new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<SysUserEntity>().eq("uuid", username))
-                : sysUserDao.selectOne(new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<SysUserEntity>().eq("username", username));
+            // MP3 无 selectOne(entity)；用 Lambda 条件与 master 实体查询语义一致，列名经 TableInfo 按方言转义（Derby 双引号 DDL 必需）
+            user = token instanceof OauthUsernameToken
+                    ? sysUserDao.selectOne(new LambdaQueryWrapper<SysUserEntity>().eq(SysUserEntity::getUuid, username))
+                    : sysUserDao.selectOne(new LambdaQueryWrapper<SysUserEntity>().eq(SysUserEntity::getUsername, username));
         }
         if (null == user && Email.isEmail(username)) {
             user = sysUserDao.getByEmail(username);

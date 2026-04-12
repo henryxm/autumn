@@ -2,6 +2,7 @@ package cn.org.autumn.config;
 
 import cn.org.autumn.database.DatabaseHolder;
 import cn.org.autumn.database.DatabaseType;
+import cn.org.autumn.database.H2EmbeddedMysqlDialect;
 import cn.org.autumn.handler.EnumTypeHandler;
 import cn.org.autumn.model.StubMapper;
 import cn.org.autumn.service.DefaultMapper;
@@ -28,6 +29,10 @@ public class MybatisPlusConfig {
     @Autowired
     private DatabaseHolder databaseHolder;
 
+    private static String primaryDataSourceUrl(Environment environment) {
+        return DatabaseHolder.readPrimaryJdbcUrl(environment);
+    }
+
     /**
      * Derby 不支持 {@code setNull(i, Types.OTHER)}（MyBatis 默认 {@link JdbcType#OTHER}），也不支持
      * {@link JdbcType#NULL}。在 {@code jdbc:derby} 下将 {@code jdbcTypeForNull} 改为 {@link JdbcType#VARCHAR}。
@@ -37,11 +42,8 @@ public class MybatisPlusConfig {
      * 下与 PostgreSQL 相同引用策略）完成；MyBatis-Plus 3.x 不再使用 MP 2.x 的 {@code SqlInjector} 路径。
      */
     private static void applyDerbyJdbcTypeForNull(Environment environment, org.apache.ibatis.session.Configuration configuration) {
-        String url = environment.getProperty("spring.datasource.druid.first.url");
-        if (StringUtils.isBlank(url)) {
-            url = environment.getProperty("spring.datasource.url");
-        }
-        if (StringUtils.isBlank(url) || !url.trim().toLowerCase(Locale.ROOT).startsWith("jdbc:derby:")) {
+        String url = DatabaseHolder.readPrimaryJdbcUrl(environment);
+        if (StringUtils.isBlank(url) || !url.toLowerCase(Locale.ROOT).startsWith("jdbc:derby:")) {
             return;
         }
         configuration.setJdbcTypeForNull(JdbcType.VARCHAR);
@@ -89,10 +91,17 @@ public class MybatisPlusConfig {
     /**
      * 与 {@code application.yml} 中 {@code mybatis-plus.global-config.db-config.column-format} 配合：
      * YAML 为 MySQL 默认；此处按 {@link DatabaseHolder} 覆盖，避免 PG 等收到反引号。
-     * Derby/DB2/SQLite/H2/HSQLDB 与注解双引号小写 DDL 一致，使用双引号并（Derby 时）将 {@code dbType} 设为与 PG 相同的引用策略。
+     * <p>
+     * <b>任意 {@code jdbc:h2:}</b>（含 {@code MODE=MySQL}）：{@link DatabaseHolder} 可能仍解析为 {@link DatabaseType#MYSQL} 以便注解建表；
+     * 但 MyBatis-Plus 若按 MySQL 使用反引号（或由 {@link JdbcEnvironmentPostProcessor} 误注入 MYSQL 的 identifier-quote），会在 H2 上触发
+     * {@code Column "`id`" not found}。故凡主库为 H2 即强制列名为双引号，与 {@link #mybatisPlusInterceptor(Environment)} 中分页
+     * {@link DbType#H2}（{@link H2EmbeddedMysqlDialect#isActive(String)} 分支）一致。
+     * <p>
+     * <b>表名</b>：Derby 等注解 DDL 使用双引号小写表名；须同步 {@link GlobalConfig.DbConfig#setTableFormat(String)}，
+     * 否则 MP 生成无引号的 {@code INSERT INTO sys_config}，Derby 会折叠为 {@code SYS_CONFIG}，与 {@code "sys_config"} 不符。
      */
     @Bean
-    public MybatisPlusPropertiesCustomizer mybatisPlusColumnFormatCustomizer() {
+    public MybatisPlusPropertiesCustomizer mybatisPlusColumnFormatCustomizer(Environment environment) {
         return props -> {
             GlobalConfig gc = props.getGlobalConfig();
             if (gc == null) {
@@ -104,54 +113,69 @@ public class MybatisPlusConfig {
                 db = new GlobalConfig.DbConfig();
                 gc.setDbConfig(db);
             }
+            if (H2EmbeddedMysqlDialect.isJdbcH2(primaryDataSourceUrl(environment))) {
+                applyColumnAndTableQuotes(db, "\"%s\"", "\"%s\"");
+                return;
+            }
             DatabaseType t = databaseHolder.getType();
             if (t == DatabaseType.POSTGRESQL || t == DatabaseType.KINGBASE) {
-                db.setColumnFormat("\"%s\"");
+                applyColumnAndTableQuotes(db, "\"%s\"", "\"%s\"");
             } else if (t == DatabaseType.ORACLE || t == DatabaseType.OCEANBASE_ORACLE || t == DatabaseType.DAMENG) {
-                db.setColumnFormat("\"%s\"");
+                applyColumnAndTableQuotes(db, "\"%s\"", "\"%s\"");
             } else if (t == DatabaseType.SQLSERVER) {
-                db.setColumnFormat("[%s]");
+                applyColumnAndTableQuotes(db, "[%s]", "[%s]");
             } else if (t == DatabaseType.DERBY || t == DatabaseType.DB2 || t == DatabaseType.SQLITE
                     || t == DatabaseType.H2 || t == DatabaseType.HSQLDB) {
-                db.setColumnFormat("\"%s\"");
+                applyColumnAndTableQuotes(db, "\"%s\"", "\"%s\"");
+            } else if (t == DatabaseType.FIREBIRD || t == DatabaseType.INFORMIX) {
+                applyColumnAndTableQuotes(db, "\"%s\"", "\"%s\"");
             } else if (t == DatabaseType.MARIADB || t == DatabaseType.TIDB || t == DatabaseType.OCEANBASE_MYSQL) {
-                db.setColumnFormat("`%s`");
+                applyColumnAndTableQuotes(db, "`%s`", "`%s`");
             } else {
-                db.setColumnFormat("`%s`");
+                applyColumnAndTableQuotes(db, "`%s`", "`%s`");
             }
         };
     }
 
+    private static void applyColumnAndTableQuotes(GlobalConfig.DbConfig db, String columnFormat, String tableFormat) {
+        db.setColumnFormat(columnFormat);
+        db.setTableFormat(tableFormat);
+    }
+
     @Bean
-    public MybatisPlusInterceptor mybatisPlusInterceptor() {
+    public MybatisPlusInterceptor mybatisPlusInterceptor(Environment environment) {
         PaginationInnerInterceptor paginationInnerInterceptor = new PaginationInnerInterceptor();
-        DatabaseType t = databaseHolder.getType();
-        if (t == DatabaseType.POSTGRESQL || t == DatabaseType.KINGBASE) {
-            paginationInnerInterceptor.setDbType(DbType.POSTGRE_SQL);
-        } else if (t == DatabaseType.ORACLE || t == DatabaseType.OCEANBASE_ORACLE || t == DatabaseType.DAMENG) {
-            paginationInnerInterceptor.setDbType(DbType.ORACLE);
-        } else if (t == DatabaseType.SQLSERVER) {
-            paginationInnerInterceptor.setDbType(DbType.SQL_SERVER);
-        } else if (t == DatabaseType.DERBY) {
-            paginationInnerInterceptor.setDbType(DbType.DERBY);
-        } else if (t == DatabaseType.DB2) {
-            paginationInnerInterceptor.setDbType(DbType.DB2);
-        } else if (t == DatabaseType.SQLITE) {
-            paginationInnerInterceptor.setDbType(DbType.SQLITE);
-        } else if (t == DatabaseType.H2 || t == DatabaseType.HSQLDB) {
+        if (H2EmbeddedMysqlDialect.isActive(primaryDataSourceUrl(environment))) {
             paginationInnerInterceptor.setDbType(DbType.H2);
-        } else if (t == DatabaseType.MARIADB) {
-            paginationInnerInterceptor.setDbType(DbType.MARIADB);
-        } else if (t == DatabaseType.TIDB) {
-            paginationInnerInterceptor.setDbType(DbType.MYSQL);
-        } else if (t == DatabaseType.OCEANBASE_MYSQL) {
-            paginationInnerInterceptor.setDbType(DbType.MYSQL);
-        } else if (t == DatabaseType.FIREBIRD) {
-            paginationInnerInterceptor.setDbType(DbType.FIREBIRD);
-        } else if (t == DatabaseType.INFORMIX) {
-            paginationInnerInterceptor.setDbType(DbType.INFORMIX);
         } else {
-            paginationInnerInterceptor.setDbType(DbType.MYSQL);
+            DatabaseType t = databaseHolder.getType();
+            if (t == DatabaseType.POSTGRESQL || t == DatabaseType.KINGBASE) {
+                paginationInnerInterceptor.setDbType(DbType.POSTGRE_SQL);
+            } else if (t == DatabaseType.ORACLE || t == DatabaseType.OCEANBASE_ORACLE || t == DatabaseType.DAMENG) {
+                paginationInnerInterceptor.setDbType(DbType.ORACLE);
+            } else if (t == DatabaseType.SQLSERVER) {
+                paginationInnerInterceptor.setDbType(DbType.SQL_SERVER);
+            } else if (t == DatabaseType.DERBY) {
+                paginationInnerInterceptor.setDbType(DbType.DERBY);
+            } else if (t == DatabaseType.DB2) {
+                paginationInnerInterceptor.setDbType(DbType.DB2);
+            } else if (t == DatabaseType.SQLITE) {
+                paginationInnerInterceptor.setDbType(DbType.SQLITE);
+            } else if (t == DatabaseType.H2 || t == DatabaseType.HSQLDB) {
+                paginationInnerInterceptor.setDbType(DbType.H2);
+            } else if (t == DatabaseType.MARIADB) {
+                paginationInnerInterceptor.setDbType(DbType.MARIADB);
+            } else if (t == DatabaseType.TIDB) {
+                paginationInnerInterceptor.setDbType(DbType.MYSQL);
+            } else if (t == DatabaseType.OCEANBASE_MYSQL) {
+                paginationInnerInterceptor.setDbType(DbType.MYSQL);
+            } else if (t == DatabaseType.FIREBIRD) {
+                paginationInnerInterceptor.setDbType(DbType.FIREBIRD);
+            } else if (t == DatabaseType.INFORMIX) {
+                paginationInnerInterceptor.setDbType(DbType.INFORMIX);
+            } else {
+                paginationInnerInterceptor.setDbType(DbType.MYSQL);
+            }
         }
         MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
         interceptor.addInnerInterceptor(paginationInnerInterceptor);

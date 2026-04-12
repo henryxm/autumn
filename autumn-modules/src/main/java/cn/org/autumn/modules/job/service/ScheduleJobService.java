@@ -47,7 +47,8 @@ public class ScheduleJobService extends ModuleService<ScheduleJobDao, ScheduleJo
                         scheduleJobEntity.setBeanName(beanName);
                         scheduleJobEntity.setMethodName(method.getName());
                         QueryWrapper<ScheduleJobEntity> qw = new QueryWrapper<>();
-                        qw.eq("bean_name", scheduleJobEntity.getBeanName()).eq("method_name", scheduleJobEntity.getMethodName());
+                        qw.eq(columnInWrapper("bean_name"), scheduleJobEntity.getBeanName())
+                                .eq(columnInWrapper("method_name"), scheduleJobEntity.getMethodName());
                         ScheduleJobEntity entity = baseMapper.selectOne(qw);
                         if (null == entity) {
                             scheduleJobEntity.setStatus(taskAware.status());

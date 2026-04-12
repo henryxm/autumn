@@ -2,12 +2,18 @@ package cn.org.autumn.database.runtime;
 
 import cn.org.autumn.database.DatabaseHolder;
 import cn.org.autumn.database.DatabaseType;
+import cn.org.autumn.database.H2EmbeddedMysqlDialect;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Primary;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
 /**
- * 根据 {@link DatabaseHolder#getType()} 选择具体方言（优先 JDBC URL，其次 {@code autumn.database}）。
+ * 根据<strong>当前路由数据源</strong>的 JDBC URL（{@link DatabaseHolder#readCurrentRoutingJdbcUrl(Environment)}）与
+ * {@link DatabaseHolder#resolveType(String, String)} 选择具体方言；无 {@link Environment} 时退化为 {@link DatabaseHolder#getType()}（主库）。
+ * <p>
+ * <b>内嵌 H2 + {@code MODE=MySQL}</b>：对该 URL 必须选用 {@link H2RuntimeSqlDialect} 的双引号与 H2 函数形态，勿用
+ * {@link MysqlRuntimeSqlDialect} 的反引号 / {@code FIND_IN_SET}。
  */
 @Primary
 @Component
@@ -15,6 +21,9 @@ public class RoutingRuntimeSqlDialect implements RuntimeSqlDialect {
 
     @Autowired
     private DatabaseHolder databaseHolder;
+
+    @Autowired(required = false)
+    private Environment environment;
 
     @Autowired
     private MysqlRuntimeSqlDialect mysqlRuntimeSqlDialect;
@@ -56,7 +65,21 @@ public class RoutingRuntimeSqlDialect implements RuntimeSqlDialect {
     private OceanBaseOracleRuntimeSqlDialect oceanBaseOracleRuntimeSqlDialect;
 
     private RuntimeSqlDialect delegate() {
-        DatabaseType t = databaseHolder.getType();
+        Environment env = environment != null ? environment : databaseHolder.getEnvironment();
+        DatabaseType t;
+        if (env != null) {
+            String url = DatabaseHolder.readCurrentRoutingJdbcUrl(env);
+            if (H2EmbeddedMysqlDialect.isActive(url)) {
+                return h2RuntimeSqlDialect;
+            }
+            t = DatabaseHolder.resolveType(url, env.getProperty("autumn.database", ""));
+        } else {
+            t = databaseHolder.getType();
+        }
+        return dialectForType(t);
+    }
+
+    private RuntimeSqlDialect dialectForType(DatabaseType t) {
         if (t == DatabaseType.POSTGRESQL) {
             return postgresqlRuntimeSqlDialect;
         }

@@ -6,7 +6,6 @@ import cn.org.autumn.database.DatabaseType;
 import cn.org.autumn.table.relational.dialect.mysql.H2MysqlCompatSchemaSql;
 import cn.org.autumn.table.relational.dialect.mysql.MysqlSchemaSql;
 import cn.org.autumn.table.relational.provider.EmbeddedH2MysqlMode;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.core.env.Environment;
 
 /**
@@ -52,10 +51,7 @@ public final class RelationalSchemaSqlRegistry {
             if (env == null) {
                 return get();
             }
-            String url = env.getProperty("spring.datasource.druid.first.url");
-            if (StringUtils.isBlank(url)) {
-                url = env.getProperty("spring.datasource.url");
-            }
+            String url = DatabaseHolder.readCurrentRoutingJdbcUrl(env);
             DatabaseType t = DatabaseHolder.resolveType(url, env.getProperty("autumn.database"));
             return forType(t);
         } catch (Exception ignored) {

@@ -3,6 +3,7 @@ package cn.org.autumn.database.runtime;
 import cn.org.autumn.config.Config;
 import cn.org.autumn.database.DatabaseHolder;
 import cn.org.autumn.database.DatabaseType;
+import cn.org.autumn.database.H2EmbeddedMysqlDialect;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.core.env.Environment;
 
@@ -10,10 +11,12 @@ import org.springframework.core.env.Environment;
  * 供 MyBatis {@code SqlProvider} 等非 Spring 托管类在启动后取得当前方言（由 {@link RuntimeSqlDialectBootstrap} 或
  * {@link RoutingRuntimeSqlDialect} 注入 {@link RoutingRuntimeSqlDialect}）。
  * <p>
+ * 运行期注入后，{@link RoutingRuntimeSqlDialect} 按 {@link DatabaseHolder#readCurrentRoutingJdbcUrl} 随动态数据源线程键切换，
+ * 避免主库方言套在从库连接上。启动早期无 Spring Bean 时，{@link #resolveStatelessFromEnvironment()} 仅按<strong>主库</strong> URL
+ * 回退（与 {@link DatabaseHolder#readPrimaryJdbcUrl} 一致），因彼时通常尚无路由上下文。
+ * <p>
  * MyBatis 在构建 {@code SqlSessionFactory} 时可能早于 {@link RoutingRuntimeSqlDialect} 的初始化解析并缓存 Provider SQL；
- * 此时若仍使用默认 MySQL 方言会生成反引号等错误语法。故在尚未注入 {@link RoutingRuntimeSqlDialect} 时，根据
- * {@link Config#getEnvironment()} 中的 JDBC URL / {@code autumn.database} 回退到无状态的具体方言实例（与
- * {@link DatabaseHolder#getType()} 解析顺序一致）。
+ * 此时若仍使用默认 MySQL 方言会生成反引号等错误语法。
  */
 public final class RuntimeSqlDialectRegistry {
 
@@ -64,9 +67,9 @@ public final class RuntimeSqlDialectRegistry {
             if (env == null) {
                 return null;
             }
-            String url = env.getProperty("spring.datasource.druid.first.url");
-            if (StringUtils.isBlank(url)) {
-                url = env.getProperty("spring.datasource.url");
+            String url = DatabaseHolder.readPrimaryJdbcUrl(env);
+            if (H2EmbeddedMysqlDialect.isActive(url)) {
+                return H2_STATELESS;
             }
             DatabaseType t = DatabaseHolder.resolveType(url, env.getProperty("autumn.database"));
             return statelessForType(t);

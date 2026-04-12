@@ -132,7 +132,7 @@ public class UserProfileService extends ModuleService<UserProfileDao, UserProfil
 
     public UserProfileEntity queryByMobile(String mobile) {
         if (StringUtils.isBlank(mobile)) return null;
-        return getOne(new QueryWrapper<UserProfileEntity>().eq("mobile", mobile));
+        return getOne(new QueryWrapper<UserProfileEntity>().eq(columnInWrapper("mobile"), mobile));
     }
 
     public void login(UserProfile userProfile) {

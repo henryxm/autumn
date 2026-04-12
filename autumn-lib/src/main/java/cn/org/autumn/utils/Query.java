@@ -1,5 +1,6 @@
 package cn.org.autumn.utils;
 
+import cn.org.autumn.database.runtime.WrapperColumns;
 import com.baomidou.mybatisplus.core.metadata.OrderItem;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import cn.org.autumn.xss.SQLFilter;
@@ -50,12 +51,13 @@ public class Query<T> extends LinkedHashMap<String, Object> {
         //mybatis-plus分页
         this.page = new Page<>(currPage, limit);
 
-        //排序 (MyBatis-Plus 3.x 使用 OrderItem 替代 setOrderByField)
-        if(StringUtils.isNotBlank(sidx) && StringUtils.isNotBlank(order)){
-            if("ASC".equalsIgnoreCase(order)){
-                this.page.addOrder(OrderItem.asc(sidx));
+        // 排序：列名经方言引用后须用 withExpression，避免 OrderItem.asc/desc 内 replaceAllBlank 去掉引号导致 ORDER BY id
+        if (StringUtils.isNotBlank(sidx) && StringUtils.isNotBlank(order)) {
+            String col = WrapperColumns.columnInWrapper(sidx.trim());
+            if ("ASC".equalsIgnoreCase(order)) {
+                this.page.addOrder(OrderItem.withExpression(col, true));
             } else {
-                this.page.addOrder(OrderItem.desc(sidx));
+                this.page.addOrder(OrderItem.withExpression(col, false));
             }
         }
 

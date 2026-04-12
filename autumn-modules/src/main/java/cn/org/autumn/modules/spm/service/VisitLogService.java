@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.spm.service;
 
+import cn.org.autumn.database.runtime.WrapperColumns;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.spm.entity.SuperPositionModelEntity;
 import cn.org.autumn.modules.spm.entity.VisitLogEntity;
@@ -61,7 +62,7 @@ public class VisitLogService extends VisitLogServiceGen implements LoopJob.OneDa
         visitLogEntity.setDayString(day);
         visitLogEntity.setCreateTime(new Date());
 
-        List<VisitLogEntity> logEntities = listByMap(map);
+        List<VisitLogEntity> logEntities = list(WrapperColumns.queryWrapperAllEqQuoted(map));
 
         if (logEntities.size() > 0)
             visitLogEntity = logEntities.get(0);
