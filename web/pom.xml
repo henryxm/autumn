@@ -8,7 +8,7 @@
     <modelVersion>4.0.0</modelVersion>
     <artifactId>web</artifactId>
     <packaging>jar</packaging>
-    <description>Autumn Web 应用入口</description>
+    <description>Autumn Web 应用入口（Spring Boot 3 / JDK 17+）</description>
 
     <dependencies>
         <dependency>
@@ -35,8 +35,7 @@
             <artifactId>sqlite-jdbc</artifactId>
             <scope>runtime</scope>
         </dependency>
-        <!-- profile：application-derby.yml；版本随 Spring Boot BOM（2.7 为 10.14.x，字节码 52，可在 Java 8 运行）。
-             Derby 10.16+ 需 Java 17+，若在 JDK17+ 环境且需要 IF NOT EXISTS 等 10.16 语法，可在本模块 pom 显式覆盖 derby 版本并改用 AutoloadedDriver。 -->
+        <!-- profile：application-derby.yml；版本由 Spring Boot BOM 管理（JDK 17+） -->
         <dependency>
             <groupId>org.apache.derby</groupId>
             <artifactId>derby</artifactId>
@@ -51,10 +50,8 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
-                    <!-- JDK 17+ 建议显式指定主类 -->
                     <mainClass>cn.org.autumn.Web</mainClass>
                     <excludes>
-                        <!-- Lombok 仅编译期使用，排除出运行时 JAR -->
                         <exclude>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>

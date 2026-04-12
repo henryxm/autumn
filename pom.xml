@@ -392,6 +392,25 @@
 
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <version>3.5.0</version>
+                <executions>
+                    <execution>
+                        <id>enforce-dependency-convergence</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <phase>validate</phase>
+                        <configuration>
+                            <rules>
+                                <dependencyConvergence/>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <!-- Maven 编译插件 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

@@ -62,7 +62,7 @@ autumn:
     init: true
     pack: cn.org.autumn.modules
 
-#mybatis-plus 3.x 配置
+# mybatis-plus 3.x 配置
 mybatis-plus:
   mapper-locations: classpath*:mapper/**/*.xml
   #实体扫描，多个package用逗号或者分号分隔

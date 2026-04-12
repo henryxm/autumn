@@ -10,7 +10,7 @@
     <artifactId>autumn-starter</artifactId>
     <packaging>jar</packaging>
     <name>autumn-starter</name>
-    <description>Autumn Framework Spring Boot Starter - 一站式引入 Autumn 框架所有功能， 外部项目只需添加此依赖即可获得完整的 Autumn 基础设施支持
+    <description>Autumn Framework Spring Boot Starter - 一站式引入 Autumn 框架所有功能，外部项目只需添加此依赖即可获得完整的 Autumn 基础设施支持
     </description>
 
     <dependencies>

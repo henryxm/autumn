@@ -1,7 +1,7 @@
 # Autumn 作为基础库：依赖方升级清单与自动化扫描
 
 > **定位**：`autumn`（本仓库）作为 **Maven 依赖 / 二方库** 被其它业务工程引用时，版本升级所需的检查项、兼容性说明，以及**只读扫描脚本**能覆盖与不能覆盖的范围。  
-> 与 **PostgreSQL 专项** 的关系：多库、方言、实体类型等细节见 `AI_POSTGRESQL.md`；本文件侧重 **跨项目升级流程** 与 **清单化验收**。
+> 与 **PostgreSQL 专项** 的关系：多库、方言、实体类型等细节见 `docs/AI_POSTGRESQL.md`；本文件侧重 **跨项目升级流程** 与 **清单化验收**。
 
 ---
 
@@ -9,7 +9,7 @@
 
 | 角色 | 说明 |
 |------|------|
-| **基础项目（本仓库）** | 产出 `autumn-lib`、`autumn-modules`、`autumn-handler`、`autumn-web` 等 GAV，版本号在根 `pom.xml` 统一（如 `2.0.0`）。 |
+| **基础项目（本仓库）** | 产出 `autumn-lib`、`autumn-modules`、`autumn-handler`、`web` 等 GAV，版本号在根 `pom.xml` 统一（如 `2.0.0`）。 |
 | **依赖方工程** | 业务仓库：在自身 `pom.xml` 中声明 `cn.org.autumn:*` 依赖，可能还有本地 `application*.yml`、自研模块与 `autumn` 的扩展点实现。 |
 | **升级** | 将依赖方中所有 `cn.org.autumn` 构件版本 **对齐到目标版本**，重新 **全量编译 / 安装**，再按清单做 **配置、数据库、回归**。 |
 
@@ -23,7 +23,7 @@
 |---|-----|------|
 | 1 | **统一 GAV** | 依赖方所有模块中 `cn.org.autumn` 的 `artifactId` + `version` 与目标发布版本 **一致**，避免混用多个版本。 |
 | 2 | **传递依赖** | 若依赖方排除了 `spring-boot`、`mybatis-plus` 等，升级后核对 **与 autumn 父 POM 管理版本** 是否冲突（以 autumn 发布说明或 BOM 为准）。 |
-| 3 | **JDK** | autumn 当前编译目标多为 **Java 8**；若本机用 **JDK 9+** 编译依赖方，须保证 **Lombok** 走 `annotationProcessorPaths`（见 `AI_POSTGRESQL.md` 工程化小节）。 |
+| 3 | **JDK** | autumn 当前编译目标多为 **Java 8**；若本机用 **JDK 9+** 编译依赖方，须保证 **Lombok** 走 `annotationProcessorPaths`（见 `docs/AI_POSTGRESQL.md` 工程化小节）。 |
 | 4 | **构建命令** | 建议使用 `mvn clean install -pl <启动模块> -am -DskipTests` **从根反应堆安装**，避免仅子模块 `spring-boot:run` 使用 `~/.m2` **陈旧 JAR**。 |
 
 ### 2.2 配置
@@ -38,7 +38,7 @@
 
 | # | 项 | 说明 |
 |---|-----|------|
-| 8 | **注解建表** | 若开启 `autumn.table.auto`，升级后首次启动关注日志；PG 与 MySQL 语义差异见 `AI_POSTGRESQL.md`。 |
+| 8 | **注解建表** | 若开启 `autumn.table.auto`，升级后首次启动关注日志；PG 与 MySQL 语义差异见 `docs/AI_POSTGRESQL.md`。 |
 | 9 | **已有 PG 库** | `smallint` 标志列 vs Java `boolean` 已用 **`int` 0/1** 或 **`ALTER ... TYPE boolean`** 策略处理，升级后勿回退实体类型导致 JDBC 类型不匹配。 |
 | 10 | **迁移脚本** | 若 autumn 发布说明要求执行 SQL，在依赖方环境 **先备份再执行**。 |
 
@@ -47,7 +47,7 @@
 | # | 项 | 说明 |
 |---|-----|------|
 | 11 | **二方扩展** | 依赖方若 **继承/实现** autumn 的 `ModuleService`、`BaseMenu`、`LoopJob` 等，对照 **CHANGELOG** 或 **Diff** 检查重载签名、废弃方法。 |
-| 12 | **手写 SQL** | 硬编码 `LIMIT`/`FIND_IN_SET`/三参 `concat('%',#{x},'%')`/保留字列名等，在多库下易出错；**老旧 Dao 上 `@Select`/`@Update`/`@Insert`/`@Delete` 内联字符串**、**Wrapper 中反引号/`apply` 拼方言**须按 **`AI_DATABASE.md` §8** 迁到 **`RuntimeSql` + Provider** 或安全 Wrapper（见下「跨库手写 SQL 与 RuntimeSql」）。 |
+| 12 | **手写 SQL** | 硬编码 `LIMIT`/`FIND_IN_SET`/三参 `concat('%',#{x},'%')`/保留字列名等，在多库下易出错；**老旧 Dao 上 `@Select`/`@Update`/`@Insert`/`@Delete` 内联字符串**、**Wrapper 中反引号/`apply` 拼方言**须按 **`docs/AI_DATABASE.md` §8** 迁到 **`RuntimeSql` + Provider** 或安全 Wrapper（见下「跨库手写 SQL 与 RuntimeSql」）。 |
 | 13 | **实体布尔与 MyBatis** | 避免同一字段 **`getX(int)` + `boolean isX()`** 引发 `Reflector` 冲突；分页若自定义 count，避免 **`COUNT(...) ORDER BY`**（PG 非法）。 |
 
 ### 2.5 回归与发布
@@ -78,7 +78,7 @@
 
 ---
 
-#### 跨库手写 SQL 约定（要点速查，与 `AI_POSTGRESQL.md` 一致）
+#### 跨库手写 SQL 约定（要点速查，与 `docs/AI_POSTGRESQL.md` 一致）
 
 - **列/表引用**：`quote` / `columnInWrapper`，勿手写 `` ` `` / `"` / `[]`。
 - **取一行**：`limitOne()`，勿手写固定 `LIMIT 1`。**`SELECT COUNT(*)`、`MAX/MIN` 等聚合勿再追加** `limitOne()`。Mapper 上勿再写 `@Select("... limit 1")`，应改为 `@SelectProvider` + 含 `limitOne()` 的构建类。
@@ -93,7 +93,7 @@
 
 - 在 **依赖方仓库根目录** 扫描所有 `pom.xml` / `*.gradle`，检查 `cn.org.autumn` **版本号是否统一**、是否缺失 **Lombok 注解处理器** 配置（启发式 grep）。
 - 扫描 `application*.yml` / `application*.properties` 是否包含 **`autumn.database`**、数据源驱动与方言关键词（**提示性**，不修改文件）。
-- **Grep 级** 规则（**仅报告**，不自动改代码）：`sun.misc.Launcher`、明显 `FIND_IN_SET`、三参 `concat('%'`、手写 `LIMIT`、**`@Select`/`@Update`/`@Insert`/`@Delete` 后紧跟字符串 SQL**、**`.apply(` / `.last(` / `.having(`**、常见 MySQL 函数 **`IFNULL`/`DATE_FORMAT`/`GROUP_CONCAT`/`LAST_INSERT_ID`** 等。依赖方宜对照 **`AI_DATABASE.md` §8** 分批改为 **`RuntimeSql` + Provider** 或标准 Wrapper。
+- **Grep 级** 规则（**仅报告**，不自动改代码）：`sun.misc.Launcher`、明显 `FIND_IN_SET`、三参 `concat('%'`、手写 `LIMIT`、**`@Select`/`@Update`/`@Insert`/`@Delete` 后紧跟字符串 SQL**、**`.apply(` / `.last(` / `.having(`**、常见 MySQL 函数 **`IFNULL`/`DATE_FORMAT`/`GROUP_CONCAT`/`LAST_INSERT_ID`** 等。依赖方宜对照 **`docs/AI_DATABASE.md` §8** 分批改为 **`RuntimeSql` + Provider** 或标准 Wrapper。
 - **本仓库脚本**：`scripts/autumn-dependency-scan.sh` 已包含部分上述规则；**§8.5** 提供可复制 `rg` 命令作为补充。
 
 ### 3.2 难以或不应「一键」自动完成
@@ -111,11 +111,11 @@
 
 | 阶段 | 动作 | 产出 |
 |------|------|------|
-| 体检 | 运行 **`autumn-dependency-scan.sh`** + **`AI_DATABASE.md` §8.5** 检索 | 待改造文件列表 |
-| 改造 | 按 **`AI_DATABASE.md` §8.2～§8.3** 逐项替换为 Provider / 安全 Wrapper | 可编译、可回归的 PR |
+| 体检 | 运行 **`autumn-dependency-scan.sh`** + **`docs/AI_DATABASE.md` §8.5** 检索 | 待改造文件列表 |
+| 改造 | 按 **`docs/AI_DATABASE.md` §8.2～§8.3** 逐项替换为 Provider / 安全 Wrapper | 可编译、可回归的 PR |
 | 验收 | 在 **目标 `DatabaseType`**（含非 MySQL）下冒烟与核心用例 | 合并门禁 |
 
-**详细对照表、单方法迁移步骤、Wrapper 策略**以 **`AI_DATABASE.md` §8** 为准。
+**详细对照表、单方法迁移步骤、Wrapper 策略**以 **`docs/AI_DATABASE.md` §8** 为准。
 
 ---
 
@@ -142,9 +142,9 @@ AUTUMN_SCAN_ROOT=/path/to/business-repo bash /path/to/autumn/scripts/autumn-depe
 
 | 文档 | 内容 |
 |------|------|
-| `AI_POSTGRESQL.md` | 多库、方言、`RuntimeSql` 与 Provider、`BaseService` 分页 count 等 |
-| `AI_BOOT.md` | 最小上下文；含 PostgreSQL 摘要与 `RuntimeSql` 索引 |
-| `AI_MAP.md` | 框架能力与模块边界 |
+| `docs/AI_POSTGRESQL.md` | 多库、方言、`RuntimeSql` 与 Provider、`BaseService` 分页 count 等 |
+| `docs/AI_BOOT.md` | 最小上下文；含 PostgreSQL 摘要与 `RuntimeSql` 索引 |
+| `docs/AI_MAP.md` | 框架能力与模块边界 |
 
 ---
 

@@ -8,7 +8,7 @@ import org.apache.commons.lang3.StringUtils;
  * 注解驱动建表范围见 {@link #supportsAnnotationTableSync()} 与 {@link AnnotationTableSyncSupport}。
  * <p>
  * PageHelper 5.1.x 方言别名与 {@link #pageHelperDialectName()} 对齐。
- * 团队规范与全库 SQL 纪律见仓库根目录 {@code AI_DATABASE.md}；{@link cn.org.autumn.database.DatabaseHolder#resolveType} 为统一解析入口。
+ * 团队规范与全库 SQL 纪律见仓库内 {@code docs/AI_DATABASE.md}（相对仓库根）；{@link cn.org.autumn.database.DatabaseHolder#resolveType} 为统一解析入口。
  */
 public enum DatabaseType {
 

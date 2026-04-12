@@ -1,8 +1,8 @@
 # Autumn PostgreSQL 支持方案（实现说明与兼容性）
 
 > 目标：在**不破坏现有 MySQL/MariaDB 基线**的前提下，为 PostgreSQL 提供可运行的元数据、DDL、分页、手写 SQL 方言与运行时类型兼容。  
-> **通用多库纪律**（全库兼容默认、`DatabaseType` 清单、Wrapper 边界、Dao **必须 Provider**）：见 **`AI_DATABASE.md`**。  
-> 关联启动说明摘要：见 `AI_BOOT.md` §8「多数据库支持（摘要）」。
+> **通用多库纪律**（全库兼容默认、`DatabaseType` 清单、Wrapper 边界、Dao **必须 Provider**）：见 **`docs/AI_DATABASE.md`**。  
+> 关联启动说明摘要：见 `docs/AI_BOOT.md` §8「多数据库支持（摘要）」。
 
 ## 1. 背景与问题模型
 
@@ -18,7 +18,7 @@
 
 ### 1.2 设计原则
 
-1. **按库拆分实现**：MySQL 与 PostgreSQL 各自实现类，通过 **`autumn.database`**、JDBC URL 与 **`DatabaseHolder`**（`resolveType`）路由；全库类型见 **`AI_DATABASE.md` §2**。
+1. **按库拆分实现**：MySQL 与 PostgreSQL 各自实现类，通过 **`autumn.database`**、JDBC URL 与 **`DatabaseHolder`**（`resolveType`）路由；全库类型见 **`docs/AI_DATABASE.md` §2**。
 2. **扩展点清晰**：方言接口、表操作接口、Provider SQL 类可独立演进。
 3. **兼容优先**：未单独实现的数据库类型可回退到 MySQL 风格（仅保证启动，语义需后续核对）。
 
@@ -29,7 +29,7 @@
 ### 2.1 `autumn.database`
 
 - **位置**：`application.yml` 注释 + `additional-spring-configuration-metadata.json` 说明。
-- **取值**：以 `DatabaseType#fromConfig` 为准（含 `mysql`、`mariadb`、`postgresql`、`oracle`、`sqlserver`、`sqlite`、`h2`、`kingbase`、`tidb`、`oceanbase_mysql`、`oceanbase_oracle`、`dm` 等）；完整表见 **AI_DATABASE.md** §2。
+- **取值**：以 `DatabaseType#fromConfig` 为准（含 `mysql`、`mariadb`、`postgresql`、`oracle`、`sqlserver`、`sqlite`、`h2`、`kingbase`、`tidb`、`oceanbase_mysql`、`oceanbase_oracle`、`dm` 等）；完整表见 **docs/AI_DATABASE.md** §2。
 - **作用**：驱动 **`DatabaseType`**、分页方言、`RoutingRelationalTableOperations`、注解建表是否执行、运行时 SQL 方言等（与 **`DatabaseHolder`** 联用）。
 
 ### 2.2 保留字物理列名（如 `order`）— 不改库列名
@@ -64,7 +64,7 @@
 
 | 组件 | 说明 |
 |------|------|
-| `DatabaseType` | 枚举：库类型 + `supportsAnnotationTableSync()`（仅 mysql/mariadb/postgresql 为 true）；全量见 **`AI_DATABASE.md` §2** |
+| `DatabaseType` | 枚举：库类型 + `supportsAnnotationTableSync()`（仅 mysql/mariadb/postgresql 为 true）；全量见 **`docs/AI_DATABASE.md` §2** |
 | `DatabaseHolder` | `getType()` / `resolveType`：JDBC URL + `autumn.database` |
 
 ### 3.2 注解建表与表操作路由
@@ -135,7 +135,7 @@ FooEntity findOne(@Param("id") Long id);
 
 **业务侧已接入示例（本仓库）**：各模块 `**/dao/sql/*DaoSql`（如 `SysUserDaoSql`、`SysConfigDaoSql`、`WallDaoSql`、`OauthInlineSql`、`UserOpenDaoSql` 等）均继承 **`RuntimeSql`**；切面等处的 `FIND_IN_SET` 替代见 `DataFilterAspect`。原先 Mapper 上硬编码 `limit 1` / `LIMIT 1` 的 `@Select` 已逐步改为 `@SelectProvider` + **`limitOne()`**。
 
-**依赖方升级与清单**：见 **`AI_UPGRADE.md`**「跨库手写 SQL 与 `RuntimeSql`」。
+**依赖方升级与清单**：见 **`docs/AI_UPGRADE.md`**「跨库手写 SQL 与 `RuntimeSql`」。
 
 ### 3.5 MyBatis-Plus 分页
 
@@ -151,7 +151,7 @@ FooEntity findOne(@Param("id") Long id);
 |----|------|
 | **Lombok** | 根 `pom.xml` 为 `maven-compiler-plugin` 配置 `annotationProcessorPaths`（JDK 9+ 必须，否则 `@Slf4j`/`@Data`/`@Builder` 不生成代码） |
 | **`PluginManager`** | 去掉对 `sun.misc.Launcher` 的编译期依赖，JDK 9+ 用反射尝试扩展 classpath，失败则跳过 |
-| **`autumn-web` spring-boot-maven-plugin** | 配置 `mainClass: cn.org.autumn.AutumnApplication` |
+| **`web` spring-boot-maven-plugin** | 配置 `mainClass: cn.org.autumn.Web` |
 | **`Common`（handler）** | 实现 `IResult.setResult/getResult`，避免未实现接口导致编译失败 |
 
 ---
@@ -202,7 +202,7 @@ FooEntity findOne(@Param("id") Long id);
 
 ### 5.4 构建与依赖
 
-- 全量构建请使用 **`mvn clean install -pl <模块> -am`**，避免仅 `autumn-web` 运行时使用 **`~/.m2` 旧 `autumn-modules` JAR** 导致运行时类与源码不一致。
+- 全量构建请使用 **`mvn clean install -pl <模块> -am`**，避免仅 `web` 运行时使用 **`~/.m2` 旧 `autumn-modules` JAR** 导致运行时类与源码不一致。
 
 ### 5.5 其他数据库（Oracle / SQL Server / other）
 
@@ -212,7 +212,7 @@ FooEntity findOne(@Param("id") Long id);
 
 ## 6. 变更过程（时间线式归纳）
 
-1. **基础设施**：`DatabaseType`、`DatabaseHolder`、路由表操作、PG 包、`TableInit` 条件执行、`MapperScan`、示例 `application-postgresql.yml`；多库规范见 **`AI_DATABASE.md`**。
+1. **基础设施**：`DatabaseType`、`DatabaseHolder`、路由表操作、PG 包、`TableInit` 条件执行、`MapperScan`、示例 `application-postgresql.yml`；多库规范见 **`docs/AI_DATABASE.md`**。
 2. **运行时方言**：`RuntimeSqlDialect` 体系与业务 Provider/SQL 分批替换 `limit`、`FIND_IN_SET`、保留字列名等。
 3. **实体与 JDBC**：PG 上 `smallint` vs `boolean` 问题 → 注解层 **`tinyint(1)`→`boolean` DDL** + 存量/业务侧 **`int` 标志位** 双轨。
 4. **MyBatis 反射**：避免 **`getX`/`isX`** 对同一逻辑列冲突。
@@ -223,7 +223,7 @@ FooEntity findOne(@Param("id") Long id);
 
 ## 7. 验证建议
 
-- **编译**：`mvn clean install -pl autumn-web -am -DskipTests`
+- **编译**：`mvn clean install -pl web -am -DskipTests`
 - **PG**：`spring.profiles.active` 含 `postgresql`（或与 `dev` 组合），连接真实实例跑建表/备份列表/登录与 OAuth 相关路径。
 - **回归 MySQL**：`dev`  profile 下核心 CRUD、分页、注解同步。
 
@@ -235,14 +235,14 @@ FooEntity findOne(@Param("id") Long id);
 |------|------|
 | `application-postgresql.yml` | PG 可选 profile；与 prod/dev 共用环境变量名 |
 | `application-prod.yml` | 生产数据源与 `AUTUMN_DATABASE` 等可由环境变量覆盖（见文件内注释） |
-| `AI_BOOT.md` | PostgreSQL 摘要、`RuntimeSql` 索引 + 指向本文件 |
-| `AI_INDEX.md` / `AI_GUIDE.md` | 索引与导航中增加本文件条目 |
-| `AI_UPGRADE.md` | 依赖方升级 autumn 的通用清单、只读扫描脚本与自动化边界（不限于 PG） |
+| `docs/AI_BOOT.md` | PostgreSQL 摘要、`RuntimeSql` 索引 + 指向本文件 |
+| `docs/AI_INDEX.md` / `docs/AI_GUIDE.md` | 索引与导航中增加本文件条目 |
+| `docs/AI_UPGRADE.md` | 依赖方升级 autumn 的通用清单、只读扫描脚本与自动化边界（不限于 PG） |
 
 ---
 
 ## 9. 依赖方升级（与 PG 的关系）
 
-将 autumn 作为 **Maven 依赖** 升级到新版本时，除本文件中的 **多库 / PG** 项外，还需统一 GAV、构建链路与业务回归；完整清单与 **`scripts/autumn-dependency-scan.sh`** 用法见 **`AI_UPGRADE.md`**。
+将 autumn 作为 **Maven 依赖** 升级到新版本时，除本文件中的 **多库 / PG** 项外，还需统一 GAV、构建链路与业务回归；完整清单与 **`scripts/autumn-dependency-scan.sh`** 用法见 **`docs/AI_UPGRADE.md`**。
 
 （完）

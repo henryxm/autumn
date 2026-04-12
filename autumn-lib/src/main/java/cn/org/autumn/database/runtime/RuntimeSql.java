@@ -5,7 +5,7 @@ package cn.org.autumn.database.runtime;
  * 子类通过 {@link #quote(String)}、{@link #limitOne()}、{@link #likeContainsAny(String)} 等拼装可移植 SQL，
  * 避免在每个 Provider 中重复 {@code RuntimeSqlDialectRegistry.get()} 与 {@code d()} 样板代码。
  * <p>
- * 多库兼容纪律、Wrapper 边界与推荐分层见仓库根目录 {@code AI_DATABASE.md}；PostgreSQL 专项见 {@code AI_POSTGRESQL.md}。
+ * 多库兼容纪律、Wrapper 边界与推荐分层见仓库内 {@code docs/AI_DATABASE.md}（相对仓库根）；PostgreSQL 专项见 {@code docs/AI_POSTGRESQL.md}。
  *
  * @see RuntimeSqlDialect
  */

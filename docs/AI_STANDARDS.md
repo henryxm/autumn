@@ -1,7 +1,7 @@
 # Autumn 应用层开发规范（约束性）
 
 > 用途：约定**业务与数据访问分层、实体与库表、生成层边界、资源与页面**等纪律。  
-> 与 `AI_BOOT.md`、`AI_MAP.md` 互补：**多库 SQL、Wrapper 与 Provider 落地以 `AI_DATABASE.md` 为准**；**PostgreSQL 专项实现见 `AI_POSTGRESQL.md`**；**团队强制口径以本文为准**。
+> 与 `docs/AI_BOOT.md`、`docs/AI_MAP.md` 互补：**多库 SQL、Wrapper 与 Provider 落地以 `docs/AI_DATABASE.md` 为准**；**PostgreSQL 专项实现见 `docs/AI_POSTGRESQL.md`**；**团队强制口径以本文为准**。
 
 ## 1. 适用范围
 
@@ -12,7 +12,7 @@
 
 ### 2.1 高内聚、低耦合
 
-- **高内聚**：与某实体（表 / 领域模型）相关的**业务流程、规则、事务边界**，默认实现于该实体对应的 **`XxxService`**（继承链以 `ModuleService` 为默认，见 `AI_MAP.md` §2.7）。
+- **高内聚**：与某实体（表 / 领域模型）相关的**业务流程、规则、事务边界**，默认实现于该实体对应的 **`XxxService`**（继承链以 `ModuleService` 为默认，见 `docs/AI_MAP.md` §2.7）。
 - **低耦合**：模块之间避免直接依赖对方**具体实现类**；需要协作时优先 **接口契约**、**事件**、或团队已选型的**远程/本地服务调用**（如 Dubbo、Facade Bean 等），由项目架构统一选型，不在此重复实现细节。
 
 ### 2.2 分层职责
@@ -43,15 +43,15 @@
 
 1. **独立控制器**：对外 API 使用**单独的 Controller 类**（例如 `XxxOpenApiController`、`XxxApiController`），与对内页面/管理接口类分离，便于鉴权、限流与文档隔离。
 
-2. **统一请求响应模型**：对外 body 统一使用框架约定的 **`Request<T>` / `Response<T>`**；兼容旧客户端时使用 **`CompatibleRequest<T>` / `CompatibleResponse<T>`** 及 `@Endpoint(compatible=true)`，与 `AI_CRYPTO.md`、`AI_MAP.md` §2.4 一致。
+2. **统一请求响应模型**：对外 body 统一使用框架约定的 **`Request<T>` / `Response<T>`**；兼容旧客户端时使用 **`CompatibleRequest<T>` / `CompatibleResponse<T>`** 及 `@Endpoint(compatible=true)`，与 `docs/AI_CRYPTO.md`、`docs/AI_MAP.md` §2.4 一致。
 
-3. **应用层加解密**：对外接口须**接入框架应用层自动加解密语义**（请求体 `ciphertext`+`session`、响应头 `X-Encrypt-Session`、握手与业务分离等），**禁止**自造与框架并行的加解密协议。细节以 `AI_MAP.md`、`AI_CRYPTO.md` 为准。
+3. **应用层加解密**：对外接口须**接入框架应用层自动加解密语义**（请求体 `ciphertext`+`session`、响应头 `X-Encrypt-Session`、握手与业务分离等），**禁止**自造与框架并行的加解密协议。细节以 `docs/AI_MAP.md`、`docs/AI_CRYPTO.md` 为准。
 
 ## 5. 定时任务（禁止 `@Scheduled`）
 
 - **禁止**在业务代码中使用 Spring **`@Scheduled`** 作为**生产环境**定时调度入口（避免脱离框架的任务治理、监控、多节点分配与统一启停）。
 
-- **必须**使用 Autumn 任务体系，按场景二选一（详见 `AI_MAP.md` §2.5）：  
+- **必须**使用 Autumn 任务体系，按场景二选一（详见 `docs/AI_MAP.md` §2.5）：  
   - **固定周期**：实现 **`LoopJob.OneSecond` … `OneWeek`** 中对应接口，配合 **`@JobMeta`**（`skipIfRunning`、`timeout`、`maxConsecutiveErrors`、`assign` 等）。  
   - **复杂日历**：使用框架 **`schedulejob` + `cronExpression`**（及 `@TaskAware` / `@JobMeta` 等既有约定），而非裸 `@Scheduled`。
 
@@ -91,7 +91,7 @@
 
 ## 8. 实体扫描、注解建表与禁止手工 DDL 脚本
 
-- 框架对**已加载的实体类型**进行扫描，在配置允许时**自动建表 / 自动对齐表结构**（启动期执行检测与更新；开关与行为见 `autumn.table.*` 等配置，`AI_BOOT.md` §3 与运行库说明）。
+- 框架对**已加载的实体类型**进行扫描，在配置允许时**自动建表 / 自动对齐表结构**（启动期执行检测与更新；开关与行为见 `autumn.table.*` 等配置，`docs/AI_BOOT.md` §3 与运行库说明）。
 
 - **禁止**在研发交付物中新增**用于初始化或变更库结构的独立 DDL `.sql` 文件**作为常规做法（例如随代码提交的 `schema.sql` / `init.sql` 专供手工执行）。**表结构以实体注解 + 框架同步为准**；若生产必须离线 DDL，走发布流程与 DBA 规范，**不**作为日常开发默认路径。
 
@@ -99,19 +99,19 @@
 
 - **模块根**：通常位于 `autumn-modules/src/main/java/cn/org/autumn/modules/<子目录>/`。该 **`<子目录>` 名**同时作为 **Java 包路径段**与**表名前缀**（与 `README`、代码生成流程一致）。
 
-- **禁止**把**模块目录名 / 表前缀**当作**实体类名的前缀**拼进类名（例如模块 `spm` 时，**不要**命名为 `SpmOrderEntity` 这类「前缀重复」形态），以免与代码生成、表前缀拼接规则叠加后产生**错乱**。实体类名使用**领域短名**即可（如 `OrderEntity`），由 **`@Table` / `@TableName` + `prefix`** 表达物理表前缀（细则见 `AI_BOOT.md` §3.2）。
+- **禁止**把**模块目录名 / 表前缀**当作**实体类名的前缀**拼进类名（例如模块 `spm` 时，**不要**命名为 `SpmOrderEntity` 这类「前缀重复」形态），以免与代码生成、表前缀拼接规则叠加后产生**错乱**。实体类名使用**领域短名**即可（如 `OrderEntity`），由 **`@Table` / `@TableName` + `prefix`** 表达物理表前缀（细则见 `docs/AI_BOOT.md` §3.2）。
 
-- **物理表名**：在遵守 `AI_BOOT.md` §3.2 前提下，惯例为 **`{表前缀}_{实体核心蛇形}`**（实体类去 `Entity` 后缀再驼峰转下划线，再与模块前缀拼接）。
+- **物理表名**：在遵守 `docs/AI_BOOT.md` §3.2 前提下，惯例为 **`{表前缀}_{实体核心蛇形}`**（实体类去 `Entity` 后缀再驼峰转下划线，再与模块前缀拼接）。
 
 ## 10. 表/字段注释、索引与字段类型
 
 ### 10.1 注释格式（`@Table` / `@Column.comment`）
 
-- **短标题**宜 **2～4 个汉字**（或等价长度），**不做硬性上限**时建议**不超过约 8 个字符**；随后使用**半角冒号 `:`** 再接详细说明，形如 **`名称:详细说明`**。框架对列表/菜单等会**只取冒号前**作为短标题（详见 `AI_BOOT.md` §3、`AI_MAP.md` 注解建表章节）。
+- **短标题**宜 **2～4 个汉字**（或等价长度），**不做硬性上限**时建议**不超过约 8 个字符**；随后使用**半角冒号 `:`** 再接详细说明，形如 **`名称:详细说明`**。框架对列表/菜单等会**只取冒号前**作为短标题（详见 `docs/AI_BOOT.md` §3、`docs/AI_MAP.md` 注解建表章节）。
 
 ### 10.2 索引与唯一约束
 
-- **禁止**在同一字段上**同时**使用 **`@Index`** 与 **`@Column(isUnique = true)`**（及同类重复唯一声明），避免 DDL 重复与迁移噪音（与 `AI_BOOT.md` §3 一致）。
+- **禁止**在同一字段上**同时**使用 **`@Index`** 与 **`@Column(isUnique = true)`**（及同类重复唯一声明），避免 DDL 重复与迁移噪音（与 `docs/AI_BOOT.md` §3 一致）。
 
 ### 10.3 整型、布尔与空值
 
@@ -119,19 +119,19 @@
 
 ## 11. 生成层边界与业务落点
 
-- **`controller/gen/*`**、由 **`SitePages.java.vm`** 生成的 **`site/*Pages.java`**、以及生成产出的 **`list.html` / `list.js`**：**禁止修改、禁止添加任何业务逻辑**；变更须走 **Velocity 模板 `resources/template/*.vm` 并重生成**（与 `AI_MAP.md` 生成矩阵一致）。
+- **`controller/gen/*`**、由 **`SitePages.java.vm`** 生成的 **`site/*Pages.java`**、以及生成产出的 **`list.html` / `list.js`**：**禁止修改、禁止添加任何业务逻辑**；变更须走 **Velocity 模板 `resources/template/*.vm` 并重生成**（与 `docs/AI_MAP.md` 生成矩阵一致）。
 
 - 代码生成产出的**可维护壳子**：**空的 / 骨架的** **`Controller.java`、`Service.java`、`Dao.java`**（非 gen 路径）是**日常实现业务与流程的位置**；**所有业务逻辑在对应 `Service`**，**Controller** 只做编排与调用 **Service**。
 
 ## 12. Dao、Provider 与多数据库 SQL
 
-- **默认目标**：除非在代码中**明确声明**仅支持某一种库，业务 SQL 与持久化写法应对框架已接入的 **`DatabaseType` 全量兼容**（见 **`AI_DATABASE.md`** §1、§2）。
+- **默认目标**：除非在代码中**明确声明**仅支持某一种库，业务 SQL 与持久化写法应对框架已接入的 **`DatabaseType` 全量兼容**（见 **`docs/AI_DATABASE.md`** §1、§2）。
 
 - **禁止**在 **Dao 接口**的方法上**内联硬编码 SQL**（如 **`@Select`/`@Update` 等注解中直接写死 SQL 字符串**）作为**新代码**的默认写法。
 
-- **必须**通过与之对应的 **MyBatis `Provider`**（如 **`XxxDaoSql`**、`*Provider` 类及 `@SelectProvider` 等）拼接与维护 SQL；推荐 **`extends RuntimeSql`**，统一使用 **`quote`、`limitOne`、`likeContainsAny`、`columnValueInCommaSeparatedList`** 等可移植片段（见 **`AI_DATABASE.md`** §3、§5 与 **`AI_POSTGRESQL.md`** 示例）。
+- **必须**通过与之对应的 **MyBatis `Provider`**（如 **`XxxDaoSql`**、`*Provider` 类及 `@SelectProvider` 等）拼接与维护 SQL；推荐 **`extends RuntimeSql`**，统一使用 **`quote`、`limitOne`、`likeContainsAny`、`columnValueInCommaSeparatedList`** 等可移植片段（见 **`docs/AI_DATABASE.md`** §3、§5 与 **`docs/AI_POSTGRESQL.md`** 示例）。
 
-- **EntityWrapper / Condition**：仅使用跨库相对安全的条件（等值、范围、`in`、空值、简单 `orderBy`）；**禁止**在 `apply` / 自定义片段中写死单库函数（`FIND_IN_SET`、`IFNULL`、`DATE_FORMAT` 等）。复杂查询、JOIN、报表、强依赖方言的模糊/列表匹配 **必须** 改为 **Dao + Provider**（**`AI_DATABASE.md`** §4～§5）。
+- **EntityWrapper / Condition**：仅使用跨库相对安全的条件（等值、范围、`in`、空值、简单 `orderBy`）；**禁止**在 `apply` / 自定义片段中写死单库函数（`FIND_IN_SET`、`IFNULL`、`DATE_FORMAT` 等）。复杂查询、JOIN、报表、强依赖方言的模糊/列表匹配 **必须** 改为 **Dao + Provider**（**`docs/AI_DATABASE.md`** §4～§5）。
 
 - **例外**：仅框架内置或历史存量可在治理计划中逐步迁移；**新开发一律走 Provider**。
 
@@ -145,7 +145,7 @@
 
 ## 14. 资源、`statics`、`pages`、`Site` 与 `@PageAware`
 
-- 框架支持从**多个 jar** 加载模板与静态资源；各子项目须把**页面与静态资源放在本项目资源目录**下，随 jar 发布，**不**依赖在入口工程手工拷贝聚合（与 `AI_GOVERNANCE.md` TemplateFactory 约定一致）。
+- 框架支持从**多个 jar** 加载模板与静态资源；各子项目须把**页面与静态资源放在本项目资源目录**下，随 jar 发布，**不**依赖在入口工程手工拷贝聚合（与 `docs/AI_GOVERNANCE.md` TemplateFactory 约定一致）。
 
 - **`resources/statics/`**：跨子模块共享的**公共静态资源**目录；放置于此的静态资源按框架约定**匿名可访问**，**无需**再单独配置匿名 URL。**若框架已有同类资源，须优先复用**，避免重复拷贝。
 
@@ -169,17 +169,17 @@
 
 | 主题 | 文档 |
 |------|------|
-| `@Table` / `@Column` / 字符集 / 表名推导细节 | `AI_BOOT.md` §3 |
-| 多库兼容、Wrapper 边界、Provider 标准写法 | **`AI_DATABASE.md`**（权威） |
-| PostgreSQL 专项 DDL/元数据、`RuntimeSql` 示例 | `AI_POSTGRESQL.md` |
-| 升级扫描与迁移 | `AI_UPGRADE.md` |
-| ModuleService、缓存、队列、LoopJob、生成矩阵 | `AI_MAP.md` |
-| 代码生成端到端流程、三步开发节奏、缓存/队列基类详解 | `AI_CODEGEN.md` |
-| 加解密 | `AI_CRYPTO.md` |
-| 多项目协作与术语 | `AI_GOVERNANCE.md` |
-| 索引与加载组合 | `AI_INDEX.md` |
+| `@Table` / `@Column` / 字符集 / 表名推导细节 | `docs/AI_BOOT.md` §3 |
+| 多库兼容、Wrapper 边界、Provider 标准写法 | **`docs/AI_DATABASE.md`**（权威） |
+| PostgreSQL 专项 DDL/元数据、`RuntimeSql` 示例 | `docs/AI_POSTGRESQL.md` |
+| 升级扫描与迁移 | `docs/AI_UPGRADE.md` |
+| ModuleService、缓存、队列、LoopJob、生成矩阵 | `docs/AI_MAP.md` |
+| 代码生成端到端流程、三步开发节奏、缓存/队列基类详解 | `docs/AI_CODEGEN.md` |
+| 加解密 | `docs/AI_CRYPTO.md` |
+| 多项目协作与术语 | `docs/AI_GOVERNANCE.md` |
+| 索引与加载组合 | `docs/AI_INDEX.md` |
 
 ## 16. 维护约定
 
-- 新增与「实体/库表/Dao/资源/页面」相关的团队规则时，**优先更新本文**，并同步 `AI_INDEX.md`、`AI_GUIDE.md` 摘要；**多库类型、方言、Wrapper/Provider 纪律**以 **`AI_DATABASE.md`** 为落地专篇，变更时同步该文 §2；**老旧项目注解 Dao / 方言 Wrapper 迁移与扫描清单**见 **`AI_DATABASE.md` §8** 与 **`AI_UPGRADE.md` §3.3**；与代码生成流程或三步节奏相关的补充可落在 **`AI_CODEGEN.md`**。
-- 若与 `AI_MAP.md` §4「开发决策规则」表述重叠，以**本文 §2～§14** 为应用层与数据访问纪律的权威表述；MAP 保留框架能力级硬约束与类索引。
+- 新增与「实体/库表/Dao/资源/页面」相关的团队规则时，**优先更新本文**，并同步 `docs/AI_INDEX.md`、`docs/AI_GUIDE.md` 摘要；**多库类型、方言、Wrapper/Provider 纪律**以 **`docs/AI_DATABASE.md`** 为落地专篇，变更时同步该文 §2；**老旧项目注解 Dao / 方言 Wrapper 迁移与扫描清单**见 **`docs/AI_DATABASE.md` §8** 与 **`docs/AI_UPGRADE.md` §3.3**；与代码生成流程或三步节奏相关的补充可落在 **`docs/AI_CODEGEN.md`**。
+- 若与 `docs/AI_MAP.md` §4「开发决策规则」表述重叠，以**本文 §2～§14** 为应用层与数据访问纪律的权威表述；MAP 保留框架能力级硬约束与类索引。
