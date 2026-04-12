@@ -18,12 +18,19 @@ import java.util.*;
  * 数据库逻辑备份：真实 MySQL 协议库走 {@code SHOW CREATE TABLE}；其它库（含内嵌 H2 的 {@code MODE=MySQL}，此时
  * {@link DatabaseType} 可能仍为 {@link DatabaseType#MYSQL}）走 JDBC {@link DatabaseMetaData} 拼装 DDL + INSERT，
  * 标识符引用与 {@link RuntimeSqlDialectRegistry} 对齐，避免破坏各库方言规则。
+ * <p>
+ * <b>完整性</b>：各支持库在相同应用初始化下应导出<b>同一套业务表</b>（FULL 模式仅排除备份元数据表）；Derby/DB2 不得因表名
+ * {@code sys_*} 误当作系统表而漏导。CLOB 列须导出文本内容而非 {@code toString()}。H2 下 DROP/CREATE/INSERT 对表使用一致的 schema 限定。
+ * 跨厂商的 DDL/字面量形态仍可能不同，属 JDBC 近似极限，恢复应在同大类库上进行。
  */
 public final class DatabaseBackupSqlExportSupport {
 
     private static final Logger log = LoggerFactory.getLogger(DatabaseBackupSqlExportSupport.class);
 
     private static final int MAX_INSERT_BYTES = 2 * 1024 * 1024;
+
+    /** 单单元格 CLOB 导出上限，避免 OOM；超出部分截断（极端长文本列需另行迁移方案）。 */
+    private static final int MAX_EXPORT_CLOB_CHARS = 16_777_216;
 
     /**
      * 全量备份排除：避免导出 DROP/重建备份元数据表，恢复后把备份功能自身表删掉导致应用不可用。
@@ -359,8 +366,14 @@ public final class DatabaseBackupSqlExportSupport {
                     row.append(", ");
                 }
                 int sqlType = meta.getColumnType(i);
-                Object val = rs.getObject(i);
-                row.append(formatSqlLiteral(val, sqlType, dbType, mysqlStyleColumns));
+                // Derby 等：LOB 列先 getObject 再 getClob 会触发「Stream or LOB value cannot be retrieved more than once」
+                if (sqlType == Types.CLOB || sqlType == Types.NCLOB) {
+                    Clob clob = sqlType == Types.NCLOB ? rs.getNClob(i) : rs.getClob(i);
+                    row.append(clob == null ? "NULL" : clobToSqlStringLiteral(clob, dbType, mysqlStyleColumns));
+                } else {
+                    Object val = rs.getObject(i);
+                    row.append(formatSqlLiteral(val, sqlType, dbType, mysqlStyleColumns));
+                }
             }
             row.append(")");
             int projectedSize = values.length() + row.length() + 3;
@@ -389,9 +402,13 @@ public final class DatabaseBackupSqlExportSupport {
         return count;
     }
 
-    private static String formatSqlLiteral(Object val, int sqlType, DatabaseType dbType, boolean mysqlStringEscape) {
+    private static String formatSqlLiteral(Object val, int sqlType, DatabaseType dbType, boolean mysqlStringEscape)
+            throws SQLException {
         if (val == null) {
             return "NULL";
+        }
+        if (val instanceof Clob) {
+            return clobToSqlStringLiteral((Clob) val, dbType, mysqlStringEscape);
         }
         if (val instanceof byte[]) {
             return formatBinaryLiteral((byte[]) val, dbType);
@@ -415,6 +432,19 @@ public final class DatabaseBackupSqlExportSupport {
             return "'" + escapeStringLiteral(new Timestamp(((java.util.Date) val).getTime()).toString(), mysqlStringEscape) + "'";
         }
         return "'" + escapeStringLiteral(val.toString(), mysqlStringEscape) + "'";
+    }
+
+    private static String clobToSqlStringLiteral(Clob c, DatabaseType dbType, boolean mysqlStringEscape) throws SQLException {
+        long length = c.length();
+        if (length == 0) {
+            return "''";
+        }
+        int n = (int) Math.min(length, (long) MAX_EXPORT_CLOB_CHARS);
+        String raw = c.getSubString(1, n);
+        if (length > MAX_EXPORT_CLOB_CHARS && log.isDebugEnabled()) {
+            log.debug("CLOB column truncated to {} characters in backup export", MAX_EXPORT_CLOB_CHARS);
+        }
+        return "'" + escapeStringLiteral(raw, mysqlStringEscape) + "'";
     }
 
     private static String formatBooleanSqlLiteral(boolean b, DatabaseType dbType) {
@@ -532,11 +562,10 @@ public final class DatabaseBackupSqlExportSupport {
         }
         String s = schema == null ? "" : schema.toUpperCase(Locale.ROOT);
         String n = name.toUpperCase(Locale.ROOT);
+        // Derby/DB2：仅按 schema 排除系统目录（如 SYS、SYSIBM），勿按表名前缀 SYS 过滤——否则会漏掉业务表
+        // sys_user、sys_config 等（大写后为 SYS_*），导致备份与其它库表集不一致。
         if (db == DatabaseType.DERBY || db == DatabaseType.DB2) {
             if (s.startsWith("SYS")) {
-                return false;
-            }
-            if (n.startsWith("SYS")) {
                 return false;
             }
         }
@@ -600,7 +629,7 @@ public final class DatabaseBackupSqlExportSupport {
         }
         List<String> pkCols = new ArrayList<>(pkBySeq.values());
         StringBuilder sb = new StringBuilder();
-        sb.append("CREATE TABLE ").append(dialect.quote(ref.name)).append(" (\n");
+        sb.append("CREATE TABLE ").append(qualifiedQuotedTable(ref, dbType, dialect)).append(" (\n");
         for (int i = 0; i < cols.size(); i++) {
             if (i > 0) {
                 sb.append(",\n");
@@ -713,6 +742,12 @@ public final class DatabaseBackupSqlExportSupport {
             case Types.LONGNVARCHAR:
                 if (tn.contains("UUID") && db == DatabaseType.POSTGRESQL) {
                     return "UUID";
+                }
+                if (db == DatabaseType.SQLITE) {
+                    if (c.size > 0 && c.size < 1048576) {
+                        return "VARCHAR(" + c.size + ")";
+                    }
+                    return "TEXT";
                 }
                 if (c.size > 0 && c.size < 1048576) {
                     return "VARCHAR(" + c.size + ")";
