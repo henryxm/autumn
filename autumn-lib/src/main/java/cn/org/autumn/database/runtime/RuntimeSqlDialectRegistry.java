@@ -3,6 +3,7 @@ package cn.org.autumn.database.runtime;
 import cn.org.autumn.config.Config;
 import cn.org.autumn.database.DatabaseHolder;
 import cn.org.autumn.database.DatabaseType;
+import cn.org.autumn.install.InstallMode;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.core.env.Environment;
 
@@ -67,6 +68,9 @@ public final class RuntimeSqlDialectRegistry {
             Environment env = Config.getInstance().getEnvironment();
             if (env == null) {
                 return null;
+            }
+            if (InstallMode.isActive(env)) {
+                return MYSQL_STATELESS;
             }
             String url = env.getProperty("spring.datasource.druid.first.url");
             if (StringUtils.isBlank(url)) {

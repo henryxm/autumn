@@ -44,6 +44,23 @@ public class DatabaseHolderRoutingTest {
     }
 
     @Test
+    public void installModeReturnsOtherRegardlessOfRouting() {
+        MockEnvironment installEnv = new MockEnvironment()
+                .withProperty("autumn.install.mode", "true")
+                .withProperty("spring.datasource.druid.first.url", "jdbc:mysql://localhost:3306/a")
+                .withProperty("spring.datasource.druid.second.url", "jdbc:postgresql://localhost:5432/b");
+        DataSourceDialectRegistry registry = new DataSourceDialectRegistry(installEnv);
+        DatabaseHolder h = new DatabaseHolder();
+        ReflectionTestUtils.setField(h, "environment", installEnv);
+        ReflectionTestUtils.setField(h, "databaseRaw", "");
+        ReflectionTestUtils.setField(h, "dataSourceDialectRegistry", registry);
+        assertEquals(DatabaseType.OTHER, h.getType());
+        DynamicDataSource.setDataSource(DataSourceNames.SECOND);
+        assertEquals(DatabaseType.OTHER, h.getType());
+        DynamicDataSource.clearDataSource();
+    }
+
+    @Test
     public void withoutRegistryFallsBackToFirstUrlOnly() {
         DatabaseHolder plain = new DatabaseHolder();
         ReflectionTestUtils.setField(plain, "environment", env);

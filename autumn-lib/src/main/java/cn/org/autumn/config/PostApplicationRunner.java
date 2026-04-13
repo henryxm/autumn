@@ -1,5 +1,6 @@
 package cn.org.autumn.config;
 
+import cn.org.autumn.install.InstallMode;
 import cn.org.autumn.site.InitFactory;
 import cn.org.autumn.site.LoadFactory;
 import cn.org.autumn.site.RefreshFactory;
@@ -42,7 +43,7 @@ public class PostApplicationRunner implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) throws Exception {
-        if (Boolean.parseBoolean(environment.getProperty("autumn.install.mode", "false"))) {
+        if (InstallMode.isActive(environment)) {
             initializationProgress.enterWizardWaiting();
             log.info("Please visit install wizard: {}", buildInstallWizardUrl());
             return;

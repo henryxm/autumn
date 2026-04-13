@@ -2,6 +2,7 @@ package cn.org.autumn.bean;
 
 import cn.org.autumn.annotation.EnvAware;
 import cn.org.autumn.config.EnvHandler;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
@@ -45,7 +46,8 @@ public class EnvBean implements EnvHandler {
     @EnvAware("node.tag")
     String nodeTag;
 
-    @EnvAware("table.init")
+    /** 与 {@code autumn.table.init} 一致；勿用 {@link EnvAware}+{@code Config#getEnv}，否则读不到 Spring 配置。 */
+    @Value("${autumn.table.init:true}")
     boolean tableInit = true;
 
     public String getClientId() {

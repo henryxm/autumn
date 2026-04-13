@@ -8,6 +8,7 @@ import cn.org.autumn.config.Config;
 import cn.org.autumn.table.data.InitType;
 import cn.org.autumn.database.DatabaseHolder;
 import cn.org.autumn.database.DatabaseType;
+import cn.org.autumn.install.InstallMode;
 import cn.org.autumn.table.service.MysqlTableService;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -59,8 +60,12 @@ public class TableInit {
         if (Config.getInstance().getEnvironment() == null && springEnvironment != null) {
             Config.getInstance().setEnv(springEnvironment);
         }
-        if (!envBean.isTableInit())
+        if (InstallMode.isActive(springEnvironment)) {
             return;
+        }
+        if (!init || !envBean.isTableInit()) {
+            return;
+        }
         DatabaseType t = databaseHolder.getType();
         if (t.supportsAnnotationTableSync()) {
             mysqlTableService.create();
@@ -79,6 +84,10 @@ public class TableInit {
     }
 
     public void create(Class<?> clazz, InitType type) {
+        if (InstallMode.isActive(springEnvironment)) {
+            log.warn("安装向导模式下跳过单表注解建表: {}", clazz.getName());
+            return;
+        }
         if (!databaseHolder.getType().supportsAnnotationTableSync()) {
             log.warn("跳过单表 {} 的注解建表：当前库类型未支持", clazz.getName());
             return;

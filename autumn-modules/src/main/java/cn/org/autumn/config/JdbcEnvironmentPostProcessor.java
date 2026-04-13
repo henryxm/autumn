@@ -2,6 +2,7 @@ package cn.org.autumn.config;
 
 import cn.org.autumn.database.DatabaseHolder;
 import cn.org.autumn.database.DatabaseType;
+import cn.org.autumn.install.InstallMode;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.env.EnvironmentPostProcessor;
@@ -39,6 +40,9 @@ public class JdbcEnvironmentPostProcessor implements EnvironmentPostProcessor {
 
     @Override
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
+        if (InstallMode.isActive(environment)) {
+            return;
+        }
         String url = environment.getProperty("spring.datasource.druid.first.url");
         if (StringUtils.isBlank(url)) {
             url = environment.getProperty("spring.datasource.url");

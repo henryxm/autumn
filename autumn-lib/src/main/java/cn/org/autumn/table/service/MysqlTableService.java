@@ -14,8 +14,10 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import cn.org.autumn.install.InstallMode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,6 +48,9 @@ public class MysqlTableService {
 
     @Autowired
     private RelationalTableOperations tableDao;
+
+    @Autowired(required = false)
+    private Environment environment;
 
     /**
      * 要扫描的model所在的pack
@@ -104,6 +109,11 @@ public class MysqlTableService {
 
         // 不做任何事情
         if (none.equals(type)) {
+            return;
+        }
+
+        if (InstallMode.isActive(environment)) {
+            log.info("安装向导模式，跳过注解建表。");
             return;
         }
 

@@ -1,6 +1,7 @@
 package cn.org.autumn.database;
 
 import org.apache.commons.lang.StringUtils;
+import cn.org.autumn.install.InstallMode;
 import cn.org.autumn.datasources.DataSourceDialectRegistry;
 import cn.org.autumn.datasources.DynamicDataSource;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +13,8 @@ import java.util.Locale;
 
 /**
  * 持有当前线程（及配置）下的 {@link DatabaseType}，供路由数据源、分页方言、Provider SQL、部分 MyBatis 插件等使用。
+ * 安装向导占位启动（{@code autumn.install.mode=true}）时 {@link #getType()} 固定为 {@link DatabaseType#OTHER}，
+ * 表示真实业务库尚未配置，{@link cn.org.autumn.database.AnnotationTableSyncSupport} 等应跳过 DDL。
  * <p>
  * <b>解析顺序</b>：若存在 {@link DataSourceDialectRegistry}，且 {@link DynamicDataSource#getDataSource()} 非空，
  * 则按路由 key 解析为对应数据源的方言；key 为空或空白时与「默认目标源」（first）一致。若无 Registry（极端场景），
@@ -31,6 +34,9 @@ public class DatabaseHolder {
     private DataSourceDialectRegistry dataSourceDialectRegistry;
 
     public DatabaseType getType() {
+        if (InstallMode.isActive(environment)) {
+            return DatabaseType.OTHER;
+        }
         if (dataSourceDialectRegistry != null) {
             String key = DynamicDataSource.getDataSource();
             return dataSourceDialectRegistry.resolveForLookupKey(key);
