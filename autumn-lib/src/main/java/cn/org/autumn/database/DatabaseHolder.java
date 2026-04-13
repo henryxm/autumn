@@ -1,6 +1,7 @@
 package cn.org.autumn.database;
 
 import cn.org.autumn.datasources.DataSourceDialectRegistry;
+import cn.org.autumn.install.InstallMode;
 import cn.org.autumn.datasources.DataSourceNames;
 import cn.org.autumn.datasources.DynamicDataSource;
 import org.apache.commons.lang3.StringUtils;
@@ -12,7 +13,9 @@ import org.springframework.stereotype.Component;
 import java.util.Locale;
 
 /**
- * 持有当前应用的 {@link DatabaseType}，供分页插件、建表、Provider SQL、部分 TypeHandler 等使用。
+ * 持有当前应用的 {@link DatabaseType}（随动态数据源线程路由变化），供分页插件、建表、Provider SQL、部分 TypeHandler 等使用。
+ * 安装向导占位启动（{@code autumn.install.mode=true}）时 {@link #getType()} 固定为 {@link DatabaseType#OTHER}，
+ * 表示真实业务库尚未配置，{@link cn.org.autumn.database.AnnotationTableSyncSupport} 等应跳过 DDL。
  * <p>
  * <b>解析顺序</b>：若存在 {@link DataSourceDialectRegistry}，则按 {@link DynamicDataSource} 当前线程 lookup key 解析；
  * key 为空或空白时与首数据源一致。若无 Registry，则根据 {@code spring.datasource.druid.first.url} /
@@ -73,6 +76,9 @@ public class DatabaseHolder {
     }
 
     public DatabaseType getType() {
+        if (InstallMode.isActive(environment)) {
+            return DatabaseType.OTHER;
+        }
         if (dataSourceDialectRegistry != null) {
             String key = DynamicDataSource.getDataSource();
             return dataSourceDialectRegistry.resolveForLookupKey(key);

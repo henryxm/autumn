@@ -4,7 +4,7 @@ import cn.org.autumn.config.Config;
 import cn.org.autumn.database.DatabaseHolder;
 import cn.org.autumn.database.DatabaseType;
 import cn.org.autumn.database.H2EmbeddedMysqlDialect;
-import org.apache.commons.lang3.StringUtils;
+import cn.org.autumn.install.InstallMode;
 import org.springframework.core.env.Environment;
 
 /**
@@ -72,6 +72,9 @@ public final class RuntimeSqlDialectRegistry {
             Environment env = Config.getInstance().getEnvironment();
             if (env == null) {
                 return null;
+            }
+            if (InstallMode.isActive(env)) {
+                return MYSQL_STATELESS;
             }
             String url = DatabaseHolder.readPrimaryJdbcUrl(env);
             if (H2EmbeddedMysqlDialect.isActive(url)) {

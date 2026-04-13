@@ -3,6 +3,7 @@ package cn.org.autumn.config;
 import cn.org.autumn.database.DatabaseHolder;
 import cn.org.autumn.database.DatabaseType;
 import cn.org.autumn.database.H2EmbeddedMysqlDialect;
+import cn.org.autumn.install.InstallMode;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.env.EnvironmentPostProcessor;
@@ -48,6 +49,9 @@ public class JdbcEnvironmentPostProcessor implements EnvironmentPostProcessor {
 
     @Override
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
+        if (InstallMode.isActive(environment)) {
+            return;
+        }
         String url = DatabaseHolder.readPrimaryJdbcUrl(environment);
         String autumnDb = environment.getProperty("autumn.database");
         if (StringUtils.isBlank(url) && StringUtils.isBlank(autumnDb)) {

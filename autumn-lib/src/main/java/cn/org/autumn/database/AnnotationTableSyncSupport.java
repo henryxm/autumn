@@ -25,6 +25,7 @@ public final class AnnotationTableSyncSupport {
      * 是否允许 {@link cn.org.autumn.table.TableInit} 执行注解建表。
      */
     public static boolean supports(DatabaseType type) {
+        // OTHER：未识别配置，或安装向导占位启动（见 DatabaseHolder#getType）
         return type != null && type != DatabaseType.OTHER;
     }
 }
