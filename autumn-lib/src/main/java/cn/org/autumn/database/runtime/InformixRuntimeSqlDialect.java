@@ -31,4 +31,35 @@ public class InformixRuntimeSqlDialect implements RuntimeSqlDialect {
     public String likeContainsAny(String mybatisParamPlaceholder) {
         return "'%' || " + mybatisParamPlaceholder + " || '%'";
     }
+
+    @Override
+    public String sqlTimestampBucketDay(String quotedColumn) {
+        return "TO_CHAR(" + quotedColumn + ", '%Y-%m-%d')";
+    }
+
+    @Override
+    public String sqlTimestampBucketMonth(String quotedColumn) {
+        return "TO_CHAR(" + quotedColumn + ", '%Y-%m')";
+    }
+
+    @Override
+    public String sqlTimestampBucketYear(String quotedColumn) {
+        return "TO_CHAR(" + quotedColumn + ", '%Y')";
+    }
+
+    @Override
+    public String sqlTimestampBucketIsoWeek(String quotedColumn) {
+        String c = quotedColumn;
+        return "TO_CHAR(" + c + ", '%Y') || '-W' || (CASE WHEN WEEK(" + c + ") < 10 THEN '0' ELSE '' END) || WEEK(" + c + ")";
+    }
+
+    @Override
+    public String sqlLimitOffsetSuffix(long limit, long offset) {
+        return " SKIP " + offset + " FIRST " + limit;
+    }
+
+    @Override
+    public String sqlLowerColumnContainsNeedle(String quotedColumn, String mybatisNeedleParam) {
+        return "INSTR(LOWER(COALESCE(" + quotedColumn + ", '')), " + mybatisNeedleParam + ") > 0";
+    }
 }

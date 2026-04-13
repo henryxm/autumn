@@ -31,4 +31,37 @@ public class FirebirdRuntimeSqlDialect implements RuntimeSqlDialect {
     public String likeContainsAny(String mybatisParamPlaceholder) {
         return "'%' || " + mybatisParamPlaceholder + " || '%'";
     }
+
+    @Override
+    public String sqlTimestampBucketDay(String quotedColumn) {
+        String c = quotedColumn;
+        return "(CAST(EXTRACT(YEAR FROM " + c + ") AS VARCHAR(4)) || '-' || LPAD(CAST(EXTRACT(MONTH FROM " + c + ") AS VARCHAR(2)), 2, '0') || '-' || LPAD(CAST(EXTRACT(DAY FROM " + c + ") AS VARCHAR(2)), 2, '0'))";
+    }
+
+    @Override
+    public String sqlTimestampBucketMonth(String quotedColumn) {
+        String c = quotedColumn;
+        return "(CAST(EXTRACT(YEAR FROM " + c + ") AS VARCHAR(4)) || '-' || LPAD(CAST(EXTRACT(MONTH FROM " + c + ") AS VARCHAR(2)), 2, '0'))";
+    }
+
+    @Override
+    public String sqlTimestampBucketYear(String quotedColumn) {
+        return "CAST(EXTRACT(YEAR FROM " + quotedColumn + ") AS VARCHAR(4))";
+    }
+
+    @Override
+    public String sqlTimestampBucketIsoWeek(String quotedColumn) {
+        String c = quotedColumn;
+        return "(CAST(EXTRACT(YEAR FROM " + c + ") AS VARCHAR(4)) || '-W' || LPAD(CAST(EXTRACT(WEEK FROM " + c + ") AS VARCHAR(2)), 2, '0'))";
+    }
+
+    @Override
+    public String sqlLimitOffsetSuffix(long limit, long offset) {
+        return " ROWS " + (offset + 1) + " TO " + (offset + limit);
+    }
+
+    @Override
+    public String sqlLowerColumnContainsNeedle(String quotedColumn, String mybatisNeedleParam) {
+        return "POSITION(" + mybatisNeedleParam + " IN LOWER(COALESCE(" + quotedColumn + ", ''))) > 0";
+    }
 }

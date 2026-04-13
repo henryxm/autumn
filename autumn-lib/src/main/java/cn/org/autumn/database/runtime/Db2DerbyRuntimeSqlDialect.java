@@ -17,6 +17,11 @@ public class Db2DerbyRuntimeSqlDialect implements RuntimeSqlDialect {
     }
 
     @Override
+    public String enabledFalseSqlLiteral() {
+        return "FALSE";
+    }
+
+    @Override
     public String quote(String identifier) {
         if (identifier == null) {
             return "\"\"";
@@ -38,5 +43,38 @@ public class Db2DerbyRuntimeSqlDialect implements RuntimeSqlDialect {
     @Override
     public String likeContainsAny(String mybatisParamPlaceholder) {
         return "'%' || CAST(" + mybatisParamPlaceholder + " AS VARCHAR(32672)) || '%'";
+    }
+
+    @Override
+    public String sqlTimestampBucketDay(String quotedColumn) {
+        String c = quotedColumn;
+        return "(CAST(EXTRACT(YEAR FROM " + c + ") AS VARCHAR(4)) || '-' || RIGHT('0' || CAST(EXTRACT(MONTH FROM " + c + ") AS VARCHAR(2)), 2) || '-' || RIGHT('0' || CAST(EXTRACT(DAY FROM " + c + ") AS VARCHAR(2)), 2))";
+    }
+
+    @Override
+    public String sqlTimestampBucketMonth(String quotedColumn) {
+        String c = quotedColumn;
+        return "(CAST(EXTRACT(YEAR FROM " + c + ") AS VARCHAR(4)) || '-' || RIGHT('0' || CAST(EXTRACT(MONTH FROM " + c + ") AS VARCHAR(2)), 2))";
+    }
+
+    @Override
+    public String sqlTimestampBucketYear(String quotedColumn) {
+        return "CAST(EXTRACT(YEAR FROM " + quotedColumn + ") AS VARCHAR(4))";
+    }
+
+    @Override
+    public String sqlTimestampBucketIsoWeek(String quotedColumn) {
+        String c = quotedColumn;
+        return "(CAST(EXTRACT(YEAR FROM " + c + ") AS VARCHAR(4)) || '-W' || RIGHT('0' || CAST(WEEK(" + c + ") AS VARCHAR(2)), 2))";
+    }
+
+    @Override
+    public String sqlLimitOffsetSuffix(long limit, long offset) {
+        return " OFFSET " + offset + " ROWS FETCH FIRST " + limit + " ROWS ONLY";
+    }
+
+    @Override
+    public String sqlLowerColumnContainsNeedle(String quotedColumn, String mybatisNeedleParam) {
+        return "LOCATE(" + mybatisNeedleParam + ", LOWER(COALESCE(" + quotedColumn + ", ''))) > 0";
     }
 }

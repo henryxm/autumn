@@ -11,6 +11,9 @@ import org.springframework.stereotype.Component;
  * <p>
  * 与 {@link DatabaseHolder#getType()} 一致：在配置了 {@link cn.org.autumn.datasources.DataSourceDialectRegistry} 时，
  * 随 {@link cn.org.autumn.datasources.DynamicDataSource} 当前线程 lookup key 切换具体方言实现。
+ * <p>
+ * {@link DatabaseType#MYSQL}、{@link DatabaseType#MARIADB}、{@link DatabaseType#OTHER} 及未来未单独接线的枚举值均回退
+ * {@link MysqlRuntimeSqlDialect}（与历史行为一致）；{@link DatabaseType#OTHER} 生产环境应尽量避免，须显式配置 {@code autumn.database}。
  */
 @Primary
 @Component
@@ -60,46 +63,44 @@ public class RoutingRuntimeSqlDialect implements RuntimeSqlDialect {
 
     private RuntimeSqlDialect delegate() {
         DatabaseType t = databaseHolder.getType();
-        if (t == DatabaseType.POSTGRESQL) {
-            return postgresqlRuntimeSqlDialect;
+        if (t == null) {
+            return mysqlRuntimeSqlDialect;
         }
-        if (t == DatabaseType.KINGBASE) {
-            return kingbaseRuntimeSqlDialect;
+        switch (t) {
+            case POSTGRESQL:
+                return postgresqlRuntimeSqlDialect;
+            case KINGBASE:
+                return kingbaseRuntimeSqlDialect;
+            case ORACLE:
+                return oracleRuntimeSqlDialect;
+            case OCEANBASE_ORACLE:
+                return oceanBaseOracleRuntimeSqlDialect;
+            case SQLSERVER:
+                return sqlServerRuntimeSqlDialect;
+            case DAMENG:
+                return oracleRuntimeSqlDialect;
+            case TIDB:
+                return tidbRuntimeSqlDialect;
+            case OCEANBASE_MYSQL:
+                return oceanBaseMysqlRuntimeSqlDialect;
+            case SQLITE:
+                return sqliteRuntimeSqlDialect;
+            case H2:
+            case HSQLDB:
+                return h2RuntimeSqlDialect;
+            case DB2:
+            case DERBY:
+                return db2DerbyRuntimeSqlDialect;
+            case FIREBIRD:
+                return firebirdRuntimeSqlDialect;
+            case INFORMIX:
+                return informixRuntimeSqlDialect;
+            case MYSQL:
+            case MARIADB:
+            case OTHER:
+                return mysqlRuntimeSqlDialect;
         }
-        if (t == DatabaseType.ORACLE) {
-            return oracleRuntimeSqlDialect;
-        }
-        if (t == DatabaseType.OCEANBASE_ORACLE) {
-            return oceanBaseOracleRuntimeSqlDialect;
-        }
-        if (t == DatabaseType.SQLSERVER) {
-            return sqlServerRuntimeSqlDialect;
-        }
-        if (t == DatabaseType.DAMENG) {
-            return oracleRuntimeSqlDialect;
-        }
-        if (t == DatabaseType.TIDB) {
-            return tidbRuntimeSqlDialect;
-        }
-        if (t == DatabaseType.OCEANBASE_MYSQL) {
-            return oceanBaseMysqlRuntimeSqlDialect;
-        }
-        if (t == DatabaseType.SQLITE) {
-            return sqliteRuntimeSqlDialect;
-        }
-        if (t == DatabaseType.H2 || t == DatabaseType.HSQLDB) {
-            return h2RuntimeSqlDialect;
-        }
-        if (t == DatabaseType.DB2 || t == DatabaseType.DERBY) {
-            return db2DerbyRuntimeSqlDialect;
-        }
-        if (t == DatabaseType.FIREBIRD) {
-            return firebirdRuntimeSqlDialect;
-        }
-        if (t == DatabaseType.INFORMIX) {
-            return informixRuntimeSqlDialect;
-        }
-        // MYSQL、MARIADB、OTHER 等与 MySQL 规则一致
+        // Java 8 switch 对枚举不做穷尽校验；新增 DatabaseType 时须在上文接线
         return mysqlRuntimeSqlDialect;
     }
 
@@ -141,5 +142,45 @@ public class RoutingRuntimeSqlDialect implements RuntimeSqlDialect {
     @Override
     public String enabledTrueSqlLiteral() {
         return delegate().enabledTrueSqlLiteral();
+    }
+
+    @Override
+    public String enabledFalseSqlLiteral() {
+        return delegate().enabledFalseSqlLiteral();
+    }
+
+    @Override
+    public String sqlBooleanColumnAsTinyInt01(String quotedColumn) {
+        return delegate().sqlBooleanColumnAsTinyInt01(quotedColumn);
+    }
+
+    @Override
+    public String sqlLimitOffsetSuffix(long limit, long offset) {
+        return delegate().sqlLimitOffsetSuffix(limit, offset);
+    }
+
+    @Override
+    public String sqlLowerColumnContainsNeedle(String quotedColumn, String mybatisNeedleParam) {
+        return delegate().sqlLowerColumnContainsNeedle(quotedColumn, mybatisNeedleParam);
+    }
+
+    @Override
+    public String sqlTimestampBucketDay(String quotedColumn) {
+        return delegate().sqlTimestampBucketDay(quotedColumn);
+    }
+
+    @Override
+    public String sqlTimestampBucketMonth(String quotedColumn) {
+        return delegate().sqlTimestampBucketMonth(quotedColumn);
+    }
+
+    @Override
+    public String sqlTimestampBucketYear(String quotedColumn) {
+        return delegate().sqlTimestampBucketYear(quotedColumn);
+    }
+
+    @Override
+    public String sqlTimestampBucketIsoWeek(String quotedColumn) {
+        return delegate().sqlTimestampBucketIsoWeek(quotedColumn);
     }
 }

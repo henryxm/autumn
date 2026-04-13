@@ -73,4 +73,65 @@ public interface RuntimeSqlDialect {
     default String enabledTrueSqlLiteral() {
         return "1";
     }
+
+    /**
+     * 与 {@link #enabledTrueSqlLiteral()} 对偶：关/假在 PG/DB2 布尔列上宜用 {@code FALSE}，MySQL 系常用 {@code 0}。
+     */
+    default String enabledFalseSqlLiteral() {
+        return "0";
+    }
+
+    /**
+     * 将可空布尔（或 0/1 数值开关）列规范为聚合用 0/1：{@code null → 0}，真/非零 → 1，假/零 → 0。
+     * <p>
+     * 适用于 {@code boolean}、{@code tinyint(1)}、{@code NUMBER(1)} 等；对任意字符串列的语义未定义。
+     */
+    default String sqlBooleanColumnAsTinyInt01(String quotedColumn) {
+        String c = quotedColumn;
+        return "(CASE WHEN " + c + " IS NULL THEN 0 WHEN " + c + " THEN 1 ELSE 0 END)";
+    }
+
+    /**
+     * 非 PageHelper 的手写分页后缀（<b>不含</b> {@code ORDER BY}）。
+     * <p>
+     * <b>SQL Server</b>：返回 {@code OFFSET … FETCH …} 时，<b>必须</b>保证主查询在拼接本后缀前已含 {@code ORDER BY}，否则语法非法。
+     * <p>
+     * <b>Firebird</b>：使用 {@code ROWS m TO n}（闭区间）。
+     * <p>
+     * <b>Informix</b>：使用 {@code SKIP offset FIRST limit}。
+     */
+    String sqlLimitOffsetSuffix(long limit, long offset);
+
+    /**
+     * 大小写不敏感子串匹配（{@code needle} 绑定值建议已由调用方转为小写）。
+     * <p>
+     * 返回可作为 {@code WHERE} 条件的布尔表达式片段（不含 {@code AND}）；{@code mybatisNeedleParam} 形如 {@code #{q}}。
+     */
+    String sqlLowerColumnContainsNeedle(String quotedColumn, String mybatisNeedleParam);
+
+    /**
+     * 将时间戳/日期列格式化为「日」桶展示键 {@code yyyy-MM-dd}，可直接用于 {@code SELECT} / {@code GROUP BY} / {@code ORDER BY}。
+     * <p>
+     * 调用方传入的列须已由 {@link #quote(String)} 包裹（或等价的安全标识符片段）。
+     *
+     * @param quotedColumn 已引用的单列，如 {@code "create"}
+     */
+    String sqlTimestampBucketDay(String quotedColumn);
+
+    /**
+     * 「月」桶键 {@code yyyy-MM}。
+     */
+    String sqlTimestampBucketMonth(String quotedColumn);
+
+    /**
+     * 「年」桶键 {@code yyyy}（四位年）。
+     */
+    String sqlTimestampBucketYear(String quotedColumn);
+
+    /**
+     * ISO 8601 周展示键 {@code yyyy-Www}（周一为周首），同一表达式可用于 {@code SELECT}、{@code GROUP BY}、{@code ORDER BY}。
+     * <p>
+     * 年界附近的 ISO 周年与日历年在少数数据库上存在实现差异，业务若强依赖与 MySQL {@code YEARWEEK(...,3)} 完全一致，需在集成侧校验。
+     */
+    String sqlTimestampBucketIsoWeek(String quotedColumn);
 }

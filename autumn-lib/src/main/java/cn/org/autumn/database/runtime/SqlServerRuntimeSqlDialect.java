@@ -31,4 +31,38 @@ public class SqlServerRuntimeSqlDialect implements RuntimeSqlDialect {
         String esc = csvInner == null ? "" : csvInner.replace("'", "''");
         return "CHARINDEX(','+LTRIM(RTRIM(CAST(" + qualifiedColumn + " AS VARCHAR(MAX))))+',', ','+'" + esc + "'+',') > 0";
     }
+
+    @Override
+    public String sqlTimestampBucketDay(String quotedColumn) {
+        return "FORMAT(" + quotedColumn + ", 'yyyy-MM-dd')";
+    }
+
+    @Override
+    public String sqlTimestampBucketMonth(String quotedColumn) {
+        return "FORMAT(" + quotedColumn + ", 'yyyy-MM')";
+    }
+
+    @Override
+    public String sqlTimestampBucketYear(String quotedColumn) {
+        return "FORMAT(" + quotedColumn + ", 'yyyy')";
+    }
+
+    @Override
+    public String sqlTimestampBucketIsoWeek(String quotedColumn) {
+        String c = quotedColumn;
+        String isoYear = "(CASE WHEN MONTH(" + c + ") = 1 AND DATEPART(ISO_WEEK, " + c + ") > 50 THEN YEAR(" + c + ") - 1 "
+                + "WHEN MONTH(" + c + ") = 12 AND DATEPART(ISO_WEEK, " + c + ") < 10 THEN YEAR(" + c + ") + 1 "
+                + "ELSE YEAR(" + c + ") END)";
+        return "CONCAT(" + isoYear + ", '-W', RIGHT(CONCAT('0', CAST(DATEPART(ISO_WEEK, " + c + ") AS VARCHAR(2))), 2))";
+    }
+
+    @Override
+    public String sqlLimitOffsetSuffix(long limit, long offset) {
+        return " OFFSET " + offset + " ROWS FETCH NEXT " + limit + " ROWS ONLY";
+    }
+
+    @Override
+    public String sqlLowerColumnContainsNeedle(String quotedColumn, String mybatisNeedleParam) {
+        return "CHARINDEX(" + mybatisNeedleParam + ", LOWER(ISNULL(" + quotedColumn + ", ''))) > 0";
+    }
 }
