@@ -1,6 +1,7 @@
 package cn.org.autumn.modules.sys.shiro;
 
 import cn.org.autumn.cluster.UserHandler;
+import cn.org.autumn.install.InstallMode;
 import cn.org.autumn.utils.RedisExpireUtil;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
@@ -57,9 +58,12 @@ public class RedisShiroSessionDAO extends EnterpriseCacheSessionDAO implements L
     protected Serializable doCreate(Session session) {
         Serializable sessionId = super.doCreate(session);
         if (null != session && null != sessionId) {
+            cache.put(sessionId, session);
+            if (InstallMode.isActive()) {
+                return sessionId;
+            }
             String key = RedisKeys.getShiroSessionKey(sysConfigService.getNameSpace(), sessionId.toString());
             setShiroSession(key, session);
-            cache.put(sessionId, session);
         }
         return sessionId;
     }
@@ -67,6 +71,13 @@ public class RedisShiroSessionDAO extends EnterpriseCacheSessionDAO implements L
     //获取session
     @Override
     protected Session doReadSession(Serializable sessionId) {
+        if (InstallMode.isActive()) {
+            Session session = super.doReadSession(sessionId);
+            if (session == null) {
+                session = cache.get(sessionId);
+            }
+            return session;
+        }
         Session session = super.doReadSession(sessionId);
         if (null == session)
             session = cache.get(sessionId);
@@ -95,6 +106,9 @@ public class RedisShiroSessionDAO extends EnterpriseCacheSessionDAO implements L
         super.doDelete(session);
         if (null != session) {
             cache.remove(session.getId());
+            if (InstallMode.isActive()) {
+                return;
+            }
             String key = RedisKeys.getShiroSessionKey(sysConfigService.getNameSpace(), session.getId().toString());
             redisTemplate.delete(key);
         }
@@ -102,6 +116,9 @@ public class RedisShiroSessionDAO extends EnterpriseCacheSessionDAO implements L
 
     @Override
     public void onTenMinute() {
+        if (InstallMode.isActive()) {
+            return;
+        }
         cache.clear();
         try {
             Iterator<Map.Entry<Serializable, Session>> iterator = update.entrySet().iterator();

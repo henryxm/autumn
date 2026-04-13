@@ -2,6 +2,7 @@ package cn.org.autumn.config;
 
 import cn.org.autumn.modules.spm.filter.SpmFilter;
 import cn.org.autumn.modules.sys.service.SysConfigService;
+import cn.org.autumn.install.InstallMode;
 import cn.org.autumn.modules.sys.shiro.ForceLogoutRememberMeManager;
 import cn.org.autumn.modules.sys.shiro.RedisShiroSessionDAO;
 import cn.org.autumn.modules.sys.shiro.UserRealm;
@@ -23,6 +24,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.DependsOn;
+import org.springframework.core.env.Environment;
 import org.springframework.data.redis.core.RedisTemplate;
 
 import jakarta.servlet.Filter;
@@ -35,18 +37,22 @@ public class ShiroConfig {
 
     @Bean("sessionManager")
     public SessionManager sessionManager(@Autowired RedisShiroSessionDAO redisShiroSessionDAO,
+                                         Environment environment,
                                          @Value("${autumn.redis.open}") boolean redisOpen,
                                          @Value("${autumn.shiro.redis}") boolean shiroRedis) {
         DefaultWebSessionManager sessionManager = new DefaultWebSessionManager();
         //设置session过期时间为1小时(单位：毫秒)，默认为30分钟
         sessionManager.setGlobalSessionTimeout(60 * 60 * 1000);
-        sessionManager.setSessionValidationSchedulerEnabled(true);
+        boolean install = InstallMode.isActive(environment);
+        // 安装模式：关闭周期校验，避免无意义地解析 SessionId / 触碰 SessionDAO
+        sessionManager.setSessionValidationSchedulerEnabled(!install);
         sessionManager.setSessionIdUrlRewritingEnabled(false);
         Cookie cookie = sessionManager.getSessionIdCookie();
         cookie.setMaxAge(24 * 60 * 60);
         cookie.setName("autumnid");
-        //如果开启redis缓存且autumn.shiro.redis=true，则shiro session存到redis里
-        if (redisOpen && shiroRedis) {
+        // 安装模式禁止 Redis SessionDAO：避免 Redis 未就绪时 doReadSession 失败，且避免 getNameSpace() 查库拼 Redis Key
+        boolean useRedisSessions = redisOpen && shiroRedis && !install;
+        if (useRedisSessions) {
             sessionManager.setSessionDAO(redisShiroSessionDAO);
         }
         return sessionManager;
@@ -55,11 +61,16 @@ public class ShiroConfig {
     @Bean
     public RememberMeManager rememberMeManager(SimpleCookie rememberMeCookie,
                                                @Autowired(required = false) RedisTemplate redisTemplate,
+                                               Environment environment,
                                                SysConfigService sysConfigService) {
         ForceLogoutRememberMeManager manager = new ForceLogoutRememberMeManager();
         manager.setCipherKey(Base64.getDecoder().decode("Z3VucwAAAAAAAAAAAAAAAA=="));
         manager.setCookie(rememberMeCookie);
-        manager.setRedisTemplate(redisTemplate);
+        if (InstallMode.isActive(environment)) {
+            manager.setRedisTemplate(null);
+        } else {
+            manager.setRedisTemplate(redisTemplate);
+        }
         manager.setSysConfigService(sysConfigService);
         return manager;
     }

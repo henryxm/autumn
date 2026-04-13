@@ -52,6 +52,8 @@ public class InstallEnvironmentPostProcessor implements EnvironmentPostProcessor
         if (wizard && (force || !configFile.isFile())) {
             Map<String, Object> bootstrap = new HashMap<>(16);
             bootstrap.put(InstallConstants.INSTALL_MODE, "true");
+            // 安装占位启动阶段不拉起 Quartz，避免 JDBC JobStore / 业务 Job 在安装未完成时访问库或外部资源
+            bootstrap.put("spring.quartz.auto-startup", "false");
             bootstrap.put("autumn.table.init", "false");
             bootstrap.put("spring.datasource.driverClassName", "org.h2.Driver");
             bootstrap.put("spring.datasource.druid.first.url",
