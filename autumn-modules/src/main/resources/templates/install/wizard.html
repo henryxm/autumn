@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>安装向导</title>
+    <style>
+        :root {
+            --bg: linear-gradient(160deg, #e8f0fe 0%, #f3e8ff 45%, #fdf8f3 100%);
+            --card: #ffffff;
+            --text: #1e293b;
+            --muted: #64748b;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --border: #e2e8f0;
+            --success: #059669;
+            --danger: #dc2626;
+            --radius: 12px;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: var(--bg);
+            min-height: 100vh;
+            margin: 0;
+            color: var(--text);
+        }
+        .wrap { max-width: 760px; margin: 0 auto; padding: 32px 16px 48px; }
+        .hero {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        .hero h1 { font-size: 1.65rem; font-weight: 700; margin: 0 0 8px; letter-spacing: -0.02em; }
+        .hero p { margin: 0; color: var(--muted); font-size: 0.95rem; line-height: 1.55; max-width: 36em; margin-left: auto; margin-right: auto; }
+        .card {
+            background: var(--card);
+            border-radius: var(--radius);
+            box-shadow: 0 4px 24px rgba(15, 23, 42, 0.08), 0 0 1px rgba(15, 23, 42, 0.06);
+            padding: 28px 32px 32px;
+            border: 1px solid var(--border);
+        }
+        h2 { font-size: 1.15rem; margin: 0 0 14px; font-weight: 600; }
+        .sub { color: var(--muted); font-size: 0.875rem; margin-bottom: 16px; line-height: 1.6; }
+        .steps {
+            display: flex;
+            justify-content: space-between;
+            gap: 6px;
+            margin-bottom: 28px;
+            flex-wrap: wrap;
+        }
+        .step-item {
+            flex: 1;
+            min-width: 72px;
+            text-align: center;
+            font-size: 0.75rem;
+            color: var(--muted);
+            padding: 8px 4px;
+            border-radius: 8px;
+            background: #f8fafc;
+            border: 1px solid transparent;
+        }
+        .step-item.done { color: var(--success); background: #ecfdf5; border-color: #a7f3d0; }
+        .step-item.current { color: var(--primary); font-weight: 600; background: #eff6ff; border-color: #93c5fd; }
+        .panel { display: none; }
+        .panel.active { display: block; }
+        label.lbl { display: block; margin: 14px 0 6px; font-size: 0.8125rem; font-weight: 500; color: #475569; }
+        input, select, textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.9375rem;
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+        }
+        textarea { min-height: 100px; font-family: inherit; resize: vertical; }
+        .row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        @media (max-width: 600px) { .row { grid-template-columns: 1fr; } }
+        .btn {
+            display: inline-block;
+            margin-top: 18px;
+            margin-right: 10px;
+            padding: 10px 22px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9375rem;
+            font-weight: 500;
+            text-decoration: none;
+            transition: background 0.15s, transform 0.05s;
+        }
+        .btn:active { transform: scale(0.98); }
+        .btn-primary { background: var(--primary); color: #fff; }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-secondary { background: #f1f5f9; color: #334155; }
+        .btn-secondary:hover { background: #e2e8f0; }
+        .err { color: var(--danger); font-size: 0.875rem; margin-top: 10px; line-height: 1.5; white-space: pre-wrap; }
+        .ok { color: var(--success); font-size: 0.9375rem; margin-top: 8px; line-height: 1.5; }
+        ul.notes { font-size: 0.875rem; color: #475569; line-height: 1.65; padding-left: 1.2em; margin: 0 0 16px; }
+        code { font-size: 0.8125rem; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; }
+        .check-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin: 16px 0;
+            cursor: pointer;
+            user-select: none;
+        }
+        .check-row input { width: auto; margin-top: 3px; flex-shrink: 0; }
+        .check-row span { font-size: 0.9375rem; line-height: 1.5; color: #334155; }
+        .mode-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+        .mode-opt {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px 14px;
+            cursor: pointer;
+            transition: border-color 0.15s, background 0.15s;
+        }
+        .mode-opt:hover { border-color: #cbd5e1; background: #f8fafc; }
+        .mode-opt.on { border-color: var(--primary); background: #eff6ff; }
+        .mode-opt input { margin-right: 8px; }
+        .mode-opt small { display: block; color: var(--muted); margin-top: 4px; font-size: 0.75rem; line-height: 1.4; }
+        .warn-banner {
+            background: #fffbeb;
+            border: 1px solid #fcd34d;
+            color: #92400e;
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 0.8125rem;
+            margin-top: 10px;
+            line-height: 1.5;
+        }
+        .result-section { margin-top: 16px; }
+        .result-section h4 { margin: 0 0 8px; font-size: 0.875rem; color: #475569; font-weight: 600; }
+        .result-section ul { margin: 0; padding-left: 1.2em; font-size: 0.875rem; line-height: 1.65; color: #334155; }
+        .summary-lines p { margin: 6px 0; font-size: 0.9375rem; color: #334155; line-height: 1.55; }
+        .table-scroll {
+            max-height: 280px;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-top: 12px;
+            background: #f8fafc;
+        }
+        .table-scroll ul { list-style: none; margin: 0; padding: 8px 0; }
+        .table-scroll li { padding: 6px 14px; font-size: 0.8125rem; font-family: ui-monospace, monospace; border-bottom: 1px solid #e2e8f0; }
+        .table-scroll li:last-child { border-bottom: none; }
+        .progress-wrap { margin: 20px 0; }
+        .progress-bar {
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 999px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), #7c3aed);
+            border-radius: 999px;
+            transition: width 0.35s ease;
+        }
+        .phase-label { font-size: 0.9375rem; margin: 14px 0 6px; font-weight: 500; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <div class="hero">
+        <h1>欢迎使用</h1>
+        <p>按步骤完成说明确认、数据库配置与检测。保存后将自动重启并连接您选择的数据库，完成表结构与基础数据准备。</p>
+    </div>
+    <div class="card">
+        <div class="steps" id="stepsBar"></div>
+
+        <div id="panel-1" class="panel active">
+            <h2>说明与同意</h2>
+            <ul class="notes">
+                <li>安装结束后，数据库连接会保存到程序目录下的 <code>config/datasource.yml</code>。如需改路径，可配置 <code>autumn.install.config-path</code>。</li>
+                <li>数据库账号需具备<strong>建表、删表</strong>及日常读写权限。检测时会临时创建并删除一张测试表，属正常现象。</li>
+                <li>为支持表情与多语言文本，向导会在常见数据库上附带合适的连接参数。若使用高级模式自写连接串，请确认字符集与库设置一致。</li>
+                <li>重新安装：删除上述配置文件，或设置环境变量 <code>AUTUMN_INSTALL_FORCE=true</code>（或配置 <code>autumn.install.force=true</code>）。</li>
+                <li>若只清空库中数据而保留配置文件，可能导致无法启动，请先恢复库或删除配置后重新安装。</li>
+                <li>部分数据库需将官方驱动放入运行环境的 classpath，具体取决于部署方式。</li>
+            </ul>
+            <label class="check-row" for="agreeCb">
+                <input type="checkbox" id="agreeCb"/>
+                <span>我已阅读并理解上述说明</span>
+            </label>
+            <div class="err" id="e1"></div>
+            <button type="button" class="btn btn-primary" onclick="doAgree()">同意并继续</button>
+        </div>
+
+        <div id="panel-2" class="panel">
+            <h2>数据库连接</h2>
+            <p class="sub">先选择连接方式，再选择数据库类型并填写对应信息。内嵌或内存库适合试用与单机场景。</p>
+
+            <label class="lbl">连接方式</label>
+            <div class="mode-grid" id="modeGrid">
+                <label class="mode-opt on" data-mode="REMOTE">
+                    <input type="radio" name="connMode" value="REMOTE" checked/>
+                    远程服务器
+                    <small>填写主机、端口与库名，适用于 MySQL、PostgreSQL 等常见部署。</small>
+                </label>
+                <label class="mode-opt" data-mode="EMBEDDED_FILE">
+                    <input type="radio" name="connMode" value="EMBEDDED_FILE"/>
+                    本机文件
+                    <small>数据落在本机磁盘，适合 H2、SQLite、HSQLDB、Derby 等。</small>
+                </label>
+                <label class="mode-opt" data-mode="EMBEDDED_MEMORY">
+                    <input type="radio" name="connMode" value="EMBEDDED_MEMORY"/>
+                    内存库（试用）
+                    <small>进程重启后数据清空，仅建议体验功能。</small>
+                </label>
+            </div>
+            <div class="warn-banner hidden" id="memoryWarn">您选择了内存库：服务重启后数据会丢失，请勿用于正式环境。</div>
+
+            <label class="lbl">数据库类型</label>
+            <select id="databaseType"></select>
+
+            <div id="remoteFields">
+                <div class="row">
+                    <div>
+                        <label class="lbl">主机地址</label>
+                        <input id="host" value="localhost"/>
+                    </div>
+                    <div>
+                        <label class="lbl">端口</label>
+                        <input id="port" placeholder="可留空使用默认"/>
+                    </div>
+                </div>
+            </div>
+
+            <label class="lbl" id="databaseNameLabel">库名 / 路径</label>
+            <input id="databaseName" placeholder="按下方提示填写"/>
+            <p class="sub" id="databaseNameHint" style="margin-top:4px"></p>
+
+            <div class="row">
+                <div>
+                    <label class="lbl">用户名</label>
+                    <input id="username"/>
+                </div>
+                <div>
+                    <label class="lbl">密码</label>
+                    <input id="password" type="password"/>
+                </div>
+            </div>
+            <label class="lbl">附加连接参数（选填）</label>
+            <p class="sub" style="margin-top:0">例如 PostgreSQL 需要 SSL 时可填 <code>sslmode=require</code>（以数据库文档为准）。</p>
+            <input id="extraOptions" placeholder="选填"/>
+
+            <label class="check-row" for="advancedUrl">
+                <input type="checkbox" id="advancedUrl"/>
+                <span>高级：自行填写完整 JDBC 连接串与驱动类名</span>
+            </label>
+            <div id="advBox" class="hidden">
+                <label class="lbl">JDBC 连接串</label>
+                <textarea id="jdbcUrl" placeholder="以 jdbc: 开头"></textarea>
+                <label class="lbl">驱动类名（可留空则与类型默认一致）</label>
+                <input id="driverClassName" placeholder="选填"/>
+            </div>
+            <div class="err" id="e2"></div>
+            <button type="button" class="btn btn-secondary" onclick="go(1)">上一步</button>
+            <button type="button" class="btn btn-primary" onclick="doForm()">下一步</button>
+        </div>
+
+        <div id="panel-3" class="panel">
+            <h2>检查连接与权限</h2>
+            <p class="sub">将尝试连接数据库，并验证建表、删表权限。若失败，请根据提示核对账号、网络或库名。</p>
+            <div id="checkResult"></div>
+            <div class="err" id="e3"></div>
+            <button type="button" class="btn btn-secondary" onclick="go(2)">上一步</button>
+            <button type="button" class="btn btn-primary" onclick="doCheck()">开始检查</button>
+            <button type="button" class="btn btn-primary hidden" id="btnNext3" onclick="go(4)">检查通过，继续</button>
+        </div>
+
+        <div id="panel-4" class="panel">
+            <h2>确认数据库现状</h2>
+            <p class="sub">以下为当前库中可读到的数据表列表。若已有大量业务表，请先确认是否与自动建表策略冲突，建议备份或更换空库。</p>
+            <div id="metaResult"></div>
+            <ul class="notes">
+                <li>点击「确认并完成安装」将写入配置文件，随后服务<strong>自动重启</strong>。</li>
+                <li>重启后会按系统设置维护表结构并写入运行所需基础数据。</li>
+            </ul>
+            <div class="err" id="e4"></div>
+            <button type="button" class="btn btn-secondary" onclick="go(3)">上一步</button>
+            <button type="button" class="btn btn-primary" onclick="loadMeta()">刷新列表</button>
+            <button type="button" class="btn btn-primary" onclick="doFinish()">确认并完成安装</button>
+        </div>
+
+        <div id="panel-5" class="panel">
+            <h2 id="panel5Title">安装进行中</h2>
+            <p class="sub" id="finishHint"></p>
+            <div id="progressWrap" class="progress-wrap">
+                <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+                <p class="phase-label" id="phaseLabel">正在保存配置并准备重启…</p>
+                <p class="sub" id="bootstrapHint"></p>
+            </div>
+            <div id="installDoneBlock" class="hidden">
+                <p class="ok" id="doneMsg"></p>
+                <p class="sub" id="countdownText"></p>
+                <a class="btn btn-primary" id="btnHome" href="${homeUrl}">进入网站首页</a>
+                <a class="btn btn-secondary" id="btnLogin" href="${loginUrl}">去登录页</a>
+            </div>
+            <div id="installFailBlock" class="hidden">
+                <p class="err" id="failMsg"></p>
+                <p class="sub">请查看运行日志或联系运维。修正问题后可刷新本页重试（必要时按说明清理配置后再安装）。</p>
+                <button type="button" class="btn btn-secondary" onclick="location.reload()">刷新页面</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    var step = 1;
+    var typeList = [];
+    var api = '${installApiBase}';
+    var bootstrapUrl = '${bootstrapStatusUrl}';
+    var homeUrl = '${homeUrl}';
+    var pollTimer;
+    var countdownTimer;
+
+    function el(id) { return document.getElementById(id); }
+
+    function esc(s) {
+        if (s == null || s === undefined) return '';
+        return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function currentType() {
+        var id = el('databaseType').value;
+        return typeList.find(function (x) { return x.id === id; });
+    }
+
+    function getConnMode() {
+        var r = document.querySelector('input[name="connMode"]:checked');
+        return r ? r.value : 'REMOTE';
+    }
+
+    function syncModeStyles() {
+        var mode = getConnMode();
+        var nodes = document.querySelectorAll('#modeGrid .mode-opt');
+        for (var i = 0; i < nodes.length; i++) {
+            nodes[i].classList.toggle('on', nodes[i].getAttribute('data-mode') === mode);
+        }
+        el('memoryWarn').classList.toggle('hidden', mode !== 'EMBEDDED_MEMORY');
+    }
+
+    function updateConnectionUi() {
+        var mode = getConnMode();
+        var t = currentType();
+        var adv = el('advancedUrl').checked;
+        el('remoteFields').classList.toggle('hidden', mode !== 'REMOTE' || adv);
+        if (t) {
+            var embF = t.supportsEmbeddedFile === 'true';
+            var embM = t.supportsEmbeddedMemory === 'true';
+            document.querySelectorAll('#modeGrid .mode-opt[data-mode="EMBEDDED_FILE"]').forEach(function (n) {
+                n.style.opacity = embF ? '1' : '0.45';
+                n.querySelector('input').disabled = !embF;
+            });
+            document.querySelectorAll('#modeGrid .mode-opt[data-mode="EMBEDDED_MEMORY"]').forEach(function (n) {
+                n.style.opacity = embM ? '1' : '0.45';
+                n.querySelector('input').disabled = !embM;
+            });
+            if (!embF && mode === 'EMBEDDED_FILE') {
+                document.querySelector('input[name="connMode"][value="REMOTE"]').checked = true;
+                syncModeStyles();
+                mode = 'REMOTE';
+            }
+            if (!embM && mode === 'EMBEDDED_MEMORY') {
+                document.querySelector('input[name="connMode"][value="REMOTE"]').checked = true;
+                syncModeStyles();
+                mode = 'REMOTE';
+            }
+        }
+        updateDatabasePlaceholder();
+    }
+
+    function updateDatabasePlaceholder() {
+        var t = currentType();
+        var mode = getConnMode();
+        var hintEl = el('databaseNameHint');
+        if (!t) {
+            hintEl.textContent = '';
+            return;
+        }
+        var hint = '';
+        if (mode === 'REMOTE') hint = t.databaseFieldHintRemote || '';
+        else if (mode === 'EMBEDDED_FILE') hint = t.databaseFieldHintFile || '';
+        else hint = t.databaseFieldHintMemory || '';
+        hintEl.textContent = hint;
+        el('databaseName').placeholder = hint ? hint.substring(0, 48) + (hint.length > 48 ? '…' : '') : '按提示填写';
+    }
+
+    function renderSteps() {
+        var names = ['说明', '数据库', '检查', '确认', '完成'];
+        var h = '';
+        for (var i = 0; i < names.length; i++) {
+            var n = i + 1;
+            var cls = 'step-item';
+            if (n < step) cls += ' done';
+            else if (n === step) cls += ' current';
+            h += '<div class="' + cls + '">' + n + '. ' + names[i] + '</div>';
+        }
+        el('stepsBar').innerHTML = h;
+    }
+
+    function go(n) {
+        step = n;
+        for (var i = 1; i <= 5; i++) {
+            el('panel-' + i).classList.toggle('active', i === step);
+        }
+        renderSteps();
+        if (step === 4) loadMeta();
+    }
+
+    el('advancedUrl').onchange = function () {
+        el('advBox').classList.toggle('hidden', !this.checked);
+        updateConnectionUi();
+    };
+
+    document.querySelectorAll('#modeGrid .mode-opt').forEach(function (node) {
+        node.addEventListener('click', function (e) {
+            if (e.target.tagName !== 'INPUT') {
+                var r = node.querySelector('input[type=radio]');
+                if (r && !r.disabled) r.checked = true;
+            }
+            syncModeStyles();
+            updateConnectionUi();
+        });
+    });
+    document.querySelectorAll('input[name="connMode"]').forEach(function (r) {
+        r.addEventListener('change', function () {
+            syncModeStyles();
+            updateConnectionUi();
+        });
+    });
+
+    function loadTypes() {
+        fetch(api + '/types').then(function (r) { return r.json(); }).then(function (d) {
+            typeList = d.types || [];
+            var s = el('databaseType');
+            s.innerHTML = '';
+            typeList.forEach(function (t) {
+                var o = document.createElement('option');
+                o.value = t.id;
+                o.textContent = t.label + ' (' + t.id + ')';
+                s.appendChild(o);
+            });
+            if (typeList.length) {
+                el('port').placeholder = typeList[0].defaultPort && typeList[0].defaultPort !== '0'
+                    ? '默认 ' + typeList[0].defaultPort : '可留空';
+            }
+            syncModeStyles();
+            updateConnectionUi();
+        }).catch(function (e) {
+            el('e1').textContent = '无法加载数据库类型列表: ' + e;
+        });
+    }
+
+    el('databaseType').onchange = function () {
+        var t = currentType();
+        if (t && t.defaultPort && t.defaultPort !== '0') {
+            el('port').placeholder = '默认 ' + t.defaultPort;
+        }
+        updateConnectionUi();
+    };
+
+    function doAgree() {
+        el('e1').textContent = '';
+        if (!el('agreeCb').checked) {
+            el('e1').textContent = '请先勾选「我已阅读并理解上述说明」';
+            return;
+        }
+        fetch(api + '/agree', { method: 'POST' }).then(function (r) { return r.json(); }).then(function () {
+            go(2);
+        }).catch(function (e) {
+            el('e1').textContent = String(e);
+        });
+    }
+
+    function payloadForm() {
+        return {
+            databaseType: el('databaseType').value,
+            connectionMode: el('advancedUrl').checked ? null : getConnMode(),
+            host: el('host').value,
+            port: el('port').value,
+            databaseName: el('databaseName').value,
+            username: el('username').value,
+            password: el('password').value,
+            extraOptions: el('extraOptions').value,
+            advancedUrl: el('advancedUrl').checked,
+            jdbcUrl: el('jdbcUrl').value,
+            driverClassName: el('driverClassName').value
+        };
+    }
+
+    function renderCheckSections(d) {
+        var html = '';
+        if (d.summaryLines && d.summaryLines.length) {
+            html += '<div class="summary-lines">';
+            d.summaryLines.forEach(function (line) {
+                html += '<p>' + esc(line) + '</p>';
+            });
+            html += '</div>';
+        }
+        if (d.sections && d.sections.length) {
+            d.sections.forEach(function (sec) {
+                html += '<div class="result-section"><h4>' + esc(sec.title) + '</h4><ul>';
+                (sec.lines || []).forEach(function (line) {
+                    html += '<li>' + esc(line) + '</li>';
+                });
+                html += '</ul></div>';
+            });
+        }
+        return html || '<p class="sub">检查已完成。</p>';
+    }
+
+    function renderMeta(d) {
+        var html = '';
+        if (d.introLines && d.introLines.length) {
+            html += '<div class="summary-lines">';
+            d.introLines.forEach(function (line) {
+                html += '<p>' + esc(line) + '</p>';
+            });
+            html += '</div>';
+        }
+        var tables = d.tables || [];
+        html += '<div class="table-scroll"><ul>';
+        tables.forEach(function (name) {
+            html += '<li>' + esc(name) + '</li>';
+        });
+        html += '</ul></div>';
+        if (d.tableCount != null) {
+            html += '<p class="sub" style="margin-top:10px">共 ' + d.tableCount + ' 张表';
+            if (d.tablesTruncated) html += '（列表仅展示部分）';
+            html += '。</p>';
+        }
+        return html;
+    }
+
+    function doForm() {
+        el('e2').textContent = '';
+        fetch(api + '/form', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payloadForm())
+        }).then(function (r) { return r.json(); }).then(function (d) {
+            if (!d.ok) {
+                el('e2').textContent = d.error || '保存失败';
+                return;
+            }
+            go(3);
+            el('checkResult').innerHTML = '';
+            el('btnNext3').classList.add('hidden');
+            el('e3').textContent = '';
+        }).catch(function (e) {
+            el('e2').textContent = String(e);
+        });
+    }
+
+    function doCheck() {
+        el('e3').textContent = '';
+        el('btnNext3').classList.add('hidden');
+        fetch(api + '/check', { method: 'POST' }).then(function (r) { return r.json(); }).then(function (d) {
+            if (!d.ok) {
+                el('e3').textContent = d.error || '检查未通过';
+                el('checkResult').innerHTML = '';
+                return;
+            }
+            el('checkResult').innerHTML = renderCheckSections(d);
+            el('btnNext3').classList.remove('hidden');
+        }).catch(function (e) {
+            el('e3').textContent = String(e);
+        });
+    }
+
+    function loadMeta() {
+        el('e4').textContent = '';
+        fetch(api + '/meta').then(function (r) { return r.json(); }).then(function (d) {
+            if (!d.ok) {
+                el('e4').textContent = d.error || '读取失败';
+                return;
+            }
+            el('metaResult').innerHTML = renderMeta(d);
+        }).catch(function (e) {
+            el('e4').textContent = String(e);
+        });
+    }
+
+    function stopPoll() {
+        if (pollTimer) clearTimeout(pollTimer);
+        pollTimer = null;
+    }
+
+    function stopCountdown() {
+        if (countdownTimer) clearTimeout(countdownTimer);
+        countdownTimer = null;
+    }
+
+    function showInstallFail(msg) {
+        stopPoll();
+        el('progressWrap').classList.add('hidden');
+        el('installFailBlock').classList.remove('hidden');
+        el('failMsg').textContent = msg || '启动过程中发生错误';
+        el('panel5Title').textContent = '安装未完全成功';
+    }
+
+    function showInstallDone(savedMessage) {
+        stopPoll();
+        el('progressWrap').classList.add('hidden');
+        el('installDoneBlock').classList.remove('hidden');
+        el('panel5Title').textContent = '安装完成';
+        el('doneMsg').textContent = savedMessage || '系统已就绪，您可以进入网站或登录后台。';
+        var sec = 10;
+        function tick() {
+            el('countdownText').textContent = sec > 0 ? (sec + ' 秒后自动进入首页…') : '';
+            if (sec <= 0) {
+                window.location.assign(homeUrl);
+                return;
+            }
+            sec--;
+            countdownTimer = setTimeout(tick, 1000);
+        }
+        tick();
+    }
+
+    function startBootstrapPoll(savedMessage) {
+        stopPoll();
+        stopCountdown();
+        el('finishHint').textContent = savedMessage || '';
+        el('progressWrap').classList.remove('hidden');
+        el('installDoneBlock').classList.add('hidden');
+        el('installFailBlock').classList.add('hidden');
+        el('panel5Title').textContent = '安装进行中';
+        el('progressFill').style.width = '0%';
+        var delay = 800;
+        function schedule(next) {
+            pollTimer = setTimeout(next, delay);
+            delay = Math.min(delay + 150, 1600);
+        }
+        function tick() {
+            fetch(bootstrapUrl).then(function (r) { return r.json(); }).then(function (d) {
+                if (d.failed) {
+                    showInstallFail(d.error);
+                    return;
+                }
+                if (d.done) {
+                    showInstallDone(savedMessage);
+                    return;
+                }
+                el('phaseLabel').textContent = d.phaseLabel || '正在启动…';
+                var pct = typeof d.percent === 'number' ? d.percent : 0;
+                el('progressFill').style.width = pct + '%';
+                if (d.wizardActive) {
+                    el('bootstrapHint').textContent = '正在等待服务重启，请稍候。';
+                } else {
+                    el('bootstrapHint').textContent = d.initializing ? '正在初始化系统，请勿关闭浏览器。' : '';
+                }
+                schedule(tick);
+            }).catch(function () {
+                el('phaseLabel').textContent = '正在等待服务重新启动…';
+                el('bootstrapHint').textContent = '若长时间无响应，请稍后手动访问站点首页。';
+                delay = Math.min(delay + 200, 2200);
+                schedule(tick);
+            });
+        }
+        tick();
+    }
+
+    function doFinish() {
+        el('e4').textContent = '';
+        fetch(api + '/finish', { method: 'POST' }).then(function (r) { return r.json(); }).then(function (d) {
+            if (!d.ok) {
+                el('e4').textContent = d.error || '保存失败';
+                return;
+            }
+            go(5);
+            startBootstrapPoll(d.message);
+        }).catch(function (e) {
+            el('e4').textContent = String(e);
+        });
+    }
+
+    el('btnHome').addEventListener('click', function () { stopCountdown(); });
+    el('btnLogin').addEventListener('click', function () { stopCountdown(); });
+
+    renderSteps();
+    loadTypes();
+</script>
+</body>
+</html>

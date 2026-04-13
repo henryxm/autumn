@@ -30,6 +30,10 @@ public class UpgradeFactory extends Factory {
         return data;
     }
 
+    public static void clearJvmRestartData() {
+        data.clear();
+    }
+
     //call this method before init or load data
     public static void fireDomainChanged() {
         data.put(domainChanged, true);

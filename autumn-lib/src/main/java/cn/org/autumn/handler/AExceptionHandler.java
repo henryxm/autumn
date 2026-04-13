@@ -11,6 +11,7 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.jdbc.BadSqlGrammarException;
 import org.springframework.web.HttpMediaTypeNotAcceptableException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -131,6 +132,10 @@ public class AExceptionHandler {
                 log.debug("常见HTTP异常: {}", ExceptionUtils.formatExceptionForLog(e, request));
             }
             return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(Response.error(Error.BAD_REQUEST));
+        }
+        if (e instanceof BadSqlGrammarException) {
+            log.error("请求失败:{}", e.getMessage());
+            return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(Response.error(Error.NOT_IMPLEMENTED));
         }
         // 返回通用错误信息，避免暴露敏感信息
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(Response.error(Error.UNKNOWN_ERROR));

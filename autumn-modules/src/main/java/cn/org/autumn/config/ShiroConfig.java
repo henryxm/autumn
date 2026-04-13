@@ -195,6 +195,8 @@ public class ShiroConfig {
         filterMap.put("/client/**", "anon");
         filterMap.put("/actuator/**", "anon");
         filterMap.put("/http/proxy/v1/**", "anon");
+        filterMap.put("/install", "anon");
+        filterMap.put("/install/**", "anon");
         filterMap.put("/**", "spm");
         shiroFilter.setFilterChainDefinitionMap(filterMap);
         shiroFilter.setFilters(map);

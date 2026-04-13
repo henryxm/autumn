@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.event.ContextRefreshedEvent;
@@ -34,8 +35,18 @@ public class PostStartupProcessor implements ApplicationListener<ContextRefreshe
     @Override
     public void onApplicationEvent(ContextRefreshedEvent event) {
         ApplicationContext context = (ApplicationContext) event.getSource();
-        if (null != Config.getInstance().getApplicationContext())
-            return;
+        ApplicationContext existing = Config.getInstance().getApplicationContext();
+        if (existing != null) {
+            if (existing == context) {
+                return;
+            }
+            if (existing instanceof ConfigurableApplicationContext
+                    && !((ConfigurableApplicationContext) existing).isActive()) {
+                Config.getInstance().setApplicationContext(null);
+            } else {
+                return;
+            }
+        }
         Config.getInstance().setApplicationContext(context);
         String[] profiles = context.getEnvironment().getActiveProfiles();
 

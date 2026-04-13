@@ -20,6 +20,10 @@ public class LoginFactory extends Factory {
 
     private static Map<Integer, List<Login>> map = null;
 
+    public static void clearOrderedHandlerCacheForJvmRestart() {
+        map = null;
+    }
+
     public interface Login {
         @Order(DEFAULT_ORDER)
         boolean isNeed(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse);
@@ -46,7 +50,7 @@ public class LoginFactory extends Factory {
             return false;
         if (null == map)
             map = getOrdered(Login.class, "isNeed", HttpServletRequest.class, HttpServletResponse.class);
-        if (null != map && map.size() > 0) {
+        if (null != map && !map.isEmpty()) {
             for (Map.Entry<Integer, List<Login>> k : map.entrySet()) {
                 List<Login> list = k.getValue();
                 for (Login login : list) {

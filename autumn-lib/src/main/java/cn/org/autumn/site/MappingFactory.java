@@ -20,6 +20,10 @@ public class MappingFactory extends Factory {
 
     private static Map<Integer, List<MappingFactory.Mapping>> map = null;
 
+    public static void clearOrderedHandlerCacheForJvmRestart() {
+        map = null;
+    }
+
     public interface Mapping {
 
         @Order(DEFAULT_ORDER)
@@ -34,7 +38,7 @@ public class MappingFactory extends Factory {
             return false;
         if (null == map)
             map = getOrdered(MappingFactory.Mapping.class, "can", HttpServletRequest.class, String.class);
-        if (null != map && map.size() > 0) {
+        if (null != map && !map.isEmpty()) {
             for (Map.Entry<Integer, List<MappingFactory.Mapping>> k : map.entrySet()) {
                 List<MappingFactory.Mapping> list = k.getValue();
                 for (MappingFactory.Mapping mapping : list) {

@@ -58,4 +58,8 @@ public class DomainFactory extends Factory {
     public void clear() {
         cache.clear();
     }
+
+    public static void clearStaticSiteBindCache() {
+        cache.clear();
+    }
 }

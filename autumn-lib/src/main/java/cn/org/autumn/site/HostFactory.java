@@ -13,6 +13,10 @@ public class HostFactory extends Factory {
 
     private static Map<Integer, List<Host>> map = null;
 
+    public static void clearOrderedHandlerCacheForJvmRestart() {
+        map = null;
+    }
+
     public interface Host {
         @Order(DEFAULT_ORDER)
         boolean isAllowed(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse);

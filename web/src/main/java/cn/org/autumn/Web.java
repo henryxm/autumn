@@ -1,9 +1,9 @@
 package cn.org.autumn;
 
+import cn.org.autumn.boot.AutumnSpringApplication;
 import cn.org.autumn.site.TemplateFactory;
 import cn.org.autumn.version.Autumn;
-import org.mybatis.spring.annotation.MapperScan;
-import org.springframework.boot.SpringApplication;
+import org.mybatis.spring.boot.autoconfigure.MybatisAutoConfiguration;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.web.servlet.ServletComponentScan;
 import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
@@ -19,10 +19,10 @@ import org.springframework.scheduling.annotation.EnableAsync;
 @EnableAspectJAutoProxy(proxyTargetClass = true, exposeProxy = true)
 @ServletComponentScan
 @EnableAsync
-@SpringBootApplication
+@SpringBootApplication(exclude = {MybatisAutoConfiguration.class})
 public class Web extends SpringBootServletInitializer implements TemplateFactory.Template {
     public static void main(String[] args) {
-        new SpringApplication(Web.class).run(args);
+        AutumnSpringApplication.run(Web.class, args);
         Autumn.versions();
     }
 }

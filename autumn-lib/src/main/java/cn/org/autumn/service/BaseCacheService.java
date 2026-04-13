@@ -30,6 +30,14 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
     static final Map<String, CacheConfig> configs = new ConcurrentHashMap<>();
 
     /**
+     * 进程内 Spring 重启（同一 JVM 再次 {@code run}）时清空 {@link #configs}，避免 {@link CacheConfig} 与已销毁的上下文残留关联；
+     * 新上下文中各子类会在首次 {@link #getConfig()} 时重建。
+     */
+    public static void clearSharedCacheConfigRegistry() {
+        configs.clear();
+    }
+
+    /**
      * 标记该实体类型是否有数据被缓存过
      * <p>
      * 使用 volatile 确保多线程可见性，读取无需同步，开销极低。

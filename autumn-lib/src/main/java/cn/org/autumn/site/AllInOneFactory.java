@@ -1,16 +1,14 @@
 package cn.org.autumn.site;
 
 import cn.org.autumn.config.AllInOneHandler;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 
+@Slf4j
 @Component
 public class AllInOneFactory extends Factory {
-
-    Logger log = LoggerFactory.getLogger(getClass());
 
     List<AllInOneHandler> list = null;
 

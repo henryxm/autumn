@@ -142,4 +142,11 @@ public final class RuntimeSqlDialectRegistry {
             dialect = d;
         }
     }
+
+    /**
+     * 进程内 Spring 重启后丢弃可能仍指向旧 {@link RoutingRuntimeSqlDialect} 的静态引用，由新一轮启动再次 {@link #set}。
+     */
+    public static void resetForJvmRestart() {
+        dialect = MYSQL_STATELESS;
+    }
 }
