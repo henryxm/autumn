@@ -1,6 +1,7 @@
 package cn.org.autumn.modules.sys.view;
 
 import cn.org.autumn.config.ViewHandler;
+import cn.org.autumn.install.InstallMode;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,6 +21,9 @@ public class NoneSuffixViewHandler implements ViewHandler, LoopJob.TenMinute {
 
     @Override
     public boolean should(String viewName) {
+        if (InstallMode.isActive()) {
+            return false;
+        }
         if (!viewName.contains("."))
             return false;
         if (null == suffixes)
