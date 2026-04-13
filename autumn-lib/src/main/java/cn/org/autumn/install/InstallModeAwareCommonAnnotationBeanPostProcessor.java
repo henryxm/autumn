@@ -7,10 +7,10 @@ import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.util.ClassUtils;
 
 /**
- * 替换默认 {@link CommonAnnotationBeanPostProcessor}：在安装模式下不调用 {@link javax.annotation.PostConstruct}
+ * 替换默认 {@link CommonAnnotationBeanPostProcessor}：在安装模式下不调用 {@link jakarta.annotation.PostConstruct}
  *（及父类中与之同一套生命周期的 init 回调），避免业务到处写 {@link InstallMode#isActive}。
  * <p>
- * {@link javax.annotation.Resource} / EJB 等注入仍由本类自父类继承的其它回调处理，不受安装模式影响。
+ * {@link jakarta.annotation.Resource} / EJB 等注入仍由本类自父类继承的其它回调处理，不受安装模式影响。
  * 若个别 Bean 在安装期仍必须执行 {@code @PostConstruct}，在其<b>实现类</b>上标
  * {@link AllowPostConstructDuringInstall}。
  * <p>
