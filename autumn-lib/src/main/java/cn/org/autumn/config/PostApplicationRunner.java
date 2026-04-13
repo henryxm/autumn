@@ -37,21 +37,31 @@ public class PostApplicationRunner implements ApplicationRunner {
     @Autowired
     Environment environment;
 
+    @Autowired
+    ApplicationInitializationProgress initializationProgress;
+
     @Override
     public void run(ApplicationArguments args) throws Exception {
         if (Boolean.parseBoolean(environment.getProperty("autumn.install.mode", "false"))) {
+            initializationProgress.enterWizardWaiting();
             log.info("Please visit install wizard: {}", buildInstallWizardUrl());
             return;
         }
         long start = System.currentTimeMillis();
+        initializationProgress.beginInitialization();
         try {
             log.info("Start application initializing.");
             initFactory.init();
+            initializationProgress.enterLoad();
             loadFactory.load();
+            initializationProgress.enterUpgrade();
             upgradeFactory.upgrade();
+            initializationProgress.enterRefresh();
             refreshFactory.refresh();
+            initializationProgress.markDone();
         } catch (Exception e) {
-            log.error("Application initializing with error:{}", e.getMessage());
+            log.error("Application initializing with error:{}", e.getMessage(), e);
+            initializationProgress.markFailed(e);
         } finally {
             long end = System.currentTimeMillis();
             float time = (float) (end - start) / 1000;

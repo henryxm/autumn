@@ -12,6 +12,12 @@ public class InstallConnectionForm implements Serializable {
     /** {@link cn.org.autumn.database.DatabaseType} 名称 */
     private String databaseType;
 
+    /**
+     * 简易模式连接方式：{@code REMOTE} 远程服务、{@code EMBEDDED_FILE} 本机文件、{@code EMBEDDED_MEMORY} 内存库。
+     * 留空时由服务端按数据库类型推断（与旧版向导兼容）。
+     */
+    private String connectionMode;
+
     private String host = "localhost";
 
     private String port = "";
@@ -39,6 +45,14 @@ public class InstallConnectionForm implements Serializable {
 
     public void setDatabaseType(String databaseType) {
         this.databaseType = databaseType;
+    }
+
+    public String getConnectionMode() {
+        return connectionMode;
+    }
+
+    public void setConnectionMode(String connectionMode) {
+        this.connectionMode = connectionMode;
     }
 
     public String getHost() {

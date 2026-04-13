@@ -28,6 +28,7 @@ public class Config {
     public static final String TEST_DOCKER = "test-docker";
     public static final String PROD_DOCKER = "prod-docker";
 
+    @Setter
     private static Config instance = null;
 
     @Getter

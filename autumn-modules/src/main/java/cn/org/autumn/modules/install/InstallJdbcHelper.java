@@ -15,6 +15,27 @@ import java.util.Locale;
  */
 public final class InstallJdbcHelper {
 
+    public enum ConnectionMode {
+        REMOTE,
+        EMBEDDED_FILE,
+        EMBEDDED_MEMORY;
+
+        static ConnectionMode fromForm(InstallConnectionForm form, DatabaseType type) {
+            String raw = form.getConnectionMode();
+            if (StringUtils.isNotBlank(raw)) {
+                try {
+                    return valueOf(raw.trim().toUpperCase(Locale.ROOT));
+                } catch (IllegalArgumentException e) {
+                    throw new IllegalArgumentException("无效连接方式，请选远程、本机文件或内存库对应项");
+                }
+            }
+            if (type == DatabaseType.H2 || type == DatabaseType.SQLITE || type == DatabaseType.HSQLDB || type == DatabaseType.DERBY) {
+                return EMBEDDED_FILE;
+            }
+            return REMOTE;
+        }
+    }
+
     private InstallJdbcHelper() {
     }
 
@@ -83,6 +104,75 @@ public final class InstallJdbcHelper {
         }
     }
 
+    public static boolean supportsEmbeddedFile(DatabaseType type) {
+        return type == DatabaseType.H2 || type == DatabaseType.SQLITE || type == DatabaseType.HSQLDB || type == DatabaseType.DERBY;
+    }
+
+    public static boolean supportsEmbeddedMemory(DatabaseType type) {
+        return type == DatabaseType.H2 || type == DatabaseType.SQLITE || type == DatabaseType.HSQLDB || type == DatabaseType.DERBY;
+    }
+
+    public static String databaseFieldHint(DatabaseType type, ConnectionMode mode) {
+        if (type == null) {
+            return "按所选类型填写";
+        }
+        if (mode == ConnectionMode.EMBEDDED_MEMORY) {
+            switch (type) {
+                case H2:
+                    return "内存库名称，可留空为 autumn";
+                case SQLITE:
+                    return "内存模式无需路径，可留空";
+                case HSQLDB:
+                    return "内存库名，可留空为 autumn";
+                case DERBY:
+                    return "内存库名，可留空为 autumn";
+                default:
+                    return "该类型不支持内存简易模式，请换类型或高级模式";
+            }
+        }
+        if (mode == ConnectionMode.EMBEDDED_FILE) {
+            switch (type) {
+                case H2:
+                    return "文件路径，可留空为 ./data/autumn（相对运行目录）";
+                case SQLITE:
+                    return "数据库文件路径，例如 ./data/app.db";
+                case HSQLDB:
+                    return "文件路径前缀，可留空为 autumn（生成 hsqldb 文件）";
+                case DERBY:
+                    return "目录路径，可留空为 data/autumn-derby";
+                default:
+                    return "库名或 SID 等";
+            }
+        }
+        switch (type) {
+            case MYSQL:
+            case MARIADB:
+            case TIDB:
+            case OCEANBASE_MYSQL:
+                return "数据库名，例如 autumn";
+            case POSTGRESQL:
+            case KINGBASE:
+                return "数据库名";
+            case SQLSERVER:
+                return "数据库名";
+            case ORACLE:
+            case OCEANBASE_ORACLE:
+                return "SID 或 Service 名";
+            case FIREBIRD:
+                return "服务器上的 .fdb 文件路径";
+            case DB2:
+                return "数据库名";
+            case DAMENG:
+                return "库名或服务名";
+            case H2:
+                return "H2 库路径（TCP 模式下为服务器端路径标识）";
+            case HSQLDB:
+                return "HSQLDB 库别名（网络模式）";
+            default:
+                return "库名、路径或连接标识";
+        }
+    }
+
     /**
      * 解析向导表单为 JDBC URL 与驱动类名。
      */
@@ -104,9 +194,11 @@ public final class InstallJdbcHelper {
             return new ResolvedJdbc(form.getJdbcUrl().trim(), driver, type);
         }
 
+        ConnectionMode mode = ConnectionMode.fromForm(form, type);
+        ensureModeSupported(type, mode);
+
         String host = StringUtils.defaultString(form.getHost(), "localhost").trim();
         String db = StringUtils.defaultString(form.getDatabaseName(), "").trim();
-        String user = form.getUsername() == null ? "" : form.getUsername().trim();
 
         int port = parsePort(form.getPort(), defaultPort(type));
         String driver = StringUtils.isNotBlank(form.getDriverClassName())
@@ -117,6 +209,105 @@ public final class InstallJdbcHelper {
         }
 
         String url;
+        switch (mode) {
+            case EMBEDDED_MEMORY:
+                url = buildEmbeddedMemoryUrl(type, db);
+                break;
+            case EMBEDDED_FILE:
+                url = buildEmbeddedFileUrl(type, db);
+                break;
+            case REMOTE:
+            default:
+                url = buildRemoteUrl(type, host, port, db);
+                break;
+        }
+
+        url = appendExtraOptions(url, form.getExtraOptions());
+
+        return new ResolvedJdbc(url, driver, type);
+    }
+
+    private static String appendExtraOptions(String url, String extraOptions) {
+        if (StringUtils.isBlank(extraOptions)) {
+            return url;
+        }
+        String e = extraOptions.trim();
+        if (url.startsWith("jdbc:sqlserver")) {
+            return url.endsWith(";") ? url + e : url + ";" + e;
+        }
+        if (url.startsWith("jdbc:h2") || url.startsWith("jdbc:hsqldb") || url.startsWith("jdbc:derby")) {
+            return url + ";" + e;
+        }
+        if (url.startsWith("jdbc:sqlite")) {
+            return url.contains("?") ? url + "&" + e : url + "?" + e;
+        }
+        if (url.contains("?")) {
+            return url + "&" + e;
+        }
+        return url + "?" + e;
+    }
+
+    private static void ensureModeSupported(DatabaseType type, ConnectionMode mode) {
+        if (mode == ConnectionMode.EMBEDDED_FILE && !supportsEmbeddedFile(type)) {
+            throw new IllegalArgumentException("当前数据库类型不支持「本机文件」简易模式，请选远程或高级 JDBC");
+        }
+        if (mode == ConnectionMode.EMBEDDED_MEMORY && !supportsEmbeddedMemory(type)) {
+            throw new IllegalArgumentException("当前数据库类型不支持「内存库」简易模式，请换库或高级 JDBC");
+        }
+    }
+
+    private static String buildEmbeddedMemoryUrl(DatabaseType type, String db) {
+        switch (type) {
+            case H2:
+                if (StringUtils.isBlank(db)) {
+                    db = "autumn";
+                }
+                return "jdbc:h2:mem:" + db + ";MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1";
+            case SQLITE:
+                return "jdbc:sqlite::memory:";
+            case HSQLDB:
+                if (StringUtils.isBlank(db)) {
+                    db = "autumn";
+                }
+                return "jdbc:hsqldb:mem:" + db;
+            case DERBY:
+                if (StringUtils.isBlank(db)) {
+                    db = "autumn";
+                }
+                return "jdbc:derby:memory:" + db + ";create=true";
+            default:
+                throw new IllegalArgumentException("不支持该类型的内存连接");
+        }
+    }
+
+    private static String buildEmbeddedFileUrl(DatabaseType type, String db) {
+        switch (type) {
+            case H2:
+                if (StringUtils.isBlank(db)) {
+                    db = "./data/autumn";
+                }
+                return "jdbc:h2:file:" + db + ";MODE=MySQL;DATABASE_TO_LOWER=TRUE;AUTO_SERVER=TRUE";
+            case SQLITE:
+                if (StringUtils.isBlank(db)) {
+                    throw new IllegalArgumentException("请填写 SQLite 数据库文件路径");
+                }
+                return "jdbc:sqlite:" + db;
+            case HSQLDB:
+                if (StringUtils.isBlank(db)) {
+                    db = "autumn";
+                }
+                return "jdbc:hsqldb:file:" + db + ";shutdown=true";
+            case DERBY:
+                if (StringUtils.isBlank(db)) {
+                    db = "data/autumn-derby";
+                }
+                return "jdbc:derby:" + db + ";create=true";
+            default:
+                throw new IllegalArgumentException("不支持该类型的本机文件连接");
+        }
+    }
+
+    private static String buildRemoteUrl(DatabaseType type, String host, int port, String db) {
         switch (type) {
             case MYSQL:
             case MARIADB:
@@ -125,84 +316,64 @@ public final class InstallJdbcHelper {
                 if (StringUtils.isBlank(db)) {
                     throw new IllegalArgumentException("请填写数据库名");
                 }
-                url = "jdbc:mysql://" + host + ":" + port + "/" + db
+                return "jdbc:mysql://" + host + ":" + port + "/" + db
                         + "?serverTimezone=Asia/Shanghai&useSSL=false&allowMultiQueries=true&useUnicode=true&characterEncoding=UTF-8&allowPublicKeyRetrieval=true&connectionCollation=utf8mb4_unicode_ci";
-                break;
             case POSTGRESQL:
             case KINGBASE:
                 if (StringUtils.isBlank(db)) {
                     throw new IllegalArgumentException("请填写数据库名");
                 }
-                url = "jdbc:postgresql://" + host + ":" + port + "/" + db + "?stringtype=unspecified";
-                break;
+                return "jdbc:postgresql://" + host + ":" + port + "/" + db + "?stringtype=unspecified";
             case SQLSERVER:
                 if (StringUtils.isBlank(db)) {
                     throw new IllegalArgumentException("请填写数据库名");
                 }
-                url = "jdbc:sqlserver://" + host + ":" + port + ";databaseName=" + db
+                return "jdbc:sqlserver://" + host + ":" + port + ";databaseName=" + db
                         + ";encrypt=false;trustServerCertificate=true;sendStringParametersAsUnicode=true";
-                break;
             case ORACLE:
             case OCEANBASE_ORACLE:
                 if (StringUtils.isBlank(db)) {
                     throw new IllegalArgumentException("请填写 SID / Service 名（作为 database 字段）");
                 }
-                url = "jdbc:oracle:thin:@" + host + ":" + port + ":" + db;
-                break;
+                return "jdbc:oracle:thin:@" + host + ":" + port + ":" + db;
             case SQLITE:
+                throw new IllegalArgumentException("SQLite 请使用「本机文件」或「内存」，或高级 JDBC");
+            case H2: {
                 if (StringUtils.isBlank(db)) {
-                    throw new IllegalArgumentException("请填写 SQLite 文件路径（或 :memory:）");
+                    throw new IllegalArgumentException("请填写 H2 数据库名或路径标识");
                 }
-                url = "jdbc:sqlite:" + db;
-                break;
-            case H2:
+                int p = port > 0 ? port : 9092;
+                return "jdbc:h2:tcp://" + host + ":" + p + "/" + db.replace("\\", "/") + ";MODE=MySQL;DATABASE_TO_LOWER=TRUE";
+            }
+            case HSQLDB: {
                 if (StringUtils.isBlank(db)) {
-                    db = "./data/autumn";
+                    throw new IllegalArgumentException("请填写 HSQLDB 库名");
                 }
-                url = "jdbc:h2:file:" + db + ";MODE=MySQL;DATABASE_TO_LOWER=TRUE;AUTO_SERVER=TRUE";
-                break;
-            case HSQLDB:
-                if (StringUtils.isBlank(db)) {
-                    db = "autumn";
-                }
-                url = "jdbc:hsqldb:file:" + db + ";shutdown=true";
-                break;
+                int p = port > 0 ? port : 9001;
+                return "jdbc:hsqldb:hsql://" + host + ":" + p + "/" + db;
+            }
             case DERBY:
-                if (StringUtils.isBlank(db)) {
-                    db = "data/autumn-derby";
-                }
-                url = "jdbc:derby:" + db + ";create=true";
-                break;
+                throw new IllegalArgumentException("Derby 远程连接请使用高级模式填写 JDBC");
             case DB2:
                 if (StringUtils.isBlank(db)) {
                     throw new IllegalArgumentException("请填写数据库名");
                 }
-                url = "jdbc:db2://" + host + ":" + port + "/" + db;
-                break;
+                return "jdbc:db2://" + host + ":" + port + "/" + db;
             case FIREBIRD:
                 if (StringUtils.isBlank(db)) {
                     throw new IllegalArgumentException("请填写 Firebird 文件路径");
                 }
-                url = "jdbc:firebirdsql://" + host + ":" + port + "/" + db.replace("\\", "/") + "?encoding=UTF8";
-                break;
+                return "jdbc:firebirdsql://" + host + ":" + port + "/" + db.replace("\\", "/") + "?encoding=UTF8";
             case INFORMIX:
                 throw new IllegalArgumentException("Informix 请使用「高级模式」填写完整 JDBC URL 与 INFORMIXSERVER 等参数");
             case DAMENG:
                 if (StringUtils.isBlank(db)) {
                     throw new IllegalArgumentException("请填写数据库名或连接串中的库名");
                 }
-                url = "jdbc:dm://" + host + ":" + port + "/" + db;
-                break;
+                return "jdbc:dm://" + host + ":" + port + "/" + db;
             default:
                 throw new IllegalArgumentException("该类型请使用「高级模式」直接填写 JDBC URL 与驱动类");
         }
-
-        if (StringUtils.isNotBlank(form.getExtraOptions())) {
-            String sep = url.contains("?") ? "&" : "?";
-            url = url + sep + form.getExtraOptions().trim();
-        }
-
-        return new ResolvedJdbc(url, driver, type);
     }
 
     public static DatabaseType parseType(String raw) {

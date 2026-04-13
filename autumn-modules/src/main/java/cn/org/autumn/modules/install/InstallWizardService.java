@@ -22,6 +22,7 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -34,6 +35,8 @@ import java.util.concurrent.TimeUnit;
 public class InstallWizardService {
 
     private static final Logger log = LoggerFactory.getLogger(InstallWizardService.class);
+
+    private static final int META_TABLE_DISPLAY_LIMIT = 500;
 
     @Value("${" + InstallConstants.CONFIG_PATH + ":" + InstallConstants.DEFAULT_CONFIG_FILE + "}")
     private String configPathProperty;
@@ -77,12 +80,48 @@ public class InstallWizardService {
         try (Connection conn = DriverManager.getConnection(r.getJdbcUrl(), form.getUsername(), form.getPassword())) {
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("ok", true);
-            out.put("product", conn.getMetaData().getDatabaseProductName());
-            out.put("version", conn.getMetaData().getDatabaseProductVersion());
-            out.put("url", r.getJdbcUrl());
+            String product = conn.getMetaData().getDatabaseProductName();
+            String version = conn.getMetaData().getDatabaseProductVersion();
+            out.put("product", product);
+            out.put("version", version);
             out.put("driver", r.getDriverClassName());
+            String masked = InstallJdbcUrlMask.mask(r.getJdbcUrl());
+            out.put("jdbcMasked", masked);
             privilegeProbe(conn, r.getDatabaseType());
             session.setAttribute(InstallConstants.SESSION_CHECKS_OK, Boolean.TRUE);
+
+            List<String> summaryLines = new ArrayList<>();
+            summaryLines.add("已成功连接数据库。");
+            summaryLines.add("产品：" + product + "。");
+            summaryLines.add("已测试建表与删表，账号具备安装所需权限。");
+            out.put("summaryLines", summaryLines);
+
+            List<Map<String, Object>> sections = new ArrayList<>();
+            Map<String, Object> secDb = new LinkedHashMap<>();
+            secDb.put("title", "数据库信息");
+            List<String> dbLines = new ArrayList<>();
+            dbLines.add("产品名称：" + product);
+            dbLines.add("版本信息：" + (version != null ? version : "—"));
+            dbLines.add("JDBC 驱动类：" + r.getDriverClassName());
+            secDb.put("lines", dbLines);
+            sections.add(secDb);
+
+            Map<String, Object> secConn = new LinkedHashMap<>();
+            secConn.put("title", "连接概要");
+            List<String> connLines = new ArrayList<>();
+            if (StringUtils.isNotBlank(form.getUsername())) {
+                connLines.add("登录用户：" + form.getUsername().trim());
+            }
+            connLines.add("连接地址（已脱敏，不含密码）：" + masked);
+            secConn.put("lines", connLines);
+            sections.add(secConn);
+
+            Map<String, Object> secPriv = new LinkedHashMap<>();
+            secPriv.put("title", "权限检测");
+            secPriv.put("lines", Collections.singletonList("已在当前库中创建并删除临时测试表，结果正常。"));
+            sections.add(secPriv);
+            out.put("sections", sections);
+
             return out;
         }
     }
@@ -111,8 +150,32 @@ public class InstallWizardService {
                     tables.add(prefix + tname);
                 }
             }
-            out.put("tables", tables);
-            out.put("tableCount", tables.size());
+            int total = tables.size();
+            boolean truncated = total > META_TABLE_DISPLAY_LIMIT;
+            List<String> displayTables = truncated ? new ArrayList<>(tables.subList(0, META_TABLE_DISPLAY_LIMIT)) : tables;
+
+            List<String> introLines = new ArrayList<>();
+            introLines.add("已读取当前连接下的库信息。");
+            introLines.add("数据库产品：" + md.getDatabaseProductName() + "。");
+            String cat = conn.getCatalog();
+            String sc = conn.getSchema();
+            if (StringUtils.isNotBlank(cat) || StringUtils.isNotBlank(sc)) {
+                introLines.add("当前目录/模式：" + StringUtils.defaultString(cat, "—") + " / " + StringUtils.defaultString(sc, "—") + "。");
+            }
+            introLines.add("共检测到 " + total + " 张数据表。");
+            if (truncated) {
+                introLines.add("下列列表仅展示前 " + META_TABLE_DISPLAY_LIMIT + " 个名称，完整数量以上述统计为准。");
+            }
+            if (r.getDatabaseType().supportsAnnotationTableSync()) {
+                introLines.add("安装完成后，系统将按配置自动维护与业务模型对应的表结构。");
+            } else {
+                introLines.add("当前数据库类型可能不走注解自动建表，请与运维确认表结构维护方式。");
+            }
+
+            out.put("introLines", introLines);
+            out.put("tables", displayTables);
+            out.put("tableCount", total);
+            out.put("tablesTruncated", truncated);
             out.put("annotationTableSync", r.getDatabaseType().supportsAnnotationTableSync());
             return out;
         }

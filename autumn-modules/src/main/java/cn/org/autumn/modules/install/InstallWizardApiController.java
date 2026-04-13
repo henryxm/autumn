@@ -39,6 +39,11 @@ public class InstallWizardApiController {
             row.put("label", label(t));
             row.put("defaultDriver", InstallJdbcHelper.defaultDriver(t));
             row.put("defaultPort", String.valueOf(InstallJdbcHelper.defaultPort(t)));
+            row.put("supportsEmbeddedFile", String.valueOf(InstallJdbcHelper.supportsEmbeddedFile(t)));
+            row.put("supportsEmbeddedMemory", String.valueOf(InstallJdbcHelper.supportsEmbeddedMemory(t)));
+            row.put("databaseFieldHintRemote", InstallJdbcHelper.databaseFieldHint(t, InstallJdbcHelper.ConnectionMode.REMOTE));
+            row.put("databaseFieldHintFile", InstallJdbcHelper.databaseFieldHint(t, InstallJdbcHelper.ConnectionMode.EMBEDDED_FILE));
+            row.put("databaseFieldHintMemory", InstallJdbcHelper.databaseFieldHint(t, InstallJdbcHelper.ConnectionMode.EMBEDDED_MEMORY));
             list.add(row);
         }
         Map<String, Object> out = new LinkedHashMap<>();

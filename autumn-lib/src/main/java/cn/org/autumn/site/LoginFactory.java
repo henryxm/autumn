@@ -50,7 +50,7 @@ public class LoginFactory extends Factory {
             return false;
         if (null == map)
             map = getOrdered(Login.class, "isNeed", HttpServletRequest.class, HttpServletResponse.class);
-        if (null != map && map.size() > 0) {
+        if (null != map && !map.isEmpty()) {
             for (Map.Entry<Integer, List<Login>> k : map.entrySet()) {
                 List<Login> list = k.getValue();
                 for (Login login : list) {
