@@ -1,5 +1,6 @@
 package cn.org.autumn.config;
 
+import cn.org.autumn.annotation.AllowPostConstructDuringInstall;
 import cn.org.autumn.modules.oauth.resolver.EncryptArgumentResolver;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +19,7 @@ import java.util.List;
 @Slf4j
 @Configuration
 @DependsOn({"env"})
+@AllowPostConstructDuringInstall
 public class WebConfig implements WebMvcConfigurer {
 
     @Autowired(required = false)
