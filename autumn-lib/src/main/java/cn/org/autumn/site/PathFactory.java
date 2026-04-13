@@ -19,6 +19,10 @@ public class PathFactory extends Factory {
 
     private static Map<Integer, List<Path>> map = null;
 
+    public static void clearOrderedHandlerCacheForJvmRestart() {
+        map = null;
+    }
+
     public interface Path {
 
         @Order(DEFAULT_ORDER)

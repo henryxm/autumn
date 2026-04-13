@@ -80,4 +80,13 @@ public class SpringContextUtils implements ApplicationContextAware {
     public static Class<? extends Object> getType(String name) {
         return applicationContext.getType(name);
     }
+
+    /**
+     * 与 {@link cn.org.autumn.config.Config#setApplicationContext} 一并清理，供安装向导等同 JVM 内二次启动，
+     * 避免静态字段仍指向已关闭的 {@link ApplicationContext} / {@link DefaultListableBeanFactory}。
+     */
+    public static void clearForJvmProcessRestart() {
+        applicationContext = null;
+        defaultListableBeanFactory = null;
+    }
 }

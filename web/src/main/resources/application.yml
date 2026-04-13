@@ -46,6 +46,15 @@ spring:
       matching-strategy: ANT_PATH_MATCHER
 
 autumn:
+  # —— 首次安装向导（给最终用户用）——
+  # autumn.install.wizard：是否启用。为 true 且尚未生成数据源文件时，打开网站会先进入安装页，无需手写配置。
+  # autumn.install.config-path：连接信息保存位置（相对程序运行目录），默认 config/datasource.yml。
+  # autumn.install.force：为 true 时忽略已有数据源文件，强制重新安装（也可用环境变量 AUTUMN_INSTALL_FORCE=true）。
+  # 本地开发可保持 wizard: false，继续使用 application-dev 等里的数据库设置。
+  install:
+    wizard: false
+    config-path: config/datasource.yml
+    force: false
   redis:
     open: false  # 是否开启redis缓存  true开启   false关闭
   shiro:

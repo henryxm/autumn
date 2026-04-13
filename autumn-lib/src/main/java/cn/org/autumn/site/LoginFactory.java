@@ -20,6 +20,10 @@ public class LoginFactory extends Factory {
 
     private static Map<Integer, List<Login>> map = null;
 
+    public static void clearOrderedHandlerCacheForJvmRestart() {
+        map = null;
+    }
+
     public interface Login {
         @Order(DEFAULT_ORDER)
         boolean isNeed(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse);

@@ -20,6 +20,10 @@ public class MappingFactory extends Factory {
 
     private static Map<Integer, List<MappingFactory.Mapping>> map = null;
 
+    public static void clearOrderedHandlerCacheForJvmRestart() {
+        map = null;
+    }
+
     public interface Mapping {
 
         @Order(DEFAULT_ORDER)

@@ -1,5 +1,7 @@
 package cn.org.autumn.config;
 
+import cn.org.autumn.database.DatabaseHolder;
+import cn.org.autumn.utils.SpringContextUtils;
 import com.baomidou.mybatisplus.entity.GlobalConfiguration;
 import com.baomidou.mybatisplus.entity.TableInfo;
 import com.baomidou.mybatisplus.enums.DBType;
@@ -8,6 +10,7 @@ import com.baomidou.mybatisplus.mapper.LogicSqlInjector;
 import com.baomidou.mybatisplus.toolkit.GlobalConfigUtils;
 import com.baomidou.mybatisplus.toolkit.StringUtils;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
+import org.springframework.context.ApplicationContext;
 
 /**
  * MP 2.x 仅在列命中 {@link com.baomidou.mybatisplus.toolkit.SqlReservedWords} 时用全局 {@code identifier-quote} 转义，
@@ -58,6 +61,7 @@ public class AutumnQuotedTableSqlInjector extends LogicSqlInjector {
     public void inject(MapperBuilderAssistant builderAssistant, Class<?> mapperClass) {
         GlobalConfiguration gc = GlobalConfigUtils.getGlobalConfig(builderAssistant.getConfiguration());
         ensurePostgresStyleColumnQuotingForQuotedLowercaseDdl(gc);
+        alignDialectFromSpringIfPossible(gc);
         super.inject(builderAssistant, mapperClass);
     }
 
@@ -67,10 +71,31 @@ public class AutumnQuotedTableSqlInjector extends LogicSqlInjector {
         if (builderAssistant != null && table != null) {
             GlobalConfiguration gc = GlobalConfigUtils.getGlobalConfig(builderAssistant.getConfiguration());
             ensurePostgresStyleColumnQuotingForQuotedLowercaseDdl(gc);
+            alignDialectFromSpringIfPossible(gc);
             quotePhysicalKeyColumn(gc, table);
             applyQuotedTableName(gc, table);
         }
         super.injectSql(builderAssistant, mapperClass, modelClass, table);
+    }
+
+    /**
+     * PageHelper 会带入 {@code mybatis-spring-boot-starter}，可能与 MP 的 {@code SqlSessionFactory} 竞态；
+     * 在注入 MappedStatement 前用 {@link DatabaseHolder} 再对齐一层，避免仍按 MySQL 生成反引号。
+     */
+    private static void alignDialectFromSpringIfPossible(GlobalConfiguration gc) {
+        if (gc == null) {
+            return;
+        }
+        try {
+            ApplicationContext ctx = SpringContextUtils.getApplicationContext();
+            if (ctx == null) {
+                return;
+            }
+            DatabaseHolder holder = ctx.getBean(DatabaseHolder.class);
+            MybatisPlusGlobalDialectAlign.apply(holder.getType(), gc);
+        } catch (Exception ignored) {
+            // 极早阶段尚无容器或 holder，忽略
+        }
     }
 
     /**

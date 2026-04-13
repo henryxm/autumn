@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>安装向导</title>
+    <style>
+        body { font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; background: #f4f6f9; margin: 0; color: #222; }
+        .wrap { max-width: 720px; margin: 32px auto; padding: 0 16px; }
+        .card { background: #fff; border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,.06); padding: 28px 32px; }
+        h1 { font-size: 22px; margin: 0 0 8px; }
+        h2 { font-size: 17px; margin: 0 0 12px; }
+        .sub { color: #666; font-size: 14px; margin-bottom: 20px; line-height: 1.5; }
+        .steps { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; font-size: 13px; color: #888; }
+        .step-on { color: #1a73e8; font-weight: 600; }
+        .panel { display: none; }
+        .panel.active { display: block; }
+        label { display: block; margin: 12px 0 4px; font-size: 13px; color: #444; }
+        input, select, textarea { width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid #dadce0; border-radius: 4px; font-size: 14px; }
+        textarea { min-height: 120px; font-family: inherit; }
+        .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        @media (max-width: 600px) { .row { grid-template-columns: 1fr; } }
+        .btn { display: inline-block; margin-top: 16px; margin-right: 8px; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
+        .btn-primary { background: #1a73e8; color: #fff; }
+        .btn-secondary { background: #e8eaed; color: #333; }
+        .err { color: #c5221f; font-size: 13px; margin-top: 8px; white-space: pre-wrap; }
+        .ok { color: #137333; font-size: 13px; margin-top: 8px; }
+        pre { background: #f8f9fa; padding: 12px; border-radius: 4px; overflow: auto; font-size: 11px; max-height: 360px; }
+        ul.notes { font-size: 13px; color: #555; line-height: 1.65; padding-left: 1.2em; }
+        code { font-size: 12px; background: #f1f3f4; padding: 1px 5px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <div class="card">
+        <h1>欢迎使用，请先完成安装</h1>
+        <p class="sub">下面几步会引导您同意说明、填写数据库信息、检查连接是否正常，最后保存设置。保存后程序会自动重启一次，然后为您建好数据表并准备初始数据。整个过程在网页上完成即可，无需编辑配置文件（除非您想改保存位置）。</p>
+        <div class="steps" id="stepsBar"></div>
+
+        <div id="panel-1" class="panel active">
+            <h2>说明与同意</h2>
+            <ul class="notes">
+                <li>安装结束后，系统会把数据库连接信息保存到程序目录下的文件 <code>config/datasource.yml</code>（一般不用改）。若需改保存路径，可在配置里设置参数 <code>autumn.install.config-path</code>。</li>
+                <li>您填写的数据库账号需要能<strong>新建表、删除表</strong>以及日常读写数据。检测步骤里会临时建一张测试表再删掉，这是正常现象。</li>
+                <li>为支持昵称、备注里的<strong>表情符号（Emoji）</strong>等字符，向导在能自动处理的数据库上会带上合适的连接参数（例如 MySQL 会带上 <code>connectionCollation=utf8mb4_unicode_ci</code>，与常用线上配置一致）。若使用「高级模式」自己写连接地址，请确认库与连接串均为 UTF‑8 / 宽字符友好设置。</li>
+                <li>需要<strong>重新安装</strong>时：删掉上面的 <code>config/datasource.yml</code>，或在启动前设置环境变量 <code>AUTUMN_INSTALL_FORCE=true</code>（参数名 <code>autumn.install.force</code> 也可在配置文件中设为 true）。</li>
+                <li>若只删了数据库里的数据、但配置文件还在，程序可能起不来。请先恢复数据库，或删掉配置文件后重新走本安装页。</li>
+                <li>部分数据库（如 Oracle、达梦、人大金仓）需要您把官方提供的驱动程序放到运行环境中，具体方式取决于您如何部署（例如与程序包放在同一目录的 <code>lib</code> 文件夹等）。</li>
+            </ul>
+            <label><input type="checkbox" id="agreeCb"/> 我已阅读并理解上述说明</label>
+            <div class="err" id="e1"></div>
+            <button type="button" class="btn btn-primary" onclick="doAgree()">同意并继续</button>
+        </div>
+
+        <div id="panel-2" class="panel">
+            <h2>填写数据库信息</h2>
+            <p class="sub">请选择数据库类型，并填写连接信息。若不清楚「主机、端口」可询问为您搭建数据库的服务商或同事。</p>
+            <label>数据库类型</label>
+            <select id="databaseType"></select>
+            <div class="row">
+                <div>
+                    <label>主机地址</label>
+                    <input id="host" value="localhost"/>
+                </div>
+                <div>
+                    <label>端口（不填则用该类型常用默认端口）</label>
+                    <input id="port" placeholder="可留空"/>
+                </div>
+            </div>
+            <label>库名 / 文件路径 / 其他标识（随类型变化，见占位提示）</label>
+            <input id="databaseName" placeholder="例如库名 autumn，或本机文件路径"/>
+            <div class="row">
+                <div>
+                    <label>用户名</label>
+                    <input id="username"/>
+                </div>
+                <div>
+                    <label>密码</label>
+                    <input id="password" type="password"/>
+                </div>
+            </div>
+            <label>附加连接参数（选填）</label>
+            <p class="sub" style="margin-top:0">会追加到连接地址末尾。例如 PostgreSQL 需要 SSL 时可填 <code>sslmode=require</code>（具体以数据库文档为准）。</p>
+            <input id="extraOptions" placeholder="选填，如 sslmode=require"/>
+            <label><input type="checkbox" id="advancedUrl"/> 高级：我自己写完整的 JDBC 连接串和驱动类名</label>
+            <div id="advBox" style="display:none;">
+                <label>JDBC 连接串</label>
+                <textarea id="jdbcUrl" placeholder="以 jdbc: 开头"></textarea>
+                <label>驱动类名（可留空，与所选类型默认一致）</label>
+                <input id="driverClassName" placeholder="选填"/>
+            </div>
+            <div class="err" id="e2"></div>
+            <button type="button" class="btn btn-secondary" onclick="go(1)">上一步</button>
+            <button type="button" class="btn btn-primary" onclick="doForm()">下一步</button>
+        </div>
+
+        <div id="panel-3" class="panel">
+            <h2>检查连接与权限</h2>
+            <p class="sub">将尝试连接数据库，并检查是否具备建表、删表权限。若失败，请根据提示联系管理员调整账号权限或核对主机、端口、库名、密码。</p>
+            <div id="checkResult"></div>
+            <div class="err" id="e3"></div>
+            <button type="button" class="btn btn-secondary" onclick="go(2)">上一步</button>
+            <button type="button" class="btn btn-primary" onclick="doCheck()">开始检查</button>
+            <button type="button" class="btn btn-primary" id="btnNext3" style="display:none" onclick="go(4)">检查通过，继续</button>
+        </div>
+
+        <div id="panel-4" class="panel">
+            <h2>确认数据库现状</h2>
+            <p class="sub">下方会列出当前连接下能读到的<strong>全部数据表</strong>及数量。表很多时加载可能稍慢，属正常现象。请确认是否要在当前库中继续安装（若已有同名表，可能与自动建表策略冲突，建议先备份或换库）。</p>
+            <div id="metaResult"></div>
+            <ul class="notes">
+                <li>点击「确认并完成安装」后，会写入 <code>config/datasource.yml</code>，随后程序<strong>自动重启</strong>。</li>
+                <li>重启成功后将按系统设置自动维护表结构（与配置项 <code>autumn.table</code> 等相关），并写入网站运行所需的基础数据。</li>
+            </ul>
+            <div class="err" id="e4"></div>
+            <button type="button" class="btn btn-secondary" onclick="go(3)">上一步</button>
+            <button type="button" class="btn btn-primary" onclick="loadMeta()">刷新列表</button>
+            <button type="button" class="btn btn-primary" onclick="doFinish()">确认并完成安装</button>
+        </div>
+
+        <div id="panel-5" class="panel">
+            <h2>安装已完成</h2>
+            <p class="ok" id="doneMsg"></p>
+            <p class="sub">程序正在重启，请等待几秒再访问。若长时间打不开页面，请查看运行日志或联系运维（例如是否使用了守护进程自动拉起程序）。</p>
+            <a class="btn btn-primary" href="/">进入网站首页</a>
+            <a class="btn btn-secondary" href="/login.html">去登录页</a>
+        </div>
+    </div>
+</div>
+<script>
+    var step = 1;
+    var typeList = [];
+    var api = '${installApiBase}';
+
+    function el(id) { return document.getElementById(id); }
+
+    function renderSteps() {
+        var names = ['说明', '数据库', '检查', '确认', '完成'];
+        var h = '';
+        for (var i = 0; i < names.length; i++) {
+            h += '<span class="' + (i + 1 === step ? 'step-on' : '') + '">' + (i + 1) + '. ' + names[i] + '</span>';
+        }
+        el('stepsBar').innerHTML = h;
+    }
+
+    function go(n) {
+        step = n;
+        for (var i = 1; i <= 5; i++) {
+            el('panel-' + i).classList.toggle('active', i === step);
+        }
+        renderSteps();
+        if (step === 4) {
+            loadMeta();
+        }
+    }
+
+    el('advancedUrl').onchange = function () {
+        el('advBox').style.display = this.checked ? 'block' : 'none';
+    };
+
+    function loadTypes() {
+        fetch(api + '/types').then(function (r) { return r.json(); }).then(function (d) {
+            typeList = d.types || [];
+            var s = el('databaseType');
+            s.innerHTML = '';
+            typeList.forEach(function (t) {
+                var o = document.createElement('option');
+                o.value = t.id;
+                o.textContent = t.label + ' (' + t.id + ')';
+                s.appendChild(o);
+            });
+            if (typeList.length) {
+                el('port').placeholder = typeList[0].defaultPort || '可留空';
+            }
+        }).catch(function (e) {
+            el('e1').textContent = '无法加载数据库类型列表: ' + e;
+        });
+    }
+
+    el('databaseType').onchange = function () {
+        var id = this.value;
+        var t = typeList.find(function (x) { return x.id === id; });
+        if (t && t.defaultPort && t.defaultPort !== '0') {
+            el('port').placeholder = t.defaultPort;
+        }
+    };
+
+    function doAgree() {
+        el('e1').textContent = '';
+        if (!el('agreeCb').checked) {
+            el('e1').textContent = '请先勾选「我已阅读并理解上述说明」';
+            return;
+        }
+        fetch(api + '/agree', { method: 'POST' }).then(function (r) { return r.json(); }).then(function () {
+            go(2);
+        }).catch(function (e) {
+            el('e1').textContent = String(e);
+        });
+    }
+
+    function payloadForm() {
+        return {
+            databaseType: el('databaseType').value,
+            host: el('host').value,
+            port: el('port').value,
+            databaseName: el('databaseName').value,
+            username: el('username').value,
+            password: el('password').value,
+            extraOptions: el('extraOptions').value,
+            advancedUrl: el('advancedUrl').checked,
+            jdbcUrl: el('jdbcUrl').value,
+            driverClassName: el('driverClassName').value
+        };
+    }
+
+    function doForm() {
+        el('e2').textContent = '';
+        fetch(api + '/form', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payloadForm())
+        }).then(function (r) { return r.json(); }).then(function (d) {
+            if (!d.ok) {
+                el('e2').textContent = d.error || '保存失败';
+                return;
+            }
+            go(3);
+            el('checkResult').innerHTML = '';
+            el('btnNext3').style.display = 'none';
+            el('e3').textContent = '';
+        }).catch(function (e) {
+            el('e2').textContent = String(e);
+        });
+    }
+
+    function doCheck() {
+        el('e3').textContent = '';
+        el('btnNext3').style.display = 'none';
+        fetch(api + '/check', { method: 'POST' }).then(function (r) { return r.json(); }).then(function (d) {
+            if (!d.ok) {
+                el('e3').textContent = d.error || '检查未通过';
+                el('checkResult').innerHTML = '';
+                return;
+            }
+            el('checkResult').innerHTML = '<pre>' + JSON.stringify(d, null, 2) + '</pre>';
+            el('btnNext3').style.display = 'inline-block';
+        }).catch(function (e) {
+            el('e3').textContent = String(e);
+        });
+    }
+
+    function loadMeta() {
+        el('e4').textContent = '';
+        fetch(api + '/meta').then(function (r) { return r.json(); }).then(function (d) {
+            if (!d.ok) {
+                el('e4').textContent = d.error || '读取失败';
+                return;
+            }
+            el('metaResult').innerHTML = '<pre>' + JSON.stringify(d, null, 2) + '</pre>';
+        }).catch(function (e) {
+            el('e4').textContent = String(e);
+        });
+    }
+
+    function doFinish() {
+        el('e4').textContent = '';
+        fetch(api + '/finish', { method: 'POST' }).then(function (r) { return r.json(); }).then(function (d) {
+            if (!d.ok) {
+                el('e4').textContent = d.error || '保存失败';
+                return;
+            }
+            el('doneMsg').textContent = d.message || '配置已保存。';
+            go(5);
+        }).catch(function (e) {
+            el('e4').textContent = String(e);
+        });
+    }
+
+    renderSteps();
+    loadTypes();
+</script>
+</body>
+</html>

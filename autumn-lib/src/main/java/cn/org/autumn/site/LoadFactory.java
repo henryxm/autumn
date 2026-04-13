@@ -11,6 +11,10 @@ public class LoadFactory extends Factory {
 
     private static boolean done = false;
 
+    public static void resetJvmRestart() {
+        done = false;
+    }
+
     public boolean isDone() {
         return done;
     }
