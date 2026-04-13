@@ -31,4 +31,34 @@ public class OracleRuntimeSqlDialect implements RuntimeSqlDialect {
         String esc = csvInner == null ? "" : csvInner.replace("'", "''");
         return "INSTR(','||'" + esc + "'||',', ','||CAST(" + qualifiedColumn + " AS VARCHAR2(4000))||',') > 0";
     }
+
+    @Override
+    public String sqlTimestampBucketDay(String quotedColumn) {
+        return "TO_CHAR(" + quotedColumn + ", 'YYYY-MM-DD')";
+    }
+
+    @Override
+    public String sqlTimestampBucketMonth(String quotedColumn) {
+        return "TO_CHAR(" + quotedColumn + ", 'YYYY-MM')";
+    }
+
+    @Override
+    public String sqlTimestampBucketYear(String quotedColumn) {
+        return "TO_CHAR(" + quotedColumn + ", 'YYYY')";
+    }
+
+    @Override
+    public String sqlTimestampBucketIsoWeek(String quotedColumn) {
+        return "TO_CHAR(" + quotedColumn + ", 'IYYY') || '-W' || LPAD(TO_CHAR(" + quotedColumn + ", 'IW'), 2, '0')";
+    }
+
+    @Override
+    public String sqlLimitOffsetSuffix(long limit, long offset) {
+        return " OFFSET " + offset + " ROWS FETCH NEXT " + limit + " ROWS ONLY";
+    }
+
+    @Override
+    public String sqlLowerColumnContainsNeedle(String quotedColumn, String mybatisNeedleParam) {
+        return "INSTR(LOWER(NVL(" + quotedColumn + ", '')), " + mybatisNeedleParam + ") > 0";
+    }
 }

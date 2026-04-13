@@ -13,7 +13,8 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
  * 避免在具体 Service 中重复 {@code RuntimeSqlDialectRegistry.get()} 与样板方法。
  * <p>
  * 已接入继承链：{@code BaseQueueService} → … → {@link cn.org.autumn.base.ModuleService}，
- * 业务实现类可直接调用 {@link #columnInWrapper(String)}、{@link #quote(String)}、{@link #sql()} 等；
+ * 业务实现类可直接调用 {@link #columnInWrapper(String)}、{@link #quote(String)}、{@link #sql()}、{@link #timestampBucketDay(String)}、
+ * {@link #booleanColumnAsTinyInt01(String)}、{@link #limitOffsetSuffix(long, long)} 等；
  * {@link #columnInWrapper(String)} 与 {@link cn.org.autumn.database.runtime.WrapperColumns#columnInWrapper(String)} 同源。
  *
  * @see RuntimeSql
@@ -77,5 +78,48 @@ public abstract class DialectService<M extends BaseMapper<T>, T> extends Service
 
     public String enabledTrueSqlLiteral() {
         return sql.enabledTrueSqlLiteral();
+    }
+
+    public String enabledFalseSqlLiteral() {
+        return sql.enabledFalseSqlLiteral();
+    }
+
+    /** @see RuntimeSql#booleanColumnAsTinyInt01(String) */
+    public String booleanColumnAsTinyInt01(String quotedColumn) {
+        return sql.booleanColumnAsTinyInt01(quotedColumn);
+    }
+
+    /** @see RuntimeSql#limitOffsetSuffix(long, long) */
+    public String limitOffsetSuffix(long limit, long offset) {
+        return sql.limitOffsetSuffix(limit, offset);
+    }
+
+    /** @see RuntimeSql#lowerColumnContainsNeedle(String, String) */
+    public String lowerColumnContainsNeedle(String quotedColumn, String mybatisNeedleParam) {
+        return sql.lowerColumnContainsNeedle(quotedColumn, mybatisNeedleParam);
+    }
+
+    /**
+     * 日桶键表达式 {@code yyyy-MM-dd}，与 {@link RuntimeSql#timestampBucketDay(String)} 同源；入参为已由 {@link #quote(String)} 或 {@link #column(String)} 得到的单列片段。
+     * <p>
+     * 可与 {@link com.baomidou.mybatisplus.core.conditions.query.QueryWrapper#apply(String, Object...)} 等组合，避免在 Wrapper 中手写 {@code DATE_FORMAT}/{@code to_char}。
+     */
+    public String timestampBucketDay(String quotedColumn) {
+        return sql.timestampBucketDay(quotedColumn);
+    }
+
+    /** @see RuntimeSql#timestampBucketMonth(String) */
+    public String timestampBucketMonth(String quotedColumn) {
+        return sql.timestampBucketMonth(quotedColumn);
+    }
+
+    /** @see RuntimeSql#timestampBucketYear(String) */
+    public String timestampBucketYear(String quotedColumn) {
+        return sql.timestampBucketYear(quotedColumn);
+    }
+
+    /** @see RuntimeSql#timestampBucketIsoWeek(String) */
+    public String timestampBucketIsoWeek(String quotedColumn) {
+        return sql.timestampBucketIsoWeek(quotedColumn);
     }
 }

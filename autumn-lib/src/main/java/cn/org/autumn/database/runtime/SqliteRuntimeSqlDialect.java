@@ -33,4 +33,35 @@ public class SqliteRuntimeSqlDialect implements RuntimeSqlDialect {
     public String likeContainsAny(String mybatisParamPlaceholder) {
         return "'%' || " + mybatisParamPlaceholder + " || '%'";
     }
+
+    @Override
+    public String sqlTimestampBucketDay(String quotedColumn) {
+        return "strftime('%Y-%m-%d', " + quotedColumn + ")";
+    }
+
+    @Override
+    public String sqlTimestampBucketMonth(String quotedColumn) {
+        return "strftime('%Y-%m', " + quotedColumn + ")";
+    }
+
+    @Override
+    public String sqlTimestampBucketYear(String quotedColumn) {
+        return "strftime('%Y', " + quotedColumn + ")";
+    }
+
+    @Override
+    public String sqlTimestampBucketIsoWeek(String quotedColumn) {
+        String c = quotedColumn;
+        return "strftime('%G', " + c + ") || '-W' || strftime('%V', " + c + ")";
+    }
+
+    @Override
+    public String sqlLimitOffsetSuffix(long limit, long offset) {
+        return " LIMIT " + limit + " OFFSET " + offset;
+    }
+
+    @Override
+    public String sqlLowerColumnContainsNeedle(String quotedColumn, String mybatisNeedleParam) {
+        return "instr(LOWER(COALESCE(" + quotedColumn + ", '')), " + mybatisNeedleParam + ") > 0";
+    }
 }

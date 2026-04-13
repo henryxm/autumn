@@ -6,8 +6,8 @@ import java.util.Map;
 
 /**
  * 与 {@link RuntimeSqlDialect#columnInWrapper(String)} 一致（默认即 {@link RuntimeSqlDialect#quote(String)}），
- * 供未继承 {@link cn.org.autumn.service.DialectService} 的 {@link com.baomidou.mybatisplus.service.impl.ServiceImpl}
- * 子类在 {@link com.baomidou.mybatisplus.mapper.EntityWrapper} 中拼接列名。
+ * 供未继承 {@link cn.org.autumn.service.DialectService} 的 {@link com.baomidou.mybatisplus.extension.service.impl.ServiceImpl}
+ * 子类在 {@link com.baomidou.mybatisplus.core.conditions.query.QueryWrapper} 等中拼接列名。
  * <p>
  * <b>跨库语义</b>：由 {@link RuntimeSqlDialectRegistry#get()} → {@link RoutingRuntimeSqlDialect} 按<strong>当前路由</strong>
  * JDBC URL（{@link cn.org.autumn.database.DatabaseHolder#readCurrentRoutingJdbcUrl}）解析方言；内嵌 H2+{@code MODE=MySQL} 时运行期引用走
