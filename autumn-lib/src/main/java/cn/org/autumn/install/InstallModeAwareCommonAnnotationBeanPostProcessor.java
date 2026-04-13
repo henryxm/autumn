@@ -2,10 +2,8 @@ package cn.org.autumn.install;
 
 import cn.org.autumn.annotation.AllowPostConstructDuringInstall;
 import org.springframework.beans.BeansException;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.CommonAnnotationBeanPostProcessor;
 import org.springframework.core.annotation.AnnotatedElementUtils;
-import org.springframework.core.env.Environment;
 import org.springframework.util.ClassUtils;
 
 /**
@@ -24,12 +22,9 @@ import org.springframework.util.ClassUtils;
  */
 public class InstallModeAwareCommonAnnotationBeanPostProcessor extends CommonAnnotationBeanPostProcessor {
 
-    @Autowired(required = false)
-    private Environment environment;
-
     @Override
     public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
-        if (environment != null && InstallMode.isActive(environment)) {
+        if (InstallMode.isActive()) {
             Class<?> userClass = ClassUtils.getUserClass(bean);
             if (!AnnotatedElementUtils.hasAnnotation(userClass, AllowPostConstructDuringInstall.class)) {
                 return bean;
