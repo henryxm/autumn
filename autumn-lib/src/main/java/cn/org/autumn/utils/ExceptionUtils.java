@@ -8,6 +8,8 @@ import java.io.StringWriter;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 异常工具类
@@ -15,6 +17,14 @@ import java.util.Map;
  */
 @Slf4j
 public class ExceptionUtils {
+    private static final long BENIGN_LOG_WINDOW_MS = 60_000L;
+    private static final int BENIGN_LOG_KEY_MAX_SIZE = 10_000;
+    private static final ConcurrentHashMap<String, BenignLogCounter> BENIGN_LOG_COUNTERS = new ConcurrentHashMap<>();
+
+    private static class BenignLogCounter {
+        private volatile long windowStartMs;
+        private final AtomicInteger count = new AtomicInteger(0);
+    }
 
     /**
      * 获取异常的完整堆栈跟踪信息
@@ -93,6 +103,101 @@ public class ExceptionUtils {
                 e instanceof org.springframework.http.converter.HttpMessageNotReadableException ||
                 e instanceof org.springframework.web.HttpMediaTypeNotSupportedException ||
                 e instanceof org.springframework.web.bind.MissingServletRequestParameterException;
+    }
+
+    /**
+     * 判断是否为客户端中途断开连接导致的异常。
+     * 这类异常通常不是服务端业务错误，不应继续尝试写错误响应。
+     */
+    public static boolean isClientDisconnectException(Throwable t) {
+        for (Throwable x = t; x != null; x = x.getCause()) {
+            String message = x.getMessage();
+            if (message != null) {
+                if (message.contains("Broken pipe") ||
+                        message.contains("Connection reset by peer") ||
+                        message.contains("An established connection was aborted by the software in your host machine") ||
+                        message.contains("connection abort") ||
+                        message.contains("Connection aborted")) {
+                    return true;
+                }
+            }
+            String className = x.getClass().getName();
+            if (className.contains("AsyncRequestNotUsableException") ||
+                    className.contains("ClientAbortException") ||
+                    className.contains("AbortedException") ||
+                    className.contains("EofException")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 判断是否为异步请求生命周期中的“预期内”异常（超时/已完成后写入等）。
+     * 这些异常在高并发、长连接、流式响应场景下常见，通常不代表业务逻辑故障。
+     */
+    public static boolean isBenignAsyncLifecycleException(Throwable t) {
+        for (Throwable x = t; x != null; x = x.getCause()) {
+            String className = x.getClass().getName();
+            if (className.contains("AsyncRequestTimeoutException") ||
+                    className.contains("AsyncRequestNotUsableException")) {
+                return true;
+            }
+            String message = x.getMessage();
+            if (message != null) {
+                if (message.contains("ResponseBodyEmitter has already completed") ||
+                        message.contains("The response object has been recycled and is no longer associated with this facade")) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 对“预期内异常”（例如客户端断开连接）做限频日志，避免日志刷屏影响问题判断。
+     * 维度：category + requestUri；窗口：1分钟。
+     */
+    public static boolean shouldLogBenignException(String category, HttpServletRequest request) {
+        return nextBenignExceptionLogHint(category, request) != null;
+    }
+
+    /**
+     * 返回预期内异常的日志提示：
+     * - 返回 null：当前应抑制日志；
+     * - 返回空串：当前输出一条常规日志；
+     * - 返回非空串：当前输出一条日志，并携带上一窗口抑制计数提示。
+     */
+    public static String nextBenignExceptionLogHint(String category, HttpServletRequest request) {
+        String uri = request != null ? request.getRequestURI() : "unknown";
+        String key = category + "|" + uri;
+        if (BENIGN_LOG_COUNTERS.size() > BENIGN_LOG_KEY_MAX_SIZE) {
+            BENIGN_LOG_COUNTERS.clear();
+        }
+        BenignLogCounter counter = BENIGN_LOG_COUNTERS.computeIfAbsent(key, k -> new BenignLogCounter());
+        long now = System.currentTimeMillis();
+        synchronized (counter) {
+            if (counter.windowStartMs == 0L) {
+                counter.windowStartMs = now;
+                counter.count.set(1);
+                return "";
+            }
+            if (now - counter.windowStartMs >= BENIGN_LOG_WINDOW_MS) {
+                int previousCount = counter.count.get();
+                counter.windowStartMs = now;
+                counter.count.set(1);
+                int suppressed = Math.max(0, previousCount - 1);
+                if (suppressed > 0) {
+                    return "（过去60秒同类日志已抑制 " + suppressed + " 次）";
+                }
+                return "";
+            }
+            int current = counter.count.incrementAndGet();
+            if (current == 1) {
+                return "";
+            }
+            return null;
+        }
     }
 
     /**
