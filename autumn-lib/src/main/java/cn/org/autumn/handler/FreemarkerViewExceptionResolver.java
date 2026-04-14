@@ -2,19 +2,20 @@ package cn.org.autumn.handler;
 
 import cn.org.autumn.model.Error;
 import cn.org.autumn.model.Response;
-import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson2.JSON;
 import freemarker.template.TemplateException;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.core.Ordered;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.handler.AbstractHandlerExceptionResolver;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 /**
  * 统一处理 FreeMarker 视图渲染异常，避免将堆栈直接暴露到浏览器。
@@ -146,11 +147,7 @@ public class FreemarkerViewExceptionResolver extends AbstractHandlerExceptionRes
             }
             target = target + (target.contains("?") ? "&" : "?") + "_fmRetry=" + nextRetryCount;
         }
-        try {
-            return "/loading.html?target=" + URLEncoder.encode(target, "UTF-8");
-        } catch (Exception ignored) {
-            return "/loading.html";
-        }
+        return "/loading.html?target=" + URLEncoder.encode(target, StandardCharsets.UTF_8);
     }
 
     private int getRetryCount(HttpServletRequest request) {
