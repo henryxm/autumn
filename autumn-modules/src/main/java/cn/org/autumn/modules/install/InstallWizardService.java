@@ -93,6 +93,9 @@ public class InstallWizardService {
             List<String> summaryLines = new ArrayList<>();
             summaryLines.add("已成功连接数据库。");
             summaryLines.add("产品：" + product + "。");
+            if (r.getDatabaseType() == DatabaseType.H2) {
+                summaryLines.add("H2 兼容模式：" + InstallJdbcHelper.H2CompatibilityMode.fromForm(form).name() + "。");
+            }
             summaryLines.add("已测试建表与删表，账号具备安装所需权限。");
             out.put("summaryLines", summaryLines);
 
@@ -111,6 +114,9 @@ public class InstallWizardService {
             List<String> connLines = new ArrayList<>();
             if (StringUtils.isNotBlank(form.getUsername())) {
                 connLines.add("登录用户：" + form.getUsername().trim());
+            }
+            if (r.getDatabaseType() == DatabaseType.H2) {
+                connLines.add("H2 兼容模式：" + InstallJdbcHelper.H2CompatibilityMode.fromForm(form).name());
             }
             connLines.add("连接地址（已脱敏，不含密码）：" + masked);
             secConn.put("lines", connLines);

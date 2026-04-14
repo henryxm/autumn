@@ -120,6 +120,27 @@ public class AExceptionHandler {
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Response<?>> handleException(Exception e, HttpServletRequest request, HttpServletResponse response) {
+        if (response != null && response.isCommitted()) {
+            String hint = ExceptionUtils.nextBenignExceptionLogHint("response-committed", request);
+            if (request != null && hint != null) {
+                log.debug("响应已提交后出现后续异常，已忽略{}。请求方式:{}, 路径:{}, IP:{}, 错误:{}", hint, request.getMethod(), request.getRequestURI(), IPUtils.getIp(request), e.getMessage());
+            }
+            return null;
+        }
+        if (ExceptionUtils.isClientDisconnectException(e)) {
+            String hint = ExceptionUtils.nextBenignExceptionLogHint("client-disconnect", request);
+            if (request != null && hint != null) {
+                log.debug("客户端连接中断，已忽略{}。请求方式:{}, 路径:{}, IP:{}, 错误:{}", hint, request.getMethod(), request.getRequestURI(), IPUtils.getIp(request), e.getMessage());
+            }
+            return null;
+        }
+        if (ExceptionUtils.isBenignAsyncLifecycleException(e)) {
+            String hint = ExceptionUtils.nextBenignExceptionLogHint("async-lifecycle", request);
+            if (request != null && hint != null) {
+                log.debug("异步请求生命周期边界异常，已忽略{}。请求方式:{}, 路径:{}, IP:{}, 错误:{}", hint, request.getMethod(), request.getRequestURI(), IPUtils.getIp(request), e.getMessage());
+            }
+            return null;
+        }
         forceJsonContentType(request, response);
         if (log.isDebugEnabled() && null != e && null != request) {
             log.debug("请求方式:{}, 路径:{}, IP:{}, 错误:{}", request.getMethod(), request.getRequestURI(), IPUtils.getIp(request), e.getMessage(), e);

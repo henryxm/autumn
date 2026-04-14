@@ -44,4 +44,17 @@ public class DataSourceDialectRegistryTest {
         DataSourceDialectRegistry r = new DataSourceDialectRegistry(env);
         assertEquals(DatabaseType.MYSQL, r.resolveForLookupKey("unknown"));
     }
+
+    @Test
+    public void resolveJdbcUrlForLookupKeyTracksFirstAndSecond() {
+        MockEnvironment env = new MockEnvironment()
+                .withProperty("spring.datasource.druid.first.url", "jdbc:mysql://localhost/a")
+                .withProperty("spring.datasource.druid.second.url", "jdbc:h2:mem:z;MODE=MySQL");
+        DataSourceDialectRegistry r = new DataSourceDialectRegistry(env);
+        assertEquals("jdbc:mysql://localhost/a", r.resolveJdbcUrlForLookupKey(null));
+        assertEquals("jdbc:mysql://localhost/a", r.resolveJdbcUrlForLookupKey(""));
+        assertEquals("jdbc:mysql://localhost/a", r.resolveJdbcUrlForLookupKey(DataSourceNames.FIRST));
+        assertEquals("jdbc:h2:mem:z;MODE=MySQL", r.resolveJdbcUrlForLookupKey(DataSourceNames.SECOND));
+        assertEquals("jdbc:mysql://localhost/a", r.resolveJdbcUrlForLookupKey("unknown"));
+    }
 }

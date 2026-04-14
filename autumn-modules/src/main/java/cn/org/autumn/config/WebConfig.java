@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.DependsOn;
 import org.springframework.lang.NonNull;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter;
 import org.springframework.web.servlet.mvc.method.annotation.RequestResponseBodyMethodProcessor;
@@ -21,6 +22,12 @@ import java.util.List;
 @DependsOn({"env"})
 @AllowPostConstructDuringInstall
 public class WebConfig implements WebMvcConfigurer {
+    /**
+     * 异步请求默认超时时间（毫秒），可通过配置覆盖。
+     * 适当拉长可减少长轮询/流式响应的非业务超时噪声。
+     */
+    @Value("${spring.mvc.async.request-timeout:900000}")
+    private Long asyncRequestTimeoutMs;
 
     @Autowired(required = false)
     List<ResourceHandler> resourceHandlers;
@@ -121,6 +128,13 @@ public class WebConfig implements WebMvcConfigurer {
             for (ResourceHandler resourceHandler : resourceHandlers) {
                 resourceHandler.apply(registry);
             }
+        }
+    }
+
+    @Override
+    public void configureAsyncSupport(@NonNull AsyncSupportConfigurer configurer) {
+        if (asyncRequestTimeoutMs != null && asyncRequestTimeoutMs > 0) {
+            configurer.setDefaultTimeout(asyncRequestTimeoutMs);
         }
     }
 }

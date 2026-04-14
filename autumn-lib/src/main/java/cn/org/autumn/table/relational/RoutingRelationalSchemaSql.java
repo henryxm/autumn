@@ -10,8 +10,8 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
 /**
- * Spring 运行期：{@link TableDao} 路径仅在 MySQL 协议族上启用；内嵌 H2 且<strong>当前路由</strong> URL 声明 {@code MODE=MySQL} 时走
- * {@link H2MysqlCompatSchemaSql}。
+ * Spring 运行期：{@link TableDao} 路径仅在 MySQL 协议族上启用；内嵌 H2 且<strong>当前路由数据源</strong> JDBC URL 声明
+ * {@code MODE=MySQL} 时走 {@link H2MysqlCompatSchemaSql}（与 {@link EmbeddedH2MysqlMode} 同源判定）。
  * <p>
  * {@link DatabaseHolder#getType()} 与多数据源线程路由一致时，本类选用的方言与当前连接目标一致
  * （见 {@link cn.org.autumn.datasources.DataSourceDialectRegistry}）。

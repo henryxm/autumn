@@ -139,6 +139,65 @@
             margin-top: 10px;
             line-height: 1.5;
         }
+        #h2ModeBox {
+            margin: 10px 0 6px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px dashed #bfdbfe;
+            background: #f8fbff;
+        }
+        .h2-mode-guide-title {
+            font-size: 0.8125rem;
+            font-weight: 600;
+            color: #334155;
+            margin: 10px 0 6px;
+        }
+        .h2-mode-table-wrap {
+            overflow-x: auto;
+            margin-top: 4px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            background: #fff;
+        }
+        .h2-mode-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8125rem;
+            min-width: 520px;
+        }
+        .h2-mode-table th,
+        .h2-mode-table td {
+            border-bottom: 1px solid #e2e8f0;
+            padding: 8px 10px;
+            text-align: left;
+            vertical-align: top;
+            line-height: 1.5;
+        }
+        .h2-mode-table th {
+            background: #f1f5f9;
+            color: #475569;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .h2-mode-table tbody tr:last-child td { border-bottom: none; }
+        .h2-mode-table tbody tr { cursor: pointer; transition: background 0.12s; }
+        .h2-mode-table tbody tr:nth-child(even) { background: #fafbfc; }
+        .h2-mode-table tbody tr:hover { background: #f1f5f9; }
+        .h2-mode-table tbody tr.h2-mode-row-active {
+            background: #eff6ff;
+            box-shadow: inset 3px 0 0 0 var(--primary);
+        }
+        .h2-tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 0.6875rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .h2-tag-rec { background: #dcfce7; color: #166534; }
+        .h2-tag-caution { background: #fef3c7; color: #92400e; }
+        .h2-tag-info { background: #e0e7ff; color: #3730a3; }
         .result-section { margin-top: 16px; }
         .result-section h4 { margin: 0 0 8px; font-size: 0.875rem; color: #475569; font-weight: 600; }
         .result-section ul { margin: 0; padding-left: 1.2em; font-size: 0.875rem; line-height: 1.65; color: #334155; }
@@ -200,30 +259,82 @@
 
         <div id="panel-2" class="panel">
             <h2>数据库连接</h2>
-            <p class="sub">先选择连接方式，再选择数据库类型并填写对应信息。内嵌或内存库适合试用与单机场景。</p>
+            <p class="sub">按“数据库类型 → 连接方式 → 参数填写”的顺序配置，更贴近实际部署习惯。不同数据库会自动限制可用连接方式并给出建议。</p>
+
+            <label class="lbl">数据库类型</label>
+            <select id="databaseType"></select>
+            <p class="sub" id="databaseTypeHint" style="margin-top:6px">先选择数据库类型后，再选择连接方式。</p>
+
+            <div id="h2ModeBox" class="hidden">
+                <label class="lbl">H2 兼容模式</label>
+                <select id="h2CompatibilityMode"></select>
+                <p class="sub" id="h2ModeHint" style="margin-top:6px"></p>
+                <p class="h2-mode-guide-title">模式说明（点击表格行可快速切换）</p>
+                <div class="h2-mode-table-wrap">
+                    <table class="h2-mode-table" id="h2ModeTable">
+                        <thead>
+                        <tr>
+                            <th>模式</th>
+                            <th>典型适用场景</th>
+                            <th>与 Autumn 配合</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr data-mode="MYSQL">
+                            <td><strong>MYSQL</strong> <span class="h2-tag h2-tag-rec">推荐默认</span></td>
+                            <td>希望与生产 MySQL 行为最接近；本地/演示环境跑通注解建表与常见 MySQL 语法。</td>
+                            <td>JDBC URL 含 <code>MODE=MySQL</code> 时走框架内嵌 H2-MySQL 兼容 DDL 与方言路由，与业务以 MySQL 为基准的开发习惯一致。</td>
+                        </tr>
+                        <tr data-mode="NATIVE">
+                            <td><strong>NATIVE</strong> <span class="h2-tag h2-tag-caution">谨慎</span></td>
+                            <td>刻意验证 H2 原生语义；不依赖反引号、<code>information_schema</code> 等 MySQL 习惯用法。</td>
+                            <td>按 <code>DatabaseType.H2</code> 走双引号 ANSI DDL；实体与手写 SQL 需与 ANSI/H2 语义对齐，勿假设 MySQL 专有写法。</td>
+                        </tr>
+                        <tr data-mode="POSTGRESQL">
+                            <td><strong>POSTGRESQL</strong> <span class="h2-tag h2-tag-info">实验</span></td>
+                            <td>尝试 PostgreSQL 风格函数或语法差异；小规模语法对照实验。</td>
+                            <td>仍解析为 H2 类型，但 SQL 语义贴近 PG；与 Autumn 以 MySQL 为中心的默认路径不一致，仅适合有明确目标的场景。</td>
+                        </tr>
+                        <tr data-mode="ORACLE">
+                            <td><strong>ORACLE</strong> <span class="h2-tag h2-tag-info">实验</span></td>
+                            <td>对照 Oracle 方言差异做本地实验（不等同于真实 Oracle）。</td>
+                            <td>与 Autumn 默认 MySQL 族路径差异大，通常需配合高级 JDBC 或改写 SQL，不建议作为首次安装默认。</td>
+                        </tr>
+                        <tr data-mode="MSSQLSERVER">
+                            <td><strong>MSSQLSERVER</strong> <span class="h2-tag h2-tag-info">实验</span></td>
+                            <td>对照 SQL Server 兼容语法做本地实验。</td>
+                            <td>与 Autumn 默认栈差异大，多用于专项验证；生产请使用真实 SQL Server 与对应配置。</td>
+                        </tr>
+                        <tr data-mode="MARIADB">
+                            <td><strong>MARIADB</strong> <span class="h2-tag h2-tag-info">可选</span></td>
+                            <td>希望略贴近 MariaDB 兼容语义时的本地尝试。</td>
+                            <td>与 <code>MYSQL</code> 接近但仍属兼容层实验；若目标是生产 MariaDB，建议直接选数据库类型 MariaDB 而非 H2 模拟。</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="warn-banner" id="h2NativeWarn">原生 H2 或非 MySQL 兼容模式下，不会启用 H2 + MODE=MySQL 适配链路，请确认业务 SQL 与方言匹配。</div>
+            </div>
 
             <label class="lbl">连接方式</label>
             <div class="mode-grid" id="modeGrid">
                 <label class="mode-opt on" data-mode="REMOTE">
                     <input type="radio" name="connMode" value="REMOTE" checked/>
                     远程服务器
-                    <small>填写主机、端口与库名，适用于 MySQL、PostgreSQL 等常见部署。</small>
+                    <small>先确定数据库类型，再填主机、端口、库名。适用于 MySQL、PostgreSQL 等集中部署。</small>
                 </label>
                 <label class="mode-opt" data-mode="EMBEDDED_FILE">
                     <input type="radio" name="connMode" value="EMBEDDED_FILE"/>
                     本机文件
-                    <small>数据落在本机磁盘，适合 H2、SQLite、HSQLDB、Derby 等。</small>
+                    <small>数据保存在本机磁盘，适合 H2、SQLite、HSQLDB、Derby。</small>
                 </label>
                 <label class="mode-opt" data-mode="EMBEDDED_MEMORY">
                     <input type="radio" name="connMode" value="EMBEDDED_MEMORY"/>
                     内存库（试用）
-                    <small>进程重启后数据清空，仅建议体验功能。</small>
+                    <small>仅用于演示和快速验证；服务重启后数据清空。</small>
                 </label>
             </div>
             <div class="warn-banner hidden" id="memoryWarn">您选择了内存库：服务重启后数据会丢失，请勿用于正式环境。</div>
-
-            <label class="lbl">数据库类型</label>
-            <select id="databaseType"></select>
 
             <div id="remoteFields">
                 <div class="row">
@@ -338,9 +449,38 @@
         return typeList.find(function (x) { return x.id === id; });
     }
 
+    function parseH2ModeOptions(raw) {
+        if (!raw) return [];
+        return String(raw).split(',').map(function (item) {
+            var pair = item.split(':');
+            return {
+                value: (pair[0] || '').trim(),
+                label: (pair[1] || pair[0] || '').trim()
+            };
+        }).filter(function (x) { return !!x.value; });
+    }
+
+    function syncH2ModeTableHighlight() {
+        var sel = el('h2CompatibilityMode');
+        var tbl = el('h2ModeTable');
+        if (!sel || !tbl) return;
+        var v = sel.value;
+        tbl.querySelectorAll('tbody tr[data-mode]').forEach(function (tr) {
+            tr.classList.toggle('h2-mode-row-active', tr.getAttribute('data-mode') === v);
+        });
+    }
+
     function getConnMode() {
         var r = document.querySelector('input[name="connMode"]:checked');
         return r ? r.value : 'REMOTE';
+    }
+
+    function preferModeByType(t) {
+        if (!t) return 'REMOTE';
+        if (t.supportsEmbeddedFile === 'true' && (t.id === 'H2' || t.id === 'SQLITE' || t.id === 'HSQLDB' || t.id === 'DERBY')) {
+            return 'EMBEDDED_FILE';
+        }
+        return 'REMOTE';
     }
 
     function syncModeStyles() {
@@ -357,6 +497,40 @@
         var t = currentType();
         var adv = el('advancedUrl').checked;
         el('remoteFields').classList.toggle('hidden', mode !== 'REMOTE' || adv);
+        if (!t) {
+            el('databaseTypeHint').textContent = '先选择数据库类型后，再选择连接方式。';
+            return;
+        }
+        var h2ModeBox = el('h2ModeBox');
+        var isH2 = t.id === 'H2';
+        h2ModeBox.classList.toggle('hidden', !isH2 || adv);
+        if (isH2) {
+            var opts = parseH2ModeOptions(t.h2ModeOptions);
+            var sel = el('h2CompatibilityMode');
+            if (!sel.options.length) {
+                sel.innerHTML = '';
+                opts.forEach(function (o) {
+                    var op = document.createElement('option');
+                    op.value = o.value;
+                    op.textContent = o.value + ' - ' + o.label;
+                    sel.appendChild(op);
+                });
+                sel.value = t.h2ModeDefault || 'MYSQL';
+            }
+            var now = opts.find(function (o) { return o.value === sel.value; });
+            el('h2ModeHint').textContent = now ? now.label : '选择 H2 的 SQL 兼容语法模式。';
+            var nonMysql = sel.value && sel.value !== 'MYSQL';
+            el('h2NativeWarn').classList.toggle('hidden', !nonMysql);
+            syncH2ModeTableHighlight();
+        } else {
+            el('h2CompatibilityMode').innerHTML = '';
+            var tbl = el('h2ModeTable');
+            if (tbl) {
+                tbl.querySelectorAll('tbody tr[data-mode]').forEach(function (tr) {
+                    tr.classList.remove('h2-mode-row-active');
+                });
+            }
+        }
         if (t) {
             var embF = t.supportsEmbeddedFile === 'true';
             var embM = t.supportsEmbeddedMemory === 'true';
@@ -379,6 +553,11 @@
                 mode = 'REMOTE';
             }
         }
+        var connTips = [];
+        if (t.supportsEmbeddedFile === 'true') connTips.push('支持本机文件模式');
+        if (t.supportsEmbeddedMemory === 'true') connTips.push('支持内存模式');
+        if (!connTips.length) connTips.push('建议远程连接或高级 JDBC 模式');
+        el('databaseTypeHint').textContent = '当前类型：' + t.label + '（' + connTips.join('，') + '）';
         updateDatabasePlaceholder();
     }
 
@@ -456,6 +635,7 @@
             if (typeList.length) {
                 el('port').placeholder = typeList[0].defaultPort && typeList[0].defaultPort !== '0'
                     ? '默认 ' + typeList[0].defaultPort : '可留空';
+                el('databaseType').dispatchEvent(new Event('change'));
             }
             syncModeStyles();
             updateConnectionUi();
@@ -469,8 +649,40 @@
         if (t && t.defaultPort && t.defaultPort !== '0') {
             el('port').placeholder = '默认 ' + t.defaultPort;
         }
+        if (!el('advancedUrl').checked && t) {
+            var mode = getConnMode();
+            var preferred = preferModeByType(t);
+            if (mode !== preferred) {
+                var radio = document.querySelector('input[name="connMode"][value="' + preferred + '"]');
+                if (radio && !radio.disabled) {
+                    radio.checked = true;
+                    syncModeStyles();
+                }
+            }
+        }
         updateConnectionUi();
     };
+
+    el('h2CompatibilityMode').onchange = function () {
+        updateConnectionUi();
+    };
+
+    (function bindH2ModeTableClick() {
+        var tbl = el('h2ModeTable');
+        if (!tbl) return;
+        tbl.addEventListener('click', function (e) {
+            var t = e.target;
+            var tr = t.closest ? t.closest('tr[data-mode]') : null;
+            if (!tr) return;
+            var m = tr.getAttribute('data-mode');
+            var sel = el('h2CompatibilityMode');
+            if (!sel || sel.disabled) return;
+            var ok = Array.prototype.some.call(sel.options, function (o) { return o.value === m; });
+            if (!ok) return;
+            sel.value = m;
+            updateConnectionUi();
+        });
+    })();
 
     function doAgree() {
         el('e1').textContent = '';
@@ -497,7 +709,8 @@
             extraOptions: el('extraOptions').value,
             advancedUrl: el('advancedUrl').checked,
             jdbcUrl: el('jdbcUrl').value,
-            driverClassName: el('driverClassName').value
+            driverClassName: el('driverClassName').value,
+            h2CompatibilityMode: el('h2CompatibilityMode').value
         };
     }
 

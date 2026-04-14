@@ -39,6 +39,15 @@ public class InstallConnectionForm implements Serializable {
     /** 高级：自定义驱动类，空则按数据库类型默认 */
     private String driverClassName = "";
 
+    /**
+     * H2 简易模式兼容选项：
+     * <ul>
+     *   <li>{@code MYSQL} / {@code NATIVE} / {@code POSTGRESQL} / {@code ORACLE} / {@code MSSQLSERVER} / {@code MARIADB}</li>
+     * </ul>
+     * 非 H2 类型可留空，服务端会忽略。
+     */
+    private String h2CompatibilityMode = "";
+
     public String getDatabaseType() {
         return databaseType;
     }
@@ -125,5 +134,13 @@ public class InstallConnectionForm implements Serializable {
 
     public void setDriverClassName(String driverClassName) {
         this.driverClassName = driverClassName;
+    }
+
+    public String getH2CompatibilityMode() {
+        return h2CompatibilityMode;
+    }
+
+    public void setH2CompatibilityMode(String h2CompatibilityMode) {
+        this.h2CompatibilityMode = h2CompatibilityMode;
     }
 }

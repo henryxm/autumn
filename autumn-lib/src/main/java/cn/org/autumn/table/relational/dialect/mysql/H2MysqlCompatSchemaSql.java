@@ -19,6 +19,11 @@ public final class H2MysqlCompatSchemaSql extends MysqlSchemaSql {
     public static final H2MysqlCompatSchemaSql INSTANCE = new H2MysqlCompatSchemaSql();
 
     @Override
+    protected void appendColumnDefinition(final ColumnInfo columnInfo, final StringBuilder sb) {
+        appendCommonEmbeddedH2(columnInfo, sb);
+    }
+
+    @Override
     public String addIndex(final Map<String, Map<TableInfo, IndexInfo>> map) {
         StringBuilder stringBuilder = new StringBuilder();
         Map<TableInfo, IndexInfo> parameter = map.get(RelationalSchemaSql.paramName);
@@ -55,7 +60,7 @@ public final class H2MysqlCompatSchemaSql extends MysqlSchemaSql {
             List<ColumnInfo> list = kv.getValue();
             String primaryKey = "";
             for (ColumnInfo columnInfo : list) {
-                appendCommonEmbeddedH2(columnInfo, stringBuilder);
+                appendColumnDefinition(columnInfo, stringBuilder);
                 if (columnInfo.isKey()) {
                     String split = ",";
                     if (StringUtils.isBlank(primaryKey)) {
