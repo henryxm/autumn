@@ -23,16 +23,30 @@ public class DataSourceDialectRegistry {
 
     private final DatabaseType secondType;
 
+    /** 与 {@link #firstType} 解析时使用的 JDBC URL 一致（可能为空串）。 */
+    private final String firstJdbcUrl;
+
+    /** 与 {@link #secondType} 解析时使用的 JDBC URL 一致（未配置 second 时与 first 相同）。 */
+    private final String secondJdbcUrl;
+
     public DataSourceDialectRegistry(Environment environment) {
         String autumnDb = environment.getProperty("autumn.database", "");
         String u1 = environment.getProperty("spring.datasource.druid.first.url");
         if (StringUtils.isBlank(u1)) {
             u1 = environment.getProperty("spring.datasource.url");
         }
+        if (u1 == null) {
+            u1 = "";
+        }
         String u2 = environment.getProperty("spring.datasource.druid.second.url");
         if (StringUtils.isBlank(u2)) {
             u2 = u1;
         }
+        if (u2 == null) {
+            u2 = "";
+        }
+        this.firstJdbcUrl = u1;
+        this.secondJdbcUrl = u2;
         this.firstType = DatabaseHolder.resolveType(u1, autumnDb);
         this.secondType = DatabaseHolder.resolveType(u2, autumnDb);
     }
@@ -60,5 +74,20 @@ public class DataSourceDialectRegistry {
         }
         log.warn("Unknown datasource lookup key [{}], falling back to first database type [{}]", lookupKey, firstType);
         return firstType;
+    }
+
+    /**
+     * 与 {@link #resolveForLookupKey} 使用同一套 first/second URL，供内嵌 H2 MySQL 兼容判定等与「当前线程数据源」对齐。
+     *
+     * @param lookupKey {@link DynamicDataSource#getDataSource()}；空白表示默认（first）
+     */
+    public String resolveJdbcUrlForLookupKey(String lookupKey) {
+        if (StringUtils.isBlank(lookupKey) || DataSourceNames.FIRST.equals(lookupKey)) {
+            return firstJdbcUrl;
+        }
+        if (DataSourceNames.SECOND.equals(lookupKey)) {
+            return secondJdbcUrl;
+        }
+        return firstJdbcUrl;
     }
 }

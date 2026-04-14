@@ -44,6 +44,15 @@ public class InstallWizardApiController {
             row.put("databaseFieldHintRemote", InstallJdbcHelper.databaseFieldHint(t, InstallJdbcHelper.ConnectionMode.REMOTE));
             row.put("databaseFieldHintFile", InstallJdbcHelper.databaseFieldHint(t, InstallJdbcHelper.ConnectionMode.EMBEDDED_FILE));
             row.put("databaseFieldHintMemory", InstallJdbcHelper.databaseFieldHint(t, InstallJdbcHelper.ConnectionMode.EMBEDDED_MEMORY));
+            row.put("h2ModeDefault", InstallJdbcHelper.defaultH2CompatibilityMode().name());
+            StringBuilder h2Modes = new StringBuilder();
+            for (InstallJdbcHelper.H2CompatibilityMode m : InstallJdbcHelper.h2CompatibilityModes()) {
+                if (h2Modes.length() > 0) {
+                    h2Modes.append(",");
+                }
+                h2Modes.append(m.name()).append(":").append(m.getDesc());
+            }
+            row.put("h2ModeOptions", h2Modes.toString());
             list.add(row);
         }
         Map<String, Object> out = new LinkedHashMap<>();

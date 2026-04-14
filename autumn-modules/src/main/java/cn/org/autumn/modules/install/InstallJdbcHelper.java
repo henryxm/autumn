@@ -36,6 +36,40 @@ public final class InstallJdbcHelper {
         }
     }
 
+    /**
+     * H2 兼容模式（仅 H2 简易连接有效；高级 JDBC 模式由用户自行控制 URL）。
+     */
+    public enum H2CompatibilityMode {
+        MYSQL("MySQL 兼容（推荐用于 Autumn 注解建表）"),
+        NATIVE("原生 H2（不附加 MODE）"),
+        POSTGRESQL("PostgreSQL 兼容"),
+        ORACLE("Oracle 兼容"),
+        MSSQLSERVER("SQL Server 兼容"),
+        MARIADB("MariaDB 兼容");
+
+        private final String desc;
+
+        H2CompatibilityMode(String desc) {
+            this.desc = desc;
+        }
+
+        public String getDesc() {
+            return desc;
+        }
+
+        static H2CompatibilityMode fromForm(InstallConnectionForm form) {
+            if (form == null || StringUtils.isBlank(form.getH2CompatibilityMode())) {
+                return MYSQL;
+            }
+            String raw = form.getH2CompatibilityMode().trim();
+            try {
+                return valueOf(raw.toUpperCase(Locale.ROOT));
+            } catch (IllegalArgumentException ex) {
+                throw new IllegalArgumentException("无效的 H2 兼容模式: " + raw);
+            }
+        }
+    }
+
     private InstallJdbcHelper() {
     }
 
@@ -110,6 +144,14 @@ public final class InstallJdbcHelper {
 
     public static boolean supportsEmbeddedMemory(DatabaseType type) {
         return type == DatabaseType.H2 || type == DatabaseType.SQLITE || type == DatabaseType.HSQLDB || type == DatabaseType.DERBY;
+    }
+
+    public static H2CompatibilityMode defaultH2CompatibilityMode() {
+        return H2CompatibilityMode.MYSQL;
+    }
+
+    public static H2CompatibilityMode[] h2CompatibilityModes() {
+        return H2CompatibilityMode.values();
     }
 
     public static String databaseFieldHint(DatabaseType type, ConnectionMode mode) {
@@ -195,6 +237,7 @@ public final class InstallJdbcHelper {
         }
 
         ConnectionMode mode = ConnectionMode.fromForm(form, type);
+        H2CompatibilityMode h2Mode = H2CompatibilityMode.fromForm(form);
         ensureModeSupported(type, mode);
 
         String host = StringUtils.defaultString(form.getHost(), "localhost").trim();
@@ -211,14 +254,14 @@ public final class InstallJdbcHelper {
         String url;
         switch (mode) {
             case EMBEDDED_MEMORY:
-                url = buildEmbeddedMemoryUrl(type, db);
+                url = buildEmbeddedMemoryUrl(type, db, h2Mode);
                 break;
             case EMBEDDED_FILE:
-                url = buildEmbeddedFileUrl(type, db);
+                url = buildEmbeddedFileUrl(type, db, h2Mode);
                 break;
             case REMOTE:
             default:
-                url = buildRemoteUrl(type, host, port, db);
+                url = buildRemoteUrl(type, host, port, db, h2Mode);
                 break;
         }
 
@@ -256,13 +299,13 @@ public final class InstallJdbcHelper {
         }
     }
 
-    private static String buildEmbeddedMemoryUrl(DatabaseType type, String db) {
+    private static String buildEmbeddedMemoryUrl(DatabaseType type, String db, H2CompatibilityMode h2Mode) {
         switch (type) {
             case H2:
                 if (StringUtils.isBlank(db)) {
                     db = "autumn";
                 }
-                return "jdbc:h2:mem:" + db + ";MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1";
+                return "jdbc:h2:mem:" + db + h2ModeParams(h2Mode) + ";DB_CLOSE_DELAY=-1";
             case SQLITE:
                 return "jdbc:sqlite::memory:";
             case HSQLDB:
@@ -280,13 +323,13 @@ public final class InstallJdbcHelper {
         }
     }
 
-    private static String buildEmbeddedFileUrl(DatabaseType type, String db) {
+    private static String buildEmbeddedFileUrl(DatabaseType type, String db, H2CompatibilityMode h2Mode) {
         switch (type) {
             case H2:
                 if (StringUtils.isBlank(db)) {
                     db = "./data/autumn";
                 }
-                return "jdbc:h2:file:" + db + ";MODE=MySQL;DATABASE_TO_LOWER=TRUE;AUTO_SERVER=TRUE";
+                return "jdbc:h2:file:" + db + h2ModeParams(h2Mode) + ";AUTO_SERVER=TRUE";
             case SQLITE:
                 if (StringUtils.isBlank(db)) {
                     throw new IllegalArgumentException("请填写 SQLite 数据库文件路径");
@@ -307,7 +350,7 @@ public final class InstallJdbcHelper {
         }
     }
 
-    private static String buildRemoteUrl(DatabaseType type, String host, int port, String db) {
+    private static String buildRemoteUrl(DatabaseType type, String host, int port, String db, H2CompatibilityMode h2Mode) {
         switch (type) {
             case MYSQL:
             case MARIADB:
@@ -343,7 +386,7 @@ public final class InstallJdbcHelper {
                     throw new IllegalArgumentException("请填写 H2 数据库名或路径标识");
                 }
                 int p = port > 0 ? port : 9092;
-                return "jdbc:h2:tcp://" + host + ":" + p + "/" + db.replace("\\", "/") + ";MODE=MySQL;DATABASE_TO_LOWER=TRUE";
+                return "jdbc:h2:tcp://" + host + ":" + p + "/" + db.replace("\\", "/") + h2ModeParams(h2Mode);
             }
             case HSQLDB: {
                 if (StringUtils.isBlank(db)) {
@@ -373,6 +416,25 @@ public final class InstallJdbcHelper {
                 return "jdbc:dm://" + host + ":" + port + "/" + db;
             default:
                 throw new IllegalArgumentException("该类型请使用「高级模式」直接填写 JDBC URL 与驱动类");
+        }
+    }
+
+    private static String h2ModeParams(H2CompatibilityMode mode) {
+        H2CompatibilityMode m = mode == null ? H2CompatibilityMode.MYSQL : mode;
+        switch (m) {
+            case NATIVE:
+                return "";
+            case POSTGRESQL:
+                return ";MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE";
+            case ORACLE:
+                return ";MODE=Oracle;DATABASE_TO_UPPER=TRUE";
+            case MSSQLSERVER:
+                return ";MODE=MSSQLServer;DATABASE_TO_UPPER=TRUE";
+            case MARIADB:
+                return ";MODE=MariaDB;DATABASE_TO_LOWER=TRUE";
+            case MYSQL:
+            default:
+                return ";MODE=MySQL;DATABASE_TO_LOWER=TRUE";
         }
     }
 

@@ -3,6 +3,8 @@ package cn.org.autumn.table.relational.support.ddl;
 import cn.org.autumn.table.data.ColumnInfo;
 import org.apache.commons.lang.StringUtils;
 
+import java.util.Locale;
+
 /**
  * 将实体侧 {@link ColumnInfo}（MySQL 风格逻辑类型）映射为各 JDBC 方言物理类型片段。
  */
@@ -153,6 +155,11 @@ public final class JdbcDdlColumnTypes {
             case "int":
             case "integer":
                 return "INTEGER";
+            case "mediumint":
+                return "INTEGER";
+            case "bool":
+            case "boolean":
+                return "BOOLEAN";
             case "tinyint":
                 if (c.getLength() == 1) {
                     return d == AnsiDialect.HSQLDB ? "BOOLEAN" : "BOOLEAN";
@@ -175,8 +182,11 @@ public final class JdbcDdlColumnTypes {
             case "time":
                 return "TIME";
             case "decimal":
+            case "numeric":
                 return "DECIMAL(" + Math.max(len, 1) + "," + dec + ")";
             case "double":
+                return "DOUBLE";
+            case "real":
                 return "DOUBLE";
             case "float":
                 return "REAL";
@@ -187,12 +197,36 @@ public final class JdbcDdlColumnTypes {
                 return "BLOB";
             case "year":
                 return "SMALLINT";
+            case "bit":
+                return c.getLength() <= 1 ? "BOOLEAN" : "SMALLINT";
+            case "json":
+            case "jsonb":
+                return "CLOB";
+            case "geometry":
+            case "point":
+            case "linestring":
+            case "polygon":
+            case "multipoint":
+            case "multilinestring":
+            case "multipolygon":
+            case "geometrycollection":
+                return "BLOB";
             case "enum":
             case "set":
-                return "VARCHAR(255)";
+                return "VARCHAR(" + Math.min(Math.max(len, 1), 65535) + ")";
             default:
-                return t;
+                return ansiDoubleQuotedUnknownType(t, d);
         }
+    }
+
+    /**
+     * 未在分支中显式映射的类型：在 H2/HSQLDB 上降级为 {@code VARCHAR(255)}，其余方言仍尝试大写关键字（历史行为）。
+     */
+    private static String ansiDoubleQuotedUnknownType(String tLower, AnsiDialect d) {
+        if (d == AnsiDialect.H2 || d == AnsiDialect.HSQLDB) {
+            return "VARCHAR(255)";
+        }
+        return tLower.toUpperCase(Locale.ROOT);
     }
 
     private static String sqlite(ColumnInfo c, String t, int len, int dec) {
