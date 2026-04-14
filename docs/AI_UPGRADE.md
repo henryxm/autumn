@@ -23,7 +23,7 @@
 |---|-----|------|
 | 1 | **统一 GAV** | 依赖方所有模块中 `cn.org.autumn` 的 `artifactId` + `version` 与目标发布版本 **一致**，避免混用多个版本。 |
 | 2 | **传递依赖** | 若依赖方排除了 `spring-boot`、`mybatis-plus` 等，升级后核对 **与 autumn 父 POM 管理版本** 是否冲突（以 autumn 发布说明或 BOM 为准）。 |
-| 3 | **JDK** | autumn 当前编译目标多为 **Java 8**；若本机用 **JDK 9+** 编译依赖方，须保证 **Lombok** 走 `annotationProcessorPaths`（见 `docs/AI_POSTGRESQL.md` 工程化小节）。 |
+| 3 | **JDK** | 与所依赖的 **autumn 主版本** 对齐：**2.0.0 / master** 多为 **Java 8**；**3.0.0 / `3.0.0` 分支** 为 **Java 17+**（以依赖方引入的 autumn 根 `pom.xml` 中 `java.version` 为准）。使用 **JDK 9+** 编译依赖方时须保证 **Lombok** 走 `annotationProcessorPaths`（见 `docs/AI_POSTGRESQL.md` 工程化小节）。 |
 | 4 | **构建命令** | 建议使用 `mvn clean install -pl <启动模块> -am -DskipTests` **从根反应堆安装**，避免仅子模块 `spring-boot:run` 使用 `~/.m2` **陈旧 JAR**。 |
 
 ### 2.2 配置

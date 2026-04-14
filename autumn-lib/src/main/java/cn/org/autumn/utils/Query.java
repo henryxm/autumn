@@ -13,7 +13,7 @@ import java.util.Map;
  * 查询参数
  */
 public class Query<T> extends LinkedHashMap<String, Object> {
-	private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L;
     /**
      * mybatis-plus分页参数
      */
@@ -27,15 +27,15 @@ public class Query<T> extends LinkedHashMap<String, Object> {
      */
     private int limit = 10;
 
-    public Query(Map<String, Object> params){
+    public Query(Map<String, Object> params) {
         this.putAll(params);
 
         //分页参数
-        if(params.get("page") != null){
-            currPage = Integer.parseInt((String)params.get("page"));
+        if (params.get("page") != null) {
+            currPage = Integer.parseInt((String) params.get("page"));
         }
-        if(params.get("limit") != null){
-            limit = Integer.parseInt((String)params.get("limit"));
+        if (params.get("limit") != null) {
+            limit = Integer.parseInt((String) params.get("limit"));
         }
 
         this.put("offset", (currPage - 1) * limit);
@@ -43,24 +43,25 @@ public class Query<T> extends LinkedHashMap<String, Object> {
         this.put("limit", limit);
 
         //防止SQL注入（因为sidx、order是通过拼接SQL实现排序的，会有SQL注入风险）
-        String sidx = SQLFilter.sqlInject((String)params.get("sidx"));
-        String order = SQLFilter.sqlInject((String)params.get("order"));
+        String sidx = SQLFilter.sqlInject((String) params.get("sidx"));
+        String order = SQLFilter.sqlInject((String) params.get("order"));
         this.put("sidx", sidx);
         this.put("order", order);
 
         //mybatis-plus分页
         this.page = new Page<>(currPage, limit);
 
-        // 排序：列名经方言引用后须用 withExpression，避免 OrderItem.asc/desc 内 replaceAllBlank 去掉引号导致 ORDER BY id
+        // 排序：与 BaseService 共用 WrapperColumns#orderByColumnExpression（方言引用 + 与 sidx 过滤策略一致）
         if (StringUtils.isNotBlank(sidx) && StringUtils.isNotBlank(order)) {
-            String col = WrapperColumns.columnInWrapper(sidx.trim());
-            if ("ASC".equalsIgnoreCase(order)) {
-                this.page.addOrder(OrderItem.withExpression(col, true));
-            } else {
-                this.page.addOrder(OrderItem.withExpression(col, false));
+            String col = WrapperColumns.orderByColumnExpression(sidx, true);
+            if (StringUtils.isNotBlank(col)) {
+                if ("ASC".equalsIgnoreCase(order)) {
+                    this.page.addOrder(OrderItem.withExpression(col, true));
+                } else {
+                    this.page.addOrder(OrderItem.withExpression(col, false));
+                }
             }
         }
-
     }
 
     public Page<T> getPage() {

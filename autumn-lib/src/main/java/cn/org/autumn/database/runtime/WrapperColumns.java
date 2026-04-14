@@ -26,7 +26,7 @@ import java.util.regex.Pattern;
 public final class WrapperColumns {
 
     /**
-     * 经 {@link SQLFilter#sqlInject(String)} 后的单列名（小写）或与之一致的逻辑列名。
+     * 经 {@link SQLFilter#sqlInject(String)} 后的单列名（小写）或未经过滤但与之一致的逻辑列名。
      */
     private static final Pattern SIMPLE_SORT_COLUMN = Pattern.compile("^[a-z_][a-z0-9_]*$");
 
@@ -38,11 +38,11 @@ public final class WrapperColumns {
     }
 
     /**
-     * 供分页 {@code ORDER BY} 使用的列片段：已呈方言引用形态（反引号/双引号/方括号成对）则原样返回；否则在
-     * {@code sqlAlreadySanitized==false} 时先做 {@link SQLFilter#sqlInject(String)}；简单标识符则
-     * {@link #columnInWrapper(String)}，否则返回过滤后的片段。
+     * 供 {@code ORDER BY} / {@link com.baomidou.mybatisplus.core.metadata.OrderItem#withExpression(String, boolean)} 使用的列片段：
+     * 已呈方言引用形态（反引号/双引号/方括号成对）则原样返回；否则在 {@code sqlAlreadySanitized==false} 时先做
+     * {@link SQLFilter#sqlInject(String)}；若结果为简单标识符则 {@link #columnInWrapper(String)}，否则返回过滤后的片段（调用方保证可移植性）。
      * <p>
-     * {@link cn.org.autumn.utils.Query} 中 {@code sidx} 已过滤时应设 {@code sqlAlreadySanitized=true}。
+     * {@link cn.org.autumn.utils.Query} 传入的 {@code sidx} 已过滤时应设 {@code sqlAlreadySanitized=true}，避免二次处理。
      */
     public static String orderByColumnExpression(String sortColumn, boolean sqlAlreadySanitized) {
         if (StringUtils.isBlank(sortColumn)) {

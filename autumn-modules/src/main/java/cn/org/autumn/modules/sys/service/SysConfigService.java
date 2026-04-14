@@ -27,7 +27,6 @@ import cn.org.autumn.utils.*;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.google.gson.Gson;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.shiro.session.mgt.SessionManager;
@@ -928,7 +927,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         theme.normalize();
 
         String current = getValue(LOADING_THEME);
-        String normalized = new Gson().toJson(theme);
+        String normalized = GsonConfig.getGson().toJson(theme);
         if (StringUtils.isBlank(current) || !Objects.equals(current, normalized)) {
             updateValueByKey(LOADING_THEME, normalized);
         }

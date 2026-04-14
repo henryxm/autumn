@@ -15,6 +15,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 /**
  * 统一处理 FreeMarker 视图渲染异常，避免将堆栈直接暴露到浏览器。
@@ -146,11 +147,7 @@ public class FreemarkerViewExceptionResolver extends AbstractHandlerExceptionRes
             }
             target = target + (target.contains("?") ? "&" : "?") + "_fmRetry=" + nextRetryCount;
         }
-        try {
-            return "/loading.html?target=" + URLEncoder.encode(target, "UTF-8");
-        } catch (Exception ignored) {
-            return "/loading.html";
-        }
+        return "/loading.html?target=" + URLEncoder.encode(target, StandardCharsets.UTF_8);
     }
 
     private int getRetryCount(HttpServletRequest request) {

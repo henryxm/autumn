@@ -219,7 +219,8 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends Distribute
     }
 
     /**
-     * 默认逆序字段须为方言引用后的列名（如 {@code columnInWrapper("id")}）。
+     * 默认逆序字段为<strong>逻辑列名</strong>（蛇形或与实体字段一致）：经 {@link WrapperColumns#orderByColumnExpression(String, boolean)}，
+     * 与 {@link Query} 的 {@code sidx} 相同策略（{@link cn.org.autumn.xss.SQLFilter} + 方言引用）。已引用片段或复杂表达式规则见 {@link WrapperColumns}。
      * <p>
      * 排序写在 {@link Page#addOrder} 而非 {@link QueryWrapper#orderByDesc}：分页插件只在带 {@code IPage} 的查询上拼接
      * {@code ORDER BY}；{@link #selectCountWithoutOrderBy} 使用的 {@code ew} 无排序，Derby/DB2 等不会对 {@code COUNT(*)} 附加非法
@@ -232,13 +233,7 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends Distribute
         Map<String, Object> normalized = normalizeQueryParams(params);
         Page<T> _page = new Query<T>(normalized).getPage();
         bindPageCondition(_page, getCondition(normalized));
-        if (descs != null) {
-            for (String desc : descs) {
-                if (StringUtils.isNotBlank(desc)) {
-                    _page.addOrder(OrderItem.withExpression(desc.trim(), false));
-                }
-            }
-        }
+        appendDescOrderItems(_page, descs);
         return queryPage(_page, new QueryWrapper<>());
     }
 
@@ -257,15 +252,35 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends Distribute
     }
 
     /**
-     * @param descs 已忽略。{@link Page#addOrder} 产生的 {@code ORDER BY} 不经 {@code column-format}，在 Derby/DB2/H2 双引号标识符下会与
-     * {@code SELECT} 列引用不一致。请使用 {@link #queryPage(Map, List)} / {@link #queryPage(Map, String...)}，或
-     * {@code queryPage(getPage(params), new QueryWrapper<>().orderByDesc(...))}。
+     * 与 {@link #queryPage(Map, List)} 一致：将降序字段写入 {@link Page#addOrder}，使用 {@link OrderItem#withExpression(String, boolean)}
+     * 以兼容 Derby/DB2/H2 等对方言引用列名的处理，并避免仅写在 {@link QueryWrapper} 上导致 COUNT 附带 ORDER BY。
+     *
+     * @param descs 降序排序列：优先传逻辑列名；已引用列名或复杂表达式可原样传入（规则同 {@link #queryPage(Map, List)}）
      */
     public Page<T> getPage(Map<String, Object> params, List<String> descs) {
         Map<String, Object> normalized = normalizeQueryParams(params);
         Page<T> _page = new Query<T>(normalized).getPage();
         bindPageCondition(_page, getCondition(normalized));
+        appendDescOrderItems(_page, descs);
         return _page;
+    }
+
+    /**
+     * 分页降序：{@link OrderItem#withExpression} 避免 {@link OrderItem#desc(String)} 去掉引号；逻辑列名经
+     * {@link WrapperColumns#orderByColumnExpression(String, boolean)} 与 {@link Query} 中 {@code sidx} 对齐。
+     */
+    private void appendDescOrderItems(Page<T> page, List<String> descs) {
+        if (page == null || descs == null) {
+            return;
+        }
+        for (String desc : descs) {
+            if (StringUtils.isNotBlank(desc)) {
+                String col = WrapperColumns.orderByColumnExpression(desc, false);
+                if (StringUtils.isNotBlank(col)) {
+                    page.addOrder(OrderItem.withExpression(col, false));
+                }
+            }
+        }
     }
 
     protected void bindPageCondition(Page<T> page, Map<String, Object> condition) {
@@ -297,7 +312,7 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends Distribute
             if (value instanceof String && StringUtils.isBlank((String) value)) {
                 continue;
             }
-            wrapper.eq(entry.getKey(), value);
+            wrapper.eq(WrapperColumns.columnInWrapper(entry.getKey()), value);
         }
     }
 
@@ -331,25 +346,13 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends Distribute
     }
 
     /**
-     * {@link com.baomidou.mybatisplus.mapper.SqlHelper#fillWrapper} 对 {@link com.baomidou.mybatisplus.plugins.Page#getCondition()}
-     * 使用 {@code allEq}，Map 键为裸列名时在 Derby/DB2/H2 等会失效；此处将键改为方言引用片段。
-     */
-    private static Map<String, Object> quoteConditionKeys(Map<String, Object> condition) {
-        if (condition == null || condition.isEmpty()) {
-            return condition;
-        }
-        Map<String, Object> out = new HashMap<String, Object>();
-        for (Map.Entry<String, Object> e : condition.entrySet()) {
-            out.put(WrapperColumns.columnInWrapper(e.getKey()), e.getValue());
-        }
-        return out;
-    }
-
-    /**
-     * 统一 Spring/Servlet 参数绑定与 jqGrid：数组/集合取首值、rows→limit、sord→order，分页排序键转为 String。
+     * 统一兼容 Spring/Servlet 在不同版本下的参数绑定差异：
+     * 1) String / String[] / Collection 统一取首值
+     * 2) rows -> limit, sord -> order
+     * 3) Query 依赖的分页排序参数强制转为 String
      */
     protected Map<String, Object> normalizeQueryParams(Map<String, Object> params) {
-        Map<String, Object> normalized = new HashMap<String, Object>();
+        Map<String, Object> normalized = new HashMap<>();
         if (params == null || params.isEmpty()) {
             return normalized;
         }
@@ -364,6 +367,7 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends Distribute
             }
             normalized.put(key, value);
         }
+        // jqGrid 兼容参数
         if (!normalized.containsKey("limit") && normalized.containsKey("rows")) {
             normalized.put("limit", normalized.get("rows"));
         }
