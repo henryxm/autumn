@@ -8,8 +8,10 @@ import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.modules.sys.service.SysLogService;
 import cn.org.autumn.modules.sys.service.SysUserRoleService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
+import cn.org.autumn.modules.spm.interceptor.SpmInterceptor;
 import cn.org.autumn.modules.wall.service.IpWhiteService;
 import cn.org.autumn.modules.wall.site.WallDefault;
+import cn.org.autumn.modules.usr.interceptor.AuthorizationInterceptor;
 import cn.org.autumn.site.PageFactory;
 import cn.org.autumn.site.PluginFactory;
 import cn.org.autumn.utils.WebPathUtils;
@@ -170,8 +172,11 @@ public class SysPageController implements ErrorController {
     }
 
     @RequestMapping("loading.html")
-    @SkipInterceptor
+    @SkipInterceptor({AuthorizationInterceptor.class, SpmInterceptor.class})
     public String loading(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        model.addAttribute("loadingBrand", sysConfigService.getLoadingBrand());
+        model.addAttribute("loadingAccent", sysConfigService.getLoadingAccent());
+        model.addAttribute("loadingLogoUrl", sysConfigService.getLoadingLogoUrl());
         return pageFactory.loading(httpServletRequest, httpServletResponse, model);
     }
 
