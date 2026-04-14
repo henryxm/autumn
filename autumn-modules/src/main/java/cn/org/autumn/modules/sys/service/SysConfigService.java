@@ -7,6 +7,7 @@ import cn.org.autumn.cluster.ServiceHandler;
 import cn.org.autumn.config.*;
 import cn.org.autumn.exception.AException;
 import cn.org.autumn.model.AesConfig;
+import cn.org.autumn.model.DistributedLockConfig;
 import cn.org.autumn.model.RsaConfig;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.lan.service.Language;
@@ -79,6 +80,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     public static final String NONE_SUFFIX_VIEW = "NONE_SUFFIX_VIEW";
     public static final String SYSTEM_UPGRADE = "SYSTEM_UPGRADE";
     public static final String LOADING_THEME = "LOADING_THEME";
+    public static final String DISTRIBUTED_LOCK_CONFIG = DistributedLockConfig.CONFIG_KEY;
     public static final String RSA_CONFIG = "RSA_CONFIG";
     public static final String AES_CONFIG = "AES_CONFIG";
     public static final String Localhost = "localhost";
@@ -219,6 +221,8 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 {configDescription(SYSTEM_UPGRADE), "系统升级过程启用开关，当升级时，部分功能被禁止，比如上传数据，新增数据", "The switch is enabled during the system upgrade process. When upgrading, some functions are prohibited, such as uploading data and adding data"},
                 {configName(LOADING_THEME), "加载页主题", "Loading Theme"},
                 {configDescription(LOADING_THEME), "加载页主题配置（品牌、主色、图标）", "Loading theme config for brand, accent and logo"},
+                {configName(DISTRIBUTED_LOCK_CONFIG), "分布式锁配置", "Distributed Lock Config"},
+                {configDescription(DISTRIBUTED_LOCK_CONFIG), "分布式锁开关与参数配置", "Distributed lock switch and parameters config"},
         };
     }
 
@@ -242,6 +246,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 {NONE_SUFFIX_VIEW, "js,css,map,html,htm,shtml", "0", "系统默认后缀名为:.html, Request请求的路径在程序查找资源的时候，默认会带上.html, 通过配置无后缀名文件视图, 系统将请求路径进行资源查找", config, string_type},
                 {SYSTEM_UPGRADE, new Gson().toJson(new SystemUpgrade()), "1", "系统升级开关与提示信息", config, json_type, SystemUpgrade.class.getName()},
                 {LOADING_THEME, new Gson().toJson(new LoadingTheme()), "1", "加载页主题配置（品牌、主色、图标）", loadingConfig, json_type, LoadingTheme.class.getName()},
+                {DISTRIBUTED_LOCK_CONFIG, new Gson().toJson(new DistributedLockConfig()), "1", "分布式锁开关与参数配置", config, json_type, DistributedLockConfig.class.getName()},
                 {CLOUD_STORAGE_CONFIG_KEY, "{\"aliyunAccessKeyId\":\"\",\"aliyunAccessKeySecret\":\"\",\"aliyunBucketName\":\"\",\"aliyunDomain\":\"\",\"aliyunEndPoint\":\"\",\"aliyunPrefix\":\"\",\"qcloudBucketName\":\"\",\"qcloudDomain\":\"\",\"qcloudPrefix\":\"\",\"qcloudSecretId\":\"\",\"qcloudSecretKey\":\"\",\"qiniuAccessKey\":\"\",\"qiniuBucketName\":\"\",\"qiniuDomain\":\"\",\"qiniuPrefix\":\"\",\"qiniuSecretKey\":\"\",\"type\":1}", "0", "云存储配置信息", config, json_type, CloudStorageConfig.class.getName()},
                 {RSA_CONFIG, new Gson().toJson(new RsaConfig()), "1", "RSA加密配置", config, json_type, RsaConfig.class.getName()},
                 {AES_CONFIG, new Gson().toJson(new AesConfig()), "1", "AES加密配置", config, json_type, AesConfig.class.getName()},
@@ -745,7 +750,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         return null;
     }
 
-    public <T> T getConfigObject(String key, Class<T> clazz) {
+    public <T> T getObject(String key, Class<T> clazz) {
         String value = getValue(key);
         if (StringUtils.isNotBlank(value)) {
             return new Gson().fromJson(value, clazz);
@@ -755,6 +760,10 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         } catch (Exception e) {
             throw new AException("获取参数失败");
         }
+    }
+
+    public <T> T getConfigObject(String key, Class<T> clazz) {
+        return getObject(key, clazz);
     }
 
     public <T> T getConfigObjectValidate(String key, Class<T> clazz) {

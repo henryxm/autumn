@@ -66,6 +66,24 @@
   - 支持自动消费者启停（空闲超时）。
   - 支持重试、死信、历史消息运维。
 
+### 2.2A 分布式锁体系（跨节点互斥）
+
+- 核心类：
+  - `cn.org.autumn.service.DistributedLockService`
+  - `cn.org.autumn.service.DistributedService`
+  - `cn.org.autumn.model.DistributedLockConfig`
+- 关键使用约束：
+  - 已继承 `ModuleService` / `BaseService` 的业务 Service：优先使用 `DistributedService` 的 `withLock*` 系列方法。
+  - 未继承基础能力的组件：直接注入 `DistributedLockService`。
+- 场景化 API：
+  - `withLock`：严格模式（锁竞争失败抛错）
+  - `withLockOrFallback`：竞争失败执行业务 fallback（服务降级）
+  - `withLockRetry`：竞争失败按配置重试 + 随机退避（雪崩抑制）
+- 配置来源：
+  - 后台 `DistributedLockConfig`（键：`DISTRIBUTED_LOCK_CONFIG`）
+  - 通过 `sysConfigService.getObject(...)` 获取对象配置
+  - 配置项与默认值详见 `docs/AI_DISTRIBUTED_LOCK.md`
+
 ### 2.3 混合加解密（RSA + AES）
 
 - 核心类：
@@ -396,6 +414,7 @@ public class DemoService extends ModuleService<DemoDao, DemoEntity> implements L
 - 涉及队列消费必须给出失败、重试、死信处理策略。
 - 涉及定时任务时，优先接口式任务（`LoopJob.OneMinute/FiveMinute/...`），避免不必要的 cron 表达式；**生产代码禁止 Spring `@Scheduled`**（见 `docs/AI_STANDARDS.md` §5）。
 - 所有 `ModuleService` 子类默认具备缓存/队列/基础 CRUD 能力，禁止重复封装同类基础组件。
+- 涉及分布式互斥时：已继承 `ModuleService` 的 Service 优先用 `DistributedService`；未继承基类再注入 `DistributedLockService`。
 - 新增基础能力前，先检查 `BaseCacheService/ShareCacheService/BaseQueueService/LoopJob` 是否已覆盖需求。
 - 涉及页面/模板资源扩展时，优先通过 `TemplateFactory.Template` 在本项目 jar 内提供模板，不要求集中拷贝到入口工程。
 

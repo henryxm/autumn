@@ -36,7 +36,7 @@ description: >-
 1. `docs/AI_INDEX.md` → 2. `docs/AI_BOOT.md` → 3. `docs/AI_MAP.md` → 4. **`docs/AI_STANDARDS.md`**
 5. **`docs/AI_DATABASE.md`**（含 **§4.0 代码层方言标准写法**、`WrapperColumns`、`RuntimeSql`、Wrapper 边界、Dao **必须** Provider）
 6. 新模块 / 代码生成：追加 **`docs/AI_CODEGEN.md`**
-按需：`docs/AI_POSTGRESQL.md`、`docs/AI_UPGRADE.md` 等。
+按需：`docs/AI_POSTGRESQL.md`、`docs/AI_UPGRADE.md`、`docs/AI_DISTRIBUTED_LOCK.md` 等。
 
 ## 多库与 SQL（与 `docs/AI_DATABASE.md` 一致）
 
@@ -44,6 +44,15 @@ description: >-
 - **Provider**：`**DaoSql extends RuntimeSql**`，用 **`quote` / `columnInWrapper`** 等 §2.1 能力。
 - **未继承 `DialectService`** 的 Java 路径：用 **`WrapperColumns.columnInWrapper`**、分页排序 **`orderByColumnExpression`**、Map 等值 **`queryWrapperAllEqQuoted`**（以分支内 `WrapperColumns` 实际方法名为准），详见 **`docs/AI_DATABASE.md` §4.0**；存量反模式见 **§8.1**、检索 **§8.5**。
 - **Controller** 禁止 **Dao**；**Service** 用 **`baseMapper`**；复杂 SQL **Dao + Provider**。
+
+## 分布式执行与加锁（新增）
+
+- 涉及跨节点任务互斥、热点写入串行化、任务防重入时，优先复用框架锁能力，不自建锁组件。
+- **已继承 `ModuleService` / `BaseService`**：使用 **`DistributedService`** 的 `withLock*` 系列（严格/降级/重试）。
+- **未继承基础框架能力**：直接注入 **`DistributedLockService`**。
+- 配置统一通过后台 **`DistributedLockConfig`**（`DISTRIBUTED_LOCK_CONFIG`）管理，读取方式为 `sysConfigService.getObject(...)`。
+- 强一致场景默认严格失败；非强一致场景可用 `withLockOrFallback` 做服务降级。
+- 并发突发场景必须使用 `withLockRetry` 的随机退避机制，避免锁竞争雪崩。
 
 ## 自检清单
 
