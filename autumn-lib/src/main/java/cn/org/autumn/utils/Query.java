@@ -1,5 +1,6 @@
 package cn.org.autumn.utils;
 
+import cn.org.autumn.database.runtime.WrapperColumns;
 import com.baomidou.mybatisplus.plugins.Page;
 import cn.org.autumn.xss.SQLFilter;
 import org.apache.commons.lang.StringUtils;
@@ -49,10 +50,13 @@ public class Query<T> extends LinkedHashMap<String, Object> {
         //mybatis-plus分页
         this.page = new Page<>(currPage, limit);
 
-        //排序
-        if(StringUtils.isNotBlank(sidx) && StringUtils.isNotBlank(order)){
-            this.page.setOrderByField(sidx);
-            this.page.setAsc("ASC".equalsIgnoreCase(order));
+        // 排序：列名经方言引用，与 BaseService#getPage(Map, List) 中 descs 策略一致（见 WrapperColumns#orderByColumnExpression）
+        if (StringUtils.isNotBlank(sidx) && StringUtils.isNotBlank(order)) {
+            String col = WrapperColumns.orderByColumnExpression(sidx, true);
+            if (StringUtils.isNotBlank(col)) {
+                this.page.setOrderByField(col);
+                this.page.setAsc("ASC".equalsIgnoreCase(order));
+            }
         }
 
     }

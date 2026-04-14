@@ -47,7 +47,7 @@
 | # | 项 | 说明 |
 |---|-----|------|
 | 11 | **二方扩展** | 依赖方若 **继承/实现** autumn 的 `ModuleService`、`BaseMenu`、`LoopJob` 等，对照 **CHANGELOG** 或 **Diff** 检查重载签名、废弃方法。 |
-| 12 | **手写 SQL** | 硬编码 `LIMIT`/`FIND_IN_SET`/三参 `concat('%',#{x},'%')`/保留字列名等，在多库下易出错；**老旧 Dao 上 `@Select`/`@Update`/`@Insert`/`@Delete` 内联字符串**、**Wrapper 中反引号/`apply` 拼方言**须按 **`docs/AI_DATABASE.md` §8** 迁到 **`RuntimeSql` + Provider** 或安全 Wrapper（见下「跨库手写 SQL 与 RuntimeSql」）。 |
+| 12 | **手写 SQL** | 硬编码 `LIMIT`/`FIND_IN_SET`/三参 `concat('%',#{x},'%')`/保留字列名等，在多库下易出错；**老旧 Dao 上 `@Select`/`@Update`/`@Insert`/`@Delete` 内联字符串**、**Wrapper 中反引号/`apply` 拼方言**、**Java 里手写引号拼 `eq`/`orderBy`/分页排序**须按 **`docs/AI_DATABASE.md` §8** 迁到 **`RuntimeSql` + Provider** 或 **`WrapperColumns`（§4.0）**（见下「跨库手写 SQL 与 RuntimeSql」）。 |
 | 13 | **实体布尔与 MyBatis** | 避免同一字段 **`getX(int)` + `boolean isX()`** 引发 `Reflector` 冲突；分页若自定义 count，避免 **`COUNT(...) ORDER BY`**（PG 非法）。 |
 
 ### 2.5 回归与发布

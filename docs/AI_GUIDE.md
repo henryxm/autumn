@@ -20,7 +20,7 @@
 - `docs/AI_BOOT.md`：最小启动上下文（首轮固定）
 - `docs/AI_MAP.md`：高频开发能力主图
 - `docs/AI_STANDARDS.md`：约束性开发规范（分层、API、定时任务、权限、FTL、实体与库表、Dao/Provider、资源与 Site）
-- **`docs/AI_DATABASE.md`**：多数据库落地（`DatabaseType` 清单、全库兼容默认、Wrapper 边界、Dao 必须 Provider、`RuntimeSql`、推荐分层；**§8** 注解 Dao / 方言 Wrapper 升级步骤与 `rg` 检索示例）
+- **`docs/AI_DATABASE.md`**：多数据库落地（`DatabaseType` 清单、**§4.0 代码层方言标准写法（`RuntimeSql` / `WrapperColumns`，禁止硬编码引号）**、全库兼容默认、Wrapper 边界、Dao 必须 Provider、`RuntimeSql`、推荐分层；**§8** 注解 Dao / 方言 Wrapper 升级步骤与 `rg` 检索示例）
 - `docs/AI_POSTGRESQL.md`：PostgreSQL 专项（DDL、元数据、类型、分页 count、迁移）；通用跨库以 `docs/AI_DATABASE.md` 为准
 - `docs/AI_UPGRADE.md`：依赖方升级清单、`scripts/autumn-dependency-scan.sh` 与「一键升级」可执行边界
 - `docs/AI_CRYPTO.md`：接口加解密兼容专项

@@ -1,5 +1,6 @@
 package cn.org.autumn.service;
 
+import cn.org.autumn.database.runtime.WrapperColumns;
 import cn.org.autumn.menu.BaseMenu;
 import cn.org.autumn.table.annotation.Column;
 import cn.org.autumn.table.annotation.Table;
@@ -53,9 +54,9 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends ShareCache
                 continue;
             String fieldName = field.getName();
             String columnName = HumpConvert.HumpToUnderline(fieldName);
-            Object value = params.get(fieldName);
+            Object value = normalizeParamValue(params.get(fieldName));
             if (null == value) {
-                value = params.get(columnName);
+                value = normalizeParamValue(params.get(columnName));
             }
             if (null != value && !condition.containsKey(columnName)) {
                 condition.put(columnName, value);
@@ -177,23 +178,122 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends ShareCache
     }
 
     public Page<T> getPage(Map<String, Object> params) {
-        Page<T> _page = new Query<T>(params).getPage();
-        Map<String, Object> condition = getCondition(params);
+        Map<String, Object> normalized = normalizeQueryParams(params);
+        Page<T> _page = new Query<T>(normalized).getPage();
+        Map<String, Object> condition = quoteConditionKeys(getCondition(normalized));
         _page.setCondition(condition);
         return _page;
     }
 
     public Page<T> getPage(Map<String, Object> params, List<String> descs) {
-        Page<T> _page = new Query<T>(params).getPage();
-        Map<String, Object> condition = getCondition(params);
+        Map<String, Object> normalized = normalizeQueryParams(params);
+        Page<T> _page = new Query<T>(normalized).getPage();
+        Map<String, Object> condition = quoteConditionKeys(getCondition(normalized));
         _page.setCondition(condition);
-        if (null != descs && !descs.isEmpty())
-            _page.setDescs(descs);
+        if (descs != null && !descs.isEmpty()) {
+            List<String> orderCols = new ArrayList<String>();
+            for (String d : descs) {
+                if (StringUtils.isBlank(d)) {
+                    continue;
+                }
+                String col = WrapperColumns.orderByColumnExpression(d, false);
+                if (StringUtils.isNotBlank(col)) {
+                    orderCols.add(col);
+                }
+            }
+            if (!orderCols.isEmpty()) {
+                _page.setDescs(orderCols);
+            }
+        }
         return _page;
     }
 
     public Page<T> getPage(Map<String, Object> params, String... descs) {
-        return getPage(params, new ArrayList<>(Arrays.asList(descs)));
+        if (descs == null || descs.length == 0) {
+            return getPage(params, (List<String>) null);
+        }
+        return getPage(params, Arrays.asList(descs));
+    }
+
+    /**
+     * {@link com.baomidou.mybatisplus.mapper.SqlHelper#fillWrapper} 对 {@link com.baomidou.mybatisplus.plugins.Page#getCondition()}
+     * 使用 {@code allEq}，Map 键为裸列名时在 Derby/DB2/H2 等会失效；此处将键改为方言引用片段。
+     */
+    private static Map<String, Object> quoteConditionKeys(Map<String, Object> condition) {
+        if (condition == null || condition.isEmpty()) {
+            return condition;
+        }
+        Map<String, Object> out = new HashMap<String, Object>();
+        for (Map.Entry<String, Object> e : condition.entrySet()) {
+            out.put(WrapperColumns.columnInWrapper(e.getKey()), e.getValue());
+        }
+        return out;
+    }
+
+    /**
+     * 统一 Spring/Servlet 参数绑定与 jqGrid：数组/集合取首值、rows→limit、sord→order，分页排序键转为 String。
+     */
+    protected Map<String, Object> normalizeQueryParams(Map<String, Object> params) {
+        Map<String, Object> normalized = new HashMap<String, Object>();
+        if (params == null || params.isEmpty()) {
+            return normalized;
+        }
+        for (Map.Entry<String, Object> entry : params.entrySet()) {
+            String key = entry.getKey();
+            if (StringUtils.isBlank(key)) {
+                continue;
+            }
+            Object value = normalizeParamValue(entry.getValue());
+            if (value == null) {
+                continue;
+            }
+            normalized.put(key, value);
+        }
+        if (!normalized.containsKey("limit") && normalized.containsKey("rows")) {
+            normalized.put("limit", normalized.get("rows"));
+        }
+        if (!normalized.containsKey("order") && normalized.containsKey("sord")) {
+            normalized.put("order", normalized.get("sord"));
+        }
+        normalizeToString(normalized, "page");
+        normalizeToString(normalized, "limit");
+        normalizeToString(normalized, "rows");
+        normalizeToString(normalized, "sidx");
+        normalizeToString(normalized, "order");
+        normalizeToString(normalized, "sord");
+        return normalized;
+    }
+
+    protected Object normalizeParamValue(Object value) {
+        if (value == null) {
+            return null;
+        }
+        Object normalized = value;
+        if (normalized instanceof String[]) {
+            String[] values = (String[]) normalized;
+            normalized = values.length > 0 ? values[0] : null;
+        } else if (normalized instanceof Object[]) {
+            Object[] values = (Object[]) normalized;
+            normalized = values.length > 0 ? values[0] : null;
+        } else if (normalized instanceof Collection) {
+            Collection<?> values = (Collection<?>) normalized;
+            normalized = values.isEmpty() ? null : values.iterator().next();
+        }
+        if (normalized instanceof String) {
+            String text = ((String) normalized).trim();
+            return StringUtils.isBlank(text) ? null : text;
+        }
+        return normalized;
+    }
+
+    protected void normalizeToString(Map<String, Object> params, String key) {
+        if (!params.containsKey(key) || params.get(key) == null) {
+            return;
+        }
+        Object value = params.get(key);
+        if (!(value instanceof String)) {
+            params.put(key, String.valueOf(value));
+        }
     }
 
     public String getPrefix() {

@@ -37,7 +37,7 @@
 
 ### 1.1 多数据库（PostgreSQL）
 
-- **`autumn.database`** 与 JDBC URL 决定 **`DatabaseType`**；**多库 SQL 纪律、Wrapper 边界、Provider 强制、已支持库类型清单**见 **`docs/AI_DATABASE.md`**（与 `docs/AI_BOOT.md` §8 摘要互补）。PostgreSQL **专项**（DDL、元数据、类型、分页 `COUNT`）见 **`docs/AI_POSTGRESQL.md`**。业务工程 **升级 autumn 版本** 见 **`docs/AI_UPGRADE.md`**。
+- **`autumn.database`** 与 JDBC URL 决定 **`DatabaseType`**；**多库 SQL 纪律、Wrapper 边界、Provider 强制、已支持库类型清单**见 **`docs/AI_DATABASE.md`**（与 `docs/AI_BOOT.md` §8 摘要互补）；**代码里表/列/排序/Map 条件键**须按 **`docs/AI_DATABASE.md` §4.0** 使用 **`RuntimeSql` / `WrapperColumns`**，**禁止**手写方言引号导致换库错误。PostgreSQL **专项**（DDL、元数据、类型、分页 `COUNT`）见 **`docs/AI_POSTGRESQL.md`**。业务工程 **升级 autumn 版本** 见 **`docs/AI_UPGRADE.md`**。
 
 ## 2. 核心能力索引（按开发高频）
 
