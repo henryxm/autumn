@@ -93,7 +93,8 @@ public class ShiroConfig {
     }
 
     @Bean("shiroFilter")
-    public ShiroFilterFactoryBean shiroFilter(SecurityManager securityManager, List<FilterChainHandler> filterChainHandlers) {
+    public ShiroFilterFactoryBean shiroFilter(SecurityManager securityManager, List<FilterChainHandler> filterChainHandlers,
+                                              @Value("${server.servlet.context-path:}") String servletContextPath) {
         ShiroFilterFactoryBean shiroFilter = new ShiroFilterFactoryBean();
         shiroFilter.setSecurityManager(securityManager);
         SecurityUtils.setSecurityManager(securityManager);
@@ -144,8 +145,12 @@ public class ShiroConfig {
         Map<String, String> filterMap = new LinkedHashMap<>();
         Map<String, Filter> map = new HashMap<>();
         map.put("spm", new SpmFilter());
-        String login = "/login";
-        String unauthorized = "/";
+        // 与 ServletContext#getContextPath 对齐：根部署为空串，不依赖 ServletContext Bean（部分测试/切片环境无该 Bean）
+        String ctx = StringUtils.defaultString(servletContextPath);
+        if ("/".equals(ctx))
+            ctx = "";
+        String login = ctx + "/login";
+        String unauthorized = ctx.isEmpty() ? "/" : (ctx + "/");
         String success = "";
 
         for (FilterChainHandler filterChainHandler : filterChainHandlers) {

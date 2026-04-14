@@ -7,7 +7,7 @@ import cn.org.autumn.modules.lan.service.LanguageService;
 import cn.org.autumn.modules.sys.entity.SysMenuEntity;
 import cn.org.autumn.modules.sys.service.SysMenuService;
 import cn.org.autumn.site.InitFactory;
-import cn.org.autumn.table.dao.TableDao;
+import cn.org.autumn.table.platform.RelationalTableOperations;
 import cn.org.autumn.table.data.ColumnInfo;
 import cn.org.autumn.table.data.IndexInfo;
 import cn.org.autumn.table.data.TableInfo;
@@ -36,7 +36,7 @@ public class GeneratorService implements InitFactory.Init {
     private SysMenuService sysMenuService;
 
     @Autowired
-    private TableDao generatorDao;
+    private RelationalTableOperations relationalTableOperations;
 
     @Autowired
     private GenTypeService genTypeService;
@@ -54,7 +54,7 @@ public class GeneratorService implements InitFactory.Init {
         Page<TableMeta> page = new Page<>();
         Query query = new Query(params);
         page.setRecords(queryList(query));
-        page.setTotal(generatorDao.getTableCount());
+        page.setTotal(relationalTableOperations.getTableCount());
         page.setCurrent(query.getCurrPage());
         page.setSize(query.getLimit());
         return new PageUtils(page);
@@ -70,23 +70,23 @@ public class GeneratorService implements InitFactory.Init {
             offset = (int) query.get("offset");
         if (query.containsKey("tableName"))
             tableName = (String) query.get("tableName");
-        return generatorDao.getTableMetasPage(tableName, offset, limit);
+        return relationalTableOperations.getTableMetas(tableName, offset, limit);
     }
 
     public List<TableMeta> queryTable(String tableName) {
-        return generatorDao.getTableMetas(tableName);
+        return relationalTableOperations.getTableMetas(tableName);
     }
 
     public List<UniqueKeyInfo> showKeys(String tableName) {
-        return generatorDao.getTableKeys(tableName);
+        return relationalTableOperations.getTableKeys(tableName);
     }
 
     public List<IndexInfo> showIndex(String tableName) {
-        return generatorDao.getTableIndex(tableName);
+        return relationalTableOperations.getTableIndex(tableName);
     }
 
     public List<ColumnMeta> queryColumns(String tableName) {
-        return generatorDao.getColumnMetas(tableName);
+        return relationalTableOperations.getColumnMetas(tableName);
     }
 
     public TableInfo toTableInfo(TableMeta table) {

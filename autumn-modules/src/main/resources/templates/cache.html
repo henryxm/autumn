@@ -832,9 +832,10 @@
         </div>
     </div>
 
-    <script src="/statics/libs/jquery.min.js"></script>
-    <script src="/statics/libs/vue.min.js"></script>
+    <script src="${request.contextPath}/statics/libs/jquery.min.js"></script>
+    <script src="${request.contextPath}/statics/libs/vue.min.js"></script>
     <script>
+        var __CTX = '${request.contextPath!""}';
         var vm = new Vue({
             el: '#app',
             data: {
@@ -878,7 +879,7 @@
             methods: {
                 loadStatus() {
                     $.ajax({
-                        url: '/sys/cache/status',
+                        url: __CTX + '/sys/cache/status',
                         method: 'GET',
                         success: (response) => {
                             if (response.code === 0) {
@@ -893,7 +894,7 @@
                 loadCacheList() {
                     this.loading = true;
                     $.ajax({
-                        url: '/sys/cache/list',
+                        url: __CTX + '/sys/cache/list',
                         method: 'GET',
                         success: (response) => {
                             this.loading = false;
@@ -923,8 +924,8 @@
                     if (!this.selectedCache) return;
                     this.keysLoading = true;
                     const url = this.searchPattern ? 
-                        '/sys/cache/search/' + this.selectedCache : 
-                        '/sys/cache/keys/' + this.selectedCache;
+                        __CTX + '/sys/cache/search/' + this.selectedCache : 
+                        __CTX + '/sys/cache/keys/' + this.selectedCache;
                     $.ajax({
                         url: url,
                         method: 'GET',
@@ -965,7 +966,7 @@
                 },
                 viewValue(key) {
                     $.ajax({
-                        url: '/sys/cache/value/' + this.selectedCache,
+                        url: __CTX + '/sys/cache/value/' + this.selectedCache,
                         method: 'GET',
                         data: { key: key },
                         success: (response) => {
@@ -988,7 +989,7 @@
                 deleteKey(key) {
                     if (!confirm('确定要删除键 "' + key + '" 吗？')) return;
                     $.ajax({
-                        url: '/sys/cache/key/' + this.selectedCache,
+                        url: __CTX + '/sys/cache/key/' + this.selectedCache,
                         method: 'DELETE',
                         data: { key: key },
                         success: (response) => {
@@ -1009,7 +1010,7 @@
                     if (this.selectedKeys.length === 0) return;
                     if (!confirm('确定要删除选中的 ' + this.selectedKeys.length + ' 个键吗？')) return;
                     $.ajax({
-                        url: '/sys/cache/keys/' + this.selectedCache,
+                        url: __CTX + '/sys/cache/keys/' + this.selectedCache,
                         method: 'DELETE',
                         contentType: 'application/json',
                         data: JSON.stringify(this.selectedKeys),
@@ -1038,7 +1039,7 @@
                 clearCache() {
                     if (!confirm('确定要清空缓存 "' + this.selectedCache + '" 吗？')) return;
                     $.ajax({
-                        url: '/sys/cache/clear/' + this.selectedCache,
+                        url: __CTX + '/sys/cache/clear/' + this.selectedCache,
                         method: 'DELETE',
                         success: (response) => {
                             if (response.code === 0) {
@@ -1057,7 +1058,7 @@
                 clearAll() {
                     if (!confirm('确定要清空所有缓存吗？此操作不可恢复！')) return;
                     $.ajax({
-                        url: '/sys/cache/clear/all',
+                        url: __CTX + '/sys/cache/clear/all',
                         method: 'DELETE',
                         success: (response) => {
                             if (response.code === 0) {

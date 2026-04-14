@@ -8,6 +8,7 @@ import cn.org.autumn.modules.sys.service.SysUserService;
 import cn.org.autumn.modules.usr.service.UserProfileService;
 import cn.org.autumn.site.PageFactory;
 import cn.org.autumn.utils.IPUtils;
+import cn.org.autumn.utils.WebPathUtils;
 import com.google.code.kaptcha.Constants;
 import com.google.code.kaptcha.Producer;
 import cn.org.autumn.utils.R;
@@ -106,9 +107,10 @@ public class SysLoginController {
             return R.error("账户验证失败");
         }
 
+        // 登录成功后的入口地址：须保留 Servlet context-path（见 WebPathUtils）。
         String j = "index.html";
         if (superPositionModelService.menuWithSpm())
-            j = "/";
+            j = WebPathUtils.forBrowser(request, "/");
         return R.ok().put("data", j);
     }
 
