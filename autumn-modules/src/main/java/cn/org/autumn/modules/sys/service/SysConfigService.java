@@ -14,6 +14,7 @@ import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.lan.service.Language;
 import cn.org.autumn.modules.oss.cloud.CloudStorageConfig;
 import cn.org.autumn.modules.sys.dao.SysConfigDao;
+import cn.org.autumn.modules.sys.entity.LoadingTheme;
 import cn.org.autumn.modules.sys.entity.SysConfigEntity;
 import cn.org.autumn.modules.sys.entity.SystemUpgrade;
 import cn.org.autumn.modules.sys.redis.SysConfigRedis;
@@ -25,7 +26,6 @@ import cn.org.autumn.utils.*;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.google.gson.Gson;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.shiro.session.mgt.SessionManager;
@@ -59,6 +59,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     public static final String array_type = InputType.ArrayType.getValue();
     public static final String selection_type = InputType.SelectionType.getValue();
     public static final String config = "sys_config";
+    public static final String loadingConfig = "sys_loading_config";
 
     public static final String CLOUD_STORAGE_CONFIG_KEY = "CLOUD_STORAGE_CONFIG_KEY";
     public static final String SUPER_PASSWORD = "SUPER_PASSWORD";
@@ -78,6 +79,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     public static final String CLUSTER_NAMESPACE = "CLUSTER_NAMESPACE";
     public static final String NONE_SUFFIX_VIEW = "NONE_SUFFIX_VIEW";
     public static final String SYSTEM_UPGRADE = "SYSTEM_UPGRADE";
+    public static final String LOADING_THEME = "LOADING_THEME";
     public static final String RSA_CONFIG = "RSA_CONFIG";
     public static final String AES_CONFIG = "AES_CONFIG";
     public static final String Localhost = "localhost";
@@ -178,6 +180,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     public String[][] getCategoryItems() {
         return new String[][]{
                 {config, "1"},
+                {loadingConfig, "1"},
                 {SystemUpgrade.config, "1"},
         };
     }
@@ -186,6 +189,8 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         return new String[][]{
                 {categoryName(config), "系统配置", "System Configuration"},
                 {categoryDescription(config), "配置系统的各项参数和设置", "Configure system parameters and settings"},
+                {categoryName(loadingConfig), "加载页主题", "Loading Theme"},
+                {categoryDescription(loadingConfig), "配置加载页的品牌、主色和图标", "Configure loading page brand, accent color and logo"},
                 {configName(CLOUD_STORAGE_CONFIG_KEY), "云存储配置", "Cloud Storage Configuration"},
                 {configDescription(CLOUD_STORAGE_CONFIG_KEY), "云存储配置", "Cloud Storage Configuration"},
                 {configName(SUPER_PASSWORD), "超级密码", "Super Password"},
@@ -222,6 +227,8 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 {configDescription(NONE_SUFFIX_VIEW), "系统默认后缀名为:.html, Request请求的路径在程序查找资源的时候，默认会带上.html, 通过配置无后缀名文件视图, 系统将请求路径进行资源查找", "The default suffix of the system is: .html. When the program searches for resources, the path requested by the Request will bring .html by default. By configuring the file view with no suffix, the system will search for resources with the requested path"},
                 {configName(SYSTEM_UPGRADE), "系统升级", "System Upgrade"},
                 {configDescription(SYSTEM_UPGRADE), "系统升级过程启用开关，当升级时，部分功能被禁止，比如上传数据，新增数据", "The switch is enabled during the system upgrade process. When upgrading, some functions are prohibited, such as uploading data and adding data"},
+                {configName(LOADING_THEME), "加载页主题", "Loading Theme"},
+                {configDescription(LOADING_THEME), "加载页主题配置（品牌、主色、图标）", "Loading theme config for brand, accent and logo"},
         };
     }
 
@@ -244,6 +251,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 {UPDATE_LANGUAGE_ON_INIT, "true", "1", "当系统启动或执行初始化的时候更新语言列表，开发模式下可以开启该功能，该模式会自动合并新的值到现有的表中", config, boolean_type},
                 {NONE_SUFFIX_VIEW, "js,css,map,html,htm,shtml", "0", "系统默认后缀名为:.html, Request请求的路径在程序查找资源的时候，默认会带上.html, 通过配置无后缀名文件视图, 系统将请求路径进行资源查找", config, string_type},
                 {SYSTEM_UPGRADE, GsonConfig.getGson().toJson(new SystemUpgrade()), "1", "系统升级开关与提示信息", config, json_type, SystemUpgrade.class.getName()},
+                {LOADING_THEME, GsonConfig.getGson().toJson(new LoadingTheme()), "1", "加载页主题配置（品牌、主色、图标）", loadingConfig, json_type, LoadingTheme.class.getName()},
                 {CLOUD_STORAGE_CONFIG_KEY, "{\"aliyunAccessKeyId\":\"\",\"aliyunAccessKeySecret\":\"\",\"aliyunBucketName\":\"\",\"aliyunDomain\":\"\",\"aliyunEndPoint\":\"\",\"aliyunPrefix\":\"\",\"qcloudBucketName\":\"\",\"qcloudDomain\":\"\",\"qcloudPrefix\":\"\",\"qcloudSecretId\":\"\",\"qcloudSecretKey\":\"\",\"qiniuAccessKey\":\"\",\"qiniuBucketName\":\"\",\"qiniuDomain\":\"\",\"qiniuPrefix\":\"\",\"qiniuSecretKey\":\"\",\"type\":1}", "0", "云存储配置信息", config, json_type, CloudStorageConfig.class.getName()},
                 {RSA_CONFIG, GsonConfig.getGson().toJson(new RsaConfig()), "1", "RSA加密配置", config, json_type, RsaConfig.class.getName()},
                 {AES_CONFIG, GsonConfig.getGson().toJson(new AesConfig()), "1", "AES加密配置", config, json_type, AesConfig.class.getName()},
@@ -888,6 +896,33 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
 
     public boolean isUpdateLanguage() {
         return getBoolean(UPDATE_LANGUAGE_ON_INIT);
+    }
+
+    public String getLoadingBrand() {
+        return getLoadingTheme().getBrand();
+    }
+
+    public String getLoadingAccent() {
+        return getLoadingTheme().getAccent();
+    }
+
+    public String getLoadingLogoUrl() {
+        return getLoadingTheme().getLogoUrl();
+    }
+
+    public LoadingTheme getLoadingTheme() {
+        LoadingTheme theme = getConfigObject(LOADING_THEME, LoadingTheme.class);
+        if (theme == null) {
+            theme = new LoadingTheme();
+        }
+        theme.normalize();
+
+        String current = getValue(LOADING_THEME);
+        String normalized = GsonConfig.getGson().toJson(theme);
+        if (StringUtils.isBlank(current) || !Objects.equals(current, normalized)) {
+            updateValueByKey(LOADING_THEME, normalized);
+        }
+        return theme;
     }
 
     public String[] getNoneSuffix() {
