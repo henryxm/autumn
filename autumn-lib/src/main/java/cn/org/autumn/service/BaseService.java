@@ -1,5 +1,6 @@
 package cn.org.autumn.service;
 
+import cn.org.autumn.database.runtime.WrapperColumns;
 import cn.org.autumn.menu.BaseMenu;
 import cn.org.autumn.table.annotation.Column;
 import cn.org.autumn.table.annotation.Table;
@@ -218,7 +219,8 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends ShareCache
     }
 
     /**
-     * 默认逆序字段须为方言引用后的列名（如 {@code columnInWrapper("id")}）。
+     * 默认逆序字段为<strong>逻辑列名</strong>（蛇形或与实体字段一致）：经 {@link WrapperColumns#orderByColumnExpression(String, boolean)}，
+     * 与 {@link Query} 的 {@code sidx} 相同策略（{@link cn.org.autumn.xss.SQLFilter} + 方言引用）。已引用片段或复杂表达式规则见 {@link WrapperColumns}。
      * <p>
      * 排序写在 {@link Page#addOrder} 而非 {@link QueryWrapper#orderByDesc}：分页插件只在带 {@code IPage} 的查询上拼接
      * {@code ORDER BY}；{@link #selectCountWithoutOrderBy} 使用的 {@code ew} 无排序，Derby/DB2 等不会对 {@code COUNT(*)} 附加非法
@@ -231,13 +233,7 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends ShareCache
         Map<String, Object> normalized = normalizeQueryParams(params);
         Page<T> _page = new Query<T>(normalized).getPage();
         bindPageCondition(_page, getCondition(normalized));
-        if (descs != null) {
-            for (String desc : descs) {
-                if (StringUtils.isNotBlank(desc)) {
-                    _page.addOrder(OrderItem.withExpression(desc.trim(), false));
-                }
-            }
-        }
+        appendDescOrderItems(_page, descs);
         return queryPage(_page, new QueryWrapper<>());
     }
 
@@ -256,15 +252,35 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends ShareCache
     }
 
     /**
-     * @param descs 已忽略。{@link Page#addOrder} 产生的 {@code ORDER BY} 不经 {@code column-format}，在 Derby/DB2/H2 双引号标识符下会与
-     * {@code SELECT} 列引用不一致。请使用 {@link #queryPage(Map, List)} / {@link #queryPage(Map, String...)}，或
-     * {@code queryPage(getPage(params), new QueryWrapper<>().orderByDesc(...))}。
+     * 与 {@link #queryPage(Map, List)} 一致：将降序字段写入 {@link Page#addOrder}，使用 {@link OrderItem#withExpression(String, boolean)}
+     * 以兼容 Derby/DB2/H2 等对方言引用列名的处理，并避免仅写在 {@link QueryWrapper} 上导致 COUNT 附带 ORDER BY。
+     *
+     * @param descs 降序排序列：优先传逻辑列名；已引用列名或复杂表达式可原样传入（规则同 {@link #queryPage(Map, List)}）
      */
     public Page<T> getPage(Map<String, Object> params, List<String> descs) {
         Map<String, Object> normalized = normalizeQueryParams(params);
         Page<T> _page = new Query<T>(normalized).getPage();
         bindPageCondition(_page, getCondition(normalized));
+        appendDescOrderItems(_page, descs);
         return _page;
+    }
+
+    /**
+     * 分页降序：{@link OrderItem#withExpression} 避免 {@link OrderItem#desc(String)} 去掉引号；逻辑列名经
+     * {@link WrapperColumns#columnInWrapper(String)} 与 {@link Query} 中 {@code sidx} 对齐。
+     */
+    private void appendDescOrderItems(Page<T> page, List<String> descs) {
+        if (page == null || descs == null) {
+            return;
+        }
+        for (String desc : descs) {
+            if (StringUtils.isNotBlank(desc)) {
+                String col = WrapperColumns.orderByColumnExpression(desc, false);
+                if (StringUtils.isNotBlank(col)) {
+                    page.addOrder(OrderItem.withExpression(col, false));
+                }
+            }
+        }
     }
 
     protected void bindPageCondition(Page<T> page, Map<String, Object> condition) {
@@ -296,7 +312,7 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends ShareCache
             if (value instanceof String && StringUtils.isBlank((String) value)) {
                 continue;
             }
-            wrapper.eq(entry.getKey(), value);
+            wrapper.eq(WrapperColumns.columnInWrapper(entry.getKey()), value);
         }
     }
 
@@ -323,7 +339,10 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends ShareCache
     }
 
     public Page<T> getPage(Map<String, Object> params, String... descs) {
-        return getPage(params, new ArrayList<>(Arrays.asList(descs)));
+        if (descs == null || descs.length == 0) {
+            return getPage(params, (List<String>) null);
+        }
+        return getPage(params, Arrays.asList(descs));
     }
 
     /**
