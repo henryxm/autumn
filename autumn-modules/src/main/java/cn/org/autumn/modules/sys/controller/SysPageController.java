@@ -8,10 +8,13 @@ import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.modules.sys.service.SysLogService;
 import cn.org.autumn.modules.sys.service.SysUserRoleService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
+import cn.org.autumn.modules.spm.interceptor.SpmInterceptor;
 import cn.org.autumn.modules.wall.service.IpWhiteService;
 import cn.org.autumn.modules.wall.site.WallDefault;
+import cn.org.autumn.modules.usr.interceptor.AuthorizationInterceptor;
 import cn.org.autumn.site.PageFactory;
 import cn.org.autumn.site.PluginFactory;
+import cn.org.autumn.utils.WebPathUtils;
 import cn.org.autumn.thread.TagTaskExecutor;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -139,7 +142,7 @@ public class SysPageController implements ErrorController {
     public String loginOauth(HttpServletRequest request, HttpServletResponse httpServletResponse, Model model) {
         Enumeration<String> enumeration = request.getParameterNames();
         if (!enumeration.hasMoreElements()) {
-            model.addAttribute("url", "/login?redirect=login");
+            model.addAttribute("url", WebPathUtils.forBrowser(request, "/login?redirect=login"));
             return "direct";
         }
         String host = request.getHeader("host");
@@ -169,8 +172,11 @@ public class SysPageController implements ErrorController {
     }
 
     @RequestMapping("loading.html")
-    @SkipInterceptor
+    @SkipInterceptor({AuthorizationInterceptor.class, SpmInterceptor.class})
     public String loading(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        model.addAttribute("loadingBrand", sysConfigService.getLoadingBrand());
+        model.addAttribute("loadingAccent", sysConfigService.getLoadingAccent());
+        model.addAttribute("loadingLogoUrl", sysConfigService.getLoadingLogoUrl());
         return pageFactory.loading(httpServletRequest, httpServletResponse, model);
     }
 
@@ -358,10 +364,10 @@ public class SysPageController implements ErrorController {
 
     @RequestMapping(value = {"scan.html"}, method = RequestMethod.GET)
     @SkipInterceptor
-    public String scan(Model model) {
+    public String scan(Model model, HttpServletRequest request) {
         if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
             return "404";
-        model.addAttribute("url", "/");
+        model.addAttribute("url", WebPathUtils.forBrowser(request, "/"));
         return "scan";
     }
 

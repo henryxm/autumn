@@ -170,6 +170,39 @@
 - 给出失败补偿策略（缓存回滚/重试/死信/任务兜底）
 ```
 
+### 2.7 分布式锁模板（跨节点互斥/防重入/抗雪崩）
+
+```md
+你正在实现一个需要分布式互斥的任务，必须复用 Autumn 框架分布式锁能力。
+
+任务目标：
+- {一句话目标}
+
+场景类型（必选其一）：
+- strict：强一致（withLock）
+- fallback：可降级（withLockOrFallback）
+- retry：热点抗雪崩（withLockRetry）
+
+能力入口约束：
+- 若当前 Service 继承 ModuleService/BaseService：直接使用 DistributedService.withLock*
+- 若当前类未继承基础链路（listener/filter/component）：注入 DistributedLockService
+
+必须产出：
+- 1) lockKey 设计（包含业务维度 + 主键，避免全局单key）
+- 2) 锁内临界区代码（短小、幂等）
+- 3) 失败策略（抛错 / fallback / 重试）
+- 4) 观测点（日志、指标、告警）
+
+配置约束：
+- 配置来自 DistributedLockConfig（DISTRIBUTED_LOCK_CONFIG）
+- 通过 sysConfigService.getObject(...) 获取，不走环境变量
+
+禁止事项：
+- 禁止手写 while(true) 自旋抢锁
+- 禁止在锁内执行长耗时阻塞 IO
+- 禁止无日志的静默降级
+```
+
 ## 3. 快速索引（按场景秒选）
 
 - 系统配置/权限/菜单：`2.1 sys`
@@ -178,6 +211,8 @@
 - 周期任务治理：`2.4 job`
 - 实体驱动代码生成：`2.5 gen`
 - 跨模块组合：`2.6 跨模块组合模板`
+- 分布式互斥与防重入：`2.7 分布式锁模板`
+- 分布式锁业务速查：`docs/AI_DISTRIBUTED_LOCK.md` §11
 
 ## 4. 组合复制示例
 

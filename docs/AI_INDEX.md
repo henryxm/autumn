@@ -9,7 +9,8 @@
 - `docs/AI_BOOT.md`：最小启动上下文（首轮必读）
 - `docs/AI_MAP.md`：高频开发能力主图（含生成模板分层与可改/不可改边界）
 - `docs/AI_STANDARDS.md`：**约束性开发规范**（分层、API、定时任务、权限、FTL、**实体/注解建表/禁止初始化 DDL**、模块表前缀、**Dao+Provider**、**Controller–Service–Dao**、**statics/pages/Site/PageAware**）
-- **`docs/AI_DATABASE.md`**：**多数据库落地规范**（已支持 `DatabaseType` 清单、**§2.1 `RuntimeSqlDialect` 能力清单与故意不抽象项**、**全库兼容默认**、**Wrapper 安全边界**、**Dao+Provider 强制与推荐分层**、`RuntimeSql` 使用纪律；**§8 老旧注解 Dao / 方言化 Wrapper 升级与一键体检策略**）
+- **`docs/AI_DATABASE.md`**：**多数据库落地规范**（已支持 `DatabaseType` 清单、**§2.1 `RuntimeSqlDialect` 能力清单与故意不抽象项**、**§4.0 代码层标准写法（`RuntimeSql` / `WrapperColumns`，禁止硬编码方言符号）**、**全库兼容默认**、**Wrapper 安全边界**、**Dao+Provider 强制与推荐分层**、`RuntimeSql` 使用纪律；**§8 老旧注解 Dao / 方言化 Wrapper 升级与一键体检策略**）
+- `docs/AI_DISTRIBUTED_LOCK.md`：分布式锁能力（`DistributedLockService` / `DistributedService`）、场景化加锁、降级与抗雪崩策略、`DistributedLockConfig` 配置项与默认值、业务域快捷模板（含项目示例源码入口）
 - `docs/AI_POSTGRESQL.md`：PostgreSQL 专项（DDL/元数据、`PostgresQuerySql`、迁移与兼容性）；通用跨库口径以 **`docs/AI_DATABASE.md`** 为准
 - `docs/AI_UPGRADE.md`：依赖方升级 autumn 时的清单、一键扫描脚本说明与自动化边界
 - `docs/AI_CRYPTO.md`：接口加解密兼容与迁移
@@ -23,6 +24,7 @@
 ## 2. 推荐加载矩阵（按场景）
 
 - 日常开发：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md`（涉及 SQL/Wrapper/多库时追加 **`docs/AI_DATABASE.md`**）
+- 分布式互斥/跨节点任务：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md + docs/AI_DISTRIBUTED_LOCK.md`
 - 新模块/代码生成：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md + docs/AI_CODEGEN.md + docs/AI_TEMPLATES.md`（先读代码生成流程与三步节奏，再确认生成层约束，后落业务层）
 - 多项目模板整合（TemplateFactory）：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md + docs/AI_GOVERNANCE.md`
 - 接口加解密改造：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md + docs/AI_CRYPTO.md`

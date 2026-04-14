@@ -7,13 +7,13 @@
     <meta name="description" content="">
     <meta name="author" content="">
     <title>统一登录系统</title>
-    <link href="/statics/css/bootstrap.min.css" rel="stylesheet">
-    <link href="/statics/css/signin.css" rel="stylesheet">
+    <link href="${request.contextPath}/statics/css/bootstrap.min.css" rel="stylesheet">
+    <link href="${request.contextPath}/statics/css/signin.css" rel="stylesheet">
 </head>
 
 <body>
 <div class="container form-margin-top">
-    <form class="form-signin" action="/oauth2/login" method="POST">
+    <form class="form-signin" action="${request.contextPath}/oauth2/login" method="POST">
         <h2 class="form-signin-heading" align="center">统一登录系统</h2>
         <input type="text" name="username" class="form-control form-margin-top" placeholder="账号" required autofocus>
         <input type="password" name="password" class="form-control" placeholder="密码" required>

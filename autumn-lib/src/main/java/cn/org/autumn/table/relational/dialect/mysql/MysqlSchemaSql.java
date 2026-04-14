@@ -180,19 +180,23 @@ public class MysqlSchemaSql implements RelationalSchemaSql {
         }
     }
 
+    /**
+     * 列定义片段（类型、空值、自增、默认值、注释等）。内嵌 H2 MySQL 兼容模式由子类改为 {@link #appendCommonEmbeddedH2}。
+     */
+    protected void appendColumnDefinition(ColumnInfo columnInfo, StringBuilder sb) {
+        appendCommon(columnInfo, sb);
+    }
+
+    /**
+     * 仅类型片段（不含列名）：见 {@link EmbeddedH2MysqlTypeMappings}。
+     */
+    protected static void appendEmbeddedH2PhysicalType(ColumnInfo c, StringBuilder sb) {
+        EmbeddedH2MysqlTypeMappings.appendPhysicalType(c, sb);
+    }
+
     protected void appendCommonEmbeddedH2(ColumnInfo columnInfo, StringBuilder sb) {
-        if (columnInfo.getTypeLength() == 0) {
-            sb.append("`").append(columnInfo.getName()).append("` ").append(columnInfo.getType());
-        }
-        if (columnInfo.getTypeLength() == 1) {
-            sb.append("`").append(columnInfo.getName()).append("` ").append(columnInfo.getType())
-                    .append("(").append(columnInfo.getLength()).append(")");
-        }
-        if (columnInfo.getTypeLength() == 2) {
-            sb.append("`").append(columnInfo.getName()).append("` ");
-            sb.append(columnInfo.getType()).append("(").append(columnInfo.getLength()).append(",")
-                    .append(columnInfo.getDecimalLength()).append(")");
-        }
+        sb.append("`").append(columnInfo.getName()).append("` ");
+        appendEmbeddedH2PhysicalType(columnInfo, sb);
         if (columnInfo.isNull()) {
             sb.append(" NULL");
         } else {
@@ -213,7 +217,7 @@ public class MysqlSchemaSql implements RelationalSchemaSql {
             TableInfo tableInfo = kv.getKey();
             sb.append("ALTER TABLE `" + tableInfo.getName() + "` " + action + " ");
             ColumnInfo columnInfo = kv.getValue();
-            appendCommon(columnInfo, sb);
+            appendColumnDefinition(columnInfo, sb);
             if (columnInfo.isKey()) {
                 sb.append(" PRIMARY KEY");
             }
@@ -244,7 +248,7 @@ public class MysqlSchemaSql implements RelationalSchemaSql {
             TableInfo tableInfo = kv.getKey();
             stringBuilder.append("ALTER TABLE `" + tableInfo.getName() + "` MODIFY");
             ColumnInfo columnInfo = kv.getValue();
-            appendCommon(columnInfo, stringBuilder);
+            appendColumnDefinition(columnInfo, stringBuilder);
             stringBuilder.append(", DROP PRIMARY KEY");
             stringBuilder.append(";");
         }
@@ -319,7 +323,7 @@ public class MysqlSchemaSql implements RelationalSchemaSql {
             List<ColumnInfo> list = kv.getValue();
             String primaryKey = "";
             for (ColumnInfo columnInfo : list) {
-                appendCommon(columnInfo, stringBuilder);
+                appendColumnDefinition(columnInfo, stringBuilder);
                 if (columnInfo.isKey()) {
                     String split = ",";
                     if (StringUtils.isBlank(primaryKey)) {

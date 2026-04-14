@@ -109,7 +109,8 @@ public class DatabaseHolder {
     /**
      * 与 {@link #getType()} 相同解析规则，供无 Spring 注入场景（如 {@link cn.org.autumn.database.runtime.RuntimeSqlDialectRegistry}）使用。
      * <p>
-     * {@code jdbc:h2:...} 且 URL 含 {@code MODE=MySQL} 时返回 {@link DatabaseType#MYSQL}（内嵌 MySQL 兼容 H2）。
+     * {@code jdbc:h2:...} 且该 URL 含 {@code MODE=MySQL} 时返回 {@link DatabaseType#MYSQL}（内嵌 MySQL 兼容 H2；与
+     * {@link cn.org.autumn.table.relational.provider.EmbeddedH2MysqlMode} 使用同一 URL 语义，含多数据源 first/second）。
      */
     public static DatabaseType resolveType(String jdbcUrl, String autumnDatabaseRaw) {
         String u = jdbcUrl == null ? "" : jdbcUrl.trim();

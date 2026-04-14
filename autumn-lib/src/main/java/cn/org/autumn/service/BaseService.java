@@ -1,5 +1,6 @@
 package cn.org.autumn.service;
 
+import cn.org.autumn.database.runtime.WrapperColumns;
 import cn.org.autumn.menu.BaseMenu;
 import cn.org.autumn.table.annotation.Column;
 import cn.org.autumn.table.annotation.Table;
@@ -32,7 +33,7 @@ import java.util.*;
  * @param <T> Entity
  */
 @Slf4j
-public abstract class BaseService<M extends BaseMapper<T>, T> extends ShareCacheService<M, T> implements BaseMenu {
+public abstract class BaseService<M extends BaseMapper<T>, T> extends DistributedService<M, T> implements BaseMenu {
 
     @Setter
     private String prefix = null;
@@ -323,17 +324,32 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends ShareCache
     }
 
     public Page<T> getPage(Map<String, Object> params, String... descs) {
-        return getPage(params, new ArrayList<>(Arrays.asList(descs)));
+        if (descs == null || descs.length == 0) {
+            return getPage(params, (List<String>) null);
+        }
+        return getPage(params, Arrays.asList(descs));
     }
 
     /**
-     * 统一兼容 Spring/Servlet 在不同版本下的参数绑定差异：
-     * 1) String / String[] / Collection 统一取首值
-     * 2) rows -> limit, sord -> order
-     * 3) Query 依赖的分页排序参数强制转为 String
+     * {@link com.baomidou.mybatisplus.mapper.SqlHelper#fillWrapper} 对 {@link com.baomidou.mybatisplus.plugins.Page#getCondition()}
+     * 使用 {@code allEq}，Map 键为裸列名时在 Derby/DB2/H2 等会失效；此处将键改为方言引用片段。
+     */
+    private static Map<String, Object> quoteConditionKeys(Map<String, Object> condition) {
+        if (condition == null || condition.isEmpty()) {
+            return condition;
+        }
+        Map<String, Object> out = new HashMap<String, Object>();
+        for (Map.Entry<String, Object> e : condition.entrySet()) {
+            out.put(WrapperColumns.columnInWrapper(e.getKey()), e.getValue());
+        }
+        return out;
+    }
+
+    /**
+     * 统一 Spring/Servlet 参数绑定与 jqGrid：数组/集合取首值、rows→limit、sord→order，分页排序键转为 String。
      */
     protected Map<String, Object> normalizeQueryParams(Map<String, Object> params) {
-        Map<String, Object> normalized = new HashMap<>();
+        Map<String, Object> normalized = new HashMap<String, Object>();
         if (params == null || params.isEmpty()) {
             return normalized;
         }
@@ -348,7 +364,6 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends ShareCache
             }
             normalized.put(key, value);
         }
-        // jqGrid 兼容参数
         if (!normalized.containsKey("limit") && normalized.containsKey("rows")) {
             normalized.put("limit", normalized.get("rows"));
         }

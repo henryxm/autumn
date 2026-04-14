@@ -1143,8 +1143,9 @@
 </div>
 
 <script>
+    var __CTX = '${request.contextPath!""}';
     //<#noparse>
-    const API_BASE = '/sys/queue';
+    const API_BASE = __CTX + '/sys/queue';
     let currentQueue = null;
     let currentPage = 1;
     let pageSize = 20;

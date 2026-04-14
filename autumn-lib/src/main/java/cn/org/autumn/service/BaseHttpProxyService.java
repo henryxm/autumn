@@ -2,6 +2,7 @@ package cn.org.autumn.service;
 
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
+import cn.org.autumn.utils.ExceptionUtils;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -118,8 +119,10 @@ public class BaseHttpProxyService {
             return null;
         } catch (Exception e) {
             if (isClientDisconnect(e)) {
-                if (log.isDebugEnabled()) {
-                    log.debug("流式响应过程中客户端断开连接，视为正常结束");
+                String hint = ExceptionUtils.nextBenignExceptionLogHint("proxy-client-disconnect", request);
+                if (hint != null) {
+                    log.info("代理流式响应时客户端连接中断，按正常结束处理{}。方法:{}, 路径:{}, 目标:{}",
+                            hint, request.getMethod(), request.getRequestURI(), determineTargetUrl(base, target, request, proxyPath));
                 }
                 return null;
             }
@@ -139,17 +142,7 @@ public class BaseHttpProxyService {
      * 此类情况不应视为服务端错误。
      */
     protected static boolean isClientDisconnect(Throwable t) {
-        for (Throwable x = t; x != null; x = x.getCause()) {
-            String msg = x.getMessage();
-            if (msg != null && (msg.contains("Connection reset by peer") || msg.contains("Broken pipe"))) {
-                return true;
-            }
-            String name = x.getClass().getName();
-            if (name.contains("AsyncRequestNotUsableException") || name.contains("ClientAbortException")) {
-                return true;
-            }
-        }
-        return false;
+        return ExceptionUtils.isClientDisconnectException(t) || ExceptionUtils.isBenignAsyncLifecycleException(t);
     }
 
     /**

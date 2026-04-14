@@ -37,7 +37,7 @@
 
 ### 1.1 多数据库（PostgreSQL）
 
-- **`autumn.database`** 与 JDBC URL 决定 **`DatabaseType`**；**多库 SQL 纪律、Wrapper 边界、Provider 强制、已支持库类型清单**见 **`docs/AI_DATABASE.md`**（与 `docs/AI_BOOT.md` §8 摘要互补）。PostgreSQL **专项**（DDL、元数据、类型、分页 `COUNT`）见 **`docs/AI_POSTGRESQL.md`**。业务工程 **升级 autumn 版本** 见 **`docs/AI_UPGRADE.md`**。
+- **`autumn.database`** 与 JDBC URL 决定 **`DatabaseType`**；**多库 SQL 纪律、Wrapper 边界、Provider 强制、已支持库类型清单**见 **`docs/AI_DATABASE.md`**（与 `docs/AI_BOOT.md` §8 摘要互补）；**代码里表/列/排序/Map 条件键**须按 **`docs/AI_DATABASE.md` §4.0** 使用 **`RuntimeSql` / `WrapperColumns`**，**禁止**手写方言引号导致换库错误。PostgreSQL **专项**（DDL、元数据、类型、分页 `COUNT`）见 **`docs/AI_POSTGRESQL.md`**。业务工程 **升级 autumn 版本** 见 **`docs/AI_UPGRADE.md`**。
 
 ## 2. 核心能力索引（按开发高频）
 
@@ -65,6 +65,24 @@
   - 支持延迟、定时、优先级、批量发送。
   - 支持自动消费者启停（空闲超时）。
   - 支持重试、死信、历史消息运维。
+
+### 2.2A 分布式锁体系（跨节点互斥）
+
+- 核心类：
+  - `cn.org.autumn.service.DistributedLockService`
+  - `cn.org.autumn.service.DistributedService`
+  - `cn.org.autumn.model.DistributedLockConfig`
+- 关键使用约束：
+  - 已继承 `ModuleService` / `BaseService` 的业务 Service：优先使用 `DistributedService` 的 `withLock*` 系列方法。
+  - 未继承基础能力的组件：直接注入 `DistributedLockService`。
+- 场景化 API：
+  - `withLock`：严格模式（锁竞争失败抛错）
+  - `withLockOrFallback`：竞争失败执行业务 fallback（服务降级）
+  - `withLockRetry`：竞争失败按配置重试 + 随机退避（雪崩抑制）
+- 配置来源：
+  - 后台 `DistributedLockConfig`（键：`DISTRIBUTED_LOCK_CONFIG`）
+  - 通过 `sysConfigService.getObject(...)` 获取对象配置
+  - 配置项与默认值详见 `docs/AI_DISTRIBUTED_LOCK.md`
 
 ### 2.3 混合加解密（RSA + AES）
 
@@ -396,6 +414,7 @@ public class DemoService extends ModuleService<DemoDao, DemoEntity> implements L
 - 涉及队列消费必须给出失败、重试、死信处理策略。
 - 涉及定时任务时，优先接口式任务（`LoopJob.OneMinute/FiveMinute/...`），避免不必要的 cron 表达式；**生产代码禁止 Spring `@Scheduled`**（见 `docs/AI_STANDARDS.md` §5）。
 - 所有 `ModuleService` 子类默认具备缓存/队列/基础 CRUD 能力，禁止重复封装同类基础组件。
+- 涉及分布式互斥时：已继承 `ModuleService` 的 Service 优先用 `DistributedService`；未继承基类再注入 `DistributedLockService`。
 - 新增基础能力前，先检查 `BaseCacheService/ShareCacheService/BaseQueueService/LoopJob` 是否已覆盖需求。
 - 涉及页面/模板资源扩展时，优先通过 `TemplateFactory.Template` 在本项目 jar 内提供模板，不要求集中拷贝到入口工程。
 

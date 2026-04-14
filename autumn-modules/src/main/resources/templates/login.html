@@ -99,9 +99,11 @@ var vm = new Vue({
 			    url: "sys/login",
 			    data: data,
 			    dataType: "json",
-			    success: function(result){
+				success: function(result){
 					if(result.code == 0){//登录成功
-						parent.location.href = result.data;
+						// 与 beforeCreate 一致：优先整页跳转，避免嵌套 iframe 下 parent 非本应用顶层导致相对路径解析错误
+						var target = (result && result.data != null) ? String(result.data) : "index.html";
+						(window.top || window).location.href = target;
 					}else{
 						vm.error = true;
 						vm.errorMsg = result.msg;

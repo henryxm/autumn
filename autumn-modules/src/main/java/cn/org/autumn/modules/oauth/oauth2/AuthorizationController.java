@@ -19,6 +19,7 @@ import cn.org.autumn.site.PageFactory;
 import cn.org.autumn.utils.IPUtils;
 import cn.org.autumn.utils.Utils;
 import com.alibaba.fastjson2.JSON;
+import cn.org.autumn.utils.WebPathUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.servers.Server;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -113,7 +114,7 @@ public class AuthorizationController {
     public Object login(HttpServletRequest request, HttpServletResponse response, String username, String password, boolean rememberMe, String way, String reason, Model model) {
         Enumeration<String> enumeration = request.getParameterNames();
         if (!enumeration.hasMoreElements()) {
-            model.addAttribute("url", "/oauth2/login?redirect=login");
+            model.addAttribute("url", WebPathUtils.forBrowser(request, "/oauth2/login?redirect=login"));
             return "direct";
         }
 
@@ -131,7 +132,9 @@ public class AuthorizationController {
                     if (StringUtils.isBlank(callback)) back = savedRequest.getRequestUrl();
                     else back = callback + "&callback=" + savedRequest.getRequestUrl();
                 }
-                if (StringUtils.isBlank(back)) back = "/";
+                if (StringUtils.isBlank(back))
+                    back = "/";
+                back = WebPathUtils.safePostLoginRedirect(request, back);
                 sysUserService.login(username, password, rememberMe, true, way, reason, request);
                 try {
                     String ip = IPUtils.getIp(request);

@@ -880,13 +880,14 @@
 </div>
 
 <script>
-window.__DB_BACKUP_API_BASE__ = "${request.contextPath!}/db/backup";
+window.__CTX__ = '${request.contextPath!""}';
+window.__DB_BACKUP_API_BASE__ = window.__CTX__ + "/db/backup";
 </script>
 <script>
 //<#noparse>
 const API_BASE = (typeof window.__DB_BACKUP_API_BASE__ === 'string' && window.__DB_BACKUP_API_BASE__.length > 0)
     ? window.__DB_BACKUP_API_BASE__
-    : '/db/backup';
+    : ((typeof window.__CTX__ === 'string') ? window.__CTX__ : '') + '/db/backup';
 let currentPage = 1, pageSize = 10, selectedIds = new Set();
 let strategyPage = 1, strategyPageSize = 10;
 let allDbTables = [];

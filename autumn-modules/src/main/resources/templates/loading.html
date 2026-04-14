@@ -2,10 +2,605 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="refresh" content="1">
-    <title>Loading</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#3c8dbc">
+    <title>${(lang.sys_string_loading_title)!'系统正在准备中'}</title>
+    <style>
+        :root {
+            --bg-a: #3c8dbc;
+            --bg-b: #6f48c9;
+            --panel-bg: rgba(255, 255, 255, 0.88);
+            --text-main: #1f2d3d;
+            --text-sub: #5b6b7c;
+            --btn-bg: #3c8dbc;
+            --btn-hover: #347ea8;
+            --accent: #6f48c9;
+            --panel-border: rgba(255, 255, 255, 0.35);
+            --status-bg: rgba(60, 141, 188, 0.1);
+            --status-text: #2f6185;
+            --secondary-btn-bg: rgba(53, 73, 94, 0.08);
+            --secondary-btn-hover: rgba(53, 73, 94, 0.16);
+            --secondary-btn-text: #425466;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+            color: var(--text-main);
+            background: linear-gradient(135deg, var(--bg-a) 0%, var(--bg-b) 100%);
+            overflow: hidden;
+        }
+
+        .bg-decoration {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+        }
+
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(6px);
+            opacity: 0.26;
+            animation: float 10s ease-in-out infinite;
+        }
+
+        .orb-a {
+            width: 240px;
+            height: 240px;
+            left: -60px;
+            top: 10%;
+            background: #9cd6ff;
+        }
+
+        .orb-b {
+            width: 320px;
+            height: 320px;
+            right: -80px;
+            bottom: -40px;
+            background: #d5b8ff;
+            animation-delay: 1.6s;
+        }
+
+        .orb-c {
+            width: 180px;
+            height: 180px;
+            right: 16%;
+            top: 14%;
+            background: #b0ffe6;
+            animation-delay: 0.8s;
+        }
+
+        .container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .panel {
+            width: 100%;
+            max-width: 620px;
+            background: var(--panel-bg);
+            border-radius: 16px;
+            border: 1px solid var(--panel-border);
+            box-shadow: 0 14px 40px rgba(0, 0, 0, 0.18);
+            backdrop-filter: blur(10px);
+            padding: 36px 30px 28px;
+            text-align: center;
+            transform: translateY(0);
+            animation: panel-in 0.6s ease-out both;
+        }
+
+        .logo {
+            width: 58px;
+            height: 58px;
+            margin: 0 auto 16px;
+            border-radius: 14px;
+            background: linear-gradient(145deg, #ffffff 0%, #f2f7ff 100%);
+            box-shadow: 0 6px 14px rgba(60, 141, 188, 0.25);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--accent);
+            font-weight: 700;
+            font-size: 20px;
+            letter-spacing: 0.3px;
+        }
+
+        .logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 14px;
+            display: none;
+        }
+
+        .logo.has-image {
+            background: #ffffff;
+            box-shadow: 0 6px 14px rgba(60, 141, 188, 0.2);
+            padding: 0;
+            color: transparent;
+            font-size: 0;
+        }
+
+        .logo.has-image img {
+            display: block;
+        }
+
+        .brand {
+            margin: 2px 0 12px;
+            font-size: 13px;
+            color: var(--text-sub);
+            letter-spacing: 0.5px;
+        }
+
+        .title {
+            margin: 0 0 12px 0;
+            font-size: 27px;
+            font-weight: 700;
+            letter-spacing: 0.2px;
+        }
+
+        .desc {
+            margin: 0;
+            line-height: 1.6;
+            color: var(--text-sub);
+            font-size: 15px;
+        }
+
+        .status-line {
+            margin: 14px auto 0;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border-radius: 999px;
+            background: var(--status-bg);
+            color: var(--status-text);
+            padding: 7px 14px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #2bb673;
+            box-shadow: 0 0 0 0 rgba(43, 182, 115, 0.4);
+            animation: pulse 1.6s infinite;
+        }
+
+        .progress-wrap {
+            margin: 22px auto 10px;
+            width: 92%;
+            max-width: 460px;
+        }
+
+        .progress-track {
+            width: 100%;
+            height: 8px;
+            border-radius: 99px;
+            background: rgba(60, 141, 188, 0.12);
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 36%;
+            border-radius: 99px;
+            background: linear-gradient(90deg, #3c8dbc 0%, #6f48c9 100%);
+            animation: loading-bar 1.6s ease-in-out infinite;
+        }
+
+        .counter {
+            margin-top: 14px;
+            font-size: 14px;
+            color: var(--text-sub);
+            min-height: 20px;
+        }
+
+        .target {
+            margin-top: 8px;
+            font-size: 12px;
+            color: var(--text-sub);
+            opacity: 0.9;
+            word-break: break-all;
+        }
+
+        .action {
+            margin-top: 18px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .action button {
+            background: var(--btn-bg);
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            padding: 10px 18px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 6px 16px rgba(60, 141, 188, 0.3);
+        }
+
+        .action button:hover {
+            background: var(--btn-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 8px 18px rgba(60, 141, 188, 0.35);
+        }
+
+        .action .secondary {
+            background: var(--secondary-btn-bg);
+            color: var(--secondary-btn-text);
+            box-shadow: none;
+        }
+
+        .action .secondary:hover {
+            background: var(--secondary-btn-hover);
+            box-shadow: none;
+        }
+
+        .footnote {
+            margin-top: 16px;
+            font-size: 12px;
+            color: var(--text-sub);
+            opacity: 0.85;
+        }
+
+        @keyframes loading-bar {
+            0% {
+                transform: translateX(-90%);
+            }
+            50% {
+                transform: translateX(60%);
+            }
+            100% {
+                transform: translateX(220%);
+            }
+        }
+
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-18px);
+            }
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(43, 182, 115, 0.44);
+            }
+            70% {
+                transform: scale(1);
+                box-shadow: 0 0 0 8px rgba(43, 182, 115, 0);
+            }
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(43, 182, 115, 0);
+            }
+        }
+
+        @keyframes panel-in {
+            from {
+                opacity: 0;
+                transform: translateY(12px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-a: #1d3352;
+                --bg-b: #342251;
+                --panel-bg: rgba(17, 24, 39, 0.8);
+                --text-main: #e8edf5;
+                --text-sub: #c5cfdf;
+                --btn-bg: #5b93ff;
+                --btn-hover: #4b82ec;
+                --accent: #b59cff;
+                --panel-border: rgba(160, 174, 192, 0.22);
+                --status-bg: rgba(118, 149, 224, 0.2);
+                --status-text: #cfe1ff;
+                --secondary-btn-bg: rgba(197, 207, 223, 0.14);
+                --secondary-btn-hover: rgba(197, 207, 223, 0.2);
+                --secondary-btn-text: #e8edf5;
+            }
+
+            .logo {
+                background: linear-gradient(145deg, #243447 0%, #1d2837 100%);
+                box-shadow: 0 6px 14px rgba(91, 147, 255, 0.25);
+            }
+
+            .progress-track {
+                background: rgba(118, 149, 224, 0.22);
+            }
+        }
+
+        @media (max-width: 640px) {
+            .panel {
+                padding: 28px 18px 22px;
+                border-radius: 14px;
+            }
+
+            .title {
+                font-size: 23px;
+            }
+
+            .desc {
+                font-size: 14px;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .panel,
+            .orb,
+            .status-dot,
+            .progress-bar {
+                animation: none !important;
+            }
+        }
+    </style>
 </head>
-<body style="text-align: center">
-Loading...
+<body>
+<div class="bg-decoration" aria-hidden="true">
+    <div class="orb orb-a"></div>
+    <div class="orb orb-b"></div>
+    <div class="orb orb-c"></div>
+</div>
+<div class="container">
+    <div class="panel">
+        <div class="logo" id="brandLogo">
+            <img id="brandLogoImage" alt="logo">
+            <span id="brandLogoText">A</span>
+        </div>
+        <p class="brand" id="brandName">${(lang.sys_string_loading_brand)!'Autumn Platform'}</p>
+        <h1 class="title">${(lang.sys_string_loading_title)!'系统正在准备中'}</h1>
+        <p class="desc">
+            ${(lang.sys_string_loading_description)!'部分资源暂未就绪，请稍候，系统将自动重试。'}
+        </p>
+        <div class="status-line">
+            <span class="status-dot"></span>
+            <span>${(lang.sys_string_loading_status)!'当前状态'}</span>:
+            <span id="statusText">${(lang.sys_string_loading_stage_bootstrap)!'正在初始化核心服务'}</span>
+        </div>
+        <div class="progress-wrap">
+            <div class="progress-track">
+                <div class="progress-bar"></div>
+            </div>
+        </div>
+        <p class="counter" id="counter"></p>
+        <p class="target">
+            ${(lang.sys_string_loading_target)!'目标页面'}:
+            <span id="targetText">/index.html</span>
+        </p>
+        <div class="action">
+            <button type="button" id="retryNow">${(lang.sys_string_loading_retry_now)!'立即重试'}</button>
+            <button type="button" class="secondary" id="goHome">${(lang.sys_string_loading_back_home)!'返回首页'}</button>
+        </div>
+        <p class="footnote" id="footnote"></p>
+    </div>
+</div>
+<script>
+    (function () {
+        var retryPrefix = "${(lang.sys_string_loading_retrying)!'正在重试，剩余'}";
+        var retrySuffix = "${(lang.sys_string_loading_seconds)!'秒'}";
+        var stageReady = "${(lang.sys_string_loading_stage_ready)!'服务已就绪，正在进入页面'}";
+        var defaultBrand = "${(loadingBrand!'')?js_string}";
+        var defaultAccent = "${(loadingAccent!'')?js_string}";
+        var defaultLogoUrl = "${(loadingLogoUrl!'')?js_string}";
+        var stageTexts = [
+            "${(lang.sys_string_loading_stage_bootstrap)!'正在初始化核心服务'}",
+            "${(lang.sys_string_loading_stage_resource)!'正在加载页面资源'}",
+            "${(lang.sys_string_loading_stage_check)!'正在进行就绪检查'}"
+        ];
+
+        function getQueryParam(name) {
+            var query = window.location.search || "";
+            var regexp = new RegExp("(^|&)" + name + "=([^&]*)(&|$)");
+            var matched = query.substring(1).match(regexp);
+            return matched ? decodeURIComponent(matched[2]) : "";
+        }
+
+        function parseHexColor(v) {
+            if (!v) {
+                return "";
+            }
+            var text = String(v).trim();
+            if (text.charAt(0) !== "#") {
+                text = "#" + text;
+            }
+            if (!/^#([0-9a-fA-F]{6})$/.test(text)) {
+                return "";
+            }
+            return text;
+        }
+
+        function parseLogoUrl(v) {
+            if (!v) {
+                return "";
+            }
+            var text = String(v).trim();
+            if (text.indexOf("http://") === 0 || text.indexOf("https://") === 0 || text.indexOf("/") === 0) {
+                return text;
+            }
+            return "";
+        }
+
+        function toRgb(hexColor) {
+            var v = hexColor.replace("#", "");
+            var r = parseInt(v.substring(0, 2), 16);
+            var g = parseInt(v.substring(2, 4), 16);
+            var b = parseInt(v.substring(4, 6), 16);
+            return r + ", " + g + ", " + b;
+        }
+
+        function darken(hexColor, ratio) {
+            var v = hexColor.replace("#", "");
+            var r = parseInt(v.substring(0, 2), 16);
+            var g = parseInt(v.substring(2, 4), 16);
+            var b = parseInt(v.substring(4, 6), 16);
+            r = Math.max(0, Math.floor(r * (1 - ratio)));
+            g = Math.max(0, Math.floor(g * (1 - ratio)));
+            b = Math.max(0, Math.floor(b * (1 - ratio)));
+            var hr = ("0" + r.toString(16)).slice(-2);
+            var hg = ("0" + g.toString(16)).slice(-2);
+            var hb = ("0" + b.toString(16)).slice(-2);
+            return "#" + hr + hg + hb;
+        }
+
+        function applyTheme() {
+            var accent = parseHexColor(getQueryParam("accent"));
+            if (!accent) {
+                accent = parseHexColor(defaultAccent);
+            }
+            if (!accent) {
+                return;
+            }
+            var darker = darken(accent, 0.12);
+            var root = document.documentElement;
+            root.style.setProperty("--bg-a", accent);
+            root.style.setProperty("--btn-bg", accent);
+            root.style.setProperty("--btn-hover", darker);
+            root.style.setProperty("--accent", darker);
+            root.style.setProperty("--status-bg", "rgba(" + toRgb(accent) + ", 0.14)");
+        }
+
+        var target = getQueryParam("target") || "/index.html";
+        if (target.indexOf("/loading.html") === 0) {
+            target = "/index.html";
+        }
+
+        var brandName = getQueryParam("brand");
+        if (!brandName) {
+            brandName = defaultBrand;
+        }
+        if (!brandName) {
+            brandName = document.getElementById("brandName").textContent;
+        }
+        if (!brandName) {
+            brandName = "Autumn";
+        }
+        var logoUrl = parseLogoUrl(getQueryParam("logo"));
+        if (!logoUrl) {
+            logoUrl = parseLogoUrl(defaultLogoUrl);
+        }
+        var brandLogo = document.getElementById("brandLogo");
+        var brandLogoImage = document.getElementById("brandLogoImage");
+        var brandLogoText = document.getElementById("brandLogoText");
+        var brandLabel = document.getElementById("brandName");
+        var counter = document.getElementById("counter");
+        var retryNow = document.getElementById("retryNow");
+        var goHome = document.getElementById("goHome");
+        var statusText = document.getElementById("statusText");
+        var targetText = document.getElementById("targetText");
+        var footnote = document.getElementById("footnote");
+        var seconds = 4;
+        var tickCount = 0;
+        var jumped = false;
+
+        applyTheme();
+        brandLabel.textContent = brandName;
+        brandLogoText.textContent = brandName.substring(0, 1).toUpperCase();
+        targetText.textContent = target;
+        footnote.textContent = brandName;
+        if (logoUrl) {
+            brandLogoImage.src = logoUrl;
+            brandLogoImage.onload = function () {
+                brandLogo.classList.add("has-image");
+            };
+            brandLogoImage.onerror = function () {
+                brandLogo.classList.remove("has-image");
+            };
+        }
+
+        function jump() {
+            if (jumped) {
+                return;
+            }
+            jumped = true;
+            window.location.replace(target);
+        }
+
+        function goIndex() {
+            if (jumped) {
+                return;
+            }
+            jumped = true;
+            window.location.replace("/index.html");
+        }
+
+        function updateStage() {
+            var idx = tickCount % stageTexts.length;
+            statusText.textContent = stageTexts[idx];
+            tickCount = tickCount + 1;
+        }
+
+        function markReadyAndJumpSoon() {
+            statusText.textContent = stageReady;
+            counter.textContent = stageReady;
+            window.setTimeout(jump, 380);
+        }
+
+        function probeHealth() {
+            try {
+                var xhr = new XMLHttpRequest();
+                xhr.open("GET", "/client/health?from=loading&_t=" + new Date().getTime(), true);
+                xhr.timeout = 900;
+                xhr.onreadystatechange = function () {
+                    if (xhr.readyState !== 4 || jumped) {
+                        return;
+                    }
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        try {
+                            var json = JSON.parse(xhr.responseText);
+                            if (json && (json.code === 0 || json.success === true)) {
+                                markReadyAndJumpSoon();
+                            }
+                        } catch (ignore) {
+                        }
+                    }
+                };
+                xhr.send();
+            } catch (ignore) {
+            }
+        }
+
+        function updateCounter() {
+            if (seconds <= 0) {
+                jump();
+                return;
+            }
+            counter.textContent = retryPrefix + " " + seconds + retrySuffix + " ...";
+            seconds = seconds - 1;
+            updateStage();
+            probeHealth();
+        }
+
+        retryNow.onclick = jump;
+        goHome.onclick = goIndex;
+        updateCounter();
+        window.setInterval(updateCounter, 1000);
+    })();
+</script>
 </body>
 </html>
