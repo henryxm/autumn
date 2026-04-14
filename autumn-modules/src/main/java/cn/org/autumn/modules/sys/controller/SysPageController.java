@@ -12,6 +12,7 @@ import cn.org.autumn.modules.wall.service.IpWhiteService;
 import cn.org.autumn.modules.wall.site.WallDefault;
 import cn.org.autumn.site.PageFactory;
 import cn.org.autumn.site.PluginFactory;
+import cn.org.autumn.utils.WebPathUtils;
 import cn.org.autumn.thread.TagTaskExecutor;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -139,7 +140,7 @@ public class SysPageController implements ErrorController {
     public String loginOauth(HttpServletRequest request, HttpServletResponse httpServletResponse, Model model) {
         Enumeration<String> enumeration = request.getParameterNames();
         if (!enumeration.hasMoreElements()) {
-            model.addAttribute("url", "/login?redirect=login");
+            model.addAttribute("url", WebPathUtils.forBrowser(request, "/login?redirect=login"));
             return "direct";
         }
         String host = request.getHeader("host");
@@ -359,10 +360,10 @@ public class SysPageController implements ErrorController {
 
     @RequestMapping(value = {"scan.html"}, method = RequestMethod.GET)
     @SkipInterceptor
-    public String scan(Model model) {
+    public String scan(Model model, HttpServletRequest request) {
         if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
             return "404";
-        model.addAttribute("url", "/");
+        model.addAttribute("url", WebPathUtils.forBrowser(request, "/"));
         return "scan";
     }
 

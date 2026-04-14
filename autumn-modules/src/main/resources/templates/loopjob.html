@@ -348,8 +348,9 @@
 <div class="toast-container" id="toastContainer"></div>
 
 <script>
+    var __CTX = '${request.contextPath!""}';
     //<#noparse>
-    const API = '/job/loop';
+    const API = __CTX + '/job/loop';
     let allJobs = [], currentJobId = null, autoTimer = null;
     let dismissedAlerts = {};
     let prevAlertCount = 0;

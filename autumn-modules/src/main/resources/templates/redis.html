@@ -105,9 +105,10 @@
     </div>
 </body>
 
-<script src="/statics/libs/jquery.min.js"></script>
-<script src="/statics/libs/vue.min.js"></script>
+<script src="${request.contextPath}/statics/libs/jquery.min.js"></script>
+<script src="${request.contextPath}/statics/libs/vue.min.js"></script>
 <script>
+    var __CTX = '${request.contextPath!""}';
     var vm = new Vue({
         el: '#app',
         data: {
@@ -134,7 +135,7 @@
         methods: {
             loadStatus() {
                 $.ajax({
-                    url: '/sys/redis/status',
+                    url: __CTX + '/sys/redis/status',
                     method: 'GET',
                     success: (response) => {
                         if (response.code === 0) {
@@ -146,7 +147,7 @@
             
             loadDatabases() {
                 $.ajax({
-                    url: '/sys/redis/databases',
+                    url: __CTX + '/sys/redis/databases',
                     method: 'GET',
                     success: (response) => {
                         if (response.code === 0) {
@@ -167,7 +168,7 @@
             loadKeys() {
                 this.loading = true;
                 $.ajax({
-                    url: '/sys/redis/keys/' + this.selectedDatabase,
+                    url: __CTX + '/sys/redis/keys/' + this.selectedDatabase,
                     method: 'GET',
                     data: {
                         pattern: this.searchPattern,
@@ -202,7 +203,7 @@
                 
                 if (confirm('确定要清除当前搜索结果吗？这将删除所有匹配的键。')) {
                     $.ajax({
-                        url: '/sys/redis/clear-keys',
+                        url: __CTX + '/sys/redis/clear-keys',
                         method: 'POST',
                         data: {
                             pattern: this.searchPattern,
@@ -230,7 +231,7 @@
             
             viewKey(key) {
                 $.ajax({
-                    url: '/sys/redis/value/' + encodeURIComponent(key),
+                    url: __CTX + '/sys/redis/value/' + encodeURIComponent(key),
                     method: 'GET',
                     success: (response) => {
                         if (response.code === 0) {
@@ -245,7 +246,7 @@
             deleteKey(key) {
                 if (confirm('确定要删除键 "' + key + '" 吗？')) {
                     $.ajax({
-                        url: '/sys/redis/key/' + encodeURIComponent(key),
+                        url: __CTX + '/sys/redis/key/' + encodeURIComponent(key),
                         method: 'DELETE',
                         success: (response) => {
                             if (response.code === 0) {
@@ -263,7 +264,7 @@
             clearDatabase(database) {
                 if (confirm('确定要清空数据库 ' + database + ' 吗？')) {
                     $.ajax({
-                        url: '/sys/redis/database/' + database,
+                        url: __CTX + '/sys/redis/database/' + database,
                         method: 'DELETE',
                         success: (response) => {
                             if (response.code === 0) {
@@ -281,7 +282,7 @@
             clearAllDatabases() {
                 if (confirm('确定要清空所有数据库吗？')) {
                     $.ajax({
-                        url: '/sys/redis/all',
+                        url: __CTX + '/sys/redis/all',
                         method: 'DELETE',
                         success: (response) => {
                             if (response.code === 0) {

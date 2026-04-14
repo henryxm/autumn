@@ -1,6 +1,7 @@
 package cn.org.autumn.site;
 
 import cn.org.autumn.config.PageHandler;
+import cn.org.autumn.utils.WebPathUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -82,8 +83,12 @@ public class PageFactory extends Factory {
     }
 
     public String direct(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model, String url) {
-        if (!model.containsAttribute("url"))
-            model.addAttribute("url", url);
+        if (!model.containsAttribute("url")) {
+            String u = url;
+            if (httpServletRequest != null)
+                u = WebPathUtils.forBrowser(httpServletRequest, url);
+            model.addAttribute("url", u);
+        }
         return direct(httpServletRequest, httpServletResponse, model);
     }
 

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>防火墙管理</title>
-    <link rel="stylesheet" href="/statics/css/font-awesome.min.css">
+    <link rel="stylesheet" href="${request.contextPath}/statics/css/font-awesome.min.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -479,7 +479,7 @@
             .toolbar .url-input { min-width: 100%; }
         }
     </style>
-    <script src="/statics/libs/jquery.min.js"></script>
+    <script src="${request.contextPath}/statics/libs/jquery.min.js"></script>
 </head>
 <body>
 <div class="container">
@@ -773,6 +773,7 @@
 
 <script>
 $(function(){
+    var __CTX = '${request.contextPath!""}';
     var currentIp = '';
     var shieldAttackEnabled = false;
     var latestVerifyLog = null;
@@ -1164,7 +1165,7 @@ $(function(){
     }
 
     function loadBlackList() {
-        $.get('/wall/api/ipblack/list', {
+        $.get(__CTX + '/wall/api/ipblack/list', {
             page: pageState.black.curr,
             limit: pageState.black.limit
         }, function(res){
@@ -1178,7 +1179,7 @@ $(function(){
     }
 
     function loadWhiteList() {
-        $.get('/wall/api/ipwhite/list', {
+        $.get(__CTX + '/wall/api/ipwhite/list', {
             page: pageState.white.curr,
             limit: pageState.white.limit
         }, function(res){
@@ -1192,7 +1193,7 @@ $(function(){
     }
 
     function loadShieldList() {
-        $.get('/wall/shield/list', {
+        $.get(__CTX + '/wall/shield/list', {
             page: pageState.shield.curr,
             limit: pageState.shield.limit
         }, function(res){
@@ -1207,7 +1208,7 @@ $(function(){
     }
 
     function loadJumpList() {
-        $.get('/wall/jump/list', {
+        $.get(__CTX + '/wall/jump/list', {
             page: pageState.jump.curr,
             limit: pageState.jump.limit
         }, function(res){
@@ -1230,7 +1231,7 @@ $(function(){
     }
 
     function loadSecurityRequestList() {
-        $.get('/oauth/securityrequest/list', {
+        $.get(__CTX + '/oauth/securityrequest/list', {
             page: pageState.securityRequest.curr,
             limit: pageState.securityRequest.limit
         }, function(res){
@@ -1245,7 +1246,7 @@ $(function(){
     }
 
     function loadVerifyStrongLogs(silent) {
-        $.get('/oauth/securityrequest/verify/logs', {limit: 100}, function(res){
+        $.get(__CTX + '/oauth/securityrequest/verify/logs', {limit: 100}, function(res){
             renderVerifyStrongLogs(res && res.list ? res.list : []);
         }).fail(function(){
             renderVerifyStrongLogs([]);
@@ -1256,7 +1257,7 @@ $(function(){
     }
 
     function loadCurrentIp() {
-        $.get('/wall/api/currentIp', function(res){
+        $.get(__CTX + '/wall/api/currentIp', function(res){
             currentIp = res.ip || res || '';
             $('#currentIp').text(currentIp || '未知');
         }).fail(function(){
@@ -1266,14 +1267,14 @@ $(function(){
     }
 
     function loadAll() {
-        $.get('/wall/api/firewallOpen', function(res){
+        $.get(__CTX + '/wall/api/firewallOpen', function(res){
             $('#firewallOpen').prop('checked', res.firewallOpen);
             syncSwitchText('#firewallOpen');
         });
-        $.get('/wall/api/firewallCount', function(res){
+        $.get(__CTX + '/wall/api/firewallCount', function(res){
             $('#firewallCount').val(res.firewallCount);
         });
-        $.get('/wall/api/shieldStatus', function(res){
+        $.get(__CTX + '/wall/api/shieldStatus', function(res){
             $('#shieldPrint').prop('checked', res.print);
             $('#shieldAttack').prop('checked', res.attack);
             shieldAttackEnabled = !!res.attack;
@@ -1281,7 +1282,7 @@ $(function(){
             syncSwitchText('#shieldAttack');
             updateVerifyFlowVisualByStatus(latestVerifyLog);
         });
-        $.get('/wall/api/shield/enable', function(res){
+        $.get(__CTX + '/wall/api/shield/enable', function(res){
             if(res.enable){
                 $('#toggleShield').removeClass('layui-btn-success').addClass('layui-btn-danger');
                 $('#shieldIcon').removeClass('fa-play').addClass('fa-stop');
@@ -1306,7 +1307,7 @@ $(function(){
     $('#firewallOpen').on('change', function(){
         syncSwitchText('#firewallOpen');
         var checked = $(this).is(':checked');
-        $.post('/wall/api/firewallOpen', {open: checked}, function(){
+        $.post(__CTX + '/wall/api/firewallOpen', {open: checked}, function(){
             msg('防火墙已' + (checked ? '开启' : '关闭'), 'success');
             loadAll();
         }).fail(function(){
@@ -1316,7 +1317,7 @@ $(function(){
 
     $('#setCountBtn').click(function(){
         var count = $('#firewallCount').val();
-        $.post('/wall/api/firewallCount', {count: count}, function(){
+        $.post(__CTX + '/wall/api/firewallCount', {count: count}, function(){
             msg('阈值已更新', 'success');
             loadAll();
         }).fail(function(){
@@ -1327,7 +1328,7 @@ $(function(){
     $('#shieldPrint').on('change', function(){
         syncSwitchText('#shieldPrint');
         var checked = $(this).is(':checked');
-        $.post('/wall/api/shieldPrint', {print: checked}, function(){
+        $.post(__CTX + '/wall/api/shieldPrint', {print: checked}, function(){
             msg('日志已' + (checked ? '开启' : '关闭'), 'success');
             loadAll();
         }).fail(function(){
@@ -1338,7 +1339,7 @@ $(function(){
     $('#shieldAttack').on('change', function(){
         syncSwitchText('#shieldAttack');
         var checked = $(this).is(':checked');
-        $.post('/wall/api/shieldAttack', {attack: checked}, function(){
+        $.post(__CTX + '/wall/api/shieldAttack', {attack: checked}, function(){
             msg('攻击模式已' + (checked ? '开启' : '关闭'), 'success');
             loadAll();
         }).fail(function(){
@@ -1347,7 +1348,7 @@ $(function(){
     });
 
     $('#toggleShield').click(function(){
-        $.post('/wall/api/shield/toggle', {}, function(res){
+        $.post(__CTX + '/wall/api/shield/toggle', {}, function(res){
             msg(res.enable ? '盾牌已启用' : '盾牌已禁用', 'success');
             loadAll();
         }).fail(function(){
@@ -1378,7 +1379,7 @@ $(function(){
             msg('Auto阈值最低为1000', 'warn');
             return;
         }
-        requestJson('/wall/shield/save', 'POST', {
+        requestJson(__CTX + '/wall/shield/save', 'POST', {
             uri: uri,
             auto: auto,
             enable: enable
@@ -1404,7 +1405,7 @@ $(function(){
             msg('请输入跳转URL', 'warn');
             return;
         }
-        requestJson('/wall/jump/save', 'POST', {
+        requestJson(__CTX + '/wall/jump/save', 'POST', {
             host: host,
             uri: uri,
             url: url,
@@ -1454,7 +1455,7 @@ $(function(){
     });
 
     $('#refreshSecurityCurrentBtn').click(function(){
-        $.get('/oauth/securityrequest/current', function(){
+        $.get(__CTX + '/oauth/securityrequest/current', function(){
             msg('当前安全特征已确保', 'success');
             pageState.securityRequest.curr = 1;
             loadSecurityRequestList();
@@ -1472,7 +1473,7 @@ $(function(){
     });
 
     $('#clearVerifyLogsBtn').click(function(){
-        $.post('/oauth/securityrequest/verify/logs/clear', function(){
+        $.post(__CTX + '/oauth/securityrequest/verify/logs/clear', function(){
             msg('verifyStrong 日志已清空', 'success');
             loadVerifyStrongLogs(false);
         }).fail(function(){
@@ -1487,7 +1488,7 @@ $(function(){
     $('#addBlackBtn').click(function(){
         var ip = $.trim($('#addBlackIp').val());
         if(ip) {
-            $.post('/wall/api/ipblack/add', {ip: ip}, function(res){
+            $.post(__CTX + '/wall/api/ipblack/add', {ip: ip}, function(res){
                 if(res.success){
                     msg('已添加黑名单', 'success');
                     $('#addBlackIp').val('');
@@ -1504,7 +1505,7 @@ $(function(){
     $('#addWhiteBtn').click(function(){
         var ip = $.trim($('#addWhiteIp').val());
         if(ip) {
-            $.post('/wall/api/ipwhite/add', {ip: ip}, function(res){
+            $.post(__CTX + '/wall/api/ipwhite/add', {ip: ip}, function(res){
                 if(res.success){
                     msg('已添加白名单', 'success');
                     $('#addWhiteIp').val('');
@@ -1523,7 +1524,7 @@ $(function(){
             msg('无法获取当前IP', 'warn');
             return;
         }
-        $.post('/wall/api/ipwhite/add', {ip: currentIp}, function(res){
+        $.post(__CTX + '/wall/api/ipwhite/add', {ip: currentIp}, function(res){
             if(res.success){
                 msg('当前IP已加入白名单', 'success');
                 loadWhiteList();
@@ -1540,7 +1541,7 @@ $(function(){
             msg('无法获取当前IP', 'warn');
             return;
         }
-        $.post('/wall/api/ipwhite/remove', {ip: currentIp}, function(){
+        $.post(__CTX + '/wall/api/ipwhite/remove', {ip: currentIp}, function(){
             msg('当前IP已从白名单移除', 'success');
             loadWhiteList();
         }).fail(function(){
@@ -1553,7 +1554,7 @@ $(function(){
             msg('无法获取当前IP', 'warn');
             return;
         }
-        $.post('/wall/api/ipblack/add', {ip: currentIp}, function(res){
+        $.post(__CTX + '/wall/api/ipblack/add', {ip: currentIp}, function(res){
             if(res.success){
                 msg('当前IP已加入黑名单', 'success');
                 loadBlackList();
@@ -1570,7 +1571,7 @@ $(function(){
             msg('无法获取当前IP', 'warn');
             return;
         }
-        $.post('/wall/api/ipblack/remove', {ip: currentIp}, function(){
+        $.post(__CTX + '/wall/api/ipblack/remove', {ip: currentIp}, function(){
             msg('当前IP已从黑名单移除', 'success');
             loadBlackList();
         }).fail(function(){
@@ -1581,7 +1582,7 @@ $(function(){
     $('#blackTableBody').on('click', '.js-black-del', function(){
         var ip = $(this).data('ip');
         if (!ip) return;
-        $.post('/wall/api/ipblack/remove', {ip: ip}, function(){
+        $.post(__CTX + '/wall/api/ipblack/remove', {ip: ip}, function(){
             msg('已移除黑名单', 'success');
             loadBlackList();
         }).fail(function(){
@@ -1592,7 +1593,7 @@ $(function(){
     $('#whiteTableBody').on('click', '.js-white-del', function(){
         var ip = $(this).data('ip');
         if (!ip) return;
-        $.post('/wall/api/ipwhite/remove', {ip: ip}, function(){
+        $.post(__CTX + '/wall/api/ipwhite/remove', {ip: ip}, function(){
             msg('已移除白名单', 'success');
             loadWhiteList();
         }).fail(function(){
@@ -1609,7 +1610,7 @@ $(function(){
             msg('规则数据异常，无法更新', 'error');
             return;
         }
-        requestJson('/wall/shield/update', 'POST', {
+        requestJson(__CTX + '/wall/shield/update', 'POST', {
             id: id,
             uri: uri,
             auto: auto > 0 ? auto : 10000,
@@ -1628,7 +1629,7 @@ $(function(){
             msg('规则ID异常，无法删除', 'error');
             return;
         }
-        requestJson('/wall/shield/delete', 'POST', [id], function(){
+        requestJson(__CTX + '/wall/shield/delete', 'POST', [id], function(){
             msg('盾牌规则已删除', 'success');
             loadShieldList();
         }, function(){
@@ -1646,7 +1647,7 @@ $(function(){
             msg('规则数据异常，无法更新', 'error');
             return;
         }
-        requestJson('/wall/jump/update', 'POST', {
+        requestJson(__CTX + '/wall/jump/update', 'POST', {
             id: id,
             host: host,
             uri: uri,
@@ -1666,7 +1667,7 @@ $(function(){
             msg('规则ID异常，无法删除', 'error');
             return;
         }
-        requestJson('/wall/jump/delete', 'POST', [id], function(){
+        requestJson(__CTX + '/wall/jump/delete', 'POST', [id], function(){
             msg('跳转规则已删除', 'success');
             loadJumpList();
         }, function(){
@@ -1685,7 +1686,7 @@ $(function(){
             msg('特征数据异常，无法更新', 'error');
             return;
         }
-        requestJson('/oauth/securityrequest/update', 'POST', {
+        requestJson(__CTX + '/oauth/securityrequest/update', 'POST', {
             id: id,
             agent: agent,
             auth: auth,
@@ -1706,7 +1707,7 @@ $(function(){
             msg('ID异常，无法删除', 'error');
             return;
         }
-        requestJson('/oauth/securityrequest/delete', 'POST', [id], function(){
+        requestJson(__CTX + '/oauth/securityrequest/delete', 'POST', [id], function(){
             msg('安全特征已删除', 'success');
             loadSecurityRequestList();
         }, function(){

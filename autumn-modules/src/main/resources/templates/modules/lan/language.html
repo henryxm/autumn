@@ -18,7 +18,7 @@
             <a class="btn btn-primary" @click="del"><i class="fa fa-trash-o"></i>&nbsp;${lang.sys_string_delete}</a>
 			</#if>
             <#if shiro.hasPermission("lan:language:supportedlist")>
-            <a class="btn btn-primary" style="float:right;" href="/?${spm.lan_supportedlanguage}">${lang.sys_string_language_config}</a>
+            <a class="btn btn-primary" style="float:right;" href="${request.contextPath}/?${spm.lan_supportedlanguage}">${lang.sys_string_language_config}</a>
             </#if>
         </div>
         <table id="jqGrid"></table>

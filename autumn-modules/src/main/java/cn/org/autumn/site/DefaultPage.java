@@ -2,6 +2,7 @@ package cn.org.autumn.site;
 
 import cn.org.autumn.config.PageHandler;
 import cn.org.autumn.modules.sys.service.SysConfigService;
+import cn.org.autumn.utils.WebPathUtils;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.annotation.Order;
@@ -28,7 +29,7 @@ public class DefaultPage implements PageHandler {
 
     @Override
     public String logout(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
-        return "/";
+        return WebPathUtils.forBrowser(httpServletRequest, "/");
     }
 
     @Override
@@ -62,7 +63,7 @@ public class DefaultPage implements PageHandler {
 
     @Override
     public String scan(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
-        model.addAttribute("url","/");
+        model.addAttribute("url", WebPathUtils.forBrowser(httpServletRequest, "/"));
         return "scan";
     }
 }
