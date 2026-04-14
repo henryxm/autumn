@@ -6,6 +6,7 @@ description: >-
   NOT for Autumn 3.0.0 / JDK 17+ / Spring Boot 3.5 / Jakarta — use autumn-framework-3x on the 3.0.0 branch when available.
   Enforces docs/AI_STANDARDS.md + docs/AI_DATABASE.md: entity-driven schema via framework scan (no routine DDL .sql);
   module dir = package = table prefix; Dao SQL only via MyBatis Provider (*DaoSql extends RuntimeSql), never inline @Select/@Update;
+  No hardcoded SQL dialect quotes in Java (use RuntimeSql quote/columnInWrapper or WrapperColumns.columnInWrapper / orderByColumnExpression / entityWrapperAllEqQuoted per docs/AI_DATABASE.md §4.0);
   Controller must not use Dao; Service uses baseMapper; gen/Pages/list.html/js never hand-edited; statics/pages/Site/PageAware.
   Read docs/AI_CODEGEN.md, docs/AI_DATABASE.md; scripts/autumn-dependency-scan.sh for upgrades.
   Triggers on cn.org.autumn 2.0.0, Spring Boot 2.7, JDK 8, ModuleService, RuntimeSql, PageAware.
@@ -36,7 +37,7 @@ description: >-
 所有 `AI_*.md` 均在仓库 **`docs/`** 下。本仓库内用 `@docs/...`；业务工程与 autumn 并列时用 `@../autumn/docs/...`（见 `docs/AI_INDEX.md` §4）。
 
 1. `docs/AI_INDEX.md` → 2. `docs/AI_BOOT.md` → 3. `docs/AI_MAP.md` → 4. **`docs/AI_STANDARDS.md`**（强制全文，含 §8～§14）  
-5. **`docs/AI_DATABASE.md`**（多库、`DatabaseType`、Wrapper 边界、Dao **必须** Provider、`RuntimeSql`）  
+5. **`docs/AI_DATABASE.md`**（多库、`DatabaseType`、**§4.0 代码层方言标准写法**、`WrapperColumns`、`RuntimeSql`、Wrapper 边界、Dao **必须** Provider）  
 6. 新模块 / 代码生成 / 搭骨架：追加 **`docs/AI_CODEGEN.md`**  
 按需：`docs/AI_POSTGRESQL.md`、`docs/AI_TEMPLATES.md`、`docs/AI_CRYPTO.md` 等。
 
@@ -56,9 +57,10 @@ description: >-
 ## 多库与 SQL（与 `docs/AI_DATABASE.md` 一致）
 
 - 默认业务 SQL / Wrapper 对 **`DatabaseType` 全量兼容**；单库例外须 JavaDoc 标明。
+- **禁止硬编码方言**：表/列/排序/Map 键不写死 `` ` `` / `"` / `[]`；Provider 用 **`RuntimeSql#quote` / `columnInWrapper`**；未继承 **`DialectService`** 时用 **`WrapperColumns`**（**`columnInWrapper`**、分页排序 **`orderByColumnExpression`**、Map 等值 **`entityWrapperAllEqQuoted`** 等，见 **`docs/AI_DATABASE.md` §4.0**）。
 - **Dao**：新代码 **禁止** 注解内联 SQL；**必须** `@SelectProvider` + **`*DaoSql`**，推荐 **`extends RuntimeSql`**。
 - **Wrapper**：安全谓词 only；复杂场景 **Dao + Provider**（见 **`docs/AI_DATABASE.md` §4～§5**）。
-- 升级体检：**`scripts/autumn-dependency-scan.sh`** + **`docs/AI_UPGRADE.md` §3.3**。
+- 升级体检：**`scripts/autumn-dependency-scan.sh`** + **`docs/AI_UPGRADE.md` §3.3**；存量 Wrapper/Service 手写引号对照 **`docs/AI_DATABASE.md` §8.1** 与 **§8.5** `rg` 示例。
 
 ## 生成层与业务（§11）
 
@@ -83,7 +85,7 @@ description: >-
 ## 自检清单
 
 - 无多余 **`schema.sql` / `init.sql`**？  
-- Dao 无内联 SQL？**Wrapper** 无方言黑魔法？  
+- Dao 无内联 SQL？**Wrapper** 无方言黑魔法？Java 无手写 **反引号/双引号/方括号** 拼 SQL（§4.0）？  
 - **Controller** 未碰 **Dao**？未手改 **gen / list.html/js**？  
 - 新页有 **`Site` + `@PageAware`**？  
 - 生成路径与 **GenUtils** 一致？

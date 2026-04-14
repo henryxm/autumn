@@ -23,7 +23,7 @@
 |---|-----|------|
 | 1 | **统一 GAV** | 依赖方所有模块中 `cn.org.autumn` 的 `artifactId` + `version` 与目标发布版本 **一致**，避免混用多个版本。 |
 | 2 | **传递依赖** | 若依赖方排除了 `spring-boot`、`mybatis-plus` 等，升级后核对 **与 autumn 父 POM 管理版本** 是否冲突（以 autumn 发布说明或 BOM 为准）。 |
-| 3 | **JDK** | autumn 当前编译目标多为 **Java 8**；若本机用 **JDK 9+** 编译依赖方，须保证 **Lombok** 走 `annotationProcessorPaths`（见 `docs/AI_POSTGRESQL.md` 工程化小节）。 |
+| 3 | **JDK** | 与所依赖的 **autumn 主版本** 对齐：**2.0.0 / master** 多为 **Java 8**；**3.0.0 / `3.0.0` 分支** 为 **Java 17+**（以依赖方引入的 autumn 根 `pom.xml` 中 `java.version` 为准）。使用 **JDK 9+** 编译依赖方时须保证 **Lombok** 走 `annotationProcessorPaths`（见 `docs/AI_POSTGRESQL.md` 工程化小节）。 |
 | 4 | **构建命令** | 建议使用 `mvn clean install -pl <启动模块> -am -DskipTests` **从根反应堆安装**，避免仅子模块 `spring-boot:run` 使用 `~/.m2` **陈旧 JAR**。 |
 
 ### 2.2 配置
@@ -47,7 +47,7 @@
 | # | 项 | 说明 |
 |---|-----|------|
 | 11 | **二方扩展** | 依赖方若 **继承/实现** autumn 的 `ModuleService`、`BaseMenu`、`LoopJob` 等，对照 **CHANGELOG** 或 **Diff** 检查重载签名、废弃方法。 |
-| 12 | **手写 SQL** | 硬编码 `LIMIT`/`FIND_IN_SET`/三参 `concat('%',#{x},'%')`/保留字列名等，在多库下易出错；**老旧 Dao 上 `@Select`/`@Update`/`@Insert`/`@Delete` 内联字符串**、**Wrapper 中反引号/`apply` 拼方言**须按 **`docs/AI_DATABASE.md` §8** 迁到 **`RuntimeSql` + Provider** 或安全 Wrapper（见下「跨库手写 SQL 与 RuntimeSql」）。 |
+| 12 | **手写 SQL** | 硬编码 `LIMIT`/`FIND_IN_SET`/三参 `concat('%',#{x},'%')`/保留字列名等，在多库下易出错；**老旧 Dao 上 `@Select`/`@Update`/`@Insert`/`@Delete` 内联字符串**、**Wrapper 中反引号/`apply` 拼方言**、**Java 里手写引号拼 `eq`/`orderBy`/分页排序**须按 **`docs/AI_DATABASE.md` §8** 迁到 **`RuntimeSql` + Provider** 或 **`WrapperColumns`（§4.0）**（见下「跨库手写 SQL 与 RuntimeSql」）。 |
 | 13 | **实体布尔与 MyBatis** | 避免同一字段 **`getX(int)` + `boolean isX()`** 引发 `Reflector` 冲突；分页若自定义 count，避免 **`COUNT(...) ORDER BY`**（PG 非法）。 |
 
 ### 2.5 回归与发布

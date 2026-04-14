@@ -6,6 +6,7 @@ description: >-
   NOT for Autumn 2.0.0 / JDK 8 / Spring Boot 2.7 / javax-only — use autumn-framework-2x on master.
   Shiro uses jakarta classifier; Druid mybatis-plus-spring-boot3-starter; SpringDoc OpenAPI (not Springfox).
   Enforces docs/AI_STANDARDS.md + docs/AI_DATABASE.md: entity-driven schema; Dao via Provider (*DaoSql extends RuntimeSql);
+  No hardcoded dialect quotes in Java (RuntimeSql quote/columnInWrapper or WrapperColumns per docs/AI_DATABASE.md §4.0);
   Controller must not use Dao; Service uses baseMapper; gen/Pages/list.html/js never hand-edited; statics/pages/Site/PageAware.
   Read docs/AI_CODEGEN.md, docs/AI_DATABASE.md; scripts/autumn-dependency-scan.sh for upgrades.
   Triggers on cn.org.autumn 3.0.0, Spring Boot 3.5, JDK 17, ModuleService, RuntimeSql, PageAware, SpringDoc.
@@ -19,7 +20,7 @@ description: >-
 |----|-------------|
 | **Autumn** | **3.0.0**（`cn.org.autumn:*:3.0.0`，**`3.0.0` Git 分支**） |
 | **JDK** | **17+**（父 POM `java.version`，勿按 JDK 8 语法或依赖写本线） |
-| **Spring Boot** | **3.5.10**（`spring-boot-starter-parent`） |
+| **Spring Boot** | **3.5.10**（`spring-boot-starter-parent`；小版本以根 `pom.xml` 为准） |
 | **MyBatis-Plus** | **3.5.x**（`mybatis-plus-spring-boot3-starter`、`mybatis-plus-jsqlparser`；配置见 `application.yml` 中 **`mybatis-plus`** 段） |
 | **命名空间** | **`jakarta.*`**（Servlet、Validation 等；**非** `javax.servlet` 新业务代码） |
 | **Shiro** | **2.x + `jakarta` classifier**（`shiro-core` / `shiro-web` / `shiro-spring`） |
@@ -32,23 +33,23 @@ description: >-
 ## 何时启用
 
 - 当前工作区为 **autumn 且检出 `3.0.0` 分支**，或业务工程 **Maven 依赖锁定 `cn.org.autumn` 3.0.0**。
-- 提到上述技术栈且需 **Jakarta / MP3 / Spring Boot 3** 行为时。
+- 提到：`cn.org.autumn`、`ModuleService`、`RuntimeSql`、`DatabaseType`、`WrapperColumns`、`QueryWrapper`、`PageAware`、`SpringDoc` 等，且 **栈为 JDK 17+ + Boot 3.5 + Jakarta + MP3**。
 
 ## 文档加载顺序
 
 所有 `AI_*.md` 均在仓库 **`docs/`** 下。本仓库内用 `@docs/...`；业务工程与 autumn 并列时用 `@../autumn/docs/...`（见 `docs/AI_INDEX.md` §4）。
 
-1. `docs/AI_INDEX.md` → 2. `docs/AI_BOOT.md` → 3. `docs/AI_MAP.md` → 4. **`docs/AI_STANDARDS.md`**  
-5. **`docs/AI_DATABASE.md`**  
-6. 新模块 / 代码生成：追加 **`docs/AI_CODEGEN.md`**  
-按需：`docs/AI_POSTGRESQL.md`、`docs/AI_TEMPLATES.md`、`docs/AI_CRYPTO.md` 等。
+1. `docs/AI_INDEX.md` → 2. `docs/AI_BOOT.md` → 3. `docs/AI_MAP.md` → 4. **`docs/AI_STANDARDS.md`**
+5. **`docs/AI_DATABASE.md`**（含 **§4.0 代码层方言标准写法**、`WrapperColumns`、`RuntimeSql`、Wrapper 边界、Dao **必须** Provider；存量反模式 **§8.1**、检索 **§8.5**）
+6. 新模块 / 代码生成：追加 **`docs/AI_CODEGEN.md`**
+按需：`docs/AI_POSTGRESQL.md`、`docs/AI_UPGRADE.md`、`docs/AI_TEMPLATES.md`、`docs/AI_CRYPTO.md` 等。
 
 **注意**：文档若出现与 **Boot 2 / MP2** 绑定的旧配置键名，以实现代码与 **当前分支 `application.yml` + `pom.xml`** 为准。
 
 ## 规范开发三步（与 `docs/AI_CODEGEN.md` 一致）
 
-1. **先实体**：`docs/AI_STANDARDS.md` + **`@Cache` / `@Caches`**；**`ModuleService`** 继承链。  
-2. **再生成**：后台 ZIP 与 **`GenUtils.getFileName`** 一致；仅非 gen 空壳写业务。  
+1. **先实体**：`docs/AI_STANDARDS.md` + **`@Cache` / `@Caches`**；**`ModuleService`** 继承链。
+2. **再生成**：后台 ZIP 与 **`GenUtils.getFileName`** 一致；仅非 gen 空壳写业务。
 3. **后业务**：**Service** 承载规则；**Controller** URL 隔离；**`pages` + `site/*Site` + `@PageAware`**。
 
 ## 实体与数据库（§8～§10）
@@ -57,7 +58,11 @@ description: >-
 
 ## 多库与 SQL（与 `docs/AI_DATABASE.md` 一致）
 
-- **Dao**：**Provider + `RuntimeSql`**；**Wrapper** 安全边界；升级体检 **`scripts/autumn-dependency-scan.sh`** + **`docs/AI_UPGRADE.md`**。
+- **禁止硬编码方言**：表/列/排序/`QueryWrapper` 列参、Map 键不写死 `` ` `` / `"` / `[]`；见 **`docs/AI_DATABASE.md` §4.0**。
+- **Dao**：**Provider + `RuntimeSql`**（`quote` / `columnInWrapper` 等 §2.1）；**禁止**注解内联 SQL。
+- **未继承 `DialectService`** 的 Java 路径：**`WrapperColumns.columnInWrapper`**、分页排序 **`orderByColumnExpression`**、Map 等值 **`queryWrapperAllEqQuoted`**。
+- 升级体检：**`scripts/autumn-dependency-scan.sh`** + **`docs/AI_UPGRADE.md` §3.3**；存量 Wrapper/Service 手写引号对照 **§8.1** 与 **§8.5** `rg` 示例。
+- **Wrapper** 安全边界；复杂场景 **Dao + Provider**（**§4～§5**）。
 
 ## 生成层与业务（§11）
 
@@ -73,10 +78,11 @@ description: >-
 
 ## 自检清单
 
-- 未误用 **`javax.servlet`** 新业务包名？未混用 **Springfox**？  
-- **`mybatis-plus`** 配置与 **MP3** 文档一致？  
-- 其余同 2.x：**Dao**、**gen**、**Site**、**用户视角文案**。
+- 未误用 **`javax.servlet`** 新业务包名？未混用 **Springfox**？
+- **`mybatis-plus`** 配置与 **MP3** 文档一致？
+- Dao 无内联 SQL？**无手写方言引号（§4.0）**？
+- 其余同 2.x：**gen**、**Site**、**用户视角文案**。
 
 ## 多项目一句话
 
-**`docs/AI_BOOT.md` → `docs/AI_MAP.md` → `docs/AI_STANDARDS.md` → `docs/AI_DATABASE.md` → `docs/AI_CODEGEN.md` → …**（**仅 3.0.0 / JDK17+ / Boot 3.5 / Jakarta / MP3 栈**）。
+**`docs/AI_BOOT.md` → `docs/AI_MAP.md` → `docs/AI_STANDARDS.md` → `docs/AI_DATABASE.md`（含 §4.0、§8）→ `docs/AI_CODEGEN.md` → …**（**仅 3.0.0 / JDK17+ / Boot 3.5 / Jakarta / MP3 栈**）。

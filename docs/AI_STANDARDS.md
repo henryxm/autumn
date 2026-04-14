@@ -131,6 +131,8 @@
 
 - **必须**通过与之对应的 **MyBatis `Provider`**（如 **`XxxDaoSql`**、`*Provider` 类及 `@SelectProvider` 等）拼接与维护 SQL；推荐 **`extends RuntimeSql`**，统一使用 **`quote`、`limitOne`、`likeContainsAny`、`columnValueInCommaSeparatedList`** 等可移植片段（见 **`docs/AI_DATABASE.md`** §3、§5 与 **`docs/AI_POSTGRESQL.md`** 示例）。
 
+- **Java 里禁止硬编码方言符号**（反引号、双引号、方括号等）：表/列引用、分页排序列、Map 等值键须走 **`RuntimeSql` / `DialectService` / `WrapperColumns`**（**`docs/AI_DATABASE.md` §4.0**），未继承方言基类时**优先** `WrapperColumns.columnInWrapper`、`orderByColumnExpression`、`entityWrapperAllEqQuoted` / `queryWrapperAllEqQuoted`（以当前分支 API 为准）。
+
 - **EntityWrapper / Condition**：仅使用跨库相对安全的条件（等值、范围、`in`、空值、简单 `orderBy`）；**禁止**在 `apply` / 自定义片段中写死单库函数（`FIND_IN_SET`、`IFNULL`、`DATE_FORMAT` 等）。复杂查询、JOIN、报表、强依赖方言的模糊/列表匹配 **必须** 改为 **Dao + Provider**（**`docs/AI_DATABASE.md`** §4～§5）。
 
 - **例外**：仅框架内置或历史存量可在治理计划中逐步迁移；**新开发一律走 Provider**。
