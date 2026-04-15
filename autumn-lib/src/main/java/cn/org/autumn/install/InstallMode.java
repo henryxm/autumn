@@ -9,6 +9,9 @@ import org.springframework.core.env.Environment;
  * 框架通过 {@link InstallModeAwareCommonAnnotationBeanPostProcessor} 在安装模式下统一跳过
  * {@link javax.annotation.PostConstruct}；少数仍须在安装期执行的 Bean 请标
  * {@link cn.org.autumn.annotation.AllowPostConstructDuringInstall}。
+ * 若要在安装期<b>不注册</b>整块配置或单个 {@code @Bean}，请使用
+ * {@link cn.org.autumn.annotation.ConditionalOnNotInstallMode}（或反向的
+ * {@link cn.org.autumn.annotation.ConditionalOnInstallMode}），详见 {@code docs/INSTALL_MODE_CONDITIONAL.md}。
  * <p>
  * 此外 autumn-modules 中 {@code InstallModeBackgroundServices} 会暂停 {@code LoopJob}、Quartz standby；
  * {@code Shiro} 在安装模式下不使用 Redis SessionDAO，并避免 {@code RedisShiroSessionDAO} 访问 Redis 与拼 Key 所需的库查询。
