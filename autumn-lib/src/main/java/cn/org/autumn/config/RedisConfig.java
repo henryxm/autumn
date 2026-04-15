@@ -1,5 +1,6 @@
 package cn.org.autumn.config;
 
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -21,8 +22,8 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 @Configuration
 public class RedisConfig {
 
-    @Autowired(required = false)
-    private RedisConnectionFactory factory;
+    @Autowired
+    ObjectProvider<RedisConnectionFactory> provider;
 
     /**
      * 默认 Redis 模板（String 键 + JDK 值序列化）；标为 {@link Primary}，避免与同类型的
@@ -31,6 +32,9 @@ public class RedisConfig {
     @Bean
     @Primary
     public RedisTemplate<String, Object> redisTemplate() {
+        RedisConnectionFactory factory = provider.getIfAvailable();
+        if (null == factory)
+            return null;
         RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
         redisTemplate.setKeySerializer(new StringRedisSerializer());
         redisTemplate.setHashKeySerializer(new StringRedisSerializer());
@@ -42,6 +46,9 @@ public class RedisConfig {
 
     @Bean
     public RedisTemplate<String, Object> jackson2JsonRedisSerializerTemplate() {
+        RedisConnectionFactory factory = provider.getIfAvailable();
+        if (null == factory)
+            return null;
         RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
         redisTemplate.setKeySerializer(new StringRedisSerializer());
         redisTemplate.setHashKeySerializer(new StringRedisSerializer());
@@ -49,30 +56,5 @@ public class RedisConfig {
         redisTemplate.setValueSerializer(new Jackson2JsonRedisSerializer<Object>(Object.class));
         redisTemplate.setConnectionFactory(factory);
         return redisTemplate;
-    }
-
-    @Bean
-    public HashOperations<String, String, Object> hashOperations(RedisTemplate<String, Object> redisTemplate) {
-        return redisTemplate.opsForHash();
-    }
-
-    @Bean
-    public ValueOperations<String, Object> valueOperations(RedisTemplate<String, Object> redisTemplate) {
-        return redisTemplate.opsForValue();
-    }
-
-    @Bean
-    public ListOperations<String, Object> listOperations(RedisTemplate<String, Object> redisTemplate) {
-        return redisTemplate.opsForList();
-    }
-
-    @Bean
-    public SetOperations<String, Object> setOperations(RedisTemplate<String, Object> redisTemplate) {
-        return redisTemplate.opsForSet();
-    }
-
-    @Bean
-    public ZSetOperations<String, Object> zSetOperations(RedisTemplate<String, Object> redisTemplate) {
-        return redisTemplate.opsForZSet();
     }
 }
