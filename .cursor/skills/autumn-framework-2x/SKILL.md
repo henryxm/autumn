@@ -72,14 +72,19 @@ description: >-
 - **Provider**  mandatory for new SQL；配合 **`docs/AI_DATABASE.md`**、**`docs/AI_POSTGRESQL.md`**（PG）。
 - **Controller** 禁止 **Dao**；**Service** 用 **`baseMapper`**，勿 **`@Autowired`** 本 **Dao**；跨域只注入 **其他 Service**。
 
+## Redis 与框架 `RedisConfig`
+
+- **`cn.org.autumn.config.RedisConfig`**：`@Configuration`；**`@Autowired(required = false) RedisConnectionFactory`**；**`@Bean`**：`RedisTemplate`（`@Primary` + JSON）、**Ops**；**不**使用 **`@ConditionalOnBean(RedisConnectionFactory)`**、**不**使用 **`@AutoConfigureAfter`**；**不**列入 **`spring.factories` → `EnableAutoConfiguration`**，随 **`cn.org.autumn`** **组件扫描**加载。
+- **`autumn.redis.open`**、EPP 与 **`spring.redis.*`**：**`docs/REDIS_STANDALONE.md` §1、§2**；业务 **模式 A / B**：**§3、§8**；升级清单：**`docs/AI_UPGRADE.md` §2.2 行 7**。
+- **`RedisResilience`**、**`DistributedLockService`**、**`TagRunnable` / `LockOnce`**：**`docs/REDIS_RESILIENCE.md`**、**`docs/AI_DISTRIBUTED_LOCK.md`**。
+
 ## 分布式执行与加锁（新增）
 
 - 涉及跨节点互斥、定时任务防重入、热点写入串行化时，必须优先复用框架锁能力。
 - **已继承 `ModuleService` / `BaseService`**：直接使用 **`DistributedService`** 的 `withLock*` 能力（`withLock` / `withLockRetry` / `withLockOrFallback`）。
 - **未继承框架基础能力**（独立组件、监听器、过滤器等）：直接注入 **`DistributedLockService`**。
 - 配置来源统一走后台 **`DistributedLockConfig`**（键 `DISTRIBUTED_LOCK_CONFIG`），通过 `sysConfigService.getObject(...)` 获取对象配置，不走环境变量。
-- **Redis 韧性**：框架 Bean **`RedisResilience`**（`autumn.redis.resilience.*`）对 Redis/Redisson 基础设施失败做计数熔断；**`DistributedLockService`** 与 **`TagRunnable` / `LockOnce`** 已对齐（熔断 OPEN 默认跳过 tryLock、单机回退）。自定义 Redis 调用应优先 **`RedisResilience#execute`**；必读 **`docs/REDIS_RESILIENCE.md`**，与 **`docs/REDIS_STANDALONE.md`**（`autumn.redis.open`、安装向导）配合。
-- **依赖方 / 兄弟模块**：未启用 Redis 时 **无 `RedisTemplate` Bean**；任何 **`@Autowired RedisTemplate`**（默认必填）会导致启动失败。使用 **`@Autowired(required = false)`** 或 **`ObjectProvider`**，业务路径 **`if (redisTemplate == null)`** 降级；见 **`docs/REDIS_STANDALONE.md` §6** 与 **`docs/AI_UPGRADE.md` §2.2 行 7**。
+- **Redis 与熔断**：见上一节 **Redis 与框架 `RedisConfig`**；**`RedisResilience`** 细节见 **`docs/REDIS_RESILIENCE.md`**。
 - 默认策略：严格模式优先（锁竞争失败抛错）；需要服务降级时显式使用 `withLockOrFallback` 或开启配置降级。
 - 抗雪崩策略：锁竞争重试必须使用“有限重试 + 随机退避”（`withLockRetry`），禁止业务自旋热重试。
 

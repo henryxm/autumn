@@ -29,37 +29,82 @@ description: >-
 ## 何时启用
 
 - 当前工作区是 **autumn 仓库且检出 3.0.0 分支**，或业务工程 **Maven 依赖锁定 `cn.org.autumn` 3.0.0**。
-- 提到：`cn.org.autumn`、`ModuleService`、`RuntimeSql`、`DatabaseType`、`WrapperColumns`、`QueryWrapper`、`PageAware`、`SpringDoc` 等，且 **栈为 JDK 17+ + Boot 3.5**。
+- 提到：`cn.org.autumn`、`ModuleService`、`gen`、`Dao`、`Provider`、`RuntimeSql`、`DatabaseType`、`statics`、`pages`、`Site`、`PageAware`、`autumn.table` 等，且 **栈为 JDK 17+ + Boot 3.5**。
 
 ## 文档加载顺序
 
-1. `docs/AI_INDEX.md` → 2. `docs/AI_BOOT.md` → 3. `docs/AI_MAP.md` → 4. **`docs/AI_STANDARDS.md`**
-5. **`docs/AI_DATABASE.md`**（含 **§4.0 代码层方言标准写法**、`WrapperColumns`、`RuntimeSql`、Wrapper 边界、Dao **必须** Provider）
-6. 新模块 / 代码生成：追加 **`docs/AI_CODEGEN.md`**
-按需：`docs/AI_POSTGRESQL.md`、`docs/AI_UPGRADE.md`、`docs/AI_DISTRIBUTED_LOCK.md`、**`docs/REDIS_STANDALONE.md`**（可选 Redis、**§6 依赖方 `RedisTemplate` 注入**）、`docs/REDIS_RESILIENCE.md` 等。
+所有 `AI_*.md` 均在仓库 **`docs/`** 下。本仓库内用 `@docs/...`；业务工程与 autumn 并列时用 `@../autumn/docs/...`（见 `docs/AI_INDEX.md` §4）。
+
+1. `docs/AI_INDEX.md` → 2. `docs/AI_BOOT.md` → 3. `docs/AI_MAP.md` → 4. **`docs/AI_STANDARDS.md`**（强制全文，含 §8～§14）  
+5. **`docs/AI_DATABASE.md`**（多库、`DatabaseType`、**§4.0 代码层方言标准写法**、`WrapperColumns`、`RuntimeSql`、Wrapper 边界、Dao **必须** Provider）  
+6. 新模块 / 代码生成 / 搭骨架：追加 **`docs/AI_CODEGEN.md`**  
+按需：`docs/AI_POSTGRESQL.md`、`docs/AI_TEMPLATES.md`、`docs/AI_CRYPTO.md`、`docs/AI_DISTRIBUTED_LOCK.md`、**`docs/REDIS_RESILIENCE.md`**（Redis 熔断与分布式锁稳健性）、`docs/REDIS_STANDALONE.md`、**`docs/INSTALL_MODE_CONDITIONAL.md`**（安装向导 **`autumn.install.wizard`**、**§0 占位默认 H2 / 可选 mysql**）等。
+
+## 规范开发三步（与 `docs/AI_CODEGEN.md` 一致）
+
+1. **先实体**：按 `docs/AI_STANDARDS.md` 建实体与索引注释；**`@Cache` / `@Caches`**；业务 Service 继承 **`ModuleService`**，勿自建平行缓存/队列/`LoopJob`。
+2. **再生成**：后台「代码生成」ZIP 与 **`GenUtils.getFileName`** 路径一致；仅在非 gen 空壳写业务；**禁止**改 `controller/gen`、`*Pages`、`list.html/js`。
+3. **后业务**：`Service` 承载规则与事务；可维护 `Controller` 独立 URL；`pages` + `site/*Site` + `@PageAware`。
+
+## 实体与数据库（§8～§10）
+
+- 框架扫描实体 + **`autumn.table.*`** 启动期对齐表结构；**禁止**把常规 **`DDL .sql`** 当默认交付物。
+- **`modules/<子目录>/`**：目录名 = 包段 = 表前缀；**禁止**把前缀拼进实体类名；物理表名见 **`docs/AI_BOOT.md` §3.2**。
+- **`@Table` / `@Column.comment`**：短标题 + **半角 `:`**；**禁止**同列 **`@Index` + `@Column(isUnique=true)`** 叠用。
+- 整型/布尔：优先基本类型 + 默认值。
 
 ## 多库与 SQL（与 `docs/AI_DATABASE.md` 一致）
 
-- **禁止硬编码方言**：表/列/排序/Map 键不写死 `` ` `` / `"` / `[]`。
-- **Provider**：`**DaoSql extends RuntimeSql**`，用 **`quote` / `columnInWrapper`** 等 §2.1 能力。
-- **未继承 `DialectService`** 的 Java 路径：用 **`WrapperColumns.columnInWrapper`**、分页排序 **`orderByColumnExpression`**、Map 等值 **`queryWrapperAllEqQuoted`**（以分支内 `WrapperColumns` 实际方法名为准），详见 **`docs/AI_DATABASE.md` §4.0**；存量反模式见 **§8.1**、检索 **§8.5**。
-- **Controller** 禁止 **Dao**；**Service** 用 **`baseMapper`**；复杂 SQL **Dao + Provider**。
+- 默认业务 SQL / Wrapper 对 **`DatabaseType` 全量兼容**；单库例外须 JavaDoc 标明。
+- **禁止硬编码方言**：表/列/排序/Map 键不写死 `` ` `` / `"` / `[]`；Provider 用 **`RuntimeSql#quote` / `columnInWrapper`**；未继承 **`DialectService`** 时用 **`WrapperColumns`**（**`columnInWrapper`**、分页排序 **`orderByColumnExpression`**、Map 等值 **`entityWrapperAllEqQuoted`** 等，见 **`docs/AI_DATABASE.md` §4.0**）。
+- **Dao**：新代码 **禁止** 注解内联 SQL；**必须** `@SelectProvider` + **`*DaoSql`**，推荐 **`extends RuntimeSql`**。
+- **Wrapper**：安全谓词 only；复杂场景 **Dao + Provider**（见 **`docs/AI_DATABASE.md` §4～§5**）。
+- 升级体检：**`scripts/autumn-dependency-scan.sh`** + **`docs/AI_UPGRADE.md` §3.3**；存量 Wrapper/Service 手写引号对照 **`docs/AI_DATABASE.md` §8.1** 与 **§8.5** `rg` 示例。
+
+## 生成层与业务（§11）
+
+- **`controller/gen/*`**、**`SitePages.java.vm`** 产物：**禁止**改逻辑；改 **`template/*.vm`** 后重生成。
+- 空壳 **Controller/Service/Dao（非 gen）**：业务落 **Service**。
+
+## SQL 与 Dao（§12～§13，摘要）
+
+- **Provider**  mandatory for new SQL；配合 **`docs/AI_DATABASE.md`**、**`docs/AI_POSTGRESQL.md`**（PG）。
+- **Controller** 禁止 **Dao**；**Service** 用 **`baseMapper`**，勿 **`@Autowired`** 本 **Dao**；跨域只注入 **其他 Service**。
+
+## Redis 与框架 `RedisConfig`
+
+- **`cn.org.autumn.config.RedisConfig`**：`@Configuration`；**`@Autowired(required = false) RedisConnectionFactory`**；**`@Bean`**：`RedisTemplate`（`@Primary` + JSON）、**Ops**；**不**使用 **`@ConditionalOnBean(RedisConnectionFactory)`**、**不**使用 **`@AutoConfigureAfter`**；**不**列入 **`spring.factories` → `EnableAutoConfiguration`**，随 **`cn.org.autumn`** **组件扫描**加载。
+- **`autumn.redis.open`**、EPP 与 **`spring.redis.*`**：**`docs/REDIS_STANDALONE.md` §1、§2**；业务 **模式 A / B**：**§3、§8**；升级清单：**`docs/AI_UPGRADE.md` §2.2 行 7**。
+- **`RedisResilience`**、**`DistributedLockService`**、**`TagRunnable` / `LockOnce`**：**`docs/REDIS_RESILIENCE.md`**、**`docs/AI_DISTRIBUTED_LOCK.md`**。
 
 ## 分布式执行与加锁（新增）
 
-- 涉及跨节点任务互斥、热点写入串行化、任务防重入时，优先复用框架锁能力，不自建锁组件。
-- **已继承 `ModuleService` / `BaseService`**：使用 **`DistributedService`** 的 `withLock*` 系列（严格/降级/重试）。
-- **未继承基础框架能力**：直接注入 **`DistributedLockService`**。
-- 配置统一通过后台 **`DistributedLockConfig`**（`DISTRIBUTED_LOCK_CONFIG`）管理，读取方式为 `sysConfigService.getObject(...)`。
-- 强一致场景默认严格失败；非强一致场景可用 `withLockOrFallback` 做服务降级。
-- 并发突发场景必须使用 `withLockRetry` 的随机退避机制，避免锁竞争雪崩。
-- **依赖方 / 兄弟模块**：未启用 Redis 时 **无 `RedisTemplate`**；勿默认 **`@Autowired RedisTemplate`**，应 **`required = false`** / **`ObjectProvider`** + 判空降级（与 2.x 相同纪律，见 **`docs/REDIS_STANDALONE.md` §6**）。
+- 涉及跨节点互斥、定时任务防重入、热点写入串行化时，必须优先复用框架锁能力。
+- **已继承 `ModuleService` / `BaseService`**：直接使用 **`DistributedService`** 的 `withLock*` 能力（`withLock` / `withLockRetry` / `withLockOrFallback`）。
+- **未继承框架基础能力**（独立组件、监听器、过滤器等）：直接注入 **`DistributedLockService`**。
+- 配置来源统一走后台 **`DistributedLockConfig`**（键 `DISTRIBUTED_LOCK_CONFIG`），通过 `sysConfigService.getObject(...)` 获取对象配置，不走环境变量。
+- **Redis 与熔断**：见上一节 **Redis 与框架 `RedisConfig`**；**`RedisResilience`** 细节见 **`docs/REDIS_RESILIENCE.md`**。
+- 默认策略：严格模式优先（锁竞争失败抛错）；需要服务降级时显式使用 `withLockOrFallback` 或开启配置降级。
+- 抗雪崩策略：锁竞争重试必须使用“有限重试 + 随机退避”（`withLockRetry`），禁止业务自旋热重试。
+
+## 资源与页面（§14）
+
+- **`resources/statics/`** 公共静态；新后台页 **`pages/`** + **`site/*Site`** + **`@PageAware`**。
+
+## 既有纪律（摘要）
+
+- **禁止生产 `@Scheduled`**；新接口 **不用 `@RequiresPermissions`**（登录态）；**FreeMarker** 安全（`<!-- -->`、`<#noparse>`）。
+- 页面文案：**用户视角**，禁开发术语与表名字段名堆砌。
+- 能力地图：**`docs/AI_MAP.md`**；缓存/队列细节：**`docs/AI_CODEGEN.md`** 第 4 节。
 
 ## 自检清单
 
-- Dao 无内联 SQL？无手写方言引号（§4.0）？
-- **Controller** 未碰 **Dao**？未手改 **gen / list.html/js**？
+- 无多余 **`schema.sql` / `init.sql`**？  
+- Dao 无内联 SQL？**Wrapper** 无方言黑魔法？Java 无手写 **反引号/双引号/方括号** 拼 SQL（§4.0）？  
+- **Controller** 未碰 **Dao**？未手改 **gen / list.html/js**？  
+- 新页有 **`Site` + `@PageAware`**？  
+- 生成路径与 **GenUtils** 一致？
 
 ## 多项目一句话
 
-**`docs/AI_BOOT.md` → `docs/AI_MAP.md` → `docs/AI_STANDARDS.md` → `docs/AI_DATABASE.md`（含 §4.0）→ `docs/AI_CODEGEN.md`**（**仅 3.0.0 / JDK17+ / Boot 3.5 栈**）。
+**`docs/AI_BOOT.md` → `docs/AI_MAP.md` → `docs/AI_STANDARDS.md` → `docs/AI_DATABASE.md` → `docs/AI_CODEGEN.md` → 专项 → README / 模块目录 → 任务约束**（**仅 3.0.0 / JDK17+ / Boot 3.5 栈**）。
