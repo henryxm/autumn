@@ -13,20 +13,27 @@ import java.util.concurrent.TimeUnit;
 @Service
 public class RedisService {
 
-    @Autowired
+    @Autowired(required = false)
     private RedisTemplate<String, Object> redisTemplate;
 
-    @Autowired
+    @Autowired(required = false)
     private StringRedisTemplate stringRedisTemplate;
 
     @Autowired
     private RedisUtils redisUtils;
+
+    private boolean redisReady() {
+        return redisTemplate != null && stringRedisTemplate != null;
+    }
 
     /**
      * 获取所有数据库信息
      * 注意：由于使用连接池，不支持数据库切换，只返回当前数据库信息
      */
     public List<Map<String, Object>> getDatabases() {
+        if (!redisReady()) {
+            return new ArrayList<>();
+        }
         List<Map<String, Object>> databases = new ArrayList<>();
         
         // 由于使用连接池，不支持数据库切换，只返回当前数据库信息
@@ -44,6 +51,14 @@ public class RedisService {
      * 获取当前数据库的键列表
      */
     public Map<String, Object> getKeys(int database, String pattern, int page, int size) {
+        if (!redisReady()) {
+            Map<String, Object> empty = new HashMap<>();
+            empty.put("total", 0);
+            empty.put("keys", new ArrayList<>());
+            empty.put("page", page);
+            empty.put("size", size);
+            return empty;
+        }
         Map<String, Object> result = new HashMap<>();
         
         // 由于使用连接池，不支持数据库切换，忽略database参数
@@ -87,6 +102,12 @@ public class RedisService {
      * 获取键的详细信息
      */
     public Map<String, Object> getKeyInfo(String key) {
+        if (!redisReady()) {
+            Map<String, Object> keyInfo = new HashMap<>();
+            keyInfo.put("key", key);
+            keyInfo.put("error", "Redis 未启用");
+            return keyInfo;
+        }
         Map<String, Object> keyInfo = new HashMap<>();
         keyInfo.put("key", key);
         
@@ -116,6 +137,9 @@ public class RedisService {
      * 删除指定的键
      */
     public boolean deleteKey(String key) {
+        if (!redisReady()) {
+            return false;
+        }
         try {
             return redisTemplate.delete(key);
         } catch (Exception e) {
@@ -128,6 +152,9 @@ public class RedisService {
      * 删除多个键
      */
     public long deleteKeys(List<String> keys) {
+        if (!redisReady()) {
+            return 0;
+        }
         try {
             return redisTemplate.delete(keys);
         } catch (Exception e) {
@@ -140,6 +167,9 @@ public class RedisService {
      * 清空当前数据库
      */
     public boolean clearDatabase(int database) {
+        if (!redisReady()) {
+            return false;
+        }
         try {
             // 由于使用连接池，不支持数据库切换，忽略database参数
             redisTemplate.getConnectionFactory().getConnection().flushDb();
@@ -154,6 +184,9 @@ public class RedisService {
      * 清空所有数据库
      */
     public boolean clearAllDatabases() {
+        if (!redisReady()) {
+            return false;
+        }
         try {
             redisTemplate.getConnectionFactory().getConnection().flushAll();
             return true;
@@ -167,6 +200,9 @@ public class RedisService {
      * 获取键的值，兼容JDK序列化、字符串、JSON等多种类型，支持所有Redis数据类型
      */
     public Object getKeyValue(String key) {
+        if (!redisReady()) {
+            return "Redis 未启用";
+        }
         try {
             // 获取键的类型
             String type = redisTemplate.type(key).name();
@@ -499,6 +535,9 @@ public class RedisService {
      * 设置键的过期时间
      */
     public boolean setKeyExpire(String key, long seconds) {
+        if (!redisReady()) {
+            return false;
+        }
         try {
             return redisTemplate.expire(key, seconds, TimeUnit.SECONDS);
         } catch (Exception e) {
@@ -567,6 +606,9 @@ public class RedisService {
      * 按模式删除键
      */
     public long deleteKeysByPattern(String pattern, int database) {
+        if (!redisReady()) {
+            return 0;
+        }
         try {
             // 由于使用连接池，不支持数据库切换，忽略database参数
             Set<String> keys = redisTemplate.keys(pattern);
@@ -586,6 +628,9 @@ public class RedisService {
      * 检查Redis连接状态
      */
     public boolean isConnected() {
+        if (!redisReady()) {
+            return false;
+        }
         try {
             redisTemplate.getConnectionFactory().getConnection().ping();
             return true;
@@ -599,6 +644,11 @@ public class RedisService {
      */
     public Map<String, Object> getServerInfo() {
         Map<String, Object> info = new HashMap<>();
+        if (!redisReady()) {
+            info.put("connected", false);
+            info.put("error", "Redis 未启用");
+            return info;
+        }
         try {
             Properties properties = redisTemplate.getConnectionFactory().getConnection().info();
             info.put("version", properties.getProperty("redis_version"));

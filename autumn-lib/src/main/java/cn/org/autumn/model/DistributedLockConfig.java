@@ -32,6 +32,9 @@ public class DistributedLockConfig implements Serializable {
     @ConfigField(category = InputType.BooleanType, name = "锁竞争失败时是否降级", description = "当锁获取失败时是否降级执行本地逻辑，默认false（严格模式）")
     private boolean degradeOnAcquireFailure = false;
 
+    @ConfigField(category = InputType.BooleanType, name = "忽略Redis熔断门控", description = "为 true 时仍尝试 Redisson tryLock（即使熔断 OPEN；仅强一致且可接受雪崩风险时开启）")
+    private boolean ignoreCircuitBreaker = false;
+
     @ConfigField(category = InputType.NumberType, name = "锁竞争重试次数", description = "锁竞争失败后的重试次数，默认0（不重试）")
     private int retryTimes = 0;
 
@@ -87,6 +90,14 @@ public class DistributedLockConfig implements Serializable {
 
     public void setDegradeOnAcquireFailure(boolean degradeOnAcquireFailure) {
         this.degradeOnAcquireFailure = degradeOnAcquireFailure;
+    }
+
+    public boolean isIgnoreCircuitBreaker() {
+        return ignoreCircuitBreaker;
+    }
+
+    public void setIgnoreCircuitBreaker(boolean ignoreCircuitBreaker) {
+        this.ignoreCircuitBreaker = ignoreCircuitBreaker;
     }
 
     public int getRetryTimes() {

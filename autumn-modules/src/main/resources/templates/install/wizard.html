@@ -363,6 +363,32 @@
                     <input id="password" type="password"/>
                 </div>
             </div>
+
+            <h3 class="sub" style="margin-top:18px">Redis（可选）</h3>
+            <p class="sub">不勾选则安装后以单机运行（配置中不写 <code>spring.redis</code>）；需要分布式缓存、会话或锁时再改配置并重启。</p>
+            <label class="check-row" for="enableRedisCb">
+                <input type="checkbox" id="enableRedisCb"/>
+                <span>启用 Redis 并写入连接信息</span>
+            </label>
+            <div id="redisFields" class="hidden">
+                <label class="check-row" for="enableShiroRedisCb">
+                    <input type="checkbox" id="enableShiroRedisCb"/>
+                    <span>Shiro 会话存 Redis（多节点共享登录态，需 Redis 稳定可用）</span>
+                </label>
+                <div class="row">
+                    <div>
+                        <label class="lbl">Redis 主机</label>
+                        <input id="redisHost" value="127.0.0.1"/>
+                    </div>
+                    <div>
+                        <label class="lbl">端口</label>
+                        <input id="redisPort" value="6379"/>
+                    </div>
+                </div>
+                <label class="lbl">Redis 密码（无则留空）</label>
+                <input id="redisPassword" type="password" placeholder="选填"/>
+            </div>
+
             <label class="lbl">附加连接参数（选填）</label>
             <p class="sub" style="margin-top:0">例如 PostgreSQL 需要 SSL 时可填 <code>sslmode=require</code>（以数据库文档为准）。</p>
             <input id="extraOptions" placeholder="选填"/>
@@ -604,6 +630,10 @@
         updateConnectionUi();
     };
 
+    el('enableRedisCb').onchange = function () {
+        el('redisFields').classList.toggle('hidden', !this.checked);
+    };
+
     document.querySelectorAll('#modeGrid .mode-opt').forEach(function (node) {
         node.addEventListener('click', function (e) {
             if (e.target.tagName !== 'INPUT') {
@@ -710,7 +740,12 @@
             advancedUrl: el('advancedUrl').checked,
             jdbcUrl: el('jdbcUrl').value,
             driverClassName: el('driverClassName').value,
-            h2CompatibilityMode: el('h2CompatibilityMode').value
+            h2CompatibilityMode: el('h2CompatibilityMode').value,
+            enableRedis: el('enableRedisCb').checked,
+            enableShiroRedis: el('enableShiroRedisCb').checked,
+            redisHost: el('redisHost').value,
+            redisPort: el('redisPort').value,
+            redisPassword: el('redisPassword').value
         };
     }
 

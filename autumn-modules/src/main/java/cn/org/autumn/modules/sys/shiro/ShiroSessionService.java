@@ -30,7 +30,7 @@ import static org.apache.shiro.subject.support.DefaultSubjectContext.PRINCIPALS_
 @Service
 public class ShiroSessionService {
 
-    @Autowired
+    @Autowired(required = false)
     private RedisTemplate redisTemplate;
 
     @Autowired
@@ -131,6 +131,9 @@ public class ShiroSessionService {
      * 检查是否启用Redis
      */
     private boolean isRedisEnabled() {
+        if (redisTemplate == null) {
+            return false;
+        }
         try {
             // 尝试获取Redis中是否有数据，如果有则说明启用了Redis
             String sessionPrefix = RedisKeys.getSessionPrefix(sysConfigService.getNameSpace());
@@ -213,6 +216,9 @@ public class ShiroSessionService {
      */
     private Set<String> getForceLogoutUserUuids() {
         Set<String> set = new HashSet<>();
+        if (redisTemplate == null) {
+            return set;
+        }
         try {
             String prefix = RedisKeys.getForceLogoutPrefix(sysConfigService.getNameSpace());
             Set<String> keys = redisTemplate.keys(prefix + "*");
@@ -350,6 +356,10 @@ public class ShiroSessionService {
     private void markForceLogout(String userUuid) {
         if (userUuid == null || userUuid.isEmpty())
             return;
+        if (redisTemplate == null) {
+            log.warn("Redis 未启用，无法写入强制下线标记: userUuid={}", userUuid);
+            return;
+        }
         try {
             String key = RedisKeys.getForceLogoutKey(sysConfigService.getNameSpace(), userUuid);
             redisTemplate.opsForValue().set(key, "1", 7, TimeUnit.DAYS);
@@ -364,6 +374,9 @@ public class ShiroSessionService {
      */
     public void clearForceLogout(String userUuid) {
         if (userUuid == null || userUuid.isEmpty()) return;
+        if (redisTemplate == null) {
+            return;
+        }
         try {
             redisTemplate.delete(RedisKeys.getForceLogoutKey(sysConfigService.getNameSpace(), userUuid));
             if (log.isDebugEnabled()) log.debug("已取消强制重登: userUuid={}", userUuid);

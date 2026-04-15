@@ -100,7 +100,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     @Autowired
     AsyncTaskExecutor asyncTaskExecutor;
 
-    @Autowired
+    @Autowired(required = false)
     private StringRedisTemplate stringRedisTemplate;
 
     @Autowired
@@ -145,6 +145,9 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     }
 
     public void clear() {
+        if (stringRedisTemplate == null) {
+            return;
+        }
         String configKey = RedisKeys.getConfigPrefix(getNameSpace());
         Set<String> keys = stringRedisTemplate.keys(configKey + "*");
         if (null != keys && !keys.isEmpty())

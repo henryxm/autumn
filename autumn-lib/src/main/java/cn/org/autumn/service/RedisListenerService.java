@@ -1,6 +1,7 @@
 package cn.org.autumn.service;
 
 import cn.org.autumn.handler.MessageHandler;
+import cn.org.autumn.redis.resilience.RedisResilience;
 import cn.org.autumn.utils.RedisUtils;
 import cn.org.autumn.utils.Uuid;
 import com.google.gson.Gson;
@@ -34,10 +35,10 @@ import java.util.concurrent.Executors;
 @Service
 public class RedisListenerService {
 
-    @Autowired
+    @Autowired(required = false)
     private RedisTemplate<String, Object> redisTemplate;
 
-    @Autowired
+    @Autowired(required = false)
     private RedisProperties redisProperties;
 
     @Autowired
@@ -48,6 +49,9 @@ public class RedisListenerService {
 
     @Autowired
     private Gson gson;
+
+    @Autowired(required = false)
+    private RedisResilience redisResilience;
 
     /**
      * 实例ID，用于标识当前实例
@@ -84,7 +88,7 @@ public class RedisListenerService {
         if (initialized) {
             return;
         }
-        if (redisUtils.isOpen())
+        if (redisUtils.isOpen() && redisTemplate != null)
             new Thread(this::initListener).start();
     }
 
@@ -92,7 +96,7 @@ public class RedisListenerService {
      * 初始化消息监听容器
      */
     void initListener() {
-        if (initialized || !redisUtils.isOpen()) {
+        if (initialized || !redisUtils.isOpen() || redisTemplate == null) {
             return;
         }
         // 先测试Redis连接是否可用
@@ -100,6 +104,9 @@ public class RedisListenerService {
             retryCount++;
             if (retryCount > MAX_RETRY_COUNT) {
                 log.error("Redis连接测试失败，已重试{}次，放弃初始化Redis Pub/Sub服务", MAX_RETRY_COUNT);
+                if (redisResilience != null) {
+                    redisResilience.recordFailure();
+                }
                 return;
             }
             log.warn("Redis连接测试失败，延迟5秒后重试初始化Redis Pub/Sub服务（第{}/{}次）", retryCount, MAX_RETRY_COUNT);
@@ -154,8 +161,14 @@ public class RedisListenerService {
             messageListenerContainer.start();
             initialized = true;
             log.info("Redis Pub/Sub started success");
+            if (redisResilience != null) {
+                redisResilience.recordSuccess();
+            }
         } catch (Exception e) {
             log.error("初始化Redis Pub/Sub服务失败: {}", e.getMessage(), e);
+            if (redisResilience != null && RedisResilience.isInfrastructureFailure(e)) {
+                redisResilience.recordFailure();
+            }
             cleanup();
         }
     }
@@ -165,6 +178,9 @@ public class RedisListenerService {
      */
     private LettuceConnectionFactory create() {
         try {
+            if (redisProperties == null) {
+                return null;
+            }
             RedisStandaloneConfiguration standalone = new RedisStandaloneConfiguration(redisProperties.getHost(), redisProperties.getPort());
             standalone.setDatabase(redisProperties.getDatabase());
             if (redisProperties.getPassword() != null) {
@@ -185,6 +201,9 @@ public class RedisListenerService {
      */
     private boolean ping() {
         try {
+            if (redisTemplate == null) {
+                return false;
+            }
             RedisConnectionFactory connectionFactory = redisTemplate.getConnectionFactory();
             if (connectionFactory == null) {
                 return false;

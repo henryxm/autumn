@@ -15,7 +15,7 @@ import java.util.concurrent.TimeUnit;
  *   <li>使用 Redisson 分布式锁 {@code tryLock(0, leaseTime, SECONDS)}，非阻塞 + 自动过期</li>
  *   <li>成功执行后<b>不主动释放锁</b>，让锁自然过期，防止同一时间窗口内其他节点再次执行</li>
  *   <li>执行失败后<b>主动释放锁</b>，允许其他节点接管重试（故障转移）</li>
- *   <li>Redis 不可用时默认跳过执行，避免多节点重复执行；子类可覆写 {@link #onRedisUnavailable()} 自定义行为</li>
+ *   <li>Redis / Redisson 不可用时默认<b>单机回退</b>执行；子类可覆写 {@link #onRedisUnavailable()} 在回退前插入自定义逻辑</li>
  *   <li><b>错峰延迟</b>：获取锁之前应用随机延迟，减少多节点同时争抢 Redis 锁的压力</li>
  * </ul>
  *
@@ -69,11 +69,14 @@ public abstract class LockOnce extends TagRunnable {
             // 3. 获取 Redisson 客户端并执行
             TagValue value = getTagValue();
             RedissonClient client = DistributedLockHelper.getRedissonClient();
+            if (client != null && !DistributedLockHelper.isRedissonLockPermitted()) {
+                client = null;
+            }
             if (client != null && value != null) {
                 executeWithDistributedLock(client, value);
             } else if (client == null) {
                 onRedisUnavailable();
-                TagTaskExecutor.recordSkipped(this, "Redis不可用");
+                executeDirectly();
             } else {
                 // TagValue 为空，无法构建锁键，直接执行
                 executeDirectly();
@@ -191,12 +194,11 @@ public abstract class LockOnce extends TagRunnable {
     }
 
     /**
-     * Redis 不可用时的处理策略。
-     * <p>默认行为：跳过执行并记录警告日志（保证多节点不重复执行）。</p>
-     * <p>子类可覆写此方法以自定义行为，例如在单节点部署时选择直接执行。</p>
+     * Redis / Redisson 不可用、即将单机执行 {@link #exe()} 前的钩子。
+     * <p>默认仅打调试日志；实际执行由框架在钩子后调用 {@link #executeDirectly()}。</p>
      */
     protected void onRedisUnavailable() {
         if (log.isDebugEnabled())
-            log.debug("RedissonClient 不可用，跳过分布式任务以避免多节点重复执行: tag={}, method={}", getTag(), getMethod());
+            log.debug("RedissonClient 不可用，单机回退: tag={}, method={}", getTag(), getMethod());
     }
 }

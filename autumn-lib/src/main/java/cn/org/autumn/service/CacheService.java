@@ -5,6 +5,7 @@ import cn.org.autumn.config.ClearHandler;
 import cn.org.autumn.config.EhCacheManager;
 import cn.org.autumn.model.Invalidation;
 import cn.org.autumn.site.LoadFactory;
+import cn.org.autumn.redis.resilience.RedisResilience;
 import cn.org.autumn.utils.RedisUtils;
 import com.google.gson.Gson;
 import lombok.extern.slf4j.Slf4j;
@@ -57,7 +58,7 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
     @Autowired
     private EhCacheManager ehCacheManager;
 
-    @Autowired
+    @Autowired(required = false)
     private RedisTemplate<String, Object> redisTemplate;
 
     @Autowired
@@ -65,6 +66,9 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
 
     @Autowired
     private RedisListenerService redisListenerService;
+
+    @Autowired(required = false)
+    private RedisResilience redisResilience;
 
     @Autowired
     private Gson gson;
@@ -79,6 +83,12 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
      */
     @Override
     public void must() {
+        if (!isRedisEnabled()) {
+            if (log.isDebugEnabled()) {
+                log.debug("Redis 未启用或 Bean 未装配，跳过跨实例缓存失效订阅");
+            }
+            return;
+        }
         redisListenerService.initListener();
         // 订阅缓存失效频道
         boolean success = redisListenerService.subscribe(CACHE_INVALIDATION_CHANNEL, (channel, messageBody) -> {
@@ -167,14 +177,27 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
      */
     private void publish(String name, Object key, String operation) {
         try {
+            if (!isRedisEnabled()) {
+                return;
+            }
             if (null == key) {
                 return;
             }
             Invalidation message = new Invalidation(name, key, operation);
             message.setInstanceId(redisListenerService.getInstanceId());
-            boolean success = redisListenerService.publish(CACHE_INVALIDATION_CHANNEL, message);
-            if (log.isDebugEnabled() && success) {
-                log.debug("发布失效: name={}, key={}, operation={}", name, key, operation);
+            if (redisResilience != null) {
+                redisResilience.execute(() -> {
+                    boolean ok = redisListenerService.publish(CACHE_INVALIDATION_CHANNEL, message);
+                    if (log.isDebugEnabled() && ok) {
+                        log.debug("发布失效: name={}, key={}, operation={}", name, key, operation);
+                    }
+                    return null;
+                }, () -> null);
+            } else {
+                boolean success = redisListenerService.publish(CACHE_INVALIDATION_CHANNEL, message);
+                if (log.isDebugEnabled() && success) {
+                    log.debug("发布失效: name={}, key={}, operation={}", name, key, operation);
+                }
             }
         } catch (Exception e) {
             log.error("发布失败: name={}, key={}, operation={}, error={}", name, key, operation, e.getMessage());
@@ -771,7 +794,7 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
      * @return 如果Redis启用返回true，否则返回false
      */
     public boolean isRedisEnabled() {
-        return redisUtils.isOpen();
+        return redisUtils != null && redisUtils.isOpen() && redisTemplate != null;
     }
 
     /**

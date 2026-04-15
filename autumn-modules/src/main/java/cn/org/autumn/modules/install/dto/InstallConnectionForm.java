@@ -48,6 +48,18 @@ public class InstallConnectionForm implements Serializable {
      */
     private String h2CompatibilityMode = "";
 
+    /** 是否在安装后的配置中启用 Redis（会写入 {@code spring.redis.*} 与 {@code autumn.redis.open}）。 */
+    private boolean enableRedis;
+
+    /** 是否在启用 Redis 时把 Shiro Session 存到 Redis（需同时启用 Redis）。 */
+    private boolean enableShiroRedis;
+
+    private String redisHost = "127.0.0.1";
+
+    private String redisPort = "6379";
+
+    private String redisPassword = "";
+
     public String getDatabaseType() {
         return databaseType;
     }
@@ -142,5 +154,45 @@ public class InstallConnectionForm implements Serializable {
 
     public void setH2CompatibilityMode(String h2CompatibilityMode) {
         this.h2CompatibilityMode = h2CompatibilityMode;
+    }
+
+    public boolean isEnableRedis() {
+        return enableRedis;
+    }
+
+    public void setEnableRedis(boolean enableRedis) {
+        this.enableRedis = enableRedis;
+    }
+
+    public boolean isEnableShiroRedis() {
+        return enableShiroRedis;
+    }
+
+    public void setEnableShiroRedis(boolean enableShiroRedis) {
+        this.enableShiroRedis = enableShiroRedis;
+    }
+
+    public String getRedisHost() {
+        return redisHost;
+    }
+
+    public void setRedisHost(String redisHost) {
+        this.redisHost = redisHost;
+    }
+
+    public String getRedisPort() {
+        return redisPort;
+    }
+
+    public void setRedisPort(String redisPort) {
+        this.redisPort = redisPort;
+    }
+
+    public String getRedisPassword() {
+        return redisPassword;
+    }
+
+    public void setRedisPassword(String redisPassword) {
+        this.redisPassword = redisPassword;
     }
 }
