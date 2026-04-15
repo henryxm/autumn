@@ -32,7 +32,8 @@ import java.io.IOException;
 
 @Controller
 public class SysLoginController {
-    @Autowired
+
+    @Autowired(required = false)
     private Producer producer;
 
     @Autowired
@@ -56,16 +57,16 @@ public class SysLoginController {
     public void captcha(HttpServletResponse response) throws IOException {
         response.setHeader("Cache-Control", "no-store, no-cache");
         response.setContentType("image/jpeg");
-
-        //生成文字验证码
-        String text = producer.createText();
-        //生成图片验证码
-        BufferedImage image = producer.createImage(text);
-        //保存到shiro session
-        ShiroUtils.setSessionAttribute(Constants.KAPTCHA_SESSION_KEY, text);
-
-        ServletOutputStream out = response.getOutputStream();
-        ImageIO.write(image, "jpg", out);
+        if (null != producer) {
+            //生成文字验证码
+            String text = producer.createText();
+            //生成图片验证码
+            BufferedImage image = producer.createImage(text);
+            //保存到shiro session
+            ShiroUtils.setSessionAttribute(Constants.KAPTCHA_SESSION_KEY, text);
+            ServletOutputStream out = response.getOutputStream();
+            ImageIO.write(image, "jpg", out);
+        }
     }
 
     /**

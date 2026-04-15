@@ -50,7 +50,7 @@ public class InstallEnvironmentPostProcessor implements EnvironmentPostProcessor
         }
 
         if (wizard && (force || !configFile.isFile())) {
-            Map<String, Object> bootstrap = new HashMap<>(16);
+            Map<String, Object> bootstrap = new HashMap<>(24);
             bootstrap.put(InstallConstants.INSTALL_MODE, "true");
             // 安装占位启动阶段不拉起 Quartz，避免 JDBC JobStore / 业务 Job 在安装未完成时访问库或外部资源
             bootstrap.put("spring.quartz.auto-startup", "false");
@@ -61,8 +61,23 @@ public class InstallEnvironmentPostProcessor implements EnvironmentPostProcessor
             bootstrap.put("spring.datasource.druid.first.username", "sa");
             bootstrap.put("spring.datasource.druid.first.password", "");
             bootstrap.put("spring.datasource.druid.validation-query", "SELECT 1");
+            mergeAutoconfigureExclude(environment, bootstrap);
             environment.getPropertySources().addFirst(new MapPropertySource("autumnInstallBootstrap", bootstrap));
         }
+    }
+
+    /**
+     * 将 {@link InstallConstants#AUTOCONFIGURE_EXCLUDE_EXTRA} 与当前环境中的 {@code spring.autoconfigure.exclude} 合并后写入引导 Map，
+     * 便于安装期排除重型自动配置而无需改代码。
+     */
+    private static void mergeAutoconfigureExclude(ConfigurableEnvironment environment, Map<String, Object> bootstrap) {
+        String extra = environment.getProperty(InstallConstants.AUTOCONFIGURE_EXCLUDE_EXTRA);
+        if (StringUtils.isBlank(extra)) {
+            return;
+        }
+        String existing = environment.getProperty("spring.autoconfigure.exclude");
+        String merged = StringUtils.isBlank(existing) ? extra.trim() : existing.trim() + "," + extra.trim();
+        bootstrap.put("spring.autoconfigure.exclude", merged);
     }
 
     private static void loadYamlFile(ConfigurableEnvironment environment, File configFile) {

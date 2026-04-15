@@ -1,5 +1,6 @@
 package cn.org.autumn.config;
 
+import cn.org.autumn.annotation.ConditionalOnNotInstallMode;
 import com.google.code.kaptcha.impl.DefaultKaptcha;
 import com.google.code.kaptcha.util.Config;
 import org.springframework.context.annotation.Bean;
@@ -11,6 +12,7 @@ import java.util.Properties;
 public class KaptchaConfig {
 
     @Bean
+    @ConditionalOnNotInstallMode
     public DefaultKaptcha producer() {
         Properties properties = new Properties();
         properties.put("kaptcha.border", "no");
