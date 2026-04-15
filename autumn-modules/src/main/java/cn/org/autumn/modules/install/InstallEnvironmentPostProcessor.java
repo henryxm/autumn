@@ -18,12 +18,23 @@ import java.util.Map;
 
 /**
  * 在 JdbcEnvironmentPostProcessor 之前执行：若存在外部数据源配置文件则优先加载；否则在开启 {@code autumn.install.wizard}
- * 时进入占位数据源（H2 内存）安装模式，避免未配置时强绑 application-dev 等业务 profile 中的 JDBC。
+ * 时进入占位数据源安装模式，避免未配置时强绑 application-dev 等业务 profile 中的 JDBC。
+ * <p>
+ * 默认使用 <strong>H2 内存库</strong>（无需外部数据库进程即可启动），因 Druid/MyBatis 在引导阶段仍会初始化
+ * {@code DataSource}/{@code SqlSessionFactory}，必须能成功建连。可选 {@code mysql} 占位须本机 MySQL 已启动。
  */
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class InstallEnvironmentPostProcessor implements EnvironmentPostProcessor {
 
     private static final String DEFAULT_CONFIG = InstallConstants.DEFAULT_CONFIG_FILE;
+
+    private static final String H2_MEM_URL =
+            "jdbc:h2:mem:autumn_install_boot;MODE=MySQL;DATABASE_TO_LOWER=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE";
+
+    /** {@link InstallConstants#BOOTSTRAP_FLAVOR_MYSQL} 时默认 JDBC URL（库可不存在，依赖 createDatabaseIfNotExist）。 */
+    private static final String DEFAULT_BOOTSTRAP_MYSQL_URL =
+            "jdbc:mysql://127.0.0.1:3306/autumn_install_boot?useUnicode=true&characterEncoding=UTF-8"
+                    + "&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false&createDatabaseIfNotExist=true";
 
     @Override
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
@@ -55,11 +66,7 @@ public class InstallEnvironmentPostProcessor implements EnvironmentPostProcessor
             // 安装占位启动阶段不拉起 Quartz，避免 JDBC JobStore / 业务 Job 在安装未完成时访问库或外部资源
             bootstrap.put("spring.quartz.auto-startup", "false");
             bootstrap.put("autumn.table.init", "false");
-            bootstrap.put("spring.datasource.driverClassName", "org.h2.Driver");
-            bootstrap.put("spring.datasource.druid.first.url",
-                    "jdbc:h2:mem:autumn_install_boot;MODE=MySQL;DATABASE_TO_LOWER=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE");
-            bootstrap.put("spring.datasource.druid.first.username", "sa");
-            bootstrap.put("spring.datasource.druid.first.password", "");
+            applyBootstrapDatasource(environment, bootstrap);
             bootstrap.put("spring.datasource.druid.validation-query", "SELECT 1");
             mergeAutoconfigureExclude(environment, bootstrap);
             environment.getPropertySources().addFirst(new MapPropertySource("autumnInstallBootstrap", bootstrap));
@@ -70,6 +77,35 @@ public class InstallEnvironmentPostProcessor implements EnvironmentPostProcessor
      * 将 {@link InstallConstants#AUTOCONFIGURE_EXCLUDE_EXTRA} 与当前环境中的 {@code spring.autoconfigure.exclude} 合并后写入引导 Map，
      * 便于安装期排除重型自动配置而无需改代码。
      */
+    /**
+     * 写入占位 {@code spring.datasource.druid.first.*} 与驱动：默认 H2 内存（零外部依赖）；{@code mysql} 须 TCP 可达。
+     */
+    private static void applyBootstrapDatasource(ConfigurableEnvironment environment, Map<String, Object> bootstrap) {
+        String flavor = environment.getProperty(InstallConstants.BOOTSTRAP_DATASOURCE_FLAVOR, InstallConstants.BOOTSTRAP_FLAVOR_H2);
+        if (flavor == null) {
+            flavor = InstallConstants.BOOTSTRAP_FLAVOR_H2;
+        } else {
+            flavor = flavor.trim().toLowerCase();
+        }
+        if (InstallConstants.BOOTSTRAP_FLAVOR_MYSQL.equals(flavor)) {
+            bootstrap.put("autumn.database", "mysql");
+            bootstrap.put("spring.datasource.driverClassName",
+                    environment.getProperty(InstallConstants.BOOTSTRAP_DATASOURCE_DRIVER, "com.mysql.cj.jdbc.Driver"));
+            bootstrap.put("spring.datasource.druid.first.url",
+                    environment.getProperty(InstallConstants.BOOTSTRAP_DATASOURCE_URL, DEFAULT_BOOTSTRAP_MYSQL_URL));
+            bootstrap.put("spring.datasource.druid.first.username",
+                    environment.getProperty(InstallConstants.BOOTSTRAP_DATASOURCE_USERNAME, "root"));
+            bootstrap.put("spring.datasource.druid.first.password",
+                    environment.getProperty(InstallConstants.BOOTSTRAP_DATASOURCE_PASSWORD, ""));
+        } else {
+            bootstrap.put("autumn.database", "mysql");
+            bootstrap.put("spring.datasource.driverClassName", "org.h2.Driver");
+            bootstrap.put("spring.datasource.druid.first.url", H2_MEM_URL);
+            bootstrap.put("spring.datasource.druid.first.username", "sa");
+            bootstrap.put("spring.datasource.druid.first.password", "");
+        }
+    }
+
     private static void mergeAutoconfigureExclude(ConfigurableEnvironment environment, Map<String, Object> bootstrap) {
         String extra = environment.getProperty(InstallConstants.AUTOCONFIGURE_EXCLUDE_EXTRA);
         if (StringUtils.isBlank(extra)) {

@@ -1,6 +1,48 @@
 # 安装模式下的条件装配与自动配置排除
 
-当 `autumn.install.wizard=true` 且不存在（或强制重装）数据源配置文件时，框架会进入**安装占位启动**（`autumn.install.mode=true`），并注入 H2 内存占位数据源等（见 `InstallEnvironmentPostProcessor`）。本文说明如何在该阶段**减少 Bean / 自动配置**的加载，加快启动并避免访问尚未就绪的真实库。
+当 `autumn.install.wizard=true` 且不存在（或强制重装）数据源配置文件时，框架会进入**安装占位启动**（`autumn.install.mode=true`），并注入占位数据源（见 `InstallEnvironmentPostProcessor`）。本文说明如何在该阶段**减少 Bean / 自动配置**的加载，加快启动并避免访问尚未就绪的真实库。
+
+## 0. 占位数据源是否必要？为何默认 H2？
+
+### 0.1 为何需要「占位」
+
+在尚未写出 `config/datasource.yml`（或 `autumn.install.config-path` 指向的文件）时，Spring Boot 仍会装配 **Druid**、**MyBatis-Plus**、**Shiro** 等链路上的 Bean，它们依赖 **`DataSource` / `SqlSessionFactory`**。若完全不配置数据源，应用往往在启动期失败。
+
+因此向导分支会注入一套 **仅用于安装期** 的 JDBC：让进程先起来，再通过向导页面收集真实连接并写入配置文件。
+
+### 0.2 为何默认不能是「未连通的 MySQL」
+
+占位阶段 **仍会初始化连接池并取库元数据**（例如 MP 的 `GlobalConfigUtils setMetaData`）。JDBC URL 指向的 MySQL **必须 TCP 可达**，否则与「尚未安装、本机还没有 MySQL」矛盾，**无法启动**。
+
+结论：**纯 MySQL URL 占位不能替代「零外部依赖」**，只适合「本机已常驻 MySQL、仅缺配置文件」的团队。
+
+### 0.3 默认方案：H2 内存（推荐）
+
+- **默认** `autumn.install.bootstrap-datasource.flavor` = **`h2`**：内存库 **`jdbc:h2:mem:...;MODE=MySQL`**，**无需**外部数据库进程即可启动。
+- `autumn-modules` **传递依赖** **`com.h2database:h2`**（`runtime`），依赖方一般无需再写 H2。
+- 与业务正式库隔离；安装完成后写入真实 `datasource.yml` 即切换到 MySQL/PostgreSQL 等。
+
+### 0.4 可选：MySQL 占位（`flavor=mysql`）
+
+当希望占位阶段就与真实 MySQL 协议/权限一致（且 **确定** 本机 MySQL 已启动）时：
+
+```yaml
+autumn:
+  install:
+    bootstrap-datasource:
+      flavor: mysql   # 默认 h2
+      # 以下为可选覆盖
+      # url: jdbc:mysql://127.0.0.1:3306/autumn_install_boot?...
+      # username: root
+      # password: ""
+      # driver-class-name: com.mysql.cj.jdbc.Driver
+```
+
+或使用 **`InstallConstants`** 中的属性键（见源码）。
+
+### 0.5 与 `application-h2.yml` 的关系
+
+本仓库 **`web`** 模块另含 **H2**（及 SQLite/Derby 等），用于 **`--spring.profiles.active=...,h2`** 等**开发内嵌**场景，与安装向导默认占位 **同属 H2 驱动**，语义不同：前者多为文件/持久化 profile，后者为 **向导专用内存库**。
 
 ## 1. `@ConditionalOnNotInstallMode` / `@ConditionalOnInstallMode`
 

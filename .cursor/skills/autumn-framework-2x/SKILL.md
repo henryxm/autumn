@@ -39,7 +39,7 @@ description: >-
 1. `docs/AI_INDEX.md` → 2. `docs/AI_BOOT.md` → 3. `docs/AI_MAP.md` → 4. **`docs/AI_STANDARDS.md`**（强制全文，含 §8～§14）  
 5. **`docs/AI_DATABASE.md`**（多库、`DatabaseType`、**§4.0 代码层方言标准写法**、`WrapperColumns`、`RuntimeSql`、Wrapper 边界、Dao **必须** Provider）  
 6. 新模块 / 代码生成 / 搭骨架：追加 **`docs/AI_CODEGEN.md`**  
-按需：`docs/AI_POSTGRESQL.md`、`docs/AI_TEMPLATES.md`、`docs/AI_CRYPTO.md`、`docs/AI_DISTRIBUTED_LOCK.md`、**`docs/REDIS_RESILIENCE.md`**（Redis 熔断与分布式锁稳健性）、`docs/REDIS_STANDALONE.md` 等。
+按需：`docs/AI_POSTGRESQL.md`、`docs/AI_TEMPLATES.md`、`docs/AI_CRYPTO.md`、`docs/AI_DISTRIBUTED_LOCK.md`、**`docs/REDIS_RESILIENCE.md`**（Redis 熔断与分布式锁稳健性）、`docs/REDIS_STANDALONE.md`、**`docs/INSTALL_MODE_CONDITIONAL.md`**（安装向导 **`autumn.install.wizard`**、**§0 占位默认 H2 / 可选 mysql**）等。
 
 ## 规范开发三步（与 `docs/AI_CODEGEN.md` 一致）
 
@@ -79,6 +79,7 @@ description: >-
 - **未继承框架基础能力**（独立组件、监听器、过滤器等）：直接注入 **`DistributedLockService`**。
 - 配置来源统一走后台 **`DistributedLockConfig`**（键 `DISTRIBUTED_LOCK_CONFIG`），通过 `sysConfigService.getObject(...)` 获取对象配置，不走环境变量。
 - **Redis 韧性**：框架 Bean **`RedisResilience`**（`autumn.redis.resilience.*`）对 Redis/Redisson 基础设施失败做计数熔断；**`DistributedLockService`** 与 **`TagRunnable` / `LockOnce`** 已对齐（熔断 OPEN 默认跳过 tryLock、单机回退）。自定义 Redis 调用应优先 **`RedisResilience#execute`**；必读 **`docs/REDIS_RESILIENCE.md`**，与 **`docs/REDIS_STANDALONE.md`**（`autumn.redis.open`、安装向导）配合。
+- **依赖方 / 兄弟模块**：未启用 Redis 时 **无 `RedisTemplate` Bean**；任何 **`@Autowired RedisTemplate`**（默认必填）会导致启动失败。使用 **`@Autowired(required = false)`** 或 **`ObjectProvider`**，业务路径 **`if (redisTemplate == null)`** 降级；见 **`docs/REDIS_STANDALONE.md` §6** 与 **`docs/AI_UPGRADE.md` §2.2 行 7**。
 - 默认策略：严格模式优先（锁竞争失败抛错）；需要服务降级时显式使用 `withLockOrFallback` 或开启配置降级。
 - 抗雪崩策略：锁竞争重试必须使用“有限重试 + 随机退避”（`withLockRetry`），禁止业务自旋热重试。
 

@@ -32,7 +32,8 @@
 |---|-----|------|
 | 5 | **`autumn.database`** | 使用 PostgreSQL 时设为 `postgresql`，并配置数据源、PageHelper 方言（见 `application-postgresql.yml` 示例）。 |
 | 6 | **多数据源 / Druid** | 校验 `spring.datasource` 与 autumn 期望结构一致；升级后注意 **validation-query**（PG 常用 `SELECT 1`）。 |
-| 7 | **Redis / 其它中间件** | 非 autumn 强绑定，但缓存、Session 等行为依赖配置，升级后做一次冒烟。 |
+| 7 | **Redis / 其它中间件** | 默认 **`autumn.redis.open=false`** 时 **不会** 创建 `RedisConnectionFactory` / **`RedisTemplate`**；依赖方自研 Bean 若 **`@Autowired RedisTemplate`**（默认 `required=true`）会 **启动失败**。须改为 **`@Autowired(required = false)`** 或 **`ObjectProvider`**，并在调用前判空；详见 **`docs/REDIS_STANDALONE.md` §6**。启用 Redis 时配置 **`autumn.redis.open=true`** 与 **`spring.redis.*`** 并做冒烟。 |
+| 7a | **`autumn.install.wizard=true`** | 占位数据源**默认 H2 内存**（无需外部 DB）；`autumn-modules` 传递 **`h2`**。若设 **`autumn.install.bootstrap-datasource.flavor=mysql`** 则须本机 MySQL 已启动。见 **`docs/INSTALL_MODE_CONDITIONAL.md` §0**。 |
 
 ### 2.3 数据库与数据
 

@@ -34,3 +34,18 @@ autumn:
 ## 5. 管理接口
 
 `/sys/redis` 依赖的 `RedisService` 在无 Redis Bean 时返回空数据或 `connected: false`。`/sys/cache` 在 Redis 未启用时仅展示本地 EhCache 侧信息。
+
+## 6. 依赖方 / 多模块工程：无 Redis 时的 `RedisTemplate` 注入
+
+当 **`autumn.redis.open=false`**、安装向导占位启动、或未配置 `spring.redis.*` 导致 **未创建 `RedisConnectionFactory`** 时，框架 **`RedisConfig` 不会注册 `RedisTemplate`**（`@ConditionalOnBean(RedisConnectionFactory.class)`）。任何 **独立 Starter、兄弟模块、业务 `@Component`** 若写默认 **`@Autowired RedisTemplate`**（`required` 默认为 `true`），会在 **启动期** 直接失败，例如：
+
+`Field redisTemplate in … required a bean of type 'RedisTemplate' that could not be found`。
+
+**推荐修复（通用，适用于所有依赖 autumn 的工程）：**
+
+1. **字段注入**：`@Autowired(required = false) RedisTemplate<…> redisTemplate`（或 `ObjectProvider<RedisTemplate<…>>` / `Optional<RedisTemplate<…>>`）。
+2. **方法体**：凡调用 `redisTemplate.opsForValue()` 等 API 前 **`if (redisTemplate == null)`** 走降级（仅内存、直接调远程、或跳过缓存）。
+3. **构造器注入**：对可选依赖使用 `ObjectProvider` 或 `@Autowired(required = false)`，避免构造器阶段强制解析缺失 Bean。
+4. **需要强依赖 Redis 的模块**：在文档与配置中明确要求 **`autumn.redis.open=true`** 且提供 **`spring.redis.*`**，而不是假定框架总会提供 `RedisTemplate`。
+
+框架侧 **不会** 在未启用 Redis 时注册“空实现”的 `RedisTemplate`，以免运行期静默失败；可选 Redis 语义由业务在 **注入 + 判空** 两层显式表达。

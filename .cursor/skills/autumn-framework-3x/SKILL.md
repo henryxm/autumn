@@ -36,7 +36,7 @@ description: >-
 1. `docs/AI_INDEX.md` → 2. `docs/AI_BOOT.md` → 3. `docs/AI_MAP.md` → 4. **`docs/AI_STANDARDS.md`**
 5. **`docs/AI_DATABASE.md`**（含 **§4.0 代码层方言标准写法**、`WrapperColumns`、`RuntimeSql`、Wrapper 边界、Dao **必须** Provider）
 6. 新模块 / 代码生成：追加 **`docs/AI_CODEGEN.md`**
-按需：`docs/AI_POSTGRESQL.md`、`docs/AI_UPGRADE.md`、`docs/AI_DISTRIBUTED_LOCK.md` 等。
+按需：`docs/AI_POSTGRESQL.md`、`docs/AI_UPGRADE.md`、`docs/AI_DISTRIBUTED_LOCK.md`、**`docs/REDIS_STANDALONE.md`**（可选 Redis、**§6 依赖方 `RedisTemplate` 注入**）、`docs/REDIS_RESILIENCE.md` 等。
 
 ## 多库与 SQL（与 `docs/AI_DATABASE.md` 一致）
 
@@ -53,6 +53,7 @@ description: >-
 - 配置统一通过后台 **`DistributedLockConfig`**（`DISTRIBUTED_LOCK_CONFIG`）管理，读取方式为 `sysConfigService.getObject(...)`。
 - 强一致场景默认严格失败；非强一致场景可用 `withLockOrFallback` 做服务降级。
 - 并发突发场景必须使用 `withLockRetry` 的随机退避机制，避免锁竞争雪崩。
+- **依赖方 / 兄弟模块**：未启用 Redis 时 **无 `RedisTemplate`**；勿默认 **`@Autowired RedisTemplate`**，应 **`required = false`** / **`ObjectProvider`** + 判空降级（与 2.x 相同纪律，见 **`docs/REDIS_STANDALONE.md` §6**）。
 
 ## 自检清单
 
