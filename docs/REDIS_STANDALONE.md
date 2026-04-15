@@ -4,7 +4,7 @@
 
 ## 1. 总开关：`autumn.redis.open`
 
-- **`false`（默认推荐）**：通过 `AutumnRedisStackEnvironmentPostProcessor` 排除 `RedisAutoConfiguration`、`RedisRepositoriesAutoConfiguration`、`RedissonAutoConfiguration`，不创建 `RedisConnectionFactory` / `RedissonClient`，应用可在**不写 `spring.redis.*`** 的情况下启动。
+- **`false`（默认推荐）**：通过 `AutumnRedisStackEnvironmentPostProcessor` 排除 `RedisAutoConfiguration`、`RedisRepositoriesAutoConfiguration`、`RedissonAutoConfigurationV2`（Spring Boot 3 下 Redisson 3.40+ 注册的自动配置类名），不创建 `RedisConnectionFactory` / `RedissonClient`，应用可在**不写 `spring.redis.*`** 的情况下启动。
 - **`true`**：加载 Spring Data Redis 与 Redisson 自动配置，需正确配置 `spring.redis.*`（或安装向导写入的等价项），且进程需能连上 Redis。
 
 安装向导占位启动（`autumn.install.mode=true`）时，会**强制**视为未启用 Redis 并排除上述自动配置，避免安装阶段依赖真实 Redis。

@@ -30,7 +30,8 @@ public class AutumnRedisStackEnvironmentPostProcessor implements EnvironmentPost
     private static final String[] REDIS_STACK_AUTOCONFIG = new String[]{
             "org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration",
             "org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration",
-            "org.redisson.spring.starter.RedissonAutoConfiguration",
+            // Boot 3：仅可排除 AutoConfiguration.imports 中注册的类；Redisson 3.40+ 使用 V2
+            "org.redisson.spring.starter.RedissonAutoConfigurationV2",
     };
 
     @Override
