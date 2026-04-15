@@ -1,9 +1,9 @@
 package cn.org.autumn.config;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.*;
 import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
@@ -11,17 +11,25 @@ import org.springframework.data.redis.serializer.JdkSerializationRedisSerializer
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 /**
- * Redis 模板与 Ops Bean；仅在存在 {@link RedisConnectionFactory} 时注册。
- * Redisson 自动配置可通过 {@code application.yml} 排除（避免启动时急切连接），由 Lettuce 提供连接工厂。
- * 当 {@code autumn.redis.open=false} 时，{@link cn.org.autumn.utils.RedisUtils} 不执行实际 Redis 操作。
+ * Redis 模板与 Ops Bean。
+ * <p>
+ * {@link RedisConnectionFactory} 使用 {@code @Autowired(required = false)}，由 Spring Boot 在
+ * {@code autumn.redis.open=true} 且 Redis 自动配置未被排除时注入；本类<strong>不</strong>使用
+ * {@code @ConditionalOnBean(RedisConnectionFactory)}、<strong>不</strong>使用 {@code @AutoConfigureAfter}，
+ * 以便 {@link #redisTemplate()} 等 {@link Bean} 在刷新阶段正常注册与执行。
  */
 @Configuration
-@ConditionalOnBean(RedisConnectionFactory.class)
 public class RedisConfig {
-    @Autowired
+
+    @Autowired(required = false)
     private RedisConnectionFactory factory;
 
+    /**
+     * 默认 Redis 模板（String 键 + JDK 值序列化）；标为 {@link Primary}，避免与同类型的
+     * {@link #jackson2JsonRedisSerializerTemplate()} 并存时按类型注入出现歧义。
+     */
     @Bean
+    @Primary
     public RedisTemplate<String, Object> redisTemplate() {
         RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
         redisTemplate.setKeySerializer(new StringRedisSerializer());
@@ -49,7 +57,7 @@ public class RedisConfig {
     }
 
     @Bean
-    public ValueOperations<String, String> valueOperations(RedisTemplate<String, String> redisTemplate) {
+    public ValueOperations<String, Object> valueOperations(RedisTemplate<String, Object> redisTemplate) {
         return redisTemplate.opsForValue();
     }
 

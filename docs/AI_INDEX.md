@@ -8,7 +8,7 @@
 
 - `docs/AI_BOOT.md`：最小启动上下文（首轮必读）
 - `docs/INSTALL_MODE_CONDITIONAL.md`：安装模式（`autumn.install.mode`）下 **`@ConditionalOnNotInstallMode` / `@ConditionalOnInstallMode`** 与 **`autumn.install.autoconfigure-exclude`** 用法；**§0** 安装占位数据源（**默认 H2 内存**、可选 **mysql**）
-- `docs/REDIS_STANDALONE.md`：**可选 Redis / 单机启动**（`autumn.redis.open`、安装向导、分布式锁单机回退；**§6** 依赖方 **`RedisTemplate` 可选注入**）
+- `docs/REDIS_STANDALONE.md`：**可选 Redis / 单机启动**（`autumn.redis.open`、安装向导、分布式锁单机回退；**§2** 框架 `RedisConfig`；**§3** 业务注入模式 A/B；**§8** 模式 B 写法）
 - `docs/REDIS_RESILIENCE.md`：**Redis 韧性**（`RedisResilience` 熔断、`DistributedLockService` 集成、`DISTRIBUTED_LOCK_CONFIG.ignoreCircuitBreaker`）
 - `docs/AI_MAP.md`：高频开发能力主图（含生成模板分层与可改/不可改边界）
 - `docs/AI_STANDARDS.md`：**约束性开发规范**（分层、API、定时任务、权限、FTL、**实体/注解建表/禁止初始化 DDL**、模块表前缀、**Dao+Provider**、**Controller–Service–Dao**、**statics/pages/Site/PageAware**）

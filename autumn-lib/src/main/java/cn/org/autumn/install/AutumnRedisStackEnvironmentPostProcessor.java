@@ -37,15 +37,11 @@ public class AutumnRedisStackEnvironmentPostProcessor implements EnvironmentPost
     @Override
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
         boolean redisOpen = Boolean.parseBoolean(environment.getProperty("autumn.redis.open", "false"));
-        boolean install = InstallMode.isActive(environment);
-        if (redisOpen && !install) {
+        if (redisOpen)
             return;
-        }
         Map<String, Object> patch = new HashMap<>(2);
         patch.put("autumn.redis.open", "false");
-        if (install) {
-            patch.put("autumn.shiro.redis", "false");
-        }
+        patch.put("autumn.shiro.redis", "false");
         String merged = mergeExclude(environment.getProperty(EXCLUDE_PROP));
         patch.put(EXCLUDE_PROP, merged);
         environment.getPropertySources().addFirst(new MapPropertySource("autumnRedisStackDisabled", patch));
