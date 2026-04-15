@@ -8,6 +8,8 @@
 
 - `docs/AI_BOOT.md`：最小启动上下文（首轮必读）
 - `docs/INSTALL_MODE_CONDITIONAL.md`：安装模式（`autumn.install.mode`）下 **`@ConditionalOnNotInstallMode` / `@ConditionalOnInstallMode`** 与 **`autumn.install.autoconfigure-exclude`** 用法
+- `docs/REDIS_STANDALONE.md`：**可选 Redis / 单机启动**（`autumn.redis.open`、安装向导、分布式锁单机回退）
+- `docs/REDIS_RESILIENCE.md`：**Redis 韧性**（`RedisResilience` 熔断、`DistributedLockService` 集成、`DISTRIBUTED_LOCK_CONFIG.ignoreCircuitBreaker`）
 - `docs/AI_MAP.md`：高频开发能力主图（含生成模板分层与可改/不可改边界）
 - `docs/AI_STANDARDS.md`：**约束性开发规范**（分层、API、定时任务、权限、FTL、**实体/注解建表/禁止初始化 DDL**、模块表前缀、**Dao+Provider**、**Controller–Service–Dao**、**statics/pages/Site/PageAware**）
 - **`docs/AI_DATABASE.md`**：**多数据库落地规范**（已支持 `DatabaseType` 清单、**§2.1 `RuntimeSqlDialect` 能力清单与故意不抽象项**、**§4.0 代码层标准写法（`RuntimeSql` / `WrapperColumns`，禁止硬编码方言符号）**、**全库兼容默认**、**Wrapper 安全边界**、**Dao+Provider 强制与推荐分层**、`RuntimeSql` 使用纪律；**§8 老旧注解 Dao / 方言化 Wrapper 升级与一键体检策略**）

@@ -1,6 +1,7 @@
 package cn.org.autumn.thread;
 
 import cn.org.autumn.config.Config;
+import cn.org.autumn.redis.resilience.RedisResilience;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.slf4j.Logger;
@@ -48,6 +49,18 @@ class DistributedLockHelper {
             }
         }
         return redissonClient;
+    }
+
+    /**
+     * 熔断等门控下是否仍允许发起 Redisson 加锁（与 {@link RedisResilience#allowDistributedLock()} 一致）。
+     */
+    static boolean isRedissonLockPermitted() {
+        try {
+            RedisResilience r = (RedisResilience) Config.getBean(RedisResilience.class);
+            return r.allowDistributedLock();
+        } catch (Exception e) {
+            return true;
+        }
     }
 
     // ======================== 锁键构建 ========================

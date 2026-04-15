@@ -69,13 +69,12 @@ public @interface TagValue {
      *   <li>使用 {@code tryLock(0, leaseTime, SECONDS)} — 非阻塞获取 + 自动过期</li>
      *   <li>执行<b>成功不释放锁</b>（防止时间窗口内重复执行）</li>
      *   <li>执行<b>失败主动释放锁</b>（允许其他节点故障转移重试）</li>
-     *   <li>Redis 不可用时跳过执行</li>
+     *   <li>Redis / Redisson 不可用时<b>单机回退</b>执行（与 {@link LockOnce} 一致；多节点部署时仅无 Redis 的节点会本地执行）</li>
      * </ul>
      *
      * <h4>适用范围</h4>
      * <p>适用于 {@link TagRunnable}、{@link TagCallable}，以及 {@link LockOnce}。
-     * 如果需要自定义 Redis 不可用时的行为（如降级为本地执行），请使用 {@link LockOnce} 并覆写
-     * {@link LockOnce#onRedisUnavailable()} 方法。</p>
+     * 若需在单机回退前插入自定义逻辑，请使用 {@link LockOnce} 并覆写 {@link LockOnce#onRedisUnavailable()}。</p>
      *
      * <h4>锁键格式</h4>
      * <p>{@code loopjob:lock:{type.simpleName}:{method}} — 由 {@link #type()} 和 {@link #method()} 决定。</p>

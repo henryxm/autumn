@@ -32,7 +32,7 @@ import static org.apache.shiro.subject.support.DefaultSubjectContext.PRINCIPALS_
 @Component
 public class RedisShiroSessionDAO extends EnterpriseCacheSessionDAO implements LoopJob.TenMinute, DisposableBean {
 
-    @Autowired
+    @Autowired(required = false)
     private RedisTemplate redisTemplate;
 
     @Autowired
@@ -59,7 +59,7 @@ public class RedisShiroSessionDAO extends EnterpriseCacheSessionDAO implements L
         Serializable sessionId = super.doCreate(session);
         if (null != session && null != sessionId) {
             cache.put(sessionId, session);
-            if (InstallMode.isActive()) {
+            if (InstallMode.isActive() || redisTemplate == null) {
                 return sessionId;
             }
             String key = RedisKeys.getShiroSessionKey(sysConfigService.getNameSpace(), sessionId.toString());
@@ -81,7 +81,7 @@ public class RedisShiroSessionDAO extends EnterpriseCacheSessionDAO implements L
         Session session = super.doReadSession(sessionId);
         if (null == session)
             session = cache.get(sessionId);
-        if (session == null) {
+        if (session == null && redisTemplate != null) {
             String key = RedisKeys.getShiroSessionKey(sysConfigService.getNameSpace(), sessionId.toString());
             session = getShiroSession(key);
             if (null != session)
@@ -106,7 +106,7 @@ public class RedisShiroSessionDAO extends EnterpriseCacheSessionDAO implements L
         super.doDelete(session);
         if (null != session) {
             cache.remove(session.getId());
-            if (InstallMode.isActive()) {
+            if (InstallMode.isActive() || redisTemplate == null) {
                 return;
             }
             String key = RedisKeys.getShiroSessionKey(sysConfigService.getNameSpace(), session.getId().toString());
@@ -116,7 +116,7 @@ public class RedisShiroSessionDAO extends EnterpriseCacheSessionDAO implements L
 
     @Override
     public void onTenMinute() {
-        if (InstallMode.isActive()) {
+        if (InstallMode.isActive() || redisTemplate == null) {
             return;
         }
         cache.clear();
@@ -135,10 +135,16 @@ public class RedisShiroSessionDAO extends EnterpriseCacheSessionDAO implements L
     }
 
     private Session getShiroSession(String key) {
+        if (redisTemplate == null) {
+            return null;
+        }
         return (Session) redisTemplate.opsForValue().get(key);
     }
 
     private void setShiroSession(String key, Session session) {
+        if (redisTemplate == null) {
+            return;
+        }
         redisTemplate.opsForValue().set(key, session);
         //60分钟过期
         RedisExpireUtil.expire(redisTemplate, key, 60, TimeUnit.MINUTES);

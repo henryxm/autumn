@@ -38,7 +38,7 @@ public class SysCacheController {
     @Autowired
     private EhCacheManager ehCacheManager;
 
-    @Autowired
+    @Autowired(required = false)
     private RedisTemplate<String, Object> redisTemplate;
 
     @Autowired
@@ -179,7 +179,7 @@ public class SysCacheController {
             keyInfo.put("redisExpire", redisExpireSeconds);
 
             // 获取值大小（优先从Redis获取）
-            if (inRedis) {
+            if (inRedis && redisTemplate != null) {
                 try {
                     String redisKey = "cache:" + cacheName + ":" + key;
                     Object value = redisTemplate.opsForValue().get(redisKey);

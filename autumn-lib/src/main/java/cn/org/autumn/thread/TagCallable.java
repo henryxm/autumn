@@ -147,11 +147,14 @@ public abstract class TagCallable<V> implements Callable<V>, Tag {
      */
     private V callWithDistributedLock() throws Exception {
         RedissonClient client = DistributedLockHelper.getRedissonClient();
+        if (client != null && !DistributedLockHelper.isRedissonLockPermitted()) {
+            client = null;
+        }
         if (client == null) {
-            if (log.isDebugEnabled())
-                log.debug("RedissonClient 不可用，跳过需要分布式锁的任务: tag={}, method={}", getTag(), getMethod());
-            TagTaskExecutor.recordSkipped(this, "Redis不可用");
-            return null;
+            if (log.isDebugEnabled()) {
+                log.debug("RedissonClient 不可用，单机回退执行: tag={}, method={}", getTag(), getMethod());
+            }
+            return callDirect();
         }
 
         TagValue value = getTagValue();

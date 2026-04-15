@@ -209,15 +209,19 @@ public abstract class TagRunnable implements Runnable, Tag {
      * <ul>
      *   <li>成功执行后<b>不释放锁</b>（防止时间窗口内重复执行）</li>
      *   <li>执行失败后<b>主动释放锁</b>（允许其他节点故障转移重试）</li>
-     *   <li>Redis 不可用时跳过执行</li>
+     *   <li>Redis / Redisson 不可用时<b>单机回退</b>执行（多节点时仅无 Redis 侧节点本地执行）</li>
      * </ul>
      */
     private void runWithDistributedLock() {
         RedissonClient client = DistributedLockHelper.getRedissonClient();
+        if (client != null && !DistributedLockHelper.isRedissonLockPermitted()) {
+            client = null;
+        }
         if (client == null) {
-            if (log.isDebugEnabled())
-                log.warn("RedissonClient 不可用，跳过需要分布式锁的任务: tag={}, method={}", getTag(), getMethod());
-            TagTaskExecutor.recordSkipped(this, "Redis不可用");
+            if (log.isDebugEnabled()) {
+                log.debug("RedissonClient 不可用，单机回退执行: tag={}, method={}", getTag(), getMethod());
+            }
+            runDirect();
             return;
         }
         TagValue value = getTagValue();

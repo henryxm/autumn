@@ -1,6 +1,7 @@
 package cn.org.autumn.config;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -10,12 +11,12 @@ import org.springframework.data.redis.serializer.JdkSerializationRedisSerializer
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 /**
- * Redis配置
- * Redisson 自动配置已通过 application.yml 排除（避免启动时急切连接），
- * 由 Lettuce (Spring Boot 默认) 提供 RedisConnectionFactory。
- * 当 autumn.redis.open=false 时，RedisUtils 不会执行实际 Redis 操作。
+ * Redis 模板与 Ops Bean；仅在存在 {@link RedisConnectionFactory} 时注册。
+ * Redisson 自动配置可通过 {@code application.yml} 排除（避免启动时急切连接），由 Lettuce 提供连接工厂。
+ * 当 {@code autumn.redis.open=false} 时，{@link cn.org.autumn.utils.RedisUtils} 不执行实际 Redis 操作。
  */
 @Configuration
+@ConditionalOnBean(RedisConnectionFactory.class)
 public class RedisConfig {
     @Autowired
     private RedisConnectionFactory factory;

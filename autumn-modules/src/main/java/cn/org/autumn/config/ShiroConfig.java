@@ -38,8 +38,8 @@ public class ShiroConfig {
     @Bean("sessionManager")
     public SessionManager sessionManager(@Autowired RedisShiroSessionDAO redisShiroSessionDAO,
                                          Environment environment,
-                                         @Value("${autumn.redis.open}") boolean redisOpen,
-                                         @Value("${autumn.shiro.redis}") boolean shiroRedis) {
+                                         @Value("${autumn.redis.open:false}") boolean redisOpen,
+                                         @Value("${autumn.shiro.redis:false}") boolean shiroRedis) {
         DefaultWebSessionManager sessionManager = new DefaultWebSessionManager();
         //设置session过期时间为1小时(单位：毫秒)，默认为30分钟
         sessionManager.setGlobalSessionTimeout(60 * 60 * 1000);

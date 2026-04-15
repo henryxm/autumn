@@ -2,6 +2,7 @@ package cn.org.autumn.service;
 
 import cn.org.autumn.config.Config;
 import cn.org.autumn.model.DistributedLockConfig;
+import cn.org.autumn.redis.resilience.RedisResilience;
 import cn.org.autumn.utils.Uuid;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
@@ -47,6 +48,9 @@ public class DistributedLockService {
     @Autowired
     protected ObjectProvider<RedissonClient> redissonProvider;
 
+    @Autowired(required = false)
+    protected RedisResilience redisResilience;
+
     public <R> R executeWithDistributedLock(String lockKey, Callable<R> callable) throws Exception {
         DistributedLockConfig config = getConfig();
         return executeWithDistributedLock(lockKey, config.getWaitMs(), config.getLeaseMs(), callable);
@@ -88,7 +92,8 @@ public class DistributedLockService {
      * <p>
      * 降级语义：
      * 1) 全局开关关闭 / Redisson未启用 / 无RedissonClient 时，自动降级为本地直执行业务；
-     * 2) 锁竞争失败是否降级由 DistributedLockConfig.degradeOnAcquireFailure 控制（默认 false）。
+     * 2) 锁竞争失败是否降级由 DistributedLockConfig.degradeOnAcquireFailure 控制（默认 false）。<br>
+     * 3) {@link RedisResilience} 熔断 OPEN 时默认跳过 tryLock 并本地执行；可用 {@code DISTRIBUTED_LOCK_CONFIG.ignoreCircuitBreaker} 强制仍访问 Redis。
      */
     public <R> R executeWithDistributedLock(String lockKey, long waitMs, long leaseMs, Callable<R> callable, LockFailureHandler<R> lockFailureHandler) throws Exception {
         if (callable == null) {
@@ -102,35 +107,53 @@ public class DistributedLockService {
         if (redisson == null) {
             return callable.call();
         }
+        if (!config.isIgnoreCircuitBreaker() && redisResilience != null && !redisResilience.allowDistributedLock()) {
+            log.warn("distributed lock skipped (redis circuit), local execution key={}", lockKey);
+            return callable.call();
+        }
         String key = buildLockKey(lockKey, config.getKeyPrefix());
         RLock lock = redisson.getLock(key);
-        boolean acquired;
+        boolean acquired = false;
         try {
-            acquired = lock.tryLock(Math.max(waitMs, 0), Math.max(leaseMs, 1000), TimeUnit.MILLISECONDS);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw e;
-        }
-        if (!acquired) {
-            IllegalStateException ex = new IllegalStateException("acquire distributed lock failed: " + key);
-            if (lockFailureHandler != null) {
-                return lockFailureHandler.onLockFailure(key, ex);
-            }
-            if (config.isDegradeOnAcquireFailure()) {
-                log.warn("distributed lock contention degraded key={}", key);
+            try {
+                acquired = lock.tryLock(Math.max(waitMs, 0), Math.max(leaseMs, 1000), TimeUnit.MILLISECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw e;
+            } catch (Exception e) {
+                log.warn("distributed lock redis unreachable, local execution key={}", key, e);
+                if (redisResilience != null && RedisResilience.isInfrastructureFailure(e)) {
+                    redisResilience.recordFailure();
+                }
                 return callable.call();
             }
-            throw ex;
-        }
-        try {
+            if (!acquired) {
+                IllegalStateException ex = new IllegalStateException("acquire distributed lock failed: " + key);
+                if (lockFailureHandler != null) {
+                    return lockFailureHandler.onLockFailure(key, ex);
+                }
+                if (config.isDegradeOnAcquireFailure()) {
+                    log.warn("distributed lock contention degraded key={}", key);
+                    return callable.call();
+                }
+                throw ex;
+            }
             return callable.call();
         } finally {
-            try {
-                if (lock.isHeldByCurrentThread()) {
-                    lock.unlock();
+            if (acquired) {
+                try {
+                    if (lock.isHeldByCurrentThread()) {
+                        lock.unlock();
+                    }
+                    if (redisResilience != null) {
+                        redisResilience.recordSuccess();
+                    }
+                } catch (Exception ex) {
+                    log.warn("unlock distributed lock failed key={} err={}", key, ex.toString());
+                    if (redisResilience != null && RedisResilience.isInfrastructureFailure(ex)) {
+                        redisResilience.recordFailure();
+                    }
                 }
-            } catch (Exception ex) {
-                log.warn("unlock distributed lock failed key={} err={}", key, ex.toString());
             }
         }
     }

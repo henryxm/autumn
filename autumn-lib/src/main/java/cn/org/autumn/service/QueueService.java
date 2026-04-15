@@ -37,7 +37,7 @@ public class QueueService {
     @Autowired(required = false)
     private RedisTemplate<String, Object> redisTemplate;
 
-    @Autowired(required = false)
+    @Autowired
     private RedisUtils redisUtils;
 
     @Autowired
@@ -1430,7 +1430,7 @@ public class QueueService {
     // ==================== 工具方法 ====================
 
     private boolean isRedisEnabled() {
-        return redisUtils != null && redisUtils.isOpen();
+        return redisUtils != null && redisUtils.isOpen() && redisTemplate != null;
     }
 
     @PreDestroy

@@ -33,6 +33,7 @@ import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.core.annotation.Order;
@@ -42,6 +43,7 @@ import org.springframework.transaction.annotation.Transactional;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 import static cn.org.autumn.modules.sys.service.SysDeptService.Department_System_Administrator;
 import static cn.org.autumn.modules.sys.service.SysRoleService.Role_System_Administrator;
@@ -90,8 +92,8 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
     @Autowired
     AccountFactory accountFactory;
 
-    @Autowired(required = false)
-    RedissonClient redissonClient;
+    @Autowired
+    private ObjectProvider<RedissonClient> redissonClientProvider;
 
     @Autowired
     EnvBean envBean;
@@ -664,7 +666,20 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
     //注销账号，账号归档，用户不可恢复，保留最后数据，超过一定时间后，执行物理删除
     public void cancel(String uuid, String reason) throws Exception {
         String key = "user:cancel:" + uuid;
-        RLock lock = redissonClient != null ? redissonClient.getLock(key) : null;
+        RedissonClient redissonClient = redissonClientProvider.getIfAvailable();
+        RLock lock = null;
+        boolean hold = false;
+        if (redissonClient != null) {
+            lock = redissonClient.getLock(key);
+            try {
+                hold = lock.tryLock(5, 120, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw e;
+            } catch (Exception e) {
+                log.warn("注销账号分布式锁不可用，单机执行: {}", e.getMessage());
+            }
+        }
         try {
             SysUserEntity entity = getByUuid(uuid);
             if (null == entity || entity.getStatus() == -1)
@@ -708,8 +723,13 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         } catch (Exception e) {
             log.error("注销账号:{}", e.getMessage());
         } finally {
-            if (lock != null && lock.isLocked())
-                lock.forceUnlock();
+            if (lock != null && hold && lock.isHeldByCurrentThread()) {
+                try {
+                    lock.unlock();
+                } catch (Exception ex) {
+                    log.debug("释放注销锁: {}", ex.getMessage());
+                }
+            }
         }
     }
 

@@ -36,12 +36,15 @@
   - `retryTimes=0`（默认不重试）
   - `retryBackoffMinMs=30`
   - `retryBackoffMaxMs=120`
+  - `ignoreCircuitBreaker=false`：为 true 时 **Redis 熔断 OPEN 仍尝试** Redisson（强一致且接受雪崩风险时使用；见 **`docs/REDIS_RESILIENCE.md`**）
 
 ## 4. 降级策略说明
 
 - 自动降级（基础可用性）
   - `enabled=false` 或 `enableRedisson=false`：直接本地执行
   - 无 `RedissonClient`：直接本地执行
+  - `RedissonClient` 存在但 `tryLock` 因 Redis 连接类异常失败：捕获后**本地执行**（与 `autumn.redis.open=false` 时排除 Redisson 自动配置互补）
+- `@TagValue(lock=true)` / `TagRunnable`：无可用 `RedissonClient` 时**单机回退执行**（不再仅跳过任务）；多节点时仅未连 Redis 的节点会执行，可能重复，属降级语义（详见 `docs/REDIS_STANDALONE.md`）
 - 竞争降级（业务可控）
   - `degradeOnAcquireFailure=true`：锁竞争失败时可执行本地逻辑
   - 或使用 `withLockOrFallback` 显式定义 fallback 处理

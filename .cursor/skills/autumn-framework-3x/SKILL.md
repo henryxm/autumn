@@ -42,7 +42,7 @@ description: >-
 1. `docs/AI_INDEX.md` → 2. `docs/AI_BOOT.md` → 3. `docs/AI_MAP.md` → 4. **`docs/AI_STANDARDS.md`**
 5. **`docs/AI_DATABASE.md`**（含 **§4.0 代码层方言标准写法**、`WrapperColumns`、`RuntimeSql`、Wrapper 边界、Dao **必须** Provider；存量反模式 **§8.1**、检索 **§8.5**）
 6. 新模块 / 代码生成：追加 **`docs/AI_CODEGEN.md`**
-按需：`docs/AI_POSTGRESQL.md`、`docs/AI_UPGRADE.md`、`docs/AI_TEMPLATES.md`、`docs/AI_CRYPTO.md`、`docs/AI_DISTRIBUTED_LOCK.md` 等。
+按需：`docs/AI_POSTGRESQL.md`、`docs/AI_UPGRADE.md`、`docs/AI_TEMPLATES.md`、`docs/AI_CRYPTO.md`、`docs/AI_DISTRIBUTED_LOCK.md`、**`docs/REDIS_RESILIENCE.md`**（Redis 熔断与分布式锁稳健性）、`docs/REDIS_STANDALONE.md` 等。
 
 **注意**：文档若出现与 **Boot 2 / MP2** 绑定的旧配置键名，以实现代码与 **当前分支 `application.yml` + `pom.xml`** 为准。
 
@@ -79,7 +79,8 @@ description: >-
 - 涉及跨节点任务互斥、热点写入串行化、任务防重入时，优先复用框架锁能力，不自建锁组件。
 - **已继承 `ModuleService` / `BaseService`**：使用 **`DistributedService`** 的 `withLock*` 系列（严格/降级/重试）。
 - **未继承基础框架能力**：直接注入 **`DistributedLockService`**。
-- 配置统一通过后台 **`DistributedLockConfig`**（`DISTRIBUTED_LOCK_CONFIG`）管理，读取方式 `sysConfigService.getObject(...)`。
+- 配置统一通过后台 **`DistributedLockConfig`**（`DISTRIBUTED_LOCK_CONFIG`）管理，读取方式 `sysConfigService.getObject(...)`；强一致后台任务可配置 **`ignoreCircuitBreaker`**（见 **`docs/AI_DISTRIBUTED_LOCK.md`**）。
+- **Redis 韧性（3.x 与 2.x 行为对齐）**：Bean **`RedisResilience`**（`autumn.redis.resilience.*`）对 Redis/Redisson 基础设施失败做计数熔断；**`DistributedLockService`** 与 **`TagRunnable` / `TagCallable` / `LockOnce`** 已对齐（熔断 OPEN 时在配置允许下跳过 tryLock、单机回退）；**`CacheService.publish`**、**`RedisListenerService`** 等路径配合成功/失败计数。自定义 Redis 调用优先 **`RedisResilience#execute`**；必读 **`docs/REDIS_RESILIENCE.md`**，并与 **`docs/REDIS_STANDALONE.md`**（`autumn.redis.open`、安装向导、无 `spring.redis` 场景）配合。
 - 强一致场景默认严格失败；非强一致场景可用 `withLockOrFallback` 做服务降级。
 - 并发突发场景必须使用 `withLockRetry` 的随机退避机制，避免锁竞争雪崩。
 

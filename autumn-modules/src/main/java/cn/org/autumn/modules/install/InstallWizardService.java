@@ -245,6 +245,14 @@ public class InstallWizardService {
         }
         InstallConnectionForm form = getForm(session);
         InstallJdbcHelper.ResolvedJdbc r = InstallJdbcHelper.resolve(form);
+        if (form.isEnableRedis()) {
+            if (StringUtils.isBlank(form.getRedisHost())) {
+                throw new IllegalStateException("已勾选启用 Redis，请填写 Redis 主机地址");
+            }
+            if (StringUtils.isBlank(form.getRedisPort())) {
+                throw new IllegalStateException("已勾选启用 Redis，请填写 Redis 端口");
+            }
+        }
 
         File out = resolvedConfigFile();
         File parent = out.getParentFile();
@@ -289,6 +297,10 @@ public class InstallWizardService {
         }
         sb.append("  table:\n");
         sb.append("    init: true\n");
+        sb.append("  redis:\n");
+        sb.append("    open: ").append(form.isEnableRedis()).append("\n");
+        sb.append("  shiro:\n");
+        sb.append("    redis: ").append(form.isEnableRedis() && form.isEnableShiroRedis()).append("\n");
         sb.append("spring:\n");
         sb.append("  datasource:\n");
         sb.append("    driverClassName: ").append(quoteYamlScalar(r.getDriverClassName())).append("\n");
@@ -301,7 +313,26 @@ public class InstallWizardService {
         sb.append("        url: ").append(quoteYamlScalar(r.getJdbcUrl())).append("\n");
         sb.append("        username: ").append(quoteYamlScalar(form.getUsername())).append("\n");
         sb.append("        password: ").append(quoteYamlScalar(form.getPassword() == null ? "" : form.getPassword())).append("\n");
+        if (form.isEnableRedis()) {
+            sb.append("  redis:\n");
+            sb.append("    host: ").append(quoteYamlScalar(form.getRedisHost().trim())).append("\n");
+            sb.append("    port: ").append(parseRedisPort(form.getRedisPort())).append("\n");
+            sb.append("    database: 0\n");
+            sb.append("    password: ").append(quoteYamlScalar(form.getRedisPassword() == null ? "" : form.getRedisPassword())).append("\n");
+            sb.append("    timeout: 6000ms\n");
+        }
         return sb.toString();
+    }
+
+    private static int parseRedisPort(String raw) {
+        if (StringUtils.isBlank(raw)) {
+            return 6379;
+        }
+        try {
+            return Integer.parseInt(raw.trim());
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Redis 端口无效: " + raw);
+        }
     }
 
     private static String quoteYamlScalar(String s) {
