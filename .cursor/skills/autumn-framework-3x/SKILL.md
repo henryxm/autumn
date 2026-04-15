@@ -42,7 +42,7 @@ description: >-
 1. `docs/AI_INDEX.md` → 2. `docs/AI_BOOT.md` → 3. `docs/AI_MAP.md` → 4. **`docs/AI_STANDARDS.md`**
 5. **`docs/AI_DATABASE.md`**（含 **§4.0 代码层方言标准写法**、`WrapperColumns`、`RuntimeSql`、Wrapper 边界、Dao **必须** Provider；存量反模式 **§8.1**、检索 **§8.5**）
 6. 新模块 / 代码生成：追加 **`docs/AI_CODEGEN.md`**
-按需：`docs/AI_POSTGRESQL.md`、`docs/AI_UPGRADE.md`、`docs/AI_TEMPLATES.md`、`docs/AI_CRYPTO.md`、`docs/AI_DISTRIBUTED_LOCK.md`、**`docs/REDIS_RESILIENCE.md`**（Redis 熔断与分布式锁稳健性）、`docs/REDIS_STANDALONE.md` 等。
+按需：`docs/AI_POSTGRESQL.md`、`docs/AI_UPGRADE.md`、`docs/AI_TEMPLATES.md`、`docs/AI_CRYPTO.md`、`docs/AI_DISTRIBUTED_LOCK.md`、**`docs/REDIS_RESILIENCE.md`**（Redis 熔断与分布式锁稳健性）、**`docs/REDIS_STANDALONE.md`**（可选 Redis、**§6** 依赖方 `RedisTemplate`）、**`docs/INSTALL_MODE_CONDITIONAL.md`**（安装向导、**§0** 占位默认 H2 / 可选 mysql）等。
 
 **注意**：文档若出现与 **Boot 2 / MP2** 绑定的旧配置键名，以实现代码与 **当前分支 `application.yml` + `pom.xml`** 为准。
 
@@ -83,6 +83,7 @@ description: >-
 - **Redis 韧性（3.x 与 2.x 行为对齐）**：Bean **`RedisResilience`**（`autumn.redis.resilience.*`）对 Redis/Redisson 基础设施失败做计数熔断；**`DistributedLockService`** 与 **`TagRunnable` / `TagCallable` / `LockOnce`** 已对齐（熔断 OPEN 时在配置允许下跳过 tryLock、单机回退）；**`CacheService.publish`**、**`RedisListenerService`** 等路径配合成功/失败计数。自定义 Redis 调用优先 **`RedisResilience#execute`**；必读 **`docs/REDIS_RESILIENCE.md`**，并与 **`docs/REDIS_STANDALONE.md`**（`autumn.redis.open`、安装向导、无 `spring.redis` 场景）配合。
 - 强一致场景默认严格失败；非强一致场景可用 `withLockOrFallback` 做服务降级。
 - 并发突发场景必须使用 `withLockRetry` 的随机退避机制，避免锁竞争雪崩。
+- **依赖方 / 兄弟模块**：未启用 Redis 时 **无 `RedisTemplate`**；勿默认 **`@Autowired RedisTemplate`**，应 **`required = false`** / **`ObjectProvider`** + 判空降级（与 2.x 相同纪律，见 **`docs/REDIS_STANDALONE.md` §6**）。
 
 ## 资源与页面（§14）
 

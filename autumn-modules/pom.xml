@@ -16,6 +16,12 @@
             <groupId>cn.org.autumn</groupId>
             <artifactId>autumn-lib</artifactId>
         </dependency>
+        <!-- 安装向导默认占位：H2 内存（InstallEnvironmentPostProcessor）；mysql 占位见 flavor 配置 -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>runtime</scope>
+        </dependency>
 
         <!-- ==================== 数据源 & ORM (分页插件运行时依赖) ==================== -->
         <dependency>
