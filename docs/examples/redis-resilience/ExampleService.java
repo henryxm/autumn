@@ -41,7 +41,7 @@
 //         }
 //         try {
 //             redisResilience.execute(() -> {
-//                 stringRedisTemplate.opsForValue().set("demo:title:" + bizId, title, 10, TimeUnit.MINUTES);
+//                 RedisExpireUtil.setWithExpire(stringRedisTemplate, "demo:title:" + bizId, title, 10, TimeUnit.MINUTES);
 //                 return null;
 //             }, () -> null);
 //         } catch (Exception ignored) {

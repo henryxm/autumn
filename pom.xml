@@ -56,7 +56,8 @@
         <javax.servlet.version>4.0.1</javax.servlet.version>
         <bouncycastle.version>1.83</bouncycastle.version>
         <!-- ==================== 中间件 ==================== -->
-        <redisson.version>3.40.2</redisson.version>
+        <!-- ≥3.48 方提供 redisson-spring-data-35，与 spring-data-redis 3.5.x 对齐；见 docs/REDIS_REDISSON_SPRING_DATA.md -->
+        <redisson.version>3.52.0</redisson.version>
         <pagehelper.spring.boot.version>2.1.1</pagehelper.spring.boot.version>
         <!-- ==================== 云服务 & OSS ==================== -->
         <aliyun.oss.version>3.18.5</aliyun.oss.version>
@@ -142,6 +143,17 @@
             <dependency>
                 <groupId>org.redisson</groupId>
                 <artifactId>redisson-spring-boot-starter</artifactId>
+                <version>${redisson.version}</version>
+            </dependency>
+            <!-- SDR 3.5.x 必须与 redisson-spring-data-35 对齐，见 docs/REDIS_REDISSON_SPRING_DATA.md -->
+            <dependency>
+                <groupId>org.redisson</groupId>
+                <artifactId>redisson</artifactId>
+                <version>${redisson.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.redisson</groupId>
+                <artifactId>redisson-spring-data-35</artifactId>
                 <version>${redisson.version}</version>
             </dependency>
             <!-- ==================== 数据源 & ORM ==================== -->

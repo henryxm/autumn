@@ -2,6 +2,7 @@ package cn.org.autumn.modules.sys.shiro;
 
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysConfigService;
+import cn.org.autumn.utils.RedisExpireUtil;
 import cn.org.autumn.utils.RedisKeys;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -362,7 +363,7 @@ public class ShiroSessionService {
         }
         try {
             String key = RedisKeys.getForceLogoutKey(sysConfigService.getNameSpace(), userUuid);
-            redisTemplate.opsForValue().set(key, "1", 7, TimeUnit.DAYS);
+            RedisExpireUtil.setWithExpire(redisTemplate, key, "1", 7, TimeUnit.DAYS);
             if (log.isDebugEnabled()) log.debug("已标记强制下线: userUuid={}", userUuid);
         } catch (Exception e) {
             log.warn("标记强制下线失败, userUuid={}: {}", userUuid, e.getMessage());
