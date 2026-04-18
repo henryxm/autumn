@@ -1,6 +1,8 @@
 # Redis 可选与单机运行说明
 
 > 熔断、宕机门控与自定义调用的统一封装见 **`docs/REDIS_RESILIENCE.md`**（`RedisResilience` + `DistributedLockService`）。
+>
+> Redisson 与 Spring Data Redis 集成版本错配（`StackOverflowError` / `pExpire`）、**`RedisExpireUtil` 使用说明与 API**见 **`docs/REDIS_TTL_GUIDE.md`**，原理与 Maven 对齐见 **`docs/REDIS_REDISSON_SPRING_DATA.md`**。
 
 ## 1. 总开关：`autumn.redis.open`
 

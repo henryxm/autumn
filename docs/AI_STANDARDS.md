@@ -167,7 +167,17 @@
   - **禁止**描述后台开发体系结构、分层实现、调用链路，或“开发者/程序员视角”说明。
   - 页面描述必须聚焦“用户能做什么、看到什么、得到什么反馈”，使用业务语义与操作结果表达。
 
-## 15. 与 AI 文档的交叉引用
+## 15. Redis TTL / Redisson 与 `RedisExpireUtil`
+
+业务工程若使用 **Redisson + Spring Data Redis**，建议在处理 **键过期、带 TTL 的写入、滑动窗口计数续期** 或排查 **`StackOverflowError`（栈含 `DefaultedRedisConnection` / `pExpire`）** 时：
+
+1. 先阅读 **`docs/REDIS_REDISSON_SPRING_DATA.md`**（依赖对齐，治本）与 **`docs/REDIS_TTL_GUIDE.md`**（何时适合用 **`RedisExpireUtil`**、API 对照、推荐处理顺序）。
+2. **推荐**用 **`cn.org.autumn.utils.RedisExpireUtil`** 统一表达 TTL 语义（Lua 或服务端语义），避免各项目复制零散脚本；是否替换存量 `RedisTemplate.expire` / `set(..., TimeUnit)` 由团队按风险与迭代安排决定。
+3. 可选使用 **`scripts/redis-expire-forbidden-scan.sh`** 做静态检索，辅助代码评审。
+
+说明：§15 不否定 Spring 默认写法在「依赖已正确对齐」时的可用性；文档重点是**讲清风险场景**并给出 **Autumn 侧的一致推荐路径**。
+
+## 16. 与 AI 文档的交叉引用
 
 | 主题 | 文档 |
 |------|------|
@@ -180,8 +190,9 @@
 | 加解密 | `docs/AI_CRYPTO.md` |
 | 多项目协作与术语 | `docs/AI_GOVERNANCE.md` |
 | 索引与加载组合 | `docs/AI_INDEX.md` |
+| Redis TTL、Redisson、`RedisExpireUtil` 使用说明 | **`docs/REDIS_TTL_GUIDE.md`**、**`docs/REDIS_REDISSON_SPRING_DATA.md`** |
 
-## 16. 维护约定
+## 17. 维护约定
 
-- 新增与「实体/库表/Dao/资源/页面」相关的团队规则时，**优先更新本文**，并同步 `docs/AI_INDEX.md`、`docs/AI_GUIDE.md` 摘要；**多库类型、方言、Wrapper/Provider 纪律**以 **`docs/AI_DATABASE.md`** 为落地专篇，变更时同步该文 §2；**老旧项目注解 Dao / 方言 Wrapper 迁移与扫描清单**见 **`docs/AI_DATABASE.md` §8** 与 **`docs/AI_UPGRADE.md` §3.3**；与代码生成流程或三步节奏相关的补充可落在 **`docs/AI_CODEGEN.md`**。
-- 若与 `docs/AI_MAP.md` §4「开发决策规则」表述重叠，以**本文 §2～§14** 为应用层与数据访问纪律的权威表述；MAP 保留框架能力级硬约束与类索引。
+- 新增与「实体/库表/Dao/资源/页面」相关的团队规则时，**优先更新本文**，并同步 `docs/AI_INDEX.md`、`docs/AI_GUIDE.md` 摘要；**多库类型、方言、Wrapper/Provider 纪律**以 **`docs/AI_DATABASE.md`** 为落地专篇，变更时同步该文 §2；**老旧项目注解 Dao / 方言 Wrapper 迁移与扫描清单**见 **`docs/AI_DATABASE.md` §8** 与 **`docs/AI_UPGRADE.md` §3.3**；与代码生成流程或三步节奏相关的补充可落在 **`docs/AI_CODEGEN.md`**。**Redis TTL 与 `RedisExpireUtil`** 以 **`docs/REDIS_TTL_GUIDE.md`** 为专篇，变更 API 或扫描脚本时同步 **`autumn-lib`** 与 **`scripts/redis-expire-forbidden-scan.sh`**。
+- 若与 `docs/AI_MAP.md` §4「开发决策规则」表述重叠，以**本文 §2～§14**、**§15** 为应用层与数据访问纪律的权威表述；MAP 保留框架能力级硬约束与类索引。

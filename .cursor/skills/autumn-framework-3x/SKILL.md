@@ -8,7 +8,7 @@ description: >-
   Enforces docs/AI_STANDARDS.md + docs/AI_DATABASE.md: entity-driven schema; Dao via Provider (*DaoSql extends RuntimeSql);
   No hardcoded dialect quotes in Java (RuntimeSql quote/columnInWrapper or WrapperColumns per docs/AI_DATABASE.md §4.0);
   Controller must not use Dao; Service uses baseMapper; gen/Pages/list.html/js never hand-edited; statics/pages/Site/PageAware.
-  Read docs/AI_CODEGEN.md, docs/AI_DATABASE.md; scripts/autumn-dependency-scan.sh for upgrades.
+  Read docs/AI_CODEGEN.md, docs/AI_DATABASE.md; Redis TTL / Redisson / pExpire issues: docs/REDIS_TTL_GUIDE.md + docs/REDIS_REDISSON_SPRING_DATA.md (optional scripts/redis-expire-forbidden-scan.sh); scripts/autumn-dependency-scan.sh for upgrades.
   Triggers on cn.org.autumn 3.0.0, Spring Boot 3.5, JDK 17, ModuleService, RuntimeSql, PageAware, SpringDoc.
 ---
 
@@ -42,7 +42,7 @@ description: >-
 1. `docs/AI_INDEX.md` → 2. `docs/AI_BOOT.md` → 3. `docs/AI_MAP.md` → 4. **`docs/AI_STANDARDS.md`**（强制全文，含 §8～§14）  
 5. **`docs/AI_DATABASE.md`**（多库、`DatabaseType`、**§4.0 代码层方言标准写法**、`WrapperColumns`、`RuntimeSql`、Wrapper 边界、Dao **必须** Provider）  
 6. 新模块 / 代码生成 / 搭骨架：追加 **`docs/AI_CODEGEN.md`**  
-按需：`docs/AI_POSTGRESQL.md`、`docs/AI_TEMPLATES.md`、`docs/AI_CRYPTO.md`、`docs/AI_DISTRIBUTED_LOCK.md`、**`docs/REDIS_RESILIENCE.md`**（Redis 熔断与分布式锁稳健性）、`docs/REDIS_STANDALONE.md`、**`docs/INSTALL_MODE_CONDITIONAL.md`**（安装向导 **`autumn.install.wizard`**、**§0 占位默认 H2 / 可选 mysql**）等。
+按需：`docs/AI_POSTGRESQL.md`、`docs/AI_TEMPLATES.md`、`docs/AI_CRYPTO.md`、`docs/AI_DISTRIBUTED_LOCK.md`、**`docs/REDIS_RESILIENCE.md`**（Redis 熔断与分布式锁稳健性）、`docs/REDIS_STANDALONE.md`、**`docs/REDIS_TTL_GUIDE.md`**（Redis TTL / **`RedisExpireUtil`**）、**`docs/INSTALL_MODE_CONDITIONAL.md`**（安装向导 **`autumn.install.wizard`**、**§0 占位默认 H2 / 可选 mysql**）等。
 
 **注意**：文档或示例若与 **Boot 3 / Jakarta / MP3** 或本分支 **`pom.xml` / `application.yml`** 不一致，以**仓库当前实现**为准。
 
@@ -82,6 +82,7 @@ description: >-
 - **`cn.org.autumn.config.RedisConfig`**：`@Configuration`；**`@Autowired(required = false) RedisConnectionFactory`**；**`@Bean`**：`RedisTemplate`（`@Primary` + JSON）、**Ops**；**不**使用 **`@ConditionalOnBean(RedisConnectionFactory)`**、**不**使用 **`@AutoConfigureAfter`**；**不**列入 **`spring.factories` → `EnableAutoConfiguration`**，随 **`cn.org.autumn`** **组件扫描**加载。
 - **`autumn.redis.open`**、EPP 与 **`spring.redis.*`**：**`docs/REDIS_STANDALONE.md` §1、§2**；业务 **模式 A / B**：**§3、§8**；升级清单：**`docs/AI_UPGRADE.md` §2.2 行 7**。
 - **`RedisResilience`**、**`DistributedLockService`**、**`TagRunnable` / `LockOnce`**：**`docs/REDIS_RESILIENCE.md`**、**`docs/AI_DISTRIBUTED_LOCK.md`**。
+- **TTL / `RedisExpireUtil` / Redisson ↔ SDR 对齐**：**`docs/REDIS_TTL_GUIDE.md`** + **`docs/REDIS_REDISSON_SPRING_DATA.md`**（可选 **`scripts/redis-expire-forbidden-scan.sh`**）。
 
 ## 分布式执行与加锁（新增）
 
