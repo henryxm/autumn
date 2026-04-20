@@ -95,6 +95,8 @@
 
 - **禁止**在研发交付物中新增**用于初始化或变更库结构的独立 DDL `.sql` 文件**作为常规做法（例如随代码提交的 `schema.sql` / `init.sql` 专供手工执行）。**表结构以实体注解 + 框架同步为准**；若生产必须离线 DDL，走发布流程与 DBA 规范，**不**作为日常开发默认路径。
 
+- **实体主键纪律**（与 **§10.4** 一致）：自增 **`id`** 仅供后台生成器与框架默认 CRUD；**业务侧关联、外键与对外标识**必须使用 **§10.4** 中的**业务主键**字段（`Uuid.uuid()` / `SnowflakeId` 等），**禁止**用自增 **`id`** 承担这些职责。
+
 ## 9. 模块目录、包名、表前缀与实体命名
 
 - **模块根**：通常位于 `autumn-modules/src/main/java/cn/org/autumn/modules/<子目录>/`。该 **`<子目录>` 名**同时作为 **Java 包路径段**与**表名前缀**（与 `README`、代码生成流程一致）。
@@ -111,11 +113,36 @@
 
 ### 10.2 索引与唯一约束
 
-- **禁止**在同一字段上**同时**使用 **`@Index`** 与 **`@Column(isUnique = true)`**（及同类重复唯一声明），避免 DDL 重复与迁移噪音（与 `docs/AI_BOOT.md` §3 一致）。
+- **硬性约束（无例外）**：凡在 **`@Column` 上声明 `isUnique = true` 的字段**，**一律不得**再对该字段声明 **`@Index`**（字段级 **`@Index`**，以及类级 **`@Index` / `@Indexes`** 中含该列的 **`@IndexField`**），以免与框架已生成的唯一索引语义重叠、产生 DDL 冲突与迁移比对噪音。**唯一性只保留 `isUnique = true` 这一路即可。**（框架侧可能会忽略冲突声明并 WARN，但仍属违规写法，合并前 Review 必须拒绝。）
+- **同类重复唯一声明**：亦不要与 `@UniqueKey(s)`、`@Indexes` 等在同一列上重复描述同一约束（细则见 **`docs/AI_BOOT.md` §3**、**`docs/AI_MAP.md` §2.10.2**）。
 
 ### 10.3 整型、布尔与空值
 
 - **无特殊原因**时，字段尽量使用 **基本类型**（如 `int`、`boolean`）并在 **`@Column`** 上声明**默认值**，减少 **`null`** 分支与 **`NullPointerException`** 风险。
+
+### 10.4 双键模型：管理用自增 `id` + 业务主键（默认强制）
+
+除非需求文档或任务中**明确豁免**，每个实体必须具备以下两类标识，二者**不得混用职责**：
+
+1. **自增 `id`（技术主键 / 后台 CRUD 专用）**  
+   - **必须**存在，类型与注解与代码生成、MyBatis-Plus 默认主键语义一致，例如：
+     ```java
+     @TableId
+     @Column(isKey = true, type = "bigint", length = 20, isNull = false, isAutoIncrement = true, comment = "id")
+     private Long id;
+     ```
+   - **仅用于**：代码生成产出的后台列表/表单 CRUD、框架按主键更新删除等**管理端默认路径**。  
+   - **禁止**：在业务代码、对外 API、缓存键、日志对外暴露中将其作为资源标识；**禁止**作为其它表的外键或被其它表引用；**禁止**在实体关系、领域模型中用它表达「业务上的同一实体」——这些职责全部由下述 **业务主键** 承担。
+
+2. **业务主键（对外与关联唯一标识）**  
+   - **必须**单独增加一列，在库表上具备 **全局唯一**（推荐 **`@Column(isUnique = true)`** 表示唯一约束；若采用该写法，**禁止**再对本字段叠加 **`@Index`**，见 **§10.2**。亦可用 `@UniqueKey` 等多列唯一方案，字段名用语义化命名，如 `bizKey`、`orderNo`、领域专用名等）。  
+   - **插入前在应用层生成**，不可依赖自增：  
+     - **字符串**：推荐 **`cn.org.autumn.utils.Uuid#uuid()`**，输出为 **去掉连字符的小写 32 位十六进制**（与现有工程约定一致）。  
+     - **长整型**：推荐 **`cn.org.autumn.utils.SnowflakeId`**（`nextId()` / 或按节点配置 `workerId`、`datacenterId` 的实例），保证去重、时序近似、**不可像连续整数一样被遍历猜测**（仍须注意分布式下为各 JVM 配置不同 worker/机房号，避免重复）。  
+   - **必须**用于：表间关联（外键列存业务主键值）、对外接口路径与 body 中的资源 ID、缓存与消息中的实体引用等。  
+   - **例外**：仅在书面需求中写明「本实体豁免业务主键」或「允许使用自增 id 关联」时方可偏离；默认无例外。
+
+**小结**：**`id`** = 内部技术与生成 CRUD；**业务主键列** = 唯一业务身份与全部关联。**禁止**把 **`id`** 当成业务主键使用。
 
 ## 11. 生成层边界与业务落点
 
@@ -186,6 +213,8 @@
 | PostgreSQL 专项 DDL/元数据、`RuntimeSql` 示例 | `docs/AI_POSTGRESQL.md` |
 | 升级扫描与迁移 | `docs/AI_UPGRADE.md` |
 | ModuleService、缓存、队列、LoopJob、生成矩阵 | `docs/AI_MAP.md` |
+| `isUnique=true` 与 `@Index` 禁止叠用 | **§10.2**；Boot/MAP 索引收集见 **`docs/AI_BOOT.md` §3**、**`docs/AI_MAP.md` §2.10.2** |
+| 双键模型（自增 `id` + 业务主键）、`Uuid` / `SnowflakeId` | **§10.4**；关联与 SQL 纪律见 **`docs/AI_DATABASE.md` §1.1 |
 | 代码生成端到端流程、三步开发节奏、缓存/队列基类详解 | `docs/AI_CODEGEN.md` |
 | 加解密 | `docs/AI_CRYPTO.md` |
 | 多项目协作与术语 | `docs/AI_GOVERNANCE.md` |
@@ -195,4 +224,4 @@
 ## 17. 维护约定
 
 - 新增与「实体/库表/Dao/资源/页面」相关的团队规则时，**优先更新本文**，并同步 `docs/AI_INDEX.md`、`docs/AI_GUIDE.md` 摘要；**多库类型、方言、Wrapper/Provider 纪律**以 **`docs/AI_DATABASE.md`** 为落地专篇，变更时同步该文 §2；**老旧项目注解 Dao / 方言 Wrapper 迁移与扫描清单**见 **`docs/AI_DATABASE.md` §8** 与 **`docs/AI_UPGRADE.md` §3.3**；与代码生成流程或三步节奏相关的补充可落在 **`docs/AI_CODEGEN.md`**。**Redis TTL 与 `RedisExpireUtil`** 以 **`docs/REDIS_TTL_GUIDE.md`** 为专篇，变更 API 或扫描脚本时同步 **`autumn-lib`** 与 **`scripts/redis-expire-forbidden-scan.sh`**。
-- 若与 `docs/AI_MAP.md` §4「开发决策规则」表述重叠，以**本文 §2～§14**、**§15** 为应用层与数据访问纪律的权威表述；MAP 保留框架能力级硬约束与类索引。
+- 若与 `docs/AI_MAP.md` §4「开发决策规则」表述重叠，以**本文 §2～§14**、**§15** 为应用层与数据访问纪律的权威表述；MAP 保留框架能力级硬约束与类索引。**索引与唯一约束叠用纪律（§10.2）** 变更时同步 **`docs/AI_BOOT.md` §3**、**`docs/AI_MAP.md` §2.10.2**。**实体双键（§10.4）** 变更时同步 **`docs/AI_DATABASE.md` §1.1** 与 **`autumn-lib`** 中 **`Uuid` / `SnowflakeId`** 说明（若工具 API 有变）。

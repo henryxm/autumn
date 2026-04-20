@@ -1,0 +1,341 @@
+#!/usr/bin/env bash
+#
+# constraints-scan — Autumn 文档约束只读扫描
+#
+# 对照文档（请在仓库内保持与实现同步）:
+#   docs/AI_STANDARDS.md  §5～§14（定时任务、权限、实体、索引唯一、分层、gen）
+#   docs/AI_DATABASE.md   §1、§4～§5、§8.5（方言、Dao Provider、Wrapper、检索示例）
+#   docs/AI_BOOT.md       §3（注解建表、表名 §3.2）
+#   docs/AI_MAP.md        §2.10、§4（注解索引、决策规则）
+#   docs/AI_UPGRADE.md    §3.1（grep 级规则）
+#
+# 用法:
+#   ./scripts/constraints-scan [ROOT]
+#   ROOT 默认为当前目录（建议在仓库根或业务工程根执行）。
+#
+# 依赖: bash 3.2+、ripgrep (rg)
+#
+# 环境变量:
+#   AUTUMN_SCAN_COLOR=0|1       是否着色（默认 TTY 自动）
+#   AUTUMN_SCAN_FAIL_ON_HIT=1     任一规则命中则 exit 1（CI）
+#   AUTUMN_SCAN_JAVA_GLOB=glob    Java 文件 glob，默认 "*.java"
+#   AUTUMN_SCAN_SKIP_GEN=1        排除路径 **/controller/gen/**、**/gen/**（减少生成代码噪声）
+#   AUTUMN_SCAN_EXTRA=1           启用额外启发式（双键提示、三参 concat 等）
+
+set -u
+
+ROOT="${1:-.}"
+ROOT="$(cd "${ROOT}" && pwd)"
+JAVA_GLOB="${AUTUMN_SCAN_JAVA_GLOB:-*.java}"
+SCRIPT_NAME="$(basename "$0")"
+
+GEN_GLOB_ARGS=( )
+if [[ "${AUTUMN_SCAN_SKIP_GEN:-}" == "1" ]]; then
+  GEN_GLOB_ARGS=( --glob '!**/controller/gen/**' --glob '!**/modules/gen/**' )
+fi
+
+if [[ ! -d "${ROOT}" ]]; then
+  echo "用法: ${SCRIPT_NAME} [ROOT_DIR]" >&2
+  exit 2
+fi
+if ! command -v rg >/dev/null 2>&1; then
+  echo "错误: 需要 ripgrep (rg)。安装: https://github.com/BurntSushi/ripgrep" >&2
+  exit 2
+fi
+
+USE_COLOR=0
+[[ -t 1 ]] && USE_COLOR=1
+[[ "${AUTUMN_SCAN_COLOR:-}" == "1" ]] && USE_COLOR=1
+[[ "${AUTUMN_SCAN_COLOR:-}" == "0" ]] && USE_COLOR=0
+
+C_HDR='' C_SEC='' C_DIM='' C_OK='' C_RST=''
+if [[ "${USE_COLOR}" -eq 1 ]]; then
+  C_HDR=$'\033[1;36m'; C_SEC=$'\033[1;33m'; C_DIM=$'\033[2m'; C_OK=$'\033[32m'; C_RST=$'\033[0m'
+fi
+
+TOTAL_HITS=0
+
+section() {
+  echo ""
+  echo "${C_HDR}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${C_RST}"
+  echo "${C_HDR}▶ $1${C_RST}"
+  echo "${C_DIM}$2${C_RST}"
+}
+
+subsection() {
+  echo ""
+  echo "${C_SEC}— $1 —${C_RST}"
+  echo "${C_DIM}$2${C_RST}"
+}
+
+# 无 heading，便于 wc -l；无匹配时 rg 退出 1
+rg_plain() {
+  rg --color=never --no-heading --line-number \
+    --glob '!**/target/**' --glob '!**/build/**' --glob '!**/.git/**' \
+    "$@" "${ROOT}" 2>/dev/null || true
+}
+
+emit_matches_or_none() {
+  local out
+  out="$(rg_plain "$@")"
+  if [[ -z "${out}" ]]; then
+    echo "${C_DIM}(无命中)${C_RST}"
+    return 1
+  fi
+  echo "${out}"
+  return 0
+}
+
+count_matches() {
+  rg_plain "$@" | wc -l | tr -d ' '
+}
+
+add_total() {
+  local n="$1"
+  TOTAL_HITS=$((TOTAL_HITS + n))
+}
+
+print_group_summary() {
+  local label="$1"
+  local n="$2"
+  echo "${C_DIM}[本组命中行数: ${n}]${C_RST}"
+  add_total "${n}"
+}
+
+# =====================================================================
+# A 实体 / 注解 / 表命名
+# =====================================================================
+scan_group_a() {
+  section "A · 实体类、索引与命名" "AI_STANDARDS §8～§10、AI_BOOT §3.2、AI_MAP §2.10"
+
+  subsection "A1 模块目录下实体类名重复模块前缀" \
+    "路径 …/modules/<mod>/entity/ 下，类名若以 <Mod> 开头且长于前缀（如 spm→SpmXxxEntity），疑似违反「勿把模块前缀拼进类名」。"
+  local hits=0
+  while IFS= read -r -d '' f; do
+    local mod cap base stem
+    mod="$(echo "${f}" | sed -n 's|.*/modules/\([^/]*\)/entity/.*|\1|p')"
+    [[ -z "${mod}" ]] && continue
+    cap="$(echo "${mod:0:1}" | tr '[:lower:]' '[:upper:]')${mod:1}"
+    base="$(basename "${f}" .java)"
+    stem="${base%Entity}"
+    if [[ "${stem}" == "${cap}"* ]] && [[ ${#stem} -gt ${#cap} ]]; then
+      echo "${f}  → 类 ${base}（模块 ${mod}）"
+      hits=$((hits + 1))
+    fi
+  done < <(find "${ROOT}" \( -path '*/target' -o -path '*/.git' \) -prune -o \
+    -path '*/modules/*/entity/*Entity.java' -print0 2>/dev/null)
+  if [[ "${hits}" -eq 0 ]]; then
+    echo "${C_DIM}(未发现符合启发式的路径/类名；若实体不在 modules/*/entity 下请人工核对)${C_RST}"
+  fi
+  print_group_summary "A1" "${hits}"
+
+  subsection "A2 isUnique 与 @Index 同文件共存（需人工核对是否同列）" \
+    "同一 *Entity*.java 内同时出现 isUnique=true 与 @Index 时，违反 §10.2 风险高。"
+  local n=0
+  local tmp
+  tmp="$(mktemp)"
+  rg_plain -l 'isUnique\s*=\s*true' --glob '*Entity*.java' --glob "${JAVA_GLOB}" >"${tmp}"
+  local f2 hits2=0
+  while IFS= read -r ff; do
+    [[ -z "${ff}" ]] && continue
+    if rg -q '@Index' "${ff}" 2>/dev/null; then
+      echo "${ff}"
+      hits2=$((hits2 + 1))
+    fi
+  done <"${tmp}"
+  rm -f "${tmp}"
+  if [[ "${hits2}" -eq 0 ]]; then
+    echo "${C_DIM}(无此类文件)${C_RST}"
+  fi
+  print_group_summary "A2" "${hits2}"
+
+  subsection "A3 @Table / @TableName 物理表名蛇形粗检（提示）" \
+    "匹配显式全大写或含连续大写字母的 @TableName(\"…\")，表名宜为蛇形小写+下划线（见 AI_BOOT §3.2）。"
+  local n
+  n="$(count_matches --glob "${JAVA_GLOB}" '@TableName\(\s*"[A-Z][A-Za-z0-9]*[A-Z]')"
+  emit_matches_or_none --glob "${JAVA_GLOB}" '@TableName\(\s*"[A-Z][A-Za-z0-9]*[A-Z]' | head -80
+  [[ "${n}" -gt 80 ]] && echo "${C_DIM}… 其余省略，共 ${n} 行${C_RST}"
+  print_group_summary "A3" "${n}"
+}
+
+# =====================================================================
+# B Dao / SQL / Wrapper / 方言
+# =====================================================================
+scan_group_b() {
+  section "B · Dao、Provider、Wrapper 与方言" "AI_STANDARDS §12、AI_DATABASE §3～5、§8.5"
+
+  subsection "B1 MyBatis 注解内联 SQL 字符串" "@Select(\"…\") / @Update(\"…\") 等（新代码须 Provider）。"
+  local n
+  n="$(count_matches --glob "${JAVA_GLOB}" '@(Select|Update|Insert|Delete)\(\s*"')"
+  emit_matches_or_none --glob "${JAVA_GLOB}" '@(Select|Update|Insert|Delete)\(\s*"' | head -50
+  local n2
+  n2="$(count_matches --glob "${JAVA_GLOB}" '@(Select|Update|Insert|Delete)\(\s*\{')"
+  emit_matches_or_none --glob "${JAVA_GLOB}" '@(Select|Update|Insert|Delete)\(\s*\{' | head -30
+  print_group_summary "B1" "$((n + n2))"
+
+  subsection "B2 Wrapper.apply / .last / .having" "方言化自定义片段，须人工判断是否违反 §4。"
+  local n
+  n="$(count_matches "${GEN_GLOB_ARGS[@]}" --glob '*Service*.java' '\.(apply|last|having)\(')"
+  n=$((n + $(count_matches "${GEN_GLOB_ARGS[@]}" --glob '*Dao*.java' '\.(apply|last|having)\(')))
+  emit_matches_or_none "${GEN_GLOB_ARGS[@]}" --glob '*Service*.java' '\.(apply|last|having)\(' | head -40
+  emit_matches_or_none "${GEN_GLOB_ARGS[@]}" --glob '*Dao*.java' '\.(apply|last|having)\(' | head -40
+  print_group_summary "B2" "${n}"
+
+  subsection "B3 Java 中疑似 SQL 标识符反引号 \`col\`" "§4.0 禁止手写方言引号拼 SQL。"
+  local n
+  n="$(count_matches "${GEN_GLOB_ARGS[@]}" --glob "${JAVA_GLOB}" '`[a-zA-Z_][a-zA-Z0-9_]*`')"
+  emit_matches_or_none "${GEN_GLOB_ARGS[@]}" --glob "${JAVA_GLOB}" '`[a-zA-Z_][a-zA-Z0-9_]*`' | head -50
+  print_group_summary "B3" "${n}"
+
+  subsection "B4 常见单库函数" "FIND_IN_SET / IFNULL / DATE_FORMAT / GROUP_CONCAT / LAST_INSERT_ID"
+  local n
+  n="$(count_matches "${GEN_GLOB_ARGS[@]}" --glob "${JAVA_GLOB}" 'FIND_IN_SET|IFNULL\(|DATE_FORMAT\(|GROUP_CONCAT\(|LAST_INSERT_ID\(')"
+  emit_matches_or_none "${GEN_GLOB_ARGS[@]}" --glob "${JAVA_GLOB}" 'FIND_IN_SET|IFNULL\(|DATE_FORMAT\(|GROUP_CONCAT\(|LAST_INSERT_ID\(' | head -40
+  print_group_summary "B4" "${n}"
+
+  subsection "B5 手写 LIMIT n" "跨库分页宜走框架 / RuntimeSql。"
+  local n
+  n="$(count_matches "${GEN_GLOB_ARGS[@]}" --glob "${JAVA_GLOB}" '\bLIMIT\s+[0-9]')"
+  emit_matches_or_none "${GEN_GLOB_ARGS[@]}" --glob "${JAVA_GLOB}" '\bLIMIT\s+[0-9]' | head -30
+  print_group_summary "B5" "${n}"
+
+  subsection "B6 三参 LIKE concat('%'…" "AI_UPGRADE §3.1 提示；遇 MyBatis 三参 concat 需审。"
+  local n
+  n="$(count_matches "${GEN_GLOB_ARGS[@]}" --glob "${JAVA_GLOB}" "concat\\s*\\(\\s*'%'")"
+  emit_matches_or_none "${GEN_GLOB_ARGS[@]}" --glob "${JAVA_GLOB}" "concat\\s*\\(\\s*'%'" | head -25
+  print_group_summary "B6" "${n}"
+}
+
+# =====================================================================
+# C 分层：Controller 与 Dao
+# =====================================================================
+scan_group_c() {
+  section "C · 分层（Controller 不得直接依赖 Dao）" "AI_STANDARDS §13"
+
+  subsection "C1 非 gen 的 Controller 与 Dao 同框" \
+    "启发式：文件同时含 @Autowired|@Resource 与 FooDao 形态标识；已排除 controller/gen、target。"
+  local n=0
+  local tmp
+  tmp="$(mktemp)"
+  find "${ROOT}" \( -path '*/target' -o -path '*/.git' \) -prune -o \
+    -name '*Controller*.java' ! -path '*/controller/gen/*' -print 2>/dev/null |
+    while IFS= read -r cf; do
+      if rg -q '@(Autowired|Resource)' "${cf}" 2>/dev/null && rg -q '\b[A-Za-z0-9_]+Dao\b' "${cf}" 2>/dev/null; then
+        echo "${cf}"
+      fi
+    done >"${tmp}"
+  if [[ -s "${tmp}" ]]; then
+    cat "${tmp}"
+    n="$(wc -l <"${tmp}" | tr -d ' ')"
+  else
+    echo "${C_DIM}(无命中)${C_RST}"
+  fi
+  rm -f "${tmp}"
+  print_group_summary "C1" "${n}"
+}
+
+# =====================================================================
+# D 定时任务 / 权限注解
+# =====================================================================
+scan_group_d() {
+  section "D · 定时任务与权限注解" "AI_STANDARDS §5～§6"
+
+  subsection "D1 @Scheduled" "生产默认禁止裸 Spring 调度。"
+  local n
+  n="$(count_matches "${GEN_GLOB_ARGS[@]}" --glob "${JAVA_GLOB}" '@Scheduled')"
+  emit_matches_or_none "${GEN_GLOB_ARGS[@]}" --glob "${JAVA_GLOB}" '@Scheduled' | head -35
+  print_group_summary "D1" "${n}"
+
+  subsection "D2 Controller 上的 @RequiresPermissions" "新建对外接口应避免；以下为命中行。"
+  local n
+  n="$(count_matches "${GEN_GLOB_ARGS[@]}" --glob '*Controller*.java' '@RequiresPermissions')"
+  emit_matches_or_none "${GEN_GLOB_ARGS[@]}" --glob '*Controller*.java' '@RequiresPermissions' | head -35
+  print_group_summary "D2" "${n}"
+}
+
+# =====================================================================
+# E 初始化 DDL 文件
+# =====================================================================
+scan_group_e() {
+  section "E · 常规 DDL 文件名" "AI_STANDARDS §8（默认交付物不以独立 DDL 为主）"
+  local hits=0
+  while IFS= read -r -d '' f; do
+    echo "${f}"
+    hits=$((hits + 1))
+  done < <(find "${ROOT}" \( -name 'schema.sql' -o -name 'init.sql' -o -name 'data.sql' -o -name 'import.sql' \) -print0 2>/dev/null)
+  if [[ "${hits}" -eq 0 ]]; then
+    echo "${C_DIM}(未发现常见命名的 DDL 文件)${C_RST}"
+  fi
+  print_group_summary "E" "${hits}"
+}
+
+# =====================================================================
+# F 代码生成层路径（仅列表，不计入违规分）
+# =====================================================================
+scan_group_f_info() {
+  section "F · 生成层路径清单（审计用）" "AI_STANDARDS §11 — 下列文件不应手改业务逻辑；仅列目录供对照。"
+  local count
+  count="$(find "${ROOT}" -path '*/controller/gen/*.java' 2>/dev/null | wc -l | tr -d ' ')"
+  echo "${C_DIM}controller/gen/*.java 数量: ${count}${C_RST}"
+  find "${ROOT}" -path '*/controller/gen/*.java' 2>/dev/null | head -20
+  [[ "${count}" -gt 20 ]] && echo "${C_DIM}… 其余省略${C_RST}"
+  echo "${C_OK}[F 组不计入 TOTAL_HITS]${C_RST}"
+}
+
+# =====================================================================
+# G 额外启发式（双键模型等，噪声可能较大）
+# =====================================================================
+scan_group_g_extra() {
+  [[ "${AUTUMN_SCAN_EXTRA:-}" != "1" ]] && return 0
+  section "G · 额外启发式（AUTUMN_SCAN_EXTRA=1）" "AI_STANDARDS §10.4 双键、雪花等"
+
+  subsection "G1 含 @TableId 的 Entity 文件未出现 isUnique" \
+    "仅提示：可能缺少业务主键列（存量代码误报多）。"
+  local tmp n=0
+  tmp="$(mktemp)"
+  rg_plain -l '@TableId' --glob '*Entity*.java' --glob "${JAVA_GLOB}" >"${tmp}"
+  while IFS= read -r ff; do
+    [[ -z "${ff}" ]] && continue
+    if ! rg -q 'isUnique\s*=\s*true' "${ff}" 2>/dev/null; then
+      echo "${ff}"
+      n=$((n + 1))
+    fi
+  done <"${tmp}"
+  rm -f "${tmp}"
+  if [[ "${n}" -eq 0 ]]; then echo "${C_DIM}(无)${C_RST}"; fi
+  print_group_summary "G1" "${n}"
+
+  subsection "G2 业务代码中的 SnowflakeId / Uuid.uuid" "插入前赋值提示（非违规）。"
+  local n
+  n="$(count_matches "${GEN_GLOB_ARGS[@]}" --glob "${JAVA_GLOB}" 'SnowflakeId\.(next|getDefault)|Uuid\.uuid\(\)')"
+  emit_matches_or_none "${GEN_GLOB_ARGS[@]}" --glob "${JAVA_GLOB}" 'SnowflakeId\.(next|getDefault)|Uuid\.uuid\(\)' | head -25
+  print_group_summary "G2" "${n}"
+}
+
+# =====================================================================
+if [[ "${1:-}" == "-h" ]] || [[ "${1:-}" == "--help" ]]; then
+  head -22 "$0" | tail -21
+  exit 0
+fi
+
+echo "${C_SEC}${SCRIPT_NAME}${C_RST} 根目录: ${ROOT}"
+echo "${C_DIM}Java: ${JAVA_GLOB} | SKIP_GEN=${AUTUMN_SCAN_SKIP_GEN:-0} | EXTRA=${AUTUMN_SCAN_EXTRA:-0}${C_RST}"
+
+scan_group_a
+scan_group_b
+scan_group_c
+scan_group_d
+scan_group_e
+scan_group_f_info
+scan_group_g_extra
+
+echo ""
+echo "${C_HDR}════════════════════════════════════════════════════════════════${C_RST}"
+echo "TOTAL_HITS（启发式命中行/条数累计，F 组除外）: ${TOTAL_HITS}"
+echo "${C_DIM}解释: 命中≠一定违规；请对照上述文档章节做 Code Review。${C_RST}"
+echo "运行 ${C_SEC}AUTUMN_SCAN_FAIL_ON_HIT=1 ${SCRIPT_NAME}${C_RST} 可在 CI 中有命中即失败。"
+
+if [[ "${AUTUMN_SCAN_FAIL_ON_HIT:-}" == "1" ]] && [[ "${TOTAL_HITS}" -gt 0 ]]; then
+  exit 1
+fi
+exit 0

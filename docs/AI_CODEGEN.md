@@ -56,7 +56,8 @@
 
 1. **对齐需求与边界**，列出领域实体、关键字段、查询维度、缓存与异步是否需要。
 2. **编写实体类**（放在目标模块 `entity` 包下），严格遵循：
-   - **`docs/AI_STANDARDS.md`** 第 8～10 节：**`@Table` / `@Column` / `@Index` / `@Indexes`**、注释格式（短标题 + 半角 `:`）、模块目录 = 包段 = 表前缀且**不把前缀写进类名**、禁止 **`@Index` 与 `@Column(isUnique=true)` 同列叠用** 等。
+   - **`docs/AI_STANDARDS.md`** 第 8～10 节：**`@Table` / `@Column` / `@Index` / `@Indexes`**、注释格式（短标题 + 半角 `:`）、模块目录 = 包段 = 表前缀且**不把前缀写进类名**；**凡 `isUnique=true` 的 `@Column` 禁止再对该字段使用 `@Index`**（§10.2）等。
+   - **`docs/AI_STANDARDS.md` §10.4**：自增 **`Long id`** 仅服务后台生成 CRUD；**须另有唯一业务主键**（`Uuid.uuid()` / **`SnowflakeId`**），插入前赋值；关联与对外 ID **禁止**用 **`id`**。
 3. **缓存声明**：在实体上使用 **`cn.org.autumn.annotation.Cache`** / **`@Caches`**（见本文第 4.1 节），声明字段级或类级复合键、**`name`** 区分同一实体上的多套缓存策略、**`unique`** 区分单值与列表语义、**`create`** 是否与自动建记录行为配合。
 4. **依赖框架能力，禁止重复造轮子**：业务 Service 默认继承 **`ModuleService`**，自动具备 **CRUD、菜单/多语言初始化、缓存、队列** 等能力（继承链见 **`docs/AI_MAP.md`** 与本文第 4 节）。**不要**自建平行缓存中间层、消息封装或调度线程替代 **`LoopJob`**。
 
