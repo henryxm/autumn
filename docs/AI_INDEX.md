@@ -6,7 +6,7 @@
 
 ## 1. 文档职责一览
 
-- **`scripts/constraints-scan`**：**文档约束分组扫描**（实体/命名、Dao/SQL、分层、DDL 等，只读体检；依赖 `rg`，见 **`docs/AI_DATABASE.md` §8.5**）
+- **`scripts/constraints-scan`**：**文档约束分组扫描 A～H**（实体/命名、Dao/SQL、分层、DDL、**Redis TTL** 等；`--redis-expire-only` 仅 H 组；依赖 `rg`，见 **`docs/AI_DATABASE.md` §8.5**）
 - `docs/AI_BOOT.md`：最小启动上下文（首轮必读）
 - `docs/INSTALL_MODE_CONDITIONAL.md`：安装模式（`autumn.install.mode`）下 **`@ConditionalOnNotInstallMode` / `@ConditionalOnInstallMode`** 与 **`autumn.install.autoconfigure-exclude`** 用法；**§0** 安装占位数据源（**默认 H2 内存**、可选 **mysql**）
 - `docs/REDIS_STANDALONE.md`：**可选 Redis / 单机启动**（`autumn.redis.open`、安装向导、分布式锁单机回退；**§2** 框架 `RedisConfig`；**§3** 业务注入模式 A/B；**§8** 模式 B 写法）

@@ -8,8 +8,8 @@ description: >-
   Enforces docs/AI_STANDARDS.md + docs/AI_DATABASE.md: never combine @Column(isUnique=true) with @Index on same field (§10.2); dual-key entities (auto Long id for gen CRUD only + unique biz key via Uuid.uuid()/SnowflakeId for FK/API; never use id as association); entity-driven schema; Dao via Provider (*DaoSql extends RuntimeSql);
   No hardcoded dialect quotes in Java (RuntimeSql quote/columnInWrapper or WrapperColumns per docs/AI_DATABASE.md §4.0);
   Controller must not use Dao; Service uses baseMapper; gen/Pages/list.html/js never hand-edited; statics/pages/Site/PageAware.
-  Read docs/AI_CODEGEN.md, docs/AI_DATABASE.md; Redis TTL / Redisson / pExpire: docs/REDIS_TTL_GUIDE.md + docs/REDIS_REDISSON_SPRING_DATA.md (optional scripts/redis-expire-forbidden-scan.sh); scripts/autumn-dependency-scan.sh for upgrades.
-  When this skill applies: agent MUST run scripts/constraints-scan on the task root, read grouped output (A–G), conclude real violations, and fix in scope; re-run after edits. See skill body "约束扫描门禁".
+  Read docs/AI_CODEGEN.md, docs/AI_DATABASE.md; Redis TTL / Redisson / pExpire: docs/REDIS_TTL_GUIDE.md + docs/REDIS_REDISSON_SPRING_DATA.md (constraints-scan group H or --redis-expire-only); scripts/autumn-dependency-scan.sh for upgrades.
+  When this skill applies: agent MUST run scripts/constraints-scan on the task root, read grouped output (A–H), conclude real violations, and fix in scope; re-run after edits. See skill body "约束扫描门禁".
   Triggers on cn.org.autumn 3.0.0, Spring Boot 3.5, JDK 17, ModuleService, RuntimeSql, PageAware, SpringDoc.
 ---
 
@@ -47,7 +47,7 @@ description: >-
    - 可选环境变量：**`AUTUMN_SCAN_SKIP_GEN=1`**、**`AUTUMN_SCAN_EXTRA=1`**（见脚本头注释）。
 
 2. **解读输出**  
-   - 按脚本分组 **A～G** 阅读命中；对照 **`docs/AI_DATABASE.md` §8.5** 与 **`docs/AI_STANDARDS.md`**。  
+   - 按脚本分组 **A～H** 阅读命中（H 为 Redis TTL，可 `AUTUMN_SCAN_SKIP_REDIS=1` 跳过）；对照 **`docs/AI_DATABASE.md` §8.5** 与 **`docs/AI_STANDARDS.md`**。  
    - **区分**真实违规与误报（注释、测试、`target/`、历史生成代码等）。**F 组**仅为 gen 清单，**不计入** TOTAL。
 
 3. **修复**  
@@ -104,7 +104,7 @@ description: >-
 - **`cn.org.autumn.config.RedisConfig`**：`@Configuration`；**`@Autowired(required = false) RedisConnectionFactory`**；**`@Bean`**：`RedisTemplate`（`@Primary` + JSON）、**Ops**；**不**使用 **`@ConditionalOnBean(RedisConnectionFactory)`**、**不**使用 **`@AutoConfigureAfter`**；**不**列入 **`spring.factories` → `EnableAutoConfiguration`**，随 **`cn.org.autumn`** **组件扫描**加载。
 - **`autumn.redis.open`**、EPP 与 **`spring.redis.*`**：**`docs/REDIS_STANDALONE.md` §1、§2**；业务 **模式 A / B**：**§3、§8**；升级清单：**`docs/AI_UPGRADE.md` §2.2 行 7**。
 - **`RedisResilience`**、**`DistributedLockService`**、**`TagRunnable` / `LockOnce`**：**`docs/REDIS_RESILIENCE.md`**、**`docs/AI_DISTRIBUTED_LOCK.md`**。
-- **TTL / `RedisExpireUtil` / Redisson ↔ SDR 对齐**：**`docs/REDIS_TTL_GUIDE.md`** + **`docs/REDIS_REDISSON_SPRING_DATA.md`**（可选 **`scripts/redis-expire-forbidden-scan.sh`**）。
+- **TTL / `RedisExpireUtil` / Redisson ↔ SDR 对齐**：**`docs/REDIS_TTL_GUIDE.md`** + **`docs/REDIS_REDISSON_SPRING_DATA.md`**（可选 **`scripts/constraints-scan --redis-expire-only`** 或全文体检 **H 组**）。
 
 ## 分布式执行与加锁（新增）
 

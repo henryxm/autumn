@@ -81,7 +81,7 @@
 在业务仓库执行（路径按本机 autumn 克隆位置调整）：
 
 ```bash
-bash /path/to/autumn/scripts/redis-expire-forbidden-scan.sh .
+bash /path/to/autumn/scripts/constraints-scan --redis-expire-only .
 ```
 
 用于**快速找出**仍使用 `redisTemplate.expire`、`opsForValue().set(..., TimeUnit)` 等写法的文件，便于评审或重构时对照上表替换。

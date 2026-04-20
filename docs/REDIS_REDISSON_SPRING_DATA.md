@@ -100,7 +100,7 @@ mvn dependency:tree -pl <入口模块> | grep redisson
 
 完整 **常见写法 ↔ API 映射**、**滑动窗口计数**、**NX 占位**、**PEXPIREAT** 等见 **`docs/REDIS_TTL_GUIDE.md` §3**。
 
-**推荐流程**（与 **`docs/REDIS_TTL_GUIDE.md`** 一致）：先 **Maven 对齐**，再按需将 TTL 语义收敛到 **`RedisExpireUtil`**；可用 **`scripts/redis-expire-forbidden-scan.sh`** 辅助检索。
+**推荐流程**（与 **`docs/REDIS_TTL_GUIDE.md`** 一致）：先 **Maven 对齐**，再按需将 TTL 语义收敛到 **`RedisExpireUtil`**；可用 **`scripts/constraints-scan --redis-expire-only`**（全文体检含 **H 组**）辅助检索。
 
 ---
 

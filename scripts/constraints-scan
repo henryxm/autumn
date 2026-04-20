@@ -8,9 +8,12 @@
 #   docs/AI_BOOT.md       §3（注解建表、表名 §3.2）
 #   docs/AI_MAP.md        §2.10、§4（注解索引、决策规则）
 #   docs/AI_UPGRADE.md    §3.1（grep 级规则）
+#   docs/REDIS_TTL_GUIDE.md、docs/REDIS_REDISSON_SPRING_DATA.md — Redis TTL / RedisExpireUtil（H 组）
 #
 # 用法:
 #   ./scripts/constraints-scan [ROOT]
+#   ./scripts/constraints-scan --redis-expire-only [ROOT]   # 仅运行 H 组（Redis TTL）
+#   ./scripts/constraints-scan -h | --help
 #   ROOT 默认为当前目录（建议在仓库根或业务工程根执行）。
 #
 # 依赖: bash 3.2+、ripgrep (rg)
@@ -20,14 +23,31 @@
 #   AUTUMN_SCAN_FAIL_ON_HIT=1     任一规则命中则 exit 1（CI）
 #   AUTUMN_SCAN_JAVA_GLOB=glob    Java 文件 glob，默认 "*.java"
 #   AUTUMN_SCAN_SKIP_GEN=1        排除路径 **/controller/gen/**、**/gen/**（减少生成代码噪声）
+#   AUTUMN_SCAN_SKIP_REDIS=1      全文体检时跳过 H 组（Redis TTL 可疑写法）
 #   AUTUMN_SCAN_EXTRA=1           启用额外启发式（双键提示、三参 concat 等）
 
 set -u
 
+SCRIPT_NAME="$(basename "$0")"
+SCAN_MODE="full"
+
+case "${1:-}" in
+  -h|--help)
+    sed -n '1,35p' "$0"
+    echo ""
+    echo "选项:"
+    echo "  --redis-expire-only [ROOT]  仅执行 H 组（Redis TTL / RedisExpireUtil）"
+    exit 0
+    ;;
+  --redis-expire-only)
+    SCAN_MODE="redis_only"
+    shift
+    ;;
+esac
+
 ROOT="${1:-.}"
 ROOT="$(cd "${ROOT}" && pwd)"
 JAVA_GLOB="${AUTUMN_SCAN_JAVA_GLOB:-*.java}"
-SCRIPT_NAME="$(basename "$0")"
 
 GEN_GLOB_ARGS=( )
 if [[ "${AUTUMN_SCAN_SKIP_GEN:-}" == "1" ]]; then
@@ -313,13 +333,50 @@ scan_group_g_extra() {
 }
 
 # =====================================================================
-if [[ "${1:-}" == "-h" ]] || [[ "${1:-}" == "--help" ]]; then
-  head -22 "$0" | tail -21
+# H Redis TTL / expire
+# =====================================================================
+scan_group_h_redis_expire() {
+  section "H · Redis TTL / expire 可疑写法" \
+    "docs/REDIS_TTL_GUIDE.md、REDIS_REDISSON_SPRING_DATA.md、AI_STANDARDS §15 — Spring Data 直接 expire / set+TimeUnit 等在 Redisson 错配场景下有风险；推荐收敛至 cn.org.autumn.utils.RedisExpireUtil。以下已排除行内出现 RedisExpireUtil / incrementAndExpireIfFirst / incrementAndPExpireIfFirst 的命中。"
+
+  subsection "H1 redisTemplate.expire / .expire(..TimeUnit) / opsForValue().set(..TimeUnit)" \
+    "可疑 expire / set+TimeUnit 等写法；须人工判断是否收敛至 RedisExpireUtil。"
+  local raw filtered n
+  # 与旧脚本 grep -E 三路 pattern 等价（单行匹配）
+  local _redis_rx='redisTemplate\.expire\s*\(|\.expire\s*\([^)]*TimeUnit|opsForValue\s*\(\s*\)\s*\.set\s*\([^;\n]*TimeUnit'
+  raw="$(rg_plain "${GEN_GLOB_ARGS[@]}" --glob "${JAVA_GLOB}" "${_redis_rx}")"
+  if [[ -z "${raw}" ]]; then
+    filtered=""
+  else
+    filtered="$(echo "${raw}" | rg -v 'RedisExpireUtil\.|incrementAndExpireIfFirst|incrementAndPExpireIfFirst' 2>/dev/null || true)"
+  fi
+  if [[ -z "${filtered}" ]]; then
+    echo "${C_DIM}(无命中，或均已标注 RedisExpireUtil 路径)${C_RST}"
+    n=0
+  else
+    echo "${filtered}" | head -80
+    n="$(echo "${filtered}" | wc -l | tr -d ' ')"
+    [[ "${n}" -gt 80 ]] && echo "${C_DIM}… 其余省略，共 ${n} 行${C_RST}"
+  fi
+  print_group_summary "H1" "${n}"
+
+  echo "${C_DIM}依赖自检（可选）：${C_RST}mvn dependency:tree \\| rg 'spring-data-redis\\|redisson-spring-data' — 见 docs/REDIS_REDISSON_SPRING_DATA.md"
+}
+
+# =====================================================================
+echo "${C_SEC}${SCRIPT_NAME}${C_RST} 根目录: ${ROOT}  |  模式: ${SCAN_MODE}"
+echo "${C_DIM}Java: ${JAVA_GLOB} | SKIP_GEN=${AUTUMN_SCAN_SKIP_GEN:-0} | SKIP_REDIS=${AUTUMN_SCAN_SKIP_REDIS:-0} | EXTRA=${AUTUMN_SCAN_EXTRA:-0}${C_RST}"
+
+if [[ "${SCAN_MODE}" == "redis_only" ]]; then
+  scan_group_h_redis_expire
+  echo ""
+  echo "${C_HDR}════════════════════════════════════════════════════════════════${C_RST}"
+  echo "TOTAL_HITS（仅 H 组）: ${TOTAL_HITS}"
+  if [[ "${AUTUMN_SCAN_FAIL_ON_HIT:-}" == "1" ]] && [[ "${TOTAL_HITS}" -gt 0 ]]; then
+    exit 1
+  fi
   exit 0
 fi
-
-echo "${C_SEC}${SCRIPT_NAME}${C_RST} 根目录: ${ROOT}"
-echo "${C_DIM}Java: ${JAVA_GLOB} | SKIP_GEN=${AUTUMN_SCAN_SKIP_GEN:-0} | EXTRA=${AUTUMN_SCAN_EXTRA:-0}${C_RST}"
 
 scan_group_a
 scan_group_b
@@ -328,6 +385,9 @@ scan_group_d
 scan_group_e
 scan_group_f_info
 scan_group_g_extra
+if [[ "${AUTUMN_SCAN_SKIP_REDIS:-}" != "1" ]]; then
+  scan_group_h_redis_expire
+fi
 
 echo ""
 echo "${C_HDR}════════════════════════════════════════════════════════════════${C_RST}"

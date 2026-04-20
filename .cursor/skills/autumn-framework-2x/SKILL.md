@@ -8,7 +8,7 @@ description: >-
   module dir = package = table prefix; Dao SQL only via MyBatis Provider (*DaoSql extends RuntimeSql), never inline @Select/@Update;
   No hardcoded SQL dialect quotes in Java (use RuntimeSql quote/columnInWrapper or WrapperColumns.columnInWrapper / orderByColumnExpression / entityWrapperAllEqQuoted per docs/AI_DATABASE.md §4.0);
   Controller must not use Dao; Service uses baseMapper; gen/Pages/list.html/js never hand-edited; statics/pages/Site/PageAware.
-  Read docs/AI_CODEGEN.md, docs/AI_DATABASE.md. When this skill applies: agent MUST run scripts/constraints-scan on the task root, read grouped output (A–G), conclude what is a real violation, and fix in scope; re-run after edits. See skill body "约束扫描门禁".
+  Read docs/AI_CODEGEN.md, docs/AI_DATABASE.md. When this skill applies: agent MUST run scripts/constraints-scan on the task root, read grouped output (A–H incl. Redis TTL), conclude what is a real violation, and fix in scope; re-run after edits. See skill body "约束扫描门禁".
   Triggers on cn.org.autumn 2.0.0, Spring Boot 2.7, JDK 8, ModuleService, RuntimeSql, PageAware.
 ---
 
@@ -43,7 +43,7 @@ description: >-
    - 可选环境变量：**`AUTUMN_SCAN_SKIP_GEN=1`**（减轻 gen 噪声）、**`AUTUMN_SCAN_EXTRA=1`**（双键等额外启发式，见脚本头注释）。
 
 2. **解读输出**  
-   - 按脚本分组 **A～G** 阅读命中；对照 **`docs/AI_DATABASE.md` §8.5** 与 **`docs/AI_STANDARDS.md`**。  
+   - 按脚本分组 **A～H** 阅读命中（H 为 Redis TTL，可 `AUTUMN_SCAN_SKIP_REDIS=1` 跳过）；对照 **`docs/AI_DATABASE.md` §8.5** 与 **`docs/AI_STANDARDS.md`**。  
    - **区分**：真实违规 vs **误报**（注释、测试类、`target/`、历史生成代码、框架内置例外）。**F 组**仅为 gen 路径清单，**不计入** TOTAL，不得当成必须删文件。
 
 3. **修复**  

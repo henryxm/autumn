@@ -200,7 +200,7 @@
 
 1. 先阅读 **`docs/REDIS_REDISSON_SPRING_DATA.md`**（依赖对齐，治本）与 **`docs/REDIS_TTL_GUIDE.md`**（何时适合用 **`RedisExpireUtil`**、API 对照、推荐处理顺序）。
 2. **推荐**用 **`cn.org.autumn.utils.RedisExpireUtil`** 统一表达 TTL 语义（Lua 或服务端语义），避免各项目复制零散脚本；是否替换存量 `RedisTemplate.expire` / `set(..., TimeUnit)` 由团队按风险与迭代安排决定。
-3. 可选使用 **`scripts/redis-expire-forbidden-scan.sh`** 做静态检索，辅助代码评审。
+3. 可选使用 **`scripts/constraints-scan`** 的 **H 组**（全文体检默认包含；仅 Redis 时用 **`scripts/constraints-scan --redis-expire-only`**）做静态检索，辅助代码评审。
 
 说明：§15 不否定 Spring 默认写法在「依赖已正确对齐」时的可用性；文档重点是**讲清风险场景**并给出 **Autumn 侧的一致推荐路径**。
 
@@ -223,5 +223,5 @@
 
 ## 17. 维护约定
 
-- 新增与「实体/库表/Dao/资源/页面」相关的团队规则时，**优先更新本文**，并同步 `docs/AI_INDEX.md`、`docs/AI_GUIDE.md` 摘要；**多库类型、方言、Wrapper/Provider 纪律**以 **`docs/AI_DATABASE.md`** 为落地专篇，变更时同步该文 §2；**老旧项目注解 Dao / 方言 Wrapper 迁移与扫描清单**见 **`docs/AI_DATABASE.md` §8** 与 **`docs/AI_UPGRADE.md` §3.3**；与代码生成流程或三步节奏相关的补充可落在 **`docs/AI_CODEGEN.md`**。**Redis TTL 与 `RedisExpireUtil`** 以 **`docs/REDIS_TTL_GUIDE.md`** 为专篇，变更 API 或扫描脚本时同步 **`autumn-lib`** 与 **`scripts/redis-expire-forbidden-scan.sh`**。
+- 新增与「实体/库表/Dao/资源/页面」相关的团队规则时，**优先更新本文**，并同步 `docs/AI_INDEX.md`、`docs/AI_GUIDE.md` 摘要；**多库类型、方言、Wrapper/Provider 纪律**以 **`docs/AI_DATABASE.md`** 为落地专篇，变更时同步该文 §2；**老旧项目注解 Dao / 方言 Wrapper 迁移与扫描清单**见 **`docs/AI_DATABASE.md` §8** 与 **`docs/AI_UPGRADE.md` §3.3**；与代码生成流程或三步节奏相关的补充可落在 **`docs/AI_CODEGEN.md`**。**Redis TTL 与 `RedisExpireUtil`** 以 **`docs/REDIS_TTL_GUIDE.md`** 为专篇，变更 API 或扫描脚本时同步 **`autumn-lib`** 与 **`scripts/constraints-scan`**（H 组）。
 - 若与 `docs/AI_MAP.md` §4「开发决策规则」表述重叠，以**本文 §2～§14**、**§15** 为应用层与数据访问纪律的权威表述；MAP 保留框架能力级硬约束与类索引。**索引与唯一约束叠用纪律（§10.2）** 变更时同步 **`docs/AI_BOOT.md` §3**、**`docs/AI_MAP.md` §2.10.2**。**实体双键（§10.4）** 变更时同步 **`docs/AI_DATABASE.md` §1.1** 与 **`autumn-lib`** 中 **`Uuid` / `SnowflakeId`** 说明（若工具 API 有变）。

@@ -260,7 +260,7 @@ rg -n '`[a-zA-Z_][a-zA-Z0-9_]*`' --glob '*Service*.java' .
 rg -n 'FIND_IN_SET|IFNULL\(|DATE_FORMAT\(|GROUP_CONCAT\(|LAST_INSERT_ID\(' --glob '*.java' .
 ```
 
-**仓库脚本（分组体检）**：根目录执行 **`scripts/constraints-scan`**（只读、`rg` 必选），按 **实体命名 / 索引唯一 / Dao 注解 SQL / Wrapper / 分层 / DDL 文件名** 等分组输出，规则与 **`docs/AI_STANDARDS.md`**、本文 §1～§5、§8 及 **`docs/AI_BOOT.md`** 表名约定等对读；详见脚本头部注释与环境变量 **`AUTUMN_SCAN_SKIP_GEN`** / **`AUTUMN_SCAN_EXTRA`**。
+**仓库脚本（分组体检）**：根目录执行 **`scripts/constraints-scan`**（只读、`rg` 必选），按 **A～G / H（Redis TTL / expire 可疑写法，见 `REDIS_TTL_GUIDE`）** 分组输出；规则与 **`docs/AI_STANDARDS.md`**、本文 §1～§5、§8、**`docs/REDIS_TTL_GUIDE.md`** 及 **`docs/AI_BOOT.md`** 表名约定等对读。详见脚本头部注释与环境变量 **`AUTUMN_SCAN_SKIP_GEN`** / **`AUTUMN_SCAN_SKIP_REDIS`** / **`AUTUMN_SCAN_EXTRA`**；仅检 Redis 时用 **`--redis-expire-only`**。
 
 ---
 
