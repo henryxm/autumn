@@ -1,5 +1,6 @@
 package cn.org.autumn.config;
 
+import cn.org.autumn.gson.FlexibleEnumGsonTypeAdapterFactory;
 import com.google.gson.*;
 import lombok.Getter;
 import org.springframework.context.annotation.Bean;
@@ -55,6 +56,7 @@ public class GsonConfig {
                 .registerTypeAdapter(Date.class, dateAdapter)
                 .registerTypeAdapter(Boolean.class, booleanAdapter)
                 .registerTypeAdapter(boolean.class, booleanAdapter)
+                .registerTypeAdapterFactory(new FlexibleEnumGsonTypeAdapterFactory())
                 .serializeNulls() // 序列化null值
                 .create();
     }
