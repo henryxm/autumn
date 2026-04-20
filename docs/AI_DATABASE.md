@@ -17,6 +17,15 @@
 4. **注解建表**  
    仅 **`MYSQL` / `MARIADB` / `POSTGRESQL`** 会执行框架注解同步（`DatabaseType#supportsAnnotationTableSync()`）。其余类型须用 Flyway / Liquibase / 厂商工具或手工 DDL；不得假设 TableInit 会建表。
 
+5. **外键与 WHERE 中的实体引用**  
+   表间关联、子查询与业务条件中引用的「对方实体标识」必须使用 **`docs/AI_STANDARDS.md` §10.4** 定义的 **业务主键列**（`Uuid.uuid()` / **`SnowflakeId`** 等），**禁止**使用自增 **`Long id`** 作为关联键或对外资源 ID。**`id`** 仅限生成 CRUD 与技术主键回填场景（见 §1.1）。
+
+### 1.1 关联列与 Wrapper 写法（承接 STANDARDS §10.4）
+
+- **FK 列命名**：与被引用实体的业务主键列语义一致（如 `xxx_biz_key`、`xxx_uuid`），存 **业务主键值**，不存对方 **`id`**。  
+- **JOIN / `eq`**：条件侧使用上述业务列 + **`RuntimeSql` / `WrapperColumns`** 按 **`docs/AI_DATABASE.md` §4.0** 引用列名；禁止假设「全世界都用 `id` 关联」。  
+- **雪花 ID**：长整型业务主键生成使用 **`cn.org.autumn.utils.SnowflakeId`**（多节点须配置 **`autumn.snowflake.worker-id`** / **`autumn.snowflake.datacenter-id`**）；字符串业务主键优先 **`Uuid.uuid()`**。
+
 ---
 
 ## 2. 框架已支持的 `DatabaseType`（与代码一致）
@@ -248,6 +257,8 @@ rg -n '`[a-zA-Z_][a-zA-Z0-9_]*`' --glob '*Service*.java' .
 # 已知高风险函数（与扫描脚本部分重叠）
 rg -n 'FIND_IN_SET|IFNULL\(|DATE_FORMAT\(|GROUP_CONCAT\(|LAST_INSERT_ID\(' --glob '*.java' .
 ```
+
+**仓库脚本（分组体检）**：根目录执行 **`scripts/constraints-scan`**（只读、`rg` 必选），按 **实体命名 / 索引唯一 / Dao 注解 SQL / Wrapper / 分层 / DDL 文件名** 等分组输出，规则与 **`docs/AI_STANDARDS.md`**、本文 §1～§5、§8 及 **`docs/AI_BOOT.md`** 表名约定等对读；详见脚本头部注释与环境变量 **`AUTUMN_SCAN_SKIP_GEN`** / **`AUTUMN_SCAN_EXTRA`**。
 
 ---
 

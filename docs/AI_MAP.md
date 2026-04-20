@@ -340,8 +340,8 @@ public class DemoService extends ModuleService<DemoDao, DemoEntity> implements L
 
 因此：
 
-1. **`@Column(isUnique = true)` 与 `@Index` 不要叠在同一列**  
-   建表时：`isUnique` 已在列定义处生成 `UNIQUE KEY`。**字段级**仍写 `@Index` 时，`TableInfo` 会**忽略**该 `@Index` 并打 **WARN**。**类级** `@Index` / `@Indexes` 的 `fields` 若包含已 `isUnique` 的列，会从该索引定义中**剔除**该列（`isUnique` 优先）并 **WARN**；剔除后若索引无剩余列则整段索引忽略并 **WARN**。
+1. **`@Column(isUnique = true)` 与 `@Index` 不得叠用（团队硬性约束，无例外）**  
+   规范见 **`docs/AI_STANDARDS.md` §10.2**：凡 `isUnique = true` 的字段**不得**再标 `@Index`。实现行为（排障参考）：建表时 `isUnique` 已在列定义处生成 `UNIQUE KEY`。**字段级**仍写 `@Index` 时，`TableInfo` 会**忽略**该 `@Index` 并打 **WARN**。**类级** `@Index` / `@Indexes` 的 `fields` 若包含已 `isUnique` 的列，会从该索引定义中**剔除**该列（`isUnique` 优先）并 **WARN**；剔除后若索引无剩余列则整段索引忽略并 **WARN**。
 
 2. **字段上已有 `@Index` 时，不要在类级 `@Indexes` / 类级 `@Index` 里再包含同一列的等价索引**  
    否则同一列会被注册两次，建表或变更时可能生成两条含义重叠的 `INDEX`，属于重复声明。
@@ -401,6 +401,7 @@ public class DemoService extends ModuleService<DemoDao, DemoEntity> implements L
 - **新增接口禁止**在 Controller 上使用 **`@RequiresPermissions`**（该注解保留给代码生成/后台管理语义）；普通用户可访问接口用**登录态**鉴权（`docs/AI_STANDARDS.md` §6）。
 - **FreeMarker 页面**：避免与 FTL 冲突；条件等可用 **`<!-- -->`** 包裹以保持 HTML 规范；**`<script>`** 内 FTL 插值须保证渲染后 JS 合法；无法避免冲突时用 **`<#noparse>`**（`docs/AI_STANDARDS.md` §7）。
 - **实体与库表**：依赖框架实体扫描与 **`autumn.table.*` 开关**做建表/更新；**禁止**把**常规初始化 DDL `.sql`** 作为默认交付物（`docs/AI_STANDARDS.md` §8）。
+- **实体主键**：默认 **自增 `Long id`** 仅用于后台生成 CRUD；**业务主键**（`Uuid.uuid()` / **`SnowflakeId`** 等唯一列）用于关联与对外标识；**禁止**用 **`id`** 做外键或对外资源 ID（`docs/AI_STANDARDS.md` §10.4，`docs/AI_DATABASE.md` §1.1）。
 - **模块名 = 包段 = 表前缀**：**禁止**把模块名当作**实体类名前缀**造成生成错乱；物理表名惯例见 `docs/AI_BOOT.md` §3.2 与 `docs/AI_STANDARDS.md` §9。
 - **新代码 SQL**：**禁止**在 Dao 接口注解上**硬编码 SQL**；**必须**用 **Provider**（跨库见 **`docs/AI_DATABASE.md`**，PG 细节见 **`docs/AI_POSTGRESQL.md`**）（`docs/AI_STANDARDS.md` §12）。
 - **Controller / Service / Dao**：Controller **禁止**用 Dao；本实体 Service 用 **`baseMapper`**、**禁止**再注入本 Dao；跨实体 **注入 Service** 而非他域 Dao（`docs/AI_STANDARDS.md` §13）。
@@ -518,7 +519,7 @@ public class DemoService extends ModuleService<DemoDao, DemoEntity> implements L
   - 把业务逻辑堆在 `controller/gen/*` 可重生层，导致再次生成被覆盖。
   - 新建与 `ModuleService` 平行的基础服务层，重复平台能力。
 - 建表注解反模式：
-  - `Column(isUnique = true)` 与同一列的 `@Index` / `@Indexes` 重复声明。
+  - **`Column(isUnique = true)` 仍对该列声明 `@Index` / `@Indexes`**（硬性禁止，见 **`docs/AI_STANDARDS.md` §10.2**）。
   - 字段 `@Index` 与类级 `@Indexes` 对同一列重复声明。
   - `@Column.type()` 与真实库类型不一致，导致前缀长度收敛不符合预期（见 2.10.3、`IndexPrefixRules`）。
   - `@Column.comment` / `@Table.comment` 写成整段长说明却**无冒号**，或**冒号前**写成整句长标题，导致多语言/列表表头位展示过长或难以对齐（见 2.10.5）。

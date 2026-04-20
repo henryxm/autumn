@@ -4,6 +4,9 @@ import org.apache.commons.lang.StringUtils;
 
 import java.util.UUID;
 
+/**
+ * 无连字符小写 32 位 UUID，常用作<strong>业务主键</strong>；长整型可选 {@link SnowflakeId}。自增 {@code id} 仅用于后台生成 CRUD。
+ */
 public class Uuid {
     public static String uuid() {
         return UUID.randomUUID().toString().replace("-", "").toLowerCase();

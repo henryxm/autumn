@@ -4,10 +4,10 @@ description: >-
   Autumn 3.0.0 line ONLY: JDK 17+, Spring Boot 3.5.x, MyBatis-Plus 3.x, jakarta.* namespace.
   Use on autumn branch 3.0.0 (artifact 3.0.0) or business apps pinned to that stack.
   NOT for Autumn 2.0.0 / JDK 8 / Spring Boot 2.7 / javax-only — use autumn-framework-2x on master.
-  Enforces docs/AI_STANDARDS.md + docs/AI_DATABASE.md: entity-driven schema; Dao SQL only via MyBatis Provider (*DaoSql extends RuntimeSql);
+  Enforces docs/AI_STANDARDS.md + docs/AI_DATABASE.md: never combine @Column(isUnique=true) with @Index on same field (§10.2); dual-key entities (auto Long id for gen CRUD only + unique biz key via Uuid.uuid()/SnowflakeId for FK/API; never use id as association); entity-driven schema; Dao SQL only via MyBatis Provider (*DaoSql extends RuntimeSql);
   No hardcoded dialect quotes in Java (RuntimeSql quote/columnInWrapper or WrapperColumns per docs/AI_DATABASE.md §4.0);
   Controller must not use Dao; Service uses baseMapper; gen/Pages/list.html/js never hand-edited; statics/pages/Site/PageAware.
-  Read docs/AI_CODEGEN.md, docs/AI_DATABASE.md; scripts/autumn-dependency-scan.sh for upgrades.
+  Read docs/AI_CODEGEN.md, docs/AI_DATABASE.md. When this skill applies: agent MUST run scripts/constraints-scan on the task root, read grouped output (A–G), conclude real violations, and fix in scope; re-run after edits. See skill body "约束扫描门禁".
   Triggers on cn.org.autumn 3.0.0, Spring Boot 3.5, JDK 17, ModuleService, RuntimeSql, PageAware, SpringDoc.
 ---
 
@@ -31,6 +31,26 @@ description: >-
 - 当前工作区是 **autumn 仓库且检出 3.0.0 分支**，或业务工程 **Maven 依赖锁定 `cn.org.autumn` 3.0.0**。
 - 提到：`cn.org.autumn`、`ModuleService`、`gen`、`Dao`、`Provider`、`RuntimeSql`、`DatabaseType`、`statics`、`pages`、`Site`、`PageAware`、`autumn.table` 等，且 **栈为 JDK 17+ + Boot 3.5**。
 
+## 约束扫描门禁（启用本 Skill 作代码/实体/库表相关任务时 **必选**）
+
+1. **执行脚本**（须用终端实际跑，不要只读文档当已扫过）  
+   - 本仓库：在**工作区根**执行 `bash scripts/constraints-scan`（或 `bash scripts/constraints-scan .`）。  
+   - 业务仓库且本机并列 clone 了 autumn：可对业务根执行  
+     `bash ../autumn/scripts/constraints-scan /path/to/business-root`  
+     （路径按实际调整）；若无 `scripts/constraints-scan`，先到 autumn 仓库拷贝该脚本再执行。  
+   - **依赖**：已安装 **`rg`（ripgrep）**。  
+   - 可选环境变量：**`AUTUMN_SCAN_SKIP_GEN=1`**、**`AUTUMN_SCAN_EXTRA=1`**（见脚本头注释）。
+
+2. **解读输出**  
+   - 按脚本分组 **A～G** 阅读命中；对照 **`docs/AI_DATABASE.md` §8.5** 与 **`docs/AI_STANDARDS.md`**。  
+   - **区分**真实违规与误报（注释、测试、`target/`、历史生成代码等）。**F 组**仅为 gen 清单，**不计入** TOTAL。
+
+3. **修复**  
+   - 任务范围内可确定的违规：**直接改代码**。超出范围或需决策的：**写明残留风险**，勿静默忽略。
+
+4. **收尾**  
+   - 改过相关文件后，条件允许时 **再跑一次** `constraints-scan`。
+
 ## 文档加载顺序
 
 所有 `AI_*.md` 均在仓库 **`docs/`** 下。本仓库内用 `@docs/...`；业务工程与 autumn 并列时用 `@../autumn/docs/...`（见 `docs/AI_INDEX.md` §4）。
@@ -50,8 +70,9 @@ description: >-
 
 - 框架扫描实体 + **`autumn.table.*`** 启动期对齐表结构；**禁止**把常规 **`DDL .sql`** 当默认交付物。
 - **`modules/<子目录>/`**：目录名 = 包段 = 表前缀；**禁止**把前缀拼进实体类名；物理表名见 **`docs/AI_BOOT.md` §3.2**。
-- **`@Table` / `@Column.comment`**：短标题 + **半角 `:`**；**禁止**同列 **`@Index` + `@Column(isUnique=true)`** 叠用。
+- **`@Table` / `@Column.comment`**：短标题 + **半角 `:`**；**凡 `@Column(isUnique=true)` 的字段禁止再使用 `@Index`**（含类级索引中含该列，§10.2，无例外）。
 - 整型/布尔：优先基本类型 + 默认值。
+- **双键模型（默认强制，详见 `docs/AI_STANDARDS.md` §10.4）**：每个实体须有 **`@TableId` 自增 `Long id`**（仅后台代码生成 CRUD、勿作业务关联）；**另增唯一业务主键列**（插入前赋值：`Uuid.uuid()` 小写 32 位，或 **`cn.org.autumn.utils.SnowflakeId`**），用于外键、对外 API、缓存键等。**禁止**用 **`id`** 关联其它表或被引用。SQL 侧见 **`docs/AI_DATABASE.md` §1.1**。
 
 ## 多库与 SQL（与 `docs/AI_DATABASE.md` 一致）
 
@@ -99,11 +120,14 @@ description: >-
 
 ## 自检清单
 
+- 已按上文 **约束扫描门禁** 执行 **`bash scripts/constraints-scan`**（或指向业务根的等价命令），并对照输出完成解读/修复（或写明无法修复的原因）？
 - 无多余 **`schema.sql` / `init.sql`**？  
 - Dao 无内联 SQL？**Wrapper** 无方言黑魔法？Java 无手写 **反引号/双引号/方括号** 拼 SQL（§4.0）？  
 - **Controller** 未碰 **Dao**？未手改 **gen / list.html/js**？  
 - 新页有 **`Site` + `@PageAware`**？  
 - 生成路径与 **GenUtils** 一致？
+- 新实体是否有 **业务主键**且关联列未误用 **`Long id`**？多节点雪花是否配置 **`autumn.snowflake.worker-id` / `datacenter-id`**？
+- **`isUnique=true` 的 `@Column` 是否未再叠 `@Index`**（§10.2）？
 
 ## 多项目一句话
 
