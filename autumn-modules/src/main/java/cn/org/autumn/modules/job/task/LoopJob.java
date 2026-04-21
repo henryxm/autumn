@@ -60,8 +60,8 @@ public class LoopJob extends Factory implements LoadFactory.Must {
     private static volatile boolean assignInitialized = false;
 
     static {
-        // 从环境变量或系统属性读取服务器标签
-        String tag = Config.getEnv("server.tag");
+        // 从环境变量或系统属性读取（YAML 需在 Spring 注入 Environment 之后，见 must() 补读）
+        String tag = Config.getEnv("autumn.server.tag");
         if (StringUtils.isNotBlank(tag)) {
             serverTag = tag.trim();
         }
@@ -1063,8 +1063,14 @@ public class LoopJob extends Factory implements LoadFactory.Must {
     @Order(0)
     public void must() {
         taskExecutor = asyncTaskExecutor;
+        if (StringUtils.isBlank(serverTag)) {
+            String tag = Config.getEnv("autumn.server.tag");
+            if (StringUtils.isNotBlank(tag))
+                serverTag = tag.trim();
+        }
         if (StringUtils.isBlank(serverTag) && StringUtils.isNotBlank(envBean.getNodeTag()))
             serverTag = envBean.getNodeTag();
+        log.info("Server start with tag: {}", serverTag);
         List<OneSecond> oneSeconds = getOrderList(OneSecond.class, "onOneSecond");
         for (OneSecond oneSecond : oneSeconds) {
             onOneSecond(oneSecond);

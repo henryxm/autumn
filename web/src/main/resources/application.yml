@@ -47,6 +47,9 @@ spring:
       matching-strategy: ANT_PATH_MATCHER
 
 autumn:
+  #服务器标签，用于指定定时任务指定的节点服务器
+  server:
+    tag: master
   # MyBatis-Plus 列名/表名包装：下方 mybatis-plus.global-config.db-config 为默认；
   # cn.org.autumn.config.MybatisPlusConfig 按 autumn.database 覆盖（PG/Oracle/SQL Server 等）。
   # 物理列名为 SQL 保留字（如 order）时：实体 Java 属性勿用保留字，用 sortOrder + @TableField("order")，见 SysConfigEntity。
