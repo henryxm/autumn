@@ -55,6 +55,11 @@ autumn:
     wizard: false
     config-path: config/datasource.yml
     force: false
+  # 备份节点控制（与 Redisson 分布式锁叠加：先标记排除副本，再在剩余实例上争用 leader）。
+  # backup:
+  #   exclude: true                    # 推荐：本实例永不执行备份（Deployment/环境变量单独设为 true）
+  #   exclude-hosts: replica,k8s-*      # 可选：集中列出主机模式（前缀/后缀/*包含*）
+  #   exclude-addresses: 10.244.12.3    # 可选：按本机 IP 精确排除
   redis:
     open: false  # 是否开启redis缓存  true开启   false关闭
   shiro:

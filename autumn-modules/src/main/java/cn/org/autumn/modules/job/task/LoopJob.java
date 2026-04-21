@@ -499,6 +499,36 @@ public class LoopJob extends Factory implements LoadFactory.Must {
     // ========== 批量执行引擎（核心优化） ==========
 
     /**
+     * 批量超限日志用：列出本分类批次内各任务的注册 id、展示名、类全名、分组、分配标签与入口方法。
+     */
+    private static String describeBatchJobsForLog(String category, List<Job> jobList) {
+        if (jobList.isEmpty())
+            return "";
+        StringBuilder sb = new StringBuilder(jobList.size() * 120);
+        for (int i = 0; i < jobList.size(); i++) {
+            Job job = jobList.get(i);
+            Class<?> userClass = getUserClass(job);
+            String key = category + "|" + userClass.getName();
+            JobInfo info = jobInfoMap.get(key);
+            if (i > 0)
+                sb.append(" | ");
+            if (info != null) {
+                sb.append("name=").append(info.getDisplayName());
+                sb.append(", id=").append(info.getId());
+                sb.append(", class=").append(info.getClassName());
+                if (StringUtils.isNotBlank(info.getGroup()))
+                    sb.append(", group=").append(info.getGroup());
+                String assign = info.getAssignTag();
+                sb.append(", assign=").append(StringUtils.isNotBlank(assign) ? assign : "*");
+                sb.append(", entry=on").append(category);
+            } else {
+                sb.append("(unregistered) class=").append(userClass.getName());
+            }
+        }
+        return sb.toString();
+    }
+
+    /**
      * 统一的分类批量执行方法。
      * <p>
      * 1. 支持并行/串行两种模式，parallelExecution=true 时利用线程池并行执行同分类所有任务。
@@ -539,7 +569,14 @@ public class LoopJob extends Factory implements LoadFactory.Must {
         Long interval = CATEGORY_INTERVAL.get(category);
         if (interval != null && batchDuration > interval) {
             categoryOverrunCount.computeIfAbsent(category, k -> new AtomicLong(0)).incrementAndGet();
-            log.warn("Category [{}] batch overrun: {}ms > {}ms interval", category, batchDuration, interval);
+            log.warn(
+                    "Category [{}] batch overrun: {}ms > {}ms interval | parallel={}, batchSize={}, jobs: {}",
+                    category,
+                    batchDuration,
+                    interval,
+                    parallelExecution,
+                    jobList.size(),
+                    describeBatchJobsForLog(category, jobList));
         }
     }
 
