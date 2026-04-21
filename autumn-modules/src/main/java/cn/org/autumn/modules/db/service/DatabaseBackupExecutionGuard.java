@@ -1,12 +1,11 @@
 package cn.org.autumn.modules.db.service;
 
+import cn.org.autumn.site.InitFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import javax.annotation.PostConstruct;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -25,11 +24,9 @@ import java.util.Locale;
  * <p>主机匹配依据：{@code InetAddress.getLocalHost()} 的 hostName、canonicalHostName、hostAddress，
  * 以及环境变量 {@code HOSTNAME}、{@code COMPUTERNAME}。</p>
  */
+@Slf4j
 @Component
-public class DatabaseBackupExecutionGuard {
-
-    private static final Logger log = LoggerFactory.getLogger(DatabaseBackupExecutionGuard.class);
-
+public class DatabaseBackupExecutionGuard implements InitFactory.Init {
     /**
      * 显式排除本节点；为 true 时不执行备份（优先级最高，无需配置主机/IP 列表）。
      */
@@ -48,15 +45,13 @@ public class DatabaseBackupExecutionGuard {
     private volatile NodeIdentity cachedIdentity;
     private volatile Boolean cachedExcluded;
 
-    @PostConstruct
     public void init() {
         excludeHostPatterns = splitCsv(excludeHostsRaw);
         excludeAddresses = splitCsv(excludeAddressesRaw);
         if (excludeSelf) {
-            log.info("数据库备份：本节点已设置 autumn.backup.exclude=true，将不执行备份");
+            log.info("Database backup is excluded on this node.");
         } else if (!excludeHostPatterns.isEmpty() || !excludeAddresses.isEmpty()) {
-            log.info("数据库备份排除节点（按主机/IP 列表）: exclude-hosts={}, exclude-addresses={}",
-                    excludeHostPatterns, excludeAddresses);
+            log.info("Database backup is excluded for ip/host: exclude-hosts={}, exclude-addresses={}", excludeHostPatterns, excludeAddresses);
         }
     }
 
@@ -95,12 +90,9 @@ public class DatabaseBackupExecutionGuard {
             return;
         }
         if (excludeSelf) {
-            throw new IllegalStateException(
-                    "当前节点已配置 autumn.backup.exclude=true，不执行数据库备份；请使用未排除的实例发起备份。");
+            throw new IllegalStateException("当前节点已配置 autumn.backup.exclude=true，不执行数据库备份；请使用未排除的实例发起备份。");
         }
-        throw new IllegalStateException(
-                "当前节点匹配 autumn.backup.exclude-hosts / exclude-addresses，不执行数据库备份。节点标识："
-                        + identity().describe());
+        throw new IllegalStateException("当前节点匹配 autumn.backup.exclude-hosts / exclude-addresses，不执行数据库备份。节点标识：" + identity().describe());
     }
 
     private NodeIdentity identity() {

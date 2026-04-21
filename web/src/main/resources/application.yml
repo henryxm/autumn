@@ -46,6 +46,9 @@ spring:
       matching-strategy: ANT_PATH_MATCHER
 
 autumn:
+  #服务器标签，用于指定定时任务指定的节点服务器
+  server:
+    tag: master
   # —— 首次安装向导（给最终用户用）——
   # autumn.install.wizard：是否启用。为 true 且尚未生成数据源文件时，打开网站会先进入安装页，无需手写配置。
   # autumn.install.config-path：连接信息保存位置（相对程序运行目录），默认 config/datasource.yml。

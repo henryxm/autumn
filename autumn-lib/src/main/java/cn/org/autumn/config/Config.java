@@ -115,6 +115,7 @@ public class Config {
         return null;
     }
 
+    /** 读取配置：环境变量 → 系统属性 → Spring {@link Environment}（含 yml/properties）。 */
     public static String getEnv(String key) {
         if (StringUtils.isBlank(key))
             return key;
@@ -125,7 +126,16 @@ public class Config {
         if (StringUtils.isBlank(value)) {
             value = System.getProperties().getProperty(key);
         }
-        return value;
+        if (StringUtils.isBlank(value)) {
+            Environment env = getInstance().getEnvironment();
+            if (env != null) {
+                String p = env.getProperty(key);
+                if (StringUtils.isNotBlank(p)) {
+                    value = p;
+                }
+            }
+        }
+        return value != null ? value : "";
     }
 
     public static Object getBean(Class<?> clazz) {
