@@ -53,6 +53,9 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
     @Autowired
     TagTaskExecutor asyncTaskExecutor;
 
+    @Autowired
+    private DatabaseBackupExecutionGuard databaseBackupExecutionGuard;
+
     @Value("${autumn.backup.dir:#{systemProperties['user.home'] + '/database'}}")
     private String backupDir;
 
@@ -143,6 +146,7 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
      */
     public DatabaseBackupEntity backupAsync(String remark, String mode, String tableList, Long strategyId) {
         ensureInitialized();
+        databaseBackupExecutionGuard.assertBackupAllowed();
         DatabaseBackupEntity entity = new DatabaseBackupEntity();
         entity.setDatabase(databaseName);
         entity.setBackupDialect(databaseHolder.getType().name());
