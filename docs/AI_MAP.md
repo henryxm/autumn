@@ -84,6 +84,21 @@
   - 通过 `sysConfigService.getObject(...)` 获取对象配置
   - 配置项与默认值详见 `docs/AI_DISTRIBUTED_LOCK.md`
 
+### 2.2B 会话终止与重登守卫（Shiro）
+
+- 核心类：
+  - `cn.org.autumn.modules.sys.shiro.ShiroSessionService`
+  - `cn.org.autumn.modules.sys.shiro.ForceLogoutRememberMeManager`
+  - `cn.org.autumn.modules.sys.controller.SysSessionController`
+- 关键点：
+  - 删除会话后自动写入「强制重登」标记，阻断 rememberMe 自动恢复。
+  - RememberMe 恢复时命中标记会清理 cookie 并拒绝自动登录。
+  - 用户密码登录成功后自动清理强制重登标记。
+  - 通用 API：`/sys/session/self/list`、`/sys/session/self/terminate`、`/sys/session/self/terminate-others`、`/sys/session/self/ping`。
+  - 默认前端守卫：`statics/js/autumn-session-guard.js`（轮询 ping 并在会话失效时跳转登录页）。
+- 专项文档：
+  - `docs/AI_SESSION_GUARD.md`
+
 ### 2.3 混合加解密（RSA + AES）
 
 - 核心类：

@@ -8,6 +8,10 @@ import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -104,5 +108,109 @@ public class SysSessionController {
         String userUuid = o.toString().trim();
         shiroSessionService.clearForceLogout(userUuid);
         return R.ok().put("msg", "已取消强制重新登录");
+    }
+
+    /**
+     * 当前登录用户的会话列表（用于前台「登录设备管理」）。
+     */
+    @GetMapping("/self/list")
+    public R selfList() {
+        String userUuid = currentUserUuid();
+        if (StringUtils.isBlank(userUuid)) {
+            return R.error(401, "未登录");
+        }
+        Serializable currentId = currentSessionId();
+        List<Map<String, Object>> sessions = shiroSessionService.listSessionsByUserUuid(userUuid, currentId);
+        return R.ok().put("sessions", sessions);
+    }
+
+    /**
+     * 终止当前用户的指定会话（不能终止当前浏览器会话）。
+     */
+    @PostMapping("/self/terminate")
+    public R selfTerminate(@RequestBody Map<String, Object> body) {
+        String userUuid = currentUserUuid();
+        if (StringUtils.isBlank(userUuid)) {
+            return R.error(401, "未登录");
+        }
+        String target = body != null && body.get("sessionId") != null ? StringUtils.trimToEmpty(String.valueOf(body.get("sessionId"))) : "";
+        if (StringUtils.isBlank(target)) {
+            return R.error(400, "sessionId 不能为空");
+        }
+        Serializable currentId = currentSessionId();
+        if (currentId != null && target.equals(String.valueOf(currentId))) {
+            return R.error(400, "不能终止当前会话");
+        }
+        if (!shiroSessionService.isSessionOwnedByUser(userUuid, target)) {
+            return R.error(403, "无权终止该会话");
+        }
+        boolean ok = shiroSessionService.deleteSession(target);
+        return ok ? R.ok().put("ok", true) : R.error(500, "终止失败");
+    }
+
+    /**
+     * 终止当前用户除当前浏览器外的其它全部会话。
+     */
+    @PostMapping("/self/terminate-others")
+    public R selfTerminateOthers() {
+        String userUuid = currentUserUuid();
+        if (StringUtils.isBlank(userUuid)) {
+            return R.error(401, "未登录");
+        }
+        Serializable currentId = currentSessionId();
+        String current = currentId == null ? "" : String.valueOf(currentId);
+        Collection<Serializable> ids = shiroSessionService.getActiveSessionsByUserUuid(userUuid);
+        int terminated = 0;
+        if (ids != null) {
+            List<Serializable> targets = new ArrayList<>(ids);
+            for (Serializable sid : targets) {
+                if (sid == null) {
+                    continue;
+                }
+                String id = String.valueOf(sid);
+                if (StringUtils.isNotBlank(current) && current.equals(id)) {
+                    continue;
+                }
+                if (shiroSessionService.deleteSession(id)) {
+                    terminated++;
+                }
+            }
+        }
+        return R.ok().put("terminated", terminated);
+    }
+
+    /**
+     * 会话保活检测：若命中「强制重登」并且当前仅 rememberMe 身份，则清理登录态并返回 401。
+     */
+    @GetMapping("/self/ping")
+    public R selfPing() {
+        String userUuid = currentUserUuid();
+        if (StringUtils.isBlank(userUuid)) {
+            return R.error(401, "未登录或会话已失效");
+        }
+        boolean forceMarked = shiroSessionService.isForceLogoutMarked(userUuid);
+        if (forceMarked && !ShiroUtils.isAuthenticated()) {
+            ShiroUtils.logout();
+            return R.error(401, "会话已失效，请重新登录").put("reason", "session_terminated");
+        }
+        return R.ok()
+                .put("authenticated", ShiroUtils.isAuthenticated())
+                .put("forceLogoutMarked", forceMarked);
+    }
+
+    private static String currentUserUuid() {
+        try {
+            return ShiroUtils.getUserUuid();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private static Serializable currentSessionId() {
+        try {
+            return ShiroUtils.getSession() != null ? ShiroUtils.getSession().getId() : null;
+        } catch (Exception e) {
+            return null;
+        }
     }
 }
