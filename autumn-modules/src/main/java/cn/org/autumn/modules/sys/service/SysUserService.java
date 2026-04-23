@@ -580,6 +580,14 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         if (sp)
             token = new SuperPasswordToken(username);
         subject.login(token);
+        try {
+            SysUserEntity current = ShiroUtils.getUserEntity();
+            if (current != null && StringUtils.isNotBlank(current.getUuid())) {
+                shiroSessionService.clearForceLogout(current.getUuid());
+            }
+        } catch (Exception e) {
+            log.debug("登录后清理强制重登标记失败: {}", e.getMessage());
+        }
     }
 
     public void login(String username, String password, boolean rememberMe, boolean allow, String way, String reason, HttpServletRequest request) {

@@ -294,11 +294,18 @@ public class ShiroSessionService {
         SessionDAO dao = getSessionDAO();
         try {
             Session session = null;
+            String userUuid = null;
             if (dao != null)
                 session = dao.readSession(sessionId);
+            if (session != null) {
+                userUuid = sessionUserUuid(session);
+            }
             if (session == null && isRedisEnabled()) {
                 String key = RedisKeys.getShiroSessionKey(sysConfigService.getNameSpace(), sessionId.toString());
                 session = (Session) redisTemplate.opsForValue().get(key);
+                if (session != null) {
+                    userUuid = sessionUserUuid(session);
+                }
                 if (session != null)
                     redisTemplate.delete(key);
                 if (session != null && dao != null) {
@@ -307,11 +314,17 @@ public class ShiroSessionService {
                     } catch (Exception ignored) {
                     }
                 }
+                if (session != null && StringUtils.isNotBlank(userUuid)) {
+                    markForceLogout(userUuid);
+                }
                 return session != null;
             }
             if (session != null) {
                 session.setTimeout(0);
                 dao.delete(session);
+                if (StringUtils.isNotBlank(userUuid)) {
+                    markForceLogout(userUuid);
+                }
                 return true;
             }
         } catch (Exception e) {
@@ -384,6 +397,92 @@ public class ShiroSessionService {
         } catch (Exception e) {
             log.warn("取消强制重登失败, userUuid={}: {}", userUuid, e.getMessage());
         }
+    }
+
+    /**
+     * 当前用户是否被标记为「强制重新登录」。
+     */
+    public boolean isForceLogoutMarked(String userUuid) {
+        if (StringUtils.isBlank(userUuid) || redisTemplate == null) {
+            return false;
+        }
+        try {
+            return Boolean.TRUE.equals(redisTemplate.hasKey(RedisKeys.getForceLogoutKey(sysConfigService.getNameSpace(), userUuid)));
+        } catch (Exception e) {
+            log.warn("查询强制重登标记失败, userUuid={}: {}", userUuid, e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * 查询某用户的活动会话列表，用于用户自助会话管理。
+     */
+    public List<Map<String, Object>> listSessionsByUserUuid(String userUuid, Serializable currentSessionId) {
+        List<Map<String, Object>> list = new ArrayList<>();
+        if (StringUtils.isBlank(userUuid)) {
+            return list;
+        }
+        String currentId = currentSessionId == null ? "" : String.valueOf(currentSessionId);
+        Map<Serializable, Session> all = getAllSessionsMap();
+        Set<String> forceLogoutUuids = getForceLogoutUserUuids();
+        for (Session session : all.values()) {
+            if (session == null || session.getId() == null) {
+                continue;
+            }
+            String owner = sessionUserUuid(session);
+            if (!userUuid.equals(owner)) {
+                continue;
+            }
+            list.add(sessionToMap(session, currentId, forceLogoutUuids));
+        }
+        list.sort((a, b) -> {
+            Long t1 = (Long) a.get("lastAccessTime");
+            Long t2 = (Long) b.get("lastAccessTime");
+            if (t1 == null && t2 == null) return 0;
+            if (t1 == null) return 1;
+            if (t2 == null) return -1;
+            return Long.compare(t2, t1);
+        });
+        return list;
+    }
+
+    /**
+     * 会话是否属于指定用户。
+     */
+    public boolean isSessionOwnedByUser(String userUuid, Serializable sessionId) {
+        if (StringUtils.isBlank(userUuid) || sessionId == null) {
+            return false;
+        }
+        Collection<Serializable> ids = getActiveSessionsByUserUuid(userUuid);
+        if (ids == null || ids.isEmpty()) {
+            return false;
+        }
+        String target = String.valueOf(sessionId);
+        for (Serializable id : ids) {
+            if (id != null && target.equals(String.valueOf(id))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private String sessionUserUuid(Session session) {
+        if (session == null) {
+            return null;
+        }
+        try {
+            PrincipalCollection principals = (PrincipalCollection) session.getAttribute(PRINCIPALS_SESSION_KEY);
+            if (principals == null) {
+                return null;
+            }
+            Object primaryPrincipal = principals.getPrimaryPrincipal();
+            if (primaryPrincipal instanceof SysUserEntity) {
+                return ((SysUserEntity) primaryPrincipal).getUuid();
+            }
+        } catch (Exception e) {
+            log.debug("解析会话用户失败: {}", e.getMessage());
+        }
+        return null;
     }
 }
 

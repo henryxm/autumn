@@ -140,5 +140,11 @@
 <script src="${request.contextPath}/statics/libs/app.js"></script>
 <script src="${request.contextPath}/statics/plugins/layer/layer.js"></script>
 <script src="${request.contextPath}/statics/js/index.js"></script>
+<script src="${request.contextPath}/statics/js/autumn-session-guard.js"></script>
+<script>
+  if (window.AutumnSessionGuard && typeof window.AutumnSessionGuard.start === 'function') {
+    window.AutumnSessionGuard.start(60000);
+  }
+</script>
 </body>
 </html>

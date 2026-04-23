@@ -129,6 +129,27 @@ var vm = new Vue({
 	}
 });
 
+try {
+    var qs = new URLSearchParams(window.location.search || '');
+    var expired = qs.get('sessionExpired') === '1';
+    var reason = qs.get('reason');
+    if (!expired) {
+        expired = window.sessionStorage.getItem('autumn_session_expired') === '1';
+        if (!reason) {
+            reason = window.sessionStorage.getItem('autumn_session_expired_reason');
+        }
+    }
+    if (expired) {
+        vm.error = true;
+        vm.errorMsg = reason === 'session_terminated'
+            ? '你的登录会话已被终止，请重新登录。'
+            : '登录状态已过期，请重新登录。';
+        window.sessionStorage.removeItem('autumn_session_expired');
+        window.sessionStorage.removeItem('autumn_session_expired_reason');
+    }
+} catch (e) {
+}
+
 vm.checkenv();
 
 </script>

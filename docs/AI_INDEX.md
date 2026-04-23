@@ -19,6 +19,7 @@
 - `docs/AI_DISTRIBUTED_LOCK.md`：分布式锁能力（`DistributedLockService` / `DistributedService`）、场景化加锁、降级与抗雪崩策略、`DistributedLockConfig` 配置项与默认值、业务域快捷模板（含项目示例源码入口）
 - `docs/AI_POSTGRESQL.md`：PostgreSQL 专项（DDL/元数据、`PostgresQuerySql`、迁移与兼容性）；通用跨库口径以 **`docs/AI_DATABASE.md`** 为准
 - `docs/AI_UPGRADE.md`：依赖方升级 autumn 时的清单、一键扫描脚本说明与自动化边界
+- `docs/AI_SESSION_GUARD.md`：会话终止、防 RememberMe 自动恢复、`/sys/session/self/*` 通用接口与前端守卫接入
 - `docs/AI_CRYPTO.md`：接口加解密兼容与迁移
 - `docs/AI_SECURITY.md`：安全强校验、灰度、演练
 - `docs/AI_CODEGEN.md`：**代码生成链路（gen / GenUtils / 模板 / 库表反射）**与**推荐三步开发流程**（实体 → 生成骨架 → 业务与页面）；**`BaseCacheService` / `ShareCacheService` / `BaseQueueService`** 能力说明
@@ -30,6 +31,7 @@
 ## 2. 推荐加载矩阵（按场景）
 
 - 日常开发：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md`（涉及 SQL/Wrapper/多库时追加 **`docs/AI_DATABASE.md`**）
+- 会话终止与重新登录守卫：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md + docs/AI_SESSION_GUARD.md`
 - 分布式互斥/跨节点任务：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md + docs/AI_DISTRIBUTED_LOCK.md`
 - 新模块/代码生成：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md + docs/AI_CODEGEN.md + docs/AI_TEMPLATES.md`（先读代码生成流程与三步节奏，再确认生成层约束，后落业务层）
 - 多项目模板整合（TemplateFactory）：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md + docs/AI_GOVERNANCE.md`
