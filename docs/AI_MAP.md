@@ -280,10 +280,11 @@ public class DemoService extends ModuleService<DemoDao, DemoEntity> implements L
 
 #### 2.8A.2 AI 开发硬约束（生成体系）
 
+- **生成物来源**：与 **`docs/AI_STANDARDS.md` §11**、本文 **2.8A.1** 一致，**优先由开发者执行后台代码生成（ZIP）** 入库；AI **不**把「仿写整套生成文件」当作默认交付，以免与 **`GenUtils`** 输出不一致、后续重生成覆盖困难。
 - `controller/gen/*` 与 `site/*Pages.java` 视为**生成源**：默认不承载业务逻辑，不在其上做需求改造。
 - 业务接口改造放在 `controller/*Controller.java`（或新增业务 Controller），通过继承/覆盖调用 `*ControllerGen`。
 - 页面业务改造优先放在自定义页面/组件；若必须改生成页，需在需求中明确“允许改模板并接受重生成影响”。
-- 生成后允许 AI 自动更新的优先顺序：`Service` -> `Controller` -> `Site` -> `Menu`；避免先改 `gen` 层。
+- 在**非可重生层**协助改动的优先顺序（**不**含用对话仿写整套后台 ZIP 产物）：`Service` -> `Controller` -> `Site` -> `Menu`；避免先改 `gen` 层。
 
 #### 2.8A.3 典型落地方式（建议）
 
@@ -393,6 +394,7 @@ public class DemoService extends ModuleService<DemoDao, DemoEntity> implements L
 
 - **短标题**：放在 **`:` 之前**，一般用 **1～4 个汉字**（或同等长度的简短词组），保证列表/表头不换行、不溢出。
 - **详述**：放在 **`:` 之后**，用完整句子说明字段用途、取值含义、与其它字段关系等。
+- **同一实体（及同列表展示域）内冒号前必须互异（硬性）**：不同列的 **`comment`** 在第一个半角 **`:`** 之前的片段须各不相同；含义再接近、或「都是统计」但**口径不同**的字段，也不得共用同一短标题，否则生成列表多列会显示相同表头（见 **`docs/AI_STANDARDS.md` §10.1**）。
 - **示例**：`状态：0=禁用 1=启用，同步上游审核结果`、`邮箱：用于登录与找回密码，唯一`。
 
 **注意**：完整字符串仍会进入实体上的 `@Column(comment = "...")` / 表注释（如 `ColumnInfo.buildAnnotation`、库表 COMMENT），详述不会丢失；仅**自动多语言初始化、菜单名等**使用冒号前段，避免把长说明塞进「表头」位。

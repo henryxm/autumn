@@ -9,7 +9,7 @@ description: >-
   No hardcoded dialect quotes in Java (RuntimeSql quote/columnInWrapper or WrapperColumns per docs/AI_DATABASE.md §4.0);
   Controller must not use Dao; Service uses baseMapper; gen/Pages/list.html/js never hand-edited; statics/pages/Site/PageAware.
   Read docs/AI_CODEGEN.md, docs/AI_DATABASE.md; Redis TTL / Redisson / pExpire: docs/REDIS_TTL_GUIDE.md + docs/REDIS_REDISSON_SPRING_DATA.md (constraints-scan group H or --redis-expire-only); scripts/autumn-dependency-scan.sh for upgrades.
-  When this skill applies: agent MUST run scripts/constraints-scan on the task root, read grouped output (A–H), conclude real violations, and fix in scope; re-run after edits. See skill body "约束扫描门禁".
+  scripts/constraints-scan is optional: run only when the user explicitly asks for a constraint audit, CI-style check, or phrases like 约束扫描/规范体检; see skill section "约束扫描（按需）".
   Triggers on cn.org.autumn 3.0.0, Spring Boot 3.5, JDK 17, ModuleService, RuntimeSql, PageAware, SpringDoc.
 ---
 
@@ -36,25 +36,24 @@ description: >-
 - 当前工作区是 **autumn 仓库且检出 3.0.0 分支**，或业务工程 **Maven 依赖锁定 `cn.org.autumn` 3.0.0**。
 - 提到：`cn.org.autumn`、`ModuleService`、`gen`、`Dao`、`Provider`、`RuntimeSql`、`DatabaseType`、`WrapperColumns`、`QueryWrapper`、`statics`、`pages`、`Site`、`PageAware`、`autumn.table`、`SpringDoc` 等，且 **栈为 JDK 17+ + Boot 3.5 + Jakarta + MP3**。
 
-## 约束扫描门禁（启用本 Skill 作代码/实体/库表相关任务时 **必选**）
+## 约束扫描（按需）
 
-1. **执行脚本**（须用终端实际跑，不要只读文档当已扫过）  
-   - 本仓库：在**工作区根**执行 `bash scripts/constraints-scan`（或 `bash scripts/constraints-scan .`）。  
-   - 业务仓库且本机并列 clone 了 autumn：可对业务根执行  
-     `bash ../autumn/scripts/constraints-scan /path/to/business-root`  
-     （路径按实际调整）；若无 `scripts/constraints-scan`，先到 autumn 仓库拷贝该脚本再执行。  
-   - **依赖**：已安装 **`rg`（ripgrep）**。  
-   - 可选环境变量：**`AUTUMN_SCAN_SKIP_GEN=1`**、**`AUTUMN_SCAN_EXTRA=1`**（见脚本头注释）。
+**默认不跑**：用户未提及规范体检、合并/CI 自检、`constraints-scan`、**约束扫描**等时，**不要**把执行 **`scripts/constraints-scan`** 当作本 Skill 的必做步骤。
+
+**何时执行**：用户或任务**明确要求**对仓库做与 **`docs/AI_STANDARDS.md` / `docs/AI_DATABASE.md`** 对齐的分组体检、或声明 CI/合并门禁需要脚本结果时，再在任务根目录实际执行（勿只读文档代替执行）。
+
+1. **命令**  
+   - 本仓库：工作区根执行 `bash scripts/constraints-scan`（或 `bash scripts/constraints-scan .`）。  
+   - 业务仓库且并列 clone 了 autumn：`bash ../autumn/scripts/constraints-scan /path/to/business-root`（路径按实际调整）；若无脚本则从 autumn 仓库拷贝。  
+   - **依赖**：**`rg`（ripgrep）**；可选 **`AUTUMN_SCAN_SKIP_GEN=1`**、**`AUTUMN_SCAN_EXTRA=1`**、**`AUTUMN_SCAN_SKIP_REDIS=1`**（见脚本头注释）。
 
 2. **解读输出**  
-   - 按脚本分组 **A～H** 阅读命中（H 为 Redis TTL，可 `AUTUMN_SCAN_SKIP_REDIS=1` 跳过）；对照 **`docs/AI_DATABASE.md` §8.5** 与 **`docs/AI_STANDARDS.md`**。  
+   - 按分组 **A～H** 阅读（H 为 Redis TTL）；对照 **`docs/AI_DATABASE.md` §8.5** 与 **`docs/AI_STANDARDS.md`**。  
    - **区分**真实违规与误报（注释、测试、`target/`、历史生成代码等）。**F 组**仅为 gen 清单，**不计入** TOTAL。
 
-3. **修复**  
-   - 任务范围内可确定的违规：**直接改代码**。超出范围或需决策的：**写明残留风险**，勿静默忽略。
-
-4. **收尾**  
-   - 改过相关文件后，条件允许时 **再跑一次** `constraints-scan`。
+3. **修复与收尾**  
+   - 任务范围内可确定的违规：**直接改代码**；超出范围的在回复中**写明残留风险**。  
+   - 若本次已跑过扫描且改过相关文件，可**再跑一次**确认未引入新的可修复项（仍属按需，非默认）。
 
 ## 文档加载顺序
 
@@ -72,14 +71,14 @@ description: >-
 ## 规范开发三步（与 `docs/AI_CODEGEN.md` 一致）
 
 1. **先实体**：按 `docs/AI_STANDARDS.md` 建实体与索引注释；**`@Cache` / `@Caches`**；业务 Service 继承 **`ModuleService`**，勿自建平行缓存/队列/`LoopJob`。
-2. **再生成**：后台「代码生成」ZIP 与 **`GenUtils.getFileName`** 路径一致；仅在非 gen 空壳写业务；**禁止**改 `controller/gen`、`*Pages`、`list.html/js`。
+2. **再生成**：由开发者在后台执行「代码生成」ZIP，路径与 **`GenUtils.getFileName`** 一致；**AI 不**以仿写替代整套生成器输出；仅在非 gen 空壳写业务；**禁止**删改已落库的 `controller/gen`、`*Pages`、`list.html/js`（须改 **`template/*.vm`** 后重生成）。
 3. **后业务**：`Service` 承载规则与事务；可维护 `Controller` 独立 URL；`pages` + `site/*Site` + `@PageAware`。
 
 ## 实体与数据库（§8～§10）
 
 - 框架扫描实体 + **`autumn.table.*`** 启动期对齐表结构；**禁止**把常规 **`DDL .sql`** 当默认交付物。
 - **`modules/<子目录>/`**：目录名 = 包段 = 表前缀；**禁止**把前缀拼进实体类名；物理表名见 **`docs/AI_BOOT.md` §3.2**。
-- **`@Table` / `@Column.comment`**：短标题 + **半角 `:`**；**凡 `@Column(isUnique=true)` 的字段禁止再使用 `@Index`**（含类级索引中含该列，§10.2，无例外）。
+- **`@Table` / `@Column.comment`**：**简介名:说明**；**不同字段**冒号前简介名**须互不相同**（生成列表只取冒号前作表头，见 **`docs/AI_STANDARDS.md` §10.1**）；**凡 `@Column(isUnique=true)` 的字段禁止再使用 `@Index`**（含类级索引中含该列，§10.2，无例外）。
 - 整型/布尔：优先基本类型 + 默认值。
 - **双键模型（默认强制，详见 `docs/AI_STANDARDS.md` §10.4）**：每个实体须有 **`@TableId` 自增 `Long id`**（仅后台代码生成 CRUD、勿作业务关联）；**另增唯一业务主键列**（插入前赋值：`Uuid.uuid()` 小写 32 位，或 **`cn.org.autumn.utils.SnowflakeId`**），用于外键、对外 API、缓存键等。**禁止**用 **`id`** 关联其它表或被引用。SQL 侧见 **`docs/AI_DATABASE.md` §1.1**。
 
@@ -93,7 +92,7 @@ description: >-
 
 ## 生成层与业务（§11）
 
-- **`controller/gen/*`**、**`SitePages.java.vm`** 产物：**禁止**改逻辑；改 **`template/*.vm`** 后重生成。
+- 可重生层：**禁止**在生成结果上删改业务逻辑；改 **`template/*.vm`** 后由开发者重生成；扩展用非 gen 壳子或独立类（**`docs/AI_STANDARDS.md` §11**）。
 - 空壳 **Controller/Service/Dao（非 gen）**：业务落 **Service**。
 
 ## SQL 与 Dao（§12～§13，摘要）
@@ -130,7 +129,7 @@ description: >-
 
 ## 自检清单
 
-- 已按上文 **约束扫描门禁** 执行 **`bash scripts/constraints-scan`**（或指向业务根的等价命令），并对照输出完成解读/修复（或写明无法修复的原因）？
+- 若用户**要求**跑规范扫描：已执行 **`bash scripts/constraints-scan`** 并完成解读/修复（或写明残留）？
 - 无多余 **`schema.sql` / `init.sql`**？  
 - Dao 无内联 SQL？**Wrapper** 无方言黑魔法？Java 无手写 **反引号/双引号/方括号** 拼 SQL（§4.0）？  
 - **Controller** 未碰 **Dao**？未手改 **gen / list.html/js**？  

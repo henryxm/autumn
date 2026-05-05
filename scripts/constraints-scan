@@ -2,6 +2,8 @@
 #
 # constraints-scan — Autumn 文档约束只读扫描
 #
+# 执行策略：见 docs/AI_INDEX.md — 日常开发与 AI 辅助**不强制**本脚本；按需（用户/任务要求、CI、合并前自检）执行。
+#
 # 对照文档（请在仓库内保持与实现同步）:
 #   docs/AI_STANDARDS.md  §5～§14（定时任务、权限、实体、索引唯一、分层、gen）
 #   docs/AI_DATABASE.md   §1、§4～§5、§8.5（方言、Dao Provider、Wrapper、检索示例）
