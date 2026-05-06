@@ -67,7 +67,7 @@ public class MysqlSchemaSqlEmbeddedH2PhysicalTypeTest {
             String m;
         }
         Field f = T.class.getDeclaredField("m");
-        ColumnInfo c = new ColumnInfo(f, null, null);
+        ColumnInfo c = new ColumnInfo(f);
         c.setTypeLength(0);
         assertEquals("longtext", physical(c));
     }
@@ -79,7 +79,7 @@ public class MysqlSchemaSqlEmbeddedH2PhysicalTypeTest {
             String e;
         }
         Field f = T.class.getDeclaredField("e");
-        ColumnInfo c = new ColumnInfo(f, null, null);
+        ColumnInfo c = new ColumnInfo(f);
         c.setTypeLength(0);
         assertEquals("varchar(40)", physical(c));
     }
@@ -91,7 +91,7 @@ public class MysqlSchemaSqlEmbeddedH2PhysicalTypeTest {
             String x;
         }
         Field f = T.class.getDeclaredField("x");
-        ColumnInfo c = new ColumnInfo(f, null, null);
+        ColumnInfo c = new ColumnInfo(f);
         c.setTypeLength(0);
         assertEquals("longtext", physical(c));
     }

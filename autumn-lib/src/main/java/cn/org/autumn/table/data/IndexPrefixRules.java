@@ -109,7 +109,7 @@ public final class IndexPrefixRules {
     }
 
     /**
-     * 根据实体类字段与 {@link Column} 注解，修正索引条目中各列的前缀长度（类级 {@code @Indexes} / {@code @UniqueKey} 中显式 length 可能误用于数值列）。
+     * 根据实体类字段与 {@link Column} 注解，修正索引条目中各列的前缀长度（类级 {@code @Indexes}} 中显式 length 可能误用于数值列）。
      */
     public static void applyPrefixLengthPolicy(Map<String, Integer> fields, Class<?> entityClass) {
         if (fields == null || fields.isEmpty() || entityClass == null) {

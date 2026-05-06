@@ -1,11 +1,8 @@
 package cn.org.autumn.table.data;
 
 import cn.org.autumn.table.annotation.Column;
-import cn.org.autumn.table.annotation.UniqueKey;
 import cn.org.autumn.table.annotation.sql.CharacterSet;
 import cn.org.autumn.table.annotation.sql.Collation;
-import cn.org.autumn.table.annotation.UniqueKeyFields;
-import cn.org.autumn.table.annotation.UniqueKeys;
 import cn.org.autumn.table.relational.model.ColumnMeta;
 import cn.org.autumn.table.utils.HumpConvert;
 import org.apache.commons.lang.StringUtils;
@@ -95,22 +92,26 @@ public class ColumnInfo {
 
     private String genAnnotation;
 
-    /** 列显式字符集（DDL），空表示继承表默认 */
+    /**
+     * 列显式字符集（DDL），空表示继承表默认
+     */
     private String explicitCharset = "";
-    /** 列显式排序规则（DDL），空表示继承表默认 */
+    /**
+     * 列显式排序规则（DDL），空表示继承表默认
+     */
     private String explicitCollation = "";
 
 
-    public ColumnInfo(Field field, UniqueKeys uniqueKeys, UniqueKey uniqueKey) {
-        initFrom(field, uniqueKeys, uniqueKey);
+    public ColumnInfo(Field field) {
+        initFrom(field);
     }
 
     public ColumnInfo(ColumnMeta field) {
         initFrom(field);
     }
 
-    public static ColumnInfo from(Field field, UniqueKeys uniqueKeys, UniqueKey uniqueKey) {
-        return new ColumnInfo(field, uniqueKeys, uniqueKey);
+    public static ColumnInfo from(Field field) {
+        return new ColumnInfo(field);
     }
 
     public void initFrom(ColumnMeta column) {
@@ -151,32 +152,32 @@ public class ColumnInfo {
             divider = ", ";
         }
         if (!"varchar".equalsIgnoreCase(type)) {
-            sb.append(divider + "type = \"" + type + "\"");
+            sb.append(divider).append("type = \"").append(type).append("\"");
             divider = ", ";
         }
         if (length != 255 && length != 0) {
-            sb.append(divider + "length = " + length);
+            sb.append(divider).append("length = ").append(length);
             divider = ", ";
         }
         if (!isNull) {
-            sb.append(divider + "isNull = false");
+            sb.append(divider).append("isNull = false");
             divider = ", ";
         }
         if (isAutoIncrement) {
-            sb.append(divider + "isAutoIncrement = true");
+            sb.append(divider).append("isAutoIncrement = true");
             divider = ", ";
         }
         if (decimalLength > 0) {
-            sb.append(divider + "decimalLength = " + decimalLength);
+            sb.append(divider).append("decimalLength = ").append(decimalLength);
             divider = ", ";
         }
         if (null != defaultValue && !"NULL".equalsIgnoreCase(defaultValue)) {
-            sb.append(divider + "defaultValue = \"" + defaultValue + "\"");
+            sb.append(divider).append("defaultValue = \"").append(defaultValue).append("\"");
             divider = ", ";
         }
 
         if (!StringUtils.isEmpty(comment)) {
-            sb.append(divider + "comment = \"" + comment + "\"");
+            sb.append(divider).append("comment = \"").append(comment).append("\"");
         }
 
         sb.append(")");
@@ -199,7 +200,7 @@ public class ColumnInfo {
         return WordUtils.capitalizeFully(columnName, new char[]{'_'}).replace("_", " ");
     }
 
-    public void initFrom(Field field, UniqueKeys uniqueKeys, UniqueKey uniqueKey) {
+    public void initFrom(Field field) {
         Column column = field.getAnnotation(Column.class);
         if (null == column) {
             return;
@@ -264,39 +265,18 @@ public class ColumnInfo {
         this.defaultValue = column.defaultValue();
         this.isUnique = column.isUnique();
         this.hasUniqueKey = isUnique;
-        if (null != uniqueKey) {
-            UniqueKeyFields[] uniqueKeyFields = uniqueKey.fields();
-            for (UniqueKeyFields u : uniqueKeyFields) {
-                if (name.equalsIgnoreCase(u.field())) {
-                    hasUniqueKey = true;
-                    break;
-                }
-            }
-        }
-        if (!hasUniqueKey && null != uniqueKeys) {
-            UniqueKey[] uu = uniqueKeys.value();
-            for (UniqueKey u1 : uu) {
-                UniqueKeyFields[] uniqueKeyFields = u1.fields();
-                for (UniqueKeyFields u : uniqueKeyFields) {
-                    if (name.equalsIgnoreCase(u.field())) {
-                        hasUniqueKey = true;
-                        break;
-                    }
-                }
-            }
-        }
         this.comment = column.comment();
         if (StringUtils.isBlank(this.comment)) {
             this.comment = HumpConvert.HumpToName(field.getName());
         }
         CharacterSet mcs = column.charset();
-        if (mcs != null && !mcs.isInherit()) {
+        if (!mcs.isInherit()) {
             this.explicitCharset = mcs.getSqlName();
         } else {
             this.explicitCharset = "";
         }
         Collation mco = column.collation();
-        if (mco != null && mco != Collation.INHERIT) {
+        if (mco != Collation.INHERIT) {
             this.explicitCollation = mco.getSqlName();
         } else {
             this.explicitCollation = "";

@@ -5,8 +5,6 @@ import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.CopyOnWriteArraySet;
 
-import cn.org.autumn.table.annotation.UniqueKey;
-import cn.org.autumn.table.annotation.UniqueKeys;
 import cn.org.autumn.table.platform.RelationalTableOperations;
 import cn.org.autumn.table.data.*;
 import cn.org.autumn.table.relational.model.ColumnMeta;
@@ -715,12 +713,10 @@ public class MysqlTableService {
         List<ColumnInfo> list = new ArrayList<>();
         Field[] fields = clazz.getDeclaredFields();
         fields = recursionParents(clazz, fields);
-        UniqueKeys uniqueKeys = clazz.getAnnotation(UniqueKeys.class);
-        UniqueKey uniqueKey = clazz.getAnnotation(UniqueKey.class);
         for (Field field : fields) {
             if (!field.isAnnotationPresent(Column.class)) continue;
             Column column = field.getAnnotation(Column.class);
-            ColumnInfo columnInfo = new ColumnInfo(field, uniqueKeys, uniqueKey);
+            ColumnInfo columnInfo = new ColumnInfo(field);
             int length = 0;
             try {
                 Object o = mySqlTypeAndLengthMap.get(columnInfo.getType());

@@ -26,7 +26,7 @@ public class GenTypeService extends GenTypeServiceGen {
 
     public void init() {
         String[][] mapping = new String[][]{
-                {null, "mysql", "cn.org.autumn", "cn.org.autumn.modules", "sys", "系统管理", SysMenuService.getSystemManagementMenuKey(), "User", "henryxm@163.com", "sys",
+                {null, "mysql", "cn.org.autumn", "cn.org.autumn.modules", "sys", "系统管理", SysMenuService.getSystemManagementMenuKey(), "sys",
                         "tinyint=Integer,smallint=Integer,mediumint=Integer,int=Integer,integer=Integer,bigint=Long,float=Float," +
                                 "double=Double,decimal=BigDecimal,bit=Boolean,char=String,varchar=String,tinytext=String,text=String," +
                                 "mediumtext=String,longtext=String,date=Date,datetime=Date,timestamp=Date"},
@@ -54,17 +54,10 @@ public class GenTypeService extends GenTypeServiceGen {
                 entity.setModuleText(temp);
             temp = map[6];
             if (null != temp)
-                entity.setModuleId(temp);
-            temp = map[7];
-            if (null != temp)
-                entity.setAuthorName(temp);
-            temp = map[8];
-            if (null != temp)
-                entity.setEmail(temp);
-            temp = map[9];
+                temp = map[7];
             if (null != temp)
                 entity.setTablePrefix(temp);
-            temp = map[10];
+            temp = map[8];
             if (null != temp)
                 entity.setMappingString(temp);
             try {

@@ -65,14 +65,6 @@ public class GenTypeWrapper {
         return entity.getModuleName();
     }
 
-    public String getAuthorName() {
-        return entity.getAuthorName();
-    }
-
-    public String getEmail() {
-        return entity.getEmail();
-    }
-
     public String getTablePrefix() {
         return entity.getTablePrefix();
     }

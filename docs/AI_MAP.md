@@ -362,18 +362,15 @@ public class DemoService extends ModuleService<DemoDao, DemoEntity> implements L
 2. **字段上已有 `@Index` 时，不要在类级 `@Indexes` / 类级 `@Index` 里再包含同一列的等价索引**  
    否则同一列会被注册两次，建表或变更时可能生成两条含义重叠的 `INDEX`，属于重复声明。
 
-3. **与 `@UniqueKey` / `@UniqueKeys` 的边界**  
-   多列唯一约束应优先用 `@UniqueKey(s)`；若已与 `@Column(isUnique)` 或 `@Index` 表达同一约束，不要再用另一套注解重复描述。
-
 #### 2.10.3 字段级 `@Index` 与列类型（前缀长度）
 
 **说明**：MySQL 对数值、日期时间、`DECIMAL` 等类型**支持** B-tree 整列索引；**仅** CHAR/VARCHAR/TEXT/BLOB/BINARY 等类型支持索引定义中的**前缀**语法 `` `col`(n) ``。旧实现曾把 `@Column.length()`（默认 255）误当前缀，导致数值列生成非法 DDL。
 
 **当前实现**（`IndexPrefixRules` + `TableInfo.initFrom` 末尾对 `IndexInfo` / `UniqueKeyInfo` 的 `applyPrefixLengthPolicy`）：
 
-- 根据 **`@Column.type()`**（若有）判断是否允许前缀；不允许时前缀长度强制为 **0**，生成 `` `col` ``，**可在任意可索引列上声明 `@Index` / `@Indexes` / `@UniqueKey`** 而不因前缀报错。
+- 根据 **`@Column.type()`**（若有）判断是否允许前缀；不允许时前缀长度强制为 **0**，生成 `` `col` ``，**可在任意可索引列上声明 `@Index` / `@Indexes` ** 而不因前缀报错。
 - 无 `Column.type` 时，按 Java 类型保守处理：`String` / `byte[]` 可保留前缀长度，其余类型前缀为 0。
-- 类级 `@IndexField` / `UniqueKeyFields` 上误写的非零 `length` 也会按实体字段与 `Column` 收敛。
+- 类级 `@IndexField` 上误写的非零 `length` 也会按实体字段与 `Column` 收敛。
 
 **仍建议**：需要前缀索引时显式在 `@IndexField` 中写 `length`；字符串列用 `@Column.length` 参与字段级 `@Index` 时，确保 `type` 为字符串类，避免歧义。
 
