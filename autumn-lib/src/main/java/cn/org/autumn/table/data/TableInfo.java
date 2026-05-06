@@ -162,16 +162,6 @@ public class TableInfo {
         if (StringUtils.isBlank(name))
             return;
         this.uniqueKeyInfos = new ArrayList<>();
-        UniqueKey uniqueKey = clazz.getAnnotation(UniqueKey.class);
-        if (null != uniqueKey) {
-            uniqueKeyInfos.add(new UniqueKeyInfo(uniqueKey));
-        }
-        UniqueKeys uniqueKeys = clazz.getAnnotation(UniqueKeys.class);
-        if (null != uniqueKeys && uniqueKeys.value().length > 0) {
-            for (UniqueKey u : uniqueKeys.value()) {
-                uniqueKeyInfos.add(new UniqueKeyInfo(u));
-            }
-        }
         this.indexInfos = new ArrayList<>();
         Index index = clazz.getAnnotation(Index.class);
         if (null != index) {

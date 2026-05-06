@@ -38,12 +38,6 @@ public class GenTypeEntity implements Serializable {
     @Column(comment = "模块ID(用于目录)")
     private String moduleId;
 
-    @Column(comment = "作者名字")
-    private String authorName;
-
-    @Column(comment = "作者邮箱")
-    private String email;
-
     @Column(comment = "表前缀")
     private String tablePrefix;
 

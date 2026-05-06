@@ -70,8 +70,6 @@ public class GenUtils {
         map.put("moduleIcon", wrapper.getModuleIcon());
         map.put("moduleOrder", wrapper.getModuleOrder());
         map.put("upperModuleName", HumpConvert.toFirstStringUpper(wrapper.getModuleName()));
-        map.put("author", wrapper.getAuthorName());
-        map.put("email", wrapper.getEmail());
         map.put("moduleId", wrapper.getModuleId());
         map.put("lang", "lang.");
         map.put("datetime", DateUtils.format(new Date(), DateUtils.DATE_TIME_PATTERN));

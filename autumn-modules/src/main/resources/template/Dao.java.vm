@@ -5,13 +5,6 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.springframework.stereotype.Repository;
 
-/**
- * ${comment}
- * 
- * @author ${author}
- * @email ${email}
- * @date ${datetime}
- */
 @Mapper
 @Repository
 public interface ${className}Dao extends BaseMapper<${className}Entity> {

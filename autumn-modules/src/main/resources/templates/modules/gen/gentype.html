@@ -8,18 +8,18 @@
 <div id="rrapp" v-cloak>
     <div v-show="showList">
         <div class="grid-btn">
-			<#if shiro.hasPermission("gen:gentype:save")>
+            <!--<#if shiro.hasPermission("gen:gentype:save")>-->
             <a class="btn btn-primary" @click="add"><i class="fa fa-plus"></i>&nbsp;${lang.sys_string_add}</a>
-			</#if>
-			<#if shiro.hasPermission("gen:gentype:update")>
+            <!--</#if>-->
+            <!--<#if shiro.hasPermission("gen:gentype:update")>-->
             <a class="btn btn-primary" @click="update"><i class="fa fa-pencil-square-o"></i>&nbsp;${lang.sys_string_change}</a>
-			</#if>
-			<#if shiro.hasPermission("gen:gentype:delete")>
+            <!--</#if>-->
+            <!--<#if shiro.hasPermission("gen:gentype:delete")>-->
             <a class="btn btn-primary" @click="del"><i class="fa fa-trash-o"></i>&nbsp;${lang.sys_string_delete}</a>
-			</#if>
-            <#if shiro.hasPermission("gen:gentype:copy")>
+            <!--</#if>-->
+            <!--<#if shiro.hasPermission("gen:gentype:copy")>-->
             <a class="btn btn-primary" @click="copy"><i class="fa fa-copy"></i>&nbsp;${lang.sys_string_copy}</a>
-            </#if>
+            <!--</#if>-->
         </div>
         <table id="jqGrid"></table>
         <div id="jqGridPager"></div>
@@ -56,18 +56,6 @@
                         <div class="col-sm-2 control-label">${lang.gen_gentype_column_module_text}</div>
                         <div class="col-sm-10">
                             <input type="text" class="form-control" style="cursor:pointer;" v-model="genType.moduleText" @click="menuTree" readonly="readonly" placeholder="${lang.sys_string_root_menu}"/>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <div class="col-sm-2 control-label">${lang.gen_gentype_column_author_name}</div>
-                        <div class="col-sm-10">
-                            <input type="text" class="form-control" v-model="genType.authorName" placeholder="${lang.gen_gentype_column_author_name}"/>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <div class="col-sm-2 control-label">${lang.gen_gentype_column_email}</div>
-                        <div class="col-sm-10">
-                            <input type="text" class="form-control" v-model="genType.email" placeholder="${lang.gen_gentype_column_email}"/>
                         </div>
                     </div>
                     <div class="form-group">

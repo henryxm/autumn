@@ -14,21 +14,11 @@ import ${package}.${moduleName}.service.${className}Service;
 import ${mainPath}.utils.PageUtils;
 import ${mainPath}.utils.R;
 
-/**
- * ${comment}
- *
- * @author ${author}
- * @email ${email}
- * @date ${datetime}
- */
 public class ${className}ControllerGen {
 
     @Autowired
     protected ${className}Service ${classname}Service;
 
-    /**
-     * 列表
-     */
     @RequestMapping("/list")
     @RequiresPermissions("${moduleName}:${pathName}:list")
     public R list(@RequestParam Map<String, Object> params) {
@@ -36,9 +26,6 @@ public class ${className}ControllerGen {
         return R.ok().put("page" , page);
     }
 
-    /**
-     * 信息
-     */
     @RequestMapping("/info/{${pk.attrname}}")
     @RequiresPermissions("${moduleName}:${pathName}:info")
     public R info(@PathVariable("${pk.attrname}") ${pk.attrType} ${pk.attrname}) {
@@ -46,9 +33,6 @@ public class ${className}ControllerGen {
         return R.ok().put("${classname}" , ${classname});
     }
 
-    /**
-     * 保存
-     */
     @RequestMapping("/save")
     @RequiresPermissions("${moduleName}:${pathName}:save")
     public R save(@RequestBody ${className}Entity ${classname}) {
@@ -56,9 +40,6 @@ public class ${className}ControllerGen {
         return R.ok();
     }
 
-    /**
-     * 修改
-     */
     @RequestMapping("/update")
     @RequiresPermissions("${moduleName}:${pathName}:update")
     public R update(@RequestBody ${className}Entity ${classname}) {
@@ -67,9 +48,6 @@ public class ${className}ControllerGen {
         return R.ok();
     }
 
-    /**
-     * 删除
-     */
     @RequestMapping("/delete")
     @RequiresPermissions("${moduleName}:${pathName}:delete")
     public R delete(@RequestBody ${pk.attrType}[] ${pk.attrname}s) {

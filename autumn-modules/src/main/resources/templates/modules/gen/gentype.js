@@ -9,8 +9,6 @@ $(function () {
 			{ label: '${lang.gen_gentype_column_module_package}', name: 'modulePackage', index: 'module_package', width: 80 },
 			{ label: '${lang.gen_gentype_column_module_name}', name: 'moduleName', index: 'module_name', width: 80 },
 			{ label: '${lang.gen_gentype_column_module_text}', name: 'moduleText', index: 'module_text', width: 80 },
-			{ label: '${lang.gen_gentype_column_author_name}', name: 'authorName', index: 'author_name', width: 80 },
-			{ label: '${lang.gen_gentype_column_email}', name: 'email', index: 'email', width: 80 },
 			{ label: '${lang.gen_gentype_column_table_prefix}', name: 'tablePrefix', index: 'table_prefix', width: 80 },
 			{ label: '${lang.gen_gentype_column_mapping_string}', name: 'mappingString', index: 'mapping_string', width: 80 },
         ],

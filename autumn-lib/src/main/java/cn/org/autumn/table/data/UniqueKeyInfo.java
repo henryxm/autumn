@@ -1,8 +1,5 @@
 package cn.org.autumn.table.data;
 
-import cn.org.autumn.table.annotation.UniqueKey;
-import cn.org.autumn.table.annotation.UniqueKeyFields;
-
 import java.util.HashMap;
 import java.util.Map;
 
@@ -25,19 +22,6 @@ public class UniqueKeyInfo {
 
     public UniqueKeyInfo() {
         fields = new HashMap<>();
-    }
-
-    public UniqueKeyInfo(UniqueKey uniqueKey) {
-        this.name = uniqueKey.name();
-        this.indexMethod = uniqueKey.indexMethod().toString();
-        this.indexType = uniqueKey.indexType().toString();
-        this.comment = uniqueKey.comment();
-        fields = new HashMap<>();
-        if (uniqueKey.fields().length > 0) {
-            for (UniqueKeyFields uniqueKeyFields : uniqueKey.fields()) {
-                fields.put(uniqueKeyFields.field(), uniqueKeyFields.length());
-            }
-        }
     }
 
     /**
@@ -153,9 +137,8 @@ public class UniqueKeyInfo {
     public int getSubPartInt(){
         if(null != subPart){
             try{
-                return Integer.valueOf(subPart);
-            }catch (Exception e){
-
+                return Integer.parseInt(subPart);
+            }catch (Exception ignored){
             }
         }
         return 0;
