@@ -12,6 +12,8 @@ import java.util.List;
 
 /**
  * 安装模式下将非向导流量重定向到 {@code /install}。
+ * <p>
+ * 放行 {@code /client/**}（如 {@code /client/health}），避免就绪探测、运维脚本在安装期拿到 302 HTML 而非 JSON。
  */
 @Component
 @ConditionalOnProperty(prefix = "autumn.install", name = "mode", havingValue = "true")
@@ -25,6 +27,9 @@ public class InstallWizardInterceptor implements HandlerInterceptor, Interceptor
             uri = uri.substring(ctx.length());
         }
         if (uri.startsWith("/install")) {
+            return true;
+        }
+        if (uri.startsWith("/client/")) {
             return true;
         }
         if (uri.startsWith("/statics/") || uri.startsWith("/static/") || uri.startsWith("/js/")
@@ -52,6 +57,7 @@ public class InstallWizardInterceptor implements HandlerInterceptor, Interceptor
         return Arrays.asList(
                 "/install",
                 "/install/**",
+                "/client/**",
                 "/statics/**",
                 "/static/**",
                 "/js/**",

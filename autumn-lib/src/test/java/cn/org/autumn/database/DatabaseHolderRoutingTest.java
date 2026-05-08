@@ -44,6 +44,15 @@ public class DatabaseHolderRoutingTest {
     }
 
     @Test
+    public void routedJdbcUrlFollowsThreadLocalLookupKey() {
+        assertEquals("jdbc:mysql://localhost:3306/a", holder.getRoutedJdbcUrl());
+        DynamicDataSource.setDataSource(DataSourceNames.SECOND);
+        assertEquals("jdbc:postgresql://localhost:5432/b", holder.getRoutedJdbcUrl());
+        DynamicDataSource.clearDataSource();
+        assertEquals("jdbc:mysql://localhost:3306/a", holder.getRoutedJdbcUrl());
+    }
+
+    @Test
     public void installModeReturnsOtherRegardlessOfRouting() {
         MockEnvironment installEnv = new MockEnvironment()
                 .withProperty("autumn.install.mode", "true")

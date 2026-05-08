@@ -107,6 +107,26 @@ public class DatabaseHolder {
     }
 
     /**
+     * 与线程路由一致的实际 JDBC URL：存在 {@link DataSourceDialectRegistry} 时按
+     * {@link DynamicDataSource#getDataSource()} 解析；否则与 {@link #readCurrentRoutingJdbcUrl(Environment)} 相同
+     * （含从库 {@code druid.second.url}），避免仅读 first 与路由不一致。
+     * <p>
+     * 不包含安装占位语义（{@link InstallMode} 下 {@link #getType()} 仍为 {@link DatabaseType#OTHER}），
+     * 调用方需结合 {@link #getType()} 与 URL。供 {@link cn.org.autumn.table.relational.provider.EmbeddedH2MysqlMode} 等使用。
+     */
+    public String getRoutedJdbcUrl() {
+        if (dataSourceDialectRegistry != null) {
+            String key = DynamicDataSource.getDataSource();
+            String url = dataSourceDialectRegistry.resolveJdbcUrlForLookupKey(key);
+            return url == null ? "" : url.trim();
+        }
+        if (environment != null) {
+            return readCurrentRoutingJdbcUrl(environment);
+        }
+        return "";
+    }
+
+    /**
      * 与 {@link #getType()} 相同解析规则，供无 Spring 注入场景（如 {@link cn.org.autumn.database.runtime.RuntimeSqlDialectRegistry}）使用。
      * <p>
      * {@code jdbc:h2:...} 且该 URL 含 {@code MODE=MySQL} 时返回 {@link DatabaseType#MYSQL}（内嵌 MySQL 兼容 H2；与

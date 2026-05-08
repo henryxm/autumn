@@ -2,6 +2,8 @@ package cn.org.autumn.modules.lan.interceptor;
 
 import cn.org.autumn.config.Config;
 import cn.org.autumn.config.InterceptorHandler;
+import cn.org.autumn.install.InstallMode;
+import cn.org.autumn.modules.install.InstallWizardLangSupport;
 import cn.org.autumn.modules.lan.service.Language;
 import cn.org.autumn.modules.lan.service.LanguageService;
 import cn.org.autumn.utils.InterceptorUtils;
@@ -18,6 +20,8 @@ import org.springframework.web.servlet.ModelAndView;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+
+import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 
@@ -71,6 +75,28 @@ public class LanguageInterceptor implements InterceptorHandler, AsyncHandlerInte
         if (InterceptorUtils.skip(handler, this.getClass())) {
             return;
         }
+        /*
+         * 安装阶段：统一注入 lang，与业务页契约一致。词条来源分层——
+         * ① classpath 种子（{@link InstallWizardLangSupport}，不访问 DB）；
+         * ② 若 {@link LanguageService} 内存中已有词条（如引导库已存在 lan 表且曾加载），再合并覆盖。
+         * 绝不调用 getUserDefaultLanguage() / sys_config，避免「库未初始化」悖论。
+         */
+        if (InstallMode.isActive()) {
+            if (modelAndView != null) {
+                Locale loc = resolveLocaleInstallSafe(request);
+                Map<String, String> lang = new HashMap<>(InstallWizardLangSupport.seedMap(loc));
+                try {
+                    String tag = languageService.toLang(loc);
+                    Map<String, String> mem = languageService.getLanguage(tag);
+                    if (mem != null && !mem.isEmpty()) {
+                        lang.putAll(mem);
+                    }
+                } catch (Exception ignored) {
+                }
+                modelAndView.getModelMap().put("lang", lang);
+            }
+            return;
+        }
         if (null != modelAndView) {
             ModelMap modelMap = modelAndView.getModelMap();
             String locale = null;
@@ -89,6 +115,33 @@ public class LanguageInterceptor implements InterceptorHandler, AsyncHandlerInte
             }
             modelMap.put("lang", lang);
         }
+    }
+
+    /**
+     * 安装模式下解析界面语言：仅 ?lang= 与 session，不读 sys_config。
+     */
+    private static Locale resolveLocaleInstallSafe(HttpServletRequest request) {
+        String language = request.getParameter("lang");
+        if (StringUtils.isNotEmpty(language)) {
+            Locale l = Language.toLocale(language);
+            if (l != null) {
+                try {
+                    HttpSession session = request.getSession();
+                    session.setAttribute(LANGUAGE_SESSION, l);
+                } catch (Exception ignored) {
+                }
+                return l;
+            }
+        }
+        try {
+            HttpSession session = request.getSession();
+            Object o = session.getAttribute(LANGUAGE_SESSION);
+            if (o instanceof Locale) {
+                return (Locale) o;
+            }
+        } catch (Exception ignored) {
+        }
+        return Locale.SIMPLIFIED_CHINESE;
     }
 
     @Override

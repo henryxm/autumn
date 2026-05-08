@@ -8,6 +8,9 @@ import java.util.concurrent.atomic.AtomicReference;
  * 应用启动阶段状态，供安装完成页轮询 {@code /install/bootstrap-status} 与排障。
  * <p>
  * 在 {@code autumn.install.mode=true} 时进入 {@link Phase#WIZARD}；正常启动时依次经过 INIT → LOAD → UPGRADE → REFRESH → DONE。
+ * <p>
+ * {@link #languageCacheReady}：多语言服务将库表词条载入内存缓存后置为 true，供页面/Freemarker 与 {@code /client/health} 就绪判断；
+ * 安装向导阶段通常不跑完整 Load，此标记可能仍为 false，调用方需结合 {@link #getPhase()}。
  */
 @Component
 public class ApplicationInitializationProgress {
@@ -41,8 +44,26 @@ public class ApplicationInitializationProgress {
     /** 失败前所处阶段的进度，供进度条停留在合理位置 */
     private volatile int failedAtPercent = 30;
 
+    /**
+     * {@code LanguageService} 已完成至少一次成功的 DB → 内存缓存加载（允许条目数为 0）。
+     * 安装向导 {@link Phase#WIZARD} 下通常不跑 {@code LoadFactory}，此标记可能一直为 false，调用方应结合 {@link #getPhase()}。
+     */
+    private volatile boolean languageCacheReady;
+
     public Phase getPhase() {
         return phase.get();
+    }
+
+    public boolean isLanguageCacheReady() {
+        return languageCacheReady;
+    }
+
+    public void markLanguageCacheReady() {
+        languageCacheReady = true;
+    }
+
+    public void clearLanguageCacheReady() {
+        languageCacheReady = false;
     }
 
     public String getMessage() {
@@ -69,10 +90,12 @@ public class ApplicationInitializationProgress {
         startedAt = 0;
         finishedAt = 0;
         failedAtPercent = 30;
+        languageCacheReady = false;
     }
 
     public void enterWizardWaiting() {
         failedDetail = null;
+        languageCacheReady = false;
         phase.set(Phase.WIZARD);
         message = Phase.WIZARD.getDefaultLabel();
         finishedAt = 0;
@@ -83,6 +106,7 @@ public class ApplicationInitializationProgress {
         failedAtPercent = 30;
         startedAt = System.currentTimeMillis();
         finishedAt = 0;
+        languageCacheReady = false;
         enter(Phase.INIT, Phase.INIT.getDefaultLabel());
     }
 
@@ -109,6 +133,7 @@ public class ApplicationInitializationProgress {
         if (was != Phase.FAILED) {
             failedAtPercent = percentForNonTerminal(was);
         }
+        languageCacheReady = false;
         phase.set(Phase.FAILED);
         message = Phase.FAILED.getDefaultLabel();
         failedDetail = rootMessage(e);
@@ -148,15 +173,15 @@ public class ApplicationInitializationProgress {
             case IDLE:
                 return 0;
             case WIZARD:
-                return 0;
+                return 8;
             case INIT:
-                return 20;
+                return 24;
             case LOAD:
-                return 45;
+                return 44;
             case UPGRADE:
-                return 70;
+                return 64;
             case REFRESH:
-                return 90;
+                return 86;
             case DONE:
                 return 100;
             default:

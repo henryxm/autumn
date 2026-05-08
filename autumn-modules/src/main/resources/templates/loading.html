@@ -485,9 +485,19 @@
             root.style.setProperty("--status-bg", "rgba(" + toRgb(accent) + ", 0.14)");
         }
 
-        var target = getQueryParam("target") || "/index.html";
-        if (target.indexOf("/loading.html") === 0) {
-            target = "/index.html";
+        var retryFromLoading = getQueryParam("_fmRetry");
+
+        var target = getQueryParam("target");
+        if (!target) {
+            target = "/";
+        } else {
+            try {
+                target = decodeURIComponent(target.replace(/\+/g, "%20"));
+            } catch (ignore) {
+            }
+        }
+        if (target.indexOf("loading.html") >= 0) {
+            target = "/";
         }
 
         var brandName = getQueryParam("brand");
@@ -533,12 +543,24 @@
             };
         }
 
+        function withFmRetry(url, retry) {
+            if (retry === "" || retry === null || typeof retry === "undefined") {
+                return url;
+            }
+            var s = String(retry);
+            if (/([?&])_fmRetry=/.test(url)) {
+                return url.replace(/_fmRetry=[^&]*/, "_fmRetry=" + encodeURIComponent(s));
+            }
+            var sep = url.indexOf("?") >= 0 ? "&" : "?";
+            return url + sep + "_fmRetry=" + encodeURIComponent(s);
+        }
+
         function jump() {
             if (jumped) {
                 return;
             }
             jumped = true;
-            window.location.replace(target);
+            window.location.replace(withFmRetry(target, retryFromLoading));
         }
 
         function goIndex() {

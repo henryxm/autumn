@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<!-- lang：安装期来自 classpath 种子 + 可选内存词条；业务期来自 LanguageService。模板使用 (lang.key)!'回退' 保持兼容。 -->
+<html lang="${(lang.sys_string_install_html_lang)!'zh-CN'}">
 <head>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <title>安装向导</title>
+    <title>${(lang.sys_string_install_title)!'安装向导'}</title>
     <style>
         :root {
             --bg: linear-gradient(160deg, #e8f0fe 0%, #f3e8ff 45%, #fdf8f3 100%);
@@ -224,7 +225,10 @@
             height: 100%;
             background: linear-gradient(90deg, var(--primary), #7c3aed);
             border-radius: 999px;
-            transition: width 0.35s ease;
+            transition: width 0.55s cubic-bezier(0.33, 1, 0.68, 1);
+        }
+        .progress-fill.install-ticking {
+            transition: none;
         }
         .phase-label { font-size: 0.9375rem; margin: 14px 0 6px; font-weight: 500; }
         .hidden { display: none !important; }
@@ -233,228 +237,268 @@
 <body>
 <div class="wrap">
     <div class="hero">
-        <h1>欢迎使用</h1>
-        <p>按步骤完成说明确认、数据库配置与检测。保存后将自动重启并连接您选择的数据库，完成表结构与基础数据准备。</p>
+        <h1>${(lang.sys_string_install_welcome)!'欢迎使用'}</h1>
+        <p>${(lang.sys_string_install_hero_hint)!'按步骤完成说明确认、数据库配置与检测。保存后将自动重启并连接您选择的数据库，完成表结构与基础数据准备。'}</p>
     </div>
     <div class="card">
         <div class="steps" id="stepsBar"></div>
 
         <div id="panel-1" class="panel active">
-            <h2>说明与同意</h2>
+            <h2>${(lang.sys_string_install_panel1_title)!'说明与同意'}</h2>
             <ul class="notes">
-                <li>安装结束后，数据库连接会保存到程序目录下的 <code>config/datasource.yml</code>。如需改路径，可配置 <code>autumn.install.config-path</code>。</li>
-                <li>数据库账号需具备<strong>建表、删表</strong>及日常读写权限。检测时会临时创建并删除一张测试表，属正常现象。</li>
-                <li>为支持表情与多语言文本，向导会在常见数据库上附带合适的连接参数。若使用高级模式自写连接串，请确认字符集与库设置一致。</li>
-                <li>重新安装：删除上述配置文件，或设置环境变量 <code>AUTUMN_INSTALL_FORCE=true</code>（或配置 <code>autumn.install.force=true</code>）。</li>
-                <li>若只清空库中数据而保留配置文件，可能导致无法启动，请先恢复库或删除配置后重新安装。</li>
-                <li>部分数据库需将官方驱动放入运行环境的 classpath，具体取决于部署方式。</li>
+                <li>${((lang.sys_string_install_note_1)!'')}</li>
+                <li>${((lang.sys_string_install_note_2)!'')}</li>
+                <li>${((lang.sys_string_install_note_3)!'')}</li>
+                <li>${((lang.sys_string_install_note_4)!'')}</li>
+                <li>${((lang.sys_string_install_note_5)!'')}</li>
+                <li>${((lang.sys_string_install_note_6)!'')}</li>
             </ul>
             <label class="check-row" for="agreeCb">
                 <input type="checkbox" id="agreeCb"/>
-                <span>我已阅读并理解上述说明</span>
+                <span>${(lang.sys_string_install_agree_checkbox)!'我已阅读并理解上述说明'}</span>
             </label>
             <div class="err" id="e1"></div>
-            <button type="button" class="btn btn-primary" onclick="doAgree()">同意并继续</button>
+            <button type="button" class="btn btn-primary" onclick="doAgree()">${(lang.sys_string_install_btn_agree_continue)!'同意并继续'}</button>
         </div>
 
         <div id="panel-2" class="panel">
-            <h2>数据库连接</h2>
-            <p class="sub">按“数据库类型 → 连接方式 → 参数填写”的顺序配置，更贴近实际部署习惯。不同数据库会自动限制可用连接方式并给出建议。</p>
+            <h2>${(lang.sys_string_install_panel2_title)!'数据库连接'}</h2>
+            <p class="sub">${((lang.sys_string_install_panel2_intro)!'')}</p>
 
-            <label class="lbl">数据库类型</label>
+            <label class="lbl">${(lang.sys_string_install_lbl_database_type)!'数据库类型'}</label>
             <select id="databaseType"></select>
-            <p class="sub" id="databaseTypeHint" style="margin-top:6px">先选择数据库类型后，再选择连接方式。</p>
+            <p class="sub" id="databaseTypeHint" style="margin-top:6px">${(lang.sys_string_install_hint_select_type_first)!'先选择数据库类型后，再选择连接方式。'}</p>
 
             <div id="h2ModeBox" class="hidden">
-                <label class="lbl">H2 兼容模式</label>
+                <label class="lbl">${(lang.sys_string_install_lbl_h2_compat)!'H2 兼容模式'}</label>
                 <select id="h2CompatibilityMode"></select>
                 <p class="sub" id="h2ModeHint" style="margin-top:6px"></p>
-                <p class="h2-mode-guide-title">模式说明（点击表格行可快速切换）</p>
+                <p class="h2-mode-guide-title">${(lang.sys_string_install_h2_guide_title)!'模式说明（点击表格行可快速切换）'}</p>
                 <div class="h2-mode-table-wrap">
                     <table class="h2-mode-table" id="h2ModeTable">
                         <thead>
                         <tr>
-                            <th>模式</th>
-                            <th>典型适用场景</th>
-                            <th>与 Autumn 配合</th>
+                            <th>${(lang.sys_string_install_h2_th_mode)!'模式'}</th>
+                            <th>${(lang.sys_string_install_h2_th_scenario)!'典型适用场景'}</th>
+                            <th>${(lang.sys_string_install_h2_th_autumn)!'与 Autumn 配合'}</th>
                         </tr>
                         </thead>
                         <tbody>
                         <tr data-mode="MYSQL">
-                            <td><strong>MYSQL</strong> <span class="h2-tag h2-tag-rec">推荐默认</span></td>
-                            <td>希望与生产 MySQL 行为最接近；本地/演示环境跑通注解建表与常见 MySQL 语法。</td>
-                            <td>JDBC URL 含 <code>MODE=MySQL</code> 时走框架内嵌 H2-MySQL 兼容 DDL 与方言路由，与业务以 MySQL 为基准的开发习惯一致。</td>
+                            <td><strong>MYSQL</strong> <span class="h2-tag h2-tag-rec">${(lang.sys_string_install_tag_rec)!'推荐默认'}</span></td>
+                            <td>${((lang.sys_string_install_h2_mysql_c2)!'')}</td>
+                            <td>${((lang.sys_string_install_h2_mysql_c3)!'')}</td>
                         </tr>
                         <tr data-mode="NATIVE">
-                            <td><strong>NATIVE</strong> <span class="h2-tag h2-tag-caution">谨慎</span></td>
-                            <td>刻意验证 H2 原生语义；不依赖反引号、<code>information_schema</code> 等 MySQL 习惯用法。</td>
-                            <td>按 <code>DatabaseType.H2</code> 走双引号 ANSI DDL；实体与手写 SQL 需与 ANSI/H2 语义对齐，勿假设 MySQL 专有写法。</td>
+                            <td><strong>NATIVE</strong> <span class="h2-tag h2-tag-caution">${(lang.sys_string_install_tag_caution)!'谨慎'}</span></td>
+                            <td>${((lang.sys_string_install_h2_native_c2)!'')}</td>
+                            <td>${((lang.sys_string_install_h2_native_c3)!'')}</td>
                         </tr>
                         <tr data-mode="POSTGRESQL">
-                            <td><strong>POSTGRESQL</strong> <span class="h2-tag h2-tag-info">实验</span></td>
-                            <td>尝试 PostgreSQL 风格函数或语法差异；小规模语法对照实验。</td>
-                            <td>仍解析为 H2 类型，但 SQL 语义贴近 PG；与 Autumn 以 MySQL 为中心的默认路径不一致，仅适合有明确目标的场景。</td>
+                            <td><strong>POSTGRESQL</strong> <span class="h2-tag h2-tag-info">${(lang.sys_string_install_tag_exp)!'实验'}</span></td>
+                            <td>${((lang.sys_string_install_h2_pg_c2)!'')}</td>
+                            <td>${((lang.sys_string_install_h2_pg_c3)!'')}</td>
                         </tr>
                         <tr data-mode="ORACLE">
-                            <td><strong>ORACLE</strong> <span class="h2-tag h2-tag-info">实验</span></td>
-                            <td>对照 Oracle 方言差异做本地实验（不等同于真实 Oracle）。</td>
-                            <td>与 Autumn 默认 MySQL 族路径差异大，通常需配合高级 JDBC 或改写 SQL，不建议作为首次安装默认。</td>
+                            <td><strong>ORACLE</strong> <span class="h2-tag h2-tag-info">${(lang.sys_string_install_tag_exp)!'实验'}</span></td>
+                            <td>${((lang.sys_string_install_h2_ora_c2)!'')}</td>
+                            <td>${((lang.sys_string_install_h2_ora_c3)!'')}</td>
                         </tr>
                         <tr data-mode="MSSQLSERVER">
-                            <td><strong>MSSQLSERVER</strong> <span class="h2-tag h2-tag-info">实验</span></td>
-                            <td>对照 SQL Server 兼容语法做本地实验。</td>
-                            <td>与 Autumn 默认栈差异大，多用于专项验证；生产请使用真实 SQL Server 与对应配置。</td>
+                            <td><strong>MSSQLSERVER</strong> <span class="h2-tag h2-tag-info">${(lang.sys_string_install_tag_exp)!'实验'}</span></td>
+                            <td>${((lang.sys_string_install_h2_mssql_c2)!'')}</td>
+                            <td>${((lang.sys_string_install_h2_mssql_c3)!'')}</td>
                         </tr>
                         <tr data-mode="MARIADB">
-                            <td><strong>MARIADB</strong> <span class="h2-tag h2-tag-info">可选</span></td>
-                            <td>希望略贴近 MariaDB 兼容语义时的本地尝试。</td>
-                            <td>与 <code>MYSQL</code> 接近但仍属兼容层实验；若目标是生产 MariaDB，建议直接选数据库类型 MariaDB 而非 H2 模拟。</td>
+                            <td><strong>MARIADB</strong> <span class="h2-tag h2-tag-info">${(lang.sys_string_install_tag_optional)!'可选'}</span></td>
+                            <td>${((lang.sys_string_install_h2_maria_c2)!'')}</td>
+                            <td>${((lang.sys_string_install_h2_maria_c3)!'')}</td>
                         </tr>
                         </tbody>
                     </table>
                 </div>
-                <div class="warn-banner" id="h2NativeWarn">原生 H2 或非 MySQL 兼容模式下，不会启用 H2 + MODE=MySQL 适配链路，请确认业务 SQL 与方言匹配。</div>
+                <div class="warn-banner" id="h2NativeWarn">${((lang.sys_string_install_h2_native_warn)!'')}</div>
             </div>
 
-            <label class="lbl">连接方式</label>
+            <label class="lbl">${(lang.sys_string_install_lbl_conn_mode)!'连接方式'}</label>
             <div class="mode-grid" id="modeGrid">
                 <label class="mode-opt on" data-mode="REMOTE">
                     <input type="radio" name="connMode" value="REMOTE" checked/>
-                    远程服务器
-                    <small>先确定数据库类型，再填主机、端口、库名。适用于 MySQL、PostgreSQL 等集中部署。</small>
+                    ${(lang.sys_string_install_mode_remote_title)!'远程服务器'}
+                    <small>${((lang.sys_string_install_mode_remote_desc)!'')}</small>
                 </label>
                 <label class="mode-opt" data-mode="EMBEDDED_FILE">
                     <input type="radio" name="connMode" value="EMBEDDED_FILE"/>
-                    本机文件
-                    <small>数据保存在本机磁盘，适合 H2、SQLite、HSQLDB、Derby。</small>
+                    ${(lang.sys_string_install_mode_file_title)!'本机文件'}
+                    <small>${((lang.sys_string_install_mode_file_desc)!'')}</small>
                 </label>
                 <label class="mode-opt" data-mode="EMBEDDED_MEMORY">
                     <input type="radio" name="connMode" value="EMBEDDED_MEMORY"/>
-                    内存库（试用）
-                    <small>仅用于演示和快速验证；服务重启后数据清空。</small>
+                    ${(lang.sys_string_install_mode_mem_title)!'内存库（试用）'}
+                    <small>${((lang.sys_string_install_mode_mem_desc)!'')}</small>
                 </label>
             </div>
-            <div class="warn-banner hidden" id="memoryWarn">您选择了内存库：服务重启后数据会丢失，请勿用于正式环境。</div>
+            <div class="warn-banner hidden" id="memoryWarn">${((lang.sys_string_install_memory_warn)!'')}</div>
 
             <div id="remoteFields">
                 <div class="row">
                     <div>
-                        <label class="lbl">主机地址</label>
+                        <label class="lbl">${(lang.sys_string_install_lbl_host)!'主机地址'}</label>
                         <input id="host" value="localhost"/>
                     </div>
                     <div>
-                        <label class="lbl">端口</label>
-                        <input id="port" placeholder="可留空使用默认"/>
+                        <label class="lbl">${(lang.sys_string_install_lbl_port)!'端口'}</label>
+                        <input id="port" placeholder="${(lang.sys_string_install_port_ph_default)!'可留空使用默认'}"/>
                     </div>
                 </div>
             </div>
 
-            <label class="lbl" id="databaseNameLabel">库名 / 路径</label>
-            <input id="databaseName" placeholder="按下方提示填写"/>
+            <label class="lbl" id="databaseNameLabel">${(lang.sys_string_install_lbl_database)!'库名 / 路径'}</label>
+            <input id="databaseName" placeholder="${(lang.sys_string_install_database_ph)!'按下方提示填写'}"/>
             <p class="sub" id="databaseNameHint" style="margin-top:4px"></p>
 
             <div class="row">
                 <div>
-                    <label class="lbl">用户名</label>
+                    <label class="lbl">${(lang.sys_string_install_lbl_username)!'用户名'}</label>
                     <input id="username"/>
                 </div>
                 <div>
-                    <label class="lbl">密码</label>
+                    <label class="lbl">${(lang.sys_string_install_lbl_password)!'密码'}</label>
                     <input id="password" type="password"/>
                 </div>
             </div>
 
-            <h3 class="sub" style="margin-top:18px">Redis（可选）</h3>
-            <p class="sub">不勾选则安装后以单机运行（配置中不写 <code>spring.redis</code>）；需要分布式缓存、会话或锁时再改配置并重启。</p>
+            <h3 class="sub" style="margin-top:18px">${(lang.sys_string_install_redis_section)!'Redis（可选）'}</h3>
+            <p class="sub">${((lang.sys_string_install_redis_intro)!'')}</p>
             <label class="check-row" for="enableRedisCb">
                 <input type="checkbox" id="enableRedisCb"/>
-                <span>启用 Redis 并写入连接信息</span>
+                <span>${(lang.sys_string_install_redis_enable)!'启用 Redis 并写入连接信息'}</span>
             </label>
             <div id="redisFields" class="hidden">
                 <label class="check-row" for="enableShiroRedisCb">
                     <input type="checkbox" id="enableShiroRedisCb"/>
-                    <span>Shiro 会话存 Redis（多节点共享登录态，需 Redis 稳定可用）</span>
+                    <span>${(lang.sys_string_install_redis_shiro)!'Shiro 会话存 Redis（多节点共享登录态，需 Redis 稳定可用）'}</span>
                 </label>
                 <div class="row">
                     <div>
-                        <label class="lbl">Redis 主机</label>
+                        <label class="lbl">${(lang.sys_string_install_lbl_redis_host)!'Redis 主机'}</label>
                         <input id="redisHost" value="127.0.0.1"/>
                     </div>
                     <div>
-                        <label class="lbl">端口</label>
+                        <label class="lbl">${(lang.sys_string_install_lbl_redis_port)!'端口'}</label>
                         <input id="redisPort" value="6379"/>
                     </div>
                 </div>
-                <label class="lbl">Redis 密码（无则留空）</label>
-                <input id="redisPassword" type="password" placeholder="选填"/>
+                <label class="lbl">${(lang.sys_string_install_lbl_redis_password)!'Redis 密码（无则留空）'}</label>
+                <input id="redisPassword" type="password" placeholder="${(lang.sys_string_install_ph_optional)!'选填'}"/>
             </div>
 
-            <label class="lbl">附加连接参数（选填）</label>
-            <p class="sub" style="margin-top:0">例如 PostgreSQL 需要 SSL 时可填 <code>sslmode=require</code>（以数据库文档为准）。</p>
-            <input id="extraOptions" placeholder="选填"/>
+            <label class="lbl">${(lang.sys_string_install_lbl_extra_options)!'附加连接参数（选填）'}</label>
+            <p class="sub" style="margin-top:0">${((lang.sys_string_install_extra_hint)!'')}</p>
+            <input id="extraOptions" placeholder="${(lang.sys_string_install_ph_optional)!'选填'}"/>
 
             <label class="check-row" for="advancedUrl">
                 <input type="checkbox" id="advancedUrl"/>
-                <span>高级：自行填写完整 JDBC 连接串与驱动类名</span>
+                <span>${(lang.sys_string_install_adv_check)!'高级：自行填写完整 JDBC 连接串与驱动类名'}</span>
             </label>
             <div id="advBox" class="hidden">
-                <label class="lbl">JDBC 连接串</label>
-                <textarea id="jdbcUrl" placeholder="以 jdbc: 开头"></textarea>
-                <label class="lbl">驱动类名（可留空则与类型默认一致）</label>
-                <input id="driverClassName" placeholder="选填"/>
+                <label class="lbl">${(lang.sys_string_install_lbl_jdbc_url)!'JDBC 连接串'}</label>
+                <textarea id="jdbcUrl" placeholder="${(lang.sys_string_install_jdbc_ph)!'以 jdbc: 开头'}"></textarea>
+                <label class="lbl">${(lang.sys_string_install_lbl_driver)!'驱动类名（可留空则与类型默认一致）'}</label>
+                <input id="driverClassName" placeholder="${(lang.sys_string_install_ph_optional)!'选填'}"/>
             </div>
             <div class="err" id="e2"></div>
-            <button type="button" class="btn btn-secondary" onclick="go(1)">上一步</button>
-            <button type="button" class="btn btn-primary" onclick="doForm()">下一步</button>
+            <button type="button" class="btn btn-secondary" onclick="go(1)">${(lang.sys_string_install_btn_prev)!'上一步'}</button>
+            <button type="button" class="btn btn-primary" onclick="doForm()">${(lang.sys_string_install_btn_next)!'下一步'}</button>
         </div>
 
         <div id="panel-3" class="panel">
-            <h2>检查连接与权限</h2>
-            <p class="sub">将尝试连接数据库，并验证建表、删表权限。若失败，请根据提示核对账号、网络或库名。</p>
+            <h2>${(lang.sys_string_install_panel3_title)!'检查连接与权限'}</h2>
+            <p class="sub">${((lang.sys_string_install_panel3_intro)!'')}</p>
             <div id="checkResult"></div>
             <div class="err" id="e3"></div>
-            <button type="button" class="btn btn-secondary" onclick="go(2)">上一步</button>
-            <button type="button" class="btn btn-primary" onclick="doCheck()">开始检查</button>
-            <button type="button" class="btn btn-primary hidden" id="btnNext3" onclick="go(4)">检查通过，继续</button>
+            <button type="button" class="btn btn-secondary" onclick="go(2)">${(lang.sys_string_install_btn_prev)!'上一步'}</button>
+            <button type="button" class="btn btn-primary" onclick="doCheck()">${(lang.sys_string_install_btn_run_check)!'开始检查'}</button>
+            <button type="button" class="btn btn-primary hidden" id="btnNext3" onclick="go(4)">${(lang.sys_string_install_btn_check_ok_next)!'检查通过，继续'}</button>
         </div>
 
         <div id="panel-4" class="panel">
-            <h2>确认数据库现状</h2>
-            <p class="sub">以下为当前库中可读到的数据表列表。若已有大量业务表，请先确认是否与自动建表策略冲突，建议备份或更换空库。</p>
+            <h2>${(lang.sys_string_install_panel4_title)!'确认数据库现状'}</h2>
+            <p class="sub">${((lang.sys_string_install_panel4_intro)!'')}</p>
             <div id="metaResult"></div>
             <ul class="notes">
-                <li>点击「确认并完成安装」将写入配置文件，随后服务<strong>自动重启</strong>。</li>
-                <li>重启后会按系统设置维护表结构并写入运行所需基础数据。</li>
+                <li>${((lang.sys_string_install_panel4_note1)!'')}</li>
+                <li>${((lang.sys_string_install_panel4_note2)!'')}</li>
             </ul>
             <div class="err" id="e4"></div>
-            <button type="button" class="btn btn-secondary" onclick="go(3)">上一步</button>
-            <button type="button" class="btn btn-primary" onclick="loadMeta()">刷新列表</button>
-            <button type="button" class="btn btn-primary" onclick="doFinish()">确认并完成安装</button>
+            <button type="button" class="btn btn-secondary" onclick="go(3)">${(lang.sys_string_install_btn_prev)!'上一步'}</button>
+            <button type="button" class="btn btn-primary" onclick="loadMeta()">${(lang.sys_string_install_btn_refresh_meta)!'刷新列表'}</button>
+            <button type="button" class="btn btn-primary" onclick="doFinish()">${(lang.sys_string_install_btn_finish)!'确认并完成安装'}</button>
         </div>
 
         <div id="panel-5" class="panel">
-            <h2 id="panel5Title">安装进行中</h2>
+            <h2 id="panel5Title">${(lang.sys_string_install_panel5_title_progress)!'安装进行中'}</h2>
             <p class="sub" id="finishHint"></p>
             <div id="progressWrap" class="progress-wrap">
                 <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
-                <p class="phase-label" id="phaseLabel">正在保存配置并准备重启…</p>
+                <p class="phase-label" id="phaseLabel">${((lang.sys_string_install_phase_saving)!'')}</p>
                 <p class="sub" id="bootstrapHint"></p>
             </div>
             <div id="installDoneBlock" class="hidden">
                 <p class="ok" id="doneMsg"></p>
                 <p class="sub" id="countdownText"></p>
-                <a class="btn btn-primary" id="btnHome" href="${homeUrl}">进入网站首页</a>
-                <a class="btn btn-secondary" id="btnLogin" href="${loginUrl}">去登录页</a>
+                <a class="btn btn-primary" id="btnHome" href="${homeUrl}">${(lang.sys_string_install_btn_home)!'进入网站首页'}</a>
+                <a class="btn btn-secondary" id="btnLogin" href="${loginUrl}">${(lang.sys_string_install_btn_login)!'去登录页'}</a>
             </div>
             <div id="installFailBlock" class="hidden">
                 <p class="err" id="failMsg"></p>
-                <p class="sub">请查看运行日志或联系运维。修正问题后可刷新本页重试（必要时按说明清理配置后再安装）。</p>
-                <button type="button" class="btn btn-secondary" onclick="location.reload()">刷新页面</button>
+                <p class="sub">${((lang.sys_string_install_fail_sub)!'')}</p>
+                <button type="button" class="btn btn-secondary" onclick="location.reload()">${(lang.sys_string_install_btn_reload)!'刷新页面'}</button>
             </div>
         </div>
     </div>
 </div>
 <script>
+    var INSTALL_I18N = {
+        hintSelectTypeFirst: "${((lang.sys_string_install_hint_select_type_first)!'先选择数据库类型后，再选择连接方式。')?js_string}",
+        h2ModeHintDefault: "${((lang.sys_string_install_js_h2_mode_hint)!'选择 H2 的 SQL 兼容语法模式。')?js_string}",
+        tipEmbedFile: "${((lang.sys_string_install_js_tip_embed_file)!'支持本机文件模式')?js_string}",
+        tipEmbedMem: "${((lang.sys_string_install_js_tip_embed_mem)!'支持内存模式')?js_string}",
+        tipRemote: "${((lang.sys_string_install_js_tip_remote)!'建议远程连接或高级 JDBC 模式')?js_string}",
+        currentTypePrefix: "${((lang.sys_string_install_js_current_type_prefix)!'当前类型：')?js_string}",
+        tipsJoiner: "${((lang.sys_string_install_js_tips_joiner)!'，')?js_string}",
+        typeTipsOpen: "${((lang.sys_string_install_js_type_tips_open)!'（')?js_string}",
+        typeTipsClose: "${((lang.sys_string_install_js_type_tips_close)!'）')?js_string}",
+        placeholderFollow: "${((lang.sys_string_install_js_placeholder_follow)!'按提示填写')?js_string}",
+        ellipsis: "${((lang.sys_string_install_js_ellipsis)!'…')?js_string}",
+        step1: "${((lang.sys_string_install_js_step_1)!'说明')?js_string}",
+        step2: "${((lang.sys_string_install_js_step_2)!'数据库')?js_string}",
+        step3: "${((lang.sys_string_install_js_step_3)!'检查')?js_string}",
+        step4: "${((lang.sys_string_install_js_step_4)!'确认')?js_string}",
+        step5: "${((lang.sys_string_install_js_step_5)!'完成')?js_string}",
+        defaultPort: "${((lang.sys_string_install_js_default_port)!'默认 ')?js_string}",
+        portOptional: "${((lang.sys_string_install_js_port_optional)!'可留空')?js_string}",
+        loadTypesFail: "${((lang.sys_string_install_js_load_types_fail)!'无法加载数据库类型列表：')?js_string}",
+        errAgree: "${((lang.sys_string_install_js_err_agree)!'请先勾选「我已阅读并理解上述说明」')?js_string}",
+        checkDone: "${((lang.sys_string_install_js_check_done)!'检查已完成。')?js_string}",
+        tablesLine: "${((lang.sys_string_install_js_tables_line)!'共 {0} 张表{1}。')?js_string}",
+        tablesTruncated: "${((lang.sys_string_install_js_tables_truncated)!'（列表仅展示部分）')?js_string}",
+        saveFail: "${((lang.sys_string_install_js_save_fail)!'保存失败')?js_string}",
+        checkFail: "${((lang.sys_string_install_js_check_fail)!'检查未通过')?js_string}",
+        readFail: "${((lang.sys_string_install_js_read_fail)!'读取失败')?js_string}",
+        startupErr: "${((lang.sys_string_install_js_startup_err)!'启动过程中发生错误')?js_string}",
+        titleFail: "${((lang.sys_string_install_js_title_fail)!'安装未完全成功')?js_string}",
+        titleDone: "${((lang.sys_string_install_js_title_done)!'安装完成')?js_string}",
+        doneMsg: "${((lang.sys_string_install_js_done_msg)!'系统已就绪，您可以进入网站或登录后台。')?js_string}",
+        countdown: "${((lang.sys_string_install_js_countdown)!'{0} 秒后自动进入首页…')?js_string}",
+        phaseStarting: "${((lang.sys_string_install_js_phase_starting)!'正在启动…')?js_string}",
+        waitRestart: "${((lang.sys_string_install_js_wait_restart)!'正在等待服务重启，请稍候。')?js_string}",
+        initRunning: "${((lang.sys_string_install_js_init_running)!'正在初始化系统，请勿关闭浏览器。')?js_string}",
+        waitReboot: "${((lang.sys_string_install_js_wait_reboot)!'正在等待服务重新启动…')?js_string}",
+        manualHomeHint: "${((lang.sys_string_install_js_manual_home_hint)!'若长时间无响应，请稍后手动访问站点首页。')?js_string}",
+        holdAt100: "${((lang.sys_string_install_js_hold_at_100)!'启动已完成，正在为您准备结果页面…')?js_string}",
+        panel5Progress: "${((lang.sys_string_install_panel5_title_progress)!'安装进行中')?js_string}"
+    };
     var step = 1;
     var typeList = [];
     var api = '${installApiBase}';
@@ -462,8 +506,77 @@
     var homeUrl = '${homeUrl}';
     var pollTimer;
     var countdownTimer;
+    var bootstrapVisualPct = 0;
+    var bootstrapTargetPct = 0;
+    var bootstrapSmoothIv = null;
+    var bootstrapDoneWatcherIv = null;
+    var pendingDoneMessage = '';
+    var pendingPhaseLabel = '';
+    var BOOTSTRAP_HOLD_100_MS = 2200;
+    var bootstrapDoneWatchTicks = 0;
 
     function el(id) { return document.getElementById(id); }
+
+    function setBootstrapProgressTicking(on) {
+        var bar = el('progressFill');
+        if (bar) bar.classList.toggle('install-ticking', !!on);
+    }
+
+    function stopBootstrapSmoothOnly() {
+        if (bootstrapSmoothIv) {
+            clearInterval(bootstrapSmoothIv);
+            bootstrapSmoothIv = null;
+        }
+    }
+
+    function clearBootstrapProgressAnim() {
+        stopBootstrapSmoothOnly();
+        if (bootstrapDoneWatcherIv) {
+            clearInterval(bootstrapDoneWatcherIv);
+            bootstrapDoneWatcherIv = null;
+        }
+    }
+
+    function startBootstrapSmoothIfNeeded() {
+        if (bootstrapSmoothIv) return;
+        bootstrapSmoothIv = setInterval(function () {
+            if (bootstrapVisualPct < bootstrapTargetPct) {
+                var gap = bootstrapTargetPct - bootstrapVisualPct;
+                var step = Math.max(0.22, Math.min(4.5, gap / 13));
+                bootstrapVisualPct = Math.min(bootstrapTargetPct, bootstrapVisualPct + step);
+            }
+            var w = Math.min(100, Math.round(bootstrapVisualPct * 100) / 100);
+            el('progressFill').style.width = w + '%';
+        }, 110);
+    }
+
+    function beginBootstrapDoneHold(savedMessage, phaseLabel) {
+        stopPoll();
+        bootstrapTargetPct = 100;
+        pendingDoneMessage = savedMessage || '';
+        pendingPhaseLabel = phaseLabel;
+        bootstrapDoneWatchTicks = 0;
+        startBootstrapSmoothIfNeeded();
+        if (bootstrapDoneWatcherIv) return;
+        bootstrapDoneWatcherIv = setInterval(function () {
+            bootstrapDoneWatchTicks++;
+            var reached = bootstrapVisualPct >= 99.75 && bootstrapTargetPct >= 100;
+            var watchdog = bootstrapTargetPct >= 100 && bootstrapDoneWatchTicks > 480;
+            if (reached || watchdog) {
+                clearInterval(bootstrapDoneWatcherIv);
+                bootstrapDoneWatcherIv = null;
+                stopBootstrapSmoothOnly();
+                bootstrapVisualPct = 100;
+                el('progressFill').style.width = '100%';
+                el('phaseLabel').textContent = pendingPhaseLabel || INSTALL_I18N.titleDone;
+                el('bootstrapHint').textContent = INSTALL_I18N.holdAt100;
+                pollTimer = setTimeout(function () {
+                    pollTimer = null;
+                    showInstallDone(pendingDoneMessage);
+                }, BOOTSTRAP_HOLD_100_MS);
+            }
+        }, 70);
+    }
 
     function esc(s) {
         if (s == null || s === undefined) return '';
@@ -524,7 +637,7 @@
         var adv = el('advancedUrl').checked;
         el('remoteFields').classList.toggle('hidden', mode !== 'REMOTE' || adv);
         if (!t) {
-            el('databaseTypeHint').textContent = '先选择数据库类型后，再选择连接方式。';
+            el('databaseTypeHint').textContent = INSTALL_I18N.hintSelectTypeFirst;
             return;
         }
         var h2ModeBox = el('h2ModeBox');
@@ -544,7 +657,7 @@
                 sel.value = t.h2ModeDefault || 'MYSQL';
             }
             var now = opts.find(function (o) { return o.value === sel.value; });
-            el('h2ModeHint').textContent = now ? now.label : '选择 H2 的 SQL 兼容语法模式。';
+            el('h2ModeHint').textContent = now ? now.label : INSTALL_I18N.h2ModeHintDefault;
             var nonMysql = sel.value && sel.value !== 'MYSQL';
             el('h2NativeWarn').classList.toggle('hidden', !nonMysql);
             syncH2ModeTableHighlight();
@@ -580,10 +693,10 @@
             }
         }
         var connTips = [];
-        if (t.supportsEmbeddedFile === 'true') connTips.push('支持本机文件模式');
-        if (t.supportsEmbeddedMemory === 'true') connTips.push('支持内存模式');
-        if (!connTips.length) connTips.push('建议远程连接或高级 JDBC 模式');
-        el('databaseTypeHint').textContent = '当前类型：' + t.label + '（' + connTips.join('，') + '）';
+        if (t.supportsEmbeddedFile === 'true') connTips.push(INSTALL_I18N.tipEmbedFile);
+        if (t.supportsEmbeddedMemory === 'true') connTips.push(INSTALL_I18N.tipEmbedMem);
+        if (!connTips.length) connTips.push(INSTALL_I18N.tipRemote);
+        el('databaseTypeHint').textContent = INSTALL_I18N.currentTypePrefix + t.label + INSTALL_I18N.typeTipsOpen + connTips.join(INSTALL_I18N.tipsJoiner) + INSTALL_I18N.typeTipsClose;
         updateDatabasePlaceholder();
     }
 
@@ -600,11 +713,11 @@
         else if (mode === 'EMBEDDED_FILE') hint = t.databaseFieldHintFile || '';
         else hint = t.databaseFieldHintMemory || '';
         hintEl.textContent = hint;
-        el('databaseName').placeholder = hint ? hint.substring(0, 48) + (hint.length > 48 ? '…' : '') : '按提示填写';
+        el('databaseName').placeholder = hint ? hint.substring(0, 48) + (hint.length > 48 ? INSTALL_I18N.ellipsis : '') : INSTALL_I18N.placeholderFollow;
     }
 
     function renderSteps() {
-        var names = ['说明', '数据库', '检查', '确认', '完成'];
+        var names = [INSTALL_I18N.step1, INSTALL_I18N.step2, INSTALL_I18N.step3, INSTALL_I18N.step4, INSTALL_I18N.step5];
         var h = '';
         for (var i = 0; i < names.length; i++) {
             var n = i + 1;
@@ -664,20 +777,20 @@
             });
             if (typeList.length) {
                 el('port').placeholder = typeList[0].defaultPort && typeList[0].defaultPort !== '0'
-                    ? '默认 ' + typeList[0].defaultPort : '可留空';
+                    ? INSTALL_I18N.defaultPort + typeList[0].defaultPort : INSTALL_I18N.portOptional;
                 el('databaseType').dispatchEvent(new Event('change'));
             }
             syncModeStyles();
             updateConnectionUi();
         }).catch(function (e) {
-            el('e1').textContent = '无法加载数据库类型列表: ' + e;
+            el('e1').textContent = INSTALL_I18N.loadTypesFail + e;
         });
     }
 
     el('databaseType').onchange = function () {
         var t = currentType();
         if (t && t.defaultPort && t.defaultPort !== '0') {
-            el('port').placeholder = '默认 ' + t.defaultPort;
+            el('port').placeholder = INSTALL_I18N.defaultPort + t.defaultPort;
         }
         if (!el('advancedUrl').checked && t) {
             var mode = getConnMode();
@@ -717,7 +830,7 @@
     function doAgree() {
         el('e1').textContent = '';
         if (!el('agreeCb').checked) {
-            el('e1').textContent = '请先勾选「我已阅读并理解上述说明」';
+            el('e1').textContent = INSTALL_I18N.errAgree;
             return;
         }
         fetch(api + '/agree', { method: 'POST' }).then(function (r) { return r.json(); }).then(function () {
@@ -767,7 +880,7 @@
                 html += '</ul></div>';
             });
         }
-        return html || '<p class="sub">检查已完成。</p>';
+        return html || '<p class="sub">' + esc(INSTALL_I18N.checkDone) + '</p>';
     }
 
     function renderMeta(d) {
@@ -786,9 +899,9 @@
         });
         html += '</ul></div>';
         if (d.tableCount != null) {
-            html += '<p class="sub" style="margin-top:10px">共 ' + d.tableCount + ' 张表';
-            if (d.tablesTruncated) html += '（列表仅展示部分）';
-            html += '。</p>';
+            var trunc = d.tablesTruncated ? INSTALL_I18N.tablesTruncated : '';
+            var line = INSTALL_I18N.tablesLine.replace(/\{0\}/g, String(d.tableCount)).replace(/\{1\}/g, trunc);
+            html += '<p class="sub" style="margin-top:10px">' + esc(line) + '</p>';
         }
         return html;
     }
@@ -801,7 +914,7 @@
             body: JSON.stringify(payloadForm())
         }).then(function (r) { return r.json(); }).then(function (d) {
             if (!d.ok) {
-                el('e2').textContent = d.error || '保存失败';
+                el('e2').textContent = d.error || INSTALL_I18N.saveFail;
                 return;
             }
             go(3);
@@ -818,7 +931,7 @@
         el('btnNext3').classList.add('hidden');
         fetch(api + '/check', { method: 'POST' }).then(function (r) { return r.json(); }).then(function (d) {
             if (!d.ok) {
-                el('e3').textContent = d.error || '检查未通过';
+                el('e3').textContent = d.error || INSTALL_I18N.checkFail;
                 el('checkResult').innerHTML = '';
                 return;
             }
@@ -833,7 +946,7 @@
         el('e4').textContent = '';
         fetch(api + '/meta').then(function (r) { return r.json(); }).then(function (d) {
             if (!d.ok) {
-                el('e4').textContent = d.error || '读取失败';
+                el('e4').textContent = d.error || INSTALL_I18N.readFail;
                 return;
             }
             el('metaResult').innerHTML = renderMeta(d);
@@ -854,21 +967,25 @@
 
     function showInstallFail(msg) {
         stopPoll();
+        clearBootstrapProgressAnim();
+        setBootstrapProgressTicking(false);
         el('progressWrap').classList.add('hidden');
         el('installFailBlock').classList.remove('hidden');
-        el('failMsg').textContent = msg || '启动过程中发生错误';
-        el('panel5Title').textContent = '安装未完全成功';
+        el('failMsg').textContent = msg || INSTALL_I18N.startupErr;
+        el('panel5Title').textContent = INSTALL_I18N.titleFail;
     }
 
     function showInstallDone(savedMessage) {
         stopPoll();
+        clearBootstrapProgressAnim();
+        setBootstrapProgressTicking(false);
         el('progressWrap').classList.add('hidden');
         el('installDoneBlock').classList.remove('hidden');
-        el('panel5Title').textContent = '安装完成';
-        el('doneMsg').textContent = savedMessage || '系统已就绪，您可以进入网站或登录后台。';
+        el('panel5Title').textContent = INSTALL_I18N.titleDone;
+        el('doneMsg').textContent = savedMessage || INSTALL_I18N.doneMsg;
         var sec = 10;
         function tick() {
-            el('countdownText').textContent = sec > 0 ? (sec + ' 秒后自动进入首页…') : '';
+            el('countdownText').textContent = sec > 0 ? INSTALL_I18N.countdown.replace(/\{0\}/g, String(sec)) : '';
             if (sec <= 0) {
                 window.location.assign(homeUrl);
                 return;
@@ -880,14 +997,21 @@
     }
 
     function startBootstrapPoll(savedMessage) {
+        clearBootstrapProgressAnim();
         stopPoll();
         stopCountdown();
+        bootstrapVisualPct = 0;
+        bootstrapTargetPct = 0;
+        pendingDoneMessage = '';
+        pendingPhaseLabel = '';
+        setBootstrapProgressTicking(true);
         el('finishHint').textContent = savedMessage || '';
         el('progressWrap').classList.remove('hidden');
         el('installDoneBlock').classList.add('hidden');
         el('installFailBlock').classList.add('hidden');
-        el('panel5Title').textContent = '安装进行中';
+        el('panel5Title').textContent = INSTALL_I18N.panel5Progress;
         el('progressFill').style.width = '0%';
+        startBootstrapSmoothIfNeeded();
         var delay = 800;
         function schedule(next) {
             pollTimer = setTimeout(next, delay);
@@ -896,25 +1020,27 @@
         function tick() {
             fetch(bootstrapUrl).then(function (r) { return r.json(); }).then(function (d) {
                 if (d.failed) {
+                    setBootstrapProgressTicking(false);
                     showInstallFail(d.error);
                     return;
                 }
                 if (d.done) {
-                    showInstallDone(savedMessage);
+                    beginBootstrapDoneHold(savedMessage, d.phaseLabel);
                     return;
                 }
-                el('phaseLabel').textContent = d.phaseLabel || '正在启动…';
-                var pct = typeof d.percent === 'number' ? d.percent : 0;
-                el('progressFill').style.width = pct + '%';
+                el('phaseLabel').textContent = d.phaseLabel || INSTALL_I18N.phaseStarting;
+                var srv = typeof d.percent === 'number' ? d.percent : 0;
+                bootstrapTargetPct = Math.max(bootstrapTargetPct, srv);
+                startBootstrapSmoothIfNeeded();
                 if (d.wizardActive) {
-                    el('bootstrapHint').textContent = '正在等待服务重启，请稍候。';
+                    el('bootstrapHint').textContent = INSTALL_I18N.waitRestart;
                 } else {
-                    el('bootstrapHint').textContent = d.initializing ? '正在初始化系统，请勿关闭浏览器。' : '';
+                    el('bootstrapHint').textContent = d.initializing ? INSTALL_I18N.initRunning : '';
                 }
                 schedule(tick);
             }).catch(function () {
-                el('phaseLabel').textContent = '正在等待服务重新启动…';
-                el('bootstrapHint').textContent = '若长时间无响应，请稍后手动访问站点首页。';
+                el('phaseLabel').textContent = INSTALL_I18N.waitReboot;
+                el('bootstrapHint').textContent = INSTALL_I18N.manualHomeHint;
                 delay = Math.min(delay + 200, 2200);
                 schedule(tick);
             });
@@ -926,7 +1052,7 @@
         el('e4').textContent = '';
         fetch(api + '/finish', { method: 'POST' }).then(function (r) { return r.json(); }).then(function (d) {
             if (!d.ok) {
-                el('e4').textContent = d.error || '保存失败';
+                el('e4').textContent = d.error || INSTALL_I18N.saveFail;
                 return;
             }
             go(5);
