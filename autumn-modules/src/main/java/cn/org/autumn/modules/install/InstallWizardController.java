@@ -1,6 +1,8 @@
 package cn.org.autumn.modules.install;
 
 import cn.org.autumn.annotation.SkipInterceptor;
+import cn.org.autumn.modules.spm.interceptor.SpmInterceptor;
+import cn.org.autumn.modules.usr.interceptor.AuthorizationInterceptor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -9,9 +11,14 @@ import org.springframework.web.bind.annotation.GetMapping;
 import javax.servlet.http.HttpServletRequest;
 
 /**
- * 安装向导页不依赖业务库与 SPM/多语言等拦截器注入；安装模式下跳过全局 MVC 拦截器，避免 postHandle 查库失败导致 500。
+ * 安装向导：跳过授权与 SPM，避免依赖业务登录态/埋点库；<b>不跳过</b> {@link cn.org.autumn.modules.lan.interceptor.LanguageInterceptor}，
+ * 以便与业务项目下沉模板时保持「必有 {@code lang}」契约。
+ * <p>
+ * <b>多语言（非二选一）</b>：安装前业务库可能未就绪，{@code lang} 由拦截器分层装入——classpath 种子
+ * （{@link cn.org.autumn.modules.install.InstallWizardLangSupport}）+ 可选内存中的 {@link cn.org.autumn.modules.lan.service.LanguageService} 词条；
+ * 正常运行期仍以 Load 链后的 DB 缓存为主。详见 {@code install/lang/*.properties}。
  */
-@SkipInterceptor
+@SkipInterceptor({AuthorizationInterceptor.class, SpmInterceptor.class})
 @Controller
 @ConditionalOnProperty(prefix = "autumn.install", name = "mode", havingValue = "true")
 public class InstallWizardController {

@@ -4,8 +4,7 @@ import cn.org.autumn.site.ViewFactory;
 import cn.org.autumn.view.NameBasedViewResolver;
 import freemarker.cache.TemplateLoader;
 import freemarker.template.TemplateException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.freemarker.FreeMarkerProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -18,15 +17,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
+@Slf4j
 @Configuration
 public class FreemarkerConfig {
-    Logger log = LoggerFactory.getLogger(getClass());
 
     @Bean
     public FreeMarkerConfigurer freeMarkerConfigurer(List<VariablesHandler> variablesHandlers, TemplateLoader templateLoader) {
         FreeMarkerConfigurer configurer = new FreeMarkerConfigurer();
         Map<String, Object> variables = new HashMap<>();
-        if (null != variablesHandlers && variablesHandlers.size() > 0) {
+        if (null != variablesHandlers && !variablesHandlers.isEmpty()) {
             for (VariablesHandler variablesHandler : variablesHandlers) {
                 variables.put(variablesHandler.getName(), variablesHandler);
             }

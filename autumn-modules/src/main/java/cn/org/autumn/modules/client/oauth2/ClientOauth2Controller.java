@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.client.oauth2;
 
+import cn.org.autumn.config.ApplicationInitializationProgress;
 import cn.org.autumn.modules.client.entity.WebAuthenticationEntity;
 import cn.org.autumn.modules.client.service.WebAuthenticationService;
 import cn.org.autumn.modules.sys.service.SysConfigService;
@@ -66,6 +67,9 @@ public class ClientOauth2Controller {
 
     @Autowired
     VersionFactory versionFactory;
+
+    @Autowired(required = false)
+    ApplicationInitializationProgress applicationInitializationProgress;
 
     @RequestMapping("oauth2/callback")
     public Object defaultCodeCallback(HttpServletRequest request, HttpServletResponse response, Model model) throws OAuthSystemException {
@@ -164,6 +168,15 @@ public class ClientOauth2Controller {
     @ResponseBody
     @RequestMapping(value = {"/health"})
     public R health() {
+        if (applicationInitializationProgress != null) {
+            ApplicationInitializationProgress.Phase p = applicationInitializationProgress.getPhase();
+            if (p == ApplicationInitializationProgress.Phase.FAILED) {
+                return R.error(500, "application startup failed");
+            }
+            if (p != ApplicationInitializationProgress.Phase.WIZARD && !applicationInitializationProgress.isLanguageCacheReady()) {
+                return R.error(503, "language cache not ready");
+            }
+        }
         Map<String, Object> o = healthFactory.getHealth();
         if (null != o && !o.isEmpty())
             return R.ok().put("data", o);

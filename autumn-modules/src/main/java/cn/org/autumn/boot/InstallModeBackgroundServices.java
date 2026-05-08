@@ -41,7 +41,8 @@ public class InstallModeBackgroundServices implements ApplicationRunner {
             return;
         }
         LoopJob.pauseAll();
-        log.info("Install mode: LoopJob.pauseAll() applied; periodic LoopJob callbacks will not run");
+        if (log.isDebugEnabled())
+            log.debug("Install mode: LoopJob.pauseAll() applied; periodic LoopJob callbacks will not run");
         pauseAllQuartzSchedulers();
     }
 

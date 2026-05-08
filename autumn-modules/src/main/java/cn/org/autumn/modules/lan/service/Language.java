@@ -37,15 +37,37 @@ public final class Language {
         return languageService.toLang(locale);
     }
 
+    /**
+     * 将 {@code ?lang=} 参数解析为 {@link Locale}。
+     * <p>
+     * 支持常见简写（如 {@code en}、{@code cn}、{@code zh}），便于安装页等场景无需输入完整 {@code en_us}/{@code zh_cn}。
+     */
     public static Locale toLocale(String lang) {
-        Locale locale = null;
-        if (StringUtils.isNotEmpty(lang)) {
-            lang = lang.replace("-", "_");
-            String[] lc = lang.split("_");
-            if (lc.length == 2)
-                locale = new Locale(lc[0], lc[1]);
+        if (StringUtils.isEmpty(lang)) {
+            return null;
         }
-        return locale;
+        String norm = lang.trim().replace("-", "_");
+        String lower = norm.toLowerCase(Locale.ROOT);
+        if ("en".equals(lower) || "english".equals(lower)) {
+            return Locale.US;
+        }
+        if ("cn".equals(lower) || "zh".equals(lower) || "chinese".equals(lower)) {
+            return Locale.SIMPLIFIED_CHINESE;
+        }
+        String[] lc = norm.split("_");
+        if (lc.length == 2 && StringUtils.isNotBlank(lc[0]) && StringUtils.isNotBlank(lc[1])) {
+            return new Locale(lc[0].toLowerCase(Locale.ROOT), lc[1].toUpperCase(Locale.ROOT));
+        }
+        if (lc.length == 1 && StringUtils.isNotBlank(lc[0])) {
+            String language = lc[0].toLowerCase(Locale.ROOT);
+            if ("en".equals(language)) {
+                return Locale.US;
+            }
+            if ("zh".equals(language)) {
+                return Locale.SIMPLIFIED_CHINESE;
+            }
+        }
+        return null;
     }
 
     /**

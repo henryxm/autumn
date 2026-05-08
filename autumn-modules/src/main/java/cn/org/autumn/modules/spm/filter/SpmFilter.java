@@ -26,6 +26,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 @Slf4j
@@ -172,6 +173,44 @@ public class SpmFilter extends FormAuthenticationFilter implements PathFactory.P
      * @param response HTTP响应
      * @return false，表示不继续处理请求
      */
+    /**
+     * 管理端 {@code index.html} 通过 iframe 加载 {@code main.html} 等子页。未登录时若仅对 iframe 内请求做 302 登录，
+     * 浏览器只在 iframe 跟随重定向，导致「外壳 + 内嵌登录」的怪异布局。此处改为返回极小 HTML，强制在顶层窗口跳转登录页。
+     */
+    @Override
+    protected void saveRequestAndRedirectToLogin(ServletRequest request, ServletResponse response) throws IOException {
+        saveRequest(request);
+        HttpServletResponse httpResponse = (HttpServletResponse) response;
+        if (httpResponse.isCommitted()) {
+            return;
+        }
+        String loginUrl = getLoginUrl();
+        writeTopWindowLoginRedirect((HttpServletRequest) request, httpResponse, loginUrl);
+    }
+
+    private static void writeTopWindowLoginRedirect(HttpServletRequest request, HttpServletResponse response, String loginUrl) throws IOException {
+        response.resetBuffer();
+        response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+        response.setContentType("text/html;charset=UTF-8");
+        response.setStatus(HttpServletResponse.SC_OK);
+        String target = loginUrl == null ? "" : loginUrl.trim();
+        if (target.isEmpty()) {
+            target = request.getContextPath() + "/login";
+        } else if (!target.startsWith("http://") && !target.startsWith("https://") && !target.startsWith("/")) {
+            target = request.getContextPath() + "/" + target;
+        } else if (target.startsWith("/")) {
+            target = request.getContextPath() + target;
+        }
+        String asJson = JSON.toJSONString(target);
+        PrintWriter w = response.getWriter();
+        w.write("<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>Redirect</title></head><body>");
+        w.write("<script>(function(){var u=");
+        w.write(asJson);
+        w.write(";try{if(window.top!==window.self){window.top.location.replace(u);}else{window.location.replace(u);}}catch(e){window.location.replace(u);}})();</script>");
+        w.write("</body></html>");
+        w.flush();
+    }
+
     private boolean handleUnauthorized(HttpServletRequest request, HttpServletResponse response) {
         try {
             if (log.isDebugEnabled()) {

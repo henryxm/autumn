@@ -52,6 +52,31 @@ public class DatabaseHolder {
     }
 
     /**
+     * 与 {@link #getType()} 的路由规则一致：存在 {@link DataSourceDialectRegistry} 时按
+     * {@link DynamicDataSource#getDataSource()} 取当前 lookup key 对应 JDBC URL；否则回退
+     * {@code spring.datasource.druid.first.url} / {@code spring.datasource.url}。
+     * <p>
+     * 不包含安装向导占位逻辑（{@link InstallMode} 下 {@link #getType()} 仍返回 {@link DatabaseType#OTHER}，
+     * 调用方应结合类型与 URL 一并判断）。供 {@link cn.org.autumn.table.relational.provider.EmbeddedH2MysqlMode}
+     * 等与方言选择对齐，避免仅读 first URL 与线程路由数据源不一致。
+     */
+    public String getRoutedJdbcUrl() {
+        if (dataSourceDialectRegistry != null) {
+            String key = DynamicDataSource.getDataSource();
+            String url = dataSourceDialectRegistry.resolveJdbcUrlForLookupKey(key);
+            return url == null ? "" : url.trim();
+        }
+        if (environment != null) {
+            String url = environment.getProperty("spring.datasource.druid.first.url");
+            if (StringUtils.isBlank(url)) {
+                url = environment.getProperty("spring.datasource.url");
+            }
+            return url == null ? "" : url.trim();
+        }
+        return "";
+    }
+
+    /**
      * 与 {@link #getType()} 相同解析规则，供无 Spring 注入场景（如 {@link cn.org.autumn.database.runtime.RuntimeSqlDialectRegistry}）使用。
      * <p>
      * {@code jdbc:h2:...} 且该 URL 含 {@code MODE=MySQL} 时返回 {@link DatabaseType#MYSQL}（内嵌 MySQL 兼容 H2；与

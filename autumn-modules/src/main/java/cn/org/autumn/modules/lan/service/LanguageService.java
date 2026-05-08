@@ -18,8 +18,11 @@ import io.netty.util.internal.StringUtil;
 import jodd.net.URLDecoder;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
+import cn.org.autumn.config.ApplicationInitializationProgress;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.core.annotation.Order;
+import org.springframework.core.Ordered;
 import org.springframework.stereotype.Service;
 
 import java.lang.reflect.Field;
@@ -47,6 +50,9 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
 
     @Autowired
     TagTaskExecutor asyncTaskExecutor;
+
+    @Autowired(required = false)
+    ApplicationInitializationProgress applicationInitializationProgress;
 
     private static boolean loaded = false;
 
@@ -113,17 +119,31 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
         }
     }
 
+    /**
+     * 在 {@link LoadFactory.Load} 批次中优先执行，尽量缩短「HTTP 已可达但多语言缓存未填充」窗口。
+     */
+    @Override
+    @Order(Ordered.HIGHEST_PRECEDENCE)
     public void load() {
         load(false);
     }
 
     public void load(boolean force) {
-        if (loaded && !force)
+        if (loaded && !force) {
+            notifyLanguageCacheReady();
             return;
-        loaded = true;
+        }
         List<LanguageEntity> languageEntityList = baseMapper.load();
         for (LanguageEntity languageEntity : languageEntityList) {
             f(languageEntity);
+        }
+        loaded = true;
+        notifyLanguageCacheReady();
+    }
+
+    private void notifyLanguageCacheReady() {
+        if (applicationInitializationProgress != null) {
+            applicationInitializationProgress.markLanguageCacheReady();
         }
     }
 
