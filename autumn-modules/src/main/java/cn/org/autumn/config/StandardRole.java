@@ -1,7 +1,7 @@
 package cn.org.autumn.config;
 
 import cn.org.autumn.modules.sys.service.SysUserRoleService;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 无 Minclouds 时的默认 {@link Role}：仅基于 {@link SysUserRoleService}，不访问菜单扩展。
