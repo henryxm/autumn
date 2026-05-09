@@ -9,6 +9,7 @@ import cn.org.autumn.modules.sys.dao.SysUserRoleDao;
 import cn.org.autumn.modules.sys.entity.SysRoleEntity;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.entity.SysUserRoleEntity;
+import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.service.CacheService;
 import cn.org.autumn.site.InitFactory;
 import cn.org.autumn.utils.MapUtils;
@@ -63,6 +64,22 @@ public class SysUserRoleService extends ServiceImpl<SysUserRoleDao, SysUserRoleE
         // 缓存过期时间：1分钟
         Boolean result = cacheService.compute(user, () -> isSystemAdministrator(user), config);
         return result != null ? result : false;
+    }
+
+    public boolean isAdmin() {
+        try {
+            return isAdmin(ShiroUtils.getUserUuid());
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public boolean isSystemAdmin() {
+        try {
+            return isAdmin(ShiroUtils.getUserUuid());
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     public void init() {
