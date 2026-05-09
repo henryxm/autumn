@@ -1,3 +1,6 @@
 org.springframework.boot.env.EnvironmentPostProcessor=\
 cn.org.autumn.modules.install.InstallEnvironmentPostProcessor,\
 cn.org.autumn.config.JdbcEnvironmentPostProcessor
+
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+cn.org.autumn.config.DefaultRoleAutoConfiguration
