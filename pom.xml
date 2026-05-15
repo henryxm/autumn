@@ -299,6 +299,12 @@
                 <artifactId>shiro-web</artifactId>
                 <version>${shiro.version}</version>
                 <classifier>jakarta</classifier>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.apache.shiro</groupId>
+                        <artifactId>shiro-core</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.apache.shiro</groupId>
@@ -310,6 +316,16 @@
                 <artifactId>shiro-spring</artifactId>
                 <version>${shiro.version}</version>
                 <classifier>jakarta</classifier>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.apache.shiro</groupId>
+                        <artifactId>shiro-web</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>org.apache.shiro</groupId>
+                        <artifactId>shiro-core</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>javax.servlet</groupId>

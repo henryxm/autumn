@@ -59,11 +59,29 @@
             <groupId>org.apache.shiro</groupId>
             <artifactId>shiro-web</artifactId>
             <classifier>jakarta</classifier>
+            <exclusions>
+                <!-- shiro-web:jakarta 勿再拉入无 classifier 的 shiro-core，避免与 shiro-core:jakarta 双 JAR 及 SavedRequest 序列化冲突 -->
+                <exclusion>
+                    <groupId>org.apache.shiro</groupId>
+                    <artifactId>shiro-core</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.apache.shiro</groupId>
             <artifactId>shiro-spring</artifactId>
             <classifier>jakarta</classifier>
+            <exclusions>
+                <!-- shiro-spring:jakarta 勿再拉入无 classifier 的 shiro-web / shiro-core，避免与 jakarta 变体双 JAR -->
+                <exclusion>
+                    <groupId>org.apache.shiro</groupId>
+                    <artifactId>shiro-web</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.apache.shiro</groupId>
+                    <artifactId>shiro-core</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <!-- ==================== 验证码 ==================== -->
