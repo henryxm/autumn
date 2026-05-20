@@ -58,6 +58,7 @@ autumn:
 - `DistributedLockService`：无 `RedissonClient`、配置关闭、或 `tryLock` 因连接异常失败时，**在捕获异常后回退为本地执行** `Callable`。
 - `TagRunnable` / `TagCallable`：`RedissonClient` 不可用时**不再跳过任务**，改为与无锁路径一致**本地执行**（多节点时仅未连 Redis 的节点会执行，存在重复执行风险，属单机降级语义）。
 - `LockOnce`：同样在无客户端时调用 `executeDirectly()`；仍可在 `onRedisUnavailable()` 中插入日志或指标。
+- 任务结束统一走 **`TagRunnable.onFinished(FinishStatus)`**（含 `SKIPPED` / 未持框架锁）；内存队列 drain 与状态机见 **`docs/AI_ASYNC_TASK.md`**。
 
 ## 7. 管理接口
 
