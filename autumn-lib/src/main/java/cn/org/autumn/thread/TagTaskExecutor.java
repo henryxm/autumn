@@ -1,7 +1,7 @@
 package cn.org.autumn.thread;
 
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang.StringUtils;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import java.text.SimpleDateFormat;
@@ -157,29 +157,37 @@ public class TagTaskExecutor extends ThreadPoolTaskExecutor {
         }
     }
 
-    public void execute(TagRunnable task) {
+    /**
+     * @return {@code true} 已提交线程池；{@code false} 未提交（null、id 去重等），并已触发 {@link TagRunnable#finishNotDispatched()}
+     */
+    public boolean execute(TagRunnable task) {
         if (task == null) {
             if (log.isDebugEnabled())
                 log.debug("尝试执行 null 任务，已忽略");
-            return;
+            return false;
         }
         String taskId = task.getId();
         if (StringUtils.isNotBlank(taskId)) {
-            if (ids.contains(taskId))
-                return;
+            if (ids.contains(taskId)) {
+                if (log.isDebugEnabled())
+                    log.debug("任务 id 重复，未重复提交: id={}, tag={}", taskId, task.getTag());
+                task.finishNotDispatched();
+                return false;
+            }
             ids.add(taskId);
         }
         totalSubmitted.incrementAndGet();
         running.add(task);
         try {
             super.execute(task);
+            return true;
         } catch (Exception e) {
-            // 提交失败时清理状态
             running.remove(task);
             if (StringUtils.isNotBlank(taskId)) {
                 ids.remove(taskId);
             }
             recordRejected();
+            task.finishNotDispatched();
             if (log.isDebugEnabled())
                 log.debug("任务提交到线程池失败: tag={}, error={}", task.getTag(), e.getMessage());
             throw e;
@@ -195,8 +203,12 @@ public class TagTaskExecutor extends ThreadPoolTaskExecutor {
         // ID 去重（与 execute() 一致）
         String taskId = task.getId();
         if (StringUtils.isNotBlank(taskId)) {
-            if (ids.contains(taskId))
+            if (ids.contains(taskId)) {
+                if (log.isDebugEnabled())
+                    log.debug("任务 id 重复，未重复提交: id={}, tag={}", taskId, task.getTag());
+                task.finishNotDispatched();
                 return null;
+            }
             ids.add(taskId);
         }
         totalSubmitted.incrementAndGet();
@@ -209,6 +221,7 @@ public class TagTaskExecutor extends ThreadPoolTaskExecutor {
                 ids.remove(taskId);
             }
             recordRejected();
+            task.finishNotDispatched();
             if (log.isDebugEnabled())
                 log.debug("任务提交到线程池失败: tag={}, error={}", task.getTag(), e.getMessage());
             throw e;

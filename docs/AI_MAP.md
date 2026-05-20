@@ -84,6 +84,19 @@
   - 通过 `sysConfigService.getObject(...)` 获取对象配置
   - 配置项与默认值详见 `docs/AI_DISTRIBUTED_LOCK.md`
 
+### 2.2C 线程池异步任务（`TagRunnable`，与 `BaseQueueService` 区分）
+
+- 核心类：
+  - `cn.org.autumn.thread.TagTaskExecutor`（注入名常为 `asyncTaskExecutor`）
+  - `cn.org.autumn.thread.TagRunnable`、`LockOnce`、`FinishStatus`
+- 关键点：
+  - 业务写在 `exe()`；**生命周期收口**用 `onFinished(FinishStatus)`（每任务最多一次）。
+  - `execute(TagRunnable)` 返回 `boolean`；未提交时 `NOT_DISPATCHED`。
+  - **内存队列 drain**：`lock=false` 的 `TagRunnable` + 本机 `IDLE/DISPATCHING` + `exe()` 内 `withLockOrFallback*`；**不要**用 `LockOnce` 却指望每轮都进 `exe()`。
+  - **时间窗只跑一次**：`LockOnce` 或 `@TagValue(lock=true)`（未持锁 → `SKIPPED`，仍触发 `onFinished`）。
+- 专项文档：
+  - **`docs/AI_ASYNC_TASK.md`**（状态机范式、反模式、与分布式锁分工）
+
 ### 2.2B 会话终止与重登守卫（Shiro）
 
 - 核心类：
@@ -526,6 +539,10 @@ public class DemoService extends ModuleService<DemoDao, DemoEntity> implements L
 - 队列反模式：
   - 业务中手动新建线程池或阻塞队列替代 `BaseQueueService`。
   - 仅发送消息不定义失败处理策略（`onErrorMessage/onDeadMessage`）。
+- **`TagRunnable` 反模式**（见 **`docs/AI_ASYNC_TASK.md`** §5）：
+  - 内存队列 drain 使用 `LockOnce` 却期望每轮都执行 `exe()`。
+  - 在 `execute()` 前设 `AtomicBoolean` 闸门，仅在 `exe()` 的 `finally` 释放。
+  - 混淆 `BaseQueueService` 持久化队列与 `asyncTaskExecutor` + 内存 `ConcurrentMap` drain。
 - 定时任务反模式：
   - 固定周期任务直接上 cron，不实现 `LoopJob.*` 周期接口。
   - 任务无超时、无防重入、无连续错误保护，不配置 `@JobMeta`。

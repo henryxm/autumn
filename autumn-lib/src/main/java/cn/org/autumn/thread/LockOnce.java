@@ -36,6 +36,10 @@ import java.util.concurrent.TimeUnit;
  *     public void exe() {
  *         // 业务逻辑，保证3600秒（1小时）内只执行一次，各节点错开10秒内随机启动
  *     }
+ *     &#64;Override
+ *     protected void onFinished(FinishStatus outcome) {
+ *         // 释放业务调度状态（见 {@link TagRunnable#onFinished(FinishStatus)}）
+ *     }
  * });
  * </pre>
  */
@@ -92,6 +96,9 @@ public abstract class LockOnce extends TagRunnable {
         } finally {
             clearThread();
             TagTaskExecutor.remove(this);
+            if (!wasFinishNotified()) {
+                notifyFinished(FinishStatus.SKIPPED);
+            }
         }
     }
 
@@ -131,7 +138,7 @@ public abstract class LockOnce extends TagRunnable {
         try {
             if (log.isDebugEnabled())
                 log.debug("分布式锁已获取，开始执行: key={}, tag={}, lease={}s", lockKey, safeTag(value), leaseSeconds);
-            exe();
+            invokeExe();
             if (log.isDebugEnabled())
                 log.debug("任务执行成功: key={}, tag={}, 耗时={}ms", lockKey, safeTag(value), System.currentTimeMillis() - start);
         } catch (Throwable t) {
@@ -150,8 +157,6 @@ public abstract class LockOnce extends TagRunnable {
         } finally {
             long duration = System.currentTimeMillis() - start;
             TagTaskExecutor.recordCompletion(this, duration, success, errorMsg);
-            clearThread();
-            TagTaskExecutor.remove(this);
         }
     }
 
@@ -164,7 +169,7 @@ public abstract class LockOnce extends TagRunnable {
         String errorMsg = null;
 
         try {
-            exe();
+            invokeExe();
         } catch (Throwable t) {
             success = false;
             if (isCancelled() || Thread.currentThread().isInterrupted()) {
@@ -177,8 +182,6 @@ public abstract class LockOnce extends TagRunnable {
         } finally {
             long duration = System.currentTimeMillis() - start;
             TagTaskExecutor.recordCompletion(this, duration, success, errorMsg);
-            clearThread();
-            TagTaskExecutor.remove(this);
         }
     }
 

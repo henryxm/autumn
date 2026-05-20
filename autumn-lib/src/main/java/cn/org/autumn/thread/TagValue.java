@@ -21,6 +21,10 @@ import java.lang.annotation.*;
  *     public void exe() {
  *         // 业务逻辑
  *     }
+ *     &#64;Override
+ *     protected void onFinished(FinishStatus status) {
+ *         // 任务结束收口（每实例一次）；队列 drain 在此释放本机调度闸门，见 docs/AI_ASYNC_TASK.md
+ *     }
  * });
  *
  * // 声明式分布式锁（无需继承 LockOnce）

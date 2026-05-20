@@ -119,6 +119,7 @@
 - **消费扩展**：覆写 **`onQueueMessage(T body)`** 返回 `boolean` 表示是否成功；**`onErrorMessage` / `onDeadMessage`** 处理错误与死信；**`register()` / `register(QueueConfig)`** 与 **`isAutoQueue` / `getIdleTime`** 控制自动启停消费者。
 - **发送 API 族**（以源码为准）：**`sendQueue` / `sendMessage` / `sendDelay` / `sendScheduled` / `sendPriority` / `sendBatch`**，以及带 **suffix / Class** 的重载。
 - **原则**：异步、削峰、延迟任务优先走 **队列体系**（类型含 MEMORY、REDIS_LIST、REDIS_STREAM、DELAY、PRIORITY 等，见 **`docs/AI_MAP.md`** 队列体系小节），不要自建无治理的 `Executor` 长轮询替代生产链路。
+- **与 `TagTaskExecutor` 区分**：Service 内 **内存 `ConcurrentMap` + 本机 drain**（如补签待处理表）用 **`TagRunnable` + `onFinished(FinishStatus)`**，见 **`docs/AI_ASYNC_TASK.md`**；**不要**与 `BaseQueueService` 混为一谈。
 
 ---
 
@@ -128,6 +129,7 @@
 |------|------|
 | 应用层强制规范与生成层禁止项 | **`docs/AI_STANDARDS.md`** 第 11～14 节 |
 | ModuleService 继承链与生成矩阵速查 | **`docs/AI_MAP.md`** 约 2.7、2.8A |
+| **`TagRunnable` / `onFinished` / 内存队列状态机** | **`docs/AI_ASYNC_TASK.md`** |
 | 模块任务提示模板（含 gen） | **`docs/AI_TEMPLATES.md`** 第 2.5 节 |
 | 文档索引与加载组合 | **`docs/AI_INDEX.md`** |
 | 多项目喂给顺序 | **`docs/AI_GUIDE.md`** |

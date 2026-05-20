@@ -2,7 +2,7 @@ package cn.org.autumn.thread;
 
 import cn.org.autumn.config.Config;
 import cn.org.autumn.site.UpgradeFactory;
-import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,6 +28,8 @@ import java.util.concurrent.TimeUnit;
  *       长耗时业务应在循环中检查 {@link #isCancelled()} 或 {@code Thread.interrupted()}</li>
  *   <li><b>超时检测</b>：通过 {@link TagValue#timeout()} 配置阈值，管理界面可识别超时任务</li>
  *   <li><b>执行记录</b>：自动向 {@link TagTaskExecutor} 上报完成/失败/中断统计</li>
+ *   <li><b>生命周期收口</b>：{@link #onFinished(FinishStatus)} 在任务结束时必调一次；
+ *       凡经 {@link #invokeExe()} 调用 {@link #exe()} 的，在 {@code exe()} 返回或异常后<b>立即</b>经 {@code onFinished} 收口</li>
  *   <li><b>全面 null 安全</b>：所有 getter 方法保证不返回 null，返回空字符串或默认值</li>
  * </ul>
  *
@@ -44,6 +46,10 @@ import java.util.concurrent.TimeUnit;
  *             }
  *             process(item);
  *         }
+ *     }
+ *     &#64;Override
+ *     protected void onFinished(FinishStatus outcome) {
+ *         // 释放本机调度闸门、补偿重试等（无论 COMPLETED / FAILED / SKIPPED）
  *     }
  * });
  * </pre>
@@ -105,6 +111,16 @@ public abstract class TagRunnable implements Runnable, Tag {
      */
     private volatile boolean delaying = false;
 
+    /**
+     * 本次 {@code run()} 是否已通过 {@link #invokeExe()} 进入 {@link #exe()}
+     */
+    private volatile boolean exeInvoked = false;
+
+    /**
+     * {@link #onFinished(FinishStatus)} 是否已调用（幂等）
+     */
+    private volatile boolean finishNotified = false;
+
     // ======================== 系统依赖 ========================
 
     static UpgradeFactory upgradeFactory;
@@ -152,19 +168,94 @@ public abstract class TagRunnable implements Runnable, Tag {
             }
         } finally {
             // 终极清理保障：无论任何代码路径，都确保线程引用和 running 列表被清理
-            // clearThread() 和 remove() 均为幂等操作，重复调用无害
             clearThread();
             TagTaskExecutor.remove(this);
+            if (!finishNotified) {
+                notifyFinished(FinishStatus.SKIPPED);
+            }
         }
     }
 
     /**
-     * 任务业务逻辑入口 — 子类必须覆写此方法。
+     * 任务业务逻辑入口 — 子类覆写此方法；框架内部请使用 {@link #invokeExe()}。
      * <p>长耗时任务应在循环中检查 {@link #isCancelled()}，以支持协作式取消。</p>
      */
     public void exe() {
         if (log.isDebugEnabled()) {
             log.debug("执行任务: tag={}, time={}, thread={}", getTag(), time, getName());
+        }
+    }
+
+    /**
+     * 框架与 {@link LockOnce} 调用 {@link #exe()} 的统一入口。
+     * <p>只要进入 {@code exe()}，返回或异常后必定调用一次 {@link #onFinished(FinishStatus)}
+     *（{@link FinishStatus#COMPLETED} 或 {@link FinishStatus#FAILED}）。</p>
+     */
+    protected final void invokeExe() {
+        exeInvoked = true;
+        FinishStatus outcome = FinishStatus.COMPLETED;
+        try {
+            exe();
+        } catch (Throwable t) {
+            outcome = FinishStatus.FAILED;
+            if (t instanceof RuntimeException) {
+                throw (RuntimeException) t;
+            }
+            if (t instanceof Error) {
+                throw (Error) t;
+            }
+            throw new RuntimeException(t);
+        } finally {
+            notifyFinished(outcome);
+        }
+    }
+
+    /**
+     * 任务结束回调（每实例最多一次）。
+     * <p>未调用 {@link #exe()} 时在 {@code run()} 的 {@code finally} 中以 {@link FinishStatus#SKIPPED} 调用；
+     * 已调用 {@code exe()} 时在 {@link #invokeExe()} 的 {@code finally} 中以 {@code COMPLETED}/{@code FAILED} 调用；
+     * 未提交线程池时以 {@link FinishStatus#NOT_DISPATCHED} 调用（见 {@link #finishNotDispatched()}）。</p>
+     *
+     * @param outcome 结束原因，不会为 null
+     */
+    protected void onFinished(FinishStatus outcome) {
+    }
+
+    /**
+     * {@link TagTaskExecutor#execute(TagRunnable)} 未将任务提交到线程池时由框架调用。
+     */
+    public final void finishNotDispatched() {
+        notifyFinished(FinishStatus.NOT_DISPATCHED);
+    }
+
+    /**
+     * 本次调度是否已进入过 {@link #exe()}。
+     */
+    public final boolean wasExeInvoked() {
+        return exeInvoked;
+    }
+
+    /**
+     * {@link #onFinished(FinishStatus)} 是否已执行。
+     */
+    public final boolean wasFinishNotified() {
+        return finishNotified;
+    }
+
+    /**
+     * 触发 {@link #onFinished(FinishStatus)}（幂等，异常不向外传播）。
+     */
+    protected final void notifyFinished(FinishStatus outcome) {
+        if (outcome == null || finishNotified) {
+            return;
+        }
+        finishNotified = true;
+        try {
+            onFinished(outcome);
+        } catch (Throwable t) {
+            if (log.isDebugEnabled()) {
+                log.debug("onFinished 回调异常: tag={}, outcome={}, error={}", getTag(), outcome, t.getMessage(), t);
+            }
         }
     }
 
@@ -178,7 +269,7 @@ public abstract class TagRunnable implements Runnable, Tag {
         boolean success = true;
         String errorMsg = null;
         try {
-            exe();
+            invokeExe();
         } catch (Throwable t) {
             success = false;
             if (cancelled || Thread.currentThread().isInterrupted()) {
@@ -196,8 +287,6 @@ public abstract class TagRunnable implements Runnable, Tag {
                 log.debug("任务完成: tag={}, method={}, success={}, 耗时={}ms, 线程={}", getTag(), getMethod(), success, duration, getName());
             }
             TagTaskExecutor.recordCompletion(this, duration, success, errorMsg);
-            clearThread();
-            TagTaskExecutor.remove(this);
         }
     }
 
@@ -257,7 +346,7 @@ public abstract class TagRunnable implements Runnable, Tag {
         try {
             if (log.isDebugEnabled())
                 log.info("分布式锁已获取，开始执行: key={}, tag={}, lease={}s", lockKey, getTag(), leaseSeconds);
-            exe();
+            invokeExe();
             if (log.isDebugEnabled())
                 log.info("任务执行成功: key={}, tag={}, 耗时={}ms", lockKey, getTag(), System.currentTimeMillis() - start);
             // 成功后不释放锁 — 让锁自然过期，防止同一时间窗口内重复执行
@@ -277,8 +366,6 @@ public abstract class TagRunnable implements Runnable, Tag {
         } finally {
             long duration = System.currentTimeMillis() - start;
             TagTaskExecutor.recordCompletion(this, duration, success, errorMsg);
-            clearThread();
-            TagTaskExecutor.remove(this);
         }
     }
 
@@ -286,7 +373,9 @@ public abstract class TagRunnable implements Runnable, Tag {
 
     /**
      * 绑定当前线程并解析 @TagValue 元数据。
-     * <p>子类覆写 {@code run()} 时必须在入口调用此方法，否则线程管理功能（cancel/interrupt/stacktrace）将失效。</p>
+     * <p>子类覆写 {@code run()} 时必须在入口调用此方法，并在 {@code finally} 中保证
+     * {@link #wasFinishNotified()} 为 true（未进 {@link #exe()} 时调用 {@link #notifyFinished(FinishStatus)}），
+     * 否则 {@link #onFinished(FinishStatus)} 可能遗漏。</p>
      */
     protected void bindThread() {
         this.executionThread = Thread.currentThread();

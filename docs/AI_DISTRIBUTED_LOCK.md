@@ -252,7 +252,16 @@ public class ThirdPartyCallbackHandler {
 - `retryTimes=0~1`
 - 说明：降低失败面，后续由周期任务补偿
 
-## 10. 团队统一约束（AI 与人工开发共用）
+## 10. 异步任务与队列 drain（`TagRunnable.onFinished`）
+
+> **完整说明、状态机范式与反模式见专项文档 [`docs/AI_ASYNC_TASK.md`](AI_ASYNC_TASK.md)。** 本节仅保留与分布式锁的分工摘要。
+
+- **框架锁**（`LockOnce` / `@TagValue(lock=true)`）：时间窗内最多执行一次；未持锁时**不进入 `exe()`**，`onFinished(SKIPPED)` 仍会调用。
+- **业务锁**（`withLock` / `withLockOrFallback`）：在 `exe()` 内使用；适合队列 drain「抢不到锁则本轮跳过、下轮再试」。
+- **本机闸门**（`IDLE` / `DISPATCHING` 等）：在 **`onFinished` 中释放**，禁止仅在 `exe()` 的 `finally` 释放。
+- 队列 drain：**`lock=false` 的 `TagRunnable`** + `onFinished` + `withLockOrFallback*`；**不要**对 drain 使用 `LockOnce`。
+
+## 11. 团队统一约束（AI 与人工开发共用）
 
 - 已继承 `ModuleService` 时，不要再注入并绕过 `DistributedService` 能力
 - 需要分布式互斥时，优先“业务分片锁 key”，避免全局单 key
@@ -260,7 +269,7 @@ public class ThirdPartyCallbackHandler {
 - fallback 必须可观测（日志/指标/告警），禁止静默吞错
 - 不允许业务自旋 while 重试锁，统一使用 `withLockRetry`
 
-## 11. 业务域快捷模板索引（直接按业务复制）
+## 12. 业务域快捷模板索引（直接按业务复制）
 
 | 业务场景 | 推荐模板 | API 组合 | 关键点 |
 |---|---|---|---|
@@ -273,7 +282,7 @@ public class ThirdPartyCallbackHandler {
 | 秒杀/抢券热点 | 8.3 抗雪崩模板 | `withLockRetry` | 有限重试 + 随机退避 |
 | 数据修复脚本任务 | 8.4 + 8.5 | `withLock` | 全局任务防重入 + 分片执行 |
 
-### 11.1 复制步骤（团队统一流程）
+### 12.1 复制步骤（团队统一流程）
 
 - 第一步：按上表选最近的业务场景模板
 - 第二步：替换 `lockKey` 规则（业务域 + 主键/分片）
@@ -281,14 +290,14 @@ public class ThirdPartyCallbackHandler {
 - 第四步：补齐观测（日志 + 指标 + 告警）
 - 第五步：在联调环境验证“多实例并发”与“降级路径”
 
-### 11.2 模板占位符清单（复制后只改这些）
+### 12.2 模板占位符清单（复制后只改这些）
 
 - `lockKey`：必须改为真实业务 key 规则
 - `doXxx/processXxx/runXxx`：替换成业务方法
 - `fallback`：替换为真实降级语义（记录、返回缓存、补偿入队等）
 - `retry` 配置：按业务热点程度在后台 `DistributedLockConfig` 调整
 
-## 12. AI 生成任务提示词（可直接复制）
+## 13. AI 生成任务提示词（可直接复制）
 
 ```md
 请基于 Autumn 框架分布式锁能力实现以下需求，并严格复用现有能力。
@@ -307,7 +316,7 @@ public class ThirdPartyCallbackHandler {
 - 提供可直接落地的 Java 模板代码 + 使用限制 + 回归检查点。
 ```
 
-## 13. 项目内示例源码入口
+## 14. 项目内示例源码入口
 
 - 示例目录：`docs/examples/distributed-lock/`
 - 推荐阅读顺序：

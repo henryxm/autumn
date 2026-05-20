@@ -1,8 +1,6 @@
 # Redis 可选与单机运行说明
 
 > 熔断、宕机门控与自定义调用的统一封装见 **`docs/REDIS_RESILIENCE.md`**（`RedisResilience` + `DistributedLockService`）。
->
-> Redisson 与 Spring Data Redis 集成版本错配（`StackOverflowError` / `pExpire`）、**`RedisExpireUtil` 使用说明与 API**见 **`docs/REDIS_TTL_GUIDE.md`**，原理与 Maven 对齐见 **`docs/REDIS_REDISSON_SPRING_DATA.md`**。
 
 ## 1. 总开关：`autumn.redis.open`
 
@@ -60,6 +58,7 @@ autumn:
 - `DistributedLockService`：无 `RedissonClient`、配置关闭、或 `tryLock` 因连接异常失败时，**在捕获异常后回退为本地执行** `Callable`。
 - `TagRunnable` / `TagCallable`：`RedissonClient` 不可用时**不再跳过任务**，改为与无锁路径一致**本地执行**（多节点时仅未连 Redis 的节点会执行，存在重复执行风险，属单机降级语义）。
 - `LockOnce`：同样在无客户端时调用 `executeDirectly()`；仍可在 `onRedisUnavailable()` 中插入日志或指标。
+- 任务结束统一走 **`TagRunnable.onFinished(FinishStatus)`**（含 `SKIPPED` / 未持框架锁）；内存队列 drain 与状态机见 **`docs/AI_ASYNC_TASK.md`**。
 
 ## 7. 管理接口
 

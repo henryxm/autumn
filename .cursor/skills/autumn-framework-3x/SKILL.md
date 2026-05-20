@@ -1,40 +1,35 @@
 ---
 name: autumn-framework-3x
 description: >-
-  Autumn 3.0.0 line ONLY: JDK 17+, Spring Boot 3.5.10, MyBatis-Plus 3.x, jakarta.* namespace.
+  Autumn 3.0.0 line ONLY: JDK 17+, Spring Boot 3.5.x, MyBatis-Plus 3.x, jakarta.* namespace.
   Use on autumn branch 3.0.0 (artifact 3.0.0) or business apps pinned to that stack.
   NOT for Autumn 2.0.0 / JDK 8 / Spring Boot 2.7 / javax-only — use autumn-framework-2x on master.
-  Shiro uses jakarta classifier; Druid mybatis-plus-spring-boot3-starter; SpringDoc OpenAPI (not Springfox).
-  Enforces docs/AI_STANDARDS.md + docs/AI_DATABASE.md: never combine @Column(isUnique=true) with @Index on same field (§10.2); dual-key entities (auto Long id for gen CRUD only + unique biz key via Uuid.uuid()/SnowflakeId for FK/API; never use id as association); entity-driven schema; Dao via Provider (*DaoSql extends RuntimeSql);
+  Enforces docs/AI_STANDARDS.md + docs/AI_DATABASE.md: never combine @Column(isUnique=true) with @Index on same field (§10.2); dual-key entities (auto Long id for gen CRUD only + unique biz key via Uuid.uuid()/SnowflakeId for FK/API; never use id as association); entity-driven schema; Dao SQL only via MyBatis Provider (*DaoSql extends RuntimeSql);
   No hardcoded dialect quotes in Java (RuntimeSql quote/columnInWrapper or WrapperColumns per docs/AI_DATABASE.md §4.0);
   Controller must not use Dao; Service uses baseMapper; gen/Pages/list.html/js never hand-edited; statics/pages/Site/PageAware.
-  Read docs/AI_CODEGEN.md, docs/AI_DATABASE.md; Redis TTL / Redisson / pExpire: docs/REDIS_TTL_GUIDE.md + docs/REDIS_REDISSON_SPRING_DATA.md (constraints-scan group H or --redis-expire-only); scripts/autumn-dependency-scan.sh for upgrades.
-  scripts/constraints-scan is optional: run only when the user explicitly asks for a constraint audit, CI-style check, or phrases like 约束扫描/规范体检; see skill section "约束扫描（按需）".
+  Read docs/AI_CODEGEN.md, docs/AI_DATABASE.md. scripts/constraints-scan is optional: run only when the user explicitly asks for a constraint audit, CI-style check, or phrases like 约束扫描/规范体检; see skill section "约束扫描（按需）".
   Triggers on cn.org.autumn 3.0.0, Spring Boot 3.5, JDK 17, ModuleService, RuntimeSql, PageAware, SpringDoc.
 ---
 
-# Autumn 3.x 框架开发（3.0.0 / `3.0.0` 分支）
+# Autumn 3.x 框架开发（3.0.0 / 分支 3.0.0）
 
 ## 版本矩阵（本 Skill 唯一适用）
 
 | 项 | 版本 / 约束 |
 |----|-------------|
-| **Autumn** | **3.0.0**（`cn.org.autumn:*:3.0.0`，**`3.0.0` Git 分支**） |
-| **JDK** | **17+**（父 POM `java.version`，勿按 JDK 8 语法或依赖写本线） |
-| **Spring Boot** | **3.5.10**（`spring-boot-starter-parent`；小版本以根 `pom.xml` 为准） |
-| **MyBatis-Plus** | **3.5.x**（`mybatis-plus-spring-boot3-starter`、`mybatis-plus-jsqlparser`；配置见 `application.yml` 中 **`mybatis-plus`** 段） |
-| **命名空间** | **`jakarta.*`**（Servlet、Validation 等；**非** `javax.servlet` 新业务代码） |
-| **Shiro** | **2.x + `jakarta` classifier**（`shiro-core` / `shiro-web` / `shiro-spring`） |
-| **API 文档** | **SpringDoc（OpenAPI 3）**，非 Springfox |
-| **JSON** | 优先 **Fastjson2** + `fastjson2-extension-spring6`（非 1.x `fastjson`） |
-| **2.x 线** | **禁用本 Skill**：**master / 2.0.0**、JDK **8**、Boot **2.7** 请用 **`autumn-framework-2x`** |
+| **Autumn** | **3.0.0**（`cn.org.autumn:*:3.0.0`，**3.0.0** 分支） |
+| **JDK** | **17+** |
+| **Spring Boot** | **3.5.x**（以根 `pom.xml` 为准） |
+| **MyBatis-Plus** | **3.x** |
+| **命名空间** | **`jakarta.*`** |
+| **2.x 线** | **禁用本 Skill**：Autumn **2.0.0**、JDK **8**、Spring Boot **2.7** 请用 **`autumn-framework-2x`**（**master**） |
 
 业务工程须在 `AGENTS.md` 或首轮对话中写明依赖的 Autumn 主版本，避免 2.x / 3.x 规范混用。
 
 ## 何时启用
 
 - 当前工作区是 **autumn 仓库且检出 3.0.0 分支**，或业务工程 **Maven 依赖锁定 `cn.org.autumn` 3.0.0**。
-- 提到：`cn.org.autumn`、`ModuleService`、`gen`、`Dao`、`Provider`、`RuntimeSql`、`DatabaseType`、`WrapperColumns`、`QueryWrapper`、`statics`、`pages`、`Site`、`PageAware`、`autumn.table`、`SpringDoc` 等，且 **栈为 JDK 17+ + Boot 3.5 + Jakarta + MP3**。
+- 提到：`cn.org.autumn`、`ModuleService`、`gen`、`Dao`、`Provider`、`RuntimeSql`、`DatabaseType`、`statics`、`pages`、`Site`、`PageAware`、`autumn.table` 等，且 **栈为 JDK 17+ + Boot 3.5**。
 
 ## 约束扫描（按需）
 
@@ -62,9 +57,11 @@ description: >-
 1. `docs/AI_INDEX.md` → 2. `docs/AI_BOOT.md` → 3. `docs/AI_MAP.md` → 4. **`docs/AI_STANDARDS.md`**（强制全文，含 §8～§14）  
 5. **`docs/AI_DATABASE.md`**（多库、`DatabaseType`、**§4.0 代码层方言标准写法**、`WrapperColumns`、`RuntimeSql`、Wrapper 边界、Dao **必须** Provider）  
 6. 新模块 / 代码生成 / 搭骨架：追加 **`docs/AI_CODEGEN.md`**  
-按需：`docs/AI_POSTGRESQL.md`、`docs/AI_TEMPLATES.md`、`docs/AI_CRYPTO.md`、`docs/AI_DISTRIBUTED_LOCK.md`、**`docs/REDIS_RESILIENCE.md`**（Redis 熔断与分布式锁稳健性）、`docs/REDIS_STANDALONE.md`、**`docs/REDIS_TTL_GUIDE.md`**（Redis TTL / `RedisExpireUtil`）、**`docs/INSTALL_MODE_CONDITIONAL.md`**（安装向导 **`autumn.install.wizard`**、**§0 占位默认 H2 / 可选 mysql**）等。
+按需：`docs/AI_POSTGRESQL.md`、`docs/AI_TEMPLATES.md`、`docs/AI_CRYPTO.md`、`docs/AI_DISTRIBUTED_LOCK.md`、**`docs/AI_ASYNC_TASK.md`**（**`TagRunnable` / `FinishStatus` / `onFinished`**、内存队列 drain 状态机）、**`docs/REDIS_RESILIENCE.md`**（Redis 熔断与分布式锁稳健性）、`docs/REDIS_STANDALONE.md`、**`docs/REDIS_TTL_GUIDE.md`**（Redis TTL / `RedisExpireUtil`）、**`docs/INSTALL_MODE_CONDITIONAL.md`**（安装向导 **`autumn.install.wizard`**、**§0 占位默认 H2 / 可选 mysql**）等。
 
 涉及「终止会话 / 记住我阻断 / 会话过期重登守卫」时，追加阅读 **`docs/AI_SESSION_GUARD.md`**（`ForceLogoutRememberMeManager`、`ShiroSessionService`、`/sys/session/self/*`、`autumn-session-guard.js`）。
+
+涉及 **`asyncTaskExecutor`、内存待处理队列、本机 DISPATCHING/IDLE 闸门** 时，必读 **`docs/AI_ASYNC_TASK.md`**（勿与 **`BaseQueueService`** 持久化队列混淆）。
 
 **注意**：文档或示例若与 **Boot 3 / Jakarta / MP3** 或本分支 **`pom.xml` / `application.yml`** 不一致，以**仓库当前实现**为准。
 
@@ -104,8 +101,16 @@ description: >-
 
 - **`cn.org.autumn.config.RedisConfig`**：`@Configuration`；**`@Autowired(required = false) RedisConnectionFactory`**；**`@Bean`**：`RedisTemplate`（`@Primary` + JSON）、**Ops**；**不**使用 **`@ConditionalOnBean(RedisConnectionFactory)`**、**不**使用 **`@AutoConfigureAfter`**；**不**列入 **`spring.factories` → `EnableAutoConfiguration`**，随 **`cn.org.autumn`** **组件扫描**加载。
 - **`autumn.redis.open`**、EPP 与 **`spring.redis.*`**：**`docs/REDIS_STANDALONE.md` §1、§2**；业务 **模式 A / B**：**§3、§8**；升级清单：**`docs/AI_UPGRADE.md` §2.2 行 7**。
-- **`RedisResilience`**、**`DistributedLockService`**、**`TagRunnable` / `LockOnce`**：**`docs/REDIS_RESILIENCE.md`**、**`docs/AI_DISTRIBUTED_LOCK.md`**。
+- **`RedisResilience`**、**`DistributedLockService`**、**`TagRunnable` / `LockOnce`**：**`docs/REDIS_RESILIENCE.md`**、**`docs/AI_DISTRIBUTED_LOCK.md`**、**`docs/AI_ASYNC_TASK.md`**。
 - **TTL / `RedisExpireUtil` / Redisson ↔ SDR 对齐**：**`docs/REDIS_TTL_GUIDE.md`** + **`docs/REDIS_REDISSON_SPRING_DATA.md`**（可选 **`scripts/constraints-scan --redis-expire-only`** 或全文体检 **H 组**）。
+
+## 异步任务与 `onFinished`（`TagRunnable`）
+
+- 注入 **`TagTaskExecutor`**（常名 `asyncTaskExecutor`）；业务写在 **`exe()`**，**禁止**业务侧直接调用 `exe()`。
+- **`onFinished(FinishStatus)`**：任务结束必调一次（`COMPLETED`/`FAILED`/`SKIPPED`/`NOT_DISPATCHED`）；**本机调度闸门在 `onFinished` 释放**，不要只在 `exe()` 的 `finally` 释放。
+- **内存队列 drain**：`TagRunnable` + `@TagValue(lock=false)` + `exe()` 内 **`withLockOrFallback*`**；**不要**对 drain 用 `LockOnce`。
+- **`execute` 返回 `boolean`**：`false` 时已 `NOT_DISPATCHED`；可配合 `LoopJob` 做积压补偿。
+- 详见 **`docs/AI_ASYNC_TASK.md`** §4。
 
 ## 分布式执行与加锁（新增）
 
@@ -137,9 +142,7 @@ description: >-
 - 生成路径与 **GenUtils** 一致？
 - 新实体是否有 **业务主键**且关联列未误用 **`Long id`**？多节点雪花是否配置 **`autumn.snowflake.worker-id` / `datacenter-id`**？
 - **`isUnique=true` 的 `@Column` 是否未再叠 `@Index`**（§10.2）？
-- 新业务包未误用 **`javax.servlet`**？未混用 **Springfox**（本线为 **SpringDoc**）？
-- **`mybatis-plus`** 配置与 **`application.yml`** 中 **MP3** 段一致？
 
 ## 多项目一句话
 
-**`docs/AI_BOOT.md` → `docs/AI_MAP.md` → `docs/AI_STANDARDS.md` → `docs/AI_DATABASE.md` → `docs/AI_CODEGEN.md` → 专项 → README / 模块目录 → 任务约束**（**仅 3.0.0 / JDK17+ / Boot 3.5 / Jakarta / MP3 栈**）。
+**`docs/AI_BOOT.md` → `docs/AI_MAP.md` → `docs/AI_STANDARDS.md` → `docs/AI_DATABASE.md` → `docs/AI_CODEGEN.md` → 专项 → README / 模块目录 → 任务约束**（**仅 3.0.0 / JDK17+ / Boot 3.5 栈**）。
