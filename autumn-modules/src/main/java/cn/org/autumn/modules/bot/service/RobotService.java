@@ -102,7 +102,7 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public RobotCreateResult create(String owner, String name, String description, String icon, Integer tokenExpireDays) throws Exception {
+    public RobotCreateResult create(String owner, String name, String description, String icon, Integer tokenExpireDays, String access) throws Exception {
         assertOwnerActive(owner);
         robotQuotaService.assertRobotQuota(owner);
         if (StringUtils.isBlank(name))
@@ -119,6 +119,8 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> {
         robot.setDescription(description);
         robot.setIcon(icon);
         robot.setStatus(RobotEntity.STATUS_ACTIVE);
+        robot.setAccess(normalizeAccess(access));
+        robot.setBlack(false);
         robot.setCreateTime(now);
         robot.setUpdateTime(now);
         insert(robot);
@@ -212,6 +214,40 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> {
             throw new CodeException("机器人未启用");
         assertOwnerActive(robot.getOwner());
         return robotTokenService.rotateIssue(robotUuid, tokenExpireDays);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void updateProfile(String robotUuid, String loginUuid, String name, String description, String icon, String access, Boolean black) throws Exception {
+        RobotEntity robot = getByUuid(robotUuid);
+        assertOwner(robot, loginUuid);
+        if (StringUtils.isNotBlank(name)) {
+            robot.setName(name);
+        }
+        if (description != null) {
+            robot.setDescription(description);
+        }
+        if (icon != null) {
+            robot.setIcon(icon);
+        }
+        if (access != null) {
+            robot.setAccess(normalizeAccess(access));
+        }
+        if (black != null) {
+            robot.setBlack(black);
+        }
+        robot.setUpdateTime(new Date());
+        updateById(robot);
+    }
+
+    public static String normalizeAccess(String mode) {
+        if (StringUtils.isBlank(mode)) {
+            return RobotEntity.ACCESS_PRIVATE;
+        }
+        String m = mode.trim().toLowerCase();
+        if (RobotEntity.ACCESS_PUBLIC.equals(m) || RobotEntity.ACCESS_SUBSCRIBE.equals(m)) {
+            return m;
+        }
+        return RobotEntity.ACCESS_PRIVATE;
     }
 
     public void touchLastUsed(RobotEntity robot) {

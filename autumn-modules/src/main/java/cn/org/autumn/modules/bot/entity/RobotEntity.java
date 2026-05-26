@@ -25,6 +25,10 @@ public class RobotEntity implements Serializable, AccountHandler.User {
     public static final int STATUS_DELETED = -1;
     public static final int STATUS_DESTROYED = -2;
 
+    public static final String ACCESS_PRIVATE = "private";
+    public static final String ACCESS_PUBLIC = "public";
+    public static final String ACCESS_SUBSCRIBE = "subscribe";
+
     @TableId
     @Column(isKey = true, type = DataType.BIGINT, length = 20, isNull = false, isAutoIncrement = true, comment = "id")
     private Long id;
@@ -49,6 +53,12 @@ public class RobotEntity implements Serializable, AccountHandler.User {
     @Column(comment = "状态:1正常;0停用;-1删除;-2销毁", defaultValue = "1")
     private int status = STATUS_ACTIVE;
 
+    @Column(comment = "访问:private仅主人,public任意用户,subscribe需订阅", length = 16, defaultValue = "private")
+    private String access = ACCESS_PRIVATE;
+
+    @Column(comment = "拉黑:平台级封禁", defaultValue = "0")
+    private boolean black = false;
+
     @Column(length = 500, comment = "权限:API权限点CSV")
     private String scopes;
 
@@ -69,6 +79,17 @@ public class RobotEntity implements Serializable, AccountHandler.User {
 
     public boolean isActive() {
         return status == STATUS_ACTIVE;
+    }
+
+    public String resolvedAccess() {
+        if (access == null || access.trim().isEmpty()) {
+            return ACCESS_PRIVATE;
+        }
+        String mode = access.trim().toLowerCase();
+        if (ACCESS_PUBLIC.equals(mode) || ACCESS_SUBSCRIBE.equals(mode)) {
+            return mode;
+        }
+        return ACCESS_PRIVATE;
     }
 
     @Override

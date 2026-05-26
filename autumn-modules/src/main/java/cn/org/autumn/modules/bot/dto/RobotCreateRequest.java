@@ -23,4 +23,7 @@ public class RobotCreateRequest implements Serializable {
 
     @Schema(name = "令牌天数", description = "API令牌有效天数，空则默认365天")
     private Integer tokenExpireDays;
+
+    @Schema(name = "访问模式", description = "private仅主人;public任意IM用户;subscribe需订阅")
+    private String access;
 }
