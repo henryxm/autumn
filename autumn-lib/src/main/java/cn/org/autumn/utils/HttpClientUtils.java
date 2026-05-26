@@ -150,14 +150,22 @@ public class HttpClientUtils {
     }
 
     public static String doPostJson(String url, String json, int timeout) {
+        return doPostJson(url, json, null, timeout);
+    }
+
+    public static String doPostJson(String url, String json, Map<String, String> header, int timeout) {
         RequestConfig config = RequestConfig.custom()
                 .setConnectTimeout(timeout)
                 .setConnectionRequestTimeout(1000)
                 .setSocketTimeout(timeout).build();
-        return doPostJson(url, json, config);
+        return doPostJson(url, json, header, config);
     }
 
     public static String doPostJson(String url, String json, RequestConfig config) {
+        return doPostJson(url, json, null, config);
+    }
+
+    public static String doPostJson(String url, String json, Map<String, String> header, RequestConfig config) {
         CloseableHttpClient httpClient = HttpClients.createDefault();
         CloseableHttpResponse response = null;
         String resultString = "";
@@ -165,6 +173,11 @@ public class HttpClientUtils {
             HttpPost httpPost = new HttpPost(url);
             if (null != config)
                 httpPost.setConfig(config);
+            if (null != header && header.size() > 0) {
+                for (Map.Entry<String, String> kv : header.entrySet()) {
+                    httpPost.setHeader(kv.getKey(), kv.getValue());
+                }
+            }
             StringEntity entity = new StringEntity(json, ContentType.APPLICATION_JSON);
             httpPost.setEntity(entity);
             response = httpClient.execute(httpPost);

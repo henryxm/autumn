@@ -43,8 +43,10 @@ public class User implements IResult {
 
     private int verify;
 
+    private boolean robot;
+
     @SneakyThrows
-    public User(SysUserEntity entity){
-        BeanUtils.copyProperties(this,entity);
+    public User(SysUserEntity entity) {
+        BeanUtils.copyProperties(this, entity);
     }
 }

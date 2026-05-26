@@ -12,13 +12,12 @@ public class AllInOneFactory extends Factory {
 
     List<AllInOneHandler> list = null;
 
-    public boolean is() {
+    public boolean isAllInOne() {
         try {
             if (null == list)
                 list = getOrderList(AllInOneHandler.class);
             for (AllInOneHandler handler : list) {
-                boolean is = handler.is();
-                if (is)
+                if (handler.isAllInOne())
                     return true;
             }
         } catch (Exception e) {

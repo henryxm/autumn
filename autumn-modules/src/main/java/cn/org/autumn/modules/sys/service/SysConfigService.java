@@ -9,6 +9,7 @@ import cn.org.autumn.cluster.ServiceHandler;
 import cn.org.autumn.config.*;
 import cn.org.autumn.exception.AException;
 import cn.org.autumn.model.AesConfig;
+import cn.org.autumn.model.RobotQuotaConfig;
 import cn.org.autumn.model.DistributedLockConfig;
 import cn.org.autumn.model.RsaConfig;
 import cn.org.autumn.modules.job.task.LoopJob;
@@ -84,6 +85,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     public static final String DISTRIBUTED_LOCK_CONFIG = DistributedLockConfig.CONFIG_KEY;
     public static final String RSA_CONFIG = "RSA_CONFIG";
     public static final String AES_CONFIG = "AES_CONFIG";
+    public static final String ROBOT_QUOTA_CONFIG = RobotQuotaConfig.CONFIG_KEY;
     public static final String Localhost = "localhost";
     public static final String config_lang_prefix = "config_lang_string_";
     private static final String NULL = null;
@@ -260,6 +262,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 {CLOUD_STORAGE_CONFIG_KEY, "{\"aliyunAccessKeyId\":\"\",\"aliyunAccessKeySecret\":\"\",\"aliyunBucketName\":\"\",\"aliyunDomain\":\"\",\"aliyunEndPoint\":\"\",\"aliyunPrefix\":\"\",\"qcloudBucketName\":\"\",\"qcloudDomain\":\"\",\"qcloudPrefix\":\"\",\"qcloudSecretId\":\"\",\"qcloudSecretKey\":\"\",\"qiniuAccessKey\":\"\",\"qiniuBucketName\":\"\",\"qiniuDomain\":\"\",\"qiniuPrefix\":\"\",\"qiniuSecretKey\":\"\",\"type\":1}", "0", "云存储配置信息", config, json_type, CloudStorageConfig.class.getName()},
                 {RSA_CONFIG, GsonConfig.getGson().toJson(new RsaConfig()), "1", "RSA加密配置", config, json_type, RsaConfig.class.getName()},
                 {AES_CONFIG, GsonConfig.getGson().toJson(new AesConfig()), "1", "AES加密配置", config, json_type, AesConfig.class.getName()},
+                {ROBOT_QUOTA_CONFIG, GsonConfig.getGson().toJson(new RobotQuotaConfig()), "1", "机器人配额配置", config, json_type, RobotQuotaConfig.class.getName()},
         };
     }
 
@@ -786,6 +789,8 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 fixes = ((RsaConfig) config).validateAndFix();
             } else if (AesConfig.class.isAssignableFrom(clazz) && config instanceof AesConfig) {
                 fixes = ((AesConfig) config).validateAndFix();
+            } else if (RobotQuotaConfig.class.isAssignableFrom(clazz) && config instanceof RobotQuotaConfig) {
+                fixes = ((RobotQuotaConfig) config).validateAndFix();
             }
             // 如果配置被修正，记录日志并更新到数据库
             if (fixes != null && !fixes.isEmpty()) {

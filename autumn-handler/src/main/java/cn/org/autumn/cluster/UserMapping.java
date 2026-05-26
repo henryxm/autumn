@@ -5,6 +5,10 @@ public interface UserMapping {
 
     String getUuid();
 
+    default boolean isRobot() {
+        return false;
+    }
+
     default String getIdCard() {
         return "";
     }

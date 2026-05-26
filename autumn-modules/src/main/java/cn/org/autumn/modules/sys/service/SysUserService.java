@@ -93,6 +93,10 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
     AccountFactory accountFactory;
 
     @Autowired
+    @Lazy
+    UuidNamespaceService uuidNamespaceService;
+
+    @Autowired
     private ObjectProvider<RedissonClient> redissonClientProvider;
 
     @Autowired
@@ -183,7 +187,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         if (null == current) {
             List<String> roleKeys = new ArrayList<>();
             roleKeys.add(Role_System_Administrator);
-            current = newUser(getAdmin(), Uuid.uuid(), getPassword(), roleKeys);
+            current = newUser(getAdmin(), uuidNamespaceService.allocate(), getPassword(), roleKeys);
             SysDeptEntity sysDeptEntity = sysDeptService.getByDeptKey(Department_System_Administrator);
             if (null != sysDeptEntity) {
                 current.setDeptKey(sysDeptEntity.getDeptKey());
@@ -242,7 +246,9 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         user.setSalt(salt);
         user.setPassword(ShiroUtils.sha256(password, user.getSalt()));
         if (StringUtils.isEmpty(user.getUuid()))
-            user.setUuid(Uuid.uuid());
+            user.setUuid(uuidNamespaceService.allocate());
+        else
+            user.setUuid(uuidNamespaceService.allocateIfBlank(user.getUuid()));
         boolean result = super.save(user);
         sysUserRoleService.saveOrUpdate(user.getUuid(), user.getRoleKeys());
         return result;
@@ -276,7 +282,9 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
             user.setPassword(ShiroUtils.sha256(user.getPassword(), user.getSalt()));
         }
         if (StringUtils.isEmpty(user.getUuid()))
-            user.setUuid(Uuid.uuid());
+            user.setUuid(uuidNamespaceService.allocate());
+        else if (uuidNamespaceService.existsInRobot(user.getUuid()))
+            throw new IllegalArgumentException("uuid已被机器人占用");
         this.updateById(user);
     }
 
@@ -561,6 +569,10 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
                         } else {
                             sysUserEntity.setUsername(mapping.getUsername());
                         }
+                        if (uuidNamespaceService.existsInRobot(mapping.getUuid())) {
+                            log.warn("集群同步跳过uuid，已被机器人占用: {}", mapping.getUuid());
+                            continue;
+                        }
                         sysUserEntity.setUuid(mapping.getUuid());
                         save(sysUserEntity);
                     }
@@ -651,6 +663,10 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
                             SysDeptEntity sysDeptEntity = sysDeptService.getByDeptKey(dk);
                             if (null != sysDeptEntity) {
                                 sysUserEntity.setDeptKey(sysDeptEntity.getDeptKey());
+                            }
+                            if (uuidNamespaceService.existsInRobot(sysUserEntity.getUuid())) {
+                                log.warn("用户同步跳过uuid，已被机器人占用: {}", sysUserEntity.getUuid());
+                                continue;
                             }
                             sysUserEntity.setUserId(null);
                             save(sysUserEntity);

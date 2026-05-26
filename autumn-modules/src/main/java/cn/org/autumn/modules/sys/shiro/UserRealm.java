@@ -7,6 +7,11 @@ import java.util.List;
 import java.util.Set;
 
 import cn.org.autumn.cluster.PermissionHandler;
+import cn.org.autumn.modules.bot.entity.RobotEntity;
+import cn.org.autumn.modules.bot.service.RobotService;
+import cn.org.autumn.modules.bot.service.RobotTokenService;
+import cn.org.autumn.modules.bot.shiro.RobotAccessTokenToken;
+import cn.org.autumn.modules.bot.shiro.RobotPrincipal;
 import cn.org.autumn.modules.oauth.service.ClientDetailsService;
 import cn.org.autumn.modules.oauth.store.ValueType;
 import cn.org.autumn.modules.sys.service.SysUserRoleService;
@@ -54,13 +59,29 @@ public class UserRealm extends AuthorizingRealm {
     @Autowired(required = false)
     List<PermissionHandler> permissionHandlers;
 
+    @Autowired
+    RobotTokenService robotTokenService;
+
+    @Autowired
+    RobotService robotService;
+
     /**
      * 授权(验证权限时调用)
      */
     @Override
     protected AuthorizationInfo doGetAuthorizationInfo(PrincipalCollection principals) {
-        SysUserEntity user = (SysUserEntity) principals.getPrimaryPrincipal();
-        String uuid = user.getUuid();
+        Object primary = principals.getPrimaryPrincipal();
+        String uuid;
+        SysUserEntity user;
+        if (primary instanceof RobotPrincipal) {
+            uuid = ((RobotPrincipal) primary).getOwner();
+            user = sysUserDao.getByUuid(uuid);
+            if (user == null)
+                return new SimpleAuthorizationInfo();
+        } else {
+            user = (SysUserEntity) primary;
+            uuid = user.getUuid();
+        }
 
         List<String> permsList;
 
@@ -103,6 +124,21 @@ public class UserRealm extends AuthorizingRealm {
     protected AuthenticationInfo doGetAuthenticationInfo(AuthenticationToken authcToken) throws AuthenticationException {
         UsernamePasswordToken token = (UsernamePasswordToken) authcToken;
         String username = token.getUsername();
+        if (token instanceof RobotAccessTokenToken) {
+            RobotTokenService.ValidateResult validated = robotTokenService.validate(username);
+            if (validated == null)
+                throw new UnknownAccountException("机器人令牌无效");
+            RobotEntity robot = validated.getRobot();
+            if (!robot.isActive())
+                throw new LockedAccountException("机器人已停用或不可用");
+            SysUserEntity owner = sysUserService.getByUuid(robot.getOwner());
+            if (owner == null || owner.getStatus() < 1)
+                throw new LockedAccountException("机器人所属用户不可用");
+            robotTokenService.touchLastUsed(validated.getToken());
+            robotService.touchLastUsed(robot);
+            RobotPrincipal principal = new RobotPrincipal(robot);
+            return new SimpleAuthenticationInfo(principal, username, getName());
+        }
         SysUserEntity user = new SysUserEntity();
         if (token instanceof OauthAccessTokenToken) {
             user = (SysUserEntity) clientDetailsService.get(ValueType.accessToken, username).getValue();

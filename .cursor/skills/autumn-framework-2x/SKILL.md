@@ -8,8 +8,9 @@ description: >-
   module dir = package = table prefix; Dao SQL only via MyBatis Provider (*DaoSql extends RuntimeSql), never inline @Select/@Update;
   No hardcoded SQL dialect quotes in Java (use RuntimeSql quote/columnInWrapper or WrapperColumns.columnInWrapper / orderByColumnExpression / entityWrapperAllEqQuoted per docs/AI_DATABASE.md §4.0);
   Controller must not use Dao; Service uses baseMapper; gen/Pages/list.html/js never hand-edited; statics/pages/Site/PageAware.
-  Read docs/AI_CODEGEN.md, docs/AI_DATABASE.md. scripts/constraints-scan is optional: run only when the user explicitly asks for a constraint audit, CI-style check, or phrases like 约束扫描/规范体检; see skill section "约束扫描（按需）".
-  Triggers on cn.org.autumn 2.0.0, Spring Boot 2.7, JDK 8, ModuleService, RuntimeSql, PageAware.
+  Read docs/AI_CODEGEN.md, docs/AI_DATABASE.md. Bot/robot: read docs/AI_ROBOT.md + docs/AI_ROBOT_API.md (rbt_, Hook, message/push, cn.org.autumn.modules.bot).
+  scripts/constraints-scan is optional: run only when the user explicitly asks for a constraint audit, CI-style check, or phrases like 约束扫描/规范体检; see skill section "约束扫描（按需）".
+  Triggers on cn.org.autumn 2.0.0, Spring Boot 2.7, JDK 8, ModuleService, RuntimeSql, PageAware, bot, robot, rbt_, RobotHook, RobotMessageSubscriber, message/push.
 ---
 
 # Autumn 2.x 框架开发（2.0.0 / master）
@@ -31,6 +32,7 @@ description: >-
 
 - 当前工作区是 **autumn 仓库且检出 master（或维护 2.0.0 标签/分支）**，或业务工程 **Maven 依赖锁定 `cn.org.autumn` 2.0.0**。
 - 提到：`cn.org.autumn`、`ModuleService`、`gen`、`Dao`、`Provider`、`RuntimeSql`、`DatabaseType`、`statics`、`pages`、`Site`、`PageAware`、`autumn.table` 等，且 **栈为 JDK8 + Boot 2.7**。
+- 提到：**机器人 / Bot / `rbt_` / Hook 回调 / `message/push` / `cn.org.autumn.modules.bot` / `RobotMessageSubscriber`**（见下文 **机器人模块**）。
 
 ## 约束扫描（按需）
 
@@ -63,6 +65,26 @@ description: >-
 涉及「终止会话 / 记住我阻断 / 会话过期重登守卫」时，追加阅读 **`docs/AI_SESSION_GUARD.md`**（`ForceLogoutRememberMeManager`、`ShiroSessionService`、`/sys/session/self/*`、`autumn-session-guard.js`）。
 
 涉及 **`asyncTaskExecutor`、内存待处理队列、本机 DISPATCHING/IDLE 闸门** 时，必读 **`docs/AI_ASYNC_TASK.md`**（勿与 **`BaseQueueService`** 持久化队列混淆）。
+
+## 机器人模块（Bot / 开放 API）
+
+**区分两类任务**（勿混读文档重点）：
+
+| 任务 | 必读文档 | 代码位置 |
+|------|----------|----------|
+| **业务系统 HTTP 对接**（创建机器人、Hook、推送消息、验签） | **`docs/AI_ROBOT.md`**（流程/清单/验签）+ **`docs/AI_ROBOT_API.md`**（字段级 API） | 业务仓库；仅调 `{ORIGIN}/robot/api/v1/*` |
+| **Autumn 内扩展**（改 bot 模块、实现 Subscriber） | 上列 + **`docs/AI_STANDARDS.md`** + **`docs/AI_DATABASE.md`** + **`docs/AI_CODEGEN.md`** | `autumn-modules` → `cn.org.autumn.modules.bot`（表前缀 **`bot_`**） |
+
+**对接纪律（摘要）**：
+
+- **用户令牌**：管理 API（`/robot/api/v1/*` 除 `message/push`）；**禁止** `rbt_`。
+- **机器人令牌 `rbt_`**：仅 **`POST .../message/push`**；推荐头 **`X-Robot-Token`**。
+- Hook 出站：业务方实现 HTTP 服务端；验签 `HMAC_SHA256(timestamp + "." + body)`；**原始 body** 验签。
+- 入站 `data` 全链路为 **JSON 文本**；Hook 转发时 `data.payload` 为 **对象**。
+- 配额：`usedRobots` 含软删行；`usedRows` 令牌仅计 **status=1**。
+- 队列/幂等/限流：见 **`AI_ROBOT.md` §5～§6**；实现复用 **`BaseQueueService`**、**`DistributedLockService`**（**`docs/AI_DISTRIBUTED_LOCK.md`**）。
+
+**扩展点**（`autumn-lib`）：`RobotMessageSubscriber`、`RobotHookDispatch`；勿在业务对接文档中要求改 gen 层。
 
 ## 规范开发三步（与 `docs/AI_CODEGEN.md` 一致）
 
@@ -139,6 +161,7 @@ description: >-
 - 生成路径与 **GenUtils** 一致？
 - 新实体是否有 **业务主键**且关联列未误用 **`Long id`**？多节点雪花是否配置 **`autumn.snowflake.worker-id` / `datacenter-id`**？
 - **`isUnique=true` 的 `@Column` 是否未再叠 `@Index`**（§10.2）？
+- 机器人相关：是否已读 **`docs/AI_ROBOT.md` + `docs/AI_ROBOT_API.md`**？管理 API 与 `message/push` 鉴权是否分离？Hook 验签是否用原始 body？
 
 ## 多项目一句话
 

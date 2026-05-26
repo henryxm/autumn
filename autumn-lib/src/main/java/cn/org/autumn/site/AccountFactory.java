@@ -122,4 +122,84 @@ public class AccountFactory extends Factory {
             handler.changed(user);
         }
     }
+
+    public void disabling(AccountHandler.User user) throws Exception {
+        if (null == user)
+            return;
+        if (null == list)
+            list = getOrderList(AccountHandler.class);
+        for (AccountHandler handler : list) {
+            handler.disabling(user);
+        }
+    }
+
+    public void disabled(AccountHandler.User user) {
+        if (null == user)
+            return;
+        if (null == list)
+            list = getOrderList(AccountHandler.class);
+        for (AccountHandler handler : list) {
+            handler.disabled(user);
+        }
+    }
+
+    public void enabling(AccountHandler.User user) throws Exception {
+        if (null == user)
+            return;
+        if (null == list)
+            list = getOrderList(AccountHandler.class);
+        for (AccountHandler handler : list) {
+            handler.enabling(user);
+        }
+    }
+
+    public void enabled(AccountHandler.User user) {
+        if (null == user)
+            return;
+        if (null == list)
+            list = getOrderList(AccountHandler.class);
+        for (AccountHandler handler : list) {
+            handler.enabled(user);
+        }
+    }
+
+    public void deleting(AccountHandler.User user) throws Exception {
+        if (null == user)
+            return;
+        if (null == list)
+            list = getOrderList(AccountHandler.class);
+        for (AccountHandler handler : list) {
+            handler.deleting(user);
+        }
+    }
+
+    public void deleted(AccountHandler.User user) {
+        if (null == user)
+            return;
+        if (null == list)
+            list = getOrderList(AccountHandler.class);
+        for (AccountHandler handler : list) {
+            handler.deleted(user);
+        }
+    }
+
+    public void destroying(AccountHandler.User user) throws Exception {
+        if (null == user)
+            return;
+        if (null == list)
+            list = getOrderList(AccountHandler.class);
+        for (AccountHandler handler : list) {
+            handler.destroying(user);
+        }
+    }
+
+    public void destroyed(AccountHandler.User user) {
+        if (null == user)
+            return;
+        if (null == list)
+            list = getOrderList(AccountHandler.class);
+        for (AccountHandler handler : list) {
+            handler.destroyed(user);
+        }
+    }
 }

@@ -7,8 +7,9 @@ description: >-
   Enforces docs/AI_STANDARDS.md + docs/AI_DATABASE.md: never combine @Column(isUnique=true) with @Index on same field (§10.2); dual-key entities (auto Long id for gen CRUD only + unique biz key via Uuid.uuid()/SnowflakeId for FK/API; never use id as association); entity-driven schema; Dao SQL only via MyBatis Provider (*DaoSql extends RuntimeSql);
   No hardcoded dialect quotes in Java (RuntimeSql quote/columnInWrapper or WrapperColumns per docs/AI_DATABASE.md §4.0);
   Controller must not use Dao; Service uses baseMapper; gen/Pages/list.html/js never hand-edited; statics/pages/Site/PageAware.
-  Read docs/AI_CODEGEN.md, docs/AI_DATABASE.md. scripts/constraints-scan is optional: run only when the user explicitly asks for a constraint audit, CI-style check, or phrases like 约束扫描/规范体检; see skill section "约束扫描（按需）".
-  Triggers on cn.org.autumn 3.0.0, Spring Boot 3.5, JDK 17, ModuleService, RuntimeSql, PageAware, SpringDoc.
+  Read docs/AI_CODEGEN.md, docs/AI_DATABASE.md. Bot/robot: read docs/AI_ROBOT.md + docs/AI_ROBOT_API.md (rbt_, Hook, message/push, cn.org.autumn.modules.bot); web 集成测试见 web/docs/INTEGRATION_TEST.md（基类 integration.base.IntegrationTest）。
+  scripts/constraints-scan is optional: run only when the user explicitly asks for a constraint audit, CI-style check, or phrases like 约束扫描/规范体检; see skill section "约束扫描（按需）".
+  Triggers on cn.org.autumn 3.0.0, Spring Boot 3.5, JDK 17, ModuleService, RuntimeSql, PageAware, SpringDoc, bot, robot, rbt_, RobotHook, RobotMessageSubscriber, message/push.
 ---
 
 # Autumn 3.x 框架开发（3.0.0 / 分支 3.0.0）
@@ -30,6 +31,7 @@ description: >-
 
 - 当前工作区是 **autumn 仓库且检出 3.0.0 分支**，或业务工程 **Maven 依赖锁定 `cn.org.autumn` 3.0.0**。
 - 提到：`cn.org.autumn`、`ModuleService`、`gen`、`Dao`、`Provider`、`RuntimeSql`、`DatabaseType`、`statics`、`pages`、`Site`、`PageAware`、`autumn.table` 等，且 **栈为 JDK 17+ + Boot 3.5**。
+- 提到：**机器人 / Bot / `rbt_` / Hook 回调 / `message/push` / `cn.org.autumn.modules.bot`**（见下文 **机器人模块**）。
 
 ## 约束扫描（按需）
 
@@ -64,6 +66,32 @@ description: >-
 涉及 **`asyncTaskExecutor`、内存待处理队列、本机 DISPATCHING/IDLE 闸门** 时，必读 **`docs/AI_ASYNC_TASK.md`**（勿与 **`BaseQueueService`** 持久化队列混淆）。
 
 **注意**：文档或示例若与 **Boot 3 / Jakarta / MP3** 或本分支 **`pom.xml` / `application.yml`** 不一致，以**仓库当前实现**为准。
+
+## 机器人模块（Bot / 开放 API）
+
+**区分两类任务**（勿混读文档重点）：
+
+| 任务 | 必读文档 | 代码位置 |
+|------|----------|----------|
+| **业务系统 HTTP 对接** | **`docs/AI_ROBOT.md`** + **`docs/AI_ROBOT_API.md`** | 仅调 `{ORIGIN}/robot/api/v1/*` |
+| **Autumn 内扩展**（改 bot、Subscriber） | 上列 + **`docs/AI_STANDARDS.md`** + **`docs/AI_DATABASE.md`** + **`docs/AI_CODEGEN.md`** | `autumn-modules` → **`cn.org.autumn.modules.bot`**（表前缀 **`bot_`**） |
+
+**3.x 实现要点**（相对 2.x master 合并后）：
+
+- **命名空间**：`jakarta.servlet.*`、`jakarta.validation.*`；实体 **`com.baomidou.mybatisplus.annotation.*`**（非 `annotations`）。
+- **鉴权**：`ShiroConfig` 将 `/robot/api/v1/**` 设为 `anon`；`@Authenticated` + **`UserContextArgumentResolver`** + **`UserContextService`**（`Token` / `X-Robot-Token`）。
+- **账号**：`AccountHandler.User#isRobot()`；人类用户 UUID 用 **`UuidNamespaceService`**（勿在 3.x 新代码里裸 `Uuid.uuid()` 造 sys_user）。
+- **配置**：`SysConfigService.ROBOT_QUOTA_CONFIG` → **`RobotQuotaConfig`**；JSON 序列化用 **`GsonConfig.getGson()`**。
+- **令牌轮换**：`RobotTokenService.rotateIssue` 清理已作废行用 **SELECT + `deleteById`**（兼容 H2，勿依赖 `DELETE … ORDER BY LIMIT`）。
+- **集成测试**：`web` 模块 **`IntegrationTest`**（`@TestInstance(PER_CLASS)`）+ `application-it.yml`；`mvn -pl web -am test -Pintegration -DskipTests=false`（见 **`web/docs/INTEGRATION_TEST.md`**）。
+
+**对接纪律（摘要）**：
+
+- **用户令牌**：管理 API（除 `message/push`）；**禁止** `rbt_`。
+- **`rbt_`**：仅 **`POST .../message/push`**；头 **`X-Robot-Token`**。
+- **`disable`**：作废该机器人全部 `rbt_`（再 push 为鉴权 `-10000`）。
+- Hook 验签：`HMAC_SHA256(timestamp + "." + body)`，**原始 body**。
+- 扩展点（`autumn-lib`）：`RobotMessageSubscriber`、`RobotHookDispatch`。
 
 ## 规范开发三步（与 `docs/AI_CODEGEN.md` 一致）
 
@@ -142,6 +170,7 @@ description: >-
 - 生成路径与 **GenUtils** 一致？
 - 新实体是否有 **业务主键**且关联列未误用 **`Long id`**？多节点雪花是否配置 **`autumn.snowflake.worker-id` / `datacenter-id`**？
 - **`isUnique=true` 的 `@Column` 是否未再叠 `@Index`**（§10.2）？
+- 机器人：是否已读 **`docs/AI_ROBOT.md` + `docs/AI_ROBOT_API.md`**？bot 包是否仍为 **`jakarta.*` / MP3 annotation**？管理 API 与 `message/push` 鉴权是否分离？
 
 ## 多项目一句话
 
