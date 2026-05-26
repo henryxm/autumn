@@ -67,10 +67,27 @@ public class RobotApiController {
             String description = data == null ? null : data.getDescription();
             String icon = data == null ? null : data.getIcon();
             Integer tokenExpireDays = data == null ? null : data.getTokenExpireDays();
-            RobotCreateResult result = robotService.create(owner, name, description, icon, tokenExpireDays);
+            String access = data == null ? null : data.getAccess();
+            RobotCreateResult result = robotService.create(owner, name, description, icon, tokenExpireDays, access);
             return Response.ok(result);
         } catch (Exception e) {
             RobotOpenApiLogSupport.logFailure(log, "创建机器人", e, servlet);
+            return Response.error(e);
+        }
+    }
+
+    @PostMapping("/update")
+    @Authenticated
+    public Response<String> update(@Valid @RequestBody Request<RobotUpdateRequest> request, UserContext context, HttpServletRequest servlet) {
+        try {
+            RobotUpdateRequest data = request == null ? null : request.getData();
+            if (data == null || StringUtils.isBlank(data.getUuid())) {
+                throw new CodeException("机器人uuid不能为空");
+            }
+            robotService.updateProfile(data.getUuid(), requireOwner(context), data.getName(), data.getDescription(), data.getIcon(), data.getAccess(), data.getBlack());
+            return Response.ok();
+        } catch (Exception e) {
+            RobotOpenApiLogSupport.logFailure(log, "更新机器人", e, servlet);
             return Response.error(e);
         }
     }
