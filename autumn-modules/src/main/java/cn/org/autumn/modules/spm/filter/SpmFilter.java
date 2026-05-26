@@ -5,6 +5,8 @@ import cn.org.autumn.model.Error;
 import cn.org.autumn.model.Response;
 import cn.org.autumn.modules.oauth.service.ClientDetailsService;
 import cn.org.autumn.modules.spm.service.SuperPositionModelService;
+import cn.org.autumn.modules.bot.service.RobotTokenService;
+import cn.org.autumn.modules.bot.shiro.RobotAccessTokenToken;
 import cn.org.autumn.modules.sys.shiro.OauthAccessTokenToken;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.wall.service.WallService;
@@ -45,12 +47,21 @@ public class SpmFilter extends FormAuthenticationFilter implements PathFactory.P
 
     protected AuthenticationToken createToken(ServletRequest request, ServletResponse response) {
         String accessToken = getAccessToken(request);
-        if (StringUtils.isNotEmpty(accessToken))
+        if (StringUtils.isNotEmpty(accessToken)) {
+            if (accessToken.startsWith(RobotTokenService.TOKEN_PREFIX))
+                return new RobotAccessTokenToken(accessToken);
             return new OauthAccessTokenToken(accessToken);
+        }
         return super.createToken(request, response);
     }
 
     public static String getAccessToken(ServletRequest request) {
+        if (request instanceof HttpServletRequest) {
+            HttpServletRequest httpRequest = (HttpServletRequest) request;
+            String robotHeader = httpRequest.getHeader("X-Robot-Token");
+            if (StringUtils.isNotBlank(robotHeader))
+                return robotHeader.trim();
+        }
         try {
             OAuthAccessResourceRequest oauthRequest = new OAuthAccessResourceRequest((HttpServletRequest) request, ParameterStyle.QUERY, ParameterStyle.HEADER);
             String accessToken = oauthRequest.getAccessToken();
@@ -120,6 +131,8 @@ public class SpmFilter extends FormAuthenticationFilter implements PathFactory.P
         if (StringUtils.isEmpty(accessToken)) {
             return super.onAccessDenied(request, response);
         }
+        if (accessToken.startsWith(RobotTokenService.TOKEN_PREFIX))
+            return executeLogin(request, response);
         if (null == clientDetailsService)
             clientDetailsService = (ClientDetailsService) Config.getBean("clientDetailsService");
         if (null != clientDetailsService) {
@@ -233,14 +246,14 @@ public class SpmFilter extends FormAuthenticationFilter implements PathFactory.P
     }
 
     protected boolean onLoginSuccess(AuthenticationToken token, Subject subject, ServletRequest request, ServletResponse response) throws Exception {
-        if (token instanceof OauthAccessTokenToken)
+        if (token instanceof OauthAccessTokenToken || token instanceof RobotAccessTokenToken)
             return true;
         return super.onLoginSuccess(token, subject, request, response);
     }
 
     @Override
     protected boolean onLoginFailure(AuthenticationToken token, AuthenticationException e, ServletRequest request, ServletResponse response) {
-        if (token instanceof OauthAccessTokenToken) {
+        if (token instanceof OauthAccessTokenToken || token instanceof RobotAccessTokenToken) {
             throw e;
         }
         return super.onLoginFailure(token, e, request, response);

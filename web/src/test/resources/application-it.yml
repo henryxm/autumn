@@ -1,0 +1,48 @@
+# 集成测试专用（profile: it）。H2 内存库 + 外部 Redis（本地需已启动）。
+# 运行：mvn -pl web -am test -Pintegration -DskipTests=false
+
+server:
+  port: 0
+
+spring:
+  application:
+    name: web-it
+  redis:
+    host: ${AUTUMN_IT_REDIS_HOST:localhost}
+    port: ${AUTUMN_IT_REDIS_PORT:6379}
+    password: ${AUTUMN_IT_REDIS_PASSWORD:autumn}
+    timeout: 3000ms
+  datasource:
+    driverClassName: org.h2.Driver
+    druid:
+      first:
+        url: jdbc:h2:mem:autumn_it;MODE=MySQL;DATABASE_TO_LOWER=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+        username: sa
+        password: ""
+      second:
+        url: jdbc:h2:mem:autumn_it;MODE=MySQL;DATABASE_TO_LOWER=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+        username: sa
+        password: ""
+      validation-query: SELECT 1
+      initial-size: 2
+      max-active: 10
+      min-idle: 1
+
+autumn:
+  install:
+    wizard: false
+  redis:
+    open: true
+  shiro:
+    redis: false
+  table:
+    auto: update
+    init: true
+    sync-charset: false
+    pack: cn.org.autumn.modules
+
+logging:
+  level:
+    root: warn
+    cn.org.autumn.modules.bot: info
+    cn.org.autumn.integration: debug

@@ -6,18 +6,26 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * 认证上下文注入/校验标记。
+ * 无 Session API 认证标记（类 / 方法 / 参数均可标注）。
+ * <ul>
+ *   <li>{@link #notNull()}：是否强制要求有效身份（默认 true，缺失时 -10000）</li>
+ *   <li>{@link #subject()}：参数为 {@code SysUserEntity} 时注入数据主体（机器人场景为 owner）</li>
+ * </ul>
  * <p>
- * 可标注在参数、方法、类上，表示当前入口需要认证上下文参与处理。
- * 具体解析逻辑由认证参数解析器与拦截链实现。
+ * 与 {@link cn.org.autumn.model.UserContext} 配合：控制器直接声明 {@code UserContext} 参数即可注入，
+ * 无需额外注解；是否必填由本注解的 {@link #notNull()} 决定（可标在方法或参数上）。
  */
 @Target({ElementType.PARAMETER, ElementType.METHOD, ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Authenticated {
+
     /**
      * 是否要求认证结果非空。
-     * <p>
-     * true：认证信息缺失时按异常处理；false：允许匿名上下文继续执行。
      */
     boolean notNull() default true;
+
+    /**
+     * 仅对 {@code SysUserEntity} 参数生效：为 true 时注入数据归属用户（机器人=主人），否则注入真人调用者本身。
+     */
+    boolean subject() default false;
 }

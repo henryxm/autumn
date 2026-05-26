@@ -161,6 +161,7 @@ public class SysUserEntity implements AccountHandler.User, Serializable {
         user.setUuid(uuid);
         user.setNickname(nickname);
         user.setIcon(icon);
+        user.setRobot(false);
         return user;
     }
 

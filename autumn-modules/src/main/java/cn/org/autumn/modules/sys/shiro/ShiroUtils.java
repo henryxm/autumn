@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.sys.shiro;
 
+import cn.org.autumn.modules.bot.shiro.RobotPrincipal;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.exception.AException;
 import org.apache.shiro.SecurityUtils;
@@ -29,12 +30,48 @@ public class ShiroUtils {
         return SecurityUtils.getSubject();
     }
 
+    public static Object getPrincipal() {
+        try {
+            return SecurityUtils.getSubject().getPrincipal();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     public static SysUserEntity getUserEntity() {
-        return (SysUserEntity) SecurityUtils.getSubject().getPrincipal();
+        Object principal = getPrincipal();
+        if (principal instanceof SysUserEntity)
+            return (SysUserEntity) principal;
+        return null;
+    }
+
+    public static boolean isRobotLogin() {
+        return getPrincipal() instanceof RobotPrincipal;
+    }
+
+    public static String getActorUuid() {
+        Object principal = getPrincipal();
+        if (principal instanceof RobotPrincipal)
+            return ((RobotPrincipal) principal).getUuid();
+        if (principal instanceof SysUserEntity)
+            return ((SysUserEntity) principal).getUuid();
+        return null;
+    }
+
+    public static String getOwnerUuid() {
+        Object principal = getPrincipal();
+        if (principal instanceof RobotPrincipal)
+            return ((RobotPrincipal) principal).getOwner();
+        if (principal instanceof SysUserEntity)
+            return ((SysUserEntity) principal).getUuid();
+        return null;
     }
 
     public static String getUserUuid() {
-        return getUserEntity().getUuid();
+        SysUserEntity user = getUserEntity();
+        if (user != null)
+            return user.getUuid();
+        return getActorUuid();
     }
 
     public static void setSessionAttribute(Object key, Object value) {

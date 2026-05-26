@@ -28,6 +28,8 @@
 - `docs/AI_GOVERNANCE.md`：治理协作、术语、维护口径
 - `docs/AI_PROMPTS.md`：可复制提示词模板
 - `docs/AI_GUIDE.md`：多项目导航与引用方式
+- **`docs/AI_ROBOT.md`**：**机器人业务对接指南**（快速开始、场景、鉴权、Hook 验签示例、对接清单、故障排查、Subscriber 扩展）
+- **`docs/AI_ROBOT_API.md`**：**机器人开放 API 参考手册**（全量请求/响应字段、入站 `message/push`、出站 Hook 回调体、事件名、接口速查表）
 
 ## 2. 推荐加载矩阵（按场景）
 
@@ -44,6 +46,9 @@
 - **多库 / 方言 / Wrapper / Provider / 换库排查**：`docs/AI_BOOT.md` + `docs/AI_MAP.md` + `docs/AI_STANDARDS.md` + **`docs/AI_DATABASE.md`**（PostgreSQL 专项叠加 **`docs/AI_POSTGRESQL.md`**）
 - 业务工程升级 autumn 版本：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md + docs/AI_UPGRADE.md`（必要时叠加 `docs/AI_POSTGRESQL.md`）
 - **Redis 过期 / TTL / Redisson / `RedisExpireUtil`**：`docs/REDIS_TTL_GUIDE.md` + `docs/REDIS_REDISSON_SPRING_DATA.md` + `docs/AI_STANDARDS.md` §15
+- **机器人 / Bot 开放 API、Hook、入站消息（业务系统 HTTP 对接）**：`docs/AI_BOOT.md` + `docs/AI_MAP.md` + **`docs/AI_ROBOT.md`** + **`docs/AI_ROBOT_API.md`**（叠加 `docs/AI_CODEGEN.md` 队列、`docs/AI_DISTRIBUTED_LOCK.md` 若用幂等锁）
+- **web 模块 Robot 集成 / API 回归**：`web/docs/INTEGRATION_TEST.md`（H2 内存 + Redis，`mvn -pl web -am test -Pintegration -DskipTests=false`）
+- **机器人模块框架内开发**（`cn.org.autumn.modules.bot`、改 Controller/Service/实体）：上列文档 + `docs/AI_STANDARDS.md` + `docs/AI_DATABASE.md` + `docs/AI_CODEGEN.md`
 
 ## 3. 标准引用顺序
 
@@ -62,7 +67,7 @@
 - @../autumn/docs/AI_BOOT.md
 - @../autumn/docs/AI_MAP.md
 - @../autumn/docs/AI_STANDARDS.md
-- （按需）@../autumn/docs/AI_DATABASE.md / @../autumn/docs/AI_POSTGRESQL.md / @../autumn/docs/AI_UPGRADE.md / @../autumn/docs/AI_CRYPTO.md / @../autumn/docs/AI_CODEGEN.md / @../autumn/docs/AI_TEMPLATES.md / @../autumn/docs/AI_GOVERNANCE.md / @../autumn/docs/AI_SECURITY.md / @../autumn/docs/AI_PROMPTS.md
+- （按需）@../autumn/docs/AI_DATABASE.md / @../autumn/docs/AI_POSTGRESQL.md / @../autumn/docs/AI_UPGRADE.md / @../autumn/docs/AI_CRYPTO.md / @../autumn/docs/AI_CODEGEN.md / @../autumn/docs/AI_ROBOT.md / @../autumn/docs/AI_ROBOT_API.md / @../autumn/docs/AI_TEMPLATES.md / @../autumn/docs/AI_GOVERNANCE.md / @../autumn/docs/AI_SECURITY.md / @../autumn/docs/AI_PROMPTS.md
 - @./README.md
 - @./<目标模块目录>
 ```
