@@ -115,7 +115,7 @@ public class UserTokenService extends ModuleService<UserTokenDao, UserTokenEntit
     }
 
     @Override
-    public void canceled(User obj) {
+    public void canceled(Account obj) {
         if (null != obj)
             baseMapper.deleteUser(obj.getUuid());
     }

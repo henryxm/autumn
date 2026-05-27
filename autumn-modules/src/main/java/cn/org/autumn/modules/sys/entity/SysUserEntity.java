@@ -2,6 +2,7 @@ package cn.org.autumn.modules.sys.entity;
 
 import cn.org.autumn.config.AccountHandler;
 import cn.org.autumn.exception.CodeException;
+import cn.org.autumn.model.UserContext;
 import cn.org.autumn.modules.usr.entity.UserProfileEntity;
 import cn.org.autumn.table.annotation.Column;
 import cn.org.autumn.table.annotation.Index;
@@ -26,7 +27,7 @@ import java.util.Objects;
 @Setter
 @TableName("sys_user")
 @Table(value = "sys_user", comment = "系统用户")
-public class SysUserEntity implements AccountHandler.User, Serializable {
+public class SysUserEntity implements AccountHandler.Account, UserContext, Serializable {
     private static final long serialVersionUID = 1L;
 
     @TableId
@@ -145,6 +146,16 @@ public class SysUserEntity implements AccountHandler.User, Serializable {
 
     public boolean check() {
         return status >= 1;
+    }
+
+    @Override
+    public String getOwner() {
+        return null;
+    }
+
+    @Override
+    public boolean isRobot() {
+        return false;
     }
 
     public void checkThrow() throws Exception {

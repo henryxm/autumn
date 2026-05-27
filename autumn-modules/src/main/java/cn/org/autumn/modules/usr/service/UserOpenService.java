@@ -42,7 +42,7 @@ public class UserOpenService extends ModuleService<UserOpenDao, UserOpenEntity> 
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void canceled(User obj) {
+    public void canceled(Account obj) {
         if (obj == null || StringUtils.isBlank(obj.getUuid())) {
             return;
         }
@@ -72,7 +72,7 @@ public class UserOpenService extends ModuleService<UserOpenDao, UserOpenEntity> 
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void removed(User obj) {
+    public void removed(Account obj) {
         if (obj == null || StringUtils.isBlank(obj.getUuid())) {
             return;
         }

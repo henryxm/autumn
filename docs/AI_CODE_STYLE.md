@@ -65,3 +65,78 @@ if (pending > limit) throw softDeleteGateException(pending, limit);
 
 - 机器人模块示例实现见 `cn.org.autumn.modules.bot.service` 包。
 - 与 Checkstyle/IDE 格式化冲突时，以本文与 `AI_STANDARDS.md` 为准。
+
+## 7. import 与全限定类名
+
+- **默认**：在 `.java` 源文件中引用类型时，**一律使用 `import`**，在代码里写**短类名**，提高可读性。
+- **禁止**在方法体、字段声明、泛型参数等位置写**全限定类名**（FQN），例如 `java.lang.reflect.Method`、`com.foo.bar.Baz`，除非满足下列例外。
+- **例外（允许 FQN）**：
+  - **类名冲突**：同一编译单元内两个不同包的同名类无法通过 `import` 同时引入时，对其中一个（或冲突方）使用 FQN。
+  - **极少见、一次性**的歧义消除（Code Review 应能一眼看出原因）；**不得**以「懒得写 import」为由使用 FQN。
+- **同包类**：同包类型可不写 import（语言默认）；跨包类型**必须** import，勿写 `cn.org.autumn.modules.sys.entity.SysUserEntity` 等形式。
+
+```java
+// 推荐
+import java.lang.reflect.Method;
+
+private static String handlerLabel(MethodParameter parameter) {
+    Method method = parameter.getMethod();
+    ...
+}
+
+// 避免（无冲突却写 FQN）
+private static String handlerLabel(MethodParameter parameter) {
+    java.lang.reflect.Method method = parameter.getMethod();
+    ...
+}
+```
+
+## 8. 日志语句（`log.info` / `log.debug` 等）
+
+- **`log.trace` / `log.debug` / `log.info` / `log.warn` / `log.error` 调用必须单行写完**：从 `log.` 到语句结束分号**不得换行**拆成多行。
+- **占位符**：继续用 SLF4J `{}` 传参；参数过多时可在**上一行**先赋给局部变量，但 **`log.xxx(...)` 本身仍占一行**。
+- **禁止**为「对齐」或「省横向滚动」把一条日志拆成多行实参。
+
+```java
+// 推荐
+log.debug("UserContextArgumentResolver 进入: {} required={}", gate, AuthenticatedSupport.authRequired(parameter));
+
+// 推荐：先算变量，日志仍一行
+String summary = buildSummary(context);
+log.info("机器人定时销毁：已处理软删除超过 {} 天的记录 {} 条", retentionDays, summary);
+
+// 避免（log 调用换行）
+log.debug("UserContextArgumentResolver 进入: {} required={}",
+        gate, AuthenticatedSupport.authRequired(parameter));
+
+// 避免（链式换行）
+log.warn("清理机器人失败 uuid={}",
+        robot.getUuid(), e);
+```
+
+- 与 §2「方法调用」的关系：一般方法调用过长时可折行；**日志调用不适用该折行例外**，一律单行。
+
+## 8. 日志语句（`log.info` / `log.debug` 等）
+
+- **`log.trace` / `log.debug` / `log.info` / `log.warn` / `log.error` 调用必须单行写完**：从 `log.` 到语句结束分号**不得换行**拆成多行。
+- **占位符**：继续用 SLF4J `{}` 传参；参数过多时可在**上一行**先赋给局部变量，但 **`log.xxx(...)` 本身仍占一行**。
+- **禁止**为「对齐」或「省横向滚动」把一条日志拆成多行实参。
+
+```java
+// 推荐
+log.debug("UserContextArgumentResolver 进入: {} required={}", gate, AuthenticatedSupport.authRequired(parameter));
+
+// 推荐：先算变量，日志仍一行
+String summary = buildSummary(context);
+log.info("机器人定时销毁：已处理软删除超过 {} 天的记录 {} 条", retentionDays, summary);
+
+// 避免（log 调用换行）
+log.debug("UserContextArgumentResolver 进入: {} required={}",
+        gate, AuthenticatedSupport.authRequired(parameter));
+
+// 避免（链式换行）
+log.warn("清理机器人失败 uuid={}",
+        robot.getUuid(), e);
+```
+
+- 与 §2「方法调用」的关系：一般方法调用过长时可折行；**日志调用不适用该折行例外**，一律单行。

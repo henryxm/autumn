@@ -148,6 +148,17 @@ sequenceDiagram
 
 用户令牌由 **`usr` 模块** 签发（具体路径以业务系统暴露的开放认证文档为准，非本文范围）。机器人模块 **不负责** 签发用户令牌。
 
+### 3.4 `UserContext` 与遗留 `userUuid` hint
+
+开放 API 注入的 `UserContext` 在运行时多为 `SysUserEntity` 或 `RobotEntity`；**数据权限**请用 `getSubject()`，勿把真人 `getOwner()` 当作主体 uuid。
+
+| 请求携带 | 解析顺序 |
+|----------|----------|
+| Shiro 已登录 | 直接返回 Session 主体 |
+| 令牌（`Token` / `X-Robot-Token` 等） | 校验令牌后返回对应实体 |
+| 令牌 + `userUuid` query/header | 二者须一致，否则视为未认证 |
+| 仅 `userUuid`、无令牌 | 遗留 minclouds 行为（内网/网关场景）；生产开放 API 应始终带令牌 |
+
 ---
 
 ## 4. 接收 Hook 回调（HTTP 服务端）

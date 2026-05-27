@@ -12,11 +12,12 @@ import java.lang.annotation.Target;
  *   <li>{@link #subject()}：参数为 {@code SysUserEntity} 时注入数据主体（机器人场景为 owner）</li>
  * </ul>
  * <p>
- * 与 {@link cn.org.autumn.model.UserContext} 配合：控制器直接声明 {@code UserContext} 参数即可注入，
+ * 与 {@link cn.org.autumn.model.UserContext} 配合：注入结果为业务实体（{@code SysUserEntity} / {@code RobotEntity} 等），
+ * 可对 {@code UserContext} 参数使用 {@code instanceof} 取得具体类型；也可直接声明 {@code @Authenticated RobotEntity} 等。
  * 是否必填由本注解的 {@link #notNull()} 决定（可标在方法或参数上）。
  * <p>
  * <b>与遗留 {@code UserInfo} 并存</b>：参数类型为 minclouds {@code UserInfo} 时仍由 {@code UserInfoResolver} 解析
- * （即使参数带本注解）；新接口请改用 {@code UserContext} 或 {@code @Authenticated User} / {@code SysUserEntity}。
+ * （即使参数带本注解）；新接口请优先 {@code UserContext} 或具体实体参数。
  */
 @Target({ElementType.PARAMETER, ElementType.METHOD, ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)

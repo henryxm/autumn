@@ -1,6 +1,9 @@
 package cn.org.autumn.modules.bot.entity;
 
+import cn.org.autumn.annotation.Cache;
 import cn.org.autumn.config.AccountHandler;
+import cn.org.autumn.model.UserContext;
+import cn.org.autumn.modules.sys.entity.User;
 import cn.org.autumn.table.annotation.Column;
 import cn.org.autumn.table.annotation.Index;
 import cn.org.autumn.table.annotation.Table;
@@ -17,7 +20,7 @@ import java.util.Date;
 @Setter
 @TableName("bot_robot")
 @Table(value = "bot_robot", comment = "机器人:系统用户创建的API调用身份")
-public class RobotEntity implements Serializable, AccountHandler.User {
+public class RobotEntity implements Serializable, AccountHandler.Account, UserContext {
     private static final long serialVersionUID = 1L;
 
     public static final int STATUS_ACTIVE = 1;
@@ -33,6 +36,7 @@ public class RobotEntity implements Serializable, AccountHandler.User {
     @Column(isKey = true, type = DataType.BIGINT, length = 20, isNull = false, isAutoIncrement = true, comment = "id")
     private Long id;
 
+    @Cache
     @Column(length = 32, comment = "标识:全局唯一业务主键", isUnique = true)
     private String uuid;
 
@@ -42,7 +46,7 @@ public class RobotEntity implements Serializable, AccountHandler.User {
 
     @Column(length = 100, comment = "名称:机器人展示名")
     @Index
-    private String name;
+    private String nickname;
 
     @Column(type = DataType.TEXT, comment = "描述:用途说明")
     private String description;
@@ -97,8 +101,16 @@ public class RobotEntity implements Serializable, AccountHandler.User {
         return true;
     }
 
-    @Override
-    public String getNickname() {
-        return name;
+    public User toUser() {
+        return new User(this);
+    }
+
+    public User toSimple() {
+        User user = new User();
+        user.setUuid(uuid);
+        user.setNickname(nickname);
+        user.setIcon(icon);
+        user.setRobot(true);
+        return user;
     }
 }
