@@ -13,7 +13,10 @@ import java.lang.annotation.Target;
  * </ul>
  * <p>
  * 与 {@link cn.org.autumn.model.UserContext} 配合：控制器直接声明 {@code UserContext} 参数即可注入，
- * 无需额外注解；是否必填由本注解的 {@link #notNull()} 决定（可标在方法或参数上）。
+ * 是否必填由本注解的 {@link #notNull()} 决定（可标在方法或参数上）。
+ * <p>
+ * <b>与遗留 {@code UserInfo} 并存</b>：参数类型为 minclouds {@code UserInfo} 时仍由 {@code UserInfoResolver} 解析
+ * （即使参数带本注解）；新接口请改用 {@code UserContext} 或 {@code @Authenticated User} / {@code SysUserEntity}。
  */
 @Target({ElementType.PARAMETER, ElementType.METHOD, ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
