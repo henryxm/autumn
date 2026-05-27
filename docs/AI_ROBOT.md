@@ -284,7 +284,9 @@ flowchart LR
 
 | 资源 | 计数方式 |
 |------|----------|
-| 机器人 | **表行数**（含停用、软删）；销毁后仍占 uuid |
+| 机器人 | **`status >= 0` 行数**：含**停用(0)**、正常(1)；**不含软删(-1)**与销毁(-2)。用户 `delete` 后立即释放名额；软删记录后台保留约 30 天由定时任务硬销毁，**用户不可 enable 恢复** |
+| 软删门禁 | 全局 `RobotQuotaConfig.maxSoftDeletePending`（默认 **5**）：软删数 **> 该值** 禁止 `create`，降至 **≤ 该值** 可恢复（管理员 `destroy` 或 `deletedRetentionDays` 自动清理） |
+| 软删保留 | 全局 `RobotQuotaConfig.deletedRetentionDays`（默认 **30**），超期由 **`RobotService.onOneDay`** 每日硬销毁 |
 | 有效令牌 | **status=1** 的行数 |
 | Hook | 表行数（按机器人） |
 

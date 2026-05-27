@@ -57,11 +57,21 @@ public class RobotApiRegressionTest extends IntegrationTest {
     @Test
     public void destroy_robot_irreversible() {
         String robotUuid = createRobotUuid();
+        JSONObject del = robotApi.post("/delete", userToken, RobotTestBodies.uuid(robotUuid));
+        IntegrationJson.assertSuccess(del);
+
         JSONObject destroy = robotApi.post("/destroy", userToken, RobotTestBodies.uuid(robotUuid));
         IntegrationJson.assertSuccess(destroy);
 
         JSONObject enable = robotApi.post("/enable", userToken, RobotTestBodies.uuid(robotUuid));
         IntegrationJson.assertBusinessFailure(enable);
+    }
+
+    @Test
+    public void destroy_requires_soft_delete_first() {
+        String robotUuid = createRobotUuid();
+        JSONObject destroy = robotApi.post("/destroy", userToken, RobotTestBodies.uuid(robotUuid));
+        IntegrationJson.assertBusinessFailure(destroy);
     }
 
     @Test
