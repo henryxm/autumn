@@ -3,6 +3,8 @@ package cn.org.autumn.model;
 import cn.org.autumn.annotation.ConfigField;
 import cn.org.autumn.annotation.ConfigParam;
 import cn.org.autumn.config.InputType;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -11,6 +13,8 @@ import java.util.List;
 /**
  * 机器人全局配额（用户可创建机器人数、每机器人令牌数、Hook 数）。
  */
+@Getter
+@Setter
 @ConfigParam(paramKey = RobotQuotaConfig.CONFIG_KEY, category = RobotQuotaConfig.config, name = "机器人配额", description = "配置用户与机器人资源默认上限")
 public class RobotQuotaConfig implements Serializable {
     private static final long serialVersionUID = 1L;
@@ -38,6 +42,12 @@ public class RobotQuotaConfig implements Serializable {
 
     @ConfigField(category = InputType.NumberType, name = "幂等缓存小时", description = "入站消息幂等键在缓存中保留的小时数")
     private int messageIdempotencyHours = 24;
+
+    @ConfigField(category = InputType.NumberType, name = "软删门禁上限", description = "单用户软删机器人数量超过该值后禁止创建，降至该值及以下可恢复；默认5")
+    private int maxSoftDeletePending = 5;
+
+    @ConfigField(category = InputType.NumberType, name = "软删保留天数", description = "用户软删后后台保留天数，超期由定时任务硬销毁；默认30")
+    private int deletedRetentionDays = 30;
 
     public List<String> validateAndFix() {
         List<String> fixes = new ArrayList<>();
@@ -76,62 +86,16 @@ public class RobotQuotaConfig implements Serializable {
             messageIdempotencyHours = 24;
             fixes.add(String.format("幂等缓存小时不合理:%d，已修正为:%d", old, messageIdempotencyHours));
         }
+        if (maxSoftDeletePending <= 0) {
+            int old = maxSoftDeletePending;
+            maxSoftDeletePending = 5;
+            fixes.add(String.format("软删门禁上限不合理:%d，已修正为:%d", old, maxSoftDeletePending));
+        }
+        if (deletedRetentionDays <= 0) {
+            int old = deletedRetentionDays;
+            deletedRetentionDays = 30;
+            fixes.add(String.format("软删保留天数不合理:%d，已修正为:%d", old, deletedRetentionDays));
+        }
         return fixes;
-    }
-
-    public int getMaxRobotsPerUser() {
-        return maxRobotsPerUser;
-    }
-
-    public void setMaxRobotsPerUser(int maxRobotsPerUser) {
-        this.maxRobotsPerUser = maxRobotsPerUser;
-    }
-
-    public int getMaxTokensPerRobot() {
-        return maxTokensPerRobot;
-    }
-
-    public void setMaxTokensPerRobot(int maxTokensPerRobot) {
-        this.maxTokensPerRobot = maxTokensPerRobot;
-    }
-
-    public int getMaxHooksPerRobot() {
-        return maxHooksPerRobot;
-    }
-
-    public void setMaxHooksPerRobot(int maxHooksPerRobot) {
-        this.maxHooksPerRobot = maxHooksPerRobot;
-    }
-
-    public int getMaxMessagePushPerMinute() {
-        return maxMessagePushPerMinute;
-    }
-
-    public void setMaxMessagePushPerMinute(int maxMessagePushPerMinute) {
-        this.maxMessagePushPerMinute = maxMessagePushPerMinute;
-    }
-
-    public int getHookDispatchRetries() {
-        return hookDispatchRetries;
-    }
-
-    public void setHookDispatchRetries(int hookDispatchRetries) {
-        this.hookDispatchRetries = hookDispatchRetries;
-    }
-
-    public int getMessageDispatchRetries() {
-        return messageDispatchRetries;
-    }
-
-    public void setMessageDispatchRetries(int messageDispatchRetries) {
-        this.messageDispatchRetries = messageDispatchRetries;
-    }
-
-    public int getMessageIdempotencyHours() {
-        return messageIdempotencyHours;
-    }
-
-    public void setMessageIdempotencyHours(int messageIdempotencyHours) {
-        this.messageIdempotencyHours = messageIdempotencyHours;
     }
 }

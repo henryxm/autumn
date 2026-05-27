@@ -132,7 +132,8 @@ public class RobotApiController {
     @Authenticated
     public Response<String> destroy(@Valid @RequestBody Request<RobotUuidRequest> request, UserContext context, HttpServletRequest servlet) {
         try {
-            robotService.destroy(requireUuid(request), requireOwner(context));
+            robotConfigService.assertAdministrator(requireOperator(context));
+            robotService.destroyByAdministrator(requireUuid(request));
             return Response.ok();
         } catch (Exception e) {
             RobotOpenApiLogSupport.logFailure(log, "销毁机器人", e, servlet);

@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.bot.entity;
 
+import cn.org.autumn.annotation.Cache;
 import cn.org.autumn.table.annotation.Column;
 import cn.org.autumn.table.annotation.Table;
 import cn.org.autumn.table.data.DataType;
@@ -24,6 +25,7 @@ public class RobotConfigEntity implements Serializable {
     @Column(isKey = true, type = DataType.BIGINT, length = 20, isNull = false, isAutoIncrement = true, comment = "id")
     private Long id;
 
+    @Cache
     @Column(length = 32, comment = "用户:sys_user.uuid，唯一", isUnique = true)
     private String uuid;
 

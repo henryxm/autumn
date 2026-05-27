@@ -5,25 +5,30 @@ import cn.org.autumn.exception.CodeException;
 import cn.org.autumn.modules.bot.dao.RobotDao;
 import cn.org.autumn.modules.bot.dto.RobotCreateResult;
 import cn.org.autumn.modules.bot.entity.RobotEntity;
+import cn.org.autumn.modules.bot.support.RobotHookEvents;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.entity.User;
 import cn.org.autumn.modules.sys.service.SysUserService;
 import cn.org.autumn.modules.sys.service.UuidNamespaceService;
-import cn.org.autumn.modules.bot.support.RobotHookEvents;
+import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.site.AccountFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @Service
-public class RobotService extends ModuleService<RobotDao, RobotEntity> {
+public class RobotService extends ModuleService<RobotDao, RobotEntity> implements LoopJob.OneDay {
 
     @Autowired
     @Lazy
@@ -59,26 +64,61 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> {
     }
 
     public RobotEntity getByUuid(String uuid) {
-        if (StringUtils.isBlank(uuid))
+        if (StringUtils.isBlank(uuid)) {
             return null;
+        }
         return baseMapper.getByUuid(uuid);
     }
 
     public List<RobotEntity> listByOwner(String owner) {
-        if (StringUtils.isBlank(owner))
+        if (StringUtils.isBlank(owner)) {
             return null;
+        }
         return baseMapper.listByOwnerManaged(owner);
     }
 
-    public int countByOwner(String owner) {
-        if (StringUtils.isBlank(owner))
+    public List<RobotEntity> listAllByOwner(String owner) {
+        if (StringUtils.isBlank(owner)) {
+            return Collections.emptyList();
+        }
+        List<RobotEntity> robots = baseMapper.listByOwner(owner);
+        return robots == null ? Collections.emptyList() : robots;
+    }
+
+    public List<String> listSoftDeletedUuids(String owner) {
+        if (StringUtils.isBlank(owner)) {
+            return Collections.emptyList();
+        }
+        List<String> uuids = baseMapper.listUuidsSoftDeletedByOwner(owner);
+        return uuids == null ? Collections.emptyList() : uuids;
+    }
+
+    public List<String> listUuidsDeletedBefore(Date beforeTime) {
+        if (beforeTime == null) {
+            return Collections.emptyList();
+        }
+        List<String> uuids = baseMapper.listUuidsDeletedBefore(beforeTime);
+        return uuids == null ? Collections.emptyList() : uuids;
+    }
+
+    public int countByOwnerForQuota(String owner) {
+        if (StringUtils.isBlank(owner)) {
             return 0;
-        return baseMapper.countByOwner(owner);
+        }
+        return baseMapper.countByOwnerForQuota(owner);
+    }
+
+    public int countSoftDeletedByOwner(String owner) {
+        if (StringUtils.isBlank(owner)) {
+            return 0;
+        }
+        return baseMapper.countSoftDeletedByOwner(owner);
     }
 
     public User toUser(RobotEntity robot) {
-        if (robot == null)
+        if (robot == null) {
             return null;
+        }
         User user = new User();
         user.setUuid(robot.getUuid());
         user.setNickname(robot.getName());
@@ -89,24 +129,40 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> {
     }
 
     public void assertOwner(RobotEntity robot, String loginUuid) throws Exception {
-        if (robot == null)
+        if (robot == null) {
             throw new CodeException("机器人不存在");
-        if (StringUtils.isBlank(loginUuid) || !loginUuid.equals(robot.getOwner()))
+        }
+        if (StringUtils.isBlank(loginUuid) || !loginUuid.equals(robot.getOwner())) {
             throw new CodeException("无权操作该机器人");
+        }
+    }
+
+    public void assertUserManageable(RobotEntity robot) throws Exception {
+        if (robot == null) {
+            throw new CodeException("机器人不存在");
+        }
+        if (robot.getStatus() == RobotEntity.STATUS_DELETED) {
+            throw new CodeException("机器人已删除，不可恢复");
+        }
+        if (robot.getStatus() == RobotEntity.STATUS_DESTROYED) {
+            throw new CodeException("机器人已销毁");
+        }
     }
 
     public void assertOwnerActive(String ownerUuid) throws Exception {
         SysUserEntity owner = sysUserService.getByUuid(ownerUuid);
-        if (owner == null || owner.getStatus() < 1)
+        if (owner == null || owner.getStatus() < 1) {
             throw new CodeException("用户不可用");
+        }
     }
 
     @Transactional(rollbackFor = Exception.class)
     public RobotCreateResult create(String owner, String name, String description, String icon, Integer tokenExpireDays, String access) throws Exception {
         assertOwnerActive(owner);
         robotQuotaService.assertRobotQuota(owner);
-        if (StringUtils.isBlank(name))
+        if (StringUtils.isBlank(name)) {
             throw new CodeException("名称不能为空");
+        }
         RobotEntity draft = new RobotEntity();
         draft.setOwner(owner);
         draft.setName(name);
@@ -132,8 +188,7 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> {
 
     @Transactional(rollbackFor = Exception.class)
     public void disable(String robotUuid, String loginUuid) throws Exception {
-        RobotEntity robot = getByUuid(robotUuid);
-        assertOwner(robot, loginUuid);
+        RobotEntity robot = requireManageable(robotUuid, loginUuid);
         accountFactory.disabling(robot);
         robot.setStatus(RobotEntity.STATUS_DISABLED);
         robot.setUpdateTime(new Date());
@@ -145,10 +200,7 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> {
 
     @Transactional(rollbackFor = Exception.class)
     public void enable(String robotUuid, String loginUuid) throws Exception {
-        RobotEntity robot = getByUuid(robotUuid);
-        assertOwner(robot, loginUuid);
-        if (robot.getStatus() == RobotEntity.STATUS_DESTROYED || robot.getStatus() == RobotEntity.STATUS_DELETED)
-            throw new CodeException("机器人已删除或已销毁");
+        RobotEntity robot = requireManageable(robotUuid, loginUuid);
         assertOwnerActive(robot.getOwner());
         robot.setStatus(RobotEntity.STATUS_ACTIVE);
         robot.setUpdateTime(new Date());
@@ -162,8 +214,12 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> {
     public void delete(String robotUuid, String loginUuid) throws Exception {
         RobotEntity robot = getByUuid(robotUuid);
         assertOwner(robot, loginUuid);
-        if (robot.getStatus() == RobotEntity.STATUS_DESTROYED)
+        if (robot.getStatus() == RobotEntity.STATUS_DESTROYED) {
             throw new CodeException("机器人已销毁");
+        }
+        if (robot.getStatus() == RobotEntity.STATUS_DELETED) {
+            throw new CodeException("机器人已删除");
+        }
         accountFactory.deleting(robot);
         Date now = new Date();
         robot.setStatus(RobotEntity.STATUS_DELETED);
@@ -177,9 +233,17 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void destroy(String robotUuid, String loginUuid) throws Exception {
+    public void destroyByAdministrator(String robotUuid) throws Exception {
         RobotEntity robot = getByUuid(robotUuid);
-        assertOwner(robot, loginUuid);
+        if (robot == null) {
+            throw new CodeException("机器人不存在");
+        }
+        if (robot.getStatus() == RobotEntity.STATUS_DESTROYED) {
+            throw new CodeException("机器人已销毁");
+        }
+        if (robot.getStatus() != RobotEntity.STATUS_DELETED) {
+            throw new CodeException("仅可销毁已删除的机器人");
+        }
         accountFactory.destroying(robot);
         Date now = new Date();
         robot.setStatus(RobotEntity.STATUS_DESTROYED);
@@ -193,33 +257,99 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> {
         accountFactory.destroyed(robot);
     }
 
+    @Override
+    public void onOneDay() {
+        try {
+            int retentionDays = robotQuotaService.effectiveDeletedRetentionDays();
+            int n = purgeExpiredDeletedRobots(retentionDays);
+            if (n > 0) {
+                log.info("机器人定时销毁：已处理软删除超过 {} 天的记录 {} 条", retentionDays, n);
+            }
+        } catch (Exception e) {
+            log.error("机器人定时销毁任务失败", e);
+        }
+    }
+
+    public void purgeSoftDeletedForOwner(String owner) {
+        if (StringUtils.isBlank(owner)) {
+            return;
+        }
+        for (String uuid : listSoftDeletedUuids(owner)) {
+            if (StringUtils.isBlank(uuid)) {
+                continue;
+            }
+            try {
+                destroyByAdministrator(uuid);
+            } catch (Exception e) {
+                log.warn("清理软删机器人失败 uuid={}", uuid, e);
+            }
+        }
+    }
+
+    public void purgeAllRobotsForOwner(String owner) {
+        if (StringUtils.isBlank(owner)) {
+            return;
+        }
+        for (RobotEntity robot : listAllByOwner(owner)) {
+            if (robot == null || StringUtils.isBlank(robot.getUuid())) {
+                continue;
+            }
+            if (robot.getStatus() == RobotEntity.STATUS_DESTROYED) {
+                continue;
+            }
+            try {
+                if (robot.getStatus() == RobotEntity.STATUS_DELETED) {
+                    destroyByAdministrator(robot.getUuid());
+                } else {
+                    delete(robot.getUuid(), owner);
+                    destroyByAdministrator(robot.getUuid());
+                }
+            } catch (Exception e) {
+                log.warn("清理机器人失败 uuid={}", robot.getUuid(), e);
+            }
+        }
+        purgeSoftDeletedForOwner(owner);
+    }
+
+    public int purgeExpiredDeletedRobots(int retentionDays) {
+        if (retentionDays < 1) {
+            retentionDays = robotQuotaService.effectiveDeletedRetentionDays();
+        }
+        Calendar cal = Calendar.getInstance();
+        cal.add(Calendar.DAY_OF_MONTH, -retentionDays);
+        Date beforeTime = cal.getTime();
+        int n = 0;
+        for (String uuid : listUuidsDeletedBefore(beforeTime)) {
+            if (StringUtils.isBlank(uuid)) {
+                continue;
+            }
+            try {
+                destroyByAdministrator(uuid);
+                n++;
+            } catch (Exception e) {
+                log.warn("定时销毁机器人失败 uuid={}", uuid, e);
+            }
+        }
+        return n;
+    }
+
     @Transactional(rollbackFor = Exception.class)
     public String createToken(String robotUuid, String loginUuid, Integer tokenExpireDays) throws Exception {
-        RobotEntity robot = getByUuid(robotUuid);
-        assertOwner(robot, loginUuid);
-        if (!robot.isActive())
-            throw new CodeException("机器人未启用");
+        RobotEntity robot = requireActiveManageable(robotUuid, loginUuid);
         assertOwnerActive(robot.getOwner());
         return robotTokenService.createToken(robotUuid, tokenExpireDays);
     }
 
-    /**
-     * 轮换令牌：表记录数达上限时删除最旧一条后再签发。
-     */
     @Transactional(rollbackFor = Exception.class)
     public String rotateToken(String robotUuid, String loginUuid, Integer tokenExpireDays) throws Exception {
-        RobotEntity robot = getByUuid(robotUuid);
-        assertOwner(robot, loginUuid);
-        if (!robot.isActive())
-            throw new CodeException("机器人未启用");
+        RobotEntity robot = requireActiveManageable(robotUuid, loginUuid);
         assertOwnerActive(robot.getOwner());
         return robotTokenService.rotateIssue(robotUuid, tokenExpireDays);
     }
 
     @Transactional(rollbackFor = Exception.class)
     public void updateProfile(String robotUuid, String loginUuid, String name, String description, String icon, String access, Boolean black) throws Exception {
-        RobotEntity robot = getByUuid(robotUuid);
-        assertOwner(robot, loginUuid);
+        RobotEntity robot = requireManageable(robotUuid, loginUuid);
         if (StringUtils.isNotBlank(name)) {
             robot.setName(name);
         }
@@ -251,16 +381,33 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> {
     }
 
     public void touchLastUsed(RobotEntity robot) {
-        if (robot == null)
+        if (robot == null) {
             return;
+        }
         robot.setLastUsedTime(new Date());
         robot.setUpdateTime(robot.getLastUsedTime());
         updateById(robot);
     }
 
+    private RobotEntity requireManageable(String robotUuid, String loginUuid) throws Exception {
+        RobotEntity robot = getByUuid(robotUuid);
+        assertOwner(robot, loginUuid);
+        assertUserManageable(robot);
+        return robot;
+    }
+
+    private RobotEntity requireActiveManageable(String robotUuid, String loginUuid) throws Exception {
+        RobotEntity robot = requireManageable(robotUuid, loginUuid);
+        if (!robot.isActive()) {
+            throw new CodeException("机器人未启用");
+        }
+        return robot;
+    }
+
     private void dispatchHook(RobotEntity robot, String event) {
-        if (robot == null || StringUtils.isBlank(event))
+        if (robot == null || StringUtils.isBlank(event)) {
             return;
+        }
         Map<String, Object> payload = new HashMap<>();
         payload.put("owner", robot.getOwner());
         payload.put("name", robot.getName());

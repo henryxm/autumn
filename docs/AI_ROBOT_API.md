@@ -107,7 +107,7 @@ X-Robot-Token: rbt_xxxxxxxxxxxxxxxx
 }
 ```
 
-说明：列表为 **`status >= 0`** 的机器人（含停用、软删）；不含已销毁。
+说明：列表为 **`status >= 0`** 的机器人（含停用）；不含软删（-1）与已销毁（-2）。
 
 ---
 
@@ -154,8 +154,14 @@ X-Robot-Token: rbt_xxxxxxxxxxxxxxxx
 |------|---------------|------|------|
 | disable | 0 | 全部作废 | 保留 |
 | enable | 1 | 不自动恢复 | 保留 |
-| delete | -1 软删 | 作废 | **删除全部 Hook 行** |
-| destroy | -2 销毁 | 作废 | **删除全部 Hook 行** |
+| delete | -1 软删（**仅主人**） | 作废 | **删除全部 Hook 行** |
+| destroy | -2 硬销毁（**仅系统管理员**） | 作废 | **删除全部 Hook 行** |
+
+- **delete**：用户侧唯一删除入口；记录 `delete_time`，从列表隐藏，**立即释放创建配额**（`usedRobots` / `assertRobotQuota` 不再计入）；**不可 enable 恢复**；后台保留 `deletedRetentionDays` 天供审计/管理员 `destroy` 或定时硬销毁。
+- **停用**：`status=0` 仍占用配额，可 `enable` 恢复。
+- **destroy**：要求机器人已为软删（`status=-1`）；非管理员调用将拒绝。
+- **定时任务**：软删除超过 **`RobotQuotaConfig.deletedRetentionDays`（默认 30）** 的机器人由 **`RobotService`** 每日任务（`LoopJob.OneDay`）自动硬销毁。
+- **软删门禁**：超过 **`RobotQuotaConfig.maxSoftDeletePending`（默认 5）** 禁止 `create`，降至该值及以下可恢复。
 
 Hook 事件：`robot.disabled` / `robot.enabled` / `robot.deleted` / `robot.destroyed`。
 
@@ -306,7 +312,11 @@ Hook 事件：`robot.disabled` / `robot.enabled` / `robot.deleted` / `robot.dest
 |------|------|
 | `uuid` | 用户 uuid |
 | `maxRobots` / `maxTokens` / `maxHooks` | 配置值，**-1** 表示继承全局 |
-| `usedRobots` | 已创建机器人数（**含停用/软删行**） |
+| `usedRobots` | 占用配额的机器人数（**含停用，不含软删/销毁**） |
+| `pendingSoftDeleted` | 软删中（`status=-1`）机器人数 |
+| `softDeleteCreateBlocked` | 为 `true` 时不可 `create`（软删数 > `effectiveMaxSoftDeletePending`） |
+| `effectiveMaxSoftDeletePending` | 全局软删门禁上限（默认 5） |
+| `effectiveDeletedRetentionDays` | 全局软删保留天数（默认 30） |
 | `effectiveMaxRobots` / `effectiveMaxTokens` / `effectiveMaxHooks` | 合并全局后的实际上限 |
 
 **`POST /robot/api/v1/config/save`**
@@ -464,7 +474,8 @@ expected = HMAC_SHA256_hex(key = hook_secret, message = payload_to_sign)
 |------|------|------|
 | `/list` | 用户 | 机器人列表 |
 | `/create` | 用户 | 创建 + 首个 rbt_ |
-| `/disable` `/enable` `/delete` `/destroy` | 用户 | 生命周期 |
+| `/disable` `/enable` `/delete` | 用户 | 生命周期 |
+| `/destroy` | **系统管理员** | 硬销毁（须先软删） |
 | `/hook/list` | 用户 | Hook 列表 |
 | `/hook/create` | 用户 | 创建 Hook |
 | `/hook/update` | 用户 | 更新 Hook |

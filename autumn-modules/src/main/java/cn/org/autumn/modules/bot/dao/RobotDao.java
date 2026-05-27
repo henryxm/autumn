@@ -8,6 +8,7 @@ import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.SelectProvider;
 import org.springframework.stereotype.Repository;
 
+import java.util.Date;
 import java.util.List;
 
 @Mapper
@@ -26,6 +27,15 @@ public interface RobotDao extends BaseMapper<RobotEntity> {
     @SelectProvider(type = RobotDaoSql.class, method = "listByOwnerManaged")
     List<RobotEntity> listByOwnerManaged(@Param("owner") String owner);
 
-    @SelectProvider(type = RobotDaoSql.class, method = "countByOwner")
-    int countByOwner(@Param("owner") String owner);
+    @SelectProvider(type = RobotDaoSql.class, method = "countByOwnerForQuota")
+    int countByOwnerForQuota(@Param("owner") String owner);
+
+    @SelectProvider(type = RobotDaoSql.class, method = "countSoftDeletedByOwner")
+    int countSoftDeletedByOwner(@Param("owner") String owner);
+
+    @SelectProvider(type = RobotDaoSql.class, method = "listUuidsSoftDeletedByOwner")
+    List<String> listUuidsSoftDeletedByOwner(@Param("owner") String owner);
+
+    @SelectProvider(type = RobotDaoSql.class, method = "listUuidsDeletedBefore")
+    List<String> listUuidsDeletedBefore(@Param("beforeTime") Date beforeTime);
 }
