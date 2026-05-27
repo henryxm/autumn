@@ -7,23 +7,33 @@ import cn.org.autumn.model.UserContext;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.entity.User;
 import cn.org.autumn.modules.sys.service.UserContextService;
+import cn.org.autumn.web.AuthenticatedSupport;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.MethodParameter;
-import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.support.WebDataBinderFactory;
 import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.method.support.ModelAndViewContainer;
 
-import java.lang.reflect.AnnotatedElement;
-
 /**
- * 无 Session API 用户上下文注入：{@link UserContext} / {@link User} / {@link SysUserEntity}。
- * 是否强制鉴权由 {@link Authenticated#notNull()} 控制（参数、方法、类上均可声明）。
+ * 新方案：无 Session API 的 {@link UserContext} / {@link User} / {@link SysUserEntity} 注入（须标 {@link Authenticated}）。
+ * <p>
+ * 与 minclouds 遗留 {@code UserInfoResolver} 并存、互不抢占：
+ * <ul>
+ *   <li>{@code UserInfo}（含 {@code @Authenticated UserInfo}）→ 仅 {@code UserInfoResolver}</li>
+ *   <li>{@code SysUserEntity} 且无 {@link Authenticated} → 仅 {@code UserInfoResolver}</li>
+ *   <li>{@code @Authenticated} + {@code UserContext} / {@code User} / {@code SysUserEntity} → 本解析器</li>
+ * </ul>
+ * {@link User} 仅匹配类型本身，不匹配子类 {@code UserInfo}。
  */
 @Component
 public class UserContextArgumentResolver implements HandlerMethodArgumentResolver, ResolverHandler {
+
+    /**
+     * 在 {@code UserInfoResolver}（order 0）之后注册
+     */
+    private static final int ORDER = 100;
 
     @Autowired
     private UserContextService userContextService;
@@ -33,17 +43,15 @@ public class UserContextArgumentResolver implements HandlerMethodArgumentResolve
         Class<?> type = parameter.getParameterType();
         if (UserContext.class.isAssignableFrom(type))
             return true;
-        if (!hasAuthenticated(parameter))
+        if (!AuthenticatedSupport.hasAuthenticated(parameter))
             return false;
-        return User.class.isAssignableFrom(type) || SysUserEntity.class.isAssignableFrom(type);
+        return type == User.class || type == SysUserEntity.class;
     }
 
     @Override
-    public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer,
-                                  NativeWebRequest webRequest, WebDataBinderFactory binderFactory) throws Exception {
-        boolean required = authRequired(parameter);
-        Authenticated paramAuth = findAuthenticated(parameter);
-
+    public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer, NativeWebRequest webRequest, WebDataBinderFactory binderFactory) throws Exception {
+        boolean required = AuthenticatedSupport.authRequired(parameter);
+        Authenticated paramAuth = AuthenticatedSupport.onParameter(parameter);
         UserContext context = userContextService.resolve(webRequest);
         if (context == null && required)
             throw new CodeException("请登录", -10000);
@@ -51,13 +59,10 @@ public class UserContextArgumentResolver implements HandlerMethodArgumentResolve
             return null;
         if (!context.isActive() && required && !context.isRobot())
             throw new CodeException("账号不可用", -10000);
-
         Class<?> type = parameter.getParameterType();
-        if (SysUserEntity.class.isAssignableFrom(type)) {
+        if (type == SysUserEntity.class) {
             boolean subject = paramAuth != null && paramAuth.subject();
-            SysUserEntity user = subject
-                    ? userContextService.loadSubjectUser(context)
-                    : userContextService.loadActorUser(context);
+            SysUserEntity user = subject ? userContextService.loadSubjectUser(context) : userContextService.loadActorUser(context);
             if (user == null && required) {
                 if (context.isRobot() && !subject)
                     throw new CodeException("机器人身份请使用 @Authenticated(subject = true) 注入主人", -10000);
@@ -67,38 +72,14 @@ public class UserContextArgumentResolver implements HandlerMethodArgumentResolve
                 user.checkThrow();
             return user;
         }
-        if (User.class.isAssignableFrom(type))
+        if (type == User.class)
             return userContextService.toUser(context);
         return context;
     }
 
-    private static boolean hasAuthenticated(MethodParameter parameter) {
-        return findAuthenticated(parameter) != null
-                || findAuthenticated(parameter.getMethod()) != null
-                || findAuthenticated(parameter.getContainingClass()) != null;
-    }
-
-    private static boolean authRequired(MethodParameter parameter) {
-        Authenticated auth = findAuthenticated(parameter);
-        if (auth != null)
-            return auth.notNull();
-        auth = findAuthenticated(parameter.getMethod());
-        if (auth != null)
-            return auth.notNull();
-        auth = findAuthenticated(parameter.getContainingClass());
-        if (auth != null)
-            return auth.notNull();
-        return false;
-    }
-
-    private static Authenticated findAuthenticated(AnnotatedElement element) {
-        if (element == null)
-            return null;
-        return AnnotatedElementUtils.findMergedAnnotation(element, Authenticated.class);
-    }
-
-    private static Authenticated findAuthenticated(MethodParameter parameter) {
-        return findAuthenticated((AnnotatedElement) parameter.getParameter());
+    @Override
+    public int getOrder() {
+        return ORDER;
     }
 
     @Override

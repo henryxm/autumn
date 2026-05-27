@@ -15,6 +15,7 @@ import org.springframework.web.servlet.config.annotation.*;
 
 import jakarta.annotation.PostConstruct;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 @Slf4j
@@ -111,9 +112,10 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addArgumentResolvers(@NonNull List<HandlerMethodArgumentResolver> argumentResolvers) {
         if (null != resolverHandlers && !resolverHandlers.isEmpty()) {
-            for (ResolverHandler resolverHandler : resolverHandlers) {
-                argumentResolvers.add(resolverHandler.getResolver());
-            }
+            resolverHandlers.stream()
+                    .sorted(Comparator.comparingInt(ResolverHandler::getOrder))
+                    .map(ResolverHandler::getResolver)
+                    .forEach(argumentResolvers::add);
         }
     }
 
