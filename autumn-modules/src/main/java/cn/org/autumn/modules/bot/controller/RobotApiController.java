@@ -326,9 +326,9 @@ public class RobotApiController {
             throw new CodeException("请登录", -10000);
         if (context.isRobot())
             throw new CodeException("请使用用户令牌管理机器人", -10000);
-        if (StringUtils.isBlank(context.getOwner()))
+        if (StringUtils.isBlank(context.getSubject()))
             throw new CodeException("用户不可用", -10000);
-        return context.getOwner();
+        return context.getSubject();
     }
 
     private String requireOperator(UserContext context) throws CodeException {

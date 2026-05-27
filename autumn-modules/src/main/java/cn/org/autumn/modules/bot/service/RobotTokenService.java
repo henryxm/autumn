@@ -183,7 +183,7 @@ public class RobotTokenService extends ModuleService<RobotTokenDao, RobotTokenEn
         if (matched.getExpireTime() != null && matched.getExpireTime().before(new Date()))
             return null;
         RobotEntity robot = robotService.getByUuid(matched.getRobot());
-        if (robot == null)
+        if (robot == null || !robot.isActive())
             return null;
         return new ValidateResult(matched, robot);
     }

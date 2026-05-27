@@ -66,8 +66,8 @@ public class RobotInboundApiController {
     }
 
     private String requireOwner(UserContext context) throws CodeException {
-        if (StringUtils.isBlank(context.getOwner()))
+        if (StringUtils.isBlank(context.getSubject()))
             throw new CodeException("机器人不可用");
-        return context.getOwner();
+        return context.getSubject();
     }
 }

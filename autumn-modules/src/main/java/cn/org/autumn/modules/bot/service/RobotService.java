@@ -121,7 +121,7 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> implement
         }
         User user = new User();
         user.setUuid(robot.getUuid());
-        user.setNickname(robot.getName());
+        user.setNickname(robot.getNickname());
         user.setIcon(robot.getIcon());
         user.setStatus(robot.getStatus());
         user.setRobot(true);
@@ -165,13 +165,13 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> implement
         }
         RobotEntity draft = new RobotEntity();
         draft.setOwner(owner);
-        draft.setName(name);
+        draft.setNickname(name);
         accountFactory.creating(draft);
         Date now = new Date();
         RobotEntity robot = new RobotEntity();
         robot.setUuid(uuidNamespaceService.allocate());
         robot.setOwner(owner);
-        robot.setName(name);
+        robot.setNickname(name);
         robot.setDescription(description);
         robot.setIcon(icon);
         robot.setStatus(RobotEntity.STATUS_ACTIVE);
@@ -249,7 +249,7 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> implement
         robot.setStatus(RobotEntity.STATUS_DESTROYED);
         robot.setDestroyTime(now);
         robot.setUpdateTime(now);
-        robot.setName("destroyed-" + robot.getUuid());
+        robot.setNickname("destroyed-" + robot.getUuid());
         updateById(robot);
         robotTokenService.revokeByRobot(robotUuid);
         dispatchHook(robot, RobotHookEvents.ROBOT_DESTROYED);
@@ -351,7 +351,7 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> implement
     public void updateProfile(String robotUuid, String loginUuid, String name, String description, String icon, String access, Boolean black) throws Exception {
         RobotEntity robot = requireManageable(robotUuid, loginUuid);
         if (StringUtils.isNotBlank(name)) {
-            robot.setName(name);
+            robot.setNickname(name);
         }
         if (description != null) {
             robot.setDescription(description);
@@ -410,7 +410,7 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> implement
         }
         Map<String, Object> payload = new HashMap<>();
         payload.put("owner", robot.getOwner());
-        payload.put("name", robot.getName());
+        payload.put("name", robot.getNickname());
         payload.put("status", robot.getStatus());
         robotHookDispatcher.dispatch(robot.getUuid(), event, payload);
     }

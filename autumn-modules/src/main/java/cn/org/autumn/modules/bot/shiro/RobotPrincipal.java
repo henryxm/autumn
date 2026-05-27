@@ -19,7 +19,7 @@ public class RobotPrincipal implements Serializable, UserMapping {
     public RobotPrincipal(RobotEntity robot) {
         this.uuid = robot.getUuid();
         this.owner = robot.getOwner();
-        this.name = robot.getName();
+        this.name = robot.getNickname();
         this.icon = robot.getIcon();
         this.status = robot.getStatus();
     }
