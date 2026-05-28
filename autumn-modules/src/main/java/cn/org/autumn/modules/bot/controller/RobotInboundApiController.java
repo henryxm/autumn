@@ -25,7 +25,7 @@ import javax.validation.Valid;
  */
 @Slf4j
 @RestController
-@RequestMapping("/robot/api/v1")
+@RequestMapping("/bot/api/v1")
 public class RobotInboundApiController {
 
     @Autowired

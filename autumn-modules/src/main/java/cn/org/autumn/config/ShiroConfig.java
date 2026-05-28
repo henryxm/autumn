@@ -188,7 +188,7 @@ public class ShiroConfig {
         filterMap.put("/images/**", "anon");
         filterMap.put("/api/**", "anon");
         // 机器人开放 API：由 @Authenticated + UserContext 解析 Token / rbt_，不经 Session 表单登录
-        filterMap.put("/robot/api/v1/**", "anon");
+        filterMap.put("/bot/api/v1/**", "anon");
         filterMap.put("/login.html", "anon");
         filterMap.put("/plugin.html", "anon");
         filterMap.put("/404.html", "anon");

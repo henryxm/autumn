@@ -43,19 +43,19 @@
 
 ```bash
 # 1. 创建机器人（保存返回的 rbt_ 明文，只出现一次）
-curl -sS -X POST '{ORIGIN}/robot/api/v1/create' \
+curl -sS -X POST '{ORIGIN}/bot/api/v1/create' \
   -H 'Content-Type: application/json' \
   -H 'Token: {USER_TOKEN}' \
   -d '{"data":{"name":"对接测试机器人","tokenExpireDays":365}}'
 
 # 2. 登记 Hook（务必传入 secret 并自行保存）
-curl -sS -X POST '{ORIGIN}/robot/api/v1/hook/create' \
+curl -sS -X POST '{ORIGIN}/bot/api/v1/hook/create' \
   -H 'Content-Type: application/json' \
   -H 'Token: {USER_TOKEN}' \
   -d '{"data":{"robot":"{ROBOT_UUID}","name":"主回调","callbackUrl":"https://your.app/hook/robot","secret":"your-hook-secret-32chars","events":"*"}}'
 
 # 3. 外部业务以机器人身份推送消息
-curl -sS -X POST '{ORIGIN}/robot/api/v1/message/push' \
+curl -sS -X POST '{ORIGIN}/bot/api/v1/message/push' \
   -H 'Content-Type: application/json' \
   -H 'X-Robot-Token: {ROBOT_TOKEN}' \
   -H 'X-Robot-Message-Id: demo-001' \
@@ -240,7 +240,7 @@ def verify(secret: str, timestamp: str, body: str, header_sig: str) -> bool:
 
 | 项 | 说明 |
 |----|------|
-| 接口 | `POST {ORIGIN}/robot/api/v1/message/push` |
+| 接口 | `POST {ORIGIN}/bot/api/v1/message/push` |
 | 鉴权 | `X-Robot-Token: rbt_...` |
 | `type` | 业务事件名，与 Hook `events` 对齐 |
 | `data` | JSON 载荷（≤256KB） |
