@@ -11,11 +11,11 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * 机器人开放 API HTTP 客户端（{@code /robot/api/v1}）。
+ * 机器人开放 API HTTP 客户端（{@code /bot/api/v1}）。
  */
 public class RobotApiClient {
 
-    public static final String API_PREFIX = "/robot/api/v1";
+    public static final String API_PREFIX = "/bot/api/v1";
 
     private final TestRestTemplate rest;
     private final String baseUrl;

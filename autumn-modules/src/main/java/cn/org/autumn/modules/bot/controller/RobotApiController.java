@@ -29,7 +29,7 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @RestController
-@RequestMapping("/robot/api/v1")
+@RequestMapping("/bot/api/v1")
 public class RobotApiController {
 
     @Autowired

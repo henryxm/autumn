@@ -74,12 +74,12 @@ description: >-
 
 | 任务 | 必读文档 | 代码位置 |
 |------|----------|----------|
-| **业务系统 HTTP 对接**（创建机器人、Hook、推送消息、验签） | **`docs/AI_ROBOT.md`**（流程/清单/验签）+ **`docs/AI_ROBOT_API.md`**（字段级 API） | 业务仓库；仅调 `{ORIGIN}/robot/api/v1/*` |
+| **业务系统 HTTP 对接**（创建机器人、Hook、推送消息、验签） | **`docs/AI_ROBOT.md`**（流程/清单/验签）+ **`docs/AI_ROBOT_API.md`**（字段级 API） | 业务仓库；仅调 `{ORIGIN}/bot/api/v1/*` |
 | **Autumn 内扩展**（改 bot 模块、实现 Subscriber） | 上列 + **`docs/AI_STANDARDS.md`** + **`docs/AI_DATABASE.md`** + **`docs/AI_CODEGEN.md`** | `autumn-modules` → `cn.org.autumn.modules.bot`（表前缀 **`bot_`**） |
 
 **对接纪律（摘要）**：
 
-- **用户令牌**：管理 API（`/robot/api/v1/*` 除 `message/push`）；**禁止** `rbt_`。
+- **用户令牌**：管理 API（`/bot/api/v1/*` 除 `message/push`）；**禁止** `rbt_`。
 - **机器人令牌 `rbt_`**：仅 **`POST .../message/push`**；推荐头 **`X-Robot-Token`**。
 - Hook 出站：业务方实现 HTTP 服务端；验签 `HMAC_SHA256(timestamp + "." + body)`；**原始 body** 验签。
 - 入站 `data` 全链路为 **JSON 文本**；Hook 转发时 `data.payload` 为 **对象**。

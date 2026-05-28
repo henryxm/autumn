@@ -10,6 +10,6 @@ public class BotConfig implements FilterChainHandler {
 
     @Override
     public void definition(Map<String, String> map) {
-        map.put("/robot/api/v1/**", "anon");
+        map.put("/bot/api/v1/**", "anon");
     }
 }

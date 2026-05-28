@@ -17,7 +17,7 @@ flowchart TB
     IT --> Client
   end
   subgraph app [Spring Boot Web]
-    API["/robot/api/v1/*"]
+    API["/bot/api/v1/*"]
     Svc[RobotService / RobotMessageService]
     DB[(H2 mem autumn_it)]
     Redis[(Redis)]
@@ -31,7 +31,7 @@ flowchart TB
 | 组件 | 路径 | 职责 |
 |------|------|------|
 | 基类 | `integration/base/IntegrationTest.java` | 启动 `Web`、等待 `InitFactory`、签发管理员 `userToken` |
-| HTTP 客户端 | `integration/support/RobotApiClient.java` | 封装 `POST /robot/api/v1/*` |
+| HTTP 客户端 | `integration/support/RobotApiClient.java` | 封装 `POST /bot/api/v1/*` |
 | 假设 | `integration/support/IntegrationAssumptions.java` | Redis 不可用时 **Assume 跳过**（非失败） |
 | 配置 | `src/test/resources/application-it.yml` | H2 + Redis + `autumn.redis.open=true` |
 | Robot 用例 | `integration/robot/*IntegrationTest.java` | 管理 API、入站 push、鉴权边界 |

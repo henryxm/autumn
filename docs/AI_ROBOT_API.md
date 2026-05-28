@@ -1,7 +1,7 @@
 # 机器人开放 API 参考手册
 
 > 配套指南：**`docs/AI_ROBOT.md`**（对接流程、验签、示例、清单）。  
-> 基础路径：`{ORIGIN}/robot/api/v1`（`ORIGIN` 为业务系统部署的 Autumn 应用根 URL，无尾斜杠）。
+> 基础路径：`{ORIGIN}/bot/api/v1`（`ORIGIN` 为业务系统部署的 Autumn 应用根 URL，无尾斜杠）。
 
 ## 0. 通用约定
 
@@ -84,7 +84,7 @@ X-Robot-Token: rbt_xxxxxxxxxxxxxxxx
 
 ### 1.1 机器人列表
 
-**`POST /robot/api/v1/list`**
+**`POST /bot/api/v1/list`**
 
 | 项 | 值 |
 |----|-----|
@@ -113,7 +113,7 @@ X-Robot-Token: rbt_xxxxxxxxxxxxxxxx
 
 ### 1.2 创建机器人
 
-**`POST /robot/api/v1/create`**
+**`POST /bot/api/v1/create`**
 
 **请求 `data`（`RobotCreateRequest`）**
 
@@ -137,10 +137,10 @@ X-Robot-Token: rbt_xxxxxxxxxxxxxxxx
 
 ### 1.3 停用 / 启用 / 删除 / 销毁机器人
 
-**`POST /robot/api/v1/disable`**  
-**`POST /robot/api/v1/enable`**  
-**`POST /robot/api/v1/delete`**  
-**`POST /robot/api/v1/destroy`**
+**`POST /bot/api/v1/disable`**  
+**`POST /bot/api/v1/enable`**  
+**`POST /bot/api/v1/delete`**  
+**`POST /bot/api/v1/destroy`**
 
 **请求 `data`（`RobotUuidRequest`）**
 
@@ -169,7 +169,7 @@ Hook 事件：`robot.disabled` / `robot.enabled` / `robot.deleted` / `robot.dest
 
 ### 1.4 Hook 列表
 
-**`POST /robot/api/v1/hook/list`**
+**`POST /bot/api/v1/hook/list`**
 
 **请求 `data`（`RobotUuidRequest`）**
 
@@ -205,7 +205,7 @@ Hook 事件：`robot.disabled` / `robot.enabled` / `robot.deleted` / `robot.dest
 
 ### 1.5 创建 Hook
 
-**`POST /robot/api/v1/hook/create`**
+**`POST /bot/api/v1/hook/create`**
 
 **请求 `data`（`RobotHookCreateRequest`）**
 
@@ -226,7 +226,7 @@ Hook 事件：`robot.disabled` / `robot.enabled` / `robot.deleted` / `robot.dest
 
 ### 1.6 更新 Hook
 
-**`POST /robot/api/v1/hook/update`**
+**`POST /bot/api/v1/hook/update`**
 
 **请求 `data`（`RobotHookUpdateRequest`）**
 
@@ -239,9 +239,9 @@ Hook 事件：`robot.disabled` / `robot.enabled` / `robot.deleted` / `robot.dest
 
 ### 1.7 删除 / 停用 / 启用 Hook
 
-**`POST /robot/api/v1/hook/delete`**  
-**`POST /robot/api/v1/hook/disable`**  
-**`POST /robot/api/v1/hook/enable`**
+**`POST /bot/api/v1/hook/delete`**  
+**`POST /bot/api/v1/hook/disable`**  
+**`POST /bot/api/v1/hook/enable`**
 
 **请求 `data`（`RobotHookUuidRequest`）**
 
@@ -253,7 +253,7 @@ Hook 事件：`robot.disabled` / `robot.enabled` / `robot.deleted` / `robot.dest
 
 ### 1.8 令牌列表
 
-**`POST /robot/api/v1/token/list`**
+**`POST /bot/api/v1/token/list`**
 
 **请求 `data`（`RobotUuidRequest`）**：机器人 uuid。
 
@@ -271,7 +271,7 @@ Hook 事件：`robot.disabled` / `robot.enabled` / `robot.deleted` / `robot.dest
 
 ### 1.9 创建 / 作废 / 轮换令牌
 
-**`POST /robot/api/v1/token/create`**
+**`POST /bot/api/v1/token/create`**
 
 **请求 `data`（`RobotTokenCreateRequest`）**
 
@@ -282,11 +282,11 @@ Hook 事件：`robot.disabled` / `robot.enabled` / `robot.deleted` / `robot.dest
 
 **响应 `data`（`RobotTokenResult`）**：`{ "token": "rbt_..." }` 明文仅返回一次。
 
-**`POST /robot/api/v1/token/revoke`**
+**`POST /bot/api/v1/token/revoke`**
 
 **请求 `data`（`RobotTokenUuidRequest`）**：`uuid` = **令牌行** uuid（非机器人 uuid）。物理删除行。
 
-**`POST /robot/api/v1/token/rotate`**
+**`POST /bot/api/v1/token/rotate`**
 
 **请求 `data`（`RobotRotateTokenRequest`）**：同 create（`uuid` 为机器人 uuid）。
 
@@ -296,7 +296,7 @@ Hook 事件：`robot.disabled` / `robot.enabled` / `robot.deleted` / `robot.dest
 
 ### 1.10 配额查询与保存
 
-**`POST /robot/api/v1/config/get`**
+**`POST /bot/api/v1/config/get`**
 
 **请求 `data`（`RobotConfigUserRequest`，可空）**
 
@@ -319,7 +319,7 @@ Hook 事件：`robot.disabled` / `robot.enabled` / `robot.deleted` / `robot.dest
 | `effectiveDeletedRetentionDays` | 全局软删保留天数（默认 30） |
 | `effectiveMaxRobots` / `effectiveMaxTokens` / `effectiveMaxHooks` | 合并全局后的实际上限 |
 
-**`POST /robot/api/v1/config/save`**
+**`POST /bot/api/v1/config/save`**
 
 **权限**：**系统管理员**（`SysUserRoleService.isSystemAdministrator`）。
 
@@ -336,7 +336,7 @@ Hook 事件：`robot.disabled` / `robot.enabled` / `robot.deleted` / `robot.dest
 
 ### 2.1 推送消息
 
-**`POST /robot/api/v1/message/push`**
+**`POST /bot/api/v1/message/push`**
 
 | 项 | 值 |
 |----|-----|
