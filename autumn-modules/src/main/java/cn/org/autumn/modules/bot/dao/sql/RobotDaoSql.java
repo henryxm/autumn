@@ -1,6 +1,7 @@
 package cn.org.autumn.modules.bot.dao.sql;
 
 import cn.org.autumn.database.runtime.RuntimeSql;
+import cn.org.autumn.modules.bot.entity.RobotEntity;
 
 public class RobotDaoSql extends RuntimeSql {
 
@@ -45,5 +46,14 @@ public class RobotDaoSql extends RuntimeSql {
                 + " WHERE " + quote("status") + " = -1"
                 + " AND " + quote("delete_time") + " IS NOT NULL AND " + quote("delete_time") + " < #{beforeTime}"
                 + " ORDER BY " + quote("delete_time") + " ASC";
+    }
+
+    /**
+     * 头像文件 hash 是否仍被未销毁的机器人引用（供 UsingHandler 与文件清理）。
+     */
+    public String countByHashInUse() {
+        return "SELECT COUNT(*) FROM " + tbl()
+                + " WHERE " + quote("hash") + " = #{hash}"
+                + " AND " + quote("status") + " > " + RobotEntity.STATUS_DESTROYED;
     }
 }

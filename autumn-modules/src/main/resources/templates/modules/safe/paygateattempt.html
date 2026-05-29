@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>${lang.safe_paygateattempt_table_comment}</title>
+	<#include "/header.html">
+</head>
+<body>
+<div id="rrapp" v-cloak>
+    <div v-show="showList">
+        <div class="grid-btn">
+			<!--<#if shiro.hasPermission("safe:paygateattempt:save")>-->
+            <a class="btn btn-primary" @click="add"><i class="fa fa-plus"></i>&nbsp;${lang.sys_string_add}</a>
+			<!--</#if>-->
+			<!--<#if shiro.hasPermission("safe:paygateattempt:update")>-->
+            <a class="btn btn-primary" @click="update"><i class="fa fa-pencil-square-o"></i>&nbsp;${lang.sys_string_change}</a>
+			<!--</#if>-->
+			<!--<#if shiro.hasPermission("safe:paygateattempt:delete")>-->
+            <a class="btn btn-primary" @click="del"><i class="fa fa-trash-o"></i>&nbsp;${lang.sys_string_delete}</a>
+			<!--</#if>-->
+        </div>
+        <table id="jqGrid"></table>
+        <div id="jqGridPager"></div>
+    </div>
+
+    <div v-show="!showList" class="panel panel-default">
+        <div class="panel-heading">{{title}}</div>
+        <form class="form-horizontal">
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.safe_paygateattempt_column_uuid}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="payGateAttempt.uuid" placeholder="${lang.safe_paygateattempt_column_uuid}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.safe_paygateattempt_column_user_uuid}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="payGateAttempt.userUuid" placeholder="${lang.safe_paygateattempt_column_user_uuid}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.safe_paygateattempt_column_amount_cent}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="payGateAttempt.amountCent" placeholder="${lang.safe_paygateattempt_column_amount_cent}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.safe_paygateattempt_column_currency}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="payGateAttempt.currency" placeholder="${lang.safe_paygateattempt_column_currency}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.safe_paygateattempt_column_order_id}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="payGateAttempt.orderId" placeholder="${lang.safe_paygateattempt_column_order_id}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.safe_paygateattempt_column_merchant_id}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="payGateAttempt.merchantId" placeholder="${lang.safe_paygateattempt_column_merchant_id}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.safe_paygateattempt_column_reason}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="payGateAttempt.reason" placeholder="${lang.safe_paygateattempt_column_reason}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.safe_paygateattempt_column_device_id}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="payGateAttempt.deviceId" placeholder="${lang.safe_paygateattempt_column_device_id}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.safe_paygateattempt_column_ip}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="payGateAttempt.ip" placeholder="${lang.safe_paygateattempt_column_ip}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.safe_paygateattempt_column_location}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="payGateAttempt.location" placeholder="${lang.safe_paygateattempt_column_location}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.safe_paygateattempt_column_auth_mode}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="payGateAttempt.authMode" placeholder="${lang.safe_paygateattempt_column_auth_mode}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.safe_paygateattempt_column_authorized}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="payGateAttempt.authorized" placeholder="${lang.safe_paygateattempt_column_authorized}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.safe_paygateattempt_column_detail_json}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="payGateAttempt.detailJson" placeholder="${lang.safe_paygateattempt_column_detail_json}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.safe_paygateattempt_column_create_time}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="payGateAttempt.createTime" placeholder="${lang.safe_paygateattempt_column_create_time}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label"></div>
+                <input type="button" class="btn btn-primary" @click="saveOrUpdate" value="${lang.sys_string_confirm}"/>
+                &nbsp;&nbsp;<input type="button" class="btn btn-warning" @click="reload" value="${lang.sys_string_back}"/>
+            </div>
+        </form>
+    </div>
+</div>
+<script src="${request.contextPath}/modules/safe/paygateattempt.js?_${.now?long}"></script>
+</body>
+</html>

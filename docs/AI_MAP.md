@@ -352,7 +352,7 @@ public class DemoService extends ModuleService<DemoDao, DemoEntity> implements L
 
 #### 2.10.1 注解职责速览
 
-- **`@Table`（类）**：表名、前缀、模块、注释、存储引擎、字符集等；与 MyBatis-Plus `@TableName` 等共同参与表名推导（见 `TableInfo.getTableName`）。
+- **`@Table`（类）**：前缀、模块、注释、存储引擎、字符集等；物理表名以 **`@TableName`** 为准（框架合并进 `TableInfo`，**`@Table` 不写 `value`**，见 **`docs/AI_BOOT.md` §3.2**）。
 - **`@Column`（字段）**：列名、类型、长度、是否可空、主键/自增、默认值、**`comment`（建议「短标题：详述」格式，见 2.10.5）**；**`isUnique = true`** 时在建表 SQL 中会额外生成该列的 `UNIQUE KEY`（见 `QuerySql.createTable` 中对 `columnInfo.isUnique()` 的处理）。
 - **`@Index`（类 / 字段 / 方法 / 注解类型）**：声明二级索引或唯一索引、全文/空间索引等；属性包括 `name`、`fields`（`@IndexField` 数组）、`indexType`（`IndexTypeEnum`）、`indexMethod`（`IndexMethodEnum`）、`comment`。
 - **`@Indexes`（类）**：打包多个 `@Index`，用于组合索引或一次声明多组索引。

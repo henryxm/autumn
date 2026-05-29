@@ -1,6 +1,7 @@
 package cn.org.autumn.modules.bot.service;
 
 import cn.org.autumn.base.ModuleService;
+import cn.org.autumn.config.UsingHandler;
 import cn.org.autumn.exception.CodeException;
 import cn.org.autumn.modules.bot.dao.RobotDao;
 import cn.org.autumn.modules.bot.dto.RobotCreateResult;
@@ -28,7 +29,7 @@ import java.util.Map;
 
 @Slf4j
 @Service
-public class RobotService extends ModuleService<RobotDao, RobotEntity> implements LoopJob.OneDay {
+public class RobotService extends ModuleService<RobotDao, RobotEntity> implements LoopJob.OneDay, UsingHandler {
 
     @Autowired
     @Lazy
@@ -61,6 +62,18 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> implement
     @Override
     public String ico() {
         return "fa-android";
+    }
+
+    @Override
+    public boolean using(Object value) {
+        if (value == null) {
+            return false;
+        }
+        String hash = String.valueOf(value).trim();
+        if (StringUtils.isBlank(hash)) {
+            return false;
+        }
+        return baseMapper.countByHashInUse(hash) > 0;
     }
 
     public RobotEntity getByUuid(String uuid) {
@@ -157,7 +170,7 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> implement
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public RobotCreateResult create(String owner, String name, String description, String icon, Integer tokenExpireDays, String access) throws Exception {
+    public RobotCreateResult create(String owner, String name, String description, String icon, String hash, Integer tokenExpireDays, String access) throws Exception {
         assertOwnerActive(owner);
         robotQuotaService.assertRobotQuota(owner);
         if (StringUtils.isBlank(name)) {
@@ -174,6 +187,7 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> implement
         robot.setNickname(name);
         robot.setDescription(description);
         robot.setIcon(icon);
+        robot.setHash(normalizeAvatarHash(hash));
         robot.setStatus(RobotEntity.STATUS_ACTIVE);
         robot.setAccess(normalizeAccess(access));
         robot.setBlack(false);
@@ -250,6 +264,8 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> implement
         robot.setDestroyTime(now);
         robot.setUpdateTime(now);
         robot.setNickname("destroyed-" + robot.getUuid());
+        robot.setIcon(null);
+        robot.setHash(null);
         updateById(robot);
         robotTokenService.revokeByRobot(robotUuid);
         dispatchHook(robot, RobotHookEvents.ROBOT_DESTROYED);
@@ -348,7 +364,7 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> implement
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void updateProfile(String robotUuid, String loginUuid, String name, String description, String icon, String access, Boolean black) throws Exception {
+    public void updateProfile(String robotUuid, String loginUuid, String name, String description, String icon, String hash, String access, Boolean black) throws Exception {
         RobotEntity robot = requireManageable(robotUuid, loginUuid);
         if (StringUtils.isNotBlank(name)) {
             robot.setNickname(name);
@@ -358,6 +374,12 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> implement
         }
         if (icon != null) {
             robot.setIcon(icon);
+            if (StringUtils.isBlank(icon)) {
+                robot.setHash(null);
+            }
+        }
+        if (hash != null) {
+            robot.setHash(normalizeAvatarHash(hash));
         }
         if (access != null) {
             robot.setAccess(normalizeAccess(access));
@@ -378,6 +400,13 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> implement
             return m;
         }
         return RobotEntity.ACCESS_PRIVATE;
+    }
+
+    private static String normalizeAvatarHash(String hash) {
+        if (StringUtils.isBlank(hash)) {
+            return null;
+        }
+        return hash.trim();
     }
 
     public void touchLastUsed(RobotEntity robot) {

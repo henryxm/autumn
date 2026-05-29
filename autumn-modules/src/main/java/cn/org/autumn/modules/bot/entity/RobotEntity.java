@@ -54,6 +54,10 @@ public class RobotEntity implements Serializable, AccountHandler.Account, UserCo
     @Column(comment = "头像:图标地址")
     private String icon;
 
+    @Column(comment = "HASH:头像HASH")
+    @Index
+    private String hash;
+
     @Column(comment = "状态:1正常;0停用;-1删除;-2销毁", defaultValue = "1")
     private int status = STATUS_ACTIVE;
 

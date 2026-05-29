@@ -5,6 +5,7 @@ import cn.org.autumn.model.Response;
 import cn.org.autumn.service.AesService;
 import cn.org.autumn.service.RsaService;
 import com.google.gson.Gson;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
@@ -16,6 +17,7 @@ import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.server.ServletServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
 import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.lang.reflect.Method;
 import java.util.Objects;
@@ -39,10 +41,12 @@ public class EncryptInterceptorTest {
     @Mock
     private RsaService rsaService;
 
-    @Mock
-    private Gson gson;
-
     private final ServerHttpResponse serverHttpResponse = mock(ServerHttpResponse.class);
+
+    @Before
+    public void setUp() {
+        ReflectionTestUtils.setField(interceptor, "gson", new Gson());
+    }
 
     @Test
     public void shouldReturnPlainDataWhenCompatibleResponseDeclaredAndNoSession() throws Exception {
@@ -116,8 +120,7 @@ public class EncryptInterceptorTest {
         servletRequest.setRequestURI("/demo/encrypt");
         servletRequest.addHeader("X-Encrypt-Session", "session-1");
 
-        Response<String> original = Response.ok("payload");
-        when(gson.toJson(original)).thenReturn("{\"code\":0,\"msg\":\"success\",\"data\":\"payload\"}");
+        Response<String> original = Response.ok("payload", "success");
         when(aesService.encrypt(anyString(), eq("session-1"))).thenReturn("cipher-text");
 
         Object result = interceptor.beforeBodyWrite(

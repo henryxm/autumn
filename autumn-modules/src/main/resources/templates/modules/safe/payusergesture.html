@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>${lang.safe_payusergesture_table_comment}</title>
+	<#include "/header.html">
+</head>
+<body>
+<div id="rrapp" v-cloak>
+    <div v-show="showList">
+        <div class="grid-btn">
+			<!--<#if shiro.hasPermission("safe:payusergesture:save")>-->
+            <a class="btn btn-primary" @click="add"><i class="fa fa-plus"></i>&nbsp;${lang.sys_string_add}</a>
+			<!--</#if>-->
+			<!--<#if shiro.hasPermission("safe:payusergesture:update")>-->
+            <a class="btn btn-primary" @click="update"><i class="fa fa-pencil-square-o"></i>&nbsp;${lang.sys_string_change}</a>
+			<!--</#if>-->
+			<!--<#if shiro.hasPermission("safe:payusergesture:delete")>-->
+            <a class="btn btn-primary" @click="del"><i class="fa fa-trash-o"></i>&nbsp;${lang.sys_string_delete}</a>
+			<!--</#if>-->
+        </div>
+        <table id="jqGrid"></table>
+        <div id="jqGridPager"></div>
+    </div>
+
+    <div v-show="!showList" class="panel panel-default">
+        <div class="panel-heading">{{title}}</div>
+        <form class="form-horizontal">
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.safe_payusergesture_column_uuid}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="payUserGesture.uuid" placeholder="${lang.safe_payusergesture_column_uuid}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.safe_payusergesture_column_user_uuid}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="payUserGesture.userUuid" placeholder="${lang.safe_payusergesture_column_user_uuid}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.safe_payusergesture_column_gesture_hash}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="payUserGesture.gestureHash" placeholder="${lang.safe_payusergesture_column_gesture_hash}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.safe_payusergesture_column_salt}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="payUserGesture.salt" placeholder="${lang.safe_payusergesture_column_salt}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.safe_payusergesture_column_status}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="payUserGesture.status" placeholder="${lang.safe_payusergesture_column_status}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.safe_payusergesture_column_fail_count}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="payUserGesture.failCount" placeholder="${lang.safe_payusergesture_column_fail_count}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.safe_payusergesture_column_locked_until}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="payUserGesture.lockedUntil" placeholder="${lang.safe_payusergesture_column_locked_until}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.safe_payusergesture_column_set_time}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="payUserGesture.setTime" placeholder="${lang.safe_payusergesture_column_set_time}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.safe_payusergesture_column_update_time}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="payUserGesture.updateTime" placeholder="${lang.safe_payusergesture_column_update_time}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label"></div>
+                <input type="button" class="btn btn-primary" @click="saveOrUpdate" value="${lang.sys_string_confirm}"/>
+                &nbsp;&nbsp;<input type="button" class="btn btn-warning" @click="reload" value="${lang.sys_string_back}"/>
+            </div>
+        </form>
+    </div>
+</div>
+<script src="${request.contextPath}/modules/safe/payusergesture.js?_${.now?long}"></script>
+</body>
+</html>

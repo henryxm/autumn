@@ -24,6 +24,9 @@ public class RobotUpdateRequest implements Serializable {
     @Schema(name = "头像", description = "图标地址")
     private String icon;
 
+    @Schema(name = "头像HASH", description = "上传头像的文件 hash")
+    private String hash;
+
     @Schema(name = "访问模式", description = "private/public/subscribe")
     private String access;
 

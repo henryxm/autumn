@@ -66,10 +66,10 @@ public class AesService {
      * @return AES密钥信息
      */
     public AesKey generate(String session) {
+        if (StringUtils.isBlank(session)) {
+            throw new RuntimeException(new CodeException(Error.RSA_SESSION_REQUIRED));
+        }
         try {
-            if (StringUtils.isBlank(session)) {
-                throw new RuntimeException(new CodeException(Error.RSA_SESSION_REQUIRED));
-            }
             EncryptConfigHandler.AesConfig config = encryptConfigFactory.getAesConfig();
             // 生成AES密钥
             KeyGenerator keyGenerator = KeyGenerator.getInstance("AES");
@@ -99,6 +99,14 @@ public class AesService {
                 log.debug("生成AES密钥，Session: {}, 过期时间: {}", session, expireTime);
             }
             return aesKey;
+        } catch (CodeException e) {
+            throw new RuntimeException(e);
+        } catch (RuntimeException e) {
+            if (e.getCause() instanceof CodeException) {
+                throw e;
+            }
+            log.error("生成AES密钥失败，Session: {}", session, e);
+            throw new RuntimeException(new CodeException(Error.AES_KEY_GENERATE_FAILED));
         } catch (Exception e) {
             log.error("生成AES密钥失败，Session: {}", session, e);
             throw new RuntimeException(new CodeException(Error.AES_KEY_GENERATE_FAILED));
@@ -262,7 +270,9 @@ public class AesService {
             // 密钥和向量已经是Base64编码，直接使用
             String decrypted = AES.decrypt(data, aesKey.getKey(), aesKey.getVector());
             if (StringUtils.isBlank(decrypted)) {
-                log.error("解密为空:{}, 秘钥:{}, 向量:{}, 内容:{}", session, aesKey.getKey(), aesKey.getVector(), data);
+                if (log.isDebugEnabled()) {
+                    log.debug("解密结果为空, Session: {}", session);
+                }
                 throw new CodeException(Error.AES_DECRYPTED_DATA_EMPTY);
             }
             // 检查密钥是否已过期（但仍在服务端冗余保留时间内）
