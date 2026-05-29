@@ -26,6 +26,8 @@ public class User implements IResult, UserContext {
 
     private String nickname;
 
+    private String description;
+
     private String email;
 
     private String mobile;

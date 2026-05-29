@@ -27,8 +27,18 @@ public class RobotApiIntegrationTest extends IntegrationTest {
         JSONObject createData = IntegrationJson.data(create);
         assertNotNull(createData);
         assertTrue(createData.getString("token").startsWith("rbt_"));
-        String robotUuid = createData.getJSONObject("robot").getString("uuid");
+        JSONObject robot = createData.getJSONObject("robot");
+        String robotUuid = robot.getString("uuid");
         assertNotNull(robotUuid);
+        assertEquals("integration test", robot.getString("description"));
+
+        JSONObject got = robotApi.post("/get", userToken, uuidBody(robotUuid));
+        IntegrationJson.assertSuccess(got);
+        JSONObject gotRobot = IntegrationJson.data(got);
+        assertEquals(robotUuid, gotRobot.getString("uuid"));
+        assertEquals(name, gotRobot.getString("nickname"));
+        assertEquals("integration test", gotRobot.getString("description"));
+        assertTrue(gotRobot.getBooleanValue("robot"));
 
         JSONObject list = robotApi.post("/list", userToken, null);
         IntegrationJson.assertSuccess(list);

@@ -57,6 +57,17 @@ public class RobotApiController {
         }
     }
 
+    @PostMapping("/get")
+    @Authenticated
+    public Response<User> get(@Valid @RequestBody Request<RobotUuidRequest> request, UserContext context, HttpServletRequest servlet) {
+        try {
+            return Response.ok(robotService.getForOwner(requireUuid(request), requireOwner(context)));
+        } catch (Exception e) {
+            RobotOpenApiLogSupport.logFailure(log, "查询机器人", e, servlet);
+            return Response.error(e);
+        }
+    }
+
     @PostMapping("/create")
     @Authenticated
     public Response<RobotCreateResult> create(@Valid @RequestBody Request<RobotCreateRequest> request, UserContext context, HttpServletRequest servlet) {

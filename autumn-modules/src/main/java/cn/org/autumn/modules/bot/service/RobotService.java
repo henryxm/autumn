@@ -119,13 +119,12 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> implement
         if (robot == null) {
             return null;
         }
-        User user = new User();
-        user.setUuid(robot.getUuid());
-        user.setNickname(robot.getNickname());
-        user.setIcon(robot.getIcon());
-        user.setStatus(robot.getStatus());
-        user.setRobot(true);
-        return user;
+        return robot.toUser();
+    }
+
+    public User getForOwner(String robotUuid, String loginUuid) throws Exception {
+        RobotEntity robot = requireManageable(robotUuid, loginUuid);
+        return toUser(robot);
     }
 
     public void assertOwner(RobotEntity robot, String loginUuid) throws Exception {
