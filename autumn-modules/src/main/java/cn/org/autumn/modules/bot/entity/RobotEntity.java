@@ -105,6 +105,11 @@ public class RobotEntity implements Serializable, AccountHandler.Account, UserCo
         return true;
     }
 
+    @Override
+    public int getVerify() {
+        return UserContext.super.getVerify();
+    }
+
     public User toUser() {
         return new User(this);
     }

@@ -29,7 +29,31 @@ public interface UserContext extends Serializable {
 
     String getIcon();
 
+    default String getHash() {
+        return "";
+    }
+
     int getStatus();
+
+    default boolean isBlack() {
+        return false;
+    }
+
+    default int getVerify() {
+        return 0;
+    }
+
+    default String getUsername() {
+        return getUuid();
+    }
+
+    default String getAccess() {
+        return "";
+    }
+
+    default String getScopes() {
+        return "";
+    }
 
     /**
      * 数据权限主体：真人为自身 {@link #getUuid()}，机器人为 {@link #getOwner()}。
