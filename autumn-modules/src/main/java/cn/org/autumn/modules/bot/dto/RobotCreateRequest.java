@@ -21,6 +21,9 @@ public class RobotCreateRequest implements Serializable {
     @Schema(name = "头像", description = "图标地址")
     private String icon;
 
+    @Schema(name = "头像HASH", description = "上传头像的文件 hash，供文件清理判断是否仍被引用")
+    private String hash;
+
     @Schema(name = "令牌天数", description = "API令牌有效天数，空则默认365天")
     private Integer tokenExpireDays;
 

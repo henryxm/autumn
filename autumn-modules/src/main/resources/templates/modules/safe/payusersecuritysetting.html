@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>${lang.safe_payusersecuritysetting_table_comment}</title>
+	<#include "/header.html">
+</head>
+<body>
+<div id="rrapp" v-cloak>
+    <div v-show="showList">
+        <div class="grid-btn">
+			<!--<#if shiro.hasPermission("safe:payusersecuritysetting:save")>-->
+            <a class="btn btn-primary" @click="add"><i class="fa fa-plus"></i>&nbsp;${lang.sys_string_add}</a>
+			<!--</#if>-->
+			<!--<#if shiro.hasPermission("safe:payusersecuritysetting:update")>-->
+            <a class="btn btn-primary" @click="update"><i class="fa fa-pencil-square-o"></i>&nbsp;${lang.sys_string_change}</a>
+			<!--</#if>-->
+			<!--<#if shiro.hasPermission("safe:payusersecuritysetting:delete")>-->
+            <a class="btn btn-primary" @click="del"><i class="fa fa-trash-o"></i>&nbsp;${lang.sys_string_delete}</a>
+			<!--</#if>-->
+        </div>
+        <table id="jqGrid"></table>
+        <div id="jqGridPager"></div>
+    </div>
+
+    <div v-show="!showList" class="panel panel-default">
+        <div class="panel-heading">{{title}}</div>
+        <form class="form-horizontal">
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.safe_payusersecuritysetting_column_uuid}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="payUserSecuritySetting.uuid" placeholder="${lang.safe_payusersecuritysetting_column_uuid}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.safe_payusersecuritysetting_column_user_uuid}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="payUserSecuritySetting.userUuid" placeholder="${lang.safe_payusersecuritysetting_column_user_uuid}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.safe_payusersecuritysetting_column_passwordless_enabled}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="payUserSecuritySetting.passwordlessEnabled" placeholder="${lang.safe_payusersecuritysetting_column_passwordless_enabled}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.safe_payusersecuritysetting_column_passwordless_max_amount_cent}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="payUserSecuritySetting.passwordlessMaxAmountCent" placeholder="${lang.safe_payusersecuritysetting_column_passwordless_max_amount_cent}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.safe_payusersecuritysetting_column_passwordless_window_minutes}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="payUserSecuritySetting.passwordlessWindowMinutes" placeholder="${lang.safe_payusersecuritysetting_column_passwordless_window_minutes}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.safe_payusersecuritysetting_column_gesture_payment_enabled}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="payUserSecuritySetting.gesturePaymentEnabled" placeholder="${lang.safe_payusersecuritysetting_column_gesture_payment_enabled}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.safe_payusersecuritysetting_column_update_time}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="payUserSecuritySetting.updateTime" placeholder="${lang.safe_payusersecuritysetting_column_update_time}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label"></div>
+                <input type="button" class="btn btn-primary" @click="saveOrUpdate" value="${lang.sys_string_confirm}"/>
+                &nbsp;&nbsp;<input type="button" class="btn btn-warning" @click="reload" value="${lang.sys_string_back}"/>
+            </div>
+        </form>
+    </div>
+</div>
+<script src="${request.contextPath}/modules/safe/payusersecuritysetting.js?_${.now?long}"></script>
+</body>
+</html>

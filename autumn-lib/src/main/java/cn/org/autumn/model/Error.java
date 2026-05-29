@@ -14,7 +14,7 @@ import lombok.Getter;
  * - 400-499: HTTP标准客户端错误（RFC 7231）
  * - 500-599: HTTP标准服务器错误（RFC 7231）
  * - 800-899: 业务逻辑错误
- *   - 814-849: 数据库相关错误
+ * - 814-849: 数据库相关错误
  * - 900-999: 认证授权错误
  * - 1000-1099: RSA加密相关错误（需要客户端执行相应操作）
  * - 1100-1199: AES加密相关错误（需要客户端执行相应操作）
@@ -593,6 +593,38 @@ public enum Error {
      * 数据库恢复失败
      */
     DATABASE_RESTORE_FAILED(837, "数据库恢复失败"),
+
+    // ==================== 支付密码与安全凭证 (838-847) ====================
+
+    PAY_PIN_NOT_SET(850, "未设置支付密码"),
+
+    PAY_PIN_ALREADY_SET(851, "支付密码已设置"),
+
+    PAY_PIN_MISMATCH(852, "支付密码不正确"),
+
+    PAY_PIN_LOCKED(853, "支付密码已锁定，请稍后再试"),
+
+    PAY_PIN_WEAK(854, "支付密码过于简单"),
+
+    PAY_PIN_FORMAT(855, "支付密码须为6位数字"),
+
+    PAY_GESTURE_INVALID(856, "手势密码无效"),
+
+    PAY_BIOMETRIC_NOT_FOUND(857, "生物识别设备未注册"),
+
+    PAY_BIOMETRIC_VERIFY_FAILED(858, "生物识别验证失败"),
+
+    PAY_VERIFY_TOKEN_INVALID(859, "支付校验令牌无效或已过期"),
+
+    PAY_GATE_DENIED(860, "支付未通过安全评估"),
+
+    PAY_GATE_TOKEN_INVALID(861, "支付闸门令牌无效或已过期"),
+
+    PAY_GATE_AMOUNT_MISMATCH(862, "支付金额与闸门评估不一致"),
+
+    PAY_GATE_REQUIRED(863, "请先完成支付安全评估"),
+
+    PAY_GESTURE_PAYMENT_DISABLED(864, "未开启手势支付，请使用支付密码或生物识别"),
 
     // ==================== 认证授权错误 (900-999) ====================
     /**

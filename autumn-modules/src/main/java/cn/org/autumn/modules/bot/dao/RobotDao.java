@@ -38,4 +38,7 @@ public interface RobotDao extends BaseMapper<RobotEntity> {
 
     @SelectProvider(type = RobotDaoSql.class, method = "listUuidsDeletedBefore")
     List<String> listUuidsDeletedBefore(@Param("beforeTime") Date beforeTime);
+
+    @SelectProvider(type = RobotDaoSql.class, method = "countByHashInUse")
+    int countByHashInUse(@Param("hash") String hash);
 }

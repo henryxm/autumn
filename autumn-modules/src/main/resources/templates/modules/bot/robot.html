@@ -38,9 +38,9 @@
                 </div>
             </div>
             <div class="form-group">
-                <div class="col-sm-2 control-label">${lang.bot_robot_column_name}</div>
+                <div class="col-sm-2 control-label">${lang.bot_robot_column_nickname}</div>
                 <div class="col-sm-10">
-                    <input type="text" class="form-control" v-model="robot.name" placeholder="${lang.bot_robot_column_name}"/>
+                    <input type="text" class="form-control" v-model="robot.nickname" placeholder="${lang.bot_robot_column_nickname}"/>
                 </div>
             </div>
             <div class="form-group">
@@ -56,9 +56,27 @@
                 </div>
             </div>
             <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.bot_robot_column_hash}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="robot.hash" placeholder="${lang.bot_robot_column_hash}"/>
+                </div>
+            </div>
+            <div class="form-group">
                 <div class="col-sm-2 control-label">${lang.bot_robot_column_status}</div>
                 <div class="col-sm-10">
                     <input type="text" class="form-control" v-model="robot.status" placeholder="${lang.bot_robot_column_status}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.bot_robot_column_access}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="robot.access" placeholder="${lang.bot_robot_column_access}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.bot_robot_column_black}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="robot.black" placeholder="${lang.bot_robot_column_black}"/>
                 </div>
             </div>
             <div class="form-group">

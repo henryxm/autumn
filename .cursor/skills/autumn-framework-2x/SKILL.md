@@ -12,7 +12,7 @@ description: >-
   Controller must not use Dao; Service uses baseMapper; gen/Pages/list.html/js never hand-edited; statics/pages/Site/PageAware.
   Read docs/AI_CODEGEN.md, docs/AI_DATABASE.md. Bot/robot: read docs/AI_ROBOT.md + docs/AI_ROBOT_API.md (rbt_, Hook, message/push, cn.org.autumn.modules.bot).
   scripts/constraints-scan is optional: run only when the user explicitly asks for a constraint audit, CI-style check, or phrases like 约束扫描/规范体检; see skill section "约束扫描（按需）".
-  Triggers on cn.org.autumn 2.0.0, Spring Boot 2.7, JDK 8, ModuleService, RuntimeSql, PageAware, bot, robot, rbt_, RobotHook, RobotMessageSubscriber, message/push.
+  Triggers on cn.org.autumn 2.0.0, Spring Boot 2.7, JDK 8, ModuleService, RuntimeSql, PageAware, bot, robot, rbt_, safe, PayUserPin, PayPinVerifier, pay password, 支付密码, 手势密码, 生物识别.
 ---
 
 # Autumn 2.x 框架开发（2.0.0 / master）
@@ -68,6 +68,24 @@ description: >-
 
 涉及 **`asyncTaskExecutor`、内存待处理队列、本机 DISPATCHING/IDLE 闸门** 时，必读 **`docs/AI_ASYNC_TASK.md`**（勿与 **`BaseQueueService`** 持久化队列混淆）。
 
+涉及 **支付密码 / `PayPinVerifier` / `modules.safe`** 时，见下文 **安全支付模块（safe）**。
+
+## 安全支付模块（safe）
+
+| 任务 | 必读 |
+|------|------|
+| **业务仓 HTTP / 扣款对接** | **`docs/AI_SAFE_CREDENTIAL_INTEGRATION.md`** + **`docs/AI_SAFE_CREDENTIAL.md`** |
+| **框架内改 safe 模块** | 上列 + **`docs/AI_STANDARDS.md`** + **`docs/AI_DATABASE.md`** |
+
+**纪律（摘要）**：
+
+- 包 **`cn.org.autumn.modules.safe`**；开放 API **`POST /safe/api/v1/*`**（25 个）；表前缀 **`safe_`**；**已移除 `modules.pay`**。
+- 配置：**`SafeConfig.get()`** → `PayCredentialConfig`（键 `PAY_CREDENTIAL_CONFIG`）。
+- 支付链路：**`gate/assess`** → `gateToken`；PIN/BIO/手势 **verify** → `verifyToken`；业务 **`PayPinVerifier`** 消费令牌。
+- **`gateEnabled`** 时禁止绕过闸门；手势支付默认关（用户级 **`gesturePaymentEnabled`**）。
+- 金额字段一律 **`amountCent`（分）**；`gateToken` / `verifyToken` **单次消费**。
+- 错误码 **838～852**；传输加密见 **`docs/AI_CRYPTO.md`**。
+
 ## 机器人模块（Bot / 开放 API）
 
 **区分两类任务**（勿混读文档重点）：
@@ -96,11 +114,10 @@ description: >-
 
 ## 实体与数据库（§8～§10）
 
-- 框架扫描实体 + **`autumn.table.*`** 启动期对齐表结构；**禁止**把常规 **`DDL .sql`** 当默认交付物。
-- **`modules/<子目录>/`**：目录名 = 包段 = 表前缀；**禁止**把前缀拼进实体类名；物理表名见 **`docs/AI_BOOT.md` §3.2**。
-- **`@Table` / `@Column.comment`**：**简介名:说明**；**不同字段**冒号前简介名**须互不相同**（生成列表只取冒号前作表头，见 **`docs/AI_STANDARDS.md` §10.1**）；**凡 `@Column(isUnique=true)` 的字段禁止再使用 `@Index`**（含类级索引中含该列，§10.2，无例外）。
-- 整型/布尔：优先基本类型 + 默认值。
-- **双键模型（默认强制，详见 `docs/AI_STANDARDS.md` §10.4）**：每个实体须有 **`@TableId` 自增 `Long id`**（仅后台代码生成 CRUD、勿作业务关联）；**另增唯一业务主键列**（插入前赋值：`Uuid.uuid()` 小写 32 位，或 **`cn.org.autumn.utils.SnowflakeId`**），用于外键、对外 API、缓存键等。**禁止**用 **`id`** 关联其它表或被引用。SQL 侧见 **`docs/AI_DATABASE.md` §1.1**。
+- 框架扫描 + **`autumn.table.*`** 对齐表结构；**禁止**常规 **`DDL .sql`**。
+- **表名/类名（强制）**：见 **`docs/AI_BOOT.md` §3.2**、**`docs/AI_STANDARDS.md` §9**。摘要：`{模块名}_` + 类名去 `Entity` 蛇形；表名仅 **`@TableName`**，**`@Table` 不写 `value`**（框架自动合并）；Dao `quote` 与 `@TableName` 一致；类名不含模块前缀。示例：`PayUserPinEntity` + `@TableName("safe_pay_user_pin")` + `@Table(comment = "...")`。
+- **`@Column.comment`**：简介名互异（§10.1）；**`isUnique=true` 禁止再 `@Index`**（§10.2）。
+- **双键**：自增 `id` 仅 gen CRUD；业务键 `uuid` 等（§10.4），**禁止**用 `id` 做关联。
 
 ## 多库与 SQL（与 `docs/AI_DATABASE.md` 一致）
 
@@ -166,6 +183,8 @@ description: >-
 - 新实体是否有 **业务主键**且关联列未误用 **`Long id`**？多节点雪花是否配置 **`autumn.snowflake.worker-id` / `datacenter-id`**？
 - **`isUnique=true` 的 `@Column` 是否未再叠 `@Index`**（§10.2）？
 - 机器人相关：是否已读 **`docs/AI_ROBOT.md` + `docs/AI_ROBOT_API.md`**？管理 API 与 `message/push` 鉴权是否分离？Hook 验签是否用原始 body？
+- **safe 支付**：闸门 assess → verify 链路完整？`modules.pay` 无残留？金额是否 `amountCent`？
+- **表名**：符合 §3.2？仅 `@TableName`（`@Table` 无 `value`）？Dao `quote` 一致？
 
 ## 多项目一句话
 

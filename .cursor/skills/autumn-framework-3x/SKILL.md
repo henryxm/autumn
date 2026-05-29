@@ -95,6 +95,8 @@ description: >-
 - Hook 验签：`HMAC_SHA256(timestamp + "." + body)`，**原始 body**。
 - 扩展点（`autumn-lib`）：`RobotMessageSubscriber`、`RobotHookDispatch`。
 
+涉及 **支付密码 / `PayPinVerifier` / `modules.safe`** 时，追加 **`docs/AI_SAFE_CREDENTIAL_INTEGRATION.md`** + **`docs/AI_SAFE_CREDENTIAL.md`**。摘要：`POST /safe/api/v1/*`、`SafeConfig`、`gate/assess` → `PayPinVerifier`、错误码 838～852；**`jakarta.*` / MP3 / `lang3`**。
+
 ## 规范开发三步（与 `docs/AI_CODEGEN.md` 一致）
 
 1. **先实体**：按 `docs/AI_STANDARDS.md` 建实体与索引注释；**`@Cache` / `@Caches`**；业务 Service 继承 **`ModuleService`**，勿自建平行缓存/队列/`LoopJob`。
@@ -103,11 +105,10 @@ description: >-
 
 ## 实体与数据库（§8～§10）
 
-- 框架扫描实体 + **`autumn.table.*`** 启动期对齐表结构；**禁止**把常规 **`DDL .sql`** 当默认交付物。
-- **`modules/<子目录>/`**：目录名 = 包段 = 表前缀；**禁止**把前缀拼进实体类名；物理表名见 **`docs/AI_BOOT.md` §3.2**。
-- **`@Table` / `@Column.comment`**：**简介名:说明**；**不同字段**冒号前简介名**须互不相同**（生成列表只取冒号前作表头，见 **`docs/AI_STANDARDS.md` §10.1**）；**凡 `@Column(isUnique=true)` 的字段禁止再使用 `@Index`**（含类级索引中含该列，§10.2，无例外）。
-- 整型/布尔：优先基本类型 + 默认值。
-- **双键模型（默认强制，详见 `docs/AI_STANDARDS.md` §10.4）**：每个实体须有 **`@TableId` 自增 `Long id`**（仅后台代码生成 CRUD、勿作业务关联）；**另增唯一业务主键列**（插入前赋值：`Uuid.uuid()` 小写 32 位，或 **`cn.org.autumn.utils.SnowflakeId`**），用于外键、对外 API、缓存键等。**禁止**用 **`id`** 关联其它表或被引用。SQL 侧见 **`docs/AI_DATABASE.md` §1.1**。
+- 框架扫描 + **`autumn.table.*`** 对齐表结构；**禁止**常规 **`DDL .sql`**。
+- **表名/类名（强制）**：见 **`docs/AI_BOOT.md` §3.2**、**`docs/AI_STANDARDS.md` §9**。摘要：`{模块名}_` + 类名去 `Entity` 蛇形；表名仅 **`@TableName`**，**`@Table` 不写 `value`**（框架自动合并）；Dao `quote` 与 `@TableName` 一致；类名不含模块前缀。示例：`PayUserPinEntity` + `@TableName("safe_pay_user_pin")` + `@Table(comment = "...")`。
+- **`@Column.comment`**：简介名互异（§10.1）；**`isUnique=true` 禁止再 `@Index`**（§10.2）。
+- **双键**：自增 `id` 仅 gen CRUD；业务键 `uuid` 等（§10.4），**禁止**用 `id` 做关联。
 
 ## 多库与 SQL（与 `docs/AI_DATABASE.md` 一致）
 
@@ -175,6 +176,7 @@ description: >-
 - 新实体是否有 **业务主键**且关联列未误用 **`Long id`**？多节点雪花是否配置 **`autumn.snowflake.worker-id` / `datacenter-id`**？
 - **`isUnique=true` 的 `@Column` 是否未再叠 `@Index`**（§10.2）？
 - 机器人：是否已读 **`docs/AI_ROBOT.md` + `docs/AI_ROBOT_API.md`**？bot 包是否仍为 **`jakarta.*` / MP3 annotation**？管理 API 与 `message/push` 鉴权是否分离？
+- **表名**：符合 §3.2？仅 `@TableName`（`@Table` 无 `value`）？Dao `quote` 一致？
 
 ## 多项目一句话
 

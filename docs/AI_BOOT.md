@@ -89,25 +89,31 @@
 - 升级到 `utf8mb4` 时注意 **索引字节长度**（如 `VARCHAR(255)` 唯一索引）与 DDL 耗时；生产大表谨慎使用自动 `CONVERT`。
 - 标识符经校验后再拼入 DDL，降低注入风险。
 
-### 3.2 表名（`@Table` / `@TableName`）约定
+### 3.2 表名（`@Table` / `@TableName`）约定（强制）
 
-**推荐物理表名形态**：`{模块短前缀}_{实体核心蛇形}`。
+**物理表名**：
 
-- **模块短前缀**：与 Maven 模块及包路径 `cn.org.autumn.modules.<模块>/` 对应，通常取目录名 + 下划线，如 `spm` → **`spm_`**、`sys` → **`sys_`**，用于区分业务域、避免跨模块撞表名。
-- **实体核心蛇形**：类名去掉后缀 **`Entity`**，再将剩余驼峰转为**小写 + 下划线**（`TableInfo.getTableName` 与 `HumpConvert` 规则一致）。
+```text
+{模块名}_{类名去掉 Entity 后缀后的驼峰转蛇形}
+```
 
-**示例**（`SuperPositionModelEntity`，模块 `spm`）：
+- **模块名** = `modules/<模块>/` 目录名 = 包段 = 表前缀（如 `safe` → **`safe_`**）。
+- **实体类名**用领域短名，**禁止**把模块名拼进类名（反例：`SafePayUserPinEntity`；正例：`PayUserPinEntity`）。
+- **注解（强制）**：物理表名只写在 **`@TableName`**；**`@Table` 不写 `value`**（框架会把 `@TableName` 合并进 `TableInfo`）。**`@Table` 至少保留 `comment`** 等建表元数据。Dao `*DaoSql#quote(...)` 与 `@TableName` 一致。
+- 可选：仅写 `@Table(prefix = "safe_", comment = "...")` 且省略 `@TableName` 时由框架推导（细则同生成器）；新代码推荐显式 **`@TableName`**。
 
-- 去后缀 → `SuperPositionModel` → 蛇形 → `super_position_model`
-- 加前缀 → **`spm_super_position_model`**
+**唯一示例**（模块 `safe`，实体 `PayUserPinEntity`）：
 
-**定义方式（按团队习惯选一；推荐减少重复）**
+- 表名：`PayUserPin` → `pay_user_pin` → **`safe_pay_user_pin`**
+- 实体：
 
-1. **单点表名（推荐）**：只写一处物理表名——**`@Table` 的 `value` 留空**，并写 MyBatis-Plus 的 **`@TableName("spm_super_position_model")`**。Autumn 的 `TableInfo.getTableName` 在 `value` 为空时会**读取 `@TableName` 的值**作为物理表名，与 MP 一致，无需两段相同字符串。仍需保留 **`@Table`**（至少带 `comment` 等），否则不参与注解建表扫描。
-2. **显式双写**：`@Table(value = "spm_super_position_model", comment = "...")` 与 `@TableName("spm_super_position_model")` 相同；适合不依赖 MP 表名、或希望 Autumn 侧自包含表名的场景。
-3. **前缀 + 推导**：`@Table(prefix = "spm_", comment = "...")` 且 **`value` 与 `@TableName` 均留空**时，按「前缀 + 去 `Entity` 蛇形」生成；若只填了 `@TableName` 则同 **1**。
+```java
+@TableName("safe_pay_user_pin")
+@Table(comment = "支付密码:用户6位支付PIN")
+public class PayUserPinEntity { ... }
+```
 
-**`@Table.module()`**：可选，多用于生成/展示元数据，**不参与**物理表名字符串拼接；表名前缀以 `prefix` / `value` 为准。
+**`@Table.module()`**：可选元数据，**不参与**物理表名拼接。
 
 ## 4. 加密最小约束
 
