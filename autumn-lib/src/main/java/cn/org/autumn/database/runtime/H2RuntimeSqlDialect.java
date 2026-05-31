@@ -57,4 +57,9 @@ public class H2RuntimeSqlDialect implements RuntimeSqlDialect {
     public String sqlLowerColumnContainsNeedle(String quotedColumn, String mybatisNeedleParam) {
         return "LOCATE(" + mybatisNeedleParam + ", LOWER(COALESCE(" + quotedColumn + ", ''))) > 0";
     }
+
+    @Override
+    public String sqlEpochMillisFromTimestamp(String quotedTimestampExpr) {
+        return "COALESCE(DATEDIFF('MILLISECOND', TIMESTAMP '1970-01-01 00:00:00', " + quotedTimestampExpr + "),0)";
+    }
 }

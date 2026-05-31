@@ -122,4 +122,19 @@ public abstract class DialectService<M extends BaseMapper<T>, T> extends Service
     public String timestampBucketIsoWeek(String quotedColumn) {
         return sql.timestampBucketIsoWeek(quotedColumn);
     }
+
+    /** @see RuntimeSql#limitOffsetMybatisParams(String, String) */
+    public String limitOffsetMybatisParams(String limitPh, String offsetPh) {
+        return sql.limitOffsetMybatisParams(limitPh, offsetPh);
+    }
+
+    /** @see RuntimeSql#epochMillisFromTimestamp(String) */
+    public String epochMillisFromTimestamp(String quotedTimestampExpr) {
+        return sql.epochMillisFromTimestamp(quotedTimestampExpr);
+    }
+
+    /** @see RuntimeSql#updateWithJoin(String, String, String, String, String, String, String) */
+    public String updateWithJoin(String targetTable, String targetAlias, String joinTable, String joinAlias, String joinOn, String quotedColumn, String extraWhere) {
+        return sql.updateWithJoin(targetTable, targetAlias, joinTable, joinAlias, joinOn, quotedColumn, extraWhere);
+    }
 }

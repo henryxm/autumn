@@ -49,4 +49,15 @@ public class MysqlRuntimeSqlDialect implements RuntimeSqlDialect {
     public String sqlLowerColumnContainsNeedle(String quotedColumn, String mybatisNeedleParam) {
         return "LOCATE(" + mybatisNeedleParam + ", LOWER(COALESCE(" + quotedColumn + ", ''))) > 0";
     }
+
+    @Override
+    public String sqlEpochMillisFromTimestamp(String quotedTimestampExpr) {
+        return "COALESCE(UNIX_TIMESTAMP(" + quotedTimestampExpr + "),0) * 1000.0";
+    }
+
+    @Override
+    public String sqlUpdateWithJoin(String targetTable, String targetAlias, String joinTable, String joinAlias, String joinOn, String quotedColumn, String extraWhere) {
+        return "UPDATE " + targetTable + " " + targetAlias + " INNER JOIN " + joinTable + " " + joinAlias + " ON " + joinOn
+                + " SET " + targetAlias + "." + quotedColumn + " = 1 WHERE " + extraWhere;
+    }
 }

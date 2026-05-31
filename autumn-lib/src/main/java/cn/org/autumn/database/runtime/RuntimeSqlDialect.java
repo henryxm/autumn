@@ -134,4 +134,31 @@ public interface RuntimeSqlDialect {
      * 年界附近的 ISO 周年与日历年在少数数据库上存在实现差异，业务若强依赖与 MySQL {@code YEARWEEK(...,3)} 完全一致，需在集成侧校验。
      */
     String sqlTimestampBucketIsoWeek(String quotedColumn);
+
+    /**
+     * Provider SQL 末尾：MyBatis 占位符分页，如 {@code LIMIT #{limit} OFFSET #{offset}} 或 SQL Server/Oracle {@code OFFSET/FETCH}。
+     *
+     * @param limitPh  形如 {@code #{limit}} 的 limit 占位符
+     * @param offsetPh 形如 {@code #{offset}} 的 offset 占位符
+     */
+    default String sqlLimitOffsetMybatisParams(String limitPh, String offsetPh) {
+        return " LIMIT " + limitPh + " OFFSET " + offsetPh;
+    }
+
+    /**
+     * 将已 {@link #quote(String)} 的时间戳表达式转为 epoch 毫秒（浮点），替代 {@code UNIX_TIMESTAMP}。
+     */
+    default String sqlEpochMillisFromTimestamp(String quotedTimestampExpr) {
+        return "COALESCE(EXTRACT(EPOCH FROM " + quotedTimestampExpr + "),0) * 1000.0";
+    }
+
+    /**
+     * 跨方言 UPDATE + JOIN：MySQL 系 {@code UPDATE … INNER JOIN … SET}；Oracle {@code MERGE}；其余 {@code UPDATE … SET … FROM … WHERE}。
+     *
+     * @param quotedColumn 已 {@link #quote(String)} 的更新列名
+     */
+    default String sqlUpdateWithJoin(String targetTable, String targetAlias, String joinTable, String joinAlias, String joinOn, String quotedColumn, String extraWhere) {
+        return "UPDATE " + targetTable + " " + targetAlias + " SET " + quotedColumn + " = 1 FROM " + joinTable + " " + joinAlias
+                + " WHERE " + joinOn + " AND " + extraWhere;
+    }
 }
