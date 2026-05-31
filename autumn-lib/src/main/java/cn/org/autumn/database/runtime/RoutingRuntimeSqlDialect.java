@@ -183,4 +183,19 @@ public class RoutingRuntimeSqlDialect implements RuntimeSqlDialect {
     public String sqlTimestampBucketIsoWeek(String quotedColumn) {
         return delegate().sqlTimestampBucketIsoWeek(quotedColumn);
     }
+
+    @Override
+    public String sqlLimitOffsetMybatisParams(String limitPh, String offsetPh) {
+        return delegate().sqlLimitOffsetMybatisParams(limitPh, offsetPh);
+    }
+
+    @Override
+    public String sqlEpochMillisFromTimestamp(String quotedTimestampExpr) {
+        return delegate().sqlEpochMillisFromTimestamp(quotedTimestampExpr);
+    }
+
+    @Override
+    public String sqlUpdateWithJoin(String targetTable, String targetAlias, String joinTable, String joinAlias, String joinOn, String quotedColumn, String extraWhere) {
+        return delegate().sqlUpdateWithJoin(targetTable, targetAlias, joinTable, joinAlias, joinOn, quotedColumn, extraWhere);
+    }
 }

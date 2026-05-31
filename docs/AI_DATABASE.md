@@ -69,6 +69,9 @@
 | 开关字面量 | `enabledTrueSqlLiteral`、`enabledFalseSqlLiteral` | PG `boolean` 与整型库差异 |
 | 布尔/开关列 → 聚合用 0/1 | `booleanColumnAsTinyInt01(quotedCol)` | `null→0`、真/非零→1、假/零→0；列须已 `quote` |
 | 手写分页后缀（无 `ORDER BY`） | `limitOffsetSuffix(limit, offset)` | **SQL Server**：主查询在拼接前**必须**已有 `ORDER BY`，否则 `OFFSET/FETCH` 非法 |
+| Provider 占位符分页 | `limitOffsetMybatisParams(#{limit}, #{offset})` | SQL Server/Oracle 为 `OFFSET/FETCH`；其余 `LIMIT/OFFSET` |
+| 时间戳 → epoch 毫秒 | `epochMillisFromTimestamp(quotedCol)` | 替代 `UNIX_TIMESTAMP`；列须已 `quote` |
+| UPDATE + JOIN | `updateWithJoin(...)` | MySQL 系 `UPDATE…INNER JOIN`；Oracle `MERGE`；其余 `UPDATE…FROM` |
 | 大小写不敏感子串 | `lowerColumnContainsNeedle(quotedCol, #{needle})` | 绑定值建议**小写** |
 | 日/月/年/ISO 周桶 | `timestampBucketDay` 等 | 列须已 `quote`；勿手写 `DATE_FORMAT`/`to_char` |
 
@@ -91,7 +94,7 @@
 
 2. **必须**使用 **`@SelectProvider` / `@UpdateProvider` …`**，实现类放在与 Dao 同域的 **`*DaoSql`**（或团队统一命名的 Provider）中；SQL 字符串在 Provider 方法内拼接。
 
-3. **推荐**业务侧 `*DaoSql` **`extends RuntimeSql`**，通过 **`quote`、`limitOne`、`likeContainsAny`、`columnValueInCommaSeparatedList`、`enabledTrueSqlLiteral`、`enabledFalseSqlLiteral`、`booleanColumnAsTinyInt01`、`limitOffsetSuffix`、`lowerColumnContainsNeedle`、`currentTimestamp`、`truncateTable`**，以及 **`timestampBucketDay` / `timestampBucketMonth` / `timestampBucketYear` / `timestampBucketIsoWeek`**（时间桶与布尔规范化入参均为 **`quote` 后的单列**）拼装，保证与 `RoutingRuntimeSqlDialect` / `RuntimeSqlDialectRegistry` 一致。**禁止**在 Provider 中手写 `DATE_FORMAT`、`to_char` 等单库日期分桶函数。
+3. **推荐**业务侧 `*DaoSql` **`extends RuntimeSql`**，通过 **`quote`、`limitOne`、`likeContainsAny`、`columnValueInCommaSeparatedList`、`enabledTrueSqlLiteral`、`enabledFalseSqlLiteral`、`booleanColumnAsTinyInt01`、`limitOffsetSuffix`、`limitOffsetMybatisParams`、`epochMillisFromTimestamp`、`updateWithJoin`、`lowerColumnContainsNeedle`、`currentTimestamp`、`truncateTable`**，以及 **`timestampBucketDay` / `timestampBucketMonth` / `timestampBucketYear` / `timestampBucketIsoWeek`**（时间桶与布尔规范化入参均为 **`quote` 后的单列**）拼装，保证与 `RoutingRuntimeSqlDialect` / `RuntimeSqlDialectRegistry` 一致。**禁止**在 Provider 中手写 `DATE_FORMAT`、`to_char` 等单库日期分桶函数。
 
 4. **历史与框架内置**注解 SQL 仅允许在治理计划中逐步迁移；**新增与变更一律 Provider**。
 

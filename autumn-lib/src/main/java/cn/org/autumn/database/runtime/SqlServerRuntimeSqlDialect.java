@@ -65,4 +65,14 @@ public class SqlServerRuntimeSqlDialect implements RuntimeSqlDialect {
     public String sqlLowerColumnContainsNeedle(String quotedColumn, String mybatisNeedleParam) {
         return "CHARINDEX(" + mybatisNeedleParam + ", LOWER(ISNULL(" + quotedColumn + ", ''))) > 0";
     }
+
+    @Override
+    public String sqlLimitOffsetMybatisParams(String limitPh, String offsetPh) {
+        return " OFFSET " + offsetPh + " ROWS FETCH NEXT " + limitPh + " ROWS ONLY";
+    }
+
+    @Override
+    public String sqlEpochMillisFromTimestamp(String quotedTimestampExpr) {
+        return "COALESCE(DATEDIFF_BIG(millisecond, CAST('1970-01-01' AS DATETIME2), " + quotedTimestampExpr + "),0)";
+    }
 }

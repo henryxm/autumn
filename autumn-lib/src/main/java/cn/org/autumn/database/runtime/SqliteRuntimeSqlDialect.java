@@ -64,4 +64,9 @@ public class SqliteRuntimeSqlDialect implements RuntimeSqlDialect {
     public String sqlLowerColumnContainsNeedle(String quotedColumn, String mybatisNeedleParam) {
         return "instr(LOWER(COALESCE(" + quotedColumn + ", '')), " + mybatisNeedleParam + ") > 0";
     }
+
+    @Override
+    public String sqlEpochMillisFromTimestamp(String quotedTimestampExpr) {
+        return "COALESCE(CAST(strftime('%s', " + quotedTimestampExpr + ") AS REAL) * 1000.0,0)";
+    }
 }

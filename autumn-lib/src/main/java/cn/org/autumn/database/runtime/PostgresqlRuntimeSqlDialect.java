@@ -58,4 +58,9 @@ public class PostgresqlRuntimeSqlDialect implements RuntimeSqlDialect {
     public String sqlLowerColumnContainsNeedle(String quotedColumn, String mybatisNeedleParam) {
         return "POSITION(" + mybatisNeedleParam + " IN LOWER(COALESCE(" + quotedColumn + ", ''))) > 0";
     }
+
+    @Override
+    public String sqlEpochMillisFromTimestamp(String quotedTimestampExpr) {
+        return "COALESCE(EXTRACT(EPOCH FROM " + quotedTimestampExpr + "),0) * 1000.0";
+    }
 }

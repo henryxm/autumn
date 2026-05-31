@@ -61,4 +61,20 @@ public class OracleRuntimeSqlDialect implements RuntimeSqlDialect {
     public String sqlLowerColumnContainsNeedle(String quotedColumn, String mybatisNeedleParam) {
         return "INSTR(LOWER(NVL(" + quotedColumn + ", '')), " + mybatisNeedleParam + ") > 0";
     }
+
+    @Override
+    public String sqlLimitOffsetMybatisParams(String limitPh, String offsetPh) {
+        return " OFFSET " + offsetPh + " ROWS FETCH NEXT " + limitPh + " ROWS ONLY";
+    }
+
+    @Override
+    public String sqlEpochMillisFromTimestamp(String quotedTimestampExpr) {
+        return "COALESCE((CAST(" + quotedTimestampExpr + " AS DATE) - DATE '1970-01-01') * 86400000,0)";
+    }
+
+    @Override
+    public String sqlUpdateWithJoin(String targetTable, String targetAlias, String joinTable, String joinAlias, String joinOn, String quotedColumn, String extraWhere) {
+        return "MERGE INTO " + targetTable + " " + targetAlias + " USING " + joinTable + " " + joinAlias + " ON (" + joinOn + " AND " + extraWhere + ")"
+                + " WHEN MATCHED THEN UPDATE SET " + targetAlias + "." + quotedColumn + " = 1";
+    }
 }

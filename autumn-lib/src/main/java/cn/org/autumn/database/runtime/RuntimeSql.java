@@ -140,4 +140,31 @@ public class RuntimeSql {
     public String timestampBucketIsoWeek(String quotedColumn) {
         return dialect().sqlTimestampBucketIsoWeek(quotedColumn);
     }
+
+    /**
+     * Provider SQL 末尾：{@code LIMIT #{limit} OFFSET #{offset}} 或 SQL Server/Oracle {@code OFFSET/FETCH}。
+     *
+     * @see RuntimeSqlDialect#sqlLimitOffsetMybatisParams(String, String)
+     */
+    public String limitOffsetMybatisParams(String limitPh, String offsetPh) {
+        return dialect().sqlLimitOffsetMybatisParams(limitPh, offsetPh);
+    }
+
+    /**
+     * 将已 {@link #quote(String)} 的时间戳表达式转为 epoch 毫秒（浮点），替代 {@code UNIX_TIMESTAMP}。
+     *
+     * @see RuntimeSqlDialect#sqlEpochMillisFromTimestamp(String)
+     */
+    public String epochMillisFromTimestamp(String quotedTimestampExpr) {
+        return dialect().sqlEpochMillisFromTimestamp(quotedTimestampExpr);
+    }
+
+    /**
+     * 跨方言 UPDATE + JOIN；{@code quotedColumn} 须已由 {@link #quote(String)} 处理。
+     *
+     * @see RuntimeSqlDialect#sqlUpdateWithJoin(String, String, String, String, String, String, String)
+     */
+    public String updateWithJoin(String targetTable, String targetAlias, String joinTable, String joinAlias, String joinOn, String quotedColumn, String extraWhere) {
+        return dialect().sqlUpdateWithJoin(targetTable, targetAlias, joinTable, joinAlias, joinOn, quotedColumn, extraWhere);
+    }
 }
