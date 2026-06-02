@@ -58,7 +58,7 @@ public class PayGateAttemptEntity implements Serializable {
     @Column(length = 128, comment = "地点:客户端上报地点")
     private String location;
 
-    @Column(length = 16, comment = "模式:评估结果授权模式")
+    @Column(length = 32, comment = "模式:评估结果授权模式")
     private String authMode;
 
     @Column(comment = "通过:是否允许进入下一步", defaultValue = "0")

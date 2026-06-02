@@ -32,7 +32,8 @@
 - `docs/AI_GUIDE.md`：多项目导航与引用方式
 - **`docs/AI_ROBOT.md`**：**机器人业务对接指南**（快速开始、场景、鉴权、Hook 验签示例、对接清单、故障排查、Subscriber 扩展）
 - **`docs/AI_ROBOT_API.md`**：**机器人开放 API 参考手册**（全量请求/响应字段、入站 `message/push`、出站 Hook 回调体、事件名、接口速查表）
-- **`docs/AI_SAFE_CREDENTIAL.md`**：**支付安全 API 参考**（`POST /safe/api/v1/*`、`SafeConfig`、`PayPinVerifier`、闸门/免密、错误码 838～852）
+- **`docs/AI_SAFE_CREDENTIAL.md`**：**支付安全 API 参考**（`POST /safe/api/v1/*`、`SafeConfig`、`PayPinVerifier`、闸门/免密、错误码 850～864）
+- **`docs/AI_SAFE_CREDENTIAL_CLIENT_API.md`**：**客户端对接手册**（App/H5 全量接口、示例 JSON、流程图、错误处理、UX/安全规范）
 - **`docs/AI_SAFE_CREDENTIAL_INTEGRATION.md`**：**业务对接指南**（assess→verify 流程、UX、SPI）
 
 ## 2. 推荐加载矩阵（按场景）
@@ -53,7 +54,7 @@
 - **机器人 / Bot 开放 API、Hook、入站消息（业务系统 HTTP 对接）**：`docs/AI_BOOT.md` + `docs/AI_MAP.md` + **`docs/AI_ROBOT.md`** + **`docs/AI_ROBOT_API.md`**（叠加 `docs/AI_CODEGEN.md` 队列、`docs/AI_DISTRIBUTED_LOCK.md` 若用幂等锁）
 - **web 模块 Robot 集成 / API 回归**：`web/docs/INTEGRATION_TEST.md`（H2 内存 + Redis，`mvn -pl web -am test -Pintegration -DskipTests=false`）
 - **机器人模块框架内开发**（`cn.org.autumn.modules.bot`、改 Controller/Service/实体）：上列文档 + `docs/AI_STANDARDS.md` + `docs/AI_DATABASE.md` + `docs/AI_CODEGEN.md`
-- **支付密码 / 安全凭证**（`cn.org.autumn.modules.safe`）：`docs/AI_BOOT.md` + `docs/AI_MAP.md` + **`docs/AI_SAFE_CREDENTIAL.md`** + **`docs/AI_SAFE_CREDENTIAL_INTEGRATION.md`** + `docs/AI_STANDARDS.md` + `docs/AI_CRYPTO.md`（传输加密）
+- **支付密码 / 安全凭证**（`cn.org.autumn.modules.safe`）：`docs/AI_BOOT.md` + `docs/AI_MAP.md` + **`docs/AI_SAFE_CREDENTIAL_CLIENT_API.md`**（客户端）+ **`docs/AI_SAFE_CREDENTIAL.md`** + **`docs/AI_SAFE_CREDENTIAL_INTEGRATION.md`**（业务仓）+ `docs/AI_STANDARDS.md` + `docs/AI_CRYPTO.md`（传输加密）
 
 ## 3. 标准引用顺序
 
