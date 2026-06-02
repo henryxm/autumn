@@ -36,7 +36,7 @@ import java.util.List;
  * {@code Authorization: Bearer ...}）；禁止机器人 {@code rbt_} 令牌。</p>
  *
  * <p><b>报文</b>：统一 {@link Request} / {@link Response}；业务字段在 {@code data} 内。
- * 成功 {@code code == 0}；鉴权失败多为 {@code -10000}；业务错误 {@code 838～852}。</p>
+ * 成功 {@code code == 0}；鉴权失败多为 {@code -10000}；业务错误 {@code 850～864}。</p>
  *
  * <p><b>支付闸门</b>：扣款前先 {@code POST /gate/assess}，再按 {@code authMode} 免密或
  * {@code pin/verify} / {@code biometric/verify}（须带 {@code gateToken} 与 {@code amountCent}）。</p>

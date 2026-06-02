@@ -1,6 +1,6 @@
 # 支付安全对接指南（safe 模块）
 
-> API 字段见 **`docs/AI_SAFE_CREDENTIAL.md`**；业务仓注入 **`PayPinVerifier`**。
+> 客户端（App/H5）见 **`docs/AI_SAFE_CREDENTIAL_CLIENT_API.md`**；API 字段见 **`docs/AI_SAFE_CREDENTIAL.md`**；业务仓注入 **`PayPinVerifier`**。
 
 ## 1. 流程（必记）
 
@@ -62,11 +62,11 @@ assess 与 verify 的 **`amountCent` 必须一致**；`gateToken` / `verifyToken
 
 | code | 处理 |
 |------|------|
-| 851 | 先 `gate/assess` |
-| 850 | assess 与 verify/扣款金额一致 |
-| 849 | `gateToken` 过期或已消费，重新 assess |
-| 852 | 未开启手势支付，改用 PIN/BIO |
-| 847 | `verifyToken` 无效或已消费，重新 verify |
+| 863 | 先 `gate/assess` |
+| 862 | assess 与 verify/扣款 `amountCent` 一致 |
+| 861 | `gateToken` 过期或已消费，重新 assess |
+| 864 | 未开启手势支付，改用 PIN/BIO |
+| 859 | `verifyToken` 无效或已消费，重新 verify |
 
 ## 5. 安全清单
 

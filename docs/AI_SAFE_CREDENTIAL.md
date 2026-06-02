@@ -2,13 +2,14 @@
 
 > 适用 Autumn **2.0.0**。收单/扣款在业务仓；本模块负责支付 PIN、手势、生物绑定与支付前校验。  
 > 实现：`cn.org.autumn.modules.safe`；开放入口：`PayCredentialApiController`（`POST /safe/api/v1/*`）。  
-> 表名/类名：**`docs/AI_BOOT.md` §3.2**、**`docs/AI_STANDARDS.md` §9**。
+> 表名/类名：**`docs/AI_BOOT.md` §3.2**、**`docs/AI_STANDARDS.md` §9**。  
+> **客户端对接**（App/H5 全量示例与流程）：**`docs/AI_SAFE_CREDENTIAL_CLIENT_API.md`**。
 
 ## 1. 模块一览
 
 | 项 | 值 |
 |----|-----|
-| 基础路径 | `{ORIGIN}/safe/api/v1`（无尾斜杠）；**25** 个 `POST` |
+| 基础路径 | `{ORIGIN}/safe/api/v1`（无尾斜杠）；**22** 个 `POST` |
 | 鉴权 | 用户访问令牌 + `@Authenticated`（**禁止** `rbt_`） |
 | 配置 | `PAY_CREDENTIAL_CONFIG`（`PayCredentialConfig`）；模块内 **`SafeConfig.get()`** |
 | Shiro | `SafeConfig` 注册 `/safe/api/v1/**` → `anon`（开放 API 自带 `@Authenticated`） |
@@ -187,7 +188,7 @@ Shiro 对 `/safe/api/v1/**` 为 `anon`，实际鉴权由 **`@Authenticated`** + 
 
 **响应**：`data` 常为 `null`（成功即可）。
 
-**错误**：`839` 已设置；`843` 格式；`842` 弱密码；`840` 两次不一致。
+**错误**：`851` 已设置；`855` 格式；`854` 弱密码；`852` 两次不一致。
 
 ---
 
@@ -201,7 +202,7 @@ Shiro 对 `/safe/api/v1/**` 为 `anon`，实际鉴权由 **`@Authenticated`** + 
 | `newPin` | string | 是 | 新密码 |
 | `confirm` | string | 是 | 确认新密码 |
 
-**错误**：`838` 未设置；`841` 锁定；`840` 原密码错误；`843`/`842` 新密码校验失败。
+**错误**：`850` 未设置；`853` 锁定；`852` 原密码错误；`855`/`854` 新密码校验失败。
 
 ---
 
@@ -246,7 +247,7 @@ Shiro 对 `/safe/api/v1/**` 为 `anon`，实际鉴权由 **`@Authenticated`** + 
 |------|------|
 | `verifyToken` | 一次性令牌，有效时间见 `verifyTokenMinutes`；业务侧调用 `PayPinVerifier.requireVerifyToken(userUuid, token)` |
 
-**错误**：`838`/`841`/`840`；失败累计达上限触发 `841` 并写审计 `LOCK`。
+**错误**：`850`/`853`/`852`；失败累计达上限触发 `853` 并写审计 `LOCK`。
 
 ---
 
@@ -301,7 +302,7 @@ Shiro 对 `/safe/api/v1/**` 为 `anon`，实际鉴权由 **`@Authenticated`** + 
 
 **响应 `data`**：`PayPinVerifyResult`（含 `verifyToken`）。须用户开启 `gesturePaymentEnabled`。
 
-**错误**：`844` 手势无效；`852` 未开启手势支付；`851`/`849`/`850` 闸门相关；锁定/未设置等复用 PIN 码（`838`/`841`/`839`）。
+**错误**：`856` 手势无效；`864` 未开启手势支付；`863`/`861`/`862` 闸门相关；锁定/未设置等复用 PIN 码（`850`/`853`/`851`）。
 
 ---
 
@@ -370,7 +371,7 @@ Shiro 对 `/safe/api/v1/**` 为 `anon`，实际鉴权由 **`@Authenticated`** + 
 
 **响应 `data`**：`PayPinVerifyResult`（`verifyToken`）。
 
-**错误**：`845` 设备未注册；`846` 验签失败或 challenge 无效；`847` 令牌无效（消费 verifyToken 时）。
+**错误**：`857` 设备未注册；`858` 验签失败或 challenge 无效；`859` 令牌无效（消费 verifyToken 时）。
 
 ---
 
@@ -456,25 +457,25 @@ Shiro 对 `/safe/api/v1/**` 为 `anon`，实际鉴权由 **`@Authenticated`** + 
 
 ---
 
-## 8. 业务错误码（838～852）
+## 8. 业务错误码（850～864）
 
 | code | 枚举 | 说明 |
 |------|------|------|
-| 838 | `PAY_PIN_NOT_SET` | 未设置支付密码/手势 |
-| 839 | `PAY_PIN_ALREADY_SET` | 已设置（重复 set） |
-| 840 | `PAY_PIN_MISMATCH` | 密码不正确或确认不一致 |
-| 841 | `PAY_PIN_LOCKED` | 已锁定 |
-| 842 | `PAY_PIN_WEAK` | 弱密码（如 123456） |
-| 843 | `PAY_PIN_FORMAT` | 格式不符（位数/非数字） |
-| 844 | `PAY_GESTURE_INVALID` | 手势无效 |
-| 845 | `PAY_BIOMETRIC_NOT_FOUND` | 设备未注册 |
-| 846 | `PAY_BIOMETRIC_VERIFY_FAILED` | 生物验签失败 |
-| 847 | `PAY_VERIFY_TOKEN_INVALID` | 校验令牌无效或已过期 |
-| 848 | `PAY_GATE_DENIED` | 支付未通过安全评估 |
-| 849 | `PAY_GATE_TOKEN_INVALID` | 闸门令牌无效或已过期 |
-| 850 | `PAY_GATE_AMOUNT_MISMATCH` | 支付金额与闸门评估不一致 |
-| 851 | `PAY_GATE_REQUIRED` | 请先完成支付安全评估 |
-| 852 | `PAY_GESTURE_PAYMENT_DISABLED` | 未开启手势支付 |
+| 850 | `PAY_PIN_NOT_SET` | 未设置支付密码/手势 |
+| 851 | `PAY_PIN_ALREADY_SET` | 已设置（重复 set） |
+| 852 | `PAY_PIN_MISMATCH` | 密码不正确或确认不一致 |
+| 853 | `PAY_PIN_LOCKED` | 已锁定 |
+| 854 | `PAY_PIN_WEAK` | 弱密码（如 123456） |
+| 855 | `PAY_PIN_FORMAT` | 格式不符（位数/非数字） |
+| 856 | `PAY_GESTURE_INVALID` | 手势无效 |
+| 857 | `PAY_BIOMETRIC_NOT_FOUND` | 设备未注册 |
+| 858 | `PAY_BIOMETRIC_VERIFY_FAILED` | 生物验签失败 |
+| 859 | `PAY_VERIFY_TOKEN_INVALID` | 校验令牌无效或已过期 |
+| 860 | `PAY_GATE_DENIED` | 支付未通过安全评估 |
+| 861 | `PAY_GATE_TOKEN_INVALID` | 闸门令牌无效或已过期 |
+| 862 | `PAY_GATE_AMOUNT_MISMATCH` | 支付金额与闸门评估不一致 |
+| 863 | `PAY_GATE_REQUIRED` | 请先完成支付安全评估 |
+| 864 | `PAY_GESTURE_PAYMENT_DISABLED` | 未开启手势支付 |
 
 鉴权类 **`-10000`** 见 §2.4。
 
