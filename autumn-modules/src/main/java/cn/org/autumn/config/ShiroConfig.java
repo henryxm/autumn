@@ -3,6 +3,7 @@ package cn.org.autumn.config;
 import cn.org.autumn.modules.spm.filter.SpmFilter;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.install.InstallMode;
+import cn.org.autumn.modules.sys.shiro.ClientIpSessionFactory;
 import cn.org.autumn.modules.sys.shiro.ForceLogoutRememberMeManager;
 import cn.org.autumn.modules.sys.shiro.RedisShiroSessionDAO;
 import cn.org.autumn.modules.sys.shiro.UserRealm;
@@ -41,6 +42,7 @@ public class ShiroConfig {
                                          @Value("${autumn.redis.open:false}") boolean redisOpen,
                                          @Value("${autumn.shiro.redis:false}") boolean shiroRedis) {
         DefaultWebSessionManager sessionManager = new DefaultWebSessionManager();
+        sessionManager.setSessionFactory(new ClientIpSessionFactory());
         //设置session过期时间为1小时(单位：毫秒)，默认为30分钟
         sessionManager.setGlobalSessionTimeout(60 * 60 * 1000);
         boolean install = InstallMode.isActive(environment);

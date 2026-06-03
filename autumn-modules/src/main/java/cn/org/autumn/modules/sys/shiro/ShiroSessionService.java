@@ -190,7 +190,7 @@ public class ShiroSessionService {
         String sid = s.getId() != null ? s.getId().toString() : "";
         m.put("sessionId", sid);
         m.put("current", sid.equals(currentSessionId));
-        m.put("host", s.getHost() != null ? s.getHost() : "");
+        m.put("host", ClientIpSessionSupport.displayHost(s));
         m.put("startTime", s.getStartTimestamp() != null ? s.getStartTimestamp().getTime() : null);
         m.put("lastAccessTime", s.getLastAccessTime() != null ? s.getLastAccessTime().getTime() : null);
         m.put("timeout", s.getTimeout());
