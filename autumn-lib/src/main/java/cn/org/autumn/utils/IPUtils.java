@@ -56,6 +56,9 @@ public class IPUtils {
                 ip = request.getHeader("HTTP_X_FORWARDED_FOR");
             }
             if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+                ip = request.getHeader("X-Real-IP");
+            }
+            if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
                 ip = request.getRemoteAddr();
             }
         } else if (ip.length() > 15) {

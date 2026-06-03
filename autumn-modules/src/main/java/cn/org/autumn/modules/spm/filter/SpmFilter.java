@@ -8,6 +8,7 @@ import cn.org.autumn.modules.oauth.service.ClientDetailsService;
 import cn.org.autumn.modules.spm.service.SuperPositionModelService;
 import cn.org.autumn.modules.bot.service.RobotTokenService;
 import cn.org.autumn.modules.bot.shiro.RobotAccessTokenToken;
+import cn.org.autumn.modules.sys.shiro.ClientIpSessionSupport;
 import cn.org.autumn.modules.sys.shiro.OauthAccessTokenToken;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.wall.service.WallService;
@@ -21,6 +22,7 @@ import org.apache.oltu.oauth2.common.message.types.ParameterStyle;
 import org.apache.oltu.oauth2.rs.request.OAuthAccessResourceRequest;
 import org.apache.shiro.authc.AuthenticationException;
 import org.apache.shiro.authc.AuthenticationToken;
+import org.apache.shiro.session.Session;
 import org.apache.shiro.subject.Subject;
 import org.apache.shiro.web.filter.authc.FormAuthenticationFilter;
 
@@ -109,8 +111,14 @@ public class SpmFilter extends FormAuthenticationFilter implements PathFactory.P
             if (null != superPositionModelService && !superPositionModelService.needLogin(httpServletRequest, httpServletResponse))
                 return true;
         }
-        if (ShiroUtils.isLogin())
+        if (ShiroUtils.isLogin()) {
+            try {
+                Session session = ShiroUtils.getSubject().getSession(false);
+                if (session != null) ClientIpSessionSupport.syncHost(session, httpServletRequest);
+            } catch (Exception ignored) {
+            }
             return true;
+        }
         return super.isAccessAllowed(request, response, mappedValue);
     }
 

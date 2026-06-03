@@ -33,7 +33,7 @@
 控制器：`cn.org.autumn.modules.sys.controller.SysSessionController`
 
 - `GET /sys/session/self/list`
-  - 当前用户会话列表（`sessions`）
+  - 当前用户会话列表（`sessions`）；`host`（访问来源）由 `SpmFilter` 经 `IPUtils.getIp` 写入会话，展示时读 `ClientIpSessionSupport.displayHost`
 - `POST /sys/session/self/terminate`
   - 终止指定会话（不可终止当前会话）
   - body: `{ "sessionId": "..." }`
