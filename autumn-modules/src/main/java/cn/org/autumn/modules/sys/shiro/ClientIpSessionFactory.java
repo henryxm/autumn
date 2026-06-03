@@ -1,6 +1,6 @@
 package cn.org.autumn.modules.sys.shiro;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.shiro.session.Session;
 import org.apache.shiro.session.mgt.SessionContext;
 import org.apache.shiro.session.mgt.SessionFactory;
@@ -8,8 +8,8 @@ import org.apache.shiro.session.mgt.SimpleSession;
 import org.apache.shiro.web.session.mgt.WebSessionContext;
 import org.apache.shiro.web.util.WebUtils;
 
-import javax.servlet.ServletRequest;
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * 新建 Shiro 会话时用 {@link IPUtils} 解析客户端 IP 作为 {@code Session#host}，替代 {@code request.getRemoteHost()}。
@@ -24,11 +24,10 @@ public class ClientIpSessionFactory implements SessionFactory {
     }
 
     private static String resolveClientIp(SessionContext initData) {
-        if (initData instanceof WebSessionContext) {
-            WebSessionContext webCtx = (WebSessionContext) initData;
+        if (initData instanceof WebSessionContext webCtx) {
             ServletRequest request = webCtx.getServletRequest();
             if (request == null) request = WebUtils.getRequest(initData);
-            if (request instanceof HttpServletRequest) return ClientIpSessionSupport.resolve((HttpServletRequest) request);
+            if (request instanceof HttpServletRequest http) return ClientIpSessionSupport.resolve(http);
         }
         return initData != null ? StringUtils.trimToEmpty(initData.getHost()) : "";
     }
