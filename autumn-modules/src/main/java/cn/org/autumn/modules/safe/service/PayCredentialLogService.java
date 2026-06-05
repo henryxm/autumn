@@ -79,7 +79,7 @@ public class PayCredentialLogService extends ModuleService<PayCredentialLogDao, 
         long cutoff = System.currentTimeMillis() - days * 24L * 3600 * 1000;
         Date before = new Date(cutoff);
         EntityWrapper<PayCredentialLogEntity> ew = new EntityWrapper<>();
-        ew.lt(columnInWrapper("createTime"), before);
+        ew.lt(columnInWrapper("create_time"), before);
         int n = baseMapper.delete(ew);
         if (n > 0)
             log.info("支付凭证操作日志清理：删除 {} 天以前的记录 {} 条", days, n);
