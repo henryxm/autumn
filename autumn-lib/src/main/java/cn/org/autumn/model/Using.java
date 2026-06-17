@@ -41,4 +41,18 @@ public class Using implements Serializable {
     public boolean IndeedUsing() {
         return null != using && using;
     }
+
+    /**
+     * 使用状态已明确确认且不在使用中（可安全视为未引用）。
+     */
+    public boolean CertainlyNotUsing() {
+        return Boolean.FALSE.equals(using);
+    }
+
+    /**
+     * 使用状态无法确认（网络异常、响应无效等），删除流程应保守跳过。
+     */
+    public boolean Uncertain() {
+        return null == using;
+    }
 }

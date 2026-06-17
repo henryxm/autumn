@@ -101,7 +101,12 @@ public class UsingFactory extends Factory {
                         log.debug("响应内容: {}", result);
                     if (null == gson)
                         gson = GsonConfig.getGson();
-                    return gson.fromJson(result, Using.class);
+                    Using using = gson.fromJson(result, Using.class);
+                    if (null == using || using.Uncertain()) {
+                        log.warn("无法确认: URL={}, 响应={}", url, result);
+                        return new Using(null, "响应无效");
+                    }
+                    return using;
                 }
             } else {
                 // 读取错误响应
@@ -111,14 +116,12 @@ public class UsingFactory extends Factory {
                     while ((responseLine = br.readLine()) != null) {
                         errorResponse.append(responseLine.trim());
                     }
-                    if (log.isDebugEnabled())
-                        log.debug("HTTP错误响应: {}, 错误内容: {}", responseCode, errorResponse);
+                    log.warn("检查错误: URL={}, code={}, body={}", url, responseCode, errorResponse);
                 }
             }
         } catch (Exception e) {
-            if (log.isDebugEnabled())
-                log.debug("HTTP请求异常: URL={}, 错误信息={}, 请求结果:{}", url, e.getMessage(), result, e);
+            log.warn("检查异常: URL={}, 错误: {}", url, e.getMessage());
         }
-        return null;
+        return new Using(null, "网络或响应异常");
     }
 }
