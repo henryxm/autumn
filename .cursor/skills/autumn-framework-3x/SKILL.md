@@ -4,7 +4,7 @@ description: >-
   Autumn 3.0.0 line ONLY: JDK 17+, Spring Boot 3.5.x, MyBatis-Plus 3.x, jakarta.* namespace.
   Use on autumn branch 3.0.0 (artifact 3.0.0) or business apps pinned to that stack.
   NOT for Autumn 2.0.0 / JDK 8 / Spring Boot 2.7 / javax-only — use autumn-framework-2x on master.
-  Enforces docs/AI_STANDARDS.md + docs/AI_DATABASE.md + docs/AI_DUAL_KEY.md: never combine @Column(isUnique=true) with @Index on same field (§10.2); dual-key entities (auto Long id for gen CRUD only + biz uuid via UuidBased/SnowBased or UserBased/unique user; never use id as association); entity-driven schema; Dao SQL only via MyBatis Provider (*DaoSql extends RuntimeSql);
+  Enforces docs/AI_STANDARDS.md + docs/AI_DATABASE.md + docs/AI_DUAL_KEY.md: never combine @Column(isUnique=true) with @Index on same field (§10.2); single-field indexes on field @Index only not class-level @Indexes unless explicit (§10.2); dual-key entities (auto Long id for gen CRUD only + biz uuid via UuidBased/SnowBased or UserBased/unique user or no second PK when user suffices; legacy entities default no retrofit unless task explicitly requires upgrade; never use id as association); entity-driven schema; Dao SQL only via MyBatis Provider (*DaoSql extends RuntimeSql);
   No hardcoded dialect quotes in Java (RuntimeSql quote/columnInWrapper or WrapperColumns per docs/AI_DATABASE.md §4.0);
   Prefer import over fully qualified class names unless name clash (docs/AI_CODE_STYLE.md §7);
   log.info/debug/warn/error must be one line, no line breaks in the call (docs/AI_CODE_STYLE.md §8);
@@ -77,8 +77,8 @@ description: >-
 
 - 框架扫描 + **`autumn.table.*`** 对齐表结构；**禁止**常规 **`DDL .sql`**。
 - **表名/类名（强制）**：见 **`docs/AI_BOOT.md` §3.2**、**`docs/AI_STANDARDS.md` §9**。摘要：`{模块名}_` + 类名去 `Entity` 蛇形；表名仅 **`@TableName`**，**`@Table` 不写 `value`**（框架自动合并）；Dao `quote` 与 `@TableName` 一致；类名不含模块前缀。示例：`PayUserPinEntity` + `@TableName("safe_pay_user_pin")` + `@Table(comment = "...")`。
-- **`@Column.comment`**：简介名互异（§10.1）；**`isUnique=true` 禁止再 `@Index`**（§10.2）。
-- **双键**：第二主键 **`uuid`** / 按真人唯一的 **`UserBased`**；业务 **`user`** 列可存 **`sys_user` 或 `bot_robot` 的 uuid**（互斥分配）。详见 **`docs/AI_DUAL_KEY.md`** §1.1、§3。
+- **`@Column.comment`**：简介名互异（§10.1）；**`isUnique=true` 禁止再 `@Index`**（§10.2）；**单字段索引用字段级 `@Index`**，类级 **`@Indexes` 仅组合索引（≥2 列）**（§10.2）。
+- **双键**：第二主键按需 **`uuid`** / **`UserBased`** / **无（§3.4 仅 `user`）**；业务 **`user`** 可存 **`sys_user` 或 `bot_robot` 的 uuid**。**存量实体默认不升级**（**`docs/AI_DUAL_KEY.md` §1.2**），除非任务明确要求。详见 **§1.1、§3**。
 
 ## 多库与 SQL（与 `docs/AI_DATABASE.md` 一致）
 
@@ -138,8 +138,10 @@ description: >-
 - **Controller** 未碰 **Dao**？未手改 **gen / list.html/js**？  
 - 新页有 **`Site` + `@PageAware`**？  
 - 生成路径与 **GenUtils** 一致？
-- 按用户唯一表是否 **`UserBased` + 唯一 `user`**（禁止 `uuid` 第二主键）？非按用户唯一表的 **`user`** 是否未标 `isUnique`？第二主键 / 外键 **`comment`** 是否符合 **`docs/AI_DUAL_KEY.md`** §3？
+- 新实体/新字段是否按 **`docs/AI_DUAL_KEY.md`** 选型？**存量默认不 retrofit**，除非任务明确要求升级第二主键 / **`user`** 标准？
+- 按用户唯一表是否 **`UserBased` + 唯一 `user`**？用户维度足够时是否避免冗余 **`uuid`**（**§3.4**）？
 - **`isUnique=true` 的 `@Column` 是否未再叠 `@Index`**（§10.2）？
+- 新索引是否**单字段在字段上 `@Index`**、**组合索引才用类级 `@Indexes`**（§10.2）？
 - **表名**：符合 §3.2？仅 `@TableName`（`@Table` 无 `value`）？Dao `quote` 一致？
 
 ## 多项目一句话

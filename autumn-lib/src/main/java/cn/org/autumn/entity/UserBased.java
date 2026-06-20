@@ -20,7 +20,7 @@ package cn.org.autumn.entity;
  * {@code user} 值由业务在插入前赋值（当前登录用户等），不经 {@link cn.org.autumn.service.AutoIdService} 自动生成。
  * <p>
  * <strong>与非唯一 {@code user} 外键区分</strong>：若表仍有独立 {@code uuid} 第二主键（{@link UuidBased} / {@link SnowBased}），可同时有非唯一的 {@code user}
- * 列表示所属用户，该列<strong>不得</strong> {@code isUnique = true}。详见 {@code docs/AI_DUAL_KEY.md} §3.3、§4.3。
+ * 列表示所属用户，该列<strong>不得</strong> {@code isUnique = true}。详见 {@code docs/AI_DUAL_KEY.md} §3.3、§3.5、§1.2（存量默认不升级）。
  *
  * @see IdBased
  * @see UuidBased
