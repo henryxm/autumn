@@ -191,7 +191,7 @@ public class DemoJob implements LoopJob.OneMinute {
 ### 2.7 ModuleService 默认继承能力（AI 必看）
 
 - 继承链（非常关键）：
-  - `ModuleService` -> `BaseService` -> `ShareCacheService` -> `BaseCacheService` -> `BaseQueueService` -> `ServiceImpl`
+  - `ModuleService` -> `BaseService` -> `DistributedService` -> `ShareCacheService` -> `BaseCacheService` -> `BaseQueueService` -> `AutoIdService` -> `DialectService` -> `ServiceImpl`
 - 结论：
   - 任何 `extends ModuleService<Dao, Entity>` 的业务 Service，默认就有 CRUD + 缓存 + 队列 + 菜单语言初始化能力。
   - 定时任务不需要额外基类，直接在 Service 上 `implements LoopJob.OneMinute/...` 即可接入调度。
@@ -428,7 +428,7 @@ public class DemoService extends ModuleService<DemoDao, DemoEntity> implements L
 - **新增接口禁止**在 Controller 上使用 **`@RequiresPermissions`**（该注解保留给代码生成/后台管理语义）；普通用户可访问接口用**登录态**鉴权（`docs/AI_STANDARDS.md` §6）。
 - **FreeMarker 页面**：避免与 FTL 冲突；条件等可用 **`<!-- -->`** 包裹以保持 HTML 规范；**`<script>`** 内 FTL 插值须保证渲染后 JS 合法；无法避免冲突时用 **`<#noparse>`**（`docs/AI_STANDARDS.md` §7）。
 - **实体与库表**：依赖框架实体扫描与 **`autumn.table.*` 开关**做建表/更新；**禁止**把**常规初始化 DDL `.sql`** 作为默认交付物（`docs/AI_STANDARDS.md` §8）。
-- **实体主键**：默认 **自增 `Long id`** 仅用于后台生成 CRUD；**业务主键**（`Uuid.uuid()` / **`SnowflakeId`** 等唯一列）用于关联与对外标识；**禁止**用 **`id`** 做外键或对外资源 ID（`docs/AI_STANDARDS.md` §10.4，`docs/AI_DATABASE.md` §1.1）。
+- **实体主键**：自增 **`id`** 仅 gen CRUD；第二主键 **`uuid`** 或按用户唯一 **`user`**（**`UserBased`**）；详见 **`docs/AI_DUAL_KEY.md`** §1、§10.4。
 - **模块名 = 包段 = 表前缀**：**禁止**把模块名当作**实体类名前缀**造成生成错乱；物理表名惯例见 `docs/AI_BOOT.md` §3.2 与 `docs/AI_STANDARDS.md` §9。
 - **新代码 SQL**：**禁止**在 Dao 接口注解上**硬编码 SQL**；**必须**用 **Provider**（跨库见 **`docs/AI_DATABASE.md`**，PG 细节见 **`docs/AI_POSTGRESQL.md`**）（`docs/AI_STANDARDS.md` §12）。
 - **Controller / Service / Dao**：Controller **禁止**用 Dao；本实体 Service 用 **`baseMapper`**、**禁止**再注入本 Dao；跨实体 **注入 Service** 而非他域 Dao（`docs/AI_STANDARDS.md` §13）。
@@ -481,7 +481,7 @@ public class DemoService extends ModuleService<DemoDao, DemoEntity> implements L
 - （如 sys / oauth / cache / queue / job）
 
 需要复用的框架能力（必须优先）：
-- Service 继承链：ModuleService -> BaseService -> ShareCacheService -> BaseCacheService -> BaseQueueService
+- Service 继承链：ModuleService -> BaseService -> DistributedService -> ShareCacheService -> BaseCacheService -> BaseQueueService -> AutoIdService -> DialectService
 - 默认能力：CRUD + 菜单/多语言初始化 + 缓存 + 队列（无需重复造轮子）
 - 缓存：BaseCacheService / CacheService / ShareCacheService（若需要）
 - 队列：BaseQueueService / QueueService（若需要）

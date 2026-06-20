@@ -1,6 +1,7 @@
 package cn.org.autumn.modules.bot.entity;
 
 import cn.org.autumn.annotation.Cache;
+import cn.org.autumn.entity.UserBased;
 import cn.org.autumn.table.annotation.Column;
 import cn.org.autumn.table.annotation.Table;
 import cn.org.autumn.table.data.DataType;
@@ -9,14 +10,13 @@ import com.baomidou.mybatisplus.annotations.TableName;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.io.Serializable;
 import java.util.Date;
 
 @Getter
 @Setter
 @TableName("bot_robot_config")
 @Table(value = "bot_robot_config", comment = "用户配额:按用户覆盖机器人全局默认")
-public class RobotConfigEntity implements Serializable {
+public class RobotConfigEntity implements UserBased {
     private static final long serialVersionUID = 1L;
 
     public static final int INHERIT = -1;
@@ -26,8 +26,8 @@ public class RobotConfigEntity implements Serializable {
     private Long id;
 
     @Cache
-    @Column(length = 32, comment = "用户:sys_user.uuid，唯一", isUnique = true)
-    private String uuid;
+    @Column(length = 32, comment = "用户:对应sys_user.uuid，唯一", isUnique = true)
+    private String user;
 
     @Column(comment = "机器人数:-1继承全局默认", defaultValue = "-1")
     private int maxRobots = INHERIT;

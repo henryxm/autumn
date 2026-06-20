@@ -8,6 +8,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
+/**
+ * 在 {@code sys_user} 与 {@code bot_robot} 间分配全局唯一 {@code uuid}，保证两类调用主体 uuid <strong>互不相同</strong>。
+ * <p>
+ * 真人注册、机器人创建等写入前须经本服务分配或校验；业务表 {@code user} 列可引用任一侧 uuid，见 {@code docs/AI_DUAL_KEY.md} §1.1。
+ */
 @Service
 public class UuidNamespaceService {
 

@@ -18,13 +18,18 @@
    仅 **`MYSQL` / `MARIADB` / `POSTGRESQL`** 会执行框架注解同步（`DatabaseType#supportsAnnotationTableSync()`）。其余类型须用 Flyway / Liquibase / 厂商工具或手工 DDL；不得假设 TableInit 会建表。
 
 5. **外键与 WHERE 中的实体引用**  
-   表间关联、子查询与业务条件中引用的「对方实体标识」必须使用 **`docs/AI_STANDARDS.md` §10.4** 定义的 **业务主键列**（`Uuid.uuid()` / **`SnowflakeId`** 等），**禁止**使用自增 **`Long id`** 作为关联键或对外资源 ID。**`id`** 仅限生成 CRUD 与技术主键回填场景（见 §1.1）。
+   表间关联、子查询与业务条件中引用的「对方实体标识」必须使用 **`docs/AI_STANDARDS.md` §10.4** 定义的 **`uuid` 业务主键列**（`Uuid.uuid()` / **`Snow.uuid()`** 等），**禁止**使用自增 **`Long id`** 作为关联键或对外资源 ID。**`id`** 仅限生成 CRUD 与技术主键回填场景（见 §1.1）。
 
 ### 1.1 关联列与 Wrapper 写法（承接 STANDARDS §10.4）
 
-- **FK 列命名**：与被引用实体的业务主键列语义一致（如 `xxx_biz_key`、`xxx_uuid`），存 **业务主键值**，不存对方 **`id`**。  
+- **第二主键选型**：默认唯一 **`uuid`**；**每真人一行**用 **`UserBased` + 唯一 `user`**（仅 `sys_user.uuid`）。业务 **`user`** 外键可存真人或机器人 **`uuid`**（§1.1）。见 **`docs/AI_DUAL_KEY.md` §1.1、§3.3～§3.4**。
+- **`comment`**：第二主键与外键列为 **`{概念}:说明`** 或 **`{概念}ID:说明`**（新代码优先 **`{概念}`**；存量均保持）。见 **`docs/AI_DUAL_KEY.md` §3.1～§3.2**。  
+- **外键 Java 字段名**：**`{concept}`** 或 **`{concept}Id`**（`concept` 为单个简洁英文单词）；**新代码优先 `{concept}`**；存量 **`{concept}Id`** **保持不回退**。列内存 **对方 `uuid` 值**，不存对方 **`id`**。  
 - **JOIN / `eq`**：条件侧使用上述业务列 + **`RuntimeSql` / `WrapperColumns`** 按 **`docs/AI_DATABASE.md` §4.0** 引用列名；禁止假设「全世界都用 `id` 关联」。  
-- **雪花 ID**：长整型业务主键生成使用 **`cn.org.autumn.utils.SnowflakeId`**（多节点须配置 **`autumn.snowflake.worker-id`** / **`autumn.snowflake.datacenter-id`**）；字符串业务主键优先 **`Uuid.uuid()`**。
+- **字符串 uuid**：**`UuidBased`** + **`Uuid.uuid()`**（32 位小写 hex）。  
+- **雪花 Long uuid**：**`SnowBased`** + **`Snow.uuid()`**（多节点须配置 **`autumn.snowflake.worker-id`** / **`autumn.snowflake.datacenter-id`**）。  
+- **自动填充**：**`AutoIdService`**（经 **`ModuleService` 继承链**）在写库前补全空 **`uuid`**；详见 **`docs/AI_DUAL_KEY.md`**。  
+- **`SnowflakeId`**：已废弃，实现委托 **`Snow`**；新代码统一 **`Snow.uuid()`**。
 
 ---
 

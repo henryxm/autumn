@@ -6,7 +6,6 @@ import cn.org.autumn.model.Parameterized;
 import cn.org.autumn.model.QueueMessage;
 import cn.org.autumn.table.annotation.Table;
 import com.baomidou.mybatisplus.mapper.BaseMapper;
-import com.baomidou.mybatisplus.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -17,7 +16,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 @Slf4j
-public abstract class BaseQueueService<M extends BaseMapper<T>, T> extends DialectService<M, T> implements Parameterized {
+public abstract class BaseQueueService<M extends BaseMapper<T>, T> extends AutoIdService<M, T> implements Parameterized {
 
     @Autowired
     protected QueueService queueService;

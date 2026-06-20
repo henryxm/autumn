@@ -307,10 +307,10 @@ scan_group_g_extra() {
   if [[ "${n}" -eq 0 ]]; then echo "${C_DIM}(无)${C_RST}"; fi
   print_group_summary "G1" "${n}"
 
-  subsection "G2 业务代码中的 SnowflakeId / Uuid.uuid" "插入前赋值提示（非违规）。"
+  subsection "G2 业务代码中的 Uuid.uuid / Snow.uuid / SnowflakeId" "插入前赋值提示（非违规）。"
   local n
-  n="$(count_matches "${GEN_GLOB_ARGS[@]}" --glob "${JAVA_GLOB}" 'SnowflakeId\.(next|getDefault)|Uuid\.uuid\(\)')"
-  emit_matches_or_none "${GEN_GLOB_ARGS[@]}" --glob "${JAVA_GLOB}" 'SnowflakeId\.(next|getDefault)|Uuid\.uuid\(\)' | head -25
+  n="$(count_matches "${GEN_GLOB_ARGS[@]}" --glob "${JAVA_GLOB}" 'Uuid\.uuid\(\)|Snow\.uuid\(\)|SnowflakeId\.(next|getDefault)')"
+  emit_matches_or_none "${GEN_GLOB_ARGS[@]}" --glob "${JAVA_GLOB}" 'Uuid\.uuid\(\)|Snow\.uuid\(\)|SnowflakeId\.(next|getDefault)' | head -25
   print_group_summary "G2" "${n}"
 }
 

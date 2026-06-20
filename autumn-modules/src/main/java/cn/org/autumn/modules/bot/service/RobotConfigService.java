@@ -81,7 +81,7 @@ public class RobotConfigService extends ModuleService<RobotConfigDao, RobotConfi
             throw new CodeException("请至少指定一项配额");
         }
         Date now = new Date();
-        RobotConfigEntity config = baseMapper.getByUuid(userUuid);
+        RobotConfigEntity config = baseMapper.getUser(userUuid);
         if (config == null) {
             insertNewConfig(userUuid, maxRobots, maxTokens, maxHooks, now);
         } else {
@@ -99,7 +99,7 @@ public class RobotConfigService extends ModuleService<RobotConfigDao, RobotConfi
         assertQuotaValue("令牌数", tokens);
         assertQuotaValue("Hook数", hooks);
         RobotConfigEntity config = new RobotConfigEntity();
-        config.setUuid(userUuid);
+        config.setUser(userUuid);
         config.setMaxRobots(robots);
         config.setMaxTokens(tokens);
         config.setMaxHooks(hooks);

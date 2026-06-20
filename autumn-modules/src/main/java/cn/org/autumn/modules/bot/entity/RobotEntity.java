@@ -2,6 +2,7 @@ package cn.org.autumn.modules.bot.entity;
 
 import cn.org.autumn.annotation.Cache;
 import cn.org.autumn.config.AccountHandler;
+import cn.org.autumn.entity.UuidBased;
 import cn.org.autumn.model.UserContext;
 import cn.org.autumn.modules.sys.entity.User;
 import cn.org.autumn.table.annotation.Column;
@@ -13,14 +14,20 @@ import com.baomidou.mybatisplus.annotations.TableName;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.io.Serializable;
 import java.util.Date;
 
+/**
+ * 机器人 API 调用身份（{@code bot_robot}），与 {@link cn.org.autumn.modules.sys.entity.SysUserEntity} 为框架层<strong>不同类型</strong>。
+ * <p>
+ * 二者 {@code uuid} 由 {@link cn.org.autumn.modules.sys.service.UuidNamespaceService} 统一分配，<strong>禁止相同</strong>。
+ * 业务层常将机器人视作用户：业务表 {@code user} 列可存本实体 {@code uuid} 或真人 {@code uuid}（见 {@code docs/AI_DUAL_KEY.md} §1.1）。
+ * {@code owner} 仅表示主人真人 {@code sys_user.uuid}。实现 {@link cn.org.autumn.model.UserContext}，{@link #isRobot()} 为 {@code true}。
+ */
 @Getter
 @Setter
 @TableName("bot_robot")
 @Table(value = "bot_robot", comment = "机器人:系统用户创建的API调用身份")
-public class RobotEntity implements Serializable, AccountHandler.Account, UserContext {
+public class RobotEntity implements UuidBased, AccountHandler.Account, UserContext {
     private static final long serialVersionUID = 1L;
 
     public static final int STATUS_ACTIVE = 1;
@@ -37,10 +44,10 @@ public class RobotEntity implements Serializable, AccountHandler.Account, UserCo
     private Long id;
 
     @Cache
-    @Column(length = 32, comment = "标识:全局唯一业务主键", isUnique = true)
+    @Column(length = 32, comment = "机器人:全局唯一业务主键", isUnique = true)
     private String uuid;
 
-    @Column(length = 32, comment = "主人:所属用户uuid")
+    @Column(length = 32, comment = "用户:主人sys_user.uuid")
     @Index
     private String owner;
 

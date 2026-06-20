@@ -8,7 +8,7 @@ public class RobotConfigDaoSql extends RuntimeSql {
         return quote("bot_robot_config");
     }
 
-    public String getByUuid() {
-        return "SELECT * FROM " + tbl() + " WHERE " + quote("uuid") + " = #{uuid}" + limitOne();
+    public String getUser() {
+        return "SELECT * FROM " + tbl() + " WHERE " + quote("user") + " = #{user}" + limitOne();
     }
 }
