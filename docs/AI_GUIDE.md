@@ -62,7 +62,7 @@
 - **定时任务**：生产代码 **禁止 `@Scheduled`**；使用 **`LoopJob.*` + `@JobMeta`** 或框架 **`schedulejob` + cron**。
 - **`@RequiresPermissions`**：仅代码生成/后台管理语义；**新接口一律不用**，普通用户接口用**登录态**鉴权（见 `docs/AI_STANDARDS.md` §6）。
 - **FreeMarker 页面**：避免与 FTL 冲突；条件等用 **`<!-- -->`** 包裹以保持 HTML 规范；**`<script>` 内插值**须保证渲染后 JS 合法，必要时注释/拆脚本/`<#noparse>`（见 `docs/AI_STANDARDS.md` §7）。
-- **实体与库表**：框架扫描实体并依开关**自动建表/更新**；**禁止**常规 **`DDL .sql`** 初始化脚本（§8）。模块目录名 = 包段 = **表前缀**，**勿**作实体类名前缀（§9）。表/字段 **`comment`** 用 **半角 `:`** 分隔短标题与说明；**凡 `@Column(isUnique=true)` 的字段禁止再使用 `@Index`**（§10.2，无例外）；整型/布尔优先**基本类型 + 默认值**（§10）。**默认**每个实体须有自增 **`id`**（仅后台生成 CRUD）+ **唯一业务主键**（`Uuid.uuid()` / **`SnowflakeId`** 等），关联与对外 ID **禁止**用 **`id`**（§10.4；SQL 侧见 **`docs/AI_DATABASE.md` §1.1**）。
+- **实体与库表**：框架扫描实体并依开关**自动建表/更新**；**禁止**常规 **`DDL .sql`** 初始化脚本（§8）。模块目录名 = 包段 = **表前缀**，**勿**作实体类名前缀（§9）。表/字段 **`comment`** 用 **半角 `:`** 分隔短标题与说明；**凡 `@Column(isUnique=true)` 的字段禁止再使用 `@Index`**（§10.2，无例外）；整型/布尔优先**基本类型 + 默认值**（§10）。**默认**每个实体须有自增 **`id`** + 业务第二主键（**`uuid`** 或按用户唯一的 **`user`** / **`UserBased`**，见 **`docs/AI_DUAL_KEY.md`** §1、§3.3）；关联与对外 ID **禁止**用 **`id`**（§10.4；SQL 见 **`docs/AI_DATABASE.md` §1.1**）。
 - **生成层**：**gen**、`SitePages` 生成的 **Pages/html/js** **不修改、不加逻辑**；在生成给出的**空壳** `Controller/Service/Dao` 中实现（§11）。
 - **SQL**：新代码 **禁止** Dao 上内联 SQL，**必须** **Provider**（§12）；多库见 `docs/AI_POSTGRESQL.md`。
 - **调用链**：**Controller** 只用 **Service**；**Service** 用 **`baseMapper`**，**勿**再注入本 Dao；跨域 **调别的 Service**，**勿**用他域 **Dao**（§13）。

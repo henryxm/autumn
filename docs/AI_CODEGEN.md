@@ -57,7 +57,7 @@
 1. **对齐需求与边界**，列出领域实体、关键字段、查询维度、缓存与异步是否需要。
 2. **编写实体类**（放在目标模块 `entity` 包下），严格遵循：
    - **`docs/AI_STANDARDS.md`** 第 8～10 节：**`@TableName` + `@Table(comment=…)`（`@Table` 不写 `value`，见 **`docs/AI_BOOT.md` §3.2**）、**`@Column` / `@Index` / `@Indexes`**、`comment` 为 **`简介名:说明`** 且冒号前简介名互异（§10.1）、模块目录 = 包段 = 表前缀且**不把前缀写进类名**；**`isUnique=true` 禁止再 `@Index`**（§10.2）等。
-   - **`docs/AI_STANDARDS.md` §10.4**：自增 **`Long id`** 仅服务后台生成 CRUD；**须另有唯一业务主键**（`Uuid.uuid()` / **`SnowflakeId`**），插入前赋值；关联与对外 ID **禁止**用 **`id`**。
+   - **`docs/AI_STANDARDS.md` §10.4** / **`docs/AI_DUAL_KEY.md`**：自增 **`id`** 仅服务后台生成 CRUD；第二主键为 **`uuid`**（**`UuidBased`** / **`SnowBased`**）或按用户唯一的 **`user`**（**`UserBased`**）；非按用户唯一时 **`user`** 仅可作非唯一外键。
 3. **缓存声明**：在实体上使用 **`cn.org.autumn.annotation.Cache`** / **`@Caches`**（见本文第 4.1 节），声明字段级或类级复合键、**`name`** 区分同一实体上的多套缓存策略、**`unique`** 区分单值与列表语义、**`create`** 是否与自动建记录行为配合。
 4. **依赖框架能力，禁止重复造轮子**：业务 Service 默认继承 **`ModuleService`**，自动具备 **CRUD、菜单/多语言初始化、缓存、队列** 等能力（继承链见 **`docs/AI_MAP.md`** 与本文第 4 节）。**不要**自建平行缓存中间层、消息封装或调度线程替代 **`LoopJob`**。
 
@@ -90,7 +90,14 @@
 
 ## 4. 基类能力详解（实现前必读，避免重复实现）
 
-以下类均在 **`autumn-lib`**，业务 **`ModuleService`** 继承链已包含 **`ShareCacheService` → `BaseCacheService` → `BaseQueueService`**（见 **`docs/AI_MAP.md`** 继承链说明）。
+以下类均在 **`autumn-lib`**，业务 **`ModuleService`** 继承链已包含 **`ShareCacheService` → `BaseCacheService` → `BaseQueueService` → `AutoIdService`**（见 **`docs/AI_MAP.md`** 继承链说明；双键详见 **`docs/AI_DUAL_KEY.md`**）。
+
+### 4.0 `AutoIdService` 与第二主键 `uuid`
+
+- **职责**：写库前为 **`UuidBased`** / **`SnowBased`** 实体自动补全空 **`uuid`**（不覆盖已有值）。  
+- **默认生效**：凡 **`extends ModuleService`** 的 Service 已具备；实体只需 `implements UuidBased` 或 `SnowBased`。  
+- **手动调用**：`AutoIdService.autoId(entity)`（非继承链场景）。  
+- **纪律**：**`id`** 仅 gen CRUD；关联与 API 只用 **`uuid`**。
 
 ### 4.1 `BaseCacheService` 与 `@Cache` / `@Caches`
 
@@ -127,6 +134,8 @@
 
 | 主题 | 文档 |
 |------|------|
+| 命名与 `comment`（§3.1～§3.2） | **`docs/AI_DUAL_KEY.md`** |
+| **`UserBased`** / 按用户唯一 `user` | **`docs/AI_DUAL_KEY.md` §3.3、§4.3** |
 | 应用层强制规范与生成层禁止项 | **`docs/AI_STANDARDS.md`** 第 11～14 节 |
 | ModuleService 继承链与生成矩阵速查 | **`docs/AI_MAP.md`** 约 2.7、2.8A |
 | **`TagRunnable` / `onFinished` / 内存队列状态机** | **`docs/AI_ASYNC_TASK.md`** |

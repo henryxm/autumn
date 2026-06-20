@@ -12,6 +12,8 @@ package cn.org.autumn.database.runtime;
  */
 public class RuntimeSql {
 
+    public static final RuntimeSql sql = new RuntimeSql();
+
     /**
      * 当前线程/上下文下的运行时方言（由注册表解析，通常为 Spring 管理的 {@link RoutingRuntimeSqlDialect} 等）。
      */

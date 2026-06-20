@@ -15,7 +15,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 @Slf4j
-public abstract class BaseQueueService<M extends BaseMapper<T>, T> extends CompatibleService<M, T> {
+public abstract class BaseQueueService<M extends BaseMapper<T>, T> extends AutoIdService<M, T> {
 
     @Autowired
     protected QueueService queueService;

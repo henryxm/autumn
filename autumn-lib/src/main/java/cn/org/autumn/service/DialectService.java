@@ -8,6 +8,8 @@ import cn.org.autumn.model.Parameterized;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 
+import static cn.org.autumn.database.runtime.RuntimeSql.sql;
+
 /**
  * 服务层方言封装：与 {@link RuntimeSql} 同源能力，供 {@code EntityWrapper}、手写 SQL 条件等统一使用，
  * 避免在具体 Service 中重复 {@code RuntimeSqlDialectRegistry.get()} 与样板方法。
@@ -21,8 +23,6 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
  * @see cn.org.autumn.database.runtime.RuntimeSqlDialectRegistry
  */
 public abstract class DialectService<M extends BaseMapper<T>, T> extends ServiceImpl<M, T> implements Parameterized {
-
-    private final RuntimeSql sql = new RuntimeSql();
 
     /**
      * 与 {@link RuntimeSql#dialect()} 一致，便于需要直接访问方言接口时使用。
@@ -84,17 +84,23 @@ public abstract class DialectService<M extends BaseMapper<T>, T> extends Service
         return sql.enabledFalseSqlLiteral();
     }
 
-    /** @see RuntimeSql#booleanColumnAsTinyInt01(String) */
+    /**
+     * @see RuntimeSql#booleanColumnAsTinyInt01(String)
+     */
     public String booleanColumnAsTinyInt01(String quotedColumn) {
         return sql.booleanColumnAsTinyInt01(quotedColumn);
     }
 
-    /** @see RuntimeSql#limitOffsetSuffix(long, long) */
+    /**
+     * @see RuntimeSql#limitOffsetSuffix(long, long)
+     */
     public String limitOffsetSuffix(long limit, long offset) {
         return sql.limitOffsetSuffix(limit, offset);
     }
 
-    /** @see RuntimeSql#lowerColumnContainsNeedle(String, String) */
+    /**
+     * @see RuntimeSql#lowerColumnContainsNeedle(String, String)
+     */
     public String lowerColumnContainsNeedle(String quotedColumn, String mybatisNeedleParam) {
         return sql.lowerColumnContainsNeedle(quotedColumn, mybatisNeedleParam);
     }
@@ -108,32 +114,44 @@ public abstract class DialectService<M extends BaseMapper<T>, T> extends Service
         return sql.timestampBucketDay(quotedColumn);
     }
 
-    /** @see RuntimeSql#timestampBucketMonth(String) */
+    /**
+     * @see RuntimeSql#timestampBucketMonth(String)
+     */
     public String timestampBucketMonth(String quotedColumn) {
         return sql.timestampBucketMonth(quotedColumn);
     }
 
-    /** @see RuntimeSql#timestampBucketYear(String) */
+    /**
+     * @see RuntimeSql#timestampBucketYear(String)
+     */
     public String timestampBucketYear(String quotedColumn) {
         return sql.timestampBucketYear(quotedColumn);
     }
 
-    /** @see RuntimeSql#timestampBucketIsoWeek(String) */
+    /**
+     * @see RuntimeSql#timestampBucketIsoWeek(String)
+     */
     public String timestampBucketIsoWeek(String quotedColumn) {
         return sql.timestampBucketIsoWeek(quotedColumn);
     }
 
-    /** @see RuntimeSql#limitOffsetMybatisParams(String, String) */
+    /**
+     * @see RuntimeSql#limitOffsetMybatisParams(String, String)
+     */
     public String limitOffsetMybatisParams(String limitPh, String offsetPh) {
         return sql.limitOffsetMybatisParams(limitPh, offsetPh);
     }
 
-    /** @see RuntimeSql#epochMillisFromTimestamp(String) */
+    /**
+     * @see RuntimeSql#epochMillisFromTimestamp(String)
+     */
     public String epochMillisFromTimestamp(String quotedTimestampExpr) {
         return sql.epochMillisFromTimestamp(quotedTimestampExpr);
     }
 
-    /** @see RuntimeSql#updateWithJoin(String, String, String, String, String, String, String) */
+    /**
+     * @see RuntimeSql#updateWithJoin(String, String, String, String, String, String, String)
+     */
     public String updateWithJoin(String targetTable, String targetAlias, String joinTable, String joinAlias, String joinOn, String quotedColumn, String extraWhere) {
         return sql.updateWithJoin(targetTable, targetAlias, joinTable, joinAlias, joinOn, quotedColumn, extraWhere);
     }

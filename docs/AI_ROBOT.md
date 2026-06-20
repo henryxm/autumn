@@ -159,6 +159,23 @@ sequenceDiagram
 | 令牌 + `userUuid` query/header | 二者须一致，否则视为未认证 |
 | 仅 `userUuid`、无令牌 | 遗留 minclouds 行为（内网/网关场景）；生产开放 API 应始终带令牌 |
 
+### 3.5 业务表 `user` 字段：真人或机器人 uuid
+
+框架层 **`SysUserEntity`** 与 **`RobotEntity`** 是**两种类型**，各自 **`uuid` 全局互斥**（`UuidNamespaceService` 统一分配，禁止同一字符串同时出现在 `sys_user` 与 `bot_robot`）。
+
+业务层为简化开发，通常**将机器人视作一种用户**，**不**为机器人单独复制一套业务表：
+
+| 场景 | 约定 |
+|------|------|
+| 业务表 **`user`** 列（非 `UserBased` 第二主键） | 存 **`UserContext#getUuid()`**，可为 **`sys_user.uuid`** 或 **`bot_robot.uuid`** |
+| 按真人唯一的 **`UserBased.user`**（如 `bot_robot_config`） | **仅** **`sys_user.uuid`** |
+| **`RobotEntity.owner`** | **仅** 主人真人 **`sys_user.uuid`** |
+| 解析 | **`UserContextService#getUserContext(uuid)`**；需区分机器/人时用 **`isRobot()`** |
+
+写入示例：创建业务记录时 `entity.setUser(ctx.getUuid())`，勿假设 `user` 列只能是真人 uuid。
+
+详见 **`docs/AI_DUAL_KEY.md` §1.1、§3.4**。
+
 ---
 
 ## 4. 接收 Hook 回调（HTTP 服务端）

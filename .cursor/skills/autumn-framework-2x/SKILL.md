@@ -4,13 +4,13 @@ description: >-
   Autumn 2.0.0 line ONLY: JDK 8, Spring Boot 2.7.18, MyBatis-Plus 2.x, javax.* namespace.
   Use on autumn master (artifact 2.0.0) or business apps pinned to that stack.
   NOT for Autumn 3.0.0 / JDK 17+ / Spring Boot 3.5 / Jakarta — use autumn-framework-3x on the 3.0.0 branch when available.
-  Enforces docs/AI_STANDARDS.md + docs/AI_DATABASE.md: never combine @Column(isUnique=true) with @Index on same field (§10.2); dual-key entities (auto Long id for gen CRUD only + unique biz key via Uuid.uuid()/SnowflakeId for FK/API; never use id as association); entity-driven schema via framework scan (no routine DDL .sql);
+  Enforces docs/AI_STANDARDS.md + docs/AI_DATABASE.md + docs/AI_DUAL_KEY.md: never combine @Column(isUnique=true) with @Index on same field (§10.2); dual-key entities (auto Long id for gen CRUD only + biz uuid via UuidBased/SnowBased or UserBased/unique user per-user tables; never use id as association); entity-driven schema via framework scan (no routine DDL .sql);
   module dir = package = table prefix; Dao SQL only via MyBatis Provider (*DaoSql extends RuntimeSql), never inline @Select/@Update;
   No hardcoded SQL dialect quotes in Java (use RuntimeSql quote/columnInWrapper or WrapperColumns.columnInWrapper / orderByColumnExpression / entityWrapperAllEqQuoted per docs/AI_DATABASE.md §4.0);
   Prefer import over fully qualified class names unless name clash (docs/AI_CODE_STYLE.md §7);
   log.info/debug/warn/error must be one line, no line breaks in the call (docs/AI_CODE_STYLE.md §8);
   Controller must not use Dao; Service uses baseMapper; gen/Pages/list.html/js never hand-edited; statics/pages/Site/PageAware.
-  Read docs/AI_CODEGEN.md, docs/AI_DATABASE.md. Bot/robot: read docs/AI_ROBOT.md + docs/AI_ROBOT_API.md (rbt_, Hook, message/push, cn.org.autumn.modules.bot).
+  Read docs/AI_CODEGEN.md, docs/AI_DATABASE.md, docs/AI_DUAL_KEY.md. Bot/robot: read docs/AI_ROBOT.md + docs/AI_ROBOT_API.md (rbt_, Hook, message/push, cn.org.autumn.modules.bot).
   scripts/constraints-scan is optional: run only when the user explicitly asks for a constraint audit, CI-style check, or phrases like 约束扫描/规范体检; see skill section "约束扫描（按需）".
   Triggers on cn.org.autumn 2.0.0, Spring Boot 2.7, JDK 8, ModuleService, RuntimeSql, PageAware, bot, robot, rbt_, safe, PayUserPin, PayPinVerifier, pay password, 支付密码, 手势密码, 生物识别.
 ---
@@ -117,7 +117,7 @@ description: >-
 - 框架扫描 + **`autumn.table.*`** 对齐表结构；**禁止**常规 **`DDL .sql`**。
 - **表名/类名（强制）**：见 **`docs/AI_BOOT.md` §3.2**、**`docs/AI_STANDARDS.md` §9**。摘要：`{模块名}_` + 类名去 `Entity` 蛇形；表名仅 **`@TableName`**，**`@Table` 不写 `value`**（框架自动合并）；Dao `quote` 与 `@TableName` 一致；类名不含模块前缀。示例：`PayUserPinEntity` + `@TableName("safe_pay_user_pin")` + `@Table(comment = "...")`。
 - **`@Column.comment`**：简介名互异（§10.1）；**`isUnique=true` 禁止再 `@Index`**（§10.2）。
-- **双键**：自增 `id` 仅 gen CRUD；业务键 `uuid` 等（§10.4），**禁止**用 `id` 做关联。
+- **双键**：第二主键 **`uuid`** / 按真人唯一的 **`UserBased`**；业务 **`user`** 列可存 **`sys_user` 或 `bot_robot` 的 uuid**（互斥分配）。详见 **`docs/AI_DUAL_KEY.md`** §1.1、§3。
 
 ## 多库与 SQL（与 `docs/AI_DATABASE.md` 一致）
 
@@ -180,7 +180,7 @@ description: >-
 - **Controller** 未碰 **Dao**？未手改 **gen / list.html/js**？  
 - 新页有 **`Site` + `@PageAware`**？  
 - 生成路径与 **GenUtils** 一致？
-- 新实体是否有 **业务主键**且关联列未误用 **`Long id`**？多节点雪花是否配置 **`autumn.snowflake.worker-id` / `datacenter-id`**？
+- 按用户唯一表是否 **`UserBased` + 唯一 `user`**（禁止 `uuid` 第二主键）？非按用户唯一表的 **`user`** 是否未标 `isUnique`？第二主键 / 外键 **`comment`** 是否符合 **`docs/AI_DUAL_KEY.md`** §3？
 - **`isUnique=true` 的 `@Column` 是否未再叠 `@Index`**（§10.2）？
 - 机器人相关：是否已读 **`docs/AI_ROBOT.md` + `docs/AI_ROBOT_API.md`**？管理 API 与 `message/push` 鉴权是否分离？Hook 验签是否用原始 body？
 - **safe 支付**：闸门 assess → verify 链路完整？`modules.pay` 无残留？金额是否 `amountCent`？

@@ -102,7 +102,7 @@
 
 - **禁止**在研发交付物中新增**用于初始化或变更库结构的独立 DDL `.sql` 文件**作为常规做法（例如随代码提交的 `schema.sql` / `init.sql` 专供手工执行）。**表结构以实体注解 + 框架同步为准**；若生产必须离线 DDL，走发布流程与 DBA 规范，**不**作为日常开发默认路径。
 
-- **实体主键纪律**（与 **§10.4** 一致）：自增 **`id`** 仅供后台生成器与框架默认 CRUD；**业务侧关联、外键与对外标识**必须使用 **§10.4** 中的**业务主键**字段（`Uuid.uuid()` / `SnowflakeId` 等），**禁止**用自增 **`id`** 承担这些职责。
+- **实体主键纪律**（与 **§10.4** 一致）：自增 **`id`** 仅供后台生成器与框架默认 CRUD；业务侧关联与对外标识使用 **`uuid`** 业务键（**`UuidBased`** / **`SnowBased`**）或按用户唯一表的 **`user`**（**`UserBased`**），见 **`docs/AI_DUAL_KEY.md`**；**禁止**用自增 **`id`** 承担这些职责。
 
 ## 9. 模块目录、包名、表前缀与实体命名（强制）
 
@@ -143,14 +143,16 @@
    - **禁止**：在业务代码、对外 API、缓存键、日志对外暴露中将其作为资源标识；**禁止**作为其它表的外键或被其它表引用；**禁止**在实体关系、领域模型中用它表达「业务上的同一实体」——这些职责全部由下述 **业务主键** 承担。
 
 2. **业务主键（对外与关联唯一标识）**  
-   - **必须**单独增加一列，在库表上具备 **全局唯一**（推荐 **`@Column(isUnique = true)`** 表示唯一约束；若采用该写法，**禁止**再对本字段叠加 **`@Index`**，见 **§10.2**。  
-   - **插入前在应用层生成**，不可依赖自增：  
-     - **字符串**：推荐 **`cn.org.autumn.utils.Uuid#uuid()`**，输出为 **去掉连字符的小写 32 位十六进制**（与现有工程约定一致）。  
-     - **长整型**：推荐 **`cn.org.autumn.utils.SnowflakeId`**（`nextId()` / 或按节点配置 `workerId`、`datacenterId` 的实例），保证去重、时序近似、**不可像连续整数一样被遍历猜测**（仍须注意分布式下为各 JVM 配置不同 worker/机房号，避免重复）。  
-   - **必须**用于：表间关联（外键列存业务主键值）、对外接口路径与 body 中的资源 ID、缓存与消息中的实体引用等。  
+   - **通用实体（默认）**：须增加唯一列 **`uuid`**（`String` 默认 **`length = 32`**，或雪花 **`Long`**），实现 **`UuidBased`** / **`SnowBased`**；列名固定 **`uuid`**；**`@Column.comment`** 为 **`{概念}:说明`** 或 **`{概念}ID:说明`**（新代码优先 **`{概念}`**）。细则 **`docs/AI_DUAL_KEY.md` §3.1**。  
+   - **按用户唯一（每用户一行）**：第二主键改为唯一列 **`user`**（`String`，`length = 32`，**`isUnique = true`**），实现 **`UserBased`**，存用户 **`uuid`** 值；**禁止**再定义 **`uuid`** 第二主键。细则 **`docs/AI_DUAL_KEY.md` §3.3、§4.3**。  
+   - **非按用户唯一且仍有 `uuid` 第二主键时**：可增加**非唯一** **`user`** 外键（调用主体，可为真人或机器人 uuid，§1.1），**禁止**对 **`user`** 设 **`isUnique = true`**。细则 **`docs/AI_DUAL_KEY.md` §3.4**。  
+   - **唯一约束纪律**：业务第二主键列（**`uuid`** 或唯一 **`user`**）推荐 **`@Column(isUnique = true)`**；**禁止**再叠 **`@Index`**（§10.2）。  
+   - **生成与填充**：**`uuid`** 经 **`Uuid` / `Snow`** 与 **`AutoIdService`** 自动补全；**`UserBased.user`** 由业务插入前赋值，**不**走 **`AutoIdService`**。  
+   - **外键列（引用它实体 `uuid`）**：Java 字段名 **`{concept}`** 或 **`{concept}Id`**；**新代码优先 `{concept}`**；存量 **`{concept}Id`** **保持不回退**。业务泛化 **`user`** 可存 **`sys_user.uuid`** 或 **`bot_robot.uuid`**（§1.1）；**`UserBased.user`**、**`RobotEntity.owner`** 仅真人 uuid。细则 **`docs/AI_DUAL_KEY.md` §3.2～§3.4**。  
+   - **必须**用于：表间关联、对外资源 ID、缓存与消息引用等；**禁止**用自增 **`id`** 承担上述职责。  
    - **例外**：仅在书面需求中写明「本实体豁免业务主键」或「允许使用自增 id 关联」时方可偏离；默认无例外。
 
-**小结**：**`id`** = 内部技术与生成 CRUD；**业务主键列** = 唯一业务身份与全部关联。**禁止**把 **`id`** 当成业务主键使用。
+**小结**：**`id`** = 内部技术与生成 CRUD；**业务键** = **`uuid`**（默认）或唯一 **`user`**（按用户唯一表）。**禁止**把 **`id`** 当成业务主键；**禁止**按用户唯一表同时使用 **`uuid`** 与唯一 **`user`** 两个第二主键。
 
 ## 11. 生成层边界与业务落点
 
@@ -224,7 +226,7 @@
 | 升级扫描与迁移 | `docs/AI_UPGRADE.md` |
 | ModuleService、缓存、队列、LoopJob、生成矩阵 | `docs/AI_MAP.md` |
 | `isUnique=true` 与 `@Index` 禁止叠用 | **§10.2**；Boot/MAP 索引收集见 **`docs/AI_BOOT.md` §3**、**`docs/AI_MAP.md` §2.10.2** |
-| 双键模型（自增 `id` + 业务主键）、`Uuid` / `SnowflakeId` | **§10.4**；关联与 SQL 纪律见 **`docs/AI_DATABASE.md` §1.1 |
+| 双键模型、`UuidBased` / `SnowBased` / **`UserBased`** / `AutoIdService` | **§10.4**、**`docs/AI_DUAL_KEY.md` §3～§4**；SQL 见 **`docs/AI_DATABASE.md` §1.1** |
 | 代码生成端到端流程、三步开发节奏、缓存/队列基类详解 | `docs/AI_CODEGEN.md` |
 | 加解密 | `docs/AI_CRYPTO.md` |
 | 多项目协作与术语 | `docs/AI_GOVERNANCE.md` |
@@ -234,4 +236,4 @@
 ## 17. 维护约定
 
 - 新增与「实体/库表/Dao/资源/页面」相关的团队规则时，**优先更新本文**，并同步 `docs/AI_INDEX.md`、`docs/AI_GUIDE.md` 摘要；**多库类型、方言、Wrapper/Provider 纪律**以 **`docs/AI_DATABASE.md`** 为落地专篇，变更时同步该文 §2；**老旧项目注解 Dao / 方言 Wrapper 迁移与扫描清单**见 **`docs/AI_DATABASE.md` §8** 与 **`docs/AI_UPGRADE.md` §3.3**；与代码生成流程或三步节奏相关的补充可落在 **`docs/AI_CODEGEN.md`**。**Redis TTL 与 `RedisExpireUtil`** 以 **`docs/REDIS_TTL_GUIDE.md`** 为专篇，变更 API 或扫描脚本时同步 **`autumn-lib`** 与 **`scripts/constraints-scan`**（H 组）。
-- 若与 `docs/AI_MAP.md` §4「开发决策规则」表述重叠，以**本文 §2～§14**、**§15** 为应用层与数据访问纪律的权威表述；MAP 保留框架能力级硬约束与类索引。**索引与唯一约束叠用纪律（§10.2）** 变更时同步 **`docs/AI_BOOT.md` §3**、**`docs/AI_MAP.md` §2.10.2**。**实体双键（§10.4）** 变更时同步 **`docs/AI_DATABASE.md` §1.1** 与 **`autumn-lib`** 中 **`Uuid` / `SnowflakeId`** 说明（若工具 API 有变）。
+- 若与 `docs/AI_MAP.md` §4「开发决策规则」表述重叠，以**本文 §2～§14**、**§15** 为应用层与数据访问纪律的权威表述；MAP 保留框架能力级硬约束与类索引。**索引与唯一约束叠用纪律（§10.2）** 变更时同步 **`docs/AI_BOOT.md` §3**、**`docs/AI_MAP.md` §2.10.2**。**实体双键（§10.4）** 变更时同步 **`docs/AI_DUAL_KEY.md`**、**`docs/AI_DATABASE.md` §1.1** 与 **`autumn-lib`** 中 **`Uuid` / `Snow` / `AutoIdService`** 说明（若工具 API 有变）。

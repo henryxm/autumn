@@ -23,6 +23,13 @@ import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 
+/**
+ * 系统真人用户（{@code sys_user}），与 {@link cn.org.autumn.modules.bot.entity.RobotEntity} 为框架层<strong>不同类型</strong>。
+ * <p>
+ * 二者 {@code uuid} 由 {@link cn.org.autumn.modules.sys.service.UuidNamespaceService} 统一分配，<strong>禁止相同</strong>。
+ * 业务表泛化 {@code user} 列可存本实体 {@code uuid}；机器人调用时则存 {@code RobotEntity#getUuid()}（见 {@code docs/AI_DUAL_KEY.md} §1.1）。
+ * 实现 {@link cn.org.autumn.model.UserContext}，{@link #isRobot()} 为 {@code false}；数据权限主体为自身 {@link #getUuid()}。
+ */
 @Getter
 @Setter
 @TableName("sys_user")

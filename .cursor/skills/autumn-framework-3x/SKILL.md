@@ -4,12 +4,12 @@ description: >-
   Autumn 3.0.0 line ONLY: JDK 17+, Spring Boot 3.5.x, MyBatis-Plus 3.x, jakarta.* namespace.
   Use on autumn branch 3.0.0 (artifact 3.0.0) or business apps pinned to that stack.
   NOT for Autumn 2.0.0 / JDK 8 / Spring Boot 2.7 / javax-only — use autumn-framework-2x on master.
-  Enforces docs/AI_STANDARDS.md + docs/AI_DATABASE.md: never combine @Column(isUnique=true) with @Index on same field (§10.2); dual-key entities (auto Long id for gen CRUD only + unique biz key via Uuid.uuid()/SnowflakeId for FK/API; never use id as association); entity-driven schema; Dao SQL only via MyBatis Provider (*DaoSql extends RuntimeSql);
+  Enforces docs/AI_STANDARDS.md + docs/AI_DATABASE.md + docs/AI_DUAL_KEY.md: never combine @Column(isUnique=true) with @Index on same field (§10.2); dual-key entities (auto Long id for gen CRUD only + biz uuid via UuidBased/SnowBased or UserBased/unique user; never use id as association); entity-driven schema; Dao SQL only via MyBatis Provider (*DaoSql extends RuntimeSql);
   No hardcoded dialect quotes in Java (RuntimeSql quote/columnInWrapper or WrapperColumns per docs/AI_DATABASE.md §4.0);
   Prefer import over fully qualified class names unless name clash (docs/AI_CODE_STYLE.md §7);
   log.info/debug/warn/error must be one line, no line breaks in the call (docs/AI_CODE_STYLE.md §8);
   Controller must not use Dao; Service uses baseMapper; gen/Pages/list.html/js never hand-edited; statics/pages/Site/PageAware.
-  Read docs/AI_CODEGEN.md, docs/AI_DATABASE.md. Bot/robot: read docs/AI_ROBOT.md + docs/AI_ROBOT_API.md (rbt_, Hook, message/push, cn.org.autumn.modules.bot); web 集成测试见 web/docs/INTEGRATION_TEST.md（基类 integration.base.IntegrationTest）。
+  Read docs/AI_CODEGEN.md, docs/AI_DATABASE.md, docs/AI_DUAL_KEY.md. Bot/robot: read docs/AI_ROBOT.md + docs/AI_ROBOT_API.md (rbt_, Hook, message/push, cn.org.autumn.modules.bot); web 集成测试见 web/docs/INTEGRATION_TEST.md（基类 integration.base.IntegrationTest）。
   scripts/constraints-scan is optional: run only when the user explicitly asks for a constraint audit, CI-style check, or phrases like 约束扫描/规范体检; see skill section "约束扫描（按需）".
   Triggers on cn.org.autumn 3.0.0, Spring Boot 3.5, JDK 17, ModuleService, RuntimeSql, PageAware, SpringDoc, bot, robot, rbt_, RobotHook, RobotMessageSubscriber, message/push.
 ---
@@ -60,7 +60,7 @@ description: >-
 
 1. `docs/AI_INDEX.md` → 2. `docs/AI_BOOT.md` → 3. `docs/AI_MAP.md` → 4. **`docs/AI_STANDARDS.md`**（强制全文，含 §8～§14）  
 5. **`docs/AI_DATABASE.md`**（多库、`DatabaseType`、**§4.0 代码层方言标准写法**、`WrapperColumns`、`RuntimeSql`、Wrapper 边界、Dao **必须** Provider）  
-6. 新模块 / 代码生成 / 搭骨架：追加 **`docs/AI_CODEGEN.md`**  
+6. 新模块 / 代码生成 / 搭骨架：追加 **`docs/AI_CODEGEN.md`**、**`docs/AI_DUAL_KEY.md`**（双键、`UserBased`、业务 `user` 可存真人或机器人 uuid）  
 按需：`docs/AI_POSTGRESQL.md`、`docs/AI_TEMPLATES.md`、`docs/AI_CRYPTO.md`、`docs/AI_DISTRIBUTED_LOCK.md`、**`docs/AI_ASYNC_TASK.md`**（**`TagRunnable` / `FinishStatus` / `onFinished`**、内存队列 drain 状态机）、**`docs/REDIS_RESILIENCE.md`**（Redis 熔断与分布式锁稳健性）、`docs/REDIS_STANDALONE.md`、**`docs/REDIS_TTL_GUIDE.md`**（Redis TTL / `RedisExpireUtil`）、**`docs/INSTALL_MODE_CONDITIONAL.md`**（安装向导 **`autumn.install.wizard`**、**§0 占位默认 H2 / 可选 mysql**）等。
 
 涉及「终止会话 / 记住我阻断 / 会话过期重登守卫」时，追加阅读 **`docs/AI_SESSION_GUARD.md`**（`ForceLogoutRememberMeManager`、`ShiroSessionService`、`/sys/session/self/*`、`autumn-session-guard.js`）。
@@ -82,7 +82,7 @@ description: >-
 
 - **命名空间**：`jakarta.servlet.*`、`jakarta.validation.*`；实体 **`com.baomidou.mybatisplus.annotation.*`**（非 `annotations`）。
 - **鉴权**：`ShiroConfig` 将 `/robot/api/v1/**` 设为 `anon`；`@Authenticated` + **`UserContextArgumentResolver`** + **`UserContextService`**（`Token` / `X-Robot-Token`）。
-- **账号**：`AccountHandler.User#isRobot()`；人类用户 UUID 用 **`UuidNamespaceService`**（勿在 3.x 新代码里裸 `Uuid.uuid()` 造 sys_user）。
+- **账号**：`AccountHandler.User#isRobot()`；人类用户 UUID 用 **`UuidNamespaceService`**（勿在 3.x 新代码里裸 `Uuid.uuid()` 造 sys_user）；业务表泛化 **`user`** 列可存 **`sys_user` 或 `bot_robot` 的 uuid**（见 **`docs/AI_DUAL_KEY.md` §1.1**）。
 - **配置**：`SysConfigService.ROBOT_QUOTA_CONFIG` → **`RobotQuotaConfig`**；JSON 序列化用 **`GsonConfig.getGson()`**。
 - **令牌轮换**：`RobotTokenService.rotateIssue` 清理已作废行用 **SELECT + `deleteById`**（兼容 H2，勿依赖 `DELETE … ORDER BY LIMIT`）。
 - **集成测试**：`web` 模块 **`IntegrationTest`**（`@TestInstance(PER_CLASS)`）+ `application-it.yml`；`mvn -pl web -am test -Pintegration -DskipTests=false`（见 **`web/docs/INTEGRATION_TEST.md`**）。
@@ -108,7 +108,7 @@ description: >-
 - 框架扫描 + **`autumn.table.*`** 对齐表结构；**禁止**常规 **`DDL .sql`**。
 - **表名/类名（强制）**：见 **`docs/AI_BOOT.md` §3.2**、**`docs/AI_STANDARDS.md` §9**。摘要：`{模块名}_` + 类名去 `Entity` 蛇形；表名仅 **`@TableName`**，**`@Table` 不写 `value`**（框架自动合并）；Dao `quote` 与 `@TableName` 一致；类名不含模块前缀。示例：`PayUserPinEntity` + `@TableName("safe_pay_user_pin")` + `@Table(comment = "...")`。
 - **`@Column.comment`**：简介名互异（§10.1）；**`isUnique=true` 禁止再 `@Index`**（§10.2）。
-- **双键**：自增 `id` 仅 gen CRUD；业务键 `uuid` 等（§10.4），**禁止**用 `id` 做关联。
+- **双键**：第二主键 **`uuid`** / 按真人唯一的 **`UserBased`**；业务 **`user`** 列可存 **`sys_user` 或 `bot_robot` 的 uuid**（互斥分配）。详见 **`docs/AI_DUAL_KEY.md`** §1.1、§3。
 
 ## 多库与 SQL（与 `docs/AI_DATABASE.md` 一致）
 
@@ -173,7 +173,7 @@ description: >-
 - **Controller** 未碰 **Dao**？未手改 **gen / list.html/js**？  
 - 新页有 **`Site` + `@PageAware`**？  
 - 生成路径与 **GenUtils** 一致？
-- 新实体是否有 **业务主键**且关联列未误用 **`Long id`**？多节点雪花是否配置 **`autumn.snowflake.worker-id` / `datacenter-id`**？
+- 按用户唯一表是否 **`UserBased` + 唯一 `user`**（禁止 `uuid` 第二主键）？非按用户唯一表的 **`user`** 是否未标 `isUnique`？第二主键 / 外键 **`comment`** 是否符合 **`docs/AI_DUAL_KEY.md`** §3？
 - **`isUnique=true` 的 `@Column` 是否未再叠 `@Index`**（§10.2）？
 - 机器人：是否已读 **`docs/AI_ROBOT.md` + `docs/AI_ROBOT_API.md`**？bot 包是否仍为 **`jakarta.*` / MP3 annotation**？管理 API 与 `message/push` 鉴权是否分离？
 - **表名**：符合 §3.2？仅 `@TableName`（`@Table` 无 `value`）？Dao `quote` 一致？

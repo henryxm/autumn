@@ -12,6 +12,6 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface RobotConfigDao extends BaseMapper<RobotConfigEntity> {
 
-    @SelectProvider(type = RobotConfigDaoSql.class, method = "getByUuid")
-    RobotConfigEntity getByUuid(@Param("uuid") String uuid);
+    @SelectProvider(type = RobotConfigDaoSql.class, method = "getUser")
+    RobotConfigEntity getUser(@Param("user") String user);
 }

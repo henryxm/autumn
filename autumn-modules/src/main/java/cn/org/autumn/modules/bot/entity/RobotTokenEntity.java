@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.bot.entity;
 
+import cn.org.autumn.entity.UuidBased;
 import cn.org.autumn.table.annotation.Column;
 import cn.org.autumn.table.annotation.Index;
 import cn.org.autumn.table.annotation.Table;
@@ -9,14 +10,13 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.io.Serializable;
 import java.util.Date;
 
 @Getter
 @Setter
 @TableName("bot_robot_token")
 @Table(value = "bot_robot_token", comment = "机令牌:机器人API访问令牌")
-public class RobotTokenEntity implements Serializable {
+public class RobotTokenEntity implements UuidBased {
     private static final long serialVersionUID = 1L;
 
     public static final int STATUS_ACTIVE = 1;
@@ -26,7 +26,7 @@ public class RobotTokenEntity implements Serializable {
     @Column(isKey = true, type = DataType.BIGINT, length = 20, isNull = false, isAutoIncrement = true, comment = "id")
     private Long id;
 
-    @Column(length = 32, comment = "标识:令牌行业务主键", isUnique = true)
+    @Column(length = 32, comment = "标识:令牌行全局唯一业务主键", isUnique = true)
     private String uuid;
 
     @Column(length = 32, comment = "机器人:对应bot_robot.uuid")

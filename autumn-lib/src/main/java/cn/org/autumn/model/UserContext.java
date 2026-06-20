@@ -5,10 +5,10 @@ import java.io.Serializable;
 /**
  * 无 Session API 调用的统一调用者视图（接口）。
  * <p>
- * 实现类为业务实体本身（如 {@code SysUserEntity}、{@code RobotEntity}、{@code User}），解析时直接返回实体实例，
- * 避免再包一层 DTO，便于 {@code instanceof} 取得原始类型。
+ * 实现类为业务实体本身（如 {@code SysUserEntity}、{@code RobotEntity}），类型不同、uuid 不得相同；
+ * 业务表 {@code user} 列可存任一侧 uuid，见 {@code docs/AI_DUAL_KEY.md} §1.1。
  * <ul>
- *   <li>{@link #getUuid()}：当前调用者（真人或机器人）</li>
+ *   <li>{@link #getUuid()}：当前调用者（真人或机器人；二者 uuid 全局互斥，见 {@code UuidNamespaceService}）</li>
  *   <li>{@link #getSubject()}：数据权限主体（真人为自身 uuid，机器人为主人 uuid）</li>
  *   <li>{@link #getOwner()}：机器人所属用户 uuid；真人常为 null</li>
  *   <li>{@link #isRobot()}：是否机器人调用</li>
