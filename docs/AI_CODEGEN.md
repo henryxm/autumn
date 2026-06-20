@@ -56,8 +56,8 @@
 
 1. **对齐需求与边界**，列出领域实体、关键字段、查询维度、缓存与异步是否需要。
 2. **编写实体类**（放在目标模块 `entity` 包下），严格遵循：
-   - **`docs/AI_STANDARDS.md`** 第 8～10 节：**`@TableName` + `@Table(comment=…)`（`@Table` 不写 `value`，见 **`docs/AI_BOOT.md` §3.2**）、**`@Column` / `@Index` / `@Indexes`**、`comment` 为 **`简介名:说明`** 且冒号前简介名互异（§10.1）、模块目录 = 包段 = 表前缀且**不把前缀写进类名**；**`isUnique=true` 禁止再 `@Index`**（§10.2）等。
-   - **`docs/AI_STANDARDS.md` §10.4** / **`docs/AI_DUAL_KEY.md`**：自增 **`id`** 仅服务后台生成 CRUD；第二主键为 **`uuid`**（**`UuidBased`** / **`SnowBased`**）或按用户唯一的 **`user`**（**`UserBased`**）；非按用户唯一时 **`user`** 仅可作非唯一外键。
+   - **`docs/AI_STANDARDS.md`** 第 8～10 节：**`@TableName` + `@Table(comment=…)`（`@Table` 不写 `value`，见 **`docs/AI_BOOT.md` §3.2**）、**`@Column` / `@Index` / `@Indexes`**、`comment` 为 **`简介名:说明`** 且冒号前简介名互异（§10.1）、模块目录 = 包段 = 表前缀且**不把前缀写进类名**；**`isUnique=true` 禁止再 `@Index`**（§10.2）；**单字段索引用字段级 `@Index`**，类级 **`@Indexes` 仅组合索引**（§10.2）等。
+   - **`docs/AI_STANDARDS.md` §10.4** / **`docs/AI_DUAL_KEY.md`**：自增 **`id`** 仅服务后台生成 CRUD；第二主键按需选型（**§1.2**：**存量默认不升级**，新实体/新字段须合规）。
 3. **缓存声明**：在实体上使用 **`cn.org.autumn.annotation.Cache`** / **`@Caches`**（见本文第 4.1 节），声明字段级或类级复合键、**`name`** 区分同一实体上的多套缓存策略、**`unique`** 区分单值与列表语义、**`create`** 是否与自动建记录行为配合。
 4. **依赖框架能力，禁止重复造轮子**：业务 Service 默认继承 **`ModuleService`**，自动具备 **CRUD、菜单/多语言初始化、缓存、队列** 等能力（继承链见 **`docs/AI_MAP.md`** 与本文第 4 节）。**不要**自建平行缓存中间层、消息封装或调度线程替代 **`LoopJob`**。
 

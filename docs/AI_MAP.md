@@ -375,6 +375,9 @@ public class DemoService extends ModuleService<DemoDao, DemoEntity> implements L
 2. **字段上已有 `@Index` 时，不要在类级 `@Indexes` / 类级 `@Index` 里再包含同一列的等价索引**  
    否则同一列会被注册两次，建表或变更时可能生成两条含义重叠的 `INDEX`，属于重复声明。
 
+3. **单字段索引写在字段上，类级 `@Indexes` 仅用于组合索引（团队默认，新代码）**  
+   规范见 **`docs/AI_STANDARDS.md` §10.2**：`TableInfo` 虽会收集类上单列 `@Index` / `@Indexes({ @Index(fields = 单字段) })`，但**除非明确指明**，新代码**禁止**用类级方式为单列建索引；**`@Index` 直接标在字段上**。类级 **`@Indexes`** 用于 **`fields` 含两列及以上** 的组合索引，或一次声明多组组合/特殊索引（如 `FULLTEXT`）。存量类级单列索引默认保持。
+
 #### 2.10.3 字段级 `@Index` 与列类型（前缀长度）
 
 **说明**：MySQL 对数值、日期时间、`DECIMAL` 等类型**支持** B-tree 整列索引；**仅** CHAR/VARCHAR/TEXT/BLOB/BINARY 等类型支持索引定义中的**前缀**语法 `` `col`(n) ``。旧实现曾把 `@Column.length()`（默认 255）误当前缀，导致数值列生成非法 DDL。
@@ -428,7 +431,7 @@ public class DemoService extends ModuleService<DemoDao, DemoEntity> implements L
 - **新增接口禁止**在 Controller 上使用 **`@RequiresPermissions`**（该注解保留给代码生成/后台管理语义）；普通用户可访问接口用**登录态**鉴权（`docs/AI_STANDARDS.md` §6）。
 - **FreeMarker 页面**：避免与 FTL 冲突；条件等可用 **`<!-- -->`** 包裹以保持 HTML 规范；**`<script>`** 内 FTL 插值须保证渲染后 JS 合法；无法避免冲突时用 **`<#noparse>`**（`docs/AI_STANDARDS.md` §7）。
 - **实体与库表**：依赖框架实体扫描与 **`autumn.table.*` 开关**做建表/更新；**禁止**把**常规初始化 DDL `.sql`** 作为默认交付物（`docs/AI_STANDARDS.md` §8）。
-- **实体主键**：自增 **`id`** 仅 gen CRUD；第二主键 **`uuid`** 或按用户唯一 **`user`**（**`UserBased`**）；详见 **`docs/AI_DUAL_KEY.md`** §1、§10.4。
+- **实体主键**：自增 **`id`** 仅 gen CRUD；第二主键按需 **`uuid`** / **`UserBased`**，或**无**（**§3.4** 仅 **`user`** 维度）；详见 **`docs/AI_DUAL_KEY.md`** §1、§10.4。
 - **模块名 = 包段 = 表前缀**：**禁止**把模块名当作**实体类名前缀**造成生成错乱；物理表名惯例见 `docs/AI_BOOT.md` §3.2 与 `docs/AI_STANDARDS.md` §9。
 - **新代码 SQL**：**禁止**在 Dao 接口注解上**硬编码 SQL**；**必须**用 **Provider**（跨库见 **`docs/AI_DATABASE.md`**，PG 细节见 **`docs/AI_POSTGRESQL.md`**）（`docs/AI_STANDARDS.md` §12）。
 - **Controller / Service / Dao**：Controller **禁止**用 Dao；本实体 Service 用 **`baseMapper`**、**禁止**再注入本 Dao；跨实体 **注入 Service** 而非他域 Dao（`docs/AI_STANDARDS.md` §13）。
@@ -552,6 +555,7 @@ public class DemoService extends ModuleService<DemoDao, DemoEntity> implements L
 - 建表注解反模式：
   - **`Column(isUnique = true)` 仍对该列声明 `@Index` / `@Indexes`**（硬性禁止，见 **`docs/AI_STANDARDS.md` §10.2**）。
   - 字段 `@Index` 与类级 `@Indexes` 对同一列重复声明。
+  - **新代码**在类级用 **`@Indexes` / `@Index`** 仅含**单列**定义普通索引（应改为字段级 **`@Index`**，见 **§10.2**）。
   - `@Column.type()` 与真实库类型不一致，导致前缀长度收敛不符合预期（见 2.10.3、`IndexPrefixRules`）。
   - `@Column.comment` / `@Table.comment` 写成整段长说明却**无冒号**，或**冒号前**写成整句长标题，导致多语言/列表表头位展示过长或难以对齐（见 2.10.5）。
 

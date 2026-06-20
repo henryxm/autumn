@@ -10,7 +10,7 @@ import java.io.Serializable;
  * <p>
  * 实体须同时实现本接口与 {@link UuidBased}、{@link SnowBased} 或 {@link UserBased} 之一（按表语义选型），并配合
  * {@link cn.org.autumn.service.AutoIdService}（仅 {@code uuid} 型）在插入前自动填充。
- * 完整约定见 {@code docs/AI_DUAL_KEY.md}。
+ * 完整约定见 {@code docs/AI_DUAL_KEY.md}（含 {@code §1.2} 存量默认不升级）。
  */
 public interface IdBased extends Serializable {
     Long getId();

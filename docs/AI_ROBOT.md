@@ -167,7 +167,8 @@ sequenceDiagram
 
 | 场景 | 约定 |
 |------|------|
-| 业务表 **`user`** 列（非 `UserBased` 第二主键） | 存 **`UserContext#getUuid()`**，可为 **`sys_user.uuid`** 或 **`bot_robot.uuid`** |
+| 业务表 **`user`** 列（非 `UserBased`、非 §3.4 唯一语义） | 存 **`UserContext#getUuid()`**，可为 **`sys_user.uuid`** 或 **`bot_robot.uuid`** |
+| **仅用户维度、无 `uuid` 第二主键**（**`AI_DUAL_KEY` §3.4**） | 自增 **`id`** + 非唯一 **`user`**；按 **`user`** 查询；**不必** `UuidBased` |
 | 按真人唯一的 **`UserBased.user`**（如 `bot_robot_config`） | **仅** **`sys_user.uuid`** |
 | **`RobotEntity.owner`** | **仅** 主人真人 **`sys_user.uuid`** |
 | 解析 | **`UserContextService#getUserContext(uuid)`**；需区分机器/人时用 **`isRobot()`** |
