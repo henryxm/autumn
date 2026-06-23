@@ -21,11 +21,11 @@ spring:
     type: com.alibaba.druid.pool.DruidDataSource
     driverClassName: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:com.mysql.cj.jdbc.Driver}
     druid:
-      first:  #数据源1
+      first: #数据源1
         url: ${SPRING_DATASOURCE_DRUID_FIRST_URL:jdbc:mysql://${database.host}:${database.port}/${database.database}?serverTimezone=Asia/Shanghai&useSSL=false&allowMultiQueries=true&useUnicode=true&characterEncoding=UTF-8&connectionCollation=utf8mb4_unicode_ci&allowPublicKeyRetrieval=true}
         username: ${SPRING_DATASOURCE_DRUID_FIRST_USERNAME:${database.username}}
         password: ${SPRING_DATASOURCE_DRUID_FIRST_PASSWORD:${database.password}}
-      second:  #数据源2
+      second: #数据源2
         url: ${SPRING_DATASOURCE_DRUID_SECOND_URL:jdbc:mysql://${database2.host}:${database2.port}/${database2.database}?serverTimezone=Asia/Shanghai&useSSL=false&allowMultiQueries=true&useUnicode=true&characterEncoding=UTF-8&connectionCollation=utf8mb4_unicode_ci&allowPublicKeyRetrieval=true}
         username: ${SPRING_DATASOURCE_DRUID_SECOND_USERNAME:${database2.username}}
         password: ${SPRING_DATASOURCE_DRUID_SECOND_PASSWORD:${database2.password}}
@@ -55,9 +55,14 @@ spring:
           config:
             multi-statement-allow: true
   redis:
-    host: ${redis.host}
-    database: ${redis.database}
-    port: ${redis.port}
-    password: ${redis.password}
-
+    host: ${redis.host:localhost}
+    database: ${redis.database:0}
+    port: ${redis.port:6379}
+    password: ${redis.password:}
+#  crypto:
+#    field:
+#      enabled: true
+#      key: ${field.encrypt.key:}   # Base64，32 字节 AES-256
+#      hash-key: ${field.hash.key:}   # 盲索引 HMAC，默认同 key
+#      prefix: "ENC$v1$"
 # autumn.database / pagehelper.helper-dialect 可选；未配置时由 JDBC URL 推断。

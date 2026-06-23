@@ -25,6 +25,7 @@
 - `docs/AI_UPGRADE.md`：依赖方升级 autumn 时的清单、一键扫描脚本说明与自动化边界
 - `docs/AI_SESSION_GUARD.md`：会话终止、防 RememberMe 自动恢复、`/sys/session/self/*` 通用接口与前端守卫接入
 - `docs/AI_CRYPTO.md`：接口加解密兼容与迁移
+- **`docs/AI_FIELD_ENCRYPT.md`**：**实体字段存储加密**（`@FieldEncrypt`、`EncryptModuleService`、`autumn.crypto.field.*`、盲索引；与传输层 `AI_CRYPTO.md` 独立）
 - `docs/AI_SECURITY.md`：安全强校验、灰度、演练
 - `docs/AI_CODEGEN.md`：**代码生成链路（gen / GenUtils / 模板 / 库表反射）**与**推荐三步开发流程**（实体 → 生成骨架 → 业务与页面）；**`BaseCacheService` / `ShareCacheService` / `BaseQueueService`** 能力说明
 - `docs/AI_TEMPLATES.md`：模块任务模板库
@@ -46,6 +47,7 @@
 - 新模块/代码生成：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md + docs/AI_CODEGEN.md + docs/AI_TEMPLATES.md`（先读代码生成流程与三步节奏，再确认生成层约束，后落业务层）
 - 多项目模板整合（TemplateFactory）：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md + docs/AI_GOVERNANCE.md`
 - 接口加解密改造：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md + docs/AI_CRYPTO.md`
+- **实体字段存储加密**：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md + docs/AI_FIELD_ENCRYPT.md`
 - 安全改造/攻防演练：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md + docs/AI_SECURITY.md`
 - 文档治理/多人协作：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md + docs/AI_GOVERNANCE.md`
 - 快速起任务：在以上任一组合追加 `docs/AI_PROMPTS.md`

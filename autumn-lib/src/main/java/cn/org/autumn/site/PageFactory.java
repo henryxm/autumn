@@ -144,4 +144,8 @@ public class PageFactory extends Factory {
     public String wall(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
         return invoke("wall", "wall", httpServletRequest, httpServletResponse, model);
     }
+
+    public String fieldencrypt(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        return invoke("fieldencrypt", "fieldencrypt", httpServletRequest, httpServletResponse, model);
+    }
 }

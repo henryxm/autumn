@@ -1,5 +1,6 @@
 package cn.org.autumn.table.data;
 
+import cn.org.autumn.annotation.FieldEncrypt;
 import cn.org.autumn.table.annotation.Column;
 import cn.org.autumn.table.annotation.sql.CharacterSet;
 import cn.org.autumn.table.annotation.sql.Collation;
@@ -281,6 +282,36 @@ public class ColumnInfo {
         } else {
             this.explicitCollation = "";
         }
+        FieldEncrypt fieldEncrypt = field.getAnnotation(FieldEncrypt.class);
+        if (fieldEncrypt != null && String.class.equals(ft)) {
+            this.type = DataType.VARCHAR;
+            if (this.length <= 255) {
+                this.length = 1024;
+            }
+        }
+        setGenAnnotation(buildAnnotation() + buildFieldEncryptAnnotation(fieldEncrypt));
+    }
+
+    private String buildFieldEncryptAnnotation(FieldEncrypt fieldEncrypt) {
+        if (fieldEncrypt == null) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append("\n\t@FieldEncrypt(");
+        String divider = "";
+        if (fieldEncrypt.searchable()) {
+            sb.append("searchable = true");
+            divider = ", ";
+        }
+        if (!fieldEncrypt.vector().isEmpty()) {
+            sb.append(divider).append("vector = \"").append(fieldEncrypt.vector()).append("\"");
+            divider = ", ";
+        }
+        if (!fieldEncrypt.hashField().isEmpty()) {
+            sb.append(divider).append("hashField = \"").append(fieldEncrypt.hashField()).append("\"");
+        }
+        sb.append(")");
+        return sb.toString();
     }
 
 

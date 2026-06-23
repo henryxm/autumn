@@ -15,6 +15,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 /**
  * 模块示例基础服务类
  * 自动化处理相关语言及菜单更新
+ * <p>
+ * 实体含 {@code @FieldEncrypt} 时改继承 {@link EncryptModuleService}，本类 CRUD 无加解密开销。
+ * 概念说明见 {@code docs/AI_FIELD_ENCRYPT.md} §0。
  *
  * @param <M>
  * @param <T>

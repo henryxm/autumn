@@ -412,6 +412,7 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
                 {"sys_string_redis_management", "Redis管理", "Redis management"},
                 {"sys_string_thread_management", "线程池管理", "Thread pool management"},
                 {"sys_string_reinit_management", "重建数据表", "Rebuild tables"},
+                {"sys_string_field_encrypt_management", "字段加密", "Field storage encryption"},
                 {"sys_string_shield_management", "人机检测", "Human verification"},
                 {"sys_string_scan_management", "版本更新", "Version update"},
 
