@@ -2,6 +2,8 @@ package cn.org.autumn.utils;
 
 import org.apache.commons.lang.StringUtils;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.Locale;
 import java.util.UUID;
 import java.util.regex.Pattern;
@@ -10,7 +12,7 @@ import java.util.regex.Pattern;
  * 无连字符小写 32 位 UUID 工具，用作 {@link cn.org.autumn.entity.UuidBased} 实体的第二主键。
  * <p>
  * <strong>规范形态（入库 / 关联 / API 推荐）</strong>：32 位小写十六进制、无连字符，例如 {@code a1b2c3d4e5f6...}。
- * 外部输入（带连字符、大小写混合）经 {@link #norm(String)} 或 {@link #requireValid(String)} 规范化后再持久化。
+ * 外部输入（带连字符、大小写混合、超长 composite）经 {@link #norm(String)} 或 {@link #requireValid(String)} 规范化后再持久化。
  * <p>
  * 自增 {@code Long id} 仅用于后台代码生成 CRUD；业务关联与对外标识使用实体 {@code uuid} 列（本工具输出值）。
  * 长整型第二主键见 {@link Snow}（{@link cn.org.autumn.entity.SnowBased}）。
@@ -62,11 +64,26 @@ public final class Uuid {
     }
 
     /**
-     * 规范化为入库形态：去首尾空白、小写、去掉连字符。
+     * 引用 ID 入库 SSOT：trim → 小写 → 去连字符 → 恒为 {@link #LENGTH} 位小写 hex。
+     * <p>已是 32 位 hex 的标准 UUID 原样返回；更短、更长或非标准形态则 SHA-256 取前 32 位（稳定、可复现）。</p>
      *
-     * @return 32 位小写 hex；入参为 null / 空白时返回 {@code null}
+     * @return 恰好 {@link #LENGTH} 位小写 hex；入参为 null / 空白时返回 {@code null}
      */
     public static String norm(String raw) {
+        String normalized = basicNorm(raw);
+        if (normalized == null) {
+            return null;
+        }
+        if (normalized.length() == LENGTH && HEX32.matcher(normalized).matches()) {
+            return normalized;
+        }
+        return sha256HexPrefix(normalized);
+    }
+
+    /**
+     * trim → 小写 → 去连字符（不保证长度为 {@link #LENGTH}）。
+     */
+    static String basicNorm(String raw) {
         String s = StringUtils.trimToNull(raw);
         return s == null ? null : s.toLowerCase(Locale.ROOT).replace("-", "");
     }
@@ -80,10 +97,11 @@ public final class Uuid {
 
     /**
      * 是否为合法规范 uuid（32 位十六进制；接受带连字符或大小写混合的输入）。
+     * <p>与 {@link #norm(String)} 区分：短标签、composite 等经 norm 后为 hash，但 {@code isValid} 为 {@code false}。</p>
      */
     public static boolean isValid(String raw) {
-        String uuid = norm(raw);
-        return uuid != null && uuid.length() == LENGTH && HEX32.matcher(uuid).matches();
+        String normalized = basicNorm(raw);
+        return normalized != null && normalized.length() == LENGTH && HEX32.matcher(normalized).matches();
     }
 
     /**
@@ -92,8 +110,9 @@ public final class Uuid {
     public static boolean equals(String left, String right) {
         String a = norm(left);
         String b = norm(right);
-        if (a == null || b == null || a.length() != LENGTH || b.length() != LENGTH)
+        if (a == null || b == null) {
             return false;
+        }
         return a.equals(b);
     }
 
@@ -103,10 +122,10 @@ public final class Uuid {
      * @throws IllegalArgumentException 入参为空或不是合法 uuid
      */
     public static String requireValid(String raw) {
-        String uuid = norm(raw);
-        if (!isValid(uuid))
+        if (!isValid(raw)) {
             throw new IllegalArgumentException("非法 uuid: " + raw);
-        return uuid;
+        }
+        return norm(raw);
     }
 
     /**
@@ -135,10 +154,10 @@ public final class Uuid {
      * 将规范 uuid 转为 {@link UUID}；非法时返回 {@code null}。
      */
     public static UUID toJavaUuid(String raw) {
-        String uuid = norm(raw);
-        if (!isValid(uuid))
+        if (!isValid(raw)) {
             return null;
-        return UUID.fromString(toDashed(uuid));
+        }
+        return UUID.fromString(toDashed(norm(raw)));
     }
 
     /**
@@ -158,5 +177,19 @@ public final class Uuid {
         if (length < 1 || length > LENGTH)
             return null;
         return uuid.substring(0, length);
+    }
+
+    private static String sha256HexPrefix(String input) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] digest = md.digest(input.getBytes(StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder(64);
+            for (byte b : digest) {
+                sb.append(String.format(Locale.ROOT, "%02x", b));
+            }
+            return sb.substring(0, LENGTH);
+        } catch (Exception e) {
+            throw new IllegalStateException("SHA-256 unavailable", e);
+        }
     }
 }
