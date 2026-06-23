@@ -8,6 +8,7 @@ import java.util.concurrent.CopyOnWriteArraySet;
 import cn.org.autumn.table.platform.RelationalTableOperations;
 import cn.org.autumn.table.data.*;
 import cn.org.autumn.table.relational.model.ColumnMeta;
+import lombok.Getter;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.Logger;
@@ -53,6 +54,7 @@ public class MysqlTableService {
     /**
      * 要扫描的model所在的pack
      */
+    @Getter
     @Value("${autumn.table.pack:" + defaultPackage + "}")
     private String pack;
 

@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>字段存储加密</title>
+    <style>
+        :root {
+            --primary: #1a4d8c;
+            --primary-light: #2d6cb5;
+            --primary-dark: #0f3460;
+            --accent: #0ea5e9;
+            --success: #059669;
+            --success-bg: #ecfdf5;
+            --danger: #dc2626;
+            --danger-bg: #fef2f2;
+            --warning: #d97706;
+            --warning-bg: #fffbeb;
+            --muted: #64748b;
+            --border: #e2e8f0;
+            --surface: #ffffff;
+            --bg: #f1f5f9;
+            --radius: 12px;
+            --shadow: 0 4px 24px rgba(15, 52, 96, 0.08);
+            --shadow-sm: 0 1px 3px rgba(15, 52, 96, 0.06);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(160deg, #e8eef5 0%, #f8fafc 40%, #eef2ff 100%);
+            color: #1e293b;
+            line-height: 1.5;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .shell {
+            max-width: 1280px;
+            margin: 0 auto;
+        }
+        .page {
+            background: var(--surface);
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+        .header {
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 45%, var(--primary-light) 100%);
+            color: #fff;
+            padding: 28px 32px 32px;
+            position: relative;
+            overflow: hidden;
+        }
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -40%;
+            right: -5%;
+            width: 320px;
+            height: 320px;
+            background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 70%);
+            pointer-events: none;
+        }
+        .header-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+            flex-wrap: wrap;
+            position: relative;
+            z-index: 1;
+        }
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .header-icon {
+            width: 48px;
+            height: 48px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            backdrop-filter: blur(4px);
+        }
+        .header h1 { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; }
+        .header-sub { opacity: 0.9; font-size: 13px; margin-top: 4px; max-width: 640px; }
+        .header-actions .btn-ghost {
+            background: rgba(255,255,255,0.15);
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.25);
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: background 0.2s;
+        }
+        .header-actions .btn-ghost:hover { background: rgba(255,255,255,0.25); }
+
+        .body { padding: 24px 28px 32px; display: flex; flex-direction: column; gap: 20px; }
+
+        .toast {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            z-index: 9999;
+            min-width: 280px;
+            max-width: 420px;
+            padding: 14px 18px;
+            border-radius: 10px;
+            font-size: 13px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+            animation: slideIn 0.3s ease;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .toast-success { background: var(--success-bg); border: 1px solid #a7f3d0; color: #065f46; }
+        .toast-danger { background: var(--danger-bg); border: 1px solid #fecaca; color: #991b1b; }
+        .toast-info { background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 12px;
+        }
+        .stat-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 14px 16px;
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-sm);
+        }
+        .stat-card.highlight {
+            grid-column: span 1;
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border-color: #bae6fd;
+        }
+        .stat-card .label {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--muted);
+            margin-bottom: 6px;
+        }
+        .stat-card .value {
+            font-size: 17px;
+            font-weight: 700;
+            word-break: break-all;
+        }
+        .stat-card .value.on { color: var(--success); }
+        .stat-card .value.off { color: var(--danger); }
+        .stat-card .value.mono {
+            font-size: 12px;
+            font-family: 'SF Mono', Consolas, monospace;
+            font-weight: 600;
+        }
+        .stat-badge {
+            display: inline-block;
+            margin-top: 6px;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 10px;
+            font-weight: 600;
+        }
+        .stat-badge.ok { background: var(--success-bg); color: var(--success); }
+        .stat-badge.no { background: var(--danger-bg); color: var(--danger); }
+
+        .layout-2col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        @media (max-width: 960px) {
+            .layout-2col { grid-template-columns: 1fr; }
+            body { padding: 12px; }
+            .body { padding: 16px; }
+        }
+
+        .panel {
+            background: var(--surface);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+        }
+        .panel-head {
+            padding: 16px 20px;
+            background: linear-gradient(to bottom, #f8fafc, #f1f5f9);
+            border-bottom: 1px solid var(--border);
+            font-weight: 600;
+            font-size: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .panel-head .title-wrap {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .panel-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            background: #e0f2fe;
+            color: var(--primary);
+        }
+        .panel-icon.warn { background: var(--warning-bg); color: var(--warning); }
+        .panel-icon.danger { background: var(--danger-bg); color: var(--danger); }
+        .panel-icon.success { background: var(--success-bg); color: var(--success); }
+        .panel-body { padding: 20px; }
+
+        .callout {
+            background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+            border: 1px solid #fcd34d;
+            border-radius: 10px;
+            padding: 16px 18px;
+            font-size: 13px;
+            line-height: 1.7;
+        }
+        .callout-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 12px;
+            margin-top: 0;
+        }
+        .callout-item {
+            background: rgba(255,255,255,0.7);
+            border-radius: 8px;
+            padding: 12px 14px;
+            border: 1px solid rgba(251, 191, 36, 0.3);
+        }
+        .callout-item strong {
+            display: block;
+            color: #92400e;
+            font-size: 12px;
+            margin-bottom: 4px;
+        }
+        .callout-item span { color: #78350f; font-size: 12px; }
+        .callout-item code {
+            background: rgba(0,0,0,0.06);
+            padding: 1px 5px;
+            border-radius: 4px;
+            font-size: 11px;
+        }
+
+        .toggle-box {
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 18px 20px;
+        }
+        .toggle-row {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        .toggle-label {
+            font-size: 14px;
+            font-weight: 500;
+            flex: 1;
+            min-width: 200px;
+        }
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 52px;
+            height: 28px;
+            flex-shrink: 0;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            inset: 0;
+            background: #cbd5e1;
+            border-radius: 28px;
+            transition: 0.25s;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 22px;
+            width: 22px;
+            left: 3px;
+            bottom: 3px;
+            background: #fff;
+            border-radius: 50%;
+            transition: 0.25s;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+        .switch input:checked + .slider { background: var(--success); }
+        .switch input:disabled + .slider { opacity: 0.45; cursor: not-allowed; }
+        .switch input:checked + .slider:before { transform: translateX(24px); }
+
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: flex-end;
+        }
+        .form-group { display: flex; flex-direction: column; gap: 6px; }
+        .form-group label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--muted);
+        }
+        .form-group input, .form-group select, .form-group textarea {
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 13px;
+            min-width: 140px;
+            background: #fff;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15);
+        }
+        .form-group textarea { min-width: 280px; min-height: 80px; resize: vertical; font-family: inherit; }
+        .form-group.wide input, .form-group.wide select { min-width: 300px; }
+
+        .btn {
+            padding: 9px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            white-space: nowrap;
+            transition: transform 0.1s, box-shadow 0.2s, background 0.2s;
+        }
+        .btn:active:not(:disabled) { transform: scale(0.98); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-primary { background: var(--primary); color: #fff; box-shadow: 0 2px 8px rgba(26, 77, 140, 0.3); }
+        .btn-primary:hover:not(:disabled) { background: var(--primary-light); }
+        .btn-secondary { background: #64748b; color: #fff; }
+        .btn-secondary:hover:not(:disabled) { background: #475569; }
+        .btn-success { background: var(--success); color: #fff; }
+        .btn-success:hover:not(:disabled) { background: #047857; }
+        .btn-warning { background: var(--warning); color: #fff; }
+        .btn-warning:hover:not(:disabled) { background: #b45309; }
+        .btn-danger { background: var(--danger); color: #fff; }
+        .btn-danger:hover:not(:disabled) { background: #b91c1c; }
+        .btn-outline {
+            background: #fff;
+            color: var(--primary);
+            border: 1px solid var(--border);
+        }
+        .btn-outline:hover:not(:disabled) { background: #f8fafc; border-color: var(--primary); }
+        .btn-sm { padding: 6px 12px; font-size: 12px; }
+        .btn-group { display: flex; flex-wrap: wrap; gap: 8px; }
+
+        .hint {
+            font-size: 12px;
+            color: var(--muted);
+            margin-top: 12px;
+            line-height: 1.65;
+        }
+        .hint code {
+            background: #f1f5f9;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+        }
+
+        .test-result, .dev-output, .result-box {
+            margin-top: 14px;
+            border-radius: 10px;
+            padding: 14px 16px;
+            font-size: 12px;
+            line-height: 1.7;
+        }
+        .test-result {
+            background: #0f172a;
+            color: #e2e8f0;
+            font-family: 'SF Mono', Consolas, monospace;
+            word-break: break-all;
+        }
+        .test-result strong { color: #34d399; }
+        .mono-break { word-break: break-all; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; }
+        .dev-output {
+            background: var(--warning-bg);
+            border: 1px solid #fde68a;
+            font-family: 'SF Mono', Consolas, monospace;
+            word-break: break-all;
+        }
+        .result-box {
+            background: #eff6ff;
+            border: 1px solid #93c5fd;
+            color: #1e3a8a;
+        }
+        .copy-btn { margin-left: 8px; vertical-align: middle; }
+
+        .table-wrap {
+            overflow: auto;
+            max-height: 440px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            margin-top: 12px;
+        }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        thead {
+            background: linear-gradient(to bottom, var(--primary-dark), var(--primary));
+            color: #fff;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+        th {
+            padding: 12px 14px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 12px;
+            letter-spacing: 0.02em;
+        }
+        td {
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--border);
+            vertical-align: top;
+        }
+        tbody tr:nth-child(even) { background: #f8fafc; }
+        tbody tr:hover { background: #f0f9ff; }
+        .mono { font-family: 'SF Mono', Consolas, monospace; font-size: 12px; color: #334155; }
+        .tag {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 600;
+            background: #e0f2fe;
+            color: var(--primary);
+            margin: 2px 4px 2px 0;
+        }
+        .tag.warn { background: #fef3c7; color: #92400e; }
+        .empty {
+            text-align: center;
+            padding: 48px 24px;
+            color: var(--muted);
+            font-size: 14px;
+        }
+        .section-label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--muted);
+            margin-bottom: 12px;
+            padding-left: 2px;
+        }
+        [v-cloak] { display: none; }
+    </style>
+</head>
+<body>
+<div class="shell" id="app" v-cloak>
+    <div v-if="message" class="toast" :class="messageType" v-text="message"></div>
+
+    <div class="page">
+        <div class="header">
+            <div class="header-top">
+                <div class="header-title">
+                    <div class="header-icon">🔐</div>
+                    <div>
+                        <h1>字段存储加密</h1>
+                        <p class="header-sub">实体 @FieldEncrypt 落库加密 · 运维迁移与运行时开关 · 详见 docs/AI_FIELD_ENCRYPT.md</p>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <button type="button" class="btn-ghost" @click="loadStatus(); loadList();">↻ 刷新全部</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="body">
+            <div class="section-label">运行状态</div>
+            <div class="stats-grid">
+                <div class="stat-card highlight">
+                    <div class="label">当前写入加密</div>
+                    <div class="value" :class="status.writeEncryptEnabled ? 'on' : 'off'" v-text="status.writeEncryptEnabled ? '开启' : '关闭'"></div>
+                    <span class="stat-badge" :class="status.writeEncryptEnabled ? 'ok' : 'no'" v-text="status.writeEncryptEnabled ? '新业务加密落库' : '新写入明文'"></span>
+                </div>
+                <div class="stat-card">
+                    <div class="label">读解密能力</div>
+                    <div class="value" :class="status.readDecryptEnabled ? 'on' : 'off'" v-text="status.readDecryptEnabled ? '可用' : '不可用'"></div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">主密钥</div>
+                    <div class="value" :class="status.keyConfigured ? 'on' : 'off'" v-text="status.keyConfigured ? '已配置' : '未配置'"></div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">盲索引密钥</div>
+                    <div class="value" :class="status.hashKeyConfigured ? 'on' : 'off'" v-text="status.hashKeyConfigured ? '已配置' : '未配置'"></div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">运行模式</div>
+                    <div class="value" :class="status.clusterMode ? 'on' : 'off'" v-text="status.clusterMode ? 'Redis 集群' : '单机'"></div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">加密实体</div>
+                    <div class="value" v-text="list.length"></div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">配置默认写入</div>
+                    <div class="value" :class="status.configWriteEncryptEnabled ? 'on' : 'off'" v-text="status.configWriteEncryptEnabled ? '开' : '关'"></div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">算法</div>
+                    <div class="value mono" v-text="status.algorithm || '-'"></div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">密文前缀</div>
+                    <div class="value mono" v-text="status.prefix || '-'"></div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">开关来源</div>
+                    <div class="value mono" v-text="status.writeSwitchSource || '-'"></div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">密钥来源</div>
+                    <div class="value mono" v-text="status.keySource || '-'"></div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-head">
+                    <div class="title-wrap">
+                        <span class="panel-icon warn">💡</span>
+                        <span>概念速查（易混）</span>
+                    </div>
+                </div>
+                <div class="panel-body">
+                    <div class="callout">
+                        <div class="callout-grid">
+                            <div class="callout-item">
+                                <strong>vector（IV）</strong>
+                                <span>随机 IV 打包进 <code>ENC$v1$...</code>，解密从密文拆出，与 hash 列无关。</span>
+                            </div>
+                            <div class="callout-item">
+                                <strong>searchable + hash 列</strong>
+                                <span>须实体手写 <code>mobileHash</code>；不会随开关自动建/删列。</span>
+                            </div>
+                            <div class="callout-item">
+                                <strong>写入开关</strong>
+                                <span>关则新数据不写密文、不维护 hash；查询回退明文列。</span>
+                            </div>
+                            <div class="callout-item">
+                                <strong>预检 dryRun</strong>
+                                <span>只统计待迁移条数，不写库；「执行」才会 update。</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="layout-2col">
+                <div class="panel">
+                    <div class="panel-head">
+                        <div class="title-wrap">
+                            <span class="panel-icon success">⚡</span>
+                            <span>运行时写入开关</span>
+                        </div>
+                    </div>
+                    <div class="panel-body">
+                        <div class="toggle-box">
+                            <div class="toggle-row">
+                                <label class="switch" :title="status.clusterMode ? '切换后写入 Redis 并通知集群' : '切换后持久化到 sys_config'">
+                                    <input type="checkbox" :checked="!!status.writeEncryptEnabled" :disabled="toggleBusy || (!status.keyConfigured && !status.writeEncryptEnabled)" @change="toggleWrite($event)">
+                                    <span class="slider"></span>
+                                </label>
+                                <span class="toggle-label" v-text="status.writeEncryptEnabled ? '写入加密已开启' : '写入加密已关闭'"></span>
+                            </div>
+                            <div class="btn-group" style="margin-top:14px;">
+                                <button type="button" class="btn btn-outline btn-sm" :disabled="toggleBusy || (!status.clusterMode && (status.runtimeWriteEncryptOverride === null || status.runtimeWriteEncryptOverride === undefined))" @click="resetWriteOverride">恢复默认</button>
+                                <button type="button" class="btn btn-outline btn-sm" v-if="status.clusterMode" @click="reloadCluster">从 Redis 刷新</button>
+                            </div>
+                        </div>
+                        <p class="hint">
+                            <span v-if="status.clusterMode">集群：开关与密钥来自 Redis，变更经频道同步。</span>
+                            <span v-else>单机：密钥来自 yml/env；开关可存 sys_config。</span>
+                            启动默认 <code>autumn.crypto.field.enabled</code>：<strong v-text="status.configWriteEncryptEnabled ? '开' : '关'"></strong>。
+                        </p>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-head">
+                        <div class="title-wrap">
+                            <span class="panel-icon">🔑</span>
+                            <span>开发用密钥生成</span>
+                        </div>
+                    </div>
+                    <div class="panel-body">
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-warning btn-sm" @click="generateKey">生成 key + hash-key</button>
+                            <button type="button" class="btn btn-warning btn-sm" @click="generateVector">生成 GCM 向量</button>
+                        </div>
+                        <div v-if="devKeyOutput" class="dev-output">
+                            <div>key: <span v-text="devKeyOutput.key"></span> <button type="button" class="btn btn-secondary btn-sm copy-btn" @click="copyText(devKeyOutput.key)">复制</button></div>
+                            <div>hash-key: <span v-text="devKeyOutput.hashKey"></span> <button type="button" class="btn btn-secondary btn-sm copy-btn" @click="copyText(devKeyOutput.hashKey)">复制</button></div>
+                            <div style="margin-top:8px;color:#92400e;" v-text="devKeyOutput.hint"></div>
+                        </div>
+                        <div v-if="devVectorOutput" class="dev-output">
+                            <div>vector: <span v-text="devVectorOutput.vector"></span> <button type="button" class="btn btn-secondary btn-sm copy-btn" @click="copyText(devVectorOutput.vector)">复制</button></div>
+                            <div style="margin-top:8px;color:#92400e;" v-text="devVectorOutput.hint"></div>
+                        </div>
+                        <p class="hint">仅复制到 yml/环境变量，不写入运行配置；改密钥须重启。</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="layout-2col">
+                <div class="panel">
+                    <div class="panel-head">
+                        <div class="title-wrap">
+                            <span class="panel-icon">🧪</span>
+                            <span>加解密往返测试</span>
+                        </div>
+                    </div>
+                    <div class="panel-body">
+                        <div class="toolbar">
+                            <div class="form-group wide">
+                                <label>明文内容</label>
+                                <textarea v-model="testPlain" placeholder="如手机号 13800138000"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>固定 vector（可选）</label>
+                                <input type="text" v-model="testVector" placeholder="Base64 IV，留空随机">
+                            </div>
+                            <button type="button" class="btn btn-primary" :disabled="!status.keyConfigured" @click="runTest">执行测试</button>
+                        </div>
+                        <div v-if="testResult" class="test-result">
+                            <div>匹配: <strong v-text="testResult.match ? '成功 ✓' : '失败 ✗'"></strong>
+                                <span v-if="testResult.writeEncryptEnabled !== undefined"> · 写入: <span v-text="testResult.writeEncryptEnabled ? '开' : '关'"></span></span>
+                            </div>
+                            <div>plain: <span v-text="testResult.plain"></span></div>
+                            <div>cipher: <span v-text="testResult.encrypted"></span></div>
+                            <div>decrypted: <span v-text="testResult.decrypted"></span></div>
+                            <div>hash: <span v-text="testResult.hash"></span></div>
+                        </div>
+                        <p class="hint">内存往返测试，不写库；写入关时仍可验证解密。</p>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-head">
+                        <div class="title-wrap">
+                            <span class="panel-icon success">🔓</span>
+                            <span>密文解密</span>
+                        </div>
+                    </div>
+                    <div class="panel-body">
+                        <div class="toolbar">
+                            <div class="form-group wide">
+                                <label>密文内容</label>
+                                <textarea v-model="decryptCipher" placeholder="粘贴 ENC$v1$... 开头的库内密文"></textarea>
+                            </div>
+                            <button type="button" class="btn btn-primary" :disabled="!status.keyConfigured || !(decryptCipher || '').trim()" @click="runDecrypt">解密</button>
+                        </div>
+                        <div v-if="decryptResult" class="test-result">
+                            <div>结果: <strong v-text="decryptResult.success ? '成功 ✓' : '失败 ✗'"></strong></div>
+                            <div>cipher: <span class="mono-break" v-text="decryptResult.cipher"></span></div>
+                            <div v-if="decryptResult.success">
+                                plain:
+                                <span v-text="decryptResult.plain"></span>
+                                <button type="button" class="btn btn-secondary btn-sm copy-btn" @click="copyText(decryptResult.plain)">复制明文</button>
+                            </div>
+                        </div>
+                        <p class="hint">使用当前配置的 <code>autumn.crypto.field.key</code> 解密；仅内存展示，不写库。密文须以 <span v-text="status.prefix || 'ENC$v1$'"></span> 开头。</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="layout-2col">
+                <div class="panel">
+                    <div class="panel-head">
+                        <div class="title-wrap">
+                            <span class="panel-icon">📄</span>
+                            <span>单条记录</span>
+                        </div>
+                    </div>
+                    <div class="panel-body">
+                        <div class="toolbar">
+                            <div class="form-group wide">
+                                <label>实体</label>
+                                <select v-model="single.entity">
+                                    <option value="">请选择实体</option>
+                                    <option v-for="r in list" :key="r.classFullName" :value="r.classFullName" v-text="r.className + ' (' + r.tableName + ')'"></option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>主键 id</label>
+                                <input type="text" v-model="single.id" placeholder="如 1">
+                            </div>
+                        </div>
+                        <div class="btn-group" style="margin-top:14px;">
+                            <button type="button" class="btn btn-success btn-sm" :disabled="!canSingle || !status.keyConfigured" @click="migrateOne(false)">加密写入</button>
+                            <button type="button" class="btn btn-warning btn-sm" :disabled="!canSingle || !status.keyConfigured" @click="migrateOne(true)">预检加密</button>
+                            <button type="button" class="btn btn-danger btn-sm" :disabled="!canSingle || !status.readDecryptEnabled" @click="restoreOne(false)">解密写入</button>
+                            <button type="button" class="btn btn-outline btn-sm" :disabled="!canSingle || !status.readDecryptEnabled" @click="restoreOne(true)">预检还原</button>
+                        </div>
+                        <div v-if="singleResult" class="result-box" v-html="singleResult"></div>
+                        <p class="hint">预检 = dryRun，只读统计不改库。</p>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-head">
+                        <div class="title-wrap">
+                            <span class="panel-icon danger">📦</span>
+                            <span>批量迁移</span>
+                        </div>
+                        <div class="form-group" style="margin:0;">
+                            <label>批量大小</label>
+                            <input type="number" v-model.number="batchSize" min="1" max="2000" style="min-width:88px;padding:6px 10px;">
+                        </div>
+                    </div>
+                    <div class="panel-body">
+                        <div class="toolbar">
+                            <div class="form-group wide">
+                                <label>目标实体</label>
+                                <select v-model="batchEntity">
+                                    <option value="">请选择实体</option>
+                                    <option v-for="r in filteredList" :key="'b-'+r.classFullName" :value="r.classFullName" v-text="r.className + ' (' + r.tableName + ')'"></option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="btn-group" style="margin-top:14px;">
+                            <button type="button" class="btn btn-success btn-sm" :disabled="!batchEntity || !status.keyConfigured" @click="batchMigrate(true)">预检加密</button>
+                            <button type="button" class="btn btn-success btn-sm" :disabled="!batchEntity || !status.keyConfigured" @click="batchMigrate(false)">执行加密</button>
+                            <button type="button" class="btn btn-danger btn-sm" :disabled="!batchEntity || !status.readDecryptEnabled" @click="batchRestore(true)">预检还原</button>
+                            <button type="button" class="btn btn-danger btn-sm" :disabled="!batchEntity || !status.readDecryptEnabled" @click="batchRestore(false)">执行还原</button>
+                        </div>
+                        <div v-if="batchResult" class="result-box" v-html="batchResult"></div>
+                        <p class="hint">建议：预检 → 核对 pending → 执行。</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-head">
+                    <div class="title-wrap">
+                        <span class="panel-icon">📋</span>
+                        <span>加密实体列表</span>
+                    </div>
+                    <div class="toolbar" style="padding:0;">
+                        <div class="form-group" style="margin:0;">
+                            <label>筛选</label>
+                            <input type="text" v-model="filter" placeholder="类名 / 表名" style="min-width:180px;padding:6px 10px;">
+                        </div>
+                        <button type="button" class="btn btn-outline btn-sm" @click="loadList">刷新</button>
+                    </div>
+                </div>
+                <div class="panel-body" style="padding-top:12px;">
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                            <tr>
+                                <th>表名</th>
+                                <th>实体类</th>
+                                <th>注释</th>
+                                <th>加密字段</th>
+                                <th style="width:88px;">操作</th>
+                            </tr>
+                            </thead>
+                            <tbody v-if="loading">
+                            <tr><td colspan="5" class="empty">加载中…</td></tr>
+                            </tbody>
+                            <tbody v-else-if="filteredList.length === 0">
+                            <tr><td colspan="5" class="empty">暂无带 @FieldEncrypt 的实体</td></tr>
+                            </tbody>
+                            <tbody v-else>
+                            <tr v-for="r in filteredList" :key="r.classFullName">
+                                <td class="mono" v-text="r.tableName"></td>
+                                <td class="mono" :title="r.classFullName" v-text="r.className"></td>
+                                <td v-text="r.comment || '-'"></td>
+                                <td>
+                                    <span v-for="f in (r.encryptFields||[])" :key="f.fieldName" class="tag" :class="{'warn': f.searchable}" v-text="f.fieldName + (f.searchable ? ' · 可查询' : '')"></span>
+                                </td>
+                                <td>
+                                    <button type="button" class="btn btn-primary btn-sm" @click="selectEntity(r)">选用</button>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="${request.contextPath}/statics/libs/jquery.min.js"></script>
+<script src="${request.contextPath}/statics/libs/vue.min.js"></script>
+<script>
+(function() {
+    var ctx = '${request.contextPath}';
+    var api = ctx + '/sys/crypto/field';
+    new Vue({
+        el: '#app',
+        data: {
+            status: { enabled: false, writeEncryptEnabled: false, configWriteEncryptEnabled: false, runtimeWriteEncryptOverride: null, readDecryptEnabled: false, clusterMode: false, writeSwitchSource: 'config', keySource: 'env', prefix: '', keyConfigured: false, hashKeyConfigured: false, algorithm: '', hashAlgorithm: '' },
+            toggleBusy: false,
+            devKeyOutput: null,
+            devVectorOutput: null,
+            list: [],
+            loading: false,
+            filter: '',
+            batchEntity: '',
+            batchSize: 200,
+            testPlain: '',
+            testVector: '',
+            testResult: null,
+            decryptCipher: '',
+            decryptResult: null,
+            single: { entity: '', id: '' },
+            singleResult: '',
+            batchResult: '',
+            message: '',
+            messageType: 'toast-success'
+        },
+        computed: {
+            filteredList: function() {
+                var q = (this.filter || '').trim().toLowerCase();
+                if (!q) return this.list;
+                return this.list.filter(function(r) {
+                    return (r.className || '').toLowerCase().indexOf(q) >= 0
+                        || (r.tableName || '').toLowerCase().indexOf(q) >= 0
+                        || (r.classFullName || '').toLowerCase().indexOf(q) >= 0;
+                });
+            },
+            canSingle: function() {
+                return !!(this.single.entity && (this.single.id || '').toString().trim());
+            }
+        },
+        mounted: function() {
+            this.loadStatus();
+            this.loadList();
+        },
+        methods: {
+            loadStatus: function() {
+                var v = this;
+                $.get(api + '/status', function(res) {
+                    if (res && res.code === 0 && res.data) {
+                        v.status = res.data;
+                        if (v.status.writeEncryptEnabled === undefined) {
+                            v.status.writeEncryptEnabled = !!v.status.enabled;
+                        }
+                        if (v.status.configWriteEncryptEnabled === undefined) {
+                            v.status.configWriteEncryptEnabled = !!v.status.enabled;
+                        }
+                        if (v.status.readDecryptEnabled === undefined) {
+                            v.status.readDecryptEnabled = !!v.status.keyConfigured;
+                        }
+                    }
+                });
+            },
+            toggleWrite: function(ev) {
+                var v = this;
+                var enabled = !!(ev && ev.target && ev.target.checked);
+                v.toggleBusy = true;
+                $.post(api + '/writeEnabled', { enabled: enabled }, function(res) {
+                    v.toggleBusy = false;
+                    if (res && res.code === 0 && res.data) {
+                        v.status = res.data;
+                        v.toast(enabled ? '写入加密已开启' : '写入加密已关闭', 'toast-success');
+                    } else {
+                        if (ev && ev.target) ev.target.checked = !enabled;
+                        v.toast((res && res.msg) || '切换失败', 'toast-danger');
+                    }
+                }).fail(function() {
+                    v.toggleBusy = false;
+                    if (ev && ev.target) ev.target.checked = !enabled;
+                    v.toast('切换请求失败', 'toast-danger');
+                });
+            },
+            resetWriteOverride: function() {
+                var v = this;
+                v.toggleBusy = true;
+                $.post(api + '/resetWriteEnabled', {}, function(res) {
+                    v.toggleBusy = false;
+                    if (res && res.code === 0 && res.data) {
+                        v.status = res.data;
+                        v.toast('已恢复跟随配置默认值', 'toast-success');
+                    } else {
+                        v.toast((res && res.msg) || '操作失败', 'toast-danger');
+                    }
+                }).fail(function() {
+                    v.toggleBusy = false;
+                    v.toast('请求失败', 'toast-danger');
+                });
+            },
+            reloadCluster: function() {
+                var v = this;
+                $.post(api + '/reloadCluster', {}, function(res) {
+                    if (res && res.code === 0 && res.data) {
+                        v.status = res.data;
+                        v.toast('已从 Redis 刷新', 'toast-success');
+                    } else {
+                        v.toast((res && res.msg) || '刷新失败', 'toast-danger');
+                    }
+                }).fail(function() { v.toast('请求失败', 'toast-danger'); });
+            },
+            generateKey: function() {
+                var v = this;
+                $.post(api + '/generateKey', {}, function(res) {
+                    if (res && res.code === 0 && res.data) {
+                        v.devKeyOutput = res.data;
+                        v.toast('已生成开发用密钥', 'toast-success');
+                    } else {
+                        v.toast((res && res.msg) || '生成失败', 'toast-danger');
+                    }
+                }).fail(function() { v.toast('请求失败', 'toast-danger'); });
+            },
+            generateVector: function() {
+                var v = this;
+                $.post(api + '/generateVector', {}, function(res) {
+                    if (res && res.code === 0 && res.data) {
+                        v.devVectorOutput = res.data;
+                        v.toast('已生成随机向量', 'toast-success');
+                    } else {
+                        v.toast((res && res.msg) || '生成失败', 'toast-danger');
+                    }
+                }).fail(function() { v.toast('请求失败', 'toast-danger'); });
+            },
+            copyText: function(text) {
+                if (!text) return;
+                var ta = document.createElement('textarea');
+                ta.value = text;
+                document.body.appendChild(ta);
+                ta.select();
+                try {
+                    document.execCommand('copy');
+                    this.toast('已复制到剪贴板', 'toast-success');
+                } catch (e) {
+                    this.toast('复制失败，请手动选择', 'toast-danger');
+                }
+                document.body.removeChild(ta);
+            },
+            loadList: function() {
+                var v = this;
+                v.loading = true;
+                $.get(api + '/list', function(res) {
+                    v.loading = false;
+                    if (res && res.code === 0) {
+                        v.list = res.list || [];
+                    } else {
+                        v.list = [];
+                        v.toast((res && res.msg) || '加载实体失败', 'toast-danger');
+                    }
+                }).fail(function() {
+                    v.loading = false;
+                    v.list = [];
+                    v.toast('加载实体失败', 'toast-danger');
+                });
+            },
+            runTest: function() {
+                var v = this;
+                $.post(api + '/test', { plain: v.testPlain, vector: v.testVector || '' }, function(res) {
+                    if (res && res.code === 0 && res.data) {
+                        v.testResult = res.data;
+                        v.toast('测试完成', 'toast-success');
+                    } else {
+                        v.toast((res && res.msg) || '测试失败', 'toast-danger');
+                    }
+                }).fail(function() { v.toast('测试请求失败', 'toast-danger'); });
+            },
+            runDecrypt: function() {
+                var v = this;
+                v.decryptResult = null;
+                $.post(api + '/decrypt', { cipher: v.decryptCipher || '' }, function(res) {
+                    if (res && res.code === 0 && res.data) {
+                        v.decryptResult = res.data;
+                        v.toast('解密成功', 'toast-success');
+                    } else {
+                        v.decryptResult = { success: false, cipher: v.decryptCipher };
+                        v.toast((res && res.msg) || '解密失败', 'toast-danger');
+                    }
+                }).fail(function() { v.toast('解密请求失败', 'toast-danger'); });
+            },
+            selectEntity: function(r) {
+                this.single.entity = r.classFullName;
+                this.batchEntity = r.classFullName;
+                this.toast('已选用 ' + r.className, 'toast-info');
+            },
+            migrateOne: function(dryRun) {
+                this.runOne('migrateOne', dryRun);
+            },
+            restoreOne: function(dryRun) {
+                this.runOne('restoreOne', dryRun);
+            },
+            runOne: function(path, dryRun) {
+                var v = this;
+                if (!v.canSingle) return;
+                var label = path === 'migrateOne' ? (dryRun ? '预检加密' : '加密') : (dryRun ? '预检还原' : '还原');
+                if (!dryRun && !confirm('确定对 id=' + v.single.id + ' 执行「' + label + '」？')) return;
+                $.post(api + '/' + path, {
+                    entity: v.single.entity,
+                    id: v.single.id,
+                    dryRun: dryRun
+                }, function(res) {
+                    v.singleResult = v.formatResult(res, label);
+                    v.toast((res && res.msg) || (res && res.code === 0 ? label + '完成' : label + '失败'), res && res.code === 0 ? 'toast-success' : 'toast-danger');
+                }).fail(function() { v.toast('请求失败', 'toast-danger'); });
+            },
+            batchMigrate: function(dryRun) {
+                this.runBatch('migrate', dryRun);
+            },
+            batchRestore: function(dryRun) {
+                this.runBatch('restore', dryRun);
+            },
+            runBatch: function(path, dryRun) {
+                var v = this;
+                if (!v.batchEntity) return;
+                var label = path === 'migrate' ? (dryRun ? '预检批量加密' : '批量加密') : (dryRun ? '预检批量还原' : '批量还原');
+                if (!dryRun && !confirm('确定对所选实体执行「' + label + '」？')) return;
+                $.post(api + '/' + path, {
+                    entity: v.batchEntity,
+                    dryRun: dryRun,
+                    batchSize: v.batchSize || 200
+                }, function(res) {
+                    v.batchResult = v.formatResult(res, label);
+                    v.toast((res && res.msg) || (res && res.code === 0 ? label + '完成' : label + '失败'), res && res.code === 0 ? 'toast-success' : 'toast-danger');
+                }).fail(function() { v.toast('请求失败', 'toast-danger'); });
+            },
+            formatResult: function(res, label) {
+                if (!res) return label + '：无响应';
+                if (res.code !== 0) return '<strong>' + label + '失败</strong>：' + (res.msg || '未知错误');
+                return '<strong>' + label + '</strong> · 扫描 ' + (res.scanned != null ? res.scanned : '-')
+                    + ' · 待处理 ' + (res.pending != null ? res.pending : '-')
+                    + ' · 已处理 ' + (res.processed != null ? res.processed : res.migrated)
+                    + (res.dryRun ? ' <em>(预检)</em>' : '');
+            },
+            toast: function(m, t) {
+                this.message = m;
+                this.messageType = t || 'toast-success';
+                var self = this;
+                setTimeout(function() { self.message = ''; }, 4500);
+            }
+        }
+    });
+})();
+</script>
+</body>
+</html>

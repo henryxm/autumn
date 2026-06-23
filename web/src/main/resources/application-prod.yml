@@ -21,11 +21,11 @@ spring:
     type: com.alibaba.druid.pool.DruidDataSource
     driverClassName: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:com.mysql.cj.jdbc.Driver}
     druid:
-      first:  #数据源1
+      first: #数据源1
         url: ${SPRING_DATASOURCE_DRUID_FIRST_URL:jdbc:mysql://${database.host}:${database.port}/${database.database}?serverTimezone=Asia/Shanghai&useSSL=false&allowMultiQueries=true&useUnicode=true&characterEncoding=UTF-8&connectionCollation=utf8mb4_unicode_ci&allowPublicKeyRetrieval=true}
         username: ${SPRING_DATASOURCE_DRUID_FIRST_USERNAME:${database.username}}
         password: ${SPRING_DATASOURCE_DRUID_FIRST_PASSWORD:${database.password}}
-      second:  #数据源2
+      second: #数据源2
         url: ${SPRING_DATASOURCE_DRUID_SECOND_URL:jdbc:mysql://${database2.host}:${database2.port}/${database2.database}?serverTimezone=Asia/Shanghai&useSSL=false&allowMultiQueries=true&useUnicode=true&characterEncoding=UTF-8&connectionCollation=utf8mb4_unicode_ci&allowPublicKeyRetrieval=true}
         username: ${SPRING_DATASOURCE_DRUID_SECOND_USERNAME:${database2.username}}
         password: ${SPRING_DATASOURCE_DRUID_SECOND_PASSWORD:${database2.password}}
@@ -65,6 +65,12 @@ spring:
 # 与 application.yml 中其它 autumn.* 合并，仅覆盖 database
 autumn:
   database: ${AUTUMN_DATABASE:mysql}
+  # 字段存储加密（at-rest）示例，见 docs/AI_FIELD_ENCRYPT.md：
+  #  crypto:
+  #    field:
+  #      enabled: true
+  #      key: ${AUTUMN_FIELD_ENCRYPT_KEY:}
+  #      hash-key: ${AUTUMN_FIELD_HASH_KEY:}
 
 # 与 application.yml 中 pagehelper 合并，补充方言（MySQL 可不设）
 pagehelper:

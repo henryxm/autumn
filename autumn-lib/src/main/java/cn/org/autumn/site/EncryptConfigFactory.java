@@ -55,5 +55,21 @@ public class EncryptConfigFactory extends Factory {
         return new EncryptConfigHandler.AesConfig() {
         };
     }
+
+    /**
+     * 获取字段存储加密配置
+     */
+    public EncryptConfigHandler.FieldEncryptConfig getFieldEncryptConfig() {
+        if (handlers != null) {
+            for (EncryptConfigHandler handler : handlers) {
+                EncryptConfigHandler.FieldEncryptConfig config = handler.getFieldEncryptConfig();
+                if (config != null) {
+                    return config;
+                }
+            }
+        }
+        return new EncryptConfigHandler.FieldEncryptConfig() {
+        };
+    }
 }
 

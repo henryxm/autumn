@@ -11,7 +11,7 @@ description: >-
   Controller must not use Dao; Service uses baseMapper; gen/Pages/list.html/js never hand-edited; statics/pages/Site/PageAware.
   Read docs/AI_CODEGEN.md, docs/AI_DATABASE.md, docs/AI_DUAL_KEY.md. Bot/robot: read docs/AI_ROBOT.md + docs/AI_ROBOT_API.md (rbt_, Hook, message/push, cn.org.autumn.modules.bot); web 集成测试见 web/docs/INTEGRATION_TEST.md（基类 integration.base.IntegrationTest）。
   scripts/constraints-scan is optional: run only when the user explicitly asks for a constraint audit, CI-style check, or phrases like 约束扫描/规范体检; see skill section "约束扫描（按需）".
-  Triggers on cn.org.autumn 3.0.0, Spring Boot 3.5, JDK 17, ModuleService, RuntimeSql, PageAware, SpringDoc, bot, robot, rbt_, RobotHook, RobotMessageSubscriber, message/push.
+  Triggers on cn.org.autumn 3.0.0, Spring Boot 3.5, JDK 17, ModuleService, EncryptModuleService, FieldEncrypt, RuntimeSql, PageAware, SpringDoc, bot, robot, rbt_, RobotHook, RobotMessageSubscriber, message/push, 字段加密, field encrypt.
 ---
 
 # Autumn 3.x 框架开发（3.0.0 / 分支 3.0.0）
@@ -61,7 +61,7 @@ description: >-
 1. `docs/AI_INDEX.md` → 2. `docs/AI_BOOT.md` → 3. `docs/AI_MAP.md` → 4. **`docs/AI_STANDARDS.md`**（强制全文，含 §8～§14）  
 5. **`docs/AI_DATABASE.md`**（多库、`DatabaseType`、**§4.0 代码层方言标准写法**、`WrapperColumns`、`RuntimeSql`、Wrapper 边界、Dao **必须** Provider）  
 6. 新模块 / 代码生成 / 搭骨架：追加 **`docs/AI_CODEGEN.md`**、**`docs/AI_DUAL_KEY.md`**（双键、`UserBased`、业务 `user` 可存真人或机器人 uuid）  
-按需：`docs/AI_POSTGRESQL.md`、`docs/AI_TEMPLATES.md`、`docs/AI_CRYPTO.md`、`docs/AI_DISTRIBUTED_LOCK.md`、**`docs/AI_ASYNC_TASK.md`**（**`TagRunnable` / `FinishStatus` / `onFinished`**、内存队列 drain 状态机）、**`docs/REDIS_RESILIENCE.md`**（Redis 熔断与分布式锁稳健性）、`docs/REDIS_STANDALONE.md`、**`docs/REDIS_TTL_GUIDE.md`**（Redis TTL / `RedisExpireUtil`）、**`docs/INSTALL_MODE_CONDITIONAL.md`**（安装向导 **`autumn.install.wizard`**、**§0 占位默认 H2 / 可选 mysql**）等。
+按需：`docs/AI_POSTGRESQL.md`、`docs/AI_TEMPLATES.md`、`docs/AI_CRYPTO.md`、**`docs/AI_FIELD_ENCRYPT.md`**（实体字段存储加密、`EncryptModuleService`）、`docs/AI_DISTRIBUTED_LOCK.md`、**`docs/AI_ASYNC_TASK.md`**（**`TagRunnable` / `FinishStatus` / `onFinished`**、内存队列 drain 状态机）、**`docs/REDIS_RESILIENCE.md`**（Redis 熔断与分布式锁稳健性）、`docs/REDIS_STANDALONE.md`、**`docs/REDIS_TTL_GUIDE.md`**（Redis TTL / `RedisExpireUtil`）、**`docs/INSTALL_MODE_CONDITIONAL.md`**（安装向导 **`autumn.install.wizard`**、**§0 占位默认 H2 / 可选 mysql**）等。
 
 涉及「终止会话 / 记住我阻断 / 会话过期重登守卫」时，追加阅读 **`docs/AI_SESSION_GUARD.md`**（`ForceLogoutRememberMeManager`、`ShiroSessionService`、`/sys/session/self/*`、`autumn-session-guard.js`）。
 
@@ -97,9 +97,24 @@ description: >-
 
 涉及 **支付密码 / `PayPinVerifier` / `modules.safe`** 时，追加 **`docs/AI_SAFE_CREDENTIAL_INTEGRATION.md`** + **`docs/AI_SAFE_CREDENTIAL.md`**。摘要：`POST /safe/api/v1/*`、`SafeConfig`、`gate/assess` → `PayPinVerifier`、错误码 838～852；**`jakarta.*` / MP3 / `lang3`**。
 
+涉及 **实体字段存储加密 / `@FieldEncrypt` / `EncryptModuleService`** 时，必读 **`docs/AI_FIELD_ENCRYPT.md`**（§0 易混概念；Service 层 `EncryptModuleService`；**`jakarta.*` / MP3**；与 **`docs/AI_CRYPTO.md`** 传输加密独立）。
+
+## 字段存储加密（at-rest）
+
+| 任务 | 必读 |
+|------|------|
+| **新增 `@FieldEncrypt` 实体** | **`docs/AI_FIELD_ENCRYPT.md`** §0～§2.4 |
+| **运行时开关 / 加解密测试** | 上列 + **`fieldencrypt.html`** / `FieldEncryptAdminController` |
+
+**纪律（摘要）**：
+
+- 默认 **`ModuleService`**（零加解密）；实体含 `@FieldEncrypt` → **`EncryptModuleService`**（MP3 `BaseMapper` / `Wrapper` / `IPage`）。
+- **`baseMapper` 直查** → **`afterRead(...)`**；`searchable=true` → 手写 `{field}Hash` + `@Column`（hash **64**；加密列 **≤255 自动扩 1024**）。
+- 约束单测：`FieldEncryptConventionTest`。
+
 ## 规范开发三步（与 `docs/AI_CODEGEN.md` 一致）
 
-1. **先实体**：按 `docs/AI_STANDARDS.md` 建实体与索引注释；**`@Cache` / `@Caches`**；业务 Service 继承 **`ModuleService`**，勿自建平行缓存/队列/`LoopJob`。
+1. **先实体**：按 `docs/AI_STANDARDS.md` 建实体与索引注释；**`@Cache` / `@Caches`**；业务 Service 默认继承 **`ModuleService`**；实体含 **`@FieldEncrypt`** 时改继承 **`EncryptModuleService`**，勿自建平行缓存/队列/`LoopJob`。
 2. **再生成**：由开发者在后台执行「代码生成」ZIP，路径与 **`GenUtils.getFileName`** 一致；**AI 不**以仿写替代整套生成器输出；仅在非 gen 空壳写业务；**禁止**删改已落库的 `controller/gen`、`*Pages`、`list.html/js`（须改 **`template/*.vm`** 后重生成）。
 3. **后业务**：`Service` 承载规则与事务；可维护 `Controller` 独立 URL；`pages` + `site/*Site` + `@PageAware`。
 
@@ -178,6 +193,7 @@ description: >-
 - **`isUnique=true` 的 `@Column` 是否未再叠 `@Index`**（§10.2）？
 - 新索引是否**单字段在字段上 `@Index`**、**组合索引才用类级 `@Indexes`**（§10.2）？
 - 机器人：是否已读 **`docs/AI_ROBOT.md` + `docs/AI_ROBOT_API.md`**？bot 包是否仍为 **`jakarta.*` / MP3 annotation**？管理 API 与 `message/push` 鉴权是否分离？
+- **`@FieldEncrypt`**：Service 是否 `EncryptModuleService`？`baseMapper` 读路径是否 `afterRead`？
 - **表名**：符合 §3.2？仅 `@TableName`（`@Table` 无 `value`）？Dao `quote` 一致？
 
 ## 多项目一句话

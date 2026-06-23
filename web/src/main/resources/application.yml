@@ -69,6 +69,14 @@ autumn:
   #   exclude-addresses: 10.244.12.3    # 可选：按本机 IP 精确排除
   redis:
     open: true  # 是否开启redis缓存  true开启   false关闭
+  # 字段存储加密（at-rest，与传输层 AI_CRYPTO 独立）：
+  #  crypto:
+  #    field:
+  #      enabled: true
+  #      key:        # Base64，32 字节 AES-256
+  #      hash-key:   # 盲索引 HMAC，默认同 key
+  #      prefix: "ENC$v1$"
+  # 详见 docs/AI_FIELD_ENCRYPT.md
   shiro:
     redis: true # true表示shiro session存到redis里，需要开启redis，才会生效【分布式场景】
   # mysql | mariadb | postgresql | oracle | sqlserver（仅影响分页方言；注解建表仅 mysql 系与 postgresql）

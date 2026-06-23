@@ -140,6 +140,22 @@
   - 回归：至少覆盖“明文/密文/header有无”三组调用路径。
 - 安全强校验（`agent/auth/签名/灰度/演练`）请看：`@docs/AI_SECURITY.md`。
 
+### 2.4.1 字段存储加密（at-rest，与 HTTP 传输无关）
+
+- 专项文档：**`docs/AI_FIELD_ENCRYPT.md`**（§0 易混概念必读）。
+- 核心类：
+  - `cn.org.autumn.annotation.FieldEncrypt`
+  - `cn.org.autumn.crypto.FieldEncryptService`（`onWrite` / `onRead`）
+  - `cn.org.autumn.base.EncryptModuleService`（带 `@FieldEncrypt` 实体的 Service 基类）
+  - `cn.org.autumn.modules.sys.service.FieldEncryptRuntimeService`（运行时开关）
+  - `cn.org.autumn.modules.sys.controller.FieldEncryptAdminController` + `fieldencrypt.html`（状态/开关/测试）
+- 关键点：
+  - **Service 层**：`EncryptModuleService` 在 CRUD 前后调用 `onWrite` / `onRead`；普通 `ModuleService` **零**加解密开销。
+  - 实体含 `@FieldEncrypt` → Service **必须** `extends EncryptModuleService`；`baseMapper` 自定义查询返回实体须 `afterRead(...)`。
+  - `searchable=true` 须**手写** `{field}Hash` + `@Column`；列表条件由 `BaseService#getCondition` 改写到 hash 列（写入开关开时）。
+  - 配置前缀 `autumn.crypto.field.*`；与传输层 `docs/AI_CRYPTO.md` **密钥独立**。
+  - 可选 `EncryptStringTypeHandler`（显式 `@TableField`）；默认不用，勿与 Service 路径叠用。
+
 ### 2.5 接口式定时任务（LoopJob，常用推荐）
 
 - 核心目标：

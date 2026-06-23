@@ -34,4 +34,18 @@ public class RedisKeys {
     public static String getForceLogoutPrefix(String namespace) {
         return StringUtils.isBlank(namespace) ? "system:logout:" : namespace.trim() + ":system:logout:";
     }
+
+    /** 字段存储加密 Redis 键前缀（集群模式开关与密钥） */
+    public static String getFieldEncryptPrefix(String namespace) {
+        String ns = StringUtils.isBlank(namespace) ? "" : namespace.trim() + ":";
+        return ns + "autumn:field-encrypt:";
+    }
+
+    public static String getFieldEncryptKey(String namespace, String suffix) {
+        return getFieldEncryptPrefix(namespace) + suffix;
+    }
+
+    public static String getFieldEncryptRefreshChannel(String namespace) {
+        return getFieldEncryptPrefix(namespace) + "refresh";
+    }
 }

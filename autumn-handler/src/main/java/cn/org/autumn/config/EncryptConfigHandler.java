@@ -32,6 +32,46 @@ public interface EncryptConfigHandler {
     }
 
     /**
+     * 字段级存储加密配置
+     *
+     * @return 配置对象，null 表示使用 {@code autumn.crypto.field.*} 默认绑定
+     */
+    default FieldEncryptConfig getFieldEncryptConfig() {
+        return null;
+    }
+
+    /**
+     * 字段级存储加密配置
+     */
+    interface FieldEncryptConfig {
+
+        default boolean isEnabled() {
+            return false;
+        }
+
+        /**
+         * AES-256 主密钥，Base64 编码（32 字节）
+         */
+        default String getKeyBase64() {
+            return "";
+        }
+
+        /**
+         * 盲索引 HMAC 密钥，Base64；空则与主密钥相同
+         */
+        default String getHashKeyBase64() {
+            return "";
+        }
+
+        /**
+         * 密文版本前缀，用于识别已加密值
+         */
+        default String getPrefix() {
+            return "ENC$v1$";
+        }
+    }
+
+    /**
      * RSA配置接口
      */
     interface RsaConfig {

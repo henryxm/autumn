@@ -416,6 +416,18 @@ public class SysPageController implements ErrorController {
         return "404";
     }
 
+    @RequestMapping(value = {"fieldencrypt.html"}, method = RequestMethod.GET)
+    @SkipInterceptor
+    public String fieldencrypt(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        ipWhiteService.check(httpServletRequest, getClass(), "fieldencrypt");
+        if (ShiroUtils.isLogin()) {
+            if (sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
+                return pageFactory.fieldencrypt(httpServletRequest, httpServletResponse, model);
+            }
+        }
+        return "404";
+    }
+
     @ResponseBody
     @RequestMapping(value = {"reinit"}, method = RequestMethod.POST)
     @SkipInterceptor
