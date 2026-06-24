@@ -12,7 +12,7 @@ description: >-
   Controller must not use Dao; Service uses baseMapper; gen/Pages/list.html/js never hand-edited; statics/pages/Site/PageAware.
   Read docs/AI_CODEGEN.md, docs/AI_DATABASE.md, docs/AI_DUAL_KEY.md. Bot/robot: read docs/AI_ROBOT.md + docs/AI_ROBOT_API.md (rbt_, Hook, message/push, cn.org.autumn.modules.bot).
   scripts/constraints-scan is optional: run only when the user explicitly asks for a constraint audit, CI-style check, or phrases like 约束扫描/规范体检; see skill section "约束扫描（按需）".
-  Triggers on cn.org.autumn 2.0.0, Spring Boot 2.7, JDK 8, ModuleService, EncryptModuleService, FieldEncrypt, RuntimeSql, PageAware, bot, robot, rbt_, safe, PayUserPin, PayPinVerifier, pay password, 支付密码, 手势密码, 生物识别, 字段加密, field encrypt.
+  Triggers on cn.org.autumn 2.0.0, Spring Boot 2.7, JDK 8, ModuleService, EncryptModuleService, FieldEncrypt, isEncryptCacheField, encryptCache, RuntimeSql, PageAware, bot, robot, rbt_, safe, PayUserPin, PayPinVerifier, pay password, 支付密码, 手势密码, 生物识别, 字段加密, field encrypt, 加密缓存.
 ---
 
 # Autumn 2.x 框架开发（2.0.0 / master）
@@ -70,22 +70,25 @@ description: >-
 
 涉及 **支付密码 / `PayPinVerifier` / `modules.safe`** 时，见下文 **安全支付模块（safe）**。
 
-涉及 **实体字段存储加密 / `@FieldEncrypt` / `EncryptModuleService`** 时，必读 **`docs/AI_FIELD_ENCRYPT.md`**（§0 易混概念；Service 层 `EncryptModuleService`；与 **`docs/AI_CRYPTO.md`** 传输加密独立）。
+涉及 **实体字段存储加密 / `@FieldEncrypt` / `EncryptModuleService`** 时，必读 **`docs/AI_FIELD_ENCRYPT.md`**（§0 易混概念；§7 **`@Cache` 加密缓存**；与 **`docs/AI_CRYPTO.md`** 传输加密独立）。
 
 ## 字段存储加密（at-rest）
 
 | 任务 | 必读 |
 |------|------|
 | **新增 `@FieldEncrypt` 实体** | **`docs/AI_FIELD_ENCRYPT.md`** §0～§2.4 |
-| **运行时开关 / 加解密测试** | 上列 + **`fieldencrypt.html`** / `FieldEncryptAdminController` |
+| **`@Cache` + searchable 加密字段** | 上列 **§7**（实体双 `@Cache`、Service、`getCache` / `getNameCache("hash", …)`） |
+| **运行时开关 / 加解密测试** | §1～§4 + **`fieldencrypt.html`** / `FieldEncryptAdminController` |
 
 **纪律（摘要）**：
 
 - 与 **`docs/AI_CRYPTO.md`**（HTTP 传输加密）**密钥与 Service 完全独立**。
-- 默认：**`ModuleService`**（零加解密开销）；实体含 `@FieldEncrypt` → **`EncryptModuleService`**。
-- **`baseMapper` 直查**返回实体 → **`afterRead(...)`**；`searchable=true` → 手写 `{field}Hash` + `@Column`。
-- 列表条件：`BaseService#getCondition` 在写入开关开时改写到 hash 列。
-- 约束单测：`FieldEncryptConventionTest`。
+- 默认 **`ModuleService`**（零加解密、零加密缓存）；实体含 `@FieldEncrypt` → **`EncryptModuleService`**。
+- **`baseMapper` 直查** → **`afterRead(...)`**；`searchable=true` → 手写 `{field}Hash` + `@Column`。
+- 列表条件：仅 **`EncryptModuleService#tryHashQueryCondition`**（`ModuleService` 走原列映射）。
+- **`@Cache` + 加密**：searchable 字段与 hash 列各标 `@Cache`（hash 列 `name = FieldEncryptService.HASH_CACHE_CHANNEL`）；调用方 cache key 用**明文**或 **hash hex**，miss 回源由框架 hash 盲查（§7.2）。
+- **`BaseCacheService` 不依赖 `FieldEncryptService`**；加密缓存钩子在 **`EncryptModuleService`** 覆盖：`isEncryptCacheField` / `isEncryptCacheNaming` / `isEncryptCacheEntity`、`tryEncryptCacheEq`、`mirrorEncryptCache`、`encryptCacheEvictionKeys`、`encryptCacheEvictionValue`（§7.4）。**勿**在基类或 `ModuleService` 子类手写平行逻辑。
+- 约束单测：`FieldEncryptConventionTest`；缓存：`FieldEncryptCacheTest`。
 
 ## 安全支付模块（safe）
 
@@ -203,7 +206,7 @@ description: >-
 - 新索引是否**单字段在字段上 `@Index`**、**组合索引才用类级 `@Indexes`**（§10.2）？
 - 机器人相关：是否已读 **`docs/AI_ROBOT.md` + `docs/AI_ROBOT_API.md`**？管理 API 与 `message/push` 鉴权是否分离？Hook 验签是否用原始 body？
 - **safe 支付**：闸门 assess → verify 链路完整？`modules.pay` 无残留？金额是否 `amountCent`？
-- **`@FieldEncrypt`**：Service 是否 `EncryptModuleService`？`baseMapper` 读路径是否 `afterRead`？`searchable` 是否手写 hash 列？
+- **`@FieldEncrypt`**：Service 是否 `EncryptModuleService`？`baseMapper` → `afterRead`？`searchable` + hash 列？**`@Cache`** 是否按 §7（明文键 + hash 通道）？
 - **表名**：符合 §3.2？仅 `@TableName`（`@Table` 无 `value`）？Dao `quote` 一致？
 
 ## 多项目一句话
