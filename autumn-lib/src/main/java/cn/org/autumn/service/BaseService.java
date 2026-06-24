@@ -1,7 +1,5 @@
 package cn.org.autumn.service;
 
-import cn.org.autumn.annotation.FieldEncrypt;
-import cn.org.autumn.crypto.FieldEncryptService;
 import cn.org.autumn.database.runtime.WrapperColumns;
 import cn.org.autumn.menu.BaseMenu;
 import cn.org.autumn.table.annotation.Column;
@@ -62,6 +60,16 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends Distribute
     }
 
     /**
+     * 列表/分页查询是否将 searchable 加密字段改写到 hash 列；默认 {@code false}。
+     * {@link cn.org.autumn.base.EncryptModuleService} 覆盖。
+     *
+     * @return {@code true} 表示已写入 condition，跳过默认列映射
+     */
+    protected boolean tryHashQueryCondition(Map<String, Object> condition, Class<?> entityClass, Field field, Object value) {
+        return false;
+    }
+
+    /**
      * 将查询条件过滤并转换为数据库中的字段条件进行查询
      *
      * @param params 查询条件，同时支持数据库的字段，属性字段(驼峰命名的对象数据)，和两者的混合条件
@@ -87,15 +95,7 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends Distribute
             if (null == value) {
                 continue;
             }
-            FieldEncrypt fieldEncrypt = field.getAnnotation(FieldEncrypt.class);
-            FieldEncryptService encrypt = FieldEncryptService.get();
-            // searchable + 写入加密开：条件改写到 hash 列（非加密列；见 docs/AI_FIELD_ENCRYPT.md §0）
-            if (fieldEncrypt != null && fieldEncrypt.searchable() && encrypt != null && encrypt.useHashForQuery()) {
-                String hashField = fieldEncrypt.hashField().isEmpty() ? fieldName + "Hash" : fieldEncrypt.hashField();
-                String hashColumn = HumpConvert.HumpToUnderline(hashField);
-                if (!condition.containsKey(hashColumn)) {
-                    condition.put(hashColumn, encrypt.hashQueryValue(entity, fieldName, value.toString()));
-                }
+            if (tryHashQueryCondition(condition, entity, field, value)) {
                 continue;
             }
             if (!condition.containsKey(columnName)) {

@@ -70,6 +70,13 @@ public class CacheConfig {
     private final String path;
 
     /**
+     * {@code @Cache#name()} 通道名（与 Ehcache/Redis 物理 cache name 不同）；默认空串为实体默认通道。
+     * 供 {@code BaseCacheService#compute} 内字段加密缓存镜像等读取。
+     */
+    @Builder.Default
+    private final String naming = "";
+
+    /**
      * 验证必填字段
      * 在使用 Builder 构建后调用此方法进行验证
      */

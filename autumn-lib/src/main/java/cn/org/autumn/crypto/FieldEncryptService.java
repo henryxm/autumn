@@ -246,7 +246,9 @@ public class FieldEncryptService {
         }
     }
 
-    /** Service / baseMapper 读库后解密；密文内自带 IV，与注解 {@code vector} 无关。 */
+    /**
+     * Service / baseMapper 读库后解密；密文内自带 IV，与注解 {@code vector} 无关。
+     */
     public <E> E onRead(E entity) {
         if (entity != null) {
             applyAfterRead(entity);
@@ -384,7 +386,189 @@ public class FieldEncryptService {
         return result;
     }
 
-    // --- 运维 / 管理端 ------------------------------------------------------------
+    /**
+     * hash 列 {@code @Cache} 推荐使用的 {@link cn.org.autumn.annotation.Cache#name()} 通道名。
+     * 与加密字段默认通道（{@code name=""}) 并存，键为 HMAC 十六进制。
+     */
+    public static final String HASH_CACHE_CHANNEL = "hash";
+
+    private static final int STORED_HASH_HEX_LENGTH = 64;
+
+    // --- @Cache 与字段加密 ----------------------------------------------------------------
+
+    /**
+     * 盲索引 hash 列是否为 {@code @Cache} 目标字段。
+     */
+    public FieldMeta findMetaByHashFieldName(Class<?> clazz, String hashFieldName) {
+        if (clazz == null || StringUtils.isBlank(hashFieldName)) {
+            return null;
+        }
+        for (FieldMeta meta : getFields(clazz)) {
+            if (hashFieldName.equals(meta.getHashFieldName())) {
+                return meta;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * {@code @Cache} 是否标在加密列或对应 hash 列（仅此字段走 hash 回源 / 镜像 / 扩展失效）。
+     */
+    public boolean isEncryptCacheField(Class<?> clazz, String fieldName) {
+        if (clazz == null || StringUtils.isBlank(fieldName)) {
+            return false;
+        }
+        return findByFieldName(clazz, fieldName) != null || findMetaByHashFieldName(clazz, fieldName) != null;
+    }
+
+    /**
+     * {@code @Cache} 回源：解析 DB 等值列与绑定值。
+     */
+    public FieldEncryptCacheLookup resolveCacheDbLookup(Class<?> clazz, String cacheFieldName, Object cacheKey) {
+        if (clazz == null || StringUtils.isBlank(cacheFieldName) || cacheKey == null) {
+            return null;
+        }
+        String keyText = cacheKey.toString().trim();
+        if (keyText.isEmpty()) {
+            return null;
+        }
+        FieldMeta hashTarget = findMetaByHashFieldName(clazz, cacheFieldName);
+        if (hashTarget != null && hashTarget.hasHashField()) {
+            return new FieldEncryptCacheLookup(HumpConvert.HumpToUnderline(hashTarget.getHashFieldName()), keyText);
+        }
+        FieldMeta encryptMeta = findByFieldName(clazz, cacheFieldName);
+        if (encryptMeta != null && encryptMeta.isSearchable() && encryptMeta.hasHashField() && isHashKeyConfigured()) {
+            String hashColumn = HumpConvert.HumpToUnderline(encryptMeta.getHashFieldName());
+            if (isStoredHashHex(keyText)) {
+                return new FieldEncryptCacheLookup(hashColumn, keyText);
+            }
+            return new FieldEncryptCacheLookup(hashColumn, hashValueForced(keyText));
+        }
+        return new FieldEncryptCacheLookup(HumpConvert.HumpToUnderline(cacheFieldName), cacheKey);
+    }
+
+    /**
+     * 从实体字段原始值解析缓存失效键（加密字段解密为明文；hash 列原样）。
+     */
+    public Object normalizeCacheEvictionKey(Class<?> clazz, String cacheFieldName, Object rawFieldValue) {
+        if (rawFieldValue == null) {
+            return null;
+        }
+        if (!(rawFieldValue instanceof String)) {
+            return rawFieldValue;
+        }
+        String text = ((String) rawFieldValue).trim();
+        if (text.isEmpty()) {
+            return null;
+        }
+        FieldMeta encryptMeta = findByFieldName(clazz, cacheFieldName);
+        if (encryptMeta != null) {
+            if (needsRestore(text)) {
+                return decryptValue(text);
+            }
+            return text;
+        }
+        return rawFieldValue;
+    }
+
+    /**
+     * 实体变更时需失效的全部缓存通道键（含 hash 镜像通道 {@link #HASH_CACHE_CHANNEL}）。
+     */
+    public List<FieldEncryptCacheKey> resolveCacheEvictionKeys(Class<?> clazz, String cacheFieldName, String naming, Object entity) {
+        List<FieldEncryptCacheKey> keys = new ArrayList<>();
+        if (clazz == null || entity == null || StringUtils.isBlank(cacheFieldName)) {
+            return keys;
+        }
+        Object raw = readFieldValue(entity, cacheFieldName);
+        Object primary = normalizeCacheEvictionKey(clazz, cacheFieldName, raw);
+        if (primary != null) {
+            keys.add(new FieldEncryptCacheKey(naming, primary));
+        }
+        FieldMeta encryptMeta = findByFieldName(clazz, cacheFieldName);
+        if (encryptMeta != null && encryptMeta.isSearchable() && encryptMeta.hasHashField()) {
+            Object hashVal = readFieldValue(entity, encryptMeta.getHashFieldName());
+            if (hashVal != null && StringUtils.isNotBlank(hashVal.toString())) {
+                keys.add(new FieldEncryptCacheKey(HASH_CACHE_CHANNEL, hashVal.toString().trim()));
+            } else if (primary instanceof String && StringUtils.isNotBlank((String) primary) && isHashKeyConfigured()) {
+                keys.add(new FieldEncryptCacheKey(HASH_CACHE_CHANNEL, hashValueForced((String) primary)));
+            }
+        }
+        FieldMeta hashOwner = findMetaByHashFieldName(clazz, cacheFieldName);
+        if (hashOwner != null) {
+            Object plain = normalizeCacheEvictionKey(clazz, hashOwner.getFieldName(), readFieldValue(entity, hashOwner.getFieldName()));
+            if (plain != null) {
+                keys.add(new FieldEncryptCacheKey("", plain));
+            }
+        }
+        return keys;
+    }
+
+    /**
+     * 缓存写入后镜像到关联通道（明文 ↔ hash）。
+     */
+    public List<FieldEncryptCacheKey> resolveCacheMirrorKeys(Class<?> clazz, String cacheFieldName, String naming, Object cacheKey, Object entity) {
+        List<FieldEncryptCacheKey> mirrors = new ArrayList<>();
+        if (clazz == null || cacheKey == null) {
+            return mirrors;
+        }
+        String effectiveNaming = naming == null ? "" : naming;
+        FieldMeta encryptMeta = findByFieldName(clazz, cacheFieldName);
+        if (encryptMeta != null && encryptMeta.isSearchable() && encryptMeta.hasHashField() && isHashKeyConfigured()) {
+            if (!HASH_CACHE_CHANNEL.equalsIgnoreCase(effectiveNaming)) {
+                String plain = cacheKey.toString().trim();
+                if (!isStoredHashHex(plain)) {
+                    mirrors.add(new FieldEncryptCacheKey(HASH_CACHE_CHANNEL, hashValueForced(plain)));
+                } else {
+                    mirrors.add(new FieldEncryptCacheKey(HASH_CACHE_CHANNEL, plain));
+                }
+            } else if (entity != null) {
+                Object plain = normalizeCacheEvictionKey(clazz, encryptMeta.getFieldName(), readFieldValue(entity, encryptMeta.getFieldName()));
+                if (plain != null) {
+                    mirrors.add(new FieldEncryptCacheKey("", plain));
+                }
+            }
+        }
+        FieldMeta hashOwner = findMetaByHashFieldName(clazz, cacheFieldName);
+        if (hashOwner != null && HASH_CACHE_CHANNEL.equalsIgnoreCase(effectiveNaming) && entity != null) {
+            Object plain = normalizeCacheEvictionKey(clazz, hashOwner.getFieldName(), readFieldValue(entity, hashOwner.getFieldName()));
+            if (plain != null) {
+                mirrors.add(new FieldEncryptCacheKey("", plain));
+            }
+        }
+        return mirrors;
+    }
+
+    public boolean isStoredHashHex(String value) {
+        if (value == null || value.length() != STORED_HASH_HEX_LENGTH) {
+            return false;
+        }
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            if (!(c >= '0' && c <= '9') && !(c >= 'a' && c <= 'f') && !(c >= 'A' && c <= 'F')) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private Object readFieldValue(Object entity, String fieldName) {
+        if (entity == null || StringUtils.isBlank(fieldName)) {
+            return null;
+        }
+        Class<?> type = entity.getClass();
+        while (type != null && !type.equals(Object.class)) {
+            try {
+                Field field = type.getDeclaredField(fieldName);
+                field.setAccessible(true);
+                return field.get(entity);
+            } catch (NoSuchFieldException e) {
+                type = type.getSuperclass();
+            } catch (IllegalAccessException e) {
+                return null;
+            }
+        }
+        return null;
+    }
 
     public Map<String, Object> statusSnapshot() {
         Map<String, Object> map = new LinkedHashMap<>();

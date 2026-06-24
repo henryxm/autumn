@@ -25,7 +25,7 @@
 - `docs/AI_UPGRADE.md`：依赖方升级 autumn 时的清单、一键扫描脚本说明与自动化边界
 - `docs/AI_SESSION_GUARD.md`：会话终止、防 RememberMe 自动恢复、`/sys/session/self/*` 通用接口与前端守卫接入
 - `docs/AI_CRYPTO.md`：接口加解密兼容与迁移
-- **`docs/AI_FIELD_ENCRYPT.md`**：**实体字段存储加密**（`@FieldEncrypt`、`EncryptModuleService`、`autumn.crypto.field.*`、盲索引；与传输层 `AI_CRYPTO.md` 独立）
+- **`docs/AI_FIELD_ENCRYPT.md`**：**实体字段存储加密**（`@FieldEncrypt`、`EncryptModuleService`、`@Cache` 钩子 §7、`autumn.crypto.field.*`；与传输层 `AI_CRYPTO.md` 独立）
 - `docs/AI_SECURITY.md`：安全强校验、灰度、演练
 - `docs/AI_CODEGEN.md`：**代码生成链路（gen / GenUtils / 模板 / 库表反射）**与**推荐三步开发流程**（实体 → 生成骨架 → 业务与页面）；**`BaseCacheService` / `ShareCacheService` / `BaseQueueService`** 能力说明
 - `docs/AI_TEMPLATES.md`：模块任务模板库
