@@ -1,131 +1,240 @@
 # Autumn
 
-Autumn 是一个可扩展的后台基础框架，覆盖权限、系统管理、代码生成、缓存、队列、加解密、定时任务、对象存储、防火墙等常见能力，并提供在线文档与 AI 协作指引。
+Autumn 是一套可扩展的后台基础框架：在 Spring Boot 之上提供权限、系统管理、代码生成、两级缓存、分布式队列、HTTP 混合加解密、**字段存储加密**、定时任务、机器人开放 API、支付安全凭证等能力，并配套 **`docs/` 约束文档**与 **Cursor Skill**，支持传统开发与 AI 协作并行。
 
-## 1. 当前版本与定位
+---
 
-- **本分支 `3.0.0`**：框架版本 **`3.0.0`**，**JDK 17+**，**Spring Boot 3.5.10**，**MyBatis-Plus 3.x**，**`jakarta.*`**，Shiro Jakarta 分类器、**SpringDoc（OpenAPI）** 等（详见根 `pom.xml`）。
-- **`master`（2.0.0 线）**：JDK 8、Spring Boot 2.7.18、MyBatis-Plus 2.x、`javax.*`；与 3.x **勿混用 Skill 与依赖坐标**。
-- 设计目标：
-  - 提供可复用的通用能力，减少业务项目重复造轮子
-  - 通过 `autumn-handler` 做框架扩展解耦
-  - 支持“传统模式 + AI 协作开发模式”并行
+## 版本与分支
 
-## 2. 核心能力总览
+| 线 | 分支 / artifact | 运行时 | 命名空间 | Cursor Skill |
+|----|-----------------|--------|----------|--------------|
+| **2.x（默认）** | `master` · `2.0.0` | JDK **8** · Spring Boot **2.7.18** · MyBatis-Plus **2.x** | `javax.*` | `.cursor/skills/autumn-framework-2x/SKILL.md` |
+| **3.x（本分支）** | **`3.0.0`** · **`3.0.0`** | JDK **17+** · Spring Boot **3.5.x** · MyBatis-Plus **3.x** | `jakarta.*` | `.cursor/skills/autumn-framework-3x/SKILL.md` |
 
-- 系统模块：`sys / gen / job / db / oauth / usr / oss / lan / spm / wall`
-- 框架能力：
-  - 缓存：两级缓存（EhCache + Redis）、共享缓存抽象、失效同步
-  - 队列：Memory/Redis List/Redis Stream/Delay/Priority，支持重试与死信
-  - 加解密：RSA + AES 混合模式，支持请求/返回兼容改造
-  - 定时任务：`schedulejob(cron)` + `LoopJob(接口周期)`，支持统一管理与告警
-  - Handler 扩展：默认实现 + 条件注入 + 顺序控制
+业务工程请在 `AGENTS.md` 或首轮对话中**写明依赖的 Autumn 主版本**，避免 2.x / 3.x 规范与 Skill 混用。具体版本以根 `pom.xml` 为准。
 
-## 3. 文档入口
+---
 
-### 3.1 在线文档（应用内）
+## 核心能力一览
 
-- 文档首页：`/modules/docs/index`
-- 推荐阅读顺序：`quickstart` → `architecture` → `ai-collab` → `handler` → `sys` → `cache` / `queue` / `job` / `oauth` / `hybrid-crypto`
-- 文档模板目录：`autumn-modules/src/main/resources/templates/modules/docs/`
+| 能力 | 说明 | 深入阅读 |
+|------|------|----------|
+| **模块与权限** | `sys / gen / job / db / oauth / usr / oss / lan / spm / wall / bot / safe` 等 | `docs/AI_MAP.md` |
+| **Service 继承链** | `ModuleService` → 缓存 / 队列 / 方言 / 自动 uuid | `docs/AI_CODEGEN.md` · `docs/AI_DUAL_KEY.md` |
+| **两级缓存** | EhCache + Redis；`@Cache` 注解回源；共享缓存与失效广播 | `docs/AI_MAP.md` §2.1 |
+| **分布式队列** | Memory / Redis List / Stream / 延迟 / 优先级；重试与死信 | `docs/AI_MAP.md` §2.2 |
+| **分布式锁** | `DistributedService.withLock*`；降级、重试、配置化 | `docs/AI_DISTRIBUTED_LOCK.md` |
+| **HTTP 混合加解密** | RSA 握手 + AES 会话；请求/响应按条件触发 | `docs/AI_CRYPTO.md` |
+| **字段存储加密** | 实体 `@FieldEncrypt` · AES-GCM 落库 · 盲索引查询 · `@Cache` 联动 | **`docs/AI_FIELD_ENCRYPT.md`** |
+| **定时任务** | `LoopJob` 接口周期（推荐）+ `schedulejob` cron | `docs/AI_MAP.md` §2.5 |
+| **代码生成** | 实体注解驱动建表 → gen 模板 → 业务只改非 gen 层 | `docs/AI_CODEGEN.md` |
+| **多数据库** | `RuntimeSql` / `WrapperColumns`；Dao 仅 Provider 写 SQL | `docs/AI_DATABASE.md` |
+| **机器人 API** | `/robot/api/v1/*` · Hook 验签 · `rbt_` 推送 | `docs/AI_ROBOT.md` |
+| **支付安全** | `/safe/api/v1/*` · 闸门 · PIN/生物识别 · `PayPinVerifier` | `docs/AI_SAFE_CREDENTIAL.md` |
+| **Handler 扩展** | `autumn-handler` 条件注入与顺序扩展 | 在线文档 `handler` 章节 |
 
-### 3.2 仓库内 Markdown（`docs/`）
+**传输加密**（`docs/AI_CRYPTO.md`）与 **字段存储加密**（`docs/AI_FIELD_ENCRYPT.md`）使用**不同密钥与服务**，请勿混用。
 
-面向 AI 与研发的约束性文档已全部放在 **`docs/`** 目录（**不再使用仓库根目录下的 `AI_*.md` 路径**）。
+---
 
-| 文件 | 用途 |
-|------|------|
-| `docs/AI_INDEX.md` | 总索引与按场景加载组合 |
-| `docs/AI_BOOT.md` | 最小启动上下文 |
-| `docs/AI_MAP.md` | 框架能力地图（硬约束） |
-| `docs/AI_STANDARDS.md` | 应用层与数据访问规范 |
-| `docs/AI_DATABASE.md` | 多库、`RuntimeSql`、Provider、Wrapper 边界 |
-| `docs/AI_CODEGEN.md` | 代码生成与三步开发 |
-| `docs/AI_GUIDE.md` | 多项目导航与 `@` 引用示例 |
-| 其它 `docs/AI_*.md` | 专项（PG、升级、安全、模板等） |
+## 字段存储加密（at-rest）
 
-**路径说明（避免引用错误）**
+面向需要在数据库中加密 `String` 字段、又要在业务层保持明文的场景。
 
-- 在 **本仓库** 内用 Cursor：`@docs/AI_INDEX.md` 等。
-- 业务仓库与 **autumn 并列**（例如 `../autumn`）：`@../autumn/docs/AI_BOOT.md`（见 `docs/AI_INDEX.md` §4）。
-- 在线章节「AI 协作」中的 `@` 示例已改为占位符 **`&lt;autumn-root&gt;/docs/...`**，请替换为本地 autumn 根路径。
+### 怎么用
 
-### 3.3 升级体检脚本
+1. 实体字段标注 `@FieldEncrypt`（可选 `searchable=true` + 手写 `{field}Hash` 列）。
+2. 模块 Service 继承 **`EncryptModuleService`**（无加密字段则继续用 **`ModuleService`**，零开销）。
+3. 配置 `autumn.crypto.field.*`（见下文）；管理页 **`fieldencrypt.html`** / API **`/sys/crypto/field/*`**。
 
-- `scripts/autumn-dependency-scan.sh`：只读扫描（`pom`、配置、`FIND_IN_SET`、Dao 注解 SQL 线索等），详见 `docs/AI_UPGRADE.md` §4。
+### 加解密路径（唯一）
 
-## 4. AI 协作与 Cursor Skill
+| 调用方式 | 写 | 读 |
+|----------|----|----|
+| **`EncryptModuleService`** 的 `insert*` / `save*` / `update*` / `select*` | 自动 `onWrite`，落库后 **`restoreAfterWrite`**（内存保持明文） | 自动 `onRead` |
+| **`baseMapper` / Dao 手写 SQL** | 手动 `encrypt.onWrite` 或改走 Service 写方法 | 实体 **`afterRead(...)`**；Map/标量 **`afterReadMap` / `afterReadMaps` / `afterReadScalar(s)`** |
+| **`ModuleService` 子类** | 无 | 无 |
 
-- **本分支（3.0.0）**：`.cursor/skills/autumn-framework-3x/SKILL.md`（JDK 17+ / Spring Boot 3.5 / Jakarta / MP3）。
-- **master（2.0.0 线）**：`.cursor/skills/autumn-framework-2x/SKILL.md`（JDK 8 / Spring Boot 2.7 / `javax` / MP2）。
-- 上述 Skill 与 **`docs/AI_*.md`** 路径一致；可同步到个人 `~/.cursor/skills`。业务工程请在 `AGENTS.md` 或首轮提示中写明 **Autumn 主版本**，避免 2x / 3x 规范混用。
+- 列表/分页 **searchable** 等值条件：`EncryptModuleService#tryHashQueryCondition` 改写 hash 列。
+- **`@Cache` + 加密字段**：明文键与 hash 通道（`FieldEncryptService.HASH_CACHE_CHANNEL`）由框架钩子处理，详见 **`docs/AI_FIELD_ENCRYPT.md` §7**。
+- 迁移读库内密文：`FieldEncryptContext.runSkip(...)`（`FieldEncryptMigrationService`）。
 
-## 5. 工程结构
+### 配置示例
 
-```text
-autumn
-├─ autumn-handler    # Handler 扩展接口与默认实现
-├─ autumn-lib        # 基础能力（缓存/队列/加解密/通用模型）
-├─ autumn-modules    # 业务模块与控制器实现
-├─ autumn-starter    # 一站式引入 Autumn 模块（聚合依赖）
-├─ web               # Web 启动入口（主类：cn.org.autumn.Web）
-├─ docs/             # AI 与研发用 Markdown 文档
-└─ scripts/          # 维护与升级辅助脚本
+```yaml
+autumn:
+  crypto:
+    field:
+      enabled: true
+      key: ${AUTUMN_FIELD_ENCRYPT_KEY:}    # Base64，32 字节 AES-256
+      hash-key: ${AUTUMN_FIELD_HASH_KEY:}  # 盲索引 HMAC；建议与 key 分开
+      prefix: "ENC$v1$"
 ```
 
-## 6. 依赖与构建
+### 关键类
 
-- 父 POM 在 **`validate` 阶段** 启用 **`maven-enforcer-plugin` 的 `dependencyConvergence`**，并在 **`dependencyManagement`** 中统一易冲突传递依赖版本，避免“同名不同版本”静默共存。
-- 若升级依赖后构建失败，请根据 enforcer 报告在父 POM 的 **`dependencyManagement`** 中补齐或调整版本后重试。
+| 类 | 职责 |
+|----|------|
+| `@FieldEncrypt` | 标记加密字段 |
+| `FieldEncryptService` | `onWrite` / `onRead` / 盲索引 / 缓存解析 |
+| `EncryptModuleService` | 带加密实体的 Service 基类（CRUD + 缓存钩子） |
+| `FieldEncryptRuntimeService` | 运行时写入开关（单机 sys_config / 集群 Redis） |
+| `FieldEncryptAdminController` | 管理 API |
 
-## 7. 环境要求
+约束单测：`FieldEncryptConventionTest` · `FieldEncryptCacheTest` · `EncryptModuleServiceTest`。
 
-- JDK：`17`
-- Maven：`3.8+`
-- MySQL：`5.7+`（建议 8.x）
-- Redis：建议开启（缓存、分布式会话、队列/加密等场景更完整）
+---
 
-## 8. 快速启动
+## Service 默认继承链
 
-1. 创建数据库 `autumn`（UTF-8/utf8mb4）。
-2. 修改数据库配置：`web/src/main/resources/application-dev.yml`。
-3. 如需 Redis，确认 `web/src/main/resources/application.yml` 中 Redis 参数可连接。
-4. 在项目根目录执行：
+业务 Service 通常从 **`ModuleService`** 出发，按需获得以下能力（无需重复实现）：
+
+```text
+ModuleService
+  → BaseService          # 分页、getCondition、菜单
+  → DistributedService   # withLock*
+  → ShareCacheService    # 跨模块共享缓存
+  → BaseCacheService     # @Cache 回源与失效
+  → BaseQueueService     # 队列注册与发送
+  → AutoIdService        # UuidBased / SnowBased 第二主键
+  → CompatibleService    # MP2 风格 select* 兼容层
+  → DialectService       # RuntimeSql / columnInWrapper（MP3 ServiceImpl）
+```
+
+含 **`@FieldEncrypt`** 的实体：将 **`ModuleService`** 换为 **`EncryptModuleService`**，其余链不变。
+
+---
+
+## 文档入口
+
+### 应用内在线文档
+
+| 入口 | 路径 |
+|------|------|
+| 文档首页 | `/modules/docs/index` |
+| 推荐顺序 | quickstart → architecture → ai-collab → handler → sys → cache / queue / job / oauth / hybrid-crypto |
+| 模板源码 | `autumn-modules/src/main/resources/templates/modules/docs/` |
+
+### 仓库 `docs/`（AI 与研发约束）
+
+**所有 `AI_*.md` 均在 `docs/` 目录**，不在仓库根目录。
+
+| 第一步 | 文件 |
+|--------|------|
+| 索引 | [`docs/AI_INDEX.md`](docs/AI_INDEX.md) |
+| 最小上下文 | [`docs/AI_BOOT.md`](docs/AI_BOOT.md) |
+| 能力地图 | [`docs/AI_MAP.md`](docs/AI_MAP.md) |
+| 强制规范 | [`docs/AI_STANDARDS.md`](docs/AI_STANDARDS.md) |
+
+**按场景追加**（见 `AI_INDEX.md` §2）：
+
+| 场景 | 文档 |
+|------|------|
+| 新模块 / 代码生成 | `AI_CODEGEN.md` · `AI_TEMPLATES.md` |
+| SQL / 多库 / Provider | `AI_DATABASE.md` |
+| 字段存储加密 | **`AI_FIELD_ENCRYPT.md`** |
+| HTTP 加解密 | `AI_CRYPTO.md` |
+| 机器人对接 | `AI_ROBOT.md` · `AI_ROBOT_API.md` |
+| 支付安全 | `AI_SAFE_CREDENTIAL*.md` |
+| 升级 autumn 版本 | `AI_UPGRADE.md` |
+
+**Cursor / 业务仓引用**
+
+- 本仓库：`@docs/AI_INDEX.md`
+- 与 autumn 并列的业务仓：`@../autumn/docs/AI_BOOT.md`（见 `AI_INDEX.md` §4）
+
+---
+
+## AI 协作与 Cursor Skill
+
+| Skill | 适用 | 路径 |
+|-------|------|------|
+| **autumn-framework-2x** | JDK 8 · Boot 2.7 · MP2 · master | `.cursor/skills/autumn-framework-2x/SKILL.md` |
+| **autumn-framework-3x** | JDK 17+ · Boot 3.5 · MP3 · **本分支 `3.0.0`** | `.cursor/skills/autumn-framework-3x/SKILL.md` |
+
+Skill 与 `docs/` 口径一致，摘要包括：分层纪律、Dao Provider、双主键、`@FieldEncrypt` / **`EncryptModuleService`**、加密缓存钩子、Bot、safe 等。可同步到 `~/.cursor/skills/` 供全局使用。
+
+**约束扫描（按需）**：仅当任务明确要求规范体检或 CI 门禁时，在仓库根执行 `bash scripts/constraints-scan`（见 Skill 与 `AI_DATABASE.md` §8.5）。
+
+---
+
+## 工程结构
+
+```text
+autumn/
+├── autumn-handler/     # Handler 扩展接口与默认实现
+├── autumn-lib/         # 缓存、队列、加解密、RuntimeSql、FieldEncryptService 等
+├── autumn-modules/     # 业务模块（sys、gen、bot、safe…）与 Controller
+├── autumn-starter/     # 一站式依赖聚合
+├── web/                # 启动入口（主类 cn.org.autumn.Web）
+├── docs/               # AI_*.md 约束与专项文档
+├── scripts/            # constraints-scan、dependency-scan 等
+└── .cursor/skills/     # autumn-framework-2x / 3x
+```
+
+---
+
+## 环境与构建
+
+| 项 | 要求（**3.0.0 分支**） |
+|----|------------------------|
+| JDK | **17+** |
+| Maven | 3.8+ |
+| MySQL | 5.7+（建议 8.x） |
+| Redis | 建议开启（缓存、Shiro 会话、队列、集群字段加密开关等） |
+
+父 POM 在 **`validate`** 阶段启用 **`dependencyConvergence`**；升级依赖后若 enforcer 报错，请在 **`dependencyManagement`** 中对齐版本。
 
 ```bash
 mvn clean package -DskipTests
 ```
 
-5. 启动方式二选一：
-   - IDE 启动主类：`web/src/main/java/cn/org/autumn/Web.java`
-   - 命令行启动：`java -jar web/target/web.jar`
+---
 
-默认配置参考：
+## 快速启动
 
-- 服务端口：`80`
-- 上下文路径：`/`
-- 管理后台：`http://localhost/`
-- 文档首页：`http://localhost/modules/docs/index`
-- API 文档（SpringDoc）：`http://localhost/swagger-ui.html`（或 `springdoc` 默认路径，以实际配置为准）
-- 默认账号：`admin/admin`
+1. 创建数据库 `autumn`（UTF-8 / utf8mb4）。
+2. 修改 `web/src/main/resources/application-dev.yml` 中的数据源。
+3. 确认 `application.yml` 中 Redis 可连接（若启用）。
+4. 构建（见上），然后：
+   - IDE 运行 `web/src/main/java/cn/org/autumn/Web.java`，或
+   - `java -jar web/target/web.jar`
 
-## 9. 定时任务选型建议（重点）
+| 项 | 默认值 |
+|----|--------|
+| 端口 | `80` |
+| 管理后台 | http://localhost/ |
+| 在线文档 | http://localhost/modules/docs/index |
+| OpenAPI（SpringDoc） | http://localhost/swagger-ui.html |
+| 账号 | `admin` / `admin` |
 
-Autumn 提供两类任务机制：
+生产环境建议：`autumn.redis.open=true`、`autumn.shiro.redis=true`；多节点定时任务配合 `LoopJob` 的 `assignTag` / `server.tag`。
 
-- `schedulejob`：cron 表达式任务（复杂时间规则适用）
-- `LoopJob`：接口式固定周期任务（推荐常规业务优先）
+---
 
-建议规则：
+## 开发纪律（摘要）
 
-- 固定周期任务优先 `LoopJob.OneMinute/FiveMinute/...`，可显著降低 cron 表达式错误率。
-- 复杂日历规则（如每月指定日、节假日）再使用 cron。
-- 上线前至少校验：幂等、防重入（`skipIfRunning`）、超时（`timeout`）、连续错误阈值（`maxConsecutiveErrors`）、多节点分配（`assignTag/server.tag`）。
+完整条文见 **`docs/AI_STANDARDS.md`**。高频项：
 
-## 10. 分布式与运维说明
+- **分层**：Controller 禁止注入 Dao；Service 通过 `baseMapper` 访问本实体；跨域走对方 Service。
+- **SQL**：Dao 仅 **Provider**（`*DaoSql extends RuntimeSql`），禁止 Dao 内联 `@Select`；条件列用 **`columnInWrapper`**，禁止硬编码方言引号。
+- **代码生成**：`controller/gen`、`Pages/*.html/js` **勿手改**；业务写在非 gen 层。
+- **双主键**：关联与对外标识用 **`uuid`**，不用自增 `id`（`docs/AI_DUAL_KEY.md`）。
+- **定时任务**：固定周期优先 **`LoopJob.*`**；复杂日历再用 cron。
+- **字段加密**：`@FieldEncrypt` 实体 → **`EncryptModuleService`**；手写 SQL → **`afterRead*`**；`searchable` → 手写 hash 列。
 
-- 建议开启：
-  - `autumn.redis.open=true`
-  - `autumn.shiro.redis=true`
-- 多节点任务建议结合 `LoopJob` 分配能力统一管理，避免重复执行。
-- 缓存、队列、加密能力建议统一复用框架内置服务，避免项目内重复实现。
+---
+
+## 维护脚本
+
+| 脚本 | 用途 |
+|------|------|
+| `scripts/constraints-scan` | 规范分组扫描 A～H（按需） |
+| `scripts/autumn-dependency-scan.sh` | 依赖方升级 autumn 时的只读体检（见 `AI_UPGRADE.md` §4） |
+
+---
+
+## 链接
+
+- 项目站点：http://autumn.org.cn
+- 文档总索引：[`docs/AI_INDEX.md`](docs/AI_INDEX.md)

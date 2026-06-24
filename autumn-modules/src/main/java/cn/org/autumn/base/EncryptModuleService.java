@@ -14,16 +14,18 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.Serializable;
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 /**
- * 带 {@code @FieldEncrypt} 实体的模块 Service：写前 {@link FieldEncryptService#onWrite}、读后 {@link FieldEncryptService#onRead}。
+ * 带 {@code @FieldEncrypt} 实体的模块 Service：写前 {@link FieldEncryptService#onWrite}、写后 {@link FieldEncryptService#restoreAfterWrite}、读路径 {@link FieldEncryptService#onRead}。
  * <p>
  * 不需要字段加解密的 Service 继续继承 {@link ModuleService}（CRUD 与 {@code @Cache} 零加密开销）。
- * {@code baseMapper} 自定义查询返回实体时，必须 {@link #afterRead(Object)} / {@link #afterRead(List)}。
+ * {@code ServiceImpl} 全部读方法已自动解密；{@code baseMapper} / Dao 手写 SQL 须 {@link #afterRead(Object)}、{@link #afterReadMap(java.util.Map)} 等（见 {@code docs/AI_FIELD_ENCRYPT.md} §0.5）。
  * <p>
  * 与 {@code @Cache} 钩子见 {@code docs/AI_FIELD_ENCRYPT.md} §7（{@link #isEncryptCacheField}、{@link #isEncryptCacheEntity} 等）。
  */
@@ -60,6 +62,79 @@ public abstract class EncryptModuleService<M extends BaseMapper<T>, T> extends M
 
     protected List<T> afterRead(List<T> entities) {
         return encrypt.onRead(entities);
+    }
+
+    protected Map<String, Object> afterReadMap(Map<String, Object> row) {
+        return encrypt.onReadMap(getModelClass(), row);
+    }
+
+    protected List<Map<String, Object>> afterReadMaps(List<Map<String, Object>> rows) {
+        return encrypt.onReadMaps(getModelClass(), rows);
+    }
+
+    protected Object afterReadScalar(Object value) {
+        return encrypt.onReadScalar(value);
+    }
+
+    protected List<Object> afterReadScalars(List<Object> values) {
+        return encrypt.onReadScalars(values);
+    }
+
+    /**
+     * 写库后将实体还原为业务明文态（委托 {@link FieldEncryptService#restoreAfterWrite}，幂等）。
+     */
+    protected T restoreAfterWrite(T entity) {
+        return encrypt.restoreAfterWrite(entity);
+    }
+
+    protected List<T> restoreAfterWrite(List<T> entities) {
+        return encrypt.restoreAfterWrite(entities);
+    }
+
+    private void beforeWrite(T entity) {
+        encrypt.onWrite(entity);
+    }
+
+    private void beforeWrite(Collection<T> entities) {
+        if (entities == null) {
+            return;
+        }
+        encrypt.onWrite(entities instanceof List ? (List<T>) entities : new ArrayList<>(entities));
+    }
+
+    private List<T> restoreAfterWrite(Collection<T> entities) {
+        if (entities == null) {
+            return Collections.emptyList();
+        }
+        return restoreAfterWrite(entities instanceof List ? (List<T>) entities : new ArrayList<>(entities));
+    }
+
+    /** 写前加密、委托持久化、{@code finally} 内幂等还原，保持业务侧实体为明文态。 */
+    private boolean writeEntity(Supplier<Boolean> persist, T entity) {
+        beforeWrite(entity);
+        try {
+            return persist.get();
+        } finally {
+            restoreAfterWrite(entity);
+        }
+    }
+
+    private boolean writeEntities(Supplier<Boolean> persist, Collection<T> entities) {
+        beforeWrite(entities);
+        try {
+            return persist.get();
+        } finally {
+            restoreAfterWrite(entities);
+        }
+    }
+
+    private int writeEntityInt(Supplier<Integer> persist, T entity) {
+        beforeWrite(entity);
+        try {
+            return persist.get();
+        } finally {
+            restoreAfterWrite(entity);
+        }
     }
 
     @Override
@@ -141,152 +216,150 @@ public abstract class EncryptModuleService<M extends BaseMapper<T>, T> extends M
         return true;
     }
 
-    private void encryptWrite(T entity) {
-        encrypt.onWrite(entity);
-    }
-
-    private void encryptWrite(Collection<T> entities) {
-        if (entities == null) {
-            return;
-        }
-        for (T entity : entities) {
-            encrypt.onWrite(entity);
-        }
-    }
-
     @Override
     public int insert(T entity) {
-        encryptWrite(entity);
-        return super.insert(entity);
+        return writeEntityInt(() -> super.insert(entity), entity);
     }
 
     @Override
     public boolean insertOrUpdate(T entity) {
-        encryptWrite(entity);
-        return super.insertOrUpdate(entity);
+        return writeEntity(() -> super.insertOrUpdate(entity), entity);
     }
 
     @Override
     public boolean insertBatch(Collection<T> entityList) {
-        encryptWrite(entityList);
-        return super.insertBatch(entityList);
+        return writeEntities(() -> super.insertBatch(entityList), entityList);
     }
 
     @Override
     public boolean insertBatch(Collection<T> entityList, int batchSize) {
-        encryptWrite(entityList);
-        return super.insertBatch(entityList, batchSize);
+        return writeEntities(() -> super.insertBatch(entityList, batchSize), entityList);
     }
 
     @Override
     public boolean insertOrUpdateBatch(Collection<T> entityList) {
-        encryptWrite(entityList);
-        return super.insertOrUpdateBatch(entityList);
+        return writeEntities(() -> super.insertOrUpdateBatch(entityList), entityList);
     }
 
     @Override
     public boolean insertOrUpdateBatch(Collection<T> entityList, int batchSize) {
-        encryptWrite(entityList);
-        return super.insertOrUpdateBatch(entityList, batchSize);
+        return writeEntities(() -> super.insertOrUpdateBatch(entityList, batchSize), entityList);
     }
 
     @Override
     public int updateAllColumnById(T entity) {
-        encryptWrite(entity);
-        return super.updateAllColumnById(entity);
+        return writeEntityInt(() -> super.updateAllColumnById(entity), entity);
     }
 
     @Override
     public boolean updateAllColumn(T entity, Wrapper<T> updateWrapper) {
-        encryptWrite(entity);
-        return super.updateAllColumn(entity, updateWrapper);
+        return writeEntity(() -> super.updateAllColumn(entity, updateWrapper), entity);
     }
 
     @Override
     public boolean save(T entity) {
-        encryptWrite(entity);
-        return super.save(entity);
+        return writeEntity(() -> super.save(entity), entity);
     }
 
     @Override
     public boolean saveOrUpdate(T entity) {
-        encryptWrite(entity);
-        return super.saveOrUpdate(entity);
+        return writeEntity(() -> super.saveOrUpdate(entity), entity);
     }
 
     @Override
     public boolean saveBatch(Collection<T> entityList) {
-        encryptWrite(entityList);
-        return super.saveBatch(entityList);
+        return writeEntities(() -> super.saveBatch(entityList), entityList);
     }
 
     @Override
     public boolean saveBatch(Collection<T> entityList, int batchSize) {
-        encryptWrite(entityList);
-        return super.saveBatch(entityList, batchSize);
+        return writeEntities(() -> super.saveBatch(entityList, batchSize), entityList);
     }
 
     @Override
     public boolean saveOrUpdateBatch(Collection<T> entityList) {
-        encryptWrite(entityList);
-        return super.saveOrUpdateBatch(entityList);
+        return writeEntities(() -> super.saveOrUpdateBatch(entityList), entityList);
     }
 
     @Override
     public boolean saveOrUpdateBatch(Collection<T> entityList, int batchSize) {
-        encryptWrite(entityList);
-        return super.saveOrUpdateBatch(entityList, batchSize);
+        return writeEntities(() -> super.saveOrUpdateBatch(entityList, batchSize), entityList);
     }
 
     @Override
     public boolean updateById(T entity) {
-        encryptWrite(entity);
-        return super.updateById(entity);
+        return writeEntity(() -> super.updateById(entity), entity);
     }
 
     @Override
     public boolean update(T entity, Wrapper<T> updateWrapper) {
-        encryptWrite(entity);
-        return super.update(entity, updateWrapper);
+        return writeEntity(() -> super.update(entity, updateWrapper), entity);
     }
 
     @Override
     public boolean updateBatchById(Collection<T> entityList) {
-        encryptWrite(entityList);
-        return super.updateBatchById(entityList);
+        return writeEntities(() -> super.updateBatchById(entityList), entityList);
     }
 
     @Override
     public boolean updateBatchById(Collection<T> entityList, int batchSize) {
-        encryptWrite(entityList);
-        return super.updateBatchById(entityList, batchSize);
+        return writeEntities(() -> super.updateBatchById(entityList, batchSize), entityList);
     }
 
     @Override
     public T selectById(Serializable id) {
-        return encrypt.onRead(super.selectById(id));
+        return afterRead(super.selectById(id));
     }
 
     @Override
     public List<T> selectBatchIds(Collection<? extends Serializable> idList) {
-        return encrypt.onRead(super.selectBatchIds(idList));
+        return afterRead(super.selectBatchIds(idList));
     }
 
     @Override
-    public List<T> selectList(Wrapper<T> queryWrapper) {
-        return encrypt.onRead(super.selectList(queryWrapper));
+    public List<T> selectByMap(Map<String, Object> columnMap) {
+        return afterRead(super.selectByMap(columnMap));
     }
 
     @Override
     public T selectOne(Wrapper<T> queryWrapper) {
-        return encrypt.onRead(super.selectOne(queryWrapper));
+        return afterRead(super.selectOne(queryWrapper));
+    }
+
+    @Override
+    public List<T> selectList(Wrapper<T> queryWrapper) {
+        return afterRead(super.selectList(queryWrapper));
+    }
+
+    @Override
+    public List<Map<String, Object>> selectMaps(Wrapper<T> queryWrapper) {
+        return afterReadMaps(super.selectMaps(queryWrapper));
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public <E> List<E> selectObjs(Wrapper<T> queryWrapper) {
+        List<E> rows = super.selectObjs(queryWrapper);
+        if (rows == null || rows.isEmpty()) {
+            return rows;
+        }
+        return (List<E>) afterReadScalars((List<Object>) rows);
     }
 
     @Override
     public <E extends IPage<T>> E selectPage(E page, Wrapper<T> queryWrapper) {
         E result = super.selectPage(page, queryWrapper);
         if (result != null) {
-            encrypt.onRead(result.getRecords());
+            afterRead(result.getRecords());
+        }
+        return result;
+    }
+
+    @Override
+    public <E extends IPage<Map<String, Object>>> E selectMapsPage(E page, Wrapper<T> queryWrapper) {
+        E result = super.selectMapsPage(page, queryWrapper);
+        if (result != null) {
+            afterReadMaps(result.getRecords());
         }
         return result;
     }

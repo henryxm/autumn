@@ -57,23 +57,19 @@ private String mobileHash;
 | 写入加密 **关**（运行时） | 写明文 | 不再维护 hash | 回退查 **明文列** `mobile` |
 | 注解 `searchable=false` | 按 key 加解密 | 不参与 | 查明文列 |
 
-### 0.5 Service 与 `baseMapper` 纪律
+### 0.5 加解密路径（唯一）
 
-| 继承 | CRUD | `baseMapper` 自定义 SQL |
-|------|------|-------------------------|
-| `ModuleService` | **零**加解密 | 无自动解密 |
-| `EncryptModuleService` | `encrypt.onWrite` / 读路径 `onRead` | 返回实体须 **`afterRead(...)`** |
+| 调用方式 | 写 | 读 |
+|----------|----|----|
+| **`EncryptModuleService`** 的 `insert*` / `update*` / `select*` | 自动 `onWrite` + `restoreAfterWrite` | 自动 `onRead` |
+| **`baseMapper` / Dao 手写 SQL** | 须手动 `encrypt.onWrite`（或改走 Service 写方法） | 返回实体须 **`afterRead(...)`**；返回 `Map`/标量须 **`afterReadMap` / `afterReadMaps` / `afterReadScalar(s)`** |
+| **`ModuleService` 子类** | 无加解密 | 无自动解密 |
+
+列表/分页 **searchable** 等值条件：`BaseService#getCondition` → `EncryptModuleService#tryHashQueryCondition`（改 hash 列）。
 
 约束单测：`FieldEncryptConventionTest`（存在 `@FieldEncrypt` 实体时，其 Service 须 extends `EncryptModuleService`）。
 
-### 0.6 实现路径
-
-| 路径 | 说明 |
-|------|------|
-| **默认** | 实体 `@FieldEncrypt` → Service 继承 **`EncryptModuleService`** → CRUD 自动 `onWrite` / `onRead` |
-| **`baseMapper` 直查** | 返回实体须 **`afterRead(...)`** |
-| **列表条件 searchable** | `BaseService#getCondition` → {@code tryHashQueryCondition}（仅 `EncryptModuleService` 改 hash 列） |
-| **可选 TypeHandler** | `EncryptStringTypeHandler` 须显式 `@TableField(typeHandler=...)`；与 Service 路径二选一，勿叠用 |
+迁移读库内密文原文：`FieldEncryptContext.runSkip(...)` 包裹 Mapper 查询（`FieldEncryptMigrationService`）。
 
 ---
 
@@ -147,9 +143,13 @@ private String mobileHash;
 
 ```java
 public class XxxService extends EncryptModuleService<XxxDao, XxxEntity> {
-    // baseMapper 直查示例
-    List<XxxEntity> rows = afterRead(baseMapper.listByMobileHash(hmac));
+    // ServiceImpl 写：onWrite → 落库 → restoreAfterWrite（业务侧保持明文）
+    // ServiceImpl 读：select* 自动 onRead
 }
+
+// baseMapper / Dao 手写 SQL（示例）
+SomeEntity row = baseMapper.getByUuid(uuid);
+afterRead(row);
 ```
 
 ---
@@ -196,7 +196,7 @@ public class XxxService extends EncryptModuleService<XxxDao, XxxEntity> {
 
 - `@FieldEncrypt` 实体 Service → `EncryptModuleService`
 - `@Cache` 在加密 searchable 字段 → 明文键 + 自动 hash 回源（§7）；hash 列用 `@Cache(name="hash")`
-- `baseMapper` 读实体 → `afterRead`
+- `baseMapper` / Dao 手写 SQL 读实体 → `afterRead`；读 `Map`/标量 → `afterReadMap` / `afterReadMaps` / `afterReadScalar(s)`
 - `searchable=true` → 实体声明 `{field}Hash` + `@Column`
 - 手写 SQL 等值查 searchable 字段 → 查 **hash 列** 并自行 HMAC 参数
 

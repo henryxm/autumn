@@ -16,6 +16,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -56,8 +57,6 @@ public class FieldEncryptService {
     @Autowired
     MysqlTableService mysqlTableService;
 
-    private static volatile FieldEncryptService instance;
-
     private final Map<Class<?>, List<FieldMeta>> entityFields = new ConcurrentHashMap<>();
 
     private volatile byte[] encryptKey;
@@ -77,13 +76,8 @@ public class FieldEncryptService {
 
     // --- 生命周期 ----------------------------------------------------------------
 
-    public static FieldEncryptService get() {
-        return instance;
-    }
-
     @PostConstruct
     public void init() {
-        instance = this;
         applyEnvironmentConfig(configSource.resolveFromEnvironment());
         scanPackage();
         if (log.isDebugEnabled()) {
@@ -247,7 +241,7 @@ public class FieldEncryptService {
     }
 
     /**
-     * Service / baseMapper 读库后解密；密文内自带 IV，与注解 {@code vector} 无关。
+     * {@code EncryptModuleService} 读路径解密；密文内自带 IV，与注解 {@code vector} 无关。
      */
     public <E> E onRead(E entity) {
         if (entity != null) {
@@ -263,6 +257,60 @@ public class FieldEncryptService {
             }
         }
         return entities;
+    }
+
+    /**
+     * {@code selectMap(s)} / {@code selectMaps} 行 Map 解密：按列名（驼峰/下划线/大小写不敏感）匹配 {@code @FieldEncrypt} 列。
+     */
+    public Map<String, Object> onReadMap(Class<?> entityClass, Map<String, Object> row) {
+        if (row == null || entityClass == null || !isReadDecryptEnabled()) {
+            return row;
+        }
+        decryptMapRow(entityClass, row);
+        return row;
+    }
+
+    public List<Map<String, Object>> onReadMaps(Class<?> entityClass, List<Map<String, Object>> rows) {
+        if (rows == null || entityClass == null || !isReadDecryptEnabled()) {
+            return rows;
+        }
+        for (Map<String, Object> row : rows) {
+            decryptMapRow(entityClass, row);
+        }
+        return rows;
+    }
+
+    /**
+     * {@code selectObj(s)} 单列值：密文字符串解密，非密文原样返回（幂等）。
+     */
+    public Object onReadScalar(Object value) {
+        if (value instanceof String) {
+            return decryptValue((String) value);
+        }
+        return value;
+    }
+
+    public List<Object> onReadScalars(List<Object> values) {
+        if (values == null) {
+            return null;
+        }
+        for (int i = 0; i < values.size(); i++) {
+            values.set(i, onReadScalar(values.get(i)));
+        }
+        return values;
+    }
+
+    /**
+     * 写库后将内存实体还原为业务明文态（幂等：字段非 {@code ENC$...} 前缀则原样保留）。
+     * <p>
+     * 仅还原 {@code @FieldEncrypt} 标注字段；searchable 的 hash 列保持库内 HMAC 形态不变。
+     */
+    public <E> E restoreAfterWrite(E entity) {
+        return onRead(entity);
+    }
+
+    public <E> List<E> restoreAfterWrite(List<E> entities) {
+        return onRead(entities);
     }
 
     /**
@@ -364,26 +412,6 @@ public class FieldEncryptService {
 
     public boolean needsRestore(String value) {
         return isReadDecryptEnabled() && StringUtils.isNotBlank(value) && value.startsWith(prefix);
-    }
-
-    /**
-     * 列表查询：将 searchable 字段条件改写为盲索引列。
-     */
-    public Map<String, Object> rewriteSearchCondition(Class<?> entityClass, String fieldName, Object value) {
-        Map<String, Object> result = new HashMap<>();
-        if (!isWriteEncryptEnabled() || value == null || entityClass == null) {
-            return result;
-        }
-        FieldMeta meta = findByFieldName(entityClass, fieldName);
-        if (meta == null || !meta.isSearchable()) {
-            return result;
-        }
-        String plain = value.toString().trim();
-        if (plain.isEmpty()) {
-            return result;
-        }
-        result.put(HumpConvert.HumpToUnderline(meta.getHashFieldName()), hashValue(plain));
-        return result;
     }
 
     /**
@@ -703,6 +731,36 @@ public class FieldEncryptService {
                 throw new IllegalStateException("字段加密处理失败:" + meta.getFieldName(), e);
             }
         }
+    }
+
+    private void decryptMapRow(Class<?> entityClass, Map<String, Object> row) {
+        List<FieldMeta> metas = getFields(entityClass);
+        if (metas.isEmpty()) {
+            return;
+        }
+        Map<String, FieldMeta> metaByColumnKey = buildMapColumnIndex(metas);
+        for (Map.Entry<String, Object> entry : row.entrySet()) {
+            FieldMeta meta = metaByColumnKey.get(normalizeMapColumnKey(entry.getKey()));
+            if (meta != null && entry.getValue() instanceof String) {
+                entry.setValue(decryptValue((String) entry.getValue()));
+            }
+        }
+    }
+
+    private Map<String, FieldMeta> buildMapColumnIndex(List<FieldMeta> metas) {
+        Map<String, FieldMeta> index = new HashMap<>();
+        for (FieldMeta meta : metas) {
+            index.put(normalizeMapColumnKey(meta.getFieldName()), meta);
+            index.put(normalizeMapColumnKey(HumpConvert.HumpToUnderline(meta.getFieldName())), meta);
+        }
+        return index;
+    }
+
+    private static String normalizeMapColumnKey(String key) {
+        if (key == null) {
+            return "";
+        }
+        return key.replace("_", "").toLowerCase(Locale.ROOT);
     }
 
     private List<FieldMeta> scanEncryptedFields(Class<?> clazz) {
