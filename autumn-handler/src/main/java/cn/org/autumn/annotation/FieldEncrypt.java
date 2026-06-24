@@ -12,7 +12,7 @@ import java.lang.annotation.Target;
  * 完整说明与易混概念见 {@code docs/AI_FIELD_ENCRYPT.md} §0。
  * <p>
  * <strong>Service 纪律</strong>：带本注解的实体，其模块 Service 须继承
- * {@code cn.org.autumn.base.EncryptModuleService}；{@code baseMapper} 直查须 {@code afterRead(...)}。
+ * {@code cn.org.autumn.base.EncryptModuleService}；{@code baseMapper} / Dao 手写 SQL 须 {@code afterRead(...)} 等（见 {@code docs/AI_FIELD_ENCRYPT.md} §0.5）。
  *
  * @see #vector()
  * @see #searchable()

@@ -84,7 +84,7 @@ description: >-
 
 - 与 **`docs/AI_CRYPTO.md`**（HTTP 传输加密）**密钥与 Service 完全独立**。
 - 默认 **`ModuleService`**（零加解密、零加密缓存）；实体含 `@FieldEncrypt` → **`EncryptModuleService`**。
-- **`baseMapper` 直查** → **`afterRead(...)`**；`searchable=true` → 手写 `{field}Hash` + `@Column`。
+- **`baseMapper` 直查** → **`afterRead(...)`**（实体）或 **`afterReadMap` / `afterReadMaps` / `afterReadScalar(s)`**（Map/标量）；`searchable=true` → 手写 `{field}Hash` + `@Column`。
 - 列表条件：仅 **`EncryptModuleService#tryHashQueryCondition`**（`ModuleService` 走原列映射）。
 - **`@Cache` + 加密**：searchable 字段与 hash 列各标 `@Cache`（hash 列 `name = FieldEncryptService.HASH_CACHE_CHANNEL`）；调用方 cache key 用**明文**或 **hash hex**，miss 回源由框架 hash 盲查（§7.2）。
 - **`BaseCacheService` 不依赖 `FieldEncryptService`**；加密缓存钩子在 **`EncryptModuleService`** 覆盖：`isEncryptCacheField` / `isEncryptCacheNaming` / `isEncryptCacheEntity`、`tryEncryptCacheEq`、`mirrorEncryptCache`、`encryptCacheEvictionKeys`、`encryptCacheEvictionValue`（§7.4）。**勿**在基类或 `ModuleService` 子类手写平行逻辑。

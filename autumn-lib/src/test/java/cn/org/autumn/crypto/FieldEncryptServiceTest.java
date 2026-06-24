@@ -12,6 +12,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.Map;
 
 public class FieldEncryptServiceTest {
@@ -126,6 +127,26 @@ public class FieldEncryptServiceTest {
         entity.mobile = "plain";
         svc.applyEncryptBeforePersist(entity);
         Assert.assertTrue(entity.mobile.startsWith("ENC$v1$"));
+    }
+
+    @Test
+    public void onReadMapDecryptsEncryptedColumns() {
+        SampleEntity entity = new SampleEntity();
+        entity.mobile = "13800138000";
+        service.onWrite(entity);
+        Map<String, Object> row = new HashMap<>();
+        row.put("mobile", entity.mobile);
+        row.put("MOBILE_HASH", entity.mobileHash);
+        service.onReadMap(SampleEntity.class, row);
+        Assert.assertEquals("13800138000", row.get("mobile"));
+        Assert.assertEquals(entity.mobileHash, row.get("MOBILE_HASH"));
+    }
+
+    @Test
+    public void onReadScalarDecryptsCipherOnly() {
+        String cipher = service.encryptValueForced("scalar-secret", "");
+        Assert.assertEquals("scalar-secret", service.onReadScalar(cipher));
+        Assert.assertEquals("plain-text", service.onReadScalar("plain-text"));
     }
 
     @Test
