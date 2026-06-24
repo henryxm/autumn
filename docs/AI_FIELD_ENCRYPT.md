@@ -61,13 +61,21 @@ private String mobileHash;
 
 | 调用方式 | 写 | 读 |
 |----------|----|----|
-| **`EncryptModuleService`** 的 `insert*` / `update*` / `select*` | 自动 `onWrite` + `restoreAfterWrite` | 自动 `onRead` |
+| **`EncryptModuleService`** 的 `insert*` / `update*` / `select*` / `getById` / `list` / `page` 等 | 自动 `onWrite` + `restoreAfterWrite` | 自动 `onRead` |
+| **读链** `lambdaQuery()` / `lambdaQuery(entity)` / `query()` / `ktQuery()` 的终端方法 `list` / `one` / `oneOpt` / `page` | — | 自动 `onRead`（`count` / `exists` 不解密） |
 | **`baseMapper` / Dao 手写 SQL** | 须手动 `encrypt.onWrite`（或改走 Service 写方法） | 返回实体须 **`afterRead(...)`**；返回 `Map`/标量须 **`afterReadMap` / `afterReadMaps` / `afterReadScalar(s)`** |
 | **`ModuleService` 子类** | 无加解密 | 无自动解密 |
 
+**读链边界（刻意不覆盖）：**
+
+- **`lambdaUpdate()` 写链**：`set(column, 明文)` 不会自动加密；带实体的 `update(entity)` 不会走 `onWrite`。加密字段请用 `save*` / `updateById` 等 Service 写方法。
+- **链式 `eq` 查 searchable 字段**：不会自动改 hash 列（与 `baseMapper.selectList(wrapper)` 手写明文条件同类问题）；列表页等值条件走 `BaseService#getCondition` → `tryHashQueryCondition`。
+- **`query().lambda()`**：已返回带解密的 lambda 链。
+- **`ChainWrappers.*` 直接 new / Kotlin 顶层扩展**：绕过 Service，须改走读链或 `list(Wrapper)` + `afterRead`。
+
 列表/分页 **searchable** 等值条件：`BaseService#getCondition` → `EncryptModuleService#tryHashQueryCondition`（改 hash 列）。
 
-约束单测：`FieldEncryptConventionTest`（存在 `@FieldEncrypt` 实体时，其 Service 须 extends `EncryptModuleService`）。
+约束单测：`FieldEncryptConventionTest`（存在 `@FieldEncrypt` 实体时，其 Service 须 extends `EncryptModuleService`；业务仓库可加 JVM 参数 `-Dautumn.fieldEncrypt.convention.packages=cn.example.modules` 扩展扫描包）。
 
 迁移读库内密文原文：`FieldEncryptContext.runSkip(...)` 包裹 Mapper 查询（`FieldEncryptMigrationService`）。
 
@@ -143,14 +151,21 @@ private String mobileHash;
 
 ```java
 public class XxxService extends EncryptModuleService<XxxDao, XxxEntity> {
-    // ServiceImpl 写：onWrite → 落库 → restoreAfterWrite（业务侧保持明文）
-    // ServiceImpl 读：select* 自动 onRead
+    // 写：insert* / save* / update* → onWrite → 落库 → restoreAfterWrite（业务侧保持明文）
+    // 读：select* / getById / list / page → onRead
+    // 读链：lambdaQuery() / lambdaQuery(entity) / query() / ktQuery()
+    //       → list / one / oneOpt / page 终端方法同样 onRead
 }
 
-// baseMapper / Dao 手写 SQL（示例）
+// 读链示例（Java）
+XxxEntity row = lambdaQuery().eq(XxxEntity::getUuid, uuid).one();
+
+// baseMapper / Dao 手写 SQL（须手动解密）
 SomeEntity row = baseMapper.getByUuid(uuid);
 afterRead(row);
 ```
+
+**读链未覆盖（见 §0.5）**：`lambdaUpdate` / `update()` 写链、`Wrapper.eq` 查 searchable 明文、`baseMapper` 直查。
 
 ---
 
@@ -160,6 +175,7 @@ afterRead(row);
 |----|------|
 | `FieldEncrypt` | 字段注解（见 §0） |
 | `FieldEncryptService` | `onWrite` / `onRead`、盲索引、`useHashForQuery` |
+| `FieldEncrypt*ChainWrapper` | 读链装饰（`cn.org.autumn.crypto`）；由 `EncryptModuleService` 组装 |
 | `EncryptModuleService` | 带 `@FieldEncrypt` 实体的 Module Service 基类 |
 | `FieldEncryptRuntimeService` | 启动加载运行时开关；集群 Redis 同步 |
 | `FieldEncryptAdminController` | 管理 API：`/sys/crypto/field/*` |
@@ -195,6 +211,7 @@ afterRead(row);
 **必须**
 
 - `@FieldEncrypt` 实体 Service → `EncryptModuleService`
+- 链式读 → `lambdaQuery` / `query` / `ktQuery`（勿 `ChainWrappers` 直 new）
 - `@Cache` 在加密 searchable 字段 → 明文键 + 自动 hash 回源（§7）；hash 列用 `@Cache(name="hash")`
 - `baseMapper` / Dao 手写 SQL 读实体 → `afterRead`；读 `Map`/标量 → `afterReadMap` / `afterReadMaps` / `afterReadScalar(s)`
 - `searchable=true` → 实体声明 `{field}Hash` + `@Column`

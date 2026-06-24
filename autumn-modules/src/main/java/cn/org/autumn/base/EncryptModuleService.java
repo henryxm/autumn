@@ -4,13 +4,22 @@ import cn.org.autumn.annotation.FieldEncrypt;
 import cn.org.autumn.config.CacheConfig;
 import cn.org.autumn.crypto.FieldEncryptCacheKey;
 import cn.org.autumn.crypto.FieldEncryptCacheLookup;
+import cn.org.autumn.crypto.FieldEncryptChainQuerySupport;
+import cn.org.autumn.crypto.FieldEncryptKtQueryChainWrapper;
+import cn.org.autumn.crypto.FieldEncryptLambdaQueryChainWrapper;
+import cn.org.autumn.crypto.FieldEncryptQueryChainWrapper;
 import cn.org.autumn.crypto.FieldEncryptService;
 import cn.org.autumn.table.utils.HumpConvert;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
+import com.baomidou.mybatisplus.extension.conditions.query.QueryChainWrapper;
+import com.baomidou.mybatisplus.extension.kotlin.KtQueryChainWrapper;
 import org.springframework.beans.factory.annotation.Autowired;
+
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 
 import java.io.Serializable;
 import java.lang.reflect.Field;
@@ -19,13 +28,18 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 /**
  * 带 {@code @FieldEncrypt} 实体的模块 Service：写前 {@link FieldEncryptService#onWrite}、写后 {@link FieldEncryptService#restoreAfterWrite}、读路径 {@link FieldEncryptService#onRead}。
  * <p>
  * 不需要字段加解密的 Service 继续继承 {@link ModuleService}（CRUD 与 {@code @Cache} 零加密开销）。
- * {@code ServiceImpl} 全部读方法已自动解密；{@code baseMapper} / Dao 手写 SQL 须 {@link #afterRead(Object)}、{@link #afterReadMap(java.util.Map)} 等（见 {@code docs/AI_FIELD_ENCRYPT.md} §0.5）。
+ * {@code ServiceImpl}/{@code IRepository} 全部实体读方法已自动解密（含 {@code getById}/{@code list}/{@code page}、读链 {@code lambdaQuery}/{@code query}/{@code ktQuery} 的 {@code list}/{@code one}/{@code page} 等）；
+ * {@code baseMapper} / Dao 手写 SQL 须 {@link #afterRead(Object)}、{@link #afterReadMap(java.util.Map)} 等（见 {@code docs/AI_FIELD_ENCRYPT.md} §0.5）。
  * <p>
  * 与 {@code @Cache} 钩子见 {@code docs/AI_FIELD_ENCRYPT.md} §7（{@link #isEncryptCacheField}、{@link #isEncryptCacheEntity} 等）。
  */
@@ -80,6 +94,30 @@ public abstract class EncryptModuleService<M extends BaseMapper<T>, T> extends M
         return encrypt.onReadScalars(values);
     }
 
+    private FieldEncryptChainQuerySupport<T> chainReadSupport() {
+        return new FieldEncryptChainQuerySupport<>(this::isEncryptCacheEntity, this::afterRead, this::afterRead);
+    }
+
+    @Override
+    public LambdaQueryChainWrapper<T> lambdaQuery() {
+        return new FieldEncryptLambdaQueryChainWrapper<>(getBaseMapper(), getEntityClass(), chainReadSupport());
+    }
+
+    @Override
+    public LambdaQueryChainWrapper<T> lambdaQuery(T entity) {
+        return new FieldEncryptLambdaQueryChainWrapper<>(getBaseMapper(), entity, chainReadSupport());
+    }
+
+    @Override
+    public QueryChainWrapper<T> query() {
+        return new FieldEncryptQueryChainWrapper<>(getBaseMapper(), chainReadSupport());
+    }
+
+    @Override
+    public KtQueryChainWrapper<T> ktQuery() {
+        return new FieldEncryptKtQueryChainWrapper<>(getBaseMapper(), getEntityClass(), chainReadSupport());
+    }
+
     /**
      * 写库后将实体还原为业务明文态（委托 {@link FieldEncryptService#restoreAfterWrite}，幂等）。
      */
@@ -109,7 +147,9 @@ public abstract class EncryptModuleService<M extends BaseMapper<T>, T> extends M
         return restoreAfterWrite(entities instanceof List ? (List<T>) entities : new ArrayList<>(entities));
     }
 
-    /** 写前加密、委托持久化、{@code finally} 内幂等还原，保持业务侧实体为明文态。 */
+    /**
+     * 写前加密、委托持久化、{@code finally} 内幂等还原，保持业务侧实体为明文态。
+     */
     private boolean writeEntity(Supplier<Boolean> persist, T entity) {
         beforeWrite(entity);
         try {
@@ -362,5 +402,131 @@ public abstract class EncryptModuleService<M extends BaseMapper<T>, T> extends M
             afterReadMaps(result.getRecords());
         }
         return result;
+    }
+
+    // --- MP3 IRepository 读路径（默认实现直调 baseMapper，须显式覆盖） ---
+
+    @Override
+    public T getById(Serializable id) {
+        return selectById(id);
+    }
+
+    @Override
+    public Optional<T> getOptById(Serializable id) {
+        return Optional.ofNullable(selectById(id));
+    }
+
+    @Override
+    public List<T> listByIds(Collection<? extends Serializable> idList) {
+        return selectBatchIds(idList);
+    }
+
+    @Override
+    public List<T> listByMap(Map<String, Object> columnMap) {
+        return selectByMap(columnMap);
+    }
+
+    @Override
+    public T getOne(Wrapper<T> queryWrapper, boolean throwEx) {
+        return afterRead(getBaseMapper().selectOne(queryWrapper, throwEx));
+    }
+
+    @Override
+    public Optional<T> getOneOpt(Wrapper<T> queryWrapper, boolean throwEx) {
+        return Optional.ofNullable(getOne(queryWrapper, throwEx));
+    }
+
+    @Override
+    public Map<String, Object> getMap(Wrapper<T> queryWrapper) {
+        return afterReadMap(super.getMap(queryWrapper));
+    }
+
+    @Override
+    public <V> V getObj(Wrapper<T> queryWrapper, Function<? super Object, V> mapper) {
+        List<V> rows = listObjs(queryWrapper, mapper);
+        if (rows == null || rows.isEmpty()) {
+            return null;
+        }
+        return rows.get(0);
+    }
+
+    @Override
+    public List<T> list(Wrapper<T> queryWrapper) {
+        return selectList(queryWrapper);
+    }
+
+    @Override
+    public List<T> list(IPage<T> page, Wrapper<T> queryWrapper) {
+        return afterRead(getBaseMapper().selectList(page, queryWrapper));
+    }
+
+    @Override
+    public List<T> list() {
+        return list(Wrappers.emptyWrapper());
+    }
+
+    @Override
+    public List<T> list(IPage<T> page) {
+        return list(page, Wrappers.emptyWrapper());
+    }
+
+    @Override
+    public <E extends IPage<T>> E page(E page, Wrapper<T> queryWrapper) {
+        return selectPage(page, queryWrapper);
+    }
+
+    @Override
+    public <E extends IPage<T>> E page(E page) {
+        return page(page, Wrappers.emptyWrapper());
+    }
+
+    @Override
+    public List<Map<String, Object>> listMaps(Wrapper<T> queryWrapper) {
+        return selectMaps(queryWrapper);
+    }
+
+    @Override
+    public List<Map<String, Object>> listMaps(IPage<? extends Map<String, Object>> page, Wrapper<T> queryWrapper) {
+        return afterReadMaps(getBaseMapper().selectMaps(page, queryWrapper));
+    }
+
+    @Override
+    public List<Map<String, Object>> listMaps() {
+        return listMaps(Wrappers.emptyWrapper());
+    }
+
+    @Override
+    public List<Map<String, Object>> listMaps(IPage<? extends Map<String, Object>> page) {
+        return listMaps(page, Wrappers.emptyWrapper());
+    }
+
+    @Override
+    public <E> List<E> listObjs() {
+        return selectObjs(Wrappers.emptyWrapper());
+    }
+
+    @Override
+    public <V> List<V> listObjs(Function<? super Object, V> mapper) {
+        return listObjs(Wrappers.emptyWrapper(), mapper);
+    }
+
+    @Override
+    public <E> List<E> listObjs(Wrapper<T> queryWrapper) {
+        return selectObjs(queryWrapper);
+    }
+
+    @Override
+    public <V> List<V> listObjs(Wrapper<T> queryWrapper, Function<? super Object, V> mapper) {
+        return selectObjs(queryWrapper).stream().filter(Objects::nonNull).map(mapper).collect(Collectors.toList());
+    }
+
+    @Override
+    public <E extends IPage<Map<String, Object>>> E pageMaps(E page, Wrapper<T> queryWrapper) {
+        return selectMapsPage(page, queryWrapper);
+    }
+
+    @Override
+    public <E extends IPage<Map<String, Object>>> E pageMaps(E page) {
+        return pageMaps(page, Wrappers.emptyWrapper());
     }
 }
