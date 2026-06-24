@@ -53,7 +53,7 @@ private String mobileHash;
 
 | 状态 | 加密列 `mobile` | 盲索引列 `mobile_hash` | 列表按手机号查 |
 |------|-----------------|--------------------------|----------------|
-| 写入加密 **开** + `searchable=true` | 写密文 | 写 HMAC | `getCondition` → `mobile_hash = HMAC(...)` |
+| 写入加密 **开** + `searchable=true` | 写密文 | 写 HMAC | `getCondition` → hash 列（`EncryptModuleService#tryHashQueryCondition`） |
 | 写入加密 **关**（运行时） | 写明文 | 不再维护 hash | 回退查 **明文列** `mobile` |
 | 注解 `searchable=false` | 按 key 加解密 | 不参与 | 查明文列 |
 
@@ -72,7 +72,7 @@ private String mobileHash;
 |------|------|
 | **默认** | 实体 `@FieldEncrypt` → Service 继承 **`EncryptModuleService`** → CRUD 自动 `onWrite` / `onRead` |
 | **`baseMapper` 直查** | 返回实体须 **`afterRead(...)`** |
-| **列表条件 searchable** | `BaseService#getCondition` 在写入开关开时改写到 hash 列 |
+| **列表条件 searchable** | `BaseService#getCondition` → {@code tryHashQueryCondition}（仅 `EncryptModuleService` 改 hash 列） |
 | **可选 TypeHandler** | `EncryptStringTypeHandler` 须显式 `@TableField(typeHandler=...)`；与 Service 路径二选一，勿叠用 |
 
 ---
@@ -195,6 +195,7 @@ public class XxxService extends EncryptModuleService<XxxDao, XxxEntity> {
 **必须**
 
 - `@FieldEncrypt` 实体 Service → `EncryptModuleService`
+- `@Cache` 在加密 searchable 字段 → 明文键 + 自动 hash 回源（§7）；hash 列用 `@Cache(name="hash")`
 - `baseMapper` 读实体 → `afterRead`
 - `searchable=true` → 实体声明 `{field}Hash` + `@Column`
 - 手写 SQL 等值查 searchable 字段 → 查 **hash 列** 并自行 HMAC 参数
@@ -204,5 +205,111 @@ public class XxxService extends EncryptModuleService<XxxDao, XxxEntity> {
 - 以为关写入开关会自动删 `*_hash` 列
 - 以为 `searchable=true` 会自动建 hash 列
 - 用固定 `vector` 做等值查询
-- 对 `ModuleService` 子类指望自动加解密
+- 对 `ModuleService` 子类指望自动加解密或加密缓存
 - 日志打印解密后明文
+
+---
+
+## 7. 与 `@Cache`（字段加密 + 缓存）
+
+`EncryptModuleService` 通过 **钩子** 与 `BaseCacheService` 打通；`ModuleService` **不依赖** `FieldEncryptService`，行为与改造前一致。
+
+### 7.0 怎么选
+
+| 实体 | Service 基类 | 缓存 / 列表查询 |
+|------|--------------|-----------------|
+| 无 `@FieldEncrypt` | `ModuleService` | 原 `@Cache` 流程，零加密开销 |
+| 含 `@FieldEncrypt` | **`EncryptModuleService`** | CRUD 加解密 + §7 缓存/条件钩子 |
+
+业务侧 **无需** 手工解密 cache 值、拼 hash SQL 或维护双通道失效。
+
+### 7.1 业务使用（三步）
+
+**① 实体**：searchable 加密字段 + hash 列各标 `@Cache`（hash 列 naming 用常量 `FieldEncryptService.HASH_CACHE_CHANNEL`，即 `"hash"`）。
+
+**② Service**：`extends EncryptModuleService<Dao, Entity>`。
+
+**③ 调用**：明文走默认通道；hash hex 走命名通道。
+
+```java
+@Column(comment = "API Key")
+@Cache
+@FieldEncrypt(searchable = true)
+private String apiKey;
+
+@Column(length = 64, comment = "API Key哈希:盲索引")
+@Cache(name = "hash")
+private String apiKeyHash;
+```
+
+```java
+public class ApiCredentialService extends EncryptModuleService<ApiCredentialDao, ApiCredentialEntity> {
+
+    /** 调用方传明文 apiKey */
+    public ApiCredentialEntity getByApiKey(String plainKey) {
+        return getCache(plainKey);
+    }
+
+    /** 调用方传 64 位 HMAC hex */
+    public ApiCredentialEntity getByApiKeyHash(String hashHex) {
+        return getNameCache("hash", hashHex);
+    }
+}
+```
+
+同一实体还可有 **普通** `@Cache` 字段（如 `uuid`）：`getCache(uuid)` 走原流程，仅 **值路径** 会因实体含 `@FieldEncrypt` 而在入缓存前解密。
+
+### 7.2 `compute` 流水线
+
+```
+getCache(key)
+  → compute
+      ├─ 快路径：isEncryptCacheEntity=false 且 isEncryptCacheNaming=false
+      │           → 与改造前完全一致
+      └─ 桥接路径
+            → cache miss：supplier → getEntity → applyCacheFieldEq
+                  → isEncryptCacheField ? tryEncryptCacheEq (hash 盲查) : wrapper.eq
+            → 入缓存：prepareCacheValue 解密实体
+            → 键镜像：mirrorEncryptCache（明文 ↔ hash 通道）
+```
+
+| 阶段 | 谁负责 | 说明 |
+|------|--------|------|
+| 缓存索引 | `cacheKey` | 业务明文或 hash hex，**不是**库内密文 |
+| cache miss 查库 | `applyCacheFieldEq` → `tryEncryptCacheEq` | 明文 key 转 `WHERE *_hash = HMAC(plain)` |
+| 写入缓存 | `prepareCacheValue` | 存解密后的业务态实体 |
+| 双通道 | `mirrorEncryptCache` | 命中/加载后镜像到另一 naming |
+
+### 7.3 架构：键按字段、值按实体
+
+| 维度 | 判定钩子 | 行为 |
+|------|----------|------|
+| **缓存键**（回源 / 失效 / 镜像） | `isEncryptCacheField` | 仅加密或 hash {@code @Cache} 字段 |
+| **其它 {@code @Cache} 字段** | 上式为 false | 与改造前 **完全一致** |
+| **缓存值**（整实体） | `isEncryptCacheEntity` | 实体含 {@code @FieldEncrypt} 时入缓存解密 |
+
+### 7.4 钩子命名（`BaseCacheService` 默认空/false，`EncryptModuleService` 实现）
+
+| 钩子 | 用途 |
+|------|------|
+| `isEncryptCacheField(fieldName)` | 是否加密/hash 缓存字段 |
+| `isEncryptCacheNaming(naming)` | 当前 `@Cache#name()` 是否加密通道 |
+| `isEncryptCacheEntity()` | 入缓存前是否解密整实体 |
+| `prepareCacheValue` / `prepareCacheValueList` | 入缓存值变换（→ `onRead`） |
+| `tryEncryptCacheEq` | cache miss 回源 hash 盲查 |
+| `mirrorEncryptCache` | 加载后镜像 hash 通道 |
+| `encryptCacheEvictionKeys` | 失效键（明文 + hash） |
+| `encryptCacheEvictionValue` | 复合 key 失效时还原明文 |
+| `tryHashQueryCondition` | 列表/分页 searchable 改 hash 列 |
+
+`BaseCacheService` **不引用** `FieldEncryptService`；底层细节在 `FieldEncryptService#resolveCacheDbLookup` / `#resolveCacheMirrorKeys` / `#resolveCacheEvictionKeys`。
+
+### 7.5 `ModuleService` 回归保证
+
+| 路径 | `ModuleService` |
+|------|-----------------|
+| `getCache` hit | 不调 supplier / `applyCacheFieldEq` |
+| `compute` | 两判定均为 false → 直调 `cacheService.compute` |
+| `applyCacheFieldEq` | `isEncryptCacheField` false → 原 `wrapper.eq` |
+| `getCondition` | `tryHashQueryCondition` false → 原列映射 |
+| 失效 | 单 key，不解析 hash 通道 |

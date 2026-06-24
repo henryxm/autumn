@@ -3,6 +3,7 @@ package cn.org.autumn.service;
 import cn.org.autumn.annotation.Cache;
 import cn.org.autumn.annotation.Caches;
 import cn.org.autumn.config.CacheConfig;
+import cn.org.autumn.crypto.FieldEncryptCacheKey;
 import cn.org.autumn.model.CacheParam;
 import cn.org.autumn.table.utils.HumpConvert;
 import com.baomidou.mybatisplus.mapper.BaseMapper;
@@ -278,24 +279,141 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         return clazz.getSimpleName().replace("Entity", "").toLowerCase();
     }
 
+    // -------------------------------------------------------------------------
+    // @Cache 与字段加密桥接（docs/AI_FIELD_ENCRYPT.md §7）
+    // 判定 isEncryptCache*；动作 tryEncryptCacheEq / mirrorEncryptCache / encryptCacheEviction*
+    // -------------------------------------------------------------------------
+
     /**
-     * 包装 cacheService.compute 调用，并标记该实体类型已有缓存数据
-     * <p>
-     * 所有 getCache / getListCache 系列方法统一通过此方法调用 compute，
-     * 从而在首次缓存数据时自动设置 hasCachedData = true。
-     * delete / update 操作可据此标记跳过不必要的 removeCache 调用。
-     *
-     * @param cacheKey 缓存 key
-     * @param supplier 值提供者
-     * @param config   缓存配置
-     * @param <R>      返回值类型
-     * @return 缓存值
+     * {@code @Cache} 字段是否为加密/hash 列（键路径：回源、失效、镜像）。
+     * 默认 {@code false}；{@link cn.org.autumn.base.EncryptModuleService} 覆盖。
+     */
+    protected boolean isEncryptCacheField(String fieldName) {
+        return false;
+    }
+
+    /**
+     * 当前 {@code @Cache#name()} 是否对应 {@link #isEncryptCacheField} 为 true 的字段。
+     */
+    protected boolean isEncryptCacheNaming(String naming) {
+        return false;
+    }
+
+    /**
+     * 写入缓存前是否须对整实体解密（值路径，与 key 字段无关）。
+     * 默认 {@code false}；{@link cn.org.autumn.base.EncryptModuleService} 在实体含 {@code @FieldEncrypt} 时为 true。
+     */
+    protected boolean isEncryptCacheEntity() {
+        return false;
+    }
+
+    /**
+     * 所有 getCache / getListCache 的统一入口。
+     * 快路径：{@link #isEncryptCacheEntity} 与 {@link #isEncryptCacheNaming} 均为 false 时与改造前一致。
      */
     private <R> R compute(Object cacheKey, Supplier<R> supplier, CacheConfig config) {
         if (!cached) {
             cached = true;
         }
-        return cacheService.compute(cacheKey, supplier, config);
+        String naming = getCacheNaming(config);
+        boolean decryptValue = isEncryptCacheEntity();
+        boolean mirrorKeys = isEncryptCacheNaming(naming);
+        if (!decryptValue && !mirrorKeys) {
+            return cacheService.compute(cacheKey, supplier, config);
+        }
+        Supplier<R> loading = decryptValue ? cacheStoreSupplier(supplier) : supplier;
+        R loaded = cacheService.compute(cacheKey, loading, config);
+        if (loaded != null && mirrorKeys) {
+            mirrorEncryptCache(naming, cacheKey, loaded);
+        }
+        return loaded;
+    }
+
+    /**
+     * 加密字段 cache 加载后镜像 hash 通道；默认空实现。
+     */
+    protected void mirrorEncryptCache(String naming, Object cacheKey, Object loaded) {
+    }
+
+    private static String getCacheNaming(CacheConfig config) {
+        return config.getNaming() == null ? "" : config.getNaming();
+    }
+
+    private <R> Supplier<R> cacheStoreSupplier(Supplier<R> supplier) {
+        return () -> prepareCacheStoreValue(supplier.get());
+    }
+
+    @SuppressWarnings("unchecked")
+    private <R> R prepareCacheStoreValue(R value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof List) {
+            return (R) prepareCacheValueList((List<T>) value);
+        }
+        Class<?> model = getModelClass();
+        if (model != null && model.isInstance(value)) {
+            return (R) prepareCacheValue((T) value);
+        }
+        return value;
+    }
+
+    /**
+     * 写入缓存前规范化实体（实体含 {@code @FieldEncrypt} 时由 {@link cn.org.autumn.base.EncryptModuleService} 覆盖为解密后的业务态）。
+     */
+    protected T prepareCacheValue(T entity) {
+        return entity;
+    }
+
+    protected List<T> prepareCacheValueList(List<T> entities) {
+        if (entities == null) {
+            return null;
+        }
+        List<T> out = new ArrayList<>(entities.size());
+        for (T entity : entities) {
+            out.add(prepareCacheValue(entity));
+        }
+        return out;
+    }
+
+    /**
+     * 加密字段 cache miss 回源等值（hash 盲查）；默认 {@code false}，{@link cn.org.autumn.base.EncryptModuleService} 覆盖。
+     *
+     * @return {@code true} 表示已写入 wrapper 条件
+     */
+    protected boolean tryEncryptCacheEq(EntityWrapper<T> wrapper, String fieldName, Object value) {
+        return false;
+    }
+
+    /**
+     * {@code @Cache} 回源等值；非加密字段与改造前 {@code wrapper.eq} 一致。
+     */
+    protected void applyCacheFieldEq(EntityWrapper<T> wrapper, String fieldName, Object value) {
+        if (wrapper == null || fieldName == null || value == null) {
+            return;
+        }
+        if (isEncryptCacheField(fieldName) && tryEncryptCacheEq(wrapper, fieldName, value)) {
+            return;
+        }
+        wrapper.eq(columnInWrapper(HumpConvert.HumpToUnderline(fieldName)), value);
+    }
+
+    /**
+     * 单字段缓存失效键；默认 naming + 字段原值。
+     */
+    protected List<FieldEncryptCacheKey> encryptCacheEvictionKeys(T entity, Field field, String naming) {
+        Object key = getFieldValue(entity, field);
+        if (key != null) {
+            return Collections.singletonList(new FieldEncryptCacheKey(naming, key));
+        }
+        return Collections.emptyList();
+    }
+
+    /**
+     * 复合 cache key 失效时的字段值；默认原样。
+     */
+    protected Object encryptCacheEvictionValue(T entity, String fieldName, Object raw) {
+        return raw;
     }
 
     /**
@@ -311,7 +429,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         String name = getEntityBaseName();
         CacheConfig config = configs.get(name);
         if (null == config) {
-            config = CacheConfig.builder().name(name).key(getCacheKeyType()).value(getModelClass()).expire(getCacheExpire()).redis(getRedisExpire()).max(getCacheMax()).unit(getCacheUnit()).Null(isCacheNull()).persistent(isCachePersistent()).path(getCachePath()).build();
+            config = CacheConfig.builder().name(name).naming("").key(getCacheKeyType()).value(getModelClass()).expire(getCacheExpire()).redis(getRedisExpire()).max(getCacheMax()).unit(getCacheUnit()).Null(isCacheNull()).persistent(isCachePersistent()).path(getCachePath()).build();
             configs.put(name, config);
         }
         return config;
@@ -330,7 +448,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         name += clazz.getSimpleName().toLowerCase();
         CacheConfig config = configs.get(name);
         if (null == config) {
-            config = CacheConfig.builder().name(name).key(getCacheKeyType()).value(clazz).expire(getCacheExpire(clazz)).redis(getRedisExpire(clazz)).max(getCacheMax(clazz)).unit(getCacheUnit(clazz)).Null(isCacheNull(clazz)).persistent(isCachePersistent(clazz)).path(getCachePath(clazz)).build();
+            config = CacheConfig.builder().name(name).naming("").key(getCacheKeyType()).value(clazz).expire(getCacheExpire(clazz)).redis(getRedisExpire(clazz)).max(getCacheMax(clazz)).unit(getCacheUnit(clazz)).Null(isCacheNull(clazz)).persistent(isCachePersistent(clazz)).path(getCachePath(clazz)).build();
             configs.put(name, config);
         }
         return config;
@@ -355,7 +473,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         name = name.toLowerCase() + clazz.getSimpleName().toLowerCase();
         CacheConfig config = configs.get(name);
         if (null == config) {
-            config = CacheConfig.builder().name(name).key(getCacheKeyType(naming)).value(clazz).expire(getCacheExpire(clazz, naming)).redis(getRedisExpire(clazz, naming)).max(getCacheMax(clazz, naming)).unit(getCacheUnit(clazz, naming)).Null(isCacheNull(clazz, naming)).persistent(isCachePersistent(clazz, naming)).path(getCachePath(clazz, naming)).build();
+            config = CacheConfig.builder().name(name).naming(naming).key(getCacheKeyType(naming)).value(clazz).expire(getCacheExpire(clazz, naming)).redis(getRedisExpire(clazz, naming)).max(getCacheMax(clazz, naming)).unit(getCacheUnit(clazz, naming)).Null(isCacheNull(clazz, naming)).persistent(isCachePersistent(clazz, naming)).path(getCachePath(clazz, naming)).build();
             configs.put(name, config);
         }
         return config;
@@ -378,7 +496,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         name = name.toLowerCase();
         CacheConfig config = configs.get(name);
         if (null == config) {
-            config = CacheConfig.builder().name(name).key(getCacheKeyType(naming)).value(getModelClass()).expire(getCacheExpire(naming)).redis(getRedisExpire(naming)).max(getCacheMax(naming)).unit(getCacheUnit(naming)).Null(isCacheNull(naming)).persistent(isCachePersistent(naming)).path(getCachePath(naming)).build();
+            config = CacheConfig.builder().name(name).naming(naming).key(getCacheKeyType(naming)).value(getModelClass()).expire(getCacheExpire(naming)).redis(getRedisExpire(naming)).max(getCacheMax(naming)).unit(getCacheUnit(naming)).Null(isCacheNull(naming)).persistent(isCachePersistent(naming)).path(getCachePath(naming)).build();
             configs.put(name, config);
         }
         return config;
@@ -394,7 +512,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         String name = getEntityBaseName() + "list";
         CacheConfig config = configs.get(name);
         if (null == config) {
-            config = CacheConfig.builder().name(name).key(getCacheKeyType()).value(List.class).expire(getCacheExpire()).redis(getRedisExpire()).max(getCacheMax()).unit(getCacheUnit()).Null(isCacheNull()).persistent(isCachePersistent()).path(getCachePath()).build();
+            config = CacheConfig.builder().name(name).naming("").key(getCacheKeyType()).value(List.class).expire(getCacheExpire()).redis(getRedisExpire()).max(getCacheMax()).unit(getCacheUnit()).Null(isCacheNull()).persistent(isCachePersistent()).path(getCachePath()).build();
             configs.put(name, config);
         }
         return config;
@@ -413,7 +531,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         name += clazz.getSimpleName().toLowerCase();
         CacheConfig config = configs.get(name);
         if (null == config) {
-            config = CacheConfig.builder().name(name).key(getCacheKeyType()).value(List.class).expire(getCacheExpire(clazz)).redis(getRedisExpire(clazz)).max(getCacheMax(clazz)).unit(getCacheUnit(clazz)).Null(isCacheNull(clazz)).persistent(isCachePersistent(clazz)).path(getCachePath(clazz)).build();
+            config = CacheConfig.builder().name(name).naming("").key(getCacheKeyType()).value(List.class).expire(getCacheExpire(clazz)).redis(getRedisExpire(clazz)).max(getCacheMax(clazz)).unit(getCacheUnit(clazz)).Null(isCacheNull(clazz)).persistent(isCachePersistent(clazz)).path(getCachePath(clazz)).build();
             configs.put(name, config);
         }
         return config;
@@ -437,7 +555,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         name = name.toLowerCase() + clazz.getSimpleName().toLowerCase();
         CacheConfig config = configs.get(name);
         if (null == config) {
-            config = CacheConfig.builder().name(name).key(getCacheKeyType(naming)).value(List.class).expire(getCacheExpire(clazz, naming)).redis(getRedisExpire(clazz, naming)).max(getCacheMax(clazz, naming)).unit(getCacheUnit(clazz, naming)).Null(isCacheNull(clazz, naming)).persistent(isCachePersistent(clazz, naming)).path(getCachePath(clazz, naming)).build();
+            config = CacheConfig.builder().name(name).naming(naming).key(getCacheKeyType(naming)).value(List.class).expire(getCacheExpire(clazz, naming)).redis(getRedisExpire(clazz, naming)).max(getCacheMax(clazz, naming)).unit(getCacheUnit(clazz, naming)).Null(isCacheNull(clazz, naming)).persistent(isCachePersistent(clazz, naming)).path(getCachePath(clazz, naming)).build();
             configs.put(name, config);
         }
         return config;
@@ -458,7 +576,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         name = name.toLowerCase();
         CacheConfig config = configs.get(name);
         if (null == config) {
-            config = CacheConfig.builder().name(name).key(getCacheKeyType(naming)).value(List.class).expire(getCacheExpire(naming)).redis(getRedisExpire(naming)).max(getCacheMax(naming)).unit(getCacheUnit(naming)).Null(isCacheNull(naming)).persistent(isCachePersistent(naming)).path(getCachePath(naming)).build();
+            config = CacheConfig.builder().name(name).naming(naming).key(getCacheKeyType(naming)).value(List.class).expire(getCacheExpire(naming)).redis(getRedisExpire(naming)).max(getCacheMax(naming)).unit(getCacheUnit(naming)).Null(isCacheNull(naming)).persistent(isCachePersistent(naming)).path(getCachePath(naming)).build();
             configs.put(name, config);
         }
         return config;
@@ -1857,9 +1975,8 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         }
         // 使用 EntityWrapper 查询
         String fieldName = cacheField.getName();
-        String columnName = HumpConvert.HumpToUnderline(fieldName);
         EntityWrapper<T> wrapper = new EntityWrapper<>();
-        wrapper.eq(columnInWrapper(columnName), convertedKey);
+        applyCacheFieldEq(wrapper, fieldName, convertedKey);
         T t = selectOne(wrapper);
         if (t == null) {
             // 检查 @Cache 注解是否配置了 create=true
@@ -1939,9 +2056,8 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         }
         // 使用 EntityWrapper 查询
         String fieldName = cacheField.getName();
-        String columnName = HumpConvert.HumpToUnderline(fieldName);
         EntityWrapper<T> wrapper = new EntityWrapper<>();
-        wrapper.eq(columnInWrapper(columnName), convertedKey);
+        applyCacheFieldEq(wrapper, fieldName, convertedKey);
         T t = selectOne(wrapper);
         if (t == null) {
             // 创建新实体，将 key 值设置到对应的缓存字段上
@@ -2015,9 +2131,8 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         }
         // 使用 EntityWrapper 查询
         String fieldName = cacheField.getName();
-        String columnName = HumpConvert.HumpToUnderline(fieldName);
         EntityWrapper<T> wrapper = new EntityWrapper<>();
-        wrapper.eq(columnInWrapper(columnName), convertedKey);
+        applyCacheFieldEq(wrapper, fieldName, convertedKey);
         T t = selectOne(wrapper);
         if (t == null) {
             // 检查 @Cache 注解是否配置了 create=true
@@ -2087,9 +2202,8 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         }
         // 使用 EntityWrapper 查询
         String fieldName = cacheField.getName();
-        String columnName = HumpConvert.HumpToUnderline(fieldName);
         EntityWrapper<T> wrapper = new EntityWrapper<>();
-        wrapper.eq(columnInWrapper(columnName), convertedKey);
+        applyCacheFieldEq(wrapper, fieldName, convertedKey);
         T t = selectOne(wrapper);
         if (t == null) {
             Map<String, Object> fieldValues = new HashMap<>();
@@ -2170,9 +2284,8 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         }
         // 使用 EntityWrapper 查询
         String fieldName = cacheField.getName();
-        String columnName = HumpConvert.HumpToUnderline(fieldName);
         EntityWrapper<T> wrapper = new EntityWrapper<>();
-        wrapper.eq(columnInWrapper(columnName), convertedKey);
+        applyCacheFieldEq(wrapper, fieldName, convertedKey);
         return selectOne(wrapper);
     }
 
@@ -2237,9 +2350,8 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         }
         // 使用 EntityWrapper 查询列表
         String fieldName = cacheField.getName();
-        String columnName = HumpConvert.HumpToUnderline(fieldName);
         EntityWrapper<T> wrapper = new EntityWrapper<>();
-        wrapper.eq(columnInWrapper(columnName), convertedKey);
+        applyCacheFieldEq(wrapper, fieldName, convertedKey);
         return selectList(wrapper);
     }
 
@@ -2301,9 +2413,8 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         }
         // 使用 EntityWrapper 查询列表
         String fieldName = cacheField.getName();
-        String columnName = HumpConvert.HumpToUnderline(fieldName);
         EntityWrapper<T> wrapper = new EntityWrapper<>();
-        wrapper.eq(columnInWrapper(columnName), convertedKey);
+        applyCacheFieldEq(wrapper, fieldName, convertedKey);
         return selectList(wrapper);
     }
 
@@ -2380,9 +2491,8 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         }
         // 使用 EntityWrapper 查询列表
         String fieldName = cacheField.getName();
-        String columnName = HumpConvert.HumpToUnderline(fieldName);
         EntityWrapper<T> wrapper = new EntityWrapper<>();
-        wrapper.eq(columnInWrapper(columnName), convertedKey);
+        applyCacheFieldEq(wrapper, fieldName, convertedKey);
         return selectList(wrapper);
     }
 
@@ -2406,8 +2516,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             if (value == null) {
                 return null; // 复合 key 的所有字段都必须有值
             }
-            String columnName = HumpConvert.HumpToUnderline(fieldName);
-            wrapper.eq(columnInWrapper(columnName), value);
+            applyCacheFieldEq(wrapper, fieldName, value);
         }
         return selectOne(wrapper);
     }
@@ -2467,8 +2576,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             if (value == null) {
                 return null; // 复合 key 的所有字段都必须有值
             }
-            String columnName = HumpConvert.HumpToUnderline(fieldName);
-            wrapper.eq(columnInWrapper(columnName), value);
+            applyCacheFieldEq(wrapper, fieldName, value);
         }
         return selectList(wrapper);
     }
@@ -2561,7 +2669,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
      * @param name  name属性值或字段名，如果为空则查找不带name的字段
      * @return 匹配的字段，如果未找到返回null
      */
-    private Field findCacheField(Class<?> clazz, String name) {
+    protected Field findCacheField(Class<?> clazz, String name) {
         Field[] fields = clazz.getDeclaredFields();
         for (Field field : fields) {
             Cache cache = field.getAnnotation(Cache.class);
@@ -3277,7 +3385,9 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             if (field != null) {
                 Object value = getFieldValue(entity, field);
                 if (value != null) {
-                    values[i] = value;
+                    values[i] = isEncryptCacheField(fieldNames[i])
+                            ? encryptCacheEvictionValue(entity, fieldNames[i], value)
+                            : value;
                 } else {
                     allValuesPresent = false;
                     break;
@@ -3309,12 +3419,18 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             Field field = entry.getValue();
             Cache cache = field.getAnnotation(Cache.class);
             if (cache != null) {
-                Object key = getFieldValue(entity, field);
-                if (key != null) {
-                    // 获取name属性值，如果为空则使用空字符串（表示使用默认配置）
-                    String cacheName = cache.name();
-                    String nameForConfig = cacheName.isEmpty() ? "" : cacheName;
-                    removeAllCacheByNameAndKey(nameForConfig, key);
+                String cacheName = cache.name();
+                String nameForConfig = cacheName.isEmpty() ? "" : cacheName;
+                if (!isEncryptCacheField(field.getName())) {
+                    Object key = getFieldValue(entity, field);
+                    if (key != null) {
+                        removeAllCacheByNameAndKey(nameForConfig, key);
+                    }
+                } else {
+                    List<FieldEncryptCacheKey> evictionKeys = encryptCacheEvictionKeys(entity, field, nameForConfig);
+                    for (FieldEncryptCacheKey ref : evictionKeys) {
+                        removeAllCacheByNameAndKey(ref.getNaming(), ref.getKey());
+                    }
                 }
             }
         }

@@ -152,7 +152,8 @@
 - 关键点：
   - **Service 层**：`EncryptModuleService` 在 CRUD 前后调用 `onWrite` / `onRead`；普通 `ModuleService` **零**加解密开销。
   - 实体含 `@FieldEncrypt` → Service **必须** `extends EncryptModuleService`；`baseMapper` 自定义查询返回实体须 `afterRead(...)`。
-  - `searchable=true` 须**手写** `{field}Hash` + `@Column`；列表条件由 `BaseService#getCondition` 改写到 hash 列（写入开关开时）。
+  - `searchable=true` 须**手写** `{field}Hash` + `@Column`；列表条件由 `tryHashQueryCondition`（`EncryptModuleService`）改 hash 列。
+  - `@Cache` + 加密字段：见 `docs/AI_FIELD_ENCRYPT.md` §7（`isEncryptCache*` / `tryEncryptCacheEq` 钩子；`ModuleService` 零开销）。
   - 配置前缀 `autumn.crypto.field.*`；与传输层 `docs/AI_CRYPTO.md` **密钥独立**。
   - 可选 `EncryptStringTypeHandler`（显式 `@TableField`）；默认不用，勿与 Service 路径叠用。
 
