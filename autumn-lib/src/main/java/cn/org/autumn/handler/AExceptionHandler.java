@@ -141,6 +141,10 @@ public class AExceptionHandler {
             }
             return null;
         }
+        AException aException = ExceptionUtils.findAException(e);
+        if (aException != null) {
+            return handleRRException(aException, request, response);
+        }
         forceJsonContentType(request, response);
         if (log.isDebugEnabled() && null != e && null != request) {
             log.debug("请求方式:{}, 路径:{}, IP:{}, 错误:{}", request.getMethod(), request.getRequestURI(), IPUtils.getIp(request), e.getMessage(), e);

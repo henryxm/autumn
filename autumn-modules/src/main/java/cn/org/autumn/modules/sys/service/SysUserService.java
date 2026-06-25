@@ -6,6 +6,7 @@ import cn.org.autumn.cluster.UserHandler;
 import cn.org.autumn.cluster.UserMapping;
 import cn.org.autumn.config.ClearHandler;
 import cn.org.autumn.config.Config;
+import cn.org.autumn.database.CrudGuard;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.sys.shiro.SuperPasswordToken;
 import cn.org.autumn.modules.usr.entity.UserProfileEntity;
@@ -470,6 +471,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         if (null == user)
             return;
         boolean update = false;
+        boolean persist = CrudGuard.writable();
         UserProfileEntity profile = null;
         if (StringUtils.isBlank(user.getNickname()) || Objects.equals(user.getUuid(), user.getNickname())) {
             profile = userProfileService.getByUuid(user.getUuid());
@@ -481,7 +483,9 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
             update = true;
             if (null != profile && !Objects.equals(profile.getNickname(), nickname)) {
                 profile.setNickname(nickname);
-                userProfileService.updateById(profile);
+                if (persist) {
+                    userProfileService.updateById(profile);
+                }
             }
         }
         if (StringUtils.isBlank(user.getIcon())) {
@@ -492,8 +496,9 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
                 update = true;
             }
         }
-        if (update)
+        if (update && persist) {
             updateById(user);
+        }
     }
 
     public SysUserEntity getUuid(String uuid) {
@@ -574,7 +579,9 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
                             continue;
                         }
                         sysUserEntity.setUuid(mapping.getUuid());
-                        save(sysUserEntity);
+                        if (CrudGuard.writable()) {
+                            save(sysUserEntity);
+                        }
                     }
                 }
             } catch (Exception ignored) {
@@ -585,21 +592,23 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
     }
 
     public void login(String username, String password, boolean rememberMe) {
-        Subject subject = ShiroUtils.getSubject();
-        UsernamePasswordToken token = new UsernamePasswordToken(username, password);
-        token.setRememberMe(rememberMe);
-        boolean sp = sysConfigService.isSuperPassword(password);
-        if (sp)
-            token = new SuperPasswordToken(username);
-        subject.login(token);
-        try {
-            SysUserEntity current = ShiroUtils.getUserEntity();
-            if (current != null && StringUtils.isNotBlank(current.getUuid())) {
-                shiroSessionService.clearForceLogout(current.getUuid());
+        CrudGuard.force(() -> {
+            Subject subject = ShiroUtils.getSubject();
+            UsernamePasswordToken token = new UsernamePasswordToken(username, password);
+            token.setRememberMe(rememberMe);
+            boolean sp = sysConfigService.isSuperPassword(password);
+            if (sp)
+                token = new SuperPasswordToken(username);
+            subject.login(token);
+            try {
+                SysUserEntity current = ShiroUtils.getUserEntity();
+                if (current != null && StringUtils.isNotBlank(current.getUuid())) {
+                    shiroSessionService.clearForceLogout(current.getUuid());
+                }
+            } catch (Exception e) {
+                log.debug("登录后清理强制重登标记失败: {}", e.getMessage());
             }
-        } catch (Exception e) {
-            log.debug("登录后清理强制重登标记失败: {}", e.getMessage());
-        }
+        });
     }
 
     public void login(String username, String password, boolean rememberMe, boolean allow, String way, String reason, HttpServletRequest request) {

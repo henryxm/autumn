@@ -6,6 +6,7 @@
 #
 # 对照文档（请在仓库内保持与实现同步）:
 #   docs/AI_STANDARDS.md  §5～§14（定时任务、权限、实体、索引唯一、分层、gen）
+#   docs/AI_CODE_STYLE.md §7（import 优先 / 禁止 FQN）
 #   docs/AI_DATABASE.md   §1、§4～§5、§8.5（方言、Dao Provider、Wrapper、检索示例）
 #   docs/AI_BOOT.md       §3（注解建表、表名 §3.2）
 #   docs/AI_MAP.md        §2.10、§4（注解索引、决策规则）
@@ -27,6 +28,7 @@
 #   AUTUMN_SCAN_SKIP_GEN=1        排除路径 **/controller/gen/**、**/gen/**（减少生成代码噪声）
 #   AUTUMN_SCAN_SKIP_REDIS=1      全文体检时跳过 H 组（Redis TTL 可疑写法）
 #   AUTUMN_SCAN_EXTRA=1           启用额外启发式（双键提示、三参 concat 等）
+#   AUTUMN_FQN_FAIL_ON_HIT=1        仅 FQN 扫描失败时 exit 1（见 scripts/check-java-fqn）
 
 set -u
 
@@ -335,6 +337,29 @@ scan_group_g_extra() {
 }
 
 # =====================================================================
+# I import / FQN（AI_CODE_STYLE §7）
+# =====================================================================
+scan_group_i() {
+  section "I · import 优先 / 禁止 FQN" "docs/AI_CODE_STYLE.md §7"
+  local script="${ROOT}/scripts/check_java_fqn.py"
+  if [[ ! -f "${script}" ]]; then
+    echo "${C_DIM}跳过: 未找到 ${script}${C_RST}"
+    return 0
+  fi
+  subsection "I1 业务源码中的全限定类名" \
+    "扫描 autumn-lib/src、autumn-modules/src、web/src；白名单 scripts/fqn-allowlist.txt；CI 门禁: bash scripts/check-java-fqn"
+  local out n
+  out="$(python3 "${script}" "${ROOT}" 2>&1 || true)"
+  echo "${out}"
+  n="$(echo "${out}" | sed -n 's/^TOTAL: //p' | tail -1)"
+  n="${n:-0}"
+  if [[ "${n}" -eq 0 ]]; then
+    echo "${C_OK}(无命中)${C_RST}"
+  fi
+  print_group_summary "I1" "${n}"
+}
+
+# =====================================================================
 # H Redis TTL / expire
 # =====================================================================
 scan_group_h_redis_expire() {
@@ -386,6 +411,7 @@ scan_group_c
 scan_group_d
 scan_group_e
 scan_group_f_info
+scan_group_i
 scan_group_g_extra
 if [[ "${AUTUMN_SCAN_SKIP_REDIS:-}" != "1" ]]; then
   scan_group_h_redis_expire

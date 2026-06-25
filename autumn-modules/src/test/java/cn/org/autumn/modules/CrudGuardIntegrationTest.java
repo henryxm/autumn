@@ -71,7 +71,7 @@ public class CrudGuardIntegrationTest {
     @Test
     public void updateDoesNotInvalidateCacheWhenWriteBlocked() {
         LanguageEntity entity = newLanguageEntity();
-        assertTrue("预置数据插入应成功", testLanguageService.insert(entity));
+        assertEquals("预置数据插入应成功", 1, testLanguageService.insert(entity));
 
         LanguageEntity cached = testLanguageService.getCache(entity.getName(), entity.getTag());
         assertNotNull("预热缓存应命中", cached);

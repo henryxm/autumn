@@ -2,6 +2,7 @@ package cn.org.autumn.modules.wall.service;
 
 import cn.org.autumn.config.ClearHandler;
 import cn.org.autumn.config.Config;
+import cn.org.autumn.database.CrudGuard;
 import cn.org.autumn.exception.AException;
 import cn.org.autumn.model.IP;
 import cn.org.autumn.modules.wall.dao.IpWhiteDao;
@@ -152,32 +153,37 @@ public class IpWhiteService extends WallCounter<IpWhiteDao, IpWhiteEntity> imple
     public IpWhiteEntity create(String ip, String tag, String description, String userAgent, boolean update) {
         IpWhiteEntity whiteEntity = null;
         if ((IPUtils.isIp(ip) || IPUtils.isIPV6(ip)) && (Config.isDev() || !IPUtils.isInternalKeepIp(ip))) {
-            try {
-                whiteEntity = getByIp(ip);
-                if (null == whiteEntity) {
-                    whiteEntity = new IpWhiteEntity();
-                    whiteEntity.setIp(ip);
-                    whiteEntity.setTag(tag);
-                    whiteEntity.setUserAgent(userAgent);
-                    whiteEntity.setDescription(description);
-                    whiteEntity.setCreateTime(new Date());
-                    whiteEntity.setForbidden(0);
-                    whiteEntity.setCount(0L);
-                    whiteEntity.setToday(0L);
-                    save(whiteEntity);
-                } else {
-                    whiteEntity.setTag(tag);
-                    whiteEntity.setUserAgent(userAgent);
-                    whiteEntity.setDescription(description);
-                    whiteEntity.setUpdateTime(new Date());
-                    whiteEntity.setCount(whiteEntity.getCount() + 1);
-                    whiteEntity.setToday(whiteEntity.getToday() + 1);
-                    updateById(whiteEntity);
+            CrudGuard.opt(() -> {
+                try {
+                    IpWhiteEntity entity = getByIp(ip);
+                    if (null == entity) {
+                        entity = new IpWhiteEntity();
+                        entity.setIp(ip);
+                        entity.setTag(tag);
+                        entity.setUserAgent(userAgent);
+                        entity.setDescription(description);
+                        entity.setCreateTime(new Date());
+                        entity.setForbidden(0);
+                        entity.setCount(0L);
+                        entity.setToday(0L);
+                        save(entity);
+                    } else {
+                        entity.setTag(tag);
+                        entity.setUserAgent(userAgent);
+                        entity.setDescription(description);
+                        entity.setUpdateTime(new Date());
+                        entity.setCount(entity.getCount() + 1);
+                        entity.setToday(entity.getToday() + 1);
+                        updateById(entity);
+                    }
+                    put(ip);
+                } catch (Exception e) {
+                    if (!CrudGuard.suppress(e, "添加白名单IP " + ip)) {
+                        log.error("添加白名单IP:{}", e.getMessage());
+                    }
                 }
-                put(ip);
-            } catch (Exception e) {
-                log.error("添加白名单IP:{}", e.getMessage());
-            }
+            });
+            whiteEntity = getByIp(ip);
         }
         return whiteEntity;
     }

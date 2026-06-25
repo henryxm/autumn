@@ -1,5 +1,6 @@
 package cn.org.autumn.thread;
 
+import cn.org.autumn.database.CrudGuard;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
@@ -255,6 +256,33 @@ public class TagTaskExecutor extends ThreadPoolTaskExecutor {
                 log.debug("任务提交到线程池失败: tag={}, error={}", task.getTag(), e.getMessage());
             throw e;
         }
+    }
+
+    @Override
+    public void execute(Runnable task) {
+        if (task == null) {
+            return;
+        }
+        CrudGuard.Snapshot scope = CrudGuard.capture();
+        super.execute(() -> CrudGuard.with(scope, task));
+    }
+
+    @Override
+    public Future<?> submit(Runnable task) {
+        if (task == null) {
+            return null;
+        }
+        CrudGuard.Snapshot scope = CrudGuard.capture();
+        return super.submit(() -> CrudGuard.with(scope, task));
+    }
+
+    @Override
+    public <T> Future<T> submit(Callable<T> task) {
+        if (task == null) {
+            return null;
+        }
+        CrudGuard.Snapshot scope = CrudGuard.capture();
+        return super.submit(() -> CrudGuard.with(scope, task));
     }
 
     public List<Tag> getRunning() {

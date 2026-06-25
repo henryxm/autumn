@@ -2,6 +2,7 @@ package cn.org.autumn.modules.sys.controller;
 
 import cn.org.autumn.annotation.SkipInterceptor;
 import cn.org.autumn.config.Config;
+import cn.org.autumn.database.CrudGuard;
 import cn.org.autumn.modules.spm.service.SuperPositionModelService;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysUserService;
@@ -75,6 +76,10 @@ public class SysLoginController {
     @ResponseBody
     @RequestMapping(value = "/sys/login", method = RequestMethod.POST)
     public R login(String username, String password, boolean rememberMe, String captcha, HttpServletRequest request) {
+        return CrudGuard.force(() -> doLogin(username, password, rememberMe, captcha, request));
+    }
+
+    private R doLogin(String username, String password, boolean rememberMe, String captcha, HttpServletRequest request) {
         if (!Config.isDev()) {
             String kaptcha = ShiroUtils.getKaptcha(Constants.KAPTCHA_SESSION_KEY);
             if (!captcha.equalsIgnoreCase(kaptcha)) {

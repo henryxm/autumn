@@ -7,6 +7,7 @@ import cn.org.autumn.annotation.ConfigField;
 import cn.org.autumn.bean.EnvBean;
 import cn.org.autumn.cluster.ServiceHandler;
 import cn.org.autumn.config.*;
+import cn.org.autumn.database.CrudGuard;
 import cn.org.autumn.exception.AException;
 import cn.org.autumn.model.AesConfig;
 import cn.org.autumn.model.PayCredentialConfig;
@@ -120,6 +121,10 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     @Autowired
     @Lazy
     private SysLogService sysLogService;
+
+    @Autowired(required = false)
+    @Lazy
+    private CrudGuardService crudGuardService;
     private CloudStorageConfig cloudStorageConfig = null;
     private Map<String, SysConfigEntity> map = new HashMap<>();
     private String lastLoggerLevel = null;
@@ -270,6 +275,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     }
 
     public void put(String[][] mapping) {
+        boolean persist = CrudGuard.writable();
         for (String[] map : mapping) {
             SysConfigEntity config = new SysConfigEntity();
             String temp = map[0];
@@ -278,6 +284,9 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
             SysConfigEntity entity = baseMapper.queryByKey(temp);
             SysConfigEntity langEntity = null;
             if (null == entity) {
+                if (!persist) {
+                    continue;
+                }
                 if (map.length > 1) {
                     temp = map[1];
                     if (null != temp)
@@ -469,6 +478,8 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
             cloudStorageConfig = null;
         if (LOGGER_LEVEL.equalsIgnoreCase(key))
             sysLogService.changeLevel(value, NULL);
+        if (SYSTEM_UPGRADE.equalsIgnoreCase(key) && crudGuardService != null)
+            crudGuardService.reloadFromConfig();
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -936,6 +947,9 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
 
         String current = getValue(LOADING_THEME);
         String normalized = GsonConfig.getGson().toJson(theme);
+        if (!CrudGuard.writable()) {
+            return theme;
+        }
         if (StringUtils.isBlank(current) || !Objects.equals(current, normalized)) {
             updateValueByKey(LOADING_THEME, normalized);
         }

@@ -1,5 +1,6 @@
 package cn.org.autumn.table.platform.jdbc;
 
+import cn.org.autumn.database.CrudGuard;
 import cn.org.autumn.table.data.ColumnInfo;
 import cn.org.autumn.table.data.IndexInfo;
 import cn.org.autumn.table.data.TableInfo;
@@ -448,6 +449,7 @@ public abstract class AbstractJdbcVendorRelationalTableOperations implements Rel
         }
         String sql = "DROP TABLE " + quoteTable(tableName);
         try (Connection c = open(); Statement st = c.createStatement()) {
+            CrudGuard.enforce();
             st.execute(sql);
         } catch (SQLException e) {
             throw new RuntimeException("dropTable failed: " + e.getMessage(), e);

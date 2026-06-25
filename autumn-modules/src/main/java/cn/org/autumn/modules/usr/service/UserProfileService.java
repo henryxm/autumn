@@ -1,6 +1,7 @@
 package cn.org.autumn.modules.usr.service;
 
 import cn.org.autumn.base.ModuleService;
+import cn.org.autumn.database.CrudGuard;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysUserService;
@@ -59,10 +60,16 @@ public class UserProfileService extends ModuleService<UserProfileDao, UserProfil
     public void updateLoginIp(String uuid, String ip, String userAgent) {
         if (StringUtils.isBlank(ip) || StringUtils.isBlank(uuid) || ip.length() > 100)
             return;
+        if (!CrudGuard.writable()) {
+            return;
+        }
         baseMapper.updateLoginIp(uuid, ip, userAgent);
     }
 
     public void syncVisitIp() {
+        if (!CrudGuard.writable()) {
+            return;
+        }
         for (Map.Entry<String, VisitIp> entry : visitIps.entrySet()) {
             if (null == entry.getValue() || StringUtils.isBlank(entry.getValue().getIp()) || StringUtils.isBlank(entry.getValue().getUserAgent()))
                 continue;
@@ -102,7 +109,9 @@ public class UserProfileService extends ModuleService<UserProfileDao, UserProfil
             userProfileEntity = baseMapper.getByUsername(sysUserEntity.getUsername());
             if (null != userProfileEntity) {
                 userProfileEntity.setUuid(sysUserEntity.getUuid());
-                baseMapper.setUuid(sysUserEntity.getUsername(), sysUserEntity.getUuid());
+                if (CrudGuard.writable()) {
+                    baseMapper.setUuid(sysUserEntity.getUsername(), sysUserEntity.getUuid());
+                }
             }
         }
         if (null == userProfileEntity) {
@@ -113,7 +122,9 @@ public class UserProfileService extends ModuleService<UserProfileDao, UserProfil
             userProfileEntity.setMobile(sysUserEntity.getMobile());
             userProfileEntity.setUuid(sysUserEntity.getUuid());
             userProfileEntity.setIcon(sysUserEntity.getIcon());
-            save(userProfileEntity);
+            if (CrudGuard.writable()) {
+                save(userProfileEntity);
+            }
         } else {
             boolean u = false;
             if ((StringUtils.isEmpty(userProfileEntity.getUuid()) && StringUtils.isNotEmpty(sysUserEntity.getUuid()))) {
@@ -124,7 +135,7 @@ public class UserProfileService extends ModuleService<UserProfileDao, UserProfil
                 userProfileEntity.setUuid(sysUserEntity.getUuid());
                 u = true;
             }
-            if (u)
+            if (u && CrudGuard.writable())
                 updateById(userProfileEntity);
         }
         return userProfileEntity;

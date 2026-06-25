@@ -336,6 +336,15 @@ public class SysPageController implements ErrorController {
         return "database";
     }
 
+    @RequestMapping({"dbmanage.html"})
+    @SkipInterceptor
+    public String dbmanage(HttpServletRequest servlet) {
+        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
+            return "404";
+        ipWhiteService.check(servlet, getClass(), "dbmanage");
+        return "dbmanage";
+    }
+
     @RequestMapping({"loopjob.html"})
     @SkipInterceptor
     public String loopjob(Model model) {

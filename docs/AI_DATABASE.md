@@ -289,3 +289,4 @@ rg -n 'FIND_IN_SET|IFNULL\(|DATE_FORMAT\(|GROUP_CONCAT\(|LAST_INSERT_ID\(' --glo
 | 启动配置、profile、环境变量 | **`docs/AI_BOOT.md`** §3、§8 |
 | 升级清单、扫描脚本、「一键」边界 | **`docs/AI_UPGRADE.md`** |
 | **老旧 Dao/Wrapper 迁移步骤与检索** | **本文 §8** |
+| **只读模式 / `CrudGuard` 全局 API** | **`docs/AI_DATABASE_READ_ONLY.md`** |

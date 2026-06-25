@@ -1,6 +1,7 @@
 package cn.org.autumn.modules.usr.service;
 
 import cn.org.autumn.base.ModuleService;
+import cn.org.autumn.database.CrudGuard;
 import cn.org.autumn.exception.AException;
 import cn.org.autumn.model.IP;
 import cn.org.autumn.modules.job.task.LoopJob;
@@ -306,29 +307,33 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
     }
 
     public void login(String uuid, String account, boolean allow, String way, String reason, String host, String ip, String session, String path, String agent) {
-        try {
-            if (!isIpAllowed(uuid, ip))
-                allow = false;
-            UserLoginLogEntity entity = new UserLoginLogEntity();
-            entity.setUuid(uuid);
-            entity.setAccount(account);
-            entity.setLogout(false);
-            entity.setAllow(allow);
-            entity.setWhite(false);
-            entity.setHost(host);
-            entity.setIp(ip);
-            entity.setPath(path);
-            entity.setSession(session);
-            if (null != agent && agent.length() > 500)
-                agent = agent.substring(0, 500);
-            entity.setAgent(agent);
-            entity.setWay(way);
-            entity.setReason(reason);
-            entity.setCreate(new Date());
-            save(entity);
-        } catch (Throwable e) {
-            log.warn("保存错误:{}, 账号:{}, 允许:{}, 方式:{}, 原因:{}, IP:{}, 代理:{}, 错误:{}", uuid, account, allow, way, reason, ip, agent, e.getMessage());
-        }
+        final String agentValue = (null != agent && agent.length() > 500) ? agent.substring(0, 500) : agent;
+        CrudGuard.opt(() -> {
+            try {
+                boolean allowed = allow;
+                if (!isIpAllowed(uuid, ip))
+                    allowed = false;
+                UserLoginLogEntity entity = new UserLoginLogEntity();
+                entity.setUuid(uuid);
+                entity.setAccount(account);
+                entity.setLogout(false);
+                entity.setAllow(allowed);
+                entity.setWhite(false);
+                entity.setHost(host);
+                entity.setIp(ip);
+                entity.setPath(path);
+                entity.setSession(session);
+                entity.setAgent(agentValue);
+                entity.setWay(way);
+                entity.setReason(reason);
+                entity.setCreate(new Date());
+                save(entity);
+            } catch (Throwable e) {
+                if (!CrudGuard.suppress(e, "登录日志")) {
+                    log.warn("保存错误:{}, 账号:{}, 允许:{}, 方式:{}, 原因:{}, IP:{}, 代理:{}, 错误:{}", uuid, account, allow, way, reason, ip, agentValue, e.getMessage());
+                }
+            }
+        });
         if (!allow) {
             throw new AException("登录限制");
         }
@@ -375,22 +380,25 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
     }
 
     public void logout(String uuid, String host, String ip, String session, String agent) {
-        try {
-            UserLoginLogEntity entity = new UserLoginLogEntity();
-            entity.setUuid(uuid);
-            entity.setCreate(new Date());
-            entity.setAllow(true);
-            entity.setWhite(false);
-            entity.setLogout(true);
-            entity.setHost(host);
-            entity.setIp(ip);
-            entity.setSession(session);
-            if (null != agent && agent.length() > 500)
-                agent = agent.substring(0, 500);
-            entity.setAgent(agent);
-            save(entity);
-        } catch (Throwable e) {
-            log.warn("退出错误:{}, IP:{}, 代理:{}, 错误:{}", uuid, ip, agent, e.getMessage());
-        }
+        final String agentValue = (null != agent && agent.length() > 500) ? agent.substring(0, 500) : agent;
+        CrudGuard.opt(() -> {
+            try {
+                UserLoginLogEntity entity = new UserLoginLogEntity();
+                entity.setUuid(uuid);
+                entity.setCreate(new Date());
+                entity.setAllow(true);
+                entity.setWhite(false);
+                entity.setLogout(true);
+                entity.setHost(host);
+                entity.setIp(ip);
+                entity.setSession(session);
+                entity.setAgent(agentValue);
+                save(entity);
+            } catch (Throwable e) {
+                if (!CrudGuard.suppress(e, "退出日志")) {
+                    log.warn("退出错误:{}, IP:{}, 代理:{}, 错误:{}", uuid, ip, agentValue, e.getMessage());
+                }
+            }
+        });
     }
 }

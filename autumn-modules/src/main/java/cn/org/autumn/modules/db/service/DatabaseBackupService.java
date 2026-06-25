@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.db.service;
 
+import cn.org.autumn.database.CrudGuard;
 import cn.org.autumn.database.DatabaseHolder;
 import cn.org.autumn.database.DatabaseType;
 import cn.org.autumn.base.ModuleService;
@@ -1007,6 +1008,7 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
      * @return 成功执行的语句数（1=成功, 0=失败/跳过, >1=拆分执行）
      */
     private int executeWithCompatFix(Connection conn, String sql, RestoreTask task, long currentLine) {
+        CrudGuard.enforce();
         try (Statement stmt = conn.createStatement()) {
             stmt.execute(sql);
             return 1;

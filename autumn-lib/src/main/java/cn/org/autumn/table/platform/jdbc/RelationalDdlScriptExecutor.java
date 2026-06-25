@@ -1,5 +1,6 @@
 package cn.org.autumn.table.platform.jdbc;
 
+import cn.org.autumn.database.CrudGuard;
 import org.apache.commons.lang3.StringUtils;
 
 import javax.sql.DataSource;
@@ -27,6 +28,7 @@ public final class RelationalDdlScriptExecutor {
                 if (s.isEmpty()) {
                     continue;
                 }
+                CrudGuard.enforce();
                 st.execute(s);
             }
         } catch (SQLException e) {

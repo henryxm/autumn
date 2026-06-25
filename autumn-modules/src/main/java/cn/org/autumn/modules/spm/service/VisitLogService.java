@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.spm.service;
 
+import cn.org.autumn.database.CrudGuard;
 import cn.org.autumn.database.runtime.WrapperColumns;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.spm.entity.SuperPositionModelEntity;
@@ -33,6 +34,10 @@ public class VisitLogService extends VisitLogServiceGen implements LoopJob.OneDa
     }
 
     public void put(String ip, SuperPositionModelEntity superPositionModelEntity) {
+        CrudGuard.opt(() -> doPut(ip, superPositionModelEntity));
+    }
+
+    private void doPut(String ip, SuperPositionModelEntity superPositionModelEntity) {
         VisitLogEntity visitLogEntity = new VisitLogEntity();
         visitLogEntity.setUniqueVisitor(0);
         visitLogEntity.setPageView(0);

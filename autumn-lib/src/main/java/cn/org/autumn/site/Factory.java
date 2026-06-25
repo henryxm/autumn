@@ -1,5 +1,6 @@
 package cn.org.autumn.site;
 
+import cn.org.autumn.database.CrudGuard;
 import cn.org.autumn.utils.SpringContextUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -118,6 +119,9 @@ public class Factory {
                     Method m = obj.getClass().getMethod(name);
                     m.invoke(obj);
                 } catch (Exception e) {
+                    if (CrudGuard.suppress(e, obj.getClass().getSimpleName() + "." + name)) {
+                        continue;
+                    }
                     log.error("{}.{}", obj.getClass().getSimpleName(), name, e);
                 }
             }

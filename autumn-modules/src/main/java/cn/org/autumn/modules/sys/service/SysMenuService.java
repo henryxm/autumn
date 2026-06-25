@@ -90,7 +90,8 @@ public class SysMenuService extends ServiceImpl<SysMenuDao, SysMenuEntity> imple
                 // 运维监控菜单
                 {"运维监控", NULL, NULL, "0", "fa fa-dashboard", "999998", getOperationsMenuKey(), "", "sys_string_operations_monitoring"},
                 {"缓存管理", "cache.html", NULL, "1", "fa fa-database", "1", getSystemMenuKey("CacheManagement"), getOperationsMenuKey(), "sys_string_cache_management"},
-                {"数据库备份", "database.html", NULL, "1", "fa fa-hdd-o", "2", getSystemMenuKey("DatabaseManagement"), getOperationsMenuKey(), "sys_string_database_management"},
+                {"数据库管理", "dbmanage.html", NULL, "1", "fa fa-database", "1", getSystemMenuKey("DbManage"), getOperationsMenuKey(), "sys_string_db_manage"},
+                {"数据库备份", "database.html", NULL, "1", "fa fa-hdd-o", "3", getSystemMenuKey("DatabaseManagement"), getOperationsMenuKey(), "sys_string_database_management"},
                 {"队列管理", "queue.html", NULL, "1", "fa fa-tasks", "3", getSystemMenuKey("QueueManagement"), getOperationsMenuKey(), "sys_string_queue_management"},
                 {"定时任务", "loopjob.html", NULL, "1", "fa fa-clock-o", "4", getSystemMenuKey("LoopJobManagement"), getOperationsMenuKey(), "sys_string_loopjob_management"},
                 {"登录日志", "loginlog.html", NULL, "1", "fa fa-sign-in", "5", getSystemMenuKey("LoginLogManagement"), getOperationsMenuKey(), "sys_string_loginlog_management"},

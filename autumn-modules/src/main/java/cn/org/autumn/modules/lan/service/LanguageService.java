@@ -402,6 +402,7 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
 
                 {"sys_string_operations_monitoring", "运维监控", "Operations monitoring"},
                 {"sys_string_cache_management", "缓存管理", "Cache management"},
+                {"sys_string_db_manage", "数据库管理", "Database management"},
                 {"sys_string_database_management", "数据库备份", "Database backup"},
                 {"sys_string_queue_management", "队列管理", "Queue management"},
                 {"sys_string_loopjob_management", "定时任务", "Scheduled tasks"},

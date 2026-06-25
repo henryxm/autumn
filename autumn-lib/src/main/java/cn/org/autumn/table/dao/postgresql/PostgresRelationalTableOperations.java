@@ -1,5 +1,6 @@
 package cn.org.autumn.table.dao.postgresql;
 
+import cn.org.autumn.database.CrudGuard;
 import cn.org.autumn.table.data.ColumnInfo;
 import cn.org.autumn.table.data.IndexInfo;
 import cn.org.autumn.table.data.TableInfo;
@@ -215,6 +216,7 @@ public class PostgresRelationalTableOperations implements RelationalTableOperati
                 if (s.isEmpty()) {
                     continue;
                 }
+                CrudGuard.enforce();
                 st.execute(s);
             }
         } catch (SQLException e) {
