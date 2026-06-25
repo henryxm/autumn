@@ -240,11 +240,5 @@ public class RsaUtil {
             return false;
         }
     }
-
-    public static void test(String[] args) {
-        RsaKey pair = generate();
-        boolean v = verify(pair.getPublicKey(), pair.getPrivateKey());
-        log.info("测试结果:{}", v);
-    }
 }
 

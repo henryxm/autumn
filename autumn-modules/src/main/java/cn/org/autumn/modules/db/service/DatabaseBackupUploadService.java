@@ -60,7 +60,7 @@ public class DatabaseBackupUploadService extends ModuleService<DatabaseBackupUpl
         entity.setStatus(0);
         entity.setCreateTime(new Date());
         insert(entity);
-        log.info("SQL backup file uploaded: originalName={}, storedName={}, size={}", originalFilename, storedFilename, file.getSize());
+        log.debug("SQL backup file uploaded: originalName={}, storedName={}, size={}", originalFilename, storedFilename, file.getSize());
         return entity;
     }
 
@@ -98,7 +98,7 @@ public class DatabaseBackupUploadService extends ModuleService<DatabaseBackupUpl
         Map<String, Object> result = new HashMap<>();
         result.put("uploadToken", uploadToken);
         result.put("totalChunks", totalChunks);
-        log.info("Chunk upload initialized: token={}, file={}, size={}, chunks={}", uploadToken, originalFilename, totalSize, totalChunks);
+        log.debug("Chunk upload initialized: token={}, file={}, size={}, chunks={}", uploadToken, originalFilename, totalSize, totalChunks);
         return result;
     }
 
@@ -168,7 +168,7 @@ public class DatabaseBackupUploadService extends ModuleService<DatabaseBackupUpl
         insert(entity);
         // 移除会话
         uploadSessions.remove(uploadToken);
-        log.info("Chunk upload merged: token={}, file={}, size={}", uploadToken, session.originalFilename, fileSize);
+        log.debug("Chunk upload merged: token={}, file={}, size={}", uploadToken, session.originalFilename, fileSize);
         return entity;
     }
 
@@ -179,7 +179,7 @@ public class DatabaseBackupUploadService extends ModuleService<DatabaseBackupUpl
         ChunkUploadSession session = uploadSessions.remove(uploadToken);
         if (session != null) {
             cleanupChunkDir(session.chunkDir);
-            log.info("Chunk upload cancelled: token={}", uploadToken);
+            log.debug("Chunk upload cancelled: token={}", uploadToken);
         }
     }
 

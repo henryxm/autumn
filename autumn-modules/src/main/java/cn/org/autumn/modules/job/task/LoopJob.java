@@ -589,13 +589,13 @@ public class LoopJob extends Factory implements LoadFactory.Must {
     public static void pauseAll() {
         globalPaused = true;
         if (log.isDebugEnabled())
-            log.info("All loop jobs paused");
+            log.debug("All loop jobs paused");
     }
 
     public static void resumeAll() {
         globalPaused = false;
         if (log.isDebugEnabled())
-            log.info("All loop jobs resumed");
+            log.debug("All loop jobs resumed");
     }
 
     public static boolean isCategoryEnabled(String category) {
@@ -605,13 +605,13 @@ public class LoopJob extends Factory implements LoadFactory.Must {
     public static void enableCategory(String category) {
         categoryEnabled.put(category, true);
         if (log.isDebugEnabled())
-            log.info("Category [{}] enabled", category);
+            log.debug("Category [{}] enabled", category);
     }
 
     public static void disableCategory(String category) {
         categoryEnabled.put(category, false);
         if (log.isDebugEnabled())
-            log.info("Category [{}] disabled", category);
+            log.debug("Category [{}] disabled", category);
     }
 
     public static boolean enableJob(String jobId) {
@@ -621,7 +621,7 @@ public class LoopJob extends Factory implements LoadFactory.Must {
         info.autoDisabled = false;
         info.consecutiveErrorCount.set(0);
         if (log.isDebugEnabled())
-            log.info("Job [{}] enabled", jobId);
+            log.debug("Job [{}] enabled", jobId);
         return true;
     }
 
@@ -629,7 +629,7 @@ public class LoopJob extends Factory implements LoadFactory.Must {
         if (!jobInfoMap.containsKey(jobId)) return false;
         disabledJobIds.add(jobId);
         if (log.isDebugEnabled())
-            log.info("Job [{}] disabled", jobId);
+            log.debug("Job [{}] disabled", jobId);
         return true;
     }
 
@@ -645,7 +645,7 @@ public class LoopJob extends Factory implements LoadFactory.Must {
         if (config.containsKey("order"))
             info.setOrder(((Number) config.get("order")).intValue());
         if (log.isDebugEnabled())
-            log.info("Job [{}] config updated: {}", jobId, config);
+            log.debug("Job [{}] config updated: {}", jobId, config);
         return true;
     }
 
@@ -699,7 +699,7 @@ public class LoopJob extends Factory implements LoadFactory.Must {
         info.autoDisabled = false;
         disabledJobIds.remove(jobId);
         if (log.isDebugEnabled())
-            log.info("Job [{}] stats reset", jobId);
+            log.debug("Job [{}] stats reset", jobId);
         return true;
     }
 

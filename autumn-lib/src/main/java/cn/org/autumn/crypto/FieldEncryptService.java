@@ -94,16 +94,20 @@ public class FieldEncryptService {
      */
     public void validateAfterBootstrap() {
         if (isConfigWriteEncryptEnabled() && !isKeyConfigured()) {
-            throw new IllegalStateException("autumn.crypto.field.enabled=true 时须配置有效的 autumn.crypto.field.key（Base64 32 字节），或在集群 Redis 中配置密钥");
+            log.warn("autumn.crypto.field.enabled=true 时须配置有效的 autumn.crypto.field.key（Base64 32 字节），或在集群 Redis 中配置密钥");
+            return;
         }
         if (isConfigWriteEncryptEnabled() && !isHashKeyConfigured()) {
-            throw new IllegalStateException("autumn.crypto.field.hash-key 无效或过短");
+            log.warn("autumn.crypto.field.hash-key 无效或过短");
+            return;
         }
         if (isWriteEncryptEnabled() && !isKeyConfigured()) {
-            throw new IllegalStateException("字段存储加密写入已开启，但未配置有效密钥");
+            log.warn("字段存储加密写入已开启，但未配置有效密钥");
+            return;
         }
         if (isWriteEncryptEnabled() && !isHashKeyConfigured()) {
-            throw new IllegalStateException("字段存储加密写入已开启，但 hash-key 无效");
+            log.warn("字段存储加密写入已开启，但 hash-key 无效");
+            return;
         }
         if (log.isDebugEnabled()) {
             log.debug("Field encrypt is ready, write enable:{} secret from:{} gate from:{}", isWriteEncryptEnabled() ? "Yes" : "No", keySource, writeSwitchSource);
@@ -294,9 +298,7 @@ public class FieldEncryptService {
         if (values == null) {
             return null;
         }
-        for (int i = 0; i < values.size(); i++) {
-            values.set(i, onReadScalar(values.get(i)));
-        }
+        values.replaceAll(this::onReadScalar);
         return values;
     }
 

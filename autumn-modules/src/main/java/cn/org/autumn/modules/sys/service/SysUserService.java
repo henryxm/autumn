@@ -208,9 +208,8 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
             UserMapping mapping = userHandler.getByUsername(getAdmin());
             if (null != mapping && StringUtils.isNotBlank(mapping.getUuid())) {
                 SysUserEntity sysUserEntity = getByUsername(getAdmin());
-                if (null != sysUserEntity && StringUtils.isNotEmpty(sysUserEntity.getUuid())
-                        && !mapping.getUuid().equals(sysUserEntity.getUuid())) {
-                    log.info("同步服务:{}, 主机:{}, 本地:{}, 同步:{}", userHandler.getClass().getSimpleName(), userHandler.uri().getHost(), sysUserEntity.getUuid(), mapping.getUuid());
+                if (null != sysUserEntity && StringUtils.isNotEmpty(sysUserEntity.getUuid()) && !mapping.getUuid().equals(sysUserEntity.getUuid())) {
+                    log.debug("同步服务:{}, 主机:{}, 本地:{}, 同步:{}", userHandler.getClass().getSimpleName(), userHandler.uri().getHost(), sysUserEntity.getUuid(), mapping.getUuid());
                     sysUserEntity.setUuid(mapping.getUuid());
                     updateById(sysUserEntity);
                 }
@@ -349,7 +348,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
                         String host = "";
                         if (null != handler.uri() && StringUtils.isNotBlank(handler.uri().getHost()))
                             host = handler.uri().getHost();
-                        log.info("Synchronize username: " + username + ", Handler:" + host + ", Site Domain: " + sysConfigService.getSiteDomain());
+                        log.debug("Synchronize username: " + username + ", Handler:" + host + ", Site Domain: " + sysConfigService.getSiteDomain());
                     }
                     UserMapping mapping = handler.getByUsername(username);
                     if (null != mapping && StringUtils.isNotBlank(mapping.getUuid())) {

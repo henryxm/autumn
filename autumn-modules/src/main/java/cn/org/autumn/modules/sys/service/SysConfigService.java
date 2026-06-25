@@ -790,7 +790,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
             // 如果配置被修正，记录日志并更新到数据库
             if (fixes != null && !fixes.isEmpty()) {
                 for (String fix : fixes) {
-                    log.info("[配置校验] " + fix);
+                    log.debug("[配置校验] " + fix);
                 }
                 String newValue = new Gson().toJson(config);
                 updateValueByKey(key, newValue);

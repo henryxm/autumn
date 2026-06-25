@@ -63,7 +63,7 @@ public class PayGateAttemptService extends ModuleService<PayGateAttemptDao, PayG
             cal.add(Calendar.DAY_OF_MONTH, -30);
             int n = baseMapper.deleteOlderThan(cal.getTime());
             if (n > 0)
-                log.info("支付闸门评估记录清理：删除 {} 条", n);
+                log.debug("支付闸门评估记录清理：删除 {} 条", n);
         } catch (Exception e) {
             log.error("支付闸门评估记录清理失败", e);
         }

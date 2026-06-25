@@ -725,7 +725,7 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
         entity.setPermanent(newVal);
         updateById(entity);
         if (log.isDebugEnabled())
-            log.info("Backup permanent toggled: id={}, permanent={}", id, newVal);
+            log.debug("Backup permanent toggled: id={}, permanent={}", id, newVal);
         return true;
     }
 
@@ -738,7 +738,7 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
         entity.setPermanent(permanent);
         updateById(entity);
         if (log.isDebugEnabled())
-            log.info("Backup permanent set: id={}, permanent={}", id, permanent);
+            log.debug("Backup permanent set: id={}, permanent={}", id, permanent);
         return true;
     }
 
@@ -762,7 +762,7 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
             for (int i = maxKeep; i < backups.size(); i++) {
                 deleteBackup(backups.get(i).getId());
                 if (log.isDebugEnabled())
-                    log.info("Rolling cleanup old backup: strategyId={}, backupId={}, filename={}", strategyId, backups.get(i).getId(), backups.get(i).getFilename());
+                    log.debug("Rolling cleanup old backup: strategyId={}, backupId={}, filename={}", strategyId, backups.get(i).getId(), backups.get(i).getFilename());
             }
         }
     }
@@ -898,7 +898,7 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
                     databaseBackupUploadService.updateById(uploadEntity);
                 }
             }
-            log.info("Database restore completed: taskKey={}, duration={}ms, statements={}", task.taskKey, duration, task.getExecutedStatements());
+            log.debug("Database restore completed: taskKey={}, duration={}ms, statements={}", task.taskKey, duration, task.getExecutedStatements());
         } catch (Exception e) {
             long duration = System.currentTimeMillis() - startTime;
             task.setError(e.getMessage());
@@ -991,7 +991,7 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
                 conn.commit();
             }
             conn.setAutoCommit(true);
-            log.info("SQL file executed: file={}, statements={}, autocommitPerStatement={}", task.filePath, executedCount, autocommitPerStatement);
+            log.debug("SQL file executed: file={}, statements={}, autocommitPerStatement={}", task.filePath, executedCount, autocommitPerStatement);
         }
     }
 

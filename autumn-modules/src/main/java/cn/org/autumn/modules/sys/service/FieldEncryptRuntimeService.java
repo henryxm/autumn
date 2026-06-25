@@ -62,7 +62,9 @@ public class FieldEncryptRuntimeService implements InitFactory.Init, InitFactory
         return fieldEncryptRedisStore.isActive();
     }
 
-    /** 从 Redis 同步到内存（读方法会在 Redis 无值时用环境变量回填）。 */
+    /**
+     * 从 Redis 同步到内存（读方法会在 Redis 无值时用环境变量回填）。
+     */
     public void reloadFromRedis() {
         if (isClusterMode()) {
             syncFromRedis();
@@ -153,8 +155,8 @@ public class FieldEncryptRuntimeService implements InitFactory.Init, InitFactory
         }
         if (fieldEncryptRedisStore.subscribeRefresh(this::syncFromRedis)) {
             refreshSubscribed = true;
-            if (log.isInfoEnabled()) {
-                log.info("字段加密集群已订阅 Redis 刷新频道");
+            if (log.isDebugEnabled()) {
+                log.debug("字段加密集群已订阅 Redis 刷新频道");
             }
             return;
         }

@@ -351,7 +351,7 @@ public class TestUnifyCacheService {
         assertNotEquals("不同的 key 应该返回不同的数据", cached1.getUuid(), cached2.getUuid());
         assertEquals("uuid1 应该匹配", uuid1, cached1.getUuid());
         assertEquals("uuid2 应该匹配", uuid2, cached2.getUuid());
-        log.info("单一 key 缓存构建正确");
+        log.debug("单一 key 缓存构建正确");
         
         // 3. 测试复合 key
         String name = "key_test_" + randomString(10);
@@ -384,7 +384,7 @@ public class TestUnifyCacheService {
         assertEquals("name 应该相同", name, cachedLang2.getName());
         assertNotEquals("tag 应该不同", cachedLang1.getTag(), cachedLang2.getTag());
         assertNotEquals("zhCn 应该不同", cachedLang1.getZhCn(), cachedLang2.getZhCn());
-        log.info("复合 key 缓存构建正确");
+        log.debug("复合 key 缓存构建正确");
         
         // 5. 清理测试数据
         webOauthCombineService.deleteById(entity1.getId());
@@ -392,6 +392,6 @@ public class TestUnifyCacheService {
         testLanguageService.deleteById(lang1.getId());
         testLanguageService.deleteById(lang2.getId());
         
-        log.info("=== 缓存 key 构建测试完成 ===");
+        log.debug("=== 缓存 key 构建测试完成 ===");
     }
 }

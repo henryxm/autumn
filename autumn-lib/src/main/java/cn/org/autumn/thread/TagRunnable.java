@@ -345,17 +345,17 @@ public abstract class TagRunnable implements Runnable, Tag {
         String errorMsg = null;
         try {
             if (log.isDebugEnabled())
-                log.info("分布式锁已获取，开始执行: key={}, tag={}, lease={}s", lockKey, getTag(), leaseSeconds);
+                log.debug("分布式锁已获取，开始执行: key={}, tag={}, lease={}s", lockKey, getTag(), leaseSeconds);
             invokeExe();
             if (log.isDebugEnabled())
-                log.info("任务执行成功: key={}, tag={}, 耗时={}ms", lockKey, getTag(), System.currentTimeMillis() - start);
+                log.debug("任务执行成功: key={}, tag={}, 耗时={}ms", lockKey, getTag(), System.currentTimeMillis() - start);
             // 成功后不释放锁 — 让锁自然过期，防止同一时间窗口内重复执行
         } catch (Throwable t) {
             success = false;
             if (cancelled || Thread.currentThread().isInterrupted()) {
                 errorMsg = "任务被中断取消";
                 if (log.isDebugEnabled())
-                    log.info("分布式锁任务被中断: key={}, tag={}", lockKey, getTag());
+                    log.debug("分布式锁任务被中断: key={}, tag={}", lockKey, getTag());
             } else {
                 errorMsg = t.getMessage();
                 if (log.isDebugEnabled())

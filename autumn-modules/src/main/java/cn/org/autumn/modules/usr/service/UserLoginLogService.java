@@ -279,7 +279,7 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
         ew.lt(columnInWrapper("create"), before);
         int n = baseMapper.delete(ew);
         if (n > 0 && log.isInfoEnabled()) {
-            log.info("定时清理登录日志：删除 {} 天以前的记录 {} 条", days, n);
+            log.debug("定时清理登录日志：删除 {} 天以前的记录 {} 条", days, n);
         }
         return n;
     }

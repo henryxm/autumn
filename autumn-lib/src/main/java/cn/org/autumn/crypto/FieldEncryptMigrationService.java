@@ -120,7 +120,6 @@ public class FieldEncryptMigrationService {
             }
             offset += limit;
         }
-        logBatchDone(entityClassName, dryRun, encrypt, result);
         return result;
     }
 
@@ -243,12 +242,6 @@ public class FieldEncryptMigrationService {
             return Long.parseLong(trimmed);
         } catch (NumberFormatException e) {
             return trimmed;
-        }
-    }
-
-    private void logBatchDone(String entityClassName, boolean dryRun, boolean encrypt, MigrationResult result) {
-        if (log.isInfoEnabled()) {
-            log.info("字段加密{}完成 entity={} dryRun={} scanned={} pending={} processed={}", encrypt ? "迁移" : "还原", entityClassName, dryRun, result.getScanned(), result.getPending(), result.getProcessed());
         }
     }
 

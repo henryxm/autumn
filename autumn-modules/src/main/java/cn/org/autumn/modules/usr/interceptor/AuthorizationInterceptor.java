@@ -110,21 +110,21 @@ public class AuthorizationInterceptor extends HandlerInterceptorAdapter implemen
                     SysUserEntity entity = sysUserService.getCache(user);
                     if (null == entity) {
                         if (!exceptions.contains(user))
-                            log.info("无效用户:{}, IP:{}, 处理:退出登录", user, IPUtils.getIp(request));
+                            log.debug("无效用户:{}, IP:{}, 处理:退出登录", user, IPUtils.getIp(request));
                         ShiroUtils.logout();
                         exceptions.add(user);
                         return;
                     }
                     if (!entity.check()) {
                         if (!exceptions.contains(user))
-                            log.info("用户异常:{}, IP:{}, 状态:{}, 处理:退出登录", user, IPUtils.getIp(request), entity.getStatus());
+                            log.debug("用户异常:{}, IP:{}, 状态:{}, 处理:退出登录", user, IPUtils.getIp(request), entity.getStatus());
                         ShiroUtils.logout();
                         exceptions.add(user);
                         return;
                     }
                     if (!Objects.equals(current.getPassword(), entity.getPassword())) {
                         if (!exceptions.contains(user))
-                            log.info("无效登录:{}, IP:{}, 登录秘钥:{}, 实际秘钥:{}, 处理:退出登录", user, IPUtils.getIp(request), current.getPassword(), entity.getPassword());
+                            log.debug("无效登录:{}, IP:{}, 登录秘钥:{}, 实际秘钥:{}, 处理:退出登录", user, IPUtils.getIp(request), current.getPassword(), entity.getPassword());
                         ShiroUtils.logout();
                         exceptions.add(user);
                         return;

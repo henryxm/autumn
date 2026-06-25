@@ -264,7 +264,7 @@ public class InstallWizardService {
         try (Writer w = new OutputStreamWriter(Files.newOutputStream(out.toPath()), StandardCharsets.UTF_8)) {
             w.write(yaml);
         }
-        log.info("已写入安装配置: {}", out.getAbsolutePath());
+        log.debug("已写入安装配置: {}", out.getAbsolutePath());
 
         Map<String, Object> resp = new LinkedHashMap<>();
         resp.put("ok", true);

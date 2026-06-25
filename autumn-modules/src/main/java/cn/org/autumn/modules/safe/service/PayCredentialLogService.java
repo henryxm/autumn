@@ -82,7 +82,7 @@ public class PayCredentialLogService extends ModuleService<PayCredentialLogDao, 
         ew.lt(columnInWrapper("create_time"), before);
         int n = baseMapper.delete(ew);
         if (n > 0)
-            log.info("支付凭证操作日志清理：删除 {} 天以前的记录 {} 条", days, n);
+            log.debug("支付凭证操作日志清理：删除 {} 天以前的记录 {} 条", days, n);
         return n;
     }
 

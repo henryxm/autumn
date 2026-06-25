@@ -113,7 +113,7 @@ public class MysqlTableService {
         }
 
         if (InstallMode.isActive(environment)) {
-            log.info("安装向导模式，跳过注解建表。");
+            log.debug("安装向导模式，跳过注解建表。");
             return;
         }
 
@@ -270,7 +270,7 @@ public class MysqlTableService {
             if (TableCharsetUtils.sameCharset(desired, dbCharset)) {
                 return;
             }
-            log.info("表 [{}] 字符集与实体不一致（库: {}，实体: {}），执行 CONVERT TO", tableInfo.getName(), dbCharset, desired);
+            log.debug("表 [{}] 字符集与实体不一致（库: {}，实体: {}），执行 CONVERT TO", tableInfo.getName(), dbCharset, desired);
             tableDao.convertTableCharset(tableInfo.getName(), desired, collationArg);
         } catch (Throwable e) {
             log.warn("表 [{}] 字符集同步失败: {}", tableInfo.getName(), e.getMessage());

@@ -78,11 +78,11 @@ public class ShieldService extends ModuleService<ShieldDao, ShieldEntity> implem
             if (uris.contains(uri)) {
                 if (!ips.contains(ip)) {
                     if (print)
-                        log.info("防御拦截:{}", ip);
+                        log.debug("防御拦截:{}", ip);
                     return true;
                 } else {
                     if (print)
-                        log.info("防御放行:{}", ip);
+                        log.debug("防御放行:{}", ip);
                     return false;
                 }
             }

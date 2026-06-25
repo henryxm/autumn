@@ -176,65 +176,65 @@ public class EncryptionTest {
      * @return 测试结果列表
      */
     public List<TestResult> runAllTests() {
-        log.info(repeat("=", 80));
-        log.info("开始运行RSA和AES组合加密方案测试");
-        log.info(repeat("=", 80));
+        log.debug(repeat("=", 80));
+        log.debug("开始运行RSA和AES组合加密方案测试");
+        log.debug(repeat("=", 80));
 
         List<TestResult> results = new ArrayList<>();
         long startTime = System.currentTimeMillis();
 
         // 1. RSA密钥对管理测试
-        log.info("\n【测试组 1/8】RSA密钥对管理测试");
-        log.info(repeat("-", 80));
+        log.debug("\n【测试组 1/8】RSA密钥对管理测试");
+        log.debug(repeat("-", 80));
         List<TestResult> rsaKeyPairResults = testRsaKeyPairManagement();
         results.addAll(rsaKeyPairResults);
         logTestGroupResults("RSA密钥对管理", rsaKeyPairResults);
 
         // 2. 客户端公钥管理测试
-        log.info("\n【测试组 2/8】客户端公钥管理测试");
-        log.info(repeat("-", 80));
+        log.debug("\n【测试组 2/8】客户端公钥管理测试");
+        log.debug(repeat("-", 80));
         List<TestResult> clientKeyResults = testClientPublicKeyManagement();
         results.addAll(clientKeyResults);
         logTestGroupResults("客户端公钥管理", clientKeyResults);
 
         // 3. AES密钥管理测试
-        log.info("\n【测试组 3/8】AES密钥管理测试");
-        log.info(repeat("-", 80));
+        log.debug("\n【测试组 3/8】AES密钥管理测试");
+        log.debug(repeat("-", 80));
         List<TestResult> aesKeyResults = testAesKeyManagement();
         results.addAll(aesKeyResults);
         logTestGroupResults("AES密钥管理", aesKeyResults);
 
         // 4. RSA加密解密测试
-        log.info("\n【测试组 4/8】RSA加密解密测试");
-        log.info(repeat("-", 80));
+        log.debug("\n【测试组 4/8】RSA加密解密测试");
+        log.debug(repeat("-", 80));
         List<TestResult> rsaEncryptResults = testRsaEncryptionDecryption();
         results.addAll(rsaEncryptResults);
         logTestGroupResults("RSA加密解密", rsaEncryptResults);
 
         // 5. AES加密解密测试
-        log.info("\n【测试组 5/8】AES加密解密测试");
-        log.info(repeat("-", 80));
+        log.debug("\n【测试组 5/8】AES加密解密测试");
+        log.debug(repeat("-", 80));
         List<TestResult> aesEncryptResults = testAesEncryptionDecryption();
         results.addAll(aesEncryptResults);
         logTestGroupResults("AES加密解密", aesEncryptResults);
 
         // 6. RSA+AES组合流程测试
-        log.info("\n【测试组 6/8】RSA+AES组合流程测试");
-        log.info(repeat("-", 80));
+        log.debug("\n【测试组 6/8】RSA+AES组合流程测试");
+        log.debug(repeat("-", 80));
         List<TestResult> combinedResults = testRsaAesCombinedFlow();
         results.addAll(combinedResults);
         logTestGroupResults("RSA+AES组合流程", combinedResults);
 
         // 7. 错误场景测试
-        log.info("\n【测试组 7/8】错误场景测试");
-        log.info(repeat("-", 80));
+        log.debug("\n【测试组 7/8】错误场景测试");
+        log.debug(repeat("-", 80));
         List<TestResult> errorResults = testErrorScenarios();
         results.addAll(errorResults);
         logTestGroupResults("错误场景", errorResults);
 
         // 8. 边界情况测试
-        log.info("\n【测试组 8/8】边界情况测试");
-        log.info(repeat("-", 80));
+        log.debug("\n【测试组 8/8】边界情况测试");
+        log.debug(repeat("-", 80));
         List<TestResult> boundaryResults = testBoundaryCases();
         results.addAll(boundaryResults);
         logTestGroupResults("边界情况", boundaryResults);
@@ -256,8 +256,7 @@ public class EncryptionTest {
         String status = failureCount == 0 ? "✓ 全部通过" : "✗ 有失败";
         double successRate = results.isEmpty() ? 0 : (successCount * 100.0 / results.size());
 
-        log.info("测试组 [{}] 完成: {} (成功: {}, 失败: {}, 总计: {}, 成功率: {:.2f}%)",
-                groupName, status, successCount, failureCount, results.size(), successRate);
+        log.debug("测试组 [{}] 完成: {} (成功: {}, 失败: {}, 总计: {}, 成功率: {:.2f}%)", groupName, status, successCount, failureCount, results.size(), successRate);
 
         // 输出每个测试用例的结果
         for (TestResult result : results) {
@@ -282,17 +281,17 @@ public class EncryptionTest {
         long failureCount = results.size() - successCount;
         double successRate = results.isEmpty() ? 0 : (successCount * 100.0 / results.size());
 
-        log.info("\n" + repeat("=", 80));
-        log.info("测试总结");
-        log.info(repeat("=", 80));
-        log.info("总测试数: {}", results.size());
-        log.info("成功: {} ({:.2f}%)", successCount, successRate);
-        log.info("失败: {} ({:.2f}%)", failureCount, 100 - successRate);
-        log.info("执行时间: {} ms ({:.2f} 秒)", duration, duration / 1000.0);
-        log.info(repeat("=", 80));
+        log.debug("\n" + repeat("=", 80));
+        log.debug("测试总结");
+        log.debug(repeat("=", 80));
+        log.debug("总测试数: {}", results.size());
+        log.debug("成功: {} ({:.2f}%)", successCount, successRate);
+        log.debug("失败: {} ({:.2f}%)", failureCount, 100 - successRate);
+        log.debug("执行时间: {} ms ({:.2f} 秒)", duration, duration / 1000.0);
+        log.debug(repeat("=", 80));
 
         if (failureCount == 0) {
-            log.info("🎉 所有测试用例全部通过！");
+            log.debug("🎉 所有测试用例全部通过！");
         } else {
             log.warn("⚠️  有 {} 个测试用例失败，请检查上述详细信息", failureCount);
         }

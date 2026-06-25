@@ -69,7 +69,7 @@ public class UrlBlackService extends WallCounter<UrlBlackDao, UrlBlackEntity> im
                 allUrls.replace(hashCode, count);
                 if (count > lastCount) {
                     if (log.isInfoEnabled())
-                        log.info("URL触发:{}, IP:{}, 频率:{}/5秒, 上限:{}/5秒", url, ip, count, lastCount);
+                        log.debug("URL触发:{}, IP:{}, 频率:{}/5秒, 上限:{}/5秒", url, ip, count, lastCount);
                     ipBlackService.saveBlackIp(ip, agent, 0, "触发URL黑名单策略");
                     allUrls.replace(hashCode, 0);
                 }

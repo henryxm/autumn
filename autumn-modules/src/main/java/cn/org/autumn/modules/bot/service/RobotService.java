@@ -279,7 +279,7 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> implement
             int retentionDays = robotQuotaService.effectiveDeletedRetentionDays();
             int n = purgeExpiredDeletedRobots(retentionDays);
             if (n > 0) {
-                log.info("机器人定时销毁：已处理软删除超过 {} 天的记录 {} 条", retentionDays, n);
+                log.debug("机器人定时销毁：已处理软删除超过 {} 天的记录 {} 条", retentionDays, n);
             }
         } catch (Exception e) {
             log.error("机器人定时销毁任务失败", e);

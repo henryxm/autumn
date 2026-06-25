@@ -224,7 +224,7 @@ public class EncryptKeyService extends ModuleService<EncryptKeyDao, EncryptKeyEn
             // 直接使用SQL删除过期记录
             int deletedCount = baseMapper.deleteExpiredKeys(cleanBeforeTime);
             if (deletedCount > 0) {
-                log.info("清理过期加密密钥记录完成，共清理 {} 条记录，清理时间点: {}", deletedCount, cleanBeforeTime);
+                log.debug("清理过期加密密钥记录完成，共清理 {} 条记录，清理时间点: {}", deletedCount, cleanBeforeTime);
             }
         } catch (Exception e) {
             log.error("清理过期加密密钥记录失败: {}", e.getMessage(), e);

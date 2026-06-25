@@ -121,8 +121,7 @@ public class BaseHttpProxyService {
             if (isClientDisconnect(e)) {
                 String hint = ExceptionUtils.nextBenignExceptionLogHint("proxy-client-disconnect", request);
                 if (hint != null) {
-                    log.info("代理流式响应时客户端连接中断，按正常结束处理{}。方法:{}, 路径:{}, 目标:{}",
-                            hint, request.getMethod(), request.getRequestURI(), determineTargetUrl(base, target, request, proxyPath));
+                    log.debug("代理流式响应时客户端连接中断，按正常结束处理{}。方法:{}, 路径:{}, 目标:{}", hint, request.getMethod(), request.getRequestURI(), determineTargetUrl(base, target, request, proxyPath));
                 }
                 return null;
             }
