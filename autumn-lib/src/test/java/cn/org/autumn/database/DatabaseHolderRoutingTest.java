@@ -1,5 +1,7 @@
 package cn.org.autumn.database;
 
+import static org.junit.Assert.assertEquals;
+
 import cn.org.autumn.datasources.DataSourceDialectRegistry;
 import cn.org.autumn.datasources.DataSourceNames;
 import cn.org.autumn.datasources.DynamicDataSource;
@@ -8,8 +10,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.springframework.mock.env.MockEnvironment;
 import org.springframework.test.util.ReflectionTestUtils;
-
-import static org.junit.Assert.assertEquals;
 
 public class DatabaseHolderRoutingTest {
 

@@ -1,12 +1,11 @@
 package cn.org.autumn.modules.oss.cloud;
 
-import com.aliyun.oss.OSSClient;
 import cn.org.autumn.exception.AException;
+import com.aliyun.oss.OSSClient;
 import com.aliyun.oss.model.CannedAccessControlList;
 import com.aliyun.oss.model.ObjectMetadata;
 import com.aliyun.oss.model.SetBucketAclRequest;
 import com.aliyun.oss.model.SetObjectAclRequest;
-
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 

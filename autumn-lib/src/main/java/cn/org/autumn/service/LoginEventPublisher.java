@@ -5,14 +5,13 @@ import cn.org.autumn.listener.LoginListener;
 import cn.org.autumn.model.LoginEvent;
 import cn.org.autumn.site.InitFactory;
 import cn.org.autumn.utils.Uuid;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.stereotype.Service;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 /**
  * 用户登录事件发布器
@@ -62,7 +61,7 @@ public class LoginEventPublisher implements InitFactory.Must {
         // 使用懒加载方式收集监听器，避免@PostConstruct时Bean还未完全注册
         initialized = true;
         if (log.isDebugEnabled()) {
-            log.debug("登录事件发布器初始化完成，将在首次使用时收集监听器");
+            log.debug("Login event publisher initialized; listeners collected on first use");
         }
     }
 
@@ -85,16 +84,16 @@ public class LoginEventPublisher implements InitFactory.Must {
                     if (listener != null && !listeners.contains(listener)) {
                         listeners.add(listener);
                         if (log.isDebugEnabled()) {
-                            log.debug("注册监听: {}", listener.getClass().getName());
+                            log.debug("Registered listener: {}", listener.getClass().getName());
                         }
                     }
                 } catch (Exception e) {
-                    log.error("监听失败: {}", handler.getClass().getName(), e);
+                    log.error("Listener registration failed: {}", handler.getClass().getName(), e);
                 }
             }
         }
         if (!listeners.isEmpty() && log.isDebugEnabled()) {
-            log.debug("登录监听，共注册 {} 个监听器", listeners.size());
+            log.debug("Login listeners registered: {}", listeners.size());
         }
     }
 
@@ -108,7 +107,7 @@ public class LoginEventPublisher implements InitFactory.Must {
      */
     public void publish(LoginEvent event) {
         if (event == null) {
-            log.debug("登录事件为空，忽略发布");
+            log.debug("Login event null, publish ignored");
             return;
         }
         // 确保事件ID和实例ID已设置
@@ -121,7 +120,7 @@ public class LoginEventPublisher implements InitFactory.Must {
         // 如果监听器列表为空，直接返回
         if (listeners.isEmpty()) {
             if (log.isDebugEnabled()) {
-                log.debug("没有注册的登录监听器，忽略事件: {}", event.getId());
+                log.debug("No login listeners registered, event ignored: {}", event.getId());
             }
             return;
         }
@@ -132,7 +131,7 @@ public class LoginEventPublisher implements InitFactory.Must {
             // 如果没有异步执行器，使用CompletableFuture的默认线程池
             CompletableFuture.runAsync(() -> notify(event))
                     .exceptionally(throwable -> {
-                        log.error("通知失败:{}", throwable.getMessage());
+                        log.error("Notification failed: {}", throwable.getMessage());
                         return null;
                     });
         }
@@ -148,7 +147,7 @@ public class LoginEventPublisher implements InitFactory.Must {
      */
     private void notify(LoginEvent event) {
         if (log.isDebugEnabled()) {
-            log.debug("通知监听，事件ID: {}, 监听器数量: {}", event.getId(), listeners.size());
+            log.debug("Notifying listeners, event ID: {}, listener count: {}", event.getId(), listeners.size());
         }
         for (LoginListener listener : listeners) {
             try {
@@ -156,19 +155,19 @@ public class LoginEventPublisher implements InitFactory.Must {
                 listener.onLogin(event);
                 long duration = System.currentTimeMillis() - startTime;
                 if (log.isDebugEnabled()) {
-                    log.debug("登录监听器 {} 处理完成，耗时: {}ms", listener.getClass().getName(), duration);
+                    log.debug("Login listener {} finished in {}ms", listener.getClass().getName(), duration);
                 }
                 // 如果处理时间过长，记录警告
                 if (duration > 1000) {
-                    log.debug("登录监听器 {} 处理时间过长: {}ms", listener.getClass().getName(), duration);
+                    log.debug("Login listener {} took too long: {}ms", listener.getClass().getName(), duration);
                 }
             } catch (Exception e) {
-                log.error("登录监听器 {} 处理事件失败，事件ID: {}", listener.getClass().getName(), event.getId(), e);
+                log.error("Login listener {} failed to handle event, event ID: {}", listener.getClass().getName(), event.getId(), e);
                 // 继续执行其他监听器，不中断流程
             }
         }
         if (log.isDebugEnabled()) {
-            log.debug("登录事件通知完成，事件ID: {}", event.getId());
+            log.debug("Login event notification complete, event ID: {}", event.getId());
         }
     }
 
@@ -183,7 +182,7 @@ public class LoginEventPublisher implements InitFactory.Must {
         if (listener != null && !listeners.contains(listener)) {
             listeners.add(listener);
             if (log.isDebugEnabled())
-                log.debug("手动注册登录监听器: {}", listener.getClass().getName());
+                log.debug("Manually registered login listener: {}", listener.getClass().getName());
         }
     }
 
@@ -196,7 +195,7 @@ public class LoginEventPublisher implements InitFactory.Must {
         if (listener != null) {
             listeners.remove(listener);
             if (log.isDebugEnabled())
-                log.debug("移除登录监听器: {}", listener.getClass().getName());
+                log.debug("Removed login listener: {}", listener.getClass().getName());
         }
     }
 

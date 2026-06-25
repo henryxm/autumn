@@ -1,9 +1,8 @@
 package cn.org.autumn.site;
 
 import cn.org.autumn.config.ClearHandler;
-import org.springframework.stereotype.Component;
-
 import java.util.List;
+import org.springframework.stereotype.Component;
 
 @Component
 public class ClearFactory extends Factory {

@@ -1,17 +1,16 @@
 package cn.org.autumn.modules.oauth.controller;
 
+import cn.org.autumn.modules.oauth.controller.gen.SecurityRequestControllerGen;
 import cn.org.autumn.modules.oauth.entity.SecurityRequestEntity;
 import cn.org.autumn.utils.R;
+import java.util.List;
+import java.util.Map;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import cn.org.autumn.modules.oauth.controller.gen.SecurityRequestControllerGen;
-
-import java.util.List;
-import java.util.Map;
 
 /**
  * 安全验证

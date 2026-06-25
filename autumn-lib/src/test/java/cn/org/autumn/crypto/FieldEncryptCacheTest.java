@@ -4,13 +4,12 @@ import cn.org.autumn.annotation.Cache;
 import cn.org.autumn.annotation.FieldEncrypt;
 import cn.org.autumn.config.FieldEncryptProperties;
 import cn.org.autumn.table.annotation.Column;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
 public class FieldEncryptCacheTest {
 

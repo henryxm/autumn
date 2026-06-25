@@ -13,7 +13,7 @@
 ### 2.0 代码版式
 
 - Java **方法签名、调用实参、if 条件**的换行约定见 **`docs/AI_CODE_STYLE.md`**（单条分支可无 `{}` 但须换行；与 Checkstyle 冲突时以该文档与本文为准）。
-- **import**：除非类名冲突，**禁止**在业务代码中用全限定类名代替 `import`；见 **`docs/AI_CODE_STYLE.md` §7**。
+- **import**：除非类名冲突，**禁止**在业务代码中用全限定类名代替 `import`；见 **`docs/AI_CODE_STYLE.md` §7**。**PR CI**：`bash scripts/check-java-fqn`（白名单 `scripts/fqn-allowlist.txt`）。
 - **日志**：`log.info` / `log.debug` 等**必须单行**，禁止把日志调用拆行；见 **`docs/AI_CODE_STYLE.md` §8**。
 
 ### 2.1 高内聚、低耦合

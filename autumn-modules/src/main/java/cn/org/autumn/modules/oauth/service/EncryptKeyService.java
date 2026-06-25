@@ -1,21 +1,20 @@
 package cn.org.autumn.modules.oauth.service;
 
 import cn.org.autumn.base.ModuleService;
-import cn.org.autumn.config.EncryptionLoader;
 import cn.org.autumn.config.EncryptConfigHandler;
+import cn.org.autumn.config.EncryptionLoader;
 import cn.org.autumn.model.AesKey;
 import cn.org.autumn.model.RsaKey;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.oauth.dao.EncryptKeyDao;
 import cn.org.autumn.modules.oauth.entity.EncryptKeyEntity;
 import cn.org.autumn.site.EncryptConfigFactory;
+import java.util.Date;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.Date;
 
 /**
  * 加密密钥服务
@@ -127,11 +126,11 @@ public class EncryptKeyService extends ModuleService<EncryptKeyDao, EncryptKeyEn
                 aesKey.setExpireTime(entity.getExpire().getTime());
             }
             if (log.isDebugEnabled()) {
-                log.debug("从数据库加载AES密钥成功，session: {}", session);
+                log.debug("Loaded AES key from database, session: {}", session);
             }
             return aesKey;
         } catch (Exception e) {
-            log.error("从数据库加载AES密钥失败，session: {}, 错误: {}", session, e.getMessage(), e);
+            log.error("Failed to load AES key from database, session: {}, error: {}", session, e.getMessage(), e);
             return null;
         }
     }
@@ -163,11 +162,11 @@ public class EncryptKeyService extends ModuleService<EncryptKeyDao, EncryptKeyEn
                 rsaKey.setExpireTime(entity.getExpire().getTime());
             }
             if (log.isDebugEnabled()) {
-                log.debug("从数据库加载RSA密钥对成功，session: {}", session);
+                log.debug("Loaded RSA key pair from database, session: {}", session);
             }
             return rsaKey;
         } catch (Exception e) {
-            log.error("从数据库加载RSA密钥对失败，session: {}, 错误: {}", session, e.getMessage(), e);
+            log.error("Failed to load RSA key pair from database, session: {}, error: {}", session, e.getMessage(), e);
             return null;
         }
     }
@@ -190,11 +189,11 @@ public class EncryptKeyService extends ModuleService<EncryptKeyDao, EncryptKeyEn
                 return null;
             }
             if (log.isDebugEnabled()) {
-                log.debug("从数据库加载客户端公钥成功，session: {}", session);
+                log.debug("Loaded client public key from database, session: {}", session);
             }
             return entity.getClientKey();
         } catch (Exception e) {
-            log.error("从数据库加载客户端公钥失败，session: {}, 错误: {}", session, e.getMessage(), e);
+            log.error("Failed to load client public key from database, session: {}, error: {}", session, e.getMessage(), e);
             return null;
         }
     }
@@ -224,10 +223,10 @@ public class EncryptKeyService extends ModuleService<EncryptKeyDao, EncryptKeyEn
             // 直接使用SQL删除过期记录
             int deletedCount = baseMapper.deleteExpiredKeys(cleanBeforeTime);
             if (deletedCount > 0) {
-                log.info("清理过期加密密钥记录完成，共清理 {} 条记录，清理时间点: {}", deletedCount, cleanBeforeTime);
+                log.debug("Expired encryption key cleanup completed, removed {} records, cutoff: {}", deletedCount, cleanBeforeTime);
             }
         } catch (Exception e) {
-            log.error("清理过期加密密钥记录失败: {}", e.getMessage(), e);
+            log.error("Failed to clean expired encryption key records: {}", e.getMessage(), e);
         }
     }
 }

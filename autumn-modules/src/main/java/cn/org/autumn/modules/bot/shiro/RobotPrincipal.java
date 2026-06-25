@@ -2,9 +2,8 @@ package cn.org.autumn.modules.bot.shiro;
 
 import cn.org.autumn.cluster.UserMapping;
 import cn.org.autumn.modules.bot.entity.RobotEntity;
-import lombok.Getter;
-
 import java.io.Serializable;
+import lombok.Getter;
 
 @Getter
 public class RobotPrincipal implements Serializable, UserMapping {

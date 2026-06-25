@@ -1,8 +1,8 @@
 package cn.org.autumn.modules.safe.controller;
 
+import cn.org.autumn.modules.safe.controller.gen.PayUserTrustedIpControllerGen;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import cn.org.autumn.modules.safe.controller.gen.PayUserTrustedIpControllerGen;
 
 @RestController
 @RequestMapping("safe/payusertrustedip")

@@ -6,7 +6,7 @@
 
 ## 1. 文档职责一览
 
-- **`scripts/constraints-scan`**：**文档约束分组扫描 A～H**（实体/命名、Dao/SQL、分层、DDL、**Redis TTL** 等；`--redis-expire-only` 仅 H 组；依赖 `rg`，见 **`docs/AI_DATABASE.md` §8.5**）。**非默认强制步骤**：日常开发或 AI 辅助编码**不必**自动执行；仅在**用户/任务明确要求**做仓库规范体检、合并前自检、CI 门禁、或主动提到「跑约束扫描 / constraints-scan」等场景下**按需**运行。
+- **`scripts/constraints-scan`**：**文档约束分组扫描 A～I**（实体/命名、Dao/SQL、分层、DDL、**import/FQN §7**、**Redis TTL** 等；`--redis-expire-only` 仅 H 组；依赖 `rg` + Python3，见 **`docs/AI_CODE_STYLE.md` §7.1**、**`docs/AI_DATABASE.md` §8.5**）。**非默认强制步骤**：日常开发或 AI 辅助编码**不必**自动执行；**`bash scripts/check-java-fqn` 为 PR 硬门禁**（见 `.github/workflows/java-style-check.yml`）。
 - `docs/AI_BOOT.md`：最小启动上下文（首轮必读）
 - `docs/INSTALL_MODE_CONDITIONAL.md`：安装模式（`autumn.install.mode`）下 **`@ConditionalOnNotInstallMode` / `@ConditionalOnInstallMode`** 与 **`autumn.install.autoconfigure-exclude`** 用法；**§0** 安装占位数据源（**默认 H2 内存**、可选 **mysql**）
 - `docs/REDIS_STANDALONE.md`：**可选 Redis / 单机启动**（`autumn.redis.open`、安装向导、分布式锁单机回退；**§2** 框架 `RedisConfig`；**§3** 业务注入模式 A/B；**§8** 模式 B 写法）
@@ -19,6 +19,7 @@
 - `docs/AI_CODE_STYLE.md`：**Java 版式**（方法/调用单行参数、if 条件同行体换行；**import 优先** §7；**日志单行** §8）
 - `docs/AI_SERVICE_COHESION.md`：**实体 Service 内聚**（CRUD/定时任务归实体 Service、约 1000 行再拆类、少工具类）
 - **`docs/AI_DATABASE.md`**：**多数据库落地规范**（已支持 `DatabaseType` 清单、**§1.1 关联键与业务主键（承接 `AI_STANDARDS` §10.4）**、**§2.1 `RuntimeSqlDialect` 能力清单与故意不抽象项**、**§4.0 代码层标准写法（`RuntimeSql` / `WrapperColumns`，禁止硬编码方言符号）**、**全库兼容默认**、**Wrapper 安全边界**、**Dao+Provider 强制与推荐分层**、`RuntimeSql` 使用纪律；**§8 老旧注解 Dao / 方言化 Wrapper 升级与一键体检策略**）
+- **`docs/AI_DATABASE_READ_ONLY.md`**：**数据库只读模式**（`CrudGuard` API：`writable` / `opt` / `force` / `suppress`；Init/LoopJob/业务三类写决策表）
 - `docs/AI_DISTRIBUTED_LOCK.md`：分布式锁能力（`DistributedLockService` / `DistributedService`）、场景化加锁、降级与抗雪崩策略、`DistributedLockConfig` 配置项与默认值、业务域快捷模板（含项目示例源码入口）
 - **`docs/AI_ASYNC_TASK.md`**：**`TagRunnable` / `TagTaskExecutor` / `LockOnce`**、**`FinishStatus` 与 `onFinished` 生命周期**、本机队列 drain 状态机范式（与 `BaseQueueService` 区分）
 - `docs/AI_POSTGRESQL.md`：PostgreSQL 专项（DDL/元数据、`PostgresQuerySql`、迁移与兼容性）；通用跨库口径以 **`docs/AI_DATABASE.md`** 为准
@@ -52,6 +53,7 @@
 - 文档治理/多人协作：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md + docs/AI_GOVERNANCE.md`
 - 快速起任务：在以上任一组合追加 `docs/AI_PROMPTS.md`
 - **多库 / 方言 / Wrapper / Provider / 换库排查**：`docs/AI_BOOT.md` + `docs/AI_MAP.md` + `docs/AI_STANDARDS.md` + **`docs/AI_DATABASE.md`**（PostgreSQL 专项叠加 **`docs/AI_POSTGRESQL.md`**）
+- **系统升级只读 / 关闭写库 / dbmanage CRUD 开关**：`docs/AI_BOOT.md` + `docs/AI_MAP.md` + **`docs/AI_DATABASE_READ_ONLY.md`**（叠加 `docs/AI_SESSION_GUARD.md` 若涉及登录）
 - 业务工程升级 autumn 版本：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md + docs/AI_UPGRADE.md`（必要时叠加 `docs/AI_POSTGRESQL.md`）
 - **Redis 过期 / TTL / Redisson / `RedisExpireUtil`**：`docs/REDIS_TTL_GUIDE.md` + `docs/REDIS_REDISSON_SPRING_DATA.md` + `docs/AI_STANDARDS.md` §15
 - **机器人 / Bot 开放 API、Hook、入站消息（业务系统 HTTP 对接）**：`docs/AI_BOOT.md` + `docs/AI_MAP.md` + **`docs/AI_ROBOT.md`** + **`docs/AI_ROBOT_API.md`**（叠加 `docs/AI_CODEGEN.md` 队列、`docs/AI_DISTRIBUTED_LOCK.md` 若用幂等锁）

@@ -1,8 +1,8 @@
 package cn.org.autumn.modules.job.utils;
 
-import cn.org.autumn.utils.Constant;
 import cn.org.autumn.exception.AException;
 import cn.org.autumn.modules.job.entity.ScheduleJobEntity;
+import cn.org.autumn.utils.Constant;
 import org.quartz.*;
 
 /**

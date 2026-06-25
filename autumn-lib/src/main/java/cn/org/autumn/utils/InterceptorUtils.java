@@ -1,11 +1,10 @@
 package cn.org.autumn.utils;
 
 import cn.org.autumn.annotation.SkipInterceptor;
+import java.lang.reflect.Method;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
-
-import java.lang.reflect.Method;
 
 /**
  * 拦截器工具类

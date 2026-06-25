@@ -1,18 +1,18 @@
 package cn.org.autumn.modules.usr.controller.gen;
 
+import cn.org.autumn.modules.usr.entity.UserLoginLogEntity;
+import cn.org.autumn.modules.usr.service.UserLoginLogService;
+import cn.org.autumn.utils.PageUtils;
+import cn.org.autumn.utils.R;
+import cn.org.autumn.validator.ValidatorUtils;
 import java.util.Arrays;
 import java.util.Map;
-import cn.org.autumn.validator.ValidatorUtils;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import cn.org.autumn.modules.usr.entity.UserLoginLogEntity;
-import cn.org.autumn.modules.usr.service.UserLoginLogService;
-import cn.org.autumn.utils.PageUtils;
-import cn.org.autumn.utils.R;
 
 /**
  * 登录日志

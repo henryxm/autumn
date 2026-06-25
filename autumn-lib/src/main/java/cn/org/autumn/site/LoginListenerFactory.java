@@ -2,11 +2,10 @@ package cn.org.autumn.site;
 
 import cn.org.autumn.config.LoginListenerHandler;
 import cn.org.autumn.listener.LoginListener;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
-
 import java.util.ArrayList;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
 /**
  * 登录监听器工厂
@@ -46,7 +45,7 @@ public class LoginListenerFactory extends Factory {
                         listeners.add(listener);
                     }
                 } catch (Exception e) {
-                    log.error("获取登录监听器失败: {}", handler.getClass().getName(), e);
+                    log.error("Failed to get login listener: {}", handler.getClass().getName(), e);
                 }
             }
         }

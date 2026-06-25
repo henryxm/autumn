@@ -7,13 +7,12 @@ import cn.org.autumn.modules.safe.entity.PayGateAttemptEntity;
 import cn.org.autumn.modules.safe.site.SafeConfig;
 import cn.org.autumn.modules.safe.support.PayCredentialVerifyMethods;
 import cn.org.autumn.service.DistributedLockService;
+import java.lang.reflect.Field;
+import java.util.concurrent.Callable;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
-
-import java.lang.reflect.Field;
-import java.util.concurrent.Callable;
 
 public class PayGateServiceTest {
 

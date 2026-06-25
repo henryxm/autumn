@@ -1,11 +1,12 @@
 package cn.org.autumn.modules.lan.service.gen;
 
-import cn.org.autumn.modules.sys.service.SysMenuService;
-import cn.org.autumn.site.InitFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import cn.org.autumn.modules.lan.service.Language;
 import cn.org.autumn.modules.lan.service.LanguageService;
+import cn.org.autumn.modules.sys.service.SysMenuService;
+import cn.org.autumn.site.InitFactory;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
+
 /**
  * 国家语言
  *

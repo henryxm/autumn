@@ -2,14 +2,13 @@ package cn.org.autumn.modules.bot.service;
 
 import cn.org.autumn.exception.CodeException;
 import cn.org.autumn.model.RobotQuotaConfig;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
-
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
 
 /**
  * 机器人入站消息推送限流（优先 Redis 计数，无 Redis 时本机滑动窗口降级）。

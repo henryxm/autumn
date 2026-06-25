@@ -1,15 +1,12 @@
 package cn.org.autumn.modules.lan.controller;
 
+import cn.org.autumn.modules.lan.controller.gen.LanguageControllerGen;
 import cn.org.autumn.modules.lan.entity.LanguageMetadata;
 import cn.org.autumn.utils.R;
-import org.apache.shiro.authz.annotation.RequiresPermissions;
-import org.springframework.web.bind.annotation.*;
-
-import cn.org.autumn.modules.lan.controller.gen.LanguageControllerGen;
-
 import java.util.List;
 import java.util.Map;
-
+import org.apache.shiro.authz.annotation.RequiresPermissions;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * 多语言

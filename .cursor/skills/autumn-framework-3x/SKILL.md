@@ -133,7 +133,7 @@ description: >-
 
 - 默认业务 SQL / Wrapper 对 **`DatabaseType` 全量兼容**；单库例外须 JavaDoc 标明。
 - **禁止硬编码方言**：表/列/排序/Map 键不写死 `` ` `` / `"` / `[]`；Provider 用 **`RuntimeSql#quote` / `columnInWrapper`**；未继承 **`DialectService`** 时用 **`WrapperColumns`**（**`columnInWrapper`**、分页排序 **`orderByColumnExpression`**、Map 等值 **`entityWrapperAllEqQuoted`** 等，见 **`docs/AI_DATABASE.md` §4.0**）。
-- **import 优先**：除非**类名冲突**，**禁止**在方法体/字段等处写全限定类名；**必须** `import` 后用短类名（**`docs/AI_CODE_STYLE.md` §7**）。
+- **import 优先**：除非**类名冲突**，**禁止**在方法体/字段等处写全限定类名；**必须** `import` 后用短类名（**`docs/AI_CODE_STYLE.md` §7**）。**改 Java 后跑** `bash scripts/check-java-fqn`；合法冲突登记 **`scripts/fqn-allowlist.txt`**。
 - **日志单行**：`log.trace` / `log.debug` / `log.info` / `log.warn` / `log.error` **整条调用一行写完**，**禁止**为日志实参换行（**`docs/AI_CODE_STYLE.md` §8**）。
 - **Dao**：新代码 **禁止** 注解内联 SQL；**必须** `@SelectProvider` + **`*DaoSql`**，推荐 **`extends RuntimeSql`**。
 - **Wrapper**：安全谓词 only；复杂场景 **Dao + Provider**（见 **`docs/AI_DATABASE.md` §4～§5**）。
@@ -186,7 +186,8 @@ description: >-
 
 ## 自检清单
 
-- 若用户**要求**跑规范扫描：已执行 **`bash scripts/constraints-scan`** 并完成解读/修复（或写明残留）？
+- 若用户**要求**跑规范扫描：已执行 **`bash scripts/constraints-scan`**（含 **I 组 FQN**）并完成解读/修复（或写明残留）？
+- **改 Java 后**：已执行 **`bash scripts/check-java-fqn`**（PR CI 硬门禁）？
 - 无多余 **`schema.sql` / `init.sql`**？  
 - Dao 无内联 SQL？**Wrapper** 无方言黑魔法？Java 无手写 **反引号/双引号/方括号** 拼 SQL（§4.0）？  
 - **Controller** 未碰 **Dao**？未手改 **gen / list.html/js**？  

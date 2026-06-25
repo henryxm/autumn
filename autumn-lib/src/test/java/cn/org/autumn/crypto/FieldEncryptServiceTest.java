@@ -4,16 +4,15 @@ import cn.org.autumn.annotation.FieldEncrypt;
 import cn.org.autumn.config.FieldEncryptProperties;
 import cn.org.autumn.table.annotation.Column;
 import cn.org.autumn.table.data.ColumnInfo;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.springframework.test.util.ReflectionTestUtils;
-
 import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 
 public class FieldEncryptServiceTest {
 

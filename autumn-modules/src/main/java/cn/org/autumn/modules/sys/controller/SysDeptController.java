@@ -1,9 +1,11 @@
 package cn.org.autumn.modules.sys.controller;
 
-import cn.org.autumn.modules.sys.service.SysUserService;
 import cn.org.autumn.modules.sys.entity.SysDeptEntity;
 import cn.org.autumn.modules.sys.service.SysDeptService;
+import cn.org.autumn.modules.sys.service.SysUserService;
 import cn.org.autumn.utils.R;
+import java.util.HashMap;
+import java.util.List;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -11,9 +13,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.HashMap;
-import java.util.List;
 
 @RestController
 @RequestMapping("/sys/dept")

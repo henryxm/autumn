@@ -5,12 +5,11 @@ import cn.org.autumn.modules.sys.service.SysCategoryService;
 import cn.org.autumn.utils.PageUtils;
 import cn.org.autumn.utils.R;
 import cn.org.autumn.validator.ValidatorUtils;
+import java.util.Arrays;
+import java.util.Map;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Arrays;
-import java.util.Map;
 
 /**
  * 系统配置类型表

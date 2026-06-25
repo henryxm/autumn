@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据库运维</title>
+    <style>
+        :root {
+            --primary: #0f4c81;
+            --primary-light: #1a6bb5;
+            --success: #059669;
+            --danger: #dc2626;
+            --warning: #d97706;
+            --muted: #64748b;
+            --border: #e2e8f0;
+            --surface: #fff;
+            --radius: 12px;
+            --shadow: 0 4px 24px rgba(15, 76, 129, 0.08);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(160deg, #e8eef5 0%, #f8fafc 45%, #eef2ff 100%);
+            color: #1e293b;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .shell { max-width: 1320px; margin: 0 auto; }
+        .page {
+            background: var(--surface);
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            overflow: hidden;
+            min-height: calc(100vh - 40px);
+            display: flex;
+            flex-direction: column;
+        }
+        .header {
+            background: linear-gradient(135deg, #0a3d6b 0%, var(--primary) 50%, var(--primary-light) 100%);
+            color: #fff;
+            padding: 28px 32px;
+        }
+        .header h1 { font-size: 26px; font-weight: 700; }
+        .header-sub { opacity: 0.92; font-size: 13px; margin-top: 6px; line-height: 1.5; }
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 14px;
+            padding: 6px 14px;
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: 600;
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.25);
+        }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #4ade80; }
+        .status-pill.warn .status-dot { background: #fbbf24; }
+        .status-pill.danger .status-dot { background: #f87171; }
+        .tabs {
+            display: flex;
+            gap: 4px;
+            padding: 0 20px;
+            background: #f8fafc;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+        .tab {
+            padding: 14px 20px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--muted);
+            border-bottom: 3px solid transparent;
+            margin-bottom: -1px;
+        }
+        .tab.active { color: var(--primary); border-bottom-color: var(--primary); background: #fff; }
+        .content { flex: 1; overflow: auto; padding: 24px 28px 32px; }
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+        .grid-4 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 14px;
+            margin-bottom: 22px;
+        }
+        .stat-card {
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px;
+        }
+        .stat-label { font-size: 12px; color: var(--muted); letter-spacing: 0.02em; }
+        .stat-value { font-size: 20px; font-weight: 800; color: var(--primary); margin-top: 6px; word-break: break-all; }
+        .stat-value.ok { color: var(--success); }
+        .stat-value.warn { color: var(--warning); }
+        .stat-value.danger { color: var(--danger); }
+        .panel {
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        .panel-head {
+            padding: 14px 18px;
+            background: #f8fafc;
+            border-bottom: 1px solid var(--border);
+            font-weight: 700;
+            font-size: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .panel-body { padding: 18px; }
+        .panel-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+        .toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px; }
+        .toolbar input {
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            min-width: 240px;
+        }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+        th { background: #f1f5f9; font-weight: 600; white-space: nowrap; }
+        tbody tr:hover { background: #fafbfc; }
+        .mono { font-family: Consolas, Monaco, monospace; font-size: 12px; }
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .badge-ok { background: #dcfce7; color: #166534; }
+        .badge-miss { background: #fee2e2; color: #991b1b; }
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .btn-primary { background: var(--primary); color: #fff; }
+        .btn-secondary { background: #e2e8f0; color: #334155; }
+        .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+        .switch-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 16px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .switch-row:last-child { border-bottom: none; }
+        .switch-meta strong { display: block; font-size: 15px; margin-bottom: 4px; }
+        .switch-meta span { font-size: 13px; color: var(--muted); line-height: 1.5; }
+        .switch { position: relative; width: 48px; height: 26px; flex-shrink: 0; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute; inset: 0; cursor: pointer;
+            background: #cbd5e1; border-radius: 26px; transition: 0.25s;
+        }
+        .slider:before {
+            content: ""; position: absolute; height: 20px; width: 20px; left: 3px; bottom: 3px;
+            background: #fff; border-radius: 50%; transition: 0.25s;
+        }
+        .switch input:checked + .slider { background: var(--primary); }
+        .switch input:checked + .slider:before { transform: translateX(22px); }
+        .switch input:disabled + .slider { opacity: 0.5; cursor: not-allowed; }
+        textarea {
+            width: 100%;
+            min-height: 80px;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            resize: vertical;
+        }
+        .hint-block { margin-top: 16px; }
+        .hint-block label { display: block; font-weight: 600; margin-bottom: 8px; font-size: 14px; }
+        .meta-line { margin-top: 14px; font-size: 13px; color: var(--muted); }
+        .meta-line strong { color: #334155; }
+        .link-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 14px;
+        }
+        .link-card {
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px;
+            text-decoration: none;
+            color: inherit;
+            transition: box-shadow 0.2s, border-color 0.2s;
+            display: block;
+        }
+        .link-card:hover { border-color: var(--primary-light); box-shadow: 0 4px 16px rgba(15,76,129,0.1); }
+        .link-card h3 { font-size: 15px; color: var(--primary); margin-bottom: 6px; }
+        .link-card p { font-size: 13px; color: var(--muted); }
+        .info-list p { margin-bottom: 10px; line-height: 1.6; }
+        .info-list p:last-child { margin-bottom: 0; }
+        .sub-table { margin: 8px 0 0 24px; font-size: 12px; }
+        .sub-table th { background: #e2e8f0; color: #334155; }
+        .expand-btn { cursor: pointer; color: var(--primary); user-select: none; min-width: 20px; display: inline-block; text-align: center; }
+        .toast {
+            position: fixed; right: 20px; bottom: 20px; z-index: 9999;
+            padding: 12px 18px; border-radius: 8px; color: #fff; font-size: 14px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+        }
+        .toast-success { background: var(--success); }
+        .toast-danger { background: var(--danger); }
+        .empty, .loading-hint { text-align: center; padding: 32px; color: var(--muted); font-size: 14px; }
+        [v-cloak] { display: none; }
+    </style>
+</head>
+<body>
+<div class="shell" id="app" v-cloak>
+    <div class="page">
+        <div class="header">
+            <h1>数据库运维</h1>
+            <div class="header-sub">连接信息、写库开关与实体表一览；升级维护时可在此切换只读模式</div>
+            <div class="status-pill" :class="statusPillClass">
+                <span class="status-dot"></span>
+                <span v-text="writeStatusText"></span>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <div class="tab" :class="{active: tab==='overview'}" @click="switchTab('overview')">概览</div>
+            <div class="tab" :class="{active: tab==='tables'}" @click="switchTab('tables')">实体表</div>
+        </div>
+
+        <div class="content">
+            <!-- 概览：打开即显示，含写库开关 -->
+            <div class="tab-panel" :class="{active: tab==='overview'}">
+                <div v-if="loadingOverview" class="loading-hint">正在加载概览…</div>
+                <template v-else>
+                    <div class="grid-4">
+                        <div class="stat-card">
+                            <div class="stat-label">数据库类型</div>
+                            <div class="stat-value" v-text="overview.databaseType || '-'"></div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">实体表 / 库表</div>
+                            <div class="stat-value" v-text="entityStatText"></div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">建表模式</div>
+                            <div class="stat-value" v-text="tableAutoModeLabel"></div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">写库状态</div>
+                            <div class="stat-value" :class="writeStatClass" v-text="writeStatShort"></div>
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-head">
+                            <span>写库开关</span>
+                            <div class="panel-actions">
+                                <button class="btn btn-secondary" @click="reloadCrud" :disabled="crudBusy">重载配置</button>
+                                <button class="btn btn-primary" @click="saveCrud" :disabled="crudBusy">保存设置</button>
+                            </div>
+                        </div>
+                        <div class="panel-body">
+                            <div class="switch-row">
+                                <div class="switch-meta">
+                                    <strong>系统写库</strong>
+                                    <span>关闭后全局禁止写库（升级、迁移场景）。备份恢复、保存本页设置等框架任务可内部绕过。</span>
+                                </div>
+                                <label class="switch">
+                                    <input type="checkbox" v-model="crudForm.databaseWrite" :disabled="crudBusy">
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                            <div class="switch-row">
+                                <div class="switch-meta">
+                                    <strong>用户写库</strong>
+                                    <span>关闭后禁止 Web 用户请求触发的增删改，后台任务与系统内部写入仍可继续。</span>
+                                </div>
+                                <label class="switch">
+                                    <input type="checkbox" v-model="crudForm.localWrite" :disabled="crudBusy">
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                            <div class="hint-block">
+                                <label for="maintHint">维护提示</label>
+                                <textarea id="maintHint" v-model="crudForm.description" placeholder="写库被禁止时展示给用户的说明" :disabled="crudBusy"></textarea>
+                            </div>
+                            <p class="meta-line">
+                                当前用户可写：<strong v-text="crud.writableForUser ? '是' : '否'"></strong>
+                                · 配置项：<span class="mono">SYSTEM_UPGRADE</span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-head">
+                            <span>连接与扫描</span>
+                            <button class="btn btn-secondary" @click="loadOverview">刷新</button>
+                        </div>
+                        <div class="panel-body info-list">
+                            <p><strong>JDBC：</strong><span class="mono" v-text="overview.jdbcUrl || '-'"></span></p>
+                            <p><strong>实体包：</strong><span class="mono" v-text="overview.tablePack || '-'"></span></p>
+                            <p><strong>注解建表：</strong><span v-text="overview.annotationTableSync ? '当前库类型支持' : '当前库类型不支持'"></span></p>
+                        </div>
+                    </div>
+
+                    <div class="panel" v-if="links.length">
+                        <div class="panel-head"><span>相关功能</span></div>
+                        <div class="panel-body">
+                            <div class="link-grid">
+                                <a class="link-card" v-for="l in links" :key="l.url" :href="ctx + '/' + l.url">
+                                    <h3 v-text="l.title"></h3>
+                                    <p v-text="l.description"></p>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+            <!-- 实体表 -->
+            <div class="tab-panel" :class="{active: tab==='tables'}">
+                <div class="panel">
+                    <div class="panel-head">
+                        <span>实体与库表对照</span>
+                        <button class="btn btn-secondary" @click="loadTables" :disabled="loadingTables">刷新</button>
+                    </div>
+                    <div class="panel-body">
+                        <div class="toolbar">
+                            <input type="text" v-model="tableFilter" placeholder="筛选表名、类名或注释">
+                        </div>
+                        <div v-if="loadingTables" class="loading-hint">正在加载实体表…</div>
+                        <div v-else class="table-wrap" style="overflow:auto; max-height: calc(100vh - 320px);">
+                            <table v-if="filteredTables.length">
+                                <thead>
+                                <tr>
+                                    <th style="width:36px;"></th>
+                                    <th>表名</th>
+                                    <th>实体类</th>
+                                    <th>注释</th>
+                                    <th>字段数</th>
+                                    <th>库中存在</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <template v-for="row in filteredTables">
+                                    <tr :key="row.classFullName">
+                                        <td><span class="expand-btn" @click="toggleExpand(row.classFullName)" v-text="expanded[row.classFullName] ? '▼' : '▶'"></span></td>
+                                        <td class="mono" v-text="row.tableName"></td>
+                                        <td class="mono" v-text="row.className"></td>
+                                        <td v-text="row.comment || '-'"></td>
+                                        <td v-text="row.columnCount"></td>
+                                        <td><span class="badge" :class="row.existsInDb ? 'badge-ok' : 'badge-miss'" v-text="row.existsInDb ? '是' : '否'"></span></td>
+                                    </tr>
+                                    <tr v-if="expanded[row.classFullName]" :key="row.classFullName + '-cols'">
+                                        <td></td>
+                                        <td colspan="5">
+                                            <table class="sub-table">
+                                                <thead><tr><th>列名</th><th>类型</th><th>主键</th><th>可空</th><th>唯一</th><th>注释</th></tr></thead>
+                                                <tbody>
+                                                <tr v-for="c in row.columns" :key="row.tableName + '-' + c.name">
+                                                    <td class="mono" v-text="c.name"></td>
+                                                    <td v-text="c.type + (c.length ? '(' + c.length + ')' : '')"></td>
+                                                    <td v-text="c.isKey ? '是' : ''"></td>
+                                                    <td v-text="c.isNull ? '是' : '否'"></td>
+                                                    <td v-text="c.isUnique ? '是' : ''"></td>
+                                                    <td v-text="c.comment || ''"></td>
+                                                </tr>
+                                                </tbody>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                </template>
+                                </tbody>
+                            </table>
+                            <div v-else class="empty">暂无实体表数据</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div v-if="toast" class="toast" :class="toastType" v-text="toast"></div>
+</div>
+
+<script src="${request.contextPath}/statics/libs/jquery.min.js"></script>
+<script src="${request.contextPath}/statics/libs/vue.min.js"></script>
+<script>
+var ctx = '${request.contextPath!""}';
+var api = ctx + '/db/admin';
+var AUTO_MODE_LABEL = { update: '增量同步', create: '删表重建', none: '不执行' };
+new Vue({
+    el: '#app',
+    data: {
+        tab: 'overview',
+        loadingOverview: true,
+        loadingTables: false,
+        tablesLoaded: false,
+        overview: {},
+        tables: [],
+        tableFilter: '',
+        expanded: {},
+        crud: { statusLabel: '加载中…', writableForUser: true, status: {} },
+        crudForm: { databaseWrite: true, localWrite: true, description: '' },
+        links: [],
+        crudBusy: false,
+        toast: '',
+        toastType: 'toast-success'
+    },
+    computed: {
+        filteredTables: function() {
+            var q = (this.tableFilter || '').trim().toLowerCase();
+            if (!q) return this.tables;
+            return this.tables.filter(function(r) {
+                return (r.tableName || '').toLowerCase().indexOf(q) >= 0
+                    || (r.className || '').toLowerCase().indexOf(q) >= 0
+                    || (r.comment || '').toLowerCase().indexOf(q) >= 0;
+            });
+        },
+        entityStatText: function() {
+            var e = this.overview.entityCount || 0;
+            var d = this.overview.dbTableCount || 0;
+            return e + ' / ' + d;
+        },
+        tableAutoModeLabel: function() {
+            var mode = this.overview.tableAutoMode;
+            return AUTO_MODE_LABEL[mode] || mode || '-';
+        },
+        writeStatusText: function() {
+            if (this.loadingOverview) return '加载中…';
+            return this.crud.statusLabel || '读写正常';
+        },
+        writeStatShort: function() {
+            if (this.crud.writableForUser) return '可写';
+            var s = this.crud.status || {};
+            if (s.databaseWrite === false) return '系统只读';
+            if (s.localWrite === false) return '用户只读';
+            return '只读';
+        },
+        writeStatClass: function() {
+            if (this.crud.writableForUser) return 'ok';
+            var s = this.crud.status || {};
+            return s.databaseWrite === false ? 'danger' : 'warn';
+        },
+        statusPillClass: function() {
+            if (this.loadingOverview || this.crud.writableForUser) return '';
+            var s = this.crud.status || {};
+            return s.databaseWrite === false ? 'danger' : 'warn';
+        }
+    },
+    mounted: function() {
+        this.loadOverview();
+    },
+    methods: {
+        switchTab: function(name) {
+            this.tab = name;
+            if (name === 'tables' && !this.tablesLoaded) {
+                this.loadTables();
+            }
+        },
+        loadOverview: function() {
+            var v = this;
+            v.loadingOverview = true;
+            $.get(api + '/overview', function(res) {
+                v.loadingOverview = false;
+                if (res && res.code === 0 && res.data) {
+                    v.overview = res.data;
+                    v.links = res.data.links || [];
+                    if (res.data.crud) v.applyCrud(res.data.crud);
+                } else {
+                    v.showToast((res && res.msg) || '加载概览失败', 'toast-danger');
+                }
+            }).fail(function() {
+                v.loadingOverview = false;
+                v.showToast('加载概览请求失败', 'toast-danger');
+            });
+        },
+        loadTables: function() {
+            var v = this;
+            v.loadingTables = true;
+            $.get(api + '/tables', function(res) {
+                v.loadingTables = false;
+                v.tablesLoaded = true;
+                if (res && res.code === 0) {
+                    v.tables = res.list || [];
+                } else {
+                    v.showToast((res && res.msg) || '加载实体表失败', 'toast-danger');
+                }
+            }).fail(function() {
+                v.loadingTables = false;
+                v.showToast('加载实体表请求失败', 'toast-danger');
+            });
+        },
+        applyCrud: function(data) {
+            this.crud = data;
+            var s = data.status || {};
+            this.crudForm.databaseWrite = s.databaseWrite !== false;
+            this.crudForm.localWrite = s.localWrite !== false;
+            this.crudForm.description = s.description || '';
+        },
+        saveCrud: function() {
+            var v = this;
+            v.crudBusy = true;
+            $.ajax({
+                url: api + '/crud',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(v.crudForm),
+                success: function(res) {
+                    v.crudBusy = false;
+                    if (res && res.code === 0) {
+                        v.loadOverview();
+                        v.showToast('写库设置已保存', 'toast-success');
+                    } else {
+                        v.showToast((res && res.msg) || '保存失败', 'toast-danger');
+                    }
+                },
+                error: function() {
+                    v.crudBusy = false;
+                    v.showToast('保存请求失败', 'toast-danger');
+                }
+            });
+        },
+        reloadCrud: function() {
+            var v = this;
+            v.crudBusy = true;
+            $.post(api + '/crud/reload', {}, function(res) {
+                v.crudBusy = false;
+                if (res && res.code === 0) {
+                    v.loadOverview();
+                    v.showToast('已从配置重载', 'toast-success');
+                } else {
+                    v.showToast((res && res.msg) || '重载失败', 'toast-danger');
+                }
+            }).fail(function() {
+                v.crudBusy = false;
+                v.showToast('重载请求失败', 'toast-danger');
+            });
+        },
+        toggleExpand: function(key) {
+            this.$set(this.expanded, key, !this.expanded[key]);
+        },
+        showToast: function(msg, type) {
+            var v = this;
+            v.toast = msg;
+            v.toastType = type || 'toast-success';
+            setTimeout(function() { v.toast = ''; }, 2800);
+        }
+    }
+});
+</script>
+</body>
+</html>

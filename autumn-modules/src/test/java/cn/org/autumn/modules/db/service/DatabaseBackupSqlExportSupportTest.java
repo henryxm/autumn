@@ -1,12 +1,11 @@
 package cn.org.autumn.modules.db.service;
 
-import cn.org.autumn.database.DatabaseType;
-import org.junit.Test;
-
-import java.lang.reflect.Method;
-
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+
+import cn.org.autumn.database.DatabaseType;
+import java.lang.reflect.Method;
+import org.junit.Test;
 
 public class DatabaseBackupSqlExportSupportTest {
 

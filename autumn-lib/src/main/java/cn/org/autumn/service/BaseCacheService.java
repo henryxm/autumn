@@ -668,42 +668,60 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         return compositeCaches;
     }
 
+    // ======================== 写库 + 缓存失效（写库开关由 CrudInterceptor 统一拦截） ========================
+    // 更新/upsert 仅在写库成功后失效缓存，避免只读模式下误清缓存。
+
     @Override
     public boolean saveOrUpdate(T entity) {
-        removeCacheByEntity(entity);
-        return super.saveOrUpdate(entity);
+        boolean result = super.saveOrUpdate(entity);
+        if (result) {
+            removeCacheByEntity(entity);
+        }
+        return result;
     }
 
     @Override
     public boolean saveBatch(Collection<T> entityList) {
-        for (T entity : entityList) {
-            removeCacheByEntity(entity);
+        boolean result = super.saveBatch(entityList);
+        if (result && entityList != null) {
+            for (T entity : entityList) {
+                removeCacheByEntity(entity);
+            }
         }
-        return super.saveBatch(entityList);
+        return result;
     }
 
     @Override
     public boolean saveBatch(Collection<T> entityList, int batchSize) {
-        for (T entity : entityList) {
-            removeCacheByEntity(entity);
+        boolean result = super.saveBatch(entityList, batchSize);
+        if (result && entityList != null) {
+            for (T entity : entityList) {
+                removeCacheByEntity(entity);
+            }
         }
-        return super.saveBatch(entityList, batchSize);
+        return result;
     }
 
     @Override
     public boolean saveOrUpdateBatch(Collection<T> entityList) {
-        for (T entity : entityList) {
-            removeCacheByEntity(entity);
+        boolean result = super.saveOrUpdateBatch(entityList);
+        if (result && entityList != null) {
+            for (T entity : entityList) {
+                removeCacheByEntity(entity);
+            }
         }
-        return super.saveOrUpdateBatch(entityList);
+        return result;
     }
 
     @Override
     public boolean saveOrUpdateBatch(Collection<T> entityList, int batchSize) {
-        for (T entity : entityList) {
-            removeCacheByEntity(entity);
+        boolean result = super.saveOrUpdateBatch(entityList, batchSize);
+        if (result && entityList != null) {
+            for (T entity : entityList) {
+                removeCacheByEntity(entity);
+            }
         }
-        return super.saveOrUpdateBatch(entityList, batchSize);
+        return result;
     }
 
     @Override
@@ -772,40 +790,44 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
 
     @Override
     public boolean updateById(T entity) {
-        // 更新前先删除缓存
-        removeCacheByEntity(entity);
-        return super.updateById(entity);
+        boolean result = super.updateById(entity);
+        if (result) {
+            removeCacheByEntity(entity);
+        }
+        return result;
     }
 
     /* updateAllColumnById 在 MyBatis-Plus 3.x 中已移除，请使用 updateById 替代 */
 
     @Override
     public boolean update(T entity, Wrapper<T> wrapper) {
-        // 更新前先删除缓存
-        removeCacheByEntity(entity);
-        return super.update(entity, wrapper);
+        boolean result = super.update(entity, wrapper);
+        if (result) {
+            removeCacheByEntity(entity);
+        }
+        return result;
     }
 
     @Override
     public boolean updateBatchById(Collection<T> entityList) {
-        // 更新前先删除缓存
-        if (entityList != null) {
+        boolean result = super.updateBatchById(entityList);
+        if (result && entityList != null) {
             for (T entity : entityList) {
                 removeCacheByEntity(entity);
             }
         }
-        return super.updateBatchById(entityList);
+        return result;
     }
 
     @Override
     public boolean updateBatchById(Collection<T> entityList, int batchSize) {
-        // 更新前先删除缓存
-        if (entityList != null) {
+        boolean result = super.updateBatchById(entityList, batchSize);
+        if (result && entityList != null) {
             for (T entity : entityList) {
                 removeCacheByEntity(entity);
             }
         }
-        return super.updateBatchById(entityList, batchSize);
+        return result;
     }
 
     /* updateAllColumnBatchById 在 MyBatis-Plus 3.x 中已移除，请使用 updateBatchById 替代 */

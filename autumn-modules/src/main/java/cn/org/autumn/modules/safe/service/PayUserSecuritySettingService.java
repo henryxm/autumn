@@ -6,14 +6,13 @@ import cn.org.autumn.modules.safe.dao.PayUserSecuritySettingDao;
 import cn.org.autumn.modules.safe.entity.PayUserSecuritySettingEntity;
 import cn.org.autumn.modules.safe.site.SafeConfig;
 import cn.org.autumn.utils.Uuid;
+import java.util.Date;
 import lombok.Getter;
 import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.Date;
 
 @Service
 public class PayUserSecuritySettingService extends ModuleService<PayUserSecuritySettingDao, PayUserSecuritySettingEntity> {

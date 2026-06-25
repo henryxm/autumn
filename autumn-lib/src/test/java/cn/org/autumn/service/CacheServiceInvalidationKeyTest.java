@@ -1,16 +1,16 @@
 package cn.org.autumn.service;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import cn.org.autumn.config.CacheConfig;
 import cn.org.autumn.config.EhCacheManager;
 import cn.org.autumn.model.Invalidation;
 import org.ehcache.Cache;
 import org.junit.Test;
 import org.springframework.test.util.ReflectionTestUtils;
-
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 public class CacheServiceInvalidationKeyTest {
 

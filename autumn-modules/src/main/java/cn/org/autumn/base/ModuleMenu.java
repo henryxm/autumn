@@ -4,9 +4,8 @@ import cn.org.autumn.menu.BaseMenu;
 import cn.org.autumn.modules.lan.service.Language;
 import cn.org.autumn.modules.lan.service.LanguageService;
 import cn.org.autumn.modules.sys.service.SysMenuService;
-import org.springframework.beans.factory.annotation.Autowired;
-
 import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
 
 public abstract class ModuleMenu implements BaseMenu {
 

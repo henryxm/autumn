@@ -3,10 +3,11 @@ package cn.org.autumn.xss;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 public final class HTMLFilter {
 
     private static final int REGEX_FLAGS_SI = Pattern.CASE_INSENSITIVE | Pattern.DOTALL;
@@ -148,7 +149,7 @@ public final class HTMLFilter {
 
     private void debug(final String msg) {
         if (vDebug) {
-            Logger.getAnonymousLogger().info(msg);
+            log.info(msg);
         }
     }
 

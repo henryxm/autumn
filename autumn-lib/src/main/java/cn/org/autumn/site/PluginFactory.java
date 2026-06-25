@@ -3,11 +3,10 @@ package cn.org.autumn.site;
 import cn.org.autumn.config.PluginHandler;
 import cn.org.autumn.plugin.PluginEntry;
 import cn.org.autumn.plugin.PluginManager;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
-
 import java.util.List;
 import java.util.Set;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 @Component
 public class PluginFactory extends Factory {

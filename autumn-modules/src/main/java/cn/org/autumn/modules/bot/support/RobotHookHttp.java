@@ -1,5 +1,7 @@
 package cn.org.autumn.modules.bot.support;
 
+import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
@@ -8,15 +10,9 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import java.util.Map;
-
+@Slf4j
 public final class RobotHookHttp {
-
-    private static final Logger log = LoggerFactory.getLogger(RobotHookHttp.class);
-
     private RobotHookHttp() {
     }
 
@@ -42,7 +38,7 @@ public final class RobotHookHttp {
             EntityUtils.consumeQuietly(response.getEntity());
             return code >= 200 && code < 300;
         } catch (Exception e) {
-            log.debug("Hook HTTP失败: {}", e.getMessage());
+            log.debug("Hook HTTP failed: {}", e.getMessage());
             return false;
         } finally {
             try {

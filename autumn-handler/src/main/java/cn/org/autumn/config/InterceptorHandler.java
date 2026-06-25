@@ -1,10 +1,9 @@
 package cn.org.autumn.config;
 
+import java.util.List;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
-
-import java.util.List;
 
 @Component
 @ConditionalOnMissingBean(InterceptorHandler.class)

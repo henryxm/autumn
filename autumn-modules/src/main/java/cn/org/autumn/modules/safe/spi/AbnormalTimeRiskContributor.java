@@ -4,12 +4,11 @@ import cn.org.autumn.model.PayCredentialConfig;
 import cn.org.autumn.modules.safe.dto.PayGateAssessRequest;
 import cn.org.autumn.modules.safe.service.PayUserSecuritySettingService;
 import cn.org.autumn.modules.safe.site.SafeConfig;
+import java.util.ArrayList;
+import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * 客户端时间与服务器偏差过大时拒绝 assess。

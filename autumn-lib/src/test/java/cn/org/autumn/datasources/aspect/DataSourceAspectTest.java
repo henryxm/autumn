@@ -1,5 +1,10 @@
 package cn.org.autumn.datasources.aspect;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import cn.org.autumn.datasources.DataSourceNames;
 import cn.org.autumn.datasources.DynamicDataSource;
 import cn.org.autumn.datasources.annotation.DataSource;
@@ -7,10 +12,6 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.junit.After;
 import org.junit.Test;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 public class DataSourceAspectTest {
 

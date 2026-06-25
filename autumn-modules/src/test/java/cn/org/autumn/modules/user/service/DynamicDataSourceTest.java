@@ -1,6 +1,5 @@
 package cn.org.autumn.modules.user.service;
 
-
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import org.junit.Ignore;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -9,7 +8,6 @@ import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
-
 
 @RunWith(SpringRunner.class)
 @SpringBootTest

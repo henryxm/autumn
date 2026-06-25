@@ -1,0 +1,28 @@
+# FQN 白名单（check_java_fqn.py）
+# 格式：相对仓库根的路径、path:line、或 re:正则
+# 仅登记 docs/AI_CODE_STYLE.md §7 允许的「类名冲突」等例外
+
+# EncryptConfigHandler.RsaConfig 与 cn.org.autumn.model.RsaConfig 同名冲突
+autumn-modules/src/main/java/cn/org/autumn/modules/sys/config/DefaultEncryptConfigHandler.java
+
+# java.util.Date 与 java.sql.Date 冲突
+autumn-modules/src/main/java/cn/org/autumn/modules/db/service/DatabaseBackupSqlExportSupport.java
+autumn-lib/src/main/java/cn/org/autumn/table/data/ColumnInfo.java
+autumn-modules/src/main/java/cn/org/autumn/config/SqliteJdbcResultAccessInterceptor.java
+autumn-modules/src/main/java/cn/org/autumn/modules/sys/controller/SysExecController.java
+autumn-modules/src/main/java/cn/org/autumn/modules/usr/service/UserLoginLogService.java
+
+# MyBatis Configuration 与 Spring @Configuration 冲突
+autumn-modules/src/main/java/cn/org/autumn/config/MybatisPlusConfig.java
+
+# Freemarker Configuration 与 Spring @Configuration 冲突
+autumn-modules/src/main/java/cn/org/autumn/config/FreemarkerConfig.java
+
+# MyBatis-Plus 与 mybatis-spring ConfigurationCustomizer 同名冲突
+re:MybatisPlusConfig\.java
+
+# logback Logger 与 Slf4j 语义冲突（动态调级）
+autumn-modules/src/main/java/cn/org/autumn/modules/sys/service/SysLogService.java
+
+# 类名 Test 与 org.junit.Test 冲突
+autumn-modules/src/test/java/cn/org/autumn/modules/Test.java

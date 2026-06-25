@@ -1,19 +1,18 @@
 package cn.org.autumn.table.dao.postgresql;
 
+import static cn.org.autumn.table.relational.dialect.postgresql.PostgresRelationalSchemaSql.*;
+
+import cn.org.autumn.table.data.IndexInfo;
+import cn.org.autumn.table.data.UniqueKeyInfo;
 import cn.org.autumn.table.relational.dialect.postgresql.PostgresRelationalSchemaSql;
 import cn.org.autumn.table.relational.model.ColumnMeta;
 import cn.org.autumn.table.relational.model.TableMeta;
-import cn.org.autumn.table.data.IndexInfo;
-import cn.org.autumn.table.data.UniqueKeyInfo;
+import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.ResultType;
 import org.apache.ibatis.annotations.SelectProvider;
 import org.springframework.stereotype.Repository;
-
-import java.util.List;
-
-import static cn.org.autumn.table.relational.dialect.postgresql.PostgresRelationalSchemaSql.*;
 
 /**
  * PostgreSQL 元数据查询（DDL 由 {@link PostgresRelationalTableOperations} 通过脚本执行）。

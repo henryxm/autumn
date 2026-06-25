@@ -62,7 +62,9 @@ public class FieldEncryptRuntimeService implements InitFactory.Init, InitFactory
         return fieldEncryptRedisStore.isActive();
     }
 
-    /** 从 Redis 同步到内存（读方法会在 Redis 无值时用环境变量回填）。 */
+    /**
+     * 从 Redis 同步到内存（读方法会在 Redis 无值时用环境变量回填）。
+     */
     public void reloadFromRedis() {
         if (isClusterMode()) {
             syncFromRedis();
@@ -143,7 +145,7 @@ public class FieldEncryptRuntimeService implements InitFactory.Init, InitFactory
             fieldEncryptService.setWriteSwitchSource(FieldEncryptService.SOURCE_SYS_CONFIG);
             return;
         }
-        log.warn("sys_config {} 值无效:{}，忽略运行时写入覆盖", RUNTIME_WRITE_ENABLED_KEY, value);
+        log.warn("sys_config {} invalid value:{}, ignoring runtime write override", RUNTIME_WRITE_ENABLED_KEY, value);
         fieldEncryptService.setWriteSwitchSource(FieldEncryptService.SOURCE_CONFIG);
     }
 
@@ -153,13 +155,13 @@ public class FieldEncryptRuntimeService implements InitFactory.Init, InitFactory
         }
         if (fieldEncryptRedisStore.subscribeRefresh(this::syncFromRedis)) {
             refreshSubscribed = true;
-            if (log.isInfoEnabled()) {
-                log.info("字段加密集群已订阅 Redis 刷新频道");
+            if (log.isDebugEnabled()) {
+                log.debug("Field encryption cluster subscribed to Redis refresh channel");
             }
             return;
         }
         if (attempt >= SUBSCRIBE_MAX_ATTEMPTS) {
-            log.warn("字段加密集群 Redis 刷新订阅失败，已达最大重试次数");
+            log.warn("Field encryption cluster Redis refresh subscription failed after max retries");
             return;
         }
         asyncTaskExecutor.execute(() -> {

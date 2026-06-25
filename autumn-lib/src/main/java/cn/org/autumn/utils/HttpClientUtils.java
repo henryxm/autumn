@@ -1,5 +1,11 @@
 package cn.org.autumn.utils;
 
+import java.io.IOException;
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
@@ -13,19 +19,9 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.net.URI;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-
+@Slf4j
 public class HttpClientUtils {
-
-    static Logger log = LoggerFactory.getLogger(HttpClientUtils.class);
-
     public  static String doGet(String url, Map<String, String> param, Map<String, String> header) {
         return doGet(url, param, header, 5000);
     }

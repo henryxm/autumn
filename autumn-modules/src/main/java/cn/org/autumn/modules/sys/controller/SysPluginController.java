@@ -2,14 +2,13 @@ package cn.org.autumn.modules.sys.controller;
 
 import cn.org.autumn.plugin.PluginEntry;
 import cn.org.autumn.plugin.PluginManager;
+import java.io.IOException;
+import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.io.IOException;
-import java.util.List;
 
 @RestController
 @RequestMapping("plugin")

@@ -3,12 +3,11 @@ package cn.org.autumn.model;
 import cn.org.autumn.annotation.ConfigField;
 import cn.org.autumn.annotation.ConfigParam;
 import cn.org.autumn.config.InputType;
-import lombok.Getter;
-import lombok.Setter;
-
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * 机器人全局配额（用户可创建机器人数、每机器人令牌数、Hook 数）。

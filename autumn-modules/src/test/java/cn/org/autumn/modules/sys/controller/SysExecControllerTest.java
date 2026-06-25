@@ -1,10 +1,9 @@
 package cn.org.autumn.modules.sys.controller;
 
-import org.junit.Test;
+import static org.junit.Assert.*;
 
 import java.lang.reflect.Method;
-
-import static org.junit.Assert.*;
+import org.junit.Test;
 
 public class SysExecControllerTest {
 

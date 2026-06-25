@@ -4,12 +4,11 @@ import cn.org.autumn.exception.CodeException;
 import cn.org.autumn.model.PayCredentialConfig;
 import cn.org.autumn.modules.safe.entity.PayGateAttemptEntity;
 import cn.org.autumn.modules.safe.site.SafeConfig;
+import java.lang.reflect.Field;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
-
-import java.lang.reflect.Field;
 
 public class PayGateTokenStoreTest {
 

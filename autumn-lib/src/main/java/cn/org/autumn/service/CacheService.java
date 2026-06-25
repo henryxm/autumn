@@ -4,22 +4,23 @@ import cn.org.autumn.config.CacheConfig;
 import cn.org.autumn.config.ClearHandler;
 import cn.org.autumn.config.EhCacheManager;
 import cn.org.autumn.model.Invalidation;
-import cn.org.autumn.site.LoadFactory;
 import cn.org.autumn.redis.resilience.RedisResilience;
+import cn.org.autumn.site.LoadFactory;
 import cn.org.autumn.utils.RedisUtils;
 import com.google.gson.Gson;
+import java.io.Serializable;
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
 import org.ehcache.Cache;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
-
-import java.math.BigDecimal;
-import java.io.Serializable;
-import java.util.Objects;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
-import java.util.function.Supplier;
 
 /**
  * 缓存服务工具类
@@ -85,7 +86,7 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
     public void must() {
         if (!isRedisEnabled()) {
             if (log.isDebugEnabled()) {
-                log.debug("Redis 未启用或 Bean 未装配，跳过跨实例缓存失效订阅");
+                log.debug("Redis disabled or bean not wired, skipping cross-instance cache invalidation subscription");
             }
             return;
         }
@@ -96,7 +97,7 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
                 // 检查消息体是否为空
                 if (messageBody == null || messageBody.trim().isEmpty()) {
                     if (log.isDebugEnabled()) {
-                        log.debug("收到空的缓存失效消息，忽略");
+                        log.debug("Empty cache invalidation message received, ignored");
                     }
                     return;
                 }
@@ -107,11 +108,11 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
                 } catch (Exception jsonException) {
                     // 如果JSON解析失败，可能是消息被JDK序列化了，尝试其他方式
                     if (log.isDebugEnabled()) {
-                        log.debug("JSON解析失败，尝试其他方式解析消息: {}", messageBody.substring(0, Math.min(100, messageBody.length())));
+                        log.debug("JSON parse failed, trying alternate parse: {}", messageBody.substring(0, Math.min(100, messageBody.length())));
                     }
                     // 如果消息不是以{开头，可能是被序列化的字符串，尝试直接反序列化
                     if (!messageBody.trim().startsWith("{")) {
-                        log.warn("缓存失效消息格式异常，不是有效的JSON格式: {}", messageBody.substring(0, Math.min(200, messageBody.length())));
+                        log.warn("Invalid cache invalidation message format, not valid JSON: {}", messageBody.substring(0, Math.min(200, messageBody.length())));
                         return;
                     }
                     throw jsonException; // 重新抛出异常
@@ -119,7 +120,7 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
                 // 验证解析后的消息是否有效
                 if (invalidation == null) {
                     if (log.isDebugEnabled()) {
-                        log.debug("解析后的缓存失效消息为空，忽略");
+                        log.debug("Parsed cache invalidation message empty, ignored");
                     }
                     return;
                 }
@@ -130,7 +131,7 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
                 // 处理缓存失效消息
                 handle(invalidation);
             } catch (Exception e) {
-                log.error("处理缓存失效消息失败: {}, 消息内容: {}", e.getMessage(), messageBody != null ? messageBody.substring(0, Math.min(200, messageBody.length())) : "null", e);
+                log.error("Failed to handle cache invalidation message: {}, body: {}", e.getMessage(), messageBody != null ? messageBody.substring(0, Math.min(200, messageBody.length())) : "null", e);
             }
         });
         if (success)
@@ -160,11 +161,11 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
                     cache.remove(key);
                 }
                 if (log.isDebugEnabled()) {
-                    log.debug("接收变更: name={}, key={}, operation={}", name, key, operation);
+                    log.debug("Received change: name={}, key={}, operation={}", name, key, operation);
                 }
             }
         } catch (Exception e) {
-            log.error("处理失败: name={}, key={}, operation={}, error={}", message.getCacheName(), message.getKey(), message.getOperation(), e.getMessage(), e);
+            log.error("Handle failed: name={}, key={}, operation={}, error={}", message.getCacheName(), message.getKey(), message.getOperation(), e.getMessage(), e);
         }
     }
 
@@ -189,18 +190,18 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
                 redisResilience.execute(() -> {
                     boolean ok = redisListenerService.publish(CACHE_INVALIDATION_CHANNEL, message);
                     if (log.isDebugEnabled() && ok) {
-                        log.debug("发布失效: name={}, key={}, operation={}", name, key, operation);
+                        log.debug("Published invalidation: name={}, key={}, operation={}", name, key, operation);
                     }
                     return null;
                 }, () -> null);
             } else {
                 boolean success = redisListenerService.publish(CACHE_INVALIDATION_CHANNEL, message);
                 if (log.isDebugEnabled() && success) {
-                    log.debug("发布失效: name={}, key={}, operation={}", name, key, operation);
+                    log.debug("Published invalidation: name={}, key={}, operation={}", name, key, operation);
                 }
             }
         } catch (Exception e) {
-            log.error("发布失败: name={}, key={}, operation={}, error={}", name, key, operation, e.getMessage());
+            log.error("Publish failed: name={}, key={}, operation={}, error={}", name, key, operation, e.getMessage());
         }
     }
 
@@ -760,9 +761,9 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
         } else if (lowerName.contains("long")) {
             valueType = Long.class;
         } else if (lowerName.contains("list")) {
-            valueType = java.util.List.class;
+            valueType = List.class;
         } else if (lowerName.contains("map")) {
-            valueType = java.util.Map.class;
+            valueType = Map.class;
         }
         // 创建默认配置
         CacheConfig config = CacheConfig.builder().name(name).key(keyType).value(valueType).build();
@@ -846,7 +847,7 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
             if (Boolean.class == keyType) return Boolean.parseBoolean(stringValue);
             if (Character.class == keyType && !stringValue.isEmpty()) return stringValue.charAt(0);
         } catch (Exception e) {
-            log.warn("缓存key类型转换失败: cache={}, key={}, expectedType={}, error={}", cacheName, rawKey, keyType.getName(), e.getMessage());
+            log.warn("Cache key type conversion failed: cache={}, key={}, expectedType={}, error={}", cacheName, rawKey, keyType.getName(), e.getMessage());
         }
         return rawKey;
     }

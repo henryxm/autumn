@@ -2,13 +2,12 @@ package cn.org.autumn.modules.safe.spi;
 
 import cn.org.autumn.exception.CodeException;
 import cn.org.autumn.model.Error;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.annotation.Order;
-import org.springframework.stereotype.Component;
-
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.annotation.Order;
+import org.springframework.stereotype.Component;
 
 /**
  * 重置身份校验：优先自定义 SPI，否则登录密码。

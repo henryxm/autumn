@@ -5,10 +5,9 @@ import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.deser.ResolvableDeserializer;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.deser.ResolvableDeserializer;
 import com.fasterxml.jackson.databind.node.TreeTraversingParser;
-
 import java.io.IOException;
 
 /**
@@ -23,7 +22,7 @@ public class FlexibleEnumDeserializer extends JsonDeserializer<Enum<?>> implemen
     }
 
     @Override
-    public void resolve(com.fasterxml.jackson.databind.DeserializationContext ctxt)
+    public void resolve(DeserializationContext ctxt)
             throws JsonMappingException {
         if (delegate instanceof ResolvableDeserializer) {
             ((ResolvableDeserializer) delegate).resolve(ctxt);

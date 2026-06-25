@@ -166,7 +166,7 @@ public class Response<T> extends DefaultEncrypt implements IResult {
 
     public static <T> Response<T> fail(T data, Throwable e) {
         if (log.isDebugEnabled() && null != e)
-            log.debug("监控异常:", e);
+            log.debug("Monitor error:", e);
         if (e instanceof ResponseThrowable) {
             ResponseThrowable exception = (ResponseThrowable) e;
             Response<T> response = new Response<>(exception.getCode(), exception.getMsg());

@@ -1,5 +1,7 @@
 package cn.org.autumn.utils;
 
+import cn.org.autumn.database.CrudGuard;
+import cn.org.autumn.exception.AException;
 import lombok.extern.slf4j.Slf4j;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -209,6 +211,35 @@ public class ExceptionUtils {
         }
         String message = e.getMessage();
         return message != null && message.contains("Circular view path");
+    }
+
+    /**
+     * 在异常链中查找 {@link AException}（含 MyBatis {@code PersistenceException} 包装场景）。
+     */
+    public static AException findAException(Throwable throwable) {
+        if (throwable == null) {
+            return null;
+        }
+        Throwable current = throwable;
+        while (current != null) {
+            if (current instanceof AException) {
+                return (AException) current;
+            }
+            Throwable next = current.getCause();
+            if (next == current) {
+                break;
+            }
+            current = next;
+        }
+        return null;
+    }
+
+    /**
+     * 是否为数据库只读守卫拦截（含 MyBatis 包装）。
+     * 委托 {@link CrudGuard#blocked(Throwable)}。
+     */
+    public static boolean isDatabaseReadOnlyException(Throwable throwable) {
+        return CrudGuard.blocked(throwable);
     }
 
     /**

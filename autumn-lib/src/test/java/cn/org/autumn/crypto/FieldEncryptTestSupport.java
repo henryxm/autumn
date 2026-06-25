@@ -2,9 +2,8 @@ package cn.org.autumn.crypto;
 
 import cn.org.autumn.config.FieldEncryptProperties;
 import cn.org.autumn.site.EncryptConfigFactory;
-import org.springframework.test.util.ReflectionTestUtils;
-
 import java.util.Collections;
+import org.springframework.test.util.ReflectionTestUtils;
 
 /** 字段加密单元测试装配辅助。 */
 final class FieldEncryptTestSupport {

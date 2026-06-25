@@ -1,0 +1,35 @@
+name: Java style check
+
+on:
+  push:
+    branches: [master, '3.0.0']
+  pull_request:
+    branches: [master, '3.0.0']
+
+jobs:
+  fqn-import:
+    name: FQN / import (AI_CODE_STYLE §7)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Check Java FQN
+        run: bash scripts/check-java-fqn
+
+  constraints-scan-report:
+    name: constraints-scan (report only)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install ripgrep
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
+
+      - name: Run constraints-scan (informational)
+        run: AUTUMN_SCAN_SKIP_GEN=1 bash scripts/constraints-scan

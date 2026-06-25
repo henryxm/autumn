@@ -1,7 +1,13 @@
 package cn.org.autumn.modules.oauth.resolver;
 
+import static org.junit.Assert.*;
+
 import cn.org.autumn.model.CompatibleRequest;
 import com.google.gson.Gson;
+import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
+import java.util.Collections;
+import java.util.Map;
 import org.junit.Test;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.converter.HttpMessageConverter;
@@ -12,13 +18,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.method.support.ModelAndViewContainer;
-
-import java.lang.reflect.Method;
-import java.nio.charset.StandardCharsets;
-import java.util.Collections;
-import java.util.Map;
-
-import static org.junit.Assert.*;
 
 public class EncryptArgumentResolverTest {
 

@@ -1,13 +1,12 @@
 package cn.org.autumn.install;
 
-import cn.org.autumn.site.Factory;
 import cn.org.autumn.config.JvmRestartHandler;
+import cn.org.autumn.site.Factory;
+import java.util.Collections;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
-
-import java.util.Collections;
-import java.util.List;
 
 /**
  * 安装向导等场景下进程内重启：在 {@code SpringApplication.exit} 之前快照已排序的
@@ -43,7 +42,7 @@ public class InstallJvmRestartCleanupCoordinator {
             try {
                 cleaner.cleanAfterContextClosed();
             } catch (Throwable t) {
-                log.warn("InstallJvmRestartCleaner [{}] 执行失败: {}", cleaner.getClass().getName(), t.toString(), t);
+                log.warn("InstallJvmRestartCleaner [{}] execution failed: {}", cleaner.getClass().getName(), t.toString(), t);
             }
         }
     }

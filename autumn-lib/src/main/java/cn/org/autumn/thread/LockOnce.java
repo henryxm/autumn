@@ -1,11 +1,9 @@
 package cn.org.autumn.thread;
 
+import java.util.concurrent.TimeUnit;
+import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.util.concurrent.TimeUnit;
 
 /**
  * 分布式锁任务基类 — 保证在多节点并行部署环境下，同一任务在指定时间窗口内只被执行一次。
@@ -43,10 +41,8 @@ import java.util.concurrent.TimeUnit;
  * });
  * </pre>
  */
+@Slf4j
 public abstract class LockOnce extends TagRunnable {
-
-    private static final Logger log = LoggerFactory.getLogger(LockOnce.class);
-
     public LockOnce() {
     }
 
@@ -87,7 +83,7 @@ public abstract class LockOnce extends TagRunnable {
             }
         } catch (Throwable t) {
             if (log.isDebugEnabled())
-                log.debug("分布式锁任务发生不可预期错误: tag={}, method={}, error={}", getTag(), getMethod(), t.getMessage(), t);
+                log.debug("Distributed lock task unexpected error: tag={}, method={}, error={}", getTag(), getMethod(), t.getMessage(), t);
             try {
                 TagTaskExecutor.recordCompletion(this, 0, false, "Unexpected: " + t.getMessage());
             } catch (Exception re) {
@@ -115,18 +111,18 @@ public abstract class LockOnce extends TagRunnable {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             if (log.isDebugEnabled())
-                log.debug("获取分布式锁被中断: key={}, tag={}", lockKey, safeTag(value));
+                log.debug("Distributed lock acquisition interrupted: key={}, tag={}", lockKey, safeTag(value));
             TagTaskExecutor.recordSkipped(this, "获取锁被中断");
             return;
         } catch (Exception e) {
             if (log.isDebugEnabled())
-                log.debug("获取分布式锁异常: key={}, error={}", lockKey, e.getMessage(), e);
+                log.debug("Distributed lock acquisition error: key={}, error={}", lockKey, e.getMessage(), e);
             TagTaskExecutor.recordSkipped(this, "获取锁异常:" + e.getMessage());
             return;
         }
         if (!acquired) {
             if (log.isDebugEnabled()) {
-                log.debug("分布式锁未获取（其他节点执行中）: key={}, tag={}", lockKey, safeTag(value));
+                log.debug("Distributed lock not acquired (running on another node): key={}, tag={}", lockKey, safeTag(value));
             }
             TagTaskExecutor.recordSkipped(this, "未能获取到锁");
             return;
@@ -137,20 +133,20 @@ public abstract class LockOnce extends TagRunnable {
         String errorMsg = null;
         try {
             if (log.isDebugEnabled())
-                log.debug("分布式锁已获取，开始执行: key={}, tag={}, lease={}s", lockKey, safeTag(value), leaseSeconds);
+                log.debug("Distributed lock acquired, starting execution: key={}, tag={}, lease={}s", lockKey, safeTag(value), leaseSeconds);
             invokeExe();
             if (log.isDebugEnabled())
-                log.debug("任务执行成功: key={}, tag={}, 耗时={}ms", lockKey, safeTag(value), System.currentTimeMillis() - start);
+                log.debug("Task succeeded: key={}, tag={}, elapsed={}ms", lockKey, safeTag(value), System.currentTimeMillis() - start);
         } catch (Throwable t) {
             success = false;
             if (isCancelled() || Thread.currentThread().isInterrupted()) {
                 errorMsg = "任务被中断取消";
                 if (log.isDebugEnabled())
-                    log.debug("分布式锁任务被中断: key={}, tag={}", lockKey, safeTag(value));
+                    log.debug("Distributed lock task interrupted: key={}, tag={}", lockKey, safeTag(value));
             } else {
                 errorMsg = t.getMessage();
                 if (log.isDebugEnabled())
-                    log.debug("任务执行失败: key={}, tag={}, error={}", lockKey, safeTag(value), t.getMessage(), t);
+                    log.debug("Task execution failed: key={}, tag={}, error={}", lockKey, safeTag(value), t.getMessage(), t);
             }
             // 失败后主动释放锁，允许其他节点故障转移重试
             DistributedLockHelper.unlockSafely(lock, lockKey);
@@ -177,7 +173,7 @@ public abstract class LockOnce extends TagRunnable {
             } else {
                 errorMsg = t.getMessage();
                 if (log.isDebugEnabled())
-                    log.debug("任务直接执行失败: tag={}, error={}", getTag(), t.getMessage(), t);
+                    log.debug("Direct task execution failed: tag={}, error={}", getTag(), t.getMessage(), t);
             }
         } finally {
             long duration = System.currentTimeMillis() - start;
@@ -202,6 +198,6 @@ public abstract class LockOnce extends TagRunnable {
      */
     protected void onRedisUnavailable() {
         if (log.isDebugEnabled())
-            log.debug("RedissonClient 不可用，单机回退: tag={}, method={}", getTag(), getMethod());
+            log.debug("RedissonClient unavailable, standalone fallback: tag={}, method={}", getTag(), getMethod());
     }
 }

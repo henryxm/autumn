@@ -9,6 +9,10 @@ import cn.org.autumn.modules.bot.entity.RobotEntity;
 import cn.org.autumn.modules.bot.entity.RobotTokenEntity;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.utils.Uuid;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
 import lombok.Getter;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -16,11 +20,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.List;
 
 @Service
 public class RobotTokenService extends ModuleService<RobotTokenDao, RobotTokenEntity> {

@@ -2,7 +2,6 @@ package cn.org.autumn.table.relational.dialect.mysql;
 
 import cn.org.autumn.table.data.ColumnInfo;
 import cn.org.autumn.table.data.DataType;
-
 import java.util.Locale;
 
 /**

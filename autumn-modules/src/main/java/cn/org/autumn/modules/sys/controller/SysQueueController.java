@@ -6,13 +6,12 @@ import cn.org.autumn.config.QueueConfig;
 import cn.org.autumn.model.QueueMessage;
 import cn.org.autumn.service.QueueService;
 import cn.org.autumn.utils.R;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.*;
-import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Controller
@@ -42,8 +41,8 @@ public class SysQueueController {
             List<Map<String, Object>> queueList = queueService.getAllQueueInfo();
             return R.ok().put("list", queueList).put("total", queueList.size());
         } catch (Exception e) {
-            log.error("获取队列列表失败", e);
-            return R.error("获取队列列表失败: " + e.getMessage());
+            log.error("Failed to get queue list", e);
+            return R.error("Failed to get queue list: " + e.getMessage());
         }
     }
 
@@ -60,8 +59,8 @@ public class SysQueueController {
             }
             return R.ok().put("info", info);
         } catch (Exception e) {
-            log.error("获取队列详情失败", e);
-            return R.error("获取队列详情失败: " + e.getMessage());
+            log.error("Failed to get queue details", e);
+            return R.error("Failed to get queue details: " + e.getMessage());
         }
     }
 
@@ -80,8 +79,8 @@ public class SysQueueController {
                     .put("page", page)
                     .put("limit", limit);
         } catch (Exception e) {
-            log.error("获取队列消息失败", e);
-            return R.error("获取队列消息失败: " + e.getMessage());
+            log.error("Failed to get queue messages", e);
+            return R.error("Failed to get queue messages: " + e.getMessage());
         }
     }
 
@@ -119,8 +118,8 @@ public class SysQueueController {
                 return R.error("消息发送失败");
             }
         } catch (Exception e) {
-            log.error("发送消息失败", e);
-            return R.error("发送消息失败: " + e.getMessage());
+            log.error("Failed to send message", e);
+            return R.error("Failed to send message: " + e.getMessage());
         }
     }
 
@@ -145,8 +144,8 @@ public class SysQueueController {
             int successCount = queueService.sendBatch(queueName, messages);
             return R.ok("批量发送完成").put("total", messages.size()).put("success", successCount);
         } catch (Exception e) {
-            log.error("批量发送消息失败", e);
-            return R.error("批量发送消息失败: " + e.getMessage());
+            log.error("Failed to batch send messages", e);
+            return R.error("Failed to batch send messages: " + e.getMessage());
         }
     }
 
@@ -169,8 +168,8 @@ public class SysQueueController {
             }
             return R.ok().put("list", messages).put("count", messages.size());
         } catch (Exception e) {
-            log.error("消费消息失败", e);
-            return R.error("消费消息失败: " + e.getMessage());
+            log.error("Failed to consume message", e);
+            return R.error("Failed to consume message: " + e.getMessage());
         }
     }
 
@@ -185,8 +184,8 @@ public class SysQueueController {
             queueService.clear(name);
             return R.ok("队列已清空").put("cleared", sizeBefore);
         } catch (Exception e) {
-            log.error("清空队列失败", e);
-            return R.error("清空队列失败: " + e.getMessage());
+            log.error("Failed to clear queue", e);
+            return R.error("Failed to clear queue: " + e.getMessage());
         }
     }
 
@@ -200,8 +199,8 @@ public class SysQueueController {
             queueService.delete(name);
             return R.ok("队列已删除");
         } catch (Exception e) {
-            log.error("删除队列失败", e);
-            return R.error("删除队列失败: " + e.getMessage());
+            log.error("Failed to delete queue", e);
+            return R.error("Failed to delete queue: " + e.getMessage());
         }
     }
 
@@ -241,8 +240,8 @@ public class SysQueueController {
             queueService.register(config);
             return R.ok("队列创建成功");
         } catch (Exception e) {
-            log.error("创建队列失败", e);
-            return R.error("创建队列失败: " + e.getMessage());
+            log.error("Failed to create queue", e);
+            return R.error("Failed to create queue: " + e.getMessage());
         }
     }
 
@@ -256,8 +255,8 @@ public class SysQueueController {
             List<Map<String, Object>> consumers = queueService.getConsumerStatus();
             return R.ok().put("list", consumers);
         } catch (Exception e) {
-            log.error("获取消费者状态失败", e);
-            return R.error("获取消费者状态失败: " + e.getMessage());
+            log.error("Failed to get consumer status", e);
+            return R.error("Failed to get consumer status: " + e.getMessage());
         }
     }
 
@@ -272,8 +271,8 @@ public class SysQueueController {
             queueService.start(name, concurrency);
             return R.ok("消费者已启动");
         } catch (Exception e) {
-            log.error("启动消费者失败", e);
-            return R.error("启动消费者失败: " + e.getMessage());
+            log.error("Failed to start consumer", e);
+            return R.error("Failed to start consumer: " + e.getMessage());
         }
     }
 
@@ -287,8 +286,8 @@ public class SysQueueController {
             queueService.stop(name);
             return R.ok("消费者已停止");
         } catch (Exception e) {
-            log.error("停止消费者失败", e);
-            return R.error("停止消费者失败: " + e.getMessage());
+            log.error("Failed to stop consumer", e);
+            return R.error("Failed to stop consumer: " + e.getMessage());
         }
     }
 
@@ -302,8 +301,8 @@ public class SysQueueController {
             Map<String, Object> stats = queueService.getStatistics();
             return R.ok().put("stats", stats);
         } catch (Exception e) {
-            log.error("获取统计信息失败", e);
-            return R.error("获取统计信息失败: " + e.getMessage());
+            log.error("Failed to get statistics", e);
+            return R.error("Failed to get statistics: " + e.getMessage());
         }
     }
 
@@ -342,8 +341,8 @@ public class SysQueueController {
                 return R.error("配置更新失败");
             }
         } catch (Exception e) {
-            log.error("更新队列配置失败", e);
-            return R.error("更新队列配置失败: " + e.getMessage());
+            log.error("Failed to update queue config", e);
+            return R.error("Failed to update queue config: " + e.getMessage());
         }
     }
 
@@ -378,7 +377,7 @@ public class SysQueueController {
             configInfo.put("processedCount", queueService.getProcessedCount(name));
             return R.ok().put("config", configInfo);
         } catch (Exception e) {
-            log.error("获取队列配置失败", e);
+            log.error("Failed to get queue config", e);
             return R.error("获取队列配置失败: " + e.getMessage());
         }
     }
@@ -400,8 +399,8 @@ public class SysQueueController {
                     .put("page", page)
                     .put("limit", limit);
         } catch (Exception e) {
-            log.error("获取历史消息失败", e);
-            return R.error("获取历史消息失败: " + e.getMessage());
+            log.error("Failed to get history messages", e);
+            return R.error("Failed to get history messages: " + e.getMessage());
         }
     }
 
@@ -420,8 +419,8 @@ public class SysQueueController {
                 return R.error("消息不存在或已被删除");
             }
         } catch (Exception e) {
-            log.error("删除历史消息失败", e);
-            return R.error("删除历史消息失败: " + e.getMessage());
+            log.error("Failed to delete history messages", e);
+            return R.error("Failed to delete history messages: " + e.getMessage());
         }
     }
 
@@ -435,8 +434,8 @@ public class SysQueueController {
             int count = queueService.clearHistory(name);
             return R.ok("已清空 " + count + " 条历史消息").put("cleared", count);
         } catch (Exception e) {
-            log.error("清空历史消息失败", e);
-            return R.error("清空历史消息失败: " + e.getMessage());
+            log.error("Failed to clear history messages", e);
+            return R.error("Failed to clear history messages: " + e.getMessage());
         }
     }
 
@@ -450,8 +449,8 @@ public class SysQueueController {
             int count = queueService.retryDeadLetterMessages(name);
             return R.ok("已重试 " + count + " 条消息").put("count", count);
         } catch (Exception e) {
-            log.error("重试死信消息失败", e);
-            return R.error("重试死信消息失败: " + e.getMessage());
+            log.error("Failed to retry dead letter message", e);
+            return R.error("Failed to retry dead letter message: " + e.getMessage());
         }
     }
 
@@ -473,8 +472,8 @@ public class SysQueueController {
             int moved = queueService.moveMessages(sourceQueue, targetQueue, count);
             return R.ok("已移动 " + moved + " 条消息").put("moved", moved);
         } catch (Exception e) {
-            log.error("移动消息失败", e);
-            return R.error("移动消息失败: " + e.getMessage());
+            log.error("Failed to move message", e);
+            return R.error("Failed to move message: " + e.getMessage());
         }
     }
 

@@ -1,7 +1,7 @@
 package cn.org.autumn.modules.oss.cloud;
 
-import cn.org.autumn.utils.Constant;
 import cn.org.autumn.modules.sys.service.SysConfigService;
+import cn.org.autumn.utils.Constant;
 import cn.org.autumn.utils.SpringContextUtils;
 
 public final class OSSFactory {

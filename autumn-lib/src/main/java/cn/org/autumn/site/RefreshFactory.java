@@ -1,10 +1,9 @@
 package cn.org.autumn.site;
 
 import cn.org.autumn.config.RefreshHandler;
+import java.util.List;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
-
-import java.util.List;
 
 @Component
 public class RefreshFactory extends Factory {

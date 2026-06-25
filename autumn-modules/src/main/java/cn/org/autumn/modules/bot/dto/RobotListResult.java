@@ -2,11 +2,10 @@ package cn.org.autumn.modules.bot.dto;
 
 import cn.org.autumn.modules.sys.entity.User;
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.Getter;
-import lombok.Setter;
-
 import java.io.Serializable;
 import java.util.List;
+import lombok.Getter;
+import lombok.Setter;
 
 @Getter
 @Setter

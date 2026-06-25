@@ -3,16 +3,15 @@ package cn.org.autumn.modules.usr.controller;
 import cn.org.autumn.modules.usr.controller.gen.UserLoginLogControllerGen;
 import cn.org.autumn.modules.usr.entity.UserLoginLogEntity;
 import cn.org.autumn.utils.R;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
 
 /**
  * 登录日志

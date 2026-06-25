@@ -1,10 +1,10 @@
 package cn.org.autumn.modules.oauth.dao;
 
+import cn.org.autumn.modules.oauth.dao.sql.TokenStoreDaoSql;
 import cn.org.autumn.modules.oauth.entity.TokenStoreEntity;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
-import cn.org.autumn.modules.oauth.dao.sql.TokenStoreDaoSql;
 import org.apache.ibatis.annotations.SelectProvider;
 import org.springframework.stereotype.Repository;
 

@@ -2,16 +2,14 @@ package cn.org.autumn.modules.job.task;
 
 import cn.org.autumn.annotation.TaskAware;
 import cn.org.autumn.site.UpgradeFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.concurrent.atomic.AtomicBoolean;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-
 @Component
+@Slf4j
 public class JobTask implements UpgradeFactory.Upgrade {
-    private final Logger log = LoggerFactory.getLogger(getClass());
 
     /**
      * 使用 AtomicBoolean 替代原始 boolean，通过 compareAndSet 保证原子性的检查并加锁操作。
@@ -69,7 +67,7 @@ public class JobTask implements UpgradeFactory.Upgrade {
         try {
             LoopJob.runThreeSecondJob();
         } catch (Exception e) {
-            log.error("三秒任务:", e);
+            log.error("Three-second job:", e);
         } finally {
             threeSecondJobLock.set(false);
         }
@@ -82,7 +80,7 @@ public class JobTask implements UpgradeFactory.Upgrade {
         try {
             LoopJob.runFiveSecondJob();
         } catch (Exception e) {
-            log.error("五秒任务:", e);
+            log.error("Five-second job:", e);
         } finally {
             fiveSecondJobLock.set(false);
         }
@@ -95,7 +93,7 @@ public class JobTask implements UpgradeFactory.Upgrade {
         try {
             LoopJob.runTenSecondJob();
         } catch (Exception e) {
-            log.error("十秒任务:", e);
+            log.error("Ten-second job:", e);
         } finally {
             tenSecondJobLock.set(false);
         }
@@ -108,7 +106,7 @@ public class JobTask implements UpgradeFactory.Upgrade {
         try {
             LoopJob.runThirtySecondJob();
         } catch (Exception e) {
-            log.error("三十秒任务:", e);
+            log.error("Thirty-second job:", e);
         } finally {
             thirtySecondJobLock.set(false);
         }
@@ -121,7 +119,7 @@ public class JobTask implements UpgradeFactory.Upgrade {
         try {
             LoopJob.runOneMinuteJob();
         } catch (Exception e) {
-            log.error("一分钟任务:", e);
+            log.error("One-minute job:", e);
         } finally {
             minuteJobLock.set(false);
         }
@@ -134,7 +132,7 @@ public class JobTask implements UpgradeFactory.Upgrade {
         try {
             LoopJob.runFiveMinuteJob();
         } catch (Exception e) {
-            log.error("五分钟任务:", e);
+            log.error("Five-minute job:", e);
         } finally {
             fiveMinuteJobLock.set(false);
         }
@@ -147,7 +145,7 @@ public class JobTask implements UpgradeFactory.Upgrade {
         try {
             LoopJob.runTenMinuteJob();
         } catch (Exception e) {
-            log.error("十分钟任务:", e);
+            log.error("Ten-minute job:", e);
         } finally {
             tenMinuteJobLock.set(false);
         }
@@ -160,7 +158,7 @@ public class JobTask implements UpgradeFactory.Upgrade {
         try {
             LoopJob.runThirtyMinuteJob();
         } catch (Exception e) {
-            log.error("三十分钟任务:", e);
+            log.error("Thirty-minute job:", e);
         } finally {
             thirtyMinuteJobLock.set(false);
         }
@@ -173,7 +171,7 @@ public class JobTask implements UpgradeFactory.Upgrade {
         try {
             LoopJob.runOneHourJob();
         } catch (Exception e) {
-            log.error("一小时任务:", e);
+            log.error("One-hour job:", e);
         } finally {
             hourJobLock.set(false);
         }
@@ -186,7 +184,7 @@ public class JobTask implements UpgradeFactory.Upgrade {
         try {
             LoopJob.runTenHourJob();
         } catch (Exception e) {
-            log.error("十小时任务:", e);
+            log.error("Ten-hour job:", e);
         } finally {
             tenHourJobLock.set(false);
         }
@@ -199,7 +197,7 @@ public class JobTask implements UpgradeFactory.Upgrade {
         try {
             LoopJob.runOneDayJob();
         } catch (Exception e) {
-            log.error("一天任务:", e);
+            log.error("One-day job:", e);
         } finally {
             dayJobLock.set(false);
         }
@@ -212,7 +210,7 @@ public class JobTask implements UpgradeFactory.Upgrade {
         try {
             LoopJob.runOneWeekJob();
         } catch (Exception e) {
-            log.error("一周任务:", e);
+            log.error("One-week job:", e);
         } finally {
             weekJobLock.set(false);
         }

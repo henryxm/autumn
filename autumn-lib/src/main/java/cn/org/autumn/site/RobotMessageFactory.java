@@ -3,11 +3,10 @@ package cn.org.autumn.site;
 import cn.org.autumn.handler.RobotMessageSubscriber;
 import cn.org.autumn.model.RobotMessage;
 import cn.org.autumn.utils.SubscriptionMatch;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
-
-import java.util.List;
 
 /**
  * 机器人入站消息分发：按 Order 调用所有 {@link RobotMessageSubscriber}。
@@ -35,7 +34,7 @@ public class RobotMessageFactory extends Factory {
                 subscriber.receive(message);
                 count++;
             } catch (Exception e) {
-                log.error("机器人消息订阅处理失败: {}, type={}", subscriber.getClass().getName(), message.getType(), e);
+                log.error("Robot message subscription handler failed: {}, type={}", subscriber.getClass().getName(), message.getType(), e);
             }
         }
         return count;

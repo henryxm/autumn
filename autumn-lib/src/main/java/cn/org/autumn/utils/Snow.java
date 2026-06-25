@@ -1,11 +1,10 @@
 package cn.org.autumn.utils;
 
-import lombok.Getter;
-
 import java.lang.management.ManagementFactory;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.util.Enumeration;
+import lombok.Getter;
 
 /**
  * 雪花算法 ID 生成器，用作 {@link cn.org.autumn.entity.SnowBased} 实体的第二主键（列名仍为 {@code uuid}，类型 {@code Long}）。

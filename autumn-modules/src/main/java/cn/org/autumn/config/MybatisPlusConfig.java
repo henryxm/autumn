@@ -1,5 +1,7 @@
 package cn.org.autumn.config;
 
+import cn.org.autumn.database.CrudGuard;
+import cn.org.autumn.database.CrudInterceptor;
 import cn.org.autumn.database.DatabaseHolder;
 import cn.org.autumn.database.DatabaseType;
 import cn.org.autumn.database.H2EmbeddedMysqlDialect;
@@ -102,6 +104,11 @@ public class MybatisPlusConfig {
     /**
      * 由 Spring Boot MyBatis 自动挂到 SqlSessionFactory（见 mybatis-spring-boot-starter）。
      */
+    @Bean
+    public Interceptor databaseCrudWriteInterceptor(CrudGuard crudGuard) {
+        return new CrudInterceptor(crudGuard);
+    }
+
     @Bean
     public Interceptor booleanNumericParameterInterceptor(BooleanNumericTypeHandler handler) {
         return new BooleanNumericParameterInterceptor(handler);

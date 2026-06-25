@@ -62,7 +62,7 @@ description: >-
 1. `docs/AI_INDEX.md` → 2. `docs/AI_BOOT.md` → 3. `docs/AI_MAP.md` → 4. **`docs/AI_STANDARDS.md`**（强制全文，含 §8～§14）  
 5. **`docs/AI_DATABASE.md`**（多库、`DatabaseType`、**§4.0 代码层方言标准写法**、`WrapperColumns`、`RuntimeSql`、Wrapper 边界、Dao **必须** Provider）  
 6. 新模块 / 代码生成 / 搭骨架：追加 **`docs/AI_CODEGEN.md`**  
-按需：`docs/AI_POSTGRESQL.md`、`docs/AI_TEMPLATES.md`、`docs/AI_CRYPTO.md`、**`docs/AI_FIELD_ENCRYPT.md`**（实体字段存储加密）、`docs/AI_DISTRIBUTED_LOCK.md`、**`docs/AI_ASYNC_TASK.md`**（**`TagRunnable` / `FinishStatus` / `onFinished`**、内存队列 drain 状态机）、**`docs/REDIS_RESILIENCE.md`**（Redis 熔断与分布式锁稳健性）、`docs/REDIS_STANDALONE.md`、**`docs/REDIS_TTL_GUIDE.md`**（Redis TTL / `RedisExpireUtil`）、**`docs/INSTALL_MODE_CONDITIONAL.md`**（安装向导 **`autumn.install.wizard`**、**§0 占位默认 H2 / 可选 mysql**）等。
+按需：`docs/AI_POSTGRESQL.md`、`docs/AI_TEMPLATES.md`、`docs/AI_CRYPTO.md`、**`docs/AI_FIELD_ENCRYPT.md`**（实体字段存储加密）、**`docs/AI_DATABASE_READ_ONLY.md`**（只读模式 / `CrudGuard`）、`docs/AI_DISTRIBUTED_LOCK.md`、**`docs/AI_ASYNC_TASK.md`**（**`TagRunnable` / `FinishStatus` / `onFinished`**、内存队列 drain 状态机）、**`docs/REDIS_RESILIENCE.md`**（Redis 熔断与分布式锁稳健性）、`docs/REDIS_STANDALONE.md`、**`docs/REDIS_TTL_GUIDE.md`**（Redis TTL / `RedisExpireUtil`）、**`docs/INSTALL_MODE_CONDITIONAL.md`**（安装向导 **`autumn.install.wizard`**、**§0 占位默认 H2 / 可选 mysql**）等。
 
 涉及「终止会话 / 记住我阻断 / 会话过期重登守卫」时，追加阅读 **`docs/AI_SESSION_GUARD.md`**（`ForceLogoutRememberMeManager`、`ShiroSessionService`、`/sys/session/self/*`、`autumn-session-guard.js`）。
 
@@ -143,7 +143,7 @@ description: >-
 
 - 默认业务 SQL / Wrapper 对 **`DatabaseType` 全量兼容**；单库例外须 JavaDoc 标明。
 - **禁止硬编码方言**：表/列/排序/Map 键不写死 `` ` `` / `"` / `[]`；Provider 用 **`RuntimeSql#quote` / `columnInWrapper`**；未继承 **`DialectService`** 时用 **`WrapperColumns`**（**`columnInWrapper`**、分页排序 **`orderByColumnExpression`**、Map 等值 **`entityWrapperAllEqQuoted`** 等，见 **`docs/AI_DATABASE.md` §4.0**）。
-- **import 优先**：除非**类名冲突**，**禁止**在方法体/字段等处写全限定类名（如 `java.lang.reflect.Method`）；**必须** `import` 后用短类名（**`docs/AI_CODE_STYLE.md` §7**）。
+- **import 优先**：除非**类名冲突**，**禁止**在方法体/字段等处写全限定类名；**必须** `import` 后用短类名（**`docs/AI_CODE_STYLE.md` §7**）。**改 Java 后跑** `bash scripts/check-java-fqn`；合法冲突登记 **`scripts/fqn-allowlist.txt`**。
 - **日志单行**：`log.trace` / `log.debug` / `log.info` / `log.warn` / `log.error` **整条调用一行写完**，**禁止**为日志实参换行（**`docs/AI_CODE_STYLE.md` §8**）。
 - **Dao**：新代码 **禁止** 注解内联 SQL；**必须** `@SelectProvider` + **`*DaoSql`**，推荐 **`extends RuntimeSql`**。
 - **Wrapper**：安全谓词 only；复杂场景 **Dao + Provider**（见 **`docs/AI_DATABASE.md` §4～§5**）。
@@ -194,7 +194,8 @@ description: >-
 
 ## 自检清单
 
-- 若用户**要求**跑规范扫描：已执行 **`bash scripts/constraints-scan`** 并完成解读/修复（或写明残留）？
+- 若用户**要求**跑规范扫描：已执行 **`bash scripts/constraints-scan`**（含 **I 组 FQN**）并完成解读/修复（或写明残留）？
+- **改 Java 后**：已执行 **`bash scripts/check-java-fqn`**（PR CI 硬门禁）？
 - 无多余 **`schema.sql` / `init.sql`**？  
 - Dao 无内联 SQL？**Wrapper** 无方言黑魔法？Java 无手写 **反引号/双引号/方括号** 拼 SQL（§4.0）？  
 - **Controller** 未碰 **Dao**？未手改 **gen / list.html/js**？  

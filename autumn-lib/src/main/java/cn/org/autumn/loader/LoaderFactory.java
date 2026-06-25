@@ -3,11 +3,10 @@ package cn.org.autumn.loader;
 import cn.org.autumn.utils.SpringContextUtils;
 import freemarker.cache.MultiTemplateLoader;
 import freemarker.cache.TemplateLoader;
-import org.springframework.context.ApplicationContext;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import org.springframework.context.ApplicationContext;
 
 public final class LoaderFactory {
     private LoaderFactory() {

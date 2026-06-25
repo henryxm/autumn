@@ -1,8 +1,8 @@
 package cn.org.autumn.modules.sys.redis;
 
+import cn.org.autumn.modules.sys.entity.SysConfigEntity;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.utils.RedisKeys;
-import cn.org.autumn.modules.sys.entity.SysConfigEntity;
 import cn.org.autumn.utils.RedisUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;

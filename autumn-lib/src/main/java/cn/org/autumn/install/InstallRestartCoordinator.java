@@ -1,9 +1,8 @@
 package cn.org.autumn.install;
 
+import java.util.concurrent.CountDownLatch;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
-
-import java.util.concurrent.CountDownLatch;
 
 /**
  * 安装完成后由主线程阻塞等待，收到信号后关闭上下文并再次启动应用（无需用户手动重启）。

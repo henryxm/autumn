@@ -2,7 +2,6 @@ package cn.org.autumn.mybatis;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import org.apache.ibatis.mapping.SqlSource;
 import org.apache.ibatis.scripting.LanguageDriver;
 import org.apache.ibatis.scripting.xmltags.XMLLanguageDriver;

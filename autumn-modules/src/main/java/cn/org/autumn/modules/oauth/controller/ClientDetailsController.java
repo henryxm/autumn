@@ -1,8 +1,8 @@
 package cn.org.autumn.modules.oauth.controller;
 
+import cn.org.autumn.modules.oauth.controller.gen.ClientDetailsControllerGen;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import cn.org.autumn.modules.oauth.controller.gen.ClientDetailsControllerGen;
 
 /**
  * 客户端详情

@@ -1,11 +1,8 @@
 package cn.org.autumn.modules.gen.controller;
 
+import cn.org.autumn.modules.gen.controller.gen.GenTypeControllerGen;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import cn.org.autumn.modules.gen.controller.gen.GenTypeControllerGen;
-
-
 
 /**
  * 代码生成设置

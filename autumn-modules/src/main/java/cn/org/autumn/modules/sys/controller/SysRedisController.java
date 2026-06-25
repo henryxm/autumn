@@ -2,16 +2,15 @@ package cn.org.autumn.modules.sys.controller;
 
 import cn.org.autumn.annotation.Endpoint;
 import cn.org.autumn.annotation.SkipInterceptor;
+import cn.org.autumn.model.Response;
 import cn.org.autumn.modules.sys.service.RedisService;
 import cn.org.autumn.modules.sys.service.SysUserRoleService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
-import cn.org.autumn.model.Response;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
-
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.HashMap;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/sys/redis")

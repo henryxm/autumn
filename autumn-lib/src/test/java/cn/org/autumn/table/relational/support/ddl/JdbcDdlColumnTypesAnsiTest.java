@@ -1,10 +1,10 @@
 package cn.org.autumn.table.relational.support.ddl;
 
+import static org.junit.Assert.assertEquals;
+
 import cn.org.autumn.table.data.ColumnInfo;
 import cn.org.autumn.table.relational.model.ColumnMeta;
 import org.junit.Test;
-
-import static org.junit.Assert.assertEquals;
 
 public class JdbcDdlColumnTypesAnsiTest {
 

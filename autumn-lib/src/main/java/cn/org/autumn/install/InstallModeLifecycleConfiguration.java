@@ -1,6 +1,7 @@
 package cn.org.autumn.install;
 
 import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
@@ -37,7 +38,7 @@ public class InstallModeLifecycleConfiguration {
                 registry.removeBeanDefinition(name);
             }
             RootBeanDefinition def = new RootBeanDefinition(InstallModeAwareCommonAnnotationBeanPostProcessor.class);
-            def.setRole(org.springframework.beans.factory.config.BeanDefinition.ROLE_INFRASTRUCTURE);
+            def.setRole(BeanDefinition.ROLE_INFRASTRUCTURE);
             registry.registerBeanDefinition(name, def);
         }
 

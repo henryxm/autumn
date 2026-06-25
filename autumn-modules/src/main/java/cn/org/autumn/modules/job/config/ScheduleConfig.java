@@ -1,10 +1,9 @@
 package cn.org.autumn.modules.job.config;
 
+import java.util.Properties;
+import javax.sql.DataSource;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.quartz.SchedulerFactoryBean;
-
-import javax.sql.DataSource;
-import java.util.Properties;
 
 /**
  * 定时任务配置

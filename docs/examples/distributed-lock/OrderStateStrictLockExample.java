@@ -1,6 +1,7 @@
 package cn.org.autumn.examples.distributedlock;
 
 import cn.org.autumn.base.ModuleService;
+import com.baomidou.mybatisplus.mapper.BaseMapper;
 import org.springframework.stereotype.Service;
 
 /**
@@ -61,7 +62,7 @@ public class OrderStateStrictLockExample extends ModuleService<OrderStateStrictL
     /**
      * 以下内部类型只为示例自包含，实际项目请替换为真实 Dao/Entity。
      */
-    public interface OrderDao extends com.baomidou.mybatisplus.mapper.BaseMapper<OrderEntity> {
+    public interface OrderDao extends BaseMapper<OrderEntity> {
     }
 
     public static class OrderEntity {

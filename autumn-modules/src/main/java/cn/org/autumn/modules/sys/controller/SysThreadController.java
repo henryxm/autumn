@@ -2,18 +2,17 @@ package cn.org.autumn.modules.sys.controller;
 
 import cn.org.autumn.annotation.Endpoint;
 import cn.org.autumn.annotation.SkipInterceptor;
-import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.sys.service.SysUserRoleService;
+import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.thread.TagTaskExecutor;
 import cn.org.autumn.thread.TaskRecord;
 import cn.org.autumn.utils.R;
+import java.util.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.*;
 
 @Slf4j
 @Controller
@@ -130,7 +129,7 @@ public class SysThreadController {
         }
         String result = tagTaskExecutor.interruptTaskByIndex(index);
         if (log.isDebugEnabled())
-            log.debug("管理员操作 - 中断任务: index={}, result={}, operator={}", index, result, ShiroUtils.getUserUuid());
+            log.debug("Admin action - interrupt task: index={}, result={}, operator={}", index, result, ShiroUtils.getUserUuid());
         return R.ok(result);
     }
 
@@ -145,7 +144,7 @@ public class SysThreadController {
         }
         String result = tagTaskExecutor.interruptTask(taskId);
         if (log.isDebugEnabled())
-            log.debug("管理员操作 - 中断任务: taskId={}, result={}, operator={}", taskId, result, ShiroUtils.getUserUuid());
+            log.debug("Admin action - interrupt task: taskId={}, result={}, operator={}", taskId, result, ShiroUtils.getUserUuid());
         return R.ok(result);
     }
 
@@ -211,10 +210,10 @@ public class SysThreadController {
                 TagTaskExecutor.setMaxHistorySize(maxHistorySize);
             }
             if (log.isDebugEnabled())
-                log.debug("线程池配置已更新 - corePoolSize:{}, maxPoolSize:{}, keepAlive:{}, coreTimeout:{}, stagger:{}, maxHistory:{}", corePoolSize, maxPoolSize, keepAliveSeconds, allowCoreThreadTimeOut, staggerSeconds, maxHistorySize);
+                log.debug("Thread pool config updated - corePoolSize:{}, maxPoolSize:{}, keepAlive:{}, coreTimeout:{}, stagger:{}, maxHistory:{}", corePoolSize, maxPoolSize, keepAliveSeconds, allowCoreThreadTimeOut, staggerSeconds, maxHistorySize);
             return R.ok("配置更新成功").put("pool", tagTaskExecutor.getPoolInfo());
         } catch (Exception e) {
-            log.error("更新线程池配置失败:{}", e.getMessage());
+            log.error("Failed to update thread pool config:{}", e.getMessage());
             return R.error("配置更新失败: " + e.getMessage());
         }
     }
@@ -230,7 +229,7 @@ public class SysThreadController {
         }
         tagTaskExecutor.clearHistory();
         if (log.isDebugEnabled())
-            log.debug("线程池历史记录已清除");
+            log.debug("Thread pool history cleared");
         return R.ok("历史记录已清除");
     }
 
@@ -245,7 +244,7 @@ public class SysThreadController {
         }
         tagTaskExecutor.resetStats();
         if (log.isDebugEnabled())
-            log.debug("线程池统计数据已重置");
+            log.debug("Thread pool statistics reset");
         return R.ok("统计数据已重置").put("pool", tagTaskExecutor.getPoolInfo());
     }
 

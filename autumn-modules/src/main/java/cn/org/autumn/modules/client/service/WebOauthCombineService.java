@@ -3,17 +3,16 @@ package cn.org.autumn.modules.client.service;
 import cn.org.autumn.base.ModuleService;
 import cn.org.autumn.config.ClientType;
 import cn.org.autumn.config.DomainHandler;
+import cn.org.autumn.modules.client.dao.WebOauthCombineDao;
 import cn.org.autumn.modules.client.entity.WebAuthenticationEntity;
+import cn.org.autumn.modules.client.entity.WebOauthCombineEntity;
 import cn.org.autumn.modules.oauth.entity.ClientDetailsEntity;
 import cn.org.autumn.modules.oauth.service.ClientDetailsService;
 import cn.org.autumn.utils.Uuid;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import cn.org.autumn.modules.client.dao.WebOauthCombineDao;
-import cn.org.autumn.modules.client.entity.WebOauthCombineEntity;
-
 import java.util.Date;
 import java.util.Objects;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 @Service
 public class WebOauthCombineService extends ModuleService<WebOauthCombineDao, WebOauthCombineEntity> implements DomainHandler {

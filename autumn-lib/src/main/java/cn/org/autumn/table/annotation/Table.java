@@ -3,14 +3,12 @@ package cn.org.autumn.table.annotation;
 import cn.org.autumn.table.annotation.sql.CharacterSet;
 import cn.org.autumn.table.annotation.sql.Collation;
 import cn.org.autumn.table.annotation.sql.Engine;
-
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-
 
 /**
  * 创建表时的表名

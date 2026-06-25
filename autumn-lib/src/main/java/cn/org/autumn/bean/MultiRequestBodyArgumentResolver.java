@@ -7,6 +7,8 @@ import com.alibaba.fastjson2.JSONObject;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.util.TextUtils;
 import org.springframework.core.MethodParameter;
+import org.springframework.lang.NonNull;
+import org.springframework.lang.Nullable;
 import org.springframework.web.bind.support.WebDataBinderFactory;
 import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
@@ -16,6 +18,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -44,7 +47,7 @@ public class MultiRequestBodyArgumentResolver implements HandlerMethodArgumentRe
      * @return 支持的类型
      */
     @Override
-    public boolean supportsParameter(MethodParameter parameter) {
+    public boolean supportsParameter(@NonNull MethodParameter parameter) {
         // 支持带@MultiRequestBody注解的参数
         return parameter.hasParameterAnnotation(MultiRequestBody.class);
     }
@@ -54,13 +57,16 @@ public class MultiRequestBodyArgumentResolver implements HandlerMethodArgumentRe
      * 注意：非基本类型返回null会报空指针异常，要通过反射或者JSON工具类创建一个空对象
      */
     @Override
-    public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer, NativeWebRequest webRequest, WebDataBinderFactory binderFactory) throws Exception {
+    @Nullable
+    public Object resolveArgument(@NonNull MethodParameter parameter, @Nullable ModelAndViewContainer mavContainer, @NonNull NativeWebRequest webRequest, @Nullable WebDataBinderFactory binderFactory) throws Exception {
 
         String jsonBody = getRequestBody(webRequest);
 
-        JSONObject jsonObject = JSON.parseObject(jsonBody);
+        JSONObject jsonObject = parseJsonObject(jsonBody);
         // 根据@MultiRequestBody注解value作为json解析的key
-        MultiRequestBody parameterAnnotation = parameter.getParameterAnnotation(MultiRequestBody.class);
+        MultiRequestBody parameterAnnotation = Objects.requireNonNull(
+                parameter.getParameterAnnotation(MultiRequestBody.class),
+                "MultiRequestBody annotation is missing on parameter: " + parameter);
         //注解的value是JSON的key
         String key = parameterAnnotation.value();
         Object value;
@@ -93,7 +99,7 @@ public class MultiRequestBodyArgumentResolver implements HandlerMethodArgumentRe
                 return value.toString();
             }
             // 其他复杂对象
-            return JSON.parseObject(value.toString(), parameterType);
+            return parseComplexObject(value.toString(), parameterType, parameterAnnotation, key);
         }
 
         // 解析不到则将整个json串解析为当前参数类型
@@ -115,32 +121,50 @@ public class MultiRequestBodyArgumentResolver implements HandlerMethodArgumentRe
             return null;
         }
         // 非基本类型，允许解析，将外层属性解析
-        Object result;
-        try {
-            result = JSON.parseObject(jsonObject.toString(), parameterType);
-        } catch (JSONException jsonException) {
-            // TODO:: 异常处理返回null是否合理？
-            result = null;
-        }
-
-        // 如果非必要参数直接返回，否则如果没有一个属性有值则报错
+        Object result = parseComplexObject(jsonObject.toString(), parameterType, parameterAnnotation, key);
         if (!parameterAnnotation.required()) {
             return result;
-        } else {
-            boolean haveValue = false;
-            Field[] declaredFields = parameterType.getDeclaredFields();
-            for (Field field : declaredFields) {
-                field.setAccessible(true);
-                if (field.get(result) != null) {
-                    haveValue = true;
-                    break;
-                }
-            }
-            if (!haveValue) {
-                throw new IllegalArgumentException(String.format("required param %s is not present", key));
-            }
-            return result;
         }
+        if (!hasAnyNonNullField(result, parameterType)) {
+            throw new IllegalArgumentException(String.format("required param %s is not present", key));
+        }
+        return result;
+    }
+
+    private static Object parseComplexObject(String json, Class<?> type, MultiRequestBody annotation, String key) {
+        try {
+            return JSON.parseObject(json, type);
+        } catch (JSONException e) {
+            if (!annotation.required()) {
+                return null;
+            }
+            throw new IllegalArgumentException(String.format("failed to parse required param %s as %s", key, type.getName()), e);
+        }
+    }
+
+    private static JSONObject parseJsonObject(String jsonBody) {
+        if (TextUtils.isEmpty(jsonBody)) {
+            return new JSONObject();
+        }
+        try {
+            JSONObject parsed = JSON.parseObject(jsonBody);
+            return parsed != null ? parsed : new JSONObject();
+        } catch (JSONException e) {
+            throw new IllegalArgumentException("request body is not valid JSON", e);
+        }
+    }
+
+    private static boolean hasAnyNonNullField(Object target, Class<?> type) throws IllegalAccessException {
+        if (target == null) {
+            return false;
+        }
+        for (Field field : type.getDeclaredFields()) {
+            field.setAccessible(true);
+            if (field.get(target) != null) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -212,8 +236,8 @@ public class MultiRequestBodyArgumentResolver implements HandlerMethodArgumentRe
     /**
      * 判断是否为基本数据类型包装类
      */
-    private boolean isBasicDataTypes(Class clazz) {
-        Set<Class> classSet = new HashSet<>();
+    private boolean isBasicDataTypes(Class<?> clazz) {
+        Set<Class<?>> classSet = new HashSet<>();
         classSet.add(Integer.class);
         classSet.add(Long.class);
         classSet.add(Short.class);
@@ -230,7 +254,9 @@ public class MultiRequestBodyArgumentResolver implements HandlerMethodArgumentRe
      */
     private String getRequestBody(NativeWebRequest webRequest) {
         HttpServletRequest servletRequest = webRequest.getNativeRequest(HttpServletRequest.class);
-
+        if (null == servletRequest) {
+            return "";
+        }
         // 有就直接获取
         String jsonBody = (String) webRequest.getAttribute(JSONBODY_ATTRIBUTE, NativeWebRequest.SCOPE_REQUEST);
         // 没有就从请求中读取

@@ -1,20 +1,19 @@
 package cn.org.autumn.modules.oauth.service;
 
+import static cn.org.autumn.modules.oauth.service.ClientDetailsService.ACCESS_TOKEN_DEFAULT_EXPIRED_IN;
+import static cn.org.autumn.modules.oauth.service.ClientDetailsService.REFRESH_TOKEN_DEFAULT_EXPIRED_IN;
+
 import cn.org.autumn.base.ModuleService;
 import cn.org.autumn.modules.oauth.dao.TokenStoreDao;
 import cn.org.autumn.modules.oauth.entity.TokenStoreEntity;
 import cn.org.autumn.modules.oauth.store.ValueType;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysUserService;
+import java.util.Date;
+import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
-
-import java.util.Date;
-import java.util.List;
-
-import static cn.org.autumn.modules.oauth.service.ClientDetailsService.ACCESS_TOKEN_DEFAULT_EXPIRED_IN;
-import static cn.org.autumn.modules.oauth.service.ClientDetailsService.REFRESH_TOKEN_DEFAULT_EXPIRED_IN;
 
 @Service
 public class TokenStoreService extends ModuleService<TokenStoreDao, TokenStoreEntity> {

@@ -1,21 +1,20 @@
 package cn.org.autumn.modules.wall.service;
 
 import cn.org.autumn.config.ClearHandler;
+import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.wall.dao.IpBlackDao;
+import cn.org.autumn.modules.wall.entity.IpBlackEntity;
 import cn.org.autumn.modules.wall.entity.RData;
 import cn.org.autumn.site.LoadFactory;
-import cn.org.autumn.modules.job.task.LoopJob;
-import cn.org.autumn.modules.wall.entity.IpBlackEntity;
 import cn.org.autumn.site.WallFactory;
 import cn.org.autumn.utils.IPUtils;
+import java.util.*;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
-
-import java.util.*;
 
 @Slf4j
 @Service
@@ -118,7 +117,7 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
             }
             ipBlackSectionList = tmpSection;
         } catch (Exception e) {
-            log.error("加载IP黑名单数据出错：", e);
+            log.error("Failed to load IP blacklist data:", e);
         }
     }
 
@@ -159,7 +158,7 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
             return false;
         } catch (Exception e) {
             if (log.isDebugEnabled())
-                log.debug("无法判断IP黑名单:{}", e.getMessage());
+                log.debug("Unable to evaluate IP blacklist:{}", e.getMessage());
             return false;
         }
     }
@@ -306,7 +305,7 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
                 }
             }
         } catch (Exception e) {
-            log.error("添加黑名单IP:{}", e.getMessage());
+            log.error("Failed to add blacklist IP:{}", e.getMessage());
         }
         return blackEntity;
     }

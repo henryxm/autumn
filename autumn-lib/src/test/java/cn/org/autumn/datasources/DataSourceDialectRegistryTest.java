@@ -1,11 +1,11 @@
 package cn.org.autumn.datasources;
 
+import static org.junit.Assert.assertEquals;
+
 import cn.org.autumn.database.DatabaseType;
 import org.junit.After;
 import org.junit.Test;
 import org.springframework.mock.env.MockEnvironment;
-
-import static org.junit.Assert.assertEquals;
 
 public class DataSourceDialectRegistryTest {
 

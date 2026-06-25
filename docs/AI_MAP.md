@@ -433,7 +433,7 @@ public class DemoService extends ModuleService<DemoDao, DemoEntity> implements L
 - `sys`：用户/角色/菜单/部门/配置/日志/系统运维能力。
 - `gen`：代码生成（表 -> 代码）。
 - `job`：定时任务管理与执行日志（优先 `LoopJob` 接口周期，复杂时间规则再使用 cron）。
-- `db`：数据库备份与恢复。
+- `db`：数据库备份与恢复；**只读/写库开关**（`CrudGuard`、`dbmanage.html`、`/db/admin/*`）见 **`docs/AI_DATABASE_READ_ONLY.md`**。
 - `oauth/client`：认证授权与客户端管理。
 - `usr`：用户域开放能力与 token。
 - `oss`：对象存储与文件管理。

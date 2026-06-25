@@ -1,11 +1,10 @@
 package cn.org.autumn.site;
 
 import cn.org.autumn.config.EncryptConfigHandler;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-
-import java.util.List;
 
 /**
  * 加密配置工厂类

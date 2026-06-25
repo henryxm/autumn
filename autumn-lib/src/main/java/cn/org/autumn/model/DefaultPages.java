@@ -4,12 +4,11 @@ import cn.org.autumn.annotation.SearchType;
 import cn.org.autumn.search.IPages;
 import cn.org.autumn.search.Result;
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.Getter;
-import lombok.Setter;
-
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.Getter;
+import lombok.Setter;
 
 @Getter
 @Setter

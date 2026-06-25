@@ -3,15 +3,14 @@ package cn.org.autumn.modules.wall.service;
 import cn.org.autumn.config.ClearHandler;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.wall.dao.HostDao;
+import cn.org.autumn.modules.wall.entity.HostEntity;
 import cn.org.autumn.modules.wall.entity.RData;
 import cn.org.autumn.site.LoadFactory;
-import cn.org.autumn.modules.wall.entity.HostEntity;
 import cn.org.autumn.site.WallFactory;
+import java.util.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
-import java.util.*;
 
 @Slf4j
 @Service
@@ -40,7 +39,7 @@ public class HostService extends WallCounter<HostDao, HostEntity> implements Loa
             }
             return false;
         } catch (Exception e) {
-            log.error("无法判断HOST黑名单：", e);
+            log.error("Unable to evaluate HOST blacklist:", e);
             return false;
         }
     }
@@ -78,7 +77,7 @@ public class HostService extends WallCounter<HostDao, HostEntity> implements Loa
                 save(hostEntity);
             }
         } catch (Exception e) {
-            log.debug("保存错误:{}", e.getMessage());
+            log.debug("Save error:{}", e.getMessage());
         }
         return hostEntity;
     }

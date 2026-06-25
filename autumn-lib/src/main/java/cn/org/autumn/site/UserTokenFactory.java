@@ -2,12 +2,11 @@ package cn.org.autumn.site;
 
 import cn.org.autumn.config.UserTokenHandler;
 import com.google.gson.Gson;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-
-import java.util.List;
 
 @Slf4j
 @Component
@@ -34,7 +33,7 @@ public class UserTokenFactory extends Factory {
                 if (StringUtils.isNotBlank(user))
                     return user;
             } catch (Throwable e) {
-                log.error("计算用户:{}, 错误:{}", token, e.getMessage());
+                log.error("User token compute failed: {}, error: {}", token, e.getMessage());
             }
         }
         return "";

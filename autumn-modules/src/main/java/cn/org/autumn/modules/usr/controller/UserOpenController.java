@@ -1,8 +1,8 @@
 package cn.org.autumn.modules.usr.controller;
 
+import cn.org.autumn.modules.usr.controller.gen.UserOpenControllerGen;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import cn.org.autumn.modules.usr.controller.gen.UserOpenControllerGen;
 
 /**
  * 认证对接

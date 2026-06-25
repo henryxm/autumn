@@ -1,8 +1,8 @@
 package cn.org.autumn.modules.wall.controller;
 
+import cn.org.autumn.modules.wall.controller.gen.IpWhiteControllerGen;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import cn.org.autumn.modules.wall.controller.gen.IpWhiteControllerGen;
 
 /**
  * IP白名单

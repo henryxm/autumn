@@ -1,5 +1,7 @@
 package cn.org.autumn.modules.sys.shiro;
 
+import static org.apache.shiro.subject.support.DefaultSubjectContext.PRINCIPALS_SESSION_KEY;
+
 import cn.org.autumn.cluster.UserHandler;
 import cn.org.autumn.install.InstallMode;
 import cn.org.autumn.utils.RedisExpireUtil;
@@ -10,6 +12,12 @@ import cn.org.autumn.modules.sys.service.SysUserService;
 import cn.org.autumn.modules.usr.service.UserProfileService;
 import cn.org.autumn.utils.RedisKeys;
 import com.google.gson.Gson;
+import java.io.*;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.shiro.session.Session;
 import org.apache.shiro.session.mgt.eis.EnterpriseCacheSessionDAO;
@@ -18,15 +26,6 @@ import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
-
-import java.io.*;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
-
-import static org.apache.shiro.subject.support.DefaultSubjectContext.PRINCIPALS_SESSION_KEY;
 
 @Slf4j
 @Component
@@ -130,7 +129,7 @@ public class RedisShiroSessionDAO extends EnterpriseCacheSessionDAO implements L
                 iterator.remove();
             }
         } catch (Exception e) {
-            log.error("执行异常:{}", e.getMessage());
+            log.error("Execution error:{}", e.getMessage());
         }
     }
 
