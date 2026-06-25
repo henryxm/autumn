@@ -3,7 +3,6 @@ package cn.org.autumn.modules.sys.entity;
 import cn.org.autumn.annotation.ConfigField;
 import cn.org.autumn.annotation.ConfigParam;
 import cn.org.autumn.config.InputType;
-
 import java.io.Serializable;
 
 @ConfigParam(paramKey = "SYSTEM_UPGRADE", category = SystemUpgrade.config, name = "系统升级", description = "当系统需要升级时开启和关闭相关功能，保护数据单独一致性")

@@ -3,16 +3,15 @@ package cn.org.autumn.modules.wall.service;
 import cn.org.autumn.base.ModuleService;
 import cn.org.autumn.config.ClearHandler;
 import cn.org.autumn.modules.job.task.LoopJob;
-import org.apache.commons.io.IOUtils;
-import org.springframework.stereotype.Service;
 import cn.org.autumn.modules.wall.dao.JumpDao;
 import cn.org.autumn.modules.wall.entity.JumpEntity;
-
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.apache.commons.io.IOUtils;
+import org.springframework.stereotype.Service;
 
 @Service
 public class JumpService extends ModuleService<JumpDao, JumpEntity> implements LoopJob.OneMinute, ClearHandler {

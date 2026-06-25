@@ -1,10 +1,18 @@
 package cn.org.autumn.modules.oauth.interceptor;
 
+import static org.junit.Assert.*;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import cn.org.autumn.model.CompatibleResponse;
 import cn.org.autumn.model.Response;
 import cn.org.autumn.service.AesService;
 import cn.org.autumn.service.RsaService;
 import com.google.gson.Gson;
+import java.lang.reflect.Method;
+import java.util.Objects;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -14,19 +22,10 @@ import org.mockito.junit.MockitoJUnitRunner;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageConverter;
-import org.springframework.http.server.ServletServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
+import org.springframework.http.server.ServletServerHttpRequest;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.test.util.ReflectionTestUtils;
-
-import java.lang.reflect.Method;
-import java.util.Objects;
-
-import static org.junit.Assert.*;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
 @SuppressWarnings("null")

@@ -1,12 +1,11 @@
 package cn.org.autumn.utils;
 
-import org.apache.commons.lang.StringUtils;
-
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Locale;
 import java.util.UUID;
 import java.util.regex.Pattern;
+import org.apache.commons.lang.StringUtils;
 
 /**
  * 无连字符小写 32 位 UUID 工具，用作 {@link cn.org.autumn.entity.UuidBased} 实体的第二主键。

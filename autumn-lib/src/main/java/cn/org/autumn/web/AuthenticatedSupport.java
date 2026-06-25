@@ -1,10 +1,9 @@
 package cn.org.autumn.web;
 
 import cn.org.autumn.annotation.Authenticated;
+import java.lang.reflect.AnnotatedElement;
 import org.springframework.core.MethodParameter;
 import org.springframework.core.annotation.AnnotatedElementUtils;
-
-import java.lang.reflect.AnnotatedElement;
 
 /**
  * {@link Authenticated} 在参数 / 方法 / 类上的合并查找，供多套用户参数解析器共用，避免职责重叠。

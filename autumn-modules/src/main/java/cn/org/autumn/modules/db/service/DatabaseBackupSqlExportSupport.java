@@ -4,15 +4,13 @@ import cn.org.autumn.database.DatabaseHolder;
 import cn.org.autumn.database.DatabaseType;
 import cn.org.autumn.database.runtime.RuntimeSqlDialect;
 import cn.org.autumn.database.runtime.RuntimeSqlDialectRegistry;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.sql.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * 数据库逻辑备份：真实 MySQL 协议库走 {@code SHOW CREATE TABLE}；其它库（含内嵌 H2 的 {@code MODE=MySQL}，此时
@@ -23,10 +21,8 @@ import java.util.*;
  * {@code sys_*} 误当作系统表而漏导。CLOB 列须导出文本内容而非 {@code toString()}。H2 下 DROP/CREATE/INSERT 对表使用一致的 schema 限定。
  * 跨厂商的 DDL/字面量形态仍可能不同，属 JDBC 近似极限，恢复应在同大类库上进行。
  */
+@Slf4j
 public final class DatabaseBackupSqlExportSupport {
-
-    private static final Logger log = LoggerFactory.getLogger(DatabaseBackupSqlExportSupport.class);
-
     private static final int MAX_INSERT_BYTES = 2 * 1024 * 1024;
 
     /** 单单元格 CLOB 导出上限，避免 OOM；超出部分截断（极端长文本列需另行迁移方案）。 */

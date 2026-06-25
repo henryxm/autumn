@@ -3,6 +3,7 @@ package cn.org.autumn.modules.usr.dao;
 import cn.org.autumn.modules.usr.dao.sql.UserLoginLogDaoSql;
 import cn.org.autumn.modules.usr.entity.UserLoginLogEntity;
 import com.baomidou.mybatisplus.mapper.BaseMapper;
+import java.util.List;
 import org.apache.ibatis.annotations.DeleteProvider;
 import org.apache.ibatis.annotations.InsertProvider;
 import org.apache.ibatis.annotations.Mapper;
@@ -10,8 +11,6 @@ import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.SelectProvider;
 import org.apache.ibatis.annotations.UpdateProvider;
 import org.springframework.stereotype.Repository;
-
-import java.util.List;
 
 /**
  * 登录日志

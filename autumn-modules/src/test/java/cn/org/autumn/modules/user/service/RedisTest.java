@@ -1,7 +1,7 @@
 package cn.org.autumn.modules.user.service;
 
-import cn.org.autumn.utils.RedisUtils;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
+import cn.org.autumn.utils.RedisUtils;
 import org.apache.commons.lang.builder.ToStringBuilder;
 import org.junit.Ignore;
 import org.junit.Test;

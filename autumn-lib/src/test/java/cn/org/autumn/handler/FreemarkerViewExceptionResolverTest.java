@@ -1,13 +1,13 @@
 package cn.org.autumn.handler;
 
-import freemarker.template.TemplateException;
-import org.junit.Test;
-import org.springframework.test.util.ReflectionTestUtils;
-
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
+
+import freemarker.template.TemplateException;
+import org.junit.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 
 public class FreemarkerViewExceptionResolverTest {
 

@@ -3,14 +3,13 @@ package cn.org.autumn.modules.safe.spi;
 import cn.org.autumn.modules.safe.dto.PayGateAssessRequest;
 import cn.org.autumn.modules.safe.service.PayGateAttemptService;
 import cn.org.autumn.modules.safe.service.PayUserSecuritySettingService;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.List;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
-
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.List;
 
 /**
  * 短时同一订单号重复 assess 拒绝。

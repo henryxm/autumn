@@ -100,7 +100,7 @@ public class FieldEncryptRedisStore {
             }
             stringRedisTemplate.convertAndSend(channel, "reload");
         } catch (Exception e) {
-            log.warn("字段加密集群刷新通知发布失败:{}", e.getMessage());
+            log.warn("Field encryption cluster refresh notification publish failed:{}", e.getMessage());
         }
     }
 
@@ -123,7 +123,7 @@ public class FieldEncryptRedisStore {
         if ("false".equalsIgnoreCase(v)) {
             return Boolean.FALSE;
         }
-        log.warn("字段加密 Redis 写入开关值无效:{}，将使用环境变量默认值", raw);
+        log.warn("Invalid field encryption Redis write switch value:{}, using environment default", raw);
         return null;
     }
 

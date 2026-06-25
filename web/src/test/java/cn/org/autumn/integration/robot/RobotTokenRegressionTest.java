@@ -1,5 +1,7 @@
 package cn.org.autumn.integration.robot;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import cn.org.autumn.integration.base.IntegrationTest;
 import cn.org.autumn.integration.support.IntegrationJson;
 import cn.org.autumn.integration.support.RobotTestBodies;
@@ -8,8 +10,6 @@ import cn.org.autumn.integration.support.RobotTestFixtures;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * 令牌轮换与 usedRows 配额回归。

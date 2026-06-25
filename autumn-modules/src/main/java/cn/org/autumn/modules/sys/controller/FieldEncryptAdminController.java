@@ -8,6 +8,9 @@ import cn.org.autumn.modules.sys.service.SysUserRoleService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.wall.service.IpWhiteService;
 import cn.org.autumn.utils.R;
+import java.util.Map;
+import java.util.function.Supplier;
+import javax.servlet.http.HttpServletRequest;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -15,10 +18,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import javax.servlet.http.HttpServletRequest;
-import java.util.Map;
-import java.util.function.Supplier;
 
 /**
  * 字段存储加密运维 API（系统管理员）。

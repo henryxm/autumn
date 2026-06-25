@@ -1,8 +1,13 @@
 package cn.org.autumn.modules.sys.shiro;
 
+import static org.apache.shiro.subject.support.DefaultSubjectContext.PRINCIPALS_SESSION_KEY;
+
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.utils.RedisKeys;
+import java.io.Serializable;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.apache.shiro.session.Session;
@@ -14,12 +19,6 @@ import org.springframework.aop.framework.Advised;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
-
-import java.io.Serializable;
-import java.util.*;
-import java.util.concurrent.TimeUnit;
-
-import static org.apache.shiro.subject.support.DefaultSubjectContext.PRINCIPALS_SESSION_KEY;
 
 /**
  * Shiro会话管理服务
@@ -50,7 +49,7 @@ public class ShiroSessionService {
             try {
                 target = ((Advised) sessionManager).getTargetSource().getTarget();
             } catch (Exception e) {
-                log.debug("获取 SessionManager 目标失败: {}", e.getMessage());
+                log.debug("Failed to obtain SessionManager target: {}", e.getMessage());
                 return null;
             }
         }
@@ -89,7 +88,7 @@ public class ShiroSessionService {
                 addSessionsFromRedis(userUuid, sessionIds);
             }
         } catch (Exception e) {
-            log.error("获取失败:{}, 错误:{}", userUuid, e.getMessage());
+            log.error("Fetch failed:{}, error:{}", userUuid, e.getMessage());
         }
         return sessionIds;
     }
@@ -118,12 +117,12 @@ public class ShiroSessionService {
                             }
                         }
                     } catch (Exception e) {
-                        log.warn("解析失败:{}, 异常:{}", key, e.getMessage());
+                        log.warn("Parse failed:{}, error:{}", key, e.getMessage());
                     }
                 }
             }
         } catch (Exception e) {
-            log.error("查询失败:{}, 错误:{}", userUuid, e.getMessage());
+            log.error("Query failed:{}, error:{}", userUuid, e.getMessage());
         }
     }
 
@@ -169,13 +168,13 @@ public class ShiroSessionService {
                             if (s != null && s.getId() != null && !map.containsKey(s.getId()))
                                 map.put(s.getId(), s);
                         } catch (Exception e) {
-                            log.warn("解析失败:{}, 错误:{}", key, e.getMessage());
+                            log.warn("Parse failed:{}, error:{}", key, e.getMessage());
                         }
                     }
                 }
             }
         } catch (Exception e) {
-            log.error("收集失败:{}", e.getMessage());
+            log.error("Collection failed:{}", e.getMessage());
         }
         return map;
     }
@@ -327,7 +326,7 @@ public class ShiroSessionService {
                 return true;
             }
         } catch (Exception e) {
-            log.error("删除会话:{}, 错误:{}", sessionId, e.getMessage());
+            log.error("Failed to delete session:{}, error:{}", sessionId, e.getMessage());
         }
         return false;
     }
@@ -343,7 +342,7 @@ public class ShiroSessionService {
         Collection<Serializable> sessionIds = getActiveSessionsByUserUuid(userUuid);
         SessionDAO sessionDAO = getSessionDAO();
         if (sessionDAO == null) {
-            log.warn("SessionDAO不可用，无法强制用户下线");
+            log.warn("SessionDAO unavailable, cannot force user logout");
             return 0;
         }
         for (Serializable sessionId : sessionIds) {
@@ -355,7 +354,7 @@ public class ShiroSessionService {
                         count++;
                 }
             } catch (Exception e) {
-                log.error("下线失败:{}, 错误:{}", sessionId, e.getMessage());
+                log.error("Logout failed:{}, error:{}", sessionId, e.getMessage());
             }
         }
         markForceLogout(userUuid);
@@ -370,15 +369,15 @@ public class ShiroSessionService {
         if (userUuid == null || userUuid.isEmpty())
             return;
         if (redisTemplate == null) {
-            log.warn("Redis 未启用，无法写入强制下线标记: userUuid={}", userUuid);
+            log.warn("Redis disabled, cannot write force logout marker: userUuid={}", userUuid);
             return;
         }
         try {
             String key = RedisKeys.getForceLogoutKey(sysConfigService.getNameSpace(), userUuid);
             redisTemplate.opsForValue().set(key, "1", 7, TimeUnit.DAYS);
-            if (log.isDebugEnabled()) log.debug("已标记强制下线: userUuid={}", userUuid);
+            if (log.isDebugEnabled()) log.debug("Force logout marked: userUuid={}", userUuid);
         } catch (Exception e) {
-            log.warn("标记强制下线失败, userUuid={}: {}", userUuid, e.getMessage());
+            log.warn("Failed to mark force logout, userUuid={}: {}", userUuid, e.getMessage());
         }
     }
 
@@ -392,9 +391,9 @@ public class ShiroSessionService {
         }
         try {
             redisTemplate.delete(RedisKeys.getForceLogoutKey(sysConfigService.getNameSpace(), userUuid));
-            if (log.isDebugEnabled()) log.debug("已取消强制重登: userUuid={}", userUuid);
+            if (log.isDebugEnabled()) log.debug("Force re-login marker cleared: userUuid={}", userUuid);
         } catch (Exception e) {
-            log.warn("取消强制重登失败, userUuid={}: {}", userUuid, e.getMessage());
+            log.warn("Failed to clear force re-login marker, userUuid={}: {}", userUuid, e.getMessage());
         }
     }
 
@@ -408,7 +407,7 @@ public class ShiroSessionService {
         try {
             return Boolean.TRUE.equals(redisTemplate.hasKey(RedisKeys.getForceLogoutKey(sysConfigService.getNameSpace(), userUuid)));
         } catch (Exception e) {
-            log.warn("查询强制重登标记失败, userUuid={}: {}", userUuid, e.getMessage());
+            log.warn("Failed to query force re-login marker, userUuid={}: {}", userUuid, e.getMessage());
             return false;
         }
     }
@@ -479,7 +478,7 @@ public class ShiroSessionService {
                 return ((SysUserEntity) primaryPrincipal).getUuid();
             }
         } catch (Exception e) {
-            log.debug("解析会话用户失败: {}", e.getMessage());
+            log.debug("Failed to parse session user: {}", e.getMessage());
         }
         return null;
     }

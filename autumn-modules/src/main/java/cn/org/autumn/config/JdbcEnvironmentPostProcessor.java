@@ -3,18 +3,17 @@ package cn.org.autumn.config;
 import cn.org.autumn.database.DatabaseHolder;
 import cn.org.autumn.database.DatabaseType;
 import cn.org.autumn.install.InstallMode;
-import org.apache.commons.lang.StringUtils;
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.env.EnvironmentPostProcessor;
-import org.springframework.core.env.ConfigurableEnvironment;
-import org.springframework.core.env.MapPropertySource;
-
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import org.apache.commons.lang.StringUtils;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.env.EnvironmentPostProcessor;
+import org.springframework.core.env.ConfigurableEnvironment;
+import org.springframework.core.env.MapPropertySource;
 
 /**
  * 按主数据源 JDBC URL（及 {@code autumn.database}、H2 URL 中 {@code MODE=MySQL}）推断并注入：

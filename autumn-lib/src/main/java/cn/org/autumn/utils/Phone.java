@@ -1,9 +1,8 @@
 package cn.org.autumn.utils;
 
-import org.apache.commons.lang.StringUtils;
-
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.apache.commons.lang.StringUtils;
 
 public class Phone {
 

@@ -2,22 +2,12 @@ package cn.org.autumn.service;
 
 import cn.org.autumn.config.QueueConfig;
 import cn.org.autumn.model.QueueMessage;
+import cn.org.autumn.thread.TagRunnable;
+import cn.org.autumn.thread.TagTaskExecutor;
 import cn.org.autumn.thread.TagValue;
 import cn.org.autumn.utils.RedisUtils;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.connection.stream.MapRecord;
-import org.springframework.data.redis.connection.stream.StreamOffset;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.stereotype.Component;
-
-import cn.org.autumn.thread.TagRunnable;
-import cn.org.autumn.thread.TagTaskExecutor;
-import org.springframework.context.annotation.Lazy;
-
-import javax.annotation.PreDestroy;
 import java.lang.reflect.Type;
 import java.util.*;
 import java.util.concurrent.*;
@@ -25,6 +15,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import javax.annotation.PreDestroy;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.data.redis.connection.stream.MapRecord;
+import org.springframework.data.redis.connection.stream.StreamOffset;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.stereotype.Component;
 
 /**
  * 通用队列服务

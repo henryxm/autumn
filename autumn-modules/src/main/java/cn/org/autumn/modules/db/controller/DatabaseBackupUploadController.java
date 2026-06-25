@@ -1,8 +1,8 @@
 package cn.org.autumn.modules.db.controller;
 
+import cn.org.autumn.modules.db.controller.gen.DatabaseBackupUploadControllerGen;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import cn.org.autumn.modules.db.controller.gen.DatabaseBackupUploadControllerGen;
 
 /**
  * 备份上传

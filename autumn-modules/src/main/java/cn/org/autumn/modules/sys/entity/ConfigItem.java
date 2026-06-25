@@ -1,16 +1,15 @@
 package cn.org.autumn.modules.sys.entity;
 
+import static cn.org.autumn.modules.sys.service.SysConfigService.boolean_type;
+import static cn.org.autumn.modules.sys.service.SysConfigService.selection_type;
+
 import cn.org.autumn.annotation.ConfigField;
 import cn.org.autumn.annotation.ConfigParam;
 import cn.org.autumn.utils.Utils;
-import org.apache.commons.lang.StringUtils;
-
 import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.util.Objects;
-
-import static cn.org.autumn.modules.sys.service.SysConfigService.boolean_type;
-import static cn.org.autumn.modules.sys.service.SysConfigService.selection_type;
+import org.apache.commons.lang.StringUtils;
 
 public class ConfigItem implements Serializable {
 

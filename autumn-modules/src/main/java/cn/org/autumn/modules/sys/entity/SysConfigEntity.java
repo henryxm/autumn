@@ -6,9 +6,8 @@ import cn.org.autumn.table.data.DataType;
 import com.baomidou.mybatisplus.annotations.TableField;
 import com.baomidou.mybatisplus.annotations.TableId;
 import com.baomidou.mybatisplus.annotations.TableName;
-
-import javax.validation.constraints.NotBlank;
 import java.io.Serializable;
+import javax.validation.constraints.NotBlank;
 
 /**
  * 系统配置信息

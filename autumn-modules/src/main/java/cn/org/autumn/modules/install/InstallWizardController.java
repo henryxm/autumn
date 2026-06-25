@@ -3,12 +3,11 @@ package cn.org.autumn.modules.install;
 import cn.org.autumn.annotation.SkipInterceptor;
 import cn.org.autumn.modules.spm.interceptor.SpmInterceptor;
 import cn.org.autumn.modules.usr.interceptor.AuthorizationInterceptor;
+import javax.servlet.http.HttpServletRequest;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
-
-import javax.servlet.http.HttpServletRequest;
 
 /**
  * 安装向导：跳过授权与 SPM，避免依赖业务登录态/埋点库；<b>不跳过</b> {@link cn.org.autumn.modules.lan.interceptor.LanguageInterceptor}，

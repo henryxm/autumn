@@ -1,12 +1,13 @@
 package cn.org.autumn.modules.bot.support;
 
 import cn.org.autumn.exception.CodeException;
+import cn.org.autumn.utils.SubscriptionMatch;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonSyntaxException;
-import org.apache.commons.lang.StringUtils;
-
+import java.nio.charset.StandardCharsets;
 import java.util.regex.Pattern;
+import org.apache.commons.lang.StringUtils;
 
 public final class RobotMessageSupport {
 
@@ -33,7 +34,7 @@ public final class RobotMessageSupport {
         if (StringUtils.isBlank(data))
             return null;
         String trimmed = data.trim();
-        if (trimmed.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > MAX_PAYLOAD_BYTES)
+        if (trimmed.getBytes(StandardCharsets.UTF_8).length > MAX_PAYLOAD_BYTES)
             throw new CodeException("业务载荷超过大小限制");
         try {
             JsonElement element = new JsonParser().parse(trimmed);
@@ -58,7 +59,7 @@ public final class RobotMessageSupport {
             return;
         if (StringUtils.isBlank(scopes))
             return;
-        if (!cn.org.autumn.utils.SubscriptionMatch.matches(scopes, required))
+        if (!SubscriptionMatch.matches(scopes, required))
             throw new CodeException("机器人无此 API 权限:" + required);
     }
 }

@@ -1,5 +1,8 @@
 package cn.org.autumn.integration.robot;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import cn.org.autumn.integration.base.IntegrationTest;
 import cn.org.autumn.integration.support.IntegrationJson;
 import cn.org.autumn.integration.support.RobotTestBodies;
@@ -7,9 +10,6 @@ import cn.org.autumn.integration.support.RobotTestContext;
 import cn.org.autumn.integration.support.RobotTestFixtures;
 import com.alibaba.fastjson.JSONObject;
 import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * 管理员配置与 Hook 启停回归。

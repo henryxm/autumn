@@ -3,12 +3,11 @@ package cn.org.autumn.model;
 import cn.org.autumn.annotation.JsonMap;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.io.Serializable;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
-import java.io.Serializable;
 
 @JsonMap
 @Getter

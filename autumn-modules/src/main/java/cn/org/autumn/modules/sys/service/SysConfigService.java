@@ -1,15 +1,16 @@
 package cn.org.autumn.modules.sys.service;
 
-import cn.org.autumn.database.runtime.WrapperColumns;
 import cn.org.autumn.annotation.ConfigField;
 import cn.org.autumn.bean.EnvBean;
 import cn.org.autumn.cluster.ServiceHandler;
 import cn.org.autumn.config.*;
+import cn.org.autumn.database.CrudGuard;
+import cn.org.autumn.database.runtime.WrapperColumns;
 import cn.org.autumn.exception.AException;
 import cn.org.autumn.model.AesConfig;
+import cn.org.autumn.model.DistributedLockConfig;
 import cn.org.autumn.model.PayCredentialConfig;
 import cn.org.autumn.model.RobotQuotaConfig;
-import cn.org.autumn.model.DistributedLockConfig;
 import cn.org.autumn.model.RsaConfig;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.lan.service.Language;
@@ -28,6 +29,14 @@ import com.baomidou.mybatisplus.mapper.EntityWrapper;
 import com.baomidou.mybatisplus.plugins.Page;
 import com.baomidou.mybatisplus.service.impl.ServiceImpl;
 import com.google.gson.Gson;
+import java.lang.reflect.Field;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.math.BigDecimal;
+import java.net.URI;
+import java.util.*;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.apache.shiro.session.mgt.SessionManager;
@@ -40,15 +49,6 @@ import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.lang.reflect.Field;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
-import java.math.BigDecimal;
-import java.net.URI;
-import java.util.*;
 
 @Slf4j
 @Service
@@ -116,6 +116,10 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     @Autowired
     @Lazy
     private SysLogService sysLogService;
+
+    @Autowired(required = false)
+    @Lazy
+    private CrudGuardService crudGuardService;
     private CloudStorageConfig cloudStorageConfig = null;
     private Map<String, SysConfigEntity> map = new HashMap<>();
     private String lastLoggerLevel = null;
@@ -263,6 +267,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     }
 
     public void put(String[][] mapping) {
+        boolean persist = CrudGuard.writable();
         for (String[] map : mapping) {
             SysConfigEntity config = new SysConfigEntity();
             String temp = map[0];
@@ -271,6 +276,9 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
             SysConfigEntity entity = baseMapper.queryByKey(temp);
             SysConfigEntity langEntity = null;
             if (null == entity) {
+                if (!persist) {
+                    continue;
+                }
                 if (map.length > 1) {
                     temp = map[1];
                     if (null != temp)
@@ -365,7 +373,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                         update = true;
                     }
                 }
-                if (update) {
+                if (update && persist) {
                     entity.setName(configName(entity.getParamKey()));
                     entity.setDescription(configDescription(entity.getParamKey()));
                     updateById(entity);
@@ -461,6 +469,8 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
             cloudStorageConfig = null;
         if (LOGGER_LEVEL.equalsIgnoreCase(key))
             sysLogService.changeLevel(value, NULL);
+        if (SYSTEM_UPGRADE.equalsIgnoreCase(key) && crudGuardService != null)
+            crudGuardService.reloadFromConfig();
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -790,7 +800,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
             // 如果配置被修正，记录日志并更新到数据库
             if (fixes != null && !fixes.isEmpty()) {
                 for (String fix : fixes) {
-                    log.debug("[配置校验] " + fix);
+                    log.debug("[Config validation] " + fix);
                 }
                 String newValue = new Gson().toJson(config);
                 updateValueByKey(key, newValue);
@@ -928,6 +938,9 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
 
         String current = getValue(LOADING_THEME);
         String normalized = new Gson().toJson(theme);
+        if (!CrudGuard.writable()) {
+            return theme;
+        }
         if (StringUtils.isBlank(current) || !Objects.equals(current, normalized)) {
             updateValueByKey(LOADING_THEME, normalized);
         }

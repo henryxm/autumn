@@ -1,5 +1,12 @@
 package cn.org.autumn.modules.oauth.oauth2;
 
+import static javax.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
+import static javax.servlet.http.HttpServletResponse.SC_UNAUTHORIZED;
+import static org.apache.oltu.oauth2.common.OAuth.*;
+import static org.apache.oltu.oauth2.common.OAuth.HttpMethod.POST;
+import static org.apache.oltu.oauth2.common.error.OAuthError.OAUTH_ERROR_URI;
+import static org.apache.oltu.oauth2.common.error.OAuthError.TokenResponse.*;
+
 import cn.org.autumn.modules.oauth.entity.ClientDetailsEntity;
 import cn.org.autumn.modules.oauth.entity.TokenStoreEntity;
 import cn.org.autumn.modules.oauth.service.ClientDetailsService;
@@ -24,6 +31,11 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.servers.Server;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.tags.Tags;
+import java.net.*;
+import java.util.Enumeration;
+import java.util.Map;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.apache.oltu.oauth2.as.issuer.MD5Generator;
@@ -55,19 +67,6 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.ModelAndView;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.net.*;
-import java.util.Enumeration;
-import java.util.Map;
-
-import static javax.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
-import static javax.servlet.http.HttpServletResponse.SC_UNAUTHORIZED;
-import static org.apache.oltu.oauth2.common.OAuth.*;
-import static org.apache.oltu.oauth2.common.OAuth.HttpMethod.POST;
-import static org.apache.oltu.oauth2.common.error.OAuthError.OAUTH_ERROR_URI;
-import static org.apache.oltu.oauth2.common.error.OAuthError.TokenResponse.*;
 
 @Slf4j
 @Controller

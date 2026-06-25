@@ -3,19 +3,22 @@ package cn.org.autumn.modules.sys.controller;
 import cn.org.autumn.annotation.SkipInterceptor;
 import cn.org.autumn.modules.client.entity.WebAuthenticationEntity;
 import cn.org.autumn.modules.client.service.WebAuthenticationService;
+import cn.org.autumn.modules.spm.interceptor.SpmInterceptor;
 import cn.org.autumn.modules.spm.service.SuperPositionModelService;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.modules.sys.service.SysLogService;
 import cn.org.autumn.modules.sys.service.SysUserRoleService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
-import cn.org.autumn.modules.spm.interceptor.SpmInterceptor;
+import cn.org.autumn.modules.usr.interceptor.AuthorizationInterceptor;
 import cn.org.autumn.modules.wall.service.IpWhiteService;
 import cn.org.autumn.modules.wall.site.WallDefault;
-import cn.org.autumn.modules.usr.interceptor.AuthorizationInterceptor;
 import cn.org.autumn.site.PageFactory;
 import cn.org.autumn.site.PluginFactory;
-import cn.org.autumn.utils.WebPathUtils;
 import cn.org.autumn.thread.TagTaskExecutor;
+import cn.org.autumn.utils.WebPathUtils;
+import java.util.*;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.web.servlet.error.ErrorController;
@@ -23,10 +26,6 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.util.*;
 
 @Controller
 public class SysPageController implements ErrorController {
@@ -335,6 +334,15 @@ public class SysPageController implements ErrorController {
         if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
             return "404";
         return "database";
+    }
+
+    @RequestMapping({"dbmanage.html"})
+    @SkipInterceptor
+    public String dbmanage(HttpServletRequest servlet) {
+        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
+            return "404";
+        ipWhiteService.check(servlet, getClass(), "dbmanage");
+        return "dbmanage";
     }
 
     @RequestMapping({"loopjob.html"})

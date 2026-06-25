@@ -9,13 +9,12 @@ import cn.org.autumn.thread.TagTaskExecutor;
 import cn.org.autumn.thread.TagValue;
 import cn.org.autumn.utils.PageUtils;
 import com.baomidou.mybatisplus.mapper.EntityWrapper;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 /**
  * 定时备份策略调度。
@@ -57,7 +56,7 @@ public class DatabaseBackupStrategyService extends ModuleService<DatabaseBackupS
     public void onOneHour() {
         if (databaseBackupExecutionGuard.isExcluded()) {
             if (log.isDebugEnabled()) {
-                log.debug("跳过每小时备份策略调度（当前节点已 autumn.backup.exclude=true 或命中 exclude-hosts/exclude-addresses）");
+                log.debug("Skipping hourly backup strategy schedule (node has autumn.backup.exclude=true or matches exclude-hosts/exclude-addresses)");
             }
             return;
         }
@@ -83,7 +82,7 @@ public class DatabaseBackupStrategyService extends ModuleService<DatabaseBackupS
     public void onOneDay() {
         if (databaseBackupExecutionGuard.isExcluded()) {
             if (log.isDebugEnabled()) {
-                log.debug("跳过每日备份策略调度（当前节点已 autumn.backup.exclude=true 或命中 exclude-hosts/exclude-addresses）");
+                log.debug("Skipping daily backup strategy schedule (node has autumn.backup.exclude=true or matches exclude-hosts/exclude-addresses)");
             }
             return;
         }

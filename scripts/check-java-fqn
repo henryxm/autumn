@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# check-java-fqn — CI 门禁：Java 禁止不必要的全限定类名
+# 规范: docs/AI_CODE_STYLE.md §7
+set -u
+ROOT="${1:-.}"
+ROOT="$(cd "${ROOT}" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+export AUTUMN_FQN_FAIL_ON_HIT=1
+export AUTUMN_FQN_SKIP_GEN="${AUTUMN_FQN_SKIP_GEN:-1}"
+exec python3 "${SCRIPT_DIR}/check_java_fqn.py" "${ROOT}"

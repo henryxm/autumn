@@ -2,12 +2,10 @@ package cn.org.autumn.site;
 
 import cn.org.autumn.config.InitHandler;
 import cn.org.autumn.table.TableInit;
+import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
-
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
-
-import java.util.List;
 
 @Component
 public class InitFactory extends Factory {

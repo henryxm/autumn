@@ -1,17 +1,16 @@
 package cn.org.autumn.table.relational.support.ddl;
 
 import cn.org.autumn.table.annotation.IndexTypeEnum;
-import cn.org.autumn.table.relational.RelationalSchemaSql;
 import cn.org.autumn.table.data.ColumnInfo;
 import cn.org.autumn.table.data.IndexInfo;
 import cn.org.autumn.table.data.TableInfo;
 import cn.org.autumn.table.data.UniqueKeyInfo;
-import org.apache.commons.lang.StringUtils;
-
+import cn.org.autumn.table.relational.RelationalSchemaSql;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import org.apache.commons.lang.StringUtils;
 
 /**
  * Oracle 12c+ 注解建表 DDL（标识符双引号，保留大小写）。

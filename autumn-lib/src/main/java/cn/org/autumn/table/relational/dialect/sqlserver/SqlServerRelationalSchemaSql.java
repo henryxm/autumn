@@ -1,15 +1,14 @@
 package cn.org.autumn.table.relational.dialect.sqlserver;
 
-import cn.org.autumn.table.relational.RelationalSchemaSql;
-import cn.org.autumn.table.relational.support.SchemaSqlNoops;
-import cn.org.autumn.table.relational.support.ddl.SqlServerJdbcDdlGenerator;
 import cn.org.autumn.table.data.ColumnInfo;
 import cn.org.autumn.table.data.IndexInfo;
 import cn.org.autumn.table.data.TableInfo;
-import org.apache.commons.lang.StringUtils;
-
+import cn.org.autumn.table.relational.RelationalSchemaSql;
+import cn.org.autumn.table.relational.support.SchemaSqlNoops;
+import cn.org.autumn.table.relational.support.ddl.SqlServerJdbcDdlGenerator;
 import java.util.List;
 import java.util.Map;
+import org.apache.commons.lang.StringUtils;
 
 /**
  * Microsoft SQL Server：{@code INFORMATION_SCHEMA} + 当前架构；DDL 由 {@link SqlServerJdbcDdlGenerator} 生成。

@@ -3,15 +3,14 @@ package cn.org.autumn.modules.bot.dao;
 import cn.org.autumn.modules.bot.dao.sql.RobotTokenDaoSql;
 import cn.org.autumn.modules.bot.entity.RobotTokenEntity;
 import com.baomidou.mybatisplus.mapper.BaseMapper;
+import java.util.Date;
+import java.util.List;
+import org.apache.ibatis.annotations.DeleteProvider;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.DeleteProvider;
 import org.apache.ibatis.annotations.SelectProvider;
 import org.apache.ibatis.annotations.UpdateProvider;
 import org.springframework.stereotype.Repository;
-
-import java.util.Date;
-import java.util.List;
 
 @Mapper
 @Repository

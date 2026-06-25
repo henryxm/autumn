@@ -1,12 +1,11 @@
 package cn.org.autumn.model;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.io.Serializable;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
-import java.io.Serializable;
 
 /**
  * Encrypt请求Body类型信息

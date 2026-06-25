@@ -1,15 +1,14 @@
 package cn.org.autumn.table.relational.dialect.mysql;
 
 import cn.org.autumn.table.annotation.IndexTypeEnum;
-import cn.org.autumn.table.relational.RelationalSchemaSql;
 import cn.org.autumn.table.data.ColumnInfo;
 import cn.org.autumn.table.data.IndexInfo;
 import cn.org.autumn.table.data.TableInfo;
-import org.apache.commons.lang.StringUtils;
-
+import cn.org.autumn.table.relational.RelationalSchemaSql;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import org.apache.commons.lang.StringUtils;
 
 /**
  * 内嵌 H2 + {@code MODE=MySQL}：剥离 MySQL 表级 DDL、索引 {@code USING}、前缀长度等 H2 不支持的语法。

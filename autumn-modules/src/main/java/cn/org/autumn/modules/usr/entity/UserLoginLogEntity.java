@@ -1,13 +1,12 @@
 package cn.org.autumn.modules.usr.entity;
 
-import com.baomidou.mybatisplus.annotations.*;
 import cn.org.autumn.table.annotation.*;
 import cn.org.autumn.table.data.DataType;
-import lombok.Getter;
-import lombok.Setter;
-
+import com.baomidou.mybatisplus.annotations.*;
 import java.io.Serializable;
 import java.util.Date;
+import lombok.Getter;
+import lombok.Setter;
 
 @Getter
 @Setter

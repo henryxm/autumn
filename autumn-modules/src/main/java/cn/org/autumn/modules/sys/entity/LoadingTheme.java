@@ -3,9 +3,8 @@ package cn.org.autumn.modules.sys.entity;
 import cn.org.autumn.annotation.ConfigField;
 import cn.org.autumn.annotation.ConfigParam;
 import cn.org.autumn.config.InputType;
-import org.apache.commons.lang.StringUtils;
-
 import java.io.Serializable;
+import org.apache.commons.lang.StringUtils;
 
 @ConfigParam(paramKey = "LOADING_THEME", category = LoadingTheme.config, name = "加载页主题", description = "配置加载页的品牌、主色和图标")
 public class LoadingTheme implements Serializable {

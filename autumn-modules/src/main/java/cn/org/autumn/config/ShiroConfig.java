@@ -1,16 +1,18 @@
 package cn.org.autumn.config;
 
+import cn.org.autumn.install.InstallMode;
 import cn.org.autumn.modules.spm.filter.SpmFilter;
 import cn.org.autumn.modules.sys.service.SysConfigService;
-import cn.org.autumn.install.InstallMode;
 import cn.org.autumn.modules.sys.shiro.ClientIpSessionFactory;
 import cn.org.autumn.modules.sys.shiro.ForceLogoutRememberMeManager;
 import cn.org.autumn.modules.sys.shiro.RedisShiroSessionDAO;
 import cn.org.autumn.modules.sys.shiro.UserRealm;
+import java.util.*;
+import javax.servlet.Filter;
 import org.apache.commons.lang.StringUtils;
 import org.apache.shiro.SecurityUtils;
-import org.apache.shiro.mgt.SecurityManager;
 import org.apache.shiro.mgt.RememberMeManager;
+import org.apache.shiro.mgt.SecurityManager;
 import org.apache.shiro.session.mgt.SessionManager;
 import org.apache.shiro.spring.LifecycleBeanPostProcessor;
 import org.apache.shiro.spring.security.interceptor.AuthorizationAttributeSourceAdvisor;
@@ -27,9 +29,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.DependsOn;
 import org.springframework.core.env.Environment;
 import org.springframework.data.redis.core.RedisTemplate;
-
-import javax.servlet.Filter;
-import java.util.*;
 
 @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
 @Configuration

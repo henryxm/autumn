@@ -1,15 +1,22 @@
 package cn.org.autumn.utils;
 
-import lombok.extern.slf4j.Slf4j;
-
-import javax.servlet.http.HttpServletRequest;
+import cn.org.autumn.database.CrudGuard;
+import cn.org.autumn.exception.AException;
+import cn.org.autumn.model.Error;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
+import javax.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpMediaTypeNotAcceptableException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 
 /**
  * 异常工具类
@@ -78,19 +85,19 @@ public class ExceptionUtils {
      */
     public static void logDetailedException(String message, Exception e, HttpServletRequest request) {
         if (log.isDebugEnabled()) {
-            log.error("=== 异常详细信息 ===");
-            log.error("消息: {}", message);
-            log.error("异常类型: {}", e.getClass().getName());
-            log.error("异常消息: {}", e.getMessage());
+            log.error("=== Exception details ===");
+            log.error("Message: {}", message);
+            log.error("Exception type: {}", e.getClass().getName());
+            log.error("Exception message: {}", e.getMessage());
 
             if (request != null) {
                 Map<String, Object> requestInfo = getRequestInfo(request);
-                log.error("请求信息: {}", requestInfo);
+                log.error("Request info: {}", requestInfo);
             }
 
-            log.error("堆栈跟踪:");
+            log.error("Stack trace:");
             log.error(getStackTrace(e));
-            log.error("=== 异常详细信息结束 ===");
+            log.error("=== End exception details ===");
         }
     }
 
@@ -98,11 +105,11 @@ public class ExceptionUtils {
      * 判断是否为常见的HTTP异常
      */
     public static boolean isCommonHttpException(Exception e) {
-        return e instanceof org.springframework.web.HttpMediaTypeNotAcceptableException ||
-                e instanceof org.springframework.web.HttpRequestMethodNotSupportedException ||
-                e instanceof org.springframework.http.converter.HttpMessageNotReadableException ||
-                e instanceof org.springframework.web.HttpMediaTypeNotSupportedException ||
-                e instanceof org.springframework.web.bind.MissingServletRequestParameterException;
+        return e instanceof HttpMediaTypeNotAcceptableException ||
+                e instanceof HttpRequestMethodNotSupportedException ||
+                e instanceof HttpMessageNotReadableException ||
+                e instanceof HttpMediaTypeNotSupportedException ||
+                e instanceof MissingServletRequestParameterException;
     }
 
     /**
@@ -209,6 +216,35 @@ public class ExceptionUtils {
         }
         String message = e.getMessage();
         return message != null && message.contains("Circular view path");
+    }
+
+    /**
+     * 在异常链中查找 {@link AException}（含 MyBatis {@code PersistenceException} 包装场景）。
+     */
+    public static AException findAException(Throwable throwable) {
+        if (throwable == null) {
+            return null;
+        }
+        Throwable current = throwable;
+        while (current != null) {
+            if (current instanceof AException) {
+                return (AException) current;
+            }
+            Throwable next = current.getCause();
+            if (next == current) {
+                break;
+            }
+            current = next;
+        }
+        return null;
+    }
+
+    /**
+     * 是否为数据库只读守卫拦截（{@link Error#DATABASE_READ_ONLY}，含 MyBatis 包装）。
+     * 委托 {@link cn.org.autumn.database.CrudGuard#blocked(Throwable)}。
+     */
+    public static boolean isDatabaseReadOnlyException(Throwable throwable) {
+        return CrudGuard.blocked(throwable);
     }
 
     /**

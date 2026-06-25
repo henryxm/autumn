@@ -1,9 +1,8 @@
 package cn.org.autumn.modules.wall.entity;
 
+import cn.org.autumn.table.annotation.*;
 import cn.org.autumn.table.data.DataType;
 import com.baomidou.mybatisplus.annotations.*;
-import cn.org.autumn.table.annotation.*;
-
 import java.io.Serializable;
 import java.util.Date;
 

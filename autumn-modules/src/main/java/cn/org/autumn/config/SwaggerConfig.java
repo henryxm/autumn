@@ -1,6 +1,9 @@
 package cn.org.autumn.config;
 
 import cn.org.autumn.site.SwaggerFactory;
+import java.lang.reflect.Field;
+import java.util.List;
+import java.util.stream.Collectors;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.BeanPostProcessor;
@@ -13,10 +16,6 @@ import springfox.documentation.oas.annotations.EnableOpenApi;
 import springfox.documentation.spring.web.plugins.Docket;
 import springfox.documentation.spring.web.plugins.WebFluxRequestHandlerProvider;
 import springfox.documentation.spring.web.plugins.WebMvcRequestHandlerProvider;
-
-import java.lang.reflect.Field;
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Configuration
 @EnableOpenApi

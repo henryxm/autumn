@@ -1,5 +1,8 @@
 package cn.org.autumn.modules.lan.service;
 
+import static cn.org.autumn.modules.sys.service.SysConfigService.*;
+
+import cn.org.autumn.config.ApplicationInitializationProgress;
 import cn.org.autumn.config.CategoryHandler;
 import cn.org.autumn.modules.lan.entity.LanguageEntity;
 import cn.org.autumn.modules.lan.entity.LanguageMetadata;
@@ -15,21 +18,17 @@ import cn.org.autumn.thread.TagTaskExecutor;
 import cn.org.autumn.thread.TagValue;
 import com.google.gson.Gson;
 import io.netty.util.internal.StringUtil;
-import jodd.net.URLDecoder;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.StringUtils;
-import cn.org.autumn.config.ApplicationInitializationProgress;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Lazy;
-import org.springframework.core.annotation.Order;
-import org.springframework.core.Ordered;
-import org.springframework.stereotype.Service;
-
 import java.lang.reflect.Field;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-
-import static cn.org.autumn.modules.sys.service.SysConfigService.*;
+import jodd.net.URLDecoder;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
+import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
@@ -402,6 +401,7 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
                 {"sys_string_operations_monitoring", "运维监控", "Operations monitoring"},
                 {"sys_string_cache_management", "缓存管理", "Cache management"},
                 {"sys_string_database_management", "数据库备份", "Database backup"},
+                {"sys_string_db_manage", "数据库管理", "Database management"},
                 {"sys_string_queue_management", "队列管理", "Queue management"},
                 {"sys_string_loopjob_management", "定时任务", "Scheduled tasks"},
                 {"sys_string_loginlog_management", "登录日志", "Login log"},
@@ -608,7 +608,7 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
                 postRefresh();
                 long end = System.currentTimeMillis();
                 if (log.isDebugEnabled())
-                    log.debug("刷新语言:{}条, 耗时:{}秒", count, (end - start) / 1000);
+                    log.debug("Refreshed languages:{} entries, elapsed:{}s", count, (end - start) / 1000);
             }
         });
     }

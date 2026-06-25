@@ -1,6 +1,8 @@
 package cn.org.autumn.modules;
 
 import cn.org.autumn.utils.HttpClientUtils;
+import java.util.HashMap;
+import java.util.Map;
 import org.apache.commons.lang.StringUtils;
 import org.apache.oltu.oauth2.client.OAuthClient;
 import org.apache.oltu.oauth2.client.URLConnectionClient;
@@ -11,9 +13,6 @@ import org.apache.oltu.oauth2.common.OAuth;
 import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
-
-import java.util.HashMap;
-import java.util.Map;
 
 public class Test {
 

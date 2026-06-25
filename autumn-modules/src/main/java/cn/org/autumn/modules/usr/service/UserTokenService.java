@@ -6,14 +6,13 @@ import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.usr.dao.UserTokenDao;
 import cn.org.autumn.modules.usr.entity.UserTokenEntity;
 import com.alibaba.fastjson.JSON;
-import org.apache.commons.lang.StringUtils;
-import org.apache.oltu.oauth2.common.OAuth;
-import org.springframework.stereotype.Service;
-
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.apache.commons.lang.StringUtils;
+import org.apache.oltu.oauth2.common.OAuth;
+import org.springframework.stereotype.Service;
 
 @Service
 public class UserTokenService extends ModuleService<UserTokenDao, UserTokenEntity> implements AccountHandler {

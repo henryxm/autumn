@@ -6,14 +6,13 @@ import cn.org.autumn.model.Parameterized;
 import cn.org.autumn.model.QueueMessage;
 import cn.org.autumn.table.annotation.Table;
 import com.baomidou.mybatisplus.mapper.BaseMapper;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 
 @Slf4j
 public abstract class BaseQueueService<M extends BaseMapper<T>, T> extends AutoIdService<M, T> implements Parameterized {
@@ -25,7 +24,7 @@ public abstract class BaseQueueService<M extends BaseMapper<T>, T> extends AutoI
         try {
             return type(1, Table.class);
         } catch (Exception e) {
-            log.error("解析错误:{}", e.getMessage());
+            log.error("Parse error: {}", e.getMessage());
             return DefaultEntity.class;
         }
     }

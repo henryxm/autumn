@@ -2,22 +2,21 @@ package cn.org.autumn.table.platform;
 
 import cn.org.autumn.database.DatabaseHolder;
 import cn.org.autumn.database.DatabaseType;
+import cn.org.autumn.table.dao.postgresql.PostgresRelationalTableOperations;
 import cn.org.autumn.table.data.IndexInfo;
 import cn.org.autumn.table.data.TableInfo;
 import cn.org.autumn.table.data.UniqueKeyInfo;
-import cn.org.autumn.table.relational.model.ColumnMeta;
-import cn.org.autumn.table.relational.model.TableMeta;
 import cn.org.autumn.table.platform.jdbc.DoubleQuotedJdbcRelationalTableOperations;
 import cn.org.autumn.table.platform.jdbc.OracleJdbcRelationalTableOperations;
 import cn.org.autumn.table.platform.jdbc.SqlServerJdbcRelationalTableOperations;
 import cn.org.autumn.table.platform.mysql.MysqlRelationalTableOperations;
-import cn.org.autumn.table.dao.postgresql.PostgresRelationalTableOperations;
+import cn.org.autumn.table.relational.model.ColumnMeta;
+import cn.org.autumn.table.relational.model.TableMeta;
+import java.util.List;
+import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
-
-import java.util.List;
-import java.util.Map;
 
 /**
  * 按 {@link DatabaseHolder#getType()} 路由：PostgreSQL、Kingbase（PG 兼容走 PostgreSQL 实现）、Oracle、SQL Server、

@@ -2,11 +2,13 @@ package cn.org.autumn.bean;
 
 import cn.org.autumn.annotation.EnvAware;
 import cn.org.autumn.config.EnvHandler;
+import lombok.Getter;
+import lombok.Setter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import javax.annotation.PostConstruct;
-
+@Getter
+@Setter
 @Component
 public class EnvBean implements EnvHandler {
 
@@ -46,89 +48,11 @@ public class EnvBean implements EnvHandler {
     @EnvAware("node.tag")
     String nodeTag;
 
-    /** 与 {@code autumn.table.init} 一致；勿用 {@link EnvAware}+{@code Config#getEnv}，否则读不到 Spring 配置。 */
+    /**
+     * 与 {@code autumn.table.init} 一致；勿用 {@link EnvAware}+{@code Config#getEnv}，否则读不到 Spring 配置。
+     */
     @Value("${autumn.table.init:true}")
     boolean tableInit = true;
-
-    public String getClientId() {
-        return clientId;
-    }
-
-    public void setClientId(String clientId) {
-        this.clientId = clientId;
-    }
-
-    public String getClientSecret() {
-        return clientSecret;
-    }
-
-    public void setClientSecret(String clientSecret) {
-        this.clientSecret = clientSecret;
-    }
-
-    public String getLoggerLevel() {
-        return loggerLevel;
-    }
-
-    public void setLoggerLevel(String loggerLevel) {
-        this.loggerLevel = loggerLevel;
-    }
-
-    public String getSupperPassword() {
-        return supperPassword;
-    }
-
-    public void setSupperPassword(String supperPassword) {
-        this.supperPassword = supperPassword;
-    }
-
-    public String getClusterNamespace() {
-        return clusterNamespace;
-    }
-
-    public void setClusterNamespace(String clusterNamespace) {
-        this.clusterNamespace = clusterNamespace;
-    }
-
-    public String getSiteDomain() {
-        return siteDomain;
-    }
-
-    public void setSiteDomain(String siteDomain) {
-        this.siteDomain = siteDomain;
-    }
-
-    public String getSystemUsername() {
-        return systemUsername;
-    }
-
-    public void setSystemUsername(String systemUsername) {
-        this.systemUsername = systemUsername;
-    }
-
-    public String getSystemPassword() {
-        return systemPassword;
-    }
-
-    public void setSystemPassword(String systemPassword) {
-        this.systemPassword = systemPassword;
-    }
-
-    public boolean isSiteSsl() {
-        return siteSsl;
-    }
-
-    public void setSiteSsl(boolean siteSsl) {
-        this.siteSsl = siteSsl;
-    }
-
-    public String getRootDomain() {
-        return rootDomain;
-    }
-
-    public void setRootDomain(String rootDomain) {
-        this.rootDomain = rootDomain;
-    }
 
     public String getNodeName() {
         if (null == nodeName)
@@ -136,25 +60,9 @@ public class EnvBean implements EnvHandler {
         return nodeName;
     }
 
-    public void setNodeName(String nodeName) {
-        this.nodeName = nodeName;
-    }
-
     public String getNodeTag() {
         if (null == nodeTag)
             nodeTag = "Tag";
         return nodeTag;
-    }
-
-    public void setNodeTag(String nodeTag) {
-        this.nodeTag = nodeTag;
-    }
-
-    public boolean isTableInit() {
-        return tableInit;
-    }
-
-    public void setTableInit(boolean tableInit) {
-        this.tableInit = tableInit;
     }
 }

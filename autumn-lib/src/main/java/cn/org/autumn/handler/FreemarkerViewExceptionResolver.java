@@ -5,6 +5,10 @@ import cn.org.autumn.model.Error;
 import cn.org.autumn.model.Response;
 import com.alibaba.fastjson.JSON;
 import freemarker.template.TemplateException;
+import java.io.IOException;
+import java.net.URLEncoder;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,11 +16,6 @@ import org.springframework.core.Ordered;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.handler.AbstractHandlerExceptionResolver;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import java.net.URLEncoder;
 
 /**
  * 统一处理 FreeMarker 视图渲染异常，避免将堆栈直接暴露到浏览器。

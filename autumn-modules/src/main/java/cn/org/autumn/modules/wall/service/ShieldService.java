@@ -3,15 +3,9 @@ package cn.org.autumn.modules.wall.service;
 import cn.org.autumn.base.ModuleService;
 import cn.org.autumn.config.ClearHandler;
 import cn.org.autumn.modules.job.task.LoopJob;
-import cn.org.autumn.modules.wall.site.WallSite;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
 import cn.org.autumn.modules.wall.dao.ShieldDao;
 import cn.org.autumn.modules.wall.entity.ShieldEntity;
-
+import cn.org.autumn.modules.wall.site.WallSite;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -19,6 +13,11 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
@@ -64,7 +63,7 @@ public class ShieldService extends ModuleService<ShieldDao, ShieldEntity> implem
     public boolean shield(String uri, String ip) {
         try {
             if (null == ip) {
-                log.error("空IP地址");
+                log.error("Empty IP address");
                 return false;
             }
             if (null == uris)
@@ -78,16 +77,16 @@ public class ShieldService extends ModuleService<ShieldDao, ShieldEntity> implem
             if (uris.contains(uri)) {
                 if (!ips.contains(ip)) {
                     if (print)
-                        log.debug("防御拦截:{}", ip);
+                        log.debug("Defense blocked:{}", ip);
                     return true;
                 } else {
                     if (print)
-                        log.debug("防御放行:{}", ip);
+                        log.debug("Defense allowed:{}", ip);
                     return false;
                 }
             }
         } catch (Exception e) {
-            log.error("防御护盾:{}", e.getMessage());
+            log.error("Defense shield error:{}", e.getMessage());
         }
         return false;
     }

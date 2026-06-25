@@ -1,16 +1,15 @@
 package cn.org.autumn.modules.db.service;
 
 import cn.org.autumn.site.InitFactory;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.StringUtils;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
-
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang.StringUtils;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
 /**
  * 集群下指定<strong>不参与备份</strong>的节点。
@@ -76,7 +75,7 @@ public class DatabaseBackupExecutionGuard implements InitFactory.Init {
             boolean hit = matchesExclude(id);
             cachedExcluded = hit;
             if (hit && log.isDebugEnabled()) {
-                log.debug("当前节点命中备份排除: identities={}", id.describe());
+                log.debug("Current node matched backup exclusion: identities={}", id.describe());
             }
             return hit;
         }
@@ -194,7 +193,7 @@ public class DatabaseBackupExecutionGuard implements InitFactory.Init {
                     addNonBlank(names, local.getCanonicalHostName());
                 }
             } catch (Exception e) {
-                log.debug("解析本机 InetAddress 失败: {}", e.getMessage());
+                log.debug("Failed to resolve local InetAddress: {}", e.getMessage());
             }
             addNonBlank(names, safeEnv("HOSTNAME"));
             addNonBlank(names, safeEnv("COMPUTERNAME"));

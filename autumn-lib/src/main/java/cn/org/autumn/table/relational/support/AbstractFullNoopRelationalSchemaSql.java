@@ -1,10 +1,9 @@
 package cn.org.autumn.table.relational.support;
 
-import cn.org.autumn.table.relational.RelationalSchemaSql;
 import cn.org.autumn.table.data.ColumnInfo;
 import cn.org.autumn.table.data.IndexInfo;
 import cn.org.autumn.table.data.TableInfo;
-
+import cn.org.autumn.table.relational.RelationalSchemaSql;
 import java.util.List;
 import java.util.Map;
 

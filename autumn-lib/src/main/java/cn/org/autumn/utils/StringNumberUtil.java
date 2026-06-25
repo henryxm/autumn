@@ -1,9 +1,8 @@
 package cn.org.autumn.utils;
 
-import org.apache.commons.lang.StringUtils;
-
 import java.math.BigDecimal;
 import java.util.regex.Pattern;
+import org.apache.commons.lang.StringUtils;
 
 /**
  * 字符串数字工具类

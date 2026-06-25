@@ -6,9 +6,8 @@ import cn.org.autumn.utils.Snow;
 import cn.org.autumn.utils.Uuid;
 import com.baomidou.mybatisplus.mapper.BaseMapper;
 import com.baomidou.mybatisplus.mapper.Wrapper;
-import org.apache.commons.lang.StringUtils;
-
 import java.util.List;
+import org.apache.commons.lang.StringUtils;
 
 /**
  * 第二主键（{@code uuid}）自动填充基类：在 CRUD 写路径上，若实体实现了标记接口且 {@code uuid} 尚未赋值，则自动生成。

@@ -1,11 +1,9 @@
 package cn.org.autumn.modules.install;
 
 import cn.org.autumn.config.JvmRestartHandler;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.lang.reflect.Field;
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * MyBatis-Plus 2.x 在 JVM 内保留多处 static 缓存；安装向导首启使用 H2（{@code MODE=MySQL}）时，
@@ -16,10 +14,8 @@ import java.util.Map;
  * 由 {@link MybatisPlusInstallJvmRestartCleaner} 实现 {@link JvmRestartHandler}，
  * 经 {@link cn.org.autumn.install.InstallJvmRestartCleanupCoordinator} 在重启流程中调用；勿在业务代码中随意调用 {@link #clearForProcessRestart()}。
  */
+@Slf4j
 public final class MybatisPlusJvmCachesReset {
-
-    private static final Logger log = LoggerFactory.getLogger(MybatisPlusJvmCachesReset.class);
-
     private MybatisPlusJvmCachesReset() {
     }
 
@@ -42,7 +38,7 @@ public final class MybatisPlusJvmCachesReset {
                 ((Map<?, ?>) v).clear();
             }
         } catch (Throwable t) {
-            log.warn("无法清空 MP 缓存 {}#{}（可忽略若未使用 MyBatis-Plus）: {}", className, fieldName, t.toString());
+            log.warn("Unable to clear MP cache {}#{} (safe to ignore if MyBatis-Plus is unused): {}", className, fieldName, t.toString());
         }
     }
 
@@ -53,7 +49,7 @@ public final class MybatisPlusJvmCachesReset {
             f.setAccessible(true);
             f.set(null, null);
         } catch (Throwable t) {
-            log.warn("无法重置 MP 静态字段 {}#{}: {}", className, fieldName, t.toString());
+            log.warn("Unable to reset MP static field {}#{}: {}", className, fieldName, t.toString());
         }
     }
 }

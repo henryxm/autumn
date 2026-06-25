@@ -2,9 +2,8 @@ package cn.org.autumn.modules.install;
 
 import cn.org.autumn.database.DatabaseType;
 import cn.org.autumn.modules.install.dto.InstallConnectionForm;
-import org.apache.commons.lang.StringUtils;
-
 import java.util.Locale;
+import org.apache.commons.lang.StringUtils;
 
 /**
  * 按 {@link DatabaseType} 推断驱动类与 JDBC URL（安装向导「简易填写」模式）。

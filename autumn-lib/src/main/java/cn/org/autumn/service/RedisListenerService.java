@@ -5,6 +5,11 @@ import cn.org.autumn.redis.resilience.RedisResilience;
 import cn.org.autumn.utils.RedisUtils;
 import cn.org.autumn.utils.Uuid;
 import com.google.gson.Gson;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.data.redis.RedisProperties;
@@ -14,17 +19,11 @@ import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceClientConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.RedisCallback;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.stereotype.Service;
-
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
 
 /**
  * Redis Pub/Sub 消息服务实现
@@ -103,20 +102,20 @@ public class RedisListenerService {
         if (!ping()) {
             retryCount++;
             if (retryCount > MAX_RETRY_COUNT) {
-                log.error("Redis连接测试失败，已重试{}次，放弃初始化Redis Pub/Sub服务", MAX_RETRY_COUNT);
+                log.error("Redis connection test failed after {} retries, abandoning Pub/Sub init", MAX_RETRY_COUNT);
                 if (redisResilience != null) {
                     redisResilience.recordFailure();
                 }
                 return;
             }
-            log.warn("Redis连接测试失败，延迟5秒后重试初始化Redis Pub/Sub服务（第{}/{}次）", retryCount, MAX_RETRY_COUNT);
+            log.warn("Redis connection test failed, retrying Pub/Sub init in 5s ({}/{})", retryCount, MAX_RETRY_COUNT);
             asyncTaskExecutor.execute(() -> {
                 try {
                     Thread.sleep(10000);
                     initListener();
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
-                    log.warn("延迟重试被中断");
+                    log.warn("Delayed retry interrupted");
                 }
             });
             return;
@@ -127,15 +126,15 @@ public class RedisListenerService {
             // 创建专用的 Lettuce 连接工厂（Pub/Sub更稳定）
             RedisConnectionFactory connectionFactory = create();
             if (connectionFactory == null) {
-                log.warn("无法创建Lettuce连接工厂，尝试使用默认连接工厂");
+                log.warn("Cannot create Lettuce connection factory, trying default");
                 connectionFactory = redisTemplate.getConnectionFactory();
                 if (connectionFactory == null) {
-                    log.warn("Redis连接工厂为空，无法启动Redis Pub/Sub服务");
+                    log.warn("Redis connection factory null, cannot start Pub/Sub");
                     return;
                 }
             }
             if (log.isDebugEnabled())
-                log.debug("开始初始化Redis Pub/Sub服务，连接工厂类型: {}", connectionFactory.getClass().getName());
+                log.debug("Initializing Redis Pub/Sub, connection factory type: {}", connectionFactory.getClass().getName());
             // 创建消息监听容器
             messageListenerContainer = new RedisMessageListenerContainer();
             messageListenerContainer.setConnectionFactory(connectionFactory);
@@ -165,7 +164,7 @@ public class RedisListenerService {
                 redisResilience.recordSuccess();
             }
         } catch (Exception e) {
-            log.error("初始化Redis Pub/Sub服务失败: {}", e.getMessage(), e);
+            log.error("Redis Pub/Sub init failed: {}", e.getMessage(), e);
             if (redisResilience != null && RedisResilience.isInfrastructureFailure(e)) {
                 redisResilience.recordFailure();
             }
@@ -191,7 +190,7 @@ public class RedisListenerService {
             factory.afterPropertiesSet();
             return factory;
         } catch (Exception e) {
-            log.error("创建失败: {}", e.getMessage());
+            log.error("Creation failed: {}", e.getMessage());
             return null;
         }
     }
@@ -212,13 +211,13 @@ public class RedisListenerService {
                 String result = connection.ping();
                 if ("PONG".equals(result)) {
                     if (log.isDebugEnabled())
-                        log.debug("Redis连接测试成功");
+                        log.debug("Redis connection test succeeded");
                     return true;
                 }
             }
             return false;
         } catch (Exception e) {
-            log.warn("Redis连接测试失败: {}", e.getMessage());
+            log.warn("Redis connection test failed: {}", e.getMessage());
             return false;
         }
     }
@@ -230,7 +229,7 @@ public class RedisListenerService {
             }
             if (!initialized) {
                 if (log.isDebugEnabled())
-                    log.debug("Redis Pub/Sub服务未初始化，无法订阅频道: {}", channel);
+                    log.debug("Redis Pub/Sub not initialized, cannot subscribe channel: {}", channel);
                 return false;
             }
             // 添加消息监听器
@@ -238,18 +237,18 @@ public class RedisListenerService {
                 try {
                     String messageBody = new String(message.getBody());
                     if (log.isDebugEnabled())
-                        log.debug("订阅接收:{}", messageBody);
+                        log.debug("Subscription received: {}", messageBody);
                     handler.handle(channel, messageBody);
                 } catch (Exception e) {
-                    log.error("处理频道 {} 的消息失败: {}", channel, e.getMessage(), e);
+                    log.error("Failed to handle message on channel {}: {}", channel, e.getMessage(), e);
                 }
             }, new ChannelTopic(channel));
             subscribedChannels.put(channel, handler);
             if (log.isDebugEnabled())
-                log.debug("订阅频道: {}", channel);
+                log.debug("Subscribed channel: {}", channel);
             return true;
         } catch (Exception e) {
-            log.error("订阅频道 {} 失败: {}", channel, e.getMessage(), e);
+            log.error("Failed to subscribe channel {}: {}", channel, e.getMessage(), e);
             return false;
         }
     }
@@ -260,7 +259,7 @@ public class RedisListenerService {
         }
         if (!subscribedChannels.containsKey(channel)) {
             if (log.isDebugEnabled())
-                log.debug("频道 {} 未订阅", channel);
+                log.debug("Channel {} not subscribed", channel);
             return false;
         }
         try {
@@ -269,10 +268,10 @@ public class RedisListenerService {
             // 如果需要完全移除，需要重新创建容器或使用其他方式
             subscribedChannels.remove(channel);
             if (log.isDebugEnabled())
-                log.debug("取消订阅: {}", channel);
+                log.debug("Unsubscribed: {}", channel);
             return true;
         } catch (Exception e) {
-            log.error("取消订阅:{}, 失败:{}", channel, e.getMessage());
+            log.error("Unsubscribe failed: {}, error: {}", channel, e.getMessage());
             return false;
         }
     }
@@ -283,7 +282,7 @@ public class RedisListenerService {
         }
         if (!initialized) {
             if (log.isDebugEnabled())
-                log.debug("Redis未启用，无法发布消息到频道: {}", channel);
+                log.debug("Redis disabled, cannot publish to channel: {}", channel);
             return false;
         }
         try {
@@ -294,11 +293,11 @@ public class RedisListenerService {
                 return 1L;
             });
             if (log.isDebugEnabled()) {
-                log.debug("发布消息:{}, 内容:{}", channel, messageJson);
+                log.debug("Published message: {}, content: {}", channel, messageJson);
             }
             return true;
         } catch (Exception e) {
-            log.error("发布消息:{}, 失败:{}", channel, e.getMessage(), e);
+            log.error("Publish message failed: {}, error: {}", channel, e.getMessage(), e);
             return false;
         }
     }
@@ -321,7 +320,7 @@ public class RedisListenerService {
                 messageListenerContainer.destroy();
             } catch (Exception e) {
                 if (log.isDebugEnabled())
-                    log.debug("清理Redis Pub/Sub服务资源时出错: {}", e.getMessage());
+                    log.debug("Error cleaning up Redis Pub/Sub resources: {}", e.getMessage());
             }
             messageListenerContainer = null;
         }

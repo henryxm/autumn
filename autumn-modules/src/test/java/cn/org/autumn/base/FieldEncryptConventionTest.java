@@ -1,14 +1,13 @@
 package cn.org.autumn.base;
 
 import cn.org.autumn.annotation.FieldEncrypt;
+import java.lang.reflect.Field;
+import java.util.HashSet;
+import java.util.Set;
 import org.junit.Assert;
 import org.junit.Test;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
-
-import java.lang.reflect.Field;
-import java.util.HashSet;
-import java.util.Set;
 
 /**
  * 约束：含 {@code @FieldEncrypt} 的实体，其模块 Service 须继承 {@link EncryptModuleService}。

@@ -10,14 +10,13 @@ import cn.org.autumn.modules.safe.support.PayCredentialVerifyMethods;
 import cn.org.autumn.utils.IPUtils;
 import cn.org.autumn.utils.Uuid;
 import com.baomidou.mybatisplus.mapper.EntityWrapper;
+import java.util.Date;
+import java.util.List;
+import javax.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
-import javax.servlet.http.HttpServletRequest;
-import java.util.Date;
-import java.util.List;
 
 @Slf4j
 @Service
@@ -82,7 +81,7 @@ public class PayCredentialLogService extends ModuleService<PayCredentialLogDao, 
         ew.lt(columnInWrapper("create_time"), before);
         int n = baseMapper.delete(ew);
         if (n > 0)
-            log.debug("支付凭证操作日志清理：删除 {} 天以前的记录 {} 条", days, n);
+            log.debug("Pay credential operation log cleanup: deleted {} records older than {} days", days, n);
         return n;
     }
 
@@ -95,7 +94,7 @@ public class PayCredentialLogService extends ModuleService<PayCredentialLogDao, 
                 return;
             deleteOlderThanDays(days);
         } catch (Exception e) {
-            log.error("支付凭证操作日志定时清理失败", e);
+            log.error("Scheduled pay credential operation log cleanup failed", e);
         }
     }
 }

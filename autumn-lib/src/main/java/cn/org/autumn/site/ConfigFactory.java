@@ -1,13 +1,10 @@
 package cn.org.autumn.site;
 
-import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.core.annotation.Order;
-import org.springframework.stereotype.Component;
-
 import java.util.List;
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.annotation.Order;
+import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
@@ -34,7 +31,7 @@ public class ConfigFactory extends Factory {
                     try {
                         config.update(key, value);
                     } catch (Throwable t) {
-                        log.error("更新配置:{},{}", key, value, t);
+                        log.error("Config update failed: {}, {}", key, value, t);
                     }
                 }
             }

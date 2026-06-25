@@ -3,14 +3,13 @@ package cn.org.autumn.site;
 import cn.org.autumn.config.PageHandler;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.utils.WebPathUtils;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.ui.Model;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 
 @Component
 @Order(Integer.MAX_VALUE / 10)

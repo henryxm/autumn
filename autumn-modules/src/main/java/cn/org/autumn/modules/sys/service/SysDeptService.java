@@ -1,21 +1,20 @@
 package cn.org.autumn.modules.sys.service;
 
-import cn.org.autumn.site.InitFactory;
-import com.baomidou.mybatisplus.mapper.EntityWrapper;
-import com.baomidou.mybatisplus.service.impl.ServiceImpl;
-import cn.org.autumn.utils.Constant;
 import cn.org.autumn.annotation.DataFilter;
 import cn.org.autumn.modules.sys.dao.SysDeptDao;
 import cn.org.autumn.modules.sys.entity.SysDeptEntity;
-import org.apache.commons.lang.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.annotation.Order;
-import org.springframework.stereotype.Service;
-
+import cn.org.autumn.site.InitFactory;
+import cn.org.autumn.utils.Constant;
+import com.baomidou.mybatisplus.mapper.EntityWrapper;
+import com.baomidou.mybatisplus.service.impl.ServiceImpl;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.apache.commons.lang.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.annotation.Order;
+import org.springframework.stereotype.Service;
 
 @Service
 public class SysDeptService extends ServiceImpl<SysDeptDao, SysDeptEntity> implements InitFactory.Init {

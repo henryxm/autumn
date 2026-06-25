@@ -1,12 +1,11 @@
 package cn.org.autumn.model;
 
-import lombok.Builder;
-import lombok.Data;
-
 import java.io.Serializable;
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
+import lombok.Builder;
+import lombok.Data;
 
 /**
  * 队列消息包装类

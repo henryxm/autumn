@@ -1,11 +1,10 @@
 package cn.org.autumn.modules.safe.dto;
 
 import cn.org.autumn.modules.safe.entity.PayUserBiometricEntity;
-import lombok.Getter;
-import lombok.Setter;
-
 import java.io.Serializable;
 import java.util.Date;
+import lombok.Getter;
+import lombok.Setter;
 
 @Getter
 @Setter

@@ -1,25 +1,23 @@
 package cn.org.autumn.modules.lan.service;
 
+import static cn.org.autumn.modules.lan.interceptor.LanguageInterceptor.LANGUAGE_SESSION;
+
 import cn.org.autumn.modules.lan.interceptor.LanguageInterceptor;
 import cn.org.autumn.modules.sys.service.SysConfigService;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpSession;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-
-import static cn.org.autumn.modules.lan.interceptor.LanguageInterceptor.LANGUAGE_SESSION;
-
 @Service
+@Slf4j
 public final class Language {
-    Logger log = LoggerFactory.getLogger(getClass());
 
     @Autowired
     @Lazy

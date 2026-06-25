@@ -2,17 +2,14 @@ package cn.org.autumn.thread;
 
 import cn.org.autumn.config.Config;
 import cn.org.autumn.site.UpgradeFactory;
-import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import org.redisson.api.RLock;
-import org.redisson.api.RedissonClient;
-
 import java.lang.reflect.Method;
 import java.util.Date;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang.StringUtils;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 
 /**
  * 可追踪、可管理的异步任务基类。
@@ -41,7 +38,7 @@ import java.util.concurrent.TimeUnit;
  *     public void exe() {
  *         for (Item item : items) {
  *             if (isCancelled()) {
- *                 log.info("任务被取消，已处理 {} 条", count);
+ *                 log.info("Task cancelled, processed {} items", count);
  *                 return;
  *             }
  *             process(item);
@@ -54,9 +51,9 @@ import java.util.concurrent.TimeUnit;
  * });
  * </pre>
  */
+@Slf4j
 public abstract class TagRunnable implements Runnable, Tag {
 
-    protected final Logger log = LoggerFactory.getLogger(getClass());
 
     // ======================== 任务元数据 ========================
     private String name = "";
@@ -160,7 +157,7 @@ public abstract class TagRunnable implements Runnable, Tag {
         } catch (Throwable t) {
             if (log.isDebugEnabled())
                 // 安全网：捕获所有未被内部方法处理的意外错误（如 Error、NoClassDefFoundError 等）
-                log.debug("任务发生不可预期错误: tag={}, method={}, error={}", getTag(), getMethod(), t.getMessage(), t);
+                log.debug("Task unexpected error: tag={}, method={}, error={}", getTag(), getMethod(), t.getMessage(), t);
             try {
                 TagTaskExecutor.recordCompletion(this, 0, false, "Unexpected: " + t.getMessage());
             } catch (Exception re) {
@@ -182,7 +179,7 @@ public abstract class TagRunnable implements Runnable, Tag {
      */
     public void exe() {
         if (log.isDebugEnabled()) {
-            log.debug("执行任务: tag={}, time={}, thread={}", getTag(), time, getName());
+            log.debug("Running task: tag={}, time={}, thread={}", getTag(), time, getName());
         }
     }
 
@@ -254,7 +251,7 @@ public abstract class TagRunnable implements Runnable, Tag {
             onFinished(outcome);
         } catch (Throwable t) {
             if (log.isDebugEnabled()) {
-                log.debug("onFinished 回调异常: tag={}, outcome={}, error={}", getTag(), outcome, t.getMessage(), t);
+                log.debug("onFinished callback error: tag={}, outcome={}, error={}", getTag(), outcome, t.getMessage(), t);
             }
         }
     }
@@ -275,16 +272,16 @@ public abstract class TagRunnable implements Runnable, Tag {
             if (cancelled || Thread.currentThread().isInterrupted()) {
                 errorMsg = "任务被中断取消";
                 if (log.isDebugEnabled())
-                    log.debug("任务被中断: tag={}, method={}", getTag(), getMethod());
+                    log.debug("Task interrupted: tag={}, method={}", getTag(), getMethod());
             } else {
                 errorMsg = t.getMessage();
                 if (log.isDebugEnabled())
-                    log.debug("任务执行异常: tag={}, method={}, error={}", getTag(), getMethod(), t.getMessage(), t);
+                    log.debug("Task execution error: tag={}, method={}, error={}", getTag(), getMethod(), t.getMessage(), t);
             }
         } finally {
             long duration = System.currentTimeMillis() - start;
             if (log.isDebugEnabled()) {
-                log.debug("任务完成: tag={}, method={}, success={}, 耗时={}ms, 线程={}", getTag(), getMethod(), success, duration, getName());
+                log.debug("Task finished: tag={}, method={}, success={}, elapsed={}ms, thread={}", getTag(), getMethod(), success, duration, getName());
             }
             TagTaskExecutor.recordCompletion(this, duration, success, errorMsg);
         }
@@ -308,7 +305,7 @@ public abstract class TagRunnable implements Runnable, Tag {
         }
         if (client == null) {
             if (log.isDebugEnabled()) {
-                log.debug("RedissonClient 不可用，单机回退执行: tag={}, method={}", getTag(), getMethod());
+                log.debug("RedissonClient unavailable, standalone fallback execution: tag={}, method={}", getTag(), getMethod());
             }
             runDirect();
             return;
@@ -323,18 +320,18 @@ public abstract class TagRunnable implements Runnable, Tag {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             if (log.isDebugEnabled())
-                log.warn("获取分布式锁被中断: key={}, tag={}", lockKey, getTag());
+                log.warn("Distributed lock acquisition interrupted: key={}, tag={}", lockKey, getTag());
             TagTaskExecutor.recordSkipped(this, "获取锁被中断");
             return;
         } catch (Exception e) {
             if (log.isDebugEnabled())
-                log.error("获取分布式锁异常: key={}, error={}", lockKey, e.getMessage(), e);
+                log.error("Distributed lock acquisition error: key={}, error={}", lockKey, e.getMessage(), e);
             TagTaskExecutor.recordSkipped(this, "获取锁异常: " + e.getMessage());
             return;
         }
         if (!acquired) {
             if (log.isDebugEnabled()) {
-                log.debug("分布式锁未获取（其他节点执行中）: key={}, tag={}", lockKey, getTag());
+                log.debug("Distributed lock not acquired (running on another node): key={}, tag={}", lockKey, getTag());
             }
             TagTaskExecutor.recordSkipped(this, "未获取到锁(其他节点执行中)");
             return;
@@ -345,21 +342,21 @@ public abstract class TagRunnable implements Runnable, Tag {
         String errorMsg = null;
         try {
             if (log.isDebugEnabled())
-                log.debug("分布式锁已获取，开始执行: key={}, tag={}, lease={}s", lockKey, getTag(), leaseSeconds);
+                log.debug("Distributed lock acquired, starting execution: key={}, tag={}, lease={}s", lockKey, getTag(), leaseSeconds);
             invokeExe();
             if (log.isDebugEnabled())
-                log.debug("任务执行成功: key={}, tag={}, 耗时={}ms", lockKey, getTag(), System.currentTimeMillis() - start);
+                log.debug("Task succeeded: key={}, tag={}, elapsed={}ms", lockKey, getTag(), System.currentTimeMillis() - start);
             // 成功后不释放锁 — 让锁自然过期，防止同一时间窗口内重复执行
         } catch (Throwable t) {
             success = false;
             if (cancelled || Thread.currentThread().isInterrupted()) {
                 errorMsg = "任务被中断取消";
                 if (log.isDebugEnabled())
-                    log.debug("分布式锁任务被中断: key={}, tag={}", lockKey, getTag());
+                    log.debug("Distributed lock task interrupted: key={}, tag={}", lockKey, getTag());
             } else {
                 errorMsg = t.getMessage();
                 if (log.isDebugEnabled())
-                    log.error("任务执行失败: key={}, tag={}, error={}", lockKey, getTag(), t.getMessage(), t);
+                    log.error("Task execution failed: key={}, tag={}, error={}", lockKey, getTag(), t.getMessage(), t);
             }
             // 失败后主动释放锁 — 允许其他节点故障转移重试
             DistributedLockHelper.unlockSafely(rlock, lockKey);
@@ -414,14 +411,14 @@ public abstract class TagRunnable implements Runnable, Tag {
         this.delaying = true;
         try {
             if (log.isDebugEnabled()) {
-                log.debug("错峰延迟: tag={}, method={}, 延迟={}ms, 窗口={}s", getTag(), getMethod(), delayMs, effectiveDelay);
+                log.debug("Stagger delay: tag={}, method={}, delay={}ms, window={}s", getTag(), getMethod(), delayMs, effectiveDelay);
             }
             Thread.sleep(delayMs);
             return true;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             if (log.isDebugEnabled())
-                log.debug("错峰延迟被中断: tag={}, method={}", getTag(), getMethod());
+                log.debug("Stagger delay interrupted: tag={}, method={}", getTag(), getMethod());
             return false;
         } finally {
             this.delaying = false;
@@ -599,7 +596,7 @@ public abstract class TagRunnable implements Runnable, Tag {
         if (t != null && t.isAlive()) {
             t.interrupt();
             if (log.isDebugEnabled())
-                log.debug("已发送中断信号: tag={}, method={}, thread={}, delaying={}", getTag(), getMethod(), t.getName(), delaying);
+                log.debug("Interrupt signal sent: tag={}, method={}, thread={}, delaying={}", getTag(), getMethod(), t.getName(), delaying);
             return true;
         }
         return false;

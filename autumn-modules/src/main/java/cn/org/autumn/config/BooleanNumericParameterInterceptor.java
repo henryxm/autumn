@@ -1,6 +1,10 @@
 package cn.org.autumn.config;
 
 import cn.org.autumn.database.DatabaseHolder;
+import java.lang.reflect.Field;
+import java.sql.PreparedStatement;
+import java.util.List;
+import java.util.Properties;
 import org.apache.ibatis.executor.parameter.ParameterHandler;
 import org.apache.ibatis.mapping.BoundSql;
 import org.apache.ibatis.mapping.ParameterMapping;
@@ -13,11 +17,6 @@ import org.apache.ibatis.scripting.defaults.DefaultParameterHandler;
 import org.apache.ibatis.session.Configuration;
 import org.apache.ibatis.type.BooleanTypeHandler;
 import org.apache.ibatis.type.TypeHandler;
-
-import java.lang.reflect.Field;
-import java.sql.PreparedStatement;
-import java.util.List;
-import java.util.Properties;
 
 /**
  * MyBatis 在解析 #{...} 时会把 {@link BooleanTypeHandler} 固化进 {@link ParameterMapping}，

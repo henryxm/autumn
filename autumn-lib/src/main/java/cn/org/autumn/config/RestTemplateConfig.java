@@ -1,6 +1,7 @@
 package cn.org.autumn.config;
 
 import cn.org.autumn.bean.QuotStringHttpMessageConverter;
+import java.util.Arrays;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.boot.web.servlet.server.Encoding;
@@ -11,8 +12,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.web.client.RestTemplate;
-
-import java.util.Arrays;
 
 @Configuration
 public class RestTemplateConfig {

@@ -3,12 +3,11 @@ package cn.org.autumn.modules.bot.dao;
 import cn.org.autumn.modules.bot.dao.sql.RobotHookDaoSql;
 import cn.org.autumn.modules.bot.entity.RobotHookEntity;
 import com.baomidou.mybatisplus.mapper.BaseMapper;
+import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.SelectProvider;
 import org.springframework.stereotype.Repository;
-
-import java.util.List;
 
 @Mapper
 @Repository

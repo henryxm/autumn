@@ -1,18 +1,17 @@
 package cn.org.autumn.modules.sys.service;
 
+import cn.org.autumn.modules.sys.dao.SysRoleDeptDao;
 import cn.org.autumn.modules.sys.entity.SysDeptEntity;
+import cn.org.autumn.modules.sys.entity.SysRoleDeptEntity;
 import cn.org.autumn.modules.sys.entity.SysRoleEntity;
 import cn.org.autumn.site.InitFactory;
 import com.baomidou.mybatisplus.service.impl.ServiceImpl;
-import cn.org.autumn.modules.sys.dao.SysRoleDeptDao;
-import cn.org.autumn.modules.sys.entity.SysRoleDeptEntity;
+import java.util.ArrayList;
+import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * 角色与部门对应关系

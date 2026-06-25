@@ -1,10 +1,9 @@
 package cn.org.autumn.site;
 
 import cn.org.autumn.config.AllInOneHandler;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-
-import java.util.List;
 
 @Slf4j
 @Component

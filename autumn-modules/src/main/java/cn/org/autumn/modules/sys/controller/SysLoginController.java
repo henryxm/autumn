@@ -2,17 +2,24 @@ package cn.org.autumn.modules.sys.controller;
 
 import cn.org.autumn.annotation.SkipInterceptor;
 import cn.org.autumn.config.Config;
+import cn.org.autumn.database.CrudGuard;
 import cn.org.autumn.modules.spm.service.SuperPositionModelService;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysUserService;
+import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.usr.service.UserProfileService;
 import cn.org.autumn.site.PageFactory;
 import cn.org.autumn.utils.IPUtils;
+import cn.org.autumn.utils.R;
 import cn.org.autumn.utils.WebPathUtils;
 import com.google.code.kaptcha.Constants;
 import com.google.code.kaptcha.Producer;
-import cn.org.autumn.utils.R;
-import cn.org.autumn.modules.sys.shiro.ShiroUtils;
+import java.awt.image.BufferedImage;
+import java.io.IOException;
+import javax.imageio.ImageIO;
+import javax.servlet.ServletOutputStream;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.lang.StringUtils;
 import org.apache.shiro.authc.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,13 +29,6 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
-
-import javax.imageio.ImageIO;
-import javax.servlet.ServletOutputStream;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.awt.image.BufferedImage;
-import java.io.IOException;
 
 @Controller
 public class SysLoginController {
@@ -75,6 +75,10 @@ public class SysLoginController {
     @ResponseBody
     @RequestMapping(value = "/sys/login", method = RequestMethod.POST)
     public R login(String username, String password, boolean rememberMe, String captcha, HttpServletRequest request) {
+        return CrudGuard.force(() -> doLogin(username, password, rememberMe, captcha, request));
+    }
+
+    private R doLogin(String username, String password, boolean rememberMe, String captcha, HttpServletRequest request) {
         if (!Config.isDev()) {
             String kaptcha = ShiroUtils.getKaptcha(Constants.KAPTCHA_SESSION_KEY);
             if (!captcha.equalsIgnoreCase(kaptcha)) {

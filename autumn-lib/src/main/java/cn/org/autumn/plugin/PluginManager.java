@@ -3,25 +3,23 @@ package cn.org.autumn.plugin;
 import cn.org.autumn.loader.ClassLoaderUtil;
 import cn.org.autumn.table.utils.HumpConvert;
 import cn.org.autumn.utils.SpringContextUtils;
+import java.io.*;
+import java.lang.annotation.Annotation;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.*;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Controller;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.io.*;
-import java.lang.annotation.Annotation;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.util.*;
-
 @Component
+@Slf4j
 public class PluginManager {
 
-    Logger log = LoggerFactory.getLogger(getClass());
 
     public static String pluginDir;
 

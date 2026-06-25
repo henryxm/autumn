@@ -1,16 +1,16 @@
 package cn.org.autumn.modules.oss.service;
 
 import cn.org.autumn.modules.lan.service.LanguageService;
-import cn.org.autumn.site.InitFactory;
-import com.baomidou.mybatisplus.plugins.Page;
-import com.baomidou.mybatisplus.service.impl.ServiceImpl;
-import cn.org.autumn.utils.PageUtils;
-import cn.org.autumn.utils.Query;
 import cn.org.autumn.modules.oss.dao.SysOssDao;
 import cn.org.autumn.modules.oss.entity.SysOssEntity;
+import cn.org.autumn.site.InitFactory;
+import cn.org.autumn.utils.PageUtils;
+import cn.org.autumn.utils.Query;
+import com.baomidou.mybatisplus.plugins.Page;
+import com.baomidou.mybatisplus.service.impl.ServiceImpl;
+import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import java.util.Map;
 
 @Service
 public class SysOssService extends ServiceImpl<SysOssDao, SysOssEntity> implements InitFactory.Init {

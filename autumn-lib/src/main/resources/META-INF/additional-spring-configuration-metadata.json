@@ -18,17 +18,25 @@
     {
       "name": "autumn.table.auto",
       "type": "java.lang.String",
-      "description": "Description for autumn.table.auto."
+      "defaultValue": "update",
+      "description": "注解建表模式：update 增量同步，create 删表重建，none 不执行。默认值见 cn.org.autumn.table.config.TableProperties#DEFAULT_AUTO。"
     },
     {
       "name": "autumn.table.init",
       "type": "java.lang.String",
-      "description": "Description for autumn.table.init."
+      "description": "启动时是否执行 TableInit 注解建表流程。"
     },
     {
       "name": "autumn.table.pack",
       "type": "java.lang.String",
-      "description": "Description for autumn.table.pack."
+      "defaultValue": "cn.org.autumn.modules",
+      "description": "实体扫描包名，多个可用逗号/分号/空格分隔。默认值见 cn.org.autumn.table.config.TableProperties#DEFAULT_PACK。"
+    },
+    {
+      "name": "autumn.table.sync-charset",
+      "type": "java.lang.Boolean",
+      "defaultValue": true,
+      "description": "update 模式下是否根据 @Table 同步表字符集。"
     }
   ]
 }

@@ -1,20 +1,19 @@
 package cn.org.autumn.config;
 
 import cn.org.autumn.thread.TagTaskExecutor;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import java.util.List;
-
 /**
- * 线程池配置 — 基于系统资源（CPU 核数、JVM 堆内存）自动计算合理参数。
+ * 线程池配置 — 基于系统资源（CPU 核数、JVM 堆内存）auto computed合理参数。
  *
  * <h3>设计原则</h3>
  * <ul>
  *   <li><b>动态适配</b>：根据 {@code Runtime.availableProcessors()} 和 {@code Runtime.maxMemory()}
- *       自动计算，无需为不同服务器手动调参</li>
+ *       auto computed，无需为不同服务器手动调参</li>
  *   <li><b>有界队列</b>：必须设置队列容量，否则 {@code maxPoolSize} 完全失效
  *       （{@code ThreadPoolExecutor} 只在队列满后才创建超过核心数的线程）</li>
  *   <li><b>弹性伸缩</b>：启用核心线程超时回收，系统空闲时自动释放资源；
@@ -30,7 +29,7 @@ import java.util.List;
  * </pre>
  *
  * <h3>参数可覆盖</h3>
- * <p>在 {@code application.yml} 中通过以下配置覆盖自动计算值（设为 0 或不配置则使用自动值）：</p>
+ * <p>在 {@code application.yml} 中通过以下配置覆盖auto computed值（设为 0 或不配置则使用自动值）：</p>
  * <pre>
  * autumn:
  *   thread:
@@ -46,19 +45,19 @@ public class ThreadConfig {
     // ======================== 可配置参数（application.yml 覆盖） ========================
 
     /**
-     * 核心线程数：0=自动计算
+     * 核心线程数：0=auto computed
      */
     @Value("${autumn.thread.core-pool-size:0}")
     private int configuredCorePoolSize;
 
     /**
-     * 最大线程数：0=自动计算
+     * 最大线程数：0=auto computed
      */
     @Value("${autumn.thread.max-pool-size:0}")
     private int configuredMaxPoolSize;
 
     /**
-     * 队列容量：0=自动计算
+     * 队列容量：0=auto computed
      */
     @Value("${autumn.thread.queue-capacity:0}")
     private int configuredQueueCapacity;
@@ -173,7 +172,7 @@ public class ThreadConfig {
             executor.setRejectedExecutionHandler((r, pool) -> {
                 TagTaskExecutor.recordRejected();
                 if (log.isDebugEnabled())
-                    log.debug("线程池已饱和，触发自定义拒绝策略: active={}/{}, queue={}", pool.getActiveCount(), pool.getMaximumPoolSize(), pool.getQueue().size());
+                    log.debug("Thread pool saturated, custom rejection policy triggered: active={}/{}, queue={}", pool.getActiveCount(), pool.getMaximumPoolSize(), pool.getQueue().size());
                 for (RejectedHandler handler : rejectedHandlers) {
                     handler.rejectedExecution(r, pool);
                 }
@@ -186,7 +185,7 @@ public class ThreadConfig {
                 }
                 TagTaskExecutor.recordRejected();
                 if (log.isDebugEnabled())
-                    log.debug("线程池已饱和，降级为调用方线程执行: active={}/{}, queue={}", pool.getActiveCount(), pool.getMaximumPoolSize(), pool.getQueue().size());
+                    log.debug("Thread pool saturated, falling back to caller thread: active={}/{}, queue={}", pool.getActiveCount(), pool.getMaximumPoolSize(), pool.getQueue().size());
                 r.run(); // CallerRunsPolicy：在提交线程中直接执行
             });
         }
@@ -194,12 +193,12 @@ public class ThreadConfig {
         // 7. 输出配置摘要
         // ================================================================
         if (log.isDebugEnabled())
-            log.debug("线程池已初始化 — core={}, max={}, queue={}, keepAlive={}s, coreTimeout=true" + " | 系统: cpu={}, heap={}MB, memLimit={}threads" + " | 来源: core={}, max={}, queue={}",
+            log.debug("Thread pool initialized — core={}, max={}, queue={}, keepAlive={}s, coreTimeout=true" + " | system: cpu={}, heap={}MB, memLimit={}threads" + " | source: core={}, max={}, queue={}",
                     coreSize, maxSize, queueCapacity, keepAliveSeconds,
                     cpuCores, maxHeapMB, memoryBasedLimit,
-                    configuredCorePoolSize > 0 ? "yml配置" : "自动计算",
-                    configuredMaxPoolSize > 0 ? "yml配置" : "自动计算",
-                    configuredQueueCapacity > 0 ? "yml配置" : "自动计算");
+                    configuredCorePoolSize > 0 ? "yml config" : "auto computed",
+                    configuredMaxPoolSize > 0 ? "yml config" : "auto computed",
+                    configuredQueueCapacity > 0 ? "yml config" : "auto computed");
         return executor;
     }
 

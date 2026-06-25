@@ -1,12 +1,11 @@
 package cn.org.autumn.modules.install;
 
 import cn.org.autumn.config.ApplicationInitializationProgress;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import org.springframework.core.env.Environment;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 /**
  * 与 {@code autumn.install.mode} 解耦，供安装完成页在进程内重启后轮询启动进度。

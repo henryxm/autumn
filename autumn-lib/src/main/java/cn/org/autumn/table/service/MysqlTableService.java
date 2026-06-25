@@ -1,41 +1,33 @@
 package cn.org.autumn.table.service;
 
+import static cn.org.autumn.table.data.InitType.*;
+
+import cn.org.autumn.install.InstallMode;
+import cn.org.autumn.table.annotation.Column;
+import cn.org.autumn.table.annotation.LengthCount;
+import cn.org.autumn.table.config.TableProperties;
+import cn.org.autumn.table.data.*;
+import cn.org.autumn.table.platform.RelationalTableOperations;
+import cn.org.autumn.table.relational.model.ColumnMeta;
+import cn.org.autumn.table.utils.ClassTools;
+import cn.org.autumn.table.utils.TableCharsetUtils;
 import java.lang.reflect.Field;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.CopyOnWriteArraySet;
-
-import cn.org.autumn.table.platform.RelationalTableOperations;
-import cn.org.autumn.table.data.*;
-import cn.org.autumn.table.relational.model.ColumnMeta;
-import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang3.ArrayUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import cn.org.autumn.install.InstallMode;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import cn.org.autumn.table.annotation.Column;
-import cn.org.autumn.table.annotation.LengthCount;
-import cn.org.autumn.table.utils.ClassTools;
-import cn.org.autumn.table.utils.TableCharsetUtils;
-
-import static cn.org.autumn.table.data.InitType.*;
-
 @Transactional
 @Service
+@Slf4j
 public class MysqlTableService {
-
-    private static final Logger log = LoggerFactory.getLogger(MysqlTableService.class);
-
     private static final List<String> ignoreLengthList = new ArrayList<>();
-
-    private static final String defaultPackage = "cn.org.autumn.modules";
 
     static {
         ignoreLengthList.add("int");
@@ -51,34 +43,26 @@ public class MysqlTableService {
     @Autowired(required = false)
     private Environment environment;
 
-    /**
-     * 要扫描的model所在的pack
-     */
-    @Getter
-    @Value("${autumn.table.pack:" + defaultPackage + "}")
-    private String pack;
+    @Autowired
+    private TableProperties tableProperties;
 
-    /**
-     * 自动创建模式：update表示更新，create表示删除原表重新创建，none 表示不执行操作
-     */
-    @Value("${autumn.table.auto:update}")
-    private InitType type;
+    public String getPack() {
+        return tableProperties.getPack();
+    }
 
-    /**
-     * 是否在 update 模式下根据 @Table 同步表字符集（不匹配则 CONVERT TO）。大表可能耗时锁表，可设为 false 后改用手动迁移。
-     */
-    @Value("${autumn.table.sync-charset:true}")
-    private boolean syncTableCharset;
+    public InitType getAutoMode() {
+        return tableProperties.getAuto();
+    }
 
     public Set<String> getPacks() {
-        return new CopyOnWriteArraySet<>(Arrays.asList(pack.split(",|:|;|-| ")));
+        return new CopyOnWriteArraySet<>(Arrays.asList(getPack().split(",|:|;|-| ")));
     }
 
     public Set<Class<?>> getClasses() {
         Set<Class<?>> classes = new CopyOnWriteArraySet<>();
         Set<String> packs = getPacks();
         //添加系统代码的默认包名，防止配置错误
-        packs.add(defaultPackage);
+        packs.add(TableProperties.DEFAULT_PACK);
         for (String pkg : packs) {
             if (!pkg.isEmpty())
                 classes.addAll(ClassTools.getClasses(pkg));
@@ -89,7 +73,7 @@ public class MysqlTableService {
     public void create() {
         // 从包package中获取所有的Class
         Set<Class<?>> classes = getClasses();
-        createMysqlTable(classes, type);
+        createMysqlTable(classes, tableProperties.getAuto());
     }
 
     public void create(Class<?> clazz, InitType type) {
@@ -113,7 +97,7 @@ public class MysqlTableService {
         }
 
         if (InstallMode.isActive(environment)) {
-            log.debug("安装向导模式，跳过注解建表。");
+            log.debug("Install wizard mode, skipped annotation DDL.");
             return;
         }
 
@@ -211,16 +195,13 @@ public class MysqlTableService {
             if (!exist) {
                 newTableMap.put(tableInfo, newFieldList);
             } else {
-                if (syncTableCharset) {
+                if (tableProperties.isSyncCharset()) {
                     syncTableCharsetIfNeeded(tableInfo);
                 }
                 List<ColumnMeta> tableColumnList = tableDao.getColumnMetas(tableInfo.getName());
                 warnOnLargeInformationSchemaLengths(tableInfo.getName(), tableColumnList);
 
-//                List<TableMeta> tableMetas = tableDao.getTableMetas("sys");
-
-                List<String> columnNames = ClassTools.getPropertyValueList(tableColumnList,
-                        ColumnMeta.COLUMN_NAME_KEY);
+                List<String> columnNames = ClassTools.getPropertyValueList(tableColumnList, ColumnMeta.COLUMN_NAME_KEY);
 
                 // 验证对比从model中解析的fieldList与从数据库查出来的columnList
                 // 1. 找出增加的字段
@@ -248,7 +229,7 @@ public class MysqlTableService {
         }
         String desired = raw.trim();
         if (!TableCharsetUtils.isSafeSqlCharsetOrCollationName(desired)) {
-            log.warn("实体表 [{}] @Table.charset 非法，已跳过字符集同步: {}", tableInfo.getName(), raw);
+            log.warn("Entity table [{}] @Table.charset invalid, charset sync skipped: {}", tableInfo.getName(), raw);
             return;
         }
         String coll = tableInfo.getCollation();
@@ -256,7 +237,7 @@ public class MysqlTableService {
         if (StringUtils.isNotBlank(coll)) {
             String c = coll.trim();
             if (!TableCharsetUtils.isSafeSqlCharsetOrCollationName(c)) {
-                log.warn("实体表 [{}] @Table.collation 非法，已跳过字符集同步: {}", tableInfo.getName(), coll);
+                log.warn("Entity table [{}] @Table.collation invalid, charset sync skipped: {}", tableInfo.getName(), coll);
                 return;
             }
             collationArg = c;
@@ -264,16 +245,16 @@ public class MysqlTableService {
         try {
             String dbCharset = tableDao.getTableCharacterSetName(tableInfo.getName());
             if (StringUtils.isBlank(dbCharset)) {
-                log.debug("无法解析表 [{}] 的字符集，跳过字符集同步", tableInfo.getName());
+                log.debug("Cannot resolve charset for table [{}], charset sync skipped", tableInfo.getName());
                 return;
             }
             if (TableCharsetUtils.sameCharset(desired, dbCharset)) {
                 return;
             }
-            log.debug("表 [{}] 字符集与实体不一致（库: {}，实体: {}），执行 CONVERT TO", tableInfo.getName(), dbCharset, desired);
+            log.debug("Table [{}] charset mismatch (db: {}, entity: {}), running CONVERT TO", tableInfo.getName(), dbCharset, desired);
             tableDao.convertTableCharset(tableInfo.getName(), desired, collationArg);
         } catch (Throwable e) {
-            log.warn("表 [{}] 字符集同步失败: {}", tableInfo.getName(), e.getMessage());
+            log.warn("Table [{}] charset sync failed: {}", tableInfo.getName(), e.getMessage());
         }
     }
 
@@ -443,8 +424,8 @@ public class MysqlTableService {
                     || (octLen != null && octLen > maxInt)
                     || (numPrecision != null && numPrecision > maxInt)) {
                 if (log.isDebugEnabled())
-                    log.debug("表 [{}] 字段 [{}] 元数据存在超大长度/精度值: characterMaximumLength={}, characterOctetLength={}, numericPrecision={}, dataType={}, columnType={}; "
-                                    + "已使用 Long 映射兼容，避免 Integer 溢出。",
+                    log.debug("Table [{}] column [{}] metadata has oversized length/precision: characterMaximumLength={}, characterOctetLength={}, numericPrecision={}, dataType={}, columnType={}; "
+                                    + "Using Long mapping to avoid Integer overflow.",
                             tableName,
                             c.getColumnName(),
                             maxLen,
@@ -724,7 +705,7 @@ public class MysqlTableService {
                 Object o = mySqlTypeAndLengthMap.get(columnInfo.getType());
                 if (o != null) length = (Integer) o;
             } catch (Exception e) {
-                log.error("未知的Mysql数据类型字段:{}", column.type());
+                log.error("Unknown MySQL column type: {}", column.type());
             }
             columnInfo.setTypeLength(length);
             list.add(columnInfo);
@@ -991,7 +972,7 @@ public class MysqlTableService {
                 try {
                     tableDao.createTable(map);
                 } catch (Throwable e) {
-                    log.warn("注解建表失败 [{}]: {}", entry.getKey().getName(), e.toString(), e);
+                    log.warn("Annotation DDL failed [{}]: {}", entry.getKey().getName(), e.toString(), e);
                 }
             }
         }

@@ -9,16 +9,16 @@ import cn.org.autumn.table.relational.dialect.hsqldb.HsqldbRelationalSchemaSql;
 import cn.org.autumn.table.relational.dialect.informix.InformixRelationalSchemaSql;
 import cn.org.autumn.table.relational.dialect.mysql.H2MysqlCompatSchemaSql;
 import cn.org.autumn.table.relational.dialect.mysql.MysqlSchemaSql;
+import cn.org.autumn.table.relational.dialect.mysqlfamily.MariadbRelationalSchemaSql;
+import cn.org.autumn.table.relational.dialect.mysqlfamily.TidbRelationalSchemaSql;
 import cn.org.autumn.table.relational.dialect.oceanbase.OceanBaseMysqlRelationalSchemaSql;
 import cn.org.autumn.table.relational.dialect.oceanbase.OceanBaseOracleRelationalSchemaSql;
 import cn.org.autumn.table.relational.dialect.oracle.DamengRelationalSchemaSql;
 import cn.org.autumn.table.relational.dialect.oracle.OracleRelationalSchemaSql;
 import cn.org.autumn.table.relational.dialect.postgresql.KingbaseRelationalSchemaSql;
 import cn.org.autumn.table.relational.dialect.postgresql.PostgresRelationalSchemaSql;
-import cn.org.autumn.table.relational.dialect.sqlserver.SqlServerRelationalSchemaSql;
 import cn.org.autumn.table.relational.dialect.sqlite.SqliteRelationalSchemaSql;
-import cn.org.autumn.table.relational.dialect.mysqlfamily.MariadbRelationalSchemaSql;
-import cn.org.autumn.table.relational.dialect.mysqlfamily.TidbRelationalSchemaSql;
+import cn.org.autumn.table.relational.dialect.sqlserver.SqlServerRelationalSchemaSql;
 
 /**
  * 按 {@link DatabaseType} 解析 {@link RelationalSchemaSql} 实现（与 {@link cn.org.autumn.database.DatabaseHolder#resolveType} 语义对齐）。

@@ -1,13 +1,12 @@
 package cn.org.autumn.config;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import springfox.documentation.builders.OAuthBuilder;
 import springfox.documentation.builders.PathSelectors;
 import springfox.documentation.service.*;
 import springfox.documentation.spi.service.contexts.SecurityContext;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 public class SwaggerBase {
 

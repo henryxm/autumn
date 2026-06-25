@@ -1,14 +1,13 @@
 package cn.org.autumn.integration.support;
 
 import com.alibaba.fastjson.JSONObject;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 /**
  * 机器人开放 API HTTP 客户端（{@code /bot/api/v1}）。

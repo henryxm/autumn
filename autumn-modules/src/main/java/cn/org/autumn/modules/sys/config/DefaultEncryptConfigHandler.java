@@ -21,9 +21,9 @@ public class DefaultEncryptConfigHandler implements EncryptConfigHandler, ClearH
     @Autowired
     private SysConfigService sysConfigService;
 
-    private RsaConfig rsaConfig;
+    private cn.org.autumn.model.RsaConfig rsaConfig;
 
-    private AesConfig aesConfig;
+    private cn.org.autumn.model.AesConfig aesConfig;
 
     @Override
     public EncryptConfigHandler.RsaConfig getRsaConfig() {
@@ -33,10 +33,10 @@ public class DefaultEncryptConfigHandler implements EncryptConfigHandler, ClearH
                     try {
                         rsaConfig = sysConfigService.getConfigObjectValidate("RSA_CONFIG", cn.org.autumn.model.RsaConfig.class);
                         if (log.isDebugEnabled()) {
-                            log.debug("加载RSA配置: keyPairValidMinutes={}, serverBufferMinutes={}, clientBufferMinutes={}, clientPublicKeyValidMinutes={}, keySize={}", rsaConfig.getKeyValidMinutes(), rsaConfig.getServerBufferMinutes(), rsaConfig.getClientBufferMinutes(), rsaConfig.getClientPublicKeyValidMinutes(), rsaConfig.getKeySize());
+                            log.debug("Loaded RSA config: keyPairValidMinutes={}, serverBufferMinutes={}, clientBufferMinutes={}, clientPublicKeyValidMinutes={}, keySize={}", rsaConfig.getKeyValidMinutes(), rsaConfig.getServerBufferMinutes(), rsaConfig.getClientBufferMinutes(), rsaConfig.getClientPublicKeyValidMinutes(), rsaConfig.getKeySize());
                         }
                     } catch (Exception e) {
-                        log.warn("加载RSA配置失败，使用默认配置: {}", e.getMessage());
+                        log.warn("Failed to load RSA config, using defaults: {}", e.getMessage());
                         rsaConfig = new cn.org.autumn.model.RsaConfig();
                     }
                 }
@@ -53,10 +53,10 @@ public class DefaultEncryptConfigHandler implements EncryptConfigHandler, ClearH
                     try {
                         aesConfig = sysConfigService.getConfigObjectValidate("AES_CONFIG", cn.org.autumn.model.AesConfig.class);
                         if (log.isDebugEnabled()) {
-                            log.debug("加载AES配置: keyValidMinutes={}, keySize={}, ivSize={}", aesConfig.getKeyValidMinutes(), aesConfig.getKeySize(), aesConfig.getIvSize());
+                            log.debug("Loaded AES config: keyValidMinutes={}, keySize={}, ivSize={}", aesConfig.getKeyValidMinutes(), aesConfig.getKeySize(), aesConfig.getIvSize());
                         }
                     } catch (Exception e) {
-                        log.warn("加载AES配置失败，使用默认配置: {}", e.getMessage());
+                        log.warn("Failed to load AES config, using defaults: {}", e.getMessage());
                         aesConfig = new cn.org.autumn.model.AesConfig();
                     }
                 }

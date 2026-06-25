@@ -1,5 +1,7 @@
 package cn.org.autumn.service;
 
+import static cn.org.autumn.database.runtime.RuntimeSql.sql;
+
 import cn.org.autumn.database.runtime.RuntimeSql;
 import cn.org.autumn.database.runtime.RuntimeSqlDialect;
 import cn.org.autumn.database.runtime.RuntimeSqlDialectRegistry;
@@ -7,8 +9,6 @@ import cn.org.autumn.database.runtime.WrapperColumns;
 import cn.org.autumn.model.Parameterized;
 import com.baomidou.mybatisplus.mapper.BaseMapper;
 import com.baomidou.mybatisplus.service.impl.ServiceImpl;
-
-import static cn.org.autumn.database.runtime.RuntimeSql.sql;
 
 /**
  * 服务层方言封装：与 {@link RuntimeSql} 同源能力，供 {@code EntityWrapper}、手写 SQL 条件等统一使用，

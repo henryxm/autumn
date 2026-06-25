@@ -5,7 +5,6 @@ import cn.org.autumn.table.data.TableInfo;
 import cn.org.autumn.table.data.UniqueKeyInfo;
 import cn.org.autumn.table.relational.model.ColumnMeta;
 import cn.org.autumn.table.relational.model.TableMeta;
-
 import java.util.List;
 import java.util.Map;
 

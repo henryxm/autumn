@@ -1,21 +1,15 @@
 package cn.org.autumn.table.dao.postgresql;
 
+import cn.org.autumn.database.CrudGuard;
 import cn.org.autumn.table.data.ColumnInfo;
 import cn.org.autumn.table.data.IndexInfo;
 import cn.org.autumn.table.data.TableInfo;
 import cn.org.autumn.table.data.UniqueKeyInfo;
+import cn.org.autumn.table.platform.RelationalTableOperations;
+import cn.org.autumn.table.platform.jdbc.RelationalDdlStatementSplitter;
 import cn.org.autumn.table.relational.dialect.postgresql.PostgresRelationalSchemaSql;
 import cn.org.autumn.table.relational.model.ColumnMeta;
 import cn.org.autumn.table.relational.model.TableMeta;
-import cn.org.autumn.table.platform.RelationalTableOperations;
-import cn.org.autumn.table.platform.jdbc.RelationalDdlStatementSplitter;
-import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
-
-import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -25,15 +19,18 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import javax.sql.DataSource;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 /**
  * PostgreSQL：元数据走 {@link PostgresTableDao}；DDL 多语句拆分执行（分号不在单引号字符串内截断，见 {@link RelationalDdlStatementSplitter}）。
  */
 @Component
+@Slf4j
 public class PostgresRelationalTableOperations implements RelationalTableOperations {
-
-    private static final Logger log = LoggerFactory.getLogger(PostgresRelationalTableOperations.class);
-
     @Autowired
     private PostgresTableDao postgresTableDao;
 
@@ -215,6 +212,7 @@ public class PostgresRelationalTableOperations implements RelationalTableOperati
                 if (s.isEmpty()) {
                     continue;
                 }
+                CrudGuard.enforce();
                 st.execute(s);
             }
         } catch (SQLException e) {

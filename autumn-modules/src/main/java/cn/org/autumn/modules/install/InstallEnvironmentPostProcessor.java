@@ -1,5 +1,9 @@
 package cn.org.autumn.modules.install;
 
+import java.io.File;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.env.EnvironmentPostProcessor;
@@ -8,13 +12,9 @@ import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.MapPropertySource;
+import org.springframework.core.env.PropertySource;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
-
-import java.io.File;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 /**
  * 在 JdbcEnvironmentPostProcessor 之前执行：若存在外部数据源配置文件则优先加载；否则在开启 {@code autumn.install.wizard}
@@ -120,7 +120,7 @@ public class InstallEnvironmentPostProcessor implements EnvironmentPostProcessor
         try {
             Resource resource = new FileSystemResource(configFile);
             YamlPropertySourceLoader loader = new YamlPropertySourceLoader();
-            List<org.springframework.core.env.PropertySource<?>> loaded = loader.load("autumnDatasourceFile", resource);
+            List<PropertySource<?>> loaded = loader.load("autumnDatasourceFile", resource);
             for (int i = loaded.size() - 1; i >= 0; i--) {
                 environment.getPropertySources().addFirst(loaded.get(i));
             }

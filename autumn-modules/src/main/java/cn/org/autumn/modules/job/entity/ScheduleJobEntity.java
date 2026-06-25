@@ -6,12 +6,11 @@ import cn.org.autumn.table.data.DataType;
 import com.baomidou.mybatisplus.annotations.TableId;
 import com.baomidou.mybatisplus.annotations.TableName;
 import com.fasterxml.jackson.annotation.JsonFormat;
-import lombok.Getter;
-import lombok.Setter;
-
-import javax.validation.constraints.NotBlank;
 import java.io.Serializable;
 import java.util.Date;
+import javax.validation.constraints.NotBlank;
+import lombok.Getter;
+import lombok.Setter;
 
 @Getter
 @Setter

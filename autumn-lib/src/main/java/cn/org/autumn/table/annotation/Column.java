@@ -3,7 +3,6 @@ package cn.org.autumn.table.annotation;
 import cn.org.autumn.table.annotation.sql.CharacterSet;
 import cn.org.autumn.table.annotation.sql.Collation;
 import cn.org.autumn.table.data.DataType;
-
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;

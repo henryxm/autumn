@@ -1,7 +1,6 @@
 package cn.org.autumn.modules.sys.entity;
 
 import cn.org.autumn.annotation.ConfigParam;
-
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Comparator;

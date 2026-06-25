@@ -1,5 +1,13 @@
 package cn.org.autumn.config;
 
+import java.io.File;
+import java.time.Duration;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
+
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.ehcache.Cache;
@@ -8,22 +16,13 @@ import org.ehcache.PersistentCacheManager;
 import org.ehcache.config.ResourcePools;
 import org.ehcache.config.builders.CacheConfigurationBuilder;
 import org.ehcache.config.builders.CacheManagerBuilder;
+import org.ehcache.config.builders.ExpiryPolicyBuilder;
 import org.ehcache.config.builders.ResourcePoolsBuilder;
 import org.ehcache.config.units.EntryUnit;
 import org.ehcache.config.units.MemoryUnit;
 import org.ehcache.expiry.ExpiryPolicy;
-import org.ehcache.config.builders.ExpiryPolicyBuilder;
 import org.ehcache.impl.serialization.PlainJavaSerializer;
-
-import java.io.File;
-import java.time.Duration;
-
 import org.springframework.stereotype.Component;
-
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * EhCache 缓存管理器
@@ -35,7 +34,13 @@ public class EhCacheManager implements ClearHandler {
 
     /**
      * 内存缓存管理器（不支持磁盘持久化）
+     * -- GETTER --
+     *  获取 CacheManager 实例
+     *
+     * @return CacheManager 实例
+
      */
+    @Getter
     private final CacheManager manager = CacheManagerBuilder.newCacheManagerBuilder().build(true);
 
     /**
@@ -131,7 +136,7 @@ public class EhCacheManager implements ClearHandler {
             caches.put(name, cache);
             return cache;
         } catch (Exception e) {
-            log.error("创建失败:{}", e.getMessage());
+            log.error("Creation failed: {}", e.getMessage());
             throw e;
         } finally {
             lock.unlock();
@@ -267,15 +272,6 @@ public class EhCacheManager implements ClearHandler {
         }
         if (log.isDebugEnabled())
             log.debug("Cleared all caches, total: {}", caches.size());
-    }
-
-    /**
-     * 获取 CacheManager 实例
-     *
-     * @return CacheManager 实例
-     */
-    public CacheManager getManager() {
-        return manager;
     }
 
     /**

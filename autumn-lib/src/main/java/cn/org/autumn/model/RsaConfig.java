@@ -4,7 +4,6 @@ import cn.org.autumn.annotation.ConfigField;
 import cn.org.autumn.annotation.ConfigParam;
 import cn.org.autumn.config.EncryptConfigHandler;
 import cn.org.autumn.config.InputType;
-
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;

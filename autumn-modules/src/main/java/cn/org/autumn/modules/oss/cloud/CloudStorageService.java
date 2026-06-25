@@ -5,11 +5,10 @@ import com.aliyun.oss.model.CannedAccessControlList;
 import com.aliyun.oss.model.ObjectMetadata;
 import com.aliyun.oss.model.SetBucketAclRequest;
 import com.aliyun.oss.model.SetObjectAclRequest;
-import org.apache.commons.lang.StringUtils;
-
 import java.io.InputStream;
 import java.util.Date;
 import java.util.UUID;
+import org.apache.commons.lang.StringUtils;
 
 public abstract class CloudStorageService {
     /**

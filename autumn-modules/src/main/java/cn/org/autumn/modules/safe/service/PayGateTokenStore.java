@@ -6,17 +6,16 @@ import cn.org.autumn.model.PayCredentialConfig;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.safe.entity.PayGateAttemptEntity;
 import cn.org.autumn.modules.safe.site.SafeConfig;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
-
-import java.util.Iterator;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
 
 /**
  * 支付闸门令牌与免密窗口（Redis 优先，无 Redis 本机降级）。

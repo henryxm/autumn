@@ -1,9 +1,8 @@
 package cn.org.autumn.model;
 
+import java.io.Serializable;
 import lombok.Getter;
 import lombok.Setter;
-
-import java.io.Serializable;
 
 /**
  * 机器人入站消息（外部推送经 API 进入系统后的统一载荷）。

@@ -153,7 +153,7 @@ ModuleService
 
 Skill 与 `docs/` 口径一致，摘要包括：分层纪律、Dao Provider、双主键、`@FieldEncrypt` / **`EncryptModuleService`**、加密缓存钩子、Bot、safe 等。可同步到 `~/.cursor/skills/` 供全局使用。
 
-**约束扫描（按需）**：仅当任务明确要求规范体检或 CI 门禁时，在仓库根执行 `bash scripts/constraints-scan`（见 Skill 与 `AI_DATABASE.md` §8.5）。
+**约束扫描（按需）**：全量 `bash scripts/constraints-scan`（含 **I 组 FQN**）；**PR 硬门禁** `bash scripts/check-java-fqn`（见 `AI_CODE_STYLE.md` §7.1、`.github/workflows/java-style-check.yml`）。
 
 ---
 

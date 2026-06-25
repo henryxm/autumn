@@ -1,19 +1,22 @@
 package cn.org.autumn.modules.oss.controller;
 
+import cn.org.autumn.exception.AException;
+import cn.org.autumn.modules.oss.cloud.CloudStorageConfig;
+import cn.org.autumn.modules.oss.cloud.OSSFactory;
 import cn.org.autumn.modules.oss.entity.SysOssEntity;
 import cn.org.autumn.modules.oss.service.SysOssService;
 import cn.org.autumn.modules.sys.service.SysConfigService;
-import com.google.gson.Gson;
 import cn.org.autumn.utils.Constant;
-import cn.org.autumn.exception.AException;
 import cn.org.autumn.utils.PageUtils;
 import cn.org.autumn.utils.R;
 import cn.org.autumn.validator.ValidatorUtils;
 import cn.org.autumn.validator.group.AliyunGroup;
 import cn.org.autumn.validator.group.QcloudGroup;
 import cn.org.autumn.validator.group.QiniuGroup;
-import cn.org.autumn.modules.oss.cloud.CloudStorageConfig;
-import cn.org.autumn.modules.oss.cloud.OSSFactory;
+import com.google.gson.Gson;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.Map;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -21,10 +24,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-
-import java.util.Arrays;
-import java.util.Date;
-import java.util.Map;
 
 @RestController
 @RequestMapping("sys/oss")

@@ -1,14 +1,13 @@
 package cn.org.autumn.modules.install;
 
 import cn.org.autumn.config.InterceptorHandler;
+import java.util.Arrays;
+import java.util.List;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.util.Arrays;
-import java.util.List;
 
 /**
  * 安装模式下将非向导流量重定向到 {@code /install}。

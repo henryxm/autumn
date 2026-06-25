@@ -1,10 +1,9 @@
 package cn.org.autumn.modules.safe.dto;
 
+import java.io.Serializable;
+import javax.validation.constraints.Min;
 import lombok.Getter;
 import lombok.Setter;
-
-import javax.validation.constraints.Min;
-import java.io.Serializable;
 
 /**
  * 支付闸门评估请求（支付密码输入前提交）。

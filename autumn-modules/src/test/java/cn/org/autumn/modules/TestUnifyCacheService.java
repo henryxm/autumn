@@ -1,9 +1,16 @@
 package cn.org.autumn.modules;
 
+import static org.junit.Assert.*;
+
 import cn.org.autumn.modules.client.entity.WebOauthCombineEntity;
 import cn.org.autumn.modules.client.service.WebOauthCombineService;
 import cn.org.autumn.modules.lan.entity.LanguageEntity;
 import cn.org.autumn.utils.Uuid;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.List;
+import java.util.Random;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -12,11 +19,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.Date;
-import java.util.Random;
-
-import static org.junit.Assert.*;
 
 /**
  * ModuleService 缓存功能测试用例
@@ -60,7 +62,7 @@ public class TestUnifyCacheService {
      */
     @Test
     public void testWebOauthCombineEntitySingleKeyCache() {
-        log.info("=== 开始测试 WebOauthCombineEntity 单一 key 缓存 ===");
+        log.info("=== Starting WebOauthCombineEntity single-key cache test ===");
         
         // 1. 创建测试数据
         WebOauthCombineEntity entity = new WebOauthCombineEntity();
@@ -75,7 +77,7 @@ public class TestUnifyCacheService {
         // 2. 插入数据
         boolean inserted = webOauthCombineService.insert(entity);
         assertTrue("插入数据失败", inserted);
-        log.info("插入数据成功，uuid: {}", uuid);
+        log.info("Insert succeeded, uuid: {}", uuid);
         
         // 3. 测试 getCache - 第一次查询（应该从数据库查询并缓存）
         long startTime1 = System.currentTimeMillis();
@@ -83,7 +85,7 @@ public class TestUnifyCacheService {
         long time1 = System.currentTimeMillis() - startTime1;
         assertNotNull("第一次查询应该返回数据", cached1);
         assertEquals("uuid 应该匹配", uuid, cached1.getUuid());
-        log.info("第一次查询（数据库查询）耗时: {} ms", time1);
+        log.info("First query (database) took: {} ms", time1);
         
         // 4. 测试 getCache - 第二次查询（应该从缓存获取）
         long startTime2 = System.currentTimeMillis();
@@ -91,7 +93,7 @@ public class TestUnifyCacheService {
         long time2 = System.currentTimeMillis() - startTime2;
         assertNotNull("第二次查询应该返回数据", cached2);
         assertEquals("uuid 应该匹配", uuid, cached2.getUuid());
-        log.info("第二次查询（缓存查询）耗时: {} ms", time2);
+        log.info("Second query (cache) took: {} ms", time2);
         
         // 5. 验证缓存生效（第二次查询应该更快）
         assertTrue("缓存查询应该比数据库查询快", time2 < time1 || time2 < 10);
@@ -100,25 +102,25 @@ public class TestUnifyCacheService {
         cached2.setClientId("updated_client_" + randomString(10));
         boolean updated = webOauthCombineService.updateById(cached2);
         assertTrue("更新应该成功", updated);
-        log.info("更新数据成功");
+        log.info("Update succeeded");
         
         // 7. 验证更新后缓存已删除（再次查询应该从数据库获取最新数据）
         WebOauthCombineEntity cached3 = webOauthCombineService.getCache(uuid);
         assertNotNull("更新后查询应该返回数据", cached3);
         assertEquals("更新后的 clientId 应该匹配", cached2.getClientId(), cached3.getClientId());
-        log.info("更新后缓存已删除，重新从数据库查询");
+        log.info("Cache evicted after update; reloaded from database");
         
         // 8. 测试删除后缓存删除
         boolean deleted = webOauthCombineService.deleteById(cached3.getId());
         assertTrue("删除应该成功", deleted);
-        log.info("删除数据成功");
+        log.info("Delete succeeded");
         
         // 9. 验证删除后缓存已删除
         WebOauthCombineEntity cached4 = webOauthCombineService.getCache(uuid);
         assertNull("删除后查询应该返回 null", cached4);
-        log.info("删除后缓存已删除");
+        log.info("Cache evicted after delete");
         
-        log.info("=== WebOauthCombineEntity 单一 key 缓存测试完成 ===");
+        log.info("=== WebOauthCombineEntity single-key cache test completed ===");
     }
 
     /**
@@ -126,7 +128,7 @@ public class TestUnifyCacheService {
      */
     @Test
     public void testLanguageEntityCompositeKeyCache() {
-        log.info("=== 开始测试 LanguageEntity 复合 key 缓存 ===");
+        log.info("=== Starting LanguageEntity composite-key cache test ===");
         
         // 1. 创建测试数据
         LanguageEntity entity = new LanguageEntity();
@@ -141,7 +143,7 @@ public class TestUnifyCacheService {
         // 2. 插入数据
         boolean inserted = testLanguageService.insert(entity);
         assertTrue("插入数据失败", inserted);
-        log.info("插入数据成功，name: {}, tag: {}", name, tag);
+        log.info("Insert succeeded, name: {}, tag: {}", name, tag);
         
         // 3. 测试 getCache - 第一次查询（应该从数据库查询并缓存）
         // 使用可变参数：getCache(name, tag)
@@ -151,7 +153,7 @@ public class TestUnifyCacheService {
         assertNotNull("第一次查询应该返回数据", cached1);
         assertEquals("name 应该匹配", name, cached1.getName());
         assertEquals("tag 应该匹配", tag, cached1.getTag());
-        log.info("第一次查询（数据库查询）耗时: {} ms", time1);
+        log.info("First query (database) took: {} ms", time1);
         
         // 4. 测试 getCache - 第二次查询（应该从缓存获取）
         long startTime2 = System.currentTimeMillis();
@@ -160,7 +162,7 @@ public class TestUnifyCacheService {
         assertNotNull("第二次查询应该返回数据", cached2);
         assertEquals("name 应该匹配", name, cached2.getName());
         assertEquals("tag 应该匹配", tag, cached2.getTag());
-        log.info("第二次查询（缓存查询）耗时: {} ms", time2);
+        log.info("Second query (cache) took: {} ms", time2);
         
         // 5. 验证缓存生效（第二次查询应该更快）
         assertTrue("缓存查询应该比数据库查询快", time2 < time1 || time2 < 10);
@@ -168,33 +170,33 @@ public class TestUnifyCacheService {
         // 6. 测试使用不同的参数顺序（应该返回 null，因为顺序不对）
         LanguageEntity cachedWrongOrder = testLanguageService.getCache(tag, name);
         assertNull("错误的参数顺序应该返回 null", cachedWrongOrder);
-        log.info("错误的参数顺序返回 null（符合预期）");
+        log.info("Wrong parameter order returned null (expected)");
         
         // 7. 测试更新后缓存删除
         cached2.setZhCn("更新后的中文");
         cached2.setEnUs("Updated English");
         boolean updated = testLanguageService.updateById(cached2);
         assertTrue("更新应该成功", updated);
-        log.info("更新数据成功");
+        log.info("Update succeeded");
         
         // 8. 验证更新后缓存已删除（再次查询应该从数据库获取最新数据）
         LanguageEntity cached3 = testLanguageService.getCache(name, tag);
         assertNotNull("更新后查询应该返回数据", cached3);
         assertEquals("更新后的 zhCn 应该匹配", "更新后的中文", cached3.getZhCn());
         assertEquals("更新后的 enUs 应该匹配", "Updated English", cached3.getEnUs());
-        log.info("更新后缓存已删除，重新从数据库查询");
+        log.info("Cache evicted after update; reloaded from database");
         
         // 9. 测试删除后缓存删除
         boolean deleted = testLanguageService.deleteById(cached3.getId());
         assertTrue("删除应该成功", deleted);
-        log.info("删除数据成功");
+        log.info("Delete succeeded");
         
         // 10. 验证删除后缓存已删除
         LanguageEntity cached4 = testLanguageService.getCache(name, tag);
         assertNull("删除后查询应该返回 null", cached4);
-        log.info("删除后缓存已删除");
+        log.info("Cache evicted after delete");
         
-        log.info("=== LanguageEntity 复合 key 缓存测试完成 ===");
+        log.info("=== LanguageEntity composite-key cache test completed ===");
     }
 
     /**
@@ -202,7 +204,7 @@ public class TestUnifyCacheService {
      */
     @Test
     public void testBatchOperationCacheRemoval() {
-        log.info("=== 开始测试批量操作缓存删除 ===");
+        log.info("=== Starting batch operation cache eviction test ===");
         
         // 1. 创建多个测试数据
         String[] uuids = new String[3];
@@ -221,22 +223,22 @@ public class TestUnifyCacheService {
             entities[i] = entity;
             
             webOauthCombineService.insert(entity);
-            log.info("插入数据 {}: uuid = {}", i, uuid);
+            log.info("Inserted record {}: uuid = {}", i, uuid);
         }
         
         // 2. 预热缓存
         for (String uuid : uuids) {
             webOauthCombineService.getCache(uuid);
         }
-        log.info("缓存预热完成");
+        log.info("Cache warm-up completed");
         
         // 3. 测试批量更新后缓存删除
         for (WebOauthCombineEntity entity : entities) {
             entity.setClientId("updated_batch_" + randomString(10));
         }
-        boolean batchUpdated = webOauthCombineService.updateBatchById(java.util.Arrays.asList(entities));
+        boolean batchUpdated = webOauthCombineService.updateBatchById(Arrays.asList(entities));
         assertTrue("批量更新应该成功", batchUpdated);
-        log.info("批量更新完成");
+        log.info("Batch update completed");
         
         // 4. 验证批量更新后缓存已删除
         for (int i = 0; i < uuids.length; i++) {
@@ -244,25 +246,25 @@ public class TestUnifyCacheService {
             assertNotNull("批量更新后查询应该返回数据", cached);
             assertEquals("更新后的 clientId 应该匹配", entities[i].getClientId(), cached.getClientId());
         }
-        log.info("批量更新后缓存已删除，重新从数据库查询");
+        log.info("Cache evicted after batch update; reloaded from database");
         
         // 5. 测试批量删除后缓存删除
-        java.util.List<Long> ids = new java.util.ArrayList<>();
+        List<Long> ids = new ArrayList<>();
         for (WebOauthCombineEntity entity : entities) {
             ids.add(entity.getId());
         }
         boolean batchDeleted = webOauthCombineService.deleteBatchIds(ids);
         assertTrue("批量删除应该成功", batchDeleted);
-        log.info("批量删除完成");
+        log.info("Batch delete completed");
         
         // 6. 验证批量删除后缓存已删除
         for (String uuid : uuids) {
             WebOauthCombineEntity cached = webOauthCombineService.getCache(uuid);
             assertNull("批量删除后查询应该返回 null", cached);
         }
-        log.info("批量删除后缓存已删除");
+        log.info("Cache evicted after batch delete");
         
-        log.info("=== 批量操作缓存删除测试完成 ===");
+        log.info("=== Batch operation cache eviction test completed ===");
     }
 
     /**
@@ -270,7 +272,7 @@ public class TestUnifyCacheService {
      */
     @Test
     public void testLanguageEntityCompositeKeyVariations() {
-        log.info("=== 开始测试复合 key 缓存的不同参数组合 ===");
+        log.info("=== Starting composite-key cache parameter variation test ===");
         
         // 1. 创建多个测试数据（相同的 name，不同的 tag）
         String name = "shared_name_" + randomString(10);
@@ -287,7 +289,7 @@ public class TestUnifyCacheService {
             entities[i] = entity;
             
             testLanguageService.insert(entity);
-            log.info("插入数据 {}: name = {}, tag = {}", i, name, tags[i]);
+            log.info("Inserted record {}: name = {}, tag = {}", i, name, tags[i]);
         }
         
         // 2. 测试不同的 tag 应该返回不同的数据
@@ -297,20 +299,20 @@ public class TestUnifyCacheService {
             assertEquals("name 应该匹配", name, cached.getName());
             assertEquals("tag 应该匹配", tags[i], cached.getTag());
             assertEquals("zhCn 应该匹配", "中文" + i, cached.getZhCn());
-            log.info("查询 name={}, tag={} 成功", name, tags[i]);
+            log.info("Query name={}, tag={} succeeded", name, tags[i]);
         }
         
         // 3. 测试不存在的组合应该返回 null
         LanguageEntity notExist = testLanguageService.getCache(name, "non_exist_tag");
         assertNull("不存在的组合应该返回 null", notExist);
-        log.info("不存在的组合返回 null（符合预期）");
+        log.info("Non-existent combination returned null (expected)");
         
         // 4. 清理测试数据
         for (LanguageEntity entity : entities) {
             testLanguageService.deleteById(entity.getId());
         }
         
-        log.info("=== 复合 key 缓存的不同参数组合测试完成 ===");
+        log.info("=== Composite-key cache parameter variation test completed ===");
     }
 
     /**
@@ -318,7 +320,7 @@ public class TestUnifyCacheService {
      */
     @Test
     public void testCacheKeyBuilding() {
-        log.info("=== 开始测试缓存 key 构建 ===");
+        log.info("=== Starting cache key construction test ===");
         
         // 1. 测试单一 key
         String uuid1 = Uuid.uuid();
@@ -351,7 +353,7 @@ public class TestUnifyCacheService {
         assertNotEquals("不同的 key 应该返回不同的数据", cached1.getUuid(), cached2.getUuid());
         assertEquals("uuid1 应该匹配", uuid1, cached1.getUuid());
         assertEquals("uuid2 应该匹配", uuid2, cached2.getUuid());
-        log.debug("单一 key 缓存构建正确");
+        log.debug("Single-key cache construction is correct");
         
         // 3. 测试复合 key
         String name = "key_test_" + randomString(10);
@@ -384,7 +386,7 @@ public class TestUnifyCacheService {
         assertEquals("name 应该相同", name, cachedLang2.getName());
         assertNotEquals("tag 应该不同", cachedLang1.getTag(), cachedLang2.getTag());
         assertNotEquals("zhCn 应该不同", cachedLang1.getZhCn(), cachedLang2.getZhCn());
-        log.debug("复合 key 缓存构建正确");
+        log.debug("Composite-key cache construction is correct");
         
         // 5. 清理测试数据
         webOauthCombineService.deleteById(entity1.getId());
@@ -392,6 +394,6 @@ public class TestUnifyCacheService {
         testLanguageService.deleteById(lang1.getId());
         testLanguageService.deleteById(lang2.getId());
         
-        log.debug("=== 缓存 key 构建测试完成 ===");
+        log.debug("=== Cache key construction test completed ===");
     }
 }

@@ -1,21 +1,21 @@
 package cn.org.autumn.modules.lan.service.gen;
 
+import cn.org.autumn.modules.lan.dao.LanguageDao;
+import cn.org.autumn.modules.lan.entity.LanguageEntity;
+import cn.org.autumn.modules.lan.service.LanMenu;
+import cn.org.autumn.modules.sys.entity.SysMenuEntity;
+import cn.org.autumn.modules.sys.service.SysMenuService;
 import cn.org.autumn.site.InitFactory;
-import org.apache.commons.lang.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import cn.org.autumn.utils.PageUtils;
+import cn.org.autumn.utils.Query;
 import com.baomidou.mybatisplus.mapper.EntityWrapper;
 import com.baomidou.mybatisplus.plugins.Page;
 import com.baomidou.mybatisplus.service.impl.ServiceImpl;
-import cn.org.autumn.utils.PageUtils;
-import cn.org.autumn.utils.Query;
-import cn.org.autumn.modules.lan.service.LanMenu;
-import cn.org.autumn.modules.lan.dao.LanguageDao;
-import cn.org.autumn.modules.lan.entity.LanguageEntity;
-import cn.org.autumn.modules.sys.entity.SysMenuEntity;
-import cn.org.autumn.modules.sys.service.SysMenuService;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import org.apache.commons.lang.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 
 /**

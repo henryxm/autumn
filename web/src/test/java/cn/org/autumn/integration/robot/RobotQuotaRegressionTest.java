@@ -1,18 +1,17 @@
 package cn.org.autumn.integration.robot;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import cn.org.autumn.integration.support.IntegrationJson;
 import cn.org.autumn.integration.support.RobotTestBodies;
 import cn.org.autumn.integration.support.RobotTestFixtures;
 import com.alibaba.fastjson.JSONObject;
+import java.util.UUID;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
-
-import java.util.UUID;
-
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * 配额：软删释放名额；停用仍占名额；软删后不可 enable。

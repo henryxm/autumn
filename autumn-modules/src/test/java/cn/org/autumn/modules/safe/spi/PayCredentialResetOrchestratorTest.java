@@ -2,13 +2,12 @@ package cn.org.autumn.modules.safe.spi;
 
 import cn.org.autumn.exception.CodeException;
 import cn.org.autumn.model.Error;
+import java.lang.reflect.Field;
+import java.util.Collections;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
-
-import java.lang.reflect.Field;
-import java.util.Collections;
 
 public class PayCredentialResetOrchestratorTest {
 

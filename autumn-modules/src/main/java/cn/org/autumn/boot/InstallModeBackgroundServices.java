@@ -2,18 +2,16 @@ package cn.org.autumn.boot;
 
 import cn.org.autumn.install.InstallMode;
 import cn.org.autumn.modules.job.task.LoopJob;
+import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
 import org.quartz.Scheduler;
 import org.quartz.SchedulerException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
-
-import java.util.Map;
 
 /**
  * 安装向导（{@code autumn.install.mode=true}）下收敛后台调度，避免访问未就绪的中间件或业务库。
@@ -25,10 +23,8 @@ import java.util.Map;
  */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
+@Slf4j
 public class InstallModeBackgroundServices implements ApplicationRunner {
-
-    private static final Logger log = LoggerFactory.getLogger(InstallModeBackgroundServices.class);
-
     private final ApplicationContext applicationContext;
 
     public InstallModeBackgroundServices(ApplicationContext applicationContext) {

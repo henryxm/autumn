@@ -5,14 +5,13 @@ import cn.org.autumn.table.annotation.sql.CharacterSet;
 import cn.org.autumn.table.relational.model.TableMeta;
 import cn.org.autumn.table.utils.HumpConvert;
 import com.baomidou.mybatisplus.annotations.TableName;
+import java.lang.reflect.Field;
+import java.util.*;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.WordUtils;
-
-import java.lang.reflect.Field;
-import java.util.*;
 
 @Slf4j
 @Getter
@@ -181,7 +180,7 @@ public class TableInfo {
             Index k = field.getAnnotation(Index.class);
             if (null != k) {
                 if (null != column && column.isUnique()) {
-                    log.warn("实体 [{}] 字段 [{}] 已使用 @Column(isUnique=true)，字段上的 @Index 已忽略且不参与建表索引收集；" + "isUnique 优先级更高，请删除该字段上冗余的 @Index 以免误导。", clazz.getName(), field.getName());
+                    log.warn("Entity [{}] field [{}] uses @Column(isUnique=true); field @Index ignored and excluded from DDL index collection; " + "isUnique takes precedence—remove redundant @Index on this field.", clazz.getName(), field.getName());
                 } else {
                     indexInfos.add(new IndexInfo(k, field));
                 }
@@ -426,11 +425,11 @@ public class TableInfo {
             }
             for (String colKey : toRemove) {
                 f.remove(colKey);
-                log.warn("实体 [{}] 索引 [{}] 中的列 [{}] 已由 @Column(isUnique=true) 表达唯一约束，已从该索引定义中移除（isUnique 优先）；" + "请从类上 @Index/@Indexes 的 fields 中删除该列以免误导。", clazz.getName(), ii.getName(), colKey);
+                log.warn("Entity [{}] index [{}] column [{}] already unique via @Column(isUnique=true), removed from index (isUnique priority); " + "remove this column from class @Index/@Indexes fields.", clazz.getName(), ii.getName(), colKey);
             }
             if (f.isEmpty()) {
                 it.remove();
-                log.warn("实体 [{}] 索引 [{}] 在移除 isUnique 列后无剩余列，整段索引已忽略；请删除或修正类上的 @Index/@Indexes。", clazz.getName(), ii.getName());
+                log.warn("Entity [{}] index [{}] has no columns left after removing isUnique columns; index ignored—fix or remove class @Index/@Indexes.", clazz.getName(), ii.getName());
             }
         }
     }

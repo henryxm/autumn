@@ -1,14 +1,14 @@
 package cn.org.autumn.modules.sys.service;
 
 import cn.org.autumn.utils.RedisUtils;
+import com.alibaba.fastjson.JSON;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import com.alibaba.fastjson.JSON;
+import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
-
-import java.util.*;
-import java.util.concurrent.TimeUnit;
 
 @Service
 public class RedisService {
@@ -460,7 +460,7 @@ public class RedisService {
      */
     private Object getZSetValue(String key) {
         try {
-            Set<org.springframework.data.redis.core.ZSetOperations.TypedTuple<Object>> zset = 
+            Set<ZSetOperations.TypedTuple<Object>> zset = 
                 redisTemplate.opsForZSet().rangeWithScores(key, 0, -1);
             if (zset == null || zset.isEmpty()) {
                 return new ArrayList<>();
@@ -468,7 +468,7 @@ public class RedisService {
             
             // 处理有序集合中的每个元素
             List<Map<String, Object>> result = new ArrayList<>();
-            for (org.springframework.data.redis.core.ZSetOperations.TypedTuple<Object> tuple : zset) {
+            for (ZSetOperations.TypedTuple<Object> tuple : zset) {
                 Map<String, Object> tupleMap = new HashMap<>();
                 Object value = tuple.getValue();
                 Double score = tuple.getScore();
@@ -497,14 +497,14 @@ public class RedisService {
         } catch (Exception e) {
             // 如果RedisTemplate读取失败，尝试用StringRedisTemplate读取
             try {
-                Set<org.springframework.data.redis.core.ZSetOperations.TypedTuple<String>> zset = 
+                Set<ZSetOperations.TypedTuple<String>> zset = 
                     stringRedisTemplate.opsForZSet().rangeWithScores(key, 0, -1);
                 if (zset == null || zset.isEmpty()) {
                     return new ArrayList<>();
                 }
                 
                 List<Map<String, Object>> result = new ArrayList<>();
-                for (org.springframework.data.redis.core.ZSetOperations.TypedTuple<String> tuple : zset) {
+                for (ZSetOperations.TypedTuple<String> tuple : zset) {
                     Map<String, Object> tupleMap = new HashMap<>();
                     String value = tuple.getValue();
                     Double score = tuple.getScore();

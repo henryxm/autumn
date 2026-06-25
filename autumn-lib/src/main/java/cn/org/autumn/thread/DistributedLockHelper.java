@@ -2,10 +2,9 @@ package cn.org.autumn.thread;
 
 import cn.org.autumn.config.Config;
 import cn.org.autumn.redis.resilience.RedisResilience;
+import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * 分布式锁共享工具 — 封装 Redisson 分布式锁的通用操作。
@@ -15,10 +14,8 @@ import org.slf4j.LoggerFactory;
  *
  * <p>此类为包级可见，不对外暴露。</p>
  */
+@Slf4j
 class DistributedLockHelper {
-
-    private static final Logger log = LoggerFactory.getLogger(DistributedLockHelper.class);
-
     /**
      * 使用 volatile 保证多线程可见性，配合 double-checked locking 实现线程安全的懒加载
      */
@@ -43,7 +40,7 @@ class DistributedLockHelper {
                         redissonClient = (RedissonClient) Config.getBean(RedissonClient.class);
                     } catch (Exception e) {
                         if (log.isDebugEnabled())
-                            log.debug("RedissonClient Bean 未就绪: {}", e.getMessage());
+                            log.debug("RedissonClient bean not ready: {}", e.getMessage());
                     }
                 }
             }
@@ -109,10 +106,10 @@ class DistributedLockHelper {
             if (lock != null && lock.isHeldByCurrentThread()) {
                 lock.unlock();
                 if (log.isDebugEnabled())
-                    log.debug("锁已释放（任务失败，允许故障转移）: key={}", lockKey);
+                    log.debug("Lock released (task failed, failover allowed): key={}", lockKey);
             }
         } catch (Exception e) {
-            log.warn("释放锁异常: key={}, error={}", lockKey, e.getMessage());
+            log.warn("Lock release error: key={}, error={}", lockKey, e.getMessage());
         }
     }
 }

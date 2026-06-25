@@ -3,10 +3,10 @@ package cn.org.autumn.modules.spm.filter;
 import cn.org.autumn.config.Config;
 import cn.org.autumn.model.Error;
 import cn.org.autumn.model.Response;
-import cn.org.autumn.modules.oauth.service.ClientDetailsService;
-import cn.org.autumn.modules.spm.service.SuperPositionModelService;
 import cn.org.autumn.modules.bot.service.RobotTokenService;
 import cn.org.autumn.modules.bot.shiro.RobotAccessTokenToken;
+import cn.org.autumn.modules.oauth.service.ClientDetailsService;
+import cn.org.autumn.modules.spm.service.SuperPositionModelService;
 import cn.org.autumn.modules.sys.shiro.ClientIpSessionSupport;
 import cn.org.autumn.modules.sys.shiro.OauthAccessTokenToken;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
@@ -14,6 +14,13 @@ import cn.org.autumn.modules.wall.service.WallService;
 import cn.org.autumn.site.PathFactory;
 import cn.org.autumn.utils.IPUtils;
 import com.alibaba.fastjson.JSON;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
+import java.util.Map;
+import javax.servlet.*;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.apache.oltu.oauth2.common.OAuth;
@@ -24,14 +31,6 @@ import org.apache.shiro.authc.AuthenticationToken;
 import org.apache.shiro.session.Session;
 import org.apache.shiro.subject.Subject;
 import org.apache.shiro.web.filter.authc.FormAuthenticationFilter;
-
-import javax.servlet.*;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.nio.charset.StandardCharsets;
-import java.util.Map;
 
 @Slf4j
 public class SpmFilter extends FormAuthenticationFilter implements PathFactory.Path {
@@ -72,7 +71,7 @@ public class SpmFilter extends FormAuthenticationFilter implements PathFactory.P
             accessToken = accessToken.trim();
             if (accessToken.startsWith("{") && accessToken.endsWith("}") && accessToken.contains("\"access_token\":")) {
                 if (log.isDebugEnabled())
-                    log.debug("数据令牌:{}", accessToken);
+                    log.debug("Data token:{}", accessToken);
                 Object resp = JSON.parse(accessToken);
                 @SuppressWarnings("unchecked")
                 Map<String, Object> map = (Map<String, Object>) resp;
@@ -83,7 +82,7 @@ public class SpmFilter extends FormAuthenticationFilter implements PathFactory.P
                 return accessTokenKey;
             } else {
                 if (log.isDebugEnabled())
-                    log.debug("字符令牌:{}", accessToken);
+                    log.debug("Char token:{}", accessToken);
                 if (accessToken.contains("\"") || accessToken.contains("{") || accessToken.contains("}") || accessToken.length() > 100)
                     return "";
                 else {
@@ -95,7 +94,7 @@ public class SpmFilter extends FormAuthenticationFilter implements PathFactory.P
                 HttpServletRequest httpServletRequest = (HttpServletRequest) request;
                 log.debug(httpServletRequest.getServletPath());
             }
-            log.debug("令牌解析:{}", e.getMessage());
+            log.debug("Token parse error:{}", e.getMessage());
         }
         return "";
     }
@@ -235,7 +234,7 @@ public class SpmFilter extends FormAuthenticationFilter implements PathFactory.P
     private boolean handleUnauthorized(HttpServletRequest request, HttpServletResponse response) {
         try {
             if (log.isDebugEnabled()) {
-                log.debug("请求未授权:{}, IP:{}, 代理:{}", request.getRequestURI(), IPUtils.getIp(request), request.getHeader("user-agent"));
+                log.debug("Unauthorized request: uri={}, IP={}, agent={}", request.getRequestURI(), IPUtils.getIp(request), request.getHeader("user-agent"));
             }
             // 设置响应头
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
@@ -248,7 +247,7 @@ public class SpmFilter extends FormAuthenticationFilter implements PathFactory.P
             writer.close();
             return false; // 不继续处理请求
         } catch (IOException e) {
-            log.error("未授权响应:{}", e.getMessage());
+            log.error("Unauthorized response:{}", e.getMessage());
             return false;
         }
     }

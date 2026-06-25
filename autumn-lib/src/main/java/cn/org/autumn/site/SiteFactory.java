@@ -2,15 +2,13 @@ package cn.org.autumn.site;
 
 import cn.org.autumn.annotation.PageAware;
 import cn.org.autumn.utils.SpringContextUtils;
-import org.apache.commons.lang.StringUtils;
-import org.springframework.context.ApplicationContext;
-import org.springframework.stereotype.Component;
-
-import javax.validation.constraints.NotNull;
-
 import java.lang.reflect.Field;
 import java.util.Collection;
 import java.util.Map;
+import javax.validation.constraints.NotNull;
+import org.apache.commons.lang.StringUtils;
+import org.springframework.context.ApplicationContext;
+import org.springframework.stereotype.Component;
 
 @Component
 public final class SiteFactory {

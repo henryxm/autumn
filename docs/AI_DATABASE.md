@@ -266,7 +266,7 @@ rg -n '`[a-zA-Z_][a-zA-Z0-9_]*`' --glob '*Service*.java' .
 rg -n 'FIND_IN_SET|IFNULL\(|DATE_FORMAT\(|GROUP_CONCAT\(|LAST_INSERT_ID\(' --glob '*.java' .
 ```
 
-**仓库脚本（分组体检）**：根目录执行 **`scripts/constraints-scan`**（只读、`rg` 必选），按 **实体命名 / 索引唯一 / Dao 注解 SQL / Wrapper / 分层 / DDL 文件名** 等分组输出，规则与 **`docs/AI_STANDARDS.md`**、本文 §1～§5、§8 及 **`docs/AI_BOOT.md`** 表名约定等对读；详见脚本头部注释与环境变量 **`AUTUMN_SCAN_SKIP_GEN`** / **`AUTUMN_SCAN_EXTRA`**。**执行时机**：与 **`docs/AI_INDEX.md`** 一致，**按需**（用户或任务要求、CI、合并前自检），**不**作为每次改动的默认必跑项。
+**仓库脚本（分组体检）**：根目录执行 **`scripts/constraints-scan`**（只读、`rg` + Python3 必选），按 **实体命名 / 索引唯一 / Dao 注解 SQL / Wrapper / 分层 / DDL / import·FQN（I 组）** 等分组输出；**PR 硬门禁**为 **`bash scripts/check-java-fqn`**（**`docs/AI_CODE_STYLE.md` §7.1**）。规则与 **`docs/AI_STANDARDS.md`**、本文 §1～§5、§8 及 **`docs/AI_BOOT.md`** 表名约定等对读；详见脚本头部注释与环境变量 **`AUTUMN_SCAN_SKIP_GEN`** / **`AUTUMN_SCAN_EXTRA`**。**执行时机**：FQN 检查随 PR CI 自动运行；全量 `constraints-scan` 与 **`docs/AI_INDEX.md`** 一致，**按需**运行。
 
 ---
 
@@ -287,3 +287,4 @@ rg -n 'FIND_IN_SET|IFNULL\(|DATE_FORMAT\(|GROUP_CONCAT\(|LAST_INSERT_ID\(' --glo
 | 启动配置、profile、环境变量 | **`docs/AI_BOOT.md`** §3、§8 |
 | 升级清单、扫描脚本、「一键」边界 | **`docs/AI_UPGRADE.md`** |
 | **老旧 Dao/Wrapper 迁移步骤与检索** | **本文 §8** |
+| **只读模式 / `CrudGuard` 全局 API** | **`docs/AI_DATABASE_READ_ONLY.md`** |

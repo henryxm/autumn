@@ -15,6 +15,11 @@ import cn.org.autumn.utils.HttpClientUtils;
 import cn.org.autumn.utils.IPUtils;
 import cn.org.autumn.utils.R;
 import com.alibaba.fastjson.JSON;
+import java.util.HashMap;
+import java.util.Map;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.apache.oltu.oauth2.as.response.OAuthASResponse;
 import org.apache.oltu.oauth2.client.OAuthClient;
@@ -27,8 +32,6 @@ import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.message.OAuthResponse;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -37,15 +40,10 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.util.HashMap;
-import java.util.Map;
-
 @Controller
 @RequestMapping("client")
+@Slf4j
 public class ClientOauth2Controller {
-    final Logger log = LoggerFactory.getLogger(getClass());
 
     @Autowired
     WebAuthenticationService webAuthenticationService;
@@ -79,7 +77,7 @@ public class ClientOauth2Controller {
                 query = "?" + query;
             else
                 query = "";
-            log.debug("客户端授权登录:{}{}", request.getRequestURL().toString(), query);
+            log.debug("Client OAuth login:{}{}", request.getRequestURL().toString(), query);
         }
         String authCode = request.getParameter(OAuth.OAUTH_CODE);
         if (StringUtils.isEmpty(authCode)) {
@@ -93,7 +91,7 @@ public class ClientOauth2Controller {
         if (ShiroUtils.needLogin()) {
             String host = request.getHeader("host");
             if (log.isDebugEnabled())
-                log.debug("登录域名:{}", host);
+                log.debug("Login domain:{}", host);
             WebAuthenticationEntity webAuthenticationEntity = webAuthenticationService.getByClientId(host);
             if (null == webAuthenticationEntity)
                 webAuthenticationEntity = webAuthenticationService.getByClientId(sysConfigService.getOauth2LoginClientId(host));
@@ -103,7 +101,7 @@ public class ClientOauth2Controller {
                 userProfileService.login(userProfile);
                 userTokenService.saveToken(accessToken);
                 if (log.isDebugEnabled())
-                    log.debug("登录用户:{}", userProfile);
+                    log.debug("Login user:{}", userProfile);
             }
         }
         String callback = request.getParameter("callback");
@@ -118,7 +116,7 @@ public class ClientOauth2Controller {
             callback = "/";
         }
         if (log.isDebugEnabled())
-            log.debug("回调地址:{}", callback);
+            log.debug("Callback URL:{}", callback);
         return pageFactory.direct(request, response, model, callback);
     }
 

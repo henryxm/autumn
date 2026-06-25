@@ -7,9 +7,12 @@ import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.site.LoadFactory;
 import cn.org.autumn.site.MappingFactory;
 import cn.org.autumn.site.PageFactory;
+import java.util.ArrayList;
+import java.util.List;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -17,15 +20,10 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.util.ArrayList;
-import java.util.List;
-
 @Controller
+@Slf4j
 public class SpmController {
 
-    final Logger log = LoggerFactory.getLogger(getClass());
 
     @Autowired
     SuperPositionModelService superPositionModelService;
@@ -74,12 +72,12 @@ public class SpmController {
             if (sysUserRoleService.isSystemAdministrator(sysUserEntity)) {
                 String resourceId = superPositionModelService.getResourceId(httpServletRequest, httpServletResponse, model, spm);
                 if (log.isDebugEnabled())
-                    log.debug("管理资源ID:{}", resourceId);
+                    log.debug("Admin resourceId:{}", resourceId);
                 return resourceId;
             }
         }
         if (log.isDebugEnabled())
-            log.debug("未经授权访问");
+            log.debug("Unauthorized access");
         return pageFactory._404(httpServletRequest, httpServletResponse, model);
     }
 
@@ -87,7 +85,7 @@ public class SpmController {
     public String spm(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model, String spm) {
         String resourceId = superPositionModelService.getResourceId(httpServletRequest, httpServletResponse, model, spm);
         if (log.isDebugEnabled())
-            log.debug("资源ID:{}", resourceId);
+            log.debug("ResourceId:{}", resourceId);
         return resourceId;
     }
 
@@ -95,12 +93,12 @@ public class SpmController {
     public String mapping(HttpServletRequest request, HttpServletResponse response, Model model, @PathVariable("value") String value) {
         if (!loadFactory.isDone()) {
             if (log.isDebugEnabled())
-                log.debug("启动中:{}", request.getRequestURL());
+                log.debug("Starting:{}", request.getRequestURL());
             return pageFactory.loading(request, response, model);
         }
         String resourceId = mappingFactory.mapping(request, response, model, value);
         if (log.isDebugEnabled())
-            log.debug("路径:{}, 资源ID:{}", value, resourceId);
+            log.debug("Path:{}, resourceId:{}", value, resourceId);
         return resourceId;
     }
 }

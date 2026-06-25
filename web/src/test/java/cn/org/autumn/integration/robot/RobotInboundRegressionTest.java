@@ -1,17 +1,16 @@
 package cn.org.autumn.integration.robot;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import cn.org.autumn.integration.base.IntegrationTest;
 import cn.org.autumn.integration.support.IntegrationJson;
 import cn.org.autumn.integration.support.RobotTestBodies;
 import com.alibaba.fastjson.JSONObject;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * 入站 message/push 扩展回归：停用机器人、类型/载荷校验。

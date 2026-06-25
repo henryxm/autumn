@@ -4,12 +4,11 @@ import cn.org.autumn.base.ModuleService;
 import cn.org.autumn.config.AccountHandler;
 import cn.org.autumn.modules.usr.dao.UserOpenDao;
 import cn.org.autumn.modules.usr.entity.UserOpenEntity;
+import java.util.Date;
+import java.util.List;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.Date;
-import java.util.List;
 
 /**
  * 系统对接服务

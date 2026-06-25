@@ -1,7 +1,7 @@
 package cn.org.autumn.modules.install;
 
-import cn.org.autumn.modules.lan.interceptor.LanguageInterceptor;
 import cn.org.autumn.config.JvmRestartHandler;
+import cn.org.autumn.modules.lan.interceptor.LanguageInterceptor;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;

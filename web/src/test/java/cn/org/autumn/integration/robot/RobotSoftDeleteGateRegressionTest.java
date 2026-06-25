@@ -1,18 +1,16 @@
 package cn.org.autumn.integration.robot;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import cn.org.autumn.integration.support.IntegrationJson;
 import cn.org.autumn.integration.support.RobotTestBodies;
 import com.alibaba.fastjson.JSONObject;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
-
-import org.apache.commons.lang.StringUtils;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-
-import static org.junit.jupiter.api.Assertions.*;
+import org.apache.commons.lang.StringUtils;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * 软删门禁：软删数超过全局 maxSoftDeletePending（默认 5）禁止创建。

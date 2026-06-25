@@ -2,12 +2,11 @@ package cn.org.autumn.config;
 
 import cn.org.autumn.database.DatabaseHolder;
 import com.baomidou.mybatisplus.plugins.PaginationInterceptor;
+import java.sql.Connection;
 import org.apache.ibatis.executor.statement.StatementHandler;
 import org.apache.ibatis.plugin.Intercepts;
 import org.apache.ibatis.plugin.Invocation;
 import org.apache.ibatis.plugin.Signature;
-
-import java.sql.Connection;
 
 /**
  * 使分页方言随 {@link DatabaseHolder#getType()}（即当前线程数据源 lookup key）变化；

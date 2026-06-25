@@ -1,11 +1,10 @@
 package cn.org.autumn.thread;
 
-import lombok.Getter;
-import lombok.Setter;
-
 import java.io.Serializable;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * 任务执行记录，用于记录已完成/失败的任务信息

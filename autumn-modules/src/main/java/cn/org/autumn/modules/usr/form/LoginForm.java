@@ -2,7 +2,6 @@ package cn.org.autumn.modules.usr.form;
 
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
-
 import javax.validation.constraints.NotBlank;
 
 @ApiModel(value = "登录表单")

@@ -14,6 +14,7 @@ import cn.org.autumn.modules.sys.support.ApiAuthSupport;
 import cn.org.autumn.modules.usr.entity.UserTokenEntity;
 import cn.org.autumn.modules.usr.service.UserTokenService;
 import cn.org.autumn.site.UserTokenFactory;
+import java.util.Date;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.apache.shiro.SecurityUtils;
@@ -22,8 +23,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.web.context.request.NativeWebRequest;
-
-import java.util.Date;
 
 /**
  * 解析无 Session API 的 {@link UserContext}（直接返回 {@link SysUserEntity} / {@link RobotEntity} 等业务实体）。
@@ -108,7 +107,7 @@ public class UserContextService implements ContextHandler {
             return ((SysUserEntity) context).toUser();
         if (context instanceof RobotEntity)
             return ((RobotEntity) context).toUser();
-        log.warn("UserContext 未知实现类型: {}", context.getClass().getName());
+        log.warn("UserContext unknown implementation type: {}", context.getClass().getName());
         return null;
     }
 

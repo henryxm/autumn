@@ -1,22 +1,20 @@
 package cn.org.autumn.site;
 
 import cn.org.autumn.utils.SpringContextUtils;
+import java.util.List;
+import java.util.Map;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.util.List;
-import java.util.Map;
-
 @Component
+@Slf4j
 public class LoginFactory extends Factory {
 
-    Logger log = LoggerFactory.getLogger(getClass());
 
     private static Map<Integer, List<Login>> map = null;
 
@@ -57,18 +55,18 @@ public class LoginFactory extends Factory {
                     try {
                         if (!login.isNeed(httpServletRequest, httpServletResponse)) {
                             if (log.isDebugEnabled())
-                                log.debug("无需登录:{}, {}", getUrl(httpServletRequest), login.getClass().getTypeName());
+                                log.debug("Login not required: {}, {}", getUrl(httpServletRequest), login.getClass().getTypeName());
                             return false;
                         }
                     } catch (Throwable e) {
                         if (log.isDebugEnabled())
-                            log.debug("访问异常:{}", login.getClass().getSimpleName(), e);
+                            log.debug("Access error: {}", login.getClass().getSimpleName(), e);
                     }
                 }
             }
         }
         if (log.isDebugEnabled())
-            log.debug("需要登录:{}", getUrl(httpServletRequest));
+            log.debug("Login required: {}", getUrl(httpServletRequest));
         return true;
     }
 }

@@ -13,6 +13,9 @@ import cn.org.autumn.modules.usr.service.UserProfileService;
 import cn.org.autumn.modules.usr.service.UserTokenService;
 import cn.org.autumn.utils.IPUtils;
 import cn.org.autumn.utils.InterceptorUtils;
+import java.util.*;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,11 +26,6 @@ import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.handler.HandlerInterceptorAdapter;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
-import java.util.*;
 
 /**
  * 权限(Token)验证
@@ -79,7 +77,7 @@ public class AuthorizationInterceptor extends HandlerInterceptorAdapter implemen
             request.setAttribute(USER_KEY, tokenEntity.getUserUuid());
             return true;
         } catch (Exception e) {
-            log.error("权限验证前:{}", e.getMessage());
+            log.error("Before authorization check:{}", e.getMessage());
             return true;
         }
     }
@@ -110,21 +108,21 @@ public class AuthorizationInterceptor extends HandlerInterceptorAdapter implemen
                     SysUserEntity entity = sysUserService.getCache(user);
                     if (null == entity) {
                         if (!exceptions.contains(user))
-                            log.debug("无效用户:{}, IP:{}, 处理:退出登录", user, IPUtils.getIp(request));
+                            log.debug("Invalid user: user={}, IP={}, action: logout", user, IPUtils.getIp(request));
                         ShiroUtils.logout();
                         exceptions.add(user);
                         return;
                     }
                     if (!entity.check()) {
                         if (!exceptions.contains(user))
-                            log.debug("用户异常:{}, IP:{}, 状态:{}, 处理:退出登录", user, IPUtils.getIp(request), entity.getStatus());
+                            log.debug("Abnormal user: user={}, IP={}, status={}, action: logout", user, IPUtils.getIp(request), entity.getStatus());
                         ShiroUtils.logout();
                         exceptions.add(user);
                         return;
                     }
                     if (!Objects.equals(current.getPassword(), entity.getPassword())) {
                         if (!exceptions.contains(user))
-                            log.debug("无效登录:{}, IP:{}, 登录秘钥:{}, 实际秘钥:{}, 处理:退出登录", user, IPUtils.getIp(request), current.getPassword(), entity.getPassword());
+                            log.debug("Invalid login: user={}, IP={}, login secret={}, actual secret={}, action: logout", user, IPUtils.getIp(request), current.getPassword(), entity.getPassword());
                         ShiroUtils.logout();
                         exceptions.add(user);
                         return;
@@ -142,7 +140,7 @@ public class AuthorizationInterceptor extends HandlerInterceptorAdapter implemen
                 }
             }
         } catch (Exception e) {
-            log.error("权限验证后:{}", e.getMessage());
+            log.error("After authorization check:{}", e.getMessage());
         }
     }
 

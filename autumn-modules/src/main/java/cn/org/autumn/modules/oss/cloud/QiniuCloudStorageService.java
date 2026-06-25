@@ -1,15 +1,14 @@
 package cn.org.autumn.modules.oss.cloud;
 
+import cn.org.autumn.exception.AException;
 import com.qiniu.common.Zone;
 import com.qiniu.http.Response;
 import com.qiniu.storage.Configuration;
 import com.qiniu.storage.UploadManager;
 import com.qiniu.util.Auth;
-import cn.org.autumn.exception.AException;
-import org.apache.commons.io.IOUtils;
-
 import java.io.IOException;
 import java.io.InputStream;
+import org.apache.commons.io.IOUtils;
 
 public class QiniuCloudStorageService extends CloudStorageService {
     private UploadManager uploadManager;

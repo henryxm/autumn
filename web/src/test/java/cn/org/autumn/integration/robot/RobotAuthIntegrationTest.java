@@ -1,15 +1,14 @@
 package cn.org.autumn.integration.robot;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import cn.org.autumn.integration.base.IntegrationTest;
 import cn.org.autumn.integration.support.IntegrationJson;
 import com.alibaba.fastjson.JSONObject;
-import org.junit.jupiter.api.Test;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
  * 机器人 API 鉴权边界：用户令牌 vs {@code rbt_} 令牌不可混用。

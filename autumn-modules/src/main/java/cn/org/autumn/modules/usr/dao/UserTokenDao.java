@@ -3,13 +3,12 @@ package cn.org.autumn.modules.usr.dao;
 import cn.org.autumn.modules.usr.dao.sql.UserTokenDaoSql;
 import cn.org.autumn.modules.usr.entity.UserTokenEntity;
 import com.baomidou.mybatisplus.mapper.BaseMapper;
+import java.util.List;
 import org.apache.ibatis.annotations.DeleteProvider;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.SelectProvider;
 import org.springframework.stereotype.Repository;
-
-import java.util.List;
 
 /**
  * 用户Token

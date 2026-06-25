@@ -1,9 +1,8 @@
 package cn.org.autumn.model;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.*;
-
 import java.io.Serializable;
+import lombok.*;
 
 /**
  * Encrypt端点信息

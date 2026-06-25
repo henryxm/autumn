@@ -10,8 +10,6 @@ import com.baomidou.mybatisplus.mapper.BaseMapper;
 import com.baomidou.mybatisplus.mapper.EntityWrapper;
 import com.baomidou.mybatisplus.mapper.Wrapper;
 import com.baomidou.mybatisplus.plugins.Page;
-import org.springframework.beans.factory.annotation.Autowired;
-
 import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.util.Collection;
@@ -19,6 +17,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 带 {@code @FieldEncrypt} 实体的模块 Service：写前 {@link FieldEncryptService#onWrite}、写后 {@link FieldEncryptService#restoreAfterWrite}、读路径 {@link FieldEncryptService#onRead}。

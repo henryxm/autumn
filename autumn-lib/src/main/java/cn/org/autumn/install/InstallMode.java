@@ -26,6 +26,9 @@ public final class InstallMode {
      */
     private static volatile Environment rootEnvironment;
 
+    /** {@link #isActive()} 无参路径缓存（安装模式启动后通常不变）。 */
+    private static volatile Boolean cachedRootActive;
+
     private InstallMode() {
     }
 
@@ -35,6 +38,7 @@ public final class InstallMode {
     public static void setRootEnvironment(Environment environment) {
         if (environment != null) {
             rootEnvironment = environment;
+            cachedRootActive = null;
         }
     }
 
@@ -49,7 +53,16 @@ public final class InstallMode {
      * @param environment 非空时优先使用；为空则回退到 {@link #setRootEnvironment} 绑定的根环境
      */
     public static boolean isActive(Environment environment) {
-        Environment e = environment != null ? environment : rootEnvironment;
-        return e != null && Boolean.parseBoolean(e.getProperty(PROPERTY, "false"));
+        if (environment != null) {
+            return Boolean.parseBoolean(environment.getProperty(PROPERTY, "false"));
+        }
+        Boolean cached = cachedRootActive;
+        if (cached != null) {
+            return cached;
+        }
+        Environment e = rootEnvironment;
+        boolean active = e != null && Boolean.parseBoolean(e.getProperty(PROPERTY, "false"));
+        cachedRootActive = active;
+        return active;
     }
 }

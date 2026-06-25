@@ -1,17 +1,16 @@
 package cn.org.autumn.table.relational.dialect.h2;
 
+import cn.org.autumn.table.data.ColumnInfo;
+import cn.org.autumn.table.data.IndexInfo;
+import cn.org.autumn.table.data.TableInfo;
 import cn.org.autumn.table.relational.RelationalSchemaSql;
 import cn.org.autumn.table.relational.support.AbstractNoopDdlRelationalSchemaSql;
 import cn.org.autumn.table.relational.support.SchemaSqlNoops;
 import cn.org.autumn.table.relational.support.ddl.AnsiDialect;
 import cn.org.autumn.table.relational.support.ddl.AnsiDoubleQuotedDdlGenerator;
-import cn.org.autumn.table.data.ColumnInfo;
-import cn.org.autumn.table.data.IndexInfo;
-import cn.org.autumn.table.data.TableInfo;
-import org.apache.commons.lang.StringUtils;
-
 import java.util.List;
 import java.util.Map;
+import org.apache.commons.lang.StringUtils;
 
 /**
  * H2 原生模式（非 MySQL 兼容）：{@code INFORMATION_SCHEMA} + {@code SCHEMA()}。

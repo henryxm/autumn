@@ -1,14 +1,14 @@
 package cn.org.autumn.thread;
 
-import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.StringUtils;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
-
+import cn.org.autumn.database.CrudGuard;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang.StringUtils;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 @Slf4j
 public class TagTaskExecutor extends ThreadPoolTaskExecutor {
@@ -122,7 +122,7 @@ public class TagTaskExecutor extends ThreadPoolTaskExecutor {
             }
         } catch (Exception e) {
             if (log.isDebugEnabled())
-                log.debug("记录任务完成状态失败: {}", e.getMessage());
+                log.debug("Failed to record task completion status: {}", e.getMessage());
         }
     }
 
@@ -153,7 +153,7 @@ public class TagTaskExecutor extends ThreadPoolTaskExecutor {
             }
         } catch (Exception e) {
             if (log.isDebugEnabled())
-                log.debug("记录跳过任务状态失败: {}", e.getMessage());
+                log.debug("Failed to record skipped task status: {}", e.getMessage());
         }
     }
 
@@ -163,14 +163,14 @@ public class TagTaskExecutor extends ThreadPoolTaskExecutor {
     public boolean execute(TagRunnable task) {
         if (task == null) {
             if (log.isDebugEnabled())
-                log.debug("尝试执行 null 任务，已忽略");
+                log.debug("Attempted to run null task, ignored");
             return false;
         }
         String taskId = task.getId();
         if (StringUtils.isNotBlank(taskId)) {
             if (ids.contains(taskId)) {
                 if (log.isDebugEnabled())
-                    log.debug("任务 id 重复，未重复提交: id={}, tag={}", taskId, task.getTag());
+                    log.debug("Duplicate task id, not resubmitted: id={}, tag={}", taskId, task.getTag());
                 task.finishNotDispatched();
                 return false;
             }
@@ -189,7 +189,7 @@ public class TagTaskExecutor extends ThreadPoolTaskExecutor {
             recordRejected();
             task.finishNotDispatched();
             if (log.isDebugEnabled())
-                log.debug("任务提交到线程池失败: tag={}, error={}", task.getTag(), e.getMessage());
+                log.debug("Failed to submit task to thread pool: tag={}, error={}", task.getTag(), e.getMessage());
             throw e;
         }
     }
@@ -197,7 +197,7 @@ public class TagTaskExecutor extends ThreadPoolTaskExecutor {
     public Future<?> submit(TagRunnable task) {
         if (task == null) {
             if (log.isDebugEnabled())
-                log.debug("尝试提交 null 任务，已忽略");
+                log.debug("Attempted to submit null task, ignored");
             return null;
         }
         // ID 去重（与 execute() 一致）
@@ -205,7 +205,7 @@ public class TagTaskExecutor extends ThreadPoolTaskExecutor {
         if (StringUtils.isNotBlank(taskId)) {
             if (ids.contains(taskId)) {
                 if (log.isDebugEnabled())
-                    log.debug("任务 id 重复，未重复提交: id={}, tag={}", taskId, task.getTag());
+                    log.debug("Duplicate task id, not resubmitted: id={}, tag={}", taskId, task.getTag());
                 task.finishNotDispatched();
                 return null;
             }
@@ -223,7 +223,7 @@ public class TagTaskExecutor extends ThreadPoolTaskExecutor {
             recordRejected();
             task.finishNotDispatched();
             if (log.isDebugEnabled())
-                log.debug("任务提交到线程池失败: tag={}, error={}", task.getTag(), e.getMessage());
+                log.debug("Failed to submit task to thread pool: tag={}, error={}", task.getTag(), e.getMessage());
             throw e;
         }
     }
@@ -231,7 +231,7 @@ public class TagTaskExecutor extends ThreadPoolTaskExecutor {
     public <T> Future<T> submit(TagCallable<T> task) {
         if (task == null) {
             if (log.isDebugEnabled())
-                log.debug("尝试提交 null 任务，已忽略");
+                log.debug("Attempted to submit null task, ignored");
             return null;
         }
         // ID 去重（与 execute() 一致）
@@ -252,9 +252,36 @@ public class TagTaskExecutor extends ThreadPoolTaskExecutor {
             }
             recordRejected();
             if (log.isDebugEnabled())
-                log.debug("任务提交到线程池失败: tag={}, error={}", task.getTag(), e.getMessage());
+                log.debug("Failed to submit task to thread pool: tag={}, error={}", task.getTag(), e.getMessage());
             throw e;
         }
+    }
+
+    @Override
+    public void execute(Runnable task) {
+        if (task == null) {
+            return;
+        }
+        CrudGuard.Snapshot scope = CrudGuard.capture();
+        super.execute(() -> CrudGuard.with(scope, task));
+    }
+
+    @Override
+    public Future<?> submit(Runnable task) {
+        if (task == null) {
+            return null;
+        }
+        CrudGuard.Snapshot scope = CrudGuard.capture();
+        return super.submit(() -> CrudGuard.with(scope, task));
+    }
+
+    @Override
+    public <T> Future<T> submit(Callable<T> task) {
+        if (task == null) {
+            return null;
+        }
+        CrudGuard.Snapshot scope = CrudGuard.capture();
+        return super.submit(() -> CrudGuard.with(scope, task));
     }
 
     public List<Tag> getRunning() {
@@ -318,7 +345,7 @@ public class TagTaskExecutor extends ThreadPoolTaskExecutor {
         boolean sent = task.cancel();
         if (sent) {
             if (log.isDebugEnabled())
-                log.debug("已中断任务: {}, threadName={}, threadState={}", desc, t.getName(), task.getThreadState());
+                log.debug("Interrupted task: {}, threadName={}, threadState={}", desc, t.getName(), task.getThreadState());
             return "已发送中断信号: " + desc;
         } else {
             return "中断信号发送失败: " + desc;
@@ -478,7 +505,7 @@ public class TagTaskExecutor extends ThreadPoolTaskExecutor {
                 list.add(map);
             } catch (Exception e) {
                 // 单个任务出错不影响整体列表
-                log.debug("获取任务详情失败: index={}, error={}", index - 1, e.getMessage());
+                log.debug("Failed to get task details: index={}, error={}", index - 1, e.getMessage());
             }
         }
         return list;
@@ -498,7 +525,7 @@ public class TagTaskExecutor extends ThreadPoolTaskExecutor {
         ThreadPoolExecutor executor = getThreadPoolExecutor();
         executor.setCorePoolSize(corePoolSize);
         if (log.isDebugEnabled())
-            log.debug("核心线程数已更新为: {}", corePoolSize);
+            log.debug("Core pool size updated to: {}", corePoolSize);
     }
 
     public void updateMaxPoolSize(int maxPoolSize) {
@@ -506,7 +533,7 @@ public class TagTaskExecutor extends ThreadPoolTaskExecutor {
         ThreadPoolExecutor executor = getThreadPoolExecutor();
         executor.setMaximumPoolSize(maxPoolSize);
         if (log.isDebugEnabled())
-            log.debug("最大线程数已更新为: {}", maxPoolSize);
+            log.debug("Max pool size updated to: {}", maxPoolSize);
     }
 
     /**
@@ -520,7 +547,7 @@ public class TagTaskExecutor extends ThreadPoolTaskExecutor {
         setKeepAliveSeconds(seconds);
         getThreadPoolExecutor().setKeepAliveTime(seconds, TimeUnit.SECONDS);
         if (log.isDebugEnabled())
-            log.debug("保活时间已更新: {}s -> {}s", old, seconds);
+            log.debug("Keep-alive time updated: {}s -> {}s", old, seconds);
     }
 
     /**
@@ -534,7 +561,7 @@ public class TagTaskExecutor extends ThreadPoolTaskExecutor {
         boolean old = getThreadPoolExecutor().allowsCoreThreadTimeOut();
         getThreadPoolExecutor().allowCoreThreadTimeOut(allow);
         if (log.isDebugEnabled())
-            log.debug("核心线程超时回收已更新: {} -> {}", old, allow);
+            log.debug("Core thread timeout updated: {} -> {}", old, allow);
     }
 
     public void resetStats() {
@@ -546,7 +573,7 @@ public class TagTaskExecutor extends ThreadPoolTaskExecutor {
         totalSkipped.set(0);
         totalExecutionTime.set(0);
         if (log.isDebugEnabled())
-            log.debug("线程池统计数据已重置");
+            log.debug("Thread pool statistics reset");
     }
 
     // ======================== 全局错峰延迟 ========================
@@ -571,7 +598,7 @@ public class TagTaskExecutor extends ThreadPoolTaskExecutor {
         long old = globalStaggerSeconds;
         globalStaggerSeconds = Math.max(0, seconds);
         if (log.isDebugEnabled())
-            log.debug("全局错峰延迟已更新: {}s -> {}s", old, globalStaggerSeconds);
+            log.debug("Global stagger delay updated: {}s -> {}s", old, globalStaggerSeconds);
     }
 
     // ======================== 格式化工具 ========================
@@ -627,7 +654,7 @@ public class TagTaskExecutor extends ThreadPoolTaskExecutor {
         int old = maxHistorySize;
         maxHistorySize = Math.max(10, Math.min(100000, size));
         if (log.isDebugEnabled())
-            log.debug("最大历史记录数已更新: {} -> {}", old, maxHistorySize);
+            log.debug("Max history size updated: {} -> {}", old, maxHistorySize);
         // 如果新上限比当前记录数小，立即触发裁剪
         if (history.size() > maxHistorySize) {
             trimHistoryIfNeeded(maxHistorySize);
@@ -651,10 +678,10 @@ public class TagTaskExecutor extends ThreadPoolTaskExecutor {
                 // subList().clear() 在 CopyOnWriteArrayList 上是单次原子操作
                 history.subList(0, excess).clear();
                 if (log.isDebugEnabled()) {
-                    log.debug("历史记录已裁剪: 移除最旧 {} 条，剩余 {}", excess, history.size());
+                    log.debug("History trimmed: removed {} oldest entries, {} remaining", excess, history.size());
                 }
             } catch (Exception e) {
-                log.debug("历史记录裁剪异常: {}", e.getMessage());
+                log.debug("History trim error: {}", e.getMessage());
             }
         } finally {
             historyTrimLock.unlock();
@@ -694,7 +721,7 @@ public class TagTaskExecutor extends ThreadPoolTaskExecutor {
             });
             sweeper.scheduleWithFixedDelay(TagTaskExecutor::sweepDeadEntries, 60, 60, TimeUnit.SECONDS);
             if (log.isDebugEnabled())
-                log.debug("任务清理线程已启动（每60秒扫描一次）");
+                log.debug("Task cleanup thread started (scan every 60s)");
         }
     }
 
@@ -704,7 +731,7 @@ public class TagTaskExecutor extends ThreadPoolTaskExecutor {
                 sweeper.shutdownNow();
                 sweeper = null;
                 if (log.isDebugEnabled())
-                    log.debug("任务清理线程已停止");
+                    log.debug("Task cleanup thread stopped");
             }
         }
     }
@@ -751,7 +778,7 @@ public class TagTaskExecutor extends ThreadPoolTaskExecutor {
                 try {
                     if (task != null) {
                         if (log.isDebugEnabled())
-                            log.debug("清理死任务条目: tag={}, method={}, id={}, thread={}", safe(task.getTag()), safe(task.getMethod()), safe(task.getId()), task.getThread() != null ? task.getThread().getName() : "null");
+                            log.debug("Cleaned stale task entry: tag={}, method={}, id={}, thread={}", safe(task.getTag()), safe(task.getMethod()), safe(task.getId()), task.getThread() != null ? task.getThread().getName() : "null");
                     }
                     remove(task);
                 } catch (Exception e) {
@@ -766,11 +793,11 @@ public class TagTaskExecutor extends ThreadPoolTaskExecutor {
             if (removed > 0) {
                 totalSweptCount.addAndGet(removed);
                 if (log.isDebugEnabled())
-                    log.debug("本轮清理了 {} 个死任务条目，剩余运行中: {}，ID 缓存: {}", removed, running.size(), ids.size());
+                    log.debug("Cleaned {} stale task entries this round, running: {}, id cache: {}", removed, running.size(), ids.size());
             }
         } catch (Exception e) {
             if (log.isDebugEnabled())
-                log.debug("清理死任务时异常: {}", e.getMessage());
+                log.debug("Error while cleaning stale tasks: {}", e.getMessage());
         }
     }
 }

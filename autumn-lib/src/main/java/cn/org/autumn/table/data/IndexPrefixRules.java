@@ -2,13 +2,12 @@ package cn.org.autumn.table.data;
 
 import cn.org.autumn.table.annotation.Column;
 import cn.org.autumn.table.utils.HumpConvert;
-import org.apache.commons.lang.StringUtils;
-
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import org.apache.commons.lang.StringUtils;
 
 /**
  * MySQL 索引「前缀长度」{@code (`col`(n))} 仅适用于部分字符/二进制串类型；对数值、日期时间等使用前缀会语法错误。

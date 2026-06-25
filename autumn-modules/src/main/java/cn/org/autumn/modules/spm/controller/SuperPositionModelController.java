@@ -1,8 +1,8 @@
 package cn.org.autumn.modules.spm.controller;
 
+import cn.org.autumn.modules.spm.controller.gen.SuperPositionModelControllerGen;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import cn.org.autumn.modules.spm.controller.gen.SuperPositionModelControllerGen;
 
 /**
  * 超级位置模型

@@ -1,5 +1,7 @@
 package cn.org.autumn.modules.sys.shiro;
 
+import javax.servlet.ServletRequest;
+import javax.servlet.http.HttpServletRequest;
 import org.apache.commons.lang.StringUtils;
 import org.apache.shiro.session.Session;
 import org.apache.shiro.session.mgt.SessionContext;
@@ -7,9 +9,6 @@ import org.apache.shiro.session.mgt.SessionFactory;
 import org.apache.shiro.session.mgt.SimpleSession;
 import org.apache.shiro.web.session.mgt.WebSessionContext;
 import org.apache.shiro.web.util.WebUtils;
-
-import javax.servlet.ServletRequest;
-import javax.servlet.http.HttpServletRequest;
 
 /**
  * 新建 Shiro 会话时用 {@link IPUtils} 解析客户端 IP 作为 {@code Session#host}，替代 {@code request.getRemoteHost()}。

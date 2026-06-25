@@ -3,13 +3,12 @@ package cn.org.autumn.modules.spm.service;
 import cn.org.autumn.config.VariablesHandler;
 import cn.org.autumn.modules.spm.entity.Spm;
 import cn.org.autumn.modules.spm.entity.SuperPositionModelEntity;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.ui.Model;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 
 @Service
 public class SpmService implements VariablesHandler {

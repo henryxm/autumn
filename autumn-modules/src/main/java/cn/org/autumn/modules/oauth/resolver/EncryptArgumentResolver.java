@@ -11,6 +11,17 @@ import cn.org.autumn.service.RsaService;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.lang.reflect.Type;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+import javax.servlet.ReadListener;
+import javax.servlet.ServletInputStream;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletRequestWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,25 +31,13 @@ import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StreamUtils;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.support.WebDataBinderFactory;
 import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.method.support.ModelAndViewContainer;
 import org.springframework.web.servlet.mvc.method.annotation.RequestResponseBodyMethodProcessor;
-import org.springframework.util.StreamUtils;
-
-import javax.servlet.ReadListener;
-import javax.servlet.ServletInputStream;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletRequestWrapper;
-import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
-import java.lang.reflect.Type;
-import java.util.List;
 
 /**
  * Encrypt参数解析器
@@ -94,7 +93,7 @@ public class EncryptArgumentResolver extends RequestResponseBodyMethodProcessor 
             object = resolveRequestFallback(parameter, effectiveWebRequest, ex);
         }
         if (log.isDebugEnabled()) {
-            log.debug("原始请求:{}", gson.toJson(object));
+            log.debug("Original request:{}", gson.toJson(object));
         }
         if (object instanceof Encrypt) {
             Encrypt encrypt = (Encrypt) object;
@@ -123,15 +122,15 @@ public class EncryptArgumentResolver extends RequestResponseBodyMethodProcessor 
                     }
                     long end = System.currentTimeMillis();
                     if (log.isDebugEnabled() && null != decrypt) {
-                        log.debug("解密长度:{}, 耗时:{}毫秒", decrypt.length(), end - start);
-                        log.debug("解密请求:{}, 结果:{}, 密文:{}", encrypt.getSession(), decrypt, encrypt.getCiphertext());
+                        log.debug("Decrypted length:{}, elapsed:{}ms", decrypt.length(), end - start);
+                        log.debug("Decrypted request: session={}, result={}, ciphertext={}", encrypt.getSession(), decrypt, encrypt.getCiphertext());
                     }
                 }
             } catch (Exception e) {
                 HttpServletRequest servlet = getHttpServletRequest(effectiveWebRequest);
                 if (servlet != null) {
                     String uri = servlet.getRequestURI();
-                    log.error("解密失败: {}, 数据:{}, URI: {}, 错误: {}", encrypt.getSession(), decrypt, uri, e.getMessage());
+                    log.error("Decryption failed: session={}, data={}, URI={}, error={}", encrypt.getSession(), decrypt, uri, e.getMessage());
                 }
                 throw e;
             }
@@ -152,7 +151,7 @@ public class EncryptArgumentResolver extends RequestResponseBodyMethodProcessor 
             wrapper = new CachedBodyHttpServletRequest(request);
         } catch (IOException e) {
             if (log.isDebugEnabled()) {
-                log.debug("包装可重复读取请求体失败，回退原始request: {}", e.getMessage());
+                log.debug("Failed to wrap repeatable request body, falling back to original request: {}", e.getMessage());
             }
             return webRequest;
         }
@@ -176,7 +175,7 @@ public class EncryptArgumentResolver extends RequestResponseBodyMethodProcessor 
             object = gson.fromJson(rawBody, parameterType);
         } catch (Exception parseEx) {
             if (log.isDebugEnabled()) {
-                log.debug("原始请求按参数类型反序列化失败，尝试Request兼容兜底。type:{}, body:{}", parameterType, rawBody);
+                log.debug("Raw request deserialization by parameter type failed, trying Request compatibility fallback. type:{}, body:{}", parameterType, rawBody);
             }
             object = fallbackForRequest(parameter, parameterType, rawBody);
         }
@@ -232,7 +231,7 @@ public class EncryptArgumentResolver extends RequestResponseBodyMethodProcessor 
                 throw ex;
             }
             if (log.isDebugEnabled()) {
-                log.debug("按参数类型反序列化失败，尝试Request兼容兜底。type:{}, body:{}", parameterType, decrypt);
+                log.debug("Deserialization by parameter type failed, trying Request compatibility fallback. type:{}, body:{}", parameterType, decrypt);
             }
             return fallbackForRequest(parameter, parameterType, decrypt);
         }
@@ -322,7 +321,7 @@ public class EncryptArgumentResolver extends RequestResponseBodyMethodProcessor 
             return request.getNativeRequest(HttpServletRequest.class);
         } catch (Exception e) {
             if (log.isDebugEnabled()) {
-                log.debug("无法从NativeWebRequest获取HttpServletRequest: {}", e.getMessage());
+                log.debug("Failed to obtain HttpServletRequest from NativeWebRequest: {}", e.getMessage());
             }
             return null;
         }
@@ -347,7 +346,7 @@ public class EncryptArgumentResolver extends RequestResponseBodyMethodProcessor 
             return builder.toString();
         } catch (Exception e) {
             if (log.isDebugEnabled()) {
-                log.debug("读取请求体失败: {}", e.getMessage());
+                log.debug("Failed to read request body: {}", e.getMessage());
             }
             return "";
         }

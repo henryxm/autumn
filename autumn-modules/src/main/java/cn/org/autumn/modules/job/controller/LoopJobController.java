@@ -4,13 +4,17 @@ import cn.org.autumn.modules.job.entity.ScheduleAssignEntity;
 import cn.org.autumn.modules.job.service.ScheduleAssignService;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.utils.R;
+import java.util.List;
+import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-import java.util.Map;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 
 /**
  * 定时任务管理控制器
@@ -43,8 +47,8 @@ public class LoopJobController {
             Map<String, Object> stats = LoopJob.getStats();
             return R.ok().put("stats", stats);
         } catch (Exception e) {
-            log.error("获取统计信息失败:", e);
-            return R.error("获取统计信息失败: " + e.getMessage());
+            log.error("Failed to get statistics:", e);
+            return R.error("Failed to get statistics: " + e.getMessage());
         }
     }
 
@@ -58,8 +62,8 @@ public class LoopJobController {
             List<Map<String, Object>> categories = LoopJob.getCategoryList();
             return R.ok().put("categories", categories);
         } catch (Exception e) {
-            log.error("获取分类列表失败:", e);
-            return R.error("获取分类列表失败: " + e.getMessage());
+            log.error("Failed to get category list:", e);
+            return R.error("Failed to get category list: " + e.getMessage());
         }
     }
 
@@ -73,8 +77,8 @@ public class LoopJobController {
             List<Map<String, Object>> jobs = LoopJob.getJobList(category);
             return R.ok().put("jobs", jobs);
         } catch (Exception e) {
-            log.error("获取任务列表失败:", e);
-            return R.error("获取任务列表失败: " + e.getMessage());
+            log.error("Failed to get task list:", e);
+            return R.error("Failed to get task list: " + e.getMessage());
         }
     }
 
@@ -88,8 +92,8 @@ public class LoopJobController {
             List<Map<String, Object>> alerts = LoopJob.getAlerts();
             return R.ok().put("alerts", alerts).put("count", alerts.size());
         } catch (Exception e) {
-            log.error("获取告警信息失败:", e);
-            return R.error("获取告警信息失败: " + e.getMessage());
+            log.error("Failed to get alert info:", e);
+            return R.error("Failed to get alert info: " + e.getMessage());
         }
     }
 
@@ -108,8 +112,8 @@ public class LoopJobController {
                 return R.error("未找到指定任务");
             }
         } catch (Exception e) {
-            log.error("启用任务失败:", e);
-            return R.error("启用任务失败: " + e.getMessage());
+            log.error("Failed to enable job:", e);
+            return R.error("Failed to enable job: " + e.getMessage());
         }
     }
 
@@ -128,8 +132,8 @@ public class LoopJobController {
                 return R.error("未找到指定任务");
             }
         } catch (Exception e) {
-            log.error("禁用任务失败:", e);
-            return R.error("禁用任务失败: " + e.getMessage());
+            log.error("Failed to disable job:", e);
+            return R.error("Failed to disable job: " + e.getMessage());
         }
     }
 
@@ -148,8 +152,8 @@ public class LoopJobController {
                 return R.error("未找到指定任务或任务正在执行中");
             }
         } catch (Exception e) {
-            log.error("触发任务失败:", e);
-            return R.error("触发任务失败: " + e.getMessage());
+            log.error("Failed to trigger job:", e);
+            return R.error("Failed to trigger job: " + e.getMessage());
         }
     }
 
@@ -164,8 +168,8 @@ public class LoopJobController {
             LoopJob.enableCategory(category);
             return R.ok("分类已启用");
         } catch (Exception e) {
-            log.error("启用分类失败:", e);
-            return R.error("启用分类失败: " + e.getMessage());
+            log.error("Failed to enable category:", e);
+            return R.error("Failed to enable category: " + e.getMessage());
         }
     }
 
@@ -180,8 +184,8 @@ public class LoopJobController {
             LoopJob.disableCategory(category);
             return R.ok("分类已禁用");
         } catch (Exception e) {
-            log.error("禁用分类失败:", e);
-            return R.error("禁用分类失败: " + e.getMessage());
+            log.error("Failed to disable category:", e);
+            return R.error("Failed to disable category: " + e.getMessage());
         }
     }
 
@@ -192,8 +196,8 @@ public class LoopJobController {
             LoopJob.pauseAll();
             return R.ok("所有定时任务已暂停");
         } catch (Exception e) {
-            log.error("全局暂停失败:", e);
-            return R.error("全局暂停失败: " + e.getMessage());
+            log.error("Global pause failed:", e);
+            return R.error("Global pause failed: " + e.getMessage());
         }
     }
 
@@ -204,8 +208,8 @@ public class LoopJobController {
             LoopJob.resumeAll();
             return R.ok("所有定时任务已恢复");
         } catch (Exception e) {
-            log.error("全局恢复失败:", e);
-            return R.error("全局恢复失败: " + e.getMessage());
+            log.error("Global resume failed:", e);
+            return R.error("Global resume failed: " + e.getMessage());
         }
     }
 
@@ -234,8 +238,8 @@ public class LoopJobController {
 
             return R.ok("配置已更新");
         } catch (Exception e) {
-            log.error("更新配置失败:", e);
-            return R.error("更新配置失败: " + e.getMessage());
+            log.error("Failed to update config:", e);
+            return R.error("Failed to update config: " + e.getMessage());
         }
     }
 
@@ -258,8 +262,8 @@ public class LoopJobController {
                 return R.error("更新分配失败");
             }
         } catch (Exception e) {
-            log.error("更新分配失败:", e);
-            return R.error("更新分配失败: " + e.getMessage());
+            log.error("Failed to update assignment:", e);
+            return R.error("Failed to update assignment: " + e.getMessage());
         }
     }
 
@@ -276,8 +280,8 @@ public class LoopJobController {
                     .put("serverTag", LoopJob.getServerTag())
                     .put("assignInitialized", LoopJob.isAssignInitialized());
         } catch (Exception e) {
-            log.error("获取分配信息失败:", e);
-            return R.error("获取分配信息失败: " + e.getMessage());
+            log.error("Failed to get assignment info:", e);
+            return R.error("Failed to get assignment info: " + e.getMessage());
         }
     }
 
@@ -291,8 +295,8 @@ public class LoopJobController {
             scheduleAssignService.triggerRescan();
             return R.ok("已触发重新扫描");
         } catch (Exception e) {
-            log.error("触发扫描失败:", e);
-            return R.error("触发扫描失败: " + e.getMessage());
+            log.error("Failed to trigger scan:", e);
+            return R.error("Failed to trigger scan: " + e.getMessage());
         }
     }
 
@@ -314,8 +318,8 @@ public class LoopJobController {
                 return R.error("未找到指定任务");
             }
         } catch (Exception e) {
-            log.error("重置统计失败:", e);
-            return R.error("重置统计失败: " + e.getMessage());
+            log.error("Failed to reset statistics:", e);
+            return R.error("Failed to reset statistics: " + e.getMessage());
         }
     }
 
@@ -334,8 +338,8 @@ public class LoopJobController {
             LoopJob.setParallelExecution(enabled);
             return R.ok("并行执行已" + (enabled ? "启用" : "关闭"));
         } catch (Exception e) {
-            log.error("切换并行执行失败:", e);
-            return R.error("切换并行执行失败: " + e.getMessage());
+            log.error("Failed to toggle parallel execution:", e);
+            return R.error("Failed to toggle parallel execution: " + e.getMessage());
         }
     }
 
@@ -350,8 +354,8 @@ public class LoopJobController {
             LoopJob.setServerTag(tag != null ? tag : "");
             return R.ok("服务器标签已更新为: " + LoopJob.getServerTag());
         } catch (Exception e) {
-            log.error("更新服务器标签失败:", e);
-            return R.error("更新服务器标签失败: " + e.getMessage());
+            log.error("Failed to update server tag:", e);
+            return R.error("Failed to update server tag: " + e.getMessage());
         }
     }
 
@@ -362,11 +366,11 @@ public class LoopJobController {
     @ResponseBody
     public R print() {
         try {
-            Map<String, java.util.List<String>> data = LoopJob.print();
+            Map<String, List<String>> data = LoopJob.print();
             return R.ok().put("data", data);
         } catch (Exception e) {
-            log.error("获取打印信息失败:", e);
-            return R.error("获取打印信息失败: " + e.getMessage());
+            log.error("Failed to get print info:", e);
+            return R.error("Failed to get print info: " + e.getMessage());
         }
     }
 }

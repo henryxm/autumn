@@ -1,17 +1,16 @@
 package cn.org.autumn.table.platform.jdbc;
 
 import cn.org.autumn.table.data.TableInfo;
-import org.apache.commons.lang.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
-
-import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Locale;
 import java.util.Map;
+import javax.sql.DataSource;
+import org.apache.commons.lang.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 /**
  * SQL Server：JDBC 元数据 + 方言 DDL；删主键通过 {@code sys.key_constraints} 解析约束名。

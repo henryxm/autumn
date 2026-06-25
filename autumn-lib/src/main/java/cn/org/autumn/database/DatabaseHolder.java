@@ -1,15 +1,14 @@
 package cn.org.autumn.database;
 
-import org.apache.commons.lang.StringUtils;
-import cn.org.autumn.install.InstallMode;
 import cn.org.autumn.datasources.DataSourceDialectRegistry;
 import cn.org.autumn.datasources.DynamicDataSource;
+import cn.org.autumn.install.InstallMode;
+import java.util.Locale;
+import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
-
-import java.util.Locale;
 
 /**
  * 持有当前线程（及配置）下的 {@link DatabaseType}，供路由数据源、分页方言、Provider SQL、部分 MyBatis 插件等使用。

@@ -1,9 +1,8 @@
 package cn.org.autumn.table.platform.jdbc;
 
+import javax.sql.DataSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-
-import javax.sql.DataSource;
 
 /**
  * Oracle：JDBC 元数据 + {@link cn.org.autumn.table.relational.RoutingRelationalSchemaSql} 生成的 DDL。

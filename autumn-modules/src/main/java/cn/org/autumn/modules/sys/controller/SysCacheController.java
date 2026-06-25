@@ -9,15 +9,14 @@ import cn.org.autumn.modules.sys.service.SysUserRoleService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.service.CacheService;
 import com.google.gson.Gson;
+import java.math.BigDecimal;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 import org.ehcache.Cache;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.*;
-
-import java.math.BigDecimal;
-import java.util.*;
-import java.util.concurrent.TimeUnit;
 
 /**
  * 缓存管理控制器
@@ -69,7 +68,7 @@ public class SysCacheController {
                 }
             }
         } catch (Exception e) {
-            log.debug("遍历本地缓存失败: cacheName={}, error={}", cacheName, e.getMessage());
+            log.debug("Failed to iterate local cache: cacheName={}, error={}", cacheName, e.getMessage());
         }
         return localKeys;
     }
@@ -114,7 +113,7 @@ public class SysCacheController {
                 return new BigDecimal(trimmed);
             }
         } catch (NumberFormatException e) {
-            log.warn("缓存key类型转换失败: name={}, key={}, targetType={}, error={}", name, key, keyType.getSimpleName(), e.getMessage());
+            log.warn("Cache key type conversion failed: name={}, key={}, targetType={}, error={}", name, key, keyType.getSimpleName(), e.getMessage());
         }
         return key;
     }
@@ -223,7 +222,7 @@ public class SysCacheController {
             status.put("instanceCount", ehCacheManager.getAllInstanceNames().size());
             return Response.ok(status);
         } catch (Exception e) {
-            log.error("获取缓存状态失败: {}", e.getMessage(), e);
+            log.error("Failed to get cache status: {}", e.getMessage(), e);
             return Response.fail(null, "获取缓存状态失败: " + e.getMessage());
         }
     }
@@ -270,7 +269,7 @@ public class SysCacheController {
                         Set<String> keys = redisTemplate.keys(pattern);
                         redisKeyCount = keys != null ? keys.size() : 0;
                     } catch (Exception e) {
-                        log.debug("获取Redis缓存数量失败: {}", e.getMessage());
+                        log.debug("Failed to get Redis cache count: {}", e.getMessage());
                     }
                 }
                 cacheInfo.put("redisKeyCount", redisKeyCount);
@@ -281,7 +280,7 @@ public class SysCacheController {
             cacheList.sort(Comparator.comparing(m -> (String) m.get("name")));
             return Response.ok(cacheList);
         } catch (Exception e) {
-            log.error("获取缓存列表失败: {}", e.getMessage(), e);
+            log.error("Failed to get cache list: {}", e.getMessage(), e);
             return Response.fail(null, "获取缓存列表失败: " + e.getMessage());
         }
     }
@@ -312,14 +311,14 @@ public class SysCacheController {
                         }
                     }
                 } catch (Exception e) {
-                    log.error("获取Redis键列表失败: {}", e.getMessage(), e);
+                    log.error("Failed to get Redis key list: {}", e.getMessage(), e);
                 }
             }
 
             Map<String, Object> result = buildMergedKeysResult(name, localKeys, localKeys, redisKeyTTLMap, page, size);
             return Response.ok(result);
         } catch (Exception e) {
-            log.error("获取缓存键列表失败: {}", e.getMessage(), e);
+            log.error("Failed to get cache key list: {}", e.getMessage(), e);
             return Response.fail(null, "获取缓存键列表失败: " + e.getMessage());
         }
     }
@@ -342,7 +341,7 @@ public class SysCacheController {
             result.put("valueJson", value != null ? gson.toJson(value) : "null");
             return Response.ok(result);
         } catch (Exception e) {
-            log.error("获取缓存值失败: {}", e.getMessage(), e);
+            log.error("Failed to get cache value: {}", e.getMessage(), e);
             return Response.fail(null, "获取缓存值失败: " + e.getMessage());
         }
     }
@@ -360,7 +359,7 @@ public class SysCacheController {
             cacheService.remove(name, convertedKey);
             return Response.ok("删除成功");
         } catch (Exception e) {
-            log.error("删除缓存键失败: {}", e.getMessage(), e);
+            log.error("Failed to delete cache key: {}", e.getMessage(), e);
             return Response.fail("删除缓存键失败: " + e.getMessage());
         }
     }
@@ -381,12 +380,12 @@ public class SysCacheController {
                     cacheService.remove(name, convertedKey);
                     count++;
                 } catch (Exception e) {
-                    log.warn("删除缓存键失败: cacheName={}, key={}, error={}", name, key, e.getMessage());
+                    log.warn("Failed to delete cache key: cacheName={}, key={}, error={}", name, key, e.getMessage());
                 }
             }
             return Response.ok("成功删除 " + count + " 个键");
         } catch (Exception e) {
-            log.error("批量删除缓存键失败: {}", e.getMessage(), e);
+            log.error("Batch cache key deletion failed: {}", e.getMessage(), e);
             return Response.fail("批量删除缓存键失败: " + e.getMessage());
         }
     }
@@ -403,7 +402,7 @@ public class SysCacheController {
             cacheService.clear(name);
             return Response.ok("清空缓存成功");
         } catch (Exception e) {
-            log.error("清空缓存失败: {}", e.getMessage(), e);
+            log.error("Failed to clear cache: {}", e.getMessage(), e);
             return Response.fail("清空缓存失败: " + e.getMessage());
         }
     }
@@ -420,7 +419,7 @@ public class SysCacheController {
             cacheService.clear();
             return Response.ok("清空所有缓存成功");
         } catch (Exception e) {
-            log.error("清空所有缓存失败: {}", e.getMessage(), e);
+            log.error("Failed to clear all caches: {}", e.getMessage(), e);
             return Response.fail("清空所有缓存失败: " + e.getMessage());
         }
     }
@@ -457,14 +456,14 @@ public class SysCacheController {
                         }
                     }
                 } catch (Exception e) {
-                    log.error("搜索Redis键失败: {}", e.getMessage(), e);
+                    log.error("Failed to search Redis keys: {}", e.getMessage(), e);
                 }
             }
 
             Map<String, Object> result = buildMergedKeysResult(name, allLocalKeys, filteredLocalKeys, redisKeyTTLMap, page, size);
             return Response.ok(result);
         } catch (Exception e) {
-            log.error("搜索缓存键失败: {}", e.getMessage(), e);
+            log.error("Failed to search cache keys: {}", e.getMessage(), e);
             return Response.fail(null, "搜索缓存键失败: " + e.getMessage());
         }
     }

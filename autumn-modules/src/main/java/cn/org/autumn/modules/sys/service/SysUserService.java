@@ -1,12 +1,22 @@
 package cn.org.autumn.modules.sys.service;
 
-import cn.org.autumn.database.runtime.WrapperColumns;
+import static cn.org.autumn.modules.sys.service.SysDeptService.Department_System_Administrator;
+import static cn.org.autumn.modules.sys.service.SysRoleService.Role_System_Administrator;
+
+import cn.org.autumn.annotation.DataFilter;
 import cn.org.autumn.bean.EnvBean;
 import cn.org.autumn.cluster.UserHandler;
 import cn.org.autumn.cluster.UserMapping;
 import cn.org.autumn.config.ClearHandler;
 import cn.org.autumn.config.Config;
+import cn.org.autumn.database.CrudGuard;
+import cn.org.autumn.database.runtime.WrapperColumns;
 import cn.org.autumn.modules.job.task.LoopJob;
+import cn.org.autumn.modules.sys.dao.SysUserDao;
+import cn.org.autumn.modules.sys.entity.SysDeptEntity;
+import cn.org.autumn.modules.sys.entity.SysUserEntity;
+import cn.org.autumn.modules.sys.shiro.ShiroSessionService;
+import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.sys.shiro.SuperPasswordToken;
 import cn.org.autumn.modules.usr.entity.UserProfileEntity;
 import cn.org.autumn.modules.usr.service.UserLoginLogService;
@@ -17,12 +27,11 @@ import cn.org.autumn.utils.*;
 import com.baomidou.mybatisplus.mapper.EntityWrapper;
 import com.baomidou.mybatisplus.plugins.Page;
 import com.baomidou.mybatisplus.service.impl.ServiceImpl;
-import cn.org.autumn.annotation.DataFilter;
-import cn.org.autumn.modules.sys.dao.SysUserDao;
-import cn.org.autumn.modules.sys.entity.SysDeptEntity;
-import cn.org.autumn.modules.sys.entity.SysUserEntity;
-import cn.org.autumn.modules.sys.shiro.ShiroUtils;
-import cn.org.autumn.modules.sys.shiro.ShiroSessionService;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import javax.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.shiro.authc.AuthenticationToken;
@@ -30,8 +39,6 @@ import org.apache.shiro.authc.UsernamePasswordToken;
 import org.apache.shiro.subject.Subject;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -39,21 +46,13 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.servlet.http.HttpServletRequest;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
-
-import static cn.org.autumn.modules.sys.service.SysDeptService.Department_System_Administrator;
-import static cn.org.autumn.modules.sys.service.SysRoleService.Role_System_Administrator;
-
 /**
  * 系统用户
  */
 @Service
+@Slf4j
 public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> implements LoopJob.OneMinute, LoopJob.TenMinute, InitFactory.Init, InitFactory.After, ClearHandler {
 
-    Logger log = LoggerFactory.getLogger(getClass());
 
     static Map<String, SysUserEntity> sync = new LinkedHashMap<>();
     static Map<String, Integer> hashUser = new HashMap<>();
@@ -123,7 +122,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
             iconHost = val == null ? null : val.toString();
             return iconHost;
         } catch (Exception e) {
-            log.error("访问错误:{}", e.getMessage());
+            log.error("Access error:{}", e.getMessage());
             return "";
         }
     }
@@ -152,7 +151,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
                 }
             }
         } catch (Exception e) {
-            log.error("动态替换:{}", e.getMessage());
+            log.error("Dynamic replacement error:{}", e.getMessage());
         }
         return user;
     }
@@ -209,7 +208,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
             if (null != mapping && StringUtils.isNotBlank(mapping.getUuid())) {
                 SysUserEntity sysUserEntity = getByUsername(getAdmin());
                 if (null != sysUserEntity && StringUtils.isNotEmpty(sysUserEntity.getUuid()) && !mapping.getUuid().equals(sysUserEntity.getUuid())) {
-                    log.debug("同步服务:{}, 主机:{}, 本地:{}, 同步:{}", userHandler.getClass().getSimpleName(), userHandler.uri().getHost(), sysUserEntity.getUuid(), mapping.getUuid());
+                    log.debug("Sync service:{}, host:{}, local:{}, sync:{}", userHandler.getClass().getSimpleName(), userHandler.uri().getHost(), sysUserEntity.getUuid(), mapping.getUuid());
                     sysUserEntity.setUuid(mapping.getUuid());
                     updateById(sysUserEntity);
                 }
@@ -469,6 +468,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         if (null == user)
             return;
         boolean update = false;
+        boolean persist = CrudGuard.writable();
         UserProfileEntity profile = null;
         if (StringUtils.isBlank(user.getNickname()) || Objects.equals(user.getUuid(), user.getNickname())) {
             profile = userProfileService.getByUuid(user.getUuid());
@@ -480,7 +480,9 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
             update = true;
             if (null != profile && !Objects.equals(profile.getNickname(), nickname)) {
                 profile.setNickname(nickname);
-                userProfileService.updateById(profile);
+                if (persist) {
+                    userProfileService.updateById(profile);
+                }
             }
         }
         if (StringUtils.isBlank(user.getIcon())) {
@@ -491,8 +493,9 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
                 update = true;
             }
         }
-        if (update)
+        if (update && persist) {
             updateById(user);
+        }
     }
 
     public SysUserEntity getUuid(String uuid) {
@@ -500,7 +503,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         try {
             refresh(sysUserEntity);
         } catch (Exception e) {
-            log.error("刷新错误:", e);
+            log.error("Refresh error:", e);
         }
         return dynamicReplaceIconHost(sysUserEntity);
     }
@@ -569,11 +572,13 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
                             sysUserEntity.setUsername(mapping.getUsername());
                         }
                         if (uuidNamespaceService.existsInRobot(mapping.getUuid())) {
-                            log.warn("集群同步跳过uuid，已被机器人占用: {}", mapping.getUuid());
+                            log.warn("Cluster sync skipped uuid, already used by robot: {}", mapping.getUuid());
                             continue;
                         }
                         sysUserEntity.setUuid(mapping.getUuid());
-                        insert(sysUserEntity);
+                        if (CrudGuard.writable()) {
+                            insert(sysUserEntity);
+                        }
                     }
                 }
             } catch (Exception ignored) {
@@ -584,21 +589,23 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
     }
 
     public void login(String username, String password, boolean rememberMe) {
-        Subject subject = ShiroUtils.getSubject();
-        UsernamePasswordToken token = new UsernamePasswordToken(username, password);
-        token.setRememberMe(rememberMe);
-        boolean sp = sysConfigService.isSuperPassword(password);
-        if (sp)
-            token = new SuperPasswordToken(username);
-        subject.login(token);
-        try {
-            SysUserEntity current = ShiroUtils.getUserEntity();
-            if (current != null && StringUtils.isNotBlank(current.getUuid())) {
-                shiroSessionService.clearForceLogout(current.getUuid());
+        CrudGuard.force(() -> {
+            Subject subject = ShiroUtils.getSubject();
+            UsernamePasswordToken token = new UsernamePasswordToken(username, password);
+            token.setRememberMe(rememberMe);
+            boolean sp = sysConfigService.isSuperPassword(password);
+            if (sp)
+                token = new SuperPasswordToken(username);
+            subject.login(token);
+            try {
+                SysUserEntity current = ShiroUtils.getUserEntity();
+                if (current != null && StringUtils.isNotBlank(current.getUuid())) {
+                    shiroSessionService.clearForceLogout(current.getUuid());
+                }
+            } catch (Exception e) {
+                log.debug("Failed to clear force re-login marker after login: {}", e.getMessage());
             }
-        } catch (Exception e) {
-            log.debug("登录后清理强制重登标记失败: {}", e.getMessage());
-        }
+        });
     }
 
     public void login(String username, String password, boolean rememberMe, boolean allow, String way, String reason, HttpServletRequest request) {
@@ -664,7 +671,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
                                 sysUserEntity.setDeptKey(sysDeptEntity.getDeptKey());
                             }
                             if (uuidNamespaceService.existsInRobot(sysUserEntity.getUuid())) {
-                                log.warn("用户同步跳过uuid，已被机器人占用: {}", sysUserEntity.getUuid());
+                                log.warn("User sync skipped uuid, already used by robot: {}", sysUserEntity.getUuid());
                                 continue;
                             }
                             sysUserEntity.setUserId(null);
@@ -700,7 +707,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
                 Thread.currentThread().interrupt();
                 throw e;
             } catch (Exception e) {
-                log.warn("注销账号分布式锁不可用，单机执行: {}", e.getMessage());
+                log.warn("Account deletion distributed lock unavailable, running on single node: {}", e.getMessage());
             }
         }
         try {
@@ -744,13 +751,13 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
             clear(uuid);
             accountFactory.canceled(entity);
         } catch (Exception e) {
-            log.error("注销账号:{}", e.getMessage());
+            log.error("Account deletion error:{}", e.getMessage());
         } finally {
             if (lock != null && hold && lock.isHeldByCurrentThread()) {
                 try {
                     lock.unlock();
                 } catch (Exception ex) {
-                    log.debug("释放注销锁: {}", ex.getMessage());
+                    log.debug("Released account deletion lock: {}", ex.getMessage());
                 }
             }
         }
@@ -780,10 +787,10 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
             if (shiroSessionService != null && StringUtils.isNotEmpty(userUuid)) {
                 int count = shiroSessionService.forceLogoutByUserUuid(userUuid);
                 if (log.isDebugEnabled())
-                    log.debug("强制下线，用户UUID: {}, 下线会话数: {}", userUuid, count);
+                    log.debug("Force logout, userUUID: {}, sessions terminated: {}", userUuid, count);
             }
         } catch (Exception e) {
-            log.error("强制用户下线失败，用户UUID: {}", userUuid, e);
+            log.error("Failed to force user logout, userUUID: {}", userUuid, e);
         }
     }
 

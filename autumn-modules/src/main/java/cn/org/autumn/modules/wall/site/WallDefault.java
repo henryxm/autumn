@@ -1,10 +1,9 @@
 package cn.org.autumn.modules.wall.site;
 
 import cn.org.autumn.config.WallHandler;
+import java.io.Serializable;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
-
-import java.io.Serializable;
 
 @Component
 @Order(0)

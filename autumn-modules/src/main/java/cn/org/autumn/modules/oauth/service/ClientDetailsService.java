@@ -18,14 +18,13 @@ import cn.org.autumn.utils.RedisUtils;
 import cn.org.autumn.utils.Utils;
 import cn.org.autumn.utils.Uuid;
 import com.qiniu.util.Md5;
+import java.util.*;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.stereotype.Service;
-
-import java.util.*;
 
 @Service
 public class ClientDetailsService extends ModuleService<ClientDetailsDao, ClientDetailsEntity> implements LoopJob.OneHour, UpgradeFactory.Domain, DomainHandler {

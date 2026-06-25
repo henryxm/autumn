@@ -1,21 +1,20 @@
 package cn.org.autumn.config;
 
-import cn.org.autumn.database.DatabaseHolder;
-import cn.org.autumn.database.DatabaseType;
-import org.apache.ibatis.plugin.Invocation;
-import org.junit.Test;
-import org.springframework.test.util.ReflectionTestUtils;
-
-import java.lang.reflect.Field;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+
+import cn.org.autumn.database.DatabaseHolder;
+import cn.org.autumn.database.DatabaseType;
+import java.lang.reflect.Field;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import org.apache.ibatis.plugin.Invocation;
+import org.junit.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 
 public class ThreadLocalPaginationInterceptorTest {
 

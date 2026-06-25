@@ -2,24 +2,21 @@ package cn.org.autumn.site;
 
 import cn.org.autumn.config.PageHandler;
 import cn.org.autumn.utils.WebPathUtils;
-import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
-import org.springframework.ui.Model;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+import org.springframework.ui.Model;
 
 @Component
+@Slf4j
 public class PageFactory extends Factory {
-    static final Logger log = LoggerFactory.getLogger(PageFactory.class);
-
     @Autowired
     ClearFactory clearFactory;
 
@@ -57,7 +54,7 @@ public class PageFactory extends Factory {
                     String value = String.valueOf(o);
                     if (StringUtils.isNotBlank(value)) {
                         if (log.isDebugEnabled())
-                            log.debug("跳转执行:{}", value);
+                            log.debug("Redirect execute: {}", value);
                         return value;
                     }
                 }
@@ -66,7 +63,7 @@ public class PageFactory extends Factory {
             log.debug("Invoke:{}", e.getMessage());
         }
         if (log.isDebugEnabled())
-            log.debug("默认执行:{}", defaultValue);
+            log.debug("Default execute: {}", defaultValue);
         return defaultValue;
     }
 
@@ -147,5 +144,9 @@ public class PageFactory extends Factory {
 
     public String fieldencrypt(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
         return invoke("fieldencrypt", "fieldencrypt", httpServletRequest, httpServletResponse, model);
+    }
+
+    public String dbmanage(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        return invoke("dbmanage", "dbmanage", httpServletRequest, httpServletResponse, model);
     }
 }

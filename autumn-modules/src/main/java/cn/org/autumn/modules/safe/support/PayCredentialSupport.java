@@ -4,13 +4,12 @@ import cn.org.autumn.exception.CodeException;
 import cn.org.autumn.model.Error;
 import cn.org.autumn.model.PayCredentialConfig;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
-import org.apache.commons.lang.RandomStringUtils;
-import org.apache.commons.lang.StringUtils;
-
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.regex.Pattern;
+import org.apache.commons.lang.RandomStringUtils;
+import org.apache.commons.lang.StringUtils;
 
 /**
  * 支付凭证哈希、格式校验与弱码检测。

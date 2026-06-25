@@ -2,9 +2,8 @@ package cn.org.autumn.datasources;
 
 import cn.org.autumn.database.DatabaseHolder;
 import cn.org.autumn.database.DatabaseType;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
@@ -15,10 +14,8 @@ import org.springframework.stereotype.Component;
  * 解析规则与 {@link DynamicDataSourceConfig} 一致：{@code second.url} 为空时按与 first 相同 URL 处理。
  */
 @Component
+@Slf4j
 public class DataSourceDialectRegistry {
-
-    private static final Logger log = LoggerFactory.getLogger(DataSourceDialectRegistry.class);
-
     private final DatabaseType firstType;
 
     private final DatabaseType secondType;

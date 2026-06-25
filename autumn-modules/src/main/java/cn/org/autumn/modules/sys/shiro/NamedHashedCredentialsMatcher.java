@@ -1,8 +1,8 @@
 package cn.org.autumn.modules.sys.shiro;
 
+import cn.org.autumn.modules.bot.shiro.RobotAccessTokenToken;
 import org.apache.shiro.authc.AuthenticationInfo;
 import org.apache.shiro.authc.AuthenticationToken;
-import cn.org.autumn.modules.bot.shiro.RobotAccessTokenToken;
 import org.apache.shiro.authc.credential.HashedCredentialsMatcher;
 
 public class NamedHashedCredentialsMatcher extends HashedCredentialsMatcher {

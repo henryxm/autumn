@@ -1,11 +1,11 @@
 package cn.org.autumn.table.platform.jdbc;
 
-import org.apache.commons.lang.StringUtils;
-
-import javax.sql.DataSource;
+import cn.org.autumn.database.CrudGuard;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
+import javax.sql.DataSource;
+import org.apache.commons.lang.StringUtils;
 
 /**
  * 将方言 {@link cn.org.autumn.table.relational.RelationalSchemaSql} 生成的多语句脚本按分号拆分执行。
@@ -27,6 +27,7 @@ public final class RelationalDdlScriptExecutor {
                 if (s.isEmpty()) {
                     continue;
                 }
+                CrudGuard.enforce();
                 st.execute(s);
             }
         } catch (SQLException e) {

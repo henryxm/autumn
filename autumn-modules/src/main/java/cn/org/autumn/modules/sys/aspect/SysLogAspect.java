@@ -1,12 +1,15 @@
 package cn.org.autumn.modules.sys.aspect;
 
 import cn.org.autumn.annotation.SysLog;
-import com.google.gson.Gson;
 import cn.org.autumn.modules.sys.entity.SysLogEntity;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysLogService;
 import cn.org.autumn.utils.HttpContextUtils;
 import cn.org.autumn.utils.IPUtils;
+import com.google.gson.Gson;
+import java.lang.reflect.Method;
+import java.util.Date;
+import javax.servlet.http.HttpServletRequest;
 import org.apache.shiro.SecurityUtils;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -15,10 +18,6 @@ import org.aspectj.lang.annotation.Pointcut;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-
-import javax.servlet.http.HttpServletRequest;
-import java.lang.reflect.Method;
-import java.util.Date;
 
 /**
  * 系统日志，切面处理类

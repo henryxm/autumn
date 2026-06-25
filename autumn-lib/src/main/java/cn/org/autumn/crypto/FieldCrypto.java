@@ -1,14 +1,13 @@
 package cn.org.autumn.crypto;
 
-import org.apache.commons.lang.StringUtils;
-
+import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
+import java.util.Base64;
 import javax.crypto.Cipher;
 import javax.crypto.Mac;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
-import java.nio.charset.StandardCharsets;
-import java.security.SecureRandom;
-import java.util.Base64;
+import org.apache.commons.lang.StringUtils;
 
 /**
  * 字段存储 AES-256-GCM 加解密与 HMAC 盲索引。

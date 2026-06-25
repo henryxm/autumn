@@ -2,27 +2,28 @@ package cn.org.autumn.config;
 
 import cn.org.autumn.database.DatabaseHolder;
 import cn.org.autumn.database.DatabaseType;
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
+import java.sql.CallableStatement;
+import java.sql.Date;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.Time;
+import java.sql.Timestamp;
+import java.util.Calendar;
+import java.util.Map;
+import java.util.Properties;
+import java.util.concurrent.ConcurrentHashMap;
 import org.apache.ibatis.executor.resultset.ResultSetHandler;
 import org.apache.ibatis.plugin.Interceptor;
 import org.apache.ibatis.plugin.Intercepts;
 import org.apache.ibatis.plugin.Invocation;
 import org.apache.ibatis.plugin.Plugin;
 import org.apache.ibatis.plugin.Signature;
-
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
-import java.sql.CallableStatement;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.sql.Timestamp;
-import java.util.Calendar;
-import java.util.Map;
-import java.util.Properties;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * MyBatis-Plus 2.x 等为 {@link java.util.Date} 生成的映射仍可能走 {@link ResultSet#getTimestamp}，
@@ -184,7 +185,7 @@ public class SqliteJdbcResultAccessInterceptor implements Interceptor {
             }
         }
 
-        private java.sql.Date getDateWithStringFallback(Object[] args) throws SQLException {
+        private Date getDateWithStringFallback(Object[] args) throws SQLException {
             try {
                 if (args.length == 1) {
                     if (args[0] instanceof String) {
@@ -201,11 +202,11 @@ public class SqliteJdbcResultAccessInterceptor implements Interceptor {
                     throw e;
                 }
                 java.util.Date util = readAsUtilDate(args[0]);
-                return util == null ? null : new java.sql.Date(util.getTime());
+                return util == null ? null : new Date(util.getTime());
             }
         }
 
-        private java.sql.Time getTimeWithStringFallback(Object[] args) throws SQLException {
+        private Time getTimeWithStringFallback(Object[] args) throws SQLException {
             try {
                 if (args.length == 1) {
                     if (args[0] instanceof String) {
@@ -222,7 +223,7 @@ public class SqliteJdbcResultAccessInterceptor implements Interceptor {
                     throw e;
                 }
                 java.util.Date util = readAsUtilDate(args[0]);
-                return util == null ? null : new java.sql.Time(util.getTime());
+                return util == null ? null : new Time(util.getTime());
             }
         }
 

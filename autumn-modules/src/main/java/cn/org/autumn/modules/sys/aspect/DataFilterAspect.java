@@ -2,13 +2,14 @@ package cn.org.autumn.modules.sys.aspect;
 
 import cn.org.autumn.annotation.DataFilter;
 import cn.org.autumn.database.runtime.RuntimeSqlDialect;
-import cn.org.autumn.utils.Constant;
+import cn.org.autumn.exception.AException;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysDeptService;
 import cn.org.autumn.modules.sys.service.SysRoleDeptService;
 import cn.org.autumn.modules.sys.service.SysUserRoleService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
-import cn.org.autumn.exception.AException;
+import cn.org.autumn.utils.Constant;
+import java.util.*;
 import org.apache.commons.lang.StringUtils;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.Aspect;
@@ -17,8 +18,6 @@ import org.aspectj.lang.annotation.Pointcut;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-
-import java.util.*;
 
 /**
  * 数据过滤，切面处理类

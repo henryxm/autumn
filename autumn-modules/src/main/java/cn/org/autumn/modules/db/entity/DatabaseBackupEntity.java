@@ -3,11 +3,10 @@ package cn.org.autumn.modules.db.entity;
 import cn.org.autumn.table.annotation.*;
 import com.baomidou.mybatisplus.annotations.TableId;
 import com.baomidou.mybatisplus.annotations.TableName;
-import lombok.Getter;
-import lombok.Setter;
-
 import java.io.Serializable;
 import java.util.Date;
+import lombok.Getter;
+import lombok.Setter;
 
 @Getter
 @Setter

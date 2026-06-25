@@ -1,10 +1,9 @@
 package cn.org.autumn.crypto;
 
-import org.junit.Assert;
-import org.junit.Test;
-
 import java.util.Arrays;
 import java.util.Base64;
+import org.junit.Assert;
+import org.junit.Test;
 
 public class FieldCryptoTest {
 

@@ -3,8 +3,8 @@ package cn.org.autumn.modules.sys.controller;
 import cn.org.autumn.config.Config;
 import cn.org.autumn.exception.AException;
 import cn.org.autumn.model.IP;
-import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.sys.service.SysUserRoleService;
+import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.wall.service.IpWhiteService;
 import cn.org.autumn.modules.wall.service.WallService;
 import cn.org.autumn.utils.SpringContextUtils;
@@ -12,13 +12,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.google.gson.reflect.TypeToken;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationContext;
-import org.springframework.web.bind.annotation.*;
-
-import javax.servlet.http.HttpServletRequest;
+import java.lang.reflect.Array;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
@@ -27,6 +21,12 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.stream.Collectors;
+import javax.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
+import org.springframework.web.bind.annotation.*;
 
 @Slf4j
 @RestController
@@ -401,7 +401,7 @@ public class SysExecController {
             }
         }
         // 处理Date类型
-        if (targetType == Date.class || targetType == java.sql.Date.class) {
+        if (targetType == Date.class || targetType == Date.class) {
             if (stringValue.isEmpty()) {
                 return null;
             }
@@ -410,8 +410,8 @@ public class SysExecController {
                 if (stringValue.matches("^\\d+$")) {
                     long timestamp = Long.parseLong(stringValue);
                     Date date = new Date(timestamp);
-                    if (targetType == java.sql.Date.class) {
-                        return new java.sql.Date(date.getTime());
+                    if (targetType == Date.class) {
+                        return new Date(date.getTime());
                     }
                     return date;
                 }
@@ -420,8 +420,8 @@ public class SysExecController {
                     // 使用Gson的Date适配器解析
                     JsonElement jsonElement = JsonParser.parseString("\"" + stringValue + "\"");
                     Date date = gson.fromJson(jsonElement, Date.class);
-                    if (targetType == java.sql.Date.class) {
-                        return new java.sql.Date(date.getTime());
+                    if (targetType == Date.class) {
+                        return new Date(date.getTime());
                     }
                     return date;
                 }
@@ -436,8 +436,8 @@ public class SysExecController {
                     try {
                         SimpleDateFormat sdf = new SimpleDateFormat(pattern);
                         Date date = sdf.parse(stringValue);
-                        if (targetType == java.sql.Date.class) {
-                            return new java.sql.Date(date.getTime());
+                        if (targetType == Date.class) {
+                            return new Date(date.getTime());
                         }
                         return date;
                     } catch (ParseException ignored) {
@@ -511,17 +511,17 @@ public class SysExecController {
         // 处理数组类型
         if (targetType.isArray()) {
             if (stringValue.isEmpty()) {
-                return java.lang.reflect.Array.newInstance(targetType.getComponentType(), 0);
+                return Array.newInstance(targetType.getComponentType(), 0);
             }
             try {
                 // 如果value已经是数组，尝试转换
                 if (value.getClass().isArray()) {
-                    int length = java.lang.reflect.Array.getLength(value);
-                    Object targetArray = java.lang.reflect.Array.newInstance(targetType.getComponentType(), length);
+                    int length = Array.getLength(value);
+                    Object targetArray = Array.newInstance(targetType.getComponentType(), length);
                     for (int i = 0; i < length; i++) {
-                        Object element = java.lang.reflect.Array.get(value, i);
+                        Object element = Array.get(value, i);
                         Object converted = convertParameter(element, targetType.getComponentType());
-                        java.lang.reflect.Array.set(targetArray, i, converted);
+                        Array.set(targetArray, i, converted);
                     }
                     return targetArray;
                 }
@@ -530,19 +530,19 @@ public class SysExecController {
                     JsonElement jsonElement = JsonParser.parseString(stringValue);
                     if (jsonElement.isJsonArray()) {
                         List<?> list = gson.fromJson(jsonElement, TypeToken.getParameterized(List.class, targetType.getComponentType()).getType());
-                        Object array = java.lang.reflect.Array.newInstance(targetType.getComponentType(), list.size());
+                        Object array = Array.newInstance(targetType.getComponentType(), list.size());
                         for (int i = 0; i < list.size(); i++) {
-                            java.lang.reflect.Array.set(array, i, list.get(i));
+                            Array.set(array, i, list.get(i));
                         }
                         return array;
                     }
                 }
                 // 如果解析失败，尝试按逗号分割
                 String[] parts = stringValue.split(",");
-                Object array = java.lang.reflect.Array.newInstance(targetType.getComponentType(), parts.length);
+                Object array = Array.newInstance(targetType.getComponentType(), parts.length);
                 for (int i = 0; i < parts.length; i++) {
                     Object converted = convertParameter(parts[i].trim(), targetType.getComponentType());
-                    java.lang.reflect.Array.set(array, i, converted);
+                    Array.set(array, i, converted);
                 }
                 return array;
             } catch (Exception e) {
@@ -563,7 +563,7 @@ public class SysExecController {
                 }
             } catch (Exception e) {
                 if (log.isDebugEnabled()) {
-                    log.debug("使用Gson转换类型失败: {} -> {}, 错误: {}", value.getClass().getName(), targetType.getName(), e.getMessage());
+                    log.debug("Gson type conversion failed: {} -> {}, error: {}", value.getClass().getName(), targetType.getName(), e.getMessage());
                 }
                 // 继续尝试其他方式
             }

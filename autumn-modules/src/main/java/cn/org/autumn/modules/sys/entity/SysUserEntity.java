@@ -8,20 +8,19 @@ import cn.org.autumn.table.annotation.Column;
 import cn.org.autumn.table.annotation.Index;
 import cn.org.autumn.table.annotation.Table;
 import cn.org.autumn.table.data.DataType;
+import cn.org.autumn.validator.group.AddGroup;
+import cn.org.autumn.validator.group.UpdateGroup;
 import com.baomidou.mybatisplus.annotations.TableField;
 import com.baomidou.mybatisplus.annotations.TableId;
 import com.baomidou.mybatisplus.annotations.TableName;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import cn.org.autumn.validator.group.AddGroup;
-import cn.org.autumn.validator.group.UpdateGroup;
-import lombok.Getter;
-import lombok.Setter;
-
-import javax.validation.constraints.NotBlank;
 import java.io.Serializable;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
+import javax.validation.constraints.NotBlank;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * 系统真人用户（{@code sys_user}），与 {@link cn.org.autumn.modules.bot.entity.RobotEntity} 为框架层<strong>不同类型</strong>。

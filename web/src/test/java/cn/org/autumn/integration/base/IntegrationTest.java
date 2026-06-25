@@ -11,6 +11,7 @@ import cn.org.autumn.modules.usr.entity.UserTokenEntity;
 import cn.org.autumn.modules.usr.service.UserTokenService;
 import cn.org.autumn.site.InitFactory;
 import com.google.gson.Gson;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,8 +20,6 @@ import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.web.server.LocalServerPort;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.test.context.ActiveProfiles;
-
-import java.util.concurrent.TimeUnit;
 
 /**
  * web 模块集成测试基类：拉起完整 Spring Boot（{@link Web}），H2 内存库，Redis 由环境提供。

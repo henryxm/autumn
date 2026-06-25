@@ -1,16 +1,10 @@
 package cn.org.autumn.modules.oauth.service;
 
 import cn.org.autumn.base.ModuleService;
+import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.oauth.dao.SecurityRequestDao;
 import cn.org.autumn.modules.oauth.entity.SecurityRequestEntity;
-import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.utils.Uuid;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.StringUtils;
-import org.springframework.stereotype.Service;
-
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -20,8 +14,13 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang.StringUtils;
+import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service

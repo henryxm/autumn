@@ -1,17 +1,17 @@
 package cn.org.autumn.modules.spm.service;
 
+import cn.org.autumn.database.CrudGuard;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.spm.entity.SuperPositionModelEntity;
 import cn.org.autumn.modules.spm.entity.VisitLogEntity;
 import cn.org.autumn.modules.spm.service.gen.VisitLogServiceGen;
 import cn.org.autumn.utils.IPUtils;
-import org.apache.commons.lang.StringUtils;
-import org.springframework.stereotype.Service;
-
-import javax.servlet.http.HttpServletRequest;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import javax.servlet.http.HttpServletRequest;
+import org.apache.commons.lang.StringUtils;
+import org.springframework.stereotype.Service;
 
 @Service
 public class VisitLogService extends VisitLogServiceGen implements LoopJob.OneDay {
@@ -32,6 +32,10 @@ public class VisitLogService extends VisitLogServiceGen implements LoopJob.OneDa
     }
 
     public void put(String ip, SuperPositionModelEntity superPositionModelEntity) {
+        CrudGuard.opt(() -> doPut(ip, superPositionModelEntity));
+    }
+
+    private void doPut(String ip, SuperPositionModelEntity superPositionModelEntity) {
         VisitLogEntity visitLogEntity = new VisitLogEntity();
         visitLogEntity.setUniqueVisitor(0);
         visitLogEntity.setPageView(0);

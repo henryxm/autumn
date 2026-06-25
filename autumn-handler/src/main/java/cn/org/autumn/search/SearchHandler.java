@@ -1,9 +1,8 @@
 package cn.org.autumn.search;
 
+import java.util.List;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.stereotype.Component;
-
-import java.util.List;
 
 @Component
 @ConditionalOnMissingBean(SearchHandler.class)

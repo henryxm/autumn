@@ -1,7 +1,6 @@
 package cn.org.autumn.table.data;
 
 import cn.org.autumn.table.annotation.LengthCount;
-
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.HashMap;

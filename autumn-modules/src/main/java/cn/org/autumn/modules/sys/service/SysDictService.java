@@ -1,20 +1,19 @@
 package cn.org.autumn.modules.sys.service;
 
 import cn.org.autumn.database.runtime.WrapperColumns;
+import cn.org.autumn.modules.sys.dao.SysDictDao;
+import cn.org.autumn.modules.sys.entity.SysDictEntity;
 import cn.org.autumn.site.InitFactory;
+import cn.org.autumn.utils.PageUtils;
+import cn.org.autumn.utils.Query;
 import com.baomidou.mybatisplus.mapper.EntityWrapper;
 import com.baomidou.mybatisplus.plugins.Page;
 import com.baomidou.mybatisplus.service.impl.ServiceImpl;
-import cn.org.autumn.utils.PageUtils;
-import cn.org.autumn.utils.Query;
-import cn.org.autumn.modules.sys.dao.SysDictDao;
-import cn.org.autumn.modules.sys.entity.SysDictEntity;
+import java.util.List;
+import java.util.Map;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import java.util.List;
-import java.util.Map;
-
 
 @Service
 public class SysDictService extends ServiceImpl<SysDictDao, SysDictEntity> implements InitFactory.Init {

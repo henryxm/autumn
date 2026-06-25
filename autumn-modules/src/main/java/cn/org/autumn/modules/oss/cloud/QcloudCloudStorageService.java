@@ -1,15 +1,14 @@
 package cn.org.autumn.modules.oss.cloud;
 
+import cn.org.autumn.exception.AException;
 import com.qcloud.cos.COSClient;
 import com.qcloud.cos.ClientConfig;
 import com.qcloud.cos.request.UploadFileRequest;
 import com.qcloud.cos.sign.Credentials;
-import cn.org.autumn.exception.AException;
-import net.sf.json.JSONObject;
-import org.apache.commons.io.IOUtils;
-
 import java.io.IOException;
 import java.io.InputStream;
+import net.sf.json.JSONObject;
+import org.apache.commons.io.IOUtils;
 
 /**
  * 腾讯云存储

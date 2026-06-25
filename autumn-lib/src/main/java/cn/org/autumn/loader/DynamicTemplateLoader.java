@@ -5,9 +5,6 @@ import freemarker.cache.ClassTemplateLoader;
 import freemarker.cache.MultiTemplateLoader;
 import freemarker.cache.StatefulTemplateLoader;
 import freemarker.cache.TemplateLoader;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.Reader;
@@ -15,10 +12,11 @@ import java.lang.reflect.Field;
 import java.net.URL;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 public class DynamicTemplateLoader extends MultiTemplateLoader {
 
-    Logger log = LoggerFactory.getLogger(getClass());
 
     private final Map<String, TemplateLoader> templateLoaders = new ConcurrentHashMap();
 

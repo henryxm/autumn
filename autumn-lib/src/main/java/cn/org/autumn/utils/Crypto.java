@@ -1,13 +1,12 @@
 package cn.org.autumn.utils;
 
-import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.StringUtils;
-
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import javax.crypto.Cipher;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
-import java.nio.charset.StandardCharsets;
-import java.util.Base64;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang.StringUtils;
 
 @Slf4j
 public class Crypto {
@@ -53,7 +52,7 @@ public class Crypto {
             if (decoded.length == 16) {
                 return decoded;
             }
-            log.error("向量长度错误: 必须是16字节，当前长度: {}", decoded.length);
+            log.error("IV length error: must be 16 bytes, actual length: {}", decoded.length);
             return null;
         } catch (IllegalArgumentException e) {
             // Base64解码失败，尝试使用原始字符串
@@ -61,7 +60,7 @@ public class Crypto {
             if (bytes.length == 16) {
                 return bytes;
             }
-            log.error("向量长度错误: 必须是16字节，当前长度: {}", bytes.length);
+            log.error("IV length error: must be 16 bytes, actual length: {}", bytes.length);
             return null;
         }
     }

@@ -2,7 +2,6 @@ package cn.org.autumn.modules.safe.spi;
 
 import cn.org.autumn.modules.safe.dto.PayGateAssessRequest;
 import cn.org.autumn.modules.safe.service.PayUserSecuritySettingService;
-
 import java.util.List;
 
 /**

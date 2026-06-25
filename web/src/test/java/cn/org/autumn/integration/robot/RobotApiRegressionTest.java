@@ -1,15 +1,16 @@
 package cn.org.autumn.integration.robot;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import cn.org.autumn.integration.base.IntegrationTest;
 import cn.org.autumn.integration.support.IntegrationJson;
 import cn.org.autumn.integration.support.RobotTestBodies;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
-import org.junit.jupiter.api.Test;
-
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
-
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
  * 管理 API 扩展回归：Hook/令牌细项、销毁、负向校验。
@@ -77,7 +78,7 @@ public class RobotApiRegressionTest extends IntegrationTest {
     @Test
     public void hook_create_rejectsLocalCallback() {
         String robotUuid = createRobotUuid();
-        java.util.Map<String, Object> body = RobotTestBodies.hookCreate(robotUuid, "http://127.0.0.1/hook");
+        Map<String, Object> body = RobotTestBodies.hookCreate(robotUuid, "http://127.0.0.1/hook");
         JSONObject resp = robotApi.post("/hook/create", userToken, body);
         IntegrationJson.assertBusinessFailure(resp);
         assertTrue(IntegrationJson.msg(resp).contains("内网") || IntegrationJson.msg(resp).contains("本机"));
@@ -90,8 +91,8 @@ public class RobotApiRegressionTest extends IntegrationTest {
         return IntegrationJson.data(create).getJSONObject("robot").getString("uuid");
     }
 
-    private static java.util.Map<String, Object> hookUpdateBody(String hookUuid) {
-        java.util.Map<String, Object> body = new java.util.HashMap<>();
+    private static Map<String, Object> hookUpdateBody(String hookUuid) {
+        Map<String, Object> body = new HashMap<>();
         body.put("uuid", hookUuid);
         body.put("name", "it-hook-updated");
         return body;

@@ -1,14 +1,13 @@
 package cn.org.autumn.modules.usr.entity;
 
-import com.baomidou.mybatisplus.annotations.*;
 import cn.org.autumn.table.annotation.*;
+import com.baomidou.mybatisplus.annotations.*;
+import java.io.Serializable;
+import java.util.Date;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
-import java.io.Serializable;
-import java.util.Date;
 
 /**
  * 用户Token

@@ -1,8 +1,8 @@
 package cn.org.autumn.modules.sys.shiro;
 
+import cn.org.autumn.exception.AException;
 import cn.org.autumn.modules.bot.shiro.RobotPrincipal;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
-import cn.org.autumn.exception.AException;
 import org.apache.shiro.SecurityUtils;
 import org.apache.shiro.crypto.hash.SimpleHash;
 import org.apache.shiro.session.Session;

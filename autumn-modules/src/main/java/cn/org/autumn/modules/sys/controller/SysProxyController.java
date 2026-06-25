@@ -3,12 +3,11 @@ package cn.org.autumn.modules.sys.controller;
 import cn.org.autumn.annotation.DisableXssFilter;
 import cn.org.autumn.annotation.SkipInterceptor;
 import cn.org.autumn.service.BaseHttpProxyService;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 
 /**
  * 通用透明反向代理控制器

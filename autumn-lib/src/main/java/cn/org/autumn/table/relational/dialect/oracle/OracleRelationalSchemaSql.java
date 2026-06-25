@@ -1,16 +1,15 @@
 package cn.org.autumn.table.relational.dialect.oracle;
 
-import cn.org.autumn.table.relational.RelationalSchemaSql;
-import cn.org.autumn.table.relational.support.SchemaSqlNoops;
-import cn.org.autumn.table.relational.support.ddl.OracleJdbcDdlGenerator;
 import cn.org.autumn.table.data.ColumnInfo;
 import cn.org.autumn.table.data.IndexInfo;
 import cn.org.autumn.table.data.TableInfo;
-import org.apache.commons.lang.StringUtils;
-
+import cn.org.autumn.table.relational.RelationalSchemaSql;
+import cn.org.autumn.table.relational.support.SchemaSqlNoops;
+import cn.org.autumn.table.relational.support.ddl.OracleJdbcDdlGenerator;
 import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Map;
+import org.apache.commons.lang.StringUtils;
 
 /**
  * Oracle：USER_* 元数据；注解建表 DDL 由 {@link OracleJdbcDdlGenerator} 生成（12c+ 标识列）。

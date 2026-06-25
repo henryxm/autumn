@@ -1,10 +1,10 @@
 package cn.org.autumn.utils;
 
-import org.springframework.util.StringUtils;
-
+import java.net.URI;
+import java.net.URL;
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
-import java.net.URL;
+import org.springframework.util.StringUtils;
 
 /**
  * 处理 Servlet context-path，避免在子路径部署时把浏览器导航到站点根（误落到网关/其它应用 JSON 接口）。
@@ -64,8 +64,8 @@ public final class WebPathUtils {
         String c = candidate.trim();
         try {
             if (c.startsWith("http://") || c.startsWith("https://")) {
-                URL u = new URL(c);
-                URL base = new URL(request.getRequestURL().toString());
+                URL u = new URI(c).toURL();
+                URL base = new URI(request.getRequestURL().toString()).toURL();
                 if (u.getPort() != base.getPort() || !hostEquals(u.getHost(), base.getHost()))
                     return home;
                 if (isUnsafeNavPath(u.getPath(), u.getQuery()))

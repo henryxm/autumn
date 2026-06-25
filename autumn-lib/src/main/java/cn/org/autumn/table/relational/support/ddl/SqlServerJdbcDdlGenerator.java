@@ -1,17 +1,17 @@
 package cn.org.autumn.table.relational.support.ddl;
 
 import cn.org.autumn.table.annotation.IndexTypeEnum;
-import cn.org.autumn.table.relational.RelationalSchemaSql;
 import cn.org.autumn.table.data.ColumnInfo;
 import cn.org.autumn.table.data.IndexInfo;
 import cn.org.autumn.table.data.TableInfo;
 import cn.org.autumn.table.data.UniqueKeyInfo;
-import org.apache.commons.lang.StringUtils;
-
+import cn.org.autumn.table.relational.RelationalSchemaSql;
+import java.lang.reflect.Field;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import org.apache.commons.lang.StringUtils;
 
 /**
  * Microsoft SQL Server 注解建表 DDL（{@code dbo} 架构、方括号标识符）。
@@ -213,7 +213,7 @@ public final class SqlServerJdbcDdlGenerator {
             return "";
         }
         for (Entry<TableInfo, Object> kv : parameter.entrySet()) {
-            java.lang.reflect.Field f = kv.getValue().getClass().getDeclaredField("name");
+            Field f = kv.getValue().getClass().getDeclaredField("name");
             f.setAccessible(true);
             String name = (String) f.get(kv.getValue());
             sb.append("DROP INDEX IF EXISTS ").append(bk(name)).append(" ON dbo.")

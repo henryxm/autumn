@@ -9,15 +9,14 @@ import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.site.UpgradeFactory;
 import cn.org.autumn.utils.Utils;
 import cn.org.autumn.utils.Uuid;
+import java.util.Date;
+import java.util.List;
+import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
-
-import java.util.Date;
-import java.util.List;
-import java.util.Objects;
 
 @Slf4j
 @Service
@@ -102,7 +101,7 @@ public class WebAuthenticationService extends ModuleService<WebAuthenticationDao
             try {
                 update(entity, scheme, host, false);
             } catch (Exception e) {
-                log.debug("更新失败:{}", e.getMessage());
+                log.debug("Update failed:{}", e.getMessage());
             }
         }
     }

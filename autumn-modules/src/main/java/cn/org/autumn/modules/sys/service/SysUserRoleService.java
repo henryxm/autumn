@@ -14,14 +14,13 @@ import cn.org.autumn.service.CacheService;
 import cn.org.autumn.site.InitFactory;
 import cn.org.autumn.utils.MapUtils;
 import com.baomidou.mybatisplus.service.impl.ServiceImpl;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * 用户与角色对应关系
@@ -240,7 +239,7 @@ public class SysUserRoleService extends ServiceImpl<SysUserRoleDao, SysUserRoleE
                     if (null != userRoleEntities && !userRoleEntities.isEmpty()) {
                         for (SysUserRoleEntity sysUserRoleEntity : userRoleEntities) {
                             if (StringUtils.isEmpty(sysUserRoleEntity.getUserUuid()) || !mapping.getUuid().equals(sysUserRoleEntity.getUserUuid())) {
-                                log.debug("同步服务:{}, 主机:{}, 本地:{}, 同步:{}", userHandler.getClass().getSimpleName(), userHandler.uri().getHost(), mapping.getUuid(), mapping.getUuid());
+                                log.debug("Sync service:{}, host:{}, local:{}, sync:{}", userHandler.getClass().getSimpleName(), userHandler.uri().getHost(), mapping.getUuid(), mapping.getUuid());
                                 sysUserRoleEntity.setUserUuid(mapping.getUuid());
                                 updateById(sysUserRoleEntity);
                             }

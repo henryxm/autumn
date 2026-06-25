@@ -1,5 +1,7 @@
 package cn.org.autumn.integration.robot;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import cn.org.autumn.integration.base.IntegrationTest;
 import cn.org.autumn.integration.support.IntegrationJson;
 import cn.org.autumn.integration.support.RobotTestBodies;
@@ -9,13 +11,10 @@ import cn.org.autumn.modules.bot.entity.RobotEntity;
 import cn.org.autumn.modules.bot.service.RobotService;
 import cn.org.autumn.modules.bot.support.RobotScopes;
 import com.alibaba.fastjson.JSONObject;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-
 import java.util.HashMap;
 import java.util.UUID;
-
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 机器人 scopes 与 {@link RobotScopes#MESSAGE_PUSH} 权限回归。

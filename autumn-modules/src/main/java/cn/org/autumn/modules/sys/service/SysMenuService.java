@@ -1,26 +1,24 @@
 package cn.org.autumn.modules.sys.service;
 
-import cn.org.autumn.modules.sys.entity.SysUserEntity;
-import cn.org.autumn.site.InitFactory;
-import com.aliyuncs.utils.StringUtils;
-import com.baomidou.mybatisplus.service.impl.ServiceImpl;
-import cn.org.autumn.utils.Constant;
-import cn.org.autumn.utils.MapUtils;
 import cn.org.autumn.modules.sys.dao.SysMenuDao;
 import cn.org.autumn.modules.sys.entity.SysMenuEntity;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import cn.org.autumn.modules.sys.entity.SysUserEntity;
+import cn.org.autumn.site.InitFactory;
+import cn.org.autumn.utils.Constant;
+import cn.org.autumn.utils.MapUtils;
+import com.aliyuncs.utils.StringUtils;
+import com.baomidou.mybatisplus.service.impl.ServiceImpl;
+import java.util.*;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
-
 @Service
+@Slf4j
 public class SysMenuService extends ServiceImpl<SysMenuDao, SysMenuEntity> implements InitFactory.Init {
 
-    Logger log = LoggerFactory.getLogger(getClass());
 
     @Autowired
     @Lazy
@@ -90,7 +88,8 @@ public class SysMenuService extends ServiceImpl<SysMenuDao, SysMenuEntity> imple
                 // 运维监控菜单
                 {"运维监控", NULL, NULL, "0", "fa fa-dashboard", "999998", getOperationsMenuKey(), "", "sys_string_operations_monitoring"},
                 {"缓存管理", "cache.html", NULL, "1", "fa fa-database", "1", getSystemMenuKey("CacheManagement"), getOperationsMenuKey(), "sys_string_cache_management"},
-                {"数据库备份", "database.html", NULL, "1", "fa fa-hdd-o", "2", getSystemMenuKey("DatabaseManagement"), getOperationsMenuKey(), "sys_string_database_management"},
+                {"数据库管理", "dbmanage.html", NULL, "1", "fa fa-database", "1", getSystemMenuKey("DbManage"), getOperationsMenuKey(), "sys_string_db_manage"},
+                {"数据库备份", "database.html", NULL, "1", "fa fa-hdd-o", "3", getSystemMenuKey("DatabaseManagement"), getOperationsMenuKey(), "sys_string_database_management"},
                 {"队列管理", "queue.html", NULL, "1", "fa fa-tasks", "3", getSystemMenuKey("QueueManagement"), getOperationsMenuKey(), "sys_string_queue_management"},
                 {"定时任务", "loopjob.html", NULL, "1", "fa fa-clock-o", "4", getSystemMenuKey("LoopJobManagement"), getOperationsMenuKey(), "sys_string_loopjob_management"},
                 {"登录日志", "loginlog.html", NULL, "1", "fa fa-sign-in", "5", getSystemMenuKey("LoginLogManagement"), getOperationsMenuKey(), "sys_string_loginlog_management"},

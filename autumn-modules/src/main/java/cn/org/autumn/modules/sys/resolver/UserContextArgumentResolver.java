@@ -9,6 +9,7 @@ import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.entity.User;
 import cn.org.autumn.modules.sys.service.UserContextService;
 import cn.org.autumn.web.AuthenticatedSupport;
+import java.lang.reflect.Method;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.MethodParameter;
@@ -17,8 +18,6 @@ import org.springframework.web.bind.support.WebDataBinderFactory;
 import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.method.support.ModelAndViewContainer;
-
-import java.lang.reflect.Method;
 
 /**
  * 无 Session API 参数注入：直接返回 {@link SysUserEntity} / {@link RobotEntity} 等业务实体（实现 {@link UserContext}）。
@@ -48,15 +47,15 @@ public class UserContextArgumentResolver implements HandlerMethodArgumentResolve
     @Override
     public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer, NativeWebRequest webRequest, WebDataBinderFactory binderFactory) throws Exception {
         if (log.isDebugEnabled())
-            log.debug("解析进入: {}, required={}", handlerLabel(parameter), AuthenticatedSupport.authRequired(parameter));
+            log.debug("Resolver enter: {}, required={}", handlerLabel(parameter), AuthenticatedSupport.authRequired(parameter));
         try {
             Object result = resolveArgumentInternal(parameter, webRequest);
             if (log.isDebugEnabled())
-                log.debug("解析退出: {} -> {}", handlerLabel(parameter), resultLabel(result));
+                log.debug("Resolver exit: {} -> {}", handlerLabel(parameter), resultLabel(result));
             return result;
         } catch (Exception e) {
             if (log.isDebugEnabled())
-                log.debug("解析退出: {}, 异常: {}", handlerLabel(parameter), e.getMessage());
+                log.debug("Resolver exit: {}, error: {}", handlerLabel(parameter), e.getMessage());
             throw e;
         }
     }

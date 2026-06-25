@@ -1,17 +1,16 @@
 package cn.org.autumn.table.relational.dialect.sqlite;
 
+import cn.org.autumn.table.data.ColumnInfo;
+import cn.org.autumn.table.data.IndexInfo;
+import cn.org.autumn.table.data.TableInfo;
 import cn.org.autumn.table.relational.RelationalSchemaSql;
 import cn.org.autumn.table.relational.support.AbstractNoopDdlRelationalSchemaSql;
 import cn.org.autumn.table.relational.support.SchemaSqlNoops;
 import cn.org.autumn.table.relational.support.ddl.AnsiDialect;
 import cn.org.autumn.table.relational.support.ddl.AnsiDoubleQuotedDdlGenerator;
-import cn.org.autumn.table.data.ColumnInfo;
-import cn.org.autumn.table.data.IndexInfo;
-import cn.org.autumn.table.data.TableInfo;
-import org.apache.commons.lang.StringUtils;
-
 import java.util.List;
 import java.util.Map;
+import org.apache.commons.lang.StringUtils;
 
 /**
  * SQLite：{@code sqlite_master} / {@code pragma_table_info}；DDL 由 {@link AnsiDoubleQuotedDdlGenerator} 生成。

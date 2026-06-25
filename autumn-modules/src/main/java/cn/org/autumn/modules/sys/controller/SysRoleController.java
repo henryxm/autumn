@@ -1,20 +1,19 @@
 package cn.org.autumn.modules.sys.controller;
 
 import cn.org.autumn.annotation.SysLog;
-import cn.org.autumn.utils.PageUtils;
-import cn.org.autumn.utils.R;
-import cn.org.autumn.validator.ValidatorUtils;
 import cn.org.autumn.modules.sys.entity.SysRoleEntity;
 import cn.org.autumn.modules.sys.service.SysRoleDeptService;
 import cn.org.autumn.modules.sys.service.SysRoleMenuService;
 import cn.org.autumn.modules.sys.service.SysRoleService;
+import cn.org.autumn.utils.PageUtils;
+import cn.org.autumn.utils.R;
+import cn.org.autumn.validator.ValidatorUtils;
+import java.util.List;
+import java.util.Map;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/sys/role")

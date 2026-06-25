@@ -1,5 +1,7 @@
 package cn.org.autumn.install;
 
+import java.util.HashMap;
+import java.util.Map;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.env.EnvironmentPostProcessor;
@@ -7,9 +9,6 @@ import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.MapPropertySource;
-
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * 当未启用 Redis（{@code autumn.redis.open=false}）或处于安装向导占位启动时，排除 Spring Data Redis 与 Redisson 的自动配置，

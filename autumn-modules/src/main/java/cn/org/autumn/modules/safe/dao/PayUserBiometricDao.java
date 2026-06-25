@@ -3,14 +3,13 @@ package cn.org.autumn.modules.safe.dao;
 import cn.org.autumn.modules.safe.dao.sql.PayUserBiometricDaoSql;
 import cn.org.autumn.modules.safe.entity.PayUserBiometricEntity;
 import com.baomidou.mybatisplus.mapper.BaseMapper;
+import java.util.Date;
+import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.SelectProvider;
 import org.apache.ibatis.annotations.UpdateProvider;
 import org.springframework.stereotype.Repository;
-
-import java.util.Date;
-import java.util.List;
 
 @Mapper
 @Repository

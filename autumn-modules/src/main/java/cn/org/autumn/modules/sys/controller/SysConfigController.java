@@ -1,28 +1,27 @@
 package cn.org.autumn.modules.sys.controller;
 
+import static cn.org.autumn.modules.sys.service.SysConfigService.*;
+
 import cn.org.autumn.annotation.SysLog;
 import cn.org.autumn.modules.lan.service.Language;
 import cn.org.autumn.modules.spm.entity.Spm;
 import cn.org.autumn.modules.spm.service.SpmService;
+import cn.org.autumn.modules.sys.entity.SysConfigEntity;
 import cn.org.autumn.modules.sys.service.SysCategoryService;
+import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.modules.sys.service.SysUserRoleService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.utils.PageUtils;
 import cn.org.autumn.utils.R;
 import cn.org.autumn.validator.ValidatorUtils;
-import cn.org.autumn.modules.sys.entity.SysConfigEntity;
-import cn.org.autumn.modules.sys.service.SysConfigService;
 import com.google.gson.Gson;
+import java.util.*;
+import javax.servlet.http.HttpServletRequest;
 import org.apache.commons.lang.StringUtils;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.web.bind.annotation.*;
-
-import javax.servlet.http.HttpServletRequest;
-import java.util.*;
-
-import static cn.org.autumn.modules.sys.service.SysConfigService.*;
 
 @RestController
 @RequestMapping("/sys/config")

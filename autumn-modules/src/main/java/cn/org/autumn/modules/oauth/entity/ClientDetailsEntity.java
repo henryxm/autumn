@@ -1,16 +1,14 @@
 package cn.org.autumn.modules.oauth.entity;
 
 import cn.org.autumn.config.ClientType;
+import cn.org.autumn.table.annotation.*;
 import cn.org.autumn.table.data.DataType;
 import com.baomidou.mybatisplus.annotations.*;
-import cn.org.autumn.table.annotation.*;
-import org.apache.commons.lang.StringUtils;
-
-
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import org.apache.commons.lang.StringUtils;
 
 /**
  * 客户端详情

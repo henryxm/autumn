@@ -1,27 +1,27 @@
 package cn.org.autumn.modules.sys.service;
 
-import cn.org.autumn.database.runtime.WrapperColumns;
 import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.LoggerContext;
+import cn.org.autumn.database.runtime.WrapperColumns;
 import cn.org.autumn.modules.job.task.LoopJob;
+import cn.org.autumn.modules.sys.dao.SysLogDao;
+import cn.org.autumn.modules.sys.entity.SysLogEntity;
+import cn.org.autumn.utils.PageUtils;
+import cn.org.autumn.utils.Query;
 import com.baomidou.mybatisplus.mapper.EntityWrapper;
 import com.baomidou.mybatisplus.plugins.Page;
 import com.baomidou.mybatisplus.service.impl.ServiceImpl;
-import cn.org.autumn.utils.PageUtils;
-import cn.org.autumn.utils.Query;
-import cn.org.autumn.modules.sys.dao.SysLogDao;
-import cn.org.autumn.modules.sys.entity.SysLogEntity;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.StringUtils;
-import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Service;
-
-import javax.validation.constraints.Null;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import javax.validation.constraints.Null;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang.StringUtils;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
@@ -71,11 +71,11 @@ public class SysLogService extends ServiceImpl<SysLogDao, SysLogEntity> implemen
                 log.debug("Set log singleLevel:{},singlePath:{}", level, name);
                 if (StringUtils.isEmpty(name)) {
                     // 设置全局日志级别
-                    ch.qos.logback.classic.Logger logger = loggerContext.getLogger("root");
+                    Logger logger = loggerContext.getLogger("root");
                     logger.setLevel(Level.toLevel(level));
                 } else {
                     // 设置某个类日志级别-可以实现定向日志级别调整
-                    ch.qos.logback.classic.Logger vLogger = loggerContext.getLogger(name);
+                    Logger vLogger = loggerContext.getLogger(name);
                     if (vLogger != null) {
                         vLogger.setLevel(Level.toLevel(level));
                         recent.put(name, level);
@@ -83,16 +83,16 @@ public class SysLogService extends ServiceImpl<SysLogDao, SysLogEntity> implemen
                 }
             }
         } catch (Exception e) {
-            log.error("修改级别:{}", e.getMessage());
+            log.error("Failed to change log level:{}", e.getMessage());
         }
         return "success";
     }
 
     public List<Map<String, String>> listLoggers() {
         LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
-        List<ch.qos.logback.classic.Logger> loggers = loggerContext.getLoggerList();
+        List<Logger> loggers = loggerContext.getLoggerList();
         List<Map<String, String>> loggerInfoList = new ArrayList<>();
-        for (ch.qos.logback.classic.Logger logger : loggers) {
+        for (Logger logger : loggers) {
             Map<String, String> loggerInfo = new HashMap<>();
             loggerInfo.put("name", logger.getName());
             loggerInfo.put("level", logger.getLevel() != null ? logger.getLevel().levelStr : "INHERITED");

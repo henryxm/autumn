@@ -1,9 +1,8 @@
 package cn.org.autumn.config;
 
+import java.util.concurrent.TimeUnit;
 import lombok.Builder;
 import lombok.Getter;
-
-import java.util.concurrent.TimeUnit;
 
 /**
  * 缓存配置类

@@ -16,16 +16,17 @@ import cn.org.autumn.modules.safe.service.PayUserPinService;
 import cn.org.autumn.modules.safe.service.PayUserSecuritySettingService;
 import cn.org.autumn.modules.safe.service.PayUserTrustedDeviceService;
 import cn.org.autumn.modules.safe.service.PayUserTrustedIpService;
+import cn.org.autumn.utils.IPUtils;
+import java.util.List;
+import javax.servlet.http.HttpServletRequest;
+import javax.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.validation.Valid;
-import java.util.List;
 
 /**
  * 支付密码、手势与生物识别<strong>开放 API</strong>（面向 App / H5 / 业务网关）。
@@ -87,7 +88,7 @@ public class PayCredentialApiController {
         try {
             return Response.ok(payUserPinService.status(requireUser(context)));
         } catch (Exception e) {
-            log.debug("支付密码状态查询失败: {}", e.getMessage());
+            log.debug("Pay password status query failed: {}", e.getMessage());
             return Response.error(e);
         }
     }
@@ -105,7 +106,7 @@ public class PayCredentialApiController {
             payUserPinService.setPin(requireUser(context), data.getPin(), data.getConfirm(), servlet);
             return Response.ok();
         } catch (Exception e) {
-            log.debug("设置支付密码失败: {}", e.getMessage());
+            log.debug("Failed to set pay password: {}", e.getMessage());
             return Response.error(e);
         }
     }
@@ -123,7 +124,7 @@ public class PayCredentialApiController {
             payUserPinService.changePin(requireUser(context), data.getOldPin(), data.getNewPin(), data.getConfirm(), servlet);
             return Response.ok();
         } catch (Exception e) {
-            log.debug("修改支付密码失败: {}", e.getMessage());
+            log.debug("Failed to change pay password: {}", e.getMessage());
             return Response.error(e);
         }
     }
@@ -141,7 +142,7 @@ public class PayCredentialApiController {
             payUserPinService.resetPin(requireUser(context), data.getNewPin(), data.getConfirm(), data.getLoginPassword(), data.getSmsCode(), servlet);
             return Response.ok();
         } catch (Exception e) {
-            log.debug("重置支付密码失败: {}", e.getMessage());
+            log.debug("Failed to reset pay password: {}", e.getMessage());
             return Response.error(e);
         }
     }
@@ -158,7 +159,7 @@ public class PayCredentialApiController {
             PayPinVerifyRequest data = data(request);
             return Response.ok(payUserPinService.verifyPin(requireUser(context), data.getPin(), data.getGateToken(), data.getAmountCent(), servlet));
         } catch (Exception e) {
-            log.debug("校验支付密码失败: {}", e.getMessage());
+            log.debug("Pay password verification failed: {}", e.getMessage());
             return Response.error(e);
         }
     }
@@ -172,7 +173,7 @@ public class PayCredentialApiController {
         try {
             return Response.ok(payUserGestureService.status(requireUser(context)));
         } catch (Exception e) {
-            log.debug("手势密码状态查询失败: {}", e.getMessage());
+            log.debug("Gesture password status query failed: {}", e.getMessage());
             return Response.error(e);
         }
     }
@@ -190,7 +191,7 @@ public class PayCredentialApiController {
             payUserGestureService.setGesture(requireUser(context), data.getPoints(), data.getConfirmPoints(), servlet);
             return Response.ok();
         } catch (Exception e) {
-            log.debug("设置手势密码失败: {}", e.getMessage());
+            log.debug("Failed to set gesture password: {}", e.getMessage());
             return Response.error(e);
         }
     }
@@ -208,7 +209,7 @@ public class PayCredentialApiController {
             payUserGestureService.changeGesture(requireUser(context), data.getOldPoints(), data.getNewPoints(), data.getConfirmPoints(), servlet);
             return Response.ok();
         } catch (Exception e) {
-            log.debug("修改手势密码失败: {}", e.getMessage());
+            log.debug("Failed to change gesture password: {}", e.getMessage());
             return Response.error(e);
         }
     }
@@ -226,7 +227,7 @@ public class PayCredentialApiController {
             payUserGestureService.resetGesture(requireUser(context), data.getPoints(), data.getConfirmPoints(), data.getLoginPassword(), servlet);
             return Response.ok();
         } catch (Exception e) {
-            log.debug("重置手势密码失败: {}", e.getMessage());
+            log.debug("Failed to reset gesture password: {}", e.getMessage());
             return Response.error(e);
         }
     }
@@ -243,7 +244,7 @@ public class PayCredentialApiController {
             PayGestureVerifyRequest data = data(request);
             return Response.ok(payUserGestureService.verifyGesture(requireUser(context), data.getPoints(), data.getGateToken(), data.getAmountCent(), servlet));
         } catch (Exception e) {
-            log.debug("校验手势密码失败: {}", e.getMessage());
+            log.debug("Gesture password verification failed: {}", e.getMessage());
             return Response.error(e);
         }
     }
@@ -261,7 +262,7 @@ public class PayCredentialApiController {
             payUserBiometricService.register(requireUser(context), data.getDeviceId(), data.getPlatform(), data.getCredentialId(), data.getPublicKey(), servlet);
             return Response.ok();
         } catch (Exception e) {
-            log.debug("注册生物识别失败: {}", e.getMessage());
+            log.debug("Failed to register biometric credential: {}", e.getMessage());
             return Response.error(e);
         }
     }
@@ -275,7 +276,7 @@ public class PayCredentialApiController {
         try {
             return Response.ok(payUserBiometricService.listDevices(requireUser(context)));
         } catch (Exception e) {
-            log.debug("生物识别设备列表失败: {}", e.getMessage());
+            log.debug("Biometric device list failed: {}", e.getMessage());
             return Response.error(e);
         }
     }
@@ -293,7 +294,7 @@ public class PayCredentialApiController {
             payUserBiometricService.revoke(requireUser(context), data.getDeviceId(), servlet);
             return Response.ok();
         } catch (Exception e) {
-            log.debug("吊销生物识别失败: {}", e.getMessage());
+            log.debug("Failed to revoke biometric credential: {}", e.getMessage());
             return Response.error(e);
         }
     }
@@ -311,7 +312,7 @@ public class PayCredentialApiController {
             PayBiometricDeviceRequest data = data(request);
             return Response.ok(payUserBiometricService.challenge(requireUser(context), data.getDeviceId()));
         } catch (Exception e) {
-            log.debug("生物识别挑战失败: {}", e.getMessage());
+            log.debug("Biometric challenge failed: {}", e.getMessage());
             return Response.error(e);
         }
     }
@@ -328,7 +329,7 @@ public class PayCredentialApiController {
             PayBiometricVerifyRequest data = data(request);
             return Response.ok(payUserBiometricService.verify(requireUser(context), data.getDeviceId(), data.getChallenge(), data.getSignature(), data.getGateToken(), data.getAmountCent(), servlet));
         } catch (Exception e) {
-            log.debug("生物识别验签失败: {}", e.getMessage());
+            log.debug("Biometric signature verification failed: {}", e.getMessage());
             return Response.error(e);
         }
     }
@@ -342,7 +343,7 @@ public class PayCredentialApiController {
         try {
             return Response.ok(payGateService.securityStatus(requireUser(context)));
         } catch (Exception e) {
-            log.debug("支付安全状态查询失败: {}", e.getMessage());
+            log.debug("Pay security status query failed: {}", e.getMessage());
             return Response.error(e);
         }
     }
@@ -357,7 +358,7 @@ public class PayCredentialApiController {
             PaySecuritySettingsUpdateRequest data = data(request);
             return Response.ok(payUserSecuritySettingService.saveUserSettings(requireUser(context), data.getPasswordlessEnabled(), data.getPasswordlessMaxAmountCent(), data.getPasswordlessWindowMinutes(), data.getGesturePaymentEnabled()));
         } catch (Exception e) {
-            log.debug("更新支付安全设置失败: {}", e.getMessage());
+            log.debug("Failed to update pay security settings: {}", e.getMessage());
             return Response.error(e);
         }
     }
@@ -373,7 +374,7 @@ public class PayCredentialApiController {
             payUserTrustedDeviceService.trust(requireUser(context), data.getDeviceId(), data.getDeviceName(), data.getPlatform());
             return Response.ok();
         } catch (Exception e) {
-            log.debug("信任支付设备失败: {}", e.getMessage());
+            log.debug("Failed to trust pay device: {}", e.getMessage());
             return Response.error(e);
         }
     }
@@ -389,7 +390,7 @@ public class PayCredentialApiController {
             payUserTrustedDeviceService.untrust(requireUser(context), data.getDeviceId());
             return Response.ok();
         } catch (Exception e) {
-            log.debug("取消信任支付设备失败: {}", e.getMessage());
+            log.debug("Failed to untrust pay device: {}", e.getMessage());
             return Response.error(e);
         }
     }
@@ -403,12 +404,12 @@ public class PayCredentialApiController {
         try {
             PayTrustedIpRequest data = data(request);
             String ip = data.getIp();
-            if (org.apache.commons.lang.StringUtils.isBlank(ip))
-                ip = cn.org.autumn.utils.IPUtils.getIp(servlet);
+            if (StringUtils.isBlank(ip))
+                ip = IPUtils.getIp(servlet);
             payUserTrustedIpService.trust(requireUser(context), ip, data.getLocationLabel());
             return Response.ok();
         } catch (Exception e) {
-            log.debug("信任支付IP失败: {}", e.getMessage());
+            log.debug("Failed to trust pay IP: {}", e.getMessage());
             return Response.error(e);
         }
     }
@@ -424,7 +425,7 @@ public class PayCredentialApiController {
             payUserTrustedIpService.untrust(requireUser(context), data.getIp());
             return Response.ok();
         } catch (Exception e) {
-            log.debug("取消信任支付IP失败: {}", e.getMessage());
+            log.debug("Failed to untrust pay IP: {}", e.getMessage());
             return Response.error(e);
         }
     }
@@ -439,7 +440,7 @@ public class PayCredentialApiController {
             PayGateAssessRequest data = data(request);
             return Response.ok(payGateService.assess(requireUser(context), data, servlet));
         } catch (Exception e) {
-            log.debug("支付闸门评估失败: {}", e.getMessage());
+            log.debug("Pay gate evaluation failed: {}", e.getMessage());
             return Response.error(e);
         }
     }
@@ -455,7 +456,7 @@ public class PayCredentialApiController {
             throw new CodeException("请登录", -10000);
         if (context.isRobot())
             throw new CodeException("请使用用户令牌", -10000);
-        if (org.apache.commons.lang.StringUtils.isBlank(context.getUuid()))
+        if (StringUtils.isBlank(context.getUuid()))
             throw new CodeException("用户不可用", -10000);
         return context.getUuid();
     }

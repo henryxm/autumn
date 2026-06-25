@@ -1,10 +1,6 @@
 package cn.org.autumn.loader;
 
 import cn.org.autumn.utils.SpringContextUtils;
-import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -16,11 +12,11 @@ import java.util.jar.Attributes;
 import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
 import java.util.jar.Manifest;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang.StringUtils;
 
+@Slf4j
 public class ClassLoaderUtil {
-
-    static final Logger log = LoggerFactory.getLogger(ClassLoaderUtil.class);
-
     private static String getClassName(JarEntry entry) {
         String name = entry.getName();
         // 这个获取的就是一个实体类class java.util.jar.JarFile$JarFileEntry

@@ -8,6 +8,10 @@ import cn.org.autumn.table.service.MysqlTableService;
 import cn.org.autumn.utils.PageUtils;
 import cn.org.autumn.utils.Query;
 import cn.org.autumn.utils.R;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Map;
+import javax.servlet.http.HttpServletResponse;
 import net.bytebuddy.implementation.bytecode.Throw;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
@@ -19,11 +23,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
-
-import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.Map;
 
 /**
  * 代码生成器

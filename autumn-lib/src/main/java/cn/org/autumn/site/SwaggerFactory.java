@@ -1,9 +1,8 @@
 package cn.org.autumn.site;
 
 import cn.org.autumn.config.SwaggerHandler;
-import org.springframework.stereotype.Component;
-
 import java.util.List;
+import org.springframework.stereotype.Component;
 
 @Component
 public class SwaggerFactory extends Factory {

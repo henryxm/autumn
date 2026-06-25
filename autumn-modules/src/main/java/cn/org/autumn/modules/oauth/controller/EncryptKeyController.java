@@ -1,8 +1,8 @@
 package cn.org.autumn.modules.oauth.controller;
 
+import cn.org.autumn.modules.oauth.controller.gen.EncryptKeyControllerGen;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import cn.org.autumn.modules.oauth.controller.gen.EncryptKeyControllerGen;
 
 /**
  * 加密秘钥

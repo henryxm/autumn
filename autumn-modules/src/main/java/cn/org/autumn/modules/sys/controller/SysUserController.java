@@ -1,6 +1,9 @@
 package cn.org.autumn.modules.sys.controller;
 
 import cn.org.autumn.annotation.SysLog;
+import cn.org.autumn.modules.sys.entity.SysUserEntity;
+import cn.org.autumn.modules.sys.service.SysUserRoleService;
+import cn.org.autumn.modules.sys.service.SysUserService;
 import cn.org.autumn.modules.usr.service.UserProfileService;
 import cn.org.autumn.utils.PageUtils;
 import cn.org.autumn.utils.R;
@@ -8,17 +11,13 @@ import cn.org.autumn.validator.Assert;
 import cn.org.autumn.validator.ValidatorUtils;
 import cn.org.autumn.validator.group.AddGroup;
 import cn.org.autumn.validator.group.UpdateGroup;
-import cn.org.autumn.modules.sys.entity.SysUserEntity;
-import cn.org.autumn.modules.sys.service.SysUserRoleService;
-import cn.org.autumn.modules.sys.service.SysUserService;
+import java.util.List;
+import java.util.Map;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/sys/user")

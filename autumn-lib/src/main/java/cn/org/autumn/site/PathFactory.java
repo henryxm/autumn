@@ -1,21 +1,19 @@
 package cn.org.autumn.site;
 
+import java.util.List;
+import java.util.Map;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.ui.Model;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.util.List;
-import java.util.Map;
-
 @Component
+@Slf4j
 public class PathFactory extends Factory {
 
-    final Logger log = LoggerFactory.getLogger(getClass());
 
     private static Map<Integer, List<Path>> map = null;
 
@@ -51,7 +49,7 @@ public class PathFactory extends Factory {
                     if (StringUtils.isEmpty(o))
                         continue;
                     if (log.isDebugEnabled())
-                        log.debug("路径访问类:{}, 值:{}", path.getClass().getName(), o);
+                        log.debug("Path handler: {}, value: {}", path.getClass().getName(), o);
                     return o;
                 }
             }

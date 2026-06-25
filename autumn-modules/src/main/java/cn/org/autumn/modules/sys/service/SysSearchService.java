@@ -10,11 +10,10 @@ import cn.org.autumn.utils.Email;
 import cn.org.autumn.utils.IDCard;
 import cn.org.autumn.utils.Phone;
 import cn.org.autumn.utils.QQ;
+import java.util.List;
 import org.apache.commons.beanutils.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
 
 @Service
 public class SysSearchService implements SearchHandler {

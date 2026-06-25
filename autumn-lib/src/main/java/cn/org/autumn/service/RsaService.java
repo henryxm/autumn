@@ -1,32 +1,45 @@
 package cn.org.autumn.service;
 
 import cn.org.autumn.annotation.Endpoint;
-import cn.org.autumn.config.Config;
-import cn.org.autumn.model.Supported;
 import cn.org.autumn.config.CacheConfig;
+import cn.org.autumn.config.Config;
 import cn.org.autumn.config.EncryptConfigHandler;
 import cn.org.autumn.config.EncryptionLoader;
 import cn.org.autumn.exception.CodeException;
-import cn.org.autumn.model.*;
+import cn.org.autumn.model.Encrypt;
+import cn.org.autumn.model.EndpointInfo;
 import cn.org.autumn.model.Error;
+import cn.org.autumn.model.Request;
+import cn.org.autumn.model.Response;
+import cn.org.autumn.model.RsaKey;
+import cn.org.autumn.model.Supported;
+import cn.org.autumn.model.Wrap;
 import cn.org.autumn.site.EncryptConfigFactory;
 import cn.org.autumn.site.LoadFactory;
 import cn.org.autumn.utils.RsaUtil;
 import cn.org.autumn.utils.SpringContextUtils;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationContext;
-import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.*;
-
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.security.InvalidKeyException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
+import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RestController;
 
 @Slf4j
 @Service
@@ -92,11 +105,11 @@ public class RsaService implements LoadFactory.Must {
             long expireTime = System.currentTimeMillis() + (config.getKeyValidMinutes() * 60 * 1000L);
             pair.setExpireTime(expireTime);
             if (log.isDebugEnabled()) {
-                log.debug("生成新的密钥对，Session: {}, 密钥长度: {}位, 过期时间: {}", session, config.getKeySize(), expireTime);
+                log.debug("Generated new key pair, Session: {}, key size: {} bits, expire time: {}", session, config.getKeySize(), expireTime);
             }
             return pair;
         } catch (Exception e) {
-            log.error("生成RSA密钥对失败，Session: {}", session, e);
+            log.error("Failed to generate RSA key pair, Session: {}", session, e);
             throw new RuntimeException(new CodeException(Error.RSA_KEY_GENERATE_FAILED));
         }
     }
@@ -107,7 +120,7 @@ public class RsaService implements LoadFactory.Must {
             RsaKey loadedKey = encryptionLoader.loadRsa(session);
             if (loadedKey != null && !loadedKey.expired() && StringUtils.isNotBlank(loadedKey.getPublicKey()) && StringUtils.isNotBlank(loadedKey.getPrivateKey())) {
                 if (log.isDebugEnabled()) {
-                    log.debug("数据库加载:{}", session);
+                    log.debug("Loaded from database: {}", session);
                 }
                 // 将加载的密钥对缓存到Cache和Redis
                 cacheService.put(getServerConfig(), session, loadedKey);
@@ -144,24 +157,24 @@ public class RsaService implements LoadFactory.Must {
             // 利用短路求值：如果pair为null，后面的条件不会执行
             if (pair == null || pair.expired() || StringUtils.isBlank(pair.getPublicKey()) || StringUtils.isBlank(pair.getPrivateKey()) || pair.expiring(config.getClientBufferMinutes())) {
                 if (pair != null && log.isDebugEnabled())
-                    log.debug("删除重建:{}, KEY:{}, 向量:{}, 过期:{}, 临期:{}, 过期时间:{}", pair.getSession(), pair.getPublicKey(), pair.getPrivateKey(), pair.expired(), pair.expiring(), null != pair.getExpireTime() ? new Date(pair.getExpireTime()) : "");
+                    log.debug("Delete and recreate: {}, KEY: {}, vector: {}, expired: {}, expiring: {}, expire time: {}", pair.getSession(), pair.getPublicKey(), pair.getPrivateKey(), pair.expired(), pair.expiring(), null != pair.getExpireTime() ? new Date(pair.getExpireTime()) : "");
                 // 删除缓存并重新调用compute
                 cacheService.remove(getServerConfig().getName(), session);
                 pair = cacheService.compute(session, () -> create(session), getServerConfig());
             }
             if (log.isDebugEnabled())
-                log.debug("获取密钥:{}, KEY:{}, 向量:{}, 过期:{}, 临期:{}, 过期时间:{}", pair.getSession(), pair.getPublicKey(), pair.getPrivateKey(), pair.expired(), pair.expiring(), null != pair.getExpireTime() ? new Date(pair.getExpireTime()) : "");
+                log.debug("Retrieved key: {}, KEY: {}, vector: {}, expired: {}, expiring: {}, expire time: {}", pair.getSession(), pair.getPublicKey(), pair.getPrivateKey(), pair.expired(), pair.expiring(), null != pair.getExpireTime() ? new Date(pair.getExpireTime()) : "");
             return pair;
         } catch (RuntimeException e) {
             if (e.getCause() instanceof CodeException) {
                 throw (CodeException) e.getCause();
             }
             if (log.isDebugEnabled())
-                log.debug("获取密钥对:{}, 错误:{}", session, e.getMessage());
+                log.debug("Failed to get key pair: {}, error: {}", session, e.getMessage());
             throw new CodeException(Error.RSA_KEY_PAIR_NOT_FOUND);
         } catch (Exception e) {
             if (log.isDebugEnabled())
-                log.debug("获取密钥对:{}, 异常:{}", session, e.getMessage());
+                log.debug("Failed to get key pair: {}, exception: {}", session, e.getMessage());
             throw new CodeException(Error.RSA_KEY_PAIR_NOT_FOUND);
         }
     }
@@ -194,20 +207,20 @@ public class RsaService implements LoadFactory.Must {
         }
         // 检查密钥对是否已过期（但仍在服务端冗余保留时间内）
         if (rsaKey.expired()) {
-            log.warn("使用已过期的密钥对进行解密，Session: {}, 过期时间: {}", value.getSession(), rsaKey.getExpireTime());
+            log.warn("Decrypting with expired key pair, Session: {}, expire time: {}", value.getSession(), rsaKey.getExpireTime());
         }
         // 执行解密
         try {
             String decrypted = RsaUtil.decrypt(value.getCiphertext(), privateKey);
             if (StringUtils.isBlank(decrypted)) {
-                log.warn("解密结果为空，Session: {}", value.getSession());
+                log.warn("Decryption result empty, Session: {}", value.getSession());
             }
             return decrypted;
         } catch (IllegalArgumentException e) {
-            log.error("RSA密钥格式错误，解密失败，Session: {}, 错误: {}", value.getSession(), e.getMessage());
+            log.error("RSA key format error, decryption failed, Session: {}, error: {}", value.getSession(), e.getMessage());
             throw new CodeException(Error.RSA_KEY_FORMAT_ERROR);
         } catch (Exception e) {
-            log.error("RSA解密失败，Session: {}, 错误: {}", value.getSession(), e.getMessage(), e);
+            log.error("RSA decryption failed, Session: {}, error: {}", value.getSession(), e.getMessage(), e);
             throw new CodeException(Error.RSA_DECRYPT_FAILED);
         }
     }
@@ -233,19 +246,19 @@ public class RsaService implements LoadFactory.Must {
             String testData = "test";
             RsaUtil.encrypt(testData, publicKey);
         } catch (IllegalArgumentException e) {
-            log.error("客户端公钥格式错误，Session: {}, 错误: {}", session, e.getMessage());
+            log.error("Client public key format error, Session: {}, error: {}", session, e.getMessage());
             throw new CodeException(Error.RSA_KEY_FORMAT_ERROR);
         } catch (RuntimeException e) {
             // RsaUtil.encrypt可能抛出RuntimeException包装的InvalidKeyException
             Throwable cause = e.getCause();
-            if (cause instanceof java.security.InvalidKeyException) {
-                log.error("客户端公钥解析失败，Session: {}, 错误: {}", session, cause.getMessage());
+            if (cause instanceof InvalidKeyException) {
+                log.error("Client public key parse failed, Session: {}, error: {}", session, cause.getMessage());
                 throw new CodeException(Error.RSA_PUBLIC_KEY_PARSE_ERROR);
             }
-            log.error("客户端公钥验证失败，Session: {}, 错误: {}", session, e.getMessage());
+            log.error("Client public key validation failed, Session: {}, error: {}", session, e.getMessage());
             throw new CodeException(Error.RSA_KEY_FORMAT_ERROR);
         } catch (Exception e) {
-            log.error("客户端公钥验证失败，Session: {}, 错误: {}", session, e.getMessage());
+            log.error("Client public key validation failed, Session: {}, error: {}", session, e.getMessage());
             throw new CodeException(Error.RSA_KEY_FORMAT_ERROR);
         }
         // 处理过期时间
@@ -260,19 +273,19 @@ public class RsaService implements LoadFactory.Must {
             }
             if (expireTime > maxExpireTime) {
                 if (log.isDebugEnabled())
-                    log.warn("客户端指定的过期时间超过最大有效期，使用最大有效期。Session: {}, 客户端指定: {}, 最大有效期: {}", session, expireTime, maxExpireTime);
+                    log.warn("Client expire time exceeds max TTL, using max. Session: {}, client: {}, max: {}", session, expireTime, maxExpireTime);
                 finalExpireTime = maxExpireTime;
             } else {
                 finalExpireTime = expireTime;
                 if (log.isDebugEnabled()) {
-                    log.debug("使用客户端指定的过期时间，Session: {}, 过期时间: {}", session, finalExpireTime);
+                    log.debug("Using client-specified expire time, Session: {}, expire time: {}", session, finalExpireTime);
                 }
             }
         } else {
             // 客户端未提供过期时间，使用后端默认过期时间
             finalExpireTime = maxExpireTime;
             if (log.isDebugEnabled()) {
-                log.debug("使用后端默认过期时间，Session: {}, 过期时间: {}", session, finalExpireTime);
+                log.debug("Using backend default expire time, Session: {}, expire time: {}", session, finalExpireTime);
             }
         }
         // 创建客户端公钥对象
@@ -280,7 +293,7 @@ public class RsaService implements LoadFactory.Must {
         // 保存到缓存
         cacheService.put(getClientConfig(), session, clientPublicKey);
         if (log.isDebugEnabled()) {
-            log.debug("保存客户端公钥，Session: {}, 过期时间: {}", session, finalExpireTime);
+            log.debug("Saved client public key, Session: {}, expire time: {}", session, finalExpireTime);
         }
         return clientPublicKey;
     }
@@ -309,14 +322,14 @@ public class RsaService implements LoadFactory.Must {
                     // 将加载的公钥缓存到Cache和Redis
                     cacheService.put(getClientConfig(), session, rsaKey);
                     if (log.isDebugEnabled()) {
-                        log.debug("从数据库加载客户端公钥成功，session: {}", session);
+                        log.debug("Loaded client public key from database, session: {}", session);
                     }
                 }
             }
         }
         if (rsaKey != null && rsaKey.expired()) {
             if (log.isDebugEnabled())
-                log.debug("客户端公钥已过期，Session: {}, 过期时间: {}", session, rsaKey.getExpireTime());
+                log.debug("Client public key expired, Session: {}, expire time: {}", session, rsaKey.getExpireTime());
             // 可以选择删除过期公钥或返回null
             return null;
         }
@@ -348,21 +361,21 @@ public class RsaService implements LoadFactory.Must {
         EncryptConfigHandler.RsaConfig config = encryptConfigFactory.getRsaConfig();
         if (clientPublicKey.expiring(config.getClientBufferMinutes())) {
             if (log.isDebugEnabled())
-                log.warn("客户端公钥即将过期，建议客户端更新公钥，Session: {}, 过期时间: {}", session, clientPublicKey.getExpireTime());
+                log.warn("Client public key expiring soon, client should refresh, Session: {}, expire time: {}", session, clientPublicKey.getExpireTime());
         }
         try {
             // 使用客户端公钥加密
             String encrypted = RsaUtil.encrypt(data, clientPublicKey.getPublicKey());
             if (StringUtils.isBlank(encrypted)) {
-                log.warn("加密结果为空，Session: {}", session);
+                log.warn("Encryption result empty, Session: {}", session);
                 throw new CodeException(Error.RSA_ENCRYPT_FAILED);
             }
             return encrypted;
         } catch (IllegalArgumentException e) {
-            log.error("RSA密钥格式错误，加密失败，Session: {}, 错误: {}", session, e.getMessage());
+            log.error("RSA key format error, encryption failed, Session: {}, error: {}", session, e.getMessage());
             throw new CodeException(Error.RSA_KEY_FORMAT_ERROR);
         } catch (Exception e) {
-            log.error("使用客户端公钥加密失败，Session: {}, 错误: {}", session, e.getMessage(), e);
+            log.error("Encryption with client public key failed, Session: {}, error: {}", session, e.getMessage(), e);
             throw new CodeException(Error.RSA_ENCRYPT_FAILED);
         }
     }
@@ -384,7 +397,7 @@ public class RsaService implements LoadFactory.Must {
             List<EndpointInfo> list = getEncryptEndpoints();
             log.info("Scan encrypt endpoints:{}", list.size());
         } catch (CodeException e) {
-            log.error("加密端点:{}", e.getMessage());
+            log.error("Encryption endpoint error: {}", e.getMessage());
         }
     }
 

@@ -1,5 +1,7 @@
 package cn.org.autumn.modules.safe.entity;
 
+import static com.fasterxml.jackson.annotation.JsonProperty.Access.WRITE_ONLY;
+
 import cn.org.autumn.annotation.Cache;
 import cn.org.autumn.table.annotation.Column;
 import cn.org.autumn.table.annotation.Table;
@@ -7,13 +9,10 @@ import cn.org.autumn.table.data.DataType;
 import com.baomidou.mybatisplus.annotations.TableId;
 import com.baomidou.mybatisplus.annotations.TableName;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.Getter;
-import lombok.Setter;
-
 import java.io.Serializable;
 import java.util.Date;
-
-import static com.fasterxml.jackson.annotation.JsonProperty.Access.WRITE_ONLY;
+import lombok.Getter;
+import lombok.Setter;
 
 @Getter
 @Setter

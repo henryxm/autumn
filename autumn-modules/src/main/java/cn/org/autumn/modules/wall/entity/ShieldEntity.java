@@ -6,7 +6,6 @@ import cn.org.autumn.table.annotation.Table;
 import cn.org.autumn.table.data.DataType;
 import com.baomidou.mybatisplus.annotations.TableId;
 import com.baomidou.mybatisplus.annotations.TableName;
-
 import java.io.Serializable;
 
 @TableName("wall_shield")

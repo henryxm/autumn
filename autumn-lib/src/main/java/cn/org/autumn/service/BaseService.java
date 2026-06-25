@@ -15,12 +15,11 @@ import com.baomidou.mybatisplus.mapper.EntityWrapper;
 import com.baomidou.mybatisplus.mapper.SqlPlus;
 import com.baomidou.mybatisplus.mapper.Wrapper;
 import com.baomidou.mybatisplus.plugins.Page;
+import java.lang.reflect.Field;
+import java.util.*;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.WordUtils;
-
-import java.lang.reflect.Field;
-import java.util.*;
 
 /**
  * 基础服务类型
@@ -124,7 +123,7 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends Distribute
             return baseMapper.selectCount(ew);
         } catch (Exception ex) {
             log.error(
-                    "selectCountWithoutOrderBy 失败，entity={}",
+                    "selectCountWithoutOrderBy failed, entity={}",
                     getModelClass() != null ? getModelClass().getName() : "?",
                     ex);
             throw ex;
@@ -156,7 +155,7 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends Distribute
             return backup;
         } catch (ReflectiveOperationException e) {
             log.warn(
-                    "selectCountWithoutOrderBy：无法反射清空 ORDER BY，将使用原 Wrapper 统计（PostgreSQL 等可能对 COUNT+ORDER BY 报错）：{}",
+                    "selectCountWithoutOrderBy: cannot clear ORDER BY via reflection, using original Wrapper count (PostgreSQL etc. may error on COUNT+ORDER BY): {}",
                     e.toString());
             return null;
         }
@@ -177,7 +176,7 @@ public abstract class BaseService<M extends BaseMapper<T>, T> extends Distribute
             orderBy.clear();
             orderBy.addAll(backup);
         } catch (ReflectiveOperationException e) {
-            log.warn("selectCountWithoutOrderBy：恢复 ORDER BY 失败：{}", e.toString());
+            log.warn("selectCountWithoutOrderBy: failed to restore ORDER BY: {}", e.toString());
         }
     }
 

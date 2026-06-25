@@ -14,16 +14,15 @@ import cn.org.autumn.modules.safe.site.SafeConfig;
 import cn.org.autumn.modules.safe.support.PayBiometricSignatureSupport;
 import cn.org.autumn.modules.safe.support.PayCredentialVerifyMethods;
 import cn.org.autumn.utils.Uuid;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import javax.servlet.http.HttpServletRequest;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import javax.servlet.http.HttpServletRequest;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
 
 @Service
 public class PayUserBiometricService extends ModuleService<PayUserBiometricDao, PayUserBiometricEntity> {

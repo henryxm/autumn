@@ -4,12 +4,11 @@ import cn.org.autumn.base.ModuleService;
 import cn.org.autumn.modules.safe.dao.PayUserTrustedIpDao;
 import cn.org.autumn.modules.safe.entity.PayUserTrustedIpEntity;
 import cn.org.autumn.utils.Uuid;
+import java.util.Date;
+import java.util.List;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.Date;
-import java.util.List;
 
 @Service
 public class PayUserTrustedIpService extends ModuleService<PayUserTrustedIpDao, PayUserTrustedIpEntity> {

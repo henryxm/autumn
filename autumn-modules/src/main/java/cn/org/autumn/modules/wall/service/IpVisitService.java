@@ -1,13 +1,12 @@
 package cn.org.autumn.modules.wall.service;
 
-import cn.org.autumn.modules.wall.entity.RData;
-import cn.org.autumn.site.WallFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
 import cn.org.autumn.modules.wall.dao.IpVisitDao;
 import cn.org.autumn.modules.wall.entity.IpVisitEntity;
-
+import cn.org.autumn.modules.wall.entity.RData;
+import cn.org.autumn.site.WallFactory;
 import java.util.Date;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 @Service
 public class IpVisitService extends WallCounter<IpVisitDao, IpVisitEntity> {

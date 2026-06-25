@@ -43,11 +43,11 @@ public class ForceLogoutRememberMeManager extends CookieRememberMeManager {
             if (Boolean.TRUE.equals(redisTemplate.hasKey(key))) {
                 forgetIdentity(subjectContext);
                 if (log.isDebugEnabled())
-                    log.debug("已标记强制下线，拒绝 RememberMe: userUuid={}", userUuid);
+                    log.debug("Force logout marked, rejecting RememberMe: userUuid={}", userUuid);
                 return null;
             }
         } catch (Exception e) {
-            log.warn("检查强制下线标记失败: {}", e.getMessage());
+            log.warn("Failed to check force logout marker: {}", e.getMessage());
         }
         return principals;
     }

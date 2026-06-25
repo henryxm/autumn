@@ -2,12 +2,11 @@ package cn.org.autumn.model;
 
 import cn.org.autumn.service.DefaultMapper;
 import com.baomidou.mybatisplus.mapper.Wrapper;
-import org.apache.ibatis.session.RowBounds;
-
 import java.io.Serializable;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import org.apache.ibatis.session.RowBounds;
 
 public class StubMapper implements DefaultMapper {
     @Override

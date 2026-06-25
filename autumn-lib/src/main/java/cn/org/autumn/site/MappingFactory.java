@@ -1,22 +1,20 @@
 package cn.org.autumn.site;
 
 import cn.org.autumn.utils.SpringContextUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.List;
+import java.util.Map;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.ui.Model;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.util.List;
-import java.util.Map;
-
 @Component
+@Slf4j
 public class MappingFactory extends Factory {
 
-    Logger log = LoggerFactory.getLogger(getClass());
 
     private static Map<Integer, List<MappingFactory.Mapping>> map = null;
 

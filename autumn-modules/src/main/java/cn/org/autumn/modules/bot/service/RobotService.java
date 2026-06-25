@@ -7,25 +7,24 @@ import cn.org.autumn.modules.bot.dao.RobotDao;
 import cn.org.autumn.modules.bot.dto.RobotCreateResult;
 import cn.org.autumn.modules.bot.entity.RobotEntity;
 import cn.org.autumn.modules.bot.support.RobotHookEvents;
+import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.entity.User;
 import cn.org.autumn.modules.sys.service.SysUserService;
 import cn.org.autumn.modules.sys.service.UuidNamespaceService;
-import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.site.AccountFactory;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Lazy;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Service
@@ -279,10 +278,10 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> implement
             int retentionDays = robotQuotaService.effectiveDeletedRetentionDays();
             int n = purgeExpiredDeletedRobots(retentionDays);
             if (n > 0) {
-                log.debug("机器人定时销毁：已处理软删除超过 {} 天的记录 {} 条", retentionDays, n);
+                log.debug("Robot scheduled purge: processed {} soft-deleted records older than {} days", retentionDays, n);
             }
         } catch (Exception e) {
-            log.error("机器人定时销毁任务失败", e);
+            log.error("Robot scheduled purge task failed", e);
         }
     }
 
@@ -297,7 +296,7 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> implement
             try {
                 destroyByAdministrator(uuid);
             } catch (Exception e) {
-                log.warn("清理软删机器人失败 uuid={}", uuid, e);
+                log.warn("Failed to purge soft-deleted robot uuid={}", uuid, e);
             }
         }
     }
@@ -321,7 +320,7 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> implement
                     destroyByAdministrator(robot.getUuid());
                 }
             } catch (Exception e) {
-                log.warn("清理机器人失败 uuid={}", robot.getUuid(), e);
+                log.warn("Failed to purge robot uuid={}", robot.getUuid(), e);
             }
         }
         purgeSoftDeletedForOwner(owner);
@@ -343,7 +342,7 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> implement
                 destroyByAdministrator(uuid);
                 n++;
             } catch (Exception e) {
-                log.warn("定时销毁机器人失败 uuid={}", uuid, e);
+                log.warn("Scheduled robot purge failed uuid={}", uuid, e);
             }
         }
         return n;

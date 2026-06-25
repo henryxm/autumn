@@ -1,21 +1,20 @@
 package cn.org.autumn.modules.wall.service;
 
 import cn.org.autumn.config.ClearHandler;
+import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.wall.dao.UrlBlackDao;
 import cn.org.autumn.modules.wall.entity.RData;
-import cn.org.autumn.site.LoadFactory;
-import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.wall.entity.UrlBlackEntity;
+import cn.org.autumn.site.LoadFactory;
 import cn.org.autumn.site.WallFactory;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
@@ -69,14 +68,14 @@ public class UrlBlackService extends WallCounter<UrlBlackDao, UrlBlackEntity> im
                 allUrls.replace(hashCode, count);
                 if (count > lastCount) {
                     if (log.isInfoEnabled())
-                        log.debug("URL触发:{}, IP:{}, 频率:{}/5秒, 上限:{}/5秒", url, ip, count, lastCount);
+                        log.debug("URL triggered: url={}, IP={}, rate={}/5s, limit={}/5s", url, ip, count, lastCount);
                     ipBlackService.saveBlackIp(ip, agent, 0, "触发URL黑名单策略");
                     allUrls.replace(hashCode, 0);
                 }
             } else
                 allUrls.put(hashCode, 1);
         } catch (Exception e) {
-            log.debug("URL黑名单计数错误:{}", e.getMessage());
+            log.debug("URL blacklist counter error:{}", e.getMessage());
         }
     }
 
@@ -119,7 +118,7 @@ public class UrlBlackService extends WallCounter<UrlBlackDao, UrlBlackEntity> im
                 insert(urlBlackEntity);
             }
         } catch (Exception e) {
-            log.debug("保存错误:{}", e.getMessage());
+            log.debug("Save error:{}", e.getMessage());
         }
         return urlBlackEntity;
     }

@@ -2,10 +2,6 @@ package cn.org.autumn.utils;
 
 import cn.org.autumn.model.KeyData;
 import cn.org.autumn.model.RsaKey;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.StringUtils;
-
-import javax.crypto.Cipher;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.*;
@@ -15,6 +11,9 @@ import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
+import javax.crypto.Cipher;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang.StringUtils;
 
 /**
  * RSA加密解密工具类
@@ -57,13 +56,13 @@ public class RsaUtil {
         try {
             KeyPairGenerator keyPairGen = KeyPairGenerator.getInstance(KEY_ALGORITHM);
             keyPairGen.initialize(keySize, new SecureRandom());
-            java.security.KeyPair keyPair = keyPairGen.generateKeyPair();
+            KeyPair keyPair = keyPairGen.generateKeyPair();
             RSAPublicKey publicKey = (RSAPublicKey) keyPair.getPublic();
             RSAPrivateKey privateKey = (RSAPrivateKey) keyPair.getPrivate();
             // Base64编码后的公钥和私钥
             return new RsaKey(Base64.getEncoder().encodeToString(publicKey.getEncoded()), Base64.getEncoder().encodeToString(privateKey.getEncoded()));
         } catch (Exception e) {
-            log.error("生成密钥: {}", e.getMessage());
+            log.error("Key generation failed: {}", e.getMessage());
             throw new RuntimeException("生成RSA密钥对失败", e);
         }
     }
@@ -121,7 +120,7 @@ public class RsaUtil {
                 pubKey = keyFactory.generatePublic(x509KeySpec);
                 // 如果检测到是PKCS#1格式但成功解析，记录警告（可能是误判）
                 if (keyData.isPKCS1()) {
-                    log.warn("检测到PKCS#1格式标识，但使用X509格式解析成功，可能存在格式误判");
+                    log.warn("PKCS#1 marker detected but parsed as X509 successfully; possible format misidentification");
                 }
             } catch (InvalidKeySpecException | IllegalArgumentException e) {
                 // 如果X509格式失败，根据isPKCS1标识提供更准确的错误信息
@@ -143,7 +142,7 @@ public class RsaUtil {
                         formatHint,
                         keyData.isPKCS1() ? "检测到PKCS#1格式" : "格式不匹配"
                 );
-                log.error("公钥解析: {}", errorMsg);
+                log.error("Public key parse failed: {}", errorMsg);
                 throw new InvalidKeyException(errorMsg, e);
             }
             Cipher cipher = Cipher.getInstance(TRANSFORMATION);
@@ -157,7 +156,7 @@ public class RsaUtil {
             int offSet = 0;
             byte[] cache;
             int i = 0;
-            java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
             while (inputLen - offSet > 0) {
                 if (inputLen - offSet > maxBlockSize) {
                     cache = cipher.doFinal(dataBytes, offSet, maxBlockSize);
@@ -172,7 +171,7 @@ public class RsaUtil {
             out.close();
             return Base64.getEncoder().encodeToString(encryptedData);
         } catch (Exception e) {
-            log.error("加密失败: {}", e.getMessage());
+            log.error("Encryption failed: {}", e.getMessage());
             throw new RuntimeException("RSA公钥加密失败", e);
         }
     }
@@ -217,7 +216,7 @@ public class RsaUtil {
             out.close();
             return out.toString("UTF-8");
         } catch (Exception e) {
-            log.error("解密失败: {}", e.getMessage());
+            log.error("Decryption failed: {}", e.getMessage());
             throw new RuntimeException("RSA私钥解密失败", e);
         }
     }
@@ -236,7 +235,7 @@ public class RsaUtil {
             String decrypted = decrypt(encrypted, privateKey);
             return verify.equals(decrypted);
         } catch (Exception e) {
-            log.error("验证密钥对失败: {}", e.getMessage());
+            log.error("Key pair verification failed: {}", e.getMessage());
             return false;
         }
     }

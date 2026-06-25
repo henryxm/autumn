@@ -1,13 +1,12 @@
 package cn.org.autumn.modules.wall.dao;
 
+import cn.org.autumn.modules.wall.dao.sql.WallDaoSql;
 import cn.org.autumn.modules.wall.entity.JumpEntity;
 import com.baomidou.mybatisplus.mapper.BaseMapper;
-import cn.org.autumn.modules.wall.dao.sql.WallDaoSql;
+import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.SelectProvider;
 import org.springframework.stereotype.Repository;
-
-import java.util.List;
 
 /**
  * 攻击跳转

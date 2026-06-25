@@ -7,6 +7,12 @@ import cn.org.autumn.modules.install.InstallWizardLangSupport;
 import cn.org.autumn.modules.lan.service.Language;
 import cn.org.autumn.modules.lan.service.LanguageService;
 import cn.org.autumn.utils.InterceptorUtils;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,13 +22,6 @@ import org.springframework.ui.ModelMap;
 import org.springframework.web.servlet.AsyncHandlerInterceptor;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.ModelAndView;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.Map;
 
 @Slf4j
 @Component

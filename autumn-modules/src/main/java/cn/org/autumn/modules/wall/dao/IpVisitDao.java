@@ -1,11 +1,11 @@
 package cn.org.autumn.modules.wall.dao;
 
+import cn.org.autumn.modules.wall.dao.sql.WallCounterSql;
+import cn.org.autumn.modules.wall.dao.sql.WallDaoSql;
 import cn.org.autumn.modules.wall.entity.IpVisitEntity;
 import com.baomidou.mybatisplus.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
-import cn.org.autumn.modules.wall.dao.sql.WallCounterSql;
-import cn.org.autumn.modules.wall.dao.sql.WallDaoSql;
 import org.apache.ibatis.annotations.SelectProvider;
 import org.apache.ibatis.annotations.UpdateProvider;
 import org.springframework.stereotype.Repository;

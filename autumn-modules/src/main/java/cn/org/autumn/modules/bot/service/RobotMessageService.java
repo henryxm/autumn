@@ -15,18 +15,17 @@ import cn.org.autumn.modules.bot.support.RobotScopes;
 import cn.org.autumn.site.RobotMessageFactory;
 import cn.org.autumn.utils.Uuid;
 import com.google.gson.Gson;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Lazy;
-import org.springframework.context.annotation.DependsOn;
-import org.springframework.stereotype.Service;
-
-import javax.annotation.PostConstruct;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import javax.annotation.PostConstruct;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.DependsOn;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.stereotype.Service;
 
 /**
  * 机器人入站消息：API 同步校验并入队，由框架 {@link cn.org.autumn.service.QueueService} 异步分发给订阅者与 Hook。
@@ -155,19 +154,19 @@ public class RobotMessageService extends ModuleService<RobotDao, RobotEntity> {
             return true;
         RobotEntity robot = robotService.getByUuid(task.getRobot());
         if (robot == null || !robot.isActive()) {
-            log.warn("入站消息跳过，机器人不可用: messageId={}, robot={}", task.getMessageId(), task.getRobot());
+            log.warn("Inbound message skipped, robot unavailable: messageId={}, robot={}", task.getMessageId(), task.getRobot());
             return true;
         }
         RobotMessage message = task.toMessage();
         try {
             robotMessageFactory.dispatch(message);
         } catch (Exception e) {
-            log.warn("入站消息订阅分发异常: messageId={}, type={}, {}", task.getMessageId(), task.getType(), e.getMessage());
+            log.warn("Inbound message subscription dispatch error: messageId={}, type={}, {}", task.getMessageId(), task.getType(), e.getMessage());
         }
         try {
             robotHookDispatch.dispatch(task.getRobot(), task.getType(), buildHookPayload(message));
         } catch (Exception e) {
-            log.warn("入站消息 Hook 投递异常: messageId={}, type={}, {}", task.getMessageId(), task.getType(), e.getMessage());
+            log.warn("Inbound message Hook delivery error: messageId={}, type={}, {}", task.getMessageId(), task.getType(), e.getMessage());
         }
         return true;
     }
@@ -176,7 +175,7 @@ public class RobotMessageService extends ModuleService<RobotDao, RobotEntity> {
     protected <X> void onDeadMessage(String suffix, Class<X> type, X message) {
         if (MESSAGE_DISPATCH_SUFFIX.equals(suffix) && message instanceof RobotMessageDispatchTask) {
             RobotMessageDispatchTask task = (RobotMessageDispatchTask) message;
-            log.error("入站消息进入死信: messageId={}, robot={}, type={}", task.getMessageId(), task.getRobot(), task.getType());
+            log.error("Inbound message moved to dead letter: messageId={}, robot={}, type={}", task.getMessageId(), task.getRobot(), task.getType());
         } else {
             super.onDeadMessage(suffix, type, message);
         }

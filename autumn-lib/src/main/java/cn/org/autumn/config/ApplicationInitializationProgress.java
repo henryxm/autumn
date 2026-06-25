@@ -1,8 +1,9 @@
 package cn.org.autumn.config;
 
-import org.springframework.stereotype.Component;
-
 import java.util.concurrent.atomic.AtomicReference;
+
+import lombok.Getter;
+import org.springframework.stereotype.Component;
 
 /**
  * 应用启动阶段状态，供安装完成页轮询 {@code /install/bootstrap-status} 与排障。
@@ -15,6 +16,7 @@ import java.util.concurrent.atomic.AtomicReference;
 @Component
 public class ApplicationInitializationProgress {
 
+    @Getter
     public enum Phase {
         IDLE("准备中"),
         WIZARD("等待安装向导"),
@@ -30,16 +32,15 @@ public class ApplicationInitializationProgress {
         Phase(String defaultLabel) {
             this.defaultLabel = defaultLabel;
         }
-
-        public String getDefaultLabel() {
-            return defaultLabel;
-        }
     }
 
     private final AtomicReference<Phase> phase = new AtomicReference<>(Phase.IDLE);
     private volatile String message;
+    @Getter
     private volatile String failedDetail;
+    @Getter
     private volatile long startedAt;
+    @Getter
     private volatile long finishedAt;
     /** 失败前所处阶段的进度，供进度条停留在合理位置 */
     private volatile int failedAtPercent = 30;
@@ -48,22 +49,15 @@ public class ApplicationInitializationProgress {
      * {@code LanguageService} 已完成至少一次成功的 DB → 内存缓存加载（允许条目数为 0）。
      * 安装向导 {@link Phase#WIZARD} 下通常不跑 {@code LoadFactory}，此标记可能一直为 false，调用方应结合 {@link #getPhase()}。
      */
+    @Getter
     private volatile boolean languageCacheReady;
 
     public Phase getPhase() {
         return phase.get();
     }
 
-    public boolean isLanguageCacheReady() {
-        return languageCacheReady;
-    }
-
     public void markLanguageCacheReady() {
         languageCacheReady = true;
-    }
-
-    public void clearLanguageCacheReady() {
-        languageCacheReady = false;
     }
 
     public String getMessage() {
@@ -71,19 +65,7 @@ public class ApplicationInitializationProgress {
         return m != null ? m : phase.get().getDefaultLabel();
     }
 
-    public String getFailedDetail() {
-        return failedDetail;
-    }
-
-    public long getStartedAt() {
-        return startedAt;
-    }
-
-    public long getFinishedAt() {
-        return finishedAt;
-    }
-
-    public void resetForNewRun() {
+    public void reset() {
         phase.set(Phase.IDLE);
         message = null;
         failedDetail = null;
@@ -170,8 +152,6 @@ public class ApplicationInitializationProgress {
             return 0;
         }
         switch (p) {
-            case IDLE:
-                return 0;
             case WIZARD:
                 return 8;
             case INIT:
@@ -184,6 +164,7 @@ public class ApplicationInitializationProgress {
                 return 86;
             case DONE:
                 return 100;
+            case IDLE:
             default:
                 return 0;
         }

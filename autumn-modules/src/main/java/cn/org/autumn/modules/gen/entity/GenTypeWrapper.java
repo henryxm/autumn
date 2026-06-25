@@ -1,10 +1,9 @@
 package cn.org.autumn.modules.gen.entity;
 
 import cn.org.autumn.modules.sys.entity.SysMenuEntity;
-import org.apache.commons.lang.StringUtils;
-
 import java.util.LinkedHashMap;
 import java.util.Map;
+import org.apache.commons.lang.StringUtils;
 
 public class GenTypeWrapper {
     private final GenTypeEntity entity;

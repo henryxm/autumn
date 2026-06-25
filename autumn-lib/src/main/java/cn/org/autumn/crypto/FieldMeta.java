@@ -1,9 +1,8 @@
 package cn.org.autumn.crypto;
 
 import cn.org.autumn.annotation.FieldEncrypt;
-import lombok.Getter;
-
 import java.lang.reflect.Field;
+import lombok.Getter;
 
 /**
  * {@link cn.org.autumn.annotation.FieldEncrypt} 字段元数据。

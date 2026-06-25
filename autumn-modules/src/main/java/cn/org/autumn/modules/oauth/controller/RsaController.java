@@ -11,13 +11,12 @@ import cn.org.autumn.service.AesService;
 import cn.org.autumn.service.RsaService;
 import cn.org.autumn.utils.IPUtils;
 import com.google.gson.Gson;
+import java.util.*;
+import javax.servlet.http.HttpServletRequest;
+import javax.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.validation.Valid;
-import java.util.*;
 
 /**
  * RSA加密接口控制器
@@ -62,11 +61,11 @@ public class RsaController {
             // 转换为PublicKey对象返回给客户端
             RsaKey copy = rsaKey.copy();
             if (log.isDebugEnabled()) {
-                log.debug("获取公钥，UUID:{}, 过期时间:{}, IP:{}", copy.getSession(), copy.getExpireTime(), IPUtils.getIp(servlet));
+                log.debug("Fetched public key, UUID:{}, expireTime:{}, IP:{}", copy.getSession(), copy.getExpireTime(), IPUtils.getIp(servlet));
             }
             return Response.ok(copy);
         } catch (Exception e) {
-            log.error("获取公钥:{}, IP:{}", e.getMessage(), IPUtils.getIp(servlet));
+            log.error("Get public key:{}, IP:{}", e.getMessage(), IPUtils.getIp(servlet));
             return Response.error(e);
         }
     }
@@ -92,11 +91,11 @@ public class RsaController {
             response.setSession(clientPublicKey.getSession());
             response.setExpireTime(clientPublicKey.getExpireTime());
             if (log.isDebugEnabled()) {
-                log.debug("上传公钥，UUID: {}, 过期时间: {}, IP:{}", clientPublicKey.getSession(), clientPublicKey.getExpireTime(), IPUtils.getIp(servlet));
+                log.debug("Uploaded public key, UUID: {}, expireTime: {}, IP:{}", clientPublicKey.getSession(), clientPublicKey.getExpireTime(), IPUtils.getIp(servlet));
             }
             return Response.ok(response);
         } catch (Exception e) {
-            log.error("上传公钥:{}, IP:{}", e.getMessage(), IPUtils.getIp(servlet));
+            log.error("Upload public key:{}, IP:{}", e.getMessage(), IPUtils.getIp(servlet));
             return Response.error(e);
         }
     }
@@ -131,11 +130,11 @@ public class RsaController {
             response.setSession(session);
             response.setExpireTime(aesKey.getExpireTime());
             return Response.ok(response);
-        } catch (cn.org.autumn.exception.CodeException e) {
-            log.error("获取AES密钥失败:{}, IP:{}", e.getMessage(), IPUtils.getIp(servlet));
+        } catch (CodeException e) {
+            log.error("Failed to get AES key:{}, IP:{}", e.getMessage(), IPUtils.getIp(servlet));
             return Response.error(e);
         } catch (Exception e) {
-            log.error("获取AES密钥失败:{}, IP:{}", e.getMessage(), IPUtils.getIp(servlet), e);
+            log.error("Failed to get AES key:{}, IP:{}", e.getMessage(), IPUtils.getIp(servlet), e);
             return Response.error(e);
         }
     }
@@ -190,13 +189,13 @@ public class RsaController {
             encryptKeyService.saveOrUpdate(session, rsaKey, clientPublicKey, aesKey);
             return Response.ok(response);
         } catch (CodeException e) {
-            log.error("初始化失败:{}, IP:{}", e.getMessage(), IPUtils.getIp(servlet), e);
+            log.error("Initialization failed:{}, IP:{}", e.getMessage(), IPUtils.getIp(servlet), e);
             return Response.error(e);
         } catch (Exception e) {
-            log.error("初始化异常:{}, IP:{}", e.getMessage(), IPUtils.getIp(servlet), e);
+            log.error("Initialization exception:{}, IP:{}", e.getMessage(), IPUtils.getIp(servlet), e);
             return Response.error(e);
         } catch (Throwable e) {
-            log.error("初始化错误:{}, IP:{}", e.getMessage(), IPUtils.getIp(servlet), e);
+            log.error("Initialization error:{}, IP:{}", e.getMessage(), IPUtils.getIp(servlet), e);
             return Response.error(e);
         }
     }
@@ -213,7 +212,7 @@ public class RsaController {
             List<EndpointInfo> endpoints = rsaService.getEncryptEndpoints();
             return Response.ok(endpoints);
         } catch (Exception e) {
-            log.error("扫描接口: {}", e.getMessage(), e);
+            log.error("Scan endpoints: {}", e.getMessage(), e);
             return Response.error(e);
         }
     }

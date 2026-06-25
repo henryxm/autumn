@@ -2,13 +2,12 @@ package cn.org.autumn.xss;
 
 import cn.org.autumn.annotation.DisableXssFilter;
 import cn.org.autumn.service.BaseHttpProxyService;
+import java.io.IOException;
+import javax.servlet.*;
+import javax.servlet.http.HttpServletRequest;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerExecutionChain;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
-
-import javax.servlet.*;
-import javax.servlet.http.HttpServletRequest;
-import java.io.IOException;
 
 /**
  * XSS 过滤器

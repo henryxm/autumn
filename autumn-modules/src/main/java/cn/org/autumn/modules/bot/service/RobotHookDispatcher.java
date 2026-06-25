@@ -5,12 +5,11 @@ import cn.org.autumn.modules.bot.entity.RobotHookEntity;
 import cn.org.autumn.modules.bot.model.RobotHookDispatchTask;
 import cn.org.autumn.modules.bot.support.RobotHookSupport;
 import com.google.gson.Gson;
+import java.util.List;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
 
 /**
  * 机器人 Hook 事件投递：匹配 Hook 后写入框架队列，HTTP 组包在消费端完成。

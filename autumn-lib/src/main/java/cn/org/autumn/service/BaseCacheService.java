@@ -9,10 +9,6 @@ import cn.org.autumn.table.utils.HumpConvert;
 import com.baomidou.mybatisplus.mapper.BaseMapper;
 import com.baomidou.mybatisplus.mapper.EntityWrapper;
 import com.baomidou.mybatisplus.mapper.Wrapper;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.beanutils.BeanUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-
 import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.math.BigDecimal;
@@ -20,6 +16,9 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.beanutils.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 
 @Slf4j
 public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQueueService<M, T> {
@@ -667,48 +666,69 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         return compositeCaches;
     }
 
+    // ======================== 写库 + 缓存失效（写库开关由 CrudInterceptor 统一拦截） ========================
+    // 更新/upsert 仅在写库成功后失效缓存，避免只读模式下误清缓存。
+
     @Override
     public boolean insertOrUpdate(T entity) {
-        removeCacheByEntity(entity);
-        return super.insertOrUpdate(entity);
+        boolean result = super.insertOrUpdate(entity);
+        if (result) {
+            removeCacheByEntity(entity);
+        }
+        return result;
     }
 
     @Override
     public boolean insertOrUpdateAllColumn(T entity) {
-        removeCacheByEntity(entity);
-        return super.insertOrUpdateAllColumn(entity);
+        boolean result = super.insertOrUpdateAllColumn(entity);
+        if (result) {
+            removeCacheByEntity(entity);
+        }
+        return result;
     }
 
     @Override
     public boolean insertOrUpdateBatch(List<T> entityList) {
-        for (T entity : entityList) {
-            removeCacheByEntity(entity);
+        boolean result = super.insertOrUpdateBatch(entityList);
+        if (result && entityList != null) {
+            for (T entity : entityList) {
+                removeCacheByEntity(entity);
+            }
         }
-        return super.insertOrUpdateBatch(entityList);
+        return result;
     }
 
     @Override
     public boolean insertOrUpdateBatch(List<T> entityList, int batchSize) {
-        for (T entity : entityList) {
-            removeCacheByEntity(entity);
+        boolean result = super.insertOrUpdateBatch(entityList, batchSize);
+        if (result && entityList != null) {
+            for (T entity : entityList) {
+                removeCacheByEntity(entity);
+            }
         }
-        return super.insertOrUpdateBatch(entityList, batchSize);
+        return result;
     }
 
     @Override
     public boolean insertOrUpdateAllColumnBatch(List<T> entityList) {
-        for (T entity : entityList) {
-            removeCacheByEntity(entity);
+        boolean result = super.insertOrUpdateAllColumnBatch(entityList);
+        if (result && entityList != null) {
+            for (T entity : entityList) {
+                removeCacheByEntity(entity);
+            }
         }
-        return super.insertOrUpdateAllColumnBatch(entityList);
+        return result;
     }
 
     @Override
     public boolean insertOrUpdateAllColumnBatch(List<T> entityList, int batchSize) {
-        for (T entity : entityList) {
-            removeCacheByEntity(entity);
+        boolean result = super.insertOrUpdateAllColumnBatch(entityList, batchSize);
+        if (result && entityList != null) {
+            for (T entity : entityList) {
+                removeCacheByEntity(entity);
+            }
         }
-        return super.insertOrUpdateAllColumnBatch(entityList, batchSize);
+        return result;
     }
 
     @Override
@@ -716,13 +736,10 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
     public boolean deleteById(Serializable id) {
         boolean result = super.deleteById(id);
         if (result) {
-            // 检查 id 是否是实体类型 T 的实例
             Class<?> clazz = getModelClass();
             if (clazz != null && clazz.isInstance(id)) {
-                // 如果是实体类型，调用 removeCacheByEntity
                 removeCacheByEntity((T) id);
             } else {
-                // 否则，使用 id 作为 key 删除所有相关缓存
                 removeAllCacheByKey(id);
             }
         }
@@ -731,7 +748,6 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
 
     @Override
     public boolean deleteByMap(Map<String, Object> columnMap) {
-        // 先查询要删除的实体，以便删除缓存
         List<T> entities = selectByMap(columnMap);
         boolean result = super.deleteByMap(columnMap);
         if (result && entities != null) {
@@ -744,7 +760,6 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
 
     @Override
     public boolean delete(Wrapper<T> wrapper) {
-        // 先查询要删除的实体，以便删除缓存
         List<T> entities = selectList(wrapper);
         boolean result = super.delete(wrapper);
         if (result && entities != null) {
@@ -762,12 +777,9 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
         if (result && idList != null) {
             Class<?> clazz = getModelClass();
             for (Serializable id : idList) {
-                // 检查 id 是否是实体类型 T 的实例
                 if (clazz != null && clazz.isInstance(id)) {
-                    // 如果是实体类型，调用 removeCacheByEntity
                     removeCacheByEntity((T) id);
                 } else {
-                    // 否则，使用 id 作为 key 删除所有相关缓存
                     removeAllCacheByKey(id);
                 }
             }
@@ -777,67 +789,73 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
 
     @Override
     public boolean updateById(T entity) {
-        // 更新前先删除缓存
-        removeCacheByEntity(entity);
-        return super.updateById(entity);
+        boolean result = super.updateById(entity);
+        if (result) {
+            removeCacheByEntity(entity);
+        }
+        return result;
     }
 
     @Override
     public boolean updateAllColumnById(T entity) {
-        // 更新前先删除缓存
-        removeCacheByEntity(entity);
-        return super.updateAllColumnById(entity);
+        boolean result = super.updateAllColumnById(entity);
+        if (result) {
+            removeCacheByEntity(entity);
+        }
+        return result;
     }
 
     @Override
     public boolean update(T entity, Wrapper<T> wrapper) {
-        // 更新前先删除缓存
-        removeCacheByEntity(entity);
-        return super.update(entity, wrapper);
+        boolean result = super.update(entity, wrapper);
+        if (result) {
+            removeCacheByEntity(entity);
+        }
+        return result;
     }
 
     @Override
     public boolean updateBatchById(List<T> entityList) {
-        // 更新前先删除缓存
-        if (entityList != null) {
+        boolean result = super.updateBatchById(entityList);
+        if (result && entityList != null) {
             for (T entity : entityList) {
                 removeCacheByEntity(entity);
             }
         }
-        return super.updateBatchById(entityList);
+        return result;
     }
 
     @Override
     public boolean updateBatchById(List<T> entityList, int batchSize) {
-        // 更新前先删除缓存
-        if (entityList != null) {
+        boolean result = super.updateBatchById(entityList, batchSize);
+        if (result && entityList != null) {
             for (T entity : entityList) {
                 removeCacheByEntity(entity);
             }
         }
-        return super.updateBatchById(entityList, batchSize);
+        return result;
     }
 
     @Override
     public boolean updateAllColumnBatchById(List<T> entityList) {
-        // 更新前先删除缓存
-        if (entityList != null) {
+        boolean result = super.updateAllColumnBatchById(entityList);
+        if (result && entityList != null) {
             for (T entity : entityList) {
                 removeCacheByEntity(entity);
             }
         }
-        return super.updateAllColumnBatchById(entityList);
+        return result;
     }
 
     @Override
     public boolean updateAllColumnBatchById(List<T> entityList, int batchSize) {
-        // 更新前先删除缓存
-        if (entityList != null) {
+        boolean result = super.updateAllColumnBatchById(entityList, batchSize);
+        if (result && entityList != null) {
             for (T entity : entityList) {
                 removeCacheByEntity(entity);
             }
         }
-        return super.updateAllColumnBatchById(entityList, batchSize);
+        return result;
     }
 
     /**
@@ -2550,7 +2568,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             return entity;
         } catch (Exception e) {
             if (log.isWarnEnabled()) {
-                log.warn("自动创建实体失败: {}", e.getMessage());
+                log.warn("Auto-create entity failed: {}", e.getMessage());
             }
             return null;
         }
@@ -2590,7 +2608,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
      * @return 字段值 Map，key 为字段名，value 为字段值
      */
     private Map<String, Object> extractFieldValues(Object key, Class<?> clazz, String[] fieldNames) {
-        Map<String, Object> fieldValues = new java.util.HashMap<>();
+        Map<String, Object> fieldValues = new HashMap<>();
         // 如果 key 是 Map，直接使用
         if (key instanceof Map) {
             @SuppressWarnings("unchecked")
@@ -2846,7 +2864,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             cacheService.remove(config.getName(), cacheKey);
         } catch (Throwable e) {
             if (log.isWarnEnabled())
-                log.warn("删除缓存失败: key={}, error={}", key, e.getMessage());
+                log.warn("Cache delete failed: key={}, error={}", key, e.getMessage());
         }
     }
 
@@ -2870,7 +2888,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             cacheService.remove(config.getName(), cacheKey);
         } catch (Throwable e) {
             if (log.isWarnEnabled())
-                log.warn("删除类型缓存失败: clazz={}, key={}, error={}", clazz.getSimpleName(), key, e.getMessage());
+                log.warn("Typed cache delete failed: clazz={}, key={}, error={}", clazz.getSimpleName(), key, e.getMessage());
         }
     }
 
@@ -2896,7 +2914,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             cacheService.remove(config.getName(), cacheKey);
         } catch (Throwable e) {
             if (log.isWarnEnabled())
-                log.warn("删除缓存失败: error={}", e.getMessage());
+                log.warn("Cache delete failed: error={}", e.getMessage());
         }
     }
 
@@ -2924,7 +2942,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             cacheService.remove(config.getName(), cacheKey);
         } catch (Throwable e) {
             if (log.isWarnEnabled())
-                log.warn("删除类型缓存失败: clazz={}, error={}", clazz.getSimpleName(), e.getMessage());
+                log.warn("Typed cache delete failed: clazz={}, error={}", clazz.getSimpleName(), e.getMessage());
         }
     }
 
@@ -2949,7 +2967,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             cacheService.remove(config.getName(), cacheKey);
         } catch (Throwable e) {
             if (log.isWarnEnabled())
-                log.warn("删除命名缓存失败: name={}, key={}, error={}", name, key, e.getMessage());
+                log.warn("Named cache delete failed: name={}, key={}, error={}", name, key, e.getMessage());
         }
     }
 
@@ -2974,7 +2992,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             cacheService.remove(config.getName(), cacheKey);
         } catch (Throwable e) {
             if (log.isWarnEnabled())
-                log.warn("删除类型命名缓存失败: clazz={}, name={}, key={}, error={}", clazz.getSimpleName(), name, key, e.getMessage());
+                log.warn("Typed named cache delete failed: clazz={}, name={}, key={}, error={}", clazz.getSimpleName(), name, key, e.getMessage());
         }
     }
 
@@ -3001,7 +3019,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             cacheService.remove(config.getName(), cacheKey);
         } catch (Throwable e) {
             if (log.isWarnEnabled())
-                log.warn("删除命名缓存失败: name={}, error={}", name, e.getMessage());
+                log.warn("Named cache delete failed: name={}, error={}", name, e.getMessage());
         }
     }
 
@@ -3030,7 +3048,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             cacheService.remove(config.getName(), cacheKey);
         } catch (Throwable e) {
             if (log.isWarnEnabled())
-                log.warn("删除类型命名缓存失败: clazz={}, name={}, error={}", clazz.getSimpleName(), name, e.getMessage());
+                log.warn("Typed named cache delete failed: clazz={}, name={}, error={}", clazz.getSimpleName(), name, e.getMessage());
         }
     }
 
@@ -3054,7 +3072,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             cacheService.remove(config.getName(), cacheKey);
         } catch (Throwable e) {
             if (log.isWarnEnabled())
-                log.warn("删除列表缓存失败: key={}, error={}", key, e.getMessage());
+                log.warn("List cache delete failed: key={}, error={}", key, e.getMessage());
         }
     }
 
@@ -3078,7 +3096,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             cacheService.remove(config.getName(), cacheKey);
         } catch (Throwable e) {
             if (log.isWarnEnabled())
-                log.warn("删除类型列表缓存失败: clazz={}, key={}, error={}", clazz.getSimpleName(), key, e.getMessage());
+                log.warn("Typed list cache delete failed: clazz={}, key={}, error={}", clazz.getSimpleName(), key, e.getMessage());
         }
     }
 
@@ -3104,7 +3122,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             cacheService.remove(config.getName(), cacheKey);
         } catch (Throwable e) {
             if (log.isWarnEnabled())
-                log.warn("删除列表缓存失败: error={}", e.getMessage());
+                log.warn("List cache delete failed: error={}", e.getMessage());
         }
     }
 
@@ -3132,7 +3150,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             cacheService.remove(config.getName(), cacheKey);
         } catch (Throwable e) {
             if (log.isWarnEnabled())
-                log.warn("删除类型列表缓存失败: clazz={}, error={}", clazz.getSimpleName(), e.getMessage());
+                log.warn("Typed list cache delete failed: clazz={}, error={}", clazz.getSimpleName(), e.getMessage());
         }
     }
 
@@ -3157,7 +3175,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             cacheService.remove(config.getName(), cacheKey);
         } catch (Throwable e) {
             if (log.isWarnEnabled())
-                log.warn("删除命名列表缓存失败: name={}, key={}, error={}", name, key, e.getMessage());
+                log.warn("Named list cache delete failed: name={}, key={}, error={}", name, key, e.getMessage());
         }
     }
 
@@ -3182,7 +3200,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             cacheService.remove(config.getName(), cacheKey);
         } catch (Throwable e) {
             if (log.isWarnEnabled())
-                log.warn("删除类型命名列表缓存失败: clazz={}, name={}, key={}, error={}", clazz.getSimpleName(), name, key, e.getMessage());
+                log.warn("Typed named list cache delete failed: clazz={}, name={}, key={}, error={}", clazz.getSimpleName(), name, key, e.getMessage());
         }
     }
 
@@ -3209,7 +3227,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             cacheService.remove(config.getName(), cacheKey);
         } catch (Throwable e) {
             if (log.isWarnEnabled())
-                log.warn("删除命名列表缓存失败: name={}, error={}", name, e.getMessage());
+                log.warn("Named list cache delete failed: name={}, error={}", name, e.getMessage());
         }
     }
 
@@ -3238,7 +3256,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             cacheService.remove(config.getName(), cacheKey);
         } catch (Throwable e) {
             if (log.isWarnEnabled())
-                log.warn("删除类型命名列表缓存失败: clazz={}, name={}, error={}", clazz.getSimpleName(), name, e.getMessage());
+                log.warn("Typed named list cache delete failed: clazz={}, name={}, error={}", clazz.getSimpleName(), name, e.getMessage());
         }
     }
 
@@ -3281,7 +3299,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             removeTypedCacheByKey(cacheName, listCacheName, key);
         } catch (Throwable e) {
             if (log.isWarnEnabled())
-                log.warn("删除缓存失败: name={}, key={}, error={}", name, key, e.getMessage());
+                log.warn("Cache delete failed: name={}, key={}, error={}", name, key, e.getMessage());
         }
     }
 
@@ -3304,7 +3322,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
                     cacheService.remove(configName, key);
                 } catch (Throwable e) {
                     if (log.isWarnEnabled())
-                        log.warn("删除类型特定缓存失败: config={}, key={}, error={}", configName, key, e.getMessage());
+                        log.warn("Typed config cache delete failed: config={}, key={}, error={}", configName, key, e.getMessage());
                 }
             }
         }
@@ -3336,7 +3354,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             removeFieldCaches(entity, clazz);
         } catch (Throwable e) {
             if (log.isWarnEnabled())
-                log.warn("清除实体缓存失败: {}", e.getMessage());
+                log.warn("Entity cache clear failed: {}", e.getMessage());
         }
     }
 
@@ -3447,7 +3465,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             cacheService.clear(config.getName());
         } catch (Throwable e) {
             if (log.isWarnEnabled())
-                log.warn("清空缓存失败: error={}", e.getMessage());
+                log.warn("Cache clear failed: error={}", e.getMessage());
         }
     }
 
@@ -3466,7 +3484,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             cacheService.clear(config.getName());
         } catch (Throwable e) {
             if (log.isWarnEnabled())
-                log.warn("清空类型缓存失败: clazz={}, error={}", clazz.getSimpleName(), e.getMessage());
+                log.warn("Typed cache clear failed: clazz={}, error={}", clazz.getSimpleName(), e.getMessage());
         }
     }
 
@@ -3481,7 +3499,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             cacheService.clear(config.getName());
         } catch (Throwable e) {
             if (log.isWarnEnabled())
-                log.warn("清空命名缓存失败: name={}, error={}", name, e.getMessage());
+                log.warn("Named cache clear failed: name={}, error={}", name, e.getMessage());
         }
     }
 
@@ -3501,7 +3519,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             cacheService.clear(config.getName());
         } catch (Throwable e) {
             if (log.isWarnEnabled())
-                log.warn("清空类型命名缓存失败: clazz={}, name={}, error={}", clazz.getSimpleName(), name, e.getMessage());
+                log.warn("Typed named cache clear failed: clazz={}, name={}, error={}", clazz.getSimpleName(), name, e.getMessage());
         }
     }
 
@@ -3516,7 +3534,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             cacheService.clear(config.getName());
         } catch (Throwable e) {
             if (log.isWarnEnabled())
-                log.warn("清空列表缓存失败: error={}", e.getMessage());
+                log.warn("List cache clear failed: error={}", e.getMessage());
         }
     }
 
@@ -3535,7 +3553,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             cacheService.clear(config.getName());
         } catch (Throwable e) {
             if (log.isWarnEnabled())
-                log.warn("清空类型列表缓存失败: clazz={}, error={}", clazz.getSimpleName(), e.getMessage());
+                log.warn("Typed list cache clear failed: clazz={}, error={}", clazz.getSimpleName(), e.getMessage());
         }
     }
 
@@ -3550,7 +3568,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             cacheService.clear(config.getName());
         } catch (Throwable e) {
             if (log.isWarnEnabled())
-                log.warn("清空命名列表缓存失败: name={}, error={}", name, e.getMessage());
+                log.warn("Named list cache clear failed: name={}, error={}", name, e.getMessage());
         }
     }
 
@@ -3570,7 +3588,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             cacheService.clear(config.getName());
         } catch (Throwable e) {
             if (log.isWarnEnabled())
-                log.warn("清空类型命名列表缓存失败: clazz={}, name={}, error={}", clazz.getSimpleName(), name, e.getMessage());
+                log.warn("Typed named list cache clear failed: clazz={}, name={}, error={}", clazz.getSimpleName(), name, e.getMessage());
         }
     }
 
@@ -3635,7 +3653,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
                     cacheService.clear(configName);
                 } catch (Throwable e) {
                     if (log.isWarnEnabled())
-                        log.warn("清空缓存失败: config={}, error={}", configName, e.getMessage());
+                        log.warn("Cache clear failed: config={}, error={}", configName, e.getMessage());
                 }
             }
         }
@@ -3652,7 +3670,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             return field.get(entity);
         } catch (Throwable e) {
             if (log.isWarnEnabled())
-                log.warn("获取实体:{}", e.getMessage());
+                log.warn("Get entity failed: {}", e.getMessage());
             return null;
         }
     }
@@ -3713,7 +3731,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
             }
         } catch (Throwable e) {
             if (log.isWarnEnabled())
-                log.warn("转换失败:{}", e.getMessage());
+                log.warn("Conversion failed: {}", e.getMessage());
             return null;
         }
         return null;

@@ -2,10 +2,9 @@ package cn.org.autumn.handler;
 
 import cn.org.autumn.config.Config;
 import cn.org.autumn.config.ResourceHandler;
+import java.io.File;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
-
-import java.io.File;
 
 @Component
 public class StaticsResourceHandler implements ResourceHandler {

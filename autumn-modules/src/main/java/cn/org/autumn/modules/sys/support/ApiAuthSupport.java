@@ -1,9 +1,8 @@
 package cn.org.autumn.modules.sys.support;
 
+import javax.servlet.http.HttpServletRequest;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.web.context.request.NativeWebRequest;
-
-import javax.servlet.http.HttpServletRequest;
 
 /**
  * 从请求头解析 API 访问令牌（与历史 UserInfoResolver / SpmFilter 习惯一致）。

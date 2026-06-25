@@ -1,10 +1,9 @@
 package cn.org.autumn.site;
 
 import cn.org.autumn.config.DeleteHandler;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-
-import java.util.List;
 
 /**
  * 数据清理工厂
@@ -35,7 +34,7 @@ public class DeleteFactory extends Factory implements DeleteHandler {
                     return false;
                 }
             } catch (Exception e) {
-                log.warn("删除异常，保守跳过: handler={}, 错误: {}", handler.getClass().getSimpleName(), e.getMessage());
+                log.warn("Delete error, conservatively skipped: handler={}, error: {}", handler.getClass().getSimpleName(), e.getMessage());
                 return false;
             }
         }

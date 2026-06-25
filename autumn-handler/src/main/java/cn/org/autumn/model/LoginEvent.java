@@ -1,12 +1,11 @@
 package cn.org.autumn.model;
 
+import java.io.Serializable;
+import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.io.Serializable;
-import java.util.Map;
 
 /**
  * 用户登录事件模型

@@ -1,23 +1,23 @@
 package cn.org.autumn.modules.spm.service.gen;
 
+import cn.org.autumn.modules.lan.service.Language;
+import cn.org.autumn.modules.lan.service.LanguageService;
+import cn.org.autumn.modules.spm.dao.VisitLogDao;
+import cn.org.autumn.modules.spm.entity.VisitLogEntity;
+import cn.org.autumn.modules.spm.service.SpmMenu;
+import cn.org.autumn.modules.sys.entity.SysMenuEntity;
+import cn.org.autumn.modules.sys.service.SysMenuService;
 import cn.org.autumn.site.InitFactory;
-import org.apache.commons.lang.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import cn.org.autumn.utils.PageUtils;
+import cn.org.autumn.utils.Query;
 import com.baomidou.mybatisplus.mapper.EntityWrapper;
 import com.baomidou.mybatisplus.plugins.Page;
 import com.baomidou.mybatisplus.service.impl.ServiceImpl;
-import cn.org.autumn.utils.PageUtils;
-import cn.org.autumn.utils.Query;
-import cn.org.autumn.modules.spm.service.SpmMenu;
-import cn.org.autumn.modules.spm.dao.VisitLogDao;
-import cn.org.autumn.modules.spm.entity.VisitLogEntity;
-import cn.org.autumn.modules.sys.entity.SysMenuEntity;
-import cn.org.autumn.modules.sys.service.SysMenuService;
-import cn.org.autumn.modules.lan.service.Language;
-import cn.org.autumn.modules.lan.service.LanguageService;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import org.apache.commons.lang.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 访问统计控制器

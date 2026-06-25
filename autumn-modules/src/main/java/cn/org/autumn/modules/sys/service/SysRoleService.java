@@ -1,28 +1,27 @@
 package cn.org.autumn.modules.sys.service;
 
-import cn.org.autumn.database.runtime.WrapperColumns;
-import cn.org.autumn.site.InitFactory;
-import com.baomidou.mybatisplus.mapper.EntityWrapper;
-import com.baomidou.mybatisplus.plugins.Page;
-import com.baomidou.mybatisplus.service.impl.ServiceImpl;
-import cn.org.autumn.utils.Constant;
+import static cn.org.autumn.modules.sys.service.SysDeptService.Department_System_Administrator;
+
 import cn.org.autumn.annotation.DataFilter;
-import cn.org.autumn.utils.PageUtils;
-import cn.org.autumn.utils.Query;
+import cn.org.autumn.database.runtime.WrapperColumns;
 import cn.org.autumn.modules.sys.dao.SysRoleDao;
 import cn.org.autumn.modules.sys.entity.SysDeptEntity;
 import cn.org.autumn.modules.sys.entity.SysRoleEntity;
+import cn.org.autumn.site.InitFactory;
+import cn.org.autumn.utils.Constant;
+import cn.org.autumn.utils.PageUtils;
+import cn.org.autumn.utils.Query;
+import com.baomidou.mybatisplus.mapper.EntityWrapper;
+import com.baomidou.mybatisplus.plugins.Page;
+import com.baomidou.mybatisplus.service.impl.ServiceImpl;
+import java.util.Date;
+import java.util.Map;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.Date;
-import java.util.Map;
-
-import static cn.org.autumn.modules.sys.service.SysDeptService.Department_System_Administrator;
 
 @Service
 public class SysRoleService extends ServiceImpl<SysRoleDao, SysRoleEntity> implements InitFactory.Init {

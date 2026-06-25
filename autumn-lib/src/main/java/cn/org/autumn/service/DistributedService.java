@@ -1,8 +1,8 @@
 package cn.org.autumn.service;
 
 import com.baomidou.mybatisplus.mapper.BaseMapper;
-import org.springframework.beans.factory.annotation.Autowired;
 import java.util.concurrent.Callable;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 通用分布式服务能力封装：挂在 Service 继承链中，提供更易用的锁 API。

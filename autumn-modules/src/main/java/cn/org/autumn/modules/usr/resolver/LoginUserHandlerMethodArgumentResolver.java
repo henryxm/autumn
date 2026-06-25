@@ -2,8 +2,8 @@ package cn.org.autumn.modules.usr.resolver;
 
 import cn.org.autumn.annotation.LoginUser;
 import cn.org.autumn.config.ResolverHandler;
-import cn.org.autumn.modules.usr.interceptor.AuthorizationInterceptor;
 import cn.org.autumn.modules.usr.entity.UserProfileEntity;
+import cn.org.autumn.modules.usr.interceptor.AuthorizationInterceptor;
 import cn.org.autumn.modules.usr.service.UserProfileService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.MethodParameter;

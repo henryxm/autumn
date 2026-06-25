@@ -2,8 +2,8 @@ package cn.org.autumn.modules.user.service;
 
 import cn.org.autumn.datasources.DataSourceNames;
 import cn.org.autumn.datasources.annotation.DataSource;
-import cn.org.autumn.modules.sys.service.SysUserService;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
+import cn.org.autumn.modules.sys.service.SysUserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 

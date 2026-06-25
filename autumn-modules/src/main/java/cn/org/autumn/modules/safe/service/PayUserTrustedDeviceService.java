@@ -6,13 +6,12 @@ import cn.org.autumn.modules.safe.dao.PayUserTrustedDeviceDao;
 import cn.org.autumn.modules.safe.entity.PayUserBiometricEntity;
 import cn.org.autumn.modules.safe.entity.PayUserTrustedDeviceEntity;
 import cn.org.autumn.utils.Uuid;
+import java.util.Date;
+import java.util.List;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.Date;
-import java.util.List;
 
 @Service
 public class PayUserTrustedDeviceService extends ModuleService<PayUserTrustedDeviceDao, PayUserTrustedDeviceEntity> {

@@ -1,16 +1,15 @@
 package cn.org.autumn.integration.robot;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import cn.org.autumn.integration.base.IntegrationTest;
 import cn.org.autumn.integration.support.IntegrationJson;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
-import org.junit.jupiter.api.Test;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
  * 机器人管理开放 API 集成测试（用户令牌）。

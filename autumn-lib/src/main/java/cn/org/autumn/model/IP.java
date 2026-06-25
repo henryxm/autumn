@@ -1,16 +1,15 @@
 package cn.org.autumn.model;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
+import javax.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.apache.commons.lang.StringUtils;
-
-import javax.servlet.http.HttpServletRequest;
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.List;
 
 @Getter
 @Setter

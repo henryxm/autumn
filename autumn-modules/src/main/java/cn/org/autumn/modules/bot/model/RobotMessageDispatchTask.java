@@ -1,11 +1,10 @@
 package cn.org.autumn.modules.bot.model;
 
 import cn.org.autumn.model.RobotMessage;
+import java.io.Serializable;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
-import java.io.Serializable;
 
 /**
  * 机器人入站消息队列任务（API 校验入队，消费端再分发给订阅者与 Hook）。

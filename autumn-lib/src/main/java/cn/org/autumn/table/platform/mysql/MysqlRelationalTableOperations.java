@@ -4,14 +4,13 @@ import cn.org.autumn.table.dao.TableDao;
 import cn.org.autumn.table.data.IndexInfo;
 import cn.org.autumn.table.data.TableInfo;
 import cn.org.autumn.table.data.UniqueKeyInfo;
+import cn.org.autumn.table.platform.RelationalTableOperations;
 import cn.org.autumn.table.relational.model.ColumnMeta;
 import cn.org.autumn.table.relational.model.TableMeta;
-import cn.org.autumn.table.platform.RelationalTableOperations;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
-
 import java.util.List;
 import java.util.Map;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 /**
  * MySQL / MariaDB：委托现有 {@link TableDao}（{@link cn.org.autumn.table.relational.provider.QuerySql}）。

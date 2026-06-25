@@ -1,16 +1,15 @@
 package cn.org.autumn.table.relational.dialect.mysql;
 
 import cn.org.autumn.table.annotation.IndexTypeEnum;
-import cn.org.autumn.table.relational.RelationalSchemaSql;
 import cn.org.autumn.table.data.ColumnInfo;
 import cn.org.autumn.table.data.IndexInfo;
 import cn.org.autumn.table.data.TableInfo;
-import org.apache.commons.lang.StringUtils;
-
+import cn.org.autumn.table.relational.RelationalSchemaSql;
 import java.lang.reflect.Field;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import org.apache.commons.lang.StringUtils;
 
 /**
  * MySQL / MariaDB / TiDB / OceanBase MySQL 等主路径：不含内嵌 H2 兼容分支。

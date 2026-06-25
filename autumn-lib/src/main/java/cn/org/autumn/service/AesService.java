@@ -10,17 +10,16 @@ import cn.org.autumn.model.Error;
 import cn.org.autumn.site.EncryptConfigFactory;
 import cn.org.autumn.utils.AES;
 import com.google.gson.Gson;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
-import javax.crypto.KeyGenerator;
-import javax.crypto.SecretKey;
 import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
+import javax.crypto.KeyGenerator;
+import javax.crypto.SecretKey;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 /**
  * AES加密服务
@@ -80,7 +79,7 @@ public class AesService {
             // 验证密钥长度
             int expectedKeyLength = config.getKeySize() / 8;
             if (keyBytes.length != expectedKeyLength) {
-                log.error("AES密钥长度错误，期望: {}字节，实际: {}字节", expectedKeyLength, keyBytes.length);
+                log.error("AES key length error, expected: {} bytes, actual: {} bytes", expectedKeyLength, keyBytes.length);
                 throw new CodeException(Error.AES_KEY_LENGTH_ERROR);
             }
             String keyBase64 = Base64.getEncoder().encodeToString(keyBytes);
@@ -96,7 +95,7 @@ public class AesService {
             // 创建AES密钥对象
             AesKey aesKey = AesKey.builder().session(session).key(keyBase64).vector(vectorBase64).expireTime(expireTime).build();
             if (log.isDebugEnabled()) {
-                log.debug("生成AES密钥，Session: {}, 过期时间: {}", session, expireTime);
+                log.debug("Generated AES key, Session: {}, expire time: {}", session, expireTime);
             }
             return aesKey;
         } catch (CodeException e) {
@@ -105,10 +104,10 @@ public class AesService {
             if (e.getCause() instanceof CodeException) {
                 throw e;
             }
-            log.error("生成AES密钥失败，Session: {}", session, e);
+            log.error("Failed to generate AES key, Session: {}", session, e);
             throw new RuntimeException(new CodeException(Error.AES_KEY_GENERATE_FAILED));
         } catch (Exception e) {
-            log.error("生成AES密钥失败，Session: {}", session, e);
+            log.error("Failed to generate AES key, Session: {}", session, e);
             throw new RuntimeException(new CodeException(Error.AES_KEY_GENERATE_FAILED));
         }
     }
@@ -119,7 +118,7 @@ public class AesService {
             AesKey loadedKey = encryptionLoader.loadAes(session);
             if (loadedKey != null && !loadedKey.expired() && StringUtils.isNotBlank(loadedKey.getKey())) {
                 if (log.isDebugEnabled()) {
-                    log.debug("数据库加载:{}", session);
+                    log.debug("Loaded from database: {}", session);
                 }
                 // 将加载的密钥缓存到Cache和Redis
                 cacheService.put(getConfig(), session, loadedKey);
@@ -155,21 +154,21 @@ public class AesService {
             // 利用短路求值：如果aesKey为null，后面的条件不会执行
             if (aesKey == null || aesKey.expired() || StringUtils.isBlank(aesKey.getKey()) || aesKey.expiring(config.getClientBufferMinutes())) {
                 if (null != aesKey && log.isDebugEnabled())
-                    log.debug("删除重建:{}, KEY:{}, 向量:{}, 过期:{}, 临期:{}, 过期时间:{}", aesKey.getSession(), aesKey.getKey(), aesKey.getVector(), aesKey.expired(), aesKey.expiring(), null != aesKey.getExpireTime() ? new Date(aesKey.getExpireTime()) : "");
+                    log.debug("Delete and recreate: {}, KEY: {}, vector: {}, expired: {}, expiring: {}, expire time: {}", aesKey.getSession(), aesKey.getKey(), aesKey.getVector(), aesKey.expired(), aesKey.expiring(), null != aesKey.getExpireTime() ? new Date(aesKey.getExpireTime()) : "");
                 cacheService.remove(getConfig().getName(), session);
                 aesKey = cacheService.compute(session, () -> create(session), getConfig());
             }
             if (log.isDebugEnabled())
-                log.debug("获取密钥:{}, KEY:{}, 向量:{}, 过期:{}, 临期:{}, 过期时间:{}", aesKey.getSession(), aesKey.getKey(), aesKey.getVector(), aesKey.expired(), aesKey.expiring(), null != aesKey.getExpireTime() ? new Date(aesKey.getExpireTime()) : "");
+                log.debug("Retrieved key: {}, KEY: {}, vector: {}, expired: {}, expiring: {}, expire time: {}", aesKey.getSession(), aesKey.getKey(), aesKey.getVector(), aesKey.expired(), aesKey.expiring(), null != aesKey.getExpireTime() ? new Date(aesKey.getExpireTime()) : "");
             return aesKey;
         } catch (RuntimeException e) {
             if (e.getCause() instanceof CodeException) {
                 throw (CodeException) e.getCause();
             }
-            log.error("获取密钥失败:{}, 错误:{}", session, e.getMessage());
+            log.error("Failed to get key: {}, error: {}", session, e.getMessage());
             throw new CodeException(Error.AES_KEY_NOT_FOUND);
         } catch (Exception e) {
-            log.error("获取密钥失败:{}, 异常:{}", session, e.getMessage());
+            log.error("Failed to get key: {}, exception: {}", session, e.getMessage());
             throw new CodeException(Error.AES_KEY_NOT_FOUND);
         }
     }
@@ -201,7 +200,7 @@ public class AesService {
             }
         }
         if (StringUtils.isBlank(aesKey.getKey())) {
-            log.error("AES密钥格式错误，密钥为空，Session: {}", session);
+            log.error("AES key format error, key empty, Session: {}", session);
             throw new CodeException(Error.AES_KEY_FORMAT_ERROR);
         }
         try {
@@ -209,22 +208,22 @@ public class AesService {
             // 密钥和向量已经是Base64编码，直接使用
             String encrypted = AES.encrypt(data, aesKey.getKey(), aesKey.getVector());
             if (StringUtils.isBlank(encrypted)) {
-                log.error("加密为空:{}, 秘钥:{}, 向量:{}, 内容:{}", session, aesKey.getKey(), aesKey.getVector(), data);
+                log.error("Encryption empty: {}, key: {}, vector: {}, content: {}", session, aesKey.getKey(), aesKey.getVector(), data);
                 throw new CodeException(Error.AES_ENCRYPT_FAILED);
             }
             // 检查密钥是否已过期（但仍在服务端冗余保留时间内）
             if (aesKey.expired() && log.isDebugEnabled()) {
-                log.debug("密钥过期(加密):{}, 过期时间:{}", session, new Date(aesKey.getExpireTime()));
-                log.debug("加密内容:{}, 秘钥:{}, 向量:{}, 内容:{}", session, aesKey.getKey(), aesKey.getVector(), data);
+                log.debug("Key expired (encrypt): {}, expire time: {}", session, new Date(aesKey.getExpireTime()));
+                log.debug("Encrypt content: {}, key: {}, vector: {}, content: {}", session, aesKey.getKey(), aesKey.getVector(), data);
             }
             return encrypted;
         } catch (CodeException e) {
             throw e;
         } catch (IllegalArgumentException e) {
-            log.error("AES密钥或向量格式错误，加密失败，Session: {}, 错误: {}", session, e.getMessage());
+            log.error("AES key or IV format error, encryption failed, Session: {}, error: {}", session, e.getMessage());
             throw new CodeException(Error.AES_KEY_FORMAT_ERROR);
         } catch (Exception e) {
-            log.error("AES加密失败，Session: {}", session, e);
+            log.error("AES encryption failed, Session: {}", session, e);
             throw new CodeException(Error.AES_ENCRYPT_FAILED);
         }
     }
@@ -262,7 +261,7 @@ public class AesService {
             }
         }
         if (StringUtils.isBlank(aesKey.getKey())) {
-            log.error("AES密钥格式错误，密钥为空，Session: {}", session);
+            log.error("AES key format error, key empty, Session: {}", session);
             throw new CodeException(Error.AES_KEY_FORMAT_ERROR);
         }
         try {
@@ -271,23 +270,23 @@ public class AesService {
             String decrypted = AES.decrypt(data, aesKey.getKey(), aesKey.getVector());
             if (StringUtils.isBlank(decrypted)) {
                 if (log.isDebugEnabled()) {
-                    log.debug("解密结果为空, Session: {}", session);
+                    log.debug("Decryption result empty, Session: {}", session);
                 }
                 throw new CodeException(Error.AES_DECRYPTED_DATA_EMPTY);
             }
             // 检查密钥是否已过期（但仍在服务端冗余保留时间内）
             if (aesKey.expired() && log.isDebugEnabled()) {
-                log.debug("密钥过期(解密):{}, 过期时间:{}", session, new Date(aesKey.getExpireTime()));
-                log.debug("解密内容:{}, 秘钥:{}, 向量:{}, 内容:{}", session, aesKey.getKey(), aesKey.getVector(), decrypted);
+                log.debug("Key expired (decrypt): {}, expire time: {}", session, new Date(aesKey.getExpireTime()));
+                log.debug("Decrypt content: {}, key: {}, vector: {}, content: {}", session, aesKey.getKey(), aesKey.getVector(), decrypted);
             }
             return decrypted;
         } catch (CodeException e) {
             throw e;
         } catch (IllegalArgumentException e) {
-            log.error("AES密钥或向量格式错误，解密失败，Session: {}, 错误: {}", session, e.getMessage());
+            log.error("AES key or IV format error, decryption failed, Session: {}, error: {}", session, e.getMessage());
             throw new CodeException(Error.AES_KEY_FORMAT_ERROR);
         } catch (Exception e) {
-            log.error("AES解密失败，Session: {}", session, e);
+            log.error("AES decryption failed, Session: {}", session, e);
             throw new CodeException(Error.AES_DECRYPT_FAILED);
         }
     }

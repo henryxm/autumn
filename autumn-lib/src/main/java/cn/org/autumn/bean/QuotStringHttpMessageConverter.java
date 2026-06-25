@@ -1,16 +1,11 @@
 package cn.org.autumn.bean;
 
+import java.io.IOException;
+import java.nio.charset.Charset;
 import org.springframework.http.HttpInputMessage;
 import org.springframework.http.converter.StringHttpMessageConverter;
 
-import java.io.IOException;
-import java.nio.charset.Charset;
-
 public class QuotStringHttpMessageConverter extends StringHttpMessageConverter {
-
-    public QuotStringHttpMessageConverter() {
-        super();
-    }
 
     public QuotStringHttpMessageConverter(Charset defaultCharset) {
         super(defaultCharset);

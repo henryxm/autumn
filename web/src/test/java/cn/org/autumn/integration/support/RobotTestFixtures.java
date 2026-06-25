@@ -1,7 +1,6 @@
 package cn.org.autumn.integration.support;
 
 import com.alibaba.fastjson.JSONObject;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;

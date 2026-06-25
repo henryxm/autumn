@@ -1,7 +1,6 @@
 package cn.org.autumn.annotation;
 
 import cn.org.autumn.config.InputType;
-
 import java.lang.annotation.*;
 
 @Target({ElementType.FIELD, ElementType.TYPE})

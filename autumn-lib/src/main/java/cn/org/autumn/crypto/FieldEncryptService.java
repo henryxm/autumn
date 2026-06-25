@@ -3,13 +3,6 @@ package cn.org.autumn.crypto;
 import cn.org.autumn.annotation.FieldEncrypt;
 import cn.org.autumn.table.service.MysqlTableService;
 import cn.org.autumn.table.utils.HumpConvert;
-import lombok.Getter;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
-import javax.annotation.PostConstruct;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -20,6 +13,12 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import javax.annotation.PostConstruct;
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 /**
  * 字段存储加解密核心：配置、实体元数据、读写变换与运维辅助。
@@ -82,9 +81,9 @@ public class FieldEncryptService {
         scanPackage();
         if (log.isDebugEnabled()) {
             if (isConfigWriteEncryptEnabled()) {
-                log.debug("字段存储加密配置默认写入:开，密文前缀:{}", prefix);
+                log.debug("Field storage encryption default write: on, ciphertext prefix: {}", prefix);
             } else if (isKeyConfigured()) {
-                log.debug("字段存储加密配置默认写入:关，读路径仍可用密钥解密历史密文，前缀:{}", prefix);
+                log.debug("Field storage encryption default write: off, read path still decrypts legacy ciphertext, prefix: {}", prefix);
             }
         }
     }
@@ -94,19 +93,19 @@ public class FieldEncryptService {
      */
     public void validateAfterBootstrap() {
         if (isConfigWriteEncryptEnabled() && !isKeyConfigured()) {
-            log.warn("autumn.crypto.field.enabled=true 时须配置有效的 autumn.crypto.field.key（Base64 32 字节），或在集群 Redis 中配置密钥");
+            log.warn("autumn.crypto.field.enabled=true requires valid autumn.crypto.field.key (Base64 32 bytes) or cluster Redis key");
             return;
         }
         if (isConfigWriteEncryptEnabled() && !isHashKeyConfigured()) {
-            log.warn("autumn.crypto.field.hash-key 无效或过短");
+            log.warn("autumn.crypto.field.hash-key invalid or too short");
             return;
         }
         if (isWriteEncryptEnabled() && !isKeyConfigured()) {
-            log.warn("字段存储加密写入已开启，但未配置有效密钥");
+            log.warn("Field storage encryption write enabled but no valid key configured");
             return;
         }
         if (isWriteEncryptEnabled() && !isHashKeyConfigured()) {
-            log.warn("字段存储加密写入已开启，但 hash-key 无效");
+            log.warn("Field storage encryption write enabled but hash-key invalid");
             return;
         }
         if (log.isDebugEnabled()) {
@@ -119,7 +118,7 @@ public class FieldEncryptService {
     public void setRuntimeWriteEncryptOverride(Boolean enabled) {
         this.runtimeWriteEncryptOverride = enabled;
         if (log.isDebugEnabled()) {
-            log.debug("字段存储加密运行时写入开关:{}", enabled == null ? "跟随配置(" + configWriteEncryptEnabled + ")" : enabled);
+            log.debug("Field storage encryption runtime write switch: {}", enabled == null ? "follow config (" + configWriteEncryptEnabled + ")" : enabled);
         }
     }
 
@@ -167,14 +166,14 @@ public class FieldEncryptService {
             encryptKey = FieldCrypto.decodeKeyBase64(validKey);
             keySource = source;
         } else if (StringUtils.isNotBlank(keyBase64)) {
-            log.warn("字段加密外部密钥无效，忽略 source:{}", source);
+            log.warn("Field encryption external key invalid, ignoring source: {}", source);
         }
         String validHash = configSource.validHashBase64(hashKeyBase64);
         if (validHash != null) {
             hashKey = FieldCrypto.decodeKeyBase64(validHash);
             hashKeySource = source;
         } else if (StringUtils.isNotBlank(hashKeyBase64)) {
-            log.warn("字段加密外部 hash-key 无效，忽略 source:{}", source);
+            log.warn("Field encryption external hash-key invalid, ignoring source: {}", source);
         } else if (validKey != null && SOURCE_REDIS.equals(source)) {
             hashKey = encryptKey;
             hashKeySource = source;
@@ -680,7 +679,7 @@ public class FieldEncryptService {
         } catch (Exception e) {
             map.put("error", "解密失败，请确认密钥与密文匹配");
             if (log.isDebugEnabled()) {
-                log.debug("字段解密测试失败:{}", e.getMessage());
+                log.debug("Field decryption test failed: {}", e.getMessage());
             }
         }
         return map;
@@ -786,7 +785,7 @@ public class FieldEncryptService {
         try {
             return clazz.getDeclaredField(hashName);
         } catch (NoSuchFieldException e) {
-            log.warn("@FieldEncrypt(searchable=true) 但实体 {} 缺少盲索引字段 {}（须手写 @Column，不会自动建列），等值查询将不可用", clazz.getSimpleName(), hashName);
+            log.warn("@FieldEncrypt(searchable=true) but entity {} missing blind index field {} (requires manual @Column, not auto-created); equality queries unavailable", clazz.getSimpleName(), hashName);
             return null;
         }
     }

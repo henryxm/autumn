@@ -2,21 +2,21 @@ package cn.org.autumn.config;
 
 import cn.org.autumn.annotation.AllowPostConstructDuringInstall;
 import cn.org.autumn.modules.oauth.resolver.EncryptArgumentResolver;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.DependsOn;
-import org.springframework.lang.NonNull;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.web.method.support.HandlerMethodArgumentResolver;
-import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter;
-import org.springframework.web.servlet.mvc.method.annotation.RequestResponseBodyMethodProcessor;
-import org.springframework.web.servlet.config.annotation.*;
-
-import javax.annotation.PostConstruct;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import javax.annotation.PostConstruct;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.DependsOn;
+import org.springframework.lang.NonNull;
+import org.springframework.web.method.support.HandlerMethodArgumentResolver;
+import org.springframework.web.servlet.config.annotation.*;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter;
+import org.springframework.web.servlet.mvc.method.annotation.RequestResponseBodyMethodProcessor;
 
 @Slf4j
 @Configuration
@@ -51,7 +51,7 @@ public class WebConfig implements WebMvcConfigurer {
             try {
                 List<HandlerMethodArgumentResolver> argumentResolvers = requestMappingHandlerAdapter.getArgumentResolvers();
                 if (argumentResolvers != null && !argumentResolvers.isEmpty()) {
-                    List<HandlerMethodArgumentResolver> newResolvers = new java.util.ArrayList<>(argumentResolvers);
+                    List<HandlerMethodArgumentResolver> newResolvers = new ArrayList<>(argumentResolvers);
                     // 移除已存在的EncryptArgumentResolver（如果存在）
                     newResolvers.removeIf(resolver -> resolver instanceof EncryptArgumentResolver);
                     // 查找RequestResponseBodyMethodProcessor的位置
@@ -75,7 +75,7 @@ public class WebConfig implements WebMvcConfigurer {
                     requestMappingHandlerAdapter.setArgumentResolvers(newResolvers);
                 }
             } catch (Exception e) {
-                log.error("设置解析器失败:{}", e.getMessage());
+                log.error("Failed to set resolver:{}", e.getMessage());
             }
         }
     }

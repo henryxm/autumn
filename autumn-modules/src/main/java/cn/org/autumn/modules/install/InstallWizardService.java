@@ -3,14 +3,6 @@ package cn.org.autumn.modules.install;
 import cn.org.autumn.database.DatabaseType;
 import cn.org.autumn.install.InstallRestartCoordinator;
 import cn.org.autumn.modules.install.dto.InstallConnectionForm;
-import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-
-import javax.servlet.http.HttpSession;
 import java.io.File;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
@@ -20,6 +12,7 @@ import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -29,13 +22,18 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import javax.servlet.http.HttpSession;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.stereotype.Service;
 
 @Service
-@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(prefix = "autumn.install", name = "mode", havingValue = "true")
+@ConditionalOnProperty(prefix = "autumn.install", name = "mode", havingValue = "true")
+@Slf4j
 public class InstallWizardService {
-
-    private static final Logger log = LoggerFactory.getLogger(InstallWizardService.class);
-
     private static final int META_TABLE_DISPLAY_LIMIT = 500;
 
     @Value("${" + InstallConstants.CONFIG_PATH + ":" + InstallConstants.DEFAULT_CONFIG_FILE + "}")
@@ -187,7 +185,7 @@ public class InstallWizardService {
         }
     }
 
-    private static String getSchemaForMeta(Connection conn, DatabaseMetaData md) throws java.sql.SQLException {
+    private static String getSchemaForMeta(Connection conn, DatabaseMetaData md) throws SQLException {
         String s = conn.getSchema();
         if (StringUtils.isNotBlank(s)) {
             return s;
@@ -264,7 +262,7 @@ public class InstallWizardService {
         try (Writer w = new OutputStreamWriter(Files.newOutputStream(out.toPath()), StandardCharsets.UTF_8)) {
             w.write(yaml);
         }
-        log.debug("已写入安装配置: {}", out.getAbsolutePath());
+        log.debug("Install config written: {}", out.getAbsolutePath());
 
         Map<String, Object> resp = new LinkedHashMap<>();
         resp.put("ok", true);

@@ -1,33 +1,31 @@
 package cn.org.autumn.modules.sys.service;
 
+import static cn.org.autumn.modules.sys.service.SysConfigService.json_type;
+
 import cn.org.autumn.annotation.ConfigField;
 import cn.org.autumn.annotation.ConfigParam;
 import cn.org.autumn.base.ModuleService;
 import cn.org.autumn.config.CategoryHandler;
 import cn.org.autumn.config.InputType;
 import cn.org.autumn.modules.lan.service.LanguageService;
+import cn.org.autumn.modules.sys.dao.SysCategoryDao;
 import cn.org.autumn.modules.sys.entity.CategoryItem;
 import cn.org.autumn.modules.sys.entity.ConfigItem;
+import cn.org.autumn.modules.sys.entity.SysCategoryEntity;
 import cn.org.autumn.modules.sys.entity.SysConfigEntity;
 import com.google.gson.Gson;
 import com.google.gson.internal.LinkedTreeMap;
-import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import cn.org.autumn.modules.sys.dao.SysCategoryDao;
-import cn.org.autumn.modules.sys.entity.SysCategoryEntity;
-
 import java.lang.reflect.Field;
 import java.util.*;
-
-import static cn.org.autumn.modules.sys.service.SysConfigService.json_type;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 @Service
+@Slf4j
 public class SysCategoryService extends ModuleService<SysCategoryDao, SysCategoryEntity> implements CategoryHandler {
 
-    public Logger log = LoggerFactory.getLogger(getClass());
 
     public static final String default_config = "default";
     public static final String storage_config = "storage_config";
@@ -170,7 +168,7 @@ public class SysCategoryService extends ModuleService<SysCategoryDao, SysCategor
             }
             return map;
         } catch (IllegalAccessException e) {
-            log.error("非法访问:{}", clazz.getName());
+            log.error("Illegal access:{}", clazz.getName());
         }
         return null;
     }
@@ -183,7 +181,7 @@ public class SysCategoryService extends ModuleService<SysCategoryDao, SysCategor
                 return reverse(clazz, "", o, language);
             }
         } catch (ClassNotFoundException e) {
-            log.error("类不存在:{}", sysConfigEntity.getOptions());
+            log.error("Class not found:{}", sysConfigEntity.getOptions());
         }
         return null;
     }

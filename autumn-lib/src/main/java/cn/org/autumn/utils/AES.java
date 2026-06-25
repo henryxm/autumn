@@ -1,12 +1,9 @@
 package cn.org.autumn.utils;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 public class AES {
-
-    public static final Logger log = LoggerFactory.getLogger(AES.class);
-
     public static String encrypt(String content, String password) {
         return Crypto.encrypt(content, null, password, null);
     }

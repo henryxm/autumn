@@ -1,10 +1,9 @@
 package cn.org.autumn.search;
 
 import cn.org.autumn.annotation.SearchType;
-import org.apache.commons.lang.StringUtils;
-
 import java.io.Serializable;
 import java.util.List;
+import org.apache.commons.lang.StringUtils;
 
 public interface ISearch extends Serializable {
     default List<String> getTypes() {

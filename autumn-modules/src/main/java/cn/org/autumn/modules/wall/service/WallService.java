@@ -1,26 +1,25 @@
 package cn.org.autumn.modules.wall.service;
 
+import cn.org.autumn.modules.oauth.service.SecurityRequestService;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysConfigService;
-import cn.org.autumn.modules.oauth.service.SecurityRequestService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.usr.service.UserProfileService;
 import cn.org.autumn.modules.wall.entity.RData;
 import cn.org.autumn.site.HostFactory;
 import cn.org.autumn.site.WallFactory;
 import cn.org.autumn.utils.IPUtils;
+import java.io.IOException;
+import java.util.Enumeration;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import java.util.Enumeration;
 
 @Slf4j
 @Component
@@ -82,7 +81,7 @@ public class WallService {
             String uriWithQuery = StringUtils.isBlank(query) ? uri : (uri + "?" + query);
             if (!securityRequestService.verifyStrong(userAgent, agent, auth, request.getMethod(), uriWithQuery, timestamp, nonce, signature)) {
                 if (shieldService.isPrint()) {
-                    log.debug("强力校验拦截: ip={}, uri={}, auth={}, agentHeader={}, ts={}, nonce={}", ip, uriWithQuery, auth, agent, timestamp, nonce);
+                    log.debug("Strong verification blocked: ip={}, uri={}, auth={}, agentHeader={}, ts={}, nonce={}", ip, uriWithQuery, auth, agent, timestamp, nonce);
                 }
                 if (null != response) {
                     response.setStatus(403);
@@ -187,7 +186,7 @@ public class WallService {
                 ipVisitService.count(ip, rData);
             }
         } catch (Exception e) {
-            log.debug("黑名单过滤错误:{}", e.getMessage());
+            log.debug("Blacklist filter error:{}", e.getMessage());
         }
         return true;
     }

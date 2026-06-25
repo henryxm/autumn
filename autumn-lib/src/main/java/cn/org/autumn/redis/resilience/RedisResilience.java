@@ -1,13 +1,8 @@
 package cn.org.autumn.redis.resilience;
 
 import cn.org.autumn.install.InstallMode;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.core.env.Environment;
-import org.springframework.data.redis.connection.RedisConnection;
-import org.springframework.data.redis.connection.RedisConnectionFactory;
-import org.springframework.stereotype.Component;
-
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
@@ -16,6 +11,12 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.core.env.Environment;
+import org.springframework.data.redis.connection.RedisConnection;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.stereotype.Component;
 
 /**
  * Redis / Redisson 韧性统一入口：熔断、单机降级门控、可组合业务降级。
@@ -251,7 +252,7 @@ public class RedisResilience {
                     || name.contains("QueryTimeoutException")) {
                 return true;
             }
-            if (c instanceof java.io.IOException && !(c instanceof java.io.FileNotFoundException)) {
+            if (c instanceof IOException && !(c instanceof FileNotFoundException)) {
                 return true;
             }
             c = c.getCause();

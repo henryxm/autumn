@@ -1,18 +1,16 @@
 package cn.org.autumn.table;
 
-import javax.annotation.PostConstruct;
-import java.util.Locale;
-
 import cn.org.autumn.bean.EnvBean;
 import cn.org.autumn.config.Config;
-import cn.org.autumn.table.data.InitType;
 import cn.org.autumn.database.DatabaseHolder;
 import cn.org.autumn.database.DatabaseType;
 import cn.org.autumn.install.InstallMode;
+import cn.org.autumn.table.data.InitType;
 import cn.org.autumn.table.service.MysqlTableService;
+import java.util.Locale;
+import javax.annotation.PostConstruct;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
@@ -22,10 +20,8 @@ import org.springframework.stereotype.Service;
  * Initialize table, scan the pointed destination package, generate the tables.
  */
 @Service
+@Slf4j
 public class TableInit {
-
-    private static final Logger log = LoggerFactory.getLogger(TableInit.class);
-
     @Autowired
     EnvBean envBean;
 
@@ -70,7 +66,7 @@ public class TableInit {
         if (t.supportsAnnotationTableSync()) {
             mysqlTableService.create();
         } else {
-            log.warn("当前库类型={} 未接入注解建表，已跳过 TableInit（请使用 Flyway/手工 DDL 或后续扩展方言）。", t);
+            log.warn("Database type={} has no annotation DDL support, TableInit skipped (use Flyway/manual DDL or extend dialect).", t);
         }
     }
 
@@ -85,11 +81,11 @@ public class TableInit {
 
     public void create(Class<?> clazz, InitType type) {
         if (InstallMode.isActive(springEnvironment)) {
-            log.warn("安装向导模式下跳过单表注解建表: {}", clazz.getName());
+            log.warn("Install wizard mode, skipped single-table annotation DDL: {}", clazz.getName());
             return;
         }
         if (!databaseHolder.getType().supportsAnnotationTableSync()) {
-            log.warn("跳过单表 {} 的注解建表：当前库类型未支持", clazz.getName());
+            log.warn("Skipped annotation DDL for table {}: database type not supported", clazz.getName());
             return;
         }
         mysqlTableService.create(clazz, type);

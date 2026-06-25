@@ -1,18 +1,16 @@
 package cn.org.autumn.site;
 
+import cn.org.autumn.database.CrudGuard;
 import cn.org.autumn.utils.SpringContextUtils;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.context.ApplicationContext;
-import org.springframework.core.annotation.Order;
-
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang.StringUtils;
+import org.springframework.context.ApplicationContext;
+import org.springframework.core.annotation.Order;
 
 /**
  * @author mac
@@ -120,6 +118,9 @@ public class Factory {
                     Method m = obj.getClass().getMethod(name);
                     m.invoke(obj);
                 } catch (Exception e) {
+                    if (CrudGuard.suppress(e, obj.getClass().getSimpleName() + "." + name)) {
+                        continue;
+                    }
                     log.error("{}.{}", obj.getClass().getSimpleName(), name, e);
                 }
             }

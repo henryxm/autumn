@@ -1,5 +1,7 @@
 package cn.org.autumn.modules.job.service;
 
+import static cn.org.autumn.modules.sys.service.SysMenuService.getSystemMenuKey;
+
 import cn.org.autumn.annotation.TaskAware;
 import cn.org.autumn.base.ModuleService;
 import cn.org.autumn.modules.job.dao.ScheduleJobDao;
@@ -14,6 +16,8 @@ import cn.org.autumn.utils.Query;
 import cn.org.autumn.utils.SpringContextUtils;
 import com.baomidou.mybatisplus.mapper.EntityWrapper;
 import com.baomidou.mybatisplus.plugins.Page;
+import java.lang.reflect.Method;
+import java.util.*;
 import org.apache.commons.lang.StringUtils;
 import org.quartz.CronTrigger;
 import org.quartz.Scheduler;
@@ -21,11 +25,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.DependsOn;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.lang.reflect.Method;
-import java.util.*;
-
-import static cn.org.autumn.modules.sys.service.SysMenuService.getSystemMenuKey;
 
 @DependsOn("springContextUtils")
 @Service

@@ -6,13 +6,12 @@ import cn.org.autumn.table.annotation.sql.CharacterSet;
 import cn.org.autumn.table.annotation.sql.Collation;
 import cn.org.autumn.table.relational.model.ColumnMeta;
 import cn.org.autumn.table.utils.HumpConvert;
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.lang.WordUtils;
-
 import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.util.Date;
 import java.util.Locale;
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.WordUtils;
 
 /**
  * 用于存放创建表的字段信息

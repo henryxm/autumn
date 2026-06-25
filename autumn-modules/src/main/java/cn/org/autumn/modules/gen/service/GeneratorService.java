@@ -7,25 +7,24 @@ import cn.org.autumn.modules.lan.service.LanguageService;
 import cn.org.autumn.modules.sys.entity.SysMenuEntity;
 import cn.org.autumn.modules.sys.service.SysMenuService;
 import cn.org.autumn.site.InitFactory;
-import cn.org.autumn.table.platform.RelationalTableOperations;
 import cn.org.autumn.table.data.ColumnInfo;
 import cn.org.autumn.table.data.IndexInfo;
 import cn.org.autumn.table.data.TableInfo;
 import cn.org.autumn.table.data.UniqueKeyInfo;
+import cn.org.autumn.table.platform.RelationalTableOperations;
 import cn.org.autumn.table.relational.model.ColumnMeta;
 import cn.org.autumn.table.relational.model.TableMeta;
 import cn.org.autumn.utils.PageUtils;
 import cn.org.autumn.utils.Query;
 import com.baomidou.mybatisplus.plugins.Page;
 import com.baomidou.mybatisplus.plugins.pagination.PageHelper;
+import java.io.ByteArrayOutputStream;
+import java.util.*;
+import java.util.zip.ZipOutputStream;
 import org.apache.commons.io.IOUtils;
 import org.apache.velocity.app.Velocity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
-import java.io.ByteArrayOutputStream;
-import java.util.*;
-import java.util.zip.ZipOutputStream;
 
 /**
  * 代码生成器

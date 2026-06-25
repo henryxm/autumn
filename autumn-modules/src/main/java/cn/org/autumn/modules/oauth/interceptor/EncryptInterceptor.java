@@ -10,6 +10,11 @@ import cn.org.autumn.model.Response;
 import cn.org.autumn.service.AesService;
 import cn.org.autumn.service.RsaService;
 import com.google.gson.Gson;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.Collections;
+import java.util.List;
+import javax.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,12 +30,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
-
-import javax.servlet.http.HttpServletRequest;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.util.Collections;
-import java.util.List;
 
 /**
  * AES加密解密拦截器
@@ -79,7 +78,7 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
     @Override
     public Object beforeBodyWrite(@Nullable Object body, @NonNull MethodParameter returnType, @NonNull MediaType selectedContentType, @NonNull Class<? extends HttpMessageConverter<?>> selectedConverterType, @NonNull ServerHttpRequest request, @NonNull ServerHttpResponse response) {
         if (null != body && log.isDebugEnabled()) {
-            log.debug("原始返回:{}", gson.toJson(body));
+            log.debug("Original response:{}", gson.toJson(body));
         }
         // 检查请求是否被加密
         HttpServletRequest servlet = getHttpServletRequest(request);
@@ -107,7 +106,7 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
             if (endpointAnnotation != null && endpointAnnotation.force()) {
                 // 强制加密验证：检查session是否为空
                 if (StringUtils.isBlank(session)) {
-                    log.error("强制加密接口缺少Session，方法: {}", controllerMethod.getName());
+                    log.error("Mandatory encryption endpoint missing Session, method: {}", controllerMethod.getName());
                     return Response.error(Error.FORCE_ENCRYPT_SESSION_REQUIRED);
                 }
             }
@@ -148,11 +147,11 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
             body = response(targetBody, encrypt, algorithm, session);
             long end = System.currentTimeMillis();
             if (log.isDebugEnabled()) {
-                log.debug("加密长度:{}, 耗时:{}毫秒", json.length(), end - start);
-                log.debug("加密返回:{}, 内容:{}, 密文:{}", session, json, encrypt);
+                log.debug("Encrypted length:{}, elapsed:{}ms", json.length(), end - start);
+                log.debug("Encrypted response: session={}, content={}, ciphertext={}", session, json, encrypt);
             }
         } catch (Exception e) {
-            log.error("加密失败: {}, URI: {}, 错误: {}", session, uri, e.getMessage());
+            log.error("Encryption failed: session={}, URI={}, error={}", session, uri, e.getMessage());
             return Response.error(e);
         }
         return body;
@@ -287,7 +286,7 @@ public class EncryptInterceptor implements HandlerInterceptor, InterceptorHandle
             }
             // 如果所有父类都没有找到字段，记录警告但不抛出异常
             if (log.isDebugEnabled())
-                log.warn("无法设置字段 {} 的值，字段不存在或无法访问", fieldName);
+                log.warn("Cannot set field {} value, field missing or inaccessible", fieldName);
         }
     }
 

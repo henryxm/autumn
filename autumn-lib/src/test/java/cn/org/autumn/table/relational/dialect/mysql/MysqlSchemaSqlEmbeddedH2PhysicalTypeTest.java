@@ -1,14 +1,13 @@
 package cn.org.autumn.table.relational.dialect.mysql;
 
+import static org.junit.Assert.assertEquals;
+
 import cn.org.autumn.table.annotation.Column;
 import cn.org.autumn.table.data.ColumnInfo;
 import cn.org.autumn.table.data.DataType;
 import cn.org.autumn.table.relational.model.ColumnMeta;
-import org.junit.Test;
-
 import java.lang.reflect.Field;
-
-import static org.junit.Assert.assertEquals;
+import org.junit.Test;
 
 public class MysqlSchemaSqlEmbeddedH2PhysicalTypeTest {
 

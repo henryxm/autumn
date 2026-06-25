@@ -1,10 +1,9 @@
 package cn.org.autumn.modules.spm.entity;
 
-import com.baomidou.mybatisplus.annotations.*;
 import cn.org.autumn.table.annotation.*;
-import org.apache.commons.lang.StringUtils;
-
+import com.baomidou.mybatisplus.annotations.*;
 import java.io.Serializable;
+import org.apache.commons.lang.StringUtils;
 
 /**
  * 超级位置模型

@@ -6,13 +6,12 @@ import cn.org.autumn.utils.PageUtils;
 import cn.org.autumn.utils.R;
 import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiImplicitParams;
+import java.util.List;
+import java.util.Map;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-import java.util.Map;
 
 @Controller
 @RequestMapping({"/sys/log", "/api"})

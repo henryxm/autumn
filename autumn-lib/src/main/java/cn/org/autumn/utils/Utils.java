@@ -1,13 +1,13 @@
 package cn.org.autumn.utils;
 
-import javax.servlet.http.HttpServletRequest;
+import static com.baomidou.mybatisplus.toolkit.StringUtils.UTF8;
+
 import java.net.URI;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.util.Enumeration;
 import java.util.Locale;
-
-import static com.baomidou.mybatisplus.toolkit.StringUtils.UTF8;
+import javax.servlet.http.HttpServletRequest;
 
 public class Utils {
     public static boolean parseBoolean(String s) {

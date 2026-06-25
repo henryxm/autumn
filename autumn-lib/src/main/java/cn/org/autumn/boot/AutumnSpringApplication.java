@@ -1,13 +1,12 @@
 package cn.org.autumn.boot;
 
+import cn.org.autumn.config.JvmRestartHandler;
 import cn.org.autumn.install.InstallJvmRestartCleanupCoordinator;
 import cn.org.autumn.install.InstallRestartCoordinator;
-import cn.org.autumn.config.JvmRestartHandler;
+import java.util.List;
 import org.springframework.boot.SpringApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.core.env.Environment;
-
-import java.util.List;
 
 /**
  * Autumn 应用入口封装：首次 {@link SpringApplication#run}，并在 {@code autumn.install.mode=true} 时

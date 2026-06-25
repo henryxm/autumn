@@ -2,21 +2,20 @@ package cn.org.autumn.datasources;
 
 import com.alibaba.druid.pool.DruidDataSource;
 import com.alibaba.druid.spring.boot.autoconfigure.DruidDataSourceBuilder;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
+import javax.sql.DataSource;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.properties.bind.Bindable;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.core.env.Environment;
-
-import javax.sql.DataSource;
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.Map;
 
 /**
  * 配置多数据源

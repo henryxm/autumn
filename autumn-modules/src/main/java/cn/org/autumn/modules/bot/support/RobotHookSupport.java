@@ -6,15 +6,14 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonSyntaxException;
-import org.apache.commons.lang.StringUtils;
-
-import javax.crypto.Mac;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import javax.crypto.spec.SecretKeySpec;
 import java.net.InetAddress;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import org.apache.commons.lang.StringUtils;
 
 public final class RobotHookSupport {
 

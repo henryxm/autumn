@@ -1,24 +1,24 @@
 package cn.org.autumn.config;
 
+import cn.org.autumn.database.CrudGuard;
+import cn.org.autumn.database.CrudInterceptor;
 import cn.org.autumn.database.DatabaseHolder;
 import cn.org.autumn.model.StubMapper;
 import cn.org.autumn.service.DefaultMapper;
 import com.baomidou.mybatisplus.entity.GlobalConfiguration;
 import com.baomidou.mybatisplus.plugins.PaginationInterceptor;
 import com.baomidou.mybatisplus.toolkit.GlobalConfigUtils;
+import java.util.Date;
+import java.util.Locale;
 import org.apache.commons.lang.StringUtils;
 import org.apache.ibatis.plugin.Interceptor;
 import org.apache.ibatis.type.JdbcType;
 import org.apache.ibatis.type.TypeHandlerRegistry;
 import org.mybatis.spring.boot.autoconfigure.ConfigurationCustomizer;
-
-import java.util.Date;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
-
-import java.util.Locale;
 
 @Configuration
 public class MybatisPlusConfig {
@@ -106,6 +106,11 @@ public class MybatisPlusConfig {
     /**
      * 由 Spring Boot MyBatis 自动挂到 SqlSessionFactory（见 mybatis-spring-boot-starter）。
      */
+    @Bean
+    public Interceptor databaseCrudWriteInterceptor(CrudGuard crudGuard) {
+        return new CrudInterceptor(crudGuard);
+    }
+
     @Bean
     public Interceptor booleanNumericParameterInterceptor(BooleanNumericTypeHandler handler) {
         return new BooleanNumericParameterInterceptor(handler);

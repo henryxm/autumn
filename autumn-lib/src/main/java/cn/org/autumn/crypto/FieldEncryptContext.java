@@ -1,5 +1,7 @@
 package cn.org.autumn.crypto;
 
+import java.util.function.Supplier;
+
 /**
  * 控制 Service 层字段加解密是否跳过（如 {@link FieldEncryptContext#runSkip} 内读取密文原文）。
  */
@@ -23,7 +25,7 @@ public final class FieldEncryptContext {
         }
     }
 
-    public static <T> T runSkip(java.util.function.Supplier<T> action) {
+    public static <T> T runSkip(Supplier<T> action) {
         setSkip(true);
         try {
             return action.get();

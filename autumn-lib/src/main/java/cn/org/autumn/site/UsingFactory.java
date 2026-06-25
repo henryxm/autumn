@@ -3,11 +3,6 @@ package cn.org.autumn.site;
 import cn.org.autumn.config.UsingHandler;
 import cn.org.autumn.model.Using;
 import com.google.gson.Gson;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
-
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -15,6 +10,10 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
@@ -48,7 +47,7 @@ public class UsingFactory extends Factory {
             list = getOrderList(UsingHandler.class);
         }
         if (null == list || list.isEmpty())
-            log.debug("无实例");
+            log.debug("No instance");
         for (UsingHandler handler : list) {
             if (handler.using(value))
                 return true;
@@ -65,7 +64,7 @@ public class UsingFactory extends Factory {
             base += "/";
         String url = base + "sys/using";
         if (log.isDebugEnabled())
-            log.debug("构建URL: base={}, 最终URL={}", base, url);
+            log.debug("Built URL: base={}, final URL={}", base, url);
         String result = "";
         try {
             URL urlObj = new URL(url);
@@ -86,7 +85,7 @@ public class UsingFactory extends Factory {
             // 读取响应
             int responseCode = connection.getResponseCode();
             if (log.isDebugEnabled())
-                log.debug("HTTP请求响应码: {}, URL: {}", responseCode, url);
+                log.debug("HTTP response code: {}, URL: {}", responseCode, url);
 
             if (responseCode == HttpURLConnection.HTTP_OK) {
                 try (BufferedReader br = new BufferedReader(new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8))) {
@@ -97,12 +96,12 @@ public class UsingFactory extends Factory {
                     }
                     result = response.toString();
                     if (log.isDebugEnabled())
-                        log.debug("响应内容: {}", result);
+                        log.debug("Response body: {}", result);
                     if (null == gson)
                         gson = new Gson();
                     Using using = gson.fromJson(result, Using.class);
                     if (null == using || using.Uncertain()) {
-                        log.warn("无法确认: URL={}, 响应={}", url, result);
+                        log.warn("Cannot confirm: URL={}, response={}", url, result);
                         return new Using(null, "响应无效");
                     }
                     return using;
@@ -115,11 +114,11 @@ public class UsingFactory extends Factory {
                     while ((responseLine = br.readLine()) != null) {
                         errorResponse.append(responseLine.trim());
                     }
-                    log.warn("检查错误: URL={}, code={}, body={}", url, responseCode, errorResponse);
+                    log.warn("Check error: URL={}, code={}, body={}", url, responseCode, errorResponse);
                 }
             }
         } catch (Exception e) {
-            log.warn("检查异常: URL={}, 错误: {}", url, e.getMessage());
+            log.warn("Check exception: URL={}, error: {}", url, e.getMessage());
         }
         return new Using(null, "网络或响应异常");
     }

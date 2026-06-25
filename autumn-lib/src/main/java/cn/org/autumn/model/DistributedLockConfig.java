@@ -3,9 +3,8 @@ package cn.org.autumn.model;
 import cn.org.autumn.annotation.ConfigField;
 import cn.org.autumn.annotation.ConfigParam;
 import cn.org.autumn.config.InputType;
-import org.apache.commons.lang.StringUtils;
-
 import java.io.Serializable;
+import org.apache.commons.lang.StringUtils;
 
 @ConfigParam(paramKey = DistributedLockConfig.CONFIG_KEY, category = DistributedLockConfig.config, name = "分布式锁配置", description = "配置分布式锁开关、等待时长、租约时长和锁前缀")
 public class DistributedLockConfig implements Serializable {

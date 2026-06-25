@@ -1,16 +1,15 @@
 package cn.org.autumn.modules.lan.entity;
 
 import cn.org.autumn.annotation.Cache;
-import com.baomidou.mybatisplus.annotations.*;
 import cn.org.autumn.table.annotation.*;
-import lombok.Getter;
-import lombok.Setter;
-
+import com.baomidou.mybatisplus.annotations.*;
 import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import lombok.Getter;
+import lombok.Setter;
 
 @Getter
 @Setter

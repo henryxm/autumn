@@ -1,11 +1,5 @@
 package cn.org.autumn.modules.sys.shiro;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
 import cn.org.autumn.cluster.PermissionHandler;
 import cn.org.autumn.modules.bot.entity.RobotEntity;
 import cn.org.autumn.modules.bot.service.RobotService;
@@ -14,17 +8,22 @@ import cn.org.autumn.modules.bot.shiro.RobotAccessTokenToken;
 import cn.org.autumn.modules.bot.shiro.RobotPrincipal;
 import cn.org.autumn.modules.oauth.service.ClientDetailsService;
 import cn.org.autumn.modules.oauth.store.ValueType;
-import cn.org.autumn.modules.sys.service.SysUserRoleService;
-import cn.org.autumn.modules.sys.service.SysUserService;
-import cn.org.autumn.modules.usr.service.UserProfileService;
-import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.dao.SysMenuDao;
 import cn.org.autumn.modules.sys.dao.SysUserDao;
 import cn.org.autumn.modules.sys.entity.SysMenuEntity;
+import cn.org.autumn.modules.sys.entity.SysUserEntity;
+import cn.org.autumn.modules.sys.service.SysUserRoleService;
+import cn.org.autumn.modules.sys.service.SysUserService;
+import cn.org.autumn.modules.usr.service.UserProfileService;
 import cn.org.autumn.utils.Email;
 import cn.org.autumn.utils.IDCard;
 import cn.org.autumn.utils.Phone;
 import cn.org.autumn.utils.QQ;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import org.apache.commons.lang.StringUtils;
 import org.apache.shiro.authc.*;
 import org.apache.shiro.authc.credential.CredentialsMatcher;

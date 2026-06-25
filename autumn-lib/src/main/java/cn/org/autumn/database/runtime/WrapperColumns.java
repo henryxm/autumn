@@ -2,10 +2,9 @@ package cn.org.autumn.database.runtime;
 
 import cn.org.autumn.xss.SQLFilter;
 import com.baomidou.mybatisplus.mapper.EntityWrapper;
-import org.apache.commons.lang.StringUtils;
-
 import java.util.Map;
 import java.util.regex.Pattern;
+import org.apache.commons.lang.StringUtils;
 
 /**
  * 与 {@link RuntimeSqlDialect#columnInWrapper(String)} 一致（默认即 {@link RuntimeSqlDialect#quote(String)}），

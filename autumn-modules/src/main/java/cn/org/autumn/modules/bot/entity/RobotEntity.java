@@ -11,10 +11,9 @@ import cn.org.autumn.table.annotation.Table;
 import cn.org.autumn.table.data.DataType;
 import com.baomidou.mybatisplus.annotations.TableId;
 import com.baomidou.mybatisplus.annotations.TableName;
+import java.util.Date;
 import lombok.Getter;
 import lombok.Setter;
-
-import java.util.Date;
 
 /**
  * 机器人 API 调用身份（{@code bot_robot}），与 {@link cn.org.autumn.modules.sys.entity.SysUserEntity} 为框架层<strong>不同类型</strong>。

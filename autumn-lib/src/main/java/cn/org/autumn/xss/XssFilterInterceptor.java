@@ -1,12 +1,11 @@
 package cn.org.autumn.xss;
 
 import cn.org.autumn.annotation.DisableXssFilter;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import org.springframework.lang.NonNull;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 
 /**
  * XSS过滤拦截器
@@ -17,7 +16,7 @@ public class XssFilterInterceptor implements HandlerInterceptor {
     @Override
     public boolean preHandle(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull Object handler) throws Exception {
         if (handler instanceof HandlerMethod) {
-            HandlerMethod handlerMethod = (org.springframework.web.method.HandlerMethod) handler;
+            HandlerMethod handlerMethod = (HandlerMethod) handler;
             // 检查方法上的注解
             DisableXssFilter methodAnnotation = handlerMethod.getMethod().getAnnotation(DisableXssFilter.class);
             if (methodAnnotation != null && methodAnnotation.value()) {

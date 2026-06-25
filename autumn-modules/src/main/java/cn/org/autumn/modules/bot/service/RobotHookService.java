@@ -12,22 +12,21 @@ import cn.org.autumn.modules.bot.support.RobotHookHttp;
 import cn.org.autumn.modules.bot.support.RobotHookSupport;
 import cn.org.autumn.utils.Uuid;
 import com.google.gson.Gson;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.RandomStringUtils;
-import org.apache.commons.lang.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Lazy;
-import org.springframework.context.annotation.DependsOn;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import javax.annotation.PostConstruct;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import javax.annotation.PostConstruct;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang.RandomStringUtils;
+import org.apache.commons.lang.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.DependsOn;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Service
@@ -237,7 +236,7 @@ public class RobotHookService extends ModuleService<RobotHookDao, RobotHookEntit
     protected <X> void onDeadMessage(String suffix, Class<X> type, X message) {
         if (HOOK_DISPATCH_SUFFIX.equals(suffix) && message instanceof RobotHookDispatchTask) {
             RobotHookDispatchTask task = (RobotHookDispatchTask) message;
-            log.error("Hook回调进入死信: hook={}, robot={}, event={}", task.getHook(), task.getRobot(), task.getEvent());
+            log.error("Hook callback moved to dead letter: hook={}, robot={}, event={}", task.getHook(), task.getRobot(), task.getEvent());
         } else {
             super.onDeadMessage(suffix, type, message);
         }
@@ -266,7 +265,7 @@ public class RobotHookService extends ModuleService<RobotHookDao, RobotHookEntit
             headers.put(RobotHookSupport.headerSignature(), signature);
             boolean ok = RobotHookHttp.postJson(hook.getCallback(), body, headers, HOOK_HTTP_TIMEOUT_MS);
             if (!ok) {
-                log.warn("Hook回调非2xx: hook={}, event={}", hook.getUuid(), task.getEvent());
+                log.warn("Hook callback non-2xx: hook={}, event={}", hook.getUuid(), task.getEvent());
                 return false;
             }
             Date now = new Date();
@@ -275,7 +274,7 @@ public class RobotHookService extends ModuleService<RobotHookDao, RobotHookEntit
             updateById(hook);
             return true;
         } catch (Exception e) {
-            log.warn("Hook回调失败: hook={}, event={}, {}", hook.getUuid(), task.getEvent(), e.getMessage());
+            log.warn("Hook callback failed: hook={}, event={}, {}", hook.getUuid(), task.getEvent(), e.getMessage());
             return false;
         }
     }

@@ -1,5 +1,7 @@
 package cn.org.autumn.modules.oss.cloud;
 
+import static cn.org.autumn.modules.sys.service.SysConfigService.*;
+
 import cn.org.autumn.annotation.ConfigField;
 import cn.org.autumn.annotation.ConfigParam;
 import cn.org.autumn.config.InputType;
@@ -7,14 +9,11 @@ import cn.org.autumn.modules.sys.service.SysCategoryService;
 import cn.org.autumn.validator.group.AliyunGroup;
 import cn.org.autumn.validator.group.QcloudGroup;
 import cn.org.autumn.validator.group.QiniuGroup;
-import org.hibernate.validator.constraints.Range;
-import org.hibernate.validator.constraints.URL;
-
+import java.io.Serializable;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
-import java.io.Serializable;
-
-import static cn.org.autumn.modules.sys.service.SysConfigService.*;
+import org.hibernate.validator.constraints.Range;
+import org.hibernate.validator.constraints.URL;
 
 @ConfigParam(paramKey = CLOUD_STORAGE_CONFIG_KEY, category = SysCategoryService.storage_config, name = category_lang_string + SysCategoryService.storage_config + "_name", description = category_lang_string + SysCategoryService.storage_config + "_description")
 public class CloudStorageConfig implements Serializable {

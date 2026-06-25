@@ -2,24 +2,23 @@ package cn.org.autumn.modules.spm.service;
 
 import cn.org.autumn.annotation.PageAware;
 import cn.org.autumn.config.ClearHandler;
-import cn.org.autumn.site.*;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.spm.entity.SuperPositionModelEntity;
 import cn.org.autumn.modules.spm.service.gen.SuperPositionModelServiceGen;
 import cn.org.autumn.modules.sys.service.SysConfigService;
+import cn.org.autumn.site.*;
 import cn.org.autumn.utils.IPUtils;
+import java.lang.reflect.Field;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.stereotype.Service;
 import org.springframework.ui.Model;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.lang.reflect.Field;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Service
@@ -136,27 +135,27 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
     public String getResourceId(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model, String spm) {
         if (!loadFactory.isDone()) {
             if (log.isDebugEnabled())
-                log.debug("启动中:{}", httpServletRequest.getRequestURL());
+                log.debug("Starting:{}", httpServletRequest.getRequestURL());
             return pageFactory.loading(httpServletRequest, httpServletResponse, model);
         }
 
         String path = pathFactory.get(httpServletRequest, httpServletResponse, model);
         if (StringUtils.isNotEmpty(path)) {
             if (log.isDebugEnabled())
-                log.debug("路径:{}, 工厂:{}", httpServletRequest.getRequestURL(), path);
+                log.debug("Path:{}, factory:{}", httpServletRequest.getRequestURL(), path);
             return path;
         }
 
         if (StringUtils.isEmpty(spm)) {
             if (log.isDebugEnabled())
-                log.debug("默认路径:{}", httpServletRequest.getRequestURL());
+                log.debug("Default path:{}", httpServletRequest.getRequestURL());
             return pageFactory.index(httpServletRequest, httpServletResponse, model);
         }
         SuperPositionModelEntity superPositionModelEntity = getSpm(httpServletRequest, spm);
         if (null != superPositionModelEntity && StringUtils.isNotEmpty(superPositionModelEntity.getResourceId()))
             return superPositionModelEntity.getResourceId();
         if (log.isDebugEnabled())
-            log.debug("无效路径:{}, 返回:404", httpServletRequest.getRequestURL());
+            log.debug("Invalid path:{}, returning 404", httpServletRequest.getRequestURL());
         return pageFactory._404(httpServletRequest, httpServletResponse, model);
     }
 

@@ -1,8 +1,9 @@
 package cn.org.autumn.modules.db.service;
 
+import cn.org.autumn.base.ModuleService;
+import cn.org.autumn.database.CrudGuard;
 import cn.org.autumn.database.DatabaseHolder;
 import cn.org.autumn.database.DatabaseType;
-import cn.org.autumn.base.ModuleService;
 import cn.org.autumn.modules.db.dao.DatabaseBackupDao;
 import cn.org.autumn.modules.db.entity.DatabaseBackupEntity;
 import cn.org.autumn.modules.db.entity.DatabaseBackupStrategyEntity;
@@ -12,13 +13,6 @@ import cn.org.autumn.thread.TagTaskExecutor;
 import cn.org.autumn.thread.TagValue;
 import cn.org.autumn.utils.PageUtils;
 import com.baomidou.mybatisplus.mapper.EntityWrapper;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-
-import javax.annotation.PreDestroy;
-import javax.sql.DataSource;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -30,6 +24,12 @@ import java.util.*;
 import java.util.Date;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
+import javax.annotation.PreDestroy;
+import javax.sql.DataSource;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
 
 /**
  * 使用注入的 {@link DataSource}（通常为动态路由数据源）；连接与 {@link DatabaseHolder#getType()} 均受
@@ -1010,6 +1010,7 @@ public class DatabaseBackupService extends ModuleService<DatabaseBackupDao, Data
      * @return 成功执行的语句数（1=成功, 0=失败/跳过, >1=拆分执行）
      */
     private int executeWithCompatFix(Connection conn, String sql, RestoreTask task, long currentLine) {
+        CrudGuard.enforce();
         try (Statement stmt = conn.createStatement()) {
             stmt.execute(sql);
             return 1;

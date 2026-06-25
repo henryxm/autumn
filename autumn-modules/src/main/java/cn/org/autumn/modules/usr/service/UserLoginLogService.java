@@ -1,22 +1,22 @@
 package cn.org.autumn.modules.usr.service;
 
 import cn.org.autumn.base.ModuleService;
+import cn.org.autumn.database.CrudGuard;
 import cn.org.autumn.exception.AException;
 import cn.org.autumn.model.IP;
 import cn.org.autumn.modules.job.task.LoopJob;
+import cn.org.autumn.modules.usr.dao.UserLoginLogDao;
+import cn.org.autumn.modules.usr.entity.UserLoginLogEntity;
 import cn.org.autumn.modules.usr.entity.UserProfileEntity;
 import cn.org.autumn.utils.PageUtils;
 import cn.org.autumn.utils.Query;
 import com.baomidou.mybatisplus.mapper.EntityWrapper;
 import com.baomidou.mybatisplus.plugins.Page;
+import java.util.*;
+import javax.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.stereotype.Service;
-import cn.org.autumn.modules.usr.dao.UserLoginLogDao;
-import cn.org.autumn.modules.usr.entity.UserLoginLogEntity;
-
-import javax.servlet.http.HttpServletRequest;
-import java.util.*;
 
 @Slf4j
 @Service
@@ -96,7 +96,7 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
             page.setTotal(total);
             return new PageUtils(page);
         } catch (Exception e) {
-            log.error("查询错误:{}", e.getMessage());
+            log.error("Query error:{}", e.getMessage());
             return null;
         }
     }
@@ -279,7 +279,7 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
         ew.lt(columnInWrapper("create"), before);
         int n = baseMapper.delete(ew);
         if (n > 0 && log.isInfoEnabled()) {
-            log.debug("定时清理登录日志：删除 {} 天以前的记录 {} 条", days, n);
+            log.debug("Scheduled login log cleanup: deleted {} records older than {} days", days, n);
         }
         return n;
     }
@@ -310,29 +310,33 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
     }
 
     public void login(String uuid, String account, boolean allow, String way, String reason, String host, String ip, String session, String path, String agent) {
-        try {
-            if (!isIpAllowed(uuid, ip))
-                allow = false;
-            UserLoginLogEntity entity = new UserLoginLogEntity();
-            entity.setUuid(uuid);
-            entity.setAccount(account);
-            entity.setLogout(false);
-            entity.setAllow(allow);
-            entity.setWhite(false);
-            entity.setHost(host);
-            entity.setIp(ip);
-            entity.setPath(path);
-            entity.setSession(session);
-            if (null != agent && agent.length() > 500)
-                agent = agent.substring(0, 500);
-            entity.setAgent(agent);
-            entity.setWay(way);
-            entity.setReason(reason);
-            entity.setCreate(new Date());
-            insert(entity);
-        } catch (Throwable e) {
-            log.warn("保存错误:{}, 账号:{}, 允许:{}, 方式:{}, 原因:{}, IP:{}, 代理:{}, 错误:{}", uuid, account, allow, way, reason, ip, agent, e.getMessage());
-        }
+        final String agentValue = (null != agent && agent.length() > 500) ? agent.substring(0, 500) : agent;
+        CrudGuard.opt(() -> {
+            try {
+                boolean allowed = allow;
+                if (!isIpAllowed(uuid, ip))
+                    allowed = false;
+                UserLoginLogEntity entity = new UserLoginLogEntity();
+                entity.setUuid(uuid);
+                entity.setAccount(account);
+                entity.setLogout(false);
+                entity.setAllow(allowed);
+                entity.setWhite(false);
+                entity.setHost(host);
+                entity.setIp(ip);
+                entity.setPath(path);
+                entity.setSession(session);
+                entity.setAgent(agentValue);
+                entity.setWay(way);
+                entity.setReason(reason);
+                entity.setCreate(new Date());
+                insert(entity);
+            } catch (Throwable e) {
+                if (!CrudGuard.suppress(e, "登录日志")) {
+                    log.warn("Save failed: uuid={}, account={}, allowed={}, way={}, reason={}, IP={}, agent={}, error={}", uuid, account, allow, way, reason, ip, agentValue, e.getMessage());
+                }
+            }
+        });
         if (!allow) {
             throw new AException("登录限制");
         }
@@ -379,22 +383,25 @@ public class UserLoginLogService extends ModuleService<UserLoginLogDao, UserLogi
     }
 
     public void logout(String uuid, String host, String ip, String session, String agent) {
-        try {
-            UserLoginLogEntity entity = new UserLoginLogEntity();
-            entity.setUuid(uuid);
-            entity.setCreate(new Date());
-            entity.setAllow(true);
-            entity.setWhite(false);
-            entity.setLogout(true);
-            entity.setHost(host);
-            entity.setIp(ip);
-            entity.setSession(session);
-            if (null != agent && agent.length() > 500)
-                agent = agent.substring(0, 500);
-            entity.setAgent(agent);
-            insert(entity);
-        } catch (Throwable e) {
-            log.warn("退出错误:{}, IP:{}, 代理:{}, 错误:{}", uuid, ip, agent, e.getMessage());
-        }
+        final String agentValue = (null != agent && agent.length() > 500) ? agent.substring(0, 500) : agent;
+        CrudGuard.opt(() -> {
+            try {
+                UserLoginLogEntity entity = new UserLoginLogEntity();
+                entity.setUuid(uuid);
+                entity.setCreate(new Date());
+                entity.setAllow(true);
+                entity.setWhite(false);
+                entity.setLogout(true);
+                entity.setHost(host);
+                entity.setIp(ip);
+                entity.setSession(session);
+                entity.setAgent(agentValue);
+                insert(entity);
+            } catch (Throwable e) {
+                if (!CrudGuard.suppress(e, "退出日志")) {
+                    log.warn("Logout error: uuid={}, IP={}, agent={}, error={}", uuid, ip, agentValue, e.getMessage());
+                }
+            }
+        });
     }
 }

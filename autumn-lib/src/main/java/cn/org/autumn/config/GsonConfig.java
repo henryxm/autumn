@@ -2,15 +2,14 @@ package cn.org.autumn.config;
 
 import cn.org.autumn.gson.FlexibleEnumGsonTypeAdapterFactory;
 import com.google.gson.*;
-import lombok.Getter;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-
 import java.lang.reflect.Type;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.TimeZone;
+import lombok.Getter;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 
 /**
  * Gson配置类

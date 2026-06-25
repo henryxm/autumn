@@ -4,10 +4,9 @@ import cn.org.autumn.modules.sys.dao.sql.SysRoleMenuDaoSql;
 import cn.org.autumn.modules.sys.entity.SysRoleMenuEntity;
 import cn.org.autumn.mybatis.SelectInLangDriver;
 import com.baomidou.mybatisplus.mapper.BaseMapper;
+import java.util.List;
 import org.apache.ibatis.annotations.*;
 import org.springframework.stereotype.Repository;
-
-import java.util.List;
 
 @Mapper
 @Repository

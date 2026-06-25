@@ -1,11 +1,10 @@
 package cn.org.autumn.site;
 
 import cn.org.autumn.config.DomainHandler;
-import org.apache.commons.lang.StringUtils;
-import org.springframework.stereotype.Component;
-
 import java.util.ArrayList;
 import java.util.List;
+import org.apache.commons.lang.StringUtils;
+import org.springframework.stereotype.Component;
 
 @Component
 public class DomainFactory extends Factory {

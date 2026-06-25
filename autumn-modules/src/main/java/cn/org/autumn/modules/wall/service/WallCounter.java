@@ -4,11 +4,10 @@ import cn.org.autumn.base.ModuleService;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.wall.entity.RData;
 import com.baomidou.mybatisplus.mapper.BaseMapper;
-import lombok.extern.slf4j.Slf4j;
-
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public abstract class WallCounter<M extends BaseMapper<T>, T> extends ModuleService<M, T> implements LoopJob.OneMinute, LoopJob.OneDay {

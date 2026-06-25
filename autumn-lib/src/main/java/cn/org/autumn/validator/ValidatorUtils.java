@@ -1,11 +1,10 @@
 package cn.org.autumn.validator;
 
 import cn.org.autumn.exception.AException;
-
+import java.util.Set;
 import javax.validation.ConstraintViolation;
 import javax.validation.Validation;
 import javax.validation.Validator;
-import java.util.Set;
 
 /**
  * 校验工具类

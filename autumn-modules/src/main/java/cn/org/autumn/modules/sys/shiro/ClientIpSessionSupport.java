@@ -1,11 +1,10 @@
 package cn.org.autumn.modules.sys.shiro;
 
 import cn.org.autumn.utils.IPUtils;
+import javax.servlet.http.HttpServletRequest;
 import org.apache.commons.lang.StringUtils;
 import org.apache.shiro.session.Session;
 import org.apache.shiro.session.mgt.SimpleSession;
-
-import javax.servlet.http.HttpServletRequest;
 
 /**
  * Shiro 会话「访问来源」与 {@link IPUtils#getIp(HttpServletRequest)} 对齐，避免 Docker / 反代后仅记录容器内网 IP。

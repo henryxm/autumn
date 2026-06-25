@@ -1,14 +1,13 @@
 package cn.org.autumn.modules.safe.support;
 
-import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.StringUtils;
-
 import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
 import java.security.PublicKey;
 import java.security.Signature;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang.StringUtils;
 
 @Slf4j
 public final class PayBiometricSignatureSupport {
@@ -29,7 +28,7 @@ public final class PayBiometricSignatureSupport {
             signature.update(challenge.getBytes(StandardCharsets.UTF_8));
             return signature.verify(Base64.getDecoder().decode(signatureBase64.trim()));
         } catch (Exception e) {
-            log.debug("生物识别验签失败: {}", e.getMessage());
+            log.debug("Biometric signature verification failed: {}", e.getMessage());
             return false;
         }
     }

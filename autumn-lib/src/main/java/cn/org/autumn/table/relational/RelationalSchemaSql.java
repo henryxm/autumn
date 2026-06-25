@@ -3,7 +3,6 @@ package cn.org.autumn.table.relational;
 import cn.org.autumn.table.data.ColumnInfo;
 import cn.org.autumn.table.data.IndexInfo;
 import cn.org.autumn.table.data.TableInfo;
-
 import java.util.List;
 import java.util.Map;
 

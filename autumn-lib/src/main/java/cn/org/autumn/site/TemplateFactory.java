@@ -5,14 +5,13 @@ import cn.org.autumn.loader.LoaderFactory;
 import cn.org.autumn.utils.SpringContextUtils;
 import freemarker.cache.ClassTemplateLoader;
 import freemarker.cache.TemplateLoader;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 
 /**
  * 装载资源模板，每个artifact仅需一个类实现该接口即可
@@ -40,7 +39,7 @@ public class TemplateFactory extends Factory {
     public TemplateLoader getTemplateLoader() {
         List<TemplateLoader> templateLoaders = new ArrayList<>();
         Map<Integer, List<Template>> map = getOrdered(Template.class, "getTemplateLoader");
-        if (null != map && map.size() > 0) {
+        if (null != map && !map.isEmpty()) {
             for (Map.Entry<Integer, List<Template>> entry : map.entrySet()) {
                 List<Template> templates = entry.getValue();
                 for (Template template : templates) {
@@ -50,13 +49,15 @@ public class TemplateFactory extends Factory {
         }
 
         ApplicationContext applicationContext = SpringContextUtils.getApplicationContext();
-        Map<String, LoaderFactory.Loader> map1 = applicationContext.getBeansOfType(LoaderFactory.Loader.class);
-        for (LoaderFactory.Loader loader : map1.values()) {
+        appendLegacyLoaders(templateLoaders, applicationContext);
+        return new DynamicTemplateLoader(templateLoaders.toArray(new TemplateLoader[0]));
+    }
+
+    @SuppressWarnings("deprecation")
+    private static void appendLegacyLoaders(List<TemplateLoader> templateLoaders, ApplicationContext applicationContext) {
+        Map<String, LoaderFactory.Loader> loaders = applicationContext.getBeansOfType(LoaderFactory.Loader.class);
+        for (LoaderFactory.Loader loader : loaders.values()) {
             templateLoaders.add(loader.get());
         }
-
-        TemplateLoader[] templateLoaders1 = new TemplateLoader[templateLoaders.size()];
-        templateLoaders.toArray(templateLoaders1);
-        return new DynamicTemplateLoader(templateLoaders1);
     }
 }

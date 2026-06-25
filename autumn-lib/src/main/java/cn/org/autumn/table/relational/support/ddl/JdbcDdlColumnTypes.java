@@ -1,9 +1,8 @@
 package cn.org.autumn.table.relational.support.ddl;
 
 import cn.org.autumn.table.data.ColumnInfo;
-import org.apache.commons.lang.StringUtils;
-
 import java.util.Locale;
+import org.apache.commons.lang.StringUtils;
 
 /**
  * 将实体侧 {@link ColumnInfo}（MySQL 风格逻辑类型）映射为各 JDBC 方言物理类型片段。
