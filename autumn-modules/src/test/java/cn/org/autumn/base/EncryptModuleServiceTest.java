@@ -12,6 +12,7 @@ import cn.org.autumn.site.EncryptConfigFactory;
 import cn.org.autumn.table.annotation.Column;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.repository.IRepository;
 import org.junit.Assert;
@@ -147,6 +148,23 @@ public class EncryptModuleServiceTest {
         PlainChainQueryTestService chainService = new PlainChainQueryTestService(plainRowMapper(row));
         ReflectionTestUtils.setField(chainService, "encrypt", fieldEncryptService);
         Assert.assertEquals("ENC$v1$looks-like-cipher", chainService.lambdaQuery().one().note);
+    }
+
+    @Test
+    public void pageAndSelectPageDecryptWithoutStackOverflow() {
+        EncryptSampleEntity cipher = new EncryptSampleEntity();
+        cipher.secret = "page-plain";
+        fieldEncryptService.onWrite(cipher);
+        ChainQueryTestService chainService = new ChainQueryTestService(singleRowMapper(cipher));
+        ReflectionTestUtils.setField(chainService, "encrypt", fieldEncryptService);
+
+        Page<EncryptSampleEntity> page = new Page<>(1, 10);
+        Page<EncryptSampleEntity> fromPage = chainService.page(page, Wrappers.emptyWrapper());
+        Assert.assertEquals("page-plain", fromPage.getRecords().get(0).secret);
+
+        Page<EncryptSampleEntity> page2 = new Page<>(1, 10);
+        Page<EncryptSampleEntity> fromSelectPage = chainService.selectPage(page2, Wrappers.emptyWrapper());
+        Assert.assertEquals("page-plain", fromSelectPage.getRecords().get(0).secret);
     }
 
     private static BaseMapper<EncryptSampleEntity> singleRowMapper(EncryptSampleEntity row) {

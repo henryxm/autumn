@@ -57,7 +57,7 @@ public class CompatibleService<M extends BaseMapper<T>, T> extends DialectServic
     }
 
     public <E extends IPage<T>> E selectPage(E page, Wrapper<T> queryWrapper) {
-        return page(page, queryWrapper);
+        return baseMapper.selectPage(page, queryWrapper);
     }
 
     public <E extends IPage<Map<String, Object>>> E selectMapsPage(E page, Wrapper<T> queryWrapper) {
