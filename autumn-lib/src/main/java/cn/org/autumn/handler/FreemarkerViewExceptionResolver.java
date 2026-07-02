@@ -3,8 +3,13 @@ package cn.org.autumn.handler;
 import cn.org.autumn.config.ApplicationInitializationProgress;
 import cn.org.autumn.model.Error;
 import cn.org.autumn.model.Response;
+import cn.org.autumn.utils.ExceptionUtils;
+import cn.org.autumn.view.ViewTemplateSupport;
 import com.alibaba.fastjson2.JSON;
 import freemarker.template.TemplateException;
+import freemarker.template.TemplateNotFoundException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,8 +18,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.handler.AbstractHandlerExceptionResolver;
 
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -24,6 +27,11 @@ import java.nio.charset.StandardCharsets;
  * <p>
  * 在 {@link ApplicationInitializationProgress} 仍处于启动阶段（未完成 ApplicationRunner 初始化）时，
  * 不因重试次数用尽而落到 500，持续引导至 loading 页，避免启动窗口期出现裸 FM 错误页。
+ * <p>
+ * <b>与视图缺失防护的关系</b>：{@link cn.org.autumn.view.ViewTemplateSupport} 与
+ * {@link ViewNameReturnValueHandler} 已在渲染前拦截大部分缺失页面；本类作为<b>最后一层兜底</b>，
+ * 处理仍漏网的 {@code Circular view path}、{@link TemplateNotFoundException} 等，统一回落
+ * {@link cn.org.autumn.view.ViewTemplateSupport#FALLBACK_404_VIEW}，避免 HTTP 500。
  */
 @Slf4j
 @Component
@@ -38,12 +46,20 @@ public class FreemarkerViewExceptionResolver extends AbstractHandlerExceptionRes
 
     @Override
     protected ModelAndView doResolveException(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) {
+        // 循环视图：前两层未拦住时（如非标准返回值路径），仍返回 404 而非 500
+        if (ExceptionUtils.isCircularViewPathException(ex)) {
+            return resolveMissingView(request, response);
+        }
         Throwable freemarkerThrowable = extractFreemarkerThrowable(ex);
         if (freemarkerThrowable == null) {
             return null;
         }
         if (response.isCommitted()) {
             return new ModelAndView();
+        }
+        if (isMissingTemplate(freemarkerThrowable) && !isApplicationBootstrapping()) {
+            // 应用已就绪后模板仍找不到，视为页面不存在（非启动期资源未加载）
+            return resolveMissingView(request, response);
         }
         logFreemarkerException(request, ex, freemarkerThrowable);
         if (isApiRequest(request)) {
@@ -63,6 +79,31 @@ public class FreemarkerViewExceptionResolver extends AbstractHandlerExceptionRes
         }
         response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
         return new ModelAndView("redirect:" + buildLoadingRedirectTarget(request, retryCount + 1));
+    }
+
+    /** 浏览器返回 404 页；API 请求返回 JSON {@link Error#NOT_FOUND}，不写 ERROR 日志。 */
+    private ModelAndView resolveMissingView(HttpServletRequest request, HttpServletResponse response) {
+        if (log.isDebugEnabled()) {
+            String uri = request != null ? request.getRequestURI() : "-";
+            log.debug("Missing view, return 404: uri={}", uri);
+        }
+        if (isApiRequest(request)) {
+            writeApiNotFound(response);
+            return new ModelAndView();
+        }
+        response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+        return new ModelAndView(ViewTemplateSupport.FALLBACK_404_VIEW);
+    }
+
+    private boolean isMissingTemplate(Throwable throwable) {
+        if (throwable == null) {
+            return false;
+        }
+        if (throwable instanceof TemplateNotFoundException) {
+            return true;
+        }
+        String message = StringUtils.defaultString(throwable.getMessage(), "");
+        return message.contains("TemplateNotFoundException") || message.contains("Template not found");
     }
 
     private boolean isLoadingPageRequest(String requestUri) {
@@ -242,6 +283,24 @@ public class FreemarkerViewExceptionResolver extends AbstractHandlerExceptionRes
             }
         } catch (IOException ioException) {
             log.error("FreeMarker API error response write failed: {}", ioException.getMessage(), ioException);
+        }
+    }
+
+    private void writeApiNotFound(HttpServletResponse response) {
+        if (response == null) {
+            return;
+        }
+        try {
+            if (!response.isCommitted()) {
+                response.resetBuffer();
+                response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                response.setCharacterEncoding("UTF-8");
+                response.setContentType("application/json;charset=UTF-8");
+                response.getWriter().write(JSON.toJSONString(Response.error(Error.NOT_FOUND)));
+                response.getWriter().flush();
+            }
+        } catch (IOException ioException) {
+            log.error("Missing view API response write failed: {}", ioException.getMessage(), ioException);
         }
     }
 }

@@ -203,14 +203,27 @@ public class ExceptionUtils {
     }
 
     /**
-     * 判断是否为循环视图路径异常
+     * 判断是否为 Spring MVC 循环视图路径异常（视图转发 URL 与当前请求 URI 相同）。
+     * <p>
+     * 遍历 cause 链：DispatcherServlet 常将 {@link javax.servlet.ServletException} 包装多层。
      */
     public static boolean isCircularViewPathException(Exception e) {
         if (e == null) {
             return false;
         }
-        String message = e.getMessage();
-        return message != null && message.contains("Circular view path");
+        Throwable current = e;
+        while (current != null) {
+            String message = current.getMessage();
+            if (message != null && message.contains("Circular view path")) {
+                return true;
+            }
+            Throwable next = current.getCause();
+            if (next == current) {
+                break;
+            }
+            current = next;
+        }
+        return false;
     }
 
     /**

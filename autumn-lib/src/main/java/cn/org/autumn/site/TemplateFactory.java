@@ -55,6 +55,10 @@ public class TemplateFactory extends Factory {
 
     @SuppressWarnings("deprecation")
     private static void appendLegacyLoaders(List<TemplateLoader> templateLoaders, ApplicationContext applicationContext) {
+        // Bean 工厂方法执行时 ApplicationContext 可能尚未绑定到 SpringContextUtils，须判空
+        if (applicationContext == null) {
+            return;
+        }
         Map<String, LoaderFactory.Loader> loaders = applicationContext.getBeansOfType(LoaderFactory.Loader.class);
         for (LoaderFactory.Loader loader : loaders.values()) {
             templateLoaders.add(loader.get());
