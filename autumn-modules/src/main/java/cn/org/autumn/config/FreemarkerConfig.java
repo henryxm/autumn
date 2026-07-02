@@ -2,6 +2,7 @@ package cn.org.autumn.config;
 
 import cn.org.autumn.site.ViewFactory;
 import cn.org.autumn.view.NameBasedViewResolver;
+import cn.org.autumn.view.ViewTemplateSupport;
 import freemarker.cache.TemplateLoader;
 import freemarker.template.TemplateException;
 import java.io.IOException;
@@ -46,8 +47,10 @@ public class FreemarkerConfig {
     }
 
     @Bean
-    FreeMarkerViewResolver freeMarkerViewResolver(FreeMarkerProperties properties, ViewFactory viewFactory) {
-        FreeMarkerViewResolver freeMarkerViewResolver = new NameBasedViewResolver(viewFactory);
+    FreeMarkerViewResolver freeMarkerViewResolver(FreeMarkerProperties properties, ViewFactory viewFactory, ViewTemplateSupport viewTemplateSupport) {
+        NameBasedViewResolver freeMarkerViewResolver = new NameBasedViewResolver(viewFactory);
+        // 注入模板校验，与 ViewNameReturnValueHandler 共用 ViewTemplateSupport
+        freeMarkerViewResolver.setViewTemplateSupport(viewTemplateSupport);
         properties.applyToMvcViewResolver(freeMarkerViewResolver);
         return freeMarkerViewResolver;
     }

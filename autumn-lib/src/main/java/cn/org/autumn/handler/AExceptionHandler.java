@@ -89,24 +89,21 @@ public class AExceptionHandler {
     }
 
     /**
-     * 处理Servlet异常（包括循环视图路径异常）
-     * 屏蔽循环视图路径异常的日志输出，但记录到监控中
+     * 处理 Servlet 异常。
+     * <p>
+     * 循环视图路径异常仅面向 REST/API（{@code @RestControllerAdvice} 不处理页面渲染链）；
+     * 页面请求由 {@link FreemarkerViewExceptionResolver} 负责，此处返回 JSON {@link Error#NOT_FOUND} 且不记 ERROR 日志。
      */
     @ExceptionHandler(ServletException.class)
     public ResponseEntity<Response<?>> handleServletException(ServletException e, HttpServletRequest request, HttpServletResponse response) {
         forceJsonContentType(request, response);
-        // 判断是否是循环视图路径异常
         boolean isCircularViewPath = ExceptionUtils.isCircularViewPathException(e);
         if (isCircularViewPath) {
-            // 循环视图路径异常：静默处理，不输出日志
-            // 只在debug模式下记录基本信息用于调试
             if (log.isDebugEnabled()) {
                 log.debug("request method: {}, path: {}, IP: {}, error: circular view path, silently handled", request.getMethod(), request.getRequestURI(), IPUtils.getIp(request));
             }
-            // 返回友好的错误信息，不暴露异常详情
-            return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(Response.error(Error.BAD_REQUEST));
+            return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(Response.error(Error.NOT_FOUND));
         } else {
-            // 其他Servlet异常：正常记录
             if (log.isDebugEnabled()) {
                 log.debug("request method: {}, path: {}, error: {}", request.getMethod(), request.getRequestURI(), e.getMessage(), e);
             }

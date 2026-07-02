@@ -5,6 +5,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
+import cn.org.autumn.utils.ExceptionUtils;
 import freemarker.template.TemplateException;
 import org.junit.Test;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -35,6 +36,13 @@ public class FreemarkerViewExceptionResolverTest {
         FreemarkerViewExceptionResolver r = new FreemarkerViewExceptionResolver();
         Throwable t = (Throwable) ReflectionTestUtils.invokeMethod(r, "extractFreemarkerThrowable", new IllegalStateException("no"));
         assertNull(t);
+    }
+
+    @Test
+    public void circularViewPathRecognizedAsMissingView() {
+        FreemarkerViewExceptionResolver r = new FreemarkerViewExceptionResolver();
+        Exception ex = new Exception("Circular view path [/modules/x/pages/index]: would dispatch back to the current handler URL");
+        assertTrue(ExceptionUtils.isCircularViewPathException(ex));
     }
 
     @Test
