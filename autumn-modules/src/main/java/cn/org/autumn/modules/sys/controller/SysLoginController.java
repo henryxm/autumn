@@ -8,12 +8,11 @@ import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysUserService;
 import cn.org.autumn.modules.usr.service.UserProfileService;
 import cn.org.autumn.site.PageFactory;
-import cn.org.autumn.utils.IPUtils;
+import cn.org.autumn.utils.R;
 import cn.org.autumn.utils.WebPathUtils;
+import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import com.google.code.kaptcha.Constants;
 import com.google.code.kaptcha.Producer;
-import cn.org.autumn.utils.R;
-import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.shiro.authc.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -80,29 +79,26 @@ public class SysLoginController {
     }
 
     private R doLogin(String username, String password, boolean rememberMe, String captcha, HttpServletRequest request) {
-        if (!Config.isDev()) {
-            String kaptcha = ShiroUtils.getKaptcha(Constants.KAPTCHA_SESSION_KEY);
-            if (!captcha.equalsIgnoreCase(kaptcha)) {
-                return R.error("验证码不正确");
+        if (Config.isDev()) {
+            if (StringUtils.isEmpty(username)) {
+                username = "admin";
+            }
+            if (StringUtils.isEmpty(password)) {
+                password = "admin";
             }
         } else {
-            if (StringUtils.isEmpty(username))
-                username = "admin";
-            if (StringUtils.isEmpty(password))
-                password = "admin";
+            R captchaError = SysAuthSupport.validateCaptcha(captcha);
+            if (captchaError != null) {
+                return captchaError;
+            }
         }
 
         try {
             sysUserService.login(username, password, rememberMe);
-            String ip = IPUtils.getIp(request);
-            try {
-                SysUserEntity userEntity = ShiroUtils.getUserEntity();
-                if (null != userEntity) {
-                    userProfileService.updateLoginIp(userEntity.getUuid(), ip, request.getHeader("user-agent"));
-                }
-            } catch (Exception ignored) {
+            SysUserEntity userEntity = ShiroUtils.getUserEntity();
+            if (userEntity != null) {
+                SysAuthSupport.recordLoginProfile(userProfileService, userEntity.getUuid(), request);
             }
-
         } catch (UnknownAccountException e) {
             return R.error(e.getMessage());
         } catch (IncorrectCredentialsException e) {
@@ -113,11 +109,7 @@ public class SysLoginController {
             return R.error("账户验证失败");
         }
 
-        // 登录成功后的入口地址：须保留 Servlet context-path（见 WebPathUtils）。
-        String j = "index.html";
-        if (superPositionModelService.menuWithSpm())
-            j = WebPathUtils.forBrowser(request, "/");
-        return R.ok().put("data", j);
+        return R.ok().put("data", SysAuthSupport.resolvePostLoginRedirect(request, superPositionModelService));
     }
 
     /**

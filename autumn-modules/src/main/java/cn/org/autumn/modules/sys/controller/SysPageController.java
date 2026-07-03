@@ -10,6 +10,7 @@ import cn.org.autumn.modules.spm.interceptor.SpmInterceptor;
 import cn.org.autumn.modules.wall.service.IpWhiteService;
 import cn.org.autumn.modules.wall.site.WallDefault;
 import cn.org.autumn.modules.usr.interceptor.AuthorizationInterceptor;
+import cn.org.autumn.site.AuthPageAttributes;
 import cn.org.autumn.site.PageFactory;
 import cn.org.autumn.site.PluginFactory;
 import cn.org.autumn.utils.WebPathUtils;
@@ -140,6 +141,46 @@ public class SysPageController implements ErrorController {
             target = target + "?" + query;
         }
         return "redirect:" + target;
+    }
+
+    @RequestMapping("register.html")
+    public String register(Model model) {
+        applyAuthPageModel(model);
+        return "register";
+    }
+
+    @RequestMapping("register")
+    public String registerAlias(HttpServletRequest request) {
+        return "redirect:" + WebPathUtils.forBrowser(request, "/register.html");
+    }
+
+    @RequestMapping("forgotpassword.html")
+    public String forgotPassword(Model model) {
+        applyAuthPageModel(model);
+        return "forgotpassword";
+    }
+
+    @RequestMapping("forgotpassword")
+    public String forgotPasswordAlias(HttpServletRequest request) {
+        return "redirect:" + WebPathUtils.forBrowser(request, "/forgotpassword.html");
+    }
+
+    @RequestMapping({"user/service.html", "user/service"})
+    public String userService(Model model) {
+        model.addAttribute("bodyClass", "login-page-v2 legal-page");
+        AuthPageAttributes.apply(model, sysConfigService);
+        return "user/service";
+    }
+
+    @RequestMapping({"user/privacy.html", "user/privacy"})
+    public String userPrivacy(Model model) {
+        model.addAttribute("bodyClass", "login-page-v2 legal-page");
+        AuthPageAttributes.apply(model, sysConfigService);
+        return "user/privacy";
+    }
+
+    private void applyAuthPageModel(Model model) {
+        AuthPageAttributes.apply(model, sysConfigService);
     }
 
     @RequestMapping("main.html")

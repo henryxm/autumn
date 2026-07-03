@@ -780,6 +780,84 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         return sysUserRoleService.isSystemAdministrator(sysUserEntity);
     }
 
+    private static final int PASSWORD_MIN_LENGTH = 6;
+    private static final int PASSWORD_MAX_LENGTH = 64;
+
+    @Transactional(rollbackFor = Exception.class)
+    public SysUserEntity registerSelfAccount(String account, String password) {
+        if (!sysConfigService.isRegisterEnabled()) {
+            throw new IllegalArgumentException("暂未开放注册，请联系管理员");
+        }
+        if (StringUtils.isBlank(account) || StringUtils.isBlank(password)) {
+            throw new IllegalArgumentException("账号或密码不能为空");
+        }
+        account = account.trim();
+        validatePasswordLength(password);
+        validateRegisterAccount(account);
+        if (getUser(account) != null) {
+            throw new IllegalArgumentException("该账号已被注册");
+        }
+        SysUserEntity created = new SysUserEntity();
+        created.setUuid(uuidNamespaceService.allocate());
+        created.setUsername(account);
+        created.setPassword(password);
+        created.setStatus(1);
+        created.setVerify(0);
+        created.setRoleKeys(sysConfigService.getDefaultRoleKeys());
+        if (Phone.isPhone(account)) {
+            created.setMobile(account);
+        } else if (Email.isEmail(account)) {
+            created.setEmail(account);
+        }
+        String deptKey = sysConfigService.getDefaultDepartKey();
+        if (StringUtils.isNotBlank(deptKey)) {
+            SysDeptEntity dept = sysDeptService.getByDeptKey(deptKey);
+            if (dept != null) {
+                created.setDeptKey(dept.getDeptKey());
+            }
+        }
+        save(created);
+        refresh(created);
+        created = dynamicReplaceIconHost(created);
+        userProfileService.from(created);
+        clear(created.getUuid());
+        return created;
+    }
+
+    public void resetPasswordByAccount(String account, String newPassword) throws Exception {
+        if (!sysConfigService.isForgotPasswordEnabled()) {
+            throw new IllegalArgumentException("暂未开放密码重置，请联系管理员");
+        }
+        if (StringUtils.isBlank(account) || StringUtils.isBlank(newPassword)) {
+            throw new IllegalArgumentException("账号或密码不能为空");
+        }
+        account = account.trim();
+        validatePasswordLength(newPassword);
+        SysUserEntity user = getUser(account);
+        if (user == null) {
+            throw new IllegalArgumentException("账号不存在，请检查手机号、邮箱或用户名");
+        }
+        resetPassword(user.getUuid(), newPassword);
+    }
+
+    private void validatePasswordLength(String password) {
+        if (password.length() < PASSWORD_MIN_LENGTH) {
+            throw new IllegalArgumentException("密码长度不能少于" + PASSWORD_MIN_LENGTH + "位");
+        }
+        if (password.length() > PASSWORD_MAX_LENGTH) {
+            throw new IllegalArgumentException("密码长度不能超过" + PASSWORD_MAX_LENGTH + "位");
+        }
+    }
+
+    private void validateRegisterAccount(String account) {
+        if (Phone.isPhone(account) || Email.isEmail(account)) {
+            return;
+        }
+        if (!account.matches("^[a-zA-Z][a-zA-Z0-9_]{3,31}$")) {
+            throw new IllegalArgumentException("用户名需以字母开头，4-32位字母、数字或下划线");
+        }
+    }
+
     /**
      * 强制用户下线（移除该用户的所有活动会话）
      *
