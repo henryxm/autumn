@@ -1,0 +1,1109 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>授权客户端中心</title>
+    <style>
+        :root {
+            --bg-page: #eef1f8;
+            --bg-elevated: #ffffff;
+            --brand-1: #5b6cf0;
+            --brand-2: #7c3aed;
+            --brand-soft: rgba(91, 108, 240, 0.12);
+            --text: #1a1d26;
+            --text-muted: #5c6370;
+            --border: #e8ecf4;
+            --radius: 12px;
+            --radius-sm: 8px;
+            --shadow-sm: 0 1px 3px rgba(26, 29, 38, 0.06);
+            --shadow-md: 0 8px 30px rgba(26, 29, 38, 0.08);
+            --shadow-lg: 0 24px 48px rgba(26, 29, 38, 0.12);
+            --success: #059669;
+            --danger: #dc2626;
+            --warning: #d97706;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            height: 100%; width: 100%; margin: 0;
+            overflow: hidden;
+            background: var(--bg-page);
+            color: var(--text);
+            -webkit-font-smoothing: antialiased;
+        }
+        .container {
+            width: 100%; height: 100%;
+            max-width: none; margin: 0;
+            background: var(--bg-elevated);
+            display: flex; flex-direction: column; overflow: hidden;
+        }
+        .header {
+            position: relative;
+            background: linear-gradient(125deg, #4f5ff7 0%, #6d4bd8 48%, #8b5cf6 100%);
+            color: white;
+            padding: 14px 20px 16px;
+            flex-shrink: 0;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+        .container.mode-edit .header { padding: 10px 16px; }
+        .container.mode-edit .header-sub { display: none; }
+        .container.mode-edit .header h1 { font-size: 1rem; }
+        .header-main { position: relative; flex: 1; min-width: 0; }
+        .header-main h1 {
+            font-size: 1.2rem;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.08);
+        }
+        .header-main p {
+            position: relative;
+            opacity: 0.9;
+            font-size: 12px;
+            margin-top: 2px;
+        }
+        .header::before {
+            content: '';
+            position: absolute; inset: 0;
+            background: radial-gradient(ellipse 80% 120% at 100% 0%, rgba(255,255,255,0.18) 0%, transparent 55%);
+            pointer-events: none;
+        }
+        .header-sub {
+            position: relative;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            justify-content: flex-end;
+            flex-shrink: 0;
+        }
+        .header-actions {
+            position: relative;
+            display: flex;
+            align-items: center;
+            flex-shrink: 0;
+        }
+        .header-doc-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #fff;
+            text-decoration: none;
+            background: rgba(255,255,255,0.16);
+            border: 1px solid rgba(255,255,255,0.35);
+            transition: background 0.2s, border-color 0.2s;
+            white-space: nowrap;
+        }
+        .header-doc-btn:hover {
+            background: rgba(255,255,255,0.28);
+            border-color: rgba(255,255,255,0.55);
+            color: #fff;
+            text-decoration: none;
+        }
+        .header-doc-btn svg { flex-shrink: 0; opacity: 0.9; }
+        .header-chip {
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            padding: 4px 12px;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.14);
+            border: 1px solid rgba(255,255,255,0.22);
+        }
+        .view { display: none; flex: 1; flex-direction: column; min-height: 0; overflow: hidden; }
+        .view.active { display: flex; }
+        .stats-inline {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        .stat-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 10px;
+            border-radius: 999px;
+            background: #f8f9fd;
+            border: 1px solid var(--border);
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+        .stat-chip strong { color: var(--brand-1); font-size: 13px; }
+        .list-body {
+            padding: 12px 16px 14px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            min-height: 0;
+            background: #fff;
+        }
+        .edit-shell {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            overflow: hidden;
+            background: #fff;
+        }
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+        .toolbar h2 { font-size: 1rem; font-weight: 800; color: var(--text); letter-spacing: -0.02em; }
+        .toolbar-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+        .btn-group { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+        .search-box {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 0 12px;
+            min-width: 220px;
+            box-shadow: var(--shadow-sm);
+        }
+        .search-box svg { flex-shrink: 0; opacity: 0.45; }
+        .search-box input {
+            border: none; outline: none; padding: 9px 0;
+            font-size: 13px; width: 100%; background: transparent;
+        }
+        .btn {
+            padding: 9px 18px;
+            border: none;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s, filter 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: var(--shadow-sm);
+        }
+        .btn:focus-visible { outline: 2px solid var(--brand-1); outline-offset: 2px; }
+        .btn-primary { background: linear-gradient(135deg, var(--brand-1) 0%, var(--brand-2) 100%); color: white; }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(91, 108, 240, 0.38); }
+        .btn-secondary { background: #64748b; color: white; }
+        .btn-secondary:hover { filter: brightness(1.08); transform: translateY(-1px); }
+        .btn-ghost { background: #fff; color: var(--text); border: 1px solid var(--border); box-shadow: none; }
+        .btn-ghost:hover { background: #f8f9fd; border-color: var(--brand-1); color: var(--brand-1); }
+        .btn-danger { background: linear-gradient(135deg, #f87171 0%, #ef4444 100%); color: white; }
+        .btn-danger:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(239, 68, 68, 0.35); }
+        .btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 8px; }
+        .table-container {
+            flex: 1;
+            overflow: auto;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--bg-elevated);
+            box-shadow: var(--shadow-sm);
+        }
+        table.data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        table.data-table th, table.data-table td {
+            padding: 9px 10px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+        }
+        table.data-table tbody tr:nth-child(even) { background: #fafbfd; }
+        table.data-table th {
+            background: linear-gradient(180deg, #f8f9fd 0%, #f1f3f9 100%);
+            font-weight: 700;
+            color: var(--text);
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            box-shadow: 0 1px 0 var(--border);
+        }
+        table.data-table tbody tr { cursor: pointer; transition: background 0.15s; }
+        table.data-table tbody tr:hover { background: rgba(91, 108, 240, 0.07) !important; }
+        .client-cell { display: flex; align-items: center; gap: 12px; }
+        .client-avatar {
+            width: 32px; height: 32px; border-radius: 8px;
+            background: linear-gradient(135deg, var(--brand-1), var(--brand-2));
+            color: #fff; font-size: 13px; font-weight: 800;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 4px 12px rgba(91, 108, 240, 0.25);
+        }
+        .client-id { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; font-weight: 600; color: var(--brand-1); }
+        .client-name { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+        .badge {
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .badge-success { background: #d1fae5; color: #065f46; }
+        .badge-secondary { background: #e2e8f0; color: #475569; }
+        .badge-info { background: #dbeafe; color: #1e40af; }
+        .badge-warning { background: #fef3c7; color: #92400e; }
+        .badge-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: 0.7; }
+        .pager {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 0 2px;
+            flex-shrink: 0;
+        }
+        .pager-info { font-size: 13px; color: var(--text-muted); font-weight: 500; }
+        .empty-state {
+            padding: 56px 24px;
+            text-align: center;
+            color: var(--text-muted);
+        }
+        .empty-icon {
+            width: 72px; height: 72px; margin: 0 auto 16px;
+            border-radius: 20px;
+            background: linear-gradient(135deg, var(--brand-soft), rgba(124, 58, 237, 0.08));
+            display: flex; align-items: center; justify-content: center;
+            font-size: 32px;
+        }
+        .empty-state h3 { font-size: 16px; color: var(--text); margin-bottom: 8px; }
+        .edit-top {
+            flex-shrink: 0;
+            padding: 10px 16px 0;
+            border-bottom: 1px solid var(--border);
+            background: linear-gradient(180deg, #fafbfd 0%, #fff 100%);
+        }
+        .edit-top-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+        .edit-hero {
+            padding: 12px 14px;
+            background: linear-gradient(135deg, rgba(91,108,240,0.07) 0%, rgba(124,58,237,0.04) 100%);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            flex: 1;
+            min-width: 0;
+        }
+        .edit-hero-avatar {
+            width: 40px; height: 40px; border-radius: 10px;
+            background: linear-gradient(135deg, var(--brand-1), var(--brand-2));
+            color: #fff; font-size: 14px; font-weight: 800;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+        .edit-hero-main { flex: 1; min-width: 120px; }
+        .edit-hero-title { font-size: 14px; font-weight: 800; letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .edit-hero-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; font-family: ui-monospace, monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .hero-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+        .edit-workspace {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            overflow: hidden;
+        }
+        .tabs {
+            display: flex;
+            background: #fff;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+            padding: 0 12px;
+            gap: 2px;
+            overflow-x: auto;
+        }
+        .tab {
+            padding: 10px 14px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            border-bottom: 2px solid transparent;
+            margin-bottom: -1px;
+            transition: color 0.2s, border-color 0.2s, background 0.2s;
+            border-radius: 8px 8px 0 0;
+            display: flex; align-items: center; gap: 6px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .tab:hover { color: var(--brand-1); background: rgba(91, 108, 240, 0.06); }
+        .tab.active { color: var(--brand-1); border-bottom-color: var(--brand-1); background: var(--bg-elevated); }
+        .tab-icon {
+            width: 18px; height: 18px; border-radius: 5px;
+            background: var(--brand-soft);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 10px;
+        }
+        .tab.active .tab-icon { background: linear-gradient(135deg, var(--brand-1), var(--brand-2)); color: #fff; }
+        .edit-scroll {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 12px 16px 16px;
+            min-height: 0;
+            -webkit-overflow-scrolling: touch;
+        }
+        .tab-panel { display: none; animation: fadeIn 0.2s ease; }
+        .tab-panel.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+        .form-card {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+            width: 100%;
+        }
+        .form-card-head {
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--border);
+            background: linear-gradient(180deg, #fafbfd, #fff);
+        }
+        .form-card-head h3 { font-size: 13px; font-weight: 700; color: var(--text); }
+        .form-card-head p { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+        .form-card-body { padding: 14px; }
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px 20px;
+        }
+        @media (max-width: 900px) { .form-grid { grid-template-columns: 1fr; } }
+        .form-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+        .form-field.full { grid-column: 1 / -1; }
+        .form-field label {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text);
+            letter-spacing: 0.02em;
+            line-height: 1.2;
+        }
+        .form-field input, .form-field select, .form-field textarea {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            background: #fff;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .form-field input:focus, .form-field select:focus, .form-field textarea:focus {
+            outline: none;
+            border-color: var(--brand-1);
+            box-shadow: 0 0 0 3px var(--brand-soft);
+        }
+        .form-field input[readonly] { background: #f8f9fd; color: var(--text-muted); }
+        .form-field textarea { min-height: 64px; resize: vertical; }
+        .form-hint { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+        .empty-card {
+            max-width: 480px;
+            margin: 40px auto;
+            padding: 32px;
+            text-align: center;
+            background: #fff;
+            border: 1px dashed var(--border);
+            border-radius: var(--radius);
+        }
+        .edit-footer {
+            padding: 10px 16px;
+            border-top: 1px solid var(--border);
+            background: #fff;
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+            box-shadow: 0 -2px 12px rgba(26, 29, 38, 0.06);
+        }
+        .ticket-panel .table-container { max-height: none; min-height: 200px; }
+        .toast {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            padding: 14px 20px;
+            border-radius: 12px;
+            color: #fff;
+            font-size: 13px;
+            font-weight: 600;
+            z-index: 9999;
+            display: none;
+            box-shadow: var(--shadow-md);
+            animation: toastIn 0.35s cubic-bezier(0.34, 1.2, 0.64, 1);
+            max-width: 360px;
+        }
+        .toast.show { display: flex; align-items: center; gap: 10px; }
+        .toast-ok { background: linear-gradient(135deg, #10b981, #059669); }
+        .toast-err { background: linear-gradient(135deg, #f87171, #dc2626); }
+        @keyframes toastIn { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.45);
+            backdrop-filter: blur(6px);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .modal.show { display: flex; }
+        .modal-content {
+            background: var(--bg-elevated);
+            border-radius: 16px;
+            width: 100%;
+            max-width: 480px;
+            box-shadow: var(--shadow-lg);
+            border: 1px solid var(--border);
+            animation: modalIn 0.35s cubic-bezier(0.34, 1.2, 0.64, 1);
+        }
+        @keyframes modalIn {
+            from { transform: scale(0.94) translateY(12px); opacity: 0; }
+            to { transform: scale(1) translateY(0); opacity: 1; }
+        }
+        .modal-header {
+            padding: 18px 22px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modal-header h3 { font-size: 16px; font-weight: 800; }
+        .modal-close {
+            width: 32px; height: 32px; border: none; border-radius: 8px;
+            background: #f1f5f9; cursor: pointer; font-size: 18px; color: var(--text-muted);
+        }
+        .modal-close:hover { background: #e2e8f0; color: var(--text); }
+        .modal-body { padding: 22px; }
+        .modal-footer {
+            padding: 14px 22px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(255,255,255,0.65);
+            z-index: 1500;
+            align-items: center;
+            justify-content: center;
+        }
+        .loading-overlay.show { display: flex; }
+        .spinner {
+            width: 40px; height: 40px;
+            border: 3px solid var(--border);
+            border-top-color: var(--brand-1);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .status-pending { background: #fef3c7; color: #92400e; }
+        .status-done { background: #d1fae5; color: #065f46; }
+        .status-fail { background: #fee2e2; color: #991b1b; }
+        .status-other { background: #e0e7ff; color: #3730a3; }
+        code.inline {
+            font-family: ui-monospace, monospace;
+            font-size: 11px;
+            background: #f1f5f9;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #4338ca;
+        }
+    </style>
+</head>
+<body>
+<div class="container" id="appRoot">
+    <div class="header">
+        <div class="header-main">
+            <h1 id="headerTitle">授权客户端中心</h1>
+            <p id="headerDesc">授权登录 · 网站接入 · 扫码授权 · 登录记录</p>
+        </div>
+        <div class="header-actions">
+            <a class="header-doc-btn" id="authFlowDocLink" href="${request.contextPath!''}/modules/docs/auth-flow" target="_blank" rel="noopener" title="查看授权与扫码登录流程说明">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M8 7h8M8 11h6"/></svg>
+                流程指南
+            </a>
+        </div>
+        <div class="header-sub">
+            <span class="header-chip">授权</span>
+            <span class="header-chip">网站</span>
+            <span class="header-chip">扫码</span>
+        </div>
+    </div>
+
+    <div id="viewList" class="view active">
+        <div class="list-body">
+            <div class="toolbar">
+                <div>
+                    <h2>应用列表</h2>
+                    <div class="toolbar-meta" id="listSummary">加载中…</div>
+                    <div class="stats-inline" style="margin-top:8px;">
+                        <span class="stat-chip">总数 <strong id="statTotal">0</strong></span>
+                        <span class="stat-chip">可信 <strong id="statTrusted">0</strong></span>
+                        <span class="stat-chip">扫码 <strong id="statQrc">0</strong></span>
+                        <span class="stat-chip">网站 <strong id="statWeb">0</strong></span>
+                    </div>
+                </div>
+                <div class="btn-group">
+                    <div class="search-box">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                        <input type="text" id="searchInput" placeholder="搜索应用标识或名称…" oninput="filterList()"/>
+                    </div>
+                    <button class="btn btn-ghost btn-sm" onclick="openAuthFlowDoc()">📖 流程说明</button>
+                    <button class="btn btn-ghost btn-sm" onclick="loadList()">↻ 刷新</button>
+                    <button class="btn btn-primary btn-sm" onclick="openCreateModal()">＋ 新建</button>
+                </div>
+            </div>
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                    <tr>
+                        <th>应用</th>
+                        <th>可信</th>
+                        <th>网站</th>
+                        <th>关联</th>
+                        <th>策略</th>
+                        <th>扫码</th>
+                        <th>创建时间</th>
+                    </tr>
+                    </thead>
+                    <tbody id="listBody"></tbody>
+                </table>
+                <div id="listEmpty" class="empty-state" style="display:none;">
+                    <div class="empty-icon">🔐</div>
+                    <h3>暂无授权应用</h3>
+                    <p>点击「新建」添加第一个接入应用</p>
+                    <button class="btn btn-primary" style="margin-top:16px;" onclick="openCreateModal()">新建应用</button>
+                </div>
+            </div>
+            <div class="pager">
+                <button class="btn btn-ghost btn-sm" onclick="prevPage()">← 上一页</button>
+                <span class="pager-info" id="pageInfo">第 1 页</span>
+                <button class="btn btn-ghost btn-sm" onclick="nextPage()">下一页 →</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="viewEdit" class="view">
+        <div class="edit-shell">
+            <div class="edit-top">
+                <div class="edit-top-row">
+                    <button class="btn btn-ghost btn-sm" onclick="showList()">← 返回</button>
+                    <div class="edit-hero" id="editHero"></div>
+                </div>
+                <div class="tabs" id="editTabs">
+                    <div class="tab active" data-tab="oauth" onclick="switchEditTab('oauth')"><span class="tab-icon">⚡</span>授权配置</div>
+                    <div class="tab" data-tab="web" onclick="switchEditTab('web')"><span class="tab-icon">🌐</span>网站接入</div>
+                    <div class="tab" data-tab="qrc" onclick="switchEditTab('qrc')"><span class="tab-icon">📱</span>扫码策略</div>
+                    <div class="tab" data-tab="tickets" onclick="switchEditTab('tickets')"><span class="tab-icon">📋</span>登录记录</div>
+                </div>
+            </div>
+            <div class="edit-scroll">
+                <div id="panelOauth" class="tab-panel active"></div>
+                <div id="panelWeb" class="tab-panel"></div>
+                <div id="panelQrc" class="tab-panel"></div>
+                <div id="panelTickets" class="tab-panel ticket-panel">
+                    <div class="form-card">
+                        <div class="form-card-head">
+                            <h3>扫码登录记录</h3>
+                            <p>只读查看，便于排查登录与授权问题</p>
+                        </div>
+                        <div class="form-card-body" style="padding:0;">
+                            <div class="table-container" style="border:none;border-radius:0;box-shadow:none;">
+                                <table class="data-table">
+                                    <thead>
+                                    <tr>
+                                        <th>流水号</th><th>用途</th><th>状态</th><th>扫码人</th><th>来源地址</th><th>发起时间</th><th>完成时间</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody id="ticketBody"></tbody>
+                                </table>
+                                <div id="ticketEmpty" class="empty-state" style="display:none;padding:24px;">
+                                    <p>暂无扫码登录记录</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="pager">
+                        <button class="btn btn-ghost btn-sm" onclick="prevTicketPage()">← 上一页</button>
+                        <span class="pager-info" id="ticketPageInfo">第 1 页</span>
+                        <button class="btn btn-ghost btn-sm" onclick="nextTicketPage()">下一页 →</button>
+                    </div>
+                </div>
+            </div>
+            <div class="edit-footer" id="editFooter">
+                <button class="btn btn-primary btn-sm" onclick="saveBundle()">✓ 保存</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteClient()">删除</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="toast" class="toast"></div>
+<div id="loading" class="loading-overlay"><div class="spinner"></div></div>
+
+<div class="modal" id="createModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>新建授权应用</h3>
+            <button class="modal-close" onclick="closeCreateModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-field">
+                <label>应用标识</label>
+                <input type="text" id="newClientId" placeholder="如 demo-app 或 app.example.com"/>
+                <div class="form-hint">将同时生成授权、网站接入与扫码策略的默认配置</div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-ghost" onclick="closeCreateModal()">取消</button>
+            <button class="btn btn-primary" onclick="submitCreate()">创建</button>
+        </div>
+    </div>
+</div>
+
+<script>
+window.__CTX__ = '${request.contextPath!""}';
+window.__AUTH_HUB_API__ = window.__CTX__ + '/client/authhub';
+window.__AUTH_FLOW_DOC__ = window.__CTX__ + '/modules/docs/auth-flow';
+</script>
+<script>
+//<#noparse>
+const API_BASE = (typeof window.__AUTH_HUB_API__ === 'string') ? window.__AUTH_HUB_API__ : '/client/authhub';
+let listPage = 1, listLimit = 10, listTotalPage = 1, listRows = [];
+let ticketPage = 1, ticketLimit = 10, ticketTotalPage = 1;
+let bundle = null;
+
+document.addEventListener('DOMContentLoaded', function() { loadList(); });
+
+function openAuthFlowDoc() {
+    var url = (typeof window.__AUTH_FLOW_DOC__ === 'string') ? window.__AUTH_FLOW_DOC__ : '/modules/docs/auth-flow';
+    window.open(url, '_blank', 'noopener');
+}
+
+function showLoading(v) { document.getElementById('loading').classList.toggle('show', !!v); }
+
+function showToast(msg, ok) {
+    const el = document.getElementById('toast');
+    el.innerHTML = '<span>' + (ok ? '✓' : '✕') + '</span><span>' + escapeHtml(msg) + '</span>';
+    el.className = 'toast show ' + (ok ? 'toast-ok' : 'toast-err');
+    setTimeout(function() { el.classList.remove('show'); }, 3200);
+}
+
+function initials(text) {
+    if (!text) return '?';
+    const s = String(text).trim();
+    if (s.length <= 2) return s.toUpperCase();
+    return s.substring(0, 2).toUpperCase();
+}
+
+function ynBadge(v, yesLabel, noLabel) {
+    yesLabel = yesLabel || '是';
+    noLabel = noLabel || '否';
+    return v
+        ? '<span class="badge badge-success"><span class="badge-dot"></span>' + yesLabel + '</span>'
+        : '<span class="badge badge-secondary"><span class="badge-dot"></span>' + noLabel + '</span>';
+}
+
+function statusBadge(status) {
+    if (!status) return '<span class="badge badge-secondary">-</span>';
+    const map = {
+        PENDING: '待扫码', SCANNED: '已扫码', CONFIRMED: '已确认',
+        COMPLETED: '已完成', SUCCESS: '成功', DONE: '已完成',
+        EXPIRED: '已过期', CANCELLED: '已取消', CANCELED: '已取消',
+        DENIED: '已拒绝', FAILED: '失败',
+        WAITING: '等待中', SCANNING: '扫码中'
+    };
+    const s = String(status).toUpperCase();
+    const label = map[s] || status;
+    let cls = 'status-other';
+    if (s === 'PENDING' || s === 'WAITING' || s === 'SCANNING' || s === 'SCANNED') cls = 'status-pending';
+    else if (s === 'CONFIRMED' || s === 'COMPLETED' || s === 'SUCCESS' || s === 'DONE') cls = 'status-done';
+    else if (s === 'EXPIRED' || s === 'CANCELLED' || s === 'CANCELED' || s === 'DENIED' || s === 'FAILED') cls = 'status-fail';
+    return '<span class="badge ' + cls + '">' + escapeHtml(label) + '</span>';
+}
+
+function intentLabel(intent) {
+    if (!intent) return '-';
+    const map = {
+        OAUTH_AUTHORIZE: '授权登录', OAUTH_CONSENT: '授权确认', OAUTH_DEVICE: '设备授权',
+        SELF_WEB_LOGIN: '网站登录', WEB_LOGIN: '网站登录'
+    };
+    return map[intent] || intent;
+}
+
+function deliveryOptions(selected) {
+    const items = [
+        ['POLL_CODE', '轮询授权码'],
+        ['POLL_TOKEN', '轮询令牌'],
+        ['DEEP_LINK', '应用跳转'],
+        ['WEBHOOK', '回调通知']
+    ];
+    return items.map(function(it) {
+        return '<option value="' + it[0] + '"' + (selected === it[0] ? ' selected' : '') + '>' + it[1] + '</option>';
+    }).join('');
+}
+
+function escapeHtml(s) {
+    if (s == null) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function updateStats(rows, totalCount) {
+    document.getElementById('statTotal').textContent = totalCount || 0;
+    let trusted = 0, qrc = 0, web = 0;
+    (rows || []).forEach(function(r) {
+        if (r.trusted === 1) trusted++;
+        if (r.qrcEnabled) qrc++;
+        if (r.hasWeb) web++;
+    });
+    document.getElementById('statTrusted').textContent = trusted;
+    document.getElementById('statQrc').textContent = qrc;
+    document.getElementById('statWeb').textContent = web;
+}
+
+function renderListRows(rows) {
+    const tbody = document.getElementById('listBody');
+    const empty = document.getElementById('listEmpty');
+    if (!rows.length) {
+        tbody.innerHTML = '';
+        empty.style.display = 'block';
+        return;
+    }
+    empty.style.display = 'none';
+    tbody.innerHTML = rows.map(function(r) {
+        return '<tr data-client-id="' + escapeHtml(r.clientId) + '" onclick="openClientFromRow(this)">' +
+            '<td><div class="client-cell"><div class="client-avatar">' + initials(r.clientId) + '</div><div><div class="client-id">' + escapeHtml(r.clientId) + '</div><div class="client-name">' + escapeHtml(r.clientName || '未命名应用') + '</div></div></div></td>' +
+            '<td>' + ynBadge(r.trusted === 1, '可信', '不可信') + '</td>' +
+            '<td>' + ynBadge(r.hasWeb, '已接', '未接') + '</td>' +
+            '<td>' + ynBadge(r.hasCombine, '已绑', '未绑') + '</td>' +
+            '<td>' + ynBadge(r.hasQrc, '已设', '未设') + '</td>' +
+            '<td>' + (r.qrcEnabled ? '<span class="badge badge-info"><span class="badge-dot"></span>已开</span>' : '<span class="badge badge-secondary">未开</span>') + '</td>' +
+            '<td style="color:var(--text-muted);font-size:12px;">' + escapeHtml(r.createTime) + '</td></tr>';
+    }).join('');
+}
+
+function filterList() {
+    const q = (document.getElementById('searchInput').value || '').trim().toLowerCase();
+    if (!q) { renderListRows(listRows); return; }
+    renderListRows(listRows.filter(function(r) {
+        return (r.clientId && r.clientId.toLowerCase().indexOf(q) >= 0) ||
+            (r.clientName && r.clientName.toLowerCase().indexOf(q) >= 0);
+    }));
+}
+
+async function loadList() {
+    showLoading(true);
+    try {
+        const res = await fetch(API_BASE + '/list?page=' + listPage + '&limit=' + listLimit, { credentials: 'same-origin' });
+        const data = await res.json();
+        if (data.code !== 0) { showToast(data.msg || '加载失败', false); return; }
+        const page = data.page || {};
+        listRows = page.list || [];
+        listTotalPage = page.totalPage || 1;
+        document.getElementById('pageInfo').textContent = '第 ' + (page.currPage || listPage) + ' / ' + listTotalPage + ' 页 · 共 ' + (page.totalCount || 0) + ' 条';
+        document.getElementById('listSummary').textContent = '统一管理第三方授权、网站登录与扫码策略';
+        updateStats(listRows, page.totalCount);
+        filterList();
+    } catch (e) { showToast('加载列表失败', false); }
+    finally { showLoading(false); }
+}
+
+function prevPage() { if (listPage > 1) { listPage--; loadList(); } }
+function nextPage() { if (listPage < listTotalPage) { listPage++; loadList(); } }
+
+function openClientFromRow(tr) {
+    const clientId = tr.getAttribute('data-client-id');
+    if (clientId) openClient(clientId);
+}
+
+function showList() {
+    document.getElementById('appRoot').classList.remove('mode-edit');
+    document.getElementById('headerTitle').textContent = '授权客户端中心';
+    document.getElementById('headerDesc').textContent = '授权登录 · 网站接入 · 扫码授权 · 登录记录';
+    document.getElementById('viewList').classList.add('active');
+    document.getElementById('viewEdit').classList.remove('active');
+    loadList();
+}
+
+function openCreateModal() {
+    document.getElementById('newClientId').value = '';
+    document.getElementById('createModal').classList.add('show');
+    setTimeout(function() { document.getElementById('newClientId').focus(); }, 100);
+}
+function closeCreateModal() { document.getElementById('createModal').classList.remove('show'); }
+
+async function submitCreate() {
+    const clientId = (document.getElementById('newClientId').value || '').trim();
+    if (!clientId) { showToast('请输入应用标识', false); return; }
+    closeCreateModal();
+    showLoading(true);
+    try {
+        const res = await fetch(API_BASE + '/create', {
+            method: 'POST', credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ clientId: clientId })
+        });
+        const data = await res.json();
+        if (data.code !== 0) { showToast(data.msg || '创建失败', false); return; }
+        showToast('创建成功', true);
+        openClient(clientId, data.bundle);
+    } catch (e) { showToast('创建失败', false); }
+    finally { showLoading(false); }
+}
+
+async function openClient(clientId, preset) {
+    if (preset) { bundle = preset; renderEdit(); return; }
+    showLoading(true);
+    try {
+        const res = await fetch(API_BASE + '/info/' + encodeURIComponent(clientId), { credentials: 'same-origin' });
+        const data = await res.json();
+        if (data.code !== 0) { showToast(data.msg || '加载失败', false); return; }
+        bundle = data.bundle;
+        renderEdit();
+    } catch (e) { showToast('加载详情失败', false); }
+    finally { showLoading(false); }
+}
+
+function renderEditHero() {
+    const o = bundle.oauth || {};
+    const q = bundle.qrc || {};
+    document.getElementById('editHero').innerHTML =
+        '<div class="edit-hero-avatar">' + initials(bundle.clientId) + '</div>' +
+        '<div class="edit-hero-main">' +
+            '<div class="edit-hero-title">' + escapeHtml(o.clientName || bundle.clientId) + '</div>' +
+            '<div class="edit-hero-sub">' + escapeHtml(bundle.clientId) + '</div>' +
+        '</div>' +
+        '<div class="hero-pills">' +
+            ynBadge(o.trusted === 1, '可信', '不可信') +
+            ynBadge(!!bundle.web, '已接入', '未接入') +
+            (q.enabled ? '<span class="badge badge-info"><span class="badge-dot"></span>扫码开</span>' : '<span class="badge badge-secondary">扫码关</span>') +
+        '</div>';
+}
+
+function renderEdit() {
+    document.getElementById('appRoot').classList.add('mode-edit');
+    document.getElementById('headerTitle').textContent = '编辑应用';
+    document.getElementById('headerDesc').textContent = bundle.clientId || '';
+    document.getElementById('viewList').classList.remove('active');
+    document.getElementById('viewEdit').classList.add('active');
+    renderEditHero();
+    renderOauthForm();
+    renderWebForm();
+    renderQrcForm();
+    switchEditTab('oauth');
+}
+
+function formField(id, label, value, opts) {
+    opts = opts || {};
+    const cls = 'form-field' + (opts.full ? ' full' : '');
+    const ro = opts.readonly ? ' readonly' : '';
+    let input = '';
+    if (opts.type === 'select') {
+        input = '<select id="' + id + '">' + opts.options + '</select>';
+    } else if (opts.type === 'textarea') {
+        input = '<textarea id="' + id + '"' + ro + '>' + escapeHtml(value) + '</textarea>';
+    } else {
+        input = '<input id="' + id + '" type="text" value="' + escapeHtml(value == null ? '' : value) + '"' + ro + '/>';
+    }
+    const hint = opts.hint ? '<div class="form-hint">' + opts.hint + '</div>' : '';
+    return '<div class="' + cls + '"><label>' + label + '</label>' + input + hint + '</div>';
+}
+
+function renderOauthForm() {
+    const o = bundle.oauth || {};
+    document.getElementById('panelOauth').innerHTML =
+        '<div class="form-card"><div class="form-card-head"><h3>授权服务器</h3><p>本系统作为授权方时，登记第三方应用的接入信息</p></div><div class="form-card-body"><div class="form-grid">' +
+        formField('o_clientId', '应用标识', o.clientId, { readonly: !!o.id, hint: '全局唯一，创建后不可修改' }) +
+        formField('o_clientName', '应用名称', o.clientName) +
+        formField('o_clientSecret', '应用密钥', o.clientSecret) +
+        formField('o_scope', '授权范围', o.scope) +
+        formField('o_trusted', '是否可信', o.trusted, { type: 'select', options: '<option value="1"' + (o.trusted === 1 ? ' selected' : '') + '>是</option><option value="0"' + (o.trusted !== 1 ? ' selected' : '') + '>否</option>' }) +
+        formField('o_archived', '是否归档', o.archived, { type: 'select', options: '<option value="0"' + (o.archived !== 1 ? ' selected' : '') + '>否</option><option value="1"' + (o.archived === 1 ? ' selected' : '') + '>是</option>' }) +
+        formField('o_grantTypes', '授权方式', o.grantTypes, { full: true }) +
+        formField('o_redirectUri', '回调地址', o.redirectUri, { full: true }) +
+        formField('o_description', '备注说明', o.description, { type: 'textarea', full: true }) +
+        '</div></div></div>';
+}
+
+function renderWebForm() {
+    const w = bundle.web;
+    if (!w) {
+        document.getElementById('panelWeb').innerHTML = '<div class="empty-card"><div class="empty-icon" style="margin-bottom:12px;">🌐</div><h3 style="margin-bottom:8px;">尚未配置网站接入</h3><p>保存授权配置后，将自动关联网站登录参数</p></div>';
+        return;
+    }
+    document.getElementById('panelWeb').innerHTML =
+        '<div class="form-card"><div class="form-card-head"><h3>网站接入</h3><p>本网站作为客户端，向授权服务器发起登录时使用</p></div><div class="form-card-body"><div class="form-grid">' +
+        formField('w_name', '显示名称', w.name) +
+        formField('w_state', '状态参数', w.state) +
+        formField('w_clientSecret', '接入密钥', w.clientSecret) +
+        formField('w_scope', '授权范围', w.scope) +
+        formField('w_redirectUri', '回调地址', w.redirectUri) +
+        formField('w_authorizeUri', '授权页址', w.authorizeUri) +
+        formField('w_accessTokenUri', '令牌地址', w.accessTokenUri) +
+        formField('w_userInfoUri', '用户资料', w.userInfoUri) +
+        '</div></div></div>';
+}
+
+function renderQrcForm() {
+    const q = bundle.qrc || {};
+    document.getElementById('panelQrc').innerHTML =
+        '<div class="form-card"><div class="form-card-head"><h3>扫码策略</h3><p>配置手机扫码登录、授权确认与结果交付方式</p></div><div class="form-card-body"><div class="form-grid">' +
+        formField('q_enabled', '启用扫码', q.enabled ? '1' : '0', { type: 'select', options: '<option value="1"' + (q.enabled ? ' selected' : '') + '>是</option><option value="0"' + (!q.enabled ? ' selected' : '') + '>否</option>' }) +
+        formField('q_delivery', '结果方式', q.delivery, { type: 'select', options: deliveryOptions(q.delivery) }) +
+        formField('q_secret', '签名密钥', q.secret) +
+        formField('q_scopes', '范围限制', q.scopes) +
+        formField('q_schemes', '应用协议', q.schemes, { hint: '多个协议用逗号分隔' }) +
+        formField('q_consent', '二次确认', q.consent ? '1' : '0', { type: 'select', options: '<option value="1"' + (q.consent ? ' selected' : '') + '>是</option><option value="0"' + (!q.consent ? ' selected' : '') + '>否</option>', hint: '网页已登录时，仍要求手机确认' }) +
+        formField('q_webhook', '通知地址', q.webhook, { full: true }) +
+        '</div></div></div>';
+}
+
+function collectBundle() {
+    const o = bundle.oauth || {};
+    o.clientId = val('o_clientId') || bundle.clientId;
+    o.clientName = val('o_clientName');
+    o.clientSecret = val('o_clientSecret');
+    o.redirectUri = val('o_redirectUri');
+    o.scope = val('o_scope');
+    o.grantTypes = val('o_grantTypes');
+    o.trusted = parseInt(val('o_trusted') || '1', 10);
+    o.archived = parseInt(val('o_archived') || '0', 10);
+    o.description = val('o_description');
+    bundle.oauth = o;
+    bundle.clientId = o.clientId;
+    if (bundle.web) {
+        const w = bundle.web;
+        w.name = val('w_name');
+        w.clientSecret = val('w_clientSecret');
+        w.redirectUri = val('w_redirectUri');
+        w.authorizeUri = val('w_authorizeUri');
+        w.accessTokenUri = val('w_accessTokenUri');
+        w.userInfoUri = val('w_userInfoUri');
+        w.scope = val('w_scope');
+        w.state = val('w_state');
+        w.clientId = bundle.clientId;
+    }
+    if (!bundle.qrc) bundle.qrc = {};
+    const q = bundle.qrc;
+    q.clientId = bundle.clientId;
+    q.enabled = val('q_enabled') === '1';
+    q.delivery = val('q_delivery') || 'POLL_CODE';
+    q.webhook = val('q_webhook');
+    q.secret = val('q_secret');
+    q.schemes = val('q_schemes');
+    q.scopes = val('q_scopes');
+    q.consent = val('q_consent') === '1';
+    return bundle;
+}
+
+function val(id) {
+    const el = document.getElementById(id);
+    return el ? el.value : '';
+}
+
+async function saveBundle() {
+    collectBundle();
+    showLoading(true);
+    try {
+        const res = await fetch(API_BASE + '/save', {
+            method: 'POST', credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(bundle)
+        });
+        const data = await res.json();
+        if (data.code !== 0) { showToast(data.msg || '保存失败', false); return; }
+        bundle = data.bundle;
+        renderEditHero();
+        renderOauthForm();
+        renderWebForm();
+        renderQrcForm();
+        showToast('保存成功', true);
+    } catch (e) { showToast('保存失败', false); }
+    finally { showLoading(false); }
+}
+
+async function deleteClient() {
+    if (!bundle || !bundle.clientId) return;
+    if (!confirm('确定删除应用「' + bundle.clientId + '」及其全部授权配置？')) return;
+    showLoading(true);
+    try {
+        const res = await fetch(API_BASE + '/delete', {
+            method: 'POST', credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ clientId: bundle.clientId })
+        });
+        const data = await res.json();
+        if (data.code !== 0) { showToast(data.msg || '删除失败', false); return; }
+        showToast('已删除', true);
+        showList();
+    } catch (e) { showToast('删除失败', false); }
+    finally { showLoading(false); }
+}
+
+function switchEditTab(tab) {
+    document.querySelectorAll('#editTabs .tab').forEach(function(t) {
+        t.classList.toggle('active', t.getAttribute('data-tab') === tab);
+    });
+    ['oauth','web','qrc','tickets'].forEach(function(name) {
+        const panel = document.getElementById('panel' + name.charAt(0).toUpperCase() + name.slice(1));
+        if (panel) panel.classList.toggle('active', name === tab);
+    });
+    document.getElementById('editFooter').style.display = tab === 'tickets' ? 'none' : 'flex';
+    if (tab === 'tickets') loadTickets();
+    var scroll = document.querySelector('.edit-scroll');
+    if (scroll) scroll.scrollTop = 0;
+}
+
+async function loadTickets() {
+    if (!bundle || !bundle.clientId) return;
+    try {
+        const res = await fetch(API_BASE + '/tickets/' + encodeURIComponent(bundle.clientId) + '?page=' + ticketPage + '&limit=' + ticketLimit, { credentials: 'same-origin' });
+        const data = await res.json();
+        if (data.code !== 0) return;
+        const page = data.page || {};
+        const rows = page.list || [];
+        ticketTotalPage = page.totalPage || 1;
+        document.getElementById('ticketPageInfo').textContent = '第 ' + (page.currPage || ticketPage) + ' / ' + ticketTotalPage + ' 页';
+        document.getElementById('ticketEmpty').style.display = rows.length ? 'none' : 'block';
+        document.getElementById('ticketBody').innerHTML = rows.map(function(r) {
+            return '<tr><td><code class="inline">' + escapeHtml(r.uuid) + '</code></td><td>' + escapeHtml(intentLabel(r.intent)) + '</td><td>' + statusBadge(r.status) + '</td><td>' + escapeHtml(r.scanner || '-') + '</td><td>' + escapeHtml(r.ip || '-') + '</td><td style="font-size:12px;color:var(--text-muted);">' + escapeHtml(r.created) + '</td><td style="font-size:12px;color:var(--text-muted);">' + escapeHtml(r.completed || '-') + '</td></tr>';
+        }).join('');
+    } catch (e) { /* silent */ }
+}
+
+function prevTicketPage() { if (ticketPage > 1) { ticketPage--; loadTickets(); } }
+function nextTicketPage() { if (ticketPage < ticketTotalPage) { ticketPage++; loadTickets(); } }
+
+document.getElementById('createModal').addEventListener('click', function(e) {
+    if (e.target === this) closeCreateModal();
+});
+document.getElementById('newClientId').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') submitCreate();
+});
+//</#noparse>
+</script>
+</body>
+</html>

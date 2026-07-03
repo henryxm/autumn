@@ -75,26 +75,160 @@
 
 ## 7. 页面模板与 FreeMarker（HTML / JavaScript）
 
-默认页面经 **FreeMarker** 渲染。须避免与 FTL 冲突的写法，并保证渲染后的 **HTML / JavaScript 语法合法**。
+默认页面经 **FreeMarker** 渲染。须避免与 FTL 冲突的写法，并保证**渲染后**的 HTML / JavaScript 语法合法、**用户可见文本无多余注释符号**。
 
-### 7.1 禁止与建议
+**参考实现**：`autumn-modules/src/main/resources/templates/modules/client/webauthentication.html`（HTML 注释包裹）；`autumn-modules/src/main/resources/templates/login.html`（HTML + JS 分支约定）。
 
-- **禁止**在页面中随意使用与 **FreeMarker 语法冲突** 的占位与指令形式（如与 `${`、`#`、`@` 等 FTL 解析规则相撞的内容），除非按本节规则处理。
+### 7.1 总原则
 
-### 7.2 条件与结构：HTML 注释包裹
+| 原则 | 说明 |
+|------|------|
+| **分域注释** | HTML 区块用 **HTML 注释**包裹 FTL；`<script>` 内用 **`//` 前缀**包裹 FTL 指令行；**禁止**在 JS 里写 `<!-- -->`。 |
+| **指令独立行** | 除 §7.3 允许的**单行裸 FTL** 外，每个 `<!--<#if>` / `<!--<#else>` / `<!--</#if>` / `//<#if>` 等**独占一行**，分支内容在下一行，便于 Code Review 与 diff。 |
+| **渲染结果优先** | 注释包裹会在输出中留下字面量 `<!--`、`-->`（如 `<!---->`）；**标题、单行纯文本**等用户可见处**禁止**使用该包裹方式。 |
+| **说明性注释** | 普通 HTML/JS 说明用 `<!-- 说明 -->` 或 `// 说明`；**禁止**在说明文字里写 `${}`、`<#if>` 等 FTL 样例字符（会被 FTL 误解析）。 |
+| **完全跳过 FTL** | 需原样输出大量 `$`/`#`/`<#` 时，用 **`<#noparse>...</#noparse>`**（§7.6）。 |
 
-- 在页面中使用 FreeMarker 做**条件判断、分支、循环**等时，为保持 **HTML 结构在校验器/IDE 中合法**，应用 **HTML 注释** `<!-- ... -->` **包裹**对应的 FTL 片段（含指令与表达式边界），避免裸写导致 HTML 非良构。  
-- **说明**：服务端仍会**正常解析**注释内的 FTL 并输出结果；注释用于**源文件级 HTML 形态**与团队协作约定，**不**等同于关闭 FreeMarker。若需**完全禁止某段被 FTL 解析**（原样输出或内含大量冲突字符），见 §7.4。
+### 7.2 HTML 条件渲染：注释包裹（默认）
 
-### 7.3 JavaScript 中的 FreeMarker 变量
+在 **HTML 标签体、块级结构、表单分支** 中做 `#if` / `#else` / `#list` 时，用 **HTML 注释**把 FTL 指令包起来，使源文件对 HTML 校验器/IDE **结构合法**；服务端仍**正常解析**注释内的 FTL。
 
-- 将 FreeMarker 变量插入 **`<script>`** 时，必须保证**渲染后的脚本**仍是合法 JavaScript：  
-  - 字符串必须**正确加引号、转义**，避免**裸露**替换结果导致未闭合字符串、意外换行或关键字冲突。  
-  - 为保持 **JS 语法不被破坏**，应对 FTL 插入点采用**注释占位、拆分到独立 `<script>`、或 `data-*` 属性 + JS 读取**等安全模式；**禁止**依赖未经验证的裸 `${...}` 插在 JS 字面量中间导致运行期语法错误。
+**标准写法**（每个指令一行，参考 `webauthentication.html`）：
 
-### 7.4 无法避免的语法冲突：`<#noparse>`
+```html
+<!--<#if oauthLogin?? && oauthLogin>-->
+<form class="login-panel" method="post" action="${request.contextPath}/oauth2/login">
+  ...
+</form>
+<!--<#else>-->
+<div class="login-panel">
+  ...
+</div>
+<!--</#if>-->
+```
 
-- 当**无法避免**与 FreeMarker 冲突的片段（如文档示例、内嵌模板、含大量 `$`/`#` 的脚本）时，必须使用 **`<#noparse>...</#noparse>`**（或项目约定的等价机制）包裹，使内部**按字面输出**、不被 FTL 解析。
+**嵌套与循环**（`#list` / 内层 `#if` 同样各占一行）：
+
+```html
+<!--<#if scope?? && scope?has_content>-->
+<!--<#list scope?split(' ') as s>-->
+<!--<#if s?has_content>-->
+<span class="scope-tag">${s}</span>
+<!--</#if>-->
+<!--</#list>-->
+<!--<#else>-->
+<span class="scope-tag">基础访问</span>
+<!--</#if>-->
+```
+
+**禁止**：
+
+- 在 HTML 注释**说明文字**里写 `${}` 或 `<#if>` 字面量（会触发 `ParseException` 或空插值）。
+- 把多个 FTL 指令与正文**挤在同一行**（可读性差，且 `#list` 难维护）。
+
+### 7.3 HTML 例外：单行裸 FTL（无 HTML 注释包裹）
+
+下列场景**必须**用**单行、不换行、无 `<!-- -->` 包裹**的裸 FTL，否则浏览器/标签页会显示 `<!---->` 等垃圾字符：
+
+| 场景 | 写法 |
+|------|------|
+| **`<title>`** | `<title><#if cond>A<#elseif cond2>B<#else>C</#if></title>` |
+| **其他仅输出纯文本、且不能有 HTML 注释残留的属性/节点** | 同上：单行裸 `<#if>`，按实际场景评估 |
+
+```html
+<!-- 推荐：title 单行裸 FTL -->
+<title><#if oauthAuthorize?? && oauthAuthorize>应用授权<#elseif oauthLogin?? && oauthLogin>用户登录<#else>Autumn管理系统</#if></title>
+
+<!-- 禁止：注释包裹 + 换行 → 渲染结果含 <!----> -->
+<title>
+  <!--<#if oauthLogin?? && oauthLogin>-->
+  用户登录
+  <!--</#if>-->
+</title>
+```
+
+**`<body class="...">` 等可接受空白折叠的属性**：可用注释包裹 + 换行（类名间空白合法）；若仍出现可见 artifacts，改为 Controller **`Model` 拼好 class 字符串**或单行裸 FTL。
+
+### 7.4 JavaScript 中的 FreeMarker
+
+**禁止**在 `<script>` 内使用 **HTML 注释** `<!-- -->` 包裹 FTL（会破坏 JS 语法或产生不可预期注释块）。
+
+#### 7.4.1 条件分支：`//` 前缀 + 独立行
+
+FTL 指令行以 **`//`** 开头（与 HTML 侧 `<!--<#if>-->` 对称），**每个指令独占一行**：
+
+```javascript
+//<#if oauthLogin?? && oauthLogin>
+var oauthLogin = true;
+//<#else>
+var oauthLogin = false;
+//</#if>
+```
+
+```javascript
+//<#if error?? && error?has_content>
+vm.error = true;
+vm.errorMsg = '${error?js_string}';
+//</#if>
+```
+
+**禁止**：
+
+```javascript
+// 错误：HTML 注释包裹 FTL
+<!--<#if oauthLogin?? && oauthLogin>-->
+var oauthLogin = true;
+<!--</#if>-->
+
+// 错误：行内 HTML 注释 + 条件（整行可能被 JS 当注释吞掉）
+var oauthLogin = <!--<#if ...>-->true<!--</#if-->;
+```
+
+#### 7.4.2 简单标量：优先 `${}` 插值
+
+布尔、数字等**无需分支**时，用 **`${}` + 默认值**，避免在 JS 里堆 `#if`：
+
+```javascript
+var pollIntervalMs = ${pollIntervalMs!2000};
+var oauthLogin = ${(oauthLogin!false)?c};
+```
+
+字符串必须 **`?js_string`** 转义：
+
+```javascript
+var ctx = '${request.contextPath}';
+var uuid = '${uuid!""?js_string}';
+```
+
+#### 7.4.3 JS 说明性注释
+
+仅作阅读的注释用 **`//`** 或 **`/* */`**，且**不要**在注释正文里写未转义的 `${}` / `<#if>` 样例。
+
+### 7.5 决策流程（写模板前 10 秒）
+
+```text
+1. 是否在 <script> 内？
+   └─ 是 → //<#if> 块（§7.4.1）或 ${}（§7.4.2）；禁止 <!-- -->
+2. 是否是 <title> 或必须零注释残留的纯文本？
+   └─ 是 → 单行裸 <#if>（§7.3）
+3. 否则（HTML 块、表单、列表）→ <!--<#if>--> 每指令独立行（§7.2）
+4. 是否仅展示文档/示例、且含大量 FTL 特殊字符？
+   └─ 是 → <#noparse>（§7.6）
+```
+
+### 7.6 无法避免的语法冲突：`<#noparse>`
+
+当**无法避免**与 FreeMarker 冲突的片段（文档示例、内嵌含 `$`/`#`/`<#` 的大段文本）时，使用 **`<#noparse>...</#noparse>`**，使内部**按字面输出**、不被 FTL 解析。
+
+### 7.7 自检清单（改 `.html` 模板后）
+
+- [ ] `<script>` 内无 `<!-- -->` 包裹的 FTL？
+- [ ] JS 条件是否为 `//<#if>` 且**每指令一行**？
+- [ ] `<title>` 是否为**单行裸 FTL**（无注释包裹）？
+- [ ] HTML 块条件是否为 `<!--<#if>` 且**每指令一行**？
+- [ ] 说明性 HTML 注释是否未包含 `${}` / `<#if>` 字面量？
+- [ ] 插入 JS 的字符串是否使用 `?js_string`？
+- [ ] 渲染后查看「查看网页源代码」：标题与正文无 `<!---->` 等多余注释残留？
 
 ## 8. 实体扫描、注解建表与禁止手工 DDL 脚本
 

@@ -1,8 +1,6 @@
 package cn.org.autumn.modules.sys.controller;
 
 import cn.org.autumn.annotation.SkipInterceptor;
-import cn.org.autumn.modules.client.entity.WebAuthenticationEntity;
-import cn.org.autumn.modules.client.service.WebAuthenticationService;
 import cn.org.autumn.modules.spm.interceptor.SpmInterceptor;
 import cn.org.autumn.modules.spm.service.SuperPositionModelService;
 import cn.org.autumn.modules.sys.service.SysConfigService;
@@ -33,10 +31,6 @@ public class SysPageController implements ErrorController {
     @Autowired
     @Lazy
     SuperPositionModelService superPositionModelService;
-
-    @Autowired
-    @Lazy
-    WebAuthenticationService webAuthenticationService;
 
     @Autowired
     @Lazy
@@ -138,31 +132,13 @@ public class SysPageController implements ErrorController {
     }
 
     @RequestMapping("login")
-    public String loginOauth(HttpServletRequest request, HttpServletResponse httpServletResponse, Model model) {
-        Enumeration<String> enumeration = request.getParameterNames();
-        if (!enumeration.hasMoreElements()) {
-            model.addAttribute("url", WebPathUtils.forBrowser(request, "/login?redirect=login"));
-            return "direct";
+    public String loginAlias(HttpServletRequest request) {
+        String query = request.getQueryString();
+        String target = WebPathUtils.forBrowser(request, "/login.html");
+        if (StringUtils.isNotBlank(query)) {
+            target = target + "?" + query;
         }
-        String host = request.getHeader("host");
-        WebAuthenticationEntity webAuthenticationEntity = webAuthenticationService.getByClientId(host);
-        if (StringUtils.isNotEmpty(host)) {
-            if (null == webAuthenticationEntity)
-                webAuthenticationEntity = webAuthenticationService.getByClientId(sysConfigService.getOauth2LoginClientId(host));
-            if (null != webAuthenticationEntity) {
-                StringBuilder sb = new StringBuilder();
-                if (StringUtils.isNotEmpty(webAuthenticationEntity.getAuthorizeUri()) && StringUtils.isNotEmpty(webAuthenticationEntity.getRedirectUri())) {
-                    sb.append(webAuthenticationEntity.getAuthorizeUri());
-                    sb.append("?response_type=code&client_id=");
-                    sb.append(webAuthenticationEntity.getClientId());
-                    sb.append("&redirect_uri=");
-                    sb.append(webAuthenticationEntity.getRedirectUri());
-                    String redirect = sb.toString();
-                    return "redirect:" + redirect;
-                }
-            }
-        }
-        return pageFactory.login(request, httpServletResponse, model);
+        return "redirect:" + target;
     }
 
     @RequestMapping("main.html")

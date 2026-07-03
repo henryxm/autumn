@@ -14,6 +14,7 @@ import cn.org.autumn.site.VersionFactory;
 import cn.org.autumn.utils.HttpClientUtils;
 import cn.org.autumn.utils.IPUtils;
 import cn.org.autumn.utils.R;
+import cn.org.autumn.utils.WebPathUtils;
 import com.alibaba.fastjson.JSON;
 import java.util.HashMap;
 import java.util.Map;
@@ -21,7 +22,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
-import org.apache.oltu.oauth2.as.response.OAuthASResponse;
 import org.apache.oltu.oauth2.client.OAuthClient;
 import org.apache.oltu.oauth2.client.URLConnectionClient;
 import org.apache.oltu.oauth2.client.request.OAuthBearerClientRequest;
@@ -30,11 +30,8 @@ import org.apache.oltu.oauth2.client.response.OAuthResourceResponse;
 import org.apache.oltu.oauth2.common.OAuth;
 import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
-import org.apache.oltu.oauth2.common.message.OAuthResponse;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -79,14 +76,13 @@ public class ClientOauth2Controller {
                 query = "";
             log.debug("Client OAuth login:{}{}", request.getRequestURL().toString(), query);
         }
+        String oauthError = request.getParameter("error");
+        if (StringUtils.isNotBlank(oauthError)) {
+            return oauthCallbackErrorPage(request, model, oauthError, request.getParameter("error_description"));
+        }
         String authCode = request.getParameter(OAuth.OAUTH_CODE);
         if (StringUtils.isEmpty(authCode)) {
-            OAuthResponse oAuthResponse =
-                    OAuthASResponse.errorResponse(HttpServletResponse.SC_BAD_REQUEST)
-                            .setError(OAuthError.OAUTH_ERROR)
-                            .setErrorDescription("Code should not be empty.")
-                            .buildJSONMessage();
-            return new ResponseEntity(oAuthResponse.getBody(), HttpStatus.valueOf(oAuthResponse.getResponseStatus()));
+            return oauthCallbackErrorPage(request, model, OAuthError.OAUTH_ERROR, "未收到授权码，请重新发起授权。");
         }
         if (ShiroUtils.needLogin()) {
             String host = request.getHeader("host");
@@ -118,6 +114,22 @@ public class ClientOauth2Controller {
         if (log.isDebugEnabled())
             log.debug("Callback URL:{}", callback);
         return pageFactory.direct(request, response, model, callback);
+    }
+
+    private String oauthCallbackErrorPage(HttpServletRequest request, Model model, String error, String description) {
+        model.addAttribute("oauthError", error);
+        model.addAttribute("loginUrl", WebPathUtils.forBrowser(request, "/login.html"));
+        if ("access_denied".equalsIgnoreCase(error)) {
+            model.addAttribute("title", "授权已取消");
+            model.addAttribute("message", "您已取消授权，应用无法获取您的账号信息。如需使用相关功能，请重新发起授权并点击确认。");
+        } else if (StringUtils.isNotBlank(description)) {
+            model.addAttribute("title", "授权失败");
+            model.addAttribute("message", description);
+        } else {
+            model.addAttribute("title", "授权未完成");
+            model.addAttribute("message", "授权未能完成，请稍后重试。");
+        }
+        return "oauth2/callback-error";
     }
 
     private String getAccessToken(WebAuthenticationEntity webAuthClientEntity, String oauthCode) {

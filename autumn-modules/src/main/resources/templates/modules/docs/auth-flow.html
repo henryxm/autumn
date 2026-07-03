@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Autumn 文档 - 授权与扫码登录流程</title>
+<#include "/header.html">
+<style>
+    .doc-page { padding: 15px; }
+    .doc-layout { display: flex; align-items: flex-start; }
+    .doc-sidebar { width: 260px; position: sticky; top: 12px; background: #fff; border: 1px solid #d2d6de; border-radius: 3px; padding: 10px 0; margin-right: 15px; }
+    .doc-sidebar-title { font-size: 14px; color: #666; padding: 0 14px 8px; margin: 0 0 8px; border-bottom: 1px solid #f0f0f0; }
+    .doc-nav { list-style: none; margin: 0; padding: 0; }
+    .doc-nav-link { display: block; padding: 8px 14px; color: #333; text-decoration: none; border-left: 3px solid transparent; }
+    .doc-nav-link:hover { background: #f7f7f7; text-decoration: none; }
+    .doc-nav-link.active { color: #3c8dbc; background: #f0f7fb; border-left-color: #3c8dbc; font-weight: 600; }
+    .doc-content { flex: 1; background: #fff; border: 1px solid #d2d6de; border-radius: 3px; padding: 18px; max-width: 960px; }
+    .doc-content h2 { margin-top: 0; }
+    .doc-content h3 { margin-top: 24px; font-size: 20px; border-bottom: 1px solid #eee; padding-bottom: 6px; }
+    .doc-content h4 { margin-top: 16px; font-size: 16px; color: #444; }
+    .doc-content ul, .doc-content ol { padding-left: 20px; }
+    .doc-note { margin: 12px 0; padding: 10px 12px; background: #f0f7fb; border-left: 3px solid #3c8dbc; color: #555; }
+    .doc-warn { margin: 12px 0; padding: 10px 12px; background: #fffbeb; border-left: 3px solid #f59e0b; color: #555; }
+    .doc-code { margin: 8px 0; padding: 10px; background: #f7f7f7; border: 1px solid #e5e5e5; border-radius: 3px; font-family: Menlo, Consolas, monospace; font-size: 12px; word-break: break-all; }
+    .doc-toc { background: #fafafa; border: 1px solid #e5e5e5; border-radius: 3px; padding: 12px 16px; margin: 16px 0; }
+    .doc-toc ul { margin: 0; }
+    .doc-toc a { color: #3c8dbc; }
+    .entity-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 16px 0; }
+    @media (max-width: 768px) { .entity-grid { grid-template-columns: 1fr; } }
+    .entity-card { border: 1px solid #d2d6de; border-radius: 4px; padding: 12px; background: #fff; }
+    .entity-card h4 { margin: 0 0 6px; font-size: 14px; color: #3c8dbc; }
+    .entity-card .meta { font-size: 11px; color: #999; margin-bottom: 6px; }
+    .entity-card p { margin: 0; font-size: 13px; color: #555; line-height: 1.5; }
+    .topology { border: 1px solid #e5e7eb; border-radius: 6px; padding: 16px; background: linear-gradient(180deg, #fafbfd, #fff); margin: 16px 0; overflow-x: auto; }
+    .topo-row { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+    .topo-box { border: 2px solid #3c8dbc; border-radius: 6px; padding: 8px 14px; font-size: 13px; font-weight: 600; background: #fff; text-align: center; min-width: 100px; }
+    .topo-box.secondary { border-color: #10b981; color: #065f46; }
+    .topo-box.tertiary { border-color: #8b5cf6; color: #5b21b6; }
+    .topo-box.audit { border-color: #94a3b8; font-weight: 500; color: #475569; }
+    .topo-arrow { color: #94a3b8; font-size: 18px; font-weight: bold; }
+    .topo-label { font-size: 11px; color: #64748b; text-align: center; width: 100%; }
+    .flow-seq { counter-reset: step; list-style: none; padding: 0; margin: 12px 0; }
+    .flow-seq li { position: relative; padding: 10px 10px 10px 44px; margin-bottom: 8px; border: 1px solid #e5e7eb; border-radius: 4px; background: #fafafa; font-size: 13px; line-height: 1.5; }
+    .flow-seq li::before { counter-increment: step; content: counter(step); position: absolute; left: 12px; top: 10px; width: 22px; height: 22px; line-height: 22px; text-align: center; background: #3c8dbc; color: #fff; border-radius: 50%; font-size: 12px; font-weight: 700; }
+    .flow-seq li strong { color: #333; }
+    .role-table td:first-child { font-weight: 600; white-space: nowrap; }
+    .status-flow { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 12px 0; font-size: 12px; }
+    .status-node { padding: 4px 10px; border-radius: 12px; background: #e2e8f0; color: #334155; }
+    .status-node.pending { background: #fef3c7; color: #92400e; }
+    .status-node.done { background: #d1fae5; color: #065f46; }
+    .status-node.fail { background: #fee2e2; color: #991b1b; }
+    .status-arrow { color: #94a3b8; }
+    .anchor-offset { scroll-margin-top: 12px; }
+    @media (max-width: 992px) { .doc-layout { display: block; } .doc-sidebar { width: 100%; position: static; margin-right: 0; margin-bottom: 12px; } }
+</style>
+</head>
+<body>
+<div class="doc-page">
+    <div class="doc-layout">
+        <aside class="doc-sidebar">
+            <#assign currentDoc = "auth-flow">
+            <#include "/modules/docs/_sidebar.html">
+        </aside>
+        <main class="doc-content">
+            <h2>授权与扫码登录流程指南</h2>
+            <p>本页从<strong>业务视角</strong>说明 Autumn 中「授权登录 + 网站接入 + 扫码授权」的整体架构、数据关系与四种典型使用场景。适合运维、后端与对接方快速理解「为什么要配应用」「扫码如何变成登录/授权码」。</p>
+
+            <div class="doc-note">
+                相关模块：<code>cn.org.autumn.modules.oauth</code>（OAuth2 授权服务器）、
+                <code>cn.org.autumn.modules.client</code>（网站 OAuth 客户端与合并绑定）、
+                <code>cn.org.autumn.modules.qrc</code>（扫码编排层）。
+                仓库详细 API 见 <code>docs/AI_QRC.md</code>、<code>docs/AI_QRC_API.md</code>。
+            </div>
+
+            <div class="doc-toc">
+                <strong>目录</strong>
+                <ul>
+                    <li><a href="#overview">1. 能力总览</a></li>
+                    <li><a href="#why-client">2. 为什么要创建应用</a></li>
+                    <li><a href="#entities">3. 业务数据与关系</a></li>
+                    <li><a href="#topology">4. 系统拓扑</a></li>
+                    <li><a href="#roles">5. 参与角色</a></li>
+                    <li><a href="#flow-self">6. 场景 A：网站扫码登录</a></li>
+                    <li><a href="#flow-oauth-qr">7. 场景 B：第三方授权扫码</a></li>
+                    <li><a href="#flow-consent">8. 场景 C：授权二次确认</a></li>
+                    <li><a href="#flow-device">9. 场景 D：设备码 / 自建二维码</a></li>
+                    <li><a href="#ticket">10. 扫码票据状态机</a></li>
+                    <li><a href="#delivery">11. 结果交付方式</a></li>
+                    <li><a href="#manage">12. 管理与配置入口</a></li>
+                    <li><a href="#api">13. API 速查</a></li>
+                </ul>
+            </div>
+
+            <h3 id="overview" class="anchor-offset">1. 能力总览</h3>
+            <p>Autumn 同时扮演两类角色，并可被第三方调用：</p>
+            <table class="table table-bordered table-striped">
+                <thead><tr><th>角色</th><th>含义</th><th>典型入口</th></tr></thead>
+                <tbody>
+                <tr><td><strong>授权服务器（AS）</strong></td><td>本系统签发授权码 / 访问令牌，管理「谁可以来拿 token」</td><td><code>/oauth2/authorize</code>、<code>/oauth2/token</code></td></tr>
+                <tr><td><strong>网站客户端</strong></td><td>本网站作为 OAuth Client，向 AS 发起登录并换 token</td><td><code>/client/oauth2/callback</code></td></tr>
+                <tr><td><strong>扫码编排层（QRC）</strong></td><td>用「手机 App 扫码 + 确认」代替 PC 输入密码，或代替 OAuth 授权页点同意</td><td><code>/qrc/web/v1/*</code>、<code>/qrc/api/v1/*</code></td></tr>
+                </tbody>
+            </table>
+            <p>扫码<strong>不是</strong>独立的认证协议，而是编排层：最终仍落到 <strong>Shiro Session</strong>（同源网站登录）或 <strong>OAuth 授权码</strong>（第三方授权）。</p>
+
+            <h3 id="why-client" class="anchor-offset">2. 为什么要创建应用</h3>
+            <p>运维口中的「应用」或「客户端」，在库里对应<strong>四块配置 + 一张审计表</strong>。它们通过 <code>clientId</code>（应用标识，如域名 <code>app.example.com</code>）逻辑关联，<strong>没有数据库外键</strong>，由「授权客户端中心」或域名初始化时一并创建。</p>
+
+            <div class="entity-grid">
+                <div class="entity-card">
+                    <h4>授权登记</h4>
+                    <div class="meta">oauth_client_details</div>
+                    <p>登记<strong>谁可以向本系统申请授权</strong>：应用标识、密钥、回调地址、授权范围、是否可信。第三方 App / 本站域名作为 OAuth Client 时都需要这条记录。</p>
+                </div>
+                <div class="entity-card">
+                    <h4>网站接入</h4>
+                    <div class="meta">client_web_authentication</div>
+                    <p>登记<strong>本网站 outbound 登录</strong>要连到哪里：授权页地址、令牌地址、用户资料地址。用于「本站用 OAuth 登录本站」这类场景。</p>
+                </div>
+                <div class="entity-card">
+                    <h4>绑定关系</h4>
+                    <div class="meta">client_web_oauth_combine</div>
+                    <p>把「授权登记」与「网站接入」绑在同一 <code>clientId</code> 下。常见做法：一个域名 = 一套 AS 侧 client + 一套 Web 侧 client，合并后运维只需记一个标识。</p>
+                </div>
+                <div class="entity-card">
+                    <h4>扫码策略</h4>
+                    <div class="meta">qrc_client_grant</div>
+                    <p>控制<strong>该应用是否允许扫码</strong>、扫码完成后如何交付结果（轮询授权码 / 轮询令牌 / 应用跳转 / 回调通知）、是否强制手机二次确认等。</p>
+                </div>
+            </div>
+
+            <h4>创建方式</h4>
+            <table class="table table-bordered table-striped">
+                <thead><tr><th>方式</th><th>触发</th><th>产生数据</th></tr></thead>
+                <tbody>
+                <tr>
+                    <td>域名自动创建</td>
+                    <td>插入 <code>client_web_oauth_combine</code>（如站点初始化）</td>
+                    <td>同时生成授权登记 + 网站接入 + 合并行；回调默认为 <code>{站点}/client/oauth2/callback</code></td>
+                </tr>
+                <tr>
+                    <td>授权客户端中心</td>
+                    <td>运维页「新建」→ <code>POST /client/authhub/create</code></td>
+                    <td>同上 + 默认扫码策略行</td>
+                </tr>
+                <tr>
+                    <td>分散维护</td>
+                    <td>各模块 CRUD 页单独维护</td>
+                    <td>需自行保证 <code>clientId</code> 一致；Hub 保存时会尝试补全合并关系</td>
+                </tr>
+                </tbody>
+            </table>
+
+            <div class="doc-warn">
+                <strong>可信应用</strong>：OAuth 类扫码（授权 / 确认 / 设备码）要求授权登记中 <code>trusted=1</code>，且回调地址与登记完全一致，否则拒绝发码。
+            </div>
+
+            <h3 id="entities" class="anchor-offset">3. 业务数据与关系</h3>
+            <p>核心关联键：<strong>clientId</strong>（业务唯一标识）与各行 <strong>uuid</strong>（合并表引用两侧记录）。</p>
+            <table class="table table-bordered table-striped">
+                <thead>
+                <tr><th>数据</th><th>关联</th><th>运行时用途</th></tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>授权登记</td>
+                    <td><code>clientId</code> 唯一</td>
+                    <td>校验 redirect_uri、发 authorization code、换 access_token</td>
+                </tr>
+                <tr>
+                    <td>网站接入</td>
+                    <td><code>clientId</code> 唯一</td>
+                    <td><code>ClientOauth2Controller</code> 回调后换 token、拉用户信息、生成本地 Session</td>
+                </tr>
+                <tr>
+                    <td>绑定关系</td>
+                    <td><code>clientId</code> + 两侧 uuid</td>
+                    <td>域名识别（<code>DomainHandler</code>）、Hub 聚合展示</td>
+                </tr>
+                <tr>
+                    <td>扫码策略</td>
+                    <td><code>clientId</code> → 授权登记</td>
+                    <td>是否 enabled、delivery、webhook、consent 开关</td>
+                </tr>
+                <tr>
+                    <td>扫码记录（审计）</td>
+                    <td>可选 <code>clientId</code>；<code>uuid</code> 为票据号</td>
+                    <td>活跃票据在 Redis/内存；终态异步写入 <code>qrc_scan_ticket</code></td>
+                </tr>
+                </tbody>
+            </table>
+
+            <div class="topology">
+                <div class="topo-label">以 clientId 为中心的数据关系（逻辑视图）</div>
+                <div class="topo-row">
+                    <div class="topo-box">clientId<br><small>应用标识</small></div>
+                </div>
+                <div class="topo-row">
+                    <span class="topo-arrow">↙</span>
+                    <span class="topo-arrow">↓</span>
+                    <span class="topo-arrow">↘</span>
+                </div>
+                <div class="topo-row">
+                    <div class="topo-box">授权登记<br><small>密钥·回调·范围</small></div>
+                    <div class="topo-box secondary">网站接入<br><small>授权页·令牌·资料</small></div>
+                    <div class="topo-box tertiary">扫码策略<br><small>启用·交付·确认</small></div>
+                </div>
+                <div class="topo-row"><span class="topo-arrow">↕</span></div>
+                <div class="topo-row">
+                    <div class="topo-box secondary">绑定关系<br><small>合并两侧 uuid</small></div>
+                </div>
+                <div class="topo-row"><span class="topo-arrow">↓</span></div>
+                <div class="topo-row">
+                    <div class="topo-box audit">扫码记录 · 按 clientId / 票据 uuid 审计</div>
+                </div>
+            </div>
+
+            <h3 id="topology" class="anchor-offset">4. 系统拓扑</h3>
+            <p>一次完整授权/登录涉及以下组件协作：</p>
+            <div class="topology">
+                <div class="topo-row">
+                    <div class="topo-box">PC 浏览器</div>
+                    <span class="topo-arrow">⇄</span>
+                    <div class="topo-box secondary">Autumn Web<br><small>/qrc/web · login.html · /oauth2/*</small></div>
+                    <span class="topo-arrow">⇄</span>
+                    <div class="topo-box">手机 App</div>
+                </div>
+                <div class="topo-row"><span class="topo-arrow">↓</span></div>
+                <div class="topo-row">
+                    <div class="topo-box">ScanTicketService<br><small>票据 · 锁 · exchange</small></div>
+                    <span class="topo-arrow">→</span>
+                    <div class="topo-box secondary">IntentHandler<br><small>按场景分支</small></div>
+                    <span class="topo-arrow">→</span>
+                    <div class="topo-box tertiary">ClientGrantService<br><small>发码 · webhook · 跳转</small></div>
+                </div>
+                <div class="topo-row"><span class="topo-arrow">↓</span></div>
+                <div class="topo-row">
+                    <div class="topo-box">Shiro Session</div>
+                    <span class="topo-arrow">或</span>
+                    <div class="topo-box secondary">OAuth code → token</div>
+                    <span class="topo-arrow">→</span>
+                    <div class="topo-box audit">第三方 redirect_uri</div>
+                </div>
+            </div>
+
+            <h3 id="roles" class="anchor-offset">5. 参与角色</h3>
+            <table class="table table-bordered table-striped role-table">
+                <thead><tr><th>角色</th><th>做什么</th><th>主要接口</th></tr></thead>
+                <tbody>
+                <tr><td>PC 浏览器</td><td>展示二维码、轮询票据状态、用 exchange 换 Session 或跳转带 code 的 URL</td><td><code>/qrc/web/v1/*</code>、<code>/oauth2/authorize</code></td></tr>
+                <tr><td>手机 App（已登录用户）</td><td>扫描二维码、确认/拒绝授权</td><td><code>/qrc/api/v1/ticket/scan|confirm|deny</code></td></tr>
+                <tr><td>第三方系统</td><td>引导用户到 AS 授权页，或用 Open API 自建二维码</td><td><code>/oauth2/authorize</code>、<code>/qrc/open/v1/*</code></td></tr>
+                <tr><td>运维</td><td>创建应用、配策略、查登录记录</td><td><code>/oauth2/authclient</code>、<code>/qrc/scanticket</code></td></tr>
+                </tbody>
+            </table>
+
+            <h3 id="flow-self" class="anchor-offset">6. 场景 A：网站扫码登录（SELF_WEB_LOGIN）</h3>
+            <p><strong>目的</strong>：用户已在手机 App 登录，PC 网站不想输密码，扫二维码后在 PC 建立与 App 同一用户的 Session。</p>
+            <p><strong>Intent</strong>：<code>SELF_WEB_LOGIN</code> · <strong>Handler</strong>：<code>SelfWebLoginHandler</code></p>
+
+            <ol class="flow-seq">
+                <li><strong>PC</strong> 调用 <code>POST /qrc/web/v1/ticket/create</code>，body 含 <code>intent: SELF_WEB_LOGIN</code>，获得票据 <code>uuid</code> 与 <code>qrUrl</code>。</li>
+                <li><strong>PC</strong> 展示二维码（内容为 <code>{host}/qrc/v1/t/{uuid}</code> 或 App 协议链接）。</li>
+                <li><strong>App</strong> 解析 uuid，带用户 Token 调用 <code>POST /qrc/api/v1/ticket/scan</code>，再 <code>POST .../confirm</code>。</li>
+                <li><strong>服务端</strong> 生成一次性 <code>exchange</code> 令牌（默认 TTL 约 60s，见 <code>QRC_CONFIG</code>）。</li>
+                <li><strong>PC</strong> 轮询 <code>GET /qrc/web/v1/ticket/status?uuid=...</code>，状态为 CONFIRMED 时拿到 exchange。</li>
+                <li><strong>PC</strong> 调用 <code>POST /qrc/web/v1/session/exchange</code>，Shiro 建立 Session，跳转首页。</li>
+            </ol>
+
+            <div class="doc-note">扫码 ≠ 登录：必须 App 端 <strong>confirm</strong>；exchange 仅用一次。登录审计 <code>way=qrc_self</code>。</div>
+
+            <h3 id="flow-oauth-qr" class="anchor-offset">7. 场景 B：第三方授权扫码（OAUTH_AUTHORIZE）</h3>
+            <p><strong>目的</strong>：第三方浏览器打开 <code>/oauth2/authorize?client_id&redirect_uri&scope&state</code>，用户未在 AS 登录；优先展示扫码页，App 确认后第三方获得 <code>code</code>。</p>
+            <p><strong>Intent</strong>：<code>OAUTH_AUTHORIZE</code> · 入口：<code>AuthorizationController</code> + <code>login.html</code>（mode=authorize）</p>
+
+            <ol class="flow-seq">
+                <li>第三方将用户重定向到 AS 授权 URL（须 trusted client + redirect_uri 完全匹配）。</li>
+                <li>AS 检测未登录且全局 <code>oauthQrFirst=true</code>（<code>QRC_CONFIG</code>）→ 创建 OAUTH_AUTHORIZE 票据 → 渲染 <code>login.html</code> 扫码 Tab。</li>
+                <li>PC 轮询票据；App scan + confirm。</li>
+                <li><code>ClientGrantService.deliverOAuth</code> 签发 authorization code，拼装 redirect 或返回 <code>result.code</code>。</li>
+                <li>PC 跳转 <code>redirect_uri?code=...&state=...</code>；第三方后端 <code>POST /oauth2/token</code> 换 access_token。</li>
+            </ol>
+
+            <div class="doc-warn">建票失败时<strong>降级</strong>为账号密码 Tab，<strong>不会</strong>静默发 code。与 consent 场景（失败直接报错）策略不同。</div>
+
+            <h3 id="flow-consent" class="anchor-offset">8. 场景 C：授权二次确认（OAUTH_CONSENT）</h3>
+            <p><strong>目的</strong>：浏览器已在 AS 有 Session，但策略要求「手机再确认一次 scope」（防会话劫持冒点同意）。</p>
+            <p><strong>触发</strong>：<code>qrc_client_grant.consent = true</code>（默认 false）</p>
+
+            <ol class="flow-seq">
+                <li>用户访问 <code>/oauth2/authorize</code>，AS 已登录 → <code>requireAppConsent(clientId)</code> 为 true。</li>
+                <li>创建 <code>OAUTH_CONSENT</code> 票据，展示 consent 模式登录页。</li>
+                <li>App 扫码 confirm 后同样 <code>deliverOAuth</code> 发 code 并 redirect。</li>
+                <li>若建票失败 → 返回 OAuth 错误，<strong>不发 code</strong>。</li>
+            </ol>
+
+            <h3 id="flow-device" class="anchor-offset">9. 场景 D：设备码 / 自建二维码（OAUTH_DEVICE）</h3>
+            <p><strong>目的</strong>：第三方自有 UI（电视、CLI、Partner 后台），不经过 AS 的 login.html，自行展示 QR 并轮询或收 Webhook。</p>
+            <p><strong>Intent</strong>：<code>OAUTH_DEVICE</code> · 入口：<code>POST /qrc/open/v1/ticket/create</code>（client_id + client_secret）</p>
+
+            <ol class="flow-seq">
+                <li>第三方服务端带密钥创建票据，获得 uuid / qrUrl，在自有界面展示 QR。</li>
+                <li>App scan + confirm（与 B/C 相同）。</li>
+                <li>按扫码策略 <strong>delivery</strong> 交付结果：轮询拿 code/token、Webhook 推送、或 Deep Link 回 App。</li>
+                <li>第三方用 code 调 <code>/oauth2/token</code> 或直接使用返回的 token（视 delivery 而定）。</li>
+            </ol>
+
+            <h3 id="ticket" class="anchor-offset">10. 扫码票据状态机</h3>
+            <p>活跃票据存 Redis/内存，键 <code>qrc:ticket:{uuid}</code>，迁移带分布式锁。</p>
+            <div class="status-flow">
+                <span class="status-node pending">PENDING 待扫码</span>
+                <span class="status-arrow">→</span>
+                <span class="status-node pending">SCANNED 已扫码</span>
+                <span class="status-arrow">→</span>
+                <span class="status-node done">CONFIRMED 已确认</span>
+                <span class="status-arrow">→</span>
+                <span class="status-node done">COMPLETED 已完成</span>
+            </div>
+            <div class="status-flow">
+                <span class="status-node fail">DENIED 已拒绝</span>
+                <span class="status-node fail">CANCELLED 已取消</span>
+                <span class="status-node fail">EXPIRED 已过期</span>
+            </div>
+            <table class="table table-bordered table-striped">
+                <thead><tr><th>Intent</th><th>用途说明</th></tr></thead>
+                <tbody>
+                <tr><td><code>SELF_WEB_LOGIN</code></td><td>同源 PC 网站登录</td></tr>
+                <tr><td><code>OAUTH_AUTHORIZE</code></td><td>未登录用户的 OAuth 授权</td></tr>
+                <tr><td><code>OAUTH_CONSENT</code></td><td>已登录 + 手机二次确认</td></tr>
+                <tr><td><code>OAUTH_DEVICE</code></td><td>第三方 Open API 自建 QR</td></tr>
+                </tbody>
+            </table>
+
+            <h3 id="delivery" class="anchor-offset">11. 结果交付方式（扫码策略 · 结果方式）</h3>
+            <table class="table table-bordered table-striped">
+                <thead><tr><th>模式</th><th>适用场景</th><th>PC/第三方如何拿到结果</th></tr></thead>
+                <tbody>
+                <tr><td><code>POLL_CODE</code></td><td>默认；OAuth 授权码模式</td><td>轮询 status，<code>result.code</code> + redirectUri</td></tr>
+                <tr><td><code>POLL_TOKEN</code></td><td>希望轮询直接拿 token</td><td>轮询 <code>result.accessToken</code> 等</td></tr>
+                <tr><td><code>DEEP_LINK</code></td><td>结果回跳到原生 App</td><td>App 获得 deepLink；需配置 schemes 白名单</td></tr>
+                <tr><td><code>WEBHOOK</code></td><td>服务端异步通知</td><td>POST 到策略中的通知地址，带签名密钥</td></tr>
+                </tbody>
+            </table>
+
+            <h3 id="manage" class="anchor-offset">12. 管理与配置入口</h3>
+            <table class="table table-bordered table-striped">
+                <thead><tr><th>入口</th><th>路径</th><th>说明</th></tr></thead>
+                <tbody>
+                <tr>
+                    <td><strong>授权客户端中心</strong></td>
+                    <td><a href="${request.contextPath}/oauth2/authclient">${request.contextPath}/oauth2/authclient</a></td>
+                    <td>四表合一：新建/编辑/删除应用，查看扫码登录记录（运维监控菜单）</td>
+                </tr>
+                <tr>
+                    <td>授权登记 CRUD</td>
+                    <td><code>/modules/oauth/clientdetails</code></td>
+                    <td>单独维护 AS 侧 client</td>
+                </tr>
+                <tr>
+                    <td>扫码策略 CRUD</td>
+                    <td><code>/modules/qrc/clientgrant</code></td>
+                    <td>单独维护 qrc_client_grant</td>
+                </tr>
+                <tr>
+                    <td>扫码记录审计</td>
+                    <td><code>/modules/qrc/scanticket</code></td>
+                    <td>全量票据审计表</td>
+                </tr>
+                <tr>
+                    <td>登录页</td>
+                    <td><code>/login.html</code>、<code>/oauth2/login</code></td>
+                    <td>账号 / 扫码 / 手机；OAuth 授权时预建票</td>
+                </tr>
+                </tbody>
+            </table>
+
+            <h4>全局配置（sys_config · QRC_CONFIG）</h4>
+            <table class="table table-bordered table-striped">
+                <thead><tr><th>字段</th><th>作用</th></tr></thead>
+                <tbody>
+                <tr><td><code>oauthQrFirst</code></td><td>OAuth 未登录时是否优先扫码页</td></tr>
+                <tr><td><code>ticketTtlSeconds</code></td><td>票据有效期</td></tr>
+                <tr><td><code>exchangeTokenTtlSeconds</code></td><td>网站登录 exchange 一次性 TTL</td></tr>
+                <tr><td><code>pollIntervalMs</code></td><td>前端轮询建议间隔</td></tr>
+                </tbody>
+            </table>
+
+            <h3 id="api" class="anchor-offset">13. API 速查</h3>
+            <h4>PC Web（匿名）</h4>
+            <div class="doc-code">POST /qrc/web/v1/ticket/create</div>
+            <div class="doc-code">GET  /qrc/web/v1/ticket/status?uuid=...</div>
+            <div class="doc-code">POST /qrc/web/v1/session/exchange</div>
+
+            <h4>手机 App（须用户 Token）</h4>
+            <div class="doc-code">GET  /qrc/api/v1/ticket/{uuid}</div>
+            <div class="doc-code">POST /qrc/api/v1/ticket/scan</div>
+            <div class="doc-code">POST /qrc/api/v1/ticket/confirm</div>
+            <div class="doc-code">POST /qrc/api/v1/ticket/deny</div>
+
+            <h4>第三方 Open API（client_id + secret）</h4>
+            <div class="doc-code">POST /qrc/open/v1/ticket/create</div>
+            <div class="doc-code">GET  /qrc/open/v1/ticket/status?uuid=...&amp;clientId=...&amp;clientSecret=...</div>
+
+            <h4>OAuth2 AS</h4>
+            <div class="doc-code">GET  /oauth2/authorize?response_type=code&amp;client_id=...&amp;redirect_uri=...&amp;scope=...&amp;state=...</div>
+            <div class="doc-code">POST /oauth2/token</div>
+            <div class="doc-code">GET  /oauth2/userInfo</div>
+
+            <h4>Hub 管理 API</h4>
+            <div class="doc-code">GET  /client/authhub/list</div>
+            <div class="doc-code">GET  /client/authhub/info/{clientId}</div>
+            <div class="doc-code">POST /client/authhub/create | save | delete</div>
+            <div class="doc-code">GET  /client/authhub/tickets/{clientId}</div>
+
+            <h4>QR 链接（公开字段，无密钥）</h4>
+            <div class="doc-code">GET /qrc/v1/t/{uuid}  →  { uuid, intent, status }</div>
+
+            <div class="doc-note" style="margin-top: 20px;">
+                延伸阅读：
+                <a href="${request.contextPath}/modules/docs/oauth">认证授权（oauth/client）</a> ·
+                <a href="${request.contextPath}/modules/docs/qrc">扫码登录（QRC）索引</a> ·
+                仓库 <code>docs/AI_OAUTH_INTEGRATION.md</code>（OAuth 第三方对接手册） ·
+                仓库 <code>docs/AI_QRC_INTEGRATION.md</code>（QRC 第三方集成）
+            </div>
+
+            <div style="margin-top: 16px;">
+                <a class="btn btn-default btn-sm" href="${request.contextPath}/modules/docs/index">返回首页</a>
+                <a class="btn btn-success btn-sm" href="${request.contextPath}/modules/docs/index?done=auth-flow">返回首页并标记本章完成</a>
+                <a class="btn btn-primary btn-sm" href="${request.contextPath}/oauth2/authclient">打开授权客户端中心</a>
+            </div>
+        </main>
+    </div>
+</div>
+</body>
+</html>

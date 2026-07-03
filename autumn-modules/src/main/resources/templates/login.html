@@ -1,157 +1,1340 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <title>Autumn管理系统</title>
-  <!-- Tell the browser to be responsive to screen width -->
+  <title><#if oauthAuthorize?? && oauthAuthorize>应用授权<#elseif oauthLogin?? && oauthLogin>用户登录<#else>Autumn管理系统</#if></title>
   <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
   <link rel="stylesheet" href="${request.contextPath}/statics/css/bootstrap.min.css">
   <link rel="stylesheet" href="${request.contextPath}/statics/css/font-awesome.min.css">
   <link rel="stylesheet" href="${request.contextPath}/statics/css/AdminLTE.min.css">
-  <!-- AdminLTE Skins. Choose a skin from the css/skins
-       folder instead of downloading all of them to reduce the load. -->
   <link rel="stylesheet" href="${request.contextPath}/statics/css/all-skins.min.css">
   <link rel="stylesheet" href="${request.contextPath}/statics/css/main.css">
-  <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
-  <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
   <!--[if lt IE 9]>
   <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
   <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
   <![endif]-->
+  <style>
+    :root {
+      --login-brand-1: #5b6cf0;
+      --login-brand-2: #7c3aed;
+      --login-brand-3: #8b5cf6;
+      --login-text: #1a1d26;
+      --login-muted: #64748b;
+      --login-border: #e8ecf4;
+      --login-radius: 16px;
+      --login-shadow: 0 24px 64px rgba(15, 23, 42, 0.28);
+    }
+    [v-cloak] { display: none; }
+    body.login-page-v2 {
+      min-height: 100vh;
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+      background: linear-gradient(135deg, #4338ca 0%, #5b6cf0 38%, #7c3aed 72%, #6d28d9 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 16px;
+      position: relative;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+    body.login-page-v2.oauth-authorize-mode {
+      background: linear-gradient(145deg, #0f172a 0%, #1e293b 42%, #312e81 100%);
+    }
+    body.login-page-v2::before,
+    body.login-page-v2::after {
+      content: '';
+      position: fixed;
+      border-radius: 50%;
+      pointer-events: none;
+      filter: blur(60px);
+      opacity: 0.45;
+    }
+    body.login-page-v2::before {
+      width: 420px; height: 420px;
+      top: -120px; right: -80px;
+      background: rgba(255, 255, 255, 0.18);
+    }
+    body.login-page-v2::after {
+      width: 360px; height: 360px;
+      bottom: -100px; left: -60px;
+      background: rgba(139, 92, 246, 0.35);
+    }
+    .login-shell {
+      width: 100%;
+      max-width: 440px;
+      position: relative;
+      z-index: 1;
+      animation: loginFadeUp 0.5s ease-out;
+    }
+    @keyframes loginFadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: none; }
+    }
+    body.oauth-authorize-mode .login-shell { max-width: 920px; }
+    .oauth-split-card { overflow: visible; }
+    .oauth-split {
+      display: flex;
+      align-items: stretch;
+      min-height: 420px;
+    }
+    .oauth-split-left {
+      flex: 1 1 50%;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .oauth-split-divider {
+      width: 1px;
+      background: var(--login-border);
+      flex-shrink: 0;
+    }
+    .oauth-split-right {
+      flex: 1 1 50%;
+      min-width: 0;
+      padding: 28px 28px 32px;
+      background: linear-gradient(180deg, #fafbfd 0%, #fff 100%);
+      display: flex;
+      flex-direction: column;
+    }
+    .oauth-left-body { flex: 1; }
+    .oauth-session-panel {
+      padding: 36px 28px 32px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 360px;
+    }
+    .oauth-session-avatar {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--login-brand-1), var(--login-brand-2));
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      margin-bottom: 16px;
+      box-shadow: 0 8px 24px rgba(91, 108, 240, 0.28);
+    }
+    .oauth-session-label { font-size: 12px; color: var(--login-muted); margin: 0 0 4px; }
+    .oauth-session-name { font-size: 18px; font-weight: 700; color: var(--login-text); margin: 0 0 8px; }
+    .oauth-session-hint { font-size: 13px; color: var(--login-muted); margin: 0 0 20px; line-height: 1.6; }
+    .oauth-session-logout {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 18px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--login-muted);
+      background: #fff;
+      border: 1px solid var(--login-border);
+      border-radius: 999px;
+      text-decoration: none;
+      transition: color 0.2s, border-color 0.2s, background 0.2s;
+    }
+    .oauth-session-logout:hover,
+    .oauth-session-logout:focus {
+      color: var(--login-brand-1);
+      border-color: rgba(91, 108, 240, 0.45);
+      background: rgba(91, 108, 240, 0.04);
+      text-decoration: none;
+    }
+    .oauth-consent-head { margin-bottom: 20px; }
+    .oauth-consent-head h2 {
+      margin: 0 0 6px;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--login-text);
+    }
+    .oauth-consent-head p { margin: 0; font-size: 13px; color: var(--login-muted); line-height: 1.5; }
+    .oauth-consent-app {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 16px;
+      border: 1px solid var(--login-border);
+      border-radius: 14px;
+      background: #fff;
+      margin-bottom: 18px;
+    }
+    .oauth-consent-app .app-icon,
+    .oauth-consent-app .app-icon-placeholder { width: 48px; height: 48px; flex-shrink: 0; }
+    .oauth-consent-app .app-name { font-size: 15px; font-weight: 700; margin: 0 0 4px; color: var(--login-text); }
+    .oauth-consent-app .app-id { font-size: 12px; color: var(--login-muted); margin: 0; word-break: break-all; }
+    .oauth-perm-list {
+      list-style: none;
+      margin: 0 0 18px;
+      padding: 0;
+      border: 1px solid var(--login-border);
+      border-radius: 12px;
+      overflow: hidden;
+      background: #fff;
+    }
+    .oauth-perm-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 12px 14px;
+      font-size: 13px;
+      color: var(--login-text);
+      border-bottom: 1px solid var(--login-border);
+    }
+    .oauth-perm-list li:last-child { border-bottom: none; }
+    .oauth-perm-list li i { color: var(--login-brand-1); margin-top: 2px; width: 16px; text-align: center; }
+    .oauth-consent-check {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 18px;
+      font-size: 13px;
+      color: var(--login-text);
+      line-height: 1.5;
+      cursor: pointer;
+      user-select: none;
+    }
+    .oauth-consent-check input { margin-top: 3px; accent-color: var(--login-brand-1); flex-shrink: 0; }
+    .oauth-consent-actions { display: flex; flex-direction: column; gap: 10px; margin-top: auto; }
+    .btn-consent {
+      height: 46px;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      border: none;
+    }
+    .btn-consent-primary {
+      background: linear-gradient(135deg, var(--login-brand-1), var(--login-brand-2));
+      color: #fff;
+      box-shadow: 0 8px 20px rgba(91, 108, 240, 0.35);
+    }
+    .btn-consent-primary:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none !important;
+    }
+    .btn-consent-primary:not(:disabled):hover {
+      background: linear-gradient(135deg, #4f46e5, #6d28d9);
+    }
+    .btn-consent-ghost {
+      background: #fff;
+      color: var(--login-muted);
+      border: 1px solid var(--login-border);
+    }
+    .oauth-consent-tip {
+      font-size: 12px;
+      color: var(--login-muted);
+      text-align: center;
+      margin: 0 0 12px;
+      min-height: 18px;
+    }
+    @media (max-width: 768px) {
+      body.oauth-authorize-mode .login-shell { max-width: 440px; }
+      .oauth-split { flex-direction: column; min-height: 0; }
+      .oauth-split-divider { width: 100%; height: 1px; }
+      .oauth-split-right { padding: 22px 20px 24px; }
+      .oauth-session-panel { min-height: 240px; padding: 24px 20px; }
+    }
+    .login-brand {
+      text-align: center;
+      color: #fff;
+      margin-bottom: 24px;
+    }
+    .login-brand .brand-icon {
+      width: 64px;
+      height: 64px;
+      line-height: 64px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.16);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 30px;
+      margin-bottom: 14px;
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    }
+    .login-brand h1 {
+      margin: 0;
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+    .login-brand p {
+      margin: 8px 0 0;
+      opacity: 0.88;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .login-card {
+      background: rgba(255, 255, 255, 0.98);
+      border-radius: var(--login-radius);
+      box-shadow: var(--login-shadow);
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.6);
+    }
+    .login-tabs {
+      display: flex;
+      margin: 0;
+      padding: 8px 10px 0;
+      list-style: none;
+      background: #f8f9fd;
+      border-bottom: 1px solid var(--login-border);
+      gap: 4px;
+    }
+    .login-tabs li { flex: 1; text-align: center; }
+    .login-tabs li a {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      padding: 12px 6px 10px;
+      color: var(--login-muted);
+      font-size: 12px;
+      font-weight: 500;
+      text-decoration: none;
+      border-radius: 10px 10px 0 0;
+      border-bottom: 2px solid transparent;
+      transition: color 0.2s, background 0.2s, border-color 0.2s;
+    }
+    .login-tabs li a i {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      font-size: 16px;
+      border-radius: 10px;
+      background: transparent;
+      transition: background 0.2s, color 0.2s;
+    }
+    .login-tabs li.active a {
+      color: var(--login-brand-1);
+      border-bottom-color: var(--login-brand-1);
+      font-weight: 600;
+      background: #fff;
+    }
+    .login-tabs li.active a i {
+      background: linear-gradient(135deg, rgba(91, 108, 240, 0.14), rgba(124, 58, 237, 0.12));
+      color: var(--login-brand-1);
+    }
+    .login-tabs li a:hover {
+      color: var(--login-brand-1);
+      text-decoration: none;
+    }
+    .login-body { padding: 28px 32px 32px; }
+    .login-alert {
+      margin-bottom: 18px;
+      border-radius: 10px;
+      border: none;
+      font-size: 13px;
+      padding: 12px 14px;
+      background: #fef2f2;
+      color: #991b1b;
+    }
+    .login-alert .close { opacity: 0.5; }
+    .login-panel { min-height: 260px; animation: panelIn 0.25s ease; }
+    @keyframes panelIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: none; }
+    }
+    .login-panel .form-group { margin-bottom: 18px; position: relative; }
+    .login-panel .form-control {
+      height: 46px;
+      padding-left: 42px;
+      border-radius: 10px;
+      border: 1px solid var(--login-border);
+      box-shadow: none;
+      font-size: 14px;
+      color: var(--login-text);
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .login-panel .form-control::placeholder { color: #94a3b8; }
+    .login-panel .form-control:focus {
+      border-color: var(--login-brand-1);
+      box-shadow: 0 0 0 3px rgba(91, 108, 240, 0.15);
+    }
+    .login-panel .form-control-feedback {
+      left: 14px;
+      right: auto;
+      top: 0;
+      bottom: 0;
+      width: 18px;
+      height: auto;
+      margin-top: 0;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #94a3b8;
+      font-size: 15px;
+      pointer-events: none;
+    }
+    .login-panel .form-control-feedback.glyphicon { top: 0; }
+    .login-panel .has-feedback .form-control { padding-right: 12px; }
+    .captcha-row { display: flex; align-items: stretch; gap: 10px; }
+    .captcha-row img {
+      height: 46px;
+      width: 110px;
+      border-radius: 10px;
+      border: 1px solid var(--login-border);
+      cursor: pointer;
+      object-fit: cover;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .captcha-row img:hover {
+      border-color: var(--login-brand-1);
+      box-shadow: 0 0 0 2px rgba(91, 108, 240, 0.12);
+    }
+    .captcha-row .form-group { flex: 1; margin-bottom: 0 !important; }
+    .captcha-row .form-control { padding-left: 14px; }
+    .remember-row {
+      margin: -4px 0 18px;
+      color: var(--login-muted);
+      font-size: 13px;
+    }
+    .remember-row label { font-weight: normal; margin: 0; cursor: pointer; user-select: none; }
+    .remember-row input { margin-right: 6px; accent-color: var(--login-brand-1); }
+    .btn-login {
+      height: 46px;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      border: none;
+      background: linear-gradient(135deg, var(--login-brand-1), var(--login-brand-2));
+      box-shadow: 0 8px 20px rgba(91, 108, 240, 0.35);
+      transition: transform 0.15s, box-shadow 0.2s, filter 0.2s;
+    }
+    .btn-login:hover, .btn-login:focus {
+      background: linear-gradient(135deg, #4f46e5, #6d28d9);
+      box-shadow: 0 10px 24px rgba(91, 108, 240, 0.42);
+      transform: translateY(-1px);
+      outline: none;
+    }
+    .btn-login:active { transform: translateY(0); }
+    .qr-panel {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      text-align: center;
+      padding: 4px 0 0;
+      width: 100%;
+    }
+    .qr-center {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+    }
+    .qr-frame {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      border: 1px solid var(--login-border);
+      border-radius: 16px;
+      background: linear-gradient(180deg, #fafbfd, #fff);
+      margin: 0 auto 16px;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+      width: 232px;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+    #loginQrcodeBox {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 200px;
+      height: 200px;
+      line-height: 0;
+    }
+    #loginQrcodeBox img,
+    #loginQrcodeBox canvas {
+      display: block;
+      margin: 0 auto;
+    }
+    .qr-frame::before,
+    .qr-frame::after {
+      content: '';
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      border-color: var(--login-brand-1);
+      border-style: solid;
+      opacity: 0.7;
+    }
+    .qr-frame::before {
+      top: 10px; left: 10px;
+      border-width: 2px 0 0 2px;
+      border-radius: 4px 0 0 0;
+    }
+    .qr-frame::after {
+      bottom: 10px; right: 10px;
+      border-width: 0 2px 2px 0;
+      border-radius: 0 0 4px 0;
+    }
+    .qr-scan-line {
+      position: absolute;
+      left: 16px; right: 16px;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--login-brand-1), transparent);
+      animation: qrScan 2.4s ease-in-out infinite;
+      pointer-events: none;
+      opacity: 0.6;
+    }
+    @keyframes qrScan {
+      0%, 100% { top: 16px; opacity: 0.3; }
+      50% { top: calc(100% - 18px); opacity: 0.85; }
+    }
+    .qr-frame img, .qr-frame canvas { display: block; width: 200px; height: 200px; border-radius: 8px; margin: 0 auto; }
+    .qr-frame table { margin: 0 auto !important; border-collapse: collapse; }
+    #loginQrcodeBox table { margin: 0 auto !important; }
+    .qr-status {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--login-brand-1);
+      margin: 0 0 8px;
+      min-height: 22px;
+      text-align: center;
+    }
+    .qr-status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--login-brand-1);
+      animation: qrPulse 1.4s ease-in-out infinite;
+    }
+    @keyframes qrPulse {
+      0%, 100% { opacity: 0.4; transform: scale(0.85); }
+      50% { opacity: 1; transform: scale(1); }
+    }
+    .qr-hint {
+      font-size: 13px;
+      color: var(--login-muted);
+      margin: 0;
+      line-height: 1.6;
+      max-width: 280px;
+      text-align: center;
+    }
+    .qr-actions {
+      margin-top: 16px;
+      display: flex;
+      justify-content: center;
+      width: 100%;
+    }
+    .qr-actions a {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--login-muted);
+      padding: 6px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--login-border);
+      background: #f8f9fd;
+      text-decoration: none;
+      transition: color 0.2s, border-color 0.2s, background 0.2s;
+    }
+    .qr-actions a:hover {
+      color: var(--login-brand-1);
+      border-color: rgba(91, 108, 240, 0.35);
+      background: rgba(91, 108, 240, 0.06);
+      text-decoration: none;
+    }
+    .login-footer {
+      text-align: center;
+      margin-top: 20px;
+      color: rgba(255, 255, 255, 0.72);
+      font-size: 12px;
+      letter-spacing: 0.04em;
+    }
+    .oauth-app-info {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 16px 18px;
+      margin-bottom: 20px;
+      background: linear-gradient(135deg, rgba(91, 108, 240, 0.08), rgba(124, 58, 237, 0.06));
+      border: 1px solid rgba(91, 108, 240, 0.18);
+      border-radius: 14px;
+    }
+    .oauth-app-info .app-action {
+      font-size: 11px;
+      color: var(--login-brand-1);
+      margin: 0 0 4px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+    }
+    .oauth-app-info .app-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      object-fit: cover;
+      background: #fff;
+      border: 1px solid var(--login-border);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    }
+    .oauth-app-info .app-icon-placeholder {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--login-brand-1), var(--login-brand-2));
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      box-shadow: 0 4px 12px rgba(91, 108, 240, 0.3);
+    }
+    .oauth-app-info .app-meta { flex: 1; min-width: 0; text-align: left; }
+    .oauth-app-info .app-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--login-text);
+      margin: 0 0 6px;
+    }
+    .oauth-app-info .app-scope {
+      font-size: 12px;
+      color: var(--login-muted);
+      margin: 0;
+      word-break: break-all;
+    }
+    .oauth-app-info .scope-tag {
+      display: inline-block;
+      margin: 2px 4px 0 0;
+      padding: 3px 10px;
+      font-size: 11px;
+      color: #4338ca;
+      background: #fff;
+      border: 1px solid rgba(91, 108, 240, 0.25);
+      border-radius: 999px;
+    }
+    @media (max-width: 480px) {
+      body.login-page-v2 { padding: 20px 12px; }
+      .login-body { padding: 22px 20px 24px; }
+      .login-tabs li a { font-size: 11px; padding: 10px 4px 8px; }
+      .login-tabs li a i { width: 28px; height: 28px; font-size: 14px; }
+      .login-brand h1 { font-size: 20px; }
+      .qr-frame { width: 208px; }
+      #loginQrcodeBox { width: 176px; height: 176px; }
+      .qr-frame img, .qr-frame canvas { width: 176px; height: 176px; }
+    }
+  </style>
 </head>
-<body class="hold-transition login-page">
-<div class="login-box" id="rrapp" v-cloak>
-  <div class="login-logo">
-    <b>Autumn管理系统</b>
+<body class="${bodyClass!'login-page-v2'}">
+<div class="login-shell" id="rrapp" v-cloak>
+  <div class="login-brand">
+    <div class="brand-icon"><i class="fa fa-shield"></i></div>
+    <h1>
+      <!--<#if oauthAuthorize?? && oauthAuthorize>-->
+      应用授权
+      <!--<#elseif oauthLogin?? && oauthLogin>-->
+      登录系统
+      <!--<#else>-->
+      Autumn 管理系统
+      <!--</#if>-->
+    </h1>
+    <p>
+      <!--<#if oauthAuthorize?? && oauthAuthorize>-->
+      请先登录，勾选授权协议后点击确认
+      <!--<#else>-->
+      欢迎回来，请选择登录方式
+      <!--</#if>-->
+    </p>
   </div>
-  <!-- /.login-logo -->
-  <div class="login-box-body">
-      <p class="login-box-msg">管理员登录</p>
-      <div v-if="error" class="alert alert-danger alert-dismissible">
-        <h4 style="margin-bottom: 0px;"><i class="fa fa-exclamation-triangle"></i> {{errorMsg}}</h4>
+
+  <!--<#if oauthAuthorize?? && oauthAuthorize>-->
+  <div class="login-card oauth-split-card">
+    <div class="oauth-split">
+      <div class="oauth-split-left">
+        <!--<#if authorizeLoggedIn?? && authorizeLoggedIn>-->
+        <div class="oauth-session-panel">
+          <div class="oauth-session-avatar"><i class="fa fa-user"></i></div>
+          <p class="oauth-session-label">当前登录账号</p>
+          <p class="oauth-session-name">${loginUserName!'已登录用户'}</p>
+          <p class="oauth-session-hint">请在右侧勾选授权范围<br>并点击「确认授权」完成授权</p>
+          <!--<#if authorizeLogoutUrl?? && authorizeLogoutUrl?has_content>-->
+          <a class="oauth-session-logout" href="${authorizeLogoutUrl}"><i class="fa fa-sign-out"></i> 切换账号</a>
+          <!--</#if>-->
+        </div>
+        <!--<#else>-->
+        <ul class="login-tabs">
+          <li :class="{ active: loginTab === 'account' }">
+            <a href="javascript:;" @click="switchTab('account')"><i class="fa fa-user"></i>账号登录</a>
+          </li>
+          <li :class="{ active: loginTab === 'qr' }">
+            <a href="javascript:;" @click="switchTab('qr')"><i class="fa fa-qrcode"></i>扫码登录</a>
+          </li>
+          <li :class="{ active: loginTab === 'phone' }">
+            <a href="javascript:;" @click="switchTab('phone')"><i class="fa fa-mobile"></i>手机登录</a>
+          </li>
+        </ul>
+        <div class="login-body oauth-left-body">
+          <div v-if="error" class="alert alert-danger alert-dismissible login-alert">
+            <button type="button" class="close" @click="error = false"><span>&times;</span></button>
+            <i class="fa fa-exclamation-circle"></i> {{ errorMsg }}
+          </div>
+          <form class="login-panel" v-show="loginTab === 'account'" method="post" action="${request.contextPath}/oauth2/login" @submit="beforeOauthAuthorizeLogin">
+            <input type="hidden" name="callback" id="oauthAuthorizeCallback" value="">
+            <div class="form-group has-feedback">
+              <input type="text" name="username" class="form-control" v-model="username" placeholder="请输入账号" autocomplete="username" required>
+              <span class="glyphicon glyphicon-user form-control-feedback"></span>
+            </div>
+            <div class="form-group has-feedback">
+              <input type="password" name="password" class="form-control" v-model="password" placeholder="请输入密码" autocomplete="current-password" required>
+              <span class="glyphicon glyphicon-lock form-control-feedback"></span>
+            </div>
+            <div class="remember-row">
+              <label><input type="checkbox" name="rememberMe" value="true" checked> 记住我</label>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block btn-login">登 录</button>
+          </form>
+          <div class="login-panel qr-panel" v-show="loginTab === 'qr'">
+            <div class="qr-center">
+              <div class="qr-frame">
+                <div class="qr-scan-line"></div>
+                <div id="loginQrcodeBox"></div>
+              </div>
+              <p class="qr-status"><span class="qr-status-dot"></span>{{ qrStatus }}</p>
+              <p class="qr-hint">打开 Autumn APP 扫码并完成确认，然后返回右侧授权</p>
+              <div class="qr-actions">
+                <a href="javascript:;" @click="refreshQrLogin"><i class="fa fa-refresh"></i> 刷新二维码</a>
+              </div>
+            </div>
+          </div>
+          <form class="login-panel" v-show="loginTab === 'phone'" method="post" action="${request.contextPath}/oauth2/login" @submit="beforeOauthAuthorizeLogin">
+            <input type="hidden" name="callback" id="oauthAuthorizeCallbackPhone" value="">
+            <input type="hidden" name="username" :value="mobileClean">
+            <div class="form-group has-feedback">
+              <input type="tel" class="form-control" v-model="mobile" placeholder="请输入手机号" maxlength="11" autocomplete="tel" required>
+              <span class="glyphicon glyphicon-phone form-control-feedback"></span>
+            </div>
+            <div class="form-group has-feedback">
+              <input type="password" name="password" class="form-control" v-model="mobilePassword" placeholder="请输入密码" autocomplete="current-password" required>
+              <span class="glyphicon glyphicon-lock form-control-feedback"></span>
+            </div>
+            <div class="remember-row">
+              <label><input type="checkbox" name="rememberMe" value="true" checked> 记住我</label>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block btn-login">登 录</button>
+          </form>
+        </div>
+        <!--</#if>-->
       </div>
-      <div class="form-group has-feedback">
-        <input type="text" class="form-control" v-model="username" placeholder="账号">
-        <span class="glyphicon glyphicon-user form-control-feedback"></span>
-      </div>
-      <div class="form-group has-feedback">
-        <input type="password" class="form-control" v-model="password" placeholder="密码">
-        <span class="glyphicon glyphicon-lock form-control-feedback"></span>
-      </div>
-      <div class="form-group has-feedback">
-        <input type="text" class="form-control" v-model="captcha" @keyup.enter="login" placeholder="验证码">
-        <span class="glyphicon glyphicon-warning-sign form-control-feedback"></span>
-      </div>
-      <div class="form-group has-feedback">
-        <img alt="如果看不清楚，请单击图片刷新！" class="pointer" :src="src" @click="refreshCode">
-        &nbsp;&nbsp;&nbsp;&nbsp;<a href="javascript:;" @click="refreshCode">点击刷新</a>
-      </div>
-      
-      
-      <div class="row">
-        <div class="col-xs-8">
-          <div class="checkbox icheck">
+      <div class="oauth-split-divider"></div>
+      <div class="oauth-split-right">
+        <!--<#if authorizeLoggedIn?? && authorizeLoggedIn>-->
+        <div v-if="error" class="alert alert-danger alert-dismissible login-alert">
+          <button type="button" class="close" @click="error = false"><span>&times;</span></button>
+          <i class="fa fa-exclamation-circle"></i> {{ errorMsg }}
+        </div>
+        <!--</#if>-->
+        <div class="oauth-consent-head">
+          <h2>授权确认</h2>
+          <p>该应用请求访问你的 Autumn 账号，请确认是否授权。</p>
+        </div>
+        <div class="oauth-consent-app">
+          <!--<#if clientIconUri?? && clientIconUri?has_content>-->
+          <img class="app-icon" src="${clientIconUri}" alt="">
+          <!--<#else>-->
+          <div class="app-icon-placeholder"><i class="fa fa-cube"></i></div>
+          <!--</#if>-->
+          <div class="app-meta">
+            <p class="app-name">${clientName!clientId!'未知应用'}</p>
+            <p class="app-id">应用标识：${clientId!''}</p>
           </div>
         </div>
-        <!-- /.col -->
-        <div class="col-xs-4">
-          <button type="button" class="btn btn-primary btn-block btn-flat" @click="login">登录</button>
-        </div>
-        <!-- /.col -->
+        <ul class="oauth-perm-list">
+          <li><i class="fa fa-check-circle"></i><span>查看你的基本账号信息（昵称、头像等）</span></li>
+          <li><i class="fa fa-check-circle"></i><span>获取你的用户唯一标识，用于第三方登录关联</span></li>
+          <!--<#if scope?? && scope?has_content>-->
+          <!--<#list scope?split(' ') as s>-->
+          <!--<#if s?has_content>-->
+          <li><i class="fa fa-check-circle"></i><span>权限范围：${s}</span></li>
+          <!--</#if>-->
+          <!--</#list>-->
+          <!--</#if>-->
+        </ul>
+        <label class="oauth-consent-check">
+          <input type="checkbox" v-model="consentChecked">
+          <span>授权后允许第三方获取我的基本信息</span>
+        </label>
+        <p class="oauth-consent-tip">{{ consentTip }}</p>
+        <form id="oauthApproveForm" class="oauth-consent-actions" method="post" action="${request.contextPath}/oauth2/authorize/approve">
+          <input type="hidden" name="client_id" value="${clientId!''}">
+          <input type="hidden" name="redirect_uri" value="${redirectUri!''}">
+          <input type="hidden" name="response_type" value="${responseType!'code'}">
+          <input type="hidden" name="scope" value="${scope!''}">
+          <input type="hidden" name="state" value="${state!''}">
+          <input type="hidden" name="userConsent" :value="consentChecked ? 'true' : 'false'">
+          <button type="button" class="btn btn-consent btn-consent-primary" :disabled="!canConfirmConsent" @click="submitOAuthConsent">确认授权</button>
+          <a class="btn btn-consent btn-consent-ghost" :href="oauthDenyRedirect">取消</a>
+        </form>
       </div>
-    <!-- /.social-auth-links -->
-
+    </div>
   </div>
-  <!-- /.login-box-body -->
+  <!--<#else>-->
+  <div class="login-card">
+    <ul class="login-tabs">
+      <li :class="{ active: loginTab === 'account' }">
+        <a href="javascript:;" @click="switchTab('account')"><i class="fa fa-user"></i>账号登录</a>
+      </li>
+      <li :class="{ active: loginTab === 'qr' }">
+        <a href="javascript:;" @click="switchTab('qr')"><i class="fa fa-qrcode"></i>扫码登录</a>
+      </li>
+      <li :class="{ active: loginTab === 'phone' }">
+        <a href="javascript:;" @click="switchTab('phone')"><i class="fa fa-mobile"></i>手机登录</a>
+      </li>
+    </ul>
+
+    <div class="login-body">
+      <div v-if="error" class="alert alert-danger alert-dismissible login-alert">
+        <button type="button" class="close" @click="error = false"><span>&times;</span></button>
+        <i class="fa fa-exclamation-circle"></i> {{ errorMsg }}
+      </div>
+
+      <!-- 账号登录 -->
+      <!--<#if oauthLogin?? && oauthLogin>-->
+      <form class="login-panel" v-show="loginTab === 'account'" method="post" action="${request.contextPath}/oauth2/login" @submit="syncOauthCallback">
+        <input type="hidden" name="callback" :value="oauthCallback">
+        <div class="form-group has-feedback">
+          <input type="text" name="username" class="form-control" v-model="username" placeholder="请输入账号" autocomplete="username" required>
+          <span class="glyphicon glyphicon-user form-control-feedback"></span>
+        </div>
+        <div class="form-group has-feedback">
+          <input type="password" name="password" class="form-control" v-model="password" placeholder="请输入密码" autocomplete="current-password" required>
+          <span class="glyphicon glyphicon-lock form-control-feedback"></span>
+        </div>
+        <div class="remember-row">
+          <label><input type="checkbox" name="rememberMe" value="true" checked> 记住我</label>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block btn-login">登 录</button>
+      </form>
+      <!--<#else>-->
+      <div class="login-panel" v-show="loginTab === 'account'">
+        <div class="form-group has-feedback">
+          <input type="text" class="form-control" v-model="username" placeholder="请输入账号" autocomplete="username">
+          <span class="glyphicon glyphicon-user form-control-feedback"></span>
+        </div>
+        <div class="form-group has-feedback">
+          <input type="password" class="form-control" v-model="password" placeholder="请输入密码" autocomplete="current-password" @keyup.enter="login">
+          <span class="glyphicon glyphicon-lock form-control-feedback"></span>
+        </div>
+        <div class="form-group captcha-row">
+          <div class="form-group has-feedback">
+            <input type="text" class="form-control" v-model="captcha" placeholder="验证码" @keyup.enter="login">
+          </div>
+          <img alt="点击刷新验证码" class="pointer" :src="src" @click="refreshCode" title="点击刷新">
+        </div>
+        <button type="button" class="btn btn-primary btn-block btn-login" @click="login">登 录</button>
+      </div>
+      <!--</#if>-->
+
+      <!-- 扫码登录 -->
+      <div class="login-panel qr-panel" v-show="loginTab === 'qr'">
+        <div class="qr-center">
+          <div class="qr-frame">
+            <div class="qr-scan-line"></div>
+            <div id="loginQrcodeBox"></div>
+          </div>
+          <p class="qr-status"><span class="qr-status-dot"></span>{{ qrStatus }}</p>
+          <p class="qr-hint">打开 Autumn APP，扫描上方二维码并确认</p>
+          <div class="qr-actions">
+            <a href="javascript:;" @click="refreshQrLogin"><i class="fa fa-refresh"></i> 刷新二维码</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- 手机登录 -->
+      <!--<#if oauthLogin?? && oauthLogin>-->
+      <form class="login-panel" v-show="loginTab === 'phone'" method="post" action="${request.contextPath}/oauth2/login" @submit="beforePhoneOauthSubmit">
+        <input type="hidden" name="callback" :value="oauthCallback">
+        <input type="hidden" name="username" :value="mobileClean">
+        <div class="form-group has-feedback">
+          <input type="tel" class="form-control" v-model="mobile" placeholder="请输入手机号" maxlength="11" autocomplete="tel" required>
+          <span class="glyphicon glyphicon-phone form-control-feedback"></span>
+        </div>
+        <div class="form-group has-feedback">
+          <input type="password" name="password" class="form-control" v-model="mobilePassword" placeholder="请输入密码" autocomplete="current-password" required>
+          <span class="glyphicon glyphicon-lock form-control-feedback"></span>
+        </div>
+        <div class="remember-row">
+          <label><input type="checkbox" name="rememberMe" value="true" checked> 记住我</label>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block btn-login">登 录</button>
+      </form>
+      <!--<#else>-->
+      <div class="login-panel" v-show="loginTab === 'phone'">
+        <div class="form-group has-feedback">
+          <input type="tel" class="form-control" v-model="mobile" placeholder="请输入手机号" maxlength="11" autocomplete="tel">
+          <span class="glyphicon glyphicon-phone form-control-feedback"></span>
+        </div>
+        <div class="form-group has-feedback">
+          <input type="password" class="form-control" v-model="mobilePassword" placeholder="请输入密码" autocomplete="current-password" @keyup.enter="loginByPhone">
+          <span class="glyphicon glyphicon-lock form-control-feedback"></span>
+        </div>
+        <div class="form-group captcha-row">
+          <div class="form-group has-feedback">
+            <input type="text" class="form-control" v-model="mobileCaptcha" placeholder="验证码" @keyup.enter="loginByPhone">
+          </div>
+          <img alt="点击刷新验证码" class="pointer" :src="src" @click="refreshCode" title="点击刷新">
+        </div>
+        <button type="button" class="btn btn-primary btn-block btn-login" @click="loginByPhone">登 录</button>
+      </div>
+      <!--</#if>-->
+    </div>
+  </div>
+  <!--</#if>-->
+
+  <div class="login-footer">&copy; Autumn Framework</div>
 </div>
-<!-- /.login-box -->
+
 <script src="${request.contextPath}/statics/libs/jquery.min.js"></script>
 <script src="${request.contextPath}/statics/libs/vue.min.js"></script>
 <script src="${request.contextPath}/statics/libs/bootstrap.min.js"></script>
-<script src="${request.contextPath}/statics/libs/jquery.slimscroll.min.js"></script>
-<script src="${request.contextPath}/statics/libs/fastclick.min.js"></script>
-<script src="${request.contextPath}/statics/libs/app.js"></script>
+<script src="${request.contextPath}/statics/js/autumn-qrcode.min.js"></script>
 <script type="text/javascript">
+var ctx = '${request.contextPath?js_string}';
+//<#if oauthLogin?? && oauthLogin>
+var oauthLogin = true;
+//<#else>
+var oauthLogin = false;
+//</#if>
+//<#if oauthAuthorize?? && oauthAuthorize>
+var oauthAuthorize = true;
+//<#else>
+var oauthAuthorize = false;
+//</#if>
+//<#if authorizeLoggedIn?? && authorizeLoggedIn>
+var authorizeLoggedIn = true;
+//<#else>
+var authorizeLoggedIn = false;
+//</#if>
+var oauthDenyRedirect = '${denyRedirect!""?js_string}';
+var serverUuid = '${uuid!""?js_string}';
+var serverQrUrl = '${qrUrl!""?js_string}';
+var serverPollIntervalMs = ${pollIntervalMs!2000};
 var vm = new Vue({
-	el:'#rrapp',
-	data:{
-		username: '',
-		password: '',
-		captcha: '',
-		error: false,
-		errorMsg: '',
-		src: 'captcha.jpg'
-	},
-	beforeCreate: function(){
-		if(self != top){
-			top.location.href = self.location.href;
-		}
-	},
-	methods: {
-		refreshCode: function(){
-			this.src = "captcha.jpg?t=" + $.now();
-		},
-		login: function (event) {
-			var data = "username="+vm.username+"&password="+vm.password+"&captcha="+vm.captcha;
-			$.ajax({
-				type: "POST",
-			    url: "sys/login",
-			    data: data,
-			    dataType: "json",
-				success: function(result){
-					if(result.code == 0){//登录成功
-						// 与 beforeCreate 一致：优先整页跳转，避免嵌套 iframe 下 parent 非本应用顶层导致相对路径解析错误
-						var target = (result && result.data != null) ? String(result.data) : "index.html";
-						(window.top || window).location.href = target;
-					}else{
-						vm.error = true;
-						vm.errorMsg = result.msg;
-						
-						vm.refreshCode();
-					}
-				}
-			});
-		},
-
-		checkenv:function() {
-            $.ajax({
-                type: "POST",
-                url: "sys/autologin",
-                dataType: "json",
-                success: function(result){
-                    if(result.code == 0){
-                        vm.login();
-                    }
-                }
-            });
+  el: '#rrapp',
+  data: {
+    loginTab: oauthAuthorize ? 'account' : 'account',
+    username: '',
+    password: '',
+    captcha: '',
+    mobile: '',
+    mobilePassword: '',
+    mobileCaptcha: '',
+    error: false,
+    errorMsg: '',
+    src: ctx + '/captcha.jpg',
+    qrStatus: oauthAuthorize ? '正在加载二维码...' : '切换到扫码登录后加载二维码',
+    qrcUuid: '',
+    qrcPollTimer: null,
+    oauthCallback: '',
+    authorizeLoggedIn: authorizeLoggedIn,
+    consentChecked: true,
+    oauthDenyRedirect: oauthDenyRedirect
+  },
+  computed: {
+    mobileClean: function () {
+      return (this.mobile || '').replace(/\s/g, '');
+    },
+    canConfirmConsent: function () {
+      return this.authorizeLoggedIn && this.consentChecked;
+    },
+    consentTip: function () {
+      if (!this.authorizeLoggedIn) {
+        return '请先在左侧完成登录';
+      }
+      if (!this.consentChecked) {
+        return '请勾选授权协议';
+      }
+      return '确认后将跳转回第三方应用';
+    }
+  },
+  beforeCreate: function () {
+    if (self != top) {
+      top.location.href = self.location.href;
+    }
+  },
+  methods: {
+    switchTab: function (tab) {
+      if (this.loginTab === tab) {
+        return;
+      }
+      this.error = false;
+      this.loginTab = tab;
+      if (tab === 'qr') {
+        if (oauthAuthorize && serverQrUrl) {
+          this.initAuthorizeQr();
+        } else {
+          this.startQrLogin();
         }
-	}
+      } else if (this.qrcPollTimer) {
+        clearInterval(this.qrcPollTimer);
+        this.qrcPollTimer = null;
+      }
+      if (!oauthLogin && (tab === 'account' || tab === 'phone')) {
+        this.refreshCode();
+      }
+    },
+    syncOauthCallback: function () {
+      if (oauthAuthorize) {
+        this.oauthCallback = window.location.href.split('#')[0];
+        return;
+      }
+      var qs = new URLSearchParams(window.location.search || '');
+      this.oauthCallback = qs.get('callback') || '';
+    },
+    beforeOauthAuthorizeLogin: function (e) {
+      if (oauthAuthorize) {
+        if (this.loginTab === 'phone') {
+          if (!/^1\d{10}$/.test(this.mobileClean)) {
+            e.preventDefault();
+            this.showError('请输入正确的手机号');
+            return false;
+          }
+          if (!this.mobilePassword) {
+            e.preventDefault();
+            this.showError('请输入密码');
+            return false;
+          }
+        }
+        var url = window.location.href.split('#')[0];
+        this.oauthCallback = url;
+        var form = e.target;
+        if (form && form.querySelector) {
+          var cbInput = form.querySelector('input[name=callback]');
+          if (cbInput) {
+            cbInput.value = url;
+          }
+        }
+        return true;
+      }
+      this.syncOauthCallback();
+      if (this.loginTab === 'phone') {
+        return this.beforePhoneOauthSubmit(e);
+      }
+    },
+    beforePhoneOauthSubmit: function (e) {
+      this.syncOauthCallback();
+      if (!/^1\d{10}$/.test(this.mobileClean)) {
+        e.preventDefault();
+        this.showError('请输入正确的手机号');
+        return false;
+      }
+      if (!this.mobilePassword) {
+        e.preventDefault();
+        this.showError('请输入密码');
+        return false;
+      }
+    },
+    refreshQrLogin: function () {
+      if (oauthAuthorize) {
+        window.location.reload();
+        return;
+      }
+      this.startQrLogin();
+    },
+    initAuthorizeQr: function () {
+      var self = this;
+      if (self.qrcPollTimer) {
+        clearInterval(self.qrcPollTimer);
+        self.qrcPollTimer = null;
+      }
+      if (!serverUuid || !serverQrUrl) {
+        self.qrStatus = '二维码加载失败，请刷新页面重试';
+        return;
+      }
+      self.qrcUuid = serverUuid;
+      self.renderQrCode(serverQrUrl);
+      self.qrStatus = '等待扫码...';
+      self.qrcPollTimer = setInterval(function () { self.pollQrStatus(); }, serverPollIntervalMs);
+    },
+    handleAuthorizeComplete: function (data) {
+      return false;
+    },
+    submitOAuthConsent: function () {
+      if (!this.authorizeLoggedIn) {
+        this.showError('请先在左侧完成登录');
+        return;
+      }
+      if (!this.consentChecked) {
+        this.showError('请勾选授权协议后再确认');
+        return;
+      }
+      var form = document.getElementById('oauthApproveForm');
+      if (form) {
+        form.submit();
+      }
+    },
+    completeAuthorizeExchange: function (exchange) {
+      var self = this;
+      $.ajax({
+        type: 'POST',
+        url: ctx + '/qrc/web/v1/session/exchange',
+        contentType: 'application/json',
+        data: JSON.stringify({ data: { exchange: exchange } }),
+        dataType: 'json',
+        success: function (result) {
+          if (result.code === 0) {
+            self.qrStatus = '登录成功，请确认授权';
+            window.location.reload();
+          } else {
+            self.qrStatus = result.msg || '登录失败';
+          }
+        },
+        error: function () {
+          self.qrStatus = '网络异常，请刷新二维码重试';
+        }
+      });
+    },
+    refreshCode: function () {
+      this.src = ctx + '/captcha.jpg?t=' + $.now();
+    },
+    renderQrCode: function (text) {
+      var box = document.getElementById('loginQrcodeBox');
+      if (!box) {
+        return;
+      }
+      box.innerHTML = '';
+      if (typeof QRCode === 'undefined') {
+        return;
+      }
+      new QRCode(box, {
+        text: text,
+        width: 200,
+        height: 200,
+        colorDark: '#1a1d26',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.M
+      });
+    },
+    showError: function (msg) {
+      this.error = true;
+      this.errorMsg = msg || '登录失败';
+      if (!oauthLogin) {
+        this.refreshCode();
+      }
+    },
+    redirectAfterLogin: function (target) {
+      if (oauthLogin) {
+        var qs = new URLSearchParams(window.location.search || '');
+        var callback = qs.get('callback');
+        if (callback) {
+          (window.top || window).location.href = callback;
+          return;
+        }
+        if (target) {
+          (window.top || window).location.href = target;
+          return;
+        }
+        (window.top || window).location.reload();
+        return;
+      }
+      (window.top || window).location.href = target || 'index.html';
+    },
+    submitLogin: function (username, password, captcha) {
+      var data = 'username=' + encodeURIComponent(username) + '&password=' + encodeURIComponent(password) + '&captcha=' + encodeURIComponent(captcha);
+      $.ajax({
+        type: 'POST',
+        url: ctx + '/sys/login',
+        data: data,
+        dataType: 'json',
+        success: function (result) {
+          if (result.code == 0) {
+            vm.redirectAfterLogin(result.data != null ? String(result.data) : 'index.html');
+          } else {
+            vm.showError(result.msg);
+          }
+        },
+        error: function () {
+          vm.showError('网络异常，请稍后重试');
+        }
+      });
+    },
+    login: function () {
+      if (!this.username) {
+        this.showError('请输入账号');
+        return;
+      }
+      if (!this.password) {
+        this.showError('请输入密码');
+        return;
+      }
+      this.submitLogin(this.username, this.password, this.captcha);
+    },
+    loginByPhone: function () {
+      if (!/^1\d{10}$/.test(this.mobileClean)) {
+        this.showError('请输入正确的手机号');
+        return;
+      }
+      if (!this.mobilePassword) {
+        this.showError('请输入密码');
+        return;
+      }
+      this.submitLogin(this.mobileClean, this.mobilePassword, this.mobileCaptcha);
+    },
+    checkenv: function () {
+      if (oauthLogin) {
+        return;
+      }
+      $.ajax({
+        type: 'POST',
+        url: ctx + '/sys/autologin',
+        dataType: 'json',
+        success: function (result) {
+          if (result.code == 0) {
+            vm.login();
+          }
+        }
+      });
+    },
+    startQrLogin: function () {
+      var self = this;
+      self.qrStatus = '正在加载二维码...';
+      if (self.qrcPollTimer) {
+        clearInterval(self.qrcPollTimer);
+        self.qrcPollTimer = null;
+      }
+      $.ajax({
+        type: 'POST',
+        url: ctx + '/qrc/web/v1/ticket/create',
+        contentType: 'application/json',
+        data: JSON.stringify({ data: { intent: 'SELF_WEB_LOGIN' } }),
+        dataType: 'json',
+        success: function (res) {
+          if (!res || res.code !== 0 || !res.data) {
+            self.qrStatus = (res && res.msg) ? res.msg : '二维码加载失败，请点击刷新重试';
+            return;
+          }
+          self.qrcUuid = res.data.uuid;
+          self.renderQrCode(res.data.qrUrl);
+          self.qrStatus = '等待扫码...';
+          self.qrcPollTimer = setInterval(function () { self.pollQrStatus(); }, 2000);
+        },
+        error: function (xhr) {
+          var msg = '网络异常，请点击刷新重试';
+          if (xhr && xhr.responseJSON && xhr.responseJSON.msg) {
+            msg = xhr.responseJSON.msg;
+          } else if (xhr && xhr.status === 404) {
+            msg = '扫码服务不可用，请确认应用已启动 QRC 模块';
+          }
+          self.qrStatus = msg;
+        }
+      });
+    },
+    pollQrStatus: function () {
+      var self = this;
+      if (!self.qrcUuid) {
+        return;
+      }
+      $.getJSON(ctx + '/qrc/web/v1/ticket/status', { uuid: self.qrcUuid }, function (res) {
+        if (!res || res.code !== 0 || !res.data) {
+          return;
+        }
+        var data = res.data;
+        if (data.status === 'SCANNED') {
+          self.qrStatus = oauthAuthorize ? '已扫码，请在 APP 确认' : '已扫码，请在 APP 确认';
+        }
+        if (oauthAuthorize) {
+          if ((data.status === 'CONFIRMED' || data.status === 'COMPLETED') && data.exchange) {
+            self.qrStatus = '扫码成功，正在登录...';
+            if (self.qrcPollTimer) {
+              clearInterval(self.qrcPollTimer);
+              self.qrcPollTimer = null;
+            }
+            self.completeAuthorizeExchange(data.exchange);
+            return;
+          }
+          if (data.status === 'DENIED' || data.status === 'CANCELLED' || data.status === 'EXPIRED') {
+            self.qrStatus = '扫码已取消或过期，请刷新重试';
+          }
+          return;
+        }
+        if ((data.status === 'CONFIRMED' || data.status === 'COMPLETED') && data.exchange) {
+          self.qrStatus = '登录成功，正在跳转...';
+          if (self.qrcPollTimer) {
+            clearInterval(self.qrcPollTimer);
+            self.qrcPollTimer = null;
+          }
+          $.ajax({
+            type: 'POST',
+            url: ctx + '/qrc/web/v1/session/exchange',
+            contentType: 'application/json',
+            data: JSON.stringify({ data: { exchange: res.data.exchange } }),
+            dataType: 'json',
+            success: function (result) {
+              if (result.code === 0) {
+                self.redirectAfterLogin(result.data != null ? String(result.data) : null);
+              } else {
+                self.qrStatus = result.msg || '登录失败';
+              }
+            },
+            error: function () {
+              self.qrStatus = '网络异常，请刷新二维码重试';
+            }
+          });
+        }
+      });
+    }
+  }
 });
 
 try {
-    var qs = new URLSearchParams(window.location.search || '');
-    var expired = qs.get('sessionExpired') === '1';
-    var reason = qs.get('reason');
-    if (!expired) {
-        expired = window.sessionStorage.getItem('autumn_session_expired') === '1';
-        if (!reason) {
-            reason = window.sessionStorage.getItem('autumn_session_expired_reason');
-        }
+  var qs = new URLSearchParams(window.location.search || '');
+  vm.syncOauthCallback();
+  if (oauthAuthorize && !authorizeLoggedIn) {
+    var authorizeReturnUrl = window.location.href.split('#')[0];
+    var cbMain = document.getElementById('oauthAuthorizeCallback');
+    var cbPhone = document.getElementById('oauthAuthorizeCallbackPhone');
+    if (cbMain) cbMain.value = authorizeReturnUrl;
+    if (cbPhone) cbPhone.value = authorizeReturnUrl;
+    vm.oauthCallback = authorizeReturnUrl;
+  }
+  if (oauthAuthorize && serverQrUrl && vm.loginTab === 'qr') {
+    vm.initAuthorizeQr();
+  }
+  var expired = qs.get('sessionExpired') === '1';
+  var reason = qs.get('reason');
+  if (!expired) {
+    expired = window.sessionStorage.getItem('autumn_session_expired') === '1';
+    if (!reason) {
+      reason = window.sessionStorage.getItem('autumn_session_expired_reason');
     }
-    if (expired) {
-        vm.error = true;
-        vm.errorMsg = reason === 'session_terminated'
-            ? '你的登录会话已被终止，请重新登录。'
-            : '登录状态已过期，请重新登录。';
-        window.sessionStorage.removeItem('autumn_session_expired');
-        window.sessionStorage.removeItem('autumn_session_expired_reason');
-    }
+  }
+  if (expired) {
+    vm.error = true;
+    vm.errorMsg = reason === 'session_terminated'
+      ? '你的登录会话已被终止，请重新登录。'
+      : '登录状态已过期，请重新登录。';
+    window.sessionStorage.removeItem('autumn_session_expired');
+    window.sessionStorage.removeItem('autumn_session_expired_reason');
+  }
+  //<#if error?? && error?has_content>
+  vm.error = true;
+  vm.errorMsg = '${error?js_string}';
+  //</#if>
 } catch (e) {
 }
 
 vm.checkenv();
-
 </script>
 </body>
 </html>

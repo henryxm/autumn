@@ -8,6 +8,8 @@ import cn.org.autumn.modules.bot.shiro.RobotAccessTokenToken;
 import cn.org.autumn.modules.bot.shiro.RobotPrincipal;
 import cn.org.autumn.modules.oauth.service.ClientDetailsService;
 import cn.org.autumn.modules.oauth.store.ValueType;
+import cn.org.autumn.modules.qrc.service.ScanTicketService;
+import cn.org.autumn.modules.qrc.shiro.ScanLoginToken;
 import cn.org.autumn.modules.sys.dao.SysMenuDao;
 import cn.org.autumn.modules.sys.dao.SysUserDao;
 import cn.org.autumn.modules.sys.entity.SysMenuEntity;
@@ -62,6 +64,9 @@ public class UserRealm extends AuthorizingRealm {
 
     @Autowired
     RobotService robotService;
+
+    @Autowired
+    ScanTicketService scanTicketService;
 
     /**
      * 授权(验证权限时调用)
@@ -136,6 +141,15 @@ public class UserRealm extends AuthorizingRealm {
             robotService.touchLastUsed(robot);
             RobotPrincipal principal = new RobotPrincipal(robot);
             return new SimpleAuthenticationInfo(principal, username, getName());
+        }
+        if (token instanceof ScanLoginToken) {
+            try {
+                SysUserEntity qrcUser = scanTicketService.consumeExchangeToken(username);
+                qrcUser = userProfileService.setProfile(qrcUser);
+                return new SimpleAuthenticationInfo(qrcUser, username, getName());
+            } catch (Exception e) {
+                throw new UnknownAccountException("扫码交换令牌无效");
+            }
         }
         SysUserEntity user = new SysUserEntity();
         if (token instanceof OauthAccessTokenToken) {

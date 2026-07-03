@@ -20,9 +20,17 @@ public class DefaultPage implements PageHandler {
 
     @Override
     public String login(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
-        String clientId = sysConfigService.getOauth2LoginClientId();
-        if (StringUtils.isNotBlank(clientId))
-            return "oauth2/login";
+        boolean oauthLogin = StringUtils.isNotBlank(sysConfigService.getOauth2LoginClientId());
+        model.addAttribute("oauthLogin", oauthLogin);
+        if (!model.containsAttribute("bodyClass")) {
+            model.addAttribute("bodyClass", "login-page-v2");
+        }
+        if (!model.containsAttribute("error")) {
+            String error = httpServletRequest.getParameter("error");
+            if (StringUtils.isNotBlank(error)) {
+                model.addAttribute("error", error);
+            }
+        }
         return "login";
     }
 

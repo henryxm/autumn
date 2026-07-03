@@ -215,7 +215,7 @@ public class SpmFilter extends FormAuthenticationFilter implements PathFactory.P
         response.setStatus(HttpServletResponse.SC_OK);
         String target = loginUrl == null ? "" : loginUrl.trim();
         if (target.isEmpty()) {
-            target = request.getContextPath() + "/login";
+            target = request.getContextPath() + "/login.html";
         } else if (!target.startsWith("http://") && !target.startsWith("https://") && !target.startsWith("/")) {
             target = request.getContextPath() + "/" + target;
         } else if (target.startsWith("/")) {

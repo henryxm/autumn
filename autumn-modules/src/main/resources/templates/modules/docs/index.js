@@ -22,6 +22,7 @@ var vm = new Vue({
                     { name: '代码生成能力', page: 'gen' },
                     { name: '定时任务与日志', page: 'job' },
                     { name: '认证授权与加密握手', page: 'oauth' },
+                    { name: '授权与扫码登录流程', page: 'auth-flow' },
                     { name: '混合加解密（RSA+AES）', page: 'hybrid-crypto' }
                 ]
             },
@@ -59,6 +60,8 @@ var vm = new Vue({
             { key: 'job', title: '定时任务', page: 'job', done: false },
             { key: 'db', title: '数据库运维', page: 'db', done: false },
             { key: 'oauth', title: '认证授权', page: 'oauth', done: false },
+            { key: 'auth-flow', title: '授权与扫码流程', page: 'auth-flow', done: false },
+            { key: 'qrc', title: '扫码登录', page: 'qrc', done: false },
             { key: 'usr', title: '用户域能力', page: 'usr', done: false },
             { key: 'oss', title: '文件存储', page: 'oss', done: false },
             { key: 'lan', title: '多语言', page: 'lan', done: false },
@@ -208,6 +211,19 @@ var vm = new Vue({
                     '补充认证流程时序图',
                     '补充典型接入配置示例'
                 ]
+            },
+            {
+                key: 'auth_flow',
+                title: '授权与扫码登录流程',
+                status: 'stable',
+                detailPage: 'auth-flow',
+                items: [
+                    '四表数据关系与创建原因',
+                    '网站扫码登录 / OAuth 授权扫码 / 二次确认 / 设备码',
+                    '票据状态机与结果交付方式',
+                    '授权客户端中心与 API 速查'
+                ],
+                todo: []
             },
             {
                 key: 'usr',

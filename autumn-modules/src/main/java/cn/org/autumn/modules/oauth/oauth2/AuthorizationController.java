@@ -13,6 +13,9 @@ import cn.org.autumn.modules.oauth.service.ClientDetailsService;
 import cn.org.autumn.modules.oauth.service.TokenStoreService;
 import cn.org.autumn.modules.oauth.store.TokenStore;
 import cn.org.autumn.modules.oauth.store.ValueType;
+import cn.org.autumn.modules.qrc.model.TicketSnapshot;
+import cn.org.autumn.modules.qrc.service.ClientGrantService;
+import cn.org.autumn.modules.qrc.service.ScanTicketService;
 import cn.org.autumn.modules.spm.service.SuperPositionModelService;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysConfigService;
@@ -32,6 +35,7 @@ import io.swagger.v3.oas.annotations.servers.Server;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.tags.Tags;
 import java.net.*;
+import java.io.UnsupportedEncodingException;
 import java.util.Enumeration;
 import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
@@ -67,6 +71,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.view.RedirectView;
 
 @Slf4j
 @Controller
@@ -98,9 +103,167 @@ public class AuthorizationController {
     @Autowired
     PageFactory pageFactory;
 
+    @Autowired
+    ScanTicketService scanTicketService;
+
+    @Autowired
+    ClientGrantService clientGrantService;
+
     private String error(String description, String error, int errorResponse) throws OAuthSystemException {
         OAuthResponse oAuthResponse = OAuthASResponse.errorResponse(errorResponse).setError(error).setErrorDescription(description).buildJSONMessage();
         return new ResponseEntity(oAuthResponse.getBody(), HttpStatus.valueOf(oAuthResponse.getResponseStatus())).getBody().toString();
+    }
+
+    private String normalizeRedirectUrl(String url) {
+        if (StringUtils.isBlank(url)) {
+            return url;
+        }
+        return url.replace("&amp;", "&").trim();
+    }
+
+    private ModelAndView redirectUrl(String url) {
+        RedirectView view = new RedirectView(normalizeRedirectUrl(url), false);
+        return new ModelAndView(view);
+    }
+
+    private String resolvePostLoginRedirect(HttpServletRequest request, String callback) {
+        callback = normalizeRedirectUrl(callback);
+        if (StringUtils.isNotBlank(callback)) {
+            return WebPathUtils.safePostLoginRedirect(request, callback);
+        }
+        SavedRequest savedRequest = WebUtils.getSavedRequest(request);
+        if (savedRequest != null && StringUtils.isNotBlank(savedRequest.getRequestUrl())) {
+            return WebPathUtils.safePostLoginRedirect(request, savedRequest.getRequestUrl());
+        }
+        return WebPathUtils.forBrowser(request, "/");
+    }
+
+    private String appendQueryParam(String url, String key, String value) throws UnsupportedEncodingException {
+        if (StringUtils.isBlank(url) || StringUtils.isBlank(key)) {
+            return url;
+        }
+        String sep = url.contains("?") ? "&" : "?";
+        return url + sep + key + "=" + URLEncoder.encode(StringUtils.defaultString(value), "utf-8");
+    }
+
+    private String loginAuthorizeView(HttpServletRequest request, Model model, TicketSnapshot ticket, ClientDetailsEntity client, String mode) {
+        return oauthConsentView(request, model, ticket, client, !ShiroUtils.needLogin(), null);
+    }
+
+    private String buildAuthorizeReturnUrl(HttpServletRequest request, Model model, ClientDetailsEntity client) {
+        String base = WebPathUtils.forBrowser(request, "/oauth2/authorize");
+        String qs = request != null ? request.getQueryString() : null;
+        if (StringUtils.isNotBlank(qs) && qs.contains("client_id=")) {
+            return base + "?" + qs;
+        }
+        try {
+            String responseType = StringUtils.defaultIfBlank((String) model.getAttribute("responseType"), ResponseType.CODE.toString());
+            String redirectUri = (String) model.getAttribute("redirectUri");
+            String scope = (String) model.getAttribute("scope");
+            String state = (String) model.getAttribute("state");
+            StringBuilder sb = new StringBuilder(base);
+            sb.append("?response_type=").append(URLEncoder.encode(responseType, "utf-8"));
+            sb.append("&client_id=").append(URLEncoder.encode(client.getClientId(), "utf-8"));
+            sb.append("&redirect_uri=").append(URLEncoder.encode(StringUtils.defaultString(redirectUri), "utf-8"));
+            if (StringUtils.isNotBlank(scope)) {
+                sb.append("&scope=").append(URLEncoder.encode(scope, "utf-8"));
+            }
+            if (StringUtils.isNotBlank(state)) {
+                sb.append("&state=").append(URLEncoder.encode(state, "utf-8"));
+            }
+            return sb.toString();
+        } catch (UnsupportedEncodingException e) {
+            return base;
+        }
+    }
+
+    private String buildAuthorizeLogoutUrl(HttpServletRequest request, String returnUrl) {
+        try {
+            String base = WebPathUtils.forBrowser(request, "/oauth2/authorize/logout");
+            return base + "?returnTo=" + URLEncoder.encode(returnUrl, "utf-8");
+        } catch (UnsupportedEncodingException e) {
+            return WebPathUtils.forBrowser(request, "/oauth2/authorize/logout");
+        }
+    }
+
+    private String oauthConsentView(HttpServletRequest request, Model model, TicketSnapshot ticket, ClientDetailsEntity client, boolean loggedIn, String consentError) {
+        if (ticket != null) {
+            scanTicketService.fillAuthorizeModel(model, ticket);
+        } else {
+            model.addAttribute("pollIntervalMs", scanTicketService.getScanLoginConfig().getPollIntervalMs());
+        }
+        model.addAttribute("oauthLogin", true);
+        model.addAttribute("oauthAuthorize", true);
+        model.addAttribute("bodyClass", "login-page-v2 oauth-authorize-mode");
+        model.addAttribute("authorizeLoggedIn", loggedIn);
+        String clientName = client.getClientName();
+        if (StringUtils.isBlank(clientName)) {
+            clientName = client.getClientId();
+        }
+        model.addAttribute("clientName", clientName);
+        model.addAttribute("clientIconUri", client.getClientIconUri());
+        model.addAttribute("clientId", client.getClientId());
+        if (loggedIn) {
+            SysUserEntity user = ShiroUtils.getUserEntity();
+            if (user != null) {
+                model.addAttribute("loginUserName", StringUtils.isNotBlank(user.getUsername()) ? user.getUsername() : user.getUuid());
+            }
+            if (request != null) {
+                String returnUrl = buildAuthorizeReturnUrl(request, model, client);
+                model.addAttribute("authorizeLogoutUrl", buildAuthorizeLogoutUrl(request, returnUrl));
+            }
+        }
+        if (StringUtils.isNotBlank(consentError)) {
+            model.addAttribute("error", consentError);
+        }
+        return "login";
+    }
+
+    private ModelAndView issueAuthCodeRedirect(HttpServletRequest request, ClientDetailsEntity client, String redirectURI, String state, String callback, String responseType) throws OAuthSystemException {
+        String authCode = null;
+        if (responseType.equals(ResponseType.CODE.toString())) {
+            OAuthIssuerImpl oAuthIssuerImpl = new OAuthIssuerImpl(new MD5Generator());
+            authCode = oAuthIssuerImpl.authorizationCode();
+            clientDetailsService.putAuthCode(authCode, ShiroUtils.getUserEntity());
+        }
+        if (StringUtils.isNotBlank(authCode)) {
+            return redirectUrl(clientGrantService.buildAuthorizeRedirect(redirectURI, authCode, state, callback));
+        }
+        return redirectUrl(redirectURI);
+    }
+
+    private String buildAccessDeniedRedirect(String redirectURI, String state) {
+        try {
+            String url = redirectURI;
+            url += (url.indexOf('?') >= 0 ? '&' : '?') + "error=access_denied";
+            if (StringUtils.isNotBlank(state)) {
+                url += "&state=" + URLEncoder.encode(state, "utf-8");
+            }
+            return url;
+        } catch (Exception e) {
+            return redirectURI;
+        }
+    }
+
+    private Object oauthLoginFallbackRedirect(HttpServletRequest request, String error) throws OAuthSystemException {
+        try {
+            ModelAndView mav = new ModelAndView();
+            String url = request.getRequestURL().toString();
+            String queryString = request.getQueryString();
+            if (StringUtils.isNotEmpty(queryString)) {
+                url = url + "?" + queryString;
+            }
+            mav.addObject("callback", url);
+            String view = "redirect:/oauth2/login";
+            if (StringUtils.isNotBlank(error)) {
+                view = view + "?error=" + URLEncoder.encode(error, "utf-8");
+            }
+            mav.setViewName(view);
+            return mav;
+        } catch (Exception e) {
+            log.warn("OAuth login fallback redirect failed: {}", e.getMessage());
+            return error(StringUtils.isNotBlank(error) ? error : "授权暂不可用", OAUTH_ERROR_URI, SC_BAD_REQUEST);
+        }
     }
 
     @RequestMapping("login")
@@ -120,18 +283,13 @@ public class AuthorizationController {
             Object obj = model.getAttribute("error");
             error = String.valueOf(obj);
         }
-        String callback = Utils.getCallback(request);
+        String callback = normalizeRedirectUrl(request.getParameter("callback"));
+        if (StringUtils.isBlank(callback)) {
+            callback = normalizeRedirectUrl(Utils.getCallback(request));
+        }
         try {
             if (StringUtils.isBlank(error) && request.getMethod().equalsIgnoreCase(POST)) {
-                SavedRequest savedRequest = WebUtils.getSavedRequest(request);
-                String back = callback;
-                if (null != savedRequest) {
-                    if (StringUtils.isBlank(callback)) back = savedRequest.getRequestUrl();
-                    else back = callback + "&callback=" + savedRequest.getRequestUrl();
-                }
-                if (StringUtils.isBlank(back))
-                    back = "/";
-                back = WebPathUtils.safePostLoginRedirect(request, back);
+                String back = resolvePostLoginRedirect(request, callback);
                 sysUserService.login(username, password, rememberMe, true, way, reason, request);
                 try {
                     String ip = IPUtils.getIp(request);
@@ -141,7 +299,7 @@ public class AuthorizationController {
                     }
                 } catch (Exception ignored) {
                 }
-                return "redirect:" + back;
+                return redirectUrl(back);
             }
         } catch (UnknownAccountException e) {
             error = e.getMessage();
@@ -155,6 +313,9 @@ public class AuthorizationController {
         try {
             if (StringUtils.isNotBlank(error)) {
                 if (error.length() > 200) error = error.substring(0, 200);
+                if (StringUtils.isNotBlank(callback)) {
+                    return redirectUrl(appendQueryParam(callback, "error", error));
+                }
                 if (StringUtils.isBlank(callback))
                     return "redirect:/oauth2/login?error=" + URLEncoder.encode(error, "utf-8");
                 else
@@ -169,72 +330,112 @@ public class AuthorizationController {
     }
 
     @RequestMapping(value = "authorize", method = RequestMethod.GET)
-    public Object applyAuthorize(HttpServletRequest request, HttpServletResponse response, Model model) throws OAuthSystemException, OAuthProblemException {
-        if (ShiroUtils.needLogin()) {
-            ModelAndView mav1 = new ModelAndView();
-            String url = request.getRequestURL().toString();
-            String queryString = request.getQueryString();
-            if (StringUtils.isNotEmpty(queryString)) {
-                url = url + "?" + queryString;
-            }
-            mav1.addObject("callback", url);
-            mav1.setViewName("redirect:/oauth2/login");
-            return mav1;
+    public Object applyAuthorize(HttpServletRequest request, HttpServletResponse response, Model model) throws OAuthSystemException {
+        try {
+            return applyAuthorizeInternal(request, model);
+        } catch (OAuthProblemException e) {
+            log.warn("OAuth authorize request invalid: {}", e.getMessage());
+            return error(StringUtils.defaultIfBlank(e.getDescription(), "授权请求无效"), OAuthError.OAUTH_ERROR, SC_BAD_REQUEST);
         }
+    }
 
-        //构建OAuth请求
+    private Object applyAuthorizeInternal(HttpServletRequest request, Model model) throws OAuthSystemException, OAuthProblemException {
         OAuthAuthzRequest oAuthzRequest = new OAuthAuthzRequest(request);
-        //获取OAuth客户端Id
         String clientId = oAuthzRequest.getClientId();
-        //校验客户端Id是否正确
         ClientDetailsEntity clientDetailsEntity = clientDetailsService.findByClientId(clientId);
         if (clientDetailsEntity == null) {
             return error("无效的客户端ID", INVALID_CLIENT, SC_BAD_REQUEST);
         }
-
         if (null == clientDetailsEntity.getTrusted() || 0 == clientDetailsEntity.getTrusted()) {
             return error("不受信任的客户端ID", INVALID_CLIENT, SC_BAD_REQUEST);
         }
-
         if (null != clientDetailsEntity.getArchived() && 1 == clientDetailsEntity.getArchived()) {
             return error("客户端ID已归档，不能使用", INVALID_CLIENT, SC_BAD_REQUEST);
         }
-
-        //生成授权码
-        String authCode = null;
-        String responseType = oAuthzRequest.getParam(OAuth.OAUTH_RESPONSE_TYPE);
-        //ResponseType仅支持CODE和TOKEN
-        if (responseType.equals(ResponseType.CODE.toString())) {
-            OAuthIssuerImpl oAuthIssuerImpl = new OAuthIssuerImpl(new MD5Generator());
-            authCode = oAuthIssuerImpl.authorizationCode();
-            clientDetailsService.putAuthCode(authCode, ShiroUtils.getUserEntity());
-        }
-
-        //构建OAuth响应
-        OAuthASResponse.OAuthAuthorizationResponseBuilder builder = OAuthASResponse.authorizationResponse(request, HttpServletResponse.SC_FOUND);
-
-        //设置授权码
-        builder.setCode(authCode);
-
-        //获取客户端重定向地址
         String redirectURI = oAuthzRequest.getParam(OAuth.OAUTH_REDIRECT_URI);
-
         if (StringUtils.isEmpty(redirectURI) || StringUtils.isEmpty(clientDetailsEntity.getRedirectUri())) {
             return error("redirect_uri should not be empty.", OAUTH_ERROR_URI, SC_BAD_REQUEST);
         }
-
         if (!redirectURI.equalsIgnoreCase(clientDetailsEntity.getRedirectUri())) {
             return error("redirect_uri does not match the uri in system.", OAUTH_ERROR_URI, SC_BAD_REQUEST);
         }
-        ModelAndView mav = new ModelAndView();
-        mav.addObject(OAUTH_CODE, authCode);
         String state = request.getParameter(OAUTH_STATE);
-        if (StringUtils.isNotEmpty(state)) mav.addObject(OAUTH_STATE, state);
         String callback = request.getParameter("callback");
-        if (null == callback) callback = "";
-        else callback = "?callback=" + callback;
-        mav.setViewName("redirect:" + redirectURI + callback);
-        return mav;
+        String scope = oAuthzRequest.getParam(OAuth.OAUTH_SCOPE);
+        String responseType = oAuthzRequest.getParam(OAuth.OAUTH_RESPONSE_TYPE);
+        if (StringUtils.isBlank(responseType)) {
+            responseType = ResponseType.CODE.toString();
+        }
+        model.addAttribute("redirectUri", redirectURI);
+        model.addAttribute("scope", scope);
+        model.addAttribute("state", state);
+        model.addAttribute("responseType", responseType);
+        model.addAttribute("denyRedirect", buildAccessDeniedRedirect(redirectURI, state));
+        boolean loggedIn = !ShiroUtils.needLogin();
+        String loginError = request.getParameter("error");
+        if (!loggedIn) {
+            if (scanTicketService.shouldUseQrAuthorize()) {
+                try {
+                    TicketSnapshot ticket = scanTicketService.createAuthorizeTicket(request, clientId, redirectURI, scope, state, callback);
+                    return oauthConsentView(request, model, ticket, clientDetailsEntity, false, loginError);
+                } catch (Exception e) {
+                    log.warn("QRC authorize ticket failed: {}", e.getMessage());
+                }
+            }
+            return oauthConsentView(request, model, null, clientDetailsEntity, false, loginError);
+        }
+        return oauthConsentView(request, model, null, clientDetailsEntity, true, loginError);
+    }
+
+    @RequestMapping(value = "authorize/logout", method = RequestMethod.GET)
+    public ModelAndView authorizeLogout(HttpServletRequest request, @RequestParam(required = false) String returnTo) {
+        ShiroUtils.logout();
+        String url = normalizeRedirectUrl(returnTo);
+        if (StringUtils.isBlank(url)) {
+            url = WebPathUtils.forBrowser(request, "/oauth2/authorize");
+        } else {
+            url = WebPathUtils.safePostLoginRedirect(request, url);
+        }
+        return redirectUrl(url);
+    }
+
+    @RequestMapping(value = "authorize/approve", method = RequestMethod.POST)
+    public Object approveAuthorize(HttpServletRequest request, @RequestParam(name = OAUTH_CLIENT_ID) String clientId, @RequestParam(OAUTH_REDIRECT_URI) String redirectURI, @RequestParam(name = OAUTH_RESPONSE_TYPE, defaultValue = "code") String responseType, @RequestParam(required = false) String scope, @RequestParam(required = false) String state, @RequestParam(required = false) String callback, @RequestParam(name = "userConsent", defaultValue = "false") String userConsent, Model model) throws OAuthSystemException, OAuthProblemException {
+        if (ShiroUtils.needLogin()) {
+            return oauthLoginFallbackRedirect(request, "请先登录后再确认授权");
+        }
+        if (!"true".equalsIgnoreCase(userConsent) && !"1".equals(userConsent) && !"on".equalsIgnoreCase(userConsent)) {
+            ClientDetailsEntity client = clientDetailsService.findByClientId(clientId);
+            if (client == null) {
+                return error("无效的客户端ID", INVALID_CLIENT, SC_BAD_REQUEST);
+            }
+            model.addAttribute("redirectUri", redirectURI);
+            model.addAttribute("scope", scope);
+            model.addAttribute("state", state);
+            model.addAttribute("responseType", responseType);
+            model.addAttribute("denyRedirect", buildAccessDeniedRedirect(redirectURI, state));
+            return oauthConsentView(request, model, null, client, true, "请勾选授权协议后再确认");
+        }
+        ClientDetailsEntity clientDetailsEntity = clientDetailsService.findByClientId(clientId);
+        if (clientDetailsEntity == null) {
+            return error("无效的客户端ID", INVALID_CLIENT, SC_BAD_REQUEST);
+        }
+        if (null == clientDetailsEntity.getTrusted() || 0 == clientDetailsEntity.getTrusted()) {
+            return error("不受信任的客户端ID", INVALID_CLIENT, SC_BAD_REQUEST);
+        }
+        if (null != clientDetailsEntity.getArchived() && 1 == clientDetailsEntity.getArchived()) {
+            return error("客户端ID已归档，不能使用", INVALID_CLIENT, SC_BAD_REQUEST);
+        }
+        if (StringUtils.isEmpty(redirectURI) || StringUtils.isEmpty(clientDetailsEntity.getRedirectUri())) {
+            return error("redirect_uri should not be empty.", OAUTH_ERROR_URI, SC_BAD_REQUEST);
+        }
+        if (!redirectURI.equalsIgnoreCase(clientDetailsEntity.getRedirectUri())) {
+            return error("redirect_uri does not match the uri in system.", OAUTH_ERROR_URI, SC_BAD_REQUEST);
+        }
+        if (StringUtils.isBlank(responseType)) {
+            responseType = ResponseType.CODE.toString();
+        }
+        return issueAuthCodeRedirect(request, clientDetailsEntity, redirectURI, state, callback, responseType);
     }
 
     @RequestMapping(value = "token", method = RequestMethod.POST)
