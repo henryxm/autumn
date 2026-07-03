@@ -11,6 +11,7 @@ import cn.org.autumn.modules.oauth.service.ClientDetailsService;
 import cn.org.autumn.utils.Uuid;
 import java.util.Date;
 import java.util.Objects;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -44,6 +45,13 @@ public class WebOauthCombineService extends ModuleService<WebOauthCombineDao, We
 
     public WebAuthenticationEntity getWebAuthentication(String domain) {
         return webAuthenticationService.getByClientId(domain);
+    }
+
+    public WebOauthCombineEntity getByClientId(String clientId) {
+        if (StringUtils.isBlank(clientId)) {
+            return null;
+        }
+        return baseMapper.getByClientId(clientId);
     }
 
     @Override

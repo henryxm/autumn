@@ -37,4 +37,11 @@ public class OauthSite implements SiteFactory.Site {
 
     @PageAware(login = false, resource = "modules/oauth/oauth2authorizefail")
     public static String oauth2authorizefail = pack + "_oauth2authorizefail";
+
+    @PageAware(login = true, resource = "oauth2/authclient")
+    public String authclient;
+
+    public String getAuthClientKey() {
+        return getKey("authclient");
+    }
 }

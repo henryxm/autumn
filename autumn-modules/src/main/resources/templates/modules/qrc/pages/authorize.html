@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<!-- SPM 占位页：OAuth 授权 UI 在 login.html；本页仅将 /qrc/authorize 等 SPM 入口重定向到统一登录页 -->
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>用户登录</title>
+  <script>
+    (function () {
+      var ctx = '${request.contextPath?js_string}';
+      window.location.replace(ctx + '/login.html' + (window.location.search || ''));
+    })();
+  </script>
+</head>
+<body></body>
+</html>

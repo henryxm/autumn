@@ -11,6 +11,7 @@ import cn.org.autumn.database.CrudGuard;
 import cn.org.autumn.exception.AException;
 import cn.org.autumn.model.AesConfig;
 import cn.org.autumn.model.PayCredentialConfig;
+import cn.org.autumn.model.ScanLoginConfig;
 import cn.org.autumn.model.RobotQuotaConfig;
 import cn.org.autumn.model.DistributedLockConfig;
 import cn.org.autumn.model.RsaConfig;
@@ -89,6 +90,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     public static final String AES_CONFIG = "AES_CONFIG";
     public static final String ROBOT_QUOTA_CONFIG = RobotQuotaConfig.CONFIG_KEY;
     public static final String PAY_CREDENTIAL_CONFIG = PayCredentialConfig.CONFIG_KEY;
+    public static final String QRC_CONFIG = ScanLoginConfig.CONFIG_KEY;
     public static final String Localhost = "localhost";
     public static final String config_lang_prefix = "config_lang_string_";
     private static final String NULL = null;
@@ -271,6 +273,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 {AES_CONFIG, GsonConfig.getGson().toJson(new AesConfig()), "1", "AES加密配置", config, json_type, AesConfig.class.getName()},
                 {ROBOT_QUOTA_CONFIG, GsonConfig.getGson().toJson(new RobotQuotaConfig()), "1", "机器人配额配置", config, json_type, RobotQuotaConfig.class.getName()},
                 {PAY_CREDENTIAL_CONFIG, GsonConfig.getGson().toJson(new PayCredentialConfig()), "1", "支付密码与生物识别策略", config, json_type, PayCredentialConfig.class.getName()},
+                {QRC_CONFIG, GsonConfig.getGson().toJson(new ScanLoginConfig()), "1", "扫码登录配置", config, json_type, ScanLoginConfig.class.getName()},
         };
     }
 

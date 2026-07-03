@@ -105,6 +105,7 @@ public class SysMenuService extends ServiceImpl<SysMenuDao, SysMenuEntity> imple
                 {"字段加密", "fieldencrypt.html", NULL, "1", "fa fa-lock", "13", getSystemMenuKey("FieldEncryptManagement"), getOperationsMenuKey(), "sys_string_field_encrypt_management"},
                 {"人机检测", "shield.html", NULL, "1", "fa fa-user-secret", "14", getSystemMenuKey("ShieldManagement"), getOperationsMenuKey(), "sys_string_shield_management"},
                 {"版本更新", "scan.html", NULL, "1", "fa fa-mobile", "15", getSystemMenuKey("ScanManagement"), getOperationsMenuKey(), "sys_string_scan_management"},
+                {"授权客户端中心", "oauth2/authclient", NULL, "1", "fa fa-shield", "16", getSystemMenuKey("AuthClientHub"), getOperationsMenuKey(), "sys_string_auth_client_hub"},
         };
         put(menus);
     }

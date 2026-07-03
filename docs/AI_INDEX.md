@@ -14,7 +14,7 @@
 - `docs/REDIS_REDISSON_SPRING_DATA.md`：**Redisson ↔ Spring Data Redis 版本对齐**（`pExpire` / `StackOverflowError` 错配原理、**`dependencyManagement`** 建议做法，与 `REDIS_TTL_GUIDE.md` 配合阅读）
 - **`docs/REDIS_TTL_GUIDE.md`**：**Redis TTL、`Redisson` 与 `RedisExpireUtil`**（何时宜用、常见问题、API 对照、推荐处理顺序与可选扫描脚本）
 - `docs/AI_MAP.md`：高频开发能力主图（含生成模板分层与可改/不可改边界）
-- `docs/AI_STANDARDS.md`：**约束性开发规范**（分层、API、定时任务、权限、FTL、**实体/注解建表/禁止初始化 DDL**、**§10.2 `isUnique` 与 `@Index` 禁止叠用**、**§10.2 单字段索引须字段级 `@Index`**、**§10.4 双键模型**、模块表前缀、**Dao+Provider**、**Controller–Service–Dao**、**statics/pages/Site/PageAware**）
+- `docs/AI_STANDARDS.md`：**约束性开发规范**（分层、API、定时任务、权限、**FTL §7（HTML `<!--<#if>-->` / JS `//<#if>` / `<title>` 裸 FTL）**、**实体/注解建表/禁止初始化 DDL**、**§10.2 `isUnique` 与 `@Index` 禁止叠用**、**§10.2 单字段索引须字段级 `@Index`**、**§10.4 双键模型**、模块表前缀、**Dao+Provider**、**Controller–Service–Dao**、**statics/pages/Site/PageAware**）
 - **`docs/AI_DUAL_KEY.md`**：**双主键落地**（`UuidBased` / `SnowBased` / **`UserBased`**、**§3.4 无第二主键仅 `user`**、`AutoIdService`、`Uuid` / `Snow`）
 - `docs/AI_CODE_STYLE.md`：**Java 版式**（方法/调用单行参数、if 条件同行体换行；**import 优先** §7；**日志单行** §8）
 - `docs/AI_SERVICE_COHESION.md`：**实体 Service 内聚**（CRUD/定时任务归实体 Service、约 1000 行再拆类、少工具类）
@@ -38,10 +38,15 @@
 - **`docs/AI_SAFE_CREDENTIAL.md`**：**支付安全 API 参考**（`POST /safe/api/v1/*`、`SafeConfig`、`PayPinVerifier`、闸门/免密、错误码 850～864）
 - **`docs/AI_SAFE_CREDENTIAL_CLIENT_API.md`**：**客户端对接手册**（App/H5 全量接口、示例 JSON、流程图、错误处理、UX/安全规范）
 - **`docs/AI_SAFE_CREDENTIAL_INTEGRATION.md`**：**业务对接指南**（assess→verify 流程、UX、SPI）
+- **`docs/AI_QRC.md`**：**扫码登录 QRC 对接指南**（Intent 场景、配置、安全）
+- **`docs/AI_QRC_API.md`**：**QRC API 参考**（Web/APP/Open/Webhook）
+- **`docs/AI_QRC_INTEGRATION.md`**：**第三方集成标准**（Autumn/非 Autumn）
+- **`docs/AI_QRC_CLIENT_API.md`**：**APP 扫码确认手册**
+- **`docs/AI_OAUTH_INTEGRATION.md`**：**OAuth2 第三方对接手册**（授权码模式、token、userInfo、账号绑定）
 
 ## 2. 推荐加载矩阵（按场景）
 
-- 日常开发：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md`（涉及 SQL/Wrapper/多库时追加 **`docs/AI_DATABASE.md`**）
+- 日常开发：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md`（涉及 SQL/Wrapper/多库时追加 **`docs/AI_DATABASE.md`**；改 **`templates/**/*.html`** 时必读 **`docs/AI_STANDARDS.md` §7**）
 - 会话终止与重新登录守卫：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md + docs/AI_SESSION_GUARD.md`
 - 分布式互斥/跨节点任务：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md + docs/AI_DISTRIBUTED_LOCK.md`
 - **内存队列 / `asyncTaskExecutor` 异步 drain / 本机调度闸门**：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md + docs/AI_ASYNC_TASK.md`（持锁写路径叠加 **`docs/AI_DISTRIBUTED_LOCK.md`**）
@@ -60,6 +65,8 @@
 - **web 模块 Robot 集成 / API 回归**：`web/docs/INTEGRATION_TEST.md`（H2 内存 + Redis，`mvn -pl web -am test -Pintegration -DskipTests=false`）
 - **机器人模块框架内开发**（`cn.org.autumn.modules.bot`、改 Controller/Service/实体）：上列文档 + `docs/AI_STANDARDS.md` + `docs/AI_DATABASE.md` + `docs/AI_CODEGEN.md`
 - **支付密码 / 安全凭证**（`cn.org.autumn.modules.safe`）：`docs/AI_BOOT.md` + `docs/AI_MAP.md` + **`docs/AI_SAFE_CREDENTIAL_CLIENT_API.md`**（客户端）+ **`docs/AI_SAFE_CREDENTIAL.md`** + **`docs/AI_SAFE_CREDENTIAL_INTEGRATION.md`**（业务仓）+ `docs/AI_STANDARDS.md` + `docs/AI_CRYPTO.md`（传输加密）
+- **扫码登录 QRC**（`cn.org.autumn.modules.qrc`）：`docs/AI_BOOT.md` + `docs/AI_MAP.md` + **`docs/AI_QRC.md`** + **`docs/AI_QRC_API.md`** + **`docs/AI_QRC_INTEGRATION.md`**（第三方）+ **`docs/AI_QRC_CLIENT_API.md`**（APP）+ `docs/AI_STANDARDS.md`（集成测试：`web/.../ScanLoginIntegrationTest`）
+- **OAuth2 第三方登录 / 用户信息对接**（`cn.org.autumn.modules.oauth`）：**`docs/AI_OAUTH_INTEGRATION.md`** + **`docs/AI_QRC_INTEGRATION.md`**（含扫码分支）+ 站内 `/modules/docs/auth-flow`
 
 ## 3. 标准引用顺序
 

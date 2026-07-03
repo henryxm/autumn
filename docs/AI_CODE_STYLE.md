@@ -134,3 +134,8 @@ log.error("请求失败:{}", e.getMessage());
 ```
 
 - 与 §2「方法调用」的关系：一般方法调用过长时可折行；**日志调用不适用该折行例外**，一律单行。
+
+## 9. FreeMarker 页面模板（`.html`）
+
+- HTML / JS 中条件渲染、注释包裹、`//<#if>`、`<title>` 单行裸 FTL 等：**全文见 `docs/AI_STANDARDS.md` §7**。
+- 参考：`templates/modules/client/webauthentication.html`、`templates/login.html`。

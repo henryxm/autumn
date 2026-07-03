@@ -8,6 +8,7 @@ description: >-
   No hardcoded dialect quotes in Java (RuntimeSql quote/columnInWrapper or WrapperColumns per docs/AI_DATABASE.md §4.0);
   Prefer import over fully qualified class names unless name clash (docs/AI_CODE_STYLE.md §7);
   log.info/debug/warn/error must be one line, no line breaks in the call (docs/AI_CODE_STYLE.md §8);
+  FreeMarker templates: docs/AI_STANDARDS.md §7 (HTML <!--<#if>--> per line, JS //<#if>, title bare inline FTL);
   Controller must not use Dao; Service uses baseMapper; gen/Pages/list.html/js never hand-edited; statics/pages/Site/PageAware.
   Read docs/AI_CODEGEN.md, docs/AI_DATABASE.md, docs/AI_DUAL_KEY.md. Bot/robot: read docs/AI_ROBOT.md + docs/AI_ROBOT_API.md (rbt_, Hook, message/push, cn.org.autumn.modules.bot); web 集成测试见 web/docs/INTEGRATION_TEST.md（基类 integration.base.IntegrationTest）。
   scripts/constraints-scan is optional: run only when the user explicitly asks for a constraint audit, CI-style check, or phrases like 约束扫描/规范体检; see skill section "约束扫描（按需）".
@@ -178,9 +179,20 @@ description: >-
 
 - **`resources/statics/`** 公共静态；新后台页 **`pages/`** + **`site/*Site`** + **`@PageAware`**。
 
+## FreeMarker 模板（§7 摘要）
+
+改 **`resources/templates/**/*.html`** 时必读 **`docs/AI_STANDARDS.md` §7**；参考 **`webauthentication.html`**、**`login.html`**。
+
+| 位置 | 条件渲染注释 | 指令换行 |
+|------|----------------|----------|
+| **HTML 块**（表单、列表、权限按钮） | `<!--<#if ...>-->` … `<!--</#if>-->` | **每个** FTL 指令独占一行 |
+| **`<title>` 等纯文本** | **禁止** HTML 注释包裹（防 `<!---->` 进标题） | 单行裸 `<#if>…</#if>` |
+| **`<script>` 内** | **`//<#if>`** … `//</#if>`；**禁止** `<!-- -->` | 每指令一行；简单标量用 `${…?js_string}` / `${(x!false)?c}` |
+| **说明注释** | HTML 用 `<!-- 说明 -->`，JS 用 `//` | 注释正文**禁止**写 `${}` / `<#if>` 样例 |
+
 ## 既有纪律（摘要）
 
-- **禁止生产 `@Scheduled`**；新接口 **不用 `@RequiresPermissions`**（登录态）；**FreeMarker** 安全（`<!-- -->`、`<#noparse>`）。
+- **禁止生产 `@Scheduled`**；新接口 **不用 `@RequiresPermissions`**（登录态）；**FreeMarker** 见 **§7**（HTML `<!-- -->` 包 FTL、JS `//` 包 FTL、`<#noparse>`）。
 - 页面文案：**用户视角**，禁开发术语与表名字段名堆砌。
 - 能力地图：**`docs/AI_MAP.md`**；缓存/队列细节：**`docs/AI_CODEGEN.md`** 第 4 节。
 
@@ -192,6 +204,7 @@ description: >-
 - Dao 无内联 SQL？**Wrapper** 无方言黑魔法？Java 无手写 **反引号/双引号/方括号** 拼 SQL（§4.0）？  
 - **Controller** 未碰 **Dao**？未手改 **gen / list.html/js**？  
 - 新页有 **`Site` + `@PageAware`**？  
+- 改 **`.html` 模板**：**`AI_STANDARDS` §7**（HTML `<!--<#if>` 独立行；JS `//<#if>`；`<title>` 单行裸 FTL）？
 - 生成路径与 **GenUtils** 一致？
 - 新实体/新字段是否按 **`docs/AI_DUAL_KEY.md`** 选型？**存量默认不 retrofit**，除非任务明确要求升级第二主键 / **`user`** 标准？
 - 按用户唯一表是否 **`UserBased` + 唯一 `user`**？用户维度足够时是否避免冗余 **`uuid`**（**§3.4**）？
