@@ -31,6 +31,7 @@ public class DefaultPage implements PageHandler {
                 model.addAttribute("error", error);
             }
         }
+        AuthPageAttributes.apply(model, sysConfigService);
         return "login";
     }
 

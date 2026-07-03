@@ -192,6 +192,14 @@ public class ShiroConfig {
         filterMap.put("/bot/api/v1/**", "anon");
         filterMap.put("/login.html", "anon");
         filterMap.put("/login", "anon");
+        filterMap.put("/register.html", "anon");
+        filterMap.put("/register", "anon");
+        filterMap.put("/forgotpassword.html", "anon");
+        filterMap.put("/forgotpassword", "anon");
+        filterMap.put("/user/service.html", "anon");
+        filterMap.put("/user/service", "anon");
+        filterMap.put("/user/privacy.html", "anon");
+        filterMap.put("/user/privacy", "anon");
         filterMap.put("/plugin.html", "anon");
         filterMap.put("/404.html", "anon");
         filterMap.put("/500.html", "anon");
@@ -205,6 +213,9 @@ public class ShiroConfig {
         filterMap.put("/clear", "anon");
         filterMap.put("/reinit", "anon");
         filterMap.put("/sys/login", "anon");
+        filterMap.put("/sys/register", "anon");
+        filterMap.put("/sys/forgotpassword", "anon");
+        filterMap.put("/sys/account/available", "anon");
         filterMap.put("/sys/using", "anon");
         filterMap.put("/plugin/load", "anon");
         filterMap.put("/sys/autologin", "anon");

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <title>注册账号</title>
+  <#include "/_auth_head.html">
+</head>
+<body class="${bodyClass!'login-page-v2'}" data-ctx="${request.contextPath?js_string}">
+<div id="rrapp" class="login-shell" v-cloak>
+  <div class="login-brand">
+    <div class="login-brand-icon"><i class="fa fa-leaf"></i></div>
+    <h1>注册账号</h1>
+    <p>创建你的 ${siteName!'Autumn'} 账号</p>
+  </div>
+  <div class="login-card">
+    <div class="login-body">
+      <!--<#if !(registerEnabled?? && registerEnabled)>-->
+      <#assign closedTitle="暂未开放注册">
+      <#assign closedDesc="管理员尚未开启自助注册功能，如需账号请联系系统管理员。">
+      <#include "/_auth_closed.html">
+      <!--<#else>-->
+      <div v-if="error" class="alert alert-danger login-alert">
+        <i class="fa fa-exclamation-circle"></i> {{ errorMsg }}
+      </div>
+      <div class="login-panel">
+        <div class="form-group has-feedback">
+          <input type="text" class="form-control" v-model="account" placeholder="手机号、邮箱或用户名" autocomplete="username" @blur="checkAvailable">
+          <span class="glyphicon glyphicon-user form-control-feedback"></span>
+        </div>
+        <p class="field-hint" v-if="accountTaken">该账号已被注册，请更换或直接登录</p>
+        <p class="field-tip" v-else>支持手机号、邮箱，或以字母开头的用户名</p>
+        <div class="form-group has-feedback">
+          <input type="password" class="form-control" v-model="password" placeholder="设置登录密码（至少6位）" autocomplete="new-password">
+          <span class="glyphicon glyphicon-lock form-control-feedback"></span>
+        </div>
+        <div class="form-group has-feedback">
+          <input type="password" class="form-control" v-model="confirmPassword" placeholder="再次输入密码" autocomplete="new-password" @keyup.enter="submit">
+          <span class="glyphicon glyphicon-lock form-control-feedback"></span>
+        </div>
+        <p class="field-hint" v-if="passwordMismatch">两次输入的密码不一致</p>
+        <div class="form-group captcha-row">
+          <div class="form-group has-feedback">
+            <input type="text" class="form-control" v-model="captcha" placeholder="验证码" @keyup.enter="submit">
+          </div>
+          <img alt="点击刷新验证码" :src="src" @click="refreshCode" title="点击刷新">
+        </div>
+        <div class="agree-row">
+          <label>
+            <input type="checkbox" v-model="agree">
+            我已阅读并同意
+            <a :href="ctx + '/user/service.html'" target="_blank">《服务条款》</a>
+            与
+            <a :href="ctx + '/user/privacy.html'" target="_blank">《隐私政策》</a>
+          </label>
+        </div>
+        <p class="field-hint" v-if="agreeError">{{ agreeError }}</p>
+        <button type="button" class="btn btn-primary btn-block btn-login" :disabled="submitting" @click="submit">
+          {{ submitting ? '注册中...' : '同意并注册' }}
+        </button>
+        <div class="auth-nav">
+          <span>已有账号？</span>
+          <a :href="ctx + '/login.html'">去登录</a>
+          <!--<#if forgotPasswordEnabled?? && forgotPasswordEnabled>-->
+          <span class="auth-nav-sep">|</span>
+          <a :href="ctx + '/forgotpassword.html'">忘记密码</a>
+          <!--</#if>-->
+        </div>
+      </div>
+      <!--</#if>-->
+    </div>
+  </div>
+  <div class="login-footer">&copy; ${siteName!'Autumn Framework'}</div>
+</div>
+<!--<#if registerEnabled?? && registerEnabled>-->
+<script src="${request.contextPath}/statics/libs/jquery.min.js"></script>
+<script src="${request.contextPath}/statics/libs/vue.min.js"></script>
+<script src="${request.contextPath}/statics/js/login-auth.js"></script>
+<script src="${request.contextPath}/statics/js/register.js?_${.now?long}"></script>
+<!--</#if>-->
+</body>
+</html>
