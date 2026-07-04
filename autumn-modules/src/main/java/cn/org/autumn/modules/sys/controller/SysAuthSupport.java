@@ -10,16 +10,27 @@ import cn.org.autumn.utils.WebPathUtils;
 import com.google.code.kaptcha.Constants;
 import javax.servlet.http.HttpServletRequest;
 import org.apache.commons.lang.StringUtils;
+import org.apache.shiro.web.util.SavedRequest;
+import org.apache.shiro.web.util.WebUtils;
 
 /**
  * 登录、注册、忘记密码等前台认证接口的公共逻辑。
  */
-final class SysAuthSupport {
+public final class SysAuthSupport {
 
     private SysAuthSupport() {
     }
 
-    static String resolvePostLoginRedirect(HttpServletRequest request, SuperPositionModelService superPositionModelService) {
+    public static String resolvePostLoginRedirect(HttpServletRequest request, SuperPositionModelService superPositionModelService) {
+        String fallback = defaultPostLoginTarget(request, superPositionModelService);
+        SavedRequest savedRequest = WebUtils.getSavedRequest(request);
+        if (savedRequest != null && StringUtils.isNotBlank(savedRequest.getRequestUrl())) {
+            return WebPathUtils.resolveLoginRedirectWithSavedRequest(request, savedRequest.getRequestUrl(), fallback);
+        }
+        return fallback;
+    }
+
+    private static String defaultPostLoginTarget(HttpServletRequest request, SuperPositionModelService superPositionModelService) {
         if (superPositionModelService != null && superPositionModelService.menuWithSpm()) {
             return WebPathUtils.forBrowser(request, "/");
         }

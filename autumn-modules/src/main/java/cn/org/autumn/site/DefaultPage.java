@@ -35,6 +35,7 @@ public class DefaultPage implements PageHandler {
             }
         }
         AuthPageAttributes.apply(model, sysConfigService);
+        AuthPageAttributes.applySafeOauthCallback(httpServletRequest, model);
         return "login";
     }
 

@@ -100,16 +100,9 @@ public class ClientOauth2Controller {
                     log.debug("Login user:{}", userProfile);
             }
         }
-        String callback = request.getParameter("callback");
-
-        if (StringUtils.isBlank(callback)
-                || "null".equalsIgnoreCase(callback)
-                || callback.endsWith(".js")
-                || callback.endsWith(".css"))
-            callback = "/";
-
-        if (!callback.contains("?spm=") && !callback.endsWith(".html")) {
-            callback = "/";
+        String callback = WebPathUtils.safeOauthCallbackForClient(request, request.getParameter("callback"));
+        if (StringUtils.isBlank(callback)) {
+            callback = WebPathUtils.forBrowser(request, "/");
         }
         if (log.isDebugEnabled())
             log.debug("Callback URL:{}", callback);

@@ -35,6 +35,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.servers.Server;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.tags.Tags;
+
 import java.net.*;
 import java.io.UnsupportedEncodingException;
 import java.util.Enumeration;
@@ -42,6 +43,7 @@ import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
+
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.apache.oltu.oauth2.as.issuer.MD5Generator;
@@ -133,7 +135,9 @@ public class AuthorizationController {
         return oAuthResponse.getBody();
     }
 
-    /** RFC 允许对授权 URL 发 HEAD，但 Oltu {@code OAuthAuthzRequest} 仅接受 GET。 */
+    /**
+     * RFC 允许对授权 URL 发 HEAD，但 Oltu {@code OAuthAuthzRequest} 仅接受 GET。
+     */
     private HttpServletRequest authzRequestForOltu(HttpServletRequest request) {
         if (request == null || !"HEAD".equalsIgnoreCase(request.getMethod())) {
             return request;
@@ -160,13 +164,15 @@ public class AuthorizationController {
 
     private String resolvePostLoginRedirect(HttpServletRequest request, String callback) {
         callback = normalizeRedirectUrl(callback);
-        if (StringUtils.isNotBlank(callback)) {
-            return WebPathUtils.safePostLoginRedirect(request, callback);
-        }
+        if (StringUtils.isNotBlank(callback)) return WebPathUtils.safePostLoginRedirect(request, callback);
         SavedRequest savedRequest = WebUtils.getSavedRequest(request);
         if (savedRequest != null && StringUtils.isNotBlank(savedRequest.getRequestUrl())) {
-            return WebPathUtils.safePostLoginRedirect(request, savedRequest.getRequestUrl());
+            String safe = WebPathUtils.safePostLoginRedirect(request, savedRequest.getRequestUrl());
+            String home = WebPathUtils.forBrowser(request, "/");
+            if (!home.equals(safe)) return safe;
         }
+        if (superPositionModelService != null && superPositionModelService.menuWithSpm())
+            return WebPathUtils.forBrowser(request, "/");
         return WebPathUtils.forBrowser(request, "/");
     }
 
@@ -351,13 +357,11 @@ public class AuthorizationController {
         try {
             if (StringUtils.isNotBlank(error)) {
                 if (error.length() > 200) error = error.substring(0, 200);
-                if (StringUtils.isNotBlank(callback)) {
-                    return redirectUrl(appendQueryParam(callback, "error", error));
+                String safeCallback = WebPathUtils.safeOauthCallbackForClient(request, callback);
+                if (StringUtils.isNotBlank(safeCallback)) {
+                    return redirectUrl(appendQueryParam(safeCallback, "error", error));
                 }
-                if (StringUtils.isBlank(callback))
-                    return "redirect:/oauth2/login?error=" + URLEncoder.encode(error, "utf-8");
-                else
-                    return "redirect:/oauth2/login?callback=" + URLEncoder.encode(callback, "utf-8") + "&error=" + URLEncoder.encode(error, "utf-8");
+                return "redirect:/oauth2/login?error=" + URLEncoder.encode(error, "utf-8");
             }
         } catch (Exception ignored) {
         }

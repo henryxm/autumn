@@ -7,6 +7,7 @@
     var oauthAuthorize = !!cfg.oauthAuthorize;
     var authorizeLoggedIn = !!cfg.authorizeLoggedIn;
     var oauthDenyRedirect = cfg.oauthDenyRedirect || '';
+    var safeOauthCallback = cfg.safeOauthCallback || '';
     var serverUuid = cfg.serverUuid || '';
     var serverQrUrl = cfg.serverQrUrl || '';
     var serverPollIntervalMs = cfg.serverPollIntervalMs || 2000;
@@ -80,8 +81,7 @@
                     this.oauthCallback = window.location.href.split('#')[0];
                     return;
                 }
-                var qs = new URLSearchParams(window.location.search || '');
-                this.oauthCallback = qs.get('callback') || '';
+                this.oauthCallback = safeOauthCallback || '';
             },
             beforeOauthAuthorizeLogin: function (e) {
                 if (oauthAuthorize) {
@@ -213,10 +213,8 @@
             },
             redirectAfterLogin: function (target) {
                 if (oauthLogin) {
-                    var qs = new URLSearchParams(window.location.search || '');
-                    var callback = qs.get('callback');
-                    if (callback) {
-                        (window.top || window).location.href = callback;
+                    if (safeOauthCallback) {
+                        (window.top || window).location.href = safeOauthCallback;
                         return;
                     }
                     if (target) {
