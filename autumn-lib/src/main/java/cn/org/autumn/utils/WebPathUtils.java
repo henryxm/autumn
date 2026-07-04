@@ -1,10 +1,10 @@
 package cn.org.autumn.utils;
 
-import org.springframework.util.StringUtils;
-
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.http.HttpServletRequest;
+import java.net.URI;
 import java.net.URL;
+import org.springframework.util.StringUtils;
 
 /**
  * 处理 Servlet context-path，避免在子路径部署时把浏览器导航到站点根（误落到网关/其它应用 JSON 接口）。
@@ -55,7 +55,7 @@ public final class WebPathUtils {
     }
 
     /**
-     * 登录成功后的浏览器跳转目标：拦截明显为接口/文档的 SavedRequest，避免整页打开 JSON。
+     * 登录成功后的浏览器跳转目标：拦截非文档形态的 SavedRequest，避免整页打开 JSON REST。
      */
     public static String safePostLoginRedirect(HttpServletRequest request, String candidate) {
         String home = forBrowser(request, "/");
@@ -78,6 +78,55 @@ public final class WebPathUtils {
         int qi = c.indexOf('?');
         String pathPart = qi < 0 ? c : c.substring(0, qi);
         String queryPart = qi < 0 ? null : c.substring(qi + 1);
+        String pathForCheck = pathForCheck(request, pathPart);
+        if (isUnsafeNavPath(pathForCheck, queryPart))
+            return home;
+        return forBrowser(request, c);
+    }
+
+    /**
+     * OAuth 登录页下发给前端的 callback：REST/API 等非法整页目标返回空串，避免 {@code login.js} 误跳 JSON 端点。
+     */
+    public static String safeOauthCallbackForClient(HttpServletRequest request, String rawCallback) {
+        if (request == null || !StringUtils.hasText(rawCallback)) return "";
+        String raw = rawCallback.trim();
+        String home = forBrowser(request, "/");
+        String safe = safePostLoginRedirect(request, raw);
+        if (!home.equals(safe)) return safe;
+        String[] parts = candidatePathAndQuery(request, raw);
+        if (parts != null && isUnsafeNavPath(parts[0], parts[1])) return "";
+        return safe;
+    }
+
+    /**
+     * AJAX 登录成功后的跳转：优先使用 Shiro SavedRequest 中的安全文档页，否则回退 {@code fallbackTarget}。
+     */
+    public static String resolveLoginRedirectWithSavedRequest(HttpServletRequest request, String savedRequestUrl, String fallbackTarget) {
+        if (request == null || !StringUtils.hasText(savedRequestUrl)) return fallbackTarget;
+        String safe = safePostLoginRedirect(request, savedRequestUrl.trim());
+        String home = forBrowser(request, "/");
+        if (home.equals(safe)) return fallbackTarget;
+        return safe;
+    }
+
+    private static String[] candidatePathAndQuery(HttpServletRequest request, String candidate) {
+        if (!StringUtils.hasText(candidate)) return null;
+        String c = candidate.trim();
+        try {
+            if (c.startsWith("http://") || c.startsWith("https://")) {
+                URL u = new URI(c).toURL();
+                return new String[]{u.getPath(), u.getQuery()};
+            }
+        } catch (Exception ignored) {
+            return null;
+        }
+        int qi = c.indexOf('?');
+        String pathPart = qi < 0 ? c : c.substring(0, qi);
+        String queryPart = qi < 0 ? null : c.substring(qi + 1);
+        return new String[]{pathForCheck(request, pathPart), queryPart};
+    }
+
+    private static String pathForCheck(HttpServletRequest request, String pathPart) {
         String ctx = contextPath(request);
         String pathForCheck = pathPart;
         if (StringUtils.hasText(ctx) && pathPart.startsWith(ctx)) {
@@ -85,9 +134,7 @@ public final class WebPathUtils {
             if (!pathForCheck.startsWith("/"))
                 pathForCheck = "/" + pathForCheck;
         }
-        if (isUnsafeNavPath(pathForCheck, queryPart))
-            return home;
-        return forBrowser(request, c);
+        return pathForCheck;
     }
 
     private static boolean hostEquals(String a, String b) {
@@ -97,32 +144,33 @@ public final class WebPathUtils {
     }
 
     /**
-     * 明显不应作为「整页」打开的地址（多为 JSON/XML 接口或监控端点）。
+     * 是否不宜作为登录后的整页跳转（与业务 Controller 路径无关的通用规则）。
+     *
+     * @see HttpNavigationUtils
      */
     public static boolean isUnsafeNavPath(String path, String query) {
-        if (!StringUtils.hasText(path))
-            return false;
-        if ("/".equals(path))
-            return false;
-        String p = path.toLowerCase();
-        if (p.contains("/api/"))
-            return true;
-        if (p.endsWith(".json"))
-            return true;
-        if (p.startsWith("/sys/") && !p.endsWith(".html"))
-            return true;
-        if (p.startsWith("/actuator/"))
-            return true;
-        if (p.startsWith("/druid/"))
-            return true;
-        if (p.contains("/v2/api-docs") || p.contains("/v3/api-docs"))
-            return true;
-        if (p.startsWith("/oauth2/token"))
-            return true;
-        if (p.contains("/oauth2/userinfo"))
-            return true;
-        if (p.contains("/swagger-resources") || p.contains("/webjars/springfox"))
-            return true;
-        return false;
+        if (HttpNavigationUtils.isInfrastructureApiPath(path)) return true;
+        return !HttpNavigationUtils.isLikelyBrowserDocumentUrl(path, query);
+    }
+
+    /**
+     * 当前请求是否应写入 Shiro {@code SavedRequest}（登录成功后浏览器回跳）。
+     * 排除 API/AJAX 语义及非文档形态 URL，避免 REST 端点污染回跳目标。
+     */
+    public static boolean shouldPersistSavedRequest(HttpServletRequest request) {
+        if (request == null) return false;
+        if (HttpNavigationUtils.isApiOrAjaxRequest(request)) return false;
+        return !isUnsafeNavPath(requestPathWithoutContext(request), request.getQueryString());
+    }
+
+    static String requestPathWithoutContext(HttpServletRequest request) {
+        String uri = request.getRequestURI();
+        if (!StringUtils.hasText(uri)) return "/";
+        String ctx = contextPath(request);
+        if (StringUtils.hasText(ctx) && uri.startsWith(ctx)) {
+            String rest = uri.substring(ctx.length());
+            return rest.isEmpty() ? "/" : rest;
+        }
+        return uri;
     }
 }

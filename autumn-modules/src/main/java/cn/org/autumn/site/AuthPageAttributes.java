@@ -1,6 +1,10 @@
 package cn.org.autumn.site;
 
 import cn.org.autumn.modules.sys.service.SysConfigService;
+import cn.org.autumn.utils.Utils;
+import cn.org.autumn.utils.WebPathUtils;
+import jakarta.servlet.http.HttpServletRequest;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.ui.Model;
 
 /**
@@ -21,5 +25,24 @@ public final class AuthPageAttributes {
         model.addAttribute("siteName", sysConfigService.getLoadingBrand());
         model.addAttribute("registerEnabled", sysConfigService.isRegisterEnabled());
         model.addAttribute("forgotPasswordEnabled", sysConfigService.isForgotPasswordEnabled());
+    }
+
+    /**
+     * 登录页 OAuth callback 服务端净化，写入 {@code safeOauthCallback} 供 {@code __LOGIN_CONFIG__} 使用。
+     */
+    public static void applySafeOauthCallback(HttpServletRequest request, Model model) {
+        if (request == null || model == null) {
+            return;
+        }
+        String raw = request.getParameter("callback");
+        if (StringUtils.isBlank(raw)) {
+            raw = Utils.getCallback(request);
+        }
+        if (StringUtils.isBlank(raw) && Boolean.TRUE.equals(model.getAttribute("oauthAuthorize"))) {
+            StringBuffer url = request.getRequestURL();
+            String query = request.getQueryString();
+            raw = StringUtils.isNotBlank(query) ? url + "?" + query : url.toString();
+        }
+        model.addAttribute("safeOauthCallback", WebPathUtils.safeOauthCallbackForClient(request, raw));
     }
 }

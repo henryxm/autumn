@@ -20,9 +20,9 @@ import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.usr.service.UserProfileService;
 import cn.org.autumn.modules.usr.interceptor.AuthorizationInterceptor;
 import cn.org.autumn.modules.spm.interceptor.SpmInterceptor;
+import cn.org.autumn.modules.sys.controller.SysAuthSupport;
 import cn.org.autumn.utils.IPUtils;
 import cn.org.autumn.utils.R;
-import cn.org.autumn.utils.WebPathUtils;
 import cn.org.autumn.database.CrudGuard;
 import java.util.HashMap;
 import jakarta.servlet.http.HttpServletRequest;
@@ -108,11 +108,7 @@ public class ScanWebController {
                 } catch (Exception ignored) {
                 }
             });
-            String j = "index.html";
-            if (superPositionModelService.menuWithSpm()) {
-                j = WebPathUtils.forBrowser(servlet, "/");
-            }
-            return R.ok().put("data", j);
+            return R.ok().put("data", SysAuthSupport.resolvePostLoginRedirect(servlet, superPositionModelService));
         } catch (Exception e) {
             return R.error(e.getMessage());
         }

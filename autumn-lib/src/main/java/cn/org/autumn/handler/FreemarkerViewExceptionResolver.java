@@ -4,6 +4,7 @@ import cn.org.autumn.config.ApplicationInitializationProgress;
 import cn.org.autumn.model.Error;
 import cn.org.autumn.model.Response;
 import cn.org.autumn.utils.ExceptionUtils;
+import cn.org.autumn.utils.HttpNavigationUtils;
 import cn.org.autumn.view.ViewTemplateSupport;
 import com.alibaba.fastjson2.JSON;
 import freemarker.template.TemplateException;
@@ -62,7 +63,7 @@ public class FreemarkerViewExceptionResolver extends AbstractHandlerExceptionRes
             return resolveMissingView(request, response);
         }
         logFreemarkerException(request, ex, freemarkerThrowable);
-        if (isApiRequest(request)) {
+        if (HttpNavigationUtils.isApiOrAjaxRequest(request)) {
             writeApiError(response);
             return new ModelAndView();
         }
@@ -81,13 +82,15 @@ public class FreemarkerViewExceptionResolver extends AbstractHandlerExceptionRes
         return new ModelAndView("redirect:" + buildLoadingRedirectTarget(request, retryCount + 1));
     }
 
-    /** 浏览器返回 404 页；API 请求返回 JSON {@link Error#NOT_FOUND}，不写 ERROR 日志。 */
+    /**
+     * 浏览器返回 404 页；API 请求返回 JSON {@link Error#NOT_FOUND}，不写 ERROR 日志。
+     */
     private ModelAndView resolveMissingView(HttpServletRequest request, HttpServletResponse response) {
         if (log.isDebugEnabled()) {
             String uri = request != null ? request.getRequestURI() : "-";
             log.debug("Missing view, return 404: uri={}", uri);
         }
-        if (isApiRequest(request)) {
+        if (HttpNavigationUtils.isApiOrAjaxRequest(request)) {
             writeApiNotFound(response);
             return new ModelAndView();
         }
@@ -188,26 +191,6 @@ public class FreemarkerViewExceptionResolver extends AbstractHandlerExceptionRes
             return;
         }
         log.error("FreeMarker resource render failed, method={}, uri={}{}{}, accept={}, exceptionType={}, message={}", method, uri, StringUtils.isBlank(query) ? "" : "?", query, accept, freemarkerThrowable.getClass().getName(), StringUtils.defaultString(freemarkerThrowable.getMessage(), "-"), ex);
-    }
-
-    private boolean isApiRequest(HttpServletRequest request) {
-        if (request == null) {
-            return false;
-        }
-        String accept = request.getHeader("Accept");
-        if (StringUtils.isNotBlank(accept) && accept.contains("application/json")) {
-            return true;
-        }
-        String contentType = request.getContentType();
-        if (StringUtils.isNotBlank(contentType) && contentType.contains("application/json")) {
-            return true;
-        }
-        String requestURI = request.getRequestURI();
-        if (StringUtils.isNotBlank(requestURI) && (requestURI.contains("/api/") || requestURI.endsWith(".json"))) {
-            return true;
-        }
-        String requestedWith = request.getHeader("X-Requested-With");
-        return StringUtils.isNotBlank(requestedWith) && "XMLHttpRequest".equalsIgnoreCase(requestedWith);
     }
 
     /**
