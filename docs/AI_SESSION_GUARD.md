@@ -56,6 +56,8 @@
 
 - `templates/login.html` 会读取 query/sessionStorage 并显示会话过期或会话已终止提示。
 
+登录 **成功后的默认落地页**（非 SavedRequest 场景）由 **`ACCOUNT_AUTH_CONFIG.postLoginRedirect`** 配置，见 **`docs/AI_ACCOUNT_AUTH_CONFIG.md`**。
+
 ## 5. 业务项目接入建议
 
 - 管理端 iframe/壳页面：直接引入 `autumn-session-guard.js` 并调用 `AutumnSessionGuard.start(60000)`。

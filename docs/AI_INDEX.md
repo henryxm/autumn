@@ -43,6 +43,7 @@
 - **`docs/AI_QRC_INTEGRATION.md`**：**第三方集成标准**（Autumn/非 Autumn）
 - **`docs/AI_QRC_CLIENT_API.md`**：**APP 扫码确认手册**
 - **`docs/AI_OAUTH_INTEGRATION.md`**：**OAuth2 第三方对接手册**（授权码模式、token、userInfo、账号绑定）
+- **`docs/AI_ACCOUNT_AUTH_CONFIG.md`**：**账号认证配置**（`ACCOUNT_AUTH_CONFIG`、`postLoginRedirect` 登录后跳转、json_type 字段刷新 API/管理页）
 
 ## 2. 推荐加载矩阵（按场景）
 
@@ -67,6 +68,7 @@
 - **支付密码 / 安全凭证**（`cn.org.autumn.modules.safe`）：`docs/AI_BOOT.md` + `docs/AI_MAP.md` + **`docs/AI_SAFE_CREDENTIAL_CLIENT_API.md`**（客户端）+ **`docs/AI_SAFE_CREDENTIAL.md`** + **`docs/AI_SAFE_CREDENTIAL_INTEGRATION.md`**（业务仓）+ `docs/AI_STANDARDS.md` + `docs/AI_CRYPTO.md`（传输加密）
 - **扫码登录 QRC**（`cn.org.autumn.modules.qrc`）：`docs/AI_BOOT.md` + `docs/AI_MAP.md` + **`docs/AI_QRC.md`** + **`docs/AI_QRC_API.md`** + **`docs/AI_QRC_INTEGRATION.md`**（第三方）+ **`docs/AI_QRC_CLIENT_API.md`**（APP）+ `docs/AI_STANDARDS.md`（集成测试：`web/.../ScanLoginIntegrationTest`）
 - **OAuth2 第三方登录 / 用户信息对接**（`cn.org.autumn.modules.oauth`）：**`docs/AI_OAUTH_INTEGRATION.md`** + **`docs/AI_QRC_INTEGRATION.md`**（含扫码分支）+ 站内 `/modules/docs/auth-flow`
+- **登录后跳转 / 账号认证 JSON 配置**（`AccountAuthConfig`、`postLoginRedirect`、json 配置刷新）：**`docs/AI_ACCOUNT_AUTH_CONFIG.md`**（叠加 **`docs/AI_SESSION_GUARD.md`** 若涉及会话过期提示）
 
 ## 3. 标准引用顺序
 
