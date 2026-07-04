@@ -26,6 +26,9 @@
             errorMsg: '',
             src: window.AuthPage ? AuthPage.captchaUrl(ctx) : ctx + '/captcha.jpg',
             qrStatus: oauthAuthorize ? '正在加载二维码...' : '切换到扫码登录后加载二维码',
+            qrPhase: 'pending',
+            scannerDisplayName: '',
+            scannerIconUrl: '',
             qrcUuid: '',
             qrcPollTimer: null,
             oauthCallback: '',
@@ -131,10 +134,43 @@
                     window.location.reload();
                     return;
                 }
+                this.resetQrScannedState();
                 this.startQrLogin();
+            },
+            resetQrScannedState: function () {
+                this.qrPhase = 'pending';
+                this.scannerDisplayName = '';
+                this.scannerIconUrl = '';
+            },
+            resolveScannerIconUrl: function (icon) {
+                if (!icon) {
+                    return '';
+                }
+                if (/^https?:\/\//i.test(icon)) {
+                    return icon;
+                }
+                if (icon.charAt(0) === '/') {
+                    return ctx + icon;
+                }
+                return ctx + '/' + icon;
+            },
+            applyScannerBrief: function (brief) {
+                if (!brief) {
+                    return;
+                }
+                this.scannerDisplayName = brief.displayName || '';
+                this.scannerIconUrl = this.resolveScannerIconUrl(brief.icon);
+                this.qrPhase = 'scanned';
+            },
+            handleQrTerminalStatus: function (status) {
+                if (status === 'DENIED' || status === 'CANCELLED' || status === 'EXPIRED') {
+                    this.resetQrScannedState();
+                    this.qrStatus = '扫码已取消或过期，请刷新重试';
+                }
             },
             initAuthorizeQr: function () {
                 var self = this;
+                self.resetQrScannedState();
                 if (self.qrcPollTimer) {
                     clearInterval(self.qrcPollTimer);
                     self.qrcPollTimer = null;
@@ -166,7 +202,7 @@
                 var self = this;
                 $.ajax({
                     type: 'POST',
-                    url: ctx + '/qrc/web/v1/session/exchange',
+                    url: ctx + '/qrc/scanticket/web/session/exchange',
                     contentType: 'application/json',
                     data: JSON.stringify({ data: { exchange: exchange } }),
                     dataType: 'json',
@@ -284,6 +320,7 @@
             },
             startQrLogin: function () {
                 var self = this;
+                self.resetQrScannedState();
                 self.qrStatus = '正在加载二维码...';
                 if (self.qrcPollTimer) {
                     clearInterval(self.qrcPollTimer);
@@ -291,7 +328,7 @@
                 }
                 $.ajax({
                     type: 'POST',
-                    url: ctx + '/qrc/web/v1/ticket/create',
+                    url: ctx + '/qrc/scanticket/web/ticket/create',
                     contentType: 'application/json',
                     data: JSON.stringify({ data: { intent: 'SELF_WEB_LOGIN' } }),
                     dataType: 'json',
@@ -321,16 +358,18 @@
                 if (!self.qrcUuid) {
                     return;
                 }
-                $.getJSON(ctx + '/qrc/web/v1/ticket/status', { uuid: self.qrcUuid }, function (res) {
+                $.getJSON(ctx + '/qrc/scanticket/web/ticket/status', { uuid: self.qrcUuid }, function (res) {
                     if (!res || res.code !== 0 || !res.data) {
                         return;
                     }
                     var data = res.data;
                     if (data.status === 'SCANNED') {
-                        self.qrStatus = '已扫码，请在 APP 确认';
+                        self.applyScannerBrief(data.scannerBrief);
+                        self.qrStatus = '扫码成功，请在手机点击登录';
                     }
                     if (oauthAuthorize) {
                         if ((data.status === 'CONFIRMED' || data.status === 'COMPLETED') && data.exchange) {
+                            self.qrPhase = 'done';
                             self.qrStatus = '扫码成功，正在登录...';
                             if (self.qrcPollTimer) {
                                 clearInterval(self.qrcPollTimer);
@@ -339,12 +378,11 @@
                             self.completeAuthorizeExchange(data.exchange);
                             return;
                         }
-                        if (data.status === 'DENIED' || data.status === 'CANCELLED' || data.status === 'EXPIRED') {
-                            self.qrStatus = '扫码已取消或过期，请刷新重试';
-                        }
+                        self.handleQrTerminalStatus(data.status);
                         return;
                     }
                     if ((data.status === 'CONFIRMED' || data.status === 'COMPLETED') && data.exchange) {
+                        self.qrPhase = 'done';
                         self.qrStatus = '登录成功，正在跳转...';
                         if (self.qrcPollTimer) {
                             clearInterval(self.qrcPollTimer);
@@ -352,7 +390,7 @@
                         }
                         $.ajax({
                             type: 'POST',
-                            url: ctx + '/qrc/web/v1/session/exchange',
+                            url: ctx + '/qrc/scanticket/web/session/exchange',
                             contentType: 'application/json',
                             data: JSON.stringify({ data: { exchange: res.data.exchange } }),
                             dataType: 'json',
@@ -367,7 +405,9 @@
                                 self.qrStatus = '网络异常，请刷新二维码重试';
                             }
                         });
+                        return;
                     }
+                    self.handleQrTerminalStatus(data.status);
                 });
             }
         }

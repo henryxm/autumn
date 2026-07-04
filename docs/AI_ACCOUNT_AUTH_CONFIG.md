@@ -178,7 +178,7 @@ sysConfigService.updateAccountAuthConfig(toSave);
 |------|------|
 | `POST /sys/login` | 标准账号密码登录 |
 | `POST /sys/auth/account/login` | 统一认证账号登录 |
-| 扫码 Web 登录相关成功响应 | 见 `ScanWebController` |
+| 扫码 Web 登录相关成功响应 | 见 `ScanTicketController`（`/qrc/scanticket/web`） |
 
 前端典型用法：读取 `r.data`，`location.href = r.data`（与现有 `login.js` 一致）。
 

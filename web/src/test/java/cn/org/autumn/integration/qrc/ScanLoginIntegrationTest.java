@@ -7,6 +7,7 @@ import cn.org.autumn.modules.oauth.entity.ClientDetailsEntity;
 import cn.org.autumn.modules.qrc.dto.ConfirmResult;
 import cn.org.autumn.modules.qrc.dto.CreateContext;
 import cn.org.autumn.modules.qrc.dto.TicketCreateResult;
+import cn.org.autumn.modules.qrc.dto.TicketStatusResult;
 import cn.org.autumn.modules.qrc.model.Intent;
 import cn.org.autumn.modules.qrc.model.TicketSnapshot;
 import cn.org.autumn.modules.qrc.model.TicketStatus;
@@ -31,6 +32,7 @@ import org.springframework.http.ResponseEntity;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class ScanLoginIntegrationTest extends IntegrationTest {
 
@@ -45,6 +47,33 @@ public class ScanLoginIntegrationTest extends IntegrationTest {
 
     private static final Type CREATE_RESULT = new TypeToken<Response<TicketCreateResult>>() {
     }.getType();
+
+    private static final Type STATUS_RESULT = new TypeToken<Response<TicketStatusResult>>() {
+    }.getType();
+
+    @Test
+    void selfWebLoginScannedStatusShowsScannerBrief() throws Exception {
+        CreateContext ctx = new CreateContext();
+        ctx.setIntent(Intent.SELF_WEB_LOGIN);
+        ctx.setIp("127.0.0.1");
+        TicketSnapshot ticket = scanTicketService.create(ctx);
+        SysUserEntity scanner = sysUserService.getByUuid(adminUuid);
+        scanTicketService.scan(ticket.getUuid(), scanner);
+
+        ResponseEntity<String> response = restTemplate.getForEntity("http://127.0.0.1:" + port + "/qrc/scanticket/web/ticket/status?uuid=" + ticket.getUuid(), String.class);
+        assertEquals(200, response.getStatusCodeValue());
+        Response<TicketStatusResult> parsed = gson.fromJson(response.getBody(), STATUS_RESULT);
+        assertNotNull(parsed);
+        assertEquals(0, parsed.getCode());
+        assertEquals(TicketStatus.SCANNED, parsed.getData().getStatus());
+        assertNotNull(parsed.getData().getScannerBrief());
+        assertNotNull(parsed.getData().getScannerBrief().getDisplayName());
+        assertNull(parsed.getData().getExchange());
+
+        scanTicketService.confirm(ticket.getUuid(), scanner, null);
+        TicketSnapshot confirmed = scanTicketService.getRequired(ticket.getUuid());
+        assertNotNull(confirmed.getExchange());
+    }
 
     @Test
     void selfWebLoginFlow() throws Exception {
@@ -109,7 +138,7 @@ public class ScanLoginIntegrationTest extends IntegrationTest {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
-        ResponseEntity<String> response = restTemplate.exchange("http://127.0.0.1:" + port + "/qrc/web/v1/ticket/create", HttpMethod.POST, entity, String.class);
+        ResponseEntity<String> response = restTemplate.exchange("http://127.0.0.1:" + port + "/qrc/scanticket/web/ticket/create", HttpMethod.POST, entity, String.class);
         assertEquals(200, response.getStatusCodeValue());
         Response<TicketCreateResult> parsed = gson.fromJson(response.getBody(), CREATE_RESULT);
         assertNotNull(parsed);

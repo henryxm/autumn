@@ -1,8 +1,5 @@
 package cn.org.autumn.modules.qrc.dto;
 
-import io.swagger.v3.oas.annotations.media.Schema;
-import java.util.HashMap;
-import java.util.Map;
 import lombok.Getter;
 import lombok.Setter;
 

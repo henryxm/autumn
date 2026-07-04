@@ -96,7 +96,7 @@
                 <tbody>
                 <tr><td><strong>授权服务器（AS）</strong></td><td>本系统签发授权码 / 访问令牌，管理「谁可以来拿 token」</td><td><code>/oauth2/authorize</code>、<code>/oauth2/token</code></td></tr>
                 <tr><td><strong>网站客户端</strong></td><td>本网站作为 OAuth Client，向 AS 发起登录并换 token</td><td><code>/client/oauth2/callback</code></td></tr>
-                <tr><td><strong>扫码编排层（QRC）</strong></td><td>用「手机 App 扫码 + 确认」代替 PC 输入密码，或代替 OAuth 授权页点同意</td><td><code>/qrc/web/v1/*</code>、<code>/qrc/api/v1/*</code></td></tr>
+                <tr><td><strong>扫码编排层（QRC）</strong></td><td>用「手机 App 扫码 + 确认」代替 PC 输入密码，或代替 OAuth 授权页点同意</td><td><code>/qrc/scanticket/web/*</code>、<code>/qrc/api/v1/*</code></td></tr>
                 </tbody>
             </table>
             <p>扫码<strong>不是</strong>独立的认证协议，而是编排层：最终仍落到 <strong>Shiro Session</strong>（同源网站登录）或 <strong>OAuth 授权码</strong>（第三方授权）。</p>
@@ -219,7 +219,7 @@
                 <div class="topo-row">
                     <div class="topo-box">PC 浏览器</div>
                     <span class="topo-arrow">⇄</span>
-                    <div class="topo-box secondary">Autumn Web<br><small>/qrc/web · login.html · /oauth2/*</small></div>
+                    <div class="topo-box secondary">Autumn Web<br><small>/qrc/scanticket/web · login.html · /oauth2/*</small></div>
                     <span class="topo-arrow">⇄</span>
                     <div class="topo-box">手机 App</div>
                 </div>
@@ -245,9 +245,9 @@
             <table class="table table-bordered table-striped role-table">
                 <thead><tr><th>角色</th><th>做什么</th><th>主要接口</th></tr></thead>
                 <tbody>
-                <tr><td>PC 浏览器</td><td>展示二维码、轮询票据状态、用 exchange 换 Session 或跳转带 code 的 URL</td><td><code>/qrc/web/v1/*</code>、<code>/oauth2/authorize</code></td></tr>
-                <tr><td>手机 App（已登录用户）</td><td>扫描二维码、确认/拒绝授权</td><td><code>/qrc/api/v1/ticket/scan|confirm|deny</code></td></tr>
-                <tr><td>第三方系统</td><td>引导用户到 AS 授权页，或用 Open API 自建二维码</td><td><code>/oauth2/authorize</code>、<code>/qrc/open/v1/*</code></td></tr>
+                <tr><td>PC 浏览器</td><td>展示二维码、轮询票据状态、用 exchange 换 Session 或跳转带 code 的 URL</td><td><code>/qrc/scanticket/web/*</code>、<code>/oauth2/authorize</code></td></tr>
+                <tr><td>手机 App（已登录用户）</td><td>扫描二维码、确认/拒绝授权</td><td><code>/qrc/api/v1/ticket/scan|confirm|deny|detail</code></td></tr>
+                <tr><td>第三方系统</td><td>引导用户到 AS 授权页，或用 Open API 自建二维码</td><td><code>/oauth2/authorize</code>、<code>/qrc/api/v1/ticket/open/*</code></td></tr>
                 <tr><td>运维</td><td>创建应用、配策略、查登录记录</td><td><code>/oauth2/authclient</code>、<code>/qrc/scanticket</code></td></tr>
                 </tbody>
             </table>
@@ -257,12 +257,12 @@
             <p><strong>Intent</strong>：<code>SELF_WEB_LOGIN</code> · <strong>Handler</strong>：<code>SelfWebLoginHandler</code></p>
 
             <ol class="flow-seq">
-                <li><strong>PC</strong> 调用 <code>POST /qrc/web/v1/ticket/create</code>，body 含 <code>intent: SELF_WEB_LOGIN</code>，获得票据 <code>uuid</code> 与 <code>qrUrl</code>。</li>
-                <li><strong>PC</strong> 展示二维码（内容为 <code>{host}/qrc/v1/t/{uuid}</code> 或 App 协议链接）。</li>
+                <li><strong>PC</strong> 调用 <code>POST /qrc/scanticket/web/ticket/create</code>，body 含 <code>intent: SELF_WEB_LOGIN</code>，获得票据 <code>uuid</code> 与 <code>qrUrl</code>。</li>
+                <li><strong>PC</strong> 展示二维码（内容为 <code>{host}/qrc/api/v1/t/{uuid}</code> 或 App 协议链接）。</li>
                 <li><strong>App</strong> 解析 uuid，带用户 Token 调用 <code>POST /qrc/api/v1/ticket/scan</code>，再 <code>POST .../confirm</code>。</li>
                 <li><strong>服务端</strong> 生成一次性 <code>exchange</code> 令牌（默认 TTL 约 60s，见 <code>QRC_CONFIG</code>）。</li>
-                <li><strong>PC</strong> 轮询 <code>GET /qrc/web/v1/ticket/status?uuid=...</code>，状态为 CONFIRMED 时拿到 exchange。</li>
-                <li><strong>PC</strong> 调用 <code>POST /qrc/web/v1/session/exchange</code>，Shiro 建立 Session，跳转首页。</li>
+                <li><strong>PC</strong> 轮询 <code>GET /qrc/scanticket/web/ticket/status?uuid=...</code>，状态为 CONFIRMED 时拿到 exchange。</li>
+                <li><strong>PC</strong> 调用 <code>POST /qrc/scanticket/web/session/exchange</code>，Shiro 建立 Session，跳转首页。</li>
             </ol>
 
             <div class="doc-note">扫码 ≠ 登录：必须 App 端 <strong>confirm</strong>；exchange 仅用一次。登录审计 <code>way=qrc_self</code>。</div>
@@ -294,7 +294,7 @@
 
             <h3 id="flow-device" class="anchor-offset">9. 场景 D：设备码 / 自建二维码（OAUTH_DEVICE）</h3>
             <p><strong>目的</strong>：第三方自有 UI（电视、CLI、Partner 后台），不经过 AS 的 login.html，自行展示 QR 并轮询或收 Webhook。</p>
-            <p><strong>Intent</strong>：<code>OAUTH_DEVICE</code> · 入口：<code>POST /qrc/open/v1/ticket/create</code>（client_id + client_secret）</p>
+            <p><strong>Intent</strong>：<code>OAUTH_DEVICE</code> · 入口：<code>POST /qrc/api/v1/ticket/open/create</code>（client_id + client_secret）</p>
 
             <ol class="flow-seq">
                 <li>第三方服务端带密钥创建票据，获得 uuid / qrUrl，在自有界面展示 QR。</li>
@@ -385,19 +385,23 @@
 
             <h3 id="api" class="anchor-offset">13. API 速查</h3>
             <h4>PC Web（匿名）</h4>
-            <div class="doc-code">POST /qrc/web/v1/ticket/create</div>
-            <div class="doc-code">GET  /qrc/web/v1/ticket/status?uuid=...</div>
-            <div class="doc-code">POST /qrc/web/v1/session/exchange</div>
+            <div class="doc-code">POST /qrc/scanticket/web/ticket/create</div>
+            <div class="doc-code">GET  /qrc/scanticket/web/ticket/status?uuid=...</div>
+            <div class="doc-code">POST /qrc/scanticket/web/session/exchange</div>
 
             <h4>手机 App（须用户 Token）</h4>
-            <div class="doc-code">GET  /qrc/api/v1/ticket/{uuid}</div>
+            <div class="doc-code">GET  /qrc/api/v1/t/{uuid}</div>
+            <div class="doc-code">POST /qrc/api/v1/ticket/detail</div>
             <div class="doc-code">POST /qrc/api/v1/ticket/scan</div>
             <div class="doc-code">POST /qrc/api/v1/ticket/confirm</div>
             <div class="doc-code">POST /qrc/api/v1/ticket/deny</div>
 
             <h4>第三方 Open API（client_id + secret）</h4>
-            <div class="doc-code">POST /qrc/open/v1/ticket/create</div>
-            <div class="doc-code">GET  /qrc/open/v1/ticket/status?uuid=...&amp;clientId=...&amp;clientSecret=...</div>
+            <div class="doc-code">POST /qrc/api/v1/ticket/open/create</div>
+            <div class="doc-code">POST /qrc/api/v1/ticket/open/status</div>
+            <div class="doc-code">POST /qrc/api/v1/ticket/open/cancel</div>
+
+            <p style="margin-top:8px;color:#666;font-size:13px;">完整字段、状态机与错误码见仓库 <code>docs/AI_QRC_API.md</code>；APP 流程见 <code>docs/AI_QRC_CLIENT_API.md</code>。</p>
 
             <h4>OAuth2 AS</h4>
             <div class="doc-code">GET  /oauth2/authorize?response_type=code&amp;client_id=...&amp;redirect_uri=...&amp;scope=...&amp;state=...</div>
@@ -411,7 +415,7 @@
             <div class="doc-code">GET  /client/authhub/tickets/{clientId}</div>
 
             <h4>QR 链接（公开字段，无密钥）</h4>
-            <div class="doc-code">GET /qrc/v1/t/{uuid}  →  { uuid, intent, status }</div>
+            <div class="doc-code">GET /qrc/api/v1/t/{uuid}  →  { uuid, intent, status }</div>
 
             <div class="doc-note" style="margin-top: 20px;">
                 延伸阅读：

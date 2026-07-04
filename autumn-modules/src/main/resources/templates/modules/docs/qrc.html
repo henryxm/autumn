@@ -36,24 +36,28 @@
                 <a href="${request.contextPath}/modules/docs/auth-flow">授权与扫码登录流程指南</a>
             </div>
 
-            <h3>文档（仓库 <code>docs/</code>）</h3>
-            <ul>
-                <li><strong>AI_QRC.md</strong> — 对接指南、代码结构、配置与安全</li>
-                <li><strong>AI_QRC_API.md</strong> — Web / APP / Open / QR 链接 / OAuth 端点</li>
-                <li><strong>AI_OAUTH_INTEGRATION.md</strong> — OAuth2 第三方对接（授权码、token、userInfo、账号绑定）</li>
-                <li><strong>AI_QRC_INTEGRATION.md</strong> — 第三方集成模式（含扫码分支）</li>
-                <li><strong>AI_QRC_CLIENT_API.md</strong> — APP 扫码确认手册</li>
-            </ul>
-
-            <h3>HTTP 路径</h3>
+            <h3>客户端对接（仓库 <code>docs/</code>）</h3>
             <table>
-                <tr><th>前缀</th><th>Controller</th><th>鉴权</th></tr>
-                <tr><td><code>/qrc/web/v1/*</code></td><td>ScanWebController</td><td>匿名</td></tr>
-                <tr><td><code>/qrc/api/v1/*</code></td><td>ScanAppApiController</td><td>@Authenticated</td></tr>
-                <tr><td><code>/qrc/open/v1/*</code></td><td>ScanOpenApiController</td><td>client 密钥</td></tr>
-                <tr><td><code>/qrc/v1/t/{uuid}</code></td><td>ScanLinkController</td><td>匿名（仅公开字段）</td></tr>
-                <tr><td><code>/oauth2/authorize</code></td><td>AuthorizationController</td><td>统一 <code>login.html</code></td></tr>
+                <tr><th>文档</th><th>读者</th></tr>
+                <tr><td><strong>AI_QRC_CLIENT_API.md</strong></td><td>APP：扫码、确认页、伪代码、联调清单</td></tr>
+                <tr><td><strong>AI_QRC_API.md</strong></td><td>全部 HTTP 端点、报文、状态机、错误码</td></tr>
+                <tr><td><strong>AI_QRC_INTEGRATION.md</strong></td><td>第三方：OAuth Redirect / 自建 QR / delivery</td></tr>
+                <tr><td><strong>AI_OAUTH_INTEGRATION.md</strong></td><td>OAuth2 token、userInfo、账号绑定</td></tr>
+                <tr><td><strong>AI_QRC.md</strong></td><td>模块结构、配置、安全基线</td></tr>
             </table>
+
+            <h3>HTTP 路径与报文</h3>
+            <table>
+                <tr><th>前缀</th><th>Controller</th><th>报文</th><th>鉴权</th></tr>
+                <tr><td><code>/qrc/api/v1/*</code></td><td>QrcApiController</td><td><code>Request</code> / <code>Response</code></td><td>APP Token 或 Open client 凭证</td></tr>
+                <tr><td><code>/qrc/scanticket/web/*</code></td><td>ScanTicketController</td><td><code>Request</code> 入参 + <code>R</code> 出参</td><td>匿名</td></tr>
+                <tr><td><code>/qrc/scanticket/*</code></td><td>ScanTicketControllerGen</td><td><code>R</code></td><td>后台权限</td></tr>
+                <tr><td><code>/oauth2/authorize</code></td><td>AuthorizationController</td><td>HTML / redirect</td><td>浏览器</td></tr>
+            </table>
+
+            <div class="doc-note">
+                <strong>对接入口</strong>：APP 开发从 <code>AI_QRC_CLIENT_API.md</code> 开始；第三方服务端从 <code>AI_QRC_INTEGRATION.md</code> + <code>AI_QRC_API.md</code> 的 <code>open/*</code> 端点开始。
+            </div>
 
             <h3>Intent（业务场景）</h3>
             <table>
