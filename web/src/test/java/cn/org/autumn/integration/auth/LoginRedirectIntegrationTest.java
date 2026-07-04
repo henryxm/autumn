@@ -2,7 +2,7 @@ package cn.org.autumn.integration.auth;
 
 import cn.org.autumn.integration.base.IntegrationTest;
 import cn.org.autumn.integration.support.IntegrationJson;
-import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson2.JSONObject;
 import java.util.Collections;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpEntity;
