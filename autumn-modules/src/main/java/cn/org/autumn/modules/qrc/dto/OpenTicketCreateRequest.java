@@ -8,11 +8,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class OpenTicketCreateRequest {
-    @Schema(description = "OAuth client_id")
-    private String clientId;
-    @Schema(description = "OAuth client_secret")
-    private String clientSecret;
+public class OpenTicketCreateRequest extends OpenTicketClientRequest {
     @Schema(description = "redirect_uri")
     private String redirectUri;
     @Schema(description = "scope")

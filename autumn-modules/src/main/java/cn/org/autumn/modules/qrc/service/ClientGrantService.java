@@ -12,6 +12,7 @@ import cn.org.autumn.modules.qrc.dao.ClientGrantDao;
 import cn.org.autumn.modules.qrc.dto.ConfirmResult;
 import cn.org.autumn.modules.qrc.entity.ClientGrantEntity;
 import cn.org.autumn.modules.qrc.model.DeliveryMode;
+import cn.org.autumn.modules.qrc.model.TicketPayloads;
 import cn.org.autumn.modules.qrc.model.TicketSnapshot;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysConfigService;
@@ -116,6 +117,14 @@ public class ClientGrantService extends ModuleService<ClientGrantDao, ClientGran
         }
     }
 
+    public ClientGrantEntity requireEnabledGrant(String clientId) throws CodeException {
+        ClientGrantEntity grant = getOrDefault(clientId);
+        if (!grant.isEnabled()) {
+            throw new CodeException("客户端未启用扫码授权", 8630);
+        }
+        return grant;
+    }
+
     public void validateClientSecret(String clientId, String clientSecret) throws CodeException {
         ClientDetailsEntity client = requireTrustedClient(clientId);
         if (StringUtils.isBlank(clientSecret) || !clientSecret.equals(client.getClientSecret())) {
@@ -180,11 +189,10 @@ public class ClientGrantService extends ModuleService<ClientGrantDao, ClientGran
     }
 
     public ConfirmResult deliverOAuth(TicketSnapshot ticket, ClientGrantEntity grant, SysUserEntity user) throws Exception {
-        Map<String, String> payload = ticket.getPayload();
-        String clientId = payload.get("clientId");
-        String redirectUri = payload.get("redirectUri");
-        String state = payload.get("state");
-        String callback = payload.get("callback");
+        String clientId = TicketPayloads.get(ticket, "clientId");
+        String redirectUri = TicketPayloads.get(ticket, "redirectUri");
+        String state = TicketPayloads.get(ticket, "state");
+        String callback = TicketPayloads.get(ticket, "callback");
         ClientDetailsEntity client = requireTrustedClient(clientId);
         validateRedirectUri(client, redirectUri);
         String code = issueAuthCode(user);
@@ -221,6 +229,20 @@ public class ClientGrantService extends ModuleService<ClientGrantDao, ClientGran
             confirmResult.setRedirect(buildAuthorizeRedirect(redirectUri, code, state, callback));
         }
         return confirmResult;
+    }
+
+    public void applyPollCodeRedirect(ConfirmResult result, TicketSnapshot ticket) {
+        if (result == null || result.getResult() == null) {
+            return;
+        }
+        String code = result.getResult().get("code");
+        String redirectUri = TicketPayloads.get(ticket, "redirectUri");
+        if (StringUtils.isBlank(code) || StringUtils.isBlank(redirectUri)) {
+            return;
+        }
+        result.setRedirect(buildAuthorizeRedirect(redirectUri, code, TicketPayloads.get(ticket, "state"), TicketPayloads.get(ticket, "callback")));
+        result.setCompleted(true);
+        result.getResult().put("redirectUri", redirectUri);
     }
 
     private String firstScheme(ClientGrantEntity grant) {

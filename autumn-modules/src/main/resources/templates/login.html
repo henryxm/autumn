@@ -79,14 +79,25 @@
           </form>
           <div class="login-panel qr-panel" v-show="loginTab === 'qr'">
             <div class="qr-center">
-              <div class="qr-frame">
-                <div class="qr-scan-line"></div>
-                <div id="loginQrcodeBox"></div>
+              <div v-show="qrPhase === 'pending'" class="qr-pending">
+                <div class="qr-frame">
+                  <div class="qr-scan-line"></div>
+                  <div id="loginQrcodeBox"></div>
+                </div>
+                <p class="qr-status"><span class="qr-status-dot"></span>{{ qrStatus }}</p>
+                <p class="qr-hint">使用手机 APP 扫码登录</p>
+                <div class="qr-actions">
+                  <a href="javascript:;" @click="refreshQrLogin"><i class="fa fa-refresh"></i> 刷新二维码</a>
+                </div>
               </div>
-              <p class="qr-status"><span class="qr-status-dot"></span>{{ qrStatus }}</p>
-              <p class="qr-hint">打开 Autumn APP 扫码并完成确认，然后返回右侧授权</p>
-              <div class="qr-actions">
-                <a href="javascript:;" @click="refreshQrLogin"><i class="fa fa-refresh"></i> 刷新二维码</a>
+              <div v-show="qrPhase === 'scanned' || qrPhase === 'done'" class="qr-scanned">
+                <div class="qr-scanned-avatar">
+                  <img v-if="scannerIconUrl" :src="scannerIconUrl" alt="">
+                  <div v-else class="qr-scanned-avatar-placeholder"><i class="fa fa-user"></i></div>
+                </div>
+                <p class="qr-scanned-name" v-if="scannerDisplayName">{{ scannerDisplayName }}</p>
+                <p class="qr-status"><span class="qr-status-dot qr-status-dot-success"></span>{{ qrStatus }}</p>
+                <button type="button" class="btn qr-switch-account" @click="refreshQrLogin">切换帐号</button>
               </div>
             </div>
           </div>
@@ -223,14 +234,25 @@
       <!-- 扫码登录 -->
       <div class="login-panel qr-panel" v-show="loginTab === 'qr'">
         <div class="qr-center">
-          <div class="qr-frame">
-            <div class="qr-scan-line"></div>
-            <div id="loginQrcodeBox"></div>
+          <div v-show="qrPhase === 'pending'" class="qr-pending">
+            <div class="qr-frame">
+              <div class="qr-scan-line"></div>
+              <div id="loginQrcodeBox"></div>
+            </div>
+            <p class="qr-status"><span class="qr-status-dot"></span>{{ qrStatus }}</p>
+            <p class="qr-hint">使用手机 APP 扫码登录</p>
+            <div class="qr-actions">
+              <a href="javascript:;" @click="refreshQrLogin"><i class="fa fa-refresh"></i> 刷新二维码</a>
+            </div>
           </div>
-          <p class="qr-status"><span class="qr-status-dot"></span>{{ qrStatus }}</p>
-          <p class="qr-hint">打开 Autumn APP，扫描上方二维码并确认</p>
-          <div class="qr-actions">
-            <a href="javascript:;" @click="refreshQrLogin"><i class="fa fa-refresh"></i> 刷新二维码</a>
+          <div v-show="qrPhase === 'scanned' || qrPhase === 'done'" class="qr-scanned">
+            <div class="qr-scanned-avatar">
+              <img v-if="scannerIconUrl" :src="scannerIconUrl" alt="">
+              <div v-else class="qr-scanned-avatar-placeholder"><i class="fa fa-user"></i></div>
+            </div>
+            <p class="qr-scanned-name" v-if="scannerDisplayName">{{ scannerDisplayName }}</p>
+            <p class="qr-status"><span class="qr-status-dot qr-status-dot-success"></span>{{ qrStatus }}</p>
+            <button type="button" class="btn qr-switch-account" @click="refreshQrLogin">切换帐号</button>
           </div>
         </div>
       </div>

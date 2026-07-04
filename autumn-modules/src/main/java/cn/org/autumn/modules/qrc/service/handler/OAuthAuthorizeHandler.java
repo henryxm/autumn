@@ -6,13 +6,12 @@ import cn.org.autumn.modules.qrc.dto.ConfirmResult;
 import cn.org.autumn.modules.qrc.dto.CreateContext;
 import cn.org.autumn.modules.qrc.entity.ClientGrantEntity;
 import cn.org.autumn.modules.qrc.model.Intent;
+import cn.org.autumn.modules.qrc.model.TicketPayloads;
 import cn.org.autumn.modules.qrc.model.TicketSnapshot;
 import cn.org.autumn.modules.qrc.service.ClientGrantService;
 import cn.org.autumn.modules.qrc.service.ScanTicketService;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
-import cn.org.autumn.modules.sys.service.SysUserService;
 import cn.org.autumn.model.UserContext;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
@@ -23,10 +22,6 @@ public class OAuthAuthorizeHandler implements IntentHandler {
     @Autowired
     @Lazy
     private ClientGrantService clientGrantService;
-
-    @Autowired
-    @Lazy
-    private SysUserService sysUserService;
 
     @Autowired
     @Lazy
@@ -54,25 +49,18 @@ public class OAuthAuthorizeHandler implements IntentHandler {
     }
 
     protected void validateOAuthPayload(TicketSnapshot ticket) throws CodeException {
-        String clientId = ticket.getPayload().get("clientId");
-        String redirectUri = ticket.getPayload().get("redirectUri");
+        String clientId = TicketPayloads.get(ticket, "clientId");
+        String redirectUri = TicketPayloads.get(ticket, "redirectUri");
         ClientDetailsEntity client = clientGrantService.requireTrustedClient(clientId);
         clientGrantService.validateRedirectUri(client, redirectUri);
-        ClientGrantEntity grant = clientGrantService.getOrDefault(clientId);
-        if (!grant.isEnabled()) {
-            throw new CodeException("客户端未启用扫码授权", 8630);
-        }
+        clientGrantService.requireEnabledGrant(clientId);
     }
 
     public ClientGrantEntity loadGrant(TicketSnapshot ticket) {
-        return clientGrantService.getOrDefault(ticket.getPayload().get("clientId"));
+        return clientGrantService.getOrDefault(TicketPayloads.get(ticket, "clientId"));
     }
 
     public SysUserEntity requireUser(UserContext scanner) throws CodeException {
-        SysUserEntity user = sysUserService.getByUuid(scanner.getUuid());
-        if (user == null || user.getStatus() < 1) {
-            throw new CodeException("用户不可用", 8623);
-        }
-        return user;
+        return scanTicketService.requireActiveUser(scanner == null ? null : scanner.getUuid());
     }
 }

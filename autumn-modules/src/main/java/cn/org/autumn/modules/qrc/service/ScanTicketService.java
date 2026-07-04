@@ -9,9 +9,13 @@ import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.qrc.dao.ScanTicketDao;
 import cn.org.autumn.modules.qrc.dto.ConfirmResult;
 import cn.org.autumn.modules.qrc.dto.CreateContext;
+import cn.org.autumn.modules.qrc.dto.ScannerBrief;
+import cn.org.autumn.modules.qrc.dto.TicketCreateResult;
+import cn.org.autumn.modules.qrc.dto.TicketStatusResult;
 import cn.org.autumn.modules.qrc.entity.ScanTicketEntity;
 import cn.org.autumn.modules.qrc.model.ExchangeSnapshot;
 import cn.org.autumn.modules.qrc.model.Intent;
+import cn.org.autumn.modules.qrc.model.TicketPayloads;
 import cn.org.autumn.modules.qrc.model.TicketSnapshot;
 import cn.org.autumn.modules.qrc.model.TicketStatus;
 import cn.org.autumn.modules.qrc.service.handler.IntentHandler;
@@ -86,9 +90,9 @@ public class ScanTicketService extends ModuleService<ScanTicketDao, ScanTicketEn
         model.addAttribute("uuid", ticket.getUuid());
         model.addAttribute("qrUrl", buildQrUrl(ticket.getUuid()));
         model.addAttribute("pollIntervalMs", getScanLoginConfig().getPollIntervalMs());
-        model.addAttribute("clientId", ticket.getPayload().get("clientId"));
-        model.addAttribute("scope", ticket.getPayload().get("scope"));
-        model.addAttribute("state", ticket.getPayload().get("state"));
+        model.addAttribute("clientId", TicketPayloads.get(ticket, "clientId"));
+        model.addAttribute("scope", TicketPayloads.get(ticket, "scope"));
+        model.addAttribute("state", TicketPayloads.get(ticket, "state"));
     }
 
     public boolean shouldUseQrAuthorize() {
@@ -210,7 +214,7 @@ public class ScanTicketService extends ModuleService<ScanTicketDao, ScanTicketEn
         return withLock("qrc:ticket:" + uuid, () -> {
             TicketSnapshot ticket = getRequired(uuid);
             if (StringUtils.isNotBlank(clientId)) {
-                String ticketClient = ticket.getPayload().get("clientId");
+                String ticketClient = TicketPayloads.get(ticket, "clientId");
                 if (StringUtils.isNotBlank(ticketClient) && !clientId.equals(ticketClient)) {
                     throw new CodeException("无权取消该票据", 8618);
                 }
@@ -248,6 +252,41 @@ public class ScanTicketService extends ModuleService<ScanTicketDao, ScanTicketEn
         return userEntity;
     }
 
+    public SysUserEntity requireActiveUser(String userUuid) throws CodeException {
+        SysUserEntity user = sysUserService.getByUuid(userUuid);
+        if (user == null || user.getStatus() < 1) {
+            throw new CodeException("用户不可用", 8623);
+        }
+        return user;
+    }
+
+    public TicketCreateResult toCreateResult(TicketSnapshot ticket) {
+        return TicketCreateResult.of(ticket.getUuid(), buildQrUrl(ticket.getUuid()), getScanLoginConfig().getTicketTtlSeconds(), ticket.getIntent(), ticket.getStatus());
+    }
+
+    public TicketStatusResult toStatusResult(TicketSnapshot ticket) {
+        TicketStatusResult result = TicketStatusResult.from(ticket);
+        if (ticket != null && StringUtils.isNotBlank(ticket.getScanner()) && shouldExposeScannerBrief(ticket.getStatus())) {
+            result.setScannerBrief(buildScannerBrief(ticket.getScanner()));
+        }
+        return result;
+    }
+
+    private boolean shouldExposeScannerBrief(String status) {
+        return TicketStatus.SCANNED.equals(status) || TicketStatus.CONFIRMED.equals(status) || TicketStatus.COMPLETED.equals(status);
+    }
+
+    private ScannerBrief buildScannerBrief(String scannerUuid) {
+        SysUserEntity user = sysUserService.getByUuid(scannerUuid);
+        if (user == null) {
+            return null;
+        }
+        ScannerBrief brief = new ScannerBrief();
+        brief.setDisplayName(StringUtils.isNotBlank(user.getNickname()) ? user.getNickname() : user.getUsername());
+        brief.setIcon(user.getIcon());
+        return brief;
+    }
+
     public String buildQrUrl(String uuid) {
         String base = sysConfigService.getBaseUrl();
         if (StringUtils.isBlank(base)) {
@@ -256,7 +295,7 @@ public class ScanTicketService extends ModuleService<ScanTicketDao, ScanTicketEn
         if (base.endsWith("/")) {
             base = base.substring(0, base.length() - 1);
         }
-        return base + "/qrc/v1/t/" + uuid;
+        return base + "/qrc/api/v1/t/" + uuid;
     }
 
     private TicketSnapshot createOAuthTicket(HttpServletRequest request, String intent, String clientId, String redirectUri, String scope, String state, String callback) throws Exception {
@@ -358,7 +397,7 @@ public class ScanTicketService extends ModuleService<ScanTicketDao, ScanTicketEn
             }
             entity.setIntent(ticket.getIntent());
             entity.setStatus(ticket.getStatus());
-            entity.setClientId(ticket.getPayload().get("clientId"));
+            entity.setClientId(TicketPayloads.get(ticket, "clientId"));
             entity.setScanner(ticket.getScanner());
             entity.setSubject(ticket.getSubject());
             entity.setIp(ticket.getIp());

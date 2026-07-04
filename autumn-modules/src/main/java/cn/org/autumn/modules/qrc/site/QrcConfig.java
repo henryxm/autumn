@@ -9,9 +9,7 @@ public class QrcConfig implements FilterChainHandler {
 
     @Override
     public void definition(Map<String, String> map) {
-        map.put("/qrc/web/v1/**", "anon");
-        map.put("/qrc/open/v1/**", "anon");
         map.put("/qrc/api/v1/**", "anon");
-        map.put("/qrc/v1/t/**", "anon");
+        map.put("/qrc/scanticket/web/**", "anon");
     }
 }

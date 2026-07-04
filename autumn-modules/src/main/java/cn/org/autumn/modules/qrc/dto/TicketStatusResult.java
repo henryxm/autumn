@@ -1,10 +1,12 @@
 package cn.org.autumn.modules.qrc.dto;
 
+import cn.org.autumn.modules.qrc.model.TicketPayloads;
 import cn.org.autumn.modules.qrc.model.TicketSnapshot;
 import java.util.HashMap;
 import java.util.Map;
 import lombok.Getter;
 import lombok.Setter;
+import org.apache.commons.lang3.StringUtils;
 
 @Getter
 @Setter
@@ -16,6 +18,7 @@ public class TicketStatusResult {
     private String redirect;
     private Map<String, String> result = new HashMap<>();
     private long expireIn;
+    private ScannerBrief scannerBrief;
 
     public static TicketStatusResult from(TicketSnapshot ticket) {
         TicketStatusResult result = new TicketStatusResult();
@@ -28,8 +31,9 @@ public class TicketStatusResult {
             result.setResult(new HashMap<>(ticket.getResult()));
         }
         result.setExpireIn(Math.max(0, (ticket.getExpired() - System.currentTimeMillis()) / 1000));
-        if (ticket.getPayload() != null && ticket.getPayload().containsKey("redirectUri")) {
-            result.getResult().put("redirectUri", ticket.getPayload().get("redirectUri"));
+        String redirectUri = TicketPayloads.get(ticket, "redirectUri");
+        if (StringUtils.isNotBlank(redirectUri)) {
+            result.getResult().put("redirectUri", redirectUri);
         }
         return result;
     }

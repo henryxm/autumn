@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.qrc.service;
 
+import cn.org.autumn.modules.qrc.model.TicketPayloads;
 import cn.org.autumn.modules.qrc.model.TicketSnapshot;
 import cn.org.autumn.modules.qrc.spi.ConsentProvider;
 import java.util.ArrayList;
@@ -17,10 +18,13 @@ public class ConsentSupport {
     private List<ConsentProvider> consentProviders = Collections.emptyList();
 
     public List<String> describeScopes(TicketSnapshot ticket) {
-        if (ticket == null || ticket.getPayload() == null) {
+        if (ticket == null) {
             return Collections.emptyList();
         }
-        Map<String, String> payload = ticket.getPayload();
+        Map<String, String> payload = TicketPayloads.map(ticket);
+        if (payload.isEmpty()) {
+            return Collections.emptyList();
+        }
         String clientId = payload.get("clientId");
         if (consentProviders != null) {
             for (ConsentProvider provider : consentProviders) {

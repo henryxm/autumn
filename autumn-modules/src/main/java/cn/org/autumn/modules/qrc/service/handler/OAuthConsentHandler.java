@@ -8,7 +8,6 @@ import cn.org.autumn.modules.qrc.model.TicketSnapshot;
 import cn.org.autumn.modules.qrc.service.ClientGrantService;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.model.UserContext;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
@@ -44,15 +43,7 @@ public class OAuthConsentHandler implements IntentHandler {
         SysUserEntity user = oauthAuthorizeHandler.requireUser(scanner);
         ClientGrantEntity grant = oauthAuthorizeHandler.loadGrant(ticket);
         ConfirmResult result = clientGrantService.deliverOAuth(ticket, grant, user);
-        String redirectUri = ticket.getPayload().get("redirectUri");
-        String state = ticket.getPayload().get("state");
-        String callback = ticket.getPayload().get("callback");
-        String code = result.getResult().get("code");
-        if (StringUtils.isNotBlank(code) && StringUtils.isNotBlank(redirectUri)) {
-            result.setRedirect(clientGrantService.buildAuthorizeRedirect(redirectUri, code, state, callback));
-            result.setCompleted(true);
-            result.getResult().put("redirectUri", redirectUri);
-        }
+        clientGrantService.applyPollCodeRedirect(result, ticket);
         return result;
     }
 }
