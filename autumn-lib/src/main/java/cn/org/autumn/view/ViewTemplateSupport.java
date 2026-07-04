@@ -43,6 +43,9 @@ public class ViewTemplateSupport {
     /** 框架内置 404 页面视图名，对应 {@code templates/404.html}。 */
     public static final String FALLBACK_404_VIEW = "404";
 
+    /** Controller 已直接写响应体时，返回值 Handler 据此标记 {@code requestHandled}。 */
+    public static final String REQUEST_HANDLED = "__request_handled__";
+
     @Autowired(required = false)
     @Lazy
     private FreeMarkerConfigurer freeMarkerConfigurer;
@@ -59,7 +62,7 @@ public class ViewTemplateSupport {
     /**
      * 统一入口：校验模板并规范化视图名。
      *
-     * @return {@link ResolvedView#isNotFound()} 为 {@code true} 时，调用方应设 HTTP 404 并渲染 {@link #FALLBACK_404_VIEW}
+     * @return {@link ResolvedView#isNotFound()} 为 {@code true} 时，调用方仅在成功解析 {@link #FALLBACK_404_VIEW} 后设 HTTP 404
      */
     public ResolvedView resolve(String viewName) {
         if (StringUtils.isBlank(viewName)) {
@@ -98,10 +101,35 @@ public class ViewTemplateSupport {
             return classpathTemplateExists(templatePath);
         }
         try {
-            return loader.findTemplateSource(templatePath) != null;
+            if (loader.findTemplateSource(templatePath) != null) {
+                return true;
+            }
         } catch (IOException e) {
             if (log.isDebugEnabled()) {
                 log.debug("Template lookup failed for {}: {}", templatePath, e.getMessage());
+            }
+        }
+        // 与渲染阶段同源：Configuration.getTemplate 能加载则视为存在，避免 TemplateLoader 误报导致 HTTP 404。
+        if (freemarkerTemplateAvailable(templatePath)) {
+            return true;
+        }
+        return classpathTemplateExists(templatePath);
+    }
+
+    private boolean freemarkerTemplateAvailable(String templatePath) {
+        if (freeMarkerConfigurer == null || StringUtils.isBlank(templatePath)) {
+            return false;
+        }
+        try {
+            Configuration configuration = freeMarkerConfigurer.getConfiguration();
+            if (configuration == null) {
+                return false;
+            }
+            configuration.getTemplate(templatePath);
+            return true;
+        } catch (IOException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("FreeMarker getTemplate miss for {}: {}", templatePath, e.getMessage());
             }
             return false;
         }

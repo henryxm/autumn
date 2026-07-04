@@ -12,7 +12,7 @@ import org.springframework.web.servlet.mvc.method.annotation.ViewNameMethodRetur
 public class ViewNameReturnValueHandlerTest {
 
     @Test
-    public void missingTemplateReturns404ViewName() throws Exception {
+    public void missingTemplateKeepsOriginalViewName() throws Exception {
         ViewTemplateSupport support = new MissingTemplateSupport();
         ViewNameMethodReturnValueHandler delegate = new ViewNameMethodReturnValueHandler();
         ViewNameReturnValueHandler handler = new ViewNameReturnValueHandler(delegate, support);
@@ -20,8 +20,8 @@ public class ViewNameReturnValueHandlerTest {
         MockHttpServletResponse response = new MockHttpServletResponse();
         ServletWebRequest webRequest = new ServletWebRequest(new org.springframework.mock.web.MockHttpServletRequest(), response);
         handler.handleReturnValue("/modules/test/pages/index", null, mavContainer, webRequest);
-        assertEquals(ViewTemplateSupport.FALLBACK_404_VIEW, mavContainer.getViewName());
-        assertEquals(404, response.getStatus());
+        assertEquals("modules/test/pages/index", mavContainer.getViewName());
+        assertEquals(200, response.getStatus());
     }
 
     private static class MissingTemplateSupport extends ViewTemplateSupport {

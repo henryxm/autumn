@@ -1,7 +1,6 @@
 package cn.org.autumn.handler;
 
 import cn.org.autumn.view.ViewTemplateSupport;
-import cn.org.autumn.view.ViewTemplateSupport.ResolvedView;
 import javax.servlet.http.HttpServletResponse;
 import org.springframework.core.MethodParameter;
 import org.springframework.web.context.request.NativeWebRequest;
@@ -37,25 +36,29 @@ public class ViewNameReturnValueHandler implements HandlerMethodReturnValueHandl
 
     @Override
     public void handleReturnValue(Object returnValue, MethodParameter returnType, ModelAndViewContainer mavContainer, NativeWebRequest webRequest) throws Exception {
+        if (returnValue == null) {
+            HttpServletResponse response = webRequest.getNativeResponse(HttpServletResponse.class);
+            if (response != null && response.isCommitted()) {
+                mavContainer.setRequestHandled(true);
+                return;
+            }
+        }
+        if (ViewTemplateSupport.REQUEST_HANDLED.equals(returnValue)) {
+            mavContainer.setRequestHandled(true);
+            return;
+        }
         Object resolved = returnValue;
         if (returnValue instanceof String) {
-            resolved = resolveViewName((String) returnValue, webRequest);
+            resolved = resolveViewName((String) returnValue);
         }
         delegate.handleReturnValue(resolved, returnType, mavContainer, webRequest);
     }
 
-    private String resolveViewName(String viewName, NativeWebRequest webRequest) {
-        ResolvedView resolved = viewTemplateSupport.resolve(viewName);
-        if (resolved.isNotFound()) {
-            setStatus(webRequest, HttpServletResponse.SC_NOT_FOUND);
+    private String resolveViewName(String viewName) {
+        if (viewTemplateSupport.isSpecialViewName(viewName)) {
+            return viewName;
         }
-        return resolved.getViewName();
-    }
-
-    private void setStatus(NativeWebRequest webRequest, int status) {
-        HttpServletResponse response = webRequest.getNativeResponse(HttpServletResponse.class);
-        if (response != null && !response.isCommitted()) {
-            response.setStatus(status);
-        }
+        // 仅规范化路径；是否 404 由 NameBasedViewResolver 在真正解析 View 时决定（先试原视图，再回落 404）
+        return viewTemplateSupport.normalizeViewName(viewName);
     }
 }

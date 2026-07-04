@@ -81,7 +81,7 @@ public class RedisShiroSessionDAO extends EnterpriseCacheSessionDAO implements L
             session = cache.get(sessionId);
         if (session == null && redisTemplate != null) {
             String key = RedisKeys.getShiroSessionKey(sysConfigService.getNameSpace(), sessionId.toString());
-            session = getShiroSession(key);
+            session = getShiroSession(key, sessionId);
             if (null != session)
                 cache.put(sessionId, session);
         }
@@ -132,11 +132,24 @@ public class RedisShiroSessionDAO extends EnterpriseCacheSessionDAO implements L
         }
     }
 
-    private Session getShiroSession(String key) {
+    private Session getShiroSession(String key, Serializable sessionId) {
         if (redisTemplate == null) {
             return null;
         }
-        return (Session) redisTemplate.opsForValue().get(key);
+        try {
+            return (Session) redisTemplate.opsForValue().get(key);
+        } catch (Exception e) {
+            log.warn("Shiro session deserialize failed, key={}, sessionId={}, cause={}", key, sessionId, e.getMessage());
+            if (sessionId != null) {
+                cache.remove(sessionId);
+            }
+            try {
+                redisTemplate.delete(key);
+            } catch (Exception ex) {
+                log.warn("Failed to delete corrupt Shiro session, key={}, cause={}", key, ex.getMessage());
+            }
+            return null;
+        }
     }
 
     private void setShiroSession(String key, Session session) {
