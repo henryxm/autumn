@@ -31,6 +31,7 @@ Autumn 是一套可扩展的后台基础框架：在 Spring Boot 之上提供权
 | **多数据库** | `RuntimeSql` / `WrapperColumns`；Dao 仅 Provider 写 SQL | `docs/AI_DATABASE.md` |
 | **机器人 API** | `/robot/api/v1/*` · Hook 验签 · `rbt_` 推送 | `docs/AI_ROBOT.md` |
 | **支付安全** | `/safe/api/v1/*` · 闸门 · PIN/生物识别 · `PayPinVerifier` | `docs/AI_SAFE_CREDENTIAL.md` |
+| **账号认证 / 登录跳转** | `ACCOUNT_AUTH_CONFIG` · `postLoginRedirect` · json_type 字段刷新 | **`docs/AI_ACCOUNT_AUTH_CONFIG.md`** |
 | **Handler 扩展** | `autumn-handler` 条件注入与顺序扩展 | 在线文档 `handler` 章节 |
 
 **传输加密**（`docs/AI_CRYPTO.md`）与 **字段存储加密**（`docs/AI_FIELD_ENCRYPT.md`）使用**不同密钥与服务**，请勿混用。
@@ -136,6 +137,7 @@ ModuleService
 | HTTP 加解密 | `AI_CRYPTO.md` |
 | 机器人对接 | `AI_ROBOT.md` · `AI_ROBOT_API.md` |
 | 支付安全 | `AI_SAFE_CREDENTIAL*.md` |
+| 登录后跳转 / 账号认证 JSON | **`AI_ACCOUNT_AUTH_CONFIG.md`** |
 | 升级 autumn 版本 | `AI_UPGRADE.md` |
 
 **Cursor / 业务仓引用**

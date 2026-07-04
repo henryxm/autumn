@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.qrc.service.handler;
 
+import cn.org.autumn.exception.CodeException;
 import cn.org.autumn.modules.qrc.dto.ConfirmResult;
 import cn.org.autumn.modules.qrc.dto.CreateContext;
 import cn.org.autumn.modules.qrc.model.Intent;
@@ -40,7 +41,7 @@ public class SelfWebLoginHandler implements IntentHandler {
     public ConfirmResult onConfirm(TicketSnapshot ticket, UserContext scanner) throws Exception {
         SysUserEntity user = sysUserService.getByUuid(scanner.getUuid());
         if (user == null || user.getStatus() < 1) {
-            throw new cn.org.autumn.exception.CodeException("用户不可用", 8623);
+            throw new CodeException("用户不可用", 8623);
         }
         String exchangeToken = scanTicketService.createExchangeToken(user.getUuid(), ticket.getUuid());
         return ConfirmResult.ofExchange(exchangeToken);

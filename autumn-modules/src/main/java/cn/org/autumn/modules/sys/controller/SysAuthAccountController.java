@@ -75,7 +75,7 @@ public class SysAuthAccountController {
             SysUserEntity user = sysUserService.registerSelfAccount(trimmedAccount, password);
             sysUserService.login(trimmedAccount, password, true);
             SysAuthSupport.recordLoginProfile(userProfileService, user.getUuid(), request);
-            return R.ok().put("data", SysAuthSupport.resolvePostLoginRedirect(request, superPositionModelService));
+            return R.ok().put("data", SysAuthSupport.resolvePostLoginRedirect(request, superPositionModelService, sysConfigService.getAccountAuthConfig()));
         } catch (IllegalArgumentException e) {
             return R.error(e.getMessage());
         } catch (Exception e) {

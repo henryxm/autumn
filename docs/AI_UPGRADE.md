@@ -56,6 +56,7 @@
 | # | 项 | 说明 |
 |---|-----|------|
 | 14 | **冒烟用例** | 登录、权限、核心 CRUD、定时任务、文件/备份（若使用）等与业务相关的路径。 |
+| 14a | **账号认证 / 登录跳转** | 自 **2.0.0** / **3.0.0** 起：升级后执行 **刷新全部 JSON**（`POST /sys/config/refreshJson`）；按需配置 `ACCOUNT_AUTH_CONFIG.postLoginRedirect`；回归 SavedRequest、直接登录、OAuth 授权页互不影响。见 **`docs/AI_ACCOUNT_AUTH_CONFIG.md` §8**。 |
 | 15 | **灰度** | 生产环境建议先 **单实例 / 低流量** 验证再全量。 |
 
 #### 跨库手写 SQL 与 `RuntimeSql`（依赖方与基础项目一致）

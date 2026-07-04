@@ -1,6 +1,7 @@
 package cn.org.autumn.modules.qrc.controller;
 
 import cn.org.autumn.annotation.SkipInterceptor;
+import cn.org.autumn.exception.CodeException;
 import cn.org.autumn.model.Request;
 import cn.org.autumn.model.Response;
 import cn.org.autumn.modules.qrc.dto.CreateContext;
@@ -46,7 +47,7 @@ public class ScanOpenApiController {
         try {
             OpenTicketCreateRequest data = request == null ? null : request.getData();
             if (data == null || StringUtils.isBlank(data.getClientId()) || StringUtils.isBlank(data.getClientSecret())) {
-                throw new cn.org.autumn.exception.CodeException("client_id与client_secret不能为空", 8609);
+                throw new CodeException("client_id与client_secret不能为空", 8609);
             }
             clientGrantService.validateClientSecret(data.getClientId(), data.getClientSecret());
             Map<String, String> payload = new HashMap<>();
@@ -84,7 +85,7 @@ public class ScanOpenApiController {
             TicketSnapshot ticket = scanTicketService.getRequired(uuid);
             String ticketClient = ticket.getPayload() == null ? null : ticket.getPayload().get("clientId");
             if (StringUtils.isNotBlank(ticketClient) && !clientId.equals(ticketClient)) {
-                throw new cn.org.autumn.exception.CodeException("无权查询该票据", 8619);
+                throw new CodeException("无权查询该票据", 8619);
             }
             return Response.ok(TicketStatusResult.from(ticket));
         } catch (Exception e) {

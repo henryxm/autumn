@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.qrc.dto;
 
+import cn.org.autumn.modules.qrc.model.TicketSnapshot;
 import java.util.HashMap;
 import java.util.Map;
 import lombok.Getter;
@@ -16,7 +17,7 @@ public class TicketStatusResult {
     private Map<String, String> result = new HashMap<>();
     private long expireIn;
 
-    public static TicketStatusResult from(cn.org.autumn.modules.qrc.model.TicketSnapshot ticket) {
+    public static TicketStatusResult from(TicketSnapshot ticket) {
         TicketStatusResult result = new TicketStatusResult();
         result.setUuid(ticket.getUuid());
         result.setStatus(ticket.getStatus());

@@ -99,6 +99,45 @@ public final class WebPathUtils {
     }
 
     /**
+     * 校验 {@link cn.org.autumn.model.AccountAuthConfig#postLoginRedirect} 是否为有效网页地址（无 Request 上下文）。
+     */
+    public static boolean isValidPostLoginRedirectConfig(String configuredValue) {
+        if (!StringUtils.hasText(configuredValue))
+            return true;
+        String c = configuredValue.trim();
+        try {
+            if (c.startsWith("http://") || c.startsWith("https://")) {
+                URL u = new URI(c).toURL();
+                return !isUnsafeNavPath(u.getPath(), u.getQuery());
+            }
+        } catch (Exception ignored) {
+            return false;
+        }
+        int qi = c.indexOf('?');
+        String pathPart = qi < 0 ? c : c.substring(0, qi);
+        String queryPart = qi < 0 ? null : c.substring(qi + 1);
+        String pathForCheck = pathPart.startsWith("/") ? pathPart : ("/" + pathPart);
+        return !isUnsafeNavPath(pathForCheck, queryPart);
+    }
+
+    /**
+     * 将账号认证配置中的登录后跳转转为安全目标；无效配置回退 {@code systemDefault}（显式 {@code /} 除外）。
+     */
+    public static String configuredPostLoginFallback(HttpServletRequest request, String configuredValue, String systemDefault) {
+        if (!StringUtils.hasText(configuredValue))
+            return systemDefault;
+        String trimmed = configuredValue.trim();
+        String safe = safePostLoginRedirect(request, trimmed);
+        String home = forBrowser(request, "/");
+        if (!home.equals(safe))
+            return safe;
+        String ctx = contextPath(request);
+        if ("/".equals(trimmed) || home.equals(trimmed) || (StringUtils.hasText(ctx) && (ctx.equals(trimmed) || (ctx + "/").equals(trimmed))))
+            return home;
+        return systemDefault;
+    }
+
+    /**
      * AJAX 登录成功后的跳转：优先使用 Shiro SavedRequest 中的安全文档页，否则回退 {@code fallbackTarget}。
      */
     public static String resolveLoginRedirectWithSavedRequest(HttpServletRequest request, String savedRequestUrl, String fallbackTarget) {
