@@ -22,6 +22,7 @@ import cn.org.autumn.site.PageFactory;
 import cn.org.autumn.utils.IPUtils;
 import cn.org.autumn.utils.Utils;
 import cn.org.autumn.utils.WebPathUtils;
+import cn.org.autumn.view.ViewTemplateSupport;
 import com.alibaba.fastjson2.JSON;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.servers.Server;
@@ -63,6 +64,7 @@ import org.springframework.web.servlet.view.RedirectView;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+
 import java.net.*;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
@@ -112,9 +114,26 @@ public class AuthorizationController {
     @Autowired
     ClientGrantService clientGrantService;
 
-    private String error(String description, String error, int errorResponse) throws OAuthSystemException {
+    private String oauthErrorBody(String description, String error, int errorResponse) throws OAuthSystemException {
         OAuthResponse oAuthResponse = OAuthASResponse.errorResponse(errorResponse).setError(error).setErrorDescription(description).buildJSONMessage();
-        return new ResponseEntity(oAuthResponse.getBody(), HttpStatus.valueOf(oAuthResponse.getResponseStatus())).getBody().toString();
+        return oAuthResponse.getBody();
+    }
+
+    private String writeOAuthError(HttpServletResponse response, String description, String error, int errorResponse) throws OAuthSystemException {
+        OAuthResponse oAuthResponse = OAuthASResponse.errorResponse(errorResponse).setError(error).setErrorDescription(description).buildJSONMessage();
+        if (response != null && !response.isCommitted()) {
+            response.setStatus(oAuthResponse.getResponseStatus());
+            response.setCharacterEncoding("UTF-8");
+            response.setContentType("application/json;charset=UTF-8");
+            try {
+                response.getWriter().write(oAuthResponse.getBody());
+                response.getWriter().flush();
+            } catch (Exception e) {
+                throw new OAuthSystemException(e);
+            }
+            return ViewTemplateSupport.REQUEST_HANDLED;
+        }
+        return oAuthResponse.getBody();
     }
 
     private String normalizeRedirectUrl(String url) {
@@ -149,8 +168,8 @@ public class AuthorizationController {
         return url + sep + key + "=" + URLEncoder.encode(StringUtils.defaultString(value), "utf-8");
     }
 
-    private String loginAuthorizeView(HttpServletRequest request, Model model, TicketSnapshot ticket, ClientDetailsEntity client, String mode) {
-        return oauthConsentView(request, model, ticket, client, !ShiroUtils.needLogin(), null);
+    private String loginAuthorizeView(HttpServletRequest request, HttpServletResponse response, Model model, TicketSnapshot ticket, ClientDetailsEntity client, String mode) {
+        return oauthConsentView(request, response, model, ticket, client, !ShiroUtils.needLogin(), null);
     }
 
     private String buildAuthorizeReturnUrl(HttpServletRequest request, Model model, ClientDetailsEntity client) {
@@ -189,7 +208,7 @@ public class AuthorizationController {
         }
     }
 
-    private String oauthConsentView(HttpServletRequest request, Model model, TicketSnapshot ticket, ClientDetailsEntity client, boolean loggedIn, String consentError) {
+    private String oauthConsentView(HttpServletRequest request, HttpServletResponse response, Model model, TicketSnapshot ticket, ClientDetailsEntity client, boolean loggedIn, String consentError) {
         if (ticket != null) {
             scanTicketService.fillAuthorizeModel(model, ticket);
         } else {
@@ -219,7 +238,13 @@ public class AuthorizationController {
         if (StringUtils.isNotBlank(consentError)) {
             model.addAttribute("error", consentError);
         }
-        return "login";
+        try {
+            String view = pageFactory.login(request, response, model);
+            return StringUtils.isNotBlank(view) ? view : "login";
+        } catch (Exception e) {
+            log.warn("OAuth consent view failed: {}", e.getMessage(), e);
+            return "login";
+        }
     }
 
     private ModelAndView issueAuthCodeRedirect(HttpServletRequest request, ClientDetailsEntity client, String redirectURI, String state, String callback, String responseType) throws OAuthSystemException {
@@ -248,7 +273,7 @@ public class AuthorizationController {
         }
     }
 
-    private Object oauthLoginFallbackRedirect(HttpServletRequest request, String error) throws OAuthSystemException {
+    private Object oauthLoginFallbackRedirect(HttpServletRequest request, HttpServletResponse response, String error) throws OAuthSystemException {
         try {
             ModelAndView mav = new ModelAndView();
             String url = request.getRequestURL().toString();
@@ -265,7 +290,7 @@ public class AuthorizationController {
             return mav;
         } catch (Exception e) {
             log.warn("OAuth login fallback redirect failed: {}", e.getMessage());
-            return error(StringUtils.isNotBlank(error) ? error : "授权暂不可用", OAUTH_ERROR_URI, SC_BAD_REQUEST);
+            return writeOAuthError(response, StringUtils.isNotBlank(error) ? error : "授权暂不可用", OAUTH_ERROR_URI, SC_BAD_REQUEST);
         }
     }
 
@@ -332,35 +357,35 @@ public class AuthorizationController {
         return pageFactory.login(request, response, model);
     }
 
-    @RequestMapping(value = "authorize", method = RequestMethod.GET)
-    public Object applyAuthorize(HttpServletRequest request, HttpServletResponse response, Model model) throws OAuthSystemException {
+    @RequestMapping(value = "authorize", method = {RequestMethod.GET, RequestMethod.HEAD})
+    public String applyAuthorize(HttpServletRequest request, HttpServletResponse response, Model model) throws OAuthSystemException {
         try {
-            return applyAuthorizeInternal(request, model);
+            return applyAuthorizeInternal(request, response, model);
         } catch (OAuthProblemException e) {
             log.warn("OAuth authorize request invalid: {}", e.getMessage());
-            return error(StringUtils.defaultIfBlank(e.getDescription(), "授权请求无效"), OAuthError.OAUTH_ERROR, SC_BAD_REQUEST);
+            return writeOAuthError(response, StringUtils.defaultIfBlank(e.getDescription(), "授权请求无效"), OAuthError.OAUTH_ERROR, SC_BAD_REQUEST);
         }
     }
 
-    private Object applyAuthorizeInternal(HttpServletRequest request, Model model) throws OAuthSystemException, OAuthProblemException {
-        OAuthAuthzRequest oAuthzRequest = new OAuthAuthzRequest(JakartaToJavaxRequestAdapter.adapt(request));
+    private String applyAuthorizeInternal(HttpServletRequest request, HttpServletResponse response, Model model) throws OAuthSystemException, OAuthProblemException {
+        OAuthAuthzRequest oAuthzRequest = new OAuthAuthzRequest(JakartaToJavaxRequestAdapter.adaptAuthz(request));
         String clientId = oAuthzRequest.getClientId();
         ClientDetailsEntity clientDetailsEntity = clientDetailsService.findByClientId(clientId);
         if (clientDetailsEntity == null) {
-            return error("无效的客户端ID", INVALID_CLIENT, SC_BAD_REQUEST);
+            return writeOAuthError(response, "无效的客户端ID", INVALID_CLIENT, SC_BAD_REQUEST);
         }
         if (null == clientDetailsEntity.getTrusted() || 0 == clientDetailsEntity.getTrusted()) {
-            return error("不受信任的客户端ID", INVALID_CLIENT, SC_BAD_REQUEST);
+            return writeOAuthError(response, "不受信任的客户端ID", INVALID_CLIENT, SC_BAD_REQUEST);
         }
         if (null != clientDetailsEntity.getArchived() && 1 == clientDetailsEntity.getArchived()) {
-            return error("客户端ID已归档，不能使用", INVALID_CLIENT, SC_BAD_REQUEST);
+            return writeOAuthError(response, "客户端ID已归档，不能使用", INVALID_CLIENT, SC_BAD_REQUEST);
         }
         String redirectURI = oAuthzRequest.getParam(OAuth.OAUTH_REDIRECT_URI);
         if (StringUtils.isEmpty(redirectURI) || StringUtils.isEmpty(clientDetailsEntity.getRedirectUri())) {
-            return error("redirect_uri should not be empty.", OAUTH_ERROR_URI, SC_BAD_REQUEST);
+            return writeOAuthError(response, "redirect_uri should not be empty.", OAUTH_ERROR_URI, SC_BAD_REQUEST);
         }
         if (!redirectURI.equalsIgnoreCase(clientDetailsEntity.getRedirectUri())) {
-            return error("redirect_uri does not match the uri in system.", OAUTH_ERROR_URI, SC_BAD_REQUEST);
+            return writeOAuthError(response, "redirect_uri does not match the uri in system.", OAUTH_ERROR_URI, SC_BAD_REQUEST);
         }
         String state = request.getParameter(OAUTH_STATE);
         String callback = request.getParameter("callback");
@@ -380,14 +405,14 @@ public class AuthorizationController {
             if (scanTicketService.shouldUseQrAuthorize()) {
                 try {
                     TicketSnapshot ticket = scanTicketService.createAuthorizeTicket(request, clientId, redirectURI, scope, state, callback);
-                    return oauthConsentView(request, model, ticket, clientDetailsEntity, false, loginError);
+                    return oauthConsentView(request, response, model, ticket, clientDetailsEntity, false, loginError);
                 } catch (Exception e) {
                     log.warn("QRC authorize ticket failed: {}", e.getMessage());
                 }
             }
-            return oauthConsentView(request, model, null, clientDetailsEntity, false, loginError);
+            return oauthConsentView(request, response, model, null, clientDetailsEntity, false, loginError);
         }
-        return oauthConsentView(request, model, null, clientDetailsEntity, true, loginError);
+        return oauthConsentView(request, response, model, null, clientDetailsEntity, true, loginError);
     }
 
     @RequestMapping(value = "authorize/logout", method = RequestMethod.GET)
@@ -403,37 +428,37 @@ public class AuthorizationController {
     }
 
     @RequestMapping(value = "authorize/approve", method = RequestMethod.POST)
-    public Object approveAuthorize(HttpServletRequest request, @RequestParam(name = OAUTH_CLIENT_ID) String clientId, @RequestParam(OAUTH_REDIRECT_URI) String redirectURI, @RequestParam(name = OAUTH_RESPONSE_TYPE, defaultValue = "code") String responseType, @RequestParam(required = false) String scope, @RequestParam(required = false) String state, @RequestParam(required = false) String callback, @RequestParam(name = "userConsent", defaultValue = "false") String userConsent, Model model) throws OAuthSystemException, OAuthProblemException {
+    public Object approveAuthorize(HttpServletRequest request, HttpServletResponse response, @RequestParam(name = OAUTH_CLIENT_ID) String clientId, @RequestParam(OAUTH_REDIRECT_URI) String redirectURI, @RequestParam(name = OAUTH_RESPONSE_TYPE, defaultValue = "code") String responseType, @RequestParam(required = false) String scope, @RequestParam(required = false) String state, @RequestParam(required = false) String callback, @RequestParam(name = "userConsent", defaultValue = "false") String userConsent, Model model) throws OAuthSystemException, OAuthProblemException {
         if (ShiroUtils.needLogin()) {
-            return oauthLoginFallbackRedirect(request, "请先登录后再确认授权");
+            return oauthLoginFallbackRedirect(request, response, "请先登录后再确认授权");
         }
         if (!"true".equalsIgnoreCase(userConsent) && !"1".equals(userConsent) && !"on".equalsIgnoreCase(userConsent)) {
             ClientDetailsEntity client = clientDetailsService.findByClientId(clientId);
             if (client == null) {
-                return error("无效的客户端ID", INVALID_CLIENT, SC_BAD_REQUEST);
+                return writeOAuthError(response, "无效的客户端ID", INVALID_CLIENT, SC_BAD_REQUEST);
             }
             model.addAttribute("redirectUri", redirectURI);
             model.addAttribute("scope", scope);
             model.addAttribute("state", state);
             model.addAttribute("responseType", responseType);
             model.addAttribute("denyRedirect", buildAccessDeniedRedirect(redirectURI, state));
-            return oauthConsentView(request, model, null, client, true, "请勾选授权协议后再确认");
+            return oauthConsentView(request, response, model, null, client, true, "请勾选授权协议后再确认");
         }
         ClientDetailsEntity clientDetailsEntity = clientDetailsService.findByClientId(clientId);
         if (clientDetailsEntity == null) {
-            return error("无效的客户端ID", INVALID_CLIENT, SC_BAD_REQUEST);
+            return writeOAuthError(response, "无效的客户端ID", INVALID_CLIENT, SC_BAD_REQUEST);
         }
         if (null == clientDetailsEntity.getTrusted() || 0 == clientDetailsEntity.getTrusted()) {
-            return error("不受信任的客户端ID", INVALID_CLIENT, SC_BAD_REQUEST);
+            return writeOAuthError(response, "不受信任的客户端ID", INVALID_CLIENT, SC_BAD_REQUEST);
         }
         if (null != clientDetailsEntity.getArchived() && 1 == clientDetailsEntity.getArchived()) {
-            return error("客户端ID已归档，不能使用", INVALID_CLIENT, SC_BAD_REQUEST);
+            return writeOAuthError(response, "客户端ID已归档，不能使用", INVALID_CLIENT, SC_BAD_REQUEST);
         }
         if (StringUtils.isEmpty(redirectURI) || StringUtils.isEmpty(clientDetailsEntity.getRedirectUri())) {
-            return error("redirect_uri should not be empty.", OAUTH_ERROR_URI, SC_BAD_REQUEST);
+            return writeOAuthError(response, "redirect_uri should not be empty.", OAUTH_ERROR_URI, SC_BAD_REQUEST);
         }
         if (!redirectURI.equalsIgnoreCase(clientDetailsEntity.getRedirectUri())) {
-            return error("redirect_uri does not match the uri in system.", OAUTH_ERROR_URI, SC_BAD_REQUEST);
+            return writeOAuthError(response, "redirect_uri does not match the uri in system.", OAUTH_ERROR_URI, SC_BAD_REQUEST);
         }
         if (StringUtils.isBlank(responseType)) {
             responseType = ResponseType.CODE.toString();
@@ -469,33 +494,33 @@ public class AuthorizationController {
         //校验客户端Id是否正确
         ClientDetailsEntity authClient = clientDetailsService.findByClientId(clientId);
         if (authClient == null) {
-            return error("无效的客户端Id", INVALID_CLIENT, SC_BAD_REQUEST);
+            return oauthErrorBody("无效的客户端Id", INVALID_CLIENT, SC_BAD_REQUEST);
         }
         if (null == authClient.getTrusted() || 0 == authClient.getTrusted()) {
-            return error("不受信任的客户端ID", INVALID_CLIENT, SC_BAD_REQUEST);
+            return oauthErrorBody("不受信任的客户端ID", INVALID_CLIENT, SC_BAD_REQUEST);
         }
         if (null != authClient.getArchived() && 1 == authClient.getArchived()) {
-            return error("客户端ID已归档，不能使用", INVALID_CLIENT, SC_BAD_REQUEST);
+            return oauthErrorBody("客户端ID已归档，不能使用", INVALID_CLIENT, SC_BAD_REQUEST);
         }
         //检查客户端安全KEY是否正确
         if (!clientDetailsService.isValidClientSecret(clientSecret)) {
-            return error("客户端安全KEY认证失败！", UNAUTHORIZED_CLIENT, SC_UNAUTHORIZED);
+            return oauthErrorBody("客户端安全KEY认证失败！", UNAUTHORIZED_CLIENT, SC_UNAUTHORIZED);
         }
-        if (StringUtils.isBlank(grantType)) return error("非法授权", INVALID_GRANT, SC_BAD_REQUEST);
-        if (!authClient.granted(grantType)) return error("未获得授权", INVALID_GRANT, SC_BAD_REQUEST);
+        if (StringUtils.isBlank(grantType)) return oauthErrorBody("非法授权", INVALID_GRANT, SC_BAD_REQUEST);
+        if (!authClient.granted(grantType)) return oauthErrorBody("未获得授权", INVALID_GRANT, SC_BAD_REQUEST);
         TokenStore tokenStore = null;
         //验证类型，有AUTHORIZATION_CODE/PASSWORD/REFRESH_TOKEN/CLIENT_CREDENTIALS
         //1. 授权码获取Token模式
         if (grantType.equals(GrantType.AUTHORIZATION_CODE.toString())) {
             if (!clientDetailsService.isValidCode(authCode)) {
-                return error("错误的授权码", INVALID_GRANT, SC_BAD_REQUEST);
+                return oauthErrorBody("错误的授权码", INVALID_GRANT, SC_BAD_REQUEST);
             }
             tokenStore = clientDetailsService.get(ValueType.authCode, authCode);
         }
         //2. 使用Refresh Token 获取Token模式
         if (grantType.equals(GrantType.REFRESH_TOKEN.toString())) {
             if (!clientDetailsService.isValidRefreshToken(refresh)) {
-                return error("错误的Refresh Token", INVALID_GRANT, SC_BAD_REQUEST);
+                return oauthErrorBody("错误的Refresh Token", INVALID_GRANT, SC_BAD_REQUEST);
             }
             tokenStore = clientDetailsService.get(ValueType.refreshToken, refresh);
         }
@@ -523,7 +548,7 @@ public class AuthorizationController {
 
         }
         if (null == tokenStore) {
-            return error("非法授权", INVALID_GRANT, SC_BAD_REQUEST);
+            return oauthErrorBody("非法授权", INVALID_GRANT, SC_BAD_REQUEST);
         }
         String accessToken = "";
         String refreshToken = "";

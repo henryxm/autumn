@@ -72,8 +72,9 @@ public class DynamicTemplateLoader extends MultiTemplateLoader {
     @Override
     public Object findTemplateSource(String name) throws IOException {
         Object source = super.findTemplateSource(name);
-        if (!exists(source))
-            return null;
+        if (source != null) {
+            return source;
+        }
         if (null == source) {
             TemplateLoader lastTemplateLoader = null;
             if (this.sticky) {

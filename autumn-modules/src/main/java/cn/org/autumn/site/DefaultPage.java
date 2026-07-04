@@ -21,10 +21,13 @@ public class DefaultPage implements PageHandler {
 
     @Override
     public String login(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        boolean oauthAuthorize = model != null && Boolean.TRUE.equals(model.getAttribute("oauthAuthorize"));
         boolean oauthLogin = StringUtils.isNotBlank(sysConfigService.getOauth2LoginClientId());
-        model.addAttribute("oauthLogin", oauthLogin);
+        if (!model.containsAttribute("oauthLogin") || oauthAuthorize) {
+            model.addAttribute("oauthLogin", oauthAuthorize || oauthLogin);
+        }
         if (!model.containsAttribute("bodyClass")) {
-            model.addAttribute("bodyClass", "login-page-v2");
+            model.addAttribute("bodyClass", oauthAuthorize ? "login-page-v2 oauth-authorize-mode" : "login-page-v2");
         }
         if (!model.containsAttribute("error")) {
             String error = httpServletRequest.getParameter("error");

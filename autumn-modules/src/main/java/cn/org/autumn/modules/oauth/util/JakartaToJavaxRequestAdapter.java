@@ -407,4 +407,23 @@ public class JakartaToJavaxRequestAdapter implements javax.servlet.http.HttpServ
     public static javax.servlet.http.HttpServletRequest adapt(HttpServletRequest jakartaRequest) {
         return new JakartaToJavaxRequestAdapter(jakartaRequest);
     }
+
+    /**
+     * OAuth 授权端点专用：RFC 允许对授权 URL 发 HEAD，但 Oltu {@code OAuthAuthzRequest} 仅接受 GET。
+     * 将 HEAD 视为 GET 参与参数校验，响应体仍由 Spring MVC 对 HEAD 请求省略。
+     */
+    public static javax.servlet.http.HttpServletRequest adaptAuthz(HttpServletRequest jakartaRequest) {
+        if (jakartaRequest == null) {
+            return null;
+        }
+        if (!"HEAD".equalsIgnoreCase(jakartaRequest.getMethod())) {
+            return adapt(jakartaRequest);
+        }
+        return new JakartaToJavaxRequestAdapter(jakartaRequest) {
+            @Override
+            public String getMethod() {
+                return "GET";
+            }
+        };
+    }
 }
