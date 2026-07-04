@@ -4,6 +4,7 @@ import static org.junit.Assert.assertEquals;
 
 import cn.org.autumn.view.ViewTemplateSupport;
 import org.junit.Test;
+import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.method.support.ModelAndViewContainer;
@@ -18,7 +19,7 @@ public class ViewNameReturnValueHandlerTest {
         ViewNameReturnValueHandler handler = new ViewNameReturnValueHandler(delegate, support);
         ModelAndViewContainer mavContainer = new ModelAndViewContainer();
         MockHttpServletResponse response = new MockHttpServletResponse();
-        ServletWebRequest webRequest = new ServletWebRequest(new org.springframework.mock.web.MockHttpServletRequest(), response);
+        ServletWebRequest webRequest = new ServletWebRequest(new MockHttpServletRequest(), response);
         handler.handleReturnValue("/modules/test/pages/index", null, mavContainer, webRequest);
         assertEquals("modules/test/pages/index", mavContainer.getViewName());
         assertEquals(200, response.getStatus());

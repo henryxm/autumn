@@ -107,6 +107,56 @@ var vm = new Vue({
 				}
 			});
 		},
+		refreshJsonSelected: function () {
+			var rowId = $("#jqGrid").jqGrid('getGridParam', 'selrow');
+			if (rowId == null) {
+				alert('请先选择一条配置');
+				return;
+			}
+			var row = $("#jqGrid").jqGrid('getRowData', rowId);
+			vm.doRefreshJson(row.paramKey);
+		},
+		refreshJsonAll: function () {
+			confirm('确定刷新全部 JSON 类型配置的缺失字段？已有字段值将保持不变。', function () {
+				vm.doRefreshJson(null);
+			});
+		},
+		doRefreshJson: function (paramKey) {
+			var url = baseURL + 'sys/config/refreshJson';
+			if (paramKey) {
+				url += '?paramKey=' + encodeURIComponent(paramKey);
+			}
+			$.ajax({
+				type: 'POST',
+				url: url,
+				success: function (r) {
+					if (r.code === 0) {
+						var lines = [];
+						if (r.changed > 0) {
+							lines.push('已更新 ' + r.changed + ' 项配置');
+						} else {
+							lines.push('所有 JSON 配置均已是最新结构');
+						}
+						if (r.data && r.data.length) {
+							r.data.forEach(function (item) {
+								if (item.changed && item.addedFields && item.addedFields.length) {
+									lines.push(item.paramKey + ' 新增: ' + item.addedFields.join(', '));
+								} else if (item.changed && item.fixes && item.fixes.length) {
+									lines.push(item.paramKey + ' 修正: ' + item.fixes.join('; '));
+								} else if (item.message && item.message.indexOf('失败') >= 0) {
+									lines.push(item.paramKey + ': ' + item.message);
+								}
+							});
+						}
+						alert(lines.join('\n'), function () {
+							vm.reload();
+						});
+					} else {
+						alert(r.msg);
+					}
+				}
+			});
+		},
 		reload: function (event) {
 			vm.showList = true;
 			var page = $("#jqGrid").jqGrid('getGridParam','page');

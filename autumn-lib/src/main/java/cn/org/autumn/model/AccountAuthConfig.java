@@ -3,11 +3,13 @@ package cn.org.autumn.model;
 import cn.org.autumn.annotation.ConfigField;
 import cn.org.autumn.annotation.ConfigParam;
 import cn.org.autumn.config.InputType;
+import cn.org.autumn.utils.WebPathUtils;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.Getter;
 import lombok.Setter;
+import org.apache.commons.lang.StringUtils;
 
 @Getter
 @Setter
@@ -24,7 +26,22 @@ public class AccountAuthConfig implements Serializable {
     @ConfigField(category = InputType.BooleanType, name = "开放忘记密码", description = "关闭后忘记密码页与重置接口不可用，登录页隐藏忘记密码入口")
     private boolean forgotPasswordEnabled = true;
 
+    @ConfigField(category = InputType.StringType, name = "登录成功后跳转地址", description = "用户直接打开登录页且无 SavedRequest 时的默认跳转；留空则按 SPM/index.html 原逻辑。须为 /、*.html 或带 spm= 的有效页面地址，不可为 API/REST")
+    private String postLoginRedirect;
+
     public List<String> validateAndFix() {
-        return new ArrayList<>();
+        List<String> fixes = new ArrayList<>();
+        if (StringUtils.isBlank(postLoginRedirect)) {
+            postLoginRedirect = null;
+            return fixes;
+        }
+        String trimmed = postLoginRedirect.trim();
+        if (!WebPathUtils.isValidPostLoginRedirectConfig(trimmed)) {
+            fixes.add("登录成功后跳转地址无效，已清空: " + trimmed);
+            postLoginRedirect = null;
+            return fixes;
+        }
+        postLoginRedirect = trimmed;
+        return fixes;
     }
 }

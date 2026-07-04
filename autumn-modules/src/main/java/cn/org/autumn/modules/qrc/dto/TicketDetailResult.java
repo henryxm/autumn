@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.qrc.dto;
 
+import cn.org.autumn.modules.qrc.model.TicketSnapshot;
 import java.util.List;
 import java.util.Map;
 import lombok.Getter;
@@ -19,7 +20,7 @@ public class TicketDetailResult {
     private Map<String, String> payload;
     private List<String> scopeLabels;
 
-    public static TicketDetailResult from(cn.org.autumn.modules.qrc.model.TicketSnapshot ticket, String clientName, String clientIconUri, List<String> scopeLabels) {
+    public static TicketDetailResult from(TicketSnapshot ticket, String clientName, String clientIconUri, List<String> scopeLabels) {
         TicketDetailResult result = new TicketDetailResult();
         result.setUuid(ticket.getUuid());
         result.setIntent(ticket.getIntent());

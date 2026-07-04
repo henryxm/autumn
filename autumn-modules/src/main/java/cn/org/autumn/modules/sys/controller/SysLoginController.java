@@ -5,6 +5,7 @@ import cn.org.autumn.config.Config;
 import cn.org.autumn.database.CrudGuard;
 import cn.org.autumn.modules.spm.service.SuperPositionModelService;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
+import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.modules.sys.service.SysUserService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.usr.service.UserProfileService;
@@ -50,6 +51,10 @@ public class SysLoginController {
     @Autowired
     @Lazy
     UserProfileService userProfileService;
+
+    @Autowired
+    @Lazy
+    SysConfigService sysConfigService;
 
     @RequestMapping("captcha.jpg")
     @SkipInterceptor
@@ -108,7 +113,7 @@ public class SysLoginController {
             return R.error("账户验证失败");
         }
 
-        return R.ok().put("data", SysAuthSupport.resolvePostLoginRedirect(request, superPositionModelService));
+        return R.ok().put("data", SysAuthSupport.resolvePostLoginRedirect(request, superPositionModelService, sysConfigService.getAccountAuthConfig()));
     }
 
     /**

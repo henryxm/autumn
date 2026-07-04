@@ -6,6 +6,7 @@ import cn.org.autumn.annotation.SysLog;
 import cn.org.autumn.modules.lan.service.Language;
 import cn.org.autumn.modules.spm.entity.Spm;
 import cn.org.autumn.modules.spm.service.SpmService;
+import cn.org.autumn.modules.sys.entity.JsonConfigRefreshResult;
 import cn.org.autumn.modules.sys.entity.SysConfigEntity;
 import cn.org.autumn.modules.sys.service.SysCategoryService;
 import cn.org.autumn.modules.sys.service.SysConfigService;
@@ -163,5 +164,24 @@ public class SysConfigController extends SysAbstractController {
         R r = R.ok();
         r.put("data", sysConfigService.getSystemUpgrade());
         return r;
+    }
+
+    /**
+     * 刷新 json_type 配置缺失字段：保留已有值，按 Java 类默认值补全新增字段。
+     */
+    @SysLog("刷新JSON配置字段")
+    @PostMapping("/refreshJson")
+    @RequiresPermissions("sys:config:update")
+    public R refreshJson(@RequestParam(required = false) String paramKey) {
+        List<JsonConfigRefreshResult> results = sysConfigService.refreshJsonConfigFields(paramKey);
+        long changed = 0;
+        if (results != null) {
+            for (JsonConfigRefreshResult item : results) {
+                if (item != null && item.isChanged()) {
+                    changed++;
+                }
+            }
+        }
+        return R.ok().put("data", results).put("changed", changed);
     }
 }

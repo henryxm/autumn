@@ -1,6 +1,7 @@
 package cn.org.autumn.modules.sys.controller;
 
 import cn.org.autumn.config.Config;
+import cn.org.autumn.model.AccountAuthConfig;
 import cn.org.autumn.modules.spm.service.SuperPositionModelService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.usr.service.UserProfileService;
@@ -22,7 +23,13 @@ public final class SysAuthSupport {
     }
 
     public static String resolvePostLoginRedirect(HttpServletRequest request, SuperPositionModelService superPositionModelService) {
-        String fallback = defaultPostLoginTarget(request, superPositionModelService);
+        return resolvePostLoginRedirect(request, superPositionModelService, null);
+    }
+
+    public static String resolvePostLoginRedirect(HttpServletRequest request, SuperPositionModelService superPositionModelService, AccountAuthConfig authConfig) {
+        String systemDefault = defaultPostLoginTarget(request, superPositionModelService);
+        String configured = authConfig != null ? authConfig.getPostLoginRedirect() : null;
+        String fallback = WebPathUtils.configuredPostLoginFallback(request, configured, systemDefault);
         SavedRequest savedRequest = WebUtils.getSavedRequest(request);
         if (savedRequest != null && StringUtils.isNotBlank(savedRequest.getRequestUrl())) {
             return WebPathUtils.resolveLoginRedirectWithSavedRequest(request, savedRequest.getRequestUrl(), fallback);

@@ -121,4 +121,46 @@ class WebPathUtilsTest {
         MockHttpServletRequest request = loginRequest();
         assertEquals("index.html", WebPathUtils.resolveLoginRedirectWithSavedRequest(request, "/module/account/me?_=1", "index.html"));
     }
+
+    @Test
+    void configuredPostLoginFallback_usesValidConfig() {
+        MockHttpServletRequest request = loginRequest();
+        assertEquals("/main.html", WebPathUtils.configuredPostLoginFallback(request, "/main.html", "index.html"));
+        assertEquals("index.html", WebPathUtils.configuredPostLoginFallback(request, "index.html", "fallback.html"));
+    }
+
+    @Test
+    void configuredPostLoginFallback_rejectsInvalidConfig() {
+        MockHttpServletRequest request = loginRequest();
+        assertEquals("index.html", WebPathUtils.configuredPostLoginFallback(request, "/module/account/me", "index.html"));
+        assertEquals("index.html", WebPathUtils.configuredPostLoginFallback(request, "/sys/menu/nav", "index.html"));
+    }
+
+    @Test
+    void configuredPostLoginFallback_allowsExplicitHome() {
+        MockHttpServletRequest request = loginRequest();
+        assertEquals("/", WebPathUtils.configuredPostLoginFallback(request, "/", "index.html"));
+    }
+
+    @Test
+    void configuredPostLoginFallback_blankUsesSystemDefault() {
+        MockHttpServletRequest request = loginRequest();
+        assertEquals("index.html", WebPathUtils.configuredPostLoginFallback(request, null, "index.html"));
+        assertEquals("index.html", WebPathUtils.configuredPostLoginFallback(request, "  ", "index.html"));
+    }
+
+    @Test
+    void isValidPostLoginRedirectConfig_acceptsDocumentPaths() {
+        assertTrue(WebPathUtils.isValidPostLoginRedirectConfig("/index.html"));
+        assertTrue(WebPathUtils.isValidPostLoginRedirectConfig("main.html"));
+        assertTrue(WebPathUtils.isValidPostLoginRedirectConfig("/?spm=demo.portal"));
+        assertTrue(WebPathUtils.isValidPostLoginRedirectConfig("/"));
+    }
+
+    @Test
+    void isValidPostLoginRedirectConfig_rejectsRestPaths() {
+        assertFalse(WebPathUtils.isValidPostLoginRedirectConfig("/module/account/me"));
+        assertFalse(WebPathUtils.isValidPostLoginRedirectConfig("/sys/menu/nav"));
+        assertFalse(WebPathUtils.isValidPostLoginRedirectConfig("/actuator/health"));
+    }
 }

@@ -58,8 +58,9 @@
         </ul>
         <div class="login-body oauth-left-body">
           <div v-if="error" class="alert alert-danger alert-dismissible login-alert">
-            <button type="button" class="close" @click="error = false"><span>&times;</span></button>
-            <i class="fa fa-exclamation-circle"></i> {{ errorMsg }}
+            <i class="fa fa-exclamation-circle"></i>
+            <span class="login-alert-text">{{ errorMsg }}</span>
+            <button type="button" class="close" @click="error = false" aria-label="关闭"><span>&times;</span></button>
           </div>
           <form class="login-panel" v-show="loginTab === 'account'" method="post" action="${request.contextPath}/oauth2/login" @submit="beforeOauthAuthorizeLogin">
             <input type="hidden" name="callback" id="oauthAuthorizeCallback" value="">
@@ -112,8 +113,9 @@
       <div class="oauth-split-right">
         <!--<#if authorizeLoggedIn?? && authorizeLoggedIn>-->
         <div v-if="error" class="alert alert-danger alert-dismissible login-alert">
-          <button type="button" class="close" @click="error = false"><span>&times;</span></button>
-          <i class="fa fa-exclamation-circle"></i> {{ errorMsg }}
+          <i class="fa fa-exclamation-circle"></i>
+          <span class="login-alert-text">{{ errorMsg }}</span>
+          <button type="button" class="close" @click="error = false" aria-label="关闭"><span>&times;</span></button>
         </div>
         <!--</#if>-->
         <div class="oauth-consent-head">
@@ -176,8 +178,9 @@
 
     <div class="login-body">
       <div v-if="error" class="alert alert-danger alert-dismissible login-alert">
-        <button type="button" class="close" @click="error = false"><span>&times;</span></button>
-        <i class="fa fa-exclamation-circle"></i> {{ errorMsg }}
+        <i class="fa fa-exclamation-circle"></i>
+        <span class="login-alert-text">{{ errorMsg }}</span>
+        <button type="button" class="close" @click="error = false" aria-label="关闭"><span>&times;</span></button>
       </div>
 
       <!-- 账号登录 -->

@@ -67,7 +67,7 @@ class SpmFilterTest {
         ReflectionTestUtils.invokeMethod(filter, "issueSuccessRedirect", request, response);
 
         assertEquals(302, response.getStatus());
-        assertEquals("/", response.getRedirectedUrl());
+        assertEquals("index.html", response.getRedirectedUrl());
         assertEquals(null, WebUtils.getSavedRequest(request));
     }
 

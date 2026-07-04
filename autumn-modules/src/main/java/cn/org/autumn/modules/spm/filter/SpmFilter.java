@@ -1,12 +1,15 @@
 package cn.org.autumn.modules.spm.filter;
 
 import cn.org.autumn.config.Config;
+import cn.org.autumn.model.AccountAuthConfig;
 import cn.org.autumn.model.Error;
 import cn.org.autumn.model.Response;
 import cn.org.autumn.modules.bot.service.RobotTokenService;
 import cn.org.autumn.modules.bot.shiro.RobotAccessTokenToken;
 import cn.org.autumn.modules.oauth.service.ClientDetailsService;
 import cn.org.autumn.modules.spm.service.SuperPositionModelService;
+import cn.org.autumn.modules.sys.controller.SysAuthSupport;
+import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.modules.sys.shiro.ClientIpSessionSupport;
 import cn.org.autumn.modules.sys.shiro.OauthAccessTokenToken;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
@@ -259,7 +262,21 @@ public class SpmFilter extends FormAuthenticationFilter implements PathFactory.P
             return;
         }
         WebUtils.getAndClearSavedRequest(httpRequest);
-        WebUtils.issueRedirect(request, response, safe, null, false, false);
+        String target = resolvePostLoginRedirectTarget(httpRequest);
+        WebUtils.issueRedirect(request, response, target, null, false, false);
+    }
+
+    private static String resolvePostLoginRedirectTarget(HttpServletRequest request) {
+        if (null == superPositionModelService)
+            superPositionModelService = (SuperPositionModelService) Config.getBean("superPositionModelService");
+        AccountAuthConfig authConfig = null;
+        try {
+            SysConfigService sysConfigService = (SysConfigService) Config.getBean("sysConfigService");
+            if (sysConfigService != null)
+                authConfig = sysConfigService.getAccountAuthConfig();
+        } catch (Exception ignored) {
+        }
+        return SysAuthSupport.resolvePostLoginRedirect(request, superPositionModelService, authConfig);
     }
 
     @Override

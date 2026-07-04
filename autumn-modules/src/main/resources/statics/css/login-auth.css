@@ -193,8 +193,54 @@ body.login-page-v2::after {
   padding: 12px 14px;
   background: #fef2f2;
   color: #991b1b;
+  line-height: 1.5;
 }
-.login-alert .close { opacity: 0.5; }
+.login-alert.alert-dismissible {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-right: 12px;
+}
+.login-alert .login-alert-text {
+  flex: 1;
+  min-width: 0;
+}
+.login-alert .fa-exclamation-circle {
+  flex-shrink: 0;
+  font-size: 14px;
+  opacity: 0.85;
+}
+.login-alert .close {
+  position: static;
+  float: none;
+  flex-shrink: 0;
+  opacity: 0.45;
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 1;
+  color: inherit;
+  text-shadow: none;
+  padding: 0;
+  margin: 0 0 0 4px;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: transparent;
+  border: none;
+  transition: opacity 0.2s, background 0.2s;
+}
+.login-alert .close:hover,
+.login-alert .close:focus {
+  opacity: 0.75;
+  background: rgba(153, 27, 27, 0.08);
+  outline: none;
+}
+.login-alert .close span {
+  line-height: 1;
+}
 @keyframes panelIn {
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: none; }

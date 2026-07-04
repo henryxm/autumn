@@ -1,6 +1,8 @@
 package cn.org.autumn.modules.sys.service;
 
 import cn.org.autumn.annotation.ConfigField;
+import cn.org.autumn.config.JsonTypeConfigRefresher;
+import cn.org.autumn.config.JsonTypeConfigRefresher.MergeResult;
 import cn.org.autumn.bean.EnvBean;
 import cn.org.autumn.cluster.ServiceHandler;
 import cn.org.autumn.config.*;
@@ -18,6 +20,7 @@ import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.lan.service.Language;
 import cn.org.autumn.modules.oss.cloud.CloudStorageConfig;
 import cn.org.autumn.modules.sys.dao.SysConfigDao;
+import cn.org.autumn.modules.sys.entity.JsonConfigRefreshResult;
 import cn.org.autumn.modules.sys.entity.LoadingTheme;
 import cn.org.autumn.modules.sys.entity.SysConfigEntity;
 import cn.org.autumn.modules.sys.entity.SystemUpgrade;
@@ -31,6 +34,7 @@ import com.baomidou.mybatisplus.mapper.EntityWrapper;
 import com.baomidou.mybatisplus.plugins.Page;
 import com.baomidou.mybatisplus.service.impl.ServiceImpl;
 import com.google.gson.Gson;
+
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -39,6 +43,7 @@ import java.net.URI;
 import java.util.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.apache.shiro.session.mgt.SessionManager;
@@ -802,6 +807,8 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 fixes = ((AesConfig) config).validateAndFix();
             } else if (RobotQuotaConfig.class.isAssignableFrom(clazz) && config instanceof RobotQuotaConfig) {
                 fixes = ((RobotQuotaConfig) config).validateAndFix();
+            } else if (AccountAuthConfig.class.isAssignableFrom(clazz) && config instanceof AccountAuthConfig) {
+                fixes = ((AccountAuthConfig) config).validateAndFix();
             }
             // 如果配置被修正，记录日志并更新到数据库
             if (fixes != null && !fixes.isEmpty()) {
@@ -813,6 +820,78 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
             }
         }
         return config;
+    }
+
+    /**
+     * 刷新 json_type 配置：保留库中已有字段值，按 Java 类默认值补全缺失字段并写回。
+     *
+     * @param paramKey 指定 paramKey 时只刷新该项；为空则刷新全部 json_type 配置
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public List<JsonConfigRefreshResult> refreshJsonConfigFields(String paramKey) {
+        List<JsonConfigRefreshResult> results = new ArrayList<>();
+        if (StringUtils.isNotBlank(paramKey)) {
+            SysConfigEntity entity = getByKey(paramKey.trim());
+            if (entity == null) {
+                JsonConfigRefreshResult missing = new JsonConfigRefreshResult();
+                missing.setParamKey(paramKey.trim());
+                missing.setMessage("配置不存在");
+                results.add(missing);
+                return results;
+            }
+            results.add(refreshJsonConfigEntity(entity));
+            return results;
+        }
+        List<SysConfigEntity> all = selectByMap(new HashMap<>());
+        if (all == null || all.isEmpty()) {
+            return results;
+        }
+        for (SysConfigEntity entity : all) {
+            if (isJsonTypeConfig(entity)) {
+                results.add(refreshJsonConfigEntity(entity));
+            }
+        }
+        return results;
+    }
+
+    private JsonConfigRefreshResult refreshJsonConfigEntity(SysConfigEntity entity) {
+        JsonConfigRefreshResult result = new JsonConfigRefreshResult();
+        result.setParamKey(entity.getParamKey());
+        result.setClassName(entity.getOptions());
+        if (!isJsonTypeConfig(entity)) {
+            result.setMessage("非 JSON 类型配置，已跳过");
+            return result;
+        }
+        try {
+            MergeResult outcome = JsonTypeConfigRefresher.mergeMissingFields(entity.getOptions(), entity.getParamValue());
+            result.setAddedFields(outcome.getAddedFields());
+            result.setFixes(outcome.getFixes());
+            result.setChanged(outcome.isChanged());
+            if (outcome.isChanged()) {
+                entity.setParamValue(outcome.getJson());
+                update(entity);
+                if (!outcome.getAddedFields().isEmpty()) {
+                    result.setMessage("已补全缺失字段");
+                } else if (!outcome.getFixes().isEmpty()) {
+                    result.setMessage("已校验并修正配置");
+                } else {
+                    result.setMessage("已刷新");
+                }
+                if (log.isDebugEnabled()) {
+                    log.debug("Refreshed json config: key={}, added={}", entity.getParamKey(), outcome.getAddedFields());
+                }
+            } else {
+                result.setMessage("无需刷新");
+            }
+        } catch (Exception e) {
+            result.setMessage("刷新失败: " + e.getMessage());
+            log.warn("Refresh json config failed: key={}, class={}, error={}", entity.getParamKey(), entity.getOptions(), e.getMessage());
+        }
+        return result;
+    }
+
+    static boolean isJsonTypeConfig(SysConfigEntity entity) {
+        return JsonTypeConfigRefresher.isJsonTypeConfig(entity == null ? null : entity.getType(), entity == null ? null : entity.getOptions(), json_type);
     }
 
     public CloudStorageConfig getCloudStorageConfig() {
@@ -928,11 +1007,19 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     }
 
     public AccountAuthConfig getAccountAuthConfig() {
-        AccountAuthConfig authConfig = getConfigObject(ACCOUNT_AUTH_CONFIG, AccountAuthConfig.class);
-        if (authConfig == null) {
-            authConfig = new AccountAuthConfig();
+        AccountAuthConfig authConfig = getConfigObjectValidate(ACCOUNT_AUTH_CONFIG, AccountAuthConfig.class);
+        return authConfig == null ? new AccountAuthConfig() : authConfig;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public AccountAuthConfig updateAccountAuthConfig(AccountAuthConfig config) {
+        AccountAuthConfig toSave = config == null ? new AccountAuthConfig() : config;
+        List<String> fixes = toSave.validateAndFix();
+        for (String fix : fixes) {
+            log.debug("[Config validation] {}", fix);
         }
-        return authConfig;
+        updateValueByKey(ACCOUNT_AUTH_CONFIG, new Gson().toJson(toSave));
+        return toSave;
     }
 
     public boolean isRegisterEnabled() {
