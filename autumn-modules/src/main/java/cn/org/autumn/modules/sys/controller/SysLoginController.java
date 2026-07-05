@@ -121,11 +121,14 @@ public class SysLoginController {
      */
     @ResponseBody
     @RequestMapping(value = "sys/autologin", method = RequestMethod.POST)
-    public R autoLogin() {
-        if (Config.isDev())
+    public R autoLogin(HttpServletRequest request) {
+        if (ShiroUtils.isLogin()) {
+            return R.ok().put("data", SysAuthSupport.resolvePostLoginRedirect(request, superPositionModelService, sysConfigService.getAccountAuthConfig()));
+        }
+        if (Config.isDev()) {
             return R.ok();
-        else
-            return R.error();
+        }
+        return R.error();
     }
 
     /**

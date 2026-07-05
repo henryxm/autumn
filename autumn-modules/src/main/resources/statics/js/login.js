@@ -262,7 +262,8 @@
                 }
                 (window.top || window).location.href = target || 'index.html';
             },
-            submitLogin: function (username, password, captcha) {
+            submitLogin: function (username, password, captcha, options) {
+                options = options || {};
                 var data = 'username=' + encodeURIComponent(username) + '&password=' + encodeURIComponent(password) + '&captcha=' + encodeURIComponent(captcha);
                 $.ajax({
                     type: 'POST',
@@ -272,12 +273,14 @@
                     success: function (result) {
                         if (result.code == 0) {
                             vm.redirectAfterLogin(result.data != null ? String(result.data) : 'index.html');
-                        } else {
+                        } else if (!options.silent) {
                             vm.showError(result.msg);
                         }
                     },
                     error: function () {
-                        vm.showError('网络异常，请稍后重试');
+                        if (!options.silent) {
+                            vm.showError('网络异常，请稍后重试');
+                        }
                     }
                 });
             },
@@ -312,9 +315,15 @@
                     url: ctx + '/sys/autologin',
                     dataType: 'json',
                     success: function (result) {
-                        if (result.code == 0) {
-                            vm.login();
+                        if (!result || result.code != 0) {
+                            return;
                         }
+                        if (result.data != null && String(result.data) !== '') {
+                            vm.redirectAfterLogin(String(result.data));
+                            return;
+                        }
+                        // dev 探测：走服务端默认账号逻辑，跳过客户端空账号校验；失败不打扰用户
+                        vm.submitLogin('', '', '', { silent: true });
                     }
                 });
             },
