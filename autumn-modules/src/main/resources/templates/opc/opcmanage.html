@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>开放接入统一管理</title>
+    <style>
+        :root {
+            --bg-page: #f0f1f8;
+            --bg-elevated: #ffffff;
+            --brand-1: #6d28d9;
+            --brand-2: #7c3aed;
+            --text: #1a1d26;
+            --text-muted: #5c6370;
+            --border: #e8ecf4;
+            --radius: 12px;
+            --shadow-md: 0 8px 30px rgba(26, 29, 38, 0.08);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            height: 100%; width: 100%; overflow: hidden;
+            background: var(--bg-page); color: var(--text);
+        }
+        .container {
+            width: 100%; max-width: 1440px; height: 100vh; margin: 0 auto;
+            background: var(--bg-elevated); display: flex; flex-direction: column; overflow: hidden;
+            box-shadow: var(--shadow-md);
+        }
+        .header {
+            background: linear-gradient(125deg, #5b21b6 0%, #7c3aed 52%, #9333ea 100%);
+            color: white; padding: 20px 28px; text-align: center; flex-shrink: 0;
+        }
+        .header h1 { font-size: 1.45rem; font-weight: 700; margin-bottom: 6px; }
+        .header p { opacity: 0.92; font-size: 0.8rem; }
+        .stats { display: flex; flex-wrap: wrap; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+        .stat-card { flex: 1; min-width: 120px; background: #faf5ff; border-radius: 10px; padding: 12px 16px; border: 1px solid #ede9fe; }
+        .stat-card .label { font-size: 12px; color: var(--text-muted); }
+        .stat-card .value { font-size: 22px; font-weight: 700; color: var(--brand-1); margin-top: 4px; }
+        .tabs { display: flex; flex-wrap: wrap; background: #fafbfd; border-bottom: 1px solid var(--border); padding: 0 12px; gap: 4px; flex-shrink: 0; }
+        .tab { padding: 14px 18px; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--text-muted); border-bottom: 3px solid transparent; margin-bottom: -1px; }
+        .tab.active { color: var(--brand-1); border-bottom-color: var(--brand-1); background: var(--bg-elevated); }
+        .tab-panel { display: none; flex: 1; flex-direction: column; overflow: hidden; min-height: 0; padding: 16px 20px; }
+        .tab-panel.active { display: flex; }
+        .toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; align-items: center; flex-shrink: 0; }
+        .toolbar input, .toolbar select { padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; }
+        .btn { border: none; border-radius: 8px; padding: 8px 14px; font-size: 13px; cursor: pointer; font-weight: 600; }
+        .btn-primary { background: var(--brand-1); color: white; }
+        .btn-secondary { background: #eef2ff; color: #4338ca; }
+        .btn-warning { background: #fef3c7; color: #92400e; }
+        .btn-danger { background: #fee2e2; color: #b91c1c; }
+        .btn-xs { padding: 4px 8px; font-size: 12px; margin-right: 4px; }
+        .table-container { flex: 1; overflow: auto; border: 1px solid var(--border); border-radius: var(--radius); }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+        th { background: #f8fafc; position: sticky; top: 0; z-index: 1; }
+        .empty-hint { text-align: center; color: var(--text-muted); padding: 24px; }
+        .pagination { display: flex; gap: 12px; align-items: center; justify-content: center; padding: 12px; flex-shrink: 0; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+        .badge-success { background: #dcfce7; color: #166534; }
+        .badge-danger { background: #fee2e2; color: #991b1b; }
+        .config-box { max-width: 520px; padding: 20px; border: 1px solid var(--border); border-radius: var(--radius); background: #faf5ff; }
+        .config-box label { display: flex; align-items: center; gap: 10px; font-size: 14px; cursor: pointer; }
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 100; align-items: center; justify-content: center; }
+        .modal.show { display: flex; }
+        .modal-content { background: white; border-radius: 12px; width: 90%; max-width: 520px; max-height: 90vh; overflow: auto; }
+        .modal-header { padding: 16px 20px; border-bottom: 1px solid var(--border); font-weight: 700; }
+        .modal-body { padding: 16px 20px; }
+        .modal-body label { display: block; font-size: 12px; color: var(--text-muted); margin: 10px 0 4px; }
+        .modal-body input, .modal-body select, .modal-body textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; }
+        .modal-footer { padding: 12px 20px; border-top: 1px solid var(--border); text-align: right; }
+        .toast { position: fixed; bottom: 24px; right: 24px; background: #166534; color: white; padding: 12px 18px; border-radius: 8px; z-index: 200; }
+        .toast.error { background: #b91c1c; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>开放接入统一管理</h1>
+        <p>ConnectApp · 用户绑定 · 运行配置</p>
+    </div>
+    <div class="stats">
+        <div class="stat-card"><div class="label">接入应用</div><div class="value" id="statApp">-</div></div>
+        <div class="stat-card"><div class="label">正常应用</div><div class="value" id="statActiveApp">-</div></div>
+        <div class="stat-card"><div class="label">用户绑定</div><div class="value" id="statBind">-</div></div>
+        <div class="stat-card"><div class="label">自动注册</div><div class="value" id="statAutoReg">-</div></div>
+    </div>
+    <div class="tabs">
+        <div class="tab active" data-tab="apps" onclick="switchTab('apps')">接入应用</div>
+        <div class="tab" data-tab="binds" onclick="switchTab('binds')">用户绑定</div>
+        <div class="tab" data-tab="config" onclick="switchTab('config')">运行配置</div>
+    </div>
+
+    <div class="tab-panel active" id="panelApps">
+        <div class="toolbar">
+            <input type="text" id="filterAppKeyword" placeholder="搜索名称/appId/平台地址">
+            <button class="btn btn-secondary btn-sm" onclick="loadApps(1)">查询</button>
+            <button class="btn btn-primary btn-sm" onclick="showSaveAppModal()">手动保存</button>
+            <button class="btn btn-primary btn-sm" onclick="showApplyAppModal()">远程申请</button>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead><tr><th>名称</th><th>appId</th><th>所属用户</th><th>平台地址</th><th>绑定数</th><th>状态</th><th>操作</th></tr></thead>
+                <tbody id="appListBody"><tr><td colspan="7" class="empty-hint">加载中...</td></tr></tbody>
+            </table>
+        </div>
+        <div class="pagination" id="appPagination"></div>
+    </div>
+
+    <div class="tab-panel" id="panelBinds">
+        <div class="toolbar">
+            <select id="filterBindApp"><option value="">全部应用</option></select>
+            <input type="text" id="filterBindKeyword" placeholder="openId/unionId/用户uuid">
+            <button class="btn btn-secondary btn-sm" onclick="loadBinds(1)">查询</button>
+            <button class="btn btn-primary btn-sm" onclick="showCreateBindModal()">手工绑定</button>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead><tr><th>应用</th><th>本地用户</th><th>openId</th><th>unionId</th><th>创建时间</th><th>操作</th></tr></thead>
+                <tbody id="bindListBody"><tr><td colspan="6" class="empty-hint">加载中...</td></tr></tbody>
+            </table>
+        </div>
+        <div class="pagination" id="bindPagination"></div>
+    </div>
+
+    <div class="tab-panel" id="panelConfig">
+        <div class="config-box">
+            <h3 style="margin-bottom:12px;font-size:15px;">OAuth 回调无绑定时的行为</h3>
+            <label><input type="checkbox" id="cfgAutoRegister"> 开启自动注册本地用户（OPC_AUTO_REGISTER）</label>
+            <p style="font-size:12px;color:var(--text-muted);margin-top:10px;">关闭后，未绑定的 openId 将无法登录，需管理员在「用户绑定」中手工绑定。</p>
+            <button class="btn btn-primary" style="margin-top:16px;" onclick="saveAutoRegister()">保存配置</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="modalSaveApp">
+    <div class="modal-content">
+        <div class="modal-header">手动保存接入配置</div>
+        <div class="modal-body">
+            <label>所属用户 uuid</label><input id="saveUser" type="text">
+            <label>appId</label><input id="saveAppId" type="text">
+            <label>appSecret</label><input id="saveAppSecret" type="text">
+            <label>平台根地址 platformBaseUrl</label><input id="savePlatform" type="text" placeholder="https://auth.example.com">
+            <label>redirectUri</label><input id="saveRedirect" type="text">
+            <label>名称</label><input id="saveName" type="text">
+            <label>scope</label><input id="saveScope" type="text" value="basic">
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary btn-sm" onclick="hideModal('modalSaveApp')">取消</button>
+            <button class="btn btn-primary btn-sm" onclick="submitSaveApp()">保存</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="modalApplyApp">
+    <div class="modal-content">
+        <div class="modal-header">向远程 OPL 申请 appId</div>
+        <div class="modal-body">
+            <label>所属用户 uuid</label><input id="applyUser" type="text">
+            <label>平台根地址</label><input id="applyPlatform" type="text">
+            <label>平台用户令牌 accessToken</label><input id="applyToken" type="text">
+            <label>redirectUri</label><input id="applyRedirect" type="text">
+            <label>名称</label><input id="applyName" type="text">
+            <label>scope</label><input id="applyScope" type="text" value="basic">
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary btn-sm" onclick="hideModal('modalApplyApp')">取消</button>
+            <button class="btn btn-primary btn-sm" onclick="submitApplyApp()">申请</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="modalCreateBind">
+    <div class="modal-content">
+        <div class="modal-header">手工绑定本地用户</div>
+        <div class="modal-body">
+            <label>接入应用</label><select id="bindConnectApp"></select>
+            <label>本地用户 uuid</label><input id="bindUser" type="text">
+            <label>openId</label><input id="bindOpenId" type="text">
+            <label>unionId（可选）</label><input id="bindUnionId" type="text">
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary btn-sm" onclick="hideModal('modalCreateBind')">取消</button>
+            <button class="btn btn-primary btn-sm" onclick="submitCreateBind()">绑定</button>
+        </div>
+    </div>
+</div>
+
+<script>
+window.__CTX__ = '${request.contextPath!""}';
+window.__OPC_ADMIN_API__ = window.__CTX__ + '/opc/admin';
+</script>
+<script>
+//<#noparse>
+const API_BASE = (typeof window.__OPC_ADMIN_API__ === 'string' && window.__OPC_ADMIN_API__.length > 0)
+    ? window.__OPC_ADMIN_API__
+    : ((typeof window.__CTX__ === 'string') ? window.__CTX__ : '') + '/opc/admin';
+
+const state = { tab: 'apps', appOptions: [], apps: { page: 1, totalPage: 1 }, binds: { page: 1, totalPage: 1 } };
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadOverview();
+    loadAppOptions();
+    loadApps(1);
+});
+
+function switchTab(tab) {
+    state.tab = tab;
+    document.querySelectorAll('.tab').forEach(function(el) {
+        el.classList.toggle('active', el.getAttribute('data-tab') === tab);
+    });
+    ['apps', 'binds', 'config'].forEach(function(key) {
+        var panel = document.getElementById('panel' + key.charAt(0).toUpperCase() + key.slice(1));
+        if (panel) panel.classList.toggle('active', key === tab);
+    });
+    if (tab === 'binds' && !state.binds.loaded) loadBinds(1);
+    if (tab === 'config') loadConfigPanel();
+}
+
+async function apiGet(path, params) {
+    var qs = new URLSearchParams(params || {}).toString();
+    var res = await fetch(API_BASE + path + (qs ? ('?' + qs) : ''), { credentials: 'same-origin' });
+    return res.json();
+}
+
+async function apiPost(path, body) {
+    var res = await fetch(API_BASE + path, {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body || {})
+    });
+    return res.json();
+}
+
+async function loadOverview() {
+    try {
+        var r = await apiGet('/overview');
+        if (r.code !== 0 || !r.data) return;
+        document.getElementById('statApp').textContent = r.data.appCount || 0;
+        document.getElementById('statActiveApp').textContent = r.data.activeAppCount || 0;
+        document.getElementById('statBind').textContent = r.data.bindCount || 0;
+        document.getElementById('statAutoReg').textContent = r.data.autoRegister ? '开' : '关';
+    } catch (e) { showToast('概览加载失败', 'error'); }
+}
+
+async function loadAppOptions() {
+    var r = await apiGet('/apps/all');
+    if (r.code !== 0) return;
+    state.appOptions = r.list || [];
+    var filter = document.getElementById('filterBindApp');
+    var bindSelect = document.getElementById('bindConnectApp');
+    filter.innerHTML = '<option value="">全部应用</option>';
+    bindSelect.innerHTML = '<option value="">请选择</option>';
+    state.appOptions.forEach(function(a) {
+        var label = escapeHtml(a.name || a.appId) + ' (' + escapeHtml(a.appId) + ')';
+        filter.innerHTML += '<option value="' + escapeAttr(a.appId) + '">' + label + '</option>';
+        bindSelect.innerHTML += '<option value="' + escapeAttr(a.uuid) + '">' + label + '</option>';
+    });
+}
+
+async function loadApps(page) {
+    state.apps.page = page;
+    var r = await apiGet('/apps', { page: page, limit: 10, keyword: document.getElementById('filterAppKeyword').value });
+    var tbody = document.getElementById('appListBody');
+    if (r.code !== 0 || !r.page) {
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-hint">' + escapeHtml(r.msg || '加载失败') + '</td></tr>';
+        return;
+    }
+    state.apps.totalPage = r.page.totalPage || 1;
+    var list = r.page.list || [];
+    tbody.innerHTML = list.length ? list.map(function(item) {
+        var status = item.status === 1 ? '<span class="badge badge-success">正常</span>' : '<span class="badge badge-danger">禁用</span>';
+        var next = item.status === 1 ? 0 : 1;
+        var toggle = item.status === 1 ? '禁用' : '启用';
+        return '<tr><td>' + escapeHtml(item.name) + '</td><td><code>' + escapeHtml(item.appId) + '</code></td>' +
+            '<td>' + escapeHtml(item.username) + '</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;">' + escapeHtml(item.platformBaseUrl) + '</td>' +
+            '<td>' + (item.bindCount || 0) + '</td><td>' + status + '</td><td>' +
+            '<button class="btn btn-secondary btn-xs" onclick="copyLoginUrl(\'' + escapeAttr(item.authorizeUrl || '') + '\')">登录URL</button>' +
+            '<button class="btn btn-warning btn-xs" onclick="toggleAppStatus(\'' + escapeAttr(item.appId) + '\',' + next + ')">' + toggle + '</button></td></tr>';
+    }).join('') : '<tr><td colspan="7" class="empty-hint">暂无应用</td></tr>';
+    renderPagination('appPagination', state.apps.page, state.apps.totalPage, loadApps);
+}
+
+async function loadBinds(page) {
+    state.binds.page = page;
+    state.binds.loaded = true;
+    var appId = document.getElementById('filterBindApp').value;
+    var r = await apiGet('/binds', { page: page, limit: 10, appId: appId, keyword: document.getElementById('filterBindKeyword').value });
+    var tbody = document.getElementById('bindListBody');
+    if (r.code !== 0 || !r.page) {
+        tbody.innerHTML = '<tr><td colspan="6" class="empty-hint">加载失败</td></tr>';
+        return;
+    }
+    state.binds.totalPage = r.page.totalPage || 1;
+    var list = r.page.list || [];
+    tbody.innerHTML = list.length ? list.map(function(item) {
+        return '<tr><td>' + escapeHtml(item.appName || item.appId) + '</td><td>' + escapeHtml(item.username) + '<br/><code>' + escapeHtml(item.user) + '</code></td>' +
+            '<td><code>' + escapeHtml(item.openId) + '</code></td><td><code>' + escapeHtml(item.unionId || '-') + '</code></td>' +
+            '<td>' + formatTime(item.create) + '</td><td><button class="btn btn-danger btn-xs" onclick="deleteBind(' + item.id + ')">解除</button></td></tr>';
+    }).join('') : '<tr><td colspan="6" class="empty-hint">暂无绑定</td></tr>';
+    renderPagination('bindPagination', state.binds.page, state.binds.totalPage, loadBinds);
+}
+
+async function loadConfigPanel() {
+    var r = await apiGet('/config/autoRegister');
+    if (r.code === 0 && r.data) document.getElementById('cfgAutoRegister').checked = !!r.data.enabled;
+}
+
+async function saveAutoRegister() {
+    var enabled = document.getElementById('cfgAutoRegister').checked;
+    var r = await apiPost('/config/autoRegister', { enabled: enabled });
+    if (r.code === 0) { showToast('已保存'); loadOverview(); }
+    else showToast(r.msg || '保存失败', 'error');
+}
+
+function showSaveAppModal() { showModal('modalSaveApp'); }
+function showApplyAppModal() { showModal('modalApplyApp'); }
+function showCreateBindModal() { loadAppOptions().then(function() { showModal('modalCreateBind'); }); }
+
+async function submitSaveApp() {
+    var r = await apiPost('/app/save', {
+        user: document.getElementById('saveUser').value,
+        appId: document.getElementById('saveAppId').value,
+        appSecret: document.getElementById('saveAppSecret').value,
+        platformBaseUrl: document.getElementById('savePlatform').value,
+        redirectUri: document.getElementById('saveRedirect').value,
+        name: document.getElementById('saveName').value,
+        scope: document.getElementById('saveScope').value
+    });
+    if (r.code === 0) { hideModal('modalSaveApp'); showToast('保存成功'); loadApps(1); loadOverview(); loadAppOptions(); }
+    else showToast(r.msg || '保存失败', 'error');
+}
+
+async function submitApplyApp() {
+    var r = await apiPost('/app/apply', {
+        user: document.getElementById('applyUser').value,
+        platformBaseUrl: document.getElementById('applyPlatform').value,
+        accessToken: document.getElementById('applyToken').value,
+        redirectUri: document.getElementById('applyRedirect').value,
+        name: document.getElementById('applyName').value,
+        scope: document.getElementById('applyScope').value
+    });
+    if (r.code === 0) { hideModal('modalApplyApp'); showToast('申请成功'); loadApps(1); loadOverview(); loadAppOptions(); }
+    else showToast(r.msg || '申请失败', 'error');
+}
+
+async function submitCreateBind() {
+    var r = await apiPost('/bind/create', {
+        connectApp: document.getElementById('bindConnectApp').value,
+        user: document.getElementById('bindUser').value,
+        openId: document.getElementById('bindOpenId').value,
+        unionId: document.getElementById('bindUnionId').value
+    });
+    if (r.code === 0) { hideModal('modalCreateBind'); showToast('绑定成功'); loadBinds(state.binds.page); loadOverview(); }
+    else showToast(r.msg || '绑定失败', 'error');
+}
+
+async function toggleAppStatus(appId, status) {
+    var r = await apiPost('/app/status', { appId: appId, status: status });
+    if (r.code === 0) { loadApps(state.apps.page); loadOverview(); showToast('状态已更新'); }
+    else showToast(r.msg || '操作失败', 'error');
+}
+
+async function deleteBind(id) {
+    if (!confirm('确定解除该绑定？')) return;
+    var r = await apiPost('/bind/delete', { id: id });
+    if (r.code === 0) { loadBinds(state.binds.page); loadOverview(); showToast('已解除'); }
+    else showToast(r.msg || '操作失败', 'error');
+}
+
+function copyLoginUrl(url) {
+    if (!url) return;
+    navigator.clipboard.writeText(window.location.origin + (window.__CTX__ || '') + url).then(function() {
+        showToast('登录 URL 已复制');
+    }).catch(function() { showToast(url, 'success'); });
+}
+
+function renderPagination(id, page, totalPage, loader) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = '<button class="btn btn-secondary btn-sm" ' + (page <= 1 ? 'disabled' : '') + ' onclick="' + loader.name + '(' + (page - 1) + ')">上一页</button>' +
+        '<span>' + page + ' / ' + totalPage + '</span>' +
+        '<button class="btn btn-secondary btn-sm" ' + (page >= totalPage ? 'disabled' : '') + ' onclick="' + loader.name + '(' + (page + 1) + ')">下一页</button>';
+}
+
+function showModal(id) { document.getElementById(id).classList.add('show'); }
+function hideModal(id) { document.getElementById(id).classList.remove('show'); }
+function showToast(msg, type) {
+    type = type || 'success';
+    var t = document.createElement('div');
+    t.className = 'toast ' + type;
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(function() { t.remove(); }, 3000);
+}
+function formatTime(v) { return v ? String(v).replace('T', ' ').substring(0, 19) : '-'; }
+function escapeHtml(s) { if (!s) return ''; return String(s).replace(/[&<>"']/g, function(m) { return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]; }); }
+function escapeAttr(s) { if (!s) return ''; return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+//</#noparse>
+</script>
+</body>
+</html>

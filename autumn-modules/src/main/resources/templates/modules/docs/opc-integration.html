@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8"/>
+    <title>OPC 开放接入</title>
+    <link rel="stylesheet" href="/statics/css/signin.css"/>
+</head>
+<body>
+<div style="max-width:800px;margin:40px auto;padding:24px;">
+    <h2>OPC 开放接入</h2>
+    <p>完整文档见仓库 <code>docs/AI_OPC_INTEGRATION.md</code>。</p>
+    <h3>接入流程</h3>
+    <ol>
+        <li>向 opl 平台申请 appId / appSecret</li>
+        <li>配置 <code>opc_connect_app</code>（API 或后台）</li>
+        <li>用户访问 <code>/opc/oauth2/authorize?appId=...</code></li>
+        <li>回调 <code>/opc/oauth2/callback</code> 完成本地绑定与登录</li>
+    </ol>
+    <h3>配置项</h3>
+    <p><code>OPC_AUTO_REGISTER</code>：无绑定时是否自动注册本地用户（默认 true）。</p>
+</div>
+</body>
+</html>

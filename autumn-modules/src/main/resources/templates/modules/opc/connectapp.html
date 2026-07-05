@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>${lang.opc_connectapp_table_comment}</title>
+	<#include "/header.html">
+</head>
+<body>
+<div id="rrapp" v-cloak>
+    <div v-show="showList">
+        <div class="grid-btn">
+			<!--<#if shiro.hasPermission("opc:connectapp:save")>-->
+            <a class="btn btn-primary" @click="add"><i class="fa fa-plus"></i>&nbsp;${lang.sys_string_add}</a>
+			<!--</#if>-->
+			<!--<#if shiro.hasPermission("opc:connectapp:update")>-->
+            <a class="btn btn-primary" @click="update"><i class="fa fa-pencil-square-o"></i>&nbsp;${lang.sys_string_change}</a>
+			<!--</#if>-->
+			<!--<#if shiro.hasPermission("opc:connectapp:delete")>-->
+            <a class="btn btn-primary" @click="del"><i class="fa fa-trash-o"></i>&nbsp;${lang.sys_string_delete}</a>
+			<!--</#if>-->
+        </div>
+        <table id="jqGrid"></table>
+        <div id="jqGridPager"></div>
+    </div>
+
+    <div v-show="!showList" class="panel panel-default">
+        <div class="panel-heading">{{title}}</div>
+        <form class="form-horizontal">
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.opc_connectapp_column_uuid}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="connectApp.uuid" placeholder="${lang.opc_connectapp_column_uuid}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.opc_connectapp_column_user}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="connectApp.user" placeholder="${lang.opc_connectapp_column_user}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.opc_connectapp_column_app_id}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="connectApp.appId" placeholder="${lang.opc_connectapp_column_app_id}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.opc_connectapp_column_app_secret}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="connectApp.appSecret" placeholder="${lang.opc_connectapp_column_app_secret}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.opc_connectapp_column_platform_base_url}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="connectApp.platformBaseUrl" placeholder="${lang.opc_connectapp_column_platform_base_url}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.opc_connectapp_column_redirect_uri}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="connectApp.redirectUri" placeholder="${lang.opc_connectapp_column_redirect_uri}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.opc_connectapp_column_authorize_uri}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="connectApp.authorizeUri" placeholder="${lang.opc_connectapp_column_authorize_uri}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.opc_connectapp_column_token_uri}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="connectApp.tokenUri" placeholder="${lang.opc_connectapp_column_token_uri}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.opc_connectapp_column_user_info_uri}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="connectApp.userInfoUri" placeholder="${lang.opc_connectapp_column_user_info_uri}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.opc_connectapp_column_name}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="connectApp.name" placeholder="${lang.opc_connectapp_column_name}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.opc_connectapp_column_scope}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="connectApp.scope" placeholder="${lang.opc_connectapp_column_scope}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.opc_connectapp_column_status}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="connectApp.status" placeholder="${lang.opc_connectapp_column_status}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.opc_connectapp_column_create}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="connectApp.create" placeholder="${lang.opc_connectapp_column_create}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.opc_connectapp_column_update}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="connectApp.update" placeholder="${lang.opc_connectapp_column_update}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label"></div>
+                <input type="button" class="btn btn-primary" @click="saveOrUpdate" value="${lang.sys_string_confirm}"/>
+                &nbsp;&nbsp;<input type="button" class="btn btn-warning" @click="reload" value="${lang.sys_string_back}"/>
+            </div>
+        </form>
+    </div>
+</div>
+<script src="${request.contextPath}/modules/opc/connectapp.js?_${.now?long}"></script>
+</body>
+</html>

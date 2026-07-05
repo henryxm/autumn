@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>${lang.opc_connectbind_table_comment}</title>
+	<#include "/header.html">
+</head>
+<body>
+<div id="rrapp" v-cloak>
+    <div v-show="showList">
+        <div class="grid-btn">
+			<!--<#if shiro.hasPermission("opc:connectbind:save")>-->
+            <a class="btn btn-primary" @click="add"><i class="fa fa-plus"></i>&nbsp;${lang.sys_string_add}</a>
+			<!--</#if>-->
+			<!--<#if shiro.hasPermission("opc:connectbind:update")>-->
+            <a class="btn btn-primary" @click="update"><i class="fa fa-pencil-square-o"></i>&nbsp;${lang.sys_string_change}</a>
+			<!--</#if>-->
+			<!--<#if shiro.hasPermission("opc:connectbind:delete")>-->
+            <a class="btn btn-primary" @click="del"><i class="fa fa-trash-o"></i>&nbsp;${lang.sys_string_delete}</a>
+			<!--</#if>-->
+        </div>
+        <table id="jqGrid"></table>
+        <div id="jqGridPager"></div>
+    </div>
+
+    <div v-show="!showList" class="panel panel-default">
+        <div class="panel-heading">{{title}}</div>
+        <form class="form-horizontal">
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.opc_connectbind_column_uuid}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="connectBind.uuid" placeholder="${lang.opc_connectbind_column_uuid}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.opc_connectbind_column_connect_app}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="connectBind.connectApp" placeholder="${lang.opc_connectbind_column_connect_app}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.opc_connectbind_column_user}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="connectBind.user" placeholder="${lang.opc_connectbind_column_user}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.opc_connectbind_column_open_id}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="connectBind.openId" placeholder="${lang.opc_connectbind_column_open_id}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.opc_connectbind_column_union_id}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="connectBind.unionId" placeholder="${lang.opc_connectbind_column_union_id}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.opc_connectbind_column_create}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="connectBind.create" placeholder="${lang.opc_connectbind_column_create}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.opc_connectbind_column_update}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="connectBind.update" placeholder="${lang.opc_connectbind_column_update}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label"></div>
+                <input type="button" class="btn btn-primary" @click="saveOrUpdate" value="${lang.sys_string_confirm}"/>
+                &nbsp;&nbsp;<input type="button" class="btn btn-warning" @click="reload" value="${lang.sys_string_back}"/>
+            </div>
+        </form>
+    </div>
+</div>
+<script src="${request.contextPath}/modules/opc/connectbind.js?_${.now?long}"></script>
+</body>
+</html>

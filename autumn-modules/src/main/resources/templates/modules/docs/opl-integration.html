@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8"/>
+    <title>OPL 开放平台对接</title>
+    <link rel="stylesheet" href="/statics/css/signin.css"/>
+</head>
+<body>
+<div style="max-width:800px;margin:40px auto;padding:24px;">
+    <h2>OPL 开放平台对接</h2>
+    <p>完整文档见仓库 <code>docs/AI_OPL_INTEGRATION.md</code>。</p>
+    <h3>端点速查</h3>
+    <ul>
+        <li>开发者 API：<code>POST /opl/api/v1/account/open</code>、<code>/app/register</code></li>
+        <li>OAuth2：<code>/opl/oauth2/authorize</code> → <code>/token</code> → <code>/userInfo</code></li>
+    </ul>
+    <h3>标识说明</h3>
+    <ul>
+        <li><strong>appId</strong>：应用唯一标识（独立于 OAuth client_id）</li>
+        <li><strong>openId</strong>：<code>opl_open_identity</code>，App（appId）内唯一</li>
+        <li><strong>unionId</strong>：<code>opl_open_union</code>，开发者账号下唯一</li>
+    </ul>
+</div>
+</body>
+</html>

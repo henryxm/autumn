@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>开放平台统一管理</title>
+    <style>
+        :root {
+            --bg-page: #eef1f8;
+            --bg-elevated: #ffffff;
+            --brand-1: #0f766e;
+            --brand-2: #0369a1;
+            --text: #1a1d26;
+            --text-muted: #5c6370;
+            --border: #e8ecf4;
+            --radius: 12px;
+            --shadow-sm: 0 1px 3px rgba(26, 29, 38, 0.06);
+            --shadow-md: 0 8px 30px rgba(26, 29, 38, 0.08);
+            --shadow-lg: 0 24px 48px rgba(26, 29, 38, 0.12);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            height: 100%; width: 100%; overflow: hidden;
+            background: var(--bg-page); color: var(--text);
+        }
+        .container {
+            width: 100%; max-width: 1440px; height: 100vh; margin: 0 auto;
+            background: var(--bg-elevated);
+            display: flex; flex-direction: column; overflow: hidden;
+            box-shadow: var(--shadow-lg);
+        }
+        @media (min-width: 1441px) {
+            .container { margin-top: 12px; margin-bottom: 12px; height: calc(100vh - 24px); border-radius: 16px; }
+        }
+        .header {
+            position: relative;
+            background: linear-gradient(125deg, #0d9488 0%, #0284c7 52%, #2563eb 100%);
+            color: white; padding: 20px 28px 22px; text-align: center; flex-shrink: 0;
+        }
+        .header h1 { font-size: 1.45rem; font-weight: 700; margin-bottom: 6px; }
+        .header p { opacity: 0.92; font-size: 0.8rem; letter-spacing: 0.04em; text-transform: uppercase; }
+        .tabs {
+            display: flex; flex-wrap: wrap; background: linear-gradient(180deg, #fafbfd 0%, #f4f6fb 100%);
+            border-bottom: 1px solid var(--border); flex-shrink: 0; padding: 0 12px; gap: 4px;
+        }
+        .tab {
+            padding: 14px 18px; cursor: pointer; font-size: 14px; font-weight: 600;
+            color: var(--text-muted); border-bottom: 3px solid transparent; margin-bottom: -1px;
+            border-radius: 10px 10px 0 0;
+        }
+        .tab:hover { color: var(--brand-1); background: rgba(15, 118, 110, 0.06); }
+        .tab.active { color: var(--brand-1); border-bottom-color: var(--brand-1); background: var(--bg-elevated); }
+        .tab.hidden { display: none; }
+        .tab-panel { display: none; flex: 1; flex-direction: column; overflow: hidden; min-height: 0; }
+        .tab-panel.active { display: flex; }
+        .stats-bar {
+            background: linear-gradient(180deg, #f8f9fd 0%, #f3f5fa 100%);
+            padding: 16px 22px; border-bottom: 1px solid var(--border);
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; flex-shrink: 0;
+        }
+        .stat-item {
+            text-align: center; padding: 14px 10px; background: var(--bg-elevated);
+            border-radius: var(--radius); box-shadow: var(--shadow-sm); border: 1px solid var(--border);
+        }
+        .stat-value { font-size: 1.35rem; font-weight: 800; color: var(--brand-1); }
+        .stat-label { font-size: 11px; color: var(--text-muted); margin-top: 6px; font-weight: 500; }
+        .content { padding: 20px 24px; flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+        .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; flex-shrink: 0; }
+        .toolbar h2 { font-size: 1.1rem; font-weight: 800; }
+        .toolbar-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+        .toolbar-filters input, .toolbar-filters select {
+            padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; min-width: 140px;
+        }
+        .btn-group { display: flex; gap: 10px; flex-wrap: wrap; }
+        .btn {
+            padding: 9px 18px; border: none; border-radius: 10px; font-size: 13px; font-weight: 600;
+            cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; box-shadow: var(--shadow-sm);
+        }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-primary { background: linear-gradient(135deg, var(--brand-1), var(--brand-2)); color: white; }
+        .btn-primary:hover:not(:disabled) { transform: translateY(-1px); }
+        .btn-success { background: linear-gradient(135deg, #2dd4bf, #059669); color: white; }
+        .btn-info { background: linear-gradient(135deg, #38bdf8, #2563eb); color: white; }
+        .btn-warning { background: linear-gradient(135deg, #fcd34d, #f59e0b); color: #422006; }
+        .btn-secondary { background: #64748b; color: white; }
+        .btn-sm { padding: 6px 12px; font-size: 12px; }
+        .btn-xs { padding: 4px 10px; font-size: 11px; margin-right: 4px; }
+        .table-container { flex: 1; overflow: auto; border: 1px solid var(--border); border-radius: var(--radius); }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th, td { padding: 11px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+        th { background: #f8f9fd; font-weight: 700; font-size: 12px; position: sticky; top: 0; white-space: nowrap; z-index: 1; }
+        tbody tr:hover { background: rgba(15, 118, 110, 0.05); }
+        code { font-size: 12px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; word-break: break-all; }
+        .badge { padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+        .badge-success { background: #d1fae5; color: #065f46; }
+        .badge-danger { background: #fee2e2; color: #991b1b; }
+        .pagination { display: flex; justify-content: flex-end; align-items: center; gap: 10px; padding-top: 12px; flex-shrink: 0; }
+        .empty-hint { text-align: center; padding: 48px; color: var(--text-muted); }
+        .detail-banner {
+            background: linear-gradient(135deg, rgba(15,118,110,0.08), rgba(2,132,199,0.06));
+            border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 18px; margin-bottom: 16px;
+        }
+        .form-grid { display: grid; grid-template-columns: 120px 1fr; gap: 12px 16px; max-width: 720px; align-items: center; }
+        .form-grid label { font-weight: 600; font-size: 13px; color: var(--text-muted); }
+        .form-grid input, .form-grid select {
+            padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; width: 100%;
+        }
+        .detail-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; max-width: 480px; margin-top: 20px; }
+        .modal { display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.45); z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
+        .modal.show { display: flex; }
+        .modal-box {
+            background: white; border-radius: 16px; width: 100%; max-width: 520px;
+            box-shadow: var(--shadow-lg); overflow: hidden;
+        }
+        .modal-header { padding: 16px 20px; font-weight: 700; border-bottom: 1px solid var(--border); }
+        .modal-body { padding: 20px; }
+        .modal-footer { padding: 14px 20px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; }
+        .modal-body .field { margin-bottom: 14px; }
+        .modal-body .field label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--text-muted); }
+        .modal-body .field input, .modal-body .field select {
+            width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px;
+        }
+        .secret-box { background: #fff7ed; border: 1px solid #fdba74; border-radius: 8px; padding: 12px; word-break: break-all; font-size: 13px; line-height: 1.6; }
+        .toast {
+            position: fixed; bottom: 24px; right: 24px; padding: 12px 20px; border-radius: 10px;
+            color: white; font-size: 14px; font-weight: 600; z-index: 2000; box-shadow: var(--shadow-md);
+        }
+        .toast.success { background: #059669; }
+        .toast.error { background: #dc2626; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>开放平台统一管理</h1>
+        <p>Open Platform Management · appId / openId / unionId</p>
+    </div>
+
+    <div class="stats-bar" id="statsBar">
+        <div class="stat-item"><div class="stat-value" id="statAccount">0</div><div class="stat-label">开发者主体</div></div>
+        <div class="stat-item"><div class="stat-value" id="statApp">0</div><div class="stat-label">应用总数</div></div>
+        <div class="stat-item"><div class="stat-value" id="statActiveApp">0</div><div class="stat-label">正常应用</div></div>
+        <div class="stat-item"><div class="stat-value" id="statIdentity">0</div><div class="stat-label">App 用户</div></div>
+        <div class="stat-item"><div class="stat-value" id="statUnion">0</div><div class="stat-label">联合身份</div></div>
+        <div class="stat-item"><div class="stat-value" id="statCode">0</div><div class="stat-label">授权码</div></div>
+        <div class="stat-item"><div class="stat-value" id="statToken">0</div><div class="stat-label">令牌</div></div>
+    </div>
+
+    <div class="tabs" id="tabBar">
+        <div class="tab active" data-tab="apps" onclick="switchTab('apps')">应用管理</div>
+        <div class="tab" data-tab="accounts" onclick="switchTab('accounts')">开发者主体</div>
+        <div class="tab hidden" id="tabDetail" data-tab="detail" onclick="switchTab('detail')">App 详情</div>
+        <div class="tab" data-tab="users" onclick="switchTab('users')">App 用户</div>
+        <div class="tab" data-tab="unions" onclick="switchTab('unions')">联合身份</div>
+        <div class="tab" data-tab="codes" onclick="switchTab('codes')">授权码</div>
+        <div class="tab" data-tab="tokens" onclick="switchTab('tokens')">令牌</div>
+    </div>
+
+    <!-- 应用管理 -->
+    <div class="tab-panel active" id="panelApps">
+        <div class="content">
+            <div class="toolbar">
+                <h2>应用列表</h2>
+                <div class="toolbar-filters">
+                    <input type="text" id="filterAppKeyword" placeholder="搜索名称/appId" onkeydown="if(event.key==='Enter')loadApps(1)"/>
+                    <select id="filterAppAccount"><option value="">全部主体</option></select>
+                    <button class="btn btn-info btn-sm" onclick="loadApps(1)">查询</button>
+                    <button class="btn btn-success btn-sm" onclick="showCreateAppModal()">创建应用</button>
+                </div>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead><tr>
+                        <th>应用名称</th><th>appId</th><th>类型</th><th>主体</th><th>用户</th><th>授权码</th><th>令牌</th><th>状态</th><th>创建时间</th><th>操作</th>
+                    </tr></thead>
+                    <tbody id="appListBody"><tr><td colspan="10" class="empty-hint">加载中...</td></tr></tbody>
+                </table>
+            </div>
+            <div class="pagination" id="appPagination"></div>
+        </div>
+    </div>
+
+    <!-- 开发者主体 -->
+    <div class="tab-panel" id="panelAccounts">
+        <div class="content">
+            <div class="toolbar">
+                <h2>开发者主体</h2>
+                <div class="toolbar-filters">
+                    <input type="text" id="filterAccountKeyword" placeholder="名称/uuid/用户" onkeydown="if(event.key==='Enter')loadAccounts(1)"/>
+                    <button class="btn btn-info btn-sm" onclick="loadAccounts(1)">查询</button>
+                    <button class="btn btn-success btn-sm" onclick="showCreateAccountModal()">开通主体</button>
+                </div>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead><tr>
+                        <th>名称</th><th>uuid</th><th>绑定用户</th><th>用户名</th><th>App数</th><th>union数</th><th>状态</th><th>创建时间</th>
+                    </tr></thead>
+                    <tbody id="accountListBody"><tr><td colspan="8" class="empty-hint">加载中...</td></tr></tbody>
+                </table>
+            </div>
+            <div class="pagination" id="accountPagination"></div>
+        </div>
+    </div>
+
+    <!-- App 详情 -->
+    <div class="tab-panel" id="panelDetail">
+        <div class="content">
+            <div class="detail-banner" id="detailBanner">请选择应用</div>
+            <div class="form-grid">
+                <label>应用名称</label><input id="editName"/>
+                <label>应用类型</label><select id="editType"></select>
+                <label>回调地址</label><input id="editRedirect"/>
+                <label>授权范围</label><input id="editScope"/>
+            </div>
+            <div style="margin-top:16px;display:flex;gap:10px;">
+                <button class="btn btn-primary btn-sm" onclick="saveAppDetail()">保存</button>
+                <button class="btn btn-info btn-sm" onclick="viewSelectedAppUsers()">查看用户列表</button>
+            </div>
+            <div class="detail-stats">
+                <div class="stat-item"><div class="stat-value" id="detailUserCount">0</div><div class="stat-label">App 用户</div></div>
+                <div class="stat-item"><div class="stat-value" id="detailCodeCount">0</div><div class="stat-label">授权码</div></div>
+                <div class="stat-item"><div class="stat-value" id="detailTokenCount">0</div><div class="stat-label">令牌</div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- App 用户 -->
+    <div class="tab-panel" id="panelUsers">
+        <div class="content">
+            <div class="toolbar">
+                <h2>App 用户</h2>
+                <div class="toolbar-filters">
+                    <input type="text" id="filterUserAppId" placeholder="appId（必填）"/>
+                    <input type="text" id="filterUserKeyword" placeholder="openId/用户uuid"/>
+                    <button class="btn btn-info btn-sm" onclick="loadUsers(1)">查询</button>
+                </div>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead><tr><th>用户名</th><th>用户uuid</th><th>openId</th><th>unionId</th><th>appId</th><th>创建时间</th></tr></thead>
+                    <tbody id="userListBody"><tr><td colspan="6" class="empty-hint">请填写 appId 后查询</td></tr></tbody>
+                </table>
+            </div>
+            <div class="pagination" id="userPagination"></div>
+        </div>
+    </div>
+
+    <!-- 联合身份 -->
+    <div class="tab-panel" id="panelUnions">
+        <div class="content">
+            <div class="toolbar">
+                <h2>联合身份 unionId</h2>
+                <div class="toolbar-filters">
+                    <input type="text" id="filterUnionAccount" placeholder="开发者主体 uuid"/>
+                    <input type="text" id="filterUnionKeyword" placeholder="unionId/用户"/>
+                    <button class="btn btn-info btn-sm" onclick="loadUnions(1)">查询</button>
+                </div>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead><tr><th>unionId</th><th>用户名</th><th>用户uuid</th><th>主体uuid</th><th>创建时间</th></tr></thead>
+                    <tbody id="unionListBody"><tr><td colspan="5" class="empty-hint">点击查询加载</td></tr></tbody>
+                </table>
+            </div>
+            <div class="pagination" id="unionPagination"></div>
+        </div>
+    </div>
+
+    <!-- 授权码 -->
+    <div class="tab-panel" id="panelCodes">
+        <div class="content">
+            <div class="toolbar">
+                <h2>OAuth 授权码</h2>
+                <div class="toolbar-filters">
+                    <input type="text" id="filterCodeAppId" placeholder="appId"/>
+                    <button class="btn btn-info btn-sm" onclick="loadCodes(1)">查询</button>
+                </div>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead><tr><th>code</th><th>appId</th><th>用户</th><th>过期时间</th><th>创建时间</th></tr></thead>
+                    <tbody id="codeListBody"><tr><td colspan="5" class="empty-hint">点击查询加载</td></tr></tbody>
+                </table>
+            </div>
+            <div class="pagination" id="codePagination"></div>
+        </div>
+    </div>
+
+    <!-- 令牌 -->
+    <div class="tab-panel" id="panelTokens">
+        <div class="content">
+            <div class="toolbar">
+                <h2>访问令牌</h2>
+                <div class="toolbar-filters">
+                    <input type="text" id="filterTokenAppId" placeholder="appId"/>
+                    <button class="btn btn-info btn-sm" onclick="loadTokens(1)">查询</button>
+                </div>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead><tr><th>accessToken</th><th>openId</th><th>unionId</th><th>用户</th><th>appId</th><th>更新时间</th></tr></thead>
+                    <tbody id="tokenListBody"><tr><td colspan="6" class="empty-hint">点击查询加载</td></tr></tbody>
+                </table>
+            </div>
+            <div class="pagination" id="tokenPagination"></div>
+        </div>
+    </div>
+</div>
+
+<!-- 创建应用 -->
+<div class="modal" id="modalCreateApp">
+    <div class="modal-box">
+        <div class="modal-header">创建应用</div>
+        <div class="modal-body">
+            <div class="field"><label>开发者主体</label><select id="createAppAccount"></select></div>
+            <div class="field"><label>应用名称</label><input id="createAppName"/></div>
+            <div class="field"><label>应用类型</label><select id="createAppType"></select></div>
+            <div class="field"><label>回调地址</label><input id="createAppRedirect" placeholder="https://example.com/callback"/></div>
+            <div class="field"><label>授权范围</label><input id="createAppScope" value="basic"/></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary btn-sm" onclick="hideModal('modalCreateApp')">取消</button>
+            <button class="btn btn-primary btn-sm" onclick="submitCreateApp()">创建</button>
+        </div>
+    </div>
+</div>
+
+<!-- 开通主体 -->
+<div class="modal" id="modalCreateAccount">
+    <div class="modal-box">
+        <div class="modal-header">开通开发者主体</div>
+        <div class="modal-body">
+            <div class="field"><label>用户 uuid</label><input id="createAccountUser" placeholder="sys_user.uuid"/></div>
+            <div class="field"><label>主体名称</label><input id="createAccountName" value="开发者"/></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary btn-sm" onclick="hideModal('modalCreateAccount')">取消</button>
+            <button class="btn btn-primary btn-sm" onclick="submitCreateAccount()">开通</button>
+        </div>
+    </div>
+</div>
+
+<!-- 凭证展示 -->
+<div class="modal" id="modalSecret">
+    <div class="modal-box">
+        <div class="modal-header">应用凭证（请妥善保存）</div>
+        <div class="modal-body secret-box" id="secretContent"></div>
+        <div class="modal-footer">
+            <button class="btn btn-primary btn-sm" onclick="hideModal('modalSecret')">知道了</button>
+        </div>
+    </div>
+</div>
+
+<script>
+window.__CTX__ = '${request.contextPath!""}';
+window.__OPL_ADMIN_API__ = window.__CTX__ + '/opl/admin';
+</script>
+<script>
+//<#noparse>
+const API_BASE = (typeof window.__OPL_ADMIN_API__ === 'string' && window.__OPL_ADMIN_API__.length > 0)
+    ? window.__OPL_ADMIN_API__
+    : ((typeof window.__CTX__ === 'string') ? window.__CTX__ : '') + '/opl/admin';
+
+const state = {
+    tab: 'apps',
+    appTypes: [],
+    accountOptions: [],
+    selectedApp: null,
+    apps: { page: 1, totalPage: 1 },
+    accounts: { page: 1, totalPage: 1 },
+    users: { page: 1, totalPage: 1 },
+    unions: { page: 1, totalPage: 1 },
+    codes: { page: 1, totalPage: 1 },
+    tokens: { page: 1, totalPage: 1 }
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadOverview();
+    loadAppTypes();
+    loadAccountOptions();
+    loadApps(1);
+});
+
+function switchTab(tab) {
+    state.tab = tab;
+    document.querySelectorAll('.tab').forEach(function(el) {
+        if (el.classList.contains('hidden')) return;
+        el.classList.toggle('active', el.getAttribute('data-tab') === tab);
+    });
+    var panels = { apps: 'panelApps', accounts: 'panelAccounts', detail: 'panelDetail', users: 'panelUsers', unions: 'panelUnions', codes: 'panelCodes', tokens: 'panelTokens' };
+    Object.keys(panels).forEach(function(key) {
+        var panel = document.getElementById(panels[key]);
+        if (panel) panel.classList.toggle('active', key === tab);
+    });
+    if (tab === 'accounts' && !state.accounts.loaded) loadAccounts(1);
+}
+
+async function apiGet(path, params) {
+    var qs = new URLSearchParams(params || {}).toString();
+    var url = API_BASE + path + (qs ? ('?' + qs) : '');
+    var res = await fetch(url, { credentials: 'same-origin' });
+    return res.json();
+}
+
+async function apiPost(path, body) {
+    var res = await fetch(API_BASE + path, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body || {})
+    });
+    return res.json();
+}
+
+async function loadOverview() {
+    try {
+        var r = await apiGet('/overview');
+        if (r.code !== 0 || !r.data) return;
+        document.getElementById('statAccount').textContent = r.data.accountCount || 0;
+        document.getElementById('statApp').textContent = r.data.appCount || 0;
+        document.getElementById('statActiveApp').textContent = r.data.activeAppCount || 0;
+        document.getElementById('statIdentity').textContent = r.data.identityCount || 0;
+        document.getElementById('statUnion').textContent = r.data.unionCount || 0;
+        document.getElementById('statCode').textContent = r.data.codeCount || 0;
+        document.getElementById('statToken').textContent = r.data.tokenCount || 0;
+    } catch (e) { showToast('概览加载失败', 'error'); }
+}
+
+async function loadAppTypes() {
+    var r = await apiGet('/appTypes');
+    if (r.code === 0) state.appTypes = r.list || [];
+    fillTypeSelect(document.getElementById('createAppType'));
+    fillTypeSelect(document.getElementById('editType'));
+}
+
+function fillTypeSelect(select) {
+    if (!select) return;
+    select.innerHTML = '';
+    state.appTypes.forEach(function(t) {
+        var opt = document.createElement('option');
+        opt.value = t.value;
+        opt.textContent = t.label + ' (' + t.value + ')';
+        select.appendChild(opt);
+    });
+}
+
+async function loadAccountOptions() {
+    var r = await apiGet('/accounts/all');
+    if (r.code !== 0) return;
+    state.accountOptions = r.list || [];
+    var filter = document.getElementById('filterAppAccount');
+    var create = document.getElementById('createAppAccount');
+    filter.innerHTML = '<option value="">全部主体</option>';
+    create.innerHTML = '<option value="">请选择</option>';
+    state.accountOptions.forEach(function(a) {
+        var label = escapeHtml(a.name) + ' (' + escapeHtml(a.uuid) + ')';
+        filter.innerHTML += '<option value="' + escapeAttr(a.uuid) + '">' + label + '</option>';
+        create.innerHTML += '<option value="' + escapeAttr(a.uuid) + '">' + label + '</option>';
+    });
+}
+
+async function loadApps(page) {
+    state.apps.page = page;
+    var r = await apiGet('/apps', {
+        page: page, limit: 10,
+        keyword: document.getElementById('filterAppKeyword').value,
+        account: document.getElementById('filterAppAccount').value
+    });
+    var tbody = document.getElementById('appListBody');
+    if (r.code !== 0 || !r.page) {
+        tbody.innerHTML = '<tr><td colspan="10" class="empty-hint">' + escapeHtml(r.msg || '加载失败') + '</td></tr>';
+        return;
+    }
+    state.apps.totalPage = r.page.totalPage || 1;
+    var list = r.page.list || [];
+    if (!list.length) {
+        tbody.innerHTML = '<tr><td colspan="10" class="empty-hint">暂无应用</td></tr>';
+    } else {
+        tbody.innerHTML = list.map(function(item) {
+            var status = item.status === 1
+                ? '<span class="badge badge-success">正常</span>'
+                : '<span class="badge badge-danger">禁用</span>';
+            var toggleLabel = item.status === 1 ? '禁用' : '启用';
+            var nextStatus = item.status === 1 ? 0 : 1;
+            return '<tr>' +
+                '<td>' + escapeHtml(item.name) + '</td>' +
+                '<td><code>' + escapeHtml(item.appId) + '</code></td>' +
+                '<td>' + escapeHtml(item.appType || 'Web') + '</td>' +
+                '<td>' + escapeHtml(item.accountName || '') + '</td>' +
+                '<td>' + (item.userCount || 0) + '</td>' +
+                '<td>' + (item.codeCount || 0) + '</td>' +
+                '<td>' + (item.tokenCount || 0) + '</td>' +
+                '<td>' + status + '</td>' +
+                '<td>' + formatTime(item.create) + '</td>' +
+                '<td><button class="btn btn-info btn-xs" onclick="selectApp(\'' + escapeAttr(item.appId) + '\')">详情</button>' +
+                '<button class="btn btn-warning btn-xs" onclick="resetSecret(\'' + escapeAttr(item.appId) + '\',\'' + escapeAttr(item.name) + '\')">重置密钥</button>' +
+                '<button class="btn btn-secondary btn-xs" onclick="toggleAppStatus(\'' + escapeAttr(item.appId) + '\',' + nextStatus + ')">' + toggleLabel + '</button></td>' +
+                '</tr>';
+        }).join('');
+    }
+    renderPagination('appPagination', state.apps.page, state.apps.totalPage, loadApps);
+}
+
+async function loadAccounts(page) {
+    state.accounts.page = page;
+    state.accounts.loaded = true;
+    var r = await apiGet('/accounts', { page: page, limit: 10, keyword: document.getElementById('filterAccountKeyword').value });
+    var tbody = document.getElementById('accountListBody');
+    if (r.code !== 0 || !r.page) {
+        tbody.innerHTML = '<tr><td colspan="8" class="empty-hint">加载失败</td></tr>';
+        return;
+    }
+    state.accounts.totalPage = r.page.totalPage || 1;
+    var list = r.page.list || [];
+    tbody.innerHTML = list.length ? list.map(function(item) {
+        var status = item.status === 1 ? '<span class="badge badge-success">正常</span>' : '<span class="badge badge-danger">禁用</span>';
+        return '<tr><td>' + escapeHtml(item.name) + '</td><td><code>' + escapeHtml(item.uuid) + '</code></td>' +
+            '<td><code>' + escapeHtml(item.user) + '</code></td><td>' + escapeHtml(item.username) + '</td>' +
+            '<td>' + (item.appCount || 0) + '</td><td>' + (item.unionCount || 0) + '</td><td>' + status + '</td><td>' + formatTime(item.create) + '</td></tr>';
+    }).join('') : '<tr><td colspan="8" class="empty-hint">暂无数据</td></tr>';
+    renderPagination('accountPagination', state.accounts.page, state.accounts.totalPage, loadAccounts);
+}
+
+async function selectApp(appId) {
+    var r = await apiGet('/app/detail', { appId: appId });
+    if (r.code !== 0 || !r.app) { showToast(r.msg || '加载失败', 'error'); return; }
+    state.selectedApp = r.app;
+    document.getElementById('tabDetail').classList.remove('hidden');
+    document.getElementById('detailBanner').innerHTML = '<strong>' + escapeHtml(r.app.name) + '</strong> · <code>' + escapeHtml(r.app.appId) + '</code> · ' + escapeHtml(r.app.appType || 'Web') + ' · 主体：' + escapeHtml(r.app.accountName || '');
+    document.getElementById('editName').value = r.app.name || '';
+    document.getElementById('editType').value = r.app.appType || 'Web';
+    document.getElementById('editRedirect').value = r.app.redirectUri || '';
+    document.getElementById('editScope').value = r.app.scope || 'basic';
+    document.getElementById('detailUserCount').textContent = r.app.userCount || 0;
+    document.getElementById('detailCodeCount').textContent = r.app.codeCount || 0;
+    document.getElementById('detailTokenCount').textContent = r.app.tokenCount || 0;
+    document.getElementById('filterUserAppId').value = r.app.appId;
+    document.getElementById('filterCodeAppId').value = r.app.appId;
+    document.getElementById('filterTokenAppId').value = r.app.appId;
+    document.getElementById('filterUnionAccount').value = r.app.account || '';
+    switchTab('detail');
+}
+
+async function saveAppDetail() {
+    if (!state.selectedApp) return;
+    var r = await apiPost('/app/update', {
+        appId: state.selectedApp.appId,
+        name: document.getElementById('editName').value,
+        appType: document.getElementById('editType').value,
+        redirectUri: document.getElementById('editRedirect').value,
+        scope: document.getElementById('editScope').value
+    });
+    if (r.code === 0) {
+        showToast('保存成功');
+        selectApp(state.selectedApp.appId);
+        loadApps(state.apps.page);
+        loadOverview();
+    } else showToast(r.msg || '保存失败', 'error');
+}
+
+function viewSelectedAppUsers() {
+    if (state.selectedApp) document.getElementById('filterUserAppId').value = state.selectedApp.appId;
+    switchTab('users');
+    loadUsers(1);
+}
+
+async function loadUsers(page) {
+    var appId = document.getElementById('filterUserAppId').value.trim();
+    if (!appId) { showToast('请填写 appId', 'error'); return; }
+    state.users.page = page;
+    var r = await apiGet('/app/users', { page: page, limit: 10, appId: appId, keyword: document.getElementById('filterUserKeyword').value });
+    var tbody = document.getElementById('userListBody');
+    if (r.code !== 0 || !r.page) {
+        tbody.innerHTML = '<tr><td colspan="6" class="empty-hint">' + escapeHtml(r.msg || '查询失败') + '</td></tr>';
+        return;
+    }
+    state.users.totalPage = r.page.totalPage || 1;
+    var list = r.page.list || [];
+    tbody.innerHTML = list.length ? list.map(function(item) {
+        return '<tr><td>' + escapeHtml(item.username) + '</td><td><code>' + escapeHtml(item.user) + '</code></td>' +
+            '<td><code>' + escapeHtml(item.openId) + '</code></td><td><code>' + escapeHtml(item.unionId || '-') + '</code></td>' +
+            '<td><code>' + escapeHtml(item.appId) + '</code></td><td>' + formatTime(item.create) + '</td></tr>';
+    }).join('') : '<tr><td colspan="6" class="empty-hint">无数据</td></tr>';
+    renderPagination('userPagination', state.users.page, state.users.totalPage, loadUsers);
+}
+
+async function loadUnions(page) {
+    state.unions.page = page;
+    var r = await apiGet('/unions', { page: page, limit: 10, account: document.getElementById('filterUnionAccount').value, keyword: document.getElementById('filterUnionKeyword').value });
+    var tbody = document.getElementById('unionListBody');
+    if (r.code !== 0 || !r.page) { tbody.innerHTML = '<tr><td colspan="5" class="empty-hint">加载失败</td></tr>'; return; }
+    state.unions.totalPage = r.page.totalPage || 1;
+    var list = r.page.list || [];
+    tbody.innerHTML = list.length ? list.map(function(item) {
+        return '<tr><td><code>' + escapeHtml(item.unionId) + '</code></td><td>' + escapeHtml(item.username) + '</td>' +
+            '<td><code>' + escapeHtml(item.user) + '</code></td><td><code>' + escapeHtml(item.account) + '</code></td><td>' + formatTime(item.create) + '</td></tr>';
+    }).join('') : '<tr><td colspan="5" class="empty-hint">无数据</td></tr>';
+    renderPagination('unionPagination', state.unions.page, state.unions.totalPage, loadUnions);
+}
+
+async function loadCodes(page) {
+    state.codes.page = page;
+    var r = await apiGet('/codes', { page: page, limit: 10, appId: document.getElementById('filterCodeAppId').value });
+    var tbody = document.getElementById('codeListBody');
+    if (r.code !== 0 || !r.page) { tbody.innerHTML = '<tr><td colspan="5" class="empty-hint">加载失败</td></tr>'; return; }
+    state.codes.totalPage = r.page.totalPage || 1;
+    var list = r.page.list || [];
+    tbody.innerHTML = list.length ? list.map(function(item) {
+        return '<tr><td><code>' + escapeHtml(item.code) + '</code></td><td><code>' + escapeHtml(item.appId) + '</code></td>' +
+            '<td>' + escapeHtml(item.username) + '<br/><code>' + escapeHtml(item.user) + '</code></td>' +
+            '<td>' + formatTime(item.expire) + '</td><td>' + formatTime(item.create) + '</td></tr>';
+    }).join('') : '<tr><td colspan="5" class="empty-hint">无数据</td></tr>';
+    renderPagination('codePagination', state.codes.page, state.codes.totalPage, loadCodes);
+}
+
+async function loadTokens(page) {
+    state.tokens.page = page;
+    var r = await apiGet('/tokens', { page: page, limit: 10, appId: document.getElementById('filterTokenAppId').value });
+    var tbody = document.getElementById('tokenListBody');
+    if (r.code !== 0 || !r.page) { tbody.innerHTML = '<tr><td colspan="6" class="empty-hint">加载失败</td></tr>'; return; }
+    state.tokens.totalPage = r.page.totalPage || 1;
+    var list = r.page.list || [];
+    tbody.innerHTML = list.length ? list.map(function(item) {
+        return '<tr><td><code>' + escapeHtml(item.accessToken) + '</code></td><td><code>' + escapeHtml(item.openId) + '</code></td>' +
+            '<td><code>' + escapeHtml(item.unionId) + '</code></td><td>' + escapeHtml(item.username) + '</td>' +
+            '<td><code>' + escapeHtml(item.appId) + '</code></td><td>' + formatTime(item.updateTime) + '</td></tr>';
+    }).join('') : '<tr><td colspan="6" class="empty-hint">无数据</td></tr>';
+    renderPagination('tokenPagination', state.tokens.page, state.tokens.totalPage, loadTokens);
+}
+
+function showCreateAppModal() {
+    fillTypeSelect(document.getElementById('createAppType'));
+    loadAccountOptions().then(function() { showModal('modalCreateApp'); });
+}
+
+function showCreateAccountModal() { showModal('modalCreateAccount'); }
+
+async function submitCreateApp() {
+    var r = await apiPost('/app/create', {
+        account: document.getElementById('createAppAccount').value,
+        name: document.getElementById('createAppName').value,
+        appType: document.getElementById('createAppType').value,
+        redirectUri: document.getElementById('createAppRedirect').value,
+        scope: document.getElementById('createAppScope').value
+    });
+    if (r.code === 0) {
+        hideModal('modalCreateApp');
+        showSecretModal(r.data);
+        loadApps(1);
+        loadOverview();
+        loadAccountOptions();
+    } else showToast(r.msg || '创建失败', 'error');
+}
+
+async function submitCreateAccount() {
+    var r = await apiPost('/account/create', {
+        user: document.getElementById('createAccountUser').value,
+        name: document.getElementById('createAccountName').value
+    });
+    if (r.code === 0) {
+        hideModal('modalCreateAccount');
+        showToast('开通成功');
+        loadAccounts(1);
+        loadAccountOptions();
+        loadOverview();
+    } else showToast(r.msg || '开通失败', 'error');
+}
+
+async function resetSecret(appId, name) {
+    if (!confirm('确定重置应用「' + name + '」的 appSecret？旧密钥将立即失效。')) return;
+    var r = await apiPost('/app/resetSecret', { appId: appId });
+    if (r.code === 0 && r.data) showSecretModal(r.data);
+    else showToast(r.msg || '重置失败', 'error');
+}
+
+async function toggleAppStatus(appId, status) {
+    var r = await apiPost('/app/status', { appId: appId, status: status });
+    if (r.code === 0) { loadApps(state.apps.page); loadOverview(); showToast('状态已更新'); }
+    else showToast(r.msg || '操作失败', 'error');
+}
+
+function showSecretModal(data) {
+    document.getElementById('secretContent').innerHTML =
+        '<p><strong>appId：</strong><code>' + escapeHtml(data.appId) + '</code></p>' +
+        '<p><strong>appSecret（仅此次显示）：</strong></p><p><code>' + escapeHtml(data.appSecret) + '</code></p>';
+    showModal('modalSecret');
+}
+
+function renderPagination(id, page, totalPage, loader) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = '<button class="btn btn-secondary btn-sm" ' + (page <= 1 ? 'disabled' : '') + ' onclick="' + loader.name + '(' + (page - 1) + ')">上一页</button>' +
+        '<span>' + page + ' / ' + totalPage + '</span>' +
+        '<button class="btn btn-secondary btn-sm" ' + (page >= totalPage ? 'disabled' : '') + ' onclick="' + loader.name + '(' + (page + 1) + ')">下一页</button>';
+}
+
+function showModal(id) { document.getElementById(id).classList.add('show'); }
+function hideModal(id) { document.getElementById(id).classList.remove('show'); }
+
+function showToast(msg, type) {
+    type = type || 'success';
+    var t = document.createElement('div');
+    t.className = 'toast ' + type;
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(function() { t.remove(); }, 3000);
+}
+
+function formatTime(value) {
+    if (!value) return '-';
+    if (typeof value === 'number') return new Date(value).toLocaleString('zh-CN');
+    return String(value).replace('T', ' ').substring(0, 19);
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/[&<>"']/g, function(m) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m];
+    });
+}
+
+function escapeAttr(str) {
+    if (!str) return '';
+    return String(str).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+}
+//</#noparse>
+</script>
+</body>
+</html>
