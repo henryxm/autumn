@@ -166,13 +166,31 @@ public class UserProfileService extends ModuleService<UserProfileDao, UserProfil
             }
             UserProfileEntity userProfileEntity = baseMapper.getByUuid(userProfile.getUuid());
             if (null == userProfileEntity) {
-                sysUserEntity = sysUserService.newUser(userProfile.getUsername(), userProfile.getUuid(), Uuid.uuid(), null);
+                sysUserEntity = sysUserService.getByUuid(userProfile.getUuid());
+                if (sysUserEntity == null) {
+                    throw new IllegalStateException("本地用户不存在，请先完成账号绑定");
+                }
                 userProfileEntity = from(sysUserEntity);
             }
             if (null == sysUserEntity)
                 sysUserEntity = sysUserService.getByUuid(userProfileEntity.getUuid());
             sysUserService.login(new OauthUsernameToken(sysUserEntity.getUuid()));
         }
+    }
+
+    /** OAuth 绑定解析完成后建立 Session：要求本地用户已存在，不自动建号。 */
+    public void establishSession(UserProfile userProfile) {
+        if (userProfile == null || StringUtils.isBlank(userProfile.getUuid())) {
+            throw new IllegalStateException("本地用户不存在");
+        }
+        if (ShiroUtils.isLogin() && userProfile.getUuid().equalsIgnoreCase(ShiroUtils.getUserUuid())) {
+            return;
+        }
+        SysUserEntity sysUserEntity = sysUserService.getByUuid(userProfile.getUuid());
+        if (sysUserEntity == null) {
+            throw new IllegalStateException("本地用户不存在");
+        }
+        sysUserService.login(new OauthUsernameToken(sysUserEntity.getUuid()));
     }
 
     public UserProfileEntity getByUuid(String uuid) {

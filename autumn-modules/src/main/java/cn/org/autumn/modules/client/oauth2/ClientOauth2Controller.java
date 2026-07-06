@@ -1,21 +1,18 @@
 package cn.org.autumn.modules.client.oauth2;
 
 import cn.org.autumn.config.ApplicationInitializationProgress;
-import cn.org.autumn.modules.oauth.oauth2.support.OAuth2HttpClient;
 import cn.org.autumn.modules.client.entity.WebAuthenticationEntity;
+import cn.org.autumn.modules.client.oauth2.WebOauthBindException.ConflictType;
 import cn.org.autumn.modules.client.service.WebAuthenticationService;
+import cn.org.autumn.modules.client.service.WebOauthBindService;
+import cn.org.autumn.modules.client.service.WebOauthLoginService;
 import cn.org.autumn.modules.sys.service.SysConfigService;
-import cn.org.autumn.modules.sys.shiro.ShiroUtils;
-import cn.org.autumn.modules.usr.dto.UserProfile;
-import cn.org.autumn.modules.usr.service.UserProfileService;
-import cn.org.autumn.modules.usr.service.UserTokenService;
 import cn.org.autumn.site.HealthFactory;
 import cn.org.autumn.site.PageFactory;
 import cn.org.autumn.site.VersionFactory;
 import cn.org.autumn.utils.IPUtils;
 import cn.org.autumn.utils.R;
 import cn.org.autumn.utils.WebPathUtils;
-import com.alibaba.fastjson.JSON;
 import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -27,7 +24,9 @@ import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 @Controller
@@ -39,16 +38,16 @@ public class ClientOauth2Controller {
     WebAuthenticationService webAuthenticationService;
 
     @Autowired
-    UserProfileService userProfileService;
-
-    @Autowired
     SysConfigService sysConfigService;
 
     @Autowired
-    UserTokenService userTokenService;
+    PageFactory pageFactory;
 
     @Autowired
-    PageFactory pageFactory;
+    WebOauthLoginService webOauthLoginService;
+
+    @Autowired
+    WebOauthBindService webOauthBindService;
 
     @Autowired
     HealthFactory healthFactory;
@@ -58,9 +57,6 @@ public class ClientOauth2Controller {
 
     @Autowired(required = false)
     ApplicationInitializationProgress applicationInitializationProgress;
-
-    @Autowired
-    OAuth2HttpClient oauth2HttpClient;
 
     @RequestMapping("oauth2/callback")
     public Object defaultCodeCallback(HttpServletRequest request, HttpServletResponse response, Model model) throws OAuthSystemException {
@@ -80,21 +76,21 @@ public class ClientOauth2Controller {
         if (StringUtils.isEmpty(authCode)) {
             return authCallbackErrorPage(request, response, model, OAuthError.OAUTH_ERROR, "未收到授权码，请重新发起授权。");
         }
-        if (ShiroUtils.needLogin()) {
-            String host = request.getHeader("host");
-            if (log.isDebugEnabled())
-                log.debug("Login domain:{}", host);
-            WebAuthenticationEntity webAuthenticationEntity = webAuthenticationService.getByClientId(host);
-            if (null == webAuthenticationEntity)
-                webAuthenticationEntity = webAuthenticationService.getByClientId(sysConfigService.getOauth2LoginClientId(host));
-            String accessToken = getAccessToken(webAuthenticationEntity, authCode);
-            UserProfile userProfile = getUserInfo(webAuthenticationEntity, accessToken);
-            if (null != userProfile) {
-                userProfileService.login(userProfile);
-                userTokenService.saveToken(accessToken);
-                if (log.isDebugEnabled())
-                    log.debug("Login user:{}", userProfile);
+        WebAuthenticationEntity webAuthenticationEntity = resolveWebAuth(request);
+        if (webAuthenticationEntity == null) {
+            return authCallbackErrorPage(request, response, model, OAuthError.OAUTH_ERROR, "未找到 OAuth 客户端配置，请联系管理员。");
+        }
+        try {
+            webOauthLoginService.completeOAuthCallback(request, webAuthenticationEntity, authCode);
+        } catch (WebOauthBindException e) {
+            log.warn("OAuth bind conflict: type={}, clientId={}", e.getConflictType(), e.getClientId());
+            if (e.getConflictType() == ConflictType.UPSTREAM_UUID_INVALID) {
+                return authCallbackErrorPage(request, response, model, OAuthError.OAUTH_ERROR, "授权用户信息无效，请重新发起授权。");
             }
+            return authCallbackConflictPage(request, response, model, e);
+        } catch (Exception e) {
+            log.error("OAuth callback failed: {}", e.getMessage());
+            return authCallbackErrorPage(request, response, model, OAuthError.OAUTH_ERROR, "授权登录失败，请稍后重试。");
         }
         String callback = WebPathUtils.safeOauthCallbackForClient(request, request.getParameter("callback"));
         if (StringUtils.isBlank(callback)) {
@@ -103,6 +99,37 @@ public class ClientOauth2Controller {
         if (log.isDebugEnabled())
             log.debug("Callback URL:{}", callback);
         return pageFactory.direct(request, response, model, callback);
+    }
+
+    @ResponseBody
+    @PostMapping("oauth2/bind/unbind")
+    public R unbind(HttpServletRequest request, @RequestParam(required = false) String clientId) {
+        WebAuthenticationEntity webAuth = resolveWebAuth(request, clientId);
+        if (webAuth == null) {
+            return R.error("未找到 OAuth 客户端配置");
+        }
+        try {
+            webOauthBindService.unbindForSessionUser(webAuth);
+            return R.ok();
+        } catch (IllegalStateException e) {
+            return R.error(e.getMessage());
+        }
+    }
+
+    private WebAuthenticationEntity resolveWebAuth(HttpServletRequest request) {
+        return resolveWebAuth(request, null);
+    }
+
+    private WebAuthenticationEntity resolveWebAuth(HttpServletRequest request, String clientId) {
+        if (StringUtils.isNotBlank(clientId)) {
+            return webAuthenticationService.getByClientId(clientId.trim());
+        }
+        String host = request.getHeader("host");
+        WebAuthenticationEntity webAuthenticationEntity = webAuthenticationService.getByClientId(host);
+        if (webAuthenticationEntity == null) {
+            webAuthenticationEntity = webAuthenticationService.getByClientId(sysConfigService.getOauth2LoginClientId(host));
+        }
+        return webAuthenticationEntity;
     }
 
     private Object authCallbackErrorPage(HttpServletRequest request, HttpServletResponse response, Model model, String error, String description) {
@@ -121,28 +148,42 @@ public class ClientOauth2Controller {
         return pageFactory.authCallbackError(request, response, model);
     }
 
-    private String getAccessToken(WebAuthenticationEntity webAuthClientEntity, String oauthCode) {
-        String state = webAuthClientEntity.getState();
-        String scope = webAuthClientEntity.getScope();
-        if (null == state) {
-            state = "state";
-        }
-        if (StringUtils.isEmpty(scope)) {
-            scope = "all";
-        }
-        String body = oauth2HttpClient.exchangeAuthorizationCodeRaw(OAuth2HttpClient.CredentialParam.OAUTH, webAuthClientEntity.getAccessTokenUri(), webAuthClientEntity.getClientId(), webAuthClientEntity.getClientSecret(), oauthCode, webAuthClientEntity.getRedirectUri());
-        log.debug(body);
-        return body;
+    private Object authCallbackConflictPage(HttpServletRequest request, HttpServletResponse response, Model model, WebOauthBindException e) {
+        model.addAttribute("oauthError", "bind_conflict");
+        model.addAttribute("conflictType", e.getConflictType().name());
+        model.addAttribute("loginUrl", WebPathUtils.forBrowser(request, "/login"));
+        model.addAttribute("logoutUrl", WebPathUtils.forBrowser(request, "/logout"));
+        model.addAttribute("manageUrl", WebPathUtils.forBrowser(request, "/modules/client/weboauthbind"));
+        model.addAttribute("title", "账号绑定冲突");
+        model.addAttribute("message", buildConflictMessage(e));
+        model.addAttribute("conflictSolutions", buildConflictSolutions(e));
+        return pageFactory.authCallbackError(request, response, model);
     }
 
-    public UserProfile getUserInfo(WebAuthenticationEntity webAuthClientEntity, String accessToken) {
-        try {
-            String userinfo = oauth2HttpClient.fetchUserInfoBody(webAuthClientEntity.getUserInfoUri(), accessToken, OAuth2HttpClient.UserInfoDelivery.LEGACY);
-            return JSON.parseObject(userinfo, UserProfile.class);
-        } catch (Exception e) {
-            log.error("getUserInfo error：" + e.getMessage());
+    private String buildConflictMessage(WebOauthBindException e) {
+        if (e.getConflictType() == ConflictType.UPSTREAM_BOUND_TO_OTHER) {
+            return "该上游授权账号已与其他本地用户绑定，无法与当前登录账号关联。";
         }
-        return null;
+        if (e.getConflictType() == ConflictType.LOCAL_ALREADY_BOUND) {
+            return "您当前登录的本地账号已绑定其他上游授权账号，无法重复绑定。";
+        }
+        return "授权用户信息无效，请重新发起授权。";
+    }
+
+    private String buildConflictSolutions(WebOauthBindException e) {
+        StringBuilder sb = new StringBuilder();
+        if (e.getConflictType() == ConflictType.UPSTREAM_BOUND_TO_OTHER) {
+            sb.append("① 退出当前本地账号后，使用已绑定的账号重新登录，再发起授权；\n");
+            sb.append("② 保持当前账号，请管理员在后台解除该上游账号的原绑定关系；\n");
+            sb.append("③ 登录后调用解绑接口（若您拥有该上游账号绑定权）解除冲突绑定，再重新授权。");
+        } else if (e.getConflictType() == ConflictType.LOCAL_ALREADY_BOUND) {
+            sb.append("① 先解除当前本地账号的上游绑定（登录态下 POST client/oauth2/bind/unbind），再重新授权；\n");
+            sb.append("② 退出当前账号，换用未绑定的本地账号登录后重新授权；\n");
+            sb.append("③ 联系管理员在后台调整绑定关系。");
+        } else {
+            sb.append("请重新发起授权；若问题持续，请联系管理员。");
+        }
+        return sb.toString();
     }
 
     @ResponseBody

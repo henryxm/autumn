@@ -65,12 +65,19 @@
 
 ## 4. 本地用户绑定
 
-`ConnectBindService.resolveAndBind` 顺序：
+`ConnectBindService.resolveAndBind(app, userInfo, platformUser)` 顺序：
 
-1. `(connectApp, openId)` 已绑定 → 登录本地用户
-2. `(connectApp, unionId)` 已绑定 → 更新 openId 并登录
-3. 无绑定且 `OPC_AUTO_REGISTER=true`（默认）→ 自动注册并绑定
-4. 否则需管理员在 `opcmanage` 手工绑定
+1. `(connectApp, openId)` 已绑定 → 同平台校验 **platformUser** 一致 → **幂等** 返回本地用户
+2. `(connectApp, unionId)` 已绑定 → 更新 openId 后同上
+3. **同平台**（`appId` 在本地 OPL 注册）且 token 含 **platformUser** → 绑定到该本地用户，**不**自动注册
+4. 无绑定且 `OPC_AUTO_REGISTER=true`（默认）→ 自动注册并绑定（跨实例）
+5. 否则需管理员在 `opcmanage` 手工绑定
+
+**platformUser** 仅同 JVM 内通过 `OpenPlatformService.resolvePlatformUserUuid` 解析，不经 HTTP userInfo 暴露；与 OPC 回调域名、Session 无关。
+
+**自助解绑**：登录态 `POST /open/oauth2/bind/unbind?appId=...`。
+
+**表约束**：`opc_connect_bind` 对 `(connectApp, openId)` 与 `(connectApp, user)` 各一唯一索引。
 
 ---
 

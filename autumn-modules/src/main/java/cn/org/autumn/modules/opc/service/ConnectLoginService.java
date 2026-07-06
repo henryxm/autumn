@@ -1,10 +1,13 @@
 package cn.org.autumn.modules.opc.service;
 
+import cn.org.autumn.modules.opc.dto.ConnectBindResolveResult;
 import cn.org.autumn.modules.opc.dto.OpcTokenResult;
+import cn.org.autumn.modules.opc.dto.OpcUserInfoResult;
 import cn.org.autumn.modules.opc.entity.ConnectAppEntity;
+import cn.org.autumn.modules.opc.support.ConnectBindException;
 import cn.org.autumn.modules.usr.dto.UserProfile;
 import cn.org.autumn.modules.usr.service.UserProfileService;
-import cn.org.autumn.opl.model.OpenUserInfoSnapshot;
+import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,11 +26,14 @@ public class ConnectLoginService {
     private UserProfileService userProfileService;
 
     @Transactional(rollbackFor = Exception.class)
-    public UserProfile completeOAuthCallback(ConnectAppEntity app, String code) {
+    public ConnectBindResolveResult completeOAuthCallback(ConnectAppEntity app, String code) {
         OpcTokenResult token = connectOauthService.exchangeCode(app, code);
-        OpenUserInfoSnapshot userInfo = connectOauthService.fetchUserInfo(app, token.getAccessToken());
-        UserProfile profile = connectBindService.resolveAndBind(app, userInfo);
-        userProfileService.login(profile);
-        return profile;
+        OpcUserInfoResult userInfoResult = connectOauthService.fetchUserInfoForBind(app, token.getAccessToken());
+        if (userInfoResult == null || userInfoResult.getSnapshot() == null || StringUtils.isBlank(userInfoResult.getSnapshot().getOpenId())) {
+            throw ConnectBindException.invalidUserInfo(app);
+        }
+        ConnectBindResolveResult result = connectBindService.resolveAndBind(app, userInfoResult.getSnapshot(), userInfoResult.getPlatformUser());
+        userProfileService.establishSession(result.getProfile());
+        return result;
     }
 }

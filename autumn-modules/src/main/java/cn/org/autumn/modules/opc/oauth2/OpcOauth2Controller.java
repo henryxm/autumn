@@ -2,8 +2,12 @@ package cn.org.autumn.modules.opc.oauth2;
 
 import cn.org.autumn.modules.opc.entity.ConnectAppEntity;
 import cn.org.autumn.modules.opc.service.ConnectAppService;
+import cn.org.autumn.modules.opc.service.ConnectBindService;
 import cn.org.autumn.modules.opc.service.ConnectLoginService;
 import cn.org.autumn.modules.opc.service.ConnectOauthService;
+import cn.org.autumn.utils.R;
+import cn.org.autumn.modules.opc.support.ConnectBindException;
+import cn.org.autumn.modules.opc.support.ConnectBindException.ConflictType;
 import cn.org.autumn.modules.opc.support.OpenOAuthStateSupport;
 import cn.org.autumn.opc.OpcConstants;
 import cn.org.autumn.site.PageFactory;
@@ -18,8 +22,10 @@ import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.view.RedirectView;
 
 /** OPC OAuth2 客户端入口：跳转远程 OPL 授权、处理回调。 */
@@ -38,7 +44,28 @@ public class OpcOauth2Controller {
     private ConnectLoginService connectLoginService;
 
     @Autowired
+    private ConnectBindService connectBindService;
+
+    @Autowired
     private PageFactory pageFactory;
+
+    @ResponseBody
+    @PostMapping("bind/unbind")
+    public R unbind(@RequestParam(required = false) String appId) {
+        if (StringUtils.isBlank(appId)) {
+            return R.error("缺少 appId 参数");
+        }
+        ConnectAppEntity app = connectAppService.getByAppId(appId.trim());
+        if (app == null) {
+            return R.error("未找到接入应用配置");
+        }
+        try {
+            connectBindService.unbindForSessionUser(app);
+            return R.ok();
+        } catch (IllegalStateException e) {
+            return R.error(e.getMessage());
+        }
+    }
 
     @RequestMapping(OpcConstants.NS + "/authorize")
     public Object authorize(HttpServletRequest request, HttpServletResponse response, Model model,
@@ -93,6 +120,12 @@ public class OpcOauth2Controller {
         }
         try {
             connectLoginService.completeOAuthCallback(app, code);
+        } catch (ConnectBindException e) {
+            log.warn("opc oauth bind conflict: type={}, appId={}", e.getConflictType(), e.getAppId());
+            if (e.getConflictType() == ConflictType.USERINFO_INVALID) {
+                return authCallbackErrorPage(request, response, model, OAuthError.OAUTH_ERROR, "授权用户信息无效，请重新发起授权。");
+            }
+            return authCallbackConflictPage(request, response, model, e);
         } catch (Exception e) {
             log.error("opc oauth callback failed: {}", e.getMessage());
             return authCallbackErrorPage(request, response, model, OAuthError.OAUTH_ERROR, "授权登录失败，请稍后重试。");
@@ -121,5 +154,43 @@ public class OpcOauth2Controller {
             model.addAttribute("message", "授权未能完成，请稍后重试。");
         }
         return pageFactory.authCallbackError(request, response, model);
+    }
+
+    private Object authCallbackConflictPage(HttpServletRequest request, HttpServletResponse response, Model model, ConnectBindException e) {
+        model.addAttribute("oauthError", "bind_conflict");
+        model.addAttribute("conflictType", e.getConflictType().name());
+        model.addAttribute("loginUrl", WebPathUtils.forBrowser(request, "/login"));
+        model.addAttribute("logoutUrl", WebPathUtils.forBrowser(request, "/logout"));
+        model.addAttribute("manageUrl", WebPathUtils.forBrowser(request, "/modules/opc/connectbind"));
+        model.addAttribute("title", "账号绑定冲突");
+        model.addAttribute("message", buildConflictMessage(e));
+        model.addAttribute("conflictSolutions", buildConflictSolutions(e));
+        return pageFactory.authCallbackError(request, response, model);
+    }
+
+    private String buildConflictMessage(ConnectBindException e) {
+        if (e.getConflictType() == ConflictType.UPSTREAM_BOUND_TO_OTHER) {
+            return "该开放平台账号已与其他本地用户绑定，无法关联到当前授权用户。";
+        }
+        if (e.getConflictType() == ConflictType.LOCAL_ALREADY_BOUND) {
+            return "该本地用户已绑定其他开放平台账号，无法重复绑定。";
+        }
+        return "授权用户信息无效，请重新发起授权。";
+    }
+
+    private String buildConflictSolutions(ConnectBindException e) {
+        StringBuilder sb = new StringBuilder();
+        if (e.getConflictType() == ConflictType.UPSTREAM_BOUND_TO_OTHER) {
+            sb.append("① 使用已绑定的本地账号登录后重试；\n");
+            sb.append("② 在「接入绑定管理」或后台解除原绑定关系；\n");
+            sb.append("③ 换用未冲突的开放平台账号重新授权。");
+        } else if (e.getConflictType() == ConflictType.LOCAL_ALREADY_BOUND) {
+            sb.append("① 先解除当前本地账号的开放平台绑定（登录态下 POST open/oauth2/bind/unbind?appId=...），再重新授权；\n");
+            sb.append("② 换用未绑定的本地账号登录后再授权；\n");
+            sb.append("③ 联系管理员在后台调整绑定关系。");
+        } else {
+            sb.append("请重新发起授权；若问题持续，请联系管理员。");
+        }
+        return sb.toString();
     }
 }

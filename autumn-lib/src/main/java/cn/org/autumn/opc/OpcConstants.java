@@ -51,4 +51,7 @@ public final class OpcConstants {
 
     /** 自动注册本地用户时的用户名前缀 */
     public static final String AUTO_REGISTER_USERNAME_PREFIX = "opc_";
+
+    /** 自动注册本地用户时用户名冲突重试次数 */
+    public static final int AUTO_REGISTER_USERNAME_RETRY = 5;
 }
