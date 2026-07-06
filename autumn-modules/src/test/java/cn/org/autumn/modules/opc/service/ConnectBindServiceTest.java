@@ -95,7 +95,7 @@ public class ConnectBindServiceTest {
 
         Assert.assertFalse(result.isIdempotent());
         Assert.assertEquals(LOCAL_A, result.getProfile().getUuid());
-        Mockito.verify(connectBindDao).insert(Mockito.argThat(bind -> OPEN_ID.equals(bind.getOpenId()) && LOCAL_A.equals(bind.getUser())));
+        Mockito.verify(connectBindDao).insert(Mockito.argThat((ConnectBindEntity bind) -> OPEN_ID.equals(bind.getOpenId()) && LOCAL_A.equals(bind.getUser())));
         Mockito.verify(sysUserService, Mockito.never()).provisionConnectUser(Mockito.anyString(), Mockito.anyString());
     }
 

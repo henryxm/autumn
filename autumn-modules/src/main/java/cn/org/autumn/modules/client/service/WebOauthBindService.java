@@ -16,7 +16,7 @@ import cn.org.autumn.modules.usr.dto.UserProfile;
 import cn.org.autumn.modules.usr.entity.UserProfileEntity;
 import cn.org.autumn.modules.usr.service.UserProfileService;
 import cn.org.autumn.utils.Uuid;
-import com.baomidou.mybatisplus.mapper.EntityWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.qiniu.util.Md5;
 import java.util.Date;
 import java.util.List;
@@ -107,7 +107,7 @@ public class WebOauthBindService extends ModuleService<WebOauthBindDao, WebOauth
         if (obj == null || StringUtils.isBlank(obj.getUuid())) {
             return;
         }
-        List<WebOauthBindEntity> binds = baseMapper.selectList(new EntityWrapper<WebOauthBindEntity>().eq("user", obj.getUuid()));
+        List<WebOauthBindEntity> binds = baseMapper.selectList(new QueryWrapper<WebOauthBindEntity>().eq("user", obj.getUuid()));
         if (binds == null || binds.isEmpty()) {
             return;
         }

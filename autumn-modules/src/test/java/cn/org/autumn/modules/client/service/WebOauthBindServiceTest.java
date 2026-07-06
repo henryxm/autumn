@@ -95,7 +95,7 @@ public class WebOauthBindServiceTest {
 
         Assert.assertFalse(result.isIdempotent());
         Assert.assertEquals(LOCAL_B, result.getProfile().getUuid());
-        Mockito.verify(webOauthBindDao).insert(Mockito.argThat(bind -> UPSTREAM_A.equals(bind.getUpper()) && LOCAL_B.equals(bind.getUser())));
+        Mockito.verify(webOauthBindDao).insert(Mockito.argThat((WebOauthBindEntity bind) -> UPSTREAM_A.equals(bind.getUpper()) && LOCAL_B.equals(bind.getUser())));
     }
 
     @Test
@@ -112,7 +112,7 @@ public class WebOauthBindServiceTest {
 
         Assert.assertTrue(result.isIdempotent());
         Assert.assertEquals(LOCAL_A, result.getProfile().getUuid());
-        Mockito.verify(webOauthBindDao).insert(Mockito.argThat(bind -> LOCAL_A.equals(bind.getUpper()) && LOCAL_A.equals(bind.getUser())));
+        Mockito.verify(webOauthBindDao).insert(Mockito.argThat((WebOauthBindEntity bind) -> LOCAL_A.equals(bind.getUpper()) && LOCAL_A.equals(bind.getUser())));
         Mockito.verify(sysUserService, Mockito.never()).provisionConnectUser(Mockito.anyString(), Mockito.anyString());
     }
 
@@ -219,7 +219,7 @@ public class WebOauthBindServiceTest {
 
         Assert.assertFalse(result.isIdempotent());
         Assert.assertEquals(UPSTREAM_A, result.getProfile().getUuid());
-        Mockito.verify(webOauthBindDao).insert(Mockito.argThat(bind -> UPSTREAM_A.equals(bind.getUpper()) && UPSTREAM_A.equals(bind.getUser())));
+        Mockito.verify(webOauthBindDao).insert(Mockito.argThat((WebOauthBindEntity bind) -> UPSTREAM_A.equals(bind.getUpper()) && UPSTREAM_A.equals(bind.getUser())));
         Mockito.verify(sysUserService, Mockito.never()).provisionConnectUser(Mockito.anyString(), Mockito.anyString());
     }
 
