@@ -33,6 +33,14 @@ class HttpNavigationUtilsTest {
         assertTrue(HttpNavigationUtils.isLikelyBrowserDocumentUrl("/index.html", null));
         assertTrue(HttpNavigationUtils.isLikelyBrowserDocumentUrl("/", "spm=demo.portal"));
         assertTrue(HttpNavigationUtils.isLikelyBrowserDocumentUrl("/oauth2/authorize", "client_id=x"));
+        assertTrue(HttpNavigationUtils.isLikelyBrowserDocumentUrl("/open/oauth2/authorize", "app_id=x"));
+    }
+
+    @Test
+    void isOauthAuthorizeConsentPath_coversAsAndOpenPlatformAuthorize() {
+        assertTrue(HttpNavigationUtils.isOauthAuthorizeConsentPath("/oauth2/authorize"));
+        assertTrue(HttpNavigationUtils.isOauthAuthorizeConsentPath("/open/oauth2/authorize"));
+        assertFalse(HttpNavigationUtils.isOauthAuthorizeConsentPath("/oauth2/token"));
     }
 
     @Test

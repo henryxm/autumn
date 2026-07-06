@@ -94,7 +94,7 @@ public class HttpClientUtils {
                 .setConnectTimeout(timeout)
                 .setConnectionRequestTimeout(1000)
                 .setSocketTimeout(timeout).build();
-        return doGet(url, param, header, config);
+        return doPost(url, param, header, config);
     }
 
     public static String doPost(String url, Map<String, String> param, Map<String, String> header, RequestConfig config) {

@@ -10,6 +10,8 @@ $(function () {
 			{ label: '${lang.opl_opencode_column_redirect_uri}', name: 'redirectUri', index: 'redirect_uri', width: 80 }, 
 			{ label: '${lang.opl_opencode_column_expire}', name: 'expire', index: 'expire', width: 80 }, 
 			{ label: '${lang.opl_opencode_column_create}', name: 'create', index: 'create', width: 80 }, 
+			{ label: '${lang.opl_opencode_column_code_challenge}', name: 'codeChallenge', index: 'code_challenge', width: 80 }, 
+			{ label: '${lang.opl_opencode_column_code_challenge_method}', name: 'codeChallengeMethod', index: 'code_challenge_method', width: 80 }, 
         ],
 		viewrecords: true,
         height: 385,

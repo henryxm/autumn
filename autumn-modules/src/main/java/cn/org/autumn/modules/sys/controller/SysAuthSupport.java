@@ -45,7 +45,7 @@ public final class SysAuthSupport {
     }
 
     static String resolveLoginPagePath(HttpServletRequest request) {
-        return WebPathUtils.forBrowser(request, "/login.html");
+        return WebPathUtils.forBrowser(request, "/login");
     }
 
     static R validateCaptcha(String captcha) {

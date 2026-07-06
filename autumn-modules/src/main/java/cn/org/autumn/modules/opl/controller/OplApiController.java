@@ -30,7 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @Slf4j
 @RestController
-@RequestMapping(OplConstants.API_V1_BASE)
+@RequestMapping(OplConstants.API_PLATFORM)
 public class OplApiController {
 
     @Autowired
@@ -71,7 +71,7 @@ public class OplApiController {
         }
     }
 
-    @PostMapping("/app/list")
+    @PostMapping("/" + OplConstants.NS + "/app/list")
     @Authenticated
     public Response<List<OpenAppSnapshot>> listApps(@Valid @RequestBody(required = false) Request<?> request, UserContext context, HttpServletRequest servlet) {
         try {

@@ -42,8 +42,9 @@
 - **`docs/AI_QRC_API.md`**：**QRC API 参考**（Web/APP/Open/Webhook）
 - **`docs/AI_QRC_INTEGRATION.md`**：**第三方集成标准**（Autumn/非 Autumn）
 - **`docs/AI_QRC_CLIENT_API.md`**：**APP 扫码确认手册**
+- **`docs/AI_AUTH_LOGIN_MODES.md`**：**双轨授权登录开发手册**（OAuth2 `uuid` 与 OPL/OPC `openId` 并行体系、自连/第三方全拓扑、选型与防迷路）
 - **`docs/AI_OAUTH_INTEGRATION.md`**：**OAuth2 第三方对接手册**（授权码模式、token、userInfo、账号绑定）
-- **`docs/AI_OPL_INTEGRATION.md`**：**OPL 开放平台对接手册**（appId/openId/unionId、独立 OAuth2 `/opl/oauth2/*`）
+- **`docs/AI_OPL_INTEGRATION.md`**：**OPL 开放平台对接手册**（appId/openId/unionId、OAuth2 `/open/oauth2/*`）
 - **`docs/AI_OPL_SPI.md`**：**OPL 扩展标准**（`cn.org.autumn.opl` Service/Extension、事件、业务模块扩展清单）
 - **`docs/AI_OPC_INTEGRATION.md`**：**OPC 开放接入手册**（本系统作为第三方接入 opl、本地用户绑定）
 - **`docs/AI_ACCOUNT_AUTH_CONFIG.md`**：**账号认证配置**（`ACCOUNT_AUTH_CONFIG`、`postLoginRedirect` 登录后跳转、json_type 字段刷新 API/管理页）
@@ -70,6 +71,7 @@
 - **机器人模块框架内开发**（`cn.org.autumn.modules.bot`、改 Controller/Service/实体）：上列文档 + `docs/AI_STANDARDS.md` + `docs/AI_DATABASE.md` + `docs/AI_CODEGEN.md`
 - **支付密码 / 安全凭证**（`cn.org.autumn.modules.safe`）：`docs/AI_BOOT.md` + `docs/AI_MAP.md` + **`docs/AI_SAFE_CREDENTIAL_CLIENT_API.md`**（客户端）+ **`docs/AI_SAFE_CREDENTIAL.md`** + **`docs/AI_SAFE_CREDENTIAL_INTEGRATION.md`**（业务仓）+ `docs/AI_STANDARDS.md` + `docs/AI_CRYPTO.md`（传输加密）
 - **扫码登录 QRC**（`cn.org.autumn.modules.qrc`）：`docs/AI_BOOT.md` + `docs/AI_MAP.md` + **`docs/AI_QRC.md`** + **`docs/AI_QRC_API.md`** + **`docs/AI_QRC_INTEGRATION.md`**（第三方）+ **`docs/AI_QRC_CLIENT_API.md`**（APP）+ `docs/AI_STANDARDS.md`（集成测试：`web/.../ScanLoginIntegrationTest`）
+- **授权登录 / 第三方账号对接（OAuth2 与开放平台选型）**：**`docs/AI_AUTH_LOGIN_MODES.md`**（**首选总览**，含 §3 Parallel Profile）+ 按角色追加下述子文档
 - **OAuth2 第三方登录 / 用户信息对接**（`cn.org.autumn.modules.oauth`）：**`docs/AI_OAUTH_INTEGRATION.md`** + **`docs/AI_QRC_INTEGRATION.md`**（含扫码分支）+ 站内 `/modules/docs/auth-flow`
 - **OPL 开放平台**（`cn.org.autumn.modules.opl`）：**`docs/AI_OPL_INTEGRATION.md`**（HTTP 对接）+ **`docs/AI_OPL_SPI.md`**（Service/Extension 扩展）+ **`docs/AI_OPC_INTEGRATION.md`**（RP 接入）
 - **登录后跳转 / 账号认证 JSON 配置**（`AccountAuthConfig`、`postLoginRedirect`、json 配置刷新）：**`docs/AI_ACCOUNT_AUTH_CONFIG.md`**（叠加 **`docs/AI_SESSION_GUARD.md`** 若涉及会话过期提示）

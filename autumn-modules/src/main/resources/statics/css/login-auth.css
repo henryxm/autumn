@@ -465,7 +465,8 @@ body.oauth-authorize-mode .login-shell { max-width: 920px; }
 }
 .oauth-session-label { font-size: 12px; color: var(--login-muted); margin: 0 0 4px; }
 .oauth-session-name { font-size: 18px; font-weight: 700; color: var(--login-text); margin: 0 0 8px; }
-.oauth-session-hint { font-size: 13px; color: var(--login-muted); margin: 0 0 20px; line-height: 1.6; }
+.oauth-session-hint { font-size: 13px; color: var(--login-muted); margin: 0 0 12px; line-height: 1.6; }
+.oauth-session-subhint { font-size: 12px; color: var(--login-muted); margin: 0 0 14px; line-height: 1.5; opacity: 0.9; }
 .oauth-session-logout {
   display: inline-flex;
   align-items: center;

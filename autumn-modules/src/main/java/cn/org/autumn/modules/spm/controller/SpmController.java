@@ -51,6 +51,9 @@ public class SpmController {
     }
 
     public boolean isActive(HttpServletRequest request) {
+        if (ShiroUtils.isLogin()) {
+            return true;
+        }
         String sessionId = request.getSession().getId();
         return active.contains(sessionId);
     }

@@ -71,6 +71,14 @@ public class PageFactory extends Factory {
         return invoke("login", "login", httpServletRequest, httpServletResponse, model);
     }
 
+    public String register(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        return invoke("register", "register", httpServletRequest, httpServletResponse, model);
+    }
+
+    public String forgotPassword(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        return invoke("forgotPassword", "forgotpassword", httpServletRequest, httpServletResponse, model);
+    }
+
     public String logout(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
         return invoke("logout", "login", httpServletRequest, httpServletResponse, model);
     }
@@ -148,5 +156,33 @@ public class PageFactory extends Factory {
 
     public String dbmanage(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
         return invoke("dbmanage", "dbmanage", httpServletRequest, httpServletResponse, model);
+    }
+
+    public String oauthAuthorize(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        return invoke("oauthAuthorize", "login", httpServletRequest, httpServletResponse, model);
+    }
+
+    public String oplAuthorize(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        return invoke("oplAuthorize", "login", httpServletRequest, httpServletResponse, model);
+    }
+
+    public String oauthLoginEntry(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        return invoke("oauthLoginEntry", "oauth2/login", httpServletRequest, httpServletResponse, model);
+    }
+
+    public String oauthLoginSuccess(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        return invoke("oauthLoginSuccess", "oauth2/success", httpServletRequest, httpServletResponse, model);
+    }
+
+    public String openLoginEntry(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        return invoke("openLoginEntry", "open/oauth2/login", httpServletRequest, httpServletResponse, model);
+    }
+
+    public String openLoginSuccess(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        return invoke("openLoginSuccess", "open/oauth2/success", httpServletRequest, httpServletResponse, model);
+    }
+
+    public String authCallbackError(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        return invoke("authCallbackError", "oauth2/callback-error", httpServletRequest, httpServletResponse, model);
     }
 }

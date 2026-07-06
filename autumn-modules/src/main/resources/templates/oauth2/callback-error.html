@@ -80,13 +80,13 @@
       <h1>${title!'授权未完成'}</h1>
       <p>${message!'授权未能完成，请稍后重试。'}</p>
       <div class="actions">
-        <a class="btn btn-primary" href="${loginUrl!'login.html'}">返回登录</a>
+        <a class="btn btn-primary" href="${loginUrl!'/login'}">返回登录</a>
         <#if retryUrl?? && retryUrl?has_content>
         <a class="btn btn-ghost" href="${retryUrl}">重新授权</a>
         </#if>
       </div>
     </div>
-    <p class="foot">&copy; Autumn Framework</p>
+    <p class="foot">&copy; ${siteName!'Autumn Framework'}</p>
   </div>
 </body>
 </html>

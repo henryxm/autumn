@@ -53,6 +53,20 @@ class WebPathUtilsTest {
     }
 
     @Test
+    void safePostLoginRedirect_allowsOpenPlatformAuthorizePage() {
+        MockHttpServletRequest request = loginRequest();
+        String target = "/open/oauth2/authorize?app_id=ax7f8da3af683d45ba&redirect_uri=http%3A%2F%2Fexample%2Fcb&response_type=code&scope=basic&state=s1";
+        assertEquals(target, WebPathUtils.safePostLoginRedirect(request, target));
+    }
+
+    @Test
+    void safeOauthCallbackForClient_allowsOpenPlatformAuthorizePage() {
+        MockHttpServletRequest request = loginRequest();
+        String target = "/open/oauth2/authorize?app_id=test&redirect_uri=http%3A%2F%2Fexample%2Fcb&response_type=code";
+        assertEquals(target, WebPathUtils.safeOauthCallbackForClient(request, target));
+    }
+
+    @Test
     void safePostLoginRedirect_respectsContextPath() {
         MockHttpServletRequest request = loginRequest();
         request.setContextPath("/app");

@@ -571,6 +571,7 @@
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
                         <input type="text" id="searchInput" placeholder="搜索应用标识或名称…" oninput="filterList()"/>
                     </div>
+                    <button class="btn btn-ghost btn-sm" onclick="openOauthLoginPage()">🔗 OAuth 登录页</button>
                     <button class="btn btn-ghost btn-sm" onclick="openAuthFlowDoc()">📖 流程说明</button>
                     <button class="btn btn-ghost btn-sm" onclick="loadList()">↻ 刷新</button>
                     <button class="btn btn-primary btn-sm" onclick="openCreateModal()">＋ 新建</button>
@@ -945,6 +946,10 @@ function renderOauthForm() {
         formField('o_grantTypes', '授权方式', o.grantTypes, { full: true }) +
         formField('o_redirectUri', '回调地址', o.redirectUri, { full: true }) +
         formField('o_description', '备注说明', o.description, { type: 'textarea', full: true }) +
+        '</div></div></div>' +
+        '<div class="form-card" style="margin-top:16px;"><div class="form-card-head"><h3>流程联调</h3><p>同实例端到端测试：OAuth 登录页 → AS 授权 → 回调成功页</p></div><div class="form-card-body"><div class="btn-group">' +
+        '<button type="button" class="btn btn-ghost btn-sm" onclick="openOauthLoginPage(bundle.clientId)">打开 OAuth 登录页</button>' +
+        '<button type="button" class="btn btn-primary btn-sm" onclick="openAsAuthorizePage()">打开 AS 授权页</button>' +
         '</div></div></div>';
 }
 
@@ -1096,6 +1101,31 @@ async function loadTickets() {
 
 function prevTicketPage() { if (ticketPage > 1) { ticketPage--; loadTickets(); } }
 function nextTicketPage() { if (ticketPage < ticketTotalPage) { ticketPage++; loadTickets(); } }
+
+function appOrigin() {
+    return window.location.origin + (window.__CTX__ || '');
+}
+
+function openOauthLoginPage(clientId) {
+    var url = appOrigin() + '/oauth2/login';
+    if (clientId) {
+        url += '?clientId=' + encodeURIComponent(clientId);
+    }
+    window.open(url, '_blank');
+}
+
+function openAsAuthorizePage() {
+    if (!bundle || !bundle.clientId) {
+        showToast('请先选择应用', false);
+        return;
+    }
+    var o = bundle.oauth || {};
+    var redirect = (o.redirectUri || '').trim() || appOrigin() + '/client/oauth2/callback';
+    var state = 'hub_' + Math.random().toString(36).slice(2, 10);
+    var url = appOrigin() + '/oauth2/authorize?response_type=code&client_id=' + encodeURIComponent(bundle.clientId)
+        + '&redirect_uri=' + encodeURIComponent(redirect) + '&scope=basic&state=' + encodeURIComponent(state);
+    window.open(url, '_blank');
+}
 
 document.getElementById('createModal').addEventListener('click', function(e) {
     if (e.target === this) closeCreateModal();

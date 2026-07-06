@@ -40,4 +40,10 @@ public class OpenCodeEntity implements Serializable {
 
     @Column(type = DataType.DATETIME, comment = "创建:创建时间")
     private Date create;
+
+    @Column(length = 128, comment = "PKCE:code_challenge")
+    private String codeChallenge;
+
+    @Column(length = 16, comment = "PKCE:code_challenge_method")
+    private String codeChallengeMethod;
 }

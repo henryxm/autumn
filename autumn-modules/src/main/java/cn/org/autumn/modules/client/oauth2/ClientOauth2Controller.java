@@ -1,6 +1,7 @@
 package cn.org.autumn.modules.client.oauth2;
 
 import cn.org.autumn.config.ApplicationInitializationProgress;
+import cn.org.autumn.modules.oauth.oauth2.support.OAuth2HttpClient;
 import cn.org.autumn.modules.client.entity.WebAuthenticationEntity;
 import cn.org.autumn.modules.client.service.WebAuthenticationService;
 import cn.org.autumn.modules.sys.service.SysConfigService;
@@ -11,26 +12,18 @@ import cn.org.autumn.modules.usr.service.UserTokenService;
 import cn.org.autumn.site.HealthFactory;
 import cn.org.autumn.site.PageFactory;
 import cn.org.autumn.site.VersionFactory;
-import cn.org.autumn.utils.HttpClientUtils;
 import cn.org.autumn.utils.IPUtils;
 import cn.org.autumn.utils.R;
 import cn.org.autumn.utils.WebPathUtils;
 import com.alibaba.fastjson.JSON;
-import java.util.HashMap;
 import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
-import org.apache.oltu.oauth2.client.OAuthClient;
-import org.apache.oltu.oauth2.client.URLConnectionClient;
-import org.apache.oltu.oauth2.client.request.OAuthBearerClientRequest;
-import org.apache.oltu.oauth2.client.request.OAuthClientRequest;
-import org.apache.oltu.oauth2.client.response.OAuthResourceResponse;
 import org.apache.oltu.oauth2.common.OAuth;
 import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
-import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -66,6 +59,9 @@ public class ClientOauth2Controller {
     @Autowired(required = false)
     ApplicationInitializationProgress applicationInitializationProgress;
 
+    @Autowired
+    OAuth2HttpClient oauth2HttpClient;
+
     @RequestMapping("oauth2/callback")
     public Object defaultCodeCallback(HttpServletRequest request, HttpServletResponse response, Model model) throws OAuthSystemException {
         if (log.isDebugEnabled()) {
@@ -78,11 +74,11 @@ public class ClientOauth2Controller {
         }
         String oauthError = request.getParameter("error");
         if (StringUtils.isNotBlank(oauthError)) {
-            return oauthCallbackErrorPage(request, model, oauthError, request.getParameter("error_description"));
+            return authCallbackErrorPage(request, response, model, oauthError, request.getParameter("error_description"));
         }
         String authCode = request.getParameter(OAuth.OAUTH_CODE);
         if (StringUtils.isEmpty(authCode)) {
-            return oauthCallbackErrorPage(request, model, OAuthError.OAUTH_ERROR, "未收到授权码，请重新发起授权。");
+            return authCallbackErrorPage(request, response, model, OAuthError.OAUTH_ERROR, "未收到授权码，请重新发起授权。");
         }
         if (ShiroUtils.needLogin()) {
             String host = request.getHeader("host");
@@ -102,16 +98,16 @@ public class ClientOauth2Controller {
         }
         String callback = WebPathUtils.safeOauthCallbackForClient(request, request.getParameter("callback"));
         if (StringUtils.isBlank(callback)) {
-            callback = WebPathUtils.forBrowser(request, "/");
+            callback = WebPathUtils.forBrowser(request, "/oauth2/success");
         }
         if (log.isDebugEnabled())
             log.debug("Callback URL:{}", callback);
         return pageFactory.direct(request, response, model, callback);
     }
 
-    private String oauthCallbackErrorPage(HttpServletRequest request, Model model, String error, String description) {
+    private Object authCallbackErrorPage(HttpServletRequest request, HttpServletResponse response, Model model, String error, String description) {
         model.addAttribute("oauthError", error);
-        model.addAttribute("loginUrl", WebPathUtils.forBrowser(request, "/login.html"));
+        model.addAttribute("loginUrl", WebPathUtils.forBrowser(request, "/login"));
         if ("access_denied".equalsIgnoreCase(error)) {
             model.addAttribute("title", "授权已取消");
             model.addAttribute("message", "您已取消授权，应用无法获取您的账号信息。如需使用相关功能，请重新发起授权并点击确认。");
@@ -122,39 +118,26 @@ public class ClientOauth2Controller {
             model.addAttribute("title", "授权未完成");
             model.addAttribute("message", "授权未能完成，请稍后重试。");
         }
-        return "oauth2/callback-error";
+        return pageFactory.authCallbackError(request, response, model);
     }
 
     private String getAccessToken(WebAuthenticationEntity webAuthClientEntity, String oauthCode) {
-        String clientSecret = webAuthClientEntity.getClientSecret();
-        String redirectUrl = webAuthClientEntity.getRedirectUri();
-        Map<String, String> paramMap = new HashMap<>();
         String state = webAuthClientEntity.getState();
         String scope = webAuthClientEntity.getScope();
-        if (null == state)
+        if (null == state) {
             state = "state";
-        if (StringUtils.isEmpty(scope))
+        }
+        if (StringUtils.isEmpty(scope)) {
             scope = "all";
-        paramMap.put(OAuth.OAUTH_STATE, state);
-        paramMap.put(OAuth.OAUTH_SCOPE, scope);
-        paramMap.put(OAuth.OAUTH_REDIRECT_URI, webAuthClientEntity.getRedirectUri());
-        paramMap.put(OAuth.OAUTH_GRANT_TYPE, String.valueOf(GrantType.AUTHORIZATION_CODE));
-        paramMap.put(OAuth.OAUTH_CLIENT_ID, webAuthClientEntity.getClientId());
-        paramMap.put(OAuth.OAUTH_CODE, oauthCode);
-        paramMap.put(OAuth.OAUTH_CLIENT_SECRET, clientSecret);
-        String accessToken = HttpClientUtils.doPost(webAuthClientEntity.getAccessTokenUri(), paramMap);
-        log.debug(accessToken);
-        return accessToken;
+        }
+        String body = oauth2HttpClient.exchangeAuthorizationCodeRaw(OAuth2HttpClient.CredentialParam.OAUTH, webAuthClientEntity.getAccessTokenUri(), webAuthClientEntity.getClientId(), webAuthClientEntity.getClientSecret(), oauthCode, webAuthClientEntity.getRedirectUri());
+        log.debug(body);
+        return body;
     }
 
     public UserProfile getUserInfo(WebAuthenticationEntity webAuthClientEntity, String accessToken) {
-        String userInfo = webAuthClientEntity.getUserInfoUri();
-        OAuthClient oAuthClient = new OAuthClient(new URLConnectionClient());
-        OAuthClientRequest authUserRequest;
         try {
-            authUserRequest = new OAuthBearerClientRequest(userInfo).setAccessToken(accessToken).buildQueryMessage();
-            OAuthResourceResponse resourceResponse = oAuthClient.resource(authUserRequest, OAuth.HttpMethod.GET, OAuthResourceResponse.class);
-            String userinfo = resourceResponse.getBody();
+            String userinfo = oauth2HttpClient.fetchUserInfoBody(webAuthClientEntity.getUserInfoUri(), accessToken, OAuth2HttpClient.UserInfoDelivery.LEGACY);
             return JSON.parseObject(userinfo, UserProfile.class);
         } catch (Exception e) {
             log.error("getUserInfo error：" + e.getMessage());

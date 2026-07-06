@@ -13,6 +13,7 @@ import cn.org.autumn.modules.usr.interceptor.AuthorizationInterceptor;
 import cn.org.autumn.modules.wall.service.IpWhiteService;
 import cn.org.autumn.modules.wall.site.WallDefault;
 import cn.org.autumn.site.AuthPageAttributes;
+import cn.org.autumn.site.AuthPageSupport;
 import cn.org.autumn.site.PageFactory;
 import cn.org.autumn.site.PluginFactory;
 import cn.org.autumn.thread.TagTaskExecutor;
@@ -60,6 +61,9 @@ public class SysPageController implements ErrorController {
     @Autowired
     TagTaskExecutor tagTaskExecutor;
 
+    @Autowired
+    AuthPageSupport authPageSupport;
+
     List<String> active = new ArrayList<>();
 
     @RequestMapping("modules/{module}/{url}")
@@ -98,6 +102,9 @@ public class SysPageController implements ErrorController {
             }
             return pageFactory.index(httpServletRequest, httpServletResponse, model);
         }
+        if (ShiroUtils.needLogin()) {
+            return "redirect:" + WebPathUtils.forBrowser(httpServletRequest, "/login");
+        }
         return pageFactory._404(httpServletRequest, httpServletResponse, model);
     }
 
@@ -110,6 +117,9 @@ public class SysPageController implements ErrorController {
     }
 
     public boolean isActive(HttpServletRequest request) {
+        if (ShiroUtils.isLogin()) {
+            return true;
+        }
         String sessionId = request.getSession().getId();
         return active.contains(sessionId);
     }
@@ -126,44 +136,46 @@ public class SysPageController implements ErrorController {
     public String index1(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
         if (isActive(httpServletRequest))
             return "index1";
+        if (ShiroUtils.needLogin()) {
+            return "redirect:" + WebPathUtils.forBrowser(httpServletRequest, "/login");
+        }
         return pageFactory._404(httpServletRequest, httpServletResponse, model);
     }
 
-    @RequestMapping("login.html")
+    @RequestMapping({"login.html", "login"})
     public String login(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
         return pageFactory.login(httpServletRequest, httpServletResponse, model);
     }
 
-    @RequestMapping("login")
-    public String loginAlias(HttpServletRequest request) {
-        String query = request.getQueryString();
-        String target = WebPathUtils.forBrowser(request, "/login.html");
-        if (StringUtils.isNotBlank(query)) {
-            target = target + "?" + query;
-        }
-        return "redirect:" + target;
+    @RequestMapping({"oauth2/success.html", "oauth2/success"})
+    @SkipInterceptor(AuthorizationInterceptor.class)
+    public String oauthLoginSuccess(HttpServletRequest request, HttpServletResponse response, Model model) {
+        authPageSupport.prepareOauthLoginSuccess(request, model);
+        return pageFactory.oauthLoginSuccess(request, response, model);
     }
 
-    @RequestMapping("register.html")
-    public String register(Model model) {
-        applyAuthPageModel(model);
-        return "register";
+    @RequestMapping({OpcConstants.OAUTH2_LOGIN_PAGE + ".html", OpcConstants.OAUTH2_LOGIN_PAGE})
+    @SkipInterceptor(AuthorizationInterceptor.class)
+    public String openLoginEntry(HttpServletRequest request, HttpServletResponse response, Model model, @RequestParam(required = false) String appId) {
+        authPageSupport.prepareOpenLoginEntry(request, model, appId);
+        return pageFactory.openLoginEntry(request, response, model);
     }
 
-    @RequestMapping("register")
-    public String registerAlias(HttpServletRequest request) {
-        return "redirect:" + WebPathUtils.forBrowser(request, "/register.html");
+    @RequestMapping({OpcConstants.OAUTH2_SUCCESS_PAGE + ".html", OpcConstants.OAUTH2_SUCCESS_PAGE})
+    @SkipInterceptor(AuthorizationInterceptor.class)
+    public String openLoginSuccess(HttpServletRequest request, HttpServletResponse response, Model model, @RequestParam(required = false) String appId) {
+        authPageSupport.prepareOpenLoginSuccess(request, model, appId);
+        return pageFactory.openLoginSuccess(request, response, model);
     }
 
-    @RequestMapping("forgotpassword.html")
-    public String forgotPassword(Model model) {
-        applyAuthPageModel(model);
-        return "forgotpassword";
+    @RequestMapping({"register.html", "register"})
+    public String register(HttpServletRequest request, HttpServletResponse response, Model model) {
+        return pageFactory.register(request, response, model);
     }
 
-    @RequestMapping("forgotpassword")
-    public String forgotPasswordAlias(HttpServletRequest request) {
-        return "redirect:" + WebPathUtils.forBrowser(request, "/forgotpassword.html");
+    @RequestMapping({"forgotpassword.html", "forgotpassword"})
+    public String forgotPassword(HttpServletRequest request, HttpServletResponse response, Model model) {
+        return pageFactory.forgotPassword(request, response, model);
     }
 
     @RequestMapping({"user/service.html", "user/service"})
@@ -178,10 +190,6 @@ public class SysPageController implements ErrorController {
         model.addAttribute("bodyClass", "login-page-v2 legal-page");
         AuthPageAttributes.apply(model, sysConfigService);
         return "user/privacy";
-    }
-
-    private void applyAuthPageModel(Model model) {
-        AuthPageAttributes.apply(model, sysConfigService);
     }
 
     @RequestMapping("main.html")

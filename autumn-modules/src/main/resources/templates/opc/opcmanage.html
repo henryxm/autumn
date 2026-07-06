@@ -46,6 +46,7 @@
         .toolbar input, .toolbar select { padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; }
         .btn { border: none; border-radius: 8px; padding: 8px 14px; font-size: 13px; cursor: pointer; font-weight: 600; }
         .btn-primary { background: var(--brand-1); color: white; }
+        .btn-info { background: #0ea5e9; color: white; }
         .btn-secondary { background: #eef2ff; color: #4338ca; }
         .btn-warning { background: #fef3c7; color: #92400e; }
         .btn-danger { background: #fee2e2; color: #b91c1c; }
@@ -66,9 +67,13 @@
         .modal-content { background: white; border-radius: 12px; width: 90%; max-width: 520px; max-height: 90vh; overflow: auto; }
         .modal-header { padding: 16px 20px; border-bottom: 1px solid var(--border); font-weight: 700; }
         .modal-body { padding: 16px 20px; }
-        .modal-body label { display: block; font-size: 12px; color: var(--text-muted); margin: 10px 0 4px; }
+        .modal-body label { display: block; font-size: 13px; font-weight: 600; margin: 10px 0 4px; color: var(--text-muted); }
         .modal-body input, .modal-body select, .modal-body textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; }
-        .modal-footer { padding: 12px 20px; border-top: 1px solid var(--border); text-align: right; }
+        .field-inline { display: flex; gap: 8px; align-items: stretch; }
+        .field-inline input { flex: 1; min-width: 0; }
+        .field-hint { font-size: 12px; color: var(--text-muted); margin-top: 6px; line-height: 1.5; }
+        .field-hint code { font-size: 11px; background: #f1f5f9; padding: 1px 4px; border-radius: 4px; }
+        .modal-footer { padding: 12px 20px; border-top: 1px solid var(--border); text-align: right; display: flex; justify-content: flex-end; gap: 8px; }
         .toast { position: fixed; bottom: 24px; right: 24px; background: #166534; color: white; padding: 12px 18px; border-radius: 8px; z-index: 200; }
         .toast.error { background: #b91c1c; }
     </style>
@@ -76,32 +81,32 @@
 <body>
 <div class="container">
     <div class="header">
-        <h1>开放接入统一管理</h1>
-        <p>ConnectApp · 用户绑定 · 运行配置</p>
+        <h1>第三方登录接入管理</h1>
+        <p>接入外部授权平台 · 关联本地账号 · 登录行为设置</p>
     </div>
     <div class="stats">
-        <div class="stat-card"><div class="label">接入应用</div><div class="value" id="statApp">-</div></div>
-        <div class="stat-card"><div class="label">正常应用</div><div class="value" id="statActiveApp">-</div></div>
-        <div class="stat-card"><div class="label">用户绑定</div><div class="value" id="statBind">-</div></div>
-        <div class="stat-card"><div class="label">自动注册</div><div class="value" id="statAutoReg">-</div></div>
+        <div class="stat-card"><div class="label">已接入应用</div><div class="value" id="statApp">-</div></div>
+        <div class="stat-card"><div class="label">可正常使用</div><div class="value" id="statActiveApp">-</div></div>
+        <div class="stat-card"><div class="label">账号关联</div><div class="value" id="statBind">-</div></div>
+        <div class="stat-card"><div class="label">新用户自动注册</div><div class="value" id="statAutoReg">-</div></div>
     </div>
     <div class="tabs">
-        <div class="tab active" data-tab="apps" onclick="switchTab('apps')">接入应用</div>
-        <div class="tab" data-tab="binds" onclick="switchTab('binds')">用户绑定</div>
-        <div class="tab" data-tab="config" onclick="switchTab('config')">运行配置</div>
+        <div class="tab active" data-tab="apps" onclick="switchTab('apps')">已接入应用</div>
+        <div class="tab" data-tab="binds" onclick="switchTab('binds')">账号关联</div>
+        <div class="tab" data-tab="config" onclick="switchTab('config')">登录设置</div>
     </div>
 
     <div class="tab-panel active" id="panelApps">
         <div class="toolbar">
-            <input type="text" id="filterAppKeyword" placeholder="搜索名称/appId/平台地址">
+            <input type="text" id="filterAppKeyword" placeholder="搜索应用名称或标识">
             <button class="btn btn-secondary btn-sm" onclick="loadApps(1)">查询</button>
-            <button class="btn btn-primary btn-sm" onclick="showSaveAppModal()">手动保存</button>
-            <button class="btn btn-primary btn-sm" onclick="showApplyAppModal()">远程申请</button>
+            <button class="btn btn-primary btn-sm" onclick="showSaveAppModal()">接入应用</button>
+            <button class="btn btn-primary btn-sm" onclick="showApplyAppModal()">向平台在线申请</button>
         </div>
         <div class="table-container">
             <table>
-                <thead><tr><th>名称</th><th>appId</th><th>所属用户</th><th>平台地址</th><th>绑定数</th><th>状态</th><th>操作</th></tr></thead>
-                <tbody id="appListBody"><tr><td colspan="7" class="empty-hint">加载中...</td></tr></tbody>
+                <thead><tr><th>应用名称</th><th>应用标识</th><th>负责人</th><th>授权平台</th><th>返回地址</th><th>关联数</th><th>状态</th><th>操作</th></tr></thead>
+                <tbody id="appListBody"><tr><td colspan="8" class="empty-hint">加载中...</td></tr></tbody>
             </table>
         </div>
         <div class="pagination" id="appPagination"></div>
@@ -110,13 +115,13 @@
     <div class="tab-panel" id="panelBinds">
         <div class="toolbar">
             <select id="filterBindApp"><option value="">全部应用</option></select>
-            <input type="text" id="filterBindKeyword" placeholder="openId/unionId/用户uuid">
+            <input type="text" id="filterBindKeyword" placeholder="用户标识或跨应用标识">
             <button class="btn btn-secondary btn-sm" onclick="loadBinds(1)">查询</button>
-            <button class="btn btn-primary btn-sm" onclick="showCreateBindModal()">手工绑定</button>
+            <button class="btn btn-primary btn-sm" onclick="showCreateBindModal()">添加关联</button>
         </div>
         <div class="table-container">
             <table>
-                <thead><tr><th>应用</th><th>本地用户</th><th>openId</th><th>unionId</th><th>创建时间</th><th>操作</th></tr></thead>
+                <thead><tr><th>应用</th><th>本地用户</th><th>应用内用户</th><th>跨应用标识</th><th>关联时间</th><th>操作</th></tr></thead>
                 <tbody id="bindListBody"><tr><td colspan="6" class="empty-hint">加载中...</td></tr></tbody>
             </table>
         </div>
@@ -125,59 +130,109 @@
 
     <div class="tab-panel" id="panelConfig">
         <div class="config-box">
-            <h3 style="margin-bottom:12px;font-size:15px;">OAuth 回调无绑定时的行为</h3>
-            <label><input type="checkbox" id="cfgAutoRegister"> 开启自动注册本地用户（OPC_AUTO_REGISTER）</label>
-            <p style="font-size:12px;color:var(--text-muted);margin-top:10px;">关闭后，未绑定的 openId 将无法登录，需管理员在「用户绑定」中手工绑定。</p>
-            <button class="btn btn-primary" style="margin-top:16px;" onclick="saveAutoRegister()">保存配置</button>
+            <h3 style="margin-bottom:12px;font-size:15px;">首次通过第三方登录时的行为</h3>
+            <label><input type="checkbox" id="cfgAutoRegister"> 允许自动创建本地账号</label>
+            <p class="field-hint" style="margin-top:10px;">开启后，首次通过第三方登录的用户将自动创建本地账号（与前台注册页开关无关）。关闭后须在「账号关联」中手动绑定。</p>
+            <button class="btn btn-primary" style="margin-top:16px;" onclick="saveAutoRegister()">保存设置</button>
         </div>
     </div>
 </div>
 
 <div class="modal" id="modalSaveApp">
     <div class="modal-content">
-        <div class="modal-header">手动保存接入配置</div>
+        <div class="modal-header">接入第三方登录应用</div>
         <div class="modal-body">
-            <label>所属用户 uuid</label><input id="saveUser" type="text">
-            <label>appId</label><input id="saveAppId" type="text">
-            <label>appSecret</label><input id="saveAppSecret" type="text">
-            <label>平台根地址 platformBaseUrl</label><input id="savePlatform" type="text" placeholder="https://auth.example.com">
-            <label>redirectUri</label><input id="saveRedirect" type="text">
-            <label>名称</label><input id="saveName" type="text">
-            <label>scope</label><input id="saveScope" type="text" value="basic">
+            <label>应用名称</label><input id="saveName" type="text" placeholder="如：官网登录">
+            <label>应用标识</label><input id="saveAppId" type="text" placeholder="在授权平台创建应用后获得">
+            <label>应用密钥</label><input id="saveAppSecret" type="text" placeholder="创建应用时一次性展示，请从平台复制">
+            <label>授权平台地址</label>
+            <div class="field-inline">
+                <input id="savePlatform" type="text" placeholder="如：https://auth.example.com">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="fillLocalPlatform('savePlatform')">本机样例</button>
+            </div>
+            <p class="field-hint">用户跳转去授权的网站根地址。本系统同时充当授权平台时，点「本机样例」填入当前站点。</p>
+            <label>授权完成返回地址</label>
+            <div class="field-inline">
+                <input id="saveRedirect" type="text" placeholder="用户授权成功后返回本系统的地址">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="fillLocalOpcCallback('saveRedirect')">本系统样例</button>
+            </div>
+            <p class="field-hint">须与授权平台登记的一致。接入本系统时可点「本系统样例」，保存后按应用标识自动补全。</p>
+            <label>授权范围</label><input id="saveScope" type="text" value="basic">
+            <label>负责人账号（可选）</label><input id="saveUser" type="text" placeholder="默认当前登录管理员">
+            <p class="field-hint">用于记录该接入配置归属哪个系统用户，一般留空即可。</p>
         </div>
         <div class="modal-footer">
             <button class="btn btn-secondary btn-sm" onclick="hideModal('modalSaveApp')">取消</button>
-            <button class="btn btn-primary btn-sm" onclick="submitSaveApp()">保存</button>
+            <button class="btn btn-primary btn-sm" onclick="submitSaveApp()">确认接入</button>
         </div>
     </div>
 </div>
 
 <div class="modal" id="modalApplyApp">
     <div class="modal-content">
-        <div class="modal-header">向远程 OPL 申请 appId</div>
+        <div class="modal-header">向授权平台在线申请</div>
         <div class="modal-body">
-            <label>所属用户 uuid</label><input id="applyUser" type="text">
-            <label>平台根地址</label><input id="applyPlatform" type="text">
-            <label>平台用户令牌 accessToken</label><input id="applyToken" type="text">
-            <label>redirectUri</label><input id="applyRedirect" type="text">
-            <label>名称</label><input id="applyName" type="text">
-            <label>scope</label><input id="applyScope" type="text" value="basic">
+            <label>应用名称</label><input id="applyName" type="text" placeholder="如：官网登录">
+            <label>授权平台地址</label>
+            <div class="field-inline">
+                <input id="applyPlatform" type="text" placeholder="如：https://auth.example.com">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="fillLocalPlatform('applyPlatform')">本机样例</button>
+            </div>
+            <label>平台登录凭证</label><input id="applyToken" type="text" placeholder="在授权平台登录后获取的访问令牌">
+            <p class="field-hint">需先在目标授权平台注册开发者并登录，再携带令牌申请应用。</p>
+            <label>授权完成返回地址</label>
+            <div class="field-inline">
+                <input id="applyRedirect" type="text" placeholder="用户授权成功后返回本系统的地址">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="fillLocalOpcCallback('applyRedirect')">本系统样例</button>
+            </div>
+            <label>授权范围</label><input id="applyScope" type="text" value="basic">
+            <label>负责人账号（可选）</label><input id="applyUser" type="text" placeholder="默认当前登录管理员">
         </div>
         <div class="modal-footer">
             <button class="btn btn-secondary btn-sm" onclick="hideModal('modalApplyApp')">取消</button>
-            <button class="btn btn-primary btn-sm" onclick="submitApplyApp()">申请</button>
+            <button class="btn btn-primary btn-sm" onclick="submitApplyApp()">提交申请</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="modalEditApp">
+    <div class="modal-content" style="max-width:560px;">
+        <div class="modal-header">修改接入配置</div>
+        <div class="modal-body">
+            <label>应用名称</label><input id="editName" type="text">
+            <label>应用标识</label><input id="editAppId" type="text" readonly style="background:#f8fafc;">
+            <label>应用密钥</label><input id="editAppSecret" type="text" placeholder="留空表示不修改">
+            <label>授权平台地址</label>
+            <div class="field-inline">
+                <input id="editPlatform" type="text">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="fillLocalPlatform('editPlatform')">本机样例</button>
+            </div>
+            <label>授权完成返回地址</label>
+            <div class="field-inline">
+                <input id="editRedirect" type="text">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="fillLocalOpcCallback('editRedirect', document.getElementById('editAppId').value)">本系统样例</button>
+            </div>
+            <p class="field-hint" id="editRedirectHint">须与「开放授权平台管理」中该应用的返回地址<strong>完全一致</strong>（含应用标识参数）。</p>
+            <p class="field-hint" id="editRedirectExpected" style="display:none;color:#b45309;"></p>
+            <label>授权范围</label><input id="editScope" type="text">
+            <input id="editUser" type="hidden">
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary btn-sm" onclick="hideModal('modalEditApp')">取消</button>
+            <button class="btn btn-primary btn-sm" onclick="submitUpdateApp()">保存修改</button>
         </div>
     </div>
 </div>
 
 <div class="modal" id="modalCreateBind">
     <div class="modal-content">
-        <div class="modal-header">手工绑定本地用户</div>
+        <div class="modal-header">添加账号关联</div>
         <div class="modal-body">
             <label>接入应用</label><select id="bindConnectApp"></select>
-            <label>本地用户 uuid</label><input id="bindUser" type="text">
-            <label>openId</label><input id="bindOpenId" type="text">
-            <label>unionId（可选）</label><input id="bindUnionId" type="text">
+            <label>本地用户账号标识</label><input id="bindUser" type="text" placeholder="本系统 sys_user 的 uuid">
+            <label>第三方应用内用户标识</label><input id="bindOpenId" type="text" placeholder="授权平台返回的应用内用户 ID">
+            <label>跨应用用户标识（可选）</label><input id="bindUnionId" type="text" placeholder="同一开发者下多应用共用 ID">
+            <p class="field-hint">将第三方登录身份与本地账号对应，关闭自动注册时必须手动添加。</p>
         </div>
         <div class="modal-footer">
             <button class="btn btn-secondary btn-sm" onclick="hideModal('modalCreateBind')">取消</button>
@@ -188,15 +243,15 @@
 
 <script>
 window.__CTX__ = '${request.contextPath!""}';
-window.__OPC_ADMIN_API__ = window.__CTX__ + '/opc/admin';
+window.__OPC_ADMIN_API__ = window.__CTX__ + '/open/admin/opc/platform';
 </script>
 <script>
 //<#noparse>
 const API_BASE = (typeof window.__OPC_ADMIN_API__ === 'string' && window.__OPC_ADMIN_API__.length > 0)
     ? window.__OPC_ADMIN_API__
-    : ((typeof window.__CTX__ === 'string') ? window.__CTX__ : '') + '/opc/admin';
+    : ((typeof window.__CTX__ === 'string') ? window.__CTX__ : '') + '/open/admin/opc/platform';
 
-const state = { tab: 'apps', appOptions: [], apps: { page: 1, totalPage: 1 }, binds: { page: 1, totalPage: 1 } };
+const state = { tab: 'apps', appOptions: [], adminUserUuid: '', editingAppId: '', apps: { page: 1, totalPage: 1 }, binds: { page: 1, totalPage: 1 } };
 
 document.addEventListener('DOMContentLoaded', function() {
     loadOverview();
@@ -240,6 +295,7 @@ async function loadOverview() {
         document.getElementById('statActiveApp').textContent = r.data.activeAppCount || 0;
         document.getElementById('statBind').textContent = r.data.bindCount || 0;
         document.getElementById('statAutoReg').textContent = r.data.autoRegister ? '开' : '关';
+        if (r.data.adminUserUuid) state.adminUserUuid = r.data.adminUserUuid;
     } catch (e) { showToast('概览加载失败', 'error'); }
 }
 
@@ -263,7 +319,7 @@ async function loadApps(page) {
     var r = await apiGet('/apps', { page: page, limit: 10, keyword: document.getElementById('filterAppKeyword').value });
     var tbody = document.getElementById('appListBody');
     if (r.code !== 0 || !r.page) {
-        tbody.innerHTML = '<tr><td colspan="7" class="empty-hint">' + escapeHtml(r.msg || '加载失败') + '</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="empty-hint">' + escapeHtml(r.msg || '加载失败') + '</td></tr>';
         return;
     }
     state.apps.totalPage = r.page.totalPage || 1;
@@ -272,12 +328,16 @@ async function loadApps(page) {
         var status = item.status === 1 ? '<span class="badge badge-success">正常</span>' : '<span class="badge badge-danger">禁用</span>';
         var next = item.status === 1 ? 0 : 1;
         var toggle = item.status === 1 ? '禁用' : '启用';
+        var redirectCell = escapeHtml(item.redirectUri || '-');
         return '<tr><td>' + escapeHtml(item.name) + '</td><td><code>' + escapeHtml(item.appId) + '</code></td>' +
-            '<td>' + escapeHtml(item.username) + '</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;">' + escapeHtml(item.platformBaseUrl) + '</td>' +
+            '<td>' + escapeHtml(item.username) + '</td><td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;" title="' + escapeAttr(item.platformBaseUrl || '') + '">' + escapeHtml(item.platformBaseUrl) + '</td>' +
+            '<td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;" title="' + escapeAttr(item.redirectUri || '') + '"><code>' + redirectCell + '</code></td>' +
             '<td>' + (item.bindCount || 0) + '</td><td>' + status + '</td><td>' +
-            '<button class="btn btn-secondary btn-xs" onclick="copyLoginUrl(\'' + escapeAttr(item.authorizeUrl || '') + '\')">登录URL</button>' +
+            '<button class="btn btn-info btn-xs" onclick="showEditAppModal(\'' + escapeAttr(item.appId) + '\')">修改</button>' +
+            '<button class="btn btn-secondary btn-xs" onclick="copyLoginUrl(\'' + escapeAttr(item.authorizeUrl || '') + '\')">复制入口</button>' +
+            '<button class="btn btn-success btn-xs" onclick="openLoginTest(\'' + escapeAttr(item.appId) + '\')">测试登录</button>' +
             '<button class="btn btn-warning btn-xs" onclick="toggleAppStatus(\'' + escapeAttr(item.appId) + '\',' + next + ')">' + toggle + '</button></td></tr>';
-    }).join('') : '<tr><td colspan="7" class="empty-hint">暂无应用</td></tr>';
+    }).join('') : '<tr><td colspan="8" class="empty-hint">暂无接入应用，可点「接入应用」填写授权平台颁发的凭证</td></tr>';
     renderPagination('appPagination', state.apps.page, state.apps.totalPage, loadApps);
 }
 
@@ -313,31 +373,144 @@ async function saveAutoRegister() {
     else showToast(r.msg || '保存失败', 'error');
 }
 
-function showSaveAppModal() { showModal('modalSaveApp'); }
-function showApplyAppModal() { showModal('modalApplyApp'); }
+function showSaveAppModal() {
+    fillLocalPlatform('savePlatform');
+    var appIdInput = document.getElementById('saveAppId');
+    fillLocalOpcCallback('saveRedirect', appIdInput && appIdInput.value.trim());
+    var userInput = document.getElementById('saveUser');
+    if (userInput && !userInput.value.trim() && state.adminUserUuid) {
+        userInput.value = state.adminUserUuid;
+    }
+    showModal('modalSaveApp');
+}
+function showApplyAppModal() {
+    fillLocalPlatform('applyPlatform');
+    fillLocalOpcCallback('applyRedirect');
+    var userInput = document.getElementById('applyUser');
+    if (userInput && !userInput.value.trim() && state.adminUserUuid) {
+        userInput.value = state.adminUserUuid;
+    }
+    showModal('modalApplyApp');
+}
 function showCreateBindModal() { loadAppOptions().then(function() { showModal('modalCreateBind'); }); }
 
+function refreshEditRedirectHint() {
+    var appId = (document.getElementById('editAppId').value || '').trim();
+    var current = (document.getElementById('editRedirect').value || '').trim();
+    var expected = appId ? localOpcCallbackUri(appId) : '';
+    var el = document.getElementById('editRedirectExpected');
+    if (!el || !expected) return;
+    if (current && current !== expected && !current.startsWith(expected.split('?')[0] + '?')) {
+        el.style.display = 'block';
+        el.innerHTML = '建议与本机标准地址一致：<code>' + escapeHtml(expected) + '</code>（须同步修改「开放授权平台管理」中同一应用）';
+    } else if (current && current !== expected) {
+        el.style.display = 'block';
+        el.innerHTML = '本机标准样例：<code>' + escapeHtml(expected) + '</code>';
+    } else {
+        el.style.display = 'none';
+    }
+}
+
+async function showEditAppModal(appId) {
+    if (!appId) return;
+    var r = await apiGet('/app/detail', { appId: appId });
+    if (r.code !== 0 || !r.app) {
+        showToast(r.msg || '加载失败', 'error');
+        return;
+    }
+    var app = r.app;
+    state.editingAppId = app.appId;
+    document.getElementById('editName').value = app.name || '';
+    document.getElementById('editAppId').value = app.appId || '';
+    document.getElementById('editAppSecret').value = '';
+    document.getElementById('editPlatform').value = app.platformBaseUrl || '';
+    document.getElementById('editRedirect').value = app.redirectUri || '';
+    document.getElementById('editScope').value = app.scope || 'basic';
+    document.getElementById('editUser').value = app.user || '';
+    document.getElementById('editRedirect').oninput = refreshEditRedirectHint;
+    refreshEditRedirectHint();
+    showModal('modalEditApp');
+}
+
+async function submitUpdateApp() {
+    var appId = document.getElementById('editAppId').value.trim();
+    var name = document.getElementById('editName').value.trim();
+    var platform = document.getElementById('editPlatform').value.trim();
+    var redirectUri = document.getElementById('editRedirect').value.trim();
+    if (!appId) { showToast('应用标识无效', 'error'); return; }
+    if (!name) { showToast('请填写应用名称', 'error'); return; }
+    if (!platform) { showToast('请填写授权平台地址', 'error'); return; }
+    if (!redirectUri) { showToast('请填写授权完成返回地址', 'error'); return; }
+    var r = await apiPost('/app/update', {
+        user: document.getElementById('editUser').value,
+        appId: appId,
+        appSecret: document.getElementById('editAppSecret').value.trim(),
+        platformBaseUrl: platform,
+        redirectUri: redirectUri,
+        name: name,
+        scope: document.getElementById('editScope').value
+    });
+    if (r.code === 0) {
+        hideModal('modalEditApp');
+        showToast('已保存。请确认「开放授权平台管理」中该应用的返回地址与此处一致');
+        loadApps(state.apps.page);
+        loadOverview();
+        loadAppOptions();
+    } else showToast(r.msg || '保存失败', 'error');
+}
+
 async function submitSaveApp() {
+    var appId = document.getElementById('saveAppId').value.trim();
+    var appSecret = document.getElementById('saveAppSecret').value.trim();
+    var platform = document.getElementById('savePlatform').value.trim();
+    var name = document.getElementById('saveName').value.trim();
+    if (!name) { showToast('请填写应用名称', 'error'); return; }
+    if (!appId) { showToast('请填写应用标识', 'error'); return; }
+    if (!appSecret) { showToast('请填写应用密钥', 'error'); return; }
+    if (!platform) { showToast('请填写授权平台地址', 'error'); return; }
+    var redirectInput = document.getElementById('saveRedirect');
+    var redirectUri = redirectInput.value.trim();
+    var useLocalSample = isLocalOpcCallbackSample(redirectUri);
+    if (!redirectUri || useLocalSample) {
+        redirectUri = localOpcCallbackUri(appId);
+    }
+    var user = document.getElementById('saveUser').value.trim();
+    if (!user && state.adminUserUuid) user = state.adminUserUuid;
     var r = await apiPost('/app/save', {
-        user: document.getElementById('saveUser').value,
-        appId: document.getElementById('saveAppId').value,
-        appSecret: document.getElementById('saveAppSecret').value,
-        platformBaseUrl: document.getElementById('savePlatform').value,
-        redirectUri: document.getElementById('saveRedirect').value,
-        name: document.getElementById('saveName').value,
+        user: user,
+        appId: appId,
+        appSecret: appSecret,
+        platformBaseUrl: platform,
+        redirectUri: redirectUri,
+        name: name,
         scope: document.getElementById('saveScope').value
     });
-    if (r.code === 0) { hideModal('modalSaveApp'); showToast('保存成功'); loadApps(1); loadOverview(); loadAppOptions(); }
-    else showToast(r.msg || '保存失败', 'error');
+    if (r.code === 0) {
+        hideModal('modalSaveApp');
+        showToast('接入成功');
+        loadApps(1); loadOverview(); loadAppOptions();
+    } else showToast(r.msg || '接入失败', 'error');
 }
 
 async function submitApplyApp() {
+    var platform = document.getElementById('applyPlatform').value.trim();
+    var token = document.getElementById('applyToken').value.trim();
+    var name = document.getElementById('applyName').value.trim();
+    if (!name) { showToast('请填写应用名称', 'error'); return; }
+    if (!platform) { showToast('请填写授权平台地址', 'error'); return; }
+    if (!token) { showToast('请填写平台登录凭证', 'error'); return; }
+    var redirectUri = document.getElementById('applyRedirect').value.trim();
+    if (!redirectUri || isLocalOpcCallbackSample(redirectUri)) {
+        redirectUri = localOpcCallbackBase();
+    }
+    var user = document.getElementById('applyUser').value.trim();
+    if (!user && state.adminUserUuid) user = state.adminUserUuid;
     var r = await apiPost('/app/apply', {
-        user: document.getElementById('applyUser').value,
-        platformBaseUrl: document.getElementById('applyPlatform').value,
-        accessToken: document.getElementById('applyToken').value,
-        redirectUri: document.getElementById('applyRedirect').value,
-        name: document.getElementById('applyName').value,
+        user: user,
+        platformBaseUrl: platform,
+        accessToken: token,
+        redirectUri: redirectUri,
+        name: name,
         scope: document.getElementById('applyScope').value
     });
     if (r.code === 0) { hideModal('modalApplyApp'); showToast('申请成功'); loadApps(1); loadOverview(); loadAppOptions(); }
@@ -371,8 +544,47 @@ async function deleteBind(id) {
 function copyLoginUrl(url) {
     if (!url) return;
     navigator.clipboard.writeText(window.location.origin + (window.__CTX__ || '') + url).then(function() {
-        showToast('登录 URL 已复制');
+        showToast('登录入口已复制');
     }).catch(function() { showToast(url, 'success'); });
+}
+
+function appOrigin() {
+    return window.location.origin + (window.__CTX__ || '');
+}
+
+function localOpcCallbackBase() {
+    return appOrigin() + '/open/oauth2/callback';
+}
+
+function localOpcCallbackUri(appId) {
+    var uri = localOpcCallbackBase() + '?appId=';
+    if (appId) uri += encodeURIComponent(appId);
+    return uri;
+}
+
+function isLocalOpcCallbackSample(uri) {
+    if (!uri) return true;
+    var trimmed = String(uri).trim();
+    var base = localOpcCallbackBase();
+    return trimmed === base || trimmed.indexOf(base + '?') === 0;
+}
+
+function fillLocalPlatform(inputId) {
+    var input = document.getElementById(inputId);
+    if (input) input.value = appOrigin();
+}
+
+function fillLocalOpcCallback(inputId, appId) {
+    var input = document.getElementById(inputId);
+    if (input) input.value = localOpcCallbackUri(appId || document.getElementById('saveAppId').value.trim() || '');
+}
+
+function openLoginTest(appId) {
+    if (!appId) {
+        showToast('应用标识无效', 'error');
+        return;
+    }
+    window.open(window.location.origin + (window.__CTX__ || '') + '/open/oauth2/login?appId=' + encodeURIComponent(appId), '_blank');
 }
 
 function renderPagination(id, page, totalPage, loader) {

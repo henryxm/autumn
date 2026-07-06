@@ -5,7 +5,6 @@ import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.utils.WebPathUtils;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -18,25 +17,73 @@ public class DefaultPage implements PageHandler {
     @Autowired
     SysConfigService sysConfigService;
 
+    @Autowired
+    AuthPageSupport authPageSupport;
+
     @Override
     public String login(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
-        boolean oauthAuthorize = model != null && Boolean.TRUE.equals(model.getAttribute("oauthAuthorize"));
-        boolean oauthLogin = StringUtils.isNotBlank(sysConfigService.getOauth2LoginClientId());
-        if (!model.containsAttribute("oauthLogin") || oauthAuthorize) {
-            model.addAttribute("oauthLogin", oauthAuthorize || oauthLogin);
+        boolean oauthAuthorize = model != null && Boolean.TRUE.equals(model.getAttribute(AuthPageAttributes.ATTR_OAUTH_AUTHORIZE));
+        boolean oplAuthorize = model != null && Boolean.TRUE.equals(model.getAttribute(AuthPageAttributes.ATTR_OPL_AUTHORIZE));
+        if (oauthAuthorize) {
+            return oauthAuthorize(httpServletRequest, httpServletResponse, model);
         }
-        if (!model.containsAttribute("bodyClass")) {
-            model.addAttribute("bodyClass", oauthAuthorize ? "login-page-v2 oauth-authorize-mode" : "login-page-v2");
+        if (oplAuthorize) {
+            return oplAuthorize(httpServletRequest, httpServletResponse, model);
         }
-        if (!model.containsAttribute("error")) {
-            String error = httpServletRequest.getParameter("error");
-            if (StringUtils.isNotBlank(error)) {
-                model.addAttribute("error", error);
-            }
-        }
-        AuthPageAttributes.apply(model, sysConfigService);
-        AuthPageAttributes.applySafeOauthCallback(httpServletRequest, model);
+        authPageSupport.prepareAuthorizePage(httpServletRequest, model, false, false);
         return "login";
+    }
+
+    @Override
+    public String register(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        AuthPageAttributes.apply(model, sysConfigService);
+        return "register";
+    }
+
+    @Override
+    public String forgotPassword(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        AuthPageAttributes.apply(model, sysConfigService);
+        return "forgotpassword";
+    }
+
+    @Override
+    public String oauthAuthorize(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        authPageSupport.prepareOauthAuthorize(httpServletRequest, model);
+        return "login";
+    }
+
+    @Override
+    public String oplAuthorize(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        authPageSupport.prepareOplAuthorize(httpServletRequest, model);
+        return "login";
+    }
+
+    @Override
+    public String oauthLoginEntry(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        return "oauth2/login";
+    }
+
+    @Override
+    public String oauthLoginSuccess(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        return "oauth2/success";
+    }
+
+    @Override
+    public String openLoginEntry(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        return "open/oauth2/login";
+    }
+
+    @Override
+    public String openLoginSuccess(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        return "open/oauth2/success";
+    }
+
+    @Override
+    public String authCallbackError(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        AuthPageAttributes.apply(model, sysConfigService);
+        AuthPageAttributes.markFlowKind(model, AuthPageAttributes.FLOW_AUTH_CALLBACK_ERROR);
+        AuthPageAttributes.applyAuthFlowBoot(httpServletRequest, model);
+        return "oauth2/callback-error";
     }
 
     @Override

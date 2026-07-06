@@ -40,6 +40,10 @@ public class OplDaoSql extends RuntimeSql {
         return "SELECT * FROM " + quote("opl_open_code") + " WHERE " + quote("code") + " = #{code}" + limitOne();
     }
 
+    public String openCodeByCodeForUpdate() {
+        return "SELECT * FROM " + quote("opl_open_code") + " WHERE " + quote("code") + " = #{code} FOR UPDATE";
+    }
+
     public String openTokenByAccessToken() {
         return "SELECT * FROM " + quote("opl_open_token") + " WHERE " + quote("access_token") + " = #{accessToken}" + limitOne();
     }

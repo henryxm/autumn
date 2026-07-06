@@ -3,7 +3,7 @@ package cn.org.autumn.opl;
 /**
  * OPL 开放平台常量：HTTP 路径、OAuth 参数、默认值、状态码与领域事件。
  * <p>
- * 业务扩展与 OPC 对接时统一引用本类，避免硬编码。
+ * 与 {@link cn.org.autumn.opc.OpcConstants} 共用 {@code /open} 前缀；仅在与 OPC 路径冲突时插入命名空间 {@code opl}。
  */
 public final class OplConstants {
 
@@ -12,14 +12,32 @@ public final class OplConstants {
 
     // --- HTTP 路径 ---
 
-    /** OAuth2 端点根路径（authorize / token / userInfo） */
-    public static final String OAUTH2_BASE = "/opl/oauth2";
+    /** 开放能力 HTTP 根前缀 */
+    public static final String OPEN = "/open";
 
-    /** 开发者自助 Open API 根路径 */
-    public static final String API_V1_BASE = "/opl/api/v1";
+    /** 本模块命名空间（仅用于冲突路径） */
+    public static final String NS = "opl";
 
-    /** 系统管理员运维 API 根路径 */
-    public static final String ADMIN_BASE = "/opl/admin";
+    /** OAuth2 AS 根路径（authorize / token / userInfo / login 等与 OPC 不冲突的端点） */
+    public static final String OAUTH2_ROOT = OPEN + "/oauth2";
+
+    /** 与 {@link #OAUTH2_ROOT} 相同 */
+    public static final String OAUTH2_BASE = OAUTH2_ROOT;
+
+    /** 授权页内登录 POST（与 OPC {@code /login} 冲突，故加 {@code opl}） */
+    public static final String OAUTH2_LOGIN = OAUTH2_ROOT + "/" + NS + "/login";
+
+    /** Open API 公共根 */
+    public static final String API_V1_BASE = OPEN + "/api/v1";
+
+    /** 平台侧开发者 Open API（与 OPC 同根；仅 {@code app/list} 等冲突方法单独加 {@code opl}） */
+    public static final String API_PLATFORM = API_V1_BASE + "/platform";
+
+    /** 管理 API 根路径 */
+    public static final String ADMIN_BASE = OPEN + "/admin";
+
+    /** 平台侧管理 API（与 OPC 管理端大量路径冲突，整树加 {@code opl}） */
+    public static final String ADMIN_PLATFORM = ADMIN_BASE + "/" + NS + "/platform";
 
     /** 统一管理页路由（模板 {@code opl/oplmanage.html}） */
     public static final String MANAGE_PAGE = "oplmanage.html";

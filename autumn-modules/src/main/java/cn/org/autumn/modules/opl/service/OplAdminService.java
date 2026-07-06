@@ -129,7 +129,10 @@ public class OplAdminService {
 
     @Transactional(rollbackFor = Exception.class)
     public OpenAccountEntity createAccount(String userUuid, String name) {
-        return openAccountService.getOrCreateByUser(userUuid, name);
+        if (StringUtils.isBlank(userUuid)) {
+            throw new IllegalArgumentException("用户 uuid 不能为空");
+        }
+        return openAccountService.getOrCreateByUser(userUuid.trim(), name);
     }
 
     public PageUtils pageAppUsers(Map<String, Object> params) {

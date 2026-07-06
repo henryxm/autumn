@@ -1,8 +1,10 @@
 package cn.org.autumn.modules.opl.service;
 
 import cn.org.autumn.base.ModuleService;
+import cn.org.autumn.modules.oauth.oauth2.support.RedirectUriSupport;
 import cn.org.autumn.modules.opl.dao.OpenAppDao;
 import cn.org.autumn.modules.opl.entity.OpenAppEntity;
+import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.opl.OplConstants;
 import cn.org.autumn.opl.model.OpenAppRegisterOutcome;
 import cn.org.autumn.opl.model.OpenAppType;
@@ -22,10 +24,14 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class OpenAppService extends ModuleService<OpenAppDao, OpenAppEntity> {
 
-    private static final String APP_SECRET_PEPPER = "opl_app_secret_v1";
+    private static final String DEFAULT_APP_SECRET_PEPPER = "opl_app_secret_v1";
+    public static final String CONFIG_APP_SECRET_PEPPER = "OPL_APP_SECRET_PEPPER";
 
     @Autowired
     private OplExtensionService oplExtensionService;
+
+    @Autowired
+    private SysConfigService sysConfigService;
 
     public OpenAppEntity getByAppId(String appId) {
         if (StringUtils.isBlank(appId)) {
@@ -53,6 +59,8 @@ public class OpenAppService extends ModuleService<OpenAppDao, OpenAppEntity> {
         if (StringUtils.isBlank(redirectUri)) {
             throw new IllegalArgumentException("回调地址不能为空");
         }
+        boolean allowHttp = sysConfigService != null && sysConfigService.getBoolean(RedirectUriSupport.CONFIG_ALLOW_HTTP);
+        RedirectUriSupport.validateFormat(redirectUri, allowHttp);
         OpenAppType resolvedType = appType == null ? OpenAppType.Web : appType;
         try {
             oplExtensionService.validateRegister(accountUuid, name, redirectUri, scope, resolvedType);
@@ -108,6 +116,8 @@ public class OpenAppService extends ModuleService<OpenAppDao, OpenAppEntity> {
             app.setAppType(appType);
         }
         if (StringUtils.isNotBlank(redirectUri)) {
+            boolean allowHttp = sysConfigService != null && sysConfigService.getBoolean(RedirectUriSupport.CONFIG_ALLOW_HTTP);
+            RedirectUriSupport.validateFormat(redirectUri, allowHttp);
             app.setRedirectUri(redirectUri.trim());
         }
         if (StringUtils.isNotBlank(scope)) {
@@ -169,7 +179,10 @@ public class OpenAppService extends ModuleService<OpenAppDao, OpenAppEntity> {
         } catch (Exception e) {
             throw new IllegalArgumentException(e.getMessage(), e);
         }
-        if (!oplExtensionService.isRelaxedRedirectMatch(OplSnapshots.toAppSnapshot(app)) && !redirectUri.equalsIgnoreCase(app.getRedirectUri())) {
+        if (!oplExtensionService.isRelaxedRedirectMatch(OplSnapshots.toAppSnapshot(app)) && !StringUtils.equals(redirectUri, app.getRedirectUri())) {
+            throw new IllegalArgumentException("redirect_uri不匹配");
+        }
+        if (oplExtensionService.isRelaxedRedirectMatch(OplSnapshots.toAppSnapshot(app)) && !redirectUri.equalsIgnoreCase(app.getRedirectUri())) {
             throw new IllegalArgumentException("redirect_uri不匹配");
         }
     }
@@ -189,7 +202,15 @@ public class OpenAppService extends ModuleService<OpenAppDao, OpenAppEntity> {
     }
 
     private String hashSecret(String plainSecret, String salt) {
-        return ShiroUtils.sha256(plainSecret + APP_SECRET_PEPPER, salt);
+        return ShiroUtils.sha256(plainSecret + resolveAppSecretPepper(), salt);
+    }
+
+    private String resolveAppSecretPepper() {
+        if (sysConfigService == null) {
+            return DEFAULT_APP_SECRET_PEPPER;
+        }
+        String configured = sysConfigService.getValue(CONFIG_APP_SECRET_PEPPER);
+        return StringUtils.isBlank(configured) ? DEFAULT_APP_SECRET_PEPPER : configured.trim();
     }
 
     private String generateAppId() {

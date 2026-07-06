@@ -121,6 +121,10 @@
         .modal-body .field input, .modal-body .field select {
             width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px;
         }
+        .field-inline { display: flex; gap: 8px; align-items: stretch; }
+        .field-inline input { flex: 1; min-width: 0; }
+        .field-hint { font-size: 12px; color: var(--text-muted); margin-top: 6px; line-height: 1.5; }
+        .field-hint code { font-size: 11px; background: #f1f5f9; padding: 1px 4px; border-radius: 4px; }
         .secret-box { background: #fff7ed; border: 1px solid #fdba74; border-radius: 8px; padding: 12px; word-break: break-all; font-size: 13px; line-height: 1.6; }
         .toast {
             position: fixed; bottom: 24px; right: 24px; padding: 12px 20px; border-radius: 10px;
@@ -133,28 +137,28 @@
 <body>
 <div class="container">
     <div class="header">
-        <h1>开放平台统一管理</h1>
-        <p>Open Platform Management · appId / openId / unionId</p>
+        <h1>开放授权平台管理</h1>
+        <p>注册应用 · 用户授权 · 供其他系统接入登录</p>
     </div>
 
     <div class="stats-bar" id="statsBar">
-        <div class="stat-item"><div class="stat-value" id="statAccount">0</div><div class="stat-label">开发者主体</div></div>
+        <div class="stat-item"><div class="stat-value" id="statAccount">0</div><div class="stat-label">开发者</div></div>
         <div class="stat-item"><div class="stat-value" id="statApp">0</div><div class="stat-label">应用总数</div></div>
-        <div class="stat-item"><div class="stat-value" id="statActiveApp">0</div><div class="stat-label">正常应用</div></div>
-        <div class="stat-item"><div class="stat-value" id="statIdentity">0</div><div class="stat-label">App 用户</div></div>
-        <div class="stat-item"><div class="stat-value" id="statUnion">0</div><div class="stat-label">联合身份</div></div>
-        <div class="stat-item"><div class="stat-value" id="statCode">0</div><div class="stat-label">授权码</div></div>
-        <div class="stat-item"><div class="stat-value" id="statToken">0</div><div class="stat-label">令牌</div></div>
+        <div class="stat-item"><div class="stat-value" id="statActiveApp">0</div><div class="stat-label">可授权应用</div></div>
+        <div class="stat-item"><div class="stat-value" id="statIdentity">0</div><div class="stat-label">已授权用户</div></div>
+        <div class="stat-item"><div class="stat-value" id="statUnion">0</div><div class="stat-label">跨应用用户</div></div>
+        <div class="stat-item"><div class="stat-value" id="statCode">0</div><div class="stat-label">授权记录</div></div>
+        <div class="stat-item"><div class="stat-value" id="statToken">0</div><div class="stat-label">访问凭证</div></div>
     </div>
 
     <div class="tabs" id="tabBar">
         <div class="tab active" data-tab="apps" onclick="switchTab('apps')">应用管理</div>
-        <div class="tab" data-tab="accounts" onclick="switchTab('accounts')">开发者主体</div>
-        <div class="tab hidden" id="tabDetail" data-tab="detail" onclick="switchTab('detail')">App 详情</div>
-        <div class="tab" data-tab="users" onclick="switchTab('users')">App 用户</div>
-        <div class="tab" data-tab="unions" onclick="switchTab('unions')">联合身份</div>
-        <div class="tab" data-tab="codes" onclick="switchTab('codes')">授权码</div>
-        <div class="tab" data-tab="tokens" onclick="switchTab('tokens')">令牌</div>
+        <div class="tab" data-tab="accounts" onclick="switchTab('accounts')">开发者</div>
+        <div class="tab hidden" id="tabDetail" data-tab="detail" onclick="switchTab('detail')">应用详情</div>
+        <div class="tab" data-tab="users" onclick="switchTab('users')">已授权用户</div>
+        <div class="tab" data-tab="unions" onclick="switchTab('unions')">跨应用用户</div>
+        <div class="tab" data-tab="codes" onclick="switchTab('codes')">授权记录</div>
+        <div class="tab" data-tab="tokens" onclick="switchTab('tokens')">访问凭证</div>
     </div>
 
     <!-- 应用管理 -->
@@ -163,8 +167,8 @@
             <div class="toolbar">
                 <h2>应用列表</h2>
                 <div class="toolbar-filters">
-                    <input type="text" id="filterAppKeyword" placeholder="搜索名称/appId" onkeydown="if(event.key==='Enter')loadApps(1)"/>
-                    <select id="filterAppAccount"><option value="">全部主体</option></select>
+                    <input type="text" id="filterAppKeyword" placeholder="搜索应用名称或标识" onkeydown="if(event.key==='Enter')loadApps(1)"/>
+                    <select id="filterAppAccount"><option value="">全部开发者</option></select>
                     <button class="btn btn-info btn-sm" onclick="loadApps(1)">查询</button>
                     <button class="btn btn-success btn-sm" onclick="showCreateAppModal()">创建应用</button>
                 </div>
@@ -172,7 +176,7 @@
             <div class="table-container">
                 <table>
                     <thead><tr>
-                        <th>应用名称</th><th>appId</th><th>类型</th><th>主体</th><th>用户</th><th>授权码</th><th>令牌</th><th>状态</th><th>创建时间</th><th>操作</th>
+                        <th>应用名称</th><th>应用标识</th><th>类型</th><th>开发者</th><th>已授权</th><th>授权记录</th><th>凭证</th><th>状态</th><th>创建时间</th><th>操作</th>
                     </tr></thead>
                     <tbody id="appListBody"><tr><td colspan="10" class="empty-hint">加载中...</td></tr></tbody>
                 </table>
@@ -185,17 +189,17 @@
     <div class="tab-panel" id="panelAccounts">
         <div class="content">
             <div class="toolbar">
-                <h2>开发者主体</h2>
+                <h2>开发者</h2>
                 <div class="toolbar-filters">
-                    <input type="text" id="filterAccountKeyword" placeholder="名称/uuid/用户" onkeydown="if(event.key==='Enter')loadAccounts(1)"/>
+                    <input type="text" id="filterAccountKeyword" placeholder="搜索名称或账号" onkeydown="if(event.key==='Enter')loadAccounts(1)"/>
                     <button class="btn btn-info btn-sm" onclick="loadAccounts(1)">查询</button>
-                    <button class="btn btn-success btn-sm" onclick="showCreateAccountModal()">开通主体</button>
+                    <button class="btn btn-success btn-sm" onclick="showCreateAccountModal()">添加开发者</button>
                 </div>
             </div>
             <div class="table-container">
                 <table>
                     <thead><tr>
-                        <th>名称</th><th>uuid</th><th>绑定用户</th><th>用户名</th><th>App数</th><th>union数</th><th>状态</th><th>创建时间</th>
+                        <th>名称</th><th>标识</th><th>关联账号</th><th>用户名</th><th>应用数</th><th>跨应用用户</th><th>状态</th><th>创建时间</th>
                     </tr></thead>
                     <tbody id="accountListBody"><tr><td colspan="8" class="empty-hint">加载中...</td></tr></tbody>
                 </table>
@@ -211,17 +215,25 @@
             <div class="form-grid">
                 <label>应用名称</label><input id="editName"/>
                 <label>应用类型</label><select id="editType"></select>
-                <label>回调地址</label><input id="editRedirect"/>
+                <label>授权完成返回地址</label>
+                <div>
+                    <div class="field-inline">
+                        <input id="editRedirect"/>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="fillLocalOpcCallback('editRedirect', state.selectedApp && state.selectedApp.appId)">本系统样例</button>
+                    </div>
+                    <p class="field-hint">用户在本系统完成授权后的返回地址。接入本系统时可点「本系统样例」自动填入。</p>
+                </div>
                 <label>授权范围</label><input id="editScope"/>
             </div>
-            <div style="margin-top:16px;display:flex;gap:10px;">
+            <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;">
                 <button class="btn btn-primary btn-sm" onclick="saveAppDetail()">保存</button>
                 <button class="btn btn-info btn-sm" onclick="viewSelectedAppUsers()">查看用户列表</button>
+                <button class="btn btn-success btn-sm" onclick="openOplAuthorizePage()">测试授权流程</button>
             </div>
             <div class="detail-stats">
-                <div class="stat-item"><div class="stat-value" id="detailUserCount">0</div><div class="stat-label">App 用户</div></div>
-                <div class="stat-item"><div class="stat-value" id="detailCodeCount">0</div><div class="stat-label">授权码</div></div>
-                <div class="stat-item"><div class="stat-value" id="detailTokenCount">0</div><div class="stat-label">令牌</div></div>
+                <div class="stat-item"><div class="stat-value" id="detailUserCount">0</div><div class="stat-label">已授权用户</div></div>
+                <div class="stat-item"><div class="stat-value" id="detailCodeCount">0</div><div class="stat-label">授权记录</div></div>
+                <div class="stat-item"><div class="stat-value" id="detailTokenCount">0</div><div class="stat-label">访问凭证</div></div>
             </div>
         </div>
     </div>
@@ -230,17 +242,17 @@
     <div class="tab-panel" id="panelUsers">
         <div class="content">
             <div class="toolbar">
-                <h2>App 用户</h2>
+                <h2>已授权用户</h2>
                 <div class="toolbar-filters">
-                    <input type="text" id="filterUserAppId" placeholder="appId（必填）"/>
-                    <input type="text" id="filterUserKeyword" placeholder="openId/用户uuid"/>
+                    <input type="text" id="filterUserAppId" placeholder="应用标识（必填）"/>
+                    <input type="text" id="filterUserKeyword" placeholder="用户标识或账号"/>
                     <button class="btn btn-info btn-sm" onclick="loadUsers(1)">查询</button>
                 </div>
             </div>
             <div class="table-container">
                 <table>
-                    <thead><tr><th>用户名</th><th>用户uuid</th><th>openId</th><th>unionId</th><th>appId</th><th>创建时间</th></tr></thead>
-                    <tbody id="userListBody"><tr><td colspan="6" class="empty-hint">请填写 appId 后查询</td></tr></tbody>
+                    <thead><tr><th>用户名</th><th>账号标识</th><th>应用内用户</th><th>跨应用标识</th><th>应用标识</th><th>授权时间</th></tr></thead>
+                    <tbody id="userListBody"><tr><td colspan="6" class="empty-hint">请先填写应用标识后查询</td></tr></tbody>
                 </table>
             </div>
             <div class="pagination" id="userPagination"></div>
@@ -251,16 +263,16 @@
     <div class="tab-panel" id="panelUnions">
         <div class="content">
             <div class="toolbar">
-                <h2>联合身份 unionId</h2>
+                <h2>跨应用用户</h2>
                 <div class="toolbar-filters">
-                    <input type="text" id="filterUnionAccount" placeholder="开发者主体 uuid"/>
-                    <input type="text" id="filterUnionKeyword" placeholder="unionId/用户"/>
+                    <input type="text" id="filterUnionAccount" placeholder="开发者标识"/>
+                    <input type="text" id="filterUnionKeyword" placeholder="跨应用标识或用户"/>
                     <button class="btn btn-info btn-sm" onclick="loadUnions(1)">查询</button>
                 </div>
             </div>
             <div class="table-container">
                 <table>
-                    <thead><tr><th>unionId</th><th>用户名</th><th>用户uuid</th><th>主体uuid</th><th>创建时间</th></tr></thead>
+                    <thead><tr><th>跨应用标识</th><th>用户名</th><th>账号标识</th><th>开发者标识</th><th>创建时间</th></tr></thead>
                     <tbody id="unionListBody"><tr><td colspan="5" class="empty-hint">点击查询加载</td></tr></tbody>
                 </table>
             </div>
@@ -272,9 +284,9 @@
     <div class="tab-panel" id="panelCodes">
         <div class="content">
             <div class="toolbar">
-                <h2>OAuth 授权码</h2>
+                <h2>授权记录</h2>
                 <div class="toolbar-filters">
-                    <input type="text" id="filterCodeAppId" placeholder="appId"/>
+                    <input type="text" id="filterCodeAppId" placeholder="应用标识"/>
                     <button class="btn btn-info btn-sm" onclick="loadCodes(1)">查询</button>
                 </div>
             </div>
@@ -292,9 +304,9 @@
     <div class="tab-panel" id="panelTokens">
         <div class="content">
             <div class="toolbar">
-                <h2>访问令牌</h2>
+                <h2>访问凭证</h2>
                 <div class="toolbar-filters">
-                    <input type="text" id="filterTokenAppId" placeholder="appId"/>
+                    <input type="text" id="filterTokenAppId" placeholder="应用标识"/>
                     <button class="btn btn-info btn-sm" onclick="loadTokens(1)">查询</button>
                 </div>
             </div>
@@ -314,10 +326,21 @@
     <div class="modal-box">
         <div class="modal-header">创建应用</div>
         <div class="modal-body">
-            <div class="field"><label>开发者主体</label><select id="createAppAccount"></select></div>
-            <div class="field"><label>应用名称</label><input id="createAppName"/></div>
+            <div class="field">
+                <label>开发者</label>
+                <select id="createAppAccount"></select>
+                <p class="field-hint">未选择时将自动为当前登录账号添加开发者身份。</p>
+            </div>
+            <div class="field"><label>应用名称</label><input id="createAppName" placeholder="如：我的网站"/></div>
             <div class="field"><label>应用类型</label><select id="createAppType"></select></div>
-            <div class="field"><label>回调地址</label><input id="createAppRedirect" placeholder="https://example.com/callback"/></div>
+            <div class="field">
+                <label>授权完成返回地址</label>
+                <div class="field-inline">
+                    <input id="createAppRedirect" placeholder="用户授权成功后跳转的地址"/>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="fillLocalOpcCallback('createAppRedirect')">本系统样例</button>
+                </div>
+                <p class="field-hint">其他系统接入本系统登录时，可点「本系统样例」；创建成功后会自动补全应用标识。</p>
+            </div>
             <div class="field"><label>授权范围</label><input id="createAppScope" value="basic"/></div>
         </div>
         <div class="modal-footer">
@@ -330,14 +353,18 @@
 <!-- 开通主体 -->
 <div class="modal" id="modalCreateAccount">
     <div class="modal-box">
-        <div class="modal-header">开通开发者主体</div>
+        <div class="modal-header">添加开发者</div>
         <div class="modal-body">
-            <div class="field"><label>用户 uuid</label><input id="createAccountUser" placeholder="sys_user.uuid"/></div>
-            <div class="field"><label>主体名称</label><input id="createAccountName" value="开发者"/></div>
+            <div class="field">
+                <label>关联系统账号</label>
+                <input id="createAccountUser" placeholder="默认当前登录管理员"/>
+                <p class="field-hint">开发者与系统用户一一对应，用于归属其名下应用。</p>
+            </div>
+            <div class="field"><label>开发者名称</label><input id="createAccountName" value="开发者" placeholder="如：个人开发者"/></div>
         </div>
         <div class="modal-footer">
             <button class="btn btn-secondary btn-sm" onclick="hideModal('modalCreateAccount')">取消</button>
-            <button class="btn btn-primary btn-sm" onclick="submitCreateAccount()">开通</button>
+            <button class="btn btn-primary btn-sm" onclick="submitCreateAccount()">确认添加</button>
         </div>
     </div>
 </div>
@@ -345,7 +372,7 @@
 <!-- 凭证展示 -->
 <div class="modal" id="modalSecret">
     <div class="modal-box">
-        <div class="modal-header">应用凭证（请妥善保存）</div>
+        <div class="modal-header">应用接入信息（请妥善保存）</div>
         <div class="modal-body secret-box" id="secretContent"></div>
         <div class="modal-footer">
             <button class="btn btn-primary btn-sm" onclick="hideModal('modalSecret')">知道了</button>
@@ -355,18 +382,19 @@
 
 <script>
 window.__CTX__ = '${request.contextPath!""}';
-window.__OPL_ADMIN_API__ = window.__CTX__ + '/opl/admin';
+window.__OPL_ADMIN_API__ = window.__CTX__ + '/open/admin/opl/platform';
 </script>
 <script>
 //<#noparse>
 const API_BASE = (typeof window.__OPL_ADMIN_API__ === 'string' && window.__OPL_ADMIN_API__.length > 0)
     ? window.__OPL_ADMIN_API__
-    : ((typeof window.__CTX__ === 'string') ? window.__CTX__ : '') + '/opl/admin';
+    : ((typeof window.__CTX__ === 'string') ? window.__CTX__ : '') + '/open/admin/opl/platform';
 
 const state = {
     tab: 'apps',
     appTypes: [],
     accountOptions: [],
+    adminUserUuid: '',
     selectedApp: null,
     apps: { page: 1, totalPage: 1 },
     accounts: { page: 1, totalPage: 1 },
@@ -425,6 +453,7 @@ async function loadOverview() {
         document.getElementById('statUnion').textContent = r.data.unionCount || 0;
         document.getElementById('statCode').textContent = r.data.codeCount || 0;
         document.getElementById('statToken').textContent = r.data.tokenCount || 0;
+        if (r.data.adminUserUuid) state.adminUserUuid = r.data.adminUserUuid;
     } catch (e) { showToast('概览加载失败', 'error'); }
 }
 
@@ -441,7 +470,7 @@ function fillTypeSelect(select) {
     state.appTypes.forEach(function(t) {
         var opt = document.createElement('option');
         opt.value = t.value;
-        opt.textContent = t.label + ' (' + t.value + ')';
+        opt.textContent = t.label;
         select.appendChild(opt);
     });
 }
@@ -452,13 +481,17 @@ async function loadAccountOptions() {
     state.accountOptions = r.list || [];
     var filter = document.getElementById('filterAppAccount');
     var create = document.getElementById('createAppAccount');
-    filter.innerHTML = '<option value="">全部主体</option>';
-    create.innerHTML = '<option value="">请选择</option>';
+    filter.innerHTML = '<option value="">全部开发者</option>';
+    create.innerHTML = '<option value="">自动选择当前账号</option>';
     state.accountOptions.forEach(function(a) {
         var label = escapeHtml(a.name) + ' (' + escapeHtml(a.uuid) + ')';
         filter.innerHTML += '<option value="' + escapeAttr(a.uuid) + '">' + label + '</option>';
         create.innerHTML += '<option value="' + escapeAttr(a.uuid) + '">' + label + '</option>';
     });
+    if (create && state.adminUserUuid) {
+        var matched = state.accountOptions.find(function(a) { return a.user === state.adminUserUuid; });
+        if (matched) create.value = matched.uuid;
+    }
 }
 
 async function loadApps(page) {
@@ -495,6 +528,7 @@ async function loadApps(page) {
                 '<td>' + status + '</td>' +
                 '<td>' + formatTime(item.create) + '</td>' +
                 '<td><button class="btn btn-info btn-xs" onclick="selectApp(\'' + escapeAttr(item.appId) + '\')">详情</button>' +
+                '<button class="btn btn-success btn-xs" onclick="openOplAuthorizePage(\'' + escapeAttr(item.appId) + '\',\'' + escapeAttr(item.redirectUri || '') + '\')">测试授权</button>' +
                 '<button class="btn btn-warning btn-xs" onclick="resetSecret(\'' + escapeAttr(item.appId) + '\',\'' + escapeAttr(item.name) + '\')">重置密钥</button>' +
                 '<button class="btn btn-secondary btn-xs" onclick="toggleAppStatus(\'' + escapeAttr(item.appId) + '\',' + nextStatus + ')">' + toggleLabel + '</button></td>' +
                 '</tr>';
@@ -528,7 +562,7 @@ async function selectApp(appId) {
     if (r.code !== 0 || !r.app) { showToast(r.msg || '加载失败', 'error'); return; }
     state.selectedApp = r.app;
     document.getElementById('tabDetail').classList.remove('hidden');
-    document.getElementById('detailBanner').innerHTML = '<strong>' + escapeHtml(r.app.name) + '</strong> · <code>' + escapeHtml(r.app.appId) + '</code> · ' + escapeHtml(r.app.appType || 'Web') + ' · 主体：' + escapeHtml(r.app.accountName || '');
+    document.getElementById('detailBanner').innerHTML = '<strong>' + escapeHtml(r.app.name) + '</strong> · <code>' + escapeHtml(r.app.appId) + '</code> · ' + escapeHtml(r.app.appType || 'Web') + ' · 开发者：' + escapeHtml(r.app.accountName || '');
     document.getElementById('editName').value = r.app.name || '';
     document.getElementById('editType').value = r.app.appType || 'Web';
     document.getElementById('editRedirect').value = r.app.redirectUri || '';
@@ -632,21 +666,82 @@ async function loadTokens(page) {
 
 function showCreateAppModal() {
     fillTypeSelect(document.getElementById('createAppType'));
+    fillLocalOpcCallback('createAppRedirect');
     loadAccountOptions().then(function() { showModal('modalCreateApp'); });
 }
 
-function showCreateAccountModal() { showModal('modalCreateAccount'); }
+function showCreateAccountModal() {
+    var input = document.getElementById('createAccountUser');
+    if (input && !input.value.trim() && state.adminUserUuid) {
+        input.value = state.adminUserUuid;
+    }
+    showModal('modalCreateAccount');
+}
+
+async function ensureDeveloperAccount() {
+    var select = document.getElementById('createAppAccount');
+    var account = select && select.value;
+    if (account) return account;
+    var adminUuid = (state.adminUserUuid || '').trim();
+    if (!adminUuid) {
+        showToast('请选择开发者主体，或先添加开发者', 'error');
+        return null;
+    }
+    var nameInput = document.getElementById('createAccountName');
+    var name = (nameInput && nameInput.value.trim()) || document.getElementById('createAppName').value.trim() || '开发者';
+    var r = await apiPost('/account/create', { user: adminUuid, name: name });
+    if (r.code !== 0) {
+        showToast(r.msg || '添加开发者失败', 'error');
+        return null;
+    }
+    await loadAccountOptions();
+    if (r.account && r.account.uuid) {
+        if (select) select.value = r.account.uuid;
+        return r.account.uuid;
+    }
+    var matched = state.accountOptions.find(function(a) { return a.user === adminUuid; });
+    if (matched && select) select.value = matched.uuid;
+    return matched ? matched.uuid : null;
+}
 
 async function submitCreateApp() {
-    var r = await apiPost('/app/create', {
-        account: document.getElementById('createAppAccount').value,
-        name: document.getElementById('createAppName').value,
+    var redirectInput = document.getElementById('createAppRedirect');
+    var redirectUri = redirectInput.value.trim();
+    var useLocalSample = isLocalOpcCallbackSample(redirectUri);
+    if (!redirectUri || useLocalSample) {
+        redirectUri = localOpcCallbackBase();
+    }
+    var appName = document.getElementById('createAppName').value.trim();
+    if (!appName) {
+        showToast('请填写应用名称', 'error');
+        return;
+    }
+    var account = await ensureDeveloperAccount();
+    if (!account) return;
+    var payload = {
+        account: account,
+        name: appName,
         appType: document.getElementById('createAppType').value,
-        redirectUri: document.getElementById('createAppRedirect').value,
+        redirectUri: redirectUri,
         scope: document.getElementById('createAppScope').value
-    });
+    };
+    var r = await apiPost('/app/create', payload);
     if (r.code === 0) {
         hideModal('modalCreateApp');
+        if (r.data && r.data.appId && (useLocalSample || isLocalOpcCallbackSample(redirectInput.value.trim()))) {
+            var finalUri = localOpcCallbackUri(r.data.appId);
+            var patch = await apiPost('/app/update', {
+                appId: r.data.appId,
+                name: payload.name,
+                appType: payload.appType,
+                redirectUri: finalUri,
+                scope: payload.scope
+            });
+            r.data.redirectUri = finalUri;
+            if (patch.code !== 0) {
+                showToast('应用已创建，请将返回地址更新为：' + finalUri, 'error');
+            }
+        }
         showSecretModal(r.data);
         loadApps(1);
         loadOverview();
@@ -655,21 +750,31 @@ async function submitCreateApp() {
 }
 
 async function submitCreateAccount() {
+    var user = document.getElementById('createAccountUser').value.trim();
+    if (!user) {
+        if (state.adminUserUuid) {
+            user = state.adminUserUuid;
+            document.getElementById('createAccountUser').value = user;
+        } else {
+            showToast('请填写用户 uuid', 'error');
+            return;
+        }
+    }
     var r = await apiPost('/account/create', {
-        user: document.getElementById('createAccountUser').value,
+        user: user,
         name: document.getElementById('createAccountName').value
     });
     if (r.code === 0) {
         hideModal('modalCreateAccount');
-        showToast('开通成功');
+        showToast('添加成功');
         loadAccounts(1);
         loadAccountOptions();
         loadOverview();
-    } else showToast(r.msg || '开通失败', 'error');
+    } else showToast(r.msg || '添加失败', 'error');
 }
 
 async function resetSecret(appId, name) {
-    if (!confirm('确定重置应用「' + name + '」的 appSecret？旧密钥将立即失效。')) return;
+    if (!confirm('确定重置应用「' + name + '」的密钥？旧密钥将立即失效。')) return;
     var r = await apiPost('/app/resetSecret', { appId: appId });
     if (r.code === 0 && r.data) showSecretModal(r.data);
     else showToast(r.msg || '重置失败', 'error');
@@ -682,9 +787,15 @@ async function toggleAppStatus(appId, status) {
 }
 
 function showSecretModal(data) {
-    document.getElementById('secretContent').innerHTML =
-        '<p><strong>appId：</strong><code>' + escapeHtml(data.appId) + '</code></p>' +
-        '<p><strong>appSecret（仅此次显示）：</strong></p><p><code>' + escapeHtml(data.appSecret) + '</code></p>';
+    var html = '<p><strong>应用标识：</strong><code>' + escapeHtml(data.appId) + '</code></p>' +
+        '<p><strong>应用密钥（仅此次显示，请复制保存）：</strong></p><p><code>' + escapeHtml(data.appSecret) + '</code></p>';
+    if (data.redirectUri) {
+        html += '<p><strong>授权完成返回地址：</strong><code>' + escapeHtml(data.redirectUri) + '</code></p>';
+    }
+    if (data.appId) {
+        html += '<p class="field-hint" style="margin-top:12px;">下一步：在「第三方登录接入管理」中点「接入应用」，填入以上信息；授权平台地址填 <code>' + escapeHtml(appOrigin()) + '</code>。也可 <a href="' + escapeAttr(appOrigin() + '/open/oauth2/login?appId=' + data.appId) + '" target="_blank" rel="noopener">打开登录页测试</a>。</p>';
+    }
+    document.getElementById('secretContent').innerHTML = html;
     showModal('modalSecret');
 }
 
@@ -724,6 +835,59 @@ function escapeHtml(str) {
 function escapeAttr(str) {
     if (!str) return '';
     return String(str).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+}
+
+function appOrigin() {
+    return window.location.origin + (window.__CTX__ || '');
+}
+
+function localOpcCallbackBase() {
+    return appOrigin() + '/open/oauth2/callback';
+}
+
+function localOpcCallbackUri(appId) {
+    var uri = localOpcCallbackBase() + '?appId=';
+    if (appId) {
+        uri += encodeURIComponent(appId);
+    }
+    return uri;
+}
+
+function isLocalOpcCallbackSample(uri) {
+    if (!uri) {
+        return true;
+    }
+    var trimmed = String(uri).trim();
+    var base = localOpcCallbackBase();
+    return trimmed === base || trimmed.indexOf(base + '?') === 0;
+}
+
+function fillLocalOpcCallback(inputId, appId) {
+    var input = document.getElementById(inputId);
+    if (!input) {
+        return;
+    }
+    input.value = localOpcCallbackUri(appId || '');
+}
+
+function openOplAuthorizePage(appId, redirectUri) {
+    if (!appId && state.selectedApp) {
+        appId = state.selectedApp.appId;
+        redirectUri = document.getElementById('editRedirect').value || state.selectedApp.redirectUri;
+    }
+    if (!appId) {
+        showToast('请先选择应用', 'error');
+        return;
+    }
+    redirectUri = (redirectUri || '').trim();
+    if (!redirectUri) {
+        redirectUri = appOrigin() + '/open/oauth2/callback?appId=' + encodeURIComponent(appId);
+    }
+    var stateParam = 'opl_' + Math.random().toString(36).slice(2, 10);
+    var url = appOrigin() + '/open/oauth2/authorize?app_id=' + encodeURIComponent(appId)
+        + '&redirect_uri=' + encodeURIComponent(redirectUri)
+        + '&response_type=code&scope=basic&state=' + encodeURIComponent(stateParam);
+    window.open(url, '_blank');
 }
 //</#noparse>
 </script>

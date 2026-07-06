@@ -5,6 +5,8 @@
     var ctx = cfg.ctx || (window.AuthPage && AuthPage.readCtx()) || '';
     var oauthLogin = !!cfg.oauthLogin;
     var oauthAuthorize = !!cfg.oauthAuthorize;
+    var oplAuthorize = !!cfg.oplAuthorize;
+    var authorizeMode = oauthAuthorize || oplAuthorize;
     var authorizeLoggedIn = !!cfg.authorizeLoggedIn;
     var oauthDenyRedirect = cfg.oauthDenyRedirect || '';
     var safeOauthCallback = cfg.safeOauthCallback || '';
@@ -25,7 +27,7 @@
             error: false,
             errorMsg: '',
             src: window.AuthPage ? AuthPage.captchaUrl(ctx) : ctx + '/captcha.jpg',
-            qrStatus: oauthAuthorize ? '正在加载二维码...' : '切换到扫码登录后加载二维码',
+            qrStatus: authorizeMode ? '正在加载二维码...' : '切换到扫码登录后加载二维码',
             qrPhase: 'pending',
             scannerDisplayName: '',
             scannerIconUrl: '',
@@ -50,7 +52,7 @@
                 if (!this.consentChecked) {
                     return '请勾选授权协议';
                 }
-                return '确认后将跳转回第三方应用';
+                return '确认后将返回应用并继续操作';
             }
         },
         beforeCreate: function () {
@@ -66,7 +68,7 @@
                 this.error = false;
                 this.loginTab = tab;
                 if (tab === 'qr') {
-                    if (oauthAuthorize && serverQrUrl) {
+                    if (authorizeMode && serverQrUrl) {
                         this.initAuthorizeQr();
                     } else {
                         this.startQrLogin();
@@ -80,14 +82,14 @@
                 }
             },
             syncOauthCallback: function () {
-                if (oauthAuthorize) {
+                if (authorizeMode) {
                     this.oauthCallback = window.location.href.split('#')[0];
                     return;
                 }
                 this.oauthCallback = safeOauthCallback || '';
             },
-            beforeOauthAuthorizeLogin: function (e) {
-                if (oauthAuthorize) {
+            beforeAuthorizeLogin: function (e) {
+                if (authorizeMode) {
                     if (this.loginTab === 'phone') {
                         if (!/^1\d{10}$/.test(this.mobileClean)) {
                             e.preventDefault();
@@ -116,6 +118,9 @@
                     return this.beforePhoneOauthSubmit(e);
                 }
             },
+            beforeOauthAuthorizeLogin: function (e) {
+                return this.beforeAuthorizeLogin(e);
+            },
             beforePhoneOauthSubmit: function (e) {
                 this.syncOauthCallback();
                 if (!/^1\d{10}$/.test(this.mobileClean)) {
@@ -130,7 +135,7 @@
                 }
             },
             refreshQrLogin: function () {
-                if (oauthAuthorize) {
+                if (authorizeMode) {
                     window.location.reload();
                     return;
                 }
@@ -184,7 +189,7 @@
                 self.qrStatus = '等待扫码...';
                 self.qrcPollTimer = setInterval(function () { self.pollQrStatus(); }, serverPollIntervalMs);
             },
-            submitOAuthConsent: function () {
+            submitAuthorizeConsent: function () {
                 if (!this.authorizeLoggedIn) {
                     this.showError('请先在左侧完成登录');
                     return;
@@ -193,10 +198,14 @@
                     this.showError('请勾选授权协议后再确认');
                     return;
                 }
-                var form = document.getElementById('oauthApproveForm');
+                var formId = oplAuthorize ? 'oplApproveForm' : 'oauthApproveForm';
+                var form = document.getElementById(formId);
                 if (form) {
                     form.submit();
                 }
+            },
+            submitOAuthConsent: function () {
+                this.submitAuthorizeConsent();
             },
             completeAuthorizeExchange: function (exchange) {
                 var self = this;
@@ -322,7 +331,6 @@
                             vm.redirectAfterLogin(String(result.data));
                             return;
                         }
-                        // dev 探测：走服务端默认账号逻辑，跳过客户端空账号校验；失败不打扰用户
                         vm.submitLogin('', '', '', { silent: true });
                     }
                 });
@@ -376,7 +384,7 @@
                         self.applyScannerBrief(data.scannerBrief);
                         self.qrStatus = '扫码成功，请在手机点击登录';
                     }
-                    if (oauthAuthorize) {
+                    if (authorizeMode) {
                         if ((data.status === 'CONFIRMED' || data.status === 'COMPLETED') && data.exchange) {
                             self.qrPhase = 'done';
                             self.qrStatus = '扫码成功，正在登录...';
@@ -427,7 +435,7 @@
     try {
         var qs = new URLSearchParams(window.location.search || '');
         vm.syncOauthCallback();
-        if (oauthAuthorize && !authorizeLoggedIn) {
+        if (authorizeMode && !authorizeLoggedIn) {
             var authorizeReturnUrl = window.location.href.split('#')[0];
             var cbMain = document.getElementById('oauthAuthorizeCallback');
             var cbPhone = document.getElementById('oauthAuthorizeCallbackPhone');
@@ -439,7 +447,7 @@
             }
             vm.oauthCallback = authorizeReturnUrl;
         }
-        if (oauthAuthorize && serverQrUrl && vm.loginTab === 'qr') {
+        if (authorizeMode && serverQrUrl && vm.loginTab === 'qr') {
             vm.initAuthorizeQr();
         }
         var expired = qs.get('sessionExpired') === '1';

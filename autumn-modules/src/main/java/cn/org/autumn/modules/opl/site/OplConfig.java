@@ -11,6 +11,6 @@ public class OplConfig implements FilterChainHandler {
     @Override
     public void definition(Map<String, String> map) {
         map.put(OplConstants.OAUTH2_BASE + "/**", "anon");
-        map.put(OplConstants.API_V1_BASE + "/**", "anon");
+        map.put(OplConstants.API_PLATFORM + "/**", "anon");
     }
 }

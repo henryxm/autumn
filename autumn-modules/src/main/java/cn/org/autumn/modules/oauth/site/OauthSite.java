@@ -41,6 +41,12 @@ public class OauthSite implements SiteFactory.Site {
     @PageAware(login = true, resource = "oauth2/authclient")
     public String authclient;
 
+    @PageAware(login = false, resource = "oauth2/login")
+    public String rpLogin = "oauth2/login";
+
+    @PageAware(login = false, resource = "oauth2/success")
+    public String rpSuccess = "oauth2/success";
+
     public String getAuthClientKey() {
         return getKey("authclient");
     }

@@ -5,6 +5,7 @@ import cn.org.autumn.opc.OpcConstants;
 import cn.org.autumn.modules.opc.entity.ConnectAppEntity;
 import cn.org.autumn.modules.opc.entity.ConnectBindEntity;
 import cn.org.autumn.modules.opc.service.OpcAdminService;
+import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.sys.support.SystemAdminApi;
 import cn.org.autumn.utils.R;
 import java.util.LinkedHashMap;
@@ -25,7 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @Slf4j
 @RestController
-@RequestMapping(OpcConstants.ADMIN_BASE)
+@RequestMapping(OpcConstants.ADMIN_PLATFORM)
 @SkipInterceptor
 public class OpcAdminController {
 
@@ -37,7 +38,13 @@ public class OpcAdminController {
 
     @GetMapping("/overview")
     public R overview(HttpServletRequest request) {
-        return admin(request, () -> R.ok().put("data", opcAdminService.overview()));
+        return admin(request, () -> {
+            Map<String, Object> data = new LinkedHashMap<>(opcAdminService.overview());
+            if (ShiroUtils.isLogin()) {
+                data.put("adminUserUuid", ShiroUtils.getUserUuid());
+            }
+            return R.ok().put("data", data);
+        });
     }
 
     @GetMapping("/apps")
@@ -80,6 +87,21 @@ public class OpcAdminController {
                     body == null ? null : body.get("redirectUri"),
                     body == null ? null : body.get("scope"),
                     body == null ? null : body.get("accessToken"));
+            return R.ok().put("app", app);
+        });
+    }
+
+    @PostMapping("/app/update")
+    public R updateApp(HttpServletRequest request, @RequestBody Map<String, String> body) {
+        return admin(request, () -> {
+            ConnectAppEntity app = opcAdminService.updateApp(
+                    body == null ? null : body.get("user"),
+                    body == null ? null : body.get("appId"),
+                    body == null ? null : body.get("appSecret"),
+                    body == null ? null : body.get("platformBaseUrl"),
+                    body == null ? null : body.get("redirectUri"),
+                    body == null ? null : body.get("name"),
+                    body == null ? null : body.get("scope"));
             return R.ok().put("app", app);
         });
     }
