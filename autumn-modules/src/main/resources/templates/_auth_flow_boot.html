@@ -1,0 +1,13 @@
+<script src="${request.contextPath}/statics/js/auth-flow.js?_${.now?long}"></script>
+<script>
+window.__AUTH_FLOW_CONFIG__ = window.__AUTH_FLOW_CONFIG__ || {
+  ctx: '${authFlowCtx!request.contextPath?js_string}',
+  flowKind: '${authFlowKind!""?js_string}',
+  clientId: '${clientId!""?js_string}',
+  clientName: '${clientName!""?js_string}',
+  redirectUri: '${redirectUri!""?js_string}',
+  appId: '${appId!""?js_string}',
+  appName: '${appName!""?js_string}',
+  scope: '${scope!"basic"?js_string}'
+};
+</script>

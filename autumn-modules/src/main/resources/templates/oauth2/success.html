@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>登录成功</title>
+  <style>
+    :root {
+      --brand-1: #5b6cf0;
+      --brand-2: #7c3aed;
+      --text: #1a1d26;
+      --muted: #64748b;
+      --border: #e8ecf4;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      background: linear-gradient(145deg, #0f172a 0%, #1e293b 42%, #312e81 100%);
+      color: var(--text);
+    }
+    .card {
+      width: 100%;
+      max-width: 420px;
+      background: #fff;
+      border-radius: 16px;
+      padding: 36px 32px 32px;
+      text-align: center;
+      box-shadow: 0 24px 64px rgba(15, 23, 42, 0.28);
+    }
+    .icon {
+      width: 64px; height: 64px; margin: 0 auto 20px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; font-size: 28px;
+      background: #dcfce7; color: #166534;
+    }
+    h1 { font-size: 20px; font-weight: 700; margin-bottom: 10px; }
+    p { font-size: 14px; color: var(--muted); line-height: 1.65; margin-bottom: 24px; }
+    .actions { display: flex; flex-direction: column; gap: 10px; }
+    .btn {
+      display: block; padding: 12px 16px; border-radius: 10px; font-size: 14px;
+      font-weight: 600; text-decoration: none; border: none; cursor: pointer;
+    }
+    .btn-primary { background: linear-gradient(135deg, var(--brand-1), var(--brand-2)); color: #fff; }
+    .btn-ghost { background: #fff; color: var(--muted); border: 1px solid var(--border); }
+    .foot { margin-top: 20px; font-size: 12px; color: rgba(255,255,255,0.6); text-align: center; }
+  </style>
+</head>
+<body>
+  <div>
+    <div class="card">
+      <div class="icon">✓</div>
+      <h1>登录成功</h1>
+      <p>您已完成授权登录，现在可以使用本应用的相关功能。</p>
+      <div class="actions">
+        <a class="btn btn-primary" href="${request.contextPath}/index.html">进入首页</a>
+        <a class="btn btn-ghost" href="${request.contextPath}/oauth2/login">使用其他账号登录</a>
+      </div>
+    </div>
+    <p class="foot">&copy; ${siteName!'Autumn Framework'}</p>
+  </div>
+</body>
+</html>

@@ -5,7 +5,8 @@
 > **基础路径**：`{ORIGIN}/oauth2`（AS 端点）；用户信息 `{ORIGIN}/oauth2/userInfo`  
 > **框架版本**：Autumn 2.0.0 / 3.0.0（OAuth 报文格式一致）
 
-扫码登录、Open API 建票等扩展流程见 **`docs/AI_QRC_INTEGRATION.md`**；AS 端流程说明见站内 **`/modules/docs/auth-flow`**。
+扫码登录、Open API 建票等扩展流程见 **`docs/AI_QRC_INTEGRATION.md`**；AS 端流程说明见站内 **`/modules/docs/auth-flow`**。  
+**双轨体系总览与选型**（OAuth2 vs OPL/OPC、自连/第三方拓扑）见 **`docs/AI_AUTH_LOGIN_MODES.md`**。
 
 ---
 
@@ -118,6 +119,15 @@
 | 授权页 | `{ORIGIN}/oauth2/authorize` |
 | 换 Token | `{ORIGIN}/oauth2/token` |
 | 用户信息 | `{ORIGIN}/oauth2/userInfo` |
+| RP 授权登录入口（联调） | `{ORIGIN}/oauth2/login?client_id=...` |
+| RP 回调成功页 | `{ORIGIN}/oauth2/success` |
+
+### 3.4 同实例联调步骤
+
+1. 在 `/oauth2/authclient` 创建 Client，`redirect_uri` 设为 `{ORIGIN}/client/oauth2/callback`
+2. 打开 `{ORIGIN}/oauth2/login?client_id=...`（或管理页「打开 OAuth 登录页」）
+3. 点击「使用 OAuth 授权登录」→ AS 分栏授权页登录并确认
+4. 回调 `/client/oauth2/callback` 换票建会话 → 默认跳转 `/oauth2/success`
 
 ---
 
@@ -231,25 +241,17 @@ GET {ORIGIN}/oauth2/userInfo
 
 ### 5.2 传参方式（重要）
 
-Autumn AS 的 `/oauth2/userInfo` 实现会从 `access_token` 参数中 **JSON 解析**并提取 `access_token` 字段（与框架内部 `ClientOauth2Controller` 一致）。
+**推荐（Parallel Profile）**：`Authorization: Bearer {access_token}` 或 query `access_token={裸token}`。
 
-**推荐方式 A：Query 传 token JSON（与 Autumn 内部一致）**
+**历史兼容（Autumn 内部 `ClientOauth2Controller` 仍使用）**：`access_token` 参数传 **JSON 包裹**整段 token 响应：
 
 ```http
 GET {ORIGIN}/oauth2/userInfo?access_token={"access_token":"YOUR_ACCESS_TOKEN","refresh_token":"YOUR_REFRESH_TOKEN","expires_in":86400}
 ```
 
-> 整段 JSON 须 **URL 编码**。
+> 整段 JSON 须 **URL 编码**。仅传最小 JSON `{"access_token":"..."}` 亦可。
 
-**推荐方式 B：Query 仅传 token 字符串（简化）**
-
-若 token 响应体已解析，可只构造最小 JSON：
-
-```http
-GET {ORIGIN}/oauth2/userInfo?access_token={"access_token":"YOUR_ACCESS_TOKEN"}
-```
-
-**注意**：当前实现**未**对标准 `Authorization: Bearer {token}` 做兼容；使用常见 OAuth SDK 的 Bearer 方式可能返回 400/401。对接 Autumn 时请按上述 query 方式传参，或自行封装 HTTP 客户端。
+新对接第三方 **优先使用 Bearer**；已有对接继续 JSON 包裹方式 **无需改动**。
 
 ### 5.3 成功响应
 
@@ -556,9 +558,10 @@ function buildAuthorizeUrl(origin, clientId, redirectUri, state) {
 
 都是 **`GET /oauth2/userInfo`** 的返回字段；`uuid` 用于关联，`nickname`/`icon`/`username` 用于展示。
 
-### Q2：为什么 `/oauth2/userInfo` 不能用 Bearer Header？
+### Q2：`/oauth2/userInfo` 支持 Bearer Header 吗？
 
-当前 AS 实现从 `access_token` 查询参数读取并 **JSON 解析**（兼容内部 `ClientOauth2Controller` 整段 token 响应透传）。对接时请使用 [5.2](#52-传参方式重要) 的 query 方式。
+**支持**。Parallel Profile 下推荐使用 `Authorization: Bearer {access_token}` 或 query 传裸 `access_token`。  
+历史对接使用的 **JSON 包裹 query** 方式仍然兼容，Autumn 内部 `ClientOauth2Controller` 继续使用该方式，无需迁移。
 
 ### Q3：`redirect_uri` 总是报不匹配？
 

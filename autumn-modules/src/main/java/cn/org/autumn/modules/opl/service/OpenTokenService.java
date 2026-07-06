@@ -129,8 +129,11 @@ public class OpenTokenService extends ModuleService<OpenTokenDao, OpenTokenEntit
             }
         } else {
             OplTokenContext context = localCache.get(redisKey);
-            if (context != null && !context.isExpired()) {
-                return context;
+            if (context != null) {
+                if (!context.isExpired()) {
+                    return context;
+                }
+                localCache.remove(redisKey);
             }
         }
         return loadFromDb(type, key);

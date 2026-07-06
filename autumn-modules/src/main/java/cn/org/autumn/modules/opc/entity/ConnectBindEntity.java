@@ -4,6 +4,10 @@ import cn.org.autumn.annotation.Cache;
 import cn.org.autumn.entity.UuidBased;
 import cn.org.autumn.table.annotation.Column;
 import cn.org.autumn.table.annotation.Index;
+import cn.org.autumn.table.annotation.IndexField;
+import cn.org.autumn.table.annotation.IndexMethodEnum;
+import cn.org.autumn.table.annotation.IndexTypeEnum;
+import cn.org.autumn.table.annotation.Indexes;
 import cn.org.autumn.table.annotation.Table;
 import cn.org.autumn.table.data.DataType;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -17,6 +21,10 @@ import lombok.Setter;
 @Setter
 @TableName("opc_connect_bind")
 @Table(value = "opc_connect_bind", comment = "接入绑定:本地用户与openId/unionId")
+@Indexes(@Index(name = "connect_app_open_id", indexType = IndexTypeEnum.UNIQUE, indexMethod = IndexMethodEnum.BTREE, fields = {
+        @IndexField(field = "connectApp", length = 32),
+        @IndexField(field = "openId", length = 64)
+}))
 public class ConnectBindEntity implements UuidBased, Serializable {
     private static final long serialVersionUID = 1L;
 

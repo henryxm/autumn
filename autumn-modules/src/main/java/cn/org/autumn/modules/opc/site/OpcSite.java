@@ -16,6 +16,12 @@ public class OpcSite extends OpcPages {
     @PageAware(login = false)
     public String integration = "modules/docs/opc-integration";
 
+    @PageAware(login = false, resource = OpcConstants.OAUTH2_LOGIN_PAGE)
+    public String rpLogin = OpcConstants.OAUTH2_LOGIN_PAGE;
+
+    @PageAware(login = false, resource = OpcConstants.OAUTH2_SUCCESS_PAGE)
+    public String rpSuccess = OpcConstants.OAUTH2_SUCCESS_PAGE;
+
     public String getOpcManageKey() {
         return getKey("opcmanage");
     }

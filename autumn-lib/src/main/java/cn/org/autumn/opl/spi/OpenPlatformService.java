@@ -58,5 +58,7 @@ public interface OpenPlatformService {
 
     OpenTokenSnapshot issueTokenFromCode(String appId, String code, String redirectUri);
 
+    OpenTokenSnapshot issueTokenFromCode(String appId, String code, String redirectUri, String codeVerifier);
+
     OpenTokenSnapshot refreshToken(String appId, String refreshToken);
 }

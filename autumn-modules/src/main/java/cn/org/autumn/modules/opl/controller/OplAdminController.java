@@ -6,10 +6,12 @@ import cn.org.autumn.opl.model.OpenAppRegisterOutcome;
 import cn.org.autumn.modules.opl.entity.OpenAccountEntity;
 import cn.org.autumn.modules.opl.entity.OpenAppEntity;
 import cn.org.autumn.modules.opl.service.OplAdminService;
+import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.sys.support.SystemAdminApi;
 import cn.org.autumn.opl.model.OpenAppType;
 import cn.org.autumn.utils.PageUtils;
 import cn.org.autumn.utils.R;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
@@ -29,7 +31,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @Slf4j
 @RestController
-@RequestMapping(OplConstants.ADMIN_BASE)
+@RequestMapping(OplConstants.ADMIN_PLATFORM)
 @SkipInterceptor
 public class OplAdminController {
 
@@ -41,7 +43,13 @@ public class OplAdminController {
 
     @GetMapping("/overview")
     public R overview(HttpServletRequest request) {
-        return admin(request, () -> R.ok().put("data", oplAdminService.overview()));
+        return admin(request, () -> {
+            Map<String, Object> data = new LinkedHashMap<>(oplAdminService.overview());
+            if (ShiroUtils.isLogin()) {
+                data.put("adminUserUuid", ShiroUtils.getUserUuid());
+            }
+            return R.ok().put("data", data);
+        });
     }
 
     @GetMapping("/appTypes")

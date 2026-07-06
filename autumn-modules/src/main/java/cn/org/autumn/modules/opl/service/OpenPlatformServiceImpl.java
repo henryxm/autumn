@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.opl.service;
 
+import cn.org.autumn.modules.oauth.oauth2.support.PkceSupport;
 import cn.org.autumn.modules.opl.entity.OpenAppEntity;
 import cn.org.autumn.modules.opl.entity.OpenCodeEntity;
 import cn.org.autumn.modules.opl.store.OplTokenContext;
@@ -155,13 +156,22 @@ public class OpenPlatformServiceImpl implements OpenPlatformService {
 
     @Override
     public OpenTokenSnapshot issueTokenFromCode(String appId, String code, String redirectUri) {
+        return issueTokenFromCode(appId, code, redirectUri, null);
+    }
+
+    @Override
+    public OpenTokenSnapshot issueTokenFromCode(String appId, String code, String redirectUri, String codeVerifier) {
+        if (StringUtils.isBlank(redirectUri)) {
+            throw new IllegalArgumentException("redirect_uri不能为空");
+        }
         OpenCodeEntity codeEntity = openCodeService.consume(code);
         if (codeEntity == null || !StringUtils.equals(codeEntity.getAppId(), appId)) {
             return null;
         }
-        if (StringUtils.isNotBlank(redirectUri) && !StringUtils.equals(redirectUri, codeEntity.getRedirectUri())) {
+        if (!StringUtils.equals(redirectUri, codeEntity.getRedirectUri())) {
             throw new IllegalArgumentException("redirect_uri不匹配");
         }
+        PkceSupport.validateVerifier(codeEntity.getCodeChallenge(), codeEntity.getCodeChallengeMethod(), codeVerifier);
         OplTokenContext context = openTokenService.issueFromCode(codeEntity);
         OpenAppSnapshot app = OplSnapshots.toAppSnapshot(openAppService.getByAppId(appId));
         OpenTokenSnapshot snapshot = OplSnapshots.toTokenSnapshot(context);

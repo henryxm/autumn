@@ -71,7 +71,7 @@ public class OplExtensionService extends Factory {
         event.setAppId(app == null ? null : app.getAppId());
         event.setAccount(app == null ? null : app.getAccount());
         event.setUser(request == null ? null : request.getUserUuid());
-        event.getPayload().put("code", code);
+        event.getPayload().put("codeIssued", true);
         publish(event);
     }
 

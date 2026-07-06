@@ -30,7 +30,7 @@ public class InstallWizardController {
         model.addAttribute("installApiBase", ctx + "/install/api");
         model.addAttribute("bootstrapStatusUrl", ctx + "/install/bootstrap-status");
         model.addAttribute("homeUrl", ctx.isEmpty() ? "/" : ctx + "/");
-        model.addAttribute("loginUrl", ctx + "/login.html");
+        model.addAttribute("loginUrl", ctx + "/login");
         return "install/wizard";
     }
 }

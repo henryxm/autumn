@@ -1,10 +1,10 @@
 package cn.org.autumn.modules.spm.filter;
 
-import cn.org.autumn.modules.oauth.util.JakartaToJavaxRequestAdapter;
 import cn.org.autumn.config.Config;
 import cn.org.autumn.model.AccountAuthConfig;
 import cn.org.autumn.model.Error;
 import cn.org.autumn.model.Response;
+import cn.org.autumn.modules.oauth.oauth2.support.OAuthAccessTokenResolver;
 import cn.org.autumn.modules.oauth.service.ClientDetailsService;
 import cn.org.autumn.modules.spm.service.SuperPositionModelService;
 import cn.org.autumn.modules.bot.service.RobotTokenService;
@@ -22,9 +22,6 @@ import cn.org.autumn.utils.WebPathUtils;
 import com.alibaba.fastjson2.JSON;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.oltu.oauth2.common.OAuth;
-import org.apache.oltu.oauth2.common.message.types.ParameterStyle;
-import org.apache.oltu.oauth2.rs.request.OAuthAccessResourceRequest;
 import org.apache.shiro.authc.AuthenticationException;
 import org.apache.shiro.authc.AuthenticationToken;
 import org.apache.shiro.session.Session;
@@ -69,41 +66,10 @@ public class SpmFilter extends FormAuthenticationFilter implements PathFactory.P
         if (request instanceof HttpServletRequest) {
             HttpServletRequest httpRequest = (HttpServletRequest) request;
             String robotHeader = httpRequest.getHeader("X-Robot-Token");
-            if (StringUtils.isNotBlank(robotHeader))
+            if (StringUtils.isNotBlank(robotHeader)) {
                 return robotHeader.trim();
-        }
-        try {
-            OAuthAccessResourceRequest oauthRequest = new OAuthAccessResourceRequest(JakartaToJavaxRequestAdapter.adapt((HttpServletRequest) request), ParameterStyle.QUERY, ParameterStyle.HEADER);
-            String accessToken = oauthRequest.getAccessToken();
-            if (StringUtils.isBlank(accessToken))
-                return "";
-            accessToken = accessToken.trim();
-            if (accessToken.startsWith("{") && accessToken.endsWith("}") && accessToken.contains("\"access_token\":")) {
-                if (log.isDebugEnabled())
-                    log.debug("数据令牌:{}", accessToken);
-                Object resp = JSON.parse(accessToken);
-                @SuppressWarnings("unchecked")
-                Map<String, Object> map = (Map<String, Object>) resp;
-                String accessTokenKey = "";
-                if (map.containsKey(OAuth.OAUTH_ACCESS_TOKEN)) {
-                    accessTokenKey = (String) map.get(OAuth.OAUTH_ACCESS_TOKEN);
-                }
-                return accessTokenKey;
-            } else {
-                if (log.isDebugEnabled())
-                    log.debug("字符令牌:{}", accessToken);
-                if (accessToken.contains("\"") || accessToken.contains("{") || accessToken.contains("}") || accessToken.length() > 100)
-                    return "";
-                else {
-                    return accessToken;
-                }
             }
-        } catch (Throwable e) {
-            if (request instanceof HttpServletRequest) {
-                HttpServletRequest httpServletRequest = (HttpServletRequest) request;
-                log.debug(httpServletRequest.getServletPath());
-            }
-            log.debug("令牌解析:{}", e.getMessage());
+            return OAuthAccessTokenResolver.resolve(httpRequest, OAuthAccessTokenResolver.Policy.PERMISSIVE);
         }
         return "";
     }
@@ -197,7 +163,7 @@ public class SpmFilter extends FormAuthenticationFilter implements PathFactory.P
         response.setStatus(HttpServletResponse.SC_OK);
         String target = loginUrl == null ? "" : loginUrl.trim();
         if (target.isEmpty()) {
-            target = request.getContextPath() + "/login.html";
+            target = request.getContextPath() + "/login";
         } else if (!target.startsWith("http://") && !target.startsWith("https://") && !target.startsWith("/")) {
             target = request.getContextPath() + "/" + target;
         } else if (target.startsWith("/")) {

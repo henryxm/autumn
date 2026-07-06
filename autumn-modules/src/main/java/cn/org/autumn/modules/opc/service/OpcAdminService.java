@@ -74,6 +74,19 @@ public class OpcAdminService {
     }
 
     @Transactional(rollbackFor = Exception.class)
+    public ConnectAppEntity updateApp(String ownerUser, String appId, String appSecret, String platformBaseUrl, String redirectUri, String name, String scope) {
+        ConnectAppEntity existing = connectAppService.getByAppId(appId);
+        if (existing == null) {
+            throw new IllegalArgumentException("接入应用不存在");
+        }
+        String user = StringUtils.isBlank(ownerUser) ? existing.getUser() : ownerUser;
+        if (StringUtils.isNotBlank(ownerUser)) {
+            Uuid.requireValid(ownerUser);
+        }
+        return connectAppService.updateConfig(user, appId, appSecret, platformBaseUrl, redirectUri, name, scope);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
     public ConnectAppEntity updateAppStatus(String appId, int status) {
         return connectAppService.updateStatus(appId, status);
     }

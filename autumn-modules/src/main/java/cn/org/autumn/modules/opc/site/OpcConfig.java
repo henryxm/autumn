@@ -11,6 +11,10 @@ public class OpcConfig implements FilterChainHandler {
     @Override
     public void definition(Map<String, String> map) {
         map.put(OpcConstants.OAUTH2_BASE + "/**", "anon");
-        map.put(OpcConstants.API_V1_BASE + "/**", "anon");
+        map.put(OpcConstants.OAUTH2_LOGIN_PAGE, "anon");
+        map.put(OpcConstants.OAUTH2_LOGIN_PAGE + ".html", "anon");
+        map.put(OpcConstants.OAUTH2_SUCCESS_PAGE, "anon");
+        map.put(OpcConstants.OAUTH2_SUCCESS_PAGE + ".html", "anon");
+        map.put(OpcConstants.API_PLATFORM + "/**", "anon");
     }
 }

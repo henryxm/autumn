@@ -788,6 +788,16 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         if (!sysConfigService.isRegisterEnabled()) {
             throw new IllegalArgumentException("暂未开放注册，请联系管理员");
         }
+        return createSelfServiceAccount(account, password);
+    }
+
+    /** 第三方登录接入自动建号：由 OPC 管理员开关控制，不依赖前台自助注册开关。 */
+    @Transactional(rollbackFor = Exception.class)
+    public SysUserEntity provisionConnectUser(String account, String password) {
+        return createSelfServiceAccount(account, password);
+    }
+
+    private SysUserEntity createSelfServiceAccount(String account, String password) {
         if (StringUtils.isBlank(account) || StringUtils.isBlank(password)) {
             throw new IllegalArgumentException("账号或密码不能为空");
         }

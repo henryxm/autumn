@@ -1,5 +1,10 @@
 package cn.org.autumn.modules.oauth.oauth2;
 
+import cn.org.autumn.modules.oauth.oauth2.support.OAuthAccessTokenResolver;
+import cn.org.autumn.modules.oauth.oauth2.support.OAuthConsentCsrfSupport;
+import cn.org.autumn.modules.oauth.oauth2.support.OAuthConsentSupport;
+import cn.org.autumn.modules.oauth.oauth2.support.OAuthRedirectSupport;
+import cn.org.autumn.modules.oauth.oauth2.support.OAuthResponseSupport;
 import cn.org.autumn.modules.oauth.entity.ClientDetailsEntity;
 import cn.org.autumn.modules.oauth.entity.TokenStoreEntity;
 import cn.org.autumn.modules.oauth.service.ClientDetailsService;
@@ -18,6 +23,7 @@ import cn.org.autumn.modules.usr.dto.UserProfile;
 import cn.org.autumn.modules.usr.entity.UserProfileEntity;
 import cn.org.autumn.modules.usr.service.UserLoginLogService;
 import cn.org.autumn.modules.usr.service.UserProfileService;
+import cn.org.autumn.site.AuthPageSupport;
 import cn.org.autumn.site.PageFactory;
 import cn.org.autumn.utils.IPUtils;
 import cn.org.autumn.utils.Utils;
@@ -109,31 +115,20 @@ public class AuthorizationController {
     PageFactory pageFactory;
 
     @Autowired
+    AuthPageSupport authPageSupport;
+
+    @Autowired
     ScanTicketService scanTicketService;
 
     @Autowired
     ClientGrantService clientGrantService;
 
     private String oauthErrorBody(String description, String error, int errorResponse) throws OAuthSystemException {
-        OAuthResponse oAuthResponse = OAuthASResponse.errorResponse(errorResponse).setError(error).setErrorDescription(description).buildJSONMessage();
-        return oAuthResponse.getBody();
+        return OAuthResponseSupport.oauthErrorBody(description, error, errorResponse);
     }
 
     private String writeOAuthError(HttpServletResponse response, String description, String error, int errorResponse) throws OAuthSystemException {
-        OAuthResponse oAuthResponse = OAuthASResponse.errorResponse(errorResponse).setError(error).setErrorDescription(description).buildJSONMessage();
-        if (response != null && !response.isCommitted()) {
-            response.setStatus(oAuthResponse.getResponseStatus());
-            response.setCharacterEncoding("UTF-8");
-            response.setContentType("application/json;charset=UTF-8");
-            try {
-                response.getWriter().write(oAuthResponse.getBody());
-                response.getWriter().flush();
-            } catch (Exception e) {
-                throw new OAuthSystemException(e);
-            }
-            return ViewTemplateSupport.REQUEST_HANDLED;
-        }
-        return oAuthResponse.getBody();
+        return OAuthResponseSupport.writeOAuthError(response, description, error, errorResponse);
     }
 
     private String normalizeRedirectUrl(String url) {
@@ -241,7 +236,7 @@ public class AuthorizationController {
             model.addAttribute("error", consentError);
         }
         try {
-            String view = pageFactory.login(request, response, model);
+            String view = pageFactory.oauthAuthorize(request, response, model);
             return StringUtils.isNotBlank(view) ? view : "login";
         } catch (Exception e) {
             log.warn("OAuth consent view failed: {}", e.getMessage(), e);
@@ -263,16 +258,7 @@ public class AuthorizationController {
     }
 
     private String buildAccessDeniedRedirect(String redirectURI, String state) {
-        try {
-            String url = redirectURI;
-            url += (url.indexOf('?') >= 0 ? '&' : '?') + "error=access_denied";
-            if (StringUtils.isNotBlank(state)) {
-                url += "&state=" + URLEncoder.encode(state, "utf-8");
-            }
-            return url;
-        } catch (Exception e) {
-            return redirectURI;
-        }
+        return OAuthRedirectSupport.buildAccessDeniedRedirect(redirectURI, state);
     }
 
     private Object oauthLoginFallbackRedirect(HttpServletRequest request, HttpServletResponse response, String error) throws OAuthSystemException {
@@ -296,18 +282,56 @@ public class AuthorizationController {
         }
     }
 
-    @RequestMapping("login")
-    public Object login(HttpServletRequest request, HttpServletResponse response, String username, String password, boolean rememberMe, Model model) {
-        return login(request, response, username, password, rememberMe, "login", "默认登录", model);
+    private boolean isOAuthRpLoginEntry(HttpServletRequest request) {
+        String clientId = request.getParameter("client_id");
+        if (StringUtils.isBlank(clientId)) {
+            clientId = request.getParameter("clientId");
+        }
+        if (StringUtils.isBlank(clientId)) {
+            return false;
+        }
+        String callback = normalizeRedirectUrl(request.getParameter("callback"));
+        if (StringUtils.isBlank(callback)) {
+            return true;
+        }
+        return !callback.contains("/oauth2/authorize") && !callback.contains("/open/oauth2/authorize");
     }
 
-    public Object login(HttpServletRequest request, HttpServletResponse response, String username, String password, boolean rememberMe, String way, String reason, Model model) {
-        Enumeration<String> enumeration = request.getParameterNames();
-        if (!enumeration.hasMoreElements()) {
-            model.addAttribute("url", WebPathUtils.forBrowser(request, "/oauth2/login?redirect=login"));
-            return "direct";
+    @RequestMapping("login")
+    public Object login(HttpServletRequest request, HttpServletResponse response, String username, String password, boolean rememberMe, Model model) {
+        if (!request.getMethod().equalsIgnoreCase(POST)) {
+            return loginGet(request, response, model);
         }
+        return loginPost(request, response, username, password, rememberMe, "login", "默认登录", model);
+    }
 
+    private Object loginGet(HttpServletRequest request, HttpServletResponse response, Model model) {
+        if ("login".equals(request.getParameter("redirect"))) {
+            return redirectUrl(WebPathUtils.forBrowser(request, "/login"));
+        }
+        if (isOAuthRpLoginEntry(request)) {
+            String clientId = request.getParameter("client_id");
+            if (StringUtils.isBlank(clientId)) {
+                clientId = request.getParameter("clientId");
+            }
+            authPageSupport.prepareOauthLoginEntry(request, model, clientId);
+            return pageFactory.oauthLoginEntry(request, response, model);
+        }
+        String error = request.getParameter("error");
+        String callback = normalizeRedirectUrl(request.getParameter("callback"));
+        if (StringUtils.isBlank(callback)) {
+            callback = normalizeRedirectUrl(Utils.getCallback(request));
+        }
+        if (StringUtils.isNotBlank(callback) || StringUtils.isNotBlank(error)) {
+            if (StringUtils.isNotBlank(error)) {
+                model.addAttribute("error", error);
+            }
+            return pageFactory.login(request, response, model);
+        }
+        return redirectUrl(WebPathUtils.forBrowser(request, "/login"));
+    }
+
+    public Object loginPost(HttpServletRequest request, HttpServletResponse response, String username, String password, boolean rememberMe, String way, String reason, Model model) {
         String error = "";
         if (model.containsAttribute("error")) {
             Object obj = model.getAttribute("error");
@@ -428,11 +452,23 @@ public class AuthorizationController {
     }
 
     @RequestMapping(value = "authorize/approve", method = RequestMethod.POST)
-    public Object approveAuthorize(HttpServletRequest request, HttpServletResponse response, @RequestParam(name = OAUTH_CLIENT_ID) String clientId, @RequestParam(OAUTH_REDIRECT_URI) String redirectURI, @RequestParam(name = OAUTH_RESPONSE_TYPE, defaultValue = "code") String responseType, @RequestParam(required = false) String scope, @RequestParam(required = false) String state, @RequestParam(required = false) String callback, @RequestParam(name = "userConsent", defaultValue = "false") String userConsent, Model model) throws OAuthSystemException, OAuthProblemException {
+    public Object approveAuthorize(HttpServletRequest request, HttpServletResponse response, @RequestParam(name = OAUTH_CLIENT_ID) String clientId, @RequestParam(OAUTH_REDIRECT_URI) String redirectURI, @RequestParam(name = OAUTH_RESPONSE_TYPE, defaultValue = "code") String responseType, @RequestParam(required = false) String scope, @RequestParam(required = false) String state, @RequestParam(required = false) String callback, @RequestParam(name = "userConsent", defaultValue = "false") String userConsent, @RequestParam(name = "consentCsrf", required = false) String consentCsrf, Model model) throws OAuthSystemException, OAuthProblemException {
         if (ShiroUtils.needLogin()) {
             return oauthLoginFallbackRedirect(request, response, "请先登录后再确认授权");
         }
-        if (!"true".equalsIgnoreCase(userConsent) && !"1".equals(userConsent) && !"on".equalsIgnoreCase(userConsent)) {
+        if (!OAuthConsentCsrfSupport.validateAndConsume(request, consentCsrf)) {
+            ClientDetailsEntity clientForCsrf = clientDetailsService.findByClientId(clientId);
+            if (clientForCsrf == null) {
+                return writeOAuthError(response, "无效的客户端ID", INVALID_CLIENT, SC_BAD_REQUEST);
+            }
+            model.addAttribute("redirectUri", redirectURI);
+            model.addAttribute("scope", scope);
+            model.addAttribute("state", state);
+            model.addAttribute("responseType", responseType);
+            model.addAttribute("denyRedirect", buildAccessDeniedRedirect(redirectURI, state));
+            return oauthConsentView(request, response, model, null, clientForCsrf, true, "授权请求已过期，请刷新页面后重试");
+        }
+        if (!OAuthConsentSupport.consented(userConsent)) {
             ClientDetailsEntity client = clientDetailsService.findByClientId(clientId);
             if (client == null) {
                 return writeOAuthError(response, "无效的客户端ID", INVALID_CLIENT, SC_BAD_REQUEST);
@@ -545,7 +581,7 @@ public class AuthorizationController {
         }
         //5. 简化授权模式
         if (grantType.equals(GrantType.IMPLICIT.toString())) {
-
+            return oauthErrorBody("unsupported_grant_type", UNSUPPORTED_GRANT_TYPE, SC_BAD_REQUEST);
         }
         if (null == tokenStore) {
             return oauthErrorBody("非法授权", INVALID_GRANT, SC_BAD_REQUEST);
@@ -587,16 +623,13 @@ public class AuthorizationController {
     @Operation(tags = {"oauth"}, servers = {@Server(url = "https://www.minclouds.com", description = "获取用户信息")}, description = "获取用户信息", summary = "获取用户信息", operationId = "getUserInfo")
     public HttpEntity<?> authUserInfo(HttpServletRequest request) throws OAuthSystemException {
         try {
-            // 构建OAuth资源请求
-            OAuthAccessResourceRequest oauthRequest = new OAuthAccessResourceRequest(JakartaToJavaxRequestAdapter.adapt(request), ParameterStyle.QUERY, ParameterStyle.HEADER);
-            String accessToken = oauthRequest.getAccessToken();
-            Object resp = JSON.parse(accessToken);
-            Map map = (Map) resp;
-            String accessTokenKey = "";
-            if (map.containsKey(OAuth.OAUTH_ACCESS_TOKEN)) {
-                accessTokenKey = (String) map.get(OAuth.OAUTH_ACCESS_TOKEN);
+            String accessTokenKey = OAuthAccessTokenResolver.resolve(request, OAuthAccessTokenResolver.Policy.LEGACY_JSON_WRAP);
+            if (StringUtils.isBlank(accessTokenKey)) {
+                OAuthResponse oauthResponse = OAuthRSResponse.errorResponse(SC_UNAUTHORIZED).setRealm("Apache Oltu").setError(OAuthError.ResourceResponse.INVALID_TOKEN).buildHeaderMessage();
+                HttpHeaders headers = new HttpHeaders();
+                headers.add(OAuth.HeaderType.WWW_AUTHENTICATE, oauthResponse.getHeader(OAuth.HeaderType.WWW_AUTHENTICATE));
+                return new ResponseEntity<>(headers, HttpStatus.UNAUTHORIZED);
             }
-            // 验证访问令牌
             if (!clientDetailsService.isValidAccessToken(accessTokenKey)) {
                 // 如果不存在/过期了，返回未验证错误，需重新验证
                 OAuthResponse oauthResponse = OAuthRSResponse.errorResponse(SC_UNAUTHORIZED).setRealm("Apache Oltu").setError(OAuthError.ResourceResponse.INVALID_TOKEN).buildHeaderMessage();
@@ -616,19 +649,8 @@ public class AuthorizationController {
                 }
                 return new ResponseEntity<>(JSON.toJSONString(username), HttpStatus.OK);
             }
-        } catch (OAuthProblemException e) {
-            // 检查是否设置了错误码
-            String errorCode = e.getError();
-            if (OAuthUtils.isEmpty(errorCode)) {
-                OAuthResponse oauthResponse = OAuthRSResponse.errorResponse(SC_UNAUTHORIZED).buildHeaderMessage();
-                HttpHeaders headers = new HttpHeaders();
-                headers.add(OAuth.HeaderType.WWW_AUTHENTICATE, oauthResponse.getHeader(OAuth.HeaderType.WWW_AUTHENTICATE));
-                return new ResponseEntity<>(headers, HttpStatus.UNAUTHORIZED);
-            }
-            OAuthResponse oauthResponse = OAuthRSResponse.errorResponse(SC_UNAUTHORIZED).setError(e.getError()).setErrorDescription(e.getDescription()).setErrorUri(e.getUri()).buildHeaderMessage();
-            HttpHeaders headers = new HttpHeaders();
-            headers.add(OAuth.HeaderType.WWW_AUTHENTICATE, oauthResponse.getHeader(OAuth.HeaderType.WWW_AUTHENTICATE));
-            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        } catch (Exception e) {
+            log.debug("authUserInfo failed: {}", e.getMessage());
         }
         return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
     }

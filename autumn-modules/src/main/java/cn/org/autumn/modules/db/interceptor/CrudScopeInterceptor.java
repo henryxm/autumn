@@ -2,6 +2,7 @@ package cn.org.autumn.modules.db.interceptor;
 
 import cn.org.autumn.config.InterceptorHandler;
 import cn.org.autumn.database.CrudGuard;
+import cn.org.autumn.opl.OplConstants;
 import java.util.Arrays;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -54,6 +55,8 @@ public class CrudScopeInterceptor implements HandlerInterceptor, InterceptorHand
                 "/sys/login",
                 "/sys/autologin",
                 "/oauth2/login",
+                OplConstants.OAUTH2_ROOT + "/login",
+                OplConstants.OAUTH2_LOGIN,
                 "/captcha.jpg",
                 "/loading.html"
         );

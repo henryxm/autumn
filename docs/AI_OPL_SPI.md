@@ -49,10 +49,11 @@
 
 | 常量 | 值 | 说明 |
 |------|-----|------|
-| `OAUTH2_BASE` | `/opl/oauth2` | authorize / token / userInfo |
-| `API_V1_BASE` | `/opl/api/v1` | 开发者 Open API |
-| `ADMIN_BASE` | `/opl/admin` | 后台管理 API |
-| `MANAGE_PAGE` | `oplmanage.html` | 统一管理页（模板 `opl/oplmanage.html`） |
+| `OAUTH2_ROOT` / `OAUTH2_BASE` | `/open/oauth2` | authorize / token / userInfo |
+| `OAUTH2_LOGIN` | `/open/oauth2/opl/login` | 授权页内登录 POST |
+| `API_PLATFORM` | `/open/api/v1/platform` | 开发者 Open API 根 |
+| `ADMIN_PLATFORM` | `/open/admin/opl/platform` | 后台管理 API |
+| `MANAGE_PAGE` | `oplmanage.html` | 统一管理页 |
 | `PARAM_APP_ID` / `PARAM_APP_SECRET` | `app_id` / `app_secret` | OAuth 参数名 |
 | `DEFAULT_SCOPE` | `basic` | 默认授权 scope |
 | `AUTH_CODE_TTL_SECONDS` | 300 | 授权码 TTL |
@@ -60,7 +61,7 @@
 | `REFRESH_TOKEN_TTL_SECONDS` | 604800 | refresh_token TTL |
 | `STATUS_ACTIVE` / `STATUS_DISABLED` | 1 / 0 | 账号与应用状态 |
 
-OPC 侧常量见 `cn.org.autumn.opc.OpcConstants`（`ADMIN_BASE`、`MANAGE_PAGE`、`CONFIG_AUTO_REGISTER`）。
+OPC 侧常量见 `cn.org.autumn.opc.OpcConstants`（`OAUTH2_AUTHORIZE`、`OAUTH2_LOGIN_PAGE`、`API_PLATFORM`、`ADMIN_PLATFORM` 等）。HTTP 路径规则见 **`docs/AI_AUTH_LOGIN_MODES.md` §1.5**。
 
 应用类型枚举：`cn.org.autumn.opl.model.OpenAppType`（与 DB/API 一致）。
 
@@ -159,7 +160,7 @@ public class MyOplExtension implements OpenPlatformExtension {
 |------|------|
 | App 注册 | `Event.APP_REGISTERED` |
 | 密钥重置 | `Event.APP_SECRET_RESET` |
-| 授权码签发 | `Event.CODE_ISSUED` |
+| 授权码签发 | `Event.CODE_ISSUED`（payload 无明文 code） |
 | Token 签发 | `Event.TOKEN_ISSUED` |
 | 身份解析 | `Event.IDENTITY_RESOLVED` |
 | Union 创建 | `Event.UNION_CREATED` |
@@ -200,7 +201,7 @@ public class OplAuditSubscriber implements OpenPlatformSubscriber {
 
 ## 6. 与 OPC 模块的关系
 
-- **OPL**：开放平台提供方（appId 体系、OAuth2 `/opl/oauth2/*`）
+- **OPL**：开放平台提供方（appId 体系、OAuth2 `/open/oauth2/*`）
 - **OPC**：接入方 RP（见 [`AI_OPC_INTEGRATION.md`](AI_OPC_INTEGRATION.md)）
 
 业务项目若同时部署两者：在 OPC 回调中注入 `OpenPlatformService` 做本地用户绑定，或通过 `OpenPlatformSubscriber` 监听 `opl.oauth.token_issued` 异步关联。

@@ -31,7 +31,7 @@ public final class HttpNavigationUtils {
     /**
      * 登录成功后是否适合作为浏览器整页 {@code location} 的目标（仅基于 URL 形态；无 Request 时的兜底）。
      * <ul>
-     *   <li>允许：{@code /}、{@code *.html}、带 {@code spm=} 的 SPM 页、OAuth 授权页等；</li>
+     *   <li>允许：{@code /}、{@code *.html}、带 {@code spm=} 的 SPM 页、OAuth 授权页（{@code /oauth2/authorize}、{@code /open/oauth2/authorize}）等；</li>
      *   <li>拒绝：基础设施端点、典型 AJAX 缓存参数、其余无文档特征的 REST 路径。</li>
      * </ul>
      */
@@ -40,10 +40,17 @@ public final class HttpNavigationUtils {
         String p = path.toLowerCase();
         if (p.endsWith(".html")) return true;
         if (hasQueryParam(query, "spm")) return true;
-        if (p.startsWith("/oauth2/authorize")) return true;
+        if (isOauthAuthorizeConsentPath(p)) return true;
         if (isInfrastructureApiPath(p)) return false;
         if (isAjaxCacheBusterOnlyQuery(query)) return false;
         return false;
+    }
+
+    /** OAuth / Open Platform 授权确认页（登录后须停留并手动确认授权）。 */
+    public static boolean isOauthAuthorizeConsentPath(String path) {
+        if (!StringUtils.hasText(path)) return false;
+        String p = path.toLowerCase();
+        return p.startsWith("/oauth2/authorize") || p.startsWith("/open/oauth2/authorize");
     }
 
     /** 明显为监控/文档/Token 等基础设施，永不应整页打开。 */

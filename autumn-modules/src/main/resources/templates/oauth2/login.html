@@ -1,15 +1,99 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8">
-  <title>用户登录</title>
-  <script>
-    (function () {
-      var ctx = '${request.contextPath?js_string}';
-      var search = window.location.search || '';
-      window.location.replace(ctx + '/login.html' + search);
-    })();
-  </script>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>授权登录</title>
+  <style>
+    :root {
+      --brand-1: #5b6cf0;
+      --brand-2: #7c3aed;
+      --text: #1a1d26;
+      --muted: #64748b;
+      --border: #e8ecf4;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      background: linear-gradient(145deg, #0f172a 0%, #1e293b 42%, #312e81 100%);
+      color: var(--text);
+    }
+    .card {
+      width: 100%;
+      max-width: 440px;
+      background: #fff;
+      border-radius: 16px;
+      padding: 36px 32px 32px;
+      box-shadow: 0 24px 64px rgba(15, 23, 42, 0.28);
+    }
+    .icon {
+      width: 64px; height: 64px; margin: 0 auto 20px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; font-size: 28px;
+      background: rgba(91, 108, 240, 0.12); color: var(--brand-1);
+    }
+    h1 { font-size: 20px; font-weight: 700; margin-bottom: 10px; text-align: center; }
+    p { font-size: 14px; color: var(--muted); line-height: 1.65; margin-bottom: 20px; text-align: center; }
+    .meta {
+      background: #f8fafc; border: 1px solid var(--border); border-radius: 10px;
+      padding: 14px 16px; font-size: 14px; margin-bottom: 20px; text-align: center;
+    }
+    .meta .app-label { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+    .meta .app-name { font-size: 16px; font-weight: 700; color: var(--text); }
+    .notice {
+      background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px;
+      padding: 14px 16px; font-size: 13px; color: #92400e; line-height: 1.6; margin-bottom: 20px;
+    }
+    .actions { display: flex; flex-direction: column; gap: 10px; }
+    .btn {
+      display: block; padding: 12px 16px; border-radius: 10px; font-size: 14px;
+      font-weight: 600; text-decoration: none; border: none; cursor: pointer; text-align: center;
+    }
+    .btn-primary { background: linear-gradient(135deg, var(--brand-1), var(--brand-2)); color: #fff; }
+    .btn-ghost { background: #fff; color: var(--muted); border: 1px solid var(--border); }
+    .foot { margin-top: 20px; font-size: 12px; color: rgba(255,255,255,0.6); text-align: center; }
+  </style>
 </head>
-<body></body>
+<body>
+  <div>
+    <div class="card">
+      <div class="icon">🔐</div>
+      <h1>授权登录</h1>
+      <!--<#if clientName?? && clientName?has_content>-->
+      <p>即将跳转到登录平台验证您的身份。授权成功后，您即可在本应用中使用相关功能。</p>
+      <div class="meta">
+        <div class="app-label">正在登录的应用</div>
+        <div class="app-name">${clientName}</div>
+      </div>
+      <div class="actions">
+        <button type="button" class="btn btn-primary" id="btnAuthorize">继续授权登录</button>
+        <a class="btn btn-ghost" href="${request.contextPath}/login">使用本站账号登录</a>
+      </div>
+      <!--<#elseif clientId?? && clientId?has_content>-->
+      <p>即将跳转到登录平台验证您的身份。授权成功后，您即可在本应用中使用相关功能。</p>
+      <div class="actions">
+        <button type="button" class="btn btn-primary" id="btnAuthorize">继续授权登录</button>
+        <a class="btn btn-ghost" href="${request.contextPath}/login">使用本站账号登录</a>
+      </div>
+      <!--<#else>-->
+      <div class="notice">无法识别要登录的应用，请关闭本页后，从应用内重新打开授权登录。</div>
+      <div class="actions">
+        <a class="btn btn-ghost" href="${request.contextPath}/login">返回登录</a>
+        <a class="btn btn-ghost" href="${request.contextPath}/index.html">返回首页</a>
+      </div>
+      <!--</#if>-->
+    </div>
+    <p class="foot">&copy; ${siteName!'Autumn Framework'}</p>
+  </div>
+  <!--<#if (clientId?? && clientId?has_content)>-->
+  <#include "/_auth_flow_boot.html">
+  <script>
+  AuthFlow.bindOAuthLoginEntryButton();
+  </script>
+  <!--</#if>-->
+</body>
 </html>

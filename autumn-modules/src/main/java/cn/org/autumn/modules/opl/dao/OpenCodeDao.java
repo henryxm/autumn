@@ -14,4 +14,7 @@ public interface OpenCodeDao extends BaseMapper<OpenCodeEntity> {
 
     @SelectProvider(type = OplDaoSql.class, method = "openCodeByCode")
     OpenCodeEntity getByCode(@Param("code") String code);
+
+    @SelectProvider(type = OplDaoSql.class, method = "openCodeByCodeForUpdate")
+    OpenCodeEntity getByCodeForUpdate(@Param("code") String code);
 }

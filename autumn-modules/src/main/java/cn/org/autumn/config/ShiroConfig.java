@@ -151,7 +151,7 @@ public class ShiroConfig {
         String ctx = StringUtils.defaultString(servletContextPath);
         if ("/".equals(ctx))
             ctx = "";
-        String login = ctx + "/login.html";
+        String login = ctx + "/login";
         String unauthorized = ctx.isEmpty() ? "/" : (ctx + "/");
         String success = "";
 

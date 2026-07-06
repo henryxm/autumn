@@ -19,6 +19,7 @@ import java.util.List;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -58,7 +59,7 @@ public class ConnectBindService extends ModuleService<ConnectBindDao, ConnectBin
             }
         }
         if (!connectAppService.isAutoRegisterEnabled()) {
-            throw new IllegalStateException("未找到本地绑定且未开启自动注册");
+            throw new IllegalStateException("该第三方账号尚未关联本地用户，请在「第三方登录接入管理」中添加关联，或开启自动注册");
         }
         SysUserEntity created = createLocalUser(userInfo);
         ConnectBindEntity bind = new ConnectBindEntity();
@@ -69,7 +70,15 @@ public class ConnectBindService extends ModuleService<ConnectBindDao, ConnectBin
         Date now = new Date();
         bind.setCreate(now);
         bind.setUpdate(now);
-        insert(bind);
+        try {
+            insert(bind);
+        } catch (DuplicateKeyException e) {
+            ConnectBindEntity existing = baseMapper.getByConnectAppAndOpenId(app.getUuid(), userInfo.getOpenId());
+            if (existing != null) {
+                return toUserProfile(existing.getUser());
+            }
+            throw e;
+        }
         return toUserProfile(created.getUuid());
     }
 
@@ -141,7 +150,7 @@ public class ConnectBindService extends ModuleService<ConnectBindDao, ConnectBin
     private SysUserEntity createLocalUser(OpenUserInfoSnapshot userInfo) {
         String username = OpcConstants.AUTO_REGISTER_USERNAME_PREFIX + Uuid.prefix(userInfo.getOpenId(), 12);
         String password = Md5.md5(Uuid.uuid().getBytes()).substring(0, 16);
-        SysUserEntity created = sysUserService.registerSelfAccount(username, password);
+        SysUserEntity created = sysUserService.provisionConnectUser(username, password);
         UserProfileEntity profile = userProfileService.getByUuid(created.getUuid());
         if (profile != null) {
             if (StringUtils.isNotBlank(userInfo.getNickname())) {

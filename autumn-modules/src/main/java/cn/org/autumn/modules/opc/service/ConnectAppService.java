@@ -1,6 +1,7 @@
 package cn.org.autumn.modules.opc.service;
 
 import cn.org.autumn.base.EncryptModuleService;
+import cn.org.autumn.modules.oauth.oauth2.support.RedirectUriSupport;
 import cn.org.autumn.opc.OpcConstants;
 import cn.org.autumn.opl.OplConstants;
 import cn.org.autumn.modules.opc.dao.ConnectAppDao;
@@ -80,9 +81,46 @@ public class ConnectAppService extends EncryptModuleService<ConnectAppDao, Conne
         if (StringUtils.isBlank(appId) || StringUtils.isBlank(appSecret)) {
             throw new IllegalArgumentException("appId与appSecret不能为空");
         }
+        return persistConfig(userUuid, appId, appSecret, platformBaseUrl, redirectUri, name, scope, false);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public ConnectAppEntity updateConfig(String userUuid, String appId, String appSecret, String platformBaseUrl,
+                                         String redirectUri, String name, String scope) {
+        if (StringUtils.isBlank(appId)) {
+            throw new IllegalArgumentException("appId不能为空");
+        }
+        ConnectAppEntity existing = getByAppId(appId);
+        if (existing == null) {
+            throw new IllegalArgumentException("接入应用不存在");
+        }
+        if (StringUtils.isBlank(appSecret)) {
+            afterRead(existing);
+            appSecret = existing.getAppSecret();
+        }
+        if (StringUtils.isBlank(appSecret)) {
+            throw new IllegalArgumentException("appSecret不能为空");
+        }
+        String owner = StringUtils.isBlank(userUuid) ? existing.getUser() : userUuid;
+        return persistConfig(owner, appId, appSecret, platformBaseUrl, redirectUri, name, scope, true);
+    }
+
+    private ConnectAppEntity persistConfig(String userUuid, String appId, String appSecret, String platformBaseUrl,
+                                           String redirectUri, String name, String scope, boolean updating) {
+        if (StringUtils.isBlank(redirectUri)) {
+            throw new IllegalArgumentException("redirectUri不能为空");
+        }
+        if (StringUtils.isBlank(platformBaseUrl)) {
+            throw new IllegalArgumentException("platformBaseUrl不能为空");
+        }
+        boolean allowHttp = sysConfigService != null && sysConfigService.getBoolean(RedirectUriSupport.CONFIG_ALLOW_HTTP);
+        RedirectUriSupport.validateFormat(redirectUri, allowHttp);
         ConnectAppEntity existing = getByAppId(appId);
         if (existing != null && !StringUtils.equals(existing.getUser(), userUuid)) {
             throw new IllegalArgumentException("appId已被其他用户占用");
+        }
+        if (existing == null && updating) {
+            throw new IllegalArgumentException("接入应用不存在");
         }
         ConnectAppEntity app = existing == null ? new ConnectAppEntity() : existing;
         app.setUser(userUuid);
@@ -118,7 +156,7 @@ public class ConnectAppService extends EncryptModuleService<ConnectAppDao, Conne
         headers.put("Content-Type", "application/json");
         JSONObject body = new JSONObject();
         body.put("data", buildRegisterPayload(name, redirectUri, scope));
-        String response = HttpClientUtils.doPostJson(base + OplConstants.API_V1_BASE + "/app/register", body.toJSONString(), headers, 10000);
+        String response = HttpClientUtils.doPostJson(base + OplConstants.API_PLATFORM + "/app/register", body.toJSONString(), headers, 10000);
         if (StringUtils.isBlank(response)) {
             throw new IllegalStateException("向开放平台申请appId失败");
         }
@@ -151,11 +189,11 @@ public class ConnectAppService extends EncryptModuleService<ConnectAppDao, Conne
 
     public boolean isAutoRegisterEnabled() {
         if (sysConfigService == null) {
-            return true;
+            return false;
         }
         String value = sysConfigService.getValue(OpcConstants.CONFIG_AUTO_REGISTER);
         if (StringUtils.isBlank(value)) {
-            return true;
+            return false;
         }
         return sysConfigService.getBoolean(OpcConstants.CONFIG_AUTO_REGISTER);
     }
@@ -191,7 +229,7 @@ public class ConnectAppService extends EncryptModuleService<ConnectAppDao, Conne
     }
 
     public String buildAuthorizeEntryUrl(String appId) {
-        return OpcConstants.OAUTH2_BASE + "/authorize?appId=" + appId;
+        return OpcConstants.OAUTH2_AUTHORIZE + "?appId=" + appId;
     }
 
     private JSONObject buildRegisterPayload(String name, String redirectUri, String scope) {

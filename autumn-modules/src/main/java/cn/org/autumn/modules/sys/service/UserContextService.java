@@ -13,8 +13,10 @@ import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.sys.support.ApiAuthSupport;
 import cn.org.autumn.modules.usr.entity.UserTokenEntity;
 import cn.org.autumn.modules.usr.service.UserTokenService;
+import cn.org.autumn.opl.OplConstants;
 import cn.org.autumn.site.UserTokenFactory;
 import java.util.Date;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.shiro.SecurityUtils;
@@ -71,7 +73,8 @@ public class UserContextService implements ContextHandler {
      * 从当前请求解析调用者：Shiro → 头令牌 / userUuid 参数；与 {@link #getUserContext(String)} 互补。
      * <p>
      * 同时携带令牌与 {@code userUuid} hint 时，hint 须与令牌解析出的 {@link UserContext#getUuid()} 一致；
-     * 仅 hint、无令牌时保留遗留行为（与 minclouds {@code UserInfoResolver} 一致，依赖网关或内网约束）。
+     * 仅 hint、无令牌时保留遗留行为（与 minclouds {@code UserInfoResolver} 一致，依赖网关或内网约束）；
+     * {@link OplConstants#API_PLATFORM} 路径禁止 hint-only，须携带有效令牌或 Shiro 会话。
      */
     public UserContext resolve(NativeWebRequest webRequest) {
         UserContext fromShiro = fromShiro();
@@ -90,9 +93,30 @@ public class UserContextService implements ContextHandler {
             }
             return fromToken;
         }
-        if (StringUtils.isNotBlank(userUuidHint))
+        if (StringUtils.isNotBlank(userUuidHint)) {
+            if (isOpenPlatformApiRequest(webRequest)) {
+                return null;
+            }
             return fromUserUuid(userUuidHint);
+        }
         return null;
+    }
+
+    static boolean isOpenPlatformApiRequest(NativeWebRequest webRequest) {
+        if (webRequest == null) {
+            return false;
+        }
+        HttpServletRequest request = webRequest.getNativeRequest(HttpServletRequest.class);
+        if (request == null) {
+            return false;
+        }
+        String uri = request.getRequestURI();
+        if (StringUtils.isBlank(uri)) {
+            return false;
+        }
+        String contextPath = StringUtils.defaultString(request.getContextPath());
+        String path = uri.startsWith(contextPath) ? uri.substring(contextPath.length()) : uri;
+        return path.startsWith(OplConstants.API_PLATFORM + "/") || path.equals(OplConstants.API_PLATFORM);
     }
 
     /**

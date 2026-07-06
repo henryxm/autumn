@@ -15,12 +15,14 @@ import org.springframework.transaction.annotation.Transactional;
 public class OpenCodeService extends ModuleService<OpenCodeDao, OpenCodeEntity> {
 
     @Transactional(rollbackFor = Exception.class)
-    public OpenCodeEntity issue(String appId, String userUuid, String redirectUri) {
+    public OpenCodeEntity issue(String appId, String userUuid, String redirectUri, String codeChallenge, String codeChallengeMethod) {
         OpenCodeEntity codeEntity = new OpenCodeEntity();
         codeEntity.setCode(generateCode());
         codeEntity.setAppId(appId);
         codeEntity.setUser(userUuid);
         codeEntity.setRedirectUri(redirectUri);
+        codeEntity.setCodeChallenge(StringUtils.isBlank(codeChallenge) ? null : codeChallenge.trim());
+        codeEntity.setCodeChallengeMethod(StringUtils.isBlank(codeChallengeMethod) ? null : codeChallengeMethod.trim());
         Date now = new Date();
         codeEntity.setCreate(now);
         codeEntity.setExpire(new Date(now.getTime() + OplConstants.AUTH_CODE_TTL_SECONDS * 1000L));
@@ -28,9 +30,13 @@ public class OpenCodeService extends ModuleService<OpenCodeDao, OpenCodeEntity> 
         return codeEntity;
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public OpenCodeEntity consume(String code) {
-        OpenCodeEntity entity = getValidCode(code);
-        if (entity == null) {
+        if (StringUtils.isBlank(code)) {
+            return null;
+        }
+        OpenCodeEntity entity = baseMapper.getByCodeForUpdate(code);
+        if (entity == null || entity.getExpire() == null || !entity.getExpire().after(new Date())) {
             return null;
         }
         deleteById(entity.getId());

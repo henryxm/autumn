@@ -26,7 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 /** 用户自助 API：管理接入应用配置。 */
 @Slf4j
 @RestController
-@RequestMapping(OpcConstants.API_V1_BASE)
+@RequestMapping(OpcConstants.API_PLATFORM)
 public class OpcApiController {
 
     @Autowired
@@ -71,7 +71,7 @@ public class OpcApiController {
         }
     }
 
-    @PostMapping("/app/list")
+    @PostMapping("/" + OpcConstants.NS + "/app/list")
     @Authenticated
     public Response<List<ConnectAppSnapshot>> list(@Valid @RequestBody(required = false) Request<?> request, UserContext context, HttpServletRequest servlet) {
         try {
@@ -91,6 +91,9 @@ public class OpcApiController {
             ConnectAppEntity app = connectAppService.getByAppId(appId);
             if (app == null) {
                 throw new IllegalArgumentException("appId不存在");
+            }
+            if (!StringUtils.equals(app.getUser(), OpenApiUsers.requireUser(context))) {
+                throw new IllegalArgumentException("无权访问该接入应用");
             }
             Map<String, String> result = new HashMap<>();
             result.put("authorizeUrl", connectAppService.buildAuthorizeEntryUrl(app.getAppId()));

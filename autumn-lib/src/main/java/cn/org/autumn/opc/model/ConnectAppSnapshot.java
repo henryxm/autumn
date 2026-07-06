@@ -29,6 +29,6 @@ public class ConnectAppSnapshot implements Serializable {
 
     /** 本系统 OPC 授权入口（相对路径）。 */
     public String authorizeEntryUrl() {
-        return OpcConstants.OAUTH2_BASE + "/authorize?appId=" + appId;
+        return OpcConstants.OAUTH2_AUTHORIZE + "?appId=" + appId;
     }
 }

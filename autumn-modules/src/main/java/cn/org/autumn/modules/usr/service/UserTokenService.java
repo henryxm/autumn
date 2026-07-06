@@ -3,17 +3,15 @@ package cn.org.autumn.modules.usr.service;
 import cn.org.autumn.base.ModuleService;
 import cn.org.autumn.config.AccountHandler;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
+import cn.org.autumn.modules.oauth.oauth2.support.OAuthTokenResponse;
+import cn.org.autumn.modules.oauth.oauth2.support.OAuthTokenResponseParser;
 import cn.org.autumn.modules.usr.dao.UserTokenDao;
 import cn.org.autumn.modules.usr.entity.UserTokenEntity;
-import com.alibaba.fastjson2.JSON;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.oltu.oauth2.common.OAuth;
-import org.springframework.stereotype.Service;
-
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.stereotype.Service;
 
 @Service
 public class UserTokenService extends ModuleService<UserTokenDao, UserTokenEntity> implements AccountHandler {
@@ -48,29 +46,24 @@ public class UserTokenService extends ModuleService<UserTokenDao, UserTokenEntit
     }
 
     public void saveToken(String token) {
-        @SuppressWarnings("unchecked")
-        Map<String, Object> map = (Map<String, Object>) JSON.parseObject(token);
-        UserTokenEntity userTokenEntity = null;
-        if (map.containsKey(OAuth.OAUTH_ACCESS_TOKEN)) {
-            String tk = (String) map.get(OAuth.OAUTH_ACCESS_TOKEN);
-            userTokenEntity = queryByToken(tk);
+        OAuthTokenResponse parsed = OAuthTokenResponseParser.parse(token);
+        if (StringUtils.isBlank(parsed.getAccessToken())) {
+            return;
         }
+        UserTokenEntity userTokenEntity = queryByToken(parsed.getAccessToken());
         if (null == userTokenEntity) {
-            String tk = (String) map.get(OAuth.OAUTH_ACCESS_TOKEN);
             userTokenEntity = new UserTokenEntity();
             if (ShiroUtils.isLogin()) {
-                String userUuid = ShiroUtils.getUserUuid();
-                userTokenEntity.setUserUuid(userUuid);
+                userTokenEntity.setUserUuid(ShiroUtils.getUserUuid());
             }
-            userTokenEntity.setToken(tk);
+            userTokenEntity.setToken(parsed.getAccessToken());
         }
-        if (map.containsKey(OAuth.OAUTH_REFRESH_TOKEN)) {
-            userTokenEntity.setRefreshToken((String) map.get(OAuth.OAUTH_REFRESH_TOKEN));
+        if (StringUtils.isNotBlank(parsed.getRefreshToken())) {
+            userTokenEntity.setRefreshToken(parsed.getRefreshToken());
         }
-        if (map.containsKey(OAuth.OAUTH_EXPIRES_IN)) {
-            Integer expire = (Integer) map.get(OAuth.OAUTH_EXPIRES_IN);
+        if (parsed.getExpiresIn() > 0) {
             Date date = new Date();
-            date.setTime(date.getTime() + expire * 1000);
+            date.setTime(date.getTime() + parsed.getExpiresIn() * 1000);
             userTokenEntity.setExpireTime(date);
             userTokenEntity.setUpdateTime(date);
         }
