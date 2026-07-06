@@ -65,7 +65,7 @@ public class OpenIdentityServiceTest {
 
         openIdentityService.resolveOrCreate("app1", "user1");
 
-        Mockito.verify(openIdentityDao).insert(Mockito.argThat(entity -> entity.getOpenId() != null && entity.getAppId().equals("app1")));
+        Mockito.verify(openIdentityDao).insert(Mockito.argThat((OpenIdentityEntity entity) -> entity.getOpenId() != null && entity.getAppId().equals("app1")));
     }
 
     private OpenAppEntity activeApp(String account, String appId) {
