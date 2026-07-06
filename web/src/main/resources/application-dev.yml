@@ -15,9 +15,9 @@ spring:
         url: ${SPRING_DATASOURCE_DRUID_SECOND_URL:jdbc:mysql://localhost:3306/autumn?serverTimezone=Asia/Shanghai&useSSL=false&allowMultiQueries=true&useUnicode=true&characterEncoding=UTF-8&connectionCollation=utf8mb4_unicode_ci&allowPublicKeyRetrieval=true}
         username: ${SPRING_DATASOURCE_DRUID_SECOND_USERNAME:autumn}
         password: ${SPRING_DATASOURCE_DRUID_SECOND_PASSWORD:autumn}
-      initial-size: 10
+      initial-size: 2
       max-active: 100
-      min-idle: 10
+      min-idle: 2
       max-wait: 60000
       pool-prepared-statements: true
       max-pool-prepared-statement-per-connection-size: 20
@@ -42,3 +42,8 @@ spring:
             multi-statement-allow: true
 
 # autumn.database / pagehelper.helper-dialect 可选；未配置时由 JDBC URL 推断。
+autumn:
+  # Springfox 启动时会扫描全部 Controller 生成文档，dev 默认关闭以缩短启动
+  swagger:
+    enabled: false
+

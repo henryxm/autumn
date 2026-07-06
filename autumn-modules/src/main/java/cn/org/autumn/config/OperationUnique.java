@@ -2,6 +2,7 @@ package cn.org.autumn.config;
 
 import io.swagger.v3.oas.annotations.Operation;
 import java.util.Optional;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -13,6 +14,7 @@ import springfox.documentation.swagger.common.SwaggerPluginSupport;
 
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE + 1000)
+@ConditionalOnProperty(prefix = "autumn.swagger", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class OperationUnique implements OperationBuilderPlugin {
 
     public void apply(OperationContext context) {

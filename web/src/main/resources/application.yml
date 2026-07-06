@@ -75,6 +75,9 @@ autumn:
   # 详见 docs/AI_FIELD_ENCRYPT.md
   shiro:
     redis: false # true表示shiro session存到redis里，需要开启redis，才会生效【分布式场景】
+  # 开发环境可关 Swagger 以缩短启动（Springfox 扫描全部 Controller，约 5~15s）
+  swagger:
+    enabled: true
   # 可选：无 URL 时指定库类型；通常由 spring.datasource.druid.first.url 推断，无需配置。
   # database: postgresql
   table:
@@ -95,7 +98,7 @@ mybatis-plus:
     #驼峰下划线转换
     db-column-underline: true
     #刷新mapper 调试神器
-    refresh-mapper: true
+    refresh-mapper: false
     #数据库大写下划线转换
     #capital-mode: true
     # Sequence序列接口实现类配置

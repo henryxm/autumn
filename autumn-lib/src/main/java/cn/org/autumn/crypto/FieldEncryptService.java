@@ -78,7 +78,9 @@ public class FieldEncryptService {
     @PostConstruct
     public void init() {
         applyEnvironmentConfig(configSource.resolveFromEnvironment());
-        scanPackage();
+        if (isKeyConfigured()) {
+            scanPackage();
+        }
         if (log.isDebugEnabled()) {
             if (isConfigWriteEncryptEnabled()) {
                 log.debug("Field storage encryption default write: on, ciphertext prefix: {}", prefix);
@@ -196,6 +198,9 @@ public class FieldEncryptService {
         if (mysqlTableService == null) {
             return;
         }
+        if (!entityFields.isEmpty()) {
+            return;
+        }
         Set<Class<?>> classes = mysqlTableService.getClasses();
         for (Class<?> clazz : classes) {
             registerEntity(clazz);
@@ -203,13 +208,22 @@ public class FieldEncryptService {
     }
 
     public boolean hasEncryptedFields(Class<?> clazz) {
+        ensureScanned();
         return clazz != null && entityFields.containsKey(clazz);
+    }
+
+    private void ensureScanned() {
+        if (!entityFields.isEmpty() || !isKeyConfigured()) {
+            return;
+        }
+        scanPackage();
     }
 
     public List<FieldMeta> getFields(Class<?> clazz) {
         if (clazz == null) {
             return Collections.emptyList();
         }
+        ensureScanned();
         return entityFields.getOrDefault(clazz, Collections.emptyList());
     }
 

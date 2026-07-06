@@ -48,7 +48,7 @@ public class MysqlRelationalTableOperations implements RelationalTableOperations
 
     @Override
     public List<TableMeta> getTableMetas(String tableName, int offset, int rows) {
-        return tableDao.getTableMetas(tableName, offset, rows);
+        return tableDao.getTableMetasPage(tableName, offset, rows);
     }
 
     @Override

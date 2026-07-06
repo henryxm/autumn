@@ -65,11 +65,11 @@ public interface TableDao {
      * @param tableName
      * @return
      */
-    @SelectProvider(type = QuerySql.class, method = getTableMetas)
+    @SelectProvider(type = QuerySql.class, method = getTableMetasPage)
     @ResultType(List.class)
-    List<TableMeta> getTableMetas(@Param(paramName) String tableName,
-                                  @Param("offset") int offset,
-                                  @Param("rows") int rows);
+    List<TableMeta> getTableMetasPage(@Param(paramName) String tableName,
+                                      @Param("offset") int offset,
+                                      @Param("rows") int rows);
 
     /**
      * @param tableName

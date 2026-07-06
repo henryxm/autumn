@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.BeanPostProcessor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.DependsOn;
@@ -20,6 +21,7 @@ import springfox.documentation.spring.web.plugins.WebMvcRequestHandlerProvider;
 @Configuration
 @EnableOpenApi
 @DependsOn({"env"})
+@ConditionalOnProperty(prefix = "autumn.swagger", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class SwaggerConfig {
 
     @Autowired
