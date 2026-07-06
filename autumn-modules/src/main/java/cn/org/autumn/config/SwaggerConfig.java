@@ -7,12 +7,14 @@ import io.swagger.v3.oas.models.security.OAuthFlows;
 import io.swagger.v3.oas.models.security.Scopes;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.DependsOn;
 
 @Configuration
 @DependsOn({"env"})
+@ConditionalOnProperty(prefix = "autumn.swagger", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class SwaggerConfig {
 
     @Bean
@@ -21,7 +23,7 @@ public class SwaggerConfig {
                 .info(new Info()
                         .title("Autumn")
                         .description("Autumn Api 文档")
-                        .version("2.0.0"))
+                        .version("3.0.0"))
                 .addSecurityItem(new SecurityRequirement().addList("Authorization"))
                 .schemaRequirement("Authorization",
                         new SecurityScheme()

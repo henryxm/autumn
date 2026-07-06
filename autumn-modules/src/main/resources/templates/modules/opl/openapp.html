@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>${lang.opl_openapp_table_comment}</title>
+	<#include "/header.html">
+</head>
+<body>
+<div id="rrapp" v-cloak>
+    <div v-show="showList">
+        <div class="grid-btn">
+			<!--<#if shiro.hasPermission("opl:openapp:save")>-->
+            <a class="btn btn-primary" @click="add"><i class="fa fa-plus"></i>&nbsp;${lang.sys_string_add}</a>
+			<!--</#if>-->
+			<!--<#if shiro.hasPermission("opl:openapp:update")>-->
+            <a class="btn btn-primary" @click="update"><i class="fa fa-pencil-square-o"></i>&nbsp;${lang.sys_string_change}</a>
+			<!--</#if>-->
+			<!--<#if shiro.hasPermission("opl:openapp:delete")>-->
+            <a class="btn btn-primary" @click="del"><i class="fa fa-trash-o"></i>&nbsp;${lang.sys_string_delete}</a>
+			<!--</#if>-->
+        </div>
+        <table id="jqGrid"></table>
+        <div id="jqGridPager"></div>
+    </div>
+
+    <div v-show="!showList" class="panel panel-default">
+        <div class="panel-heading">{{title}}</div>
+        <form class="form-horizontal">
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.opl_openapp_column_uuid}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="openApp.uuid" placeholder="${lang.opl_openapp_column_uuid}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.opl_openapp_column_account}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="openApp.account" placeholder="${lang.opl_openapp_column_account}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.opl_openapp_column_app_id}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="openApp.appId" placeholder="${lang.opl_openapp_column_app_id}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.opl_openapp_column_app_secret_hash}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="openApp.appSecretHash" placeholder="${lang.opl_openapp_column_app_secret_hash}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.opl_openapp_column_app_secret_salt}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="openApp.appSecretSalt" placeholder="${lang.opl_openapp_column_app_secret_salt}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.opl_openapp_column_name}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="openApp.name" placeholder="${lang.opl_openapp_column_name}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.opl_openapp_column_app_type}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="openApp.appType" placeholder="${lang.opl_openapp_column_app_type}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.opl_openapp_column_redirect_uri}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="openApp.redirectUri" placeholder="${lang.opl_openapp_column_redirect_uri}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.opl_openapp_column_scope}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="openApp.scope" placeholder="${lang.opl_openapp_column_scope}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.opl_openapp_column_status}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="openApp.status" placeholder="${lang.opl_openapp_column_status}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.opl_openapp_column_create}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="openApp.create" placeholder="${lang.opl_openapp_column_create}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.opl_openapp_column_update}</div>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" v-model="openApp.update" placeholder="${lang.opl_openapp_column_update}"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-2 control-label"></div>
+                <input type="button" class="btn btn-primary" @click="saveOrUpdate" value="${lang.sys_string_confirm}"/>
+                &nbsp;&nbsp;<input type="button" class="btn btn-warning" @click="reload" value="${lang.sys_string_back}"/>
+            </div>
+        </form>
+    </div>
+</div>
+<script src="${request.contextPath}/modules/opl/openapp.js?_${.now?long}"></script>
+</body>
+</html>

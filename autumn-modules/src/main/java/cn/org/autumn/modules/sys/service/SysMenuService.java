@@ -52,6 +52,22 @@ public class SysMenuService extends ServiceImpl<SysMenuDao, SysMenuEntity> imple
         return getSystemMenuKey("OperationsMonitoring");
     }
 
+    public static String getOplMenuKey() {
+        return getMenuKey("Opl", "OplMenu");
+    }
+
+    public static String getOplManageMenuKey() {
+        return getMenuKey("Opl", "OplManage");
+    }
+
+    public static String getOpcMenuKey() {
+        return getMenuKey("Opc", "OpcMenu");
+    }
+
+    public static String getOpcManageMenuKey() {
+        return getMenuKey("Opc", "OpcManage");
+    }
+
     @Order(-1)
     public void init() {
         String[][] menus = new String[][]{
@@ -106,6 +122,14 @@ public class SysMenuService extends ServiceImpl<SysMenuDao, SysMenuEntity> imple
                 {"人机检测", "shield.html", NULL, "1", "fa fa-user-secret", "14", getSystemMenuKey("ShieldManagement"), getOperationsMenuKey(), "sys_string_shield_management"},
                 {"版本更新", "scan.html", NULL, "1", "fa fa-mobile", "15", getSystemMenuKey("ScanManagement"), getOperationsMenuKey(), "sys_string_scan_management"},
                 {"授权客户端中心", "oauth2/authclient", NULL, "1", "fa fa-shield", "16", getSystemMenuKey("AuthClientHub"), getOperationsMenuKey(), "sys_string_auth_client_hub"},
+
+                // 开放平台菜单
+                {"开放平台", NULL, NULL, "0", "fa fa-share-alt", "666660", getOplMenuKey(), "", "opl_menu_text"},
+                {"统一管理", "oplmanage.html", NULL, "1", "fa fa-dashboard", "0", getOplManageMenuKey(), getOplMenuKey(), "opl_oplmanage"},
+
+                // 开放接入菜单
+                {"开放接入", NULL, NULL, "0", "fa fa-plug", "666661", getOpcMenuKey(), "", "opc_menu_text"},
+                {"统一管理", "opcmanage.html", NULL, "1", "fa fa-dashboard", "0", getOpcManageMenuKey(), getOpcMenuKey(), "opc_opcmanage"},
         };
         put(menus);
     }

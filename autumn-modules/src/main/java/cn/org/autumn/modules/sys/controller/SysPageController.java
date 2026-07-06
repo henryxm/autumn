@@ -1,12 +1,14 @@
 package cn.org.autumn.modules.sys.controller;
 
 import cn.org.autumn.annotation.SkipInterceptor;
+import cn.org.autumn.opl.OplConstants;
+import cn.org.autumn.opc.OpcConstants;
+import cn.org.autumn.modules.spm.interceptor.SpmInterceptor;
 import cn.org.autumn.modules.spm.service.SuperPositionModelService;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.modules.sys.service.SysLogService;
 import cn.org.autumn.modules.sys.service.SysUserRoleService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
-import cn.org.autumn.modules.spm.interceptor.SpmInterceptor;
 import cn.org.autumn.modules.wall.service.IpWhiteService;
 import cn.org.autumn.modules.wall.site.WallDefault;
 import cn.org.autumn.modules.usr.interceptor.AuthorizationInterceptor;
@@ -360,6 +362,22 @@ public class SysPageController implements ErrorController {
             return "404";
         ipWhiteService.check(servlet, getClass(), "dbmanage");
         return "dbmanage";
+    }
+
+    @RequestMapping({OplConstants.MANAGE_PAGE})
+    @SkipInterceptor
+    public String oplmanage() {
+        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
+            return "404";
+        return "opl/oplmanage";
+    }
+
+    @RequestMapping({OpcConstants.MANAGE_PAGE})
+    @SkipInterceptor
+    public String opcmanage() {
+        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
+            return "404";
+        return "opc/opcmanage";
     }
 
     @RequestMapping({"loopjob.html"})

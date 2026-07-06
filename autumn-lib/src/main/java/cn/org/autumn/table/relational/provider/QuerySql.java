@@ -26,6 +26,7 @@ public class QuerySql {
     public static final String dropTable = "dropTable";
     public static final String addIndex = "addIndex";
     public static final String getTableMetas = "getTableMetas";
+    public static final String getTableMetasPage = "getTableMetasPage";
     public static final String getTableCharacterSetName = "getTableCharacterSetName";
     public static final String convertTableCharset = "convertTableCharset";
     public static final String getTableCount = "getTableCount";
@@ -50,6 +51,10 @@ public class QuerySql {
     }
 
     public String getTableMetas(Map<String, Object> map) {
+        return sql().getTableMetas(map);
+    }
+
+    public String getTableMetasPage(Map<String, Object> map) {
         return sql().getTableMetas(map);
     }
 

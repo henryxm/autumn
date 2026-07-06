@@ -11,11 +11,16 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Collections;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
 public class ClassTools{
+
+	private static final Map<String, Set<Class<?>>> PACKAGE_CLASS_CACHE = new ConcurrentHashMap<>();
 
 	/**
 	 * 从包package中获取所有的Class
@@ -28,13 +33,26 @@ public class ClassTools{
 		String[] packs = pack.split(",");
 		Set<Class<?>> classes = new LinkedHashSet<Class<?>>();
 		for(String p:packs) {
-			classes.addAll(getClassesInternal(p));
+			classes.addAll(getClassesInternal(p.trim()));
 		}
 		return classes;
 	}
 
 	private static Set<Class<?>> getClassesInternal(String pack){
+		if (pack == null || pack.isEmpty()) {
+			return new LinkedHashSet<>();
+		}
+		Set<Class<?>> cached = PACKAGE_CLASS_CACHE.get(pack);
+		if (cached != null) {
+			return new LinkedHashSet<>(cached);
+		}
+		Set<Class<?>> computed = scanClassesInternal(pack);
+		Set<Class<?>> frozen = Collections.unmodifiableSet(computed);
+		PACKAGE_CLASS_CACHE.putIfAbsent(pack, frozen);
+		return new LinkedHashSet<>(PACKAGE_CLASS_CACHE.get(pack));
+	}
 
+	private static Set<Class<?>> scanClassesInternal(String pack){
 		// 第一个class类的集合
 		Set<Class<?>> classes = new LinkedHashSet<Class<?>>();
 		// 是否循环迭代
