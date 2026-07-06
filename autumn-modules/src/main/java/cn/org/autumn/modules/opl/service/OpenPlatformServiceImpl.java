@@ -155,6 +155,15 @@ public class OpenPlatformServiceImpl implements OpenPlatformService {
     }
 
     @Override
+    public String resolvePlatformUserUuid(String accessToken) {
+        if (StringUtils.isBlank(accessToken) || !openTokenService.isValidAccessToken(accessToken)) {
+            return null;
+        }
+        OplTokenContext context = openTokenService.getByAccessToken(accessToken);
+        return context == null ? null : context.getUser();
+    }
+
+    @Override
     public OpenTokenSnapshot issueTokenFromCode(String appId, String code, String redirectUri) {
         return issueTokenFromCode(appId, code, redirectUri, null);
     }

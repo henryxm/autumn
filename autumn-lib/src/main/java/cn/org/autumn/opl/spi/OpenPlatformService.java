@@ -56,6 +56,9 @@ public interface OpenPlatformService {
 
     OpenUserInfoSnapshot buildUserInfo(String accessToken);
 
+    /** 解析 access_token 对应的本地 sys_user.uuid；无效 token 返回 null。仅同 JVM 内 OPC 绑定编排使用。 */
+    String resolvePlatformUserUuid(String accessToken);
+
     OpenTokenSnapshot issueTokenFromCode(String appId, String code, String redirectUri);
 
     OpenTokenSnapshot issueTokenFromCode(String appId, String code, String redirectUri, String codeVerifier);

@@ -46,8 +46,21 @@
       color: #d97706;
     }
     .icon.denied { background: #fee2e2; color: #dc2626; }
+    .icon.conflict { background: #fef3c7; color: #b45309; }
     h1 { font-size: 20px; font-weight: 700; margin-bottom: 10px; }
     p { font-size: 14px; color: var(--muted); line-height: 1.65; margin-bottom: 24px; }
+    .solutions {
+      text-align: left;
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.7;
+      margin-bottom: 24px;
+      padding: 14px 16px;
+      background: #f8fafc;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      white-space: pre-line;
+    }
     .actions { display: flex; flex-direction: column; gap: 10px; }
     .btn {
       display: block;
@@ -74,13 +87,22 @@
 <body>
   <div>
     <div class="card">
-      <div class="icon <#if oauthError?? && oauthError == 'access_denied'>denied</#if>">
-        <#if oauthError?? && oauthError == 'access_denied'>✕<#else>!</#if>
+      <div class="icon <#if oauthError?? && oauthError == 'access_denied'>denied<#elseif oauthError?? && oauthError == 'bind_conflict'>conflict</#if>">
+        <#if oauthError?? && oauthError == 'access_denied'>✕<#elseif oauthError?? && oauthError == 'bind_conflict'>⚠<#else>!</#if>
       </div>
       <h1>${title!'授权未完成'}</h1>
       <p>${message!'授权未能完成，请稍后重试。'}</p>
+      <#if conflictSolutions?? && conflictSolutions?has_content>
+      <div class="solutions">${conflictSolutions}</div>
+      </#if>
       <div class="actions">
         <a class="btn btn-primary" href="${loginUrl!'/login'}">返回登录</a>
+        <#if logoutUrl?? && logoutUrl?has_content>
+        <a class="btn btn-ghost" href="${logoutUrl}">退出当前账号</a>
+        </#if>
+        <#if manageUrl?? && manageUrl?has_content>
+        <a class="btn btn-ghost" href="${manageUrl}">绑定管理</a>
+        </#if>
         <#if retryUrl?? && retryUrl?has_content>
         <a class="btn btn-ghost" href="${retryUrl}">重新授权</a>
         </#if>

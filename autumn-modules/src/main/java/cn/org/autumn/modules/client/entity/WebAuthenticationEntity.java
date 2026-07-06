@@ -46,6 +46,9 @@ public class WebAuthenticationEntity implements Serializable {
     @Column(length = 200, comment = "用户信息地址")
     private String userInfoUri;
 
+    @Column(length = 16, comment = "userInfo传参:legacy/bearer,空则自动")
+    private String userInfoDelivery;
+
     @Column(length = 200, comment = "范围")
     private String scope;
 

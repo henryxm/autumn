@@ -318,9 +318,17 @@ String base = mode == OAUTH ? origin + "/oauth2" : origin + "/open/oauth2";
 **RP 回调实现**：`ClientOauth2Controller`
 
 - 路径：`GET /client/oauth2/callback`
-- 流程：收 `code` → 读 `WebAuthenticationEntity`（按 Host 或 `LOGIN_AUTHENTICATION` 解析 client）→ POST 远端 `/oauth2/token` → GET `/oauth2/userInfo` → `userProfileService.login` → Shiro Session
+- 流程：收 `code` → 读 `WebAuthenticationEntity`（按 Host 或 `LOGIN_AUTHENTICATION` 解析 client）→ POST 远端 `/oauth2/token` → GET `/oauth2/userInfo` → **`WebOauthBindService.resolveAndBind`**（`client_web_oauth_bind` 表）→ **`UserProfileService.establishSession`**（已登录同用户时内部 NO-OP）→ Shiro Session
 
-**`WebAuthenticationEntity`**：存 AS 地址、`client_id`、`client_secret`、`redirect_uri`、token/userInfo URI 等（`client_web_authentication` 表）。
+**`WebAuthenticationEntity`**：存 AS 地址、`client_id`、`client_secret`、`redirect_uri`、token/userInfo URI、`userInfoDelivery`（`legacy` / `bearer`，空则自动：同实例 `legacy`、跨实例 `bearer`）等（`client_web_authentication` 表）。
+
+**`client_web_oauth_bind`**：经典 OAuth RP 侧 **上游 uuid ↔ 本地 `sys_user.uuid`** 绑定表（字段 `authentication` / `upper` / `user`）。新用户本地 `UuidNamespaceService.allocate()`，**不再**默认 `local.uuid == upstream.uuid`；存量同 uuid 用户可懒迁移写绑定。
+
+**同实例自连幂等**：AS/RP 同 JVM 且 userInfo.uuid 在本地 `sys_user` 已存在时，以 **token 内 upstream uuid 为权威本地用户**（对齐 OPC `platformUser`），**不依赖** RP 回调域 Session/Cookie；重复授权仅补写绑定或 NO-OP（`idempotent=true`）。`establishSession` 始终调用，已登录同用户时内部跳过。
+
+**绑定冲突**：上游已绑其他本地用户、或当前 Session 已绑其他上游时，回调错误页展示自助方案（含退出登录、**绑定管理** `/modules/client/weboauthbind`）；登录态可 `POST /client/oauth2/bind/unbind?clientId=...` 解绑后重试。无效 userInfo 走普通授权失败页，不走冲突页。
+
+**运维**：后台 **OAuth 绑定** 管理页（`client/weboauthbind`）可 CRUD 绑定行，仅供排查/解绑；日常绑定应走 OAuth 回调编排，勿手工写入冲突数据。
 
 ### 3.6 方式一 · 同实例自连（AS + RP 同一 JVM）
 
@@ -338,7 +346,9 @@ String base = mode == OAUTH ? origin + "/oauth2" : origin + "/open/oauth2";
 
 3. **设置** `LOGIN_AUTHENTICATION` = `oauth2:my-web`
 
-4. **用户访问** `/login` → 授权 → 回调 `/client/oauth2/callback` → 本站 Session
+4. **用户访问** `/login` → 授权 → 回调 `/client/oauth2/callback` → 绑定解析 → 本站 Session
+
+**重复授权（幂等）**：同实例且 userInfo.uuid=A 在本地已存在时，回调 **不会** 重复建号，仅补写绑定或 NO-OP；跨域回调无 Session 时仍会 `establishSession` 登录为 A（见 `WebOauthBindService` 同实例分支）。
 
 ### 3.7 方式一 · 跨实例（第三方 AS 或第三方 RP）
 
@@ -352,8 +362,9 @@ String base = mode == OAUTH ? origin + "/oauth2" : origin + "/open/oauth2";
 
 1. 在 **第三方 AS** 登记 Client，拿到 `client_id` / `secret` / `redirect_uri`
 2. 在本站 `WebAuthenticationEntity` 填写 **第三方** `{ORIGIN}/oauth2/token` 与 `userInfo`
-3. `redirect_uri` 指向本站 `/client/oauth2/callback`（或自建 RP 端点）
-4. 登录页链到第三方 `/oauth2/authorize?client_id=...`
+3. 跨实例时 `userInfoDelivery` 留空即可默认 **Bearer**；若第三方 AS 也是 Autumn 且需 JSON 包裹传参，显式设为 `legacy`
+4. `redirect_uri` 指向本站 `/client/oauth2/callback`（或自建 RP 端点）
+5. 登录页链到第三方 `/oauth2/authorize?client_id=...`
 
 #### 3.7.3 两个 Autumn 实例互相当 AS/RP
 
@@ -468,8 +479,8 @@ app_id=...&app_secret=...&grant_type=authorization_code&code=...&redirect_uri=..
 ```
 exchangeCode(app, code)           → ConnectOauthService（HTTP POST 远端 /open/oauth2/token）
 fetchUserInfo(app, accessToken)   → HTTP GET 远端 /open/oauth2/userInfo
-resolveAndBind(app, userInfo)     → ConnectBindService
-userProfileService.login(profile) → Shiro Session
+resolveAndBind(app, userInfo, platformUser) → ConnectBindService（同平台 platformUser 来自 OPL token）
+userProfileService.establishSession(profile)   → 已登录同用户时内部 NO-OP
 userTokenService.saveToken(...)   → 可选保存 access_token
 ```
 
@@ -489,10 +500,19 @@ userTokenService.saveToken(...)   → 可选保存 access_token
 
 `ConnectBindService.resolveAndBind` 顺序：
 
-1. `(connectApp, openId)` 已存在 → 登录对应 **本地 `sys_user.uuid`**
-2. `(connectApp, unionId)` 已存在 → 更新 openId 后登录
-3. 均无绑定且 **`OPC_AUTO_REGISTER=true`**（默认）→ 自动注册本地用户（用户名前缀 `opc_`）并写 `opc_connect_bind`
-4. 均无绑定且关闭自动注册 → 抛错，需管理员在 `opcmanage` 手工绑定
+1. `(connectApp, openId)` 已存在 → 若同平台带 **platformUser** 则校验与绑定用户一致 → **幂等** 返回本地用户
+2. `(connectApp, unionId)` 已存在 → 更新 openId 后同上
+3. **同平台**（`appId` 在本 JVM OPL 注册，与域名/OPC Session 无关）且 token 解析出 **platformUser** → 绑定 `(openId → platformUser)`，**不**自动注册新账号
+4. 均无绑定且 **`OPC_AUTO_REGISTER=true`**（默认）→ 自动注册本地用户（用户名前缀 `opc_`）并写 `opc_connect_bind`
+5. 均无绑定且关闭自动注册 → 抛错，需管理员在 `opcmanage` 手工绑定
+
+**同平台判定**：`ConnectBindSupport.isSamePlatform` — 本 JVM 存在 `OpenPlatformService` 且 `appId` 在本地 OPL 已注册；**不依赖** OPC 回调域名的 Session/Cookie。
+
+**platformUser 来源**：同平台时 `ConnectOauthService` **直调** `OpenPlatformService.resolvePlatformUserUuid(accessToken)`（不经 HTTP userInfo JSON，不对外泄露 uuid）；跨实例仍仅 openId/unionId。
+
+**幂等**：已有 openId 绑定或 unionId 命中 → `idempotent=true`（绑定解析 NO-OP）；`ConnectLoginService` **始终** `establishSession`，未登录或跨域回调时仍能登录，已登录同用户时内部跳过。
+
+**自助解绑**：登录态 `POST /open/oauth2/bind/unbind?appId=...`（`ConnectBindService.unbindForSessionUser`）；冲突页见 `/modules/opc/connectbind`。
 
 **销户联动**：实现 `AccountHandler`，用户注销时删除其 `opc_connect_bind` 行。
 
@@ -532,6 +552,8 @@ userTokenService.saveToken(...)   → 可选保存 access_token
    ```
 
 4. **预期**：跳转 `/open/oauth2/authorize`（OPL 授权页）→ 用户确认 → `/open/oauth2/callback` → 本地 Session + `opc_connect_bind` 写入。
+
+**同实例重复授权（幂等）**：OPL 授权用户 A 首次回调写 `openId→A`；再次授权命中已有绑定 → **不** 注册 `opc_` 新用户，**不** 重复 `establishSession`（与域名/OPC Session 无关，依赖 token 内 platformUser）。
 
 ### 4.8 方式二 · 跨实例对接
 
@@ -673,9 +695,13 @@ userTokenService.saveToken(...)   → 可选保存 access_token
 | 类型 | 路径 |
 |------|------|
 | AS Controller | `modules/oauth/oauth2/AuthorizationController.java` |
-| RP 示例 | `modules/client/oauth2/ClientOauth2Controller.java` |
+| RP 回调 | `modules/client/oauth2/ClientOauth2Controller.java` |
+| RP 编排 | `modules/client/service/WebOauthLoginService.java` |
+| uuid 绑定 | `modules/client/service/WebOauthBindService.java`（表 **`client_web_oauth_bind`**） |
+| 同实例/ userInfo | `modules/client/oauth2/WebOauthBindSupport.java` |
 | Client 配置 | `modules/client/service/WebAuthenticationService.java` |
 | 登录配置 | `modules/sys/service/SysConfigService`（`LOGIN_AUTHENTICATION`） |
+| Session | `modules/usr/service/UserProfileService.java`（**`establishSession`**） |
 | Token 存储 | `modules/oauth/store/ValueType.java` |
 
 ### 10.3 方式二
@@ -689,6 +715,8 @@ userTokenService.saveToken(...)   → 可选保存 access_token
 | OPC OAuth | `modules/opc/oauth2/OpcOauth2Controller.java` |
 | OPC 登录编排 | `modules/opc/service/ConnectLoginService.java` |
 | OPC 绑定 | `modules/opc/service/ConnectBindService.java` |
+| 同平台判定 / platformUser | `modules/opc/support/ConnectBindSupport.java`、`ConnectOauthService.fetchUserInfoForBind` |
+| OPL platformUser | `OpenPlatformService.resolvePlatformUserUuid` |
 | OPC HTTP 客户端 | `modules/opc/service/ConnectOauthService.java` |
 | 常量 | `autumn-lib/.../opl/OplConstants.java`、`opc/OpcConstants.java` |
 | SPI | `autumn-lib/.../opl/spi/OpenPlatformService.java` |
@@ -698,8 +726,9 @@ userTokenService.saveToken(...)   → 可选保存 access_token
 | 前缀 | 模块 |
 |------|------|
 | `oauth_*` | 方式一 Client/Token（+ Redis） |
+| `client_web_oauth_bind` | 方式一 RP **上游 uuid ↔ 本地 user** 绑定 |
 | `opl_*` | 开放平台授权方 |
-| `opc_*` | 开放接入 RP |
+| `opc_*` | 开放接入 RP（含 **`opc_connect_bind`**） |
 
 ---
 

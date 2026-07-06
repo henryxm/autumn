@@ -3,12 +3,16 @@ package cn.org.autumn.modules.opc.service;
 import cn.org.autumn.base.ModuleService;
 import cn.org.autumn.config.AccountHandler;
 import cn.org.autumn.modules.opc.dao.ConnectBindDao;
+import cn.org.autumn.modules.opc.dto.ConnectBindResolveResult;
 import cn.org.autumn.opc.OpcConstants;
 import cn.org.autumn.opl.model.OpenUserInfoSnapshot;
 import cn.org.autumn.modules.opc.entity.ConnectAppEntity;
 import cn.org.autumn.modules.opc.entity.ConnectBindEntity;
+import cn.org.autumn.modules.opc.support.ConnectBindException;
+import cn.org.autumn.modules.opc.support.ConnectBindSupport;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysUserService;
+import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.usr.dto.UserProfile;
 import cn.org.autumn.modules.usr.entity.UserProfileEntity;
 import cn.org.autumn.modules.usr.service.UserProfileService;
@@ -38,48 +42,55 @@ public class ConnectBindService extends ModuleService<ConnectBindDao, ConnectBin
     @Lazy
     private UserProfileService userProfileService;
 
+    @Autowired
+    private ConnectBindSupport connectBindSupport;
+
     @Transactional(rollbackFor = Exception.class)
-    public UserProfile resolveAndBind(ConnectAppEntity app, OpenUserInfoSnapshot userInfo) {
+    public ConnectBindResolveResult resolveAndBind(ConnectAppEntity app, OpenUserInfoSnapshot userInfo, String platformUser) {
         if (app == null || userInfo == null || StringUtils.isBlank(userInfo.getOpenId())) {
-            throw new IllegalArgumentException("用户信息无效");
+            throw ConnectBindException.invalidUserInfo(app);
         }
-        ConnectBindEntity byOpenId = baseMapper.getByConnectAppAndOpenId(app.getUuid(), userInfo.getOpenId());
+        String openId = userInfo.getOpenId().trim();
+        String connectAppUuid = app.getUuid();
+
+        ConnectBindEntity byOpenId = baseMapper.getByConnectAppAndOpenId(connectAppUuid, openId);
         if (byOpenId != null) {
+            assertPlatformUserMatchesBind(app, openId, platformUser, byOpenId);
             updateProfileFields(byOpenId, userInfo);
-            return toUserProfile(byOpenId.getUser());
+            return ConnectBindResolveResult.of(toUserProfile(byOpenId.getUser()), true);
         }
+
         if (StringUtils.isNotBlank(userInfo.getUnionId())) {
-            ConnectBindEntity byUnion = baseMapper.getByConnectAppAndUnionId(app.getUuid(), userInfo.getUnionId());
+            ConnectBindEntity byUnion = baseMapper.getByConnectAppAndUnionId(connectAppUuid, userInfo.getUnionId());
             if (byUnion != null) {
-                byUnion.setOpenId(userInfo.getOpenId());
+                assertPlatformUserMatchesBind(app, openId, platformUser, byUnion);
+                byUnion.setOpenId(openId);
                 byUnion.setUpdate(new Date());
                 updateById(byUnion);
                 updateProfileFields(byUnion, userInfo);
-                return toUserProfile(byUnion.getUser());
+                return ConnectBindResolveResult.of(toUserProfile(byUnion.getUser()), true);
             }
         }
+
+        if (StringUtils.isNotBlank(platformUser)) {
+            SysUserEntity platform = sysUserService.getByUuid(platformUser.trim());
+            if (platform != null) {
+                ConnectBindEntity byUser = baseMapper.getByConnectAppAndUser(connectAppUuid, platform.getUuid());
+                if (byUser != null && !connectBindSupport.isSameOpenId(byUser.getOpenId(), openId)) {
+                    throw ConnectBindException.localAlreadyBound(app, openId, platform.getUuid(), byUser);
+                }
+                insertBind(connectAppUuid, platform.getUuid(), openId, userInfo.getUnionId());
+                syncProfileFields(platform.getUuid(), userInfo);
+                return ConnectBindResolveResult.of(toUserProfile(platform.getUuid()), false);
+            }
+        }
+
         if (!connectAppService.isAutoRegisterEnabled()) {
             throw new IllegalStateException("该第三方账号尚未关联本地用户，请在「第三方登录接入管理」中添加关联，或开启自动注册");
         }
         SysUserEntity created = createLocalUser(userInfo);
-        ConnectBindEntity bind = new ConnectBindEntity();
-        bind.setConnectApp(app.getUuid());
-        bind.setUser(created.getUuid());
-        bind.setOpenId(userInfo.getOpenId());
-        bind.setUnionId(userInfo.getUnionId());
-        Date now = new Date();
-        bind.setCreate(now);
-        bind.setUpdate(now);
-        try {
-            insert(bind);
-        } catch (DuplicateKeyException e) {
-            ConnectBindEntity existing = baseMapper.getByConnectAppAndOpenId(app.getUuid(), userInfo.getOpenId());
-            if (existing != null) {
-                return toUserProfile(existing.getUser());
-            }
-            throw e;
-        }
-        return toUserProfile(created.getUuid());
+        insertBind(connectAppUuid, created.getUuid(), openId, userInfo.getUnionId());
+        return ConnectBindResolveResult.of(toUserProfile(created.getUuid()), false);
     }
 
     public ConnectBindEntity getByOpenId(String connectAppUuid, String openId) {
@@ -108,6 +119,18 @@ public class ConnectBindService extends ModuleService<ConnectBindDao, ConnectBin
         return bind == null ? null : bind.getUser();
     }
 
+    @Transactional(rollbackFor = Exception.class)
+    public void unbindForSessionUser(ConnectAppEntity app) {
+        if (app == null || !ShiroUtils.isLogin()) {
+            throw new IllegalStateException("请先登录");
+        }
+        ConnectBindEntity bind = baseMapper.getByConnectAppAndUser(app.getUuid(), ShiroUtils.getUserUuid());
+        if (bind == null) {
+            throw new IllegalStateException("当前账号未绑定该开放平台应用");
+        }
+        deleteById(bind.getId());
+    }
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void canceled(Account obj) {
@@ -123,13 +146,51 @@ public class ConnectBindService extends ModuleService<ConnectBindDao, ConnectBin
         }
     }
 
+    private void assertPlatformUserMatchesBind(ConnectAppEntity app, String openId, String platformUser, ConnectBindEntity bind) {
+        if (StringUtils.isBlank(platformUser) || bind == null) {
+            return;
+        }
+        if (!connectBindSupport.isSameUser(bind.getUser(), platformUser)) {
+            throw ConnectBindException.upstreamBoundToOther(app, openId, platformUser, bind.getUser(), bind);
+        }
+    }
+
+    private void insertBind(String connectAppUuid, String localUserUuid, String openId, String unionId) {
+        ConnectBindEntity bind = new ConnectBindEntity();
+        bind.setUuid(Uuid.uuid());
+        bind.setConnectApp(connectAppUuid);
+        bind.setUser(localUserUuid);
+        bind.setOpenId(openId);
+        bind.setUnionId(unionId);
+        Date now = new Date();
+        bind.setCreate(now);
+        bind.setUpdate(now);
+        try {
+            insert(bind);
+        } catch (DuplicateKeyException e) {
+            ConnectBindEntity existing = baseMapper.getByConnectAppAndOpenId(connectAppUuid, openId);
+            if (existing != null) {
+                return;
+            }
+            existing = baseMapper.getByConnectAppAndUser(connectAppUuid, localUserUuid);
+            if (existing != null) {
+                return;
+            }
+            throw e;
+        }
+    }
+
     private void updateProfileFields(ConnectBindEntity bind, OpenUserInfoSnapshot userInfo) {
         if (StringUtils.isNotBlank(userInfo.getUnionId()) && !StringUtils.equals(bind.getUnionId(), userInfo.getUnionId())) {
             bind.setUnionId(userInfo.getUnionId());
             bind.setUpdate(new Date());
             updateById(bind);
         }
-        UserProfileEntity profile = userProfileService.getByUuid(bind.getUser());
+        syncProfileFields(bind.getUser(), userInfo);
+    }
+
+    private void syncProfileFields(String localUserUuid, OpenUserInfoSnapshot userInfo) {
+        UserProfileEntity profile = userProfileService.getByUuid(localUserUuid);
         if (profile == null) {
             return;
         }
@@ -148,20 +209,32 @@ public class ConnectBindService extends ModuleService<ConnectBindDao, ConnectBin
     }
 
     private SysUserEntity createLocalUser(OpenUserInfoSnapshot userInfo) {
-        String username = OpcConstants.AUTO_REGISTER_USERNAME_PREFIX + Uuid.prefix(userInfo.getOpenId(), 12);
+        String baseUsername = OpcConstants.AUTO_REGISTER_USERNAME_PREFIX + Uuid.prefix(userInfo.getOpenId(), 12);
         String password = Md5.md5(Uuid.uuid().getBytes()).substring(0, 16);
-        SysUserEntity created = sysUserService.provisionConnectUser(username, password);
-        UserProfileEntity profile = userProfileService.getByUuid(created.getUuid());
-        if (profile != null) {
-            if (StringUtils.isNotBlank(userInfo.getNickname())) {
-                profile.setNickname(userInfo.getNickname());
+        IllegalArgumentException lastError = null;
+        for (int attempt = 0; attempt < OpcConstants.AUTO_REGISTER_USERNAME_RETRY; attempt++) {
+            String username = attempt == 0 ? baseUsername : baseUsername + "_" + attempt;
+            try {
+                SysUserEntity created = sysUserService.provisionConnectUser(username, password);
+                UserProfileEntity profile = userProfileService.getByUuid(created.getUuid());
+                if (profile != null) {
+                    if (StringUtils.isNotBlank(userInfo.getNickname())) {
+                        profile.setNickname(userInfo.getNickname());
+                    }
+                    if (StringUtils.isNotBlank(userInfo.getIcon())) {
+                        profile.setIcon(userInfo.getIcon());
+                    }
+                    userProfileService.updateById(profile);
+                }
+                return created;
+            } catch (IllegalArgumentException e) {
+                lastError = e;
+                if (!StringUtils.contains(e.getMessage(), "已被注册")) {
+                    throw e;
+                }
             }
-            if (StringUtils.isNotBlank(userInfo.getIcon())) {
-                profile.setIcon(userInfo.getIcon());
-            }
-            userProfileService.updateById(profile);
         }
-        return created;
+        throw lastError == null ? new IllegalStateException("创建 OPC 本地用户失败") : lastError;
     }
 
     private UserProfile toUserProfile(String userUuid) {

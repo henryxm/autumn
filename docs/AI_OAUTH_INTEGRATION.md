@@ -331,12 +331,29 @@ grant_type=refresh_token
 
 ## 8. 第三方账号绑定建议
 
-### 8.1 推荐数据模型
+### 8.1 Autumn 内置 RP（`client` 模块）
+
+Autumn 作为 OAuth **接入方（RP）** 时，使用表 **`client_web_oauth_bind`** 维护关联：
+
+| 字段 | 含义 |
+|------|------|
+| `authentication` | `WebAuthenticationEntity.uuid`，按 client/host 隔离 |
+| `upper` | AS `/oauth2/userInfo` 返回的 `uuid` |
+| `user` | 本地 `sys_user.uuid`（新用户由 `UuidNamespaceService.allocate()` 分配） |
+
+- **不要** 再假设 `local.uuid == upstream.uuid`（仅懒迁移兼容历史数据）
+- 同实例 AS+RP 且 userInfo.uuid 在本地 `sys_user` 已存在时，以 **token 内 upstream 为权威**（不依赖 RP Session）；重复授权 **幂等 NO-OP**；`establishSession` 始终调用（已登录同用户时内部跳过）
+- 冲突时回调错误页（含绑定管理入口）+ `POST /client/oauth2/bind/unbind` 自助解绑
+- **`userInfoDelivery`**（`WebAuthenticationEntity`）：`legacy` = Autumn 历史 query JSON 包裹；`bearer` = 标准 Bearer；空则同实例自动 `legacy`、跨实例自动 `bearer`
+- 自动注册用户名 `oauth_{upper前缀}`，冲突时追加 `_1`…`_4` 重试
+
+### 8.2 外部第三方系统推荐数据模型
 
 ```text
 third_party_user
 ├── id              （第三方本地主键）
-├── autumn_uuid     （Autumn uuid，UNIQUE，关联键）
+├── autumn_uuid     （Autumn 本地 uuid，来自绑定解析后的 Session 用户；或外部系统自管映射表）
+├── upstream_uuid   （Autumn AS 返回的 uuid，关联键之一）
 ├── username        （可选，来自 UserProfile.username）
 ├── nickname        （展示，来自 UserProfile.nickname）
 ├── avatar_url      （展示，来自 UserProfile.icon）
@@ -344,33 +361,32 @@ third_party_user
 └── created_at
 ```
 
-### 8.2 绑定逻辑（伪代码）
+### 8.3 绑定逻辑（外部 RP 伪代码）
 
 ```text
-profile = GET /oauth2/userInfo
+profile = GET /oauth2/userInfo   // profile.uuid = 上游 AS 用户 uuid
 
-localUser = db.findByAutumnUuid(profile.uuid)
-if localUser == null:
-    localUser = db.findByOtherIdentity(...)   // 可选：邮箱/手机号等
-    if localUser != null:
-        localUser.autumn_uuid = profile.uuid  // 绑定
-    else:
-        localUser = db.create({
-            autumn_uuid: profile.uuid,
-            nickname: profile.nickname,
-            avatar_url: profile.icon,
-            username: profile.username
-        })
+binding = db.findBind(oauthClientConfig, profile.uuid)
+if binding != null:
+    localUser = db.findByUuid(binding.local_uuid)
+else if session.loggedIn:
+    if session.user already bound other upstream: error
+    db.createBind(oauthClientConfig, profile.uuid, session.user)
+    localUser = session.user
 else:
-    localUser.nickname = profile.nickname     // 同步展示信息
-    localUser.avatar_url = profile.icon
+    localUser = db.findByAutumnUuid(profile.uuid)   // 可选：历史同 uuid 迁移
+    if localUser == null:
+        localUser = db.create({ uuid: allocateNew(), nickname: profile.nickname, ... })
+    db.createBind(oauthClientConfig, profile.uuid, localUser.uuid)
 
 session.login(localUser)
+sync nickname / icon from profile
 ```
 
-### 8.3 注意事项
+### 8.4 注意事项
 
-- **永远使用 `uuid` 关联**，不要使用 Autumn 内部 Long 型 `id`
+- **Autumn RP**：以 **`client_web_oauth_bind`** + 本地 `user` 为关联键；**外部系统**：至少持久化 `(client, upper) → localUser`
+- **永远使用业务 `uuid` 关联**，不要使用 Autumn 内部 Long 型 `id`
 - `username` 可能被管理员修改，不宜作为唯一关联键
 - 头像 URL 可能为空，前端需占位图
 - 每次登录可刷新 nickname / icon，保持展示一致
@@ -405,6 +421,16 @@ AS 返回 JSON 错误体（HTTP 400/401），常见 `error`：
 |------|------|
 | 401 INVALID_TOKEN | 尝试 refresh；失败则重新授权 |
 | 400 | 检查 access_token 传参格式（见 [5.2](#52-传参方式重要)） |
+| userInfo 无 `uuid` | RP 回调普通错误页，提示重新授权 |
+| 绑定冲突 | 冲突专用错误页：退出登录 / 绑定管理 / 解绑 API |
+
+### 9.4 RP 绑定冲突（Autumn `client` 模块）
+
+| ConflictType | 表现 | 用户操作 |
+|--------------|------|----------|
+| `UPSTREAM_BOUND_TO_OTHER` | 上游账号已绑其他本地用户 | 退出后换账号；或后台/绑定管理页解绑 |
+| `LOCAL_ALREADY_BOUND` | 当前 Session 已绑其他上游 | `POST /client/oauth2/bind/unbind` 后重试 |
+| `UPSTREAM_UUID_INVALID` | 普通授权失败页（非冲突页） | 重新发起授权 |
 
 ---
 
@@ -561,7 +587,7 @@ function buildAuthorizeUrl(origin, clientId, redirectUri, state) {
 ### Q2：`/oauth2/userInfo` 支持 Bearer Header 吗？
 
 **支持**。Parallel Profile 下推荐使用 `Authorization: Bearer {access_token}` 或 query 传裸 `access_token`。  
-历史对接使用的 **JSON 包裹 query** 方式仍然兼容，Autumn 内部 `ClientOauth2Controller` 继续使用该方式，无需迁移。
+历史对接使用的 **JSON 包裹 query** 方式仍然兼容。Autumn 内置 RP（`WebOauthLoginService`）按 `WebAuthenticationEntity.userInfoDelivery` 或同实例/跨实例自动选择 **LEGACY** 或 **Bearer**。
 
 ### Q3：`redirect_uri` 总是报不匹配？
 
@@ -577,7 +603,7 @@ function buildAuthorizeUrl(origin, clientId, redirectUri, state) {
 
 ### Q6：Autumn 同源站点还要自己对接吗？
 
-若第三方就是同一 Autumn 部署且走 `/client/oauth2/callback`，框架会自动 `getAccessToken` + `getUserInfo` + `userProfileService.login`。跨系统或非 Autumn 应用需按本文自行对接。
+若第三方就是同一 Autumn 部署且走 `/client/oauth2/callback`，框架会自动换票、`resolveAndBind`、`establishSession`。跨系统或非 Autumn 应用需按本文自行对接。
 
 ### Q7：scope 可以传 `all` 吗？
 

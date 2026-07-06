@@ -12,7 +12,8 @@ description: >-
   Controller must not use Dao; Service uses baseMapper; gen/Pages/list.html/js never hand-edited; statics/pages/Site/PageAware.
   Read docs/AI_CODEGEN.md, docs/AI_DATABASE.md, docs/AI_DUAL_KEY.md. Bot/robot: read docs/AI_ROBOT.md + docs/AI_ROBOT_API.md (rbt_, Hook, message/push, cn.org.autumn.modules.bot); web 集成测试见 web/docs/INTEGRATION_TEST.md（基类 integration.base.IntegrationTest）。
   scripts/constraints-scan is optional: run only when the user explicitly asks for a constraint audit, CI-style check, or phrases like 约束扫描/规范体检; see skill section "约束扫描（按需）".
-  Triggers on cn.org.autumn 3.0.0, Spring Boot 3.5, JDK 17, ModuleService, EncryptModuleService, FieldEncrypt, isEncryptCacheField, encryptCache, RuntimeSql, PageAware, SpringDoc, bot, robot, rbt_, RobotHook, RobotMessageSubscriber, message/push, 字段加密, field encrypt, 加密缓存.
+  OAuth/OPL/OPC: read docs/AI_AUTH_LOGIN_MODES.md first; classic RP bind client_web_oauth_bind (WebOauthBindService); OPC bind opc_connect_bind (ConnectBindService); callback uses establishSession not login(upstream).
+  Triggers on cn.org.autumn 3.0.0, Spring Boot 3.5, JDK 17, ModuleService, EncryptModuleService, FieldEncrypt, isEncryptCacheField, encryptCache, RuntimeSql, PageAware, SpringDoc, bot, robot, rbt_, RobotHook, RobotMessageSubscriber, message/push, 字段加密, field encrypt, 加密缓存, OAuth, openId, unionId, WebOauthBind, ConnectBind, client_id, app_id, 授权登录, 账号绑定, uuid绑定.
 ---
 
 # Autumn 3.x 框架开发（3.0.0 / 分支 3.0.0）
@@ -99,6 +100,49 @@ description: >-
 涉及 **支付密码 / `PayPinVerifier` / `modules.safe`** 时，追加 **`docs/AI_SAFE_CREDENTIAL_INTEGRATION.md`** + **`docs/AI_SAFE_CREDENTIAL.md`**。摘要：`POST /safe/api/v1/*`、`SafeConfig`、`gate/assess` → `PayPinVerifier`、错误码 838～852；**`jakarta.*` / MP3 / `lang3`**。
 
 涉及 **实体字段存储加密 / `@FieldEncrypt` / `EncryptModuleService`** 时，必读 **`docs/AI_FIELD_ENCRYPT.md`**（§0 易混概念；§7 **`@Cache` 加密缓存**；**`jakarta.*` / MP3**；与 **`docs/AI_CRYPTO.md`** 传输加密独立）。
+
+涉及 **授权登录 / OAuth / 开放平台 / 账号绑定** 时，**先读 **`docs/AI_AUTH_LOGIN_MODES.md`**（双轨总览），再按角色追加 **`docs/AI_OAUTH_INTEGRATION.md`**（方式一 uuid）或 **`docs/AI_OPC_INTEGRATION.md`** + **`docs/AI_OPL_INTEGRATION.md`**（方式二 openId）；见下文 **授权登录与账号绑定**（3.x 与 2.x **业务语义一致**，包名为 **`jakarta.*`**，以 **3.0.0** 分支代码为准）。
+
+## 授权登录与账号绑定（OAuth uuid / 开放平台 openId）
+
+**两套并行体系，互不替代**（勿混 `client_id` 与 `app_id`、勿混 `/oauth2/*` 与 `/open/oauth2/*`）。
+
+| 维度 | **方式一 · 经典 OAuth** | **方式二 · 开放平台 OPC** |
+|------|-------------------------|---------------------------|
+| 模块 | `oauth`（AS）+ `client`（RP） | `opl`（AS）+ `opc`（RP） |
+| 凭证 | `client_id` / `client_secret` | `app_id` / `app_secret` |
+| 上游用户标识 | **`uuid`**（userInfo） | **`openId`**（+ **`unionId`** 跨应用） |
+| RP 绑定表 | **`client_web_oauth_bind`** | **`opc_connect_bind`** |
+| 绑定键 | **`authentication`** + **`upper`** → **`user`** | **`connectApp`** + **`openId`** → **`user`** |
+| 编排 | `WebOauthLoginService` | `ConnectLoginService` |
+| 绑定解析 | `WebOauthBindService.resolveAndBind` | `ConnectBindService.resolveAndBind` |
+| 回调 | `/client/oauth2/callback` | `/open/oauth2/callback` |
+
+**共用纪律（改绑定/登录必守）**：
+
+- 绑定关系 **只写独立绑定表**，**禁止** 在 `SysUserEntity` 上存上游关联。
+- 回调链路：**换票 → userInfo → `resolveAndBind` → `UserProfileService.establishSession`**（已登录同用户时内部 NO-OP）；**禁止** `login(upstreamProfile)` 用上游 uuid/openId **直接建号**。
+- **新用户**：本地 **`UuidNamespaceService.allocate()`**；经典 OAuth 用户名 `oauth_{upper前缀}`（冲突 `_1`…重试）；OPC 见 `OpcConstants.AUTO_REGISTER_USERNAME_PREFIX`。
+- **冲突**：拒绝自动改绑；经典 OAuth 走冲突错误页 + `POST /client/oauth2/bind/unbind`；OPC 走冲突错误页 + `POST /open/oauth2/bind/unbind?appId=...`。
+- **Dao**：绑定查询 **仅** `@SelectProvider` + `*DaoSql extends RuntimeSql`（如 `WebOauthBindDaoSql`）。
+
+**方式一 · 经典 OAuth RP 要点**：
+
+- 实体 **`WebOauthBindEntity`**：字段 **`user`**（本地 uuid，紧跟 `id`）、**`authentication`**、**`upper`**；**无** 行级 `uuid`；类级 **`@Indexes`** 双唯一 `(authentication,upper)`、`(authentication,user)`。
+- **勿假设** `local.user == upstream.uuid`；仅懒迁移兼容历史同 uuid。
+- **同实例 AS+RP 幂等**：`isSameInstance` 且 upstream uuid 在本地已存在 → 绑定 `upper→upstream`，**不依赖 Session**（对齐 OPC `platformUser`）；`idempotent=true` 表示绑定 NO-OP。
+- **userInfo 传参**：`WebAuthenticationEntity.userInfoDelivery` = `legacy` / `bearer`；空则同实例 **legacy**、跨实例 **bearer**（`WebOauthBindSupport.resolveUserInfoDelivery`）。
+- 管理页 **`client/weboauthbind`**（gen CRUD，排查/解绑；日常绑定走回调，勿手工写冲突数据）。
+
+**方式二 · 开放平台 OPC 要点**：
+
+- **`ConnectBindEntity`**：`connectApp` + **`openId`** 唯一；**`(connectApp, user)`** 唯一；**`unionId`** 存绑定行；**`user`** 为本地 uuid。
+- userInfo 固定 **Bearer**（`ConnectOauthService`）；**同平台**额外直调 **`OpenPlatformService.resolvePlatformUserUuid`**（不经 HTTP，不依赖 OPC Session）。
+- **同平台幂等**：`appId` 在本地 OPL 注册 → 首次绑定 `openId→platformUser`；重复授权 **idempotent**，不重复建号；`establishSession` 始终调用。
+- 自动注册受 **`OPC_AUTO_REGISTER`** 控制（仅跨平台或无 platformUser 时）。
+- OPL 侧 **openId 按 app 隔离**，**unionId 按 account 共享**（`OpenIdentityService` / `OpenUnionService`）。
+
+**实现索引**：`docs/AI_AUTH_LOGIN_MODES.md` §10.2～§10.4；经典绑定参考 `ConnectBindService` 对标实现。
 
 ## 字段存储加密（at-rest）
 
@@ -212,6 +256,7 @@ description: >-
 - 新索引是否**单字段在字段上 `@Index`**、**组合索引才用类级 `@Indexes`**（§10.2）？
 - 机器人：是否已读 **`docs/AI_ROBOT.md` + `docs/AI_ROBOT_API.md`**？bot 包是否仍为 **`jakarta.*` / MP3 annotation**？管理 API 与 `message/push` 鉴权是否分离？
 - **`@FieldEncrypt`**：Service 是否 `EncryptModuleService`？`baseMapper` → `afterRead`？`searchable` + hash 列？**`@Cache`** 是否按 §7（明文键 + hash 通道）？
+- **授权/OAuth/OPC**：是否先读 **`AI_AUTH_LOGIN_MODES.md`**？未混 `client_id`/`app_id`？绑定写 **独立表**？回调用 **`establishSession`** 而非 **`login(upstream)`**？经典 OAuth 是否走 **`WebOauthBindService`**（非 upstream uuid 联邦）？
 - **表名**：符合 §3.2？仅 `@TableName`（`@Table` 无 `value`）？Dao `quote` 一致？
 
 ## 多项目一句话

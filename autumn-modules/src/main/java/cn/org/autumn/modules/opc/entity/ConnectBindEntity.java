@@ -21,10 +21,16 @@ import lombok.Setter;
 @Setter
 @TableName("opc_connect_bind")
 @Table(value = "opc_connect_bind", comment = "接入绑定:本地用户与openId/unionId")
-@Indexes(@Index(name = "connect_app_open_id", indexType = IndexTypeEnum.UNIQUE, indexMethod = IndexMethodEnum.BTREE, fields = {
-        @IndexField(field = "connectApp", length = 32),
-        @IndexField(field = "openId", length = 64)
-}))
+@Indexes({
+        @Index(name = "connect_app_open_id", indexType = IndexTypeEnum.UNIQUE, indexMethod = IndexMethodEnum.BTREE, fields = {
+                @IndexField(field = "connectApp", length = 32),
+                @IndexField(field = "openId", length = 64)
+        }),
+        @Index(name = "connect_app_user", indexType = IndexTypeEnum.UNIQUE, indexMethod = IndexMethodEnum.BTREE, fields = {
+                @IndexField(field = "connectApp", length = 32),
+                @IndexField(field = "user", length = 32)
+        })
+})
 public class ConnectBindEntity implements UuidBased, Serializable {
     private static final long serialVersionUID = 1L;
 
