@@ -676,6 +676,23 @@ body.oauth-authorize-mode .login-shell { max-width: 920px; }
   display: block;
   margin: 0 auto;
 }
+/* Safari：QRCode 库会同时生成 canvas+img，优先 canvas，隐藏破损占位 img */
+#loginQrcodeBox canvas,
+.qr-frame canvas {
+  display: block !important;
+  max-width: 100%;
+  height: auto !important;
+}
+#loginQrcodeBox:has(canvas) img,
+.qr-frame:has(canvas) img {
+  display: none !important;
+}
+#loginQrcodeBox img[src=""],
+#loginQrcodeBox img:not([src]),
+.qr-frame img[src=""],
+.qr-frame img:not([src]) {
+  display: none !important;
+}
 .qr-frame::before,
 .qr-frame::after {
   content: '';
@@ -709,7 +726,7 @@ body.oauth-authorize-mode .login-shell { max-width: 920px; }
   0%, 100% { top: 16px; opacity: 0.3; }
   50% { top: calc(100% - 18px); opacity: 0.85; }
 }
-.qr-frame img, .qr-frame canvas { display: block; width: 200px; height: 200px; border-radius: 8px; margin: 0 auto; }
+.qr-frame img, .qr-frame canvas { display: block; width: 200px; max-width: 100%; height: auto; border-radius: 8px; margin: 0 auto; }
 .qr-frame table { margin: 0 auto !important; border-collapse: collapse; }
 #loginQrcodeBox table { margin: 0 auto !important; }
 .qr-status {

@@ -233,21 +233,42 @@
             },
             renderQrCode: function (text) {
                 var box = document.getElementById('loginQrcodeBox');
-                if (!box) {
+                if (!box || !text) {
+                    return;
+                }
+                var renderOpts = {
+                    fallbackSize: 200,
+                    colorDark: '#1a1d26',
+                    colorLight: '#ffffff'
+                };
+                if (window.AutumnQrc && typeof AutumnQrc.renderInto === 'function') {
+                    AutumnQrc.renderInto(box, text, renderOpts);
                     return;
                 }
                 box.innerHTML = '';
                 if (typeof QRCode === 'undefined') {
                     return;
                 }
+                var size = Math.min(box.clientWidth || 200, 200);
+                if (size < 120) {
+                    size = 200;
+                }
                 new QRCode(box, {
                     text: text,
-                    width: 200,
-                    height: 200,
-                    colorDark: '#1a1d26',
-                    colorLight: '#ffffff',
+                    width: size,
+                    height: size,
+                    colorDark: renderOpts.colorDark,
+                    colorLight: renderOpts.colorLight,
                     correctLevel: QRCode.CorrectLevel.M
                 });
+                if (box.querySelector('canvas')) {
+                    var legacyImgs = box.querySelectorAll('img');
+                    for (var i = 0; i < legacyImgs.length; i++) {
+                        if (legacyImgs[i].parentNode) {
+                            legacyImgs[i].parentNode.removeChild(legacyImgs[i]);
+                        }
+                    }
+                }
             },
             showError: function (msg) {
                 this.error = true;
