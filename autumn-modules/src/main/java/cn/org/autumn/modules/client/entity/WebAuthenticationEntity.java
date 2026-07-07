@@ -60,6 +60,9 @@ public class WebAuthenticationEntity implements Serializable {
     @Column(length = 500, comment = "描述信息")
     private String description;
 
+    @Column(length = 500, comment = "远程身份源根地址（如 https://chaoran.xin）；同实例 AS+RP 留空，由 authorizeUri 等本地 URI 驱动")
+    private String originUri;
+
     @Column(type = "datetime", comment = "创建时间")
     private Date createTime;
 }

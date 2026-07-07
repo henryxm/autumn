@@ -87,6 +87,12 @@ public class DefaultPage implements PageHandler {
     }
 
     @Override
+    public String oauthBindChoice(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        AuthPageAttributes.apply(model, sysConfigService);
+        return "oauth2/bind-choice";
+    }
+
+    @Override
     public String logout(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
         return WebPathUtils.forBrowser(httpServletRequest, "/");
     }

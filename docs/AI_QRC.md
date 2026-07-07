@@ -10,11 +10,13 @@
 | **第三方平台（服务端）** | `AI_OAUTH_INTEGRATION.md` → `AI_QRC_INTEGRATION.md` → `AI_QRC_API.md` §2 open/* |
 | **Autumn APP / 移动端** | `AI_QRC_CLIENT_API.md` → `AI_QRC_API.md` §0～§2 |
 | **PC 前端（login.html）** | 本文 §5 → `AI_QRC_API.md` §3 |
+| **Autumn 系 RP 联邦登录（chaoran→bighub）** | **`docs/AI_AUTH_SITE_ROLES.md`** → `autumn-qrc-core.js` |
 
 ### 快速索引
 
 | 需求 | 文档章节 |
 |------|----------|
+| AS/RP 双角色与 chaoran+bighub | **`AI_AUTH_SITE_ROLES.md`** |
 | APP 怎么扫、怎么 confirm | `AI_QRC_CLIENT_API.md` §2、§7 |
 | 第三方自建 QR + 轮询 code | `AI_QRC_INTEGRATION.md` §3.2 + `AI_QRC_API.md` open/* |
 | 字段含义 / 错误码 | `AI_QRC_API.md` §2.6、§6 |

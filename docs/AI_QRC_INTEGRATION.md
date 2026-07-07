@@ -13,6 +13,9 @@
 | **A. 浏览器 Redirect（B1）** | 第三方 Web | Autumn `/oauth2/authorize` | `redirect_uri?code=` |
 | **B. 同源 Web 扫码（B2）** | Autumn 系站点 PC 登录 | PC 调 `/qrc/scanticket/web/ticket/create` | `exchange` → Session |
 | **C. 第三方自建 QR（B3）** | Native / 自建 UI | 第三方调 `/qrc/api/v1/ticket/open/create` | 按 `delivery` 轮询/Webhook/DeepLink |
+| **D. Autumn 系 RP Web（B3 代理）** | 另一 Autumn 站点作 RP | 浏览器调 **`/client/oauth2/qrc/web/ticket/create`** | `complete` → **`WebOauthLoginService`**（与 B1 callback 同编排） |
+
+> **D 模式**与 **`AI_AUTH_LOGIN_MODES.md` §3.5** 方式一共用 `WebOauthBindService`；完整整合说明、架构图与配置见 **`docs/AI_AUTH_SITE_ROLES.md`**。
 
 ---
 

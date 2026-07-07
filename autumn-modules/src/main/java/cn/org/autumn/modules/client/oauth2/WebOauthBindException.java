@@ -11,7 +11,8 @@ public class WebOauthBindException extends RuntimeException {
     public enum ConflictType {
         UPSTREAM_UUID_INVALID,
         UPSTREAM_BOUND_TO_OTHER,
-        LOCAL_ALREADY_BOUND
+        LOCAL_ALREADY_BOUND,
+        BIND_CHOICE_REQUIRED
     }
 
     private final ConflictType conflictType;
@@ -19,10 +20,11 @@ public class WebOauthBindException extends RuntimeException {
     private final String upstreamUuid;
     private final String sessionUserUuid;
     private final String boundUserUuid;
+    private final String pendingToken;
     private final WebAuthenticationEntity webAuth;
     private final WebOauthBindEntity existingBind;
 
-    public WebOauthBindException(ConflictType conflictType, String message, WebAuthenticationEntity webAuth, String upstreamUuid, String sessionUserUuid, String boundUserUuid, WebOauthBindEntity existingBind) {
+    public WebOauthBindException(ConflictType conflictType, String message, WebAuthenticationEntity webAuth, String upstreamUuid, String sessionUserUuid, String boundUserUuid, WebOauthBindEntity existingBind, String pendingToken) {
         super(message);
         this.conflictType = conflictType;
         this.webAuth = webAuth;
@@ -31,6 +33,11 @@ public class WebOauthBindException extends RuntimeException {
         this.sessionUserUuid = sessionUserUuid;
         this.boundUserUuid = boundUserUuid;
         this.existingBind = existingBind;
+        this.pendingToken = pendingToken;
+    }
+
+    public WebOauthBindException(ConflictType conflictType, String message, WebAuthenticationEntity webAuth, String upstreamUuid, String sessionUserUuid, String boundUserUuid, WebOauthBindEntity existingBind) {
+        this(conflictType, message, webAuth, upstreamUuid, sessionUserUuid, boundUserUuid, existingBind, null);
     }
 
     public static WebOauthBindException invalidUpstream(WebAuthenticationEntity webAuth) {
@@ -43,5 +50,13 @@ public class WebOauthBindException extends RuntimeException {
 
     public static WebOauthBindException localAlreadyBound(WebAuthenticationEntity webAuth, String upstreamUuid, String sessionUserUuid, WebOauthBindEntity bind) {
         return new WebOauthBindException(ConflictType.LOCAL_ALREADY_BOUND, "当前本地账号已绑定其他上游账号", webAuth, upstreamUuid, sessionUserUuid, bind == null ? null : bind.getUser(), bind);
+    }
+
+    public static WebOauthBindException bindChoiceRequired(WebAuthenticationEntity webAuth, String upstreamUuid) {
+        return new WebOauthBindException(ConflictType.BIND_CHOICE_REQUIRED, "请选择绑定方式", webAuth, upstreamUuid, null, null, null);
+    }
+
+    public static WebOauthBindException bindChoiceRequired(WebAuthenticationEntity webAuth, String upstreamUuid, String pendingToken) {
+        return new WebOauthBindException(ConflictType.BIND_CHOICE_REQUIRED, "请选择绑定方式", webAuth, upstreamUuid, null, null, null, pendingToken);
     }
 }

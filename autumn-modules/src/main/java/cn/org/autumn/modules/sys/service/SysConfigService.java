@@ -10,6 +10,7 @@ import cn.org.autumn.database.CrudGuard;
 import cn.org.autumn.database.runtime.WrapperColumns;
 import cn.org.autumn.exception.AException;
 import cn.org.autumn.model.AccountAuthConfig;
+import cn.org.autumn.model.AuthSiteConfig;
 import cn.org.autumn.model.AesConfig;
 import cn.org.autumn.model.DistributedLockConfig;
 import cn.org.autumn.model.PayCredentialConfig;
@@ -96,6 +97,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     public static final String PAY_CREDENTIAL_CONFIG = PayCredentialConfig.CONFIG_KEY;
     public static final String QRC_CONFIG = ScanLoginConfig.CONFIG_KEY;
     public static final String ACCOUNT_AUTH_CONFIG = AccountAuthConfig.CONFIG_KEY;
+    public static final String AUTH_SITE_CONFIG = AuthSiteConfig.CONFIG_KEY;
     public static final String Localhost = "localhost";
     public static final String config_lang_prefix = "config_lang_string_";
     private static final String NULL = null;
@@ -274,6 +276,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 {PAY_CREDENTIAL_CONFIG, new Gson().toJson(new PayCredentialConfig()), "1", "支付密码与生物识别策略", config, json_type, PayCredentialConfig.class.getName()},
                 {QRC_CONFIG, new Gson().toJson(new ScanLoginConfig()), "1", "扫码登录配置", config, json_type, ScanLoginConfig.class.getName()},
                 {ACCOUNT_AUTH_CONFIG, new Gson().toJson(new AccountAuthConfig()), "1", "账号认证配置（自助注册开关等）", config, json_type, AccountAuthConfig.class.getName()},
+                {AUTH_SITE_CONFIG, new Gson().toJson(new AuthSiteConfig()), "1", "认证站点角色与联邦登录配置", config, json_type, AuthSiteConfig.class.getName()},
         };
     }
 
@@ -1009,6 +1012,11 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     public AccountAuthConfig getAccountAuthConfig() {
         AccountAuthConfig authConfig = getConfigObjectValidate(ACCOUNT_AUTH_CONFIG, AccountAuthConfig.class);
         return authConfig == null ? new AccountAuthConfig() : authConfig;
+    }
+
+    public AuthSiteConfig getAuthSiteConfig() {
+        AuthSiteConfig siteConfig = getConfigObjectValidate(AUTH_SITE_CONFIG, AuthSiteConfig.class);
+        return siteConfig == null ? new AuthSiteConfig() : siteConfig;
     }
 
     @Transactional(rollbackFor = Exception.class)
