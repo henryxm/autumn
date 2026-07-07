@@ -34,9 +34,6 @@ public class ConnectBindServiceTest {
     private ConnectBindDao connectBindDao;
 
     @Mock
-    private ConnectAppService connectAppService;
-
-    @Mock
     private SysUserService sysUserService;
 
     @Mock
@@ -50,10 +47,10 @@ public class ConnectBindServiceTest {
         MockitoAnnotations.initMocks(this);
         connectBindService = new ConnectBindService();
         ReflectionTestUtils.setField(connectBindService, "baseMapper", connectBindDao);
-        ReflectionTestUtils.setField(connectBindService, "connectAppService", connectAppService);
         ReflectionTestUtils.setField(connectBindService, "sysUserService", sysUserService);
         ReflectionTestUtils.setField(connectBindService, "userProfileService", userProfileService);
         ReflectionTestUtils.setField(connectBindService, "connectBindSupport", connectBindSupport);
+        connectBindService = Mockito.spy(connectBindService);
         Mockito.when(connectBindSupport.isSameUser(Mockito.anyString(), Mockito.anyString())).thenAnswer(invocation -> {
             String left = (String) invocation.getArguments()[0];
             String right = (String) invocation.getArguments()[1];
@@ -133,20 +130,50 @@ public class ConnectBindServiceTest {
     }
 
     @Test
-    public void crossPlatformWithoutPlatformUserAutoRegisters() {
+    public void crossPlatformWithoutPlatformUserRequiresBindChoice() {
         ConnectAppEntity app = app();
         OpenUserInfoSnapshot userInfo = userInfo(OPEN_ID, UNION_ID);
-        SysUserEntity created = user(LOCAL_NEW);
+        Mockito.doReturn(null).when(connectBindService).sessionUserUuid();
         Mockito.when(connectBindDao.getByConnectAppAndOpenId(CONNECT_APP_UUID, OPEN_ID)).thenReturn(null);
         Mockito.when(connectBindDao.getByConnectAppAndUnionId(CONNECT_APP_UUID, UNION_ID)).thenReturn(null);
-        Mockito.when(connectAppService.isAutoRegisterEnabled()).thenReturn(true);
-        Mockito.when(sysUserService.provisionConnectUser(Mockito.anyString(), Mockito.anyString())).thenReturn(created);
-        mockProfile(LOCAL_NEW);
+
+        try {
+            connectBindService.resolveAndBind(app, userInfo, null);
+            Assert.fail("expected ConnectBindException");
+        } catch (ConnectBindException e) {
+            Assert.assertEquals(ConnectBindException.ConflictType.BIND_CHOICE_REQUIRED, e.getConflictType());
+        }
+    }
+
+    @Test
+    public void loggedInSessionUserBindsWithoutChoice() {
+        ConnectAppEntity app = app();
+        OpenUserInfoSnapshot userInfo = userInfo(OPEN_ID, UNION_ID);
+        Mockito.doReturn(LOCAL_B).when(connectBindService).sessionUserUuid();
+        Mockito.when(connectBindDao.getByConnectAppAndOpenId(CONNECT_APP_UUID, OPEN_ID)).thenReturn(null);
+        Mockito.when(connectBindDao.getByConnectAppAndUnionId(CONNECT_APP_UUID, UNION_ID)).thenReturn(null);
+        Mockito.when(connectBindDao.getByConnectAppAndUser(CONNECT_APP_UUID, LOCAL_B)).thenReturn(null);
+        mockProfile(LOCAL_B);
 
         ConnectBindResolveResult result = connectBindService.resolveAndBind(app, userInfo, null);
 
-        Assert.assertFalse(result.isIdempotent());
+        Assert.assertEquals(LOCAL_B, result.getProfile().getUuid());
+        Mockito.verify(connectBindDao).insert(Mockito.argThat(bind -> OPEN_ID.equals(bind.getOpenId()) && LOCAL_B.equals(bind.getUser())));
+    }
+
+    @Test
+    public void bindCreateNewUser_insertsBind() {
+        ConnectAppEntity app = app();
+        OpenUserInfoSnapshot userInfo = userInfo(OPEN_ID, UNION_ID);
+        Mockito.when(connectBindDao.getByConnectAppAndOpenId(CONNECT_APP_UUID, OPEN_ID)).thenReturn(null);
+        SysUserEntity created = user(LOCAL_NEW);
+        Mockito.when(sysUserService.provisionConnectUser(Mockito.anyString(), Mockito.anyString())).thenReturn(created);
+        mockProfile(LOCAL_NEW);
+
+        ConnectBindResolveResult result = connectBindService.bindCreateNewUser(app, userInfo);
+
         Assert.assertEquals(LOCAL_NEW, result.getProfile().getUuid());
+        Mockito.verify(connectBindDao).insert(Mockito.argThat(bind -> OPEN_ID.equals(bind.getOpenId()) && LOCAL_NEW.equals(bind.getUser())));
     }
 
     private ConnectAppEntity app() {

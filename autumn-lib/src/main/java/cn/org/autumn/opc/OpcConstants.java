@@ -46,10 +46,7 @@ public final class OpcConstants {
     /** 统一管理页路由（模板 {@code opc/opcmanage.html}） */
     public static final String MANAGE_PAGE = "opcmanage.html";
 
-    /** {@code sys_config} 键：OAuth 回调无本地绑定时是否自动注册用户（默认 true） */
-    public static final String CONFIG_AUTO_REGISTER = "OPC_AUTO_REGISTER";
-
-    /** 自动注册本地用户时的用户名前缀 */
+    /** 用户确认创建新账号时的用户名前缀 */
     public static final String AUTO_REGISTER_USERNAME_PREFIX = "opc_";
 
     /** 自动注册本地用户时用户名冲突重试次数 */

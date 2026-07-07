@@ -145,34 +145,6 @@ public class OpcAdminController {
         });
     }
 
-    @GetMapping("/config/autoRegister")
-    public R getAutoRegister(HttpServletRequest request) {
-        return admin(request, () -> {
-            Map<String, Object> data = new LinkedHashMap<>();
-            data.put("enabled", opcAdminService.getAutoRegister());
-            return R.ok().put("data", data);
-        });
-    }
-
-    @PostMapping("/config/autoRegister")
-    public R setAutoRegister(HttpServletRequest request, @RequestBody Map<String, Object> body) {
-        return admin(request, () -> {
-            boolean enabled = body != null && body.get("enabled") != null && parseBoolean(body.get("enabled"));
-            opcAdminService.setAutoRegister(enabled);
-            Map<String, Object> data = new LinkedHashMap<>();
-            data.put("enabled", enabled);
-            return R.ok().put("data", data);
-        });
-    }
-
-    private boolean parseBoolean(Object value) {
-        if (value instanceof Boolean) {
-            return (Boolean) value;
-        }
-        String text = value == null ? "" : value.toString().trim();
-        return "true".equalsIgnoreCase(text) || "1".equals(text);
-    }
-
     private R admin(HttpServletRequest request, Supplier<R> action) {
         return systemAdminApi.execute(request, "OPC", action);
     }

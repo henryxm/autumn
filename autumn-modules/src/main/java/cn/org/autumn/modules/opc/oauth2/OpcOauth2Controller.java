@@ -1,7 +1,9 @@
 package cn.org.autumn.modules.opc.oauth2;
 
+import cn.org.autumn.modules.opc.dto.ConnectBindPendingContext;
 import cn.org.autumn.modules.opc.entity.ConnectAppEntity;
 import cn.org.autumn.modules.opc.service.ConnectAppService;
+import cn.org.autumn.modules.opc.service.ConnectBindPendingService;
 import cn.org.autumn.modules.opc.service.ConnectBindService;
 import cn.org.autumn.modules.opc.service.ConnectLoginService;
 import cn.org.autumn.modules.opc.service.ConnectOauthService;
@@ -22,6 +24,7 @@ import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -45,6 +48,9 @@ public class OpcOauth2Controller {
 
     @Autowired
     private ConnectBindService connectBindService;
+
+    @Autowired
+    private ConnectBindPendingService connectBindPendingService;
 
     @Autowired
     private PageFactory pageFactory;
@@ -119,9 +125,12 @@ public class OpcOauth2Controller {
             return authCallbackErrorPage(request, response, model, OAuthError.OAUTH_ERROR, "授权状态无效或已过期，请重新发起登录。");
         }
         try {
-            connectLoginService.completeOAuthCallback(app, code);
+            connectLoginService.completeOAuthCallback(request, app, code, callback);
         } catch (ConnectBindException e) {
             log.warn("opc oauth bind conflict: type={}, appId={}", e.getConflictType(), e.getAppId());
+            if (e.getConflictType() == ConflictType.BIND_CHOICE_REQUIRED) {
+                return authCallbackBindChoicePage(request, response, model, e);
+            }
             if (e.getConflictType() == ConflictType.USERINFO_INVALID) {
                 return authCallbackErrorPage(request, response, model, OAuthError.OAUTH_ERROR, "授权用户信息无效，请重新发起授权。");
             }
@@ -138,6 +147,90 @@ public class OpcOauth2Controller {
             }
         }
         return pageFactory.direct(request, response, model, redirect);
+    }
+
+    @GetMapping("bind/choice")
+    public Object bindChoicePage(HttpServletRequest request, HttpServletResponse response, Model model, @RequestParam("token") String token, @RequestParam(required = false) String appId) {
+        if (StringUtils.isBlank(token)) {
+            return authCallbackErrorPage(request, response, model, OAuthError.OAUTH_ERROR, "绑定会话无效或已过期");
+        }
+        ConnectBindPendingContext pending = connectBindPendingService.peek(token);
+        if (pending == null) {
+            return authCallbackErrorPage(request, response, model, OAuthError.OAUTH_ERROR, "绑定会话已过期，请重新发起授权");
+        }
+        String resolvedAppId = StringUtils.isNotBlank(appId) ? appId : pending.getAppId();
+        String confirmPath = WebPathUtils.forBrowser(request, "/open/oauth2/bind/confirm?token=" + token);
+        if (StringUtils.isNotBlank(resolvedAppId)) {
+            confirmPath = confirmPath + "&appId=" + resolvedAppId;
+        }
+        model.addAttribute("bindToken", token);
+        model.addAttribute("loginBindUrl", WebPathUtils.forBrowser(request, "/login?callback=" + encodeCallback(confirmPath)));
+        model.addAttribute("createBindAction", WebPathUtils.forBrowser(request, "/open/oauth2/bind/create"));
+        model.addAttribute("title", "选择账号绑定方式");
+        model.addAttribute("message", "授权已成功，请选择将此开放平台账号与本地账号的关联方式。");
+        return pageFactory.oauthBindChoice(request, response, model);
+    }
+
+    @GetMapping("bind/confirm")
+    public Object bindConfirm(HttpServletRequest request, HttpServletResponse response, Model model, @RequestParam("token") String token, @RequestParam(required = false) String appId) {
+        ConnectBindPendingContext pending = connectBindPendingService.peek(token);
+        String callback = resolveSuccessRedirect(request, pending, appId);
+        try {
+            connectLoginService.completePendingBindSession(token);
+        } catch (ConnectBindException e) {
+            if (e.getConflictType() == ConflictType.UPSTREAM_BOUND_TO_OTHER || e.getConflictType() == ConflictType.LOCAL_ALREADY_BOUND) {
+                return authCallbackConflictPage(request, response, model, e);
+            }
+            return authCallbackErrorPage(request, response, model, OAuthError.OAUTH_ERROR, e.getMessage());
+        } catch (Exception e) {
+            return authCallbackErrorPage(request, response, model, OAuthError.OAUTH_ERROR, StringUtils.defaultIfBlank(e.getMessage(), "绑定失败，请重试"));
+        }
+        return pageFactory.direct(request, response, model, callback);
+    }
+
+    @PostMapping("bind/create")
+    public Object bindCreate(HttpServletRequest request, HttpServletResponse response, Model model, @RequestParam("token") String token, @RequestParam(required = false) String appId) {
+        ConnectBindPendingContext pending = connectBindPendingService.peek(token);
+        String callback = resolveSuccessRedirect(request, pending, appId);
+        try {
+            connectLoginService.completePendingCreateNew(token);
+        } catch (ConnectBindException e) {
+            return authCallbackErrorPage(request, response, model, OAuthError.OAUTH_ERROR, e.getMessage());
+        } catch (Exception e) {
+            return authCallbackErrorPage(request, response, model, OAuthError.OAUTH_ERROR, StringUtils.defaultIfBlank(e.getMessage(), "创建账号失败，请重试"));
+        }
+        return pageFactory.direct(request, response, model, callback);
+    }
+
+    private Object authCallbackBindChoicePage(HttpServletRequest request, HttpServletResponse response, Model model, ConnectBindException e) {
+        String token = e.getPendingToken();
+        if (StringUtils.isBlank(token)) {
+            return authCallbackErrorPage(request, response, model, OAuthError.OAUTH_ERROR, "绑定会话无效，请重新发起授权");
+        }
+        return pageFactory.direct(request, response, model, connectLoginService.bindChoicePageUrl(request, e.getAppId(), token));
+    }
+
+    private String resolveSuccessRedirect(HttpServletRequest request, ConnectBindPendingContext pending, String appId) {
+        if (pending != null && StringUtils.isNotBlank(pending.getCallback())) {
+            return pending.getCallback();
+        }
+        String redirect = WebPathUtils.forBrowser(request, OpcConstants.OAUTH2_BASE + "/success");
+        String resolvedAppId = appId;
+        if (StringUtils.isBlank(resolvedAppId) && pending != null) {
+            resolvedAppId = pending.getAppId();
+        }
+        if (StringUtils.isNotBlank(resolvedAppId)) {
+            redirect = redirect + (redirect.contains("?") ? "&" : "?") + "appId=" + resolvedAppId;
+        }
+        return redirect;
+    }
+
+    private static String encodeCallback(String callback) {
+        try {
+            return java.net.URLEncoder.encode(callback, "UTF-8");
+        } catch (Exception e) {
+            return callback;
+        }
     }
 
     private Object authCallbackErrorPage(HttpServletRequest request, HttpServletResponse response, Model model, String error, String description) {

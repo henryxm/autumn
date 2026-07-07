@@ -187,34 +187,6 @@ public class ConnectAppService extends EncryptModuleService<ConnectAppDao, Conne
         return app;
     }
 
-    public boolean isAutoRegisterEnabled() {
-        if (sysConfigService == null) {
-            return false;
-        }
-        String value = sysConfigService.getValue(OpcConstants.CONFIG_AUTO_REGISTER);
-        if (StringUtils.isBlank(value)) {
-            return false;
-        }
-        return sysConfigService.getBoolean(OpcConstants.CONFIG_AUTO_REGISTER);
-    }
-
-    public void setAutoRegisterEnabled(boolean enabled) {
-        if (sysConfigService == null) {
-            return;
-        }
-        String value = enabled ? "true" : "false";
-        if (sysConfigService.hasKey(OpcConstants.CONFIG_AUTO_REGISTER)) {
-            sysConfigService.updateValueByKey(OpcConstants.CONFIG_AUTO_REGISTER, value);
-            return;
-        }
-        SysConfigEntity config = new SysConfigEntity();
-        config.setParamKey(OpcConstants.CONFIG_AUTO_REGISTER);
-        config.setParamValue(value);
-        config.setStatus(1);
-        config.setRemark("开放接入：OAuth回调无绑定时是否自动注册本地用户");
-        sysConfigService.save(config);
-    }
-
     public void fillDefaultUris(ConnectAppEntity app) {
         String base = normalizeBaseUrl(app.getPlatformBaseUrl());
         if (StringUtils.isBlank(app.getAuthorizeUri())) {

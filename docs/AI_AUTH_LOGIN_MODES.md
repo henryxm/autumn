@@ -496,18 +496,25 @@ userTokenService.saveToken(...)   → 可选保存 access_token
 | POST | `/open/api/v1/platform/opc/app/list` | 当前用户的接入 App |
 | POST | `/open/api/v1/platform/login/url` | 获取登录入口 URL |
 
-**管理端**：`/open/admin/opc/platform/*`，页面 `opcmanage.html`。  
-**配置**：`OpcConstants.CONFIG_AUTO_REGISTER`（`sys_config` 键 `OPC_AUTO_REGISTER`）。
+**管理端**：`/open/admin/opc/platform/*`，页面 `opcmanage.html`。
 
-### 4.5 本地用户绑定策略（OPC 核心）
+### 4.5 本地用户绑定策略（OPC 核心，与经典 OAuth 对称）
 
 `ConnectBindService.resolveAndBind` 顺序：
 
 1. `(connectApp, openId)` 已存在 → 若同平台带 **platformUser** 则校验与绑定用户一致 → **幂等** 返回本地用户
 2. `(connectApp, unionId)` 已存在 → 更新 openId 后同上
-3. **同平台**（`appId` 在本 JVM OPL 注册，与域名/OPC Session 无关）且 token 解析出 **platformUser** → 绑定 `(openId → platformUser)`，**不**自动注册新账号
-4. 均无绑定且 **`OPC_AUTO_REGISTER=true`**（默认）→ 自动注册本地用户（用户名前缀 `opc_`）并写 `opc_connect_bind`
-5. 均无绑定且关闭自动注册 → 抛错，需管理员在 `opcmanage` 手工绑定
+3. **同平台**（`appId` 在本 JVM OPL 注册，与域名/OPC Session 无关）且 token 解析出 **platformUser** → 绑定 `(openId → platformUser)`，**不**新建账号
+4. **已登录** 本地 Session → 绑定当前 Session 用户
+5. **跨平台 + 未登录 + 无绑定** → **`BIND_CHOICE_REQUIRED`** → 绑定选择页（用户自选「登录并绑定」或「创建新账号」）
+
+**绑定选择端点**（与方式一共用 `oauth2/bind-choice.html`）：
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/open/oauth2/bind/choice?token=&appId=` | 选择页 |
+| GET | `/open/oauth2/bind/confirm?token=` | 已登录后确认绑定 Session |
+| POST | `/open/oauth2/bind/create` | 用户确认创建新账号（`opc_` 前缀） |
 
 **同平台判定**：`ConnectBindSupport.isSamePlatform` — 本 JVM 存在 `OpenPlatformService` 且 `appId` 在本地 OPL 已注册；**不依赖** OPC 回调域名的 Session/Cookie。
 
@@ -516,6 +523,8 @@ userTokenService.saveToken(...)   → 可选保存 access_token
 **幂等**：已有 openId 绑定或 unionId 命中 → `idempotent=true`（绑定解析 NO-OP）；`ConnectLoginService` **始终** `establishSession`，未登录或跨域回调时仍能登录，已登录同用户时内部跳过。
 
 **自助解绑**：登录态 `POST /open/oauth2/bind/unbind?appId=...`（`ConnectBindService.unbindForSessionUser`）；冲突页见 `/modules/opc/connectbind`。
+
+**禁止**：后台 `sys_config` 开关决定「是否自动注册」；跨实例首次授权须用户在选择页确认。
 
 **销户联动**：实现 `AccountHandler`，用户注销时删除其 `opc_connect_bind` 行。
 
@@ -636,7 +645,7 @@ userTokenService.saveToken(...)   → 可选保存 access_token
 
 - 业务站、子站、边缘节点需要 **用中心账号登录**
 - 多实例部署：中心 OPL + 多地 OPC
-- 希望 **自动注册** 本地用户并绑定 openId（可关 `OPC_AUTO_REGISTER` 改为人工审核）
+- 希望用户在 **授权回调后自主选择** 创建新账号或绑定已有账号（绑定选择页，与方式一对称）
 - 登录页增加「开放平台登录」按钮，与密码登录、方式一并存
 
 ---
@@ -756,7 +765,7 @@ userTokenService.saveToken(...)   → 可选保存 access_token
 
 | 现象 | 检查 |
 |------|------|
-| 「未找到本地绑定且未开启自动注册」 | `OPC_AUTO_REGISTER` 是否为 true |
+| 跨平台首次授权未登录 | 是否进入 `/open/oauth2/bind/choice` 由用户选择绑定方式 |
 | 绑错用户 | 是否同一 `connectApp` 下 openId 冲突 |
 | 远程 OPL 不通 | `platformBaseUrl` 无尾斜杠；网络可达 |
 
@@ -791,7 +800,7 @@ userTokenService.saveToken(...)   → 可选保存 access_token
 
 - [ ] `ConnectApp` 与 OPL 注册信息一致
 - [ ] `platformBaseUrl` 正确
-- [ ] 明确自动注册或人工绑定策略
+- [ ] 跨平台首次授权展示绑定选择页（非后台静默建号）
 - [ ] 文档交付 **`docs/AI_OPC_INTEGRATION.md`**
 
 ---
