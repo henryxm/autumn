@@ -1,6 +1,221 @@
 (function (window) {
     'use strict';
 
+    var QR_RENDER_MAX_ATTEMPTS = 12;
+
+    function isBoxVisible(box) {
+        if (!box) {
+            return false;
+        }
+        var rect = box.getBoundingClientRect();
+        return rect.width > 8 && rect.height > 8;
+    }
+
+    function resolveQrBoxSize(box, fallback) {
+        fallback = fallback || 200;
+        if (!box) {
+            return fallback;
+        }
+        var style = window.getComputedStyle(box);
+        var padX = (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0);
+        var padY = (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0);
+        var width = box.clientWidth;
+        var height = box.clientHeight;
+        if ((!width || width < 40) && style.width) {
+            width = parseFloat(style.width);
+        }
+        if ((!height || height < 40) && style.height) {
+            height = parseFloat(style.height);
+        }
+        var size = Math.floor(Math.min((width || 0) - padX, (height || 0) - padY));
+        if (size < 120) {
+            size = fallback;
+        }
+        if (size > 280) {
+            size = 280;
+        }
+        return size;
+    }
+
+    function isBrokenQrImage(img) {
+        if (!img) {
+            return true;
+        }
+        var src = img.getAttribute('src') || '';
+        if (!src || src === 'about:blank') {
+            return true;
+        }
+        if (img.complete && img.naturalWidth === 0) {
+            return true;
+        }
+        return false;
+    }
+
+    function normalizeQrMarkup(box, size) {
+        if (!box) {
+            return;
+        }
+        var canvases = box.querySelectorAll('canvas');
+        var imgs = box.querySelectorAll('img');
+        var i;
+        for (i = 1; i < canvases.length; i++) {
+            if (canvases[i].parentNode) {
+                canvases[i].parentNode.removeChild(canvases[i]);
+            }
+        }
+        var canvas = canvases[0] || null;
+        if (canvas) {
+            canvas.style.display = 'block';
+            var paintSize = canvas.width || size;
+            canvas.style.width = paintSize + 'px';
+            canvas.style.height = paintSize + 'px';
+            for (i = 0; i < imgs.length; i++) {
+                if (imgs[i].parentNode) {
+                    imgs[i].parentNode.removeChild(imgs[i]);
+                }
+            }
+        } else if (imgs.length > 0) {
+            for (i = 1; i < imgs.length; i++) {
+                if (imgs[i].parentNode) {
+                    imgs[i].parentNode.removeChild(imgs[i]);
+                }
+            }
+            var img = imgs[0];
+            img.alt = '';
+            if (isBrokenQrImage(img)) {
+                if (img.parentNode) {
+                    img.parentNode.removeChild(img);
+                }
+            } else {
+                img.style.display = 'block';
+                img.style.width = size + 'px';
+                img.style.height = size + 'px';
+            }
+        }
+        box.setAttribute('data-qr-size', String(size));
+    }
+
+    function isQrPainted(box) {
+        if (!box) {
+            return false;
+        }
+        var canvas = box.querySelector('canvas');
+        if (canvas && canvas.width > 0 && canvas.height > 0) {
+            try {
+                var ctx = canvas.getContext('2d');
+                var sample = ctx.getImageData(0, 0, Math.min(8, canvas.width), Math.min(8, canvas.height));
+                for (var i = 0; i < sample.data.length; i += 4) {
+                    if (sample.data[i] < 250 || sample.data[i + 1] < 250 || sample.data[i + 2] < 250) {
+                        return true;
+                    }
+                }
+            } catch (ignored) {
+                return true;
+            }
+        }
+        var img = box.querySelector('img');
+        return !!(img && !isBrokenQrImage(img) && img.naturalWidth > 0);
+    }
+
+    function paintWithJquery(box, text, size) {
+        if (!window.jQuery || !jQuery.fn || !jQuery.fn.qrcode) {
+            return false;
+        }
+        try {
+            jQuery(box).empty().qrcode({
+                render: 'canvas',
+                text: text,
+                width: size,
+                height: size,
+                foreground: '#1a1d26',
+                background: '#ffffff'
+            });
+            normalizeQrMarkup(box, size);
+            return isQrPainted(box);
+        } catch (ignored) {
+            return false;
+        }
+    }
+
+    function paintWithQrCode(box, text, renderOpts) {
+        if (typeof QRCode === 'undefined') {
+            return false;
+        }
+        try {
+            box.innerHTML = '';
+            new QRCode(box, {
+                text: text,
+                width: renderOpts.size,
+                height: renderOpts.size,
+                colorDark: renderOpts.colorDark || '#1a1d26',
+                colorLight: renderOpts.colorLight || '#ffffff',
+                correctLevel: QRCode.CorrectLevel.M
+            });
+            return true;
+        } catch (ignored) {
+            return false;
+        }
+    }
+
+    function finalizeQrRender(box, text, renderOpts, attempt, callback) {
+        normalizeQrMarkup(box, renderOpts.size);
+        if (isQrPainted(box)) {
+            if (typeof callback === 'function') {
+                callback(true);
+            }
+            return;
+        }
+        if (attempt >= 5) {
+            var ok = paintWithJquery(box, text, renderOpts.size);
+            if (typeof callback === 'function') {
+                callback(ok);
+            }
+            return;
+        }
+        window.setTimeout(function () {
+            finalizeQrRender(box, text, renderOpts, attempt + 1, callback);
+        }, attempt === 0 ? 0 : 40);
+    }
+
+    function renderIntoBox(box, text, renderOpts, attempt) {
+        renderOpts = renderOpts || {};
+        attempt = attempt || 0;
+        if (!box || !text) {
+            return false;
+        }
+        if (!isBoxVisible(box)) {
+            if (attempt >= QR_RENDER_MAX_ATTEMPTS) {
+                var forcedSize = renderOpts.size || renderOpts.fallbackSize || 200;
+                renderOpts.size = forcedSize;
+                if (!paintWithQrCode(box, text, renderOpts)) {
+                    return paintWithJquery(box, text, forcedSize);
+                }
+                finalizeQrRender(box, text, renderOpts, 0, function (ok) {
+                    if (!ok) {
+                        paintWithJquery(box, text, forcedSize);
+                    }
+                });
+                return true;
+            }
+            var nextAttempt = attempt + 1;
+            window.requestAnimationFrame(function () {
+                renderIntoBox(box, text, renderOpts, nextAttempt);
+            });
+            return true;
+        }
+        var size = renderOpts.size || resolveQrBoxSize(box, renderOpts.fallbackSize || 200);
+        renderOpts.size = size;
+        if (!paintWithQrCode(box, text, renderOpts)) {
+            return paintWithJquery(box, text, size);
+        }
+        finalizeQrRender(box, text, renderOpts, 0, function (ok) {
+            if (!ok) {
+                paintWithJquery(box, text, size);
+            }
+        });
+        return true;
+    }
+
     function normalizeMode(mode) {
         mode = (mode || 'as').toLowerCase();
         return mode === 'rp' ? 'rp' : 'as';
@@ -64,17 +279,11 @@
                 if (!box) {
                     return;
                 }
-                box.innerHTML = '';
-                if (typeof QRCode === 'undefined') {
-                    return;
-                }
-                new QRCode(box, {
-                    text: text,
-                    width: options.qrSize || 200,
-                    height: options.qrSize || 200,
+                renderIntoBox(box, text, {
+                    size: options.qrSize || resolveQrBoxSize(box, 200),
+                    fallbackSize: options.qrSize || 200,
                     colorDark: '#1a1d26',
-                    colorLight: '#ffffff',
-                    correctLevel: QRCode.CorrectLevel.M
+                    colorLight: '#ffffff'
                 });
             },
             stopPoll: function () {
@@ -268,6 +477,7 @@
 
     window.AutumnQrc = {
         createMethods: createQrMethods,
+        renderInto: renderIntoBox,
         mergeInto: function (target, options) {
             var methods = createQrMethods(options);
             Object.keys(methods).forEach(function (key) {
