@@ -177,11 +177,11 @@ String base = mode == OAUTH ? origin + "/oauth2" : origin + "/open/oauth2";
 | **RP 发起授权** | — | `/open/oauth2/opc/authorize?appId=...` |
 | **RP 回调成功页** | `/oauth2/success`（无 `callback` 时默认跳转） | `/open/oauth2/success` |
 | **RP OAuth 回调** | `/client/oauth2/callback` | `/open/oauth2/callback?appId=...` |
-| **运维联调入口** | `/oauth2/authclient`「流程联调」区 | `oplmanage.html` / `opcmanage.html` 行内按钮 |
+| **运维联调入口** | `oauthasmanage.html` / `oauthrpmanage.html` | `oplmanage.html` / `opcmanage.html` 行内按钮 |
 
 **同实例自连验收（OAuth）**
 
-1. `authclient` 登记 Client，`redirect_uri` = `{ORIGIN}/client/oauth2/callback`
+1. `oauthasmanage.html` 创建 AS Client，`redirect_uri` = `{ORIGIN}/client/oauth2/callback`；`oauthrpmanage.html` 一键接入同 `clientId`
 2. 访问 `{ORIGIN}/oauth2/login?client_id=...` → 授权登录
 3. AS `login` 分栏确认 → 回调 → `/oauth2/success`
 
@@ -300,7 +300,8 @@ String base = mode == OAUTH ? origin + "/oauth2" : origin + "/open/oauth2";
 
 **管理入口**：
 
-- `/oauth2/authclient` — 授权客户端中心（推荐）
+- `oauthasmanage.html` — 上游 AS 管理（推荐）
+- `oauthrpmanage.html` — 下游 RP 管理（推荐）
 - `/modules/oauth/clientdetails` — 单表 CRUD
 
 ### 3.5 本站作为 RP：`client` 模块 + `LOGIN_AUTHENTICATION`
@@ -622,7 +623,7 @@ userTokenService.saveToken(...)   → 可选保存 access_token
 | 典型 AS 路径 | `/oauth2` | `/open/oauth2` | （调用远端 OPL） |
 | 典型 RP 路径 | `/client/oauth2/callback` | 任意第三方 URL | `/open/oauth2/callback` |
 | 本站登录配置 | `LOGIN_AUTHENTICATION` | — | `/open/oauth2/authorize` |
-| 管理页 | `authclient` | `oplmanage.html` | `opcmanage.html` |
+| 管理页 | `oauthasmanage.html` / `oauthrpmanage.html` | `oplmanage.html` | `opcmanage.html` |
 | 与 QRC 扫码 | 可结合（见 QRC 文档） | 独立 | 独立 |
 
 ### 6.2 适用场景详述

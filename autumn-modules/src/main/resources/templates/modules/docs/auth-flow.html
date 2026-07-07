@@ -102,7 +102,7 @@
             <p>扫码<strong>不是</strong>独立的认证协议，而是编排层：最终仍落到 <strong>Shiro Session</strong>（同源网站登录）或 <strong>OAuth 授权码</strong>（第三方授权）。</p>
 
             <h3 id="why-client" class="anchor-offset">2. 为什么要创建应用</h3>
-            <p>运维口中的「应用」或「客户端」，在库里对应<strong>四块配置 + 一张审计表</strong>。它们通过 <code>clientId</code>（应用标识，如域名 <code>app.example.com</code>）逻辑关联，<strong>没有数据库外键</strong>，由「授权客户端中心」或域名初始化时一并创建。</p>
+            <p>运维口中的「应用」或「客户端」，在库里对应<strong>四块配置 + 一张审计表</strong>。它们通过 <code>clientId</code>（应用标识，如域名 <code>app.example.com</code>）逻辑关联，<strong>没有数据库外键</strong>，由「授权客户端」或域名初始化时一并创建。</p>
 
             <div class="entity-grid">
                 <div class="entity-card">
@@ -137,14 +137,14 @@
                     <td>同时生成授权登记 + 网站接入 + 合并行；回调默认为 <code>{站点}/client/oauth2/callback</code></td>
                 </tr>
                 <tr>
-                    <td>授权客户端中心</td>
-                    <td>运维页「新建」→ <code>POST /client/authhub/create</code></td>
-                    <td>同上 + 默认扫码策略行</td>
+                    <td>统一管理</td>
+                    <td>运维页「新建」→ <code>POST /oauth/admin/as/platform/client/create</code> 与 <code>POST /client/admin/rp/platform/client/quickCreate</code></td>
+                    <td>上游 AS 与下游 RP 分表管理；扫码策略见 <code>/modules/qrc/clientgrant</code></td>
                 </tr>
                 <tr>
                     <td>分散维护</td>
                     <td>各模块 CRUD 页单独维护</td>
-                    <td>需自行保证 <code>clientId</code> 一致；Hub 保存时会尝试补全合并关系</td>
+                    <td>需自行保证 <code>clientId</code> 一致；合并关系见 <code>client_web_oauth_combine</code></td>
                 </tr>
                 </tbody>
             </table>
@@ -248,7 +248,7 @@
                 <tr><td>PC 浏览器</td><td>展示二维码、轮询票据状态、用 exchange 换 Session 或跳转带 code 的 URL</td><td><code>/qrc/scanticket/web/*</code>、<code>/oauth2/authorize</code></td></tr>
                 <tr><td>手机 App（已登录用户）</td><td>扫描二维码、确认/拒绝授权</td><td><code>/qrc/api/v1/ticket/scan|confirm|deny|detail</code></td></tr>
                 <tr><td>第三方系统</td><td>引导用户到 AS 授权页，或用 Open API 自建二维码</td><td><code>/oauth2/authorize</code>、<code>/qrc/api/v1/ticket/open/*</code></td></tr>
-                <tr><td>运维</td><td>创建应用、配策略、查登录记录</td><td><code>/oauth2/authclient</code>、<code>/qrc/scanticket</code></td></tr>
+                <tr><td>运维</td><td>创建应用、配策略、查登录记录</td><td><code>oauthasmanage.html</code>、<code>oauthrpmanage.html</code>、<code>/qrc/scanticket</code></td></tr>
                 </tbody>
             </table>
 
@@ -345,9 +345,14 @@
                 <thead><tr><th>入口</th><th>路径</th><th>说明</th></tr></thead>
                 <tbody>
                 <tr>
-                    <td><strong>授权客户端中心</strong></td>
-                    <td><a href="${request.contextPath}/oauth2/authclient">${request.contextPath}/oauth2/authclient</a></td>
-                    <td>四表合一：新建/编辑/删除应用，查看扫码登录记录（运维监控菜单）</td>
+                    <td><strong>上游授权管理</strong></td>
+                    <td><a href="${request.contextPath}/oauthasmanage.html">${request.contextPath}/oauthasmanage.html</a></td>
+                    <td>AS 侧客户端、令牌审计</td>
+                </tr>
+                <tr>
+                    <td><strong>下游接入管理</strong></td>
+                    <td><a href="${request.contextPath}/oauthrpmanage.html">${request.contextPath}/oauthrpmanage.html</a></td>
+                    <td>RP 侧接入应用、账号绑定</td>
                 </tr>
                 <tr>
                     <td>授权登记 CRUD</td>
@@ -408,11 +413,11 @@
             <div class="doc-code">POST /oauth2/token</div>
             <div class="doc-code">GET  /oauth2/userInfo</div>
 
-            <h4>Hub 管理 API</h4>
-            <div class="doc-code">GET  /client/authhub/list</div>
-            <div class="doc-code">GET  /client/authhub/info/{clientId}</div>
-            <div class="doc-code">POST /client/authhub/create | save | delete</div>
-            <div class="doc-code">GET  /client/authhub/tickets/{clientId}</div>
+            <h4>OAuth2 管理 API（系统管理员）</h4>
+            <div class="doc-code">GET  /oauth/admin/as/platform/overview | clients | tokens</div>
+            <div class="doc-code">POST /oauth/admin/as/platform/client/create | resetSecret | update</div>
+            <div class="doc-code">GET  /client/admin/rp/platform/overview | clients | binds</div>
+            <div class="doc-code">POST /client/admin/rp/platform/client/quickCreate | save | update</div>
 
             <h4>QR 链接（公开字段，无密钥）</h4>
             <div class="doc-code">GET /qrc/api/v1/t/{uuid}  →  { uuid, intent, status }</div>
@@ -428,7 +433,8 @@
             <div style="margin-top: 16px;">
                 <a class="btn btn-default btn-sm" href="${request.contextPath}/modules/docs/index">返回首页</a>
                 <a class="btn btn-success btn-sm" href="${request.contextPath}/modules/docs/index?done=auth-flow">返回首页并标记本章完成</a>
-                <a class="btn btn-primary btn-sm" href="${request.contextPath}/oauth2/authclient">打开授权客户端中心</a>
+                <a class="btn btn-primary btn-sm" href="${request.contextPath}/oauthasmanage.html">上游授权管理</a>
+                <a class="btn btn-primary btn-sm" href="${request.contextPath}/oauthrpmanage.html">下游接入管理</a>
             </div>
         </main>
     </div>

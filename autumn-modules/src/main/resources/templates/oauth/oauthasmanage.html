@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OAuth2 授权服务器管理</title>
+    <style>
+        :root {
+            --bg-page: #eef4f8;
+            --bg-elevated: #ffffff;
+            --brand-1: #0891b2;
+            --brand-2: #2563eb;
+            --text: #1a1d26;
+            --text-muted: #5c6370;
+            --border: #e8ecf4;
+            --radius: 12px;
+            --shadow-sm: 0 1px 3px rgba(26, 29, 38, 0.06);
+            --shadow-md: 0 8px 30px rgba(26, 29, 38, 0.08);
+            --shadow-lg: 0 24px 48px rgba(26, 29, 38, 0.12);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            height: 100%; width: 100%; overflow: hidden;
+            background: var(--bg-page); color: var(--text);
+        }
+        .container {
+            width: 100%; max-width: 1440px; height: 100vh; margin: 0 auto;
+            background: var(--bg-elevated);
+            display: flex; flex-direction: column; overflow: hidden;
+            box-shadow: var(--shadow-lg);
+        }
+        @media (min-width: 1441px) {
+            .container { margin-top: 12px; margin-bottom: 12px; height: calc(100vh - 24px); border-radius: 16px; }
+        }
+        .header {
+            position: relative;
+            background: linear-gradient(125deg, #06b6d4 0%, #0284c7 52%, #4338ca 100%);
+            color: white; padding: 20px 28px 22px; text-align: center; flex-shrink: 0;
+        }
+        .header h1 { font-size: 1.45rem; font-weight: 700; margin-bottom: 6px; }
+        .header p { opacity: 0.92; font-size: 0.8rem; letter-spacing: 0.04em; text-transform: uppercase; }
+        .stats-bar {
+            background: linear-gradient(180deg, #f8fbfd 0%, #f0f7fb 100%);
+            padding: 16px 22px; border-bottom: 1px solid var(--border);
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; flex-shrink: 0;
+        }
+        .stat-item {
+            text-align: center; padding: 14px 10px; background: var(--bg-elevated);
+            border-radius: var(--radius); box-shadow: var(--shadow-sm); border: 1px solid var(--border);
+        }
+        .stat-value { font-size: 1.35rem; font-weight: 800; color: var(--brand-1); }
+        .stat-label { font-size: 11px; color: var(--text-muted); margin-top: 6px; font-weight: 500; }
+        .tabs {
+            display: flex; flex-wrap: wrap; background: linear-gradient(180deg, #fafbfd 0%, #f4f6fb 100%);
+            border-bottom: 1px solid var(--border); flex-shrink: 0; padding: 0 12px; gap: 4px;
+        }
+        .tab {
+            padding: 14px 18px; cursor: pointer; font-size: 14px; font-weight: 600;
+            color: var(--text-muted); border-bottom: 3px solid transparent; margin-bottom: -1px;
+            border-radius: 10px 10px 0 0;
+        }
+        .tab:hover { color: var(--brand-1); background: rgba(8, 145, 178, 0.06); }
+        .tab.active { color: var(--brand-1); border-bottom-color: var(--brand-1); background: var(--bg-elevated); }
+        .tab.hidden { display: none; }
+        .tab-panel { display: none; flex: 1; flex-direction: column; overflow: hidden; min-height: 0; }
+        .tab-panel.active { display: flex; }
+        .content { padding: 20px 24px; flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+        .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; flex-shrink: 0; }
+        .toolbar h2 { font-size: 1.1rem; font-weight: 800; }
+        .toolbar-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+        .toolbar-filters input, .toolbar-filters select {
+            padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; min-width: 140px;
+        }
+        .btn {
+            padding: 9px 18px; border: none; border-radius: 10px; font-size: 13px; font-weight: 600;
+            cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; box-shadow: var(--shadow-sm);
+        }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-primary { background: linear-gradient(135deg, var(--brand-1), var(--brand-2)); color: white; }
+        .btn-primary:hover:not(:disabled) { transform: translateY(-1px); }
+        .btn-success { background: linear-gradient(135deg, #22d3ee, #0891b2); color: white; }
+        .btn-info { background: linear-gradient(135deg, #38bdf8, #2563eb); color: white; }
+        .btn-warning { background: linear-gradient(135deg, #fcd34d, #f59e0b); color: #422006; }
+        .btn-secondary { background: #64748b; color: white; }
+        .btn-sm { padding: 6px 12px; font-size: 12px; }
+        .btn-xs { padding: 4px 10px; font-size: 11px; margin-right: 4px; }
+        .table-container { flex: 1; overflow: auto; border: 1px solid var(--border); border-radius: var(--radius); }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th, td { padding: 11px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+        th { background: #f8f9fd; font-weight: 700; font-size: 12px; position: sticky; top: 0; white-space: nowrap; z-index: 1; }
+        tbody tr:hover { background: rgba(8, 145, 178, 0.05); }
+        code { font-size: 12px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; word-break: break-all; }
+        .badge { padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+        .badge-success { background: #cffafe; color: #0e7490; }
+        .badge-danger { background: #fee2e2; color: #991b1b; }
+        .badge-muted { background: #f1f5f9; color: #64748b; }
+        .pagination { display: flex; justify-content: flex-end; align-items: center; gap: 10px; padding-top: 12px; flex-shrink: 0; }
+        .empty-hint { text-align: center; padding: 48px; color: var(--text-muted); }
+        .detail-banner {
+            background: linear-gradient(135deg, rgba(6,182,212,0.08), rgba(37,99,235,0.06));
+            border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 18px; margin-bottom: 16px;
+        }
+        .form-grid { display: grid; grid-template-columns: 120px 1fr; gap: 12px 16px; max-width: 720px; align-items: center; }
+        .form-grid label { font-weight: 600; font-size: 13px; color: var(--text-muted); }
+        .form-grid input, .form-grid select {
+            padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; width: 100%;
+        }
+        .form-grid .readonly { background: #f8fafc; color: var(--text-muted); }
+        .modal { display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.45); z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
+        .modal.show { display: flex; }
+        .modal-box {
+            background: white; border-radius: 16px; width: 100%; max-width: 520px;
+            box-shadow: var(--shadow-lg); overflow: hidden;
+        }
+        .modal-header { padding: 16px 20px; font-weight: 700; border-bottom: 1px solid var(--border); }
+        .modal-body { padding: 20px; }
+        .modal-footer { padding: 14px 20px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; }
+        .modal-body .field { margin-bottom: 14px; }
+        .modal-body .field label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--text-muted); }
+        .modal-body .field input, .modal-body .field select {
+            width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px;
+        }
+        .field-inline { display: flex; gap: 8px; align-items: stretch; }
+        .field-inline input { flex: 1; min-width: 0; }
+        .field-hint { font-size: 12px; color: var(--text-muted); margin-top: 6px; line-height: 1.5; }
+        .field-hint code { font-size: 11px; background: #f1f5f9; padding: 1px 4px; border-radius: 4px; }
+        .secret-box { background: #ecfeff; border: 1px solid #67e8f9; border-radius: 8px; padding: 12px; word-break: break-all; font-size: 13px; line-height: 1.7; }
+        .toast {
+            position: fixed; bottom: 24px; right: 24px; padding: 12px 20px; border-radius: 10px;
+            color: white; font-size: 14px; font-weight: 600; z-index: 2000; box-shadow: var(--shadow-md);
+        }
+        .toast.success { background: #0891b2; }
+        .toast.error { background: #dc2626; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>OAuth2 授权服务器管理</h1>
+        <p>注册客户端 · 颁发凭证 · 经典 OAuth2 上游 AS</p>
+    </div>
+
+    <div class="stats-bar" id="statsBar">
+        <div class="stat-item"><div class="stat-value" id="statClient">0</div><div class="stat-label">客户端总数</div></div>
+        <div class="stat-item"><div class="stat-value" id="statTrusted">0</div><div class="stat-label">可信客户端</div></div>
+        <div class="stat-item"><div class="stat-value" id="statActive">0</div><div class="stat-label">活跃客户端</div></div>
+        <div class="stat-item"><div class="stat-value" id="statToken">0</div><div class="stat-label">访问凭证</div></div>
+    </div>
+
+    <div class="tabs" id="tabBar">
+        <div class="tab active" data-tab="apps" onclick="switchTab('apps')">客户端</div>
+        <div class="tab hidden" id="tabDetail" data-tab="detail" onclick="switchTab('detail')">应用详情</div>
+        <div class="tab" data-tab="tokens" onclick="switchTab('tokens')">访问凭证</div>
+    </div>
+
+    <!-- 客户端列表 -->
+    <div class="tab-panel active" id="panelApps">
+        <div class="content">
+            <div class="toolbar">
+                <h2>客户端列表</h2>
+                <div class="toolbar-filters">
+                    <input type="text" id="filterClientKeyword" placeholder="搜索名称或 clientId" onkeydown="if(event.key==='Enter')loadClients(1)"/>
+                    <button class="btn btn-info btn-sm" onclick="loadClients(1)">查询</button>
+                    <button class="btn btn-success btn-sm" onclick="showCreateClientModal()">创建客户端</button>
+                </div>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead><tr>
+                        <th>客户端名称</th><th>clientId</th><th>redirectUri</th><th>可信</th><th>归档</th><th>创建时间</th><th>操作</th>
+                    </tr></thead>
+                    <tbody id="clientListBody"><tr><td colspan="7" class="empty-hint">加载中...</td></tr></tbody>
+                </table>
+            </div>
+            <div class="pagination" id="clientPagination"></div>
+        </div>
+    </div>
+
+    <!-- 应用详情 -->
+    <div class="tab-panel" id="panelDetail">
+        <div class="content">
+            <div class="detail-banner" id="detailBanner">请选择客户端</div>
+            <div class="form-grid">
+                <label>客户端名称</label><input id="editName"/>
+                <label>clientId</label><input id="editClientId" class="readonly" readonly/>
+                <label>redirectUri</label>
+                <div>
+                    <div class="field-inline">
+                        <input id="editRedirect"/>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="fillLocalCallback('editRedirect')">本系统样例</button>
+                    </div>
+                    <p class="field-hint">用户在本系统完成授权后的回调地址。</p>
+                </div>
+                <label>授权范围</label><input id="editScope"/>
+                <label>可信客户端</label>
+                <select id="editTrusted">
+                    <option value="1">是（跳过确认页）</option>
+                    <option value="0">否</option>
+                </select>
+                <label>归档状态</label>
+                <select id="editArchived">
+                    <option value="0">正常</option>
+                    <option value="1">已归档</option>
+                </select>
+            </div>
+            <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;">
+                <button class="btn btn-primary btn-sm" onclick="saveClientDetail()">保存</button>
+                <button class="btn btn-success btn-sm" onclick="openAsAuthorize()">测试授权</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 访问凭证 -->
+    <div class="tab-panel" id="panelTokens">
+        <div class="content">
+            <div class="toolbar">
+                <h2>访问凭证</h2>
+                <div class="toolbar-filters">
+                    <input type="text" id="filterTokenKeyword" placeholder="用户、token 或授权码" onkeydown="if(event.key==='Enter')loadTokens(1)"/>
+                    <button class="btn btn-info btn-sm" onclick="loadTokens(1)">查询</button>
+                </div>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead><tr>
+                        <th>accessToken</th><th>refreshToken</th><th>用户</th><th>授权码</th><th>access 过期</th><th>refresh 过期</th><th>更新时间</th>
+                    </tr></thead>
+                    <tbody id="tokenListBody"><tr><td colspan="7" class="empty-hint">点击查询加载</td></tr></tbody>
+                </table>
+            </div>
+            <div class="pagination" id="tokenPagination"></div>
+        </div>
+    </div>
+</div>
+
+<!-- 创建客户端 -->
+<div class="modal" id="modalCreateClient">
+    <div class="modal-box">
+        <div class="modal-header">创建 OAuth2 客户端</div>
+        <div class="modal-body">
+            <div class="field">
+                <label>clientId（必填）</label>
+                <input id="createClientId" placeholder="如：my-web-app"/>
+                <p class="field-hint">全局唯一标识，创建后不可修改。</p>
+            </div>
+            <div class="field">
+                <label>客户端名称（可选）</label>
+                <input id="createClientName" placeholder="默认同 clientId"/>
+            </div>
+            <div class="field">
+                <label>redirectUri（可选）</label>
+                <div class="field-inline">
+                    <input id="createRedirect" placeholder="授权完成后的回调地址"/>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="fillLocalCallback('createRedirect')">本系统样例</button>
+                </div>
+                <p class="field-hint">留空时默认 <code>{origin}/client/oauth2/callback</code>。</p>
+            </div>
+            <div class="field">
+                <label>授权范围</label>
+                <input id="createScope" value="basic"/>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary btn-sm" onclick="hideModal('modalCreateClient')">取消</button>
+            <button class="btn btn-primary btn-sm" onclick="submitCreateClient()">创建</button>
+        </div>
+    </div>
+</div>
+
+<!-- 凭证展示 -->
+<div class="modal" id="modalSecret">
+    <div class="modal-box">
+        <div class="modal-header">客户端接入信息（请妥善保存）</div>
+        <div class="modal-body secret-box" id="secretContent"></div>
+        <div class="modal-footer">
+            <button class="btn btn-primary btn-sm" onclick="hideModal('modalSecret')">知道了</button>
+        </div>
+    </div>
+</div>
+
+<script>
+window.__CTX__ = '${request.contextPath!""}';
+window.__OAUTH_AS_ADMIN_API__ = window.__CTX__ + '/oauth/admin/as/platform';
+</script>
+<script>
+//<#noparse>
+const API_BASE = (typeof window.__OAUTH_AS_ADMIN_API__ === 'string' && window.__OAUTH_AS_ADMIN_API__.length > 0)
+    ? window.__OAUTH_AS_ADMIN_API__
+    : ((typeof window.__CTX__ === 'string') ? window.__CTX__ : '') + '/oauth/admin/as/platform';
+
+const state = {
+    tab: 'apps',
+    adminUserUuid: '',
+    selectedClient: null,
+    clients: { page: 1, totalPage: 1 },
+    tokens: { page: 1, totalPage: 1, loaded: false }
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadOverview();
+    loadClients(1);
+});
+
+function switchTab(tab) {
+    state.tab = tab;
+    document.querySelectorAll('.tab').forEach(function(el) {
+        if (el.classList.contains('hidden')) return;
+        el.classList.toggle('active', el.getAttribute('data-tab') === tab);
+    });
+    var panels = { apps: 'panelApps', detail: 'panelDetail', tokens: 'panelTokens' };
+    Object.keys(panels).forEach(function(key) {
+        var panel = document.getElementById(panels[key]);
+        if (panel) panel.classList.toggle('active', key === tab);
+    });
+    if (tab === 'tokens' && !state.tokens.loaded) loadTokens(1);
+}
+
+async function apiGet(path, params) {
+    var qs = new URLSearchParams(params || {}).toString();
+    var url = API_BASE + path + (qs ? ('?' + qs) : '');
+    var res = await fetch(url, { credentials: 'same-origin' });
+    return res.json();
+}
+
+async function apiPost(path, body) {
+    var res = await fetch(API_BASE + path, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body || {})
+    });
+    return res.json();
+}
+
+async function loadOverview() {
+    try {
+        var r = await apiGet('/overview');
+        if (r.code !== 0 || !r.data) return;
+        document.getElementById('statClient').textContent = r.data.clientCount || 0;
+        document.getElementById('statTrusted').textContent = r.data.trustedCount || 0;
+        document.getElementById('statActive').textContent = r.data.activeCount || 0;
+        document.getElementById('statToken').textContent = r.data.tokenCount || 0;
+        if (r.data.adminUserUuid) state.adminUserUuid = r.data.adminUserUuid;
+    } catch (e) { showToast('概览加载失败', 'error'); }
+}
+
+async function loadClients(page) {
+    state.clients.page = page;
+    var r = await apiGet('/clients', {
+        page: page,
+        limit: 10,
+        keyword: document.getElementById('filterClientKeyword').value
+    });
+    var tbody = document.getElementById('clientListBody');
+    if (r.code !== 0 || !r.page) {
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-hint">' + escapeHtml(r.msg || '加载失败') + '</td></tr>';
+        return;
+    }
+    state.clients.totalPage = r.page.totalPage || 1;
+    var list = r.page.list || [];
+    if (!list.length) {
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-hint">暂无客户端，可点「创建客户端」注册</td></tr>';
+    } else {
+        tbody.innerHTML = list.map(function(item) {
+            var trustedBadge = item.trusted === 1
+                ? '<span class="badge badge-success">可信</span>'
+                : '<span class="badge badge-muted">普通</span>';
+            var archivedBadge = item.archived === 1
+                ? '<span class="badge badge-danger">已归档</span>'
+                : '<span class="badge badge-success">正常</span>';
+            return '<tr>' +
+                '<td>' + escapeHtml(item.clientName || item.clientId) + '</td>' +
+                '<td><code>' + escapeHtml(item.clientId) + '</code></td>' +
+                '<td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;" title="' + escapeAttr(item.redirectUri || '') + '"><code>' + escapeHtml(item.redirectUri || '-') + '</code></td>' +
+                '<td>' + trustedBadge + '</td>' +
+                '<td>' + archivedBadge + '</td>' +
+                '<td>' + formatTime(item.createTime) + '</td>' +
+                '<td>' +
+                '<button class="btn btn-info btn-xs" onclick="selectClient(\'' + escapeAttr(item.clientId) + '\')">详情</button>' +
+                '<button class="btn btn-warning btn-xs" onclick="resetSecret(\'' + escapeAttr(item.clientId) + '\',\'' + escapeAttr(item.clientName || item.clientId) + '\')">重置密钥</button>' +
+                '<button class="btn btn-success btn-xs" onclick="openAsAuthorize(\'' + escapeAttr(item.clientId) + '\',\'' + escapeAttr(item.redirectUri || '') + '\')">测试授权</button>' +
+                '</td></tr>';
+        }).join('');
+    }
+    renderPagination('clientPagination', state.clients.page, state.clients.totalPage, loadClients);
+}
+
+async function selectClient(clientId) {
+    var r = await apiGet('/client/detail', { clientId: clientId });
+    if (r.code !== 0 || !r.client) {
+        showToast(r.msg || '加载失败', 'error');
+        return;
+    }
+    state.selectedClient = r.client;
+    document.getElementById('tabDetail').classList.remove('hidden');
+    document.getElementById('detailBanner').innerHTML =
+        '<strong>' + escapeHtml(r.client.clientName || r.client.clientId) + '</strong> · ' +
+        '<code>' + escapeHtml(r.client.clientId) + '</code>' +
+        (r.client.grantTypes ? ' · ' + escapeHtml(r.client.grantTypes) : '');
+    document.getElementById('editName').value = r.client.clientName || '';
+    document.getElementById('editClientId').value = r.client.clientId || '';
+    document.getElementById('editRedirect').value = r.client.redirectUri || '';
+    document.getElementById('editScope').value = r.client.scope || 'basic';
+    document.getElementById('editTrusted').value = String(r.client.trusted != null ? r.client.trusted : 1);
+    document.getElementById('editArchived').value = String(r.client.archived != null ? r.client.archived : 0);
+    switchTab('detail');
+}
+
+async function saveClientDetail() {
+    if (!state.selectedClient) return;
+    var r = await apiPost('/client/update', {
+        clientId: state.selectedClient.clientId,
+        name: document.getElementById('editName').value,
+        redirectUri: document.getElementById('editRedirect').value,
+        scope: document.getElementById('editScope').value,
+        trusted: parseInt(document.getElementById('editTrusted').value, 10),
+        archived: parseInt(document.getElementById('editArchived').value, 10)
+    });
+    if (r.code === 0) {
+        showToast('保存成功');
+        selectClient(state.selectedClient.clientId);
+        loadClients(state.clients.page);
+        loadOverview();
+    } else {
+        showToast(r.msg || '保存失败', 'error');
+    }
+}
+
+async function loadTokens(page) {
+    state.tokens.page = page;
+    state.tokens.loaded = true;
+    var r = await apiGet('/tokens', {
+        page: page,
+        limit: 10,
+        keyword: document.getElementById('filterTokenKeyword').value
+    });
+    var tbody = document.getElementById('tokenListBody');
+    if (r.code !== 0 || !r.page) {
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-hint">' + escapeHtml(r.msg || '加载失败') + '</td></tr>';
+        return;
+    }
+    state.tokens.totalPage = r.page.totalPage || 1;
+    var list = r.page.list || [];
+    tbody.innerHTML = list.length ? list.map(function(item) {
+        return '<tr>' +
+            '<td><code>' + escapeHtml(item.accessToken || '-') + '</code></td>' +
+            '<td><code>' + escapeHtml(item.refreshToken || '-') + '</code></td>' +
+            '<td>' + escapeHtml(item.username || '-') + '<br/><code>' + escapeHtml(item.userUuid || '') + '</code></td>' +
+            '<td><code>' + escapeHtml(item.authCode || '-') + '</code></td>' +
+            '<td>' + formatTime(item.accessTokenExpiredIn) + '</td>' +
+            '<td>' + formatTime(item.refreshTokenExpiredIn) + '</td>' +
+            '<td>' + formatTime(item.updateTime) + '</td></tr>';
+    }).join('') : '<tr><td colspan="7" class="empty-hint">无数据</td></tr>';
+    renderPagination('tokenPagination', state.tokens.page, state.tokens.totalPage, loadTokens);
+}
+
+function showCreateClientModal() {
+    document.getElementById('createClientId').value = '';
+    document.getElementById('createClientName').value = '';
+    document.getElementById('createRedirect').value = '';
+    document.getElementById('createScope').value = 'basic';
+    fillLocalCallback('createRedirect');
+    showModal('modalCreateClient');
+}
+
+async function submitCreateClient() {
+    var clientId = document.getElementById('createClientId').value.trim();
+    if (!clientId) {
+        showToast('请填写 clientId', 'error');
+        return;
+    }
+    var redirectUri = document.getElementById('createRedirect').value.trim();
+    if (!redirectUri || isLocalCallbackSample(redirectUri)) {
+        redirectUri = '';
+    }
+    var r = await apiPost('/client/create', {
+        clientId: clientId,
+        name: document.getElementById('createClientName').value.trim(),
+        redirectUri: redirectUri,
+        scope: document.getElementById('createScope').value
+    });
+    if (r.code === 0) {
+        hideModal('modalCreateClient');
+        showSecretModal(r.data);
+        loadClients(1);
+        loadOverview();
+    } else {
+        showToast(r.msg || '创建失败', 'error');
+    }
+}
+
+async function resetSecret(clientId, name) {
+    if (!confirm('确定重置客户端「' + name + '」的密钥？旧密钥将立即失效。')) return;
+    var r = await apiPost('/client/resetSecret', { clientId: clientId });
+    if (r.code === 0 && r.data) {
+        showSecretModal(r.data);
+    } else {
+        showToast(r.msg || '重置失败', 'error');
+    }
+}
+
+function showSecretModal(data) {
+    if (!data) return;
+    var html = '<p><strong>clientId：</strong><code>' + escapeHtml(data.clientId) + '</code></p>' +
+        '<p><strong>clientSecret（仅此次显示，请复制保存）：</strong></p><p><code>' + escapeHtml(data.clientSecret) + '</code></p>';
+    if (data.redirectUri) {
+        html += '<p><strong>redirectUri：</strong><code>' + escapeHtml(data.redirectUri) + '</code></p>';
+    }
+    if (data.authorizeUrl) {
+        html += '<p><strong>authorizeUrl：</strong><code>' + escapeHtml(data.authorizeUrl) + '</code></p>';
+    }
+    if (data.tokenUrl) {
+        html += '<p><strong>tokenUrl：</strong><code>' + escapeHtml(data.tokenUrl) + '</code></p>';
+    }
+    if (data.userInfoUrl) {
+        html += '<p><strong>userInfoUrl：</strong><code>' + escapeHtml(data.userInfoUrl) + '</code></p>';
+    }
+    if (data.clientId) {
+        html += '<p class="field-hint" style="margin-top:12px;">可将以上信息配置到 RP 端「授权客户端」，或 ' +
+            '<a href="' + escapeAttr(appOrigin() + '/oauth2/login?client_id=' + data.clientId) + '" target="_blank" rel="noopener">打开登录页测试</a>。</p>';
+    }
+    document.getElementById('secretContent').innerHTML = html;
+    showModal('modalSecret');
+}
+
+function renderPagination(id, page, totalPage, loader) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = '<button class="btn btn-secondary btn-sm" ' + (page <= 1 ? 'disabled' : '') + ' onclick="' + loader.name + '(' + (page - 1) + ')">上一页</button>' +
+        '<span>' + page + ' / ' + totalPage + '</span>' +
+        '<button class="btn btn-secondary btn-sm" ' + (page >= totalPage ? 'disabled' : '') + ' onclick="' + loader.name + '(' + (page + 1) + ')">下一页</button>';
+}
+
+function showModal(id) { document.getElementById(id).classList.add('show'); }
+function hideModal(id) { document.getElementById(id).classList.remove('show'); }
+
+function showToast(msg, type) {
+    type = type || 'success';
+    var t = document.createElement('div');
+    t.className = 'toast ' + type;
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(function() { t.remove(); }, 3000);
+}
+
+function formatTime(value) {
+    if (!value) return '-';
+    if (typeof value === 'number') return new Date(value).toLocaleString('zh-CN');
+    return String(value).replace('T', ' ').substring(0, 19);
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/[&<>"']/g, function(m) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m];
+    });
+}
+
+function escapeAttr(str) {
+    if (!str) return '';
+    return String(str).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+}
+
+function appOrigin() {
+    return window.location.origin + (window.__CTX__ || '');
+}
+
+function localCallbackUri() {
+    return appOrigin() + '/client/oauth2/callback';
+}
+
+function isLocalCallbackSample(uri) {
+    if (!uri) return true;
+    var trimmed = String(uri).trim();
+    var base = localCallbackUri();
+    return trimmed === base || trimmed.indexOf(base + '?') === 0 || trimmed.indexOf(base + '/') === 0;
+}
+
+function fillLocalCallback(inputId) {
+    var input = document.getElementById(inputId);
+    if (input) input.value = localCallbackUri();
+}
+
+function openAsAuthorize(clientId, redirectUri) {
+    if (!clientId && state.selectedClient) {
+        clientId = state.selectedClient.clientId;
+        redirectUri = document.getElementById('editRedirect').value || state.selectedClient.redirectUri;
+    }
+    if (!clientId) {
+        showToast('请先选择客户端', 'error');
+        return;
+    }
+    redirectUri = (redirectUri || '').trim();
+    if (!redirectUri) {
+        redirectUri = localCallbackUri();
+    }
+    var scope = 'basic';
+    if (state.selectedClient && state.selectedClient.clientId === clientId && state.selectedClient.scope) {
+        scope = state.selectedClient.scope;
+    } else if (document.getElementById('editScope') && document.getElementById('editScope').value) {
+        scope = document.getElementById('editScope').value;
+    }
+    var stateParam = 'as_' + Math.random().toString(36).slice(2, 10);
+    var url = appOrigin() + '/oauth2/authorize?client_id=' + encodeURIComponent(clientId)
+        + '&redirect_uri=' + encodeURIComponent(redirectUri)
+        + '&response_type=code&scope=' + encodeURIComponent(scope)
+        + '&state=' + encodeURIComponent(stateParam);
+    window.open(url, '_blank');
+}
+//</#noparse>
+</script>
+</body>
+</html>

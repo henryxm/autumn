@@ -122,7 +122,7 @@ flowchart TB
 
 **AS（chaoran.xin）**
 
-1. AuthClientHub 登记 OAuth Client `bighub-web`，`redirect_uri` = `https://bighub.cn/client/oauth2/callback`，`trusted=1`
+1. `oauthasmanage.html` 登记 OAuth Client `bighub-web`，`redirect_uri` = `https://bighub.cn/client/oauth2/callback`，`trusted=1`
 2. `qrc_client_grant`：`enabled=1`，`delivery=POLL_CODE`
 
 **RP（bighub.cn）**

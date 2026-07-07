@@ -1,6 +1,7 @@
 package cn.org.autumn.modules.oauth.site;
 
 import cn.org.autumn.annotation.PageAware;
+import cn.org.autumn.modules.oauth.support.OauthAdminConstants;
 import cn.org.autumn.site.SiteFactory;
 import org.springframework.stereotype.Component;
 
@@ -38,8 +39,16 @@ public class OauthSite implements SiteFactory.Site {
     @PageAware(login = false, resource = "modules/oauth/oauth2authorizefail")
     public static String oauth2authorizefail = pack + "_oauth2authorizefail";
 
-    @PageAware(login = true, resource = "oauth2/authclient")
-    public String authclient;
+    @PageAware(login = true, page = "oauthasmanage")
+    public String oauthasmanage = "oauth/oauthasmanage";
+
+    public String getOauthAsManageKey() {
+        return getKey("oauthasmanage");
+    }
+
+    public static String oauthAsManagePage() {
+        return OauthAdminConstants.MANAGE_AS_PAGE;
+    }
 
     @PageAware(login = false, resource = "oauth2/login")
     public String rpLogin = "oauth2/login";
@@ -47,7 +56,4 @@ public class OauthSite implements SiteFactory.Site {
     @PageAware(login = false, resource = "oauth2/success")
     public String rpSuccess = "oauth2/success";
 
-    public String getAuthClientKey() {
-        return getKey("authclient");
-    }
 }

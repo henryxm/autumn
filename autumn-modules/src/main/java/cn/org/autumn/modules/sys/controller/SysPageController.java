@@ -3,6 +3,8 @@ package cn.org.autumn.modules.sys.controller;
 import cn.org.autumn.annotation.SkipInterceptor;
 import cn.org.autumn.opl.OplConstants;
 import cn.org.autumn.opc.OpcConstants;
+import cn.org.autumn.modules.client.support.OauthRpAdminConstants;
+import cn.org.autumn.modules.oauth.support.OauthAdminConstants;
 import cn.org.autumn.modules.spm.interceptor.SpmInterceptor;
 import cn.org.autumn.modules.spm.service.SuperPositionModelService;
 import cn.org.autumn.modules.sys.service.SysConfigService;
@@ -386,6 +388,22 @@ public class SysPageController implements ErrorController {
         if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
             return "404";
         return "opc/opcmanage";
+    }
+
+    @RequestMapping({OauthAdminConstants.MANAGE_AS_PAGE})
+    @SkipInterceptor
+    public String oauthasmanage() {
+        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
+            return "404";
+        return "oauth/oauthasmanage";
+    }
+
+    @RequestMapping({OauthRpAdminConstants.MANAGE_RP_PAGE})
+    @SkipInterceptor
+    public String oauthrpmanage() {
+        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
+            return "404";
+        return "client/oauthrpmanage";
     }
 
     @RequestMapping({"loopjob.html"})
