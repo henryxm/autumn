@@ -40,7 +40,6 @@ public class OpcAdminService {
         data.put("appCount", connectAppService.selectCount(new QueryWrapper<>()));
         data.put("activeAppCount", connectAppService.selectCount(new QueryWrapper<ConnectAppEntity>().eq("status", ConnectAppEntity.STATUS_ACTIVE)));
         data.put("bindCount", connectBindService.selectCount(new QueryWrapper<>()));
-        data.put("autoRegister", connectAppService.isAutoRegisterEnabled());
         return data;
     }
 
@@ -155,14 +154,6 @@ public class OpcAdminService {
             throw new IllegalArgumentException("绑定不存在");
         }
         connectBindService.deleteById(id);
-    }
-
-    public boolean getAutoRegister() {
-        return connectAppService.isAutoRegisterEnabled();
-    }
-
-    public void setAutoRegister(boolean enabled) {
-        connectAppService.setAutoRegisterEnabled(enabled);
     }
 
     public List<ConnectAppEntity> listAllAppsBrief() {

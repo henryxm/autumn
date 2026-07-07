@@ -139,7 +139,7 @@ description: >-
 - **`ConnectBindEntity`**：`connectApp` + **`openId`** 唯一；**`(connectApp, user)`** 唯一；**`unionId`** 存绑定行；**`user`** 为本地 uuid。
 - userInfo 固定 **Bearer**（`ConnectOauthService`）；**同平台**额外直调 **`OpenPlatformService.resolvePlatformUserUuid`**（不经 HTTP，不依赖 OPC Session）。
 - **同平台幂等**：`appId` 在本地 OPL 注册 → 首次绑定 `openId→platformUser`；重复授权 **idempotent**，不重复建号；`establishSession` 始终调用。
-- 自动注册受 **`OPC_AUTO_REGISTER`** 控制（仅跨平台或无 platformUser 时）。
+- **跨平台首次授权**：未登录且无绑定时 **`BIND_CHOICE_REQUIRED`** → `/open/oauth2/bind/choice`（用户自选创建或登录绑定）。
 - OPL 侧 **openId 按 app 隔离**，**unionId 按 account 共享**（`OpenIdentityService` / `OpenUnionService`）。
 
 **实现索引**：`docs/AI_AUTH_LOGIN_MODES.md` §10.2～§10.4；经典绑定参考 `ConnectBindService` 对标实现。

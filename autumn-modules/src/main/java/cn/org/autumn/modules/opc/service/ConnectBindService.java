@@ -32,10 +32,6 @@ public class ConnectBindService extends ModuleService<ConnectBindDao, ConnectBin
 
     @Autowired
     @Lazy
-    private ConnectAppService connectAppService;
-
-    @Autowired
-    @Lazy
     private SysUserService sysUserService;
 
     @Autowired
@@ -85,12 +81,62 @@ public class ConnectBindService extends ModuleService<ConnectBindDao, ConnectBin
             }
         }
 
-        if (!connectAppService.isAutoRegisterEnabled()) {
-            throw new IllegalStateException("该第三方账号尚未关联本地用户，请在「第三方登录接入管理」中添加关联，或开启自动注册");
+        String sessionUser = sessionUserUuid();
+        if (StringUtils.isNotBlank(sessionUser)) {
+            ConnectBindEntity byUser = baseMapper.getByConnectAppAndUser(connectAppUuid, sessionUser);
+            if (byUser != null && !connectBindSupport.isSameOpenId(byUser.getOpenId(), openId)) {
+                throw ConnectBindException.localAlreadyBound(app, openId, sessionUser, byUser);
+            }
+            insertBind(connectAppUuid, sessionUser, openId, userInfo.getUnionId());
+            syncProfileFields(sessionUser, userInfo);
+            return ConnectBindResolveResult.of(toUserProfile(sessionUser), false);
+        }
+
+        throw ConnectBindException.bindChoiceRequired(app, openId);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public ConnectBindResolveResult bindCreateNewUser(ConnectAppEntity app, OpenUserInfoSnapshot userInfo) {
+        if (app == null || userInfo == null || StringUtils.isBlank(userInfo.getOpenId())) {
+            throw ConnectBindException.invalidUserInfo(app);
+        }
+        String openId = userInfo.getOpenId().trim();
+        String connectAppUuid = app.getUuid();
+        ConnectBindEntity existing = baseMapper.getByConnectAppAndOpenId(connectAppUuid, openId);
+        if (existing != null) {
+            return ConnectBindResolveResult.of(toUserProfile(existing.getUser()), false);
         }
         SysUserEntity created = createLocalUser(userInfo);
         insertBind(connectAppUuid, created.getUuid(), openId, userInfo.getUnionId());
         return ConnectBindResolveResult.of(toUserProfile(created.getUuid()), false);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public ConnectBindResolveResult bindSessionUser(ConnectAppEntity app, OpenUserInfoSnapshot userInfo) {
+        if (app == null || userInfo == null || StringUtils.isBlank(userInfo.getOpenId())) {
+            throw ConnectBindException.invalidUserInfo(app);
+        }
+        if (!ShiroUtils.isLogin()) {
+            throw new IllegalStateException("请先登录本地账号");
+        }
+        String sessionUser = ShiroUtils.getUserUuid();
+        String openId = userInfo.getOpenId().trim();
+        String connectAppUuid = app.getUuid();
+        ConnectBindEntity byOpenId = baseMapper.getByConnectAppAndOpenId(connectAppUuid, openId);
+        if (byOpenId != null) {
+            if (!connectBindSupport.isSameUser(byOpenId.getUser(), sessionUser)) {
+                throw ConnectBindException.upstreamBoundToOther(app, openId, sessionUser, byOpenId.getUser(), byOpenId);
+            }
+            updateProfileFields(byOpenId, userInfo);
+            return ConnectBindResolveResult.of(toUserProfile(byOpenId.getUser()), true);
+        }
+        ConnectBindEntity byUser = baseMapper.getByConnectAppAndUser(connectAppUuid, sessionUser);
+        if (byUser != null && !connectBindSupport.isSameOpenId(byUser.getOpenId(), openId)) {
+            throw ConnectBindException.localAlreadyBound(app, openId, sessionUser, byUser);
+        }
+        insertBind(connectAppUuid, sessionUser, openId, userInfo.getUnionId());
+        syncProfileFields(sessionUser, userInfo);
+        return ConnectBindResolveResult.of(toUserProfile(sessionUser), false);
     }
 
     public ConnectBindEntity getByOpenId(String connectAppUuid, String openId) {
@@ -247,5 +293,10 @@ public class ConnectBindService extends ModuleService<ConnectBindDao, ConnectBin
             throw new IllegalStateException("本地用户不存在");
         }
         return UserProfile.from(profile);
+    }
+
+    /** 供单测 stub；生产环境读取 Shiro Session。 */
+    String sessionUserUuid() {
+        return ShiroUtils.isLogin() ? ShiroUtils.getUserUuid() : null;
     }
 }

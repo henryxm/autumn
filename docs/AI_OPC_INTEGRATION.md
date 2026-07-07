@@ -44,8 +44,6 @@
 
 根路径 **`/open/admin/opc/platform/*`**。页面：`opcmanage.html`。
 
-配置项 **`OpcConstants.CONFIG_AUTO_REGISTER`**（`sys_config` 键 `OPC_AUTO_REGISTER`，**默认 false**；开发联调可设为 `true`）。
-
 **安全**：`/open/oauth2/opc/authorize` 绑定 Session state；`/open/api/v1/platform/**` 须有效用户令牌（禁止 hint-only）。
 
 ## 3. 同实例联调
@@ -63,15 +61,17 @@
 
 ---
 
-## 4. 本地用户绑定
+## 4. 本地用户绑定（与经典 OAuth 对称）
 
 `ConnectBindService.resolveAndBind(app, userInfo, platformUser)` 顺序：
 
 1. `(connectApp, openId)` 已绑定 → 同平台校验 **platformUser** 一致 → **幂等** 返回本地用户
 2. `(connectApp, unionId)` 已绑定 → 更新 openId 后同上
-3. **同平台**（`appId` 在本地 OPL 注册）且 token 含 **platformUser** → 绑定到该本地用户，**不**自动注册
-4. 无绑定且 `OPC_AUTO_REGISTER=true`（默认）→ 自动注册并绑定（跨实例）
-5. 否则需管理员在 `opcmanage` 手工绑定
+3. **同平台**（`appId` 在本地 OPL 注册）且 token 含 **platformUser** → 绑定到该本地用户，**不**新建账号
+4. **已登录** 本地 Session → 绑定当前 Session 用户
+5. **跨平台 + 未登录 + 无绑定** → **`BIND_CHOICE_REQUIRED`** → `/open/oauth2/bind/choice`
+
+**绑定选择端点**：`GET /open/oauth2/bind/choice`、`GET /open/oauth2/bind/confirm`、`POST /open/oauth2/bind/create`（共用 `oauth2/bind-choice.html`）。
 
 **platformUser** 仅同 JVM 内通过 `OpenPlatformService.resolvePlatformUserUuid` 解析，不经 HTTP userInfo 暴露；与 OPC 回调域名、Session 无关。
 

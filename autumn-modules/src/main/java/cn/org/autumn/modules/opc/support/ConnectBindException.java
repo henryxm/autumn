@@ -11,7 +11,8 @@ public class ConnectBindException extends RuntimeException {
     public enum ConflictType {
         USERINFO_INVALID,
         UPSTREAM_BOUND_TO_OTHER,
-        LOCAL_ALREADY_BOUND
+        LOCAL_ALREADY_BOUND,
+        BIND_CHOICE_REQUIRED
     }
 
     private final ConflictType conflictType;
@@ -19,10 +20,11 @@ public class ConnectBindException extends RuntimeException {
     private final String openId;
     private final String platformUser;
     private final String boundUserUuid;
+    private final String pendingToken;
     private final ConnectAppEntity app;
     private final ConnectBindEntity existingBind;
 
-    public ConnectBindException(ConflictType conflictType, String message, ConnectAppEntity app, String openId, String platformUser, String boundUserUuid, ConnectBindEntity existingBind) {
+    public ConnectBindException(ConflictType conflictType, String message, ConnectAppEntity app, String openId, String platformUser, String boundUserUuid, ConnectBindEntity existingBind, String pendingToken) {
         super(message);
         this.conflictType = conflictType;
         this.app = app;
@@ -31,6 +33,11 @@ public class ConnectBindException extends RuntimeException {
         this.platformUser = platformUser;
         this.boundUserUuid = boundUserUuid;
         this.existingBind = existingBind;
+        this.pendingToken = pendingToken;
+    }
+
+    public ConnectBindException(ConflictType conflictType, String message, ConnectAppEntity app, String openId, String platformUser, String boundUserUuid, ConnectBindEntity existingBind) {
+        this(conflictType, message, app, openId, platformUser, boundUserUuid, existingBind, null);
     }
 
     public static ConnectBindException invalidUserInfo(ConnectAppEntity app) {
@@ -43,5 +50,13 @@ public class ConnectBindException extends RuntimeException {
 
     public static ConnectBindException localAlreadyBound(ConnectAppEntity app, String openId, String platformUser, ConnectBindEntity bind) {
         return new ConnectBindException(ConflictType.LOCAL_ALREADY_BOUND, "该本地用户已绑定其他开放平台账号", app, openId, platformUser, bind == null ? null : bind.getUser(), bind);
+    }
+
+    public static ConnectBindException bindChoiceRequired(ConnectAppEntity app, String openId) {
+        return new ConnectBindException(ConflictType.BIND_CHOICE_REQUIRED, "请选择绑定方式", app, openId, null, null, null);
+    }
+
+    public static ConnectBindException bindChoiceRequired(ConnectAppEntity app, String openId, String pendingToken) {
+        return new ConnectBindException(ConflictType.BIND_CHOICE_REQUIRED, "请选择绑定方式", app, openId, null, null, null, pendingToken);
     }
 }

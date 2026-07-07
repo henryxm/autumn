@@ -16,8 +16,8 @@
         <li>用户访问 <code>/open/oauth2/opc/authorize?appId=...</code></li>
         <li>回调 <code>/open/oauth2/callback</code> 完成本地绑定与登录</li>
     </ol>
-    <h3>配置项</h3>
-    <p><code>OPC_AUTO_REGISTER</code>：无绑定时是否自动注册本地用户（默认 false）。</p>
+    <h3>首次登录</h3>
+    <p>跨平台首次授权且未登录时，回调后进入<strong>绑定选择页</strong>：用户可选择「登录已有账号并绑定」或「创建新账号并绑定」（与经典 OAuth 一致）。</p>
     <p>OPC 在 callback 校验 Session 绑定的 <code>state</code>；Open API 须 Bearer 令牌。</p>
 </div>
 </body>

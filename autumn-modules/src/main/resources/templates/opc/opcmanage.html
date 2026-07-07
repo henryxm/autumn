@@ -88,12 +88,10 @@
         <div class="stat-card"><div class="label">已接入应用</div><div class="value" id="statApp">-</div></div>
         <div class="stat-card"><div class="label">可正常使用</div><div class="value" id="statActiveApp">-</div></div>
         <div class="stat-card"><div class="label">账号关联</div><div class="value" id="statBind">-</div></div>
-        <div class="stat-card"><div class="label">新用户自动注册</div><div class="value" id="statAutoReg">-</div></div>
     </div>
     <div class="tabs">
         <div class="tab active" data-tab="apps" onclick="switchTab('apps')">已接入应用</div>
         <div class="tab" data-tab="binds" onclick="switchTab('binds')">账号关联</div>
-        <div class="tab" data-tab="config" onclick="switchTab('config')">登录设置</div>
     </div>
 
     <div class="tab-panel active" id="panelApps">
@@ -126,15 +124,6 @@
             </table>
         </div>
         <div class="pagination" id="bindPagination"></div>
-    </div>
-
-    <div class="tab-panel" id="panelConfig">
-        <div class="config-box">
-            <h3 style="margin-bottom:12px;font-size:15px;">首次通过第三方登录时的行为</h3>
-            <label><input type="checkbox" id="cfgAutoRegister"> 允许自动创建本地账号</label>
-            <p class="field-hint" style="margin-top:10px;">开启后，首次通过第三方登录的用户将自动创建本地账号（与前台注册页开关无关）。关闭后须在「账号关联」中手动绑定。</p>
-            <button class="btn btn-primary" style="margin-top:16px;" onclick="saveAutoRegister()">保存设置</button>
-        </div>
     </div>
 </div>
 
@@ -232,7 +221,7 @@
             <label>本地用户账号标识</label><input id="bindUser" type="text" placeholder="本系统 sys_user 的 uuid">
             <label>第三方应用内用户标识</label><input id="bindOpenId" type="text" placeholder="授权平台返回的应用内用户 ID">
             <label>跨应用用户标识（可选）</label><input id="bindUnionId" type="text" placeholder="同一开发者下多应用共用 ID">
-            <p class="field-hint">将第三方登录身份与本地账号对应，关闭自动注册时必须手动添加。</p>
+            <p class="field-hint">将第三方登录身份与本地账号对应；用户也可在授权回调后自行选择绑定方式。</p>
         </div>
         <div class="modal-footer">
             <button class="btn btn-secondary btn-sm" onclick="hideModal('modalCreateBind')">取消</button>
@@ -264,12 +253,11 @@ function switchTab(tab) {
     document.querySelectorAll('.tab').forEach(function(el) {
         el.classList.toggle('active', el.getAttribute('data-tab') === tab);
     });
-    ['apps', 'binds', 'config'].forEach(function(key) {
+    ['apps', 'binds'].forEach(function(key) {
         var panel = document.getElementById('panel' + key.charAt(0).toUpperCase() + key.slice(1));
         if (panel) panel.classList.toggle('active', key === tab);
     });
     if (tab === 'binds' && !state.binds.loaded) loadBinds(1);
-    if (tab === 'config') loadConfigPanel();
 }
 
 async function apiGet(path, params) {
@@ -294,7 +282,6 @@ async function loadOverview() {
         document.getElementById('statApp').textContent = r.data.appCount || 0;
         document.getElementById('statActiveApp').textContent = r.data.activeAppCount || 0;
         document.getElementById('statBind').textContent = r.data.bindCount || 0;
-        document.getElementById('statAutoReg').textContent = r.data.autoRegister ? '开' : '关';
         if (r.data.adminUserUuid) state.adminUserUuid = r.data.adminUserUuid;
     } catch (e) { showToast('概览加载失败', 'error'); }
 }
@@ -359,18 +346,6 @@ async function loadBinds(page) {
             '<td>' + formatTime(item.create) + '</td><td><button class="btn btn-danger btn-xs" onclick="deleteBind(' + item.id + ')">解除</button></td></tr>';
     }).join('') : '<tr><td colspan="6" class="empty-hint">暂无绑定</td></tr>';
     renderPagination('bindPagination', state.binds.page, state.binds.totalPage, loadBinds);
-}
-
-async function loadConfigPanel() {
-    var r = await apiGet('/config/autoRegister');
-    if (r.code === 0 && r.data) document.getElementById('cfgAutoRegister').checked = !!r.data.enabled;
-}
-
-async function saveAutoRegister() {
-    var enabled = document.getElementById('cfgAutoRegister').checked;
-    var r = await apiPost('/config/autoRegister', { enabled: enabled });
-    if (r.code === 0) { showToast('已保存'); loadOverview(); }
-    else showToast(r.msg || '保存失败', 'error');
 }
 
 function showSaveAppModal() {
