@@ -28,6 +28,7 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/** OAuth uuid 绑定：已登录直接绑定；跨实例未登录走绑定选择页；同实例幂等。 */
 @Service
 public class WebOauthBindService extends ModuleService<WebOauthBindDao, WebOauthBindEntity> implements AccountHandler {
 
@@ -42,6 +43,15 @@ public class WebOauthBindService extends ModuleService<WebOauthBindDao, WebOauth
     @Autowired
     private WebOauthBindSupport webOauthBindSupport;
 
+    /**
+     * 解析上游 userInfo 与本地账号关系并写入绑定。
+     * <ol>
+     *   <li>上游 uuid 已有绑定 → 登录对应本地用户</li>
+     *   <li>当前 Session 已登录 → 绑定到 Session 用户</li>
+     *   <li>同实例且本地已有同 uuid 用户 → 幂等绑定</li>
+     *   <li>跨实例且未登录 → 抛出 {@code BIND_CHOICE_REQUIRED}</li>
+     * </ol>
+     */
     @Transactional(rollbackFor = Exception.class)
     public WebOauthBindResolveResult resolveAndBind(WebAuthenticationEntity webAuth, UserProfile upstream, HttpServletRequest request) {
         if (webAuth == null || upstream == null || StringUtils.isBlank(upstream.getUuid())) {
@@ -50,10 +60,6 @@ public class WebOauthBindService extends ModuleService<WebOauthBindDao, WebOauth
         String upstreamUuid = upstream.getUuid().trim();
         String sessionUser = sessionUserUuid();
         String webAuthUuid = webAuth.getUuid();
-
-        if (webOauthBindSupport.isSameInstance(webAuth, request) && sysUserService.getByUuid(upstreamUuid) != null) {
-            return resolveSameInstanceIdempotent(webAuth, upstream, webAuthUuid, upstreamUuid, upstreamUuid);
-        }
 
         WebOauthBindEntity byUpstream = baseMapper.getByAuthenticationAndUpper(webAuthUuid, upstreamUuid);
         if (byUpstream != null) {
@@ -70,16 +76,51 @@ public class WebOauthBindService extends ModuleService<WebOauthBindDao, WebOauth
             return WebOauthBindResolveResult.of(toUserProfile(sessionUser), false);
         }
 
-        SysUserEntity legacy = sysUserService.getByUuid(upstreamUuid);
-        if (legacy != null) {
-            insertBind(webAuthUuid, upstreamUuid, upstreamUuid);
-            syncProfileFields(upstreamUuid, upstream);
-            return WebOauthBindResolveResult.of(toUserProfile(upstreamUuid), false);
+        if (webOauthBindSupport.isSameInstance(webAuth, request) && sysUserService.getByUuid(upstreamUuid) != null) {
+            return resolveSameInstanceIdempotent(webAuth, upstream, webAuthUuid, upstreamUuid, upstreamUuid);
         }
 
+        throw WebOauthBindException.bindChoiceRequired(webAuth, upstreamUuid);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public WebOauthBindResolveResult bindCreateNewUser(WebAuthenticationEntity webAuth, UserProfile upstream) {
+        if (webAuth == null || upstream == null || StringUtils.isBlank(upstream.getUuid())) {
+            throw WebOauthBindException.invalidUpstream(webAuth);
+        }
+        String upstreamUuid = upstream.getUuid().trim();
+        String webAuthUuid = webAuth.getUuid();
+        WebOauthBindEntity existing = baseMapper.getByAuthenticationAndUpper(webAuthUuid, upstreamUuid);
+        if (existing != null) {
+            return WebOauthBindResolveResult.of(toUserProfile(existing.getUser()), false);
+        }
         SysUserEntity created = createLocalUser(upstream);
         insertBind(webAuthUuid, upstreamUuid, created.getUuid());
         return WebOauthBindResolveResult.of(toUserProfile(created.getUuid()), false);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public WebOauthBindResolveResult bindSessionUser(WebAuthenticationEntity webAuth, UserProfile upstream) {
+        if (webAuth == null || upstream == null || StringUtils.isBlank(upstream.getUuid())) {
+            throw WebOauthBindException.invalidUpstream(webAuth);
+        }
+        if (!ShiroUtils.isLogin()) {
+            throw new IllegalStateException("请先登录本地账号");
+        }
+        String sessionUser = ShiroUtils.getUserUuid();
+        String upstreamUuid = upstream.getUuid().trim();
+        String webAuthUuid = webAuth.getUuid();
+        WebOauthBindEntity byUpstream = baseMapper.getByAuthenticationAndUpper(webAuthUuid, upstreamUuid);
+        if (byUpstream != null) {
+            return resolveExistingUpstreamBind(webAuth, upstream, byUpstream, sessionUser);
+        }
+        WebOauthBindEntity byUser = baseMapper.getByAuthenticationAndUser(webAuthUuid, sessionUser);
+        if (byUser != null && !webOauthBindSupport.isSameUser(byUser.getUpper(), upstreamUuid)) {
+            throw WebOauthBindException.localAlreadyBound(webAuth, upstreamUuid, sessionUser, byUser);
+        }
+        insertBind(webAuthUuid, upstreamUuid, sessionUser);
+        syncProfileFields(sessionUser, upstream);
+        return WebOauthBindResolveResult.of(toUserProfile(sessionUser), false);
     }
 
     @Transactional(rollbackFor = Exception.class)

@@ -966,6 +966,7 @@ function renderWebForm() {
         formField('w_clientSecret', '接入密钥', w.clientSecret) +
         formField('w_scope', '授权范围', w.scope) +
         formField('w_redirectUri', '回调地址', w.redirectUri) +
+        formField('w_originUri', '身份源根址', w.originUri, { hint: '跨站 RP 必填，如 https://chaoran.xin；同实例留空' }) +
         formField('w_authorizeUri', '授权页址', w.authorizeUri) +
         formField('w_accessTokenUri', '令牌地址', w.accessTokenUri) +
         formField('w_userInfoUri', '用户资料', w.userInfoUri) +
@@ -1004,6 +1005,7 @@ function collectBundle() {
         w.name = val('w_name');
         w.clientSecret = val('w_clientSecret');
         w.redirectUri = val('w_redirectUri');
+        w.originUri = val('w_originUri');
         w.authorizeUri = val('w_authorizeUri');
         w.accessTokenUri = val('w_accessTokenUri');
         w.userInfoUri = val('w_userInfoUri');

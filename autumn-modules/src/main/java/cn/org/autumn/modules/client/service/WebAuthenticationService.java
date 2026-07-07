@@ -36,6 +36,13 @@ public class WebAuthenticationService extends ModuleService<WebAuthenticationDao
         return baseMapper.getByClientId(clientId);
     }
 
+    public WebAuthenticationEntity getByUuid(String uuid) {
+        if (StringUtils.isBlank(uuid)) {
+            return null;
+        }
+        return baseMapper.getByUuid(uuid);
+    }
+
     public boolean hasClientId(String clientId) {
         if (StringUtils.isBlank(clientId))
             return false;

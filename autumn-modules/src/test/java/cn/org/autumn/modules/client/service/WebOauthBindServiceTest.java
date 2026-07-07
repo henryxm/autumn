@@ -60,25 +60,34 @@ public class WebOauthBindServiceTest {
     }
 
     @Test
-    public void noBindNotLoggedInCreatesLocalUserAndBind() {
+    public void noBindNotLoggedInRequiresBindChoice() {
         WebAuthenticationEntity webAuth = webAuth();
         UserProfile upstream = upstream(UPSTREAM_A);
         Mockito.doReturn(null).when(webOauthBindService).sessionUserUuid();
-        Mockito.when(webOauthBindSupport.isSameInstance(webAuth, request)).thenReturn(false);
+        Mockito.when(webOauthBindDao.getByAuthenticationAndUpper(WEB_AUTH_UUID, UPSTREAM_A)).thenReturn(null);
+
+        try {
+            webOauthBindService.resolveAndBind(webAuth, upstream, request);
+            Assert.fail("expected WebOauthBindException");
+        } catch (WebOauthBindException e) {
+            Assert.assertEquals(WebOauthBindException.ConflictType.BIND_CHOICE_REQUIRED, e.getConflictType());
+        }
+    }
+
+    @Test
+    public void bindCreateNewUser_insertsBind() {
+        WebAuthenticationEntity webAuth = webAuth();
+        UserProfile upstream = upstream(UPSTREAM_A);
         Mockito.when(webOauthBindDao.getByAuthenticationAndUpper(WEB_AUTH_UUID, UPSTREAM_A)).thenReturn(null);
         Mockito.when(sysUserService.getByUuid(UPSTREAM_A)).thenReturn(null);
         SysUserEntity created = user(LOCAL_NEW);
         Mockito.when(sysUserService.provisionConnectUser(Mockito.anyString(), Mockito.anyString())).thenReturn(created);
         mockProfile(LOCAL_NEW);
 
-        WebOauthBindResolveResult result = webOauthBindService.resolveAndBind(webAuth, upstream, request);
+        WebOauthBindResolveResult result = webOauthBindService.bindCreateNewUser(webAuth, upstream);
 
-        Assert.assertFalse(result.isIdempotent());
         Assert.assertEquals(LOCAL_NEW, result.getProfile().getUuid());
-        ArgumentCaptor<WebOauthBindEntity> captor = ArgumentCaptor.forClass(WebOauthBindEntity.class);
-        Mockito.verify(webOauthBindDao).insert(captor.capture());
-        Assert.assertEquals(UPSTREAM_A, captor.getValue().getUpper());
-        Assert.assertEquals(LOCAL_NEW, captor.getValue().getUser());
+        Mockito.verify(webOauthBindDao).insert(Mockito.argThat((WebOauthBindEntity bind) -> UPSTREAM_A.equals(bind.getUpper()) && LOCAL_NEW.equals(bind.getUser())));
     }
 
     @Test
@@ -99,7 +108,7 @@ public class WebOauthBindServiceTest {
     }
 
     @Test
-    public void sameInstanceWithoutSessionUsesUpstreamUuidAsLocalUser() {
+    public void sameInstanceWithoutSessionUsesUpstreamUuidIdempotent() {
         WebAuthenticationEntity webAuth = webAuth();
         UserProfile upstream = upstream(LOCAL_A);
         Mockito.doReturn(null).when(webOauthBindService).sessionUserUuid();
@@ -137,7 +146,7 @@ public class WebOauthBindServiceTest {
     public void sameInstanceIdempotentNoOpWhenBindExists() {
         WebAuthenticationEntity webAuth = webAuth();
         UserProfile upstream = upstream(LOCAL_A);
-        WebOauthBindEntity existing = bind(UPSTREAM_A, LOCAL_A);
+        WebOauthBindEntity existing = bind(LOCAL_A, LOCAL_A);
         Mockito.doReturn(null).when(webOauthBindService).sessionUserUuid();
         Mockito.when(webOauthBindSupport.isSameInstance(webAuth, request)).thenReturn(true);
         Mockito.when(sysUserService.getByUuid(LOCAL_A)).thenReturn(user(LOCAL_A));
@@ -147,7 +156,8 @@ public class WebOauthBindServiceTest {
 
         WebOauthBindResolveResult result = webOauthBindService.resolveAndBind(webAuth, upstream, request);
 
-        Assert.assertTrue(result.isIdempotent());
+        Assert.assertFalse(result.isIdempotent());
+        Assert.assertEquals(LOCAL_A, result.getProfile().getUuid());
         Mockito.verify(webOauthBindDao, Mockito.never()).insert(Mockito.any(WebOauthBindEntity.class));
     }
 
@@ -205,30 +215,25 @@ public class WebOauthBindServiceTest {
     }
 
     @Test
-    public void legacyUserLazyMigration() {
+    public void bindCreateNewUser_alwaysAllocatesLocalUuidEvenWhenLegacyExists() {
         WebAuthenticationEntity webAuth = webAuth();
         UserProfile upstream = upstream(UPSTREAM_A);
-        SysUserEntity legacy = user(UPSTREAM_A);
-        Mockito.doReturn(null).when(webOauthBindService).sessionUserUuid();
-        Mockito.when(webOauthBindSupport.isSameInstance(webAuth, request)).thenReturn(false);
+        SysUserEntity created = user(LOCAL_NEW);
         Mockito.when(webOauthBindDao.getByAuthenticationAndUpper(WEB_AUTH_UUID, UPSTREAM_A)).thenReturn(null);
-        Mockito.when(sysUserService.getByUuid(UPSTREAM_A)).thenReturn(legacy);
-        mockProfile(UPSTREAM_A);
+        Mockito.when(sysUserService.provisionConnectUser(Mockito.anyString(), Mockito.anyString())).thenReturn(created);
+        mockProfile(LOCAL_NEW);
 
-        WebOauthBindResolveResult result = webOauthBindService.resolveAndBind(webAuth, upstream, request);
+        WebOauthBindResolveResult result = webOauthBindService.bindCreateNewUser(webAuth, upstream);
 
-        Assert.assertFalse(result.isIdempotent());
-        Assert.assertEquals(UPSTREAM_A, result.getProfile().getUuid());
-        Mockito.verify(webOauthBindDao).insert(Mockito.argThat((WebOauthBindEntity bind) -> UPSTREAM_A.equals(bind.getUpper()) && UPSTREAM_A.equals(bind.getUser())));
-        Mockito.verify(sysUserService, Mockito.never()).provisionConnectUser(Mockito.anyString(), Mockito.anyString());
+        Assert.assertEquals(LOCAL_NEW, result.getProfile().getUuid());
+        Mockito.verify(sysUserService, Mockito.never()).getByUuid(UPSTREAM_A);
+        Mockito.verify(webOauthBindDao).insert(Mockito.argThat((WebOauthBindEntity bind) -> UPSTREAM_A.equals(bind.getUpper()) && LOCAL_NEW.equals(bind.getUser())));
     }
 
     @Test
     public void usernameConflictRetriesWithSuffix() {
         WebAuthenticationEntity webAuth = webAuth();
         UserProfile upstream = upstream(UPSTREAM_A);
-        Mockito.doReturn(null).when(webOauthBindService).sessionUserUuid();
-        Mockito.when(webOauthBindSupport.isSameInstance(webAuth, request)).thenReturn(false);
         Mockito.when(webOauthBindDao.getByAuthenticationAndUpper(WEB_AUTH_UUID, UPSTREAM_A)).thenReturn(null);
         Mockito.when(sysUserService.getByUuid(UPSTREAM_A)).thenReturn(null);
         SysUserEntity created = user(LOCAL_NEW);
@@ -237,7 +242,7 @@ public class WebOauthBindServiceTest {
         Mockito.when(sysUserService.provisionConnectUser(Mockito.eq(usernameBase + "_1"), Mockito.anyString())).thenReturn(created);
         mockProfile(LOCAL_NEW);
 
-        WebOauthBindResolveResult result = webOauthBindService.resolveAndBind(webAuth, upstream, request);
+        WebOauthBindResolveResult result = webOauthBindService.bindCreateNewUser(webAuth, upstream);
 
         Assert.assertEquals(LOCAL_NEW, result.getProfile().getUuid());
         Mockito.verify(sysUserService).provisionConnectUser(Mockito.eq(usernameBase + "_1"), Mockito.anyString());

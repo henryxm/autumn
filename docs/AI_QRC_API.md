@@ -548,6 +548,23 @@ grant_type=authorization_code
 &redirect_uri={redirectUri}
 ```
 
+---
+
+## 8. RP Web API（Autumn 联邦扫码）
+
+Autumn 站点作 **RP** 时，浏览器不直接持有 `client_secret`，由本站点服务端代理 AS Open API：
+
+| 方法 | 路径 |
+|------|------|
+| POST | `/client/oauth2/qrc/web/ticket/create` |
+| POST | `/client/oauth2/qrc/web/ticket/status?uuid=` |
+| POST | `/client/oauth2/qrc/web/ticket/complete` |
+| POST | `/client/oauth2/qrc/web/ticket/cancel?uuid=` |
+
+请求/响应字段与 §3 PC Web（`ScanTicketController`）对齐，返回框架 **`R`**（`code` / `msg` / `data`）。  
+**`ticket/complete`** 内部调用 **`WebOauthLoginService.completeRemoteOAuthCallback`**，与 B1 **`/client/oauth2/callback`** 共用绑定与会话编排（见 **`docs/AI_AUTH_SITE_ROLES.md` §2**）。  
+前端 **`autumn-qrc-core.js`**（`mode: 'rp'`）与配置见 **`docs/AI_AUTH_SITE_ROLES.md`**。
+
 用户信息：`GET /oauth2/userInfo`（详见 **`docs/AI_OAUTH_INTEGRATION.md`**）。
 
 ---

@@ -106,4 +106,9 @@ public interface PageHandler {
     default String authCallbackError(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
         return "";
     }
+
+    /** OAuth 授权后未登录时的绑定方式选择页。 */
+    default String oauthBindChoice(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        return "";
+    }
 }

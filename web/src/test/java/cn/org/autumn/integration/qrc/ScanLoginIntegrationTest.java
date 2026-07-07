@@ -30,6 +30,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -121,12 +122,13 @@ public class ScanLoginIntegrationTest extends IntegrationTest {
         scanTicketService.scan(ticket.getUuid(), scanner);
         ConfirmResult result = scanTicketService.confirm(ticket.getUuid(), scanner, null);
 
-        assertTrue(result.isCompleted());
-        assertNotNull(result.getRedirect());
-        assertTrue(result.getRedirect().contains("code="));
-        assertTrue(result.getRedirect().contains("state=it-state"));
-        assertNotNull(result.getResult().get("code"));
-        assertTrue(clientDetailsService.isValidCode(result.getResult().get("code")));
+        assertNotNull(result.getExchange());
+        assertFalse(result.isCompleted());
+        TicketSnapshot updated = scanTicketService.getRequired(ticket.getUuid());
+        assertEquals(TicketStatus.CONFIRMED, updated.getStatus());
+
+        CrudGuard.force(() -> sysUserService.login(new ScanLoginToken(result.getExchange())));
+        assertTrue(ShiroUtils.isLogin());
     }
 
     @Test
@@ -145,6 +147,53 @@ public class ScanLoginIntegrationTest extends IntegrationTest {
         assertEquals(0, parsed.getCode());
         assertNotNull(parsed.getData().getUuid());
         assertNotNull(parsed.getData().getQrUrl());
+    }
+
+    @Test
+    void oauthDeviceOpenCreateFlow() throws Exception {
+        String clientId = "qrc-it-device-" + System.currentTimeMillis();
+        String baseUrl = "http://127.0.0.1:" + port;
+        String redirectUri = baseUrl + "/client/oauth2/callback";
+        ClientDetailsEntity client = clientDetailsService.create(baseUrl, clientId, "it-secret", null, "IT Device", "QRC device integration");
+        assertNotNull(client);
+
+        Map<String, Object> openBody = new HashMap<>();
+        Map<String, Object> data = new HashMap<>();
+        data.put("clientId", clientId);
+        data.put("clientSecret", "it-secret");
+        data.put("redirectUri", redirectUri);
+        data.put("scope", "basic");
+        data.put("state", "device-state");
+        openBody.put("data", data);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        ResponseEntity<String> createResp = restTemplate.exchange(baseUrl + "/qrc/api/v1/ticket/open/create", HttpMethod.POST, new HttpEntity<>(openBody, headers), String.class);
+        assertEquals(200, createResp.getStatusCodeValue());
+        Response<TicketCreateResult> created = gson.fromJson(createResp.getBody(), CREATE_RESULT);
+        assertNotNull(created);
+        assertEquals(0, created.getCode());
+        assertNotNull(created.getData().getUuid());
+        assertEquals(Intent.OAUTH_DEVICE, created.getData().getIntent());
+
+        String uuid = created.getData().getUuid();
+        SysUserEntity scanner = sysUserService.getByUuid(adminUuid);
+        scanTicketService.scan(uuid, scanner);
+        scanTicketService.confirm(uuid, scanner, null);
+
+        Map<String, Object> statusBody = new HashMap<>();
+        Map<String, Object> statusData = new HashMap<>();
+        statusData.put("uuid", uuid);
+        statusData.put("clientId", clientId);
+        statusData.put("clientSecret", "it-secret");
+        statusBody.put("data", statusData);
+        ResponseEntity<String> statusResp = restTemplate.exchange(baseUrl + "/qrc/api/v1/ticket/open/status", HttpMethod.POST, new HttpEntity<>(statusBody, headers), String.class);
+        assertEquals(200, statusResp.getStatusCodeValue());
+        Response<TicketStatusResult> status = gson.fromJson(statusResp.getBody(), STATUS_RESULT);
+        assertNotNull(status);
+        assertEquals(0, status.getCode());
+        assertEquals(TicketStatus.COMPLETED, status.getData().getStatus());
+        assertNotNull(status.getData().getResult().get("code"));
+        assertTrue(clientDetailsService.isValidCode(status.getData().getResult().get("code")));
     }
 
     @Test

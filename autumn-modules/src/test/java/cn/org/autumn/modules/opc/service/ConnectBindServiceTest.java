@@ -158,7 +158,7 @@ public class ConnectBindServiceTest {
         ConnectBindResolveResult result = connectBindService.resolveAndBind(app, userInfo, null);
 
         Assert.assertEquals(LOCAL_B, result.getProfile().getUuid());
-        Mockito.verify(connectBindDao).insert(Mockito.argThat(bind -> OPEN_ID.equals(bind.getOpenId()) && LOCAL_B.equals(bind.getUser())));
+        Mockito.verify(connectBindDao).insert(Mockito.argThat((ConnectBindEntity bind) -> OPEN_ID.equals(bind.getOpenId()) && LOCAL_B.equals(bind.getUser())));
     }
 
     @Test
@@ -173,7 +173,7 @@ public class ConnectBindServiceTest {
         ConnectBindResolveResult result = connectBindService.bindCreateNewUser(app, userInfo);
 
         Assert.assertEquals(LOCAL_NEW, result.getProfile().getUuid());
-        Mockito.verify(connectBindDao).insert(Mockito.argThat(bind -> OPEN_ID.equals(bind.getOpenId()) && LOCAL_NEW.equals(bind.getUser())));
+        Mockito.verify(connectBindDao).insert(Mockito.argThat((ConnectBindEntity bind) -> OPEN_ID.equals(bind.getOpenId()) && LOCAL_NEW.equals(bind.getUser())));
     }
 
     private ConnectAppEntity app() {

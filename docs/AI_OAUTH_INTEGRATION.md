@@ -391,6 +391,12 @@ sync nickname / icon from profile
 - 头像 URL 可能为空，前端需占位图
 - 每次登录可刷新 nickname / icon，保持展示一致
 
+### 8.4 Autumn 系 RP 内置联邦（推荐）
+
+Autumn 站点作 **RP** 时无需自行实现 §8.2：`WebOauthLoginService.completeRemoteOAuthCallback` → **`WebOauthBindService.resolveAndBind`**（`client_web_oauth_bind`，`upper`=上游 uuid、`user`=本地 uuid）。跨实例未登录且无 bind 时进入 **`/client/oauth2/bind/choice`**。  
+B1 回调 `/client/oauth2/callback` 与 B3 扫码 `POST /client/oauth2/qrc/web/ticket/complete` 均走同一套逻辑。  
+完整配置见 **`docs/AI_AUTH_SITE_ROLES.md`**。
+
 ---
 
 ## 9. 错误处理

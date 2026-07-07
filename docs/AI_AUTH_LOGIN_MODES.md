@@ -330,6 +330,8 @@ String base = mode == OAUTH ? origin + "/oauth2" : origin + "/open/oauth2";
 
 **运维**：后台 **OAuth 绑定** 管理页（`client/weboauthbind`）可 CRUD 绑定行，仅供排查/解绑；日常绑定应走 OAuth 回调编排，勿手工写入冲突数据。
 
+**RP 扫码联邦（模式 D）**：浏览器 `POST /client/oauth2/qrc/web/ticket/complete` 在服务端取得授权码后，调用 **`WebOauthLoginService.completeRemoteOAuthCallback`**，与 **`GET /client/oauth2/callback`** 共用 **`finishOAuthLogin` → `resolveAndBind` → `establishSession`**。配置与时序见 **`docs/AI_AUTH_SITE_ROLES.md`** §2～§3。
+
 ### 3.6 方式一 · 同实例自连（AS + RP 同一 JVM）
 
 **目标**：`https://my.example.com` 既当 AS 又当 RP。
@@ -369,8 +371,9 @@ String base = mode == OAUTH ? origin + "/oauth2" : origin + "/open/oauth2";
 #### 3.7.3 两个 Autumn 实例互相当 AS/RP
 
 - 实例 A：登记 Client，`redirect_uri` = `https://b.example.com/client/oauth2/callback`
-- 实例 B：配置 `WebAuthentication` 指向 A 的 `/oauth2/*`
-- 用户在 B 登录即跳转 A 授权，回到 B 建立 Session
+- 实例 B：配置 `WebAuthentication` 的 `originUri` = A 根地址，或分别填写 A 的 `/oauth2/*` URI
+- 用户在 B 登录即跳转 A 授权，回到 B 经 **`WebOauthBindService`** 建立 Session
+- RP 扫码联邦（超然信 App + bighub Web）见 **`docs/AI_AUTH_SITE_ROLES.md`**
 
 ---
 
@@ -811,6 +814,7 @@ userTokenService.saveToken(...)   → 可选保存 access_token
 | [`AI_OPC_INTEGRATION.md`](AI_OPC_INTEGRATION.md) | 方式二 OPC 接入与绑定 |
 | [`AI_OPL_SPI.md`](AI_OPL_SPI.md) | 框架内扩展 OPL（Extension/Service） |
 | [`AI_QRC_INTEGRATION.md`](AI_QRC_INTEGRATION.md) | 扫码登录与 OAuth 分支 |
+| [`AI_AUTH_SITE_ROLES.md`](AI_AUTH_SITE_ROLES.md) | AS/RP 双角色、RP QRC 联邦、`WebOauthBind` 跨站绑定 |
 | [`AI_ACCOUNT_AUTH_CONFIG.md`](AI_ACCOUNT_AUTH_CONFIG.md) | 登录后跳转、账号认证 JSON |
 | [`AI_SESSION_GUARD.md`](AI_SESSION_GUARD.md) | 会话终止与重登守卫 |
 | 站内 `/modules/docs/auth-flow` | 授权流程说明页 |

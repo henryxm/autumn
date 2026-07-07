@@ -4,7 +4,9 @@ import cn.org.autumn.modules.client.dto.WebOauthBindResolveResult;
 import cn.org.autumn.modules.client.entity.WebAuthenticationEntity;
 import cn.org.autumn.modules.client.oauth2.WebOauthBindException;
 import cn.org.autumn.modules.client.oauth2.WebOauthBindSupport;
+import cn.org.autumn.modules.client.oauth2.WebOauthEndpointResolver;
 import cn.org.autumn.modules.oauth.oauth2.support.OAuth2HttpClient;
+import cn.org.autumn.modules.oauth.service.ClientDetailsService;
 import cn.org.autumn.modules.usr.dto.UserProfile;
 import cn.org.autumn.modules.usr.service.UserProfileService;
 import cn.org.autumn.modules.usr.service.UserTokenService;
@@ -39,6 +41,12 @@ public class WebOauthLoginServiceTest {
     private UserTokenService userTokenService;
 
     @Mock
+    private ClientDetailsService clientDetailsService;
+
+    @Mock
+    private WebOauthEndpointResolver webOauthEndpointResolver;
+
+    @Mock
     private HttpServletRequest request;
 
     private WebAuthenticationEntity webAuth;
@@ -53,6 +61,9 @@ public class WebOauthLoginServiceTest {
         webAuth.setAccessTokenUri("https://remote.example.com/oauth2/token");
         webAuth.setUserInfoUri("https://remote.example.com/oauth2/userInfo");
         webAuth.setRedirectUri("https://local.example.com/client/oauth2/callback");
+        Mockito.when(webOauthEndpointResolver.resolveAccessTokenUri(webAuth)).thenReturn(webAuth.getAccessTokenUri());
+        Mockito.when(webOauthEndpointResolver.resolveUserInfoUri(Mockito.eq(webAuth), Mockito.anyBoolean())).thenReturn(webAuth.getUserInfoUri());
+        Mockito.when(clientDetailsService.isValidCode(Mockito.anyString())).thenReturn(false);
     }
 
     @Test

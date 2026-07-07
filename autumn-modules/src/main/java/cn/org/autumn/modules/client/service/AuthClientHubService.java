@@ -122,6 +122,7 @@ public class AuthClientHubService {
             if (StringUtils.isBlank(web.getUuid())) {
                 web.setUuid(Uuid.uuid());
             }
+            validateRpWebConfig(web);
             if (web.getId() == null) {
                 if (web.getCreateTime() == null) {
                     web.setCreateTime(new Date());
@@ -200,5 +201,14 @@ public class AuthClientHubService {
         summary.setHasQrc(grant != null);
         summary.setQrcEnabled(grant != null && grant.isEnabled());
         return summary;
+    }
+
+    private void validateRpWebConfig(WebAuthenticationEntity web) {
+        if (web == null || StringUtils.isBlank(web.getOriginUri())) {
+            return;
+        }
+        if (StringUtils.isBlank(web.getClientSecret())) {
+            throw new IllegalArgumentException("配置 originUri（远程身份源）时 clientSecret 不能为空");
+        }
     }
 }

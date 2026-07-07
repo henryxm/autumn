@@ -3,7 +3,11 @@ package cn.org.autumn.modules.client.oauth2;
 import cn.org.autumn.config.ApplicationInitializationProgress;
 import cn.org.autumn.modules.client.entity.WebAuthenticationEntity;
 import cn.org.autumn.modules.client.oauth2.WebOauthBindException.ConflictType;
+import cn.org.autumn.modules.client.service.OauthRpLoginService;
+import cn.org.autumn.modules.client.service.AuthSiteRoleService;
+import cn.org.autumn.modules.client.dto.WebOauthBindPendingContext;
 import cn.org.autumn.modules.client.service.WebAuthenticationService;
+import cn.org.autumn.modules.client.service.WebOauthBindPendingService;
 import cn.org.autumn.modules.client.service.WebOauthBindService;
 import cn.org.autumn.modules.client.service.WebOauthLoginService;
 import cn.org.autumn.modules.sys.service.SysConfigService;
@@ -32,6 +36,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.util.HashMap;
 import java.util.Map;
 
+/** OAuth2 RP 浏览器入口：B1 授权回调、绑定选择页、冲突页。 */
 @Controller
 @Slf4j
 @RequestMapping("client")
@@ -50,7 +55,19 @@ public class ClientOauth2Controller {
     WebOauthLoginService webOauthLoginService;
 
     @Autowired
+    WebOauthBindPendingService webOauthBindPendingService;
+
+    @Autowired
     WebOauthBindService webOauthBindService;
+
+    @Autowired
+    AuthSiteRoleService authSiteRoleService;
+
+    @Autowired
+    OauthRpLoginService oauthRpLoginService;
+
+    @Autowired
+    WebOauthEndpointResolver webOauthEndpointResolver;
 
     @Autowired
     HealthFactory healthFactory;
@@ -60,6 +77,16 @@ public class ClientOauth2Controller {
 
     @Autowired(required = false)
     ApplicationInitializationProgress applicationInitializationProgress;
+
+    @RequestMapping("oauth2/login")
+    public Object rpAuthorize(HttpServletRequest request, HttpServletResponse response, Model model) throws Exception {
+        if (!authSiteRoleService.isRpEnabled()) {
+            return authCallbackErrorPage(request, response, model, OAuthError.OAUTH_ERROR, "当前站点未启用 RP 角色");
+        }
+        String callback = WebPathUtils.safeOauthCallbackForClient(request, request.getParameter("callback"));
+        String redirect = oauthRpLoginService.buildAuthorizeRedirect(request, callback);
+        return pageFactory.direct(request, response, model, redirect);
+    }
 
     @RequestMapping("oauth2/callback")
     public Object defaultCodeCallback(HttpServletRequest request, HttpServletResponse response, Model model) throws OAuthSystemException {
@@ -79,21 +106,31 @@ public class ClientOauth2Controller {
         if (StringUtils.isEmpty(authCode)) {
             return authCallbackErrorPage(request, response, model, OAuthError.OAUTH_ERROR, "未收到授权码，请重新发起授权。");
         }
-        WebAuthenticationEntity webAuthenticationEntity = resolveWebAuth(request);
+        WebAuthenticationEntity webAuthenticationEntity = resolveCallbackWebAuth(request);
         if (webAuthenticationEntity == null) {
             return authCallbackErrorPage(request, response, model, OAuthError.OAUTH_ERROR, "未找到 OAuth 客户端配置，请联系管理员。");
         }
         try {
+            if (isRemoteRpCallback(webAuthenticationEntity)) {
+                String callback = oauthRpLoginService.handleCallback(request, authCode, request.getParameter(OAuth.OAUTH_STATE), oauthError, request.getParameter("error_description"));
+                if (StringUtils.isBlank(callback)) {
+                    callback = WebPathUtils.forBrowser(request, "/oauth2/success");
+                }
+                return pageFactory.direct(request, response, model, callback);
+            }
             webOauthLoginService.completeOAuthCallback(request, webAuthenticationEntity, authCode);
         } catch (WebOauthBindException e) {
             log.warn("OAuth bind conflict: type={}, clientId={}", e.getConflictType(), e.getClientId());
+            if (e.getConflictType() == ConflictType.BIND_CHOICE_REQUIRED) {
+                return authCallbackBindChoicePage(request, response, model, e);
+            }
             if (e.getConflictType() == ConflictType.UPSTREAM_UUID_INVALID) {
                 return authCallbackErrorPage(request, response, model, OAuthError.OAUTH_ERROR, "授权用户信息无效，请重新发起授权。");
             }
             return authCallbackConflictPage(request, response, model, e);
         } catch (Exception e) {
             log.error("OAuth callback failed: {}", e.getMessage());
-            return authCallbackErrorPage(request, response, model, OAuthError.OAUTH_ERROR, "授权登录失败，请稍后重试。");
+            return authCallbackErrorPage(request, response, model, OAuthError.OAUTH_ERROR, StringUtils.defaultIfBlank(e.getMessage(), "授权登录失败，请稍后重试。"));
         }
         String callback = WebPathUtils.safeOauthCallbackForClient(request, request.getParameter("callback"));
         if (StringUtils.isBlank(callback)) {
@@ -117,6 +154,90 @@ public class ClientOauth2Controller {
         } catch (IllegalStateException e) {
             return R.error(e.getMessage());
         }
+    }
+
+    @RequestMapping("oauth2/bind/choice")
+    public Object bindChoicePage(HttpServletRequest request, HttpServletResponse response, Model model, @RequestParam("token") String token) {
+        if (StringUtils.isBlank(token)) {
+            return authCallbackErrorPage(request, response, model, OAuthError.OAUTH_ERROR, "绑定会话无效或已过期");
+        }
+        WebOauthBindPendingContext pending = webOauthBindPendingService.peek(token);
+        if (pending == null) {
+            return authCallbackErrorPage(request, response, model, OAuthError.OAUTH_ERROR, "绑定会话已过期，请重新发起授权");
+        }
+        model.addAttribute("bindToken", token);
+        model.addAttribute("loginBindUrl", WebPathUtils.forBrowser(request, "/login?callback=" + encodeCallback(WebPathUtils.forBrowser(request, "/client/oauth2/bind/confirm?token=" + token))));
+        model.addAttribute("createBindAction", WebPathUtils.forBrowser(request, "/client/oauth2/bind/create"));
+        model.addAttribute("title", "选择账号绑定方式");
+        model.addAttribute("message", "授权已成功，请选择将此外部账号与本地账号的关联方式。");
+        return pageFactory.oauthBindChoice(request, response, model);
+    }
+
+    @RequestMapping("oauth2/bind/confirm")
+    public Object bindConfirm(HttpServletRequest request, HttpServletResponse response, Model model, @RequestParam("token") String token) {
+        WebOauthBindPendingContext pending = webOauthBindPendingService.peek(token);
+        String callback = pending == null ? null : pending.getCallback();
+        try {
+            webOauthLoginService.completePendingBindSession(request, token);
+        } catch (WebOauthBindException e) {
+            if (e.getConflictType() == ConflictType.UPSTREAM_BOUND_TO_OTHER || e.getConflictType() == ConflictType.LOCAL_ALREADY_BOUND) {
+                return authCallbackConflictPage(request, response, model, e);
+            }
+            return authCallbackErrorPage(request, response, model, OAuthError.OAUTH_ERROR, e.getMessage());
+        } catch (Exception e) {
+            return authCallbackErrorPage(request, response, model, OAuthError.OAUTH_ERROR, StringUtils.defaultIfBlank(e.getMessage(), "绑定失败，请重试"));
+        }
+        if (StringUtils.isBlank(callback)) {
+            callback = WebPathUtils.forBrowser(request, "/oauth2/success");
+        }
+        return pageFactory.direct(request, response, model, callback);
+    }
+
+    @PostMapping("oauth2/bind/create")
+    public Object bindCreate(HttpServletRequest request, HttpServletResponse response, Model model, @RequestParam("token") String token) {
+        WebOauthBindPendingContext pending = webOauthBindPendingService.peek(token);
+        String callback = pending == null ? null : pending.getCallback();
+        try {
+            webOauthLoginService.completePendingCreateNew(request, token);
+        } catch (WebOauthBindException e) {
+            return authCallbackErrorPage(request, response, model, OAuthError.OAUTH_ERROR, e.getMessage());
+        } catch (Exception e) {
+            return authCallbackErrorPage(request, response, model, OAuthError.OAUTH_ERROR, StringUtils.defaultIfBlank(e.getMessage(), "创建账号失败，请重试"));
+        }
+        if (StringUtils.isBlank(callback)) {
+            callback = WebPathUtils.forBrowser(request, "/oauth2/success");
+        }
+        return pageFactory.direct(request, response, model, callback);
+    }
+
+    private Object authCallbackBindChoicePage(HttpServletRequest request, HttpServletResponse response, Model model, WebOauthBindException e) {
+        String token = e.getPendingToken();
+        if (StringUtils.isBlank(token)) {
+            return authCallbackErrorPage(request, response, model, OAuthError.OAUTH_ERROR, "绑定会话无效，请重新发起授权");
+        }
+        return pageFactory.direct(request, response, model, webOauthLoginService.bindChoicePageUrl(request, token));
+    }
+
+    private static String encodeCallback(String callback) {
+        try {
+            return java.net.URLEncoder.encode(callback, "UTF-8");
+        } catch (Exception e) {
+            return callback;
+        }
+    }
+
+    private WebAuthenticationEntity resolveCallbackWebAuth(HttpServletRequest request) {
+        if (authSiteRoleService.isRpEnabled()) {
+            WebAuthenticationEntity rpClient = authSiteRoleService.resolveRpClient(request);
+            if (rpClient != null && webOauthEndpointResolver.hasRemoteOrigin(rpClient)) {
+                return rpClient;
+            }
+        }
+        return resolveWebAuth(request);
+    }
+
+    private boolean isRemoteRpCallback(WebAuthenticationEntity webAuth) {
+        return webOauthEndpointResolver.hasRemoteOrigin(webAuth);
     }
 
     private WebAuthenticationEntity resolveWebAuth(HttpServletRequest request) {

@@ -188,4 +188,8 @@ public class PageFactory extends Factory {
     public String authCallbackError(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
         return invoke("authCallbackError", "oauth2/callback-error", httpServletRequest, httpServletResponse, model);
     }
+
+    public String oauthBindChoice(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        return invoke("oauthBindChoice", "oauth2/bind-choice", httpServletRequest, httpServletResponse, model);
+    }
 }
