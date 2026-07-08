@@ -101,7 +101,7 @@ public class ShiroUtils {
     public static void logout() {
         try {
             SecurityUtils.getSubject().logout();
-        } catch (Exception e) {
+        } catch (Exception ignored) {
         }
     }
 

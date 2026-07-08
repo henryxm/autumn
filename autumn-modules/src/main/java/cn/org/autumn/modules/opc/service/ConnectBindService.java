@@ -51,33 +51,20 @@ public class ConnectBindService extends ModuleService<ConnectBindDao, ConnectBin
 
         ConnectBindEntity byOpenId = baseMapper.getByConnectAppAndOpenId(connectAppUuid, openId);
         if (byOpenId != null) {
-            assertPlatformUserMatchesBind(app, openId, platformUser, byOpenId);
-            updateProfileFields(byOpenId, userInfo);
-            return ConnectBindResolveResult.of(toUserProfile(byOpenId.getUser()), true);
+            return resolveExistingOpenIdBind(app, userInfo, platformUser, byOpenId);
         }
 
         if (StringUtils.isNotBlank(userInfo.getUnionId())) {
             ConnectBindEntity byUnion = baseMapper.getByConnectAppAndUnionId(connectAppUuid, userInfo.getUnionId());
             if (byUnion != null) {
-                assertPlatformUserMatchesBind(app, openId, platformUser, byUnion);
-                byUnion.setOpenId(openId);
-                byUnion.setUpdate(new Date());
-                updateById(byUnion);
-                updateProfileFields(byUnion, userInfo);
-                return ConnectBindResolveResult.of(toUserProfile(byUnion.getUser()), true);
+                return resolveExistingUnionBind(app, userInfo, platformUser, openId, byUnion);
             }
         }
 
         if (StringUtils.isNotBlank(platformUser)) {
             SysUserEntity platform = sysUserService.getByUuid(platformUser.trim());
             if (platform != null) {
-                ConnectBindEntity byUser = baseMapper.getByConnectAppAndUser(connectAppUuid, platform.getUuid());
-                if (byUser != null && !connectBindSupport.isSameOpenId(byUser.getOpenId(), openId)) {
-                    throw ConnectBindException.localAlreadyBound(app, openId, platform.getUuid(), byUser);
-                }
-                insertBind(connectAppUuid, platform.getUuid(), openId, userInfo.getUnionId());
-                syncProfileFields(platform.getUuid(), userInfo);
-                return ConnectBindResolveResult.of(toUserProfile(platform.getUuid()), false);
+                return bindPlatformUser(app, userInfo, openId, connectAppUuid, platform);
             }
         }
 
@@ -190,6 +177,67 @@ public class ConnectBindService extends ModuleService<ConnectBindDao, ConnectBin
         for (ConnectBindEntity bind : binds) {
             deleteById(bind.getId());
         }
+    }
+
+    private ConnectBindResolveResult resolveExistingOpenIdBind(ConnectAppEntity app, OpenUserInfoSnapshot userInfo, String platformUser, ConnectBindEntity bind) {
+        String openId = userInfo.getOpenId().trim();
+        if (canTrustPlatformUser(app, platformUser)) {
+            realignOpenIdBindToPlatformUser(app, userInfo, platformUser.trim(), bind);
+            updateProfileFields(bind, userInfo);
+            return ConnectBindResolveResult.of(toUserProfile(platformUser.trim()), true);
+        }
+        assertPlatformUserMatchesBind(app, openId, platformUser, bind);
+        updateProfileFields(bind, userInfo);
+        return ConnectBindResolveResult.of(toUserProfile(bind.getUser()), true);
+    }
+
+    private ConnectBindResolveResult resolveExistingUnionBind(ConnectAppEntity app, OpenUserInfoSnapshot userInfo, String platformUser, String openId, ConnectBindEntity byUnion) {
+        byUnion.setOpenId(openId);
+        byUnion.setUpdate(new Date());
+        updateById(byUnion);
+        return resolveExistingOpenIdBind(app, userInfo, platformUser, byUnion);
+    }
+
+    private ConnectBindResolveResult bindPlatformUser(ConnectAppEntity app, OpenUserInfoSnapshot userInfo, String openId, String connectAppUuid, SysUserEntity platform) {
+        ConnectBindEntity byUser = baseMapper.getByConnectAppAndUser(connectAppUuid, platform.getUuid());
+        if (byUser != null && !connectBindSupport.isSameOpenId(byUser.getOpenId(), openId)) {
+            if (connectBindSupport.isSamePlatform(app)) {
+                byUser.setOpenId(openId);
+                if (StringUtils.isNotBlank(userInfo.getUnionId())) {
+                    byUser.setUnionId(userInfo.getUnionId());
+                }
+                byUser.setUpdate(new Date());
+                updateById(byUser);
+                syncProfileFields(platform.getUuid(), userInfo);
+                return ConnectBindResolveResult.of(toUserProfile(platform.getUuid()), true);
+            }
+            throw ConnectBindException.localAlreadyBound(app, openId, platform.getUuid(), byUser);
+        }
+        insertBind(connectAppUuid, platform.getUuid(), openId, userInfo.getUnionId());
+        syncProfileFields(platform.getUuid(), userInfo);
+        return ConnectBindResolveResult.of(toUserProfile(platform.getUuid()), false);
+    }
+
+    /** 同平台 OPL token 内 platformUser 为权威本地用户，可校正陈旧绑定。 */
+    private boolean canTrustPlatformUser(ConnectAppEntity app, String platformUser) {
+        return connectBindSupport.isSamePlatform(app) && StringUtils.isNotBlank(platformUser) && sysUserService.getByUuid(platformUser.trim()) != null;
+    }
+
+    private void realignOpenIdBindToPlatformUser(ConnectAppEntity app, OpenUserInfoSnapshot userInfo, String platformUser, ConnectBindEntity openIdBind) {
+        if (connectBindSupport.isSameUser(openIdBind.getUser(), platformUser)) {
+            return;
+        }
+        String connectAppUuid = app.getUuid();
+        ConnectBindEntity userBind = baseMapper.getByConnectAppAndUser(connectAppUuid, platformUser);
+        if (userBind != null && !userBind.getId().equals(openIdBind.getId())) {
+            deleteById(userBind.getId());
+        }
+        openIdBind.setUser(platformUser);
+        if (StringUtils.isNotBlank(userInfo.getUnionId())) {
+            openIdBind.setUnionId(userInfo.getUnionId());
+        }
+        openIdBind.setUpdate(new Date());
+        updateById(openIdBind);
     }
 
     private void assertPlatformUserMatchesBind(ConnectAppEntity app, String openId, String platformUser, ConnectBindEntity bind) {

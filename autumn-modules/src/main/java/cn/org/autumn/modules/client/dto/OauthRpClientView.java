@@ -27,4 +27,7 @@ public class OauthRpClientView implements Serializable {
     private String loginAuthentication;
     private boolean secretConfigured;
     private boolean sameInstance;
+    private String icon;
+    private String hash;
+    private int pageLogin;
 }

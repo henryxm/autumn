@@ -149,6 +149,13 @@
             <label>授权范围</label><input id="saveScope" type="text" value="basic">
             <label>负责人账号（可选）</label><input id="saveUser" type="text" placeholder="默认当前登录管理员">
             <p class="field-hint">用于记录该接入配置归属哪个系统用户，一般留空即可。</p>
+            <label>登录页图标地址（icon）</label><input id="saveIcon" type="text" placeholder="可选">
+            <label>图标文件 HASH（hash）</label><input id="saveHash" type="text" placeholder="上传图标后的文件 hash">
+            <label>登录页展示（pageLogin）</label>
+            <select id="savePageLogin">
+                <option value="0">0 - 不在登录页展示</option>
+                <option value="1">1 - 在 /login 展示</option>
+            </select>
         </div>
         <div class="modal-footer">
             <button class="btn btn-secondary btn-sm" onclick="hideModal('modalSaveApp')">取消</button>
@@ -175,6 +182,11 @@
                 <button type="button" class="btn btn-secondary btn-sm" onclick="fillLocalOpcCallback('applyRedirect')">本系统样例</button>
             </div>
             <label>授权范围</label><input id="applyScope" type="text" value="basic">
+            <label>登录页展示（pageLogin）</label>
+            <select id="applyPageLogin">
+                <option value="0">0 - 不在登录页展示</option>
+                <option value="1">1 - 在 /login 展示</option>
+            </select>
             <label>负责人账号（可选）</label><input id="applyUser" type="text" placeholder="默认当前登录管理员">
         </div>
         <div class="modal-footer">
@@ -205,6 +217,13 @@
             <p class="field-hint" id="editRedirectExpected" style="display:none;color:#b45309;"></p>
             <label>授权范围</label><input id="editScope" type="text">
             <input id="editUser" type="hidden">
+            <label>登录页图标地址（icon）</label><input id="editIcon" type="text" placeholder="可选">
+            <label>图标文件 HASH（hash）</label><input id="editHash" type="text" placeholder="上传图标后的文件 hash">
+            <label>登录页展示（pageLogin）</label>
+            <select id="editPageLogin">
+                <option value="0">0 - 不在登录页展示</option>
+                <option value="1">1 - 在 /login 展示</option>
+            </select>
         </div>
         <div class="modal-footer">
             <button class="btn btn-secondary btn-sm" onclick="hideModal('modalEditApp')">取消</button>
@@ -402,6 +421,9 @@ async function showEditAppModal(appId) {
     document.getElementById('editRedirect').value = app.redirectUri || '';
     document.getElementById('editScope').value = app.scope || 'basic';
     document.getElementById('editUser').value = app.user || '';
+    document.getElementById('editIcon').value = app.icon || '';
+    document.getElementById('editHash').value = app.hash || '';
+    document.getElementById('editPageLogin').value = String(app.pageLogin != null ? app.pageLogin : 0);
     document.getElementById('editRedirect').oninput = refreshEditRedirectHint;
     refreshEditRedirectHint();
     showModal('modalEditApp');
@@ -423,7 +445,10 @@ async function submitUpdateApp() {
         platformBaseUrl: platform,
         redirectUri: redirectUri,
         name: name,
-        scope: document.getElementById('editScope').value
+        scope: document.getElementById('editScope').value,
+        icon: document.getElementById('editIcon').value.trim(),
+        hash: document.getElementById('editHash').value.trim(),
+        pageLogin: document.getElementById('editPageLogin').value
     });
     if (r.code === 0) {
         hideModal('modalEditApp');
@@ -458,7 +483,10 @@ async function submitSaveApp() {
         platformBaseUrl: platform,
         redirectUri: redirectUri,
         name: name,
-        scope: document.getElementById('saveScope').value
+        scope: document.getElementById('saveScope').value,
+        icon: document.getElementById('saveIcon').value.trim(),
+        hash: document.getElementById('saveHash').value.trim(),
+        pageLogin: document.getElementById('savePageLogin').value
     });
     if (r.code === 0) {
         hideModal('modalSaveApp');
@@ -486,7 +514,8 @@ async function submitApplyApp() {
         accessToken: token,
         redirectUri: redirectUri,
         name: name,
-        scope: document.getElementById('applyScope').value
+        scope: document.getElementById('applyScope').value,
+        pageLogin: document.getElementById('applyPageLogin').value
     });
     if (r.code === 0) { hideModal('modalApplyApp'); showToast('申请成功'); loadApps(1); loadOverview(); loadAppOptions(); }
     else showToast(r.msg || '申请失败', 'error');

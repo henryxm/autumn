@@ -192,6 +192,7 @@ public class ShiroConfig {
         filterMap.put("/bot/api/v1/**", "anon");
         filterMap.put("/login.html", "anon");
         filterMap.put("/login", "anon");
+        filterMap.put("/auth/login/**", "anon");
         filterMap.put("/register.html", "anon");
         filterMap.put("/register", "anon");
         filterMap.put("/forgotpassword.html", "anon");

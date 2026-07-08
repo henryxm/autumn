@@ -68,6 +68,15 @@ public class SysPageController implements ErrorController {
 
     List<String> active = new ArrayList<>();
 
+    @RequestMapping(OpcConstants.CONNECTBIND_MANAGE_PAGE)
+    @SkipInterceptor
+    public String connectbindManage() {
+        if (!ShiroUtils.isLogin()) {
+            return "redirect:/login";
+        }
+        return "opc/connectbind";
+    }
+
     @RequestMapping("modules/{module}/{url}")
     public String module(@PathVariable("module") String module, @PathVariable("url") String url, String lang, Model model) {
         if (StringUtils.isNotBlank(lang)) {
@@ -159,6 +168,12 @@ public class SysPageController implements ErrorController {
     @RequestMapping({OpcConstants.OAUTH2_LOGIN_PAGE + ".html", OpcConstants.OAUTH2_LOGIN_PAGE})
     @SkipInterceptor(AuthorizationInterceptor.class)
     public String openLoginEntry(HttpServletRequest request, HttpServletResponse response, Model model, @RequestParam(required = false) String appId) {
+        String callback = request.getParameter("callback");
+        String canonicalUrl = WebPathUtils.oauthLoginEntryUrlIfCallbackNeedsCanonical(
+                request, OpcConstants.OAUTH2_LOGIN_PATH, "appId", appId, callback);
+        if (StringUtils.isNotBlank(canonicalUrl)) {
+            return "redirect:" + canonicalUrl;
+        }
         authPageSupport.prepareOpenLoginEntry(request, model, appId);
         return pageFactory.openLoginEntry(request, response, model);
     }

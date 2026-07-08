@@ -25,4 +25,7 @@ public class OpcAppAdminView {
     private int bindCount;
     private String authorizeUrl;
     private boolean secretConfigured;
+    private String icon;
+    private String hash;
+    private int pageLogin;
 }

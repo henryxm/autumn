@@ -4,7 +4,9 @@ import cn.org.autumn.config.ApplicationInitializationProgress;
 import cn.org.autumn.modules.client.entity.WebAuthenticationEntity;
 import cn.org.autumn.modules.client.oauth2.WebOauthBindException.ConflictType;
 import cn.org.autumn.modules.client.service.OauthRpLoginService;
+import cn.org.autumn.modules.client.service.OauthRpStateService;
 import cn.org.autumn.modules.client.service.AuthSiteRoleService;
+import cn.org.autumn.modules.client.dto.OauthRpStatePayload;
 import cn.org.autumn.modules.client.dto.WebOauthBindPendingContext;
 import cn.org.autumn.modules.client.service.WebAuthenticationService;
 import cn.org.autumn.modules.client.service.WebOauthBindPendingService;
@@ -67,6 +69,9 @@ public class ClientOauth2Controller {
     WebOauthEndpointResolver webOauthEndpointResolver;
 
     @Autowired
+    OauthRpStateService oauthRpStateService;
+
+    @Autowired
     HealthFactory healthFactory;
 
     @Autowired
@@ -76,13 +81,13 @@ public class ClientOauth2Controller {
     ApplicationInitializationProgress applicationInitializationProgress;
 
     @RequestMapping("oauth2/login")
-    public Object rpAuthorize(HttpServletRequest request, HttpServletResponse response, Model model) throws Exception {
-        if (!authSiteRoleService.isRpEnabled()) {
-            return authCallbackErrorPage(request, response, model, OAuthError.OAUTH_ERROR, "当前站点未启用 RP 角色");
+    public Object rpAuthorize(HttpServletRequest request, HttpServletResponse response, Model model) {
+        String qs = request.getQueryString();
+        String target = WebPathUtils.forBrowser(request, "/oauth2/login");
+        if (StringUtils.isNotBlank(qs)) {
+            target = target + "?" + qs;
         }
-        String callback = WebPathUtils.safeOauthCallbackForClient(request, request.getParameter("callback"));
-        String redirect = oauthRpLoginService.buildAuthorizeRedirect(request, callback);
-        return pageFactory.direct(request, response, model, redirect);
+        return pageFactory.direct(request, response, model, target);
     }
 
     @RequestMapping("oauth2/callback")
@@ -224,6 +229,14 @@ public class ClientOauth2Controller {
     }
 
     private WebAuthenticationEntity resolveCallbackWebAuth(HttpServletRequest request) {
+        String state = request.getParameter(OAuth.OAUTH_STATE);
+        OauthRpStatePayload payload = oauthRpStateService.peekStatePayload(state);
+        if (payload != null && StringUtils.isNotBlank(payload.getClientId())) {
+            WebAuthenticationEntity byState = webAuthenticationService.getByClientId(payload.getClientId());
+            if (byState != null) {
+                return byState;
+            }
+        }
         if (authSiteRoleService.isRpEnabled()) {
             WebAuthenticationEntity rpClient = authSiteRoleService.resolveRpClient(request);
             if (rpClient != null && webOauthEndpointResolver.hasRemoteOrigin(rpClient)) {

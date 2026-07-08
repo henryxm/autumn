@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <title><#if oauthAuthorize?? && oauthAuthorize>应用授权<#elseif oplAuthorize?? && oplAuthorize>应用授权<#elseif oauthLogin?? && oauthLogin>用户登录<#else>${siteName!'Autumn'} 管理系统</#if></title>
+  <title><#if oauthAuthorize?? && oauthAuthorize>应用授权<#elseif oplAuthorize?? && oplAuthorize>应用授权<#else>${siteName!'Autumn'} 管理系统</#if></title>
   <#include "/_auth_head_login.html">
   <!--[if lt IE 9]>
   <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
@@ -17,8 +17,6 @@
       应用授权
       <!--<#elseif oplAuthorize?? && oplAuthorize>-->
       应用授权
-      <!--<#elseif oauthLogin?? && oauthLogin>-->
-      登录系统
       <!--<#else>-->
       Autumn 管理系统
       <!--</#if>-->
@@ -231,23 +229,6 @@
       </div>
 
       <!-- 账号登录 -->
-      <!--<#if oauthLogin?? && oauthLogin>-->
-      <form class="login-panel" v-show="loginTab === 'account'" method="post" action="${request.contextPath}/oauth2/login" @submit="syncOauthCallback">
-        <input type="hidden" name="callback" :value="oauthCallback">
-        <div class="form-group has-feedback">
-          <input type="text" name="username" class="form-control" v-model="username" placeholder="请输入账号" autocomplete="username" required>
-          <span class="glyphicon glyphicon-user form-control-feedback"></span>
-        </div>
-        <div class="form-group has-feedback">
-          <input type="password" name="password" class="form-control" v-model="password" placeholder="请输入密码" autocomplete="current-password" required>
-          <span class="glyphicon glyphicon-lock form-control-feedback"></span>
-        </div>
-        <div class="remember-row">
-          <label><input type="checkbox" name="rememberMe" value="true" checked> 记住我</label>
-        </div>
-        <button type="submit" class="btn btn-primary btn-block btn-login">登 录</button>
-      </form>
-      <!--<#else>-->
       <div class="login-panel" v-show="loginTab === 'account'">
         <div class="form-group has-feedback">
           <input type="text" class="form-control" v-model="username" placeholder="请输入账号" autocomplete="username">
@@ -265,7 +246,6 @@
         </div>
         <button type="button" class="btn btn-primary btn-block btn-login" @click="login">登 录</button>
       </div>
-      <!--</#if>-->
 
       <!-- 扫码登录 -->
       <div class="login-panel qr-panel" v-show="loginTab === 'qr'">
@@ -294,24 +274,6 @@
       </div>
 
       <!-- 手机登录 -->
-      <!--<#if oauthLogin?? && oauthLogin>-->
-      <form class="login-panel" v-show="loginTab === 'phone'" method="post" action="${request.contextPath}/oauth2/login" @submit="beforePhoneOauthSubmit">
-        <input type="hidden" name="callback" :value="oauthCallback">
-        <input type="hidden" name="username" :value="mobileClean">
-        <div class="form-group has-feedback">
-          <input type="tel" class="form-control" v-model="mobile" placeholder="请输入手机号" maxlength="11" autocomplete="tel" required>
-          <span class="glyphicon glyphicon-phone form-control-feedback"></span>
-        </div>
-        <div class="form-group has-feedback">
-          <input type="password" name="password" class="form-control" v-model="mobilePassword" placeholder="请输入密码" autocomplete="current-password" required>
-          <span class="glyphicon glyphicon-lock form-control-feedback"></span>
-        </div>
-        <div class="remember-row">
-          <label><input type="checkbox" name="rememberMe" value="true" checked> 记住我</label>
-        </div>
-        <button type="submit" class="btn btn-primary btn-block btn-login">登 录</button>
-      </form>
-      <!--<#else>-->
       <div class="login-panel" v-show="loginTab === 'phone'">
         <div class="form-group has-feedback">
           <input type="tel" class="form-control" v-model="mobile" placeholder="请输入手机号" maxlength="11" autocomplete="tel">
@@ -329,7 +291,15 @@
         </div>
         <button type="button" class="btn btn-primary btn-block btn-login" @click="loginByPhone">登 录</button>
       </div>
-      <!--</#if>-->
+      <div v-if="authLoginVisible" class="auth-login-section">
+        <div class="auth-login-divider"><span>授权登录</span></div>
+        <div class="auth-login-grid">
+          <a v-for="p in authLoginProviders" :key="p.type + '-' + p.id" class="auth-login-item" :href="buildProviderUrl(p)" :title="p.name">
+            <img class="auth-login-icon" :src="providerIcon(p)" :alt="p.name">
+            <span class="auth-login-name">{{ p.name }}</span>
+          </a>
+        </div>
+      </div>
       <!--<#if !((oauthAuthorize?? && oauthAuthorize) || (oplAuthorize?? && oplAuthorize))>-->
       <div class="auth-nav">
         <!--<#if registerEnabled?? && registerEnabled>-->
@@ -360,11 +330,6 @@
 <script>
 window.__LOGIN_CONFIG__ = {
   ctx: '${request.contextPath?js_string}',
-  //<#if oauthLogin?? && oauthLogin>
-  oauthLogin: true,
-  //<#else>
-  oauthLogin: false,
-  //</#if>
   //<#if oplAuthorize?? && oplAuthorize>
   oplAuthorize: true,
   //<#else>
@@ -384,7 +349,13 @@ window.__LOGIN_CONFIG__ = {
   safeOauthCallback: '${safeOauthCallback!""?js_string}',
   serverUuid: '${uuid!""?js_string}',
   serverQrUrl: '${qrUrl!""?js_string}',
-  serverPollIntervalMs: ${pollIntervalMs!2000}
+  serverPollIntervalMs: ${pollIntervalMs!2000},
+  skipAutologinCookie: '${skipAutologinCookie!"autumn_skip_autologin"?js_string}'
+  //<#if oauthLogin?? && oauthLogin>
+  ,oauthLogin: true
+  //<#else>
+  ,oauthLogin: false
+  //</#if>
   //<#if error?? && error?has_content>
   ,errorMsg: '${error?js_string}'
   //</#if>

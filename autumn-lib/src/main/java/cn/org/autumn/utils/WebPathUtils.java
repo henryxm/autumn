@@ -2,6 +2,8 @@ package cn.org.autumn.utils;
 
 import java.net.URI;
 import java.net.URL;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 
@@ -97,6 +99,106 @@ public final class WebPathUtils {
         String[] parts = candidatePathAndQuery(request, raw);
         if (parts != null && isUnsafeNavPath(parts[0], parts[1])) return "";
         return safe;
+    }
+
+    /**
+     * 授权 Provider 登录入口 callback 幂等化：剥除嵌套的 {@code /oauth2/login}、{@code /open/oauth2/login}，同站回退 {@code /login}。
+     */
+    public static String canonicalOauthLoginCallback(HttpServletRequest request, String rawCallback) {
+        if (request == null || !StringUtils.hasText(rawCallback)) {
+            return "";
+        }
+        String loginPage = forBrowser(request, "/login");
+        String current = rawCallback.trim();
+        for (int depth = 0; depth < 8; depth++) {
+            String[] parts = candidatePathAndQuery(request, current);
+            if (parts == null) {
+                break;
+            }
+            String path = pathForCheck(request, parts[0]);
+            if (!HttpNavigationUtils.isOauthLoginEntryPath(path)) {
+                String safe = safeOauthCallbackForClient(request, current);
+                return StringUtils.hasText(safe) ? safe : loginPage;
+            }
+            String inner = queryParam(parts[1], "callback");
+            if (!StringUtils.hasText(inner)) {
+                inner = queryParam(extractAbsoluteQuery(current), "callback");
+            }
+            if (!StringUtils.hasText(inner)) {
+                return loginPage;
+            }
+            current = decodeCallbackValue(inner);
+        }
+        return loginPage;
+    }
+
+    /** 若 {@code callback} 已嵌套 OAuth 登录入口 URL，302 到 canonical 形态（地址栏不再递增）。 */
+    public static String oauthLoginEntryUrlIfCallbackNeedsCanonical(HttpServletRequest request, String loginEntryPath, String clientIdParam, String clientId, String rawCallback) {
+        if (request == null || !StringUtils.hasText(rawCallback) || !StringUtils.hasText(loginEntryPath)) {
+            return null;
+        }
+        String canonical = canonicalOauthLoginCallback(request, rawCallback);
+        if (!StringUtils.hasText(canonical) || rawCallback.trim().equals(canonical)) {
+            return null;
+        }
+        StringBuilder url = new StringBuilder(forBrowser(request, loginEntryPath));
+        boolean hasQuery = false;
+        if (StringUtils.hasText(clientIdParam) && StringUtils.hasText(clientId)) {
+            url.append("?").append(clientIdParam).append("=").append(encodeUrlParam(clientId));
+            hasQuery = true;
+        }
+        url.append(hasQuery ? "&" : "?").append("callback=").append(encodeUrlParam(canonical));
+        return url.toString();
+    }
+
+    private static String encodeUrlParam(String value) {
+        try {
+            return java.net.URLEncoder.encode(StringUtils.hasText(value) ? value.trim() : "", StandardCharsets.UTF_8.name());
+        } catch (Exception e) {
+            return value;
+        }
+    }
+
+    private static String decodeCallbackValue(String value) {
+        try {
+            return URLDecoder.decode(value.trim(), StandardCharsets.UTF_8.name());
+        } catch (Exception e) {
+            return value.trim();
+        }
+    }
+
+    private static String extractAbsoluteQuery(String candidate) {
+        if (!StringUtils.hasText(candidate)) {
+            return null;
+        }
+        String c = candidate.trim();
+        try {
+            if (c.startsWith("http://") || c.startsWith("https://")) {
+                URL u = new URI(c).toURL();
+                return u.getQuery();
+            }
+        } catch (Exception ignored) {
+            return null;
+        }
+        int qi = c.indexOf('?');
+        return qi < 0 ? null : c.substring(qi + 1);
+    }
+
+    private static String queryParam(String query, String name) {
+        if (!StringUtils.hasText(query) || !StringUtils.hasText(name)) {
+            return null;
+        }
+        for (String part : query.split("&")) {
+            if (!StringUtils.hasText(part)) {
+                continue;
+            }
+            int eq = part.indexOf('=');
+            String key = eq < 0 ? part : part.substring(0, eq);
+            if (name.equals(key)) {
+                return eq < 0 ? "" : part.substring(eq + 1);
+            }
+        }
+        return null;
     }
 
     /**
@@ -212,5 +314,26 @@ public final class WebPathUtils {
             return rest.isEmpty() ? "/" : rest;
         }
         return uri;
+    }
+
+    /**
+     * 远端根地址与站点 {@code baseUrl} 是否同实例；{@code originOrBase} 为空视为同实例（本地 AS+RP/OPL+OPC）。
+     */
+    public static boolean isSameSiteUrl(String originOrBase, String siteBaseUrl) {
+        if (!StringUtils.hasText(originOrBase)) {
+            return true;
+        }
+        if (!StringUtils.hasText(siteBaseUrl)) {
+            return false;
+        }
+        String left = originOrBase.trim();
+        String right = siteBaseUrl.trim();
+        while (left.endsWith("/")) {
+            left = left.substring(0, left.length() - 1);
+        }
+        while (right.endsWith("/")) {
+            right = right.substring(0, right.length() - 1);
+        }
+        return left.equalsIgnoreCase(right);
     }
 }

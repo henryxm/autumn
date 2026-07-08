@@ -25,17 +25,22 @@ import cn.org.autumn.modules.spm.service.SuperPositionModelService;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.modules.sys.service.SysUserService;
+import cn.org.autumn.modules.sys.shiro.LogoutSkipSupport;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.usr.dto.UserProfile;
 import cn.org.autumn.modules.usr.entity.UserProfileEntity;
 import cn.org.autumn.modules.usr.service.UserLoginLogService;
 import cn.org.autumn.modules.usr.service.UserProfileService;
+import cn.org.autumn.modules.client.oauth2.WebOauthEndpointResolver;
+import cn.org.autumn.modules.client.service.AuthSiteRoleService;
+import cn.org.autumn.modules.client.service.OauthRpLoginService;
+import cn.org.autumn.modules.client.entity.WebAuthenticationEntity;
+import cn.org.autumn.modules.client.service.WebAuthenticationService;
 import cn.org.autumn.site.AuthPageSupport;
 import cn.org.autumn.site.PageFactory;
 import cn.org.autumn.utils.IPUtils;
 import cn.org.autumn.utils.Utils;
 import cn.org.autumn.utils.WebPathUtils;
-import cn.org.autumn.view.ViewTemplateSupport;
 import com.alibaba.fastjson.JSON;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.servers.Server;
@@ -44,8 +49,6 @@ import io.swagger.v3.oas.annotations.tags.Tags;
 
 import java.net.*;
 import java.io.UnsupportedEncodingException;
-import java.util.Enumeration;
-import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
@@ -115,6 +118,18 @@ public class AuthorizationController {
 
     @Autowired
     AuthPageSupport authPageSupport;
+
+    @Autowired
+    AuthSiteRoleService authSiteRoleService;
+
+    @Autowired
+    OauthRpLoginService oauthRpLoginService;
+
+    @Autowired
+    WebAuthenticationService webAuthenticationService;
+
+    @Autowired
+    WebOauthEndpointResolver webOauthEndpointResolver;
 
     @Autowired
     ScanTicketService scanTicketService;
@@ -296,21 +311,6 @@ public class AuthorizationController {
         }
     }
 
-    private boolean isOAuthRpLoginEntry(HttpServletRequest request) {
-        String clientId = request.getParameter("client_id");
-        if (StringUtils.isBlank(clientId)) {
-            clientId = request.getParameter("clientId");
-        }
-        if (StringUtils.isBlank(clientId)) {
-            return false;
-        }
-        String callback = normalizeRedirectUrl(request.getParameter("callback"));
-        if (StringUtils.isBlank(callback)) {
-            return true;
-        }
-        return !callback.contains("/oauth2/authorize") && !callback.contains("/open/oauth2/authorize");
-    }
-
     @RequestMapping("login")
     public Object login(HttpServletRequest request, HttpServletResponse response, String username, String password, boolean rememberMe, Model model) {
         if (!request.getMethod().equalsIgnoreCase(POST)) {
@@ -323,26 +323,58 @@ public class AuthorizationController {
         if ("login".equals(request.getParameter("redirect"))) {
             return redirectUrl(WebPathUtils.forBrowser(request, "/login"));
         }
-        if (isOAuthRpLoginEntry(request)) {
-            String clientId = request.getParameter("client_id");
-            if (StringUtils.isBlank(clientId)) {
-                clientId = request.getParameter("clientId");
-            }
-            authPageSupport.prepareOauthLoginEntry(request, model, clientId);
-            return pageFactory.oauthLoginEntry(request, response, model);
-        }
         String error = request.getParameter("error");
         String callback = normalizeRedirectUrl(request.getParameter("callback"));
         if (StringUtils.isBlank(callback)) {
             callback = normalizeRedirectUrl(Utils.getCallback(request));
         }
+        if (StringUtils.isNotBlank(callback)) {
+            String clientId = authSiteRoleService.resolveRpClientId(request);
+            String canonicalUrl = WebPathUtils.oauthLoginEntryUrlIfCallbackNeedsCanonical(request, "/oauth2/login", "client_id", clientId, callback);
+            if (StringUtils.isNotBlank(canonicalUrl)) {
+                return redirectUrl(canonicalUrl);
+            }
+            callback = WebPathUtils.canonicalOauthLoginCallback(request, callback);
+        }
         if (StringUtils.isNotBlank(callback) || StringUtils.isNotBlank(error)) {
             if (StringUtils.isNotBlank(error)) {
                 model.addAttribute("error", error);
             }
+            if (StringUtils.isNotBlank(callback)) {
+                model.addAttribute("callback", callback);
+            }
             return pageFactory.login(request, response, model);
         }
+        Object rpEntry = tryRpOAuthLoginEntry(request, response, model);
+        if (rpEntry != null) {
+            return rpEntry;
+        }
         return redirectUrl(WebPathUtils.forBrowser(request, "/login"));
+    }
+
+    private Object tryRpOAuthLoginEntry(HttpServletRequest request, HttpServletResponse response, Model model) {
+        if (!authSiteRoleService.isRpEnabled()) {
+            return null;
+        }
+        String clientId = authSiteRoleService.resolveRpClientId(request);
+        if (StringUtils.isBlank(clientId)) {
+            return null;
+        }
+        WebAuthenticationEntity rpClient = webAuthenticationService.getByClientId(clientId);
+        if (rpClient == null) {
+            return null;
+        }
+        if (webOauthEndpointResolver.hasRemoteOrigin(rpClient)) {
+            try {
+                String safeCallback = WebPathUtils.safeOauthCallbackForClient(request, request.getParameter("callback"));
+                return redirectUrl(oauthRpLoginService.buildAuthorizeRedirect(request, safeCallback));
+            } catch (Exception e) {
+                log.warn("RP authorize redirect failed: clientId={}, {}", clientId, e.getMessage());
+                return null;
+            }
+        }
+        authPageSupport.prepareOauthLoginEntry(request, model, clientId);
+        return pageFactory.oauthLoginEntry(request, response, model);
     }
 
     public Object loginPost(HttpServletRequest request, HttpServletResponse response, String username, String password, boolean rememberMe, String way, String reason, Model model) {
@@ -438,6 +470,10 @@ public class AuthorizationController {
         model.addAttribute("responseType", responseType);
         model.addAttribute("denyRedirect", buildAccessDeniedRedirect(redirectURI, state));
         boolean loggedIn = !ShiroUtils.needLogin();
+        if ("1".equals(request.getParameter("loggedOut"))) {
+            ShiroUtils.logout();
+            loggedIn = false;
+        }
         String loginError = request.getParameter("error");
         if (!loggedIn) {
             if (scanTicketService.shouldUseQrAuthorize()) {
@@ -454,8 +490,9 @@ public class AuthorizationController {
     }
 
     @RequestMapping(value = "authorize/logout", method = RequestMethod.GET)
-    public ModelAndView authorizeLogout(HttpServletRequest request, @RequestParam(required = false) String returnTo) {
+    public ModelAndView authorizeLogout(HttpServletRequest request, HttpServletResponse response, @RequestParam(required = false) String returnTo) {
         ShiroUtils.logout();
+        LogoutSkipSupport.mark(request, response);
         String url = normalizeRedirectUrl(returnTo);
         if (StringUtils.isBlank(url)) {
             url = WebPathUtils.forBrowser(request, "/oauth2/authorize");

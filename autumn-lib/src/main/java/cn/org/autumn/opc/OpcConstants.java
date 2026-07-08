@@ -40,11 +40,23 @@ public final class OpcConstants {
     /** Open 接入登录页路由（无 leading slash，供 {@code @RequestMapping}） */
     public static final String OAUTH2_LOGIN_PAGE = "open/oauth2/login";
 
+    /** Open 接入登录页浏览器/API 绝对路径（含 leading slash） */
+    public static final String OAUTH2_LOGIN_PATH = OAUTH2_ROOT + "/login";
+
     /** Open 接入登录成功页路由 */
     public static final String OAUTH2_SUCCESS_PAGE = "open/oauth2/success";
 
+    /** Open 接入登录成功页浏览器绝对路径 */
+    public static final String OAUTH2_SUCCESS_PATH = OAUTH2_ROOT + "/success";
+
     /** 统一管理页路由（模板 {@code opc/opcmanage.html}） */
     public static final String MANAGE_PAGE = "opcmanage.html";
+
+    /** 接入绑定管理页（模板 {@code opc/connectbind.html}，路径 {@code /modules/opc/connectbind}） */
+    public static final String CONNECTBIND_MANAGE_PAGE = "modules/opc/connectbind";
+
+    /** 接入绑定友好管理页 API 根路径 */
+    public static final String CONNECTBIND_MANAGE_API = "opc/connectbind/manage";
 
     /** 用户确认创建新账号时的用户名前缀 */
     public static final String AUTO_REGISTER_USERNAME_PREFIX = "opc_";

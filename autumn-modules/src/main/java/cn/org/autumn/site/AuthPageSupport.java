@@ -38,6 +38,7 @@ public class AuthPageSupport {
             model.addAttribute("clientId", webAuth.getClientId());
             model.addAttribute("clientName", webAuth.getName());
             model.addAttribute("redirectUri", webAuth.getRedirectUri());
+            model.addAttribute("sameInstance", WebPathUtils.isSameSiteUrl(webAuth.getOriginUri(), sysConfigService.getBaseUrl()));
         } else if (StringUtils.isNotBlank(clientId)) {
             model.addAttribute("clientId", clientId);
             model.addAttribute("redirectUri", WebPathUtils.forBrowser(request, "/client/oauth2/callback"));
@@ -61,6 +62,7 @@ public class AuthPageSupport {
                 model.addAttribute("appName", app.getName());
             }
         }
+        AuthPageAttributes.applySafeOauthCallback(request, model);
         AuthPageAttributes.applyAuthFlowBoot(request, model);
     }
 
@@ -102,13 +104,17 @@ public class AuthPageSupport {
             if (request != null) {
                 model.addAttribute("consentCsrfToken", OAuthConsentCsrfSupport.issue(request));
             }
+            if (!model.containsAttribute("oauthLogin")) {
+                model.addAttribute("oauthLogin", true);
+            }
+            if (!model.containsAttribute("bodyClass")) {
+                model.addAttribute("bodyClass", "login-page-v2 oauth-authorize-mode");
+            }
+        } else if (!model.containsAttribute("oauthLogin")) {
+            model.addAttribute("oauthLogin", false);
         }
-        boolean oauthLogin = StringUtils.isNotBlank(sysConfigService.getOauth2LoginClientId());
-        if (!model.containsAttribute("oauthLogin") || authorizeMode) {
-            model.addAttribute("oauthLogin", authorizeMode || oauthLogin);
-        }
-        if (!model.containsAttribute("bodyClass")) {
-            model.addAttribute("bodyClass", authorizeMode ? "login-page-v2 oauth-authorize-mode" : "login-page-v2");
+        if (!authorizeMode && !model.containsAttribute("bodyClass")) {
+            model.addAttribute("bodyClass", "login-page-v2");
         }
         if (request != null && !model.containsAttribute("error")) {
             String error = request.getParameter("error");

@@ -1,12 +1,14 @@
 package cn.org.autumn.modules.client.service;
 
 import cn.org.autumn.model.AuthSiteConfig;
+import cn.org.autumn.modules.client.entity.WebAuthenticationEntity;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockHttpServletRequest;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -18,6 +20,9 @@ class AuthSiteRoleServiceTest {
 
     @Mock
     SysConfigService sysConfigService;
+
+    @Mock
+    WebAuthenticationService webAuthenticationService;
 
     @InjectMocks
     AuthSiteRoleService authSiteRoleService;
@@ -39,5 +44,23 @@ class AuthSiteRoleServiceTest {
         when(sysConfigService.getAuthSiteConfig()).thenReturn(config);
         assertEquals("as", authSiteRoleService.resolveQrcWebMode());
         assertFalse(authSiteRoleService.isRpEnabled());
+    }
+
+    @Test
+    void resolveRpClientId_prefersRequestParamOverLoginAuthentication() {
+        AuthSiteConfig config = new AuthSiteConfig();
+        config.setSiteRole(AuthSiteConfig.ROLE_AS_AND_RP);
+        when(sysConfigService.getAuthSiteConfig()).thenReturn(config);
+        when(sysConfigService.getOauth2LoginClientId()).thenReturn("default-client");
+
+        WebAuthenticationEntity entity = new WebAuthenticationEntity();
+        entity.setClientId("param-client");
+        when(webAuthenticationService.getByClientId("param-client")).thenReturn(entity);
+
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/oauth2/login");
+        request.setParameter("client_id", "param-client");
+
+        assertEquals("param-client", authSiteRoleService.resolveRpClientId(request));
+        assertEquals("param-client", authSiteRoleService.resolveRpClient(request).getClientId());
     }
 }

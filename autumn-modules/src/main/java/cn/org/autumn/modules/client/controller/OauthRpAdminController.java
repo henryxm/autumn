@@ -10,6 +10,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.Supplier;
 import javax.servlet.http.HttpServletRequest;
+import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -66,26 +67,43 @@ public class OauthRpAdminController {
 
     @PostMapping("/client/save")
     public R saveClient(HttpServletRequest request, @RequestBody Map<String, String> body) {
-        return admin(request, () -> R.ok().put("client", oauthRpAdminService.saveClient(
-                body == null ? null : body.get("clientId"),
-                body == null ? null : body.get("name"),
-                body == null ? null : body.get("clientSecret"),
-                body == null ? null : body.get("originUri"),
-                body == null ? null : body.get("redirectUri"),
-                body == null ? null : body.get("scope"),
-                body == null ? null : body.get("userInfoDelivery"))));
+        return admin(request, () -> {
+            String clientId = body == null ? null : body.get("clientId");
+            String name = body == null ? null : body.get("name");
+            String clientSecret = body == null ? null : body.get("clientSecret");
+            String originUri = body == null ? null : body.get("originUri");
+            String redirectUri = body == null ? null : body.get("redirectUri");
+            String scope = body == null ? null : body.get("scope");
+            String userInfoDelivery = body == null ? null : body.get("userInfoDelivery");
+            String icon = body == null ? null : body.get("icon");
+            String hash = body == null ? null : body.get("hash");
+            Integer pageLogin = parsePageLogin(body == null ? null : body.get("pageLogin"));
+            return R.ok().put("client", oauthRpAdminService.saveClient(clientId, name, clientSecret, originUri, redirectUri, scope, userInfoDelivery, icon, hash, pageLogin));
+        });
     }
 
     @PostMapping("/client/update")
     public R updateClient(HttpServletRequest request, @RequestBody Map<String, String> body) {
-        return admin(request, () -> R.ok().put("client", oauthRpAdminService.updateClient(
-                body == null ? null : body.get("clientId"),
-                body == null ? null : body.get("name"),
-                body == null ? null : body.get("clientSecret"),
-                body == null ? null : body.get("originUri"),
-                body == null ? null : body.get("redirectUri"),
-                body == null ? null : body.get("scope"),
-                body == null ? null : body.get("userInfoDelivery"))));
+        return admin(request, () -> {
+            String clientId = body == null ? null : body.get("clientId");
+            String name = body == null ? null : body.get("name");
+            String clientSecret = body == null ? null : body.get("clientSecret");
+            String originUri = body == null ? null : body.get("originUri");
+            String redirectUri = body == null ? null : body.get("redirectUri");
+            String scope = body == null ? null : body.get("scope");
+            String userInfoDelivery = body == null ? null : body.get("userInfoDelivery");
+            String icon = body == null ? null : body.get("icon");
+            String hash = body == null ? null : body.get("hash");
+            Integer pageLogin = parsePageLogin(body == null ? null : body.get("pageLogin"));
+            return R.ok().put("client", oauthRpAdminService.updateClient(clientId, name, clientSecret, originUri, redirectUri, scope, userInfoDelivery, icon, hash, pageLogin));
+        });
+    }
+
+    private static Integer parsePageLogin(String value) {
+        if (StringUtils.isBlank(value)) {
+            return null;
+        }
+        return "1".equals(value.trim()) || "true".equalsIgnoreCase(value.trim()) ? 1 : 0;
     }
 
     @GetMapping("/binds")

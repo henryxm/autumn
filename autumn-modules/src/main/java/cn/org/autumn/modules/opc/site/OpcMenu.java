@@ -12,6 +12,7 @@ public class OpcMenu extends ModuleMenu {
         return new String[][]{
                 {getLanguageKey(), "开放接入", "Open Connect"},
                 {"opc_opcmanage", "统一管理", "OPC Manage"},
+                {"opc_connectbind", "接入绑定管理", "Connect Bind Manage"},
         };
     }
 }

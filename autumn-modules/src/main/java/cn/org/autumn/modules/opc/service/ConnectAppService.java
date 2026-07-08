@@ -1,6 +1,7 @@
 package cn.org.autumn.modules.opc.service;
 
 import cn.org.autumn.base.EncryptModuleService;
+import cn.org.autumn.config.UsingHandler;
 import cn.org.autumn.modules.oauth.oauth2.support.RedirectUriSupport;
 import cn.org.autumn.opc.OpcConstants;
 import cn.org.autumn.opl.OplConstants;
@@ -24,11 +25,78 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class ConnectAppService extends EncryptModuleService<ConnectAppDao, ConnectAppEntity> {
+public class ConnectAppService extends EncryptModuleService<ConnectAppDao, ConnectAppEntity> implements UsingHandler {
 
     @Autowired
     @Lazy
     private SysConfigService sysConfigService;
+
+    @Override
+    public boolean using(Object value) {
+        return isIconHashInUse(value);
+    }
+
+    /**
+     * 登录页图标文件 hash 是否仍被 OPC 接入应用引用。
+     */
+    public boolean isIconHashInUse(Object hash) {
+        if (hash == null) {
+            return false;
+        }
+        String normalized = normalizeIconHash(String.valueOf(hash));
+        if (StringUtils.isBlank(normalized)) {
+            return false;
+        }
+        return countByIconHash(normalized) > 0;
+    }
+
+    public int countByIconHash(String hash) {
+        String normalized = normalizeIconHash(hash);
+        if (StringUtils.isBlank(normalized)) {
+            return 0;
+        }
+        return baseMapper.countByHashInUse(normalized);
+    }
+
+    public static String normalizeIconHash(String hash) {
+        if (StringUtils.isBlank(hash)) {
+            return null;
+        }
+        return hash.trim();
+    }
+
+    /**
+     * 更新 OPC 接入应用的登录页图标与文件 hash（扩展项目可直接调用）。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public ConnectAppEntity updateIcon(String appId, String icon, String hash) {
+        if (StringUtils.isBlank(appId)) {
+            throw new IllegalArgumentException("appId不能为空");
+        }
+        ConnectAppEntity app = getByAppId(appId.trim());
+        if (app == null) {
+            throw new IllegalArgumentException("接入应用不存在");
+        }
+        applyIcon(app, icon, hash);
+        app.setUpdate(new Date());
+        updateById(app);
+        stripSecret(app);
+        return app;
+    }
+
+    public void applyIcon(ConnectAppEntity app, String icon, String hash) {
+        if (app == null) {
+            return;
+        }
+        if (icon != null) {
+            app.setIcon(StringUtils.trimToEmpty(icon));
+        }
+        if (hash != null) {
+            app.setHash(normalizeIconHash(hash));
+        } else if (icon != null && StringUtils.isBlank(app.getIcon())) {
+            app.setHash(null);
+        }
+    }
 
     public ConnectAppEntity getByAppId(String appId) {
         if (StringUtils.isBlank(appId)) {
@@ -69,6 +137,74 @@ public class ConnectAppService extends EncryptModuleService<ConnectAppDao, Conne
         return app.getAppSecret();
     }
 
+    /** 登录页 Provider 准入：appSecret 已落库且可读（不抛异常）。 */
+    public boolean hasConfiguredSecret(ConnectAppEntity app) {
+        if (app == null || StringUtils.isBlank(app.getAppId())) {
+            return false;
+        }
+        try {
+            if (StringUtils.isNotBlank(app.getAppSecret())) {
+                return true;
+            }
+            afterRead(app);
+            if (StringUtils.isNotBlank(app.getAppSecret())) {
+                return true;
+            }
+        } catch (Exception ignored) {
+            // fall through to raw column check
+        }
+        return baseMapper.countSecretByAppId(app.getAppId().trim()) > 0;
+    }
+
+    /** 登录页显式展示的活跃 OPC 接入应用（显式 SQL，避免 Wrapper 列名差异）。 */
+    public List<ConnectAppEntity> listPageLoginActive() {
+        List<ConnectAppEntity> rows = baseMapper.listPageLoginActive();
+        return afterRead(rows);
+    }
+
+    /** 推断 OPC 授权根地址；同实例本地 OPL 可回退 {@link SysConfigService#getBaseUrl()}。 */
+    public String resolvePlatformBaseUrl(ConnectAppEntity app, String fallbackBaseUrl) {
+        if (app == null) {
+            return null;
+        }
+        if (StringUtils.isNotBlank(app.getPlatformBaseUrl())) {
+            return normalizeBaseUrlQuiet(app.getPlatformBaseUrl());
+        }
+        if (StringUtils.isNotBlank(fallbackBaseUrl)) {
+            return normalizeBaseUrlQuiet(fallbackBaseUrl);
+        }
+        return null;
+    }
+
+    /** 填充 OPC OAuth URI；platformBaseUrl 为空时返回 false，不抛异常。 */
+    public boolean tryFillDefaultUris(ConnectAppEntity app, String fallbackBaseUrl) {
+        if (app == null) {
+            return false;
+        }
+        String base = resolvePlatformBaseUrl(app, fallbackBaseUrl);
+        if (StringUtils.isBlank(base)) {
+            return StringUtils.isNotBlank(app.getAuthorizeUri());
+        }
+        try {
+            app.setPlatformBaseUrl(base);
+            fillDefaultUris(app);
+            return StringUtils.isNotBlank(app.getAuthorizeUri());
+        } catch (Exception e) {
+            return StringUtils.isNotBlank(app.getAuthorizeUri());
+        }
+    }
+
+    private String normalizeBaseUrlQuiet(String baseUrl) {
+        if (StringUtils.isBlank(baseUrl)) {
+            return null;
+        }
+        String base = baseUrl.trim();
+        while (base.endsWith("/")) {
+            base = base.substring(0, base.length() - 1);
+        }
+        return base;
+    }
+
     public void stripSecret(ConnectAppEntity app) {
         if (app != null) {
             app.setAppSecret(null);
@@ -78,15 +214,27 @@ public class ConnectAppService extends EncryptModuleService<ConnectAppDao, Conne
     @Transactional(rollbackFor = Exception.class)
     public ConnectAppEntity saveConfig(String userUuid, String appId, String appSecret, String platformBaseUrl,
                                        String redirectUri, String name, String scope) {
+        return saveConfig(userUuid, appId, appSecret, platformBaseUrl, redirectUri, name, scope, null, null, null);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public ConnectAppEntity saveConfig(String userUuid, String appId, String appSecret, String platformBaseUrl,
+                                       String redirectUri, String name, String scope, String icon, String hash, Integer pageLogin) {
         if (StringUtils.isBlank(appId) || StringUtils.isBlank(appSecret)) {
             throw new IllegalArgumentException("appId与appSecret不能为空");
         }
-        return persistConfig(userUuid, appId, appSecret, platformBaseUrl, redirectUri, name, scope, false);
+        return persistConfig(userUuid, appId, appSecret, platformBaseUrl, redirectUri, name, scope, icon, hash, pageLogin, false);
     }
 
     @Transactional(rollbackFor = Exception.class)
     public ConnectAppEntity updateConfig(String userUuid, String appId, String appSecret, String platformBaseUrl,
                                          String redirectUri, String name, String scope) {
+        return updateConfig(userUuid, appId, appSecret, platformBaseUrl, redirectUri, name, scope, null, null, null);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public ConnectAppEntity updateConfig(String userUuid, String appId, String appSecret, String platformBaseUrl,
+                                         String redirectUri, String name, String scope, String icon, String hash, Integer pageLogin) {
         if (StringUtils.isBlank(appId)) {
             throw new IllegalArgumentException("appId不能为空");
         }
@@ -102,11 +250,11 @@ public class ConnectAppService extends EncryptModuleService<ConnectAppDao, Conne
             throw new IllegalArgumentException("appSecret不能为空");
         }
         String owner = StringUtils.isBlank(userUuid) ? existing.getUser() : userUuid;
-        return persistConfig(owner, appId, appSecret, platformBaseUrl, redirectUri, name, scope, true);
+        return persistConfig(owner, appId, appSecret, platformBaseUrl, redirectUri, name, scope, icon, hash, pageLogin, true);
     }
 
     private ConnectAppEntity persistConfig(String userUuid, String appId, String appSecret, String platformBaseUrl,
-                                           String redirectUri, String name, String scope, boolean updating) {
+                                           String redirectUri, String name, String scope, String icon, String hash, Integer pageLogin, boolean updating) {
         if (StringUtils.isBlank(redirectUri)) {
             throw new IllegalArgumentException("redirectUri不能为空");
         }
@@ -130,6 +278,10 @@ public class ConnectAppService extends EncryptModuleService<ConnectAppDao, Conne
         app.setRedirectUri(redirectUri.trim());
         app.setName(StringUtils.defaultIfBlank(name, appId));
         app.setScope(StringUtils.defaultIfBlank(scope, OplConstants.DEFAULT_SCOPE));
+        applyIcon(app, icon, hash);
+        if (pageLogin != null) {
+            app.setPageLogin(pageLogin);
+        }
         fillDefaultUris(app);
         app.setStatus(ConnectAppEntity.STATUS_ACTIVE);
         Date now = new Date();
@@ -181,6 +333,19 @@ public class ConnectAppService extends EncryptModuleService<ConnectAppDao, Conne
             throw new IllegalArgumentException("无效的状态值");
         }
         app.setStatus(status);
+        app.setUpdate(new Date());
+        updateById(app);
+        stripSecret(app);
+        return app;
+    }
+
+    /** 在线申请落库后补写 {@code pageLogin}（申请接口本身不返回该字段）。 */
+    @Transactional(rollbackFor = Exception.class)
+    public ConnectAppEntity applyPageLogin(ConnectAppEntity app, Integer pageLogin) {
+        if (app == null || pageLogin == null) {
+            return app;
+        }
+        app.setPageLogin(pageLogin);
         app.setUpdate(new Date());
         updateById(app);
         stripSecret(app);

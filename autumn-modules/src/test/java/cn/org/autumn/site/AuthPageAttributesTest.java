@@ -59,6 +59,19 @@ class AuthPageAttributesTest {
     }
 
     @Test
+    void applySafeOauthCallback_unwrapsNestedOauthLoginCallback() {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/oauth2/login");
+        request.setContextPath("");
+        request.setRequestURI("/oauth2/login");
+        request.setParameter("callback", "http://localhost/oauth2/login?client_id=demo&callback=%2Flogin");
+        Model model = new ExtendedModelMap();
+
+        AuthPageAttributes.applySafeOauthCallback(request, model);
+
+        assertEquals("/login", model.getAttribute("safeOauthCallback"));
+    }
+
+    @Test
     void apply_populatesSiteAttributes() {
         SysConfigService config = mock(SysConfigService.class);
         when(config.getLoadingBrand()).thenReturn("Autumn");

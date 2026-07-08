@@ -167,6 +167,13 @@
                 <option value="bearer">bearer</option>
             </select>
             <p class="field-hint">控制从上游获取用户信息的方式：<code>legacy</code> 为传统模式，<code>bearer</code> 为 Bearer Token 模式。</p>
+            <label>登录页图标地址（icon）</label><input id="saveIcon" type="text" placeholder="可选，如 https://cdn.example/icon.png">
+            <label>图标文件 HASH（hash）</label><input id="saveHash" type="text" placeholder="上传图标后的文件 hash，供文件清理引用判断">
+            <label>登录页展示（pageLogin）</label>
+            <select id="savePageLogin">
+                <option value="0">0 - 不在登录页展示（隐式登录仍可用）</option>
+                <option value="1">1 - 在 /login 展示授权入口</option>
+            </select>
         </div>
         <div class="modal-footer">
             <button class="btn btn-secondary btn-xs" onclick="hideModal('modalSaveClient')">取消</button>
@@ -198,6 +205,13 @@
                 <option value="">默认（空）</option>
                 <option value="legacy">legacy</option>
                 <option value="bearer">bearer</option>
+            </select>
+            <label>登录页图标地址（icon）</label><input id="editIcon" type="text" placeholder="可选">
+            <label>图标文件 HASH（hash）</label><input id="editHash" type="text" placeholder="上传图标后的文件 hash">
+            <label>登录页展示（pageLogin）</label>
+            <select id="editPageLogin">
+                <option value="0">0 - 不在登录页展示</option>
+                <option value="1">1 - 在 /login 展示</option>
             </select>
         </div>
         <div class="modal-footer">
@@ -378,6 +392,9 @@ async function showEditClientModal(clientId) {
     document.getElementById('editRedirectUri').value = client.redirectUri || '';
     document.getElementById('editScope').value = client.scope || 'basic';
     document.getElementById('editUserInfoDelivery').value = client.userInfoDelivery || '';
+    document.getElementById('editIcon').value = client.icon || '';
+    document.getElementById('editHash').value = client.hash || '';
+    document.getElementById('editPageLogin').value = String(client.pageLogin != null ? client.pageLogin : 0);
     showModal('modalEditClient');
 }
 
@@ -418,7 +435,10 @@ async function submitSaveClient() {
         originUri: originUri,
         redirectUri: redirectUri,
         scope: document.getElementById('saveScope').value,
-        userInfoDelivery: document.getElementById('saveUserInfoDelivery').value
+        userInfoDelivery: document.getElementById('saveUserInfoDelivery').value,
+        icon: document.getElementById('saveIcon').value.trim(),
+        hash: document.getElementById('saveHash').value.trim(),
+        pageLogin: document.getElementById('savePageLogin').value
     });
     if (r.code === 0) {
         hideModal('modalSaveClient');
@@ -446,7 +466,10 @@ async function submitUpdateClient() {
         originUri: originUri,
         redirectUri: redirectUri,
         scope: document.getElementById('editScope').value,
-        userInfoDelivery: document.getElementById('editUserInfoDelivery').value
+        userInfoDelivery: document.getElementById('editUserInfoDelivery').value,
+        icon: document.getElementById('editIcon').value.trim(),
+        hash: document.getElementById('editHash').value.trim(),
+        pageLogin: document.getElementById('editPageLogin').value
     });
     if (r.code === 0) {
         hideModal('modalEditClient');

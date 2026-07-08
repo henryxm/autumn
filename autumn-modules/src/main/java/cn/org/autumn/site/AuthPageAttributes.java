@@ -1,6 +1,7 @@
 package cn.org.autumn.site;
 
 import cn.org.autumn.modules.sys.service.SysConfigService;
+import cn.org.autumn.modules.sys.shiro.LogoutSkipSupport;
 import cn.org.autumn.utils.Utils;
 import cn.org.autumn.utils.WebPathUtils;
 import javax.servlet.http.HttpServletRequest;
@@ -55,6 +56,7 @@ public final class AuthPageAttributes {
         model.addAttribute("siteName", sysConfigService.getLoadingBrand());
         model.addAttribute("registerEnabled", sysConfigService.isRegisterEnabled());
         model.addAttribute("forgotPasswordEnabled", sysConfigService.isForgotPasswordEnabled());
+        model.addAttribute("skipAutologinCookie", LogoutSkipSupport.COOKIE_NAME);
     }
 
     /**
@@ -73,6 +75,6 @@ public final class AuthPageAttributes {
             String query = request.getQueryString();
             raw = StringUtils.isNotBlank(query) ? url + "?" + query : url.toString();
         }
-        model.addAttribute("safeOauthCallback", WebPathUtils.safeOauthCallbackForClient(request, raw));
+        model.addAttribute("safeOauthCallback", WebPathUtils.canonicalOauthLoginCallback(request, raw));
     }
 }

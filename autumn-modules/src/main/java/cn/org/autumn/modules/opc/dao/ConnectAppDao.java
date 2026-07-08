@@ -18,4 +18,13 @@ public interface ConnectAppDao extends BaseMapper<ConnectAppEntity> {
 
     @SelectProvider(type = OpcDaoSql.class, method = "connectAppByUser")
     List<ConnectAppEntity> listByUser(@Param("user") String user);
+
+    @SelectProvider(type = OpcDaoSql.class, method = "connectAppCountByHashInUse")
+    int countByHashInUse(@Param("hash") String hash);
+
+    @SelectProvider(type = OpcDaoSql.class, method = "connectAppListPageLoginActive")
+    List<ConnectAppEntity> listPageLoginActive();
+
+    @SelectProvider(type = OpcDaoSql.class, method = "connectAppCountSecretByAppId")
+    int countSecretByAppId(@Param("appId") String appId);
 }

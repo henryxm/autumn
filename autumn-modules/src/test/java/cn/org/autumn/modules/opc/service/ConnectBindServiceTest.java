@@ -97,11 +97,13 @@ public class ConnectBindServiceTest {
     }
 
     @Test
-    public void platformUserMismatchExistingBindThrowsConflict() {
+    public void platformUserMismatchExistingBindThrowsConflictWhenCrossPlatform() {
         ConnectAppEntity app = app();
         OpenUserInfoSnapshot userInfo = userInfo(OPEN_ID, UNION_ID);
         ConnectBindEntity existing = bind(OPEN_ID, LOCAL_A);
+        existing.setId(1L);
         Mockito.when(connectBindDao.getByConnectAppAndOpenId(CONNECT_APP_UUID, OPEN_ID)).thenReturn(existing);
+        Mockito.when(connectBindSupport.isSamePlatform(app)).thenReturn(false);
 
         try {
             connectBindService.resolveAndBind(app, userInfo, LOCAL_B);
@@ -109,6 +111,48 @@ public class ConnectBindServiceTest {
         } catch (ConnectBindException e) {
             Assert.assertEquals(ConnectBindException.ConflictType.UPSTREAM_BOUND_TO_OTHER, e.getConflictType());
         }
+    }
+
+    @Test
+    public void samePlatformRealignsStaleOpenIdBindIdempotent() {
+        ConnectAppEntity app = app();
+        OpenUserInfoSnapshot userInfo = userInfo(OPEN_ID, UNION_ID);
+        ConnectBindEntity existing = bind(OPEN_ID, LOCAL_A);
+        existing.setId(1L);
+        Mockito.when(connectBindDao.getByConnectAppAndOpenId(CONNECT_APP_UUID, OPEN_ID)).thenReturn(existing);
+        Mockito.when(connectBindSupport.isSamePlatform(app)).thenReturn(true);
+        Mockito.when(sysUserService.getByUuid(LOCAL_B)).thenReturn(user(LOCAL_B));
+        Mockito.when(connectBindDao.getByConnectAppAndUser(CONNECT_APP_UUID, LOCAL_B)).thenReturn(null);
+        mockProfile(LOCAL_B);
+
+        ConnectBindResolveResult result = connectBindService.resolveAndBind(app, userInfo, LOCAL_B);
+
+        Assert.assertTrue(result.isIdempotent());
+        Assert.assertEquals(LOCAL_B, result.getProfile().getUuid());
+        Assert.assertEquals(LOCAL_B, existing.getUser());
+        Mockito.verify(connectBindDao).updateById(existing);
+        Mockito.verify(connectBindDao, Mockito.never()).insert(Mockito.any(ConnectBindEntity.class));
+    }
+
+    @Test
+    public void samePlatformUpdatesOpenIdForExistingUserBind() {
+        ConnectAppEntity app = app();
+        OpenUserInfoSnapshot userInfo = userInfo(OPEN_ID, UNION_ID);
+        ConnectBindEntity localBind = bind("legacy-open-id", LOCAL_A);
+        localBind.setId(2L);
+        Mockito.when(connectBindDao.getByConnectAppAndOpenId(CONNECT_APP_UUID, OPEN_ID)).thenReturn(null);
+        Mockito.when(connectBindDao.getByConnectAppAndUnionId(CONNECT_APP_UUID, UNION_ID)).thenReturn(null);
+        Mockito.when(sysUserService.getByUuid(LOCAL_A)).thenReturn(user(LOCAL_A));
+        Mockito.when(connectBindDao.getByConnectAppAndUser(CONNECT_APP_UUID, LOCAL_A)).thenReturn(localBind);
+        Mockito.when(connectBindSupport.isSamePlatform(app)).thenReturn(true);
+        mockProfile(LOCAL_A);
+
+        ConnectBindResolveResult result = connectBindService.resolveAndBind(app, userInfo, LOCAL_A);
+
+        Assert.assertTrue(result.isIdempotent());
+        Assert.assertEquals(OPEN_ID, localBind.getOpenId());
+        Mockito.verify(connectBindDao).updateById(localBind);
+        Mockito.verify(connectBindDao, Mockito.never()).insert(Mockito.any(ConnectBindEntity.class));
     }
 
     @Test
@@ -196,6 +240,7 @@ public class ConnectBindServiceTest {
         bind.setConnectApp(CONNECT_APP_UUID);
         bind.setOpenId(openId);
         bind.setUser(localUser);
+        bind.setId(1L);
         return bind;
     }
 

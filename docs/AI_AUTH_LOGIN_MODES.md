@@ -178,6 +178,7 @@ String base = mode == OAUTH ? origin + "/oauth2" : origin + "/open/oauth2";
 | **RP 回调成功页** | `/oauth2/success`（无 `callback` 时默认跳转） | `/open/oauth2/success` |
 | **RP OAuth 回调** | `/client/oauth2/callback` | `/open/oauth2/callback?appId=...` |
 | **运维联调入口** | `oauthasmanage.html` / `oauthrpmanage.html` | `oplmanage.html` / `opcmanage.html` 行内按钮 |
+| **用户绑定自助** | `client/weboauthbind`（codegen，运维） | **`/modules/opc/connectbind`**（友好页，用户+管理员） |
 
 **同实例自连验收（OAuth）**
 
@@ -521,9 +522,16 @@ userTokenService.saveToken(...)   → 可选保存 access_token
 
 **platformUser 来源**：同平台时 `ConnectOauthService` **直调** `OpenPlatformService.resolvePlatformUserUuid(accessToken)`（不经 HTTP userInfo JSON，不对外泄露 uuid）；跨实例仍仅 openId/unionId。
 
-**幂等**：已有 openId 绑定或 unionId 命中 → `idempotent=true`（绑定解析 NO-OP）；`ConnectLoginService` **始终** `establishSession`，未登录或跨域回调时仍能登录，已登录同用户时内部跳过。
+**幂等**：已有 openId 绑定或 unionId 命中 → `idempotent=true`（绑定解析 NO-OP）；同平台重复授权时 **platformUser 为权威**，可校正陈旧绑定行；`ConnectLoginService` **始终** `establishSession`，未登录或跨域回调时仍能登录，已登录同用户时内部跳过。
 
-**自助解绑**：登录态 `POST /open/oauth2/bind/unbind?appId=...`（`ConnectBindService.unbindForSessionUser`）；冲突页见 `/modules/opc/connectbind`。
+**自助解绑**：
+
+| 场景 | 方式 |
+|------|------|
+| 授权回调上下文 | 登录态 `POST /open/oauth2/bind/unbind?appId=...`（`ConnectBindService.unbindForSessionUser`） |
+| 冲突页 / 用户自助 | **`/modules/opc/connectbind`**（`ConnectBindManageService` + 脱敏 API，见 **`docs/AI_OPC_INTEGRATION.md` §2.3**） |
+
+**运维绑定 CRUD**：`opcmanage.html` 绑定 Tab → `/open/admin/opc/platform/binds`（`OpcBindAdminView`）；勿与友好管理页混用 codegen 列表 `modules/opc/connectbind`（已由 `opc/connectbind.html` 替代）。
 
 **禁止**：后台 `sys_config` 开关决定「是否自动注册」；跨实例首次授权须用户在选择页确认。
 
@@ -728,6 +736,8 @@ userTokenService.saveToken(...)   → 可选保存 access_token
 | OPC OAuth | `modules/opc/oauth2/OpcOauth2Controller.java` |
 | OPC 登录编排 | `modules/opc/service/ConnectLoginService.java` |
 | OPC 绑定 | `modules/opc/service/ConnectBindService.java` |
+| 绑定管理（友好页 / opcmanage） | `modules/opc/service/ConnectBindManageService.java` |
+| 绑定管理 API / 页面 | `ConnectBindManageController.java`、`opc/connectbind.html`、`OpcConstants.CONNECTBIND_*` |
 | 同平台判定 / platformUser | `modules/opc/support/ConnectBindSupport.java`、`ConnectOauthService.fetchUserInfoForBind` |
 | OPL platformUser | `OpenPlatformService.resolvePlatformUserUuid` |
 | OPC HTTP 客户端 | `modules/opc/service/ConnectOauthService.java` |
@@ -816,6 +826,7 @@ userTokenService.saveToken(...)   → 可选保存 access_token
 | [`AI_OPL_SPI.md`](AI_OPL_SPI.md) | 框架内扩展 OPL（Extension/Service） |
 | [`AI_QRC_INTEGRATION.md`](AI_QRC_INTEGRATION.md) | 扫码登录与 OAuth 分支 |
 | [`AI_AUTH_SITE_ROLES.md`](AI_AUTH_SITE_ROLES.md) | AS/RP 双角色、RP QRC 联邦、`WebOauthBind` 跨站绑定 |
+| [`AI_AUTH_LOGIN_PROVIDERS.md`](AI_AUTH_LOGIN_PROVIDERS.md) | `/login` 授权 Provider 列表、`pageLogin`、client_id 路由 |
 | [`AI_ACCOUNT_AUTH_CONFIG.md`](AI_ACCOUNT_AUTH_CONFIG.md) | 登录后跳转、账号认证 JSON |
 | [`AI_SESSION_GUARD.md`](AI_SESSION_GUARD.md) | 会话终止与重登守卫 |
 | 站内 `/modules/docs/auth-flow` | 授权流程说明页 |

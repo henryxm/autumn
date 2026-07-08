@@ -13,6 +13,29 @@
     var serverUuid = cfg.serverUuid || '';
     var serverQrUrl = cfg.serverQrUrl || '';
     var serverPollIntervalMs = cfg.serverPollIntervalMs || 2000;
+    var skipAutologinCookie = cfg.skipAutologinCookie || 'autumn_skip_autologin';
+    var authFlowOpts = { ctx: ctx, safeOauthCallback: safeOauthCallback };
+
+    function shouldSkipAutologin() {
+        try {
+            return document.cookie.indexOf(skipAutologinCookie + '=1') >= 0;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function buildProviderUrl(provider) {
+        if (window.AuthFlow && window.AuthFlow.buildAuthProviderUrl) {
+            return window.AuthFlow.buildAuthProviderUrl(provider, authFlowOpts);
+        }
+        if (!provider || !provider.loginUrl) {
+            return '#';
+        }
+        var url = provider.loginUrl.indexOf('http') === 0 ? provider.loginUrl : ctx + (provider.loginUrl.charAt(0) === '/' ? provider.loginUrl : '/' + provider.loginUrl);
+        var loginPage = ctx + '/login';
+        var callbackTarget = provider.sameInstance ? loginPage : (safeOauthCallback || loginPage);
+        return url + (url.indexOf('?') >= 0 ? '&' : '?') + 'callback=' + encodeURIComponent(callbackTarget);
+    }
 
     var vm = new Vue({
         el: '#rrapp',
@@ -36,7 +59,10 @@
             oauthCallback: '',
             authorizeLoggedIn: authorizeLoggedIn,
             consentChecked: true,
-            oauthDenyRedirect: oauthDenyRedirect
+            oauthDenyRedirect: oauthDenyRedirect,
+            authLoginVisible: false,
+            authLoginProviders: [],
+            authLoginDefaultIcon: '/statics/img/auth-login-default.svg'
         },
         computed: {
             mobileClean: function () {
@@ -80,6 +106,39 @@
                 if (!oauthLogin && (tab === 'account' || tab === 'phone')) {
                     this.refreshCode();
                 }
+            },
+            loadAuthLoginProviders: function () {
+                if (authorizeMode) {
+                    return;
+                }
+                var self = this;
+                $.ajax({
+                    type: 'GET',
+                    url: ctx + '/auth/login/providers',
+                    dataType: 'json',
+                    success: function (res) {
+                        if (!res || res.code !== 0 || !res.data || !res.data.visible) {
+                            return;
+                        }
+                        self.authLoginVisible = true;
+                        self.authLoginProviders = res.data.providers || [];
+                        self.authLoginDefaultIcon = res.data.defaultIconUrl || '/statics/img/auth-login-default.svg';
+                    }
+                });
+            },
+            buildProviderUrl: function (provider) {
+                return buildProviderUrl(provider);
+            },
+            providerIcon: function (provider) {
+                var icon = provider && provider.iconUrl ? provider.iconUrl.trim() : '';
+                if (icon) {
+                    if (/^https?:\/\//i.test(icon) || icon.charAt(0) === '/') {
+                        return icon.charAt(0) === '/' ? ctx + icon : icon;
+                    }
+                    return ctx + '/' + icon;
+                }
+                var fallback = this.authLoginDefaultIcon || '/statics/img/auth-login-default.svg';
+                return fallback.charAt(0) === '/' ? ctx + fallback : fallback;
             },
             syncOauthCallback: function () {
                 if (authorizeMode) {
@@ -337,7 +396,10 @@
                 this.submitLogin(this.mobileClean, this.mobilePassword, this.mobileCaptcha);
             },
             checkenv: function () {
-                if (oauthLogin) {
+                if (oauthLogin || authorizeMode) {
+                    return;
+                }
+                if (shouldSkipAutologin()) {
                     return;
                 }
                 $.ajax({
@@ -490,6 +552,9 @@
         if (cfg.errorMsg) {
             vm.error = true;
             vm.errorMsg = cfg.errorMsg;
+        }
+        if (!authorizeMode) {
+            vm.loadAuthLoginProviders();
         }
     } catch (e) {
     }

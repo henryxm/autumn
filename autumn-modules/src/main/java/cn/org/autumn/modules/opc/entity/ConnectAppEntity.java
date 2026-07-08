@@ -68,6 +68,16 @@ public class ConnectAppEntity implements UuidBased, Serializable {
     @Column(comment = "状态:1正常;0禁用", defaultValue = "1")
     private int status = STATUS_ACTIVE;
 
+    @Column(length = 500, comment = "图标:登录页图标地址")
+    private String icon;
+
+    @Column(comment = "HASH:图标文件HASH")
+    @Index
+    private String hash;
+
+    @Column(comment = "登录页展示:1展示;0隐式", defaultValue = "0")
+    private int pageLogin;
+
     @Column(type = DataType.DATETIME, comment = "创建:创建时间")
     private Date create;
 

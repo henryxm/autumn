@@ -3,6 +3,9 @@ package cn.org.autumn.utils;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -176,5 +179,49 @@ class WebPathUtilsTest {
         assertFalse(WebPathUtils.isValidPostLoginRedirectConfig("/module/account/me"));
         assertFalse(WebPathUtils.isValidPostLoginRedirectConfig("/sys/menu/nav"));
         assertFalse(WebPathUtils.isValidPostLoginRedirectConfig("/actuator/health"));
+    }
+
+    @Test
+    void canonicalOauthLoginCallback_unwrapsNestedOauthLoginEntry() throws Exception {
+        MockHttpServletRequest request = loginRequest();
+        String inner = URLEncoder.encode("http://localhost/login", StandardCharsets.UTF_8.name());
+        String nested = "http://localhost/oauth2/login?client_id=demo&callback=" + inner;
+        assertEquals("http://localhost/login", WebPathUtils.canonicalOauthLoginCallback(request, nested));
+    }
+
+    @Test
+    void canonicalOauthLoginCallback_deepNestedFallsBackToLoginPage() throws Exception {
+        MockHttpServletRequest request = loginRequest();
+        String level1 = URLEncoder.encode("/login", StandardCharsets.UTF_8.name());
+        String level2 = URLEncoder.encode("http://localhost/oauth2/login?client_id=demo&callback=" + level1, StandardCharsets.UTF_8.name());
+        String nested = "http://localhost/oauth2/login?client_id=demo&callback=" + level2;
+        assertEquals("/login", WebPathUtils.canonicalOauthLoginCallback(request, nested));
+    }
+
+    @Test
+    void oauthLoginEntryUrlIfCallbackNeedsCanonical_returnsRedirectWhenNested() throws Exception {
+        MockHttpServletRequest request = loginRequest();
+        String inner = URLEncoder.encode("/login", StandardCharsets.UTF_8.name());
+        String nested = "http://localhost/oauth2/login?client_id=demo&callback=" + inner;
+        String url = WebPathUtils.oauthLoginEntryUrlIfCallbackNeedsCanonical(request, "/oauth2/login", "client_id", "demo", nested);
+        assertEquals("/oauth2/login?client_id=demo&callback=%2Flogin", url);
+    }
+
+    @Test
+    void isSameSiteUrl_blankOriginIsSameInstance() {
+        assertTrue(WebPathUtils.isSameSiteUrl(null, "http://local.example.com"));
+        assertTrue(WebPathUtils.isSameSiteUrl("  ", "http://local.example.com"));
+    }
+
+    @Test
+    void isSameSiteUrl_matchesIgnoringCaseAndTrailingSlash() {
+        assertTrue(WebPathUtils.isSameSiteUrl("http://Local.Example.com/", "http://local.example.com"));
+        assertTrue(WebPathUtils.isSameSiteUrl("http://local.example.com", "http://local.example.com/"));
+    }
+
+    @Test
+    void isSameSiteUrl_rejectsDifferentHosts() {
+        assertFalse(WebPathUtils.isSameSiteUrl("http://remote.example.com", "http://local.example.com"));
+        assertFalse(WebPathUtils.isSameSiteUrl("http://local.example.com", null));
     }
 }

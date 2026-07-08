@@ -12,6 +12,7 @@ import cn.org.autumn.modules.oauth.service.ClientDetailsService;
 import cn.org.autumn.modules.open.support.AdminPageQueries;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysConfigService;
+import cn.org.autumn.utils.WebPathUtils;
 import cn.org.autumn.modules.sys.service.SysUserService;
 import cn.org.autumn.utils.PageUtils;
 import cn.org.autumn.utils.Uuid;
@@ -101,14 +102,14 @@ public class OauthRpAdminService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public OauthRpClientView saveClient(String clientId, String name, String clientSecret, String originUri, String redirectUri, String scope, String userInfoDelivery) {
+    public OauthRpClientView saveClient(String clientId, String name, String clientSecret, String originUri, String redirectUri, String scope, String userInfoDelivery, String icon, String hash, Integer pageLogin) {
         if (StringUtils.isBlank(clientId)) {
             throw new IllegalArgumentException("clientId不能为空");
         }
         clientId = clientId.trim();
         String baseUrl = sysConfigService.getBaseUrl();
         WebAuthenticationEntity existing = webAuthenticationService.getByClientId(clientId);
-        boolean sameInstance = isSameInstance(originUri, baseUrl);
+        boolean sameInstance = WebPathUtils.isSameSiteUrl(originUri, baseUrl);
         if (existing == null) {
             if (StringUtils.isBlank(clientSecret)) {
                 if (sameInstance) {
@@ -123,16 +124,16 @@ public class OauthRpAdminService {
                 throw new IllegalStateException("创建接入应用失败");
             }
         }
-        applyClientFields(existing, name, clientSecret, originUri, redirectUri, scope, userInfoDelivery, baseUrl, sameInstance);
+        applyClientFields(existing, name, clientSecret, originUri, redirectUri, scope, userInfoDelivery, baseUrl, sameInstance, icon, hash, pageLogin);
         webAuthenticationService.updateAllColumnById(existing);
         return toClientView(existing);
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public OauthRpClientView updateClient(String clientId, String name, String clientSecret, String originUri, String redirectUri, String scope, String userInfoDelivery) {
+    public OauthRpClientView updateClient(String clientId, String name, String clientSecret, String originUri, String redirectUri, String scope, String userInfoDelivery, String icon, String hash, Integer pageLogin) {
         WebAuthenticationEntity existing = requireClient(clientId);
         String baseUrl = sysConfigService.getBaseUrl();
-        applyClientFields(existing, name, clientSecret, originUri, redirectUri, scope, userInfoDelivery, baseUrl, isSameInstance(originUri, baseUrl));
+        applyClientFields(existing, name, clientSecret, originUri, redirectUri, scope, userInfoDelivery, baseUrl, WebPathUtils.isSameSiteUrl(originUri, baseUrl), icon, hash, pageLogin);
         webAuthenticationService.updateAllColumnById(existing);
         return toClientView(existing);
     }
@@ -219,7 +220,7 @@ public class OauthRpAdminService {
         return entity;
     }
 
-    private void applyClientFields(WebAuthenticationEntity entity, String name, String clientSecret, String originUri, String redirectUri, String scope, String userInfoDelivery, String baseUrl, boolean sameInstance) {
+    private void applyClientFields(WebAuthenticationEntity entity, String name, String clientSecret, String originUri, String redirectUri, String scope, String userInfoDelivery, String baseUrl, boolean sameInstance, String icon, String hash, Integer pageLogin) {
         if (StringUtils.isNotBlank(name)) {
             entity.setName(name.trim());
             entity.setDescription(name.trim());
@@ -237,6 +238,10 @@ public class OauthRpAdminService {
             entity.setScope(scope.trim());
         }
         entity.setUserInfoDelivery(StringUtils.trimToNull(userInfoDelivery));
+        webAuthenticationService.applyIcon(entity, icon, hash);
+        if (pageLogin != null) {
+            entity.setPageLogin(pageLogin);
+        }
         String authBase = sameInstance ? baseUrl : StringUtils.removeEnd(StringUtils.trimToEmpty(originUri), "/");
         if (StringUtils.isBlank(authBase)) {
             authBase = baseUrl;
@@ -244,13 +249,6 @@ public class OauthRpAdminService {
         entity.setAuthorizeUri(authBase + "/oauth2/authorize");
         entity.setAccessTokenUri(authBase + "/oauth2/token");
         entity.setUserInfoUri(authBase + "/oauth2/userInfo");
-    }
-
-    private boolean isSameInstance(String originUri, String baseUrl) {
-        if (StringUtils.isBlank(originUri)) {
-            return true;
-        }
-        return StringUtils.removeEnd(originUri.trim(), "/").equalsIgnoreCase(StringUtils.removeEnd(baseUrl, "/"));
     }
 
     private void enrichClientRows(PageUtils page) {
@@ -268,7 +266,7 @@ public class OauthRpAdminService {
 
     private OauthRpClientView toClientView(WebAuthenticationEntity entity) {
         String baseUrl = sysConfigService.getBaseUrl();
-        boolean sameInstance = isSameInstance(entity.getOriginUri(), baseUrl);
+        boolean sameInstance = WebPathUtils.isSameSiteUrl(entity.getOriginUri(), baseUrl);
         OauthRpClientView view = new OauthRpClientView();
         view.setId(entity.getId());
         view.setUuid(entity.getUuid());
@@ -287,6 +285,9 @@ public class OauthRpAdminService {
         view.setLoginAuthentication("oauth2:" + entity.getClientId());
         view.setSecretConfigured(StringUtils.isNotBlank(entity.getClientSecret()));
         view.setSameInstance(sameInstance);
+        view.setIcon(entity.getIcon());
+        view.setHash(entity.getHash());
+        view.setPageLogin(entity.getPageLogin());
         return view;
     }
 
