@@ -76,7 +76,7 @@
               <span class="glyphicon glyphicon-lock form-control-feedback"></span>
             </div>
             <div class="remember-row">
-              <label><input type="checkbox" name="rememberMe" value="true" checked> 记住我</label>
+              <label><input type="checkbox" name="rememberMe" value="true"> 记住我</label>
             </div>
             <button type="submit" class="btn btn-primary btn-block btn-login">登 录</button>
           </form>
@@ -116,7 +116,7 @@
               <span class="glyphicon glyphicon-lock form-control-feedback"></span>
             </div>
             <div class="remember-row">
-              <label><input type="checkbox" name="rememberMe" value="true" checked> 记住我</label>
+              <label><input type="checkbox" name="rememberMe" value="true"> 记住我</label>
             </div>
             <button type="submit" class="btn btn-primary btn-block btn-login">登 录</button>
           </form>
@@ -141,13 +141,8 @@
           <p>「${clientName!clientId!'未知应用'}」申请使用您的账号登录，请确认是否授权。</p>
           <!--</#if>-->
         </div>
+        <#include "/_oauth_consent_app_card.html">
         <!--<#if oplAuthorize?? && oplAuthorize>-->
-        <div class="oauth-consent-app">
-          <div class="app-icon-placeholder"><i class="fa fa-cubes"></i></div>
-          <div class="app-meta">
-            <p class="app-name">${appName!appId!'未知应用'}</p>
-          </div>
-        </div>
         <ul class="oauth-perm-list">
           <li><i class="fa fa-check-circle"></i><span>在本应用内识别您的身份</span></li>
           <li><i class="fa fa-check-circle"></i><span>在同一开发者的其他应用中识别同一账号</span></li>
@@ -172,16 +167,6 @@
           <a class="btn btn-consent btn-consent-ghost" :href="oauthDenyRedirect">取消</a>
         </form>
         <!--<#else>-->
-        <div class="oauth-consent-app">
-          <!--<#if clientIconUri?? && clientIconUri?has_content>-->
-          <img class="app-icon" src="${clientIconUri}" alt="">
-          <!--<#else>-->
-          <div class="app-icon-placeholder"><i class="fa fa-cube"></i></div>
-          <!--</#if>-->
-          <div class="app-meta">
-            <p class="app-name">${clientName!clientId!'未知应用'}</p>
-          </div>
-        </div>
         <ul class="oauth-perm-list">
           <li><i class="fa fa-check-circle"></i><span>查看您的基本账号信息（昵称、头像等）</span></li>
           <li><i class="fa fa-check-circle"></i><span>获取用于登录关联的唯一标识</span></li>
@@ -350,7 +335,8 @@ window.__LOGIN_CONFIG__ = {
   serverUuid: '${uuid!""?js_string}',
   serverQrUrl: '${qrUrl!""?js_string}',
   serverPollIntervalMs: ${pollIntervalMs!2000},
-  skipAutologinCookie: '${skipAutologinCookie!"autumn_skip_autologin"?js_string}'
+  skipAutologinCookie: '${skipAutologinCookie!"autumn_skip_autologin"?js_string}',
+  devAutologinEnabled: ${(devAutologinEnabled!false)?c}
   //<#if oauthLogin?? && oauthLogin>
   ,oauthLogin: true
   //<#else>
@@ -362,6 +348,7 @@ window.__LOGIN_CONFIG__ = {
 };
 </script>
 <script src="${request.contextPath}/statics/js/auth-flow.js?_${.now?long}"></script>
+<script src="${request.contextPath}/statics/js/autologin-check.js?_${.now?long}"></script>
 <script src="${request.contextPath}/statics/js/login.js?_${.now?long}"></script>
 </body>
 </html>

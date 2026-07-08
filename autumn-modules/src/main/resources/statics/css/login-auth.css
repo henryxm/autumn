@@ -507,8 +507,38 @@ body.oauth-authorize-mode .login-shell { max-width: 920px; }
   margin-bottom: 18px;
 }
 .oauth-consent-app .app-icon,
-.oauth-consent-app .app-icon-placeholder { width: 48px; height: 48px; flex-shrink: 0; }
-.oauth-consent-app .app-name { font-size: 15px; font-weight: 700; margin: 0 0 4px; color: var(--login-text); }
+.oauth-app-info .app-icon {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  object-fit: cover;
+  background: #fff;
+  border: 1px solid var(--login-border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+.oauth-consent-app .app-icon-fallback,
+.oauth-app-info .app-icon-fallback {
+  object-fit: contain;
+  padding: 8px;
+  background: linear-gradient(135deg, rgba(91, 108, 240, 0.08), rgba(124, 58, 237, 0.06));
+}
+.oauth-consent-app .app-meta,
+.oauth-app-info .app-meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.oauth-consent-app .app-name,
+.oauth-app-info .app-name {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--login-text);
+  line-height: 1.35;
+}
 .oauth-consent-app .app-id { font-size: 12px; color: var(--login-muted); margin: 0; word-break: break-all; }
 .oauth-perm-list {
   list-style: none;
@@ -591,10 +621,10 @@ body.oauth-authorize-mode .login-shell { max-width: 920px; }
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 6px;
   padding: 12px 6px 10px;
   color: var(--login-muted);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   text-decoration: none;
   border-radius: 10px 10px 0 0;
@@ -605,9 +635,9 @@ body.oauth-authorize-mode .login-shell { max-width: 920px; }
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  font-size: 16px;
+  width: 40px;
+  height: 40px;
+  font-size: 20px;
   border-radius: 10px;
   background: transparent;
   transition: background 0.2s, color 0.2s;
@@ -861,15 +891,6 @@ body.oauth-authorize-mode .login-shell { max-width: 920px; }
   font-weight: 600;
   letter-spacing: 0.04em;
 }
-.oauth-app-info .app-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  object-fit: cover;
-  background: #fff;
-  border: 1px solid var(--login-border);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-}
 .oauth-app-info .app-icon-placeholder {
   width: 48px;
   height: 48px;
@@ -881,13 +902,6 @@ body.oauth-authorize-mode .login-shell { max-width: 920px; }
   justify-content: center;
   font-size: 20px;
   box-shadow: 0 4px 12px rgba(91, 108, 240, 0.3);
-}
-.oauth-app-info .app-meta { flex: 1; min-width: 0; text-align: left; }
-.oauth-app-info .app-name {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--login-text);
-  margin: 0 0 6px;
 }
 .oauth-app-info .app-scope {
   font-size: 12px;
@@ -922,7 +936,7 @@ body.oauth-authorize-mode .login-shell { max-width: 920px; }
   body.login-page-v2 { padding: 20px 12px; }
   .login-body { padding: 22px 20px 24px; }
   .login-tabs li a { font-size: 11px; padding: 10px 4px 8px; }
-  .login-tabs li a i { width: 28px; height: 28px; font-size: 14px; }
+  .login-tabs li a i { width: 34px; height: 34px; font-size: 17px; }
   .login-shell.login-main .login-brand h1 { font-size: 20px; }
   .qr-frame { width: 208px; }
   #loginQrcodeBox { width: 176px; height: 176px; }

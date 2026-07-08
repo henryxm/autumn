@@ -103,6 +103,7 @@ public class AuthPageSupport {
             model.addAttribute("authorizeLoginAction", oplAuthorize ? OplConstants.OAUTH2_LOGIN : "/oauth2/login");
             if (request != null) {
                 model.addAttribute("consentCsrfToken", OAuthConsentCsrfSupport.issue(request));
+                AuthPageAttributes.applyAuthLoginDefaultIcon(request, model);
             }
             if (!model.containsAttribute("oauthLogin")) {
                 model.addAttribute("oauthLogin", true);

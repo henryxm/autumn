@@ -5,6 +5,7 @@ import static javax.servlet.http.HttpServletResponse.SC_UNAUTHORIZED;
 import static org.apache.oltu.oauth2.common.OAuth.HttpMethod.POST;
 
 import cn.org.autumn.modules.oauth.oauth2.support.OAuthAccessTokenResolver;
+import cn.org.autumn.modules.oauth.oauth2.support.OAuthAuthorizeAppIconSupport;
 import cn.org.autumn.modules.oauth.oauth2.support.OAuthConsentCsrfSupport;
 import cn.org.autumn.modules.oauth.oauth2.support.OAuthConsentSupport;
 import cn.org.autumn.modules.oauth.oauth2.support.OAuthRedirectSupport;
@@ -21,7 +22,9 @@ import cn.org.autumn.modules.qrc.service.ScanTicketService;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysUserService;
 import cn.org.autumn.modules.sys.shiro.LogoutSkipSupport;
+import cn.org.autumn.modules.sys.shiro.ShiroSessionService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
+import cn.org.autumn.modules.sys.support.SysLogoutSupport;
 import cn.org.autumn.modules.usr.service.UserProfileService;
 import cn.org.autumn.opl.OplConstants;
 import cn.org.autumn.opl.model.OpenAuthorizationRequest;
@@ -35,11 +38,13 @@ import cn.org.autumn.utils.IPUtils;
 import cn.org.autumn.utils.Utils;
 import cn.org.autumn.utils.WebPathUtils;
 import com.alibaba.fastjson.JSON;
+
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.Enumeration;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.apache.oltu.oauth2.as.response.OAuthASResponse;
@@ -102,6 +107,12 @@ public class OplAuthorizationController {
     @Autowired
     private OplOAuthRateLimiter oplOAuthRateLimiter;
 
+    @Autowired
+    private ShiroSessionService shiroSessionService;
+
+    @Autowired
+    private OAuthAuthorizeAppIconSupport authorizeAppIconSupport;
+
     @RequestMapping(value = "authorize", method = {RequestMethod.GET, RequestMethod.HEAD})
     public String authorize(HttpServletRequest request, HttpServletResponse response, Model model,
                             @RequestParam(name = OplConstants.PARAM_APP_ID) String appId,
@@ -128,12 +139,14 @@ public class OplAuthorizationController {
                     TicketSnapshot ticket = scanTicketService.createAuthorizeTicket(request, appId, redirectUri, resolvedScope, state, null);
                     return oplConsentView(request, response, model, app, appId, redirectUri, responseType, resolvedScope, state, codeChallenge, codeChallengeMethod, ticket, false, loginError);
                 } catch (Exception e) {
-                    log.warn("opl QRC authorize ticket failed: {}", e.getMessage());
+                    if (log.isDebugEnabled())
+                        log.debug("opl QRC authorize ticket failed: {}", e.getMessage());
                 }
             }
             return oplConsentView(request, response, model, app, appId, redirectUri, responseType, resolvedScope, state, codeChallenge, codeChallengeMethod, null, !ShiroUtils.needLogin(), loginError);
         } catch (Exception e) {
-            log.warn("opl authorize failed: {}", e.getMessage());
+            if (log.isDebugEnabled())
+                log.debug("opl authorize failed: {}", e.getMessage());
             try {
                 return OAuthResponseSupport.writeOAuthError(response, e.getMessage(), OAuthError.OAUTH_ERROR, SC_BAD_REQUEST);
             } catch (OAuthSystemException ex) {
@@ -351,7 +364,7 @@ public class OplAuthorizationController {
 
     @RequestMapping(value = "authorize/logout", method = RequestMethod.GET)
     public ModelAndView authorizeLogout(HttpServletRequest request, HttpServletResponse response, @RequestParam(required = false) String returnTo) {
-        ShiroUtils.logout();
+        SysLogoutSupport.logoutAndForceReauth(shiroSessionService);
         LogoutSkipSupport.mark(request, response);
         String url = normalizeRedirectUrl(returnTo);
         if (StringUtils.isBlank(url)) {
@@ -404,6 +417,7 @@ public class OplAuthorizationController {
         model.addAttribute("bodyClass", "login-page-v2 oauth-authorize-mode");
         model.addAttribute("appId", appId);
         model.addAttribute("appName", app.getName());
+        AuthPageAttributes.applyConsentApp(model, StringUtils.defaultIfBlank(app.getName(), appId), authorizeAppIconSupport.resolveByAppId(appId));
         model.addAttribute("appType", app.getAppType() == null ? OpenAppType.Web.name() : app.getAppType().name());
         model.addAttribute("redirectUri", redirectUri);
         model.addAttribute("responseType", responseType);

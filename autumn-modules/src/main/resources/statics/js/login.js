@@ -14,6 +14,7 @@
     var serverQrUrl = cfg.serverQrUrl || '';
     var serverPollIntervalMs = cfg.serverPollIntervalMs || 2000;
     var skipAutologinCookie = cfg.skipAutologinCookie || 'autumn_skip_autologin';
+    var devAutologinEnabled = !!cfg.devAutologinEnabled;
     var authFlowOpts = { ctx: ctx, safeOauthCallback: safeOauthCallback };
 
     function shouldSkipAutologin() {
@@ -396,6 +397,25 @@
                 this.submitLogin(this.mobileClean, this.mobilePassword, this.mobileCaptcha);
             },
             checkenv: function () {
+                if (!devAutologinEnabled) {
+                    return;
+                }
+                if (window.AutologinCheck) {
+                    AutologinCheck.run({
+                        ctx: ctx,
+                        autologinEnabled: devAutologinEnabled,
+                        oauthLogin: oauthLogin,
+                        authorizeMode: authorizeMode,
+                        skipAutologinCookie: skipAutologinCookie,
+                        onRedirect: function (url) {
+                            vm.redirectAfterLogin(url);
+                        },
+                        onDevProbe: function () {
+                            vm.submitLogin('', '', '', { silent: true });
+                        }
+                    });
+                    return;
+                }
                 if (oauthLogin || authorizeMode) {
                     return;
                 }
@@ -414,7 +434,9 @@
                             vm.redirectAfterLogin(String(result.data));
                             return;
                         }
-                        vm.submitLogin('', '', '', { silent: true });
+                        if (result.devProbe) {
+                            vm.submitLogin('', '', '', { silent: true });
+                        }
                     }
                 });
             },

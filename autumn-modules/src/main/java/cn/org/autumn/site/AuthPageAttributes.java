@@ -1,5 +1,6 @@
 package cn.org.autumn.site;
 
+import cn.org.autumn.model.AuthLoginProviderList;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.modules.sys.shiro.LogoutSkipSupport;
 import cn.org.autumn.utils.Utils;
@@ -16,6 +17,9 @@ public final class AuthPageAttributes {
     public static final String ATTR_OAUTH_AUTHORIZE = "oauthAuthorize";
     public static final String ATTR_OPL_AUTHORIZE = "oplAuthorize";
     public static final String ATTR_AUTH_FLOW_KIND = "authFlowKind";
+    public static final String ATTR_CONSENT_APP_NAME = "consentAppName";
+    public static final String ATTR_CONSENT_APP_ICON_URI = "consentAppIconUri";
+    public static final String ATTR_AUTH_LOGIN_DEFAULT_ICON = "authLoginDefaultIcon";
 
     public static final String FLOW_OAUTH_AS_AUTHORIZE = "oauth_as_authorize";
     public static final String FLOW_OPL_AS_AUTHORIZE = "opl_as_authorize";
@@ -32,6 +36,28 @@ public final class AuthPageAttributes {
         if (model != null && StringUtils.isNotBlank(kind)) {
             model.addAttribute(ATTR_AUTH_FLOW_KIND, kind);
         }
+    }
+
+    /** 授权确认卡片：应用名称与图标（无图标时模板回退 {@link #ATTR_AUTH_LOGIN_DEFAULT_ICON}）。 */
+    public static void applyConsentApp(Model model, String appName, String iconUri) {
+        if (model == null) {
+            return;
+        }
+        model.addAttribute(ATTR_CONSENT_APP_NAME, StringUtils.defaultIfBlank(appName, "未知应用"));
+        if (StringUtils.isNotBlank(iconUri)) {
+            model.addAttribute(ATTR_CONSENT_APP_ICON_URI, iconUri.trim());
+        }
+    }
+
+    public static void applyAuthLoginDefaultIcon(HttpServletRequest request, Model model) {
+        if (model == null) {
+            return;
+        }
+        String path = AuthLoginProviderList.DEFAULT_ICON_PATH;
+        if (request != null) {
+            path = request.getContextPath() + path;
+        }
+        model.addAttribute(ATTR_AUTH_LOGIN_DEFAULT_ICON, path);
     }
 
     /**
@@ -57,6 +83,8 @@ public final class AuthPageAttributes {
         model.addAttribute("registerEnabled", sysConfigService.isRegisterEnabled());
         model.addAttribute("forgotPasswordEnabled", sysConfigService.isForgotPasswordEnabled());
         model.addAttribute("skipAutologinCookie", LogoutSkipSupport.COOKIE_NAME);
+        boolean devAutologinEnabled = sysConfigService.getAccountAuthConfig() != null && sysConfigService.getAccountAuthConfig().isDevAutologinEnabled();
+        model.addAttribute("devAutologinEnabled", devAutologinEnabled);
     }
 
     /**

@@ -9,7 +9,7 @@ import cn.org.autumn.modules.client.entity.WebAuthenticationEntity;
 import cn.org.autumn.modules.client.entity.WebOauthBindEntity;
 import cn.org.autumn.modules.oauth.entity.ClientDetailsEntity;
 import cn.org.autumn.modules.oauth.service.ClientDetailsService;
-import cn.org.autumn.modules.open.support.AdminPageQueries;
+import cn.org.autumn.modules.support.AdminPageQueries;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.utils.WebPathUtils;

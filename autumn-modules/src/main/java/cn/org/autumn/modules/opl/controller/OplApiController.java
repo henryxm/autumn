@@ -4,7 +4,7 @@ import cn.org.autumn.annotation.Authenticated;
 import cn.org.autumn.model.Request;
 import cn.org.autumn.model.Response;
 import cn.org.autumn.model.UserContext;
-import cn.org.autumn.modules.open.support.OpenApiUsers;
+import cn.org.autumn.modules.support.OpenApiUsers;
 import cn.org.autumn.modules.opl.dto.OplAppRegisterRequest;
 import cn.org.autumn.opl.OplConstants;
 import cn.org.autumn.opl.model.OpenAccountSnapshot;

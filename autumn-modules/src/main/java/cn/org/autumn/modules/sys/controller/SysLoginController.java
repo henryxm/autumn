@@ -3,17 +3,22 @@ package cn.org.autumn.modules.sys.controller;
 import cn.org.autumn.annotation.SkipInterceptor;
 import cn.org.autumn.config.Config;
 import cn.org.autumn.database.CrudGuard;
+import cn.org.autumn.model.AccountAuthConfig;
 import cn.org.autumn.modules.spm.service.SuperPositionModelService;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.modules.sys.service.SysUserService;
 import cn.org.autumn.modules.sys.shiro.LogoutSkipSupport;
+import cn.org.autumn.modules.sys.shiro.ShiroSessionService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
+import cn.org.autumn.modules.sys.support.SysAutologinSupport;
+import cn.org.autumn.modules.sys.support.SysLogoutSupport;
 import cn.org.autumn.modules.usr.service.UserProfileService;
 import cn.org.autumn.site.PageFactory;
 import cn.org.autumn.utils.R;
 import com.google.code.kaptcha.Constants;
 import com.google.code.kaptcha.Producer;
+import lombok.extern.slf4j.Slf4j;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import javax.imageio.ImageIO;
@@ -31,6 +36,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 @Controller
+@Slf4j
 public class SysLoginController {
 
     @Autowired(required = false)
@@ -55,6 +61,10 @@ public class SysLoginController {
     @Autowired
     @Lazy
     SysConfigService sysConfigService;
+
+    @Autowired
+    @Lazy
+    ShiroSessionService shiroSessionService;
 
     @RequestMapping("captcha.jpg")
     @SkipInterceptor
@@ -123,21 +133,20 @@ public class SysLoginController {
     }
 
     /**
-     * 登录页环境探测：已登录则返回跳转地址；开发环境未登录时返回成功供 checkenv 静默登录。
+     * 登录页环境探测：默认关闭（{@code devAutologinEnabled=false}）时不自动跳转、不静默登录；
+     * 开启后仅 dev 环境返回 {@code devProbe} 供静默 admin 探测。
      */
     @ResponseBody
     @RequestMapping(value = "sys/autologin", method = RequestMethod.POST)
     public R autoLogin(HttpServletRequest request) {
-        if (LogoutSkipSupport.marked(request)) {
-            return R.error();
+        AccountAuthConfig authConfig = sysConfigService.getAccountAuthConfig();
+        boolean devAutologinEnabled = authConfig != null && authConfig.isDevAutologinEnabled();
+        String redirect = SysAuthSupport.resolvePostLoginRedirect(request, superPositionModelService, authConfig);
+        R response = SysAutologinSupport.buildAutologinResponse(LogoutSkipSupport.marked(request), ShiroUtils.isAuthenticated(), ShiroUtils.isLogin(), Config.isDev(), devAutologinEnabled, redirect);
+        if (log.isDebugEnabled()) {
+            log.debug("autologin result: reason={}", response.get("reason"));
         }
-        if (ShiroUtils.isLogin()) {
-            return R.ok().put("data", SysAuthSupport.resolvePostLoginRedirect(request, superPositionModelService, sysConfigService.getAccountAuthConfig()));
-        }
-        if (Config.isDev()) {
-            return R.ok();
-        }
-        return R.error();
+        return response;
     }
 
     /**
@@ -146,7 +155,7 @@ public class SysLoginController {
     @RequestMapping(value = "logout", method = RequestMethod.GET)
     @SkipInterceptor
     public String logout(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
-        ShiroUtils.logout();
+        SysLogoutSupport.logoutAndForceReauth(shiroSessionService);
         LogoutSkipSupport.mark(httpServletRequest, httpServletResponse);
         return "redirect:" + pageFactory.logout(httpServletRequest, httpServletResponse, model);
     }
