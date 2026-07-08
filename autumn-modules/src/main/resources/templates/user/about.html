@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <title>${siteName!'Autumn'} 关于我们</title>
+  <#include "/_auth_head.html">
+</head>
+<body class="${bodyClass!'login-page-v2 legal-page'}">
+<div class="login-shell legal-shell">
+  <div class="legal-card">
+    <h1>关于 ${siteName!'Autumn'}</h1>
+    <p class="legal-meta">了解本平台的基本信息与服务说明</p>
+
+    <!--<#if siteBranding?? && siteBranding.tagline?? && siteBranding.tagline?has_content>-->
+    <p>${siteBranding.tagline}</p>
+    <!--<#else>-->
+    <p>${siteName!'Autumn'} 是基于 Autumn 框架构建的站点服务。本页为框架默认占位内容，可在子项目中覆盖 <code>user/about.html</code> 模板，或在「站点门户配置」中将「关于我们」链接指向自定义地址。</p>
+    <!--</#if>-->
+
+    <h2>服务说明</h2>
+    <p>本平台提供账号登录、注册、授权及系统管理能力。具体业务功能以实际部署版本为准。</p>
+
+    <h2>联系我们</h2>
+    <!--<#if siteLegalLinks?? && siteLegalLinks.contactUrl?? && siteLegalLinks.contactUrl?has_content>-->
+    <!--<#if siteLegalLinks.contactExternal>-->
+    <p>如需帮助，请访问 <a href="${siteLegalLinks.contactUrl}" target="_blank" rel="noopener noreferrer">联系我们</a>。</p>
+    <!--<#else>-->
+    <p>如需帮助，请访问 <a href="${siteLegalLinks.contactUrl}">联系我们</a>。</p>
+    <!--</#if>-->
+    <!--<#else>-->
+    <p>如需帮助，请通过系统管理员或运营方公布的渠道联系我们。</p>
+    <!--</#if>-->
+
+    <a class="legal-back" href="${request.contextPath}/login"><i class="fa fa-arrow-left"></i> 返回登录</a>
+  </div>
+  <#include "/_auth_site_footer.html">
+</div>
+</body>
+</html>

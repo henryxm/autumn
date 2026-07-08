@@ -18,6 +18,7 @@ import cn.org.autumn.site.AuthPageAttributes;
 import cn.org.autumn.site.AuthPageSupport;
 import cn.org.autumn.site.PageFactory;
 import cn.org.autumn.site.PluginFactory;
+import cn.org.autumn.site.SitePortalSupport;
 import cn.org.autumn.thread.TagTaskExecutor;
 import cn.org.autumn.utils.WebPathUtils;
 import java.util.*;
@@ -65,6 +66,9 @@ public class SysPageController implements ErrorController {
 
     @Autowired
     AuthPageSupport authPageSupport;
+
+    @Autowired
+    SitePortalSupport sitePortalSupport;
 
     List<String> active = new ArrayList<>();
 
@@ -196,17 +200,34 @@ public class SysPageController implements ErrorController {
     }
 
     @RequestMapping({"user/service.html", "user/service"})
-    public String userService(Model model) {
+    public String userService(HttpServletRequest request, Model model) {
         model.addAttribute("bodyClass", "login-page-v2 legal-page");
-        AuthPageAttributes.apply(model, sysConfigService);
+        AuthPageAttributes.apply(model, sysConfigService, request, sitePortalSupport);
         return "user/service";
     }
 
     @RequestMapping({"user/privacy.html", "user/privacy"})
-    public String userPrivacy(Model model) {
+    public String userPrivacy(HttpServletRequest request, Model model) {
         model.addAttribute("bodyClass", "login-page-v2 legal-page");
-        AuthPageAttributes.apply(model, sysConfigService);
+        AuthPageAttributes.apply(model, sysConfigService, request, sitePortalSupport);
         return "user/privacy";
+    }
+
+    @RequestMapping({"user/about.html", "user/about"})
+    public String userAbout(HttpServletRequest request, Model model) {
+        model.addAttribute("bodyClass", "login-page-v2 legal-page");
+        AuthPageAttributes.apply(model, sysConfigService, request, sitePortalSupport);
+        return "user/about";
+    }
+
+    @RequestMapping({"siteportal.html"})
+    @SkipInterceptor
+    public String siteportal(HttpServletRequest servlet) {
+        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
+            return "404";
+        }
+        ipWhiteService.check(servlet, getClass(), "siteportal");
+        return "siteportal";
     }
 
     @RequestMapping("main.html")

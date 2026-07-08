@@ -10,27 +10,7 @@
 </head>
 <body class="${bodyClass!'login-page-v2'}" data-ctx="${request.contextPath?js_string}">
 <div class="login-shell login-main" id="rrapp" v-cloak>
-  <div class="login-brand">
-    <div class="brand-icon"><i class="fa fa-shield"></i></div>
-    <h1>
-      <!--<#if oauthAuthorize?? && oauthAuthorize>-->
-      应用授权
-      <!--<#elseif oplAuthorize?? && oplAuthorize>-->
-      应用授权
-      <!--<#else>-->
-      Autumn 管理系统
-      <!--</#if>-->
-    </h1>
-    <p>
-      <!--<#if oauthAuthorize?? && oauthAuthorize>-->
-      请先登录，勾选授权协议后点击确认
-      <!--<#elseif oplAuthorize?? && oplAuthorize>-->
-      请先登录，再确认是否授权该应用
-      <!--<#else>-->
-      欢迎回来，请选择登录方式
-      <!--</#if>-->
-    </p>
-  </div>
+  <#include "/_auth_site_header.html">
 
   <!--<#if (oauthAuthorize?? && oauthAuthorize) || (oplAuthorize?? && oplAuthorize)>-->
   <div class="login-card oauth-split-card">
@@ -303,7 +283,7 @@
   </div>
   <!--</#if>-->
 
-  <div class="login-footer">&copy; ${siteName!'Autumn Framework'}</div>
+  <#include "/_auth_site_footer.html">
 </div>
 
 <script src="${request.contextPath}/statics/libs/jquery.min.js"></script>

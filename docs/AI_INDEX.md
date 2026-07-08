@@ -49,6 +49,7 @@
 - **`docs/AI_OPL_SPI.md`**：**OPL 扩展标准**（`cn.org.autumn.opl` Service/Extension、事件、业务模块扩展清单）
 - **`docs/AI_OPC_INTEGRATION.md`**：**OPC 开放接入手册**（本系统作为第三方接入 opl、本地用户绑定）
 - **`docs/AI_ACCOUNT_AUTH_CONFIG.md`**：**账号认证配置**（`ACCOUNT_AUTH_CONFIG`、`postLoginRedirect` 登录后跳转、json_type 字段刷新 API/管理页）
+- **`docs/AI_SITE_PORTAL.md`**：**站点门户与合规配置**（`SITE_PORTAL_CONFIG`、登录页品牌/备案/法律链接、`SiteLegalLinksHandler` SPI）
 
 ## 2. 推荐加载矩阵（按场景）
 
@@ -76,6 +77,7 @@
 - **OAuth2 第三方登录 / 用户信息对接**（`cn.org.autumn.modules.oauth`）：**`docs/AI_OAUTH_INTEGRATION.md`** + **`docs/AI_QRC_INTEGRATION.md`**（含扫码分支）+ 站内 `/modules/docs/auth-flow`
 - **OPL 开放平台**（`cn.org.autumn.modules.opl`）：**`docs/AI_OPL_INTEGRATION.md`**（HTTP 对接）+ **`docs/AI_OPL_SPI.md`**（Service/Extension 扩展）+ **`docs/AI_OPC_INTEGRATION.md`**（RP 接入）
 - **登录后跳转 / 账号认证 JSON 配置**（`AccountAuthConfig`、`postLoginRedirect`、json 配置刷新）：**`docs/AI_ACCOUNT_AUTH_CONFIG.md`**（叠加 **`docs/AI_SESSION_GUARD.md`** 若涉及会话过期提示）
+- **登录页品牌 / ICP 备案 / 法律链接**（`SitePortalConfig`、`siteportal.html`）：**`docs/AI_SITE_PORTAL.md`**
 
 ## 3. 标准引用顺序
 

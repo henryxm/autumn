@@ -1,0 +1,37 @@
+        <!--<#list siteFilings as filing>-->
+        <span class="site-footer-filing-unit">
+        <span class="site-footer-sep" aria-hidden="true">·</span>
+        <span class="site-footer-item site-footer-filing">
+        <!--<#if filing.prefix?? && filing.prefix?has_content>-->
+        <span class="site-filing-affix site-filing-prefix">${filing.prefix}</span>
+        <!--</#if>-->
+        <!--<#if filing.url?? && filing.url?has_content>-->
+        <!--<#if filing.external>-->
+        <a class="site-filing-link site-filing-core" href="${filing.url}" target="_blank" rel="noopener noreferrer">
+          <!--<#if filing.type?? && filing.type == 'psb' && filing.showIcon>-->
+          <#include "/_auth_site_psb_icon.html">
+          <!--</#if>-->
+          <span class="site-filing-label">${filing.number}</span>
+        </a>
+        <!--<#else>-->
+        <a class="site-filing-link site-filing-core" href="${filing.url}">
+          <!--<#if filing.type?? && filing.type == 'psb' && filing.showIcon>-->
+          <#include "/_auth_site_psb_icon.html">
+          <!--</#if>-->
+          <span class="site-filing-label">${filing.number}</span>
+        </a>
+        <!--</#if>-->
+        <!--<#else>-->
+        <span class="site-filing-core site-filing-text">
+          <!--<#if filing.type?? && filing.type == 'psb' && filing.showIcon>-->
+          <#include "/_auth_site_psb_icon.html">
+          <!--</#if>-->
+          <span class="site-filing-label">${filing.number}</span>
+        </span>
+        <!--</#if>-->
+        <!--<#if filing.suffix?? && filing.suffix?has_content>-->
+        <span class="site-filing-affix site-filing-suffix">${filing.suffix}</span>
+        <!--</#if>-->
+        </span>
+        </span>
+        <!--</#list>-->

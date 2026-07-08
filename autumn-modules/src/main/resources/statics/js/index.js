@@ -23,14 +23,53 @@ var menuItem = Vue.extend({
     ].join('')
 });
 
-//iframe自适应
-$(window).on('resize', function() {
+//iframe自适应（子页设置 __AUTUMN_IFRAME_AUTO_HEIGHT__ 时按内容撑高，由框架页滚动）
+function measureIframeDocumentHeight(win) {
+	try {
+		if (win.AutumnIframeAutoHeight && typeof win.AutumnIframeAutoHeight.measureDocumentHeight === 'function') {
+			return win.AutumnIframeAutoHeight.measureDocumentHeight(win.document);
+		}
+		var doc = win.document.documentElement;
+		var body = win.document.body;
+		return Math.max(doc.scrollHeight, doc.offsetHeight, body ? body.scrollHeight : 0);
+	} catch (e) {
+		return 0;
+	}
+}
+
+function resizeContentIframes() {
 	var $content = $('.content');
-	$content.height($(this).height() - 120);
-	$content.find('iframe').each(function() {
-		$(this).height($content.height());
+	var $iframe = $content.find('iframe');
+	var autoHeight = false;
+	$iframe.each(function() {
+		var win = this.contentWindow;
+		if (win && win.__AUTUMN_IFRAME_AUTO_HEIGHT__) {
+			autoHeight = true;
+		}
 	});
-}).resize();
+	if (autoHeight) {
+		$content.css({ height: 'auto', minHeight: 0, overflow: 'visible' });
+		$iframe.each(function() {
+			var win = this.contentWindow;
+			if (win && win.__AUTUMN_IFRAME_AUTO_HEIGHT__) {
+				var h = measureIframeDocumentHeight(win);
+				if (h > 0) {
+					$(this).attr('scrolling', 'no').css({ overflow: 'visible', height: h + 'px' });
+				}
+			}
+		});
+	} else {
+		$content.css({ minHeight: '', overflow: '' });
+		var contentHeight = $(window).height() - 120;
+		$content.height(contentHeight);
+		$iframe.attr('scrolling', 'yes').css({ overflow: '', height: contentHeight + 'px' });
+	}
+}
+window.resizeContentIframes = resizeContentIframes;
+$(window).on('resize', resizeContentIframes).resize();
+$(document).on('load', '.content iframe', function() {
+	resizeContentIframes();
+});
 
 //注册菜单组件
 Vue.component('menuItem',menuItem);

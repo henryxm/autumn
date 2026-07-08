@@ -20,6 +20,9 @@ public class DefaultPage implements PageHandler {
     @Autowired
     AuthPageSupport authPageSupport;
 
+    @Autowired
+    SitePortalSupport sitePortalSupport;
+
     @Override
     public String login(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
         boolean oauthAuthorize = model != null && Boolean.TRUE.equals(model.getAttribute(AuthPageAttributes.ATTR_OAUTH_AUTHORIZE));
@@ -36,13 +39,13 @@ public class DefaultPage implements PageHandler {
 
     @Override
     public String register(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
-        AuthPageAttributes.apply(model, sysConfigService);
+        AuthPageAttributes.apply(model, sysConfigService, httpServletRequest, sitePortalSupport);
         return "register";
     }
 
     @Override
     public String forgotPassword(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
-        AuthPageAttributes.apply(model, sysConfigService);
+        AuthPageAttributes.apply(model, sysConfigService, httpServletRequest, sitePortalSupport);
         return "forgotpassword";
     }
 
@@ -80,7 +83,7 @@ public class DefaultPage implements PageHandler {
 
     @Override
     public String authCallbackError(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
-        AuthPageAttributes.apply(model, sysConfigService);
+        AuthPageAttributes.apply(model, sysConfigService, httpServletRequest, sitePortalSupport);
         AuthPageAttributes.markFlowKind(model, AuthPageAttributes.FLOW_AUTH_CALLBACK_ERROR);
         AuthPageAttributes.applyAuthFlowBoot(httpServletRequest, model);
         return "oauth2/callback-error";
@@ -88,7 +91,7 @@ public class DefaultPage implements PageHandler {
 
     @Override
     public String oauthBindChoice(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
-        AuthPageAttributes.apply(model, sysConfigService);
+        AuthPageAttributes.apply(model, sysConfigService, httpServletRequest, sitePortalSupport);
         return "oauth2/bind-choice";
     }
 

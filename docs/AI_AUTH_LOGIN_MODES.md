@@ -222,6 +222,14 @@ String base = mode == OAUTH ? origin + "/oauth2" : origin + "/open/oauth2";
 
 **参考实现**：框架内置 `oauth2/login.html`、`open/oauth2/login.html`、`login.html`（`oauthAuthorize`/`oplAuthorize` 分栏）。
 
+### 3.8 站点门户（品牌 / 备案 / 法律链接）
+
+登录、注册、忘记密码、法律页及 OAuth/OPL 授权分栏共用 **`_auth_site_header.html`** / **`_auth_site_footer.html`**，数据来自 **`SITE_PORTAL_CONFIG`**（后台 **系统管理 → 站点门户**）。未配置字段不展示。
+
+- 配置与备案类型默认 URL：**`docs/AI_SITE_PORTAL.md`**
+- 下游覆盖法律链接：实现 **`SiteLegalLinksHandler`**（`@Order` 首个非空生效）
+- 下游覆盖法律正文：同名模板 `user/privacy.html`、`user/service.html`、`user/about.html`
+
 ---
 
 ## 4. 方式一：OAuth2 标准授权（`uuid` 体系）

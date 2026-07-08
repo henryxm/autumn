@@ -390,6 +390,7 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
                 {"sys_string_immediate_execution", "立即执行", "Immediate execution"},
                 {"sys_string_log_list", "日志列表", "Log list"},
                 {"sys_string_config_management", "参数管理", "Config management"},
+                {"sys_string_site_portal", "站点门户", "Site portal"},
                 {"sys_string_config_name", "参数名", "Config name"},
                 {"sys_string_config_value", "参数值", "Config value"},
                 {"sys_string_system_log", "系统日志", "System log"},

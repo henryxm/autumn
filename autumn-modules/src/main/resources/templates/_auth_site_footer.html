@@ -1,0 +1,64 @@
+<div class="login-footer site-portal-footer">
+  <div class="site-portal-footer-line">
+    <span class="site-portal-footer-content">
+      <!--<#if siteCopyrightLine?? && siteCopyrightLine?has_content>-->
+      <span class="site-footer-item site-footer-copyright">${siteCopyrightLine}</span>
+      <!--<#else>-->
+      <span class="site-footer-item site-footer-copyright">&copy; ${siteName!'Autumn Framework'}</span>
+      <!--</#if>-->
+      <!--<#if siteVersionLabel?? && siteVersionLabel?has_content>-->
+      <span class="site-footer-sep" aria-hidden="true">·</span>
+      <span class="site-footer-item site-footer-version">${siteVersionLabel}</span>
+      <!--</#if>-->
+      <!--<#if siteFilings?? && (siteFilings?size > 0)>-->
+      <span class="site-portal-footer-filings">
+        <#include "/_auth_site_filing_item.html">
+      </span>
+      <!--</#if>-->
+      <!--<#if siteLegalLinks??>-->
+      <span class="site-portal-footer-legal">
+        <!--<#if siteLegalLinks.termsUrl?? && siteLegalLinks.termsUrl?has_content>-->
+        <span class="site-footer-sep" aria-hidden="true">·</span>
+        <!--<#if siteLegalLinks.termsExternal>-->
+        <a class="site-footer-item site-legal-link" href="${siteLegalLinks.termsUrl}" target="_blank" rel="noopener noreferrer">服务条款</a>
+        <!--<#else>-->
+        <a class="site-footer-item site-legal-link" href="${siteLegalLinks.termsUrl}">服务条款</a>
+        <!--</#if>-->
+        <!--</#if>-->
+        <!--<#if siteLegalLinks.privacyUrl?? && siteLegalLinks.privacyUrl?has_content>-->
+        <span class="site-footer-sep" aria-hidden="true">·</span>
+        <!--<#if siteLegalLinks.privacyExternal>-->
+        <a class="site-footer-item site-legal-link" href="${siteLegalLinks.privacyUrl}" target="_blank" rel="noopener noreferrer">隐私政策</a>
+        <!--<#else>-->
+        <a class="site-footer-item site-legal-link" href="${siteLegalLinks.privacyUrl}">隐私政策</a>
+        <!--</#if>-->
+        <!--</#if>-->
+        <!--<#if siteLegalLinks.aboutUrl?? && siteLegalLinks.aboutUrl?has_content>-->
+        <span class="site-footer-sep" aria-hidden="true">·</span>
+        <!--<#if siteLegalLinks.aboutExternal>-->
+        <a class="site-footer-item site-legal-link" href="${siteLegalLinks.aboutUrl}" target="_blank" rel="noopener noreferrer">关于我们</a>
+        <!--<#else>-->
+        <a class="site-footer-item site-legal-link" href="${siteLegalLinks.aboutUrl}">关于我们</a>
+        <!--</#if>-->
+        <!--</#if>-->
+        <!--<#if siteLegalLinks.helpUrl?? && siteLegalLinks.helpUrl?has_content>-->
+        <span class="site-footer-sep" aria-hidden="true">·</span>
+        <!--<#if siteLegalLinks.helpExternal>-->
+        <a class="site-footer-item site-legal-link" href="${siteLegalLinks.helpUrl}" target="_blank" rel="noopener noreferrer">帮助中心</a>
+        <!--<#else>-->
+        <a class="site-footer-item site-legal-link" href="${siteLegalLinks.helpUrl}">帮助中心</a>
+        <!--</#if>-->
+        <!--</#if>-->
+        <!--<#if siteLegalLinks.contactUrl?? && siteLegalLinks.contactUrl?has_content>-->
+        <span class="site-footer-sep" aria-hidden="true">·</span>
+        <!--<#if siteLegalLinks.contactExternal>-->
+        <a class="site-footer-item site-legal-link" href="${siteLegalLinks.contactUrl}" target="_blank" rel="noopener noreferrer">联系我们</a>
+        <!--<#else>-->
+        <a class="site-footer-item site-legal-link" href="${siteLegalLinks.contactUrl}">联系我们</a>
+        <!--</#if>-->
+        <!--</#if>-->
+      </span>
+      <!--</#if>-->
+    </span>
+  </div>
+</div>

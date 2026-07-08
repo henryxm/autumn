@@ -17,6 +17,7 @@ import cn.org.autumn.model.PayCredentialConfig;
 import cn.org.autumn.model.ScanLoginConfig;
 import cn.org.autumn.model.RobotQuotaConfig;
 import cn.org.autumn.model.RsaConfig;
+import cn.org.autumn.model.SitePortalConfig;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.lan.service.Language;
 import cn.org.autumn.modules.oss.cloud.CloudStorageConfig;
@@ -97,6 +98,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     public static final String PAY_CREDENTIAL_CONFIG = PayCredentialConfig.CONFIG_KEY;
     public static final String QRC_CONFIG = ScanLoginConfig.CONFIG_KEY;
     public static final String ACCOUNT_AUTH_CONFIG = AccountAuthConfig.CONFIG_KEY;
+    public static final String SITE_PORTAL_CONFIG = SitePortalConfig.CONFIG_KEY;
     public static final String AUTH_SITE_CONFIG = AuthSiteConfig.CONFIG_KEY;
     public static final String Localhost = "localhost";
     public static final String config_lang_prefix = "config_lang_string_";
@@ -243,6 +245,8 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 {configDescription(SYSTEM_UPGRADE), "系统升级过程启用开关，当升级时，部分功能被禁止，比如上传数据，新增数据", "The switch is enabled during the system upgrade process. When upgrading, some functions are prohibited, such as uploading data and adding data"},
                 {configName(LOADING_THEME), "加载页主题", "Loading Theme"},
                 {configDescription(LOADING_THEME), "加载页主题配置（品牌、主色、图标）", "Loading theme config for brand, accent and logo"},
+                {configName(SITE_PORTAL_CONFIG), "站点门户配置", "Site Portal Config"},
+                {configDescription(SITE_PORTAL_CONFIG), "登录页品牌、版权、备案与法律链接", "Login page branding, compliance filings and legal links"},
                 {configName(DISTRIBUTED_LOCK_CONFIG), "分布式锁配置", "Distributed Lock Config"},
                 {configDescription(DISTRIBUTED_LOCK_CONFIG), "分布式锁开关与参数配置", "Distributed lock switch and parameters config"},
         };
@@ -277,6 +281,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 {QRC_CONFIG, new Gson().toJson(new ScanLoginConfig()), "1", "扫码登录配置", config, json_type, ScanLoginConfig.class.getName()},
                 {ACCOUNT_AUTH_CONFIG, new Gson().toJson(new AccountAuthConfig()), "1", "账号认证配置（自助注册开关等）", config, json_type, AccountAuthConfig.class.getName()},
                 {AUTH_SITE_CONFIG, new Gson().toJson(new AuthSiteConfig()), "1", "认证站点角色与联邦登录配置", config, json_type, AuthSiteConfig.class.getName()},
+                {SITE_PORTAL_CONFIG, new Gson().toJson(new SitePortalConfig()), "1", "登录页品牌、版权、备案与法律链接", config, json_type, SitePortalConfig.class.getName()},
         };
     }
 
@@ -812,6 +817,8 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 fixes = ((RobotQuotaConfig) config).validateAndFix();
             } else if (AccountAuthConfig.class.isAssignableFrom(clazz) && config instanceof AccountAuthConfig) {
                 fixes = ((AccountAuthConfig) config).validateAndFix();
+            } else if (SitePortalConfig.class.isAssignableFrom(clazz) && config instanceof SitePortalConfig) {
+                fixes = ((SitePortalConfig) config).validateAndFix();
             }
             // 如果配置被修正，记录日志并更新到数据库
             if (fixes != null && !fixes.isEmpty()) {
@@ -1006,7 +1013,35 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     }
 
     public String getLoadingBrand() {
+        SitePortalConfig portal = getSitePortalConfig();
+        if (portal.getBranding() != null && StringUtils.isNotBlank(portal.getBranding().getSiteName())) {
+            return portal.getBranding().getSiteName().trim();
+        }
         return getLoadingTheme().getBrand();
+    }
+
+    public SitePortalConfig getSitePortalConfig() {
+        SitePortalConfig portalConfig = getConfigObjectValidate(SITE_PORTAL_CONFIG, SitePortalConfig.class);
+        return portalConfig == null ? new SitePortalConfig() : portalConfig;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public SitePortalConfig updateSitePortalConfig(SitePortalConfig config) {
+        SitePortalConfig toSave = config == null ? new SitePortalConfig() : config;
+        List<String> fixes = toSave.validateAndFix();
+        for (String fix : fixes) {
+            log.debug("[Config validation] {}", fix);
+        }
+        updateValueByKey(SITE_PORTAL_CONFIG, new Gson().toJson(toSave));
+        return toSave;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public LoadingTheme updateLoadingTheme(LoadingTheme theme) {
+        LoadingTheme toSave = theme == null ? new LoadingTheme() : theme;
+        toSave.normalize();
+        updateValueByKey(LOADING_THEME, new Gson().toJson(toSave));
+        return toSave;
     }
 
     public AccountAuthConfig getAccountAuthConfig() {

@@ -73,6 +73,10 @@ public final class AuthPageAttributes {
     }
 
     public static void apply(Model model, SysConfigService sysConfigService) {
+        apply(model, sysConfigService, null, null);
+    }
+
+    public static void apply(Model model, SysConfigService sysConfigService, HttpServletRequest request, SitePortalSupport sitePortalSupport) {
         if (model == null || sysConfigService == null) {
             return;
         }
@@ -85,6 +89,9 @@ public final class AuthPageAttributes {
         model.addAttribute("skipAutologinCookie", LogoutSkipSupport.COOKIE_NAME);
         boolean devAutologinEnabled = sysConfigService.getAccountAuthConfig() != null && sysConfigService.getAccountAuthConfig().isDevAutologinEnabled();
         model.addAttribute("devAutologinEnabled", devAutologinEnabled);
+        if (sitePortalSupport != null) {
+            sitePortalSupport.applyToModel(request, model);
+        }
     }
 
     /**
