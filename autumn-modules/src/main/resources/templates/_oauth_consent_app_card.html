@@ -1,0 +1,10 @@
+<div class="oauth-consent-app">
+  <!--<#if consentAppIconUri?? && consentAppIconUri?has_content>-->
+  <img class="app-icon" src="${consentAppIconUri}" alt="">
+  <!--<#else>-->
+  <img class="app-icon app-icon-fallback" src="${authLoginDefaultIcon}" alt="">
+  <!--</#if>-->
+  <div class="app-meta">
+    <p class="app-name">${consentAppName!'未知应用'}</p>
+  </div>
+</div>

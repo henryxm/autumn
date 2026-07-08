@@ -1,4 +1,4 @@
-package cn.org.autumn.modules.open.support;
+package cn.org.autumn.modules.support;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import java.util.Map;

@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>站点门户配置</title>
+    <style>
+        :root { --primary:#4338ca; --border:#e2e8f0; --muted:#64748b; --danger:#dc2626; --ok:#059669; }
+        * { box-sizing:border-box; margin:0; padding:0; }
+        html, body { height:auto; min-height:0; overflow:visible; }
+        body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif; background:linear-gradient(160deg,#eef2ff,#f8fafc); color:#1e293b; padding:20px; }
+        .shell { max-width:1100px; margin:0 auto; }
+        .page { background:#fff; border-radius:16px; border:1px solid var(--border); box-shadow:0 8px 30px rgba(67,56,202,.08); overflow:hidden; }
+        .header { background:linear-gradient(135deg,#312e81,#4338ca,#6366f1); color:#fff; padding:24px 28px; }
+        .header h1 { font-size:24px; margin-bottom:6px; }
+        .header p { opacity:.92; font-size:13px; line-height:1.5; }
+        .body { padding:24px 28px 28px; }
+        .section { margin-bottom:28px; padding-bottom:22px; border-bottom:1px solid var(--border); }
+        .section:last-child { border-bottom:none; margin-bottom:0; padding-bottom:0; }
+        .section h2 { font-size:16px; margin-bottom:14px; color:#312e81; }
+        .section-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
+        .section-head h2 { margin:0; }
+        .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px 18px; }
+        .field label { display:block; font-size:12px; color:var(--muted); margin-bottom:6px; font-weight:600; }
+        .field input, .field select, .field textarea { width:100%; border:1px solid var(--border); border-radius:10px; padding:10px 12px; font-size:14px; }
+        .field textarea { min-height:72px; resize:vertical; }
+        .field.full { grid-column:1 / -1; }
+        .filing-grid { gap:12px 18px; }
+        .f-checkbox-label {
+            display:inline-flex;
+            align-items:center;
+            gap:8px;
+            font-size:13px;
+            font-weight:600;
+            color:var(--muted);
+            cursor:pointer;
+            user-select:none;
+            min-height:38px;
+            margin-bottom:0;
+        }
+        .field.f-icon-field > .f-checkbox-label {
+            display:inline-flex;
+            align-items:center;
+            margin-bottom:0;
+        }
+        .f-checkbox-label input[type="checkbox"] {
+            width:16px;
+            height:16px;
+            margin:0;
+            padding:0;
+            flex-shrink:0;
+            accent-color:var(--primary);
+        }
+        .field.f-icon-field { display:flex; align-items:center; padding-top:2px; min-height:38px; }
+        .field.f-icon-field[hidden] { display:none !important; }
+        .field.f-icon-field .f-checkbox-label { margin:0; }
+        .field input.f-preview { background:#f8fafc; color:#475569; }
+        .check-row { display:flex; align-items:center; gap:8px; margin-top:8px; font-size:13px; color:var(--muted); }
+        .filings { display:flex; flex-direction:column; gap:12px; }
+        .filing-item { border:1px solid var(--border); border-radius:12px; padding:14px; background:#fafbfd; }
+        .filing-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+        .filing-head strong { font-size:13px; color:#334155; }
+        .btn { border:none; border-radius:10px; padding:10px 16px; font-size:14px; cursor:pointer; font-weight:600; }
+        .btn-primary { background:linear-gradient(135deg,#4338ca,#6366f1); color:#fff; }
+        .btn-ghost { background:#fff; border:1px solid var(--border); color:#334155; }
+        .btn-danger { background:#fff; border:1px solid #fecaca; color:var(--danger); }
+        .actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:18px; }
+        .hint { font-size:12px; color:var(--muted); margin-top:6px; line-height:1.5; }
+        .toast { margin-top:14px; font-size:13px; min-height:20px; }
+        .toast.ok { color:var(--ok); }
+        .toast.err { color:var(--danger); }
+        @media (max-width:768px) { .grid { grid-template-columns:1fr; } }
+    </style>
+</head>
+<body>
+<div class="shell">
+    <div class="page">
+        <div class="header">
+            <h1>站点门户配置</h1>
+            <p>统一管理登录页品牌、版权、版本、中国大陆备案/许可及法律链接。未填写的项不会在前台展示。</p>
+        </div>
+        <div class="body">
+            <div class="section">
+                <h2>品牌信息</h2>
+                <div class="grid">
+                    <div class="field"><label>站点名称</label><input id="siteName" placeholder="留空则使用加载页主题品牌名"></div>
+                    <div class="field"><label>登录页说明</label><input id="tagline" placeholder="例如：欢迎回来，请选择登录方式"></div>
+                    <div class="field"><label>Logo URL</label><input id="logoUrl" placeholder="/statics/... 或 https://..."></div>
+                    <div class="field"><label>Logo Alt</label><input id="logoAlt" placeholder="图标无障碍描述"></div>
+                </div>
+                <label class="check-row"><input type="checkbox" id="syncLoadingTheme" checked> 保存时同步到加载页主题（LOADING_THEME）</label>
+            </div>
+            <div class="section">
+                <h2>版权与版本</h2>
+                <div class="grid">
+                    <div class="field full"><label>版权主体</label><input id="copyrightHolder" placeholder="公司或组织名称"></div>
+                    <div class="field"><label>起始年</label><input id="copyrightYearStart" placeholder="2020"></div>
+                    <div class="field"><label>结束年</label><input id="copyrightYearEnd" placeholder="留空则使用当前年"></div>
+                    <div class="field"><label>版本号</label><input id="versionLabel" placeholder="v2.0.0"></div>
+                </div>
+                <p class="hint">版权行需填写「版权主体」；仅填版本号时，页脚单独展示版本，不生成 © 行。</p>
+            </div>
+            <div class="section">
+                <h2>法律链接</h2>
+                <div class="grid">
+                    <div class="field"><label>隐私政策</label><input id="privacyUrl" placeholder="/user/privacy.html"></div>
+                    <div class="field"><label>服务条款</label><input id="termsUrl" placeholder="/user/service.html"></div>
+                    <div class="field"><label>关于我们</label><input id="aboutUrl" placeholder="/user/about.html"></div>
+                    <div class="field"><label>帮助中心</label><input id="helpUrl" placeholder="可选"></div>
+                    <div class="field full"><label>联系我们</label><input id="contactUrl" placeholder="可选"></div>
+                </div>
+                <p class="hint">支持相对路径（自动加 contextPath）或 http(s) 外链。子项目可实现 SiteLegalLinksHandler 覆盖上述地址。</p>
+            </div>
+            <div class="section">
+                <div class="section-head">
+                    <h2>备案与许可</h2>
+                    <button type="button" class="btn btn-ghost" id="addFilingBtn">+ 添加一项</button>
+                </div>
+                <div class="filings" id="filingsBox"></div>
+                <p class="hint">类型按中国大陆常见合规分类；默认跳转指向主管部门门户，可手填更精确的公示链接。公安备案 URL 会根据备案号自动提取 recordcode。前缀/后缀仅展示，链接仅作用于「展示文案」。</p>
+            </div>
+            <div class="actions">
+                <button type="button" class="btn btn-primary" id="saveBtn">保存配置</button>
+                <button type="button" class="btn btn-ghost" id="reloadBtn">重新加载</button>
+            </div>
+            <div class="toast" id="toast"></div>
+        </div>
+    </div>
+</div>
+<script src="${request.contextPath}/statics/js/autumn-iframe-auto-height.js"></script>
+<script src="${request.contextPath}/statics/js/siteportal-admin.js"></script>
+<script>
+SitePortalAdmin.init('${request.contextPath!""}');
+</script>
+</body>
+</html>

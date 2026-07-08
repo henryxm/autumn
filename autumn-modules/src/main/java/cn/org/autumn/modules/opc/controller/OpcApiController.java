@@ -4,7 +4,7 @@ import cn.org.autumn.annotation.Authenticated;
 import cn.org.autumn.model.Request;
 import cn.org.autumn.model.Response;
 import cn.org.autumn.model.UserContext;
-import cn.org.autumn.modules.open.support.OpenApiUsers;
+import cn.org.autumn.modules.support.OpenApiUsers;
 import cn.org.autumn.modules.opc.dto.OpcConnectApplyRequest;
 import cn.org.autumn.modules.opc.entity.ConnectAppEntity;
 import cn.org.autumn.modules.opc.service.ConnectAppService;

@@ -30,8 +30,11 @@ public class AuthPageSupport {
     @Autowired
     private ConnectAppService connectAppService;
 
+    @Autowired
+    private SitePortalSupport sitePortalSupport;
+
     public void prepareOauthLoginEntry(HttpServletRequest request, Model model, String clientId) {
-        AuthPageAttributes.apply(model, sysConfigService);
+        AuthPageAttributes.apply(model, sysConfigService, request, sitePortalSupport);
         AuthPageAttributes.markFlowKind(model, AuthPageAttributes.FLOW_OAUTH_LOGIN_ENTRY);
         WebAuthenticationEntity webAuth = resolveWebAuth(request, clientId);
         if (webAuth != null) {
@@ -47,13 +50,13 @@ public class AuthPageSupport {
     }
 
     public void prepareOauthLoginSuccess(HttpServletRequest request, Model model) {
-        AuthPageAttributes.apply(model, sysConfigService);
+        AuthPageAttributes.apply(model, sysConfigService, request, sitePortalSupport);
         AuthPageAttributes.markFlowKind(model, AuthPageAttributes.FLOW_OAUTH_LOGIN_SUCCESS);
         AuthPageAttributes.applyAuthFlowBoot(request, model);
     }
 
     public void prepareOpenLoginEntry(HttpServletRequest request, Model model, String appId) {
-        AuthPageAttributes.apply(model, sysConfigService);
+        AuthPageAttributes.apply(model, sysConfigService, request, sitePortalSupport);
         AuthPageAttributes.markFlowKind(model, AuthPageAttributes.FLOW_OPEN_LOGIN_ENTRY);
         if (StringUtils.isNotBlank(appId)) {
             ConnectAppEntity app = connectAppService.getByAppId(appId);
@@ -67,7 +70,7 @@ public class AuthPageSupport {
     }
 
     public void prepareOpenLoginSuccess(HttpServletRequest request, Model model, String appId) {
-        AuthPageAttributes.apply(model, sysConfigService);
+        AuthPageAttributes.apply(model, sysConfigService, request, sitePortalSupport);
         AuthPageAttributes.markFlowKind(model, AuthPageAttributes.FLOW_OPEN_LOGIN_SUCCESS);
         if (StringUtils.isBlank(appId) && request != null) {
             appId = request.getParameter("app_id");
@@ -103,6 +106,7 @@ public class AuthPageSupport {
             model.addAttribute("authorizeLoginAction", oplAuthorize ? OplConstants.OAUTH2_LOGIN : "/oauth2/login");
             if (request != null) {
                 model.addAttribute("consentCsrfToken", OAuthConsentCsrfSupport.issue(request));
+                AuthPageAttributes.applyAuthLoginDefaultIcon(request, model);
             }
             if (!model.containsAttribute("oauthLogin")) {
                 model.addAttribute("oauthLogin", true);
@@ -122,7 +126,7 @@ public class AuthPageSupport {
                 model.addAttribute("error", error);
             }
         }
-        AuthPageAttributes.apply(model, sysConfigService);
+        AuthPageAttributes.apply(model, sysConfigService, request, sitePortalSupport);
         AuthPageAttributes.applySafeOauthCallback(request, model);
         AuthPageAttributes.applyAuthFlowBoot(request, model);
     }

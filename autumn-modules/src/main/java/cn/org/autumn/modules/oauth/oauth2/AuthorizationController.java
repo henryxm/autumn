@@ -1,6 +1,7 @@
 package cn.org.autumn.modules.oauth.oauth2;
 
 import cn.org.autumn.modules.oauth.oauth2.support.OAuthAccessTokenResolver;
+import cn.org.autumn.modules.oauth.oauth2.support.OAuthAuthorizeAppIconSupport;
 import cn.org.autumn.modules.oauth.oauth2.support.OAuthConsentCsrfSupport;
 import cn.org.autumn.modules.oauth.oauth2.support.OAuthConsentSupport;
 import cn.org.autumn.modules.oauth.oauth2.support.OAuthRedirectSupport;
@@ -19,7 +20,9 @@ import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.modules.sys.service.SysUserService;
 import cn.org.autumn.modules.sys.shiro.LogoutSkipSupport;
+import cn.org.autumn.modules.sys.shiro.ShiroSessionService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
+import cn.org.autumn.modules.sys.support.SysLogoutSupport;
 import cn.org.autumn.modules.usr.dto.UserProfile;
 import cn.org.autumn.modules.usr.entity.UserProfileEntity;
 import cn.org.autumn.modules.usr.service.UserLoginLogService;
@@ -29,6 +32,7 @@ import cn.org.autumn.modules.client.service.AuthSiteRoleService;
 import cn.org.autumn.modules.client.service.OauthRpLoginService;
 import cn.org.autumn.modules.client.entity.WebAuthenticationEntity;
 import cn.org.autumn.modules.client.service.WebAuthenticationService;
+import cn.org.autumn.site.AuthPageAttributes;
 import cn.org.autumn.site.AuthPageSupport;
 import cn.org.autumn.site.PageFactory;
 import cn.org.autumn.utils.IPUtils;
@@ -140,6 +144,12 @@ public class AuthorizationController {
     @Autowired
     ClientGrantService clientGrantService;
 
+    @Autowired
+    ShiroSessionService shiroSessionService;
+
+    @Autowired
+    OAuthAuthorizeAppIconSupport authorizeAppIconSupport;
+
     private String oauthErrorBody(String description, String error, int errorResponse) throws OAuthSystemException {
         return OAuthResponseSupport.oauthErrorBody(description, error, errorResponse);
     }
@@ -237,7 +247,7 @@ public class AuthorizationController {
             clientName = client.getClientId();
         }
         model.addAttribute("clientName", clientName);
-        model.addAttribute("clientIconUri", client.getClientIconUri());
+        AuthPageAttributes.applyConsentApp(model, clientName, authorizeAppIconSupport.resolveByClient(client));
         model.addAttribute("clientId", client.getClientId());
         if (loggedIn) {
             SysUserEntity user = ShiroUtils.getUserEntity();
@@ -479,7 +489,7 @@ public class AuthorizationController {
 
     @RequestMapping(value = "authorize/logout", method = RequestMethod.GET)
     public ModelAndView authorizeLogout(HttpServletRequest request, HttpServletResponse response, @RequestParam(required = false) String returnTo) {
-        ShiroUtils.logout();
+        SysLogoutSupport.logoutAndForceReauth(shiroSessionService);
         LogoutSkipSupport.mark(request, response);
         String url = normalizeRedirectUrl(returnTo);
         if (StringUtils.isBlank(url)) {

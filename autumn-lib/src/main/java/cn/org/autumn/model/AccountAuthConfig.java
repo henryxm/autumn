@@ -29,6 +29,9 @@ public class AccountAuthConfig implements Serializable {
     @ConfigField(category = InputType.StringType, name = "登录成功后跳转地址", description = "用户直接打开登录页且无 SavedRequest 时的默认跳转；留空则按 SPM/index.html 原逻辑。须为 /、*.html 或带 spm= 的有效页面地址，不可为 API/REST")
     private String postLoginRedirect;
 
+    @ConfigField(category = InputType.BooleanType, name = "开发环境登录页静默探测", description = "默认关闭：登录页不自动跳转、不静默登录。仅 dev 环境且开启后，checkenv 才可静默使用默认 admin 账号")
+    private boolean devAutologinEnabled = false;
+
     public List<String> validateAndFix() {
         List<String> fixes = new ArrayList<>();
         if (StringUtils.isBlank(postLoginRedirect)) {

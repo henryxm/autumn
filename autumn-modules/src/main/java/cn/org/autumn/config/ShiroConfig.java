@@ -202,6 +202,8 @@ public class ShiroConfig {
         filterMap.put("/user/service", "anon");
         filterMap.put("/user/privacy.html", "anon");
         filterMap.put("/user/privacy", "anon");
+        filterMap.put("/user/about.html", "anon");
+        filterMap.put("/user/about", "anon");
         filterMap.put("/plugin.html", "anon");
         filterMap.put("/404.html", "anon");
         filterMap.put("/500.html", "anon");

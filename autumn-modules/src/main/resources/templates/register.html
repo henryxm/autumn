@@ -7,7 +7,7 @@
 <body class="${bodyClass!'login-page-v2'}" data-ctx="${request.contextPath?js_string}">
 <div id="rrapp" class="login-shell" v-cloak>
   <div class="login-brand">
-    <div class="login-brand-icon"><i class="fa fa-leaf"></i></div>
+    <#include "/_auth_site_branding_icon.html">
     <h1>注册账号</h1>
     <p>创建你的 ${siteName!'Autumn'} 账号</p>
   </div>
@@ -47,9 +47,9 @@
           <label>
             <input type="checkbox" v-model="agree">
             我已阅读并同意
-            <a :href="ctx + '/user/service.html'" target="_blank">《服务条款》</a>
+            <a href="${(siteLegalLinks.termsUrl)!((request.contextPath)!'') + '/user/service.html'}" target="_blank">《服务条款》</a>
             与
-            <a :href="ctx + '/user/privacy.html'" target="_blank">《隐私政策》</a>
+            <a href="${(siteLegalLinks.privacyUrl)!((request.contextPath)!'') + '/user/privacy.html'}" target="_blank">《隐私政策》</a>
           </label>
         </div>
         <p class="field-hint" v-if="agreeError">{{ agreeError }}</p>
@@ -68,7 +68,7 @@
       <!--</#if>-->
     </div>
   </div>
-  <div class="login-footer">&copy; ${siteName!'Autumn Framework'}</div>
+  <#include "/_auth_site_footer.html">
 </div>
 <!--<#if registerEnabled?? && registerEnabled>-->
 <script src="${request.contextPath}/statics/libs/jquery.min.js"></script>

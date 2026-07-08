@@ -10,27 +10,7 @@
 </head>
 <body class="${bodyClass!'login-page-v2'}" data-ctx="${request.contextPath?js_string}">
 <div class="login-shell login-main" id="rrapp" v-cloak>
-  <div class="login-brand">
-    <div class="brand-icon"><i class="fa fa-shield"></i></div>
-    <h1>
-      <!--<#if oauthAuthorize?? && oauthAuthorize>-->
-      应用授权
-      <!--<#elseif oplAuthorize?? && oplAuthorize>-->
-      应用授权
-      <!--<#else>-->
-      Autumn 管理系统
-      <!--</#if>-->
-    </h1>
-    <p>
-      <!--<#if oauthAuthorize?? && oauthAuthorize>-->
-      请先登录，勾选授权协议后点击确认
-      <!--<#elseif oplAuthorize?? && oplAuthorize>-->
-      请先登录，再确认是否授权该应用
-      <!--<#else>-->
-      欢迎回来，请选择登录方式
-      <!--</#if>-->
-    </p>
-  </div>
+  <#include "/_auth_site_header.html">
 
   <!--<#if (oauthAuthorize?? && oauthAuthorize) || (oplAuthorize?? && oplAuthorize)>-->
   <div class="login-card oauth-split-card">
@@ -76,7 +56,7 @@
               <span class="glyphicon glyphicon-lock form-control-feedback"></span>
             </div>
             <div class="remember-row">
-              <label><input type="checkbox" name="rememberMe" value="true" checked> 记住我</label>
+              <label><input type="checkbox" name="rememberMe" value="true"> 记住我</label>
             </div>
             <button type="submit" class="btn btn-primary btn-block btn-login">登 录</button>
           </form>
@@ -116,7 +96,7 @@
               <span class="glyphicon glyphicon-lock form-control-feedback"></span>
             </div>
             <div class="remember-row">
-              <label><input type="checkbox" name="rememberMe" value="true" checked> 记住我</label>
+              <label><input type="checkbox" name="rememberMe" value="true"> 记住我</label>
             </div>
             <button type="submit" class="btn btn-primary btn-block btn-login">登 录</button>
           </form>
@@ -141,13 +121,8 @@
           <p>「${clientName!clientId!'未知应用'}」申请使用您的账号登录，请确认是否授权。</p>
           <!--</#if>-->
         </div>
+        <#include "/_oauth_consent_app_card.html">
         <!--<#if oplAuthorize?? && oplAuthorize>-->
-        <div class="oauth-consent-app">
-          <div class="app-icon-placeholder"><i class="fa fa-cubes"></i></div>
-          <div class="app-meta">
-            <p class="app-name">${appName!appId!'未知应用'}</p>
-          </div>
-        </div>
         <ul class="oauth-perm-list">
           <li><i class="fa fa-check-circle"></i><span>在本应用内识别您的身份</span></li>
           <li><i class="fa fa-check-circle"></i><span>在同一开发者的其他应用中识别同一账号</span></li>
@@ -172,16 +147,6 @@
           <a class="btn btn-consent btn-consent-ghost" :href="oauthDenyRedirect">取消</a>
         </form>
         <!--<#else>-->
-        <div class="oauth-consent-app">
-          <!--<#if clientIconUri?? && clientIconUri?has_content>-->
-          <img class="app-icon" src="${clientIconUri}" alt="">
-          <!--<#else>-->
-          <div class="app-icon-placeholder"><i class="fa fa-cube"></i></div>
-          <!--</#if>-->
-          <div class="app-meta">
-            <p class="app-name">${clientName!clientId!'未知应用'}</p>
-          </div>
-        </div>
         <ul class="oauth-perm-list">
           <li><i class="fa fa-check-circle"></i><span>查看您的基本账号信息（昵称、头像等）</span></li>
           <li><i class="fa fa-check-circle"></i><span>获取用于登录关联的唯一标识</span></li>
@@ -318,7 +283,7 @@
   </div>
   <!--</#if>-->
 
-  <div class="login-footer">&copy; ${siteName!'Autumn Framework'}</div>
+  <#include "/_auth_site_footer.html">
 </div>
 
 <script src="${request.contextPath}/statics/libs/jquery.min.js"></script>
@@ -350,7 +315,8 @@ window.__LOGIN_CONFIG__ = {
   serverUuid: '${uuid!""?js_string}',
   serverQrUrl: '${qrUrl!""?js_string}',
   serverPollIntervalMs: ${pollIntervalMs!2000},
-  skipAutologinCookie: '${skipAutologinCookie!"autumn_skip_autologin"?js_string}'
+  skipAutologinCookie: '${skipAutologinCookie!"autumn_skip_autologin"?js_string}',
+  devAutologinEnabled: ${(devAutologinEnabled!false)?c}
   //<#if oauthLogin?? && oauthLogin>
   ,oauthLogin: true
   //<#else>
@@ -362,6 +328,7 @@ window.__LOGIN_CONFIG__ = {
 };
 </script>
 <script src="${request.contextPath}/statics/js/auth-flow.js?_${.now?long}"></script>
+<script src="${request.contextPath}/statics/js/autologin-check.js?_${.now?long}"></script>
 <script src="${request.contextPath}/statics/js/login.js?_${.now?long}"></script>
 </body>
 </html>

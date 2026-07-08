@@ -1,4 +1,4 @@
-package cn.org.autumn.modules.open.support;
+package cn.org.autumn.modules.support;
 
 import cn.org.autumn.model.UserContext;
 import cn.org.autumn.utils.Uuid;

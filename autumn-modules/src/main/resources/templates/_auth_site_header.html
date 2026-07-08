@@ -1,0 +1,27 @@
+<!--<#if oauthAuthorize?? && oauthAuthorize>-->
+<div class="login-brand">
+  <div class="brand-icon"><i class="fa fa-shield"></i></div>
+  <h1>应用授权</h1>
+  <p>请先登录，勾选授权协议后点击确认</p>
+</div>
+<!--<#elseif oplAuthorize?? && oplAuthorize>-->
+<div class="login-brand">
+  <div class="brand-icon"><i class="fa fa-shield"></i></div>
+  <h1>应用授权</h1>
+  <p>请先登录，再确认是否授权该应用</p>
+</div>
+<!--<#else>-->
+<div class="login-brand">
+  <!--<#if siteBranding?? && siteBranding.logoUrl?? && siteBranding.logoUrl?has_content>-->
+  <div class="brand-icon site-portal-logo-wrap"><img class="site-portal-logo" src="${siteBranding.logoUrl}" alt="${siteBranding.logoAlt!siteName!''}"></div>
+  <!--<#else>-->
+  <div class="brand-icon"><i class="fa fa-shield"></i></div>
+  <!--</#if>-->
+  <h1>${siteBranding.siteName!siteName!'Autumn'} 管理系统</h1>
+  <!--<#if siteBranding?? && siteBranding.tagline?? && siteBranding.tagline?has_content>-->
+  <p>${siteBranding.tagline}</p>
+  <!--<#else>-->
+  <p>欢迎回来，请选择登录方式</p>
+  <!--</#if>-->
+</div>
+<!--</#if>-->

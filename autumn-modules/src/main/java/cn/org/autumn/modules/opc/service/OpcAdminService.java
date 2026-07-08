@@ -1,6 +1,6 @@
 package cn.org.autumn.modules.opc.service;
 
-import cn.org.autumn.modules.open.support.AdminPageQueries;
+import cn.org.autumn.modules.support.AdminPageQueries;
 import cn.org.autumn.database.runtime.WrapperColumns;
 import cn.org.autumn.modules.opc.dto.OpcAppAdminView;
 import cn.org.autumn.modules.opc.entity.ConnectAppEntity;

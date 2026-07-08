@@ -102,7 +102,7 @@ public class ShiroSessionService {
         try {
             String sessionPrefix = RedisKeys.getSessionPrefix(sysConfigService.getNameSpace());
             Set<String> keys = redisTemplate.keys(sessionPrefix + "*");
-            if (null != keys && !keys.isEmpty()) {
+            if (!keys.isEmpty()) {
                 for (String key : keys) {
                     try {
                         Session session = (Session) redisTemplate.opsForValue().get(key);
@@ -119,12 +119,16 @@ public class ShiroSessionService {
                             }
                         }
                     } catch (Exception e) {
-                        log.warn("解析失败:{}, 异常:{}", key, e.getMessage());
+                        if (log.isDebugEnabled()) {
+                            log.debug("解析失败:{}, 异常:{}", key, e.getMessage());
+                        }
                     }
                 }
             }
         } catch (Exception e) {
-            log.error("查询失败:{}, 错误:{}", userUuid, e.getMessage());
+            if (log.isDebugEnabled()) {
+                log.debug("查询失败:{}, 错误:{}", userUuid, e.getMessage());
+            }
         }
     }
 
@@ -163,7 +167,7 @@ public class ShiroSessionService {
             if (isRedisEnabled()) {
                 String sessionPrefix = RedisKeys.getSessionPrefix(sysConfigService.getNameSpace());
                 Set<String> keys = redisTemplate.keys(sessionPrefix + "*");
-                if (keys != null && !keys.isEmpty()) {
+                if (!keys.isEmpty()) {
                     for (String key : keys) {
                         try {
                             Session s = (Session) redisTemplate.opsForValue().get(key);
@@ -223,11 +227,9 @@ public class ShiroSessionService {
         try {
             String prefix = RedisKeys.getForceLogoutPrefix(sysConfigService.getNameSpace());
             Set<String> keys = redisTemplate.keys(prefix + "*");
-            if (keys != null) {
-                for (String k : keys) {
-                    String suf = k.length() > prefix.length() ? k.substring(prefix.length()) : "";
-                    if (!suf.isEmpty()) set.add(suf);
-                }
+            for (String k : keys) {
+                String suf = k.length() > prefix.length() ? k.substring(prefix.length()) : "";
+                if (!suf.isEmpty()) set.add(suf);
             }
         } catch (Exception e) {
             log.warn("getForceLogoutUserUuids: {}", e.getMessage());
@@ -328,7 +330,9 @@ public class ShiroSessionService {
                 return true;
             }
         } catch (Exception e) {
-            log.error("删除会话:{}, 错误:{}", sessionId, e.getMessage());
+            if (log.isDebugEnabled()) {
+                log.debug("删除会话:{}, 错误:{}", sessionId, e.getMessage());
+            }
         }
         return false;
     }
@@ -344,7 +348,9 @@ public class ShiroSessionService {
         Collection<Serializable> sessionIds = getActiveSessionsByUserUuid(userUuid);
         SessionDAO sessionDAO = getSessionDAO();
         if (sessionDAO == null) {
-            log.warn("SessionDAO不可用，无法强制用户下线");
+            if (log.isDebugEnabled()) {
+                log.debug("SessionDAO不可用，无法强制用户下线");
+            }
             return 0;
         }
         for (Serializable sessionId : sessionIds) {
@@ -364,6 +370,13 @@ public class ShiroSessionService {
     }
 
     /**
+     * 显式登出等场景：写入强制重登标记，阻断 RememberMe 静默恢复。
+     */
+    public void markForceLogoutForUser(String userUuid) {
+        markForceLogout(userUuid);
+    }
+
+    /**
      * 标记用户为「强制下线」：在 TTL 内禁止其通过 RememberMe 自动登录，必须重新输入密码。
      * 依赖 Redis；若 Redis 不可用则仅记录日志。
      */
@@ -371,15 +384,21 @@ public class ShiroSessionService {
         if (userUuid == null || userUuid.isEmpty())
             return;
         if (redisTemplate == null) {
-            log.warn("Redis 未启用，无法写入强制下线标记: userUuid={}", userUuid);
+            if (log.isDebugEnabled()) {
+                log.debug("Redis 未启用，无法写入强制下线标记: userUuid={}", userUuid);
+            }
             return;
         }
         try {
             String key = RedisKeys.getForceLogoutKey(sysConfigService.getNameSpace(), userUuid);
             RedisExpireUtil.setWithExpire(redisTemplate, key, "1", 7, TimeUnit.DAYS);
-            if (log.isDebugEnabled()) log.debug("已标记强制下线: userUuid={}", userUuid);
+            if (log.isDebugEnabled()) {
+                log.debug("已标记强制下线: userUuid={}", userUuid);
+            }
         } catch (Exception e) {
-            log.warn("标记强制下线失败, userUuid={}: {}", userUuid, e.getMessage());
+            if (log.isDebugEnabled()) {
+                log.debug("标记强制下线失败, userUuid={}: {}", userUuid, e.getMessage());
+            }
         }
     }
 
@@ -407,9 +426,11 @@ public class ShiroSessionService {
             return false;
         }
         try {
-            return Boolean.TRUE.equals(redisTemplate.hasKey(RedisKeys.getForceLogoutKey(sysConfigService.getNameSpace(), userUuid)));
+            return redisTemplate.hasKey(RedisKeys.getForceLogoutKey(sysConfigService.getNameSpace(), userUuid));
         } catch (Exception e) {
-            log.warn("查询强制重登标记失败, userUuid={}: {}", userUuid, e.getMessage());
+            if (log.isDebugEnabled()) {
+                log.debug("查询强制重登标记失败, userUuid={}: {}", userUuid, e.getMessage());
+            }
             return false;
         }
     }

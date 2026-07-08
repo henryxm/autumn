@@ -28,6 +28,19 @@
 - `SysUserService.login(...)` 登录成功后会调用 `shiroSessionService.clearForceLogout(userUuid)`。
 - 含义：用户已经重新完成密码认证后，可恢复正常 rememberMe 行为。
 
+### 2.5 显式登出写强制重登标记
+
+- `GET /logout`、`/oauth2/authorize/logout`、开放平台 `/open/oauth2/authorize/logout` 在清理 Shiro 身份前会调用 `SysLogoutSupport.logoutAndForceReauth(...)`，写入与 §2.1 相同的强制重登标记。
+- 与 `LogoutSkipSupport`（120s 内跳过登录页 `checkenv`）互补：前者阻断 RememberMe 跨页静默恢复，后者阻断 dev 静默 admin 探测。
+
+### 2.6 登录页 autologin 探测（`POST /sys/autologin`）
+
+- **默认关闭**（`ACCOUNT_AUTH_CONFIG.devAutologinEnabled=false`）：登录页**不**自动跳转、**不**静默登录；已登录会话访问 `/login` 也停留登录页（`reason=session_active`）。
+- **开启后**（仅 dev 环境）：未登录时返回 `devProbe=true`，供 `checkenv` 静默 `admin/admin` 探测；仍**不**对已认证会话或 RememberMe 自动跳转。
+- RememberMe 半登录态始终返回 `reason=remember_me_blocked`。
+- 登出后 Cookie `autumn_skip_autologin` 存在时返回 `reason=skipped`。
+- 前端：`statics/js/autologin-check.js`；`devAutologinEnabled=false` 时前端不发起探测请求。
+
 ## 3. 通用 API（可直接复用）
 
 控制器：`cn.org.autumn.modules.sys.controller.SysSessionController`
@@ -55,6 +68,17 @@
 登录页提示：
 
 - `templates/login.html` 会读取 query/sessionStorage 并显示会话过期或会话已终止提示。
+
+### 4.1 开发环境意外自动登录（复现与验证）
+
+**典型复现（dev + default 主题，修复前）**：Safari 打开 `/login` → 页面加载触发 `checkenv` → 服务端在未登录时返回成功 → 前端静默 `POST /sys/login`（dev 补 `admin/admin`）→ 用户感知为「刷新即自动登录」。
+
+**修复后验证**：
+
+1. 清除站点 Cookie 后打开 `/login`，应停留登录页（默认 `devAutologinEnabled=false`，不发起 checkenv）。
+2. 已登录状态下打开 `/login`，仍停留登录页，不自动跳转。
+3. 显式登出后刷新 `/login`，不应 autologin；RememberMe 不应静默恢复（见 §2.5）。
+4. 需本地单人调试时，将 `ACCOUNT_AUTH_CONFIG.devAutologinEnabled` 设为 `true` 后，dev 环境刷新才可静默 admin 探测。
 
 登录 **成功后的默认落地页**（非 SavedRequest 场景）由 **`ACCOUNT_AUTH_CONFIG.postLoginRedirect`** 配置，见 **`docs/AI_ACCOUNT_AUTH_CONFIG.md`**。
 

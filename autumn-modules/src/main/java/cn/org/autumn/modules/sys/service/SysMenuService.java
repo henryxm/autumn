@@ -98,6 +98,7 @@ public class SysMenuService extends ServiceImpl<SysMenuDao, SysMenuEntity> imple
                 {"修改", NULL, "sys:menu:update,sys:menu:select", "2", NULL, "0", getSystemMenuKey("MenuManagementUpdate"), getSystemMenuKey("MenuManagement"), "sys_string_change"},
                 {"删除", NULL, "sys:menu:delete", "2", NULL, "0", getSystemMenuKey("MenuManagementDelete"), getSystemMenuKey("MenuManagement"), "sys_string_delete"},
                 {"参数管理", "modules/sys/config", "sys:config:list,sys:config:info,sys:config:save,sys:config:update,sys:config:delete", "1", "fa fa-sun-o", "6", getSystemMenuKey("ConfigManagement"), getSystemMenuKey("SystemManagement"), "sys_string_config_management"},
+                {"站点门户", "siteportal.html", NULL, "1", "fa fa-globe", "8", getSystemMenuKey("SitePortalManagement"), getSystemMenuKey("SystemManagement"), "sys_string_site_portal"},
                 {"系统日志", "modules/sys/log", "sys:log:list", "1", "fa fa-file-text-o", "7", getSystemMenuKey("LogManagement"), getSystemMenuKey("SystemManagement"), "sys_string_system_log"},
                 {"文件上传", "modules/oss/oss", "sys:oss:all", "1", "fa fa-file-image-o", "6", getSystemMenuKey("UploadManagement"), getSystemMenuKey("SystemManagement"), "sys_string_file_upload"},
                 {"部门管理", "modules/sys/dept", NULL, "1", "fa fa-file-code-o", "1", getSystemMenuKey("DepartmentManagement"), getSystemMenuKey("SystemManagement"), "sys_string_department_management"},
