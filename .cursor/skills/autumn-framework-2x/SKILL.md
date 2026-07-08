@@ -14,7 +14,7 @@ description: >-
   Read docs/AI_CODEGEN.md, docs/AI_DATABASE.md, docs/AI_DUAL_KEY.md. Bot/robot: read docs/AI_ROBOT.md + docs/AI_ROBOT_API.md (rbt_, Hook, message/push, cn.org.autumn.modules.bot).
   OAuth/OPL/OPC: read docs/AI_AUTH_LOGIN_MODES.md first; classic RP bind client_web_oauth_bind (WebOauthBindService); OPC bind opc_connect_bind (ConnectBindService); callback uses establishSession not login(upstream).
   scripts/constraints-scan is optional: run only when the user explicitly asks for a constraint audit, CI-style check, or phrases like 约束扫描/规范体检; see skill section "约束扫描（按需）".
-  Triggers on cn.org.autumn 2.0.0, Spring Boot 2.7, JDK 8, ModuleService, EncryptModuleService, FieldEncrypt, isEncryptCacheField, encryptCache, RuntimeSql, PageAware, bot, robot, rbt_, safe, PayUserPin, PayPinVerifier, pay password, 支付密码, 手势密码, 生物识别, 字段加密, field encrypt, 加密缓存, OAuth, openId, unionId, WebOauthBind, ConnectBind, client_id, app_id, 授权登录, 账号绑定, uuid绑定.
+  Triggers on cn.org.autumn 2.0.0, Spring Boot 2.7, JDK 8, ModuleService, EncryptModuleService, FieldEncrypt, isEncryptCacheField, encryptCache, RuntimeSql, PageAware, bot, robot, rbt_, safe, PayUserPin, PayPinVerifier, pay password, 支付密码, 手势密码, 生物识别, 字段加密, field encrypt, 加密缓存, OAuth, openId, unionId, WebOauthBind, ConnectBind, client_id, app_id, 授权登录, 账号绑定, uuid绑定, 站点门户, SITE_PORTAL_CONFIG, SiteLegalLinksHandler.
 ---
 
 # Autumn 2.x 框架开发（2.0.0 / master）
@@ -75,6 +75,8 @@ description: >-
 涉及 **实体字段存储加密 / `@FieldEncrypt` / `EncryptModuleService`** 时，必读 **`docs/AI_FIELD_ENCRYPT.md`**（§0 易混概念；§7 **`@Cache` 加密缓存**；与 **`docs/AI_CRYPTO.md`** 传输加密独立）。
 
 涉及 **授权登录 / OAuth / 开放平台 / 账号绑定** 时，**先读 **`docs/AI_AUTH_LOGIN_MODES.md`**（双轨总览），再按角色追加 **`docs/AI_OAUTH_INTEGRATION.md`**（方式一 uuid）或 **`docs/AI_OPC_INTEGRATION.md`** + **`docs/AI_OPL_INTEGRATION.md`**（方式二 openId）；见下文 **授权登录与账号绑定**。
+
+涉及 **站点门户 / 登录页备案·法律链接** 时，按需读 **`docs/AI_SITE_PORTAL.md`**（`SITE_PORTAL_CONFIG` JSON + `SiteLegalLinksHandler` SPI；细节以文档为准）。
 
 ## 授权登录与账号绑定（OAuth uuid / 开放平台 openId）
 
