@@ -1,5 +1,7 @@
 package cn.org.autumn.modules.client.site;
 
+import cn.org.autumn.annotation.PageAware;
+import cn.org.autumn.modules.client.support.OauthRpAdminConstants;
 import org.springframework.stereotype.Component;
 
 /**
@@ -7,4 +9,15 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class ClientSite extends ClientPages {
+
+    @PageAware(login = true, page = "oauthrpmanage")
+    public String oauthrpmanage = "client/oauthrpmanage";
+
+    public String getOauthRpManageKey() {
+        return getKey("oauthrpmanage");
+    }
+
+    public static String oauthRpManagePage() {
+        return OauthRpAdminConstants.MANAGE_RP_PAGE;
+    }
 }

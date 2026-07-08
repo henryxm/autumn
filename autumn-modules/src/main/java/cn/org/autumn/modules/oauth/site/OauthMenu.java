@@ -18,6 +18,7 @@ public class OauthMenu extends ModuleMenu {
     public String[][] getLanguageItems() {
         String[][] items = new String[][]{
                 {getLanguageKey(), "授权登录", "Authentication"},
+                {"oauth_oauthasmanage", "上游授权管理", "OAuth AS Manage"},
         };
         return items;
     }

@@ -12,6 +12,28 @@ public class OpcDaoSql extends RuntimeSql {
         return "SELECT * FROM " + quote("opc_connect_app") + " WHERE " + quote("user") + " = #{user} ORDER BY " + quote("create") + " DESC";
     }
 
+    /**
+     * 登录页图标文件 hash 是否仍被 OPC 接入应用引用（供 UsingHandler 与文件清理）。
+     */
+    public String connectAppCountByHashInUse() {
+        return "SELECT COUNT(*) FROM " + quote("opc_connect_app")
+                + " WHERE " + quote("hash") + " = #{hash}";
+    }
+
+    /** 登录页显式展示的活跃 OPC 接入应用。 */
+    public String connectAppListPageLoginActive() {
+        return "SELECT * FROM " + quote("opc_connect_app")
+                + " WHERE " + quote("page_login") + " = 1 AND " + quote("status") + " = 1"
+                + " ORDER BY " + quote("create") + " DESC";
+    }
+
+    /** appSecret 列是否已落库（密文或明文均可，供登录页 Provider 准入）。 */
+    public String connectAppCountSecretByAppId() {
+        return "SELECT COUNT(*) FROM " + quote("opc_connect_app")
+                + " WHERE " + quote("app_id") + " = #{appId} AND " + quote("app_secret") + " IS NOT NULL"
+                + " AND " + quote("app_secret") + " <> ''";
+    }
+
     public String connectBindByConnectAppAndUser() {
         return "SELECT * FROM " + quote("opc_connect_bind") + " WHERE " + quote("connect_app") + " = #{connectApp} AND " + quote("user") + " = #{user}" + limitOne();
     }

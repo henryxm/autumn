@@ -84,6 +84,18 @@
             + '&state=' + encodeURIComponent(state);
     }
 
+    function buildOauthLoginEntryUrl(options) {
+        options = options || {};
+        var ctx = readCtx(options);
+        var clientId = options.clientId;
+        var callback = options.callback;
+        var url = browserOrigin(ctx) + '/oauth2/login?client_id=' + encodeURIComponent(clientId);
+        if (callback) {
+            url += '&callback=' + encodeURIComponent(callback);
+        }
+        return url;
+    }
+
     function bindOAuthLoginEntryButton(options) {
         options = options || {};
         var btn = document.getElementById(options.buttonId || 'btnAuthorize');
@@ -101,6 +113,18 @@
                 } else {
                     alert('无法发起授权，请从应用内重新进入');
                 }
+                return;
+            }
+            var sameInstance = options.sameInstance;
+            if (sameInstance === undefined || sameInstance === null) {
+                sameInstance = cfg.sameInstance !== false;
+            }
+            if (!sameInstance) {
+                window.location.href = buildOauthLoginEntryUrl({
+                    ctx: readCtx(cfg),
+                    clientId: clientId,
+                    callback: trim(options.callback || cfg.callback)
+                });
                 return;
             }
             var redirectUri = trim(options.redirectUri || cfg.redirectUri)
@@ -187,18 +211,77 @@
         return false;
     }
 
+    function absoluteAppUrl(path, options) {
+        options = options || {};
+        var ctx = readCtx(options);
+        if (!path) {
+            return '#';
+        }
+        if (/^https?:\/\//i.test(path)) {
+            return path;
+        }
+        var normalized = path.charAt(0) === '/' ? path : '/' + path;
+        return ctx + normalized;
+    }
+
+    function isOauthLoginEntryUrl(url) {
+        if (!url) {
+            return false;
+        }
+        try {
+            var u = new URL(url, window.location.origin);
+            var pathname = (u.pathname || '').toLowerCase();
+            return pathname.endsWith('/oauth2/login') || pathname.endsWith('/open/oauth2/login');
+        } catch (e) {
+            return /\/oauth2\/login(?:\?|$)/i.test(url) || /\/open\/oauth2\/login(?:\?|$)/i.test(url);
+        }
+    }
+
+    function resolveAuthProviderCallback(provider, options) {
+        options = options || {};
+        var ctx = readCtx(options);
+        var safeOauthCallback = options.safeOauthCallback || '';
+        var loginPage = ctx + '/login';
+        if (provider && provider.sameInstance) {
+            return loginPage;
+        }
+        if (safeOauthCallback) {
+            return safeOauthCallback;
+        }
+        var href = window.location.href.split('#')[0];
+        if (isOauthLoginEntryUrl(href)) {
+            return loginPage;
+        }
+        return href;
+    }
+
+    function buildAuthProviderUrl(provider, options) {
+        options = options || {};
+        if (!provider || !provider.loginUrl) {
+            return '#';
+        }
+        var url = absoluteAppUrl(provider.loginUrl, options);
+        var callback = encodeURIComponent(resolveAuthProviderCallback(provider, options));
+        return url + (url.indexOf('?') >= 0 ? '&' : '?') + 'callback=' + callback;
+    }
+
     window.AuthFlow = {
         readCtx: readCtx,
         browserOrigin: browserOrigin,
         randomState: randomState,
         resolveQueryParam: resolveQueryParam,
         buildOauthAuthorizeUrl: buildOauthAuthorizeUrl,
+        buildOauthLoginEntryUrl: buildOauthLoginEntryUrl,
         buildOpenAsAuthorizeUrl: buildOpenAsAuthorizeUrl,
         buildOpenAuthorizeEntryUrl: buildOpenAuthorizeEntryUrl,
         bindOAuthLoginEntryButton: bindOAuthLoginEntryButton,
         bindOpenLoginEntryButton: bindOpenLoginEntryButton,
         syncAuthorizeCallback: syncAuthorizeCallback,
         beforeAuthorizeLoginSubmit: beforeAuthorizeLoginSubmit,
-        submitAuthorizeConsent: submitAuthorizeConsent
+        submitAuthorizeConsent: submitAuthorizeConsent,
+        absoluteAppUrl: absoluteAppUrl,
+        isOauthLoginEntryUrl: isOauthLoginEntryUrl,
+        resolveAuthProviderCallback: resolveAuthProviderCallback,
+        buildAuthProviderUrl: buildAuthProviderUrl
     };
 })(window);

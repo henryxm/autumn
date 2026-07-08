@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OAuth2 下游接入管理</title>
+    <style>
+        :root {
+            --bg-page: #f0f1f8;
+            --bg-elevated: #ffffff;
+            --brand-1: #6d28d9;
+            --brand-2: #7c3aed;
+            --text: #1a1d26;
+            --text-muted: #5c6370;
+            --border: #e8ecf4;
+            --radius: 12px;
+            --shadow-md: 0 8px 30px rgba(26, 29, 38, 0.08);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            height: 100%; width: 100%; overflow: hidden;
+            background: var(--bg-page); color: var(--text);
+        }
+        .container {
+            width: 100%; max-width: 1440px; height: 100vh; margin: 0 auto;
+            background: var(--bg-elevated); display: flex; flex-direction: column; overflow: hidden;
+            box-shadow: var(--shadow-md);
+        }
+        .header {
+            background: linear-gradient(125deg, #5b21b6 0%, #7c3aed 52%, #9333ea 100%);
+            color: white; padding: 20px 28px; text-align: center; flex-shrink: 0;
+        }
+        .header h1 { font-size: 1.45rem; font-weight: 700; margin-bottom: 6px; }
+        .header p { opacity: 0.92; font-size: 0.8rem; }
+        .stats { display: flex; flex-wrap: wrap; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+        .stat-card { flex: 1; min-width: 120px; background: #faf5ff; border-radius: 10px; padding: 12px 16px; border: 1px solid #ede9fe; }
+        .stat-card .label { font-size: 12px; color: var(--text-muted); }
+        .stat-card .value { font-size: 22px; font-weight: 700; color: var(--brand-1); margin-top: 4px; }
+        .tabs { display: flex; flex-wrap: wrap; background: #fafbfd; border-bottom: 1px solid var(--border); padding: 0 12px; gap: 4px; flex-shrink: 0; }
+        .tab { padding: 14px 18px; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--text-muted); border-bottom: 3px solid transparent; margin-bottom: -1px; }
+        .tab.active { color: var(--brand-1); border-bottom-color: var(--brand-1); background: var(--bg-elevated); }
+        .tab-panel { display: none; flex: 1; flex-direction: column; overflow: hidden; min-height: 0; padding: 16px 20px; }
+        .tab-panel.active { display: flex; }
+        .toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; align-items: center; flex-shrink: 0; }
+        .toolbar input, .toolbar select { padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; }
+        .btn { border: none; border-radius: 8px; padding: 8px 14px; font-size: 13px; cursor: pointer; font-weight: 600; }
+        .btn-primary { background: var(--brand-1); color: white; }
+        .btn-info { background: #0ea5e9; color: white; }
+        .btn-secondary { background: #eef2ff; color: #4338ca; }
+        .btn-success { background: #059669; color: white; }
+        .btn-danger { background: #fee2e2; color: #b91c1c; }
+        .btn-xs { padding: 4px 8px; font-size: 12px; margin-right: 4px; }
+        .table-container { flex: 1; overflow: auto; border: 1px solid var(--border); border-radius: var(--radius); }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+        th { background: #f8fafc; position: sticky; top: 0; z-index: 1; }
+        .empty-hint { text-align: center; color: var(--text-muted); padding: 24px; }
+        .pagination { display: flex; gap: 12px; align-items: center; justify-content: center; padding: 12px; flex-shrink: 0; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+        .badge-success { background: #dcfce7; color: #166534; }
+        .badge-info { background: #ede9fe; color: #5b21b6; }
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 100; align-items: center; justify-content: center; }
+        .modal.show { display: flex; }
+        .modal-content { background: white; border-radius: 12px; width: 90%; max-width: 520px; max-height: 90vh; overflow: auto; }
+        .modal-header { padding: 16px 20px; border-bottom: 1px solid var(--border); font-weight: 700; }
+        .modal-body { padding: 16px 20px; }
+        .modal-body label { display: block; font-size: 13px; font-weight: 600; margin: 10px 0 4px; color: var(--text-muted); }
+        .modal-body input, .modal-body select, .modal-body textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; }
+        .field-inline { display: flex; gap: 8px; align-items: stretch; }
+        .field-inline input { flex: 1; min-width: 0; }
+        .field-hint { font-size: 12px; color: var(--text-muted); margin-top: 6px; line-height: 1.5; }
+        .field-hint code { font-size: 11px; background: #f1f5f9; padding: 1px 4px; border-radius: 4px; }
+        .modal-footer { padding: 12px 20px; border-top: 1px solid var(--border); text-align: right; display: flex; justify-content: flex-end; gap: 8px; }
+        .toast { position: fixed; bottom: 24px; right: 24px; background: #166534; color: white; padding: 12px 18px; border-radius: 8px; z-index: 200; max-width: 420px; line-height: 1.5; }
+        .toast.error { background: #b91c1c; }
+        code { font-size: 12px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; word-break: break-all; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>OAuth2 下游接入管理</h1>
+        <p>经典 OAuth2 Relying Party · 接入上游授权平台 · 账号绑定</p>
+    </div>
+    <div class="stats">
+        <div class="stat-card"><div class="label">接入应用</div><div class="value" id="statClient">-</div></div>
+        <div class="stat-card"><div class="label">账号绑定</div><div class="value" id="statBind">-</div></div>
+    </div>
+    <div class="tabs">
+        <div class="tab active" data-tab="apps" onclick="switchTab('apps')">接入应用</div>
+        <div class="tab" data-tab="binds" onclick="switchTab('binds')">账号绑定</div>
+    </div>
+
+    <div class="tab-panel active" id="panelApps">
+        <div class="toolbar">
+            <input type="text" id="filterClientKeyword" placeholder="搜索应用名称或 clientId">
+            <button class="btn btn-secondary btn-xs" onclick="loadClients(1)">查询</button>
+            <button class="btn btn-primary btn-xs" onclick="showQuickCreateModal()">一键接入</button>
+            <button class="btn btn-primary btn-xs" onclick="showSaveClientModal()">手动配置</button>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead><tr><th>应用名称</th><th>Client ID</th><th>授权平台</th><th>回调地址</th><th>绑定数</th><th>实例</th><th>操作</th></tr></thead>
+                <tbody id="clientListBody"><tr><td colspan="7" class="empty-hint">加载中...</td></tr></tbody>
+            </table>
+        </div>
+        <div class="pagination" id="clientPagination"></div>
+    </div>
+
+    <div class="tab-panel" id="panelBinds">
+        <div class="toolbar">
+            <select id="filterBindClient"><option value="">全部应用</option></select>
+            <input type="text" id="filterBindKeyword" placeholder="本地用户 uuid 或上游 uuid">
+            <button class="btn btn-secondary btn-xs" onclick="loadBinds(1)">查询</button>
+            <button class="btn btn-primary btn-xs" onclick="showCreateBindModal()">添加绑定</button>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead><tr><th>接入应用</th><th>本地用户</th><th>上游 uuid</th><th>绑定时间</th><th>操作</th></tr></thead>
+                <tbody id="bindListBody"><tr><td colspan="5" class="empty-hint">加载中...</td></tr></tbody>
+            </table>
+        </div>
+        <div class="pagination" id="bindPagination"></div>
+    </div>
+</div>
+
+<div class="modal" id="modalQuickCreate">
+    <div class="modal-content">
+        <div class="modal-header">一键接入</div>
+        <div class="modal-body">
+            <label>Client ID</label>
+            <input id="quickClientId" type="text" placeholder="与上游 AS 注册的应用标识一致">
+            <p class="field-hint">若本系统同时作为授权平台且已存在同名 AS 应用，将自动同步 <code>client_secret</code> 与回调地址；否则自动生成密钥并设置默认回调 <code>/client/oauth2/callback</code>。</p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary btn-xs" onclick="hideModal('modalQuickCreate')">取消</button>
+            <button class="btn btn-primary btn-xs" onclick="submitQuickCreate()">确认接入</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="modalSaveClient">
+    <div class="modal-content">
+        <div class="modal-header">手动配置接入应用</div>
+        <div class="modal-body">
+            <label>应用名称</label><input id="saveName" type="text" placeholder="如：官网登录">
+            <label>Client ID</label><input id="saveClientId" type="text" placeholder="上游 AS 颁发的 client_id">
+            <label>Client Secret</label><input id="saveClientSecret" type="text" placeholder="同实例可留空，将自动同步上游密钥">
+            <label>授权平台地址（originUri）</label>
+            <div class="field-inline">
+                <input id="saveOriginUri" type="text" placeholder="留空表示本实例；跨实例填上游站点根地址">
+                <button type="button" class="btn btn-secondary btn-xs" onclick="fillLocalPlatform('saveOriginUri')">本机样例</button>
+            </div>
+            <p class="field-hint">用户跳转去授权的网站根地址。本系统同时充当 AS 时，留空或点「本机样例」即可。</p>
+            <label>授权回调地址（redirectUri）</label>
+            <div class="field-inline">
+                <input id="saveRedirectUri" type="text" placeholder="OAuth 授权完成后返回本系统的地址">
+                <button type="button" class="btn btn-secondary btn-xs" onclick="fillLocalCallback('saveRedirectUri')">本系统样例</button>
+            </div>
+            <p class="field-hint">须与上游 AS 登记一致。默认可使用 <code>{站点}/client/oauth2/callback</code>。</p>
+            <label>授权范围（scope）</label><input id="saveScope" type="text" value="basic">
+            <label>用户信息传递方式（userInfoDelivery）</label>
+            <select id="saveUserInfoDelivery">
+                <option value="">默认（空）</option>
+                <option value="legacy">legacy</option>
+                <option value="bearer">bearer</option>
+            </select>
+            <p class="field-hint">控制从上游获取用户信息的方式：<code>legacy</code> 为传统模式，<code>bearer</code> 为 Bearer Token 模式。</p>
+            <label>登录页图标地址（icon）</label><input id="saveIcon" type="text" placeholder="可选，如 https://cdn.example/icon.png">
+            <label>图标文件 HASH（hash）</label><input id="saveHash" type="text" placeholder="上传图标后的文件 hash，供文件清理引用判断">
+            <label>登录页展示（pageLogin）</label>
+            <select id="savePageLogin">
+                <option value="0">0 - 不在登录页展示（隐式登录仍可用）</option>
+                <option value="1">1 - 在 /login 展示授权入口</option>
+            </select>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary btn-xs" onclick="hideModal('modalSaveClient')">取消</button>
+            <button class="btn btn-primary btn-xs" onclick="submitSaveClient()">确认接入</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="modalEditClient">
+    <div class="modal-content" style="max-width:560px;">
+        <div class="modal-header">编辑接入配置</div>
+        <div class="modal-body">
+            <label>应用名称</label><input id="editName" type="text">
+            <label>Client ID</label><input id="editClientId" type="text" readonly style="background:#f8fafc;">
+            <label>Client Secret</label><input id="editClientSecret" type="text" placeholder="留空表示不修改">
+            <label>授权平台地址（originUri）</label>
+            <div class="field-inline">
+                <input id="editOriginUri" type="text" placeholder="留空表示本实例">
+                <button type="button" class="btn btn-secondary btn-xs" onclick="fillLocalPlatform('editOriginUri')">本机样例</button>
+            </div>
+            <label>授权回调地址（redirectUri）</label>
+            <div class="field-inline">
+                <input id="editRedirectUri" type="text">
+                <button type="button" class="btn btn-secondary btn-xs" onclick="fillLocalCallback('editRedirectUri')">本系统样例</button>
+            </div>
+            <label>授权范围（scope）</label><input id="editScope" type="text">
+            <label>用户信息传递方式（userInfoDelivery）</label>
+            <select id="editUserInfoDelivery">
+                <option value="">默认（空）</option>
+                <option value="legacy">legacy</option>
+                <option value="bearer">bearer</option>
+            </select>
+            <label>登录页图标地址（icon）</label><input id="editIcon" type="text" placeholder="可选">
+            <label>图标文件 HASH（hash）</label><input id="editHash" type="text" placeholder="上传图标后的文件 hash">
+            <label>登录页展示（pageLogin）</label>
+            <select id="editPageLogin">
+                <option value="0">0 - 不在登录页展示</option>
+                <option value="1">1 - 在 /login 展示</option>
+            </select>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary btn-xs" onclick="hideModal('modalEditClient')">取消</button>
+            <button class="btn btn-primary btn-xs" onclick="submitUpdateClient()">保存修改</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="modalCreateBind">
+    <div class="modal-content">
+        <div class="modal-header">添加账号绑定</div>
+        <div class="modal-body">
+            <label>接入应用</label><select id="bindClientId"></select>
+            <label>本地用户 uuid</label><input id="bindUser" type="text" placeholder="本系统 sys_user 的 uuid">
+            <label>上游 uuid</label><input id="bindUpper" type="text" placeholder="上游 AS 返回的用户 uuid">
+            <p class="field-hint">将上游 OAuth 身份与本地账号手动关联；用户也可在授权回调后自行选择绑定方式。</p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary btn-xs" onclick="hideModal('modalCreateBind')">取消</button>
+            <button class="btn btn-primary btn-xs" onclick="submitCreateBind()">绑定</button>
+        </div>
+    </div>
+</div>
+
+<script>
+window.__CTX__ = '${request.contextPath!""}';
+window.__OAUTH_RP_ADMIN_API__ = window.__CTX__ + '/client/admin/rp/platform';
+</script>
+<script>
+//<#noparse>
+const API_BASE = (typeof window.__OAUTH_RP_ADMIN_API__ === 'string' && window.__OAUTH_RP_ADMIN_API__.length > 0)
+    ? window.__OAUTH_RP_ADMIN_API__
+    : ((typeof window.__CTX__ === 'string') ? window.__CTX__ : '') + '/client/admin/rp/platform';
+
+const state = { tab: 'apps', clientOptions: [], clients: { page: 1, totalPage: 1 }, binds: { page: 1, totalPage: 1, loaded: false } };
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadOverview();
+    loadClientOptions();
+    loadClients(1);
+});
+
+function switchTab(tab) {
+    state.tab = tab;
+    document.querySelectorAll('.tab').forEach(function(el) {
+        el.classList.toggle('active', el.getAttribute('data-tab') === tab);
+    });
+    ['apps', 'binds'].forEach(function(key) {
+        var panel = document.getElementById('panel' + key.charAt(0).toUpperCase() + key.slice(1));
+        if (panel) panel.classList.toggle('active', key === tab);
+    });
+    if (tab === 'binds' && !state.binds.loaded) loadBinds(1);
+}
+
+async function apiGet(path, params) {
+    var qs = new URLSearchParams(params || {}).toString();
+    var res = await fetch(API_BASE + path + (qs ? ('?' + qs) : ''), { credentials: 'same-origin' });
+    return res.json();
+}
+
+async function apiPost(path, body) {
+    var res = await fetch(API_BASE + path, {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body || {})
+    });
+    return res.json();
+}
+
+async function loadOverview() {
+    try {
+        var r = await apiGet('/overview');
+        if (r.code !== 0 || !r.data) return;
+        document.getElementById('statClient').textContent = r.data.clientCount || 0;
+        document.getElementById('statBind').textContent = r.data.bindCount || 0;
+    } catch (e) { showToast('概览加载失败', 'error'); }
+}
+
+async function loadClientOptions() {
+    var r = await apiGet('/clients/all');
+    if (r.code !== 0) return;
+    state.clientOptions = r.list || [];
+    var filter = document.getElementById('filterBindClient');
+    var bindSelect = document.getElementById('bindClientId');
+    filter.innerHTML = '<option value="">全部应用</option>';
+    bindSelect.innerHTML = '<option value="">请选择</option>';
+    state.clientOptions.forEach(function(c) {
+        var label = escapeHtml(c.name || c.clientId) + ' (' + escapeHtml(c.clientId) + ')';
+        filter.innerHTML += '<option value="' + escapeAttr(c.clientId) + '">' + label + '</option>';
+        bindSelect.innerHTML += '<option value="' + escapeAttr(c.clientId) + '">' + label + '</option>';
+    });
+}
+
+async function loadClients(page) {
+    state.clients.page = page;
+    var r = await apiGet('/clients', { page: page, limit: 10, keyword: document.getElementById('filterClientKeyword').value });
+    var tbody = document.getElementById('clientListBody');
+    if (r.code !== 0 || !r.page) {
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-hint">' + escapeHtml(r.msg || '加载失败') + '</td></tr>';
+        return;
+    }
+    state.clients.totalPage = r.page.totalPage || 1;
+    var list = r.page.list || [];
+    tbody.innerHTML = list.length ? list.map(function(item) {
+        var originCell = item.sameInstance ? '<span class="badge badge-info">同实例</span>' : escapeHtml(item.originUri || '-');
+        var instanceBadge = item.sameInstance
+            ? '<span class="badge badge-success">同实例</span>'
+            : '<span class="badge badge-info">跨实例</span>';
+        return '<tr><td>' + escapeHtml(item.name) + '</td>' +
+            '<td><code>' + escapeHtml(item.clientId) + '</code></td>' +
+            '<td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;" title="' + escapeAttr(item.originUri || '同实例') + '">' + originCell + '</td>' +
+            '<td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;" title="' + escapeAttr(item.redirectUri || '') + '"><code>' + escapeHtml(item.redirectUri || '-') + '</code></td>' +
+            '<td>' + (item.bindCount || 0) + '</td>' +
+            '<td>' + instanceBadge + '</td>' +
+            '<td>' +
+            '<button class="btn btn-info btn-xs" onclick="showEditClientModal(\'' + escapeAttr(item.clientId) + '\')">编辑</button>' +
+            '<button class="btn btn-success btn-xs" onclick="openLoginPage(\'' + escapeAttr(item.clientId) + '\')">打开登录页</button>' +
+            '</td></tr>';
+    }).join('') : '<tr><td colspan="7" class="empty-hint">暂无接入应用，可点「一键接入」或「手动配置」创建</td></tr>';
+    renderPagination('clientPagination', state.clients.page, state.clients.totalPage, loadClients);
+}
+
+async function loadBinds(page) {
+    state.binds.page = page;
+    state.binds.loaded = true;
+    var clientId = document.getElementById('filterBindClient').value;
+    var r = await apiGet('/binds', { page: page, limit: 10, clientId: clientId, keyword: document.getElementById('filterBindKeyword').value });
+    var tbody = document.getElementById('bindListBody');
+    if (r.code !== 0 || !r.page) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty-hint">' + escapeHtml(r.msg || '加载失败') + '</td></tr>';
+        return;
+    }
+    state.binds.totalPage = r.page.totalPage || 1;
+    var list = r.page.list || [];
+    tbody.innerHTML = list.length ? list.map(function(item) {
+        return '<tr><td>' + escapeHtml(item.clientName || item.clientId) + '<br/><code>' + escapeHtml(item.clientId || '') + '</code></td>' +
+            '<td>' + escapeHtml(item.username || '') + '<br/><code>' + escapeHtml(item.user) + '</code></td>' +
+            '<td><code>' + escapeHtml(item.upper) + '</code></td>' +
+            '<td>' + formatTime(item.create) + '</td>' +
+            '<td><button class="btn btn-danger btn-xs" onclick="deleteBind(' + item.id + ')">解除</button></td></tr>';
+    }).join('') : '<tr><td colspan="5" class="empty-hint">暂无绑定记录</td></tr>';
+    renderPagination('bindPagination', state.binds.page, state.binds.totalPage, loadBinds);
+}
+
+function showQuickCreateModal() {
+    document.getElementById('quickClientId').value = '';
+    showModal('modalQuickCreate');
+}
+
+function showSaveClientModal() {
+    document.getElementById('saveName').value = '';
+    document.getElementById('saveClientId').value = '';
+    document.getElementById('saveClientSecret').value = '';
+    document.getElementById('saveOriginUri').value = '';
+    fillLocalCallback('saveRedirectUri');
+    document.getElementById('saveScope').value = 'basic';
+    document.getElementById('saveUserInfoDelivery').value = '';
+    showModal('modalSaveClient');
+}
+
+function showCreateBindModal() {
+    loadClientOptions().then(function() { showModal('modalCreateBind'); });
+}
+
+async function showEditClientModal(clientId) {
+    if (!clientId) return;
+    var r = await apiGet('/client/detail', { clientId: clientId });
+    if (r.code !== 0 || !r.client) {
+        showToast(r.msg || '加载失败', 'error');
+        return;
+    }
+    var client = r.client;
+    document.getElementById('editName').value = client.name || '';
+    document.getElementById('editClientId').value = client.clientId || '';
+    document.getElementById('editClientSecret').value = '';
+    document.getElementById('editOriginUri').value = client.originUri || '';
+    document.getElementById('editRedirectUri').value = client.redirectUri || '';
+    document.getElementById('editScope').value = client.scope || 'basic';
+    document.getElementById('editUserInfoDelivery').value = client.userInfoDelivery || '';
+    document.getElementById('editIcon').value = client.icon || '';
+    document.getElementById('editHash').value = client.hash || '';
+    document.getElementById('editPageLogin').value = String(client.pageLogin != null ? client.pageLogin : 0);
+    showModal('modalEditClient');
+}
+
+async function submitQuickCreate() {
+    var clientId = document.getElementById('quickClientId').value.trim();
+    if (!clientId) { showToast('请填写 Client ID', 'error'); return; }
+    var r = await apiPost('/client/quickCreate', { clientId: clientId });
+    if (r.code === 0) {
+        hideModal('modalQuickCreate');
+        var msg = '接入成功';
+        if (r.client && r.client.sameInstance && r.client.secretConfigured) {
+            msg = '接入成功，已同步上游 AS 密钥与回调地址';
+        }
+        showToast(msg);
+        loadClients(1);
+        loadOverview();
+        loadClientOptions();
+    } else {
+        showToast(r.msg || '接入失败', 'error');
+    }
+}
+
+async function submitSaveClient() {
+    var clientId = document.getElementById('saveClientId').value.trim();
+    var name = document.getElementById('saveName').value.trim();
+    var clientSecret = document.getElementById('saveClientSecret').value.trim();
+    var originUri = document.getElementById('saveOriginUri').value.trim();
+    var redirectUri = document.getElementById('saveRedirectUri').value.trim();
+    if (!clientId) { showToast('请填写 Client ID', 'error'); return; }
+    if (!name) { showToast('请填写应用名称', 'error'); return; }
+    if (!redirectUri || isLocalCallbackSample(redirectUri)) {
+        redirectUri = localCallbackUri();
+    }
+    var r = await apiPost('/client/save', {
+        clientId: clientId,
+        name: name,
+        clientSecret: clientSecret,
+        originUri: originUri,
+        redirectUri: redirectUri,
+        scope: document.getElementById('saveScope').value,
+        userInfoDelivery: document.getElementById('saveUserInfoDelivery').value,
+        icon: document.getElementById('saveIcon').value.trim(),
+        hash: document.getElementById('saveHash').value.trim(),
+        pageLogin: document.getElementById('savePageLogin').value
+    });
+    if (r.code === 0) {
+        hideModal('modalSaveClient');
+        showToast('接入成功');
+        loadClients(1);
+        loadOverview();
+        loadClientOptions();
+    } else {
+        showToast(r.msg || '接入失败', 'error');
+    }
+}
+
+async function submitUpdateClient() {
+    var clientId = document.getElementById('editClientId').value.trim();
+    var name = document.getElementById('editName').value.trim();
+    var originUri = document.getElementById('editOriginUri').value.trim();
+    var redirectUri = document.getElementById('editRedirectUri').value.trim();
+    if (!clientId) { showToast('Client ID 无效', 'error'); return; }
+    if (!name) { showToast('请填写应用名称', 'error'); return; }
+    if (!redirectUri) { showToast('请填写回调地址', 'error'); return; }
+    var r = await apiPost('/client/update', {
+        clientId: clientId,
+        name: name,
+        clientSecret: document.getElementById('editClientSecret').value.trim(),
+        originUri: originUri,
+        redirectUri: redirectUri,
+        scope: document.getElementById('editScope').value,
+        userInfoDelivery: document.getElementById('editUserInfoDelivery').value,
+        icon: document.getElementById('editIcon').value.trim(),
+        hash: document.getElementById('editHash').value.trim(),
+        pageLogin: document.getElementById('editPageLogin').value
+    });
+    if (r.code === 0) {
+        hideModal('modalEditClient');
+        showToast('已保存');
+        loadClients(state.clients.page);
+        loadOverview();
+        loadClientOptions();
+    } else {
+        showToast(r.msg || '保存失败', 'error');
+    }
+}
+
+async function submitCreateBind() {
+    var clientId = document.getElementById('bindClientId').value;
+    var user = document.getElementById('bindUser').value.trim();
+    var upper = document.getElementById('bindUpper').value.trim();
+    if (!clientId) { showToast('请选择接入应用', 'error'); return; }
+    if (!user) { showToast('请填写本地用户 uuid', 'error'); return; }
+    if (!upper) { showToast('请填写上游 uuid', 'error'); return; }
+    var r = await apiPost('/bind/create', { clientId: clientId, user: user, upper: upper });
+    if (r.code === 0) {
+        hideModal('modalCreateBind');
+        showToast('绑定成功');
+        loadBinds(state.binds.page);
+        loadOverview();
+    } else {
+        showToast(r.msg || '绑定失败', 'error');
+    }
+}
+
+async function deleteBind(id) {
+    if (!confirm('确定解除该绑定？')) return;
+    var r = await apiPost('/bind/delete', { id: id });
+    if (r.code === 0) {
+        loadBinds(state.binds.page);
+        loadOverview();
+        showToast('已解除');
+    } else {
+        showToast(r.msg || '操作失败', 'error');
+    }
+}
+
+function openLoginPage(clientId) {
+    if (!clientId) {
+        showToast('Client ID 无效', 'error');
+        return;
+    }
+    window.open(appOrigin() + '/oauth2/login?client_id=' + encodeURIComponent(clientId), '_blank');
+}
+
+function appOrigin() {
+    return window.location.origin + (window.__CTX__ || '');
+}
+
+function localCallbackUri() {
+    return appOrigin() + '/client/oauth2/callback';
+}
+
+function isLocalCallbackSample(uri) {
+    if (!uri) return true;
+    var trimmed = String(uri).trim();
+    var base = localCallbackUri();
+    return trimmed === base;
+}
+
+function fillLocalPlatform(inputId) {
+    var input = document.getElementById(inputId);
+    if (input) input.value = appOrigin();
+}
+
+function fillLocalCallback(inputId) {
+    var input = document.getElementById(inputId);
+    if (input) input.value = localCallbackUri();
+}
+
+function renderPagination(id, page, totalPage, loader) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = '<button class="btn btn-secondary btn-xs" ' + (page <= 1 ? 'disabled' : '') + ' onclick="' + loader.name + '(' + (page - 1) + ')">上一页</button>' +
+        '<span>' + page + ' / ' + totalPage + '</span>' +
+        '<button class="btn btn-secondary btn-xs" ' + (page >= totalPage ? 'disabled' : '') + ' onclick="' + loader.name + '(' + (page + 1) + ')">下一页</button>';
+}
+
+function showModal(id) { document.getElementById(id).classList.add('show'); }
+function hideModal(id) { document.getElementById(id).classList.remove('show'); }
+function showToast(msg, type) {
+    type = type || 'success';
+    var t = document.createElement('div');
+    t.className = 'toast ' + type;
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(function() { t.remove(); }, 3000);
+}
+function formatTime(v) { return v ? String(v).replace('T', ' ').substring(0, 19) : '-'; }
+function escapeHtml(s) { if (!s) return ''; return String(s).replace(/[&<>"']/g, function(m) { return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]; }); }
+function escapeAttr(s) { if (!s) return ''; return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+//</#noparse>
+</script>
+</body>
+</html>

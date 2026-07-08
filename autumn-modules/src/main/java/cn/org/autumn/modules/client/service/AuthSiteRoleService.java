@@ -42,14 +42,37 @@ public class AuthSiteRoleService {
         return "as";
     }
 
+    /** 请求参数 client_id 优先，否则 LOGIN_AUTHENTICATION。 */
+    public String resolveRpClientId(HttpServletRequest request) {
+        if (!isRpEnabled()) {
+            return null;
+        }
+        String clientId = resolveClientIdParam(request);
+        if (StringUtils.isBlank(clientId)) {
+            clientId = request == null ? null : sysConfigService.getOauth2LoginClientId(request.getHeader("host"));
+        }
+        if (StringUtils.isBlank(clientId)) {
+            clientId = sysConfigService.getOauth2LoginClientId();
+        }
+        return StringUtils.isBlank(clientId) ? null : clientId.trim();
+    }
+
+    public String resolveClientIdParam(HttpServletRequest request) {
+        if (request == null) {
+            return null;
+        }
+        String clientId = request.getParameter("client_id");
+        if (StringUtils.isBlank(clientId)) {
+            clientId = request.getParameter("clientId");
+        }
+        return StringUtils.isBlank(clientId) ? null : clientId.trim();
+    }
+
     public WebAuthenticationEntity resolveRpClient(HttpServletRequest request) {
         if (!isRpEnabled()) {
             return null;
         }
-        String clientId = request == null ? null : sysConfigService.getOauth2LoginClientId(request.getHeader("host"));
-        if (StringUtils.isBlank(clientId)) {
-            clientId = sysConfigService.getOauth2LoginClientId();
-        }
+        String clientId = resolveRpClientId(request);
         if (StringUtils.isBlank(clientId)) {
             return null;
         }

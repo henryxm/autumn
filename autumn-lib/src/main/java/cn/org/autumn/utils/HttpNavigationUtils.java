@@ -53,6 +53,14 @@ public final class HttpNavigationUtils {
         return p.startsWith("/oauth2/authorize") || p.startsWith("/open/oauth2/authorize");
     }
 
+    /** OAuth 客户端登录入口（不宜作为 callback 链式嵌套目标）。 */
+    public static boolean isOauthLoginEntryPath(String path) {
+        if (!StringUtils.hasText(path)) return false;
+        String p = path.toLowerCase();
+        return "/oauth2/login".equals(p) || p.startsWith("/oauth2/login/")
+                || "/open/oauth2/login".equals(p) || p.startsWith("/open/oauth2/login/");
+    }
+
     /** 明显为监控/文档/Token 等基础设施，永不应整页打开。 */
     public static boolean isInfrastructureApiPath(String path) {
         if (!StringUtils.hasText(path)) return false;

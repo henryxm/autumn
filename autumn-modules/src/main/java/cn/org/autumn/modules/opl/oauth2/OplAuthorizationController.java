@@ -20,6 +20,7 @@ import cn.org.autumn.modules.qrc.model.TicketSnapshot;
 import cn.org.autumn.modules.qrc.service.ScanTicketService;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysUserService;
+import cn.org.autumn.modules.sys.shiro.LogoutSkipSupport;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.usr.service.UserProfileService;
 import cn.org.autumn.opl.OplConstants;
@@ -349,8 +350,9 @@ public class OplAuthorizationController {
     }
 
     @RequestMapping(value = "authorize/logout", method = RequestMethod.GET)
-    public ModelAndView authorizeLogout(HttpServletRequest request, @RequestParam(required = false) String returnTo) {
+    public ModelAndView authorizeLogout(HttpServletRequest request, HttpServletResponse response, @RequestParam(required = false) String returnTo) {
         ShiroUtils.logout();
+        LogoutSkipSupport.mark(request, response);
         String url = normalizeRedirectUrl(returnTo);
         if (StringUtils.isBlank(url)) {
             url = WebPathUtils.forBrowser(request, OplConstants.OAUTH2_BASE + "/authorize");

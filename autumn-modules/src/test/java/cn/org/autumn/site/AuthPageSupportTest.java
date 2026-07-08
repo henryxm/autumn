@@ -13,6 +13,7 @@ import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -55,5 +56,17 @@ class AuthPageSupportTest {
         authPageSupport.prepareOplAuthorize(request, model);
 
         assertEquals("/open/oauth2/opl/login", model.getAttribute("authorizeLoginAction"));
+    }
+
+    @Test
+    void prepareAuthorizePage_regularLoginDoesNotEnableOauthLoginHijack() {
+        when(sysConfigService.getOauth2LoginClientId()).thenReturn("default-client");
+        when(sysConfigService.getLoadingBrand()).thenReturn("Autumn");
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/login");
+        Model model = new ExtendedModelMap();
+
+        authPageSupport.prepareAuthorizePage(request, model, false, false);
+
+        assertFalse(Boolean.TRUE.equals(model.getAttribute("oauthLogin")));
     }
 }

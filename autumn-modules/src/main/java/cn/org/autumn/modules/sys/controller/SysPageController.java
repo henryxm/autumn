@@ -3,6 +3,8 @@ package cn.org.autumn.modules.sys.controller;
 import cn.org.autumn.annotation.SkipInterceptor;
 import cn.org.autumn.opl.OplConstants;
 import cn.org.autumn.opc.OpcConstants;
+import cn.org.autumn.modules.client.support.OauthRpAdminConstants;
+import cn.org.autumn.modules.oauth.support.OauthAdminConstants;
 import cn.org.autumn.modules.spm.interceptor.SpmInterceptor;
 import cn.org.autumn.modules.spm.service.SuperPositionModelService;
 import cn.org.autumn.modules.sys.service.SysConfigService;
@@ -66,6 +68,15 @@ public class SysPageController implements ErrorController {
     AuthPageSupport authPageSupport;
 
     List<String> active = new ArrayList<>();
+
+    @RequestMapping(OpcConstants.CONNECTBIND_MANAGE_PAGE)
+    @SkipInterceptor
+    public String connectbindManage() {
+        if (!ShiroUtils.isLogin()) {
+            return "redirect:/login";
+        }
+        return "opc/connectbind";
+    }
 
     @RequestMapping("modules/{module}/{url}")
     public String module(@PathVariable("module") String module, @PathVariable("url") String url, String lang, Model model) {
@@ -158,6 +169,12 @@ public class SysPageController implements ErrorController {
     @RequestMapping({OpcConstants.OAUTH2_LOGIN_PAGE + ".html", OpcConstants.OAUTH2_LOGIN_PAGE})
     @SkipInterceptor(AuthorizationInterceptor.class)
     public String openLoginEntry(HttpServletRequest request, HttpServletResponse response, Model model, @RequestParam(required = false) String appId) {
+        String callback = request.getParameter("callback");
+        String canonicalUrl = WebPathUtils.oauthLoginEntryUrlIfCallbackNeedsCanonical(
+                request, OpcConstants.OAUTH2_LOGIN_PATH, "appId", appId, callback);
+        if (StringUtils.isNotBlank(canonicalUrl)) {
+            return "redirect:" + canonicalUrl;
+        }
         authPageSupport.prepareOpenLoginEntry(request, model, appId);
         return pageFactory.openLoginEntry(request, response, model);
     }
@@ -386,6 +403,22 @@ public class SysPageController implements ErrorController {
         if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
             return "404";
         return "opc/opcmanage";
+    }
+
+    @RequestMapping({OauthAdminConstants.MANAGE_AS_PAGE})
+    @SkipInterceptor
+    public String oauthasmanage() {
+        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
+            return "404";
+        return "oauth/oauthasmanage";
+    }
+
+    @RequestMapping({OauthRpAdminConstants.MANAGE_RP_PAGE})
+    @SkipInterceptor
+    public String oauthrpmanage() {
+        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
+            return "404";
+        return "client/oauthrpmanage";
     }
 
     @RequestMapping({"loopjob.html"})

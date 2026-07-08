@@ -4,6 +4,7 @@ import cn.org.autumn.annotation.SkipInterceptor;
 import cn.org.autumn.opc.OpcConstants;
 import cn.org.autumn.modules.opc.entity.ConnectAppEntity;
 import cn.org.autumn.modules.opc.entity.ConnectBindEntity;
+import cn.org.autumn.modules.opc.service.ConnectBindManageService;
 import cn.org.autumn.modules.opc.service.OpcAdminService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.sys.support.SystemAdminApi;
@@ -32,6 +33,9 @@ public class OpcAdminController {
 
     @Autowired
     private OpcAdminService opcAdminService;
+
+    @Autowired
+    private ConnectBindManageService connectBindManageService;
 
     @Autowired
     private SystemAdminApi systemAdminApi;
@@ -72,7 +76,10 @@ public class OpcAdminController {
                     body == null ? null : body.get("platformBaseUrl"),
                     body == null ? null : body.get("redirectUri"),
                     body == null ? null : body.get("name"),
-                    body == null ? null : body.get("scope"));
+                    body == null ? null : body.get("scope"),
+                    body == null ? null : body.get("icon"),
+                    body == null ? null : body.get("hash"),
+                    parsePageLogin(body == null ? null : body.get("pageLogin")));
             return R.ok().put("app", app);
         });
     }
@@ -86,7 +93,8 @@ public class OpcAdminController {
                     body == null ? null : body.get("name"),
                     body == null ? null : body.get("redirectUri"),
                     body == null ? null : body.get("scope"),
-                    body == null ? null : body.get("accessToken"));
+                    body == null ? null : body.get("accessToken"),
+                    parsePageLogin(body == null ? null : body.get("pageLogin")));
             return R.ok().put("app", app);
         });
     }
@@ -101,7 +109,10 @@ public class OpcAdminController {
                     body == null ? null : body.get("platformBaseUrl"),
                     body == null ? null : body.get("redirectUri"),
                     body == null ? null : body.get("name"),
-                    body == null ? null : body.get("scope"));
+                    body == null ? null : body.get("scope"),
+                    body == null ? null : body.get("icon"),
+                    body == null ? null : body.get("hash"),
+                    parsePageLogin(body == null ? null : body.get("pageLogin")));
             return R.ok().put("app", app);
         });
     }
@@ -118,13 +129,13 @@ public class OpcAdminController {
 
     @GetMapping("/binds")
     public R binds(HttpServletRequest request, @RequestParam Map<String, Object> params) {
-        return admin(request, () -> R.ok().put("page", opcAdminService.pageBinds(params)));
+        return admin(request, () -> R.ok().put("page", connectBindManageService.pageBinds(params)));
     }
 
     @PostMapping("/bind/create")
     public R createBind(HttpServletRequest request, @RequestBody Map<String, String> body) {
         return admin(request, () -> {
-            ConnectBindEntity bind = opcAdminService.createBind(
+            ConnectBindEntity bind = connectBindManageService.createBind(
                     body == null ? null : body.get("connectApp"),
                     body == null ? null : body.get("user"),
                     body == null ? null : body.get("openId"),
@@ -140,12 +151,19 @@ public class OpcAdminController {
             if (body != null && body.get("id") != null) {
                 id = Long.parseLong(body.get("id").toString());
             }
-            opcAdminService.deleteBind(id);
+            connectBindManageService.deleteBind(id);
             return R.ok();
         });
     }
 
     private R admin(HttpServletRequest request, Supplier<R> action) {
         return systemAdminApi.execute(request, "OPC", action);
+    }
+
+    private static Integer parsePageLogin(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return null;
+        }
+        return "1".equals(value.trim()) || "true".equalsIgnoreCase(value.trim()) ? 1 : 0;
     }
 }

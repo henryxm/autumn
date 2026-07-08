@@ -31,4 +31,12 @@ public class WebAuthenticationDaoSql extends RuntimeSql {
         return "UPDATE " + quote("client_web_authentication") + " SET " + quote("client_type") + " = #{clientType} WHERE " + quote("client_id")
                 + " = #{clientId}";
     }
+
+    /**
+     * 登录页图标文件 hash 是否仍被 RP 接入应用引用（供 UsingHandler 与文件清理）。
+     */
+    public String countByHashInUse() {
+        return "SELECT COUNT(*) FROM " + quote("client_web_authentication")
+                + " WHERE " + quote("hash") + " = #{hash}";
+    }
 }

@@ -86,7 +86,8 @@
 
 | 入口 | 路径 | 说明 |
 |------|------|------|
-| 授权客户端中心 | `/oauth2/authclient` | 四表合一，推荐运维使用 |
+| 上游授权管理 | `oauthasmanage.html` | AS 侧客户端、令牌（推荐） |
+| 下游接入管理 | `oauthrpmanage.html` | RP 侧接入、绑定（推荐） |
 | 客户端详情 CRUD | `/modules/oauth/clientdetails` | 单独维护 `oauth_client_details` |
 
 **必填/关键字段**（表 `oauth_client_details`）：
@@ -124,7 +125,7 @@
 
 ### 3.4 同实例联调步骤
 
-1. 在 `/oauth2/authclient` 创建 Client，`redirect_uri` 设为 `{ORIGIN}/client/oauth2/callback`
+1. 在 `oauthasmanage.html` 创建 AS Client，`redirect_uri` 设为 `{ORIGIN}/client/oauth2/callback`；在 `oauthrpmanage.html` 用同 `clientId` 一键接入
 2. 打开 `{ORIGIN}/oauth2/login?client_id=...`（或管理页「打开 OAuth 登录页」）
 3. 点击「使用 OAuth 授权登录」→ AS 分栏授权页登录并确认
 4. 回调 `/client/oauth2/callback` 换票建会话 → 默认跳转 `/oauth2/success`
@@ -622,4 +623,4 @@ function buildAuthorizeUrl(origin, clientId, redirectUri, state) {
 - **`docs/AI_QRC_INTEGRATION.md`** — 扫码 / Open API 第三方集成
 - **`docs/AI_QRC_API.md`** — QRC 端点参考
 - 站内 **`/modules/docs/auth-flow`** — 授权与扫码流程（含运维视角）
-- 站内 **`/oauth2/authclient`** — 授权客户端中心
+- 站内 **`oauthasmanage.html`** / **`oauthrpmanage.html`** — 经典 OAuth2 管理

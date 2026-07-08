@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>账号绑定</title>
+    <style>
+        :root {
+            --bg-page: #eef1f8;
+            --bg-card: #ffffff;
+            --brand-1: #6d28d9;
+            --brand-2: #7c3aed;
+            --text: #1a1d26;
+            --text-muted: #64748b;
+            --border: #e8ecf4;
+            --radius-xl: 20px;
+            --radius-lg: 14px;
+            --radius-md: 10px;
+            --shadow-soft: 0 10px 40px rgba(26, 29, 38, 0.08);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            min-height: 100%;
+            background: var(--bg-page);
+            color: var(--text);
+        }
+        .page-shell {
+            min-height: 100vh;
+            padding: 28px 20px 40px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+        .container {
+            width: 100%;
+            max-width: 720px;
+            background: var(--bg-card);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-soft);
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.8);
+        }
+        .container.admin-mode { max-width: 920px; }
+        .header {
+            padding: 28px 28px 24px;
+            background: linear-gradient(135deg, #5b21b6 0%, #7c3aed 55%, #8b5cf6 100%);
+            color: #fff;
+        }
+        .header h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 8px; letter-spacing: 0.02em; }
+        .header p { font-size: 0.9rem; line-height: 1.6; opacity: 0.94; max-width: 36em; }
+        .content { padding: 24px 28px 32px; }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: linear-gradient(180deg, #faf5ff 0%, #f5f3ff 100%);
+            border: 1px solid #ede9fe;
+            border-radius: var(--radius-lg);
+            padding: 16px 18px;
+        }
+        .stat-card .label { font-size: 12px; color: var(--text-muted); }
+        .stat-card .value { font-size: 26px; font-weight: 700; color: var(--brand-1); margin-top: 6px; }
+        .hint-card {
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 14px 16px;
+            font-size: 13px;
+            color: var(--text-muted);
+            line-height: 1.65;
+            margin-bottom: 20px;
+        }
+        .hint-card strong { color: var(--text); font-weight: 600; }
+        .filter-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 18px;
+            align-items: center;
+        }
+        .filter-bar select,
+        .filter-bar input {
+            flex: 1;
+            min-width: 140px;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: 14px;
+            background: #fff;
+        }
+        .btn {
+            border: none;
+            border-radius: var(--radius-md);
+            padding: 10px 16px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.15s;
+        }
+        .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+        .btn-primary { background: var(--brand-1); color: #fff; }
+        .btn-secondary { background: #eef2ff; color: #4338ca; }
+        .btn-ghost { background: #f8fafc; color: var(--text-muted); border: 1px solid var(--border); }
+        .btn-danger { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+        .btn-sm { padding: 8px 14px; font-size: 12px; }
+        .bind-list { display: flex; flex-direction: column; gap: 12px; min-height: 120px; }
+        .bind-card {
+            display: flex;
+            gap: 14px;
+            align-items: flex-start;
+            padding: 16px 18px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            background: #fff;
+            transition: box-shadow 0.15s, border-color 0.15s;
+        }
+        .bind-card:hover {
+            border-color: #ddd6fe;
+            box-shadow: 0 6px 20px rgba(109, 40, 217, 0.06);
+        }
+        .app-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            background: linear-gradient(145deg, #ede9fe, #ddd6fe);
+            color: var(--brand-1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: 700;
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+        .app-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .bind-main { flex: 1; min-width: 0; }
+        .bind-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+        .bind-meta { font-size: 13px; color: var(--text-muted); line-height: 1.55; }
+        .bind-meta + .bind-meta { margin-top: 2px; }
+        .bind-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            flex-shrink: 0;
+            align-items: flex-end;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 48px 24px;
+            border: 1px dashed #cbd5e1;
+            border-radius: var(--radius-lg);
+            color: var(--text-muted);
+            line-height: 1.7;
+            background: #fafbfd;
+        }
+        .empty-state .icon { font-size: 2rem; margin-bottom: 12px; opacity: 0.5; }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 14px;
+            margin-top: 22px;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+        .footer-links {
+            margin-top: 24px;
+            padding-top: 18px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            justify-content: center;
+        }
+        .footer-links a {
+            font-size: 13px;
+            color: var(--brand-1);
+            text-decoration: none;
+            padding: 6px 12px;
+            border-radius: 999px;
+            background: #f5f3ff;
+        }
+        .footer-links a:hover { background: #ede9fe; }
+        .admin-bar {
+            margin-top: 20px;
+            padding: 14px 16px;
+            border-radius: var(--radius-lg);
+            background: #fffbeb;
+            border: 1px solid #fde68a;
+            display: none;
+        }
+        .admin-bar.show { display: block; }
+        .admin-bar p { font-size: 13px; color: #92400e; line-height: 1.55; margin-bottom: 10px; }
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.45);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .modal.show { display: flex; }
+        .modal-content {
+            background: #fff;
+            border-radius: var(--radius-xl);
+            width: 100%;
+            max-width: 480px;
+            max-height: 90vh;
+            overflow: auto;
+            box-shadow: var(--shadow-soft);
+        }
+        .modal-header {
+            padding: 20px 22px 12px;
+            font-size: 17px;
+            font-weight: 700;
+        }
+        .modal-body { padding: 8px 22px 20px; }
+        .modal-body label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            margin: 14px 0 6px;
+            color: var(--text-muted);
+        }
+        .modal-body input,
+        .modal-body select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: 14px;
+        }
+        .field-hint { font-size: 12px; color: var(--text-muted); line-height: 1.55; margin-top: 8px; }
+        .modal-footer {
+            padding: 14px 22px 20px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        .detail-block {
+            padding: 12px 14px;
+            background: #f8fafc;
+            border-radius: var(--radius-md);
+            margin-bottom: 10px;
+        }
+        .detail-block .label { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+        .detail-block .value { font-size: 14px; line-height: 1.5; word-break: break-word; }
+        .tech-section {
+            margin-top: 16px;
+            padding-top: 14px;
+            border-top: 1px dashed var(--border);
+        }
+        .tech-section h4 { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; font-weight: 600; }
+        .tech-section code {
+            display: block;
+            font-size: 11px;
+            background: #f1f5f9;
+            padding: 8px 10px;
+            border-radius: 8px;
+            word-break: break-all;
+            margin-top: 4px;
+            color: #475569;
+        }
+        .toast {
+            position: fixed;
+            bottom: 28px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #166534;
+            color: #fff;
+            padding: 12px 20px;
+            border-radius: 999px;
+            z-index: 200;
+            font-size: 14px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+        }
+        .toast.error { background: #b91c1c; }
+        @media (max-width: 600px) {
+            .page-shell { padding: 16px 12px 28px; }
+            .header, .content { padding-left: 18px; padding-right: 18px; }
+            .bind-card { flex-direction: column; }
+            .bind-actions { flex-direction: row; width: 100%; justify-content: flex-end; }
+        }
+    </style>
+</head>
+<body>
+<div class="page-shell">
+    <div class="container" id="pageContainer">
+        <div class="header">
+            <h1 id="pageTitle">我的账号绑定</h1>
+            <p id="pageDesc">查看您通过第三方应用授权登录时建立的账号关联，必要时可解除后重新授权。</p>
+        </div>
+
+        <div class="content">
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="label" id="statBindLabel">已关联账号</div>
+                    <div class="value" id="statBind">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label" id="statAppLabel">涉及应用</div>
+                    <div class="value" id="statApp">-</div>
+                </div>
+                <div class="stat-card" id="statExtraCard" style="display:none;">
+                    <div class="label" id="statExtraLabel">可用应用</div>
+                    <div class="value" id="statExtra">-</div>
+                </div>
+            </div>
+
+            <div class="hint-card" id="scopeHint">加载中…</div>
+
+            <div class="filter-bar">
+                <select id="filterApp"><option value="">全部应用</option></select>
+                <input type="text" id="filterKeyword" placeholder="搜索应用名称">
+                <button class="btn btn-secondary btn-sm" onclick="loadBinds(1)">筛选</button>
+            </div>
+
+            <div class="bind-list" id="bindList">
+                <div class="empty-state"><div class="icon">⋯</div>加载中…</div>
+            </div>
+
+            <div class="pagination" id="bindPagination"></div>
+
+            <div class="admin-bar" id="adminBar">
+                <p>管理员：可手动维护绑定记录，仅供排查冲突。日常请让用户通过授权登录自动建立关联。</p>
+                <button class="btn btn-primary btn-sm" onclick="showCreateBindModal()">手动添加绑定</button>
+            </div>
+
+            <div class="footer-links" id="footerLinks" style="display:none;">
+                <a href="${request.contextPath}/opcmanage.html">开放接入统一管理</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="modalDetail">
+    <div class="modal-content">
+        <div class="modal-header" id="detailTitle">绑定详情</div>
+        <div class="modal-body" id="detailBody"></div>
+        <div class="modal-footer">
+            <button class="btn btn-ghost btn-sm" onclick="hideModal('modalDetail')">关闭</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="modalCreateBind">
+    <div class="modal-content">
+        <div class="modal-header">手动添加绑定</div>
+        <div class="modal-body">
+            <label>接入应用</label><select id="bindConnectApp"></select>
+            <label>本地用户标识</label><input id="bindLocalUser" type="text" placeholder="用户 uuid（仅运维使用）">
+            <label>第三方用户标识</label><input id="bindOpenId" type="text" placeholder="开放平台返回的用户 ID">
+            <label>跨应用标识（可选）</label><input id="bindUnionId" type="text" placeholder="可选">
+            <p class="field-hint">此功能仅供系统管理员排查异常绑定，请勿随意添加以免引发登录冲突。</p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-ghost btn-sm" onclick="hideModal('modalCreateBind')">取消</button>
+            <button class="btn btn-primary btn-sm" onclick="submitCreateBind()">确认</button>
+        </div>
+    </div>
+</div>
+
+<script>
+window.__CTX__ = '${request.contextPath!""}';
+window.__BIND_API__ = window.__CTX__ + '/opc/connectbind/manage';
+</script>
+<script>
+//<#noparse>
+const API_BASE = window.__BIND_API__ || '/opc/connectbind/manage';
+const state = { admin: false, page: 1, totalPage: 1, appOptions: [], rows: [] };
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadOverview();
+    loadAppOptions().then(function() { loadBinds(1); });
+    document.getElementById('filterKeyword').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') loadBinds(1);
+    });
+});
+
+async function apiGet(path, params) {
+    var qs = new URLSearchParams(params || {}).toString();
+    var res = await fetch(API_BASE + path + (qs ? ('?' + qs) : ''), { credentials: 'same-origin' });
+    return res.json();
+}
+
+async function apiPost(path, body) {
+    var res = await fetch(API_BASE + path, {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body || {})
+    });
+    return res.json();
+}
+
+function applyUserMode(admin) {
+    state.admin = admin;
+    var container = document.getElementById('pageContainer');
+    if (admin) {
+        container.classList.add('admin-mode');
+        document.getElementById('pageTitle').textContent = '账号绑定管理';
+        document.getElementById('pageDesc').textContent = '查看全站第三方授权与本地账号的关联，处理冲突或解除异常绑定。';
+        document.getElementById('statBindLabel').textContent = '绑定记录';
+        document.getElementById('statAppLabel').textContent = '接入应用';
+        document.getElementById('statExtraCard').style.display = '';
+        document.getElementById('statExtraLabel').textContent = '可用应用';
+        document.getElementById('scopeHint').innerHTML = '<strong>管理员视图</strong>：列表仅展示业务可读信息；技术字段请在详情中查看。解除绑定后，请让用户重新发起授权登录。';
+        document.getElementById('adminBar').classList.add('show');
+        document.getElementById('footerLinks').style.display = 'flex';
+        document.getElementById('filterKeyword').placeholder = '搜索应用名称或账号';
+    } else {
+        container.classList.remove('admin-mode');
+        document.getElementById('pageTitle').textContent = '我的账号绑定';
+        document.getElementById('pageDesc').textContent = '这里展示您通过第三方应用授权登录时建立的账号关联。解除后需重新授权才能再次登录。';
+        document.getElementById('statBindLabel').textContent = '已关联';
+        document.getElementById('statAppLabel').textContent = '涉及应用';
+        document.getElementById('statExtraCard').style.display = 'none';
+        document.getElementById('scopeHint').innerHTML = '以下为您当前账号的绑定记录。若授权登录提示冲突，可先解除对应应用的绑定，再重新登录。';
+        document.getElementById('adminBar').classList.remove('show');
+        document.getElementById('footerLinks').style.display = 'none';
+        document.getElementById('filterKeyword').placeholder = '搜索应用名称';
+    }
+}
+
+async function loadOverview() {
+    try {
+        var r = await apiGet('/overview');
+        if (r.code !== 0 || !r.data) {
+            document.getElementById('scopeHint').textContent = r.msg || '加载失败，请先登录';
+            return;
+        }
+        applyUserMode(!!r.data.admin);
+        document.getElementById('statBind').textContent = r.data.bindCount != null ? r.data.bindCount : 0;
+        document.getElementById('statApp').textContent = r.data.appCount != null ? r.data.appCount : 0;
+        if (r.data.admin && r.data.activeAppCount != null) {
+            document.getElementById('statExtra').textContent = r.data.activeAppCount;
+        }
+    } catch (e) {
+        document.getElementById('scopeHint').textContent = '加载失败，请刷新重试';
+    }
+}
+
+async function loadAppOptions() {
+    var r = await apiGet('/apps');
+    if (r.code !== 0) return;
+    state.appOptions = r.list || [];
+    var filter = document.getElementById('filterApp');
+    var bindSelect = document.getElementById('bindConnectApp');
+    filter.innerHTML = '<option value="">全部应用</option>';
+    bindSelect.innerHTML = '<option value="">请选择应用</option>';
+    state.appOptions.forEach(function(a) {
+        var label = a.name || '未命名应用';
+        filter.innerHTML += '<option value="' + escapeAttr(a.appId || '') + '">' + escapeHtml(label) + '</option>';
+        if (a.connectApp) {
+            bindSelect.innerHTML += '<option value="' + escapeAttr(a.connectApp) + '">' + escapeHtml(label) + '</option>';
+        }
+    });
+}
+
+async function loadBinds(page) {
+    state.page = page;
+    var listEl = document.getElementById('bindList');
+    listEl.innerHTML = '<div class="empty-state"><div class="icon">⋯</div>加载中…</div>';
+    var r = await apiGet('/binds', {
+        page: page,
+        limit: 10,
+        appId: document.getElementById('filterApp').value,
+        keyword: document.getElementById('filterKeyword').value
+    });
+    if (r.code !== 0 || !r.page) {
+        listEl.innerHTML = '<div class="empty-state">' + escapeHtml(r.msg || '加载失败') + '</div>';
+        return;
+    }
+    state.totalPage = r.page.totalPage || 1;
+    state.rows = r.page.list || [];
+    if (!state.rows.length) {
+        listEl.innerHTML = '<div class="empty-state"><div class="icon">○</div>' +
+            (state.admin ? '暂无绑定记录' : '您还没有绑定任何第三方应用') +
+            '<br><span style="font-size:12px;margin-top:8px;display:inline-block;">' +
+            (state.admin ? '用户完成授权登录后会自动出现在此' : '使用第三方登录成功后会自动出现在此') +
+            '</span></div>';
+        renderPagination();
+        return;
+    }
+    listEl.innerHTML = state.rows.map(function(item, index) {
+        return renderBindCard(item, index);
+    }).join('');
+    renderPagination();
+}
+
+function renderBindCard(item, index) {
+    var appName = escapeHtml(item.appName || '第三方应用');
+    var account = escapeHtml(item.accountLabel || '当前账号');
+    var time = formatTime(item.boundAt);
+    var avatar = renderAvatar(item.appName, item.appIcon);
+    var detailBtn = state.admin
+        ? '<button class="btn btn-ghost btn-sm" onclick="showDetail(' + index + ')">详情</button>'
+        : '';
+    return '<article class="bind-card">' +
+        avatar +
+        '<div class="bind-main">' +
+        '<div class="bind-title">' + appName + '</div>' +
+        '<div class="bind-meta">关联账号：' + account + '</div>' +
+        '<div class="bind-meta">绑定时间：' + time + '</div>' +
+        '</div>' +
+        '<div class="bind-actions">' +
+        detailBtn +
+        '<button class="btn btn-danger btn-sm" onclick="deleteBind(' + item.id + ')">解除绑定</button>' +
+        '</div></article>';
+}
+
+function renderAvatar(appName, iconUrl) {
+    var letter = (appName || 'A').trim().charAt(0).toUpperCase();
+    if (iconUrl) {
+        return '<div class="app-avatar"><img src="' + escapeAttr(iconUrl) + '" alt=""></div>';
+    }
+    return '<div class="app-avatar">' + escapeHtml(letter) + '</div>';
+}
+
+function showDetail(index) {
+    var item = state.rows[index];
+    if (!item) return;
+    document.getElementById('detailTitle').textContent = item.appName || '绑定详情';
+    var html =
+        detailBlock('应用名称', item.appName) +
+        detailBlock('关联账号', item.accountLabel) +
+        detailBlock('绑定时间', formatTime(item.boundAt));
+    if (item.technical) {
+        var t = item.technical;
+        html += '<div class="tech-section"><h4>技术信息（仅管理员可见）</h4>' +
+            detailBlock('应用标识', t.appId) +
+            detailBlock('登录名', t.username) +
+            detailBlock('昵称', t.nickname || '-') +
+            detailBlock('用户标识', t.userUuid) +
+            detailBlock('Open ID', t.openId) +
+            detailBlock('Union ID', t.unionId || '-') +
+            detailBlock('最近更新', formatTime(t.updatedAt)) +
+            '</div>';
+    }
+    document.getElementById('detailBody').innerHTML = html;
+    showModal('modalDetail');
+}
+
+function detailBlock(label, value) {
+    return '<div class="detail-block"><div class="label">' + escapeHtml(label) + '</div><div class="value">' + escapeHtml(value || '-') + '</div></div>';
+}
+
+function showCreateBindModal() {
+    loadAppOptions().then(function() { showModal('modalCreateBind'); });
+}
+
+async function submitCreateBind() {
+    var r = await apiPost('/bind/create', {
+        connectApp: document.getElementById('bindConnectApp').value,
+        localUser: document.getElementById('bindLocalUser').value.trim(),
+        openId: document.getElementById('bindOpenId').value.trim(),
+        unionId: document.getElementById('bindUnionId').value.trim()
+    });
+    if (r.code === 0) {
+        hideModal('modalCreateBind');
+        showToast('已添加绑定');
+        loadOverview();
+        loadAppOptions();
+        loadBinds(state.page);
+    } else {
+        showToast(r.msg || '操作失败', 'error');
+    }
+}
+
+async function deleteBind(id) {
+    if (!confirm('确定解除该绑定？解除后需要重新通过第三方应用授权登录。')) return;
+    var r = await apiPost('/bind/delete', { id: id });
+    if (r.code === 0) {
+        showToast('已解除绑定');
+        loadOverview();
+        loadAppOptions();
+        loadBinds(state.page);
+    } else {
+        showToast(r.msg || '操作失败', 'error');
+    }
+}
+
+function renderPagination() {
+    var el = document.getElementById('bindPagination');
+    if (state.totalPage <= 1) {
+        el.innerHTML = '';
+        return;
+    }
+    el.innerHTML =
+        '<button class="btn btn-ghost btn-sm"' + (state.page <= 1 ? ' disabled' : '') + ' onclick="loadBinds(' + (state.page - 1) + ')">上一页</button>' +
+        '<span>第 ' + state.page + ' / ' + state.totalPage + ' 页</span>' +
+        '<button class="btn btn-ghost btn-sm"' + (state.page >= state.totalPage ? ' disabled' : '') + ' onclick="loadBinds(' + (state.page + 1) + ')">下一页</button>';
+}
+
+function showModal(id) { document.getElementById(id).classList.add('show'); }
+function hideModal(id) { document.getElementById(id).classList.remove('show'); }
+
+function showToast(msg, type) {
+    var el = document.createElement('div');
+    el.className = 'toast' + (type === 'error' ? ' error' : '');
+    el.textContent = msg;
+    document.body.appendChild(el);
+    setTimeout(function() { el.remove(); }, 2600);
+}
+
+function formatTime(value) {
+    if (!value) return '-';
+    var d = new Date(value);
+    if (isNaN(d.getTime())) return String(value);
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+}
+
+function pad(n) { return n < 10 ? '0' + n : '' + n; }
+function escapeHtml(text) {
+    return String(text == null ? '' : text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+function escapeAttr(text) { return escapeHtml(text).replace(/'/g, '&#39;'); }
+//</#noparse>
+</script>
+</body>
+</html>

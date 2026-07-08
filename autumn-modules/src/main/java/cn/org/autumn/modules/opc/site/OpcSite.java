@@ -6,9 +6,14 @@ import org.springframework.stereotype.Component;
 
 /**
  * 模块站点入口：在此添加自定义页面与扩展。表结构对应的页面由 OpcPages 生成维护。
+ * <p>
+ * {@code connectbind} 已由 {@code opc/connectbind.html} 友好页覆盖（见 {@link cn.org.autumn.opc.OpcConstants#CONNECTBIND_MANAGE_PAGE}）。
  */
 @Component
 public class OpcSite extends OpcPages {
+
+    @PageAware(login = true, page = "connectbind")
+    public String connectbind = "opc/connectbind";
 
     @PageAware(login = true, page = "opcmanage")
     public String opcmanage = "opc/opcmanage";
@@ -24,6 +29,10 @@ public class OpcSite extends OpcPages {
 
     public String getOpcManageKey() {
         return getKey("opcmanage");
+    }
+
+    public String getConnectBindManageKey() {
+        return getKey("connectbind");
     }
 
     public String getIntegrationKey() {

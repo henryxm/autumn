@@ -38,4 +38,7 @@ public interface WebAuthenticationDao extends BaseMapper<WebAuthenticationEntity
 
     @UpdateProvider(type = WebAuthenticationDaoSql.class, method = "updateClientType")
     void updateClientType(@Param("clientId") String clientId, @Param("clientType") ClientType clientType);
+
+    @SelectProvider(type = WebAuthenticationDaoSql.class, method = "countByHashInUse")
+    int countByHashInUse(@Param("hash") String hash);
 }

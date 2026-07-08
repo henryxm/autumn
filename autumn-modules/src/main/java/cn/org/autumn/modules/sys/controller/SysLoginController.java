@@ -7,11 +7,11 @@ import cn.org.autumn.modules.spm.service.SuperPositionModelService;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.modules.sys.service.SysUserService;
+import cn.org.autumn.modules.sys.shiro.LogoutSkipSupport;
+import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.usr.service.UserProfileService;
 import cn.org.autumn.site.PageFactory;
 import cn.org.autumn.utils.R;
-import cn.org.autumn.utils.WebPathUtils;
-import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import com.google.code.kaptcha.Constants;
 import com.google.code.kaptcha.Producer;
 import org.apache.commons.lang3.StringUtils;
@@ -79,8 +79,14 @@ public class SysLoginController {
      */
     @ResponseBody
     @RequestMapping(value = "/sys/login", method = RequestMethod.POST)
-    public R login(String username, String password, boolean rememberMe, String captcha, HttpServletRequest request) {
-        return CrudGuard.force(() -> doLogin(username, password, rememberMe, captcha, request));
+    public R login(String username, String password, boolean rememberMe, String captcha, HttpServletRequest request, HttpServletResponse response) {
+        return CrudGuard.force(() -> {
+            R result = doLogin(username, password, rememberMe, captcha, request);
+            if (result != null && Integer.valueOf(0).equals(result.get("code"))) {
+                LogoutSkipSupport.clear(response, request);
+            }
+            return result;
+        });
     }
 
     private R doLogin(String username, String password, boolean rememberMe, String captcha, HttpServletRequest request) {
@@ -118,11 +124,14 @@ public class SysLoginController {
     }
 
     /**
-     * 退出
+     * 登录页环境探测：已登录则返回跳转地址；开发环境未登录时返回成功供 checkenv 静默登录。
      */
     @ResponseBody
     @RequestMapping(value = "sys/autologin", method = RequestMethod.POST)
     public R autoLogin(HttpServletRequest request) {
+        if (LogoutSkipSupport.marked(request)) {
+            return R.error();
+        }
         if (ShiroUtils.isLogin()) {
             return R.ok().put("data", SysAuthSupport.resolvePostLoginRedirect(request, superPositionModelService, sysConfigService.getAccountAuthConfig()));
         }
@@ -139,6 +148,7 @@ public class SysLoginController {
     @SkipInterceptor
     public String logout(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
         ShiroUtils.logout();
+        LogoutSkipSupport.mark(httpServletRequest, httpServletResponse);
         return "redirect:" + pageFactory.logout(httpServletRequest, httpServletResponse, model);
     }
 }
