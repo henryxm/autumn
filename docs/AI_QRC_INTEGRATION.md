@@ -1,5 +1,7 @@
 # QRC 第三方集成标准
 
+> **扫码登录两套标准（Web / 服务端建票）首选入口**：**`docs/AI_SCAN_LOGIN_STANDARD.md`**。
+>
 > **OAuth 授权码 / token / userInfo 完整对接**（含用户信息字段、账号绑定、示例代码）见 **`docs/AI_OAUTH_INTEGRATION.md`**。
 >
 > 本文侧重 **QRC 扫码分支**与 **Open API 自建 QR**。HTTP 字段与错误码见 **`docs/AI_QRC_API.md`**。
@@ -13,9 +15,9 @@
 | **A. 浏览器 Redirect（B1）** | 第三方 Web | Autumn `/oauth2/authorize` | `redirect_uri?code=` |
 | **B. 同源 Web 扫码（B2）** | Autumn 系站点 PC 登录 | PC 调 `/qrc/scanticket/web/ticket/create` | `exchange` → Session |
 | **C. 第三方自建 QR（B3）** | Native / 自建 UI | 第三方调 `/qrc/api/v1/ticket/open/create` | 按 `delivery` 轮询/Webhook/DeepLink |
-| **D. Autumn 系 RP Web（B3 代理）** | 另一 Autumn 站点作 RP | 浏览器调 **`/client/oauth2/qrc/web/ticket/create`** | `complete` → **`WebOauthLoginService`**（与 B1 callback 同编排） |
+| **D. Autumn 系 RP Web** | 另一 Autumn 站点作 RP | 浏览器调 **`/client/oauth2/qrc/web/ticket/create`** | **SSE** `ticket/stream` + 入站双 Webhook 自动 `WebOauthLoginService` |
 
-> **D 模式**与 **`AI_AUTH_LOGIN_MODES.md` §3.5** 方式一共用 `WebOauthBindService`；完整整合说明、架构图与配置见 **`docs/AI_AUTH_SITE_ROLES.md`**。
+> **D 模式**与 **`AI_AUTH_LOGIN_MODES.md` §3.5** 方式一共用 `WebOauthBindService`；完整时序与拓扑见 **`docs/AI_SCAN_LOGIN_FLOWS.md` §3.3**、配置见 **`docs/AI_AUTH_SITE_ROLES.md`**。
 
 ---
 
@@ -166,6 +168,7 @@ POST /qrc/api/v1/ticket/open/cancel
 
 | 文档 | 内容 |
 |------|------|
+| **`AI_SCAN_LOGIN_FLOWS.md`** | 时序图、拓扑图、鉴权流程 |
 | `AI_QRC_API.md` | 全部 HTTP 端点、字段、错误码 |
 | `AI_QRC_CLIENT_API.md` | APP 扫码 UX 与伪代码 |
 | `AI_QRC.md` | 模块结构、配置、审计 |

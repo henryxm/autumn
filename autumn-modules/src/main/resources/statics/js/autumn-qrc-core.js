@@ -221,6 +221,34 @@
         return mode === 'rp' ? 'rp' : 'as';
     }
 
+    function resolveCredentialType(options) {
+        return options.credentialType || options.type || '';
+    }
+
+    function resolveCredentialId(options) {
+        return options.credentialId || options.id || '';
+    }
+
+    function isOpenCredential(options) {
+        return resolveCredentialType(options) === 'oauth2_open';
+    }
+
+    function buildAsCreatePayload(options) {
+        var payload = { intent: options.intent || 'SELF_WEB_LOGIN' };
+        var credType = resolveCredentialType(options);
+        var credId = resolveCredentialId(options);
+        if (credType) {
+            payload.type = credType;
+        }
+        if (credId) {
+            payload.id = credId;
+        }
+        if (options.callback) {
+            payload.callback = options.callback;
+        }
+        return payload;
+    }
+
     function apiPrefix(mode, ctx) {
         if (mode === 'rp') {
             return (ctx || '') + '/client/oauth2/qrc/web';
@@ -243,6 +271,7 @@
             scannerDisplayName: '',
             scannerIconUrl: '',
             qrcPollTimer: null,
+            qrcEventSource: null,
             resetQrScannedState: function () {
                 this.qrPhase = 'pending';
                 this.scannerDisplayName = '';
@@ -291,6 +320,10 @@
                     clearInterval(this.qrcPollTimer);
                     this.qrcPollTimer = null;
                 }
+                if (this.qrcEventSource) {
+                    this.qrcEventSource.close();
+                    this.qrcEventSource = null;
+                }
             },
             refreshQrLogin: function () {
                 this.resetQrScannedState();
@@ -302,9 +335,22 @@
                 self.qrStatus = '正在加载二维码...';
                 self.stopPoll();
                 var createUrl = prefix + '/ticket/create';
+                var createData = { callback: options.callback || '' };
+                if (options.type) {
+                    createData.type = options.type;
+                }
+                if (options.id) {
+                    createData.id = options.id;
+                }
+                if (options.credentialType) {
+                    createData.type = options.credentialType;
+                }
+                if (options.credentialId) {
+                    createData.id = options.credentialId;
+                }
                 var payload = mode === 'rp'
-                    ? { data: { callback: options.callback || '' } }
-                    : { data: { intent: options.intent || 'SELF_WEB_LOGIN' } };
+                    ? { data: createData }
+                    : { data: buildAsCreatePayload(options) };
                 $.ajax({
                     type: 'POST',
                     url: createUrl,
@@ -323,6 +369,10 @@
                         self.qrcUuid = res.data.uuid;
                         self.renderQrCode(res.data.qrUrl);
                         self.qrStatus = '等待扫码...';
+                        if (mode === 'rp') {
+                            self.subscribeRpStream(onUnavailable);
+                            return;
+                        }
                         self.qrcPollTimer = setInterval(function () {
                             self.pollQrStatus(onUnavailable);
                         }, pollIntervalMs);
@@ -362,7 +412,11 @@
                     var data = res.data;
                     if (data.status === 'SCANNED') {
                         self.applyScannerBrief(data.scannerBrief);
-                        self.qrStatus = '扫码成功，请在手机点击登录';
+                        self.qrStatus = isOpenCredential(options) ? '扫码成功，请在手机点击确认授权' : '扫码成功，请在手机点击登录';
+                    }
+                    if (isOpenCredential(options) && data.status === 'COMPLETED' && data.result && data.result.code) {
+                        self.completeOpenQrcLogin(data.result.code, onUnavailable);
+                        return;
                     }
                     if (typeof options.onAuthorizeExchange === 'function' && (data.status === 'CONFIRMED' || data.status === 'COMPLETED') && data.exchange) {
                         self.stopPoll();
@@ -402,60 +456,124 @@
                     self.handleQrTerminalStatus(data.status);
                 });
             },
-            pollRpStatus: function (onUnavailable) {
+            completeOpenQrcLogin: function (code, onUnavailable) {
                 var self = this;
+                var credType = resolveCredentialType(options);
+                var credId = resolveCredentialId(options);
+                if (!credType || !credId) {
+                    self.qrStatus = '扫码凭证未配置，请刷新重试';
+                    return;
+                }
+                self.qrPhase = 'done';
+                self.qrStatus = '授权成功，正在跳转...';
+                self.stopPoll();
                 $.ajax({
                     type: 'POST',
-                    url: prefix + '/ticket/status',
-                    data: { uuid: self.qrcUuid },
+                    url: (ctx || '') + '/open/oauth2/qrc/web/complete',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        data: {
+                            type: credType,
+                            id: credId,
+                            code: code,
+                            callback: options.callback || ''
+                        }
+                    }),
                     dataType: 'json',
-                    success: function (res) {
-                        if (!res || res.code !== 0 || !res.data) {
-                            return;
+                    success: function (result) {
+                        if (result.code === 0) {
+                            var target = result.data != null ? String(result.data) : null;
+                            if (typeof options.onSuccess === 'function') {
+                                options.onSuccess(target, self);
+                            } else if (target) {
+                                (window.top || window).location.href = target;
+                            } else {
+                                (window.top || window).location.href = 'index.html';
+                            }
+                        } else {
+                            self.qrStatus = result.msg || '登录失败';
                         }
-                        var data = res.data;
-                        if (data.status === 'SCANNED') {
-                            self.applyScannerBrief(data.scannerBrief);
-                            self.qrStatus = '扫码成功，请在手机点击确认授权';
-                        }
-                        if (data.status === 'COMPLETED' || ((data.status === 'CONFIRMED' || data.status === 'COMPLETED') && data.result && data.result.code)) {
-                            self.qrPhase = 'done';
-                            self.qrStatus = '授权成功，正在登录...';
-                            self.stopPoll();
-                            $.ajax({
-                                type: 'POST',
-                                url: prefix + '/ticket/complete',
-                                contentType: 'application/json',
-                                data: JSON.stringify({ data: { uuid: self.qrcUuid, callback: options.callback || '' } }),
-                                dataType: 'json',
-                                success: function (result) {
-                                    if (result.code === 0) {
-                                        var target = result.data != null ? String(result.data) : null;
-                                        if (typeof options.onSuccess === 'function') {
-                                            options.onSuccess(target, self);
-                                        } else if (target) {
-                                            (window.top || window).location.href = target;
-                                        } else {
-                                            (window.top || window).location.href = '/';
-                                        }
-                                    } else {
-                                        self.qrStatus = result.msg || '登录失败';
-                                    }
-                                },
-                                error: function () {
-                                    self.qrStatus = '网络异常，请刷新二维码重试';
-                                }
-                            });
-                            return;
-                        }
-                        self.handleQrTerminalStatus(data.status);
                     },
                     error: function () {
                         if (typeof onUnavailable === 'function') {
                             onUnavailable(true);
+                            return;
                         }
+                        self.qrStatus = '网络异常，请刷新二维码重试';
                     }
                 });
+            },
+            subscribeRpStream: function (onUnavailable) {
+                var self = this;
+                if (!self.qrcUuid || typeof EventSource === 'undefined') {
+                    if (typeof onUnavailable === 'function') {
+                        onUnavailable(true);
+                    }
+                    self.qrStatus = '当前浏览器不支持实时推送，请刷新重试';
+                    return;
+                }
+                self.stopPoll();
+                var streamUrl = prefix + '/ticket/stream?uuid=' + encodeURIComponent(self.qrcUuid);
+                var es = new EventSource(streamUrl);
+                self.qrcEventSource = es;
+                es.addEventListener('status', function (ev) {
+                    if (!ev || !ev.data) {
+                        return;
+                    }
+                    var data;
+                    try {
+                        data = JSON.parse(ev.data);
+                    } catch (e) {
+                        return;
+                    }
+                    self.handleRpStreamEvent(data, onUnavailable);
+                });
+                es.onerror = function () {
+                    if (self.qrPhase === 'done') {
+                        return;
+                    }
+                    if (typeof onUnavailable === 'function') {
+                        onUnavailable(true);
+                    }
+                };
+            },
+            handleRpStreamEvent: function (data, onUnavailable) {
+                var self = this;
+                if (!data) {
+                    return;
+                }
+                if (data.status === 'SCANNED') {
+                    self.applyScannerBrief(data.scannerBrief);
+                    self.qrStatus = '扫码成功，请在手机点击确认授权';
+                }
+                if (data.status === 'SESSION_EXPIRED') {
+                    self.resetQrScannedState();
+                    self.qrStatus = '登录会话已过期，请刷新二维码重试';
+                    self.stopPoll();
+                    return;
+                }
+                if (data.status === 'COMPLETED' && data.redirectUrl) {
+                    self.qrPhase = 'done';
+                    self.qrStatus = '授权成功，正在跳转...';
+                    self.stopPoll();
+                    var target = String(data.redirectUrl);
+                    if (typeof options.onSuccess === 'function') {
+                        options.onSuccess(target, self);
+                    } else if (target) {
+                        (window.top || window).location.href = target;
+                    } else {
+                        (window.top || window).location.href = '/';
+                    }
+                    return;
+                }
+                self.handleQrTerminalStatus(data.status);
+            },
+            pollRpStatus: function (onUnavailable) {
+                var self = this;
+                if (!self.qrcUuid) {
+                    return;
+                }
+                self.subscribeRpStream(onUnavailable);
             },
             cancelQrLogin: function () {
                 var self = this;

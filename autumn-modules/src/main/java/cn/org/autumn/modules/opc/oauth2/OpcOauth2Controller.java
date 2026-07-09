@@ -1,12 +1,19 @@
 package cn.org.autumn.modules.opc.oauth2;
 
+import cn.org.autumn.annotation.SkipInterceptor;
+import cn.org.autumn.model.AuthLoginProviderType;
+import cn.org.autumn.model.Request;
+import cn.org.autumn.modules.client.service.ScanLoginFacade;
 import cn.org.autumn.modules.opc.dto.ConnectBindPendingContext;
+import cn.org.autumn.modules.opc.dto.OpenQrcWebCompleteRequest;
 import cn.org.autumn.modules.opc.entity.ConnectAppEntity;
 import cn.org.autumn.modules.opc.service.ConnectAppService;
 import cn.org.autumn.modules.opc.service.ConnectBindPendingService;
 import cn.org.autumn.modules.opc.service.ConnectBindService;
 import cn.org.autumn.modules.opc.service.ConnectLoginService;
 import cn.org.autumn.modules.opc.service.ConnectOauthService;
+import cn.org.autumn.modules.spm.interceptor.SpmInterceptor;
+import cn.org.autumn.modules.usr.interceptor.AuthorizationInterceptor;
 import cn.org.autumn.utils.R;
 import cn.org.autumn.modules.opc.support.ConnectBindException;
 import cn.org.autumn.modules.opc.support.ConnectBindException.ConflictType;
@@ -26,6 +33,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -54,6 +62,30 @@ public class OpcOauth2Controller {
 
     @Autowired
     private PageFactory pageFactory;
+
+    @Autowired
+    private ScanLoginFacade scanLoginFacade;
+
+    @ResponseBody
+    @PostMapping("qrc/web/complete")
+    @SkipInterceptor({AuthorizationInterceptor.class, SpmInterceptor.class})
+    public R completeOpenQrcWeb(@RequestBody(required = false) Request<OpenQrcWebCompleteRequest> request, HttpServletRequest servlet) {
+        try {
+            OpenQrcWebCompleteRequest data = request == null ? null : request.getData();
+            if (data == null || StringUtils.isBlank(data.getCode())) {
+                return R.error("授权码不能为空");
+            }
+            String type = StringUtils.isNotBlank(data.getType()) ? data.getType() : AuthLoginProviderType.OAUTH2_OPEN;
+            String id = StringUtils.isNotBlank(data.getId()) ? data.getId() : data.getAppId();
+            if (StringUtils.isBlank(id)) {
+                return R.error("appId 不能为空");
+            }
+            String redirect = scanLoginFacade.completeOpenWebLogin(servlet, type, id, data.getCode(), data.getCallback());
+            return R.ok().put("data", redirect);
+        } catch (Exception e) {
+            return R.error(e.getMessage());
+        }
+    }
 
     @ResponseBody
     @PostMapping("bind/unbind")

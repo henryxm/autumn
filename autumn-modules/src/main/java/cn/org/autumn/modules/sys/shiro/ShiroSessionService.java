@@ -16,6 +16,8 @@ import org.apache.shiro.session.Session;
 import org.apache.shiro.session.mgt.SessionManager;
 import org.apache.shiro.session.mgt.eis.SessionDAO;
 import org.apache.shiro.subject.PrincipalCollection;
+import org.apache.shiro.subject.Subject;
+import org.apache.shiro.mgt.SecurityManager;
 import org.apache.shiro.web.session.mgt.DefaultWebSessionManager;
 import org.springframework.aop.framework.Advised;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,6 +41,35 @@ public class ShiroSessionService {
 
     @Autowired
     private SessionManager sessionManager;
+
+    @Autowired(required = false)
+    private SecurityManager securityManager;
+
+    /**
+     * 按 SessionId 读取活动会话（建票浏览器绑定用）。
+     */
+    public Session readSessionById(String sessionId) {
+        if (StringUtils.isBlank(sessionId)) {
+            return null;
+        }
+        SessionDAO sessionDAO = getSessionDAO();
+        if (sessionDAO == null) {
+            return null;
+        }
+        try {
+            return sessionDAO.readSession(sessionId);
+        } catch (Exception e) {
+            log.debug("Read session failed id={}: {}", sessionId, e.getMessage());
+            return null;
+        }
+    }
+
+    public Subject buildSubjectForSession(Session session) {
+        if (session == null || securityManager == null) {
+            return null;
+        }
+        return new Subject.Builder(securityManager).sessionId(session.getId()).buildSubject();
+    }
 
     /**
      * 从 SessionManager 获取 SessionDAO（含 RedisShiroSessionDAO）。

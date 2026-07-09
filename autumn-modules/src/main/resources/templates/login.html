@@ -280,10 +280,19 @@
         </div>
         <button type="button" class="btn btn-primary btn-block btn-login" @click="loginByPhone">登 录</button>
       </div>
-      <div v-if="authLoginVisible" class="auth-login-section">
+      <div v-if="authLoginTabVisible" class="auth-login-section">
         <div class="auth-login-divider"><span>授权登录</span></div>
         <div class="auth-login-grid">
-          <a v-for="p in authLoginProviders" :key="p.type + '-' + p.id" class="auth-login-item" :href="buildProviderUrl(p)" :title="p.name">
+          <a v-for="p in authLoginTabProviders" :key="'tab-' + p.type + '-' + p.id" class="auth-login-item" :href="buildProviderUrl(p)" :title="p.name">
+            <img class="auth-login-icon" :src="providerIcon(p)" :alt="p.name">
+            <span class="auth-login-name">{{ p.name }}</span>
+          </a>
+        </div>
+      </div>
+      <div v-if="authLoginQrVisible" class="auth-login-section">
+        <div class="auth-login-divider"><span>扫码登录</span></div>
+        <div class="auth-login-grid">
+          <a v-for="p in authLoginQrProviders" :key="'qr-' + p.type + '-' + p.id" class="auth-login-item" href="javascript:;" @click.prevent="selectQrProvider(p)" :title="p.name">
             <img class="auth-login-icon" :src="providerIcon(p)" :alt="p.name">
             <span class="auth-login-name">{{ p.name }}</span>
           </a>

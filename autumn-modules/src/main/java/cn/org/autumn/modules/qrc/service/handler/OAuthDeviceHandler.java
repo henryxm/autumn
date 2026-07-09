@@ -44,8 +44,23 @@ public class OAuthDeviceHandler implements IntentHandler {
             clientGrantService.validateRedirectUri(client, redirectUri);
         }
         ClientGrantEntity grant = clientGrantService.requireEnabledGrant(clientId);
-        if (StringUtils.isNotBlank(grant.getDelivery())) {
+        String payloadDelivery = TicketPayloads.get(ticket, "delivery");
+        if (StringUtils.isNotBlank(payloadDelivery)) {
+            ticket.getPayload().put("delivery", payloadDelivery);
+        } else if (StringUtils.isNotBlank(grant.getDelivery())) {
             ticket.getPayload().put("delivery", grant.getDelivery());
+        }
+        String payloadWebhook = TicketPayloads.get(ticket, "webhook");
+        if (StringUtils.isNotBlank(payloadWebhook)) {
+            ticket.getPayload().put("webhook", payloadWebhook);
+        } else if (StringUtils.isNotBlank(grant.getWebhook())) {
+            ticket.getPayload().put("webhook", grant.getWebhook());
+        }
+        String payloadSecret = TicketPayloads.get(ticket, "webhookSecret");
+        if (StringUtils.isNotBlank(payloadSecret)) {
+            ticket.getPayload().put("webhookSecret", payloadSecret);
+        } else if (StringUtils.isNotBlank(grant.getSecret())) {
+            ticket.getPayload().put("webhookSecret", grant.getSecret());
         }
     }
 

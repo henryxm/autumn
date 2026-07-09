@@ -2,6 +2,7 @@
 
 > **适用对象**：需要在 Autumn 中接入「授权登录」的全栈 / 后端 / 第三方对接开发者  
 > **版本**：Autumn 2.0.0（master）/ 3.0.0（`3.0.0` 分支）— OAuth 报文格式一致，3.x 为 `jakarta.*` + SpringDoc  
+> **扫码登录标准（Web 授权 + 服务端建票轮询）**：**`docs/AI_SCAN_LOGIN_STANDARD.md`**。  
 > **目的**：厘清系统内 **两套并行、互不替代** 的授权体系，给出 **自连 / 跨实例第三方** 全拓扑对接步骤，避免混用 `client_id` 与 `app_id`、混用 `uuid` 与 `openId`。
 
 ---
@@ -340,7 +341,7 @@ String base = mode == OAUTH ? origin + "/oauth2" : origin + "/open/oauth2";
 
 **运维**：后台 **OAuth 绑定** 管理页（`client/weboauthbind`）可 CRUD 绑定行，仅供排查/解绑；日常绑定应走 OAuth 回调编排，勿手工写入冲突数据。
 
-**RP 扫码联邦（模式 D）**：浏览器 `POST /client/oauth2/qrc/web/ticket/complete` 在服务端取得授权码后，调用 **`WebOauthLoginService.completeRemoteOAuthCallback`**，与 **`GET /client/oauth2/callback`** 共用 **`finishOAuthLogin` → `resolveAndBind` → `establishSession`**。配置与时序见 **`docs/AI_AUTH_SITE_ROLES.md`** §2～§3。
+**RP 扫码联邦（模式 D）**：AS `qrc.authorized` 入站后，RP 在 **`RpQrcCallbackService.completeOnInbound`** 中绑定建票 `browserSessionId`，调用 **`WebOauthLoginService.completeRemoteOAuthCallback`**，与 **`GET /client/oauth2/callback`** 共用 **`finishOAuthLogin` → `resolveAndBind` → `establishSession`**；浏览器经 **SSE** `ticket/stream` 接收 `redirectUrl`。时序见 **`docs/AI_SCAN_LOGIN_FLOWS.md` §3.3**；配置见 **`docs/AI_AUTH_SITE_ROLES.md`** §2～§3。
 
 ### 3.6 方式一 · 同实例自连（AS + RP 同一 JVM）
 
@@ -383,7 +384,7 @@ String base = mode == OAUTH ? origin + "/oauth2" : origin + "/open/oauth2";
 - 实例 A：登记 Client，`redirect_uri` = `https://b.example.com/client/oauth2/callback`
 - 实例 B：配置 `WebAuthentication` 的 `originUri` = A 根地址，或分别填写 A 的 `/oauth2/*` URI
 - 用户在 B 登录即跳转 A 授权，回到 B 经 **`WebOauthBindService`** 建立 Session
-- RP 扫码联邦（超然信 App + bighub Web）见 **`docs/AI_AUTH_SITE_ROLES.md`**
+- RP 扫码联邦（A应用 + B网站）见 **`docs/AI_AUTH_SITE_ROLES.md`**
 
 ---
 

@@ -1,6 +1,8 @@
 # Autumn 认证站点双角色（AS / RP）
 
 > 版本线：**Autumn 2.0.0（master）** 与 **3.0.0** API 契约一致（3.x 为 `jakarta.*`，语义相同）。  
+> **扫码登录标准（Web + 服务端建票）**：**`docs/AI_SCAN_LOGIN_STANDARD.md`**。  
+> **时序图 / 拓扑 / 鉴权**：**`docs/AI_SCAN_LOGIN_FLOWS.md`**。  
 > 授权登录总览见 **`docs/AI_AUTH_LOGIN_MODES.md` §3（方式一 · 经典 OAuth）**；扫码 HTTP 字段见 **`docs/AI_QRC_API.md`**；OAuth API 见 **`docs/AI_OAUTH_INTEGRATION.md`**。
 
 ---
@@ -37,7 +39,7 @@
 | `userInfoUri` | 使用填写值 | `{originUri}/oauth2/userInfo` |
 | QRC 联邦代理（仅 RP） | — | `{originUri}/qrc/api/v1/ticket/open/*` |
 
-同实例 AS+RP：`WebAuthenticationService.create` 会预填本站 `/oauth2/*` URI；跨站 RP 通常只填 **`originUri`**（远程 AS 根地址，如 `https://chaoran.xin`）。
+同实例 AS+RP：`WebAuthenticationService.create` 会预填本站 `/oauth2/*` URI；跨站 RP 通常只填 **`originUri`**（远程 AS 根地址，如 `https://a.com`）。
 
 ---
 
@@ -55,41 +57,43 @@
       → UserTokenService.saveToken
 ```
 
-**扫码 RP 联邦（模式 D）与浏览器 Redirect（B1）在 `finishOAuthLogin` 处完全汇合**，差异仅在「如何拿到 `code`」：
+**扫码 RP 联邦（模式 D）与浏览器 Redirect（B1）在各自编排服务处汇合**，差异仅在「如何拿到 `code`」：
 
-| 入口 | 拿 code 的方式 | 进入编排的方法 | `remoteIdp` |
-|------|----------------|----------------|-------------|
-| **B1** `GET /client/oauth2/callback` | AS 302 回调 `?code=` | `completeOAuthCallback` 或 `completeRemoteOAuthCallback` | 有 `originUri` 时为 `true` |
-| **B1** `GET /client/oauth2/login` | 跳转 AS `/oauth2/authorize` | （用户授权后回到 callback） | — |
-| **D** `POST .../qrc/web/ticket/complete` | 轮询票据 `result.code`（POLL_CODE） | **`completeRemoteOAuthCallback`** | 恒为 `true` |
+| 入口 | 拿 code 的方式 | 进入编排的方法 | 凭证类型 |
+|------|----------------|----------------|----------|
+| **B1** `GET /client/oauth2/callback` | AS 302 回调 `?code=` | `WebOauthLoginService.complete*OAuthCallback` | `oauth2_classic` |
+| **B1** `GET /open/oauth2/callback` | OPL 302 回调 `?code=` | `ConnectLoginService.completeOAuthCallback` | `oauth2_open` |
+| **D** `qrc.authorized` 入站 | Webhook `data.code` | 按 `credentialType` 分支上述两服务 | classic / open |
 
 因此：
 
-- **绑定表、冲突处理、同实例幂等、绑定选择页**与 `AI_AUTH_LOGIN_MODES.md` §3.5 一致，**无第二套账号逻辑**。
+- **经典**：绑定表 `client_web_oauth_bind`、冲突页 `/client/oauth2/bind/choice`。
+- **开放**：绑定表 `opc_connect_bind`、冲突页 `/open/oauth2/bind/choice`。
 - **禁止**在扫码 complete 路径绕过 `resolveAndBind` 直接 `login(upstreamProfile)`。
-- QRC 仅多一层 **Open API 代理**（`OauthRpQrcService` 建票/轮询），**不**重复实现换票与绑定。
+- QRC 联邦仅多 **Open API 建票代理**；`OauthRpQrcService` 保留 **cancel** 代理，完成登录由 `RpQrcCallbackService` + 上述编排服务承担。
 
 ### 2.1 与 AS 同源扫码（模式 B2）的边界
 
-| 模式 | 站点角色 | 前端 `autumn-qrc-core.js` | 登录结果 |
+| 模式 | 凭证类型 | 前端 `autumn-qrc-core.js` | 登录结果 |
 |------|----------|---------------------------|----------|
-| **B2 同源扫码** | AS（或 `qrcWebMode=as`） | `/qrc/scanticket/web/*` | `session/exchange` → **直接 Session**（用户已在 AS 域） |
-| **D RP 联邦扫码** | RP（或 `qrcWebMode=rp`） | `/client/oauth2/qrc/web/*` | `ticket/complete` → **`WebOauthLoginService`** → bind + Session |
+| **B2 经典同源** | `oauth2_classic` | `/qrc/scanticket/web/*` | `session/exchange` → Session |
+| **B2 开放同源** | `oauth2_open` | `/qrc/scanticket/web/*` + `complete` | `OAUTH_DEVICE` 轮询 code → `POST /open/oauth2/qrc/web/complete` → `ConnectLoginService` |
+| **D RP 联邦** | classic / open | `/client/oauth2/qrc/web/*` SSE | `qrc.authorized` → 对应编排服务 |
 
-B2 **不走** `WebOauthBindService`（无跨站 RP）；D **必须走** 与 B1 相同的 RP 编排。这是**有意设计**，不是整合遗漏。
+经典 B2 **不走** `WebOauthBindService`；开放 B2 **走** `ConnectLoginService`（与 Tab 一致）。D **必须走** 与 B1 相同的 RP 编排。
 
 ### 2.2 整合架构图
 
 ```mermaid
 flowchart TB
-  subgraph AS["身份源 AS（chaoran.xin）"]
+  subgraph AS["身份源 AS（a.com）"]
     A1["/oauth2/authorize"]
     A2["/oauth2/token + userInfo"]
     A3["/qrc/api/v1/ticket/open/*"]
     A4["App scan / confirm"]
   end
 
-  subgraph RP["依赖方 RP（bighub.cn）"]
+  subgraph RP["依赖方 RP（b.com）"]
     R1["LOGIN_AUTHENTICATION → WebAuthentication"]
     R2["/client/oauth2/login → B1"]
     R3["/client/oauth2/qrc/web → D"]
@@ -114,33 +118,34 @@ flowchart TB
 
 ---
 
-## 3. 端到端：bighub 扫码登录（超然信 App）
+## 3. 端到端：B网站扫码登录（A应用客户端）
 
-典型：**chaoran.xin = AS**，**bighub.cn = RP**。
+典型：**a.com = AS**，**b.com = RP**。
 
 ### 3.1 配置
 
-**AS（chaoran.xin）**
+**AS（a.com）**
 
-1. `oauthasmanage.html` 登记 OAuth Client `bighub-web`，`redirect_uri` = `https://bighub.cn/client/oauth2/callback`，`trusted=1`
-2. `qrc_client_grant`：`enabled=1`，`delivery=POLL_CODE`
+1. `oauthasmanage.html` 登记 OAuth Client `b-web`，`redirect_uri` = `https://b.com/client/oauth2/callback`，`trusted=1`
+2. `qrc_client_grant`：`enabled=1`（建票时可 payload 覆盖 `delivery=WEBHOOK`）
 
-**RP（bighub.cn）**
+**RP（b.com）**
 
-1. `LOGIN_AUTHENTICATION` = `oauth2:bighub-web`
-2. `client_web_authentication`（`bighub-web`）：
-   - `originUri` = `https://chaoran.xin`
+1. `LOGIN_AUTHENTICATION` = `oauth2:b-web`
+2. `client_web_authentication`（`b-web`）：
+   - `originUri` = `https://a.com`
    - `clientId` / `clientSecret` / `redirectUri` 与 AS 登记一致
+   - `pageLogin` = `2` 或 `3`（登录页扫码）
 3. `AUTH_SITE_CONFIG.siteRole` = `RP_ONLY`（或 `AS_AND_RP` + `qrcWebMode=rp`）
 
-### 3.2 运行时序
+### 3.2 运行时序（双 Webhook + SSE）
 
-1. 登录页引入 **`autumn-qrc-core.js`**，`AutumnQrc.createMethods({ mode: 'rp', ... })`
-2. `POST /client/oauth2/qrc/web/ticket/create` → RP 用 `client_secret` 代理 AS `open/create` → 返回 `qrUrl`
-3. App 扫 `https://chaoran.xin/qrc/api/v1/t/{uuid}` → scan → confirm
-4. 浏览器 `POST .../ticket/status` → `COMPLETED` 且 `result.code` 就绪
-5. `POST .../ticket/complete` → **`completeRemoteOAuthCallback`** → 换票 / userInfo / **`resolveAndBind`** / **`establishSession`**
-6. 响应 `data` 为跳转 URL；若需绑定选择则 URL 为 **`/client/oauth2/bind/choice?token=`**（与 B1 callback 同一套 bind 端点）
+1. 登录页引入 **`autumn-qrc-core.js`**，`AutumnQrc.createMethods({ mode: 'rp', type, id })` 或 `qrProviders`
+2. `POST /client/oauth2/qrc/web/ticket/create` → RP 代理 AS `open/create`（注入 WEBHOOK）→ 返回 `qrUrl`
+3. 浏览器 `GET /client/oauth2/qrc/web/ticket/stream?uuid=`（SSE）
+4. A应用扫 `https://a.com/qrc/api/v1/t/{uuid}` → scan → AS Webhook `qrc.scanned` → B SSE `SCANNED`
+5. confirm → AS Webhook `qrc.authorized` → B 自动 **`completeRemoteOAuthCallback`** → SSE `COMPLETED` + `redirectUrl`
+6. 若需绑定选择则 `redirectUrl` 为 **`/client/oauth2/bind/choice?token=`**（与 B1 callback 同一套 bind 端点）
 
 ---
 
@@ -171,9 +176,11 @@ flowchart TB
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| POST | `/ticket/create` | 代理 AS `open/create`，body `{ data: { callback } }` |
-| POST | `/ticket/status?uuid=` | 代理 AS `open/status` |
-| POST | `/ticket/complete` | body `{ data: { uuid, callback } }`；内部走 **`completeRemoteOAuthCallback`** |
+| POST | `/ticket/create` | 代理 AS `open/create`（WEBHOOK payload），body `{ data: { callback, type?, id? } }` |
+| GET | `/ticket/stream?uuid=` | **SSE** 推送扫码状态（`SCANNED` / `COMPLETED` / 终端态） |
+| POST | `/ticket/cancel?uuid=` | 取消票据 |
+| POST | `/inbound` | AS Webhook 入站（`qrc.scanned` / `qrc.authorized`） |
+| POST | `/inbound` | AS Webhook 回调入口（签名校验） |
 | POST | `/ticket/cancel?uuid=` | 代理 AS `open/cancel` |
 
 ### 5.2 浏览器 Redirect（B1）
@@ -204,13 +211,13 @@ flowchart TB
 
 ## 7. 配置检查清单
 
-**AS（chaoran.xin）**
+**AS（a.com）**
 
 - [ ] `oauth_client_details`：`client_id`、`redirect_uri`、`trusted=1`
 - [ ] `qrc_client_grant`：`enabled=1`，`delivery=POLL_CODE`
 - [ ] App 对接 `/qrc/api/v1/ticket/scan|confirm`
 
-**RP（bighub.cn）**
+**RP（b.com）**
 
 - [ ] `AUTH_SITE_CONFIG.siteRole` 含 RP（`RP_ONLY` 或 `AS_AND_RP`）
 - [ ] `LOGIN_AUTHENTICATION` = `oauth2:{clientId}`
@@ -228,7 +235,8 @@ flowchart TB
 | `WebOauthLoginService` | **统一 RP 编排**（B1 callback + D complete） |
 | `WebOauthBindService` | `resolveAndBind` / 绑定选择后续 |
 | `OauthRpLoginService` | B1 授权跳转与 callback |
-| `OauthRpQrcService` | D 模式 Open API 代理 + complete 调编排 |
+| `OauthRpQrcService` | D 模式取消票据（代理 AS cancel） |
+| `RpQrcCallbackService` | D 模式建票 WEBHOOK + 本地会话 + complete |
 | `ClientOauth2Controller` | callback、bind 页、冲突页 |
 | `ClientOauth2QrcController` | `/client/oauth2/qrc/web/*` REST |
 | `ScanTicketService` / QRC Open API | AS 侧建票与 POLL_CODE |

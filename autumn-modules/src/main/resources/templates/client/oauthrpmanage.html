@@ -171,8 +171,10 @@
             <label>图标文件 HASH（hash）</label><input id="saveHash" type="text" placeholder="上传图标后的文件 hash，供文件清理引用判断">
             <label>登录页展示（pageLogin）</label>
             <select id="savePageLogin">
-                <option value="0">0 - 不在登录页展示（隐式登录仍可用）</option>
+                <option value="0">0 - 不展示（隐式登录仍可用）</option>
                 <option value="1">1 - 在 /login 展示授权入口</option>
+                <option value="2">2 - 仅展示扫码登录</option>
+                <option value="3">3 - 授权入口 + 扫码登录</option>
             </select>
         </div>
         <div class="modal-footer">
@@ -210,8 +212,10 @@
             <label>图标文件 HASH（hash）</label><input id="editHash" type="text" placeholder="上传图标后的文件 hash">
             <label>登录页展示（pageLogin）</label>
             <select id="editPageLogin">
-                <option value="0">0 - 不在登录页展示</option>
+                <option value="0">0 - 不展示</option>
                 <option value="1">1 - 在 /login 展示</option>
+                <option value="2">2 - 仅展示扫码</option>
+                <option value="3">3 - 授权 + 扫码</option>
             </select>
         </div>
         <div class="modal-footer">

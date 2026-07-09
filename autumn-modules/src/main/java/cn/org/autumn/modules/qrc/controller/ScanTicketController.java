@@ -2,6 +2,7 @@ package cn.org.autumn.modules.qrc.controller;
 
 import cn.org.autumn.annotation.SkipInterceptor;
 import cn.org.autumn.model.Request;
+import cn.org.autumn.modules.client.service.ScanLoginFacade;
 import cn.org.autumn.modules.qrc.controller.gen.ScanTicketControllerGen;
 import cn.org.autumn.modules.qrc.dto.SessionExchangeRequest;
 import cn.org.autumn.modules.qrc.dto.TicketCreateRequest;
@@ -12,6 +13,7 @@ import cn.org.autumn.modules.usr.interceptor.AuthorizationInterceptor;
 import cn.org.autumn.utils.R;
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -27,11 +29,17 @@ public class ScanTicketController extends ScanTicketControllerGen {
     @Autowired
     private ScanWebSupport scanWebSupport;
 
+    @Autowired
+    private ScanLoginFacade scanLoginFacade;
+
     @PostMapping("/web/ticket/create")
     @SkipInterceptor({AuthorizationInterceptor.class, SpmInterceptor.class})
     public R webCreate(@Valid @RequestBody(required = false) Request<TicketCreateRequest> request, HttpServletRequest servlet) {
         try {
             TicketCreateRequest data = request == null ? null : request.getData();
+            if (data != null && StringUtils.isNotBlank(data.getType()) && StringUtils.isNotBlank(data.getId())) {
+                return R.ok().put("data", scanLoginFacade.createWebTicketByCredential(servlet, data.getType(), data.getId(), data.getCallback()));
+            }
             TicketSnapshot ticket = scanTicketService.create(scanWebSupport.buildWebCreateContext(data, servlet));
             return R.ok().put("data", scanTicketService.toCreateResult(ticket));
         } catch (Exception e) {

@@ -25,6 +25,9 @@ public interface ConnectAppDao extends BaseMapper<ConnectAppEntity> {
     @SelectProvider(type = OpcDaoSql.class, method = "connectAppListPageLoginActive")
     List<ConnectAppEntity> listPageLoginActive();
 
+    @SelectProvider(type = OpcDaoSql.class, method = "connectAppListPageQrActive")
+    List<ConnectAppEntity> listPageQrActive();
+
     @SelectProvider(type = OpcDaoSql.class, method = "connectAppCountSecretByAppId")
     int countSecretByAppId(@Param("appId") String appId);
 }

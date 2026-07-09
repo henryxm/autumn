@@ -32,13 +32,23 @@
             <p>统一扫码登录/授权编排模块，支持同源 PC 登录与 OAuth 第三方授权。实现包：<code>cn.org.autumn.modules.qrc</code>。</p>
 
             <div class="doc-note">
-                <strong>完整业务流程</strong>（数据关系、拓扑图、四种场景分步说明）请阅读：
-                <a href="${request.contextPath}/modules/docs/auth-flow">授权与扫码登录流程指南</a>
+                <strong>扫码登录标准（首选）</strong>：仓库 <code>docs/AI_SCAN_LOGIN_STANDARD.md</code> 定义两套流程——
+                <strong>标准一</strong> 网页授权（B1/B2/D，含 B网站←A应用联邦回调）；
+                <strong>标准二</strong> 服务端建票轮询（B3 Open API，无需网页 UI）。
+                进程内调用：<code>ScanLoginFacade</code>。
             </div>
+
+            <h3>两套标准（速览）</h3>
+            <table>
+                <tr><th>标准</th><th>适用</th><th>入口</th></tr>
+                <tr><td><strong>标准一 · Web</strong></td><td>浏览器登录页、OAuth 授权、RP 联邦扫码</td><td><code>autumn-qrc-core.js</code>；RP 用 <code>/client/oauth2/qrc/web/*</code></td></tr>
+                <tr><td><strong>标准二 · Server</strong></td><td>第三方后台自建 QR、无网页</td><td><code>POST /qrc/api/v1/ticket/open/create|status</code></td></tr>
+            </table>
 
             <h3>客户端对接（仓库 <code>docs/</code>）</h3>
             <table>
                 <tr><th>文档</th><th>读者</th></tr>
+                <tr><td><strong>AI_SCAN_LOGIN_STANDARD.md</strong></td><td><strong>首选</strong>：两套标准、ScanLoginFacade、a.com+b.com 验收</td></tr>
                 <tr><td><strong>AI_QRC_CLIENT_API.md</strong></td><td>APP：扫码、确认页、伪代码、联调清单</td></tr>
                 <tr><td><strong>AI_QRC_API.md</strong></td><td>全部 HTTP 端点、报文、状态机、错误码</td></tr>
                 <tr><td><strong>AI_QRC_INTEGRATION.md</strong></td><td>第三方：OAuth Redirect / 自建 QR / delivery</td></tr>
@@ -52,6 +62,7 @@
                 <tr><td><code>/qrc/api/v1/*</code></td><td>QrcApiController</td><td><code>Request</code> / <code>Response</code></td><td>APP Token 或 Open client 凭证</td></tr>
                 <tr><td><code>/qrc/scanticket/web/*</code></td><td>ScanTicketController</td><td><code>Request</code> 入参 + <code>R</code> 出参</td><td>匿名</td></tr>
                 <tr><td><code>/qrc/scanticket/*</code></td><td>ScanTicketControllerGen</td><td><code>R</code></td><td>后台权限</td></tr>
+                <tr><td><code>/client/oauth2/qrc/web/*</code></td><td>ClientOauth2QrcController</td><td><code>R</code></td><td>匿名（RP 联邦 D 模式）</td></tr>
                 <tr><td><code>/oauth2/authorize</code></td><td>AuthorizationController</td><td>HTML / redirect</td><td>浏览器</td></tr>
             </table>
 
