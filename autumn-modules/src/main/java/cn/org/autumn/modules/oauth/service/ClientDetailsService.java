@@ -19,6 +19,7 @@ import cn.org.autumn.utils.Utils;
 import cn.org.autumn.utils.Uuid;
 import com.qiniu.util.Md5;
 import java.util.*;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -27,6 +28,7 @@ import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.stereotype.Service;
 
 @Service
+@Slf4j
 public class ClientDetailsService extends ModuleService<ClientDetailsDao, ClientDetailsEntity> implements LoopJob.OneHour, UpgradeFactory.Domain, DomainHandler {
 
     @Autowired
@@ -314,7 +316,11 @@ public class ClientDetailsService extends ModuleService<ClientDetailsDao, Client
         String scheme = sysConfigService.getScheme();
         List<ClientDetailsEntity> entities = selectByMap(null);
         for (ClientDetailsEntity entity : entities) {
-            update(entity, scheme, host, false);
+            try {
+                update(entity, scheme, host, false);
+            } catch (Exception e) {
+                log.warn("OAuth client domain sync skipped for clientId={}: {}", entity.getClientId(), e.getMessage());
+            }
         }
     }
 
@@ -331,9 +337,19 @@ public class ClientDetailsService extends ModuleService<ClientDetailsDao, Client
             entity.setClientIconUri(Utils.replaceSchemeHost(scheme, host, entity.getClientIconUri()));
         if (StringUtils.isNotBlank(entity.getRedirectUri()))
             entity.setRedirectUri(Utils.replaceSchemeHost(scheme, host, entity.getRedirectUri()));
-        entity.setClientId(host);
-        entity.setClientName(host);
-        entity.setDescription(host);
+        if (StringUtils.isNotBlank(host) && !Objects.equals(entity.getClientId(), host)) {
+            ClientDetailsEntity occupied = findByClientId(host);
+            if (occupied != null && !Objects.equals(occupied.getId(), entity.getId())) {
+                entity.setClientType(null);
+                updateById(entity);
+                return;
+            }
+            entity.setClientId(host);
+        }
+        if (StringUtils.isNotBlank(host)) {
+            entity.setClientName(host);
+            entity.setDescription(host);
+        }
         updateById(entity);
     }
 
