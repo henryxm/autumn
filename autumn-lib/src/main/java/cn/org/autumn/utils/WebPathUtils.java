@@ -336,4 +336,101 @@ public final class WebPathUtils {
         }
         return left.equalsIgnoreCase(right);
     }
+
+    /**
+     * 当前请求的绝对站点根 URL（scheme + host [+ port] + contextPath），供二维码等多域名场景使用。
+     */
+    public static String absoluteBaseUrl(HttpServletRequest request) {
+        return absoluteBaseUrl(request, null);
+    }
+
+    /**
+     * @param preferSiteSsl 为 true 且无反向代理 scheme 时，将 http 提升为 https（对齐 SITE_SSL）
+     */
+    public static String absoluteBaseUrl(HttpServletRequest request, Boolean preferSiteSsl) {
+        if (request == null) {
+            return "";
+        }
+        String scheme = resolveRequestScheme(request);
+        if (Boolean.TRUE.equals(preferSiteSsl) && "http".equals(scheme)) {
+            scheme = "https";
+        }
+        String host = resolveRequestHost(request);
+        if (!StringUtils.hasText(host)) {
+            return "";
+        }
+        String ctx = contextPath(request);
+        StringBuilder sb = new StringBuilder();
+        sb.append(scheme).append("://").append(host);
+        int port = resolveRequestPort(request, scheme);
+        if (port > 0 && !isDefaultPort(scheme, port)) {
+            sb.append(':').append(port);
+        }
+        if (StringUtils.hasText(ctx)) {
+            sb.append(ctx);
+        }
+        return sb.toString();
+    }
+
+    static String resolveRequestScheme(HttpServletRequest request) {
+        String forwarded = request.getHeader("X-Forwarded-Proto");
+        if (StringUtils.hasText(forwarded)) {
+            String first = forwarded.split(",")[0].trim().toLowerCase();
+            if ("https".equals(first) || "http".equals(first)) {
+                return first;
+            }
+        }
+        String scheme = request.getScheme();
+        return StringUtils.hasText(scheme) ? scheme.toLowerCase() : "http";
+    }
+
+    static String resolveRequestHost(HttpServletRequest request) {
+        String forwarded = request.getHeader("X-Forwarded-Host");
+        if (StringUtils.hasText(forwarded)) {
+            String first = forwarded.split(",")[0].trim();
+            int colon = first.indexOf(':');
+            if (colon > 0) {
+                first = first.substring(0, colon);
+            }
+            return first;
+        }
+        String host = request.getHeader("Host");
+        if (StringUtils.hasText(host)) {
+            int colon = host.indexOf(':');
+            if (colon > 0) {
+                host = host.substring(0, colon);
+            }
+            return host.trim();
+        }
+        return request.getServerName();
+    }
+
+    static int resolveRequestPort(HttpServletRequest request, String scheme) {
+        String forwarded = request.getHeader("X-Forwarded-Host");
+        if (StringUtils.hasText(forwarded)) {
+            String first = forwarded.split(",")[0].trim();
+            int colon = first.indexOf(':');
+            if (colon > 0 && colon < first.length() - 1) {
+                try {
+                    return Integer.parseInt(first.substring(colon + 1));
+                } catch (NumberFormatException ignored) {
+                }
+            }
+        }
+        String hostHeader = request.getHeader("Host");
+        if (StringUtils.hasText(hostHeader)) {
+            int colon = hostHeader.indexOf(':');
+            if (colon > 0 && colon < hostHeader.length() - 1) {
+                try {
+                    return Integer.parseInt(hostHeader.substring(colon + 1));
+                } catch (NumberFormatException ignored) {
+                }
+            }
+        }
+        return request.getServerPort();
+    }
+
+    static boolean isDefaultPort(String scheme, int port) {
+        return ("http".equals(scheme) && port == 80) || ("https".equals(scheme) && port == 443);
+    }
 }

@@ -835,6 +835,7 @@ userTokenService.saveToken(...)   → 可选保存 access_token
 | [`AI_QRC_INTEGRATION.md`](AI_QRC_INTEGRATION.md) | 扫码登录与 OAuth 分支 |
 | [`AI_AUTH_SITE_ROLES.md`](AI_AUTH_SITE_ROLES.md) | AS/RP 双角色、RP QRC 联邦、`WebOauthBind` 跨站绑定 |
 | [`AI_AUTH_LOGIN_PROVIDERS.md`](AI_AUTH_LOGIN_PROVIDERS.md) | `/login` 授权 Provider 列表、`pageLogin`、client_id 路由 |
+| [`AI_MULTI_DOMAIN.md`](AI_MULTI_DOMAIN.md) | 多域名部署、授权页 Tab 记忆、Host 感知 Cookie/QR |
 | [`AI_ACCOUNT_AUTH_CONFIG.md`](AI_ACCOUNT_AUTH_CONFIG.md) | 登录后跳转、账号认证 JSON |
 | [`AI_SESSION_GUARD.md`](AI_SESSION_GUARD.md) | 会话终止与重登守卫 |
 | 站内 `/modules/docs/auth-flow` | 授权流程说明页 |

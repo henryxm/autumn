@@ -8,6 +8,7 @@ import static org.apache.oltu.oauth2.common.error.OAuthError.OAUTH_ERROR_URI;
 import static org.apache.oltu.oauth2.common.error.OAuthError.TokenResponse.*;
 
 import cn.org.autumn.modules.oauth.oauth2.support.OAuthAccessTokenResolver;
+import cn.org.autumn.modules.oauth.oauth2.support.AuthAuthorizeLoginSupport;
 import cn.org.autumn.modules.oauth.oauth2.support.OAuthAuthorizeAppIconSupport;
 import cn.org.autumn.modules.oauth.oauth2.support.OAuthConsentCsrfSupport;
 import cn.org.autumn.modules.oauth.oauth2.support.OAuthConsentSupport;
@@ -246,7 +247,7 @@ public class AuthorizationController {
 
     private String oauthConsentView(HttpServletRequest request, HttpServletResponse response, Model model, TicketSnapshot ticket, ClientDetailsEntity client, boolean loggedIn, String consentError) {
         if (ticket != null) {
-            scanTicketService.fillAuthorizeModel(model, ticket);
+            scanTicketService.fillAuthorizeModel(request, model, ticket);
         } else {
             model.addAttribute("pollIntervalMs", scanTicketService.getScanLoginConfig().getPollIntervalMs());
         }
@@ -264,12 +265,14 @@ public class AuthorizationController {
         if (loggedIn) {
             SysUserEntity user = ShiroUtils.getUserEntity();
             if (user != null) {
-                model.addAttribute("loginUserName", StringUtils.isNotBlank(user.getUsername()) ? user.getUsername() : user.getUuid());
+                AuthAuthorizeLoginSupport.enrichLoggedInUser(request, model, user);
             }
             if (request != null) {
                 String returnUrl = buildAuthorizeReturnUrl(request, model, client);
                 model.addAttribute("authorizeLogoutUrl", buildAuthorizeLogoutUrl(request, returnUrl));
             }
+        } else if (scanTicketService.shouldUseQrAuthorize()) {
+            model.addAttribute("authorizeLoginTab", AuthAuthorizeLoginSupport.TAB_QR);
         }
         if (StringUtils.isNotBlank(consentError)) {
             model.addAttribute("error", consentError);
@@ -414,6 +417,11 @@ public class AuthorizationController {
                     }
                 } catch (Exception ignored) {
                 }
+                if (AuthAuthorizeLoginSupport.isAuthorizeCallback(callback)) {
+                    String tab = AuthAuthorizeLoginSupport.resolveLoginTabForLogin(request, username);
+                    AuthAuthorizeLoginSupport.saveLoginTab(request, tab);
+                    back = AuthAuthorizeLoginSupport.appendLoginTab(back, tab);
+                }
                 return redirectUrl(back);
             }
         } catch (UnknownAccountException e) {
@@ -487,6 +495,7 @@ public class AuthorizationController {
         boolean loggedIn = !ShiroUtils.needLogin();
         if ("1".equals(request.getParameter("loggedOut"))) {
             ShiroUtils.logout();
+            AuthAuthorizeLoginSupport.clearLoginTab(request);
             loggedIn = false;
         }
         String loginError = request.getParameter("error");
@@ -506,6 +515,7 @@ public class AuthorizationController {
 
     @RequestMapping(value = "authorize/logout", method = RequestMethod.GET)
     public ModelAndView authorizeLogout(HttpServletRequest request, HttpServletResponse response, @RequestParam(required = false) String returnTo) {
+        AuthAuthorizeLoginSupport.clearLoginTab(request);
         SysLogoutSupport.logoutAndForceReauth(shiroSessionService);
         LogoutSkipSupport.mark(request, response);
         String url = normalizeRedirectUrl(returnTo);

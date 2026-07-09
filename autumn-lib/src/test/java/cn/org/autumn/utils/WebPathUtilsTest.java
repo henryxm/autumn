@@ -224,4 +224,35 @@ class WebPathUtilsTest {
         assertFalse(WebPathUtils.isSameSiteUrl("http://remote.example.com", "http://local.example.com"));
         assertFalse(WebPathUtils.isSameSiteUrl("http://local.example.com", null));
     }
+
+    @Test
+    void absoluteBaseUrl_usesHostHeaderAndForwardedProto() {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/oauth2/authorize");
+        request.setScheme("http");
+        request.setServerName("localhost");
+        request.setServerPort(8080);
+        request.addHeader("Host", "b.example.com");
+        request.addHeader("X-Forwarded-Proto", "https");
+        assertEquals("https://b.example.com", WebPathUtils.absoluteBaseUrl(request));
+    }
+
+    @Test
+    void absoluteBaseUrl_includesContextPath() {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/app/oauth2/authorize");
+        request.setContextPath("/app");
+        request.addHeader("Host", "a.example.com");
+        request.setScheme("https");
+        request.setServerPort(443);
+        assertEquals("https://a.example.com/app", WebPathUtils.absoluteBaseUrl(request));
+    }
+
+    @Test
+    void absoluteBaseUrl_prefersSiteSslWhenNoForwardedProto() {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/oauth2/authorize");
+        request.addHeader("Host", "secure.example.com");
+        request.setScheme("http");
+        request.setServerPort(80);
+        assertEquals("https://secure.example.com", WebPathUtils.absoluteBaseUrl(request, true));
+        assertEquals("http://secure.example.com", WebPathUtils.absoluteBaseUrl(request, false));
+    }
 }

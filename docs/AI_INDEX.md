@@ -44,6 +44,7 @@
 - **`docs/AI_QRC_INTEGRATION.md`**：**第三方集成标准**（Autumn/非 Autumn）
 - **`docs/AI_QRC_CLIENT_API.md`**：**APP 扫码确认手册**
 - **`docs/AI_AUTH_LOGIN_MODES.md`**：**双轨授权登录开发手册**（OAuth2 `uuid` 与 OPL/OPC `openId` 并行体系、自连/第三方全拓扑、选型与防迷路）
+- **`docs/AI_MULTI_DOMAIN.md`**：**多域名部署与授权页 Tab**（混合域名 Cookie 隔离、扫码 Host 感知、登录方式记忆）
 - **`docs/AI_OAUTH_INTEGRATION.md`**：**OAuth2 第三方对接手册**（授权码模式、token、userInfo、账号绑定）
 - **`docs/AI_OPL_INTEGRATION.md`**：**OPL 开放平台对接手册**（appId/openId/unionId、OAuth2 `/open/oauth2/*`）
 - **`docs/AI_OPL_SPI.md`**：**OPL 扩展标准**（`cn.org.autumn.opl` Service/Extension、事件、业务模块扩展清单）

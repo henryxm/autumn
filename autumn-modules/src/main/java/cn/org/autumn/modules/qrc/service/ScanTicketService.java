@@ -25,6 +25,7 @@ import cn.org.autumn.modules.sys.service.SysUserService;
 import cn.org.autumn.modules.usr.service.UserLoginLogService;
 import cn.org.autumn.utils.RedisUtils;
 import cn.org.autumn.utils.Uuid;
+import cn.org.autumn.utils.WebPathUtils;
 import com.alibaba.fastjson.JSON;
 import java.util.Calendar;
 import java.util.Date;
@@ -87,8 +88,12 @@ public class ScanTicketService extends ModuleService<ScanTicketDao, ScanTicketEn
     }
 
     public void fillAuthorizeModel(Model model, TicketSnapshot ticket) {
+        fillAuthorizeModel(null, model, ticket);
+    }
+
+    public void fillAuthorizeModel(HttpServletRequest request, Model model, TicketSnapshot ticket) {
         model.addAttribute("uuid", ticket.getUuid());
-        model.addAttribute("qrUrl", buildQrUrl(ticket.getUuid()));
+        model.addAttribute("qrUrl", buildQrUrl(request, ticket.getUuid()));
         model.addAttribute("pollIntervalMs", getScanLoginConfig().getPollIntervalMs());
         model.addAttribute("clientId", TicketPayloads.get(ticket, "clientId"));
         model.addAttribute("scope", TicketPayloads.get(ticket, "scope"));
@@ -236,6 +241,18 @@ public class ScanTicketService extends ModuleService<ScanTicketDao, ScanTicketEn
         return snapshot.getExchange();
     }
 
+    public String peekExchangeTicketIntent(String exchange) {
+        if (StringUtils.isBlank(exchange)) {
+            return null;
+        }
+        ExchangeSnapshot snapshot = getExchange(exchange);
+        if (snapshot == null || StringUtils.isBlank(snapshot.getUuid())) {
+            return null;
+        }
+        TicketSnapshot ticket = getTicket(snapshot.getUuid());
+        return ticket == null ? null : ticket.getIntent();
+    }
+
     public SysUserEntity consumeExchangeToken(String exchange) throws CodeException {
         if (StringUtils.isBlank(exchange)) {
             throw new CodeException("exchange不能为空", 8620);
@@ -288,7 +305,14 @@ public class ScanTicketService extends ModuleService<ScanTicketDao, ScanTicketEn
     }
 
     public String buildQrUrl(String uuid) {
-        String base = sysConfigService.getBaseUrl();
+        return buildQrUrl(null, uuid);
+    }
+
+    public String buildQrUrl(HttpServletRequest request, String uuid) {
+        String base = WebPathUtils.absoluteBaseUrl(request, sysConfigService.isSsl());
+        if (StringUtils.isBlank(base)) {
+            base = sysConfigService.getBaseUrl();
+        }
         if (StringUtils.isBlank(base)) {
             base = "";
         }

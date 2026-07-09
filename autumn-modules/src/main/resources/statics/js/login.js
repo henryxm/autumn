@@ -8,6 +8,8 @@
     var oplAuthorize = !!cfg.oplAuthorize;
     var authorizeMode = oauthAuthorize || oplAuthorize;
     var authorizeLoggedIn = !!cfg.authorizeLoggedIn;
+    var authorizeLoginTab = cfg.authorizeLoginTab || 'account';
+    var authorizeLogoutUrl = cfg.authorizeLogoutUrl || '';
     var oauthDenyRedirect = cfg.oauthDenyRedirect || '';
     var safeOauthCallback = cfg.safeOauthCallback || '';
     var serverUuid = cfg.serverUuid || '';
@@ -41,7 +43,7 @@
     var vm = new Vue({
         el: '#rrapp',
         data: {
-            loginTab: 'account',
+            loginTab: authorizeMode ? authorizeLoginTab : 'account',
             username: '',
             password: '',
             captcha: '',
@@ -55,10 +57,14 @@
             qrPhase: 'pending',
             scannerDisplayName: '',
             scannerIconUrl: '',
+            loggedInDisplayName: cfg.loginUserName || '',
+            loggedInIconUrl: '',
+            loggedInMobile: cfg.loginUserMobile || '',
             qrcUuid: '',
             qrcPollTimer: null,
             oauthCallback: '',
             authorizeLoggedIn: authorizeLoggedIn,
+            authorizeLogoutUrl: authorizeLogoutUrl,
             consentChecked: true,
             oauthDenyRedirect: oauthDenyRedirect,
             authLoginVisible: false,
@@ -89,6 +95,9 @@
         },
         methods: {
             switchTab: function (tab) {
+                if (this.authorizeLoggedIn) {
+                    return;
+                }
                 if (this.loginTab === tab) {
                     return;
                 }
@@ -195,6 +204,10 @@
                 }
             },
             refreshQrLogin: function () {
+                if (authorizeMode && this.authorizeLoggedIn && this.authorizeLogoutUrl) {
+                    window.location.href = this.authorizeLogoutUrl;
+                    return;
+                }
                 if (authorizeMode) {
                     window.location.reload();
                     return;
@@ -218,6 +231,28 @@
                     return ctx + icon;
                 }
                 return ctx + '/' + icon;
+            },
+            applyLoggedInProfile: function () {
+                if (!this.authorizeLoggedIn) {
+                    return;
+                }
+                var name = cfg.loginUserNickname || cfg.loginUserName || '已登录用户';
+                this.loggedInDisplayName = name;
+                this.loggedInMobile = cfg.loginUserMobile || '';
+                this.loggedInIconUrl = this.resolveScannerIconUrl(cfg.loginUserIcon || '');
+                if (this.loginTab === 'qr') {
+                    this.qrPhase = 'done';
+                    this.scannerDisplayName = name;
+                    this.scannerIconUrl = this.loggedInIconUrl;
+                    this.qrStatus = '登录成功，请在右侧确认授权';
+                }
+            },
+            appendLoginTabToUrl: function (url, tab) {
+                if (!url || !tab) {
+                    return url;
+                }
+                var sep = url.indexOf('?') >= 0 ? '&' : '?';
+                return url + sep + 'loginTab=' + encodeURIComponent(tab);
             },
             applyScannerBrief: function (brief) {
                 if (!brief) {
@@ -278,7 +313,8 @@
                     success: function (result) {
                         if (result.code === 0) {
                             self.qrStatus = '登录成功，请确认授权';
-                            window.location.reload();
+                            var target = self.appendLoginTabToUrl(window.location.href.split('#')[0], 'qr');
+                            window.location.href = target;
                         } else {
                             self.qrStatus = result.msg || '登录失败';
                         }
@@ -552,8 +588,12 @@
             }
             vm.oauthCallback = authorizeReturnUrl;
         }
-        if (authorizeMode && serverQrUrl && vm.loginTab === 'qr') {
+        if (authorizeMode && serverQrUrl && (vm.loginTab === 'qr' || authorizeLoginTab === 'qr') && !authorizeLoggedIn) {
+            vm.loginTab = 'qr';
             vm.initAuthorizeQr();
+        }
+        if (authorizeLoggedIn) {
+            vm.applyLoggedInProfile();
         }
         var expired = qs.get('sessionExpired') === '1';
         var reason = qs.get('reason');
