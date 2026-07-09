@@ -29,6 +29,7 @@ import cn.org.autumn.modules.sys.entity.LoadingTheme;
 import cn.org.autumn.modules.sys.entity.SysConfigEntity;
 import cn.org.autumn.modules.sys.entity.SystemUpgrade;
 import cn.org.autumn.modules.sys.redis.SysConfigRedis;
+import cn.org.autumn.modules.sys.shiro.HostSessionCookieSupport;
 import cn.org.autumn.site.ConfigFactory;
 import cn.org.autumn.site.DomainFactory;
 import cn.org.autumn.site.HostFactory;
@@ -718,6 +719,17 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         return oa;
     }
 
+    /**
+     * SITE_DOMAIN 配置中的全部有效域名（跳过 # 前缀项）。
+     */
+    public List<String> getSiteDomainList() {
+        String oa = getValue(SITE_DOMAIN);
+        if (StringUtils.isBlank(oa)) {
+            oa = getDefaultSiteDomains();
+        }
+        return HostSessionCookieSupport.parseDomainList(oa);
+    }
+
     @Override
     public boolean isBindDomain(String domain) {
         if (StringUtils.isBlank(domain))
@@ -957,8 +969,15 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
             DefaultWebSessionManager webSessionManager = (DefaultWebSessionManager) sessionManager;
             Cookie cookie = webSessionManager.getSessionIdCookie();
             cookie.setMaxAge(24 * 60 * 60);
+            List<String> siteDomains = getSiteDomainList();
+            boolean multiIndependent = HostSessionCookieSupport.hasMultipleIndependentDomains(siteDomains);
             String rootDomain = getClusterRootDomain();
             String siteDomain = getSiteDomain();
+            if (multiIndependent) {
+                cookie.setName(HostSessionCookieSupport.DEFAULT_COOKIE_NAME);
+                cookie.setDomain(null);
+                return;
+            }
             String name = siteDomain;
             String domain = rootDomain;
             if (StringUtils.isNotBlank(rootDomain)) {
@@ -972,10 +991,12 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 domain = "." + rootDomain;
             }
             if (StringUtils.isBlank(name))
-                name = "autumnid";
+                name = HostSessionCookieSupport.DEFAULT_COOKIE_NAME;
             cookie.setName(name);
             if (StringUtils.isNotBlank(domain))
                 cookie.setDomain(domain);
+            else
+                cookie.setDomain(null);
         }
     }
 

@@ -16,26 +16,14 @@
   <div class="login-card oauth-split-card">
     <div class="oauth-split">
       <div class="oauth-split-left">
-        <!--<#if authorizeLoggedIn?? && authorizeLoggedIn>-->
-        <div class="oauth-session-panel">
-          <div class="oauth-session-avatar"><i class="fa fa-user"></i></div>
-          <p class="oauth-session-label">当前登录账号</p>
-          <p class="oauth-session-name">${loginUserName!'已登录用户'}</p>
-          <p class="oauth-session-hint">请在右侧确认授权信息<br>并点击「确认授权」完成授权</p>
-          <!--<#if authorizeLogoutUrl?? && authorizeLogoutUrl?has_content>-->
-          <p class="oauth-session-subhint">需要更换账号？退出当前登录后重新登录即可</p>
-          <a class="oauth-session-logout" href="${authorizeLogoutUrl}"><i class="fa fa-sign-out"></i> 切换账号</a>
-          <!--</#if>-->
-        </div>
-        <!--<#else>-->
         <ul class="login-tabs">
-          <li :class="{ active: loginTab === 'account' }">
+          <li :class="{ active: loginTab === 'account', readonly: authorizeLoggedIn }">
             <a href="javascript:;" @click="switchTab('account')"><i class="fa fa-user"></i>账号登录</a>
           </li>
-          <li :class="{ active: loginTab === 'qr' }">
+          <li :class="{ active: loginTab === 'qr', readonly: authorizeLoggedIn }">
             <a href="javascript:;" @click="switchTab('qr')"><i class="fa fa-qrcode"></i>扫码登录</a>
           </li>
-          <li :class="{ active: loginTab === 'phone' }">
+          <li :class="{ active: loginTab === 'phone', readonly: authorizeLoggedIn }">
             <a href="javascript:;" @click="switchTab('phone')"><i class="fa fa-mobile"></i>手机登录</a>
           </li>
         </ul>
@@ -45,23 +33,47 @@
             <span class="login-alert-text">{{ errorMsg }}</span>
             <button type="button" class="close" @click="error = false" aria-label="关闭"><span>&times;</span></button>
           </div>
-          <form class="login-panel" v-show="loginTab === 'account'" method="post" action="${request.contextPath}${authorizeLoginAction!'/oauth2/login'}" @submit="beforeAuthorizeLogin">
-            <input type="hidden" name="callback" id="oauthAuthorizeCallback" value="">
-            <div class="form-group has-feedback">
-              <input type="text" name="username" class="form-control" v-model="username" placeholder="请输入账号" autocomplete="username" required>
-              <span class="glyphicon glyphicon-user form-control-feedback"></span>
+          <div v-show="loginTab === 'account'">
+            <div v-if="authorizeLoggedIn" class="login-panel oauth-tab-logged-in">
+              <div class="oauth-session-avatar">
+                <img v-if="loggedInIconUrl" :src="loggedInIconUrl" alt="">
+                <i v-else class="fa fa-user"></i>
+              </div>
+              <p class="oauth-session-label">当前登录账号</p>
+              <p class="oauth-session-name">{{ loggedInDisplayName }}</p>
+              <p class="oauth-session-hint">请在右侧确认授权信息<br>并点击「确认授权」完成授权</p>
+              <a v-if="authorizeLogoutUrl" class="oauth-session-logout" :href="authorizeLogoutUrl"><i class="fa fa-sign-out"></i> 切换账号</a>
             </div>
-            <div class="form-group has-feedback">
-              <input type="password" name="password" class="form-control" v-model="password" placeholder="请输入密码" autocomplete="current-password" required>
-              <span class="glyphicon glyphicon-lock form-control-feedback"></span>
-            </div>
-            <div class="remember-row">
-              <label><input type="checkbox" name="rememberMe" value="true"> 记住我</label>
-            </div>
-            <button type="submit" class="btn btn-primary btn-block btn-login">登 录</button>
-          </form>
+            <form v-else class="login-panel" method="post" action="${request.contextPath}${authorizeLoginAction!'/oauth2/login'}" @submit="beforeAuthorizeLogin">
+              <input type="hidden" name="callback" id="oauthAuthorizeCallback" value="">
+              <input type="hidden" name="loginTab" value="account">
+              <div class="form-group has-feedback">
+                <input type="text" name="username" class="form-control" v-model="username" placeholder="请输入账号" autocomplete="username" required>
+                <span class="glyphicon glyphicon-user form-control-feedback"></span>
+              </div>
+              <div class="form-group has-feedback">
+                <input type="password" name="password" class="form-control" v-model="password" placeholder="请输入密码" autocomplete="current-password" required>
+                <span class="glyphicon glyphicon-lock form-control-feedback"></span>
+              </div>
+              <div class="remember-row">
+                <label><input type="checkbox" name="rememberMe" value="true"> 记住我</label>
+              </div>
+              <button type="submit" class="btn btn-primary btn-block btn-login">登 录</button>
+            </form>
+          </div>
           <div class="login-panel qr-panel" v-show="loginTab === 'qr'">
-            <div class="qr-center">
+            <div v-if="authorizeLoggedIn" class="qr-center oauth-tab-logged-in">
+              <div class="qr-scanned">
+                <div class="qr-scanned-avatar">
+                  <img v-if="loggedInIconUrl" :src="loggedInIconUrl" alt="">
+                  <div v-else class="qr-scanned-avatar-placeholder"><i class="fa fa-user"></i></div>
+                </div>
+                <p class="qr-scanned-name">{{ loggedInDisplayName }}</p>
+                <p class="qr-status"><span class="qr-status-dot qr-status-dot-success"></span>登录成功，请在右侧确认授权</p>
+                <a v-if="authorizeLogoutUrl" class="oauth-session-logout" :href="authorizeLogoutUrl"><i class="fa fa-sign-out"></i> 切换账号</a>
+              </div>
+            </div>
+            <div v-else class="qr-center">
               <div v-show="qrPhase === 'pending'" class="qr-pending">
                 <div class="qr-frame">
                   <div class="qr-scan-line"></div>
@@ -84,24 +96,36 @@
               </div>
             </div>
           </div>
-          <form class="login-panel" v-show="loginTab === 'phone'" method="post" action="${request.contextPath}${authorizeLoginAction!'/oauth2/login'}" @submit="beforeAuthorizeLogin">
-            <input type="hidden" name="callback" id="oauthAuthorizeCallbackPhone" value="">
-            <input type="hidden" name="username" :value="mobileClean">
-            <div class="form-group has-feedback">
-              <input type="tel" class="form-control" v-model="mobile" placeholder="请输入手机号" maxlength="11" autocomplete="tel" required>
-              <span class="glyphicon glyphicon-phone form-control-feedback"></span>
+          <div v-show="loginTab === 'phone'">
+            <div v-if="authorizeLoggedIn" class="login-panel oauth-tab-logged-in">
+              <div class="oauth-session-avatar">
+                <img v-if="loggedInIconUrl" :src="loggedInIconUrl" alt="">
+                <i v-else class="fa fa-user"></i>
+              </div>
+              <p class="oauth-session-label">当前登录手机</p>
+              <p class="oauth-session-name">{{ loggedInMobile || loggedInDisplayName }}</p>
+              <p class="oauth-session-hint">请在右侧确认授权信息<br>并点击「确认授权」完成授权</p>
+              <a v-if="authorizeLogoutUrl" class="oauth-session-logout" :href="authorizeLogoutUrl"><i class="fa fa-sign-out"></i> 切换账号</a>
             </div>
-            <div class="form-group has-feedback">
-              <input type="password" name="password" class="form-control" v-model="mobilePassword" placeholder="请输入密码" autocomplete="current-password" required>
-              <span class="glyphicon glyphicon-lock form-control-feedback"></span>
-            </div>
-            <div class="remember-row">
-              <label><input type="checkbox" name="rememberMe" value="true"> 记住我</label>
-            </div>
-            <button type="submit" class="btn btn-primary btn-block btn-login">登 录</button>
-          </form>
+            <form v-else class="login-panel" method="post" action="${request.contextPath}${authorizeLoginAction!'/oauth2/login'}" @submit="beforeAuthorizeLogin">
+              <input type="hidden" name="callback" id="oauthAuthorizeCallbackPhone" value="">
+              <input type="hidden" name="loginTab" value="phone">
+              <input type="hidden" name="username" :value="mobileClean">
+              <div class="form-group has-feedback">
+                <input type="tel" class="form-control" v-model="mobile" placeholder="请输入手机号" maxlength="11" autocomplete="tel" required>
+                <span class="glyphicon glyphicon-phone form-control-feedback"></span>
+              </div>
+              <div class="form-group has-feedback">
+                <input type="password" name="password" class="form-control" v-model="mobilePassword" placeholder="请输入密码" autocomplete="current-password" required>
+                <span class="glyphicon glyphicon-lock form-control-feedback"></span>
+              </div>
+              <div class="remember-row">
+                <label><input type="checkbox" name="rememberMe" value="true"> 记住我</label>
+              </div>
+              <button type="submit" class="btn btn-primary btn-block btn-login">登 录</button>
+            </form>
+          </div>
         </div>
-        <!--</#if>-->
       </div>
       <div class="oauth-split-divider"></div>
       <div class="oauth-split-right">
@@ -310,6 +334,12 @@ window.__LOGIN_CONFIG__ = {
   //<#else>
   authorizeLoggedIn: false,
   //</#if>
+  authorizeLoginTab: '${authorizeLoginTab!"account"?js_string}',
+  loginUserName: '${loginUserName!""?js_string}',
+  loginUserNickname: '${loginUserNickname!""?js_string}',
+  loginUserIcon: '${loginUserIcon!""?js_string}',
+  loginUserMobile: '${loginUserMobile!""?js_string}',
+  authorizeLogoutUrl: '${authorizeLogoutUrl!""?js_string}',
   oauthDenyRedirect: '${denyRedirect!""?js_string}',
   safeOauthCallback: '${safeOauthCallback!""?js_string}',
   serverUuid: '${uuid!""?js_string}',

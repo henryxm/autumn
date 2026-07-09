@@ -2,9 +2,11 @@ package cn.org.autumn.modules.qrc.support;
 
 import cn.org.autumn.database.CrudGuard;
 import cn.org.autumn.modules.qrc.dto.CreateContext;
+import cn.org.autumn.modules.oauth.oauth2.support.AuthAuthorizeLoginSupport;
 import cn.org.autumn.modules.qrc.dto.SessionExchangeRequest;
 import cn.org.autumn.modules.qrc.dto.TicketCreateRequest;
 import cn.org.autumn.modules.qrc.model.Intent;
+import cn.org.autumn.modules.qrc.service.ScanTicketService;
 import cn.org.autumn.modules.qrc.shiro.ScanLoginToken;
 import cn.org.autumn.modules.spm.service.SuperPositionModelService;
 import cn.org.autumn.modules.sys.controller.SysAuthSupport;
@@ -39,6 +41,9 @@ public class ScanWebSupport {
     @Autowired
     private SysConfigService sysConfigService;
 
+    @Autowired
+    private ScanTicketService scanTicketService;
+
     public CreateContext buildWebCreateContext(TicketCreateRequest data, HttpServletRequest servlet) {
         String intent = data == null || StringUtils.isBlank(data.getIntent()) ? Intent.SELF_WEB_LOGIN : data.getIntent();
         CreateContext ctx = new CreateContext();
@@ -57,6 +62,7 @@ public class ScanWebSupport {
             throw new IllegalArgumentException("exchange不能为空");
         }
         boolean rememberMe = data != null && data.isRememberMe();
+        String intent = scanTicketService.peekExchangeTicketIntent(exchange);
         CrudGuard.force(() -> {
             ScanLoginToken token = new ScanLoginToken(exchange);
             token.setRememberMe(rememberMe);
@@ -70,6 +76,13 @@ public class ScanWebSupport {
             } catch (Exception ignored) {
             }
         });
-        return SysAuthSupport.resolvePostLoginRedirect(servlet, superPositionModelService, sysConfigService.getAccountAuthConfig());
+        String redirect = SysAuthSupport.resolvePostLoginRedirect(servlet, superPositionModelService, sysConfigService.getAccountAuthConfig());
+        if (Intent.OAUTH_AUTHORIZE.equals(intent)
+                || AuthAuthorizeLoginSupport.isAuthorizeCallback(servlet != null ? servlet.getParameter("callback") : null)
+                || AuthAuthorizeLoginSupport.isAuthorizeCallback(redirect)) {
+            AuthAuthorizeLoginSupport.saveLoginTab(servlet, AuthAuthorizeLoginSupport.TAB_QR);
+            redirect = AuthAuthorizeLoginSupport.appendLoginTab(redirect, AuthAuthorizeLoginSupport.TAB_QR);
+        }
+        return redirect;
     }
 }

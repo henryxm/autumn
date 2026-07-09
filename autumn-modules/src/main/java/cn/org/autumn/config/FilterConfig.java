@@ -1,6 +1,8 @@
 package cn.org.autumn.config;
 
+import cn.org.autumn.modules.sys.shiro.HostSessionCookieFilter;
 import cn.org.autumn.xss.XssFilter;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -10,6 +12,20 @@ import jakarta.servlet.DispatcherType;
 
 @Configuration
 public class FilterConfig {
+
+    @Autowired
+    private HostSessionCookieFilter hostSessionCookieFilter;
+
+    @Bean
+    public FilterRegistrationBean hostSessionCookieFilterRegistration() {
+        FilterRegistrationBean registration = new FilterRegistrationBean();
+        registration.setFilter(hostSessionCookieFilter);
+        registration.addUrlPatterns("/*");
+        registration.setName("hostSessionCookieFilter");
+        registration.setOrder(Integer.MAX_VALUE - 2);
+        registration.setAsyncSupported(true);
+        return registration;
+    }
 
     @Bean
     public FilterRegistrationBean shiroFilterRegistration() {

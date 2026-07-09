@@ -5,6 +5,7 @@ import static jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED;
 import static org.apache.oltu.oauth2.common.OAuth.HttpMethod.POST;
 
 import cn.org.autumn.modules.oauth.oauth2.support.OAuthAccessTokenResolver;
+import cn.org.autumn.modules.oauth.oauth2.support.AuthAuthorizeLoginSupport;
 import cn.org.autumn.modules.oauth.oauth2.support.OAuthAuthorizeAppIconSupport;
 import cn.org.autumn.modules.oauth.oauth2.support.OAuthConsentCsrfSupport;
 import cn.org.autumn.modules.oauth.oauth2.support.OAuthConsentSupport;
@@ -132,7 +133,13 @@ public class OplAuthorizationController {
             authRequest.setAppType(app.getAppType());
             oplExtensionService.beforeAuthorizePage(OplSnapshots.toAppSnapshot(app), authRequest);
             String loginError = request.getParameter("error");
-            if (ShiroUtils.needLogin() && scanTicketService.shouldUseQrAuthorize()) {
+            boolean loggedIn = !ShiroUtils.needLogin();
+            if ("1".equals(request.getParameter("loggedOut"))) {
+                ShiroUtils.logout();
+                AuthAuthorizeLoginSupport.clearLoginTab(request);
+                loggedIn = false;
+            }
+            if (!loggedIn && scanTicketService.shouldUseQrAuthorize()) {
                 try {
                     TicketSnapshot ticket = scanTicketService.createAuthorizeTicket(request, appId, redirectUri, resolvedScope, state, null);
                     return oplConsentView(request, response, model, app, appId, redirectUri, responseType, resolvedScope, state, codeChallenge, codeChallengeMethod, ticket, false, loginError);
@@ -141,7 +148,7 @@ public class OplAuthorizationController {
                         log.debug("opl QRC authorize ticket failed: {}", e.getMessage());
                 }
             }
-            return oplConsentView(request, response, model, app, appId, redirectUri, responseType, resolvedScope, state, codeChallenge, codeChallengeMethod, null, !ShiroUtils.needLogin(), loginError);
+            return oplConsentView(request, response, model, app, appId, redirectUri, responseType, resolvedScope, state, codeChallenge, codeChallengeMethod, null, loggedIn, loginError);
         } catch (Exception e) {
             if (log.isDebugEnabled())
                 log.debug("opl authorize failed: {}", e.getMessage());
@@ -224,6 +231,11 @@ public class OplAuthorizationController {
                         userProfileService.updateLoginIp(userEntity.getUuid(), ip, request.getHeader("user-agent"));
                     }
                 } catch (Exception ignored) {
+                }
+                if (AuthAuthorizeLoginSupport.isAuthorizeCallback(callback)) {
+                    String tab = AuthAuthorizeLoginSupport.resolveLoginTabForLogin(request, username);
+                    AuthAuthorizeLoginSupport.saveLoginTab(request, tab);
+                    back = AuthAuthorizeLoginSupport.appendLoginTab(back, tab);
                 }
                 return redirectUrl(back);
             }
@@ -334,7 +346,7 @@ public class OplAuthorizationController {
     private String oplConsentView(HttpServletRequest request, HttpServletResponse response, Model model, OpenAppEntity app, String appId, String redirectUri, String responseType, String scope, String state, String codeChallenge, String codeChallengeMethod, TicketSnapshot ticket, boolean loggedIn, String consentError) {
         fillAuthorizeModel(model, app, appId, redirectUri, responseType, scope, state, codeChallenge, codeChallengeMethod, consentError);
         if (ticket != null) {
-            scanTicketService.fillAuthorizeModel(model, ticket);
+            scanTicketService.fillAuthorizeModel(request, model, ticket);
         } else {
             model.addAttribute("pollIntervalMs", scanTicketService.getScanLoginConfig().getPollIntervalMs());
         }
@@ -342,11 +354,13 @@ public class OplAuthorizationController {
         if (loggedIn) {
             SysUserEntity user = ShiroUtils.getUserEntity();
             if (user != null) {
-                model.addAttribute("loginUserName", StringUtils.defaultIfBlank(user.getUsername(), user.getUuid()));
+                AuthAuthorizeLoginSupport.enrichLoggedInUser(request, model, user);
             }
             if (request != null) {
                 model.addAttribute("authorizeLogoutUrl", buildAuthorizeLogoutUrl(request, buildAuthorizeReturnUrl(request, model)));
             }
+        } else if (scanTicketService.shouldUseQrAuthorize()) {
+            model.addAttribute("authorizeLoginTab", AuthAuthorizeLoginSupport.TAB_QR);
         }
         if (StringUtils.isNotBlank(consentError)) {
             model.addAttribute("error", consentError);
@@ -362,6 +376,7 @@ public class OplAuthorizationController {
 
     @RequestMapping(value = "authorize/logout", method = RequestMethod.GET)
     public ModelAndView authorizeLogout(HttpServletRequest request, HttpServletResponse response, @RequestParam(required = false) String returnTo) {
+        AuthAuthorizeLoginSupport.clearLoginTab(request);
         SysLogoutSupport.logoutAndForceReauth(shiroSessionService);
         LogoutSkipSupport.mark(request, response);
         String url = normalizeRedirectUrl(returnTo);

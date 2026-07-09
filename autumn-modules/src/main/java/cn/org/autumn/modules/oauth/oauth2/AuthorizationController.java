@@ -1,6 +1,7 @@
 package cn.org.autumn.modules.oauth.oauth2;
 
 import cn.org.autumn.modules.oauth.oauth2.support.OAuthAccessTokenResolver;
+import cn.org.autumn.modules.oauth.oauth2.support.AuthAuthorizeLoginSupport;
 import cn.org.autumn.modules.oauth.oauth2.support.OAuthAuthorizeAppIconSupport;
 import cn.org.autumn.modules.oauth.oauth2.support.OAuthConsentCsrfSupport;
 import cn.org.autumn.modules.oauth.oauth2.support.OAuthConsentSupport;
@@ -234,7 +235,7 @@ public class AuthorizationController {
 
     private String oauthConsentView(HttpServletRequest request, HttpServletResponse response, Model model, TicketSnapshot ticket, ClientDetailsEntity client, boolean loggedIn, String consentError) {
         if (ticket != null) {
-            scanTicketService.fillAuthorizeModel(model, ticket);
+            scanTicketService.fillAuthorizeModel(request, model, ticket);
         } else {
             model.addAttribute("pollIntervalMs", scanTicketService.getScanLoginConfig().getPollIntervalMs());
         }
@@ -252,12 +253,14 @@ public class AuthorizationController {
         if (loggedIn) {
             SysUserEntity user = ShiroUtils.getUserEntity();
             if (user != null) {
-                model.addAttribute("loginUserName", StringUtils.isNotBlank(user.getUsername()) ? user.getUsername() : user.getUuid());
+                AuthAuthorizeLoginSupport.enrichLoggedInUser(request, model, user);
             }
             if (request != null) {
                 String returnUrl = buildAuthorizeReturnUrl(request, model, client);
                 model.addAttribute("authorizeLogoutUrl", buildAuthorizeLogoutUrl(request, returnUrl));
             }
+        } else if (scanTicketService.shouldUseQrAuthorize()) {
+            model.addAttribute("authorizeLoginTab", AuthAuthorizeLoginSupport.TAB_QR);
         }
         if (StringUtils.isNotBlank(consentError)) {
             model.addAttribute("error", consentError);
@@ -334,6 +337,10 @@ public class AuthorizationController {
             }
             callback = WebPathUtils.canonicalOauthLoginCallback(request, callback);
         }
+        Object rpEntry = tryRpOAuthLoginEntry(request, response, model, callback);
+        if (rpEntry != null) {
+            return rpEntry;
+        }
         if (StringUtils.isNotBlank(callback) || StringUtils.isNotBlank(error)) {
             if (StringUtils.isNotBlank(error)) {
                 model.addAttribute("error", error);
@@ -343,14 +350,14 @@ public class AuthorizationController {
             }
             return pageFactory.login(request, response, model);
         }
-        Object rpEntry = tryRpOAuthLoginEntry(request, response, model);
-        if (rpEntry != null) {
-            return rpEntry;
-        }
         return redirectUrl(WebPathUtils.forBrowser(request, "/login"));
     }
 
     private Object tryRpOAuthLoginEntry(HttpServletRequest request, HttpServletResponse response, Model model) {
+        return tryRpOAuthLoginEntry(request, response, model, null);
+    }
+
+    private Object tryRpOAuthLoginEntry(HttpServletRequest request, HttpServletResponse response, Model model, String callbackHint) {
         if (!authSiteRoleService.isRpEnabled()) {
             return null;
         }
@@ -364,7 +371,8 @@ public class AuthorizationController {
         }
         if (webOauthEndpointResolver.hasRemoteOrigin(rpClient)) {
             try {
-                String safeCallback = WebPathUtils.safeOauthCallbackForClient(request, request.getParameter("callback"));
+                String rawCallback = StringUtils.isNotBlank(callbackHint) ? callbackHint : request.getParameter("callback");
+                String safeCallback = WebPathUtils.safeOauthCallbackForClient(request, rawCallback);
                 return redirectUrl(oauthRpLoginService.buildAuthorizeRedirect(request, safeCallback));
             } catch (Exception e) {
                 log.warn("RP authorize redirect failed: clientId={}, {}", clientId, e.getMessage());
@@ -396,6 +404,11 @@ public class AuthorizationController {
                         userProfileService.updateLoginIp(userEntity.getUuid(), ip, request.getHeader("user-agent"));
                     }
                 } catch (Exception ignored) {
+                }
+                if (AuthAuthorizeLoginSupport.isAuthorizeCallback(callback)) {
+                    String tab = AuthAuthorizeLoginSupport.resolveLoginTabForLogin(request, username);
+                    AuthAuthorizeLoginSupport.saveLoginTab(request, tab);
+                    back = AuthAuthorizeLoginSupport.appendLoginTab(back, tab);
                 }
                 return redirectUrl(back);
             }
@@ -470,6 +483,7 @@ public class AuthorizationController {
         boolean loggedIn = !ShiroUtils.needLogin();
         if ("1".equals(request.getParameter("loggedOut"))) {
             ShiroUtils.logout();
+            AuthAuthorizeLoginSupport.clearLoginTab(request);
             loggedIn = false;
         }
         String loginError = request.getParameter("error");
@@ -489,6 +503,7 @@ public class AuthorizationController {
 
     @RequestMapping(value = "authorize/logout", method = RequestMethod.GET)
     public ModelAndView authorizeLogout(HttpServletRequest request, HttpServletResponse response, @RequestParam(required = false) String returnTo) {
+        AuthAuthorizeLoginSupport.clearLoginTab(request);
         SysLogoutSupport.logoutAndForceReauth(shiroSessionService);
         LogoutSkipSupport.mark(request, response);
         String url = normalizeRedirectUrl(returnTo);

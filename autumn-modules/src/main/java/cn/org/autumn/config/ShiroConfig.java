@@ -5,6 +5,8 @@ import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.install.InstallMode;
 import cn.org.autumn.modules.sys.shiro.ClientIpSessionFactory;
 import cn.org.autumn.modules.sys.shiro.ForceLogoutRememberMeManager;
+import cn.org.autumn.modules.sys.shiro.HostAwareSessionIdCookie;
+import cn.org.autumn.modules.sys.shiro.HostSessionCookieSupport;
 import cn.org.autumn.modules.sys.shiro.RedisShiroSessionDAO;
 import cn.org.autumn.modules.sys.shiro.UserRealm;
 import org.apache.commons.lang3.StringUtils;
@@ -16,7 +18,6 @@ import org.apache.shiro.spring.LifecycleBeanPostProcessor;
 import org.apache.shiro.spring.security.interceptor.AuthorizationAttributeSourceAdvisor;
 import org.apache.shiro.spring.web.ShiroFilterFactoryBean;
 import org.apache.shiro.web.mgt.DefaultWebSecurityManager;
-import org.apache.shiro.web.servlet.Cookie;
 import org.apache.shiro.web.servlet.SimpleCookie;
 import org.apache.shiro.web.session.mgt.DefaultWebSessionManager;
 import org.springframework.aop.framework.autoproxy.DefaultAdvisorAutoProxyCreator;
@@ -49,9 +50,9 @@ public class ShiroConfig {
         // 安装模式：关闭周期校验，避免无意义地解析 SessionId / 触碰 SessionDAO
         sessionManager.setSessionValidationSchedulerEnabled(!install);
         sessionManager.setSessionIdUrlRewritingEnabled(false);
-        Cookie cookie = sessionManager.getSessionIdCookie();
+        HostAwareSessionIdCookie cookie = new HostAwareSessionIdCookie(HostSessionCookieSupport.DEFAULT_COOKIE_NAME);
         cookie.setMaxAge(24 * 60 * 60);
-        cookie.setName("autumnid");
+        sessionManager.setSessionIdCookie(cookie);
         // 安装模式禁止 Redis SessionDAO：避免 Redis 未就绪时 doReadSession 失败，且避免 getNameSpace() 查库拼 Redis Key
         boolean useRedisSessions = redisOpen && shiroRedis && !install;
         if (useRedisSessions) {
