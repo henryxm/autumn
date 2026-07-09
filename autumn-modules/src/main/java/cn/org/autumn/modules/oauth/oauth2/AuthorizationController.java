@@ -334,6 +334,10 @@ public class AuthorizationController {
             }
             callback = WebPathUtils.canonicalOauthLoginCallback(request, callback);
         }
+        Object rpEntry = tryRpOAuthLoginEntry(request, response, model, callback);
+        if (rpEntry != null) {
+            return rpEntry;
+        }
         if (StringUtils.isNotBlank(callback) || StringUtils.isNotBlank(error)) {
             if (StringUtils.isNotBlank(error)) {
                 model.addAttribute("error", error);
@@ -343,14 +347,14 @@ public class AuthorizationController {
             }
             return pageFactory.login(request, response, model);
         }
-        Object rpEntry = tryRpOAuthLoginEntry(request, response, model);
-        if (rpEntry != null) {
-            return rpEntry;
-        }
         return redirectUrl(WebPathUtils.forBrowser(request, "/login"));
     }
 
     private Object tryRpOAuthLoginEntry(HttpServletRequest request, HttpServletResponse response, Model model) {
+        return tryRpOAuthLoginEntry(request, response, model, null);
+    }
+
+    private Object tryRpOAuthLoginEntry(HttpServletRequest request, HttpServletResponse response, Model model, String callbackHint) {
         if (!authSiteRoleService.isRpEnabled()) {
             return null;
         }
@@ -364,7 +368,8 @@ public class AuthorizationController {
         }
         if (webOauthEndpointResolver.hasRemoteOrigin(rpClient)) {
             try {
-                String safeCallback = WebPathUtils.safeOauthCallbackForClient(request, request.getParameter("callback"));
+                String rawCallback = StringUtils.isNotBlank(callbackHint) ? callbackHint : request.getParameter("callback");
+                String safeCallback = WebPathUtils.safeOauthCallbackForClient(request, rawCallback);
                 return redirectUrl(oauthRpLoginService.buildAuthorizeRedirect(request, safeCallback));
             } catch (Exception e) {
                 log.warn("RP authorize redirect failed: clientId={}, {}", clientId, e.getMessage());
