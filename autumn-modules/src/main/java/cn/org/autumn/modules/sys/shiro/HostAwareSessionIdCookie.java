@@ -1,6 +1,6 @@
 package cn.org.autumn.modules.sys.shiro;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.shiro.web.servlet.SimpleCookie;
 
 /**

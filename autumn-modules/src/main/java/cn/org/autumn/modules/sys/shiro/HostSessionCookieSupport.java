@@ -3,8 +3,8 @@ package cn.org.autumn.modules.sys.shiro;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import javax.servlet.http.HttpServletRequest;
-import org.apache.commons.lang.StringUtils;
+import jakarta.servlet.http.HttpServletRequest;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 多域名 / 混合域名场景下，按当前请求 Host 解析 Shiro 会话 Cookie 的 name 与 domain。
