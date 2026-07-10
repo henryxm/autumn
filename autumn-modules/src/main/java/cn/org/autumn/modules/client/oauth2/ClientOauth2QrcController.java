@@ -41,7 +41,7 @@ public class ClientOauth2QrcController {
             String callback = data == null ? null : data.getCallback();
             String type = data == null ? null : data.getType();
             String id = data == null ? null : data.getId();
-            log.info("RP QRC create request type={} id={} callback={}", type, id, callback);
+            log.debug("RP QRC create request type={} id={} callback={}", type, id, callback);
             if (StringUtils.isNotBlank(type) && StringUtils.isNotBlank(id)) {
                 return R.ok().put("data", scanLoginFacade.createWebTicketByCredential(servlet, type, id, callback));
             }
@@ -58,7 +58,7 @@ public class ClientOauth2QrcController {
         response.setHeader("Cache-Control", "no-cache, no-transform");
         response.setHeader("Connection", "keep-alive");
         response.setHeader("X-Accel-Buffering", "no");
-        log.info("RP QRC stream subscribe uuid={}", uuid);
+        log.debug("RP QRC stream subscribe uuid={}", uuid);
         return scanLoginFacade.streamRpTicket(uuid);
     }
 
@@ -99,7 +99,7 @@ public class ClientOauth2QrcController {
                 log.warn("RP QRC inbound rejected: empty body");
                 return R.error("回调体为空");
             }
-            log.info("RP QRC inbound received bodyLen={} remote={}", rawBody.length(), servlet == null ? null : servlet.getRemoteAddr());
+            log.debug("RP QRC inbound received bodyLen={} remote={}", rawBody.length(), servlet == null ? null : servlet.getRemoteAddr());
             scanLoginFacade.handleRpInbound(rawBody, readHeaders(servlet));
             return R.ok();
         } catch (Exception e) {

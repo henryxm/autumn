@@ -56,6 +56,23 @@
                 <tr><td><strong>AI_QRC.md</strong></td><td>模块结构、配置、安全基线</td></tr>
             </table>
 
+            <h3>AutumnQrc 前端通知（方案 C）</h3>
+            <p>静态脚本 <code>statics/js/autumn-qrc-core.js</code> 导出 <code>window.AutumnQrc</code>，统一 B2/D 建票与状态通知。</p>
+            <table>
+                <tr><th>API</th><th>说明</th></tr>
+                <tr><td><code>mergeInto(vm, options)</code></td><td>合并扫码方法到 Vue/宿主；检测到 <code>$set</code> 时自动 <code>wireVueScannerUi</code></td></tr>
+                <tr><td><code>startTicketNotify()</code></td><td>建票成功后统一入口：<code>mode=rp</code> → SSE 主通道；<code>mode=as</code> → 轮询</td></tr>
+                <tr><td><code>startRpNotify()</code></td><td>D 模式：先 <code>GET /ticket/stream</code>，失败/超时后 <code>startPollFallback</code></td></tr>
+                <tr><td><code>startPollFallback()</code></td><td>幂等启动 <code>GET /ticket/status</code> 轮询（仅 RP 降级）</td></tr>
+                <tr><td><code>resumeTicketNotify({ uuid, qrUrl })</code></td><td>授权页预置 uuid：跳过 create，直接 AS 轮询</td></tr>
+                <tr><td><code>stopNotify()</code></td><td>关闭 EventSource、清除轮询与 watchdog</td></tr>
+                <tr><td><code>wireVueScannerUi(vm)</code></td><td>Vue 2 扫码成功 UI（<code>qrPhase</code> / <code>scannerDisplayName</code>）</td></tr>
+                <tr><td><code>bindPlainHostScannedUi(host, ui)</code></td><td>非 Vue 宿主 pending/scanned DOM 切换</td></tr>
+            </table>
+            <div class="doc-note">
+                <strong>方案 C</strong>：RP 模式 SSE 正常时无并行轮询；<code>sseFallbackDelayMs</code>（默认 5000）内未收到 <code>status</code> 或 <code>EventSource.onerror</code> 时降级 <code>/ticket/status</code>。Nginx 需关闭 SSE 缓冲（<code>X-Accel-Buffering: no</code>）。
+            </div>
+
             <h3>HTTP 路径与报文</h3>
             <table>
                 <tr><th>前缀</th><th>Controller</th><th>报文</th><th>鉴权</th></tr>

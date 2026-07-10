@@ -159,7 +159,7 @@ stateDiagram-v2
 
 ### 3.3 D — RP 联邦扫码（b.com ← a.com）
 
-**场景**：b.com 登录页扫码，身份来自 a.com；**零轮询**——浏览器仅一条 SSE，AS 两次 Webhook 驱动状态与登录完成。
+**场景**：b.com 登录页扫码，身份来自 a.com；**方案 C**——浏览器优先一条 SSE，SSE 不可用时降级 `ticket/status`；AS 两次 Webhook 驱动状态与登录完成。
 
 ```mermaid
 sequenceDiagram
@@ -180,6 +180,11 @@ sequenceDiagram
   JS->>RP: GET /ticket/stream?uuid=\n(EventSource)
   RP->>Store: subscribe + catch-up PENDING
   Store-->>JS: SSE status PENDING
+
+  alt SSE 不可用 / onerror / watchdog 超时
+    JS->>RP: GET /ticket/status?uuid=
+    RP-->>JS: status + scannerBrief
+  end
 
   APP->>AS: POST scan
   AS->>WH: deliver qrc.scanned\n+ scannerBrief
@@ -233,9 +238,12 @@ sequenceDiagram
 **D 模式禁止路径（已删除，勿调用）**
 
 - `GET|POST .../ticket/local-status`
-- `POST .../ticket/status`（RP 代理 AS 轮询）
 - `POST .../ticket/complete`
 - `ScanLoginConfig.legacyRemotePoll`
+
+**D 模式降级路径（方案 C）**
+
+- `GET .../ticket/status?uuid=` — 仅当 SSE 不可用或超时后由 `autumn-qrc-core.js` 启动轮询
 
 ### 3.4 B1 — OAuth 浏览器 Redirect（简述）
 

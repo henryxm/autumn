@@ -45,7 +45,7 @@
 3. 浏览器建立 **一条** `GET /client/oauth2/qrc/web/ticket/stream?uuid=`（SSE），连接时 catch-up 当前状态
 4. A应用扫 QR → `scan` → AS `POST` Webhook `qrc.scanned` → B `inbound` → SSE 推送 `SCANNED` + `scannerBrief`（「请在手机点击确认」）
 5. A应用 `confirm` → AS `POST` Webhook `qrc.authorized` → B `inbound` → 后台按 `browserSessionId` 自动 `completeRemoteOAuthCallback` → SSE 推送 `COMPLETED` + `redirectUrl` → 浏览器跳转
-6. **全程无轮询**：B 前端不调用 `local-status` / `ticket/status` / `ticket/complete`；B 后台不 HTTP 调用 AS `open/status`
+6. **方案 C（SSE 主 + 轮询降级）**：SSE 正常时浏览器 **仅一条** stream 连接、**无**并行 `ticket/status` 轮询；当 `EventSource` 不可用、`onerror` 或 watchdog（默认 5s 内未收到 `status`）时，降级 `GET /client/oauth2/qrc/web/ticket/status?uuid=`；B 后台仍不 HTTP 调用 AS `open/status`
 7. Session 绑定失效时 SSE 推送 `SESSION_EXPIRED`，前端提示刷新二维码
 
 完整配置见 **`docs/AI_AUTH_SITE_ROLES.md` §3**。
@@ -57,7 +57,8 @@
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | POST | `/ticket/create` | 代理 AS 建票，绑定 `browserSessionId` |
-| GET | `/ticket/stream` | **SSE** 推送状态（唯一浏览器推送通道） |
+| GET | `/ticket/stream` | **SSE** 推送状态（主通道） |
+| GET | `/ticket/status` | **降级轮询**（SSE 不可用/超时） |
 | POST | `/ticket/cancel` | 取消 |
 | POST | `/inbound` | AS Webhook 入站（服务端回调，非浏览器） |
 

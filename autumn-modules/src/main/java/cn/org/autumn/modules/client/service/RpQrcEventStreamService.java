@@ -62,7 +62,7 @@ public class RpQrcEventStreamService {
         long timeout = Math.max(30_000L, pending.getExpiredAt() - System.currentTimeMillis());
         SseEmitter emitter = new SseEmitter(timeout);
         subscribers.computeIfAbsent(uuid, key -> new CopyOnWriteArrayList<>()).add(emitter);
-        log.info("RP QRC SSE subscribe uuid={} status={} localSubscribers={}", uuid, pending.getStatus(), subscribers.get(uuid).size());
+        log.debug("RP QRC SSE subscribe uuid={} status={} localSubscribers={}", uuid, pending.getStatus(), subscribers.get(uuid).size());
         emitter.onCompletion(() -> removeEmitter(uuid, emitter));
         emitter.onTimeout(() -> removeEmitter(uuid, emitter));
         emitter.onError(e -> removeEmitter(uuid, emitter));
@@ -75,7 +75,7 @@ public class RpQrcEventStreamService {
             return;
         }
         RpQrcStreamEvent event = RpQrcStreamEvent.from(pending);
-        log.info("RP QRC SSE publish uuid={} status={} redirect={}", pending.getUuid(), pending.getStatus(), pending.getRedirectUrl());
+        log.debug("RP QRC SSE publish uuid={} status={} redirect={}", pending.getUuid(), pending.getStatus(), pending.getRedirectUrl());
         dispatchLocal(pending.getUuid(), event);
         if (redisListenerService != null) {
             redisListenerService.publish(REDIS_CHANNEL, gson.toJson(event));

@@ -117,6 +117,8 @@
                     } else {
                         this.beginQrLogin();
                     }
+                } else if (typeof this.stopNotify === 'function') {
+                    this.stopNotify();
                 } else if (this.qrcPollTimer) {
                     clearInterval(this.qrcPollTimer);
                     this.qrcPollTimer = null;
@@ -243,12 +245,12 @@
                 };
             },
             beginQrLogin: function () {
-                if (this.activeQrProvider && window.AutumnQrc) {
-                    AutumnQrc.mergeInto(this, this.buildQrcOptions(this.activeQrProvider));
-                    this.startQrLogin();
+                if (!window.AutumnQrc) {
+                    this.qrStatus = '扫码组件未加载，请刷新页面';
                     return;
                 }
-                this.startAsQrLogin();
+                AutumnQrc.mergeInto(this, this.buildQrcOptions(this.activeQrProvider));
+                this.startQrLogin();
             },
             selectQrProvider: function (provider) {
                 this.activeQrProvider = provider;
@@ -309,20 +311,24 @@
                 }
             },
             initAuthorizeQr: function () {
-                var self = this;
-                self.resetQrScannedState();
-                if (self.qrcPollTimer) {
-                    clearInterval(self.qrcPollTimer);
-                    self.qrcPollTimer = null;
-                }
-                if (!serverUuid || !serverQrUrl) {
-                    self.qrStatus = '二维码加载失败，请刷新页面重试';
+                if (!window.AutumnQrc) {
+                    this.qrStatus = '扫码组件未加载，请刷新页面';
                     return;
                 }
-                self.qrcUuid = serverUuid;
-                self.renderQrCode(serverQrUrl);
-                self.qrStatus = '等待扫码...';
-                self.qrcPollTimer = setInterval(function () { self.pollQrStatus(); }, serverPollIntervalMs);
+                var self = this;
+                AutumnQrc.mergeInto(this, {
+                    ctx: ctx,
+                    mode: 'as',
+                    boxId: 'loginQrcodeBox',
+                    pollIntervalMs: serverPollIntervalMs,
+                    onAuthorizeExchange: function (exchange) {
+                        self.completeAuthorizeExchange(exchange);
+                    }
+                });
+                this.resumeTicketNotify({
+                    uuid: serverUuid,
+                    qrUrl: serverQrUrl
+                });
             },
             submitAuthorizeConsent: function () {
                 if (!this.authorizeLoggedIn) {
@@ -514,98 +520,6 @@
                             vm.submitLogin('', '', '', { silent: true });
                         }
                     }
-                });
-            },
-            startAsQrLogin: function () {
-                var self = this;
-                self.resetQrScannedState();
-                self.qrStatus = '正在加载二维码...';
-                if (self.qrcPollTimer) {
-                    clearInterval(self.qrcPollTimer);
-                    self.qrcPollTimer = null;
-                }
-                $.ajax({
-                    type: 'POST',
-                    url: ctx + '/qrc/scanticket/web/ticket/create',
-                    contentType: 'application/json',
-                    data: JSON.stringify({ data: { intent: 'SELF_WEB_LOGIN' } }),
-                    dataType: 'json',
-                    success: function (res) {
-                        if (!res || res.code !== 0 || !res.data) {
-                            self.qrStatus = (res && res.msg) ? res.msg : '二维码加载失败，请点击刷新重试';
-                            return;
-                        }
-                        self.qrcUuid = res.data.uuid;
-                        self.renderQrCode(res.data.qrUrl);
-                        self.qrStatus = '等待扫码...';
-                        self.qrcPollTimer = setInterval(function () { self.pollQrStatus(); }, 2000);
-                    },
-                    error: function (xhr) {
-                        var msg = '网络异常，请点击刷新重试';
-                        if (xhr && xhr.responseJSON && xhr.responseJSON.msg) {
-                            msg = xhr.responseJSON.msg;
-                        } else if (xhr && xhr.status === 404) {
-                            msg = '扫码服务不可用，请确认应用已启动 QRC 模块';
-                        }
-                        self.qrStatus = msg;
-                    }
-                });
-            },
-            pollQrStatus: function () {
-                var self = this;
-                if (!self.qrcUuid) {
-                    return;
-                }
-                $.getJSON(ctx + '/qrc/scanticket/web/ticket/status', { uuid: self.qrcUuid }, function (res) {
-                    if (!res || res.code !== 0 || !res.data) {
-                        return;
-                    }
-                    var data = res.data;
-                    if (data.status === 'SCANNED') {
-                        self.applyScannerBrief(data.scannerBrief);
-                        self.qrStatus = '扫码成功，请在手机点击登录';
-                    }
-                    if (authorizeMode) {
-                        if ((data.status === 'CONFIRMED' || data.status === 'COMPLETED') && data.exchange) {
-                            self.qrPhase = 'done';
-                            self.qrStatus = '扫码成功，正在登录...';
-                            if (self.qrcPollTimer) {
-                                clearInterval(self.qrcPollTimer);
-                                self.qrcPollTimer = null;
-                            }
-                            self.completeAuthorizeExchange(data.exchange);
-                            return;
-                        }
-                        self.handleQrTerminalStatus(data.status);
-                        return;
-                    }
-                    if ((data.status === 'CONFIRMED' || data.status === 'COMPLETED') && data.exchange) {
-                        self.qrPhase = 'done';
-                        self.qrStatus = '登录成功，正在跳转...';
-                        if (self.qrcPollTimer) {
-                            clearInterval(self.qrcPollTimer);
-                            self.qrcPollTimer = null;
-                        }
-                        $.ajax({
-                            type: 'POST',
-                            url: ctx + '/qrc/scanticket/web/session/exchange',
-                            contentType: 'application/json',
-                            data: JSON.stringify({ data: { exchange: res.data.exchange } }),
-                            dataType: 'json',
-                            success: function (result) {
-                                if (result.code === 0) {
-                                    self.redirectAfterLogin(result.data != null ? String(result.data) : null);
-                                } else {
-                                    self.qrStatus = result.msg || '登录失败';
-                                }
-                            },
-                            error: function () {
-                                self.qrStatus = '网络异常，请刷新二维码重试';
-                            }
-                        });
-                        return;
-                    }
-                    self.handleQrTerminalStatus(data.status);
                 });
             }
         }

@@ -257,7 +257,7 @@ public class ClientGrantService extends ModuleService<ClientGrantDao, ClientGran
             }
             webhookData.put("status", TicketStatus.COMPLETED);
             putScannerBrief(webhookData, user);
-            log.info("QRC authorize webhook delivering uuid={} clientId={} webhook={}", ticket.getUuid(), clientId, TicketPayloads.get(ticket, "webhook"));
+            log.debug("QRC authorize webhook delivering uuid={} clientId={} webhook={}", ticket.getUuid(), clientId, TicketPayloads.get(ticket, "webhook"));
             qrcWebhookDeliveryService.deliverAuthorized(ticket, grant, webhookData);
         }
         if (StringUtils.isNotBlank(redirectUri) && !DeliveryMode.POLL_CODE.equals(delivery) && !DeliveryMode.POLL_TOKEN.equals(delivery) && !DeliveryMode.WEBHOOK.equals(delivery)) {
