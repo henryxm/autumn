@@ -4,11 +4,9 @@ import cn.org.autumn.model.AuthLoginProviderType;
 import cn.org.autumn.modules.client.entity.WebAuthenticationEntity;
 import cn.org.autumn.modules.client.model.RpQrcPendingSession;
 import cn.org.autumn.modules.client.model.ScanLoginCredentialContext;
-import cn.org.autumn.modules.client.oauth2.WebOauthBindException;
+import cn.org.autumn.modules.opc.dto.ConnectOAuthFinishResult;
 import cn.org.autumn.modules.opc.entity.ConnectAppEntity;
 import cn.org.autumn.modules.opc.service.ConnectLoginService;
-import cn.org.autumn.modules.opc.support.ConnectBindException;
-import cn.org.autumn.modules.opc.support.ConnectBindException.ConflictType;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,7 +19,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -73,12 +70,15 @@ class RpQrcCallbackServiceTest {
         ScanLoginCredentialContext credential = openCredential();
         when(scanLoginCredentialService.require(AuthLoginProviderType.OAUTH2_OPEN, "app_demo")).thenReturn(credential);
         when(sysConfigService.getBaseUrl()).thenReturn("https://b.com");
+        when(connectLoginService.finishOAuthLogin(any(), eq(credential.getConnectApp()), eq("open-code"), eq("/welcome"))).thenReturn(ConnectOAuthFinishResult.success("/welcome"));
         stubSessionRunner();
 
         rpQrcCallbackService.completeOnInbound(pending, "open-code");
 
-        verify(connectLoginService).completeOAuthCallback(any(), eq(credential.getConnectApp()), eq("open-code"), eq("/welcome"));
+        verify(connectLoginService).finishOAuthLogin(any(), eq(credential.getConnectApp()), eq("open-code"), eq("/welcome"));
         assertEquals("COMPLETED", pending.getStatus());
+        assertEquals("/welcome", pending.getRedirectUrl());
+        assertEquals("open-code", pending.getCode());
     }
 
     @Test
@@ -87,10 +87,8 @@ class RpQrcCallbackServiceTest {
         ScanLoginCredentialContext credential = openCredential();
         when(scanLoginCredentialService.require(AuthLoginProviderType.OAUTH2_OPEN, "app_demo")).thenReturn(credential);
         when(sysConfigService.getBaseUrl()).thenReturn("https://b.com");
+        when(connectLoginService.finishOAuthLogin(any(), any(), eq("open-code"), any())).thenReturn(ConnectOAuthFinishResult.bindChoice("/open/oauth2/bind/choice?token=pending-1&appId=app_demo"));
         stubSessionRunner();
-        ConnectBindException conflict = ConnectBindException.bindChoiceRequired(credential.getConnectApp(), "oid1", "pending-1");
-        doThrow(conflict).when(connectLoginService).completeOAuthCallback(any(), any(), eq("open-code"), any());
-        when(connectLoginService.bindChoicePageUrl(any(), eq("app_demo"), eq("pending-1"))).thenReturn("/open/oauth2/bind/choice?token=pending-1&appId=app_demo");
 
         rpQrcCallbackService.completeOnInbound(pending, "open-code");
 

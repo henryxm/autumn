@@ -113,7 +113,7 @@ sequenceDiagram
 
 开放 OPC **网页**扫码（B2/D）不经过 B3 轮询集成面；B3 面向持 secret 的服务端集成。
 
-**同源开放 B2 前置**：`appId` 须在 `oauth_client_details`（trusted）登记，且 OPL `opl_open_app` 存在同 `appId` 活跃应用。
+**同源开放 B2 前置**：`appId` 须在 `oauth_client_details`（trusted）登记，且 OPL `opl_open_app` 存在同 `appId` 活跃应用。`pageLogin` 含 QR 时 `ConnectAppService` 会自动同步 `oauth_client_details`。
 
 ---
 

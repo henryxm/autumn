@@ -5,8 +5,6 @@ import cn.org.autumn.modules.client.dto.ScanLoginCredentialView;
 import cn.org.autumn.modules.client.model.ScanLoginCredentialContext;
 import cn.org.autumn.modules.opc.entity.ConnectAppEntity;
 import cn.org.autumn.modules.opc.service.ConnectLoginService;
-import cn.org.autumn.modules.opc.support.ConnectBindException;
-import cn.org.autumn.modules.opc.support.ConnectBindException.ConflictType;
 import cn.org.autumn.modules.qrc.dto.OpenTicketCreateRequest;
 import cn.org.autumn.modules.qrc.dto.OpenTicketStatusRequest;
 import cn.org.autumn.modules.qrc.dto.SessionExchangeRequest;
@@ -18,8 +16,6 @@ import cn.org.autumn.modules.qrc.model.TicketSnapshot;
 import cn.org.autumn.modules.qrc.service.ScanTicketService;
 import cn.org.autumn.modules.qrc.support.QrcApiSupport;
 import cn.org.autumn.modules.qrc.support.ScanWebSupport;
-import cn.org.autumn.opc.OpcConstants;
-import cn.org.autumn.utils.WebPathUtils;
 import java.util.HashMap;
 import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
@@ -132,22 +128,7 @@ public class ScanLoginFacade {
         if (app == null) {
             throw new IllegalStateException("未配置开放平台应用");
         }
-        try {
-            connectLoginService.completeOAuthCallback(request, app, code, callback);
-        } catch (ConnectBindException e) {
-            if (e.getConflictType() == ConflictType.BIND_CHOICE_REQUIRED && StringUtils.isNotBlank(e.getPendingToken())) {
-                return connectLoginService.bindChoicePageUrl(request, app.getAppId(), e.getPendingToken());
-            }
-            throw e;
-        }
-        String redirect = WebPathUtils.safeOauthCallbackForClient(request, callback);
-        if (StringUtils.isBlank(redirect)) {
-            redirect = WebPathUtils.forBrowser(request, OpcConstants.OAUTH2_SUCCESS_PATH);
-            if (StringUtils.isNotBlank(app.getAppId())) {
-                redirect = redirect + (redirect.contains("?") ? "&" : "?") + "appId=" + app.getAppId();
-            }
-        }
-        return redirect;
+        return connectLoginService.finishOAuthLogin(request, app, code, callback).getRedirectUrl();
     }
 
     /** D：RP 联邦 SSE 订阅（建票后浏览器唯一推送通道）。 */

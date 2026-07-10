@@ -2,7 +2,9 @@ package cn.org.autumn.modules.opc.service;
 
 import cn.org.autumn.base.EncryptModuleService;
 import cn.org.autumn.config.UsingHandler;
+import cn.org.autumn.model.PageLoginSupport;
 import cn.org.autumn.modules.oauth.oauth2.support.RedirectUriSupport;
+import cn.org.autumn.modules.oauth.service.ClientDetailsService;
 import cn.org.autumn.opc.OpcConstants;
 import cn.org.autumn.opl.OplConstants;
 import cn.org.autumn.modules.opc.dao.ConnectAppDao;
@@ -30,6 +32,10 @@ public class ConnectAppService extends EncryptModuleService<ConnectAppDao, Conne
     @Autowired
     @Lazy
     private SysConfigService sysConfigService;
+
+    @Autowired
+    @Lazy
+    private ClientDetailsService clientDetailsService;
 
     @Override
     public boolean using(Object value) {
@@ -299,8 +305,21 @@ public class ConnectAppService extends EncryptModuleService<ConnectAppDao, Conne
             app.setUpdate(now);
             updateById(app);
         }
+        syncQrcOAuthClient(app);
         stripSecret(app);
         return app;
+    }
+
+    /** pageLogin 含 QR 时，在 AS 侧同步 oauth_client_details（appId = clientId）。 */
+    private void syncQrcOAuthClient(ConnectAppEntity app) {
+        if (app == null || !PageLoginSupport.showQr(app.getPageLogin())) {
+            return;
+        }
+        afterRead(app);
+        if (StringUtils.isBlank(app.getAppSecret())) {
+            return;
+        }
+        clientDetailsService.ensureQrcOpenClient(app.getPlatformBaseUrl(), app.getAppId(), app.getAppSecret(), app.getRedirectUri(), app.getName());
     }
 
     @Transactional(rollbackFor = Exception.class)
