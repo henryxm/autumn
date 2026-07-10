@@ -98,7 +98,25 @@ public class QrcWebhookDeliveryService {
             log.warn("QRC webhook HTTP {} ticket={} event={} url={} body={}", httpResult.getStatusCode(), ticket.getUuid(), event, webhook, abbreviate(httpResult.getBody()));
             return;
         }
+        if (!isBusinessSuccess(httpResult.getBody())) {
+            log.warn("QRC webhook RP rejected ticket={} event={} url={} body={}", ticket.getUuid(), event, webhook, abbreviate(httpResult.getBody()));
+            return;
+        }
         log.info("QRC webhook delivered ticket={} event={} url={} http={} body={}", ticket.getUuid(), event, webhook, httpResult.getStatusCode(), abbreviate(httpResult.getBody()));
+    }
+
+    private boolean isBusinessSuccess(String body) {
+        if (StringUtils.isBlank(body)) {
+            return true;
+        }
+        try {
+            com.google.gson.JsonObject json = gson.fromJson(body.trim(), com.google.gson.JsonObject.class);
+            if (json != null && json.has("code") && !json.get("code").isJsonNull()) {
+                return json.get("code").getAsInt() == 0;
+            }
+        } catch (Exception ignored) {
+        }
+        return true;
     }
 
     private static String abbreviate(String raw) {
