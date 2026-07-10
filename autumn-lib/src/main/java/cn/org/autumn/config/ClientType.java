@@ -1,10 +1,10 @@
 package cn.org.autumn.config;
 
 public enum ClientType {
-    //系统默认值，在升级或启动时，对应回调地址将动态被修改
+    /** 站点内置默认客户端（sys_config clientId）；启动时仅确保存在并标记类型，不自动改写 OAuth 配置 */
     SiteDefault,
-    //手动创建的，在系统升级时，不改变，用户需要自行更改
+    /** 管理端/OAuth RP 手动创建；升级与域名变更时不自动修改 */
     ManualCreate,
-    //用户创建Key时生成的类型，一般不需要更改
+    /** AccessKey 类客户端；一般不需要更改 */
     AccessKey,
 }

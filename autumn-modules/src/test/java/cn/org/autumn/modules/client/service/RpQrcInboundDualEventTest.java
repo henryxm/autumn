@@ -50,7 +50,7 @@ class RpQrcInboundDualEventTest {
 
         rpQrcInboundService.handleInbound(json, signatureHeaders(json));
 
-        verify(rpQrcCallbackService).applyScanned(eq(pending), any(com.alibaba.fastjson2.JSONObject.class));
+        verify(rpQrcCallbackService).applyScanned(eq(pending), any());
         verify(rpQrcCallbackService, never()).completeOnInbound(any(), any());
     }
 
@@ -67,8 +67,45 @@ class RpQrcInboundDualEventTest {
 
         rpQrcInboundService.handleInbound(json, signatureHeaders(json));
 
+        verify(rpQrcCallbackService).ensureScannedBeforeAuthorize(eq(pending), any());
         verify(rpQrcCallbackService).completeOnInbound(eq(pending), eq("auth-code"));
         verify(rpQrcCallbackService, never()).applyScanned(any(), any());
+    }
+
+    @Test
+    void handleInbound_authorizedWithoutPriorScan_promotesScannedFirst() {
+        RpQrcPendingSession pending = basePending();
+        pending.setStatus("PENDING");
+        when(rpQrcPendingStore.get("ticket-1")).thenReturn(pending);
+        stubSecret();
+
+        Map<String, Object> brief = new HashMap<>();
+        brief.put("displayName", "Late Scanner");
+        Map<String, Object> data = new HashMap<>();
+        data.put("code", "auth-code");
+        data.put("scannerBrief", brief);
+        String json = signedBody("ticket-1", RpQrcInboundService.EVENT_AUTHORIZED, data);
+
+        rpQrcInboundService.handleInbound(json, signatureHeaders(json));
+
+        verify(rpQrcCallbackService).ensureScannedBeforeAuthorize(eq(pending), any());
+        verify(rpQrcCallbackService).completeOnInbound(eq(pending), eq("auth-code"));
+    }
+
+    @Test
+    void handleInbound_denied_marksDenied() {
+        RpQrcPendingSession pending = basePending();
+        when(rpQrcPendingStore.get("ticket-1")).thenReturn(pending);
+        stubSecret();
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("status", "DENIED");
+        String json = signedBody("ticket-1", RpQrcInboundService.EVENT_DENIED, data);
+
+        rpQrcInboundService.handleInbound(json, signatureHeaders(json));
+
+        verify(rpQrcCallbackService).applyDenied(eq(pending), any());
+        verify(rpQrcCallbackService, never()).completeOnInbound(any(), any());
     }
 
     @Test

@@ -255,4 +255,24 @@ class WebPathUtilsTest {
         assertEquals("https://secure.example.com", WebPathUtils.absoluteBaseUrl(request, true));
         assertEquals("http://secure.example.com", WebPathUtils.absoluteBaseUrl(request, false));
     }
+
+    @Test
+    void absoluteUrl_buildsAbsoluteWebhookPath() {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/login");
+        request.addHeader("Host", "bighub.cn");
+        request.addHeader("X-Forwarded-Proto", "https");
+        request.setScheme("http");
+        request.setServerPort(80);
+        assertEquals("https://bighub.cn/client/oauth2/qrc/web/inbound", WebPathUtils.absoluteUrl(request, "/client/oauth2/qrc/web/inbound", true));
+    }
+
+    @Test
+    void absoluteUrl_includesContextPathOnce() {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/app/login");
+        request.setContextPath("/app");
+        request.addHeader("Host", "bighub.cn");
+        request.setScheme("https");
+        request.setServerPort(443);
+        assertEquals("https://bighub.cn/app/client/oauth2/qrc/web/inbound", WebPathUtils.absoluteUrl(request, "/client/oauth2/qrc/web/inbound", true));
+    }
 }
