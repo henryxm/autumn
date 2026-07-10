@@ -13,6 +13,7 @@ import cn.org.autumn.modules.qrc.dto.ScannerBrief;
 import cn.org.autumn.modules.qrc.dto.TicketCreateResult;
 import cn.org.autumn.modules.qrc.dto.TicketStatusResult;
 import cn.org.autumn.modules.qrc.entity.ScanTicketEntity;
+import cn.org.autumn.modules.qrc.entity.ClientGrantEntity;
 import cn.org.autumn.modules.qrc.model.ExchangeSnapshot;
 import cn.org.autumn.modules.qrc.model.Intent;
 import cn.org.autumn.modules.qrc.model.TicketPayloads;
@@ -68,6 +69,14 @@ public class ScanTicketService extends ModuleService<ScanTicketDao, ScanTicketEn
     @Autowired
     @Lazy
     private UserLoginLogService userLoginLogService;
+
+    @Autowired
+    @Lazy
+    private QrcWebhookDeliveryService qrcWebhookDeliveryService;
+
+    @Autowired
+    @Lazy
+    private ClientGrantService clientGrantService;
 
     @Override
     public String ico() {
@@ -153,6 +162,7 @@ public class ScanTicketService extends ModuleService<ScanTicketDao, ScanTicketEn
             ticket.setScanner(scanner.getUuid());
             ticket.setStatus(TicketStatus.SCANNED);
             saveTicket(ticket);
+            deliverScannedWebhook(ticket, scanner.getUuid());
             return ticket;
         });
     }
@@ -287,6 +297,21 @@ public class ScanTicketService extends ModuleService<ScanTicketDao, ScanTicketEn
             result.setScannerBrief(buildScannerBrief(ticket.getScanner()));
         }
         return result;
+    }
+
+    private void deliverScannedWebhook(TicketSnapshot ticket, String scannerUuid) {
+        if (!qrcWebhookDeliveryService.shouldDeliverWebhook(ticket)) {
+            return;
+        }
+        String clientId = TicketPayloads.get(ticket, "clientId");
+        ClientGrantEntity grant = StringUtils.isBlank(clientId) ? null : clientGrantService.getOrDefault(clientId);
+        Map<String, Object> data = new HashMap<>();
+        data.put("status", TicketStatus.SCANNED);
+        ScannerBrief brief = buildScannerBrief(scannerUuid);
+        if (brief != null) {
+            data.put("scannerBrief", brief);
+        }
+        qrcWebhookDeliveryService.deliverScanned(ticket, grant, data);
     }
 
     private boolean shouldExposeScannerBrief(String status) {

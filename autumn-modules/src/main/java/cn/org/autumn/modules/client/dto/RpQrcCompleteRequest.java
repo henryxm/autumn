@@ -11,4 +11,6 @@ public class RpQrcCompleteRequest implements Serializable {
 
     private String uuid;
     private String callback;
+    private String type;
+    private String id;
 }

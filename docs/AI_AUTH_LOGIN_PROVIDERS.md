@@ -52,7 +52,7 @@
 |------|------|------|
 | `icon` | 空 | 登录页图标 URL，空则前端用 `defaultIconUrl` |
 | `hash` | 空 | 上传图标文件 hash，供 `UsingHandler` / 文件清理判断引用 |
-| `pageLogin` | `0` | `1` 表示在 `/login` 展示 |
+| `pageLogin` | `0` | `0` 不展示；`1` Tab；`2` 扫码；`3` Tab+扫码 |
 
 ### ConnectAppEntity（opcmanage）
 
@@ -66,7 +66,7 @@
 
 | 条件 | 说明 |
 |------|------|
-| `pageLogin == 1` | 显式开启 |
+| `pageLogin == 1 或 3` | Tab 显式开启 |
 | `clientId`、`clientSecret` 非空 | 可换票 |
 | `redirectUri` 非空 | 回调可达 |
 | 授权端点可解析 | `WebOauthEndpointResolver.resolveAuthorizeUri` 非空 |
@@ -76,13 +76,25 @@
 
 | 条件 | 说明 |
 |------|------|
-| `pageLogin == 1` | 显式开启 |
+| `pageLogin == 1 或 3` | Tab 显式开启 |
 | `status == STATUS_ACTIVE` | 未禁用 |
 | `appId` 非空、`appSecret` 已配置 | API 不返回 secret |
 | `redirectUri` 非空 | OPC 回调可达 |
 | 授权端点可解析 | `authorizeUri` 非空或由 `platformBaseUrl` 推断 |
 
-合并后按创建时间倒序；`sortOrder` 递增。
+合并后按创建时间倒序；`sortOrder` 递增。响应含 `tabProviders`、`qrProviders`、`tabVisible`、`qrVisible`（`providers` 兼容等于 `tabProviders`）。
+
+### 扫码 Provider（`qrProviders`）
+
+| 条件 | 说明 |
+|------|------|
+| `pageLogin == 2 或 3` | 扫码区展示 |
+| 凭证可解析 | `ScanLoginCredentialService.require(type, id)` 成功 |
+| 视图字段 | `qrMode`（`as`/`rp`）、`credentialType`、`id` |
+
+前端：`AutumnQrc.createMethods({ mode: p.qrMode, type: p.credentialType, id: p.id })`；RP 订阅 SSE `/client/oauth2/qrc/web/ticket/stream`；开放同源（`qrMode=as`）确认后 `POST /open/oauth2/qrc/web/complete`。
+
+双模式扫码能力与验收见 **`docs/AI_SCAN_LOGIN_DUAL_MODE_REGRESSION.md`**（双模式均已完整支持）。
 
 ## 5. client_id 路由
 

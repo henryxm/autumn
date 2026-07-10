@@ -162,6 +162,12 @@ public class ConnectAppService extends EncryptModuleService<ConnectAppDao, Conne
         return afterRead(rows);
     }
 
+    /** 登录页扫码展示的活跃 OPC 接入应用。 */
+    public List<ConnectAppEntity> listPageQrActive() {
+        List<ConnectAppEntity> rows = baseMapper.listPageQrActive();
+        return afterRead(rows);
+    }
+
     /** 推断 OPC 授权根地址；同实例本地 OPL 可回退 {@link SysConfigService#getBaseUrl()}。 */
     public String resolvePlatformBaseUrl(ConnectAppEntity app, String fallbackBaseUrl) {
         if (app == null) {

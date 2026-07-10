@@ -25,4 +25,9 @@ public class AuthLoginProviderView implements Serializable {
     /** oauth2_open 专有 */
     private String appId;
     private String platformBaseUrl;
+
+    /** 扫码展示：as 同源 / rp 联邦 */
+    private String qrMode;
+    /** 与 type 对齐，供扫码建票 */
+    private String credentialType;
 }

@@ -5,6 +5,7 @@ import cn.org.autumn.model.AuthLoginProviderType;
 import cn.org.autumn.modules.client.entity.WebAuthenticationEntity;
 import cn.org.autumn.modules.client.oauth2.WebOauthEndpointResolver;
 import cn.org.autumn.modules.client.service.AuthSiteRoleService;
+import cn.org.autumn.modules.client.service.ScanLoginCredentialService;
 import cn.org.autumn.modules.client.service.WebAuthenticationService;
 import cn.org.autumn.modules.opc.entity.ConnectAppEntity;
 import cn.org.autumn.modules.opc.service.ConnectAppService;
@@ -46,6 +47,9 @@ class AuthLoginProviderServiceTest {
 
     @Mock
     private ConnectBindSupport connectBindSupport;
+
+    @Mock
+    private ScanLoginCredentialService scanLoginCredentialService;
 
     @InjectMocks
     private AuthLoginProviderService authLoginProviderService;
@@ -91,12 +95,13 @@ class AuthLoginProviderServiceTest {
         AuthLoginProviderList list = authLoginProviderService.listPageProviders();
 
         assertTrue(list.isVisible());
-        assertEquals(2, list.getProviders().size());
-        assertEquals(AuthLoginProviderType.OAUTH2_CLASSIC, list.getProviders().get(0).getType());
-        assertEquals("rp-demo", list.getProviders().get(0).getClientId());
-        assertEquals(AuthLoginProviderType.OAUTH2_OPEN, list.getProviders().get(1).getType());
-        assertEquals("app_demo", list.getProviders().get(1).getAppId());
-        assertTrue(list.getProviders().get(1).getLoginUrl().startsWith("/open/oauth2/login?appId="));
+        assertTrue(list.isTabVisible());
+        assertEquals(2, list.getTabProviders().size());
+        assertEquals(AuthLoginProviderType.OAUTH2_CLASSIC, list.getTabProviders().get(0).getType());
+        assertEquals("rp-demo", list.getTabProviders().get(0).getClientId());
+        assertEquals(AuthLoginProviderType.OAUTH2_OPEN, list.getTabProviders().get(1).getType());
+        assertEquals("app_demo", list.getTabProviders().get(1).getAppId());
+        assertTrue(list.getTabProviders().get(1).getLoginUrl().startsWith("/open/oauth2/login?appId="));
     }
 
     @Test
@@ -118,9 +123,64 @@ class AuthLoginProviderServiceTest {
         AuthLoginProviderList list = authLoginProviderService.listPageProviders();
 
         assertTrue(list.isVisible());
-        assertEquals(1, list.getProviders().size());
-        assertEquals(AuthLoginProviderType.OAUTH2_OPEN, list.getProviders().get(0).getType());
-        assertEquals("local_app", list.getProviders().get(0).getAppId());
+        assertEquals(1, list.getTabProviders().size());
+        assertEquals(AuthLoginProviderType.OAUTH2_OPEN, list.getTabProviders().get(0).getType());
+        assertEquals("local_app", list.getTabProviders().get(0).getAppId());
+    }
+
+    @Test
+    void listPageProviders_qrOnlyPageLogin() {
+        when(authSiteRoleService.isRpEnabled()).thenReturn(true);
+        when(sysConfigService.getBaseUrl()).thenReturn("https://b.com");
+        when(webAuthenticationService.selectList(any(QueryWrapper.class))).thenReturn(Collections.emptyList());
+
+        WebAuthenticationEntity qrOnly = new WebAuthenticationEntity();
+        qrOnly.setClientId("qr-rp");
+        qrOnly.setClientSecret("secret");
+        qrOnly.setRedirectUri("https://b.com/client/oauth2/callback");
+        qrOnly.setOriginUri("https://a.com");
+        qrOnly.setPageLogin(2);
+        when(webAuthenticationService.selectList(any(QueryWrapper.class)))
+                .thenReturn(Collections.emptyList())
+                .thenReturn(Collections.singletonList(qrOnly));
+        when(webOauthEndpointResolver.hasRemoteOrigin(qrOnly)).thenReturn(true);
+        when(scanLoginCredentialService.require(AuthLoginProviderType.OAUTH2_CLASSIC, "qr-rp"))
+                .thenReturn(new cn.org.autumn.modules.client.model.ScanLoginCredentialContext());
+
+        AuthLoginProviderList list = authLoginProviderService.listPageProviders();
+
+        assertTrue(list.isQrVisible());
+        assertFalse(list.isTabVisible());
+    }
+
+    @Test
+    void listPageProviders_openQrOnlyPageLogin() {
+        when(authSiteRoleService.isRpEnabled()).thenReturn(true);
+        when(sysConfigService.getBaseUrl()).thenReturn("https://b.com");
+        when(webAuthenticationService.selectList(any(QueryWrapper.class))).thenReturn(Collections.emptyList());
+
+        ConnectAppEntity openQr = new ConnectAppEntity();
+        openQr.setAppId("open_qr");
+        openQr.setName("Open QR");
+        openQr.setRedirectUri("https://b.com/open/oauth2/callback?appId=open_qr");
+        openQr.setPlatformBaseUrl("https://opl.example.com");
+        openQr.setStatus(ConnectAppEntity.STATUS_ACTIVE);
+        openQr.setPageLogin(2);
+        when(connectAppService.listPageQrActive()).thenReturn(Collections.singletonList(openQr));
+        when(connectAppService.hasConfiguredSecret(openQr)).thenReturn(true);
+        when(connectBindSupport.isSamePlatform(openQr)).thenReturn(false);
+        when(connectAppService.tryFillDefaultUris(eq(openQr), isNull())).thenReturn(true);
+        when(scanLoginCredentialService.require(AuthLoginProviderType.OAUTH2_OPEN, "open_qr"))
+                .thenReturn(new cn.org.autumn.modules.client.model.ScanLoginCredentialContext());
+
+        AuthLoginProviderList list = authLoginProviderService.listPageProviders();
+
+        assertTrue(list.isQrVisible());
+        assertFalse(list.isTabVisible());
+        assertEquals(1, list.getQrProviders().size());
+        assertEquals(AuthLoginProviderType.OAUTH2_OPEN, list.getQrProviders().get(0).getType());
+        assertEquals("open_qr", list.getQrProviders().get(0).getAppId());
+        assertEquals("rp", list.getQrProviders().get(0).getQrMode());
     }
 
     @Test
@@ -151,8 +211,8 @@ class AuthLoginProviderServiceTest {
 
         AuthLoginProviderList list = authLoginProviderService.listPageProviders();
 
-        assertEquals(2, list.getProviders().size());
-        assertEquals("newer_app", list.getProviders().get(0).getAppId());
-        assertEquals("older-rp", list.getProviders().get(1).getClientId());
+        assertEquals(2, list.getTabProviders().size());
+        assertEquals("newer_app", list.getTabProviders().get(0).getAppId());
+        assertEquals("older-rp", list.getTabProviders().get(1).getClientId());
     }
 }

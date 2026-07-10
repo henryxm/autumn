@@ -2,7 +2,6 @@ package cn.org.autumn.modules.qrc.service;
 
 import cn.org.autumn.base.ModuleService;
 import cn.org.autumn.exception.CodeException;
-import cn.org.autumn.model.ScanLoginConfig;
 import cn.org.autumn.modules.oauth.entity.ClientDetailsEntity;
 import cn.org.autumn.modules.oauth.entity.TokenStoreEntity;
 import cn.org.autumn.modules.oauth.service.ClientDetailsService;
@@ -14,19 +13,19 @@ import cn.org.autumn.modules.qrc.entity.ClientGrantEntity;
 import cn.org.autumn.modules.qrc.model.DeliveryMode;
 import cn.org.autumn.modules.qrc.model.TicketPayloads;
 import cn.org.autumn.modules.qrc.model.TicketSnapshot;
+import cn.org.autumn.modules.opl.entity.OpenCodeEntity;
+import cn.org.autumn.modules.opl.service.OpenCodeService;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysConfigService;
-import cn.org.autumn.utils.HttpClientUtils;
+import cn.org.autumn.opl.OplConstants;
+import cn.org.autumn.opl.model.OpenAppSnapshot;
+import cn.org.autumn.opl.spi.OpenPlatformService;
 import cn.org.autumn.utils.Uuid;
-import com.google.gson.Gson;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.oltu.oauth2.as.issuer.MD5Generator;
@@ -40,8 +39,6 @@ import org.springframework.stereotype.Service;
 @Service
 public class ClientGrantService extends ModuleService<ClientGrantDao, ClientGrantEntity> {
 
-    private final Gson gson = new Gson();
-
     @Autowired
     @Lazy
     private ClientDetailsService clientDetailsService;
@@ -53,6 +50,18 @@ public class ClientGrantService extends ModuleService<ClientGrantDao, ClientGran
     @Autowired
     @Lazy
     private TokenStoreService tokenStoreService;
+
+    @Autowired
+    @Lazy
+    private QrcWebhookDeliveryService qrcWebhookDeliveryService;
+
+    @Autowired(required = false)
+    @Lazy
+    private OpenPlatformService openPlatformService;
+
+    @Autowired
+    @Lazy
+    private OpenCodeService openCodeService;
 
     public ClientGrantEntity getByClientId(String clientId) {
         if (StringUtils.isBlank(clientId)) {
@@ -132,6 +141,25 @@ public class ClientGrantService extends ModuleService<ClientGrantDao, ClientGran
         }
     }
 
+    private String issueDeliveryCode(String clientId, String redirectUri, SysUserEntity user) throws OAuthSystemException {
+        if (isActiveOplApp(clientId)) {
+            if (StringUtils.isBlank(redirectUri)) {
+                throw new IllegalStateException("OPL 应用扫码授权 redirect_uri 不能为空");
+            }
+            OpenCodeEntity codeEntity = openCodeService.issue(clientId, user.getUuid(), redirectUri, null, null);
+            return codeEntity.getCode();
+        }
+        return issueAuthCode(user);
+    }
+
+    private boolean isActiveOplApp(String clientId) {
+        if (openPlatformService == null || StringUtils.isBlank(clientId)) {
+            return false;
+        }
+        OpenAppSnapshot app = openPlatformService.getApp(clientId);
+        return app != null && app.getStatus() == OplConstants.STATUS_ACTIVE;
+    }
+
     public String issueAuthCode(SysUserEntity user) throws OAuthSystemException {
         OAuthIssuerImpl issuer = new OAuthIssuerImpl(new MD5Generator());
         String code = issuer.authorizationCode();
@@ -195,8 +223,12 @@ public class ClientGrantService extends ModuleService<ClientGrantDao, ClientGran
         String callback = TicketPayloads.get(ticket, "callback");
         ClientDetailsEntity client = requireTrustedClient(clientId);
         validateRedirectUri(client, redirectUri);
-        String code = issueAuthCode(user);
+        String code = issueDeliveryCode(clientId, redirectUri, user);
         String delivery = grant == null ? DeliveryMode.POLL_CODE : grant.getDelivery();
+        String payloadDelivery = TicketPayloads.get(ticket, "delivery");
+        if (StringUtils.isNotBlank(payloadDelivery)) {
+            delivery = payloadDelivery;
+        }
         if (StringUtils.isBlank(delivery)) {
             delivery = DeliveryMode.POLL_CODE;
         }
@@ -218,7 +250,7 @@ public class ClientGrantService extends ModuleService<ClientGrantDao, ClientGran
                 result.put("accessToken", accessToken);
             }
         } else if (DeliveryMode.WEBHOOK.equals(delivery)) {
-            postWebhook(grant, ticket, result);
+            qrcWebhookDeliveryService.deliverAuthorized(ticket, grant, result);
         }
         if (StringUtils.isNotBlank(redirectUri) && !DeliveryMode.POLL_CODE.equals(delivery) && !DeliveryMode.POLL_TOKEN.equals(delivery) && !DeliveryMode.WEBHOOK.equals(delivery)) {
             confirmResult.setRedirect(buildAuthorizeRedirect(redirectUri, code, state, callback));
@@ -258,45 +290,8 @@ public class ClientGrantService extends ModuleService<ClientGrantDao, ClientGran
         return null;
     }
 
-    private void postWebhook(ClientGrantEntity grant, TicketSnapshot ticket, Map<String, String> result) {
-        if (grant == null || StringUtils.isBlank(grant.getWebhook())) {
-            return;
-        }
-        Map<String, Object> body = new HashMap<>();
-        body.put("event", "qrc.authorized");
-        body.put("uuid", ticket.getUuid());
-        body.put("timestamp", System.currentTimeMillis());
-        body.put("data", result);
-        String json = gson.toJson(body);
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Content-Type", "application/json;charset=UTF-8");
-        headers.put("X-Qrc-Event", "qrc.authorized");
-        headers.put("X-Qrc-Timestamp", String.valueOf(System.currentTimeMillis()));
-        if (StringUtils.isNotBlank(grant.getSecret())) {
-            headers.put("X-Qrc-Signature", sign(json, grant.getSecret()));
-        }
-        try {
-            ScanLoginConfig config = sysConfigService.getConfigObjectValidate(ScanLoginConfig.CONFIG_KEY, ScanLoginConfig.class);
-            int timeout = config == null ? new ScanLoginConfig().getWebhookTimeoutMs() : config.getWebhookTimeoutMs();
-            HttpClientUtils.doPostJson(grant.getWebhook(), json, headers, timeout);
-        } catch (Exception e) {
-            log.warn("QRC webhook delivery failed ticket={}: {}", ticket.getUuid(), e.getMessage());
-        }
-    }
-
     public static String sign(String payload, String secret) {
-        try {
-            Mac mac = Mac.getInstance("HmacSHA256");
-            mac.init(new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
-            byte[] raw = mac.doFinal(payload.getBytes(StandardCharsets.UTF_8));
-            StringBuilder sb = new StringBuilder();
-            for (byte b : raw) {
-                sb.append(String.format("%02x", b));
-            }
-            return sb.toString();
-        } catch (Exception e) {
-            return "";
-        }
+        return QrcWebhookDeliveryService.sign(payload, secret);
     }
 
     private String urlEncode(String value) {

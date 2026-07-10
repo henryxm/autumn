@@ -38,8 +38,9 @@
 - **`docs/AI_SAFE_CREDENTIAL.md`**：**支付安全 API 参考**（`POST /safe/api/v1/*`、`SafeConfig`、`PayPinVerifier`、闸门/免密、错误码 850～864）
 - **`docs/AI_SAFE_CREDENTIAL_CLIENT_API.md`**：**客户端对接手册**（App/H5 全量接口、示例 JSON、流程图、错误处理、UX/安全规范）
 - **`docs/AI_SAFE_CREDENTIAL_INTEGRATION.md`**：**业务对接指南**（assess→verify 流程、UX、SPI）
+- **`docs/AI_SCAN_LOGIN_STANDARD.md`**：**扫码登录标准（首选入口）** — Web 授权 / 服务端建票 / 回调联邦、`ScanLoginFacade`、a.com+b.com 验收清单
 - **`docs/AI_QRC.md`**：**扫码登录 QRC 对接指南**（Intent 场景、配置、安全）
-- **`docs/AI_AUTH_SITE_ROLES.md`**：**AS/RP 双角色联邦登录**（chaoran+bighub、RP Web API、`autumn-qrc-core.js`）
+- **`docs/AI_AUTH_SITE_ROLES.md`**：**AS/RP 双角色联邦登录**（A应用+B网站、RP Web API、`autumn-qrc-core.js`）
 - **`docs/AI_QRC_API.md`**：**QRC API 参考**（Web/APP/Open/Webhook + §8 RP Web API）
 - **`docs/AI_QRC_INTEGRATION.md`**：**第三方集成标准**（Autumn/非 Autumn）
 - **`docs/AI_QRC_CLIENT_API.md`**：**APP 扫码确认手册**
@@ -73,7 +74,7 @@
 - **web 模块 Robot 集成 / API 回归**：`web/docs/INTEGRATION_TEST.md`（H2 内存 + Redis，`mvn -pl web -am test -Pintegration -DskipTests=false`）
 - **机器人模块框架内开发**（`cn.org.autumn.modules.bot`、改 Controller/Service/实体）：上列文档 + `docs/AI_STANDARDS.md` + `docs/AI_DATABASE.md` + `docs/AI_CODEGEN.md`
 - **支付密码 / 安全凭证**（`cn.org.autumn.modules.safe`）：`docs/AI_BOOT.md` + `docs/AI_MAP.md` + **`docs/AI_SAFE_CREDENTIAL_CLIENT_API.md`**（客户端）+ **`docs/AI_SAFE_CREDENTIAL.md`** + **`docs/AI_SAFE_CREDENTIAL_INTEGRATION.md`**（业务仓）+ `docs/AI_STANDARDS.md` + `docs/AI_CRYPTO.md`（传输加密）
-- **扫码登录 QRC**（`cn.org.autumn.modules.qrc`）：`docs/AI_BOOT.md` + `docs/AI_MAP.md` + **`docs/AI_QRC.md`** + **`docs/AI_AUTH_SITE_ROLES.md`**（AS/RP 联邦）+ **`docs/AI_QRC_API.md`** + **`docs/AI_QRC_INTEGRATION.md`**（第三方）+ **`docs/AI_QRC_CLIENT_API.md`**（APP）+ `docs/AI_STANDARDS.md`（集成测试：`web/.../ScanLoginIntegrationTest`、RP 联邦测试）
+- **扫码登录 QRC**（`cn.org.autumn.modules.qrc`）：`docs/AI_BOOT.md` + `docs/AI_MAP.md` + **`docs/AI_SCAN_LOGIN_STANDARD.md`**（**首选**）+ **`docs/AI_QRC.md`** + **`docs/AI_AUTH_SITE_ROLES.md`**（AS/RP 联邦）+ **`docs/AI_QRC_API.md`** + **`docs/AI_QRC_INTEGRATION.md`**（第三方）+ **`docs/AI_QRC_CLIENT_API.md`**（APP）+ `docs/AI_STANDARDS.md`（集成测试：`web/.../ScanLoginIntegrationTest`、RP 联邦测试）
 - **授权登录 / 第三方账号对接（OAuth2 与开放平台选型）**：**`docs/AI_AUTH_LOGIN_MODES.md`**（**首选总览**，含 §3 Parallel Profile）+ 按角色追加下述子文档
 - **OAuth2 第三方登录 / 用户信息对接**（`cn.org.autumn.modules.oauth`）：**`docs/AI_OAUTH_INTEGRATION.md`** + **`docs/AI_QRC_INTEGRATION.md`**（含扫码分支）+ 站内 `/modules/docs/auth-flow`
 - **OPL 开放平台**（`cn.org.autumn.modules.opl`）：**`docs/AI_OPL_INTEGRATION.md`**（HTTP 对接）+ **`docs/AI_OPL_SPI.md`**（Service/Extension 扩展）+ **`docs/AI_OPC_INTEGRATION.md`**（RP 接入）

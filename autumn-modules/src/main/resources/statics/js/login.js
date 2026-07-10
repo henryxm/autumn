@@ -68,8 +68,13 @@
             consentChecked: true,
             oauthDenyRedirect: oauthDenyRedirect,
             authLoginVisible: false,
+            authLoginTabVisible: false,
+            authLoginQrVisible: false,
             authLoginProviders: [],
-            authLoginDefaultIcon: '/statics/img/auth-login-default.svg'
+            authLoginTabProviders: [],
+            authLoginQrProviders: [],
+            authLoginDefaultIcon: '/statics/img/auth-login-default.svg',
+            activeQrProvider: null
         },
         computed: {
             mobileClean: function () {
@@ -94,7 +99,7 @@
             }
         },
         methods: {
-            switchTab: function (tab) {
+            switchTab: function (tab, keepQrProvider) {
                 if (this.authorizeLoggedIn) {
                     return;
                 }
@@ -104,10 +109,13 @@
                 this.error = false;
                 this.loginTab = tab;
                 if (tab === 'qr') {
+                    if (!keepQrProvider) {
+                        this.activeQrProvider = null;
+                    }
                     if (authorizeMode && serverQrUrl) {
                         this.initAuthorizeQr();
                     } else {
-                        this.startQrLogin();
+                        this.beginQrLogin();
                     }
                 } else if (this.qrcPollTimer) {
                     clearInterval(this.qrcPollTimer);
@@ -131,7 +139,11 @@
                             return;
                         }
                         self.authLoginVisible = true;
-                        self.authLoginProviders = res.data.providers || [];
+                        self.authLoginTabVisible = !!res.data.tabVisible;
+                        self.authLoginQrVisible = !!res.data.qrVisible;
+                        self.authLoginTabProviders = res.data.tabProviders || res.data.providers || [];
+                        self.authLoginQrProviders = res.data.qrProviders || [];
+                        self.authLoginProviders = self.authLoginTabProviders;
                         self.authLoginDefaultIcon = res.data.defaultIconUrl || '/statics/img/auth-login-default.svg';
                     }
                 });
@@ -213,7 +225,35 @@
                     return;
                 }
                 this.resetQrScannedState();
-                this.startQrLogin();
+                this.beginQrLogin();
+            },
+            buildQrcOptions: function (provider) {
+                var self = this;
+                return {
+                    ctx: ctx,
+                    mode: (provider && provider.qrMode) || 'as',
+                    type: provider ? (provider.credentialType || provider.type) : null,
+                    id: provider ? provider.id : null,
+                    boxId: 'loginQrcodeBox',
+                    callback: safeOauthCallback || '',
+                    pollIntervalMs: serverPollIntervalMs,
+                    onSuccess: function (target) {
+                        self.redirectAfterLogin(target);
+                    }
+                };
+            },
+            beginQrLogin: function () {
+                if (this.activeQrProvider && window.AutumnQrc) {
+                    AutumnQrc.mergeInto(this, this.buildQrcOptions(this.activeQrProvider));
+                    this.startQrLogin();
+                    return;
+                }
+                this.startAsQrLogin();
+            },
+            selectQrProvider: function (provider) {
+                this.activeQrProvider = provider;
+                this.switchTab('qr', true);
+                this.beginQrLogin();
             },
             resetQrScannedState: function () {
                 this.qrPhase = 'pending';
@@ -476,7 +516,7 @@
                     }
                 });
             },
-            startQrLogin: function () {
+            startAsQrLogin: function () {
                 var self = this;
                 self.resetQrScannedState();
                 self.qrStatus = '正在加载二维码...';

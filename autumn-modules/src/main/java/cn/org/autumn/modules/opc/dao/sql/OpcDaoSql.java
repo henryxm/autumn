@@ -20,10 +20,17 @@ public class OpcDaoSql extends RuntimeSql {
                 + " WHERE " + quote("hash") + " = #{hash}";
     }
 
-    /** 登录页显式展示的活跃 OPC 接入应用。 */
+    /** 登录页 Tab 显式展示的活跃 OPC 接入应用（pageLogin 1 或 3）。 */
     public String connectAppListPageLoginActive() {
         return "SELECT * FROM " + quote("opc_connect_app")
-                + " WHERE " + quote("page_login") + " = 1 AND " + quote("status") + " = 1"
+                + " WHERE " + quote("page_login") + " IN (1, 3) AND " + quote("status") + " = 1"
+                + " ORDER BY " + quote("create") + " DESC";
+    }
+
+    /** 登录页扫码展示的活跃 OPC 接入应用（pageLogin 2 或 3）。 */
+    public String connectAppListPageQrActive() {
+        return "SELECT * FROM " + quote("opc_connect_app")
+                + " WHERE " + quote("page_login") + " IN (2, 3) AND " + quote("status") + " = 1"
                 + " ORDER BY " + quote("create") + " DESC";
     }
 

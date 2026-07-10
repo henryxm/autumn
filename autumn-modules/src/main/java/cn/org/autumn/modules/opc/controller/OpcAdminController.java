@@ -8,6 +8,7 @@ import cn.org.autumn.modules.opc.service.ConnectBindManageService;
 import cn.org.autumn.modules.opc.service.OpcAdminService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.sys.support.SystemAdminApi;
+import cn.org.autumn.model.PageLoginSupport;
 import cn.org.autumn.utils.R;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -164,6 +165,17 @@ public class OpcAdminController {
         if (value == null || value.trim().isEmpty()) {
             return null;
         }
-        return "1".equals(value.trim()) || "true".equalsIgnoreCase(value.trim()) ? 1 : 0;
+        String trimmed = value.trim();
+        if ("true".equalsIgnoreCase(trimmed)) {
+            return PageLoginSupport.TAB;
+        }
+        if ("false".equalsIgnoreCase(trimmed)) {
+            return PageLoginSupport.NONE;
+        }
+        try {
+            return PageLoginSupport.parse(Integer.parseInt(trimmed));
+        } catch (NumberFormatException e) {
+            return PageLoginSupport.NONE;
+        }
     }
 }

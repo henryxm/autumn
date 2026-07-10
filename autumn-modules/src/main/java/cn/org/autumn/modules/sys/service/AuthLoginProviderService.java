@@ -4,9 +4,11 @@ import cn.org.autumn.database.runtime.WrapperColumns;
 import cn.org.autumn.model.AuthLoginProviderList;
 import cn.org.autumn.model.AuthLoginProviderType;
 import cn.org.autumn.model.AuthLoginProviderView;
+import cn.org.autumn.model.PageLoginSupport;
 import cn.org.autumn.modules.client.entity.WebAuthenticationEntity;
 import cn.org.autumn.modules.client.oauth2.WebOauthEndpointResolver;
 import cn.org.autumn.modules.client.service.AuthSiteRoleService;
+import cn.org.autumn.modules.client.service.ScanLoginCredentialService;
 import cn.org.autumn.modules.client.service.WebAuthenticationService;
 import cn.org.autumn.modules.opc.entity.ConnectAppEntity;
 import cn.org.autumn.modules.opc.service.ConnectAppService;
@@ -47,75 +49,121 @@ public class AuthLoginProviderService {
     @Autowired
     private ConnectBindSupport connectBindSupport;
 
+    @Autowired
+    private ScanLoginCredentialService scanLoginCredentialService;
+
     public AuthLoginProviderList listPageProviders() {
         String baseUrl = sysConfigService.getBaseUrl();
-        List<RankedProvider> ranked = new ArrayList<>();
+        List<RankedProvider> tabRanked = new ArrayList<>();
+        List<RankedProvider> qrRanked = new ArrayList<>();
         if (authSiteRoleService.isRpEnabled()) {
-            ranked.addAll(listClassicProviders(baseUrl));
+            tabRanked.addAll(listClassicTabProviders(baseUrl));
+            qrRanked.addAll(listClassicQrProviders(baseUrl));
         }
-        ranked.addAll(listOpenProviders(baseUrl));
-        ranked.sort(Comparator.comparingLong(RankedProvider::getCreatedAt).reversed());
+        tabRanked.addAll(listOpenTabProviders(baseUrl));
+        qrRanked.addAll(listOpenQrProviders(baseUrl));
+        tabRanked.sort(Comparator.comparingLong(RankedProvider::getCreatedAt).reversed());
+        qrRanked.sort(Comparator.comparingLong(RankedProvider::getCreatedAt).reversed());
+        return AuthLoginProviderList.of(toViews(tabRanked), toViews(qrRanked), AuthLoginProviderList.DEFAULT_ICON_PATH);
+    }
+
+    private List<AuthLoginProviderView> toViews(List<RankedProvider> ranked) {
         List<AuthLoginProviderView> views = new ArrayList<>(ranked.size());
         for (int i = 0; i < ranked.size(); i++) {
             AuthLoginProviderView view = ranked.get(i).getView();
             view.setSortOrder(i);
             views.add(view);
         }
-        return AuthLoginProviderList.of(views, AuthLoginProviderList.DEFAULT_ICON_PATH);
+        return views;
     }
 
-    private List<RankedProvider> listClassicProviders(String baseUrl) {
+    private List<RankedProvider> listClassicTabProviders(String baseUrl) {
         QueryWrapper<WebAuthenticationEntity> wrapper = new QueryWrapper<>();
-        wrapper.eq("page_login", 1);
+        wrapper.in(WrapperColumns.columnInWrapper("page_login"), PageLoginSupport.TAB, PageLoginSupport.TAB_AND_QR);
         wrapper.orderByDesc(WrapperColumns.columnInWrapper("create_time"));
         List<WebAuthenticationEntity> rows = webAuthenticationService.selectList(wrapper);
+        return buildClassicProviders(rows, baseUrl, true);
+    }
+
+    private List<RankedProvider> listClassicQrProviders(String baseUrl) {
+        QueryWrapper<WebAuthenticationEntity> wrapper = new QueryWrapper<>();
+        wrapper.in(WrapperColumns.columnInWrapper("page_login"), PageLoginSupport.QR, PageLoginSupport.TAB_AND_QR);
+        wrapper.orderByDesc(WrapperColumns.columnInWrapper("create_time"));
+        List<WebAuthenticationEntity> rows = webAuthenticationService.selectList(wrapper);
+        return buildClassicProviders(rows, baseUrl, false);
+    }
+
+    private List<RankedProvider> buildClassicProviders(List<WebAuthenticationEntity> rows, String baseUrl, boolean tabMode) {
         if (rows == null || rows.isEmpty()) {
             return Collections.emptyList();
         }
         List<RankedProvider> views = new ArrayList<>();
         for (WebAuthenticationEntity entity : rows) {
-            if (!isClassicEligible(entity, baseUrl)) {
+            if (tabMode && !isClassicTabEligible(entity, baseUrl)) {
+                continue;
+            }
+            if (!tabMode && !isClassicQrEligible(entity, baseUrl)) {
                 continue;
             }
             AuthLoginProviderView view = new AuthLoginProviderView();
             view.setType(AuthLoginProviderType.OAUTH2_CLASSIC);
+            view.setCredentialType(AuthLoginProviderType.OAUTH2_CLASSIC);
             view.setId(entity.getClientId());
             view.setClientId(entity.getClientId());
             view.setName(StringUtils.defaultIfBlank(entity.getName(), entity.getClientId()));
             view.setIconUrl(StringUtils.trimToEmpty(entity.getIcon()));
             view.setSameInstance(WebPathUtils.isSameSiteUrl(entity.getOriginUri(), baseUrl));
-            view.setLoginUrl("/oauth2/login?client_id=" + urlEncode(entity.getClientId()));
+            view.setQrMode(webOauthEndpointResolver.hasRemoteOrigin(entity) ? "rp" : "as");
+            if (tabMode) {
+                view.setLoginUrl("/oauth2/login?client_id=" + urlEncode(entity.getClientId()));
+            }
             views.add(new RankedProvider(view, createdAtMillis(entity.getCreateTime())));
         }
         return views;
     }
 
-    private List<RankedProvider> listOpenProviders(String baseUrl) {
+    private List<RankedProvider> listOpenTabProviders(String baseUrl) {
         List<ConnectAppEntity> rows = connectAppService.listPageLoginActive();
+        return buildOpenProviders(rows, baseUrl, true);
+    }
+
+    private List<RankedProvider> listOpenQrProviders(String baseUrl) {
+        List<ConnectAppEntity> rows = connectAppService.listPageQrActive();
+        return buildOpenProviders(rows, baseUrl, false);
+    }
+
+    private List<RankedProvider> buildOpenProviders(List<ConnectAppEntity> rows, String baseUrl, boolean tabMode) {
         if (rows == null || rows.isEmpty()) {
             return Collections.emptyList();
         }
         List<RankedProvider> views = new ArrayList<>();
         for (ConnectAppEntity entity : rows) {
-            if (!isOpenEligible(entity, baseUrl)) {
+            if (tabMode && !isOpenTabEligible(entity, baseUrl)) {
+                continue;
+            }
+            if (!tabMode && !isOpenQrEligible(entity, baseUrl)) {
                 continue;
             }
             AuthLoginProviderView view = new AuthLoginProviderView();
             view.setType(AuthLoginProviderType.OAUTH2_OPEN);
+            view.setCredentialType(AuthLoginProviderType.OAUTH2_OPEN);
             view.setId(entity.getAppId());
             view.setAppId(entity.getAppId());
             view.setName(StringUtils.defaultIfBlank(entity.getName(), entity.getAppId()));
             view.setIconUrl(StringUtils.trimToEmpty(entity.getIcon()));
             view.setPlatformBaseUrl(StringUtils.trimToEmpty(entity.getPlatformBaseUrl()));
             view.setSameInstance(resolveOpenSameInstance(entity, baseUrl));
-            view.setLoginUrl(OpcConstants.OAUTH2_LOGIN_PATH + "?appId=" + urlEncode(entity.getAppId()));
+            view.setQrMode(resolveOpenQrMode(entity, baseUrl));
+            if (tabMode) {
+                view.setLoginUrl(OpcConstants.OAUTH2_LOGIN_PATH + "?appId=" + urlEncode(entity.getAppId()));
+            }
             views.add(new RankedProvider(view, createdAtMillis(entity.getCreate())));
         }
         return views;
     }
 
-    private boolean isClassicEligible(WebAuthenticationEntity entity, String baseUrl) {
-        if (entity == null || entity.getPageLogin() != 1) {
+    private boolean isClassicTabEligible(WebAuthenticationEntity entity, String baseUrl) {
+        if (entity == null || !PageLoginSupport.showTab(entity.getPageLogin())) {
             return false;
         }
         if (StringUtils.isBlank(entity.getClientId()) || StringUtils.isBlank(entity.getClientSecret())) {
@@ -127,8 +175,26 @@ public class AuthLoginProviderService {
         return StringUtils.isNotBlank(webOauthEndpointResolver.resolveAuthorizeUri(entity));
     }
 
-    private boolean isOpenEligible(ConnectAppEntity entity, String baseUrl) {
-        if (entity == null || entity.getPageLogin() != 1 || entity.getStatus() != ConnectAppEntity.STATUS_ACTIVE) {
+    private boolean isClassicQrEligible(WebAuthenticationEntity entity, String baseUrl) {
+        if (entity == null || !PageLoginSupport.showQr(entity.getPageLogin())) {
+            return false;
+        }
+        if (StringUtils.isBlank(entity.getClientId()) || StringUtils.isBlank(entity.getClientSecret())) {
+            return false;
+        }
+        if (StringUtils.isBlank(entity.getRedirectUri())) {
+            return false;
+        }
+        try {
+            scanLoginCredentialService.require(AuthLoginProviderType.OAUTH2_CLASSIC, entity.getClientId());
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private boolean isOpenTabEligible(ConnectAppEntity entity, String baseUrl) {
+        if (entity == null || !PageLoginSupport.showTab(entity.getPageLogin()) || entity.getStatus() != ConnectAppEntity.STATUS_ACTIVE) {
             return false;
         }
         if (StringUtils.isBlank(entity.getAppId()) || StringUtils.isBlank(entity.getRedirectUri())) {
@@ -139,6 +205,31 @@ public class AuthLoginProviderService {
         }
         String fallbackBase = resolveOpenFallbackBase(entity, baseUrl);
         return connectAppService.tryFillDefaultUris(entity, fallbackBase);
+    }
+
+    private boolean isOpenQrEligible(ConnectAppEntity entity, String baseUrl) {
+        if (entity == null || !PageLoginSupport.showQr(entity.getPageLogin()) || entity.getStatus() != ConnectAppEntity.STATUS_ACTIVE) {
+            return false;
+        }
+        if (StringUtils.isBlank(entity.getAppId()) || StringUtils.isBlank(entity.getRedirectUri())) {
+            return false;
+        }
+        if (!connectAppService.hasConfiguredSecret(entity)) {
+            return false;
+        }
+        try {
+            scanLoginCredentialService.require(AuthLoginProviderType.OAUTH2_OPEN, entity.getAppId());
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private String resolveOpenQrMode(ConnectAppEntity entity, String baseUrl) {
+        if (connectBindSupport.isSamePlatform(entity) || WebPathUtils.isSameSiteUrl(entity.getPlatformBaseUrl(), baseUrl)) {
+            return "as";
+        }
+        return "rp";
     }
 
     private String resolveOpenFallbackBase(ConnectAppEntity entity, String siteBaseUrl) {

@@ -67,12 +67,34 @@
                 相关模块：<code>cn.org.autumn.modules.oauth</code>（OAuth2 授权服务器）、
                 <code>cn.org.autumn.modules.client</code>（网站 OAuth 客户端与合并绑定）、
                 <code>cn.org.autumn.modules.qrc</code>（扫码编排层）。
-                仓库详细 API 见 <code>docs/AI_QRC.md</code>、<code>docs/AI_QRC_API.md</code>。
+                仓库<strong>首选标准</strong>：<code>docs/AI_SCAN_LOGIN_STANDARD.md</code>（标准一 Web / 标准二 Server）。
+                详细 API 见 <code>docs/AI_QRC.md</code>、<code>docs/AI_QRC_API.md</code>。
             </div>
+
+            <h3 id="scan-standards" class="anchor-offset">扫码登录两套标准</h3>
+            <table class="table table-bordered table-striped">
+                <thead><tr><th>标准</th><th>场景</th><th>典型调用方</th><th>完成方式</th></tr></thead>
+                <tbody>
+                <tr>
+                    <td><strong>标准一 · Web 授权</strong></td>
+                    <td>浏览器登录页、OAuth 授权页、Autumn RP 联邦（B网站←A应用）</td>
+                    <td><code>autumn-qrc-core.js</code>；B2 <code>/qrc/scanticket/web/*</code>；D <code>/client/oauth2/qrc/web/*</code></td>
+                    <td>Session exchange 或 <code>complete</code> → <code>WebOauthLoginService</code></td>
+                </tr>
+                <tr>
+                    <td><strong>标准二 · 服务端建票</strong></td>
+                    <td>第三方后台、Native 壳；不打开 Autumn 登录页</td>
+                    <td><code>POST /qrc/api/v1/ticket/open/create|status</code>；或注入 <code>ScanLoginFacade</code></td>
+                    <td>轮询 <code>result.code</code> → <code>/oauth2/token</code> → <code>/oauth2/userInfo</code></td>
+                </tr>
+                </tbody>
+            </table>
+            <p>跨站 RP 联邦扫码时，QR 内容必须为<strong>身份源（AS）域名</strong>，例如 <code>https://a.com/qrc/api/v1/t/...</code>，不得使用接入站本域自建 Redis 二维码。完成登录采用 AS 双 Webhook（<code>qrc.scanned</code> / <code>qrc.authorized</code>）+ B 前端 SSE <code>ticket/stream</code>。</p>
 
             <div class="doc-toc">
                 <strong>目录</strong>
                 <ul>
+                    <li><a href="#scan-standards">扫码登录两套标准</a></li>
                     <li><a href="#overview">1. 能力总览</a></li>
                     <li><a href="#why-client">2. 为什么要创建应用</a></li>
                     <li><a href="#entities">3. 业务数据与关系</a></li>
