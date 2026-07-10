@@ -29,40 +29,40 @@ public class RpQrcPendingStore {
         if (session == null || StringUtils.isBlank(session.getUuid())) {
             return;
         }
-        long ttl = resolveTtlSeconds(session.getExpiredAt());
-        if (redisUtils.isOpen()) {
-            redisUtils.set(KEY_PREFIX + session.getUuid(), session, ttl);
-            return;
-        }
         memory.put(session.getUuid(), session);
+        if (redisUtils.isOpen()) {
+            long ttl = resolveTtlSeconds(session.getExpiredAt());
+            redisUtils.set(KEY_PREFIX + session.getUuid(), session, ttl);
+        }
     }
 
     public RpQrcPendingSession get(String uuid) {
         if (StringUtils.isBlank(uuid)) {
             return null;
         }
+        RpQrcPendingSession cached = memory.get(uuid);
+        if (cached != null) {
+            return cached;
+        }
         if (redisUtils.isOpen()) {
             Object raw = redisUtils.get(KEY_PREFIX + uuid);
-            if (raw == null) {
-                return null;
+            RpQrcPendingSession fromRedis = parseSession(raw);
+            if (fromRedis != null) {
+                memory.put(uuid, fromRedis);
+                return fromRedis;
             }
-            if (raw instanceof RpQrcPendingSession) {
-                return (RpQrcPendingSession) raw;
-            }
-            return JSON.parseObject(JSON.toJSONString(raw), RpQrcPendingSession.class);
         }
-        return memory.get(uuid);
+        return null;
     }
 
     public void remove(String uuid) {
         if (StringUtils.isBlank(uuid)) {
             return;
         }
+        memory.remove(uuid);
         if (redisUtils.isOpen()) {
             redisUtils.delete(KEY_PREFIX + uuid);
-            return;
         }
-        memory.remove(uuid);
     }
 
     public TicketStatusResult toStatusResult(RpQrcPendingSession session) {
@@ -74,9 +74,20 @@ public class RpQrcPendingStore {
         result.setStatus(session.getStatus());
         result.setResult(session.getResult());
         result.setScannerBrief(session.getScannerBrief());
+        result.setRedirect(session.getRedirectUrl());
         long remain = (session.getExpiredAt() - System.currentTimeMillis()) / 1000;
         result.setExpireIn(Math.max(0, remain));
         return result;
+    }
+
+    private RpQrcPendingSession parseSession(Object raw) {
+        if (raw == null) {
+            return null;
+        }
+        if (raw instanceof RpQrcPendingSession) {
+            return (RpQrcPendingSession) raw;
+        }
+        return JSON.parseObject(JSON.toJSONString(raw), RpQrcPendingSession.class);
     }
 
     private long resolveTtlSeconds(long expiredAt) {

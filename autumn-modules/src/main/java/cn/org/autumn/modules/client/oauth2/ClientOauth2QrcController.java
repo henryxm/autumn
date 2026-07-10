@@ -13,6 +13,7 @@ import jakarta.validation.Valid;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -24,6 +25,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+@Slf4j
 @RestController
 @RequestMapping("client/oauth2/qrc/web")
 public class ClientOauth2QrcController {
@@ -39,11 +41,13 @@ public class ClientOauth2QrcController {
             String callback = data == null ? null : data.getCallback();
             String type = data == null ? null : data.getType();
             String id = data == null ? null : data.getId();
+            log.info("RP QRC create request type={} id={} callback={}", type, id, callback);
             if (StringUtils.isNotBlank(type) && StringUtils.isNotBlank(id)) {
                 return R.ok().put("data", scanLoginFacade.createWebTicketByCredential(servlet, type, id, callback));
             }
             return R.ok().put("data", scanLoginFacade.createRpTicket(servlet, callback));
         } catch (Exception e) {
+            log.warn("RP QRC create failed: {}", e.getMessage());
             return R.error(e.getMessage());
         }
     }
@@ -54,7 +58,22 @@ public class ClientOauth2QrcController {
         response.setHeader("Cache-Control", "no-cache, no-transform");
         response.setHeader("Connection", "keep-alive");
         response.setHeader("X-Accel-Buffering", "no");
+        log.info("RP QRC stream subscribe uuid={}", uuid);
         return scanLoginFacade.streamRpTicket(uuid);
+    }
+
+    @GetMapping("/ticket/status")
+    @SkipInterceptor({AuthorizationInterceptor.class, SpmInterceptor.class})
+    public R status(@RequestParam("uuid") String uuid) {
+        try {
+            if (StringUtils.isBlank(uuid)) {
+                return R.error("uuid 不能为空");
+            }
+            return R.ok().put("data", scanLoginFacade.pollRpTicketStatus(uuid));
+        } catch (Exception e) {
+            log.warn("RP QRC status failed uuid={}: {}", uuid, e.getMessage());
+            return R.error(e.getMessage());
+        }
     }
 
     @PostMapping("/ticket/cancel")
@@ -67,6 +86,7 @@ public class ClientOauth2QrcController {
             scanLoginFacade.cancelRpTicket(servlet, uuid);
             return R.ok().put("data", uuid);
         } catch (Exception e) {
+            log.warn("RP QRC cancel failed uuid={}: {}", uuid, e.getMessage());
             return R.error(e.getMessage());
         }
     }
@@ -76,11 +96,14 @@ public class ClientOauth2QrcController {
     public R inbound(@RequestBody(required = false) String rawBody, HttpServletRequest servlet) {
         try {
             if (StringUtils.isBlank(rawBody)) {
+                log.warn("RP QRC inbound rejected: empty body");
                 return R.error("回调体为空");
             }
+            log.info("RP QRC inbound received bodyLen={} remote={}", rawBody.length(), servlet == null ? null : servlet.getRemoteAddr());
             scanLoginFacade.handleRpInbound(rawBody, readHeaders(servlet));
             return R.ok();
         } catch (Exception e) {
+            log.warn("RP QRC inbound failed: {}", e.getMessage());
             return R.error(e.getMessage());
         }
     }

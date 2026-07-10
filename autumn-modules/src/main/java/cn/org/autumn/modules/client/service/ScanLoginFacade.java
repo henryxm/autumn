@@ -147,6 +147,22 @@ public class ScanLoginFacade {
         return rpQrcEventStreamService.subscribe(uuid, pending);
     }
 
+    /** D：RP 联邦轮询状态（SSE 不可用时的降级通道）。 */
+    public TicketStatusResult pollRpTicketStatus(String uuid) {
+        if (StringUtils.isBlank(uuid)) {
+            throw new IllegalArgumentException("uuid 不能为空");
+        }
+        cn.org.autumn.modules.client.model.RpQrcPendingSession pending = rpQrcPendingStore.get(uuid);
+        if (pending == null) {
+            throw new IllegalStateException("扫码会话不存在或已过期");
+        }
+        if (pending.getExpiredAt() > 0 && pending.getExpiredAt() < System.currentTimeMillis() && !"COMPLETED".equals(pending.getStatus())) {
+            pending.setStatus("EXPIRED");
+            rpQrcPendingStore.save(pending);
+        }
+        return rpQrcPendingStore.toStatusResult(pending);
+    }
+
     /** D：RP 联邦取消票据。 */
     public String cancelRpTicket(HttpServletRequest request, String uuid) {
         return oauthRpQrcService.cancelTicket(request, uuid);

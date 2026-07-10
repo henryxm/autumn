@@ -8,6 +8,7 @@ import cn.org.autumn.modules.qrc.model.TicketPayloads;
 import cn.org.autumn.modules.qrc.model.TicketSnapshot;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.utils.HttpClientUtils;
+import cn.org.autumn.utils.HttpClientUtils.HttpPostResult;
 import com.google.gson.Gson;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
@@ -57,10 +58,12 @@ public class QrcWebhookDeliveryService {
 
     public void deliver(TicketSnapshot ticket, ClientGrantEntity grant, String event, Map<String, Object> data) {
         if (ticket == null || StringUtils.isBlank(event)) {
+            log.warn("QRC webhook skipped: ticket or event missing event={}", event);
             return;
         }
         String webhook = resolveWebhookUrl(ticket, grant);
         if (StringUtils.isBlank(webhook)) {
+            log.warn("QRC webhook skipped: blank URL ticket={} event={} delivery={} clientId={}", ticket.getUuid(), event, TicketPayloads.get(ticket, "delivery"), TicketPayloads.get(ticket, "clientId"));
             return;
         }
         if (!webhook.startsWith("http://") && !webhook.startsWith("https://")) {
@@ -80,19 +83,22 @@ public class QrcWebhookDeliveryService {
         String secret = resolveWebhookSecret(ticket, grant);
         if (StringUtils.isNotBlank(secret)) {
             headers.put("X-Qrc-Signature", sign(json, secret));
+        } else {
+            log.warn("QRC webhook unsigned ticket={} event={} clientId={}", ticket.getUuid(), event, TicketPayloads.get(ticket, "clientId"));
         }
-        try {
-            ScanLoginConfig config = sysConfigService.getConfigObjectValidate(ScanLoginConfig.CONFIG_KEY, ScanLoginConfig.class);
-            int timeout = config == null ? new ScanLoginConfig().getWebhookTimeoutMs() : config.getWebhookTimeoutMs();
-            String response = HttpClientUtils.doPostJson(webhook, json, headers, timeout);
-            if (StringUtils.isBlank(response)) {
-                log.warn("QRC webhook empty response ticket={} event={} url={}", ticket.getUuid(), event, webhook);
-            } else if (log.isDebugEnabled()) {
-                log.debug("QRC webhook delivered ticket={} event={} response={}", ticket.getUuid(), event, abbreviate(response));
-            }
-        } catch (Exception e) {
-            log.warn("QRC webhook delivery failed ticket={} event={} url={}: {}", ticket.getUuid(), event, webhook, e.getMessage());
+        ScanLoginConfig config = sysConfigService.getConfigObjectValidate(ScanLoginConfig.CONFIG_KEY, ScanLoginConfig.class);
+        int timeout = config == null ? new ScanLoginConfig().getWebhookTimeoutMs() : config.getWebhookTimeoutMs();
+        log.info("QRC webhook delivering ticket={} event={} url={} clientId={}", ticket.getUuid(), event, webhook, TicketPayloads.get(ticket, "clientId"));
+        HttpPostResult httpResult = HttpClientUtils.doPostJsonDetailed(webhook, json, headers, timeout);
+        if (StringUtils.isNotBlank(httpResult.getError())) {
+            log.warn("QRC webhook delivery failed ticket={} event={} url={}: {}", ticket.getUuid(), event, webhook, httpResult.getError());
+            return;
         }
+        if (!httpResult.isSuccess()) {
+            log.warn("QRC webhook HTTP {} ticket={} event={} url={} body={}", httpResult.getStatusCode(), ticket.getUuid(), event, webhook, abbreviate(httpResult.getBody()));
+            return;
+        }
+        log.info("QRC webhook delivered ticket={} event={} url={} http={} body={}", ticket.getUuid(), event, webhook, httpResult.getStatusCode(), abbreviate(httpResult.getBody()));
     }
 
     private static String abbreviate(String raw) {

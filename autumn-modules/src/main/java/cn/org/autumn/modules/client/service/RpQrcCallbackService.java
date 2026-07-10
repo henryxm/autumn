@@ -94,8 +94,10 @@ public class RpQrcCallbackService {
         Map<String, Object> envelope = new HashMap<>();
         envelope.put("data", body);
         String url = resolveOpenCreateUri(credential, rpClient);
+        log.info("RP QRC create ticket clientId={} webhook={} asUrl={}", credential.getClientId(), inboundUrl, url);
         String raw = HttpClientUtils.doPostJson(url, JSON.toJSONString(envelope));
         TicketCreateResult created = parseOpenCreateResponse(url, raw);
+        log.info("RP QRC create ticket success uuid={} clientId={} webhook={}", created.getUuid(), credential.getClientId(), inboundUrl);
         RpQrcPendingSession pending = new RpQrcPendingSession();
         pending.setUuid(created.getUuid());
         pending.setStatus("PENDING");
@@ -124,10 +126,12 @@ public class RpQrcCallbackService {
         final String authCode = code;
         boolean executed = rpQrcSessionContextService.runWithBrowserSession(pending.getBrowserSessionId(), () -> finishInboundLogin(pending, cred, authCode));
         if (!executed) {
+            log.warn("RP QRC complete failed: browser session expired uuid={}", pending.getUuid());
             markSessionExpired(pending);
             return;
         }
         rpQrcPendingStore.save(pending);
+        log.info("RP QRC complete success uuid={} redirect={}", pending.getUuid(), pending.getRedirectUrl());
         rpQrcEventStreamService.publish(pending);
         rpQrcPendingStore.remove(pending.getUuid());
     }
@@ -141,6 +145,7 @@ public class RpQrcCallbackService {
         }
         mergeScannerBrief(pending, data);
         rpQrcPendingStore.save(pending);
+        log.info("RP QRC apply scanned uuid={} status={}", pending.getUuid(), pending.getStatus());
         rpQrcEventStreamService.publish(pending);
     }
 

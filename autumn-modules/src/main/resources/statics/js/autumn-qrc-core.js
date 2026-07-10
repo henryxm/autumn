@@ -516,6 +516,12 @@
                 var streamUrl = prefix + '/ticket/stream?uuid=' + encodeURIComponent(self.qrcUuid);
                 var es = new EventSource(streamUrl);
                 self.qrcEventSource = es;
+                self.qrcPollTimer = setInterval(function () {
+                    if (self.qrPhase === 'done') {
+                        return;
+                    }
+                    self.pollRpStatus(onUnavailable);
+                }, pollIntervalMs);
                 es.addEventListener('status', function (ev) {
                     if (!ev || !ev.data) {
                         return;
@@ -532,8 +538,10 @@
                     if (self.qrPhase === 'done') {
                         return;
                     }
-                    if (typeof onUnavailable === 'function') {
-                        onUnavailable(true);
+                    if (!self.qrcPollTimer) {
+                        self.qrcPollTimer = setInterval(function () {
+                            self.pollRpStatus(onUnavailable);
+                        }, pollIntervalMs);
                     }
                 };
             },
@@ -573,7 +581,16 @@
                 if (!self.qrcUuid) {
                     return;
                 }
-                self.subscribeRpStream(onUnavailable);
+                $.getJSON(prefix + '/ticket/status', { uuid: self.qrcUuid }, function (res) {
+                    if (!res || res.code !== 0 || !res.data) {
+                        return;
+                    }
+                    var data = res.data;
+                    if (data.redirect && !data.redirectUrl) {
+                        data.redirectUrl = data.redirect;
+                    }
+                    self.handleRpStreamEvent(data, onUnavailable);
+                });
             },
             cancelQrLogin: function () {
                 var self = this;
