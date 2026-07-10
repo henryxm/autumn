@@ -86,8 +86,8 @@
 
 | 入口 | 路径 | 说明 |
 |------|------|------|
-| 上游授权管理 | `oauthasmanage.html` | AS 侧客户端、令牌（推荐） |
-| 下游接入管理 | `oauthrpmanage.html` | RP 侧接入、绑定（推荐） |
+| 授权管理 | `oauthasmanage.html` | AS 侧客户端、令牌（推荐） |
+| 接入管理 | `oauthrpmanage.html` | RP 侧接入、绑定（推荐） |
 | 客户端详情 CRUD | `/modules/oauth/clientdetails` | 单独维护 `oauth_client_details` |
 
 **必填/关键字段**（表 `oauth_client_details`）：

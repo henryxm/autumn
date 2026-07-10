@@ -26,12 +26,16 @@ import java.util.HashMap;
 import java.util.Map;
 import jakarta.servlet.http.HttpServletRequest;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /** RP 联邦扫码：建票注入 WEBHOOK，SSE 推送状态，入站 authorized 自动完成登录。 */
 @Service
 public class RpQrcCallbackService {
+
+    private static final Logger log = LoggerFactory.getLogger(RpQrcCallbackService.class);
 
     @Autowired
     private AuthSiteRoleService authSiteRoleService;
@@ -91,12 +95,7 @@ public class RpQrcCallbackService {
         envelope.put("data", body);
         String url = resolveOpenCreateUri(credential, rpClient);
         String raw = HttpClientUtils.doPostJson(url, JSON.toJSONString(envelope));
-        Response<TicketCreateResult> response = JSON.parseObject(raw, new TypeReference<Response<TicketCreateResult>>() {
-        });
-        if (response == null || !response.success() || response.getData() == null) {
-            throw new IllegalStateException(response == null ? "建票失败" : StringUtils.defaultIfBlank(response.getMsg(), "建票失败"));
-        }
-        TicketCreateResult created = response.getData();
+        TicketCreateResult created = parseOpenCreateResponse(url, raw);
         RpQrcPendingSession pending = new RpQrcPendingSession();
         pending.setUuid(created.getUuid());
         pending.setStatus("PENDING");
@@ -227,6 +226,41 @@ public class RpQrcCallbackService {
             return credential.getOriginUri() + WebOauthEndpointResolver.PATH_QRC_OPEN_CREATE;
         }
         throw new IllegalStateException("未配置远程平台地址");
+    }
+
+    private TicketCreateResult parseOpenCreateResponse(String url, String raw) {
+        if (StringUtils.isBlank(raw)) {
+            throw new IllegalStateException("远程 AS 建票无响应，请检查 RP 到 AS 的网络: " + url);
+        }
+        Response<TicketCreateResult> response;
+        try {
+            response = JSON.parseObject(raw, new TypeReference<Response<TicketCreateResult>>() {
+            });
+        } catch (Exception e) {
+            log.warn("Remote AS open/create response parse failed: url={}, body={}", url, abbreviate(raw));
+            throw new IllegalStateException("远程 AS 建票响应无法解析: " + url);
+        }
+        if (response == null || !response.success() || response.getData() == null) {
+            int code = response == null ? -1 : response.getCode();
+            String msg = response == null ? null : response.getMsg();
+            log.warn("Remote AS open/create rejected: url={}, code={}, msg={}, body={}", url, code, msg, abbreviate(raw));
+            if (StringUtils.isBlank(msg)) {
+                msg = "建票失败";
+            }
+            if (code > 0) {
+                throw new IllegalStateException("远程 AS 建票失败(" + code + "): " + msg);
+            }
+            throw new IllegalStateException("远程 AS 建票失败: " + msg);
+        }
+        return response.getData();
+    }
+
+    private static String abbreviate(String raw) {
+        if (raw == null) {
+            return "";
+        }
+        String trimmed = raw.trim();
+        return trimmed.length() <= 240 ? trimmed : trimmed.substring(0, 240) + "...";
     }
 
     private WebAuthenticationEntity toVirtualWebAuth(ScanLoginCredentialContext credential) {
