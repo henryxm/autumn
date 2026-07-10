@@ -398,7 +398,7 @@ public final class WebPathUtils {
         String ctx = contextPath(request);
         StringBuilder sb = new StringBuilder();
         sb.append(scheme).append("://").append(host);
-        int port = resolveRequestPort(request, scheme);
+        int port = normalizePublicPort(scheme, resolveRequestPort(request, scheme));
         if (port > 0 && !isDefaultPort(scheme, port)) {
             sb.append(':').append(port);
         }
@@ -464,6 +464,19 @@ public final class WebPathUtils {
             }
         }
         return request.getServerPort();
+    }
+
+    /**
+     * 反向代理后容器端口（如 80）与对外 scheme（https）不一致时，去掉错误端口。
+     */
+    static int normalizePublicPort(String scheme, int port) {
+        if ("https".equals(scheme) && port == 80) {
+            return 443;
+        }
+        if ("http".equals(scheme) && port == 443) {
+            return 80;
+        }
+        return port;
     }
 
     static boolean isDefaultPort(String scheme, int port) {

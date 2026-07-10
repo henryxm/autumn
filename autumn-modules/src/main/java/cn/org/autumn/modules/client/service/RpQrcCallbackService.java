@@ -239,22 +239,30 @@ public class RpQrcCallbackService {
     }
 
     private String resolveInboundWebhookUrl(HttpServletRequest request) {
+        String path = WebPathUtils.forBrowser(request, "/client/oauth2/qrc/web/inbound");
+        if (!path.startsWith("/")) {
+            path = "/" + path;
+        }
+        String configured = normalizeOrigin(sysConfigService.getBaseUrl());
+        if (StringUtils.isNotBlank(configured)) {
+            return configured + path;
+        }
         String absolute = WebPathUtils.absoluteUrl(request, "/client/oauth2/qrc/web/inbound", sysConfigService.isSsl());
         if (StringUtils.isBlank(absolute) || !(absolute.startsWith("http://") || absolute.startsWith("https://"))) {
-            String fallback = StringUtils.trimToEmpty(sysConfigService.getBaseUrl());
-            while (fallback.endsWith("/")) {
-                fallback = fallback.substring(0, fallback.length() - 1);
-            }
-            String path = WebPathUtils.forBrowser(request, "/client/oauth2/qrc/web/inbound");
-            if (!path.startsWith("/")) {
-                path = "/" + path;
-            }
-            absolute = StringUtils.isBlank(fallback) ? path : fallback + path;
-        }
-        if (!(absolute.startsWith("http://") || absolute.startsWith("https://"))) {
-            throw new IllegalStateException("Webhook 地址必须为绝对 URL，请配置 SITE_SSL / X-Forwarded-* 或 sys.baseUrl");
+            throw new IllegalStateException("Webhook 地址必须为绝对 URL，请配置 sys.baseUrl 或 SITE_SSL / X-Forwarded-*");
         }
         return absolute;
+    }
+
+    private static String normalizeOrigin(String origin) {
+        if (StringUtils.isBlank(origin)) {
+            return null;
+        }
+        String trimmed = origin.trim();
+        while (trimmed.endsWith("/")) {
+            trimmed = trimmed.substring(0, trimmed.length() - 1);
+        }
+        return trimmed;
     }
 
     private static void mergeScannerBrief(RpQrcPendingSession pending, JSONObject data) {

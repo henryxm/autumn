@@ -267,6 +267,26 @@ class WebPathUtilsTest {
     }
 
     @Test
+    void absoluteUrl_httpsBehindProxyOmitsContainerPort80() {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/login");
+        request.addHeader("Host", "bighub.cn");
+        request.setScheme("http");
+        request.setServerPort(80);
+        assertEquals("https://bighub.cn", WebPathUtils.absoluteBaseUrl(request, true));
+        assertEquals("https://bighub.cn/client/oauth2/qrc/web/inbound", WebPathUtils.absoluteUrl(request, "/client/oauth2/qrc/web/inbound", true));
+    }
+
+    @Test
+    void absoluteUrl_httpsWithHostPort80OmitsWrongPort() {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/login");
+        request.addHeader("Host", "bighub.cn:80");
+        request.addHeader("X-Forwarded-Proto", "https");
+        request.setScheme("http");
+        request.setServerPort(80);
+        assertEquals("https://bighub.cn/client/oauth2/qrc/web/inbound", WebPathUtils.absoluteUrl(request, "/client/oauth2/qrc/web/inbound", true));
+    }
+
+    @Test
     void absoluteUrl_includesContextPathOnce() {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/app/login");
         request.setContextPath("/app");

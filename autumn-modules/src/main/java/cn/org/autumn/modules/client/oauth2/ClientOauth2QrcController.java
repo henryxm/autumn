@@ -51,7 +51,8 @@ public class ClientOauth2QrcController {
     @GetMapping(value = "/ticket/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @SkipInterceptor({AuthorizationInterceptor.class, SpmInterceptor.class})
     public SseEmitter stream(@RequestParam("uuid") String uuid, HttpServletResponse response) {
-        response.setHeader("Cache-Control", "no-cache");
+        response.setHeader("Cache-Control", "no-cache, no-transform");
+        response.setHeader("Connection", "keep-alive");
         response.setHeader("X-Accel-Buffering", "no");
         return scanLoginFacade.streamRpTicket(uuid);
     }
