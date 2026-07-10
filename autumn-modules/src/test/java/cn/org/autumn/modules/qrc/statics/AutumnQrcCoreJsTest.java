@@ -15,13 +15,16 @@ public class AutumnQrcCoreJsTest {
     public void coreJs_exposesPlanCNotifyAndUiHelpers() throws Exception {
         String js = readCoreJs();
         assertTrue(js.contains("startTicketNotify: function"));
+        assertTrue(js.contains("startSseNotify: function"));
         assertTrue(js.contains("startRpNotify: function"));
         assertTrue(js.contains("startPollFallback: function"));
         assertTrue(js.contains("resumeTicketNotify: function"));
         assertTrue(js.contains("stopNotify: function"));
+        assertTrue(js.contains("handleStreamEvent: function"));
         assertTrue(js.contains("wireVueScannerUi: wireVueScannerUi"));
         assertTrue(js.contains("bindPlainHostScannedUi: bindPlainHostScannedUi"));
         assertTrue(js.contains("startTicketNotify(onUnavailable)"));
+        assertTrue(js.contains("this.startSseNotify(onUnavailable)"));
     }
 
     @Test
@@ -34,7 +37,8 @@ public class AutumnQrcCoreJsTest {
         assertTrue(js.contains("startPollFallback: function"));
         int fallbackIdx = js.indexOf("startPollFallback: function");
         String fallbackBody = js.substring(fallbackIdx, Math.min(js.length(), fallbackIdx + 600));
-        assertTrue("fallback should poll RP status", fallbackBody.contains("pollRpStatus"));
+        assertTrue("fallback should poll by mode", fallbackBody.contains("pollQrStatus"));
+        assertFalse("startTicketNotify must not call startAsPoll directly", js.contains("this.startAsPoll(onUnavailable)"));
     }
 
     private static String readCoreJs() throws Exception {

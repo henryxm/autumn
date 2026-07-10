@@ -29,12 +29,12 @@
 | 子模式 | 场景 | 建票入口 | 完成登录 |
 |--------|------|----------|----------|
 | **B1** | 第三方 Web Redirect | `GET /oauth2/authorize` | `redirect_uri?code=` → token → userInfo |
-| **B2** | 同源 Autumn PC 扫码 | `POST /qrc/scanticket/web/ticket/create` | `POST .../session/exchange` |
+| **B2** | 同源 Autumn PC 扫码 | `POST /qrc/scanticket/web/ticket/create` | SSE `GET .../ticket/stream` → 降级 `ticket/status` → `POST .../session/exchange` |
 | **D** | Autumn RP 联邦扫码 | `POST /client/oauth2/qrc/web/ticket/create` | SSE `GET .../ticket/stream` → 自动 `completeRemoteOAuthCallback` |
 
 前端统一使用 **`autumn-qrc-core.js`**：
 
-- `mode: 'as'` → B2（`/qrc/scanticket/web/*`）
+- `mode: 'as'` → B2（`/qrc/scanticket/web/*`，**SSE** `GET /ticket/stream` + 降级 `ticket/status`）
 - `mode: 'rp'` → D（`/client/oauth2/qrc/web/*`，**SSE** `GET /ticket/stream`）
 - **跨站 RP 联邦**：QR 内容为 **AS 域名**（如 `https://a.com/qrc/api/v1/t/{uuid}`），不得使用 RP 本域自建 QR。
 
@@ -164,6 +164,7 @@ ScanLoginFacade scanLoginFacade;
 // B2 同源 Web
 TicketCreateResult as = scanLoginFacade.createAsWebTicket(request, ticketCreateRequest);
 TicketStatusResult status = scanLoginFacade.pollAsWebStatus(uuid);
+SseEmitter asStream = scanLoginFacade.streamAsWebTicket(uuid);
 String redirect = scanLoginFacade.exchangeAsWebSession(exchangeRequest, request);
 
 // D RP 联邦（双 Webhook + SSE）

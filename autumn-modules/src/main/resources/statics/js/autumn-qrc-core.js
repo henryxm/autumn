@@ -529,52 +529,58 @@
                     if (!res || res.code !== 0 || !res.data) {
                         return;
                     }
-                    var data = res.data;
-                    if (data.status === 'SCANNED') {
-                        self.applyScannerBrief(data.scannerBrief);
-                        self.qrStatus = isOpenCredential(options) ? '扫码成功，请在手机点击确认授权' : '扫码成功，请在手机点击登录';
-                    }
-                    if (isOpenCredential(options) && data.status === 'COMPLETED' && data.result && data.result.code) {
-                        self.completeOpenQrcLogin(data.result.code, onUnavailable);
-                        return;
-                    }
-                    if (typeof options.onAuthorizeExchange === 'function' && (data.status === 'CONFIRMED' || data.status === 'COMPLETED') && data.exchange) {
-                        self.stopNotify();
-                        options.onAuthorizeExchange(data.exchange, self);
-                        return;
-                    }
-                    if ((data.status === 'CONFIRMED' || data.status === 'COMPLETED') && data.exchange) {
-                        self.qrPhase = 'done';
-                        self.qrStatus = '登录成功，正在跳转...';
-                        self.stopNotify();
-                        $.ajax({
-                            type: 'POST',
-                            url: prefix + '/session/exchange',
-                            contentType: 'application/json',
-                            data: JSON.stringify({ data: { exchange: data.exchange } }),
-                            dataType: 'json',
-                            success: function (result) {
-                                if (result.code === 0) {
-                                    var target = result.data != null ? String(result.data) : null;
-                                    if (typeof options.onSuccess === 'function') {
-                                        options.onSuccess(target, self);
-                                    } else if (target) {
-                                        (window.top || window).location.href = target;
-                                    } else {
-                                        (window.top || window).location.href = 'index.html';
-                                    }
-                                } else {
-                                    self.qrStatus = result.msg || '登录失败';
-                                }
-                            },
-                            error: function () {
-                                self.qrStatus = '网络异常，请刷新二维码重试';
-                            }
-                        });
-                        return;
-                    }
-                    self.handleQrTerminalStatus(data.status);
+                    self.processAsStatusData(res.data, onUnavailable);
                 });
+            },
+            processAsStatusData: function (data, onUnavailable) {
+                var self = this;
+                if (!data) {
+                    return;
+                }
+                if (data.status === 'SCANNED') {
+                    self.applyScannerBrief(data.scannerBrief);
+                    self.qrStatus = isOpenCredential(options) ? '扫码成功，请在手机点击确认授权' : '扫码成功，请在手机点击登录';
+                }
+                if (isOpenCredential(options) && data.status === 'COMPLETED' && data.result && data.result.code) {
+                    self.completeOpenQrcLogin(data.result.code, onUnavailable);
+                    return;
+                }
+                if (typeof options.onAuthorizeExchange === 'function' && (data.status === 'CONFIRMED' || data.status === 'COMPLETED') && data.exchange) {
+                    self.stopNotify();
+                    options.onAuthorizeExchange(data.exchange, self);
+                    return;
+                }
+                if ((data.status === 'CONFIRMED' || data.status === 'COMPLETED') && data.exchange) {
+                    self.qrPhase = 'done';
+                    self.qrStatus = '登录成功，正在跳转...';
+                    self.stopNotify();
+                    $.ajax({
+                        type: 'POST',
+                        url: prefix + '/session/exchange',
+                        contentType: 'application/json',
+                        data: JSON.stringify({ data: { exchange: data.exchange } }),
+                        dataType: 'json',
+                        success: function (result) {
+                            if (result.code === 0) {
+                                var target = result.data != null ? String(result.data) : null;
+                                if (typeof options.onSuccess === 'function') {
+                                    options.onSuccess(target, self);
+                                } else if (target) {
+                                    (window.top || window).location.href = target;
+                                } else {
+                                    (window.top || window).location.href = 'index.html';
+                                }
+                            } else {
+                                self.qrStatus = result.msg || '登录失败';
+                            }
+                        },
+                        error: function () {
+                            self.qrStatus = '网络异常，请刷新二维码重试';
+                        }
+                    });
+                    return;
+                }
+                self.handleQrTerminalStatus(data.status);
             },
             completeOpenQrcLogin: function (code, onUnavailable) {
                 var self = this;
@@ -624,13 +630,9 @@
                 });
             },
             startTicketNotify: function (onUnavailable) {
-                if (mode === 'rp') {
-                    this.startRpNotify(onUnavailable);
-                    return;
-                }
-                this.startAsPoll(onUnavailable);
+                this.startSseNotify(onUnavailable);
             },
-            startAsPoll: function (onUnavailable) {
+            startPollOnly: function (onUnavailable) {
                 var self = this;
                 self.stopNotify();
                 self.qrcNotifyChannel = 'poll';
@@ -638,8 +640,11 @@
                     if (self.qrPhase === 'done') {
                         return;
                     }
-                    self.pollAsStatus(onUnavailable);
+                    self.pollQrStatus(onUnavailable);
                 }, pollIntervalMs);
+            },
+            startAsPoll: function (onUnavailable) {
+                this.startPollOnly(onUnavailable);
             },
             startPollFallback: function (onUnavailable) {
                 var self = this;
@@ -653,7 +658,7 @@
                     if (self.qrPhase === 'done') {
                         return;
                     }
-                    self.pollRpStatus(onUnavailable);
+                    self.pollQrStatus(onUnavailable);
                 }, pollIntervalMs);
             },
             scheduleSseFallback: function (onUnavailable) {
@@ -669,7 +674,7 @@
                     }
                 }, sseFallbackDelayMs);
             },
-            startRpNotify: function (onUnavailable) {
+            startSseNotify: function (onUnavailable) {
                 var self = this;
                 if (!self.qrcUuid) {
                     return;
@@ -695,7 +700,7 @@
                     } catch (e) {
                         return;
                     }
-                    self.handleRpStreamEvent(data, onUnavailable);
+                    self.handleStreamEvent(data, onUnavailable);
                 });
                 es.onopen = function () {
                     self.sseOpened = true;
@@ -710,8 +715,21 @@
                     }
                 };
             },
+            startRpNotify: function (onUnavailable) {
+                this.startSseNotify(onUnavailable);
+            },
             subscribeRpStream: function (onUnavailable) {
-                this.startRpNotify(onUnavailable);
+                this.startSseNotify(onUnavailable);
+            },
+            handleStreamEvent: function (data, onUnavailable) {
+                if (mode === 'rp') {
+                    this.handleRpStreamEvent(data, onUnavailable);
+                    return;
+                }
+                this.handleAsStreamEvent(data, onUnavailable);
+            },
+            handleAsStreamEvent: function (data, onUnavailable) {
+                this.processAsStatusData(data, onUnavailable);
             },
             resumeTicketNotify: function (resumeOpts) {
                 resumeOpts = resumeOpts || {};
@@ -729,7 +747,7 @@
                     self.qrStatus = '二维码加载失败，请刷新页面重试';
                     return;
                 }
-                self.startAsPoll(resumeOpts.onUnavailable);
+                self.startTicketNotify(resumeOpts.onUnavailable);
             },
             handleRpStreamEvent: function (data, onUnavailable) {
                 var self = this;

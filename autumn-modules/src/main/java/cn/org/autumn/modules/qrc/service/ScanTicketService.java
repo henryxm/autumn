@@ -14,6 +14,7 @@ import cn.org.autumn.modules.qrc.dto.TicketCreateResult;
 import cn.org.autumn.modules.qrc.dto.TicketStatusResult;
 import cn.org.autumn.modules.qrc.entity.ScanTicketEntity;
 import cn.org.autumn.modules.qrc.entity.ClientGrantEntity;
+import cn.org.autumn.modules.qrc.model.AsQrcStreamEvent;
 import cn.org.autumn.modules.qrc.model.ExchangeSnapshot;
 import cn.org.autumn.modules.qrc.model.Intent;
 import cn.org.autumn.modules.qrc.model.TicketPayloads;
@@ -77,6 +78,10 @@ public class ScanTicketService extends ModuleService<ScanTicketDao, ScanTicketEn
     @Autowired
     @Lazy
     private ClientGrantService clientGrantService;
+
+    @Autowired
+    @Lazy
+    private AsQrcEventStreamService asQrcEventStreamService;
 
     @Override
     public String ico() {
@@ -162,6 +167,7 @@ public class ScanTicketService extends ModuleService<ScanTicketDao, ScanTicketEn
             ticket.setScanner(scanner.getUuid());
             ticket.setStatus(TicketStatus.SCANNED);
             saveTicket(ticket);
+            publishStreamEvent(ticket);
             log.debug("QRC ticket scanned uuid={} scanner={} intent={} delivery={}", uuid, scanner.getUuid(), ticket.getIntent(), TicketPayloads.get(ticket, "delivery"));
             deliverScannedWebhook(ticket, scanner.getUuid());
             return ticket;
@@ -207,6 +213,7 @@ public class ScanTicketService extends ModuleService<ScanTicketDao, ScanTicketEn
                 ticket.getResult().put("deepLink", result.getDeepLink());
             }
             saveTicket(ticket);
+            publishStreamEvent(ticket);
             persistAudit(ticket, true);
             log.debug("QRC ticket confirmed uuid={} scanner={} intent={} status={} delivery={}", uuid, scanner.getUuid(), ticket.getIntent(), ticket.getStatus(), TicketPayloads.get(ticket, "delivery"));
             writeLoginLog(ticket, scanner.getUuid(), request);
@@ -222,6 +229,7 @@ public class ScanTicketService extends ModuleService<ScanTicketDao, ScanTicketEn
                 ticket.setScanner(scanner.getUuid());
             }
             saveTicket(ticket);
+            publishStreamEvent(ticket);
             deliverDeniedWebhook(ticket, scanner == null ? null : scanner.getUuid());
             persistAudit(ticket, true);
             return ticket;
@@ -239,6 +247,7 @@ public class ScanTicketService extends ModuleService<ScanTicketDao, ScanTicketEn
             }
             ticket.setStatus(TicketStatus.CANCELLED);
             saveTicket(ticket);
+            publishStreamEvent(ticket);
             persistAudit(ticket, true);
             return ticket;
         });
@@ -427,6 +436,18 @@ public class ScanTicketService extends ModuleService<ScanTicketDao, ScanTicketEn
         if (ticket.getExpired() < System.currentTimeMillis() && !TicketStatus.isTerminal(ticket.getStatus())) {
             ticket.setStatus(TicketStatus.EXPIRED);
             saveTicket(ticket);
+            publishStreamEvent(ticket);
+        }
+    }
+
+    private void publishStreamEvent(TicketSnapshot ticket) {
+        if (asQrcEventStreamService == null || ticket == null) {
+            return;
+        }
+        try {
+            asQrcEventStreamService.publish(AsQrcStreamEvent.from(toStatusResult(ticket)));
+        } catch (Exception e) {
+            log.debug("AS QRC SSE publish skipped uuid={}: {}", ticket.getUuid(), e.getMessage());
         }
     }
 
