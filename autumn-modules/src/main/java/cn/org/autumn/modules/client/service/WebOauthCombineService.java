@@ -32,11 +32,11 @@ public class WebOauthCombineService extends ModuleService<WebOauthCombineDao, We
     }
 
     public void updateClientDetails(String uuid, String domain) {
-        clientDetailsService.update(uuid, domain);
+        clientDetailsService.rebindToDomain(uuid, domain);
     }
 
     public void updateWebAuthentication(String uuid, String domain) {
-        webAuthenticationService.update(uuid, domain);
+        webAuthenticationService.rebindToDomain(uuid, domain);
     }
 
     public ClientDetailsEntity getClientDetails(String domain) {

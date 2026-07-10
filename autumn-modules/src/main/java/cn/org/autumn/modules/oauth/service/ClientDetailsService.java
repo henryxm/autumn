@@ -7,6 +7,7 @@ import cn.org.autumn.config.DomainHandler;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.oauth.dao.ClientDetailsDao;
 import cn.org.autumn.modules.oauth.entity.ClientDetailsEntity;
+import cn.org.autumn.modules.client.support.OAuthClientDomainSupport;
 import cn.org.autumn.modules.oauth.entity.TokenStoreEntity;
 import cn.org.autumn.modules.oauth.store.TokenStore;
 import cn.org.autumn.modules.oauth.store.ValueType;
@@ -15,7 +16,6 @@ import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.modules.sys.service.SysUserService;
 import cn.org.autumn.site.UpgradeFactory;
 import cn.org.autumn.utils.RedisUtils;
-import cn.org.autumn.utils.Utils;
 import cn.org.autumn.utils.Uuid;
 import com.qiniu.util.Md5;
 import java.util.*;
@@ -198,7 +198,12 @@ public class ClientDetailsService extends ModuleService<ClientDetailsDao, Client
     @Order(2000)
     public void init() {
         super.init();
-        onOneHour();
+        ensureSiteDefaultClient();
+    }
+
+    private void ensureSiteDefaultClient() {
+        create(sysConfigService.getClientId(), sysConfigService.getClientSecret(), "默认的客户端", "默认的客户端");
+        updateClientType(sysConfigService.getClientId(), ClientType.SiteDefault);
     }
 
     @Override
@@ -211,8 +216,6 @@ public class ClientDetailsService extends ModuleService<ClientDetailsDao, Client
                 iterator.remove();
             }
         }
-        create(sysConfigService.getClientId(), sysConfigService.getClientSecret(), "默认的客户端", "默认的客户端");
-        updateClientType(sysConfigService.getClientId(), ClientType.SiteDefault);
     }
 
     public static String newKey(String prefix) {
@@ -310,34 +313,38 @@ public class ClientDetailsService extends ModuleService<ClientDetailsDao, Client
         baseMapper.updateClientType(clientId, clientType);
     }
 
+    /**
+     * 域名变更升级钩子：仅补全缺失 uuid，不修改 redirectUri、clientUri、clientId 等 OAuth 配置。
+     */
     @Override
     public void onDomainChanged() {
-        String host = sysConfigService.getSiteDomain();
-        String scheme = sysConfigService.getScheme();
+        backfillMissingUuids();
+    }
+
+    private void backfillMissingUuids() {
         List<ClientDetailsEntity> entities = selectByMap(null);
         for (ClientDetailsEntity entity : entities) {
-            try {
-                update(entity, scheme, host, false);
-            } catch (Exception e) {
-                log.warn("OAuth client domain sync skipped for clientId={}: {}", entity.getClientId(), e.getMessage());
+            if (StringUtils.isBlank(entity.getUuid())) {
+                entity.setUuid(OAuthClientDomainSupport.ensureUuid(null));
+                updateById(entity);
             }
         }
     }
 
-    public void update(ClientDetailsEntity entity, String scheme, String host, boolean force) {
-        if (StringUtils.isBlank(entity.getUuid())) {
-            entity.setUuid(Uuid.uuid());
-            updateById(entity);
-        }
-        if (!force && !Objects.equals(entity.getClientType(), ClientType.SiteDefault))
+    /**
+     * WebOauthCombine 管理端显式换绑域名时调用；按标准路径重建 OAuth 配置。
+     */
+    public void rebindToDomain(String uuid, String domain) {
+        ClientDetailsEntity entity = baseMapper.getByUuid(uuid);
+        if (entity == null || StringUtils.isBlank(domain)) {
             return;
-        if (StringUtils.isNotBlank(entity.getClientUri()))
-            entity.setClientUri(Utils.replaceSchemeHost(scheme, host, entity.getClientUri()));
-        if (StringUtils.isNotBlank(entity.getClientIconUri()))
-            entity.setClientIconUri(Utils.replaceSchemeHost(scheme, host, entity.getClientIconUri()));
-        if (StringUtils.isNotBlank(entity.getRedirectUri()))
-            entity.setRedirectUri(Utils.replaceSchemeHost(scheme, host, entity.getRedirectUri()));
-        if (StringUtils.isNotBlank(host) && !Objects.equals(entity.getClientId(), host)) {
+        }
+        String host = domain.trim();
+        if (StringUtils.isBlank(entity.getUuid())) {
+            entity.setUuid(OAuthClientDomainSupport.ensureUuid(null));
+        }
+        OAuthClientDomainSupport.applyAsDomainRebind(entity, sysConfigService.getScheme(), host);
+        if (!Objects.equals(entity.getClientId(), host)) {
             ClientDetailsEntity occupied = findByClientId(host);
             if (occupied != null && !Objects.equals(occupied.getId(), entity.getId())) {
                 entity.setClientType(null);
@@ -346,19 +353,7 @@ public class ClientDetailsService extends ModuleService<ClientDetailsDao, Client
             }
             entity.setClientId(host);
         }
-        if (StringUtils.isNotBlank(host)) {
-            entity.setClientName(host);
-            entity.setDescription(host);
-        }
         updateById(entity);
-    }
-
-    public void update(String uuid, String domain) {
-        ClientDetailsEntity entity = baseMapper.getByUuid(uuid);
-        if (null != entity) {
-            String scheme = sysConfigService.getScheme();
-            update(entity, scheme, domain, true);
-        }
     }
 
     /** 开放扫码（pageLogin 含 QR）时同步 AS 侧 oauth_client_details，使 appId 可用于 QRC open/create。 */
