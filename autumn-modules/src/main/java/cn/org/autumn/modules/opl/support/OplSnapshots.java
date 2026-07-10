@@ -70,6 +70,7 @@ public final class OplSnapshots {
         snapshot.setAccessToken(context.getAccessToken());
         snapshot.setRefreshToken(context.getRefreshToken());
         snapshot.setAccessExpireIn(context.getExpireIn());
+        snapshot.setScope(context.getGrantedScope());
         return snapshot;
     }
 }

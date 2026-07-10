@@ -52,11 +52,11 @@ QRC 模块（`cn.org.autumn.modules.qrc`）是**扫码交互编排层**，复用
 | 组装 | `QrcApiSupport` | Open API detail、client 校验、建票上下文 |
 | 组装 | `ScanWebSupport` | PC 建票上下文、session exchange |
 | SPI | `IntentHandler` + `IntentHandlerRegistry` | 按 Intent 分发 |
-| SPI | `ConsentProvider` + `ConsentSupport` | 可选 scope 文案（无实现时回退 `scope` 拆分） |
+| SPI | `ConsentProvider` + `ConsentSupport` | 可选 scope 文案（无实现时从 `AuthScopeCatalog` 取 label） |
 | 开放 API | `QrcApiController` | APP / Open API / QR 链接，`/qrc/api/v1`，`Request`/`Response` |
 | PC 网页 | `ScanTicketController` | 登录页建票/轮询/exchange，`/qrc/scanticket/web`，`R` |
 | 后台 | `ScanTicketControllerGen` | 票据审计 CRUD，`/qrc/scanticket`，`R` + 权限 |
-| OAuth 页 | `AuthorizationController` + `login.html` | 未登录 authorize / consent 统一 UI |
+| OAuth/OPL 授权页 | `AuthorizationController` / `OplAuthorizationController` + **`login.html`** | 未登录 authorize / 已登录 consent 统一 UI（`oauthAuthorize` / `oplAuthorize`）；**无**独立 `opl/authorize.html` |
 | 实体 | `ScanTicketEntity`、`ClientGrantEntity` | 审计与 client 策略（实体驱动建表） |
 | 配置 | `ScanLoginConfig`（`QRC_CONFIG`） | 全局 TTL/轮询/OAuth QR 优先 |
 
@@ -66,9 +66,10 @@ QRC 模块（`cn.org.autumn.modules.qrc`）是**扫码交互编排层**，复用
 |------|------|
 | `/login.html` | 三 Tab：账号 / 扫码 / 手机；普通登录走 `/sys/login` |
 | 配置 OAuth client 后 | 账号/手机 Tab POST `/oauth2/login` |
-| `/oauth2/authorize` 未登录 | 渲染同一 `login.html`（`oauthAuthorize=true`），预建 `OAUTH_AUTHORIZE` 票据 |
+| `/oauth2/authorize` 未登录 | 渲染 `login.html`（`oauthAuthorize=true`），预建 `OAUTH_AUTHORIZE` 票据；scope 文案来自 `scopeLabels` |
+| `/open/oauth2/authorize` | 同上（`oplAuthorize=true`）；确认表单 POST `/open/oauth2/authorize/approve` |
 | 已登录 + `consent=true` | 同上，`mode=consent`，预建 `OAUTH_CONSENT` 票据 |
-| SPM `qrc/authorize` | 跳转桩 → `login.html`（保留 query） |
+| SPM `modules/qrc/pages/authorize.html` | JS 重定向 → `/login`（保留 query） |
 
 **安全**：consent/authorize 建票失败时**不会**静默发放 OAuth `code`（consent 返回错误；authorize 降级账号登录并提示）。
 
@@ -138,7 +139,7 @@ autumn://qrc/t/{uuid}
 ## 11. 扩展（SPI）
 
 - **`IntentHandler`**：新增 Intent 时注册 Spring Bean
-- **`ConsentProvider`**：按 client/intent 自定义 scope 展示文案；未注册时 `ConsentSupport` 按 `scope` 空格拆分
+- **`ConsentProvider`**：按 client/intent 自定义 scope 展示文案；未注册时 `ConsentSupport` 经 `AuthScopeSupport` 从 catalog 解析 label
 
 ## 12. 故障排查
 

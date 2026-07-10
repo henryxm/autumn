@@ -103,6 +103,8 @@ description: >-
 
 涉及 **授权登录 / OAuth / 开放平台 / 账号绑定** 时，**先读 **`docs/AI_AUTH_LOGIN_MODES.md`**（双轨总览），再按角色追加 **`docs/AI_OAUTH_INTEGRATION.md`**（方式一 uuid）或 **`docs/AI_OPC_INTEGRATION.md`** + **`docs/AI_OPL_INTEGRATION.md`**（方式二 openId）；见下文 **授权登录与账号绑定**（3.x 与 2.x **业务语义一致**，包名为 **`jakarta.*`**，以 **3.0.0** 分支代码为准）。
 
+涉及 **授权 scope 目录 / authorize 文案 / `auth_scope_def`** 时，追加 **`docs/AI_AUTH_SCOPE.md`**（`AuthScopeCatalog`、`ScopeDefinitionEntity`、`login.html` 统一授权 UI）。
+
 涉及 **站点门户 / 登录页备案·法律链接** 时，按需读 **`docs/AI_SITE_PORTAL.md`**。
 
 ## 授权登录与账号绑定（OAuth uuid / 开放平台 openId）
@@ -144,7 +146,21 @@ description: >-
 - **跨平台首次授权**：未登录且无绑定时 **`BIND_CHOICE_REQUIRED`** → `/open/oauth2/bind/choice`（用户自选创建或登录绑定）。
 - OPL 侧 **openId 按 app 隔离**，**unionId 按 account 共享**（`OpenIdentityService` / `OpenUnionService`）。
 
-**实现索引**：`docs/AI_AUTH_LOGIN_MODES.md` §10.2～§10.4；经典绑定参考 `ConnectBindService` 对标实现。
+**Scope 目录（OAuth / OPL，详见 `docs/AI_AUTH_SCOPE.md`）**：
+
+| 项 | 约定 |
+|----|------|
+| 内存模型 | `AuthScopeDef`（lib catalog 条目，**非** DB 实体） |
+| DB 实体 | **`ScopeDefinitionEntity`** → 表 **`auth_scope_def`**；Service **`ScopeDefinitionService`**（`syncBuiltins` / `refreshCatalog`） |
+| 文案唯一源 | **`AuthScopeCatalog.labels()`** → Model **`scopeLabels`**（`AuthPageSupport.prepareAuthorizePage`） |
+| `basic` 展开 | OAuth：`identity+profile`；OPL：`openid+unionid+profile` |
+| 统一 label | `profile`/`phone`/`email`/`verified`/`status` 两轨中文一致；OPL **`email`** 已纳入 userInfo |
+| 身份 code | OPL 为 **`unionid`**（**无** `union` 兼容归一） |
+| authorize UI | **`login.html`**（`oauthAuthorize` / `oplAuthorize`）；片段 `_scope_perm_list.html`；**勿**恢复已删 `opl/authorize.html` |
+| 管理 | **`authscopemanage.html`** + **`/oauth/admin/scopes/*`**（`ScopeDefinitionAdminController`）；gen **`scopedef.html`** 仅审计 CRUD |
+| 解析 | authorize：`resolve` → 未知 code **`invalid_scope`**；发码/QRC：`resolveBounded` 静默剔除 |
+
+**实现索引**：`docs/AI_AUTH_LOGIN_MODES.md` §10.2～§10.4；scope 细节 **`docs/AI_AUTH_SCOPE.md`** §4～§10；经典绑定参考 `ConnectBindService` 对标实现。
 
 ## 字段存储加密（at-rest）
 
@@ -258,7 +274,7 @@ description: >-
 - 新索引是否**单字段在字段上 `@Index`**、**组合索引才用类级 `@Indexes`**（§10.2）？
 - 机器人：是否已读 **`docs/AI_ROBOT.md` + `docs/AI_ROBOT_API.md`**？bot 包是否仍为 **`jakarta.*` / MP3 annotation**？管理 API 与 `message/push` 鉴权是否分离？
 - **`@FieldEncrypt`**：Service 是否 `EncryptModuleService`？`baseMapper` → `afterRead`？`searchable` + hash 列？**`@Cache`** 是否按 §7（明文键 + hash 通道）？
-- **授权/OAuth/OPC**：是否先读 **`AI_AUTH_LOGIN_MODES.md`**？未混 `client_id`/`app_id`？绑定写 **独立表**？回调用 **`establishSession`** 而非 **`login(upstream)`**？经典 OAuth 是否走 **`WebOauthBindService`**（非 upstream uuid 联邦）？
+- **授权/OAuth/OPC**：是否先读 **`AI_AUTH_LOGIN_MODES.md`**？改 scope/authorize 文案是否读 **`AI_AUTH_SCOPE.md`**？未混 `client_id`/`app_id`？绑定写 **独立表**？回调用 **`establishSession`** 而非 **`login(upstream)`**？经典 OAuth 是否走 **`WebOauthBindService`**（非 upstream uuid 联邦）？
 - **表名**：符合 §3.2？仅 `@TableName`（`@Table` 无 `value`）？Dao `quote` 一致？
 
 ## 多项目一句话

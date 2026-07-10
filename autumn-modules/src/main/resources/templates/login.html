@@ -146,12 +146,8 @@
           <!--</#if>-->
         </div>
         <#include "/_oauth_consent_app_card.html">
+        <#include "/_scope_perm_list.html">
         <!--<#if oplAuthorize?? && oplAuthorize>-->
-        <ul class="oauth-perm-list">
-          <li><i class="fa fa-check-circle"></i><span>在本应用内识别您的身份</span></li>
-          <li><i class="fa fa-check-circle"></i><span>在同一开发者的其他应用中识别同一账号</span></li>
-          <li><i class="fa fa-check-circle"></i><span>查看您的昵称与头像</span></li>
-        </ul>
         <label class="oauth-consent-check">
           <input type="checkbox" v-model="consentChecked">
           <span>我同意授权该应用关联我的账号</span>
@@ -171,11 +167,6 @@
           <a class="btn btn-consent btn-consent-ghost" :href="oauthDenyRedirect">取消</a>
         </form>
         <!--<#else>-->
-        <ul class="oauth-perm-list">
-          <li><i class="fa fa-check-circle"></i><span>查看您的基本账号信息（昵称、头像等）</span></li>
-          <li><i class="fa fa-check-circle"></i><span>获取用于登录关联的唯一标识</span></li>
-          <li><i class="fa fa-check-circle"></i><span>按应用声明的权限范围提供服务</span></li>
-        </ul>
         <label class="oauth-consent-check">
           <input type="checkbox" v-model="consentChecked">
           <span>我同意授权该应用获取我的基本信息</span>

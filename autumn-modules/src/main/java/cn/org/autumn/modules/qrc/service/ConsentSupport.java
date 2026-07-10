@@ -1,9 +1,11 @@
 package cn.org.autumn.modules.qrc.service;
 
+import cn.org.autumn.auth.scope.AuthScopeSet;
+import cn.org.autumn.auth.scope.AuthTrack;
+import cn.org.autumn.modules.auth.support.AuthScopeSupport;
 import cn.org.autumn.modules.qrc.model.TicketPayloads;
 import cn.org.autumn.modules.qrc.model.TicketSnapshot;
 import cn.org.autumn.modules.qrc.spi.ConsentProvider;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -16,6 +18,9 @@ public class ConsentSupport {
 
     @Autowired(required = false)
     private List<ConsentProvider> consentProviders = Collections.emptyList();
+
+    @Autowired
+    private AuthScopeSupport authScopeSupport;
 
     public List<String> describeScopes(TicketSnapshot ticket) {
         if (ticket == null) {
@@ -40,12 +45,14 @@ public class ConsentSupport {
         if (StringUtils.isBlank(scope)) {
             return Collections.emptyList();
         }
-        List<String> labels = new ArrayList<>();
-        for (String part : scope.split("\\s+")) {
-            if (StringUtils.isNotBlank(part)) {
-                labels.add(part.trim());
-            }
+        AuthTrack track = resolveTrack(clientId, payload);
+        return authScopeSupport.labels(track, scope);
+    }
+
+    private AuthTrack resolveTrack(String clientId, Map<String, String> payload) {
+        if (payload != null && payload.containsKey("appId")) {
+            return AuthTrack.OPL;
         }
-        return labels;
+        return AuthTrack.OAUTH;
     }
 }

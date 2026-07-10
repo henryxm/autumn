@@ -46,4 +46,7 @@ public class OpenCodeEntity implements Serializable {
 
     @Column(length = 16, comment = "PKCE:code_challenge_method")
     private String codeChallengeMethod;
+
+    @Column(length = 200, comment = "范围:granted scope")
+    private String scope;
 }

@@ -4,6 +4,7 @@ import cn.org.autumn.config.ClientType;
 import cn.org.autumn.database.runtime.WrapperColumns;
 import cn.org.autumn.modules.oauth.dto.OauthAsClientView;
 import cn.org.autumn.modules.oauth.dto.OauthAsCreateOutcome;
+import cn.org.autumn.modules.auth.support.AuthScopeSupport;
 import cn.org.autumn.modules.oauth.entity.ClientDetailsEntity;
 import cn.org.autumn.modules.oauth.entity.TokenStoreEntity;
 import cn.org.autumn.modules.support.AdminPageQueries;
@@ -37,6 +38,9 @@ public class OauthAsAdminService {
 
     @Autowired
     private SysUserService sysUserService;
+
+    @Autowired
+    private AuthScopeSupport authScopeSupport;
 
     public Map<String, Object> overview() {
         Map<String, Object> data = new LinkedHashMap<>();
@@ -80,6 +84,7 @@ public class OauthAsAdminService {
         if (StringUtils.isBlank(scope)) {
             scope = "basic";
         }
+        validateOAuthScope(scope);
         ClientDetailsEntity entity = clientDetailsService.create(baseUrl, clientId, secret, ClientType.ManualCreate, name, name);
         if (entity == null) {
             throw new IllegalStateException("创建客户端失败");
@@ -111,6 +116,7 @@ public class OauthAsAdminService {
             entity.setRedirectUri(redirectUri.trim());
         }
         if (StringUtils.isNotBlank(scope)) {
+            validateOAuthScope(scope.trim());
             entity.setScope(scope.trim());
         }
         if (trusted != null) {
@@ -233,5 +239,18 @@ public class OauthAsAdminService {
             return token;
         }
         return token.substring(0, 8) + "..." + token.substring(token.length() - 4);
+    }
+
+    private void validateOAuthScope(String scope) {
+        if (StringUtils.isBlank(scope)) {
+            return;
+        }
+        ClientDetailsEntity helper = new ClientDetailsEntity();
+        helper.setScope(scope.trim());
+        try {
+            authScopeSupport.validateOAuthScope(authScopeSupport.toSnapshot(helper), scope.trim());
+        } catch (Exception e) {
+            throw new IllegalArgumentException("无效的授权范围: " + scope.trim(), e);
+        }
     }
 }

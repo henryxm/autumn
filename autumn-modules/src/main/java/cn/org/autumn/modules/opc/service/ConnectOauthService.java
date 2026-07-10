@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.opc.service;
 
+import cn.org.autumn.modules.auth.support.AuthScopeSupport;
 import cn.org.autumn.modules.oauth.oauth2.support.OAuth2HttpClient;
 import cn.org.autumn.modules.opc.dto.OpcTokenResult;
 import cn.org.autumn.modules.opc.dto.OpcUserInfoResult;
@@ -7,6 +8,7 @@ import cn.org.autumn.modules.opc.entity.ConnectAppEntity;
 import cn.org.autumn.modules.opc.support.ConnectBindSupport;
 import cn.org.autumn.opc.OpcConstants;
 import cn.org.autumn.opl.OplConstants;
+import cn.org.autumn.opl.model.OpenAppSnapshot;
 import cn.org.autumn.opl.model.OpenUserInfoSnapshot;
 import cn.org.autumn.opl.spi.OpenPlatformService;
 import com.alibaba.fastjson2.JSON;
@@ -31,12 +33,28 @@ public class ConnectOauthService {
     @Autowired(required = false)
     private OpenPlatformService openPlatformService;
 
+    @Autowired
+    private AuthScopeSupport authScopeSupport;
+
     public String buildAuthorizeUrl(ConnectAppEntity app, String state) {
         connectAppService.fillDefaultUris(app);
         if (StringUtils.isBlank(state)) {
             state = UUID.randomUUID().toString().replace("-", "");
         }
-        return oauth2HttpClient.buildAuthorizeUrl(app.getAuthorizeUri(), OAuth2HttpClient.CredentialParam.OPL, app.getAppId(), app.getRedirectUri(), StringUtils.defaultIfBlank(app.getScope(), OplConstants.DEFAULT_SCOPE), state);
+        String scope = resolveEffectiveOplScope(app);
+        return oauth2HttpClient.buildAuthorizeUrl(app.getAuthorizeUri(), OAuth2HttpClient.CredentialParam.OPL, app.getAppId(), app.getRedirectUri(), scope, state);
+    }
+
+    private String resolveEffectiveOplScope(ConnectAppEntity app) {
+        String downstream = StringUtils.defaultIfBlank(app.getScope(), OplConstants.DEFAULT_SCOPE);
+        if (!connectBindSupport.isSamePlatform(app) || openPlatformService == null) {
+            return downstream;
+        }
+        OpenAppSnapshot upstream = openPlatformService.getApp(app.getAppId());
+        if (upstream == null) {
+            return downstream;
+        }
+        return authScopeSupport.grantOplScope(upstream, downstream);
     }
 
     public OpcTokenResult exchangeCode(ConnectAppEntity app, String code) {

@@ -46,6 +46,13 @@ public class OauthSite implements SiteFactory.Site {
         return getKey("oauthasmanage");
     }
 
+    @PageAware(login = true, page = "authscopemanage")
+    public String authscopemanage = "auth/authscopemanage";
+
+    public String getAuthScopeManageKey() {
+        return getKey("authscopemanage");
+    }
+
     public static String oauthAsManagePage() {
         return OauthAdminConstants.MANAGE_AS_PAGE;
     }

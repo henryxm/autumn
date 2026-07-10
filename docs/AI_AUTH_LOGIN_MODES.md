@@ -720,6 +720,10 @@ userTokenService.saveToken(...)   → 可选保存 access_token
 | `OAuth2HttpClient` | 同上 |
 | `OAuthResponseSupport` / `OAuthRedirectSupport` / `OAuthConsentSupport` | 同上 |
 | `OAuthTokenResponseParser` | 同上 |
+| Scope 目录 / 解析 | `autumn-lib/.../auth/scope/AuthScopeCatalog.java`、`AuthScopeSupport.java` |
+| Scope DB / 管理 | `modules/auth/entity/ScopeDefinitionEntity.java`、`ScopeDefinitionService.java`、`ScopeDefinitionAdminController.java` |
+| 授权页 Model | `site/AuthPageSupport.java`；UI **`login.html`** + `_scope_perm_list.html`（详见 **`docs/AI_AUTH_SCOPE.md`**） |
+
 ### 10.2 方式一
 
 | 类型 | 路径 |
@@ -845,4 +849,4 @@ userTokenService.saveToken(...)   → 可选保存 access_token
 
 ---
 
-**维护说明**：新增授权端点或变更绑定策略时，请同步更新本文 §3–§4 端点表与 §10 排查项，并更新子文档 `AI_OAUTH_INTEGRATION` / `AI_OPL_INTEGRATION` / `AI_OPC_INTEGRATION` 中的细节参数。
+**维护说明**：新增授权端点或变更绑定策略时，请同步更新本文 §3–§4 端点表与 §10 排查项，并更新子文档 `AI_OAUTH_INTEGRATION` / `AI_OPL_INTEGRATION` / `AI_OPC_INTEGRATION` / **`AI_AUTH_SCOPE`** 中的细节参数。

@@ -66,6 +66,14 @@ public class ClientDetailsService extends ModuleService<ClientDetailsDao, Client
     }
 
     public void put(ValueType type, String code, String accessToken, String refreshToken, Object user, Long expire) {
+        put(type, code, accessToken, refreshToken, user, expire, null);
+    }
+
+    public void put(ValueType type, String code, String accessToken, String refreshToken, Object user, Long expire, String grantedScope) {
+        put(type, code, accessToken, refreshToken, user, expire, grantedScope, null);
+    }
+
+    public void put(ValueType type, String code, String accessToken, String refreshToken, Object user, Long expire, String grantedScope, String clientId) {
         String v = code;
         if (type == ValueType.accessToken)
             v = accessToken;
@@ -73,7 +81,8 @@ public class ClientDetailsService extends ModuleService<ClientDetailsDao, Client
             v = refreshToken;
 
         String key = getKey(type, v);
-        TokenStore tokenStore = new TokenStore(user, code, accessToken, refreshToken, expire);
+        TokenStore tokenStore = new TokenStore(user, code, accessToken, refreshToken, grantedScope, expire);
+        tokenStore.setClientId(clientId);
         if (redisUtils.isOpen()) {
             redisUtils.set(key, tokenStore, expire);
         } else {
@@ -85,7 +94,15 @@ public class ClientDetailsService extends ModuleService<ClientDetailsDao, Client
     }
 
     public void putAuthCode(String code, Object user) {
-        put(ValueType.authCode, code, null, null, user, AUTH_CODE_DEFAULT_EXPIRED_IN);
+        putAuthCode(code, user, null);
+    }
+
+    public void putAuthCode(String code, Object user, String grantedScope) {
+        putAuthCode(code, user, grantedScope, null);
+    }
+
+    public void putAuthCode(String code, Object user, String grantedScope, String clientId) {
+        put(ValueType.authCode, code, null, null, user, AUTH_CODE_DEFAULT_EXPIRED_IN, grantedScope, clientId);
     }
 
     /**
@@ -109,12 +126,14 @@ public class ClientDetailsService extends ModuleService<ClientDetailsDao, Client
                 }
             }
         }
-        put(ValueType.accessToken, null, accessToken, refreshToken, v, ACCESS_TOKEN_DEFAULT_EXPIRED_IN);
-        put(ValueType.refreshToken, null, accessToken, refreshToken, v, REFRESH_TOKEN_DEFAULT_EXPIRED_IN);
+        String grantedScope = tokenStore == null ? null : tokenStore.getGrantedScope();
+        String clientId = tokenStore == null ? null : tokenStore.getClientId();
+        put(ValueType.accessToken, null, accessToken, refreshToken, v, ACCESS_TOKEN_DEFAULT_EXPIRED_IN, grantedScope, clientId);
+        put(ValueType.refreshToken, null, accessToken, refreshToken, v, REFRESH_TOKEN_DEFAULT_EXPIRED_IN, grantedScope, clientId);
         if (null != tokenStore)
             remove(ValueType.authCode, tokenStore.getAuthCode());
         if (null != sysUserEntity) {
-            tokenStoreService.saveOrUpdate(sysUserEntity, accessToken, refreshToken, tokenStore.getAuthCode(), ACCESS_TOKEN_DEFAULT_EXPIRED_IN, REFRESH_TOKEN_DEFAULT_EXPIRED_IN);
+            tokenStoreService.saveOrUpdate(sysUserEntity, accessToken, refreshToken, tokenStore.getAuthCode(), ACCESS_TOKEN_DEFAULT_EXPIRED_IN, REFRESH_TOKEN_DEFAULT_EXPIRED_IN, tokenStore.getGrantedScope());
         }
     }
 
@@ -152,11 +171,11 @@ public class ClientDetailsService extends ModuleService<ClientDetailsDao, Client
                     }
                     expire = (date.getTime() + storeEntity.getAccessTokenExpiredIn() * 1000 - (new Date().getTime())) / 1000;
                     if (expire > 0)
-                        tokenStore = new TokenStore(sysUserEntity, storeEntity.getAuthCode(), storeEntity.getAccessToken(), storeEntity.getRefreshToken(), expire);
+                        tokenStore = new TokenStore(sysUserEntity, storeEntity.getAuthCode(), storeEntity.getAccessToken(), storeEntity.getRefreshToken(), storeEntity.getScope(), expire);
                 }
             }
             if (null != tokenStore) {
-                put(type, storeEntity.getAuthCode(), storeEntity.getAccessToken(), storeEntity.getRefreshToken(), sysUserEntity, expire);
+                put(type, storeEntity.getAuthCode(), storeEntity.getAccessToken(), storeEntity.getRefreshToken(), sysUserEntity, expire, storeEntity.getScope());
             }
         }
         return tokenStore;

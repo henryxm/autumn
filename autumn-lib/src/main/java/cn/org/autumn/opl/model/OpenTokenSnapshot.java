@@ -17,4 +17,5 @@ public class OpenTokenSnapshot implements Serializable {
     private String refreshToken;
     private long accessExpireIn;
     private long refreshExpireIn;
+    private String scope;
 }

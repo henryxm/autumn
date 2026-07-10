@@ -9,6 +9,7 @@ import cn.org.autumn.opl.OplConstants;
 import cn.org.autumn.opl.model.OpenAppRegisterOutcome;
 import cn.org.autumn.opl.model.OpenAppType;
 import cn.org.autumn.opl.model.OpenPlatformEvent;
+import cn.org.autumn.modules.auth.support.AuthScopeSupport;
 import cn.org.autumn.modules.opl.support.OplSnapshots;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.utils.Uuid;
@@ -32,6 +33,9 @@ public class OpenAppService extends ModuleService<OpenAppDao, OpenAppEntity> {
 
     @Autowired
     private SysConfigService sysConfigService;
+
+    @Autowired
+    private AuthScopeSupport authScopeSupport;
 
     public OpenAppEntity getByAppId(String appId) {
         if (StringUtils.isBlank(appId)) {
@@ -71,13 +75,15 @@ public class OpenAppService extends ModuleService<OpenAppDao, OpenAppEntity> {
         }
         String appId = generateAppId();
         String plainSecret = generateAppSecret();
+        String resolvedScope = StringUtils.defaultIfBlank(scope, OplConstants.DEFAULT_SCOPE);
+        validateOplScope(resolvedScope);
         OpenAppEntity app = new OpenAppEntity();
         app.setAccount(accountUuid);
         app.setAppId(appId);
         app.setName(name.trim());
         app.setAppType(resolvedType);
         app.setRedirectUri(redirectUri.trim());
-        app.setScope(StringUtils.defaultIfBlank(scope, OplConstants.DEFAULT_SCOPE));
+        app.setScope(resolvedScope);
         app.setStatus(OpenAppEntity.STATUS_ACTIVE);
         applySecretHash(app, plainSecret);
         Date now = new Date();
@@ -121,6 +127,7 @@ public class OpenAppService extends ModuleService<OpenAppDao, OpenAppEntity> {
             app.setRedirectUri(redirectUri.trim());
         }
         if (StringUtils.isNotBlank(scope)) {
+            validateOplScope(scope.trim());
             app.setScope(scope.trim());
         }
         app.setUpdate(new Date());
@@ -225,5 +232,18 @@ public class OpenAppService extends ModuleService<OpenAppDao, OpenAppEntity> {
 
     private String generateAppSecret() {
         return Uuid.uuid() + Uuid.uuid().substring(0, 8);
+    }
+
+    private void validateOplScope(String scope) {
+        if (StringUtils.isBlank(scope)) {
+            return;
+        }
+        OpenAppEntity helper = new OpenAppEntity();
+        helper.setScope(scope.trim());
+        try {
+            authScopeSupport.validateOplScope(OplSnapshots.toAppSnapshot(helper), scope.trim());
+        } catch (Exception e) {
+            throw new IllegalArgumentException("无效的授权范围: " + scope.trim(), e);
+        }
     }
 }

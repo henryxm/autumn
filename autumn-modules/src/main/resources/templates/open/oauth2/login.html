@@ -56,6 +56,22 @@
     .btn-primary { background: linear-gradient(135deg, var(--brand-1), var(--brand-2)); color: #fff; }
     .btn-ghost { background: #fff; color: var(--muted); border: 1px solid var(--border); }
     .foot { margin-top: 20px; font-size: 12px; color: rgba(255,255,255,0.6); text-align: center; }
+    .scope-box {
+      background: #faf5ff; border: 1px solid #ede9fe; border-radius: 10px;
+      padding: 14px 16px; margin-bottom: 20px; text-align: left;
+    }
+    .scope-box-title { font-size: 12px; color: var(--muted); margin-bottom: 10px; font-weight: 600; }
+    .scope-perm-list { list-style: none; margin: 0; padding: 0; }
+    .scope-perm-list li {
+      display: flex; align-items: flex-start; gap: 8px; padding: 7px 0;
+      font-size: 13px; color: #334155; line-height: 1.5; border-bottom: 1px solid #f3e8ff;
+    }
+    .scope-perm-list li:last-child { border-bottom: none; }
+    .scope-perm-list li::before {
+      content: "✓"; flex-shrink: 0; width: 18px; height: 18px; border-radius: 50%;
+      background: #f3e8ff; color: var(--brand-1); font-size: 11px; font-weight: 700;
+      display: inline-flex; align-items: center; justify-content: center; margin-top: 1px;
+    }
   </style>
 </head>
 <body>
@@ -63,18 +79,15 @@
     <div class="card">
       <div class="icon">🔗</div>
       <h1>授权登录</h1>
-      <!--<#if appName?? && appName?has_content>-->
+      <!--<#if (appName?? && appName?has_content) || (appId?? && appId?has_content)>-->
       <p>即将跳转到授权平台验证您的身份。授权成功后，您的账号将与本应用安全关联。</p>
+      <!--<#if appName?? && appName?has_content>-->
       <div class="meta">
         <div class="app-label">正在登录的应用</div>
         <div class="app-name">${appName}</div>
       </div>
-      <div class="actions">
-        <button type="button" class="btn btn-primary" id="btnAuthorize">继续授权登录</button>
-        <a class="btn btn-ghost" href="${request.contextPath}/login">使用本站账号登录</a>
-      </div>
-      <!--<#elseif appId?? && appId?has_content>-->
-      <p>即将跳转到授权平台验证您的身份。授权成功后，您的账号将与本应用安全关联。</p>
+      <!--</#if>-->
+      <#include "/_scope_perm_box.html">
       <div class="actions">
         <button type="button" class="btn btn-primary" id="btnAuthorize">继续授权登录</button>
         <a class="btn btn-ghost" href="${request.contextPath}/login">使用本站账号登录</a>

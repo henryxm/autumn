@@ -50,6 +50,9 @@ public class OpenTokenEntity implements Serializable {
     @Column(comment = "过期:refreshToken秒数", defaultValue = "604800")
     private long refreshExpireIn;
 
+    @Column(length = 200, comment = "范围:granted scope")
+    private String scope;
+
     @Column(type = DataType.DATETIME, comment = "更新:更新时间")
     private Date updateTime;
 }

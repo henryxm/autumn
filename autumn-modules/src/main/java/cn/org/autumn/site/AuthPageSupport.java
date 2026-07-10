@@ -1,5 +1,8 @@
 package cn.org.autumn.site;
 
+import cn.org.autumn.auth.scope.AuthScopeSet;
+import cn.org.autumn.auth.scope.AuthTrack;
+import cn.org.autumn.modules.auth.support.AuthScopeSupport;
 import cn.org.autumn.modules.client.entity.WebAuthenticationEntity;
 import cn.org.autumn.modules.client.service.WebAuthenticationService;
 import cn.org.autumn.modules.oauth.oauth2.support.OAuthConsentCsrfSupport;
@@ -33,6 +36,9 @@ public class AuthPageSupport {
     @Autowired
     private SitePortalSupport sitePortalSupport;
 
+    @Autowired
+    private AuthScopeSupport authScopeSupport;
+
     public void prepareOauthLoginEntry(HttpServletRequest request, Model model, String clientId) {
         AuthPageAttributes.apply(model, sysConfigService, request, sitePortalSupport);
         AuthPageAttributes.markFlowKind(model, AuthPageAttributes.FLOW_OAUTH_LOGIN_ENTRY);
@@ -42,10 +48,12 @@ public class AuthPageSupport {
             model.addAttribute("clientName", webAuth.getName());
             model.addAttribute("redirectUri", webAuth.getRedirectUri());
             model.addAttribute("sameInstance", WebPathUtils.isSameSiteUrl(webAuth.getOriginUri(), sysConfigService.getBaseUrl()));
+            model.addAttribute("scopeLabels", authScopeSupport.labels(AuthTrack.OAUTH, StringUtils.defaultIfBlank(webAuth.getScope(), AuthScopeSet.BASIC)));
         } else if (StringUtils.isNotBlank(clientId)) {
             model.addAttribute("clientId", clientId);
             model.addAttribute("redirectUri", WebPathUtils.forBrowser(request, "/client/oauth2/callback"));
         }
+        ensureScopeLabels(model, AuthTrack.OAUTH, AuthScopeSet.BASIC);
         AuthPageAttributes.applyAuthFlowBoot(request, model);
     }
 
@@ -63,8 +71,10 @@ public class AuthPageSupport {
             model.addAttribute("appId", appId);
             if (app != null) {
                 model.addAttribute("appName", app.getName());
+                model.addAttribute("scopeLabels", authScopeSupport.labels(AuthTrack.OPL, StringUtils.defaultIfBlank(app.getScope(), AuthScopeSet.BASIC)));
             }
         }
+        ensureScopeLabels(model, AuthTrack.OPL, AuthScopeSet.BASIC);
         AuthPageAttributes.applySafeOauthCallback(request, model);
         AuthPageAttributes.applyAuthFlowBoot(request, model);
     }
@@ -104,6 +114,9 @@ public class AuthPageSupport {
         boolean authorizeMode = oauthAuthorize || oplAuthorize;
         if (authorizeMode) {
             model.addAttribute("authorizeLoginAction", oplAuthorize ? OplConstants.OAUTH2_LOGIN : "/oauth2/login");
+            AuthTrack track = oplAuthorize ? AuthTrack.OPL : AuthTrack.OAUTH;
+            String scope = model.containsAttribute("scope") ? String.valueOf(model.getAttribute("scope")) : AuthScopeSet.BASIC;
+            model.addAttribute("scopeLabels", authScopeSupport.labels(track, StringUtils.defaultIfBlank(scope, AuthScopeSet.BASIC)));
             if (request != null) {
                 model.addAttribute("consentCsrfToken", OAuthConsentCsrfSupport.issue(request));
                 AuthPageAttributes.applyAuthLoginDefaultIcon(request, model);
@@ -147,5 +160,11 @@ public class AuthPageSupport {
             return list.get(0);
         }
         return null;
+    }
+
+    private void ensureScopeLabels(Model model, AuthTrack track, String defaultScope) {
+        if (!model.containsAttribute("scopeLabels")) {
+            model.addAttribute("scopeLabels", authScopeSupport.labels(track, defaultScope));
+        }
     }
 }

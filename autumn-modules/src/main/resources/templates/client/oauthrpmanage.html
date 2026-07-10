@@ -62,7 +62,7 @@
         .badge-info { background: #ede9fe; color: #5b21b6; }
         .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 100; align-items: center; justify-content: center; }
         .modal.show { display: flex; }
-        .modal-content { background: white; border-radius: 12px; width: 90%; max-width: 520px; max-height: 90vh; overflow: auto; }
+        .modal-content { background: white; border-radius: 12px; width: 90%; max-width: 580px; max-height: 90vh; overflow: auto; }
         .modal-header { padding: 16px 20px; border-bottom: 1px solid var(--border); font-weight: 700; }
         .modal-body { padding: 16px 20px; }
         .modal-body label { display: block; font-size: 13px; font-weight: 600; margin: 10px 0 4px; color: var(--text-muted); }
@@ -76,6 +76,7 @@
         .toast.error { background: #b91c1c; }
         code { font-size: 12px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; word-break: break-all; }
     </style>
+    <link rel="stylesheet" href="${request.contextPath!''}/statics/css/auth-scope-picker.css"/>
 </head>
 <body>
 <div class="container">
@@ -96,8 +97,8 @@
         <div class="toolbar">
             <input type="text" id="filterClientKeyword" placeholder="搜索应用名称或 clientId">
             <button class="btn btn-secondary btn-xs" onclick="loadClients(1)">查询</button>
-            <button class="btn btn-primary btn-xs" onclick="showQuickCreateModal()">一键接入</button>
-            <button class="btn btn-primary btn-xs" onclick="showSaveClientModal()">手动配置</button>
+            <button class="btn btn-primary btn-xs" onclick="showQuickCreateModal()">接入</button>
+            <button class="btn btn-primary btn-xs" onclick="showSaveClientModal()">配置</button>
         </div>
         <div class="table-container">
             <table>
@@ -113,7 +114,7 @@
             <select id="filterBindClient"><option value="">全部应用</option></select>
             <input type="text" id="filterBindKeyword" placeholder="本地用户 uuid 或上游 uuid">
             <button class="btn btn-secondary btn-xs" onclick="loadBinds(1)">查询</button>
-            <button class="btn btn-primary btn-xs" onclick="showCreateBindModal()">添加绑定</button>
+            <button class="btn btn-primary btn-xs" onclick="showCreateBindModal()">添加</button>
         </div>
         <div class="table-container">
             <table>
@@ -127,7 +128,7 @@
 
 <div class="modal" id="modalQuickCreate">
     <div class="modal-content">
-        <div class="modal-header">一键接入</div>
+        <div class="modal-header">接入</div>
         <div class="modal-body">
             <label>Client ID</label>
             <input id="quickClientId" type="text" placeholder="与上游 AS 注册的应用标识一致">
@@ -135,14 +136,14 @@
         </div>
         <div class="modal-footer">
             <button class="btn btn-secondary btn-xs" onclick="hideModal('modalQuickCreate')">取消</button>
-            <button class="btn btn-primary btn-xs" onclick="submitQuickCreate()">确认接入</button>
+            <button class="btn btn-primary btn-xs" onclick="submitQuickCreate()">接入</button>
         </div>
     </div>
 </div>
 
 <div class="modal" id="modalSaveClient">
-    <div class="modal-content">
-        <div class="modal-header">手动配置接入应用</div>
+    <div class="modal-content admin-modal-scroll">
+        <div class="modal-header">配置接入应用</div>
         <div class="modal-body">
             <label>应用名称</label><input id="saveName" type="text" placeholder="如：官网登录">
             <label>Client ID</label><input id="saveClientId" type="text" placeholder="上游 AS 颁发的 client_id">
@@ -159,7 +160,18 @@
                 <button type="button" class="btn btn-secondary btn-xs" onclick="fillLocalCallback('saveRedirectUri')">本系统样例</button>
             </div>
             <p class="field-hint">须与上游 AS 登记一致。默认可使用 <code>{站点}/client/oauth2/callback</code>。</p>
-            <label>授权范围（scope）</label><input id="saveScope" type="text" value="basic">
+            <label>授权范围</label>
+            <div class="scope-field">
+                <input type="hidden" id="saveScope" value="basic"/>
+                <p class="scope-field-desc">勾选可请求的权限；用户在授权确认页将看到相同说明。须在上游 AS 登记范围内。</p>
+                <div class="scope-stored-box">
+                    <span class="scope-stored-label">存储值</span>
+                    <code class="scope-stored-text" id="saveScopeStored">basic</code>
+                </div>
+                <div class="scope-field-summary" id="saveScopeSummary"></div>
+                <div class="scope-presets" id="saveScopePresets"></div>
+                <div class="scope-picker-list" id="saveScopePicker"></div>
+            </div>
             <label>用户信息传递方式（userInfoDelivery）</label>
             <select id="saveUserInfoDelivery">
                 <option value="">默认（空）</option>
@@ -179,13 +191,13 @@
         </div>
         <div class="modal-footer">
             <button class="btn btn-secondary btn-xs" onclick="hideModal('modalSaveClient')">取消</button>
-            <button class="btn btn-primary btn-xs" onclick="submitSaveClient()">确认接入</button>
+            <button class="btn btn-primary btn-xs" onclick="submitSaveClient()">接入</button>
         </div>
     </div>
 </div>
 
 <div class="modal" id="modalEditClient">
-    <div class="modal-content" style="max-width:560px;">
+    <div class="modal-content admin-modal-scroll" style="max-width:600px;">
         <div class="modal-header">编辑接入配置</div>
         <div class="modal-body">
             <label>应用名称</label><input id="editName" type="text">
@@ -201,7 +213,18 @@
                 <input id="editRedirectUri" type="text">
                 <button type="button" class="btn btn-secondary btn-xs" onclick="fillLocalCallback('editRedirectUri')">本系统样例</button>
             </div>
-            <label>授权范围（scope）</label><input id="editScope" type="text">
+            <label>授权范围</label>
+            <div class="scope-field">
+                <input type="hidden" id="editScope"/>
+                <p class="scope-field-desc">勾选可请求的权限；用户在授权确认页将看到相同说明。须在上游 AS 登记范围内。</p>
+                <div class="scope-stored-box">
+                    <span class="scope-stored-label">存储值</span>
+                    <code class="scope-stored-text" id="editScopeStored">basic</code>
+                </div>
+                <div class="scope-field-summary" id="editScopeSummary"></div>
+                <div class="scope-presets" id="editScopePresets"></div>
+                <div class="scope-picker-list" id="editScopePicker"></div>
+            </div>
             <label>用户信息传递方式（userInfoDelivery）</label>
             <select id="editUserInfoDelivery">
                 <option value="">默认（空）</option>
@@ -220,14 +243,14 @@
         </div>
         <div class="modal-footer">
             <button class="btn btn-secondary btn-xs" onclick="hideModal('modalEditClient')">取消</button>
-            <button class="btn btn-primary btn-xs" onclick="submitUpdateClient()">保存修改</button>
+            <button class="btn btn-primary btn-xs" onclick="submitUpdateClient()">保存</button>
         </div>
     </div>
 </div>
 
 <div class="modal" id="modalCreateBind">
     <div class="modal-content">
-        <div class="modal-header">添加账号绑定</div>
+        <div class="modal-header">添加账号关联</div>
         <div class="modal-body">
             <label>接入应用</label><select id="bindClientId"></select>
             <label>本地用户 uuid</label><input id="bindUser" type="text" placeholder="本系统 sys_user 的 uuid">
@@ -236,7 +259,7 @@
         </div>
         <div class="modal-footer">
             <button class="btn btn-secondary btn-xs" onclick="hideModal('modalCreateBind')">取消</button>
-            <button class="btn btn-primary btn-xs" onclick="submitCreateBind()">绑定</button>
+            <button class="btn btn-primary btn-xs" onclick="submitCreateBind()">添加</button>
         </div>
     </div>
 </div>
@@ -245,6 +268,7 @@
 window.__CTX__ = '${request.contextPath!""}';
 window.__OAUTH_RP_ADMIN_API__ = window.__CTX__ + '/client/admin/rp/platform';
 </script>
+<script src="${request.contextPath!''}/statics/js/auth-scope-picker.js"></script>
 <script>
 //<#noparse>
 const API_BASE = (typeof window.__OAUTH_RP_ADMIN_API__ === 'string' && window.__OAUTH_RP_ADMIN_API__.length > 0)
@@ -333,9 +357,9 @@ async function loadClients(page) {
             '<td>' + instanceBadge + '</td>' +
             '<td>' +
             '<button class="btn btn-info btn-xs" onclick="showEditClientModal(\'' + escapeAttr(item.clientId) + '\')">编辑</button>' +
-            '<button class="btn btn-success btn-xs" onclick="openLoginPage(\'' + escapeAttr(item.clientId) + '\')">打开登录页</button>' +
+            '<button class="btn btn-success btn-xs" onclick="openLoginPage(\'' + escapeAttr(item.clientId) + '\')" title="打开登录页测试">测试</button>' +
             '</td></tr>';
-    }).join('') : '<tr><td colspan="7" class="empty-hint">暂无接入应用，可点「一键接入」或「手动配置」创建</td></tr>';
+    }).join('') : '<tr><td colspan="7" class="empty-hint">暂无接入应用，可点「接入」或「配置」创建</td></tr>';
     renderPagination('clientPagination', state.clients.page, state.clients.totalPage, loadClients);
 }
 
@@ -374,6 +398,9 @@ function showSaveClientModal() {
     fillLocalCallback('saveRedirectUri');
     document.getElementById('saveScope').value = 'basic';
     document.getElementById('saveUserInfoDelivery').value = '';
+    if (window.AuthScopePicker) {
+        AuthScopePicker.refresh('saveScope', 'saveScopePicker', 'oauth', window.__CTX__ || '');
+    }
     showModal('modalSaveClient');
 }
 
@@ -399,6 +426,9 @@ async function showEditClientModal(clientId) {
     document.getElementById('editIcon').value = client.icon || '';
     document.getElementById('editHash').value = client.hash || '';
     document.getElementById('editPageLogin').value = String(client.pageLogin != null ? client.pageLogin : 0);
+    if (window.AuthScopePicker) {
+        AuthScopePicker.refresh('editScope', 'editScopePicker', 'oauth', window.__CTX__ || '');
+    }
     showModal('modalEditClient');
 }
 
@@ -570,6 +600,21 @@ function showToast(msg, type) {
 function formatTime(v) { return v ? String(v).replace('T', ' ').substring(0, 19) : '-'; }
 function escapeHtml(s) { if (!s) return ''; return String(s).replace(/[&<>"']/g, function(m) { return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]; }); }
 function escapeAttr(s) { if (!s) return ''; return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+
+function initScopePickers() {
+    if (!window.AuthScopePicker) {
+        return;
+    }
+    AuthScopePicker.bind({
+        contextPath: window.__CTX__ || '',
+        track: 'oauth',
+        pairs: [
+            { inputId: 'saveScope', containerId: 'saveScopePicker' },
+            { inputId: 'editScope', containerId: 'editScopePicker' }
+        ]
+    });
+}
+document.addEventListener('DOMContentLoaded', initScopePickers);
 //</#noparse>
 </script>
 </body>

@@ -4,6 +4,8 @@ import static jakarta.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
 import static jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED;
 import static org.apache.oltu.oauth2.common.OAuth.HttpMethod.POST;
 
+import cn.org.autumn.auth.scope.AuthScopeResolution;
+import cn.org.autumn.modules.auth.support.AuthScopeSupport;
 import cn.org.autumn.modules.oauth.oauth2.support.OAuthAccessTokenResolver;
 import cn.org.autumn.modules.oauth.oauth2.support.AuthAuthorizeLoginSupport;
 import cn.org.autumn.modules.oauth.oauth2.support.OAuthAuthorizeAppIconSupport;
@@ -112,6 +114,9 @@ public class OplAuthorizationController {
     @Autowired
     private OAuthAuthorizeAppIconSupport authorizeAppIconSupport;
 
+    @Autowired
+    private AuthScopeSupport authScopeSupport;
+
     @RequestMapping(value = "authorize", method = {RequestMethod.GET, RequestMethod.HEAD})
     public String authorize(HttpServletRequest request, HttpServletResponse response, Model model,
                             @RequestParam(name = OplConstants.PARAM_APP_ID) String appId,
@@ -127,9 +132,8 @@ public class OplAuthorizationController {
             }
             OpenAppEntity app = openAppService.requireActiveApp(appId);
             openAppService.validateRedirectUri(app, redirectUri);
-            String resolvedScope = StringUtils.defaultIfBlank(scope, app.getScope());
-            oplExtensionService.validateScope(OplSnapshots.toAppSnapshot(app), resolvedScope);
-            OpenAuthorizationRequest authRequest = buildAuthRequest(appId, redirectUri, responseType, resolvedScope, state, null, false);
+            String grantedScope = resolveOplGrantedScope(app, scope);
+            OpenAuthorizationRequest authRequest = buildAuthRequest(appId, redirectUri, responseType, grantedScope, state, null, false);
             authRequest.setAppType(app.getAppType());
             oplExtensionService.beforeAuthorizePage(OplSnapshots.toAppSnapshot(app), authRequest);
             String loginError = request.getParameter("error");
@@ -141,14 +145,14 @@ public class OplAuthorizationController {
             }
             if (!loggedIn && scanTicketService.shouldUseQrAuthorize()) {
                 try {
-                    TicketSnapshot ticket = scanTicketService.createAuthorizeTicket(request, appId, redirectUri, resolvedScope, state, null);
-                    return oplConsentView(request, response, model, app, appId, redirectUri, responseType, resolvedScope, state, codeChallenge, codeChallengeMethod, ticket, false, loginError);
+                    TicketSnapshot ticket = scanTicketService.createAuthorizeTicket(request, appId, redirectUri, grantedScope, state, null);
+                    return oplConsentView(request, response, model, app, appId, redirectUri, responseType, grantedScope, state, codeChallenge, codeChallengeMethod, ticket, false, loginError);
                 } catch (Exception e) {
                     if (log.isDebugEnabled())
                         log.debug("opl QRC authorize ticket failed: {}", e.getMessage());
                 }
             }
-            return oplConsentView(request, response, model, app, appId, redirectUri, responseType, resolvedScope, state, codeChallenge, codeChallengeMethod, null, loggedIn, loginError);
+            return oplConsentView(request, response, model, app, appId, redirectUri, responseType, grantedScope, state, codeChallenge, codeChallengeMethod, null, loggedIn, loginError);
         } catch (Exception e) {
             if (log.isDebugEnabled())
                 log.debug("opl authorize failed: {}", e.getMessage());
@@ -179,23 +183,23 @@ public class OplAuthorizationController {
             if (appForCsrf == null) {
                 return OAuthResponseSupport.writeOAuthError(response, "无效的授权请求", OAuthError.OAUTH_ERROR, SC_BAD_REQUEST);
             }
-            return oplConsentView(request, response, model, appForCsrf, appId, redirectUri, responseType, scope, state, codeChallenge, codeChallengeMethod, null, true, "授权请求已过期，请刷新页面后重试");
+            String csrfGrantedScope = resolveOplGrantedScope(appForCsrf, scope);
+            return oplConsentView(request, response, model, appForCsrf, appId, redirectUri, responseType, csrfGrantedScope, state, codeChallenge, codeChallengeMethod, null, true, "授权请求已过期，请刷新页面后重试");
         }
         OpenAppEntity app = openAppService.requireActiveApp(appId);
         openAppService.validateRedirectUri(app, redirectUri);
-        String resolvedScope = StringUtils.defaultIfBlank(scope, app.getScope());
-        oplExtensionService.validateScope(OplSnapshots.toAppSnapshot(app), resolvedScope);
+        String grantedScope = resolveOplGrantedScope(app, scope);
         if (!OAuthConsentSupport.consented(userConsent)) {
-            return oplConsentView(request, response, model, app, appId, redirectUri, responseType, resolvedScope, state, codeChallenge, codeChallengeMethod, null, true, "请勾选授权协议后再确认");
+            return oplConsentView(request, response, model, app, appId, redirectUri, responseType, grantedScope, state, codeChallenge, codeChallengeMethod, null, true, "请勾选授权协议后再确认");
         }
         if (!ResponseType.CODE.toString().equalsIgnoreCase(responseType)) {
             return OAuthResponseSupport.writeOAuthError(response, "仅支持authorization_code", OAuthError.OAUTH_ERROR, SC_BAD_REQUEST);
         }
         SysUserEntity user = ShiroUtils.getUserEntity();
-        OpenAuthorizationRequest authRequest = buildAuthRequest(appId, redirectUri, responseType, resolvedScope, state, user.getUuid(), true);
+        OpenAuthorizationRequest authRequest = buildAuthRequest(appId, redirectUri, responseType, grantedScope, state, user.getUuid(), true);
         authRequest.setAppType(app.getAppType());
         oplExtensionService.beforeApprove(OplSnapshots.toAppSnapshot(app), authRequest);
-        OpenCodeEntity codeEntity = openCodeService.issue(appId, user.getUuid(), redirectUri, codeChallenge, codeChallengeMethod);
+        OpenCodeEntity codeEntity = openCodeService.issue(appId, user.getUuid(), redirectUri, codeChallenge, codeChallengeMethod, grantedScope);
         oplExtensionService.afterCodeIssued(OplSnapshots.toAppSnapshot(app), authRequest, codeEntity.getCode());
         RedirectView view = new RedirectView(OAuthRedirectSupport.appendCodeAndState(redirectUri, codeEntity.getCode(), state), false);
         return new ModelAndView(view);
@@ -301,15 +305,13 @@ public class OplAuthorizationController {
             if (snapshot == null) {
                 return OAuthResponseSupport.oauthErrorBody("授权码无效", OAuthError.TokenResponse.INVALID_GRANT, SC_BAD_REQUEST);
             }
-            OpenAppEntity app = openAppService.getByAppId(appId);
-            if (app != null && StringUtils.isNotBlank(app.getScope())) {
-                responseScope = app.getScope();
-            }
+            responseScope = StringUtils.defaultIfBlank(snapshot.getScope(), OplConstants.DEFAULT_SCOPE);
         } else if (GrantType.REFRESH_TOKEN.toString().equalsIgnoreCase(grantType)) {
             snapshot = openPlatformService.refreshToken(appId, refreshToken);
             if (snapshot == null) {
                 return OAuthResponseSupport.oauthErrorBody("refresh_token无效", OAuthError.TokenResponse.INVALID_GRANT, SC_BAD_REQUEST);
             }
+            responseScope = StringUtils.defaultIfBlank(snapshot.getScope(), OplConstants.DEFAULT_SCOPE);
         } else {
             return OAuthResponseSupport.oauthErrorBody("不支持的grant_type", OAuthError.TokenResponse.UNSUPPORTED_GRANT_TYPE, SC_BAD_REQUEST);
         }
@@ -426,8 +428,6 @@ public class OplAuthorizationController {
     }
 
     private void fillAuthorizeModel(Model model, OpenAppEntity app, String appId, String redirectUri, String responseType, String scope, String state, String codeChallenge, String codeChallengeMethod, String error) {
-        model.addAttribute("oplAuthorize", true);
-        model.addAttribute("bodyClass", "login-page-v2 oauth-authorize-mode");
         model.addAttribute("appId", appId);
         model.addAttribute("appName", app.getName());
         AuthPageAttributes.applyConsentApp(model, StringUtils.defaultIfBlank(app.getName(), appId), authorizeAppIconSupport.resolveByAppId(appId));
@@ -442,6 +442,17 @@ public class OplAuthorizationController {
         if (StringUtils.isNotBlank(error)) {
             model.addAttribute("error", error);
         }
+    }
+
+    private String resolveOplGrantedScope(OpenAppEntity app, String scope) throws Exception {
+        String requested = StringUtils.defaultIfBlank(scope, app == null ? null : app.getScope());
+        requested = StringUtils.defaultIfBlank(requested, OplConstants.DEFAULT_SCOPE);
+        AuthScopeResolution resolution = authScopeSupport.resolveBoundedOpl(OplSnapshots.toAppSnapshot(app), requested);
+        if (resolution.getGranted().isEmpty()) {
+            throw new IllegalArgumentException("invalid_scope");
+        }
+        oplExtensionService.validateScope(OplSnapshots.toAppSnapshot(app), resolution.getGranted().toScopeString());
+        return resolution.getGranted().toScopeString();
     }
 
     private OpenAuthorizationRequest buildAuthRequest(String appId, String redirectUri, String responseType, String scope, String state, String userUuid, boolean consented) {

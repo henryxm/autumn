@@ -7,6 +7,7 @@ import cn.org.autumn.modules.client.dto.OauthRpBindAdminView;
 import cn.org.autumn.modules.client.dto.OauthRpClientView;
 import cn.org.autumn.modules.client.entity.WebAuthenticationEntity;
 import cn.org.autumn.modules.client.entity.WebOauthBindEntity;
+import cn.org.autumn.modules.auth.support.AuthScopeSupport;
 import cn.org.autumn.modules.oauth.entity.ClientDetailsEntity;
 import cn.org.autumn.modules.oauth.service.ClientDetailsService;
 import cn.org.autumn.modules.support.AdminPageQueries;
@@ -49,6 +50,9 @@ public class OauthRpAdminService {
 
     @Autowired
     private SysUserService sysUserService;
+
+    @Autowired
+    private AuthScopeSupport authScopeSupport;
 
     public Map<String, Object> overview() {
         Map<String, Object> data = new LinkedHashMap<>();
@@ -125,6 +129,7 @@ public class OauthRpAdminService {
             }
         }
         applyClientFields(existing, name, clientSecret, originUri, redirectUri, scope, userInfoDelivery, baseUrl, sameInstance, icon, hash, pageLogin);
+        validateOAuthScope(existing.getScope());
         webAuthenticationService.updateAllColumnById(existing);
         return toClientView(existing);
     }
@@ -134,6 +139,7 @@ public class OauthRpAdminService {
         WebAuthenticationEntity existing = requireClient(clientId);
         String baseUrl = sysConfigService.getBaseUrl();
         applyClientFields(existing, name, clientSecret, originUri, redirectUri, scope, userInfoDelivery, baseUrl, WebPathUtils.isSameSiteUrl(originUri, baseUrl), icon, hash, pageLogin);
+        validateOAuthScope(existing.getScope());
         webAuthenticationService.updateAllColumnById(existing);
         return toClientView(existing);
     }
@@ -341,5 +347,18 @@ public class OauthRpAdminService {
             return userUuid;
         }
         return StringUtils.defaultIfBlank(user.getUsername(), userUuid);
+    }
+
+    private void validateOAuthScope(String scope) {
+        if (StringUtils.isBlank(scope)) {
+            return;
+        }
+        ClientDetailsEntity helper = new ClientDetailsEntity();
+        helper.setScope(scope.trim());
+        try {
+            authScopeSupport.validateOAuthScope(authScopeSupport.toSnapshot(helper), scope.trim());
+        } catch (Exception e) {
+            throw new IllegalArgumentException("无效的授权范围: " + scope.trim(), e);
+        }
     }
 }
