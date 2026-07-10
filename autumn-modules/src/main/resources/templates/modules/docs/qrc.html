@@ -56,11 +56,29 @@
                 <tr><td><strong>AI_QRC.md</strong></td><td>模块结构、配置、安全基线</td></tr>
             </table>
 
+            <h3>AutumnQrc 前端通知（方案 C）</h3>
+            <p>静态脚本 <code>statics/js/autumn-qrc-core.js</code> 导出 <code>window.AutumnQrc</code>，统一 B2/D 建票与状态通知。</p>
+            <table>
+                <tr><th>API</th><th>说明</th></tr>
+                <tr><td><code>mergeInto(vm, options)</code></td><td>合并扫码方法到 Vue/宿主；检测到 <code>$set</code> 时自动 <code>wireVueScannerUi</code></td></tr>
+                <tr><td><code>startTicketNotify()</code></td><td>建票成功后统一入口：RP/AS 均先 <code>GET /ticket/stream</code>（SSE），失败/超时后降级轮询</td></tr>
+                <tr><td><code>startSseNotify()</code></td><td>SSE 主通道（RP/AS 共用）；watchdog 超时或 <code>onerror</code> 时 <code>startPollFallback</code></td></tr>
+                <tr><td><code>startPollFallback()</code></td><td>幂等启动 <code>GET /ticket/status</code> 轮询（RP/AS 共用降级）</td></tr>
+                <tr><td><code>resumeTicketNotify({ uuid, qrUrl })</code></td><td>授权页预置 uuid：跳过 create，直接 SSE + 降级轮询</td></tr>
+                <tr><td><code>stopNotify()</code></td><td>关闭 EventSource、清除轮询与 watchdog</td></tr>
+                <tr><td><code>wireVueScannerUi(vm)</code></td><td>Vue 2 扫码成功 UI（<code>qrPhase</code> / <code>scannerDisplayName</code>）</td></tr>
+                <tr><td><code>bindPlainHostScannedUi(host, ui)</code></td><td>非 Vue 宿主 pending/scanned DOM 切换</td></tr>
+            </table>
+            <div class="doc-note">
+                <strong>方案 C</strong>：RP/AS 模式 SSE 正常时无并行轮询；catch-up <code>PENDING</code> 不视为 healthy，watchdog 仍会在 <code>sseFallbackDelayMs</code>（默认 5000）内启动降级；<code>EventSource.onerror</code> 时降级 <code>/ticket/status</code>。Nginx 需关闭 SSE 缓冲（<code>X-Accel-Buffering: no</code>）。
+            </div>
+
             <h3>HTTP 路径与报文</h3>
             <table>
                 <tr><th>前缀</th><th>Controller</th><th>报文</th><th>鉴权</th></tr>
                 <tr><td><code>/qrc/api/v1/*</code></td><td>QrcApiController</td><td><code>Request</code> / <code>Response</code></td><td>APP Token 或 Open client 凭证</td></tr>
-                <tr><td><code>/qrc/scanticket/web/*</code></td><td>ScanTicketController</td><td><code>Request</code> 入参 + <code>R</code> 出参</td><td>匿名</td></tr>
+                <tr><td><code>/qrc/scanticket/web/ticket/stream</code></td><td>ScanTicketController</td><td>SSE</td><td>匿名（B2 主通道）</td></tr>
+                <tr><td><code>/qrc/scanticket/web/ticket/status</code></td><td>ScanTicketController</td><td><code>R</code></td><td>匿名（B2 降级轮询）</td></tr>
                 <tr><td><code>/qrc/scanticket/*</code></td><td>ScanTicketControllerGen</td><td><code>R</code></td><td>后台权限</td></tr>
                 <tr><td><code>/client/oauth2/qrc/web/*</code></td><td>ClientOauth2QrcController</td><td><code>R</code></td><td>匿名（RP 联邦 D 模式）</td></tr>
                 <tr><td><code>/oauth2/authorize</code></td><td>AuthorizationController</td><td>HTML / redirect</td><td>浏览器</td></tr>

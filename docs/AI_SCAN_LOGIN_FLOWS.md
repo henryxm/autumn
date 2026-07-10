@@ -12,7 +12,7 @@
 
 | 标准 | 适用场景 | 典型子模式 | 建票 | 取结果 / 完成登录 | 前端/调用方 |
 |------|----------|------------|------|-------------------|-------------|
-| **标准一：网页授权** | 浏览器登录页、OAuth 授权页 | **B2** 同源 PC 扫码 | `POST /qrc/scanticket/web/ticket/create` | 轮询 `GET .../ticket/status` → `POST .../session/exchange` | `autumn-qrc-core.js` `mode:'as'` |
+| **标准一：网页授权** | 浏览器登录页、OAuth 授权页 | **B2** 同源 PC 扫码 | `POST /qrc/scanticket/web/ticket/create` | **SSE** `GET .../ticket/stream` + 降级 `ticket/status` → `POST .../session/exchange` | `autumn-qrc-core.js` `mode:'as'` |
 | | | **D** RP 联邦（B←A） | `POST /client/oauth2/qrc/web/ticket/create` | **SSE** `GET .../ticket/stream`；入站自动 `completeRemoteOAuthCallback` | `mode:'rp'` 或 `qrProviders` |
 | | | **B1** OAuth Redirect | `GET /oauth2/authorize` | `redirect_uri?code=` → token | 浏览器跳转 |
 | **标准二：服务端建票** | 第三方后台、Native、自建 UI | **B3** Open API | `POST /qrc/api/v1/ticket/open/create` | 按 `delivery` 轮询 / Webhook / DeepLink → `/oauth2/token` | 服务端 HTTP，无 Autumn 登录页 |
@@ -33,7 +33,7 @@
 | PC 网页 API | `ScanTicketController` | `/qrc/scanticket/web/*` |
 | RP 网页 API | `ClientOauth2QrcController` | `/client/oauth2/qrc/web/*`（**无** `local-status` / `complete`） |
 | Open API | `QrcApiController` | `/qrc/api/v1/ticket/open/*`、APP `scan`/`confirm` |
-| 前端 | `autumn-qrc-core.js` | B2 轮询；D **EventSource** |
+| 前端 | `autumn-qrc-core.js` | B2/D 均为 **EventSource** + 降级轮询 |
 
 ---
 
@@ -117,18 +117,23 @@ sequenceDiagram
   Web->>Svc: create + Redis 票据
   Web-->>JS: qrUrl, uuid
   JS->>PC: 渲染二维码
-  loop 每 pollIntervalMs（默认 2s）
-    JS->>Web: GET /ticket/status?uuid=
-    Web->>Svc: getRequired + toStatusResult
-    Web-->>JS: PENDING / SCANNED / ...
+  JS->>Web: GET /ticket/stream?uuid=\n(EventSource)
+  Web-->>JS: SSE status PENDING
+
+  alt SSE 不可用 / onerror / watchdog 超时
+    loop 每 pollIntervalMs（默认 2s）
+      JS->>Web: GET /ticket/status?uuid=
+      Web->>Svc: getRequired + toStatusResult
+      Web-->>JS: PENDING / SCANNED / ...
+    end
   end
+
   APP->>API: POST /ticket/scan（@Authenticated）
   API->>Svc: scan → SCANNED
-  Note over JS,Web: 下次轮询返回 scannerBrief
+  Svc-->>JS: SSE SCANNED + scannerBrief
   APP->>API: POST /ticket/confirm
   API->>Svc: confirm → Handler 发 exchange
-  Svc-->>API: COMPLETED + exchange
-  JS->>Web: GET /ticket/status → exchange 就绪
+  Svc-->>JS: SSE COMPLETED + exchange
   JS->>Web: POST /session/exchange\n{ exchange }
   Web->>Svc: ScanWebSupport.exchangeSession
   Note over Web: establishSession（Shiro）
@@ -159,7 +164,7 @@ stateDiagram-v2
 
 ### 3.3 D — RP 联邦扫码（b.com ← a.com）
 
-**场景**：b.com 登录页扫码，身份来自 a.com；**零轮询**——浏览器仅一条 SSE，AS 两次 Webhook 驱动状态与登录完成。
+**场景**：b.com 登录页扫码，身份来自 a.com；**方案 C**——浏览器优先一条 SSE，SSE 不可用时降级 `ticket/status`；AS 两次 Webhook 驱动状态与登录完成。
 
 ```mermaid
 sequenceDiagram
@@ -180,6 +185,11 @@ sequenceDiagram
   JS->>RP: GET /ticket/stream?uuid=\n(EventSource)
   RP->>Store: subscribe + catch-up PENDING
   Store-->>JS: SSE status PENDING
+
+  alt SSE 不可用 / onerror / watchdog 超时
+    JS->>RP: GET /ticket/status?uuid=
+    RP-->>JS: status + scannerBrief
+  end
 
   APP->>AS: POST scan
   AS->>WH: deliver qrc.scanned\n+ scannerBrief
@@ -233,9 +243,12 @@ sequenceDiagram
 **D 模式禁止路径（已删除，勿调用）**
 
 - `GET|POST .../ticket/local-status`
-- `POST .../ticket/status`（RP 代理 AS 轮询）
 - `POST .../ticket/complete`
 - `ScanLoginConfig.legacyRemotePoll`
+
+**D 模式降级路径（方案 C）**
+
+- `GET .../ticket/status?uuid=` — 仅当 SSE 不可用或超时后由 `autumn-qrc-core.js` 启动轮询
 
 ### 3.4 B1 — OAuth 浏览器 Redirect（简述）
 

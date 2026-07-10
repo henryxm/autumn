@@ -12,7 +12,9 @@ import cn.org.autumn.modules.qrc.dto.TicketCreateRequest;
 import cn.org.autumn.modules.qrc.dto.TicketCreateResult;
 import cn.org.autumn.modules.qrc.dto.TicketStatusResult;
 import cn.org.autumn.modules.qrc.model.DeliveryMode;
+import cn.org.autumn.modules.qrc.model.AsQrcStreamEvent;
 import cn.org.autumn.modules.qrc.model.TicketSnapshot;
+import cn.org.autumn.modules.qrc.service.AsQrcEventStreamService;
 import cn.org.autumn.modules.qrc.service.ScanTicketService;
 import cn.org.autumn.modules.qrc.support.QrcApiSupport;
 import cn.org.autumn.modules.qrc.support.ScanWebSupport;
@@ -59,6 +61,9 @@ public class ScanLoginFacade {
     private RpQrcEventStreamService rpQrcEventStreamService;
 
     @Autowired
+    private AsQrcEventStreamService asQrcEventStreamService;
+
+    @Autowired
     private ConnectLoginService connectLoginService;
 
     /** B2：同源 Web 建票。 */
@@ -71,6 +76,20 @@ public class ScanLoginFacade {
     public TicketStatusResult pollAsWebStatus(String uuid) throws Exception {
         TicketSnapshot ticket = scanTicketService.getRequired(uuid);
         return scanTicketService.toStatusResult(ticket);
+    }
+
+    /** B2：同源 Web SSE 订阅（建票后浏览器主推送通道）。 */
+    public SseEmitter streamAsWebTicket(String uuid) throws Exception {
+        if (StringUtils.isBlank(uuid)) {
+            throw new IllegalArgumentException("uuid 不能为空");
+        }
+        TicketSnapshot ticket = scanTicketService.getRequired(uuid);
+        TicketStatusResult status = scanTicketService.toStatusResult(ticket);
+        AsQrcStreamEvent catchUp = AsQrcStreamEvent.from(status);
+        if (catchUp == null) {
+            throw new IllegalStateException("扫码会话不存在或已过期");
+        }
+        return asQrcEventStreamService.subscribe(uuid, ticket.getExpired(), catchUp);
     }
 
     /** B2：同源 Web exchange 换 Session，返回跳转 URL。 */

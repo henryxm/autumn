@@ -12,15 +12,18 @@ import cn.org.autumn.modules.spm.interceptor.SpmInterceptor;
 import cn.org.autumn.modules.usr.interceptor.AuthorizationInterceptor;
 import cn.org.autumn.utils.R;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @RestController
 @RequestMapping("qrc/scanticket")
@@ -45,6 +48,18 @@ public class ScanTicketController extends ScanTicketControllerGen {
         } catch (Exception e) {
             return R.error(e.getMessage());
         }
+    }
+
+    @GetMapping(value = "/web/ticket/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @SkipInterceptor({AuthorizationInterceptor.class, SpmInterceptor.class})
+    public SseEmitter webStream(@RequestParam("uuid") String uuid, HttpServletResponse response) throws Exception {
+        response.setHeader("Cache-Control", "no-cache, no-transform");
+        response.setHeader("Connection", "keep-alive");
+        response.setHeader("X-Accel-Buffering", "no");
+        if (StringUtils.isBlank(uuid)) {
+            throw new IllegalArgumentException("uuid 不能为空");
+        }
+        return scanLoginFacade.streamAsWebTicket(uuid);
     }
 
     @GetMapping("/web/ticket/status")

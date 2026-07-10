@@ -256,11 +256,120 @@
         return (ctx || '') + '/qrc/scanticket/web';
     }
 
+    function resolveScannerIconUrl(icon, ctx) {
+        if (!icon) {
+            return '';
+        }
+        if (/^https?:\/\//i.test(icon)) {
+            return icon;
+        }
+        var base = ctx || '';
+        if (icon.charAt(0) === '/') {
+            return base + icon;
+        }
+        return base + '/' + icon;
+    }
+
+    function wireVueScannerUi(vm, ctx) {
+        if (!vm) {
+            return;
+        }
+        var pageCtx = ctx || '';
+        vm.applyScannerBrief = function (brief) {
+            if (!brief) {
+                return;
+            }
+            var name = brief.displayName || '';
+            var iconUrl = typeof vm.resolveScannerIconUrl === 'function'
+                ? vm.resolveScannerIconUrl(brief.icon)
+                : resolveScannerIconUrl(brief.icon, pageCtx);
+            if (typeof vm.$set === 'function') {
+                vm.$set(vm, 'scannerDisplayName', name);
+                vm.$set(vm, 'scannerIconUrl', iconUrl);
+                vm.$set(vm, 'qrPhase', 'scanned');
+            } else {
+                vm.scannerDisplayName = name;
+                vm.scannerIconUrl = iconUrl;
+                vm.qrPhase = 'scanned';
+            }
+        };
+        vm.resetQrScannedState = function () {
+            if (typeof vm.$set === 'function') {
+                vm.$set(vm, 'qrPhase', 'pending');
+                vm.$set(vm, 'scannerDisplayName', '');
+                vm.$set(vm, 'scannerIconUrl', '');
+            } else {
+                vm.qrPhase = 'pending';
+                vm.scannerDisplayName = '';
+                vm.scannerIconUrl = '';
+            }
+        };
+    }
+
+    function bindPlainHostScannedUi(host, ui) {
+        ui = ui || {};
+        if (!host) {
+            return function () {};
+        }
+        var pendingEl = ui.pendingEl;
+        var scannedEl = ui.scannedEl;
+        var tipEl = ui.tipEl;
+        var avatarImg = ui.avatarImg;
+        var avatarPh = ui.avatarPh;
+        var nameEl = ui.nameEl;
+        var statusEl = ui.statusEl;
+        var pageCtx = ui.ctx || '';
+        return function syncPlainHostScannedUi() {
+            var phase = host.qrPhase || 'pending';
+            var scanned = phase === 'scanned' || phase === 'done';
+            if (pendingEl) {
+                pendingEl.style.display = scanned ? 'none' : '';
+            }
+            if (scannedEl) {
+                scannedEl.style.display = scanned ? '' : 'none';
+            }
+            if (tipEl) {
+                tipEl.style.display = scanned ? 'none' : '';
+                if (!scanned && host.qrStatus) {
+                    tipEl.textContent = host.qrStatus;
+                }
+            }
+            if (!scanned) {
+                return;
+            }
+            var iconUrl = host.scannerIconUrl || '';
+            if (!iconUrl && host.scannerBrief && host.scannerBrief.icon) {
+                iconUrl = typeof host.resolveScannerIconUrl === 'function'
+                    ? host.resolveScannerIconUrl(host.scannerBrief.icon)
+                    : resolveScannerIconUrl(host.scannerBrief.icon, pageCtx);
+            }
+            if (avatarImg && avatarPh) {
+                if (iconUrl) {
+                    avatarImg.src = iconUrl;
+                    avatarImg.style.display = '';
+                    avatarPh.style.display = 'none';
+                } else {
+                    avatarImg.style.display = 'none';
+                    avatarPh.style.display = '';
+                }
+            }
+            if (nameEl) {
+                nameEl.textContent = host.scannerDisplayName || '';
+                nameEl.style.display = host.scannerDisplayName ? '' : 'none';
+            }
+            if (statusEl && host.qrStatus) {
+                statusEl.textContent = host.qrStatus;
+            }
+        };
+    }
+
     function createQrMethods(options) {
         options = options || {};
         var ctx = options.ctx || '';
         var mode = normalizeMode(options.mode);
         var pollIntervalMs = options.pollIntervalMs || 2000;
+        var sseFallbackDelayMs = options.sseFallbackDelayMs == null ? 5000 : options.sseFallbackDelayMs;
+        var sseFallbackOnError = options.sseFallbackOnError !== false;
         var boxId = options.boxId || 'loginQrcodeBox';
         var prefix = apiPrefix(mode, ctx);
 
@@ -272,6 +381,30 @@
             scannerIconUrl: '',
             qrcPollTimer: null,
             qrcEventSource: null,
+            qrcNotifyChannel: null,
+            sseOpened: false,
+            sseReceivedStatus: false,
+            sseFallbackTimer: null,
+            clearSseFallbackTimer: function () {
+                if (this.sseFallbackTimer) {
+                    clearTimeout(this.sseFallbackTimer);
+                    this.sseFallbackTimer = null;
+                }
+            },
+            stopNotify: function () {
+                this.clearSseFallbackTimer();
+                if (this.qrcPollTimer) {
+                    clearInterval(this.qrcPollTimer);
+                    this.qrcPollTimer = null;
+                }
+                if (this.qrcEventSource) {
+                    this.qrcEventSource.close();
+                    this.qrcEventSource = null;
+                }
+                this.qrcNotifyChannel = null;
+                this.sseOpened = false;
+                this.sseReceivedStatus = false;
+            },
             resetQrScannedState: function () {
                 this.qrPhase = 'pending';
                 this.scannerDisplayName = '';
@@ -316,14 +449,7 @@
                 });
             },
             stopPoll: function () {
-                if (this.qrcPollTimer) {
-                    clearInterval(this.qrcPollTimer);
-                    this.qrcPollTimer = null;
-                }
-                if (this.qrcEventSource) {
-                    this.qrcEventSource.close();
-                    this.qrcEventSource = null;
-                }
+                this.stopNotify();
             },
             refreshQrLogin: function () {
                 this.resetQrScannedState();
@@ -333,7 +459,7 @@
                 var self = this;
                 self.resetQrScannedState();
                 self.qrStatus = '正在加载二维码...';
-                self.stopPoll();
+                self.stopNotify();
                 var createUrl = prefix + '/ticket/create';
                 var createData = { callback: options.callback || '' };
                 if (options.type) {
@@ -369,13 +495,7 @@
                         self.qrcUuid = res.data.uuid;
                         self.renderQrCode(res.data.qrUrl);
                         self.qrStatus = '等待扫码...';
-                        if (mode === 'rp') {
-                            self.subscribeRpStream(onUnavailable);
-                            return;
-                        }
-                        self.qrcPollTimer = setInterval(function () {
-                            self.pollQrStatus(onUnavailable);
-                        }, pollIntervalMs);
+                        self.startTicketNotify(onUnavailable);
                     },
                     error: function (xhr) {
                         if (typeof onUnavailable === 'function') {
@@ -409,52 +529,58 @@
                     if (!res || res.code !== 0 || !res.data) {
                         return;
                     }
-                    var data = res.data;
-                    if (data.status === 'SCANNED') {
-                        self.applyScannerBrief(data.scannerBrief);
-                        self.qrStatus = isOpenCredential(options) ? '扫码成功，请在手机点击确认授权' : '扫码成功，请在手机点击登录';
-                    }
-                    if (isOpenCredential(options) && data.status === 'COMPLETED' && data.result && data.result.code) {
-                        self.completeOpenQrcLogin(data.result.code, onUnavailable);
-                        return;
-                    }
-                    if (typeof options.onAuthorizeExchange === 'function' && (data.status === 'CONFIRMED' || data.status === 'COMPLETED') && data.exchange) {
-                        self.stopPoll();
-                        options.onAuthorizeExchange(data.exchange, self);
-                        return;
-                    }
-                    if ((data.status === 'CONFIRMED' || data.status === 'COMPLETED') && data.exchange) {
-                        self.qrPhase = 'done';
-                        self.qrStatus = '登录成功，正在跳转...';
-                        self.stopPoll();
-                        $.ajax({
-                            type: 'POST',
-                            url: prefix + '/session/exchange',
-                            contentType: 'application/json',
-                            data: JSON.stringify({ data: { exchange: data.exchange } }),
-                            dataType: 'json',
-                            success: function (result) {
-                                if (result.code === 0) {
-                                    var target = result.data != null ? String(result.data) : null;
-                                    if (typeof options.onSuccess === 'function') {
-                                        options.onSuccess(target, self);
-                                    } else if (target) {
-                                        (window.top || window).location.href = target;
-                                    } else {
-                                        (window.top || window).location.href = 'index.html';
-                                    }
-                                } else {
-                                    self.qrStatus = result.msg || '登录失败';
-                                }
-                            },
-                            error: function () {
-                                self.qrStatus = '网络异常，请刷新二维码重试';
-                            }
-                        });
-                        return;
-                    }
-                    self.handleQrTerminalStatus(data.status);
+                    self.processAsStatusData(res.data, onUnavailable);
                 });
+            },
+            processAsStatusData: function (data, onUnavailable) {
+                var self = this;
+                if (!data) {
+                    return;
+                }
+                if (data.status === 'SCANNED') {
+                    self.applyScannerBrief(data.scannerBrief);
+                    self.qrStatus = isOpenCredential(options) ? '扫码成功，请在手机点击确认授权' : '扫码成功，请在手机点击登录';
+                }
+                if (isOpenCredential(options) && data.status === 'COMPLETED' && data.result && data.result.code) {
+                    self.completeOpenQrcLogin(data.result.code, onUnavailable);
+                    return;
+                }
+                if (typeof options.onAuthorizeExchange === 'function' && (data.status === 'CONFIRMED' || data.status === 'COMPLETED') && data.exchange) {
+                    self.stopNotify();
+                    options.onAuthorizeExchange(data.exchange, self);
+                    return;
+                }
+                if ((data.status === 'CONFIRMED' || data.status === 'COMPLETED') && data.exchange) {
+                    self.qrPhase = 'done';
+                    self.qrStatus = '登录成功，正在跳转...';
+                    self.stopNotify();
+                    $.ajax({
+                        type: 'POST',
+                        url: prefix + '/session/exchange',
+                        contentType: 'application/json',
+                        data: JSON.stringify({ data: { exchange: data.exchange } }),
+                        dataType: 'json',
+                        success: function (result) {
+                            if (result.code === 0) {
+                                var target = result.data != null ? String(result.data) : null;
+                                if (typeof options.onSuccess === 'function') {
+                                    options.onSuccess(target, self);
+                                } else if (target) {
+                                    (window.top || window).location.href = target;
+                                } else {
+                                    (window.top || window).location.href = 'index.html';
+                                }
+                            } else {
+                                self.qrStatus = result.msg || '登录失败';
+                            }
+                        },
+                        error: function () {
+                            self.qrStatus = '网络异常，请刷新二维码重试';
+                        }
+                    });
+                    return;
+                }
+                self.handleQrTerminalStatus(data.status);
             },
             completeOpenQrcLogin: function (code, onUnavailable) {
                 var self = this;
@@ -466,7 +592,7 @@
                 }
                 self.qrPhase = 'done';
                 self.qrStatus = '授权成功，正在跳转...';
-                self.stopPoll();
+                self.stopNotify();
                 $.ajax({
                     type: 'POST',
                     url: (ctx || '') + '/open/oauth2/qrc/web/complete',
@@ -503,25 +629,69 @@
                     }
                 });
             },
-            subscribeRpStream: function (onUnavailable) {
+            startTicketNotify: function (onUnavailable) {
+                this.startSseNotify(onUnavailable);
+            },
+            startPollFallback: function (onUnavailable) {
                 var self = this;
-                if (!self.qrcUuid || typeof EventSource === 'undefined') {
-                    if (typeof onUnavailable === 'function') {
-                        onUnavailable(true);
-                    }
-                    self.qrStatus = '当前浏览器不支持实时推送，请刷新重试';
+                if (self.qrcPollTimer || self.qrPhase === 'done') {
                     return;
                 }
-                self.stopPoll();
-                var streamUrl = prefix + '/ticket/stream?uuid=' + encodeURIComponent(self.qrcUuid);
-                var es = new EventSource(streamUrl);
-                self.qrcEventSource = es;
+                if (self.qrcNotifyChannel === 'sse') {
+                    self.qrcNotifyChannel = 'poll';
+                } else if (!self.qrcNotifyChannel) {
+                    self.qrcNotifyChannel = 'poll';
+                }
                 self.qrcPollTimer = setInterval(function () {
                     if (self.qrPhase === 'done') {
                         return;
                     }
-                    self.pollRpStatus(onUnavailable);
+                    self.pollQrStatus(onUnavailable);
                 }, pollIntervalMs);
+            },
+            startPollOnly: function (onUnavailable) {
+                var self = this;
+                self.stopNotify();
+                self.qrcNotifyChannel = 'poll';
+                self.startPollFallback(onUnavailable);
+            },
+            startAsPoll: function (onUnavailable) {
+                this.startPollOnly(onUnavailable);
+            },
+            scheduleSseFallback: function (onUnavailable) {
+                var self = this;
+                self.clearSseFallbackTimer();
+                if (self.sseReceivedStatus || self.qrPhase === 'done') {
+                    return;
+                }
+                self.sseFallbackTimer = setTimeout(function () {
+                    self.sseFallbackTimer = null;
+                    if (!self.sseReceivedStatus && self.qrPhase !== 'done') {
+                        self.startPollFallback(onUnavailable);
+                    }
+                }, sseFallbackDelayMs);
+            },
+            markSseHealthy: function (data) {
+                if (!data || !data.status || data.status === 'PENDING') {
+                    return;
+                }
+                this.sseReceivedStatus = true;
+                this.clearSseFallbackTimer();
+            },
+            startSseNotify: function (onUnavailable) {
+                var self = this;
+                if (!self.qrcUuid) {
+                    return;
+                }
+                if (typeof EventSource === 'undefined') {
+                    self.startPollFallback(onUnavailable);
+                    return;
+                }
+                self.stopNotify();
+                self.qrcNotifyChannel = 'sse';
+                var streamUrl = prefix + '/ticket/stream?uuid=' + encodeURIComponent(self.qrcUuid);
+                var es = new EventSource(streamUrl);
+                self.qrcEventSource = es;
                 es.addEventListener('status', function (ev) {
                     if (!ev || !ev.data) {
                         return;
@@ -532,18 +702,55 @@
                     } catch (e) {
                         return;
                     }
-                    self.handleRpStreamEvent(data, onUnavailable);
+                    self.markSseHealthy(data);
+                    self.handleStreamEvent(data, onUnavailable);
                 });
+                es.onopen = function () {
+                    self.sseOpened = true;
+                    self.scheduleSseFallback(onUnavailable);
+                };
                 es.onerror = function () {
                     if (self.qrPhase === 'done') {
                         return;
                     }
-                    if (!self.qrcPollTimer) {
-                        self.qrcPollTimer = setInterval(function () {
-                            self.pollRpStatus(onUnavailable);
-                        }, pollIntervalMs);
+                    if (sseFallbackOnError) {
+                        self.startPollFallback(onUnavailable);
                     }
                 };
+            },
+            startRpNotify: function (onUnavailable) {
+                this.startSseNotify(onUnavailable);
+            },
+            subscribeRpStream: function (onUnavailable) {
+                this.startSseNotify(onUnavailable);
+            },
+            handleStreamEvent: function (data, onUnavailable) {
+                if (mode === 'rp') {
+                    this.handleRpStreamEvent(data, onUnavailable);
+                    return;
+                }
+                this.handleAsStreamEvent(data, onUnavailable);
+            },
+            handleAsStreamEvent: function (data, onUnavailable) {
+                this.processAsStatusData(data, onUnavailable);
+            },
+            resumeTicketNotify: function (resumeOpts) {
+                resumeOpts = resumeOpts || {};
+                var self = this;
+                self.stopNotify();
+                self.resetQrScannedState();
+                if (resumeOpts.uuid) {
+                    self.qrcUuid = resumeOpts.uuid;
+                }
+                if (resumeOpts.qrUrl && resumeOpts.skipRender !== true) {
+                    self.renderQrCode(resumeOpts.qrUrl);
+                }
+                self.qrStatus = resumeOpts.statusText || resumeOpts.qrStatus || '等待扫码...';
+                if (!self.qrcUuid) {
+                    self.qrStatus = '二维码加载失败，请刷新页面重试';
+                    return;
+                }
+                self.startTicketNotify(resumeOpts.onUnavailable);
             },
             handleRpStreamEvent: function (data, onUnavailable) {
                 var self = this;
@@ -557,13 +764,13 @@
                 if (data.status === 'SESSION_EXPIRED') {
                     self.resetQrScannedState();
                     self.qrStatus = '登录会话已过期，请刷新二维码重试';
-                    self.stopPoll();
+                    self.stopNotify();
                     return;
                 }
                 if (data.status === 'COMPLETED' && data.redirectUrl) {
                     self.qrPhase = 'done';
                     self.qrStatus = '授权成功，正在跳转...';
-                    self.stopPoll();
+                    self.stopNotify();
                     var target = String(data.redirectUrl);
                     if (typeof options.onSuccess === 'function') {
                         options.onSuccess(target, self);
@@ -595,7 +802,7 @@
             cancelQrLogin: function () {
                 var self = this;
                 if (!self.qrcUuid || mode !== 'rp') {
-                    self.stopPoll();
+                    self.stopNotify();
                     return;
                 }
                 $.ajax({
@@ -603,7 +810,7 @@
                     url: prefix + '/ticket/cancel',
                     data: { uuid: self.qrcUuid },
                     complete: function () {
-                        self.stopPoll();
+                        self.stopNotify();
                     }
                 });
             }
@@ -613,11 +820,17 @@
     window.AutumnQrc = {
         createMethods: createQrMethods,
         renderInto: renderIntoBox,
+        wireVueScannerUi: wireVueScannerUi,
+        bindPlainHostScannedUi: bindPlainHostScannedUi,
         mergeInto: function (target, options) {
+            options = options || {};
             var methods = createQrMethods(options);
             Object.keys(methods).forEach(function (key) {
                 target[key] = methods[key];
             });
+            if (target && typeof target.$set === 'function') {
+                wireVueScannerUi(target, options.ctx || '');
+            }
             return target;
         }
     };

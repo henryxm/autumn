@@ -88,7 +88,7 @@ public class QrcWebhookDeliveryService {
         }
         ScanLoginConfig config = sysConfigService.getConfigObjectValidate(ScanLoginConfig.CONFIG_KEY, ScanLoginConfig.class);
         int timeout = config == null ? new ScanLoginConfig().getWebhookTimeoutMs() : config.getWebhookTimeoutMs();
-        log.info("QRC webhook delivering ticket={} event={} url={} clientId={}", ticket.getUuid(), event, webhook, TicketPayloads.get(ticket, "clientId"));
+        log.debug("QRC webhook delivering ticket={} event={} url={} clientId={}", ticket.getUuid(), event, webhook, TicketPayloads.get(ticket, "clientId"));
         HttpPostResult httpResult = HttpClientUtils.doPostJsonDetailed(webhook, json, headers, timeout);
         if (StringUtils.isNotBlank(httpResult.getError())) {
             log.warn("QRC webhook delivery failed ticket={} event={} url={}: {}", ticket.getUuid(), event, webhook, httpResult.getError());
@@ -102,7 +102,7 @@ public class QrcWebhookDeliveryService {
             log.warn("QRC webhook RP rejected ticket={} event={} url={} body={}", ticket.getUuid(), event, webhook, abbreviate(httpResult.getBody()));
             return;
         }
-        log.info("QRC webhook delivered ticket={} event={} url={} http={} body={}", ticket.getUuid(), event, webhook, httpResult.getStatusCode(), abbreviate(httpResult.getBody()));
+        log.debug("QRC webhook delivered ticket={} event={} url={} http={} body={}", ticket.getUuid(), event, webhook, httpResult.getStatusCode(), abbreviate(httpResult.getBody()));
     }
 
     private boolean isBusinessSuccess(String body) {

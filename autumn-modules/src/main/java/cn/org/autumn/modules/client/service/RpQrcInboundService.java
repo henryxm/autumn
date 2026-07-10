@@ -53,7 +53,7 @@ public class RpQrcInboundService {
             throw new IllegalArgumentException("回调 data 为空");
         }
         String event = StringUtils.defaultIfBlank(root.getString("event"), header(headers, "X-Qrc-Event"));
-        log.info("RP QRC inbound uuid={} event={} pendingStatus={} bodyLen={}", uuid, event, pending.getStatus(), rawBody.length());
+        log.debug("RP QRC inbound uuid={} event={} pendingStatus={} bodyLen={}", uuid, event, pending.getStatus(), rawBody.length());
         if (EVENT_SCANNED.equalsIgnoreCase(event)) {
             rpQrcCallbackService.applyScanned(pending, data);
             return;

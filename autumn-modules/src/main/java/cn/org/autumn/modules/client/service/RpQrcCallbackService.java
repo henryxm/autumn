@@ -94,10 +94,10 @@ public class RpQrcCallbackService {
         Map<String, Object> envelope = new HashMap<>();
         envelope.put("data", body);
         String url = resolveOpenCreateUri(credential, rpClient);
-        log.info("RP QRC create ticket clientId={} webhook={} asUrl={}", credential.getClientId(), inboundUrl, url);
+        log.debug("RP QRC create ticket clientId={} webhook={} asUrl={}", credential.getClientId(), inboundUrl, url);
         String raw = HttpClientUtils.doPostJson(url, JSON.toJSONString(envelope));
         TicketCreateResult created = parseOpenCreateResponse(url, raw);
-        log.info("RP QRC create ticket success uuid={} clientId={} webhook={}", created.getUuid(), credential.getClientId(), inboundUrl);
+        log.debug("RP QRC create ticket success uuid={} clientId={} webhook={}", created.getUuid(), credential.getClientId(), inboundUrl);
         RpQrcPendingSession pending = new RpQrcPendingSession();
         pending.setUuid(created.getUuid());
         pending.setStatus("PENDING");
@@ -131,7 +131,7 @@ public class RpQrcCallbackService {
             return;
         }
         rpQrcPendingStore.save(pending);
-        log.info("RP QRC complete success uuid={} redirect={}", pending.getUuid(), pending.getRedirectUrl());
+        log.debug("RP QRC complete success uuid={} redirect={}", pending.getUuid(), pending.getRedirectUrl());
         rpQrcEventStreamService.publish(pending);
         rpQrcPendingStore.remove(pending.getUuid());
     }
@@ -145,7 +145,7 @@ public class RpQrcCallbackService {
         }
         mergeScannerBrief(pending, data);
         rpQrcPendingStore.save(pending);
-        log.info("RP QRC apply scanned uuid={} status={}", pending.getUuid(), pending.getStatus());
+        log.debug("RP QRC apply scanned uuid={} status={}", pending.getUuid(), pending.getStatus());
         rpQrcEventStreamService.publish(pending);
     }
 
