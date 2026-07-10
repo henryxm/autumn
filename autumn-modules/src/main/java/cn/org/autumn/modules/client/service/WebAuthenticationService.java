@@ -6,13 +6,12 @@ import cn.org.autumn.config.DomainHandler;
 import cn.org.autumn.config.UsingHandler;
 import cn.org.autumn.modules.client.dao.WebAuthenticationDao;
 import cn.org.autumn.modules.client.entity.WebAuthenticationEntity;
+import cn.org.autumn.modules.client.support.OAuthClientDomainSupport;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.site.UpgradeFactory;
-import cn.org.autumn.utils.Utils;
 import cn.org.autumn.utils.Uuid;
 import java.util.Date;
 import java.util.List;
-import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -169,6 +168,10 @@ public class WebAuthenticationService extends ModuleService<WebAuthenticationDao
     @Order(2000)
     public void init() {
         super.init();
+        ensureSiteDefaultClient();
+    }
+
+    private void ensureSiteDefaultClient() {
         if (!hasClientId(sysConfigService.getClientId())) {
             ClientType type = baseMapper.countClientType(ClientType.SiteDefault) > 0 ? null : ClientType.SiteDefault;
             create(sysConfigService.getBaseUrl(), sysConfigService.getClientId(), sysConfigService.getClientSecret(), type, "默认的客户端", "basic", "normal");
@@ -180,47 +183,37 @@ public class WebAuthenticationService extends ModuleService<WebAuthenticationDao
         baseMapper.updateClientType(clientId, clientType);
     }
 
+    /**
+     * 域名变更升级钩子：仅补全缺失 uuid，不修改 redirectUri、endpoint、clientId 等 OAuth 配置。
+     */
     @Override
     public void onDomainChanged() {
-        String host = sysConfigService.getSiteDomain();
-        String scheme = sysConfigService.getScheme();
+        backfillMissingUuids();
+    }
+
+    private void backfillMissingUuids() {
         List<WebAuthenticationEntity> entities = selectByMap(null);
         for (WebAuthenticationEntity entity : entities) {
-            try {
-                update(entity, scheme, host, false);
-            } catch (Exception e) {
-                log.debug("Update failed:{}", e.getMessage());
+            if (StringUtils.isBlank(entity.getUuid())) {
+                entity.setUuid(OAuthClientDomainSupport.ensureUuid(null));
+                updateById(entity);
             }
         }
     }
 
-    public void update(WebAuthenticationEntity entity, String scheme, String host, boolean force) {
-        if (StringUtils.isBlank(entity.getUuid())) {
-            entity.setUuid(Uuid.uuid());
-            updateById(entity);
-        }
-        if (!force && !Objects.equals(entity.getClientType(), ClientType.SiteDefault))
-            return;
-        if (StringUtils.isNotBlank(entity.getAccessTokenUri()))
-            entity.setAccessTokenUri(Utils.replaceSchemeHost(scheme, host, entity.getAccessTokenUri()));
-        if (StringUtils.isNotBlank(entity.getAuthorizeUri()))
-            entity.setAuthorizeUri(Utils.replaceSchemeHost(scheme, host, entity.getAuthorizeUri()));
-        if (StringUtils.isNotBlank(entity.getRedirectUri()))
-            entity.setRedirectUri(Utils.replaceSchemeHost(scheme, host, entity.getRedirectUri()));
-        if (StringUtils.isNotBlank(entity.getUserInfoUri()))
-            entity.setUserInfoUri(Utils.replaceSchemeHost(scheme, host, entity.getUserInfoUri()));
-        entity.setName(host);
-        entity.setDescription(host);
-        entity.setClientId(host);
-        updateById(entity);
-    }
-
-    public void update(String uuid, String domain) {
+    /**
+     * WebOauthCombine 管理端显式换绑域名时调用；按标准路径重建 OAuth 配置。
+     */
+    public void rebindToDomain(String uuid, String domain) {
         WebAuthenticationEntity entity = baseMapper.getByUuid(uuid);
-        if (null != entity) {
-            String scheme = sysConfigService.getScheme();
-            update(entity, scheme, domain, true);
+        if (entity == null || StringUtils.isBlank(domain)) {
+            return;
         }
+        if (StringUtils.isBlank(entity.getUuid())) {
+            entity.setUuid(OAuthClientDomainSupport.ensureUuid(null));
+        }
+        OAuthClientDomainSupport.applyRpDomainRebind(entity, sysConfigService.getScheme(), domain.trim());
+        updateById(entity);
     }
 
     @Override
