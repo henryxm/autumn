@@ -9,10 +9,9 @@ import cn.org.autumn.modules.client.model.ScanLoginCredentialContext;
 import cn.org.autumn.modules.client.oauth2.RpQrcSyntheticRequest;
 import cn.org.autumn.modules.client.oauth2.WebOauthBindException;
 import cn.org.autumn.modules.client.oauth2.WebOauthEndpointResolver;
+import cn.org.autumn.modules.opc.dto.ConnectOAuthFinishResult;
 import cn.org.autumn.modules.opc.entity.ConnectAppEntity;
 import cn.org.autumn.modules.opc.service.ConnectLoginService;
-import cn.org.autumn.modules.opc.support.ConnectBindException;
-import cn.org.autumn.modules.opc.support.ConnectBindException.ConflictType;
 import cn.org.autumn.modules.qrc.dto.OpenTicketCreateRequest;
 import cn.org.autumn.modules.qrc.dto.ScannerBrief;
 import cn.org.autumn.modules.qrc.dto.TicketCreateResult;
@@ -177,17 +176,12 @@ public class RpQrcCallbackService {
         if (app == null) {
             throw new IllegalStateException("未配置开放平台应用");
         }
-        try {
-            connectLoginService.completeOAuthCallback(request, app, code, pending.getCallback());
-        } catch (ConnectBindException e) {
-            if (e.getConflictType() == ConflictType.BIND_CHOICE_REQUIRED && StringUtils.isNotBlank(e.getPendingToken())) {
-                pending.setRedirectUrl(connectLoginService.bindChoicePageUrl(request, app.getAppId(), e.getPendingToken()));
-                pending.setStatus("COMPLETED");
-                return;
-            }
-            throw e;
+        ConnectOAuthFinishResult result = connectLoginService.finishOAuthLogin(request, app, code, pending.getCallback());
+        pending.setRedirectUrl(result.getRedirectUrl());
+        pending.setStatus("COMPLETED");
+        if (!result.isBindChoice()) {
+            pending.setCode(code);
         }
-        applyCompletedRedirect(pending, request, code);
     }
 
     private void applyCompletedRedirect(RpQrcPendingSession pending, RpQrcSyntheticRequest request, String code) {

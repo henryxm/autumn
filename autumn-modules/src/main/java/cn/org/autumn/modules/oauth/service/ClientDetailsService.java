@@ -362,6 +362,59 @@ public class ClientDetailsService extends ModuleService<ClientDetailsDao, Client
         }
     }
 
+    /** 开放扫码（pageLogin 含 QR）时同步 AS 侧 oauth_client_details，使 appId 可用于 QRC open/create。 */
+    public ClientDetailsEntity ensureQrcOpenClient(String baseUrl, String clientId, String secret, String redirectUri, String name) {
+        if (StringUtils.isBlank(clientId) || StringUtils.isBlank(secret)) {
+            return null;
+        }
+        String normalizedRedirect = StringUtils.trimToEmpty(redirectUri);
+        String normalizedBase = StringUtils.defaultIfBlank(baseUrl, "");
+        String displayName = StringUtils.defaultIfBlank(name, clientId);
+        ClientDetailsEntity entity = findByClientId(clientId);
+        if (entity == null) {
+            entity = new ClientDetailsEntity();
+            entity.setUuid(Uuid.uuid());
+            entity.setClientId(clientId);
+            entity.setArchived(0);
+            entity.setClientIconUri("");
+            entity.setClientName(displayName);
+            entity.setClientSecret(secret);
+            entity.setClientUri(normalizedBase);
+            entity.setGrantTypes("all");
+            entity.setResourceIds("all");
+            entity.setRedirectUri(normalizedRedirect);
+            entity.setDescription(displayName);
+            entity.setScope("basic");
+            entity.setTrusted(1);
+            entity.setRoles("user");
+            entity.setCreateTime(new Date());
+            insert(entity);
+            clientToUser(entity);
+            return entity;
+        }
+        boolean changed = false;
+        if (!secret.equals(entity.getClientSecret())) {
+            entity.setClientSecret(secret);
+            changed = true;
+        }
+        if (StringUtils.isNotBlank(normalizedRedirect) && !normalizedRedirect.equalsIgnoreCase(StringUtils.defaultString(entity.getRedirectUri()))) {
+            entity.setRedirectUri(normalizedRedirect);
+            changed = true;
+        }
+        if (StringUtils.isNotBlank(normalizedBase) && !normalizedBase.equalsIgnoreCase(StringUtils.defaultString(entity.getClientUri()))) {
+            entity.setClientUri(normalizedBase);
+            changed = true;
+        }
+        if (entity.getTrusted() == null || entity.getTrusted() == 0) {
+            entity.setTrusted(1);
+            changed = true;
+        }
+        if (changed) {
+            updateById(entity);
+        }
+        return entity;
+    }
+
     @Override
     public boolean isSiteDomain(String domain) {
         return baseMapper.count(domain) > 0;

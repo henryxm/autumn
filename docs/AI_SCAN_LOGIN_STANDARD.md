@@ -209,6 +209,8 @@ HTTP 层：`ClientOauth2QrcController`、`ScanTicketController`、`QrcApiControl
 
 **开放同源 B2 额外要求**：`appId` 同时存在于 `oauth_client_details`（trusted）与 `opl_open_app`（活跃）。
 
+**自动同步**：`ConnectAppService.saveConfig` / `updateConfig` 在 `pageLogin` 含 QR（`PageLoginSupport.showQr`）时，自动调用 `ClientDetailsService.ensureQrcOpenClient`，以 `appId`/`appSecret`/`redirectUri` 写入或更新 `oauth_client_details`，无需手工重复登记。
+
 ### 5.3 B网站（RP）+ A应用（AS）检查清单
 
 **a.com（AS）**

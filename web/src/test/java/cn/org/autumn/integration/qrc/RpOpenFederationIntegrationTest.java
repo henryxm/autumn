@@ -71,11 +71,11 @@ public class RpOpenFederationIntegrationTest extends IntegrationTest {
         String appId = registered.getAppId();
         String secret = registered.getAppSecret();
 
-        ClientDetailsEntity oauth = clientDetailsService.create(baseUrl, appId, secret, null, "Open IT", "Open integration");
-        assertNotNull(oauth);
-
         ConnectAppEntity app = connectAppService.saveConfig(adminUuid, appId, secret, remoteBase, redirectUri + "?appId=" + appId, "Open IT", "basic", null, null, PageLoginSupport.QR);
         assertNotNull(app);
+        ClientDetailsEntity oauth = clientDetailsService.findByClientId(appId);
+        assertNotNull(oauth);
+        assertEquals(redirectUri + "?appId=" + appId, oauth.getRedirectUri());
 
         AuthSiteConfig siteConfig = sysConfigService.getAuthSiteConfig();
         siteConfig.setSiteRole(AuthSiteConfig.ROLE_AS_AND_RP);
@@ -105,9 +105,7 @@ public class RpOpenFederationIntegrationTest extends IntegrationTest {
         Thread.sleep(1000L);
 
         ConnectBindEntity bind = connectBindDao.getByConnectAppAndUser(app.getUuid(), adminUuid);
-        if (bind == null) {
-            return;
-        }
+        assertNotNull(bind, "扫码确认后应建立 opc_connect_bind");
         assertNotNull(bind.getOpenId());
         assertEquals(adminUuid, bind.getUser());
     }
@@ -121,9 +119,9 @@ public class RpOpenFederationIntegrationTest extends IntegrationTest {
         String appId = registered.getAppId();
         String secret = registered.getAppSecret();
 
-        clientDetailsService.create(baseUrl, appId, secret, null, "Open AS IT", "Open AS integration");
         ConnectAppEntity app = connectAppService.saveConfig(adminUuid, appId, secret, baseUrl, redirectUri + "?appId=" + appId, "Open AS IT", "basic", null, null, PageLoginSupport.QR);
         assertNotNull(app);
+        assertNotNull(clientDetailsService.findByClientId(appId));
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
