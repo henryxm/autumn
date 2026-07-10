@@ -7,14 +7,19 @@ import com.alibaba.fastjson2.JSONObject;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
 public class RpQrcInboundService {
 
+    private static final Logger log = LoggerFactory.getLogger(RpQrcInboundService.class);
+
     public static final String EVENT_SCANNED = QrcWebhookDeliveryService.EVENT_SCANNED;
     public static final String EVENT_AUTHORIZED = QrcWebhookDeliveryService.EVENT_AUTHORIZED;
+    public static final String EVENT_DENIED = QrcWebhookDeliveryService.EVENT_DENIED;
 
     @Autowired
     private RpQrcPendingStore rpQrcPendingStore;
@@ -47,12 +52,19 @@ public class RpQrcInboundService {
             throw new IllegalArgumentException("回调 data 为空");
         }
         String event = StringUtils.defaultIfBlank(root.getString("event"), header(headers, "X-Qrc-Event"));
+        if (log.isDebugEnabled()) {
+            log.debug("RP QRC inbound uuid={} event={} status={}", uuid, event, pending.getStatus());
+        }
         if (EVENT_SCANNED.equalsIgnoreCase(event)) {
             rpQrcCallbackService.applyScanned(pending, data);
             return;
         }
         if (EVENT_AUTHORIZED.equalsIgnoreCase(event)) {
             handleAuthorized(pending, data);
+            return;
+        }
+        if (EVENT_DENIED.equalsIgnoreCase(event)) {
+            rpQrcCallbackService.applyDenied(pending, data);
             return;
         }
         throw new IllegalArgumentException("不支持的 Webhook 事件: " + event);
@@ -73,6 +85,7 @@ public class RpQrcInboundService {
             result.put("clientId", pending.getClientId());
         }
         pending.setResult(result);
+        rpQrcCallbackService.ensureScannedBeforeAuthorize(pending, data);
         rpQrcCallbackService.completeOnInbound(pending, code);
     }
 
