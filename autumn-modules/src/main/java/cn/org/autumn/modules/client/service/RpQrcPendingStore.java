@@ -4,14 +4,18 @@ import cn.org.autumn.model.ScanLoginConfig;
 import cn.org.autumn.modules.client.model.RpQrcPendingSession;
 import cn.org.autumn.modules.qrc.dto.TicketStatusResult;
 import cn.org.autumn.modules.sys.service.SysConfigService;
-import cn.org.autumn.utils.RedisUtils;
 import com.alibaba.fastjson2.JSON;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
+/** RP 待处理扫码会话：进程内内存 + Redis JSON 字符串（避免 JDK 序列化嵌套 DTO 失败）。 */
+@Slf4j
 @Component
 public class RpQrcPendingStore {
 
@@ -19,8 +23,8 @@ public class RpQrcPendingStore {
 
     private final Map<String, RpQrcPendingSession> memory = new ConcurrentHashMap<>();
 
-    @Autowired
-    private RedisUtils redisUtils;
+    @Autowired(required = false)
+    private StringRedisTemplate stringRedisTemplate;
 
     @Autowired
     private SysConfigService sysConfigService;
@@ -30,9 +34,14 @@ public class RpQrcPendingStore {
             return;
         }
         memory.put(session.getUuid(), session);
-        if (redisUtils.isOpen()) {
-            long ttl = resolveTtlSeconds(session.getExpiredAt());
-            redisUtils.set(KEY_PREFIX + session.getUuid(), session, ttl);
+        if (stringRedisTemplate == null) {
+            return;
+        }
+        long ttl = resolveTtlSeconds(session.getExpiredAt());
+        try {
+            stringRedisTemplate.opsForValue().set(KEY_PREFIX + session.getUuid(), JSON.toJSONString(session), ttl, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            log.warn("RP QRC pending redis save failed uuid={}: {}", session.getUuid(), e.getMessage());
         }
     }
 
@@ -44,13 +53,18 @@ public class RpQrcPendingStore {
         if (cached != null) {
             return cached;
         }
-        if (redisUtils.isOpen()) {
-            Object raw = redisUtils.get(KEY_PREFIX + uuid);
+        if (stringRedisTemplate == null) {
+            return null;
+        }
+        try {
+            String raw = stringRedisTemplate.opsForValue().get(KEY_PREFIX + uuid);
             RpQrcPendingSession fromRedis = parseSession(raw);
             if (fromRedis != null) {
                 memory.put(uuid, fromRedis);
                 return fromRedis;
             }
+        } catch (Exception e) {
+            log.warn("RP QRC pending redis read failed uuid={}: {}", uuid, e.getMessage());
         }
         return null;
     }
@@ -60,8 +74,12 @@ public class RpQrcPendingStore {
             return;
         }
         memory.remove(uuid);
-        if (redisUtils.isOpen()) {
-            redisUtils.delete(KEY_PREFIX + uuid);
+        if (stringRedisTemplate != null) {
+            try {
+                stringRedisTemplate.delete(KEY_PREFIX + uuid);
+            } catch (Exception e) {
+                log.warn("RP QRC pending redis delete failed uuid={}: {}", uuid, e.getMessage());
+            }
         }
     }
 
@@ -80,14 +98,11 @@ public class RpQrcPendingStore {
         return result;
     }
 
-    private RpQrcPendingSession parseSession(Object raw) {
-        if (raw == null) {
+    private RpQrcPendingSession parseSession(String raw) {
+        if (StringUtils.isBlank(raw)) {
             return null;
         }
-        if (raw instanceof RpQrcPendingSession) {
-            return (RpQrcPendingSession) raw;
-        }
-        return JSON.parseObject(JSON.toJSONString(raw), RpQrcPendingSession.class);
+        return JSON.parseObject(raw, RpQrcPendingSession.class);
     }
 
     private long resolveTtlSeconds(long expiredAt) {
