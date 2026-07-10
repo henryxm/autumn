@@ -12,13 +12,17 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/** B2 同源 SSE：scan 后 PendingStore 更新，status 降级端点可返回 scannerBrief。 */
+/** B2 同源 SSE：subscribe + scan 推送；stream/status HTTP 端点可用。 */
 public class AsQrcSseIntegrationTest extends IntegrationTest {
 
     @Autowired
@@ -56,5 +60,26 @@ public class AsQrcSseIntegrationTest extends IntegrationTest {
         assertEquals("SCANNED", data.getString("status"));
         assertNotNull(data.getJSONObject("scannerBrief"));
         emitter.complete();
+    }
+
+    @Test
+    void httpStreamEndpoint_acceptsSubscription() {
+        CreateContext ctx = new CreateContext();
+        ctx.setIntent(Intent.SELF_WEB_LOGIN);
+        ctx.setIp("127.0.0.1");
+        TicketSnapshot ticket;
+        try {
+            ticket = scanTicketService.create(ctx);
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Accept", "text/event-stream");
+        ResponseEntity<String> streamResp = restTemplate.exchange(
+                "http://127.0.0.1:" + port + "/qrc/scanticket/web/ticket/stream?uuid=" + ticket.getUuid(),
+                HttpMethod.GET,
+                new HttpEntity<>(headers),
+                String.class);
+        assertTrue(streamResp.getStatusCode().is2xxSuccessful() || streamResp.getStatusCodeValue() == 200);
     }
 }

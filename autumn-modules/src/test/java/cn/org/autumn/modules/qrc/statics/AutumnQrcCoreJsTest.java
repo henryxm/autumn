@@ -24,7 +24,8 @@ public class AutumnQrcCoreJsTest {
         assertTrue(js.contains("wireVueScannerUi: wireVueScannerUi"));
         assertTrue(js.contains("bindPlainHostScannedUi: bindPlainHostScannedUi"));
         assertTrue(js.contains("startTicketNotify(onUnavailable)"));
-        assertTrue(js.contains("this.startSseNotify(onUnavailable)"));
+        assertTrue(js.contains("markSseHealthy: function"));
+        assertTrue(js.contains("data.status === 'PENDING'"));
     }
 
     @Test
@@ -36,9 +37,10 @@ public class AutumnQrcCoreJsTest {
         assertFalse("subscribeRpStream must not start parallel poll", subscribeBody.contains("setInterval"));
         assertTrue(js.contains("startPollFallback: function"));
         int fallbackIdx = js.indexOf("startPollFallback: function");
-        String fallbackBody = js.substring(fallbackIdx, Math.min(js.length(), fallbackIdx + 600));
+        String fallbackBody = js.substring(fallbackIdx, Math.min(js.length(), fallbackIdx + 900));
         assertTrue("fallback should poll by mode", fallbackBody.contains("pollQrStatus"));
         assertFalse("startTicketNotify must not call startAsPoll directly", js.contains("this.startAsPoll(onUnavailable)"));
+        assertFalse("resumeTicketNotify must not call startAsPoll directly", js.contains("self.startAsPoll(resumeOpts"));
     }
 
     private static String readCoreJs() throws Exception {

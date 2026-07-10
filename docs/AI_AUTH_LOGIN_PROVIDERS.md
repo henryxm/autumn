@@ -92,7 +92,7 @@
 | 凭证可解析 | `ScanLoginCredentialService.require(type, id)` 成功 |
 | 视图字段 | `qrMode`（`as`/`rp`）、`credentialType`、`id` |
 
-前端：`AutumnQrc.createMethods({ mode: p.qrMode, type: p.credentialType, id: p.id })`；RP 订阅 SSE `/client/oauth2/qrc/web/ticket/stream`；开放同源（`qrMode=as`）确认后 `POST /open/oauth2/qrc/web/complete`。
+前端：`AutumnQrc.createMethods({ mode: p.qrMode, type: p.credentialType, id: p.id })` 或 `AutumnQrc.mergeInto`；RP/AS 均订阅 SSE `{prefix}/ticket/stream`（失败降级 `ticket/status`）；开放同源（`qrMode=as`）确认后 `POST /open/oauth2/qrc/web/complete`。
 
 双模式扫码能力与验收见 **`docs/AI_SCAN_LOGIN_DUAL_MODE_REGRESSION.md`**（双模式均已完整支持）。
 

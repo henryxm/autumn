@@ -70,7 +70,7 @@
                 <tr><td><code>bindPlainHostScannedUi(host, ui)</code></td><td>非 Vue 宿主 pending/scanned DOM 切换</td></tr>
             </table>
             <div class="doc-note">
-                <strong>方案 C</strong>：RP/AS 模式 SSE 正常时无并行轮询；<code>sseFallbackDelayMs</code>（默认 5000）内未收到 <code>status</code> 或 <code>EventSource.onerror</code> 时降级 <code>/ticket/status</code>。Nginx 需关闭 SSE 缓冲（<code>X-Accel-Buffering: no</code>）。
+                <strong>方案 C</strong>：RP/AS 模式 SSE 正常时无并行轮询；catch-up <code>PENDING</code> 不视为 healthy，watchdog 仍会在 <code>sseFallbackDelayMs</code>（默认 5000）内启动降级；<code>EventSource.onerror</code> 时降级 <code>/ticket/status</code>。Nginx 需关闭 SSE 缓冲（<code>X-Accel-Buffering: no</code>）。
             </div>
 
             <h3>HTTP 路径与报文</h3>

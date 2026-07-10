@@ -77,7 +77,7 @@
 | 模式 | 凭证类型 | 前端 `autumn-qrc-core.js` | 登录结果 |
 |------|----------|---------------------------|----------|
 | **B2 经典同源** | `oauth2_classic` | `/qrc/scanticket/web/*` | `session/exchange` → Session |
-| **B2 开放同源** | `oauth2_open` | `/qrc/scanticket/web/*` + `complete` | `OAUTH_DEVICE` 轮询 code → `POST /open/oauth2/qrc/web/complete` → `ConnectLoginService` |
+| **B2 开放同源** | `oauth2_open` | `/qrc/scanticket/web/*` SSE + `complete` | SSE/`result.code` → `POST /open/oauth2/qrc/web/complete` → `ConnectLoginService` |
 | **D RP 联邦** | classic / open | `/client/oauth2/qrc/web/*` SSE | `qrc.authorized` → 对应编排服务 |
 
 经典 B2 **不走** `WebOauthBindService`；开放 B2 **走** `ConnectLoginService`（与 Tab 一致）。D **必须走** 与 B1 相同的 RP 编排。
@@ -240,7 +240,7 @@ flowchart TB
 | `ClientOauth2Controller` | callback、bind 页、冲突页 |
 | `ClientOauth2QrcController` | `/client/oauth2/qrc/web/*` REST |
 | `ScanTicketService` / QRC Open API | AS 侧建票与 POLL_CODE |
-| `autumn-qrc-core.js` | 前端 AS/RP 双模式轮询 |
+| `autumn-qrc-core.js` | 前端 AS/RP 统一 **SSE 主 + ticket/status 降级**（方案 C） |
 
 ---
 

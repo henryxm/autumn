@@ -632,26 +632,14 @@
             startTicketNotify: function (onUnavailable) {
                 this.startSseNotify(onUnavailable);
             },
-            startPollOnly: function (onUnavailable) {
-                var self = this;
-                self.stopNotify();
-                self.qrcNotifyChannel = 'poll';
-                self.qrcPollTimer = setInterval(function () {
-                    if (self.qrPhase === 'done') {
-                        return;
-                    }
-                    self.pollQrStatus(onUnavailable);
-                }, pollIntervalMs);
-            },
-            startAsPoll: function (onUnavailable) {
-                this.startPollOnly(onUnavailable);
-            },
             startPollFallback: function (onUnavailable) {
                 var self = this;
                 if (self.qrcPollTimer || self.qrPhase === 'done') {
                     return;
                 }
-                if (!self.qrcNotifyChannel) {
+                if (self.qrcNotifyChannel === 'sse') {
+                    self.qrcNotifyChannel = 'poll';
+                } else if (!self.qrcNotifyChannel) {
                     self.qrcNotifyChannel = 'poll';
                 }
                 self.qrcPollTimer = setInterval(function () {
@@ -660,6 +648,15 @@
                     }
                     self.pollQrStatus(onUnavailable);
                 }, pollIntervalMs);
+            },
+            startPollOnly: function (onUnavailable) {
+                var self = this;
+                self.stopNotify();
+                self.qrcNotifyChannel = 'poll';
+                self.startPollFallback(onUnavailable);
+            },
+            startAsPoll: function (onUnavailable) {
+                this.startPollOnly(onUnavailable);
             },
             scheduleSseFallback: function (onUnavailable) {
                 var self = this;
@@ -673,6 +670,13 @@
                         self.startPollFallback(onUnavailable);
                     }
                 }, sseFallbackDelayMs);
+            },
+            markSseHealthy: function (data) {
+                if (!data || !data.status || data.status === 'PENDING') {
+                    return;
+                }
+                this.sseReceivedStatus = true;
+                this.clearSseFallbackTimer();
             },
             startSseNotify: function (onUnavailable) {
                 var self = this;
@@ -692,14 +696,13 @@
                     if (!ev || !ev.data) {
                         return;
                     }
-                    self.sseReceivedStatus = true;
-                    self.clearSseFallbackTimer();
                     var data;
                     try {
                         data = JSON.parse(ev.data);
                     } catch (e) {
                         return;
                     }
+                    self.markSseHealthy(data);
                     self.handleStreamEvent(data, onUnavailable);
                 });
                 es.onopen = function () {
