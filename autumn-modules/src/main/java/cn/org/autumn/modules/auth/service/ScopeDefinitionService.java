@@ -19,7 +19,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -30,12 +30,12 @@ public class ScopeDefinitionService extends ModuleService<ScopeDefinitionDao, Sc
     private AuthScopeCatalog authScopeCatalog;
 
     @Override
-    public boolean insert(ScopeDefinitionEntity entity) {
-        boolean ok = super.insert(entity);
-        if (ok) {
+    public int insert(ScopeDefinitionEntity entity) {
+        int rows = super.insert(entity);
+        if (rows > 0) {
             refreshCatalog();
         }
-        return ok;
+        return rows;
     }
 
     @Override
@@ -57,12 +57,12 @@ public class ScopeDefinitionService extends ModuleService<ScopeDefinitionDao, Sc
     }
 
     @Override
-    public boolean deleteBatchIds(Collection<? extends Serializable> idList) {
-        boolean ok = super.deleteBatchIds(idList);
-        if (ok) {
+    public int deleteBatchIds(List<?> idList) {
+        int rows = super.deleteBatchIds(idList);
+        if (rows > 0) {
             refreshCatalog();
         }
-        return ok;
+        return rows;
     }
 
     @Override

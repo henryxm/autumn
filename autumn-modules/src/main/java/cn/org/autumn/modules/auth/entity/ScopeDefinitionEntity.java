@@ -4,8 +4,8 @@ import cn.org.autumn.entity.UuidBased;
 import cn.org.autumn.table.annotation.Column;
 import cn.org.autumn.table.annotation.Table;
 import cn.org.autumn.table.data.DataType;
-import com.baomidou.mybatisplus.annotations.TableId;
-import com.baomidou.mybatisplus.annotations.TableName;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 import java.io.Serializable;
 import java.util.Date;
 import lombok.Getter;
@@ -13,8 +13,8 @@ import lombok.Setter;
 
 @Getter
 @Setter
-@TableName("auth_scope_definition")
-@Table(comment = "授权范围:OAuth/OPL scope目录")
+@TableName("auth_scope_def")
+@Table(value = "auth_scope_def", comment = "授权范围:OAuth/OPL scope目录")
 public class ScopeDefinitionEntity implements UuidBased, Serializable {
     private static final long serialVersionUID = 1L;
 

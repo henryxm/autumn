@@ -10,7 +10,7 @@ import cn.org.autumn.modules.usr.entity.UserProfileEntity;
 import cn.org.autumn.modules.usr.dto.UserProfile;
 import java.util.Set;
 import cn.org.autumn.opl.model.OpenUserInfoSnapshot;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 
 public final class AuthUserInfoBuilder {
 

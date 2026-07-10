@@ -15,7 +15,7 @@ import cn.org.autumn.modules.qrc.service.ClientGrantService;
 import cn.org.autumn.modules.qrc.service.ScanTicketService;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.model.UserContext;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
