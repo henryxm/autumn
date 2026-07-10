@@ -15,7 +15,7 @@
 3. GET  /open/oauth2/authorize?app_id=...&redirect_uri=...&state=...
 4. 用户登录并确认 → redirect_uri?code=...&state=...
 5. POST /open/oauth2/token                   用 code 换 access_token（服务端带 app_secret）
-6. GET  /open/oauth2/userInfo               Bearer → openId / unionId / nickname / icon
+6. GET  /open/oauth2/userInfo               Bearer → openId / unionId / nickname / icon / email（按 scope）
 ```
 
 ---
@@ -61,7 +61,7 @@ GET {ORIGIN}/open/oauth2/authorize?app_id={appId}&redirect_uri={urlencode(uri)}&
 | `app_id` | 是 | 注册的 appId |
 | `redirect_uri` | 是 | 与注册值**字符级一致** |
 | `response_type` | 是 | 固定 `code` |
-| `scope` | 否 | 默认 `basic` |
+| `scope` | 否 | 默认 `basic`（展开为 openid+unionid+profile）；详见 **`docs/AI_AUTH_SCOPE.md`** |
 | `state` | 推荐 | CSRF 防护 |
 
 ### 3.2 换 Token
@@ -82,7 +82,7 @@ GET {ORIGIN}/open/oauth2/userInfo
 Authorization: Bearer {access_token}
 ```
 
-响应含 `openId`、`unionId`、`nickname`、`icon`（**不暴露**内部 `uuid`）。
+响应含 `openId`、`unionId`、`nickname`、`icon`（**不暴露**内部 `uuid`）。按 granted scope 还可返回 `mobile`、`email`、`verified`、`status` 等，见 **`docs/AI_AUTH_SCOPE.md`**。
 
 ---
 

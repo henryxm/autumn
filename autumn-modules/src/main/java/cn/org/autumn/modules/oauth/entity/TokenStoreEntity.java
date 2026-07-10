@@ -56,6 +56,11 @@ public class TokenStoreEntity implements Serializable {
     @Column(type = "bigint", length = 20, comment = "刷新令牌有效时长(秒)")
     private Long refreshTokenExpiredIn;
     /**
+     * 授权范围
+     */
+    @Column(length = 200, comment = "范围:granted scope")
+    private String scope;
+    /**
      * 创建时间
      */
     @Column(type = "datetime", comment = "创建时间")
@@ -162,6 +167,14 @@ public class TokenStoreEntity implements Serializable {
      */
     public Long getRefreshTokenExpiredIn() {
         return refreshTokenExpiredIn;
+    }
+
+    public String getScope() {
+        return scope;
+    }
+
+    public void setScope(String scope) {
+        this.scope = scope;
     }
 
     /**

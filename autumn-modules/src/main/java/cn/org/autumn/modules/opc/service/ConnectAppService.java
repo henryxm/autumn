@@ -3,7 +3,9 @@ package cn.org.autumn.modules.opc.service;
 import cn.org.autumn.base.EncryptModuleService;
 import cn.org.autumn.config.UsingHandler;
 import cn.org.autumn.model.PageLoginSupport;
+import cn.org.autumn.modules.auth.support.AuthScopeSupport;
 import cn.org.autumn.modules.oauth.oauth2.support.RedirectUriSupport;
+import cn.org.autumn.opl.model.OpenAppSnapshot;
 import cn.org.autumn.modules.oauth.service.ClientDetailsService;
 import cn.org.autumn.opc.OpcConstants;
 import cn.org.autumn.opl.OplConstants;
@@ -11,7 +13,6 @@ import cn.org.autumn.modules.opc.dao.ConnectAppDao;
 import cn.org.autumn.modules.opc.entity.ConnectAppEntity;
 import cn.org.autumn.modules.opc.support.OpcSnapshots;
 import cn.org.autumn.opc.model.ConnectAppSnapshot;
-import cn.org.autumn.modules.sys.entity.SysConfigEntity;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.utils.HttpClientUtils;
 import com.alibaba.fastjson.JSON;
@@ -36,6 +37,9 @@ public class ConnectAppService extends EncryptModuleService<ConnectAppDao, Conne
     @Autowired
     @Lazy
     private ClientDetailsService clientDetailsService;
+
+    @Autowired
+    private AuthScopeSupport authScopeSupport;
 
     @Override
     public boolean using(Object value) {
@@ -289,7 +293,9 @@ public class ConnectAppService extends EncryptModuleService<ConnectAppDao, Conne
         app.setPlatformBaseUrl(normalizeBaseUrl(platformBaseUrl));
         app.setRedirectUri(redirectUri.trim());
         app.setName(StringUtils.defaultIfBlank(name, appId));
-        app.setScope(StringUtils.defaultIfBlank(scope, OplConstants.DEFAULT_SCOPE));
+        String resolvedScope = StringUtils.defaultIfBlank(scope, OplConstants.DEFAULT_SCOPE);
+        validateOplScope(resolvedScope);
+        app.setScope(resolvedScope);
         applyIcon(app, icon, hash);
         if (pageLogin != null) {
             app.setPageLogin(pageLogin);
@@ -411,5 +417,18 @@ public class ConnectAppService extends EncryptModuleService<ConnectAppDao, Conne
             base = base.substring(0, base.length() - 1);
         }
         return base;
+    }
+
+    private void validateOplScope(String scope) {
+        if (StringUtils.isBlank(scope)) {
+            return;
+        }
+        OpenAppSnapshot snapshot = new OpenAppSnapshot();
+        snapshot.setScope(scope.trim());
+        try {
+            authScopeSupport.validateOplScope(snapshot, scope.trim());
+        } catch (Exception e) {
+            throw new IllegalArgumentException("无效的授权范围: " + scope.trim(), e);
+        }
     }
 }

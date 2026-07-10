@@ -8,6 +8,8 @@ public class TokenStore implements Serializable {
     String authCode;
     String accessToken;
     String refreshToken;
+    String grantedScope;
+    String clientId;
     Date date;
 
     public TokenStore(Object object) {
@@ -23,19 +25,29 @@ public class TokenStore implements Serializable {
     }
 
     public TokenStore(Object value, String authCode, String accessToken, String refreshToken, Long expire) {
+        this(value, authCode, accessToken, refreshToken, null, expire);
+    }
+
+    public TokenStore(Object value, String authCode, String accessToken, String refreshToken, String grantedScope, Long expire) {
         this.value = value;
         this.authCode = authCode;
         this.accessToken = accessToken;
         this.refreshToken = refreshToken;
+        this.grantedScope = grantedScope;
         this.date = new Date();
         this.date.setTime(this.date.getTime() + expire * 1000);
     }
 
     public TokenStore(Object value, String authCode, String accessToken, String refreshToken, Date date) {
+        this(value, authCode, accessToken, refreshToken, null, date);
+    }
+
+    public TokenStore(Object value, String authCode, String accessToken, String refreshToken, String grantedScope, Date date) {
         this.value = value;
         this.authCode = authCode;
         this.accessToken = accessToken;
         this.refreshToken = refreshToken;
+        this.grantedScope = grantedScope;
         this.date = date;
     }
 
@@ -90,5 +102,21 @@ public class TokenStore implements Serializable {
 
     public void setDate(Date date) {
         this.date = date;
+    }
+
+    public String getGrantedScope() {
+        return grantedScope;
+    }
+
+    public void setGrantedScope(String grantedScope) {
+        this.grantedScope = grantedScope;
+    }
+
+    public String getClientId() {
+        return clientId;
+    }
+
+    public void setClientId(String clientId) {
+        this.clientId = clientId;
     }
 }

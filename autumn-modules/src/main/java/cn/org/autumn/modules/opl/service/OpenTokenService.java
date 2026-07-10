@@ -43,6 +43,7 @@ public class OpenTokenService extends ModuleService<OpenTokenDao, OpenTokenEntit
         context.setAuthCode(codeEntity.getCode());
         context.setAccessToken(accessToken);
         context.setRefreshToken(refreshToken);
+        context.setGrantedScope(codeEntity.getScope());
         context.setExpireAt(new Date(System.currentTimeMillis() + OplConstants.ACCESS_TOKEN_TTL_SECONDS * 1000L));
         putContext(ValueType.authCode, codeEntity.getCode(), context, OplConstants.AUTH_CODE_TTL_SECONDS);
         putContext(ValueType.accessToken, accessToken, context, OplConstants.ACCESS_TOKEN_TTL_SECONDS);
@@ -96,6 +97,7 @@ public class OpenTokenService extends ModuleService<OpenTokenDao, OpenTokenEntit
         entity.setUser(context.getUser());
         entity.setOpenId(context.getOpenId());
         entity.setUnionId(context.getUnionId());
+        entity.setScope(context.getGrantedScope());
         entity.setAccessExpireIn(OplConstants.ACCESS_TOKEN_TTL_SECONDS);
         entity.setRefreshExpireIn(OplConstants.REFRESH_TOKEN_TTL_SECONDS);
         entity.setUpdateTime(new Date());
@@ -160,6 +162,7 @@ public class OpenTokenService extends ModuleService<OpenTokenDao, OpenTokenEntit
         context.setAuthCode(entity.getAuthCode());
         context.setAccessToken(entity.getAccessToken());
         context.setRefreshToken(entity.getRefreshToken());
+        context.setGrantedScope(entity.getScope());
         context.setExpireAt(expireAt);
         return context;
     }

@@ -101,7 +101,7 @@
             background: linear-gradient(135deg, rgba(6,182,212,0.08), rgba(37,99,235,0.06));
             border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 18px; margin-bottom: 16px;
         }
-        .form-grid { display: grid; grid-template-columns: 120px 1fr; gap: 12px 16px; max-width: 720px; align-items: center; }
+        .form-grid { display: grid; grid-template-columns: 120px 1fr; gap: 12px 16px; max-width: 860px; align-items: center; }
         .form-grid label { font-weight: 600; font-size: 13px; color: var(--text-muted); }
         .form-grid input, .form-grid select {
             padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; width: 100%;
@@ -110,7 +110,7 @@
         .modal { display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.45); z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
         .modal.show { display: flex; }
         .modal-box {
-            background: white; border-radius: 16px; width: 100%; max-width: 520px;
+            background: white; border-radius: 16px; width: 100%; max-width: 580px;
             box-shadow: var(--shadow-lg); overflow: hidden;
         }
         .modal-header { padding: 16px 20px; font-weight: 700; border-bottom: 1px solid var(--border); }
@@ -133,6 +133,7 @@
         .toast.success { background: #0891b2; }
         .toast.error { background: #dc2626; }
     </style>
+    <link rel="stylesheet" href="${request.contextPath!''}/statics/css/auth-scope-picker.css"/>
 </head>
 <body>
 <div class="container">
@@ -150,7 +151,7 @@
 
     <div class="tabs" id="tabBar">
         <div class="tab active" data-tab="apps" onclick="switchTab('apps')">客户端</div>
-        <div class="tab hidden" id="tabDetail" data-tab="detail" onclick="switchTab('detail')">应用详情</div>
+        <div class="tab hidden" id="tabDetail" data-tab="detail" onclick="switchTab('detail')">编辑</div>
         <div class="tab" data-tab="tokens" onclick="switchTab('tokens')">访问凭证</div>
     </div>
 
@@ -162,7 +163,7 @@
                 <div class="toolbar-filters">
                     <input type="text" id="filterClientKeyword" placeholder="搜索名称或 clientId" onkeydown="if(event.key==='Enter')loadClients(1)"/>
                     <button class="btn btn-info btn-sm" onclick="loadClients(1)">查询</button>
-                    <button class="btn btn-success btn-sm" onclick="showCreateClientModal()">创建客户端</button>
+                    <button class="btn btn-success btn-sm" onclick="showCreateClientModal()">创建</button>
                 </div>
             </div>
             <div class="table-container">
@@ -179,7 +180,7 @@
 
     <!-- 应用详情 -->
     <div class="tab-panel" id="panelDetail">
-        <div class="content">
+        <div class="content admin-detail-scroll">
             <div class="detail-banner" id="detailBanner">请选择客户端</div>
             <div class="form-grid">
                 <label>客户端名称</label><input id="editName"/>
@@ -192,7 +193,20 @@
                     </div>
                     <p class="field-hint">用户在本系统完成授权后的回调地址。</p>
                 </div>
-                <label>授权范围</label><input id="editScope"/>
+                <div class="scope-field-wrap">
+                    <span class="scope-field-label">授权范围</span>
+                    <div class="scope-field">
+                        <input type="hidden" id="editScope"/>
+                        <p class="scope-field-desc">勾选可请求的权限；用户在授权确认页将看到相同说明。默认「基本授权」包含获取用户唯一标识与基本资料。</p>
+                        <div class="scope-stored-box">
+                            <span class="scope-stored-label">存储值</span>
+                            <code class="scope-stored-text" id="editScopeStored">basic</code>
+                        </div>
+                        <div class="scope-field-summary" id="editScopeSummary"></div>
+                        <div class="scope-presets" id="editScopePresets"></div>
+                        <div class="scope-picker-list" id="editScopePicker"></div>
+                    </div>
+                </div>
                 <label>可信客户端</label>
                 <select id="editTrusted">
                     <option value="1">是（跳过确认页）</option>
@@ -206,7 +220,7 @@
             </div>
             <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;">
                 <button class="btn btn-primary btn-sm" onclick="saveClientDetail()">保存</button>
-                <button class="btn btn-success btn-sm" onclick="openAsAuthorize()">测试授权</button>
+                <button class="btn btn-success btn-sm" onclick="openAsAuthorize()">测试</button>
             </div>
         </div>
     </div>
@@ -236,7 +250,7 @@
 
 <!-- 创建客户端 -->
 <div class="modal" id="modalCreateClient">
-    <div class="modal-box">
+    <div class="modal-box admin-modal-scroll">
         <div class="modal-header">创建 OAuth2 客户端</div>
         <div class="modal-body">
             <div class="field">
@@ -258,7 +272,17 @@
             </div>
             <div class="field">
                 <label>授权范围</label>
-                <input id="createScope" value="basic"/>
+                <div class="scope-field">
+                    <input type="hidden" id="createScope" value="basic"/>
+                    <p class="scope-field-desc">勾选可请求的权限；用户在授权确认页将看到相同说明。</p>
+                    <div class="scope-stored-box">
+                        <span class="scope-stored-label">存储值</span>
+                        <code class="scope-stored-text" id="createScopeStored">basic</code>
+                    </div>
+                    <div class="scope-field-summary" id="createScopeSummary"></div>
+                    <div class="scope-presets" id="createScopePresets"></div>
+                    <div class="scope-picker-list" id="createScopePicker"></div>
+                </div>
             </div>
         </div>
         <div class="modal-footer">
@@ -283,6 +307,7 @@
 window.__CTX__ = '${request.contextPath!""}';
 window.__OAUTH_AS_ADMIN_API__ = window.__CTX__ + '/oauth/admin/as/platform';
 </script>
+<script src="${request.contextPath!''}/statics/js/auth-scope-picker.js"></script>
 <script>
 //<#noparse>
 const API_BASE = (typeof window.__OAUTH_AS_ADMIN_API__ === 'string' && window.__OAUTH_AS_ADMIN_API__.length > 0)
@@ -360,7 +385,7 @@ async function loadClients(page) {
     state.clients.totalPage = r.page.totalPage || 1;
     var list = r.page.list || [];
     if (!list.length) {
-        tbody.innerHTML = '<tr><td colspan="7" class="empty-hint">暂无客户端，可点「创建客户端」注册</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-hint">暂无客户端，可点「创建」注册</td></tr>';
     } else {
         tbody.innerHTML = list.map(function(item) {
             var trustedBadge = item.trusted === 1
@@ -377,9 +402,9 @@ async function loadClients(page) {
                 '<td>' + archivedBadge + '</td>' +
                 '<td>' + formatTime(item.createTime) + '</td>' +
                 '<td>' +
-                '<button class="btn btn-info btn-xs" onclick="selectClient(\'' + escapeAttr(item.clientId) + '\')">详情</button>' +
-                '<button class="btn btn-warning btn-xs" onclick="resetSecret(\'' + escapeAttr(item.clientId) + '\',\'' + escapeAttr(item.clientName || item.clientId) + '\')">重置密钥</button>' +
-                '<button class="btn btn-success btn-xs" onclick="openAsAuthorize(\'' + escapeAttr(item.clientId) + '\',\'' + escapeAttr(item.redirectUri || '') + '\')">测试授权</button>' +
+                '<button class="btn btn-info btn-xs" onclick="selectClient(\'' + escapeAttr(item.clientId) + '\')" title="编辑客户端配置">编辑</button>' +
+                '<button class="btn btn-warning btn-xs" onclick="resetSecret(\'' + escapeAttr(item.clientId) + '\',\'' + escapeAttr(item.clientName || item.clientId) + '\')" title="重置客户端密钥">重置</button>' +
+                '<button class="btn btn-success btn-xs" onclick="openAsAuthorize(\'' + escapeAttr(item.clientId) + '\',\'' + escapeAttr(item.redirectUri || '') + '\')" title="测试授权流程">测试</button>' +
                 '</td></tr>';
         }).join('');
     }
@@ -404,6 +429,9 @@ async function selectClient(clientId) {
     document.getElementById('editScope').value = r.client.scope || 'basic';
     document.getElementById('editTrusted').value = String(r.client.trusted != null ? r.client.trusted : 1);
     document.getElementById('editArchived').value = String(r.client.archived != null ? r.client.archived : 0);
+    if (window.AuthScopePicker) {
+        AuthScopePicker.refresh('editScope', 'editScopePicker', 'oauth', window.__CTX__ || '');
+    }
     switchTab('detail');
 }
 
@@ -461,6 +489,9 @@ function showCreateClientModal() {
     document.getElementById('createRedirect').value = '';
     document.getElementById('createScope').value = 'basic';
     fillLocalCallback('createRedirect');
+    if (window.AuthScopePicker) {
+        AuthScopePicker.refresh('createScope', 'createScopePicker', 'oauth', window.__CTX__ || '');
+    }
     showModal('modalCreateClient');
 }
 
@@ -608,6 +639,21 @@ function openAsAuthorize(clientId, redirectUri) {
         + '&state=' + encodeURIComponent(stateParam);
     window.open(url, '_blank');
 }
+
+function initScopePickers() {
+    if (!window.AuthScopePicker) {
+        return;
+    }
+    AuthScopePicker.bind({
+        contextPath: window.__CTX__ || '',
+        track: 'oauth',
+        pairs: [
+            { inputId: 'createScope', containerId: 'createScopePicker' },
+            { inputId: 'editScope', containerId: 'editScopePicker' }
+        ]
+    });
+}
+document.addEventListener('DOMContentLoaded', initScopePickers);
 //</#noparse>
 </script>
 </body>

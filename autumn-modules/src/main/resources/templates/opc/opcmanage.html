@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>开放接入统一管理</title>
+    <link rel="stylesheet" href="${request.contextPath!''}/statics/css/auth-scope-picker.css"/>
     <style>
         :root {
             --bg-page: #f0f1f8;
@@ -98,8 +99,8 @@
         <div class="toolbar">
             <input type="text" id="filterAppKeyword" placeholder="搜索应用名称或标识">
             <button class="btn btn-secondary btn-sm" onclick="loadApps(1)">查询</button>
-            <button class="btn btn-primary btn-sm" onclick="showSaveAppModal()">接入应用</button>
-            <button class="btn btn-primary btn-sm" onclick="showApplyAppModal()">向平台在线申请</button>
+            <button class="btn btn-primary btn-sm" onclick="showSaveAppModal()">接入</button>
+            <button class="btn btn-primary btn-sm" onclick="showApplyAppModal()">申请</button>
         </div>
         <div class="table-container">
             <table>
@@ -115,7 +116,7 @@
             <select id="filterBindApp"><option value="">全部应用</option></select>
             <input type="text" id="filterBindKeyword" placeholder="用户标识或跨应用标识">
             <button class="btn btn-secondary btn-sm" onclick="loadBinds(1)">查询</button>
-            <button class="btn btn-primary btn-sm" onclick="showCreateBindModal()">添加关联</button>
+            <button class="btn btn-primary btn-sm" onclick="showCreateBindModal()">添加</button>
         </div>
         <div class="table-container">
             <table>
@@ -128,7 +129,7 @@
 </div>
 
 <div class="modal" id="modalSaveApp">
-    <div class="modal-content">
+    <div class="modal-content admin-modal-scroll">
         <div class="modal-header">接入第三方登录应用</div>
         <div class="modal-body">
             <label>应用名称</label><input id="saveName" type="text" placeholder="如：官网登录">
@@ -146,7 +147,18 @@
                 <button type="button" class="btn btn-secondary btn-sm" onclick="fillLocalOpcCallback('saveRedirect')">本系统样例</button>
             </div>
             <p class="field-hint">须与授权平台登记的一致。接入本系统时可点「本系统样例」，保存后按应用标识自动补全。</p>
-            <label>授权范围</label><input id="saveScope" type="text" value="basic">
+            <label>授权范围</label>
+            <div class="scope-field">
+                <input type="hidden" id="saveScope" value="basic"/>
+                <p class="scope-field-desc">勾选可请求的权限；用户在授权确认页将看到相同说明。须与平台登记一致。</p>
+                <div class="scope-stored-box">
+                    <span class="scope-stored-label">存储值</span>
+                    <code class="scope-stored-text">basic</code>
+                </div>
+                <div class="scope-field-summary" id="saveScopeSummary"></div>
+                <div class="scope-presets" id="saveScopePresets"></div>
+                <div class="scope-picker-list" id="saveScopePicker"></div>
+            </div>
             <label>负责人账号（可选）</label><input id="saveUser" type="text" placeholder="默认当前登录管理员">
             <p class="field-hint">用于记录该接入配置归属哪个系统用户，一般留空即可。</p>
             <label>登录页图标地址（icon）</label><input id="saveIcon" type="text" placeholder="可选">
@@ -161,14 +173,14 @@
         </div>
         <div class="modal-footer">
             <button class="btn btn-secondary btn-sm" onclick="hideModal('modalSaveApp')">取消</button>
-            <button class="btn btn-primary btn-sm" onclick="submitSaveApp()">确认接入</button>
+            <button class="btn btn-primary btn-sm" onclick="submitSaveApp()">接入</button>
         </div>
     </div>
 </div>
 
 <div class="modal" id="modalApplyApp">
-    <div class="modal-content">
-        <div class="modal-header">向授权平台在线申请</div>
+    <div class="modal-content admin-modal-scroll">
+        <div class="modal-header">在线申请</div>
         <div class="modal-body">
             <label>应用名称</label><input id="applyName" type="text" placeholder="如：官网登录">
             <label>授权平台地址</label>
@@ -183,7 +195,18 @@
                 <input id="applyRedirect" type="text" placeholder="用户授权成功后返回本系统的地址">
                 <button type="button" class="btn btn-secondary btn-sm" onclick="fillLocalOpcCallback('applyRedirect')">本系统样例</button>
             </div>
-            <label>授权范围</label><input id="applyScope" type="text" value="basic">
+            <label>授权范围</label>
+            <div class="scope-field">
+                <input type="hidden" id="applyScope" value="basic"/>
+                <p class="scope-field-desc">勾选可请求的权限；用户在授权确认页将看到相同说明。须与平台登记一致。</p>
+                <div class="scope-stored-box">
+                    <span class="scope-stored-label">存储值</span>
+                    <code class="scope-stored-text">basic</code>
+                </div>
+                <div class="scope-field-summary" id="applyScopeSummary"></div>
+                <div class="scope-presets" id="applyScopePresets"></div>
+                <div class="scope-picker-list" id="applyScopePicker"></div>
+            </div>
             <label>登录页展示（pageLogin）</label>
             <select id="applyPageLogin">
                 <option value="0">0 - 不展示</option>
@@ -195,14 +218,14 @@
         </div>
         <div class="modal-footer">
             <button class="btn btn-secondary btn-sm" onclick="hideModal('modalApplyApp')">取消</button>
-            <button class="btn btn-primary btn-sm" onclick="submitApplyApp()">提交申请</button>
+            <button class="btn btn-primary btn-sm" onclick="submitApplyApp()">申请</button>
         </div>
     </div>
 </div>
 
 <div class="modal" id="modalEditApp">
-    <div class="modal-content" style="max-width:560px;">
-        <div class="modal-header">修改接入配置</div>
+    <div class="modal-content admin-modal-scroll" style="max-width:560px;">
+        <div class="modal-header">编辑接入配置</div>
         <div class="modal-body">
             <label>应用名称</label><input id="editName" type="text">
             <label>应用标识</label><input id="editAppId" type="text" readonly style="background:#f8fafc;">
@@ -219,7 +242,18 @@
             </div>
             <p class="field-hint" id="editRedirectHint">须与「开放授权平台管理」中该应用的返回地址<strong>完全一致</strong>（含应用标识参数）。</p>
             <p class="field-hint" id="editRedirectExpected" style="display:none;color:#b45309;"></p>
-            <label>授权范围</label><input id="editScope" type="text">
+            <label>授权范围</label>
+            <div class="scope-field">
+                <input type="hidden" id="editScope" value="basic"/>
+                <p class="scope-field-desc">勾选可请求的权限；用户在授权确认页将看到相同说明。须与平台登记一致。</p>
+                <div class="scope-stored-box">
+                    <span class="scope-stored-label">存储值</span>
+                    <code class="scope-stored-text">basic</code>
+                </div>
+                <div class="scope-field-summary" id="editScopeSummary"></div>
+                <div class="scope-presets" id="editScopePresets"></div>
+                <div class="scope-picker-list" id="editScopePicker"></div>
+            </div>
             <input id="editUser" type="hidden">
             <label>登录页图标地址（icon）</label><input id="editIcon" type="text" placeholder="可选">
             <label>图标文件 HASH（hash）</label><input id="editHash" type="text" placeholder="上传图标后的文件 hash">
@@ -233,7 +267,7 @@
         </div>
         <div class="modal-footer">
             <button class="btn btn-secondary btn-sm" onclick="hideModal('modalEditApp')">取消</button>
-            <button class="btn btn-primary btn-sm" onclick="submitUpdateApp()">保存修改</button>
+            <button class="btn btn-primary btn-sm" onclick="submitUpdateApp()">保存</button>
         </div>
     </div>
 </div>
@@ -250,11 +284,12 @@
         </div>
         <div class="modal-footer">
             <button class="btn btn-secondary btn-sm" onclick="hideModal('modalCreateBind')">取消</button>
-            <button class="btn btn-primary btn-sm" onclick="submitCreateBind()">绑定</button>
+            <button class="btn btn-primary btn-sm" onclick="submitCreateBind()">添加</button>
         </div>
     </div>
 </div>
 
+<script src="${request.contextPath!''}/statics/js/auth-scope-picker.js"></script>
 <script>
 window.__CTX__ = '${request.contextPath!""}';
 window.__OPC_ADMIN_API__ = window.__CTX__ + '/open/admin/opc/platform';
@@ -345,11 +380,11 @@ async function loadApps(page) {
             '<td>' + escapeHtml(item.username) + '</td><td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;" title="' + escapeAttr(item.platformBaseUrl || '') + '">' + escapeHtml(item.platformBaseUrl) + '</td>' +
             '<td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;" title="' + escapeAttr(item.redirectUri || '') + '"><code>' + redirectCell + '</code></td>' +
             '<td>' + (item.bindCount || 0) + '</td><td>' + status + '</td><td>' +
-            '<button class="btn btn-info btn-xs" onclick="showEditAppModal(\'' + escapeAttr(item.appId) + '\')">修改</button>' +
-            '<button class="btn btn-secondary btn-xs" onclick="copyLoginUrl(\'' + escapeAttr(item.authorizeUrl || '') + '\')">复制入口</button>' +
-            '<button class="btn btn-success btn-xs" onclick="openLoginTest(\'' + escapeAttr(item.appId) + '\')">测试登录</button>' +
+            '<button class="btn btn-info btn-xs" onclick="showEditAppModal(\'' + escapeAttr(item.appId) + '\')" title="编辑接入配置">编辑</button>' +
+            '<button class="btn btn-secondary btn-xs" onclick="copyLoginUrl(\'' + escapeAttr(item.authorizeUrl || '') + '\')" title="复制登录入口地址">复制</button>' +
+            '<button class="btn btn-success btn-xs" onclick="openLoginTest(\'' + escapeAttr(item.appId) + '\')" title="打开登录页测试">测试</button>' +
             '<button class="btn btn-warning btn-xs" onclick="toggleAppStatus(\'' + escapeAttr(item.appId) + '\',' + next + ')">' + toggle + '</button></td></tr>';
-    }).join('') : '<tr><td colspan="8" class="empty-hint">暂无接入应用，可点「接入应用」填写授权平台颁发的凭证</td></tr>';
+    }).join('') : '<tr><td colspan="8" class="empty-hint">暂无接入应用，可点「接入」填写授权平台颁发的凭证</td></tr>';
     renderPagination('appPagination', state.apps.page, state.apps.totalPage, loadApps);
 }
 
@@ -432,6 +467,9 @@ async function showEditAppModal(appId) {
     document.getElementById('editPageLogin').value = String(app.pageLogin != null ? app.pageLogin : 0);
     document.getElementById('editRedirect').oninput = refreshEditRedirectHint;
     refreshEditRedirectHint();
+    if (window.AuthScopePicker) {
+        AuthScopePicker.refresh('editScope', 'editScopePicker', 'opl', window.__CTX__ || '');
+    }
     showModal('modalEditApp');
 }
 
@@ -618,6 +656,22 @@ function showToast(msg, type) {
 function formatTime(v) { return v ? String(v).replace('T', ' ').substring(0, 19) : '-'; }
 function escapeHtml(s) { if (!s) return ''; return String(s).replace(/[&<>"']/g, function(m) { return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]; }); }
 function escapeAttr(s) { if (!s) return ''; return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+
+function initScopePickers() {
+    if (!window.AuthScopePicker) {
+        return;
+    }
+    AuthScopePicker.bind({
+        contextPath: window.__CTX__ || '',
+        track: 'opl',
+        pairs: [
+            { inputId: 'saveScope', containerId: 'saveScopePicker', presetsId: 'saveScopePresets' },
+            { inputId: 'applyScope', containerId: 'applyScopePicker', presetsId: 'applyScopePresets' },
+            { inputId: 'editScope', containerId: 'editScopePicker', presetsId: 'editScopePresets' }
+        ]
+    });
+}
+document.addEventListener('DOMContentLoaded', initScopePickers);
 //</#noparse>
 </script>
 </body>

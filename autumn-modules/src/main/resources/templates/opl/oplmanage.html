@@ -101,7 +101,7 @@
             background: linear-gradient(135deg, rgba(15,118,110,0.08), rgba(2,132,199,0.06));
             border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 18px; margin-bottom: 16px;
         }
-        .form-grid { display: grid; grid-template-columns: 120px 1fr; gap: 12px 16px; max-width: 720px; align-items: center; }
+        .form-grid { display: grid; grid-template-columns: 120px 1fr; gap: 12px 16px; max-width: 860px; align-items: center; }
         .form-grid label { font-weight: 600; font-size: 13px; color: var(--text-muted); }
         .form-grid input, .form-grid select {
             padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; width: 100%;
@@ -110,7 +110,7 @@
         .modal { display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.45); z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
         .modal.show { display: flex; }
         .modal-box {
-            background: white; border-radius: 16px; width: 100%; max-width: 520px;
+            background: white; border-radius: 16px; width: 100%; max-width: 580px;
             box-shadow: var(--shadow-lg); overflow: hidden;
         }
         .modal-header { padding: 16px 20px; font-weight: 700; border-bottom: 1px solid var(--border); }
@@ -133,6 +133,7 @@
         .toast.success { background: #059669; }
         .toast.error { background: #dc2626; }
     </style>
+    <link rel="stylesheet" href="${request.contextPath!''}/statics/css/auth-scope-picker.css"/>
 </head>
 <body>
 <div class="container">
@@ -154,7 +155,7 @@
     <div class="tabs" id="tabBar">
         <div class="tab active" data-tab="apps" onclick="switchTab('apps')">应用管理</div>
         <div class="tab" data-tab="accounts" onclick="switchTab('accounts')">开发者</div>
-        <div class="tab hidden" id="tabDetail" data-tab="detail" onclick="switchTab('detail')">应用详情</div>
+        <div class="tab hidden" id="tabDetail" data-tab="detail" onclick="switchTab('detail')">编辑</div>
         <div class="tab" data-tab="users" onclick="switchTab('users')">已授权用户</div>
         <div class="tab" data-tab="unions" onclick="switchTab('unions')">跨应用用户</div>
         <div class="tab" data-tab="codes" onclick="switchTab('codes')">授权记录</div>
@@ -170,7 +171,7 @@
                     <input type="text" id="filterAppKeyword" placeholder="搜索应用名称或标识" onkeydown="if(event.key==='Enter')loadApps(1)"/>
                     <select id="filterAppAccount"><option value="">全部开发者</option></select>
                     <button class="btn btn-info btn-sm" onclick="loadApps(1)">查询</button>
-                    <button class="btn btn-success btn-sm" onclick="showCreateAppModal()">创建应用</button>
+                    <button class="btn btn-success btn-sm" onclick="showCreateAppModal()">创建</button>
                 </div>
             </div>
             <div class="table-container">
@@ -210,7 +211,7 @@
 
     <!-- App 详情 -->
     <div class="tab-panel" id="panelDetail">
-        <div class="content">
+        <div class="content admin-detail-scroll">
             <div class="detail-banner" id="detailBanner">请选择应用</div>
             <div class="form-grid">
                 <label>应用名称</label><input id="editName"/>
@@ -223,12 +224,25 @@
                     </div>
                     <p class="field-hint">用户在本系统完成授权后的返回地址。接入本系统时可点「本系统样例」自动填入。</p>
                 </div>
-                <label>授权范围</label><input id="editScope"/>
+                <div class="scope-field-wrap">
+                    <span class="scope-field-label">授权范围</span>
+                    <div class="scope-field">
+                        <input type="hidden" id="editScope"/>
+                        <p class="scope-field-desc">勾选可请求的权限；用户在授权确认页将看到相同说明。默认「基本授权」包含应用内识别身份、跨应用识别身份与基本资料。</p>
+                        <div class="scope-stored-box">
+                            <span class="scope-stored-label">存储值</span>
+                            <code class="scope-stored-text" id="editScopeStored">basic</code>
+                        </div>
+                        <div class="scope-field-summary" id="editScopeSummary"></div>
+                        <div class="scope-presets" id="editScopePresets"></div>
+                        <div class="scope-picker-list" id="editScopePicker"></div>
+                    </div>
+                </div>
             </div>
             <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;">
                 <button class="btn btn-primary btn-sm" onclick="saveAppDetail()">保存</button>
-                <button class="btn btn-info btn-sm" onclick="viewSelectedAppUsers()">查看用户列表</button>
-                <button class="btn btn-success btn-sm" onclick="openOplAuthorizePage()">测试授权流程</button>
+                <button class="btn btn-info btn-sm" onclick="viewSelectedAppUsers()" title="查看已授权用户列表">用户</button>
+                <button class="btn btn-success btn-sm" onclick="openOplAuthorizePage()">测试</button>
             </div>
             <div class="detail-stats">
                 <div class="stat-item"><div class="stat-value" id="detailUserCount">0</div><div class="stat-label">已授权用户</div></div>
@@ -323,8 +337,8 @@
 
 <!-- 创建应用 -->
 <div class="modal" id="modalCreateApp">
-    <div class="modal-box">
-        <div class="modal-header">创建应用</div>
+    <div class="modal-box admin-modal-scroll">
+        <div class="modal-header">创建</div>
         <div class="modal-body">
             <div class="field">
                 <label>开发者</label>
@@ -341,7 +355,20 @@
                 </div>
                 <p class="field-hint">其他系统接入本系统登录时，可点「本系统样例」；创建成功后会自动补全应用标识。</p>
             </div>
-            <div class="field"><label>授权范围</label><input id="createAppScope" value="basic"/></div>
+            <div class="field">
+                <label>授权范围</label>
+                <div class="scope-field">
+                    <input type="hidden" id="createAppScope" value="basic"/>
+                    <p class="scope-field-desc">勾选可请求的权限；用户在授权确认页将看到相同说明。</p>
+                    <div class="scope-stored-box">
+                        <span class="scope-stored-label">存储值</span>
+                        <code class="scope-stored-text" id="createAppScopeStored">basic</code>
+                    </div>
+                    <div class="scope-field-summary" id="createAppScopeSummary"></div>
+                    <div class="scope-presets" id="createAppScopePresets"></div>
+                    <div class="scope-picker-list" id="createAppScopePicker"></div>
+                </div>
+            </div>
         </div>
         <div class="modal-footer">
             <button class="btn btn-secondary btn-sm" onclick="hideModal('modalCreateApp')">取消</button>
@@ -384,6 +411,7 @@
 window.__CTX__ = '${request.contextPath!""}';
 window.__OPL_ADMIN_API__ = window.__CTX__ + '/open/admin/opl/platform';
 </script>
+<script src="${request.contextPath!''}/statics/js/auth-scope-picker.js"></script>
 <script>
 //<#noparse>
 const API_BASE = (typeof window.__OPL_ADMIN_API__ === 'string' && window.__OPL_ADMIN_API__.length > 0)
@@ -527,9 +555,9 @@ async function loadApps(page) {
                 '<td>' + (item.tokenCount || 0) + '</td>' +
                 '<td>' + status + '</td>' +
                 '<td>' + formatTime(item.create) + '</td>' +
-                '<td><button class="btn btn-info btn-xs" onclick="selectApp(\'' + escapeAttr(item.appId) + '\')">详情</button>' +
-                '<button class="btn btn-success btn-xs" onclick="openOplAuthorizePage(\'' + escapeAttr(item.appId) + '\',\'' + escapeAttr(item.redirectUri || '') + '\')">测试授权</button>' +
-                '<button class="btn btn-warning btn-xs" onclick="resetSecret(\'' + escapeAttr(item.appId) + '\',\'' + escapeAttr(item.name) + '\')">重置密钥</button>' +
+                '<td><button class="btn btn-info btn-xs" onclick="selectApp(\'' + escapeAttr(item.appId) + '\')" title="编辑应用配置">编辑</button>' +
+                '<button class="btn btn-success btn-xs" onclick="openOplAuthorizePage(\'' + escapeAttr(item.appId) + '\',\'' + escapeAttr(item.redirectUri || '') + '\')" title="测试授权流程">测试</button>' +
+                '<button class="btn btn-warning btn-xs" onclick="resetSecret(\'' + escapeAttr(item.appId) + '\',\'' + escapeAttr(item.name) + '\')" title="重置应用密钥">重置</button>' +
                 '<button class="btn btn-secondary btn-xs" onclick="toggleAppStatus(\'' + escapeAttr(item.appId) + '\',' + nextStatus + ')">' + toggleLabel + '</button></td>' +
                 '</tr>';
         }).join('');
@@ -574,6 +602,9 @@ async function selectApp(appId) {
     document.getElementById('filterCodeAppId').value = r.app.appId;
     document.getElementById('filterTokenAppId').value = r.app.appId;
     document.getElementById('filterUnionAccount').value = r.app.account || '';
+    if (window.AuthScopePicker) {
+        AuthScopePicker.refresh('editScope', 'editScopePicker', 'opl', window.__CTX__ || '');
+    }
     switchTab('detail');
 }
 
@@ -666,7 +697,11 @@ async function loadTokens(page) {
 
 function showCreateAppModal() {
     fillTypeSelect(document.getElementById('createAppType'));
+    document.getElementById('createAppScope').value = 'basic';
     fillLocalOpcCallback('createAppRedirect');
+    if (window.AuthScopePicker) {
+        AuthScopePicker.refresh('createAppScope', 'createAppScopePicker', 'opl', window.__CTX__ || '');
+    }
     loadAccountOptions().then(function() { showModal('modalCreateApp'); });
 }
 
@@ -884,11 +919,33 @@ function openOplAuthorizePage(appId, redirectUri) {
         redirectUri = appOrigin() + '/open/oauth2/callback?appId=' + encodeURIComponent(appId);
     }
     var stateParam = 'opl_' + Math.random().toString(36).slice(2, 10);
+    var scope = 'basic';
+    if (state.selectedApp && state.selectedApp.appId === appId && state.selectedApp.scope) {
+        scope = state.selectedApp.scope;
+    } else if (document.getElementById('editScope') && document.getElementById('editScope').value) {
+        scope = document.getElementById('editScope').value;
+    }
     var url = appOrigin() + '/open/oauth2/authorize?app_id=' + encodeURIComponent(appId)
         + '&redirect_uri=' + encodeURIComponent(redirectUri)
-        + '&response_type=code&scope=basic&state=' + encodeURIComponent(stateParam);
+        + '&response_type=code&scope=' + encodeURIComponent(scope)
+        + '&state=' + encodeURIComponent(stateParam);
     window.open(url, '_blank');
 }
+
+function initScopePickers() {
+    if (!window.AuthScopePicker) {
+        return;
+    }
+    AuthScopePicker.bind({
+        contextPath: window.__CTX__ || '',
+        track: 'opl',
+        pairs: [
+            { inputId: 'createAppScope', containerId: 'createAppScopePicker' },
+            { inputId: 'editScope', containerId: 'editScopePicker' }
+        ]
+    });
+}
+document.addEventListener('DOMContentLoaded', initScopePickers);
 //</#noparse>
 </script>
 </body>

@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8"/>
+    <title>授权范围管理</title>
+    <link rel="stylesheet" href="${request.contextPath!''}/statics/css/bootstrap.min.css"/>
+    <style>
+        body { padding: 24px; background: #f5f7fb; }
+        .card { background: #fff; border-radius: 8px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+        .scope-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #eee; }
+        .scope-row:last-child { border-bottom: 0; }
+        .tag { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; margin-right: 6px; background: #eef2ff; color: #334155; }
+        .tag.builtin { background: #ecfeff; }
+        .tag.high { background: #fee2e2; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h3>OAuth / OPL 授权范围目录</h3>
+    <p>内置 scope 可启用/禁用；自定义 scope 可增删。客户端登记范围请在 <a href="${request.contextPath!''}/oauthasmanage.html">授权管理</a> 与 <a href="${request.contextPath!''}/oplmanage.html">开放平台管理</a> 中配置。对照说明见 <a href="${request.contextPath!''}/docs/AI_AUTH_SCOPE.md" target="_blank">AI_AUTH_SCOPE</a>。</p>
+    <div id="scopeList"></div>
+</div>
+<div class="card">
+    <h4>新增自定义 scope</h4>
+    <div class="form-group"><label>代码</label><input id="newCode" class="form-control" placeholder="例如 custom.read"/></div>
+    <div class="form-group"><label>名称</label><input id="newLabel" class="form-control" placeholder="展示名称"/></div>
+    <div class="form-group"><label>轨道</label><input id="newTracks" class="form-control" value="oauth,opl" placeholder="oauth,opl"/></div>
+    <div class="form-group"><label>字段</label><input id="newFields" class="form-control" placeholder="nickname,icon"/></div>
+    <button class="btn btn-primary btn-sm" onclick="saveCustom()">保存</button>
+</div>
+<script>
+window.__CTX__ = '${request.contextPath!""}';
+const API = window.__CTX__ + '/oauth/admin/scopes';
+async function apiGet(path) {
+    const res = await fetch(API + path, { credentials: 'same-origin' });
+    return res.json();
+}
+async function apiPost(path, body) {
+    const res = await fetch(API + path, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body || {})
+    });
+    return res.json();
+}
+function renderItems(items) {
+    const box = document.getElementById('scopeList');
+    box.innerHTML = '';
+    (items || []).forEach(function (item) {
+        const row = document.createElement('div');
+        row.className = 'scope-row';
+        const left = document.createElement('div');
+        left.innerHTML = '<strong>' + (item.label || item.code) + '</strong> <code>' + item.code + '</code>'
+            + ' <span class="tag' + (item.builtin ? ' builtin' : '') + '">' + (item.builtin ? '内置' : '自定义') + '</span>'
+            + (item.tracks ? ' <span class="tag">' + item.tracks + '</span>' : '')
+            + (item.sensitivity === 'high' ? ' <span class="tag high">高敏感</span>' : '');
+        const right = document.createElement('div');
+        const toggle = document.createElement('button');
+        toggle.className = 'btn btn-default btn-xs';
+        toggle.textContent = item.enabled === false ? '启用' : '禁用';
+        toggle.onclick = function () {
+            apiPost('/enabled', { uuid: item.uuid, enabled: item.enabled === false }).then(function () {
+                invalidateScopeCatalog();
+                loadList();
+            });
+        };
+        right.appendChild(toggle);
+        if (!item.builtin) {
+            const del = document.createElement('button');
+            del.className = 'btn btn-danger btn-xs';
+            del.style.marginLeft = '8px';
+            del.textContent = '删除';
+            del.onclick = function () {
+                apiPost('/delete', { uuid: item.uuid }).then(function () {
+                    invalidateScopeCatalog();
+                    loadList();
+                });
+            };
+            right.appendChild(del);
+        }
+        row.appendChild(left);
+        row.appendChild(right);
+        box.appendChild(row);
+    });
+}
+function invalidateScopeCatalog() {
+    if (window.AuthScopePicker && AuthScopePicker.invalidateCatalog) {
+        AuthScopePicker.invalidateCatalog();
+    }
+}
+function loadList() {
+    apiGet('/list').then(function (body) {
+        if (body && body.code === 0) {
+            renderItems(body.items);
+        }
+    });
+}
+function saveCustom() {
+    apiPost('/save', {
+        code: document.getElementById('newCode').value,
+        label: document.getElementById('newLabel').value,
+        tracks: document.getElementById('newTracks').value,
+        fields: document.getElementById('newFields').value,
+        sensitivity: 'low'
+    }).then(function (body) {
+        if (body && body.code === 0) {
+            invalidateScopeCatalog();
+            loadList();
+        }
+    });
+}
+loadList();
+</script>
+</body>
+</html>

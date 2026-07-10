@@ -1,0 +1,245 @@
+/* 授权范围选择器（管理页共用） */
+
+/* 表单内整行占位，避免与 form-grid 两列布局冲突 */
+.form-grid .scope-field-wrap {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    gap: 12px 16px;
+    align-items: start;
+}
+
+.form-grid .scope-field-wrap > .scope-field-label {
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--text-muted, #64748b);
+    padding-top: 10px;
+}
+
+.scope-field {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    min-width: 0;
+}
+
+.scope-field-desc {
+    font-size: 12px;
+    color: var(--text-muted, #64748b);
+    line-height: 1.55;
+    margin: 0;
+}
+
+/* 存储值（提交/持久化用） */
+.scope-stored-box {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+}
+
+.scope-stored-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    white-space: nowrap;
+}
+
+.scope-stored-text {
+    flex: 1;
+    min-width: 120px;
+    font-size: 13px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    color: #0f766e;
+    background: #fff;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 4px 10px;
+    word-break: break-all;
+}
+
+/* 已选权限中文摘要 */
+.scope-field-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-height: 0;
+}
+
+.scope-summary-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    background: #eef2ff;
+    color: #3730a3;
+    border: 1px solid #c7d2fe;
+}
+
+.scope-summary-chip.empty {
+    background: #f8fafc;
+    color: #94a3b8;
+    border-color: #e2e8f0;
+    font-weight: 500;
+}
+
+.scope-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.scope-preset-btn {
+    padding: 6px 14px;
+    border-radius: 999px;
+    border: 1px solid #cbd5e1;
+    background: #fff;
+    color: #475569;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.scope-preset-btn:hover {
+    border-color: #94a3b8;
+    background: #f8fafc;
+}
+
+.scope-preset-btn.active {
+    border-color: #0891b2;
+    background: #ecfeff;
+    color: #0e7490;
+}
+
+/* 列表式选项（避免窄列网格导致文字竖排） */
+.scope-picker-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+}
+
+.scope-pick-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #fff;
+    cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+    user-select: none;
+    box-sizing: border-box;
+}
+
+.scope-pick-row:hover {
+    border-color: #cbd5e1;
+    background: #fafbfd;
+}
+
+.scope-pick-row.checked {
+    border-color: #0891b2;
+    background: linear-gradient(180deg, #f0fdfa 0%, #ecfeff 100%);
+    box-shadow: 0 0 0 1px rgba(8, 145, 178, 0.15);
+}
+
+.scope-pick-row input[type="checkbox"] {
+    margin: 2px 0 0;
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    accent-color: #0891b2;
+    cursor: pointer;
+}
+
+.scope-pick-body {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.scope-pick-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #1e293b;
+    line-height: 1.45;
+    word-break: break-word;
+}
+
+.scope-pick-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+}
+
+.scope-pick-code {
+    display: inline-block;
+    font-size: 12px;
+    color: #475569;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    background: #f1f5f9;
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+.scope-sens {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.4;
+    white-space: nowrap;
+}
+
+.scope-sens-low { background: #ecfdf5; color: #047857; }
+.scope-sens-medium { background: #fffbeb; color: #b45309; }
+.scope-sens-high { background: #fef2f2; color: #b91c1c; }
+
+.scope-field-loading,
+.scope-field-empty {
+    padding: 14px;
+    text-align: center;
+    font-size: 13px;
+    color: #94a3b8;
+    border: 1px dashed #e2e8f0;
+    border-radius: 10px;
+    background: #f8fafc;
+}
+
+.modal-body .scope-field {
+    margin-top: 2px;
+}
+
+/* 防止 form-grid 的 label 样式污染 picker 行 */
+.form-grid .scope-pick-row,
+.modal-body .scope-pick-row {
+    font-weight: normal;
+    color: inherit;
+    margin: 0;
+}
+
+.admin-detail-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.admin-modal-scroll {
+    max-height: min(90vh, 720px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}

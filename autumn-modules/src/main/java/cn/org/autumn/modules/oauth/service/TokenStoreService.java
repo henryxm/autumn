@@ -57,6 +57,10 @@ public class TokenStoreService extends ModuleService<TokenStoreDao, TokenStoreEn
     }
 
     public TokenStoreEntity saveOrUpdate(SysUserEntity sysUserEntity, String accessToken, String refreshToken, String authCode, Long accessTokenExpiredIn, Long refreshTokenExpiredIn) {
+        return saveOrUpdate(sysUserEntity, accessToken, refreshToken, authCode, accessTokenExpiredIn, refreshTokenExpiredIn, null);
+    }
+
+    public TokenStoreEntity saveOrUpdate(SysUserEntity sysUserEntity, String accessToken, String refreshToken, String authCode, Long accessTokenExpiredIn, Long refreshTokenExpiredIn, String scope) {
         TokenStoreEntity tokenStoreEntity = findByUser(sysUserEntity);
         if (null == tokenStoreEntity) {
             tokenStoreEntity = new TokenStoreEntity();
@@ -69,6 +73,9 @@ public class TokenStoreService extends ModuleService<TokenStoreDao, TokenStoreEn
         tokenStoreEntity.setRefreshToken(refreshToken);
         tokenStoreEntity.setAccessTokenExpiredIn(accessTokenExpiredIn);
         tokenStoreEntity.setRefreshTokenExpiredIn(refreshTokenExpiredIn);
+        if (scope != null) {
+            tokenStoreEntity.setScope(scope);
+        }
         tokenStoreEntity.setUpdateTime(new Date());
         insertOrUpdate(tokenStoreEntity);
         return tokenStoreEntity;
@@ -149,10 +156,10 @@ public class TokenStoreService extends ModuleService<TokenStoreDao, TokenStoreEn
             if (null != sysUserEntity) {
                 Long at = getAccessTokenExpiredIn(tokenStoreEntity);
                 if (at > 0)
-                    clientDetailsService.put(ValueType.accessToken, null, tokenStoreEntity.getAccessToken(), tokenStoreEntity.getRefreshToken(), sysUserEntity, at);
+                    clientDetailsService.put(ValueType.accessToken, null, tokenStoreEntity.getAccessToken(), tokenStoreEntity.getRefreshToken(), sysUserEntity, at, tokenStoreEntity.getScope());
                 Long rt = getRefreshTokenExpiredIn(tokenStoreEntity);
                 if (rt > 0) {
-                    clientDetailsService.put(ValueType.refreshToken, null, tokenStoreEntity.getAccessToken(), tokenStoreEntity.getRefreshToken(), sysUserEntity, rt);
+                    clientDetailsService.put(ValueType.refreshToken, null, tokenStoreEntity.getAccessToken(), tokenStoreEntity.getRefreshToken(), sysUserEntity, rt, tokenStoreEntity.getScope());
                 }
             }
         }

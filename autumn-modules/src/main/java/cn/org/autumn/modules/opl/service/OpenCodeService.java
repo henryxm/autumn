@@ -15,12 +15,13 @@ import org.springframework.transaction.annotation.Transactional;
 public class OpenCodeService extends ModuleService<OpenCodeDao, OpenCodeEntity> {
 
     @Transactional(rollbackFor = Exception.class)
-    public OpenCodeEntity issue(String appId, String userUuid, String redirectUri, String codeChallenge, String codeChallengeMethod) {
+    public OpenCodeEntity issue(String appId, String userUuid, String redirectUri, String codeChallenge, String codeChallengeMethod, String grantedScope) {
         OpenCodeEntity codeEntity = new OpenCodeEntity();
         codeEntity.setCode(generateCode());
         codeEntity.setAppId(appId);
         codeEntity.setUser(userUuid);
         codeEntity.setRedirectUri(redirectUri);
+        codeEntity.setScope(grantedScope);
         codeEntity.setCodeChallenge(StringUtils.isBlank(codeChallenge) ? null : codeChallenge.trim());
         codeEntity.setCodeChallengeMethod(StringUtils.isBlank(codeChallengeMethod) ? null : codeChallengeMethod.trim());
         Date now = new Date();
@@ -28,6 +29,11 @@ public class OpenCodeService extends ModuleService<OpenCodeDao, OpenCodeEntity> 
         codeEntity.setExpire(new Date(now.getTime() + OplConstants.AUTH_CODE_TTL_SECONDS * 1000L));
         insert(codeEntity);
         return codeEntity;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public OpenCodeEntity issue(String appId, String userUuid, String redirectUri, String codeChallenge, String codeChallengeMethod) {
+        return issue(appId, userUuid, redirectUri, codeChallenge, codeChallengeMethod, null);
     }
 
     @Transactional(rollbackFor = Exception.class)

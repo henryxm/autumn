@@ -434,6 +434,14 @@ public class SysPageController implements ErrorController {
         return "oauth/oauthasmanage";
     }
 
+    @RequestMapping({"authscopemanage.html"})
+    @SkipInterceptor
+    public String authscopemanage() {
+        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
+            return "404";
+        return "auth/authscopemanage";
+    }
+
     @RequestMapping({OauthRpAdminConstants.MANAGE_RP_PAGE})
     @SkipInterceptor
     public String oauthrpmanage() {

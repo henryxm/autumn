@@ -1,5 +1,11 @@
 package cn.org.autumn.modules.opl.service;
 
+import cn.org.autumn.auth.scope.AuthScopeCatalog;
+import cn.org.autumn.auth.scope.AuthScopeSet;
+import cn.org.autumn.auth.scope.AuthTrack;
+import cn.org.autumn.modules.auth.support.AuthUserInfoBuilder;
+import cn.org.autumn.modules.sys.entity.SysUserEntity;
+import cn.org.autumn.modules.sys.service.SysUserService;
 import cn.org.autumn.modules.oauth.oauth2.support.PkceSupport;
 import cn.org.autumn.modules.opl.entity.OpenAppEntity;
 import cn.org.autumn.modules.opl.entity.OpenCodeEntity;
@@ -46,6 +52,12 @@ public class OpenPlatformServiceImpl implements OpenPlatformService {
 
     @Autowired
     private UserProfileService userProfileService;
+
+    @Autowired
+    private SysUserService sysUserService;
+
+    @Autowired
+    private AuthScopeCatalog authScopeCatalog;
 
     @Override
     public OpenAccountSnapshot getOrCreateAccount(String userUuid, String name) {
@@ -142,14 +154,10 @@ public class OpenPlatformServiceImpl implements OpenPlatformService {
         if (app != null) {
             identity.setAccount(app.getAccount());
         }
-        OpenUserInfoSnapshot snapshot = new OpenUserInfoSnapshot();
-        snapshot.setOpenId(context.getOpenId());
-        snapshot.setUnionId(context.getUnionId());
         UserProfileEntity profile = userProfileService.getByUuid(context.getUser());
-        if (profile != null) {
-            snapshot.setNickname(profile.getNickname());
-            snapshot.setIcon(profile.getIcon());
-        }
+        SysUserEntity user = sysUserService.getByUuid(context.getUser());
+        AuthScopeSet grantedScope = AuthScopeSet.withDefault(context.getGrantedScope()).expand(authScopeCatalog, AuthTrack.OPL);
+        OpenUserInfoSnapshot snapshot = AuthUserInfoBuilder.toOpenUserInfo(AuthUserInfoBuilder.build(authScopeCatalog, AuthTrack.OPL, grantedScope, user, profile, context.getOpenId(), context.getUnionId()));
         oplExtensionService.enrichUserInfo(appSnapshot, identity, snapshot);
         return snapshot;
     }

@@ -13,6 +13,7 @@ public class OplTokenContext implements Serializable {
     private String authCode;
     private String accessToken;
     private String refreshToken;
+    private String grantedScope;
     private Date expireAt;
 
     public OplTokenContext() {
@@ -99,5 +100,13 @@ public class OplTokenContext implements Serializable {
 
     public void setExpireAt(Date expireAt) {
         this.expireAt = expireAt;
+    }
+
+    public String getGrantedScope() {
+        return grantedScope;
+    }
+
+    public void setGrantedScope(String grantedScope) {
+        this.grantedScope = grantedScope;
     }
 }

@@ -1,9 +1,13 @@
 package cn.org.autumn.modules.client.service;
 
+import cn.org.autumn.modules.auth.support.AuthScopeSupport;
 import cn.org.autumn.modules.client.dto.OauthRpStatePayload;
 import cn.org.autumn.modules.client.entity.WebAuthenticationEntity;
 import cn.org.autumn.modules.client.oauth2.WebOauthEndpointResolver;
+import cn.org.autumn.modules.oauth.entity.ClientDetailsEntity;
 import cn.org.autumn.modules.oauth.oauth2.support.OAuth2HttpClient;
+import cn.org.autumn.modules.oauth.service.ClientDetailsService;
+import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.utils.WebPathUtils;
 import javax.servlet.http.HttpServletRequest;
 import org.apache.commons.lang3.StringUtils;
@@ -32,6 +36,15 @@ public class OauthRpLoginService {
     @Autowired
     WebAuthenticationService webAuthenticationService;
 
+    @Autowired
+    ClientDetailsService clientDetailsService;
+
+    @Autowired
+    SysConfigService sysConfigService;
+
+    @Autowired
+    AuthScopeSupport authScopeSupport;
+
     public String buildAuthorizeRedirect(HttpServletRequest request, String callback) {
         WebAuthenticationEntity rpClient = authSiteRoleService.resolveRpClient(request);
         if (rpClient == null) {
@@ -43,7 +56,20 @@ public class OauthRpLoginService {
         if (StringUtils.isBlank(authorizeUri)) {
             throw new IllegalStateException("未配置授权地址（originUri 或 authorizeUri）");
         }
-        return oauth2HttpClient.buildAuthorizeUrl(authorizeUri, OAuth2HttpClient.CredentialParam.OAUTH, rpClient.getClientId(), rpClient.getRedirectUri(), rpClient.getScope(), state);
+        return oauth2HttpClient.buildAuthorizeUrl(authorizeUri, OAuth2HttpClient.CredentialParam.OAUTH, rpClient.getClientId(), rpClient.getRedirectUri(), resolveEffectiveOAuthScope(rpClient), state);
+    }
+
+    private String resolveEffectiveOAuthScope(WebAuthenticationEntity rpClient) {
+        String downstream = StringUtils.defaultIfBlank(rpClient.getScope(), "basic");
+        String baseUrl = sysConfigService.getBaseUrl();
+        if (!WebPathUtils.isSameSiteUrl(rpClient.getOriginUri(), baseUrl)) {
+            return downstream;
+        }
+        ClientDetailsEntity upstream = clientDetailsService.findByClientId(rpClient.getClientId());
+        if (upstream == null) {
+            return downstream;
+        }
+        return authScopeSupport.grantOAuthScope(upstream, downstream);
     }
 
     public String handleCallback(HttpServletRequest request, String code, String state, String error, String errorDescription) {

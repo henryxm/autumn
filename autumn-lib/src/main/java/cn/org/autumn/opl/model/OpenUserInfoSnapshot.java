@@ -13,4 +13,8 @@ public class OpenUserInfoSnapshot implements Serializable {
     private String unionId;
     private String nickname;
     private String icon;
+    private String mobile;
+    private String email;
+    private Integer verified;
+    private Integer status;
 }

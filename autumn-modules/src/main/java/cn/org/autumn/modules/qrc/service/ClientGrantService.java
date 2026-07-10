@@ -142,15 +142,15 @@ public class ClientGrantService extends ModuleService<ClientGrantDao, ClientGran
         }
     }
 
-    private String issueDeliveryCode(String clientId, String redirectUri, SysUserEntity user) throws OAuthSystemException {
+    private String issueDeliveryCode(String clientId, String redirectUri, SysUserEntity user, String grantedScope) throws OAuthSystemException {
         if (isActiveOplApp(clientId)) {
             if (StringUtils.isBlank(redirectUri)) {
                 throw new IllegalStateException("OPL 应用扫码授权 redirect_uri 不能为空");
             }
-            OpenCodeEntity codeEntity = openCodeService.issue(clientId, user.getUuid(), redirectUri, null, null);
+            OpenCodeEntity codeEntity = openCodeService.issue(clientId, user.getUuid(), redirectUri, null, null, grantedScope);
             return codeEntity.getCode();
         }
-        return issueAuthCode(user);
+        return issueAuthCode(user, grantedScope);
     }
 
     private boolean isActiveOplApp(String clientId) {
@@ -162,9 +162,13 @@ public class ClientGrantService extends ModuleService<ClientGrantDao, ClientGran
     }
 
     public String issueAuthCode(SysUserEntity user) throws OAuthSystemException {
+        return issueAuthCode(user, null);
+    }
+
+    public String issueAuthCode(SysUserEntity user, String grantedScope) throws OAuthSystemException {
         OAuthIssuerImpl issuer = new OAuthIssuerImpl(new MD5Generator());
         String code = issuer.authorizationCode();
-        clientDetailsService.putAuthCode(code, user);
+        clientDetailsService.putAuthCode(code, user, grantedScope);
         return code;
     }
 
@@ -224,7 +228,8 @@ public class ClientGrantService extends ModuleService<ClientGrantDao, ClientGran
         String callback = TicketPayloads.get(ticket, "callback");
         ClientDetailsEntity client = requireTrustedClient(clientId);
         validateRedirectUri(client, redirectUri);
-        String code = issueDeliveryCode(clientId, redirectUri, user);
+        String grantedScope = TicketPayloads.get(ticket, "scope");
+        String code = issueDeliveryCode(clientId, redirectUri, user, grantedScope);
         String delivery = grant == null ? DeliveryMode.POLL_CODE : grant.getDelivery();
         String payloadDelivery = TicketPayloads.get(ticket, "delivery");
         if (StringUtils.isNotBlank(payloadDelivery)) {

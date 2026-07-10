@@ -70,6 +70,10 @@ public class SysMenuService extends ServiceImpl<SysMenuDao, SysMenuEntity> imple
         return getMenuKey("Oauth", "OauthAsManage");
     }
 
+    public static String getAuthScopeManageMenuKey() {
+        return getMenuKey("Oauth", "AuthScopeManage");
+    }
+
     public static String getOauthRpManageMenuKey() {
         return getMenuKey("Client", "OauthRpManage");
     }
@@ -130,6 +134,7 @@ public class SysMenuService extends ServiceImpl<SysMenuDao, SysMenuEntity> imple
                 {"版本更新", "scan.html", NULL, "1", "fa fa-mobile", "15", getSystemMenuKey("ScanManagement"), getOperationsMenuKey(), "sys_string_scan_management"},
                 // 经典 OAuth2 管理（对标 OPL/OPC 统一管理）
                 {"授权管理", "oauthasmanage.html", NULL, "1", "fa fa-dashboard", "0", getOauthAsManageMenuKey(), getMenuKey("Oauth", "OauthMenu"), "oauth_oauthasmanage"},
+                {"授权范围", "authscopemanage.html", NULL, "1", "fa fa-key", "1", getAuthScopeManageMenuKey(), getMenuKey("Oauth", "OauthMenu"), "oauth_authscopemanage"},
                 {"接入管理", "oauthrpmanage.html", NULL, "1", "fa fa-dashboard", "0", getOauthRpManageMenuKey(), getMenuKey("Client", "ClientMenu"), "client_oauthrpmanage"},
 
                 // 开放平台菜单

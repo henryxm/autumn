@@ -7,6 +7,15 @@ import static org.apache.oltu.oauth2.common.OAuth.HttpMethod.POST;
 import static org.apache.oltu.oauth2.common.error.OAuthError.OAUTH_ERROR_URI;
 import static org.apache.oltu.oauth2.common.error.OAuthError.TokenResponse.*;
 
+import cn.org.autumn.auth.model.AuthUserInfo;
+import cn.org.autumn.auth.scope.AuthScopeCatalog;
+import cn.org.autumn.auth.scope.AuthScopeResolution;
+import cn.org.autumn.auth.scope.AuthScopeSet;
+import cn.org.autumn.auth.scope.AuthTrack;
+import cn.org.autumn.modules.auth.service.OAuthExtensionService;
+import cn.org.autumn.modules.auth.support.AuthScopeSupport;
+import cn.org.autumn.modules.auth.support.AuthUserInfoBuilder;
+import cn.org.autumn.opl.OplConstants;
 import cn.org.autumn.modules.oauth.oauth2.support.OAuthAccessTokenResolver;
 import cn.org.autumn.modules.oauth.oauth2.support.AuthAuthorizeLoginSupport;
 import cn.org.autumn.modules.oauth.oauth2.support.OAuthAuthorizeAppIconSupport;
@@ -148,6 +157,15 @@ public class AuthorizationController {
     @Autowired
     OAuthAuthorizeAppIconSupport authorizeAppIconSupport;
 
+    @Autowired
+    AuthScopeSupport authScopeSupport;
+
+    @Autowired
+    AuthScopeCatalog authScopeCatalog;
+
+    @Autowired
+    OAuthExtensionService oauthExtensionService;
+
     private String oauthErrorBody(String description, String error, int errorResponse) throws OAuthSystemException {
         return OAuthResponseSupport.oauthErrorBody(description, error, errorResponse);
     }
@@ -251,9 +269,6 @@ public class AuthorizationController {
         } else {
             model.addAttribute("pollIntervalMs", scanTicketService.getScanLoginConfig().getPollIntervalMs());
         }
-        model.addAttribute("oauthLogin", true);
-        model.addAttribute("oauthAuthorize", true);
-        model.addAttribute("bodyClass", "login-page-v2 oauth-authorize-mode");
         model.addAttribute("authorizeLoggedIn", loggedIn);
         String clientName = client.getClientName();
         if (StringUtils.isBlank(clientName)) {
@@ -286,12 +301,12 @@ public class AuthorizationController {
         }
     }
 
-    private ModelAndView issueAuthCodeRedirect(HttpServletRequest request, ClientDetailsEntity client, String redirectURI, String state, String callback, String responseType) throws OAuthSystemException {
+    private ModelAndView issueAuthCodeRedirect(HttpServletRequest request, ClientDetailsEntity client, String redirectURI, String state, String callback, String responseType, String grantedScope) throws OAuthSystemException {
         String authCode = null;
         if (responseType.equals(ResponseType.CODE.toString())) {
             OAuthIssuerImpl oAuthIssuerImpl = new OAuthIssuerImpl(new MD5Generator());
             authCode = oAuthIssuerImpl.authorizationCode();
-            clientDetailsService.putAuthCode(authCode, ShiroUtils.getUserEntity());
+            clientDetailsService.putAuthCode(authCode, ShiroUtils.getUserEntity(), grantedScope, client.getClientId());
         }
         if (StringUtils.isNotBlank(authCode)) {
             return redirectUrl(clientGrantService.buildAuthorizeRedirect(redirectURI, authCode, state, callback));
@@ -487,8 +502,13 @@ public class AuthorizationController {
         if (StringUtils.isBlank(responseType)) {
             responseType = ResponseType.CODE.toString();
         }
+        AuthScopeResolution scopeResolution = resolveBoundedOAuthScope(clientDetailsEntity, scope);
+        if (scopeResolution.getGranted().isEmpty()) {
+            return writeOAuthError(response, "无效的授权范围", "invalid_scope", SC_BAD_REQUEST);
+        }
+        String grantedScope = scopeResolution.getGranted().toScopeString();
         model.addAttribute("redirectUri", redirectURI);
-        model.addAttribute("scope", scope);
+        model.addAttribute("scope", grantedScope);
         model.addAttribute("state", state);
         model.addAttribute("responseType", responseType);
         model.addAttribute("denyRedirect", buildAccessDeniedRedirect(redirectURI, state));
@@ -502,7 +522,7 @@ public class AuthorizationController {
         if (!loggedIn) {
             if (scanTicketService.shouldUseQrAuthorize()) {
                 try {
-                    TicketSnapshot ticket = scanTicketService.createAuthorizeTicket(request, clientId, redirectURI, scope, state, callback);
+                    TicketSnapshot ticket = scanTicketService.createAuthorizeTicket(request, clientId, redirectURI, grantedScope, state, callback);
                     return oauthConsentView(request, response, model, ticket, clientDetailsEntity, false, loginError);
                 } catch (Exception e) {
                     log.warn("QRC authorize ticket failed: {}", e.getMessage());
@@ -575,7 +595,23 @@ public class AuthorizationController {
         if (StringUtils.isBlank(responseType)) {
             responseType = ResponseType.CODE.toString();
         }
-        return issueAuthCodeRedirect(request, clientDetailsEntity, redirectURI, state, callback, responseType);
+        AuthScopeResolution scopeResolution = resolveBoundedOAuthScope(clientDetailsEntity, scope);
+        if (scopeResolution.getGranted().isEmpty()) {
+            return writeOAuthError(response, "无效的授权范围", "invalid_scope", SC_BAD_REQUEST);
+        }
+        return issueAuthCodeRedirect(request, clientDetailsEntity, redirectURI, state, callback, responseType, scopeResolution.getGranted().toScopeString());
+    }
+
+    private AuthScopeResolution resolveOAuthScope(ClientDetailsEntity client, String scope) {
+        String resolved = StringUtils.defaultIfBlank(scope, client == null ? null : client.getScope());
+        resolved = StringUtils.defaultIfBlank(resolved, OplConstants.DEFAULT_SCOPE);
+        return authScopeSupport.resolveOAuth(client, resolved);
+    }
+
+    private AuthScopeResolution resolveBoundedOAuthScope(ClientDetailsEntity client, String scope) {
+        String resolved = StringUtils.defaultIfBlank(scope, client == null ? null : client.getScope());
+        resolved = StringUtils.defaultIfBlank(resolved, OplConstants.DEFAULT_SCOPE);
+        return authScopeSupport.resolveBoundedOAuth(client, resolved);
     }
 
     @RequestMapping(value = "token", method = RequestMethod.POST)
@@ -686,11 +722,14 @@ public class AuthorizationController {
              * refreshToken 过期时间：7 * 24 * 60 * 60L  一周
              * 如果服务器重启或者Redis重启后，将立即过期
              */
+            if (tokenStore != null && StringUtils.isBlank(tokenStore.getClientId())) {
+                tokenStore.setClientId(authClient.getClientId());
+            }
             clientDetailsService.putToken(accessToken, refreshToken, tokenStore);
         }
         TokenStore store = clientDetailsService.get(ValueType.accessToken, accessToken);
-        //生成OAuth响应
-        OAuthResponse response = OAuthASResponse.tokenResponse(HttpServletResponse.SC_OK).setAccessToken(accessToken).setRefreshToken(refreshToken).setTokenType("bearer").setExpiresIn(String.valueOf(store.getExpireIn())).setScope("basic").buildJSONMessage();
+        String responseScope = store == null ? OplConstants.DEFAULT_SCOPE : StringUtils.defaultIfBlank(store.getGrantedScope(), OplConstants.DEFAULT_SCOPE);
+        OAuthResponse response = OAuthASResponse.tokenResponse(HttpServletResponse.SC_OK).setAccessToken(accessToken).setRefreshToken(refreshToken).setTokenType("bearer").setExpiresIn(String.valueOf(store.getExpireIn())).setScope(responseScope).buildJSONMessage();
         return new ResponseEntity<>(response.getBody(), HttpStatus.valueOf(response.getResponseStatus())).getBody();
     }
 
@@ -720,7 +759,11 @@ public class AuthorizationController {
                 if (username instanceof SysUserEntity) {
                     SysUserEntity sysUserEntity = (SysUserEntity) username;
                     UserProfileEntity profile = userProfileService.from(sysUserEntity);
-                    username = UserProfile.from(profile);
+                    AuthScopeSet grantedScope = AuthScopeSet.withDefault(tokenStore.getGrantedScope()).expand(authScopeCatalog, AuthTrack.OAUTH);
+                    AuthUserInfo userInfo = AuthUserInfoBuilder.build(authScopeCatalog, AuthTrack.OAUTH, grantedScope, sysUserEntity, profile, null, null);
+                    ClientDetailsEntity clientEntity = StringUtils.isBlank(tokenStore.getClientId()) ? null : clientDetailsService.findByClientId(tokenStore.getClientId());
+                    oauthExtensionService.enrichUserInfo(authScopeSupport.toSnapshot(clientEntity), userInfo);
+                    username = userInfo;
                     userLoginLogService.login(profile, "userInfo", "用户查询", request);
                 }
                 return new ResponseEntity<>(JSON.toJSONString(username), HttpStatus.OK);
