@@ -62,6 +62,7 @@ public class RpQrcEventStreamService {
         long timeout = Math.max(30_000L, pending.getExpiredAt() - System.currentTimeMillis());
         SseEmitter emitter = new SseEmitter(timeout);
         subscribers.computeIfAbsent(uuid, key -> new CopyOnWriteArrayList<>()).add(emitter);
+        log.info("RP QRC SSE subscribe uuid={} status={} localSubscribers={}", uuid, pending.getStatus(), subscribers.get(uuid).size());
         emitter.onCompletion(() -> removeEmitter(uuid, emitter));
         emitter.onTimeout(() -> removeEmitter(uuid, emitter));
         emitter.onError(e -> removeEmitter(uuid, emitter));
@@ -74,6 +75,7 @@ public class RpQrcEventStreamService {
             return;
         }
         RpQrcStreamEvent event = RpQrcStreamEvent.from(pending);
+        log.info("RP QRC SSE publish uuid={} status={} redirect={}", pending.getUuid(), pending.getStatus(), pending.getRedirectUrl());
         dispatchLocal(pending.getUuid(), event);
         if (redisListenerService != null) {
             redisListenerService.publish(REDIS_CHANNEL, gson.toJson(event));
@@ -83,6 +85,7 @@ public class RpQrcEventStreamService {
     private void dispatchLocal(String uuid, RpQrcStreamEvent event) {
         CopyOnWriteArrayList<SseEmitter> emitters = subscribers.get(uuid);
         if (emitters == null || emitters.isEmpty()) {
+            log.warn("RP QRC SSE publish uuid={} status={} but no local subscribers (browser SSE may be broken; use poll fallback)", uuid, event.getStatus());
             return;
         }
         Iterator<SseEmitter> iterator = emitters.iterator();
@@ -102,7 +105,7 @@ public class RpQrcEventStreamService {
             emitter.send(SseEmitter.event().name("status").data(JSON.toJSONString(event), MediaType.APPLICATION_JSON));
             return true;
         } catch (IOException e) {
-            log.debug("RP QRC SSE send failed uuid={}: {}", event.getUuid(), e.getMessage());
+            log.warn("RP QRC SSE send failed uuid={}: {}", event.getUuid(), e.getMessage());
             try {
                 emitter.completeWithError(e);
             } catch (Exception ignored) {

@@ -44,6 +44,7 @@ public class RpQrcInboundService {
         }
         RpQrcPendingSession pending = rpQrcPendingStore.get(uuid);
         if (pending == null) {
+            log.warn("RP QRC inbound rejected: unknown or expired uuid={}", uuid);
             throw new IllegalArgumentException("未知或已过期的扫码会话");
         }
         verifySignature(rawBody, headers, pending);
@@ -52,9 +53,7 @@ public class RpQrcInboundService {
             throw new IllegalArgumentException("回调 data 为空");
         }
         String event = StringUtils.defaultIfBlank(root.getString("event"), header(headers, "X-Qrc-Event"));
-        if (log.isDebugEnabled()) {
-            log.debug("RP QRC inbound uuid={} event={} status={}", uuid, event, pending.getStatus());
-        }
+        log.info("RP QRC inbound uuid={} event={} pendingStatus={} bodyLen={}", uuid, event, pending.getStatus(), rawBody.length());
         if (EVENT_SCANNED.equalsIgnoreCase(event)) {
             rpQrcCallbackService.applyScanned(pending, data);
             return;

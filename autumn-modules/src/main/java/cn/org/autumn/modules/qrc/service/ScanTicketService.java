@@ -162,6 +162,7 @@ public class ScanTicketService extends ModuleService<ScanTicketDao, ScanTicketEn
             ticket.setScanner(scanner.getUuid());
             ticket.setStatus(TicketStatus.SCANNED);
             saveTicket(ticket);
+            log.info("QRC ticket scanned uuid={} scanner={} intent={} delivery={}", uuid, scanner.getUuid(), ticket.getIntent(), TicketPayloads.get(ticket, "delivery"));
             deliverScannedWebhook(ticket, scanner.getUuid());
             return ticket;
         });
@@ -207,6 +208,7 @@ public class ScanTicketService extends ModuleService<ScanTicketDao, ScanTicketEn
             }
             saveTicket(ticket);
             persistAudit(ticket, true);
+            log.info("QRC ticket confirmed uuid={} scanner={} intent={} status={} delivery={}", uuid, scanner.getUuid(), ticket.getIntent(), ticket.getStatus(), TicketPayloads.get(ticket, "delivery"));
             writeLoginLog(ticket, scanner.getUuid(), request);
             return result;
         });
@@ -302,6 +304,7 @@ public class ScanTicketService extends ModuleService<ScanTicketDao, ScanTicketEn
 
     private void deliverScannedWebhook(TicketSnapshot ticket, String scannerUuid) {
         if (!qrcWebhookDeliveryService.shouldDeliverWebhook(ticket)) {
+            log.info("QRC scan webhook skipped uuid={} delivery={} webhook={}", ticket.getUuid(), TicketPayloads.get(ticket, "delivery"), TicketPayloads.get(ticket, "webhook"));
             return;
         }
         String clientId = TicketPayloads.get(ticket, "clientId");
