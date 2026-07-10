@@ -79,7 +79,7 @@ public class RpQrcCallbackService {
         if (rpClient == null) {
             throw new IllegalStateException("未配置 RP OAuth 客户端");
         }
-        String inboundUrl = WebPathUtils.forBrowser(request, "/client/oauth2/qrc/web/inbound");
+        String inboundUrl = resolveInboundWebhookUrl(request);
         OpenTicketCreateRequest body = new OpenTicketCreateRequest();
         body.setClientId(credential.getClientId());
         body.setClientSecret(credential.getClientSecret());
@@ -136,13 +136,33 @@ public class RpQrcCallbackService {
         if (pending == null) {
             return;
         }
-        pending.setStatus("SCANNED");
-        if (data != null) {
-            JSONObject briefJson = data.getJSONObject("scannerBrief");
-            if (briefJson != null) {
-                pending.setScannerBrief(briefJson.toJavaObject(ScannerBrief.class));
-            }
+        if (!"COMPLETED".equalsIgnoreCase(pending.getStatus()) && !"DENIED".equalsIgnoreCase(pending.getStatus()) && !"CANCELLED".equalsIgnoreCase(pending.getStatus())) {
+            pending.setStatus("SCANNED");
         }
+        mergeScannerBrief(pending, data);
+        rpQrcPendingStore.save(pending);
+        rpQrcEventStreamService.publish(pending);
+    }
+
+    public void applyDenied(RpQrcPendingSession pending, JSONObject data) {
+        if (pending == null) {
+            return;
+        }
+        pending.setStatus("DENIED");
+        mergeScannerBrief(pending, data);
+        rpQrcPendingStore.save(pending);
+        rpQrcEventStreamService.publish(pending);
+        rpQrcPendingStore.remove(pending.getUuid());
+    }
+
+    /** 扫码 Webhook 丢失时，在确认回调到达前补推 SCANNED 状态（含扫码者信息）。 */
+    public void ensureScannedBeforeAuthorize(RpQrcPendingSession pending, JSONObject data) {
+        if (pending == null || !"PENDING".equalsIgnoreCase(pending.getStatus())) {
+            mergeScannerBrief(pending, data);
+            return;
+        }
+        pending.setStatus("SCANNED");
+        mergeScannerBrief(pending, data);
         rpQrcPendingStore.save(pending);
         rpQrcEventStreamService.publish(pending);
     }
@@ -216,6 +236,35 @@ public class RpQrcCallbackService {
             throw new IllegalStateException("未配置 RP OAuth 客户端");
         }
         return rpClient;
+    }
+
+    private String resolveInboundWebhookUrl(HttpServletRequest request) {
+        String absolute = WebPathUtils.absoluteUrl(request, "/client/oauth2/qrc/web/inbound", sysConfigService.isSsl());
+        if (StringUtils.isBlank(absolute) || !(absolute.startsWith("http://") || absolute.startsWith("https://"))) {
+            String fallback = StringUtils.trimToEmpty(sysConfigService.getBaseUrl());
+            while (fallback.endsWith("/")) {
+                fallback = fallback.substring(0, fallback.length() - 1);
+            }
+            String path = WebPathUtils.forBrowser(request, "/client/oauth2/qrc/web/inbound");
+            if (!path.startsWith("/")) {
+                path = "/" + path;
+            }
+            absolute = StringUtils.isBlank(fallback) ? path : fallback + path;
+        }
+        if (!(absolute.startsWith("http://") || absolute.startsWith("https://"))) {
+            throw new IllegalStateException("Webhook 地址必须为绝对 URL，请配置 SITE_SSL / X-Forwarded-* 或 sys.baseUrl");
+        }
+        return absolute;
+    }
+
+    private static void mergeScannerBrief(RpQrcPendingSession pending, JSONObject data) {
+        if (pending == null || data == null) {
+            return;
+        }
+        JSONObject briefJson = data.getJSONObject("scannerBrief");
+        if (briefJson != null) {
+            pending.setScannerBrief(briefJson.toJavaObject(ScannerBrief.class));
+        }
     }
 
     private String resolveOpenCreateUri(ScanLoginCredentialContext credential, WebAuthenticationEntity rpClient) {

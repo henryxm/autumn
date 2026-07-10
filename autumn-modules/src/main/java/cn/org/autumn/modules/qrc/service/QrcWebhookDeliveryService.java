@@ -27,6 +27,7 @@ public class QrcWebhookDeliveryService {
 
     public static final String EVENT_SCANNED = "qrc.scanned";
     public static final String EVENT_AUTHORIZED = "qrc.authorized";
+    public static final String EVENT_DENIED = "qrc.denied";
 
     private final Gson gson = new Gson();
 
@@ -42,7 +43,11 @@ public class QrcWebhookDeliveryService {
         deliver(ticket, grant, EVENT_SCANNED, data);
     }
 
-    public void deliverAuthorized(TicketSnapshot ticket, ClientGrantEntity grant, Map<String, String> result) {
+    public void deliverDenied(TicketSnapshot ticket, ClientGrantEntity grant, Map<String, Object> data) {
+        deliver(ticket, grant, EVENT_DENIED, data);
+    }
+
+    public void deliverAuthorized(TicketSnapshot ticket, ClientGrantEntity grant, Map<String, ?> result) {
         Map<String, Object> data = new HashMap<>();
         if (result != null) {
             data.putAll(result);
@@ -56,6 +61,10 @@ public class QrcWebhookDeliveryService {
         }
         String webhook = resolveWebhookUrl(ticket, grant);
         if (StringUtils.isBlank(webhook)) {
+            return;
+        }
+        if (!webhook.startsWith("http://") && !webhook.startsWith("https://")) {
+            log.warn("QRC webhook URL must be absolute, skip ticket={} event={} url={}", ticket.getUuid(), event, webhook);
             return;
         }
         Map<String, Object> body = new HashMap<>();
@@ -75,10 +84,23 @@ public class QrcWebhookDeliveryService {
         try {
             ScanLoginConfig config = sysConfigService.getConfigObjectValidate(ScanLoginConfig.CONFIG_KEY, ScanLoginConfig.class);
             int timeout = config == null ? new ScanLoginConfig().getWebhookTimeoutMs() : config.getWebhookTimeoutMs();
-            HttpClientUtils.doPostJson(webhook, json, headers, timeout);
+            String response = HttpClientUtils.doPostJson(webhook, json, headers, timeout);
+            if (StringUtils.isBlank(response)) {
+                log.warn("QRC webhook empty response ticket={} event={} url={}", ticket.getUuid(), event, webhook);
+            } else if (log.isDebugEnabled()) {
+                log.debug("QRC webhook delivered ticket={} event={} response={}", ticket.getUuid(), event, abbreviate(response));
+            }
         } catch (Exception e) {
-            log.warn("QRC webhook delivery failed ticket={} event={}: {}", ticket.getUuid(), event, e.getMessage());
+            log.warn("QRC webhook delivery failed ticket={} event={} url={}: {}", ticket.getUuid(), event, webhook, e.getMessage());
         }
+    }
+
+    private static String abbreviate(String raw) {
+        if (raw == null) {
+            return "";
+        }
+        String trimmed = raw.trim();
+        return trimmed.length() <= 200 ? trimmed : trimmed.substring(0, 200) + "...";
     }
 
     public boolean shouldDeliverWebhook(TicketSnapshot ticket) {

@@ -220,6 +220,7 @@ public class ScanTicketService extends ModuleService<ScanTicketDao, ScanTicketEn
                 ticket.setScanner(scanner.getUuid());
             }
             saveTicket(ticket);
+            deliverDeniedWebhook(ticket, scanner == null ? null : scanner.getUuid());
             persistAudit(ticket, true);
             return ticket;
         });
@@ -312,6 +313,21 @@ public class ScanTicketService extends ModuleService<ScanTicketDao, ScanTicketEn
             data.put("scannerBrief", brief);
         }
         qrcWebhookDeliveryService.deliverScanned(ticket, grant, data);
+    }
+
+    private void deliverDeniedWebhook(TicketSnapshot ticket, String scannerUuid) {
+        if (!qrcWebhookDeliveryService.shouldDeliverWebhook(ticket)) {
+            return;
+        }
+        String clientId = TicketPayloads.get(ticket, "clientId");
+        ClientGrantEntity grant = StringUtils.isBlank(clientId) ? null : clientGrantService.getOrDefault(clientId);
+        Map<String, Object> data = new HashMap<>();
+        data.put("status", TicketStatus.DENIED);
+        ScannerBrief brief = buildScannerBrief(scannerUuid);
+        if (brief != null) {
+            data.put("scannerBrief", brief);
+        }
+        qrcWebhookDeliveryService.deliverDenied(ticket, grant, data);
     }
 
     private boolean shouldExposeScannerBrief(String status) {

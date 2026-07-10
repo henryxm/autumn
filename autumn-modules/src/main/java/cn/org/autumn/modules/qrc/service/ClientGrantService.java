@@ -13,6 +13,7 @@ import cn.org.autumn.modules.qrc.entity.ClientGrantEntity;
 import cn.org.autumn.modules.qrc.model.DeliveryMode;
 import cn.org.autumn.modules.qrc.model.TicketPayloads;
 import cn.org.autumn.modules.qrc.model.TicketSnapshot;
+import cn.org.autumn.modules.qrc.model.TicketStatus;
 import cn.org.autumn.modules.opl.entity.OpenCodeEntity;
 import cn.org.autumn.modules.opl.service.OpenCodeService;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
@@ -250,7 +251,13 @@ public class ClientGrantService extends ModuleService<ClientGrantDao, ClientGran
                 result.put("accessToken", accessToken);
             }
         } else if (DeliveryMode.WEBHOOK.equals(delivery)) {
-            qrcWebhookDeliveryService.deliverAuthorized(ticket, grant, result);
+            Map<String, Object> webhookData = new HashMap<>();
+            if (result != null) {
+                webhookData.putAll(result);
+            }
+            webhookData.put("status", TicketStatus.COMPLETED);
+            putScannerBrief(webhookData, user);
+            qrcWebhookDeliveryService.deliverAuthorized(ticket, grant, webhookData);
         }
         if (StringUtils.isNotBlank(redirectUri) && !DeliveryMode.POLL_CODE.equals(delivery) && !DeliveryMode.POLL_TOKEN.equals(delivery) && !DeliveryMode.WEBHOOK.equals(delivery)) {
             confirmResult.setRedirect(buildAuthorizeRedirect(redirectUri, code, state, callback));
@@ -300,5 +307,17 @@ public class ClientGrantService extends ModuleService<ClientGrantDao, ClientGran
         } catch (UnsupportedEncodingException e) {
             return value;
         }
+    }
+
+    private static void putScannerBrief(Map<String, Object> data, SysUserEntity user) {
+        if (data == null || user == null) {
+            return;
+        }
+        Map<String, String> brief = new HashMap<>();
+        brief.put("displayName", StringUtils.isNotBlank(user.getNickname()) ? user.getNickname() : user.getUsername());
+        if (StringUtils.isNotBlank(user.getIcon())) {
+            brief.put("icon", user.getIcon());
+        }
+        data.put("scannerBrief", brief);
     }
 }

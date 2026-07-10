@@ -45,6 +45,7 @@ class QrcWebhookDeliveryServiceTest {
     void eventConstants_matchContract() {
         assertEquals("qrc.scanned", QrcWebhookDeliveryService.EVENT_SCANNED);
         assertEquals("qrc.authorized", QrcWebhookDeliveryService.EVENT_AUTHORIZED);
+        assertEquals("qrc.denied", QrcWebhookDeliveryService.EVENT_DENIED);
         ClientGrantEntity grant = new ClientGrantEntity();
         grant.setClientId("demo");
         assertNotEquals("", QrcWebhookDeliveryService.sign("body", "secret"));

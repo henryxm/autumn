@@ -345,6 +345,42 @@ public final class WebPathUtils {
     }
 
     /**
+     * 当前请求 Host 下的绝对 URL（scheme + host + context-path + path），供站外 Webhook 等回调使用。
+     * {@code path} 可为 {@code /client/...} 或已含 context 的浏览器路径；Host 未解析时回退 {@link #forBrowser}。
+     */
+    public static String absoluteUrl(HttpServletRequest request, String path, Boolean preferSiteSsl) {
+        if (request == null) {
+            return path;
+        }
+        if (!StringUtils.hasText(path)) {
+            return absoluteBaseUrl(request, preferSiteSsl);
+        }
+        String trimmed = path.trim();
+        if (trimmed.startsWith("http://") || trimmed.startsWith("https://") || trimmed.startsWith("//")) {
+            return trimmed;
+        }
+        String base = absoluteBaseUrl(request, preferSiteSsl);
+        if (!StringUtils.hasText(base)) {
+            return forBrowser(request, path);
+        }
+        while (base.endsWith("/")) {
+            base = base.substring(0, base.length() - 1);
+        }
+        String browserPath = forBrowser(request, path);
+        if (!browserPath.startsWith("/")) {
+            browserPath = "/" + browserPath;
+        }
+        String ctx = contextPath(request);
+        if (StringUtils.hasText(ctx) && browserPath.startsWith(ctx + "/")) {
+            return base + browserPath.substring(ctx.length());
+        }
+        if (StringUtils.hasText(ctx) && browserPath.equals(ctx)) {
+            return base;
+        }
+        return base + browserPath;
+    }
+
+    /**
      * @param preferSiteSsl 为 true 且无反向代理 scheme 时，将 http 提升为 https（对齐 SITE_SSL）
      */
     public static String absoluteBaseUrl(HttpServletRequest request, Boolean preferSiteSsl) {
