@@ -18,7 +18,7 @@ public class ClientMenu extends ModuleMenu {
     public String[][] getLanguageItems() {
         String[][] items = new String[][]{
                 {getLanguageKey(), "客户端", "Client"},
-                {"client_oauthrpmanage", "下游接入管理", "OAuth RP Manage"},
+                {"client_oauthrpmanage", "接入管理", "OAuth RP Manage"},
         };
         return items;
     }
