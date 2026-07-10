@@ -50,7 +50,7 @@ class RpQrcInboundDualEventTest {
 
         rpQrcInboundService.handleInbound(json, signatureHeaders(json));
 
-        verify(rpQrcCallbackService).applyScanned(eq(pending), any(com.alibaba.fastjson2.JSONObject.class));
+        verify(rpQrcCallbackService).applyScanned(eq(pending), any());
         verify(rpQrcCallbackService, never()).completeOnInbound(any(), any());
     }
 
@@ -67,7 +67,7 @@ class RpQrcInboundDualEventTest {
 
         rpQrcInboundService.handleInbound(json, signatureHeaders(json));
 
-        verify(rpQrcCallbackService).ensureScannedBeforeAuthorize(eq(pending), any(com.alibaba.fastjson.JSONObject.class));
+        verify(rpQrcCallbackService).ensureScannedBeforeAuthorize(eq(pending), any());
         verify(rpQrcCallbackService).completeOnInbound(eq(pending), eq("auth-code"));
         verify(rpQrcCallbackService, never()).applyScanned(any(), any());
     }
@@ -88,7 +88,7 @@ class RpQrcInboundDualEventTest {
 
         rpQrcInboundService.handleInbound(json, signatureHeaders(json));
 
-        verify(rpQrcCallbackService).ensureScannedBeforeAuthorize(eq(pending), any(com.alibaba.fastjson.JSONObject.class));
+        verify(rpQrcCallbackService).ensureScannedBeforeAuthorize(eq(pending), any());
         verify(rpQrcCallbackService).completeOnInbound(eq(pending), eq("auth-code"));
     }
 
@@ -104,7 +104,7 @@ class RpQrcInboundDualEventTest {
 
         rpQrcInboundService.handleInbound(json, signatureHeaders(json));
 
-        verify(rpQrcCallbackService).applyDenied(eq(pending), any(com.alibaba.fastjson.JSONObject.class));
+        verify(rpQrcCallbackService).applyDenied(eq(pending), any());
         verify(rpQrcCallbackService, never()).completeOnInbound(any(), any());
     }
 
