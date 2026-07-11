@@ -210,7 +210,9 @@ public class WallService {
                 || uri.startsWith("/rsa/api/v1/endpoints")
                 || uri.startsWith("/wall/api")
                 || uri.startsWith("/wall/shield")
-                || uri.startsWith("/shield");
+                || uri.startsWith("/shield")
+                || uri.startsWith("/app/ready")
+                || uri.startsWith("/app/isReady");
     }
 
     private void print(HttpServletRequest request) {
