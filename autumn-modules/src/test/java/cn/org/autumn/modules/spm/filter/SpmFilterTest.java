@@ -33,6 +33,21 @@ class SpmFilterTest {
     }
 
     @Test
+    void onAccessDenied_returns401JsonWhenAccessTokenPresentButInvalid() throws Exception {
+        SpmFilter filter = new SpmFilter();
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/account/signature");
+        request.setParameter("access_token", "invalid-token");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        boolean continued = filter.onAccessDenied(request, response);
+
+        assertFalse(continued);
+        assertEquals(401, response.getStatus());
+        assertTrue(response.getContentType().contains("application/json"));
+        assertTrue(response.getContentAsString().contains("401"));
+    }
+
+    @Test
     void saveRequest_skipsRestEndpointWithoutJsonHeaders() {
         SavingProbeFilter filter = new SavingProbeFilter();
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/module/account/me");

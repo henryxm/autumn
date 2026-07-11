@@ -102,6 +102,9 @@ public class SpmFilter extends FormAuthenticationFilter implements PathFactory.P
         // API/AJAX 须先于 super.onAccessDenied：父类会 saveRequest，污染登录成功后的 SavedRequest
         if (isApiOrAjaxRequest(httpRequest))
             return handleUnauthorized(httpRequest, (HttpServletResponse) response);
+        // 服务间 Feign 等带 access_token 但未通过认证：返回 401 JSON，避免登录页 HTML 被当作业务响应
+        if (StringUtils.isNotEmpty(getAccessToken(request)))
+            return handleUnauthorized(httpRequest, (HttpServletResponse) response);
         return super.onAccessDenied(request, response);
     }
 
