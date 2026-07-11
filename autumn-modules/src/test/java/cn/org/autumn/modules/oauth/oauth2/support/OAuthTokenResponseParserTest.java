@@ -38,4 +38,16 @@ public class OAuthTokenResponseParserTest {
         OAuthTokenResponse parsed = OAuthTokenResponseParser.parse(raw);
         assertEquals(raw, parsed.getAccessToken());
     }
+
+    @Test
+    public void extractLongPlainToken() {
+        String raw = "at_7d2ec174e0c71bf07b4aadf61572d16f0123456789abcdef0123456789abcdef";
+        assertEquals(raw, OAuthTokenResponseParser.extractAccessTokenKey(raw));
+    }
+
+    @Test
+    public void extractIgnoresOAuthErrorJson() {
+        String raw = "{\"error\":\"invalid_grant\",\"error_description\":\"未获得授权\"}";
+        assertEquals("", OAuthTokenResponseParser.extractAccessTokenKey(raw));
+    }
 }

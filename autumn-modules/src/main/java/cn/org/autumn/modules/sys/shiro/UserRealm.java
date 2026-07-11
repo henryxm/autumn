@@ -13,7 +13,9 @@ import cn.org.autumn.modules.bot.service.RobotTokenService;
 import cn.org.autumn.modules.bot.shiro.RobotAccessTokenToken;
 import cn.org.autumn.modules.bot.shiro.RobotPrincipal;
 import cn.org.autumn.modules.oauth.service.ClientDetailsService;
+import cn.org.autumn.modules.oauth.store.TokenStore;
 import cn.org.autumn.modules.oauth.store.ValueType;
+import cn.org.autumn.modules.sys.support.ApiTokenLoginSupport;
 import cn.org.autumn.modules.qrc.service.ScanTicketService;
 import cn.org.autumn.modules.qrc.shiro.ScanLoginToken;
 import cn.org.autumn.modules.sys.service.SysUserRoleService;
@@ -155,7 +157,14 @@ public class UserRealm extends AuthorizingRealm {
         }
         SysUserEntity user = new SysUserEntity();
         if (token instanceof OauthAccessTokenToken) {
-            user = (SysUserEntity) clientDetailsService.get(ValueType.accessToken, username).getValue();
+            TokenStore store = clientDetailsService.get(ValueType.accessToken, username);
+            if (store != null && store.getValue() instanceof SysUserEntity)
+                user = (SysUserEntity) store.getValue();
+            if (user == null || StringUtils.isBlank(user.getUuid())) {
+                String legacyUuid = ApiTokenLoginSupport.resolveLegacyUserUuid(username);
+                if (StringUtils.isNotBlank(legacyUuid))
+                    user = sysUserDao.getByUuid(legacyUuid);
+            }
         } else {
             // MP3 无 selectOne(entity)；用 Lambda 条件与 master 实体查询语义一致，列名经 TableInfo 按方言转义（Derby 双引号 DDL 必需）
             user = token instanceof OauthUsernameToken

@@ -203,6 +203,18 @@ public class ClientDetailsService extends ModuleService<ClientDetailsDao, Client
         return baseMapper.findByClientSecret(clientSecret) != null;
     }
 
+    /**
+     * 遗留 client_credentials：优先校验当前 clientId 的 secret，其次全局 secret 表（历史行为）。
+     */
+    public boolean acceptsClientSecret(String clientId, String clientSecret) {
+        if (StringUtils.isBlank(clientSecret))
+            return false;
+        ClientDetailsEntity client = findByClientId(clientId);
+        if (client != null && StringUtils.isNotBlank(client.getClientSecret()) && client.getClientSecret().equals(clientSecret))
+            return true;
+        return isValidClientSecret(clientSecret);
+    }
+
     public boolean isValidCode(String code) {
         return get(ValueType.authCode, code) != null;
     }

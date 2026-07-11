@@ -627,22 +627,24 @@ public class AuthorizationController {
                 grantType = GrantType.CLIENT_CREDENTIALS.toString();
             }
         }
+        if (StringUtils.isBlank(grantType))
+            grantType = GrantType.CLIENT_CREDENTIALS.toString();
         //校验客户端Id是否正确
         ClientDetailsEntity authClient = clientDetailsService.findByClientId(clientId);
         if (authClient == null) {
             return oauthErrorBody("无效的客户端Id", INVALID_CLIENT, SC_BAD_REQUEST);
         }
-        if (null == authClient.getTrusted() || 0 == authClient.getTrusted()) {
+        boolean clientCredentials = GrantType.CLIENT_CREDENTIALS.toString().equalsIgnoreCase(grantType);
+        if (!clientCredentials && (null == authClient.getTrusted() || 0 == authClient.getTrusted())) {
             return oauthErrorBody("不受信任的客户端ID", INVALID_CLIENT, SC_BAD_REQUEST);
         }
         if (null != authClient.getArchived() && 1 == authClient.getArchived()) {
             return oauthErrorBody("客户端ID已归档，不能使用", INVALID_CLIENT, SC_BAD_REQUEST);
         }
         //检查客户端安全KEY是否正确
-        if (!clientDetailsService.isValidClientSecret(clientSecret)) {
+        if (!clientDetailsService.acceptsClientSecret(clientId, clientSecret)) {
             return oauthErrorBody("客户端安全KEY认证失败！", UNAUTHORIZED_CLIENT, SC_UNAUTHORIZED);
         }
-        if (StringUtils.isBlank(grantType)) return oauthErrorBody("非法授权", INVALID_GRANT, SC_BAD_REQUEST);
         if (!authClient.granted(grantType)) return oauthErrorBody("未获得授权", INVALID_GRANT, SC_BAD_REQUEST);
         TokenStore tokenStore = null;
         //验证类型，有AUTHORIZATION_CODE/PASSWORD/REFRESH_TOKEN/CLIENT_CREDENTIALS

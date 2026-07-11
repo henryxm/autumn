@@ -11,11 +11,8 @@ import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.entity.User;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.sys.support.ApiAuthSupport;
-import cn.org.autumn.modules.usr.entity.UserTokenEntity;
-import cn.org.autumn.modules.usr.service.UserTokenService;
+import cn.org.autumn.modules.sys.support.ApiTokenLoginSupport;
 import cn.org.autumn.opl.OplConstants;
-import cn.org.autumn.site.UserTokenFactory;
-import java.util.Date;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -44,14 +41,6 @@ public class UserContextService implements ContextHandler {
     @Autowired
     @Lazy
     private RobotTokenService robotTokenService;
-
-    @Autowired
-    @Lazy
-    private UserTokenService userTokenService;
-
-    @Autowired
-    @Lazy
-    private UserTokenFactory userTokenFactory;
 
     /**
      * 按业务 uuid 从缓存取账号实体（用户或机器人），不解析请求头令牌。
@@ -196,15 +185,10 @@ public class UserContextService implements ContextHandler {
     private UserContext fromUserToken(String token) {
         if (StringUtils.isBlank(token))
             return null;
-        String userUuid = userTokenFactory.getUser(token);
-        if (StringUtils.isNotBlank(userUuid))
-            return fromUserUuid(userUuid);
-        UserTokenEntity entity = userTokenService.getToken(token);
-        if (entity == null)
+        String userUuid = ApiTokenLoginSupport.resolveUserUuid(token);
+        if (StringUtils.isBlank(userUuid))
             return null;
-        if (entity.getExpireTime() != null && entity.getExpireTime().before(new Date()))
-            return null;
-        return fromUserUuid(entity.getUserUuid());
+        return fromUserUuid(userUuid);
     }
 
     private SysUserEntity fromUserUuid(String userUuid) {

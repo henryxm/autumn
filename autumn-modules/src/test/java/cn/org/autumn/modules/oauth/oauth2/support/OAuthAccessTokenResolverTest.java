@@ -44,6 +44,21 @@ public class OAuthAccessTokenResolverTest {
     }
 
     @Test
+    public void permissiveJsonWrappedBearerHeader() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("Authorization", "Bearer {\"access_token\":\"wrapped-from-token-endpoint\",\"token_type\":\"bearer\"}");
+        assertEquals("wrapped-from-token-endpoint", OAuthAccessTokenResolver.resolve(request, OAuthAccessTokenResolver.Policy.PERMISSIVE));
+    }
+
+    @Test
+    public void permissiveLongPlainQueryToken() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        String longToken = "at_7d2ec174e0c71bf07b4aadf61572d16f0123456789abcdef0123456789abcdef";
+        request.setParameter("access_token", longToken);
+        assertEquals(longToken, OAuthAccessTokenResolver.resolve(request, OAuthAccessTokenResolver.Policy.PERMISSIVE));
+    }
+
+    @Test
     public void buildAuthorizeUrlUsesClientIdForOauth() {
         OAuth2HttpClient client = new OAuth2HttpClient();
         String url = client.buildAuthorizeUrl("https://auth.example.com/oauth2/authorize", OAuth2HttpClient.CredentialParam.OAUTH, "my-client", "https://app/cb", "basic", "st");

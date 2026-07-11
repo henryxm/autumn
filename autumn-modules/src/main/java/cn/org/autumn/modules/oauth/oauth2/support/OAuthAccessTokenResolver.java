@@ -1,9 +1,7 @@
 package cn.org.autumn.modules.oauth.oauth2.support;
 
 import cn.org.autumn.modules.oauth.util.JakartaToJavaxRequestAdapter;
-import com.alibaba.fastjson2.JSON;
 import jakarta.servlet.http.HttpServletRequest;
-import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.oltu.oauth2.common.OAuth;
 import org.apache.oltu.oauth2.common.message.types.ParameterStyle;
@@ -39,7 +37,7 @@ public final class OAuthAccessTokenResolver {
             case STANDARD:
                 return resolveStandard(raw);
             case PERMISSIVE:
-                return OAuthTokenResponseParser.extractAccessTokenKey(raw);
+                return resolveLegacyJsonWrap(raw);
             case LEGACY_JSON_WRAP:
             default:
                 return resolveLegacyJsonWrap(raw);
@@ -71,28 +69,6 @@ public final class OAuthAccessTokenResolver {
     }
 
     private static String resolveLegacyJsonWrap(String raw) {
-        if (OAuthTokenResponseParser.isJsonWrappedToken(raw)) {
-            return OAuthTokenResponseParser.extractAccessTokenKey(raw);
-        }
-        String standard = resolveStandard(raw);
-        if (StringUtils.isNotBlank(standard) && !standard.equals(raw)) {
-            return standard;
-        }
-        if (!raw.contains("\"") && !raw.contains("{") && !raw.contains("}") && raw.length() <= 100) {
-            return raw;
-        }
-        try {
-            Object resp = JSON.parse(raw);
-            if (resp instanceof Map) {
-                @SuppressWarnings("unchecked")
-                Map<String, Object> map = (Map<String, Object>) resp;
-                if (map.containsKey(OAuth.OAUTH_ACCESS_TOKEN)) {
-                    return StringUtils.defaultString((String) map.get(OAuth.OAUTH_ACCESS_TOKEN));
-                }
-            }
-        } catch (Exception ignored) {
-            // fall through
-        }
-        return "";
+        return OAuthTokenResponseParser.extractAccessTokenKey(raw);
     }
 }

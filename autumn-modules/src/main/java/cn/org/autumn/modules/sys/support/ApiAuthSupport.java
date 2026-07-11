@@ -1,9 +1,9 @@
 package cn.org.autumn.modules.sys.support;
 
+import cn.org.autumn.modules.oauth.oauth2.support.OAuthTokenResponseParser;
+import jakarta.servlet.http.HttpServletRequest;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.web.context.request.NativeWebRequest;
-
-import javax.servlet.http.HttpServletRequest;
 
 /**
  * 从请求头解析 API 访问令牌（与历史 UserInfoResolver / SpmFilter 习惯一致）。
@@ -57,7 +57,8 @@ public final class ApiAuthSupport {
             return "";
         token = token.trim();
         if (token.startsWith("Bearer "))
-            return token.substring(7).trim();
-        return token;
+            token = token.substring(7).trim();
+        String extracted = OAuthTokenResponseParser.extractAccessTokenKey(token);
+        return StringUtils.isNotBlank(extracted) ? extracted : token;
     }
 }
