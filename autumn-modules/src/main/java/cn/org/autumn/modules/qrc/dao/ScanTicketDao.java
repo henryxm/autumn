@@ -4,11 +4,13 @@ import cn.org.autumn.modules.qrc.dao.sql.ScanTicketDaoSql;
 import cn.org.autumn.modules.qrc.entity.ScanTicketEntity;
 import com.baomidou.mybatisplus.mapper.BaseMapper;
 import java.util.Date;
+import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.SelectProvider;
 import org.apache.ibatis.annotations.UpdateProvider;
 import org.springframework.stereotype.Repository;
 
+@Mapper
 @Repository
 public interface ScanTicketDao extends BaseMapper<ScanTicketEntity> {
 
