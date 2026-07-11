@@ -7,7 +7,9 @@ import cn.org.autumn.modules.bot.service.RobotTokenService;
 import cn.org.autumn.modules.bot.shiro.RobotAccessTokenToken;
 import cn.org.autumn.modules.bot.shiro.RobotPrincipal;
 import cn.org.autumn.modules.oauth.service.ClientDetailsService;
+import cn.org.autumn.modules.oauth.store.TokenStore;
 import cn.org.autumn.modules.oauth.store.ValueType;
+import cn.org.autumn.modules.sys.support.ApiTokenLoginSupport;
 import cn.org.autumn.modules.qrc.service.ScanTicketService;
 import cn.org.autumn.modules.qrc.shiro.ScanLoginToken;
 import cn.org.autumn.modules.sys.dao.SysMenuDao;
@@ -153,7 +155,14 @@ public class UserRealm extends AuthorizingRealm {
         }
         SysUserEntity user = new SysUserEntity();
         if (token instanceof OauthAccessTokenToken) {
-            user = (SysUserEntity) clientDetailsService.get(ValueType.accessToken, username).getValue();
+            TokenStore store = clientDetailsService.get(ValueType.accessToken, username);
+            if (store != null && store.getValue() instanceof SysUserEntity)
+                user = (SysUserEntity) store.getValue();
+            if (user == null || StringUtils.isBlank(user.getUuid())) {
+                String legacyUuid = ApiTokenLoginSupport.resolveLegacyUserUuid(username);
+                if (StringUtils.isNotBlank(legacyUuid))
+                    user = sysUserDao.getByUuid(legacyUuid);
+            }
         } else {
             //查询用户信息
             if (token instanceof OauthUsernameToken)

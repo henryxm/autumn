@@ -27,16 +27,29 @@ public final class OAuthTokenResponseParser {
         }
         String trimmed = raw.trim();
         if (isJsonWrappedToken(trimmed)) {
-            JSONObject json = JSON.parseObject(trimmed);
-            if (json != null && StringUtils.isNotBlank(json.getString(OAuth.OAUTH_ACCESS_TOKEN))) {
-                return json.getString(OAuth.OAUTH_ACCESS_TOKEN);
-            }
+            String fromJson = readAccessTokenField(trimmed);
+            if (StringUtils.isNotBlank(fromJson))
+                return fromJson;
             return "";
         }
-        if (trimmed.contains("\"") || trimmed.contains("{") || trimmed.contains("}") || trimmed.length() > 100) {
+        if (trimmed.startsWith("{")) {
+            String fromJson = readAccessTokenField(trimmed);
+            if (StringUtils.isNotBlank(fromJson))
+                return fromJson;
             return "";
         }
         return trimmed;
+    }
+
+    private static String readAccessTokenField(String jsonBody) {
+        try {
+            JSONObject json = JSON.parseObject(jsonBody);
+            if (json == null)
+                return "";
+            return StringUtils.defaultString(json.getString(OAuth.OAUTH_ACCESS_TOKEN)).trim();
+        } catch (Exception ignored) {
+            return "";
+        }
     }
 
     public static OAuthTokenResponse parse(String body) {

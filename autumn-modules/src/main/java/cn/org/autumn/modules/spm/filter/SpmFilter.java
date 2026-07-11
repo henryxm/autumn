@@ -11,6 +11,7 @@ import cn.org.autumn.modules.oauth.service.ClientDetailsService;
 import cn.org.autumn.modules.spm.service.SuperPositionModelService;
 import cn.org.autumn.modules.sys.controller.SysAuthSupport;
 import cn.org.autumn.modules.sys.service.SysConfigService;
+import cn.org.autumn.modules.sys.support.ApiTokenLoginSupport;
 import cn.org.autumn.modules.sys.shiro.ClientIpSessionSupport;
 import cn.org.autumn.modules.sys.shiro.OauthAccessTokenToken;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
@@ -132,7 +133,7 @@ public class SpmFilter extends FormAuthenticationFilter implements PathFactory.P
         if (accessToken.startsWith(RobotTokenService.TOKEN_PREFIX)) return executeLogin(request, response);
         if (null == clientDetailsService)
             clientDetailsService = (ClientDetailsService) Config.getBean("clientDetailsService");
-        if (null != clientDetailsService && clientDetailsService.isValidAccessToken(accessToken))
+        if (ApiTokenLoginSupport.isLoginableApiToken(accessToken))
             return executeLogin(request, response);
         return false;
     }

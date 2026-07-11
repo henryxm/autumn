@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.sys.support;
 
+import cn.org.autumn.modules.oauth.oauth2.support.OAuthTokenResponseParser;
 import javax.servlet.http.HttpServletRequest;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.web.context.request.NativeWebRequest;
@@ -56,7 +57,8 @@ public final class ApiAuthSupport {
             return "";
         token = token.trim();
         if (token.startsWith("Bearer "))
-            return token.substring(7).trim();
-        return token;
+            token = token.substring(7).trim();
+        String extracted = OAuthTokenResponseParser.extractAccessTokenKey(token);
+        return StringUtils.isNotBlank(extracted) ? extracted : token;
     }
 }

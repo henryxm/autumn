@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import org.apache.commons.lang.StringUtils;
+import org.apache.oltu.oauth2.common.message.types.GrantType;
 
 /**
  * 客户端详情
@@ -240,8 +241,10 @@ public class ClientDetailsEntity implements Serializable {
     }
 
     public boolean granted(String grant) {
-        if (null == grantTypes)
+        if (StringUtils.isBlank(grant))
             return false;
+        if (null == grantTypes || StringUtils.isBlank(grantTypes.trim()))
+            return GrantType.CLIENT_CREDENTIALS.toString().equalsIgnoreCase(grant);
         if (grantTypes.toLowerCase().contains("all"))
             return true;
         return grants().contains(grant);
