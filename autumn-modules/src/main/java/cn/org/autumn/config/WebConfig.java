@@ -3,9 +3,11 @@ package cn.org.autumn.config;
 import cn.org.autumn.annotation.AllowPostConstructDuringInstall;
 import cn.org.autumn.modules.oauth.resolver.EncryptArgumentResolver;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.DependsOn;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.lang.NonNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
@@ -13,7 +15,6 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 import org.springframework.web.servlet.mvc.method.annotation.RequestResponseBodyMethodProcessor;
 import org.springframework.web.servlet.config.annotation.*;
 
-import jakarta.annotation.PostConstruct;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -22,7 +23,7 @@ import java.util.List;
 @Configuration
 @DependsOn({"env"})
 @AllowPostConstructDuringInstall
-public class WebConfig implements WebMvcConfigurer {
+public class WebConfig implements WebMvcConfigurer, SmartInitializingSingleton {
     /**
      * 异步请求默认超时时间（毫秒），可通过配置覆盖。
      * 适当拉长可减少长轮询/流式响应的非业务超时噪声。
@@ -43,10 +44,15 @@ public class WebConfig implements WebMvcConfigurer {
     EncryptArgumentResolver encryptArgumentResolver;
 
     @Autowired(required = false)
+    @Lazy
     RequestMappingHandlerAdapter requestMappingHandlerAdapter;
 
-    @PostConstruct
-    public void ensureEncryptArgumentResolverFirst() {
+    @Override
+    public void afterSingletonsInstantiated() {
+        ensureEncryptArgumentResolverFirst();
+    }
+
+    void ensureEncryptArgumentResolverFirst() {
         if (requestMappingHandlerAdapter != null && encryptArgumentResolver != null) {
             try {
                 List<HandlerMethodArgumentResolver> argumentResolvers = requestMappingHandlerAdapter.getArgumentResolvers();

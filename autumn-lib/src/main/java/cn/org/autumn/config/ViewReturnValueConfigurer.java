@@ -5,8 +5,8 @@ import cn.org.autumn.handler.ViewNameReturnValueHandler;
 import cn.org.autumn.view.ViewTemplateSupport;
 import java.util.ArrayList;
 import java.util.List;
-import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
@@ -17,26 +17,33 @@ import org.springframework.web.servlet.mvc.method.annotation.ViewNameMethodRetur
 /**
  * 将 {@link ViewNameReturnValueHandler} 注册进 MVC 返回值处理链。
  * <p>
- * 必须在 {@link RequestMappingHandlerAdapter} 完成默认 Handler 装配后执行（{@code @PostConstruct}），
+ * 必须在 {@link RequestMappingHandlerAdapter} 完成默认 Handler 装配后执行（{@link SmartInitializingSingleton}），
  * 因此独立为本组件，而不写入 {@link WebConfig}，避免与参数解析器初始化逻辑耦合。
  * <p>
- * {@link ViewTemplateSupport} 使用 {@code @Lazy}：Configurer 本身在启动早期即可创建，
+ * {@link RequestMappingHandlerAdapter}、{@link ViewTemplateSupport} 均使用 {@code @Lazy}：
+ * 避免与 {@link WebConfig}（{@link org.springframework.web.servlet.config.annotation.WebMvcConfigurer}）
+ * 在 Spring Boot 3.x 启动阶段形成循环依赖；Configurer 本身在启动早期即可创建，
  * 不会反向拉动 {@link cn.org.autumn.site.TemplateFactory} 过早实例化 {@link freemarker.cache.TemplateLoader}。
  */
 @Slf4j
 @Component
 @AllowPostConstructDuringInstall
-public class ViewReturnValueConfigurer {
+public class ViewReturnValueConfigurer implements SmartInitializingSingleton {
 
     @Autowired(required = false)
+    @Lazy
     private RequestMappingHandlerAdapter requestMappingHandlerAdapter;
 
     @Autowired(required = false)
     @Lazy
     private ViewTemplateSupport viewTemplateSupport;
 
-    @PostConstruct
-    public void wrapViewNameReturnValueHandler() {
+    @Override
+    public void afterSingletonsInstantiated() {
+        wrapViewNameReturnValueHandler();
+    }
+
+    void wrapViewNameReturnValueHandler() {
         if (requestMappingHandlerAdapter == null || viewTemplateSupport == null) {
             return;
         }
