@@ -173,6 +173,12 @@ public class AuthorizationController {
         return OAuthResponseSupport.oauthErrorBody(description, error, errorResponse);
     }
 
+    private String tokenError(HttpServletResponse response, String description, String error, int status) throws OAuthSystemException {
+        if (response != null && !response.isCommitted())
+            response.setStatus(status);
+        return oauthErrorBody(description, error, status);
+    }
+
     private String writeOAuthError(HttpServletResponse response, String description, String error, int errorResponse) throws OAuthSystemException {
         return OAuthResponseSupport.writeOAuthError(response, description, error, errorResponse);
     }
@@ -605,7 +611,7 @@ public class AuthorizationController {
     @RequestMapping(value = "token", method = RequestMethod.POST)
     @ResponseBody
     @Operation(tags = {"oauth"}, servers = {@Server(url = "https://www.minclouds.com", description = "用户授权登录获取Token接口")}, description = "获取Token", summary = "获取Token", operationId = "getToken", method = POST)
-    public String applyAccessToken(HttpServletRequest request, @Validated @RequestParam(name = OAUTH_CLIENT_ID) String clientId, @Validated @RequestParam(OAUTH_CLIENT_SECRET) String clientSecret) throws OAuthSystemException, OAuthProblemException {
+    public String applyAccessToken(HttpServletRequest request, HttpServletResponse httpResponse, @Validated @RequestParam(name = OAUTH_CLIENT_ID) String clientId, @Validated @RequestParam(OAUTH_CLIENT_SECRET) String clientSecret) throws OAuthSystemException, OAuthProblemException {
         //构建OAuth请求
         String username = null;
         String password = null;
@@ -632,33 +638,33 @@ public class AuthorizationController {
         //校验客户端Id是否正确
         ClientDetailsEntity authClient = clientDetailsService.findByClientId(clientId);
         if (authClient == null) {
-            return oauthErrorBody("无效的客户端Id", INVALID_CLIENT, SC_BAD_REQUEST);
+            return tokenError(httpResponse, "无效的客户端Id", INVALID_CLIENT, SC_BAD_REQUEST);
         }
         boolean clientCredentials = GrantType.CLIENT_CREDENTIALS.toString().equalsIgnoreCase(grantType);
         if (!clientCredentials && (null == authClient.getTrusted() || 0 == authClient.getTrusted())) {
-            return oauthErrorBody("不受信任的客户端ID", INVALID_CLIENT, SC_BAD_REQUEST);
+            return tokenError(httpResponse, "不受信任的客户端ID", INVALID_CLIENT, SC_BAD_REQUEST);
         }
         if (null != authClient.getArchived() && 1 == authClient.getArchived()) {
-            return oauthErrorBody("客户端ID已归档，不能使用", INVALID_CLIENT, SC_BAD_REQUEST);
+            return tokenError(httpResponse, "客户端ID已归档，不能使用", INVALID_CLIENT, SC_BAD_REQUEST);
         }
         //检查客户端安全KEY是否正确
         if (!clientDetailsService.acceptsClientSecret(clientId, clientSecret)) {
-            return oauthErrorBody("客户端安全KEY认证失败！", UNAUTHORIZED_CLIENT, SC_UNAUTHORIZED);
+            return tokenError(httpResponse, "客户端安全KEY认证失败！", UNAUTHORIZED_CLIENT, SC_UNAUTHORIZED);
         }
-        if (!authClient.granted(grantType)) return oauthErrorBody("未获得授权", INVALID_GRANT, SC_BAD_REQUEST);
+        if (!authClient.granted(grantType)) return tokenError(httpResponse, "未获得授权", INVALID_GRANT, SC_BAD_REQUEST);
         TokenStore tokenStore = null;
         //验证类型，有AUTHORIZATION_CODE/PASSWORD/REFRESH_TOKEN/CLIENT_CREDENTIALS
         //1. 授权码获取Token模式
         if (grantType.equals(GrantType.AUTHORIZATION_CODE.toString())) {
             if (!clientDetailsService.isValidCode(authCode)) {
-                return oauthErrorBody("错误的授权码", INVALID_GRANT, SC_BAD_REQUEST);
+                return tokenError(httpResponse, "错误的授权码", INVALID_GRANT, SC_BAD_REQUEST);
             }
             tokenStore = clientDetailsService.get(ValueType.authCode, authCode);
         }
         //2. 使用Refresh Token 获取Token模式
         if (grantType.equals(GrantType.REFRESH_TOKEN.toString())) {
             if (!clientDetailsService.isValidRefreshToken(refresh)) {
-                return oauthErrorBody("错误的Refresh Token", INVALID_GRANT, SC_BAD_REQUEST);
+                return tokenError(httpResponse, "错误的Refresh Token", INVALID_GRANT, SC_BAD_REQUEST);
             }
             tokenStore = clientDetailsService.get(ValueType.refreshToken, refresh);
         }
@@ -683,10 +689,10 @@ public class AuthorizationController {
         }
         //5. 简化授权模式
         if (grantType.equals(GrantType.IMPLICIT.toString())) {
-            return oauthErrorBody("unsupported_grant_type", UNSUPPORTED_GRANT_TYPE, SC_BAD_REQUEST);
+            return tokenError(httpResponse, "unsupported_grant_type", UNSUPPORTED_GRANT_TYPE, SC_BAD_REQUEST);
         }
         if (null == tokenStore) {
-            return oauthErrorBody("非法授权", INVALID_GRANT, SC_BAD_REQUEST);
+            return tokenError(httpResponse, "非法授权", INVALID_GRANT, SC_BAD_REQUEST);
         }
         String accessToken = "";
         String refreshToken = "";
