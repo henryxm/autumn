@@ -79,20 +79,26 @@ public class ExceptionUtils {
      * 记录详细的异常信息
      */
     public static void logDetailedException(String message, Exception e, HttpServletRequest request) {
+        String path = request != null ? request.getRequestURI() : "-";
+        String type = e != null ? e.getClass().getName() : "-";
+        String detail = e != null ? e.getMessage() : message;
+        log.error("Unhandled exception: path={}, type={}, message={}", path, type, detail);
         if (log.isDebugEnabled()) {
-            log.error("=== 异常详细信息 ===");
-            log.error("消息: {}", message);
-            log.error("异常类型: {}", e.getClass().getName());
-            log.error("异常消息: {}", e.getMessage());
-
+            log.error("=== Exception details ===");
+            log.error("Message: {}", message);
+            if (e != null) {
+                log.error("Exception type: {}", e.getClass().getName());
+                log.error("Exception message: {}", e.getMessage());
+            }
             if (request != null) {
                 Map<String, Object> requestInfo = getRequestInfo(request);
-                log.error("请求信息: {}", requestInfo);
+                log.error("Request info: {}", requestInfo);
             }
-
-            log.error("堆栈跟踪:");
-            log.error(getStackTrace(e));
-            log.error("=== 异常详细信息结束 ===");
+            if (e != null) {
+                log.error("Stack trace:");
+                log.error(getStackTrace(e));
+            }
+            log.error("=== End exception details ===");
         }
     }
 

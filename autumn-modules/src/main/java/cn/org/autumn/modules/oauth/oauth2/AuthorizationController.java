@@ -725,7 +725,8 @@ public class AuthorizationController {
         }
         TokenStore store = clientDetailsService.get(ValueType.accessToken, accessToken);
         String responseScope = store == null ? OplConstants.DEFAULT_SCOPE : StringUtils.defaultIfBlank(store.getGrantedScope(), OplConstants.DEFAULT_SCOPE);
-        OAuthResponse response = OAuthASResponse.tokenResponse(HttpServletResponse.SC_OK).setAccessToken(accessToken).setRefreshToken(refreshToken).setTokenType("bearer").setExpiresIn(String.valueOf(store.getExpireIn())).setScope(responseScope).buildJSONMessage();
+        long expireIn = store != null ? store.getExpireIn() : ClientDetailsService.ACCESS_TOKEN_DEFAULT_EXPIRED_IN;
+        OAuthResponse response = OAuthASResponse.tokenResponse(HttpServletResponse.SC_OK).setAccessToken(accessToken).setRefreshToken(refreshToken).setTokenType("bearer").setExpiresIn(String.valueOf(expireIn)).setScope(responseScope).buildJSONMessage();
         return new ResponseEntity<>(response.getBody(), HttpStatus.valueOf(response.getResponseStatus())).getBody();
     }
 
