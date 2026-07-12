@@ -141,7 +141,7 @@ public class ClientDetailsService extends ModuleService<ClientDetailsDao, Client
         String key = getKey(type, code);
         TokenStore tokenStore = null;
         if (redisUtils.isOpen()) {
-            Object object = redisUtils.get(key);
+            Object object = getRedisToken(key);
             if (object instanceof TokenStore)
                 tokenStore = (TokenStore) object;
         } else {
@@ -179,6 +179,29 @@ public class ClientDetailsService extends ModuleService<ClientDetailsDao, Client
             }
         }
         return tokenStore;
+    }
+
+    private Object getRedisToken(String key) {
+        try {
+            return redisUtils.get(key);
+        } catch (Exception e) {
+            if (!isRedisDeserializationFailure(e))
+                throw e;
+            log.warn("Stale Redis token cache, purging key={}: {}", key, e.getMessage());
+            redisUtils.delete(key);
+            return null;
+        }
+    }
+
+    private static boolean isRedisDeserializationFailure(Throwable e) {
+        for (Throwable x = e; x != null; x = x.getCause()) {
+            if (x instanceof org.springframework.data.redis.serializer.SerializationException)
+                return true;
+            String name = x.getClass().getName();
+            if (name.contains("SerializationException") || name.contains("InvalidClassException"))
+                return true;
+        }
+        return false;
     }
 
     public void remove(ValueType type, String code) {
