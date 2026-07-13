@@ -56,6 +56,7 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
     private static final Map<String, String> spmListForHtml = new ConcurrentHashMap<>();
     private static final Map<String, SuperPositionModelEntity> spmListForUrlKey = new ConcurrentHashMap<>();
     private static final Map<String, SuperPositionModelEntity> spmListForResourceID = new ConcurrentHashMap<>();
+    private static volatile Map<String, String> spmListFromSitesFallback;
 
     @Override
     public int menuOrder() {
@@ -68,7 +69,51 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
     }
 
     public Map<String, String> getSpmListForHtml() {
-        return spmListForHtml;
+        if (!spmListForHtml.isEmpty()) {
+            return spmListForHtml;
+        }
+        Map<String, String> fallback = spmListFromSitesFallback;
+        if (fallback != null) {
+            return fallback;
+        }
+        synchronized (SuperPositionModelService.class) {
+            fallback = spmListFromSitesFallback;
+            if (fallback == null) {
+                fallback = buildSpmListFromSites();
+                spmListFromSitesFallback = fallback;
+            }
+            return fallback;
+        }
+    }
+
+    private Map<String, String> buildSpmListFromSites() {
+        Map<String, String> map = new HashMap<>();
+        Collection<SiteFactory.Site> sites = siteFactory.getSites();
+        if (sites == null) {
+            return map;
+        }
+        for (SiteFactory.Site site : sites) {
+            for (Class<?> clazz = site.getClass(); clazz != null && clazz != Object.class; clazz = clazz.getSuperclass()) {
+                Field[] fields = clazz.getDeclaredFields();
+                for (Field field : fields) {
+                    PageAware aware = field.getAnnotation(PageAware.class);
+                    if (aware == null) {
+                        continue;
+                    }
+                    String page = field.getName();
+                    if (StringUtils.isNotEmpty(aware.page()) && !"NULL".equalsIgnoreCase(aware.page()) && !"0".equalsIgnoreCase(aware.page())) {
+                        page = aware.page();
+                    }
+                    SuperPositionModelEntity entity = new SuperPositionModelEntity();
+                    entity.setSiteId(site.getId());
+                    entity.setPageId(page);
+                    entity.setChannelId(aware.channel());
+                    entity.setProductId(aware.product());
+                    map.put(site.getKey(field.getName()), "spm=" + entity.toSpmString());
+                }
+            }
+        }
+        return map;
     }
 
     public Map<String, SuperPositionModelEntity> getSpmListForResourceID() {
