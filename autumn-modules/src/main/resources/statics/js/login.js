@@ -98,6 +98,9 @@
                 top.location.href = self.location.href;
             }
         },
+        mounted: function () {
+            this.bootstrapAuthorizeQr();
+        },
         methods: {
             switchTab: function (tab, keepQrProvider) {
                 if (this.authorizeLoggedIn) {
@@ -316,19 +319,40 @@
                     return;
                 }
                 var self = this;
-                AutumnQrc.mergeInto(this, {
-                    ctx: ctx,
-                    mode: 'as',
-                    boxId: 'loginQrcodeBox',
-                    pollIntervalMs: serverPollIntervalMs,
-                    onAuthorizeExchange: function (exchange) {
-                        self.completeAuthorizeExchange(exchange);
-                    }
-                });
-                this.resumeTicketNotify({
-                    uuid: serverUuid,
-                    qrUrl: serverQrUrl
-                });
+                var run = function () {
+                    AutumnQrc.mergeInto(self, {
+                        ctx: ctx,
+                        mode: 'as',
+                        boxId: 'loginQrcodeBox',
+                        pollIntervalMs: serverPollIntervalMs,
+                        onAuthorizeExchange: function (exchange) {
+                            self.completeAuthorizeExchange(exchange);
+                        }
+                    });
+                    self.resumeTicketNotify({
+                        uuid: serverUuid,
+                        qrUrl: serverQrUrl
+                    });
+                };
+                if (typeof this.$nextTick === 'function') {
+                    this.$nextTick(run);
+                } else {
+                    run();
+                }
+            },
+            bootstrapAuthorizeQr: function () {
+                if (!authorizeMode || this.authorizeLoggedIn) {
+                    return;
+                }
+                if (this.loginTab !== 'qr' && authorizeLoginTab !== 'qr') {
+                    return;
+                }
+                this.loginTab = 'qr';
+                if (serverQrUrl) {
+                    this.initAuthorizeQr();
+                } else {
+                    this.beginQrLogin();
+                }
             },
             submitAuthorizeConsent: function () {
                 if (!this.authorizeLoggedIn) {
@@ -541,10 +565,6 @@
                 cbPhone.value = authorizeReturnUrl;
             }
             vm.oauthCallback = authorizeReturnUrl;
-        }
-        if (authorizeMode && serverQrUrl && (vm.loginTab === 'qr' || authorizeLoginTab === 'qr') && !authorizeLoggedIn) {
-            vm.loginTab = 'qr';
-            vm.initAuthorizeQr();
         }
         if (authorizeLoggedIn) {
             vm.applyLoggedInProfile();
