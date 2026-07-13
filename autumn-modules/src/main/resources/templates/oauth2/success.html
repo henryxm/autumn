@@ -57,7 +57,11 @@
       <p>您已完成授权登录，现在可以使用本应用的相关功能。</p>
       <div class="actions">
         <a class="btn btn-primary" href="${request.contextPath}/index.html">进入首页</a>
-        <a class="btn btn-ghost" href="${request.contextPath}/oauth2/login">使用其他账号登录</a>
+        <!--<#if clientId?? && clientId?has_content>-->
+        <a class="btn btn-ghost" href="${request.contextPath}/oauth2/login?client_id=${clientId?url('UTF-8')}">使用其他账号登录</a>
+        <!--<#else>-->
+        <a class="btn btn-ghost" href="${request.contextPath}/login">使用其他账号登录</a>
+        <!--</#if>-->
       </div>
     </div>
     <p class="foot">&copy; ${siteName!'Autumn Framework'}</p>

@@ -6,8 +6,8 @@
 
 | 概念 | 说明 |
 |------|------|
-| **隐式登录** | 用户通过 `/oauth2/login`、`/open/oauth2/login` 或业务内嵌 URL 直接进入授权流程；`pageLogin=0`（默认）时不在 `/login` 展示。 |
-| **显式登录** | 在 `/login` Tab 下方展示图标列表；需 `pageLogin=1` 且满足 §4 准入条件。 |
+| **隐式登录** | 用户主动打开 `/oauth2/login`、`/open/oauth2/login`（或带 `client_id` / `appId` 的链接）进入授权登录；`pageLogin=0`（默认）时不在 `/login` 展示 Provider 列表。 |
+| **显式登录（本站默认）** | 普通页面导航、未要求授权时的登录按钮指向 `/login`；仅当登录页配置了授权 Provider（`pageLogin=1`）时，才从 `/login` 跳转到 `/oauth2/login?client_id=`。 |
 
 **重要**：无任何 Provider 满足展示条件时，`visible=false`，登录页 UI 与改造前完全一致（无 divider、无额外区块）。
 
@@ -110,7 +110,7 @@
 |------|------|
 | 有 `client_id` + 远程 `originUri` | `OauthRpLoginService.buildAuthorizeRedirect` 302 |
 | 有 `client_id` + 同实例 | 渲染 `oauth2/login.html` |
-| 无 `client_id` | 用 `LOGIN_AUTHENTICATION` 默认 client；未配置则 redirect `/login` |
+| 无 `client_id` | 用 `LOGIN_AUTHENTICATION` 默认 client 进入授权登录入口；未配置则 redirect `/login` |
 
 `OauthRpStateService` state 携带 `clientId`；callback 优先从 state 恢复 client 上下文。`/client/oauth2/login` 薄代理至 `/oauth2/login`。
 
@@ -125,7 +125,7 @@
 
 - 存量与新建 client/app 默认 `pageLogin=0`，登录页与旧版一致
 - 需展示时：管理页开启 `pageLogin=1` 并补齐 §4 条件
-- 隐式 `/oauth2/login`（无 client_id 用默认 client）不受影响
+- **路由约定**：普通入口（导航、未要求授权）→ `/login`；主动或业务要求授权登录 → `/oauth2/login`（可带 `client_id`；无参数时用 `LOGIN_AUTHENTICATION`）
 
 ## 8. 故障排查
 
