@@ -7,6 +7,7 @@ import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.site.LoadFactory;
 import cn.org.autumn.site.MappingFactory;
 import cn.org.autumn.site.PageFactory;
+import cn.org.autumn.site.SitePortalSupport;
 import java.util.ArrayList;
 import java.util.List;
 import javax.servlet.http.HttpServletRequest;
@@ -39,6 +40,9 @@ public class SpmController {
 
     @Autowired
     LoadFactory loadFactory;
+
+    @Autowired
+    SitePortalSupport sitePortalSupport;
 
     List<String> active = new ArrayList<>();
 
@@ -74,6 +78,7 @@ public class SpmController {
             SysUserEntity sysUserEntity = ShiroUtils.getUserEntity();
             if (sysUserRoleService.isSystemAdministrator(sysUserEntity)) {
                 String resourceId = superPositionModelService.getResourceId(httpServletRequest, httpServletResponse, model, spm);
+                sitePortalSupport.applyToModelForView(httpServletRequest, model, resourceId);
                 if (log.isDebugEnabled())
                     log.debug("Admin resourceId:{}", resourceId);
                 return resourceId;
@@ -87,6 +92,7 @@ public class SpmController {
     @RequestMapping("/")
     public String spm(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model, String spm) {
         String resourceId = superPositionModelService.getResourceId(httpServletRequest, httpServletResponse, model, spm);
+        sitePortalSupport.applyToModelForView(httpServletRequest, model, resourceId);
         if (log.isDebugEnabled())
             log.debug("ResourceId:{}", resourceId);
         return resourceId;
@@ -100,6 +106,7 @@ public class SpmController {
             return pageFactory.loading(request, response, model);
         }
         String resourceId = mappingFactory.mapping(request, response, model, value);
+        sitePortalSupport.applyToModelForView(request, model, resourceId);
         if (log.isDebugEnabled())
             log.debug("Path:{}, resourceId:{}", value, resourceId);
         return resourceId;

@@ -1,0 +1,10 @@
+<#assign sitePortalFooterHideVersion = true>
+<footer class="main-footer site-shell-footer">
+  <!--<#if siteVersionLabel?? && siteVersionLabel?has_content>-->
+  <div class="pull-right hidden-xs site-shell-version">${siteVersionLabel}</div>
+  <!--</#if>-->
+  <div class="site-shell-footer-line">
+    <#include "/_site_portal_footer_content.html">
+  </div>
+</footer>
+<#assign sitePortalFooterHideVersion = false>

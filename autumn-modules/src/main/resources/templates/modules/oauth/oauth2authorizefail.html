@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html class="no-js">
+<html class="no-js" lang="zh-CN">
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -8,23 +8,75 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <meta name="renderer" content="webkit">
     <meta http-equiv="Cache-Control" content="no-siteapp"/>
+    <link rel="stylesheet" href="${request.contextPath}/statics/css/site-portal-footer-compact.css">
     <style type="text/css">
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: #f5f7fb;
+            color: #1a1d26;
+        }
+        .oauth_wrap {
+            max-width: 640px;
+            margin: 48px auto;
+            padding: 0 16px;
+        }
+        .oauth_header {
+            margin-bottom: 16px;
+        }
+        .WB_logo {
+            margin: 0;
+            font-size: 22px;
+            font-weight: 700;
+            color: #1a1d26;
+        }
         .oauth_main {
             border: 1px solid #d2d2d2;
             border-radius: 6px;
             box-shadow: 0 0 5px #c6c6c6;
+            background: #fff;
         }
-
         .oauth_content {
             padding: 20px 18px 30px 20px;
         }
+        .oauth_error_content {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+        .error_content {
+            margin: 0;
+        }
+        .error_content dt {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .error_content dd {
+            margin: 0;
+            color: #64748b;
+            line-height: 1.6;
+            font-size: 14px;
+        }
+        .login-footer.site-portal-footer {
+            color: #64748b;
+        }
+        .site-portal-footer-line {
+            color: #64748b;
+        }
+        .site-footer-sep {
+            color: #94a3b8;
+        }
+        .site-filing-link:hover,
+        .site-legal-link:hover {
+            color: #1a1d26;
+        }
     </style>
-
 </head>
 <body>
 <div class="oauth_wrap">
     <div class="oauth_header clearfix">
-        <h1 title="Autumn" class="WB_logo">Autumn</h1>
+        <h1 title="${siteName!'Autumn'}" class="WB_logo">${siteName!'Autumn'}</h1>
         <p class="login_account"></p>
     </div>
     <div class="WB_panel oauth_main oauth_content">
@@ -33,13 +85,13 @@
                 <dl class="error_content">
                     <dt>访问出错了！</dt>
                     <dd>你所访问的站点认证失败或者稍后再试。<br>
-                        失败信息：${OAuth2FailedMessage }
+                        失败信息：${OAuth2FailedMessage!}
                     </dd>
                 </dl>
             </div>
-            <div class="oauth_copyright"><a href="#">Autumn</a>版权所有</div>
         </div>
     </div>
+    <#include "/_auth_site_footer.html">
 </div>
 </body>
 </html>

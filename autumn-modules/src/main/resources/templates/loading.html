@@ -196,10 +196,15 @@
 
         .progress-bar {
             height: 100%;
-            width: 36%;
+            width: 12%;
             border-radius: 99px;
             background: linear-gradient(90deg, #3c8dbc 0%, #6f48c9 100%);
             animation: loading-bar 1.6s ease-in-out infinite;
+            transition: width 0.45s ease;
+        }
+
+        .progress-bar.is-determinate {
+            animation: none;
         }
 
         .counter {
@@ -373,10 +378,10 @@
             <img id="brandLogoImage" alt="logo">
             <span id="brandLogoText">A</span>
         </div>
-        <p class="brand" id="brandName">${(lang.sys_string_loading_brand)!'Autumn Platform'}</p>
+        <p class="brand" id="brandName">${(loadingBrand)!(lang.sys_string_loading_brand)!''}</p>
         <h1 class="title">${(lang.sys_string_loading_title)!'系统正在准备中'}</h1>
         <p class="desc">
-            ${(lang.sys_string_loading_description)!'部分资源暂未就绪，请稍候，系统将自动重试。'}
+            ${(lang.sys_string_loading_description)!'系统正在后台完成启动检查，页面不会自动整页刷新；就绪后将自动进入目标页。'}
         </p>
         <div class="status-line">
             <span class="status-dot"></span>
@@ -385,7 +390,7 @@
         </div>
         <div class="progress-wrap">
             <div class="progress-track">
-                <div class="progress-bar"></div>
+                <div class="progress-bar" id="progressBar"></div>
             </div>
         </div>
         <p class="counter" id="counter"></p>
@@ -394,7 +399,8 @@
             <span id="targetText">/index.html</span>
         </p>
         <div class="action">
-            <button type="button" id="retryNow">${(lang.sys_string_loading_retry_now)!'立即重试'}</button>
+            <button type="button" id="retryNow">${(lang.sys_string_loading_retry_now)!'立即检测'}</button>
+            <button type="button" class="secondary" id="forceEnter" style="display:none;">${(lang.sys_string_loading_force_enter)!'仍要进入'}</button>
             <button type="button" class="secondary" id="goHome">${(lang.sys_string_loading_back_home)!'返回首页'}</button>
         </div>
         <p class="footnote" id="footnote"></p>
@@ -402,9 +408,11 @@
 </div>
 <script>
     (function () {
-        var retryPrefix = "${(lang.sys_string_loading_retrying)!'正在重试，剩余'}";
+        var waitedPrefix = "${(lang.sys_string_loading_waiting)!'已等待'}";
         var retrySuffix = "${(lang.sys_string_loading_seconds)!'秒'}";
+        var checkingText = "${(lang.sys_string_loading_checking)!'正在后台检测服务就绪状态…'}";
         var stageReady = "${(lang.sys_string_loading_stage_ready)!'服务已就绪，正在进入页面'}";
+        var failedText = "${(lang.sys_string_loading_failed)!'启动失败，请查看服务日志或稍后重试'}";
         var defaultBrand = "${(loadingBrand!'')?js_string}";
         var defaultAccent = "${(loadingAccent!'')?js_string}";
         var defaultLogoUrl = "${(loadingLogoUrl!'')?js_string}";
@@ -413,6 +421,9 @@
             "${(lang.sys_string_loading_stage_resource)!'正在加载页面资源'}",
             "${(lang.sys_string_loading_stage_check)!'正在进行就绪检查'}"
         ];
+        var POLL_MS = 1500;
+        var FORCE_ENTER_AFTER_MS = 45000;
+        var MAX_WAIT_MS = 10 * 60 * 1000;
 
         function getQueryParam(name) {
             var query = window.location.search || "";
@@ -505,10 +516,7 @@
             brandName = defaultBrand;
         }
         if (!brandName) {
-            brandName = document.getElementById("brandName").textContent;
-        }
-        if (!brandName) {
-            brandName = "Autumn";
+            brandName = (document.getElementById("brandName").textContent || "").trim();
         }
         var logoUrl = parseLogoUrl(getQueryParam("logo"));
         if (!logoUrl) {
@@ -520,19 +528,27 @@
         var brandLabel = document.getElementById("brandName");
         var counter = document.getElementById("counter");
         var retryNow = document.getElementById("retryNow");
+        var forceEnter = document.getElementById("forceEnter");
         var goHome = document.getElementById("goHome");
         var statusText = document.getElementById("statusText");
         var targetText = document.getElementById("targetText");
         var footnote = document.getElementById("footnote");
-        var seconds = 4;
+        var progressBar = document.getElementById("progressBar");
+        var startedAt = Date.now();
         var tickCount = 0;
         var jumped = false;
+        var probing = false;
+        var pollTimer = null;
+        var waitTimer = null;
+        var startupFailed = false;
 
         applyTheme();
-        brandLabel.textContent = brandName;
-        brandLogoText.textContent = brandName.substring(0, 1).toUpperCase();
+        if (brandName) {
+            brandLabel.textContent = brandName;
+            brandLogoText.textContent = brandName.substring(0, 1).toUpperCase();
+            footnote.textContent = brandName;
+        }
         targetText.textContent = target;
-        footnote.textContent = brandName;
         if (logoUrl) {
             brandLogoImage.src = logoUrl;
             brandLogoImage.onload = function () {
@@ -560,6 +576,14 @@
                 return;
             }
             jumped = true;
+            if (pollTimer) {
+                window.clearTimeout(pollTimer);
+                pollTimer = null;
+            }
+            if (waitTimer) {
+                window.clearInterval(waitTimer);
+                waitTimer = null;
+            }
             window.location.replace(withFmRetry(target, retryFromLoading));
         }
 
@@ -568,60 +592,168 @@
                 return;
             }
             jumped = true;
+            if (pollTimer) {
+                window.clearTimeout(pollTimer);
+                pollTimer = null;
+            }
+            if (waitTimer) {
+                window.clearInterval(waitTimer);
+                waitTimer = null;
+            }
             window.location.replace("/index.html");
         }
 
-        function updateStage() {
-            var idx = tickCount % stageTexts.length;
-            statusText.textContent = stageTexts[idx];
-            tickCount = tickCount + 1;
+        function elapsedSeconds() {
+            return Math.floor((Date.now() - startedAt) / 1000);
+        }
+
+        function updateWaitLabel() {
+            if (jumped || startupFailed) {
+                return;
+            }
+            counter.textContent = waitedPrefix + " " + elapsedSeconds() + retrySuffix + " · " + checkingText;
+            if (elapsedSeconds() * 1000 >= FORCE_ENTER_AFTER_MS && forceEnter) {
+                forceEnter.style.display = "";
+            }
+        }
+
+        function applyProgress(percent) {
+            if (!progressBar) {
+                return;
+            }
+            var p = Number(percent);
+            if (isNaN(p) || p < 0) {
+                return;
+            }
+            if (p > 100) {
+                p = 100;
+            }
+            progressBar.classList.add("is-determinate");
+            progressBar.style.width = Math.max(8, p) + "%";
+        }
+
+        function applyBootstrapUi(json) {
+            if (!json) {
+                return;
+            }
+            if (json.phaseLabel) {
+                statusText.textContent = json.phaseLabel;
+            } else if (!json.ready) {
+                statusText.textContent = stageTexts[tickCount % stageTexts.length];
+                tickCount = tickCount + 1;
+            }
+            if (typeof json.percent !== "undefined" && json.percent !== null) {
+                applyProgress(json.percent);
+            }
+            if (json.phase === "FAILED" || json.code === 500) {
+                startupFailed = true;
+                statusText.textContent = failedText;
+                counter.textContent = json.error || failedText;
+                if (forceEnter) {
+                    forceEnter.style.display = "";
+                }
+                if (pollTimer) {
+                    window.clearTimeout(pollTimer);
+                    pollTimer = null;
+                }
+            }
         }
 
         function markReadyAndJumpSoon() {
             statusText.textContent = stageReady;
             counter.textContent = stageReady;
+            applyProgress(100);
             window.setTimeout(jump, 380);
         }
 
-        function probeHealth() {
+        function scheduleNextPoll(delay) {
+            if (jumped || startupFailed) {
+                return;
+            }
+            if (pollTimer) {
+                window.clearTimeout(pollTimer);
+            }
+            pollTimer = window.setTimeout(function () {
+                pollTimer = null;
+                probeHealth(false);
+            }, delay);
+        }
+
+        function probeHealth(manual) {
+            if (jumped || probing || startupFailed) {
+                return;
+            }
+            probing = true;
+            if (manual) {
+                counter.textContent = checkingText;
+            }
             try {
                 var xhr = new XMLHttpRequest();
                 xhr.open("GET", "/client/health?from=loading&_t=" + new Date().getTime(), true);
-                xhr.timeout = 900;
+                xhr.timeout = 2500;
                 xhr.onreadystatechange = function () {
                     if (xhr.readyState !== 4 || jumped) {
                         return;
                     }
-                    if (xhr.status >= 200 && xhr.status < 300) {
-                        try {
-                            var json = JSON.parse(xhr.responseText);
-                            if (json && (json.code === 0 || json.success === true)) {
-                                markReadyAndJumpSoon();
-                            }
-                        } catch (ignore) {
+                    probing = false;
+                    var json = null;
+                    try {
+                        json = JSON.parse(xhr.responseText || "{}");
+                    } catch (ignore) {
+                        json = null;
+                    }
+                    if (json) {
+                        applyBootstrapUi(json);
+                    }
+                    var ready = json && (json.code === 0 || json.success === true || json.ready === true);
+                    if (xhr.status >= 200 && xhr.status < 300 && ready) {
+                        markReadyAndJumpSoon();
+                        return;
+                    }
+                    if (startupFailed) {
+                        return;
+                    }
+                    if (Date.now() - startedAt >= MAX_WAIT_MS) {
+                        counter.textContent = waitedPrefix + " " + elapsedSeconds() + retrySuffix + " · " + checkingText;
+                        if (forceEnter) {
+                            forceEnter.style.display = "";
                         }
+                        scheduleNextPoll(5000);
+                        return;
+                    }
+                    scheduleNextPoll(POLL_MS);
+                };
+                xhr.onerror = function () {
+                    probing = false;
+                    if (!jumped && !startupFailed) {
+                        statusText.textContent = stageTexts[tickCount % stageTexts.length];
+                        tickCount = tickCount + 1;
+                        scheduleNextPoll(POLL_MS);
+                    }
+                };
+                xhr.ontimeout = function () {
+                    probing = false;
+                    if (!jumped && !startupFailed) {
+                        scheduleNextPoll(POLL_MS);
                     }
                 };
                 xhr.send();
             } catch (ignore) {
+                probing = false;
+                scheduleNextPoll(POLL_MS);
             }
         }
 
-        function updateCounter() {
-            if (seconds <= 0) {
-                jump();
-                return;
-            }
-            counter.textContent = retryPrefix + " " + seconds + retrySuffix + " ...";
-            seconds = seconds - 1;
-            updateStage();
-            probeHealth();
+        retryNow.onclick = function () {
+            probeHealth(true);
+        };
+        if (forceEnter) {
+            forceEnter.onclick = jump;
         }
-
-        retryNow.onclick = jump;
         goHome.onclick = goIndex;
-        updateCounter();
-        window.setInterval(updateCounter, 1000);
+        updateWaitLabel();
+        waitTimer = window.setInterval(updateWaitLabel, 1000);
+        probeHealth(false);
     })();
 </script>
 </body>

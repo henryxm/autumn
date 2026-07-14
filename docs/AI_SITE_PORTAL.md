@@ -99,13 +99,33 @@ API（系统管理员）：`GET/POST /sys/site-portal/*`
 模板片段：
 
 - `_auth_site_header.html` — 登录页顶部（OAuth 授权模式保留「应用授权」标题）
-- `_auth_site_footer.html` — 版权、备案、法律链接
+- `_site_portal_footer_content.html` — 版权 / 版本 / 备案 / 法律链接公共内容
+- `_auth_site_footer.html` — 认证类页脚（`login-footer`）
+- `_shell_site_footer.html` / `_shell_site_footer_layui.html` — 后台壳页脚（AdminLTE / Layui）
 - `_auth_site_psb_icon.html` — 公安备案官方图标（`statics/img/beian-psb.png`）
 - `_auth_site_branding_icon.html` — 可复用 Logo 块
+- `statics/css/site-portal-footer-compact.css` — OAuth/Open 简页深色背景页脚样式
 
-注入：`AuthPageAttributes.apply(..., SitePortalSupport)` → Model 属性 `siteBranding`、`siteMeta`、`siteFilings`、`siteLegalLinks` 等。
+注入：
 
-**规则**：字段为空则不渲染对应块。
+- 认证页：`AuthPageAttributes.apply(..., SitePortalSupport)` → `siteBranding`、`siteName`、`siteCopyrightLine`、`siteVersionLabel`、`siteFilings`、`siteLegalLinks` 等
+- 后台壳：`DefaultPage.index/main` 与 `SysPageController.index1` / SPM 命中 `index|index1|main` 时 `SitePortalSupport.applyToModel`
+- 遗留授权失败页：`SitePortalSupport.applyToModelForView`（视图名 `modules/oauth/oauth2authorizefail`）
+
+### 3.1 覆盖矩阵
+
+| 页面 | 品牌 / 系统名 | 页脚（版权·备案·法律） |
+|------|---------------|------------------------|
+| `login` / `register` / `forgotpassword` | `_auth_site_header` | `_auth_site_footer` |
+| `user/{privacy,service,about}` | `siteName` | `_auth_site_footer` |
+| `oauth2/*`、`open/oauth2/*`、`oauth2/callback-error` | `siteName`（Model） | `_auth_site_footer` + compact CSS |
+| `modules/oauth/oauth2authorizefail` | `siteName` | `_auth_site_footer` |
+| `index` / `index1` | `siteName` / logo-mini | `_shell_site_footer*` |
+| `main` | `siteName` 欢迎语 | （无页脚块） |
+| `loading` | `loadingBrand`（`DefaultPage.loading` / `SysPageController.loading`；门户 `siteName` 优先 → `LOADING_THEME`） | 仅品牌脚注；**后台 XHR 轮询** `/client/health`（含 `phase`/`percent`/`languageCacheReady`），就绪前不整页刷新，就绪后仅跳转一次 |
+| `modules/docs/*`、安装向导 | 框架产品文案「Autumn」 | **不接入**站点门户 |
+
+**规则**：字段为空则不渲染对应块；未配置版权行时 fallback 为 `&copy; ${siteName}`（不再出现硬编码 `autumn.org.cn`）。
 
 ## 4. 下游扩展法律链接（SPI）
 

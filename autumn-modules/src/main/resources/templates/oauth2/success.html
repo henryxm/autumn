@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>登录成功</title>
+  <link rel="stylesheet" href="${request.contextPath}/statics/css/site-portal-footer-compact.css">
   <style>
     :root {
       --brand-1: #5b6cf0;
@@ -46,7 +47,6 @@
     }
     .btn-primary { background: linear-gradient(135deg, var(--brand-1), var(--brand-2)); color: #fff; }
     .btn-ghost { background: #fff; color: var(--muted); border: 1px solid var(--border); }
-    .foot { margin-top: 20px; font-size: 12px; color: rgba(255,255,255,0.6); text-align: center; }
   </style>
 </head>
 <body>
@@ -60,7 +60,7 @@
         <a class="btn btn-ghost" href="${request.contextPath}/oauth2/login">使用其他账号登录</a>
       </div>
     </div>
-    <p class="foot">&copy; ${siteName!'Autumn Framework'}</p>
+    <#include "/_auth_site_footer.html">
   </div>
 </body>
 </html>
