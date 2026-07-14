@@ -13,8 +13,8 @@ import lombok.Setter;
 
 @Getter
 @Setter
-@TableName("auth_scope_def")
-@Table(value = "auth_scope_def", comment = "授权范围:OAuth/OPL scope目录")
+@TableName("auth_scope_definition")
+@Table(comment = "授权范围:OAuth/OPL scope目录")
 public class ScopeDefinitionEntity implements UuidBased, Serializable {
     private static final long serialVersionUID = 1L;
 

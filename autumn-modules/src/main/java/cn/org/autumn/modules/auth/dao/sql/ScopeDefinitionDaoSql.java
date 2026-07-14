@@ -5,7 +5,7 @@ import cn.org.autumn.database.runtime.RuntimeSql;
 public class ScopeDefinitionDaoSql extends RuntimeSql {
 
     private String tbl() {
-        return quote("auth_scope_def");
+        return quote("auth_scope_definition");
     }
 
     public String getByCode() {
