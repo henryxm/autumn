@@ -147,7 +147,7 @@
 ## 9. 扩展
 
 - 实现 `OAuthPlatformExtension` / `OpenPlatformExtension` 追加校验或 userInfo 字段
-- 自定义 scope：管理页或 Admin API 写入 `auth_scope_def`，`ScopeDefinitionService.refreshCatalog()` 合并进 `AuthScopeCatalog`
+- 自定义 scope：管理页或 Admin API 写入 `auth_scope_definition`，`ScopeDefinitionService.refreshCatalog()` 合并进 `AuthScopeCatalog`
 - QRC scope 文案：`ConsentProvider` SPI；未注册时 `ConsentSupport` → `AuthScopeSupport.labels()`
 
 ---
