@@ -27,9 +27,9 @@
   <header class="main-header">
     <a href="javascript:void(0);" class="logo">
       <!-- mini logo for sidebar mini 50x50 pixels -->
-      <span class="logo-mini"><b>Autumn</b></span>
+      <span class="logo-mini" title="${siteName!'Autumn'}"><b>${(siteName!'A')?substring(0,1)}</b></span>
       <!-- logo for regular state and mobile devices -->
-      <span class="logo-lg"><b>${lang.sys_string_management}</b></span>
+      <span class="logo-lg"><b>${siteName!'Autumn'}</b> ${lang.sys_string_management!''}</span>
     </a>
     <!-- Header Navbar: style can be found in header.less -->
     <nav class="navbar navbar-static-top" role="navigation">
@@ -93,12 +93,7 @@
   </div>
   <!-- /.content-wrapper -->
 
-  <footer class="main-footer">
-    <div class="pull-right hidden-xs">
-      Version 1.0.0
-    </div>
-    Copyright &copy; 2018-2020 <a href="http://www.autumn.org.cn" target="_blank">autumn.org.cn</a> All Rights Reserved
-  </footer>
+  <#include "/_shell_site_footer.html">
 
   <!-- Add the sidebar's background. This div must be placed
        immediately after the control sidebar -->

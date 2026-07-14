@@ -122,12 +122,24 @@ public class DefaultPage implements PageHandler {
 
     @Override
     public String index(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        sitePortalSupport.applyToModel(httpServletRequest, model);
         return "index";
     }
 
     @Override
     public String main(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        sitePortalSupport.applyToModel(httpServletRequest, model);
         return "main";
+    }
+
+    @Override
+    public String loading(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        if (model != null) {
+            model.addAttribute("loadingBrand", sysConfigService.getLoadingBrand());
+            model.addAttribute("loadingAccent", sysConfigService.getLoadingAccent());
+            model.addAttribute("loadingLogoUrl", sysConfigService.getLoadingLogoUrl());
+        }
+        return "loading";
     }
 
     @Override

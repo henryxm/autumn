@@ -20,6 +20,66 @@ html { overflow-x:hidden; }
     border-top: 1px solid #eee;
 }
 
+.site-shell-footer .site-shell-footer-line,
+.site-shell-footer .site-portal-footer-content {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    row-gap: 4px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: inherit;
+}
+.site-shell-footer .site-portal-footer-filings,
+.site-shell-footer .site-portal-footer-legal {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    row-gap: 4px;
+}
+.site-shell-footer .site-footer-item {
+    display: inline-flex;
+    align-items: center;
+}
+.site-shell-footer .site-footer-sep {
+    margin: 0 4px;
+    color: #999;
+    user-select: none;
+}
+.site-shell-footer .site-filing-link,
+.site-shell-footer .site-legal-link {
+    color: #3c8dbc;
+    text-decoration: none;
+}
+.site-shell-footer .site-filing-link:hover,
+.site-shell-footer .site-legal-link:hover {
+    text-decoration: underline;
+}
+.site-shell-footer .site-psb-icon {
+    width: 14px;
+    height: 14px;
+    margin-right: 2px;
+    object-fit: contain;
+}
+.site-shell-footer .site-shell-version {
+    font-size: 12px;
+    color: #777;
+}
+.layui-footer.site-shell-footer,
+body .layui-layout-admin .layui-larry-foot.site-shell-footer {
+    height: auto;
+    min-height: 30px;
+    line-height: 1.5;
+    padding: 8px 10px;
+    overflow: visible;
+    text-align: center;
+    box-sizing: border-box;
+}
+.layui-footer.site-shell-footer .site-shell-footer-line {
+    justify-content: center;
+    width: 100%;
+}
+
 [v-cloak] {
   display: none;
 }

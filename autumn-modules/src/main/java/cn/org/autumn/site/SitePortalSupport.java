@@ -29,6 +29,8 @@ public class SitePortalSupport {
     @Autowired
     private SiteLegalLinksFactory siteLegalLinksFactory;
 
+    public static final String OAUTH2_AUTHORIZE_FAIL_VIEW = "modules/oauth/oauth2authorizefail";
+
     public void applyToModel(HttpServletRequest request, Model model) {
         if (model == null) {
             return;
@@ -56,6 +58,53 @@ public class SitePortalSupport {
         if (!filings.isEmpty()) {
             model.addAttribute("siteFilings", filings);
         }
+    }
+
+    /**
+     * Inject portal attributes for known public/shell views that bypass {@link AuthPageAttributes}.
+     */
+    public void applyToModelForView(HttpServletRequest request, Model model, String viewName) {
+        if (isAuthPortalView(viewName) || isShellPortalView(viewName)) {
+            applyToModel(request, model);
+        }
+    }
+
+    public static boolean isOauthAuthorizeFailView(String viewName) {
+        return OAUTH2_AUTHORIZE_FAIL_VIEW.equals(normalizeViewName(viewName));
+    }
+
+    /**
+     * Auth / OAuth card pages that render {@code _auth_site_footer} and may be reached via SPM without
+     * {@link AuthPageAttributes#apply}.
+     */
+    public static boolean isAuthPortalView(String viewName) {
+        String v = normalizeViewName(viewName);
+        return "oauth2/login".equals(v)
+                || "oauth2/success".equals(v)
+                || "oauth2/callback-error".equals(v)
+                || "oauth2/bind-choice".equals(v)
+                || "open/oauth2/login".equals(v)
+                || "open/oauth2/success".equals(v)
+                || OAUTH2_AUTHORIZE_FAIL_VIEW.equals(v);
+    }
+
+    public static boolean isShellPortalView(String viewName) {
+        String v = normalizeViewName(viewName);
+        return "index".equals(v) || "index1".equals(v) || "main".equals(v);
+    }
+
+    private static String normalizeViewName(String viewName) {
+        if (StringUtils.isBlank(viewName)) {
+            return "";
+        }
+        String v = viewName.trim();
+        if (v.startsWith("/")) {
+            v = v.substring(1);
+        }
+        if (v.endsWith(".html")) {
+            v = v.substring(0, v.length() - 5);
+        }
+        return v;
     }
 
     public SitePortalBranding resolveBranding(SitePortalConfig config) {
