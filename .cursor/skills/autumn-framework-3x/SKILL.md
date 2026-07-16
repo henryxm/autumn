@@ -191,6 +191,7 @@ description: >-
 ## 异步任务与 `onFinished`（`TagRunnable`）
 
 - **`onFinished(FinishStatus)`** 每任务必调一次；本机闸门在 **`onFinished` 释放**；队列 drain 见 **`docs/AI_ASYNC_TASK.md`** §4。
+- 本机相位用框架 **`JobPhase`** + **`JobPhaseGate`**，勿在业务 Service 重复定义私有 enum。
 
 ## 分布式执行与加锁（新增）
 

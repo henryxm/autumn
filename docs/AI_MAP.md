@@ -88,7 +88,7 @@
 
 - 核心类：
   - `cn.org.autumn.thread.TagTaskExecutor`（注入名常为 `asyncTaskExecutor`）
-  - `cn.org.autumn.thread.TagRunnable`、`LockOnce`、`FinishStatus`
+  - `cn.org.autumn.thread.TagRunnable`、`LockOnce`、`FinishStatus`、`JobPhase`、`JobPhaseGate`
 - 关键点：
   - 业务写在 `exe()`；**生命周期收口**用 `onFinished(FinishStatus)`（每任务最多一次）。
   - `execute(TagRunnable)` 返回 `boolean`；未提交时 `NOT_DISPATCHED`。
