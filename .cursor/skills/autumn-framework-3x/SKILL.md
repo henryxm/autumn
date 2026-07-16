@@ -223,6 +223,7 @@ description: >-
 
 - 注入 **`TagTaskExecutor`**（常名 `asyncTaskExecutor`）；业务写在 **`exe()`**，**禁止**业务侧直接调用 `exe()`。
 - **`onFinished(FinishStatus)`**：任务结束必调一次（`COMPLETED`/`FAILED`/`SKIPPED`/`NOT_DISPATCHED`）；**本机调度闸门在 `onFinished` 释放**，不要只在 `exe()` 的 `finally` 释放。
+- **本机相位**：使用框架 **`JobPhase`** + **`JobPhaseGate`**（`IDLE`/`DISPATCHING`），勿在业务 Service 内重复定义私有 enum。
 - **内存队列 drain**：`TagRunnable` + `@TagValue(lock=false)` + `exe()` 内 **`withLockOrFallback*`**；**不要**对 drain 用 `LockOnce`。
 - **`execute` 返回 `boolean`**：`false` 时已 `NOT_DISPATCHED`；可配合 `LoopJob` 做积压补偿。
 - 详见 **`docs/AI_ASYNC_TASK.md`** §4。

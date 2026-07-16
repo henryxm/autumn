@@ -13,6 +13,8 @@
 | `LockOnce` | 继承 `TagRunnable`；**时间窗内最多执行一次**（框架 Redisson 锁，未持锁可跳过 `exe()`） |
 | `@TagValue` | 标在 `exe()` 上：tag、delay、timeout、`lock=true` 等元数据 |
 | `FinishStatus` | `onFinished` 回调参数：任务如何结束 |
+| `JobPhase` | 本机调度相位：`IDLE` / `DISPATCHING`（单飞闸门与内存队列 drain） |
+| `JobPhaseGate` | `JobPhase` 的 CAS / end / 再调度 / 积压补偿工具 |
 
 **不要混用语义：**
 
@@ -68,12 +70,16 @@ asyncTaskExecutor.execute(new TagRunnable() {
 
 推荐两阶段：
 
-1. **本机调度相位**（如 `IDLE` / `DISPATCHING`）：只表示「是否已向线程池提交 drain 任务」；在 **`onFinished` 中** 置回 `IDLE`，若队列非空再 `schedule`。
+1. **本机调度相位**（框架枚举 {@code cn.org.autumn.thread.JobPhase}：`IDLE` / `DISPATCHING`）：只表示「是否已向线程池提交 drain 任务」；在 **`onFinished` 中** 置回 `IDLE`，若队列非空再 `schedule`。**勿**在各 Service 内再定义私有 `JobPhase` / `DrainPhase`，请用 {@code JobPhase} + {@code JobPhaseGate}。
 2. **跨节点互斥**：在 `exe()` 内用 `withLockOrFallbackUnchecked("biz:queue:drain", …)`，抢不到锁记日志，依赖下一轮 `onFinished` 或 `LoopJob` 补偿。
 
 ```java
-private enum DrainPhase { IDLE, DISPATCHING }
-private final AtomicReference<DrainPhase> phase = new AtomicReference<>(DrainPhase.IDLE);
+import cn.org.autumn.thread.JobPhase;
+import cn.org.autumn.thread.JobPhaseGate;
+import cn.org.autumn.thread.FinishStatus;
+import cn.org.autumn.thread.TagRunnable;
+
+private final AtomicReference<JobPhase> phase = JobPhaseGate.create();
 private final ConcurrentMap<String, Item> queue = new ConcurrentHashMap<>();
 
 void enqueue(Item item) {
@@ -83,19 +89,16 @@ void enqueue(Item item) {
 
 void scheduleDrain() {
     if (queue.isEmpty()) {
-        phase.set(DrainPhase.IDLE);
+        JobPhaseGate.resetIdle(phase);
         return;
     }
-    if (!phase.compareAndSet(DrainPhase.IDLE, DrainPhase.DISPATCHING)) {
+    if (!JobPhaseGate.tryBegin(phase)) {
         return;
     }
     asyncTaskExecutor.execute(new TagRunnable() {
         @Override
         protected void onFinished(FinishStatus status) {
-            phase.set(DrainPhase.IDLE);
-            if (!queue.isEmpty()) {
-                scheduleDrain();
-            }
+            JobPhaseGate.endAndMaybeReschedule(phase, () -> !queue.isEmpty(), this::scheduleDrain);
         }
 
         @Override
@@ -113,13 +116,31 @@ void scheduleDrain() {
 }
 
 void recoverIfStalled() {
-    if (!queue.isEmpty() && phase.get() == DrainPhase.IDLE) {
-        scheduleDrain();
-    }
+    JobPhaseGate.recoverIfStalled(phase, () -> !queue.isEmpty(), this::scheduleDrain);
 }
 ```
 
 `LoopJob.OneMinute` 中可调用 `recoverIfStalled()`，防止 `SKIPPED` / `NOT_DISPATCHED` 后队列积压无消费者。
+
+单飞周期任务（非队列）同样使用 `JobPhaseGate.tryBegin` / `JobPhaseGate.end`：
+
+```java
+private final AtomicReference<JobPhase> syncPhase = JobPhaseGate.create();
+
+void onOneMinute() {
+    if (!JobPhaseGate.tryBegin(syncPhase))
+        return;
+    asyncTaskExecutor.execute(new TagRunnable() {
+        @Override
+        protected void onFinished(FinishStatus s) {
+            JobPhaseGate.end(syncPhase);
+        }
+        @Override
+        @TagValue(..., lock = false)
+        public void exe() { /* 业务 */ }
+    });
+}
+```
 
 ## 5. 反模式（AI 与人工均需避免）
 
@@ -137,7 +158,7 @@ void recoverIfStalled() {
 
 ## 7. 相关源码与文档
 
-- `cn.org.autumn.thread.TagRunnable`、`LockOnce`、`FinishStatus`、`TagTaskExecutor`
+- `cn.org.autumn.thread.TagRunnable`、`LockOnce`、`FinishStatus`、`TagTaskExecutor`、`JobPhase`、`JobPhaseGate`
 - **`docs/AI_DISTRIBUTED_LOCK.md`** §10（摘要）及 §8 模板
 - **`docs/AI_MAP.md`** §2.2C
 - 示例：`docs/examples/distributed-lock/`（`withLock*`）；业务队列参考各子项目 Service 内 `scheduleDrain` 实现
