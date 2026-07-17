@@ -61,7 +61,8 @@ class RpQrcCallbackServiceTest {
 
         verify(webOauthLoginService).completeRemoteOAuthCallback(any(), eq(credential.getWebAuth()), eq("classic-code"));
         assertEquals("COMPLETED", pending.getStatus());
-        verify(rpQrcPendingStore).remove(pending.getUuid());
+        verify(rpQrcPendingStore).saveTerminal(eq(pending), eq(RpQrcPendingStore.TERMINAL_GRACE_MS));
+        verify(rpQrcEventStreamService).publish(pending);
     }
 
     @Test

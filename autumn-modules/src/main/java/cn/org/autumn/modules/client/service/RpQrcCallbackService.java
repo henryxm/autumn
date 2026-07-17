@@ -130,10 +130,9 @@ public class RpQrcCallbackService {
             markSessionExpired(pending);
             return;
         }
-        rpQrcPendingStore.save(pending);
+        rpQrcPendingStore.saveTerminal(pending, RpQrcPendingStore.TERMINAL_GRACE_MS);
         log.debug("RP QRC complete success uuid={} redirect={}", pending.getUuid(), pending.getRedirectUrl());
         rpQrcEventStreamService.publish(pending);
-        rpQrcPendingStore.remove(pending.getUuid());
     }
 
     public void applyScanned(RpQrcPendingSession pending, JSONObject data) {
@@ -155,9 +154,8 @@ public class RpQrcCallbackService {
         }
         pending.setStatus("DENIED");
         mergeScannerBrief(pending, data);
-        rpQrcPendingStore.save(pending);
+        rpQrcPendingStore.saveTerminal(pending, RpQrcPendingStore.TERMINAL_GRACE_MS);
         rpQrcEventStreamService.publish(pending);
-        rpQrcPendingStore.remove(pending.getUuid());
     }
 
     /** 扫码 Webhook 丢失时，在确认回调到达前补推 SCANNED 状态（含扫码者信息）。 */

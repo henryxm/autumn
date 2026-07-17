@@ -14,7 +14,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.MediaType;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-/** 扫码 SSE 订阅/推送公共实现：Redis Pub/Sub 单路径投递，避免本节点 dispatch + relay 重复。 */
+/** 扫码 SSE 订阅/推送公共实现：本节点先投递 + Redis Pub/Sub 跨节点广播（同节点可能收到中继重复事件，前端需幂等）。 */
 @Slf4j
 public class QrcSseEventStreamSupport<T> {
 
@@ -89,10 +89,11 @@ public class QrcSseEventStreamSupport<T> {
         String uuid = uuidExtractor.apply(event);
         String json = jsonSerializer.apply(event);
         log.debug("{} SSE publish uuid={} status={}", label, uuid, statusExtractor.apply(event));
-        if (redisListenerService != null && redisListenerService.publish(redisChannel, json)) {
-            return;
+        // 本节点先投递，避免仅走 Redis 异步中继时浏览器迟收 COMPLETED，同时 poll 已读到终态。
+        dispatchLocal(uuid, event, false);
+        if (redisListenerService != null) {
+            redisListenerService.publish(redisChannel, json);
         }
-        dispatchLocal(uuid, event, true);
     }
 
     private void dispatchLocal(String uuid, T event, boolean warnIfNoSubscribers) {
