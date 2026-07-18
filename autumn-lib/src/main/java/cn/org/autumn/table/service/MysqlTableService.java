@@ -141,13 +141,15 @@ public class MysqlTableService {
         // 用于存需要删除唯一约束的表名+结构
         Map<TableInfo, List<Object>> addIndexTableMap = new HashMap<TableInfo, List<Object>>();
         Map<TableInfo, List<Object>> removeIndexTableMap = new HashMap<TableInfo, List<Object>>();
+        // 待 CONVERT TO 的表：须在删索引之后执行，避免 utf8→utf8mb4 时超长索引（3072）导致失败
+        List<TableInfo> charsetSyncTables = new ArrayList<TableInfo>();
         // 构建出全部表的增删改的map
         allTableMapConstruct(type, mySqlTypeAndLengthMap, classes, newTableMap, modifyTableMap, addTableMap, removeTableMap,
-                dropKeyTableMap, dropUniqueTableMap, addIndexTableMap, removeIndexTableMap);
+                dropKeyTableMap, dropUniqueTableMap, addIndexTableMap, removeIndexTableMap, charsetSyncTables);
 
-        // 根据传入的map，分别去创建或修改表结构
+        // 根据传入的map，分别去创建或修改表结构（先删多余索引，再改列，再 CONVERT）
         createOrModifyTableConstruct(newTableMap, modifyTableMap, addTableMap, removeTableMap, dropKeyTableMap,
-                dropUniqueTableMap, addIndexTableMap, removeIndexTableMap);
+                dropUniqueTableMap, addIndexTableMap, removeIndexTableMap, charsetSyncTables);
     }
 
     /**
@@ -172,7 +174,8 @@ public class MysqlTableService {
                                       Map<TableInfo, List<Object>> dropKeyTableMap,
                                       Map<TableInfo, List<Object>> dropUniqueTableMap,
                                       Map<TableInfo, List<Object>> addIndexTableMap,
-                                      Map<TableInfo, List<Object>> removeIndexTableMap) {
+                                      Map<TableInfo, List<Object>> removeIndexTableMap,
+                                      List<TableInfo> charsetSyncTables) {
         for (Class<?> clazz : classes) {
 
             TableInfo tableInfo = new TableInfo(clazz);
@@ -212,7 +215,8 @@ public class MysqlTableService {
                 newTableMap.put(tableInfo, newFieldList);
             } else {
                 if (syncTableCharset) {
-                    syncTableCharsetIfNeeded(tableInfo);
+                    // 延后到删索引之后再 CONVERT，见 createOrModifyTableConstruct
+                    charsetSyncTables.add(tableInfo);
                 }
                 List<ColumnMeta> tableColumnList = tableDao.getColumnMetas(tableInfo.getName());
                 warnOnLargeInformationSchemaLengths(tableInfo.getName(), tableColumnList);
@@ -236,6 +240,7 @@ public class MysqlTableService {
 
     /**
      * 若库表字符集与 @Table.charset 不一致，则执行 {@code ALTER TABLE ... CONVERT TO}。
+     * <p>须在实体多余索引已删除之后调用，否则 utf8→utf8mb4 时超长索引会报 max key length 3072。
      * <p>名称经校验后拼接，非法则跳过；utf8 与 utf8mb3 视为一致不升级。
      */
     private void syncTableCharsetIfNeeded(TableInfo tableInfo) {
@@ -889,7 +894,8 @@ public class MysqlTableService {
                                               Map<TableInfo, List<Object>> dropKeyTableMap,
                                               Map<TableInfo, List<Object>> dropUniqueTableMap,
                                               Map<TableInfo, List<Object>> addIndexTableMap,
-                                              Map<TableInfo, List<Object>> removeIndexTableMap) {
+                                              Map<TableInfo, List<Object>> removeIndexTableMap,
+                                              List<TableInfo> charsetSyncTables) {
         // 1. 创建表
         createTableByMap(newTableMap);
         // 2. 删除要变更主键的表的原来的字段的主键
@@ -900,10 +906,18 @@ public class MysqlTableService {
         addFieldsByMap(addTableMap);
         // 5. 删除字段
         removeFieldsByMap(removeTableMap);
-        // 6. 修改字段类型等
-        modifyFieldsByMap(modifyTableMap);
+        // 6. 先删多余索引（须在列 charset MODIFY / 表 CONVERT 之前，避免超长键）
         removeIndexByMap(removeIndexTableMap);
+        // 7. 修改字段类型等（含列级字符集）
+        modifyFieldsByMap(modifyTableMap);
+        // 8. 新增索引
         addIndexByMap(addIndexTableMap);
+        // 9. 表级字符集与实体对齐（CONVERT TO）
+        if (charsetSyncTables != null) {
+            for (TableInfo tableInfo : charsetSyncTables) {
+                syncTableCharsetIfNeeded(tableInfo);
+            }
+        }
     }
 
     /**

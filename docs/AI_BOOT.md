@@ -75,7 +75,7 @@
 **运行时行为（`MysqlTableService` + `QuerySql`，`autumn.table.auto=update`）**
 
 - 新建表：`CREATE TABLE ... ENGINE= ... DEFAULT CHARACTER SET ...`（`Collation` 非 `INHERIT` 时带 `COLLATE`）；列上仅在显式指定时追加 `CHARACTER SET` / `COLLATE`。
-- 表字符集与实体不一致：`autumn.table.sync-charset`（默认 `true`）下对已有表执行 `ALTER TABLE ... CONVERT TO ...`（大表可能锁表，可关开关后改手动迁移）。
+- 表字符集与实体不一致：`autumn.table.sync-charset`（默认 `true`）下对已有表执行 `ALTER TABLE ... CONVERT TO ...`（大表可能锁表，可关开关后改手动迁移）。**执行顺序**：先按实体删多余索引，再改列，最后 `CONVERT TO`，避免 utf8→utf8mb4 时超长索引（InnoDB 3072 字节）导致失败。
 - 列级字符串类型：与库中 `information_schema` 比较字符集/排序规则，不一致则 `MODIFY` 对齐。
 
 **与 JDBC 的关系（存储 ≠ 连接编码名）**
