@@ -223,9 +223,11 @@ description: >-
 
 - 注入 **`TagTaskExecutor`**（常名 `asyncTaskExecutor`）；业务写在 **`exe()`**，**禁止**业务侧直接调用 `exe()`。
 - **`onFinished(FinishStatus)`**：任务结束必调一次（`COMPLETED`/`FAILED`/`SKIPPED`/`NOT_DISPATCHED`）；**本机调度闸门在 `onFinished` 释放**，不要只在 `exe()` 的 `finally` 释放。
+- **本机相位**：使用框架 **`JobPhase`** + **`JobPhaseGate`**（`IDLE`/`DISPATCHING`），勿在业务 Service 内重复定义私有 enum。
 - **内存队列 drain**：`TagRunnable` + `@TagValue(lock=false)` + `exe()` 内 **`withLockOrFallback*`**；**不要**对 drain 用 `LockOnce`。
 - **`execute` 返回 `boolean`**：`false` 时已 `NOT_DISPATCHED`；可配合 `LoopJob` 做积压补偿。
-- 详见 **`docs/AI_ASYNC_TASK.md`** §4。
+- **`LoopJob` 秒级 / ≤1 分钟**：回调只做快速投递与本机轻量清理；**禁止**在 `onXxx` 内读写 DB / 文件 / Redis 或跑复杂业务；耗时逻辑一律 **入队 + `TagTaskExecutor` drain**（见 **`docs/AI_ASYNC_TASK.md` §4.1**）；禁止私建 `ScheduledExecutorService`。
+- 详见 **`docs/AI_ASYNC_TASK.md`** §4、§4.1。
 
 ## 分布式执行与加锁（新增）
 

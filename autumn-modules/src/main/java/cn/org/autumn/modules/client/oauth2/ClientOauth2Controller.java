@@ -332,20 +332,47 @@ public class ClientOauth2Controller {
     @ResponseBody
     @RequestMapping(value = {"/health"})
     public R health() {
+        R result;
         if (applicationInitializationProgress != null) {
             ApplicationInitializationProgress.Phase p = applicationInitializationProgress.getPhase();
             if (p == ApplicationInitializationProgress.Phase.FAILED) {
-                return R.error(500, "application startup failed");
+                result = R.error(500, "application startup failed");
+                attachBootstrapStatus(result);
+                return result;
             }
             if (p != ApplicationInitializationProgress.Phase.WIZARD && !applicationInitializationProgress.isLanguageCacheReady()) {
-                return R.error(503, "language cache not ready");
+                result = R.error(503, "language cache not ready");
+                attachBootstrapStatus(result);
+                return result;
             }
         }
         Map<String, Object> o = healthFactory.getHealth();
-        if (null != o && !o.isEmpty())
-            return R.ok().put("data", o);
-        else
-            return R.ok();
+        if (null != o && !o.isEmpty()) {
+            result = R.ok().put("data", o);
+        } else {
+            result = R.ok();
+        }
+        attachBootstrapStatus(result);
+        return result;
+    }
+
+    /**
+     * Bootstrap fields for loading-page soft polling (phase / percent / languageReady).
+     * Always attached so the UI can update without full page reload while code != 0.
+     */
+    private void attachBootstrapStatus(R result) {
+        if (result == null || applicationInitializationProgress == null) {
+            return;
+        }
+        ApplicationInitializationProgress.Phase p = applicationInitializationProgress.getPhase();
+        result.put("phase", p.name());
+        result.put("phaseLabel", applicationInitializationProgress.getMessage());
+        result.put("percent", applicationInitializationProgress.getPercentForPhase());
+        result.put("languageCacheReady", applicationInitializationProgress.isLanguageCacheReady());
+        result.put("ready", Integer.valueOf(0).equals(result.get("code")));
+        if (p == ApplicationInitializationProgress.Phase.FAILED) {
+            result.put("error", applicationInitializationProgress.getFailedDetail());
+        }
     }
 
     @ResponseBody

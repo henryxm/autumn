@@ -12,6 +12,7 @@ import org.springframework.mock.web.MockHttpServletRequest;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
@@ -62,5 +63,18 @@ class AuthSiteRoleServiceTest {
 
         assertEquals("param-client", authSiteRoleService.resolveRpClientId(request));
         assertEquals("param-client", authSiteRoleService.resolveRpClient(request).getClientId());
+    }
+
+    @Test
+    void resolveExplicitRpClientId_ignoresLoginAuthentication() {
+        AuthSiteConfig config = new AuthSiteConfig();
+        config.setSiteRole(AuthSiteConfig.ROLE_AS_AND_RP);
+        when(sysConfigService.getAuthSiteConfig()).thenReturn(config);
+
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/oauth2/login");
+        assertNull(authSiteRoleService.resolveExplicitRpClientId(request));
+
+        request.setParameter("client_id", "param-client");
+        assertEquals("param-client", authSiteRoleService.resolveExplicitRpClientId(request));
     }
 }

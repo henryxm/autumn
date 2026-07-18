@@ -12,7 +12,7 @@
 |------|---------|------|
 | **内存目录** | `AuthScopeCatalog`、`AuthScopeDef`、`AuthScopeSet`、`AuthScopeResolution` | 内置 scope 注册、解析/校验、`basic` 展开、label 固定展示顺序 |
 | **业务桥接** | `AuthScopeSupport` | OAuth/OPL/QRC 调用 catalog；`validate*Scope`、`grant*Scope`、`labels()` |
-| **DB 持久化** | `ScopeDefinitionEntity`（表 `auth_scope_def`）、`ScopeDefinitionService` | 启动 `syncBuiltins` 合并内置行；自定义 scope CRUD；`refreshCatalog()` 回灌 catalog |
+| **DB 持久化** | `ScopeDefinitionEntity`（表 `auth_scope_definition`）、`ScopeDefinitionService` | 启动 `syncBuiltins` 合并内置行；自定义 scope CRUD；`refreshCatalog()` 回灌 catalog |
 | **页面 Model** | `AuthPageSupport` | 统一注入 `scopeLabels`、`authorizeLoginAction`、consent CSRF |
 | **授权 UI** | `login.html` + `_scope_perm_list.html` | OAuth/OPL authorize 登录 + 确认同一页（**无**独立 `opl/authorize.html`） |
 | **管理 API** | `ScopeDefinitionAdminController` | `/oauth/admin/scopes/*`（catalog/list/save/enabled/delete） |
@@ -20,7 +20,7 @@
 **命名约定**：
 
 - **`AuthScopeDef`**：`autumn-lib` 内存 catalog 条目（非 DB 实体）。
-- **`ScopeDefinitionEntity`**：DB 行实体（原 `ScopeDefEntity`，全拼命名）；表名仍为 **`auth_scope_def`**。
+- **`ScopeDefinitionEntity`**：DB 行实体（原 `ScopeDefEntity`，全拼命名）；表名为 **`auth_scope_definition`**（与 `@TableName` / Dao Provider 一致）。
 - OPL 身份 scope 代码为 **`unionid`**（全小写）；**不提供**旧码 `union` 的兼容归一。
 
 ---
@@ -147,7 +147,7 @@
 ## 9. 扩展
 
 - 实现 `OAuthPlatformExtension` / `OpenPlatformExtension` 追加校验或 userInfo 字段
-- 自定义 scope：管理页或 Admin API 写入 `auth_scope_def`，`ScopeDefinitionService.refreshCatalog()` 合并进 `AuthScopeCatalog`
+- 自定义 scope：管理页或 Admin API 写入 `auth_scope_definition`，`ScopeDefinitionService.refreshCatalog()` 合并进 `AuthScopeCatalog`
 - QRC scope 文案：`ConsentProvider` SPI；未注册时 `ConsentSupport` → `AuthScopeSupport.labels()`
 
 ---

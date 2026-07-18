@@ -26,6 +26,9 @@ public class AutumnQrcCoreJsTest {
         assertTrue(js.contains("startTicketNotify(onUnavailable)"));
         assertTrue(js.contains("markSseHealthy: function"));
         assertTrue(js.contains("data.status === 'PENDING'"));
+        assertTrue(js.contains("markQrScanned: function"));
+        assertTrue(js.contains("completeQrRedirect: function"));
+        assertTrue(js.contains("recoverAfterMissingSession: function"));
     }
 
     @Test

@@ -7,6 +7,11 @@ import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.site.LoadFactory;
 import cn.org.autumn.site.MappingFactory;
 import cn.org.autumn.site.PageFactory;
+import cn.org.autumn.site.SitePortalSupport;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,11 +21,6 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
-
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import java.util.ArrayList;
-import java.util.List;
 
 @Controller
 public class SpmController {
@@ -41,6 +41,9 @@ public class SpmController {
 
     @Autowired
     LoadFactory loadFactory;
+
+    @Autowired
+    SitePortalSupport sitePortalSupport;
 
     List<String> active = new ArrayList<>();
 
@@ -76,6 +79,7 @@ public class SpmController {
             SysUserEntity sysUserEntity = ShiroUtils.getUserEntity();
             if (sysUserRoleService.isSystemAdministrator(sysUserEntity)) {
                 String resourceId = superPositionModelService.getResourceId(httpServletRequest, httpServletResponse, model, spm);
+                sitePortalSupport.applyToModelForView(httpServletRequest, model, resourceId);
                 if (log.isDebugEnabled())
                     log.debug("管理资源ID:{}", resourceId);
                 return resourceId;
@@ -89,6 +93,7 @@ public class SpmController {
     @RequestMapping("/")
     public String spm(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model, String spm) {
         String resourceId = superPositionModelService.getResourceId(httpServletRequest, httpServletResponse, model, spm);
+        sitePortalSupport.applyToModelForView(httpServletRequest, model, resourceId);
         if (log.isDebugEnabled())
             log.debug("资源ID:{}", resourceId);
         return resourceId;
@@ -102,6 +107,7 @@ public class SpmController {
             return pageFactory.loading(request, response, model);
         }
         String resourceId = mappingFactory.mapping(request, response, model, value);
+        sitePortalSupport.applyToModelForView(request, model, resourceId);
         if (log.isDebugEnabled())
             log.debug("路径:{}, 资源ID:{}", value, resourceId);
         return resourceId;

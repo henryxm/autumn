@@ -1,6 +1,7 @@
 package cn.org.autumn.site;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import cn.org.autumn.model.ComplianceFilingItem;
@@ -99,5 +100,21 @@ public class SitePortalSupportTest {
         MockHttpServletRequest request = new MockHttpServletRequest();
         String resolved = support.resolveFilingUrl(item);
         assertEquals(resolved, support.resolveFilings(request, java.util.Collections.singletonList(item)).get(0).getUrl());
+    }
+
+    @Test
+    public void viewNameHelpersRecognizePortalViews() {
+        assertTrue(SitePortalSupport.isOauthAuthorizeFailView("/modules/oauth/oauth2authorizefail.html"));
+        assertTrue(SitePortalSupport.isOauthAuthorizeFailView("modules/oauth/oauth2authorizefail"));
+        assertFalse(SitePortalSupport.isOauthAuthorizeFailView("oauth2/callback-error"));
+        assertTrue(SitePortalSupport.isAuthPortalView("oauth2/login"));
+        assertTrue(SitePortalSupport.isAuthPortalView("/open/oauth2/success.html"));
+        assertTrue(SitePortalSupport.isAuthPortalView("oauth2/callback-error"));
+        assertTrue(SitePortalSupport.isAuthPortalView("modules/oauth/oauth2authorizefail"));
+        assertFalse(SitePortalSupport.isAuthPortalView("login"));
+        assertTrue(SitePortalSupport.isShellPortalView("index"));
+        assertTrue(SitePortalSupport.isShellPortalView("/index1.html"));
+        assertTrue(SitePortalSupport.isShellPortalView("main.html"));
+        assertFalse(SitePortalSupport.isShellPortalView("login"));
     }
 }

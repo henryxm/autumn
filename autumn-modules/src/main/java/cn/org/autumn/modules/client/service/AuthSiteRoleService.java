@@ -57,6 +57,15 @@ public class AuthSiteRoleService {
         return StringUtils.isBlank(clientId) ? null : clientId.trim();
     }
 
+    /** 仅解析请求中的 client_id / clientId，不含 {@code LOGIN_AUTHENTICATION} 回退（用于 {@code /oauth2/login} 入口）。 */
+    public String resolveExplicitRpClientId(HttpServletRequest request) {
+        if (!isRpEnabled() || request == null) {
+            return null;
+        }
+        String clientId = resolveClientIdParam(request);
+        return StringUtils.isBlank(clientId) ? null : clientId.trim();
+    }
+
     public String resolveClientIdParam(HttpServletRequest request) {
         if (request == null) {
             return null;

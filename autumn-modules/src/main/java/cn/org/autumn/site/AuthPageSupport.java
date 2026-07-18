@@ -4,6 +4,7 @@ import cn.org.autumn.auth.scope.AuthScopeSet;
 import cn.org.autumn.auth.scope.AuthTrack;
 import cn.org.autumn.modules.auth.support.AuthScopeSupport;
 import cn.org.autumn.modules.client.entity.WebAuthenticationEntity;
+import cn.org.autumn.modules.client.service.AuthSiteRoleService;
 import cn.org.autumn.modules.client.service.WebAuthenticationService;
 import cn.org.autumn.modules.oauth.oauth2.support.OAuthConsentCsrfSupport;
 import cn.org.autumn.modules.opc.entity.ConnectAppEntity;
@@ -39,6 +40,9 @@ public class AuthPageSupport {
     @Autowired
     private AuthScopeSupport authScopeSupport;
 
+    @Autowired
+    private AuthSiteRoleService authSiteRoleService;
+
     public void prepareOauthLoginEntry(HttpServletRequest request, Model model, String clientId) {
         AuthPageAttributes.apply(model, sysConfigService, request, sitePortalSupport);
         AuthPageAttributes.markFlowKind(model, AuthPageAttributes.FLOW_OAUTH_LOGIN_ENTRY);
@@ -60,6 +64,12 @@ public class AuthPageSupport {
     public void prepareOauthLoginSuccess(HttpServletRequest request, Model model) {
         AuthPageAttributes.apply(model, sysConfigService, request, sitePortalSupport);
         AuthPageAttributes.markFlowKind(model, AuthPageAttributes.FLOW_OAUTH_LOGIN_SUCCESS);
+        if (request != null) {
+            String clientId = authSiteRoleService.resolveClientIdParam(request);
+            if (StringUtils.isNotBlank(clientId)) {
+                model.addAttribute("clientId", clientId);
+            }
+        }
         AuthPageAttributes.applyAuthFlowBoot(request, model);
     }
 

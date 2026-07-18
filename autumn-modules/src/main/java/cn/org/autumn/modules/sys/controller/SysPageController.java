@@ -83,11 +83,14 @@ public class SysPageController implements ErrorController {
     }
 
     @RequestMapping("modules/{module}/{url}")
-    public String module(@PathVariable("module") String module, @PathVariable("url") String url, String lang, Model model) {
+    public String module(@PathVariable("module") String module, @PathVariable("url") String url, String lang,
+                         HttpServletRequest request, Model model) {
         if (StringUtils.isNotBlank(lang)) {
             model.addAttribute("locale", lang);
         }
-        return "/modules/" + module + "/" + url;
+        String view = "/modules/" + module + "/" + url;
+        sitePortalSupport.applyToModelForView(request, model, view);
+        return view;
     }
 
     @RequestMapping("modules/{module}/{url}.js")
@@ -114,7 +117,9 @@ public class SysPageController implements ErrorController {
         inactive(httpServletRequest);
         if (isActive(httpServletRequest)) {
             if (superPositionModelService.menuWithSpm()) {
-                return superPositionModelService.getResourceId(httpServletRequest, httpServletResponse, model, spm);
+                String resourceId = superPositionModelService.getResourceId(httpServletRequest, httpServletResponse, model, spm);
+                sitePortalSupport.applyToModelForView(httpServletRequest, model, resourceId);
+                return resourceId;
             }
             return pageFactory.index(httpServletRequest, httpServletResponse, model);
         }
@@ -150,8 +155,10 @@ public class SysPageController implements ErrorController {
 
     @RequestMapping("index1.html")
     public String index1(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
-        if (isActive(httpServletRequest))
+        if (isActive(httpServletRequest)) {
+            sitePortalSupport.applyToModel(httpServletRequest, model);
             return "index1";
+        }
         if (ShiroUtils.needLogin()) {
             return "redirect:" + WebPathUtils.forBrowser(httpServletRequest, "/login");
         }
