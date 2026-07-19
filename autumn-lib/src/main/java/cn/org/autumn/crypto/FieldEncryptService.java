@@ -714,8 +714,8 @@ public class FieldEncryptService {
     }
 
     private void transformEntityForPersist(Object entity, boolean force) {
-        List<FieldMeta> metas = entityFields.get(entity.getClass());
-        if (metas == null || metas.isEmpty()) {
+        List<FieldMeta> metas = getFields(entity.getClass());
+        if (metas.isEmpty()) {
             return;
         }
         forFieldValues(entity, (meta, plain) -> {
@@ -731,8 +731,8 @@ public class FieldEncryptService {
     }
 
     private void forFieldValues(Object entity, FieldValueConsumer consumer) {
-        List<FieldMeta> metas = entityFields.get(entity.getClass());
-        if (metas == null || metas.isEmpty()) {
+        List<FieldMeta> metas = getFields(entity.getClass());
+        if (metas.isEmpty()) {
             return;
         }
         for (FieldMeta meta : metas) {

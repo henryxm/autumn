@@ -71,13 +71,32 @@ public class EhCacheManager implements ClearHandler {
      * @param <V>    Value 类型
      * @return 缓存实例
      */
+    /**
+     * EhCache 按 {@link Class} 身份校验 value；DevTools 热重启后 FQN 相同但 ClassLoader 不同会导致
+     * {@code ClassCastException: expected X but was X}。此处用 {@code ==} 比较 Class 身份。
+     */
+    private static boolean typeIdentityMatches(Cache<?, ?> cache, Class<?> keyType, Class<?> valueType) {
+        if (cache == null) {
+            return false;
+        }
+        Class<?> cacheKey = cache.getRuntimeConfiguration().getKeyType();
+        Class<?> cacheValue = cache.getRuntimeConfiguration().getValueType();
+        boolean keyOk = keyType == null || keyType == cacheKey;
+        boolean valueOk = valueType == null || valueType == cacheValue;
+        return keyOk && valueOk;
+    }
+
     @SuppressWarnings("unchecked")
     public <K, V> Cache<K, V> getOrCreate(CacheConfig config) {
         String name = config.getName();
-        // 第一次检查：快速路径，如果缓存已存在直接返回
+        // 第一次检查：快速路径，如果缓存已存在且类型身份一致则直接返回
         Cache<?, ?> existing = caches.get(name);
         if (existing != null) {
-            return (Cache<K, V>) existing;
+            if (typeIdentityMatches(existing, config.getKey(), config.getValue())) {
+                return (Cache<K, V>) existing;
+            }
+            log.warn("Cache '{}' Class identity mismatch (key/value FQN may match but ClassLoader differs, e.g. DevTools restart); recreating", name);
+            remove(name);
         }
         // 获取或创建该缓存名称对应的锁
         ReentrantLock lock = locks.computeIfAbsent(name, k -> new ReentrantLock());
@@ -86,19 +105,27 @@ public class EhCacheManager implements ClearHandler {
             // 双重检查：在获取锁后再次检查缓存是否已存在（可能被其他线程创建）
             existing = caches.get(name);
             if (existing != null) {
-                return (Cache<K, V>) existing;
+                if (typeIdentityMatches(existing, config.getKey(), config.getValue())) {
+                    return (Cache<K, V>) existing;
+                }
+                log.warn("Cache '{}' Class identity mismatch under lock; recreating", name);
+                remove(name);
             }
             // 尝试从 CacheManager 获取已存在的缓存（可能在其他地方已创建）
             try {
                 Cache<K, V> cache = manager.getCache(name, (Class<K>) config.getKey(), (Class<V>) config.getValue());
                 if (cache != null) {
-                    // 缓存已存在，添加到本地映射中
-                    caches.put(name, cache);
-                    // 确保配置已注册
-                    if (!configs.containsKey(name)) {
-                        register(config);
+                    if (!typeIdentityMatches(cache, config.getKey(), config.getValue())) {
+                        manager.removeCache(name);
+                    } else {
+                        // 缓存已存在，添加到本地映射中
+                        caches.put(name, cache);
+                        // 确保配置已注册
+                        if (!configs.containsKey(name)) {
+                            register(config);
+                        }
+                        return cache;
                     }
-                    return cache;
                 }
             } catch (Exception e) {
                 log.error("Cache '{}' not found in CacheManager, will create new one", name);
@@ -157,7 +184,12 @@ public class EhCacheManager implements ClearHandler {
     public <K, V> Cache<K, V> getCache(String name, Class<K> keyType, Class<V> valueType) {
         Cache<?, ?> cache = caches.get(name);
         if (cache != null) {
-            return (Cache<K, V>) cache;
+            if (typeIdentityMatches(cache, keyType, valueType)) {
+                return (Cache<K, V>) cache;
+            }
+            log.warn("Cache '{}' Class identity mismatch on get; removing so caller can recreate", name);
+            remove(name);
+            return null;
         }
         // 先检查是否是持久化缓存，从对应的 PersistentCacheManager 中查找
         CacheConfig config = configs.get(name);

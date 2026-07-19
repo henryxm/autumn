@@ -329,7 +329,7 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
             V value = getFromRedis(key, config);
             if (value != null) {
                 // Redis缓存中存在，写入本地缓存并返回
-                cache.put(key, value);
+                putLocalResilient(cache, name, key, value, config);
                 return value;
             } else if (isRedisEnabled()) {
                 // 检查Redis中是否有null占位符
@@ -337,7 +337,7 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
                 if (redisValue != null && redisValue.toString().equals(NULL_PLACEHOLDER.toString())) {
                     // Redis中有null占位符，写入本地缓存并返回null
                     if (cacheNull) {
-                        cache.put(key, NULL_PLACEHOLDER);
+                        putLocalResilient(cache, name, key, NULL_PLACEHOLDER, config);
                     }
                     return null;
                 }
@@ -346,14 +346,14 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
             value = supplier.get();
             if (value != null) {
                 // 值不为 null，同时写入本地缓存和Redis缓存
-                cache.put(key, value);
+                putLocalResilient(cache, name, key, value, config);
                 putToRedis(name, key, value, config);
                 // 发布缓存失效消息，通知其他实例清除本地缓存
                 publish(name, key, Invalidation.Operation.PUT);
                 return value;
             } else if (cacheNull) {
                 // 值为 null 且允许缓存 null，使用占位符缓存
-                cache.put(key, NULL_PLACEHOLDER);
+                putLocalResilient(cache, name, key, NULL_PLACEHOLDER, config);
                 putToRedis(name, key, NULL_PLACEHOLDER, config);
                 // 发布缓存失效消息
                 publish(name, key, Invalidation.Operation.PUT);
@@ -365,9 +365,66 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
         } else if (cached == NULL_PLACEHOLDER) {
             // 缓存中是 null 占位符，返回 null
             return null;
+        } else if (cacheValueType != Object.class && cached.getClass() != cacheValueType && !cacheValueType.isInstance(cached)) {
+            // 堆内残留旧 ClassLoader 实例：丢弃条目，走未命中路径重载
+            log.warn("Cache '{}' hit stale ClassLoader value for key {}; evicting and reloading", name, key);
+            try {
+                cache.remove(key);
+            } catch (Exception ignored) {
+            }
+            V value = supplier.get();
+            if (value != null) {
+                putLocalResilient(cache, name, key, value, config);
+                putToRedis(name, key, value, config);
+                publish(name, key, Invalidation.Operation.PUT);
+            }
+            return value;
         } else {
             // 缓存中存在有效值
             return (V) cached;
+        }
+    }
+
+    /**
+     * 本地 put；遇 EhCache Class 身份不匹配（常见于 DevTools 热重启）时销毁并按当前 value Class 重建后重试。
+     */
+    @SuppressWarnings("unchecked")
+    private <K> void putLocalResilient(Cache<Object, Object> cache, String name, K key, Object value, CacheConfig config) {
+        if (cache == null || key == null || value == null) {
+            return;
+        }
+        try {
+            cache.put(key, value);
+            return;
+        } catch (ClassCastException e) {
+            log.warn("Ehcache put ClassCastException for '{}': {}; recreating cache", name, e.getMessage());
+        }
+        try {
+            ehCacheManager.remove(name);
+            Class<?> valueType = value instanceof NullPlaceholder ? Object.class : value.getClass();
+            CacheConfig fresh = config.toBuilder().value(valueType).build();
+            fresh.validate();
+            ehCacheManager.register(fresh);
+            Cache<Object, Object> rebuilt = ehCacheManager.getOrCreate(fresh);
+            if (rebuilt != null) {
+                rebuilt.put(key, value);
+            }
+        } catch (ClassCastException e2) {
+            log.warn("Ehcache put still fails after recreate for '{}'; skip local put: {}", name, e2.getMessage());
+            evictRedisKey(name, key);
+        } catch (Exception e) {
+            log.warn("Ehcache recreate after ClassCastException failed for '{}': {}", name, e.getMessage());
+        }
+    }
+
+    private void evictRedisKey(String name, Object key) {
+        try {
+            if (!isRedisEnabled() || key == null) {
+                return;
+            }
+            redisTemplate.delete(buildRedisKey(name, key));
+        } catch (Exception e) {
+            log.warn("Failed to evict Redis cache key after ClassCastException: {}", e.getMessage());
         }
     }
 
@@ -651,14 +708,14 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
         V value = getFromRedis(key, config);
         if (value != null) {
             // Redis缓存中存在，写入本地缓存并返回
-            cache.put(key, value);
+            putLocalResilient((Cache<Object, Object>) cache, name, key, value, config);
             return value;
         } else if (isRedisEnabled()) {
             // 检查Redis中是否有null占位符
             Object redisValue = getRedisValue(name, key);
             if (redisValue != null && redisValue.toString().equals(NULL_PLACEHOLDER.toString())) {
                 // Redis中有null占位符，写入本地缓存并返回null
-                cache.put(key, NULL_PLACEHOLDER);
+                putLocalResilient((Cache<Object, Object>) cache, name, key, NULL_PLACEHOLDER, config);
                 return null;
             }
         }
@@ -685,7 +742,7 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
         if (cache == null) {
             cache = ehCacheManager.getOrCreate(config);
         }
-        cache.put(key, value);
+        putLocalResilient((Cache<Object, Object>) cache, name, key, value, config);
         // 同时写入Redis缓存
         putToRedis(name, key, value, config);
         // 发布缓存失效消息，通知其他实例清除本地缓存
