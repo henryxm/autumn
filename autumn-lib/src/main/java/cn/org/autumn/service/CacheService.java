@@ -299,31 +299,10 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
         }
         String name = config.getName();
         boolean cacheNull = config.isNull();
-        // 如果 cacheNull 为 true，需要使用 Object 作为 Value 类型以支持存储 NULL_PLACEHOLDER
-        // 否则使用配置中的 Value 类型
-        Class<?> cacheValueType = cacheNull ? Object.class : config.getValue();
-        if (cacheNull && config.getValue() != Object.class) {
-            // 如果已存在配置但需要缓存 null，且 Value 类型不是 Object
-            // 我们需要使用 Object 类型来获取缓存，这样可以兼容存储 NULL_PLACEHOLDER 和实际值
-            if (log.isDebugEnabled())
-                log.debug("Cache config exists for: {} but valueType is not Object, using Object.class for null caching", name);
-        }
-        Cache<Object, Object> cache = (Cache<Object, Object>) ehCacheManager.getCache(name, (Class<K>) config.getKey(), cacheValueType);
+        Cache<Object, Object> cache = getOrCreateLocalCache(config);
         if (cache == null) {
-            // 如果缓存不存在，需要创建
-            if (cacheNull && config.getValue() != Object.class) {
-                // 创建临时配置，使用 Object.class 作为 Value 类型
-                CacheConfig tempConfig = config.toBuilder().value(Object.class).build();
-                tempConfig.validate();
-                cache = ehCacheManager.getOrCreate(tempConfig);
-            } else {
-                cache = ehCacheManager.getOrCreate(config);
-            }
-            // 如果创建后仍然为 null（理论上不应该发生）
-            if (cache == null) {
-                log.error("Failed to create or retrieve cache '{}', returning value from supplier", name);
-                return supplier.get();
-            }
+            log.error("Failed to create or retrieve cache '{}', returning value from supplier", name);
+            return supplier.get();
         }
         Object cached = cache.get(key);
         if (cached == null) {
@@ -367,8 +346,8 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
         } else if (cached == NULL_PLACEHOLDER) {
             // 缓存中是 null 占位符，返回 null
             return null;
-        } else if (cacheValueType != Object.class && cached.getClass() != cacheValueType && !cacheValueType.isInstance(cached)) {
-            // 堆内残留旧 ClassLoader 实例：丢弃条目，走未命中路径重载
+        } else if (isStaleClassLoaderValue(cached, config)) {
+            // 堆内残留旧 ClassLoader 实例（FQN 相同、身份不同）：丢弃条目后重载
             log.warn("Cache '{}' hit stale ClassLoader value for key {}; evicting and reloading", name, key);
             try {
                 cache.remove(key);
@@ -388,7 +367,77 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
     }
 
     /**
-     * 本地 put；遇 EhCache Class 身份不匹配（常见于 DevTools 热重启）时销毁并按当前 value Class 重建后重试。
+     * cacheNull 时本地 Ehcache 运行时 value 为 Object，以兼容 NULL_PLACEHOLDER；
+     * 注册表仍保留业务声明类型（{@link CacheConfig#getValue()}）。
+     */
+    private Class<?> resolveLocalValueType(CacheConfig config) {
+        if (config == null) {
+            return Object.class;
+        }
+        if (config.isNull()) {
+            return Object.class;
+        }
+        return config.getValue() != null ? config.getValue() : Object.class;
+    }
+
+    /**
+     * FQN 相同但 Class 身份不同（典型 DevTools 热重启），即使本地缓存以 Object 扩宽也能识别。
+     */
+    private boolean isStaleClassLoaderValue(Object cached, CacheConfig config) {
+        if (cached == null || cached instanceof NullPlaceholder || config == null) {
+            return false;
+        }
+        Class<?> declared = config.getValue();
+        if (declared == null || declared == Object.class) {
+            return false;
+        }
+        if (declared.isInstance(cached)) {
+            return false;
+        }
+        return declared.getName().equals(cached.getClass().getName());
+    }
+
+    /**
+     * 按与 compute/get/put 一致的运行时 value 类型获取或创建本地缓存；
+     * 创建后把注册表写回声明配置，避免 Object 扩宽覆盖业务类型。
+     */
+    @SuppressWarnings("unchecked")
+    private Cache<Object, Object> getOrCreateLocalCache(CacheConfig config) {
+        if (config == null) {
+            return null;
+        }
+        String name = config.getName();
+        Class<?> keyType = config.getKey();
+        Class<?> cacheValueType = resolveLocalValueType(config);
+        Cache<Object, Object> cache = (Cache<Object, Object>) ehCacheManager.getCache(name, keyType, cacheValueType);
+        if (cache != null) {
+            restoreDeclaredConfig(config);
+            return cache;
+        }
+        if (config.isNull() && config.getValue() != null && config.getValue() != Object.class) {
+            CacheConfig runtimeConfig = config.toBuilder().value(Object.class).build();
+            runtimeConfig.validate();
+            cache = ehCacheManager.getOrCreate(runtimeConfig);
+        } else {
+            cache = ehCacheManager.getOrCreate(config);
+        }
+        restoreDeclaredConfig(config);
+        return cache;
+    }
+
+    /**
+     * getOrCreate 可能用 Object 运行时配置 register；写回调用方声明配置，供 getCache(name)/运维查询。
+     */
+    private void restoreDeclaredConfig(CacheConfig declared) {
+        if (declared == null || declared.getName() == null) {
+            return;
+        }
+        ehCacheManager.register(declared);
+    }
+
+    /**
+     * 本地 put；遇 EhCache Class 身份不匹配（常见于 DevTools 热重启）时按运行时类型重建后重试，
+     * 并恢复声明配置，避免注册表被 Object/运行时 Class 长期覆盖。
      */
     @SuppressWarnings("unchecked")
     private <K> void putLocalResilient(Cache<Object, Object> cache, String name, K key, Object value, CacheConfig config) {
@@ -403,19 +452,26 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
         }
         try {
             ehCacheManager.remove(name);
-            Class<?> valueType = value instanceof NullPlaceholder ? Object.class : value.getClass();
+            Class<?> valueType = resolveLocalValueType(config);
+            // DevTools：声明/运行时 FQN 相同但 Class 身份不同时，非 Object 路径用新 Class 重建
+            if (valueType != Object.class && !(value instanceof NullPlaceholder)
+                    && valueType.getName().equals(value.getClass().getName()) && valueType != value.getClass()) {
+                valueType = value.getClass();
+            }
             CacheConfig fresh = config.toBuilder().value(valueType).build();
             fresh.validate();
-            ehCacheManager.register(fresh);
             Cache<Object, Object> rebuilt = ehCacheManager.getOrCreate(fresh);
+            restoreDeclaredConfig(config);
             if (rebuilt != null) {
                 rebuilt.put(key, value);
             }
         } catch (ClassCastException e2) {
             log.warn("Ehcache put still fails after recreate for '{}'; skip local put: {}", name, e2.getMessage());
+            restoreDeclaredConfig(config);
             evictRedisKey(name, key);
         } catch (Exception e) {
             log.warn("Ehcache recreate after ClassCastException failed for '{}': {}", name, e.getMessage());
+            restoreDeclaredConfig(config);
         }
     }
 
@@ -629,30 +685,31 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
                                       Boolean persistent, String path) {
         CacheConfig config = ehCacheManager.getConfig(name);
         if (config != null) {
-            // 已有注册配置，检查是否需要覆盖某些设置
-            boolean needsOverride = (config.isNull() != cacheNull)
-                    || (persistent != null && config.isPersistent() != persistent)
+            // Null 一经注册不可翻转，避免 Object/具体类型运行时来回拆建
+            if (config.isNull() != cacheNull && log.isDebugEnabled()) {
+                log.debug("Ignore cacheNull override for '{}': registered={}, requested={}", name, config.isNull(), cacheNull);
+            }
+            boolean needsOverride = (persistent != null && config.isPersistent() != persistent)
                     || (path != null && !path.equals(config.getPath()));
             if (needsOverride) {
-                CacheConfig.CacheConfigBuilder builder = config.toBuilder().Null(cacheNull);
+                CacheConfig.CacheConfigBuilder builder = config.toBuilder();
                 if (persistent != null) builder.persistent(persistent);
                 if (path != null) builder.path(path);
-                return builder.build();
+                CacheConfig overridden = builder.build();
+                ehCacheManager.register(overridden);
+                return overridden;
             }
             return config;
         }
         // 配置不存在，尝试根据传入的类型和过期时间创建新配置
         if (keyType != null && valueType != null) {
-            // 如果 cacheNull 为 true，需要使用 Object 作为 Value 类型以支持存储 NULL_PLACEHOLDER
-            Class<?> finalValueType = cacheNull ? Object.class : valueType;
-            // 使用传入的过期时间，如果未指定则使用默认值
+            // 注册表保留业务声明类型；Null 占位扩宽仅在 getOrCreateLocalCache 运行时使用 Object
             long expire = expireTime != null ? expireTime : 24 * 60;
             TimeUnit unit = expireTimeUnit != null ? expireTimeUnit : TimeUnit.MINUTES;
-            // 使用传入的最大条目数，如果未指定则使用默认值 10000
             long max = maxEntries != null ? maxEntries : 10000;
             long redis = redisTime != null ? redisTime : 24 * 60;
             config = CacheConfig.builder()
-                    .name(name).key(keyType).value(finalValueType)
+                    .name(name).key(keyType).value(valueType)
                     .max(max).expire(expire).redis(redis).unit(unit)
                     .Null(cacheNull)
                     .persistent(persistent != null ? persistent : false)
@@ -685,14 +742,9 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
         if (null == config)
             return null;
         String name = config.getName();
-        // 获取缓存实例
-        Cache<Object, Object> cache = (Cache<Object, Object>) ehCacheManager.getCache(name, (Class<K>) config.getKey(), (Class<V>) config.getValue());
+        Cache<Object, Object> cache = getOrCreateLocalCache(config);
         if (cache == null) {
-            // 如果缓存不存在，尝试创建
-            cache = ehCacheManager.getOrCreate(config);
-            if (cache == null) {
-                return null;
-            }
+            return null;
         }
         // 先从本地缓存获取
         Object cached = cache.get(key);
@@ -710,14 +762,14 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
         V value = getFromRedis(key, config);
         if (value != null) {
             // Redis缓存中存在，写入本地缓存并返回
-            putLocalResilient((Cache<Object, Object>) cache, name, key, value, config);
+            putLocalResilient(cache, name, key, value, config);
             return value;
         } else if (isRedisEnabled()) {
             // 检查Redis中是否有null占位符
             Object redisValue = getRedisValue(name, key);
             if (redisValue != null && redisValue.toString().equals(NULL_PLACEHOLDER.toString())) {
                 // Redis中有null占位符，写入本地缓存并返回null
-                putLocalResilient((Cache<Object, Object>) cache, name, key, NULL_PLACEHOLDER, config);
+                putLocalResilient(cache, name, key, NULL_PLACEHOLDER, config);
                 return null;
             }
         }
@@ -740,11 +792,8 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
             return;
         }
         String name = config.getName();
-        Cache<K, V> cache = ehCacheManager.getCache(name, (Class<K>) config.getKey(), (Class<V>) config.getValue());
-        if (cache == null) {
-            cache = ehCacheManager.getOrCreate(config);
-        }
-        putLocalResilient((Cache<Object, Object>) cache, name, key, value, config);
+        Cache<Object, Object> cache = getOrCreateLocalCache(config);
+        putLocalResilient(cache, name, key, value, config);
         // 同时写入Redis缓存
         putToRedis(name, key, value, config);
         // 发布缓存失效消息，通知其他实例清除本地缓存

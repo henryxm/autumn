@@ -73,7 +73,10 @@ public class EhCacheManager implements ClearHandler {
      */
     /**
      * EhCache 按 {@link Class} 身份校验 value；DevTools 热重启后 FQN 相同但 ClassLoader 不同会导致
-     * {@code ClassCastException: expected X but was X}。此处用 {@code ==} 比较 Class 身份。
+     * {@code ClassCastException: expected X but was X}。
+     * <p>
+     * {@code cacheNull=true} 时以 {@link Object} 建缓存以存放 null 占位符：已有 Object 缓存可服务具体类型请求；
+     * 若已有具体类型缓存但请求 Object，则需重建，否则无法 put 占位符。
      */
     private static boolean typeIdentityMatches(Cache<?, ?> cache, Class<?> keyType, Class<?> valueType) {
         if (cache == null) {
@@ -81,9 +84,33 @@ public class EhCacheManager implements ClearHandler {
         }
         Class<?> cacheKey = cache.getRuntimeConfiguration().getKeyType();
         Class<?> cacheValue = cache.getRuntimeConfiguration().getValueType();
-        boolean keyOk = keyType == null || keyType == cacheKey;
-        boolean valueOk = valueType == null || valueType == cacheValue;
-        return keyOk && valueOk;
+        return classIdentityCompatible(cacheKey, keyType) && valueTypeCompatible(cacheValue, valueType);
+    }
+
+    private static boolean classIdentityCompatible(Class<?> cacheType, Class<?> requestedType) {
+        if (requestedType == null || requestedType == cacheType) {
+            return true;
+        }
+        if (cacheType == Object.class || requestedType == Object.class) {
+            return true;
+        }
+        return false;
+    }
+
+    private static boolean valueTypeCompatible(Class<?> cacheType, Class<?> requestedType) {
+        if (requestedType == null || requestedType == cacheType) {
+            return true;
+        }
+        // Object 缓存可存具体业务类型与 NULL_PLACEHOLDER
+        if (cacheType == Object.class) {
+            return true;
+        }
+        // 请求 Object（null 占位路径）但缓存已是具体类型 → 需重建
+        if (requestedType == Object.class) {
+            return false;
+        }
+        // FQN 相同但身份不同（ClassLoader 切换）或类型不同 → 重建
+        return false;
     }
 
     @SuppressWarnings("unchecked")
@@ -95,7 +122,7 @@ public class EhCacheManager implements ClearHandler {
             if (typeIdentityMatches(existing, config.getKey(), config.getValue())) {
                 return (Cache<K, V>) existing;
             }
-            log.warn("Cache '{}' Class identity mismatch (key/value FQN may match but ClassLoader differs, e.g. DevTools restart); recreating", name);
+            log.warn("Cache '{}' type incompatible with request (null-placeholder Object vs concrete, or ClassLoader switch); recreating", name);
             remove(name);
         }
         // 获取或创建该缓存名称对应的锁
@@ -108,7 +135,7 @@ public class EhCacheManager implements ClearHandler {
                 if (typeIdentityMatches(existing, config.getKey(), config.getValue())) {
                     return (Cache<K, V>) existing;
                 }
-                log.warn("Cache '{}' Class identity mismatch under lock; recreating", name);
+                log.warn("Cache '{}' type incompatible under lock; recreating", name);
                 remove(name);
             }
             // 尝试从 CacheManager 获取已存在的缓存（可能在其他地方已创建）
@@ -187,7 +214,7 @@ public class EhCacheManager implements ClearHandler {
             if (typeIdentityMatches(cache, keyType, valueType)) {
                 return (Cache<K, V>) cache;
             }
-            log.warn("Cache '{}' Class identity mismatch on get; removing so caller can recreate", name);
+            log.warn("Cache '{}' type incompatible on get; removing so caller can recreate", name);
             remove(name);
             return null;
         }
