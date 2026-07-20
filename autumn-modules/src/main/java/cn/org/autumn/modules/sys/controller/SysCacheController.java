@@ -15,7 +15,9 @@ import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 import org.ehcache.Cache;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -261,13 +263,12 @@ public class SysCacheController {
                     cacheInfo.put("localKeyCount", 0);
                     cacheInfo.put("exists", false);
                 }
-                // 检查Redis中的缓存数量
+                // 检查Redis中的缓存数量（SCAN，禁止 KEYS）
                 int redisKeyCount = 0;
                 if (cacheService.isRedisEnabled()) {
                     try {
                         String pattern = "cache:" + cacheName + ":*";
-                        Set<String> keys = redisTemplate.keys(pattern);
-                        redisKeyCount = keys != null ? keys.size() : 0;
+                        redisKeyCount = scanRedisKeys(pattern, 5000).size();
                     } catch (Exception e) {
                         log.debug("Failed to get Redis cache count: {}", e.getMessage());
                     }
@@ -302,13 +303,10 @@ public class SysCacheController {
             if (cacheService.isRedisEnabled()) {
                 try {
                     String pattern = "cache:" + name + ":*";
-                    Set<String> redisKeys = redisTemplate.keys(pattern);
-                    if (redisKeys != null) {
-                        for (String rk : redisKeys) {
-                            String key = rk.substring(("cache:" + name + ":").length());
-                            Long ttl = redisTemplate.getExpire(rk);
-                            redisKeyTTLMap.put(key, ttl != null ? ttl : -1L);
-                        }
+                    for (String rk : scanRedisKeys(pattern, 5000)) {
+                        String key = rk.substring(("cache:" + name + ":").length());
+                        Long ttl = redisTemplate.getExpire(rk);
+                        redisKeyTTLMap.put(key, ttl != null ? ttl : -1L);
                     }
                 } catch (Exception e) {
                     log.error("Failed to get Redis key list: {}", e.getMessage(), e);
@@ -447,13 +445,10 @@ public class SysCacheController {
             if (cacheService.isRedisEnabled()) {
                 try {
                     String redisPattern = "cache:" + name + ":" + pattern;
-                    Set<String> redisKeys = redisTemplate.keys(redisPattern);
-                    if (redisKeys != null) {
-                        for (String rk : redisKeys) {
-                            String key = rk.substring(("cache:" + name + ":").length());
-                            Long ttl = redisTemplate.getExpire(rk);
-                            redisKeyTTLMap.put(key, ttl != null ? ttl : -1L);
-                        }
+                    for (String rk : scanRedisKeys(redisPattern, 5000)) {
+                        String key = rk.substring(("cache:" + name + ":").length());
+                        Long ttl = redisTemplate.getExpire(rk);
+                        redisKeyTTLMap.put(key, ttl != null ? ttl : -1L);
                     }
                 } catch (Exception e) {
                     log.error("Failed to search Redis keys: {}", e.getMessage(), e);
@@ -466,5 +461,27 @@ public class SysCacheController {
             log.error("Failed to search cache keys: {}", e.getMessage(), e);
             return Response.fail(null, "搜索缓存键失败: " + e.getMessage());
         }
+    }
+
+    /**
+     * SCAN 收集匹配键，禁止使用阻塞型 KEYS；超过 max 则截断。
+     */
+    private List<String> scanRedisKeys(String pattern, int max) {
+        List<String> keys = new ArrayList<>();
+        if (redisTemplate == null || pattern == null) {
+            return keys;
+        }
+        ScanOptions options = ScanOptions.scanOptions().match(pattern).count(200).build();
+        try (Cursor<String> cursor = redisTemplate.scan(options)) {
+            while (cursor.hasNext() && keys.size() < max) {
+                keys.add(cursor.next());
+            }
+            if (cursor.hasNext()) {
+                log.warn("Redis SCAN truncated at {}, pattern={}", max, pattern);
+            }
+        } catch (Exception e) {
+            log.warn("Redis SCAN failed, pattern={}, cause={}", pattern, e.getMessage());
+        }
+        return keys;
     }
 }

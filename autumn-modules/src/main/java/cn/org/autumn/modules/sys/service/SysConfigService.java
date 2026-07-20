@@ -47,6 +47,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.task.AsyncTaskExecutor;
+import org.springframework.data.redis.core.Cursor;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -174,9 +176,20 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
             return;
         try {
             String configKey = RedisKeys.getConfigPrefix(getNameSpace());
-            Set<String> keys = stringRedisTemplate.keys(configKey + "*");
-            if (null != keys && !keys.isEmpty())
-                stringRedisTemplate.delete(keys);
+            ScanOptions options = ScanOptions.scanOptions().match(configKey + "*").count(200).build();
+            List<String> batch = new ArrayList<>(100);
+            try (Cursor<String> cursor = stringRedisTemplate.scan(options)) {
+                while (cursor.hasNext()) {
+                    batch.add(cursor.next());
+                    if (batch.size() >= 100) {
+                        stringRedisTemplate.delete(batch);
+                        batch.clear();
+                    }
+                }
+            }
+            if (!batch.isEmpty()) {
+                stringRedisTemplate.delete(batch);
+            }
         } catch (Exception e) {
             log.debug("Redis clear failed: {}", e.getMessage());
         }

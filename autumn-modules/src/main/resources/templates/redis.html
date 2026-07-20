@@ -141,6 +141,9 @@
                         if (response.code === 0) {
                             this.redisStatus = response.data;
                         }
+                    },
+                    error: () => {
+                        this.showMessage('获取 Redis 状态失败', 'alert-danger');
                     }
                 });
             },
@@ -155,6 +158,9 @@
                         } else {
                             this.showMessage(response.msg, 'alert-danger');
                         }
+                    },
+                    error: () => {
+                        this.showMessage('获取数据库列表失败', 'alert-danger');
                     }
                 });
             },
@@ -170,6 +176,7 @@
                 $.ajax({
                     url: __CTX + '/sys/redis/keys/' + this.selectedDatabase,
                     method: 'GET',
+                    timeout: 15000,
                     data: {
                         pattern: this.searchPattern,
                         page: this.currentPage,
@@ -179,9 +186,16 @@
                         this.loading = false;
                         if (response.code === 0) {
                             this.keysData = response.data;
+                            if (response.data && response.data.truncated) {
+                                this.showMessage('键数量较多，列表已按扫描上限截断，请使用更精确的搜索模式', 'alert-warning');
+                            }
                         } else {
                             this.showMessage(response.msg, 'alert-danger');
                         }
+                    },
+                    error: () => {
+                        this.loading = false;
+                        this.showMessage('获取键列表失败或超时', 'alert-danger');
                     }
                 });
             },
