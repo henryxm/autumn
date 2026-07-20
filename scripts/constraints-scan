@@ -12,10 +12,13 @@
 #   docs/AI_MAP.md        §2.10、§4（注解索引、决策规则）
 #   docs/AI_UPGRADE.md    §3.1（grep 级规则）
 #   docs/REDIS_TTL_GUIDE.md、docs/REDIS_REDISSON_SPRING_DATA.md — Redis TTL / RedisExpireUtil（H 组）
+#   docs/REDIS_KEYS_AND_SCAN.md — 禁止 RedisTemplate.keys / KEYS（J 组）
 #
 # 用法:
 #   ./scripts/constraints-scan [ROOT]
-#   ./scripts/constraints-scan --redis-expire-only [ROOT]   # 仅运行 H 组（Redis TTL）
+#   ./scripts/constraints-scan --redis-expire-only [ROOT]   # 仅 H 组（Redis TTL）
+#   ./scripts/constraints-scan --redis-keys-only [ROOT]     # 仅 J 组（禁止 .keys(）
+#   ./scripts/constraints-scan --redis-only [ROOT]          # H + J 组
 #   ./scripts/constraints-scan -h | --help
 #   ROOT 默认为当前目录（建议在仓库根或业务工程根执行）。
 #
@@ -26,7 +29,7 @@
 #   AUTUMN_SCAN_FAIL_ON_HIT=1     任一规则命中则 exit 1（CI）
 #   AUTUMN_SCAN_JAVA_GLOB=glob    Java 文件 glob，默认 "*.java"
 #   AUTUMN_SCAN_SKIP_GEN=1        排除路径 **/controller/gen/**、**/gen/**（减少生成代码噪声）
-#   AUTUMN_SCAN_SKIP_REDIS=1      全文体检时跳过 H 组（Redis TTL 可疑写法）
+#   AUTUMN_SCAN_SKIP_REDIS=1      全文体检时跳过 H、J 组（Redis 相关）
 #   AUTUMN_SCAN_EXTRA=1           启用额外启发式（双键提示、三参 concat 等）
 #   AUTUMN_FQN_FAIL_ON_HIT=1        仅 FQN 扫描失败时 exit 1（见 scripts/check-java-fqn）
 
@@ -41,9 +44,19 @@ case "${1:-}" in
     echo ""
     echo "选项:"
     echo "  --redis-expire-only [ROOT]  仅执行 H 组（Redis TTL / RedisExpireUtil）"
+    echo "  --redis-keys-only [ROOT]    仅执行 J 组（禁止 redisTemplate.keys / KEYS）"
+    echo "  --redis-only [ROOT]         执行 H + J 组"
     exit 0
     ;;
   --redis-expire-only)
+    SCAN_MODE="redis_expire_only"
+    shift
+    ;;
+  --redis-keys-only)
+    SCAN_MODE="redis_keys_only"
+    shift
+    ;;
+  --redis-only)
     SCAN_MODE="redis_only"
     shift
     ;;
@@ -369,9 +382,12 @@ scan_group_h_redis_expire() {
   subsection "H1 redisTemplate.expire / .expire(..TimeUnit) / opsForValue().set(..TimeUnit)" \
     "可疑 expire / set+TimeUnit 等写法；须人工判断是否收敛至 RedisExpireUtil。"
   local raw filtered n
-  # 与旧脚本 grep -E 三路 pattern 等价（单行匹配）
   local _redis_rx='redisTemplate\.expire\s*\(|\.expire\s*\([^)]*TimeUnit|opsForValue\s*\(\s*\)\s*\.set\s*\([^;\n]*TimeUnit'
-  raw="$(rg_plain "${GEN_GLOB_ARGS[@]}" --glob "${JAVA_GLOB}" "${_redis_rx}")"
+  if [[ ${#GEN_GLOB_ARGS[@]} -gt 0 ]]; then
+    raw="$(rg_plain "${GEN_GLOB_ARGS[@]}" --glob "${JAVA_GLOB}" "${_redis_rx}")"
+  else
+    raw="$(rg_plain --glob "${JAVA_GLOB}" "${_redis_rx}")"
+  fi
   if [[ -z "${raw}" ]]; then
     filtered=""
   else
@@ -391,14 +407,70 @@ scan_group_h_redis_expire() {
 }
 
 # =====================================================================
+# J Redis KEYS / keys() — 禁止阻塞全量扫描
+# =====================================================================
+scan_group_j_redis_keys() {
+  section "J · Redis 禁止 KEYS / .keys(" \
+    "docs/REDIS_KEYS_AND_SCAN.md、AI_STANDARDS §15.1 — RedisTemplate.keys / StringRedisTemplate.keys 底层为 KEYS，大键空间会阻塞 Redis；须改为 SCAN + Cursor + 分批 delete。"
+
+  subsection "J1 redisTemplate.keys / stringRedisTemplate.keys" \
+    "禁止在生产与运维代码中使用；测试代码若必须 mock 请局部 suppress 或移出 src/main。"
+  local raw filtered n
+  local _keys_rx='(redisTemplate|stringRedisTemplate)\.keys\s*\('
+  if [[ ${#GEN_GLOB_ARGS[@]} -gt 0 ]]; then
+    raw="$(rg_plain "${GEN_GLOB_ARGS[@]}" --glob "${JAVA_GLOB}" "${_keys_rx}")"
+  else
+    raw="$(rg_plain --glob "${JAVA_GLOB}" "${_keys_rx}")"
+  fi
+  if [[ -z "${raw}" ]]; then
+    filtered=""
+  else
+    filtered="$(echo "${raw}" | rg -v 'RedisServiceTest|RedisTest|@Ignore|//.*\.keys\s*\(' 2>/dev/null || true)"
+  fi
+  if [[ -z "${filtered}" ]]; then
+    echo "${C_DIM}(无命中)${C_RST}"
+    n=0
+  else
+    echo "${filtered}" | head -80
+    n="$(echo "${filtered}" | wc -l | tr -d ' ')"
+    [[ "${n}" -gt 80 ]] && echo "${C_DIM}… 其余省略，共 ${n} 行${C_RST}"
+  fi
+  print_group_summary "J1" "${n}"
+  echo "${C_DIM}推荐写法见 docs/REDIS_KEYS_AND_SCAN.md §4${C_RST}"
+}
+
+# =====================================================================
 echo "${C_SEC}${SCRIPT_NAME}${C_RST} 根目录: ${ROOT}  |  模式: ${SCAN_MODE}"
 echo "${C_DIM}Java: ${JAVA_GLOB} | SKIP_GEN=${AUTUMN_SCAN_SKIP_GEN:-0} | SKIP_REDIS=${AUTUMN_SCAN_SKIP_REDIS:-0} | EXTRA=${AUTUMN_SCAN_EXTRA:-0}${C_RST}"
 
-if [[ "${SCAN_MODE}" == "redis_only" ]]; then
+if [[ "${SCAN_MODE}" == "redis_expire_only" ]]; then
   scan_group_h_redis_expire
   echo ""
   echo "${C_HDR}════════════════════════════════════════════════════════════════${C_RST}"
   echo "TOTAL_HITS（仅 H 组）: ${TOTAL_HITS}"
+  if [[ "${AUTUMN_SCAN_FAIL_ON_HIT:-}" == "1" ]] && [[ "${TOTAL_HITS}" -gt 0 ]]; then
+    exit 1
+  fi
+  exit 0
+fi
+
+if [[ "${SCAN_MODE}" == "redis_keys_only" ]]; then
+  scan_group_j_redis_keys
+  echo ""
+  echo "${C_HDR}════════════════════════════════════════════════════════════════${C_RST}"
+  echo "TOTAL_HITS（仅 J 组）: ${TOTAL_HITS}"
+  if [[ "${AUTUMN_SCAN_FAIL_ON_HIT:-}" == "1" ]] && [[ "${TOTAL_HITS}" -gt 0 ]]; then
+    exit 1
+  fi
+  exit 0
+fi
+
+if [[ "${SCAN_MODE}" == "redis_only" ]]; then
+  scan_group_h_redis_expire
+  scan_group_j_redis_keys
+  echo ""
+  echo "${C_HDR}════════════════════════════════════════════════════════════════${C_RST}"
+  echo "TOTAL_HITS（H + J 组）: ${TOTAL_HITS}"
   if [[ "${AUTUMN_SCAN_FAIL_ON_HIT:-}" == "1" ]] && [[ "${TOTAL_HITS}" -gt 0 ]]; then
     exit 1
   fi
@@ -415,6 +487,7 @@ scan_group_i
 scan_group_g_extra
 if [[ "${AUTUMN_SCAN_SKIP_REDIS:-}" != "1" ]]; then
   scan_group_h_redis_expire
+  scan_group_j_redis_keys
 fi
 
 echo ""

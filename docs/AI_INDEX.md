@@ -13,6 +13,7 @@
 - `docs/REDIS_RESILIENCE.md`：**Redis 韧性**（`RedisResilience` 熔断、`DistributedLockService` 集成、`DISTRIBUTED_LOCK_CONFIG.ignoreCircuitBreaker`）
 - `docs/REDIS_REDISSON_SPRING_DATA.md`：**Redisson ↔ Spring Data Redis 版本对齐**（`pExpire` / `StackOverflowError` 错配原理、**`dependencyManagement`** 建议做法，与 `REDIS_TTL_GUIDE.md` 配合阅读）
 - **`docs/REDIS_TTL_GUIDE.md`**：**Redis TTL、`Redisson` 与 `RedisExpireUtil`**（何时宜用、常见问题、API 对照、推荐处理顺序与可选扫描脚本）
+- **`docs/REDIS_KEYS_AND_SCAN.md`**：**禁止 `KEYS`、推荐 `SCAN`**（大键空间运维、`redis.html` 事故、批量删键/列表分页推荐写法、**constraints-scan J 组**）
 - `docs/AI_MAP.md`：高频开发能力主图（含生成模板分层与可改/不可改边界）
 - `docs/AI_STANDARDS.md`：**约束性开发规范**（分层、API、定时任务、权限、**FTL §7（HTML `<!--<#if>-->` / JS `//<#if>` / `<title>` 裸 FTL）**、**实体/注解建表/禁止初始化 DDL**、**§10.2 `isUnique` 与 `@Index` 禁止叠用**、**§10.2 单字段索引须字段级 `@Index`**、**§10.4 双键模型**、模块表前缀、**Dao+Provider**、**Controller–Service–Dao**、**statics/pages/Site/PageAware**）
 - **`docs/AI_DUAL_KEY.md`**：**双主键落地**（`UuidBased` / `SnowBased` / **`UserBased`**、**§3.4 无第二主键仅 `user`**、`AutoIdService`、`Uuid` / `Snow`）
@@ -71,6 +72,7 @@
 - **系统升级只读 / 关闭写库 / dbmanage CRUD 开关**：`docs/AI_BOOT.md` + `docs/AI_MAP.md` + **`docs/AI_DATABASE_READ_ONLY.md`**（叠加 `docs/AI_SESSION_GUARD.md` 若涉及登录）
 - 业务工程升级 autumn 版本：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md + docs/AI_UPGRADE.md`（必要时叠加 `docs/AI_POSTGRESQL.md`）
 - **Redis 过期 / TTL / Redisson / `RedisExpireUtil`**：`docs/REDIS_TTL_GUIDE.md` + `docs/REDIS_REDISSON_SPRING_DATA.md` + `docs/AI_STANDARDS.md` §15
+- **Redis 批量扫描 / 禁止 KEYS / 运维页大库**：`docs/REDIS_KEYS_AND_SCAN.md` + `docs/AI_STANDARDS.md` §15.1 + `docs/REDIS_STANDALONE.md` §7
 - **机器人 / Bot 开放 API、Hook、入站消息（业务系统 HTTP 对接）**：`docs/AI_BOOT.md` + `docs/AI_MAP.md` + **`docs/AI_ROBOT.md`** + **`docs/AI_ROBOT_API.md`**（叠加 `docs/AI_CODEGEN.md` 队列、`docs/AI_DISTRIBUTED_LOCK.md` 若用幂等锁）
 - **web 模块 Robot 集成 / API 回归**：`web/docs/INTEGRATION_TEST.md`（H2 内存 + Redis，`mvn -pl web -am test -Pintegration -DskipTests=false`）
 - **机器人模块框架内开发**（`cn.org.autumn.modules.bot`、改 Controller/Service/实体）：上列文档 + `docs/AI_STANDARDS.md` + `docs/AI_DATABASE.md` + `docs/AI_CODEGEN.md`

@@ -30,7 +30,7 @@ public class RedisKeys {
         return getForceLogoutPrefix(namespace) + (userUuid != null ? userUuid : "");
     }
 
-    /** 强制下线 key 的前缀，用于 keys(prefix+"*") 批量查询 */
+    /** 强制下线 key 的前缀，批量查询请用 SCAN(prefix+"*")，禁止 KEYS */
     public static String getForceLogoutPrefix(String namespace) {
         return StringUtils.isBlank(namespace) ? "system:logout:" : namespace.trim() + ":system:logout:";
     }

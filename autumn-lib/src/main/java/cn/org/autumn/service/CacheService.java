@@ -10,16 +10,18 @@ import cn.org.autumn.utils.RedisUtils;
 import com.google.gson.Gson;
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
 import org.ehcache.Cache;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.stereotype.Component;
 
 /**
@@ -781,11 +783,10 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
      */
     public void clear(String name) {
         ehCacheManager.clear(name);
-        // 同时清空Redis缓存
+        // 同时清空Redis缓存（SCAN 分批删，禁止 KEYS）
         if (isRedisEnabled()) {
             try {
-                String pattern = "cache:" + name + ":*";
-                redisTemplate.delete(Objects.requireNonNull(redisTemplate.keys(pattern)));
+                deleteByScan("cache:" + name + ":*");
             } catch (Exception e) {
                 log.warn("Failed to clear Redis cache: {}", e.getMessage());
             }
@@ -835,14 +836,36 @@ public class CacheService implements ClearHandler, LoadFactory.Must {
     @Override
     public void clear() {
         ehCacheManager.clear();
-        // 同时清空所有Redis缓存
+        // 同时清空所有Redis缓存（SCAN 分批删，禁止 KEYS）
         if (isRedisEnabled()) {
             try {
-                String pattern = "cache:*";
-                redisTemplate.delete(Objects.requireNonNull(redisTemplate.keys(pattern)));
+                deleteByScan("cache:*");
             } catch (Exception e) {
                 log.warn("Failed to clear all Redis cache: {}", e.getMessage());
             }
+        }
+    }
+
+    /**
+     * SCAN 分批删除匹配键，避免 KEYS 在大键空间下阻塞 Redis。
+     */
+    private void deleteByScan(String pattern) {
+        if (redisTemplate == null || pattern == null) {
+            return;
+        }
+        List<String> batch = new ArrayList<>(100);
+        ScanOptions options = ScanOptions.scanOptions().match(pattern).count(200).build();
+        try (Cursor<String> cursor = redisTemplate.scan(options)) {
+            while (cursor.hasNext()) {
+                batch.add(cursor.next());
+                if (batch.size() >= 100) {
+                    redisTemplate.delete(batch);
+                    batch.clear();
+                }
+            }
+        }
+        if (!batch.isEmpty()) {
+            redisTemplate.delete(batch);
         }
     }
 
