@@ -75,6 +75,7 @@
 | 非强一致写入（统计、通知、非关键同步） | `withLockOrFallback` | fallback 降级执行 | 可选 |
 | 热点键高并发冲突 | `withLockRetry` | 有限重试 + 退避后失败 | 是（小次数） |
 | 周期任务防重入 | `withLock` 或 `withLockOrFallback` | 重复触发直接跳过 | 否 |
+| LoopJob 声明式 SINGLETON | 优先 `@JobMeta(duty=SINGLETON)`（框架 `JobDutySupport`） | 未获锁静默跳过 | 否；见 `docs/AI_CLUSTER_JOB_ORCHESTRATION.md` |
 | 批量任务分片并发 | `withLock`（分片 key） | 单分片失败不影响其他分片 | 可选 |
 | 非继承链组件（Listener/Filter） | `DistributedLockService` 直接注入 | 同上按场景选 | 同上 |
 

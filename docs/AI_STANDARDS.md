@@ -59,7 +59,7 @@
 - **禁止**在业务代码中使用 Spring **`@Scheduled`** 作为**生产环境**定时调度入口（避免脱离框架的任务治理、监控、多节点分配与统一启停）。
 
 - **必须**使用 Autumn 任务体系，按场景二选一（详见 `docs/AI_MAP.md` §2.5）：  
-  - **固定周期**：实现 **`LoopJob.OneSecond` … `OneWeek`** 中对应接口，配合 **`@JobMeta`**（`skipIfRunning`、`timeout`、`maxConsecutiveErrors`、`assign` 等）。  
+  - **固定周期**：实现 **`LoopJob.OneSecond` … `OneWeek`** 中对应接口，配合 **`@JobMeta`**（`skipIfRunning`、`timeout`、`maxConsecutiveErrors`、`assign`、`duty` 等）。同一 Bean 可实现多个周期接口；`JobDuty` 类/方法合并与多接口标法见 **`docs/AI_CLUSTER_JOB_ORCHESTRATION.md` §1.3**。  
   - **复杂日历**：使用框架 **`schedulejob` + `cronExpression`**（及 `@TaskAware` / `@JobMeta` 等既有约定），而非裸 `@Scheduled`。
 
 - 例外：仅允许在**本地调试、单元测试、非交付脚手架**中使用 `@Scheduled`，且不得合并入主分支交付配置。

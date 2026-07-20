@@ -72,6 +72,12 @@ public class ScheduleAssignEntity implements Serializable {
     private String defaultAssignTag;
 
     /**
+     * 任务职责（JobDuty 名）；空则沿用注解缺省 ALL
+     */
+    @Column(length = 32, comment = "职责ALL/SINGLETON/SEQUENTIAL/DISABLED")
+    private String duty;
+
+    /**
      * 任务分组
      */
     @Column(length = 200, comment = "分组")

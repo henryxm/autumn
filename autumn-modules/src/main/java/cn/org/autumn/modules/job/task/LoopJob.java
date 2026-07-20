@@ -4,6 +4,8 @@ import cn.org.autumn.annotation.JobMeta;
 import cn.org.autumn.bean.EnvBean;
 import cn.org.autumn.config.Config;
 import cn.org.autumn.database.CrudGuard;
+import cn.org.autumn.job.JobDuty;
+import cn.org.autumn.job.JobDutySupport;
 import cn.org.autumn.site.Factory;
 import cn.org.autumn.site.LoadFactory;
 import cn.org.autumn.thread.TagRunnable;
@@ -167,6 +169,15 @@ public class LoopJob extends Factory implements LoadFactory.Must {
         private String[] tags;
         private int delay;
         private boolean async;
+        private JobDuty duty = JobDuty.ALL;
+        private String[] roles = new String[0];
+        private String lock = "";
+        /**
+         * 注解解析后的职责快照；DB duty 清空时内存回落到此值。
+         */
+        private JobDuty annotationDuty = JobDuty.ALL;
+        /** DB 显式禁用：仅当 schedule_assign.enabled=0 时为 true；null 列不影响。 */
+        private volatile Boolean assignEnabled;
 
         // ---- 来自 @JobMeta.assign / 数据库配置 ----
         /**
@@ -211,11 +222,19 @@ public class LoopJob extends Factory implements LoadFactory.Must {
             this.tags = new String[0];
             this.delay = 0;
             this.async = false;
+            this.duty = JobDuty.ALL;
+            this.roles = new String[0];
+            this.lock = "";
+            this.assignEnabled = null;
             // 解析注解
             resolveAnnotation(this, job, category);
+            this.annotationDuty = this.duty != null ? this.duty : JobDuty.ALL;
         }
 
         public boolean isEnabled() {
+            if (Boolean.FALSE.equals(assignEnabled)) {
+                return false;
+            }
             return !disabledJobIds.contains(id);
         }
 
@@ -245,9 +264,13 @@ public class LoopJob extends Factory implements LoadFactory.Must {
             map.put("tags", tags);
             map.put("delay", delay);
             map.put("async", async);
+            map.put("duty", duty != null ? duty.name() : JobDuty.ALL.name());
+            map.put("roles", roles);
+            map.put("lock", lock);
             map.put("assignTag", assignTag);
             map.put("defaultAssignTag", defaultAssignTag);
             map.put("assignedToThisServer", isAssignedToThisServer(this));
+            map.put("assignEnabled", assignEnabled);
             map.put("running", running.get());
             map.put("autoDisabled", autoDisabled);
             map.put("executionCount", executionCount.get());
@@ -277,27 +300,28 @@ public class LoopJob extends Factory implements LoadFactory.Must {
      *   <li>类级别 {@code @JobMeta(assign=...)}</li>
      *   <li>方法级别 {@code @JobMeta(assign=...)}（覆盖类级别）</li>
      * </ol>
+     * <p>
+     * {@code duty}：方法级仅当显式非 {@link JobDuty#ALL} 时覆盖类级，避免 {@code @JobMeta(name=...)} 把类级 SINGLETON 打回 ALL。
+     * 方法级若须强制 ALL，使用 DB {@code sys_schedule_assign.duty=ALL} 或方法上写非缺省 duty 后再由 DB 覆盖。
      */
     private static void resolveAnnotation(JobInfo info, Job job, String category) {
         Class<?> userClass = getUserClass(job);
-        // 类级别 @JobMeta
         JobMeta classMeta = userClass.getAnnotation(JobMeta.class);
         if (classMeta != null) {
-            applyAnnotation(info, classMeta, userClass.getSimpleName());
+            applyAnnotation(info, classMeta, userClass.getSimpleName(), false);
         }
         String methodName = "on" + category;
         try {
             Method method = userClass.getMethod(methodName);
-            // 方法级别 @JobMeta（覆盖类级别）
             JobMeta methodMeta = method.getAnnotation(JobMeta.class);
             if (methodMeta != null) {
-                applyAnnotation(info, methodMeta, userClass.getSimpleName() + "." + methodName);
+                applyAnnotation(info, methodMeta, userClass.getSimpleName() + "." + methodName, true);
             }
         } catch (NoSuchMethodException ignored) {
         }
     }
 
-    private static void applyAnnotation(JobInfo info, JobMeta meta, String fallbackName) {
+    private static void applyAnnotation(JobInfo info, JobMeta meta, String fallbackName, boolean methodLevel) {
         if (!meta.name().isEmpty()) {
             info.displayName = meta.name();
         } else if (info.displayName == null || info.displayName.equals(info.simpleName)) {
@@ -310,15 +334,21 @@ public class LoopJob extends Factory implements LoadFactory.Must {
         info.timeout = meta.timeout();
         info.maxConsecutiveErrors = meta.maxConsecutiveErrors();
         if (meta.tags().length > 0) info.tags = meta.tags();
-        // 处理 assign（服务器分配）
         if (meta.assign().length > 0) {
             String assignTags = String.join(",", meta.assign());
             info.defaultAssignTag = assignTags;
             info.assignTag = assignTags;
         }
-        // 处理 delay 和 async（delay > 0 隐含异步）
         info.delay = Math.max(0, meta.delay());
         info.async = meta.async() || info.delay > 0;
+        // duty：类级始终应用；方法级仅非 ALL 才覆盖（与 roles 非空才覆盖同理，规避注解缺省值陷阱）
+        info.duty = JobDutySupport.mergeDuty(info.duty, meta.duty(), methodLevel);
+        if (meta.roles().length > 0) {
+            info.roles = meta.roles();
+        }
+        if (StringUtils.isNotBlank(meta.lock())) {
+            info.lock = meta.lock().trim();
+        }
     }
 
     // ========== 任务注册 ==========
@@ -338,12 +368,31 @@ public class LoopJob extends Factory implements LoadFactory.Must {
         if (disabledJobIds.contains(key)) return;
         JobInfo info = jobInfoMap.get(key);
         if (info == null) return;
+        if (!info.isEnabled()) return;
         // 服务器分配检查
         if (!isAssignedToThisServer(info)) {
             if (log.isDebugEnabled())
                 log.debug("Skip {} Job:{} (not assigned to server tag '{}')", category, userClass.getSimpleName(), serverTag);
             return;
         }
+        JobDuty duty = info.getDuty() != null ? info.getDuty() : JobDuty.ALL;
+        if (duty == JobDuty.DISABLED) {
+            return;
+        }
+        if (!JobDutySupport.allowRoles(info.getRoles())) {
+            if (log.isDebugEnabled())
+                log.debug("Skip {} Job:{} (roles gate)", category, userClass.getSimpleName());
+            return;
+        }
+        Runnable guarded = () -> {
+            try {
+                JobDutySupport.run(duty, info.getId(), info.getLock(), action);
+            } catch (RuntimeException e) {
+                throw e;
+            } catch (Exception e) {
+                throw new IllegalStateException("Job duty run failed: " + info.getId(), e);
+            }
+        };
         // 防重入检查
         if (info.skipIfRunning) {
             if (!info.running.compareAndSet(false, true)) {
@@ -377,7 +426,7 @@ public class LoopJob extends Factory implements LoadFactory.Must {
                             return;
                         }
                     }
-                    doExecuteJob(info, key, category, userClass, action);
+                    doExecuteJob(info, key, category, userClass, guarded);
                 }
 
                 @Override
@@ -387,7 +436,7 @@ public class LoopJob extends Factory implements LoadFactory.Must {
             });
         } else {
             // 同步执行路径
-            doExecuteJob(info, key, category, userClass, action);
+            doExecuteJob(info, key, category, userClass, guarded);
         }
     }
 
@@ -796,6 +845,31 @@ public class LoopJob extends Factory implements LoadFactory.Must {
         info.setAssignTag(assignTag != null ? assignTag.trim() : "");
         if (log.isDebugEnabled())
             log.debug("Job [{}] assign tag updated to: '{}'", jobId, info.getAssignTag());
+        return true;
+    }
+
+    /**
+     * 更新任务职责（数据库覆盖）。
+     * {@code duty == null} 表示清除 DB 覆盖，内存回落到 {@link JobInfo#getAnnotationDuty()}。
+     */
+    public static boolean updateJobDuty(String jobId, JobDuty duty) {
+        JobInfo info = jobInfoMap.get(jobId);
+        if (info == null) return false;
+        if (duty == null) {
+            info.setDuty(info.getAnnotationDuty() != null ? info.getAnnotationDuty() : JobDuty.ALL);
+        } else {
+            info.setDuty(duty);
+        }
+        return true;
+    }
+
+    /**
+     * 同步 DB enabled：仅 {@code Boolean.FALSE} 显式禁用；{@code null} 清除 DB 覆盖。
+     */
+    public static boolean updateJobAssignEnabled(String jobId, Boolean enabled) {
+        JobInfo info = jobInfoMap.get(jobId);
+        if (info == null) return false;
+        info.setAssignEnabled(enabled);
         return true;
     }
 

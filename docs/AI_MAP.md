@@ -176,6 +176,8 @@
   - 周期接口覆盖：`OneSecond` 到 `OneWeek`。
   - 运行保护：`skipIfRunning` 防重入，`timeout` 超时观测，`maxConsecutiveErrors` 连续错误自动禁用。
   - 多节点分配：`assignTag` 配合 `server.tag` 控制任务归属。
+  - 集群职责：`@JobMeta(duty=ALL|SINGLETON|SEQUENTIAL|DISABLED)`，缺省 `ALL` 与历史完全兼容；**一 Bean 多 `LoopJob.*`** 时每周期独立 Job、类级 duty 落到全部周期、方法级非 ALL 才覆盖——见 `docs/AI_CLUSTER_JOB_ORCHESTRATION.md` §1.3。
+  - 节点身份：`ProfileService.uuid()` / `docs/AI_NODE_PROFILE.md`。
   - 批量性能：支持并行执行开关与 overrun（批量耗时超间隔）监控。
 - 最小模板（跨项目可直接套用）：
 

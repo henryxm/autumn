@@ -207,6 +207,84 @@ public class DistributedLockService {
         }
     }
 
+    /**
+     * 是否可提供跨节点互斥（Redisson 可用且未熔断）。供 JobDuty 在无法互斥时 fail-closed。
+     * 与通用 {@link #withLock} 的「本地降级执行」语义分离。
+     */
+    public boolean isClusterMutexAvailable() {
+        DistributedLockConfig config = getConfig();
+        if (!config.isEnabled() || !config.isEnableRedisson()) {
+            return false;
+        }
+        if (redissonProvider.getIfAvailable() == null) {
+            return false;
+        }
+        if (!config.isIgnoreCircuitBreaker() && redisResilience != null && !redisResilience.allowDistributedLock()) {
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * 集群互斥或跳过：无法保证跨节点互斥、获锁失败、Redis 不可达时均不执行业务（返回 null）。
+     * 专供 {@code JobDuty.SINGLETON}/{@code SEQUENTIAL}，避免多机在降级路径上重复执行。
+     */
+    public <R> R withClusterMutexOrSkip(String lockKey, Callable<R> callable) throws Exception {
+        if (callable == null) {
+            return null;
+        }
+        if (!isClusterMutexAvailable()) {
+            log.warn("cluster mutex unavailable, skip key={}", lockKey);
+            return null;
+        }
+        DistributedLockConfig config = getConfig();
+        RedissonClient redisson = redissonProvider.getIfAvailable();
+        if (redisson == null) {
+            log.warn("cluster mutex no redisson, skip key={}", lockKey);
+            return null;
+        }
+        String key = buildLockKey(lockKey, config.getKeyPrefix());
+        RLock lock = redisson.getLock(key);
+        boolean acquired = false;
+        try {
+            try {
+                acquired = lock.tryLock(Math.max(config.getWaitMs(), 0), Math.max(config.getLeaseMs(), 1000), TimeUnit.MILLISECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw e;
+            } catch (Exception e) {
+                log.warn("cluster mutex redis unreachable, skip key={}", key);
+                if (redisResilience != null && RedisResilience.isInfrastructureFailure(e)) {
+                    redisResilience.recordFailure();
+                }
+                return null;
+            }
+            if (!acquired) {
+                if (log.isDebugEnabled()) {
+                    log.debug("cluster mutex busy, skip key={}", key);
+                }
+                return null;
+            }
+            return callable.call();
+        } finally {
+            if (acquired) {
+                try {
+                    if (lock.isHeldByCurrentThread()) {
+                        lock.unlock();
+                    }
+                    if (redisResilience != null) {
+                        redisResilience.recordSuccess();
+                    }
+                } catch (Exception ex) {
+                    log.warn("unlock cluster mutex failed key={} err={}", key, ex.toString());
+                    if (redisResilience != null && RedisResilience.isInfrastructureFailure(ex)) {
+                        redisResilience.recordFailure();
+                    }
+                }
+            }
+        }
+    }
+
     protected String buildLockKey(String lockKey) {
         return buildLockKey(lockKey, null);
     }
