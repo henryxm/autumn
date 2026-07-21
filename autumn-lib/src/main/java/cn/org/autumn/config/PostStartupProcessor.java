@@ -45,11 +45,7 @@ public class PostStartupProcessor implements ApplicationListener<ContextRefreshe
             }
         }
         Config.getInstance().setApplicationContext(context);
-        String[] profiles = context.getEnvironment().getActiveProfiles();
-
-        if (profiles.length > 0) {
-            Config.getInstance().setEnv(context.getEnvironment());
-        }
+        Config.getInstance().setEnv(context.getEnvironment());
 
         event.getApplicationContext().getParent();
     }

@@ -14,6 +14,9 @@ import java.util.Objects;
 import java.util.concurrent.locks.ReentrantLock;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
 /**
@@ -31,15 +34,42 @@ public class ProfileStore {
     public static final String HOME_KEY = "autumn.node.home";
 
     private final ReentrantLock lock = new ReentrantLock();
+    private final ObjectProvider<Environment> environment;
     /** 非 null 表示运维/API 显式指定目录，不再跟配置漂移。 */
     private volatile Path homeOverride;
+
+    @Autowired
+    public ProfileStore(ObjectProvider<Environment> environment) {
+        this.environment = environment;
+    }
+
+    /** 测试 / 无 Spring 场景。 */
+    public ProfileStore() {
+        this.environment = null;
+    }
 
     public Path home() {
         Path override = homeOverride;
         if (override != null) {
             return override;
         }
-        return resolveHome(Config.getEnv(HOME_KEY));
+        return resolveHome(resolveConfiguredHome());
+    }
+
+    /** 配置键 → 系统属性 → Spring Environment（含 relaxed / EPP 默认）。 */
+    String resolveConfiguredHome() {
+        String raw = Config.getEnv(HOME_KEY);
+        if (StringUtils.isNotBlank(raw)) {
+            return raw;
+        }
+        Environment env = environment != null ? environment.getIfAvailable() : null;
+        if (env != null) {
+            String p = env.getProperty(HOME_KEY);
+            if (StringUtils.isNotBlank(p)) {
+                return p;
+            }
+        }
+        return null;
     }
 
     public Path file() {
@@ -124,11 +154,12 @@ public class ProfileStore {
     static Path resolveHome(String raw) {
         String s = StringUtils.trimToNull(raw);
         if (s == null) {
-            s = DEFAULT_HOME;
+            // 相对默认目录落在 user.home，避免 Docker 下 user.dir=/ 写成 /.autumn
+            return Path.of(System.getProperty("user.home", "."), DEFAULT_HOME).toAbsolutePath().normalize();
         }
         Path p = Path.of(s);
         if (!p.isAbsolute()) {
-            p = Path.of(System.getProperty("user.dir", ".")).resolve(p).normalize();
+            p = Path.of(System.getProperty("user.home", ".")).resolve(p).normalize();
         }
         return p.toAbsolutePath().normalize();
     }

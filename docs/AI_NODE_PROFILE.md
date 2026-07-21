@@ -6,7 +6,7 @@
 ## 1. 作用
 
 - 为本 JVM 进程生成并持久化稳定节点身份 **`uuid`**（32 位小写 hex）。
-- 文件：`{home}/node-profile.json`；默认 `home` 为 **`.autumn`**（相对 `user.dir`）。
+- 文件：`{home}/node-profile.json`；未配置时默认 **`{user.home}/.autumn`**（绝对路径，避免 Docker 下 `user.dir=/` 落到 `/.autumn`）。
 - 业务侧注入 `NodeProfile` / `ProfileService`：`uuid()` 作为服务节点主键。
 - 扩展字段只进 **`labels`**；框架不解释键含义。`roles` 为**服务器角色**列表（见 `AI_SERVER_ROLE.md`）：空或 `ALL` = 全开；亦供 LoopJob `@JobMeta(roles)` 门禁。
 
@@ -14,7 +14,7 @@
 
 | 键 | 含义 | 默认 |
 |----|------|------|
-| `autumn.node.home` | 画像目录（可用 `${user.home}/.myapp`） | `.autumn` |
+| `autumn.node.home` | 画像目录（绝对或相对；相对路径相对 `user.home`） | `{user.home}/.autumn` |
 | `autumn.node.salt` | 同机多实例区分盐 | 空 |
 | `autumn.node.profile.cache-ttl-ms` | 内存缓存 TTL；≤0 每次读盘 | `60000` |
 | `autumn.node.registry` | 集群登记心跳 | `false` |
