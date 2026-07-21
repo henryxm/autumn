@@ -153,6 +153,17 @@ public @interface JobMeta {
     String lock() default "";
 
     /**
+     * 周期栅栏（仅 {@link JobDuty#SINGLETON}）：同一逻辑周期全集群只跑一次。
+     * <p>
+     * 用 Redis {@code TIME} 按 LoopJob 分类间隔分桶，{@code SETNX} 占桶后再抢互斥锁。
+     * 解决「先到节点跑完释放锁后，同周期晚到节点再次获锁再跑」。
+     * <p>
+     * 缺省 {@code false}（仅互斥锁，与历史兼容）。方法级缺省 false <b>不会</b>把类级 true 打回；
+     * 方法级写 {@code true} 可打开。
+     */
+    boolean oncePerPeriod() default false;
+
+    /**
      * 延迟执行时间（秒）
      * <p>
      * 当值大于 0 时，任务将通过 TagTaskExecutor 异步提交，并在延迟指定秒数后执行，
@@ -167,10 +178,10 @@ public @interface JobMeta {
     int delay() default 0;
 
     /**
-     * 异步执行：任务提交到 TagTaskExecutor 线程池异步执行，不阻塞调度线程
+     * 异步执行：将<strong>整段</strong>（含 JobDuty 抢锁/周期栅栏 + 业务）提交到 TagTaskExecutor，不阻塞调度线程。
      * <p>
-     * 适用于执行耗时较长、不需要阻塞调度周期的任务。
-     * 异步任务由 TagTaskExecutor 统一管理，支持任务追踪、中断、堆栈诊断等能力。
+     * {@link JobDuty#SINGLETON} 仍在<strong>同一 worker 线程</strong>内持锁执行业务（Redisson 锁不可跨线程持有）；
+     * 不是「调度线程抢锁后再异步跑业务」。
      * <p>
      * 规则：
      * <ul>

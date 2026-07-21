@@ -2,6 +2,7 @@ package cn.org.autumn.job;
 
 import cn.org.autumn.config.Config;
 import cn.org.autumn.node.ProfileService;
+import cn.org.autumn.node.role.ServerRoleGate;
 import cn.org.autumn.service.DistributedLockService;
 import java.util.Arrays;
 import java.util.concurrent.Callable;
@@ -13,6 +14,10 @@ import org.apache.commons.lang3.StringUtils;
  * <p>
  * {@link JobDuty#SINGLETON}/{@link JobDuty#SEQUENTIAL} 在无法保证跨节点互斥时 fail-closed（跳过），
  * 不走 {@link DistributedLockService} 通用路径的「本地降级执行」。
+ * <p>
+ * SINGLETON 可选 {@code oncePerPeriod}：先 Redis TIME 分桶 SETNX，再互斥锁；同逻辑周期只跑一台。
+ * 业务始终在<strong>持锁线程</strong>内同步执行（{@code async} 仅把整段抢锁+业务丢到线程池，不跨线程持锁）。
+ * 角色闸委托 {@link ServerRoleGate}（空 roles / ALL = 全开）。
  */
 @Slf4j
 public final class JobDutySupport {
@@ -21,27 +26,19 @@ public final class JobDutySupport {
     }
 
     public static boolean allowRoles(String[] requiredRoles) {
-        if (requiredRoles == null || requiredRoles.length == 0) {
-            return true;
-        }
-        boolean any = false;
-        for (String r : requiredRoles) {
-            if (StringUtils.isNotBlank(r)) {
-                any = true;
-                break;
-            }
-        }
-        if (!any) {
-            return true;
-        }
-        ProfileService profile = bean(ProfileService.class);
-        if (profile == null || !profile.adjusted()) {
-            return true;
-        }
-        return profile.hasAll(requiredRoles);
+        return ServerRoleGate.allowsAll(requiredRoles);
     }
 
+    /** 兼容旧调用：无周期栅栏。 */
     public static void run(JobDuty duty, String jobId, String lockOverride, Runnable action) throws Exception {
+        run(duty, jobId, lockOverride, false, 0L, action);
+    }
+
+    /**
+     * @param oncePerPeriod 仅对 {@link JobDuty#SINGLETON} 生效；为 true 时先占周期桶再抢锁
+     * @param periodIntervalMs LoopJob 分类间隔（毫秒），用于分桶；≤0 时栅栏退化为单键
+     */
+    public static void run(JobDuty duty, String jobId, String lockOverride, boolean oncePerPeriod, long periodIntervalMs, Runnable action) throws Exception {
         JobDuty d = duty == null ? JobDuty.ALL : duty;
         if (d == JobDuty.DISABLED) {
             return;
@@ -53,7 +50,7 @@ public final class JobDutySupport {
         String lockKey = StringUtils.isNotBlank(lockOverride) ? lockOverride.trim() : "autumn:job:" + jobId;
         DistributedLockService locks = bean(DistributedLockService.class);
         if (d == JobDuty.SINGLETON) {
-            runSingleton(locks, lockKey, action);
+            runSingleton(locks, lockKey, oncePerPeriod, periodIntervalMs, action);
             return;
         }
         if (d == JobDuty.SEQUENTIAL) {
@@ -74,9 +71,25 @@ public final class JobDutySupport {
         return current != null ? current : JobDuty.ALL;
     }
 
-    private static void runSingleton(DistributedLockService locks, String lockKey, Runnable action) throws Exception {
+    /**
+     * 合并 oncePerPeriod：方法级注解缺省 false 不把类级 true 打回；方法级 true 可打开。
+     */
+    public static boolean mergeOncePerPeriod(boolean current, boolean incoming, boolean methodLevel) {
+        if (!methodLevel) {
+            return incoming;
+        }
+        return current || incoming;
+    }
+
+    private static void runSingleton(DistributedLockService locks, String lockKey, boolean oncePerPeriod, long periodIntervalMs, Runnable action) throws Exception {
         if (locks == null || !locks.isClusterMutexAvailable()) {
             log.warn("JobDuty SINGLETON skip: cluster mutex unavailable key={}", lockKey);
+            return;
+        }
+        if (oncePerPeriod && !JobPeriodFence.tryClaim(lockKey, periodIntervalMs)) {
+            if (log.isDebugEnabled()) {
+                log.debug("JobDuty SINGLETON skip: period fence key={}", lockKey);
+            }
             return;
         }
         locks.withClusterMutexOrSkip(lockKey, (Callable<Void>) () -> {

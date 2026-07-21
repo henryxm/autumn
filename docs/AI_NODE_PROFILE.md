@@ -1,14 +1,14 @@
 # 本机节点画像（Node Profile）
 
 > 适用：`autumn-lib` / `autumn-modules`。通用基础能力，供任意业务项目注入使用。  
-> 相关：`docs/AI_CLUSTER_JOB_ORCHESTRATION.md`（LoopJob `JobDuty`；多接口 Bean 见 §1.3）。
+> 相关：`docs/AI_CLUSTER_JOB_ORCHESTRATION.md`（LoopJob `JobDuty`；多接口 Bean 见 §1.3）；`docs/AI_SERVER_ROLE.md`（服务器角色与能力门禁）。
 
 ## 1. 作用
 
 - 为本 JVM 进程生成并持久化稳定节点身份 **`uuid`**（32 位小写 hex）。
 - 文件：`{home}/node-profile.json`；默认 `home` 为 **`.autumn`**（相对 `user.dir`）。
 - 业务侧注入 `NodeProfile` / `ProfileService`：`uuid()` 作为服务节点主键。
-- 扩展字段只进 **`labels`**；框架不解释键含义。`roles` **仅**服务 LoopJob 角色门禁，**不是**业务集群角色。
+- 扩展字段只进 **`labels`**；框架不解释键含义。`roles` 为**服务器角色**列表（见 `AI_SERVER_ROLE.md`）：空或 `ALL` = 全开；亦供 LoopJob `@JobMeta(roles)` 门禁。
 
 ## 2. 配置
 

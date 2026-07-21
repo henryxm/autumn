@@ -1,6 +1,7 @@
 package cn.org.autumn.node;
 
 import cn.org.autumn.config.Config;
+import cn.org.autumn.node.role.ServerRoleGroups;
 import cn.org.autumn.site.LoadFactory;
 import cn.org.autumn.utils.Uuid;
 import java.nio.file.Path;
@@ -14,6 +15,7 @@ import java.util.function.Consumer;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.annotation.AnnotationAwareOrderComparator;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
@@ -31,8 +33,9 @@ import org.springframework.stereotype.Service;
  * </ol>
  * <p>
  * 已有文件路径仅在 {@link #lastSnapshot()} 为空时采集指纹（避免 TTL/二次 ensure 重复扫硬件）。
- * 启动仅保证身份（{@code roles} 为空）不算手动调整；非空 {@code roles} 才参与 LoopJob 角色门禁。
+ * 启动仅保证身份（{@code roles} 为空）视为全开（等同 ALL）；非空且非 ALL 时参与能力/Job 角色门禁。
  * {@link #peekUuid()} 只读缓存、不触发 ensure；业务身份请在 Must/Init 之后用 {@link #uuid()}。
+ * 详见 {@code docs/AI_SERVER_ROLE.md}。
  */
 @Slf4j
 @Service
@@ -50,6 +53,7 @@ public class ProfileService implements LoadFactory.Must, NodeProfile {
     /** 最近一次采集快照（ensure 创建或显式 collect）；供扩展层读取。 */
     private volatile Fingerprint.Snapshot lastSnapshot;
 
+    @Autowired
     public ProfileService(ProfileStore store,
                           ObjectProvider<FingerprintProvider> fingerprintProvider,
                           ObjectProvider<ProfileCustomizer> customizers) {
@@ -255,7 +259,8 @@ public class ProfileService implements LoadFactory.Must, NodeProfile {
 
     @Override
     public synchronized Profile roles(List<String> roles) {
-        return patch(p -> p.setRoles(roles != null ? new ArrayList<>(roles) : new ArrayList<>()));
+        List<String> normalized = ServerRoleGroups.normalize(roles);
+        return patch(p -> p.setRoles(new ArrayList<>(normalized)));
     }
 
     @Override
@@ -408,7 +413,8 @@ public class ProfileService implements LoadFactory.Must, NodeProfile {
     }
 
     private static void normalizeCollections(Profile p) {
-        p.setRoles(p.getRoles() == null ? new ArrayList<>() : new ArrayList<>(p.getRoles()));
+        p.setRoles(p.getRoles() == null ? new ArrayList<>()
+                : new ArrayList<>(ServerRoleGroups.normalize(p.getRoles())));
         p.setLabels(p.getLabels() == null ? new LinkedHashMap<>() : new LinkedHashMap<>(p.getLabels()));
     }
 
@@ -435,7 +441,7 @@ public class ProfileService implements LoadFactory.Must, NodeProfile {
                         roles.add(String.valueOf(o));
                     }
                 }
-                p.setRoles(roles);
+                p.setRoles(new ArrayList<>(ServerRoleGroups.normalize(roles)));
             }
         }
         if (fields.containsKey("labels") && fields.get("labels") instanceof Map<?, ?> map) {

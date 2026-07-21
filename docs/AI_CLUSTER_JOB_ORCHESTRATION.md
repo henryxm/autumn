@@ -9,11 +9,36 @@
 | 值 | 语义 | 框架行为 |
 |----|------|----------|
 | **ALL**（缺省） | 过 `assign`/`server.tag` 后本机执行 | **不加**集群锁（历史等价） |
-| SINGLETON | 全集群本轮至多一台 | 集群互斥；未获锁或**无法互斥时跳过**（fail-closed） |
+| SINGLETON | 全集群互斥执行 | 集群互斥；未获锁或**无法互斥时跳过**（fail-closed）；可选 `oncePerPeriod` |
 | SEQUENTIAL | 在线成员按 uuid 排序轮转 | Redis 令牌 + 集群互斥；成员来自 Registry `online()`（按心跳淘汰） |
 | DISABLED | 不执行 | return |
 
 另：`@JobMeta(roles={...})` 仅当本机 `roles` 已手动非空（`adjusted()`）时过滤；`@JobMeta(lock="...")` 覆盖默认锁键 `autumn:job:{jobId}`。
+
+### 1.0 同步 / 异步与持锁
+
+- `@JobMeta(async=true)` / `delay>0`：把**整段**（周期栅栏 + 抢锁 + 业务）丢到 `TagTaskExecutor`，不堵调度线程。
+- SINGLETON **始终在持锁的同一线程内**跑业务（Redisson 锁不可跨线程持有）。
+- **不要**理解为「调度线程抢锁后再异步执行」——那会导致无法正确解锁。
+
+### 1.0.1 `oncePerPeriod`（周期栅栏）
+
+仅 `duty=SINGLETON` 且 `oncePerPeriod=true` 时生效（缺省 `false`，兼容旧行为）。
+
+| 步骤 | 行为 |
+|------|------|
+| 1 | 用 Redis `TIME`（非各机本地时钟）按 LoopJob 分类间隔分桶：`bucket = redisMs / intervalMs` |
+| 2 | `SETNX autumn:job:once:{lockKey}:{bucket}`，TTL ≈ `interval + 10s` |
+| 3 | 占桶失败 → 跳过；成功 → 再 `withClusterMutexOrSkip` 持锁执行 |
+
+解决：先到节点跑完释放互斥锁后，同逻辑周期内晚到节点再次获锁再跑。Redis/TIME 不可用时 fail-closed（跳过）。
+
+方法级合并：方法注解缺省 `oncePerPeriod=false` **不会**把类级 `true` 打回；方法写 `true` 可打开。
+
+```java
+@JobMeta(name = "轮次兜底", duty = JobDuty.SINGLETON, oncePerPeriod = true, lock = "biz:turn-fallback")
+public class TurnFallbackJob implements LoopJob.FiveMinute { ... }
+```
 
 ### 1.1 类级 / 方法级 duty 合并
 
@@ -59,7 +84,7 @@ implements LoopJob.FiveSecond, LoopJob.OneMinute, LoopJob.OneDay
 
 ```java
 @Component
-@JobMeta(name = "轮次兜底", duty = JobDuty.SINGLETON, lock = "biz:turn-fallback")
+@JobMeta(name = "轮次兜底", duty = JobDuty.SINGLETON, oncePerPeriod = true, lock = "biz:turn-fallback")
 public class TurnFallbackJob implements LoopJob.FiveMinute {
     @Override
     public void onFiveMinute() { /* ... */ }

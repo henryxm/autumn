@@ -23,6 +23,7 @@
 - **`docs/AI_DATABASE_READ_ONLY.md`**：**数据库只读模式**（`CrudGuard` API：`writable` / `opt` / `force` / `suppress`；Init/LoopJob/业务三类写决策表）
 - `docs/AI_DISTRIBUTED_LOCK.md`：分布式锁能力（`DistributedLockService` / `DistributedService`）、场景化加锁、降级与抗雪崩策略、`DistributedLockConfig` 配置项与默认值、业务域快捷模板（含项目示例源码入口）
 - `docs/AI_NODE_PROFILE.md`：本机节点画像（`ProfileService` / `node-profile.json` / 指纹 uuid；缓存 TTL 惰性读盘，无 Watch 线程）
+- `docs/AI_SERVER_ROLE.md`：服务器角色注册表 / 能力门禁（空 roles=ALL 全开；WEB/API 路径限制）
 - `docs/AI_CLUSTER_JOB_ORCHESTRATION.md`：LoopJob 职责 `JobDuty`、类/方法合并、**多接口同一 Bean 的标记法**（§1.3）
 - **`docs/AI_ASYNC_TASK.md`**：**`TagRunnable` / `TagTaskExecutor` / `LockOnce`**、**`FinishStatus` 与 `onFinished` 生命周期**、本机队列 drain 状态机范式（与 `BaseQueueService` 区分）
 - `docs/AI_POSTGRESQL.md`：PostgreSQL 专项（DDL/元数据、`PostgresQuerySql`、迁移与兼容性）；通用跨库口径以 **`docs/AI_DATABASE.md`** 为准

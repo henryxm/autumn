@@ -172,6 +172,8 @@ public class LoopJob extends Factory implements LoadFactory.Must {
         private JobDuty duty = JobDuty.ALL;
         private String[] roles = new String[0];
         private String lock = "";
+        /** SINGLETON 周期栅栏；缺省 false。 */
+        private boolean oncePerPeriod;
         /**
          * 注解解析后的职责快照；DB duty 清空时内存回落到此值。
          */
@@ -225,6 +227,7 @@ public class LoopJob extends Factory implements LoadFactory.Must {
             this.duty = JobDuty.ALL;
             this.roles = new String[0];
             this.lock = "";
+            this.oncePerPeriod = false;
             this.assignEnabled = null;
             // 解析注解
             resolveAnnotation(this, job, category);
@@ -267,6 +270,7 @@ public class LoopJob extends Factory implements LoadFactory.Must {
             map.put("duty", duty != null ? duty.name() : JobDuty.ALL.name());
             map.put("roles", roles);
             map.put("lock", lock);
+            map.put("oncePerPeriod", oncePerPeriod);
             map.put("assignTag", assignTag);
             map.put("defaultAssignTag", defaultAssignTag);
             map.put("assignedToThisServer", isAssignedToThisServer(this));
@@ -343,6 +347,7 @@ public class LoopJob extends Factory implements LoadFactory.Must {
         info.async = meta.async() || info.delay > 0;
         // duty：类级始终应用；方法级仅非 ALL 才覆盖（与 roles 非空才覆盖同理，规避注解缺省值陷阱）
         info.duty = JobDutySupport.mergeDuty(info.duty, meta.duty(), methodLevel);
+        info.oncePerPeriod = JobDutySupport.mergeOncePerPeriod(info.oncePerPeriod, meta.oncePerPeriod(), methodLevel);
         if (meta.roles().length > 0) {
             info.roles = meta.roles();
         }
@@ -386,7 +391,8 @@ public class LoopJob extends Factory implements LoadFactory.Must {
         }
         Runnable guarded = () -> {
             try {
-                JobDutySupport.run(duty, info.getId(), info.getLock(), action);
+                long intervalMs = CATEGORY_INTERVAL.getOrDefault(category, 0L);
+                JobDutySupport.run(duty, info.getId(), info.getLock(), info.isOncePerPeriod(), intervalMs, action);
             } catch (RuntimeException e) {
                 throw e;
             } catch (Exception e) {

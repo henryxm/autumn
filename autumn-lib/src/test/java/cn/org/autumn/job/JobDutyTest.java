@@ -1,6 +1,7 @@
 package cn.org.autumn.job;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
@@ -33,9 +34,11 @@ class JobDutyTest {
     }
 
     @Test
-    void allowRoles_empty_alwaysTrue() {
-        assertTrue(JobDutySupport.allowRoles(null));
-        assertTrue(JobDutySupport.allowRoles(new String[0]));
-        assertTrue(JobDutySupport.allowRoles(new String[]{"", "  "}));
+    void mergeOncePerPeriod_methodDefaultFalse_keepsClassTrue() {
+        assertTrue(JobDutySupport.mergeOncePerPeriod(true, false, true));
+        assertTrue(JobDutySupport.mergeOncePerPeriod(false, true, true));
+        assertFalse(JobDutySupport.mergeOncePerPeriod(false, false, true));
+        assertTrue(JobDutySupport.mergeOncePerPeriod(false, true, false));
+        assertFalse(JobDutySupport.mergeOncePerPeriod(true, false, false));
     }
 }
