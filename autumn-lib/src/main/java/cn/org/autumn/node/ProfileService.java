@@ -193,6 +193,7 @@ public class ProfileService implements LoadFactory.Must, NodeProfile {
         Profile existing = store.read();
         if (existing != null && Uuid.isValid(existing.getUuid())) {
             normalizeCollections(existing);
+            boolean firstInProcess = lastSnapshot == null;
             Fingerprint.Snapshot snap = lastSnapshot;
             if (snap == null) {
                 snap = collectSnapshot();
@@ -202,6 +203,9 @@ public class ProfileService implements LoadFactory.Must, NodeProfile {
                 store.write(existing);
             }
             adopt(existing);
+            if (firstInProcess && log.isInfoEnabled()) {
+                log.info("Node profile loaded uuid={} file={}", existing.getUuid(), store.file().toAbsolutePath());
+            }
             return existing.copy();
         }
         Fingerprint.Snapshot snap = collectSnapshot();
@@ -215,7 +219,7 @@ public class ProfileService implements LoadFactory.Must, NodeProfile {
         store.write(created);
         adopt(created);
         if (log.isInfoEnabled()) {
-            log.info("Node profile ensured uuid={} file={}", created.getUuid(), store.file());
+            log.info("Node profile ensured uuid={} file={}", created.getUuid(), store.file().toAbsolutePath());
         }
         return created.copy();
     }

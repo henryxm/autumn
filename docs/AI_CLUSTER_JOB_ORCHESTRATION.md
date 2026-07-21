@@ -27,7 +27,7 @@
 
 | 步骤 | 行为 |
 |------|------|
-| 1 | 用 Redis `TIME`（非各机本地时钟）按 LoopJob 分类间隔分桶：`bucket = redisMs / intervalMs` |
+| 1 | 用 Redis `TIME`（非各机本地时钟）按 LoopJob 分类间隔分桶：`bucket = redisMs / intervalMs`；经 Redisson 时须 `StringCodec`（`TIME`/`SETNX` 明文，勿走默认 Kryo） |
 | 2 | `SETNX autumn:job:once:{lockKey}:{bucket}`，TTL ≈ `interval + 10s` |
 | 3 | 占桶失败 → 跳过；成功 → 再 `withClusterMutexOrSkip` 持锁执行 |
 

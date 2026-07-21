@@ -10,6 +10,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.redisson.api.RBucket;
 import org.redisson.api.RScript;
 import org.redisson.api.RedissonClient;
+import org.redisson.client.codec.StringCodec;
 
 /**
  * SINGLETON 周期栅栏：同一逻辑周期（按 Redis TIME 分桶）全集群只允许一台声明执行权。
@@ -49,7 +50,8 @@ public final class JobPeriodFence {
         String key = fenceKey(fenceBase, bucket);
         long ttlMs = ttlMs(intervalMs);
         try {
-            RBucket<String> b = redis.getBucket(key);
+            // 占位符为明文串；须 StringCodec，避免默认 Kryo 与 redis-cli/跨客户端不一致
+            RBucket<String> b = redis.getBucket(key, StringCodec.INSTANCE);
             boolean ok = b.setIfAbsent("1", Duration.ofMillis(ttlMs));
             if (!ok && log.isDebugEnabled()) {
                 log.debug("JobPeriodFence occupied key={} bucket={}", key, bucket);
@@ -77,10 +79,13 @@ public final class JobPeriodFence {
         return "autumn:job:once:" + fenceBase.trim() + ":" + bucket;
     }
 
-    @SuppressWarnings("unchecked")
+    /**
+     * Redis {@code TIME} 返回 bulk string 数组；必须用 {@link StringCodec}，
+     * 默认 Kryo5 会把明文秒/微秒误当对象反序列化（unregistered class ID）。
+     */
     static Long redisTimeMs(RedissonClient redis) {
         try {
-            Object raw = redis.getScript().eval(RScript.Mode.READ_ONLY, "return redis.call('TIME')", RScript.ReturnType.MULTI, Collections.emptyList());
+            Object raw = redis.getScript(StringCodec.INSTANCE).eval(RScript.Mode.READ_ONLY, "return redis.call('TIME')", RScript.ReturnType.MULTI, Collections.emptyList());
             if (!(raw instanceof List<?> list) || list.size() < 2) {
                 return null;
             }
