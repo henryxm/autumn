@@ -12,6 +12,7 @@ import cn.org.autumn.site.LoadFactory;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.wall.entity.IpWhiteEntity;
 import cn.org.autumn.site.WallFactory;
+import cn.org.autumn.thread.FunctionQueues;
 import cn.org.autumn.utils.IPUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -139,7 +140,7 @@ public class IpWhiteService extends WallCounter<IpWhiteDao, IpWhiteEntity> imple
 
     @Override
     public void onOneMinute() {
-        clear();
+        FunctionQueues.offer("IpWhiteService.clear", this::clear);
     }
 
     public IpWhiteEntity create(String ip, String tag, String description) {

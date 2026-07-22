@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>函数队列管理</title>
+    <link rel="stylesheet" href="${request.contextPath}/statics/css/bootstrap.min.css">
+    <link rel="stylesheet" href="${request.contextPath}/statics/css/font-awesome.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #f0f2f5;
+            color: #333;
+            min-height: 100vh;
+        }
+        [v-cloak] { display: none; }
+        .page-header {
+            background: linear-gradient(135deg, #00897b, #00695c);
+            color: #fff;
+            padding: 20px 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        .page-header h1 { font-size: 22px; font-weight: 600; margin: 0; }
+        .page-header h1 i { margin-right: 10px; }
+        .header-info { font-size: 13px; opacity: 0.85; }
+        .header-actions { display: flex; align-items: center; gap: 12px; }
+        .header-actions .btn { font-size: 13px; padding: 6px 14px; }
+        .main-container { padding: 20px 30px; max-width: 1600px; margin: 0 auto; }
+        .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 20px; }
+        .stat-card {
+            background: #fff; border-radius: 8px; padding: 16px 20px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+            display: flex; align-items: center; gap: 14px;
+        }
+        .stat-icon {
+            width: 48px; height: 48px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 20px; color: #fff;
+        }
+        .stat-icon.blue { background: linear-gradient(135deg, #1a73e8, #4a9af5); }
+        .stat-icon.green { background: linear-gradient(135deg, #34a853, #5ec879); }
+        .stat-icon.orange { background: linear-gradient(135deg, #f9a825, #fbc02d); }
+        .stat-icon.red { background: linear-gradient(135deg, #ea4335, #f06292); }
+        .stat-icon.purple { background: linear-gradient(135deg, #7b1fa2, #ab47bc); }
+        .stat-icon.teal { background: linear-gradient(135deg, #00897b, #26a69a); }
+        .stat-value { font-size: 22px; font-weight: 700; color: #1a1a1a; line-height: 1.2; }
+        .stat-label { font-size: 12px; color: #888; margin-top: 2px; }
+        .text-muted { color: #999; font-size: 12px; }
+        .panel {
+            background: #fff; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+            margin-bottom: 20px; overflow: hidden;
+        }
+        .panel-header {
+            padding: 14px 20px; border-bottom: 1px solid #eee;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .panel-title { font-size: 15px; font-weight: 600; color: #333; }
+        .panel-title i { margin-right: 8px; color: #00897b; }
+        .panel-body { padding: 16px 20px; }
+        .panel-body.no-padding { padding: 0; }
+        .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .data-table th {
+            background: #fafbfc; padding: 10px 14px; text-align: left;
+            font-weight: 600; color: #555; border-bottom: 2px solid #eee; white-space: nowrap;
+        }
+        .data-table td { padding: 10px 14px; border-bottom: 1px solid #f0f0f0; color: #444; }
+        .data-table tbody tr:hover { background: #f8f9ff; }
+        .data-table .no-data { text-align: center; padding: 40px; color: #aaa; font-size: 14px; }
+        .badge-status {
+            display: inline-block; padding: 2px 10px; border-radius: 10px;
+            font-size: 12px; font-weight: 500;
+        }
+        .badge-running { background: #e3f2fd; color: #1565c0; }
+        .badge-completed { background: #e8f5e9; color: #2e7d32; }
+        .badge-failed { background: #fce4ec; color: #c62828; }
+        .badge-idle { background: #eceff1; color: #546e7a; }
+        .tab-bar { display: flex; border-bottom: 2px solid #eee; }
+        .tab-item {
+            padding: 10px 20px; font-size: 14px; cursor: pointer; color: #666;
+            border-bottom: 2px solid transparent; margin-bottom: -2px;
+        }
+        .tab-item:hover { color: #00897b; }
+        .tab-item.active { color: #00897b; border-bottom-color: #00897b; font-weight: 600; }
+        .filter-bar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+        .filter-bar input, .filter-bar select {
+            border: 1px solid #ddd; border-radius: 6px; padding: 6px 12px; font-size: 13px; outline: none;
+        }
+        .pagination-bar {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 12px 20px; border-top: 1px solid #f0f0f0; font-size: 13px; color: #666;
+        }
+        .pagination-btns { display: flex; gap: 4px; }
+        .pagination-btns button {
+            border: 1px solid #ddd; background: #fff; padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;
+        }
+        .pagination-btns button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .config-form { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end; }
+        .config-group { display: flex; flex-direction: column; gap: 4px; }
+        .config-group label { font-size: 12px; color: #666; font-weight: 500; }
+        .config-group input, .config-group select {
+            border: 1px solid #ddd; border-radius: 6px; padding: 7px 12px; font-size: 13px; width: 180px; outline: none;
+        }
+        .btn-primary-custom {
+            background: #00897b; color: #fff; border: none; padding: 7px 18px; border-radius: 6px;
+            font-size: 13px; cursor: pointer;
+        }
+        .btn-outline {
+            background: transparent; color: #00897b; border: 1px solid #00897b;
+            padding: 6px 14px; border-radius: 6px; font-size: 12px; cursor: pointer;
+        }
+        .btn-danger-outline {
+            background: transparent; color: #ea4335; border: 1px solid #ea4335;
+            padding: 6px 14px; border-radius: 6px; font-size: 12px; cursor: pointer;
+        }
+        .btn-action {
+            padding: 3px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; border: 1px solid; background: transparent;
+        }
+        .btn-interrupt { color: #ea4335; border-color: #ea4335; }
+        .btn-stack { color: #1a73e8; border-color: #1a73e8; }
+        .pulse-dot {
+            display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+            background: #34a853; margin-right: 6px; animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.8); }
+        }
+        .pool-progress { height: 6px; background: #eee; border-radius: 3px; overflow: hidden; margin-top: 6px; }
+        .pool-progress-bar { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
+        .progress-safe { background: linear-gradient(90deg, #34a853, #5ec879); }
+        .progress-warn { background: linear-gradient(90deg, #f9a825, #fbc02d); }
+        .progress-danger { background: linear-gradient(90deg, #ea4335, #f06292); }
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000;
+        }
+        .modal-box {
+            background: #fff; border-radius: 10px; width: 700px; max-width: 90vw; max-height: 80vh;
+            display: flex; flex-direction: column; box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+        }
+        .modal-header {
+            padding: 16px 20px; border-bottom: 1px solid #eee;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .modal-body { padding: 16px 20px; overflow: auto; }
+        .modal-footer { padding: 12px 20px; border-top: 1px solid #eee; text-align: right; }
+        .stack-pre {
+            background: #1e1e1e; color: #d4d4d4; padding: 14px; border-radius: 6px;
+            font-size: 12px; line-height: 1.5; white-space: pre-wrap; word-break: break-all; max-height: 400px; overflow: auto;
+        }
+        .current-box {
+            background: #f7faf9; border: 1px solid #e0f2f1; border-radius: 8px; padding: 14px 16px; margin-bottom: 16px;
+        }
+        .current-box .row-line { display: flex; flex-wrap: wrap; gap: 20px; font-size: 13px; }
+        .current-box label { color: #888; margin-right: 4px; }
+        @media (max-width: 768px) {
+            .main-container { padding: 12px; }
+            .stats-row { grid-template-columns: repeat(2, 1fr); }
+            .page-header { flex-direction: column; gap: 10px; }
+        }
+    </style>
+</head>
+<body>
+<div id="app" v-cloak>
+    <div class="page-header">
+        <div>
+            <h1><i class="fa fa-list-alt"></i> 函数队列管理</h1>
+            <div class="header-info" v-if="queue.startTime">
+                启动于 {{queue.startTime}} · 已运行 {{queue.uptime || '-'}} · Worker: {{queue.workerName || '-'}}
+            </div>
+        </div>
+        <div class="header-actions">
+            <div style="display:flex;align-items:center;gap:8px;font-size:13px;">
+                <span>自动刷新</span>
+                <select v-model="refreshInterval" @change="toggleAutoRefresh" style="border:1px solid rgba(255,255,255,0.3);background:transparent;color:#fff;border-radius:4px;padding:3px 6px;font-size:12px;">
+                    <option value="0" style="color:#333;">关闭</option>
+                    <option value="3000" style="color:#333;">3秒</option>
+                    <option value="5000" style="color:#333;">5秒</option>
+                    <option value="10000" style="color:#333;">10秒</option>
+                </select>
+            </div>
+            <button class="btn btn-sm btn-outline-light" @click="loadAll" style="font-size:13px;">
+                <i class="fa fa-refresh"></i> 立即刷新
+            </button>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-icon teal"><i class="fa fa-list-ol"></i></div>
+                <div>
+                    <div class="stat-value">{{queue.queueSize || 0}}</div>
+                    <div class="stat-label">排队长度</div>
+                    <div class="pool-progress">
+                        <div class="pool-progress-bar" :class="usageClass" :style="{width: usagePercent + '%'}"></div>
+                    </div>
+                    <div class="text-muted">容量 {{queue.capacity || 0}}</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon blue"><i class="fa fa-play-circle"></i></div>
+                <div>
+                    <div class="stat-value">
+                        <span class="pulse-dot" v-if="current.busy"></span>{{current.busy ? '执行中' : '空闲'}}
+                    </div>
+                    <div class="stat-label">Worker 状态</div>
+                    <div class="text-muted">{{queue.threadState || '-'}}</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon green"><i class="fa fa-check-circle"></i></div>
+                <div>
+                    <div class="stat-value">{{queue.executed || 0}}</div>
+                    <div class="stat-label">已完成</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon red"><i class="fa fa-times-circle"></i></div>
+                <div>
+                    <div class="stat-value">{{queue.failed || 0}}</div>
+                    <div class="stat-label">失败</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon purple"><i class="fa fa-ban"></i></div>
+                <div>
+                    <div class="stat-value">{{queue.rejected || 0}}</div>
+                    <div class="stat-label">拒绝(溢出)</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon orange"><i class="fa fa-trash"></i></div>
+                <div>
+                    <div class="stat-value">{{queue.dropped || 0}}</div>
+                    <div class="stat-label">丢弃(最旧)</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon blue"><i class="fa fa-clock-o"></i></div>
+                <div>
+                    <div class="stat-value">{{formatMs(queue.avgExecutionTime || 0)}}</div>
+                    <div class="stat-label">平均耗时</div>
+                    <div class="text-muted">最大 {{formatMs(queue.maxExecutionTime || 0)}}</div>
+                </div>
+            </div>
+            <div class="stat-card" :style="(queue.slowCount || 0) > 0 ? {borderLeft: '3px solid #e65100'} : {}">
+                <div class="stat-icon orange"><i class="fa fa-exclamation-triangle"></i></div>
+                <div>
+                    <div class="stat-value" :style="(queue.slowCount || 0) > 0 ? {color:'#e65100'} : {}">{{queue.slowCount || 0}}</div>
+                    <div class="stat-label">慢任务</div>
+                    <div class="text-muted">阈值 {{queue.slowTaskThresholdMs || 0}}ms</div>
+                </div>
+            </div>
+            <div class="stat-card" :style="(queue.timedOut || 0) > 0 ? {borderLeft: '3px solid #c62828'} : {}">
+                <div class="stat-icon red"><i class="fa fa-hourglass-end"></i></div>
+                <div>
+                    <div class="stat-value" :style="(queue.timedOut || 0) > 0 ? {color:'#c62828'} : {}">{{queue.timedOut || 0}}</div>
+                    <div class="stat-label">超时/废弃</div>
+                    <div class="text-muted">硬超时 {{queue.maxTaskTimeoutMs || 0}}ms / 废弃 {{queue.abandoned || 0}}</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon teal"><i class="fa fa-paper-plane"></i></div>
+                <div>
+                    <div class="stat-value">{{queue.accepted || 0}}</div>
+                    <div class="stat-label">累计入队</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-header" style="padding:0;">
+                <div class="tab-bar" style="width:100%;">
+                    <div class="tab-item" :class="{active: activeTab === 'live'}" @click="activeTab='live'">
+                        <i class="fa fa-bolt"></i> 当前 / 排队
+                        <span class="badge-status badge-running" style="margin-left:4px;" v-if="(queue.queueSize || 0) > 0">{{queue.queueSize}}</span>
+                    </div>
+                    <div class="tab-item" :class="{active: activeTab === 'history'}" @click="switchToHistory">
+                        <i class="fa fa-history"></i> 执行历史
+                    </div>
+                    <div class="tab-item" :class="{active: activeTab === 'config'}" @click="activeTab='config'; syncConfigForm()">
+                        <i class="fa fa-sliders"></i> 配置
+                    </div>
+                </div>
+            </div>
+
+            <div v-show="activeTab === 'live'">
+                <div class="panel-body">
+                    <div class="current-box">
+                        <div style="font-weight:600;margin-bottom:10px;">
+                            <i class="fa fa-play"></i> 当前任务
+                            <span class="badge-status" :class="current.busy ? 'badge-running' : 'badge-idle'" style="margin-left:8px;">
+                                {{current.busy ? 'RUNNING' : 'IDLE'}}
+                            </span>
+                            <span v-if="current.slow" style="color:#e65100;margin-left:8px;font-size:12px;"><i class="fa fa-warning"></i> 慢任务</span>
+                            <span v-if="current.overTimeout" style="color:#c62828;margin-left:8px;font-size:12px;"><i class="fa fa-bomb"></i> 已超硬超时</span>
+                        </div>
+                        <div class="row-line" v-if="current.busy">
+                            <div><label>名称:</label><span>{{current.name || '-'}}</span></div>
+                            <div><label>已运行:</label><span style="color:#1a73e8;font-weight:500;">{{current.runningTime || '-'}}</span></div>
+                            <div><label>入队等待:</label><span>{{formatMs(current.waitMs || 0)}}</span></div>
+                            <div><label>开始:</label><span>{{current.startTime || '-'}}</span></div>
+                            <div><label>线程:</label><span>{{current.threadName || '-'}} ({{current.threadState || '-'}})</span></div>
+                        </div>
+                        <div class="text-muted" v-else>当前没有正在执行的任务，Worker 在 take() 上等待。</div>
+                        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+                            <button class="btn-action btn-interrupt" @click="doInterrupt" :disabled="!current.busy"><i class="fa fa-hand-stop-o"></i> 中断当前</button>
+                            <button class="btn-action btn-stack" @click="showStack"><i class="fa fa-code"></i> 查看堆栈</button>
+                            <button class="btn-outline" @click="doRecover"><i class="fa fa-heartbeat"></i> 解除卡死</button>
+                            <button class="btn-danger-outline" @click="doClear"><i class="fa fa-trash"></i> 清空排队</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="panel-body no-padding">
+                    <table class="data-table">
+                        <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>任务名称</th>
+                            <th>入队时间</th>
+                            <th>已等待</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr v-for="item in pendingList" :key="item.index">
+                            <td>{{item.index + 1}}</td>
+                            <td>{{item.name}}</td>
+                            <td>{{item.enqueueTime}}</td>
+                            <td>{{item.waitTime}}</td>
+                        </tr>
+                        <tr v-if="pendingList.length === 0">
+                            <td colspan="4" class="no-data">排队为空</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div v-show="activeTab === 'history'">
+                <div class="panel-body" style="border-bottom:1px solid #f0f0f0;">
+                    <div class="filter-bar">
+                        <input type="text" v-model="historyKeyword" placeholder="搜索任务名称/错误..." style="width:240px;" @keyup.enter="loadHistory">
+                        <select v-model="historyStatus" @change="loadHistory">
+                            <option value="">全部状态</option>
+                            <option value="COMPLETED">COMPLETED</option>
+                            <option value="FAILED">FAILED</option>
+                            <option value="TIMED_OUT">TIMED_OUT</option>
+                            <option value="ABANDONED">ABANDONED</option>
+                        </select>
+                        <button class="btn-outline" @click="loadHistory"><i class="fa fa-search"></i> 查询</button>
+                        <button class="btn-danger-outline" @click="doClearHistory"><i class="fa fa-eraser"></i> 清空历史</button>
+                    </div>
+                </div>
+                <div class="panel-body no-padding">
+                    <table class="data-table">
+                        <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>任务名称</th>
+                            <th>状态</th>
+                            <th>等待</th>
+                            <th>耗时</th>
+                            <th>开始</th>
+                            <th>结束</th>
+                            <th>错误</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr v-for="(item, index) in historyList" :key="index">
+                            <td>{{historyPage * historySize + index + 1}}</td>
+                            <td>{{item.name}}</td>
+                            <td>
+                                <span class="badge-status" :class="item.status === 'COMPLETED' ? 'badge-completed' : 'badge-failed'">{{item.status}}</span>
+                            </td>
+                            <td>{{item.waitStr || formatMs(item.waitMs)}}</td>
+                            <td style="font-weight:500;color:#1a73e8;">{{item.durationStr || formatMs(item.durationMs)}}</td>
+                            <td>{{item.startTimeStr || item.startTime}}</td>
+                            <td>{{item.endTimeStr || item.endTime}}</td>
+                            <td style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" :title="item.errorMessage || ''">{{item.errorMessage || '-'}}</td>
+                        </tr>
+                        <tr v-if="historyList.length === 0">
+                            <td colspan="8" class="no-data">暂无历史记录</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="pagination-bar" v-if="historyTotal > 0">
+                    <span>共 {{historyTotal}} 条，第 {{historyPage + 1}} / {{historyPages || 1}} 页</span>
+                    <div class="pagination-btns">
+                        <button @click="historyPage=0;loadHistory()" :disabled="historyPage === 0">首页</button>
+                        <button @click="historyPage--;loadHistory()" :disabled="historyPage === 0">上一页</button>
+                        <button @click="historyPage++;loadHistory()" :disabled="historyPage >= historyPages - 1">下一页</button>
+                        <button @click="historyPage=historyPages-1;loadHistory()" :disabled="historyPage >= historyPages - 1">末页</button>
+                    </div>
+                </div>
+            </div>
+
+            <div v-show="activeTab === 'config'" class="panel-body">
+                <div class="config-form">
+                    <div class="config-group">
+                        <label>队列容量</label>
+                        <input type="number" v-model.number="configForm.capacity" min="1" max="1000000">
+                    </div>
+                    <div class="config-group">
+                        <label>溢出策略</label>
+                        <select v-model="configForm.overflowPolicy">
+                            <option value="REJECT">REJECT（拒绝）</option>
+                            <option value="DROP_OLDEST">DROP_OLDEST（丢最旧）</option>
+                        </select>
+                    </div>
+                    <div class="config-group">
+                        <label>历史记录上限</label>
+                        <input type="number" v-model.number="configForm.maxHistorySize" min="10" max="100000">
+                    </div>
+                    <div class="config-group">
+                        <label>慢任务阈值(ms)</label>
+                        <input type="number" v-model.number="configForm.slowTaskThresholdMs" min="1000" max="3600000">
+                    </div>
+                    <div class="config-group">
+                        <label>任务硬超时(ms)</label>
+                        <input type="number" v-model.number="configForm.maxTaskTimeoutMs" min="1000" max="3600000">
+                    </div>
+                    <div class="config-group">
+                        <label>硬废弃宽限(ms)</label>
+                        <input type="number" v-model.number="configForm.hardAbandonMs" min="500" max="300000">
+                    </div>
+                    <button class="btn-primary-custom" @click="saveConfig"><i class="fa fa-save"></i> 保存配置</button>
+                    <button class="btn-outline" @click="doResetStats"><i class="fa fa-refresh"></i> 重置统计</button>
+                </div>
+                <div style="margin-top:16px;font-size:13px;color:#666;line-height:1.7;">
+                    <div><i class="fa fa-info-circle" style="color:#00897b;"></i> REJECT：队列满时拒绝入队并计数，调用方立即返回 false，不阻塞。</div>
+                    <div><i class="fa fa-info-circle" style="color:#00897b;"></i> DROP_OLDEST：队列满时丢弃最旧待执行任务再入队，保证新任务可进入。</div>
+                    <div><i class="fa fa-info-circle" style="color:#00897b;"></i> 硬超时：watchdog 每秒检查；超 maxTaskTimeoutMs 先 interrupt；再超 hardAbandonMs 则废弃旧 worker 并换新线程继续下一任务。</div>
+                    <div><i class="fa fa-info-circle" style="color:#00897b;"></i> 「解除卡死」对当前任务立即硬废弃；不可中断的原生阻塞线程可能仍存活为孤儿，但队列不再被堵住。</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" v-if="showModal" @click.self="showModal=false">
+        <div class="modal-box">
+            <div class="modal-header">
+                <strong><i class="fa fa-code"></i> Worker 堆栈</strong>
+                <button class="btn-outline" @click="showModal=false">关闭</button>
+            </div>
+            <div class="modal-body">
+                <pre class="stack-pre">{{modalStack || '加载中...'}}</pre>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-outline" @click="showStack"><i class="fa fa-refresh"></i> 刷新堆栈</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="${request.contextPath}/statics/libs/jquery.min.js"></script>
+<script src="${request.contextPath}/statics/libs/vue.min.js"></script>
+<script>
+var basePath = '${request.contextPath}/sys/functionqueue/';
+var vm = new Vue({
+    el: '#app',
+    data: {
+        activeTab: 'live',
+        refreshInterval: 5000,
+        refreshTimer: null,
+        queue: {},
+        current: {},
+        pendingList: [],
+        historyList: [],
+        historyPage: 0,
+        historySize: 20,
+        historyTotal: 0,
+        historyPages: 0,
+        historyKeyword: '',
+        historyStatus: '',
+        configForm: {
+            capacity: 10000,
+            overflowPolicy: 'REJECT',
+            maxHistorySize: 500,
+            slowTaskThresholdMs: 30000,
+            maxTaskTimeoutMs: 60000,
+            hardAbandonMs: 5000
+        },
+        showModal: false,
+        modalStack: ''
+    },
+    computed: {
+        usagePercent: function() {
+            var cap = this.queue.capacity || 0;
+            if (cap <= 0) return 0;
+            return Math.min(100, Math.round((this.queue.queueSize || 0) * 100 / cap));
+        },
+        usageClass: function() {
+            var p = this.usagePercent;
+            if (p >= 90) return 'progress-danger';
+            if (p >= 70) return 'progress-warn';
+            return 'progress-safe';
+        }
+    },
+    mounted: function() {
+        this.loadAll();
+        this.toggleAutoRefresh();
+    },
+    beforeDestroy: function() {
+        if (this.refreshTimer) clearInterval(this.refreshTimer);
+    },
+    methods: {
+        formatMs: function(ms) {
+            ms = ms || 0;
+            if (ms < 1000) return ms + 'ms';
+            if (ms < 60000) return (ms / 1000).toFixed(1) + 's';
+            var m = Math.floor(ms / 60000);
+            var s = Math.floor((ms % 60000) / 1000);
+            return m + 'm' + s + 's';
+        },
+        toggleAutoRefresh: function() {
+            var self = this;
+            if (self.refreshTimer) {
+                clearInterval(self.refreshTimer);
+                self.refreshTimer = null;
+            }
+            var ms = parseInt(self.refreshInterval, 10);
+            if (ms > 0) {
+                self.refreshTimer = setInterval(function() {
+                    self.loadAll(true);
+                }, ms);
+            }
+        },
+        loadAll: function(quiet) {
+            var self = this;
+            $.post(basePath + 'info', {pendingLimit: 50}, function(r) {
+                if (r && r.code === 0) {
+                    self.queue = r.queue || {};
+                    self.current = (r.queue && r.queue.current) || {};
+                    self.pendingList = r.pending || [];
+                    if (self.activeTab === 'history') self.loadHistory();
+                } else if (!quiet && r) {
+                    alert(r.msg || '加载失败');
+                }
+            });
+        },
+        switchToHistory: function() {
+            this.activeTab = 'history';
+            this.loadHistory();
+        },
+        loadHistory: function() {
+            var self = this;
+            $.post(basePath + 'history', {
+                page: self.historyPage,
+                size: self.historySize,
+                status: self.historyStatus,
+                keyword: self.historyKeyword
+            }, function(r) {
+                if (r && r.code === 0) {
+                    self.historyList = r.list || [];
+                    self.historyTotal = r.total || 0;
+                    self.historyPages = r.pages || 0;
+                }
+            });
+        },
+        syncConfigForm: function() {
+            this.configForm.capacity = this.queue.capacity || 10000;
+            this.configForm.overflowPolicy = this.queue.overflowPolicy || 'REJECT';
+            this.configForm.maxHistorySize = this.queue.maxHistorySize || 500;
+            this.configForm.slowTaskThresholdMs = this.queue.slowTaskThresholdMs || 30000;
+            this.configForm.maxTaskTimeoutMs = this.queue.maxTaskTimeoutMs || 60000;
+            this.configForm.hardAbandonMs = this.queue.hardAbandonMs || 5000;
+        },
+        saveConfig: function() {
+            var self = this;
+            $.post(basePath + 'config', self.configForm, function(r) {
+                if (r && r.code === 0) {
+                    self.queue = r.queue || self.queue;
+                    alert(r.msg || '保存成功');
+                } else {
+                    alert((r && r.msg) || '保存失败');
+                }
+            });
+        },
+        doInterrupt: function() {
+            if (!confirm('确认向当前任务发送中断信号？')) return;
+            var self = this;
+            $.post(basePath + 'interrupt', {}, function(r) {
+                alert((r && r.msg) || '完成');
+                self.loadAll();
+            });
+        },
+        doRecover: function() {
+            var self = this;
+            $.post(basePath + 'recover', {}, function(r) {
+                alert((r && r.msg) || '完成');
+                if (r && r.queue) self.queue = r.queue;
+                self.loadAll();
+            });
+        },
+        showStack: function() {
+            var self = this;
+            self.showModal = true;
+            self.modalStack = '加载中...';
+            $.post(basePath + 'stacktrace', {depth: 40}, function(r) {
+                if (r && r.code === 0) self.modalStack = r.stacktrace || '';
+                else self.modalStack = (r && r.msg) || '获取失败';
+            });
+        },
+        doClear: function() {
+            if (!confirm('确认清空所有排队中的任务？当前正在执行的任务不会中断。')) return;
+            var self = this;
+            $.post(basePath + 'clear', {}, function(r) {
+                alert((r && r.msg) || '完成');
+                self.loadAll();
+            });
+        },
+        doClearHistory: function() {
+            if (!confirm('确认清空执行历史？')) return;
+            var self = this;
+            $.post(basePath + 'clearHistory', {}, function(r) {
+                alert((r && r.msg) || '完成');
+                self.loadHistory();
+            });
+        },
+        doResetStats: function() {
+            if (!confirm('确认重置统计计数？')) return;
+            var self = this;
+            $.post(basePath + 'resetStats', {}, function(r) {
+                if (r && r.code === 0) {
+                    self.queue = r.queue || self.queue;
+                    alert(r.msg || '已重置');
+                } else {
+                    alert((r && r.msg) || '失败');
+                }
+            });
+        }
+    }
+});
+</script>
+</body>
+</html>

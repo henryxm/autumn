@@ -154,23 +154,24 @@ void onOneMinute() {
 
 **正确拆分：**
 
-1. **秒级 / ≤1min 回调**：只做「快速投递」——把待处理键写入**本机内存队列**，再 `scheduleDrain()`。
-2. **耗时处理**：`TagTaskExecutor` + `TagRunnable`（`@TagValue(lock=false)`）+ `JobPhaseGate` 消费队列；`exe()` 内再访问 Redis / DB / 文件（跨节点互斥时用 `withLockOrFallback*`）。
-3. **禁止**在秒级回调里私建 `ScheduledExecutorService` / `Executors.*`；延迟清理用 `expiredAt` + 周期入队 + 异步 drain（或 Redis TTL）。
+1. **秒级 / ≤1min 回调**：只做「快速投递」——内存入队 + `scheduleDrain()`，或 **`FunctionQueues.offer(...)`**（回调内有 DB 的简单串行，见 **`docs/AI_FUNCTION_QUEUE.md`** §5）。
+2. **耗时处理**：
+   - **简单串行 / 降低起线程开销**：`FunctionQueue`（常驻单 worker；框架 wall / UserProfile 等已按此迁）。
+   - **业务 map + 单飞 / 再调度 / 监控 UI**：`TagTaskExecutor` + `TagRunnable`（`lock=false`）+ `JobPhaseGate`；`exe()` 内再访问 Redis / DB（跨节点用 `withLockOrFallback*`）。
+3. **禁止**在秒级回调里私建 `ScheduledExecutorService` / `Executors.*`。
 
 ```java
-// LoopJob 秒级：只入队
+// A) FunctionQueue：≤1min 且需访问 DB 的简单滚动
 @Override
-public void onThirtySecond() {
-    enqueueExpiredKeys(); // 仅扫 ConcurrentHashMap
-    scheduleDrain();      // TagTaskExecutor + JobPhaseGate
+public void onOneMinute() {
+    FunctionQueues.offer("IpBlackService.clear", this::clear);
 }
 
-// 异步 drain：才允许 Redis/DB
+// B) TagTaskExecutor + JobPhaseGate：内存 map drain
 @Override
-@TagValue(type = MyStore.class, method = "drainExpired", tag = "过期清理", lock = false)
-public void exe() {
-    drainExpired(); // memory remove + redis delete
+public void onThirtySecond() {
+    enqueueExpiredKeys();
+    scheduleDrain();
 }
 ```
 
@@ -205,7 +206,8 @@ public void exe() {
 ## 7. 相关源码与文档
 
 - `cn.org.autumn.thread.TagRunnable`、`LockOnce`、`FinishStatus`、`TagTaskExecutor`、`JobPhase`、`JobPhaseGate`
+- `cn.org.autumn.thread.FunctionQueue`、`FunctionQueues`（全局串行函数队列，见 **`docs/AI_FUNCTION_QUEUE.md`**）
 - `cn.org.autumn.modules.job.task.LoopJob`（周期回调；秒级纪律见 §4.1）
 - **`docs/AI_DISTRIBUTED_LOCK.md`** §10（摘要）及 §8 模板
-- **`docs/AI_MAP.md`** §2.2C、§2.5
+- **`docs/AI_MAP.md`** §2.2C、§2.2D、§2.5
 - 示例：`docs/examples/distributed-lock/`（`withLock*`）；业务队列参考各子项目 Service 内 `scheduleDrain` 实现

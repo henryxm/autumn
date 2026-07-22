@@ -70,6 +70,8 @@ description: >-
 
 涉及 **`asyncTaskExecutor`、内存待处理队列、本机 DISPATCHING/IDLE 闸门** 时，必读 **`docs/AI_ASYNC_TASK.md`**（勿与 **`BaseQueueService`** 持久化队列混淆）。
 
+涉及 **`FunctionQueue`** 时：该能力在 **Autumn 3.0.0** 线落地（**`docs/AI_FUNCTION_QUEUE.md`**）；**2.x / master** 仅当仓库已合入同类类时才可调用，勿臆造 API。
+
 涉及 **支付密码 / `PayPinVerifier` / `modules.safe`** 时，见下文 **安全支付模块（safe）**。
 
 涉及 **实体字段存储加密 / `@FieldEncrypt` / `EncryptModuleService`** 时，必读 **`docs/AI_FIELD_ENCRYPT.md`**（§0 易混概念；§7 **`@Cache` 加密缓存**；与 **`docs/AI_CRYPTO.md`** 传输加密独立）。
@@ -236,6 +238,7 @@ description: >-
 - **`onFinished(FinishStatus)`**：任务结束必调一次；**本机调度闸门在 `onFinished` 释放**，不要只在 `exe()` 的 `finally` 释放。
 - **本机相位**：使用框架 **`JobPhase`** + **`JobPhaseGate`**（`IDLE`/`DISPATCHING`），勿在业务 Service 内重复定义私有 enum。
 - **内存队列 drain**：`TagRunnable` + `@TagValue(lock=false)` + `exe()` 内 **`withLockOrFallback*`**；**不要**对 drain 用 `LockOnce`。
+- **`LoopJob` 秒级 / ≤1 分钟**：回调禁止同步 DB/重 IO；耗时走异步。**3.0.0** 简单串行写库优先 **`FunctionQueues.offer`**（见 **`docs/AI_FUNCTION_QUEUE.md`**）；map drain 仍用 **`TagTaskExecutor` + `JobPhaseGate`**（**`docs/AI_ASYNC_TASK.md` §4.1**）。
 - 详见 **`docs/AI_ASYNC_TASK.md`** §4。
 
 ## 分布式执行与加锁（新增）

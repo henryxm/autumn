@@ -11,6 +11,7 @@ import cn.org.autumn.modules.usr.dao.UserProfileDao;
 import cn.org.autumn.modules.usr.dto.UserProfile;
 import cn.org.autumn.modules.usr.dto.VisitIp;
 import cn.org.autumn.modules.usr.entity.UserProfileEntity;
+import cn.org.autumn.thread.FunctionQueues;
 import cn.org.autumn.utils.IPUtils;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import cn.org.autumn.utils.Uuid;
@@ -29,6 +30,10 @@ import static cn.org.autumn.utils.Uuid.uuid;
 public class UserProfileService extends ModuleService<UserProfileDao, UserProfileEntity> implements LoopJob.TenSecond, LoopJob.OneMinute {
 
     Logger log = LoggerFactory.getLogger(getClass());
+
+    /** 单次函数队列任务最多处理条数，避免长时间占用全局串行槽 */
+    private static final int SYNC_PROFILE_BATCH = 50;
+    private static final int SYNC_VISIT_IP_BATCH = 100;
 
     @Autowired
     UserTokenService userTokenService;
@@ -67,17 +72,29 @@ public class UserProfileService extends ModuleService<UserProfileDao, UserProfil
     }
 
     public void syncVisitIp() {
+        syncVisitIp(Integer.MAX_VALUE);
+    }
+
+    /**
+     * @param limit 最多写库条数；返回是否仍有未同步项
+     */
+    public boolean syncVisitIp(int limit) {
         if (!CrudGuard.writable()) {
-            return;
+            return false;
         }
+        int n = 0;
         for (Map.Entry<String, VisitIp> entry : visitIps.entrySet()) {
+            if (n >= limit)
+                return true;
             if (null == entry.getValue() || StringUtils.isBlank(entry.getValue().getIp()) || StringUtils.isBlank(entry.getValue().getUserAgent()))
                 continue;
             if (!entry.getValue().isUpdated()) {
                 baseMapper.updateVisitIp(entry.getKey(), entry.getValue().getIp(), entry.getValue().getUserAgent());
                 entry.getValue().setUpdated(true);
+                n++;
             }
         }
+        return false;
     }
 
     public void updateVisitIp(String uuid, String ip) {
@@ -227,9 +244,18 @@ public class UserProfileService extends ModuleService<UserProfileDao, UserProfil
 
     @Override
     public void onOneMinute() {
+        FunctionQueues.offer("UserProfileService.syncVisitIp", this::runSyncVisitIpJob);
+    }
+
+    private void runSyncVisitIpJob() {
         try {
-            syncVisitIp();
-            visitIps.clear();
+            boolean more = syncVisitIp(SYNC_VISIT_IP_BATCH);
+            if (more) {
+                FunctionQueues.offer("UserProfileService.syncVisitIp", this::runSyncVisitIpJob);
+                return;
+            }
+            // 全部已写库后再清理，避免分批间隙丢失未写完的 IP
+            visitIps.entrySet().removeIf(e -> e.getValue() != null && e.getValue().isUpdated());
         } catch (Exception e) {
             log.error("Synchronize User IP:{}", e.getMessage());
         }
@@ -237,39 +263,51 @@ public class UserProfileService extends ModuleService<UserProfileDao, UserProfil
 
     @Override
     public void onTenSecond() {
+        FunctionQueues.offer("UserProfileService.syncProfile", this::runSyncProfileJob);
+    }
+
+    private void runSyncProfileJob() {
         try {
-            if (null != sync && !sync.isEmpty()) {
-                Iterator<Map.Entry<String, UserProfileEntity>> iterator = sync.entrySet().iterator();
-                while (iterator.hasNext()) {
-                    Map.Entry<String, UserProfileEntity> entity = iterator.next();
-                    UserProfileEntity userProfileEntity = entity.getValue();
-                    if (!checkNeedUpdate(userProfileEntity))
-                        continue;
-                    try {
-                        UserProfileEntity ex = getByUuid(userProfileEntity.getUuid());
-                        if (null == ex || ex.hashCode() != userProfileEntity.hashCode()) {
-                            if (null != ex) {
-                                userProfileEntity.setNickname(ex.getNickname());
-                                userProfileEntity.setMobile(ex.getMobile());
-                            }
-                            UserProfileEntity username = baseMapper.getByUsername(userProfileEntity.getUsername());
-                            if (null != username)
-                                continue;
-                            saveOrUpdate(userProfileEntity);
-                        }
-                    } catch (Exception e) {
-                        log.debug("UserProfile Synchronize Error, User uuid:" + userProfileEntity.getUuid() + ", Msg:" + e.getMessage());
-                    }
-                    hashUser.put(userProfileEntity.getUuid(), userProfileEntity.hashCode());
+            if (null == sync || sync.isEmpty()) {
+                if (hashUser.size() > 10000)
+                    hashUser.clear();
+                return;
+            }
+            int processed = 0;
+            Iterator<Map.Entry<String, UserProfileEntity>> iterator = sync.entrySet().iterator();
+            while (iterator.hasNext() && processed < SYNC_PROFILE_BATCH) {
+                Map.Entry<String, UserProfileEntity> entity = iterator.next();
+                UserProfileEntity userProfileEntity = entity.getValue();
+                if (!checkNeedUpdate(userProfileEntity)) {
                     iterator.remove();
+                    continue;
                 }
+                try {
+                    UserProfileEntity ex = getByUuid(userProfileEntity.getUuid());
+                    if (null == ex || ex.hashCode() != userProfileEntity.hashCode()) {
+                        if (null != ex) {
+                            userProfileEntity.setNickname(ex.getNickname());
+                            userProfileEntity.setMobile(ex.getMobile());
+                        }
+                        UserProfileEntity username = baseMapper.getByUsername(userProfileEntity.getUsername());
+                        if (null != username) {
+                            iterator.remove();
+                            continue;
+                        }
+                        saveOrUpdate(userProfileEntity);
+                    }
+                } catch (Exception e) {
+                    log.debug("UserProfile Synchronize Error, User uuid:" + userProfileEntity.getUuid() + ", Msg:" + e.getMessage());
+                }
+                hashUser.put(userProfileEntity.getUuid(), userProfileEntity.hashCode());
+                iterator.remove();
+                processed++;
             }
-            /**
-             * 清理缓存，避免过度消耗内存
-             */
-            if (hashUser.size() > 10000) {
+            if (hashUser.size() > 10000)
                 hashUser.clear();
-            }
+            // 仍有积压则再投递一批，让出串行槽给防火墙等其它任务
+            if (!sync.isEmpty())
+                FunctionQueues.offer("UserProfileService.syncProfile", this::runSyncProfileJob);
         } catch (Exception e) {
             log.error("Synchronize User Profile:{}", e.getMessage());
         }

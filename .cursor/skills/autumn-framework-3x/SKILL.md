@@ -13,7 +13,7 @@ description: >-
   Read docs/AI_CODEGEN.md, docs/AI_DATABASE.md, docs/AI_DUAL_KEY.md. Bot/robot: read docs/AI_ROBOT.md + docs/AI_ROBOT_API.md (rbt_, Hook, message/push, cn.org.autumn.modules.bot); web 集成测试见 web/docs/INTEGRATION_TEST.md（基类 integration.base.IntegrationTest）。
   scripts/constraints-scan is optional: run only when the user explicitly asks for a constraint audit, CI-style check, or phrases like 约束扫描/规范体检; see skill section "约束扫描（按需）".
   OAuth/OPL/OPC: read docs/AI_AUTH_LOGIN_MODES.md first; classic RP bind client_web_oauth_bind (WebOauthBindService); OPC bind opc_connect_bind (ConnectBindService); callback uses establishSession not login(upstream).
-  Triggers on cn.org.autumn 3.0.0, Spring Boot 3.5, JDK 17, ModuleService, EncryptModuleService, FieldEncrypt, isEncryptCacheField, encryptCache, RuntimeSql, PageAware, SpringDoc, bot, robot, rbt_, RobotHook, RobotMessageSubscriber, message/push, 字段加密, field encrypt, 加密缓存, OAuth, openId, unionId, WebOauthBind, ConnectBind, client_id, app_id, 授权登录, 账号绑定, uuid绑定, 站点门户, SITE_PORTAL_CONFIG, SiteLegalLinksHandler, redisTemplate.keys, KEYS, SCAN, redis.html, Redis timeout, QueryTimeoutException, 大键空间, redis运维.
+  Triggers on cn.org.autumn 3.0.0, Spring Boot 3.5, JDK 17, ModuleService, EncryptModuleService, FieldEncrypt, isEncryptCacheField, encryptCache, RuntimeSql, PageAware, SpringDoc, bot, robot, rbt_, RobotHook, RobotMessageSubscriber, message/push, 字段加密, field encrypt, 加密缓存, OAuth, openId, unionId, WebOauthBind, ConnectBind, client_id, app_id, 授权登录, 账号绑定, uuid绑定, 站点门户, SITE_PORTAL_CONFIG, SiteLegalLinksHandler, FunctionQueue, FunctionQueues, 函数队列, LoopJob, TagTaskExecutor, JobPhaseGate, redisTemplate.keys, KEYS, SCAN, redis.html, Redis timeout, QueryTimeoutException, 大键空间, redis运维.
 ---
 
 # Autumn 3.x 框架开发（3.0.0 / 分支 3.0.0）
@@ -63,11 +63,13 @@ description: >-
 1. `docs/AI_INDEX.md` → 2. `docs/AI_BOOT.md` → 3. `docs/AI_MAP.md` → 4. **`docs/AI_STANDARDS.md`**（强制全文，含 §8～§14）  
 5. **`docs/AI_DATABASE.md`**（多库、`DatabaseType`、**§4.0 代码层方言标准写法**、`WrapperColumns`、`RuntimeSql`、Wrapper 边界、Dao **必须** Provider）  
 6. 新模块 / 代码生成 / 搭骨架：追加 **`docs/AI_CODEGEN.md`**、**`docs/AI_DUAL_KEY.md`**（双键、`UserBased`、业务 `user` 可存真人或机器人 uuid）  
-按需：`docs/AI_POSTGRESQL.md`、`docs/AI_TEMPLATES.md`、`docs/AI_CRYPTO.md`、**`docs/AI_FIELD_ENCRYPT.md`**（实体字段存储加密、`EncryptModuleService`）、`docs/AI_DISTRIBUTED_LOCK.md`、**`docs/AI_ASYNC_TASK.md`**（**`TagRunnable` / `FinishStatus` / `onFinished`**、内存队列 drain 状态机）、**`docs/REDIS_RESILIENCE.md`**（Redis 熔断与分布式锁稳健性）、`docs/REDIS_STANDALONE.md`、**`docs/REDIS_TTL_GUIDE.md`**（Redis TTL / `RedisExpireUtil`）、**`docs/REDIS_KEYS_AND_SCAN.md`**（**禁止 KEYS、推荐 SCAN**）、**`docs/INSTALL_MODE_CONDITIONAL.md`**（安装向导 **`autumn.install.wizard`**、**§0 占位默认 H2 / 可选 mysql**）等。
+按需：`docs/AI_POSTGRESQL.md`、`docs/AI_TEMPLATES.md`、`docs/AI_CRYPTO.md`、**`docs/AI_FIELD_ENCRYPT.md`**（实体字段存储加密、`EncryptModuleService`）、`docs/AI_DISTRIBUTED_LOCK.md`、**`docs/AI_ASYNC_TASK.md`**（**`TagRunnable` / `FinishStatus` / `onFinished`**、内存队列 drain 状态机）、**`docs/AI_FUNCTION_QUEUE.md`**（**`FunctionQueue` / `FunctionQueues`**、≤1min DB 串行投递、运维页）、**`docs/REDIS_RESILIENCE.md`**（Redis 熔断与分布式锁稳健性）、`docs/REDIS_STANDALONE.md`、**`docs/REDIS_TTL_GUIDE.md`**（Redis TTL / `RedisExpireUtil`）、**`docs/REDIS_KEYS_AND_SCAN.md`**（**禁止 KEYS、推荐 SCAN**）、**`docs/INSTALL_MODE_CONDITIONAL.md`**（安装向导 **`autumn.install.wizard`**、**§0 占位默认 H2 / 可选 mysql**）等。
 
 涉及「终止会话 / 记住我阻断 / 会话过期重登守卫」时，追加阅读 **`docs/AI_SESSION_GUARD.md`**（`ForceLogoutRememberMeManager`、`ShiroSessionService`、`/sys/session/self/*`、`autumn-session-guard.js`）。
 
 涉及 **`asyncTaskExecutor`、内存待处理队列、本机 DISPATCHING/IDLE 闸门** 时，必读 **`docs/AI_ASYNC_TASK.md`**（勿与 **`BaseQueueService`** 持久化队列混淆）。
+
+涉及 **`FunctionQueue` / `FunctionQueues`、≤1 分钟 LoopJob 写库迁出、函数队列运维页** 时，必读 **`docs/AI_FUNCTION_QUEUE.md`**（与实现对齐；勿与 `TagTaskExecutor` / `BaseQueueService` 混用语义）。
 
 **注意**：文档或示例若与 **Boot 3 / Jakarta / MP3** 或本分支 **`pom.xml` / `application.yml`** 不一致，以**仓库当前实现**为准。
 
@@ -227,8 +229,19 @@ description: >-
 - **本机相位**：使用框架 **`JobPhase`** + **`JobPhaseGate`**（`IDLE`/`DISPATCHING`），勿在业务 Service 内重复定义私有 enum。
 - **内存队列 drain**：`TagRunnable` + `@TagValue(lock=false)` + `exe()` 内 **`withLockOrFallback*`**；**不要**对 drain 用 `LockOnce`。
 - **`execute` 返回 `boolean`**：`false` 时已 `NOT_DISPATCHED`；可配合 `LoopJob` 做积压补偿。
-- **`LoopJob` 秒级 / ≤1 分钟**：回调只做快速投递与本机轻量清理；**禁止**在 `onXxx` 内读写 DB / 文件 / Redis 或跑复杂业务；耗时逻辑一律 **入队 + `TagTaskExecutor` drain**（见 **`docs/AI_ASYNC_TASK.md` §4.1**）；禁止私建 `ScheduledExecutorService`。
-- 详见 **`docs/AI_ASYNC_TASK.md`** §4、§4.1。
+- **`LoopJob` 秒级 / ≤1 分钟**：回调只做快速投递与本机轻量清理；**禁止**在 `onXxx` 内读写 **DB**（及文件 / Redis 重 IO）或跑复杂业务。
+  - **回调内有 DB、要简单串行滚动** → **`FunctionQueues.offer(...)`**（常驻单 worker，见 **`docs/AI_FUNCTION_QUEUE.md`**；框架 wall / `UserProfileService` 等已迁）。
+  - **业务 map + 单飞 / 监控 UI** → **入队 + `TagTaskExecutor` drain**（**`docs/AI_ASYNC_TASK.md` §4.1**）。
+  - 禁止私建 `ScheduledExecutorService`；大批量写库须**分批再 offer**（共享串行槽）。
+- 详见 **`docs/AI_ASYNC_TASK.md`** §4、§4.1；函数队列专项 **`docs/AI_FUNCTION_QUEUE.md`**。
+
+## 全局函数队列（`FunctionQueue`，3.0.0）
+
+- **类**：`FunctionQueue` / `FunctionQueues`（`autumn-lib`）；运维 **`/sys/functionqueue/*`** + **`functionqueue.html`**。
+- **默认**：软容量 10000（`LinkedBlockingQueue` 永不换实例）、`REJECT`、同名排队去重、历史 500、慢任务 30s、**硬超时 60s + 废弃宽限 5s + 1s watchdog**；`offer` 带 `CrudGuard` 快照。
+- **规则**：≤1min 且同步 DB → 只 `offer`；无 DB 不迁。共享一条 worker，禁止单帧扫全表。
+- **防卡死**：超时 interrupt → 无效则硬废弃换 worker；管理端 `recover` 可立即废弃当前任务。空闲 `take` **不算**卡死（避免定时 offer 刷 WARN）。网络调用应自带 I/O timeout。
+- 必读：**`docs/AI_FUNCTION_QUEUE.md`**（与实现对齐）。
 
 ## 分布式执行与加锁（新增）
 

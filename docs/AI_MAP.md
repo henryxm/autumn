@@ -97,6 +97,19 @@
 - 专项文档：
   - **`docs/AI_ASYNC_TASK.md`**（状态机范式、反模式、与分布式锁分工）
 
+### 2.2D 全局串行函数队列（`FunctionQueue`）
+
+- 核心类：
+  - `cn.org.autumn.thread.FunctionQueue`（守护线程 `autumn-function-queue`，默认容量 10000，`REJECT`/`DROP_OLDEST`）
+  - `cn.org.autumn.thread.FunctionQueues`、`FunctionTaskRecord`、`OverflowPolicy`
+  - `SysFunctionQueueController` + `functionqueue.html`
+- 触点：
+  - **≤1min LoopJob 且回调内有 DB** → 只 `offer`；无 DB 不迁（见 `AI_FUNCTION_QUEUE.md` §5 迁移表）。
+  - **单 worker 共享串行槽**：大批量须分批再 `offer`（如 `UserProfileService`）。
+  - 容量热更新：缩容丢最旧 + 空闲 `interrupt` 唤醒，避免卡在旧 `take()`。
+  - **不替代** `TagRunnable` 监控/去重，也**不替代** `BaseQueueService`。
+- 专项文档：**`docs/AI_FUNCTION_QUEUE.md`**（与实现对齐的唯一说明）
+
 ### 2.2B 会话终止与重登守卫（Shiro）
 
 - 核心类：

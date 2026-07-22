@@ -7,6 +7,7 @@ import cn.org.autumn.modules.wall.entity.HostEntity;
 import cn.org.autumn.modules.wall.entity.RData;
 import cn.org.autumn.site.LoadFactory;
 import cn.org.autumn.site.WallFactory;
+import cn.org.autumn.thread.FunctionQueues;
 import java.util.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -84,7 +85,7 @@ public class HostService extends WallCounter<HostDao, HostEntity> implements Loa
 
     @Override
     public void onOneMinute() {
-        clear();
+        FunctionQueues.offer("HostService.clear", this::clear);
     }
 
     @Override

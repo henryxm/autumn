@@ -7,6 +7,7 @@ import cn.org.autumn.site.LoadFactory;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.wall.entity.UrlBlackEntity;
 import cn.org.autumn.site.WallFactory;
+import cn.org.autumn.thread.FunctionQueues;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -126,7 +127,7 @@ public class UrlBlackService extends WallCounter<UrlBlackDao, UrlBlackEntity> im
 
     @Override
     public void onOneMinute() {
-        clear();
+        FunctionQueues.offer("UrlBlackService.clear", this::clear);
     }
 
     @Override
