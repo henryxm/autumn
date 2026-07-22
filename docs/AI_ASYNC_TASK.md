@@ -184,6 +184,18 @@ public void exe() {
 - **在秒级 / `OneMinute` 的 `onXxx` 内直接读写 Redis、数据库、文件或跑复杂业务**（应入队后异步处理，见 §4.1）。
 - 为「延迟 N 秒删 key」私建 `ScheduledExecutorService`，绕过 `LoopJob` + `TagTaskExecutor`。
 
+## 5.1 Quartz `schedule_job` 与 LoopJob 线程池隔离
+
+| 池 | Bean | 用途 |
+|----|------|------|
+| 主异步池 | `@Primary` `asyncTaskExecutor`（线程名 `Executor-*`） | LoopJob drain、业务 `TagRunnable` |
+| Quartz 专用池 | `scheduleJobExecutor`（线程名 `ScheduleJob-*`） | 管理后台 / 表 `schedule_job` 的 cron 方法 |
+
+- **禁止**再让 `ScheduleJob` 共用主池：长日任务会占满 `Executor-*`，饿死秒级 drain。
+- 超时：`autumn.job.schedule-timeout-seconds`（**默认 0=不限制**）；仅当显式 `>0` 时 `future.get` 超时并 `cancel`。
+- 池大小：`autumn.job.schedule-pool-core`（默认 2）/ `schedule-pool-max`（8）/ `schedule-pool-queue`（64）。
+- 重活仍可走 `schedule_job`，但注意 Quartz 触发线程会 `future.get` 阻塞至任务结束（或超时）；LoopJob 周期任务不受影响。
+
 ## 6. 与 Redis / 熔断的关系
 
 - `@TagValue(lock=true)` / `LockOnce`：未持锁 → `SKIPPED` → **`onFinished` 仍会调用**（`run()` 收口）。

@@ -182,9 +182,19 @@ AUTUMN_SCAN_FAIL_ON_HIT=1 bash scripts/constraints-scan .
 |----|------|
 | `RedisService` | `/sys/redis/*`，SCAN 分页、`DBSIZE`、`STRLEN` |
 | `CacheService` | 两级缓存；`clear` / `clear(name)` 用 SCAN 删 Redis |
-| `RedisUtils` | 单键读写；TTL 走 `RedisExpireUtil` |
-| `RedisKeys` | 键前缀与命名空间 |
+| `RedisUtils` | 单键读写；TTL 走 `RedisExpireUtil`；**GET 前 STRLEN**（`autumn.redis.max-value-bytes`，默认 1MB），超限删键；反序列化失败 / OOM 删键回空 |
+| `RedisKeys` | 键前缀与命名空间；SysConfig 键带 `:pv1`（仅缓存 `paramValue` String） |
+| `SysConfigRedis` | 配置二级缓存：只存 String，勿整实体 JDK 缓存大 TEXT |
 | `ShiroSessionService` | 会话列举 SCAN（有上限） |
+
+### 8.1 热路径反序列化与大值护栏
+
+- Primary `RedisTemplate` 值序列化仍为 **JDK**（`RedisConfig`）；JSON 模板非 Primary。
+- 业务/框架热路径 **禁止** 对未知大小的 STRING 直接 `GET` 估大小或反序列化；用 **`STRLEN`**，超 `autumn.redis.max-value-bytes`（默认 **1048576**）则跳过 GET、删键、回源。
+- `SysConfig` Redis 键为 `{ns}system:config:{paramKey}:pv1`，只缓存 **`paramValue` 字符串**；旧版整实体键自然弃用。
+- 反序列化失败（`SerializationException` / `Cannot deserialize` / `Java heap space`）应对齐 Session/OAuth：**删坏键 → 回源 DB**，勿把异常打穿 Filter。
+
+见 **`docs/REDIS_RESILIENCE.md`** §7。
 
 ---
 

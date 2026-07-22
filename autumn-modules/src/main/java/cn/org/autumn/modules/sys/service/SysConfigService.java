@@ -61,6 +61,7 @@ import java.lang.reflect.Type;
 import java.math.BigDecimal;
 import java.net.URI;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Service
@@ -140,7 +141,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     @Lazy
     private CrudGuardService crudGuardService;
     private CloudStorageConfig cloudStorageConfig = null;
-    private Map<String, SysConfigEntity> map = new HashMap<>();
+    private Map<String, SysConfigEntity> map = new ConcurrentHashMap<>();
     private String lastLoggerLevel = null;
     private String namespace = null;
     private static final String temp = Uuid.uuid();
@@ -166,8 +167,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
 
     @Override
     public void onOneMinute() {
-        if (null != map)
-            map.clear();
+        // 不再全清本地 map，避免每分钟 Redis JDK 反序列化风暴；配置变更走 update/delete 精确失效
         domainFactory.clear();
     }
 
@@ -528,16 +528,21 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         if (null != map && map.containsKey(key)) {
             config = map.get(key);
         }
-        if (null == config)
-            config = sysConfigRedis.get(key);
+        if (null == config) {
+            try {
+                config = sysConfigRedis.get(key);
+            } catch (Exception e) {
+                log.warn("SysConfig redis miss fallback DB key={} msg={}", key, e.getMessage());
+            }
+        }
+        if (null != config && null != map) {
+            map.put(key, config);
+        }
         if (config == null) {
             config = baseMapper.queryByKey(key);
             sysConfigRedis.saveOrUpdate(config);
             if (null != config && null != map) {
-                if (map.containsKey(key))
-                    map.replace(key, config);
-                else
-                    map.put(key, config);
+                map.put(key, config);
             }
         }
         String r = config == null ? null : config.getParamValue();
@@ -946,7 +951,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     public void onThirtyMinute() {
         List<SysConfigEntity> list = list();
         if (null != list && list.size() > 0) {
-            Map<String, SysConfigEntity> t = new HashMap<>();
+            Map<String, SysConfigEntity> t = new ConcurrentHashMap<>();
             for (SysConfigEntity sysConfigEntity : list) {
                 t.put(sysConfigEntity.getParamKey(), sysConfigEntity);
                 if (LOGGER_LEVEL.equalsIgnoreCase(sysConfigEntity.getParamKey())) {

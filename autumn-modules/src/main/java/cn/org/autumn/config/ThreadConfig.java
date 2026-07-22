@@ -2,10 +2,12 @@ package cn.org.autumn.config;
 
 import cn.org.autumn.thread.TagTaskExecutor;
 import java.util.List;
+import java.util.concurrent.ThreadPoolExecutor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 
 /**
  * 线程池配置 — 基于系统资源（CPU 核数、JVM 堆内存）auto computed合理参数。
@@ -68,6 +70,16 @@ public class ThreadConfig {
     @Value("${autumn.thread.keep-alive-seconds:60}")
     private int keepAliveSeconds;
 
+    /** Quartz schedule_job 专用池：与 LoopJob 主池隔离，避免长 cron 占满 Executor-* */
+    @Value("${autumn.job.schedule-pool-core:2}")
+    private int schedulePoolCore;
+
+    @Value("${autumn.job.schedule-pool-max:8}")
+    private int schedulePoolMax;
+
+    @Value("${autumn.job.schedule-pool-queue:64}")
+    private int schedulePoolQueue;
+
     // ======================== 安全边界常量 ========================
 
     /**
@@ -96,6 +108,7 @@ public class ThreadConfig {
     private static final int THREAD_STACK_MB = 1;
 
     @Bean
+    @Primary
     public TagTaskExecutor asyncTaskExecutor(List<RejectedHandler> rejectedHandlers) {
         // ================================================================
         // 1. 探测系统资源
@@ -199,6 +212,30 @@ public class ThreadConfig {
                     configuredCorePoolSize > 0 ? "yml config" : "auto computed",
                     configuredMaxPoolSize > 0 ? "yml config" : "auto computed",
                     configuredQueueCapacity > 0 ? "yml config" : "auto computed");
+        return executor;
+    }
+
+    /**
+     * Quartz {@code schedule_job} 专用有界池，与 {@link #asyncTaskExecutor}（LoopJob / 业务异步）隔离。
+     * 长日任务可占用本池而不饿死秒级 LoopJob drain。
+     */
+    @Bean(name = "scheduleJobExecutor")
+    public TagTaskExecutor scheduleJobExecutor() {
+        int core = Math.max(1, schedulePoolCore);
+        int max = Math.max(core, schedulePoolMax);
+        int queue = Math.max(1, schedulePoolQueue);
+        TagTaskExecutor executor = new TagTaskExecutor();
+        executor.setThreadNamePrefix("ScheduleJob-");
+        executor.setCorePoolSize(core);
+        executor.setMaxPoolSize(max);
+        executor.setQueueCapacity(queue);
+        executor.setKeepAliveSeconds(keepAliveSeconds);
+        executor.setAllowCoreThreadTimeOut(true);
+        executor.setWaitForTasksToCompleteOnShutdown(true);
+        executor.setAwaitTerminationSeconds(60);
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+        if (log.isDebugEnabled())
+            log.debug("ScheduleJob pool initialized — core={}, max={}, queue={}", core, max, queue);
         return executor;
     }
 

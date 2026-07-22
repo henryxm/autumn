@@ -15,8 +15,13 @@ public class RedisKeys {
         return StringUtils.isBlank(namespace) ? "system:session:" : namespace.trim() + ":system:session:";
     }
 
+    /**
+     * SysConfig Redis 键后缀：仅缓存 paramValue String（pv1），与旧版整实体 JDK 键隔离。
+     */
+    public static final String SYS_CONFIG_VALUE_SUFFIX = ":pv1";
+
     public static String getSysConfigKey(String namespace, String key) {
-        return getConfigPrefix(namespace) + key;
+        return getConfigPrefix(namespace) + key + SYS_CONFIG_VALUE_SUFFIX;
     }
 
     public static String getShiroSessionKey(String namespace, String key) {

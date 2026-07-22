@@ -86,3 +86,16 @@ public Optional<String> readPromotion(String id) {
 - 日志关键字：`redis circuit OPEN`、`distributed lock skipped (redis circuit)`、`redis unreachable`。  
 - 熔断长期 OPEN：检查 Redis 网络、连接数、DNS；适当调大 `open-wait-ms` 或 `failure-threshold`。  
 - 需要 **绝对串行** 且不能接受本地降级：设置 `ignoreCircuitBreaker=true` 并接受雪崩风险，或保证 Redis SLA。
+
+## 7. 大值 GET 与 SysConfig（防 OOM）
+
+与熔断互补：堆近满时 JDK 反序列化大 STRING 会二次爆堆。框架约定：
+
+| 项 | 说明 |
+|----|------|
+| `autumn.redis.max-value-bytes` | 默认 `1048576`（1MB）。`RedisUtils.get` 先 **STRLEN**，超限 **删键并返回 null**，禁止 GET。 |
+| 反序列化失败 | `RedisUtils.get` 捕获 `SerializationException` / 堆相关消息，删键回空。 |
+| SysConfig | `SysConfigRedis` 只缓存 `paramValue` **String**（键后缀 `:pv1`）；本地 map 用 `ConcurrentHashMap`，`onOneMinute` **不再全清** map。 |
+| Primary 序列化 | 仍为 JDK；全量迁 JSON 需单独迁移任务。 |
+
+详见 **`docs/REDIS_KEYS_AND_SCAN.md`** §8.1。
