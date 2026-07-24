@@ -177,17 +177,36 @@ public class ScheduleAssignService extends ModuleService<ScheduleAssignDao, Sche
                 } catch (Exception e) {
                     log.error("Failed to update assignment for job [{}]: {}", jobId, e.getMessage());
                 }
-                // 从数据库加载 assignTag 到内存（数据库配置优先于注解）
+                // 从数据库加载 assignTag / duty / enabled 到内存（数据库配置优先于注解；null 不改）
                 String dbAssignTag = existing.getAssignTag();
                 if (dbAssignTag != null) {
                     LoopJob.updateJobAssign(jobId, dbAssignTag);
                 }
+                applyDutyAndEnabled(jobId, existing);
             }
         }
         // 标记分配功能已初始化
         LoopJob.markAssignInitialized();
         if (log.isDebugEnabled())
             log.debug("Schedule assign scan completed: {} created, {} updated, total {} jobs", created, updated, jobInfoMap.size());
+    }
+
+    private void applyDutyAndEnabled(String jobId, ScheduleAssignEntity entity) {
+        if (entity == null) {
+            return;
+        }
+        if (StringUtils.isNotBlank(entity.getDuty())) {
+            LoopJob.updateJobDuty(jobId, cn.org.autumn.job.JobDuty.of(entity.getDuty()));
+        } else {
+            // DB 无 duty / 已清空 → 内存回落注解缺省
+            LoopJob.updateJobDuty(jobId, null);
+        }
+        Integer en = entity.getEnabled();
+        if (en != null && en == 0) {
+            LoopJob.updateJobAssignEnabled(jobId, Boolean.FALSE);
+        } else if (en != null && en == 1) {
+            LoopJob.updateJobAssignEnabled(jobId, Boolean.TRUE);
+        }
     }
 
     /**
@@ -203,6 +222,7 @@ public class ScheduleAssignService extends ModuleService<ScheduleAssignDao, Sche
             for (ScheduleAssignEntity entity : list) {
                 if (entity.getJobId() != null) {
                     boolean result = LoopJob.updateJobAssign(entity.getJobId(), entity.getAssignTag() != null ? entity.getAssignTag() : "");
+                    applyDutyAndEnabled(entity.getJobId(), entity);
                     if (result)
                         refreshed++;
                 }
@@ -294,6 +314,53 @@ public class ScheduleAssignService extends ModuleService<ScheduleAssignDao, Sche
         } catch (Exception e) {
             log.error("Failed to get assignment for job [{}]: {}", jobId, e.getMessage(), e);
             return null;
+        }
+    }
+
+    /**
+     * 更新任务职责并落库；空白 duty 清除 DB 覆盖并使内存回落到注解值。
+     */
+    public boolean updateDuty(String jobId, String duty) {
+        if (StringUtils.isBlank(jobId)) return false;
+        String d = duty != null ? duty.trim() : "";
+        if (StringUtils.isBlank(d)) {
+            LoopJob.updateJobDuty(jobId, null);
+        } else {
+            LoopJob.updateJobDuty(jobId, cn.org.autumn.job.JobDuty.of(d));
+        }
+        try {
+            ScheduleAssignEntity entity = this.getOne(new QueryWrapper<ScheduleAssignEntity>().eq(columnInWrapper("job_id"), jobId));
+            if (entity == null) return false;
+            entity.setDuty(StringUtils.isBlank(d) ? null : d);
+            entity.setUpdateTime(new Date());
+            this.updateById(entity);
+            return true;
+        } catch (Exception e) {
+            log.error("Failed to update duty for job [{}]: {}", jobId, e.getMessage(), e);
+            return false;
+        }
+    }
+
+    /**
+     * 更新 DB enabled：0 禁用，1 启用；同步内存。
+     */
+    public boolean updateEnabled(String jobId, Integer enabled) {
+        if (StringUtils.isBlank(jobId) || enabled == null) return false;
+        if (enabled == 0) {
+            LoopJob.updateJobAssignEnabled(jobId, Boolean.FALSE);
+        } else {
+            LoopJob.updateJobAssignEnabled(jobId, Boolean.TRUE);
+        }
+        try {
+            ScheduleAssignEntity entity = this.getOne(new QueryWrapper<ScheduleAssignEntity>().eq(columnInWrapper("job_id"), jobId));
+            if (entity == null) return false;
+            entity.setEnabled(enabled);
+            entity.setUpdateTime(new Date());
+            this.updateById(entity);
+            return true;
+        } catch (Exception e) {
+            log.error("Failed to update enabled for job [{}]: {}", jobId, e.getMessage(), e);
+            return false;
         }
     }
 

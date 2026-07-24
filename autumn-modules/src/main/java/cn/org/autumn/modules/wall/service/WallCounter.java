@@ -3,6 +3,7 @@ package cn.org.autumn.modules.wall.service;
 import cn.org.autumn.base.ModuleService;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.wall.entity.RData;
+import cn.org.autumn.thread.FunctionQueues;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import lombok.extern.slf4j.Slf4j;
 
@@ -58,6 +59,11 @@ public abstract class WallCounter<M extends BaseMapper<T>, T> extends ModuleServ
 
     @Override
     public void onOneMinute() {
+        // flushCounter 会写库；LoopJob 一分钟回调只投递，由函数队列串行执行
+        FunctionQueues.offer(getClass().getSimpleName() + ".flushCounter", this::runFlushCounterJob);
+    }
+
+    private void runFlushCounterJob() {
         try {
             flushCounter();
         } catch (Exception e) {

@@ -88,7 +88,7 @@
 
 - 核心类：
   - `cn.org.autumn.thread.TagTaskExecutor`（注入名常为 `asyncTaskExecutor`）
-  - `cn.org.autumn.thread.TagRunnable`、`LockOnce`、`FinishStatus`
+  - `cn.org.autumn.thread.TagRunnable`、`LockOnce`、`FinishStatus`、`JobPhase`、`JobPhaseGate`
 - 关键点：
   - 业务写在 `exe()`；**生命周期收口**用 `onFinished(FinishStatus)`（每任务最多一次）。
   - `execute(TagRunnable)` 返回 `boolean`；未提交时 `NOT_DISPATCHED`。
@@ -96,6 +96,19 @@
   - **时间窗只跑一次**：`LockOnce` 或 `@TagValue(lock=true)`（未持锁 → `SKIPPED`，仍触发 `onFinished`）。
 - 专项文档：
   - **`docs/AI_ASYNC_TASK.md`**（状态机范式、反模式、与分布式锁分工）
+
+### 2.2D 全局串行函数队列（`FunctionQueue`）
+
+- 核心类：
+  - `cn.org.autumn.thread.FunctionQueue`（守护线程 `autumn-function-queue`，默认容量 10000，`REJECT`/`DROP_OLDEST`）
+  - `cn.org.autumn.thread.FunctionQueues`、`FunctionTaskRecord`、`OverflowPolicy`
+  - `SysFunctionQueueController` + `functionqueue.html`
+- 触点：
+  - **≤1min LoopJob 且回调内有 DB** → 只 `offer`；无 DB 不迁（见 `AI_FUNCTION_QUEUE.md` §5 迁移表）。
+  - **单 worker 共享串行槽**：大批量须分批再 `offer`（如 `UserProfileService`）。
+  - 容量热更新：缩容丢最旧 + 空闲 `interrupt` 唤醒，避免卡在旧 `take()`。
+  - **不替代** `TagRunnable` 监控/去重，也**不替代** `BaseQueueService`。
+- 专项文档：**`docs/AI_FUNCTION_QUEUE.md`**（与实现对齐的唯一说明）
 
 ### 2.2B 会话终止与重登守卫（Shiro）
 
@@ -167,10 +180,17 @@
 - 选型规则（给 AI 的硬约束）：
   - 固定周期任务：优先实现 `LoopJob.OneMinute/FiveMinute/...`。
   - 仅当时间规则复杂（如每月、节假日）时，才使用 `schedulejob + cronExpression`。
+- **秒级 / ≤1 分钟回调纪律**（与 `docs/AI_ASYNC_TASK.md` §4.1 一致，必须遵守）：
+  - `LoopJob` 同类任务串行：回调阻塞会拖慢同分类后续任务。
+  - **秒级**（`OneSecond`～`ThirtySecond`）：回调内只做内存扫描、入队、`scheduleDrain`、轻量本机缓存清理；**禁止**复杂业务与 **DB / 文件 / Redis**。
+  - **一分钟及以内**（含 `OneMinute`）：原则上同样禁止 DB / 文件 / Redis；耗时逻辑一律 `TagTaskExecutor` + 内存队列 drain。
+  - 秒级投递的数据若需耗时处理：一律异步线程 + 队列（`JobPhaseGate` + `TagRunnable`），勿私建 `ScheduledExecutorService`。
 - 关键机制：
   - 周期接口覆盖：`OneSecond` 到 `OneWeek`。
   - 运行保护：`skipIfRunning` 防重入，`timeout` 超时观测，`maxConsecutiveErrors` 连续错误自动禁用。
   - 多节点分配：`assignTag` 配合 `server.tag` 控制任务归属。
+  - 集群职责：`@JobMeta(duty=ALL|SINGLETON|SEQUENTIAL|DISABLED)`，缺省 `ALL` 与历史完全兼容；**一 Bean 多 `LoopJob.*`** 时每周期独立 Job、类级 duty 落到全部周期、方法级非 ALL 才覆盖——见 `docs/AI_CLUSTER_JOB_ORCHESTRATION.md` §1.3。
+  - 节点身份：`ProfileService.uuid()` / `docs/AI_NODE_PROFILE.md`。
   - 批量性能：支持并行执行开关与 overrun（批量耗时超间隔）监控。
 - 最小模板（跨项目可直接套用）：
 
@@ -185,7 +205,8 @@
 public class DemoJob implements LoopJob.OneMinute {
     @Override
     public void onOneMinute() {
-        // business logic
+        // ≤1min：只做轻量投递/本机清理；耗时业务见 AI_ASYNC_TASK §4.1
+        enqueueAndScheduleDrain();
     }
 }
 ```
@@ -234,6 +255,7 @@ public class DemoJob implements LoopJob.OneMinute {
   - 固定周期任务：在 Service 直接 `implements LoopJob.OneSecond...OneWeek` 并覆写对应 `onXxx()`。
   - 任务治理：可结合 `@JobMeta` 使用 `skipIfRunning/timeout/maxConsecutiveErrors/assign`。
   - 仅复杂时间表达式场景才退回 `schedulejob + cronExpression`。
+  - **秒级 / ≤1min `onXxx`**：只做内存投递与轻量本机清理；DB/文件/Redis 与耗时业务走 `TagTaskExecutor` + 内存队列 drain（`docs/AI_ASYNC_TASK.md` §4.1）。
 - 给 AI 的硬约束：
   - 新建 Service 时默认继承 `ModuleService`，禁止绕开继承链重复实现缓存/队列/分页/菜单语言初始化。
   - 需要缓存时，先选 `getCache/getListCache/getShareCache` 体系；需要异步时，先选 `BaseQueueService` 体系。
@@ -459,7 +481,7 @@ public class DemoService extends ModuleService<DemoDao, DemoEntity> implements L
 - 涉及加解密必须先判断触发条件（header/请求体字段/接口排除）。
 - 涉及兼容改造时，先判断请求/返回类型是否已实现 `Encrypt`；若已实现则禁止再做兼容包装。
 - 涉及队列消费必须给出失败、重试、死信处理策略。
-- 涉及定时任务时，优先接口式任务（`LoopJob.OneMinute/FiveMinute/...`），避免不必要的 cron 表达式；**生产代码禁止 Spring `@Scheduled`**（见 `docs/AI_STANDARDS.md` §5）。
+- 涉及定时任务时，优先接口式任务（`LoopJob.OneMinute/FiveMinute/...`），避免不必要的 cron 表达式；**生产代码禁止 Spring `@Scheduled`**（见 `docs/AI_STANDARDS.md` §5）；秒级/≤1min 回调纪律见 **`docs/AI_ASYNC_TASK.md` §4.1**。
 - 所有 `ModuleService` 子类默认具备缓存/队列/基础 CRUD 能力，禁止重复封装同类基础组件。
 - 涉及分布式互斥时：已继承 `ModuleService` 的 Service 优先用 `DistributedService`；未继承基类再注入 `DistributedLockService`。
 - 新增基础能力前，先检查 `BaseCacheService/ShareCacheService/BaseQueueService/LoopJob` 是否已覆盖需求。
@@ -564,6 +586,8 @@ public class DemoService extends ModuleService<DemoDao, DemoEntity> implements L
   - 混淆 `BaseQueueService` 持久化队列与 `asyncTaskExecutor` + 内存 `ConcurrentMap` drain。
 - 定时任务反模式：
   - 固定周期任务直接上 cron，不实现 `LoopJob.*` 周期接口。
+  - 秒级 / `OneMinute` 回调内直接打 Redis、数据库、文件或跑重业务（应入队 + `TagTaskExecutor` drain，见 `docs/AI_ASYNC_TASK.md` §4.1）。
+  - 为延迟清理私建 `ScheduledExecutorService` / `Executors.new*ThreadPool`。
   - 任务无超时、无防重入、无连续错误保护，不配置 `@JobMeta`。
 - 分层反模式：
   - 把业务逻辑堆在 `controller/gen/*` 可重生层，导致再次生成被覆盖。

@@ -64,6 +64,12 @@ autumn:
 
 `/sys/redis` 依赖的 `RedisService` 在无 Redis Bean 时返回空数据或 `connected: false`。`/sys/cache` 在 Redis 未启用时仅展示本地 EhCache 侧信息。
 
+**大键空间纪律**（百万级键仍须可访问、且不得拖垮生产 Redis）：
+
+- 框架 **`RedisService`** 已用 **`SCAN` + `DBSIZE` + `STRLEN`**，禁止 **`KEYS *`**；详见 **`docs/REDIS_KEYS_AND_SCAN.md`**。
+- 业务工程 **禁止** 再写 **`redisTemplate.keys(...)`**；清缓存走 **`CacheService.clear(name)`**，批量删前缀走 **SCAN 分批**。
+- 合并前建议 **`bash scripts/constraints-scan --redis-keys-only`**（**J 组**）。
+
 ## 8. 模式 B 推荐写法
 
 1. **注入**：`@Autowired(required = false) RedisTemplate<…> redisTemplate`（或 `ObjectProvider<RedisTemplate<…>>`）。

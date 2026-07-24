@@ -112,6 +112,7 @@
   - **回源**：覆盖 **`getEntity` / `getListEntity` / `getNameEntity`** 等，使「未命中则加载」走统一路径。
   - **批量失效**：`**removeCacheAll**`、`**removeCacheByEntity**`、写后务必同步列表缓存。
 - **原则**：读走 **`getCache*`**，写后 **`remove*`**；不要复制一套 TTL 或 Redis 键规则。
+- **禁止**：手写 **`redisTemplate.keys("cache:" + name + ":*")`** 或等价 **`KEYS`** 清 Redis；按名清理用 **`clearCache` / `cacheService.clear(name)`**（框架内已 **SCAN 分批**）。见 **`docs/REDIS_KEYS_AND_SCAN.md`**。
 
 ### 4.2 `ShareCacheService`
 

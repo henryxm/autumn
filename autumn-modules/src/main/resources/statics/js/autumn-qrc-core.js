@@ -276,13 +276,13 @@
         }
         var pageCtx = ctx || '';
         vm.applyScannerBrief = function (brief) {
-            if (!brief) {
-                return;
+            var name = brief && brief.displayName ? brief.displayName : '';
+            var iconUrl = '';
+            if (brief && brief.icon) {
+                iconUrl = typeof vm.resolveScannerIconUrl === 'function'
+                    ? vm.resolveScannerIconUrl(brief.icon)
+                    : resolveScannerIconUrl(brief.icon, pageCtx);
             }
-            var name = brief.displayName || '';
-            var iconUrl = typeof vm.resolveScannerIconUrl === 'function'
-                ? vm.resolveScannerIconUrl(brief.icon)
-                : resolveScannerIconUrl(brief.icon, pageCtx);
             if (typeof vm.$set === 'function') {
                 vm.$set(vm, 'scannerDisplayName', name);
                 vm.$set(vm, 'scannerIconUrl', iconUrl);
@@ -302,6 +302,13 @@
                 vm.qrPhase = 'pending';
                 vm.scannerDisplayName = '';
                 vm.scannerIconUrl = '';
+            }
+        };
+        vm.setQrStatus = function (text) {
+            if (typeof vm.$set === 'function') {
+                vm.$set(vm, 'qrStatus', text || '');
+            } else {
+                vm.qrStatus = text || '';
             }
         };
     }
@@ -423,12 +430,50 @@
                 return ctx + '/' + icon;
             },
             applyScannerBrief: function (brief) {
-                if (!brief) {
+                this.scannerDisplayName = (brief && brief.displayName) ? brief.displayName : '';
+                this.scannerIconUrl = brief && brief.icon ? this.resolveScannerIconUrl(brief.icon) : '';
+                this.qrPhase = 'scanned';
+            },
+            setQrStatus: function (text) {
+                this.qrStatus = text || '';
+            },
+            markQrScanned: function (brief, statusText) {
+                this.applyScannerBrief(brief);
+                this.setQrStatus(statusText || '扫码成功，请在手机点击确认授权');
+            },
+            completeQrRedirect: function (target) {
+                if (this.qrPhase === 'done') {
                     return;
                 }
-                this.scannerDisplayName = brief.displayName || '';
-                this.scannerIconUrl = this.resolveScannerIconUrl(brief.icon);
-                this.qrPhase = 'scanned';
+                if (typeof this.$set === 'function') {
+                    this.$set(this, 'qrPhase', 'done');
+                } else {
+                    this.qrPhase = 'done';
+                }
+                this.setQrStatus('授权成功，正在跳转...');
+                this.stopNotify();
+                var url = target != null && String(target) !== '' ? String(target) : '/';
+                if (typeof options.onSuccess === 'function') {
+                    options.onSuccess(url, this);
+                } else {
+                    (window.top || window).location.href = url;
+                }
+            },
+            recoverAfterMissingSession: function () {
+                var self = this;
+                if (self.qrPhase === 'done') {
+                    return;
+                }
+                if (typeof self.$set === 'function') {
+                    self.$set(self, 'qrPhase', 'done');
+                } else {
+                    self.qrPhase = 'done';
+                }
+                self.setQrStatus('登录可能已完成，正在刷新...');
+                self.stopNotify();
+                window.setTimeout(function () {
+                    (window.top || window).location.reload();
+                }, 300);
             },
             handleQrTerminalStatus: function (status) {
                 if (status === 'DENIED' || status === 'CANCELLED' || status === 'EXPIRED') {
@@ -534,12 +579,12 @@
             },
             processAsStatusData: function (data, onUnavailable) {
                 var self = this;
-                if (!data) {
+                if (!data || self.qrPhase === 'done') {
                     return;
                 }
                 if (data.status === 'SCANNED') {
                     self.applyScannerBrief(data.scannerBrief);
-                    self.qrStatus = isOpenCredential(options) ? '扫码成功，请在手机点击确认授权' : '扫码成功，请在手机点击登录';
+                    self.setQrStatus(isOpenCredential(options) ? '扫码成功，请在手机点击确认授权' : '扫码成功，请在手机点击登录');
                 }
                 if (isOpenCredential(options) && data.status === 'COMPLETED' && data.result && data.result.code) {
                     self.completeOpenQrcLogin(data.result.code, onUnavailable);
@@ -754,31 +799,21 @@
             },
             handleRpStreamEvent: function (data, onUnavailable) {
                 var self = this;
-                if (!data) {
+                if (!data || self.qrPhase === 'done') {
                     return;
                 }
                 if (data.status === 'SCANNED') {
-                    self.applyScannerBrief(data.scannerBrief);
-                    self.qrStatus = '扫码成功，请在手机点击确认授权';
+                    self.markQrScanned(data.scannerBrief, '扫码成功，请在手机点击确认授权');
                 }
                 if (data.status === 'SESSION_EXPIRED') {
                     self.resetQrScannedState();
-                    self.qrStatus = '登录会话已过期，请刷新二维码重试';
+                    self.setQrStatus('登录会话已过期，请刷新二维码重试');
                     self.stopNotify();
                     return;
                 }
-                if (data.status === 'COMPLETED' && data.redirectUrl) {
-                    self.qrPhase = 'done';
-                    self.qrStatus = '授权成功，正在跳转...';
-                    self.stopNotify();
-                    var target = String(data.redirectUrl);
-                    if (typeof options.onSuccess === 'function') {
-                        options.onSuccess(target, self);
-                    } else if (target) {
-                        (window.top || window).location.href = target;
-                    } else {
-                        (window.top || window).location.href = '/';
-                    }
+                if (data.status === 'COMPLETED') {
+                    var target = data.redirectUrl || data.redirect || '/';
+                    self.completeQrRedirect(target);
                     return;
                 }
                 self.handleQrTerminalStatus(data.status);
@@ -788,15 +823,36 @@
                 if (!self.qrcUuid) {
                     return;
                 }
-                $.getJSON(prefix + '/ticket/status', { uuid: self.qrcUuid }, function (res) {
-                    if (!res || res.code !== 0 || !res.data) {
-                        return;
+                $.ajax({
+                    type: 'GET',
+                    url: prefix + '/ticket/status',
+                    data: { uuid: self.qrcUuid },
+                    dataType: 'json',
+                    success: function (res) {
+                        if (!res || res.code !== 0 || !res.data) {
+                            var msg = res && res.msg ? String(res.msg) : '';
+                            if (msg.indexOf('不存在') >= 0 || msg.indexOf('过期') >= 0) {
+                                if (self.qrPhase === 'scanned' || self.qrPhase === 'done') {
+                                    self.recoverAfterMissingSession();
+                                    return;
+                                }
+                                self.resetQrScannedState();
+                                self.setQrStatus(msg || '扫码会话不存在或已过期，请刷新重试');
+                                self.stopNotify();
+                            }
+                            return;
+                        }
+                        var data = res.data;
+                        if (data.redirect && !data.redirectUrl) {
+                            data.redirectUrl = data.redirect;
+                        }
+                        self.handleRpStreamEvent(data, onUnavailable);
+                    },
+                    error: function () {
+                        if (typeof onUnavailable === 'function') {
+                            onUnavailable(true);
+                        }
                     }
-                    var data = res.data;
-                    if (data.redirect && !data.redirectUrl) {
-                        data.redirectUrl = data.redirect;
-                    }
-                    self.handleRpStreamEvent(data, onUnavailable);
                 });
             },
             cancelQrLogin: function () {

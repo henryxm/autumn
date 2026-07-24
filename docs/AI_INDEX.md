@@ -13,6 +13,7 @@
 - `docs/REDIS_RESILIENCE.md`：**Redis 韧性**（`RedisResilience` 熔断、`DistributedLockService` 集成、`DISTRIBUTED_LOCK_CONFIG.ignoreCircuitBreaker`）
 - `docs/REDIS_REDISSON_SPRING_DATA.md`：**Redisson ↔ Spring Data Redis 版本对齐**（`pExpire` / `StackOverflowError` 错配原理、**`dependencyManagement`** 建议做法，与 `REDIS_TTL_GUIDE.md` 配合阅读）
 - **`docs/REDIS_TTL_GUIDE.md`**：**Redis TTL、`Redisson` 与 `RedisExpireUtil`**（何时宜用、常见问题、API 对照、推荐处理顺序与可选扫描脚本）
+- **`docs/REDIS_KEYS_AND_SCAN.md`**：**禁止 `KEYS`、推荐 `SCAN`**（大键空间运维、`redis.html` 事故、批量删键/列表分页推荐写法、**constraints-scan J 组**）
 - `docs/AI_MAP.md`：高频开发能力主图（含生成模板分层与可改/不可改边界）
 - `docs/AI_STANDARDS.md`：**约束性开发规范**（分层、API、定时任务、权限、**FTL §7（HTML `<!--<#if>-->` / JS `//<#if>` / `<title>` 裸 FTL）**、**实体/注解建表/禁止初始化 DDL**、**§10.2 `isUnique` 与 `@Index` 禁止叠用**、**§10.2 单字段索引须字段级 `@Index`**、**§10.4 双键模型**、模块表前缀、**Dao+Provider**、**Controller–Service–Dao**、**statics/pages/Site/PageAware**）
 - **`docs/AI_DUAL_KEY.md`**：**双主键落地**（`UuidBased` / `SnowBased` / **`UserBased`**、**§3.4 无第二主键仅 `user`**、`AutoIdService`、`Uuid` / `Snow`）
@@ -21,7 +22,11 @@
 - **`docs/AI_DATABASE.md`**：**多数据库落地规范**（已支持 `DatabaseType` 清单、**§1.1 关联键与业务主键（承接 `AI_STANDARDS` §10.4）**、**§2.1 `RuntimeSqlDialect` 能力清单与故意不抽象项**、**§4.0 代码层标准写法（`RuntimeSql` / `WrapperColumns`，禁止硬编码方言符号）**、**全库兼容默认**、**Wrapper 安全边界**、**Dao+Provider 强制与推荐分层**、`RuntimeSql` 使用纪律；**§8 老旧注解 Dao / 方言化 Wrapper 升级与一键体检策略**）
 - **`docs/AI_DATABASE_READ_ONLY.md`**：**数据库只读模式**（`CrudGuard` API：`writable` / `opt` / `force` / `suppress`；Init/LoopJob/业务三类写决策表）
 - `docs/AI_DISTRIBUTED_LOCK.md`：分布式锁能力（`DistributedLockService` / `DistributedService`）、场景化加锁、降级与抗雪崩策略、`DistributedLockConfig` 配置项与默认值、业务域快捷模板（含项目示例源码入口）
+- `docs/AI_NODE_PROFILE.md`：本机节点画像（`ProfileService` / `node-profile.json` / 指纹 uuid；缓存 TTL 惰性读盘，无 Watch 线程）
+- `docs/AI_SERVER_ROLE.md`：服务器角色注册表 / 能力门禁（空 roles=ALL 全开；WEB/API 路径限制）
+- `docs/AI_CLUSTER_JOB_ORCHESTRATION.md`：LoopJob 职责 `JobDuty`、类/方法合并、**多接口同一 Bean 的标记法**（§1.3）
 - **`docs/AI_ASYNC_TASK.md`**：**`TagRunnable` / `TagTaskExecutor` / `LockOnce`**、**`FinishStatus` 与 `onFinished` 生命周期**、本机队列 drain 状态机范式（与 `BaseQueueService` 区分）
+- **`docs/AI_FUNCTION_QUEUE.md`**：**全局串行函数队列**（方案+默认参数+≤1min DB 迁移表+运维页+共享串行槽；与 `FunctionQueue` 实现对齐）
 - `docs/AI_POSTGRESQL.md`：PostgreSQL 专项（DDL/元数据、`PostgresQuerySql`、迁移与兼容性）；通用跨库口径以 **`docs/AI_DATABASE.md`** 为准
 - `docs/AI_UPGRADE.md`：依赖方升级 autumn 时的清单、一键扫描脚本说明与自动化边界
 - `docs/AI_SESSION_GUARD.md`：会话终止、防 RememberMe 自动恢复、`/sys/session/self/*` 通用接口与前端守卫接入
@@ -60,6 +65,7 @@
 - 会话终止与重新登录守卫：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md + docs/AI_SESSION_GUARD.md`
 - 分布式互斥/跨节点任务：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md + docs/AI_DISTRIBUTED_LOCK.md`
 - **内存队列 / `asyncTaskExecutor` 异步 drain / 本机调度闸门**：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md + docs/AI_ASYNC_TASK.md`（持锁写路径叠加 **`docs/AI_DISTRIBUTED_LOCK.md`**）
+- **全局串行函数队列 / 秒级任务滚动执行 / 函数队列运维页**：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md + docs/AI_FUNCTION_QUEUE.md`（与 `AI_ASYNC_TASK.md` 选型对照；复杂 drain 仍用后者）
 - 新模块/代码生成：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md + docs/AI_CODEGEN.md + docs/AI_TEMPLATES.md`（先读代码生成流程与三步节奏，再确认生成层约束，后落业务层）
 - 多项目模板整合（TemplateFactory）：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md + docs/AI_GOVERNANCE.md`
 - 接口加解密改造：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md + docs/AI_CRYPTO.md`
@@ -71,6 +77,7 @@
 - **系统升级只读 / 关闭写库 / dbmanage CRUD 开关**：`docs/AI_BOOT.md` + `docs/AI_MAP.md` + **`docs/AI_DATABASE_READ_ONLY.md`**（叠加 `docs/AI_SESSION_GUARD.md` 若涉及登录）
 - 业务工程升级 autumn 版本：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md + docs/AI_UPGRADE.md`（必要时叠加 `docs/AI_POSTGRESQL.md`）
 - **Redis 过期 / TTL / Redisson / `RedisExpireUtil`**：`docs/REDIS_TTL_GUIDE.md` + `docs/REDIS_REDISSON_SPRING_DATA.md` + `docs/AI_STANDARDS.md` §15
+- **Redis 批量扫描 / 禁止 KEYS / 运维页大库**：`docs/REDIS_KEYS_AND_SCAN.md` + `docs/AI_STANDARDS.md` §15.1 + `docs/REDIS_STANDALONE.md` §7
 - **机器人 / Bot 开放 API、Hook、入站消息（业务系统 HTTP 对接）**：`docs/AI_BOOT.md` + `docs/AI_MAP.md` + **`docs/AI_ROBOT.md`** + **`docs/AI_ROBOT_API.md`**（叠加 `docs/AI_CODEGEN.md` 队列、`docs/AI_DISTRIBUTED_LOCK.md` 若用幂等锁）
 - **web 模块 Robot 集成 / API 回归**：`web/docs/INTEGRATION_TEST.md`（H2 内存 + Redis，`mvn -pl web -am test -Pintegration -DskipTests=false`）
 - **机器人模块框架内开发**（`cn.org.autumn.modules.bot`、改 Controller/Service/实体）：上列文档 + `docs/AI_STANDARDS.md` + `docs/AI_DATABASE.md` + `docs/AI_CODEGEN.md`

@@ -346,6 +346,15 @@ public class SysPageController implements ErrorController {
         return "thread";
     }
 
+    @RequestMapping({"functionqueue.html"})
+    @SkipInterceptor
+    public String getFunctionQueue(Model model, HttpServletRequest servlet) {
+        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
+            return "404";
+        ipWhiteService.check(servlet, getClass(), "getFunctionQueue");
+        return "functionqueue";
+    }
+
     @RequestMapping({"logger.html"})
     @SkipInterceptor
     public String logger(Model model, HttpServletRequest servlet) {

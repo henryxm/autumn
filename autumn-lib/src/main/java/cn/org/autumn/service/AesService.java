@@ -54,7 +54,8 @@ public class AesService {
             EncryptConfigHandler.AesConfig aesConfig = encryptConfigFactory.getAesConfig();
             // 缓存过期时间 = 密钥有效期 + 服务端冗余保留时间
             // 确保在密钥过期后，服务端仍能解密正在传输的加密数据
-            config = CacheConfig.builder().name("aseservice").key(String.class).value(AesKey.class).expire(aesConfig.getKeyValidMinutes()).redis(aesConfig.getKeyValidMinutes() + aesConfig.getServerBufferMinutes()).unit(TimeUnit.MINUTES).build();
+            // Null=false：密钥缺失应回源生成，勿走 Object 占位扩宽，避免与 get/put 类型路径不一致
+            config = CacheConfig.builder().name("aseservice").key(String.class).value(AesKey.class).expire(aesConfig.getKeyValidMinutes()).redis(aesConfig.getKeyValidMinutes() + aesConfig.getServerBufferMinutes()).unit(TimeUnit.MINUTES).Null(false).build();
         }
         return config;
     }

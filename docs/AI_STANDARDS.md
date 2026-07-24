@@ -59,7 +59,7 @@
 - **禁止**在业务代码中使用 Spring **`@Scheduled`** 作为**生产环境**定时调度入口（避免脱离框架的任务治理、监控、多节点分配与统一启停）。
 
 - **必须**使用 Autumn 任务体系，按场景二选一（详见 `docs/AI_MAP.md` §2.5）：  
-  - **固定周期**：实现 **`LoopJob.OneSecond` … `OneWeek`** 中对应接口，配合 **`@JobMeta`**（`skipIfRunning`、`timeout`、`maxConsecutiveErrors`、`assign` 等）。  
+  - **固定周期**：实现 **`LoopJob.OneSecond` … `OneWeek`** 中对应接口，配合 **`@JobMeta`**（`skipIfRunning`、`timeout`、`maxConsecutiveErrors`、`assign`、`duty` 等）。同一 Bean 可实现多个周期接口；`JobDuty` 类/方法合并与多接口标法见 **`docs/AI_CLUSTER_JOB_ORCHESTRATION.md` §1.3**。  
   - **复杂日历**：使用框架 **`schedulejob` + `cronExpression`**（及 `@TaskAware` / `@JobMeta` 等既有约定），而非裸 `@Scheduled`。
 
 - 例外：仅允许在**本地调试、单元测试、非交付脚手架**中使用 `@Scheduled`，且不得合并入主分支交付配置。
@@ -365,7 +365,18 @@ public class DemoEntity { ... }
 
 1. 先阅读 **`docs/REDIS_REDISSON_SPRING_DATA.md`**（依赖对齐，治本）与 **`docs/REDIS_TTL_GUIDE.md`**（何时适合用 **`RedisExpireUtil`**、API 对照、推荐处理顺序）。
 2. **推荐**用 **`cn.org.autumn.utils.RedisExpireUtil`** 统一表达 TTL 语义（Lua 或服务端语义），避免各项目复制零散脚本；是否替换存量 `RedisTemplate.expire` / `set(..., TimeUnit)` 由团队按风险与迭代安排决定。
-3. 可选使用 **`scripts/constraints-scan`** 的 **H 组**（全文体检默认包含；仅 Redis 时用 **`scripts/constraints-scan --redis-expire-only`**）做静态检索，辅助代码评审。
+3. 可选使用 **`scripts/constraints-scan`** 的 **H 组**（全文体检默认包含；仅 Redis TTL 时用 **`--redis-expire-only`**）做静态检索，辅助代码评审。
+
+### 15.1 Redis 批量扫描（禁止 `KEYS`）
+
+凡涉及 **按前缀枚举键、清缓存、运维列表、会话批量列举** 等场景：
+
+1. **禁止** **`RedisTemplate.keys` / `StringRedisTemplate.keys`**（底层 **`KEYS`**，大键空间会阻塞 Redis 并拖垮同实例全部连接）。典型事故见 **`docs/REDIS_KEYS_AND_SCAN.md` §2**。
+2. **必须** 使用 **`SCAN` + `Cursor` + 分批 `delete`**，管理类接口设 **扫描上限** 并在 API 中可表达 **`truncated`**；全库键数用 **`DBSIZE`**，内存用 **`INFO memory`**，STRING 长度用 **`STRLEN`**，禁止为估大小对 Session 等键全量 **`GET`**。
+3. 业务读写 **已知 key** 时走 **`RedisKeys`** / **`RedisUtils`** / **`CacheService`**，不要自建扫描工具类。
+4. 合并前在业务仓执行 **`bash scripts/constraints-scan --redis-keys-only`**（**J 组**）；全文体检默认含 **H + J**。
+
+完整禁止/推荐写法与 Checklist：**`docs/REDIS_KEYS_AND_SCAN.md`**。
 
 说明：§15 不否定 Spring 默认写法在「依赖已正确对齐」时的可用性；文档重点是**讲清风险场景**并给出 **Autumn 侧的一致推荐路径**。
 
@@ -386,8 +397,9 @@ public class DemoEntity { ... }
 | 多项目协作与术语 | `docs/AI_GOVERNANCE.md` |
 | 索引与加载组合 | `docs/AI_INDEX.md` |
 | Redis TTL、Redisson、`RedisExpireUtil` 使用说明 | **`docs/REDIS_TTL_GUIDE.md`**、**`docs/REDIS_REDISSON_SPRING_DATA.md`** |
+| Redis 批量扫描、禁止 `KEYS`、推荐 `SCAN` | **`docs/REDIS_KEYS_AND_SCAN.md`**、**§15.1** |
 
 ## 17. 维护约定
 
-- 新增与「实体/库表/Dao/资源/页面」相关的团队规则时，**优先更新本文**，并同步 `docs/AI_INDEX.md`、`docs/AI_GUIDE.md` 摘要；**多库类型、方言、Wrapper/Provider 纪律**以 **`docs/AI_DATABASE.md`** 为落地专篇，变更时同步该文 §2；**老旧项目注解 Dao / 方言 Wrapper 迁移与扫描清单**见 **`docs/AI_DATABASE.md` §8** 与 **`docs/AI_UPGRADE.md` §3.3**；与代码生成流程或三步节奏相关的补充可落在 **`docs/AI_CODEGEN.md`**。**Redis TTL 与 `RedisExpireUtil`** 以 **`docs/REDIS_TTL_GUIDE.md`** 为专篇，变更 API 或扫描脚本时同步 **`autumn-lib`** 与 **`scripts/constraints-scan`**（H 组）。
+- 新增与「实体/库表/Dao/资源/页面」相关的团队规则时，**优先更新本文**，并同步 `docs/AI_INDEX.md`、`docs/AI_GUIDE.md` 摘要；**多库类型、方言、Wrapper/Provider 纪律**以 **`docs/AI_DATABASE.md`** 为落地专篇，变更时同步该文 §2；**老旧项目注解 Dao / 方言 Wrapper 迁移与扫描清单**见 **`docs/AI_DATABASE.md` §8** 与 **`docs/AI_UPGRADE.md` §3.3**；与代码生成流程或三步节奏相关的补充可落在 **`docs/AI_CODEGEN.md`**。**Redis TTL 与 `RedisExpireUtil`** 以 **`docs/REDIS_TTL_GUIDE.md`** 为专篇；**Redis 禁止 KEYS / 推荐 SCAN** 以 **`docs/REDIS_KEYS_AND_SCAN.md`** 为专篇，变更时同步 **`scripts/constraints-scan`**（**H / J 组**）。
 - 若与 `docs/AI_MAP.md` §4「开发决策规则」表述重叠，以**本文 §2～§14**、**§15** 为应用层与数据访问纪律的权威表述；MAP 保留框架能力级硬约束与类索引。**索引与唯一约束叠用纪律（§10.2）** 变更时同步 **`docs/AI_BOOT.md` §3**、**`docs/AI_MAP.md` §2.10.2**。**实体双键（§10.4）** 变更时同步 **`docs/AI_DUAL_KEY.md`**、**`docs/AI_DATABASE.md` §1.1** 与 **`autumn-lib`** 中 **`Uuid` / `Snow` / `AutoIdService`** 说明（若工具 API 有变）。

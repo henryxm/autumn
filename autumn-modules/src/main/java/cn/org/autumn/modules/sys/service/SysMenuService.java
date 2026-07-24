@@ -130,6 +130,7 @@ public class SysMenuService extends ServiceImpl<SysMenuDao, SysMenuEntity> imple
                 {"会话管理", "session.html", NULL, "1", "fa fa-users", "9", getSystemMenuKey("SessionManagement"), getOperationsMenuKey(), "sys_string_session_management"},
                 {"Redis管理", "redis.html", NULL, "1", "fa fa-server", "10", getSystemMenuKey("RedisManagement"), getOperationsMenuKey(), "sys_string_redis_management"},
                 {"线程池管理", "threading.html", NULL, "1", "fa fa-cogs", "11", getSystemMenuKey("ThreadManagement"), getOperationsMenuKey(), "sys_string_thread_management"},
+                {"函数队列管理", "functionqueue.html", NULL, "1", "fa fa-list-alt", "11", getSystemMenuKey("FunctionQueueManagement"), getOperationsMenuKey(), "sys_string_function_queue_management"},
                 {"重建数据表", "reinit.html", NULL, "1", "fa fa-refresh", "12", getSystemMenuKey("ReinitManagement"), getOperationsMenuKey(), "sys_string_reinit_management"},
                 {"字段加密", "fieldencrypt.html", NULL, "1", "fa fa-lock", "13", getSystemMenuKey("FieldEncryptManagement"), getOperationsMenuKey(), "sys_string_field_encrypt_management"},
                 {"人机检测", "shield.html", NULL, "1", "fa fa-user-secret", "14", getSystemMenuKey("ShieldManagement"), getOperationsMenuKey(), "sys_string_shield_management"},

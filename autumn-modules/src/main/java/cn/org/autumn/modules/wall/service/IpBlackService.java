@@ -7,13 +7,16 @@ import cn.org.autumn.modules.wall.entity.IpBlackEntity;
 import cn.org.autumn.modules.wall.entity.RData;
 import cn.org.autumn.site.LoadFactory;
 import cn.org.autumn.site.WallFactory;
+import cn.org.autumn.thread.FunctionQueues;
 import cn.org.autumn.utils.IPUtils;
 import java.util.*;
+
+import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 @Slf4j
@@ -25,23 +28,13 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
     @Autowired
     WallFactory wallFactory;
 
-    @Autowired
-    @Lazy
-    ShieldService shieldService;
-
     /**
      * 一个ip地址统计刷新周期内，ip访问次数大于该值后，把ip地址加入到黑名单
      */
+    @Setter
+    @Getter
     @Value("${autumn.firewall.count:1000}")
     private int firewallCount;
-
-    public int getFirewallCount() {
-        return firewallCount;
-    }
-
-    public void setFirewallCount(int count) {
-        this.firewallCount = count;
-    }
 
     public int getCount() {
         IpBlackEntity black = getByIp("0.0.0.0");
@@ -249,9 +242,7 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
             ipBlackEntity.setTag(tag);
             ipBlackEntity.setCreateTime(new Date());
             saveOrUpdate(ipBlackEntity);
-            if (!ipBlackList.contains(ip)) {
-                ipBlackList.add(ip);
-            }
+            ipBlackList.add(ip);
             return true;
         } catch (Exception e) {
             return false;
@@ -277,9 +268,7 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
 
     public boolean hasIp(String ip) {
         Integer integer = baseMapper.hasIp(ip);
-        if (null != integer && integer > 0)
-            return true;
-        return false;
+        return null != integer && integer > 0;
     }
 
     public IpBlackEntity getByIp(String ip) {
@@ -312,7 +301,8 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
 
     @Override
     public void onOneMinute() {
-        clear();
+        // LoopJob 一分钟回调只做轻量投递；DB 刷新与黑名单加载在函数队列串行执行
+        FunctionQueues.offer("IpBlackService.clear", this::clear);
     }
 
     @Override

@@ -2,6 +2,8 @@
 
 本页面向**日常业务开发**：说明 **`RedisExpireUtil`** 要解决什么问题、**在什么情况下值得你改用**它，以及如何把 **Maven 依赖对齐**（治本）和 **Lua 封装调用**（常见场景下的稳妥写法）结合起来。
 
+> **批量枚举键 / 禁止 `KEYS`**（运维页大库、`redisTemplate.keys`）见 **`docs/REDIS_KEYS_AND_SCAN.md`**，与本文互补。
+
 **文档定位**：本文 **`docs/REDIS_TTL_GUIDE.md`** 为正式文件名。旧链接 **`docs/REDIS_EXPIRE_MANDATORY.md`** 仅保留一页重定向，避免历史引用失效。
 
 ---

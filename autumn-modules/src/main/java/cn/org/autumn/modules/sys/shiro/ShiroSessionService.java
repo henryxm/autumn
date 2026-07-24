@@ -15,7 +15,9 @@ import org.apache.shiro.mgt.SecurityManager;
 import org.apache.shiro.web.session.mgt.DefaultWebSessionManager;
 import org.springframework.aop.framework.Advised;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.stereotype.Service;
 
 import java.io.Serializable;
@@ -32,6 +34,10 @@ import static org.apache.shiro.subject.support.DefaultSubjectContext.PRINCIPALS_
 @Slf4j
 @Service
 public class ShiroSessionService {
+
+    /** 会话 SCAN 上限（管理页列举）；强制下线标记通常很少，单独用更高上限 */
+    private static final int MAX_SESSION_SCAN = 2_000;
+    private static final int MAX_FORCE_LOGOUT_SCAN = 20_000;
 
     @Autowired(required = false)
     private RedisTemplate redisTemplate;
@@ -132,27 +138,24 @@ public class ShiroSessionService {
     private void addSessionsFromRedis(String userUuid, Set<Serializable> sessionIds) {
         try {
             String sessionPrefix = RedisKeys.getSessionPrefix(sysConfigService.getNameSpace());
-            Set<String> keys = redisTemplate.keys(sessionPrefix + "*");
-            if (!keys.isEmpty()) {
-                for (String key : keys) {
-                    try {
-                        Session session = (Session) redisTemplate.opsForValue().get(key);
-                        if (session != null) {
-                            PrincipalCollection principals = (PrincipalCollection) session.getAttribute(PRINCIPALS_SESSION_KEY);
-                            if (principals != null) {
-                                Object primaryPrincipal = principals.getPrimaryPrincipal();
-                                if (primaryPrincipal instanceof SysUserEntity) {
-                                    SysUserEntity user = (SysUserEntity) primaryPrincipal;
-                                    if (userUuid.equals(user.getUuid())) {
-                                        sessionIds.add(session.getId());
-                                    }
+            for (String key : scanKeys(sessionPrefix + "*", MAX_SESSION_SCAN)) {
+                try {
+                    Session session = (Session) redisTemplate.opsForValue().get(key);
+                    if (session != null) {
+                        PrincipalCollection principals = (PrincipalCollection) session.getAttribute(PRINCIPALS_SESSION_KEY);
+                        if (principals != null) {
+                            Object primaryPrincipal = principals.getPrimaryPrincipal();
+                            if (primaryPrincipal instanceof SysUserEntity) {
+                                SysUserEntity user = (SysUserEntity) primaryPrincipal;
+                                if (userUuid.equals(user.getUuid())) {
+                                    sessionIds.add(session.getId());
                                 }
                             }
                         }
-                    } catch (Exception e) {
-                        if (log.isDebugEnabled()) {
-                            log.debug("解析失败:{}, 异常:{}", key, e.getMessage());
-                        }
+                    }
+                } catch (Exception e) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("解析失败:{}, 异常:{}", key, e.getMessage());
                     }
                 }
             }
@@ -164,20 +167,10 @@ public class ShiroSessionService {
     }
 
     /**
-     * 检查是否启用Redis
+     * 检查是否启用Redis（有模板即可，禁止用 KEYS 探测）
      */
     private boolean isRedisEnabled() {
-        if (redisTemplate == null) {
-            return false;
-        }
-        try {
-            // 尝试获取Redis中是否有数据，如果有则说明启用了Redis
-            String sessionPrefix = RedisKeys.getSessionPrefix(sysConfigService.getNameSpace());
-            Set<String> keys = (Set<String>) redisTemplate.keys(sessionPrefix + "*");
-            return !keys.isEmpty();
-        } catch (Exception e) {
-            return false;
-        }
+        return redisTemplate != null;
     }
 
     /**
@@ -197,16 +190,13 @@ public class ShiroSessionService {
             }
             if (isRedisEnabled()) {
                 String sessionPrefix = RedisKeys.getSessionPrefix(sysConfigService.getNameSpace());
-                Set<String> keys = redisTemplate.keys(sessionPrefix + "*");
-                if (!keys.isEmpty()) {
-                    for (String key : keys) {
-                        try {
-                            Session s = (Session) redisTemplate.opsForValue().get(key);
-                            if (s != null && s.getId() != null && !map.containsKey(s.getId()))
-                                map.put(s.getId(), s);
-                        } catch (Exception e) {
-                            log.warn("解析失败:{}, 错误:{}", key, e.getMessage());
-                        }
+                for (String key : scanKeys(sessionPrefix + "*", MAX_SESSION_SCAN)) {
+                    try {
+                        Session s = (Session) redisTemplate.opsForValue().get(key);
+                        if (s != null && s.getId() != null && !map.containsKey(s.getId()))
+                            map.put(s.getId(), s);
+                    } catch (Exception e) {
+                        log.warn("解析失败:{}, 错误:{}", key, e.getMessage());
                     }
                 }
             }
@@ -257,8 +247,7 @@ public class ShiroSessionService {
         }
         try {
             String prefix = RedisKeys.getForceLogoutPrefix(sysConfigService.getNameSpace());
-            Set<String> keys = redisTemplate.keys(prefix + "*");
-            for (String k : keys) {
+            for (String k : scanKeys(prefix + "*", MAX_FORCE_LOGOUT_SCAN)) {
                 String suf = k.length() > prefix.length() ? k.substring(prefix.length()) : "";
                 if (!suf.isEmpty()) set.add(suf);
             }
@@ -266,6 +255,28 @@ public class ShiroSessionService {
             log.warn("getForceLogoutUserUuids: {}", e.getMessage());
         }
         return set;
+    }
+
+    /**
+     * SCAN 收集匹配键；禁止 KEYS。
+     */
+    private List<String> scanKeys(String pattern, int max) {
+        List<String> keys = new ArrayList<>();
+        if (redisTemplate == null || pattern == null) {
+            return keys;
+        }
+        ScanOptions options = ScanOptions.scanOptions().match(pattern).count(200).build();
+        try (Cursor<String> cursor = redisTemplate.scan(options)) {
+            while (cursor.hasNext() && keys.size() < max) {
+                keys.add(cursor.next());
+            }
+            if (cursor.hasNext()) {
+                log.warn("Redis SCAN truncated at {}, pattern={}", max, pattern);
+            }
+        } catch (Exception e) {
+            log.warn("Redis SCAN failed, pattern={}, cause={}", pattern, e.getMessage());
+        }
+        return keys;
     }
 
     /**
