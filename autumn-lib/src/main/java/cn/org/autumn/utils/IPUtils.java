@@ -1,10 +1,12 @@
 package cn.org.autumn.utils;
 
+import cn.org.autumn.config.Config;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import jakarta.servlet.http.HttpServletRequest;
+
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.UnknownHostException;
@@ -19,6 +21,15 @@ import java.util.regex.Pattern;
 public class IPUtils {
     private final static String IPV6_REGEX = "^\\s*((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)(\\.(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)(\\.(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)(\\.(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)(\\.(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)(\\.(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)(\\.(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)(\\.(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)){3}))|:)))(%.+)?\\s*$";
     private static final Logger logger = LoggerFactory.getLogger(IPUtils.class);
+
+    /**
+     * Docker / 环境变量标准键，如 {@code HOST_LAN_IP=192.168.0.155}
+     */
+    public static final String HOST_LAN_IP_ENV = "HOST_LAN_IP";
+    /**
+     * JVM / Spring / compose 点分键，如 {@code host.lan.ip=192.168.0.155}
+     */
+    public static final String HOST_LAN_IP_PROP = "host.lan.ip";
 
     //判断是否字符串是ipv6
     public static boolean isIPV6(String ip) {
@@ -103,8 +114,48 @@ public class IPUtils {
         return (ipAddr & mask) == (cidrIpAddr & mask);
     }
 
+    /**
+     * 获取宿主机局域网 IP（Docker 等场景由外部手动指定，避免探测到容器网桥 IP）。
+     * <p>
+     * 读取顺序（经 {@link Config#getEnv}）：环境变量 → 系统属性 → Spring Environment（含 yml）。
+     * 优先 {@link #HOST_LAN_IP_ENV}，其次 {@link #HOST_LAN_IP_PROP}。
+     * <p>
+     * Docker Compose 示例：
+     * <pre>
+     *   environment:
+     *     - HOST_LAN_IP=192.168.0.155
+     *     # 或
+     *     - host.lan.ip=192.168.0.155
+     * </pre>
+     * application.yml / properties：{@code host.lan.ip: 192.168.0.155}
+     *
+     * @return 有效 IPv4；未配置或非法时返回空字符串
+     */
+    public static String getHostLanIp() {
+        String ip = Config.getEnv(HOST_LAN_IP_ENV);
+        if (StringUtils.isBlank(ip)) {
+            ip = Config.getEnv(HOST_LAN_IP_PROP);
+        }
+        if (StringUtils.isBlank(ip)) {
+            return "";
+        }
+        ip = ip.trim();
+        if (!isIp(ip)) {
+            logger.warn("Invalid HOST_LAN_IP config: {}", ip);
+            return "";
+        }
+        return ip;
+    }
+
+    /**
+     * 本机对外 IP：优先 {@link #getHostLanIp()}，否则网卡探测，再退回 127.0.0.1 / localhost。
+     */
     public static String getIp() {
         try {
+            String configured = getHostLanIp();
+            if (StringUtils.isNotBlank(configured)) {
+                return configured;
+            }
             String ip = null;
             InetAddress address = getLocalHostLANAddress();
             if (null == address) {
