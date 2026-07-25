@@ -13,7 +13,6 @@ import cn.org.autumn.modules.bot.service.RobotService;
 import cn.org.autumn.modules.bot.service.RobotTokenService;
 import cn.org.autumn.modules.bot.support.RobotOpenApiLogSupport;
 import cn.org.autumn.modules.sys.entity.User;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -27,7 +26,6 @@ import java.util.stream.Collectors;
 /**
  * 机器人管理开放 API：统一 {@link Request} / {@link Response}，无 Session，用户令牌鉴权。
  */
-@Slf4j
 @RestController
 @RequestMapping("/bot/api/v1")
 public class RobotApiController {
@@ -52,7 +50,7 @@ public class RobotApiController {
             List<User> users = robots == null ? Collections.emptyList() : robots.stream().map(robotService::toUser).collect(Collectors.toList());
             return Response.ok(RobotListResult.of(users));
         } catch (Exception e) {
-            RobotOpenApiLogSupport.logFailure(log, "机器人列表", e, servlet);
+            RobotOpenApiLogSupport.logFailure("机器人列表", e, servlet);
             return Response.error(e);
         }
     }
@@ -63,7 +61,7 @@ public class RobotApiController {
         try {
             return Response.ok(robotService.getForOwner(requireUuid(request), requireOwner(context)));
         } catch (Exception e) {
-            RobotOpenApiLogSupport.logFailure(log, "查询机器人", e, servlet);
+            RobotOpenApiLogSupport.logFailure("查询机器人", e, servlet);
             return Response.error(e);
         }
     }
@@ -83,7 +81,7 @@ public class RobotApiController {
             RobotCreateResult result = robotService.create(owner, name, description, icon, hash, tokenExpireDays, access);
             return Response.ok(result);
         } catch (Exception e) {
-            RobotOpenApiLogSupport.logFailure(log, "创建机器人", e, servlet);
+            RobotOpenApiLogSupport.logFailure("创建机器人", e, servlet);
             return Response.error(e);
         }
     }
@@ -99,7 +97,7 @@ public class RobotApiController {
             robotService.updateProfile(data.getUuid(), requireOwner(context), data.getName(), data.getDescription(), data.getIcon(), data.getHash(), data.getAccess(), data.getBlack());
             return Response.ok();
         } catch (Exception e) {
-            RobotOpenApiLogSupport.logFailure(log, "更新机器人", e, servlet);
+            RobotOpenApiLogSupport.logFailure("更新机器人", e, servlet);
             return Response.error(e);
         }
     }
@@ -111,7 +109,7 @@ public class RobotApiController {
             robotService.disable(requireUuid(request), requireOwner(context));
             return Response.ok();
         } catch (Exception e) {
-            RobotOpenApiLogSupport.logFailure(log, "停用机器人", e, servlet);
+            RobotOpenApiLogSupport.logFailure("停用机器人", e, servlet);
             return Response.error(e);
         }
     }
@@ -123,7 +121,7 @@ public class RobotApiController {
             robotService.enable(requireUuid(request), requireOwner(context));
             return Response.ok();
         } catch (Exception e) {
-            RobotOpenApiLogSupport.logFailure(log, "启用机器人", e, servlet);
+            RobotOpenApiLogSupport.logFailure("启用机器人", e, servlet);
             return Response.error(e);
         }
     }
@@ -135,7 +133,7 @@ public class RobotApiController {
             robotService.delete(requireUuid(request), requireOwner(context));
             return Response.ok();
         } catch (Exception e) {
-            RobotOpenApiLogSupport.logFailure(log, "删除机器人", e, servlet);
+            RobotOpenApiLogSupport.logFailure("删除机器人", e, servlet);
             return Response.error(e);
         }
     }
@@ -148,7 +146,7 @@ public class RobotApiController {
             robotService.destroyByAdministrator(requireUuid(request));
             return Response.ok();
         } catch (Exception e) {
-            RobotOpenApiLogSupport.logFailure(log, "销毁机器人", e, servlet);
+            RobotOpenApiLogSupport.logFailure("销毁机器人", e, servlet);
             return Response.error(e);
         }
     }
@@ -159,7 +157,7 @@ public class RobotApiController {
         try {
             return Response.ok(RobotHookListResult.of(robotHookService.listViewsForOwner(requireUuid(request), requireOwner(context))));
         } catch (Exception e) {
-            RobotOpenApiLogSupport.logFailure(log, "Hook列表", e, servlet);
+            RobotOpenApiLogSupport.logFailure("Hook列表", e, servlet);
             return Response.error(e);
         }
     }
@@ -174,7 +172,7 @@ public class RobotApiController {
             RobotHookView hook = robotHookService.create(data.getRobot(), requireOwner(context), data.getName(), data.getCallbackUrl(), data.getSecret(), data.getEvents(), data.getDescription());
             return Response.ok(hook);
         } catch (Exception e) {
-            RobotOpenApiLogSupport.logFailure(log, "创建Hook", e, servlet);
+            RobotOpenApiLogSupport.logFailure("创建Hook", e, servlet);
             return Response.error(e);
         }
     }
@@ -189,7 +187,7 @@ public class RobotApiController {
             RobotHookView hook = robotHookService.update(data.getUuid(), requireOwner(context), data.getName(), data.getCallbackUrl(), data.getSecret(), data.getEvents(), data.getDescription());
             return Response.ok(hook);
         } catch (Exception e) {
-            RobotOpenApiLogSupport.logFailure(log, "更新Hook", e, servlet);
+            RobotOpenApiLogSupport.logFailure("更新Hook", e, servlet);
             return Response.error(e);
         }
     }
@@ -201,7 +199,7 @@ public class RobotApiController {
             robotHookService.delete(requireHookUuid(request), requireOwner(context));
             return Response.ok();
         } catch (Exception e) {
-            RobotOpenApiLogSupport.logFailure(log, "删除Hook", e, servlet);
+            RobotOpenApiLogSupport.logFailure("删除Hook", e, servlet);
             return Response.error(e);
         }
     }
@@ -213,7 +211,7 @@ public class RobotApiController {
             robotHookService.disable(requireHookUuid(request), requireOwner(context));
             return Response.ok();
         } catch (Exception e) {
-            RobotOpenApiLogSupport.logFailure(log, "停用Hook", e, servlet);
+            RobotOpenApiLogSupport.logFailure("停用Hook", e, servlet);
             return Response.error(e);
         }
     }
@@ -225,7 +223,7 @@ public class RobotApiController {
             robotHookService.enable(requireHookUuid(request), requireOwner(context));
             return Response.ok();
         } catch (Exception e) {
-            RobotOpenApiLogSupport.logFailure(log, "启用Hook", e, servlet);
+            RobotOpenApiLogSupport.logFailure("启用Hook", e, servlet);
             return Response.error(e);
         }
     }
@@ -237,7 +235,7 @@ public class RobotApiController {
             String userUuid = request == null || request.getData() == null ? null : request.getData().getUuid();
             return Response.ok(robotConfigService.getEffective(userUuid, requireOperator(context)));
         } catch (Exception e) {
-            RobotOpenApiLogSupport.logFailure(log, "查询配置", e, servlet);
+            RobotOpenApiLogSupport.logFailure("查询配置", e, servlet);
             return Response.error(e);
         }
     }
@@ -253,7 +251,7 @@ public class RobotApiController {
             RobotConfigResult result = robotConfigService.save(requireOperator(context), data.getUuid(), data.getMaxRobots(), data.getMaxTokens(), data.getMaxHooks());
             return Response.ok(result);
         } catch (Exception e) {
-            RobotOpenApiLogSupport.logFailure(log, "保存配置", e, servlet);
+            RobotOpenApiLogSupport.logFailure("保存配置", e, servlet);
             return Response.error(e);
         }
     }
@@ -264,7 +262,7 @@ public class RobotApiController {
         try {
             return Response.ok(robotTokenService.listActiveResult(requireUuid(request), requireOwner(context)));
         } catch (Exception e) {
-            RobotOpenApiLogSupport.logFailure(log, "令牌列表", e, servlet);
+            RobotOpenApiLogSupport.logFailure("令牌列表", e, servlet);
             return Response.error(e);
         }
     }
@@ -276,7 +274,7 @@ public class RobotApiController {
             robotTokenService.revoke(requireTokenUuid(request), requireOwner(context));
             return Response.ok();
         } catch (Exception e) {
-            RobotOpenApiLogSupport.logFailure(log, "作废令牌", e, servlet);
+            RobotOpenApiLogSupport.logFailure("作废令牌", e, servlet);
             return Response.error(e);
         }
     }
@@ -293,7 +291,7 @@ public class RobotApiController {
                 return Response.error("令牌生成失败");
             return Response.ok(RobotTokenResult.of(token));
         } catch (Exception e) {
-            RobotOpenApiLogSupport.logFailure(log, "创建令牌", e, servlet);
+            RobotOpenApiLogSupport.logFailure("创建令牌", e, servlet);
             return Response.error(e);
         }
     }
@@ -310,7 +308,7 @@ public class RobotApiController {
                 return Response.error("令牌生成失败");
             return Response.ok(RobotTokenResult.of(token));
         } catch (Exception e) {
-            RobotOpenApiLogSupport.logFailure(log, "轮换令牌", e, servlet);
+            RobotOpenApiLogSupport.logFailure("轮换令牌", e, servlet);
             return Response.error(e);
         }
     }

@@ -9,7 +9,6 @@ import cn.org.autumn.modules.bot.dto.RobotMessagePushRequest;
 import cn.org.autumn.modules.bot.dto.RobotMessagePushResult;
 import cn.org.autumn.modules.bot.service.RobotMessageService;
 import cn.org.autumn.modules.bot.support.RobotOpenApiLogSupport;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -23,7 +22,6 @@ import jakarta.validation.Valid;
 /**
  * 机器人入站 API：使用 {@code rbt_} 令牌调用（与 {@link RobotApiController} 用户管理 API 分离）。
  */
-@Slf4j
 @RestController
 @RequestMapping("/bot/api/v1")
 public class RobotInboundApiController {
@@ -48,7 +46,7 @@ public class RobotInboundApiController {
                     requireRobot(context), requireOwner(context), type, payload, idempotencyKey);
             return Response.ok(result);
         } catch (Exception e) {
-            RobotOpenApiLogSupport.logFailure(log, "机器人消息推送", e, servlet);
+            RobotOpenApiLogSupport.logFailure("机器人消息推送", e, servlet);
             return Response.error(e);
         }
     }

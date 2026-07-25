@@ -21,6 +21,8 @@ import org.apache.commons.lang3.StringUtils;
  * {@code oncePerPeriod} 对 LOCAL 忽略。
  * 业务始终在<strong>持锁线程</strong>内同步执行（{@code async} 仅把整段抢锁+业务丢到线程池，不跨线程持锁）。
  * 角色闸委托 {@link ServerRoleGate}（空 roles / ALL = 全开）。
+ * {@link JobDuty#SINGLETON}/{@link JobDuty#SEQUENTIAL} 在 LOCAL 专岗下与 LoopJob 注解路径一致：经
+ * {@link ServerRoleGate#allowsClusterJobDuty} 跳过（含程序化 {@link #run}）。
  */
 @Slf4j
 public final class JobDutySupport {
@@ -53,6 +55,13 @@ public final class JobDutySupport {
         String lockKey = StringUtils.isNotBlank(lockOverride) ? lockOverride.trim() : "autumn:job:" + jobId;
         if (d == JobDuty.LOCAL) {
             JobLocalLocks.runWithTryLock(localScopedKey(lockKey), action);
+            return;
+        }
+        // 与 LoopJob 注解路径一致：LOCAL 专岗跳过集群互斥 / 轮转（含程序化 JobDutySupport.run）
+        if (!ServerRoleGate.allowsClusterJobDuty(d)) {
+            if (log.isDebugEnabled()) {
+                log.debug("JobDuty {} skip: LOCAL scoped jobId={}", d, jobId);
+            }
             return;
         }
         DistributedLockService locks = bean(DistributedLockService.class);

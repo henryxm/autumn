@@ -35,6 +35,8 @@ public class LocalCacheCleanupJob implements LoopJob.OneMinute { ... }
 
 仅边缘执行时再加 `roles = {"LOCAL"}`。
 
+**程序化 `JobDutySupport.run(SINGLETON|SEQUENTIAL, …)`** 与注解路径一致：LOCAL 专岗经 `ServerRoleGate.allowsClusterJobDuty` **跳过**（避免混合任务外层 `duty=LOCAL`/`ALL` 时边缘仍抢到集群锁）。
+
 ### 1.0 同步 / 异步与持锁
 
 - `@JobMeta(async=true)` / `delay>0`：把**整段**（周期栅栏 + 抢锁 + 业务）丢到 `TagTaskExecutor`，不堵调度线程。
