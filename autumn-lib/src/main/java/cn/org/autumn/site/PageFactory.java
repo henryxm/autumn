@@ -1,10 +1,9 @@
 package cn.org.autumn.site;
 
+import lombok.extern.slf4j.Slf4j;
 import cn.org.autumn.config.PageHandler;
 import cn.org.autumn.utils.WebPathUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.ui.Model;
@@ -16,10 +15,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @Component
 public class PageFactory extends Factory {
-    static final Logger log = LoggerFactory.getLogger(PageFactory.class);
-
     @Autowired
     ClearFactory clearFactory;
 

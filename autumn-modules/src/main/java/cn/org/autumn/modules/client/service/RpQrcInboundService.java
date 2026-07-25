@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.client.service;
 
+import lombok.extern.slf4j.Slf4j;
 import cn.org.autumn.modules.client.model.RpQrcPendingSession;
 import cn.org.autumn.modules.qrc.service.QrcWebhookDeliveryService;
 import com.alibaba.fastjson2.JSON;
@@ -7,15 +8,12 @@ import com.alibaba.fastjson2.JSONObject;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+@Slf4j
 @Service
 public class RpQrcInboundService {
-
-    private static final Logger log = LoggerFactory.getLogger(RpQrcInboundService.class);
 
     public static final String EVENT_SCANNED = QrcWebhookDeliveryService.EVENT_SCANNED;
     public static final String EVENT_AUTHORIZED = QrcWebhookDeliveryService.EVENT_AUTHORIZED;

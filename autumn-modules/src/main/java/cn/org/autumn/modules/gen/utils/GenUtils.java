@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.gen.utils;
 
+import lombok.extern.slf4j.Slf4j;
 import cn.org.autumn.modules.gen.entity.GenTypeWrapper;
 import cn.org.autumn.table.data.TableInfo;
 import cn.org.autumn.table.utils.HumpConvert;
@@ -8,8 +9,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.velocity.Template;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.Velocity;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.StringWriter;
@@ -20,9 +19,8 @@ import java.util.zip.ZipOutputStream;
 /**
  * Coding generator tool
  */
+@Slf4j
 public class GenUtils {
-
-    private static final Logger log = LoggerFactory.getLogger(GenUtils.class);
 
     public static List<String> getTemplates() {
         List<String> templates = new ArrayList<>();

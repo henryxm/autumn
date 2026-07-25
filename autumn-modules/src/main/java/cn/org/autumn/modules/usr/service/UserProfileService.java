@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.usr.service;
 
+import lombok.extern.slf4j.Slf4j;
 import cn.org.autumn.base.ModuleService;
 import cn.org.autumn.database.CrudGuard;
 import cn.org.autumn.modules.job.task.LoopJob;
@@ -16,8 +17,6 @@ import cn.org.autumn.utils.IPUtils;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import cn.org.autumn.utils.Uuid;
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -26,10 +25,9 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import static cn.org.autumn.utils.Uuid.uuid;
 
+@Slf4j
 @Service
 public class UserProfileService extends ModuleService<UserProfileDao, UserProfileEntity> implements LoopJob.TenSecond, LoopJob.OneMinute {
-
-    Logger log = LoggerFactory.getLogger(getClass());
 
     /** 单次函数队列任务最多处理条数，避免长时间占用全局串行槽 */
     private static final int SYNC_PROFILE_BATCH = 50;

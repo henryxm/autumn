@@ -7,7 +7,7 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
 
 /**
- * Registry 心跳（仅当 {@code autumn.node.registry=true} 时实质上报）。
+ * Registry 心跳（启用条件：显式 {@code autumn.node.registry}，或未配置时跟随 {@code autumn.redis.open}）。
  */
 @Component
 @JobMeta(name = "节点登记心跳", duty = cn.org.autumn.job.JobDuty.ALL, skipIfRunning = true)

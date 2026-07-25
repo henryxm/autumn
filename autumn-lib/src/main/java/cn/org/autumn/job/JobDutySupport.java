@@ -1,6 +1,7 @@
 package cn.org.autumn.job;
 
 import cn.org.autumn.config.Config;
+import cn.org.autumn.node.NodeProfile;
 import cn.org.autumn.node.ProfileService;
 import cn.org.autumn.node.role.ServerRoleGate;
 import cn.org.autumn.service.DistributedLockService;
@@ -12,10 +13,12 @@ import org.apache.commons.lang3.StringUtils;
 /**
  * LoopJob 职责门禁与锁包裹（完全兼容：{@link JobDuty#ALL} 无框架锁）。
  * <p>
+ * {@link JobDuty#LOCAL}：进程内本地锁（节点作用域键），不参与集群互斥。
  * {@link JobDuty#SINGLETON}/{@link JobDuty#SEQUENTIAL} 在无法保证跨节点互斥时 fail-closed（跳过），
  * 不走 {@link DistributedLockService} 通用路径的「本地降级执行」。
  * <p>
  * SINGLETON 可选 {@code oncePerPeriod}：先 Redis TIME 分桶 SETNX，再互斥锁；同逻辑周期只跑一台。
+ * {@code oncePerPeriod} 对 LOCAL 忽略。
  * 业务始终在<strong>持锁线程</strong>内同步执行（{@code async} 仅把整段抢锁+业务丢到线程池，不跨线程持锁）。
  * 角色闸委托 {@link ServerRoleGate}（空 roles / ALL = 全开）。
  */
@@ -35,7 +38,7 @@ public final class JobDutySupport {
     }
 
     /**
-     * @param oncePerPeriod 仅对 {@link JobDuty#SINGLETON} 生效；为 true 时先占周期桶再抢锁
+     * @param oncePerPeriod 仅对 {@link JobDuty#SINGLETON} 生效；为 true 时先占周期桶再抢锁；对 LOCAL 忽略
      * @param periodIntervalMs LoopJob 分类间隔（毫秒），用于分桶；≤0 时栅栏退化为单键
      */
     public static void run(JobDuty duty, String jobId, String lockOverride, boolean oncePerPeriod, long periodIntervalMs, Runnable action) throws Exception {
@@ -48,6 +51,10 @@ public final class JobDutySupport {
             return;
         }
         String lockKey = StringUtils.isNotBlank(lockOverride) ? lockOverride.trim() : "autumn:job:" + jobId;
+        if (d == JobDuty.LOCAL) {
+            JobLocalLocks.runWithTryLock(localScopedKey(lockKey), action);
+            return;
+        }
         DistributedLockService locks = bean(DistributedLockService.class);
         if (d == JobDuty.SINGLETON) {
             runSingleton(locks, lockKey, oncePerPeriod, periodIntervalMs, action);
@@ -58,6 +65,31 @@ public final class JobDutySupport {
             return;
         }
         action.run();
+    }
+
+    /** 节点作用域本地锁键：{@code local:{nodeUuid}:{lockKey}}。 */
+    static String localScopedKey(String lockKey) {
+        String uuid = nodeUuid();
+        String base = StringUtils.isNotBlank(lockKey) ? lockKey.trim() : "autumn:job";
+        return "local:" + uuid + ":" + base;
+    }
+
+    private static String nodeUuid() {
+        NodeProfile profile = bean(NodeProfile.class);
+        if (profile != null) {
+            String peek = profile.peekUuid();
+            if (StringUtils.isNotBlank(peek)) {
+                return peek.trim();
+            }
+        }
+        ProfileService svc = bean(ProfileService.class);
+        if (svc != null) {
+            String peek = svc.peekUuid();
+            if (StringUtils.isNotBlank(peek)) {
+                return peek.trim();
+            }
+        }
+        return "unknown";
     }
 
     /**

@@ -1,5 +1,6 @@
 package cn.org.autumn.table.dao.postgresql;
 
+import lombok.extern.slf4j.Slf4j;
 import cn.org.autumn.database.CrudGuard;
 import cn.org.autumn.table.data.ColumnInfo;
 import cn.org.autumn.table.data.IndexInfo;
@@ -11,8 +12,6 @@ import cn.org.autumn.table.relational.model.TableMeta;
 import cn.org.autumn.table.platform.RelationalTableOperations;
 import cn.org.autumn.table.platform.jdbc.RelationalDdlStatementSplitter;
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -30,10 +29,9 @@ import java.util.Map;
 /**
  * PostgreSQL：元数据走 {@link PostgresTableDao}；DDL 多语句拆分执行（分号不在单引号字符串内截断，见 {@link RelationalDdlStatementSplitter}）。
  */
+@Slf4j
 @Component
 public class PostgresRelationalTableOperations implements RelationalTableOperations {
-
-    private static final Logger log = LoggerFactory.getLogger(PostgresRelationalTableOperations.class);
 
     @Autowired
     private PostgresTableDao postgresTableDao;

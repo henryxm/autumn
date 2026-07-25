@@ -1,5 +1,6 @@
 package cn.org.autumn.config;
 
+import lombok.extern.slf4j.Slf4j;
 import cn.org.autumn.install.InstallMode;
 import cn.org.autumn.site.InitFactory;
 import cn.org.autumn.site.LoadFactory;
@@ -7,8 +8,6 @@ import cn.org.autumn.site.RefreshFactory;
 import cn.org.autumn.site.UpgradeFactory;
 import cn.org.autumn.utils.IPUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -18,10 +17,9 @@ import org.springframework.stereotype.Component;
 /**
  * @author henryxm
  */
+@Slf4j
 @Component
 public class PostApplicationRunner implements ApplicationRunner {
-
-    private static final Logger log = LoggerFactory.getLogger(PostApplicationRunner.class);
 
     @Autowired
     LoadFactory loadFactory;

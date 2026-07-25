@@ -13,7 +13,7 @@ description: >-
   Read docs/AI_CODEGEN.md, docs/AI_DATABASE.md, docs/AI_DUAL_KEY.md. Bot/robot: read docs/AI_ROBOT.md + docs/AI_ROBOT_API.md (rbt_, Hook, message/push, cn.org.autumn.modules.bot); web 集成测试见 web/docs/INTEGRATION_TEST.md（基类 integration.base.IntegrationTest）。
   scripts/constraints-scan is optional: run only when the user explicitly asks for a constraint audit, CI-style check, or phrases like 约束扫描/规范体检; see skill section "约束扫描（按需）".
   OAuth/OPL/OPC: read docs/AI_AUTH_LOGIN_MODES.md first; classic RP bind client_web_oauth_bind (WebOauthBindService); OPC bind opc_connect_bind (ConnectBindService); callback uses establishSession not login(upstream).
-  Triggers on cn.org.autumn 3.0.0, Spring Boot 3.5, JDK 17, ModuleService, EncryptModuleService, FieldEncrypt, isEncryptCacheField, encryptCache, RuntimeSql, PageAware, SpringDoc, bot, robot, rbt_, RobotHook, RobotMessageSubscriber, message/push, 字段加密, field encrypt, 加密缓存, OAuth, openId, unionId, WebOauthBind, ConnectBind, client_id, app_id, 授权登录, 账号绑定, uuid绑定, 站点门户, SITE_PORTAL_CONFIG, SiteLegalLinksHandler, FunctionQueue, FunctionQueues, 函数队列, LoopJob, TagTaskExecutor, JobPhaseGate, redisTemplate.keys, KEYS, SCAN, redis.html, Redis timeout, QueryTimeoutException, 大键空间, redis运维.
+  Triggers on cn.org.autumn 3.0.0, Spring Boot 3.5, JDK 17, ModuleService, EncryptModuleService, FieldEncrypt, isEncryptCacheField, encryptCache, RuntimeSql, PageAware, SpringDoc, bot, robot, rbt_, RobotHook, RobotMessageSubscriber, message/push, 字段加密, field encrypt, 加密缓存, OAuth, openId, unionId, WebOauthBind, ConnectBind, client_id, app_id, 授权登录, 账号绑定, uuid绑定, 站点门户, SITE_PORTAL_CONFIG, SiteLegalLinksHandler, FunctionQueue, FunctionQueues, 函数队列, LoopJob, JobDuty, JobDuty.LOCAL, ServerRole, ServerRole.LOCAL, Registry, cluster.html, 集群节点, 边缘节点, node-profile, autumn.node.registry, TagTaskExecutor, JobPhaseGate, redisTemplate.keys, KEYS, SCAN, redis.html, Redis timeout, QueryTimeoutException, 大键空间, redis运维.
 ---
 
 # Autumn 3.x 框架开发（3.0.0 / 分支 3.0.0）
@@ -70,6 +70,21 @@ description: >-
 涉及 **`asyncTaskExecutor`、内存待处理队列、本机 DISPATCHING/IDLE 闸门** 时，必读 **`docs/AI_ASYNC_TASK.md`**（勿与 **`BaseQueueService`** 持久化队列混淆）。
 
 涉及 **`FunctionQueue` / `FunctionQueues`、≤1 分钟 LoopJob 写库迁出、函数队列运维页** 时，必读 **`docs/AI_FUNCTION_QUEUE.md`**（与实现对齐；勿与 `TagTaskExecutor` / `BaseQueueService` 混用语义）。
+
+涉及 **集群节点 / JobDuty.LOCAL / ServerRole.LOCAL / Registry / `cluster.html` / 边缘专岗** 时，必读 **`docs/AI_CLUSTER_NODE.md`**（用法与完整性）；细则见 `AI_NODE_PROFILE` / `AI_SERVER_ROLE` / `AI_CLUSTER_JOB_ORCHESTRATION`。摘要见下文 **集群节点**。
+
+## 集群节点（JobDuty.LOCAL / ServerRole.LOCAL / Registry）
+
+详情只维护在 **`docs/AI_CLUSTER_NODE.md`**。Agent 改相关代码时遵守：
+
+| 要点 | 约定 |
+|------|------|
+| 双轴 | 任务用 `JobDuty`（含 **LOCAL** 本机锁）；节点用 `ServerRole`（含 **LOCAL**） |
+| LOCAL 专岗 | 含 LOCAL、无 JOB、非 unrestricted → 跳过 SINGLETON/SEQUENTIAL；宽松下 ALL 仍跑 |
+| Registry | 未配 `autumn.node.registry` 时跟随 `autumn.redis.open`；无 Redis/Redisson 则 inactive + 一次 info，**不阻断启动** |
+| 写盘 | 只覆盖框架键；扩展顶层键保留；`labels` patch 合并 |
+| 管理 | `cluster.html` + `/sys/node/*`；JobDuty 运维用 `loopjob.html` |
+| 禁止 | LOCAL 做成集群 Redis 锁；远程 `reset-uuid`/`home`；无 Redis 时臆造集群编排 |
 
 **注意**：文档或示例若与 **Boot 3 / Jakarta / MP3** 或本分支 **`pom.xml` / `application.yml`** 不一致，以**仓库当前实现**为准。
 

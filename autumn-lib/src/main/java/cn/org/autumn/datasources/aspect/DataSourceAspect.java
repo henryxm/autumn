@@ -1,5 +1,6 @@
 package cn.org.autumn.datasources.aspect;
 
+import lombok.extern.slf4j.Slf4j;
 import cn.org.autumn.datasources.annotation.DataSource;
 import cn.org.autumn.datasources.DataSourceNames;
 import cn.org.autumn.datasources.DynamicDataSource;
@@ -9,8 +10,6 @@ import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
 import org.aspectj.lang.reflect.MethodSignature;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.core.Ordered;
 import org.springframework.stereotype.Component;
 
@@ -19,11 +18,10 @@ import java.lang.reflect.Method;
 /**
  * 多数据源，切面处理类
  */
+@Slf4j
 @Aspect
 @Component
 public class DataSourceAspect implements Ordered {
-    protected Logger logger = LoggerFactory.getLogger(getClass());
-
     @Pointcut("@annotation(cn.org.autumn.datasources.annotation.DataSource)")
     public void dataSourcePointCut() {
 
@@ -37,21 +35,21 @@ public class DataSourceAspect implements Ordered {
         DataSource ds = method.getAnnotation(DataSource.class);
         if (ds == null) {
             DynamicDataSource.setDataSource(DataSourceNames.FIRST);
-            logger.debug("set datasource is " + DataSourceNames.FIRST);
+            log.debug("set datasource is " + DataSourceNames.FIRST);
         } else {
             String key = ds.name();
             if (StringUtils.isBlank(key)) {
                 key = DataSourceNames.FIRST;
             }
             DynamicDataSource.setDataSource(key);
-            logger.debug("set datasource is {}", key);
+            log.debug("set datasource is {}", key);
         }
 
         try {
             return point.proceed();
         } finally {
             DynamicDataSource.clearDataSource();
-            logger.debug("clean datasource");
+            log.debug("clean datasource");
         }
     }
 

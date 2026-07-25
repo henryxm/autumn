@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import cn.org.autumn.utils.Uuid;
 import com.alibaba.fastjson2.JSON;
+import com.alibaba.fastjson2.JSONObject;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -160,5 +161,38 @@ class ProfileServiceTest {
         ProfileService third = new ProfileService(store, List.of(c));
         assertEquals("v", third.ensure().getLabels().get("k"));
         assertEquals(2, loads.get());
+    }
+
+    @Test
+    void write_preservesUnknownTopLevelKeys() throws Exception {
+        ProfileStore store = new ProfileStore();
+        store.home(temp.resolve("ext").toString(), false);
+        ProfileService svc = new ProfileService(store);
+        Profile p = svc.ensure();
+        JSONObject raw = JSON.parseObject(Files.readString(store.file(), StandardCharsets.UTF_8));
+        raw.put("biz", JSON.parseObject("{\"region\":\"edge\",\"quota\":3}"));
+        Files.writeString(store.file(), JSON.toJSONString(raw), StandardCharsets.UTF_8);
+        svc.roles("LOCAL", "WEB");
+        JSONObject after = JSON.parseObject(Files.readString(store.file(), StandardCharsets.UTF_8));
+        assertEquals("edge", after.getJSONObject("biz").getString("region"));
+        assertEquals(3, after.getJSONObject("biz").getIntValue("quota"));
+        assertEquals(List.of("LOCAL", "WEB"), after.getList("roles", String.class));
+        assertEquals(p.getUuid(), after.getString("uuid"));
+    }
+
+    @Test
+    void patch_labels_mergesExisting() {
+        ProfileStore store = new ProfileStore();
+        store.home(temp.resolve("merge").toString(), false);
+        ProfileService svc = new ProfileService(store);
+        svc.ensure();
+        svc.label("keep", "1");
+        svc.patch(Map.of("labels", Map.of("add", "2")));
+        Map<String, String> labels = svc.labels();
+        assertEquals("1", labels.get("keep"));
+        assertEquals("2", labels.get("add"));
+        svc.patch(Map.of("roles", List.of("JOB")));
+        assertEquals("1", svc.labels().get("keep"));
+        assertTrue(svc.has("JOB"));
     }
 }

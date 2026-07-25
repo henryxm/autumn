@@ -1,6 +1,6 @@
 # LoopJob 集群任务编排
 
-> 与 `AI_NODE_PROFILE.md`、`AI_DISTRIBUTED_LOCK.md` 配套。强调**完全兼容**：未手动调整角色/职责时行为与历史一致。
+> 与 `AI_NODE_PROFILE.md`、`AI_DISTRIBUTED_LOCK.md`、**`AI_CLUSTER_NODE.md`（集群节点总览）** 配套。强调**完全兼容**：未手动调整角色/职责时行为与历史一致。
 
 ## 1. JobDuty
 
@@ -9,11 +9,31 @@
 | 值 | 语义 | 框架行为 |
 |----|------|----------|
 | **ALL**（缺省） | 过 `assign`/`server.tag` 后本机执行 | **不加**集群锁（历史等价） |
+| **LOCAL** | 本节点本地任务 | **进程内本地锁**（键 `local:{nodeUuid}:{lock}`）；不参与集群互斥 / SEQUENTIAL / `oncePerPeriod`；抢锁失败跳过 |
 | SINGLETON | 全集群互斥执行 | 集群互斥；未获锁或**无法互斥时跳过**（fail-closed）；可选 `oncePerPeriod` |
 | SEQUENTIAL | 在线成员按 uuid 排序轮转 | Redis 令牌 + 集群互斥；成员来自 Registry `online()`（按心跳淘汰） |
 | DISABLED | 不执行 | return |
 
-另：`@JobMeta(roles={...})` 仅当本机 `roles` 已手动非空（`adjusted()`）时过滤；`@JobMeta(lock="...")` 覆盖默认锁键 `autumn:job:{jobId}`。
+另：`@JobMeta(roles={...})` 仅当本机 `roles` 已手动非空（`adjusted()`）时过滤；`@JobMeta(lock="...")` 覆盖默认锁键 `autumn:job:{jobId}`（LOCAL 再套节点前缀）。
+
+### 1.0.0 LOCAL 专岗（ServerRole.LOCAL，宽松）
+
+本机 Profile `roles` 含 `LOCAL`、不含 `JOB`、且非 unrestricted（空/`ALL`）时为 **LOCAL 专岗**：
+
+| 本机 | ALL（无 roles） | LOCAL duty | SINGLETON / SEQUENTIAL |
+|------|-----------------|------------|------------------------|
+| 空 / ALL | 跑 | 跑 | 跑 |
+| 仅 LOCAL（可兼 WEB/API 等） | **跑**（宽松） | 跑 | **跳过** |
+| LOCAL + JOB | 跑 | 跑 | 跑 |
+
+边缘节点示例：`roles: ["LOCAL","WEB","API"]`。仅本机任务可写：
+
+```java
+@JobMeta(name = "清理本机缓存", duty = JobDuty.LOCAL, lock = "cache:local-cleanup")
+public class LocalCacheCleanupJob implements LoopJob.OneMinute { ... }
+```
+
+仅边缘执行时再加 `roles = {"LOCAL"}`。
 
 ### 1.0 同步 / 异步与持锁
 
@@ -128,6 +148,7 @@ public class ShieldService implements LoopJob.FiveSecond, LoopJob.OneMinute, Loo
 |------|------|
 | 该类所有周期都全集群一台 | 类 `@JobMeta(duty=SINGLETON)`；方法可只写 name |
 | 仅某个周期全集群一台 | 类缺省 ALL；该 `onXxx` 写 `duty=SINGLETON` |
+| 本机清理 / 边缘本地任务 | `duty=LOCAL`（可选 `lock=`；可选 `roles={"LOCAL"}`） |
 | 各周期职责不同 | 类缺省 ALL；各方法分别写非 ALL 的 duty |
 | 两周期共享一把业务锁 | 两方法（或类）同一 `lock=` |
 | 两周期独立互斥 | 不写 `lock`（默认按 jobId 分锁）或写不同 lock |
@@ -142,10 +163,10 @@ public class ShieldService implements LoopJob.FiveSecond, LoopJob.OneMinute, Loo
 ## 2. 完全兼容铁律
 
 - 未写 `duty` → **ALL**。
-- 未手动写非空节点 `roles` → 不过角色闸。
+- 未手动写非空节点 `roles` → 不过角色闸；亦非 LOCAL 专岗（不跳过 SINGLETON/SEQUENTIAL）。
 - DB `enabled` 仅显式 `0` 禁用；null 不改变。
-- 业务自有 `withLock*` 不剥离；仅任务显式 `SINGLETON`/`SEQUENTIAL` 时框架再包锁。
-- JobDuty 路径**不**走通用锁的「无 Redis 本地降级执行」：无法互斥则跳过，避免多机重复跑。
+- 业务自有 `withLock*` 不剥离；仅任务显式 `SINGLETON`/`SEQUENTIAL` 时框架再包集群锁；`LOCAL` 仅包进程内锁。
+- JobDuty 集群互斥路径**不**走通用锁的「无 Redis 本地降级执行」：无法互斥则跳过，避免多机重复跑。
 
 ## 3. 节点画像
 
@@ -155,7 +176,7 @@ public class ShieldService implements LoopJob.FiveSecond, LoopJob.OneMinute, Loo
 
 ## 4. 集群登记（可选）
 
-`autumn.node.registry=true` 后 Registry 心跳上报；`PUT /sys/node/registry/assign` 远程改目标机 `roles`。关闭时不影响 LoopJob 原始流程。
+`autumn.node.registry` 未配置时跟随 `autumn.redis.open`；显式 true/false 可覆盖。开启后 Registry 心跳上报；`PUT /sys/node/registry/assign` 远程改目标机 `roles`。关闭时不影响 LoopJob 原始流程。
 
 - 每条成员 JSON 含 `beat`（epoch ms）；`online()` 过滤超过约 180s 无心跳的节点并清理。
 - 命令 channel 带 namespace：`autumn:cluster:profile-cmd:{ns}`。

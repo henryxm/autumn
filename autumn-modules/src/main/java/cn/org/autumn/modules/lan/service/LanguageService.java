@@ -407,6 +407,7 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
                 {"sys_string_database_management", "数据库备份", "Database backup"},
                 {"sys_string_queue_management", "队列管理", "Queue management"},
                 {"sys_string_loopjob_management", "定时任务", "Scheduled tasks"},
+                {"sys_string_cluster_management", "集群节点", "Cluster nodes"},
                 {"sys_string_loginlog_management", "登录日志", "Login log"},
                 {"sys_string_loglevel_management", "日志级别", "Log level"},
                 {"sys_string_exec_management", "Bean执行器", "Bean executor"},

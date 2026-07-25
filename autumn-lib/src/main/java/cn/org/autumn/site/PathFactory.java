@@ -1,8 +1,7 @@
 package cn.org.autumn.site;
 
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.ui.Model;
@@ -12,10 +11,9 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @Component
 public class PathFactory extends Factory {
-
-    final Logger log = LoggerFactory.getLogger(getClass());
 
     private static Map<Integer, List<Path>> map = null;
 
@@ -43,7 +41,7 @@ public class PathFactory extends Factory {
     public String get(HttpServletRequest request, HttpServletResponse response, Model model) {
         if (null == map)
             map = getOrdered(Path.class, "get", HttpServletRequest.class, HttpServletResponse.class, Model.class);
-        if (null != map && map.size() > 0) {
+        if (null != map && !map.isEmpty()) {
             for (Map.Entry<Integer, List<Path>> k : map.entrySet()) {
                 List<Path> paths = k.getValue();
                 for (Path path : paths) {

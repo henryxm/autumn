@@ -1,5 +1,6 @@
 package cn.org.autumn.table;
 
+import lombok.extern.slf4j.Slf4j;
 import jakarta.annotation.PostConstruct;
 
 import java.util.Locale;
@@ -12,8 +13,6 @@ import cn.org.autumn.database.DatabaseType;
 import cn.org.autumn.install.InstallMode;
 import cn.org.autumn.table.service.MysqlTableService;
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
@@ -22,10 +21,9 @@ import org.springframework.stereotype.Service;
 /**
  * Initialize table, scan the pointed destination package, generate the tables.
  */
+@Slf4j
 @Service
 public class TableInit {
-
-    private static final Logger log = LoggerFactory.getLogger(TableInit.class);
 
     @Autowired
     EnvBean envBean;

@@ -1,8 +1,7 @@
 package cn.org.autumn.site;
 
+import lombok.extern.slf4j.Slf4j;
 import cn.org.autumn.utils.SpringContextUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -13,10 +12,9 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @Component
 public class MappingFactory extends Factory {
-
-    Logger log = LoggerFactory.getLogger(getClass());
 
     private static Map<Integer, List<MappingFactory.Mapping>> map = null;
 

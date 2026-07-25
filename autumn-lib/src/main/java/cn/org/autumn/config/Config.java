@@ -1,10 +1,9 @@
 package cn.org.autumn.config;
 
+import lombok.extern.slf4j.Slf4j;
 import lombok.Getter;
 import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.env.Environment;
 
@@ -13,9 +12,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 public class Config {
-    private static final Logger log = LoggerFactory.getLogger(Config.class);
-
     public static final String DEV = "dev";
     public static final String TEST = "test";
     public static final String PROD = "prod";

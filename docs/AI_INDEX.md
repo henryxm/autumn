@@ -22,9 +22,10 @@
 - **`docs/AI_DATABASE.md`**：**多数据库落地规范**（已支持 `DatabaseType` 清单、**§1.1 关联键与业务主键（承接 `AI_STANDARDS` §10.4）**、**§2.1 `RuntimeSqlDialect` 能力清单与故意不抽象项**、**§4.0 代码层标准写法（`RuntimeSql` / `WrapperColumns`，禁止硬编码方言符号）**、**全库兼容默认**、**Wrapper 安全边界**、**Dao+Provider 强制与推荐分层**、`RuntimeSql` 使用纪律；**§8 老旧注解 Dao / 方言化 Wrapper 升级与一键体检策略**）
 - **`docs/AI_DATABASE_READ_ONLY.md`**：**数据库只读模式**（`CrudGuard` API：`writable` / `opt` / `force` / `suppress`；Init/LoopJob/业务三类写决策表）
 - `docs/AI_DISTRIBUTED_LOCK.md`：分布式锁能力（`DistributedLockService` / `DistributedService`）、场景化加锁、降级与抗雪崩策略、`DistributedLockConfig` 配置项与默认值、业务域快捷模板（含项目示例源码入口）
-- `docs/AI_NODE_PROFILE.md`：本机节点画像（`ProfileService` / `node-profile.json` / 指纹 uuid；缓存 TTL 惰性读盘，无 Watch 线程）
-- `docs/AI_SERVER_ROLE.md`：服务器角色注册表 / 能力门禁（空 roles=ALL 全开；WEB/API 路径限制）
-- `docs/AI_CLUSTER_JOB_ORCHESTRATION.md`：LoopJob 职责 `JobDuty`、类/方法合并、**多接口同一 Bean 的标记法**（§1.3）
+- `docs/AI_NODE_PROFILE.md`：本机节点画像（`ProfileService` / `node-profile.json` / 指纹 uuid；写盘保留扩展键；缓存 TTL 惰性读盘）
+- `docs/AI_SERVER_ROLE.md`：服务器角色注册表 / 能力门禁（空 roles=ALL 全开；含 **LOCAL**；WEB/API 路径限制）
+- `docs/AI_CLUSTER_JOB_ORCHESTRATION.md`：LoopJob 职责 `JobDuty`（含 **LOCAL**）、LOCAL 专岗宽松门禁、类/方法合并、**多接口同一 Bean 的标记法**（§1.3）
+- **`docs/AI_CLUSTER_NODE.md`**：**集群节点总览与用法**（LOCAL 双轴、Registry↔Redis、`cluster.html`、完整性表与排障）
 - **`docs/AI_ASYNC_TASK.md`**：**`TagRunnable` / `TagTaskExecutor` / `LockOnce`**、**`FinishStatus` 与 `onFinished` 生命周期**、本机队列 drain 状态机范式（与 `BaseQueueService` 区分）
 - **`docs/AI_FUNCTION_QUEUE.md`**：**全局串行函数队列**（方案+默认参数+≤1min DB 迁移表+运维页+共享串行槽；与 `FunctionQueue` 实现对齐）
 - `docs/AI_POSTGRESQL.md`：PostgreSQL 专项（DDL/元数据、`PostgresQuerySql`、迁移与兼容性）；通用跨库口径以 **`docs/AI_DATABASE.md`** 为准

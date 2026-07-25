@@ -1,11 +1,10 @@
 package cn.org.autumn.modules.install;
 
+import lombok.extern.slf4j.Slf4j;
 import cn.org.autumn.database.DatabaseType;
 import cn.org.autumn.install.InstallRestartCoordinator;
 import cn.org.autumn.modules.install.dto.InstallConnectionForm;
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -30,11 +29,10 @@ import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+@Slf4j
 @Service
 @org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(prefix = "autumn.install", name = "mode", havingValue = "true")
 public class InstallWizardService {
-
-    private static final Logger log = LoggerFactory.getLogger(InstallWizardService.class);
 
     private static final int META_TABLE_DISPLAY_LIMIT = 500;
 

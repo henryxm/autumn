@@ -17,6 +17,7 @@ public final class ServerRole {
     public static final String CODE_WEB = "WEB";
     public static final String CODE_API = "API";
     public static final String CODE_WORKER = "WORKER";
+    public static final String CODE_LOCAL = "LOCAL";
     public static final String CODE_JOB = "JOB";
     public static final String CODE_MONITOR = "MONITOR";
 
@@ -25,6 +26,7 @@ public final class ServerRole {
     public static final String CAP_API_HTTP = "API_HTTP";
     public static final String CAP_FILE_DOWNLOAD = "FILE_DOWNLOAD";
     public static final String CAP_BACKGROUND = "BACKGROUND";
+    public static final String CAP_LOCAL_JOB = "LOCAL_JOB";
     public static final String CAP_SCHEDULED_JOB = "SCHEDULED_JOB";
     public static final String CAP_MONITOR = "MONITOR";
 

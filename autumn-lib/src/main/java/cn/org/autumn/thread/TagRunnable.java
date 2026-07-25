@@ -1,10 +1,9 @@
 package cn.org.autumn.thread;
 
+import lombok.extern.slf4j.Slf4j;
 import cn.org.autumn.config.Config;
 import cn.org.autumn.site.UpgradeFactory;
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
@@ -54,9 +53,8 @@ import java.util.concurrent.TimeUnit;
  * });
  * </pre>
  */
+@Slf4j
 public abstract class TagRunnable implements Runnable, Tag {
-
-    protected final Logger log = LoggerFactory.getLogger(getClass());
 
     // ======================== 任务元数据 ========================
     private String name = "";

@@ -22,7 +22,7 @@ public class ServerRoleGroups {
 
     public ServerRoleGroups() {
         groups.put(GROUP_TRAFFIC, Set.of(ServerRole.CODE_WEB, ServerRole.CODE_API));
-        groups.put(GROUP_BACKEND, Set.of(ServerRole.CODE_WORKER, ServerRole.CODE_JOB));
+        groups.put(GROUP_BACKEND, Set.of(ServerRole.CODE_WORKER, ServerRole.CODE_LOCAL, ServerRole.CODE_JOB));
         groups.put(GROUP_OPS, Set.of(ServerRole.CODE_MONITOR));
     }
 

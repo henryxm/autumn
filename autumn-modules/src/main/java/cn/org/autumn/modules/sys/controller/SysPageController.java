@@ -474,6 +474,14 @@ public class SysPageController implements ErrorController {
         return "loopjob";
     }
 
+    @RequestMapping({"cluster.html"})
+    @SkipInterceptor
+    public String cluster(Model model) {
+        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
+            return "404";
+        return "cluster";
+    }
+
     @RequestMapping({"loginlog.html"})
     @SkipInterceptor
     public String loginlog(HttpServletRequest servlet) {

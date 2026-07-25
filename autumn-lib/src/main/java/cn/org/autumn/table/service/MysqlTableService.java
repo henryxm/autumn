@@ -1,5 +1,6 @@
 package cn.org.autumn.table.service;
 
+import lombok.extern.slf4j.Slf4j;
 import java.lang.reflect.Field;
 import java.util.*;
 import java.util.Map.Entry;
@@ -11,8 +12,6 @@ import cn.org.autumn.table.relational.model.ColumnMeta;
 import lombok.Getter;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.ArrayUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import cn.org.autumn.install.InstallMode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -27,11 +26,10 @@ import cn.org.autumn.table.utils.TableCharsetUtils;
 
 import static cn.org.autumn.table.data.InitType.*;
 
+@Slf4j
 @Transactional
 @Service
 public class MysqlTableService {
-
-    private static final Logger log = LoggerFactory.getLogger(MysqlTableService.class);
 
     private static final List<String> ignoreLengthList = new ArrayList<>();
 
@@ -646,7 +644,6 @@ public class MysqlTableService {
             removeTableMap.put(table, removeFieldList);
         }
     }
-
 
     /**
      * 根据数据库中表的结构和model中表的结构对比找出新增的字段

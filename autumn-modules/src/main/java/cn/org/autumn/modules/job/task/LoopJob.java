@@ -6,6 +6,7 @@ import cn.org.autumn.config.Config;
 import cn.org.autumn.database.CrudGuard;
 import cn.org.autumn.job.JobDuty;
 import cn.org.autumn.job.JobDutySupport;
+import cn.org.autumn.node.role.ServerRoleGate;
 import cn.org.autumn.site.Factory;
 import cn.org.autumn.site.LoadFactory;
 import cn.org.autumn.thread.TagRunnable;
@@ -387,6 +388,11 @@ public class LoopJob extends Factory implements LoadFactory.Must {
         if (!JobDutySupport.allowRoles(info.getRoles())) {
             if (log.isDebugEnabled())
                 log.debug("Skip {} Job:{} (roles gate)", category, userClass.getSimpleName());
+            return;
+        }
+        if (!ServerRoleGate.allowsClusterJobDuty(duty)) {
+            if (log.isDebugEnabled())
+                log.debug("Skip {} Job:{} (LOCAL scoped, duty={})", category, userClass.getSimpleName(), duty);
             return;
         }
         Runnable guarded = () -> {

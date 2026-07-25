@@ -11,6 +11,7 @@ final class BuiltinRoleCapabilities {
             ServerRole.CODE_WEB, Set.of(ServerRole.CAP_WEB_UI),
             ServerRole.CODE_API, Set.of(ServerRole.CAP_API_HTTP, ServerRole.CAP_FILE_DOWNLOAD),
             ServerRole.CODE_WORKER, Set.of(ServerRole.CAP_BACKGROUND),
+            ServerRole.CODE_LOCAL, Set.of(ServerRole.CAP_LOCAL_JOB),
             ServerRole.CODE_JOB, Set.of(ServerRole.CAP_SCHEDULED_JOB),
             ServerRole.CODE_MONITOR, Set.of(ServerRole.CAP_MONITOR));
 

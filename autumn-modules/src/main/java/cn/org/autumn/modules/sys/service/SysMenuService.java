@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.sys.service;
 
+import lombok.extern.slf4j.Slf4j;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.site.InitFactory;
 import org.apache.commons.lang3.StringUtils;
@@ -8,8 +9,6 @@ import cn.org.autumn.utils.Constant;
 import cn.org.autumn.utils.MapUtils;
 import cn.org.autumn.modules.sys.dao.SysMenuDao;
 import cn.org.autumn.modules.sys.entity.SysMenuEntity;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.core.annotation.Order;
@@ -17,10 +16,9 @@ import org.springframework.stereotype.Service;
 
 import java.util.*;
 
+@Slf4j
 @Service
 public class SysMenuService extends ServiceImpl<SysMenuDao, SysMenuEntity> implements InitFactory.Init {
-
-    Logger log = LoggerFactory.getLogger(getClass());
 
     @Autowired
     @Lazy
@@ -123,6 +121,7 @@ public class SysMenuService extends ServiceImpl<SysMenuDao, SysMenuEntity> imple
                 {"数据库备份", "database.html", NULL, "1", "fa fa-hdd-o", "3", getSystemMenuKey("DatabaseManagement"), getOperationsMenuKey(), "sys_string_database_management"},
                 {"队列管理", "queue.html", NULL, "1", "fa fa-tasks", "3", getSystemMenuKey("QueueManagement"), getOperationsMenuKey(), "sys_string_queue_management"},
                 {"定时任务", "loopjob.html", NULL, "1", "fa fa-clock-o", "4", getSystemMenuKey("LoopJobManagement"), getOperationsMenuKey(), "sys_string_loopjob_management"},
+                {"集群节点", "cluster.html", NULL, "1", "fa fa-sitemap", "5", getSystemMenuKey("ClusterNodeManagement"), getOperationsMenuKey(), "sys_string_cluster_management"},
                 {"登录日志", "loginlog.html", NULL, "1", "fa fa-sign-in", "5", getSystemMenuKey("LoginLogManagement"), getOperationsMenuKey(), "sys_string_loginlog_management"},
                 {"日志级别", "log.html", NULL, "1", "fa fa-file-text-o", "6", getSystemMenuKey("LogLevelManagement"), getOperationsMenuKey(), "sys_string_loglevel_management"},
                 {"Bean执行器", "exec.html", NULL, "1", "fa fa-terminal", "7", getSystemMenuKey("ExecManagement"), getOperationsMenuKey(), "sys_string_exec_management"},

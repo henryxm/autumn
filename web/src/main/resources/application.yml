@@ -69,6 +69,11 @@ autumn:
   #   exclude-addresses: 10.244.12.3    # 可选：按本机 IP 精确排除
   redis:
     open: true  # 是否开启redis缓存  true开启   false关闭
+  # 节点画像 / 集群登记（Registry 依赖 Redis+Redisson）
+  # autumn.node.registry 未配置时跟随 autumn.redis.open；显式 true/false 可覆盖
+  node:
+    #registry: true
+    namespace: default
   # 字段存储加密（at-rest，与传输层 AI_CRYPTO 独立）：
   #  crypto:
   #    field:

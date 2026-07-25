@@ -1,5 +1,6 @@
 package cn.org.autumn.table.platform.jdbc;
 
+import lombok.extern.slf4j.Slf4j;
 import cn.org.autumn.database.CrudGuard;
 import cn.org.autumn.table.data.ColumnInfo;
 import cn.org.autumn.table.data.IndexInfo;
@@ -11,8 +12,6 @@ import cn.org.autumn.table.relational.model.ColumnMeta;
 import cn.org.autumn.table.relational.model.TableMeta;
 import cn.org.autumn.table.platform.RelationalTableOperations;
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.sql.DataSource;
@@ -36,9 +35,8 @@ import java.util.TreeMap;
  * 基于 JDBC {@link DatabaseMetaData} 的关系库操作：元数据、索引列表、{@code DROP TABLE}，
  * 以及通过 {@link RoutingRelationalSchemaSql} 生成并执行的注解建表 DDL。
  */
+@Slf4j
 public abstract class AbstractJdbcVendorRelationalTableOperations implements RelationalTableOperations {
-
-    private static final Logger log = LoggerFactory.getLogger(AbstractJdbcVendorRelationalTableOperations.class);
 
     private final DataSource dataSource;
 

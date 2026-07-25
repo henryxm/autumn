@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>集群节点</title>
+    <style>
+        :root {
+            --primary: #4f6ef7; --primary-hover: #3b5de7; --primary-light: #eef2ff;
+            --success: #22c55e; --success-bg: #f0fdf4;
+            --danger: #ef4444; --danger-bg: #fef2f2;
+            --warning: #f59e0b; --warning-bg: #fffbeb;
+            --info: #3b82f6; --info-bg: #eff6ff;
+            --purple: #8b5cf6; --purple-bg: #f5f3ff;
+            --gray-50: #f9fafb; --gray-100: #f3f4f6; --gray-200: #e5e7eb; --gray-300: #d1d5db;
+            --gray-400: #9ca3af; --gray-500: #6b7280; --gray-600: #4b5563; --gray-700: #374151;
+            --gray-800: #1f2937; --gray-900: #111827;
+            --radius: 8px;
+            --shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--gray-50); color: var(--gray-800); line-height: 1.55; }
+        .container { max-width: 1280px; margin: 0 auto; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding: 18px 22px; background: white; border-radius: var(--radius); box-shadow: var(--shadow); flex-wrap: wrap; gap: 12px; }
+        .header-left h1 { font-size: 20px; font-weight: 600; color: var(--gray-900); }
+        .header-left .sub { font-size: 12px; color: var(--gray-500); margin-top: 4px; max-width: 640px; }
+        .header-right { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        .global-status { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+        .global-status.on { background: var(--success-bg); color: #16a34a; }
+        .global-status.off { background: var(--warning-bg); color: #d97706; }
+        .global-status.syncing { background: var(--info-bg); color: #1d4ed8; }
+        .global-status .dot { width: 7px; height: 7px; border-radius: 50%; }
+        .global-status.on .dot { background: var(--success); }
+        .global-status.off .dot { background: var(--warning); }
+        .global-status.syncing .dot { background: var(--info); animation: pulse 1s infinite; }
+        @keyframes pulse { 50% { opacity: 0.35; } }
+        .btn { display: inline-flex; align-items: center; gap: 5px; padding: 7px 14px; border: none; border-radius: var(--radius); font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.15s; white-space: nowrap; text-decoration: none; color: inherit; }
+        .btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-outline { background: white; color: var(--gray-700); border: 1px solid var(--gray-300); }
+        .btn-sm { padding: 4px 10px; font-size: 11px; }
+        .btn-xs { padding: 2px 7px; font-size: 10px; border-radius: 4px; }
+        .btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+        @media (max-width: 900px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+        .stat-card { background: white; padding: 14px 16px; border-radius: var(--radius); box-shadow: var(--shadow); }
+        .stat-card .stat-label { font-size: 10px; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
+        .stat-card .stat-value { font-size: 22px; font-weight: 700; color: var(--gray-900); margin-top: 2px; font-variant-numeric: tabular-nums; }
+        .stat-card .stat-value.sm { font-size: 13px; font-weight: 600; word-break: break-all; }
+        .stat-card .stat-detail { font-size: 11px; color: var(--gray-400); margin-top: 4px; }
+        .layout { display: grid; grid-template-columns: 340px 1fr; gap: 16px; align-items: start; }
+        @media (max-width: 980px) { .layout { grid-template-columns: 1fr; } }
+        .section { background: white; border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 0; }
+        .section-header { display: flex; justify-content: space-between; align-items: center; padding: 13px 16px; border-bottom: 1px solid var(--gray-200); flex-wrap: wrap; gap: 8px; }
+        .section-title { font-size: 14px; font-weight: 600; color: var(--gray-800); }
+        .section-body { padding: 14px 16px; }
+        .guide { background: white; border-radius: var(--radius); box-shadow: var(--shadow); padding: 14px 16px; margin-bottom: 16px; font-size: 12px; color: var(--gray-600); }
+        .guide strong { color: var(--gray-800); }
+        .guide ol { margin: 8px 0 0 18px; }
+        .guide li { margin: 3px 0; }
+        .guide code, .hint code, .kv code { font-size: 11px; background: var(--gray-100); padding: 1px 5px; border-radius: 3px; }
+        .guide a, .hint a { color: var(--primary); }
+        .hint { font-size: 12px; color: var(--gray-500); background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: 6px; padding: 10px 12px; margin-bottom: 12px; }
+        .hint.warn { background: var(--warning-bg); border-color: #fde68a; color: #92400e; }
+        .hint.ok { background: var(--success-bg); border-color: #bbf7d0; color: #166534; }
+        .kv { display: grid; gap: 8px; font-size: 12px; }
+        .kv-row { display: grid; grid-template-columns: 72px 1fr; gap: 8px; align-items: start; }
+        .kv-row .k { color: var(--gray-500); padding-top: 2px; }
+        .kv-row .v { color: var(--gray-800); word-break: break-all; }
+        .legend { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+        .legend span { font-size: 10px; color: var(--gray-500); }
+        .role-tag { display: inline-block; font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 4px; margin: 1px 2px; background: var(--gray-100); color: var(--gray-700); }
+        .role-tag.LOCAL { background: var(--info-bg); color: #1d4ed8; }
+        .role-tag.JOB { background: var(--purple-bg); color: #6d28d9; }
+        .role-tag.ALL { background: var(--success-bg); color: #15803d; }
+        .role-tag.WEB, .role-tag.API { background: var(--primary-light); color: #3730a3; }
+        .role-tag.WORKER { background: #ecfeff; color: #0e7490; }
+        .role-tag.MONITOR { background: #fff7ed; color: #c2410c; }
+        .role-tag.pending { outline: 1px dashed var(--info); opacity: 0.85; }
+        .empty-roles { color: var(--gray-400); font-size: 12px; }
+        .toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+        .sync-bar { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 11px; color: var(--gray-500); margin-bottom: 10px; }
+        .table-wrap { overflow-x: auto; border: 1px solid var(--gray-200); border-radius: 6px; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th, td { padding: 10px 10px; text-align: left; border-bottom: 1px solid var(--gray-200); vertical-align: middle; }
+        tr:last-child td { border-bottom: none; }
+        th { font-size: 11px; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.04em; background: var(--gray-50); }
+        tr.pending-row { background: #f8fafc; }
+        .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+        .badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 12px; }
+        .badge.on { background: var(--success-bg); color: #16a34a; }
+        .badge.off { background: var(--gray-100); color: var(--gray-500); }
+        .badge.self { background: var(--primary-light); color: var(--primary); }
+        .badge.pending { background: var(--info-bg); color: #1d4ed8; }
+        .empty { text-align: center; padding: 40px 16px; color: var(--gray-500); font-size: 13px; }
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.45); z-index: 1000; align-items: center; justify-content: center; padding: 16px; }
+        .modal-overlay.show { display: flex; }
+        .modal { background: white; border-radius: 12px; width: 100%; max-width: 560px; box-shadow: 0 20px 40px rgba(0,0,0,0.15); max-height: 90vh; overflow: auto; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 18px; border-bottom: 1px solid var(--gray-200); }
+        .modal-header h3 { font-size: 16px; }
+        .modal-close { border: none; background: none; font-size: 22px; cursor: pointer; color: var(--gray-400); line-height: 1; }
+        .modal-body { padding: 16px 18px; }
+        .modal-footer { display: flex; justify-content: flex-end; gap: 8px; padding: 14px 18px; border-top: 1px solid var(--gray-200); }
+        .role-option { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--gray-200); border-radius: 8px; margin-bottom: 8px; cursor: pointer; }
+        .role-option:hover { border-color: var(--primary); background: var(--primary-light); }
+        .role-option.selected { border-color: var(--primary); background: var(--primary-light); }
+        .role-option input { margin-top: 3px; }
+        .role-option .name { font-size: 13px; font-weight: 600; }
+        .role-option .desc { font-size: 11px; color: var(--gray-500); margin-top: 2px; }
+        .toast-container { position: fixed; right: 16px; bottom: 16px; z-index: 2000; display: flex; flex-direction: column; gap: 8px; }
+        .toast { background: var(--gray-900); color: white; padding: 10px 14px; border-radius: 8px; font-size: 12px; box-shadow: var(--shadow-md); max-width: 380px; }
+        .toast.err { background: #b91c1c; }
+        .toast.ok { background: #15803d; }
+        .toast.info { background: #1d4ed8; }
+        .check-label { font-size: 12px; color: var(--gray-500); display: inline-flex; align-items: center; gap: 4px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <div class="header-left">
+            <h1>集群节点</h1>
+            <p class="sub">管理本机与同命名空间成员的 ServerRole。远程改角色经 Redis Pub/Sub 下发；JobDuty 编排请使用定时任务页。</p>
+        </div>
+        <div class="header-right">
+            <span class="global-status off" id="regStatus"><span class="dot"></span><span id="regStatusText">Registry …</span></span>
+            <label class="check-label"><input type="checkbox" id="autoRefresh" checked> 自动刷新</label>
+            <button class="btn btn-outline" id="btnRefresh" onclick="refreshAll(true)">刷新</button>
+            <a class="btn btn-outline" href="loopjob.html">定时任务</a>
+        </div>
+    </div>
+
+    <div class="guide">
+        <strong>快速说明</strong>
+        <ol>
+            <li><strong>本机</strong>：直接写 <code>node-profile.json</code>，立即生效，无需 Registry。</li>
+            <li><strong>他机</strong>：需 Redis 开启（<code>autumn.redis.open=true</code>，Registry 默认跟随）；各节点共用 Redis 且 <code>autumn.node.namespace</code> 一致。显式 <code>autumn.node.registry=false</code> 可单独关闭登记。</li>
+            <li><strong>LOCAL</strong> 专岗（含 LOCAL、不含 JOB）：宽松跳过 SINGLETON/SEQUENTIAL；未标 roles 的 ALL 仍跑。</li>
+            <li>写盘只更新框架字段（roles 等），子项目扩展顶层键会保留。</li>
+        </ol>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-label">本机 UUID</div>
+            <div class="stat-value sm mono" id="statUuid">—</div>
+            <div class="stat-detail" id="statUuidHint">点击可复制完整值</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">本机角色</div>
+            <div class="stat-value sm" id="statRoles">—</div>
+            <div class="stat-detail">空 = 全开（未手动限制）</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">在线 / 登记</div>
+            <div class="stat-value" id="statOnlineTotal">0 / 0</div>
+            <div class="stat-detail" id="statMembersHint">registry 关闭时仅本机</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">命名空间</div>
+            <div class="stat-value sm" id="statNamespace">—</div>
+            <div class="stat-detail" id="statSyncAt">尚未同步</div>
+        </div>
+    </div>
+
+    <div class="layout">
+        <div class="section">
+            <div class="section-header">
+                <div class="section-title">本机画像</div>
+                <div style="display:flex;gap:6px;">
+                    <button class="btn btn-outline btn-sm" onclick="reloadLocal()">Reload</button>
+                    <button class="btn btn-primary btn-sm" onclick="openRoleModal('local')">编辑角色</button>
+                </div>
+            </div>
+            <div class="section-body">
+                <div class="hint" id="localHint">修改后立即写盘；若已开 Registry 会主动上报心跳以刷新成员表。</div>
+                <div class="kv">
+                    <div class="kv-row"><div class="k">UUID</div><div class="v mono" id="localUuid">—</div></div>
+                    <div class="kv-row"><div class="k">Roles</div><div class="v" id="localRoles">—</div></div>
+                    <div class="kv-row"><div class="k">Update</div><div class="v" id="localUpdate">—</div></div>
+                </div>
+                <div class="legend">
+                    <span>角色色例：</span>
+                    <span class="role-tag LOCAL">LOCAL</span>
+                    <span class="role-tag JOB">JOB</span>
+                    <span class="role-tag WEB">WEB</span>
+                    <span class="role-tag API">API</span>
+                    <span class="role-tag ALL">ALL</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">
+                <div class="section-title">集群成员</div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                    <button class="btn btn-outline btn-sm" id="btnBatchSelected" onclick="openRoleModal('selected')" disabled>批量改选中</button>
+                    <button class="btn btn-outline btn-sm" id="btnBatchOnline" onclick="openRoleModal('online')" disabled>批量改在线</button>
+                </div>
+            </div>
+            <div class="section-body">
+                <div class="hint" id="registryHint">加载中…</div>
+                <div class="sync-bar">
+                    <span id="syncMsg">—</span>
+                    <span id="pendingMsg"></span>
+                </div>
+                <div id="membersWrap">
+                    <div class="empty" id="membersEmpty">加载中…</div>
+                    <div class="table-wrap" id="membersTableWrap" style="display:none;">
+                        <table id="membersTable">
+                            <thead>
+                            <tr>
+                                <th style="width:36px;"><input type="checkbox" id="checkAll" onclick="toggleAll(this.checked)" title="全选"></th>
+                                <th>节点</th>
+                                <th style="width:88px;">状态</th>
+                                <th style="width:72px;">心跳</th>
+                                <th>角色</th>
+                                <th style="width:84px;">操作</th>
+                            </tr>
+                            </thead>
+                            <tbody id="membersBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="roleModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 id="roleModalTitle">编辑角色</h3>
+            <button class="modal-close" onclick="closeRoleModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="hint" id="roleModalHint"></div>
+            <div id="roleOptions"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeRoleModal()" id="btnCancelRoles">取消</button>
+            <button class="btn btn-primary" onclick="saveRoles()" id="btnSaveRoles">保存并同步</button>
+        </div>
+    </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+    var __CTX = '${request.contextPath!""}';
+    //<#noparse>
+    const API = __CTX + '/sys/node';
+    const SYNC_POLL_MS = 1000;
+    const SYNC_TIMEOUT_MS = 12000;
+    const AUTO_REFRESH_MS = 10000;
+
+    let localProfile = null;
+    let catalog = [];
+    let members = [];
+    let registryEnabled = false;
+    let registryNamespace = '—';
+    let staleMs = 180000;
+    let editMode = 'local';
+    let editUuid = null;
+    let autoTimer = null;
+    let syncTimer = null;
+    let pending = {}; // uuid -> expected roles array
+    let refreshing = false;
+    let lastSyncAt = 0;
+
+    async function apiGet(path) {
+        const r = await fetch(API + path, { cache: 'no-store' });
+        return r.json();
+    }
+    async function apiSend(method, path, body) {
+        const r = await fetch(API + path, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body || {}),
+            cache: 'no-store'
+        });
+        return r.json();
+    }
+
+    function toast(msg, type) {
+        const el = document.createElement('div');
+        el.className = 'toast ' + (type || '');
+        el.textContent = msg;
+        document.getElementById('toastContainer').appendChild(el);
+        setTimeout(() => el.remove(), 3600);
+    }
+
+    function shortUuid(u) {
+        if (!u) return '—';
+        return u.length > 12 ? u.slice(0, 8) + '…' + u.slice(-4) : u;
+    }
+
+    function rolesEqual(a, b) {
+        const na = normalizeRoles(a);
+        const nb = normalizeRoles(b);
+        if (na.length !== nb.length) return false;
+        for (let i = 0; i < na.length; i++) if (na[i] !== nb[i]) return false;
+        return true;
+    }
+
+    function normalizeRoles(roles) {
+        if (!roles || !roles.length) return [];
+        const set = [];
+        let all = false;
+        roles.forEach(r => {
+            const c = String(r || '').trim().toUpperCase();
+            if (!c) return;
+            if (c === 'ALL') all = true;
+            else if (set.indexOf(c) < 0) set.push(c);
+        });
+        return all ? ['ALL'] : set;
+    }
+
+    function renderRoleTags(roles, pendingMark) {
+        const list = normalizeRoles(roles);
+        if (!list.length) return '<span class="empty-roles">（空 / 全开）</span>';
+        const cls = pendingMark ? ' pending' : '';
+        return list.map(r => '<span class="role-tag ' + r + cls + '">' + r + '</span>').join('');
+    }
+
+    function relativeBeat(beat) {
+        if (!beat) return '—';
+        const sec = Math.max(0, Math.floor((Date.now() - beat) / 1000));
+        if (sec < 60) return sec + 's';
+        if (sec < 3600) return Math.floor(sec / 60) + 'm';
+        return Math.floor(sec / 3600) + 'h';
+    }
+
+    function setSyncStatus(kind, text) {
+        const st = document.getElementById('regStatus');
+        const stText = document.getElementById('regStatusText');
+        if (kind === 'syncing') {
+            st.className = 'global-status syncing';
+            stText.textContent = text || '同步中…';
+            return;
+        }
+        if (registryEnabled) {
+            st.className = 'global-status on';
+            stText.textContent = text || ('Registry · ' + registryNamespace);
+        } else {
+            st.className = 'global-status off';
+            stText.textContent = text || 'Registry 未开启';
+        }
+    }
+
+    function updateSyncBar() {
+        const n = Object.keys(pending).length;
+        document.getElementById('pendingMsg').textContent = n ? ('等待同步 ' + n + ' 台') : '';
+        document.getElementById('syncMsg').textContent = lastSyncAt
+            ? ('上次刷新 ' + new Date(lastSyncAt).toLocaleTimeString())
+            : '尚未刷新';
+        document.getElementById('statSyncAt').textContent = lastSyncAt
+            ? ('刷新于 ' + new Date(lastSyncAt).toLocaleTimeString())
+            : '尚未同步';
+    }
+
+    async function loadCatalog() {
+        const d = await apiGet('/roles');
+        if (d.code === 0) catalog = d.roles || [];
+    }
+
+    function renderLocal() {
+        const uuid = (localProfile && localProfile.uuid) || '';
+        document.getElementById('statUuid').textContent = shortUuid(uuid);
+        document.getElementById('statUuid').title = uuid;
+        document.getElementById('statRoles').innerHTML = renderRoleTags(localProfile && localProfile.roles);
+        document.getElementById('localUuid').textContent = uuid || '—';
+        document.getElementById('localRoles').innerHTML = renderRoleTags(localProfile && localProfile.roles);
+        document.getElementById('localUpdate').textContent = (localProfile && localProfile.update) || '—';
+    }
+
+    async function loadLocal() {
+        const d = await apiGet('/profile');
+        if (d.code !== 0) {
+            toast(d.msg || '读取本机画像失败', 'err');
+            return false;
+        }
+        localProfile = d.profile || {};
+        renderLocal();
+        return true;
+    }
+
+    async function loadRegistry() {
+        const d = await apiGet('/registry');
+        if (d.code !== 0) {
+            toast(d.msg || '读取 registry 失败', 'err');
+            return false;
+        }
+        registryEnabled = !!d.enabled;
+        registryNamespace = d.namespace || 'default';
+        staleMs = d.staleMs || 180000;
+        const redisOpen = !!d.redisOpen;
+        const followsRedis = !!d.followsRedis;
+        const configured = d.configured !== undefined ? !!d.configured : registryEnabled;
+        members = d.members || [];
+        const online = (d.online || []).length;
+        const hint = document.getElementById('registryHint');
+        if (registryEnabled) {
+            hint.className = 'hint ok';
+            const mode = followsRedis
+                ? '（跟随 <code>autumn.redis.open</code>）'
+                : '（显式 <code>autumn.node.registry</code>）';
+            hint.innerHTML = 'Registry 已开启' + mode + ' · 命名空间 <code>' + registryNamespace + '</code>；远程指派经 Pub/Sub，页面会轮询直到角色一致或超时。心跳窗口约 '
+                + Math.round(staleMs / 1000) + 's。JobDuty 见 <a href="loopjob.html">定时任务</a>。';
+            setSyncStatus('on');
+        } else {
+            hint.className = 'hint warn';
+            if (configured && !redisOpen) {
+                hint.innerHTML = 'Registry 配置为开启，但 <code>autumn.redis.open=false</code>，无法登记（启动不受影响）。开启 Redis 后自动可用。';
+            } else if (configured && redisOpen) {
+                hint.innerHTML = 'Registry 配置为开启且 Redis 已开，但 Redisson 不可用，无法登记（启动不受影响）。请检查 Redis/Redisson 装配。';
+            } else if (!redisOpen) {
+                hint.innerHTML = 'Registry 未开启：当前 <code>autumn.redis.open=false</code>。开启 Redis 后 Registry 默认跟随启用；或显式设置 <code>autumn.node.registry=true</code>（仍需 Redis/Redisson）。';
+            } else {
+                hint.innerHTML = 'Registry 未开启：Redis 已开，但 <code>autumn.node.registry</code> 被显式关闭。去掉该配置或设为 <code>true</code> 以启用集群登记。';
+            }
+            setSyncStatus('off');
+        }
+        document.getElementById('statOnlineTotal').textContent = (registryEnabled ? online : (localProfile ? 1 : 0)) + ' / ' + (registryEnabled ? members.length : (localProfile ? 1 : 0));
+        document.getElementById('statMembersHint').textContent = registryEnabled ? ('离线判定 >' + Math.round(staleMs / 1000) + 's') : '仅本机可用';
+        document.getElementById('statNamespace').textContent = registryEnabled ? registryNamespace : '（未启用）';
+        lastSyncAt = Date.now();
+        settlePendingFromMembers();
+        renderMembers();
+        updateBatchButtons();
+        updateSyncBar();
+        return true;
+    }
+
+    function settlePendingFromMembers() {
+        const done = [];
+        Object.keys(pending).forEach(uuid => {
+            const m = members.find(x => x.uuid === uuid);
+            if (m && rolesEqual(m.roles, pending[uuid])) done.push(uuid);
+        });
+        done.forEach(u => delete pending[u]);
+        if (!Object.keys(pending).length && syncTimer) {
+            clearInterval(syncTimer);
+            syncTimer = null;
+            setSyncStatus(registryEnabled ? 'on' : 'off');
+        }
+    }
+
+    function renderMembers() {
+        const empty = document.getElementById('membersEmpty');
+        const wrap = document.getElementById('membersTableWrap');
+        const body = document.getElementById('membersBody');
+        const selected = new Set(selectedUuids());
+        if (!registryEnabled) {
+            wrap.style.display = 'none';
+            empty.style.display = 'block';
+            empty.textContent = 'Registry 未开启，无集群成员列表。可先在左侧编辑本机角色。';
+            return;
+        }
+        if (!members.length) {
+            wrap.style.display = 'none';
+            empty.style.display = 'block';
+            empty.textContent = '暂无登记成员。请确认各节点已开启 registry 并完成至少一次心跳。';
+            return;
+        }
+        empty.style.display = 'none';
+        wrap.style.display = 'block';
+        body.innerHTML = members.map(m => {
+            const isPending = !!pending[m.uuid];
+            const showRoles = isPending ? pending[m.uuid] : m.roles;
+            const status = isPending
+                ? '<span class="badge pending">同步中</span>'
+                : (m.online ? '<span class="badge on">在线</span>' : '<span class="badge off">离线</span>');
+            const self = m.self ? ' <span class="badge self">本机</span>' : '';
+            const checked = selected.has(m.uuid) ? ' checked' : '';
+            return '<tr class="' + (isPending ? 'pending-row' : '') + '" data-uuid="' + m.uuid + '">'
+                + '<td><input type="checkbox" class="row-check" value="' + m.uuid + '"' + checked + ' onchange="updateBatchButtons()"></td>'
+                + '<td><div class="mono" title="' + m.uuid + '">' + shortUuid(m.uuid) + '</div>' + self + '</td>'
+                + '<td>' + status + '</td>'
+                + '<td title="' + (m.beat ? new Date(m.beat).toLocaleString() : '') + '">' + relativeBeat(m.beat) + '</td>'
+                + '<td>' + renderRoleTags(showRoles, isPending) + '</td>'
+                + '<td><button class="btn btn-outline btn-xs" onclick="openRoleModal(\'node\',\'' + m.uuid + '\')">改角色</button></td>'
+                + '</tr>';
+        }).join('');
+        const checks = document.querySelectorAll('.row-check');
+        document.getElementById('checkAll').checked = checks.length > 0 && Array.from(checks).every(c => c.checked);
+    }
+
+    function selectedUuids() {
+        return Array.from(document.querySelectorAll('.row-check:checked')).map(el => el.value);
+    }
+    function onlineUuids() {
+        return members.filter(m => m.online).map(m => m.uuid);
+    }
+    function toggleAll(on) {
+        document.querySelectorAll('.row-check').forEach(el => { el.checked = on; });
+        updateBatchButtons();
+    }
+    function updateBatchButtons() {
+        document.getElementById('btnBatchSelected').disabled = !registryEnabled || selectedUuids().length === 0;
+        document.getElementById('btnBatchOnline').disabled = !registryEnabled || onlineUuids().length === 0;
+    }
+
+    function openRoleModal(mode, uuid) {
+        editMode = mode;
+        editUuid = uuid || null;
+        let title = '编辑角色';
+        let hint = '';
+        let current = [];
+        if (mode === 'local') {
+            title = '编辑本机角色';
+            hint = '直接写入本机 node-profile.json（扩展顶层字段保留）。勾选 ALL 表示全开，与其它角色互斥。';
+            current = (localProfile && localProfile.roles) ? localProfile.roles.slice() : [];
+        } else if (mode === 'node') {
+            if (!registryEnabled) { toast('Registry 未开启', 'err'); return; }
+            title = '远程改角色 · ' + shortUuid(uuid);
+            hint = '向目标节点下发 roles；本机目标会同步落盘，其它节点将轮询等待心跳回写。';
+            const m = members.find(x => x.uuid === uuid);
+            current = pending[uuid] || (m && m.roles ? m.roles.slice() : []);
+        } else if (mode === 'selected') {
+            if (!registryEnabled) { toast('Registry 未开启', 'err'); return; }
+            const ids = selectedUuids();
+            if (!ids.length) { toast('请先勾选节点', 'err'); return; }
+            title = '批量改角色 · 已选 ' + ids.length + ' 台';
+            hint = '对勾选节点统一下发相同 roles，并轮询同步状态。';
+            current = [];
+        } else if (mode === 'online') {
+            if (!registryEnabled) { toast('Registry 未开启', 'err'); return; }
+            const ids = onlineUuids();
+            if (!ids.length) { toast('无在线节点', 'err'); return; }
+            title = '批量改角色 · 在线 ' + ids.length + ' 台';
+            hint = '对全部在线节点统一下发相同 roles，并轮询同步状态。';
+            current = [];
+        }
+        document.getElementById('roleModalTitle').textContent = title;
+        document.getElementById('roleModalHint').textContent = hint + ' LOCAL 专岗（含 LOCAL、不含 JOB）宽松跳过 SINGLETON/SEQUENTIAL。';
+        const box = document.getElementById('roleOptions');
+        const curSet = new Set(normalizeRoles(current));
+        box.innerHTML = catalog.map(r => {
+            const code = r.code;
+            const on = curSet.has(code);
+            return '<label class="role-option' + (on ? ' selected' : '') + '">'
+                + '<input type="checkbox" class="role-check" value="' + code + '"' + (on ? ' checked' : '') + ' onchange="onRoleCheck(this)">'
+                + '<span><div class="name">' + code + ' · ' + (r.name || '') + '</div>'
+                + '<div class="desc">' + (r.description || '') + '</div></span></label>';
+        }).join('') || '<div class="empty">无可用角色目录</div>';
+        document.getElementById('btnSaveRoles').disabled = false;
+        document.getElementById('roleModal').classList.add('show');
+    }
+
+    function onRoleCheck(el) {
+        if (el.value === 'ALL' && el.checked) {
+            document.querySelectorAll('.role-check').forEach(c => {
+                if (c.value !== 'ALL') c.checked = false;
+            });
+        } else if (el.value !== 'ALL' && el.checked) {
+            const all = document.querySelector('.role-check[value="ALL"]');
+            if (all) all.checked = false;
+        }
+        document.querySelectorAll('.role-option').forEach(lab => {
+            const inp = lab.querySelector('.role-check');
+            lab.classList.toggle('selected', !!(inp && inp.checked));
+        });
+    }
+
+    function closeRoleModal() {
+        document.getElementById('roleModal').classList.remove('show');
+    }
+
+    function pickedRoles() {
+        return normalizeRoles(Array.from(document.querySelectorAll('.role-check:checked')).map(el => el.value));
+    }
+
+    function markPending(uuids, roles) {
+        const expected = normalizeRoles(roles);
+        uuids.forEach(u => { pending[u] = expected; });
+        updateSyncBar();
+        renderMembers();
+        startSyncPoll();
+    }
+
+    function startSyncPoll() {
+        if (syncTimer) clearInterval(syncTimer);
+        if (!Object.keys(pending).length) return;
+        setSyncStatus('syncing', '等待节点同步…');
+        const started = Date.now();
+        syncTimer = setInterval(async () => {
+            await loadRegistry();
+            if (!Object.keys(pending).length) {
+                toast('角色已同步到目标节点', 'ok');
+                return;
+            }
+            if (Date.now() - started >= SYNC_TIMEOUT_MS) {
+                clearInterval(syncTimer);
+                syncTimer = null;
+                const left = Object.keys(pending).length;
+                setSyncStatus(registryEnabled ? 'on' : 'off');
+                toast('仍有 ' + left + ' 台未确认同步（可能离线或心跳较慢），可稍后刷新', 'info');
+            }
+        }, SYNC_POLL_MS);
+    }
+
+    async function saveRoles() {
+        const roles = pickedRoles();
+        const btn = document.getElementById('btnSaveRoles');
+        btn.disabled = true;
+        try {
+            if (editMode === 'local') {
+                const d = await apiSend('PUT', '/profile', { roles: roles });
+                if (d.code !== 0) { toast(d.msg || '保存失败', 'err'); return; }
+                localProfile = d.profile || localProfile;
+                renderLocal();
+                if (registryEnabled) {
+                    const b = await apiSend('POST', '/registry/beat', {});
+                    if (b.code === 0) {
+                        members = b.members || members;
+                        lastSyncAt = Date.now();
+                        if (localProfile && localProfile.uuid) {
+                            markPending([localProfile.uuid], roles);
+                        }
+                        await loadRegistry();
+                    } else {
+                        await loadRegistry();
+                    }
+                }
+                toast('本机角色已保存' + (registryEnabled ? '并上报心跳' : ''), 'ok');
+                closeRoleModal();
+                return;
+            }
+            let uuids = [];
+            if (editMode === 'node') uuids = [editUuid];
+            if (editMode === 'selected') uuids = selectedUuids();
+            if (editMode === 'online') uuids = onlineUuids();
+            if (!uuids.length) { toast('无目标节点', 'err'); return; }
+            let d;
+            if (uuids.length === 1) {
+                d = await apiSend('PUT', '/registry/assign', { uuid: uuids[0], roles: roles });
+            } else {
+                d = await apiSend('PUT', '/registry/assign-batch', { uuids: uuids, roles: roles });
+            }
+            if (d.code !== 0) { toast(d.msg || '下发失败', 'err'); return; }
+            markPending(uuids, roles);
+            toast(uuids.length === 1 ? '已下发，正在同步…' : ('已批量下发 ' + (d.ok || uuids.length) + ' 台，正在同步…'), 'info');
+            closeRoleModal();
+            await loadLocal();
+            await loadRegistry();
+        } catch (e) {
+            toast(String(e), 'err');
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    async function reloadLocal() {
+        const d = await apiSend('POST', '/profile/reload', {});
+        if (d.code !== 0) { toast(d.msg || 'reload 失败', 'err'); return; }
+        localProfile = d.profile || {};
+        renderLocal();
+        toast('已 reload 本机画像', 'ok');
+        if (registryEnabled) {
+            await apiSend('POST', '/registry/beat', {});
+            await loadRegistry();
+        }
+    }
+
+    async function refreshAll(manual) {
+        if (refreshing) return;
+        refreshing = true;
+        const btn = document.getElementById('btnRefresh');
+        if (btn) btn.disabled = true;
+        try {
+            if (manual) setSyncStatus('syncing', '刷新中…');
+            await loadLocal();
+            await loadRegistry();
+            if (manual) toast('已刷新', 'ok');
+        } finally {
+            refreshing = false;
+            if (btn) btn.disabled = false;
+            if (!Object.keys(pending).length) setSyncStatus(registryEnabled ? 'on' : 'off');
+        }
+    }
+
+    function setupAutoRefresh() {
+        if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
+        if (document.getElementById('autoRefresh').checked) {
+            autoTimer = setInterval(() => refreshAll(false), AUTO_REFRESH_MS);
+        }
+    }
+
+    document.getElementById('autoRefresh').addEventListener('change', setupAutoRefresh);
+    document.getElementById('roleModal').addEventListener('click', function (e) {
+        if (e.target === this) closeRoleModal();
+    });
+    document.getElementById('statUuid').addEventListener('click', async function () {
+        const u = localProfile && localProfile.uuid;
+        if (!u || !navigator.clipboard) return;
+        try {
+            await navigator.clipboard.writeText(u);
+            toast('已复制 UUID', 'ok');
+        } catch (e) { /* ignore */ }
+    });
+
+    (async function init() {
+        await loadCatalog();
+        await refreshAll(false);
+        setupAutoRefresh();
+    })();
+    //</#noparse>
+</script>
+</body>
+</html>

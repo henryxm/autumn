@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.sys.service;
 
+import lombok.extern.slf4j.Slf4j;
 import cn.org.autumn.database.runtime.WrapperColumns;
 import cn.org.autumn.bean.EnvBean;
 import cn.org.autumn.cluster.UserHandler;
@@ -32,8 +33,6 @@ import org.apache.shiro.authc.UsernamePasswordToken;
 import org.apache.shiro.subject.Subject;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -52,10 +51,9 @@ import static cn.org.autumn.modules.sys.service.SysRoleService.Role_System_Admin
 /**
  * 系统用户
  */
+@Slf4j
 @Service
 public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> implements LoopJob.OneMinute, LoopJob.TenMinute, InitFactory.Init, InitFactory.After, ClearHandler {
-
-    Logger log = LoggerFactory.getLogger(getClass());
 
     static Map<String, SysUserEntity> sync = new LinkedHashMap<>();
     static Map<String, Integer> hashUser = new HashMap<>();

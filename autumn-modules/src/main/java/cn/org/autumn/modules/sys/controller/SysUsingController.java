@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.sys.controller;
 
+import lombok.extern.slf4j.Slf4j;
 import cn.org.autumn.model.Using;
 import cn.org.autumn.site.UsingFactory;
 import org.apache.commons.lang3.StringUtils;
@@ -11,16 +12,13 @@ import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.servlet.http.HttpServletRequest;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.Objects;
 
+@Slf4j
 @RestController
 @RequestMapping("sys")
 public class SysUsingController {
-
-    private static final Logger log = LoggerFactory.getLogger(SysUsingController.class);
 
     @Autowired
     UsingFactory usingFactory;

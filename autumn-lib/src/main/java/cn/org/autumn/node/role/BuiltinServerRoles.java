@@ -28,6 +28,8 @@ public class BuiltinServerRoles implements LoadFactory.Must {
                 Set.of(ServerRole.CAP_API_HTTP, ServerRole.CAP_FILE_DOWNLOAD), 20));
         registry.register(new ServerRole(ServerRole.CODE_WORKER, "后台", "后台静默工作",
                 Set.of(ServerRole.CAP_BACKGROUND), 30));
+        registry.register(new ServerRole(ServerRole.CODE_LOCAL, "本机", "仅本节点本地任务，不参与集群互斥编排",
+                Set.of(ServerRole.CAP_LOCAL_JOB), 35));
         registry.register(new ServerRole(ServerRole.CODE_JOB, "任务", "定时任务服务器",
                 Set.of(ServerRole.CAP_SCHEDULED_JOB), 40));
         registry.register(new ServerRole(ServerRole.CODE_MONITOR, "监视", "监视与观测",

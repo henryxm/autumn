@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.client.service;
 
+import lombok.extern.slf4j.Slf4j;
 import cn.org.autumn.model.AuthLoginProviderType;
 import cn.org.autumn.model.Response;
 import cn.org.autumn.model.ScanLoginConfig;
@@ -26,16 +27,13 @@ import java.util.HashMap;
 import java.util.Map;
 import jakarta.servlet.http.HttpServletRequest;
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /** RP 联邦扫码：建票注入 WEBHOOK，SSE 推送状态，入站 authorized 自动完成登录。 */
+@Slf4j
 @Service
 public class RpQrcCallbackService {
-
-    private static final Logger log = LoggerFactory.getLogger(RpQrcCallbackService.class);
 
     @Autowired
     private AuthSiteRoleService authSiteRoleService;

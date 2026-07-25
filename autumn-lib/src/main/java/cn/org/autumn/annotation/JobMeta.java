@@ -135,10 +135,13 @@ public @interface JobMeta {
     String[] assign() default {};
 
     /**
-     * 集群任务职责；缺省 {@link JobDuty#ALL} 与历史行为完全兼容（本机执行、框架不加集群锁）。
+     * 任务职责；缺省 {@link JobDuty#ALL} 与历史行为完全兼容（本机执行、框架不加集群锁）。
+     * <p>
+     * {@link JobDuty#LOCAL}：本节点本地锁，不参与集群互斥。
+     * {@link JobDuty#SINGLETON}/{@link JobDuty#SEQUENTIAL}：集群编排。
      * <p>
      * 方法级 {@code @JobMeta} 仅当 {@code duty} 为非 {@link JobDuty#ALL} 时覆盖类级，
-     * 避免仅写 {@code name} 等把类级 {@code SINGLETON}/{@code SEQUENTIAL} 打回 ALL。
+     * 避免仅写 {@code name} 等把类级 {@code SINGLETON}/{@code SEQUENTIAL}/{@code LOCAL} 打回 ALL。
      */
     JobDuty duty() default JobDuty.ALL;
 
@@ -148,12 +151,14 @@ public @interface JobMeta {
     String[] roles() default {};
 
     /**
-     * 分布式锁键（仅 {@link JobDuty#SINGLETON}/{@link JobDuty#SEQUENTIAL}）；空则使用 {@code autumn:job:{jobId}}。
+     * 锁键：{@link JobDuty#SINGLETON}/{@link JobDuty#SEQUENTIAL} 为集群锁键；
+     * {@link JobDuty#LOCAL} 为本地锁业务键（框架再套 {@code local:{nodeUuid}:} 前缀）。
+     * 空则使用 {@code autumn:job:{jobId}}。
      */
     String lock() default "";
 
     /**
-     * 周期栅栏（仅 {@link JobDuty#SINGLETON}）：同一逻辑周期全集群只跑一次。
+     * 周期栅栏（仅 {@link JobDuty#SINGLETON}）：同一逻辑周期全集群只跑一次；对 {@link JobDuty#LOCAL} 忽略。
      * <p>
      * 用 Redis {@code TIME} 按 LoopJob 分类间隔分桶，{@code SETNX} 占桶后再抢互斥锁。
      * 解决「先到节点跑完释放锁后，同周期晚到节点再次获锁再跑」。
@@ -180,8 +185,8 @@ public @interface JobMeta {
     /**
      * 异步执行：将<strong>整段</strong>（含 JobDuty 抢锁/周期栅栏 + 业务）提交到 TagTaskExecutor，不阻塞调度线程。
      * <p>
-     * {@link JobDuty#SINGLETON} 仍在<strong>同一 worker 线程</strong>内持锁执行业务（Redisson 锁不可跨线程持有）；
-     * 不是「调度线程抢锁后再异步跑业务」。
+     * {@link JobDuty#SINGLETON}/{@link JobDuty#LOCAL} 仍在<strong>同一 worker 线程</strong>内持锁执行业务
+     * （集群锁不可跨线程；本地锁同理）；不是「调度线程抢锁后再异步跑业务」。
      * <p>
      * 规则：
      * <ul>

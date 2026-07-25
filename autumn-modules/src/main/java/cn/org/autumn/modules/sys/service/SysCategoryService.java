@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.sys.service;
 
+import lombok.extern.slf4j.Slf4j;
 import cn.org.autumn.config.GsonConfig;
 import cn.org.autumn.annotation.ConfigField;
 import cn.org.autumn.annotation.ConfigParam;
@@ -13,8 +14,6 @@ import cn.org.autumn.modules.sys.entity.SysConfigEntity;
 import com.google.gson.Gson;
 import com.google.gson.internal.LinkedTreeMap;
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import cn.org.autumn.modules.sys.dao.SysCategoryDao;
@@ -25,10 +24,9 @@ import java.util.*;
 
 import static cn.org.autumn.modules.sys.service.SysConfigService.json_type;
 
+@Slf4j
 @Service
 public class SysCategoryService extends ModuleService<SysCategoryDao, SysCategoryEntity> implements CategoryHandler {
-
-    public Logger log = LoggerFactory.getLogger(getClass());
 
     public static final String default_config = "default";
     public static final String storage_config = "storage_config";
@@ -121,7 +119,6 @@ public class SysCategoryService extends ModuleService<SysCategoryDao, SysCategor
         categoryEntity.setDescription(description);
         saveOrUpdate(categoryEntity);
     }
-
 
     public Map<String, CategoryItem> reverse(Class<?> clazz, String fieldName, Object obj, String language) {
         try {

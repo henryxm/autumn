@@ -1,8 +1,7 @@
 package cn.org.autumn.utils;
 
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
@@ -14,9 +13,9 @@ import org.springframework.stereotype.Component;
 /**
  * Spring Context 工具类
  */
+@Slf4j
 @Component
 public class SpringContextUtils implements ApplicationContextAware {
-    private static final Logger log = LoggerFactory.getLogger(SpringContextUtils.class);
     public static ApplicationContext applicationContext;
     private static DefaultListableBeanFactory defaultListableBeanFactory;
 

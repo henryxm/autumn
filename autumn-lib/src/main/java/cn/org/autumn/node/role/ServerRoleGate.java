@@ -1,6 +1,7 @@
 package cn.org.autumn.node.role;
 
 import cn.org.autumn.config.Config;
+import cn.org.autumn.job.JobDuty;
 import cn.org.autumn.node.NodeProfile;
 import cn.org.autumn.node.ProfileService;
 import java.util.ArrayList;
@@ -10,6 +11,9 @@ import org.apache.commons.lang3.StringUtils;
 
 /**
  * 本机服务器角色门禁（100% 前向兼容：空 roles 或 ALL = 全开）。
+ * <p>
+ * LOCAL 专岗（含 {@link ServerRole#CODE_LOCAL}、不含 {@link ServerRole#CODE_JOB}、非 unrestricted）
+ * 对 {@link JobDuty#SINGLETON}/{@link JobDuty#SEQUENTIAL} 走宽松跳过，见 {@link #allowsClusterJobDuty}。
  */
 public final class ServerRoleGate {
 
@@ -114,6 +118,49 @@ public final class ServerRoleGate {
             }
         }
         return false;
+    }
+
+    /**
+     * LOCAL 专岗：已手动限制角色，且含 LOCAL、不含 JOB（含 ALL 时不算专岗）。
+     * 空 roles / ALL → false（全开兼容）。
+     */
+    public static boolean isLocalScoped() {
+        return isLocalScoped(currentRoles());
+    }
+
+    public static boolean isLocalScoped(Collection<String> roles) {
+        if (isUnrestricted(roles)) {
+            return false;
+        }
+        List<String> normalized = ServerRoleGroups.normalize(roles);
+        boolean local = false;
+        for (String r : normalized) {
+            if (ServerRole.CODE_JOB.equalsIgnoreCase(r)) {
+                return false;
+            }
+            if (ServerRole.CODE_LOCAL.equalsIgnoreCase(r)) {
+                local = true;
+            }
+        }
+        return local;
+    }
+
+    /**
+     * 宽松集群编排门禁：LOCAL 专岗跳过 {@link JobDuty#SINGLETON}/{@link JobDuty#SEQUENTIAL}；
+     * {@link JobDuty#ALL}/{@link JobDuty#LOCAL} 等仍允许。非专岗一律允许。
+     */
+    public static boolean allowsClusterJobDuty(JobDuty duty) {
+        return allowsClusterJobDuty(currentRoles(), duty);
+    }
+
+    public static boolean allowsClusterJobDuty(Collection<String> roles, JobDuty duty) {
+        if (duty == null || duty == JobDuty.ALL || duty == JobDuty.LOCAL || duty == JobDuty.DISABLED) {
+            return true;
+        }
+        if (duty != JobDuty.SINGLETON && duty != JobDuty.SEQUENTIAL) {
+            return true;
+        }
+        return !isLocalScoped(roles);
     }
 
     public static List<String> currentRoles() {

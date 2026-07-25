@@ -34,6 +34,8 @@ import org.springframework.stereotype.Service;
  * <p>
  * 已有文件路径仅在 {@link #lastSnapshot()} 为空时采集指纹（避免 TTL/二次 ensure 重复扫硬件）。
  * 启动仅保证身份（{@code roles} 为空）视为全开（等同 ALL）；非空且非 ALL 时参与能力/Job 角色门禁。
+ * 写盘仅更新框架字段（uuid/version/create/update/roles/labels），子项目在 JSON 上的其它顶层键由 {@link ProfileStore} 保留；
+ * {@code patch} 中的 {@code labels} 为合并写入（null 值删除键），不整表替换。
  * {@link #peekUuid()} 只读缓存、不触发 ensure；业务身份请在 Must/Init 之后用 {@link #uuid()}。
  * 详见 {@code docs/AI_SERVER_ROLE.md}。
  */
@@ -449,10 +451,19 @@ public class ProfileService implements LoadFactory.Must, NodeProfile {
             }
         }
         if (fields.containsKey("labels") && fields.get("labels") instanceof Map<?, ?> map) {
-            Map<String, String> labels = new LinkedHashMap<>();
+            Map<String, String> labels = new LinkedHashMap<>(p.getLabels());
             for (Map.Entry<?, ?> e : map.entrySet()) {
-                if (e.getKey() != null) {
-                    labels.put(String.valueOf(e.getKey()), e.getValue() == null ? "" : String.valueOf(e.getValue()));
+                if (e.getKey() == null) {
+                    continue;
+                }
+                String key = String.valueOf(e.getKey()).trim();
+                if (key.isEmpty()) {
+                    continue;
+                }
+                if (e.getValue() == null) {
+                    labels.remove(key);
+                } else {
+                    labels.put(key, String.valueOf(e.getValue()));
                 }
             }
             p.setLabels(labels);
