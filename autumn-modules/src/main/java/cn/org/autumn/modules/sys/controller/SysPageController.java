@@ -14,6 +14,7 @@ import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.wall.service.IpWhiteService;
 import cn.org.autumn.modules.wall.site.WallDefault;
 import cn.org.autumn.modules.usr.interceptor.AuthorizationInterceptor;
+import cn.org.autumn.site.AdminShellAccess;
 import cn.org.autumn.site.AuthPageAttributes;
 import cn.org.autumn.site.AuthPageSupport;
 import cn.org.autumn.site.PageFactory;
@@ -71,6 +72,9 @@ public class SysPageController implements ErrorController {
     @Autowired
     SitePortalSupport sitePortalSupport;
 
+    @Autowired
+    AdminShellAccess adminShellAccess;
+
     List<String> active = new ArrayList<>();
 
     @RequestMapping(OpcConstants.CONNECTBIND_MANAGE_PAGE)
@@ -121,7 +125,8 @@ public class SysPageController implements ErrorController {
                 sitePortalSupport.applyToModelForView(httpServletRequest, model, resourceId);
                 return resourceId;
             }
-            return pageFactory.index(httpServletRequest, httpServletResponse, model);
+            String indexView = pageFactory.index(httpServletRequest, httpServletResponse, model);
+            return adminShellAccess.denyUnlessSystemAdmin(indexView, httpServletRequest, httpServletResponse, model);
         }
         if (ShiroUtils.needLogin()) {
             return "redirect:" + WebPathUtils.forBrowser(httpServletRequest, "/login");
@@ -157,7 +162,7 @@ public class SysPageController implements ErrorController {
     public String index1(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
         if (isActive(httpServletRequest)) {
             sitePortalSupport.applyToModel(httpServletRequest, model);
-            return "index1";
+            return adminShellAccess.denyUnlessSystemAdmin("index1", httpServletRequest, httpServletResponse, model);
         }
         if (ShiroUtils.needLogin()) {
             return "redirect:" + WebPathUtils.forBrowser(httpServletRequest, "/login");
@@ -240,7 +245,8 @@ public class SysPageController implements ErrorController {
 
     @RequestMapping("main.html")
     public String _main(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
-        return pageFactory.main(httpServletRequest, httpServletResponse, model);
+        String mainView = pageFactory.main(httpServletRequest, httpServletResponse, model);
+        return adminShellAccess.denyUnlessSystemAdmin(mainView, httpServletRequest, httpServletResponse, model);
     }
 
     @RequestMapping("loading.html")

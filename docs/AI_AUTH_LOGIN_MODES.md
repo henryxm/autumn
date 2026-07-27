@@ -223,6 +223,17 @@ String base = mode == OAUTH ? origin + "/oauth2" : origin + "/open/oauth2";
 
 **参考实现**：框架内置 `oauth2/login.html`、`open/oauth2/login.html`、`login.html`（`oauthAuthorize`/`oplAuthorize` 分栏）。
 
+### 3.7.1 默认后台壳（index / index1 / main）仅系统管理员
+
+框架 AdminLTE 壳模板名精确为 **`index`**、**`index1`**、**`main`**（不含业务路径如 `modules/bigmodel/pages/index`）。
+
+| 规则 | 说明 |
+|------|------|
+| **门禁** | `AdminShellAccess.denyUnlessSystemAdmin`：已登录且非 `isSystemAdministrator` 时，最终视图若为上述壳名 → **404** |
+| **挂载点** | `SysPageController`（`/index.html`、`/index1.html`、`/main.html`）与 `SuperPositionModelService.getResourceId`（含 `/?spm=root.index` 等） |
+| **业务替代** | 实现 `PageHandler.index()` / `main()`（更小 `@Order`）返回自有模板或 `redirect:/?spm=…`；抢先返回则不会落到框架壳，从而不受 404 门禁 |
+| **登录跳转** | 面向普通用户的业务站 **不要** 把 `postLoginRedirect` 设为裸 `/index.html`；应指向业务首页 SPM 或 `/`（见 `docs/AI_ACCOUNT_AUTH_CONFIG.md`） |
+
 ### 3.8 站点门户（品牌 / 备案 / 法律链接）
 
 登录、注册、忘记密码、法律页及 OAuth/OPL 授权分栏共用 **`_auth_site_header.html`** / **`_auth_site_footer.html`**，数据来自 **`SITE_PORTAL_CONFIG`**（后台 **系统管理 → 站点门户**）。未配置字段不展示。

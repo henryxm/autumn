@@ -48,6 +48,8 @@
 
 **留空 `postLoginRedirect` 或删除该字段**：行为与升级前一致——启用 SPM 菜单时默认 `/`，否则默认 `index.html`。
 
+> **注意**：框架默认后台壳（视图名 `index` / `index1` / `main`）对**非系统管理员**会 404（见 `AdminShellAccess`、`docs/AI_AUTH_LOGIN_MODES.md` §3.7.1）。面向终端用户的业务工程应将 `postLoginRedirect` 设为业务首页（如 `/?spm=…`），并用 `PageHandler.index()` 替代或重定向，**不要**依赖裸 `/index.html` 作为普通用户落地页。
+
 ---
 
 ## 2. 配置项说明
@@ -321,8 +323,9 @@ POST /sys/config/refreshJson?paramKey=ACCOUNT_AUTH_CONFIG
 
 | 场景 | 期望 |
 |------|------|
-| 未配置 `postLoginRedirect`，直接登录 | 与升级前相同（SPM `/` 或 `index.html`） |
-| 配置 `/main.html`，直接登录 | 跳 `/main.html` |
+| 未配置 `postLoginRedirect`，直接登录 | 与升级前相同（SPM `/` 或 `index.html`）；若落到框架壳且非超管则 404 |
+| 配置 `/main.html`，直接登录 | 跳 `/main.html`；非超管打开该壳 → 404 |
+| 业务 `PageHandler.index` 返回 `redirect:/?spm=…` | 普通用户可跟随跳转，不渲染框架壳 |
 | 访问 HTML 页过期后登录 | 回到原 HTML 页（SavedRequest） |
 | REST/AJAX 过期后登录 | 不跳到 REST；走配置或默认 |
 | OAuth 授权登录 | 不受 `postLoginRedirect` 影响 |
@@ -357,6 +360,7 @@ A：**否**。仍为 SHA-256 + salt；本次变更仅涉及登录 **成功后浏
 | `docs/AI_OAUTH_INTEGRATION.md` | OAuth2 第三方对接（与本文跳转配置正交） |
 | `docs/AI_UPGRADE.md` | 依赖方升级清单 |
 | `AccountAuthConfig.java` | 配置模型与 `validateAndFix` |
+| `AdminShellAccess.java` | 默认后台壳仅系统管理员；业务用 `PageHandler` 替代 |
 | `JsonTypeConfigRefresher.java` | JSON 字段合并与刷新核心 |
 | `SysAuthSupport.java` | 登录后跳转统一解析 |
 | `WebPathUtils.java` | 安全 URL 校验与 context-path |

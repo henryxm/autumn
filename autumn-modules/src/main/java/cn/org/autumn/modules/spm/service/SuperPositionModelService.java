@@ -50,6 +50,9 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
     PageFactory pageFactory;
 
     @Autowired
+    AdminShellAccess adminShellAccess;
+
+    @Autowired
     LoadFactory loadFactory;
 
     @Autowired
@@ -190,17 +193,18 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
         if (StringUtils.isNotEmpty(path)) {
             if (log.isDebugEnabled())
                 log.debug("路径:{}, 工厂:{}", httpServletRequest.getRequestURL(), path);
-            return path;
+            return adminShellAccess.denyUnlessSystemAdmin(path, httpServletRequest, httpServletResponse, model);
         }
 
         if (StringUtils.isEmpty(spm)) {
             if (log.isDebugEnabled())
                 log.debug("默认路径:{}", httpServletRequest.getRequestURL());
-            return pageFactory.index(httpServletRequest, httpServletResponse, model);
+            String indexView = pageFactory.index(httpServletRequest, httpServletResponse, model);
+            return adminShellAccess.denyUnlessSystemAdmin(indexView, httpServletRequest, httpServletResponse, model);
         }
         SuperPositionModelEntity superPositionModelEntity = getSpm(httpServletRequest, spm);
         if (null != superPositionModelEntity && StringUtils.isNotEmpty(superPositionModelEntity.getResourceId()))
-            return superPositionModelEntity.getResourceId();
+            return adminShellAccess.denyUnlessSystemAdmin(superPositionModelEntity.getResourceId(), httpServletRequest, httpServletResponse, model);
         if (log.isDebugEnabled())
             log.debug("无效路径:{}, 返回:404", httpServletRequest.getRequestURL());
         return pageFactory._404(httpServletRequest, httpServletResponse, model);
