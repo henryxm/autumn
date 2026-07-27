@@ -3,11 +3,11 @@ package cn.org.autumn.modules.client.service;
 import cn.org.autumn.modules.client.dto.WebOauthBindPendingContext;
 import cn.org.autumn.modules.client.dto.WebOauthBindResolveResult;
 import cn.org.autumn.modules.client.entity.WebAuthenticationEntity;
+import cn.org.autumn.modules.client.event.WebOauthBindCompletedEvent;
 import cn.org.autumn.modules.client.oauth2.WebOauthBindException;
 import cn.org.autumn.modules.client.oauth2.WebOauthBindException.ConflictType;
 import cn.org.autumn.modules.client.oauth2.WebOauthBindSupport;
 import cn.org.autumn.modules.client.oauth2.WebOauthEndpointResolver;
-import cn.org.autumn.utils.WebPathUtils;
 import cn.org.autumn.modules.oauth.oauth2.support.OAuth2HttpClient;
 import cn.org.autumn.modules.oauth.oauth2.support.OAuthTokenResponse;
 import cn.org.autumn.modules.oauth.oauth2.support.OAuthTokenResponseParser;
@@ -19,6 +19,7 @@ import cn.org.autumn.modules.usr.dto.UserProfile;
 import cn.org.autumn.modules.usr.entity.UserProfileEntity;
 import cn.org.autumn.modules.usr.service.UserProfileService;
 import cn.org.autumn.modules.usr.service.UserTokenService;
+import cn.org.autumn.utils.WebPathUtils;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
 import jakarta.servlet.http.HttpServletRequest;
@@ -28,6 +29,7 @@ import org.apache.oltu.oauth2.as.issuer.OAuthIssuerImpl;
 import org.apache.oltu.oauth2.common.OAuth;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -61,6 +63,9 @@ public class WebOauthLoginService {
 
     @Autowired
     private WebOauthEndpointResolver webOauthEndpointResolver;
+
+    @Autowired
+    private ApplicationEventPublisher applicationEventPublisher;
 
     public String bindChoicePageUrl(HttpServletRequest request, String pendingToken) {
         return WebPathUtils.forBrowser(request, "/client/oauth2/bind/choice?token=" + pendingToken);
@@ -115,6 +120,7 @@ public class WebOauthLoginService {
         }
         userProfileService.establishSession(result.getProfile());
         userTokenService.saveToken(tokenBody);
+        publishBindCompleted(webAuth, upstream, result);
         return result;
     }
 
@@ -136,7 +142,17 @@ public class WebOauthLoginService {
         if (StringUtils.isNotBlank(pending.getTokenBody())) {
             userTokenService.saveToken(pending.getTokenBody());
         }
+        publishBindCompleted(webAuth, upstream, result);
         return result;
+    }
+
+    private void publishBindCompleted(WebAuthenticationEntity webAuth, UserProfile upstream, WebOauthBindResolveResult result) {
+        if (result == null || result.getProfile() == null || StringUtils.isBlank(result.getProfile().getUuid())) {
+            return;
+        }
+        String clientId = webAuth == null ? null : webAuth.getClientId();
+        String originUri = webAuth == null ? null : webAuth.getOriginUri();
+        applicationEventPublisher.publishEvent(new WebOauthBindCompletedEvent(this, result.getProfile().getUuid(), clientId, originUri, upstream, result.isIdempotent()));
     }
 
     private UserProfile fetchUserInfo(WebAuthenticationEntity webAuth, String tokenBody, OAuth2HttpClient.UserInfoDelivery delivery, boolean remoteIdp) {
@@ -218,8 +234,14 @@ public class WebOauthLoginService {
         if (tokenStore == null || !(tokenStore.getValue() instanceof SysUserEntity)) {
             throw new IllegalStateException("access_token 无效");
         }
-        UserProfileEntity profileEntity = userProfileService.from((SysUserEntity) tokenStore.getValue());
-        return UserProfile.from(profileEntity);
+        SysUserEntity user = (SysUserEntity) tokenStore.getValue();
+        UserProfileEntity profileEntity = userProfileService.from(user);
+        UserProfile profile = UserProfile.from(profileEntity);
+        profile.setVerified(user.getVerify());
+        if (StringUtils.isBlank(profile.getMobile()) && StringUtils.isNotBlank(user.getMobile())) {
+            profile.setMobile(user.getMobile());
+        }
+        return profile;
     }
 
     private String extractAccessToken(String tokenResponseBody) {

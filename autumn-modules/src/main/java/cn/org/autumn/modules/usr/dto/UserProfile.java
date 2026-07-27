@@ -24,6 +24,13 @@ public class UserProfile implements Serializable {
     @JsonSerialize(include = JsonSerialize.Inclusion.NON_EMPTY)
     private String nickname = "";
 
+    /** OAuth userInfo scope=phone；可为空。 */
+    @JsonSerialize(include = JsonSerialize.Inclusion.NON_EMPTY)
+    private String mobile;
+
+    /** OAuth userInfo scope=verified：0 未实名 / 1 已实名；可为空表示未下发该字段。 */
+    private Integer verified;
+
     public static UserProfile from(UserProfileEntity userProfileEntity) {
         UserProfile userProfile = new UserProfile();
         if (StringUtils.isNotEmpty(userProfileEntity.getIcon()))
@@ -33,6 +40,9 @@ public class UserProfile implements Serializable {
         userProfile.setUsername(userProfileEntity.getUsername());
         userProfile.setNickname(userProfileEntity.getNickname());
         userProfile.setUuid(userProfileEntity.getUuid());
+        if (StringUtils.isNotBlank(userProfileEntity.getMobile())) {
+            userProfile.setMobile(userProfileEntity.getMobile());
+        }
         return userProfile;
     }
 
@@ -43,6 +53,8 @@ public class UserProfile implements Serializable {
                 ", icon='" + icon + '\'' +
                 ", username='" + username + '\'' +
                 ", nickname='" + nickname + '\'' +
+                ", mobile='" + mobile + '\'' +
+                ", verified=" + verified +
                 '}';
     }
 }

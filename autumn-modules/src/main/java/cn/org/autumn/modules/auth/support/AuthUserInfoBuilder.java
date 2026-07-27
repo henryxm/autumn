@@ -83,6 +83,12 @@ public final class AuthUserInfoBuilder {
         if (StringUtils.isNotBlank(info.getNickname())) {
             profile.setNickname(info.getNickname());
         }
+        if (StringUtils.isNotBlank(info.getMobile())) {
+            profile.setMobile(info.getMobile());
+        }
+        if (info.getVerified() != null) {
+            profile.setVerified(info.getVerified());
+        }
         return profile;
     }
 

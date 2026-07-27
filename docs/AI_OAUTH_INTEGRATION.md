@@ -311,6 +311,8 @@ token 过期后：使用 [Refresh Token 续期](#7-refresh-token-续期)，或�
 | `phone` | `mobile`（需客户端登记含 `phone`） |
 | `verified` | `verified`（0/1，不含身份证） |
 
+RP 侧：`UserProfile` 保留 `verified`/`mobile`；绑定成功发布 `WebOauthBindCompletedEvent`（本地 uuid + 上游 userInfo），供业务仓（如 BigHub）同步实名。跨站联邦（如 bighub ← chaoran.xin）客户端登记 scope 须含 `verified`。
+
 ### 6.3 实现说明
 
 - 换 token 响应中 `scope` 为**本次实际授权**值

@@ -68,4 +68,18 @@ public class AuthUserInfoBuilderTest {
         OpenUserInfoSnapshot snapshot = AuthUserInfoBuilder.toOpenUserInfo(info);
         Assert.assertNull(snapshot.getEmail());
     }
+
+    @Test
+    public void toUserProfileCopiesVerifiedAndMobile() {
+        cn.org.autumn.auth.model.AuthUserInfo info = new cn.org.autumn.auth.model.AuthUserInfo();
+        info.setUuid("u1");
+        info.setNickname("nick");
+        info.setMobile("13800000000");
+        info.setVerified(1);
+        cn.org.autumn.modules.usr.dto.UserProfile profile = AuthUserInfoBuilder.toUserProfile(info);
+        Assert.assertEquals("u1", profile.getUuid());
+        Assert.assertEquals("nick", profile.getNickname());
+        Assert.assertEquals("13800000000", profile.getMobile());
+        Assert.assertEquals(Integer.valueOf(1), profile.getVerified());
+    }
 }
