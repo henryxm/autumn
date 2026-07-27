@@ -175,63 +175,62 @@ public class MysqlTableService {
                                       Map<TableInfo, List<Object>> removeIndexTableMap,
                                       List<TableInfo> charsetSyncTables) {
         for (Class<?> clazz : classes) {
+            try {
+                TableInfo tableInfo = new TableInfo(clazz);
 
-            TableInfo tableInfo = new TableInfo(clazz);
+                if (!tableInfo.isValid())
+                    continue;
 
-            if (!tableInfo.isValid())
-                continue;
+                // 用于存新增表的字段
+                List<Object> newFieldList = new ArrayList<Object>();
+                // 用于存删除的字段
+                List<Object> removeFieldList = new ArrayList<Object>();
+                // 用于存新增的字段
+                List<Object> addFieldList = new ArrayList<Object>();
+                // 用于存修改的字段
+                List<Object> modifyFieldList = new ArrayList<Object>();
+                // 用于存删除主键的字段
+                List<Object> dropKeyFieldList = new ArrayList<Object>();
+                // 用于存删除唯一约束的字段
+                List<Object> dropUniqueFieldList = new ArrayList<Object>();
+                // 保存需要增加索引的信息
+                List<Object> addIndexList = new ArrayList<Object>();
+                // 保存需要删除索引的信息
+                List<Object> removeIndexList = new ArrayList<Object>();
 
-            // 用于存新增表的字段
-            List<Object> newFieldList = new ArrayList<Object>();
-            // 用于存删除的字段
-            List<Object> removeFieldList = new ArrayList<Object>();
-            // 用于存新增的字段
-            List<Object> addFieldList = new ArrayList<Object>();
-            // 用于存修改的字段
-            List<Object> modifyFieldList = new ArrayList<Object>();
-            // 用于存删除主键的字段
-            List<Object> dropKeyFieldList = new ArrayList<Object>();
-            // 用于存删除唯一约束的字段
-            List<Object> dropUniqueFieldList = new ArrayList<Object>();
-            // 保存需要增加索引的信息
-            List<Object> addIndexList = new ArrayList<Object>();
-            // 保存需要删除索引的信息
-            List<Object> removeIndexList = new ArrayList<Object>();
+                // 迭代出所有model的所有fields存到newFieldList中
+                tableFieldsConstruct(mySqlTypeAndLengthMap, clazz, newFieldList);
 
-            // 迭代出所有model的所有fields存到newFieldList中
-            tableFieldsConstruct(mySqlTypeAndLengthMap, clazz, newFieldList);
-
-            // 如果配置文件配置的是create，表示将所有的表删掉重新创建
-            if (create.equals(type)) {
-                tableDao.dropTable(tableInfo.getName());
-            }
-
-            Boolean exist = tableDao.hasTable(tableInfo.getName());
-
-            // 不存在时
-            if (!exist) {
-                newTableMap.put(tableInfo, newFieldList);
-            } else {
-                if (syncTableCharset) {
-                    // 延后到删索引之后再 CONVERT，见 createOrModifyTableConstruct
-                    charsetSyncTables.add(tableInfo);
+                // 如果配置文件配置的是create，表示将所有的表删掉重新创建
+                if (create.equals(type)) {
+                    tableDao.dropTable(tableInfo.getName());
                 }
-                List<ColumnMeta> tableColumnList = tableDao.getColumnMetas(tableInfo.getName());
-                warnOnLargeInformationSchemaLengths(tableInfo.getName(), tableColumnList);
 
-//                List<TableMeta> tableMetas = tableDao.getTableMetas("sys");
+                Boolean exist = tableDao.hasTable(tableInfo.getName());
 
-                List<String> columnNames = ClassTools.getPropertyValueList(tableColumnList,
-                        ColumnMeta.COLUMN_NAME_KEY);
-
-                // 验证对比从model中解析的fieldList与从数据库查出来的columnList
-                // 1. 找出增加的字段
-                // 2. 找出删除的字段
-                // 3. 找出更新的字段
-                buildAddAndRemoveAndModifyFields(mySqlTypeAndLengthMap, modifyTableMap, addTableMap, removeTableMap,
-                        dropKeyTableMap, dropUniqueTableMap, addIndexTableMap, removeIndexTableMap, tableInfo, newFieldList, removeFieldList, addFieldList,
-                        modifyFieldList, dropKeyFieldList, dropUniqueFieldList, addIndexList, removeIndexList, tableColumnList, columnNames);
-
+                // 不存在时
+                if (!exist) {
+                    newTableMap.put(tableInfo, newFieldList);
+                } else {
+                    if (syncTableCharset) {
+                        // 延后到删索引之后再 CONVERT，见 createOrModifyTableConstruct
+                        charsetSyncTables.add(tableInfo);
+                    }
+                    List<ColumnMeta> tableColumnList = tableDao.getColumnMetas(tableInfo.getName());
+                    warnOnLargeInformationSchemaLengths(tableInfo.getName(), tableColumnList);
+                    List<String> columnNames = ClassTools.getPropertyValueList(tableColumnList,
+                            ColumnMeta.COLUMN_NAME_KEY);
+                    // 验证对比从model中解析的fieldList与从数据库查出来的columnList
+                    // 1. 找出增加的字段
+                    // 2. 找出删除的字段
+                    // 3. 找出更新的字段
+                    buildAddAndRemoveAndModifyFields(mySqlTypeAndLengthMap, modifyTableMap, addTableMap, removeTableMap,
+                            dropKeyTableMap, dropUniqueTableMap, addIndexTableMap, removeIndexTableMap, tableInfo, newFieldList, removeFieldList, addFieldList,
+                            modifyFieldList, dropKeyFieldList, dropUniqueFieldList, addIndexList, removeIndexList, tableColumnList, columnNames);
+                }
+            } catch (Throwable e) {
+                // 单实体元数据/对照失败不得中断空库全量建表（否则 sys_config 等核心表也不会创建）
+                log.warn("建表跳过: [{}]: {}", clazz.getName(), e.getMessage());
             }
         }
     }

@@ -312,7 +312,16 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
             String temp = map[0];
             if (null != temp)
                 config.setParamKey(temp);
-            SysConfigEntity entity = baseMapper.queryByKey(temp);
+            SysConfigEntity entity;
+            try {
+                entity = baseMapper.queryByKey(temp);
+            } catch (Exception e) {
+                if (isMissingRelation(e)) {
+                    log.warn("SysConfig put skipped (table missing) key={} msg={}", temp, e.getMessage());
+                    return;
+                }
+                throw e;
+            }
             SysConfigEntity langEntity = null;
             if (null == entity) {
                 if (!persist) {
@@ -532,17 +541,32 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
             try {
                 config = sysConfigRedis.get(key);
             } catch (Exception e) {
-                log.warn("SysConfig redis miss fallback DB key={} msg={}", key, e.getMessage());
+                // getNameSpace 可能在建表前查库失败，勿当作致命错误
+                if (isMissingRelation(e)) {
+                    log.debug("SysConfig redis/namespace unavailable before schema key={} msg={}", key, e.getMessage());
+                } else {
+                    log.warn("SysConfig redis unavailable fallback DB key={} msg={}", key, e.getMessage());
+                }
             }
         }
         if (null != config && null != map) {
             map.put(key, config);
         }
         if (config == null) {
-            config = baseMapper.queryByKey(key);
-            sysConfigRedis.saveOrUpdate(config);
-            if (null != config && null != map) {
-                map.put(key, config);
+            try {
+                config = baseMapper.queryByKey(key);
+                sysConfigRedis.saveOrUpdate(config);
+                if (null != config && null != map) {
+                    map.put(key, config);
+                }
+            } catch (Exception e) {
+                // 空库/建表前：返回 null 让调用方回落默认值，避免 @PostConstruct 阻断 TableInit 全量建表
+                if (isMissingRelation(e)) {
+                    log.debug("SysConfig table unavailable key={} msg={}", key, e.getMessage());
+                } else {
+                    log.warn("SysConfig DB query fail key={} msg={}", key, e.getMessage());
+                }
+                return null;
             }
         }
         String r = config == null ? null : config.getParamValue();
@@ -554,11 +578,19 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
 
     public String getNameSpace() {
         if (null == namespace) {
-            SysConfigEntity config = baseMapper.queryByKey(CLUSTER_NAMESPACE);
-            String r = config == null ? null : config.getParamValue();
-            if (null != r) {
-                r = r.trim();
-                namespace = r;
+            try {
+                SysConfigEntity config = baseMapper.queryByKey(CLUSTER_NAMESPACE);
+                String r = config == null ? null : config.getParamValue();
+                if (null != r) {
+                    r = r.trim();
+                    namespace = r;
+                }
+            } catch (Exception e) {
+                if (isMissingRelation(e)) {
+                    log.debug("SysConfig getNameSpace table unavailable msg={}", e.getMessage());
+                } else {
+                    log.warn("SysConfig getNameSpace DB fail msg={}", e.getMessage());
+                }
             }
         }
         if (StringUtils.isBlank(namespace)) {
@@ -568,6 +600,24 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
             namespace = "";
         }
         return namespace;
+    }
+
+    /** 空库或尚未注解建表时查 sys_config 的典型错误。 */
+    static boolean isMissingRelation(Throwable e) {
+        for (Throwable t = e; t != null; t = t.getCause()) {
+            String m = t.getMessage();
+            if (m == null) {
+                continue;
+            }
+            String lower = m.toLowerCase(Locale.ROOT);
+            if (lower.contains("doesn't exist") || lower.contains("does not exist") || lower.contains("unknown table")) {
+                return true;
+            }
+            if (lower.contains("not found") && (lower.contains("table") || lower.contains("sys_config"))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public boolean getBoolean(String key) {
