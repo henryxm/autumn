@@ -70,6 +70,28 @@ public class AuthUserInfoBuilderTest {
     }
 
     @Test
+    public void basicOAuthScopeOmitsVerified() {
+        AuthScopeCatalog catalog = new AuthScopeCatalog();
+        SysUserEntity user = new SysUserEntity();
+        user.setUuid("u1");
+        user.setVerify(1);
+        AuthScopeSet granted = AuthScopeSet.of("basic").expand(catalog, AuthTrack.OAUTH);
+        cn.org.autumn.auth.model.AuthUserInfo info = AuthUserInfoBuilder.build(catalog, AuthTrack.OAUTH, granted, user, null, null, null);
+        Assert.assertNull(info.getVerified());
+    }
+
+    @Test
+    public void verifiedScopeReturnsVerifyFlag() {
+        AuthScopeCatalog catalog = new AuthScopeCatalog();
+        SysUserEntity user = new SysUserEntity();
+        user.setUuid("u1");
+        user.setVerify(1);
+        AuthScopeSet granted = AuthScopeSet.of("identity", "verified");
+        cn.org.autumn.auth.model.AuthUserInfo info = AuthUserInfoBuilder.build(catalog, AuthTrack.OAUTH, granted, user, null, null, null);
+        Assert.assertEquals(Integer.valueOf(1), info.getVerified());
+    }
+
+    @Test
     public void toUserProfileCopiesVerifiedAndMobile() {
         cn.org.autumn.auth.model.AuthUserInfo info = new cn.org.autumn.auth.model.AuthUserInfo();
         info.setUuid("u1");

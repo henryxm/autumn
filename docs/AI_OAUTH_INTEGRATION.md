@@ -311,7 +311,9 @@ token 过期后：使用 [Refresh Token 续期](#7-refresh-token-续期)，或�
 | `phone` | `mobile`（需客户端登记含 `phone`） |
 | `verified` | `verified`（0/1，不含身份证） |
 
-RP 侧：`UserProfile` 保留 `verified`/`mobile`；绑定成功发布 `WebOauthBindCompletedEvent`（本地 uuid + 上游 userInfo），供业务仓（如 BigHub）同步实名。跨站联邦（如 bighub ← chaoran.xin）客户端登记 scope 须含 `verified`。
+RP 侧：`UserProfile` 保留 `verified`/`mobile`；绑定成功发布 `WebOauthBindCompletedEvent`（本地 uuid + 上游 userInfo），供业务仓（如 BigHub）同步实名。跨站联邦（如 bighub ← chaoran.xin）**AS 与 RP 客户端登记 scope 均须含 `verified`**（需要上游手机号时另加 `phone`）；仅 `basic` 时 userInfo 不下发实名/手机，RP 应视为未知（勿清已有 KYC）。
+
+同实例本地捷径（RP 检测到本机 access_token）亦按 token `grantedScope` 经 `AuthUserInfoBuilder` 裁剪，与 `/oauth2/userInfo` 一致。
 
 ### 6.3 实现说明
 
@@ -628,7 +630,16 @@ function buildAuthorizeUrl(origin, clientId, redirectUri, state) {
 
 ### Q7：scope 可以传 `all` 吗？
 
-客户端登记支持 `all`；userInfo 当前仍返回完整 `UserProfile`，未做字段级 scope 过滤。
+客户端登记支持 `all`（表示该轨道下全部**已启用** scope 均可被请求）。authorize 仍按请求 scope 与登记范围求交；`/oauth2/userInfo`（及同实例本地捷径）按 **token 绑定的 grantedScope** 裁剪字段，**不会**因登记了 `all` 就无条件返回手机号/实名。若需 `verified`/`phone`，须在本次授权请求（或客户端默认 scope）中显式包含相应 code。
+
+### Q8：联邦实名（verified）联调清单？
+
+| 项 | 说明 |
+|----|------|
+| AS `ClientDetails.scope` | 含 `verified`（可选 `phone`）或 `all` |
+| RP `WebAuthentication.scope` | 请求含 `verified`（`OauthRpLoginService` 会带入 authorize） |
+| 用户 | 上游 `sys_user.verify=1`（超然信 APP 实人） |
+| 观察 | token 响应 `scope` 含 `verified`；userInfo JSON 含 `"verified":0\|1`；同实例本地捷径亦按 grantedScope 裁剪 |
 
 ---
 

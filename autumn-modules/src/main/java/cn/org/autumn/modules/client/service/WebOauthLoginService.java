@@ -1,5 +1,12 @@
 package cn.org.autumn.modules.client.service;
 
+import cn.org.autumn.auth.model.AuthUserInfo;
+import cn.org.autumn.auth.scope.AuthScopeCatalog;
+import cn.org.autumn.auth.scope.AuthScopeSet;
+import cn.org.autumn.auth.scope.AuthTrack;
+import cn.org.autumn.modules.auth.service.OAuthExtensionService;
+import cn.org.autumn.modules.auth.support.AuthScopeSupport;
+import cn.org.autumn.modules.auth.support.AuthUserInfoBuilder;
 import cn.org.autumn.modules.client.dto.WebOauthBindPendingContext;
 import cn.org.autumn.modules.client.dto.WebOauthBindResolveResult;
 import cn.org.autumn.modules.client.entity.WebAuthenticationEntity;
@@ -8,6 +15,7 @@ import cn.org.autumn.modules.client.oauth2.WebOauthBindException;
 import cn.org.autumn.modules.client.oauth2.WebOauthBindException.ConflictType;
 import cn.org.autumn.modules.client.oauth2.WebOauthBindSupport;
 import cn.org.autumn.modules.client.oauth2.WebOauthEndpointResolver;
+import cn.org.autumn.modules.oauth.entity.ClientDetailsEntity;
 import cn.org.autumn.modules.oauth.oauth2.support.OAuth2HttpClient;
 import cn.org.autumn.modules.oauth.oauth2.support.OAuthTokenResponse;
 import cn.org.autumn.modules.oauth.oauth2.support.OAuthTokenResponseParser;
@@ -19,6 +27,7 @@ import cn.org.autumn.modules.usr.dto.UserProfile;
 import cn.org.autumn.modules.usr.entity.UserProfileEntity;
 import cn.org.autumn.modules.usr.service.UserProfileService;
 import cn.org.autumn.modules.usr.service.UserTokenService;
+import cn.org.autumn.opl.OplConstants;
 import cn.org.autumn.utils.WebPathUtils;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
@@ -66,6 +75,15 @@ public class WebOauthLoginService {
 
     @Autowired
     private ApplicationEventPublisher applicationEventPublisher;
+
+    @Autowired
+    private AuthScopeCatalog authScopeCatalog;
+
+    @Autowired
+    private AuthScopeSupport authScopeSupport;
+
+    @Autowired
+    private OAuthExtensionService oauthExtensionService;
 
     public String bindChoicePageUrl(HttpServletRequest request, String pendingToken) {
         return WebPathUtils.forBrowser(request, "/client/oauth2/bind/choice?token=" + pendingToken);
@@ -217,31 +235,36 @@ public class WebOauthLoginService {
             clientDetailsService.putToken(accessToken, refreshToken, tokenStore);
             TokenStore store = clientDetailsService.get(ValueType.accessToken, accessToken);
             long expiresIn = store == null ? 3600L : store.getExpireIn();
+            String responseScope = store != null && StringUtils.isNotBlank(store.getGrantedScope())
+                    ? store.getGrantedScope()
+                    : StringUtils.defaultIfBlank(tokenStore.getGrantedScope(), OplConstants.DEFAULT_SCOPE);
             JSONObject json = new JSONObject();
             json.put(OAuth.OAUTH_ACCESS_TOKEN, accessToken);
             json.put(OAuth.OAUTH_REFRESH_TOKEN, refreshToken);
             json.put(OAuth.OAUTH_TOKEN_TYPE, "bearer");
             json.put("expires_in", expiresIn);
-            json.put(OAuth.OAUTH_SCOPE, "basic");
+            json.put(OAuth.OAUTH_SCOPE, responseScope);
             return json.toJSONString();
         } catch (OAuthSystemException e) {
             throw new IllegalStateException("本地换票失败: " + e.getMessage(), e);
         }
     }
 
-    private UserProfile fetchUserProfileLocally(String accessToken) {
+    /**
+     * 同实例本地 userInfo：与 {@code /oauth2/userInfo} 一致，按 token {@code grantedScope} 裁剪字段（含 phone/verified）。
+     */
+    UserProfile fetchUserProfileLocally(String accessToken) {
         TokenStore tokenStore = clientDetailsService.get(ValueType.accessToken, accessToken);
         if (tokenStore == null || !(tokenStore.getValue() instanceof SysUserEntity)) {
             throw new IllegalStateException("access_token 无效");
         }
         SysUserEntity user = (SysUserEntity) tokenStore.getValue();
         UserProfileEntity profileEntity = userProfileService.from(user);
-        UserProfile profile = UserProfile.from(profileEntity);
-        profile.setVerified(user.getVerify());
-        if (StringUtils.isBlank(profile.getMobile()) && StringUtils.isNotBlank(user.getMobile())) {
-            profile.setMobile(user.getMobile());
-        }
-        return profile;
+        AuthScopeSet grantedScope = AuthScopeSet.withDefault(tokenStore.getGrantedScope()).expand(authScopeCatalog, AuthTrack.OAUTH);
+        AuthUserInfo userInfo = AuthUserInfoBuilder.build(authScopeCatalog, AuthTrack.OAUTH, grantedScope, user, profileEntity, null, null);
+        ClientDetailsEntity clientEntity = StringUtils.isBlank(tokenStore.getClientId()) ? null : clientDetailsService.findByClientId(tokenStore.getClientId());
+        oauthExtensionService.enrichUserInfo(authScopeSupport.toSnapshot(clientEntity), userInfo);
+        return AuthUserInfoBuilder.toUserProfile(userInfo);
     }
 
     private String extractAccessToken(String tokenResponseBody) {
