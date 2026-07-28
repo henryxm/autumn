@@ -73,6 +73,7 @@ public final class OAuthTokenResponseParser {
         result.setRefreshToken(json.getString(OAuth.OAUTH_REFRESH_TOKEN));
         result.setTokenType(json.getString(OAuth.OAUTH_TOKEN_TYPE));
         result.setExpiresIn(json.getLongValue("expires_in"));
+        result.setScope(json.getString(OAuth.OAUTH_SCOPE));
         return result;
     }
 }

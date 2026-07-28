@@ -83,6 +83,11 @@ public class AuthScopeDef implements Serializable {
         return this;
     }
 
+    public AuthScopeDef enabled(boolean value) {
+        this.enabled = value;
+        return this;
+    }
+
     private static AuthField[] copyRest(AuthField[] fields) {
         if (fields.length <= 1) {
             return new AuthField[0];

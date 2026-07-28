@@ -1,5 +1,6 @@
 package cn.org.autumn.opl.model;
 
+import cn.org.autumn.auth.model.AuthRealNameInfo;
 import java.io.Serializable;
 import lombok.Getter;
 import lombok.Setter;
@@ -17,4 +18,5 @@ public class OpenUserInfoSnapshot implements Serializable {
     private String email;
     private Integer verified;
     private Integer status;
+    private AuthRealNameInfo realName;
 }

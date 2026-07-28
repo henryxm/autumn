@@ -35,6 +35,21 @@ public class WebOauthEndpointResolverTest {
     }
 
     @Test
+    public void inferRealNameFromUserInfoUri() {
+        WebAuthenticationEntity web = new WebAuthenticationEntity();
+        web.setOriginUri("https://as.example.com");
+        web.setUserInfoUri("https://custom.example.com/oauth2/userInfo");
+        Assert.assertEquals("https://custom.example.com/oauth2/realName", resolver.resolveRealNameUri(web, true));
+    }
+
+    @Test
+    public void inferRealNameFromOriginWhenUserInfoBlank() {
+        WebAuthenticationEntity web = new WebAuthenticationEntity();
+        web.setOriginUri("https://chaoran.xin/");
+        Assert.assertEquals("https://chaoran.xin/oauth2/realName", resolver.resolveRealNameUri(web, true));
+    }
+
+    @Test
     public void blankOriginUriReturnsNullForAccessToken() {
         WebAuthenticationEntity web = new WebAuthenticationEntity();
         Assert.assertNull(resolver.resolveAccessTokenUri(web));

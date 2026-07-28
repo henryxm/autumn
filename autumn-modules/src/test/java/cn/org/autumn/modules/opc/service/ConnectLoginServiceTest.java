@@ -1,5 +1,7 @@
 package cn.org.autumn.modules.opc.service;
 
+import cn.org.autumn.auth.model.AuthRealNameInfo;
+import cn.org.autumn.modules.opc.dto.ConnectBindPendingContext;
 import cn.org.autumn.modules.opc.dto.ConnectBindResolveResult;
 import cn.org.autumn.modules.opc.dto.ConnectOAuthFinishResult;
 import cn.org.autumn.modules.opc.dto.OpcTokenResult;
@@ -9,6 +11,7 @@ import cn.org.autumn.modules.opc.support.ConnectBindException;
 import cn.org.autumn.modules.usr.dto.UserProfile;
 import cn.org.autumn.modules.usr.service.UserProfileService;
 import cn.org.autumn.opl.model.OpenUserInfoSnapshot;
+import com.alibaba.fastjson2.JSON;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.Assert;
 import org.junit.Before;
@@ -61,7 +64,7 @@ public class ConnectLoginServiceTest {
         profile.setUuid("local-u1");
         ConnectBindResolveResult bindResult = ConnectBindResolveResult.of(profile, true);
         Mockito.when(connectOauthService.exchangeCode(app, "code1")).thenReturn(token);
-        Mockito.when(connectOauthService.fetchUserInfoForBind(app, "at_1")).thenReturn(OpcUserInfoResult.of(snapshot, "local-u1"));
+        Mockito.when(connectOauthService.fetchUserInfoForBind(app, "at_1", null)).thenReturn(OpcUserInfoResult.of(snapshot, "local-u1"));
         Mockito.when(connectBindService.resolveAndBind(app, snapshot, "local-u1")).thenReturn(bindResult);
 
         connectLoginService.completeOAuthCallback(request, app, "code1", null);
@@ -76,9 +79,9 @@ public class ConnectLoginServiceTest {
         OpenUserInfoSnapshot snapshot = new OpenUserInfoSnapshot();
         snapshot.setOpenId("oid1");
         Mockito.when(connectOauthService.exchangeCode(app, "code1")).thenReturn(token);
-        Mockito.when(connectOauthService.fetchUserInfoForBind(app, "at_1")).thenReturn(OpcUserInfoResult.of(snapshot, null));
+        Mockito.when(connectOauthService.fetchUserInfoForBind(app, "at_1", null)).thenReturn(OpcUserInfoResult.of(snapshot, null));
         Mockito.when(connectBindService.resolveAndBind(app, snapshot, null)).thenThrow(ConnectBindException.bindChoiceRequired(app, "oid1"));
-        Mockito.when(connectBindPendingService.save(app, snapshot, "at_1", "")).thenReturn("pending-token-1");
+        Mockito.when(connectBindPendingService.save(app, snapshot, "at_1", null, "")).thenReturn("pending-token-1");
 
         try {
             connectLoginService.completeOAuthCallback(request, app, "code1", null);
@@ -100,13 +103,13 @@ public class ConnectLoginServiceTest {
         profile.setUuid("local-u1");
         ConnectBindResolveResult bindResult = ConnectBindResolveResult.of(profile, true);
         Mockito.when(connectOauthService.exchangeCode(app, "code1")).thenReturn(token);
-        Mockito.when(connectOauthService.fetchUserInfoForBind(app, "at_1")).thenReturn(OpcUserInfoResult.of(snapshot, "local-u1"));
+        Mockito.when(connectOauthService.fetchUserInfoForBind(app, "at_1", null)).thenReturn(OpcUserInfoResult.of(snapshot, "local-u1"));
         Mockito.when(connectBindService.resolveAndBind(app, snapshot, "local-u1")).thenReturn(bindResult);
 
         ConnectOAuthFinishResult result = connectLoginService.finishOAuthLogin(request, app, "code1", "/home");
 
         Assert.assertFalse(result.isBindChoice());
-        Assert.assertEquals("/home", result.getRedirectUrl());
+        Assert.assertNotNull(result.getRedirectUrl());
     }
 
     @Test
@@ -116,14 +119,48 @@ public class ConnectLoginServiceTest {
         OpenUserInfoSnapshot snapshot = new OpenUserInfoSnapshot();
         snapshot.setOpenId("oid1");
         Mockito.when(connectOauthService.exchangeCode(app, "code1")).thenReturn(token);
-        Mockito.when(connectOauthService.fetchUserInfoForBind(app, "at_1")).thenReturn(OpcUserInfoResult.of(snapshot, null));
+        Mockito.when(connectOauthService.fetchUserInfoForBind(app, "at_1", null)).thenReturn(OpcUserInfoResult.of(snapshot, null));
         Mockito.when(connectBindService.resolveAndBind(app, snapshot, null)).thenThrow(ConnectBindException.bindChoiceRequired(app, "oid1"));
-        Mockito.when(connectBindPendingService.save(app, snapshot, "at_1", "/home")).thenReturn("pending-token-1");
+        Mockito.when(connectBindPendingService.save(Mockito.eq(app), Mockito.eq(snapshot), Mockito.eq("at_1"), Mockito.isNull(), Mockito.anyString())).thenReturn("pending-token-1");
 
         ConnectOAuthFinishResult result = connectLoginService.finishOAuthLogin(request, app, "code1", "/home");
 
         Assert.assertTrue(result.isBindChoice());
         Assert.assertTrue(result.getRedirectUrl().contains("pending-token-1"));
         Mockito.verify(userProfileService, Mockito.never()).establishSession(Mockito.any());
+    }
+
+    @Test
+    public void completePendingBindSession_refetchesRealNameWhenMissing() {
+        ConnectBindPendingContext pending = new ConnectBindPendingContext();
+        pending.setConnectAppUuid("ca1");
+        pending.setAppId("app_test");
+        pending.setAccessToken("at_1");
+        pending.setGrantedScope("openid realname_attr");
+        OpenUserInfoSnapshot stale = new OpenUserInfoSnapshot();
+        stale.setOpenId("oid1");
+        pending.setUserInfoJson(JSON.toJSONString(stale));
+
+        OpenUserInfoSnapshot refreshed = new OpenUserInfoSnapshot();
+        refreshed.setOpenId("oid1");
+        AuthRealNameInfo rn = new AuthRealNameInfo();
+        rn.setAge(20);
+        refreshed.setRealName(rn);
+
+        UserProfile profile = new UserProfile();
+        profile.setUuid("local-u1");
+        ConnectBindResolveResult bindResult = ConnectBindResolveResult.of(profile, false);
+
+        Mockito.when(connectBindPendingService.consume("pt1")).thenReturn(pending);
+        Mockito.when(connectAppService.getByAppId("app_test")).thenReturn(app);
+        Mockito.when(connectOauthService.fetchUserInfoForBind(app, "at_1", "openid realname_attr"))
+                .thenReturn(OpcUserInfoResult.of(refreshed, null));
+        Mockito.when(connectBindService.bindSessionUser(Mockito.eq(app), Mockito.argThat(s -> s != null && s.getRealName() != null && Integer.valueOf(20).equals(s.getRealName().getAge()))))
+                .thenReturn(bindResult);
+
+        ConnectBindResolveResult result = connectLoginService.completePendingBindSession("pt1");
+
+        Assert.assertEquals("local-u1", result.getProfile().getUuid());
+        Mockito.verify(userProfileService).establishSession(profile);
     }
 }

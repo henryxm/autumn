@@ -14,6 +14,7 @@ public class OpcTokenResult implements Serializable {
     private String refreshToken;
     private String tokenType;
     private long expiresIn;
+    private String scope;
 
     public static OpcTokenResult from(OAuthTokenResponse response) {
         OpcTokenResult result = new OpcTokenResult();
@@ -24,6 +25,7 @@ public class OpcTokenResult implements Serializable {
         result.setRefreshToken(response.getRefreshToken());
         result.setTokenType(response.getTokenType());
         result.setExpiresIn(response.getExpiresIn());
+        result.setScope(response.getScope());
         return result;
     }
 }

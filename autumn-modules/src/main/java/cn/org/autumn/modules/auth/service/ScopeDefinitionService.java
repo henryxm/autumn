@@ -192,6 +192,7 @@ public class ScopeDefinitionService extends ModuleService<ScopeDefinitionDao, Sc
                 if (builtin.getRequires() != null && !builtin.getRequires().isEmpty()) {
                     merge.requires = new ArrayList<String>(builtin.getRequires());
                 }
+                merge.enabled = merge.enabled && builtin.isEnabled();
             }
         }
         for (Map.Entry<String, BuiltinMerge> entry : merged.entrySet()) {
@@ -206,7 +207,7 @@ public class ScopeDefinitionService extends ModuleService<ScopeDefinitionDao, Sc
                 entity.setFields(joinFields(merge.fields));
                 entity.setSensitivity(merge.sensitivity == null ? AuthScopeSensitivity.low.name() : merge.sensitivity.name());
                 entity.setRequires(joinList(merge.requires));
-                entity.setEnabled(true);
+                entity.setEnabled(merge.enabled);
                 entity.setBuiltin(true);
                 entity.setUpdated(new Date());
                 insert(entity);
@@ -228,10 +229,12 @@ public class ScopeDefinitionService extends ModuleService<ScopeDefinitionDao, Sc
         private EnumSet<AuthField> fields = EnumSet.noneOf(AuthField.class);
         private AuthScopeSensitivity sensitivity;
         private List<String> requires = new ArrayList<String>();
+        private boolean enabled = true;
 
         private BuiltinMerge(AuthScopeDef builtin) {
             this.label = builtin.getLabel();
             this.sensitivity = builtin.getSensitivity();
+            this.enabled = builtin.isEnabled();
             if (builtin.getRequires() != null) {
                 this.requires = new ArrayList<String>(builtin.getRequires());
             }

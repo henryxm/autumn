@@ -10,12 +10,13 @@ public class OAuthTokenResponseParserTest {
 
     @Test
     public void parseTokenBody() {
-        String body = "{\"access_token\":\"at1\",\"refresh_token\":\"rt1\",\"token_type\":\"bearer\",\"expires_in\":3600}";
+        String body = "{\"access_token\":\"at1\",\"refresh_token\":\"rt1\",\"token_type\":\"bearer\",\"expires_in\":3600,\"scope\":\"openid profile\"}";
         OAuthTokenResponse parsed = OAuthTokenResponseParser.parse(body);
         assertEquals("at1", parsed.getAccessToken());
         assertEquals("rt1", parsed.getRefreshToken());
         assertEquals("bearer", parsed.getTokenType());
         assertEquals(3600L, parsed.getExpiresIn());
+        assertEquals("openid profile", parsed.getScope());
     }
 
     @Test

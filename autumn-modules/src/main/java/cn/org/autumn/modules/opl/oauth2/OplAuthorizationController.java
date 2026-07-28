@@ -4,7 +4,13 @@ import static jakarta.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
 import static jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED;
 import static org.apache.oltu.oauth2.common.OAuth.HttpMethod.POST;
 
+import cn.org.autumn.auth.model.AuthRealNameInfo;
+import cn.org.autumn.auth.scope.AuthScopeCatalog;
 import cn.org.autumn.auth.scope.AuthScopeResolution;
+import cn.org.autumn.auth.scope.AuthScopeSet;
+import cn.org.autumn.auth.scope.AuthTrack;
+import cn.org.autumn.modules.auth.service.AuthRealNameService;
+import cn.org.autumn.modules.auth.support.AuthRealNameHttpSupport;
 import cn.org.autumn.modules.auth.support.AuthScopeSupport;
 import cn.org.autumn.modules.oauth.oauth2.support.OAuthAccessTokenResolver;
 import cn.org.autumn.modules.oauth.oauth2.support.AuthAuthorizeLoginSupport;
@@ -17,8 +23,10 @@ import cn.org.autumn.modules.opl.entity.OpenAppEntity;
 import cn.org.autumn.modules.opl.entity.OpenCodeEntity;
 import cn.org.autumn.modules.opl.service.OpenAppService;
 import cn.org.autumn.modules.opl.service.OpenCodeService;
+import cn.org.autumn.modules.opl.service.OpenTokenService;
 import cn.org.autumn.modules.opl.service.OplOAuthRateLimiter;
 import cn.org.autumn.modules.opl.service.OplExtensionService;
+import cn.org.autumn.modules.opl.store.OplTokenContext;
 import cn.org.autumn.modules.opl.support.OplSnapshots;
 import cn.org.autumn.modules.qrc.model.TicketSnapshot;
 import cn.org.autumn.modules.qrc.service.ScanTicketService;
@@ -89,6 +97,15 @@ public class OplAuthorizationController {
 
     @Autowired
     private OpenPlatformService openPlatformService;
+
+    @Autowired
+    private OpenTokenService openTokenService;
+
+    @Autowired
+    private AuthScopeCatalog authScopeCatalog;
+
+    @Autowired
+    private AuthRealNameService authRealNameService;
 
     @Autowired
     private OplExtensionService oplExtensionService;
@@ -343,6 +360,34 @@ public class OplAuthorizationController {
             return new ResponseEntity<>(headers, HttpStatus.UNAUTHORIZED);
         }
         return new ResponseEntity<>(JSON.toJSONString(snapshot), HttpStatus.OK);
+    }
+
+    @RequestMapping(value = "realName", method = {RequestMethod.GET, RequestMethod.POST})
+    @ResponseBody
+    public HttpEntity<?> realName(HttpServletRequest request) throws OAuthSystemException {
+        String accessToken = OAuthAccessTokenResolver.resolve(request, OAuthAccessTokenResolver.Policy.STANDARD);
+        if (StringUtils.isBlank(accessToken) || !openTokenService.isValidAccessToken(accessToken)) {
+            OAuthResponse oauthResponse = OAuthRSResponse.errorResponse(SC_UNAUTHORIZED).setRealm("Apache Oltu").setError(OAuthError.ResourceResponse.INVALID_TOKEN).buildHeaderMessage();
+            HttpHeaders headers = new HttpHeaders();
+            headers.add(OAuth.HeaderType.WWW_AUTHENTICATE, oauthResponse.getHeader(OAuth.HeaderType.WWW_AUTHENTICATE));
+            return new ResponseEntity<>(headers, HttpStatus.UNAUTHORIZED);
+        }
+        OplTokenContext context = openTokenService.getByAccessToken(accessToken);
+        if (context == null) {
+            OAuthResponse oauthResponse = OAuthRSResponse.errorResponse(SC_UNAUTHORIZED).setRealm("Apache Oltu").setError(OAuthError.ResourceResponse.INVALID_TOKEN).buildHeaderMessage();
+            HttpHeaders headers = new HttpHeaders();
+            headers.add(OAuth.HeaderType.WWW_AUTHENTICATE, oauthResponse.getHeader(OAuth.HeaderType.WWW_AUTHENTICATE));
+            return new ResponseEntity<>(headers, HttpStatus.UNAUTHORIZED);
+        }
+        AuthScopeSet grantedScope = AuthScopeSet.withDefault(context.getGrantedScope()).expand(authScopeCatalog, AuthTrack.OPL);
+        if (!authRealNameService.hasAnyRealNameScope(grantedScope)) {
+            return AuthRealNameHttpSupport.insufficientScope();
+        }
+        if (!authRealNameService.hasProvider()) {
+            return AuthRealNameHttpSupport.unsupported();
+        }
+        AuthRealNameInfo info = authRealNameService.project(authRealNameService.resolve(context.getUser()), grantedScope);
+        return AuthRealNameHttpSupport.ok(info);
     }
 
     private String oplConsentView(HttpServletRequest request, HttpServletResponse response, Model model, OpenAppEntity app, String appId, String redirectUri, String responseType, String scope, String state, String codeChallenge, String codeChallengeMethod, TicketSnapshot ticket, boolean loggedIn, String consentError) {

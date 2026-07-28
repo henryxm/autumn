@@ -1,6 +1,7 @@
 package cn.org.autumn.modules.client.service;
 
 import cn.org.autumn.auth.scope.AuthScopeCatalog;
+import cn.org.autumn.modules.auth.service.AuthRealNameService;
 import cn.org.autumn.modules.auth.service.OAuthExtensionService;
 import cn.org.autumn.modules.auth.support.AuthScopeSupport;
 import cn.org.autumn.modules.client.dto.WebOauthBindResolveResult;
@@ -67,6 +68,9 @@ public class WebOauthLoginServiceTest {
 
     @Mock
     private OAuthExtensionService oauthExtensionService;
+
+    @Mock
+    private AuthRealNameService authRealNameService;
 
     @Mock
     private HttpServletRequest request;

@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.client.oauth2;
 
+import cn.org.autumn.modules.auth.support.AuthRealNameHttpSupport;
 import cn.org.autumn.modules.client.entity.WebAuthenticationEntity;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
@@ -11,6 +12,7 @@ public class WebOauthEndpointResolver {
     public static final String PATH_AUTHORIZE = "/oauth2/authorize";
     public static final String PATH_TOKEN = "/oauth2/token";
     public static final String PATH_USER_INFO = "/oauth2/userInfo";
+    public static final String PATH_REAL_NAME = "/oauth2/realName";
     public static final String PATH_QRC_OPEN_CREATE = "/qrc/api/v1/ticket/open/create";
     public static final String PATH_QRC_OPEN_STATUS = "/qrc/api/v1/ticket/open/status";
     public static final String PATH_QRC_OPEN_CANCEL = "/qrc/api/v1/ticket/open/cancel";
@@ -52,6 +54,21 @@ public class WebOauthEndpointResolver {
         }
         String origin = resolveOriginUri(web);
         return origin == null ? null : origin + PATH_USER_INFO;
+    }
+
+    /**
+     * 实名详情资源 URI：由 userInfoUri 推导（替换末尾 {@code userInfo}），否则 {@code origin + /oauth2/realName}。
+     */
+    public String resolveRealNameUri(WebAuthenticationEntity web, boolean remoteIdp) {
+        String derived = AuthRealNameHttpSupport.deriveRealNameUri(resolveUserInfoUri(web, remoteIdp));
+        if (StringUtils.isNotBlank(derived)) {
+            return derived;
+        }
+        if (!remoteIdp && (web == null || StringUtils.isBlank(web.getOriginUri()))) {
+            return null;
+        }
+        String origin = resolveOriginUri(web);
+        return origin == null ? null : origin + PATH_REAL_NAME;
     }
 
     public String resolveQrcOpenCreateUri(WebAuthenticationEntity web) {

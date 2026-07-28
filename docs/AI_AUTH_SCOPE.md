@@ -34,7 +34,7 @@
 
 未传 `scope` 或传 `scope=basic` 时行为与上述一致。登录页、授权确认页、管理页、QRC confirm 展示的 scope 中文说明**唯一来源**为 **`AuthScopeCatalog.labels()`**，经 Model 属性 **`scopeLabels`** 注入模板。
 
-**展示顺序**（`AuthScopeCatalog.orderCodesForDisplay`）：身份层（OAuth `identity` / OPL `openid`→`unionid`）→ `profile` → `phone` → `email` → `verified` → `status` → 其余自定义 code 字母序。
+**展示顺序**（`AuthScopeCatalog.orderCodesForDisplay`）：身份层（OAuth `identity` / OPL `openid`→`unionid`）→ `profile` → `phone` → `email` → `verified` → `status` → `realname_attr` → `realname_person` → `realname_id` → 其余自定义 code 字母序。
 
 ---
 
@@ -65,12 +65,30 @@
 
 > OAuth 与 OPL 的 `profile` scope 展示 label 均为「查看基本资料」；OAuth 含 `username` 字段，OPL 不含。
 
+### 3.1 实名详情三档（独立资源接口）
+
+| Scope | Label | 字段（`AuthRealNameInfo`） | 默认 |
+|-------|-------|----------------------------|------|
+| `realname_attr` | 查看实名人口属性 | `age`、`gender`、`ethnicity` | **关闭** |
+| `realname_person` | 查看实名姓名与生日 | `name`、`birthday` | **关闭** |
+| `realname_id` | 查看实名证件与地址 | `idNumber`、`address` | **关闭** |
+
+- **不进 `basic`**；无 `AuthField`（**不**写入标准 `userInfo`）。
+- **兼容别名 `realname`**：请求/登记时 expand 为当前轨道下**已启用**的三档（类似 `basic`）；**不再**作为 builtin 实体行；历史 DB 行按退役码过滤。
+- **端点**：
+  - OAuth：`GET|POST /oauth2/realName`
+  - OPL：`GET|POST /open/oauth2/realName`
+- **鉴权**：有效 access_token，且 token `grantedScope`（expand 后）含**任一**实名三档；否则 **`403`** `{"error":"insufficient_scope"}`。
+- **供给**：`AuthRealNameProvider` SPI（业务仓返回全量）；框架出口按 granted **并集裁剪**（`AuthRealNameService.project`）。无 Provider → **`501`** `{"error":"unsupported"}`；未实名 → `200` `{}`。
+- **RP 预取**：经典 OAuth / OPC 在 token 含任一实名档时，将裁剪后详情挂到 `UserProfile.realName` / `OpenUserInfoSnapshot.realName`；OPC 远端须用 **token 响应 scope**，不得仅用客户端登记 `app.scope`。预取失败仅 `log.debug`（无 PII）。
+
 ### 通配
 
 | 代码 | 含义 |
 |------|------|
 | `all` | 客户端登记通配，允许该轨道下全部**已启用** scope |
 | `basic` | 见 §2 |
+| `realname` | 见 §3.1（别名，非独立 builtin） |
 
 ---
 
@@ -135,18 +153,19 @@
 
 ---
 
-## 8. 刻意不纳入标准 scope
+## 8. 刻意不纳入标准 scope / userInfo
 
-- `idCard` 原文 — 需业务扩展点自定义
+- `idCard` 原文 — 经 **`realname_*` scope + `/oauth2/realName`（或 OPL 对称端点）+ `AuthRealNameProvider`** 下发，**不**写入标准 userInfo
 - `password` / token / 支付凭证 — 禁止
 - 审计字段（`loginIp` 等）— 不进 userInfo
-- 退役 code（如 `union`）— 无运行时兼容，按 §4 过滤
+- 退役 code（如 `union`、历史单体 `realname` builtin 行）— 无运行时兼容，按 §4 过滤
 
 ---
 
 ## 9. 扩展
 
 - 实现 `OAuthPlatformExtension` / `OpenPlatformExtension` 追加校验或 userInfo 字段
+- 实现 `AuthRealNameProvider` 供给实名详情（无 Bean 时 realName 接口返回 `501 unsupported`）
 - 自定义 scope：管理页或 Admin API 写入 `auth_scope_definition`，`ScopeDefinitionService.refreshCatalog()` 合并进 `AuthScopeCatalog`
 - QRC scope 文案：`ConsentProvider` SPI；未注册时 `ConsentSupport` → `AuthScopeSupport.labels()`
 
@@ -158,13 +177,15 @@
 |----|------|
 | `AuthScopeCatalog` | `autumn-lib/.../auth/scope/AuthScopeCatalog.java` |
 | `AuthScopeSet.basicFor` | `autumn-lib/.../auth/scope/AuthScopeSet.java` |
+| `AuthRealNameInfo` / `AuthRealNameProvider` | `autumn-lib/.../auth/model`、`auth/spi` |
+| `AuthRealNameService` / `AuthRealNameHttpSupport` | `autumn-modules/.../auth/service`、`auth/support` |
 | `AuthScopeSupport` | `autumn-modules/.../auth/support/AuthScopeSupport.java` |
 | `AuthPageSupport` | `autumn-modules/.../site/AuthPageSupport.java` |
 | `ScopeDefinitionEntity` | `autumn-modules/.../auth/entity/ScopeDefinitionEntity.java` |
 | `ScopeDefinitionService` | `autumn-modules/.../auth/service/ScopeDefinitionService.java` |
 | `ScopeDefinitionAdminController` | `autumn-modules/.../auth/controller/ScopeDefinitionAdminController.java` |
-| `AuthorizationController` | `autumn-modules/.../oauth/oauth2/AuthorizationController.java` |
-| `OplAuthorizationController` | `autumn-modules/.../opl/oauth2/OplAuthorizationController.java` |
+| `AuthorizationController` | `autumn-modules/.../oauth/oauth2/AuthorizationController.java`（含 `/oauth2/realName`） |
+| `OplAuthorizationController` | `autumn-modules/.../opl/oauth2/OplAuthorizationController.java`（含 `/open/oauth2/realName`） |
 | `auth-scope-picker.js` | `autumn-modules/.../statics/js/auth-scope-picker.js` |
 
 单测：`autumn-lib/.../AuthScopeCatalogTest.java`、`AuthUserInfoBuilderTest.java`。

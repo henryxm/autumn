@@ -25,12 +25,13 @@ public class ConnectBindPendingServiceTest {
         userInfo.setOpenId("oid_1");
         userInfo.setNickname("nick");
 
-        String token = connectBindPendingService.save(app, userInfo, "access-token", "/success");
+        String token = connectBindPendingService.save(app, userInfo, "access-token", "openid profile realname_attr", "/success");
 
         ConnectBindPendingContext peeked = connectBindPendingService.peek(token);
         Assert.assertNotNull(peeked);
         Assert.assertEquals("ca_uuid", peeked.getConnectAppUuid());
         Assert.assertEquals("app_demo", peeked.getAppId());
+        Assert.assertEquals("openid profile realname_attr", peeked.getGrantedScope());
         Assert.assertEquals("/success", peeked.getCallback());
 
         ConnectBindPendingContext consumed = connectBindPendingService.consume(token);

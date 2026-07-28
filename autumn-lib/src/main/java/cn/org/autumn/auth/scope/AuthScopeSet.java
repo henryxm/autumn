@@ -18,6 +18,13 @@ public final class AuthScopeSet implements Serializable {
 
     public static final String BASIC = "basic";
     public static final String ALL = "all";
+    /** 实名详情兼容别名：expand 为已启用的三档。 */
+    public static final String REALNAME = "realname";
+    public static final String REALNAME_ATTR = "realname_attr";
+    public static final String REALNAME_PERSON = "realname_person";
+    public static final String REALNAME_ID = "realname_id";
+
+    public static final String[] REALNAME_TIERS = new String[]{REALNAME_ATTR, REALNAME_PERSON, REALNAME_ID};
 
     private final Set<String> codes;
 
@@ -111,6 +118,10 @@ public final class AuthScopeSet implements Serializable {
             }
             if (ALL.equals(code)) {
                 expanded.addAll(catalog.enabledCodes(track));
+                continue;
+            }
+            if (REALNAME.equals(code)) {
+                expanded.addAll(catalog.enabledRealNameTierCodes(track));
                 continue;
             }
             expanded.add(code);

@@ -14,5 +14,7 @@ public class ConnectBindPendingContext implements Serializable {
     private String appId;
     private String userInfoJson;
     private String accessToken;
+    /** token 响应 scope，供 pending 绑定完成时重拉实名详情。 */
+    private String grantedScope;
     private String callback;
 }

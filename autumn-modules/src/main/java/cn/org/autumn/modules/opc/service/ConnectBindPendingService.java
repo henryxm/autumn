@@ -25,7 +25,7 @@ public class ConnectBindPendingService {
     @Autowired(required = false)
     StringRedisTemplate stringRedisTemplate;
 
-    public String save(ConnectAppEntity app, OpenUserInfoSnapshot userInfo, String accessToken, String callback) {
+    public String save(ConnectAppEntity app, OpenUserInfoSnapshot userInfo, String accessToken, String grantedScope, String callback) {
         if (app == null || userInfo == null || StringUtils.isBlank(userInfo.getOpenId())) {
             throw new IllegalArgumentException("待绑定授权信息无效");
         }
@@ -34,6 +34,7 @@ public class ConnectBindPendingService {
         context.setAppId(app.getAppId());
         context.setUserInfoJson(JSON.toJSONString(userInfo));
         context.setAccessToken(StringUtils.defaultString(accessToken));
+        context.setGrantedScope(StringUtils.defaultString(grantedScope));
         context.setCallback(StringUtils.defaultString(callback));
         String token = Uuid.uuid();
         String payload = JSON.toJSONString(context);

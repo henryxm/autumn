@@ -6,7 +6,9 @@ import static org.junit.Assert.assertTrue;
 
 import cn.org.autumn.auth.scope.AuthField;
 import cn.org.autumn.auth.scope.AuthScopeCatalog;
+import cn.org.autumn.auth.scope.AuthScopeDef;
 import cn.org.autumn.auth.scope.AuthScopeResolution;
+import cn.org.autumn.auth.scope.AuthScopeSensitivity;
 import cn.org.autumn.auth.scope.AuthScopeSet;
 import cn.org.autumn.auth.scope.AuthTrack;
 import java.util.Arrays;
@@ -163,5 +165,92 @@ public class AuthScopeCatalogTest {
         assertEquals("查看基本资料", oplLabels.get(2));
         assertEquals("查看手机号", oplLabels.get(3));
         assertEquals("查看邮箱", oplLabels.get(4));
+    }
+
+    @Test
+    public void realnameTiersDisabledByDefault() {
+        for (String tier : AuthScopeSet.REALNAME_TIERS) {
+            AuthScopeDef oauth = catalog.getDefinition(AuthTrack.OAUTH, tier);
+            AuthScopeDef opl = catalog.getDefinition(AuthTrack.OPL, tier);
+            assertTrue(oauth != null);
+            assertTrue(opl != null);
+            assertFalse(oauth.isEnabled());
+            assertFalse(opl.isEnabled());
+            assertFalse(catalog.enabledCodes(AuthTrack.OAUTH).contains(tier));
+            assertFalse(catalog.enabledCodes(AuthTrack.OPL).contains(tier));
+            assertTrue(catalog.isRegisteredBuiltin(tier));
+        }
+        assertTrue(catalog.enabledRealNameTierCodes(AuthTrack.OAUTH).isEmpty());
+        assertFalse(catalog.isRegisteredBuiltin(AuthScopeSet.REALNAME));
+    }
+
+    @Test
+    public void realnameAliasExpandsOnlyEnabledTiers() {
+        enableRealNameTiers(AuthTrack.OAUTH, AuthScopeSet.REALNAME_ATTR, AuthScopeSet.REALNAME_PERSON);
+        AuthScopeSet expanded = AuthScopeSet.of(AuthScopeSet.REALNAME).expand(catalog, AuthTrack.OAUTH);
+        assertTrue(expanded.contains(AuthScopeSet.REALNAME_ATTR));
+        assertTrue(expanded.contains(AuthScopeSet.REALNAME_PERSON));
+        assertFalse(expanded.contains(AuthScopeSet.REALNAME_ID));
+        assertFalse(expanded.contains(AuthScopeSet.REALNAME));
+    }
+
+    @Test
+    public void resolveRejectsDisabledRealnameTiers() {
+        AuthScopeResolution resolution = catalog.resolve(AuthTrack.OAUTH,
+                Arrays.asList("basic", AuthScopeSet.REALNAME_ATTR), AuthScopeSet.REALNAME_ATTR);
+        assertTrue(resolution.hasInvalid());
+    }
+
+    @Test
+    public void allDoesNotIncludeDisabledRealnameTiers() {
+        AuthScopeSet all = AuthScopeSet.of("all").expand(catalog, AuthTrack.OAUTH);
+        for (String tier : AuthScopeSet.REALNAME_TIERS) {
+            assertFalse(all.contains(tier));
+        }
+    }
+
+    @Test
+    public void realnameTiersHaveNoAuthFields() {
+        for (String tier : AuthScopeSet.REALNAME_TIERS) {
+            AuthScopeDef def = catalog.getDefinition(AuthTrack.OAUTH, tier);
+            assertTrue(def.getFields() == null || def.getFields().isEmpty());
+            assertEquals(AuthScopeSensitivity.high, def.getSensitivity());
+        }
+    }
+
+    @Test
+    public void resolveGrantsEnabledRealnameTierWithinClient() {
+        enableRealNameTiers(AuthTrack.OAUTH, AuthScopeSet.REALNAME_ATTR);
+        AuthScopeResolution resolution = catalog.resolve(AuthTrack.OAUTH,
+                Arrays.asList("basic", AuthScopeSet.REALNAME_ATTR), AuthScopeSet.REALNAME_ATTR);
+        assertFalse(resolution.hasInvalid());
+        assertTrue(resolution.getGranted().contains(AuthScopeSet.REALNAME_ATTR));
+        assertFalse(resolution.getGranted().contains(AuthScopeSet.REALNAME_PERSON));
+    }
+
+    @Test
+    public void labelsIncludeEnabledRealnameTiersInOrder() {
+        enableRealNameTiers(AuthTrack.OAUTH, AuthScopeSet.REALNAME_ID, AuthScopeSet.REALNAME_ATTR, AuthScopeSet.REALNAME_PERSON);
+        AuthScopeSet scopes = AuthScopeSet.of("basic", AuthScopeSet.REALNAME_ID, AuthScopeSet.REALNAME_ATTR, AuthScopeSet.REALNAME_PERSON);
+        java.util.List<String> labels = catalog.labels(AuthTrack.OAUTH, scopes);
+        int attr = labels.indexOf("查看实名人口属性");
+        int person = labels.indexOf("查看实名姓名与生日");
+        int id = labels.indexOf("查看实名证件与地址");
+        assertTrue(attr > 0);
+        assertTrue(person > attr);
+        assertTrue(id > person);
+    }
+
+    private void enableRealNameTiers(AuthTrack track, String... tiers) {
+        java.util.List<AuthScopeDef> defs = new java.util.ArrayList<AuthScopeDef>();
+        for (String tier : tiers) {
+            AuthScopeDef def = new AuthScopeDef();
+            def.setCode(tier);
+            def.setBuiltin(true);
+            def.setEnabled(true);
+            def.setTracks(java.util.EnumSet.of(track));
+            defs.add(def);
+        }
+        catalog.refreshCustom(defs);
     }
 }

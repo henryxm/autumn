@@ -1,11 +1,14 @@
 package cn.org.autumn.modules.oauth.oauth2;
 
+import cn.org.autumn.auth.model.AuthRealNameInfo;
 import cn.org.autumn.auth.model.AuthUserInfo;
 import cn.org.autumn.auth.scope.AuthScopeCatalog;
 import cn.org.autumn.auth.scope.AuthScopeResolution;
 import cn.org.autumn.auth.scope.AuthScopeSet;
 import cn.org.autumn.auth.scope.AuthTrack;
+import cn.org.autumn.modules.auth.service.AuthRealNameService;
 import cn.org.autumn.modules.auth.service.OAuthExtensionService;
+import cn.org.autumn.modules.auth.support.AuthRealNameHttpSupport;
 import cn.org.autumn.modules.auth.support.AuthScopeSupport;
 import cn.org.autumn.modules.auth.support.AuthUserInfoBuilder;
 import cn.org.autumn.opl.OplConstants;
@@ -168,6 +171,9 @@ public class AuthorizationController {
 
     @Autowired
     OAuthExtensionService oauthExtensionService;
+
+    @Autowired
+    AuthRealNameService authRealNameService;
 
     private String oauthErrorBody(String description, String error, int errorResponse) throws OAuthSystemException {
         return OAuthResponseSupport.oauthErrorBody(description, error, errorResponse);
@@ -769,5 +775,37 @@ public class AuthorizationController {
             log.debug("authUserInfo failed: {}", e.getMessage());
         }
         return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+    }
+
+    @RequestMapping(value = "/realName", produces = "application/json;charset=UTF-8", method = {RequestMethod.GET, RequestMethod.POST})
+    @ResponseBody
+    @Operation(tags = {"oauth"}, description = "获取实名认证详细信息（需 realname_* scope）", summary = "获取实名详情", operationId = "getRealName")
+    public HttpEntity<?> authRealName(HttpServletRequest request) throws OAuthSystemException {
+        try {
+            String accessTokenKey = OAuthAccessTokenResolver.resolve(request, OAuthAccessTokenResolver.Policy.LEGACY_JSON_WRAP);
+            if (StringUtils.isBlank(accessTokenKey) || !clientDetailsService.isValidAccessToken(accessTokenKey)) {
+                OAuthResponse oauthResponse = OAuthRSResponse.errorResponse(SC_UNAUTHORIZED).setRealm("Apache Oltu").setError(OAuthError.ResourceResponse.INVALID_TOKEN).buildHeaderMessage();
+                HttpHeaders headers = new HttpHeaders();
+                headers.add(OAuth.HeaderType.WWW_AUTHENTICATE, oauthResponse.getHeader(OAuth.HeaderType.WWW_AUTHENTICATE));
+                return new ResponseEntity<>(headers, HttpStatus.UNAUTHORIZED);
+            }
+            TokenStore tokenStore = clientDetailsService.get(ValueType.accessToken, accessTokenKey);
+            if (tokenStore == null || !(tokenStore.getValue() instanceof SysUserEntity)) {
+                return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+            }
+            AuthScopeSet grantedScope = AuthScopeSet.withDefault(tokenStore.getGrantedScope()).expand(authScopeCatalog, AuthTrack.OAUTH);
+            if (!authRealNameService.hasAnyRealNameScope(grantedScope)) {
+                return AuthRealNameHttpSupport.insufficientScope();
+            }
+            if (!authRealNameService.hasProvider()) {
+                return AuthRealNameHttpSupport.unsupported();
+            }
+            SysUserEntity user = (SysUserEntity) tokenStore.getValue();
+            AuthRealNameInfo info = authRealNameService.project(authRealNameService.resolve(user.getUuid()), grantedScope);
+            return AuthRealNameHttpSupport.ok(info);
+        } catch (Exception e) {
+            log.debug("authRealName failed: {}", e.getMessage());
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
     }
 }

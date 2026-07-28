@@ -1,10 +1,13 @@
 package cn.org.autumn.modules.client.service;
 
+import cn.org.autumn.auth.model.AuthRealNameInfo;
 import cn.org.autumn.auth.model.AuthUserInfo;
 import cn.org.autumn.auth.scope.AuthScopeCatalog;
 import cn.org.autumn.auth.scope.AuthScopeSet;
 import cn.org.autumn.auth.scope.AuthTrack;
+import cn.org.autumn.modules.auth.service.AuthRealNameService;
 import cn.org.autumn.modules.auth.service.OAuthExtensionService;
+import cn.org.autumn.modules.auth.support.AuthRealNameHttpSupport;
 import cn.org.autumn.modules.auth.support.AuthScopeSupport;
 import cn.org.autumn.modules.auth.support.AuthUserInfoBuilder;
 import cn.org.autumn.modules.client.dto.WebOauthBindPendingContext;
@@ -32,6 +35,7 @@ import cn.org.autumn.utils.WebPathUtils;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.oltu.oauth2.as.issuer.MD5Generator;
 import org.apache.oltu.oauth2.as.issuer.OAuthIssuerImpl;
@@ -43,6 +47,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /** 经典 OAuth2 RP 回调编排：换票、拉 userInfo、绑定、establishSession。{@link #completeOAuthCallback} 与 {@link #completeRemoteOAuthCallback} 共用同一套 finish 逻辑。 */
+@Slf4j
 @Service
 public class WebOauthLoginService {
 
@@ -84,6 +89,9 @@ public class WebOauthLoginService {
 
     @Autowired
     private OAuthExtensionService oauthExtensionService;
+
+    @Autowired
+    private AuthRealNameService authRealNameService;
 
     public String bindChoicePageUrl(HttpServletRequest request, String pendingToken) {
         return WebPathUtils.forBrowser(request, "/client/oauth2/bind/choice?token=" + pendingToken);
@@ -155,6 +163,23 @@ public class WebOauthLoginService {
         if (upstream == null || StringUtils.isBlank(upstream.getUuid())) {
             throw WebOauthBindException.invalidUpstream(webAuth);
         }
+        if (upstream.getRealName() == null && StringUtils.isNotBlank(pending.getTokenBody())
+                && tokenGrantsAnyRealName(pending.getTokenBody())) {
+            String accessToken = extractAccessToken(pending.getTokenBody());
+            if (StringUtils.isNotBlank(accessToken) && clientDetailsService.isValidAccessToken(accessToken)) {
+                UserProfile local = fetchUserProfileLocally(accessToken);
+                if (local != null && local.getRealName() != null) {
+                    upstream.setRealName(local.getRealName());
+                }
+            } else {
+                OAuth2HttpClient.UserInfoDelivery delivery = webOauthBindSupport.resolveUserInfoDelivery(webAuth, request);
+                boolean remoteIdp = webOauthEndpointResolver.hasRemoteOrigin(webAuth);
+                if (remoteIdp && StringUtils.isBlank(webAuth.getUserInfoDelivery())) {
+                    delivery = OAuth2HttpClient.UserInfoDelivery.BEARER;
+                }
+                attachRemoteRealName(upstream, webAuth, accessToken, delivery, remoteIdp, pending.getTokenBody());
+            }
+        }
         WebOauthBindResolveResult result = createNewUser ? webOauthBindService.bindCreateNewUser(webAuth, upstream) : webOauthBindService.bindSessionUser(webAuth, upstream);
         userProfileService.establishSession(result.getProfile());
         if (StringUtils.isNotBlank(pending.getTokenBody())) {
@@ -191,10 +216,49 @@ public class WebOauthLoginService {
                 throw new IllegalArgumentException("未配置 userInfoUri");
             }
             String userinfo = oauth2HttpClient.fetchUserInfoBody(userInfoUri, tokenForUserInfo, delivery);
-            return JSON.parseObject(userinfo, UserProfile.class);
+            UserProfile profile = JSON.parseObject(userinfo, UserProfile.class);
+            attachRemoteRealName(profile, webAuth, accessToken, delivery, remoteIdp, tokenBody);
+            return profile;
         } catch (Exception e) {
             return null;
         }
+    }
+
+    private void attachRemoteRealName(UserProfile profile, WebAuthenticationEntity webAuth, String accessToken,
+                                      OAuth2HttpClient.UserInfoDelivery delivery, boolean remoteIdp, String tokenBody) {
+        if (profile == null || !tokenGrantsAnyRealName(tokenBody)) {
+            return;
+        }
+        try {
+            String realNameUri = webOauthEndpointResolver.resolveRealNameUri(webAuth, remoteIdp);
+            if (StringUtils.isBlank(realNameUri)) {
+                return;
+            }
+            String tokenForRealName = delivery == OAuth2HttpClient.UserInfoDelivery.BEARER ? accessToken : tokenBody;
+            if (StringUtils.isBlank(tokenForRealName)) {
+                return;
+            }
+            String body = oauth2HttpClient.fetchUserInfoBody(realNameUri, tokenForRealName, delivery);
+            AuthRealNameInfo info = AuthRealNameHttpSupport.parseBody(body);
+            if (info != null) {
+                profile.setRealName(info);
+            }
+        } catch (Exception e) {
+            log.debug("realName fetch failed: {}", e.getMessage());
+        }
+    }
+
+    private boolean tokenGrantsAnyRealName(String tokenBody) {
+        if (StringUtils.isBlank(tokenBody) || !tokenBody.trim().startsWith("{")) {
+            return false;
+        }
+        JSONObject json = JSON.parseObject(tokenBody);
+        if (json == null) {
+            return false;
+        }
+        String scope = json.getString(OAuth.OAUTH_SCOPE);
+        AuthScopeSet granted = AuthScopeSet.withDefault(scope).expand(authScopeCatalog, AuthTrack.OAUTH);
+        return authRealNameService.hasAnyRealNameScope(granted);
     }
 
     private String exchangeAuthorizationCode(WebAuthenticationEntity webAuth, String code) {
@@ -252,6 +316,7 @@ public class WebOauthLoginService {
 
     /**
      * 同实例本地 userInfo：与 {@code /oauth2/userInfo} 一致，按 token {@code grantedScope} 裁剪字段（含 phone/verified）。
+     * 若 granted 含任一 {@code realname_*}，附加裁剪后的 {@link UserProfile#setRealName}。
      */
     UserProfile fetchUserProfileLocally(String accessToken) {
         TokenStore tokenStore = clientDetailsService.get(ValueType.accessToken, accessToken);
@@ -264,7 +329,14 @@ public class WebOauthLoginService {
         AuthUserInfo userInfo = AuthUserInfoBuilder.build(authScopeCatalog, AuthTrack.OAUTH, grantedScope, user, profileEntity, null, null);
         ClientDetailsEntity clientEntity = StringUtils.isBlank(tokenStore.getClientId()) ? null : clientDetailsService.findByClientId(tokenStore.getClientId());
         oauthExtensionService.enrichUserInfo(authScopeSupport.toSnapshot(clientEntity), userInfo);
-        return AuthUserInfoBuilder.toUserProfile(userInfo);
+        UserProfile profile = AuthUserInfoBuilder.toUserProfile(userInfo);
+        if (authRealNameService.hasAnyRealNameScope(grantedScope) && authRealNameService.hasProvider()) {
+            AuthRealNameInfo realName = authRealNameService.project(authRealNameService.resolve(user.getUuid()), grantedScope);
+            if (realName != null) {
+                profile.setRealName(realName);
+            }
+        }
+        return profile;
     }
 
     private String extractAccessToken(String tokenResponseBody) {

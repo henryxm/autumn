@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.usr.dto;
 
+import cn.org.autumn.auth.model.AuthRealNameInfo;
 import cn.org.autumn.modules.usr.entity.UserProfileEntity;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import java.io.Serializable;
@@ -30,6 +31,9 @@ public class UserProfile implements Serializable {
 
     /** OAuth userInfo scope=verified：0 未实名 / 1 已实名；可为空表示未下发该字段。 */
     private Integer verified;
+
+    /** 授权含任一 realname_* 时由 RP 预取的实名详情；未授权或拉取失败时为 null。 */
+    private AuthRealNameInfo realName;
 
     public static UserProfile from(UserProfileEntity userProfileEntity) {
         UserProfile userProfile = new UserProfile();

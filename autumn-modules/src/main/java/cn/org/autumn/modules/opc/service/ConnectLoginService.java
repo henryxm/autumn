@@ -59,7 +59,7 @@ public class ConnectLoginService {
     @Transactional(rollbackFor = Exception.class)
     public ConnectBindResolveResult completeOAuthCallback(HttpServletRequest request, ConnectAppEntity app, String code, String callback) {
         OpcTokenResult token = connectOauthService.exchangeCode(app, code);
-        OpcUserInfoResult userInfoResult = connectOauthService.fetchUserInfoForBind(app, token.getAccessToken());
+        OpcUserInfoResult userInfoResult = connectOauthService.fetchUserInfoForBind(app, token.getAccessToken(), token.getScope());
         if (userInfoResult == null || userInfoResult.getSnapshot() == null || StringUtils.isBlank(userInfoResult.getSnapshot().getOpenId())) {
             throw ConnectBindException.invalidUserInfo(app);
         }
@@ -70,7 +70,7 @@ public class ConnectLoginService {
         } catch (ConnectBindException e) {
             if (e.getConflictType() == ConflictType.BIND_CHOICE_REQUIRED) {
                 String safeCallback = WebPathUtils.safeOauthCallbackForClient(request, callback);
-                String pendingToken = connectBindPendingService.save(app, snapshot, token.getAccessToken(), safeCallback);
+                String pendingToken = connectBindPendingService.save(app, snapshot, token.getAccessToken(), token.getScope(), safeCallback);
                 throw ConnectBindException.bindChoiceRequired(app, snapshot.getOpenId(), pendingToken);
             }
             throw e;
@@ -118,6 +118,17 @@ public class ConnectLoginService {
         OpenUserInfoSnapshot userInfo = JSON.parseObject(pending.getUserInfoJson(), OpenUserInfoSnapshot.class);
         if (userInfo == null || StringUtils.isBlank(userInfo.getOpenId())) {
             throw ConnectBindException.invalidUserInfo(app);
+        }
+        if (userInfo.getRealName() == null && StringUtils.isNotBlank(pending.getAccessToken())) {
+            try {
+                OpcUserInfoResult refreshed = connectOauthService.fetchUserInfoForBind(
+                        app, pending.getAccessToken(), pending.getGrantedScope());
+                if (refreshed != null && refreshed.getSnapshot() != null && refreshed.getSnapshot().getRealName() != null) {
+                    userInfo.setRealName(refreshed.getSnapshot().getRealName());
+                }
+            } catch (Exception ignored) {
+                // 重拉失败不阻断绑定；年龄可由后续同步补偿
+            }
         }
         ConnectBindResolveResult result = createNewUser ? connectBindService.bindCreateNewUser(app, userInfo) : connectBindService.bindSessionUser(app, userInfo);
         userProfileService.establishSession(result.getProfile());

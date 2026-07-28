@@ -97,7 +97,8 @@ public class AuthScopeCatalog {
             addIfPresent(ordered, codes, "openid");
             addIfPresent(ordered, codes, "unionid");
         }
-        for (String code : new String[]{"profile", "phone", "email", "verified", "status"}) {
+        for (String code : new String[]{"profile", "phone", "email", "verified", "status",
+                AuthScopeSet.REALNAME_ATTR, AuthScopeSet.REALNAME_PERSON, AuthScopeSet.REALNAME_ID}) {
             addIfPresent(ordered, codes, code);
         }
         for (String code : new TreeSet<String>(codes)) {
@@ -120,7 +121,7 @@ public class AuthScopeCatalog {
         List<String> invalid = new ArrayList<String>();
         List<String> denied = new ArrayList<String>();
         for (String code : rawRequested.getCodes()) {
-            if (AuthScopeSet.BASIC.equals(code) || AuthScopeSet.ALL.equals(code)) {
+            if (AuthScopeSet.BASIC.equals(code) || AuthScopeSet.ALL.equals(code) || AuthScopeSet.REALNAME.equals(code)) {
                 continue;
             }
             if (!isValidCode(track, code)) {
@@ -196,6 +197,20 @@ public class AuthScopeCatalog {
         for (AuthScopeDef def : bucket.values()) {
             if (def != null && def.isEnabled()) {
                 codes.add(def.getCode());
+            }
+        }
+        return codes;
+    }
+
+    /** 当前轨道下已启用的实名三档 code。 */
+    public Set<String> enabledRealNameTierCodes(AuthTrack track) {
+        Set<String> codes = new LinkedHashSet<String>();
+        if (track == null) {
+            return codes;
+        }
+        for (String tier : AuthScopeSet.REALNAME_TIERS) {
+            if (isValidCode(track, tier)) {
+                codes.add(tier);
             }
         }
         return codes;
@@ -285,6 +300,8 @@ public class AuthScopeCatalog {
             }
             if (AuthScopeSet.BASIC.equals(code)) {
                 allowed.addAll(AuthScopeSet.basicFor(track).getCodes());
+            } else if (AuthScopeSet.REALNAME.equals(code)) {
+                allowed.addAll(enabledRealNameTierCodes(track));
             } else if (StringUtils.isNotBlank(code)) {
                 allowed.add(code);
             }
@@ -306,6 +323,9 @@ public class AuthScopeCatalog {
         registerBuiltin(AuthScopeDef.of("email", "查看邮箱", AuthTrack.OAUTH, AuthField.email).sensitivity(AuthScopeSensitivity.high));
         registerBuiltin(AuthScopeDef.of("verified", "查看实名认证状态", AuthTrack.OAUTH, AuthField.verified).sensitivity(AuthScopeSensitivity.medium));
         registerBuiltin(AuthScopeDef.of("status", "查看账号状态", AuthTrack.OAUTH, AuthField.status).sensitivity(AuthScopeSensitivity.medium));
+        registerBuiltin(AuthScopeDef.of(AuthScopeSet.REALNAME_ATTR, "查看实名人口属性", AuthTrack.OAUTH).sensitivity(AuthScopeSensitivity.high).enabled(false));
+        registerBuiltin(AuthScopeDef.of(AuthScopeSet.REALNAME_PERSON, "查看实名姓名与生日", AuthTrack.OAUTH).sensitivity(AuthScopeSensitivity.high).enabled(false));
+        registerBuiltin(AuthScopeDef.of(AuthScopeSet.REALNAME_ID, "查看实名证件与地址", AuthTrack.OAUTH).sensitivity(AuthScopeSensitivity.high).enabled(false));
         registerBuiltin(AuthScopeDef.of("openid", "应用内识别身份", AuthTrack.OPL, AuthField.openId).sensitivity(AuthScopeSensitivity.low));
         registerBuiltin(AuthScopeDef.of("unionid", "跨应用识别身份", AuthTrack.OPL, AuthField.unionId).requires("openid").sensitivity(AuthScopeSensitivity.low));
         registerBuiltin(AuthScopeDef.of("profile", "查看基本资料", AuthTrack.OPL, AuthField.nickname, AuthField.icon).sensitivity(AuthScopeSensitivity.low));
@@ -313,6 +333,9 @@ public class AuthScopeCatalog {
         registerBuiltin(AuthScopeDef.of("email", "查看邮箱", AuthTrack.OPL, AuthField.email).sensitivity(AuthScopeSensitivity.high));
         registerBuiltin(AuthScopeDef.of("verified", "查看实名认证状态", AuthTrack.OPL, AuthField.verified).sensitivity(AuthScopeSensitivity.medium));
         registerBuiltin(AuthScopeDef.of("status", "查看账号状态", AuthTrack.OPL, AuthField.status).sensitivity(AuthScopeSensitivity.medium));
+        registerBuiltin(AuthScopeDef.of(AuthScopeSet.REALNAME_ATTR, "查看实名人口属性", AuthTrack.OPL).sensitivity(AuthScopeSensitivity.high).enabled(false));
+        registerBuiltin(AuthScopeDef.of(AuthScopeSet.REALNAME_PERSON, "查看实名姓名与生日", AuthTrack.OPL).sensitivity(AuthScopeSensitivity.high).enabled(false));
+        registerBuiltin(AuthScopeDef.of(AuthScopeSet.REALNAME_ID, "查看实名证件与地址", AuthTrack.OPL).sensitivity(AuthScopeSensitivity.high).enabled(false));
     }
 
     private void registerBuiltin(AuthScopeDef def) {
