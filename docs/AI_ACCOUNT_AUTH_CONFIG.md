@@ -48,7 +48,7 @@
 
 **留空 `postLoginRedirect` 或删除该字段**：行为与升级前一致——启用 SPM 菜单时默认 `/`，否则默认 `index.html`。
 
-> **注意**：框架默认后台壳（视图名 `index` / `index1` / `main`）对**非系统管理员**会 404（见 `AdminShellAccess`、`docs/AI_AUTH_LOGIN_MODES.md` §3.7.1）。面向终端用户的业务工程应将 `postLoginRedirect` 设为业务首页（如 `/?spm=…`），并用 `PageHandler.index()` 替代或重定向，**不要**依赖裸 `/index.html` 作为普通用户落地页。
+> **注意**：框架默认后台壳（视图名 `index` / `index1` / `main`）对**非系统管理员**会 404（见 `AdminShellAccess`、`docs/AI_AUTH_LOGIN_MODES.md` §3.7.1）。面向终端用户的业务工程应将 `postLoginRedirect` 设为业务首页（如 `/?spm=…`），并用 `PageHandler.index()` 替代或重定向，**不要**依赖裸 `/index.html` 作为普通用户落地页。业务 `PageHandler` 抢先 `redirect:` 时须对系统超管返回空串，保留 `/admin` 入口。
 
 ---
 

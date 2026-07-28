@@ -231,7 +231,9 @@ String base = mode == OAUTH ? origin + "/oauth2" : origin + "/open/oauth2";
 |------|------|
 | **门禁** | `AdminShellAccess.denyUnlessSystemAdmin`：已登录且非 `isSystemAdministrator` 时，最终视图若为上述壳名 → **404** |
 | **挂载点** | `SysPageController`（`/index.html`、`/index1.html`、`/main.html`）与 `SuperPositionModelService.getResourceId`（含 `/?spm=root.index` 等） |
+| **超管专用入口** | 已登录系统超管访问 **`/admin`**（可带 `?active=admin`；已登录时 `isActive` 本就恒 true）。未登录激活壳会话可用 **`/index.html?active=admin`**（门禁对未登录放行壳渲染，登录后仍须超管角色）。判定角色键：`Role:System:Administrator` |
 | **业务替代** | 实现 `PageHandler.index()` / `main()`（更小 `@Order`）返回自有模板或 `redirect:/?spm=…`；抢先返回则不会落到框架壳，从而不受 404 门禁 |
+| **业务 PageHandler 契约** | 更小 `@Order` 抢先 `redirect:` 时，**必须**对 `isSystemAdministrator` 返回空串放行；否则会堵死 `/admin` 壳（`redirect:` 不算壳视图，`AdminShellAccess` 无法兜底）。参考：account `AccountSite#index`；业务仓（如 BigHub）覆盖时同样须豁免超管 |
 | **登录跳转** | 面向普通用户的业务站 **不要** 把 `postLoginRedirect` 设为裸 `/index.html`；应指向业务首页 SPM 或 `/`（见 `docs/AI_ACCOUNT_AUTH_CONFIG.md`） |
 
 ### 3.8 站点门户（品牌 / 备案 / 法律链接）
