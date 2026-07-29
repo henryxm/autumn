@@ -174,7 +174,20 @@ onUserCancel(uuid):
 
 ---
 
-## 9. 联调检查清单
+## 9. Web 唤起（可选扩展，同一 uuid）
+
+网页可在 **B2 / D 建票成功后** 用 custom scheme 唤起已安装客户端，代替用户扫码；**不**新增 Intent / Webhook / App API。
+
+1. 浏览器：`AutumnQrc.startQrLogin`（或 `resumeTicketNotify`）建票得 `uuid` + `qrUrl`，并先挂 SSE。
+2. 可选 `options.wakeClient({ uuid, qrUrl, host, renderQr })`：返回 `true` 表示由站点决定何时 `renderQr()`；未配置则立即渲染二维码（历史行为）。
+3. 客户端打开深链（如 `crchat://vc/qrc/confirm?uuid=...&authHost=...`）后走 **本文 §2～§7 同一套** scan / detail / confirm。
+4. 成功判据：浏览器 SSE/`status` 出现 `SCANNED`；超时则 `renderQr` 回退二维码。
+
+站点协议示例见业务仓 `CLIENT_WAKE_LOGIN_PROTOCOL.md`（超然信）。框架脚本：`statics/js/autumn-qrc-core.js`。
+
+---
+
+## 10. 联调检查清单
 
 - [ ] APP 已登录且 Token 有效
 - [ ] scan → PC 轮询可见 `SCANNED` + `scannerBrief`
@@ -182,3 +195,4 @@ onUserCancel(uuid):
 - [ ] confirm 后 PC 获得 `exchange` 并完成跳转（Web 登录）
 - [ ] deny 后 PC 轮询为 `DENIED`
 - [ ] OAuth 场景 confirm 后 `redirect` 或 `result.code` 符合预期
+- [ ]（可选）Web wake：单次 create、同 uuid；超时回退出码

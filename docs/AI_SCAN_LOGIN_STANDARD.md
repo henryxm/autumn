@@ -273,7 +273,7 @@ PENDING → SCANNED → CONFIRMED → COMPLETED
 | **`docs/AI_AUTH_SITE_ROLES.md`** | AS/RP 双角色、联邦配置与时序 |
 | **`docs/AI_QRC_API.md`** | HTTP 端点、报文、错误码 |
 | **`docs/AI_QRC_INTEGRATION.md`** | 第三方集成模式 A～D |
-| **`docs/AI_QRC_CLIENT_API.md`** | APP scan/confirm |
+| **`docs/AI_QRC_CLIENT_API.md`** | APP scan/confirm；§9 Web 唤起（可选，同一 uuid） |
 | **`docs/AI_OAUTH_INTEGRATION.md`** | OAuth2 token、userInfo、绑定 |
 | **`docs/AI_AUTH_LOGIN_MODES.md`** | 双轨授权总览 |
 | **`docs/AI_QRC.md`** | 模块结构与配置 |

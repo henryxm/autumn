@@ -424,7 +424,15 @@ D 模式若冲突，`completeOnInbound` 将 `redirectUrl` 设为 bind choice 页
 
 ---
 
-## 8. 相关文档
+## 8. Web 唤起客户端（可选，非新标准模式）
+
+在 **标准一 B2 / D** 网页授权路径上，站点可在 `ticket/create` 之后、用户扫码之前，用 custom scheme 唤起本机 App，把「扫码得到 uuid」换成「深链传入同一 uuid」。服务端状态机、Webhook、App `scan/confirm` **不变**。
+
+前端扩展点：`autumn-qrc-core.js` 的 `options.wakeClient`（见 **`AI_QRC_CLIENT_API.md` §9**）。未配置时行为与纯二维码完全一致。
+
+---
+
+## 9. 相关文档
 
 | 文档 | 内容 |
 |------|------|
@@ -432,7 +440,7 @@ D 模式若冲突，`completeOnInbound` 将 `redirectUrl` 设为 bind choice 页
 | **`AI_QRC_API.md`** | HTTP 端点、报文、Webhook §5、错误码 |
 | **`AI_AUTH_SITE_ROLES.md`** | AS/RP 双角色、联邦配置 |
 | **`AI_QRC_INTEGRATION.md`** | 集成模式 A～D 选型 |
-| **`AI_QRC_CLIENT_API.md`** | APP scan/confirm UX |
+| **`AI_QRC_CLIENT_API.md`** | APP scan/confirm UX；§9 Web 唤起 |
 | **`AI_OAUTH_INTEGRATION.md`** | token / userInfo |
 
 **集成测试**：`ScanLoginFacadeIntegrationTest`、`RpFederatedLoginIntegrationTest`、`RpQrcSseIntegrationTest`、`OpenApiServerScanLoginIntegrationTest`。

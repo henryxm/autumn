@@ -538,9 +538,37 @@
                             return;
                         }
                         self.qrcUuid = res.data.uuid;
-                        self.renderQrCode(res.data.qrUrl);
-                        self.qrStatus = '等待扫码...';
+                        var qrUrl = res.data.qrUrl;
+                        var rendered = false;
+                        var ensureRender = function () {
+                            if (rendered) {
+                                return;
+                            }
+                            rendered = true;
+                            self.renderQrCode(qrUrl);
+                            if (self.qrPhase === 'pending') {
+                                self.qrStatus = '等待扫码...';
+                            }
+                        };
+                        // SSE 先挂：唤起期间 App scan 即可推送到浏览器（同一 uuid）。
                         self.startTicketNotify(onUnavailable);
+                        var wakeHandled = false;
+                        if (typeof options.wakeClient === 'function') {
+                            self.qrStatus = options.wakeStatusText || '正在打开客户端...';
+                            try {
+                                wakeHandled = options.wakeClient({
+                                    uuid: self.qrcUuid,
+                                    qrUrl: qrUrl,
+                                    host: self,
+                                    renderQr: ensureRender
+                                }) === true;
+                            } catch (wakeErr) {
+                                wakeHandled = false;
+                            }
+                        }
+                        if (!wakeHandled) {
+                            ensureRender();
+                        }
                     },
                     error: function (xhr) {
                         if (typeof onUnavailable === 'function') {
@@ -787,15 +815,49 @@
                 if (resumeOpts.uuid) {
                     self.qrcUuid = resumeOpts.uuid;
                 }
-                if (resumeOpts.qrUrl && resumeOpts.skipRender !== true) {
-                    self.renderQrCode(resumeOpts.qrUrl);
-                }
-                self.qrStatus = resumeOpts.statusText || resumeOpts.qrStatus || '等待扫码...';
                 if (!self.qrcUuid) {
                     self.qrStatus = '二维码加载失败，请刷新页面重试';
                     return;
                 }
+                var qrUrl = resumeOpts.qrUrl || '';
+                var skipRender = resumeOpts.skipRender === true;
+                var rendered = skipRender;
+                var ensureRender = function () {
+                    if (rendered || !qrUrl) {
+                        if (!rendered && self.qrPhase === 'pending') {
+                            self.qrStatus = resumeOpts.statusText || resumeOpts.qrStatus || '等待扫码...';
+                        }
+                        return;
+                    }
+                    rendered = true;
+                    self.renderQrCode(qrUrl);
+                    if (self.qrPhase === 'pending') {
+                        self.qrStatus = resumeOpts.statusText || resumeOpts.qrStatus || '等待扫码...';
+                    }
+                };
                 self.startTicketNotify(resumeOpts.onUnavailable);
+                var wakeHandled = false;
+                var allowWake = resumeOpts.wake !== false && typeof options.wakeClient === 'function';
+                if (allowWake && qrUrl && !skipRender) {
+                    self.qrStatus = options.wakeStatusText || '正在打开客户端...';
+                    try {
+                        wakeHandled = options.wakeClient({
+                            uuid: self.qrcUuid,
+                            qrUrl: qrUrl,
+                            host: self,
+                            renderQr: ensureRender
+                        }) === true;
+                    } catch (wakeErr) {
+                        wakeHandled = false;
+                    }
+                }
+                if (!wakeHandled) {
+                    if (qrUrl && !skipRender) {
+                        ensureRender();
+                    } else {
+                        self.qrStatus = resumeOpts.statusText || resumeOpts.qrStatus || '等待扫码...';
+                    }
+                }
             },
             handleRpStreamEvent: function (data, onUnavailable) {
                 var self = this;
