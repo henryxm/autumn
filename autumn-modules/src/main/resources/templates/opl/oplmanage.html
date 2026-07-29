@@ -228,7 +228,7 @@
                     <span class="scope-field-label">授权范围</span>
                     <div class="scope-field">
                         <input type="hidden" id="editScope"/>
-                        <p class="scope-field-desc">勾选可请求的权限；用户在授权确认页将看到相同说明。默认「基本授权」包含应用内识别身份、跨应用识别身份与基本资料。</p>
+                        <p class="scope-field-desc">勾选可请求的权限；用户在授权确认页将看到相同说明。默认「基本授权」包含应用内识别身份、跨应用识别身份与基本资料。实名三档默认关闭，须先在 <a href="${request.contextPath!''}/authscopemanage.html" target="_blank" rel="noopener">授权范围管理</a> 启用后再勾选。</p>
                         <div class="scope-stored-box">
                             <span class="scope-stored-label">存储值</span>
                             <code class="scope-stored-text" id="editScopeStored">basic</code>
@@ -359,7 +359,7 @@
                 <label>授权范围</label>
                 <div class="scope-field">
                     <input type="hidden" id="createAppScope" value="basic"/>
-                    <p class="scope-field-desc">勾选可请求的权限；用户在授权确认页将看到相同说明。</p>
+                    <p class="scope-field-desc">勾选可请求的权限；用户在授权确认页将看到相同说明。实名档须先在 <a href="${request.contextPath!''}/authscopemanage.html" target="_blank" rel="noopener">授权范围管理</a> 启用。</p>
                     <div class="scope-stored-box">
                         <span class="scope-stored-label">存储值</span>
                         <code class="scope-stored-text" id="createAppScopeStored">basic</code>

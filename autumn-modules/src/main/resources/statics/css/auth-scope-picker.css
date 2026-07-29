@@ -219,6 +219,35 @@
     background: #f8fafc;
 }
 
+.scope-group-header {
+    margin: 8px 0 4px;
+    padding: 4px 2px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #b91c1c;
+    letter-spacing: 0.02em;
+}
+
+.scope-group-header:first-child {
+    margin-top: 0;
+}
+
+.scope-realname-hint {
+    margin: 0 0 8px;
+    padding: 10px 12px;
+    font-size: 12px;
+    line-height: 1.55;
+    color: #92400e;
+    background: #fffbeb;
+    border: 1px solid #fcd34d;
+    border-radius: 8px;
+}
+
+.scope-realname-hint a {
+    color: #b45309;
+    font-weight: 600;
+}
+
 .modal-body .scope-field {
     margin-top: 2px;
 }

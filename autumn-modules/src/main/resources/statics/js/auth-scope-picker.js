@@ -2,6 +2,8 @@
     'use strict';
 
     var catalogCache = {};
+    var REALNAME_ALIAS = 'realname';
+    var REALNAME_TIERS = ['realname_attr', 'realname_person', 'realname_id'];
 
     function parseScopeValue(value) {
         if (!value) {
@@ -33,6 +35,23 @@
         return codes;
     }
 
+    function enabledRealnameTiers(items) {
+        var enabled = enabledCodes(items);
+        return REALNAME_TIERS.filter(function (code) {
+            return enabled.indexOf(code) >= 0;
+        });
+    }
+
+    function hasDisabledRealnameOnly(items) {
+        var anyTierInCatalog = false;
+        (items || []).forEach(function (item) {
+            if (item && REALNAME_TIERS.indexOf(item.code) >= 0) {
+                anyTierInCatalog = true;
+            }
+        });
+        return anyTierInCatalog && !enabledRealnameTiers(items).length;
+    }
+
     function expandScopeCodes(codes, track, items) {
         var enabledSet = {};
         enabledCodes(items).forEach(function (code) {
@@ -48,6 +67,10 @@
                 });
             } else if (code === 'all') {
                 Object.keys(enabledSet).forEach(function (c) {
+                    expanded.push(c);
+                });
+            } else if (code === REALNAME_ALIAS) {
+                enabledRealnameTiers(items).forEach(function (c) {
                     expanded.push(c);
                 });
             } else if (enabledSet[code]) {
@@ -84,15 +107,32 @@
             return 'basic';
         }
         var allEnabled = enabledCodes(items);
-        if (sameSet(selected, basicCodesForTrack(track).filter(function (c) {
+        var basicEnabled = basicCodesForTrack(track).filter(function (c) {
             return allEnabled.indexOf(c) >= 0;
-        }))) {
+        });
+        if (sameSet(selected, basicEnabled)) {
             return 'basic';
         }
         if (allEnabled.length && sameSet(selected, allEnabled)) {
             return 'all';
         }
-        return selected.join(' ');
+        var rnTiers = enabledRealnameTiers(items);
+        if (rnTiers.length && rnTiers.every(function (c) {
+            return selected.indexOf(c) >= 0;
+        })) {
+            var rest = selected.filter(function (c) {
+                return rnTiers.indexOf(c) < 0;
+            });
+            if (!rest.length) {
+                return REALNAME_ALIAS;
+            }
+            if (sameSet(rest, basicEnabled)) {
+                return 'basic ' + REALNAME_ALIAS;
+            }
+            rest = rest.slice().sort();
+            return rest.concat([REALNAME_ALIAS]).join(' ');
+        }
+        return selected.slice().sort().join(' ');
     }
 
     function findItem(items, code) {
@@ -131,6 +171,10 @@
         return '低敏感';
     }
 
+    function manageScopesHref(ctx) {
+        return (ctx || window.__CTX__ || '') + '/authscopemanage.html';
+    }
+
     function updateSummary(summaryEl, selected, items) {
         if (!summaryEl) {
             return;
@@ -159,6 +203,28 @@
         storedEl.textContent = storedText || 'basic';
     }
 
+    function updateRealnameHint(fieldRoot, items, ctx) {
+        if (!fieldRoot) {
+            return;
+        }
+        var existing = fieldRoot.querySelector('.scope-realname-hint');
+        if (existing) {
+            existing.parentNode.removeChild(existing);
+        }
+        if (!hasDisabledRealnameOnly(items)) {
+            return;
+        }
+        var hint = document.createElement('p');
+        hint.className = 'scope-realname-hint';
+        hint.innerHTML = '实名档（realname_attr / person / id）默认关闭，请先在 <a href="' + manageScopesHref(ctx) + '" target="_blank" rel="noopener">授权范围管理</a> 启用后，方可在此勾选。';
+        var list = fieldRoot.querySelector('.scope-picker-list');
+        if (list && list.parentNode) {
+            list.parentNode.insertBefore(hint, list);
+        } else {
+            fieldRoot.appendChild(hint);
+        }
+    }
+
     function updatePresets(presetsEl, container, input, track, items, selected) {
         if (!presetsEl) {
             return;
@@ -168,6 +234,9 @@
             { code: 'basic', label: '基本授权（推荐）' },
             { code: 'all', label: '全部权限' }
         ];
+        if (enabledRealnameTiers(items).length) {
+            presets.splice(1, 0, { code: REALNAME_ALIAS, label: '实名详情' });
+        }
         presets.forEach(function (preset) {
             var btn = document.createElement('button');
             btn.type = 'button';
@@ -194,6 +263,14 @@
         selected.sort();
         var stored = joinScopeValue(selected, track, items);
         input.value = stored;
+        if (typeof input.dispatchEvent === 'function') {
+            try {
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+            } catch (e) {
+                /* IE ignore */
+            }
+        }
         container.querySelectorAll('.scope-pick-row').forEach(function (row) {
             var box = row.querySelector('input[type=checkbox]');
             row.classList.toggle('checked', !!(box && box.checked));
@@ -205,6 +282,56 @@
         updatePresets(presetsEl, container, input, track, items, selected);
     }
 
+    function appendGroupHeader(container, title) {
+        var header = document.createElement('div');
+        header.className = 'scope-group-header';
+        header.textContent = title;
+        container.appendChild(header);
+    }
+
+    function appendPickRow(container, input, item, code, selectedSet, track, items, fieldRoot, presetsEl) {
+        var row = document.createElement('div');
+        row.className = 'scope-pick-row' + (selectedSet[code] ? ' checked' : '');
+        var checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.value = code;
+        checkbox.checked = !!selectedSet[code];
+        checkbox.id = input.id + '_' + code;
+        checkbox.addEventListener('change', function () {
+            syncInput(container, input, track, items, fieldRoot, presetsEl);
+        });
+        var body = document.createElement('div');
+        body.className = 'scope-pick-body';
+        var title = document.createElement('label');
+        title.className = 'scope-pick-title';
+        title.setAttribute('for', checkbox.id);
+        title.textContent = item.label || code;
+        var meta = document.createElement('div');
+        meta.className = 'scope-pick-meta';
+        var codeEl = document.createElement('span');
+        codeEl.className = 'scope-pick-code';
+        codeEl.textContent = code;
+        meta.appendChild(codeEl);
+        if (item.sensitivity) {
+            var sens = document.createElement('span');
+            sens.className = 'scope-sens ' + sensClass(String(item.sensitivity).toLowerCase());
+            sens.textContent = sensLabel(String(item.sensitivity).toLowerCase());
+            meta.appendChild(sens);
+        }
+        body.appendChild(title);
+        body.appendChild(meta);
+        row.appendChild(checkbox);
+        row.appendChild(body);
+        row.addEventListener('click', function (e) {
+            if (e.target === checkbox) {
+                return;
+            }
+            checkbox.checked = !checkbox.checked;
+            syncInput(container, input, track, items, fieldRoot, presetsEl);
+        });
+        container.appendChild(row);
+    }
+
     function renderPicker(container, input, items, selected, track, presetsEl) {
         if (!container || !input) {
             return;
@@ -214,6 +341,8 @@
             presetsEl = fieldRoot.querySelector('.scope-presets');
         }
         container.innerHTML = '';
+        var ctx = window.__CTX__ || '';
+        updateRealnameHint(fieldRoot, items, ctx);
         var expanded = expandScopeCodes(selected, track, items);
         var selectedSet = {};
         expanded.forEach(function (code) {
@@ -229,51 +358,17 @@
             }
             return;
         }
+        var realnameShown = false;
         visible.forEach(function (code) {
             var item = findItem(items, code);
             if (!item) {
                 return;
             }
-            var row = document.createElement('div');
-            row.className = 'scope-pick-row' + (selectedSet[code] ? ' checked' : '');
-            var checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.value = code;
-            checkbox.checked = !!selectedSet[code];
-            checkbox.id = input.id + '_' + code;
-            checkbox.addEventListener('change', function () {
-                syncInput(container, input, track, items, fieldRoot, presetsEl);
-            });
-            var body = document.createElement('div');
-            body.className = 'scope-pick-body';
-            var title = document.createElement('label');
-            title.className = 'scope-pick-title';
-            title.setAttribute('for', checkbox.id);
-            title.textContent = item.label || code;
-            var meta = document.createElement('div');
-            meta.className = 'scope-pick-meta';
-            var codeEl = document.createElement('span');
-            codeEl.className = 'scope-pick-code';
-            codeEl.textContent = code;
-            meta.appendChild(codeEl);
-            if (item.sensitivity) {
-                var sens = document.createElement('span');
-                sens.className = 'scope-sens ' + sensClass(String(item.sensitivity).toLowerCase());
-                sens.textContent = sensLabel(String(item.sensitivity).toLowerCase());
-                meta.appendChild(sens);
+            if (REALNAME_TIERS.indexOf(code) >= 0 && !realnameShown) {
+                appendGroupHeader(container, '实名详情（高敏感）');
+                realnameShown = true;
             }
-            body.appendChild(title);
-            body.appendChild(meta);
-            row.appendChild(checkbox);
-            row.appendChild(body);
-            row.addEventListener('click', function (e) {
-                if (e.target === checkbox) {
-                    return;
-                }
-                checkbox.checked = !checkbox.checked;
-                syncInput(container, input, track, items, fieldRoot, presetsEl);
-            });
-            container.appendChild(row);
+            appendPickRow(container, input, item, code, selectedSet, track, items, fieldRoot, presetsEl);
         });
         syncInput(container, input, track, items, fieldRoot, presetsEl);
     }
@@ -352,6 +447,7 @@
         parseScopeValue: parseScopeValue,
         joinScopeValue: joinScopeValue,
         renderPicker: renderPicker,
-        expandScopeCodes: expandScopeCodes
+        expandScopeCodes: expandScopeCodes,
+        enabledRealnameTiers: enabledRealnameTiers
     };
 })(window);

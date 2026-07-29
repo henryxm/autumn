@@ -7,30 +7,78 @@
     <style>
         body { padding: 24px; background: #f5f7fb; }
         .card { background: #fff; border-radius: 8px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
-        .scope-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #eee; }
+        .scope-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 12px 0; border-bottom: 1px solid #eee; }
         .scope-row:last-child { border-bottom: 0; }
+        .scope-row-meta { font-size: 12px; color: #64748b; margin-top: 6px; line-height: 1.5; }
         .tag { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; margin-right: 6px; background: #eef2ff; color: #334155; }
         .tag.builtin { background: #ecfeff; }
-        .tag.high { background: #fee2e2; }
+        .tag.high { background: #fee2e2; color: #b91c1c; }
+        .tag.medium { background: #fffbeb; color: #b45309; }
+        .tag.off { background: #f1f5f9; color: #94a3b8; }
+        .group-title { margin: 18px 0 8px; font-size: 14px; font-weight: 700; color: #0f172a; }
+        .group-title:first-child { margin-top: 0; }
+        .group-title.realname { color: #b91c1c; }
+        .toolbar { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin-bottom: 14px; }
+        .toolbar label { margin: 0 8px 0 0; font-weight: 600; font-size: 13px; color: #475569; }
+        .toolbar select { display: inline-block; width: auto; min-width: 120px; }
+        .hint-box { padding: 12px 14px; background: #fff7ed; border: 1px solid #fdba74; border-radius: 8px; font-size: 13px; line-height: 1.55; color: #9a3412; margin-bottom: 14px; }
+        .links a { margin-right: 12px; }
+        .form-inline-checks label { font-weight: 500; margin-right: 14px; }
     </style>
 </head>
 <body>
 <div class="card">
     <h3>OAuth / OPL 授权范围目录</h3>
-    <p>内置 scope 可启用/禁用；自定义 scope 可增删。客户端登记范围请在 <a href="${request.contextPath!''}/oauthasmanage.html">授权管理</a> 与 <a href="${request.contextPath!''}/oplmanage.html">开放平台管理</a> 中配置。对照说明见 <a href="${request.contextPath!''}/docs/AI_AUTH_SCOPE.md" target="_blank">AI_AUTH_SCOPE</a>。</p>
+    <p class="links">内置 scope 可启用/禁用；自定义 scope 可增删。客户端登记请到：
+        <a href="${request.contextPath!''}/oauthasmanage.html">OAuth 授权管理（AS）</a>
+        <a href="${request.contextPath!''}/oauthrpmanage.html">OAuth 客户端（RP）</a>
+        <a href="${request.contextPath!''}/oplmanage.html">开放平台管理（OPL AS）</a>
+        <a href="${request.contextPath!''}/opcmanage.html">开放接入管理（OPC）</a>
+        · 说明见 <a href="${request.contextPath!''}/docs/AI_AUTH_SCOPE.md" target="_blank" rel="noopener">AI_AUTH_SCOPE</a>
+    </p>
+    <div class="hint-box">
+        <strong>实名三档</strong>（<code>realname_attr</code> / <code>realname_person</code> / <code>realname_id</code>）默认关闭、高敏感，不进标准 userInfo；详情走 <code>/oauth2/realName</code>（OPL 对称 <code>/open/oauth2/realName</code>）。
+        须在此启用后，四页授权范围勾选器才会出现对应选项。别名 <code>realname</code> 展开为当前轨道已启用的三档。
+        BigHub 建议仅启用并登记 <code>realname_attr</code>（配合 <code>verified</code>）。
+    </div>
+    <div class="toolbar">
+        <label for="trackFilter">轨道</label>
+        <select id="trackFilter" class="form-control input-sm">
+            <option value="all">全部</option>
+            <option value="oauth">OAuth</option>
+            <option value="opl">OPL</option>
+        </select>
+    </div>
     <div id="scopeList"></div>
 </div>
 <div class="card">
     <h4>新增自定义 scope</h4>
     <div class="form-group"><label>代码</label><input id="newCode" class="form-control" placeholder="例如 custom.read"/></div>
     <div class="form-group"><label>名称</label><input id="newLabel" class="form-control" placeholder="展示名称"/></div>
-    <div class="form-group"><label>轨道</label><input id="newTracks" class="form-control" value="oauth,opl" placeholder="oauth,opl"/></div>
-    <div class="form-group"><label>字段</label><input id="newFields" class="form-control" placeholder="nickname,icon"/></div>
+    <div class="form-group form-inline-checks">
+        <label>轨道</label>
+        <label><input type="checkbox" id="trackOauth" checked/> oauth</label>
+        <label><input type="checkbox" id="trackOpl" checked/> opl</label>
+    </div>
+    <div class="form-group"><label>字段（AuthField，可选）</label><input id="newFields" class="form-control" placeholder="nickname,icon"/></div>
+    <div class="form-group">
+        <label>敏感级</label>
+        <select id="newSensitivity" class="form-control">
+            <option value="low" selected>low</option>
+            <option value="medium">medium</option>
+            <option value="high">high</option>
+        </select>
+    </div>
+    <div class="form-group"><label>依赖 requires（可选，空格/逗号分隔）</label><input id="newRequires" class="form-control" placeholder="例如 openid"/></div>
     <button class="btn btn-primary btn-sm" onclick="saveCustom()">保存</button>
+    <span id="saveMsg" style="margin-left:10px;color:#b91c1c;font-size:13px;"></span>
 </div>
+<script src="${request.contextPath!''}/statics/js/auth-scope-picker.js"></script>
 <script>
 window.__CTX__ = '${request.contextPath!""}';
 const API = window.__CTX__ + '/oauth/admin/scopes';
+var allItems = [];
+
 async function apiGet(path) {
     const res = await fetch(API + path, { credentials: 'same-origin' });
     return res.json();
@@ -44,72 +92,155 @@ async function apiPost(path, body) {
     });
     return res.json();
 }
+
+function groupKey(item) {
+    var code = (item.code || '').toLowerCase();
+    if (code === 'identity' || code === 'openid' || code === 'unionid') return 'identity';
+    if (code === 'profile' || code === 'phone' || code === 'email' || code === 'verified' || code === 'status') return 'profile';
+    if (code.indexOf('realname') === 0) return 'realname';
+    return 'other';
+}
+
+var GROUP_ORDER = ['identity', 'profile', 'realname', 'other'];
+var GROUP_LABEL = {
+    identity: '身份标识',
+    profile: '资料与状态',
+    realname: '实名详情（高敏感 · 默认关闭）',
+    other: '其它 / 自定义'
+};
+
+function matchTrack(item, filter) {
+    if (filter === 'all') return true;
+    var tracks = String(item.tracks || '').toLowerCase();
+    return tracks.indexOf(filter) >= 0;
+}
+
 function renderItems(items) {
     const box = document.getElementById('scopeList');
     box.innerHTML = '';
-    (items || []).forEach(function (item) {
-        const row = document.createElement('div');
-        row.className = 'scope-row';
-        const left = document.createElement('div');
-        left.innerHTML = '<strong>' + (item.label || item.code) + '</strong> <code>' + item.code + '</code>'
-            + ' <span class="tag' + (item.builtin ? ' builtin' : '') + '">' + (item.builtin ? '内置' : '自定义') + '</span>'
-            + (item.tracks ? ' <span class="tag">' + item.tracks + '</span>' : '')
-            + (item.sensitivity === 'high' ? ' <span class="tag high">高敏感</span>' : '');
-        const right = document.createElement('div');
-        const toggle = document.createElement('button');
-        toggle.className = 'btn btn-default btn-xs';
-        toggle.textContent = item.enabled === false ? '启用' : '禁用';
-        toggle.onclick = function () {
-            apiPost('/enabled', { uuid: item.uuid, enabled: item.enabled === false }).then(function () {
-                invalidateScopeCatalog();
-                loadList();
-            });
-        };
-        right.appendChild(toggle);
-        if (!item.builtin) {
-            const del = document.createElement('button');
-            del.className = 'btn btn-danger btn-xs';
-            del.style.marginLeft = '8px';
-            del.textContent = '删除';
-            del.onclick = function () {
-                apiPost('/delete', { uuid: item.uuid }).then(function () {
-                    invalidateScopeCatalog();
-                    loadList();
+    var filter = document.getElementById('trackFilter').value || 'all';
+    var filtered = (items || []).filter(function (item) { return matchTrack(item, filter); });
+    if (!filtered.length) {
+        box.innerHTML = '<p style="color:#94a3b8">无匹配的 scope</p>';
+        return;
+    }
+    var buckets = {};
+    GROUP_ORDER.forEach(function (k) { buckets[k] = []; });
+    filtered.forEach(function (item) {
+        var g = groupKey(item);
+        if (!buckets[g]) buckets[g] = [];
+        buckets[g].push(item);
+    });
+    GROUP_ORDER.forEach(function (g) {
+        var list = buckets[g] || [];
+        if (!list.length) return;
+        var title = document.createElement('div');
+        title.className = 'group-title' + (g === 'realname' ? ' realname' : '');
+        title.textContent = GROUP_LABEL[g] || g;
+        box.appendChild(title);
+        list.forEach(function (item) {
+            const row = document.createElement('div');
+            row.className = 'scope-row';
+            const left = document.createElement('div');
+            var sens = (item.sensitivity || '').toLowerCase();
+            left.innerHTML = '<strong>' + (item.label || item.code) + '</strong> <code>' + item.code + '</code>'
+                + ' <span class="tag' + (item.builtin ? ' builtin' : '') + '">' + (item.builtin ? '内置' : '自定义') + '</span>'
+                + (item.tracks ? ' <span class="tag">' + item.tracks + '</span>' : '')
+                + (sens === 'high' ? ' <span class="tag high">高敏感</span>' : (sens === 'medium' ? ' <span class="tag medium">中敏感</span>' : ''))
+                + (item.enabled === false ? ' <span class="tag off">已禁用</span>' : '');
+            var metaParts = [];
+            if (item.fields) metaParts.push('fields: ' + item.fields);
+            if (item.requires) metaParts.push('requires: ' + item.requires);
+            if (metaParts.length) {
+                left.innerHTML += '<div class="scope-row-meta">' + metaParts.join(' · ') + '</div>';
+            }
+            const right = document.createElement('div');
+            const toggle = document.createElement('button');
+            toggle.className = 'btn btn-default btn-xs';
+            toggle.textContent = item.enabled === false ? '启用' : '禁用';
+            toggle.onclick = function () {
+                apiPost('/enabled', { uuid: item.uuid, enabled: item.enabled === false }).then(function (body) {
+                    if (body && body.code === 0) {
+                        invalidateScopeCatalog();
+                        loadList();
+                    }
                 });
             };
-            right.appendChild(del);
-        }
-        row.appendChild(left);
-        row.appendChild(right);
-        box.appendChild(row);
+            right.appendChild(toggle);
+            if (!item.builtin) {
+                const del = document.createElement('button');
+                del.className = 'btn btn-danger btn-xs';
+                del.style.marginLeft = '8px';
+                del.textContent = '删除';
+                del.onclick = function () {
+                    apiPost('/delete', { uuid: item.uuid }).then(function () {
+                        invalidateScopeCatalog();
+                        loadList();
+                    });
+                };
+                right.appendChild(del);
+            }
+            row.appendChild(left);
+            row.appendChild(right);
+            box.appendChild(row);
+        });
     });
 }
+
 function invalidateScopeCatalog() {
     if (window.AuthScopePicker && AuthScopePicker.invalidateCatalog) {
         AuthScopePicker.invalidateCatalog();
     }
 }
+
 function loadList() {
     apiGet('/list').then(function (body) {
         if (body && body.code === 0) {
-            renderItems(body.items);
+            allItems = body.items || [];
+            renderItems(allItems);
         }
     });
 }
+
+function collectTracks() {
+    var parts = [];
+    if (document.getElementById('trackOauth').checked) parts.push('oauth');
+    if (document.getElementById('trackOpl').checked) parts.push('opl');
+    return parts.join(',');
+}
+
 function saveCustom() {
+    var msg = document.getElementById('saveMsg');
+    msg.textContent = '';
+    var tracks = collectTracks();
+    if (!tracks) {
+        msg.textContent = '请至少选择一个轨道';
+        return;
+    }
     apiPost('/save', {
         code: document.getElementById('newCode').value,
         label: document.getElementById('newLabel').value,
-        tracks: document.getElementById('newTracks').value,
+        tracks: tracks,
         fields: document.getElementById('newFields').value,
-        sensitivity: 'low'
+        sensitivity: document.getElementById('newSensitivity').value,
+        requires: document.getElementById('newRequires').value
     }).then(function (body) {
         if (body && body.code === 0) {
             invalidateScopeCatalog();
+            document.getElementById('newCode').value = '';
+            document.getElementById('newLabel').value = '';
+            document.getElementById('newFields').value = '';
+            document.getElementById('newRequires').value = '';
             loadList();
+        } else {
+            msg.textContent = (body && body.msg) || '保存失败';
         }
     });
 }
+
+document.getElementById('trackFilter').addEventListener('change', function () {
+    renderItems(allItems);
+});
 loadList();
 </script>
 </body>

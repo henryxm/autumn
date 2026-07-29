@@ -163,7 +163,7 @@
             <label>授权范围</label>
             <div class="scope-field">
                 <input type="hidden" id="saveScope" value="basic"/>
-                <p class="scope-field-desc">勾选可请求的权限；用户在授权确认页将看到相同说明。须在上游 AS 登记范围内。</p>
+                <p class="scope-field-desc">勾选可请求的权限；用户在授权确认页将看到相同说明。须在上游 AS 已登记范围内（不得超过上游）。实名档须先在 <a href="${request.contextPath!''}/authscopemanage.html" target="_blank" rel="noopener">授权范围管理</a> 启用；BigHub 建议 <code>verified</code> + <code>realname_attr</code>。</p>
                 <div class="scope-stored-box">
                     <span class="scope-stored-label">存储值</span>
                     <code class="scope-stored-text" id="saveScopeStored">basic</code>
@@ -216,7 +216,7 @@
             <label>授权范围</label>
             <div class="scope-field">
                 <input type="hidden" id="editScope"/>
-                <p class="scope-field-desc">勾选可请求的权限；用户在授权确认页将看到相同说明。须在上游 AS 登记范围内。</p>
+                <p class="scope-field-desc">勾选可请求的权限；用户在授权确认页将看到相同说明。须在上游 AS 已登记范围内（不得超过上游）。实名档须先在 <a href="${request.contextPath!''}/authscopemanage.html" target="_blank" rel="noopener">授权范围管理</a> 启用；BigHub 建议 <code>verified</code> + <code>realname_attr</code>。</p>
                 <div class="scope-stored-box">
                     <span class="scope-stored-label">存储值</span>
                     <code class="scope-stored-text" id="editScopeStored">basic</code>

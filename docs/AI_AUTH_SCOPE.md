@@ -131,25 +131,51 @@
 
 ## 7. 管理配置
 
+### 运维顺序（推荐）
+
+1. **`authscopemanage.html`**：启用所需内置 scope（实名三档默认关闭；BigHub 至少启用 `realname_attr`）或新增自定义 scope。
+2. **双轨四页登记客户端 scope**（勾选器共用 `auth-scope-picker.js`）：
+   - `oauthasmanage.html` — OAuth AS
+   - `oauthrpmanage.html` — OAuth RP（不得超过上游 AS 登记范围）
+   - `oplmanage.html` — OPL AS
+   - `opcmanage.html` — OPC 接入（须与上游 OPL 登记一致）
+3. 用户重新授权后，确认页 `login.html` / RP 登录入口按 `scopeLabels` 展示中文说明。
+
 ### 页面
 
 | 页面 | 用途 |
 |------|------|
-| `authscopemanage.html` | **推荐**：全局 scope 启用/禁用、自定义 scope、OAuth/OPL 对照 |
-| `scopedef.html` / `scopedef.js` | gen CRUD 审计（`/auth/scopedef/*`）；改库后须走 `ScopeDefinitionService` 以保证 `refreshCatalog` |
-| `oauthasmanage.html` | OAuth 客户端登记 scope（多选） |
-| `oplmanage.html` | OPL 应用登记 scope（多选） |
-| QRC `clientgrant` | `scopes` CSV 限制扫码授权范围 |
+| `authscopemanage.html` | **推荐**：全局 scope 启用/禁用、按轨道筛选与分组、实名专区说明、自定义 scope（tracks / sensitivity / requires） |
+| `scopedef.html` / `scopedef.js` | gen CRUD 审计（`/auth/scopedef/*`）；改库后须走 `ScopeDefinitionService` 以保证 `refreshCatalog`；日常请用 `authscopemanage` |
+| `oauthasmanage.html` | OAuth AS 客户端登记 scope（多选；支持 `realname` 别名预设） |
+| `oauthrpmanage.html` | OAuth RP 客户端登记 scope（多选） |
+| `oplmanage.html` | OPL AS 应用登记 scope（多选） |
+| `opcmanage.html` | OPC 接入应用登记 scope（多选；存储值 DOM 须带 id 供 picker 回写） |
+| QRC `clientgrant`（gen） | 扫码授权上限 scope；**gen 页勿手改**，保持文本/CSV；运行时仍经 `ConsentSupport` / `AuthScopeSupport.labels` 展示 |
+
+### Picker 行为（`auth-scope-picker.js`）
+
+- 目录：`GET /oauth/admin/scopes/catalog?track=oauth|opl`；仅 **enabled** 项可勾选。
+- 预设：`basic` / `all`；当至少一档实名已启用时增加 **「实名详情」**（`realname` 别名）。
+- `expand` / `join`：与后端一致，`realname` ↔ 当前轨道已启用的 `realname_attr`/`person`/`id`；可折叠为 `basic realname` 等存储值。
+- 实名均未启用时展示提示，链到 `authscopemanage.html`。
 
 ### Admin API（`ScopeDefinitionAdminController`）
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `/oauth/admin/scopes/catalog?track=oauth\|opl` | 当前轨道目录；含 **`basicCodes`**（与 `AuthScopeSet.basicFor` 一致） |
-| GET | `/oauth/admin/scopes/list` | 管理列表（已识别行） |
-| POST | `/oauth/admin/scopes/save` | 自定义 scope |
+| GET | `/oauth/admin/scopes/catalog?track=oauth\|opl` | 当前轨道目录；含 **`basicCodes`**（与 `AuthScopeSet.basicFor` 一致）；含 disabled 项供提示 |
+| GET | `/oauth/admin/scopes/list` | 管理列表（已识别行，含 tracks/fields/sensitivity/requires） |
+| POST | `/oauth/admin/scopes/save` | 自定义 scope（body：code/label/tracks/fields/sensitivity/requires） |
 | POST | `/oauth/admin/scopes/enabled` | 启用/禁用 |
 | POST | `/oauth/admin/scopes/delete` | 删除自定义 scope（内置不可删） |
+
+### 验收清单
+
+1. `authscopemanage` 启用 `realname_attr` → 四页 picker 出现该档并可勾选。
+2. 勾选后存储值含 `realname_attr` 或折叠为含 `realname` 的别名串；保存客户端成功。
+3. `opcmanage` 勾选时「存储值」文案随勾选更新。
+4. 授权确认页在请求含实名档时展示对应中文 label。
 
 ---
 

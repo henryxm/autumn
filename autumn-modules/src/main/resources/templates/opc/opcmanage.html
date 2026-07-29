@@ -150,10 +150,10 @@
             <label>授权范围</label>
             <div class="scope-field">
                 <input type="hidden" id="saveScope" value="basic"/>
-                <p class="scope-field-desc">勾选可请求的权限；用户在授权确认页将看到相同说明。须与平台登记一致。</p>
+                <p class="scope-field-desc">勾选可请求的权限；用户在授权确认页将看到相同说明。须与上游开放平台（OPL）登记一致、不得超过平台范围。实名档须先在 <a href="${request.contextPath!''}/authscopemanage.html" target="_blank" rel="noopener">授权范围管理</a> 启用。</p>
                 <div class="scope-stored-box">
                     <span class="scope-stored-label">存储值</span>
-                    <code class="scope-stored-text">basic</code>
+                    <code class="scope-stored-text" id="saveScopeStored">basic</code>
                 </div>
                 <div class="scope-field-summary" id="saveScopeSummary"></div>
                 <div class="scope-presets" id="saveScopePresets"></div>
@@ -198,10 +198,10 @@
             <label>授权范围</label>
             <div class="scope-field">
                 <input type="hidden" id="applyScope" value="basic"/>
-                <p class="scope-field-desc">勾选可请求的权限；用户在授权确认页将看到相同说明。须与平台登记一致。</p>
+                <p class="scope-field-desc">勾选可请求的权限；用户在授权确认页将看到相同说明。须与上游开放平台（OPL）登记一致、不得超过平台范围。实名档须先在 <a href="${request.contextPath!''}/authscopemanage.html" target="_blank" rel="noopener">授权范围管理</a> 启用。</p>
                 <div class="scope-stored-box">
                     <span class="scope-stored-label">存储值</span>
-                    <code class="scope-stored-text">basic</code>
+                    <code class="scope-stored-text" id="applyScopeStored">basic</code>
                 </div>
                 <div class="scope-field-summary" id="applyScopeSummary"></div>
                 <div class="scope-presets" id="applyScopePresets"></div>
@@ -245,10 +245,10 @@
             <label>授权范围</label>
             <div class="scope-field">
                 <input type="hidden" id="editScope" value="basic"/>
-                <p class="scope-field-desc">勾选可请求的权限；用户在授权确认页将看到相同说明。须与平台登记一致。</p>
+                <p class="scope-field-desc">勾选可请求的权限；用户在授权确认页将看到相同说明。须与上游开放平台（OPL）登记一致、不得超过平台范围。实名档须先在 <a href="${request.contextPath!''}/authscopemanage.html" target="_blank" rel="noopener">授权范围管理</a> 启用。</p>
                 <div class="scope-stored-box">
                     <span class="scope-stored-label">存储值</span>
-                    <code class="scope-stored-text">basic</code>
+                    <code class="scope-stored-text" id="editScopeStored">basic</code>
                 </div>
                 <div class="scope-field-summary" id="editScopeSummary"></div>
                 <div class="scope-presets" id="editScopePresets"></div>

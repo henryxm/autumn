@@ -66,12 +66,20 @@ public class SysMenuService extends ServiceImpl<SysMenuDao, SysMenuEntity> imple
         return getMenuKey("Opc", "OpcManage");
     }
 
+    public static String getOauthMenuKey() {
+        return getMenuKey("Oauth", "OauthMenu");
+    }
+
     public static String getOauthAsManageMenuKey() {
         return getMenuKey("Oauth", "OauthAsManage");
     }
 
     public static String getAuthScopeManageMenuKey() {
         return getMenuKey("Oauth", "AuthScopeManage");
+    }
+
+    public static String getClientMenuKey() {
+        return getMenuKey("Client", "ClientMenu");
     }
 
     public static String getOauthRpManageMenuKey() {
@@ -134,16 +142,18 @@ public class SysMenuService extends ServiceImpl<SysMenuDao, SysMenuEntity> imple
                 {"字段加密", "fieldencrypt.html", NULL, "1", "fa fa-lock", "13", getSystemMenuKey("FieldEncryptManagement"), getOperationsMenuKey(), "sys_string_field_encrypt_management"},
                 {"人机检测", "shield.html", NULL, "1", "fa fa-user-secret", "14", getSystemMenuKey("ShieldManagement"), getOperationsMenuKey(), "sys_string_shield_management"},
                 {"版本更新", "scan.html", NULL, "1", "fa fa-mobile", "15", getSystemMenuKey("ScanManagement"), getOperationsMenuKey(), "sys_string_scan_management"},
-                // 经典 OAuth2 管理（对标 OPL/OPC 统一管理）
-                {"授权管理", "oauthasmanage.html", NULL, "1", "fa fa-dashboard", "0", getOauthAsManageMenuKey(), getMenuKey("Oauth", "OauthMenu"), "oauth_oauthasmanage"},
-                {"授权范围", "authscopemanage.html", NULL, "1", "fa fa-key", "1", getAuthScopeManageMenuKey(), getMenuKey("Oauth", "OauthMenu"), "oauth_authscopemanage"},
-                {"接入管理", "oauthrpmanage.html", NULL, "1", "fa fa-dashboard", "0", getOauthRpManageMenuKey(), getMenuKey("Client", "ClientMenu"), "client_oauthrpmanage"},
+                // 经典 OAuth2：先写模块目录（与 OauthMenu/ClientMenu 同 key），再挂叶子；顺序必须先父后子
+                {"授权登录", NULL, NULL, "0", "fa fa-sign-in", "666666", getOauthMenuKey(), "", "oauth_menu_text"},
+                {"授权管理", "oauthasmanage.html", NULL, "1", "fa fa-dashboard", "0", getOauthAsManageMenuKey(), getOauthMenuKey(), "oauth_oauthasmanage"},
+                {"授权范围", "authscopemanage.html", NULL, "1", "fa fa-key", "1", getAuthScopeManageMenuKey(), getOauthMenuKey(), "oauth_authscopemanage"},
+                {"客户端", NULL, NULL, "0", "fa fa-eercast", "555555", getClientMenuKey(), "", "client_menu_text"},
+                {"接入管理", "oauthrpmanage.html", NULL, "1", "fa fa-dashboard", "0", getOauthRpManageMenuKey(), getClientMenuKey(), "client_oauthrpmanage"},
 
-                // 开放平台菜单
+                // 开放平台菜单（先父后子）
                 {"开放平台", NULL, NULL, "0", "fa fa-share-alt", "666660", getOplMenuKey(), "", "opl_menu_text"},
                 {"统一管理", "oplmanage.html", NULL, "1", "fa fa-dashboard", "0", getOplManageMenuKey(), getOplMenuKey(), "opl_oplmanage"},
 
-                // 开放接入菜单
+                // 开放接入菜单（先父后子）
                 {"开放接入", NULL, NULL, "0", "fa fa-plug", "666661", getOpcMenuKey(), "", "opc_menu_text"},
                 {"统一管理", "opcmanage.html", NULL, "1", "fa fa-dashboard", "0", getOpcManageMenuKey(), getOpcMenuKey(), "opc_opcmanage"},
         };
