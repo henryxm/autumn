@@ -81,6 +81,28 @@ public class SitePortalSupportTest {
     }
 
     @Test
+    public void applyToModelResolvesRelativeLogoUrlWithContextPath() {
+        SitePortalConfig config = new SitePortalConfig();
+        cn.org.autumn.model.SitePortalBranding branding = new cn.org.autumn.model.SitePortalBranding();
+        branding.setSiteName("Demo");
+        branding.setLogoUrl("/statics/img/logo.png");
+        config.setBranding(branding);
+        LoadingTheme theme = new LoadingTheme();
+        theme.setBrand("Autumn Platform");
+        when(sysConfigService.getSitePortalConfig()).thenReturn(config);
+        when(sysConfigService.getLoadingTheme()).thenReturn(theme);
+        when(sysConfigService.getLoadingBrand()).thenReturn("Demo");
+        when(siteLegalLinksFactory.resolve(config)).thenReturn(new cn.org.autumn.model.SitePortalLegalLinks());
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setContextPath("/ctx");
+        org.springframework.ui.ExtendedModelMap model = new org.springframework.ui.ExtendedModelMap();
+        support.applyToModel(request, model);
+        cn.org.autumn.model.SitePortalBranding applied = (cn.org.autumn.model.SitePortalBranding) model.get("siteBranding");
+        assertEquals("/ctx/statics/img/logo.png", applied.getLogoUrl());
+        assertEquals("Demo", model.get("siteName"));
+    }
+
+    @Test
     public void resolveFilingsPropagatesPrefixAndSuffix() {
         ComplianceFilingItem item = new ComplianceFilingItem();
         item.setType(ComplianceFilingType.telecom.name());

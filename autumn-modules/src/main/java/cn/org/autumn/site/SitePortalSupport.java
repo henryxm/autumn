@@ -37,6 +37,9 @@ public class SitePortalSupport {
         }
         SitePortalConfig config = sysConfigService.getSitePortalConfig();
         SitePortalBranding branding = resolveBranding(config);
+        if (StringUtils.isNotBlank(branding.getLogoUrl())) {
+            branding.setLogoUrl(resolveUrl(request, branding.getLogoUrl()));
+        }
         model.addAttribute("siteBranding", branding);
         model.addAttribute("siteName", StringUtils.defaultIfBlank(branding.getSiteName(), sysConfigService.getLoadingBrand()));
 

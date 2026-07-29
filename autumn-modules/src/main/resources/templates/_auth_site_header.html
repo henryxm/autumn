@@ -17,7 +17,7 @@
   <!--<#else>-->
   <div class="brand-icon"><i class="fa fa-shield"></i></div>
   <!--</#if>-->
-  <h1>${siteBranding.siteName!siteName!'Autumn'} 管理系统</h1>
+  <h1>${(siteBranding.siteName)!siteName!'Autumn'}</h1>
   <!--<#if siteBranding?? && siteBranding.tagline?? && siteBranding.tagline?has_content>-->
   <p>${siteBranding.tagline}</p>
   <!--<#else>-->

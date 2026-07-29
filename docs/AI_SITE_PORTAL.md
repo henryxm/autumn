@@ -96,9 +96,26 @@ API（系统管理员）：`GET/POST /sys/site-portal/*`
 
 ## 3. 前台展示
 
+### 3.0 品牌变量契约（下游必读）
+
+登录 / 注册 / 忘记密码顶栏的 **logo 与站点名称** 只消费下列 Model 属性（由 `SitePortalSupport.applyToModel` / `AuthPageAttributes.apply` 注入）：
+
+| 变量 | 说明 |
+|------|------|
+| `siteBranding` | `SitePortalBranding`：`siteName` / `tagline` / `logoUrl` / `logoAlt` |
+| `siteName` | 站点名快捷字段（与 `siteBranding.siteName` 同源；空则回退 `LOADING_THEME.brand`） |
+
+规则：
+
+- **编排唯一源**：后台「系统管理 → 站点门户」`SITE_PORTAL_CONFIG.branding`；保存时可同步到 `LOADING_THEME`（`syncLoadingTheme`）。
+- **相对路径 `logoUrl`**（以 `/` 开头）注入 Model 时会补上 `contextPath`，与法律链接一致。
+- **下游业务主题**（如 Account classic / cloud_portal / minimal）顶栏应只读 `siteBranding` / `siteName`，不要再绑业务侧 `api.setting.web.name|icon` 作为主展示。
+- Account 可在门户字段为空时，于 Java 层用业务配置回填 Model，但模板层仍只读门户变量。
+- **运维**：修改登录/注册页 logo 与站点名称请走后台 **系统管理 → 站点门户**；`CONSOLE_SETTING`（`api.setting.web.name/icon`）仅在门户 branding 未填时作 Account 兼容回退，不建议两边长期各改各的。
+
 模板片段：
 
-- `_auth_site_header.html` — 登录页顶部（OAuth 授权模式保留「应用授权」标题）
+- `_auth_site_header.html` — 登录页顶部：站点名（无「管理系统」后缀）；有 `tagline` 用 tagline，否则默认欢迎语（OAuth 授权模式保留「应用授权」标题）
 - `_site_portal_footer_content.html` — 版权 / 版本 / 备案 / 法律链接公共内容
 - `_auth_site_footer.html` — 认证类页脚（`login-footer`）
 - `_shell_site_footer.html` / `_shell_site_footer_layui.html` — 后台壳页脚（AdminLTE / Layui）
@@ -116,7 +133,8 @@ API（系统管理员）：`GET/POST /sys/site-portal/*`
 
 | 页面 | 品牌 / 系统名 | 页脚（版权·备案·法律） |
 |------|---------------|------------------------|
-| `login` / `register` / `forgotpassword` | `_auth_site_header` | `_auth_site_footer` |
+| `login` | `_auth_site_header`（站点名 + tagline/欢迎语） | `_auth_site_footer` |
+| `register` / `forgotpassword` | 品牌图标 + 站点名标题 + tagline/场景副文案 | `_auth_site_footer` |
 | `user/{privacy,service,about}` | `siteName` | `_auth_site_footer` |
 | `oauth2/*`、`open/oauth2/*`、`oauth2/callback-error` | `siteName`（Model） | `_auth_site_footer` + compact CSS |
 | `modules/oauth/oauth2authorizefail` | `siteName` | `_auth_site_footer` |

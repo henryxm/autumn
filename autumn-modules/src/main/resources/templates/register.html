@@ -1,15 +1,19 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <title>注册账号</title>
+  <title>注册 — ${(siteName)!'Autumn'}</title>
   <#include "/_auth_head.html">
 </head>
 <body class="${bodyClass!'login-page-v2'}" data-ctx="${request.contextPath?js_string}">
 <div id="rrapp" class="login-shell" v-cloak>
   <div class="login-brand">
     <#include "/_auth_site_branding_icon.html">
-    <h1>注册账号</h1>
-    <p>创建你的 ${siteName!'Autumn'} 账号</p>
+    <h1>${(siteBranding.siteName)!siteName!'Autumn'}</h1>
+    <!--<#if siteBranding?? && siteBranding.tagline?? && siteBranding.tagline?has_content>-->
+    <p>${siteBranding.tagline}</p>
+    <!--<#else>-->
+    <p>注册账号 — 创建你的 ${(siteBranding.siteName)!siteName!'Autumn'} 账号</p>
+    <!--</#if>-->
   </div>
   <div class="login-card">
     <div class="login-body">
