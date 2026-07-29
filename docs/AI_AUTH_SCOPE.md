@@ -69,7 +69,7 @@
 
 | Scope | Label | 字段（`AuthRealNameInfo`） | 默认 |
 |-------|-------|----------------------------|------|
-| `realname_attr` | 查看实名人口属性 | `age`、`gender`、`ethnicity` | **关闭** |
+| `realname_attr` | 查询实名基本属性 | `age`、`gender`、`ethnicity` | **关闭** |
 | `realname_person` | 查看实名姓名与生日 | `name`、`birthday` | **关闭** |
 | `realname_id` | 查看实名证件与地址 | `idNumber`、`address` | **关闭** |
 

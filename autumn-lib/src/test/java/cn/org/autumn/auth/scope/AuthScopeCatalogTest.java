@@ -233,7 +233,7 @@ public class AuthScopeCatalogTest {
         enableRealNameTiers(AuthTrack.OAUTH, AuthScopeSet.REALNAME_ID, AuthScopeSet.REALNAME_ATTR, AuthScopeSet.REALNAME_PERSON);
         AuthScopeSet scopes = AuthScopeSet.of("basic", AuthScopeSet.REALNAME_ID, AuthScopeSet.REALNAME_ATTR, AuthScopeSet.REALNAME_PERSON);
         java.util.List<String> labels = catalog.labels(AuthTrack.OAUTH, scopes);
-        int attr = labels.indexOf("查看实名人口属性");
+        int attr = labels.indexOf("查询实名基本属性");
         int person = labels.indexOf("查看实名姓名与生日");
         int id = labels.indexOf("查看实名证件与地址");
         assertTrue(attr > 0);

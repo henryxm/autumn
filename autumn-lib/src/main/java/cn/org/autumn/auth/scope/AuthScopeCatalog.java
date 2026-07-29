@@ -323,7 +323,7 @@ public class AuthScopeCatalog {
         registerBuiltin(AuthScopeDef.of("email", "查看邮箱", AuthTrack.OAUTH, AuthField.email).sensitivity(AuthScopeSensitivity.high));
         registerBuiltin(AuthScopeDef.of("verified", "查看实名认证状态", AuthTrack.OAUTH, AuthField.verified).sensitivity(AuthScopeSensitivity.medium));
         registerBuiltin(AuthScopeDef.of("status", "查看账号状态", AuthTrack.OAUTH, AuthField.status).sensitivity(AuthScopeSensitivity.medium));
-        registerBuiltin(AuthScopeDef.of(AuthScopeSet.REALNAME_ATTR, "查看实名人口属性", AuthTrack.OAUTH).sensitivity(AuthScopeSensitivity.high).enabled(false));
+        registerBuiltin(AuthScopeDef.of(AuthScopeSet.REALNAME_ATTR, "查询实名基本属性", AuthTrack.OAUTH).sensitivity(AuthScopeSensitivity.high).enabled(false));
         registerBuiltin(AuthScopeDef.of(AuthScopeSet.REALNAME_PERSON, "查看实名姓名与生日", AuthTrack.OAUTH).sensitivity(AuthScopeSensitivity.high).enabled(false));
         registerBuiltin(AuthScopeDef.of(AuthScopeSet.REALNAME_ID, "查看实名证件与地址", AuthTrack.OAUTH).sensitivity(AuthScopeSensitivity.high).enabled(false));
         registerBuiltin(AuthScopeDef.of("openid", "应用内识别身份", AuthTrack.OPL, AuthField.openId).sensitivity(AuthScopeSensitivity.low));
@@ -333,7 +333,7 @@ public class AuthScopeCatalog {
         registerBuiltin(AuthScopeDef.of("email", "查看邮箱", AuthTrack.OPL, AuthField.email).sensitivity(AuthScopeSensitivity.high));
         registerBuiltin(AuthScopeDef.of("verified", "查看实名认证状态", AuthTrack.OPL, AuthField.verified).sensitivity(AuthScopeSensitivity.medium));
         registerBuiltin(AuthScopeDef.of("status", "查看账号状态", AuthTrack.OPL, AuthField.status).sensitivity(AuthScopeSensitivity.medium));
-        registerBuiltin(AuthScopeDef.of(AuthScopeSet.REALNAME_ATTR, "查看实名人口属性", AuthTrack.OPL).sensitivity(AuthScopeSensitivity.high).enabled(false));
+        registerBuiltin(AuthScopeDef.of(AuthScopeSet.REALNAME_ATTR, "查询实名基本属性", AuthTrack.OPL).sensitivity(AuthScopeSensitivity.high).enabled(false));
         registerBuiltin(AuthScopeDef.of(AuthScopeSet.REALNAME_PERSON, "查看实名姓名与生日", AuthTrack.OPL).sensitivity(AuthScopeSensitivity.high).enabled(false));
         registerBuiltin(AuthScopeDef.of(AuthScopeSet.REALNAME_ID, "查看实名证件与地址", AuthTrack.OPL).sensitivity(AuthScopeSensitivity.high).enabled(false));
     }
