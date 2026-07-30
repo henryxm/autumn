@@ -56,7 +56,7 @@
                 <span class="glyphicon glyphicon-lock form-control-feedback"></span>
               </div>
               <div class="remember-row">
-                <label><input type="checkbox" name="rememberMe" value="true"> 记住我</label>
+                <label><input type="checkbox" name="rememberMe" value="true" checked> 记住我</label>
               </div>
               <button type="submit" class="btn btn-primary btn-block btn-login">登 录</button>
             </form>
@@ -120,7 +120,7 @@
                 <span class="glyphicon glyphicon-lock form-control-feedback"></span>
               </div>
               <div class="remember-row">
-                <label><input type="checkbox" name="rememberMe" value="true"> 记住我</label>
+                <label><input type="checkbox" name="rememberMe" value="true" checked> 记住我</label>
               </div>
               <button type="submit" class="btn btn-primary btn-block btn-login">登 录</button>
             </form>
@@ -224,6 +224,9 @@
           </div>
           <img alt="点击刷新验证码" class="pointer" :src="src" @click="refreshCode" title="点击刷新">
         </div>
+        <div class="remember-row">
+          <label><input type="checkbox" v-model="rememberMe"> 记住我</label>
+        </div>
         <button type="button" class="btn btn-primary btn-block btn-login" @click="login">登 录</button>
       </div>
 
@@ -268,6 +271,9 @@
             <input type="text" class="form-control" v-model="mobileCaptcha" placeholder="验证码" @keyup.enter="loginByPhone">
           </div>
           <img alt="点击刷新验证码" class="pointer" :src="src" @click="refreshCode" title="点击刷新">
+        </div>
+        <div class="remember-row">
+          <label><input type="checkbox" v-model="rememberMe"> 记住我</label>
         </div>
         <button type="button" class="btn btn-primary btn-block btn-login" @click="loginByPhone">登 录</button>
       </div>

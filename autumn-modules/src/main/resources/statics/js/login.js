@@ -47,6 +47,7 @@
             username: '',
             password: '',
             captcha: '',
+            rememberMe: true,
             mobile: '',
             mobilePassword: '',
             mobileCaptcha: '',
@@ -460,7 +461,10 @@
             },
             submitLogin: function (username, password, captcha, options) {
                 options = options || {};
-                var data = 'username=' + encodeURIComponent(username) + '&password=' + encodeURIComponent(password) + '&captcha=' + encodeURIComponent(captcha);
+                var data = 'username=' + encodeURIComponent(username)
+                    + '&password=' + encodeURIComponent(password)
+                    + '&captcha=' + encodeURIComponent(captcha)
+                    + '&rememberMe=' + (this.rememberMe ? 'true' : 'false');
                 $.ajax({
                     type: 'POST',
                     url: ctx + '/sys/login',

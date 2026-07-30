@@ -8,6 +8,7 @@ import cn.org.autumn.modules.sys.shiro.ForceLogoutRememberMeManager;
 import cn.org.autumn.modules.sys.shiro.HostAwareSessionIdCookie;
 import cn.org.autumn.modules.sys.shiro.HostSessionCookieSupport;
 import cn.org.autumn.modules.sys.shiro.RedisShiroSessionDAO;
+import cn.org.autumn.modules.sys.shiro.ShiroSessionTimeouts;
 import cn.org.autumn.modules.sys.shiro.UserRealm;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.shiro.SecurityUtils;
@@ -39,23 +40,22 @@ public class ShiroConfig {
 
     @Bean("sessionManager")
     public SessionManager sessionManager(@Autowired RedisShiroSessionDAO redisShiroSessionDAO,
-                                         Environment environment,
-                                         @Value("${autumn.redis.open:false}") boolean redisOpen,
-                                         @Value("${autumn.shiro.redis:false}") boolean shiroRedis) {
+                                         Environment environment) {
         DefaultWebSessionManager sessionManager = new DefaultWebSessionManager();
         sessionManager.setSessionFactory(new ClientIpSessionFactory());
-        //设置session过期时间为1小时(单位：毫秒)，默认为30分钟
-        sessionManager.setGlobalSessionTimeout(60 * 60 * 1000);
+        // Session 空闲超时 1 天（与 Redis TTL / Cookie maxAge 对齐，见 ShiroSessionTimeouts）
+        sessionManager.setGlobalSessionTimeout(ShiroSessionTimeouts.SESSION_TIMEOUT_MS);
         boolean install = InstallMode.isActive(environment);
         // 安装模式：关闭周期校验，避免无意义地解析 SessionId / 触碰 SessionDAO
         sessionManager.setSessionValidationSchedulerEnabled(!install);
         sessionManager.setSessionIdUrlRewritingEnabled(false);
         HostAwareSessionIdCookie cookie = new HostAwareSessionIdCookie(HostSessionCookieSupport.DEFAULT_COOKIE_NAME);
-        cookie.setMaxAge(24 * 60 * 60);
+        // Cookie 寿命取记住我上限；真正空闲过期仍由 session.timeout（1 天 / 7 天）决定
+        cookie.setMaxAge(ShiroSessionTimeouts.REMEMBER_ME_COOKIE_MAX_AGE_SEC);
         sessionManager.setSessionIdCookie(cookie);
-        // 安装模式禁止 Redis SessionDAO：避免 Redis 未就绪时 doReadSession 失败，且避免 getNameSpace() 查库拼 Redis Key
-        boolean useRedisSessions = redisOpen && shiroRedis && !install;
-        if (useRedisSessions) {
+        // 安装模式禁止自定义 SessionDAO；非安装态始终挂 RedisShiroSessionDAO（无 Redis 时仅 cache+DB）
+        // 避免 Bean 存在却未挂载时登录落库、登出不走 doDelete 留下可回源孤儿行
+        if (!install) {
             sessionManager.setSessionDAO(redisShiroSessionDAO);
         }
         return sessionManager;

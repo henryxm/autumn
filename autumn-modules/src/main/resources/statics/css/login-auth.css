@@ -686,8 +686,11 @@ body.oauth-authorize-mode .login-shell { max-width: 920px; }
   margin: -4px 0 18px;
   color: var(--login-muted);
   font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
 }
-.remember-row label { font-weight: normal; margin: 0; cursor: pointer; user-select: none; }
+.remember-row label { font-weight: normal; margin: 0; cursor: pointer; user-select: none; display: inline-flex; align-items: center; gap: 2px; }
 .remember-row input { margin-right: 6px; accent-color: var(--login-brand-1); }
 .qr-panel {
   display: flex;

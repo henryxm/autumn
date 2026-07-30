@@ -116,7 +116,9 @@
   - `cn.org.autumn.modules.sys.shiro.ShiroSessionService`
   - `cn.org.autumn.modules.sys.shiro.ForceLogoutRememberMeManager`
   - `cn.org.autumn.modules.sys.controller.SysSessionController`
+  - `cn.org.autumn.modules.sys.shiro.RedisShiroSessionDAO` / `SysShiroSessionService`（`sys_shiro_session` DB 权威持久化）
 - 关键点：
+  - Session 读路径：本地 cache → Redis → DB 回源并回填；超时与 Redis TTL **1 天**；RememberMe Cookie **仍 7 天**；扫码 exchange 默认 `rememberMe: true`。
   - 删除会话后自动写入「强制重登」标记，阻断 rememberMe 自动恢复。
   - RememberMe 恢复时命中标记会清理 cookie 并拒绝自动登录。
   - 用户密码登录成功后自动清理强制重登标记。

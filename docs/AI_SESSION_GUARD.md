@@ -87,3 +87,42 @@
 - 管理端 iframe/壳页面：直接引入 `autumn-session-guard.js` 并调用 `AutumnSessionGuard.start(60000)`。
 - 自定义「我的会话」页面：优先复用 `/sys/session/self/*` API，不再自建重复接口。
 - 若项目有已有弹窗组件，可在收到 `401 + reason=session_terminated` 后替换为业务弹窗文案。
+
+## 6. Session 持久化与时效（DB 权威 + Redis 缓存）
+
+### 6.1 读路径
+
+`RedisShiroSessionDAO.doReadSession`：本地 cache → Redis → **`sys_shiro_session`（未过期）** → 命中 DB 后回填 Redis + cache。
+
+清 Redis 后，只要浏览器仍持有 sessionId Cookie，即可从 DB 回源恢复登录态。
+
+### 6.2 写 / 删
+
+- 创建 / 更新：Redis（TTL **1 天**）始终可写；**DB 仅在已解析到登录用户（`user` 非空）时 upsert**，匿名 Session 不落库。
+- 删除（登出、`ShiroSessionService.deleteSession` / forceLogout、SessionDAO.delete）：同步删 cache、Redis、DB 行。
+
+### 6.3 时效
+
+| 项 | 值 |
+|----|----|
+| `globalSessionTimeout` | **1 天**（`ShiroSessionTimeouts.SESSION_TIMEOUT_MS`） |
+| Redis Session TTL | **1 天** |
+| SessionId Cookie maxAge | **7 天**（浏览器上限；空闲过期仍由 session.timeout 1/7 天决定） |
+| RememberMe Cookie | **7 天** |
+
+勾选「记住我」登录后：`session.timeout`、Redis TTL、`sys_shiro_session.expire_time` 均为 **7 天**；未勾选仍为 **1 天**。
+SessionId Cookie 统一按 7 天下发，避免记住我后 Cookie 先于服务端会话过期。
+
+非安装态始终挂载 `RedisShiroSessionDAO`（无 Redis 时仅本地 cache + DB），保证登出走 `doDelete` 同步清库。
+强制下线 / 会话列表会合并 DB 未过期行。
+
+### 6.4 过期清理
+
+- `SysShiroSessionService` 实现 `LoopJob.OneHour`：每小时一条 SQL `DELETE FROM sys_shiro_session WHERE expire_time < now`，一次清全部过期行。
+- 管理员手动：`POST /sys/session/cleanup-expired`（同样一条 SQL）。
+- **Force-logout 标记仍仅 Redis**（§2.1）；清 Redis 后 RememberMe 阻断可能短暂失效，本能力不落库。
+
+### 6.5 边界
+
+- 与 App Bearer 表 `usr_user_token` 无关。
+- 不做后台 gen 管理页；运维用 `/sys/session/*` 与 `/sys/session/self/*`。

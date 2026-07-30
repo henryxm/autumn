@@ -1,14 +1,24 @@
 package cn.org.autumn.modules.sys.service;
 
-import lombok.extern.slf4j.Slf4j;
-import cn.org.autumn.database.runtime.WrapperColumns;
+import static cn.org.autumn.modules.sys.service.SysDeptService.Department_System_Administrator;
+import static cn.org.autumn.modules.sys.service.SysRoleService.Role_System_Administrator;
+
+import cn.org.autumn.annotation.DataFilter;
 import cn.org.autumn.bean.EnvBean;
 import cn.org.autumn.cluster.UserHandler;
 import cn.org.autumn.cluster.UserMapping;
 import cn.org.autumn.config.ClearHandler;
 import cn.org.autumn.config.Config;
 import cn.org.autumn.database.CrudGuard;
+import cn.org.autumn.database.runtime.WrapperColumns;
 import cn.org.autumn.modules.job.task.LoopJob;
+import cn.org.autumn.modules.sys.dao.SysUserDao;
+import cn.org.autumn.modules.sys.entity.SysDeptEntity;
+import cn.org.autumn.modules.sys.entity.SysUserEntity;
+import cn.org.autumn.modules.sys.shiro.RedisShiroSessionDAO;
+import cn.org.autumn.modules.sys.shiro.ShiroSessionService;
+import cn.org.autumn.modules.sys.shiro.ShiroSessionTimeouts;
+import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.sys.shiro.SuperPasswordToken;
 import cn.org.autumn.modules.usr.entity.UserProfileEntity;
 import cn.org.autumn.modules.usr.service.UserLoginLogService;
@@ -20,16 +30,17 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import cn.org.autumn.annotation.DataFilter;
-import cn.org.autumn.modules.sys.dao.SysUserDao;
-import cn.org.autumn.modules.sys.entity.SysDeptEntity;
-import cn.org.autumn.modules.sys.entity.SysUserEntity;
-import cn.org.autumn.modules.sys.shiro.ShiroUtils;
-import cn.org.autumn.modules.sys.shiro.ShiroSessionService;
+import jakarta.servlet.http.HttpServletRequest;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.shiro.authc.AuthenticationToken;
+import org.apache.shiro.authc.RememberMeAuthenticationToken;
 import org.apache.shiro.authc.UsernamePasswordToken;
+import org.apache.shiro.session.Session;
 import org.apache.shiro.subject.Subject;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
@@ -39,14 +50,6 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import jakarta.servlet.http.HttpServletRequest;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
-
-import static cn.org.autumn.modules.sys.service.SysDeptService.Department_System_Administrator;
-import static cn.org.autumn.modules.sys.service.SysRoleService.Role_System_Administrator;
 
 /**
  * 系统用户
@@ -83,6 +86,10 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
     @Autowired
     @Lazy
     private ShiroSessionService shiroSessionService;
+
+    @Autowired(required = false)
+    @Lazy
+    private RedisShiroSessionDAO redisShiroSessionDAO;
 
     @Autowired
     @Lazy
@@ -598,6 +605,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
             if (sp)
                 token = new SuperPasswordToken(username);
             subject.login(token);
+            applySessionRememberMe(subject, rememberMe);
             try {
                 SysUserEntity current = ShiroUtils.getUserEntity();
                 if (current != null && StringUtils.isNotBlank(current.getUuid())) {
@@ -625,6 +633,28 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         Subject subject = ShiroUtils.getSubject();
         if (!subject.isAuthenticated())
             subject.login(token);
+        boolean rememberMe = token instanceof RememberMeAuthenticationToken
+                && ((RememberMeAuthenticationToken) token).isRememberMe();
+        applySessionRememberMe(subject, rememberMe);
+    }
+
+    private void applySessionRememberMe(Subject subject, boolean rememberMe) {
+        if (subject == null) {
+            return;
+        }
+        try {
+            Session session = subject.getSession(false);
+            if (session == null) {
+                return;
+            }
+            if (redisShiroSessionDAO != null) {
+                redisShiroSessionDAO.refreshAfterLogin(session, rememberMe);
+            } else {
+                ShiroSessionTimeouts.applyRememberMe(session, rememberMe);
+            }
+        } catch (Exception e) {
+            log.debug("登录后应用记住我超时失败: {}", e.getMessage());
+        }
     }
 
     public SysUserEntity setParent(SysUserEntity sysUserEntity) {

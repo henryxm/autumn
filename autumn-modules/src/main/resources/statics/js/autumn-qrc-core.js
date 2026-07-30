@@ -631,7 +631,7 @@
                         type: 'POST',
                         url: prefix + '/session/exchange',
                         contentType: 'application/json',
-                        data: JSON.stringify({ data: { exchange: data.exchange } }),
+                        data: JSON.stringify({ data: { exchange: data.exchange, rememberMe: true } }),
                         dataType: 'json',
                         success: function (result) {
                             if (result.code === 0) {

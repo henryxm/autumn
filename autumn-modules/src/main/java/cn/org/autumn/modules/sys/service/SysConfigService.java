@@ -30,6 +30,7 @@ import cn.org.autumn.modules.sys.entity.SysConfigEntity;
 import cn.org.autumn.modules.sys.entity.SystemUpgrade;
 import cn.org.autumn.modules.sys.redis.SysConfigRedis;
 import cn.org.autumn.modules.sys.shiro.HostSessionCookieSupport;
+import cn.org.autumn.modules.sys.shiro.ShiroSessionTimeouts;
 import cn.org.autumn.site.ConfigFactory;
 import cn.org.autumn.site.DomainFactory;
 import cn.org.autumn.site.HostFactory;
@@ -1036,7 +1037,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         if (sessionManager instanceof DefaultWebSessionManager) {
             DefaultWebSessionManager webSessionManager = (DefaultWebSessionManager) sessionManager;
             Cookie cookie = webSessionManager.getSessionIdCookie();
-            cookie.setMaxAge(24 * 60 * 60);
+            cookie.setMaxAge(ShiroSessionTimeouts.REMEMBER_ME_COOKIE_MAX_AGE_SEC);
             List<String> siteDomains = getSiteDomainList();
             boolean multiIndependent = HostSessionCookieSupport.hasMultipleIndependentDomains(siteDomains);
             String rootDomain = getClusterRootDomain();

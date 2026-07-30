@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.sys.controller;
 
+import cn.org.autumn.modules.sys.service.SysShiroSessionService;
 import cn.org.autumn.modules.sys.service.SysUserRoleService;
 import cn.org.autumn.modules.sys.shiro.ShiroSessionService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
@@ -23,6 +24,9 @@ public class SysSessionController {
 
     @Autowired
     private ShiroSessionService shiroSessionService;
+
+    @Autowired(required = false)
+    private SysShiroSessionService sysShiroSessionService;
 
     @Autowired
     private SysUserRoleService sysUserRoleService;
@@ -108,6 +112,21 @@ public class SysSessionController {
         String userUuid = o.toString().trim();
         shiroSessionService.clearForceLogout(userUuid);
         return R.ok().put("msg", "已取消强制重新登录");
+    }
+
+    /**
+     * 清理 DB 中已过期的 Shiro Session 行（管理员）：一条 SQL 删除全部过期行。
+     */
+    @RequestMapping(value = "/cleanup-expired", method = RequestMethod.POST)
+    public R cleanupExpired() {
+        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
+            return R.error(403, "无权限");
+        }
+        if (sysShiroSessionService == null) {
+            return R.error(500, "会话持久化服务不可用");
+        }
+        int deleted = sysShiroSessionService.cleanupExpired();
+        return R.ok().put("deleted", deleted).put("msg", "已清理 " + deleted + " 条过期会话");
     }
 
     /**

@@ -1,18 +1,18 @@
 package cn.org.autumn.modules.qrc.statics;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import org.junit.Test;
-
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import org.junit.jupiter.api.Test;
 
 /** autumn-qrc-core.js 方案 C 通知 API 契约测试。 */
-public class AutumnQrcCoreJsTest {
+class AutumnQrcCoreJsTest {
 
     @Test
-    public void coreJs_exposesPlanCNotifyAndUiHelpers() throws Exception {
+    void coreJs_exposesPlanCNotifyAndUiHelpers() throws Exception {
         String js = readCoreJs();
         assertTrue(js.contains("startTicketNotify: function"));
         assertTrue(js.contains("startSseNotify: function"));
@@ -29,26 +29,29 @@ public class AutumnQrcCoreJsTest {
         assertTrue(js.contains("markQrScanned: function"));
         assertTrue(js.contains("completeQrRedirect: function"));
         assertTrue(js.contains("recoverAfterMissingSession: function"));
+        assertTrue(js.contains("exchange: data.exchange, rememberMe: true")
+                || js.contains("rememberMe: true, exchange: data.exchange"),
+                "exchange should default rememberMe true");
     }
 
     @Test
-    public void coreJs_doesNotUnconditionallyPollRpOnStreamSubscribe() throws Exception {
+    void coreJs_doesNotUnconditionallyPollRpOnStreamSubscribe() throws Exception {
         String js = readCoreJs();
         int subscribeIdx = js.indexOf("subscribeRpStream: function");
-        assertTrue("subscribeRpStream should exist", subscribeIdx >= 0);
+        assertTrue(subscribeIdx >= 0, "subscribeRpStream should exist");
         String subscribeBody = js.substring(subscribeIdx, Math.min(js.length(), subscribeIdx + 400));
-        assertFalse("subscribeRpStream must not start parallel poll", subscribeBody.contains("setInterval"));
+        assertFalse(subscribeBody.contains("setInterval"), "subscribeRpStream must not start parallel poll");
         assertTrue(js.contains("startPollFallback: function"));
         int fallbackIdx = js.indexOf("startPollFallback: function");
         String fallbackBody = js.substring(fallbackIdx, Math.min(js.length(), fallbackIdx + 900));
-        assertTrue("fallback should poll by mode", fallbackBody.contains("pollQrStatus"));
-        assertFalse("startTicketNotify must not call startAsPoll directly", js.contains("this.startAsPoll(onUnavailable)"));
-        assertFalse("resumeTicketNotify must not call startAsPoll directly", js.contains("self.startAsPoll(resumeOpts"));
+        assertTrue(fallbackBody.contains("pollQrStatus"), "fallback should poll by mode");
+        assertFalse(js.contains("this.startAsPoll(onUnavailable)"), "startTicketNotify must not call startAsPoll directly");
+        assertFalse(js.contains("self.startAsPoll(resumeOpts"), "resumeTicketNotify must not call startAsPoll directly");
     }
 
     private static String readCoreJs() throws Exception {
         InputStream in = AutumnQrcCoreJsTest.class.getResourceAsStream("/statics/js/autumn-qrc-core.js");
-        assertNotNull("classpath statics/js/autumn-qrc-core.js", in);
+        assertNotNull(in, "classpath statics/js/autumn-qrc-core.js");
         try {
             java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
             byte[] buf = new byte[4096];

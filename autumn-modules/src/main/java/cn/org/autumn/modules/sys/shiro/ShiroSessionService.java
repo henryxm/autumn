@@ -2,6 +2,7 @@ package cn.org.autumn.modules.sys.shiro;
 
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysConfigService;
+import cn.org.autumn.modules.sys.service.SysShiroSessionService;
 import cn.org.autumn.utils.RedisExpireUtil;
 import cn.org.autumn.utils.RedisKeys;
 import lombok.extern.slf4j.Slf4j;
@@ -50,6 +51,9 @@ public class ShiroSessionService {
 
     @Autowired(required = false)
     private SecurityManager securityManager;
+
+    @Autowired(required = false)
+    private SysShiroSessionService sysShiroSessionService;
 
     /**
      * 按 SessionId 读取活动会话（建票浏览器绑定用）。
@@ -100,10 +104,13 @@ public class ShiroSessionService {
 
     /**
      * 根据用户UUID获取该用户的所有活动会话ID
-     * 支持Redis和内存两种模式
+     * 支持内存 / Redis / DB 回源
      */
     public Collection<Serializable> getActiveSessionsByUserUuid(String userUuid) {
         Set<Serializable> sessionIds = new HashSet<>();
+        if (StringUtils.isBlank(userUuid)) {
+            return sessionIds;
+        }
         try {
             // 从SessionDAO获取活动会话
             SessionDAO sessionDAO = getSessionDAO();
@@ -126,10 +133,26 @@ public class ShiroSessionService {
             if (isRedisEnabled()) {
                 addSessionsFromRedis(userUuid, sessionIds);
             }
+            addSessionsFromDb(userUuid, sessionIds);
         } catch (Exception e) {
             log.error("获取失败:{}, 错误:{}", userUuid, e.getMessage());
         }
         return sessionIds;
+    }
+
+    private void addSessionsFromDb(String userUuid, Set<Serializable> sessionIds) {
+        if (sysShiroSessionService == null || StringUtils.isBlank(userUuid)) {
+            return;
+        }
+        try {
+            for (String id : sysShiroSessionService.listValidSessionIdsByUser(userUuid, MAX_SESSION_SCAN)) {
+                if (StringUtils.isNotBlank(id)) {
+                    sessionIds.add(id);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("从 DB 合并用户会话失败, user={}, cause={}", userUuid, e.getMessage());
+        }
     }
 
     /**
@@ -174,7 +197,7 @@ public class ShiroSessionService {
     }
 
     /**
-     * 收集所有活动会话（SessionDAO + Redis 去重）
+     * 收集所有活动会话（SessionDAO + Redis + DB 去重）
      */
     private Map<Serializable, Session> getAllSessionsMap() {
         Map<Serializable, Session> map = new LinkedHashMap<>();
@@ -200,10 +223,30 @@ public class ShiroSessionService {
                     }
                 }
             }
+            addAllSessionsFromDb(map);
         } catch (Exception e) {
             log.error("收集失败:{}", e.getMessage());
         }
         return map;
+    }
+
+    private void addAllSessionsFromDb(Map<Serializable, Session> map) {
+        if (sysShiroSessionService == null) {
+            return;
+        }
+        try {
+            for (String id : sysShiroSessionService.listValidSessionIds(MAX_SESSION_SCAN)) {
+                if (StringUtils.isBlank(id) || map.containsKey(id)) {
+                    continue;
+                }
+                Session s = sysShiroSessionService.getValidBySessionId(id);
+                if (s != null && s.getId() != null) {
+                    map.put(s.getId(), s);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("从 DB 合并会话列表失败, cause={}", e.getMessage());
+        }
     }
 
     /**
@@ -349,27 +392,45 @@ public class ShiroSessionService {
                 session = (Session) redisTemplate.opsForValue().get(key);
                 if (session != null) {
                     userUuid = sessionUserUuid(session);
-                }
-                if (session != null)
                     redisTemplate.delete(key);
-                if (session != null && dao != null) {
-                    try {
-                        dao.delete(session);
-                    } catch (Exception ignored) {
+                    if (dao != null) {
+                        try {
+                            dao.delete(session);
+                        } catch (Exception ignored) {
+                        }
                     }
+                    if (sysShiroSessionService != null) {
+                        sysShiroSessionService.deleteBySessionId(sessionId);
+                    }
+                    if (StringUtils.isNotBlank(userUuid)) {
+                        markForceLogout(userUuid);
+                    }
+                    return true;
                 }
-                if (session != null && StringUtils.isNotBlank(userUuid)) {
-                    markForceLogout(userUuid);
-                }
-                return session != null;
             }
             if (session != null) {
                 session.setTimeout(0);
                 dao.delete(session);
+                if (sysShiroSessionService != null) {
+                    sysShiroSessionService.deleteBySessionId(sessionId);
+                }
                 if (StringUtils.isNotBlank(userUuid)) {
                     markForceLogout(userUuid);
                 }
                 return true;
+            }
+            // Redis/cache miss：清 DB 权威行；成功则视为删除成功
+            if (sysShiroSessionService != null) {
+                if (StringUtils.isBlank(userUuid)) {
+                    userUuid = sysShiroSessionService.findUserBySessionId(sessionId);
+                }
+                int deleted = sysShiroSessionService.deleteBySessionIdReturning(sessionId);
+                if (deleted > 0) {
+                    if (StringUtils.isNotBlank(userUuid)) {
+                        markForceLogout(userUuid);
+                    }
+                    return true;
+                }
             }
         } catch (Exception e) {
             if (log.isDebugEnabled()) {
@@ -386,25 +447,29 @@ public class ShiroSessionService {
      * @return 下线的会话数量
      */
     public int forceLogoutByUserUuid(String userUuid) {
-        int count = 0;
-        Collection<Serializable> sessionIds = getActiveSessionsByUserUuid(userUuid);
-        SessionDAO sessionDAO = getSessionDAO();
-        if (sessionDAO == null) {
-            if (log.isDebugEnabled()) {
-                log.debug("SessionDAO不可用，无法强制用户下线");
-            }
+        if (StringUtils.isBlank(userUuid)) {
             return 0;
         }
+        int count = 0;
+        Collection<Serializable> sessionIds = getActiveSessionsByUserUuid(userUuid);
         for (Serializable sessionId : sessionIds) {
             try {
-                Session session = sessionDAO.readSession(sessionId);
-                if (session != null) {
-                    boolean del = deleteSession(sessionId);
-                    if (del)
-                        count++;
+                if (deleteSession(sessionId)) {
+                    count++;
                 }
             } catch (Exception e) {
                 log.error("下线失败:{}, 错误:{}", sessionId, e.getMessage());
+            }
+        }
+        // 兜底：按用户清光 DB 行，避免仅存在于 DB 的会话漏删
+        if (sysShiroSessionService != null) {
+            try {
+                int dbLeft = sysShiroSessionService.deleteByUserUuid(userUuid);
+                if (dbLeft > 0 && count == 0) {
+                    count += dbLeft;
+                }
+            } catch (Exception e) {
+                log.warn("强制下线清 DB 失败, user={}, cause={}", userUuid, e.getMessage());
             }
         }
         markForceLogout(userUuid);
