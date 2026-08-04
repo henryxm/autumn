@@ -350,6 +350,11 @@ window.__LOGIN_CONFIG__ = {
   safeOauthCallback: '${safeOauthCallback!""?js_string}',
   serverUuid: '${uuid!""?js_string}',
   serverQrUrl: '${qrUrl!""?js_string}',
+  //<#if quick??>
+  serverQuick: ${quick?c},
+  //<#else>
+  serverQuick: null,
+  //</#if>
   serverPollIntervalMs: ${pollIntervalMs!2000},
   skipAutologinCookie: '${skipAutologinCookie!"autumn_skip_autologin"?js_string}',
   devAutologinEnabled: ${(devAutologinEnabled!false)?c}

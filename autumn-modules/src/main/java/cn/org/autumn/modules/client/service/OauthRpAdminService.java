@@ -10,6 +10,7 @@ import cn.org.autumn.modules.client.entity.WebOauthBindEntity;
 import cn.org.autumn.modules.auth.support.AuthScopeSupport;
 import cn.org.autumn.modules.oauth.entity.ClientDetailsEntity;
 import cn.org.autumn.modules.oauth.service.ClientDetailsService;
+import cn.org.autumn.modules.qrc.service.ClientGrantService;
 import cn.org.autumn.modules.support.AdminPageQueries;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysConfigService;
@@ -44,6 +45,9 @@ public class OauthRpAdminService {
 
     @Autowired
     private ClientDetailsService clientDetailsService;
+
+    @Autowired
+    private ClientGrantService clientGrantService;
 
     @Autowired
     private SysConfigService sysConfigService;
@@ -106,7 +110,7 @@ public class OauthRpAdminService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public OauthRpClientView saveClient(String clientId, String name, String clientSecret, String originUri, String redirectUri, String scope, String userInfoDelivery, String icon, String hash, Integer pageLogin) {
+    public OauthRpClientView saveClient(String clientId, String name, String clientSecret, String originUri, String redirectUri, String scope, String userInfoDelivery, String icon, String hash, Integer pageLogin, Boolean quick) {
         if (StringUtils.isBlank(clientId)) {
             throw new IllegalArgumentException("clientId不能为空");
         }
@@ -131,16 +135,22 @@ public class OauthRpAdminService {
         applyClientFields(existing, name, clientSecret, originUri, redirectUri, scope, userInfoDelivery, baseUrl, sameInstance, icon, hash, pageLogin);
         validateOAuthScope(existing.getScope());
         webAuthenticationService.updateAllColumnById(existing);
+        if (quick != null) {
+            clientGrantService.saveQuick(existing.getClientId(), quick);
+        }
         return toClientView(existing);
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public OauthRpClientView updateClient(String clientId, String name, String clientSecret, String originUri, String redirectUri, String scope, String userInfoDelivery, String icon, String hash, Integer pageLogin) {
+    public OauthRpClientView updateClient(String clientId, String name, String clientSecret, String originUri, String redirectUri, String scope, String userInfoDelivery, String icon, String hash, Integer pageLogin, Boolean quick) {
         WebAuthenticationEntity existing = requireClient(clientId);
         String baseUrl = sysConfigService.getBaseUrl();
         applyClientFields(existing, name, clientSecret, originUri, redirectUri, scope, userInfoDelivery, baseUrl, WebPathUtils.isSameSiteUrl(originUri, baseUrl), icon, hash, pageLogin);
         validateOAuthScope(existing.getScope());
         webAuthenticationService.updateAllColumnById(existing);
+        if (quick != null) {
+            clientGrantService.saveQuick(existing.getClientId(), quick);
+        }
         return toClientView(existing);
     }
 
@@ -294,6 +304,7 @@ public class OauthRpAdminService {
         view.setIcon(entity.getIcon());
         view.setHash(entity.getHash());
         view.setPageLogin(entity.getPageLogin());
+        view.setQuick(clientGrantService.isQuick(entity.getClientId()));
         return view;
     }
 

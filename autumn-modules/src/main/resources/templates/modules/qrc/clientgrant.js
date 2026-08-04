@@ -13,6 +13,7 @@ $(function () {
 			{ label: '${lang.qrc_clientgrant_column_schemes}', name: 'schemes', index: 'schemes', width: 80 }, 
 			{ label: '${lang.qrc_clientgrant_column_scopes}', name: 'scopes', index: 'scopes', width: 80 }, 
 			{ label: '${lang.qrc_clientgrant_column_consent}', name: 'consent', index: 'consent', width: 80 }, 
+			{ label: '${lang.qrc_clientgrant_column_quick}', name: 'quick', index: 'quick', width: 80 },
 			{ label: '${lang.qrc_clientgrant_column_updated}', name: 'updated', index: 'updated', width: 80 }, 
         ],
 		viewrecords: true,
@@ -56,7 +57,7 @@ var vm = new Vue({
 		add: function(){
 			vm.showList = false;
 			vm.title = "${lang.sys_string_add}";
-			vm.clientGrant = {};
+			vm.clientGrant = { enabled: true, quick: false, consent: false };
 		},
 		update: function (event) {
 			var id = getSelectedRow();

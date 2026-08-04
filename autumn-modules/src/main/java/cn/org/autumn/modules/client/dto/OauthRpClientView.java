@@ -30,4 +30,9 @@ public class OauthRpClientView implements Serializable {
     private String icon;
     private String hash;
     private int pageLogin;
+    /**
+     * 桌面快捷登录：是否允许该客户端扫码登录页经 AS Bridge 探测本机超然信。
+     * 来自 {@code qrc_client_grant.quick}，与 {@code pageLogin} 扫码档（2/3）配合使用。
+     */
+    private boolean quick;
 }

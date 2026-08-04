@@ -14,6 +14,7 @@
     var safeOauthCallback = cfg.safeOauthCallback || '';
     var serverUuid = cfg.serverUuid || '';
     var serverQrUrl = cfg.serverQrUrl || '';
+    var serverQuick = typeof cfg.serverQuick === 'boolean' ? cfg.serverQuick : null;
     var serverPollIntervalMs = cfg.serverPollIntervalMs || 2000;
     var skipAutologinCookie = cfg.skipAutologinCookie || 'autumn_skip_autologin';
     var devAutologinEnabled = !!cfg.devAutologinEnabled;
@@ -332,7 +333,8 @@
                     });
                     self.resumeTicketNotify({
                         uuid: serverUuid,
-                        qrUrl: serverQrUrl
+                        qrUrl: serverQrUrl,
+                        quick: serverQuick
                     });
                 };
                 if (typeof this.$nextTick === 'function') {

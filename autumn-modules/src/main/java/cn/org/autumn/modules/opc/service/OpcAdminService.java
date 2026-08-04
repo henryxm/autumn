@@ -4,6 +4,7 @@ import cn.org.autumn.modules.support.AdminPageQueries;
 import cn.org.autumn.database.runtime.WrapperColumns;
 import cn.org.autumn.modules.opc.dto.OpcAppAdminView;
 import cn.org.autumn.modules.opc.entity.ConnectAppEntity;
+import cn.org.autumn.modules.qrc.service.ClientGrantService;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysUserService;
 import cn.org.autumn.utils.PageUtils;
@@ -27,6 +28,9 @@ public class OpcAdminService {
 
     @Autowired
     private ConnectBindManageService connectBindManageService;
+
+    @Autowired
+    private ClientGrantService clientGrantService;
 
     @Autowired
     private SysUserService sysUserService;
@@ -56,20 +60,24 @@ public class OpcAdminService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public ConnectAppEntity saveApp(String ownerUser, String appId, String appSecret, String platformBaseUrl, String redirectUri, String name, String scope, String icon, String hash, Integer pageLogin) {
+    public ConnectAppEntity saveApp(String ownerUser, String appId, String appSecret, String platformBaseUrl, String redirectUri, String name, String scope, String icon, String hash, Integer pageLogin, Boolean quick) {
         Uuid.requireValid(ownerUser);
-        return connectAppService.saveConfig(ownerUser, appId, appSecret, platformBaseUrl, redirectUri, name, scope, icon, hash, pageLogin);
+        ConnectAppEntity app = connectAppService.saveConfig(ownerUser, appId, appSecret, platformBaseUrl, redirectUri, name, scope, icon, hash, pageLogin);
+        syncQuick(app, quick);
+        return app;
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public ConnectAppEntity applyApp(String ownerUser, String platformBaseUrl, String name, String redirectUri, String scope, String accessToken, Integer pageLogin) {
+    public ConnectAppEntity applyApp(String ownerUser, String platformBaseUrl, String name, String redirectUri, String scope, String accessToken, Integer pageLogin, Boolean quick) {
         Uuid.requireValid(ownerUser);
         ConnectAppEntity app = connectAppService.applyToPlatform(ownerUser, platformBaseUrl, name, redirectUri, scope, accessToken);
-        return connectAppService.applyPageLogin(app, pageLogin);
+        app = connectAppService.applyPageLogin(app, pageLogin);
+        syncQuick(app, quick);
+        return app;
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public ConnectAppEntity updateApp(String ownerUser, String appId, String appSecret, String platformBaseUrl, String redirectUri, String name, String scope, String icon, String hash, Integer pageLogin) {
+    public ConnectAppEntity updateApp(String ownerUser, String appId, String appSecret, String platformBaseUrl, String redirectUri, String name, String scope, String icon, String hash, Integer pageLogin, Boolean quick) {
         ConnectAppEntity existing = connectAppService.getByAppId(appId);
         if (existing == null) {
             throw new IllegalArgumentException("接入应用不存在");
@@ -78,7 +86,17 @@ public class OpcAdminService {
         if (StringUtils.isNotBlank(ownerUser)) {
             Uuid.requireValid(ownerUser);
         }
-        return connectAppService.updateConfig(user, appId, appSecret, platformBaseUrl, redirectUri, name, scope, icon, hash, pageLogin);
+        ConnectAppEntity app = connectAppService.updateConfig(user, appId, appSecret, platformBaseUrl, redirectUri, name, scope, icon, hash, pageLogin);
+        syncQuick(app, quick);
+        return app;
+    }
+
+    /** 将管理页「快捷登录」写入 {@code qrc_client_grant.quick}（clientId = appId）。 */
+    private void syncQuick(ConnectAppEntity app, Boolean quick) {
+        if (quick == null || app == null || StringUtils.isBlank(app.getAppId())) {
+            return;
+        }
+        clientGrantService.saveQuick(app.getAppId(), quick);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -135,6 +153,7 @@ public class OpcAdminService {
         view.setIcon(app.getIcon());
         view.setHash(app.getHash());
         view.setPageLogin(app.getPageLogin());
+        view.setQuick(clientGrantService.isQuick(app.getAppId()));
         return view;
     }
 

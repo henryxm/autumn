@@ -188,6 +188,10 @@
                 <option value="2">2 - 仅展示扫码登录</option>
                 <option value="3">3 - 授权入口 + 扫码登录</option>
             </select>
+            <label class="checkbox-inline" style="display:block;margin-top:10px;">
+                <input type="checkbox" id="saveQuick"> 快捷登录（quick）
+            </label>
+            <p class="field-hint">开启后，该客户端扫码登录页可经 AS Bridge 探测本机超然信并展示快捷账号。写入 <code>qrc_client_grant.quick</code>；建议在 pageLogin 为 2/3（含扫码）时使用。与 TLS 证书下发开关无关。</p>
         </div>
         <div class="modal-footer">
             <button class="btn btn-secondary btn-xs" onclick="hideModal('modalSaveClient')">取消</button>
@@ -240,6 +244,10 @@
                 <option value="2">2 - 仅展示扫码</option>
                 <option value="3">3 - 授权 + 扫码</option>
             </select>
+            <label class="checkbox-inline" style="display:block;margin-top:10px;">
+                <input type="checkbox" id="editQuick"> 快捷登录（quick）
+            </label>
+            <p class="field-hint">开启后经 AS Bridge 探测本机超然信；对应 <code>qrc_client_grant.quick</code>（clientId 同本应用）。建议配合 pageLogin=2/3。</p>
         </div>
         <div class="modal-footer">
             <button class="btn btn-secondary btn-xs" onclick="hideModal('modalEditClient')">取消</button>
@@ -398,6 +406,8 @@ function showSaveClientModal() {
     fillLocalCallback('saveRedirectUri');
     document.getElementById('saveScope').value = 'basic';
     document.getElementById('saveUserInfoDelivery').value = '';
+    document.getElementById('savePageLogin').value = '0';
+    document.getElementById('saveQuick').checked = false;
     if (window.AuthScopePicker) {
         AuthScopePicker.refresh('saveScope', 'saveScopePicker', 'oauth', window.__CTX__ || '');
     }
@@ -426,6 +436,7 @@ async function showEditClientModal(clientId) {
     document.getElementById('editIcon').value = client.icon || '';
     document.getElementById('editHash').value = client.hash || '';
     document.getElementById('editPageLogin').value = String(client.pageLogin != null ? client.pageLogin : 0);
+    document.getElementById('editQuick').checked = !!client.quick;
     if (window.AuthScopePicker) {
         AuthScopePicker.refresh('editScope', 'editScopePicker', 'oauth', window.__CTX__ || '');
     }
@@ -472,7 +483,8 @@ async function submitSaveClient() {
         userInfoDelivery: document.getElementById('saveUserInfoDelivery').value,
         icon: document.getElementById('saveIcon').value.trim(),
         hash: document.getElementById('saveHash').value.trim(),
-        pageLogin: document.getElementById('savePageLogin').value
+        pageLogin: document.getElementById('savePageLogin').value,
+        quick: document.getElementById('saveQuick').checked ? 'true' : 'false'
     });
     if (r.code === 0) {
         hideModal('modalSaveClient');
@@ -503,7 +515,8 @@ async function submitUpdateClient() {
         userInfoDelivery: document.getElementById('editUserInfoDelivery').value,
         icon: document.getElementById('editIcon').value.trim(),
         hash: document.getElementById('editHash').value.trim(),
-        pageLogin: document.getElementById('editPageLogin').value
+        pageLogin: document.getElementById('editPageLogin').value,
+        quick: document.getElementById('editQuick').checked ? 'true' : 'false'
     });
     if (r.code === 0) {
         hideModal('modalEditClient');

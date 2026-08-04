@@ -179,7 +179,8 @@ onUserCancel(uuid):
 网页可在 **B2 / D 建票成功后** 用 custom scheme 唤起已安装客户端，代替用户扫码；**不**新增 Intent / Webhook / App API。
 
 1. 浏览器：`AutumnQrc.startQrLogin`（或 `resumeTicketNotify`）建票得 `uuid` + `qrUrl`，并先挂 SSE。
-2. 可选 `options.wakeClient({ uuid, qrUrl, host, renderQr })`：返回 `true` 表示由站点决定何时 `renderQr()`；未配置则立即渲染二维码（历史行为）。
+2. 可选 `options.wakeClient({ uuid, qrUrl, host, renderQr, quick })`：返回 `true` 表示由站点决定何时 `renderQr()`；未配置则立即渲染二维码（历史行为）。
+   - `quick`：建票响应字段，有 OAuth client 时取自 `qrc_client_grant.quick`（该客户端是否允许桌面快捷探测）；为 `false` 时只出码不探测；省略/`undefined` 时回落站点 LoginPage 的 `chaoranWakeEnabled`。
 3. 客户端打开深链（如 `crchat://vc/qrc/confirm?uuid=...&authHost=...`）后走 **本文 §2～§7 同一套** scan / detail / confirm。
 4. 成功判据：浏览器 SSE/`status` 出现 `SCANNED`；超时则 `renderQr` 回退二维码。
 

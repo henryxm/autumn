@@ -80,6 +80,15 @@
                 </div>
             </div>
             <div class="form-group">
+                <div class="col-sm-2 control-label">${lang.qrc_clientgrant_column_quick}</div>
+                <div class="col-sm-10">
+                    <label class="checkbox-inline">
+                        <input type="checkbox" v-model="clientGrant.quick">
+                        快捷登录：允许该客户端网页经 AS Bridge 探测本机超然信并展示快捷账号（默认关闭；与 TLS 证书下发开关无关）
+                    </label>
+                </div>
+            </div>
+            <div class="form-group">
                 <div class="col-sm-2 control-label">${lang.qrc_clientgrant_column_updated}</div>
                 <div class="col-sm-10">
                     <input type="text" class="form-control" v-model="clientGrant.updated" placeholder="${lang.qrc_clientgrant_column_updated}"/>

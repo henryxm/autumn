@@ -81,7 +81,49 @@ public class ClientGrantService extends ModuleService<ClientGrantDao, ClientGran
         defaults.setEnabled(true);
         defaults.setDelivery(DeliveryMode.POLL_CODE);
         defaults.setConsent(false);
+        defaults.setQuick(false);
         return defaults;
+    }
+
+    /**
+     * 读取客户端是否开启桌面快捷登录（{@code qrc_client_grant.quick}）。
+     * 无记录时视为关闭（与 {@link #getOrDefault} 默认一致，但不落库）。
+     */
+    public boolean isQuick(String clientId) {
+        if (StringUtils.isBlank(clientId)) {
+            return false;
+        }
+        ClientGrantEntity grant = getByClientId(clientId.trim());
+        return grant != null && grant.isQuick();
+    }
+
+    /**
+     * 写入桌面快捷登录开关，供经典 OAuth RP / OPC 管理页与扫码授权配置共用。
+     * <p>
+     * {@code clientId} 对经典 OAuth 为 {@code oauth_client_details.client_id}，
+     * 对 OPC 为 {@code appId}（与 AS 侧扫码客户端 id 相同）。无行则创建默认 grant 后再改 {@code quick}。
+     */
+    public void saveQuick(String clientId, boolean quick) {
+        if (StringUtils.isBlank(clientId)) {
+            return;
+        }
+        String id = clientId.trim();
+        ClientGrantEntity grant = getByClientId(id);
+        if (grant == null) {
+            grant = new ClientGrantEntity();
+            grant.setClientId(id);
+            grant.setEnabled(true);
+            grant.setDelivery(DeliveryMode.POLL_CODE);
+            grant.setConsent(false);
+            grant.setQuick(quick);
+            saveGrant(grant);
+            return;
+        }
+        if (grant.isQuick() == quick) {
+            return;
+        }
+        grant.setQuick(quick);
+        saveGrant(grant);
     }
 
     public ClientGrantEntity saveGrant(ClientGrantEntity entity) {

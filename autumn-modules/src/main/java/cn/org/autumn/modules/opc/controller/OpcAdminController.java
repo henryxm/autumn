@@ -80,7 +80,8 @@ public class OpcAdminController {
                     body == null ? null : body.get("scope"),
                     body == null ? null : body.get("icon"),
                     body == null ? null : body.get("hash"),
-                    parsePageLogin(body == null ? null : body.get("pageLogin")));
+                    parsePageLogin(body == null ? null : body.get("pageLogin")),
+                    parseQuick(body == null ? null : body.get("quick")));
             return R.ok().put("app", app);
         });
     }
@@ -95,7 +96,8 @@ public class OpcAdminController {
                     body == null ? null : body.get("redirectUri"),
                     body == null ? null : body.get("scope"),
                     body == null ? null : body.get("accessToken"),
-                    parsePageLogin(body == null ? null : body.get("pageLogin")));
+                    parsePageLogin(body == null ? null : body.get("pageLogin")),
+                    parseQuick(body == null ? null : body.get("quick")));
             return R.ok().put("app", app);
         });
     }
@@ -113,7 +115,8 @@ public class OpcAdminController {
                     body == null ? null : body.get("scope"),
                     body == null ? null : body.get("icon"),
                     body == null ? null : body.get("hash"),
-                    parsePageLogin(body == null ? null : body.get("pageLogin")));
+                    parsePageLogin(body == null ? null : body.get("pageLogin")),
+                    parseQuick(body == null ? null : body.get("quick")));
             return R.ok().put("app", app);
         });
     }
@@ -177,5 +180,23 @@ public class OpcAdminController {
         } catch (NumberFormatException e) {
             return PageLoginSupport.NONE;
         }
+    }
+
+    /** 解析桌面快捷登录开关；缺省 null 表示不改动既有 {@code qrc_client_grant.quick}。 */
+    private static Boolean parseQuick(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+        if ("1".equals(trimmed) || "true".equalsIgnoreCase(trimmed) || "on".equalsIgnoreCase(trimmed) || "yes".equalsIgnoreCase(trimmed)) {
+            return Boolean.TRUE;
+        }
+        if ("0".equals(trimmed) || "false".equalsIgnoreCase(trimmed) || "off".equalsIgnoreCase(trimmed) || "no".equalsIgnoreCase(trimmed)) {
+            return Boolean.FALSE;
+        }
+        return Boolean.FALSE;
     }
 }

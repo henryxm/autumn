@@ -7,6 +7,7 @@ import cn.org.autumn.modules.auth.support.AuthScopeSupport;
 import cn.org.autumn.modules.oauth.oauth2.support.RedirectUriSupport;
 import cn.org.autumn.opl.model.OpenAppSnapshot;
 import cn.org.autumn.modules.oauth.service.ClientDetailsService;
+import cn.org.autumn.modules.qrc.service.ClientGrantService;
 import cn.org.autumn.opc.OpcConstants;
 import cn.org.autumn.opl.OplConstants;
 import cn.org.autumn.modules.opc.dao.ConnectAppDao;
@@ -37,6 +38,10 @@ public class ConnectAppService extends EncryptModuleService<ConnectAppDao, Conne
     @Autowired
     @Lazy
     private ClientDetailsService clientDetailsService;
+
+    @Autowired
+    @Lazy
+    private ClientGrantService clientGrantService;
 
     @Autowired
     private AuthScopeSupport authScopeSupport;

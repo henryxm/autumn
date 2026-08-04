@@ -79,7 +79,8 @@ public class OauthRpAdminController {
             String icon = body == null ? null : body.get("icon");
             String hash = body == null ? null : body.get("hash");
             Integer pageLogin = parsePageLogin(body == null ? null : body.get("pageLogin"));
-            return R.ok().put("client", oauthRpAdminService.saveClient(clientId, name, clientSecret, originUri, redirectUri, scope, userInfoDelivery, icon, hash, pageLogin));
+            Boolean quick = parseQuick(body == null ? null : body.get("quick"));
+            return R.ok().put("client", oauthRpAdminService.saveClient(clientId, name, clientSecret, originUri, redirectUri, scope, userInfoDelivery, icon, hash, pageLogin, quick));
         });
     }
 
@@ -96,7 +97,8 @@ public class OauthRpAdminController {
             String icon = body == null ? null : body.get("icon");
             String hash = body == null ? null : body.get("hash");
             Integer pageLogin = parsePageLogin(body == null ? null : body.get("pageLogin"));
-            return R.ok().put("client", oauthRpAdminService.updateClient(clientId, name, clientSecret, originUri, redirectUri, scope, userInfoDelivery, icon, hash, pageLogin));
+            Boolean quick = parseQuick(body == null ? null : body.get("quick"));
+            return R.ok().put("client", oauthRpAdminService.updateClient(clientId, name, clientSecret, originUri, redirectUri, scope, userInfoDelivery, icon, hash, pageLogin, quick));
         });
     }
 
@@ -116,6 +118,24 @@ public class OauthRpAdminController {
         } catch (NumberFormatException e) {
             return PageLoginSupport.NONE;
         }
+    }
+
+    /** 解析桌面快捷登录开关；缺省返回 null 表示不改动既有 grant.quick。 */
+    private static Boolean parseQuick(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+        if ("1".equals(trimmed) || "true".equalsIgnoreCase(trimmed) || "on".equalsIgnoreCase(trimmed) || "yes".equalsIgnoreCase(trimmed)) {
+            return Boolean.TRUE;
+        }
+        if ("0".equals(trimmed) || "false".equalsIgnoreCase(trimmed) || "off".equalsIgnoreCase(trimmed) || "no".equalsIgnoreCase(trimmed)) {
+            return Boolean.FALSE;
+        }
+        return Boolean.FALSE;
     }
 
     @GetMapping("/binds")

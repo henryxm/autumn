@@ -28,4 +28,9 @@ public class OpcAppAdminView {
     private String icon;
     private String hash;
     private int pageLogin;
+    /**
+     * 桌面快捷登录：是否允许该 OPC 应用扫码登录页经 AS Bridge 探测本机超然信。
+     * 来自 {@code qrc_client_grant.quick}（clientId = appId），与 {@code pageLogin} 扫码档配合。
+     */
+    private boolean quick;
 }

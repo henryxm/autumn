@@ -109,9 +109,14 @@ public class ScanTicketService extends ModuleService<ScanTicketDao, ScanTicketEn
         model.addAttribute("uuid", ticket.getUuid());
         model.addAttribute("qrUrl", buildQrUrl(request, ticket.getUuid()));
         model.addAttribute("pollIntervalMs", getScanLoginConfig().getPollIntervalMs());
-        model.addAttribute("clientId", TicketPayloads.get(ticket, "clientId"));
+        String clientId = TicketPayloads.get(ticket, "clientId");
+        model.addAttribute("clientId", clientId);
         model.addAttribute("scope", TicketPayloads.get(ticket, "scope"));
         model.addAttribute("state", TicketPayloads.get(ticket, "state"));
+        // 有 OAuth client 时下发 qrc_client_grant.quick，供授权页 resumeTicketNotify 按客户端开关探测
+        if (StringUtils.isNotBlank(clientId)) {
+            model.addAttribute("quick", clientGrantService.isQuick(clientId));
+        }
     }
 
     public boolean shouldUseQrAuthorize() {
@@ -300,7 +305,13 @@ public class ScanTicketService extends ModuleService<ScanTicketDao, ScanTicketEn
     }
 
     public TicketCreateResult toCreateResult(TicketSnapshot ticket) {
-        return TicketCreateResult.of(ticket.getUuid(), buildQrUrl(ticket.getUuid()), getScanLoginConfig().getTicketTtlSeconds(), ticket.getIntent(), ticket.getStatus());
+        TicketCreateResult result = TicketCreateResult.of(ticket.getUuid(), buildQrUrl(ticket.getUuid()), getScanLoginConfig().getTicketTtlSeconds(), ticket.getIntent(), ticket.getStatus());
+        String clientId = TicketPayloads.get(ticket, "clientId");
+        if (StringUtils.isNotBlank(clientId)) {
+            ClientGrantEntity grant = clientGrantService.getOrDefault(clientId);
+            result.setQuick(grant != null && grant.isQuick());
+        }
+        return result;
     }
 
     public TicketStatusResult toStatusResult(TicketSnapshot ticket) {

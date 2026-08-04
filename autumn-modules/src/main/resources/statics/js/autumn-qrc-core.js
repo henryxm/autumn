@@ -560,7 +560,9 @@
                                     uuid: self.qrcUuid,
                                     qrUrl: qrUrl,
                                     host: self,
-                                    renderQr: ensureRender
+                                    renderQr: ensureRender,
+                                    // 建票下发的 qrc_client_grant.quick；无 client 时可能为 undefined
+                                    quick: res.data.quick
                                 }) === true;
                             } catch (wakeErr) {
                                 wakeHandled = false;
@@ -845,7 +847,8 @@
                             uuid: self.qrcUuid,
                             qrUrl: qrUrl,
                             host: self,
-                            renderQr: ensureRender
+                            renderQr: ensureRender,
+                            quick: resumeOpts.quick
                         }) === true;
                     } catch (wakeErr) {
                         wakeHandled = false;
