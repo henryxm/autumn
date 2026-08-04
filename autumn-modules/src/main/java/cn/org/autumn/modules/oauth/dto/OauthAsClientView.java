@@ -22,4 +22,6 @@ public class OauthAsClientView implements Serializable {
     private Date createTime;
     private String authorizeUrl;
     private String loginUrl;
+    /** 对应 {@code qrc_client_grant.quick}：网页是否经 App Bridge 探测本机超然信。 */
+    private boolean quick;
 }

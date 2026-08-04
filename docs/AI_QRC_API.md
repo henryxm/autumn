@@ -332,7 +332,8 @@ QR 内容 URL（匿名）。用于 APP 可选校验或 WebView 打开。
 | `expireIn` | 有效秒数（与全局 `ticketTtlSeconds` 一致） |
 | `intent` | 固定 `OAUTH_DEVICE` |
 | `status` | 固定 `PENDING` |
-| `quick` | 可选布尔。有 OAuth `clientId` 时取自 `qrc_client_grant.quick`：是否允许该客户端登录页经 AS Bridge 探测本机超然信并展示快捷账号（默认 `false`，须在扫码授权客户端配置显式开启）。无 client 上下文时省略/`null`，前端回落站点 `LoginPageConfig.chaoranWakeEnabled`。与 TLS 证书下发开关无关。 |
+| `clientId` | 票面 OAuth/OPC 客户端 id；有 client 上下文时下发，便于对照 `qrc_client_grant.quick` |
+| `quick` | 可选布尔。有 OAuth `clientId` 时取自 `qrc_client_grant.quick`：是否允许该客户端登录页经 App Bridge 探测本机超然信并展示快捷账号（默认 `false`，须在 AS 的 oauthrpmanage / opcmanage / oauthasmanage / clientgrant 显式开启）。无 client 上下文时省略/`null`，前端回落站点 `LoginPageConfig.chaoranWakeEnabled`。与 TLS 证书下发开关无关。 |
 
 ```json
 {
@@ -343,6 +344,7 @@ QR 内容 URL（匿名）。用于 APP 可选校验或 WebView 打开。
     "expireIn": 300,
     "intent": "OAUTH_DEVICE",
     "status": "PENDING",
+    "clientId": "bighub-web",
     "quick": true
   }
 }

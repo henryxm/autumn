@@ -2,6 +2,7 @@ package cn.org.autumn.modules.oauth.service;
 
 import cn.org.autumn.config.ClientType;
 import cn.org.autumn.database.runtime.WrapperColumns;
+import cn.org.autumn.modules.qrc.service.ClientGrantService;
 import cn.org.autumn.modules.oauth.dto.OauthAsClientView;
 import cn.org.autumn.modules.oauth.dto.OauthAsCreateOutcome;
 import cn.org.autumn.modules.auth.support.AuthScopeSupport;
@@ -42,6 +43,9 @@ public class OauthAsAdminService {
     @Autowired
     private AuthScopeSupport authScopeSupport;
 
+    @Autowired
+    private ClientGrantService clientGrantService;
+
     public Map<String, Object> overview() {
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("clientCount", clientDetailsService.selectCount(new QueryWrapper<>()));
@@ -65,7 +69,7 @@ public class OauthAsAdminService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public OauthAsCreateOutcome createClient(String clientId, String name, String redirectUri, String scope) {
+    public OauthAsCreateOutcome createClient(String clientId, String name, String redirectUri, String scope, Boolean quick) {
         if (StringUtils.isBlank(clientId)) {
             throw new IllegalArgumentException("clientId不能为空");
         }
@@ -94,6 +98,9 @@ public class OauthAsAdminService {
         entity.setTrusted(1);
         entity.setArchived(0);
         clientDetailsService.updateAllColumnById(entity);
+        if (quick != null) {
+            clientGrantService.saveQuick(entity.getClientId(), quick);
+        }
         return toCreateOutcome(entity);
     }
 
@@ -107,7 +114,7 @@ public class OauthAsAdminService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public ClientDetailsEntity updateClient(String clientId, String name, String redirectUri, String scope, Integer trusted, Integer archived) {
+    public ClientDetailsEntity updateClient(String clientId, String name, String redirectUri, String scope, Integer trusted, Integer archived, Boolean quick) {
         ClientDetailsEntity entity = requireClient(clientId);
         if (StringUtils.isNotBlank(name)) {
             entity.setClientName(name.trim());
@@ -126,6 +133,9 @@ public class OauthAsAdminService {
             entity.setArchived(archived);
         }
         clientDetailsService.updateAllColumnById(entity);
+        if (quick != null) {
+            clientGrantService.saveQuick(entity.getClientId(), quick);
+        }
         return entity;
     }
 
@@ -177,6 +187,7 @@ public class OauthAsAdminService {
         view.setCreateTime(entity.getCreateTime());
         view.setAuthorizeUrl(baseUrl + "/oauth2/authorize");
         view.setLoginUrl(baseUrl + "/oauth2/login?client_id=" + entity.getClientId());
+        view.setQuick(clientGrantService.isQuick(entity.getClientId()));
         return view;
     }
 

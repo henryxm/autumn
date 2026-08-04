@@ -169,9 +169,9 @@
             <div class="table-container">
                 <table>
                     <thead><tr>
-                        <th>客户端名称</th><th>clientId</th><th>redirectUri</th><th>可信</th><th>归档</th><th>创建时间</th><th>操作</th>
+                        <th>客户端名称</th><th>clientId</th><th>redirectUri</th><th>可信</th><th>快捷登录</th><th>归档</th><th>创建时间</th><th>操作</th>
                     </tr></thead>
-                    <tbody id="clientListBody"><tr><td colspan="7" class="empty-hint">加载中...</td></tr></tbody>
+                    <tbody id="clientListBody"><tr><td colspan="8" class="empty-hint">加载中...</td></tr></tbody>
                 </table>
             </div>
             <div class="pagination" id="clientPagination"></div>
@@ -212,6 +212,13 @@
                     <option value="1">是（跳过确认页）</option>
                     <option value="0">否</option>
                 </select>
+                <label>快捷登录（quick）</label>
+                <div>
+                    <label class="checkbox-inline" style="display:flex;align-items:center;gap:8px;font-weight:500;">
+                        <input type="checkbox" id="editQuick"/> 允许经 App Bridge 探测本机超然信
+                    </label>
+                    <p class="field-hint">写入 <code>qrc_client_grant.quick</code>（与下游接入 / OPC / 客户端授权同一字段）。网页探测看本开关；TLS 证书 enabled 只影响 App 拉证。RP 本域不要另存。</p>
+                </div>
                 <label>归档状态</label>
                 <select id="editArchived">
                     <option value="0">正常</option>
@@ -283,6 +290,12 @@
                     <div class="scope-presets" id="createScopePresets"></div>
                     <div class="scope-picker-list" id="createScopePicker"></div>
                 </div>
+            </div>
+            <div class="field">
+                <label class="checkbox-inline" style="display:flex;align-items:center;gap:8px;">
+                    <input type="checkbox" id="createQuick"/> 快捷登录（quick）
+                </label>
+                <p class="field-hint">写入 <code>qrc_client_grant.quick</code>（与下游接入 / OPC / 客户端授权同一字段）。网页探测看本开关；TLS 证书 enabled 只影响 App 拉证。RP 本域不要另存。</p>
             </div>
         </div>
         <div class="modal-footer">
@@ -379,13 +392,13 @@ async function loadClients(page) {
     });
     var tbody = document.getElementById('clientListBody');
     if (r.code !== 0 || !r.page) {
-        tbody.innerHTML = '<tr><td colspan="7" class="empty-hint">' + escapeHtml(r.msg || '加载失败') + '</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="empty-hint">' + escapeHtml(r.msg || '加载失败') + '</td></tr>';
         return;
     }
     state.clients.totalPage = r.page.totalPage || 1;
     var list = r.page.list || [];
     if (!list.length) {
-        tbody.innerHTML = '<tr><td colspan="7" class="empty-hint">暂无客户端，可点「创建」注册</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="empty-hint">暂无客户端，可点「创建」注册</td></tr>';
     } else {
         tbody.innerHTML = list.map(function(item) {
             var trustedBadge = item.trusted === 1
@@ -394,11 +407,15 @@ async function loadClients(page) {
             var archivedBadge = item.archived === 1
                 ? '<span class="badge badge-danger">已归档</span>'
                 : '<span class="badge badge-success">正常</span>';
+            var quickBadge = item.quick
+                ? '<span class="badge badge-success">开</span>'
+                : '<span class="badge badge-muted">关</span>';
             return '<tr>' +
                 '<td>' + escapeHtml(item.clientName || item.clientId) + '</td>' +
                 '<td><code>' + escapeHtml(item.clientId) + '</code></td>' +
                 '<td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;" title="' + escapeAttr(item.redirectUri || '') + '"><code>' + escapeHtml(item.redirectUri || '-') + '</code></td>' +
                 '<td>' + trustedBadge + '</td>' +
+                '<td>' + quickBadge + '</td>' +
                 '<td>' + archivedBadge + '</td>' +
                 '<td>' + formatTime(item.createTime) + '</td>' +
                 '<td>' +
@@ -429,6 +446,7 @@ async function selectClient(clientId) {
     document.getElementById('editScope').value = r.client.scope || 'basic';
     document.getElementById('editTrusted').value = String(r.client.trusted != null ? r.client.trusted : 1);
     document.getElementById('editArchived').value = String(r.client.archived != null ? r.client.archived : 0);
+    document.getElementById('editQuick').checked = !!r.client.quick;
     if (window.AuthScopePicker) {
         AuthScopePicker.refresh('editScope', 'editScopePicker', 'oauth', window.__CTX__ || '');
     }
@@ -443,7 +461,8 @@ async function saveClientDetail() {
         redirectUri: document.getElementById('editRedirect').value,
         scope: document.getElementById('editScope').value,
         trusted: parseInt(document.getElementById('editTrusted').value, 10),
-        archived: parseInt(document.getElementById('editArchived').value, 10)
+        archived: parseInt(document.getElementById('editArchived').value, 10),
+        quick: document.getElementById('editQuick').checked ? 'true' : 'false'
     });
     if (r.code === 0) {
         showToast('保存成功');
@@ -487,6 +506,7 @@ function showCreateClientModal() {
     document.getElementById('createClientId').value = '';
     document.getElementById('createClientName').value = '';
     document.getElementById('createRedirect').value = '';
+    document.getElementById('createQuick').checked = false;
     document.getElementById('createScope').value = 'basic';
     fillLocalCallback('createRedirect');
     if (window.AuthScopePicker) {
@@ -509,7 +529,8 @@ async function submitCreateClient() {
         clientId: clientId,
         name: document.getElementById('createClientName').value.trim(),
         redirectUri: redirectUri,
-        scope: document.getElementById('createScope').value
+        scope: document.getElementById('createScope').value,
+        quick: document.getElementById('createQuick').checked ? 'true' : 'false'
     });
     if (r.code === 0) {
         hideModal('modalCreateClient');

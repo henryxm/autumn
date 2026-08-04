@@ -308,8 +308,8 @@ public class ScanTicketService extends ModuleService<ScanTicketDao, ScanTicketEn
         TicketCreateResult result = TicketCreateResult.of(ticket.getUuid(), buildQrUrl(ticket.getUuid()), getScanLoginConfig().getTicketTtlSeconds(), ticket.getIntent(), ticket.getStatus());
         String clientId = TicketPayloads.get(ticket, "clientId");
         if (StringUtils.isNotBlank(clientId)) {
-            ClientGrantEntity grant = clientGrantService.getOrDefault(clientId);
-            result.setQuick(grant != null && grant.isQuick());
+            result.setClientId(clientId);
+            result.setQuick(clientGrantService.isQuick(clientId));
         }
         return result;
     }

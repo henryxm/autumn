@@ -191,7 +191,7 @@
             <label class="checkbox-inline" style="display:block;margin-top:10px;">
                 <input type="checkbox" id="saveQuick"> 快捷登录（quick）
             </label>
-            <p class="field-hint">开启后，该客户端扫码登录页可经 AS Bridge 探测本机超然信并展示快捷账号。写入 <code>qrc_client_grant.quick</code>；建议在 pageLogin 为 2/3（含扫码）时使用。与 TLS 证书下发开关无关。</p>
+            <p class="field-hint">开启后，该客户端扫码登录页可经 App Bridge 探测本机超然信并展示快捷账号。写入 <code>qrc_client_grant.quick</code>（与授权服务管理 / OPC / 客户端授权同一字段）；建议在 pageLogin 为 2/3（含扫码）时使用。网页探测看本开关；TLS 证书 enabled 只影响 App 拉证，与本开关无关。勿在 RP 本域另存。</p>
         </div>
         <div class="modal-footer">
             <button class="btn btn-secondary btn-xs" onclick="hideModal('modalSaveClient')">取消</button>
@@ -247,7 +247,7 @@
             <label class="checkbox-inline" style="display:block;margin-top:10px;">
                 <input type="checkbox" id="editQuick"> 快捷登录（quick）
             </label>
-            <p class="field-hint">开启后经 AS Bridge 探测本机超然信；对应 <code>qrc_client_grant.quick</code>（clientId 同本应用）。建议配合 pageLogin=2/3。</p>
+            <p class="field-hint">写入 <code>qrc_client_grant.quick</code>（与授权服务管理 / OPC / 客户端授权同一字段）。网页探测看本开关；TLS 证书 enabled 只影响 App 拉证。建议配合 pageLogin=2/3。勿在 RP 本域另存。</p>
         </div>
         <div class="modal-footer">
             <button class="btn btn-secondary btn-xs" onclick="hideModal('modalEditClient')">取消</button>

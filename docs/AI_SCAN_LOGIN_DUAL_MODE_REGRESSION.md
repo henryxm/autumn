@@ -157,10 +157,48 @@ sequenceDiagram
 
 ---
 
+## 7.5 App Bridge / quick（授权双入口 × 凭证双轨）
+
+> 协议细节：Account `CLIENT_WAKE_LOGIN_PROTOCOL.md`。与 §1～§7「经典 vs 开放」正交：**同一套** Bridge / `qrc_client_grant.quick`。
+
+### 双入口定义
+
+| 入口 | 说明 | `quick` 来源 | 前端 |
+|------|------|--------------|------|
+| **A 授权页预建票** | AS `/oauth2/authorize` 或 `/open/oauth2/authorize` 服务端预建票 | `fillAuthorizeModel` → `serverQuick` | `resumeTicketNotify({ quick })` |
+| **B RP/登录页建票** | 联邦 D / 本站扫码 / B3 `open/create` | `toCreateResult.quick` + `clientId` | `wakeClient({ quick })` |
+
+### 能力矩阵
+
+| 检查项 | 经典 OAuth2 | 开放 OPC | 入口 A | 入口 B |
+|--------|-------------|----------|--------|--------|
+| `ClientGrantService.isQuick(clientId)` | ✅ `client_id` | ✅ `appId` | ✅ | ✅ |
+| 建票/模型下发 `quick` | ✅ | ✅ | ✅ | ✅ |
+| 下发 `clientId` 便于对照 | ✅ | ✅ | model + `serverClientId` | `TicketCreateResult` |
+| Account 挂 `wakeClient` + `/qrc/app-bridge` | ✅ | ✅ | ✅ | ✅ |
+| 管理页写同一 `qrc_client_grant.quick` | oauthas / oauthrp / clientgrant | opcmanage / clientgrant | — | — |
+| TLS `enabled` 不控制探测 | ✅ | ✅ | ✅ | ✅ |
+
+### 回归勾选（建议每次发版）
+
+- [ ] **A×经典**：`/oauth2/authorize?client_id=<已开 quick>` → Network 有 `app-bridge`；关 quick 后无
+- [ ] **A×开放**：`/open/oauth2/authorize?app_id=<已开 quick>` → 同上
+- [ ] **B×经典联邦**：RP 登录页 `create` → `quick:true` + `clientId` → 父页仅 AS `app-bridge`
+- [ ] **B×开放联邦**：同上（`type=oauth2_open`）
+- [ ] 错 clientId 开 quick、建票用另一 id → 仍 `quick:false`（防配错）
+
+### 已知分层
+
+- App Bridge **页面与 JS** 在 Account（`ChaoranClientBridge`）；Autumn 提供 `wakeClient` 钩子与 `quick` 字段。
+- Autumn stock `login.js`：若页面已加载 `ChaoranClientBridge`，会挂载同一 `wakeClient`（与入口 B 同逻辑）；无 Bridge 脚本时仅二维码。
+
+---
+
 ## 8. 相关文档
 
 | 文档 | 内容 |
 |------|------|
-| [`AI_SCAN_LOGIN_FLOWS.md`](AI_SCAN_LOGIN_FLOWS.md) | 时序图、拓扑、双模式绑定 |
+| [`AI_SCAN_LOGIN_FLOWS.md`](AI_SCAN_LOGIN_FLOWS.md) | 时序图、拓扑、双模式绑定、§8 App Bridge 双入口 |
 | [`AI_AUTH_LOGIN_PROVIDERS.md`](AI_AUTH_LOGIN_PROVIDERS.md) | Provider 契约与 `pageLogin` |
 | [`AI_AUTH_LOGIN_MODES.md`](AI_AUTH_LOGIN_MODES.md) | 方式一经典 / 方式二开放总览 |
+| Account `CLIENT_WAKE_LOGIN_PROTOCOL.md` | App Bridge 协议与 quick 职责 |

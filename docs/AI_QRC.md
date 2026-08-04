@@ -110,12 +110,17 @@ autumn://qrc/t/{uuid}
 | 字段 | 说明 |
 |------|------|
 | `enabled` | 是否允许扫码授权 |
+| `quick` | 是否允许该客户端登录页经 **App Bridge** 探测本机超然信（默认关）。**一种真相、多入口**：`oauthasmanage` / `oauthrpmanage` / `opcmanage` / `clientgrant` 均写本字段。与 Account TLS `enabled`（仅控 App 拉证）无关；勿在 RP 本域另存 |
 | `delivery` | `POLL_CODE` / `POLL_TOKEN` / `WEBHOOK` / `DEEP_LINK` |
 | `webhook` / `secret` | Webhook 地址与 HMAC 密钥 |
 | `schemes` | DeepLink scheme 白名单（CSV） |
 | `scopes` | 允许的 scope CSV |
 | `consent` | 浏览器已登录时仍要 APP 确认 |
 | `updated` | 最后更新时间 |
+
+建票响应 `TicketCreateResult` 在有 client 上下文时下发 `clientId` + `quick`（见 `AI_QRC_API.md`）。授权页预建票经 `fillAuthorizeModel` 下发同字段（模板 `serverQuick` / `serverClientId`）。**两种入口同一 grant**：见 `AI_SCAN_LOGIN_FLOWS.md` §8、`AI_SCAN_LOGIN_DUAL_MODE_REGRESSION.md` §7.5。
+
+运维核对：以建票/`authorize` 所用 `clientId` 查 `qrc_client_grant.quick`；为 `0`/无行则网页不会嵌 `/qrc/app-bridge`（属预期）。
 
 ## 9. 审计表（`qrc_scan_ticket`）
 

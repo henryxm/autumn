@@ -59,7 +59,8 @@ public class OauthAsAdminController {
             String name = body == null ? null : body.get("name");
             String redirectUri = body == null ? null : body.get("redirectUri");
             String scope = body == null ? null : body.get("scope");
-            return R.ok().put("data", oauthAsAdminService.createClient(clientId, name, redirectUri, scope));
+            Boolean quick = parseBoolean(body, "quick");
+            return R.ok().put("data", oauthAsAdminService.createClient(clientId, name, redirectUri, scope, quick));
         });
     }
 
@@ -80,7 +81,8 @@ public class OauthAsAdminController {
             String scope = body == null || body.get("scope") == null ? null : body.get("scope").toString();
             Integer trusted = parseInt(body, "trusted");
             Integer archived = parseInt(body, "archived");
-            return R.ok().put("client", oauthAsAdminService.updateClient(clientId, name, redirectUri, scope, trusted, archived));
+            Boolean quick = parseBooleanObj(body, "quick");
+            return R.ok().put("client", oauthAsAdminService.updateClient(clientId, name, redirectUri, scope, trusted, archived, quick));
         });
     }
 
@@ -94,6 +96,27 @@ public class OauthAsAdminController {
             return null;
         }
         return Integer.parseInt(body.get(key).toString());
+    }
+
+    private Boolean parseBoolean(Map<String, String> body, String key) {
+        if (body == null || body.get(key) == null || StringUtils.isBlank(body.get(key))) {
+            return null;
+        }
+        return Boolean.parseBoolean(body.get(key).trim());
+    }
+
+    private Boolean parseBooleanObj(Map<String, Object> body, String key) {
+        if (body == null || body.get(key) == null || StringUtils.isBlank(body.get(key).toString())) {
+            return null;
+        }
+        String raw = body.get(key).toString().trim();
+        if ("1".equals(raw) || "true".equalsIgnoreCase(raw) || "yes".equalsIgnoreCase(raw)) {
+            return true;
+        }
+        if ("0".equals(raw) || "false".equalsIgnoreCase(raw) || "no".equalsIgnoreCase(raw)) {
+            return false;
+        }
+        return Boolean.parseBoolean(raw);
     }
 
     private R admin(HttpServletRequest request, Supplier<R> action) {

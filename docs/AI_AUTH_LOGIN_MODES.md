@@ -850,6 +850,8 @@ userTokenService.saveToken(...)   → 可选保存 access_token
 | [`AI_OPL_INTEGRATION.md`](AI_OPL_INTEGRATION.md) | 方式二 OPL 第三方 HTTP 对接 |
 | [`AI_OPC_INTEGRATION.md`](AI_OPC_INTEGRATION.md) | 方式二 OPC 接入与绑定 |
 | [`AI_OPL_SPI.md`](AI_OPL_SPI.md) | 框架内扩展 OPL（Extension/Service） |
+| [`AI_SCAN_LOGIN_FLOWS.md`](AI_SCAN_LOGIN_FLOWS.md) | 扫码时序；§8 App Bridge 双入口（authorize 预建票 × RP create）同一 `qrc_client_grant.quick` |
+| [`AI_SCAN_LOGIN_DUAL_MODE_REGRESSION.md`](AI_SCAN_LOGIN_DUAL_MODE_REGRESSION.md) | 经典/开放双轨回归；§7.5 App Bridge 验收勾选 |
 | [`AI_QRC_INTEGRATION.md`](AI_QRC_INTEGRATION.md) | 扫码登录与 OAuth 分支 |
 | [`AI_AUTH_SITE_ROLES.md`](AI_AUTH_SITE_ROLES.md) | AS/RP 双角色、RP QRC 联邦、`WebOauthBind` 跨站绑定 |
 | [`AI_AUTH_LOGIN_PROVIDERS.md`](AI_AUTH_LOGIN_PROVIDERS.md) | `/login` 授权 Provider 列表、`pageLogin`、client_id 路由 |

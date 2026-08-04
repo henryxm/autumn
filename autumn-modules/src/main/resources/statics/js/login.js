@@ -76,7 +76,11 @@
             authLoginTabProviders: [],
             authLoginQrProviders: [],
             authLoginDefaultIcon: '/statics/img/auth-login-default.svg',
-            activeQrProvider: null
+            activeQrProvider: null,
+            // Account ChaoranClientBridge 注入时可展示 App 快捷层（与 RP OAUTH_DEVICE 同一套）
+            appPresence: null,
+            appQuickDismissed: false,
+            appAuthHost: ''
         },
         computed: {
             mobileClean: function () {
@@ -254,7 +258,11 @@
                     this.qrStatus = '扫码组件未加载，请刷新页面';
                     return;
                 }
-                AutumnQrc.mergeInto(this, this.buildQrcOptions(this.activeQrProvider));
+                var qrcOpts = this.attachOptionalWakeClient(this.buildQrcOptions(this.activeQrProvider));
+                AutumnQrc.mergeInto(this, qrcOpts);
+                if (window.ChaoranClientBridge && ChaoranClientBridge.bindHostQuickLoginMethods) {
+                    ChaoranClientBridge.bindHostQuickLoginMethods(this);
+                }
                 this.startQrLogin();
             },
             selectQrProvider: function (provider) {
@@ -315,6 +323,26 @@
                     this.qrStatus = '扫码已取消或过期，请刷新重试';
                 }
             },
+            /**
+             * 与 RP OAUTH_DEVICE 共用：有 ChaoranClientBridge 时挂 wakeClient；
+             * 探测以 ticket/resume 的 quick（qrc_client_grant.quick）为准。
+             */
+            attachOptionalWakeClient: function (qrcOpts) {
+                if (!window.ChaoranClientBridge || !ChaoranClientBridge.createWakeClient) {
+                    return qrcOpts;
+                }
+                var wakeCfg = typeof ChaoranClientBridge.resolveWakeConfig === 'function'
+                    ? ChaoranClientBridge.resolveWakeConfig({
+                        chaoranWakeEnabled: cfg.chaoranWakeEnabled,
+                        chaoranWakeTimeoutMs: cfg.chaoranWakeTimeoutMs
+                    })
+                    : { enabled: true, timeoutMs: 2000 };
+                var wakeFn = ChaoranClientBridge.createWakeClient(wakeCfg);
+                if (typeof wakeFn === 'function') {
+                    qrcOpts.wakeClient = wakeFn;
+                }
+                return qrcOpts;
+            },
             initAuthorizeQr: function () {
                 if (!window.AutumnQrc) {
                     this.qrStatus = '扫码组件未加载，请刷新页面';
@@ -322,7 +350,7 @@
                 }
                 var self = this;
                 var run = function () {
-                    AutumnQrc.mergeInto(self, {
+                    var qrcOpts = self.attachOptionalWakeClient({
                         ctx: ctx,
                         mode: 'as',
                         boxId: 'loginQrcodeBox',
@@ -331,6 +359,10 @@
                             self.completeAuthorizeExchange(exchange);
                         }
                     });
+                    AutumnQrc.mergeInto(self, qrcOpts);
+                    if (window.ChaoranClientBridge && ChaoranClientBridge.bindHostQuickLoginMethods) {
+                        ChaoranClientBridge.bindHostQuickLoginMethods(self);
+                    }
                     self.resumeTicketNotify({
                         uuid: serverUuid,
                         qrUrl: serverQrUrl,

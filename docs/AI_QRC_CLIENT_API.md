@@ -174,17 +174,25 @@ onUserCancel(uuid):
 
 ---
 
-## 9. Web 唤起（可选扩展，同一 uuid）
+## 9. Web 唤起 / App Bridge（可选扩展，同一 uuid）
 
-网页可在 **B2 / D 建票成功后** 用 custom scheme 唤起已安装客户端，代替用户扫码；**不**新增 Intent / Webhook / App API。
+网页可在建票成功后经 **App Bridge** 探测本机 App（或历史 custom scheme）；**不**新增 Intent / Webhook / App API。
 
-1. 浏览器：`AutumnQrc.startQrLogin`（或 `resumeTicketNotify`）建票得 `uuid` + `qrUrl`，并先挂 SSE。
-2. 可选 `options.wakeClient({ uuid, qrUrl, host, renderQr, quick })`：返回 `true` 表示由站点决定何时 `renderQr()`；未配置则立即渲染二维码（历史行为）。
-   - `quick`：建票响应字段，有 OAuth client 时取自 `qrc_client_grant.quick`（该客户端是否允许桌面快捷探测）；为 `false` 时只出码不探测；省略/`undefined` 时回落站点 LoginPage 的 `chaoranWakeEnabled`。
-3. 客户端打开深链（如 `crchat://vc/qrc/confirm?uuid=...&authHost=...`）后走 **本文 §2～§7 同一套** scan / detail / confirm。
-4. 成功判据：浏览器 SSE/`status` 出现 `SCANNED`；超时则 `renderQr` 回退二维码。
+### 9.1 两种授权登录入口（同一 `wakeClient` 契约）
 
-站点协议示例见业务仓 `CLIENT_WAKE_LOGIN_PROTOCOL.md`（超然信）。框架脚本：`statics/js/autumn-qrc-core.js`。
+| 入口 | 触发 | `quick` 入参 |
+|------|------|--------------|
+| **A 授权页预建票** | `AutumnQrc.resumeTicketNotify({ uuid, qrUrl, quick })` | 服务端 `fillAuthorizeModel` → 模板 `serverQuick`（来自 `qrc_client_grant.quick`） |
+| **B create 建票** | `AutumnQrc.startQrLogin` → `wakeClient({ ..., quick: res.data.quick })` | `TicketCreateResult.quick`（同字段）；可含 `clientId` 对照 |
+
+1. 浏览器：入口 A 用 resume；入口 B 用 create；均须先挂 SSE。
+2. 可选 `options.wakeClient({ uuid, qrUrl, host, renderQr, quick })`：返回 `true` 表示由站点决定何时 `renderQr()`；未配置则立即渲染二维码。
+   - `quick`：有 OAuth/`appId` 时取自 `qrc_client_grant.quick`；`false` 时只出码不探测；省略时回落站点 `chaoranWakeEnabled`（**仅无 client 的本站扫码**；授权页入口 A 必有 client，以 `serverQuick` 为准）。
+   - `clientId`：建票响应 / 授权页 `serverClientId`，用于运维对照 grant。
+3. App Bridge（Account）：嵌 AS `/qrc/app-bridge` → loopback presence；成功后快捷登录走同一 uuid 的 confirm。
+4. 成功判据：浏览器 SSE/`status` 出现 `SCANNED`；探测失败保持二维码。
+
+站点协议：业务仓 `CLIENT_WAKE_LOGIN_PROTOCOL.md` §4.5。框架脚本：`statics/js/autumn-qrc-core.js`。双入口回归：`AI_SCAN_LOGIN_DUAL_MODE_REGRESSION.md` §7.5。
 
 ---
 

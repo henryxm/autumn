@@ -1,8 +1,10 @@
 package cn.org.autumn.modules.oauth.service;
 
 import cn.org.autumn.config.ClientType;
+import cn.org.autumn.modules.auth.support.AuthScopeSupport;
 import cn.org.autumn.modules.oauth.dto.OauthAsCreateOutcome;
 import cn.org.autumn.modules.oauth.entity.ClientDetailsEntity;
+import cn.org.autumn.modules.qrc.service.ClientGrantService;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.modules.sys.service.SysUserService;
 import org.junit.Assert;
@@ -30,6 +32,12 @@ public class OauthAsAdminServiceTest {
     @Mock
     private SysUserService sysUserService;
 
+    @Mock
+    private ClientGrantService clientGrantService;
+
+    @Mock
+    private AuthScopeSupport authScopeSupport;
+
     @Before
     public void setUp() {
         MockitoAnnotations.openMocks(this);
@@ -38,6 +46,8 @@ public class OauthAsAdminServiceTest {
         ReflectionTestUtils.setField(oauthAsAdminService, "tokenStoreService", tokenStoreService);
         ReflectionTestUtils.setField(oauthAsAdminService, "sysConfigService", sysConfigService);
         ReflectionTestUtils.setField(oauthAsAdminService, "sysUserService", sysUserService);
+        ReflectionTestUtils.setField(oauthAsAdminService, "clientGrantService", clientGrantService);
+        ReflectionTestUtils.setField(oauthAsAdminService, "authScopeSupport", authScopeSupport);
     }
 
     @Test
@@ -66,11 +76,29 @@ public class OauthAsAdminServiceTest {
             return true;
         }).when(clientDetailsService).updateAllColumnById(Mockito.any(ClientDetailsEntity.class));
 
-        OauthAsCreateOutcome outcome = oauthAsAdminService.createClient("demo", null, null, null);
+        OauthAsCreateOutcome outcome = oauthAsAdminService.createClient("demo", null, null, null, Boolean.TRUE);
 
         Assert.assertEquals("demo", outcome.getClientId());
         Assert.assertEquals("secret-x", outcome.getClientSecret());
         Assert.assertEquals("https://auth.example.com/oauth2/token", outcome.getTokenUrl());
         Assert.assertNotNull(secretCaptor.getValue());
+        Mockito.verify(clientGrantService).saveQuick("demo", true);
+    }
+
+    @Test
+    public void updateClient_persistsQuickGrant() {
+        ClientDetailsEntity entity = new ClientDetailsEntity();
+        entity.setClientId("demo");
+        entity.setClientName("Demo");
+        entity.setRedirectUri("https://rp.example.com/cb");
+        entity.setScope("basic");
+        entity.setTrusted(1);
+        entity.setArchived(0);
+        Mockito.when(clientDetailsService.findByClientId("demo")).thenReturn(entity);
+        Mockito.when(clientDetailsService.updateAllColumnById(Mockito.any(ClientDetailsEntity.class))).thenReturn(1);
+
+        oauthAsAdminService.updateClient("demo", "Demo2", "https://rp.example.com/cb", "basic", 1, 0, Boolean.FALSE);
+
+        Mockito.verify(clientGrantService).saveQuick("demo", false);
     }
 }

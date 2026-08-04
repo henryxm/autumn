@@ -173,7 +173,7 @@
             <label class="checkbox-inline" style="display:block;margin-top:10px;">
                 <input type="checkbox" id="saveQuick"> 快捷登录（quick）
             </label>
-            <p class="field-hint">开启后该 OPC 应用扫码登录页可经 AS Bridge 探测本机超然信。写入 <code>qrc_client_grant.quick</code>（clientId = appId）；建议 pageLogin 为 2/3。与 TLS 证书下发无关。</p>
+            <p class="field-hint">写入 <code>qrc_client_grant.quick</code>（clientId = appId；与下游接入 / 授权服务管理 / 客户端授权同一字段）。网页探测看本开关；TLS 证书 enabled 只影响 App 拉证。建议 pageLogin 为 2/3。勿在 RP 本域另存。</p>
         </div>
         <div class="modal-footer">
             <button class="btn btn-secondary btn-sm" onclick="hideModal('modalSaveApp')">取消</button>
@@ -221,7 +221,7 @@
             <label class="checkbox-inline" style="display:block;margin-top:10px;">
                 <input type="checkbox" id="applyQuick"> 快捷登录（quick）
             </label>
-            <p class="field-hint">申请成功后写入本机 <code>qrc_client_grant.quick</code>；跨平台 AS 建票时仍须在授权平台侧为该 appId 开启快捷登录。</p>
+            <p class="field-hint">申请成功后写入本机 <code>qrc_client_grant.quick</code>（网页探测看本开关；TLS enabled 只管 App 拉证）。跨平台 AS 建票时仍须在授权平台侧为该 appId 开启快捷登录。</p>
             <label>负责人账号（可选）</label><input id="applyUser" type="text" placeholder="默认当前登录管理员">
         </div>
         <div class="modal-footer">
@@ -275,7 +275,7 @@
             <label class="checkbox-inline" style="display:block;margin-top:10px;">
                 <input type="checkbox" id="editQuick"> 快捷登录（quick）
             </label>
-            <p class="field-hint">对应 <code>qrc_client_grant.quick</code>（clientId = appId）；建议配合 pageLogin=2/3。</p>
+            <p class="field-hint">写入 <code>qrc_client_grant.quick</code>（clientId = appId）。网页探测看本开关；TLS 证书 enabled 只影响 App 拉证。建议配合 pageLogin=2/3。</p>
         </div>
         <div class="modal-footer">
             <button class="btn btn-secondary btn-sm" onclick="hideModal('modalEditApp')">取消</button>

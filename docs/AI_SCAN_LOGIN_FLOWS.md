@@ -424,11 +424,70 @@ D 模式若冲突，`completeOnInbound` 将 `redirectUrl` 设为 bind choice 页
 
 ---
 
-## 8. Web 唤起客户端（可选，非新标准模式）
+## 8. Web App Bridge / 快捷登录（两入口同一方案）
 
-在 **标准一 B2 / D** 网页授权路径上，站点可在 `ticket/create` 之后、用户扫码之前，用 custom scheme 唤起本机 App，把「扫码得到 uuid」换成「深链传入同一 uuid」。服务端状态机、Webhook、App `scan/confirm` **不变**。
+网页在 **出码之后、用户扫码之前**，可经 AS **App Bridge** 静默探测本机 App（非自动 scheme）。服务端 QRC 状态机、Webhook、App `scan/confirm` **不变**；与经典/开放两套凭证体系正交。
 
-前端扩展点：`autumn-qrc-core.js` 的 `options.wakeClient`（见 **`AI_QRC_CLIENT_API.md` §9**）。未配置时行为与纯二维码完全一致。
+### 8.1 两种授权登录入口（须共用同一套）
+
+| 入口 | 典型路径 | Intent | `quick` 下发 | 前端挂载 |
+|------|----------|--------|--------------|----------|
+| **A. 授权页预建票** | `GET /oauth2/authorize` 或 `GET /open/oauth2/authorize` → `login.html` | `OAUTH_AUTHORIZE` | `ScanTicketService.fillAuthorizeModel` → `serverQuick` | `resumeTicketNotify({ uuid, qrUrl, quick })` |
+| **B. RP / 登录页建票** | RP `POST .../ticket/create`（联邦 D）或 AS `open/create` / 本站扫码 | `OAUTH_DEVICE`（及本站其它 Intent） | `toCreateResult` → `res.data.quick` + `clientId` | `startQrLogin` → `wakeClient({ quick })` |
+
+**同一真相**：两种入口都读 AS 上同一行 `qrc_client_grant.quick`（`ClientGrantService.isQuick(clientId)`）。`clientId` 对经典为 OAuth `client_id`，对开放为 OPL `appId`。
+
+```mermaid
+flowchart LR
+  subgraph entryA [入口A_授权页]
+    AuthZ["/oauth2/authorize\n或 /open/oauth2/authorize"]
+    Fill[fillAuthorizeModel]
+    Resume[resumeTicketNotify]
+  end
+  subgraph entryB [入口B_RP建票]
+    Create["ticket/create\nOAUTH_DEVICE"]
+    ToRes[toCreateResult]
+    Start[startQrLogin wakeClient]
+  end
+  Grant[qrc_client_grant.quick]
+  Bridge["AS /qrc/app-bridge"]
+  App[本机 presence]
+  AuthZ --> Fill
+  Fill --> Grant
+  Fill --> Resume
+  Create --> ToRes
+  ToRes --> Grant
+  ToRes --> Start
+  Resume --> Bridge
+  Start --> Bridge
+  Bridge --> App
+```
+
+### 8.2 与经典 / 开放双轨的关系
+
+| 凭证体系 | 入口 A | 入口 B |
+|----------|--------|--------|
+| 经典 OAuth2 | `/oauth2/authorize?client_id=` | RP `type=oauth2_classic` 或 B3 `clientId` |
+| 开放 OPC/OPL | `/open/oauth2/authorize?app_id=` | RP `type=oauth2_open` 或 B3 `clientId=appId` |
+
+App Bridge **不区分** 经典/开放：只认票面 `clientId` 对应的 grant.quick。配置入口见 Account `CLIENT_WAKE_LOGIN_PROTOCOL.md`（oauthasmanage / oauthrpmanage / opcmanage / clientgrant）。
+
+### 8.3 前端契约
+
+- 扩展点：`autumn-qrc-core.js` 的 `options.wakeClient`（见 **`AI_QRC_CLIENT_API.md` §9**）。
+- Account 实现：`ChaoranClientBridge.createWakeClient`；父页永不 `fetch` localhost。
+- 未配置 `wakeClient`：行为与纯二维码一致（Autumn stock 无 Bridge 时属预期）。
+- `quick===false`：立即出码、**不**嵌 app-bridge（默认关）。
+- 授权页（入口 A）：以 `serverQuick` 为准，**忽略** 本站 `chaoranWakeEnabled`（该开关仅 B2 无 client 场景）。
+
+### 8.4 验收（两入口各测一次）
+
+- [ ] 入口 A：authorize 页 Network 见 `/qrc/app-bridge`（对该 `client_id`/`appId` 已开 quick）
+- [ ] 入口 B：RP 登录页 `create` 响应 `"quick":true` 且 `"clientId"` 与 grant 一致后见 app-bridge
+- [ ] `quick=false`：两入口均无 app-bridge
+- [ ] 经典与开放各至少一条入口 B 联邦路径通过
+
+详见 [`AI_SCAN_LOGIN_DUAL_MODE_REGRESSION.md`](AI_SCAN_LOGIN_DUAL_MODE_REGRESSION.md) §App Bridge。
 
 ---
 
