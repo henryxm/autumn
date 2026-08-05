@@ -283,14 +283,19 @@
                     ? vm.resolveScannerIconUrl(brief.icon)
                     : resolveScannerIconUrl(brief.icon, pageCtx);
             }
+            var quickPath = !!vm.appQuickActive;
             if (typeof vm.$set === 'function') {
                 vm.$set(vm, 'scannerDisplayName', name);
                 vm.$set(vm, 'scannerIconUrl', iconUrl);
-                vm.$set(vm, 'qrPhase', 'scanned');
+                if (!quickPath) {
+                    vm.$set(vm, 'qrPhase', 'scanned');
+                }
             } else {
                 vm.scannerDisplayName = name;
                 vm.scannerIconUrl = iconUrl;
-                vm.qrPhase = 'scanned';
+                if (!quickPath) {
+                    vm.qrPhase = 'scanned';
+                }
             }
         };
         vm.resetQrScannedState = function () {
@@ -302,6 +307,21 @@
                 vm.qrPhase = 'pending';
                 vm.scannerDisplayName = '';
                 vm.scannerIconUrl = '';
+            }
+            if (vm.appQuickActive != null || vm.appQuickPhase != null) {
+                if (typeof vm.$set === 'function') {
+                    vm.$set(vm, 'appQuickActive', false);
+                    vm.$set(vm, 'appQuickBusy', false);
+                    vm.$set(vm, 'appQuickPhase', 'idle');
+                    vm.$set(vm, 'appQuickHint', '');
+                    vm.$set(vm, 'appQuickTargetKey', '');
+                } else {
+                    vm.appQuickActive = false;
+                    vm.appQuickBusy = false;
+                    vm.appQuickPhase = 'idle';
+                    vm.appQuickHint = '';
+                    vm.appQuickTargetKey = '';
+                }
             }
         };
         vm.setQrStatus = function (text) {
@@ -328,7 +348,7 @@
         var pageCtx = ui.ctx || '';
         return function syncPlainHostScannedUi() {
             var phase = host.qrPhase || 'pending';
-            var scanned = phase === 'scanned' || phase === 'done';
+            var scanned = (phase === 'scanned' || phase === 'done') && !host.appQuickActive;
             if (pendingEl) {
                 pendingEl.style.display = scanned ? 'none' : '';
             }
@@ -416,6 +436,11 @@
                 this.qrPhase = 'pending';
                 this.scannerDisplayName = '';
                 this.scannerIconUrl = '';
+                this.appQuickActive = false;
+                this.appQuickBusy = false;
+                this.appQuickPhase = 'idle';
+                this.appQuickHint = '';
+                this.appQuickTargetKey = '';
             },
             resolveScannerIconUrl: function (icon) {
                 if (!icon) {
@@ -432,13 +457,30 @@
             applyScannerBrief: function (brief) {
                 this.scannerDisplayName = (brief && brief.displayName) ? brief.displayName : '';
                 this.scannerIconUrl = brief && brief.icon ? this.resolveScannerIconUrl(brief.icon) : '';
-                this.qrPhase = 'scanned';
+                if (!this.appQuickActive) {
+                    this.qrPhase = 'scanned';
+                }
             },
             setQrStatus: function (text) {
+                if (this.appQuickActive) {
+                    var t = text || '';
+                    if (/扫码/.test(t)) {
+                        this.appQuickPhase = 'waiting';
+                        this.appQuickHint = /成功|确认|授权/.test(t) ? '等待超然信确认…' : '请在超然信 APP 中确认登录';
+                        this.appQuickBusy = true;
+                        return;
+                    }
+                }
                 this.qrStatus = text || '';
             },
             markQrScanned: function (brief, statusText) {
                 this.applyScannerBrief(brief);
+                if (this.appQuickActive) {
+                    this.appQuickPhase = 'waiting';
+                    this.appQuickHint = '等待超然信确认…';
+                    this.appQuickBusy = true;
+                    return;
+                }
                 this.setQrStatus(statusText || '扫码成功，请在手机点击确认授权');
             },
             completeQrRedirect: function (target) {
@@ -614,7 +656,13 @@
                 }
                 if (data.status === 'SCANNED') {
                     self.applyScannerBrief(data.scannerBrief);
-                    self.setQrStatus(isOpenCredential(options) ? '扫码成功，请在手机点击确认授权' : '扫码成功，请在手机点击登录');
+                    if (self.appQuickActive) {
+                        self.appQuickPhase = 'waiting';
+                        self.appQuickHint = '等待超然信确认…';
+                        self.appQuickBusy = true;
+                    } else {
+                        self.setQrStatus(isOpenCredential(options) ? '扫码成功，请在手机点击确认授权' : '扫码成功，请在手机点击登录');
+                    }
                 }
                 if (isOpenCredential(options) && data.status === 'COMPLETED' && data.result && data.result.code) {
                     self.completeOpenQrcLogin(data.result.code, onUnavailable);
