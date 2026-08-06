@@ -185,11 +185,12 @@ onUserCancel(uuid):
 | **A 授权页预建票** | `AutumnQrc.resumeTicketNotify({ uuid, qrUrl, quick })` | 服务端 `fillAuthorizeModel` → 模板 `serverQuick`（来自 `qrc_client_grant.quick`） |
 | **B create 建票** | `AutumnQrc.startQrLogin` → `wakeClient({ ..., quick: res.data.quick })` | `TicketCreateResult.quick`（同字段）；可含 `clientId` 对照 |
 
-1. 浏览器：入口 A 用 resume；入口 B 用 create；均须先挂 SSE。
-2. 可选 `options.wakeClient({ uuid, qrUrl, host, renderQr, quick })`：返回 `true` 表示由站点决定何时 `renderQr()`；未配置则立即渲染二维码。
+1. 浏览器：入口 A 用 resume；入口 B 用 create；均须先挂 SSE（`onerror`/watchdog → `ticket/status`）。
+2. 可选 `options.wakeClient({ uuid, qrUrl, host, renderQr, quick, probeNonce })`：返回 `true` 表示由站点决定何时 `renderQr()`；未配置则立即渲染二维码。
    - `quick`：有 OAuth/`appId` 时取自 `qrc_client_grant.quick`；`false` 时只出码不探测；省略时回落站点 `chaoranWakeEnabled`（**仅无 client 的本站扫码**；授权页入口 A 必有 client，以 `serverQuick` 为准）。
    - `clientId`：建票响应 / 授权页 `serverClientId`，用于运维对照 grant。
-3. App Bridge（Account）：嵌 AS `/qrc/app-bridge` → loopback presence；成功后快捷登录走同一 uuid 的 confirm。
+   - `probeNonce`：建票 `data.probeNonce` / 授权页 `serverProbeNonce`；Account Bridge 签发 Probe Bearer 所需；缺省则跳过本机探测。
+3. App Bridge（Account）：嵌 AS `/qrc/app-bridge` → `probe-grant` + loopback presence（Bearer）；成功后快捷登录走同一 uuid 的 confirm。探测须晚于出码/SSE，失败零打扰、不得 `stopNotify`。
 4. 成功判据：浏览器 SSE/`status` 出现 `SCANNED`；探测失败保持二维码。
 
 站点协议：业务仓 `CLIENT_WAKE_LOGIN_PROTOCOL.md` §4.5。框架脚本：`statics/js/autumn-qrc-core.js`。双入口回归：`AI_SCAN_LOGIN_DUAL_MODE_REGRESSION.md` §7.5。

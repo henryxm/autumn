@@ -340,6 +340,7 @@ Web 浏览器用 `exchange` 调 `session/exchange`；PC/桌面客户端持久化
 | `status` | 固定 `PENDING` |
 | `clientId` | 票面 OAuth/OPC 客户端 id；有 client 上下文时下发，便于对照 `qrc_client_grant.quick` |
 | `quick` | 可选布尔。有 OAuth `clientId` 时取自 `qrc_client_grant.quick`：是否允许该客户端登录页经 App Bridge 探测本机超然信并展示快捷账号（默认 `false`，须在 AS 的 oauthrpmanage / opcmanage / oauthasmanage / clientgrant 显式开启）。无 client 上下文时省略/`null`，前端回落站点 `LoginPageConfig.chaoranWakeEnabled`。与 TLS 证书下发开关无关。 |
+| `probeNonce` | 可选字符串。建票时写入票 payload（`TicketPayloads.PROBE_NONCE`）；**仅**出现在 create 响应与授权页模型，**不**进 QR URL、**不**进 `ticket/status`。Account App Bridge 用其向 AS `probe-grant` 换短时 Probe Bearer。缺省则站点跳过本机探测（扫码不受影响）。 |
 
 ```json
 {
@@ -351,7 +352,8 @@ Web 浏览器用 `exchange` 调 `session/exchange`；PC/桌面客户端持久化
     "intent": "OAUTH_DEVICE",
     "status": "PENDING",
     "clientId": "bighub-web",
-    "quick": true
+    "quick": true,
+    "probeNonce": "base64url-random"
   }
 }
 ```
@@ -432,19 +434,23 @@ Web 浏览器用 `exchange` 调 `session/exchange`；PC/桌面客户端持久化
 
 ### GET `/qrc/scanticket/web/ticket/stream?uuid={uuid}`
 
-**SSE** 主通道（方案 C）。响应 `Content-Type: text/event-stream`，事件名 `status`，JSON 体与 `TicketStatusResult` 对齐（含 `scannerBrief`、`exchange`、`result`）。
+**SSE** 加速通道（方案 C：SSE + status 必达）。响应 `Content-Type: text/event-stream`，事件名 `status`，JSON 体与 `TicketStatusResult` 对齐（含 `scannerBrief`、`exchange`、`result`）。
 
-连接时 **catch-up** 当前状态（通常 `PENDING`）。PC 前端在 SSE 不可用或 watchdog 超时后降级 `GET .../ticket/status`。
+连接时 **catch-up** 当前状态（通常 `PENDING`）。PC 前端：
 
-响应头建议：`Cache-Control: no-cache`、`X-Accel-Buffering: no`（Nginx 需关闭缓冲）。
+- SSE `onerror` → **立即**降级 `GET .../ticket/status`
+- watchdog（默认约 **2s** 未收到可用状态）→ 启动 status 轮询
+- `ticket/status` 为**真相源**；SSE 正常时可仍保持单条 stream，但降级后不以「禁止并行 status」为由拖死扫码
+
+响应头建议：`Cache-Control: no-cache`、`X-Accel-Buffering: no`（Nginx 仅对 stream 窄路径关缓冲；见业务仓 `SCAN_LOGIN_DEPLOY.md` §4.3）。
 
 ---
 
 ### GET `/qrc/scanticket/web/ticket/status?uuid={uuid}`
 
-**降级轮询**（SSE 不可用/超时）。**响应 `data`**：同 `TicketStatusResult`（§2.6）。
+**必达轮询 / SSE 降级**。**响应 `data`**：同 `TicketStatusResult`（§2.6）。
 
-PC 前端应在 `SCANNED` 展示 `scannerBrief`；在 `CONFIRMED`/`COMPLETED` 且存在 `exchange` 时调用 `session/exchange`。SSE 正常时不应并行轮询本端点。
+PC 前端应在 `SCANNED` 展示 `scannerBrief`；在 `CONFIRMED`/`COMPLETED` 且存在 `exchange` 时调用 `session/exchange`。SSE 不可用、`onerror` 或 watchdog 触发后**必须**轮询本端点。
 
 ---
 

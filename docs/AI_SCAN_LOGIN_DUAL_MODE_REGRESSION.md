@@ -141,7 +141,7 @@ sequenceDiagram
 | 凭证统一 | `ScanLoginCredentialService` 单一入口 |
 | 完成编排对称 | 经典 `WebOauthLoginService` / 开放 `ConnectLoginService` |
 | AS 发码 | OPL `appId` 自动走 `OpenCodeService` |
-| 联邦 Phase 2 | 双 Webhook + SSE；RP/AS 统一方案 C（SSE 主 + status 降级） |
+| 联邦 Phase 2 | 双 Webhook + SSE；RP/AS 统一方案 C（SSE 加速 + status 必达） |
 | 门面 | `ScanLoginFacade` 统一 B2/D/B3；`ScanTicketController` 支持凭证建票 |
 
 ---

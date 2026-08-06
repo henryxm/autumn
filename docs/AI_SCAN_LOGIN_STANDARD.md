@@ -29,13 +29,13 @@
 | 子模式 | 场景 | 建票入口 | 完成登录 |
 |--------|------|----------|----------|
 | **B1** | 第三方 Web Redirect | `GET /oauth2/authorize` | `redirect_uri?code=` → token → userInfo |
-| **B2** | 同源 Autumn PC 扫码 | `POST /qrc/scanticket/web/ticket/create` | SSE `GET .../ticket/stream` → 降级 `ticket/status` → `POST .../session/exchange` |
-| **D** | Autumn RP 联邦扫码 | `POST /client/oauth2/qrc/web/ticket/create` | SSE `GET .../ticket/stream` → 自动 `completeRemoteOAuthCallback` |
+| **B2** | 同源 Autumn PC 扫码 | `POST /qrc/scanticket/web/ticket/create` | SSE `GET .../ticket/stream` → 必达 `ticket/status` → `POST .../session/exchange` |
+| **D** | Autumn RP 联邦扫码 | `POST /client/oauth2/qrc/web/ticket/create` | SSE `GET .../ticket/stream` → 必达 `ticket/status`；入站自动完成 |
 
 前端统一使用 **`autumn-qrc-core.js`**：
 
-- `mode: 'as'` → B2（`/qrc/scanticket/web/*`，**SSE** `GET /ticket/stream` + 降级 `ticket/status`）
-- `mode: 'rp'` → D（`/client/oauth2/qrc/web/*`，**SSE** `GET /ticket/stream`）
+- `mode: 'as'` → B2（`/qrc/scanticket/web/*`，**SSE** `GET /ticket/stream` + 必达 `ticket/status`）
+- `mode: 'rp'` → D（`/client/oauth2/qrc/web/*`，**SSE** `GET /ticket/stream` + 必达 `ticket/status`）
 - **跨站 RP 联邦**：QR 内容为 **AS 域名**（如 `https://a.com/qrc/api/v1/t/{uuid}`），不得使用 RP 本域自建 QR。
 
 ### 2.2 B网站 ← A应用 联邦时序（D 模式 · 双 Webhook + SSE）
@@ -45,7 +45,7 @@
 3. 浏览器建立 **一条** `GET /client/oauth2/qrc/web/ticket/stream?uuid=`（SSE），连接时 catch-up 当前状态
 4. A应用扫 QR → `scan` → AS `POST` Webhook `qrc.scanned` → B `inbound` → SSE 推送 `SCANNED` + `scannerBrief`（「请在手机点击确认」）
 5. A应用 `confirm` → AS `POST` Webhook `qrc.authorized` → B `inbound` → 后台按 `browserSessionId` 自动 `completeRemoteOAuthCallback` → SSE 推送 `COMPLETED` + `redirectUrl` → 浏览器跳转
-6. **方案 C（SSE 主 + 轮询降级）**：SSE 正常时浏览器 **仅一条** stream 连接、**无**并行 `ticket/status` 轮询；当 `EventSource` 不可用、`onerror` 或 watchdog（默认 5s 内未收到 `status`）时，降级 `GET /client/oauth2/qrc/web/ticket/status?uuid=`；B 后台仍不 HTTP 调用 AS `open/status`
+6. **方案 C（SSE 加速 + status 必达）**：浏览器建立 `GET .../ticket/stream`（SSE）；`EventSource` 不可用、`onerror` 或 watchdog（默认约 **2s**）时降级 `GET .../ticket/status`。**status 为真相源**；SSE 为加速推送。B 后台仍不 HTTP 调用 AS `open/status`。App Bridge presence 与本通道解耦，不得关闭 stream。
 7. Session 绑定失效时 SSE 推送 `SESSION_EXPIRED`，前端提示刷新二维码
 
 完整配置见 **`docs/AI_AUTH_SITE_ROLES.md` §3**。
@@ -57,8 +57,8 @@
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | POST | `/ticket/create` | 代理 AS 建票，绑定 `browserSessionId` |
-| GET | `/ticket/stream` | **SSE** 推送状态（主通道） |
-| GET | `/ticket/status` | **降级轮询**（SSE 不可用/超时） |
+| GET | `/ticket/stream` | **SSE** 加速推送 |
+| GET | `/ticket/status` | **必达轮询**（SSE 不可用 / onerror / watchdog） |
 | POST | `/ticket/cancel` | 取消 |
 | POST | `/inbound` | AS Webhook 入站（服务端回调，非浏览器） |
 

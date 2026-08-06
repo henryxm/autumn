@@ -240,7 +240,7 @@ flowchart TB
 | `ClientOauth2Controller` | callback、bind 页、冲突页 |
 | `ClientOauth2QrcController` | `/client/oauth2/qrc/web/*` REST |
 | `ScanTicketService` / QRC Open API | AS 侧建票与 POLL_CODE |
-| `autumn-qrc-core.js` | 前端 AS/RP 统一 **SSE 主 + ticket/status 降级**（方案 C） |
+| `autumn-qrc-core.js` | 前端 AS/RP 统一 **SSE 加速 + ticket/status 必达**（方案 C；onerror 立即 poll） |
 
 ---
 

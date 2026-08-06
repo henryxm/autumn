@@ -12,8 +12,8 @@
 
 | 标准 | 适用场景 | 典型子模式 | 建票 | 取结果 / 完成登录 | 前端/调用方 |
 |------|----------|------------|------|-------------------|-------------|
-| **标准一：网页授权** | 浏览器登录页、OAuth 授权页 | **B2** 同源 PC 扫码 | `POST /qrc/scanticket/web/ticket/create` | **SSE** `GET .../ticket/stream` + 降级 `ticket/status` → `POST .../session/exchange` | `autumn-qrc-core.js` `mode:'as'` |
-| | | **D** RP 联邦（B←A） | `POST /client/oauth2/qrc/web/ticket/create` | **SSE** `GET .../ticket/stream`；入站自动 `completeRemoteOAuthCallback` | `mode:'rp'` 或 `qrProviders` |
+| **标准一：网页授权** | 浏览器登录页、OAuth 授权页 | **B2** 同源 PC 扫码 | `POST /qrc/scanticket/web/ticket/create` | **SSE** `GET .../ticket/stream` + **必达** `ticket/status` → `POST .../session/exchange` | `autumn-qrc-core.js` `mode:'as'` |
+| | | **D** RP 联邦（B←A） | `POST /client/oauth2/qrc/web/ticket/create` | **SSE** `GET .../ticket/stream` + status 降级；入站自动 `completeRemoteOAuthCallback` | `mode:'rp'` 或 `qrProviders` |
 | | | **B1** OAuth Redirect | `GET /oauth2/authorize` | `redirect_uri?code=` → token | 浏览器跳转 |
 | **标准二：服务端建票** | 第三方后台、Native、自建 UI | **B3** Open API | `POST /qrc/api/v1/ticket/open/create` | 按 `delivery` 轮询 / Webhook / DeepLink → `/oauth2/token` | 服务端 HTTP，无 Autumn 登录页 |
 
@@ -164,7 +164,7 @@ stateDiagram-v2
 
 ### 3.3 D — RP 联邦扫码（b.com ← a.com）
 
-**场景**：b.com 登录页扫码，身份来自 a.com；**方案 C**——浏览器优先一条 SSE，SSE 不可用时降级 `ticket/status`；AS 两次 Webhook 驱动状态与登录完成。
+**场景**：b.com 登录页扫码，身份来自 a.com；**方案 C**——SSE 加速推送，`onerror`/watchdog（约 2s）降级 `ticket/status`（真相源）；AS 两次 Webhook 驱动状态与登录完成。
 
 ```mermaid
 sequenceDiagram
@@ -248,7 +248,7 @@ sequenceDiagram
 
 **D 模式降级路径（方案 C）**
 
-- `GET .../ticket/status?uuid=` — 仅当 SSE 不可用或超时后由 `autumn-qrc-core.js` 启动轮询
+- `GET .../ticket/status?uuid=` — SSE 不可用、`onerror` 或 watchdog 后由 `autumn-qrc-core.js` 启动轮询（status 必达）
 
 ### 3.4 B1 — OAuth 浏览器 Redirect（简述）
 
@@ -362,7 +362,8 @@ sequenceDiagram
 
 **RP 联邦明确不做的事**
 
-- B 前端 **不** 轮询 `local-status` / `ticket/status`，**不** `POST complete`
+- B 前端 **不** 轮询 AS `open/status` / 旧 `local-status`，**不** `POST complete`（登录由入站自动完成）
+- B 前端 **可** 在 SSE `onerror`/watchdog 后轮询 **本域** `GET .../ticket/status`（方案 C 必达通道）
 - B 后台 **不** HTTP 调用 AS `open/status` 代理轮询
 
 ---
@@ -433,7 +434,8 @@ D 模式若冲突，`completeOnInbound` 将 `redirectUrl` 设为 bind choice 页
 | 入口 | 典型路径 | Intent | `quick` 下发 | 前端挂载 |
 |------|----------|--------|--------------|----------|
 | **A. 授权页预建票** | `GET /oauth2/authorize` 或 `GET /open/oauth2/authorize` → `login.html` | `OAUTH_AUTHORIZE` | `ScanTicketService.fillAuthorizeModel` → `serverQuick` | `resumeTicketNotify({ uuid, qrUrl, quick })` |
-| **B. RP / 登录页建票** | RP `POST .../ticket/create`（联邦 D）或 AS `open/create` / 本站扫码 | `OAUTH_DEVICE`（及本站其它 Intent） | `toCreateResult` → `res.data.quick` + `clientId` | `startQrLogin` → `wakeClient({ quick })` |
+| **B. RP / 登录页建票** | RP `POST .../ticket/create`（联邦 D）或 AS `open/create` / 本站扫码 | `OAUTH_DEVICE`（及本站其它 Intent） | `toCreateResult` → `res.data.quick` + `clientId` + `probeNonce` | `startQrLogin` → `wakeClient({ quick, probeNonce })` |
+
 
 **同一真相**：两种入口都读 AS 上同一行 `qrc_client_grant.quick`（`ClientGrantService.isQuick(clientId)`）。`clientId` 对经典为 OAuth `client_id`，对开放为 OPL `appId`。
 
