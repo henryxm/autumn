@@ -16,6 +16,7 @@ import java.io.ObjectInputFilter;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.Date;
@@ -24,6 +25,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.shiro.session.Session;
 import org.apache.shiro.subject.PrincipalCollection;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 
 /**
@@ -73,8 +75,7 @@ public class SysShiroSessionService extends ModuleService<SysShiroSessionDao, Sy
         try {
             String payload = serializeSession(session);
             if (StringUtils.isBlank(payload)) {
-                log.warn("Skip persist shiro session: serialize failed, sessionId={}, sessionClass={}",
-                        sessionId, session.getClass().getName());
+                log.warn("Skip persist shiro session: serialize failed, sessionId={}, sessionClass={}", sessionId, session.getClass().getName());
                 return;
             }
             Date now = new Date();
@@ -82,20 +83,42 @@ public class SysShiroSessionService extends ModuleService<SysShiroSessionDao, Sy
             Date expire = new Date(now.getTime() + timeoutMs);
             Date lastAccess = session.getLastAccessTime() != null ? session.getLastAccessTime() : now;
 
-            SysShiroSessionEntity row = baseMapper.getBySessionId(sessionId);
-            if (row == null) {
-                row = new SysShiroSessionEntity();
-                row.setSessionId(sessionId);
-            }
+            // 按 session_id 先 UPDATE 再 INSERT，避免集群并发「先查后插」撞唯一键
+            SysShiroSessionEntity row = new SysShiroSessionEntity();
+            row.setSessionId(sessionId);
             row.setUser(userUuid);
             row.setPayload(payload);
             row.setExpireTime(expire);
             row.setLastAccessTime(lastAccess);
             row.setUpdateTime(now);
-            saveOrUpdate(row);
+            upsertBySessionId(row);
         } catch (Exception e) {
             log.warn("Persist shiro session to DB failed, sessionId={}, cause={}", sessionId, e.getMessage());
         }
+    }
+
+    /** session_id 唯一：先更新；0 行则插入；并发撞键则再更新。 */
+    private void upsertBySessionId(SysShiroSessionEntity row) {
+        if (baseMapper.updateBySessionId(row) > 0) {
+            return;
+        }
+        try {
+            baseMapper.insert(row);
+        } catch (RuntimeException e) {
+            if (!isDuplicateKey(e)) {
+                throw e;
+            }
+            baseMapper.updateBySessionId(row);
+        }
+    }
+
+    private static boolean isDuplicateKey(Throwable e) {
+        for (Throwable t = e; t != null; t = t.getCause()) {
+            if (t instanceof DuplicateKeyException || t instanceof SQLIntegrityConstraintViolationException) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public Session getValidBySessionId(Serializable sessionId) {

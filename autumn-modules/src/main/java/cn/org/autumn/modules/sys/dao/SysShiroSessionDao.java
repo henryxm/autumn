@@ -9,6 +9,7 @@ import org.apache.ibatis.annotations.DeleteProvider;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.SelectProvider;
+import org.apache.ibatis.annotations.UpdateProvider;
 import org.springframework.stereotype.Repository;
 
 @Mapper
@@ -17,6 +18,10 @@ public interface SysShiroSessionDao extends BaseMapper<SysShiroSessionEntity> {
 
     @SelectProvider(type = SysShiroSessionDaoSql.class, method = "getBySessionId")
     SysShiroSessionEntity getBySessionId(@Param("sessionId") String sessionId);
+
+    /** 按业务唯一键 session_id 更新；0 行表示尚不存在，调用方再 insert。 */
+    @UpdateProvider(type = SysShiroSessionDaoSql.class, method = "updateBySessionId")
+    int updateBySessionId(SysShiroSessionEntity entity);
 
     @DeleteProvider(type = SysShiroSessionDaoSql.class, method = "deleteBySessionId")
     int deleteBySessionId(@Param("sessionId") String sessionId);

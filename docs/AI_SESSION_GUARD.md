@@ -99,6 +99,7 @@
 ### 6.2 写 / 删
 
 - 创建 / 更新：Redis（TTL **1 天**）始终可写；**DB 仅在已解析到登录用户（`user` 非空）时 upsert**，匿名 Session 不落库。
+- DB upsert：按 `session_id` **先 UPDATE 再 INSERT**；集群并发撞唯一键时捕获后重试 UPDATE（勿「先查后插」按主键 `id` 的 `saveOrUpdate`）。
 - 删除（登出、`ShiroSessionService.deleteSession` / forceLogout、SessionDAO.delete）：同步删 cache、Redis、DB 行。
 
 ### 6.3 时效

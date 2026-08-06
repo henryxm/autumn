@@ -15,6 +15,12 @@ public class SysShiroSessionDaoSql extends RuntimeSql {
         return "SELECT * FROM " + tbl() + " WHERE " + quote("session_id") + " = #{sessionId}" + limitOne();
     }
 
+    public String updateBySessionId() {
+        return "UPDATE " + tbl() + " SET " + quote("user") + " = #{user}, " + quote("payload") + " = #{payload}, "
+                + quote("expire_time") + " = #{expireTime}, " + quote("last_access_time") + " = #{lastAccessTime}, "
+                + quote("update_time") + " = #{updateTime} WHERE " + quote("session_id") + " = #{sessionId}";
+    }
+
     public String deleteBySessionId() {
         return "DELETE FROM " + tbl() + " WHERE " + quote("session_id") + " = #{sessionId}";
     }
