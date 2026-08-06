@@ -395,7 +395,7 @@
         var ctx = options.ctx || '';
         var mode = normalizeMode(options.mode);
         var pollIntervalMs = options.pollIntervalMs || 2000;
-        var sseFallbackDelayMs = options.sseFallbackDelayMs == null ? 5000 : options.sseFallbackDelayMs;
+        var sseFallbackDelayMs = options.sseFallbackDelayMs == null ? 2000 : options.sseFallbackDelayMs;
         var sseFallbackOnError = options.sseFallbackOnError !== false;
         var boxId = options.boxId || 'loginQrcodeBox';
         var prefix = apiPrefix(mode, ctx);
@@ -702,6 +702,7 @@
                             }
                         };
                         // SSE 先挂：唤起期间 App scan 即可推送到浏览器（同一 uuid）。
+                        // presence 探测必须在其后、且失败不得影响扫码通道。
                         self.startTicketNotify(onUnavailable);
                         var wakeHandled = false;
                         if (typeof options.wakeClient === 'function') {
@@ -722,6 +723,9 @@
                         }
                         if (!wakeHandled) {
                             ensureRender();
+                        } else if (self.qrPhase === 'pending' && (!self.qrStatus || self.qrStatus.indexOf('打开客户端') >= 0)) {
+                            // wake 已出码时恢复等待文案，避免一直停在「正在打开客户端」
+                            self.qrStatus = '等待扫码...';
                         }
                     },
                     error: function (xhr) {
@@ -917,6 +921,8 @@
                 self.stopNotify();
                 self.qrcNotifyChannel = 'sse';
                 self._sseUuid = self.qrcUuid;
+                self.sseOpened = false;
+                self.sseReceivedStatus = false;
                 var streamUrl = prefix + '/ticket/stream?uuid=' + encodeURIComponent(self.qrcUuid);
                 var es = new EventSource(streamUrl);
                 self.qrcEventSource = es;
@@ -935,16 +941,23 @@
                 });
                 es.onopen = function () {
                     self.sseOpened = true;
-                    self.scheduleSseFallback(onUnavailable);
                 };
                 es.onerror = function () {
                     if (self.qrPhase === 'done') {
                         return;
                     }
                     if (sseFallbackOnError) {
+                        // 立刻拉一次 + 开轮询，不把扫码成败绑在 SSE 上
+                        try {
+                            self.pollQrStatus(onUnavailable);
+                        } catch (ePoll) {
+                            /* ignore */
+                        }
                         self.startPollFallback(onUnavailable);
                     }
                 };
+                // 不依赖 onopen：连接卡住/失败时也能进入 status 轮询
+                self.scheduleSseFallback(onUnavailable);
             },
             startRpNotify: function (onUnavailable) {
                 this.startSseNotify(onUnavailable);
