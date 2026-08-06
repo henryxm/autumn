@@ -29,6 +29,12 @@ public class TicketCreateResult {
      */
     private Boolean quick;
 
+    /**
+     * 探测签发密钥材料：仅建票响应 / 授权页下发，不进 QR、不进 status 轮询。
+     * Bridge {@code probe-grant} 须与票上 payload 一致。
+     */
+    private String probeNonce;
+
     public static TicketCreateResult of(String uuid, String qrUrl, long expireIn, String intent, String status) {
         TicketCreateResult result = new TicketCreateResult();
         result.setUuid(uuid);

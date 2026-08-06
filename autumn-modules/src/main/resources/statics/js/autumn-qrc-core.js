@@ -713,7 +713,8 @@
                                     host: self,
                                     renderQr: ensureRender,
                                     // 建票下发的 qrc_client_grant.quick；无 client 时可能为 undefined
-                                    quick: res.data.quick
+                                    quick: res.data.quick,
+                                    probeNonce: res.data.probeNonce
                                 }) === true;
                             } catch (wakeErr) {
                                 wakeHandled = false;
@@ -1000,7 +1001,8 @@
                             qrUrl: qrUrl,
                             host: self,
                             renderQr: ensureRender,
-                            quick: resumeOpts.quick
+                            quick: resumeOpts.quick,
+                            probeNonce: resumeOpts.probeNonce
                         }) === true;
                     } catch (wakeErr) {
                         wakeHandled = false;

@@ -109,6 +109,7 @@ public class ScanTicketService extends ModuleService<ScanTicketDao, ScanTicketEn
         model.addAttribute("uuid", ticket.getUuid());
         model.addAttribute("qrUrl", buildQrUrl(request, ticket.getUuid()));
         model.addAttribute("pollIntervalMs", getScanLoginConfig().getPollIntervalMs());
+        model.addAttribute("probeNonce", TicketPayloads.get(ticket, TicketPayloads.PROBE_NONCE));
         String clientId = TicketPayloads.get(ticket, "clientId");
         model.addAttribute("clientId", clientId);
         model.addAttribute("scope", TicketPayloads.get(ticket, "scope"));
@@ -310,6 +311,7 @@ public class ScanTicketService extends ModuleService<ScanTicketDao, ScanTicketEn
 
     public TicketCreateResult toCreateResult(TicketSnapshot ticket) {
         TicketCreateResult result = TicketCreateResult.of(ticket.getUuid(), buildQrUrl(ticket.getUuid()), getScanLoginConfig().getTicketTtlSeconds(), ticket.getIntent(), ticket.getStatus());
+        result.setProbeNonce(TicketPayloads.get(ticket, TicketPayloads.PROBE_NONCE));
         String clientId = TicketPayloads.get(ticket, "clientId");
         if (StringUtils.isNotBlank(clientId)) {
             result.setClientId(clientId);
@@ -414,6 +416,11 @@ public class ScanTicketService extends ModuleService<ScanTicketDao, ScanTicketEn
         ticket.setStatus(TicketStatus.PENDING);
         if (ctx.getPayload() != null) {
             ticket.setPayload(new HashMap<>(ctx.getPayload()));
+        } else {
+            ticket.setPayload(new HashMap<>());
+        }
+        if (StringUtils.isBlank(TicketPayloads.get(ticket, TicketPayloads.PROBE_NONCE))) {
+            ticket.getPayload().put(TicketPayloads.PROBE_NONCE, Uuid.uuid());
         }
         ticket.setIp(ctx.getIp());
         ticket.setAgent(ctx.getAgent());
