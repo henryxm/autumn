@@ -420,6 +420,7 @@
             },
             stopNotify: function () {
                 this.clearSseFallbackTimer();
+                this.clearConfirmWatch();
                 if (this.qrcPollTimer) {
                     clearInterval(this.qrcPollTimer);
                     this.qrcPollTimer = null;
@@ -431,6 +432,103 @@
                 this.qrcNotifyChannel = null;
                 this.sseOpened = false;
                 this.sseReceivedStatus = false;
+            },
+            clearConfirmWatch: function () {
+                if (this._confirmWatchTimer) {
+                    clearInterval(this._confirmWatchTimer);
+                    this._confirmWatchTimer = null;
+                }
+            },
+            /**
+             * 扫码/快捷确认等待期间并行轮询，避免 SSE 漏推 COMPLETED 导致页面卡住。
+             */
+            ensureConfirmWatch: function (onUnavailable) {
+                var self = this;
+                if (self._confirmWatchTimer || self.qrPhase === 'done') {
+                    return;
+                }
+                self._confirmWatchTimer = setInterval(function () {
+                    if (self.qrPhase === 'done') {
+                        self.clearConfirmWatch();
+                        return;
+                    }
+                    self.pollQrStatus(onUnavailable);
+                }, Math.max(1000, Math.min(pollIntervalMs, 2000)));
+            },
+            forceNavigate: function (target) {
+                var url = target != null && String(target) !== '' ? String(target) : '/';
+                var win = window.top || window;
+                try {
+                    win.location.href = url;
+                } catch (e1) {
+                    /* ignore */
+                }
+                window.setTimeout(function () {
+                    try {
+                        win.location.replace(url);
+                    } catch (e2) {
+                        try {
+                            win.location.reload();
+                        } catch (e3) {
+                            /* ignore */
+                        }
+                    }
+                }, 800);
+            },
+            finishSessionExchange: function (exchange, onUnavailable) {
+                var self = this;
+                if (self.qrPhase === 'done') {
+                    return;
+                }
+                self.qrPhase = 'done';
+                if (self.appQuickActive) {
+                    self.appQuickPhase = 'waiting';
+                    self.appQuickHint = '登录成功，正在跳转…';
+                    self.appQuickBusy = true;
+                }
+                self.qrStatus = '登录成功，正在跳转...';
+                self.stopNotify();
+                $.ajax({
+                    type: 'POST',
+                    url: prefix + '/session/exchange',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ data: { exchange: exchange, rememberMe: true } }),
+                    dataType: 'json',
+                    success: function (result) {
+                        if (result && result.code === 0) {
+                            var target = result.data != null ? String(result.data) : null;
+                            if (typeof options.onSuccess === 'function') {
+                                try {
+                                    options.onSuccess(target, self);
+                                } catch (e) {
+                                    /* fall through to force navigate */
+                                }
+                            }
+                            self.forceNavigate(target || '/');
+                            return;
+                        }
+                        // exchange 失败但本地可能已有会话：尝试刷新恢复
+                        if (self.appQuickActive) {
+                            self.appQuickHint = (result && result.msg) || '登录可能已完成，正在刷新…';
+                        }
+                        self.qrStatus = (result && result.msg) || '登录失败';
+                        window.setTimeout(function () {
+                            self.recoverAfterMissingSession();
+                        }, 400);
+                    },
+                    error: function () {
+                        if (typeof onUnavailable === 'function') {
+                            onUnavailable(true);
+                        }
+                        if (self.appQuickActive) {
+                            self.appQuickHint = '网络异常，正在尝试刷新…';
+                        }
+                        self.qrStatus = '网络异常，请刷新重试';
+                        window.setTimeout(function () {
+                            self.recoverAfterMissingSession();
+                        }, 500);
+                    }
+                });
             },
             resetQrScannedState: function () {
                 this.qrPhase = 'pending';
@@ -492,14 +590,22 @@
                 } else {
                     this.qrPhase = 'done';
                 }
+                if (this.appQuickActive) {
+                    this.appQuickPhase = 'waiting';
+                    this.appQuickHint = '登录成功，正在跳转…';
+                    this.appQuickBusy = true;
+                }
                 this.setQrStatus('授权成功，正在跳转...');
                 this.stopNotify();
                 var url = target != null && String(target) !== '' ? String(target) : '/';
                 if (typeof options.onSuccess === 'function') {
-                    options.onSuccess(url, this);
-                } else {
-                    (window.top || window).location.href = url;
+                    try {
+                        options.onSuccess(url, this);
+                    } catch (e) {
+                        /* ignore */
+                    }
                 }
+                this.forceNavigate(url);
             },
             recoverAfterMissingSession: function () {
                 var self = this;
@@ -663,6 +769,7 @@
                     } else {
                         self.setQrStatus(isOpenCredential(options) ? '扫码成功，请在手机点击确认授权' : '扫码成功，请在手机点击登录');
                     }
+                    self.ensureConfirmWatch(onUnavailable);
                 }
                 if (isOpenCredential(options) && data.status === 'COMPLETED' && data.result && data.result.code) {
                     self.completeOpenQrcLogin(data.result.code, onUnavailable);
@@ -670,37 +777,22 @@
                 }
                 if (typeof options.onAuthorizeExchange === 'function' && (data.status === 'CONFIRMED' || data.status === 'COMPLETED') && data.exchange) {
                     self.stopNotify();
+                    if (self.appQuickActive) {
+                        self.appQuickHint = '登录成功，正在跳转…';
+                    }
                     options.onAuthorizeExchange(data.exchange, self);
                     return;
                 }
                 if ((data.status === 'CONFIRMED' || data.status === 'COMPLETED') && data.exchange) {
-                    self.qrPhase = 'done';
-                    self.qrStatus = '登录成功，正在跳转...';
-                    self.stopNotify();
-                    $.ajax({
-                        type: 'POST',
-                        url: prefix + '/session/exchange',
-                        contentType: 'application/json',
-                        data: JSON.stringify({ data: { exchange: data.exchange, rememberMe: true } }),
-                        dataType: 'json',
-                        success: function (result) {
-                            if (result.code === 0) {
-                                var target = result.data != null ? String(result.data) : null;
-                                if (typeof options.onSuccess === 'function') {
-                                    options.onSuccess(target, self);
-                                } else if (target) {
-                                    (window.top || window).location.href = target;
-                                } else {
-                                    (window.top || window).location.href = 'index.html';
-                                }
-                            } else {
-                                self.qrStatus = result.msg || '登录失败';
-                            }
-                        },
-                        error: function () {
-                            self.qrStatus = '网络异常，请刷新二维码重试';
-                        }
-                    });
+                    self.finishSessionExchange(data.exchange, onUnavailable);
+                    return;
+                }
+                if ((data.status === 'CONFIRMED' || data.status === 'COMPLETED') && !data.exchange) {
+                    // 无 exchange 但已完成：会话可能已建立，刷新避免卡死
+                    if (self.appQuickActive) {
+                        self.appQuickHint = '登录成功，正在刷新…';
+                    }
+                    self.recoverAfterMissingSession();
                     return;
                 }
                 self.handleQrTerminalStatus(data.status);
@@ -733,12 +825,13 @@
                         if (result.code === 0) {
                             var target = result.data != null ? String(result.data) : null;
                             if (typeof options.onSuccess === 'function') {
-                                options.onSuccess(target, self);
-                            } else if (target) {
-                                (window.top || window).location.href = target;
-                            } else {
-                                (window.top || window).location.href = 'index.html';
+                                try {
+                                    options.onSuccess(target, self);
+                                } catch (e) {
+                                    /* ignore */
+                                }
                             }
+                            self.forceNavigate(target || 'index.html');
                         } else {
                             self.qrStatus = result.msg || '登录失败';
                         }
@@ -749,6 +842,9 @@
                             return;
                         }
                         self.qrStatus = '网络异常，请刷新二维码重试';
+                        window.setTimeout(function () {
+                            self.recoverAfterMissingSession();
+                        }, 500);
                     }
                 });
             },
@@ -917,6 +1013,7 @@
                 }
                 if (data.status === 'SCANNED') {
                     self.markQrScanned(data.scannerBrief, '扫码成功，请在手机点击确认授权');
+                    self.ensureConfirmWatch(onUnavailable);
                 }
                 if (data.status === 'SESSION_EXPIRED') {
                     self.resetQrScannedState();
