@@ -202,11 +202,12 @@ public class ScanTicketService extends ModuleService<ScanTicketDao, ScanTicketEn
             ConfirmResult result = handler.onConfirm(ticket, scanner);
             ticket.setSubject(scanner.getUuid());
             ticket.setStatus(TicketStatus.CONFIRMED);
+            // Always merge result map (e.g. SELF_WEB_LOGIN accessToken with completed=false)
+            if (result != null && result.getResult() != null && !result.getResult().isEmpty()) {
+                ticket.setResult(result.getResult());
+            }
             if (result != null && result.isCompleted()) {
                 ticket.setStatus(TicketStatus.COMPLETED);
-                if (result.getResult() != null) {
-                    ticket.setResult(result.getResult());
-                }
                 if (StringUtils.isNotBlank(result.getRedirect())) {
                     ticket.setRedirect(result.getRedirect());
                 }
@@ -215,6 +216,9 @@ public class ScanTicketService extends ModuleService<ScanTicketDao, ScanTicketEn
                 ticket.setExchange(result.getExchange());
             }
             if (result != null && StringUtils.isNotBlank(result.getDeepLink())) {
+                if (ticket.getResult() == null) {
+                    ticket.setResult(new HashMap<>());
+                }
                 ticket.getResult().put("deepLink", result.getDeepLink());
             }
             saveTicket(ticket);
