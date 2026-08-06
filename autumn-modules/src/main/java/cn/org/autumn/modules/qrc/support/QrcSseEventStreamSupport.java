@@ -2,6 +2,7 @@ package cn.org.autumn.modules.qrc.support;
 
 import cn.org.autumn.handler.MessageHandler;
 import cn.org.autumn.service.RedisListenerService;
+import cn.org.autumn.utils.ExceptionUtils;
 import com.alibaba.fastjson2.JSON;
 import java.io.IOException;
 import java.util.Iterator;
@@ -123,7 +124,12 @@ public class QrcSseEventStreamSupport<T> {
             emitter.send(SseEmitter.event().name("status").data(jsonSerializer.apply(event), MediaType.APPLICATION_JSON));
             return true;
         } catch (IOException e) {
-            log.warn("{} SSE send failed uuid={}: {}", label, uuidExtractor.apply(event), e.getMessage());
+            // 浏览器 stopNotify/关页导致的 Broken pipe 属预期，降为 debug 避免刷屏
+            if (ExceptionUtils.isClientDisconnectException(e)) {
+                log.debug("{} SSE client gone uuid={}: {}", label, uuidExtractor.apply(event), e.getMessage());
+            } else {
+                log.warn("{} SSE send failed uuid={}: {}", label, uuidExtractor.apply(event), e.getMessage());
+            }
             try {
                 emitter.completeWithError(e);
             } catch (Exception ignored) {

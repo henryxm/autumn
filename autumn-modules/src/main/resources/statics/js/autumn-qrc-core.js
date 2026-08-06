@@ -412,6 +412,8 @@
             sseOpened: false,
             sseReceivedStatus: false,
             sseFallbackTimer: null,
+            _sseUuid: '',
+            _confirmWatchTimer: null,
             clearSseFallbackTimer: function () {
                 if (this.sseFallbackTimer) {
                     clearTimeout(this.sseFallbackTimer);
@@ -432,6 +434,7 @@
                 this.qrcNotifyChannel = null;
                 this.sseOpened = false;
                 this.sseReceivedStatus = false;
+                this._sseUuid = '';
             },
             clearConfirmWatch: function () {
                 if (this._confirmWatchTimer) {
@@ -906,8 +909,13 @@
                     self.startPollFallback(onUnavailable);
                     return;
                 }
+                // 同票已在听：不重连，避免无故 close → 服务端 Broken pipe、扫码丢推送
+                if (self.qrcEventSource && self.qrcNotifyChannel === 'sse' && self._sseUuid === self.qrcUuid) {
+                    return;
+                }
                 self.stopNotify();
                 self.qrcNotifyChannel = 'sse';
+                self._sseUuid = self.qrcUuid;
                 var streamUrl = prefix + '/ticket/stream?uuid=' + encodeURIComponent(self.qrcUuid);
                 var es = new EventSource(streamUrl);
                 self.qrcEventSource = es;
