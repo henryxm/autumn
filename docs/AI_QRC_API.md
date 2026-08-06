@@ -102,7 +102,7 @@ Open API 客户端凭证写在 **JSON body** 的 `clientId` / `clientSecret`，*
 |------|------|------------|
 | `PENDING` | 已建票，待扫码 | APP 可 scan |
 | `SCANNED` | 已扫码，待用户确认 | APP 展示确认页；PC 可展示 `scannerBrief` |
-| `CONFIRMED` | 用户已确认 | `SELF_WEB_LOGIN` / `OAUTH_AUTHORIZE`：PC 用 `exchange` 换 Session |
+| `CONFIRMED` | 用户已确认 | `SELF_WEB_LOGIN`：Web 用 `exchange` 换 Session；桌面/API 用 `result.accessToken`。`OAUTH_AUTHORIZE`：浏览器用 `exchange` 换 Session |
 | `COMPLETED` | 业务完成 | Open API 轮询可取 `code` / `accessToken`；或已有 `redirect` |
 | `DENIED` | 用户拒绝 | 停止轮询，提示重新扫码 |
 | `CANCELLED` | 第三方取消 | 停止轮询 |
@@ -114,7 +114,7 @@ Open API 客户端凭证写在 **JSON body** 的 `clientId` / `clientSecret`，*
 
 | Intent | confirm 后典型状态 | PC/第三方取结果方式 |
 |--------|-------------------|---------------------|
-| `SELF_WEB_LOGIN` | `CONFIRMED` + `exchange` | PC `session/exchange` |
+| `SELF_WEB_LOGIN` | `CONFIRMED` + `exchange` + `result.accessToken` | Web：`session/exchange`；桌面/API：读 `result.accessToken`（=`usr_user_token`，等同 account `/login/uniform` 的 `token`） |
 | `OAUTH_AUTHORIZE` | `CONFIRMED` + `exchange` | 浏览器 `session/exchange` 后继续 OAuth |
 | `OAUTH_CONSENT` | `COMPLETED` + `redirect`/`result.code` | 浏览器跟随 `redirect` |
 | `OAUTH_DEVICE` | `COMPLETED` + `result.*` | Open API 轮询 / Webhook / DeepLink |
@@ -249,7 +249,8 @@ QR 内容 URL（匿名）。用于 APP 可选校验或 WebView 打开。
 | 键 | 何时出现 | 说明 |
 |----|----------|------|
 | `code` | `COMPLETED` + `POLL_CODE` / consent | OAuth 授权码 |
-| `accessToken` | `COMPLETED` + `POLL_TOKEN` | 访问令牌 |
+| `accessToken` | `COMPLETED` + `POLL_TOKEN`；或 `CONFIRMED` + `SELF_WEB_LOGIN` | OAuth TokenStore 访问令牌；或 `usr_user_token`（桌面/API，等同 `/login/uniform` 的 `token`） |
+| `userUuid` | `CONFIRMED` + `SELF_WEB_LOGIN` | 用户 uuid（对齐 `LoginResponse.uuid`） |
 | `state` | OAuth | 回传 state |
 | `clientId` | OAuth | 客户端 id |
 | `redirectUri` | OAuth | 注册回调地址 |
@@ -277,7 +278,7 @@ QR 内容 URL（匿名）。用于 APP 可选校验或 WebView 打开。
 }
 ```
 
-**示例（网页登录已确认）**
+**示例（网页/桌面登录已确认）**
 
 ```json
 {
@@ -288,10 +289,15 @@ QR 内容 URL（匿名）。用于 APP 可选校验或 WebView 打开。
     "intent": "SELF_WEB_LOGIN",
     "exchange": "e5f6g7h8-one-time-token",
     "expireIn": 250,
-    "result": {}
+    "result": {
+      "accessToken": "usr-user-token-value",
+      "userUuid": "user-uuid-32hex"
+    }
   }
 }
 ```
+
+Web 浏览器用 `exchange` 调 `session/exchange`；PC/桌面客户端持久化 `result.accessToken`，请求头带 `Token` 或 `Authorization: Bearer`。建票可选 `payload.deviceId`（或 `payload.uuid`）绑定设备行。
 
 ---
 
@@ -418,7 +424,7 @@ QR 内容 URL（匿名）。用于 APP 可选校验或 WebView 打开。
 | 字段 | 必填 | 说明 |
 |------|------|------|
 | `intent` | 否 | 默认 `SELF_WEB_LOGIN` |
-| `payload` | 否 | 扩展载荷 |
+| `payload` | 否 | 扩展载荷；桌面客户端可传 `deviceId`（或 `uuid`）绑定 `usr_user_token` 设备行 |
 
 **响应 `data`**：同 `TicketCreateResult`（§2 open/create）。
 

@@ -18,6 +18,9 @@ public class UserTokenService extends ModuleService<UserTokenDao, UserTokenEntit
 
     private final static int EXPIRE = 3600 * 12;
 
+    /** Align AppApiUserLoginService /login/uniform long-lived API token TTL. */
+    public static final int API_EXPIRE = 3600 * 24 * 365;
+
     @Override
     public String ico() {
         return "fa-eye-slash";
@@ -85,6 +88,55 @@ public class UserTokenService extends ModuleService<UserTokenDao, UserTokenEntit
         tokenEntity.setExpireTime(expireTime);
         this.saveOrUpdate(tokenEntity);
         return tokenEntity;
+    }
+
+    /**
+     * Issue or refresh a long-lived API token (same physical token as account /login/uniform).
+     */
+    public UserTokenEntity createApiToken(String userUuid) {
+        return createApiToken(userUuid, null);
+    }
+
+    /**
+     * Issue or refresh a long-lived API token; bind {@code deviceUuid} to {@link UserTokenEntity#uuid} when present.
+     */
+    public UserTokenEntity createApiToken(String userUuid, String deviceUuid) {
+        if (StringUtils.isBlank(userUuid)) {
+            return null;
+        }
+        UserTokenEntity entity = null;
+        if (StringUtils.isNotBlank(deviceUuid)) {
+            entity = getUuid(deviceUuid);
+            if (entity == null) {
+                List<UserTokenEntity> list = getUser(userUuid);
+                if (list != null) {
+                    for (UserTokenEntity row : list) {
+                        if (StringUtils.isBlank(row.getUuid())) {
+                            entity = row;
+                            break;
+                        }
+                    }
+                }
+            }
+        } else {
+            List<UserTokenEntity> list = getUser(userUuid);
+            if (list != null && !list.isEmpty()) {
+                entity = list.get(0);
+            }
+        }
+        if (entity == null) {
+            entity = new UserTokenEntity();
+            entity.setUserUuid(userUuid);
+        }
+        if (StringUtils.isNotBlank(deviceUuid)) {
+            entity.setUuid(deviceUuid);
+        }
+        Date now = new Date();
+        entity.setToken(generateToken());
+        entity.setUpdateTime(now);
+        entity.setExpireTime(new Date(now.getTime() + API_EXPIRE * 1000L));
+        saveOrUpdate(entity);
+        return entity;
     }
 
     public void expireToken(String userUuid) {
