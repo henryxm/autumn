@@ -898,14 +898,14 @@ public class MysqlTableService {
         dropFieldsKeyByMap(dropKeyTableMap);
         // 3. 删除要变更唯一约束的表的原来的字段的唯一约束
         dropFieldsUniqueByMap(dropUniqueTableMap);
-        // 4. 添加新的字段
-        addFieldsByMap(addTableMap);
-        // 5. 删除字段
-        removeFieldsByMap(removeTableMap);
-        // 6. 先删多余索引（须在列 charset MODIFY / 表 CONVERT 之前，避免超长键）
+        // 4. 先删多余索引（须在列 charset MODIFY / 表 CONVERT 之前，避免超长键）
         removeIndexByMap(removeIndexTableMap);
-        // 7. 修改字段类型等（含列级字符集）
+        // 5. 修改字段类型等（含列级字符集；varchar→TEXT / 缩短须在加列之前，否则 InnoDB 行宽已满时 ADD 会被吞掉）
         modifyFieldsByMap(modifyTableMap);
+        // 6. 添加新的字段
+        addFieldsByMap(addTableMap);
+        // 7. 删除实体中已不存在的字段（保持在 ADD 之后：改名时若先 DROP 再 ADD 失败会丢旧列数据）
+        removeFieldsByMap(removeTableMap);
         // 8. 新增索引
         addIndexByMap(addIndexTableMap);
         // 9. 表级字符集与实体对齐（CONVERT TO）
@@ -931,7 +931,7 @@ public class MysqlTableService {
                     try {
                         tableDao.modifyColumn(map);
                     } catch (Throwable e) {
-                        log.debug("Modify Columns:{}", e.getMessage());
+                        log.warn("Modify Columns:{}", e.getMessage());
                     }
                 }
             }
@@ -974,7 +974,8 @@ public class MysqlTableService {
                     try {
                         tableDao.addColumns(map);
                     } catch (Throwable e) {
-                        log.debug("Add Columns:{}", e.getMessage());
+                        String col = obj instanceof ColumnInfo ? ((ColumnInfo) obj).getName() : String.valueOf(obj);
+                        log.warn("Add Columns:{} {}", col, e.getMessage());
                     }
                 }
             }
