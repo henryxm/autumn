@@ -49,10 +49,7 @@ public class SelfWebLoginHandler implements IntentHandler {
         SysUserEntity user = scanTicketService.requireActiveUser(scanner == null ? null : scanner.getUuid());
         String exchangeToken = scanTicketService.createExchangeToken(user.getUuid(), ticket.getUuid());
         ConfirmResult result = ConfirmResult.ofExchange(exchangeToken);
-        String deviceUuid = TicketPayloads.get(ticket, "deviceId");
-        if (StringUtils.isBlank(deviceUuid)) {
-            deviceUuid = TicketPayloads.get(ticket, "uuid");
-        }
+        String deviceUuid = TicketPayloads.get(ticket, "loginDeviceUuid");
         UserTokenEntity tokenEntity = userTokenService.createApiToken(user.getUuid(), deviceUuid);
         if (tokenEntity != null && StringUtils.isNotBlank(tokenEntity.getToken())) {
             Map<String, String> map = result.getResult();
