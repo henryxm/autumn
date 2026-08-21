@@ -297,7 +297,7 @@ QR 内容 URL（匿名）。用于 APP 可选校验或 WebView 打开。
 }
 ```
 
-Web 浏览器用 `exchange` 调 `session/exchange`；PC/桌面客户端持久化 `result.accessToken`，请求头带 `Token` 或 `Authorization: Bearer`。建票可选 `payload.deviceId`（或 `payload.uuid`）绑定设备行。
+Web 浏览器用 `exchange` 调 `session/exchange`；PC/桌面客户端持久化 `result.accessToken`，请求头带 `Token` 或 `Authorization: Bearer`。建票可选 `payload.loginDeviceUuid`（扫码授权目标电脑 Login.uuid）绑定设备行。
 
 ---
 
@@ -426,7 +426,7 @@ Web 浏览器用 `exchange` 调 `session/exchange`；PC/桌面客户端持久化
 | 字段 | 必填 | 说明 |
 |------|------|------|
 | `intent` | 否 | 默认 `SELF_WEB_LOGIN` |
-| `payload` | 否 | 扩展载荷；桌面客户端可传 `deviceId`（或 `uuid`）绑定 `usr_user_token` 设备行 |
+| `payload` | 否 | 扩展载荷；桌面客户端可传 `loginDeviceUuid`（扫码授权目标电脑 Login.uuid）绑定 `usr_user_token` 设备行 |
 
 **响应 `data`**：同 `TicketCreateResult`（§2 open/create）。
 
