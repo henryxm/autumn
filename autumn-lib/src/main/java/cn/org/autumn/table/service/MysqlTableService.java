@@ -490,8 +490,11 @@ public class MysqlTableService {
             if (createTableParam != null) {
                 // 检查是否要删除已有主键和是否要删除已有唯一约束的代码必须放在其他检查的最前面
                 // 原本是主键，现在不是了，那么要去做删除主键的操作
-                if ("PRI".equals(sysColumn.getColumnKey()) && !createTableParam.isKey()) {
-                    dropKeyFieldList.add(createTableParam);
+                if ("PRI".equals(sysColumn.getColumnKey())) {
+                    createTableParam.setExistingPrimaryKey(true);
+                    if (!createTableParam.isKey()) {
+                        dropKeyFieldList.add(createTableParam);
+                    }
                 }
 
                 // 原本是唯一，现在不是了，那么要去做删除唯一的操作
@@ -931,7 +934,7 @@ public class MysqlTableService {
                     try {
                         tableDao.modifyColumn(map);
                     } catch (Throwable e) {
-                        log.warn("Modify Columns:{}", e.getMessage());
+                        log.warn("Modify Columns:{}", ddlError(e));
                     }
                 }
             }
@@ -975,7 +978,7 @@ public class MysqlTableService {
                         tableDao.addColumns(map);
                     } catch (Throwable e) {
                         String col = obj instanceof ColumnInfo ? ((ColumnInfo) obj).getName() : String.valueOf(obj);
-                        log.warn("Add Columns:{} {}", col, e.getMessage());
+                        log.warn("Add Columns:{} {}", col, ddlError(e));
                     }
                 }
             }
@@ -1102,6 +1105,17 @@ public class MysqlTableService {
                 map.put(field.getName().toLowerCase(), lengthCount.LengthCount());
         }
         return map;
+    }
+
+    private static String ddlError(Throwable e) {
+        if (e == null) {
+            return "";
+        }
+        String m = e.getMessage();
+        if (m == null) {
+            return e.getClass().getSimpleName();
+        }
+        return m.replace('\r', ' ').replace('\n', ' ').replaceAll(" +", " ").trim();
     }
 
     public void dropTable(String tableName) {

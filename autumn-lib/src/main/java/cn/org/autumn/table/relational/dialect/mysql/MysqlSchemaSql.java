@@ -173,11 +173,18 @@ public class MysqlSchemaSql implements RelationalSchemaSql {
             sb.append(" AUTO_INCREMENT");
         }
         if (!"NULL".equals(columnInfo.getDefaultValue())) {
-            sb.append(" DEFAULT '" + columnInfo.getDefaultValue() + "'");
+            sb.append(" DEFAULT '").append(sqlStringLiteral(columnInfo.getDefaultValue())).append("'");
         }
         if (!StringUtils.isEmpty(columnInfo.getComment())) {
-            sb.append(" COMMENT '" + columnInfo.getComment() + "'");
+            sb.append(" COMMENT '").append(sqlStringLiteral(columnInfo.getComment())).append("'");
         }
+    }
+
+    static String sqlStringLiteral(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replace("'", "''");
     }
 
     /**
@@ -218,7 +225,7 @@ public class MysqlSchemaSql implements RelationalSchemaSql {
             sb.append("ALTER TABLE `" + tableInfo.getName() + "` " + action + " ");
             ColumnInfo columnInfo = kv.getValue();
             appendColumnDefinition(columnInfo, sb);
-            if (columnInfo.isKey()) {
+            if (columnInfo.isKey() && !columnInfo.isExistingPrimaryKey()) {
                 sb.append(" PRIMARY KEY");
             }
             sb.append(";");

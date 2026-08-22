@@ -52,6 +52,11 @@ public class ColumnInfo {
     private boolean isKey;
 
     /**
+     * 库中该列已是主键。ALTER MODIFY 时不可再写 PRIMARY KEY，否则 MySQL 报 Multiple primary key defined。
+     */
+    private boolean existingPrimaryKey;
+
+    /**
      * 主键是否自增
      */
     private boolean isAutoIncrement;
@@ -409,6 +414,14 @@ public class ColumnInfo {
 
     public void setKey(boolean key) {
         this.isKey = key;
+    }
+
+    public boolean isExistingPrimaryKey() {
+        return existingPrimaryKey;
+    }
+
+    public void setExistingPrimaryKey(boolean existingPrimaryKey) {
+        this.existingPrimaryKey = existingPrimaryKey;
     }
 
     public boolean isAutoIncrement() {
