@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>全表查询</title>
+    <style>
+        :root {
+            --primary: #0f4c81;
+            --primary-light: #1a6bb5;
+            --success: #059669;
+            --danger: #dc2626;
+            --muted: #64748b;
+            --border: #e2e8f0;
+            --surface: #fff;
+            --radius: 12px;
+            --shadow: 0 4px 24px rgba(15, 76, 129, 0.08);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(160deg, #e8eef5 0%, #f8fafc 45%, #eef2ff 100%);
+            color: #1e293b;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .shell { max-width: 1200px; margin: 0 auto; }
+        .page {
+            background: var(--surface);
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            overflow: hidden;
+            min-height: calc(100vh - 40px);
+            display: flex;
+            flex-direction: column;
+        }
+        .header {
+            background: linear-gradient(135deg, #0a3d6b 0%, var(--primary) 50%, var(--primary-light) 100%);
+            color: #fff;
+            padding: 28px 32px;
+        }
+        .header h1 { font-size: 26px; font-weight: 700; }
+        .header-sub { opacity: 0.92; font-size: 13px; margin-top: 8px; line-height: 1.6; max-width: 720px; }
+        .content { flex: 1; padding: 24px 28px 32px; overflow: auto; }
+        .panel {
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px 22px;
+            margin-bottom: 20px;
+        }
+        .panel-title { font-size: 15px; font-weight: 700; color: var(--primary); margin-bottom: 14px; }
+        .form-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px;
+            align-items: flex-end;
+        }
+        .field { flex: 1; min-width: 200px; }
+        .field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; font-weight: 600; }
+        .field input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            background: #fff;
+        }
+        .field input:focus { outline: none; border-color: var(--primary-light); box-shadow: 0 0 0 3px rgba(26, 107, 181, 0.15); }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.15s;
+        }
+        .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+        .btn-primary { background: var(--primary); color: #fff; }
+        .btn-primary:hover:not(:disabled) { background: var(--primary-light); }
+        .btn-ghost { background: #fff; color: var(--primary); border: 1px solid var(--border); }
+        .stats {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+        .stat {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px 16px;
+            min-width: 140px;
+        }
+        .stat-label { font-size: 12px; color: var(--muted); }
+        .stat-value { font-size: 20px; font-weight: 800; color: var(--primary); margin-top: 4px; }
+        .stat-value.ok { color: var(--success); }
+        table.data {
+            width: 100%;
+            border-collapse: collapse;
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+        table.data th, table.data td {
+            padding: 12px 14px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+            font-size: 13px;
+        }
+        table.data th {
+            background: #f1f5f9;
+            font-weight: 700;
+            color: #475569;
+        }
+        table.data tr:last-child td { border-bottom: none; }
+        .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+        .empty {
+            text-align: center;
+            padding: 48px 20px;
+            color: var(--muted);
+            background: #fff;
+            border: 1px dashed var(--border);
+            border-radius: var(--radius);
+        }
+        .modal-mask {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.45);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+        .modal {
+            background: #fff;
+            border-radius: 14px;
+            width: min(960px, 100%);
+            max-height: 85vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: var(--shadow);
+        }
+        .modal-head {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modal-head h3 { font-size: 16px; }
+        .modal-body { padding: 16px 20px; overflow: auto; flex: 1; }
+        .preview-json {
+            background: #0f172a;
+            color: #e2e8f0;
+            padding: 14px;
+            border-radius: 8px;
+            font-size: 12px;
+            line-height: 1.5;
+            overflow: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            padding: 12px 18px;
+            border-radius: 10px;
+            color: #fff;
+            font-size: 14px;
+            z-index: 2000;
+            box-shadow: var(--shadow);
+        }
+        .toast-success { background: var(--success); }
+        .toast-danger { background: var(--danger); }
+        .hint { font-size: 12px; color: var(--muted); margin-top: 10px; line-height: 1.5; }
+    </style>
+</head>
+<body>
+<div id="app" class="shell">
+    <div class="page">
+        <div class="header">
+            <h1>全表特征值查询</h1>
+            <p class="header-sub">在 @Table 注解实体表中，仅对实体上声明了索引的列进行精确匹配，快速定位特征值（如 uuid）落在哪些表中。</p>
+        </div>
+        <div class="content">
+            <div class="panel">
+                <div class="panel-title">查询条件</div>
+                <div class="form-row">
+                    <div class="field" style="max-width:220px;">
+                        <label>列名</label>
+                        <input v-model="form.columnName" placeholder="例如 uuid" @keyup.enter="search">
+                    </div>
+                    <div class="field">
+                        <label>特征值</label>
+                        <input v-model="form.value" placeholder="精确匹配的值" @keyup.enter="search">
+                    </div>
+                    <button class="btn btn-primary" :disabled="loading" @click="search">{{ loading ? '扫描中…' : '开始扫描' }}</button>
+                    <button class="btn btn-ghost" :disabled="loadingCandidates" @click="loadCandidates">查看候选表</button>
+                </div>
+                <p class="hint">仅扫描实体索引列（@Index / @Indexes / isUnique），按列 Java/SQL 类型精确匹配；加密列、类型不符的候选表会自动跳过。</p>
+            </div>
+
+            <div v-if="stats" class="stats">
+                <div class="stat">
+                    <div class="stat-label">索引候选表</div>
+                    <div class="stat-value">{{ stats.candidateCount }}</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">命中表数</div>
+                    <div class="stat-value ok">{{ stats.hitCount }}</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">跳过（类型/加密）</div>
+                    <div class="stat-value">{{ stats.skippedCount != null ? stats.skippedCount : 0 }}</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">耗时 (ms)</div>
+                    <div class="stat-value">{{ stats.elapsedMs }}</div>
+                </div>
+            </div>
+
+            <div v-if="candidates.length && showCandidates" class="panel">
+                <div class="panel-title">含索引列「{{ form.columnName }}」的实体表（{{ candidates.length }}）</div>
+                <table class="data">
+                    <thead>
+                    <tr>
+                        <th>表名</th>
+                        <th>实体类</th>
+                        <th>索引列</th>
+                        <th>列类型</th>
+                        <th>可扫描</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr v-for="(row, idx) in candidates" :key="'c-' + idx">
+                        <td class="mono">{{ row.tableName }}</td>
+                        <td>{{ row.entityClass }}</td>
+                        <td class="mono">{{ row.columnName }}</td>
+                        <td>{{ row.columnType }}</td>
+                        <td>{{ row.scannable ? '是' : '否' }}</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div v-if="searched">
+                <div class="panel-title" style="margin-bottom:12px;">命中结果</div>
+                <table v-if="hits.length" class="data">
+                    <thead>
+                    <tr>
+                        <th>表名</th>
+                        <th>实体类</th>
+                        <th>索引列</th>
+                        <th>列类型</th>
+                        <th>命中数</th>
+                        <th style="width:100px;">操作</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr v-for="(row, idx) in hits" :key="'h-' + idx">
+                        <td class="mono">{{ row.tableName }}</td>
+                        <td>{{ row.entityClass }}</td>
+                        <td class="mono">{{ row.columnName }}</td>
+                        <td>{{ row.columnType }}</td>
+                        <td>{{ row.hitCount }}</td>
+                        <td><button class="btn btn-ghost" style="padding:6px 12px;font-size:12px;" @click="openPreview(row)">预览</button></td>
+                    </tr>
+                    </tbody>
+                </table>
+                <div v-else class="empty">未在任何索引列上找到该特征值</div>
+            </div>
+        </div>
+    </div>
+
+    <div v-if="previewOpen" class="modal-mask" @click.self="previewOpen = false">
+        <div class="modal">
+            <div class="modal-head">
+                <h3>数据预览 — {{ previewMeta.tableName }}</h3>
+                <button class="btn btn-ghost" @click="previewOpen = false">关闭</button>
+            </div>
+            <div class="modal-body">
+                <div v-if="previewLoading" class="empty">加载中…</div>
+                <pre v-else class="preview-json">{{ previewText }}</pre>
+            </div>
+        </div>
+    </div>
+
+    <div v-if="toast" class="toast" :class="toastType" v-text="toast"></div>
+</div>
+
+<script src="${request.contextPath}/statics/libs/jquery.min.js"></script>
+<script src="${request.contextPath}/statics/libs/vue.min.js"></script>
+<script>
+var ctx = '${request.contextPath!""}';
+var api = ctx + '/db/admin/tablescan';
+new Vue({
+    el: '#app',
+    data: {
+        form: { columnName: 'uuid', value: '' },
+        loading: false,
+        loadingCandidates: false,
+        searched: false,
+        hits: [],
+        stats: null,
+        candidates: [],
+        showCandidates: false,
+        previewOpen: false,
+        previewLoading: false,
+        previewMeta: {},
+        previewText: '',
+        toast: '',
+        toastType: 'toast-success'
+    },
+    methods: {
+        search: function() {
+            var v = this;
+            if (!(v.form.columnName || '').trim()) {
+                v.showToast('请输入列名', 'toast-danger');
+                return;
+            }
+            if (!(v.form.value || '').trim()) {
+                v.showToast('请输入特征值', 'toast-danger');
+                return;
+            }
+            v.loading = true;
+            v.searched = false;
+            $.ajax({
+                url: api + '/search',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    columnName: v.form.columnName.trim(),
+                    value: v.form.value.trim()
+                }),
+                success: function(res) {
+                    v.loading = false;
+                    if (res && res.code === 0 && res.data) {
+                        v.hits = res.data.hits || [];
+                        v.stats = res.data.stats || null;
+                        v.searched = true;
+                        v.showCandidates = false;
+                    } else {
+                        v.showToast((res && res.msg) || '扫描失败', 'toast-danger');
+                    }
+                },
+                error: function() {
+                    v.loading = false;
+                    v.showToast('扫描请求失败', 'toast-danger');
+                }
+            });
+        },
+        loadCandidates: function() {
+            var v = this;
+            if (!(v.form.columnName || '').trim()) {
+                v.showToast('请输入列名', 'toast-danger');
+                return;
+            }
+            v.loadingCandidates = true;
+            $.get(api + '/columns', { columnName: v.form.columnName.trim() }, function(res) {
+                v.loadingCandidates = false;
+                if (res && res.code === 0) {
+                    v.candidates = res.list || [];
+                    v.showCandidates = true;
+                } else {
+                    v.showToast((res && res.msg) || '加载候选表失败', 'toast-danger');
+                }
+            }).fail(function() {
+                v.loadingCandidates = false;
+                v.showToast('加载候选表请求失败', 'toast-danger');
+            });
+        },
+        openPreview: function(row) {
+            var v = this;
+            v.previewMeta = row;
+            v.previewOpen = true;
+            v.previewLoading = true;
+            v.previewText = '';
+            $.get(api + '/preview', {
+                table: row.tableName,
+                column: row.columnName,
+                value: v.form.value.trim(),
+                limit: 10
+            }, function(res) {
+                v.previewLoading = false;
+                if (res && res.code === 0) {
+                    v.previewText = JSON.stringify(res.list || [], null, 2);
+                } else {
+                    v.previewText = (res && res.msg) || '预览失败';
+                }
+            }).fail(function() {
+                v.previewLoading = false;
+                v.previewText = '预览请求失败';
+            });
+        },
+        showToast: function(msg, type) {
+            var v = this;
+            v.toast = msg;
+            v.toastType = type || 'toast-success';
+            setTimeout(function() { v.toast = ''; }, 2800);
+        }
+    }
+});
+</script>
+</body>
+</html>

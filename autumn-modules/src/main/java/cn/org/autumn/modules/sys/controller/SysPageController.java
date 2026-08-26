@@ -432,6 +432,15 @@ public class SysPageController implements ErrorController {
         return "dbmanage";
     }
 
+    @RequestMapping({"tablescan.html"})
+    @SkipInterceptor
+    public String tablescan(HttpServletRequest servlet) {
+        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
+            return "404";
+        ipWhiteService.check(servlet, getClass(), "tablescan");
+        return "tablescan";
+    }
+
     @RequestMapping({OplConstants.MANAGE_PAGE})
     @SkipInterceptor
     public String oplmanage() {
