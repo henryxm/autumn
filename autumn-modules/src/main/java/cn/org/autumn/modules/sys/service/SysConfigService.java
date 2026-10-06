@@ -497,6 +497,8 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     public void update(SysConfigEntity config) {
         this.updateById(config);
         sysConfigRedis.saveOrUpdate(config);
+        if (null != map && config != null && StringUtils.isNotBlank(config.getParamKey()))
+            map.put(config.getParamKey(), config);
         if (LOGGER_LEVEL.equalsIgnoreCase(config.getParamKey())) {
             sysLogService.changeLevel(config.getParamValue(), NULL);
         }
