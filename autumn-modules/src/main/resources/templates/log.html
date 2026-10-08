@@ -112,6 +112,82 @@
             color: green;
             font-weight: bold;
         }
+        .log-file-panel {
+            margin-top: 28px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+        }
+        .log-file-panel h2 {
+            margin: 0 0 12px 0;
+            font-size: 18px;
+            color: #333;
+        }
+        .log-file-meta {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        .log-file-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .log-file-controls label {
+            font-size: 13px;
+            color: #555;
+        }
+        .log-file-controls input[type="date"],
+        .log-file-controls input[type="number"],
+        .log-file-controls input[type="text"] {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .log-file-controls input[type="text"] {
+            min-width: 160px;
+        }
+        .log-file-controls button {
+            padding: 8px 14px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            color: #fff;
+        }
+        .log-file-controls .btn-refresh {
+            background-color: #007bff;
+        }
+        .log-file-controls .btn-refresh:hover {
+            background-color: #0056b3;
+        }
+        .log-file-controls .btn-clear {
+            background-color: #dc3545;
+        }
+        .log-file-controls .btn-clear:hover {
+            background-color: #c82333;
+        }
+        .log-file-viewer {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            font-family: Consolas, Monaco, "Courier New", monospace;
+            font-size: 12px;
+            line-height: 1.45;
+            height: 420px;
+            overflow: auto;
+            padding: 12px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .log-file-viewer .empty {
+            color: #888;
+        }
+        .log-file-loading {
+            color: #666;
+            font-size: 13px;
+            margin-bottom: 8px;
+        }
     </style>
 </head>
 <body>
@@ -160,11 +236,46 @@
     </div>
 
     <div class="message" v-if="message">{{ message }}</div>
+
+    <div class="log-file-panel">
+        <h2>日期日志</h2>
+        <div class="log-file-meta" v-if="logFile.path">
+            文件: {{ logFile.path }}
+            <span v-if="logFile.exists"> | 大小: {{ logFile.size }} 字节</span>
+            <span v-if="logFile.gzip"> | gzip</span>
+            <span v-if="!logFile.exists"> | 文件不存在或尚未产生</span>
+            <span v-if="logFile.truncated"> | 部分行已按单行长度截断</span>
+        </div>
+        <div class="log-file-controls">
+            <label>日期</label>
+            <input type="date" v-model="logFile.date" @change="fetchLogFile">
+            <label>尾部行数</label>
+            <input type="number" v-model.number="logFile.lines" min="1" max="5000" style="width:90px">
+            <label>关键字</label>
+            <input type="text" v-model="logFile.keyword" placeholder="可选过滤" @keyup.enter="fetchLogFile">
+            <label>单行最大长度</label>
+            <input type="number" v-model.number="logFile.maxLineLength" min="0" style="width:100px" title="0 表示不截断">
+            <span style="font-size:12px;color:#888">0=不截断</span>
+            <button class="btn-refresh" @click="fetchLogFile" :disabled="logFile.loading">刷新</button>
+            <button class="btn-clear" @click="clearLogFile" :disabled="logFile.loading">清空</button>
+        </div>
+        <div class="log-file-loading" v-if="logFile.loading">加载中...</div>
+        <div class="log-file-viewer" ref="logViewer">
+            <div v-if="!logFile.loading && logFile.contentLines.length === 0" class="empty">暂无日志内容</div>
+            <div v-for="(line, idx) in logFile.contentLines" :key="idx">{{ line }}</div>
+        </div>
+    </div>
 </div>
 
 <script src="${request.contextPath}/statics/libs/jquery.min.js"></script>
 <script src="${request.contextPath}/statics/libs/vue.min.js"></script>
 <script>
+    function todayYmd() {
+        var d = new Date();
+        var m = (d.getMonth() + 1);
+        var day = d.getDate();
+        return d.getFullYear() + '-' + (m < 10 ? '0' : '') + m + '-' + (day < 10 ? '0' : '') + day;
+    }
     var vm = new Vue({
         el: '#app',
         data: {
@@ -174,11 +285,25 @@
             logLevels: ['ALL', 'TRACE', 'DEBUG', 'INFO', 'WARN', 'ERROR', 'OFF'],
             globalSelectedLevel: 'INFO',
             message: '',
-            recentSearches: []
+            recentSearches: [],
+            logFile: {
+                date: todayYmd(),
+                lines: 500,
+                keyword: '',
+                maxLineLength: 0,
+                path: '',
+                exists: false,
+                gzip: false,
+                size: 0,
+                truncated: false,
+                contentLines: [],
+                loading: false
+            }
         },
         mounted() {
             this.loadRecentSearches();
             this.fetchLoggers();
+            this.fetchLogFile();
         },
         methods: {
             loadRecentSearches: function() {
@@ -290,6 +415,74 @@
                     },
                     error: function (xhr, status, error) {
                         self.message = '请求失败: ' + error;
+                    }
+                });
+            },
+            fetchLogFile: function () {
+                var self = this;
+                self.logFile.loading = true;
+                $.ajax({
+                    type: "GET",
+                    url: "sys/logfile/view",
+                    data: {
+                        date: self.logFile.date,
+                        lines: self.logFile.lines,
+                        keyword: self.logFile.keyword,
+                        maxLineLength: self.logFile.maxLineLength
+                    },
+                    success: function (result) {
+                        self.logFile.loading = false;
+                        if (result.code === 0) {
+                            self.logFile.path = result.path || '';
+                            self.logFile.exists = !!result.exists;
+                            self.logFile.gzip = !!result.gzip;
+                            self.logFile.size = result.size || 0;
+                            self.logFile.truncated = !!result.truncated;
+                            self.logFile.contentLines = result.lines || [];
+                            self.$nextTick(function () {
+                                var el = self.$refs.logViewer;
+                                if (el) {
+                                    el.scrollTop = el.scrollHeight;
+                                }
+                            });
+                        } else {
+                            self.message = '读取日志失败: ' + result.msg;
+                        }
+                    },
+                    error: function (xhr, status, error) {
+                        self.logFile.loading = false;
+                        self.message = '读取日志请求失败: ' + error;
+                    }
+                });
+            },
+            clearLogFile: function () {
+                var self = this;
+                if (!self.logFile.date) {
+                    self.message = '请选择要清空的日期';
+                    return;
+                }
+                if (!confirm('确定清空 ' + self.logFile.date + ' 的磁盘日志文件？此操作不可恢复。')) {
+                    return;
+                }
+                self.logFile.loading = true;
+                $.ajax({
+                    type: "POST",
+                    url: "sys/logfile/clear",
+                    data: {
+                        date: self.logFile.date
+                    },
+                    success: function (result) {
+                        if (result.code === 0) {
+                            self.message = '已清空 ' + self.logFile.date + ' 日志 (' + (result.status || 'ok') + ')';
+                            self.fetchLogFile();
+                        } else {
+                            self.logFile.loading = false;
+                            self.message = '清空日志失败: ' + result.msg;
+                        }
+                    },
+                    error: function (xhr, status, error) {
+                        self.logFile.loading = false;
+                        self.message = '清空日志请求失败: ' + error;
                     }
                 });
             }
