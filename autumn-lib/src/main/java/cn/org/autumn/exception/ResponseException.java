@@ -7,27 +7,28 @@ import lombok.Setter;
 @Setter
 public class ResponseException extends CodeException implements ResponseThrowable {
 
-    //默认错误值
-    int code = 100001;
+    /** 业务失败默认码（勿与 {@link cn.org.autumn.model.Error#UNKNOWN_ERROR} 100000 混淆） */
+    public static final int DEFAULT_CODE = 100001;
 
     public ResponseException() {
         super();
+        setCode(DEFAULT_CODE);
     }
 
     public ResponseException(String message) {
-        super(message);
+        super(message, DEFAULT_CODE);
     }
 
     public ResponseException(String message, Throwable cause) {
-        super(message, cause);
+        super(message, DEFAULT_CODE, cause);
     }
 
     public ResponseException(Throwable cause) {
         super(cause);
+        setCode(DEFAULT_CODE);
     }
 
     public ResponseException(int code, String message) {
-        super(message);
-        this.code = code;
+        super(message, code);
     }
 }
