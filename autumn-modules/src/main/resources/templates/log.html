@@ -18,6 +18,32 @@
         h1 {
             text-align: center;
             color: #333;
+            margin-bottom: 16px;
+        }
+        .page-tabs {
+            display: flex;
+            gap: 0;
+            border-bottom: 2px solid #dee2e6;
+            margin-bottom: 16px;
+        }
+        .page-tabs button {
+            padding: 10px 20px;
+            border: none;
+            background: transparent;
+            color: #555;
+            cursor: pointer;
+            font-size: 15px;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+        }
+        .page-tabs button:hover {
+            color: #007bff;
+            background: #f8f9fa;
+        }
+        .page-tabs button.active {
+            color: #007bff;
+            font-weight: bold;
+            border-bottom-color: #007bff;
         }
         .recent-searches {
             margin-bottom: 15px;
@@ -42,7 +68,7 @@
             background-color: #5a6268;
         }
         .search-bar {
-            margin-bottom: 20px;
+            margin-bottom: 12px;
             display: flex;
             gap: 10px;
         }
@@ -63,18 +89,30 @@
         .search-bar button:hover {
             background-color: #0056b3;
         }
-        table {
+        .logger-table-wrap {
+            max-height: calc(100vh - 260px);
+            overflow: auto;
+            margin-bottom: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .logger-table-wrap table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 20px;
+            margin-bottom: 0;
         }
-        th, td {
+        .logger-table-wrap th,
+        .logger-table-wrap td {
             border: 1px solid #ddd;
             padding: 10px;
             text-align: left;
         }
-        th {
+        .logger-table-wrap thead th {
             background-color: #f2f2f2;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            box-shadow: 0 1px 0 #ddd;
         }
         .level-select {
             width: 100%;
@@ -87,7 +125,7 @@
             justify-content: center;
             align-items: center;
             gap: 10px;
-            margin-top: 20px;
+            margin-top: 12px;
             padding: 15px;
             background-color: #e9ecef;
             border-radius: 8px;
@@ -113,9 +151,9 @@
             font-weight: bold;
         }
         .log-file-panel {
-            margin-top: 28px;
-            padding-top: 20px;
-            border-top: 1px solid #ddd;
+            margin-top: 0;
+            padding-top: 0;
+            border-top: none;
         }
         .log-file-panel h2 {
             margin: 0 0 12px 0;
@@ -173,7 +211,8 @@
             font-family: Consolas, Monaco, "Courier New", monospace;
             font-size: 12px;
             line-height: 1.45;
-            height: 420px;
+            height: calc(100vh - 280px);
+            min-height: 320px;
             overflow: auto;
             padding: 12px;
             border-radius: 4px;
@@ -194,51 +233,14 @@
 <div class="container" id="app" v-cloak>
     <h1>日志级别管理</h1>
 
-    <div class="recent-searches" v-if="recentSearches.length > 0">
-        <span>最近搜索:</span>
-        <button v-for="(item, index) in recentSearches" :key="index" @click="applyRecentSearch(item)">{{ item }}</button>
-    </div>
-
-    <div class="search-bar">
-        <input type="text" v-model="searchTerm" placeholder="搜索日志器名称..." @keyup.enter="filterLoggers">
-        <button @click="filterLoggers">搜索</button>
-        <button @click="resetFilter">重置</button>
-        <button @click="fetchLoggers">刷新列表</button>
-    </div>
-
-    <table>
-        <thead>
-        <tr>
-            <th>日志器名称</th>
-            <th>当前级别</th>
-            <th>操作</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr v-for="logger in filteredLoggers" :key="logger.name">
-            <td>{{ logger.name }}</td>
-            <td>{{ logger.level }}</td>
-            <td>
-                <select class="level-select" v-model="logger.selectedLevel" @change="changeLoggerLevel(logger)">
-                    <option v-for="level in logLevels" :value="level">{{ level }}</option>
-                </select>
-            </td>
-        </tr>
-        </tbody>
-    </table>
-
-    <div class="global-controls">
-        <span>全局日志级别:</span>
-        <select v-model="globalSelectedLevel">
-            <option v-for="level in logLevels" :value="level">{{ level }}</option>
-        </select>
-        <button @click="changeGlobalLevel">设置全局级别</button>
+    <div class="page-tabs">
+        <button type="button" :class="{ active: activeTab === 'logfile' }" @click="switchTab('logfile')">日期日志</button>
+        <button type="button" :class="{ active: activeTab === 'level' }" @click="switchTab('level')">日志级别</button>
     </div>
 
     <div class="message" v-if="message">{{ message }}</div>
 
-    <div class="log-file-panel">
-        <h2>日期日志</h2>
+    <div v-show="activeTab === 'logfile'" class="log-file-panel">
         <div class="log-file-meta" v-if="logFile.path">
             文件: {{ logFile.path }}
             <span v-if="logFile.exists"> | 大小: {{ logFile.size }} 字节</span>
@@ -265,6 +267,51 @@
             <div v-for="(line, idx) in logFile.contentLines" :key="idx">{{ line }}</div>
         </div>
     </div>
+
+    <div v-show="activeTab === 'level'">
+        <div class="recent-searches" v-if="recentSearches.length > 0">
+            <span>最近搜索:</span>
+            <button v-for="(item, index) in recentSearches" :key="index" @click="applyRecentSearch(item)">{{ item }}</button>
+        </div>
+
+        <div class="search-bar">
+            <input type="text" v-model="searchTerm" placeholder="搜索日志器名称..." @keyup.enter="filterLoggers">
+            <button @click="filterLoggers">搜索</button>
+            <button @click="resetFilter">重置</button>
+            <button @click="fetchLoggers">刷新列表</button>
+        </div>
+
+        <div class="logger-table-wrap">
+            <table>
+                <thead>
+                <tr>
+                    <th>日志器名称</th>
+                    <th>当前级别</th>
+                    <th>操作</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr v-for="logger in filteredLoggers" :key="logger.name">
+                    <td>{{ logger.name }}</td>
+                    <td>{{ logger.level }}</td>
+                    <td>
+                        <select class="level-select" v-model="logger.selectedLevel" @change="changeLoggerLevel(logger)">
+                            <option v-for="level in logLevels" :value="level">{{ level }}</option>
+                        </select>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="global-controls">
+            <span>全局日志级别:</span>
+            <select v-model="globalSelectedLevel">
+                <option v-for="level in logLevels" :value="level">{{ level }}</option>
+            </select>
+            <button @click="changeGlobalLevel">设置全局级别</button>
+        </div>
+    </div>
 </div>
 
 <script src="${request.contextPath}/statics/libs/jquery.min.js"></script>
@@ -279,6 +326,7 @@
     var vm = new Vue({
         el: '#app',
         data: {
+            activeTab: 'logfile',
             loggers: [],
             filteredLoggers: [],
             searchTerm: '',
@@ -306,6 +354,12 @@
             this.fetchLogFile();
         },
         methods: {
+            switchTab: function (tab) {
+                this.activeTab = tab;
+                if (tab === 'logfile') {
+                    this.fetchLogFile();
+                }
+            },
             loadRecentSearches: function() {
                 try {
                     const storedSearches = localStorage.getItem('recentLogSearches');
@@ -326,8 +380,8 @@
             },
             addRecentSearch: function(loggerName) {
                 if (!this.recentSearches.includes(loggerName)) {
-                    this.recentSearches.unshift(loggerName); // Add to the beginning
-                    if (this.recentSearches.length > 5) { // Keep only the last 5 searches
+                    this.recentSearches.unshift(loggerName);
+                    if (this.recentSearches.length > 5) {
                         this.recentSearches.pop();
                     }
                     this.saveRecentSearches();
@@ -345,10 +399,10 @@
                     success: function (result) {
                         if (result.code === 0) {
                             self.loggers = result.loggers.map(logger => {
-                                logger.selectedLevel = logger.level; // Initialize selected level
+                                logger.selectedLevel = logger.level;
                                 return logger;
                             });
-                            self.filterLoggers(); // Apply initial filter
+                            self.filterLoggers();
                         } else {
                             self.message = '获取日志器列表失败: ' + result.msg;
                         }
@@ -384,8 +438,8 @@
                     success: function (result) {
                         if (result === 'success') {
                             self.message = '日志器 "' + logger.name + '" 级别已更新为 ' + logger.selectedLevel;
-                            logger.level = logger.selectedLevel; // Update displayed level
-                            self.addRecentSearch(logger.name); // Add to recent searches
+                            logger.level = logger.selectedLevel;
+                            self.addRecentSearch(logger.name);
                         } else {
                             self.message = '更新日志器 "' + logger.name + '" 级别失败: ' + result;
                         }
@@ -403,12 +457,12 @@
                     url: "sys/log/changeLevel",
                     data: {
                         rootLevel: self.globalSelectedLevel,
-                        level: self.globalSelectedLevel // Pass as 'level' for the backend
+                        level: self.globalSelectedLevel
                     },
                     success: function (result) {
                         if (result === 'success') {
                             self.message = '全局日志级别已更新为 ' + self.globalSelectedLevel;
-                            self.fetchLoggers(); // Refresh all loggers to reflect global change
+                            self.fetchLoggers();
                         } else {
                             self.message = '更新全局日志级别失败: ' + result;
                         }
