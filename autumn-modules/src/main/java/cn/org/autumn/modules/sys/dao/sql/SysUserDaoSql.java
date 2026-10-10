@@ -59,6 +59,13 @@ public class SysUserDaoSql extends RuntimeSql {
         return "SELECT * FROM " + tbl() + " WHERE " + quote("mobile") + " LIKE " + likeContainsAny("#{mobile}") + " AND " + quote("status") + " >= 0" + limitOne();
     }
 
+    /**
+     * 批量按手机号查用户。{@code IN (#{mobiles})} 由 {@link cn.org.autumn.mybatis.SelectInLangDriver} 展开。
+     */
+    public String getByPhones() {
+        return "SELECT * FROM " + tbl() + " WHERE " + quote("mobile") + " IN (#{mobiles}) AND " + quote("status") + " >= 0";
+    }
+
     public String getByUuid() {
         return "SELECT * FROM " + tbl() + " WHERE " + quote("uuid") + " = #{uuid} AND " + quote("status") + " >= 0";
     }

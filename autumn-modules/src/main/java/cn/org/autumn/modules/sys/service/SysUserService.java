@@ -393,6 +393,24 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         return dynamicReplaceIconHost(baseMapper.getByPhoneLike(mobile));
     }
 
+    /**
+     * 批量按手机号查用户（通讯录匹配）；空列表返回空。
+     */
+    public List<SysUserEntity> getByPhones(List<String> mobiles) {
+        if (mobiles == null || mobiles.isEmpty()) {
+            return new ArrayList<>();
+        }
+        List<SysUserEntity> list = baseMapper.getByPhones(mobiles);
+        if (list == null || list.isEmpty()) {
+            return new ArrayList<>();
+        }
+        List<SysUserEntity> out = new ArrayList<>(list.size());
+        for (SysUserEntity e : list) {
+            out.add(dynamicReplaceIconHost(e));
+        }
+        return out;
+    }
+
     public SysUserEntity getByQq(String qq) {
         return dynamicReplaceIconHost(baseMapper.getByQq(qq));
     }

@@ -2,7 +2,9 @@ package cn.org.autumn.modules.sys.dao;
 
 import cn.org.autumn.modules.sys.dao.sql.SysUserDaoSql;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
+import cn.org.autumn.mybatis.SelectInLangDriver;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import org.apache.ibatis.annotations.Lang;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.SelectProvider;
@@ -41,6 +43,10 @@ public interface SysUserDao extends BaseMapper<SysUserEntity> {
 
     @SelectProvider(type = SysUserDaoSql.class, method = "getByPhoneLike")
     SysUserEntity getByPhoneLike(@Param("mobile") String mobile);
+
+    @SelectProvider(type = SysUserDaoSql.class, method = "getByPhones")
+    @Lang(SelectInLangDriver.class)
+    List<SysUserEntity> getByPhones(@Param("mobiles") List<String> mobiles);
 
     @SelectProvider(type = SysUserDaoSql.class, method = "getByUuid")
     SysUserEntity getByUuid(@Param("uuid") String uuid);
