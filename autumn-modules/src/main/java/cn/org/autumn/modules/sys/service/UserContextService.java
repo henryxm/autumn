@@ -4,6 +4,8 @@ import cn.org.autumn.config.ContextHandler;
 import cn.org.autumn.model.UserContext;
 import cn.org.autumn.modules.bot.entity.RobotEntity;
 import cn.org.autumn.modules.bot.service.RobotService;
+import cn.org.autumn.modules.bot.entity.GuestEntity;
+import cn.org.autumn.modules.bot.service.GuestService;
 import cn.org.autumn.modules.bot.service.RobotTokenService;
 import cn.org.autumn.modules.bot.shiro.RobotAccessTokenToken;
 import cn.org.autumn.modules.bot.shiro.RobotPrincipal;
@@ -24,7 +26,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.context.request.NativeWebRequest;
 
 /**
- * 解析无 Session API 的 {@link UserContext}（直接返回 {@link SysUserEntity} / {@link RobotEntity} 等业务实体）。
+ * 解析无 Session API 的 {@link UserContext}（直接返回 {@link SysUserEntity} / {@link RobotEntity} / {@link GuestEntity} 等业务实体）。
+ * 临时用户只出现在按 uuid 的资料查询中，不作为登录主体。
  */
 @Slf4j
 @Service
@@ -42,8 +45,12 @@ public class UserContextService implements ContextHandler {
     @Lazy
     private RobotTokenService robotTokenService;
 
+    @Autowired
+    @Lazy
+    private GuestService guestService;
+
     /**
-     * 按业务 uuid 从缓存取账号实体（用户或机器人），不解析请求头令牌。
+     * 按业务 uuid 从缓存取账号实体（用户、机器人或未过期临时用户），不解析请求头令牌。
      */
     public UserContext getUserContext(String uuid) {
         SysUserEntity user = sysUserService.getCache(uuid);
@@ -55,6 +62,9 @@ public class UserContextService implements ContextHandler {
         RobotEntity robot = robotService.getCache(uuid);
         if (robot != null && robot.isActive())
             return robot;
+        GuestEntity guest = guestService.getActive(uuid);
+        if (guest != null)
+            return guest;
         return null;
     }
 
@@ -120,6 +130,8 @@ public class UserContextService implements ContextHandler {
             return ((SysUserEntity) context).toUser();
         if (context instanceof RobotEntity)
             return ((RobotEntity) context).toUser();
+        if (context instanceof GuestEntity)
+            return ((GuestEntity) context).toUser();
         log.warn("UserContext unknown implementation type: {}", context.getClass().getName());
         return null;
     }

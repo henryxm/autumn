@@ -12,7 +12,7 @@ public abstract class BotPages implements SiteFactory.Site, TemplateFactory.Temp
     public final static String pack = "bot";
 
     @PageAware(login = true)
-    public String robottoken = "modules/bot/robottoken";
+    public String guest = "modules/bot/guest";
 
     @PageAware(login = true)
     public String robothook = "modules/bot/robothook";
@@ -21,10 +21,13 @@ public abstract class BotPages implements SiteFactory.Site, TemplateFactory.Temp
     public String robotconfig = "modules/bot/robotconfig";
 
     @PageAware(login = true)
+    public String robottoken = "modules/bot/robottoken";
+
+    @PageAware(login = true)
     public String robot = "modules/bot/robot";
 
-    public String getRobotTokenKey() {
-        return getKey("robottoken");
+    public String getGuestKey() {
+        return getKey("guest");
     }
 
     public String getRobotHookKey() {
@@ -33,6 +36,10 @@ public abstract class BotPages implements SiteFactory.Site, TemplateFactory.Temp
 
     public String getRobotConfigKey() {
         return getKey("robotconfig");
+    }
+
+    public String getRobotTokenKey() {
+        return getKey("robottoken");
     }
 
     public String getRobotKey() {

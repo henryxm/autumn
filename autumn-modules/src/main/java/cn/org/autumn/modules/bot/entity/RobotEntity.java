@@ -19,8 +19,8 @@ import java.util.Date;
 /**
  * 机器人 API 调用身份（{@code bot_robot}），与 {@link cn.org.autumn.modules.sys.entity.SysUserEntity} 为框架层<strong>不同类型</strong>。
  * <p>
- * 二者 {@code uuid} 由 {@link cn.org.autumn.modules.sys.service.UuidNamespaceService} 统一分配，<strong>禁止相同</strong>。
- * 业务层常将机器人视作用户：业务表 {@code user} 列可存本实体 {@code uuid} 或真人 {@code uuid}（见 {@code docs/AI_DUAL_KEY.md} §1.1）。
+ * 三者 {@code uuid} 由 {@link cn.org.autumn.modules.sys.service.UuidNamespaceService} 统一分配，<strong>禁止相同</strong>（含临时用户 {@code bot_guest}）。
+ * 业务层常将机器人视作用户：业务表 {@code user} 列可存本实体 {@code uuid}、真人 {@code uuid} 或临时用户 {@code uuid}（见 {@code docs/AI_DUAL_KEY.md} §1.1）。
  * {@code owner} 仅表示主人真人 {@code sys_user.uuid}。实现 {@link cn.org.autumn.model.UserContext}，{@link #isRobot()} 为 {@code true}。
  */
 @Getter
@@ -127,6 +127,7 @@ public class RobotEntity implements UuidBased, AccountHandler.Account, UserConte
         user.setNickname(nickname);
         user.setIcon(icon);
         user.setRobot(true);
+        user.setGuest(false);
         return user;
     }
 }

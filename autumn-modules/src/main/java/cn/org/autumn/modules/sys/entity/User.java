@@ -3,9 +3,9 @@ package cn.org.autumn.modules.sys.entity;
 import cn.org.autumn.annotation.SearchType;
 import cn.org.autumn.model.UserContext;
 import cn.org.autumn.modules.bot.entity.RobotEntity;
+import cn.org.autumn.modules.bot.entity.GuestEntity;
 import cn.org.autumn.search.IResult;
 import cn.org.autumn.search.Result;
-import cn.org.autumn.table.annotation.Column;
 import lombok.*;
 import org.apache.commons.beanutils.BeanUtils;
 
@@ -42,6 +42,8 @@ public class User implements IResult, UserContext {
 
     private boolean robot;
 
+    private boolean guest;
+
     private String access;
 
     private boolean black;
@@ -52,6 +54,7 @@ public class User implements IResult, UserContext {
     public User(SysUserEntity entity) {
         BeanUtils.copyProperties(this, entity);
         this.robot = false;
+        this.guest = false;
         this.owner = entity.getUuid();
     }
 
@@ -59,8 +62,17 @@ public class User implements IResult, UserContext {
     public User(RobotEntity entity) {
         BeanUtils.copyProperties(this, entity);
         this.robot = true;
+        this.guest = false;
         if (this.owner == null)
             this.owner = entity.getOwner();
+    }
+
+    @SneakyThrows
+    public User(GuestEntity entity) {
+        BeanUtils.copyProperties(this, entity);
+        this.robot = false;
+        this.guest = true;
+        this.owner = entity.getUuid();
     }
 
     @Override

@@ -39,7 +39,7 @@
 - `docs/AI_GOVERNANCE.md`：治理协作、术语、维护口径
 - `docs/AI_PROMPTS.md`：可复制提示词模板
 - `docs/AI_GUIDE.md`：多项目导航与引用方式
-- **`docs/AI_ROBOT.md`**：**机器人业务对接指南**（快速开始、场景、鉴权、Hook 验签示例、对接清单、故障排查、Subscriber 扩展）
+- **`docs/AI_ROBOT.md`**：**机器人业务对接指南**（快速开始、场景、鉴权、Hook 验签示例、对接清单、故障排查、Subscriber 扩展；§3.6 临时用户 `bot_guest`）
 - **`docs/AI_ROBOT_API.md`**：**机器人开放 API 参考手册**（全量请求/响应字段、入站 `message/push`、出站 Hook 回调体、事件名、接口速查表）
 - **`docs/AI_SAFE_CREDENTIAL.md`**：**支付安全 API 参考**（`POST /safe/api/v1/*`、`SafeConfig`、`PayPinVerifier`、闸门/免密、错误码 850～864）
 - **`docs/AI_SAFE_CREDENTIAL_CLIENT_API.md`**：**客户端对接手册**（App/H5 全量接口、示例 JSON、流程图、错误处理、UX/安全规范）

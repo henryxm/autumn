@@ -1,18 +1,18 @@
 package cn.org.autumn.modules.bot.controller.gen;
 
-import cn.org.autumn.modules.bot.entity.RobotTokenEntity;
-import cn.org.autumn.modules.bot.service.RobotTokenService;
-import cn.org.autumn.utils.PageUtils;
-import cn.org.autumn.utils.R;
-import cn.org.autumn.validator.ValidatorUtils;
 import java.util.Arrays;
 import java.util.Map;
+import cn.org.autumn.validator.ValidatorUtils;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import cn.org.autumn.modules.bot.entity.RobotTokenEntity;
+import cn.org.autumn.modules.bot.service.RobotTokenService;
+import cn.org.autumn.utils.PageUtils;
+import cn.org.autumn.utils.R;
 
 public class RobotTokenControllerGen {
 
@@ -29,14 +29,14 @@ public class RobotTokenControllerGen {
     @RequestMapping("/info/{id}")
     @RequiresPermissions("bot:robottoken:info")
     public R info(@PathVariable("id") Long id) {
-        RobotTokenEntity robotToken = robotTokenService.selectById(id);
+        RobotTokenEntity robotToken = robotTokenService.getById(id);
         return R.ok().put("robotToken" , robotToken);
     }
 
     @RequestMapping("/save")
     @RequiresPermissions("bot:robottoken:save")
     public R save(@RequestBody RobotTokenEntity robotToken) {
-        robotTokenService.insert(robotToken);
+        robotTokenService.save(robotToken);
         return R.ok();
     }
 
@@ -44,14 +44,14 @@ public class RobotTokenControllerGen {
     @RequiresPermissions("bot:robottoken:update")
     public R update(@RequestBody RobotTokenEntity robotToken) {
         ValidatorUtils.validateEntity(robotToken);
-        robotTokenService.updateAllColumnById(robotToken);
+        robotTokenService.updateById(robotToken);
         return R.ok();
     }
 
     @RequestMapping("/delete")
     @RequiresPermissions("bot:robottoken:delete")
     public R delete(@RequestBody Long[] ids) {
-        robotTokenService.deleteBatchIds(Arrays.asList(ids));
+        robotTokenService.removeBatchByIds(Arrays.asList(ids));
         return R.ok();
     }
 }

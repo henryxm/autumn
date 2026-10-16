@@ -4,7 +4,7 @@ $(function () {
         datatype: "json",
         colModel: [			
 			{ label: '${lang.bot_robotconfig_column_id}', name: 'id', index: 'id', width: 50, key: true },
-			{ label: '${lang.bot_robotconfig_column_uuid}', name: 'uuid', index: 'uuid', width: 80 }, 
+			{ label: '${lang.bot_robotconfig_column_user}', name: 'user', index: 'user', width: 80 }, 
 			{ label: '${lang.bot_robotconfig_column_max_robots}', name: 'maxRobots', index: 'max_robots', width: 80 }, 
 			{ label: '${lang.bot_robotconfig_column_max_tokens}', name: 'maxTokens', index: 'max_tokens', width: 80 }, 
 			{ label: '${lang.bot_robotconfig_column_max_hooks}', name: 'maxHooks', index: 'max_hooks', width: 80 }, 

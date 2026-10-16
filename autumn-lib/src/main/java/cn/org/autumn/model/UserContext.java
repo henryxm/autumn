@@ -5,13 +5,14 @@ import java.io.Serializable;
 /**
  * 无 Session API 调用的统一调用者视图（接口）。
  * <p>
- * 实现类为业务实体本身（如 {@code SysUserEntity}、{@code RobotEntity}），类型不同、uuid 不得相同；
+ * 实现类为业务实体本身（如 {@code SysUserEntity}、{@code RobotEntity}、{@code GuestEntity}），类型不同、uuid 不得相同；
  * 业务表 {@code user} 列可存任一侧 uuid，见 {@code docs/AI_DUAL_KEY.md} §1.1。
  * <ul>
- *   <li>{@link #getUuid()}：当前调用者（真人或机器人；二者 uuid 全局互斥，见 {@code UuidNamespaceService}）</li>
- *   <li>{@link #getSubject()}：数据权限主体（真人为自身 uuid，机器人为主人 uuid）</li>
- *   <li>{@link #getOwner()}：机器人所属用户 uuid；真人常为 null</li>
+ *   <li>{@link #getUuid()}：当前调用者（真人、机器人或临时用户；三者 uuid 全局互斥，见 {@code UuidNamespaceService}）</li>
+ *   <li>{@link #getSubject()}：数据权限主体（真人或临时用户为自身 uuid，机器人为主人 uuid）</li>
+ *   <li>{@link #getOwner()}：机器人所属用户 uuid；真人与临时用户常为 null</li>
  *   <li>{@link #isRobot()}：是否机器人调用</li>
+ *   <li>{@link #isGuest()}：是否临时用户</li>
  * </ul>
  */
 public interface UserContext extends Serializable {
@@ -24,6 +25,13 @@ public interface UserContext extends Serializable {
     String getOwner();
 
     boolean isRobot();
+
+    /**
+     * 临时用户（{@code bot_guest}）。默认否，避免改动真人与机器人实现。
+     */
+    default boolean isGuest() {
+        return false;
+    }
 
     String getNickname();
 

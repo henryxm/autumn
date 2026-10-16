@@ -150,7 +150,7 @@ sequenceDiagram
 
 ### 3.4 `UserContext` 与遗留 `userUuid` hint
 
-开放 API 注入的 `UserContext` 在运行时多为 `SysUserEntity` 或 `RobotEntity`；**数据权限**请用 `getSubject()`，勿把真人 `getOwner()` 当作主体 uuid。
+开放 API 注入的 `UserContext` 在运行时多为 `SysUserEntity` 或 `RobotEntity`（临时用户 `GuestEntity` 只出现在按 uuid 的资料查询，不会作为登录主体）；**数据权限**请用 `getSubject()`，勿把真人 `getOwner()` 当作主体 uuid。
 
 | 请求携带 | 解析顺序 |
 |----------|----------|
@@ -159,23 +159,43 @@ sequenceDiagram
 | 令牌 + `userUuid` query/header | 二者须一致，否则视为未认证 |
 | 仅 `userUuid`、无令牌 | 遗留 minclouds 行为（内网/网关场景）；生产开放 API 应始终带令牌 |
 
-### 3.5 业务表 `user` 字段：真人或机器人 uuid
+### 3.5 业务表 `user` 字段：真人、机器人或临时用户 uuid
 
-框架层 **`SysUserEntity`** 与 **`RobotEntity`** 是**两种类型**，各自 **`uuid` 全局互斥**（`UuidNamespaceService` 统一分配，禁止同一字符串同时出现在 `sys_user` 与 `bot_robot`）。
+框架层 **`SysUserEntity`**、**`RobotEntity`** 与 **`GuestEntity`** 是**三种类型**，各自 **`uuid` 全局互斥**（`UuidNamespaceService` 统一分配，禁止同一字符串同时出现在 `sys_user`、`bot_robot` 与 `bot_guest`）。
 
-业务层为简化开发，通常**将机器人视作一种用户**，**不**为机器人单独复制一套业务表：
+业务层为简化开发，通常**将机器人与临时用户视作一种用户**，**不**为它们单独复制一套业务表：
 
 | 场景 | 约定 |
 |------|------|
-| 业务表 **`user`** 列（非 `UserBased`、非 §3.4 唯一语义） | 存 **`UserContext#getUuid()`**，可为 **`sys_user.uuid`** 或 **`bot_robot.uuid`** |
+| 业务表 **`user`** 列（非 `UserBased`、非 §3.4 唯一语义） | 存 **`UserContext#getUuid()`**，可为 **`sys_user.uuid`**、**`bot_robot.uuid`** 或 **`bot_guest.uuid`** |
 | **仅用户维度、无 `uuid` 第二主键**（**`AI_DUAL_KEY` §3.4**） | 自增 **`id`** + 非唯一 **`user`**；按 **`user`** 查询；**不必** `UuidBased` |
 | 按真人唯一的 **`UserBased.user`**（如 `bot_robot_config`） | **仅** **`sys_user.uuid`** |
 | **`RobotEntity.owner`** | **仅** 主人真人 **`sys_user.uuid`** |
-| 解析 | **`UserContextService#getUserContext(uuid)`**；需区分机器/人时用 **`isRobot()`** |
+| 解析 | **`UserContextService#getUserContext(uuid)`**；机器用 **`isRobot()`**，临时用户用 **`isGuest()`**。对外视图 **`User.robot`** / **`User.guest`** |
+| 临时用户登录 | **不可**。`resolve` 不把 `bot_guest` 当作令牌或 Shiro 主体 |
 
-写入示例：创建业务记录时 `entity.setUser(ctx.getUuid())`，勿假设 `user` 列只能是真人 uuid。
+写入示例：创建业务记录时 `entity.setUser(ctx.getUuid())`，勿假设 `user` 列只能是真人 uuid。临时用户过期后行会被物理删除，历史消息里的 uuid 仍可能残留。
 
 详见 **`docs/AI_DUAL_KEY.md` §1.1、§3.4**。
+
+### 3.6 临时用户 `bot_guest`
+
+类在 `cn.org.autumn.modules.bot`（`GuestEntity` / `GuestService`），表名 **`bot_guest`**，与 `bot_robot` 同一模块前缀。不是机器人：`isRobot()` 为 false，`isGuest()` 为 true，没有主人、令牌、Hook。
+
+| 项 | 约定 |
+|----|------|
+| 身份 | 无密码、无角色、不可 Shiro / 开放 API 登录。`UserContextService.resolve` 不返回临时用户 |
+| uuid | `UuidNamespaceService` 与 `sys_user`、`bot_robot` 互斥 |
+| 复用 | `guestKey` 唯一。未过期则刷新 `expireTime`；过期则删行并分配新 uuid |
+| 清理 | `GuestService` 每小时物理删除 `expireTime` 已过的行，不删消息 |
+| 资料 | `UserContextService.getUserContext` 在真人、机器人之后返回未过期临时用户。对外 `User.guest=true` |
+| 过期后 | 查不到则按「账号已注销」展示，`guest=false`。不要把任意未知 uuid 标成网页访客 |
+| 在线 | 网页轮询写 `im:guest:presence:{uuid}`，约 30 秒。**禁止**写入 `im:user:devices:`（那是 WebSocket 路由） |
+| 推送 | 发送方不是 `sys_user` 时，仅活跃临时用户用其昵称；否则丢弃，与未知用户相同 |
+
+网页会话入口在 IM `GuestContactService`（`im/api/v1/guest/contact`）。官方端单聊顶栏读 `im/api/v1/im` 的 `online.status`。
+
+`bot_guest` 只保留聊天身份。不得因此产生短视频用户、超然号、IM 用户设置、单聊设置或关注/拉黑关系。主页和聊天补齐只返回 uuid、昵称、头像（`user.guest=true`），作品和关系为空。这份空白资料缓存约 10 分钟；身份本身走 `GuestService.getActive` 的实体缓存。各端用昵称和头像展示会话，不发起关注或加好友。
 
 ---
 

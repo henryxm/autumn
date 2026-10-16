@@ -22,24 +22,26 @@
 
 仍使用 **`uuid`** 第二主键时：可有**非唯一**的 **`user`** 外键列（所属/调用主体），与 **`uuid`** **同时存在**；该 **`user`** **不得** `isUnique = true`（除非整表走 **`UserBased`**）。见 **§3.5**。
 
-### 1.1 调用主体：`SysUserEntity` 与 `RobotEntity`（业务 `user` 字段）
+### 1.1 调用主体：`SysUserEntity`、`RobotEntity` 与 `GuestEntity`（业务 `user` 字段）
 
-框架在基础结构中定义**两类**无 Session API 调用主体，均为独立实体类型，且 **`uuid` 全局不得相同**（由 **`UuidNamespaceService`** 在 `sys_user` 与 `bot_robot` 间统一分配与校验）：
+框架在基础结构中定义**三类**调用主体，均为独立实体类型，且 **`uuid` 全局不得相同**（由 **`UuidNamespaceService`** 在 `sys_user`、`bot_robot` 与 `bot_guest` 间统一分配与校验）：
 
-| 实体 | 表 | 框架类型 | `UserContext#isRobot()` |
-|------|-----|----------|-------------------------|
-| **`SysUserEntity`** | `sys_user` | 真人系统用户 | `false` |
-| **`RobotEntity`** | `bot_robot` | 机器人 API 身份 | `true` |
+| 实体 | 表 | 框架类型 | `isRobot()` | `isGuest()` |
+|------|-----|----------|-------------|-------------|
+| **`SysUserEntity`** | `sys_user` | 真人系统用户 | `false` | `false` |
+| **`RobotEntity`** | `bot_robot` | 机器人 API 身份 | `true` | `false` |
+| **`GuestEntity`**（`modules.bot`） | `bot_guest` | 临时用户（短生命周期，不可登录，归属机器人模块） | `false` | `true` |
 
 **业务层简化约定（默认接受）**：
 
-- 业务模块通常**不**为机器人单独复制一套业务表；与「用户」相关的业务表沿用 **`user`**（或 **`owner`** 等）列表示**调用主体 / 所属主体**。
-- 该列存 **32 位 `uuid` 字符串**，取值可以是 **`sys_user.uuid`** 或 **`bot_robot.uuid`**，按实际调用方写入；解析时用 **`UserContextService#getUserContext(uuid)`** 或接口注入的 **`UserContext`**，必要时 **`isRobot()`** 区分行为。
+- 业务模块通常**不**为机器人或临时用户单独复制一套业务表；与「用户」相关的业务表沿用 **`user`**（或 **`owner`** 等）列表示**调用主体 / 所属主体**。
+- 该列存 **32 位 `uuid` 字符串**，取值可以是 **`sys_user.uuid`**、**`bot_robot.uuid`** 或 **`bot_guest.uuid`**，按实际调用方写入；解析时用 **`UserContextService#getUserContext(uuid)`** 或接口注入的 **`UserContext`**，必要时 **`isRobot()`** / **`isGuest()`** 区分行为。对外统一视图为 **`User`**（字段 `robot`、`guest`）。
+- 临时用户**不能**作为 Shiro / 开放 API 登录主体；`resolve` 只认真人或机器人令牌。
 - **`RobotEntity.owner`**、**`UserBased`** 按用户唯一表的 **`user`** 等**特指真人**的列，仍只存 **`sys_user.uuid`**（见 §3.3）；勿与上述「业务泛化 `user`」混为一谈。
 
 ```java
-// 业务表：同一 user 列可记录真人或机器人 uuid
-@Column(length = 32, comment = "用户:调用主体uuid，可为sys_user或bot_robot")
+// 业务表：同一 user 列可记录真人、机器人或临时用户 uuid
+@Column(length = 32, comment = "用户:调用主体uuid，可为sys_user、bot_robot或bot_guest")
 @Index
 private String user;
 
@@ -124,7 +126,7 @@ private Long uuid;
 | **Java 字段名** | **`{concept}`** 或 **`{concept}Id`** — `concept` 为**单个**简洁英文单词（如 `robot`、`owner`、`user`），避免复合词与过长命名 |
 | **新代码** | **优先 `{concept}`**（如 `robot`、`owner`） |
 | **存量 / 已改型** | 已使用 **`{concept}Id`**（或历史变体如 `parentUuid`、`userUuid`）的**保持不动**；**禁止**为「统一」回退成 `{concept}` |
-| **列值** | 存**被引用方**的 **`uuid`**，**禁止**存自增 **`id`**。业务 **`user`** 列在泛化语义下可为 **`sys_user.uuid`** 或 **`bot_robot.uuid`**（§1.1）；**`owner`**（机器人表）、**`UserBased.user`** 等特指真人时仅 **`sys_user.uuid`** |
+| **列值** | 存**被引用方**的 **`uuid`**，**禁止**存自增 **`id`**。业务 **`user`** 列在泛化语义下可为 **`sys_user.uuid`**、**`bot_robot.uuid`** 或 **`bot_guest.uuid`**（§1.1）；**`owner`**（机器人表）、**`UserBased.user`** 等特指真人时仅 **`sys_user.uuid`** |
 | **`String` 外键** | 默认 **`length = 32`** |
 | **`@Column.comment`** | **`{概念}:说明`** 或 **`{概念}ID:说明`** — 概念对应**被引用方**；**新代码优先 `{概念}`**（如 **`机器人:对应bot_robot.uuid`**）；存量 **`{概念}`** / **`{概念}ID`** 均保持 |
 
@@ -176,7 +178,7 @@ private String user;
 |----|------|
 | **适用** | 与用户直接相关的业务数据；典型为按 **`user`** 列表/筛选/统计，每用户 **0～N** 行 |
 | **唯一性** | **`user`** 单独**不得** `isUnique = true`（每用户一行请用 **§3.3 `UserBased`**）；允许 **`user` + 其它字段** 联合唯一 |
-| **`user` 列** | 非唯一外键；值可为 **`sys_user.uuid`** 或 **`bot_robot.uuid`**（**§1.1**）；建议 **`@Index`** 便于按用户查询 |
+| **`user` 列** | 非唯一外键；值可为 **`sys_user.uuid`**、**`bot_robot.uuid`** 或 **`bot_guest.uuid`**（**§1.1**）；建议 **`@Index`** 便于按用户查询 |
 | **`@Column.comment`** | **`用户:说明`** 或 **`用户ID:说明`**（新代码优先 **`用户:`**） |
 | **禁止** | 同时声明业务第二主键列 **`uuid`**；为实现 **`UserBased`** 却把 **`user`** 标为唯一（语义不符时每用户一行才用 **§3.3**） |
 | **仍需** | 自增技术主键 **`id`**（gen CRUD） |
@@ -191,7 +193,7 @@ public class DemoUserFavoriteEntity {
     @Column(isKey = true, type = "bigint", isAutoIncrement = true, comment = "id")
     private Long id;
 
-    @Column(length = 32, comment = "用户:所属用户uuid，可为sys_user或bot_robot")
+    @Column(length = 32, comment = "用户:所属用户uuid，可为sys_user、bot_robot或bot_guest")
     @Index
     private String user;
 
@@ -206,7 +208,7 @@ public class DemoUserFavoriteEntity {
 
 ### 3.5 非唯一的 `user` 外键（与 `uuid` 第二主键并存）
 
-当表**不是**按用户唯一、**仍使用 `uuid` 第二主键**时，可增加 **`user`** 表示所属/调用主体（**§1.1**：可为 **`sys_user.uuid`** 或 **`bot_robot.uuid`**）：
+当表**不是**按用户唯一、**仍使用 `uuid` 第二主键**时，可增加 **`user`** 表示所属/调用主体（**§1.1**：可为 **`sys_user.uuid`**、**`bot_robot.uuid`** 或 **`bot_guest.uuid`**）：
 
 | 项 | 标准 |
 |----|------|
@@ -217,7 +219,7 @@ public class DemoUserFavoriteEntity {
 @Column(length = 32, isUnique = true, comment = "标识:全局唯一业务主键")
 private String uuid;
 
-@Column(length = 32, comment = "用户:调用主体uuid，可为sys_user或bot_robot")
+@Column(length = 32, comment = "用户:调用主体uuid，可为sys_user、bot_robot或bot_guest")
 @Index
 private String user;   // 非唯一，禁止 isUnique
 ```
@@ -299,7 +301,7 @@ public class DemoUserNoteEntity {
     @Column(isKey = true, type = "bigint", isAutoIncrement = true, comment = "id")
     private Long id;
 
-    @Column(length = 32, comment = "用户:所属用户uuid，可为sys_user或bot_robot")
+    @Column(length = 32, comment = "用户:所属用户uuid，可为sys_user、bot_robot或bot_guest")
     @Index
     private String user;
 
@@ -393,7 +395,7 @@ AUTUMN_SCAN_EXTRA=1 bash scripts/constraints-scan
 | 主题 | 文档 |
 |------|------|
 | 约束权威 §10.4 | `docs/AI_STANDARDS.md` |
-| 真人 / 机器人与业务 `user` | **§1.1**；`docs/AI_ROBOT.md` §3.5 |
+| 真人 / 机器人 / 临时用户与业务 `user` | **§1.1**；`docs/AI_ROBOT.md` §3.5 |
 | 存量代码默认不升级 | **§1.2** |
 | SQL / FK / Wrapper | `docs/AI_DATABASE.md` §1.1 |
 | 实体建模与三步流程 | `docs/AI_CODEGEN.md` |

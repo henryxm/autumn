@@ -289,8 +289,8 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         }
         if (StringUtils.isEmpty(user.getUuid()))
             user.setUuid(uuidNamespaceService.allocate());
-        else if (uuidNamespaceService.existsInRobot(user.getUuid()))
-            throw new IllegalArgumentException("uuid已被机器人占用");
+        else if (uuidNamespaceService.existsInRobot(user.getUuid()) || uuidNamespaceService.existsInGuest(user.getUuid()))
+            throw new IllegalArgumentException("uuid已被机器人或临时用户占用");
         this.updateById(user);
     }
 
@@ -597,8 +597,8 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
                         } else {
                             sysUserEntity.setUsername(mapping.getUsername());
                         }
-                        if (uuidNamespaceService.existsInRobot(mapping.getUuid())) {
-                            log.warn("集群同步跳过uuid，已被机器人占用: {}", mapping.getUuid());
+                        if (uuidNamespaceService.existsInRobot(mapping.getUuid()) || uuidNamespaceService.existsInGuest(mapping.getUuid())) {
+                            log.warn("集群同步跳过uuid，已被机器人或临时用户占用: {}", mapping.getUuid());
                             continue;
                         }
                         sysUserEntity.setUuid(mapping.getUuid());
@@ -719,8 +719,8 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
                             if (null != sysDeptEntity) {
                                 sysUserEntity.setDeptKey(sysDeptEntity.getDeptKey());
                             }
-                            if (uuidNamespaceService.existsInRobot(sysUserEntity.getUuid())) {
-                                log.warn("用户同步跳过uuid，已被机器人占用: {}", sysUserEntity.getUuid());
+                            if (uuidNamespaceService.existsInRobot(sysUserEntity.getUuid()) || uuidNamespaceService.existsInGuest(sysUserEntity.getUuid())) {
+                                log.warn("用户同步跳过uuid，已被机器人或临时用户占用: {}", sysUserEntity.getUuid());
                                 continue;
                             }
                             sysUserEntity.setUserId(null);
