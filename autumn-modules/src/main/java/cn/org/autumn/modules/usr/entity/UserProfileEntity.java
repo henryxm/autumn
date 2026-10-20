@@ -24,6 +24,9 @@ public class UserProfileEntity implements Serializable {
     @Column(comment = "头像")
     private String icon;
 
+    @Column(comment = "头像:对象存储uuid", length = 64, defaultValue = "")
+    private String iconUuid;
+
     @Column(length = 50, comment = "用户名", isUnique = true)
     private String username;
 

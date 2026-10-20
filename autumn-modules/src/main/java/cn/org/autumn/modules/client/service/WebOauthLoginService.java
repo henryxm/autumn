@@ -30,6 +30,7 @@ import cn.org.autumn.modules.usr.dto.UserProfile;
 import cn.org.autumn.modules.usr.entity.UserProfileEntity;
 import cn.org.autumn.modules.usr.service.UserProfileService;
 import cn.org.autumn.modules.usr.service.UserTokenService;
+import cn.org.autumn.modules.usr.support.UserProfileIconFiller;
 import cn.org.autumn.opl.OplConstants;
 import cn.org.autumn.utils.WebPathUtils;
 import com.alibaba.fastjson2.JSON;
@@ -62,6 +63,9 @@ public class WebOauthLoginService {
 
     @Autowired
     private UserProfileService userProfileService;
+
+    @Autowired(required = false)
+    private UserProfileIconFiller userProfileIconFiller;
 
     @Autowired
     private UserTokenService userTokenService;
@@ -325,6 +329,9 @@ public class WebOauthLoginService {
         }
         SysUserEntity user = (SysUserEntity) tokenStore.getValue();
         UserProfileEntity profileEntity = userProfileService.from(user);
+        if (userProfileIconFiller != null) {
+            userProfileIconFiller.fillDisplayIcon(profileEntity);
+        }
         AuthScopeSet grantedScope = AuthScopeSet.withDefault(tokenStore.getGrantedScope()).expand(authScopeCatalog, AuthTrack.OAUTH);
         AuthUserInfo userInfo = AuthUserInfoBuilder.build(authScopeCatalog, AuthTrack.OAUTH, grantedScope, user, profileEntity, null, null);
         ClientDetailsEntity clientEntity = StringUtils.isBlank(tokenStore.getClientId()) ? null : clientDetailsService.findByClientId(tokenStore.getClientId());

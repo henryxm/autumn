@@ -21,6 +21,7 @@ import cn.org.autumn.opl.model.OpenUserInfoSnapshot;
 import cn.org.autumn.opl.spi.OpenPlatformService;
 import cn.org.autumn.modules.usr.entity.UserProfileEntity;
 import cn.org.autumn.modules.usr.service.UserProfileService;
+import cn.org.autumn.modules.usr.support.UserProfileIconFiller;
 import java.util.List;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -52,6 +53,9 @@ public class OpenPlatformServiceImpl implements OpenPlatformService {
 
     @Autowired
     private UserProfileService userProfileService;
+
+    @Autowired(required = false)
+    private UserProfileIconFiller userProfileIconFiller;
 
     @Autowired
     private SysUserService sysUserService;
@@ -155,6 +159,9 @@ public class OpenPlatformServiceImpl implements OpenPlatformService {
             identity.setAccount(app.getAccount());
         }
         UserProfileEntity profile = userProfileService.getByUuid(context.getUser());
+        if (userProfileIconFiller != null && profile != null) {
+            userProfileIconFiller.fillDisplayIcon(profile);
+        }
         SysUserEntity user = sysUserService.getByUuid(context.getUser());
         AuthScopeSet grantedScope = AuthScopeSet.withDefault(context.getGrantedScope()).expand(authScopeCatalog, AuthTrack.OPL);
         OpenUserInfoSnapshot snapshot = AuthUserInfoBuilder.toOpenUserInfo(AuthUserInfoBuilder.build(authScopeCatalog, AuthTrack.OPL, grantedScope, user, profile, context.getOpenId(), context.getUnionId()));

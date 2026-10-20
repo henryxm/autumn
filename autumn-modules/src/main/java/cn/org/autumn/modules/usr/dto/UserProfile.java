@@ -19,6 +19,10 @@ public class UserProfile implements Serializable {
     @JsonSerialize(include = JsonSerialize.Inclusion.NON_EMPTY)
     private String icon = "";
 
+    /** 头像对象存储 uuid；展示 URL 仍用 {@link #icon}（有 uuid 时由调用方回填签名 URL）。 */
+    @JsonSerialize(include = JsonSerialize.Inclusion.NON_EMPTY)
+    private String iconUuid = "";
+
     @JsonSerialize(include = JsonSerialize.Inclusion.NON_EMPTY)
     private String username = "";
 
@@ -41,6 +45,10 @@ public class UserProfile implements Serializable {
             userProfile.setIcon(userProfileEntity.getIcon());
         else
             userProfile.setIcon("");
+        if (StringUtils.isNotBlank(userProfileEntity.getIconUuid()))
+            userProfile.setIconUuid(userProfileEntity.getIconUuid());
+        else
+            userProfile.setIconUuid("");
         userProfile.setUsername(userProfileEntity.getUsername());
         userProfile.setNickname(userProfileEntity.getNickname());
         userProfile.setUuid(userProfileEntity.getUuid());
@@ -55,6 +63,7 @@ public class UserProfile implements Serializable {
         return "UserProfile{" +
                 "uuid='" + uuid + '\'' +
                 ", icon='" + icon + '\'' +
+                ", iconUuid='" + iconUuid + '\'' +
                 ", username='" + username + '\'' +
                 ", nickname='" + nickname + '\'' +
                 ", mobile='" + mobile + '\'' +
