@@ -44,13 +44,6 @@ public class SysUserController extends SysAbstractController {
     @RequiresPermissions("sys:user:list")
     public R list(@RequestParam Map<String, Object> params) {
         PageUtils page = sysUserService.queryPage(params);
-        if (page != null && page.getList() != null) {
-            for (Object row : page.getList()) {
-                if (row instanceof SysUserEntity user) {
-                    sysUserService.applyDisplayIcon(user);
-                }
-            }
-        }
         return R.ok().put("page", page);
     }
 

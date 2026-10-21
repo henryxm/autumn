@@ -19,7 +19,7 @@ public class UserProfile implements Serializable {
     @JsonSerialize(include = JsonSerialize.Inclusion.NON_EMPTY)
     private String icon = "";
 
-    /** 头像对象存储 uuid；展示 URL 仍用 {@link #icon}（有 uuid 时由调用方回填签名 URL）。 */
+    /** Profile 备份列镜像（业务真相为 SysUser.iconId）；展示 URL 用 {@link #icon}。 */
     @JsonSerialize(include = JsonSerialize.Inclusion.NON_EMPTY)
     private String iconUuid = "";
 

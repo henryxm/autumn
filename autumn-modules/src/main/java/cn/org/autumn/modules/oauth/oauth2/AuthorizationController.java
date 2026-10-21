@@ -40,7 +40,6 @@ import cn.org.autumn.modules.usr.dto.UserProfile;
 import cn.org.autumn.modules.usr.entity.UserProfileEntity;
 import cn.org.autumn.modules.usr.service.UserLoginLogService;
 import cn.org.autumn.modules.usr.service.UserProfileService;
-import cn.org.autumn.modules.usr.support.UserProfileIconFiller;
 import cn.org.autumn.modules.client.oauth2.WebOauthEndpointResolver;
 import cn.org.autumn.modules.client.service.AuthSiteRoleService;
 import cn.org.autumn.modules.client.service.OauthRpLoginService;
@@ -124,9 +123,6 @@ public class AuthorizationController {
 
     @Autowired
     UserProfileService userProfileService;
-
-    @Autowired(required = false)
-    UserProfileIconFiller userProfileIconFiller;
 
     @Autowired
     AuthAuthorizeLoginSupport authAuthorizeLoginSupport;
@@ -769,9 +765,6 @@ public class AuthorizationController {
                 if (username instanceof SysUserEntity) {
                     SysUserEntity sysUserEntity = (SysUserEntity) username;
                     UserProfileEntity profile = userProfileService.from(sysUserEntity);
-                    if (userProfileIconFiller != null) {
-                        userProfileIconFiller.fillDisplayIcon(profile);
-                    }
                     AuthScopeSet grantedScope = AuthScopeSet.withDefault(tokenStore.getGrantedScope()).expand(authScopeCatalog, AuthTrack.OAUTH);
                     AuthUserInfo userInfo = AuthUserInfoBuilder.build(authScopeCatalog, AuthTrack.OAUTH, grantedScope, sysUserEntity, profile, null, null);
                     ClientDetailsEntity clientEntity = StringUtils.isBlank(tokenStore.getClientId()) ? null : clientDetailsService.findByClientId(tokenStore.getClientId());

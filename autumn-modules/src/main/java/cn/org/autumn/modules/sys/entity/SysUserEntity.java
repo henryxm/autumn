@@ -91,6 +91,9 @@ public class SysUserEntity implements AccountHandler.Account, UserContext, Seria
     @Column(comment = "头像")
     private String icon;
 
+    @Column(comment = "头像对象ID", length = 64, defaultValue = "")
+    private String iconId;
+
     @Column(comment = "头像MD5", length = 128, defaultValue = "")
     private String iconMd5;
 
@@ -144,11 +147,14 @@ public class SysUserEntity implements AccountHandler.Account, UserContext, Seria
         this.status = entity.status;
         this.verify = entity.verify;
         this.icon = entity.icon;
+        this.iconId = entity.iconId;
+        this.iconMd5 = entity.iconMd5;
     }
 
     public SysUserEntity copy() {
         SysUserEntity clone = new SysUserEntity();
         clone.copy(this);
+        clone.setUuid(this.uuid);
         return clone;
     }
 
@@ -180,6 +186,7 @@ public class SysUserEntity implements AccountHandler.Account, UserContext, Seria
         user.setUuid(uuid);
         user.setNickname(nickname);
         user.setIcon(icon);
+        user.setIconId(iconId);
         user.setRobot(false);
         user.setGuest(false);
         return user;
@@ -202,6 +209,7 @@ public class SysUserEntity implements AccountHandler.Account, UserContext, Seria
                 getIdCard(),
                 getStatus(),
                 getIcon(),
+                getIconId(),
                 getIconMd5()
         );
     }

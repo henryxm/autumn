@@ -10,9 +10,7 @@ import cn.org.autumn.modules.sys.service.SysUserService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.usr.entity.UserProfileEntity;
 import cn.org.autumn.modules.usr.entity.UserTokenEntity;
-import cn.org.autumn.modules.usr.service.UserProfileService;
 import cn.org.autumn.modules.usr.service.UserTokenService;
-import cn.org.autumn.modules.usr.support.UserProfileIconFiller;
 import cn.org.autumn.utils.IPUtils;
 import cn.org.autumn.utils.InterceptorUtils;
 import lombok.extern.slf4j.Slf4j;
@@ -40,13 +38,7 @@ public class AuthorizationInterceptor implements HandlerInterceptor, Interceptor
     private UserTokenService userTokenService;
 
     @Autowired
-    private UserProfileService userProfileService;
-
-    @Autowired
     private SysUserService sysUserService;
-
-    @Autowired(required = false)
-    private UserProfileIconFiller userProfileIconFiller;
 
     public static final String USER_KEY = "userUuid";
 
@@ -89,7 +81,7 @@ public class AuthorizationInterceptor implements HandlerInterceptor, Interceptor
     }
 
     /**
-     * 组装页面 Model 用的用户副本（含 profile 展示 icon），不改 cache 原对象。
+     * 组装页面 Model 用的用户副本（展示字段取自 SysUser），不改 cache 原对象。
      */
     private SysUserEntity appendForDisplay(SysUserEntity src) {
         if (src == null) {
@@ -99,26 +91,13 @@ public class AuthorizationInterceptor implements HandlerInterceptor, Interceptor
         if (display == null) {
             return null;
         }
-        UserProfileEntity profile = userProfileService.getByUuid(display.getUuid());
-        if (profile == null) {
-            profile = userProfileService.from(src);
-        }
-        if (profile != null) {
-            UserProfileEntity view = new UserProfileEntity();
-            view.setUuid(profile.getUuid());
-            view.setUsername(profile.getUsername());
-            view.setNickname(profile.getNickname());
-            view.setIconUuid(profile.getIconUuid());
-            if (userProfileIconFiller != null) {
-                view.setIcon(StringUtils.defaultString(userProfileIconFiller.resolveDisplayIcon(profile)));
-            } else {
-                view.setIcon(StringUtils.defaultString(profile.getIcon()));
-            }
-            if (StringUtils.isBlank(view.getIcon()) && StringUtils.isNotBlank(display.getIcon())) {
-                view.setIcon(display.getIcon());
-            }
-            display.setProfile(view);
-        }
+        UserProfileEntity view = new UserProfileEntity();
+        view.setUuid(display.getUuid());
+        view.setUsername(display.getUsername());
+        view.setNickname(display.getNickname());
+        view.setIcon(StringUtils.defaultString(display.getIcon()));
+        view.setIconUuid(StringUtils.defaultString(display.getIconId()));
+        display.setProfile(view);
         return display;
     }
 

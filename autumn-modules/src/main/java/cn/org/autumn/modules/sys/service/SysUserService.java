@@ -23,7 +23,6 @@ import cn.org.autumn.modules.sys.shiro.SuperPasswordToken;
 import cn.org.autumn.modules.usr.entity.UserProfileEntity;
 import cn.org.autumn.modules.usr.service.UserLoginLogService;
 import cn.org.autumn.modules.usr.service.UserProfileService;
-import cn.org.autumn.modules.usr.support.UserProfileIconFiller;
 import cn.org.autumn.site.AccountFactory;
 import cn.org.autumn.site.InitFactory;
 import cn.org.autumn.utils.*;
@@ -83,10 +82,6 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
     @Autowired
     @Lazy
     private UserProfileService userProfileService;
-
-    @Autowired(required = false)
-    @Lazy
-    private UserProfileIconFiller userProfileIconFiller;
 
     @Autowired
     @Lazy
@@ -516,14 +511,19 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
                 }
             }
         }
-        if (StringUtils.isBlank(user.getIcon())) {
+        if (StringUtils.isBlank(user.getIcon()) || StringUtils.isBlank(user.getIconId())) {
             if (null == profile)
                 profile = userProfileService.getByUuid(user.getUuid());
-            // 仅抄写静态/历史 profile.icon；有 iconUuid 时不落库签名 URL，出站用 copyForDisplay
-            if (null != profile && StringUtils.isBlank(profile.getIconUuid())
-                    && StringUtils.isNotBlank(profile.getIcon())) {
-                user.setIcon(profile.getIcon());
-                update = true;
+            // 迁移：Profile 备份 → 持久化 sys_user（不调 OSS）
+            if (null != profile) {
+                if (StringUtils.isBlank(user.getIconId()) && StringUtils.isNotBlank(profile.getIconUuid())) {
+                    user.setIconId(profile.getIconUuid().trim());
+                    update = true;
+                }
+                if (StringUtils.isBlank(user.getIcon()) && StringUtils.isNotBlank(profile.getIcon())) {
+                    user.setIcon(profile.getIcon());
+                    update = true;
+                }
             }
         }
         if (update && persist) {
@@ -532,57 +532,13 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
     }
 
     /**
-     * 出站用用户副本：按 profile.iconUuid 签发展示 URL 写入副本 icon，不改 src、不写库。
+     * 出站用用户副本（含 icon host 替换），不改 src / cache / principal。
      */
     public SysUserEntity copyForDisplay(SysUserEntity src) {
         if (src == null) {
             return null;
         }
-        SysUserEntity copy = src.copy();
-        if (StringUtils.isNotBlank(src.getUuid())) {
-            copy.setUuid(src.getUuid());
-        }
-        applyDisplayIcon(copy);
-        return dynamicReplaceIconHost(copy);
-    }
-
-    /**
-     * 出站展示 icon：对副本 {@link #copyForDisplay} 后取 icon；不改 src、不写库。
-     */
-    public String displayIcon(SysUserEntity src) {
-        if (src == null) {
-            return "";
-        }
-        SysUserEntity display = copyForDisplay(src);
-        return display != null ? StringUtils.defaultString(display.getIcon()) : "";
-    }
-
-    /**
-     * 仅对传入实体内存写入展示 icon（调用方须保证是副本或页内临时对象，勿写回 cache/principal）。
-     */
-    public void applyDisplayIcon(SysUserEntity user) {
-        if (user == null || StringUtils.isBlank(user.getUuid())) {
-            return;
-        }
-        UserProfileEntity profile = userProfileService.getByUuid(user.getUuid());
-        if (profile == null) {
-            profile = new UserProfileEntity();
-            profile.setUuid(user.getUuid());
-        }
-        if (userProfileIconFiller != null) {
-            String resolved = userProfileIconFiller.resolveDisplayIcon(profile);
-            if (StringUtils.isNotBlank(resolved)) {
-                user.setIcon(resolved);
-                return;
-            }
-            // 签发/远端失败：保留副本上已有历史 icon
-            if (StringUtils.isNotBlank(user.getIcon())) {
-                return;
-            }
-        }
-        if (StringUtils.isNotBlank(profile.getIcon())) {
-            user.setIcon(profile.getIcon());
-        }
+        return dynamicReplaceIconHost(src.copy());
     }
 
     public SysUserEntity getUuid(String uuid) {

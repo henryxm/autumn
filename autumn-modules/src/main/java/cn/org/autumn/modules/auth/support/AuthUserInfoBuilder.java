@@ -36,14 +36,26 @@ public final class AuthUserInfoBuilder {
         if (fields.contains(AuthField.unionId) && StringUtils.isNotBlank(unionId)) {
             info.setUnionId(unionId);
         }
-        if (fields.contains(AuthField.nickname) && profile != null) {
-            info.setNickname(profile.getNickname());
+        if (fields.contains(AuthField.nickname)) {
+            if (user != null && StringUtils.isNotBlank(user.getNickname())) {
+                info.setNickname(user.getNickname());
+            } else if (profile != null) {
+                info.setNickname(profile.getNickname());
+            }
         }
-        if (fields.contains(AuthField.icon) && profile != null) {
-            info.setIcon(StringUtils.defaultString(profile.getIcon()));
+        if (fields.contains(AuthField.icon)) {
+            if (user != null && StringUtils.isNotBlank(user.getIcon())) {
+                info.setIcon(user.getIcon());
+            } else if (profile != null) {
+                info.setIcon(StringUtils.defaultString(profile.getIcon()));
+            }
         }
-        if (fields.contains(AuthField.username) && profile != null) {
-            info.setUsername(profile.getUsername());
+        if (fields.contains(AuthField.username)) {
+            if (user != null && StringUtils.isNotBlank(user.getUsername())) {
+                info.setUsername(user.getUsername());
+            } else if (profile != null) {
+                info.setUsername(profile.getUsername());
+            }
         }
         if (fields.contains(AuthField.mobile)) {
             String mobile = profile != null ? profile.getMobile() : null;

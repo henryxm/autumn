@@ -36,8 +36,8 @@ public class User implements IResult, UserContext {
 
     private String icon;
 
-    /** 头像对象存储 uuid；出参展示 URL 仍用 {@link #icon}（有 uuid 时由业务回填签名 URL）。 */
-    private String iconUuid;
+    /** 头像对象存储 ID（对应 {@link SysUserEntity#getIconId()}）；展示 URL 用 {@link #icon}。 */
+    private String iconId;
 
     private int status;
 

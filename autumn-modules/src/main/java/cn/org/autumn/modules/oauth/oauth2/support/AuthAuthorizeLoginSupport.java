@@ -78,7 +78,7 @@ public class AuthAuthorizeLoginSupport {
     }
 
     /**
-     * 写入授权页已登录用户展示字段；icon 经 {@link SysUserService#copyForDisplay} 回填，不改 principal。
+     * 写入授权页已登录用户展示字段；icon 取自 SysUser，不改 principal。
      */
     public void enrichLoggedInUser(HttpServletRequest request, Model model, SysUserEntity user) {
         if (model == null || user == null) {
