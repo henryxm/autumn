@@ -132,6 +132,9 @@ public class OplAuthorizationController {
     private OAuthAuthorizeAppIconSupport authorizeAppIconSupport;
 
     @Autowired
+    private AuthAuthorizeLoginSupport authAuthorizeLoginSupport;
+
+    @Autowired
     private AuthScopeSupport authScopeSupport;
 
     @RequestMapping(value = "authorize", method = {RequestMethod.GET, RequestMethod.HEAD})
@@ -401,7 +404,7 @@ public class OplAuthorizationController {
         if (loggedIn) {
             SysUserEntity user = ShiroUtils.getUserEntity();
             if (user != null) {
-                AuthAuthorizeLoginSupport.enrichLoggedInUser(request, model, user);
+                authAuthorizeLoginSupport.enrichLoggedInUser(request, model, user);
             }
             if (request != null) {
                 model.addAttribute("authorizeLogoutUrl", buildAuthorizeLogoutUrl(request, buildAuthorizeReturnUrl(request, model)));

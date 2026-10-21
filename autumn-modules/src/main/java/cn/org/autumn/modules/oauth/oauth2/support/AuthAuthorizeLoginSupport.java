@@ -1,18 +1,23 @@
 package cn.org.autumn.modules.oauth.oauth2.support;
 
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
+import cn.org.autumn.modules.sys.service.SysUserService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import java.net.URI;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.shiro.session.Session;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.stereotype.Component;
 import org.springframework.ui.Model;
 
 /**
- * OAuth/OPL 授权页登录方式 Tab 状态（account / qr / phone）。
+ * OAuth/OPL 授权页登录方式 Tab 状态（account / qr / phone）及已登录用户展示字段。
  */
-public final class AuthAuthorizeLoginSupport {
+@Component
+public class AuthAuthorizeLoginSupport {
 
     public static final String SESSION_KEY = "oauth_authorize_login_tab";
     public static final String PARAM_LOGIN_TAB = "loginTab";
@@ -20,8 +25,9 @@ public final class AuthAuthorizeLoginSupport {
     public static final String TAB_QR = "qr";
     public static final String TAB_PHONE = "phone";
 
-    private AuthAuthorizeLoginSupport() {
-    }
+    @Autowired
+    @Lazy
+    private SysUserService sysUserService;
 
     public static void saveLoginTab(HttpServletRequest request, String tab) {
         String normalized = normalizeTab(tab);
@@ -71,7 +77,10 @@ public final class AuthAuthorizeLoginSupport {
         return TAB_ACCOUNT;
     }
 
-    public static void enrichLoggedInUser(HttpServletRequest request, Model model, SysUserEntity user) {
+    /**
+     * 写入授权页已登录用户展示字段；icon 经 {@link SysUserService#copyForDisplay} 回填，不改 principal。
+     */
+    public void enrichLoggedInUser(HttpServletRequest request, Model model, SysUserEntity user) {
         if (model == null || user == null) {
             return;
         }
@@ -83,7 +92,8 @@ public final class AuthAuthorizeLoginSupport {
         }
         model.addAttribute("loginUserName", displayName);
         model.addAttribute("loginUserNickname", StringUtils.defaultString(user.getNickname()));
-        model.addAttribute("loginUserIcon", StringUtils.defaultString(user.getIcon()));
+        SysUserEntity display = sysUserService != null ? sysUserService.copyForDisplay(user) : user;
+        model.addAttribute("loginUserIcon", StringUtils.defaultString(display != null ? display.getIcon() : user.getIcon()));
         model.addAttribute("loginUserMobile", maskMobile(user.getMobile()));
     }
 

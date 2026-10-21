@@ -18,6 +18,7 @@ import cn.org.autumn.modules.opl.entity.OpenCodeEntity;
 import cn.org.autumn.modules.opl.service.OpenCodeService;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysConfigService;
+import cn.org.autumn.modules.sys.service.SysUserService;
 import cn.org.autumn.opl.OplConstants;
 import cn.org.autumn.opl.model.OpenAppSnapshot;
 import cn.org.autumn.opl.spi.OpenPlatformService;
@@ -63,6 +64,10 @@ public class ClientGrantService extends ModuleService<ClientGrantDao, ClientGran
     @Autowired
     @Lazy
     private OpenCodeService openCodeService;
+
+    @Autowired
+    @Lazy
+    private SysUserService sysUserService;
 
     public ClientGrantEntity getByClientId(String clientId) {
         if (StringUtils.isBlank(clientId)) {
@@ -357,14 +362,15 @@ public class ClientGrantService extends ModuleService<ClientGrantDao, ClientGran
         }
     }
 
-    private static void putScannerBrief(Map<String, Object> data, SysUserEntity user) {
+    private void putScannerBrief(Map<String, Object> data, SysUserEntity user) {
         if (data == null || user == null) {
             return;
         }
+        SysUserEntity display = sysUserService != null ? sysUserService.copyForDisplay(user) : user;
         Map<String, String> brief = new HashMap<>();
-        brief.put("displayName", StringUtils.isNotBlank(user.getNickname()) ? user.getNickname() : user.getUsername());
-        if (StringUtils.isNotBlank(user.getIcon())) {
-            brief.put("icon", user.getIcon());
+        brief.put("displayName", StringUtils.isNotBlank(display.getNickname()) ? display.getNickname() : display.getUsername());
+        if (StringUtils.isNotBlank(display.getIcon())) {
+            brief.put("icon", display.getIcon());
         }
         data.put("scannerBrief", brief);
     }

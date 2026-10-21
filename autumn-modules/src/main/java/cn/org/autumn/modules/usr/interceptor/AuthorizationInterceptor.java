@@ -8,9 +8,11 @@ import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysUserService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
+import cn.org.autumn.modules.usr.entity.UserProfileEntity;
 import cn.org.autumn.modules.usr.entity.UserTokenEntity;
 import cn.org.autumn.modules.usr.service.UserProfileService;
 import cn.org.autumn.modules.usr.service.UserTokenService;
+import cn.org.autumn.modules.usr.support.UserProfileIconFiller;
 import cn.org.autumn.utils.IPUtils;
 import cn.org.autumn.utils.InterceptorUtils;
 import lombok.extern.slf4j.Slf4j;
@@ -42,6 +44,9 @@ public class AuthorizationInterceptor implements HandlerInterceptor, Interceptor
 
     @Autowired
     private SysUserService sysUserService;
+
+    @Autowired(required = false)
+    private UserProfileIconFiller userProfileIconFiller;
 
     public static final String USER_KEY = "userUuid";
 
@@ -83,18 +88,38 @@ public class AuthorizationInterceptor implements HandlerInterceptor, Interceptor
         }
     }
 
-    private SysUserEntity append(SysUserEntity sysUserEntity) {
-        if (null != sysUserEntity) {
-            if (null == sysUserEntity.getProfile())
-                sysUserEntity = userProfileService.setProfile(sysUserEntity);
-            if (null == sysUserEntity.getProfile()) {
-                sysUserEntity.setProfile(userProfileService.from(sysUserEntity));
-            }
-            if (null == sysUserEntity.getProfile().getIcon()) {
-                sysUserEntity.getProfile().setIcon("");
-            }
+    /**
+     * 组装页面 Model 用的用户副本（含 profile 展示 icon），不改 cache 原对象。
+     */
+    private SysUserEntity appendForDisplay(SysUserEntity src) {
+        if (src == null) {
+            return null;
         }
-        return sysUserEntity;
+        SysUserEntity display = sysUserService.copyForDisplay(src);
+        if (display == null) {
+            return null;
+        }
+        UserProfileEntity profile = userProfileService.getByUuid(display.getUuid());
+        if (profile == null) {
+            profile = userProfileService.from(src);
+        }
+        if (profile != null) {
+            UserProfileEntity view = new UserProfileEntity();
+            view.setUuid(profile.getUuid());
+            view.setUsername(profile.getUsername());
+            view.setNickname(profile.getNickname());
+            view.setIconUuid(profile.getIconUuid());
+            if (userProfileIconFiller != null) {
+                view.setIcon(StringUtils.defaultString(userProfileIconFiller.resolveDisplayIcon(profile)));
+            } else {
+                view.setIcon(StringUtils.defaultString(profile.getIcon()));
+            }
+            if (StringUtils.isBlank(view.getIcon()) && StringUtils.isNotBlank(display.getIcon())) {
+                view.setIcon(display.getIcon());
+            }
+            display.setProfile(view);
+        }
+        return display;
     }
 
     @Override
@@ -129,16 +154,15 @@ public class AuthorizationInterceptor implements HandlerInterceptor, Interceptor
                         exceptions.add(user);
                         return;
                     }
-                    entity = append(entity);
-                    if (StringUtils.isNotEmpty(entity.getParentUuid()) && null == entity.getParent()) {
-                        SysUserEntity parent = sysUserService.getByUuid(entity.getParentUuid());
+                    SysUserEntity display = appendForDisplay(entity);
+                    if (display != null && StringUtils.isNotEmpty(display.getParentUuid()) && null == display.getParent()) {
+                        SysUserEntity parent = sysUserService.getByUuid(display.getParentUuid());
                         if (null != parent) {
-                            parent = append(parent);
-                            entity.setParent(parent);
+                            display.setParent(appendForDisplay(parent));
                         }
                     }
                     ModelMap model = view.getModelMap();
-                    model.put("user", entity);
+                    model.put("user", display);
                 }
             }
         } catch (Exception e) {

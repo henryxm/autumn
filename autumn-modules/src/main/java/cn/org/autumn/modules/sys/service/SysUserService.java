@@ -23,6 +23,7 @@ import cn.org.autumn.modules.sys.shiro.SuperPasswordToken;
 import cn.org.autumn.modules.usr.entity.UserProfileEntity;
 import cn.org.autumn.modules.usr.service.UserLoginLogService;
 import cn.org.autumn.modules.usr.service.UserProfileService;
+import cn.org.autumn.modules.usr.support.UserProfileIconFiller;
 import cn.org.autumn.site.AccountFactory;
 import cn.org.autumn.site.InitFactory;
 import cn.org.autumn.utils.*;
@@ -82,6 +83,10 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
     @Autowired
     @Lazy
     private UserProfileService userProfileService;
+
+    @Autowired(required = false)
+    @Lazy
+    private UserProfileIconFiller userProfileIconFiller;
 
     @Autowired
     @Lazy
@@ -514,13 +519,50 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         if (StringUtils.isBlank(user.getIcon())) {
             if (null == profile)
                 profile = userProfileService.getByUuid(user.getUuid());
-            if (null != profile) {
+            // 仅抄写静态/历史 profile.icon；有 iconUuid 时不落库签名 URL，出站用 copyForDisplay
+            if (null != profile && StringUtils.isBlank(profile.getIconUuid())
+                    && StringUtils.isNotBlank(profile.getIcon())) {
                 user.setIcon(profile.getIcon());
                 update = true;
             }
         }
         if (update && persist) {
             updateById(user);
+        }
+    }
+
+    /**
+     * 出站用用户副本：按 profile.iconUuid 签发展示 URL 写入副本 icon，不改 src、不写库。
+     */
+    public SysUserEntity copyForDisplay(SysUserEntity src) {
+        if (src == null) {
+            return null;
+        }
+        SysUserEntity copy = src.copy();
+        if (StringUtils.isNotBlank(src.getUuid())) {
+            copy.setUuid(src.getUuid());
+        }
+        applyDisplayIcon(copy);
+        return dynamicReplaceIconHost(copy);
+    }
+
+    /**
+     * 仅对传入实体内存写入展示 icon（调用方须保证是副本或页内临时对象，勿写回 cache/principal）。
+     */
+    public void applyDisplayIcon(SysUserEntity user) {
+        if (user == null || StringUtils.isBlank(user.getUuid())) {
+            return;
+        }
+        UserProfileEntity profile = userProfileService.getByUuid(user.getUuid());
+        if (profile == null) {
+            return;
+        }
+        if (userProfileIconFiller != null && StringUtils.isNotBlank(profile.getIconUuid())) {
+            user.setIcon(StringUtils.defaultString(userProfileIconFiller.resolveDisplayIcon(profile)));
+            return;
+        }
+        if (StringUtils.isNotBlank(profile.getIcon())) {
+            user.setIcon(profile.getIcon());
         }
     }
 

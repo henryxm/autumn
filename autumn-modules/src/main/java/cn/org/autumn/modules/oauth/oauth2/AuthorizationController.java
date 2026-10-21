@@ -129,6 +129,9 @@ public class AuthorizationController {
     UserProfileIconFiller userProfileIconFiller;
 
     @Autowired
+    AuthAuthorizeLoginSupport authAuthorizeLoginSupport;
+
+    @Autowired
     UserLoginLogService userLoginLogService;
 
     @Autowired
@@ -284,7 +287,7 @@ public class AuthorizationController {
         if (loggedIn) {
             SysUserEntity user = ShiroUtils.getUserEntity();
             if (user != null) {
-                AuthAuthorizeLoginSupport.enrichLoggedInUser(request, model, user);
+                authAuthorizeLoginSupport.enrichLoggedInUser(request, model, user);
             }
             if (request != null) {
                 String returnUrl = buildAuthorizeReturnUrl(request, model, client);

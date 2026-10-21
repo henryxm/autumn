@@ -368,9 +368,10 @@ public class ScanTicketService extends ModuleService<ScanTicketDao, ScanTicketEn
         if (user == null) {
             return null;
         }
+        SysUserEntity display = sysUserService.copyForDisplay(user);
         ScannerBrief brief = new ScannerBrief();
-        brief.setDisplayName(StringUtils.isNotBlank(user.getNickname()) ? user.getNickname() : user.getUsername());
-        brief.setIcon(user.getIcon());
+        brief.setDisplayName(StringUtils.isNotBlank(display.getNickname()) ? display.getNickname() : display.getUsername());
+        brief.setIcon(display.getIcon());
         return brief;
     }
 

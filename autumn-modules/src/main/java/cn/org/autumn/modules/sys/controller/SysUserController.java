@@ -44,6 +44,13 @@ public class SysUserController extends SysAbstractController {
     @RequiresPermissions("sys:user:list")
     public R list(@RequestParam Map<String, Object> params) {
         PageUtils page = sysUserService.queryPage(params);
+        if (page != null && page.getList() != null) {
+            for (Object row : page.getList()) {
+                if (row instanceof SysUserEntity user) {
+                    sysUserService.applyDisplayIcon(user);
+                }
+            }
+        }
         return R.ok().put("page", page);
     }
 
@@ -52,7 +59,7 @@ public class SysUserController extends SysAbstractController {
      */
     @RequestMapping("/info")
     public R info() {
-        return R.ok().put("user", getUser());
+        return R.ok().put("user", sysUserService.copyForDisplay(getUser()));
     }
 
     /**
@@ -76,7 +83,10 @@ public class SysUserController extends SysAbstractController {
     @RequestMapping("/info/{uuid}")
     @RequiresPermissions("sys:user:info")
     public R info(@PathVariable("uuid") String uuid) {
-        SysUserEntity user = sysUserService.getByUuid(uuid);
+        SysUserEntity user = sysUserService.copyForDisplay(sysUserService.getByUuid(uuid));
+        if (user == null) {
+            return R.error("用户不存在");
+        }
         //获取用户所属的角色列表
         List<String> roleIdList = sysUserRoleService.getRoleKeys(uuid);
         user.setRoleKeys(roleIdList);
