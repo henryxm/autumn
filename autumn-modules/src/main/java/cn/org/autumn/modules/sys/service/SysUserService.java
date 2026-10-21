@@ -547,6 +547,17 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
     }
 
     /**
+     * 出站展示 icon：对副本 {@link #copyForDisplay} 后取 icon；不改 src、不写库。
+     */
+    public String displayIcon(SysUserEntity src) {
+        if (src == null) {
+            return "";
+        }
+        SysUserEntity display = copyForDisplay(src);
+        return display != null ? StringUtils.defaultString(display.getIcon()) : "";
+    }
+
+    /**
      * 仅对传入实体内存写入展示 icon（调用方须保证是副本或页内临时对象，勿写回 cache/principal）。
      */
     public void applyDisplayIcon(SysUserEntity user) {
@@ -555,11 +566,19 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         }
         UserProfileEntity profile = userProfileService.getByUuid(user.getUuid());
         if (profile == null) {
-            return;
+            profile = new UserProfileEntity();
+            profile.setUuid(user.getUuid());
         }
-        if (userProfileIconFiller != null && StringUtils.isNotBlank(profile.getIconUuid())) {
-            user.setIcon(StringUtils.defaultString(userProfileIconFiller.resolveDisplayIcon(profile)));
-            return;
+        if (userProfileIconFiller != null) {
+            String resolved = userProfileIconFiller.resolveDisplayIcon(profile);
+            if (StringUtils.isNotBlank(resolved)) {
+                user.setIcon(resolved);
+                return;
+            }
+            // 签发/远端失败：保留副本上已有历史 icon
+            if (StringUtils.isNotBlank(user.getIcon())) {
+                return;
+            }
         }
         if (StringUtils.isNotBlank(profile.getIcon())) {
             user.setIcon(profile.getIcon());
