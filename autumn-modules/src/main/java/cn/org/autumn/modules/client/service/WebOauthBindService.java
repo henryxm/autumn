@@ -205,20 +205,20 @@ public class WebOauthBindService extends ModuleService<WebOauthBindDao, WebOauth
 
     private void syncProfileFields(String localUserUuid, UserProfile upstream) {
         UserProfileEntity profile = userProfileService.getByUuid(localUserUuid);
-        if (profile == null) {
-            return;
-        }
-        boolean changed = false;
-        if (StringUtils.isNotBlank(upstream.getNickname()) && !StringUtils.equals(profile.getNickname(), upstream.getNickname())) {
+        if (profile != null
+                && StringUtils.isNotBlank(upstream.getNickname())
+                && !StringUtils.equals(profile.getNickname(), upstream.getNickname())) {
             profile.setNickname(upstream.getNickname());
-            changed = true;
-        }
-        if (StringUtils.isNotBlank(upstream.getIcon()) && !StringUtils.equals(profile.getIcon(), upstream.getIcon())) {
-            profile.setIcon(upstream.getIcon());
-            changed = true;
-        }
-        if (changed) {
             userProfileService.updateById(profile);
+        }
+        if (StringUtils.isNotBlank(upstream.getIcon())) {
+            SysUserEntity user = sysUserService.getByUuid(localUserUuid);
+            if (user != null && !StringUtils.equals(user.getIcon(), upstream.getIcon())) {
+                user.setIcon(upstream.getIcon());
+                user.setIconId("");
+                sysUserService.updateById(user);
+                sysUserService.clear(localUserUuid);
+            }
         }
     }
 
@@ -230,14 +230,23 @@ public class WebOauthBindService extends ModuleService<WebOauthBindDao, WebOauth
             String username = attempt == 0 ? baseUsername : baseUsername + "_" + attempt;
             try {
                 SysUserEntity created = sysUserService.provisionConnectUser(username, password);
+                boolean userChanged = false;
+                if (StringUtils.isNotBlank(upstream.getNickname())) {
+                    created.setNickname(upstream.getNickname());
+                    userChanged = true;
+                }
+                if (StringUtils.isNotBlank(upstream.getIcon())) {
+                    created.setIcon(upstream.getIcon());
+                    created.setIconId("");
+                    userChanged = true;
+                }
+                if (userChanged) {
+                    sysUserService.updateById(created);
+                    sysUserService.clear(created.getUuid());
+                }
                 UserProfileEntity profile = userProfileService.getByUuid(created.getUuid());
-                if (profile != null) {
-                    if (StringUtils.isNotBlank(upstream.getNickname())) {
-                        profile.setNickname(upstream.getNickname());
-                    }
-                    if (StringUtils.isNotBlank(upstream.getIcon())) {
-                        profile.setIcon(upstream.getIcon());
-                    }
+                if (profile != null && StringUtils.isNotBlank(upstream.getNickname())) {
+                    profile.setNickname(upstream.getNickname());
                     userProfileService.updateById(profile);
                 }
                 return created;
@@ -252,15 +261,25 @@ public class WebOauthBindService extends ModuleService<WebOauthBindDao, WebOauth
     }
 
     private UserProfile toUserProfile(String userUuid) {
-        UserProfileEntity profile = userProfileService.getByUuid(userUuid);
-        if (profile == null) {
-            SysUserEntity user = sysUserService.getByUuid(userUuid);
-            profile = user == null ? null : userProfileService.from(user);
-        }
-        if (profile == null) {
+        SysUserEntity user = sysUserService.getByUuid(userUuid);
+        if (user == null) {
             throw new IllegalStateException("本地用户不存在");
         }
-        return UserProfile.from(profile);
+        UserProfileEntity profile = userProfileService.getByUuid(userUuid);
+        if (profile == null) {
+            profile = userProfileService.from(user);
+        }
+        UserProfile dto = UserProfile.from(profile);
+        dto.setIcon(StringUtils.defaultString(user.getIcon()));
+        dto.setIconId(StringUtils.defaultString(user.getIconId()));
+        if (StringUtils.isBlank(dto.getNickname())) {
+            dto.setNickname(StringUtils.defaultString(user.getNickname()));
+        }
+        if (StringUtils.isBlank(dto.getUsername())) {
+            dto.setUsername(StringUtils.defaultString(user.getUsername()));
+        }
+        dto.setUuid(user.getUuid());
+        return dto;
     }
 
     /** 供单测 stub；生产环境读取 Shiro Session。 */

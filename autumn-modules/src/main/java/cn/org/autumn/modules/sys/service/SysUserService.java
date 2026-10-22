@@ -511,21 +511,6 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
                 }
             }
         }
-        if (StringUtils.isBlank(user.getIcon()) || StringUtils.isBlank(user.getIconId())) {
-            if (null == profile)
-                profile = userProfileService.getByUuid(user.getUuid());
-            // 迁移：Profile 备份 → 持久化 sys_user（不调 OSS）
-            if (null != profile) {
-                if (StringUtils.isBlank(user.getIconId()) && StringUtils.isNotBlank(profile.getIconUuid())) {
-                    user.setIconId(profile.getIconUuid().trim());
-                    update = true;
-                }
-                if (StringUtils.isBlank(user.getIcon()) && StringUtils.isNotBlank(profile.getIcon())) {
-                    user.setIcon(profile.getIcon());
-                    update = true;
-                }
-            }
-        }
         if (update && persist) {
             updateById(user);
         }

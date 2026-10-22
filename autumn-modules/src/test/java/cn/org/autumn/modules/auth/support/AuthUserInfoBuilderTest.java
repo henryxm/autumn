@@ -19,10 +19,10 @@ public class AuthUserInfoBuilderTest {
         user.setVerify(1);
         user.setStatus(1);
         user.setMobile("13800000000");
+        user.setIcon("icon.png");
         UserProfileEntity profile = new UserProfileEntity();
         profile.setUuid("u1");
         profile.setNickname("nick");
-        profile.setIcon("icon.png");
         profile.setUsername("user1");
         AuthScopeSet granted = AuthScopeSet.of("basic").expand(catalog, AuthTrack.OAUTH);
         cn.org.autumn.auth.model.AuthUserInfo info = AuthUserInfoBuilder.build(catalog, AuthTrack.OAUTH, granted, user, profile, null, null);

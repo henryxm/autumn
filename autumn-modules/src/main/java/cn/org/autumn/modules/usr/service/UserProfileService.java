@@ -136,8 +136,6 @@ public class UserProfileService extends ModuleService<UserProfileDao, UserProfil
             userProfileEntity.setUsername(sysUserEntity.getUsername());
             userProfileEntity.setMobile(sysUserEntity.getMobile());
             userProfileEntity.setUuid(sysUserEntity.getUuid());
-            userProfileEntity.setIcon(sysUserEntity.getIcon());
-            userProfileEntity.setIconUuid(StringUtils.defaultString(sysUserEntity.getIconId()));
             if (CrudGuard.writable()) {
                 save(userProfileEntity);
             }

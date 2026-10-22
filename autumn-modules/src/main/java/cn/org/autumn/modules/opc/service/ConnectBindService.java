@@ -285,20 +285,20 @@ public class ConnectBindService extends ModuleService<ConnectBindDao, ConnectBin
 
     private void syncProfileFields(String localUserUuid, OpenUserInfoSnapshot userInfo) {
         UserProfileEntity profile = userProfileService.getByUuid(localUserUuid);
-        if (profile == null) {
-            return;
-        }
-        boolean changed = false;
-        if (StringUtils.isNotBlank(userInfo.getNickname()) && !StringUtils.equals(profile.getNickname(), userInfo.getNickname())) {
+        if (profile != null
+                && StringUtils.isNotBlank(userInfo.getNickname())
+                && !StringUtils.equals(profile.getNickname(), userInfo.getNickname())) {
             profile.setNickname(userInfo.getNickname());
-            changed = true;
-        }
-        if (StringUtils.isNotBlank(userInfo.getIcon()) && !StringUtils.equals(profile.getIcon(), userInfo.getIcon())) {
-            profile.setIcon(userInfo.getIcon());
-            changed = true;
-        }
-        if (changed) {
             userProfileService.updateById(profile);
+        }
+        if (StringUtils.isNotBlank(userInfo.getIcon())) {
+            SysUserEntity user = sysUserService.getByUuid(localUserUuid);
+            if (user != null && !StringUtils.equals(user.getIcon(), userInfo.getIcon())) {
+                user.setIcon(userInfo.getIcon());
+                user.setIconId("");
+                sysUserService.updateById(user);
+                sysUserService.clear(localUserUuid);
+            }
         }
     }
 
@@ -310,14 +310,23 @@ public class ConnectBindService extends ModuleService<ConnectBindDao, ConnectBin
             String username = attempt == 0 ? baseUsername : baseUsername + "_" + attempt;
             try {
                 SysUserEntity created = sysUserService.provisionConnectUser(username, password);
+                boolean userChanged = false;
+                if (StringUtils.isNotBlank(userInfo.getNickname())) {
+                    created.setNickname(userInfo.getNickname());
+                    userChanged = true;
+                }
+                if (StringUtils.isNotBlank(userInfo.getIcon())) {
+                    created.setIcon(userInfo.getIcon());
+                    created.setIconId("");
+                    userChanged = true;
+                }
+                if (userChanged) {
+                    sysUserService.updateById(created);
+                    sysUserService.clear(created.getUuid());
+                }
                 UserProfileEntity profile = userProfileService.getByUuid(created.getUuid());
-                if (profile != null) {
-                    if (StringUtils.isNotBlank(userInfo.getNickname())) {
-                        profile.setNickname(userInfo.getNickname());
-                    }
-                    if (StringUtils.isNotBlank(userInfo.getIcon())) {
-                        profile.setIcon(userInfo.getIcon());
-                    }
+                if (profile != null && StringUtils.isNotBlank(userInfo.getNickname())) {
+                    profile.setNickname(userInfo.getNickname());
                     userProfileService.updateById(profile);
                 }
                 return created;
@@ -332,15 +341,25 @@ public class ConnectBindService extends ModuleService<ConnectBindDao, ConnectBin
     }
 
     private UserProfile toUserProfile(String userUuid) {
-        UserProfileEntity profile = userProfileService.getByUuid(userUuid);
-        if (profile == null) {
-            SysUserEntity user = sysUserService.getByUuid(userUuid);
-            profile = user == null ? null : userProfileService.from(user);
-        }
-        if (profile == null) {
+        SysUserEntity user = sysUserService.getByUuid(userUuid);
+        if (user == null) {
             throw new IllegalStateException("本地用户不存在");
         }
-        return UserProfile.from(profile);
+        UserProfileEntity profile = userProfileService.getByUuid(userUuid);
+        if (profile == null) {
+            profile = userProfileService.from(user);
+        }
+        UserProfile dto = UserProfile.from(profile);
+        dto.setIcon(StringUtils.defaultString(user.getIcon()));
+        dto.setIconId(StringUtils.defaultString(user.getIconId()));
+        if (StringUtils.isBlank(dto.getNickname())) {
+            dto.setNickname(StringUtils.defaultString(user.getNickname()));
+        }
+        if (StringUtils.isBlank(dto.getUsername())) {
+            dto.setUsername(StringUtils.defaultString(user.getUsername()));
+        }
+        dto.setUuid(user.getUuid());
+        return dto;
     }
 
     /** 供单测 stub；生产环境读取 Shiro Session。 */

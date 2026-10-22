@@ -96,7 +96,6 @@ public class AuthorizationInterceptor implements HandlerInterceptor, Interceptor
         view.setUsername(display.getUsername());
         view.setNickname(display.getNickname());
         view.setIcon(StringUtils.defaultString(display.getIcon()));
-        view.setIconUuid(StringUtils.defaultString(display.getIconId()));
         display.setProfile(view);
         return display;
     }

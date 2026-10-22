@@ -46,8 +46,6 @@ public final class AuthUserInfoBuilder {
         if (fields.contains(AuthField.icon)) {
             if (user != null && StringUtils.isNotBlank(user.getIcon())) {
                 info.setIcon(user.getIcon());
-            } else if (profile != null) {
-                info.setIcon(StringUtils.defaultString(profile.getIcon()));
             }
         }
         if (fields.contains(AuthField.username)) {

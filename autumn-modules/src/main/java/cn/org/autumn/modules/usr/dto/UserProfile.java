@@ -19,9 +19,9 @@ public class UserProfile implements Serializable {
     @JsonSerialize(include = JsonSerialize.Inclusion.NON_EMPTY)
     private String icon = "";
 
-    /** Profile 备份列镜像（业务真相为 SysUser.iconId）；展示 URL 用 {@link #icon}。 */
+    /** 对象存储头像 id（与 SysUser.iconId 对齐）；展示 URL 用 {@link #icon}。 */
     @JsonSerialize(include = JsonSerialize.Inclusion.NON_EMPTY)
-    private String iconUuid = "";
+    private String iconId = "";
 
     @JsonSerialize(include = JsonSerialize.Inclusion.NON_EMPTY)
     private String username = "";
@@ -39,16 +39,16 @@ public class UserProfile implements Serializable {
     /** 授权含任一 realname_* 时由 RP 预取的实名详情；未授权或拉取失败时为 null。 */
     private AuthRealNameInfo realName;
 
+    /**
+     * 自 Profile 实体组装传输模型；头像字段不抄实体（真相在 SysUser，由调用方另行设置）。
+     */
     public static UserProfile from(UserProfileEntity userProfileEntity) {
         UserProfile userProfile = new UserProfile();
-        if (StringUtils.isNotEmpty(userProfileEntity.getIcon()))
-            userProfile.setIcon(userProfileEntity.getIcon());
-        else
-            userProfile.setIcon("");
-        if (StringUtils.isNotBlank(userProfileEntity.getIconUuid()))
-            userProfile.setIconUuid(userProfileEntity.getIconUuid());
-        else
-            userProfile.setIconUuid("");
+        if (userProfileEntity == null) {
+            return userProfile;
+        }
+        userProfile.setIcon("");
+        userProfile.setIconId("");
         userProfile.setUsername(userProfileEntity.getUsername());
         userProfile.setNickname(userProfileEntity.getNickname());
         userProfile.setUuid(userProfileEntity.getUuid());
@@ -63,7 +63,7 @@ public class UserProfile implements Serializable {
         return "UserProfile{" +
                 "uuid='" + uuid + '\'' +
                 ", icon='" + icon + '\'' +
-                ", iconUuid='" + iconUuid + '\'' +
+                ", iconId='" + iconId + '\'' +
                 ", username='" + username + '\'' +
                 ", nickname='" + nickname + '\'' +
                 ", mobile='" + mobile + '\'' +
