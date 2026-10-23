@@ -99,7 +99,8 @@ X-Robot-Token: rbt_xxxxxxxxxxxxxxxx
     {
       "uuid": "32位机器人uuid",
       "nickname": "展示名",
-      "icon": "头像URL",
+      "icon": "头像URL（有 iconId 时出站回填）",
+      "iconId": "对象存储uuid，可空",
       "status": 1,
       "robot": true
     }
@@ -107,7 +108,7 @@ X-Robot-Token: rbt_xxxxxxxxxxxxxxxx
 }
 ```
 
-说明：列表为 **`status >= 0`** 的机器人（含停用）；不含软删（-1）与已销毁（-2）。
+说明：列表为 **`status >= 0`** 的机器人（含停用）；不含软删（-1）与已销毁（-2）。有 `iconId` 时服务端回填 `icon` 展示 URL（不写库）。
 
 ---
 
@@ -121,17 +122,45 @@ X-Robot-Token: rbt_xxxxxxxxxxxxxxxx
 |------|------|------|------|
 | `name` | string | 是 | 展示名称 |
 | `description` | string | 否 | 描述 |
-| `icon` | string | 否 | 头像 URL |
+| `iconId` | string | 否 | **推荐**：OSS 直传 uuid（`bizType=im_group_info`，`accessLevel=PUBLIC`，用户令牌） |
+| `icon` | string | 否 | 旧轨头像 URL；有 `iconId` 时忽略 |
+| `hash` | string | 否 | 旧轨文件 hash；新路径缺省等于 `iconId` |
 | `tokenExpireDays` | int | 否 | 首个令牌有效天数；空则默认 **365** |
+| `access` | string | 否 | `private` / `public` / `subscribe` |
+
+**头像写路径**：`iconId` 非空 → 解析落库 `iconId`+`icon`（hash 空则填 uuid）；否则可写旧 `icon`/`hash`；皆空则头像可空（不强制回落主人头像）。
+
+**OSS 直传**：与业务头像相同——用户令牌上传，`bizType=im_group_info` + `PUBLIC` + 图片 MIME；**不要**用 `rbt_*` / `bizType=im`（那是发图通道）。客户端对接专文：im [`docs/IM_ROBOT_ICON_CLIENT.md`](../../im/docs/IM_ROBOT_ICON_CLIENT.md)。
 
 **响应 `data`（`RobotCreateResult`）**
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| `robot` | User | 机器人概要（`robot=true`） |
+| `robot` | User | 机器人概要（`robot=true`；含 `icon`/`iconId`） |
 | `token` | string | **首个 `rbt_` 明文令牌，仅返回一次** |
 
 **副作用**：触发 Hook 事件 `robot.created`（若已配置 Hook）。
+
+---
+
+### 1.2.1 更新机器人资料
+
+**`POST /bot/api/v1/update`**
+
+**请求 `data`（`RobotUpdateRequest`）**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `uuid` | string | 是 | 机器人业务主键 |
+| `name` | string | 否 | 展示名称 |
+| `description` | string | 否 | 描述 |
+| `iconId` | string | 否 | OSS uuid；非空则改头像（优先） |
+| `icon` | string | 否 | 旧轨 URL；**传 `""` 显式清空** icon/hash/iconId；字段省略则不改头像 |
+| `hash` | string | 否 | 旧轨 hash |
+| `access` | string | 否 | 访问模式 |
+| `black` | boolean | 否 | 平台封禁 |
+
+**头像 PATCH 语义**：`iconId` 非空 → 新路径；否则 `icon`/`hash` 非空 → 旧路径并清空 `iconId`；`icon` 与 `hash` 皆省略且无 `iconId` → **不改**头像；`icon:""` → **清空**。
 
 ---
 
@@ -474,6 +503,7 @@ expected = HMAC_SHA256_hex(key = hook_secret, message = payload_to_sign)
 |------|------|------|
 | `/list` | 用户 | 机器人列表 |
 | `/create` | 用户 | 创建 + 首个 rbt_ |
+| `/update` | 用户 | 资料（含 iconId 头像） |
 | `/disable` `/enable` `/delete` | 用户 | 生命周期 |
 | `/destroy` | **系统管理员** | 硬销毁（须先软删） |
 | `/hook/list` | 用户 | Hook 列表 |

@@ -179,6 +179,13 @@
             </exclusions>
         </dependency>
 
+        <!-- 对象存储：机器人头像 iconId 解析（与 account 同款） -->
+        <dependency>
+            <groupId>com.minclouds</groupId>
+            <artifactId>minclouds-file-starter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
         <!-- ==================== Lombok ==================== -->
         <dependency>
             <groupId>org.projectlombok</groupId>

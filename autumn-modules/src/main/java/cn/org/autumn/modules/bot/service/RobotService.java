@@ -59,6 +59,10 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> implement
     @Lazy
     private RobotHookService robotHookService;
 
+    @Autowired
+    @Lazy
+    private RobotIconUrlHelper robotIconUrlHelper;
+
     @Override
     public String ico() {
         return "fa-android";
@@ -132,7 +136,25 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> implement
         if (robot == null) {
             return null;
         }
-        return robot.toUser();
+        User user = robot.toUser();
+        fillOutboundIcon(user, robot);
+        return user;
+    }
+
+    /**
+     * 出站回填：有 iconId 则解析展示 URL（不写库）。
+     */
+    private void fillOutboundIcon(User user, RobotEntity robot) {
+        if (user == null || robot == null) {
+            return;
+        }
+        if (StringUtils.isNotBlank(robot.getIconId())) {
+            user.setIconId(robot.getIconId());
+            String url = robotIconUrlHelper.resolveAccessUrl(robot.getIconId());
+            if (StringUtils.isNotBlank(url)) {
+                user.setIcon(url);
+            }
+        }
     }
 
     public User getForOwner(String robotUuid, String loginUuid) throws Exception {
@@ -169,7 +191,14 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> implement
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public RobotCreateResult create(String owner, String name, String description, String icon, String hash, Integer tokenExpireDays, String access) throws Exception {
+    public RobotCreateResult create(String owner, String name, String description, String icon, String hash,
+                                    Integer tokenExpireDays, String access) throws Exception {
+        return create(owner, name, description, icon, null, hash, tokenExpireDays, access);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public RobotCreateResult create(String owner, String name, String description, String icon, String iconId,
+                                    String hash, Integer tokenExpireDays, String access) throws Exception {
         assertOwnerActive(owner);
         robotQuotaService.assertRobotQuota(owner);
         if (StringUtils.isBlank(name)) {
@@ -185,8 +214,7 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> implement
         robot.setOwner(owner);
         robot.setNickname(name);
         robot.setDescription(description);
-        robot.setIcon(icon);
-        robot.setHash(normalizeAvatarHash(hash));
+        applyAvatar(robot, iconId, icon, hash, false);
         robot.setStatus(RobotEntity.STATUS_ACTIVE);
         robot.setAccess(normalizeAccess(access));
         robot.setBlack(false);
@@ -264,6 +292,7 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> implement
         robot.setUpdateTime(now);
         robot.setNickname("destroyed-" + robot.getUuid());
         robot.setIcon(null);
+        robot.setIconId(null);
         robot.setHash(null);
         updateById(robot);
         robotTokenService.revokeByRobot(robotUuid);
@@ -363,7 +392,14 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> implement
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void updateProfile(String robotUuid, String loginUuid, String name, String description, String icon, String hash, String access, Boolean black) throws Exception {
+    public void updateProfile(String robotUuid, String loginUuid, String name, String description,
+                              String icon, String hash, String access, Boolean black) throws Exception {
+        updateProfile(robotUuid, loginUuid, name, description, icon, null, hash, access, black);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void updateProfile(String robotUuid, String loginUuid, String name, String description,
+                              String icon, String iconId, String hash, String access, Boolean black) throws Exception {
         RobotEntity robot = requireManageable(robotUuid, loginUuid);
         if (StringUtils.isNotBlank(name)) {
             robot.setNickname(name);
@@ -371,15 +407,7 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> implement
         if (description != null) {
             robot.setDescription(description);
         }
-        if (icon != null) {
-            robot.setIcon(icon);
-            if (StringUtils.isBlank(icon)) {
-                robot.setHash(null);
-            }
-        }
-        if (hash != null) {
-            robot.setHash(normalizeAvatarHash(hash));
-        }
+        applyAvatar(robot, iconId, icon, hash, true);
         if (access != null) {
             robot.setAccess(normalizeAccess(access));
         }
@@ -388,6 +416,49 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> implement
         }
         robot.setUpdateTime(new Date());
         updateById(robot);
+    }
+
+    /**
+     * 头像双轨：iconId 优先；update 时 icon==null 且 hash==null 且无 iconId → 不改；
+     * update 且 icon 为空串 → 显式清空；否则旧轨写 URL/hash 并清空 iconId。
+     */
+    private void applyAvatar(RobotEntity robot, String iconId, String icon, String hash, boolean update)
+            throws CodeException {
+        if (robot == null) {
+            return;
+        }
+        if (StringUtils.isNotBlank(iconId)) {
+            String id = iconId.trim();
+            String url = robotIconUrlHelper.requireAccessUrl(id);
+            robot.setIconId(id);
+            robot.setIcon(url);
+            if (StringUtils.isBlank(hash)) {
+                robot.setHash(id);
+            } else {
+                robot.setHash(normalizeAvatarHash(hash));
+            }
+            return;
+        }
+        if (update && icon == null && hash == null) {
+            return;
+        }
+        if (update && icon != null && icon.isEmpty()) {
+            robot.setIcon("");
+            robot.setIconId("");
+            robot.setHash(null);
+            return;
+        }
+        if (StringUtils.isNotBlank(icon) || StringUtils.isNotBlank(hash)) {
+            robot.setIconId("");
+            if (StringUtils.isNotBlank(icon)) {
+                robot.setIcon(icon.trim());
+            } else if (!update) {
+                robot.setIcon(icon);
+            }
+            if (hash != null) {
+                robot.setHash(normalizeAvatarHash(hash));
+            }
+        }
     }
 
     public static String normalizeAccess(String mode) {

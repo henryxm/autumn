@@ -17,10 +17,13 @@ public class RobotCreateRequest implements Serializable {
     @Schema(name = "描述", description = "用途说明")
     private String description;
 
-    @Schema(name = "头像", description = "图标地址")
+    @Schema(name = "头像", description = "图标地址（旧轨；有 iconId 时忽略）")
     private String icon;
 
-    @Schema(name = "头像HASH", description = "上传头像的文件 hash，供文件清理判断是否仍被引用")
+    @Schema(name = "头像对象存储uuid", description = "OSS 直传返回的 uuid（bizType=im_group_info，accessLevel=PUBLIC）")
+    private String iconId;
+
+    @Schema(name = "头像HASH", description = "上传头像的文件 hash，供文件清理判断是否仍被引用；新路径缺省等于 iconId")
     private String hash;
 
     @Schema(name = "令牌天数", description = "API令牌有效天数，空则默认365天")

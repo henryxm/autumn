@@ -58,8 +58,11 @@ public class RobotEntity implements UuidBased, AccountHandler.Account, UserConte
     @Column(type = DataType.TEXT, comment = "描述:用途说明")
     private String description;
 
-    @Column(comment = "头像:图标地址")
+    @Column(length = 1024, comment = "头像:展示URL")
     private String icon;
+
+    @Column(length = 64, comment = "头像:对象存储uuid", isNull = true)
+    private String iconId;
 
     @Column(comment = "HASH:头像HASH")
     @Index
@@ -126,6 +129,7 @@ public class RobotEntity implements UuidBased, AccountHandler.Account, UserConte
         user.setUuid(uuid);
         user.setNickname(nickname);
         user.setIcon(icon);
+        user.setIconId(iconId);
         user.setRobot(true);
         user.setGuest(false);
         return user;
