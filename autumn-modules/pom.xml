@@ -184,6 +184,13 @@
             <groupId>com.minclouds</groupId>
             <artifactId>minclouds-file-starter</artifactId>
             <version>${project.version}</version>
+            <exclusions>
+                <!-- 传递为 7.2.0，与直连 7.2.29（需 Md5）冲突；统一用 dependencyManagement 的版本 -->
+                <exclusion>
+                    <groupId>com.qiniu</groupId>
+                    <artifactId>qiniu-java-sdk</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <!-- ==================== Lombok ==================== -->

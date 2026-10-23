@@ -63,8 +63,8 @@
         <pagehelper.spring.boot.version>2.1.1</pagehelper.spring.boot.version>
         <!-- ==================== 云服务 & OSS ==================== -->
         <aliyun.oss.version>3.18.5</aliyun.oss.version>
-        <!-- 固定版本：范围 [7.2.0, 7.2.99] 会解析为 7.2.29，与 minclouds→autumn-api 传递的 7.2.0 冲突，触发 enforcer dependencyConvergence -->
-        <qiniu.version>7.2.0</qiniu.version>
+        <!-- 固定 7.2.29：业务依赖 com.qiniu.util.Md5（仅该版有）；与 minclouds 传递的 7.2.0 靠 autumn-modules exclusion 对齐，勿用版本范围 -->
+        <qiniu.version>7.2.29</qiniu.version>
         <qcloud.cos.version>5.6.227</qcloud.cos.version>
         <!-- ==================== API 文档 ==================== -->
         <springdoc.version>2.8.5</springdoc.version>
