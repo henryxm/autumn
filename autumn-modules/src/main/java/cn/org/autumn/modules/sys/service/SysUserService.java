@@ -921,6 +921,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
             accountFactory.canceled(entity);
         } catch (Exception e) {
             log.error("注销账号:{}", e.getMessage());
+            throw e;
         } finally {
             if (lock != null && hold && lock.isHeldByCurrentThread()) {
                 try {
