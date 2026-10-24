@@ -23,6 +23,8 @@ import cn.org.autumn.modules.sys.shiro.SuperPasswordToken;
 import cn.org.autumn.modules.usr.entity.UserProfileEntity;
 import cn.org.autumn.modules.usr.service.UserLoginLogService;
 import cn.org.autumn.modules.usr.service.UserProfileService;
+import cn.org.autumn.handler.MessageHandler;
+import cn.org.autumn.service.RedisListenerService;
 import cn.org.autumn.site.AccountFactory;
 import cn.org.autumn.site.InitFactory;
 import cn.org.autumn.utils.*;
@@ -30,6 +32,9 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -62,6 +67,19 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
     static Map<String, Integer> hashUser = new HashMap<>();
 
     static final Map<String, SysUserEntity> cache = new ConcurrentHashMap<>();
+
+    /**
+     * 跨进程清 {@link #cache}：任意节点 {@link #verified} 后广播，各节点丢弃该用户本机缓存。
+     */
+    public static final String CACHE_INVALIDATE_CHANNEL = "sys:user:cache:invalidate";
+
+    @Autowired(required = false)
+    private RedisListenerService redisListenerService;
+
+    @Autowired(required = false)
+    private Gson gson;
+
+    private volatile boolean userCacheSubscribed;
 
     @Autowired
     @Lazy
@@ -167,6 +185,9 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
     @Override
     public void onOneMinute() {
         iconHost = null;
+        if (!userCacheSubscribed) {
+            trySubscribeUserCacheInvalidate();
+        }
     }
 
     public List<String> getMenus(String uuid) {
@@ -291,7 +312,22 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
             user.setUuid(uuidNamespaceService.allocate());
         else if (uuidNamespaceService.existsInRobot(user.getUuid()) || uuidNamespaceService.existsInGuest(user.getUuid()))
             throw new IllegalArgumentException("uuid已被机器人或临时用户占用");
+        Integer prevVerify = null;
+        if (StringUtils.isNotBlank(user.getUuid())) {
+            SysUserEntity prev = baseMapper.getByUuid(user.getUuid());
+            if (prev != null) {
+                prevVerify = prev.getVerify();
+            }
+        }
         this.updateById(user);
+        // 管理端全量更新：本机必清；verify 变更（含撤销）须全集群广播，避免他机误放行/误拒
+        if (StringUtils.isNotBlank(user.getUuid())) {
+            if (prevVerify != null && !Objects.equals(prevVerify, user.getVerify())) {
+                invalidateUserCacheCluster(user.getUuid());
+            } else {
+                clear(user.getUuid());
+            }
+        }
     }
 
     public boolean changePassword(String userUuid, String password, String newPassword) throws Exception {
@@ -644,9 +680,91 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         login(username, password, rememberMe);
     }
 
+    /**
+     * 标记已实名：写 {@code sys_user.verify=1} 并全集群失效进程内用户 cache。
+     * 刷脸 SUCCESS / 自愈等业务落已实名的唯一入口。
+     */
     public void verified(String uuid) {
-        baseMapper.verify(uuid, 1);
-        clear(uuid);
+        setVerifyAndInvalidate(uuid, 1);
+    }
+
+    /**
+     * 写 {@code sys_user.verify} 并全集群失效进程内用户 cache（含撤销实名 verify=0）。
+     * 禁止旁路 {@code updateById}/SQL 改 verify 却不清 cache。
+     */
+    public void setVerifyAndInvalidate(String uuid, int verify) {
+        if (StringUtils.isBlank(uuid)) {
+            return;
+        }
+        String u = uuid.trim();
+        baseMapper.verify(u, verify);
+        invalidateUserCacheCluster(u);
+    }
+
+    /**
+     * 本机 clear + Pub/Sub {@link #CACHE_INVALIDATE_CHANNEL}（不写库）。
+     * 管理端改 verify 走 {@link #updateNoRole} 时在写库后调用。
+     */
+    public void invalidateUserCacheCluster(String uuid) {
+        if (StringUtils.isBlank(uuid)) {
+            return;
+        }
+        String u = uuid.trim();
+        clear(u);
+        publishUserCacheInvalidate(u);
+    }
+
+    @PostConstruct
+    public void subscribeUserCacheInvalidate() {
+        trySubscribeUserCacheInvalidate();
+    }
+
+    private void publishUserCacheInvalidate(String uuid) {
+        if (redisListenerService == null || StringUtils.isBlank(uuid)) {
+            return;
+        }
+        try {
+            Map<String, String> payload = new HashMap<>(2);
+            payload.put("u", uuid.trim());
+            redisListenerService.publish(CACHE_INVALIDATE_CHANNEL, payload);
+        } catch (Exception e) {
+            log.warn("实名缓存集群广播失败:uuid={}, err={}", uuid, e.getMessage());
+        }
+    }
+
+    private synchronized void trySubscribeUserCacheInvalidate() {
+        if (userCacheSubscribed || redisListenerService == null) {
+            return;
+        }
+        MessageHandler handler = (channel, body) -> dispatchUserCacheInvalidate(body);
+        boolean ok = redisListenerService.subscribe(CACHE_INVALIDATE_CHANNEL, handler);
+        if (ok) {
+            userCacheSubscribed = true;
+            if (log.isDebugEnabled()) {
+                log.debug("已订阅用户缓存失效频道:{}", CACHE_INVALIDATE_CHANNEL);
+            }
+        }
+    }
+
+    void dispatchUserCacheInvalidate(String body) {
+        if (StringUtils.isBlank(body)) {
+            return;
+        }
+        try {
+            String user = null;
+            if (gson != null) {
+                JsonObject o = gson.fromJson(body, JsonObject.class);
+                if (o != null && o.has("u")) {
+                    user = o.get("u").getAsString();
+                }
+            }
+            if (StringUtils.isBlank(user)) {
+                return;
+            }
+            clear(user.trim());
+        } catch (Exception e) {
+            log.warn("用户缓存失效消息处理失败:body={}, err={}", body, e.getMessage());
+        }
     }
 
     public void login(AuthenticationToken token) {

@@ -511,6 +511,17 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         });
     }
 
+    /**
+     * 仅丢弃本机 map 中的一项，不删共享 Redis/DB。
+     * 用于集群他机写配置后本机 miss 回源前避开脏 map（{@link #getValue} 优先读 map）。
+     */
+    public void invalidateLocalCache(String key) {
+        if (StringUtils.isBlank(key) || map == null) {
+            return;
+        }
+        map.remove(key);
+    }
+
     @Transactional(rollbackFor = Exception.class)
     public void updateValueByKey(String key, String value) {
         baseMapper.updateValueByKey(key, value);
