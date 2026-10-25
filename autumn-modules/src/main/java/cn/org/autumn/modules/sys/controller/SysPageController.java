@@ -233,6 +233,14 @@ public class SysPageController implements ErrorController {
         return "user/about";
     }
 
+    /** 社区行为规范（匿名可读；模板可在业务模块 templates/user/community.html） */
+    @RequestMapping({"user/community.html"})
+    public String userCommunity(HttpServletRequest request, Model model) {
+        model.addAttribute("bodyClass", "login-page-v2 legal-page");
+        AuthPageAttributes.apply(model, sysConfigService, request, sitePortalSupport);
+        return "user/community";
+    }
+
     @RequestMapping({"siteportal.html"})
     @SkipInterceptor
     public String siteportal(HttpServletRequest servlet) {

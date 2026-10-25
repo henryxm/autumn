@@ -205,6 +205,9 @@ public class ShiroConfig {
         filterMap.put("/user/privacy", "anon");
         filterMap.put("/user/about.html", "anon");
         filterMap.put("/user/about", "anon");
+        // 社区行为规范：与协议/隐私一致，匿名可读（H5 + 短链）
+        filterMap.put("/user/community.html", "anon");
+        filterMap.put("/user/community", "anon");
         filterMap.put("/plugin.html", "anon");
         filterMap.put("/404.html", "anon");
         filterMap.put("/500.html", "anon");
