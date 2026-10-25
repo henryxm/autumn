@@ -3,9 +3,11 @@ package cn.org.autumn.config;
 import cn.org.autumn.gson.FlexibleEnumGsonTypeAdapterFactory;
 import com.google.gson.*;
 import java.lang.reflect.Type;
+import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Locale;
 import java.util.TimeZone;
 import lombok.Getter;
 import org.springframework.context.annotation.Bean;
@@ -100,20 +102,15 @@ public class GsonConfig {
                 if (dateStr == null || dateStr.trim().isEmpty()) {
                     return null;
                 }
+                Date parsed = tryParseDateString(dateStr);
+                if (parsed != null) {
+                    return parsed;
+                }
                 try {
-                    // 尝试使用配置的日期格式解析
-                    synchronized (dateFormat) {
-                        return dateFormat.parse(dateStr);
-                    }
-                } catch (ParseException e) {
-                    // 如果解析失败，尝试使用时间戳（毫秒）
-                    try {
-                        long timestamp = Long.parseLong(dateStr);
-                        return new Date(timestamp);
-                    } catch (NumberFormatException ex) {
-                        // 如果都失败，抛出异常
-                        throw new JsonParseException("无法解析日期字符串: " + dateStr, e);
-                    }
+                    long timestamp = Long.parseLong(dateStr.trim());
+                    return new Date(timestamp);
+                } catch (NumberFormatException ex) {
+                    throw new JsonParseException("无法解析日期字符串: " + dateStr, ex);
                 }
             }
             // 处理数字类型（时间戳）
@@ -123,6 +120,47 @@ public class GsonConfig {
             }
             // 其他类型无法解析
             throw new JsonParseException("无法将 " + json.getClass().getSimpleName() + " 转换为 Date");
+        }
+
+        /**
+         * 主格式 yyyy-MM-dd HH:mm:ss；兼容 new Gson() / Locale.US 的
+         * {@code Oct 25, 2026, 5:04:56 PM} 与 ISO-8601。
+         */
+        private Date tryParseDateString(String dateStr) {
+            String s = dateStr.trim();
+            synchronized (dateFormat) {
+                try {
+                    return dateFormat.parse(s);
+                } catch (ParseException ignored) {
+                    // fall through
+                }
+            }
+            String[] patterns = {
+                    "MMM d, yyyy, h:mm:ss a",
+                    "MMM dd, yyyy, h:mm:ss a",
+                    "MMM d, yyyy h:mm:ss a",
+                    "yyyy-MM-dd'T'HH:mm:ss.SSSXXX",
+                    "yyyy-MM-dd'T'HH:mm:ssXXX",
+                    "yyyy-MM-dd'T'HH:mm:ss",
+                    "EEE MMM dd HH:mm:ss zzz yyyy",
+            };
+            for (String pattern : patterns) {
+                try {
+                    SimpleDateFormat alt = new SimpleDateFormat(pattern, Locale.US);
+                    alt.setTimeZone(TimeZone.getTimeZone(TIME_ZONE));
+                    return alt.parse(s);
+                } catch (ParseException ignored) {
+                    // try next
+                }
+            }
+            try {
+                DateFormat medium = DateFormat.getDateTimeInstance(
+                        DateFormat.MEDIUM, DateFormat.MEDIUM, Locale.US);
+                medium.setTimeZone(TimeZone.getTimeZone(TIME_ZONE));
+                return medium.parse(s);
+            } catch (ParseException ignored) {
+                return null;
+            }
         }
     }
 
