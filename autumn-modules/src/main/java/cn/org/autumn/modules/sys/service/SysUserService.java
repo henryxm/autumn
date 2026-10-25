@@ -73,6 +73,11 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
      */
     public static final String CACHE_INVALIDATE_CHANNEL = "sys:user:cache:invalidate";
 
+    /**
+     * verify 边沿变更（0↔1 等）：供 IM 下发多端 Audit；payload {@code u}/{@code v}/{@code p}。
+     */
+    public static final String CACHE_VERIFY_CHANGED_CHANNEL = "sys:user:verify:changed";
+
     @Autowired(required = false)
     private RedisListenerService redisListenerService;
 
@@ -320,10 +325,12 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
             }
         }
         this.updateById(user);
-        // 管理端全量更新：本机必清；verify 变更（含撤销）须全集群广播，避免他机误放行/误拒
+        // 管理端全量更新：本机必清；verify 边沿（含 prev=null→1）须全集群广播 + 边沿通知
         if (StringUtils.isNotBlank(user.getUuid())) {
-            if (prevVerify != null && !Objects.equals(prevVerify, user.getVerify())) {
+            Integer next = user.getVerify();
+            if (!Objects.equals(prevVerify, next)) {
                 invalidateUserCacheCluster(user.getUuid());
+                publishUserVerifyChanged(user.getUuid(), next == null ? 0 : next, prevVerify);
             } else {
                 clear(user.getUuid());
             }
@@ -691,14 +698,27 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
     /**
      * 写 {@code sys_user.verify} 并全集群失效进程内用户 cache（含撤销实名 verify=0）。
      * 禁止旁路 {@code updateById}/SQL 改 verify 却不清 cache。
+     * verify 边沿变更时额外广播 {@link #CACHE_VERIFY_CHANGED_CHANNEL}（供多端 Audit）。
      */
     public void setVerifyAndInvalidate(String uuid, int verify) {
         if (StringUtils.isBlank(uuid)) {
             return;
         }
         String u = uuid.trim();
+        Integer prevVerify = null;
+        try {
+            SysUserEntity prev = baseMapper.getByUuid(u);
+            if (prev != null) {
+                prevVerify = prev.getVerify();
+            }
+        } catch (Exception e) {
+            log.warn("读 verify 边沿失败:uuid={}, err={}", u, e.getMessage());
+        }
         baseMapper.verify(u, verify);
         invalidateUserCacheCluster(u);
+        if (!Objects.equals(prevVerify, verify)) {
+            publishUserVerifyChanged(u, verify, prevVerify);
+        }
     }
 
     /**
@@ -732,6 +752,26 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         }
     }
 
+    /**
+     * verify 边沿：{@code v}=新值，{@code p}=旧值（可空）。IM 订阅后下发 realNameVerified/Cleared。
+     */
+    private void publishUserVerifyChanged(String uuid, int verify, Integer prevVerify) {
+        if (redisListenerService == null || StringUtils.isBlank(uuid)) {
+            return;
+        }
+        try {
+            Map<String, Object> payload = new HashMap<>(4);
+            payload.put("u", uuid.trim());
+            payload.put("v", verify);
+            if (prevVerify != null) {
+                payload.put("p", prevVerify);
+            }
+            redisListenerService.publish(CACHE_VERIFY_CHANGED_CHANNEL, payload);
+        } catch (Exception e) {
+            log.warn("实名边沿广播失败:uuid={}, verify={}, err={}", uuid, verify, e.getMessage());
+        }
+    }
+
     private synchronized void trySubscribeUserCacheInvalidate() {
         if (userCacheSubscribed || redisListenerService == null) {
             return;
@@ -751,13 +791,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
             return;
         }
         try {
-            String user = null;
-            if (gson != null) {
-                JsonObject o = gson.fromJson(body, JsonObject.class);
-                if (o != null && o.has("u")) {
-                    user = o.get("u").getAsString();
-                }
-            }
+            String user = parseInvalidateUser(body);
             if (StringUtils.isBlank(user)) {
                 return;
             }
@@ -765,6 +799,31 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         } catch (Exception e) {
             log.warn("用户缓存失效消息处理失败:body={}, err={}", body, e.getMessage());
         }
+    }
+
+    /** Gson 可空；兜底解析 {@code "u":"..."}。 */
+    private String parseInvalidateUser(String body) {
+        try {
+            if (gson != null) {
+                JsonObject o = gson.fromJson(body, JsonObject.class);
+                if (o != null && o.has("u") && !o.get("u").isJsonNull()) {
+                    return o.get("u").getAsString();
+                }
+            }
+        } catch (Exception ignored) {
+            // fall through
+        }
+        int i = body.indexOf("\"u\"");
+        if (i < 0) {
+            return null;
+        }
+        int colon = body.indexOf(':', i);
+        int q1 = body.indexOf('"', colon + 1);
+        int q2 = q1 >= 0 ? body.indexOf('"', q1 + 1) : -1;
+        if (q1 >= 0 && q2 > q1) {
+            return body.substring(q1 + 1, q2);
+        }
+        return null;
     }
 
     public void login(AuthenticationToken token) {
