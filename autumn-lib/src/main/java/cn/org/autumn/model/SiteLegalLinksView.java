@@ -14,10 +14,12 @@ public class SiteLegalLinksView implements Serializable {
     private String aboutUrl;
     private String helpUrl;
     private String contactUrl;
+    private String communityUrl;
 
     private boolean privacyExternal;
     private boolean termsExternal;
     private boolean aboutExternal;
     private boolean helpExternal;
     private boolean contactExternal;
+    private boolean communityExternal;
 }

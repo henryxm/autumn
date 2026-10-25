@@ -18,6 +18,7 @@ public class SiteLegalLinksFactory extends Factory {
         resolved.setAboutUrl(firstNonBlank(config, "aboutUrl", base.getAboutUrl()));
         resolved.setHelpUrl(firstNonBlank(config, "helpUrl", base.getHelpUrl()));
         resolved.setContactUrl(firstNonBlank(config, "contactUrl", base.getContactUrl()));
+        resolved.setCommunityUrl(firstNonBlank(config, "communityUrl", base.getCommunityUrl()));
         return resolved;
     }
 
@@ -50,6 +51,8 @@ public class SiteLegalLinksFactory extends Factory {
                     return handler.helpUrl(config);
                 case "contactUrl":
                     return handler.contactUrl(config);
+                case "communityUrl":
+                    return handler.communityUrl(config);
                 default:
                     return null;
             }

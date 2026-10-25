@@ -170,11 +170,13 @@ public class SitePortalSupport {
         view.setAboutUrl(resolveUrl(request, links.getAboutUrl()));
         view.setHelpUrl(resolveUrl(request, links.getHelpUrl()));
         view.setContactUrl(resolveUrl(request, links.getContactUrl()));
+        view.setCommunityUrl(resolveUrl(request, links.getCommunityUrl()));
         view.setPrivacyExternal(isExternal(links.getPrivacyUrl()));
         view.setTermsExternal(isExternal(links.getTermsUrl()));
         view.setAboutExternal(isExternal(links.getAboutUrl()));
         view.setHelpExternal(isExternal(links.getHelpUrl()));
         view.setContactExternal(isExternal(links.getContactUrl()));
+        view.setCommunityExternal(isExternal(links.getCommunityUrl()));
         return view;
     }
 

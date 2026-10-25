@@ -26,4 +26,8 @@ public interface SiteLegalLinksHandler {
     default String contactUrl(SitePortalConfig config) {
         return null;
     }
+
+    default String communityUrl(SitePortalConfig config) {
+        return null;
+    }
 }
