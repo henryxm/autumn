@@ -27,10 +27,12 @@ API（系统管理员）：`GET/POST /sys/site-portal/*`
 
 | 字段 | 默认路径 |
 |------|----------|
-| `privacyUrl` | `/user/privacy.html` |
-| `termsUrl` | `/user/service.html` |
+| `privacyUrl` | `/user/privacy.html`（下游 Handler 可覆盖为带 `?product=`） |
+| `termsUrl` | `/user/service.html`（同上） |
 | `aboutUrl` | 空（不展示；可设为 `/user/about.html`） |
 | `communityUrl` | `/user/community.html`（无业务 product；下游 Handler 可覆盖为带 `?product=`） |
+
+法律页（协议/隐私/关于/社区规范）路由与产品展示名由业务模块（如 account `LegalPageController`）按 `?product=` 渲染；框架 `SysPageController` 不映射这些路径。
 
 ### 2.2 备案类型与默认跳转
 
