@@ -12,7 +12,8 @@ public class SitePortalLegalLinks implements Serializable {
     public static final String DEFAULT_PRIVACY_PATH = "/user/privacy.html";
     public static final String DEFAULT_TERMS_PATH = "/user/service.html";
     public static final String DEFAULT_ABOUT_PATH = "/user/about.html";
-    public static final String DEFAULT_COMMUNITY_PATH = "/user/community.html?product=chaoranxin";
+    /** 框架默认不含业务 product；带 product 的 URL 由业务模块 {@code SiteLegalLinksHandler#communityUrl} 或门户配置提供。 */
+    public static final String DEFAULT_COMMUNITY_PATH = "/user/community.html";
 
     private String privacyUrl = DEFAULT_PRIVACY_PATH;
     private String termsUrl = DEFAULT_TERMS_PATH;

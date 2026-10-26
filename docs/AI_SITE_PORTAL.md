@@ -19,7 +19,7 @@ API（系统管理员）：`GET/POST /sys/site-portal/*`
 |------|------|------|
 | `branding` | `siteName` / `tagline` / `logoUrl` / `logoAlt` | 登录页顶部品牌；`siteName` 为空时回退 `LOADING_THEME.brand` |
 | `meta` | `copyrightHolder` / `copyrightYearStart` / `copyrightYearEnd` / `versionLabel` | 页脚版权与版本；未填不展示；**仅填版本号**时不生成 © 行，版本单独展示 |
-| `legalLinks` | `privacyUrl` / `termsUrl` / `aboutUrl` / `helpUrl` / `contactUrl` | 法律与帮助链接；相对路径自动加 `contextPath` |
+| `legalLinks` | `privacyUrl` / `termsUrl` / `aboutUrl` / `helpUrl` / `contactUrl` / `communityUrl` | 法律与帮助链接；相对路径自动加 `contextPath`；`communityUrl` 框架默认为裸路径 `/user/community.html`，带业务 `product` 的默认由下游 `SiteLegalLinksHandler` 提供 |
 | `filings[]` | `type` / `number` / `prefix` / `suffix` / `url` / `showIcon` | 备案/许可列表；`prefix`/`suffix` 可选，仅展示不参与链接；`number` 为空则整项不展示 |
 | 开关 | `syncLoadingTheme` | 保存时同步品牌名与 Logo 到 `LOADING_THEME` |
 
@@ -30,6 +30,7 @@ API（系统管理员）：`GET/POST /sys/site-portal/*`
 | `privacyUrl` | `/user/privacy.html` |
 | `termsUrl` | `/user/service.html` |
 | `aboutUrl` | 空（不展示；可设为 `/user/about.html`） |
+| `communityUrl` | `/user/community.html`（无业务 product；下游 Handler 可覆盖为带 `?product=`） |
 
 ### 2.2 备案类型与默认跳转
 
