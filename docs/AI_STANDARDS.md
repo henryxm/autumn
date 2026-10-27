@@ -350,6 +350,7 @@ public class DemoEntity { ... }
 - **`@PageAware`**（标注在 **Site 类的字段**上）：  
   - **匿名公共页**：`@PageAware(login = false)`（按需填 `resource` / `url` / `page` 等指向资源路径）。  
   - **需登录后台页**：`@PageAware(login = true)`。  
+  - **仅系统管理员**：`@PageAware(login = true, admin = true)`。已登录非 `isSystemAdministrator` 经 SPM 或 `/modules/**` 直链访问 → **404**（`AdminShellAccess`）；未登录仍按 `login` 走登录跳转。  
 
   具体属性以 `cn.org.autumn.annotation.PageAware` 为准。
 

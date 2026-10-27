@@ -58,7 +58,15 @@ class AdminShellAccessTest {
     }
 
     @Test
-    void denyUnlessSystemAdmin_passesThroughNonShell() {
+    void registerAdminPage_matchesNormalizedPaths() {
+        access.registerAdminPage("modules/account/pages/loginlimit");
+        assertTrue(access.isAdminPageView("modules/account/pages/loginlimit"));
+        assertTrue(access.isAdminPageView("/modules/account/pages/loginlimit.html"));
+        assertFalse(access.isAdminPageView("modules/account/index"));
+    }
+
+    @Test
+    void denyUnlessSystemAdmin_passesThroughNonRestricted() {
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
         Model model = new ConcurrentModel();
@@ -89,7 +97,7 @@ class AdminShellAccessTest {
     }
 
     @Test
-    void denyUnlessSystemAdmin_returns404ForNonAdmin() {
+    void denyUnlessSystemAdmin_returns404ForNonAdminShell() {
         shiroUtils.when(ShiroUtils::isLogin).thenReturn(true);
         shiroUtils.when(ShiroUtils::getUserUuid).thenReturn("user-uuid");
         when(sysUserRoleService.isSystemAdministrator("user-uuid")).thenReturn(false);
@@ -99,5 +107,33 @@ class AdminShellAccessTest {
         Model model = new ConcurrentModel();
         assertEquals("404", access.denyUnlessSystemAdmin("main", request, response, model));
         verify(pageFactory)._404(eq(request), eq(response), eq(model));
+    }
+
+    @Test
+    void denyUnlessSystemAdmin_returns404ForNonAdminPageAware() {
+        access.registerAdminPage("modules/account/pages/loginlimit");
+        shiroUtils.when(ShiroUtils::isLogin).thenReturn(true);
+        shiroUtils.when(ShiroUtils::getUserUuid).thenReturn("user-uuid");
+        when(sysUserRoleService.isSystemAdministrator("user-uuid")).thenReturn(false);
+        when(pageFactory._404(any(), any(), any())).thenReturn("404");
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        Model model = new ConcurrentModel();
+        assertEquals("404", access.denyUnlessSystemAdmin("/modules/account/pages/loginlimit.html", request, response, model));
+        verify(pageFactory)._404(eq(request), eq(response), eq(model));
+    }
+
+    @Test
+    void denyUnlessSystemAdmin_allowsAdminOnPageAware() {
+        access.registerAdminPage("modules/account/pages/loginlimit");
+        shiroUtils.when(ShiroUtils::isLogin).thenReturn(true);
+        shiroUtils.when(ShiroUtils::getUserUuid).thenReturn("admin-uuid");
+        when(sysUserRoleService.isSystemAdministrator("admin-uuid")).thenReturn(true);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        Model model = new ConcurrentModel();
+        assertEquals("modules/account/pages/loginlimit",
+                access.denyUnlessSystemAdmin("modules/account/pages/loginlimit", request, response, model));
+        verifyNoInteractions(pageFactory);
     }
 }

@@ -223,16 +223,17 @@ String base = mode == OAUTH ? origin + "/oauth2" : origin + "/open/oauth2";
 
 **参考实现**：框架内置 `oauth2/login.html`、`open/oauth2/login.html`、`login.html`（`oauthAuthorize`/`oplAuthorize` 分栏）。
 
-### 3.7.1 默认后台壳（index / index1 / main）仅系统管理员
+### 3.7.1 默认后台壳与 `@PageAware(admin=true)` 仅系统管理员
 
-框架 AdminLTE 壳模板名精确为 **`index`**、**`index1`**、**`main`**（不含业务路径如 `modules/bigmodel/pages/index`）。
+框架 AdminLTE 壳模板名精确为 **`index`**、**`index1`**、**`main`**（不含业务路径如 `modules/bigmodel/pages/index`）。  
+另：Site 字段标注 **`@PageAware(admin = true)`** 的业务页资源（如 `modules/account/pages/loginlimit`）同样走同一门禁。
 
 | 规则 | 说明 |
 |------|------|
-| **门禁** | `AdminShellAccess.denyUnlessSystemAdmin`：已登录且非 `isSystemAdministrator` 时，最终视图若为上述壳名 → **404** |
-| **挂载点** | `SysPageController`（`/index.html`、`/index1.html`、`/main.html`）与 `SuperPositionModelService.getResourceId`（含 `/?spm=root.index` 等） |
+| **门禁** | `AdminShellAccess.denyUnlessSystemAdmin`：已登录且非 `isSystemAdministrator` 时，最终视图若为壳名 **或** 已注册的 admin 页资源 → **404** |
+| **挂载点** | `SysPageController`（`/index.html`、`/index1.html`、`/main.html`、`/modules/**`）与 `SuperPositionModelService.getResourceId`（含 `/?spm=…`）；SPM 扫描时 `admin=true` 注册内存资源集 |
 | **超管专用入口** | 已登录系统超管访问 **`/admin`**（可带 `?active=admin`；已登录时 `isActive` 本就恒 true）。未登录激活壳会话可用 **`/index.html?active=admin`**（门禁对未登录放行壳渲染，登录后仍须超管角色）。判定角色键：`Role:System:Administrator` |
-| **业务替代** | 实现 `PageHandler.index()` / `main()`（更小 `@Order`）返回自有模板或 `redirect:/?spm=…`；抢先返回则不会落到框架壳，从而不受 404 门禁 |
+| **业务替代** | 实现 `PageHandler.index()` / `main()`（更小 `@Order`）返回自有模板或 `redirect:/?spm=…`；抢先返回则不会落到框架壳，从而不受壳 404 门禁（`admin=true` 业务页仍受资源门禁） |
 | **业务 PageHandler 契约** | 更小 `@Order` 抢先 `redirect:` 时，**必须**对 `isSystemAdministrator` 返回空串放行；否则会堵死 `/admin` 壳（`redirect:` 不算壳视图，`AdminShellAccess` 无法兜底）。参考：account `AccountSite#index`；业务仓（如 BigHub）覆盖时同样须豁免超管 |
 | **登录跳转** | 面向普通用户的业务站 **不要** 把 `postLoginRedirect` 设为裸 `/index.html`；应指向业务首页 SPM 或 `/`（见 `docs/AI_ACCOUNT_AUTH_CONFIG.md`） |
 

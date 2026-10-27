@@ -44,4 +44,12 @@ public @interface PageAware {
      * 是否需要登录访问该页面。
      */
     boolean login() default false;
+
+    /**
+     * 是否仅系统管理员可访问。
+     * <p>
+     * 为 true 时：已登录且非 {@code isSystemAdministrator} 访问该页资源 → 404；
+     * 未登录仍按 {@link #login()} 走登录跳转。由 {@code AdminShellAccess} 在 SPM / 直链出口统一门禁。
+     */
+    boolean admin() default false;
 }

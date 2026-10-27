@@ -87,13 +87,13 @@ public class SysPageController implements ErrorController {
 
     @RequestMapping("modules/{module}/{url}")
     public String module(@PathVariable("module") String module, @PathVariable("url") String url, String lang,
-                         HttpServletRequest request, Model model) {
+                         HttpServletRequest request, HttpServletResponse response, Model model) {
         if (StringUtils.isNotBlank(lang)) {
             model.addAttribute("locale", lang);
         }
         String view = "/modules/" + module + "/" + url;
         sitePortalSupport.applyToModelForView(request, model, view);
-        return view;
+        return adminShellAccess.denyUnlessSystemAdmin(view, request, response, model);
     }
 
     @RequestMapping("modules/{module}/{url}.js")
@@ -105,8 +105,9 @@ public class SysPageController implements ErrorController {
     }
 
     @RequestMapping({"modules/**", "pages/**"})
-    public String modules(HttpServletRequest httpServletRequest) {
-        return httpServletRequest.getRequestURI();
+    public String modules(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        String view = httpServletRequest.getRequestURI();
+        return adminShellAccess.denyUnlessSystemAdmin(view, httpServletRequest, httpServletResponse, model);
     }
 
     @RequestMapping("docs/index.html")

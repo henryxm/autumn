@@ -176,6 +176,10 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
                     }
                     boolean login = aware.login();
                     String key = site.getKey(field.getName());
+                    if (aware.admin() && StringUtils.isNotEmpty(resource)) {
+                        // 与 put 是否因已存在而早退无关：每次扫描都注册内存门禁
+                        adminShellAccess.registerAdminPage(resource);
+                    }
                     put(siteId, page, channel, product, resource, url, key, login);
                 }
             }
