@@ -199,11 +199,27 @@
         .log-file-controls .btn-refresh:hover {
             background-color: #0056b3;
         }
+        .log-file-controls .btn-copy {
+            background-color: #6c757d;
+        }
+        .log-file-controls .btn-copy:hover {
+            background-color: #5a6268;
+        }
+        .log-file-controls .btn-download {
+            background-color: #17a2b8;
+        }
+        .log-file-controls .btn-download:hover {
+            background-color: #138496;
+        }
         .log-file-controls .btn-clear {
             background-color: #dc3545;
         }
         .log-file-controls .btn-clear:hover {
             background-color: #c82333;
+        }
+        .log-file-controls button:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
         }
         .log-file-viewer {
             background: #1e1e1e;
@@ -259,6 +275,8 @@
             <input type="number" v-model.number="logFile.maxLineLength" min="0" style="width:100px" title="0 表示不截断">
             <span style="font-size:12px;color:#888">0=不截断</span>
             <button class="btn-refresh" @click="fetchLogFile" :disabled="logFile.loading">刷新</button>
+            <button class="btn-copy" @click="copyLogFile" :disabled="logFile.loading || logFile.contentLines.length === 0">复制</button>
+            <button class="btn-download" @click="downloadLogFile" :disabled="logFile.loading || !logFile.exists">下载</button>
             <button class="btn-clear" @click="clearLogFile" :disabled="logFile.loading">清空</button>
         </div>
         <div class="log-file-loading" v-if="logFile.loading">加载中...</div>
@@ -508,6 +526,63 @@
                         self.message = '读取日志请求失败: ' + error;
                     }
                 });
+            },
+            copyLogFile: function () {
+                var self = this;
+                var lines = self.logFile.contentLines || [];
+                if (lines.length === 0) {
+                    self.message = '没有可复制的日志内容';
+                    return;
+                }
+                var text = lines.join('\n');
+                var done = function () {
+                    self.message = '日志已复制到剪贴板（' + lines.length + ' 行）';
+                };
+                var fail = function (err) {
+                    self.message = '复制失败: ' + (err || '未知错误');
+                };
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(text).then(done).catch(function (e) {
+                        if (self.copyViaTextarea(text)) {
+                            done();
+                        } else {
+                            fail(e && e.message);
+                        }
+                    });
+                } else if (self.copyViaTextarea(text)) {
+                    done();
+                } else {
+                    fail('浏览器不支持剪贴板');
+                }
+            },
+            copyViaTextarea: function (text) {
+                try {
+                    var ta = document.createElement('textarea');
+                    ta.value = text;
+                    ta.setAttribute('readonly', '');
+                    ta.style.position = 'fixed';
+                    ta.style.left = '-9999px';
+                    document.body.appendChild(ta);
+                    ta.select();
+                    var ok = document.execCommand('copy');
+                    document.body.removeChild(ta);
+                    return !!ok;
+                } catch (e) {
+                    return false;
+                }
+            },
+            downloadLogFile: function () {
+                var self = this;
+                if (!self.logFile.date) {
+                    self.message = '请选择要下载的日期';
+                    return;
+                }
+                if (!self.logFile.exists) {
+                    self.message = '日志文件不存在，无法下载';
+                    return;
+                }
+                window.location.href = 'sys/logfile/download?date=' + encodeURIComponent(self.logFile.date);
+                self.message = '已开始下载 ' + self.logFile.date + ' 日志文件';
             },
             clearLogFile: function () {
                 var self = this;

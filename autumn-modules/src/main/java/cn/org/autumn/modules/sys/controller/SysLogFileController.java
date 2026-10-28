@@ -16,6 +16,13 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import java.io.File;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -103,6 +110,57 @@ public class SysLogFileController {
             log.error("清空日志失败: {}", e.getMessage());
             return R.error("清空日志失败: " + e.getMessage());
         }
+    }
+
+    /**
+     * 流式下载指定日完整磁盘日志文件。
+     */
+    @GetMapping("/download")
+    public void download(@RequestParam(required = false) String date,
+                         HttpServletRequest request,
+                         HttpServletResponse response) throws IOException {
+        if (!guard(request, "download")) {
+            writeJsonError(response, 403, "无权限");
+            return;
+        }
+        try {
+            LocalDate day = logFileService.parseDate(date);
+            File file = logFileService.resolveLogFile(day);
+            if (file == null || !file.isFile()) {
+                writeJsonError(response, 404, "日志文件不存在");
+                return;
+            }
+            String filename = file.getName().replace("\"", "");
+            String contentType = filename.endsWith(".gz") ? "application/gzip" : "application/octet-stream";
+            response.reset();
+            response.setContentType(contentType);
+            response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+            String encoded = URLEncoder.encode(filename, StandardCharsets.UTF_8).replace("+", "%20");
+            response.setHeader("Content-Disposition", "attachment; filename=\"" + filename + "\"; filename*=UTF-8''" + encoded);
+            response.setContentLengthLong(file.length());
+            try (OutputStream out = response.getOutputStream()) {
+                Files.copy(file.toPath(), out);
+                out.flush();
+            }
+        } catch (IllegalArgumentException e) {
+            writeJsonError(response, 400, e.getMessage());
+        } catch (SecurityException e) {
+            log.warn("日志下载路径拒绝: {}", e.getMessage());
+            writeJsonError(response, 403, "非法路径");
+        } catch (Exception e) {
+            log.error("下载日志失败: {}", e.getMessage());
+            if (!response.isCommitted()) {
+                writeJsonError(response, 500, "下载日志失败: " + e.getMessage());
+            }
+        }
+    }
+
+    private void writeJsonError(HttpServletResponse response, int status, String msg) throws IOException {
+        response.reset();
+        response.setStatus(status);
+        response.setContentType("application/json;charset=UTF-8");
+        String safe = msg == null ? "" : msg.replace("\\", "\\\\").replace("\"", "\\\"");
+        response.getWriter().write("{\"code\":" + status + ",\"msg\":\"" + safe + "\"}");
     }
 
     private boolean guard(HttpServletRequest request, String method) {
