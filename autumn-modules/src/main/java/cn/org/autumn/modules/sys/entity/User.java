@@ -43,6 +43,9 @@ public class User implements IResult, UserContext {
 
     private int verify;
 
+    /** 永久封禁：1=banned（与 {@link SysUserEntity#getBanned()} 一致）。 */
+    private int banned;
+
     private boolean robot;
 
     private boolean guest;

@@ -11,6 +11,7 @@ import cn.org.autumn.config.ClearHandler;
 import cn.org.autumn.config.Config;
 import cn.org.autumn.database.CrudGuard;
 import cn.org.autumn.database.runtime.WrapperColumns;
+import cn.org.autumn.exception.ResponseException;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.sys.dao.SysUserDao;
 import cn.org.autumn.modules.sys.entity.SysDeptEntity;
@@ -318,21 +319,28 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         else if (uuidNamespaceService.existsInRobot(user.getUuid()) || uuidNamespaceService.existsInGuest(user.getUuid()))
             throw new IllegalArgumentException("uuid已被机器人或临时用户占用");
         Integer prevVerify = null;
+        Integer prevBanned = null;
         if (StringUtils.isNotBlank(user.getUuid())) {
             SysUserEntity prev = baseMapper.getByUuid(user.getUuid());
             if (prev != null) {
                 prevVerify = prev.getVerify();
+                prevBanned = prev.getBanned();
             }
         }
         this.updateById(user);
-        // 管理端全量更新：本机必清；verify 边沿（含 prev=null→1）须全集群广播 + 边沿通知
+        // 管理端全量更新：本机必清；verify / banned 边沿须全集群广播
         if (StringUtils.isNotBlank(user.getUuid())) {
             Integer next = user.getVerify();
-            if (!Objects.equals(prevVerify, next)) {
+            Integer nextBanned = user.getBanned();
+            boolean verifyEdge = !Objects.equals(prevVerify, next);
+            boolean bannedEdge = !Objects.equals(prevBanned, nextBanned);
+            if (verifyEdge || bannedEdge) {
                 invalidateUserCacheCluster(user.getUuid());
-                publishUserVerifyChanged(user.getUuid(), next == null ? 0 : next, prevVerify);
+                if (verifyEdge) {
+                    publishUserVerifyChanged(user.getUuid(), next == null ? 0 : next, prevVerify);
+                }
             } else {
-                clear(user.getUuid());
+                clearUserCacheKeys(user, user.getUuid());
             }
         }
     }
@@ -580,7 +588,32 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
     }
 
     public void clear(String user) {
-        cache.remove(user);
+        if (StringUtils.isBlank(user)) {
+            return;
+        }
+        cache.remove(user.trim());
+    }
+
+    /**
+     * 清理用户可能作为 cache key 的全部别名（uuid / 用户名 / 手机 / 邮箱 / 证号等）。
+     */
+    public void clearUserCacheKeys(SysUserEntity entity, String uuid) {
+        if (StringUtils.isNotBlank(uuid)) {
+            clear(uuid.trim());
+        }
+        if (entity == null) {
+            return;
+        }
+        clear(entity.getUuid());
+        clear(entity.getUsername());
+        clear(entity.getMobile());
+        clear(entity.getEmail());
+        clear(entity.getQq());
+        clear(entity.getWeixin());
+        clear(entity.getAlipay());
+        clear(entity.getIdCard());
+        clear(entity.getOpenId());
+        clear(entity.getUnionId());
     }
 
     public boolean has(String user) {
@@ -689,10 +722,50 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
 
     /**
      * 标记已实名：写 {@code sys_user.verify=1} 并全集群失效进程内用户 cache。
-     * 刷脸 SUCCESS / 自愈等业务落已实名的唯一入口。
+     * 刷脸 SUCCESS / 自愈等业务落已实名的唯一入口（无证号时仅 verify）。
      */
     public void verified(String uuid) {
-        setVerifyAndInvalidate(uuid, 1);
+        verified(uuid, null);
+    }
+
+    /**
+     * 已实名：{@code verify=1}；有证号则规范化写入 {@code id_card}。
+     * 首次变为已实名时写 {@code verify_time=now}；已是已实名则保留原 {@code verify_time}（间隔门禁锚点）。
+     */
+    public void verified(String uuid, String idCard) {
+        if (StringUtils.isBlank(uuid)) {
+            return;
+        }
+        String u = uuid.trim();
+        String card = IDCard.normalizeForStore(idCard);
+        Integer prevVerify = null;
+        Date prevVerifyTime = null;
+        SysUserEntity prev = null;
+        try {
+            prev = baseMapper.getByUuid(u);
+            if (prev != null) {
+                prevVerify = prev.getVerify();
+                prevVerifyTime = prev.getVerifyTime();
+                if (card == null && StringUtils.isNotBlank(prev.getIdCard())) {
+                    card = IDCard.normalizeForStore(prev.getIdCard());
+                }
+            }
+        } catch (Exception e) {
+            log.warn("读 verify 边沿失败:uuid={}, err={}", u, e.getMessage());
+        }
+        boolean firstVerified = !Objects.equals(prevVerify, 1);
+        Date verifyTime = firstVerified || prevVerifyTime == null ? new Date() : prevVerifyTime;
+        if (card != null) {
+            baseMapper.verifiedWithIdCard(u, card, verifyTime);
+        } else if (firstVerified || prevVerifyTime == null) {
+            baseMapper.verifiedSetTime(u, verifyTime);
+        } else {
+            baseMapper.verify(u, 1);
+        }
+        invalidateUserCacheCluster(u);
+        if (firstVerified) {
+            publishUserVerifyChanged(u, 1, prevVerify);
+        }
     }
 
     /**
@@ -721,16 +794,189 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         }
     }
 
+    public List<SysUserEntity> listActiveByIdCard(String idCard) {
+        String card = IDCard.normalizeForStore(idCard);
+        if (card == null) {
+            return Collections.emptyList();
+        }
+        List<SysUserEntity> list = baseMapper.listByIdCard(card);
+        if (list == null || list.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<SysUserEntity> out = new ArrayList<>(list.size());
+        for (SysUserEntity e : list) {
+            out.add(dynamicReplaceIconHost(e));
+        }
+        return out;
+    }
+
+    /** 同证活跃账号是否存在 {@code banned=1}（直查库）。 */
+    public boolean isIdCardBanned(String idCard) {
+        String card = IDCard.normalizeForStore(idCard);
+        if (card == null) {
+            return false;
+        }
+        return baseMapper.countBannedByIdCard(card) > 0;
+    }
+
     /**
-     * 本机 clear + Pub/Sub {@link #CACHE_INVALIDATE_CHANNEL}（不写库）。
-     * 管理端改 verify 走 {@link #updateNoRole} 时在写库后调用。
+     * 用户是否永久封禁（直查库，不读进程内 cache）。
+     */
+    public boolean isUserBanned(String uuid) {
+        if (StringUtils.isBlank(uuid)) {
+            return false;
+        }
+        SysUserEntity user = baseMapper.getByUuid(uuid.trim());
+        return user != null && user.getBanned() == 1;
+    }
+
+    /**
+     * 按登录键（uuid/手机/邮箱/证号等）解析用户后查是否 banned（直查库）。
+     */
+    public boolean isAccountBanned(String account) {
+        if (StringUtils.isBlank(account)) {
+            return false;
+        }
+        SysUserEntity user = getUser(account.trim());
+        if (user == null || StringUtils.isBlank(user.getUuid())) {
+            return false;
+        }
+        return isUserBanned(user.getUuid());
+    }
+
+    public void assertUserNotBanned(String uuid) throws Exception {
+        if (isUserBanned(uuid)) {
+            throw new ResponseException("该账号已被永久禁用，无法使用");
+        }
+    }
+
+    public void assertAccountNotBanned(String account) throws Exception {
+        if (isAccountBanned(account)) {
+            throw new ResponseException("该账号已被永久禁用，无法使用");
+        }
+    }
+
+    /**
+     * 同证已实名账号中最大的 {@code verify_time}（可排除当前 uuid）；无则 null。
+     * 无 {@code verify_time} 时回退 {@code update_time}/{@code create_time}。
+     */
+    public Date getLatestVerifyTimeByIdCard(String idCard, String excludeUuid) {
+        String card = IDCard.normalizeForStore(idCard);
+        if (card == null) {
+            return null;
+        }
+        String exclude = StringUtils.trimToEmpty(excludeUuid);
+        Date last = null;
+        for (SysUserEntity e : listActiveByIdCard(card)) {
+            if (e.getVerify() != 1) {
+                continue;
+            }
+            if (StringUtils.isNotBlank(exclude) && exclude.equals(e.getUuid())) {
+                continue;
+            }
+            Date t = e.getVerifyTime();
+            if (t == null) {
+                t = e.getUpdateTime() != null ? e.getUpdateTime() : e.getCreateTime();
+            }
+            if (t != null && (last == null || t.after(last))) {
+                last = t;
+            }
+        }
+        return last;
+    }
+
+    /**
+     * 实名门禁：同证封禁拒；{@code intervalDays>0} 时校验距上一账号实名间隔。
+     *
+     * @param excludeUuid 当前申请实名的账号（可空）
+     * @param intervalDays 间隔天数，0 表示不校验间隔
+     */
+    public void assertIdCardCertifyAllowed(String idCard, String excludeUuid, int intervalDays) throws Exception {
+        String card = IDCard.normalizeForStore(idCard);
+        if (card == null) {
+            return;
+        }
+        if (isIdCardBanned(card)) {
+            throw new ResponseException("该证件已被永久禁止认证");
+        }
+        if (intervalDays <= 0) {
+            return;
+        }
+        Date last = getLatestVerifyTimeByIdCard(card, excludeUuid);
+        if (last == null) {
+            return;
+        }
+        long needMs = intervalDays * 24L * 60L * 60L * 1000L;
+        if (System.currentTimeMillis() - last.getTime() < needMs) {
+            throw new ResponseException("距上一账号实名不足" + intervalDays + "天，请稍后再试");
+        }
+    }
+
+    /**
+     * 写封禁标记并失效用户 cache。
+     * {@code banned=true} 且用户已有证号时，同证其它活跃账号一并封禁。
+     * 解封仅当前 uuid。
+     */
+    public void setBannedAndInvalidate(String uuid, boolean banned) {
+        if (StringUtils.isBlank(uuid)) {
+            return;
+        }
+        String u = uuid.trim();
+        SysUserEntity user = baseMapper.getForDelete(u);
+        if (user == null) {
+            return;
+        }
+        int flag = banned ? 1 : 0;
+        baseMapper.updateBanned(u, flag);
+        user.setBanned(flag);
+        invalidateUserCacheCluster(user);
+        if (!banned) {
+            return;
+        }
+        String card = IDCard.normalizeForStore(user.getIdCard());
+        if (card == null) {
+            return;
+        }
+        for (SysUserEntity other : listActiveByIdCard(card)) {
+            if (other == null || StringUtils.isBlank(other.getUuid()) || u.equals(other.getUuid())) {
+                continue;
+            }
+            if (other.getBanned() == 1) {
+                continue;
+            }
+            baseMapper.updateBanned(other.getUuid(), 1);
+            other.setBanned(1);
+            invalidateUserCacheCluster(other);
+        }
+    }
+
+    /**
+     * 本机按别名清 cache + Pub/Sub {@link #CACHE_INVALIDATE_CHANNEL}（不写库）。
      */
     public void invalidateUserCacheCluster(String uuid) {
         if (StringUtils.isBlank(uuid)) {
             return;
         }
         String u = uuid.trim();
-        clear(u);
+        SysUserEntity snap = null;
+        try {
+            snap = baseMapper.getForDelete(u);
+        } catch (Exception e) {
+            log.warn("失效缓存读用户失败:uuid={}, err={}", u, e.getMessage());
+        }
+        clearUserCacheKeys(snap, u);
+        publishUserCacheInvalidate(u);
+    }
+
+    /**
+     * 已知实体时失效：避免再查库，并清全部别名 key。
+     */
+    public void invalidateUserCacheCluster(SysUserEntity entity) {
+        if (entity == null || StringUtils.isBlank(entity.getUuid())) {
+            return;
+        }
+        String u = entity.getUuid().trim();
+        clearUserCacheKeys(entity, u);
         publishUserCacheInvalidate(u);
     }
 
@@ -795,7 +1041,13 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
             if (StringUtils.isBlank(user)) {
                 return;
             }
-            clear(user.trim());
+            String u = user.trim();
+            SysUserEntity snap = null;
+            try {
+                snap = baseMapper.getForDelete(u);
+            } catch (Exception ignored) {
+            }
+            clearUserCacheKeys(snap, u);
         } catch (Exception e) {
             log.warn("用户缓存失效消息处理失败:body={}, err={}", body, e.getMessage());
         }

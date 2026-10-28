@@ -151,6 +151,26 @@ public class IDCard {
         }
     }
 
+    /**
+     * 写入/比对用规范化证号：去空白、去注销前缀 {@code del-}、大写。空白返回 null。
+     */
+    public static String normalizeForStore(String idCard) {
+        if (idCard == null) {
+            return null;
+        }
+        String v = idCard.trim();
+        if (v.isEmpty()) {
+            return null;
+        }
+        if (v.regionMatches(true, 0, "del-", 0, 4)) {
+            v = v.substring(4).trim();
+        }
+        if (v.isEmpty()) {
+            return null;
+        }
+        return v.toUpperCase();
+    }
+
 
     /**
      * 根据身份编号获取年龄

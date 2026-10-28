@@ -111,6 +111,12 @@ public class SysUserEntity implements AccountHandler.Account, UserContext, Seria
     @Column(comment = "实名:0,未实名;1:已实名", defaultValue = "0")
     private int verify = 0;
 
+    @Column(comment = "封禁:0,正常;1:永久封禁(挡同证再实名)", defaultValue = "0")
+    private int banned = 0;
+
+    @Column(type = DataType.DATETIME, comment = "实名成功时间")
+    private Date verifyTime;
+
     @Column(length = 100, comment = "部门标识")
     private String deptKey;
 
@@ -146,6 +152,9 @@ public class SysUserEntity implements AccountHandler.Account, UserContext, Seria
         this.weixin = entity.weixin;
         this.status = entity.status;
         this.verify = entity.verify;
+        this.banned = entity.banned;
+        this.verifyTime = entity.verifyTime;
+        this.idCard = entity.idCard;
         this.icon = entity.icon;
         this.iconId = entity.iconId;
         this.iconMd5 = entity.iconMd5;

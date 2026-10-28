@@ -35,6 +35,34 @@ public class SysUserDaoSql extends RuntimeSql {
         return "UPDATE " + tbl() + " SET " + quote("verify") + " = #{verify} WHERE " + quote("uuid") + " = #{uuid}";
     }
 
+    /** 已实名写入：verify=1 + 证号 + verify_time。 */
+    public String verifiedWithIdCard() {
+        return "UPDATE " + tbl() + " SET " + quote("verify") + " = 1, "
+                + quote("id_card") + " = #{idCard}, "
+                + quote("verify_time") + " = #{verifyTime} "
+                + "WHERE " + quote("uuid") + " = #{uuid}";
+    }
+
+    /** 已实名写入：verify=1 + verify_time（不改正号）。 */
+    public String verifiedSetTime() {
+        return "UPDATE " + tbl() + " SET " + quote("verify") + " = 1, "
+                + quote("verify_time") + " = #{verifyTime} "
+                + "WHERE " + quote("uuid") + " = #{uuid}";
+    }
+
+    public String updateBanned() {
+        return "UPDATE " + tbl() + " SET " + quote("banned") + " = #{banned} WHERE " + quote("uuid") + " = #{uuid}";
+    }
+
+    public String listByIdCard() {
+        return "SELECT * FROM " + tbl() + " WHERE " + quote("id_card") + " = #{idCard} AND " + quote("status") + " >= 0";
+    }
+
+    public String countBannedByIdCard() {
+        return "SELECT COUNT(1) FROM " + tbl() + " WHERE " + quote("id_card") + " = #{idCard} AND "
+                + quote("banned") + " = 1 AND " + quote("status") + " >= 0";
+    }
+
     public String getByUsername() {
         return "SELECT * FROM " + tbl() + " WHERE " + quote("username") + " = #{username} AND " + quote("status") + " >= 0";
     }
@@ -103,7 +131,7 @@ public class SysUserDaoSql extends RuntimeSql {
     }
 
     public String getByIdCard() {
-        return "SELECT * FROM " + tbl() + " WHERE " + quote("id_card") + " = #{idCard} AND " + quote("status") + " >= 0";
+        return "SELECT * FROM " + tbl() + " WHERE " + quote("id_card") + " = #{idCard} AND " + quote("status") + " >= 0" + limitOne();
     }
 
     public String getByIdCardLike() {

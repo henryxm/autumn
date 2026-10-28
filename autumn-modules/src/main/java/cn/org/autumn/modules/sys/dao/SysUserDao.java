@@ -11,6 +11,7 @@ import org.apache.ibatis.annotations.SelectProvider;
 import org.apache.ibatis.annotations.UpdateProvider;
 import org.springframework.stereotype.Repository;
 
+import java.util.Date;
 import java.util.List;
 
 @Mapper
@@ -25,6 +26,21 @@ public interface SysUserDao extends BaseMapper<SysUserEntity> {
 
     @UpdateProvider(type = SysUserDaoSql.class, method = "verify")
     void verify(@Param("uuid") String uuid, @Param("verify") int verify);
+
+    @UpdateProvider(type = SysUserDaoSql.class, method = "verifiedWithIdCard")
+    void verifiedWithIdCard(@Param("uuid") String uuid, @Param("idCard") String idCard, @Param("verifyTime") Date verifyTime);
+
+    @UpdateProvider(type = SysUserDaoSql.class, method = "verifiedSetTime")
+    void verifiedSetTime(@Param("uuid") String uuid, @Param("verifyTime") Date verifyTime);
+
+    @UpdateProvider(type = SysUserDaoSql.class, method = "updateBanned")
+    void updateBanned(@Param("uuid") String uuid, @Param("banned") int banned);
+
+    @SelectProvider(type = SysUserDaoSql.class, method = "listByIdCard")
+    List<SysUserEntity> listByIdCard(@Param("idCard") String idCard);
+
+    @SelectProvider(type = SysUserDaoSql.class, method = "countBannedByIdCard")
+    int countBannedByIdCard(@Param("idCard") String idCard);
 
     @SelectProvider(type = SysUserDaoSql.class, method = "getByUsername")
     SysUserEntity getByUsername(@Param("username") String username);
