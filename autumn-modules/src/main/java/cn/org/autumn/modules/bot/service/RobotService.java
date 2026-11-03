@@ -19,6 +19,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.Calendar;
 import java.util.Collections;
@@ -65,6 +67,9 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> implement
 
     @Autowired(required = false)
     private BotDisplayNameRiskGuard botDisplayNameRiskGuard;
+
+    @Autowired(required = false)
+    private BotIconAuditGuard botIconAuditGuard;
 
     @Override
     public String ico() {
@@ -228,13 +233,23 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> implement
         robot.setOwner(owner);
         robot.setNickname(name);
         robot.setDescription(description);
-        applyAvatar(robot, iconId, icon, hash, false);
+        String pendingIconId = null;
+        String pendingIconUrl = null;
+        if (StringUtils.isNotBlank(iconId)) {
+            // iconId 先审后写：建号时不落新头像
+            pendingIconId = iconId.trim();
+            pendingIconUrl = robotIconUrlHelper.requireAccessUrl(pendingIconId);
+        } else {
+            applyAvatar(robot, null, icon, hash, false);
+        }
         robot.setStatus(RobotEntity.STATUS_ACTIVE);
         robot.setAccess(normalizeAccess(access));
         robot.setBlack(false);
         robot.setCreateTime(now);
         robot.setUpdateTime(now);
         insert(robot);
+        // 入审必须在建号事务提交后：同事务内 catch 入审失败仍会 rollback-only，违反「submit 失败不回滚建号」
+        scheduleRobotIconAuditAfterCommit(owner, robot.getUuid(), pendingIconId, pendingIconUrl);
         String plainToken = robotTokenService.insertToken(robot.getUuid(), tokenExpireDays);
         accountFactory.created(robot);
         dispatchHook(robot, RobotHookEvents.ROBOT_CREATED);
@@ -411,6 +426,61 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> implement
         updateProfile(robotUuid, loginUuid, name, description, icon, null, hash, access, black);
     }
 
+    /**
+     * 建号成功后再入审；失败只打日志，不影响已创建的机器人。
+     */
+    private void scheduleRobotIconAuditAfterCommit(String owner, String robotUuid,
+                                                   String pendingIconId, String pendingIconUrl) {
+        if (StringUtils.isBlank(pendingIconId)) {
+            return;
+        }
+        Runnable task = () -> {
+            if (botIconAuditGuard == null) {
+                log.warn("机器人创建后头像入审跳过: BotIconAuditGuard 未注入 robot={}", robotUuid);
+                return;
+            }
+            try {
+                botIconAuditGuard.submitPending(owner, robotUuid, pendingIconId, pendingIconUrl);
+            } catch (Exception e) {
+                log.warn("机器人创建后头像入审失败 robot={} err={}", robotUuid, e.getMessage());
+            }
+        };
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    task.run();
+                }
+            });
+        } else {
+            task.run();
+        }
+    }
+
+    /**
+     * 头像审核通过后落库（超管侧调用，不校验主人会话）。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void applyApprovedIcon(String robotUuid, String iconId, String iconUrl) throws Exception {
+        if (StringUtils.isBlank(robotUuid) || StringUtils.isBlank(iconId)) {
+            throw new CodeException("机器人uuid/iconId不能为空");
+        }
+        RobotEntity robot = getByUuid(robotUuid.trim());
+        if (robot == null) {
+            throw new CodeException("机器人不存在");
+        }
+        String id = iconId.trim();
+        String url = StringUtils.trimToEmpty(iconUrl);
+        if (StringUtils.isBlank(url)) {
+            url = robotIconUrlHelper.requireAccessUrl(id);
+        }
+        robot.setIconId(id);
+        robot.setIcon(url);
+        robot.setHash(id);
+        robot.setUpdateTime(new Date());
+        updateById(robot);
+    }
+
     @Transactional(rollbackFor = Exception.class)
     public void updateProfile(String robotUuid, String loginUuid, String name, String description,
                               String icon, String iconId, String hash, String access, Boolean black) throws Exception {
@@ -422,7 +492,16 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> implement
         if (description != null) {
             robot.setDescription(description);
         }
-        applyAvatar(robot, iconId, icon, hash, true);
+        if (StringUtils.isNotBlank(iconId)) {
+            String id = iconId.trim();
+            String url = robotIconUrlHelper.requireAccessUrl(id);
+            if (botIconAuditGuard == null) {
+                throw new CodeException("头像审核服务不可用");
+            }
+            botIconAuditGuard.submitPending(loginUuid, robot.getUuid(), id, url);
+        } else {
+            applyAvatar(robot, null, icon, hash, true);
+        }
         if (access != null) {
             robot.setAccess(normalizeAccess(access));
         }
