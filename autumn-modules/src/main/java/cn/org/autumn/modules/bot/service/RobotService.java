@@ -63,9 +63,22 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> implement
     @Lazy
     private RobotIconUrlHelper robotIconUrlHelper;
 
+    @Autowired(required = false)
+    private BotDisplayNameRiskGuard botDisplayNameRiskGuard;
+
     @Override
     public String ico() {
         return "fa-android";
+    }
+
+    private void assertDisplayNameAllowed(String ownerUuid, String name) throws CodeException {
+        if (botDisplayNameRiskGuard == null || StringUtils.isBlank(name)) {
+            return;
+        }
+        String reject = botDisplayNameRiskGuard.blockMessageOrNull(ownerUuid, name.trim());
+        if (StringUtils.isNotBlank(reject)) {
+            throw new CodeException(reject);
+        }
     }
 
     @Override
@@ -204,6 +217,7 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> implement
         if (StringUtils.isBlank(name)) {
             throw new CodeException("名称不能为空");
         }
+        assertDisplayNameAllowed(owner, name);
         RobotEntity draft = new RobotEntity();
         draft.setOwner(owner);
         draft.setNickname(name);
@@ -402,6 +416,7 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> implement
                               String icon, String iconId, String hash, String access, Boolean black) throws Exception {
         RobotEntity robot = requireManageable(robotUuid, loginUuid);
         if (StringUtils.isNotBlank(name)) {
+            assertDisplayNameAllowed(loginUuid, name);
             robot.setNickname(name);
         }
         if (description != null) {
