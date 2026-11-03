@@ -13,6 +13,7 @@ import cn.org.autumn.modules.sys.service.SysUserService;
 import cn.org.autumn.modules.sys.service.UuidNamespaceService;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.site.AccountFactory;
+import cn.org.autumn.site.BotHandlerFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -65,11 +66,9 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> implement
     @Lazy
     private RobotIconUrlHelper robotIconUrlHelper;
 
-    @Autowired(required = false)
-    private BotDisplayNameRiskGuard botDisplayNameRiskGuard;
-
-    @Autowired(required = false)
-    private BotIconAuditGuard botIconAuditGuard;
+    @Autowired
+    @Lazy
+    private BotHandlerFactory botHandlerFactory;
 
     @Override
     public String ico() {
@@ -77,10 +76,10 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> implement
     }
 
     private void assertDisplayNameAllowed(String ownerUuid, String name) throws CodeException {
-        if (botDisplayNameRiskGuard == null || StringUtils.isBlank(name)) {
+        if (StringUtils.isBlank(name)) {
             return;
         }
-        String reject = botDisplayNameRiskGuard.blockMessageOrNull(ownerUuid, name.trim());
+        String reject = botHandlerFactory.displayNameRejectOrNull(ownerUuid, name);
         if (StringUtils.isNotBlank(reject)) {
             throw new CodeException(reject);
         }
@@ -435,12 +434,12 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> implement
             return;
         }
         Runnable task = () -> {
-            if (botIconAuditGuard == null) {
-                log.warn("机器人创建后头像入审跳过: BotIconAuditGuard 未注入 robot={}", robotUuid);
+            if (!botHandlerFactory.hasIconAuditHandler()) {
+                log.warn("机器人创建后头像入审跳过: BotIconAuditHandler 未注入 robot={}", robotUuid);
                 return;
             }
             try {
-                botIconAuditGuard.submitPending(owner, robotUuid, pendingIconId, pendingIconUrl);
+                botHandlerFactory.submitIconPending(owner, robotUuid, pendingIconId, pendingIconUrl);
             } catch (Exception e) {
                 log.warn("机器人创建后头像入审失败 robot={} err={}", robotUuid, e.getMessage());
             }
@@ -493,12 +492,12 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> implement
             robot.setDescription(description);
         }
         if (StringUtils.isNotBlank(iconId)) {
-            String id = iconId.trim();
-            String url = robotIconUrlHelper.requireAccessUrl(id);
-            if (botIconAuditGuard == null) {
+            if (!botHandlerFactory.hasIconAuditHandler()) {
                 throw new CodeException("头像审核服务不可用");
             }
-            botIconAuditGuard.submitPending(loginUuid, robot.getUuid(), id, url);
+            String id = iconId.trim();
+            String url = robotIconUrlHelper.requireAccessUrl(id);
+            botHandlerFactory.submitIconPending(loginUuid, robot.getUuid(), id, url);
         } else {
             applyAvatar(robot, null, icon, hash, true);
         }
