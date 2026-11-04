@@ -126,6 +126,12 @@
             border-bottom: 1px solid #f0f0f0;
             font-size: 13px;
         }
+        .level-panel-row.clickable {
+            cursor: pointer;
+        }
+        .level-panel-row.clickable:hover {
+            background: #f0f4f8;
+        }
         .level-panel-row:last-child {
             border-bottom: none;
         }
@@ -389,10 +395,10 @@
                 </div>
                 <div class="level-panel-list">
                     <div v-if="recentSearches.length === 0" class="level-panel-empty">暂无最近搜索</div>
-                    <div class="level-panel-row" v-for="item in recentSearches" :key="'r-' + item">
-                        <input type="checkbox" :value="item" v-model="selectedRecent">
+                    <div class="level-panel-row clickable" v-for="item in recentSearches" :key="'r-' + item" @click="toggleRecentItem(item)">
+                        <input type="checkbox" :checked="selectedRecent.indexOf(item) >= 0" @click.stop="toggleRecentItem(item)">
                         <span class="name" :title="item">{{ item }}</span>
-                        <button type="button" class="locate" @click="locateLogger(item)">定位</button>
+                        <button type="button" class="locate" @click.stop="locateLogger(item)">定位</button>
                     </div>
                 </div>
             </div>
@@ -405,10 +411,10 @@
                 </div>
                 <div class="level-panel-list">
                     <div v-if="debugLoggers.length === 0" class="level-panel-empty">暂无显式 DEBUG 日志器</div>
-                    <div class="level-panel-row" v-for="item in debugLoggers" :key="'d-' + item">
-                        <input type="checkbox" :value="item" v-model="selectedDebug">
+                    <div class="level-panel-row clickable" v-for="item in debugLoggers" :key="'d-' + item" @click="toggleDebugItem(item)">
+                        <input type="checkbox" :checked="selectedDebug.indexOf(item) >= 0" @click.stop="toggleDebugItem(item)">
                         <span class="name" :title="item">{{ item }}</span>
-                        <button type="button" class="locate" @click="locateLogger(item)">定位</button>
+                        <button type="button" class="locate" @click.stop="locateLogger(item)">定位</button>
                     </div>
                 </div>
             </div>
@@ -562,11 +568,27 @@
                 this.searchTerm = item;
                 this.filterLoggers();
             },
+            toggleRecentItem: function (item) {
+                var idx = this.selectedRecent.indexOf(item);
+                if (idx >= 0) {
+                    this.selectedRecent.splice(idx, 1);
+                } else {
+                    this.selectedRecent.push(item);
+                }
+            },
             toggleSelectAllRecent: function () {
                 if (this.allRecentSelected) {
                     this.selectedRecent = [];
                 } else {
                     this.selectedRecent = this.recentSearches.slice();
+                }
+            },
+            toggleDebugItem: function (item) {
+                var idx = this.selectedDebug.indexOf(item);
+                if (idx >= 0) {
+                    this.selectedDebug.splice(idx, 1);
+                } else {
+                    this.selectedDebug.push(item);
                 }
             },
             toggleSelectAllDebug: function () {
