@@ -45,27 +45,115 @@
             font-weight: bold;
             border-bottom-color: #007bff;
         }
-        .recent-searches {
-            margin-bottom: 15px;
-            padding: 10px;
-            background-color: #e9ecef;
-            border-radius: 5px;
+        .level-top-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 14px;
         }
-        .recent-searches span {
+        @media (max-width: 900px) {
+            .level-top-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .level-panel {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 10px 12px;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+        .level-panel-title {
             font-weight: bold;
-            margin-right: 10px;
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 8px;
         }
-        .recent-searches button {
-            background-color: #6c757d;
-            color: white;
-            border: none;
+        .level-panel-title .count {
+            font-weight: normal;
+            color: #888;
+            font-size: 12px;
+        }
+        .level-panel-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .level-panel-actions select {
+            padding: 5px 8px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+        }
+        .level-panel-actions button {
             padding: 5px 10px;
-            margin: 2px;
+            border: none;
             border-radius: 3px;
             cursor: pointer;
+            color: #fff;
+            font-size: 12px;
+            background: #6c757d;
         }
-        .recent-searches button:hover {
-            background-color: #5a6268;
+        .level-panel-actions button.btn-primary {
+            background: #007bff;
+        }
+        .level-panel-actions button.btn-success {
+            background: #28a745;
+        }
+        .level-panel-actions button.btn-warning {
+            background: #e0a800;
+            color: #212529;
+        }
+        .level-panel-actions button:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+        .level-panel-list {
+            max-height: 220px;
+            overflow: auto;
+            background: #fff;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+        }
+        .level-panel-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 8px;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 13px;
+        }
+        .level-panel-row:last-child {
+            border-bottom: none;
+        }
+        .level-panel-row .name {
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: #333;
+        }
+        .level-panel-row .locate {
+            flex-shrink: 0;
+            color: #007bff;
+            cursor: pointer;
+            background: none;
+            border: none;
+            padding: 0;
+            font-size: 12px;
+        }
+        .level-panel-row .locate:hover {
+            text-decoration: underline;
+        }
+        .level-panel-empty {
+            padding: 16px 8px;
+            text-align: center;
+            color: #999;
+            font-size: 13px;
         }
         .search-bar {
             margin-bottom: 12px;
@@ -90,7 +178,8 @@
             background-color: #0056b3;
         }
         .logger-table-wrap {
-            max-height: calc(100vh - 260px);
+            max-height: calc(100vh - 420px);
+            min-height: 200px;
             overflow: auto;
             margin-bottom: 12px;
             border: 1px solid #ddd;
@@ -287,9 +376,42 @@
     </div>
 
     <div v-show="activeTab === 'level'">
-        <div class="recent-searches" v-if="recentSearches.length > 0">
-            <span>最近搜索:</span>
-            <button v-for="(item, index) in recentSearches" :key="index" @click="applyRecentSearch(item)">{{ item }}</button>
+        <div class="level-top-grid">
+            <div class="level-panel">
+                <div class="level-panel-title">最近搜索 <span class="count">({{ recentSearches.length }})</span></div>
+                <div class="level-panel-actions">
+                    <button type="button" @click="toggleSelectAllRecent">{{ allRecentSelected ? '取消全选' : '全选' }}</button>
+                    <select v-model="batchLevel">
+                        <option v-for="level in logLevels" :value="level">{{ level }}</option>
+                    </select>
+                    <button type="button" class="btn-primary" @click="batchSetRecentLevel" :disabled="selectedRecent.length === 0 || batchBusy">批量设置</button>
+                    <button type="button" @click="removeSelectedRecent" :disabled="selectedRecent.length === 0">移除勾选</button>
+                </div>
+                <div class="level-panel-list">
+                    <div v-if="recentSearches.length === 0" class="level-panel-empty">暂无最近搜索</div>
+                    <div class="level-panel-row" v-for="item in recentSearches" :key="'r-' + item">
+                        <input type="checkbox" :value="item" v-model="selectedRecent">
+                        <span class="name" :title="item">{{ item }}</span>
+                        <button type="button" class="locate" @click="locateLogger(item)">定位</button>
+                    </div>
+                </div>
+            </div>
+            <div class="level-panel">
+                <div class="level-panel-title">当前 DEBUG <span class="count">({{ debugLoggers.length }})</span></div>
+                <div class="level-panel-actions">
+                    <button type="button" @click="toggleSelectAllDebug">{{ allDebugSelected ? '取消全选' : '全选' }}</button>
+                    <button type="button" class="btn-success" @click="batchDebugToInfo" :disabled="selectedDebug.length === 0 || batchBusy">批量设为 INFO</button>
+                    <button type="button" class="btn-warning" @click="allDebugToInfo" :disabled="debugLoggers.length === 0 || batchBusy">全部恢复 INFO</button>
+                </div>
+                <div class="level-panel-list">
+                    <div v-if="debugLoggers.length === 0" class="level-panel-empty">暂无显式 DEBUG 日志器</div>
+                    <div class="level-panel-row" v-for="item in debugLoggers" :key="'d-' + item">
+                        <input type="checkbox" :value="item" v-model="selectedDebug">
+                        <span class="name" :title="item">{{ item }}</span>
+                        <button type="button" class="locate" @click="locateLogger(item)">定位</button>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="search-bar">
@@ -352,6 +474,10 @@
             globalSelectedLevel: 'INFO',
             message: '',
             recentSearches: [],
+            selectedRecent: [],
+            batchLevel: 'DEBUG',
+            selectedDebug: [],
+            batchBusy: false,
             logFile: {
                 date: todayYmd(),
                 lines: 500,
@@ -366,6 +492,26 @@
                 loading: false
             }
         },
+        computed: {
+            debugLoggers: function () {
+                return this.loggers
+                    .filter(function (l) { return l.level === 'DEBUG'; })
+                    .map(function (l) { return l.name; });
+            },
+            allRecentSelected: function () {
+                return this.recentSearches.length > 0 && this.selectedRecent.length === this.recentSearches.length;
+            },
+            allDebugSelected: function () {
+                return this.debugLoggers.length > 0 && this.selectedDebug.length === this.debugLoggers.length;
+            }
+        },
+        watch: {
+            debugLoggers: function (names) {
+                this.selectedDebug = this.selectedDebug.filter(function (n) {
+                    return names.indexOf(n) >= 0;
+                });
+            }
+        },
         mounted() {
             this.loadRecentSearches();
             this.fetchLoggers();
@@ -376,6 +522,8 @@
                 this.activeTab = tab;
                 if (tab === 'logfile') {
                     this.fetchLogFile();
+                } else if (tab === 'level') {
+                    this.fetchLoggers();
                 }
             },
             loadRecentSearches: function() {
@@ -397,17 +545,105 @@
                 }
             },
             addRecentSearch: function(loggerName) {
-                if (!this.recentSearches.includes(loggerName)) {
-                    this.recentSearches.unshift(loggerName);
-                    if (this.recentSearches.length > 5) {
-                        this.recentSearches.pop();
-                    }
-                    this.saveRecentSearches();
+                if (!loggerName) {
+                    return;
                 }
+                var idx = this.recentSearches.indexOf(loggerName);
+                if (idx >= 0) {
+                    this.recentSearches.splice(idx, 1);
+                }
+                this.recentSearches.unshift(loggerName);
+                if (this.recentSearches.length > 20) {
+                    this.recentSearches = this.recentSearches.slice(0, 20);
+                }
+                this.saveRecentSearches();
             },
-            applyRecentSearch: function(item) {
+            locateLogger: function (item) {
                 this.searchTerm = item;
                 this.filterLoggers();
+            },
+            toggleSelectAllRecent: function () {
+                if (this.allRecentSelected) {
+                    this.selectedRecent = [];
+                } else {
+                    this.selectedRecent = this.recentSearches.slice();
+                }
+            },
+            toggleSelectAllDebug: function () {
+                if (this.allDebugSelected) {
+                    this.selectedDebug = [];
+                } else {
+                    this.selectedDebug = this.debugLoggers.slice();
+                }
+            },
+            removeSelectedRecent: function () {
+                var selected = this.selectedRecent.slice();
+                if (selected.length === 0) {
+                    return;
+                }
+                this.recentSearches = this.recentSearches.filter(function (n) {
+                    return selected.indexOf(n) < 0;
+                });
+                this.selectedRecent = [];
+                this.saveRecentSearches();
+                this.message = '已从最近搜索移除 ' + selected.length + ' 项';
+            },
+            changeLevelAjax: function (loggerName, level) {
+                return new Promise(function (resolve) {
+                    $.ajax({
+                        type: "GET",
+                        url: "sys/log/changeLevel",
+                        data: {
+                            loggerName: loggerName,
+                            level: level
+                        },
+                        success: function (result) {
+                            resolve(result === 'success');
+                        },
+                        error: function () {
+                            resolve(false);
+                        }
+                    });
+                });
+            },
+            runBatchChangeLevel: function (names, level, doneMsg) {
+                var self = this;
+                if (!names || names.length === 0) {
+                    return;
+                }
+                self.batchBusy = true;
+                self.message = '正在批量设置 ' + names.length + ' 个日志器...';
+                var ok = 0;
+                var fail = 0;
+                var chain = Promise.resolve();
+                names.forEach(function (name) {
+                    chain = chain.then(function () {
+                        return self.changeLevelAjax(name, level).then(function (success) {
+                            if (success) {
+                                ok++;
+                                self.addRecentSearch(name);
+                            } else {
+                                fail++;
+                            }
+                        });
+                    });
+                });
+                chain.then(function () {
+                    self.batchBusy = false;
+                    self.message = (doneMsg || '批量设置完成') + '：成功 ' + ok + '，失败 ' + fail;
+                    self.fetchLoggers();
+                });
+            },
+            batchSetRecentLevel: function () {
+                this.runBatchChangeLevel(this.selectedRecent.slice(), this.batchLevel, '最近搜索批量设置 ' + this.batchLevel);
+            },
+            batchDebugToInfo: function () {
+                this.runBatchChangeLevel(this.selectedDebug.slice(), 'INFO', 'DEBUG 批量恢复 INFO');
+                this.selectedDebug = [];
+            },
+            allDebugToInfo: function () {
+                this.runBatchChangeLevel(this.debugLoggers.slice(), 'INFO', '全部 DEBUG 恢复 INFO');
+                this.selectedDebug = [];
             },
             fetchLoggers: function () {
                 var self = this;
