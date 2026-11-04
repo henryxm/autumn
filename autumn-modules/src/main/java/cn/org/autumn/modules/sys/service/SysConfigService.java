@@ -28,9 +28,11 @@ import cn.org.autumn.modules.sys.entity.JsonConfigRefreshResult;
 import cn.org.autumn.modules.sys.entity.LoadingTheme;
 import cn.org.autumn.modules.sys.entity.SysConfigEntity;
 import cn.org.autumn.modules.sys.entity.SystemUpgrade;
+import cn.org.autumn.handler.MessageHandler;
 import cn.org.autumn.modules.sys.redis.SysConfigRedis;
 import cn.org.autumn.modules.sys.shiro.HostSessionCookieSupport;
 import cn.org.autumn.modules.sys.shiro.ShiroSessionTimeouts;
+import cn.org.autumn.service.RedisListenerService;
 import cn.org.autumn.site.ConfigFactory;
 import cn.org.autumn.site.DomainFactory;
 import cn.org.autumn.site.HostFactory;
@@ -39,6 +41,8 @@ import cn.org.autumn.utils.*;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.google.gson.JsonObject;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.shiro.session.mgt.SessionManager;
@@ -107,6 +111,11 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     public static final String AUTH_SITE_CONFIG = AuthSiteConfig.CONFIG_KEY;
     public static final String Localhost = "localhost";
     public static final String config_lang_prefix = "config_lang_string_";
+    /**
+     * 集群 SysConfig 本机 map 失效频道；payload {@code {"k":"PARAM_KEY"}}。
+     * 写端在 {@link #update}/{@link #updateValueByKey}/{@link #save} 后广播，他机丢弃脏 map 再回源 Redis/DB。
+     */
+    public static final String CACHE_INVALIDATE_CHANNEL = "sys:config:cache:invalidate";
     private static final String NULL = null;
     private static SessionManager sessionManager;
     @Autowired
@@ -141,11 +150,16 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     @Autowired(required = false)
     @Lazy
     private CrudGuardService crudGuardService;
+
+    @Autowired(required = false)
+    private RedisListenerService redisListenerService;
+
     private CloudStorageConfig cloudStorageConfig = null;
     private Map<String, SysConfigEntity> map = new ConcurrentHashMap<>();
     private String lastLoggerLevel = null;
     private String namespace = null;
     private static final String temp = Uuid.uuid();
+    private volatile boolean configCacheSubscribed = false;
 
     @Order(-1000)
     public void init() {
@@ -490,6 +504,9 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         if (LOGGER_LEVEL.equalsIgnoreCase(config.getParamKey())) {
             sysLogService.changeLevel(config.getParamValue(), NULL);
         }
+        if (config != null) {
+            publishConfigCacheInvalidate(config.getParamKey());
+        }
         return result;
     }
 
@@ -501,6 +518,9 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
             map.put(config.getParamKey(), config);
         if (LOGGER_LEVEL.equalsIgnoreCase(config.getParamKey())) {
             sysLogService.changeLevel(config.getParamValue(), NULL);
+        }
+        if (config != null) {
+            publishConfigCacheInvalidate(config.getParamKey());
         }
         asyncTaskExecutor.execute(new Runnable() {
             @Override
@@ -520,6 +540,99 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
             return;
         }
         map.remove(key);
+        if (CLOUD_STORAGE_CONFIG_KEY.equalsIgnoreCase(key)) {
+            cloudStorageConfig = null;
+        }
+    }
+
+    /**
+     * 本机丢弃 map + Pub/Sub 通知同 Redis 的 IM/video/account 副本立即回源。
+     */
+    public void invalidateClusterCache(String key) {
+        invalidateLocalCache(key);
+        publishConfigCacheInvalidate(key);
+    }
+
+    /**
+     * 批量本机+集群失效（风控总台保存后一次刷旁路键等）。
+     */
+    public void invalidateClusterCache(Iterable<String> keys) {
+        if (keys == null) {
+            return;
+        }
+        for (String key : keys) {
+            if (StringUtils.isNotBlank(key)) {
+                invalidateClusterCache(key.trim());
+            }
+        }
+    }
+
+    @PostConstruct
+    public void subscribeConfigCacheInvalidate() {
+        trySubscribeConfigCacheInvalidate();
+    }
+
+    private synchronized void trySubscribeConfigCacheInvalidate() {
+        if (configCacheSubscribed || redisListenerService == null) {
+            return;
+        }
+        MessageHandler handler = (channel, body) -> dispatchConfigCacheInvalidate(body);
+        boolean ok = redisListenerService.subscribe(CACHE_INVALIDATE_CHANNEL, handler);
+        if (ok) {
+            configCacheSubscribed = true;
+            if (log.isDebugEnabled()) {
+                log.debug("已订阅 SysConfig 缓存失效频道:{}", CACHE_INVALIDATE_CHANNEL);
+            }
+        }
+    }
+
+    private void publishConfigCacheInvalidate(String key) {
+        if (redisListenerService == null || StringUtils.isBlank(key)) {
+            return;
+        }
+        try {
+            Map<String, String> payload = new HashMap<>(2);
+            payload.put("k", key.trim());
+            redisListenerService.publish(CACHE_INVALIDATE_CHANNEL, payload);
+        } catch (Exception e) {
+            log.warn("SysConfig cluster invalidate publish fail key={} msg={}", key, e.getMessage());
+        }
+    }
+
+    void dispatchConfigCacheInvalidate(String body) {
+        if (StringUtils.isBlank(body)) {
+            return;
+        }
+        try {
+            String key = parseInvalidateConfigKey(body);
+            if (StringUtils.isNotBlank(key)) {
+                invalidateLocalCache(key.trim());
+            }
+        } catch (Exception e) {
+            log.warn("SysConfig cache invalidate handle fail body={} msg={}", body, e.getMessage());
+        }
+    }
+
+    private String parseInvalidateConfigKey(String body) {
+        try {
+            JsonObject o = GsonConfig.getGson().fromJson(body, JsonObject.class);
+            if (o != null && o.has("k") && !o.get("k").isJsonNull()) {
+                return o.get("k").getAsString();
+            }
+        } catch (Exception ignored) {
+            // fall through
+        }
+        int i = body.indexOf("\"k\"");
+        if (i < 0) {
+            return null;
+        }
+        int colon = body.indexOf(':', i);
+        int q1 = body.indexOf('"', colon + 1);
+        int q2 = q1 >= 0 ? body.indexOf('"', q1 + 1) : -1;
+        if (q1 >= 0 && q2 > q1) {
+            return body.substring(q1 + 1, q2);
+        }
+        return null;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -534,6 +647,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
             sysLogService.changeLevel(value, NULL);
         if (SYSTEM_UPGRADE.equalsIgnoreCase(key) && crudGuardService != null)
             crudGuardService.reloadFromConfig();
+        publishConfigCacheInvalidate(key);
     }
 
     @Transactional(rollbackFor = Exception.class)
