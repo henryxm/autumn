@@ -1,6 +1,7 @@
 package cn.org.autumn.modules.bot.service;
 
 import cn.org.autumn.base.ModuleService;
+import cn.org.autumn.config.BotIconAuditHandler;
 import cn.org.autumn.config.UsingHandler;
 import cn.org.autumn.exception.CodeException;
 import cn.org.autumn.modules.bot.dao.RobotDao;
@@ -480,6 +481,25 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> implement
         updateById(robot);
     }
 
+    /**
+     * 头像复审拒绝回滚：清空资料头像（对齐 update 传 icon:""）。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void clearApprovedIcon(String robotUuid) throws Exception {
+        if (StringUtils.isBlank(robotUuid)) {
+            throw new CodeException("机器人uuid不能为空");
+        }
+        RobotEntity robot = getByUuid(robotUuid.trim());
+        if (robot == null) {
+            throw new CodeException("机器人不存在");
+        }
+        robot.setIconId("");
+        robot.setIcon("");
+        robot.setHash(null);
+        robot.setUpdateTime(new Date());
+        updateById(robot);
+    }
+
     @Transactional(rollbackFor = Exception.class)
     public void updateProfile(String robotUuid, String loginUuid, String name, String description,
                               String icon, String iconId, String hash, String access, Boolean black) throws Exception {
@@ -497,7 +517,17 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> implement
             }
             String id = iconId.trim();
             String url = robotIconUrlHelper.requireAccessUrl(id);
-            botHandlerFactory.submitIconPending(loginUuid, robot.getUuid(), id, url);
+            BotIconAuditHandler.SubmitOutcome outcome =
+                    botHandlerFactory.submitIcon(loginUuid, robot.getUuid(), id, url);
+            // 机审自动通过已写库：同步内存实体，避免 updateById 用旧头像覆盖
+            if (outcome != null && !outcome.pending) {
+                RobotEntity fresh = getByUuid(robot.getUuid());
+                if (fresh != null) {
+                    robot.setIconId(fresh.getIconId());
+                    robot.setIcon(fresh.getIcon());
+                    robot.setHash(fresh.getHash());
+                }
+            }
         } else {
             applyAvatar(robot, null, icon, hash, true);
         }

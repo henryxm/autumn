@@ -34,8 +34,17 @@ public class BotHandlerFactory extends Factory {
      * @return 审核单 uuid；null 表示未入审
      */
     public String submitIconPending(String user, String robotUuid, String iconId, String icon) throws Exception {
+        BotIconAuditHandler.SubmitOutcome o = submitIcon(user, robotUuid, iconId, icon);
+        return o == null ? null : o.uuid;
+    }
+
+    /**
+     * @return 入审结果；null 表示无 Handler
+     */
+    public BotIconAuditHandler.SubmitOutcome submitIcon(String user, String robotUuid, String iconId, String icon)
+            throws Exception {
         BotIconAuditHandler handler = primaryIconAudit();
-        return handler == null ? null : handler.submitPending(user, robotUuid, iconId, icon);
+        return handler == null ? null : handler.submit(user, robotUuid, iconId, icon);
     }
 
     public boolean hasIconAuditHandler() {
