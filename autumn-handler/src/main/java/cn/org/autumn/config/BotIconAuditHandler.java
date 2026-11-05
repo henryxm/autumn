@@ -21,6 +21,14 @@ public interface BotIconAuditHandler {
      * 提交入审；失败抛异常。自动通过时业务表已写新头像。
      */
     default SubmitOutcome submit(String user, String robotUuid, String iconId, String icon) throws Exception {
+        return submit(user, robotUuid, iconId, icon, false);
+    }
+
+    /**
+     * @param forceSyncDetect true 时忽略配置中的异步 Detect（create 建号门禁须同步 BLOCK）
+     */
+    default SubmitOutcome submit(String user, String robotUuid, String iconId, String icon, boolean forceSyncDetect)
+            throws Exception {
         String uuid = submitPending(user, robotUuid, iconId, icon);
         SubmitOutcome o = new SubmitOutcome();
         o.uuid = uuid;

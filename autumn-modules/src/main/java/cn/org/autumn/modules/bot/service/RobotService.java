@@ -21,8 +21,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.Calendar;
 import java.util.Collections;
@@ -222,6 +220,9 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> implement
         if (StringUtils.isBlank(name)) {
             throw new CodeException("名称不能为空");
         }
+        if (StringUtils.isBlank(iconId)) {
+            throw new CodeException("请上传机器人头像");
+        }
         assertDisplayNameAllowed(owner, name);
         RobotEntity draft = new RobotEntity();
         draft.setOwner(owner);
@@ -233,23 +234,29 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> implement
         robot.setOwner(owner);
         robot.setNickname(name);
         robot.setDescription(description);
-        String pendingIconId = null;
-        String pendingIconUrl = null;
-        if (StringUtils.isNotBlank(iconId)) {
-            // iconId 先审后写：建号时不落新头像
-            pendingIconId = iconId.trim();
-            pendingIconUrl = robotIconUrlHelper.requireAccessUrl(pendingIconId);
-        } else {
-            applyAvatar(robot, null, icon, hash, false);
-        }
+        String id = iconId.trim();
+        String url = robotIconUrlHelper.requireAccessUrl(id);
+        // iconId 先审后写：建号时先空头像，同步入审通过后再落库（AUTO）或保持空（REVIEW pending）
         robot.setStatus(RobotEntity.STATUS_ACTIVE);
         robot.setAccess(normalizeAccess(access));
         robot.setBlack(false);
         robot.setCreateTime(now);
         robot.setUpdateTime(now);
         insert(robot);
-        // 入审必须在建号事务提交后：同事务内 catch 入审失败仍会 rollback-only，违反「submit 失败不回滚建号」
-        scheduleRobotIconAuditAfterCommit(owner, robot.getUuid(), pendingIconId, pendingIconUrl);
+        if (!botHandlerFactory.hasIconAuditHandler()) {
+            throw new CodeException("头像审核服务不可用");
+        }
+        // 同步入审（forceSync）须在签发 token / Hook 之前：BLOCK 抛异常 → 整单回滚，不建号、不发 token
+        BotIconAuditHandler.SubmitOutcome outcome =
+                botHandlerFactory.submitIcon(owner, robot.getUuid(), id, url, true);
+        if (outcome != null && !outcome.pending) {
+            RobotEntity fresh = getByUuid(robot.getUuid());
+            if (fresh != null) {
+                robot.setIconId(fresh.getIconId());
+                robot.setIcon(fresh.getIcon());
+                robot.setHash(fresh.getHash());
+            }
+        }
         String plainToken = robotTokenService.insertToken(robot.getUuid(), tokenExpireDays);
         accountFactory.created(robot);
         dispatchHook(robot, RobotHookEvents.ROBOT_CREATED);
@@ -424,37 +431,6 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> implement
     public void updateProfile(String robotUuid, String loginUuid, String name, String description,
                               String icon, String hash, String access, Boolean black) throws Exception {
         updateProfile(robotUuid, loginUuid, name, description, icon, null, hash, access, black);
-    }
-
-    /**
-     * 建号成功后再入审；失败只打日志，不影响已创建的机器人。
-     */
-    private void scheduleRobotIconAuditAfterCommit(String owner, String robotUuid,
-                                                   String pendingIconId, String pendingIconUrl) {
-        if (StringUtils.isBlank(pendingIconId)) {
-            return;
-        }
-        Runnable task = () -> {
-            if (!botHandlerFactory.hasIconAuditHandler()) {
-                log.warn("机器人创建后头像入审跳过: BotIconAuditHandler 未注入 robot={}", robotUuid);
-                return;
-            }
-            try {
-                botHandlerFactory.submitIconPending(owner, robotUuid, pendingIconId, pendingIconUrl);
-            } catch (Exception e) {
-                log.warn("机器人创建后头像入审失败 robot={} err={}", robotUuid, e.getMessage());
-            }
-        };
-        if (TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    task.run();
-                }
-            });
-        } else {
-            task.run();
-        }
     }
 
     /**

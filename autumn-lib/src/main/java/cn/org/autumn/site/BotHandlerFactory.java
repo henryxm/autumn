@@ -43,8 +43,16 @@ public class BotHandlerFactory extends Factory {
      */
     public BotIconAuditHandler.SubmitOutcome submitIcon(String user, String robotUuid, String iconId, String icon)
             throws Exception {
+        return submitIcon(user, robotUuid, iconId, icon, false);
+    }
+
+    /**
+     * @param forceSyncDetect create 建号门禁须为 true，保证机审 BLOCK 可回滚整单
+     */
+    public BotIconAuditHandler.SubmitOutcome submitIcon(String user, String robotUuid, String iconId, String icon,
+                                                        boolean forceSyncDetect) throws Exception {
         BotIconAuditHandler handler = primaryIconAudit();
-        return handler == null ? null : handler.submit(user, robotUuid, iconId, icon);
+        return handler == null ? null : handler.submit(user, robotUuid, iconId, icon, forceSyncDetect);
     }
 
     public boolean hasIconAuditHandler() {

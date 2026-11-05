@@ -122,13 +122,13 @@ X-Robot-Token: rbt_xxxxxxxxxxxxxxxx
 |------|------|------|------|
 | `name` | string | 是 | 展示名称 |
 | `description` | string | 否 | 描述 |
-| `iconId` | string | 否 | **推荐**：OSS 直传 uuid（`bizType=im_group_info`，`accessLevel=PUBLIC`，用户令牌） |
-| `icon` | string | 否 | 旧轨头像 URL；有 `iconId` 时忽略 |
-| `hash` | string | 否 | 旧轨文件 hash；新路径缺省等于 `iconId` |
+| `iconId` | string | **是** | OSS 直传 uuid（`bizType=im_group_info`，`accessLevel=PUBLIC`，用户令牌） |
+| `icon` | string | 否 | create **忽略**（不得绕过机审） |
+| `hash` | string | 否 | create **忽略** |
 | `tokenExpireDays` | int | 否 | 首个令牌有效天数；空则默认 **365** |
 | `access` | string | 否 | `private` / `public` / `subscribe` |
 
-**头像写路径**：`iconId` 非空 → 解析落库 `iconId`+`icon`（hash 空则填 uuid）；否则可写旧 `icon`/`hash`；皆空则头像可空（不强制回落主人头像）。
+**头像写路径**：`iconId` 必填 → 建号事务内 **同步入审**（强制 sync Detect）；BLOCK/失败 → 整单回滚、不建号；AUTO+PASS → 落库后响应可见头像；REVIEW → pending，响应头像可空。无 `iconId` →「请上传机器人头像」。
 
 **OSS 直传**：与业务头像相同——用户令牌上传，`bizType=im_group_info` + `PUBLIC` + 图片 MIME；**不要**用 `rbt_*` / `bizType=im`（那是发图通道）。客户端对接专文：im [`docs/IM_ROBOT_ICON_CLIENT.md`](../../im/docs/IM_ROBOT_ICON_CLIENT.md)。
 
