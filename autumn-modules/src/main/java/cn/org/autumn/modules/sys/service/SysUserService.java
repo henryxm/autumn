@@ -569,12 +569,20 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
 
     /**
      * 出站用用户副本（含 icon host 替换），不改 src / cache / principal。
+     * <p>
+     * {@link SysUserEntity#copy()} 只拷展示常用字段，不含 {@code createTime}/{@code updateTime}；
+     * 页面模板（如账号用户中心）会格式化注册时间，缺省会导致 FreeMarker 中途失败、内容区空白。
      */
     public SysUserEntity copyForDisplay(SysUserEntity src) {
         if (src == null) {
             return null;
         }
-        return dynamicReplaceIconHost(src.copy());
+        SysUserEntity display = dynamicReplaceIconHost(src.copy());
+        if (display != null) {
+            display.setCreateTime(src.getCreateTime());
+            display.setUpdateTime(src.getUpdateTime());
+        }
+        return display;
     }
 
     public SysUserEntity getUuid(String uuid) {
