@@ -74,7 +74,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Service
-public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity> implements LoopJob.ThirtyMinute, LoopJob.OneMinute, HostFactory.Host, InitFactory.Init, InitFactory.After, CategoryHandler, DomainHandler, ClearHandler {
+public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity> implements LoopJob.FiveMinute, LoopJob.OneMinute, HostFactory.Host, InitFactory.Init, InitFactory.After, CategoryHandler, DomainHandler, ClearHandler {
 
     public static final String string_type = InputType.StringType.getValue();
     public static final String boolean_type = InputType.BooleanType.getValue();
@@ -642,7 +642,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         asyncTaskExecutor.execute(new Runnable() {
             @Override
             public void run() {
-                onThirtyMinute();
+                onFiveMinute();
                 configFactory.update(config.getParamKey(), config.getParamValue());
             }
         });
@@ -774,7 +774,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
             sysConfigRedis.delete(config.getParamKey());
         }
         this.removeBatchByIds(Arrays.asList(ids));
-        onThirtyMinute();
+        onFiveMinute();
     }
 
     public String getValue(String key) {
@@ -1321,10 +1321,11 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         return cloudStorageConfig;
     }
 
+    /** 本机配置 map 全量回源数据库；调度周期 5 分钟，缩短直改库后的生效延迟。 */
     @Override
-    public void onThirtyMinute() {
+    public void onFiveMinute() {
         List<SysConfigEntity> list = list();
-        if (null != list && list.size() > 0) {
+        if (null != list && !list.isEmpty()) {
             Map<String, SysConfigEntity> t = new ConcurrentHashMap<>();
             for (SysConfigEntity sysConfigEntity : list) {
                 t.put(sysConfigEntity.getParamKey(), sysConfigEntity);

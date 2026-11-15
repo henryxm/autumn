@@ -168,7 +168,7 @@ sysConfigService.updateAccountAuthConfig(toSave);
 条件：`param_key = 'ACCOUNT_AUTH_CONFIG'`  
 字段：`param_value`（JSON 字符串）
 
-改库后需等待配置缓存刷新（默认约 30 分钟轮询），或重启应用 / 触发配置 reload 逻辑。
+改库后需等待配置缓存刷新（默认约 5 分钟轮询），或重启应用 / 触发配置 reload 逻辑。
 
 ---
 
