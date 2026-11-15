@@ -58,7 +58,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.tags.Tags;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.oltu.oauth2.as.issuer.MD5Generator;
+import cn.org.autumn.modules.oauth.oauth2.support.SecureRandomValueGenerator;
 import org.apache.oltu.oauth2.as.issuer.OAuthIssuerImpl;
 import cn.org.autumn.modules.oauth.util.JakartaToJavaxRequestAdapter;
 import org.apache.oltu.oauth2.as.request.OAuthAuthzRequest;
@@ -307,7 +307,7 @@ public class AuthorizationController {
     private ModelAndView issueAuthCodeRedirect(HttpServletRequest request, ClientDetailsEntity client, String redirectURI, String state, String callback, String responseType, String grantedScope) throws OAuthSystemException {
         String authCode = null;
         if (responseType.equals(ResponseType.CODE.toString())) {
-            OAuthIssuerImpl oAuthIssuerImpl = new OAuthIssuerImpl(new MD5Generator());
+            OAuthIssuerImpl oAuthIssuerImpl = new OAuthIssuerImpl(new SecureRandomValueGenerator());
             authCode = oAuthIssuerImpl.authorizationCode();
             clientDetailsService.putAuthCode(authCode, ShiroUtils.getUserEntity(), grantedScope, client.getClientId());
         }
@@ -719,7 +719,7 @@ public class AuthorizationController {
         }
         if (StringUtils.isBlank(accessToken) || StringUtils.isBlank(refreshToken)) {
             //生成访问令牌
-            OAuthIssuerImpl authIssuerImpl = new OAuthIssuerImpl(new MD5Generator());
+            OAuthIssuerImpl authIssuerImpl = new OAuthIssuerImpl(new SecureRandomValueGenerator());
             accessToken = authIssuerImpl.accessToken();
             refreshToken = authIssuerImpl.refreshToken();
             /**

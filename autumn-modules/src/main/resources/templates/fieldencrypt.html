@@ -718,7 +718,7 @@
                             <button type="button" class="btn btn-danger btn-sm" :disabled="!canSingle || !status.readDecryptEnabled" @click="restoreOne(false)">解密写入</button>
                             <button type="button" class="btn btn-outline btn-sm" :disabled="!canSingle || !status.readDecryptEnabled" @click="restoreOne(true)">预检还原</button>
                         </div>
-                        <div v-if="singleResult" class="result-box" v-html="singleResult"></div>
+                        <div v-if="singleResult" class="result-box" v-text="singleResult"></div>
                         <p class="hint">预检 = dryRun，只读统计不改库。</p>
                     </div>
                 </div>
@@ -750,7 +750,7 @@
                             <button type="button" class="btn btn-danger btn-sm" :disabled="!batchEntity || !status.readDecryptEnabled" @click="batchRestore(true)">预检还原</button>
                             <button type="button" class="btn btn-danger btn-sm" :disabled="!batchEntity || !status.readDecryptEnabled" @click="batchRestore(false)">执行还原</button>
                         </div>
-                        <div v-if="batchResult" class="result-box" v-html="batchResult"></div>
+                        <div v-if="batchResult" class="result-box" v-text="batchResult"></div>
                         <p class="hint">建议：预检 → 核对 pending → 执行。</p>
                     </div>
                 </div>

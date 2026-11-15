@@ -8,6 +8,7 @@ import cn.org.autumn.modules.spm.service.SuperPositionModelService;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.modules.sys.service.SysUserService;
+import cn.org.autumn.modules.sys.shiro.AdminBootstrapService;
 import cn.org.autumn.modules.sys.shiro.LogoutSkipSupport;
 import cn.org.autumn.modules.sys.shiro.ShiroSessionService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
@@ -67,6 +68,10 @@ public class SysLoginController {
     @Lazy
     ShiroSessionService shiroSessionService;
 
+    @Autowired
+    @Lazy
+    AdminBootstrapService adminBootstrapService;
+
     @RequestMapping("captcha.jpg")
     @SkipInterceptor
     public void captcha(HttpServletResponse response) throws IOException {
@@ -100,18 +105,14 @@ public class SysLoginController {
     }
 
     private R doLogin(String username, String password, boolean rememberMe, String captcha, HttpServletRequest request) {
-        if (Config.isDev()) {
-            if (StringUtils.isEmpty(username)) {
-                username = "admin";
-            }
-            if (StringUtils.isEmpty(password)) {
-                password = "admin";
-            }
-        } else {
+        // 不再在 dev 下空口令回填 admin/admin，避免误开 dev profile 时无验证码撞默认口令
+        if (!Config.isDev()) {
             R captchaError = SysAuthSupport.validateCaptcha(captcha);
             if (captchaError != null) {
                 return captchaError;
             }
+        } else if (StringUtils.isEmpty(username) || StringUtils.isEmpty(password)) {
+            return R.error("用户名或密码不能为空");
         }
 
         try {
@@ -130,7 +131,13 @@ public class SysLoginController {
             return R.error("账户验证失败");
         }
 
-        return R.ok().put("data", SysAuthSupport.resolvePostLoginRedirect(request, superPositionModelService, sysConfigService.getAccountAuthConfig()));
+        R ok = R.ok().put("data", SysAuthSupport.resolvePostLoginRedirect(request, superPositionModelService, sysConfigService.getAccountAuthConfig()));
+        try {
+            ok.put("passwordReminder", adminBootstrapService.buildPasswordReminder(ShiroUtils.getSession()));
+        } catch (Exception ignored) {
+            ok.put("passwordReminder", adminBootstrapService.buildPasswordReminder(null));
+        }
+        return ok;
     }
 
     /**

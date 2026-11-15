@@ -1,19 +1,19 @@
 $(function () {
     $("#jqGrid").jqGrid({
-        url: baseURL + 'auth/scopedef/list',
+        url: baseURL + 'auth/scopedefinition/list',
         datatype: "json",
         colModel: [			
-			{ label: '${lang.auth_scopedef_column_id}', name: 'id', index: 'id', width: 50, key: true },
-			{ label: '${lang.auth_scopedef_column_uuid}', name: 'uuid', index: 'uuid', width: 80 }, 
-			{ label: '${lang.auth_scopedef_column_code}', name: 'code', index: 'code', width: 80 }, 
-			{ label: '${lang.auth_scopedef_column_label}', name: 'label', index: 'label', width: 80 }, 
-			{ label: '${lang.auth_scopedef_column_tracks}', name: 'tracks', index: 'tracks', width: 80 }, 
-			{ label: '${lang.auth_scopedef_column_fields}', name: 'fields', index: 'fields', width: 80 }, 
-			{ label: '${lang.auth_scopedef_column_sensitivity}', name: 'sensitivity', index: 'sensitivity', width: 80 }, 
-			{ label: '${lang.auth_scopedef_column_requires}', name: 'requires', index: 'requires', width: 80 }, 
-			{ label: '${lang.auth_scopedef_column_enabled}', name: 'enabled', index: 'enabled', width: 80 }, 
-			{ label: '${lang.auth_scopedef_column_builtin}', name: 'builtin', index: 'builtin', width: 80 }, 
-			{ label: '${lang.auth_scopedef_column_updated}', name: 'updated', index: 'updated', width: 80 }, 
+			{ label: '${lang.auth_scopedefinition_column_id}', name: 'id', index: 'id', width: 50, key: true },
+			{ label: '${lang.auth_scopedefinition_column_uuid}', name: 'uuid', index: 'uuid', width: 80 }, 
+			{ label: '${lang.auth_scopedefinition_column_code}', name: 'code', index: 'code', width: 80 }, 
+			{ label: '${lang.auth_scopedefinition_column_label}', name: 'label', index: 'label', width: 80 }, 
+			{ label: '${lang.auth_scopedefinition_column_tracks}', name: 'tracks', index: 'tracks', width: 80 }, 
+			{ label: '${lang.auth_scopedefinition_column_fields}', name: 'fields', index: 'fields', width: 80 }, 
+			{ label: '${lang.auth_scopedefinition_column_sensitivity}', name: 'sensitivity', index: 'sensitivity', width: 80 }, 
+			{ label: '${lang.auth_scopedefinition_column_requires}', name: 'requires', index: 'requires', width: 80 }, 
+			{ label: '${lang.auth_scopedefinition_column_enabled}', name: 'enabled', index: 'enabled', width: 80 }, 
+			{ label: '${lang.auth_scopedefinition_column_builtin}', name: 'builtin', index: 'builtin', width: 80 }, 
+			{ label: '${lang.auth_scopedefinition_column_updated}', name: 'updated', index: 'updated', width: 80 }, 
         ],
 		viewrecords: true,
         height: 385,
@@ -47,7 +47,7 @@ var vm = new Vue({
 	data:{
 		showList: true,
 		title: null,
-		scopeDef: {}
+		scopeDefinition: {}
 	},
 	methods: {
 		query: function () {
@@ -56,7 +56,7 @@ var vm = new Vue({
 		add: function(){
 			vm.showList = false;
 			vm.title = "${lang.sys_string_add}";
-			vm.scopeDef = {};
+			vm.scopeDefinition = {};
 		},
 		update: function (event) {
 			var id = getSelectedRow();
@@ -69,12 +69,12 @@ var vm = new Vue({
             vm.getInfo(id)
 		},
 		saveOrUpdate: function (event) {
-			var url = vm.scopeDef.id == null ? "auth/scopedef/save" : "auth/scopedef/update";
+			var url = vm.scopeDefinition.id == null ? "auth/scopedefinition/save" : "auth/scopedefinition/update";
 			$.ajax({
 				type: "POST",
 			    url: baseURL + url,
                 contentType: "application/json",
-			    data: JSON.stringify(vm.scopeDef),
+			    data: JSON.stringify(vm.scopeDefinition),
 			    success: function(r){
 			    	if(r.code === 0){
 						alert('${lang.sys_string_successful}', function(index){
@@ -94,7 +94,7 @@ var vm = new Vue({
 			confirm('${lang.sys_string_are_sure_to_delete}？', function(){
 				$.ajax({
 					type: "POST",
-				    url: baseURL + "auth/scopedef/delete",
+				    url: baseURL + "auth/scopedefinition/delete",
                     contentType: "application/json",
 				    data: JSON.stringify(ids),
 				    success: function(r){
@@ -110,8 +110,8 @@ var vm = new Vue({
 			});
 		},
 		getInfo: function(id){
-			$.get(baseURL + "auth/scopedef/info/"+id, function(r){
-                vm.scopeDef = r.scopeDef;
+			$.get(baseURL + "auth/scopedefinition/info/"+id, function(r){
+                vm.scopeDefinition = r.scopeDefinition;
             });
 		},
 		reload: function (event) {

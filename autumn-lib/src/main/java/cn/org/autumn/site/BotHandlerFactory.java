@@ -3,13 +3,14 @@ package cn.org.autumn.site;
 import cn.org.autumn.config.BotDisplayNameRiskHandler;
 import cn.org.autumn.config.BotHandlerOrder;
 import cn.org.autumn.config.BotIconAuditHandler;
+import cn.org.autumn.config.BotIconUrlHandler;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 
 /**
- * 机器人展示名硬拦 / 头像入审 Handler 聚合（对齐 {@link AccountFactory}）。
+ * 机器人展示名硬拦 / 头像入审 / iconId→URL Handler 聚合（对齐 {@link AccountFactory}）。
  * <p>共部署时 {@link BotHandlerOrder#LOCAL} 优先于 {@link BotHandlerOrder#REMOTE}，避免双检与双入审。
  */
 @Component
@@ -18,6 +19,8 @@ public class BotHandlerFactory extends Factory {
     List<BotDisplayNameRiskHandler> displayNameHandlers;
 
     List<BotIconAuditHandler> iconAuditHandlers;
+
+    List<BotIconUrlHandler> iconUrlHandlers;
 
     /**
      * @return 拒文案；null 表示放行或无 Handler
@@ -59,6 +62,25 @@ public class BotHandlerFactory extends Factory {
         return primaryIconAudit() != null;
     }
 
+    public boolean hasIconUrlHandler() {
+        return primaryIconUrl() != null;
+    }
+
+    /**
+     * iconId → 展示 URL；无 Handler 或无法解析时返回空串。
+     */
+    public String resolveIconUrl(String objectUuid) {
+        if (StringUtils.isBlank(objectUuid)) {
+            return "";
+        }
+        BotIconUrlHandler handler = primaryIconUrl();
+        if (handler == null) {
+            return "";
+        }
+        String url = handler.resolveAccessUrl(objectUuid.trim());
+        return url == null ? "" : url.trim();
+    }
+
     private BotDisplayNameRiskHandler primaryDisplayName() {
         if (displayNameHandlers == null) {
             displayNameHandlers = getOrderList(BotDisplayNameRiskHandler.class);
@@ -71,6 +93,14 @@ public class BotHandlerFactory extends Factory {
             iconAuditHandlers = getOrderList(BotIconAuditHandler.class);
         }
         return first(iconAuditHandlers);
+    }
+
+    private BotIconUrlHandler primaryIconUrl() {
+        // 空列表不永久缓存：避免启动早期查询时错过随后注册的 object-storage 适配器
+        if (iconUrlHandlers == null || iconUrlHandlers.isEmpty()) {
+            iconUrlHandlers = getOrderList(BotIconUrlHandler.class);
+        }
+        return first(iconUrlHandlers);
     }
 
     private static <T> T first(List<T> list) {

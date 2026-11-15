@@ -26,10 +26,13 @@ import org.springframework.web.servlet.ModelAndView;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 /**
- * 权限(Token)验证
+ * 权限(Token)验证；并对已登录 Shiro 主体做口令对齐（含惰性升级）与页面态用户门禁。
  */
 @Slf4j
 @Component
@@ -47,6 +50,9 @@ public class AuthorizationInterceptor implements HandlerInterceptor, Interceptor
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         try {
+            // 全请求：以 DB 为准对齐 Session 口令（覆盖无 ModelAndView 的 JSON API，修复 C-19）
+            alignSessionPassword(request);
+
             Login annotation;
             if (handler instanceof HandlerMethod) {
                 annotation = ((HandlerMethod) handler).getMethodAnnotation(Login.class);
@@ -74,9 +80,11 @@ public class AuthorizationInterceptor implements HandlerInterceptor, Interceptor
             //设置userUuid到request里，后续根据userUuid，获取用户信息
             request.setAttribute(USER_KEY, tokenEntity.getUserUuid());
             return true;
+        } catch (AException e) {
+            throw e;
         } catch (Exception e) {
             log.error("权限验证前:{}", e.getMessage());
-            return true;
+            throw new AException("权限验证失败");
         }
     }
 
@@ -100,49 +108,61 @@ public class AuthorizationInterceptor implements HandlerInterceptor, Interceptor
         return display;
     }
 
+    private void alignSessionPassword(HttpServletRequest request) {
+        SysUserEntity current = ShiroUtils.getUserEntity();
+        if (current == null || StringUtils.isBlank(current.getUuid())) {
+            return;
+        }
+        String user = current.getUuid();
+        if (!sysUserService.alignSessionPasswordWithStore(current)) {
+            if (!exceptions.contains(user)) {
+                log.debug("无效登录:{}, IP:{}, 处理:退出登录", user, IPUtils.getIp(request));
+                exceptions.add(user);
+            }
+        }
+    }
+
     @Override
     public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, @Nullable ModelAndView view) throws Exception {
         try {
             if (InterceptorUtils.skip(handler, this.getClass())) {
                 return;
             }
-            if (null != view) {
-                SysUserEntity current = (SysUserEntity) ShiroUtils.getSubject().getPrincipal();
-                if (null != current) {
-                    String user = current.getUuid();
-                    SysUserEntity entity = sysUserService.getCache(user);
-                    if (null == entity) {
-                        if (!exceptions.contains(user))
-                            log.info("无效用户:{}, IP:{}, 处理:退出登录", user, IPUtils.getIp(request));
-                        ShiroUtils.logout();
-                        exceptions.add(user);
-                        return;
-                    }
-                    if (!entity.check()) {
-                        if (!exceptions.contains(user))
-                            log.info("用户异常:{}, IP:{}, 状态:{}, 处理:退出登录", user, IPUtils.getIp(request), entity.getStatus());
-                        ShiroUtils.logout();
-                        exceptions.add(user);
-                        return;
-                    }
-                    if (!Objects.equals(current.getPassword(), entity.getPassword())) {
-                        if (!exceptions.contains(user))
-                            log.info("无效登录:{}, IP:{}, 登录秘钥:{}, 实际秘钥:{}, 处理:退出登录", user, IPUtils.getIp(request), current.getPassword(), entity.getPassword());
-                        ShiroUtils.logout();
-                        exceptions.add(user);
-                        return;
-                    }
-                    SysUserEntity display = appendForDisplay(entity);
-                    if (display != null && StringUtils.isNotEmpty(display.getParentUuid()) && null == display.getParent()) {
-                        SysUserEntity parent = sysUserService.getByUuid(display.getParentUuid());
-                        if (null != parent) {
-                            display.setParent(appendForDisplay(parent));
-                        }
-                    }
-                    ModelMap model = view.getModelMap();
-                    model.put("user", display);
+            if (null == view) {
+                return;
+            }
+            SysUserEntity current = ShiroUtils.getUserEntity();
+            if (null == current || StringUtils.isBlank(current.getUuid())) {
+                return;
+            }
+            String user = current.getUuid();
+            SysUserEntity entity = sysUserService.getCache(user);
+            if (null == entity) {
+                if (!exceptions.contains(user)) {
+                    log.info("无效用户:{}, IP:{}, 处理:退出登录", user, IPUtils.getIp(request));
+                }
+                ShiroUtils.logout();
+                exceptions.add(user);
+                return;
+            }
+            if (!entity.check()) {
+                if (!exceptions.contains(user)) {
+                    log.info("用户异常:{}, IP:{}, 状态:{}, 处理:退出登录", user, IPUtils.getIp(request), entity.getStatus());
+                }
+                ShiroUtils.logout();
+                exceptions.add(user);
+                return;
+            }
+            // 口令门禁已在 preHandle 以 DB 对齐；此处不再用 getCache.password 二次比对
+            SysUserEntity display = appendForDisplay(entity);
+            if (display != null && StringUtils.isNotEmpty(display.getParentUuid()) && null == display.getParent()) {
+                SysUserEntity parent = sysUserService.getByUuid(display.getParentUuid());
+                if (null != parent) {
+                    display.setParent(appendForDisplay(parent));
                 }
             }
+            ModelMap model = view.getModelMap();
+            model.put("user", display);
         } catch (Exception e) {
             log.error("权限验证后:{}", e.getMessage());
         }

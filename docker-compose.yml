@@ -4,37 +4,45 @@ services:
     build: ./web
     container_name: autumn
     environment:
-      - "--spring.profiles.active=dev"
+      - SPRING_PROFILES_ACTIVE=prod
+      - SPRING_DATASOURCE_DRUID_FIRST_USERNAME=${MYSQL_USER:-autumn}
+      - SPRING_DATASOURCE_DRUID_FIRST_PASSWORD=${MYSQL_PASSWORD}
+      - SPRING_DATASOURCE_DRUID_SECOND_USERNAME=${MYSQL_USER:-autumn}
+      - SPRING_DATASOURCE_DRUID_SECOND_PASSWORD=${MYSQL_PASSWORD}
+      - SPRING_DATA_REDIS_PASSWORD=${REDIS_PASSWORD}
+      - AUTUMN_NODE_HOME=/root/.autumn
+      # RememberMe 密钥 / 运维 Token / 代理白名单 → 后台 SysConfig「安全加固」，勿再注入 Env
     ports:
-      - "80:80"
+      - "8080:80"
     volumes:
       - "./.storage/web/tmp:/tmp"
+      # 节点画像 + security/remember-me.key + admin-bootstrap.credentials（重启保留）
+      - "./.storage/web/autumn:/root/.autumn"
     depends_on:
       - db
       - redis
-    links:
-      - "db:database"
   db:
-    image: mysql:5.7
+    image: mysql:8.0
     restart: always
     container_name: mysql
     environment:
-      MYSQL_USER: autumn
-      MYSQL_PASSWORD: autumn
+      MYSQL_USER: ${MYSQL_USER:-autumn}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?set MYSQL_PASSWORD}
       MYSQL_DATABASE: autumn
-      MYSQL_ROOT_PASSWORD: 123456
-    ports:
-      - '3306:3306'
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD}
+    # 默认不映射到宿主机，避免公网暴露；调试时取消注释
+    # ports:
+    #   - '3306:3306'
     volumes:
       - "./.storage/mysql/data:/var/lib/mysql"
       - "./.storage/mysql/my.cnf:/etc/my.cnf"
     command: '--default-time-zone=+8:00'
   redis:
-    image: redis
+    image: redis:7-alpine
     restart: always
     container_name: redis
-    command: --appendonly yes --requirepass autumn
-    ports:
-      - 6379:6379
+    command: --appendonly yes --requirepass ${REDIS_PASSWORD:?set REDIS_PASSWORD}
+    # ports:
+    #   - 6379:6379
     volumes:
       - "./.storage/redis:/data"

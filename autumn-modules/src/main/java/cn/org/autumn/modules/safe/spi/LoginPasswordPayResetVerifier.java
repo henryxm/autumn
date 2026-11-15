@@ -37,8 +37,7 @@ public class LoginPasswordPayResetVerifier implements PayCredentialResetVerifier
             SysUserEntity user = sysUserService.getByUuid(ctx.getUserUuid());
             if (user == null)
                 throw new CodeException(Error.DATA_NOT_FOUND);
-            String hashed = ShiroUtils.sha256(ctx.getLoginPassword(), user.getSalt());
-            if (!StringUtils.equals(hashed, user.getPassword()))
+            if (!ShiroUtils.passwordsMatch(ctx.getLoginPassword(), user.getPassword(), user.getSalt()))
                 throw new CodeException(Error.LOGIN_FAILED);
         } catch (CodeException e) {
             throw e;

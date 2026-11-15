@@ -9,6 +9,7 @@ import cn.org.autumn.modules.qrc.model.TicketSnapshot;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.utils.HttpClientUtils;
 import cn.org.autumn.utils.HttpClientUtils.HttpPostResult;
+import cn.org.autumn.utils.OutboundUrlSafety;
 import com.google.gson.Gson;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
@@ -66,8 +67,9 @@ public class QrcWebhookDeliveryService {
             log.warn("QRC webhook skipped: blank URL ticket={} event={} delivery={} clientId={}", ticket.getUuid(), event, TicketPayloads.get(ticket, "delivery"), TicketPayloads.get(ticket, "clientId"));
             return;
         }
-        if (!webhook.startsWith("http://") && !webhook.startsWith("https://")) {
-            log.warn("QRC webhook URL must be absolute, skip ticket={} event={} url={}", ticket.getUuid(), event, webhook);
+        String ssrf = OutboundUrlSafety.rejectReasonPublicHostsOk(webhook, java.util.List.of(), true);
+        if (ssrf != null) {
+            log.warn("QRC webhook SSRF rejected ticket={} event={} reason={} url={}", ticket.getUuid(), event, ssrf, webhook);
             return;
         }
         Map<String, Object> body = new HashMap<>();

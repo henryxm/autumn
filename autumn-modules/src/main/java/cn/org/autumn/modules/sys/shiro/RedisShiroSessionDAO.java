@@ -204,6 +204,31 @@ public class RedisShiroSessionDAO extends EnterpriseCacheSessionDAO implements L
     }
 
     /**
+     * 将当前 Session（含已就地修改的 Principal.password）立即回写 Redis/DB，
+     * 避免口令惰性升级后仅内存更新、下一请求仍反序列化出旧 SHA。
+     */
+    public void forcePersist(Session session) {
+        if (session == null || InstallMode.isActive()) {
+            return;
+        }
+        try {
+            session.touch();
+        } catch (Exception ignored) {
+            // touch 失败仍尝试持久化
+        }
+        Serializable id = session.getId();
+        Session nativeSession = resolveNativeSession(id);
+        if (nativeSession == null) {
+            nativeSession = session;
+        }
+        if (id != null) {
+            cache.put(id, nativeSession);
+            update.put(id, nativeSession);
+        }
+        persistSession(nativeSession);
+    }
+
+    /**
      * 登录成功后按是否记住我拉长 Session/Redis/DB 过期（普通 1 天，记住我 7 天）。
      * <p>
      * 注意：{@code Subject#getSession()} 常为不可序列化的代理，必须落到 DAO 内的原生 Session 再写 Redis/DB。

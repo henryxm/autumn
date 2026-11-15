@@ -1,6 +1,10 @@
 target/
 !.mvn/wrapper/maven-wrapper.jar
 
+### macOS ###
+.DS_Store
+**/.DS_Store
+
 ### STS ###
 .apt_generated
 .classpath
@@ -31,3 +35,6 @@ embedded/
 /.vscode/settings.json
 /.env
 /derby.log
+
+# RememberMe AES key (auto-generated)
+config/remember-me.key

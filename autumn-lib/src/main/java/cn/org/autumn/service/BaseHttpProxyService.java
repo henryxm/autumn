@@ -2,11 +2,14 @@ package cn.org.autumn.service;
 
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
+import cn.org.autumn.config.SecurityHttpProxySettings;
 import cn.org.autumn.utils.ExceptionUtils;
+import cn.org.autumn.utils.OutboundUrlSafety;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -56,6 +59,9 @@ public class BaseHttpProxyService {
      */
     private static final int OPENAI_CHAT_BODY_MAX_BYTES = 16 * 1024 * 1024;
 
+    @Autowired(required = false)
+    private SecurityHttpProxySettings securityHttpProxySettings;
+
     public Object proxy(String prefix, String base, String target, HttpServletRequest request, HttpServletResponse response) {
         // 构建完整的代理路径
         String proxyPath = buildProxyPath(prefix, request);
@@ -104,6 +110,11 @@ public class BaseHttpProxyService {
             String finalTargetUrl = determineTargetUrl(base, target, request, proxyPath);
             if (StringUtils.isBlank(finalTargetUrl)) {
                 return createErrorResponse(response, "缺少目标", "missing_target_url", 400);
+            }
+            String denyReason = assertTargetAllowed(finalTargetUrl);
+            if (denyReason != null) {
+                log.warn("代理目标被拒绝: reason={}, url={}", denyReason, finalTargetUrl);
+                return createErrorResponse(response, "目标不允许", denyReason, 403);
             }
             if (log.isDebugEnabled()) {
                 log.debug("最终目标 URL: {}", finalTargetUrl);
@@ -646,6 +657,26 @@ public class BaseHttpProxyService {
             requestUri = requestUri.substring(prefix.length());
         }
         return requestUri;
+    }
+
+    /**
+     * 出站 SSRF 防护：白名单 + 拒绝私网/元数据。白名单为空则拒绝全部。
+     * 设置来自 {@link SecurityHttpProxySettings}（SysConfig {@code SECURITY_HTTP_PROXY_CONFIG}）。
+     *
+     * @return 拒绝原因码，null 表示允许
+     */
+    protected String assertTargetAllowed(String url) {
+        boolean enabled = true;
+        List<String> hosts = List.of();
+        boolean resolveDns = true;
+        SecurityHttpProxySettings settings = securityHttpProxySettings;
+        if (settings != null) {
+            enabled = settings.isEnabled();
+            resolveDns = settings.isResolveDns();
+            List<String> fromCfg = settings.hostList();
+            hosts = fromCfg != null ? fromCfg : List.of();
+        }
+        return OutboundUrlSafety.rejectReason(url, enabled, hosts, resolveDns);
     }
 
     /**

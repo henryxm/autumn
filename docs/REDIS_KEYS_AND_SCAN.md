@@ -140,7 +140,7 @@ redisResilience.execute(
    redis-cli --scan --pattern 'your-ns:*' | head -5000 | cut -d: -f1-3 | sort | uniq -c | sort -rn
    ```
 
-4. **运维页**（`redis.html`）默认 `*` 仅适合看 **DBSIZE**；排查请用 **`xsignco:system:session:*`** 等精确前缀。
+4. **运维页**（`redis.html`）默认 `*` 仅适合看 **DBSIZE**；排查请用 **`{namespace}:system:session:*`** 等精确前缀（与 `CLUSTER_NAMESPACE` / `RedisKeys` 一致）。
 5. 键量 **> 百万** 时考虑 **会话/缓存/业务分库或分实例**，避免单库混合承载。
 
 ---

@@ -20,38 +20,38 @@ public class ScopeDefinitionControllerGen {
     protected ScopeDefinitionService scopeDefinitionService;
 
     @RequestMapping("/list")
-    @RequiresPermissions("auth:scopedef:list")
+    @RequiresPermissions("auth:scopedefinition:list")
     public R list(@RequestParam Map<String, Object> params) {
         PageUtils page = scopeDefinitionService.queryPage(params);
         return R.ok().put("page" , page);
     }
 
     @RequestMapping("/info/{id}")
-    @RequiresPermissions("auth:scopedef:info")
+    @RequiresPermissions("auth:scopedefinition:info")
     public R info(@PathVariable("id") Long id) {
-        ScopeDefinitionEntity scopeDef = scopeDefinitionService.selectById(id);
-        return R.ok().put("scopeDef" , scopeDef);
+        ScopeDefinitionEntity scopeDefinition = scopeDefinitionService.getById(id);
+        return R.ok().put("scopeDefinition" , scopeDefinition);
     }
 
     @RequestMapping("/save")
-    @RequiresPermissions("auth:scopedef:save")
-    public R save(@RequestBody ScopeDefinitionEntity scopeDef) {
-        scopeDefinitionService.insert(scopeDef);
+    @RequiresPermissions("auth:scopedefinition:save")
+    public R save(@RequestBody ScopeDefinitionEntity scopeDefinition) {
+        scopeDefinitionService.save(scopeDefinition);
         return R.ok();
     }
 
     @RequestMapping("/update")
-    @RequiresPermissions("auth:scopedef:update")
-    public R update(@RequestBody ScopeDefinitionEntity scopeDef) {
-        ValidatorUtils.validateEntity(scopeDef);
-        scopeDefinitionService.updateAllColumnById(scopeDef);
+    @RequiresPermissions("auth:scopedefinition:update")
+    public R update(@RequestBody ScopeDefinitionEntity scopeDefinition) {
+        ValidatorUtils.validateEntity(scopeDefinition);
+        scopeDefinitionService.updateById(scopeDefinition);
         return R.ok();
     }
 
     @RequestMapping("/delete")
-    @RequiresPermissions("auth:scopedef:delete")
+    @RequiresPermissions("auth:scopedefinition:delete")
     public R delete(@RequestBody Long[] ids) {
-        scopeDefinitionService.deleteBatchIds(Arrays.asList(ids));
+        scopeDefinitionService.removeBatchByIds(Arrays.asList(ids));
         return R.ok();
     }
 }

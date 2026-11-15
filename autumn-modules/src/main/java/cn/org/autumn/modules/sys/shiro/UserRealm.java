@@ -81,10 +81,10 @@ public class UserRealm extends AuthorizingRealm {
         String uuid;
         SysUserEntity user;
         if (primary instanceof RobotPrincipal) {
-            uuid = ((RobotPrincipal) primary).getOwner();
-            user = sysUserDao.getByUuid(uuid);
-            if (user == null)
-                return new SimpleAuthorizationInfo();
+            // 机器人 Subject 不继承主人菜单权限，仅固定 bot API 能力
+            SimpleAuthorizationInfo robotInfo = new SimpleAuthorizationInfo();
+            robotInfo.addStringPermission("bot:api");
+            return robotInfo;
         } else {
             user = (SysUserEntity) primary;
             uuid = user.getUuid();

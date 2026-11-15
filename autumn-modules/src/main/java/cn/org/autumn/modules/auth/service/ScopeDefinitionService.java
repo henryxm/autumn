@@ -23,57 +23,94 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+/**
+ * 授权范围定义：在 gen CRUD（{@code ModuleService}）之上扩展 catalog 同步与内置保护。
+ */
 @Service
 public class ScopeDefinitionService extends ModuleService<ScopeDefinitionDao, ScopeDefinitionEntity> {
 
     @Autowired
     private AuthScopeCatalog authScopeCatalog;
 
-    @Override
-    public int insert(ScopeDefinitionEntity entity) {
-        int rows = super.insert(entity);
-        if (rows > 0) {
-            refreshCatalog();
-        }
-        return rows;
-    }
-
-    @Override
-    public boolean updateById(ScopeDefinitionEntity entity) {
-        boolean ok = super.updateById(entity);
-        if (ok) {
-            refreshCatalog();
-        }
-        return ok;
-    }
-
-    @Override
-    public boolean deleteById(Serializable id) {
-        boolean ok = super.deleteById(id);
-        if (ok) {
-            refreshCatalog();
-        }
-        return ok;
-    }
-
-    @Override
-    public int deleteBatchIds(List<?> idList) {
-        int rows = super.deleteBatchIds(idList);
-        if (rows > 0) {
-            refreshCatalog();
-        }
-        return rows;
-    }
+    /** syncBuiltins 批量写入时抑制逐行 refresh。 */
+    private final ThreadLocal<Boolean> suppressCatalogRefresh = ThreadLocal.withInitial(() -> Boolean.FALSE);
 
     @Override
     public String ico() {
         return "fa-key";
     }
 
+    @Override
     public void init() {
         syncBuiltins();
         refreshCatalog();
         super.init();
+    }
+
+    // —— gen / MP 写路径：保证改库后刷新内存目录 ——
+
+    @Override
+    public boolean save(ScopeDefinitionEntity entity) {
+        prepareNewCustom(entity);
+        boolean ok = super.save(entity);
+        if (ok) {
+            touchCatalog();
+        }
+        return ok;
+    }
+
+    @Override
+    public boolean updateById(ScopeDefinitionEntity entity) {
+        boolean ok = super.updateById(entity);
+        if (ok) {
+            touchCatalog();
+        }
+        return ok;
+    }
+
+    @Override
+    public int insert(ScopeDefinitionEntity entity) {
+        int rows = super.insert(entity);
+        if (rows > 0) {
+            touchCatalog();
+        }
+        return rows;
+    }
+
+    @Override
+    public boolean deleteById(Serializable id) {
+        assertDeletable(id);
+        boolean ok = super.deleteById(id);
+        if (ok) {
+            touchCatalog();
+        }
+        return ok;
+    }
+
+    @Override
+    public int deleteBatchIds(List<?> idList) {
+        List<?> allowed = filterDeletableIds(idList);
+        if (allowed.isEmpty()) {
+            return 0;
+        }
+        int rows = super.deleteBatchIds(allowed);
+        if (rows > 0) {
+            touchCatalog();
+        }
+        return rows;
+    }
+
+    @Override
+    public boolean removeByIds(Collection<?> list) {
+        List<?> allowed = filterDeletableIds(list);
+        if (allowed.isEmpty()) {
+            return false;
+        }
+        boolean ok = super.removeByIds(allowed);
+        if (ok) {
+            touchCatalog();
+        }
+        return ok;
     }
 
     public void refreshCatalog() {
@@ -88,29 +125,16 @@ public class ScopeDefinitionService extends ModuleService<ScopeDefinitionDao, Sc
         return recognizedEntities(selectByMap(null));
     }
 
-    private List<ScopeDefinitionEntity> recognizedEntities(List<ScopeDefinitionEntity> entities) {
-        List<ScopeDefinitionEntity> result = new ArrayList<>();
-        if (entities == null) {
-            return result;
+    public ScopeDefinitionEntity getByUuid(String uuid) {
+        if (StringUtils.isBlank(uuid)) {
+            return null;
         }
-        for (ScopeDefinitionEntity entity : entities) {
-            if (isRecognized(entity)) {
-                result.add(entity);
-            }
-        }
-        return result;
+        return baseMapper.getByUuid(uuid);
     }
 
-    private boolean isRecognized(ScopeDefinitionEntity entity) {
-        if (entity == null || StringUtils.isBlank(entity.getCode())) {
-            return false;
-        }
-        if (!entity.isBuiltin()) {
-            return true;
-        }
-        return authScopeCatalog.isRegisteredBuiltin(entity.getCode());
-    }
-
+    /**
+     * 管理页新增/更新自定义 scope（在 gen 能力上约束：不可覆盖内置）。
+     */
     public ScopeDefinitionEntity saveCustom(String code, String label, String tracks, String fields, String sensitivity, String requires) {
         if (StringUtils.isBlank(code) || StringUtils.isBlank(label)) {
             return null;
@@ -134,7 +158,6 @@ public class ScopeDefinitionService extends ModuleService<ScopeDefinitionDao, Sc
         entity.setBuiltin(false);
         entity.setUpdated(new Date());
         insertOrUpdate(entity);
-        refreshCatalog();
         return entity;
     }
 
@@ -146,7 +169,6 @@ public class ScopeDefinitionService extends ModuleService<ScopeDefinitionDao, Sc
         entity.setEnabled(enabled);
         entity.setUpdated(new Date());
         updateById(entity);
-        refreshCatalog();
         return entity;
     }
 
@@ -156,18 +178,10 @@ public class ScopeDefinitionService extends ModuleService<ScopeDefinitionDao, Sc
             return;
         }
         deleteById(entity.getId());
-        refreshCatalog();
-    }
-
-    public ScopeDefinitionEntity getByUuid(String uuid) {
-        if (StringUtils.isBlank(uuid)) {
-            return null;
-        }
-        return baseMapper.getByUuid(uuid);
     }
 
     private void syncBuiltins() {
-        Map<String, BuiltinMerge> merged = new LinkedHashMap<String, BuiltinMerge>();
+        Map<String, BuiltinMerge> merged = new LinkedHashMap<>();
         for (AuthTrack track : AuthTrack.values()) {
             for (AuthScopeDef builtin : authScopeCatalog.listDefinitions(track)) {
                 if (builtin == null || builtin.isAlias() || StringUtils.isBlank(builtin.getCode())) {
@@ -190,55 +204,118 @@ public class ScopeDefinitionService extends ModuleService<ScopeDefinitionDao, Sc
                     merge.sensitivity = builtin.getSensitivity();
                 }
                 if (builtin.getRequires() != null && !builtin.getRequires().isEmpty()) {
-                    merge.requires = new ArrayList<String>(builtin.getRequires());
+                    merge.requires = new ArrayList<>(builtin.getRequires());
                 }
                 merge.enabled = merge.enabled && builtin.isEnabled();
             }
         }
-        for (Map.Entry<String, BuiltinMerge> entry : merged.entrySet()) {
-            BuiltinMerge merge = entry.getValue();
-            ScopeDefinitionEntity entity = baseMapper.getByCode(entry.getKey());
-            if (entity == null) {
-                entity = new ScopeDefinitionEntity();
-                entity.setUuid(Uuid.uuid());
-                entity.setCode(entry.getKey());
-                entity.setLabel(merge.label);
-                entity.setTracks(joinTracks(merge.tracks));
-                entity.setFields(joinFields(merge.fields));
-                entity.setSensitivity(merge.sensitivity == null ? AuthScopeSensitivity.low.name() : merge.sensitivity.name());
-                entity.setRequires(joinList(merge.requires));
-                entity.setEnabled(merge.enabled);
-                entity.setBuiltin(true);
-                entity.setUpdated(new Date());
-                insert(entity);
-            } else if (entity.isBuiltin()) {
-                entity.setLabel(merge.label);
-                entity.setTracks(joinTracks(merge.tracks));
-                entity.setFields(joinFields(merge.fields));
-                entity.setSensitivity(merge.sensitivity == null ? AuthScopeSensitivity.low.name() : merge.sensitivity.name());
-                entity.setRequires(joinList(merge.requires));
-                entity.setUpdated(new Date());
-                updateById(entity);
+        suppressCatalogRefresh.set(Boolean.TRUE);
+        try {
+            for (Map.Entry<String, BuiltinMerge> entry : merged.entrySet()) {
+                BuiltinMerge merge = entry.getValue();
+                ScopeDefinitionEntity entity = baseMapper.getByCode(entry.getKey());
+                if (entity == null) {
+                    entity = new ScopeDefinitionEntity();
+                    entity.setUuid(Uuid.uuid());
+                    entity.setCode(entry.getKey());
+                    applyBuiltinMerge(entity, merge);
+                    entity.setBuiltin(true);
+                    insert(entity);
+                } else if (entity.isBuiltin()) {
+                    applyBuiltinMerge(entity, merge);
+                    updateById(entity);
+                }
             }
+        } finally {
+            suppressCatalogRefresh.remove();
         }
     }
 
-    private static final class BuiltinMerge {
-        private String label;
-        private EnumSet<AuthTrack> tracks = EnumSet.noneOf(AuthTrack.class);
-        private EnumSet<AuthField> fields = EnumSet.noneOf(AuthField.class);
-        private AuthScopeSensitivity sensitivity;
-        private List<String> requires = new ArrayList<String>();
-        private boolean enabled = true;
+    private static void applyBuiltinMerge(ScopeDefinitionEntity entity, BuiltinMerge merge) {
+        entity.setLabel(merge.label);
+        entity.setTracks(joinTracks(merge.tracks));
+        entity.setFields(joinFields(merge.fields));
+        entity.setSensitivity(merge.sensitivity == null ? AuthScopeSensitivity.low.name() : merge.sensitivity.name());
+        entity.setRequires(joinList(merge.requires));
+        entity.setEnabled(merge.enabled);
+        entity.setUpdated(new Date());
+    }
 
-        private BuiltinMerge(AuthScopeDef builtin) {
-            this.label = builtin.getLabel();
-            this.sensitivity = builtin.getSensitivity();
-            this.enabled = builtin.isEnabled();
-            if (builtin.getRequires() != null) {
-                this.requires = new ArrayList<String>(builtin.getRequires());
+    private void prepareNewCustom(ScopeDefinitionEntity entity) {
+        if (entity == null) {
+            return;
+        }
+        if (StringUtils.isBlank(entity.getUuid())) {
+            entity.setUuid(Uuid.uuid());
+        }
+        if (StringUtils.isNotBlank(entity.getCode())) {
+            String code = AuthScopeSet.normalize(entity.getCode());
+            entity.setCode(code);
+            ScopeDefinitionEntity existing = baseMapper.getByCode(code);
+            if (existing != null && existing.isBuiltin()) {
+                throw new IllegalArgumentException("内置 scope 不可覆盖创建");
             }
         }
+        if (entity.getUpdated() == null) {
+            entity.setUpdated(new Date());
+        }
+    }
+
+    private void assertDeletable(Serializable id) {
+        if (id == null) {
+            return;
+        }
+        ScopeDefinitionEntity entity = getById(id);
+        if (entity != null && entity.isBuiltin()) {
+            throw new IllegalArgumentException("内置 scope 不可删除");
+        }
+    }
+
+    private List<?> filterDeletableIds(Collection<?> idList) {
+        List<Object> allowed = new ArrayList<>();
+        if (idList == null) {
+            return allowed;
+        }
+        for (Object id : idList) {
+            if (id == null) {
+                continue;
+            }
+            ScopeDefinitionEntity entity = getById((Serializable) id);
+            if (entity != null && !entity.isBuiltin()) {
+                allowed.add(id);
+            }
+        }
+        return allowed;
+    }
+
+    private void touchCatalog() {
+        if (Boolean.TRUE.equals(suppressCatalogRefresh.get())) {
+            return;
+        }
+        refreshCatalog();
+    }
+
+    private List<ScopeDefinitionEntity> recognizedEntities(List<ScopeDefinitionEntity> entities) {
+        List<ScopeDefinitionEntity> result = new ArrayList<>();
+        if (entities == null) {
+            return result;
+        }
+        for (ScopeDefinitionEntity entity : entities) {
+            if (isRecognized(entity)) {
+                result.add(entity);
+            }
+        }
+        return result;
+    }
+
+    private boolean isRecognized(ScopeDefinitionEntity entity) {
+        if (entity == null || StringUtils.isBlank(entity.getCode())) {
+            return false;
+        }
+        if (!entity.isBuiltin()) {
+            return true;
+        }
+        return authScopeCatalog.isRegisteredBuiltin(entity.getCode());
     }
 
     private List<AuthScopeDef> toCatalogDefs(List<ScopeDefinitionEntity> entities) {
@@ -266,8 +343,7 @@ public class ScopeDefinitionService extends ModuleService<ScopeDefinitionDao, Sc
         def.setCode(AuthScopeSet.normalize(entity.getCode()));
         def.setLabel(entity.getLabel());
         def.setTracks(parseTracks(entity.getTracks()));
-        EnumSet<AuthField> fieldSet = parseFields(entity.getFields());
-        def.setFields(fieldSet);
+        def.setFields(parseFields(entity.getFields()));
         def.setSensitivity(parseSensitivity(entity.getSensitivity()));
         def.setRequires(parseRequires(entity.getRequires()));
         def.setEnabled(entity.isEnabled());
@@ -333,7 +409,7 @@ public class ScopeDefinitionService extends ModuleService<ScopeDefinitionDao, Sc
         return list;
     }
 
-    private String joinTracks(Set<AuthTrack> tracks) {
+    private static String joinTracks(Set<AuthTrack> tracks) {
         if (tracks == null || tracks.isEmpty()) {
             return "";
         }
@@ -344,7 +420,7 @@ public class ScopeDefinitionService extends ModuleService<ScopeDefinitionDao, Sc
         return StringUtils.join(list, ",");
     }
 
-    private String joinFields(Set<AuthField> fields) {
+    private static String joinFields(Set<AuthField> fields) {
         if (fields == null || fields.isEmpty()) {
             return "";
         }
@@ -355,10 +431,28 @@ public class ScopeDefinitionService extends ModuleService<ScopeDefinitionDao, Sc
         return StringUtils.join(list, ",");
     }
 
-    private String joinList(List<String> values) {
+    private static String joinList(List<String> values) {
         if (values == null || values.isEmpty()) {
             return "";
         }
         return StringUtils.join(values, ",");
+    }
+
+    private static final class BuiltinMerge {
+        private String label;
+        private final EnumSet<AuthTrack> tracks = EnumSet.noneOf(AuthTrack.class);
+        private final EnumSet<AuthField> fields = EnumSet.noneOf(AuthField.class);
+        private AuthScopeSensitivity sensitivity;
+        private List<String> requires = new ArrayList<>();
+        private boolean enabled = true;
+
+        private BuiltinMerge(AuthScopeDef builtin) {
+            this.label = builtin.getLabel();
+            this.sensitivity = builtin.getSensitivity();
+            this.enabled = builtin.isEnabled();
+            if (builtin.getRequires() != null) {
+                this.requires = new ArrayList<>(builtin.getRequires());
+            }
+        }
     }
 }

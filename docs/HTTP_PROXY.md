@@ -73,6 +73,23 @@ Authorization: Bearer sk-xxx
 
 ---
 
+## 2.4 出站安全（SSRF 防护）
+
+路径 **`/http/proxy/v1/**` 仍可匿名调用**（方案 1B），但目标 URL 必须通过出站校验：
+
+| 配置项 | 说明 |
+|--------|------|
+| **SysConfig** `SECURITY_HTTP_PROXY_CONFIG` | `enabled` / `allowedHosts` / `resolveDns`；后台「HTTP 代理安全」，全集群同步 |
+
+白名单语法：精确 / `example.com` 含子域 / `*.example.com`；**空=拒绝全部目标**。`resolveDns` 默认开，解析后拒私网/元数据。
+
+默认拒绝：`localhost`、RFC1918 私网、链路本地、CGNAT `100.64/10`、云元数据 `169.254.169.254`、非 `http`/`https`。
+
+拒绝时返回 HTTP **403**，`error_type` 为原因码（如 `host_not_allowlisted`、`private_or_metadata_address`）。
+
+运维在后台维护白名单即可，勿再依赖 yml/Env。
+
+
 ## 3. 实现要点
 
 ### 3.1 请求体与响应体处理

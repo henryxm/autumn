@@ -7,6 +7,8 @@ import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.utils.Uuid;
 import org.apache.commons.lang3.StringUtils;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.Mac;
@@ -22,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
@@ -41,6 +44,10 @@ public class SecurityRequestService extends ModuleService<SecurityRequestDao, Se
     private static final Map<String, Long> NONCE_REPLAY_GUARD = new ConcurrentHashMap<>();
     private static final int VERIFY_LOG_ROLLING_LIMIT = 100;
     private static final Deque<Map<String, Object>> VERIFY_STRONG_LOGS = new ConcurrentLinkedDeque<>();
+    private static final String REDIS_NONCE_PREFIX = "autumn:sec:nonce:";
+
+    @Autowired(required = false)
+    private StringRedisTemplate stringRedisTemplate;
 
     public synchronized SecurityRequestEntity ensureCurrent() {
         SecurityRequestEntity latest = baseMapper.getLatestEnabled();
@@ -214,16 +221,28 @@ public class SecurityRequestService extends ModuleService<SecurityRequestDao, Se
         if (StringUtils.isBlank(nonce) || nonce.length() > 128) {
             return false;
         }
+        if (stringRedisTemplate != null) {
+            try {
+                Boolean ok = stringRedisTemplate.opsForValue().setIfAbsent(
+                        REDIS_NONCE_PREFIX + auth + ":" + nonce, "1", NONCE_TTL_MILLIS, TimeUnit.MILLISECONDS);
+                return Boolean.TRUE.equals(ok);
+            } catch (Exception e) {
+                log.debug("nonce Redis 不可用，回退本地: {}", e.getMessage());
+            }
+        }
         if (NONCE_REPLAY_GUARD.size() > NONCE_GC_THRESHOLD) {
             gcNonce(now);
         }
         String key = auth + ":" + nonce;
-        Long deadline = NONCE_REPLAY_GUARD.get(key);
-        if (deadline != null && deadline > now) {
+        Long deadline = now + NONCE_TTL_MILLIS;
+        Long previous = NONCE_REPLAY_GUARD.putIfAbsent(key, deadline);
+        if (previous == null) {
+            return true;
+        }
+        if (previous > now) {
             return false;
         }
-        NONCE_REPLAY_GUARD.put(key, now + NONCE_TTL_MILLIS);
-        return true;
+        return NONCE_REPLAY_GUARD.replace(key, previous, deadline);
     }
 
     private void gcNonce(long now) {

@@ -6,6 +6,12 @@
 
 ---
 
+## 头像与对象存储（iconId）
+
+- 基础框架**不**内嵌 `minclouds-file-starter`。
+- `iconId` → URL 经 SPI `BotIconUrlHandler`；业务引入 file-starter 后由 `object-storage-file` 的 `BotIconUrlObjectStorageHandler`（组件扫描）提供。
+- 有头像审核时 create 仍**必须** `iconId`（与 Risk 契约一致）；无审核的纯框架可用 `icon` URL。详见 `AI_ROBOT_API.md`。
+
 ## 文档导读
 
 | 读者 | 阅读路径 |

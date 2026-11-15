@@ -10,16 +10,30 @@ import org.apache.shiro.subject.Subject;
 
 public class ShiroUtils {
     /**
-     * 加密算法
+     * 遗留加密算法（SHA-256×16），仅用于兼容旧口令与非登录场景（如 rbt_ 哈希）。
      */
     public final static String hashAlgorithmName = "SHA-256";
     /**
-     * 循环次数
+     * 遗留循环次数
      */
     public final static int hashIterations = 16;
 
+    /**
+     * 遗留 SHA-256 哈希（盐 + 16 次）；新登录口令请用 {@link #hashPassword(String)}。
+     */
     public static String sha256(String password, String salt) {
         return new SimpleHash(hashAlgorithmName, password, salt, hashIterations).toString();
+    }
+
+    /**
+     * 新用户/改密：PBKDF2 存储串。
+     */
+    public static String hashPassword(String rawPassword) {
+        return PasswordHashSupport.hashNew(rawPassword);
+    }
+
+    public static boolean passwordsMatch(String rawPassword, String storedPassword, String legacySalt) {
+        return PasswordHashSupport.matches(rawPassword, storedPassword, legacySalt);
     }
 
     public static Session getSession() {

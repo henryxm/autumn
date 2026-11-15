@@ -30,8 +30,8 @@ spring:
       stat-view-servlet:
         enabled: true
         url-pattern: /druid/*
-        #login-username: admin
-        #login-password: admin
+        login-username: ${DRUID_LOGIN_USERNAME:admin}
+        login-password: ${DRUID_LOGIN_PASSWORD:changeme}
       filter:
         stat:
           log-slow-sql: true
@@ -46,4 +46,5 @@ autumn:
   # Springdoc 启动时会扫描全部 Controller，dev 默认关闭以缩短启动
   swagger:
     enabled: false
+  # HTTP 代理白名单等 → 后台 SysConfig「HTTP 代理安全」
 

@@ -59,6 +59,12 @@ public class SysShiroSessionService extends ModuleService<SysShiroSessionDao, Sy
         return "fa-clock-o";
     }
 
+    /** 会话运维页为 {@code session.html}，不注册 gen CRUD 菜单。 */
+    @Override
+    protected String[][] getMenuItemsInternal() {
+        return null;
+    }
+
     public void saveOrUpdateBySessionId(Session session) {
         if (InstallMode.isActive() || session == null || session.getId() == null) {
             return;

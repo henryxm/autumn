@@ -169,6 +169,9 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> implement
             String url = robotIconUrlHelper.resolveAccessUrl(robot.getIconId());
             if (StringUtils.isNotBlank(url)) {
                 user.setIcon(url);
+            } else if (StringUtils.isNotBlank(robot.getIcon())) {
+                // SPI 未接入或解析失败时保留库内已有展示 URL
+                user.setIcon(robot.getIcon());
             }
         }
     }
@@ -220,7 +223,16 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> implement
         if (StringUtils.isBlank(name)) {
             throw new CodeException("名称不能为空");
         }
-        if (StringUtils.isBlank(iconId)) {
+        // 有头像审核（业务仓）：保持历史契约，必须 iconId + 同步入审（Risk 侧亦要求 iconId 非空）
+        // 无审核 Handler（纯框架）：允许仅 icon URL 旧轨直接落库，不走入审
+        boolean hasAudit = botHandlerFactory.hasIconAuditHandler();
+        boolean hasIconId = StringUtils.isNotBlank(iconId);
+        boolean hasIconUrl = StringUtils.isNotBlank(icon);
+        if (hasAudit) {
+            if (!hasIconId) {
+                throw new CodeException("请上传机器人头像");
+            }
+        } else if (!hasIconId && !hasIconUrl) {
             throw new CodeException("请上传机器人头像");
         }
         assertDisplayNameAllowed(owner, name);
@@ -234,28 +246,43 @@ public class RobotService extends ModuleService<RobotDao, RobotEntity> implement
         robot.setOwner(owner);
         robot.setNickname(name);
         robot.setDescription(description);
-        String id = iconId.trim();
-        String url = robotIconUrlHelper.requireAccessUrl(id);
-        // iconId 先审后写：建号时先空头像，同步入审通过后再落库（AUTO）或保持空（REVIEW pending）
         robot.setStatus(RobotEntity.STATUS_ACTIVE);
         robot.setAccess(normalizeAccess(access));
         robot.setBlack(false);
         robot.setCreateTime(now);
         robot.setUpdateTime(now);
-        insert(robot);
-        if (!botHandlerFactory.hasIconAuditHandler()) {
-            throw new CodeException("头像审核服务不可用");
-        }
-        // 同步入审（forceSync）须在签发 token / Hook 之前：BLOCK 抛异常 → 整单回滚，不建号、不发 token
-        BotIconAuditHandler.SubmitOutcome outcome =
-                botHandlerFactory.submitIcon(owner, robot.getUuid(), id, url, true);
-        if (outcome != null && !outcome.pending) {
-            RobotEntity fresh = getByUuid(robot.getUuid());
-            if (fresh != null) {
-                robot.setIconId(fresh.getIconId());
-                robot.setIcon(fresh.getIcon());
-                robot.setHash(fresh.getHash());
+        if (hasAudit) {
+            String id = iconId.trim();
+            String url = robotIconUrlHelper.requireAccessUrl(id);
+            // iconId 先审后写：建号时先空头像，同步入审通过后再落库（AUTO）或保持空（REVIEW pending）
+            insert(robot);
+            // 同步入审（forceSync）须在签发 token / Hook 之前：BLOCK 抛异常 → 整单回滚，不建号、不发 token
+            BotIconAuditHandler.SubmitOutcome outcome =
+                    botHandlerFactory.submitIcon(owner, robot.getUuid(), id, url, true);
+            if (outcome != null && !outcome.pending) {
+                RobotEntity fresh = getByUuid(robot.getUuid());
+                if (fresh != null) {
+                    robot.setIconId(fresh.getIconId());
+                    robot.setIcon(fresh.getIcon());
+                    robot.setHash(fresh.getHash());
+                }
             }
+        } else {
+            // 纯框架无审核：旧轨直接写展示 URL；有 iconId 则仍尝试 SPI 解析
+            if (hasIconId) {
+                String id = iconId.trim();
+                String url = robotIconUrlHelper.requireAccessUrl(id);
+                robot.setIconId(id);
+                robot.setIcon(url);
+                robot.setHash(StringUtils.isNotBlank(hash) ? hash.trim() : id);
+            } else {
+                robot.setIcon(icon.trim());
+                robot.setIconId("");
+                if (StringUtils.isNotBlank(hash)) {
+                    robot.setHash(hash.trim());
+                }
+            }
+            insert(robot);
         }
         String plainToken = robotTokenService.insertToken(robot.getUuid(), tokenExpireDays);
         accountFactory.created(robot);

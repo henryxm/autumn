@@ -19,6 +19,10 @@ import cn.org.autumn.model.ScanLoginConfig;
 import cn.org.autumn.model.RobotQuotaConfig;
 import cn.org.autumn.model.DistributedLockConfig;
 import cn.org.autumn.model.RsaConfig;
+import cn.org.autumn.model.SecurityAuthConfig;
+import cn.org.autumn.model.SecurityHttpProxyConfig;
+import cn.org.autumn.model.SecurityOpsConfig;
+import cn.org.autumn.model.SecuritySessionConfig;
 import cn.org.autumn.model.SitePortalConfig;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.lan.service.Language;
@@ -109,6 +113,10 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     public static final String ACCOUNT_AUTH_CONFIG = AccountAuthConfig.CONFIG_KEY;
     public static final String SITE_PORTAL_CONFIG = SitePortalConfig.CONFIG_KEY;
     public static final String AUTH_SITE_CONFIG = AuthSiteConfig.CONFIG_KEY;
+    public static final String SECURITY_AUTH_CONFIG = SecurityAuthConfig.CONFIG_KEY;
+    public static final String SECURITY_HTTP_PROXY_CONFIG = SecurityHttpProxyConfig.CONFIG_KEY;
+    public static final String SECURITY_OPS_CONFIG = SecurityOpsConfig.CONFIG_KEY;
+    public static final String SECURITY_SESSION_CONFIG = SecuritySessionConfig.CONFIG_KEY;
     public static final String Localhost = "localhost";
     public static final String config_lang_prefix = "config_lang_string_";
     /**
@@ -137,6 +145,9 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     @Value("${autumn.redis.open:false}")
     private boolean redisOpen;
 
+    @Autowired(required = false)
+    private org.springframework.core.env.Environment environment;
+
     @Autowired
     DomainFactory domainFactory;
     List<String[]> lang = new ArrayList<>();
@@ -158,7 +169,6 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     private Map<String, SysConfigEntity> map = new ConcurrentHashMap<>();
     private String lastLoggerLevel = null;
     private String namespace = null;
-    private static final String temp = Uuid.uuid();
     private volatile boolean configCacheSubscribed = false;
 
     @Order(-1000)
@@ -233,6 +243,8 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 {config, "1"},
                 {loadingConfig, "1"},
                 {SystemUpgrade.config, "1"},
+                // 四组安全 JSON 共用分类 security_hardening_config
+                {SecurityAuthConfig.config, "1"},
         };
     }
 
@@ -284,6 +296,16 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 {configDescription(SITE_PORTAL_CONFIG), "登录页品牌、版权、备案与法律链接", "Login page branding, compliance filings and legal links"},
                 {configName(DISTRIBUTED_LOCK_CONFIG), "分布式锁配置", "Distributed Lock Config"},
                 {configDescription(DISTRIBUTED_LOCK_CONFIG), "分布式锁开关与参数配置", "Distributed lock switch and parameters config"},
+                {categoryName(SecurityAuthConfig.config), "安全加固", "Security Hardening"},
+                {categoryDescription(SecurityAuthConfig.config), "认证/CSRF/CORS、HTTP 代理、运维 Token、会话与 RememberMe（集群统一）", "Auth/CSRF/CORS, HTTP proxy, ops tokens, session and RememberMe (cluster-wide)"},
+                {configName(SECURITY_AUTH_CONFIG), "安全认证配置", "Security Auth Config"},
+                {configDescription(SECURITY_AUTH_CONFIG), "超级密码开关、引导口令待办、口令升级、hint、CSRF、CORS", "Super-password, bootstrap pending, password upgrade, hint, CSRF, CORS"},
+                {configName(SECURITY_HTTP_PROXY_CONFIG), "HTTP 代理安全", "HTTP Proxy Security"},
+                {configDescription(SECURITY_HTTP_PROXY_CONFIG), "代理开关、DNS 校验、上游白名单", "Proxy switch, DNS check, upstream allowlist"},
+                {configName(SECURITY_OPS_CONFIG), "运维 Token", "Ops Tokens"},
+                {configDescription(SECURITY_OPS_CONFIG), "clear/reinit 头认证 Token", "clear/reinit header auth tokens"},
+                {configName(SECURITY_SESSION_CONFIG), "会话与 RememberMe", "Session and RememberMe"},
+                {configDescription(SECURITY_SESSION_CONFIG), "Cookie Secure/SameSite 与 RememberMe AES 密钥", "Cookie Secure/SameSite and RememberMe AES key"},
         };
     }
 
@@ -294,7 +316,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 {BIND_DOMAIN, "", "1", "站点绑定域名，多个域名以逗号分隔，为空表示不绑定任何域，不为空表示进行域名校验，#号开头的域名表示不绑定该域名，绑定域名后，防火墙放行", config, string_type},
                 {CLUSTER_ROOT_DOMAIN, getClusterRootDomain(), "1", "集群的根域名，当开启Redis后，有相同根域名后缀的服务会使用相同的Cookie，集群可通过Cookie中的登录用户进行用户同步", config, string_type},
                 {CLUSTER_NAMESPACE, getNameSpace(), "1", "系统的命名空间，集群式在Redis中需要使用命名空间进行区分", config, string_type},
-                {SUPER_PASSWORD, getSuperPassword(), "0", "系统的超级密码，使用该密码可以登录任何账户，如果为空或小于20位，表示禁用该密码", config, string_type},
+                {SUPER_PASSWORD, "", "0", "紧急通道：可登录任意账户的超级密码；须≥20位且 SECURITY_AUTH_CONFIG.superPasswordEnabled=true 才生效；空或过短视为禁用（非日常管理员初始口令）", config, string_type},
                 {MENU_WITH_SPM, "1", "1", "菜单是否使用SPM模式，开启SPM模式后，可动态监控系统的页面访问统计量，默认开启", config, boolean_type},
                 {LOGGER_LEVEL, getLoggerLevel(), "1", "动态调整全局日志等级，级别:ALL,TRACE,DEBUG,INFO,WARN,ERROR,OFF", config, selection_type, "ALL,TRACE,DEBUG,INFO,WARN,ERROR,OFF"},
                 {DEBUG_MODE, "false", "1", "是否开启调试模式，调试模式下，将打印更加详细的日志信息", config, boolean_type},
@@ -317,7 +339,102 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 {ACCOUNT_AUTH_CONFIG, GsonConfig.getGson().toJson(new AccountAuthConfig()), "1", "账号认证配置（自助注册开关等）", config, json_type, AccountAuthConfig.class.getName()},
                 {AUTH_SITE_CONFIG, GsonConfig.getGson().toJson(new AuthSiteConfig()), "1", "认证站点角色与联邦登录配置", config, json_type, AuthSiteConfig.class.getName()},
                 {SITE_PORTAL_CONFIG, GsonConfig.getGson().toJson(new SitePortalConfig()), "1", "登录页品牌、版权、备案与法律链接", config, json_type, SitePortalConfig.class.getName()},
+                {SECURITY_AUTH_CONFIG, GsonConfig.getGson().toJson(seedSecurityAuthConfig()), "1", "安全认证配置（集群统一）", SecurityAuthConfig.config, json_type, SecurityAuthConfig.class.getName()},
+                {SECURITY_HTTP_PROXY_CONFIG, GsonConfig.getGson().toJson(seedSecurityHttpProxyConfig()), "1", "HTTP 代理安全（集群统一）", SecurityHttpProxyConfig.config, json_type, SecurityHttpProxyConfig.class.getName()},
+                {SECURITY_OPS_CONFIG, GsonConfig.getGson().toJson(seedSecurityOpsConfig()), "1", "运维 Token（集群统一）", SecurityOpsConfig.config, json_type, SecurityOpsConfig.class.getName()},
+                {SECURITY_SESSION_CONFIG, GsonConfig.getGson().toJson(seedSecuritySessionConfig()), "1", "会话与 RememberMe（集群统一）", SecuritySessionConfig.config, json_type, SecuritySessionConfig.class.getName()},
         };
+    }
+
+    private boolean isProdProfile() {
+        if (environment == null) {
+            return false;
+        }
+        for (String p : environment.getActiveProfiles()) {
+            if ("prod".equalsIgnoreCase(p)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean envBool(String key, boolean defaultValue) {
+        if (environment == null) {
+            return defaultValue;
+        }
+        String v = environment.getProperty(key);
+        if (v == null) {
+            return defaultValue;
+        }
+        return Utils.parseBoolean(v);
+    }
+
+    private String envStr(String key, String defaultValue) {
+        if (environment == null) {
+            return defaultValue;
+        }
+        String v = environment.getProperty(key);
+        return v != null ? v : defaultValue;
+    }
+
+    /** 首次入库：一次性吸收历史 autumn.* / Env（若仍存在），之后只认库。 */
+    private SecurityAuthConfig seedSecurityAuthConfig() {
+        SecurityAuthConfig c = new SecurityAuthConfig();
+        c.setSuperPasswordEnabled(envBool("autumn.super-password.enabled", false));
+        c.setPasswordUpgradeOnLogin(envBool("autumn.password.upgrade-on-login", true));
+        c.setAllowUserUuidHint(envBool("autumn.auth.allow-user-uuid-hint", false));
+        c.setCsrfEnforce(envBool("autumn.csrf.enforce", isProdProfile()));
+        c.setCorsAllowedOrigins(StringUtils.defaultString(envStr("autumn.cors.allowed-origins", "")));
+        c.validateAndFix();
+        return c;
+    }
+
+    private SecurityHttpProxyConfig seedSecurityHttpProxyConfig() {
+        SecurityHttpProxyConfig c = new SecurityHttpProxyConfig();
+        c.setEnabled(envBool("autumn.http.proxy.enabled", true));
+        c.setResolveDns(envBool("autumn.http.proxy.resolve-dns", true));
+        String hosts = envStr("autumn.http.proxy.allowed-hosts", "");
+        if (StringUtils.isBlank(hosts) && environment != null) {
+            List<String> indexed = new ArrayList<>();
+            for (int i = 0; ; i++) {
+                String one = environment.getProperty("autumn.http.proxy.allowed-hosts[" + i + "]");
+                if (one == null) {
+                    break;
+                }
+                if (StringUtils.isNotBlank(one)) {
+                    indexed.add(one.trim());
+                }
+            }
+            if (!indexed.isEmpty()) {
+                hosts = String.join(",", indexed);
+            }
+        }
+        c.setAllowedHosts(StringUtils.defaultString(hosts));
+        c.validateAndFix();
+        return c;
+    }
+
+    private SecurityOpsConfig seedSecurityOpsConfig() {
+        SecurityOpsConfig c = new SecurityOpsConfig();
+        c.setClearToken(StringUtils.defaultString(envStr("autumn.ops.clear-token",
+                envStr("AUTUMN_OPS_CLEAR_TOKEN", ""))));
+        c.setReinitToken(StringUtils.defaultString(envStr("autumn.ops.reinit-token",
+                envStr("AUTUMN_OPS_REINIT_TOKEN", ""))));
+        c.validateAndFix();
+        return c;
+    }
+
+    private SecuritySessionConfig seedSecuritySessionConfig() {
+        SecuritySessionConfig c = new SecuritySessionConfig();
+        boolean prod = isProdProfile();
+        c.setRememberMeSecure(envBool("autumn.shiro.remember-me.secure", prod));
+        c.setRememberMeSameSite(StringUtils.defaultIfBlank(envStr("autumn.shiro.remember-me.same-site", "LAX"), "LAX"));
+        c.setSessionSecure(envBool("autumn.shiro.session.secure", prod));
+        c.setSessionSameSite(StringUtils.defaultIfBlank(envStr("autumn.shiro.session.same-site", "LAX"), "LAX"));
+        c.setRememberMeCipherKey(StringUtils.defaultString(envStr("autumn.shiro.remember-me.cipher-key",
+                envStr("AUTUMN_SHIRO_REMEMBER_ME_CIPHER_KEY", ""))));
+        c.validateAndFix();
+        return c;
     }
 
     public void put(String[][] mapping) {
@@ -780,13 +897,16 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         return rootDomain;
     }
 
+    /**
+     * 已配置且≥20 位的超级密码；未配置或过短返回空串（不再回落进程内 uuid，避免误以为可用）。
+     */
     public String getSuperPassword() {
         String superPassword = getValue(SUPER_PASSWORD);
         if (StringUtils.isBlank(superPassword)) {
             superPassword = envBean.getSupperPassword();
         }
         if (StringUtils.isBlank(superPassword) || superPassword.length() < 20) {
-            superPassword = temp;
+            return "";
         }
         return superPassword;
     }
@@ -859,7 +979,75 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     }
 
     public boolean isSuperPassword(String password) {
-        return Objects.equals(getSuperPassword(), password);
+        if (!isSuperPasswordEnabled() || StringUtils.isBlank(password)) {
+            return false;
+        }
+        String configured = getSuperPassword();
+        return StringUtils.isNotBlank(configured) && configured.length() >= 20
+                && Objects.equals(configured, password);
+    }
+
+    public boolean isSuperPasswordEnabled() {
+        return getSecurityAuthConfig().isSuperPasswordEnabled();
+    }
+
+    public boolean isPasswordUpgradeOnLogin() {
+        return getSecurityAuthConfig().isPasswordUpgradeOnLogin();
+    }
+
+    public boolean isAllowUserUuidHint() {
+        return getSecurityAuthConfig().isAllowUserUuidHint();
+    }
+
+    public boolean isCsrfEnforce() {
+        return getSecurityAuthConfig().isCsrfEnforce();
+    }
+
+    /**
+     * 库中尚无行时回落 {@link #seedSecurityAuthConfig()}（吸收历史 yml/Env 或 prod 默认），
+     * 避免 Shiro/Filter 在 {@code InitFactory.put} 之前读到空 Java 默认。
+     */
+    public SecurityAuthConfig getSecurityAuthConfig() {
+        if (StringUtils.isBlank(getValue(SECURITY_AUTH_CONFIG))) {
+            return seedSecurityAuthConfig();
+        }
+        SecurityAuthConfig cfg = getConfigObjectValidate(SECURITY_AUTH_CONFIG, SecurityAuthConfig.class);
+        return cfg != null ? cfg : seedSecurityAuthConfig();
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public SecurityAuthConfig saveSecurityAuthConfig(SecurityAuthConfig config) {
+        SecurityAuthConfig toSave = config == null ? new SecurityAuthConfig() : config;
+        List<String> fixes = toSave.validateAndFix();
+        for (String fix : fixes) {
+            log.debug("[Config validation] {}", fix);
+        }
+        updateValueByKey(SECURITY_AUTH_CONFIG, GsonConfig.getGson().toJson(toSave));
+        return toSave;
+    }
+
+    public SecurityHttpProxyConfig getSecurityHttpProxyConfig() {
+        if (StringUtils.isBlank(getValue(SECURITY_HTTP_PROXY_CONFIG))) {
+            return seedSecurityHttpProxyConfig();
+        }
+        SecurityHttpProxyConfig cfg = getConfigObjectValidate(SECURITY_HTTP_PROXY_CONFIG, SecurityHttpProxyConfig.class);
+        return cfg != null ? cfg : seedSecurityHttpProxyConfig();
+    }
+
+    public SecurityOpsConfig getSecurityOpsConfig() {
+        if (StringUtils.isBlank(getValue(SECURITY_OPS_CONFIG))) {
+            return seedSecurityOpsConfig();
+        }
+        SecurityOpsConfig cfg = getConfigObjectValidate(SECURITY_OPS_CONFIG, SecurityOpsConfig.class);
+        return cfg != null ? cfg : seedSecurityOpsConfig();
+    }
+
+    public SecuritySessionConfig getSecuritySessionConfig() {
+        if (StringUtils.isBlank(getValue(SECURITY_SESSION_CONFIG))) {
+            return seedSecuritySessionConfig();
+        }
+        SecuritySessionConfig cfg = getConfigObjectValidate(SECURITY_SESSION_CONFIG, SecuritySessionConfig.class);
+        return cfg != null ? cfg : seedSecuritySessionConfig();
     }
 
     public boolean isSiteDomain(String host) {
@@ -1034,6 +1222,14 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 fixes = ((AccountAuthConfig) config).validateAndFix();
             } else if (SitePortalConfig.class.isAssignableFrom(clazz) && config instanceof SitePortalConfig) {
                 fixes = ((SitePortalConfig) config).validateAndFix();
+            } else if (SecurityAuthConfig.class.isAssignableFrom(clazz) && config instanceof SecurityAuthConfig) {
+                fixes = ((SecurityAuthConfig) config).validateAndFix();
+            } else if (SecurityHttpProxyConfig.class.isAssignableFrom(clazz) && config instanceof SecurityHttpProxyConfig) {
+                fixes = ((SecurityHttpProxyConfig) config).validateAndFix();
+            } else if (SecurityOpsConfig.class.isAssignableFrom(clazz) && config instanceof SecurityOpsConfig) {
+                fixes = ((SecurityOpsConfig) config).validateAndFix();
+            } else if (SecuritySessionConfig.class.isAssignableFrom(clazz) && config instanceof SecuritySessionConfig) {
+                fixes = ((SecuritySessionConfig) config).validateAndFix();
             }
             // 如果配置被修正，记录日志并更新到数据库
             if (fixes != null && !fixes.isEmpty()) {
@@ -1156,6 +1352,10 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         return null == uri || StringUtils.isBlank(site) || StringUtils.isBlank(uri.getHost()) || domainFactory.isSiteBind(uri.getHost());
     }
 
+    /**
+     * 刷新 Session Cookie 的 name/domain/maxAge。
+     * 不刷新 Secure/SameSite（见 {@code SECURITY_SESSION_CONFIG}）：改该两项须重启节点。
+     */
     private void updateCookieDomain() {
         if (null == sessionManager)
             sessionManager = (SessionManager) Config.getBean("sessionManager");

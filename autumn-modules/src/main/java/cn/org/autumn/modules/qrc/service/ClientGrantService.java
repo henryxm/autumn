@@ -30,7 +30,7 @@ import java.util.HashMap;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.oltu.oauth2.as.issuer.MD5Generator;
+import cn.org.autumn.modules.oauth.oauth2.support.SecureRandomValueGenerator;
 import org.apache.oltu.oauth2.as.issuer.OAuthIssuerImpl;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -213,7 +213,7 @@ public class ClientGrantService extends ModuleService<ClientGrantDao, ClientGran
     }
 
     public String issueAuthCode(SysUserEntity user, String grantedScope) throws OAuthSystemException {
-        OAuthIssuerImpl issuer = new OAuthIssuerImpl(new MD5Generator());
+        OAuthIssuerImpl issuer = new OAuthIssuerImpl(new SecureRandomValueGenerator());
         String code = issuer.authorizationCode();
         clientDetailsService.putAuthCode(code, user, grantedScope);
         return code;
@@ -235,7 +235,7 @@ public class ClientGrantService extends ModuleService<ClientGrantDao, ClientGran
             }
         }
         if (StringUtils.isBlank(accessToken) || StringUtils.isBlank(refreshToken)) {
-            OAuthIssuerImpl issuer = new OAuthIssuerImpl(new MD5Generator());
+            OAuthIssuerImpl issuer = new OAuthIssuerImpl(new SecureRandomValueGenerator());
             accessToken = issuer.accessToken();
             refreshToken = issuer.refreshToken();
             clientDetailsService.putToken(accessToken, refreshToken, tokenStore);

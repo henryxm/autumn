@@ -2,7 +2,7 @@
 
 > **适用对象**：OAuth `/oauth2/*` 与 OPL `/open/oauth2/*` 对接开发者、平台管理员、框架维护者  
 > **实现模块**：`cn.org.autumn.auth.scope`（`autumn-lib`）、`cn.org.autumn.modules.auth`（`autumn-modules`）  
-> **管理页**：`authscopemanage.html`（业务管理）、`scopedef.html`（gen CRUD 审计）、`oauthasmanage.html` / `oplmanage.html`（客户端登记）
+> **管理页**：`authscopemanage.html`（业务管理）、`modules/auth/scopedefinition`（gen CRUD）、`oauthasmanage.html` / `oplmanage.html`（客户端登记）
 
 ---
 
@@ -146,7 +146,7 @@
 | 页面 | 用途 |
 |------|------|
 | `authscopemanage.html` | **推荐**：全局 scope 启用/禁用、按轨道筛选与分组、实名专区说明、自定义 scope（tracks / sensitivity / requires） |
-| `scopedef.html` / `scopedef.js` | gen CRUD 审计（`/auth/scopedef/*`）；改库后须走 `ScopeDefinitionService` 以保证 `refreshCatalog`；日常请用 `authscopemanage` |
+| `modules/auth/scopedefinition` | gen CRUD（`/auth/scopedefinition/*`）；Service 写路径会 `refreshCatalog`；业务启用/自定义日常用 `authscopemanage`（`/oauth/admin/scopes`） |
 | `oauthasmanage.html` | OAuth AS 客户端登记 scope（多选；支持 `realname` 别名预设） |
 | `oauthrpmanage.html` | OAuth RP 客户端登记 scope（多选） |
 | `oplmanage.html` | OPL AS 应用登记 scope（多选） |

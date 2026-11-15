@@ -34,6 +34,7 @@
 - `docs/AI_CRYPTO.md`：接口加解密兼容与迁移
 - **`docs/AI_FIELD_ENCRYPT.md`**：**实体字段存储加密**（`@FieldEncrypt`、`EncryptModuleService`、`@Cache` 钩子 §7、`autumn.crypto.field.*`；与传输层 `AI_CRYPTO.md` 独立）
 - `docs/AI_SECURITY.md`：安全强校验、灰度、演练
+- **`docs/AI_SECURITY_HARDENING_3_0_COMPAT.md`**：**3.0.0 安全加固兼容性与回滚**（口令/Token 双读、破坏性变更清单 C-xx/D-xx、配置开关、回归与回滚）
 - `docs/AI_CODEGEN.md`：**代码生成链路（gen / GenUtils / 模板 / 库表反射）**与**推荐三步开发流程**（实体 → 生成骨架 → 业务与页面）；**`BaseCacheService` / `ShareCacheService` / `BaseQueueService`** 能力说明
 - `docs/AI_TEMPLATES.md`：模块任务模板库
 - `docs/AI_GOVERNANCE.md`：治理协作、术语、维护口径
@@ -71,7 +72,7 @@
 - 多项目模板整合（TemplateFactory）：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md + docs/AI_GOVERNANCE.md`
 - 接口加解密改造：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md + docs/AI_CRYPTO.md`
 - **实体字段存储加密**：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md + docs/AI_FIELD_ENCRYPT.md`
-- 安全改造/攻防演练：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md + docs/AI_SECURITY.md`
+- 安全改造/攻防演练：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md + docs/AI_SECURITY.md`（**升级加固后兼容/回滚**叠加 **`docs/AI_SECURITY_HARDENING_3_0_COMPAT.md`**）
 - 文档治理/多人协作：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md + docs/AI_GOVERNANCE.md`
 - 快速起任务：在以上任一组合追加 `docs/AI_PROMPTS.md`
 - **多库 / 方言 / Wrapper / Provider / 换库排查**：`docs/AI_BOOT.md` + `docs/AI_MAP.md` + `docs/AI_STANDARDS.md` + **`docs/AI_DATABASE.md`**（PostgreSQL 专项叠加 **`docs/AI_POSTGRESQL.md`**）

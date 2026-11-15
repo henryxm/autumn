@@ -42,10 +42,10 @@ spring:
       test-on-borrow: false
       test-on-return: false
       stat-view-servlet:
-        enabled: true
+        enabled: false
         url-pattern: /druid/*
-        #login-username: admin
-        #login-password: admin
+        login-username: ${DRUID_LOGIN_USERNAME:}
+        login-password: ${DRUID_LOGIN_PASSWORD:}
       filter:
         stat:
           log-slow-sql: true
@@ -63,7 +63,10 @@ spring:
 
 # autumn.database / pagehelper.helper-dialect 可选；未配置时由 JDBC URL 推断。
 # 与 application.yml 中其它 autumn.* 合并，仅覆盖 database
+# 安全加固请在后台 SysConfig「安全加固」配置；prod 首次入库默认 CSRF/Cookie Secure=true（见 seedSecurity*）
 autumn:
+  swagger:
+    enabled: false
   database: ${AUTUMN_DATABASE:mysql}
   # 字段存储加密（at-rest）示例，见 docs/AI_FIELD_ENCRYPT.md：
   #  crypto:

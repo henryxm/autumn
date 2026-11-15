@@ -85,6 +85,7 @@ var vm = new Vue({
         navTitle:"控制台",
 		lang:"",
 		languageList:[],
+		passwordReminder: null
 	},
 	methods: {
 		getMenuList: function (event) {
@@ -101,6 +102,43 @@ var vm = new Vue({
 			$.getJSON("api/getsupportedlanguage?_"+$.now(), function(r){
 				vm.languageList = r.language;
 				vm.lang = r.lang;
+			});
+		},
+		getPasswordReminder: function(){
+			$.getJSON("sys/session/self?_"+$.now(), function(r){
+				if(r && r.code === 0){
+					vm.passwordReminder = r.passwordReminder || null;
+				}
+			});
+		},
+		snoozePasswordReminder: function(){
+			$.ajax({
+				type: "POST",
+				url: "sys/session/self/password-reminder/snooze",
+				dataType: "json",
+				success: function(r){
+					if(r && r.code === 0){
+						vm.passwordReminder = r.passwordReminder || null;
+					}
+				}
+			});
+		},
+		acknowledgePasswordReminder: function(){
+			layer.confirm('确认保留当前口令并关闭引导提示？恢复文件将被删除。', function(idx){
+				layer.close(idx);
+				$.ajax({
+					type: "POST",
+					url: "sys/session/self/password-reminder/acknowledge",
+					dataType: "json",
+					success: function(r){
+						if(r && r.code === 0){
+							vm.passwordReminder = r.passwordReminder || null;
+							layer.msg('已关闭引导提示');
+						}else{
+							layer.alert(r && r.msg ? r.msg : '操作失败');
+						}
+					}
+				});
 			});
 		},
 		updatePassword: function(){
@@ -161,6 +199,7 @@ var vm = new Vue({
 		this.getMenuList();
 		this.getUser();
 		this.getLanguageList();
+		this.getPasswordReminder();
 	},
 	updated: function(){
 		//路由

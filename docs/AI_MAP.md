@@ -460,7 +460,7 @@ public class DemoService extends ModuleService<DemoDao, DemoEntity> implements L
 - `db`：数据库备份与恢复；**只读/写库开关**（`CrudGuard`、`dbmanage.html`、`/db/admin/*`）见 **`docs/AI_DATABASE_READ_ONLY.md`**。
 - `oauth/client`：认证授权与客户端管理。
 - `usr`：用户域开放能力与 token。
-- `oss`：对象存储与文件管理。
+- `oss`：历史模块名；**对象存储非 autumn 核心**。业务仓按需引入 `minclouds-file-starter`（`BotIconUrlHandler` 桥接机器人 `iconId`）。
 - `lan`：多语言资源管理。
 - `spm`：超级位置模型与埋点统计。
 - `wall`：防火墙策略（IP/URL/主机访问控制）。

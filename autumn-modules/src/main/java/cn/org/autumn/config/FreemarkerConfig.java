@@ -4,6 +4,7 @@ import cn.org.autumn.site.ViewFactory;
 import cn.org.autumn.view.NameBasedViewResolver;
 import cn.org.autumn.view.ViewTemplateSupport;
 import freemarker.cache.TemplateLoader;
+import freemarker.core.HTMLOutputFormat;
 import freemarker.template.TemplateException;
 import java.io.IOException;
 import java.util.HashMap;
@@ -34,11 +35,17 @@ public class FreemarkerConfig {
         Properties settings = new Properties();
         settings.setProperty("default_encoding", "utf-8");
         settings.setProperty("number_format", "0.##");
+        // FreeMarker 合法取值：enable_if_default | enable_if_supported | force | disable（勿写 *_true 后缀）
+        settings.setProperty("auto_escaping_policy", "enable_if_default");
+        settings.setProperty("output_format", "HTML");
         configurer.setFreemarkerSettings(settings);
         try {
-            freemarker.template.Configuration configuration = null;
-            configuration = configurer.createConfiguration();
+            // 与 Spring @Configuration 同名，此处用 FQN
+            freemarker.template.Configuration configuration = configurer.createConfiguration();
             configuration.setTemplateLoader(templateLoader);
+            // 程序化双保险，避免字符串拼写错误导致启动失败
+            configuration.setOutputFormat(HTMLOutputFormat.INSTANCE);
+            configuration.setAutoEscapingPolicy(freemarker.template.Configuration.ENABLE_IF_DEFAULT_AUTO_ESCAPING_POLICY);
             configurer.setConfiguration(configuration);
         } catch (IOException | TemplateException e) {
             log.debug("freeMarkerConfigurer", e);

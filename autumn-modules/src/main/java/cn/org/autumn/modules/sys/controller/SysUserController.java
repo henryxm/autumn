@@ -13,6 +13,7 @@ import cn.org.autumn.modules.sys.service.SysUserRoleService;
 import cn.org.autumn.modules.sys.service.SysUserService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -60,14 +61,21 @@ public class SysUserController extends SysAbstractController {
      */
     @SysLog("修改密码")
     @RequestMapping("/password")
-    public R password(String password, String newPassword) throws Exception {
-        Assert.isBlank(newPassword, "新密码不为能空");
-        //更新密码
-        boolean flag = sysUserService.changePassword(getUserUuid(), password, newPassword);
-        if (!flag) {
-            return R.error("原密码不正确");
+    public R password(String password, String newPassword) {
+        Assert.isBlank(newPassword, "新密码不能为空");
+        if (StringUtils.isBlank(password)) {
+            return R.error("原密码不能为空");
         }
-        return R.ok();
+        try {
+            boolean flag = sysUserService.changePassword(getUserUuid(), password, newPassword);
+            if (!flag) {
+                return R.error("原密码不正确");
+            }
+            return R.ok();
+        } catch (Exception e) {
+            String msg = e.getMessage();
+            return R.error(StringUtils.isNotBlank(msg) ? msg : "修改密码失败");
+        }
     }
 
     /**

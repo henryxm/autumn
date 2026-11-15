@@ -53,4 +53,13 @@ public class RedisKeys {
     public static String getFieldEncryptRefreshChannel(String namespace) {
         return getFieldEncryptPrefix(namespace) + "refresh";
     }
+
+    /**
+     * 集群共享 RememberMe AES 密钥（Base64 字符串，无 TTL，各节点必须一致才能解密 Cookie）。
+     */
+    public static String getRememberMeCipherKey(String namespace) {
+        return StringUtils.isBlank(namespace)
+                ? "system:shiro:remember-me:cipher-key"
+                : namespace.trim() + ":system:shiro:remember-me:cipher-key";
+    }
 }

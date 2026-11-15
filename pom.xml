@@ -41,14 +41,14 @@
         <commons.beanutils.version>1.11.0</commons.beanutils.version>
         <!-- 固定版本：范围 [1.3.3,) 在 reactor 中可被解析为不同结果，触发 enforcer dependencyConvergence -->
         <commons.fileupload.version>1.6.0</commons.fileupload.version>
-        <!-- minclouds-file-starter→guava 与 gson 传递的 error_prone_annotations 版本分歧 -->
+        <!-- guava 与 gson 传递的 error_prone_annotations 版本分歧 -->
         <error.prone.annotations.version>2.47.0</error.prone.annotations.version>
         <httpclient.version>4.5.14</httpclient.version>
         <velocity.version>2.4.1</velocity.version>
         <joda.time.version>2.13.0</joda.time.version>
         <jsqlparser.version>5.2</jsqlparser.version>
         <jaxb.api.version>2.3.1</jaxb.api.version>
-        <org.json.version>20140107</org.json.version>
+        <org.json.version>20240303</org.json.version>
         <jakarta.validation.api.version>3.1.0</jakarta.validation.api.version>
         <!-- ==================== 缓存 ==================== -->
         <ehcache.version>3.11.1</ehcache.version>
@@ -63,7 +63,7 @@
         <pagehelper.spring.boot.version>2.1.1</pagehelper.spring.boot.version>
         <!-- ==================== 云服务 & OSS ==================== -->
         <aliyun.oss.version>3.18.5</aliyun.oss.version>
-        <!-- 固定 7.2.29：业务依赖 com.qiniu.util.Md5（仅该版有）；与 minclouds 传递的 7.2.0 靠 autumn-modules exclusion 对齐，勿用版本范围 -->
+        <!-- 固定 7.2.29：业务依赖 com.qiniu.util.Md5（仅该版有）；勿用版本范围 -->
         <qiniu.version>7.2.29</qiniu.version>
         <qcloud.cos.version>5.6.227</qcloud.cos.version>
         <!-- ==================== API 文档 ==================== -->

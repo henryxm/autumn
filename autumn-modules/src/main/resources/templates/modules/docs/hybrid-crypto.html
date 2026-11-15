@@ -89,12 +89,12 @@
                 <li>服务端：统一接收 <code>cn.org.autumn.model.CompatibleRequest&lt;T&gt;</code>，优先取 <code>data</code>（新协议），否则回退到旧字段映射。</li>
                 <li>返回值：统一使用 <code>Response&lt;T&gt;</code>，由拦截器依据 <code>X-Encrypt-Session</code> 决定是否加密返回体。</li>
             </ul>
-            <div class="doc-code">// 示例（xsign）：同一个 hyper 接口同时兼容新旧协议
+            <div class="doc-code">// 示例：同一个接口同时兼容新旧协议
 @RequestMapping(value = "hyper", method = RequestMethod.POST)
 public Response&lt;Hyper&gt; hyper(@RequestBody(required = false) CompatibleRequest&lt;Hyper&gt; request, HttpServletRequest servlet) {
     Hyper hyper = request != null ? request.resolveBody(Hyper.class, gson) : null;
     if (hyper == null) return Response.error("非法请求");
-    Hyper ex = xSignChaoCodeService.exchange(hyper);
+    Hyper ex = businessService.exchange(hyper);
     return ex == null ? Response.error("无效兑换码") : Response.ok(ex);
 }</div>
 

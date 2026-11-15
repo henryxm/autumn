@@ -5,8 +5,8 @@ server:
     threads:
       min-spare: 30
       max: 1000
-    max-http-form-post-size: -1      # 表单 POST 最大大小（-1 表示不限制）
-    max-swallow-size: -1             # 防止超大请求体被静默吞掉（-1 表示不限制）
+    max-http-form-post-size: 104857600  # 100MB
+    max-swallow-size: 104857600
   port: 80
   servlet:
     context-path: /
@@ -21,8 +21,8 @@ spring:
     time-zone: GMT+8
   servlet:
     multipart:
-      max-file-size: -1              # 单个文件大小不限制
-      max-request-size: -1           # 整个 multipart 请求体大小不限制
+      max-file-size: 100MB
+      max-request-size: 100MB
       enabled: true
   data:
     redis:
@@ -67,13 +67,15 @@ autumn:
   #   exclude: true                    # 推荐：本实例永不执行备份（Deployment/环境变量单独设为 true）
   #   exclude-hosts: replica,k8s-*      # 可选：集中列出主机模式（前缀/后缀/*包含*）
   #   exclude-addresses: 10.244.12.3    # 可选：按本机 IP 精确排除
+  # 安全加固（CSRF/CORS/代理/运维Token/RememberMe密钥等）→ 后台 SysConfig「安全加固」四组 JSON，勿再写 yml。
   redis:
     open: true  # 是否开启redis缓存  true开启   false关闭
-  # 节点画像 / 集群登记（Registry 依赖 Redis+Redisson）
+  # 节点画像 / 集群登记（Registry 依赖 Redis+Redisson）— 基础设施，不进 SysConfig
   # autumn.node.registry 未配置时跟随 autumn.redis.open；显式 true/false 可覆盖
   node:
     #registry: true
     namespace: default
+    # home: ${user.home}/.autumn   # 节点画像 + security/remember-me.key；Docker 请挂载此目录
   # 字段存储加密（at-rest，与传输层 AI_CRYPTO 独立）：
   #  crypto:
   #    field:
@@ -84,6 +86,8 @@ autumn:
   # 详见 docs/AI_FIELD_ENCRYPT.md
   shiro:
     redis: true # true表示shiro session存到redis里，需要开启redis，才会生效【分布式场景】
+    remember-me:
+      # key-file:   # 空=自动落节点 home；也可显式绝对路径（按节点，不进 SysConfig）
   # dev 可关 springdoc 以缩短启动（见 application-dev.yml）
   swagger:
     enabled: true
@@ -159,3 +163,13 @@ pagehelper:
 
 mybatis:
   mapperLocations: classpath*:mapper/**/*.xml
+
+# Actuator：仅暴露健康检查；敏感端点需登录（Shiro 不再 anon /actuator/**）
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never

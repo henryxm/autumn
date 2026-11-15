@@ -77,6 +77,21 @@
   <!-- =============================================== -->
   <!-- Content Wrapper. Contains page content -->
   <div class="content-wrapper">
+    <div v-if="passwordReminder && passwordReminder.pending && passwordReminder.level === 'strong'"
+         style="margin:0;padding:10px 16px;background:#fcf8e3;border-bottom:1px solid #f0ad4e;color:#8a6d3b;">
+      <i class="fa fa-exclamation-triangle"></i>
+      {{passwordReminder.message}}
+      <span style="float:right;">
+        <a href="javascript:;" @click="updatePassword" style="margin-right:12px;">去修改</a>
+        <a href="javascript:;" @click="snoozePasswordReminder" style="margin-right:12px;">稍后提醒</a>
+        <a href="javascript:;" @click="acknowledgePasswordReminder">已知晓并保留</a>
+      </span>
+    </div>
+    <div v-else-if="passwordReminder && passwordReminder.pending && passwordReminder.level === 'weak'"
+         style="margin:0;padding:6px 16px;background:#f5f5f5;border-bottom:1px solid #ddd;color:#777;font-size:12px;">
+      {{passwordReminder.message}}
+      <a href="javascript:;" @click="updatePassword" style="margin-left:10px;">去修改</a>
+    </div>
     <!-- Content Header (Page header) -->
     <section class="content-header">
       <ol class="breadcrumb" id="nav_title" style="position:static;float:none;">

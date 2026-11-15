@@ -49,6 +49,10 @@ public class UserContextService implements ContextHandler {
     @Lazy
     private GuestService guestService;
 
+    @Autowired
+    @Lazy
+    private SysConfigService sysConfigService;
+
     /**
      * 按业务 uuid 从缓存取账号实体（用户、机器人或未过期临时用户），不解析请求头令牌。
      */
@@ -72,8 +76,8 @@ public class UserContextService implements ContextHandler {
      * 从当前请求解析调用者：Shiro → 头令牌 / userUuid 参数；与 {@link #getUserContext(String)} 互补。
      * <p>
      * 同时携带令牌与 {@code userUuid} hint 时，hint 须与令牌解析出的 {@link UserContext#getUuid()} 一致；
-     * 仅 hint、无令牌时保留遗留行为（与 minclouds {@code UserInfoResolver} 一致，依赖网关或内网约束）；
-     * {@link OplConstants#API_PLATFORM} 路径禁止 hint-only，须携带有效令牌或 Shiro 会话。
+     * 仅 hint、无令牌：默认拒绝；仅当 SysConfig 安全加固「允许仅 userUuid hint」开启时保留遗留行为；
+     * {@link OplConstants#API_PLATFORM} 路径始终禁止 hint-only，须携带有效令牌或 Shiro 会话。
      */
     public UserContext resolve(NativeWebRequest webRequest) {
         UserContext fromShiro = fromShiro();
@@ -94,6 +98,9 @@ public class UserContextService implements ContextHandler {
         }
         if (StringUtils.isNotBlank(userUuidHint)) {
             if (isOpenPlatformApiRequest(webRequest)) {
+                return null;
+            }
+            if (!sysConfigService.isAllowUserUuidHint()) {
                 return null;
             }
             return fromUserUuid(userUuidHint);

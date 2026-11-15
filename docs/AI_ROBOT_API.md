@@ -122,15 +122,21 @@ X-Robot-Token: rbt_xxxxxxxxxxxxxxxx
 |------|------|------|------|
 | `name` | string | 是 | 展示名称 |
 | `description` | string | 否 | 描述 |
-| `iconId` | string | **是** | OSS 直传 uuid（`bizType=im_group_info`，`accessLevel=PUBLIC`，用户令牌） |
-| `icon` | string | 否 | create **忽略**（不得绕过机审） |
-| `hash` | string | 否 | create **忽略** |
+| `iconId` | string | **业务仓必填** | OSS 直传 uuid（`bizType=im_group_info`，`PUBLIC`；需 `BotIconUrlHandler`） |
+| `icon` | string | 纯框架可选 | 无头像审核时可用的展示 URL 旧轨；**有审核时勿用空 iconId 代替**（Risk 要求 iconId） |
+| `hash` | string | 否 | create 可忽略 |
 | `tokenExpireDays` | int | 否 | 首个令牌有效天数；空则默认 **365** |
 | `access` | string | 否 | `private` / `public` / `subscribe` |
 
-**头像写路径**：`iconId` 必填 → 建号事务内 **同步入审**（强制 sync Detect）；BLOCK/失败 → 整单回滚、不建号；AUTO+PASS → 落库后响应可见头像；REVIEW → pending，响应头像可空。无 `iconId` →「请上传机器人头像」。
+**头像写路径**：
 
-**OSS 直传**：与业务头像相同——用户令牌上传，`bizType=im_group_info` + `PUBLIC` + 图片 MIME；**不要**用 `rbt_*` / `bizType=im`（那是发图通道）。客户端对接专文：im [`docs/IM_ROBOT_ICON_CLIENT.md`](../../im/docs/IM_ROBOT_ICON_CLIENT.md)。
+- **有 `BotIconAuditHandler`（im/account 等）**：与历史一致——`iconId` 必填 → 同步入审；BLOCK 整单回滚；AUTO+PASS 落库；REVIEW pending。
+- **无审核 Handler（纯 autumn）**：可仅传 `icon` URL 直接落库；若传 `iconId` 仍须 SPI 能解析。
+- 两者皆空 →「请上传机器人头像」。
+
+**OSS**：业务仓可选引入 `minclouds-file-starter`；其中 `BotIconUrlObjectStorageHandler` 实现 `BotIconUrlHandler` SPI。IM 头像审核与客户端约定见对应业务仓文档（本仓不内嵌 IM 专文）。
+
+> Autumn **不再**内嵌 file-starter；纯框架无 MinIO / 无账号 Feign 拉菜单噪声。
 
 **响应 `data`（`RobotCreateResult`）**
 

@@ -2,11 +2,13 @@ package cn.org.autumn.modules.usr.service;
 
 import cn.org.autumn.base.ModuleService;
 import cn.org.autumn.config.AccountHandler;
-import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.oauth.oauth2.support.OAuthTokenResponse;
 import cn.org.autumn.modules.oauth.oauth2.support.OAuthTokenResponseParser;
+import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.usr.dao.UserTokenDao;
 import cn.org.autumn.modules.usr.entity.UserTokenEntity;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
@@ -20,6 +22,11 @@ public class UserTokenService extends ModuleService<UserTokenDao, UserTokenEntit
 
     /** Align AppApiUserLoginService /login/uniform long-lived API token TTL. */
     public static final int API_EXPIRE = 3600 * 24 * 365;
+
+    /** 新写入的 token 列前缀：sha256 hex，明文仅创建时回显 */
+    public static final String TOKEN_HASH_PREFIX = "sha256:";
+
+    private static final String HASH_PEPPER = "autumn-user-api-token";
 
     @Override
     public String ico() {
@@ -36,9 +43,20 @@ public class UserTokenService extends ModuleService<UserTokenDao, UserTokenEntit
         return baseMapper.getUuid(uuid);
     }
 
+    /**
+     * 按明文或已存哈希查找；过渡期兼容历史明文行。
+     */
     public UserTokenEntity getToken(String token) {
         if (StringUtils.isBlank(token))
             return null;
+        if (token.startsWith(TOKEN_HASH_PREFIX)) {
+            return baseMapper.getToken(token);
+        }
+        UserTokenEntity byHash = baseMapper.getToken(hashToken(token));
+        if (byHash != null) {
+            return byHash;
+        }
+        // 遗留明文存储
         return baseMapper.getToken(token);
     }
 
@@ -53,13 +71,14 @@ public class UserTokenService extends ModuleService<UserTokenDao, UserTokenEntit
         if (StringUtils.isBlank(parsed.getAccessToken())) {
             return;
         }
-        UserTokenEntity userTokenEntity = queryByToken(parsed.getAccessToken());
+        String access = parsed.getAccessToken();
+        UserTokenEntity userTokenEntity = queryByToken(access);
         if (null == userTokenEntity) {
             userTokenEntity = new UserTokenEntity();
             if (ShiroUtils.isLogin()) {
                 userTokenEntity.setUserUuid(ShiroUtils.getUserUuid());
             }
-            userTokenEntity.setToken(parsed.getAccessToken());
+            userTokenEntity.setToken(hashToken(access));
         }
         if (StringUtils.isNotBlank(parsed.getRefreshToken())) {
             userTokenEntity.setRefreshToken(parsed.getRefreshToken());
@@ -74,32 +93,23 @@ public class UserTokenService extends ModuleService<UserTokenDao, UserTokenEntit
     }
 
     public UserTokenEntity createToken(String userUuid) {
-        //当前时间
         Date now = new Date();
-        //过期时间
         Date expireTime = new Date(now.getTime() + EXPIRE * 1000);
-        //生成token
-        String token = generateToken();
-        //保存或更新用户token
+        String plain = generateToken();
         UserTokenEntity tokenEntity = new UserTokenEntity();
         tokenEntity.setUserUuid(userUuid);
-        tokenEntity.setToken(token);
+        tokenEntity.setToken(hashToken(plain));
         tokenEntity.setUpdateTime(now);
         tokenEntity.setExpireTime(expireTime);
         this.saveOrUpdate(tokenEntity);
+        tokenEntity.setToken(plain);
         return tokenEntity;
     }
 
-    /**
-     * Issue or refresh a long-lived API token (same physical token as account /login/uniform).
-     */
     public UserTokenEntity createApiToken(String userUuid) {
         return createApiToken(userUuid, null);
     }
 
-    /**
-     * Issue or refresh a long-lived API token; bind {@code deviceUuid} to {@link UserTokenEntity#uuid} when present.
-     */
     public UserTokenEntity createApiToken(String userUuid, String deviceUuid) {
         if (StringUtils.isBlank(userUuid)) {
             return null;
@@ -132,10 +142,12 @@ public class UserTokenService extends ModuleService<UserTokenDao, UserTokenEntit
             entity.setUuid(deviceUuid);
         }
         Date now = new Date();
-        entity.setToken(generateToken());
+        String plain = generateToken();
+        entity.setToken(hashToken(plain));
         entity.setUpdateTime(now);
         entity.setExpireTime(new Date(now.getTime() + API_EXPIRE * 1000L));
         saveOrUpdate(entity);
+        entity.setToken(plain);
         return entity;
     }
 
@@ -154,6 +166,20 @@ public class UserTokenService extends ModuleService<UserTokenDao, UserTokenEntit
 
     public void deleteUuid(String user) {
         baseMapper.deleteUuid(user);
+    }
+
+    public static String hashToken(String plainToken) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] dig = md.digest((HASH_PEPPER + ":" + plainToken).getBytes(StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder(TOKEN_HASH_PREFIX);
+            for (byte b : dig) {
+                sb.append(String.format("%02x", b));
+            }
+            return sb.toString();
+        } catch (Exception e) {
+            throw new IllegalStateException("token hash failed", e);
+        }
     }
 
     private String generateToken() {

@@ -1,5 +1,6 @@
 package cn.org.autumn.config;
 
+import cn.org.autumn.model.SecuritySessionConfig;
 import cn.org.autumn.modules.spm.filter.SpmFilter;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.install.InstallMode;
@@ -8,6 +9,8 @@ import cn.org.autumn.modules.sys.shiro.ForceLogoutRememberMeManager;
 import cn.org.autumn.modules.sys.shiro.HostAwareSessionIdCookie;
 import cn.org.autumn.modules.sys.shiro.HostSessionCookieSupport;
 import cn.org.autumn.modules.sys.shiro.RedisShiroSessionDAO;
+import cn.org.autumn.modules.sys.shiro.RememberMeCipherKeySupport;
+import cn.org.autumn.node.ProfileStore;
 import cn.org.autumn.modules.sys.shiro.ShiroSessionTimeouts;
 import cn.org.autumn.modules.sys.shiro.UserRealm;
 import org.apache.commons.lang3.StringUtils;
@@ -29,8 +32,10 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.DependsOn;
 import org.springframework.core.env.Environment;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 
 import jakarta.servlet.Filter;
+import java.nio.file.Path;
 import java.util.*;
 
 @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
@@ -40,7 +45,8 @@ public class ShiroConfig {
 
     @Bean("sessionManager")
     public SessionManager sessionManager(@Autowired RedisShiroSessionDAO redisShiroSessionDAO,
-                                         Environment environment) {
+                                         Environment environment,
+                                         @Autowired(required = false) SysConfigService sysConfigService) {
         DefaultWebSessionManager sessionManager = new DefaultWebSessionManager();
         sessionManager.setSessionFactory(new ClientIpSessionFactory());
         // Session 空闲超时 1 天（与 Redis TTL / Cookie maxAge 对齐，见 ShiroSessionTimeouts）
@@ -52,6 +58,10 @@ public class ShiroConfig {
         HostAwareSessionIdCookie cookie = new HostAwareSessionIdCookie(HostSessionCookieSupport.DEFAULT_COOKIE_NAME);
         // Cookie 寿命取记住我上限；真正空闲过期仍由 session.timeout（1 天 / 7 天）决定
         cookie.setMaxAge(ShiroSessionTimeouts.REMEMBER_ME_COOKIE_MAX_AGE_SEC);
+        cookie.setHttpOnly(true);
+        SecuritySessionConfig sessionCfg = resolveSessionConfig(sysConfigService);
+        cookie.setSecure(sessionCfg.isSessionSecure());
+        applySameSite(cookie, sessionCfg.getSessionSameSite());
         sessionManager.setSessionIdCookie(cookie);
         // 安装模式禁止自定义 SessionDAO；非安装态始终挂 RedisShiroSessionDAO（无 Redis 时仅 cache+DB）
         // 避免 Bean 存在却未挂载时登录落库、登出不走 doDelete 留下可回源孤儿行
@@ -64,10 +74,25 @@ public class ShiroConfig {
     @Bean
     public RememberMeManager rememberMeManager(SimpleCookie rememberMeCookie,
                                                @Autowired(required = false) RedisTemplate redisTemplate,
+                                               @Autowired(required = false) StringRedisTemplate stringRedisTemplate,
+                                               @Autowired(required = false) ProfileStore profileStore,
                                                Environment environment,
-                                               SysConfigService sysConfigService) {
+                                               SysConfigService sysConfigService,
+                                               @Value("${autumn.shiro.remember-me.key-file:}") String rememberMeKeyFile,
+                                               @Value("${autumn.node.namespace:default}") String nodeNamespace) {
         ForceLogoutRememberMeManager manager = new ForceLogoutRememberMeManager();
-        manager.setCipherKey(Base64.getDecoder().decode("Z3VucwAAAAAAAAAAAAAAAA=="));
+        // 集群：SysConfig → Redis SETNX → 节点 home/security/remember-me.key（无 Env）
+        StringRedisTemplate cipherRedis = InstallMode.isActive(environment) ? null : stringRedisTemplate;
+        String ns = sysConfigService != null ? sysConfigService.getNameSpace() : nodeNamespace;
+        if (StringUtils.isBlank(ns)) {
+            ns = nodeNamespace;
+        }
+        Path nodeHome = profileStore != null ? profileStore.home() : null;
+        Path keyFile = RememberMeCipherKeySupport.resolveKeyFile(rememberMeKeyFile, nodeHome);
+        SecuritySessionConfig sessionCfg = resolveSessionConfig(sysConfigService);
+        String cipherConfigured = StringUtils.trimToEmpty(sessionCfg.getRememberMeCipherKey());
+        manager.setCipherKey(RememberMeCipherKeySupport.resolveCipherKey(
+                cipherConfigured, keyFile, cipherRedis, ns));
         manager.setCookie(rememberMeCookie);
         if (InstallMode.isActive(environment)) {
             manager.setRedisTemplate(null);
@@ -79,11 +104,41 @@ public class ShiroConfig {
     }
 
     @Bean
-    public SimpleCookie rememberMeCookie() {
+    public SimpleCookie rememberMeCookie(@Autowired(required = false) SysConfigService sysConfigService) {
+        SecuritySessionConfig sessionCfg = resolveSessionConfig(sysConfigService);
         SimpleCookie simpleCookie = new SimpleCookie("rememberMe");
         simpleCookie.setHttpOnly(true);
+        simpleCookie.setSecure(sessionCfg.isRememberMeSecure());
+        applySameSite(simpleCookie, sessionCfg.getRememberMeSameSite());
         simpleCookie.setMaxAge(7 * 24 * 60 * 60);//7天
         return simpleCookie;
+    }
+
+    /**
+     * 读 {@link SysConfigService#getSecuritySessionConfig()}：库有行用库；库空则种子（含 prod Secure / 历史 Env）。
+     * Cookie/RememberMe Bean 在 Init put 之前创建时依赖此回落，与入库后权威值一致。
+     */
+    static SecuritySessionConfig resolveSessionConfig(SysConfigService sysConfigService) {
+        if (sysConfigService == null) {
+            return new SecuritySessionConfig();
+        }
+        try {
+            return sysConfigService.getSecuritySessionConfig();
+        } catch (Exception e) {
+            return new SecuritySessionConfig();
+        }
+    }
+
+    /**
+     * Shiro {@link SimpleCookie.SameSiteOptions} 枚举名为 NONE/LAX/STRICT（全大写）。
+     * 配置写 Lax/lax 时归一化为 LAX，避免 {@code valueOf} 启动失败。
+     */
+    static void applySameSite(SimpleCookie cookie, String sameSite) {
+        if (cookie == null || StringUtils.isBlank(sameSite)) {
+            return;
+        }
+        String normalized = sameSite.trim().toUpperCase();
+        cookie.setSameSite(SimpleCookie.SameSiteOptions.valueOf(normalized));
     }
 
     @Bean("securityManager")
@@ -220,19 +275,19 @@ public class ShiroConfig {
         filterMap.put("/error", "anon");
         filterMap.put("/clear", "anon");
         filterMap.put("/reinit", "anon");
+        filterMap.put("/sys/ops/admin-bootstrap/**", "anon");
         filterMap.put("/sys/login", "anon");
         filterMap.put("/sys/register", "anon");
         filterMap.put("/sys/forgotpassword", "anon");
         filterMap.put("/sys/account/available", "anon");
         filterMap.put("/sys/using", "anon");
-        filterMap.put("/plugin/load", "anon");
         filterMap.put("/sys/autologin", "anon");
         filterMap.put("/favicon.ico", "anon");
         filterMap.put("/captcha.jpg", "anon");
         filterMap.put("/oauth2/**", "anon");
         filterMap.put("/rsa/api/v1/**", "anon");
         filterMap.put("/client/**", "anon");
-        filterMap.put("/actuator/**", "anon");
+        // /actuator/**、/plugin/load 不再 anon：需登录（spm）
         filterMap.put("/http/proxy/v1/**", "anon");
         filterMap.put("/install", "anon");
         filterMap.put("/install/**", "anon");

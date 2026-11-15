@@ -2,10 +2,13 @@ package cn.org.autumn.modules.sys.controller;
 
 import cn.org.autumn.modules.sys.service.SysShiroSessionService;
 import cn.org.autumn.modules.sys.service.SysUserRoleService;
+import cn.org.autumn.modules.sys.shiro.AdminBootstrapService;
 import cn.org.autumn.modules.sys.shiro.ShiroSessionService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
+import cn.org.autumn.modules.sys.support.CsrfTokenSupport;
 import cn.org.autumn.utils.R;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.shiro.session.Session;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,6 +33,57 @@ public class SysSessionController {
 
     @Autowired
     private SysUserRoleService sysUserRoleService;
+
+    @Autowired
+    private AdminBootstrapService adminBootstrapService;
+
+    /**
+     * 当前会话摘要（含引导口令提示）。
+     */
+    @GetMapping("/self")
+    public R self() {
+        String userUuid = currentUserUuid();
+        if (StringUtils.isBlank(userUuid)) {
+            return R.error(401, "未登录");
+        }
+        Session session = null;
+        try {
+            session = ShiroUtils.getSession();
+        } catch (Exception ignored) {
+        }
+        return R.ok()
+                .put("userUuid", userUuid)
+                .put("authenticated", ShiroUtils.isAuthenticated())
+                .put("passwordReminder", adminBootstrapService.buildPasswordReminder(session));
+    }
+
+    /**
+     * 稍后提醒：会话内 24h 降为弱提示。
+     */
+    @PostMapping("/self/password-reminder/snooze")
+    public R snoozePasswordReminder() {
+        if (StringUtils.isBlank(currentUserUuid())) {
+            return R.error(401, "未登录");
+        }
+        try {
+            adminBootstrapService.snooze(ShiroUtils.getSession());
+        } catch (Exception e) {
+            return R.error(500, "稍后提醒失败");
+        }
+        return R.ok().put("passwordReminder", adminBootstrapService.buildPasswordReminder(currentSession()));
+    }
+
+    /**
+     * 已知晓并保留当前口令：清除引导待办与恢复文件。
+     */
+    @PostMapping("/self/password-reminder/acknowledge")
+    public R acknowledgePasswordReminder() {
+        if (StringUtils.isBlank(currentUserUuid())) {
+            return R.error(401, "未登录");
+        }
+        adminBootstrapService.acknowledgeRetain();
+        return R.ok().put("passwordReminder", adminBootstrapService.buildPasswordReminder(currentSession()));
+    }
 
     /**
      * 活动会话列表（分页），支持按用户 UUID、用户名、会话 ID 筛选；每页默认 20 条
@@ -199,6 +253,17 @@ public class SysSessionController {
     }
 
     /**
+     * 下发 Cookie 会话 CSRF Token（头 {@code X-CSRF-Token}）。
+     */
+    @GetMapping("/self/csrf")
+    public R selfCsrf() {
+        if (StringUtils.isBlank(currentUserUuid())) {
+            return R.error(401, "未登录或会话已失效");
+        }
+        return R.ok().put("csrfToken", CsrfTokenSupport.peekOrIssue()).put("header", CsrfTokenSupport.HEADER);
+    }
+
+    /**
      * 会话保活检测：若命中「强制重登」并且当前仅 rememberMe 身份，则清理登录态并返回 401。
      */
     @GetMapping("/self/ping")
@@ -212,9 +277,15 @@ public class SysSessionController {
             ShiroUtils.logout();
             return R.error(401, "会话已失效，请重新登录").put("reason", "session_terminated");
         }
+        Session session = null;
+        try {
+            session = ShiroUtils.getSession();
+        } catch (Exception ignored) {
+        }
         return R.ok()
                 .put("authenticated", ShiroUtils.isAuthenticated())
-                .put("forceLogoutMarked", forceMarked);
+                .put("forceLogoutMarked", forceMarked)
+                .put("passwordReminder", adminBootstrapService.buildPasswordReminder(session));
     }
 
     private static String currentUserUuid() {
@@ -228,6 +299,14 @@ public class SysSessionController {
     private static Serializable currentSessionId() {
         try {
             return ShiroUtils.getSession() != null ? ShiroUtils.getSession().getId() : null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private static Session currentSession() {
+        try {
+            return ShiroUtils.getSession();
         } catch (Exception e) {
             return null;
         }

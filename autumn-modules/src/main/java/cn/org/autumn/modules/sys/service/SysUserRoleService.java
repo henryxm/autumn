@@ -19,6 +19,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -82,6 +83,7 @@ public class SysUserRoleService extends ServiceImpl<SysUserRoleDao, SysUserRoleE
         }
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public void init() {
         String[][] mapping = new String[][]{
                 {sysUserService.getAdmin(), SysRoleService.Role_System_Administrator},
@@ -124,6 +126,11 @@ public class SysUserRoleService extends ServiceImpl<SysUserRoleDao, SysUserRoleE
         return null != i && i > 0;
     }
 
+    /**
+     * 须带事务：内部 {@code saveBatch} 为自调用，依赖外层 TX，否则 MyBatis-Plus 会 WARN
+     * {@code SqlSession [...] Transaction not enabled}。
+     */
+    @Transactional(rollbackFor = Exception.class)
     public void saveOrUpdate(Long userId, List<Long> roleIdList) {
         //先删除用户与角色关系
         this.removeByMap(new MapUtils().put("user_id", userId));
@@ -148,9 +155,13 @@ public class SysUserRoleService extends ServiceImpl<SysUserRoleDao, SysUserRoleE
             sysUserRoleEntity.setUserUuid(sysUserEntity.getUuid());
             list.add(sysUserRoleEntity);
         }
-        this.saveBatch(list);
+        saveUserRoles(list);
     }
 
+    /**
+     * 须带事务：见 {@link #saveOrUpdate(Long, List)}；启动建 admin 角色时由此进入。
+     */
+    @Transactional(rollbackFor = Exception.class)
     public void saveOrUpdate(String userUuid, List<String> roleKeys) {
         //情况角色关系
         if (roleKeys == null || roleKeys.size() == 0) {
@@ -195,8 +206,19 @@ public class SysUserRoleService extends ServiceImpl<SysUserRoleDao, SysUserRoleE
             sysUserRoleEntity.setRoleKey(roleKey);
             list.add(sysUserRoleEntity);
         }
-        if (list.size() > 0)
-            this.saveBatch(list);
+        saveUserRoles(list);
+    }
+
+    /** 单条走 insert，多条走 batch（外层须已有事务）。 */
+    private void saveUserRoles(List<SysUserRoleEntity> list) {
+        if (list == null || list.isEmpty()) {
+            return;
+        }
+        if (list.size() == 1) {
+            save(list.get(0));
+            return;
+        }
+        saveBatch(list);
     }
 
     public List<String> getRoleKeys(String userUuid) {

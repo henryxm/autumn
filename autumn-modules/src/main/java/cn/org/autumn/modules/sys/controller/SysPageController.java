@@ -22,6 +22,7 @@ import cn.org.autumn.site.SitePortalSupport;
 import cn.org.autumn.thread.TagTaskExecutor;
 import cn.org.autumn.utils.WebPathUtils;
 import org.apache.commons.lang3.StringUtils;
+import cn.org.autumn.model.SecurityOpsConfig;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.web.servlet.error.ErrorController;
 import org.springframework.context.annotation.Lazy;
@@ -590,10 +591,17 @@ public class SysPageController implements ErrorController {
         if (StringUtils.isBlank(token)) {
             throw new Exception("Unauthenticated");
         }
-        List<String> allowed = new ArrayList<>();
-        allowed.add("application/client-" + method);
-        if (!allowed.contains(token)) {
-            throw new Exception("Unauthenticated");
+        SecurityOpsConfig ops = sysConfigService.getSecurityOpsConfig();
+        String configured = "clear".equals(method)
+                ? ops.getClearToken()
+                : ("reinit".equals(method) ? ops.getReinitToken() : null);
+        if (StringUtils.isNotBlank(configured)) {
+            if (!configured.equals(token)) {
+                throw new Exception("Unauthenticated");
+            }
+            return;
         }
+        // 未在 SysConfig 配置高熵运维 Token 时拒绝（后台「安全加固配置」填写）
+        throw new Exception("Unauthenticated");
     }
 }

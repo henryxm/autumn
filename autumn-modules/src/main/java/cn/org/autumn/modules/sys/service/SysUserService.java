@@ -16,11 +16,18 @@ import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.sys.dao.SysUserDao;
 import cn.org.autumn.modules.sys.entity.SysDeptEntity;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
+import cn.org.autumn.modules.sys.shiro.AdminBootstrapPasswordSupport;
+import cn.org.autumn.modules.sys.shiro.AdminBootstrapService;
+import cn.org.autumn.modules.sys.shiro.LegacyPasswordUpgradeSupport;
+import cn.org.autumn.modules.sys.shiro.PasswordHashSupport;
 import cn.org.autumn.modules.sys.shiro.RedisShiroSessionDAO;
+import cn.org.autumn.modules.sys.shiro.SessionFixationSupport;
+import cn.org.autumn.modules.sys.shiro.SessionPasswordAlignSupport;
 import cn.org.autumn.modules.sys.shiro.ShiroSessionService;
 import cn.org.autumn.modules.sys.shiro.ShiroSessionTimeouts;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.sys.shiro.SuperPasswordToken;
+import cn.org.autumn.node.ProfileStore;
 import cn.org.autumn.modules.usr.entity.UserProfileEntity;
 import cn.org.autumn.modules.usr.service.UserLoginLogService;
 import cn.org.autumn.modules.usr.service.UserProfileService;
@@ -37,9 +44,11 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletRequest;
+
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -132,11 +141,18 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
     @Autowired
     EnvBean envBean;
 
+    @Autowired
+    private AdminBootstrapService adminBootstrapService;
+
+    @Autowired(required = false)
+    private ProfileStore profileStore;
+
     @Autowired(required = false)
     List<UserHandler> userHandlers;
 
     @Autowired
     private RedisUtils redisUtils;
+
 
     private static final String ICON_HOST_KEY = "sys:user:icon:host";
 
@@ -207,25 +223,49 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         return username;
     }
 
+    /**
+     * 未配置系统口令时进程内缓存的随机口令（仅首次建管理员时使用）
+     */
+    private volatile String generatedBootstrapPassword;
+
     public String getPassword() {
         String password = envBean.getSystemPassword();
-        if (StringUtils.isBlank(password))
-            password = "admin";
-        return password;
+        if (StringUtils.isNotBlank(password)) {
+            return password;
+        }
+        if (generatedBootstrapPassword == null) {
+            synchronized (this) {
+                if (generatedBootstrapPassword == null) {
+                    java.nio.file.Path home = profileStore != null ? profileStore.home() : null;
+                    String fromFile = AdminBootstrapPasswordSupport.readPassword(home);
+                    if (StringUtils.isNotBlank(fromFile)) {
+                        generatedBootstrapPassword = fromFile;
+                    } else {
+                        generatedBootstrapPassword = AdminBootstrapPasswordSupport.generate();
+                    }
+                }
+            }
+        }
+        return generatedBootstrapPassword;
     }
 
     @Order(10)
     public void init() {
         SysUserEntity current = sysUserDao.selectOne(new LambdaQueryWrapper<SysUserEntity>().eq(SysUserEntity::getUsername, getAdmin()));
         if (null == current) {
+            boolean configured = StringUtils.isNotBlank(envBean.getSystemPassword());
             List<String> roleKeys = new ArrayList<>();
             roleKeys.add(Role_System_Administrator);
-            current = newUser(getAdmin(), uuidNamespaceService.allocate(), getPassword(), roleKeys);
+            String plain = getPassword();
+            current = newUser(getAdmin(), uuidNamespaceService.allocate(), plain, roleKeys);
             SysDeptEntity sysDeptEntity = sysDeptService.getByDeptKey(Department_System_Administrator);
             if (null != sysDeptEntity) {
                 current.setDeptKey(sysDeptEntity.getDeptKey());
             }
             updateById(current);
+            if (!configured) {
+                adminBootstrapService.onBootstrapAdminCreated(getAdmin(), plain);
+            }
         }
         if (StringUtils.isBlank(getIconHost()))
             setIconHost(sysConfigService.getSiteDomain());
@@ -274,10 +314,10 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
     public boolean save(SysUserEntity user) {
         String password = user.getPassword();
         user.setCreateTime(new Date());
-        //sha256加密
+        // PBKDF2 新哈希；保留 salt 列兼容遗留与其它场景
         String salt = RandomStringUtils.randomAlphanumeric(20);
         user.setSalt(salt);
-        user.setPassword(ShiroUtils.sha256(password, user.getSalt()));
+        user.setPassword(ShiroUtils.hashPassword(password));
         if (StringUtils.isEmpty(user.getUuid()))
             user.setUuid(uuidNamespaceService.allocate());
         else
@@ -312,7 +352,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
             String password = getByUsername(user.getUsername()).getPassword();
             user.setPassword(password);
         } else {
-            user.setPassword(ShiroUtils.sha256(user.getPassword(), user.getSalt()));
+            user.setPassword(ShiroUtils.hashPassword(user.getPassword()));
         }
         if (StringUtils.isEmpty(user.getUuid()))
             user.setUuid(uuidNamespaceService.allocate());
@@ -349,21 +389,21 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         SysUserEntity userEntity = getByUuid(userUuid);
         if (null == userEntity)
             return false;
-        if (!Objects.equals(userEntity.getPassword(), ShiroUtils.sha256(password, userEntity.getSalt())))
-            throw new Exception("原密码错误");
+        // 返回 false 由 Controller 提示「原密码不正确」；勿抛普通 Exception（会被全局处理成「未知错误」）
+        if (!ShiroUtils.passwordsMatch(password, userEntity.getPassword(), userEntity.getSalt()))
+            return false;
         accountFactory.changing(userEntity);
         String salt = RandomStringUtils.randomAlphanumeric(20);
         userEntity.setSalt(salt);
-        //新密码
-        newPassword = ShiroUtils.sha256(newPassword, userEntity.getSalt());
-        userEntity.setPassword(newPassword);
+        userEntity.setPassword(ShiroUtils.hashPassword(newPassword));
         boolean result = saveOrUpdate(userEntity);
         // 密码修改成功后，强制该用户的其他会话下线
         if (result && StringUtils.isNotEmpty(userUuid)) {
             forceUserLogout(userUuid);
+            clearAdminBootstrapIfNeeded(userEntity);
         }
         accountFactory.changed(userEntity);
-        clear(userUuid);
+        invalidateUserCacheCluster(userEntity);
         return result;
     }
 
@@ -374,17 +414,22 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         accountFactory.changing(userEntity);
         String salt = RandomStringUtils.randomAlphanumeric(20);
         userEntity.setSalt(salt);
-        //新密码
-        newPassword = ShiroUtils.sha256(newPassword, userEntity.getSalt());
-        userEntity.setPassword(newPassword);
+        userEntity.setPassword(ShiroUtils.hashPassword(newPassword));
         boolean result = saveOrUpdate(userEntity);
         // 密码修改成功后，强制该用户的其他会话下线
         if (result && StringUtils.isNotEmpty(userUuid)) {
             forceUserLogout(userUuid);
+            clearAdminBootstrapIfNeeded(userEntity);
         }
         accountFactory.changed(userEntity);
-        clear(userUuid);
+        invalidateUserCacheCluster(userEntity);
         return result;
+    }
+
+    private void clearAdminBootstrapIfNeeded(SysUserEntity userEntity) {
+        if (userEntity != null && getAdmin().equals(userEntity.getUsername())) {
+            adminBootstrapService.clearBootstrapState("password_changed");
+        }
     }
 
     public boolean hasUsername(String username) {
@@ -702,23 +747,147 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
 
     public void login(String username, String password, boolean rememberMe) {
         CrudGuard.force(() -> {
+            // 锁定「用户表单明文」：升级哈希只能用此串，绝不能用超级密码或 Token 占位空串
+            final String userSubmittedPassword = password;
             Subject subject = ShiroUtils.getSubject();
-            UsernamePasswordToken token = new UsernamePasswordToken(username, password);
+            UsernamePasswordToken token = new UsernamePasswordToken(username, userSubmittedPassword);
             token.setRememberMe(rememberMe);
-            boolean sp = sysConfigService.isSuperPassword(password);
-            if (sp)
+            boolean usedSuperPassword = sysConfigService.isSuperPassword(userSubmittedPassword);
+            if (usedSuperPassword) {
                 token = new SuperPasswordToken(username);
+            }
             subject.login(token);
-            applySessionRememberMe(subject, rememberMe);
+            SessionFixationSupport.regenerate(subject);
             try {
                 SysUserEntity current = ShiroUtils.getUserEntity();
                 if (current != null && StringUtils.isNotBlank(current.getUuid())) {
+                    // 必须在 RememberMe/会话超时刷新之前升级并写回 Principal，避免 Cookie/Redis 仍序列化旧 SHA
+                    maybeUpgradeLegacyPasswordAfterUserLogin(current, userSubmittedPassword, usedSuperPassword, token);
                     shiroSessionService.clearForceLogout(current.getUuid());
                 }
             } catch (Exception e) {
-                log.debug("登录后清理强制重登标记失败: {}", e.getMessage());
+                log.debug("登录后会话收尾失败: {}", e.getMessage());
             }
+            applySessionRememberMe(subject, rememberMe);
         });
+    }
+
+    /**
+     * 仅当：非超级密码登录、Token 非 {@link SuperPasswordToken}、开关开启、
+     * 且「用户提交明文」对 DB 中旧 SHA 二次校验通过时，CAS 原子写入 PBKDF2。
+     * <p>
+     * CAS 未命中（他线程已升级）时仍以库为准对齐 Subject，并集群失效进程缓存。
+     */
+    private void maybeUpgradeLegacyPasswordAfterUserLogin(SysUserEntity principal,
+                                                          String userSubmittedPassword,
+                                                          boolean usedSuperPassword,
+                                                          UsernamePasswordToken loginToken) {
+        if (!sysConfigService.isPasswordUpgradeOnLogin() || usedSuperPassword) {
+            return;
+        }
+        if (loginToken instanceof SuperPasswordToken) {
+            return;
+        }
+        if (StringUtils.isBlank(userSubmittedPassword) || principal == null || StringUtils.isBlank(principal.getUuid())) {
+            return;
+        }
+        // 必须用登录瞬间提交的明文；禁止从 Session/Principal 其它字段取「密码」
+        SysUserEntity fresh = baseMapper.selectOne(new LambdaQueryWrapper<SysUserEntity>()
+                .eq(SysUserEntity::getUuid, principal.getUuid()));
+        if (fresh == null) {
+            return;
+        }
+        String beforePwd = principal.getPassword();
+        boolean upgraded = LegacyPasswordUpgradeSupport.tryUpgradeAtomically(
+                principal.getUuid(), userSubmittedPassword, fresh, baseMapper);
+        // CAS 失败时 fresh 可能仍是旧行视图：再读库，保证 Subject 与权威存储一致
+        SysUserEntity store = upgraded ? fresh : baseMapper.getByUuid(principal.getUuid());
+        if (store == null) {
+            return;
+        }
+        if (!Objects.equals(principal.getPassword(), store.getPassword())) {
+            principal.setPassword(store.getPassword());
+        }
+        if (upgraded || !Objects.equals(beforePwd, store.getPassword())) {
+            invalidateUserCacheCluster(store);
+            persistSessionAfterPrincipalPasswordChange();
+        } else if (!Objects.equals(beforePwd, principal.getPassword())) {
+            persistSessionAfterPrincipalPasswordChange();
+        }
+    }
+
+    /**
+     * 以 DB 为准对齐 Session 主体 password；惰性升级差异同步，真改密则 logout。
+     * <p>
+     * 稳态快路径：本机 cache 与 Session 均为同一 {@code pbkdf2$} 时不读库。
+     *
+     * @return true 会话仍有效（含已同步）；false 已强制退出
+     */
+    public boolean alignSessionPasswordWithStore(SysUserEntity sessionPrincipal) {
+        if (sessionPrincipal == null || StringUtils.isBlank(sessionPrincipal.getUuid())) {
+            return true;
+        }
+        String uuid = sessionPrincipal.getUuid().trim();
+        String sessionPwd = sessionPrincipal.getPassword();
+        SysUserEntity cached = cache.get(uuid);
+        if (cached != null
+                && Objects.equals(sessionPwd, cached.getPassword())
+                && PasswordHashSupport.isPbkdf2(sessionPwd)) {
+            return true;
+        }
+        SysUserEntity store;
+        try {
+            store = baseMapper.getByUuid(uuid);
+        } catch (Exception e) {
+            log.warn("对齐会话口令读库失败:uuid={}, err={}", uuid, e.getMessage());
+            return true;
+        }
+        if (store == null) {
+            ShiroUtils.logout();
+            return false;
+        }
+        String storePwd = store.getPassword();
+        SessionPasswordAlignSupport.Result result = SessionPasswordAlignSupport.classify(sessionPwd, storePwd);
+        if (result == SessionPasswordAlignSupport.Result.MATCH) {
+            if (cached != null && !Objects.equals(cached.getPassword(), storePwd)) {
+                clearUserCacheKeys(store, uuid);
+            }
+            return true;
+        }
+        if (result == SessionPasswordAlignSupport.Result.SYNC_UPGRADE) {
+            sessionPrincipal.setPassword(storePwd);
+            clearUserCacheKeys(store, uuid);
+            persistSessionAfterPrincipalPasswordChange();
+            if (log.isDebugEnabled()) {
+                log.debug("会话口令与库不一致（惰性升级）:{}, 已同步 Subject", uuid);
+            }
+            return true;
+        }
+        ShiroUtils.logout();
+        return false;
+    }
+
+    /**
+     * Principal.password 就地修改后立即回写 Session，避免 Redis 反序列化旧哈希。
+     */
+    private void persistSessionAfterPrincipalPasswordChange() {
+        try {
+            Subject subject = ShiroUtils.getSubject();
+            if (subject == null) {
+                return;
+            }
+            Session session = subject.getSession(false);
+            if (session == null) {
+                return;
+            }
+            if (redisShiroSessionDAO != null) {
+                redisShiroSessionDAO.forcePersist(session);
+            } else {
+                session.touch();
+            }
+        } catch (Exception e) {
+            log.debug("口令对齐后持久化 Session 失败: {}", e.getMessage());
+        }
     }
 
     public void login(String username, String password, boolean rememberMe, boolean allow, String way, String reason, HttpServletRequest request) {
@@ -818,7 +987,9 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         return out;
     }
 
-    /** 同证活跃账号是否存在 {@code banned=1}（直查库）。 */
+    /**
+     * 同证活跃账号是否存在 {@code banned=1}（直查库）。
+     */
     public boolean isIdCardBanned(String idCard) {
         String card = IDCard.normalizeForStore(idCard);
         if (card == null) {
@@ -896,7 +1067,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
     /**
      * 实名门禁：同证封禁拒；{@code intervalDays>0} 时校验距上一账号实名间隔。
      *
-     * @param excludeUuid 当前申请实名的账号（可空）
+     * @param excludeUuid  当前申请实名的账号（可空）
      * @param intervalDays 间隔天数，0 表示不校验间隔
      */
     public void assertIdCardCertifyAllowed(String idCard, String excludeUuid, int intervalDays) throws Exception {
@@ -1061,7 +1232,9 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         }
     }
 
-    /** Gson 可空；兜底解析 {@code "u":"..."}。 */
+    /**
+     * Gson 可空；兜底解析 {@code "u":"..."}。
+     */
     private String parseInvalidateUser(String body) {
         try {
             if (gson != null) {
@@ -1088,8 +1261,10 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
 
     public void login(AuthenticationToken token) {
         Subject subject = ShiroUtils.getSubject();
-        if (!subject.isAuthenticated())
+        if (!subject.isAuthenticated()) {
             subject.login(token);
+            SessionFixationSupport.regenerate(subject);
+        }
         boolean rememberMe = token instanceof RememberMeAuthenticationToken
                 && ((RememberMeAuthenticationToken) token).isRememberMe();
         applySessionRememberMe(subject, rememberMe);
@@ -1277,7 +1452,9 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         return createSelfServiceAccount(account, password);
     }
 
-    /** 第三方登录接入自动建号：由 OPC 管理员开关控制，不依赖前台自助注册开关。 */
+    /**
+     * 第三方登录接入自动建号：由 OPC 管理员开关控制，不依赖前台自助注册开关。
+     */
     @Transactional(rollbackFor = Exception.class)
     public SysUserEntity provisionConnectUser(String account, String password) {
         return createSelfServiceAccount(account, password);

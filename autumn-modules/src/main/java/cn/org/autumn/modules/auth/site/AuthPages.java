@@ -12,10 +12,10 @@ public abstract class AuthPages implements SiteFactory.Site, TemplateFactory.Tem
     public final static String pack = "auth";
 
     @PageAware(login = true)
-    public String scopedef = "modules/auth/scopedef";
+    public String scopedefinition = "modules/auth/scopedefinition";
 
-    public String getScopeDefKey() {
-        return getKey("scopedef");
+    public String getScopeDefinitionKey() {
+        return getKey("scopedefinition");
     }
 
     @Override
