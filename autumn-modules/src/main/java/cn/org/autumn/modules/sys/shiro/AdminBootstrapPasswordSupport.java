@@ -63,10 +63,11 @@ public final class AdminBootstrapPasswordSupport {
             String body = "username=" + StringUtils.defaultString(username) + "\n"
                     + "password=" + plainPassword.trim() + "\n"
                     + "createdAt=" + Instant.now() + "\n"
-                    + "# 首次登录后请修改口令；改密或「已知晓并保留」后本文件将删除\n";
+                    + "# Change the password after first login; this file is removed after password change or acknowledge-retain\n";
             Files.writeString(file, body, StandardCharsets.UTF_8,
                     StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE);
             tryRestrictPermissions(file);
+            // Keep info: one-shot plaintext for operators when random bootstrap password is created
             log.info("Admin bootstrap password generated. Save it now. file={} username={} password={} Change it after login.",
                     file, username, plainPassword.trim());
         } catch (Exception e) {
@@ -107,8 +108,8 @@ public final class AdminBootstrapPasswordSupport {
         try {
             if (Files.isRegularFile(file)) {
                 Files.delete(file);
-                if (log.isInfoEnabled()) {
-                    log.info("Deleted admin bootstrap credentials file path={}", file);
+                if (log.isDebugEnabled()) {
+                    log.debug("Deleted admin bootstrap credentials file path={}", file);
                 }
             }
         } catch (Exception e) {

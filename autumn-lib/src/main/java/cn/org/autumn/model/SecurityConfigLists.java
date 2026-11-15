@@ -35,7 +35,7 @@ public final class SecurityConfigLists {
             return n;
         }
         if (fixes != null) {
-            fixes.add(label + " 无效已重置为 " + fallback + ": " + raw);
+            fixes.add(label + " invalid, reset to " + fallback + ": " + raw);
         }
         return fallback;
     }

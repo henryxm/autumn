@@ -83,7 +83,7 @@ public class AuthorizationInterceptor implements HandlerInterceptor, Interceptor
         } catch (AException e) {
             throw e;
         } catch (Exception e) {
-            log.error("权限验证前:{}", e.getMessage());
+            log.error("Authorization preHandle failed: {}", e.getMessage());
             throw new AException("权限验证失败");
         }
     }
@@ -116,7 +116,7 @@ public class AuthorizationInterceptor implements HandlerInterceptor, Interceptor
         String user = current.getUuid();
         if (!sysUserService.alignSessionPasswordWithStore(current)) {
             if (!exceptions.contains(user)) {
-                log.debug("无效登录:{}, IP:{}, 处理:退出登录", user, IPUtils.getIp(request));
+                log.debug("Invalid session password align; logout uuid={} ip={}", user, IPUtils.getIp(request));
                 exceptions.add(user);
             }
         }
@@ -139,7 +139,7 @@ public class AuthorizationInterceptor implements HandlerInterceptor, Interceptor
             SysUserEntity entity = sysUserService.getCache(user);
             if (null == entity) {
                 if (!exceptions.contains(user)) {
-                    log.info("无效用户:{}, IP:{}, 处理:退出登录", user, IPUtils.getIp(request));
+                    log.debug("Invalid user cache miss; logout uuid={} ip={}", user, IPUtils.getIp(request));
                 }
                 ShiroUtils.logout();
                 exceptions.add(user);
@@ -147,7 +147,7 @@ public class AuthorizationInterceptor implements HandlerInterceptor, Interceptor
             }
             if (!entity.check()) {
                 if (!exceptions.contains(user)) {
-                    log.info("用户异常:{}, IP:{}, 状态:{}, 处理:退出登录", user, IPUtils.getIp(request), entity.getStatus());
+                    log.debug("User status invalid; logout uuid={} ip={} status={}", user, IPUtils.getIp(request), entity.getStatus());
                 }
                 ShiroUtils.logout();
                 exceptions.add(user);
@@ -164,7 +164,7 @@ public class AuthorizationInterceptor implements HandlerInterceptor, Interceptor
             ModelMap model = view.getModelMap();
             model.put("user", display);
         } catch (Exception e) {
-            log.error("权限验证后:{}", e.getMessage());
+            log.error("Authorization postHandle failed: {}", e.getMessage());
         }
     }
 

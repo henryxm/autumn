@@ -80,20 +80,20 @@ public class BaseHttpProxyService {
                 }
             } catch (IOException e) {
                 if (log.isDebugEnabled())
-                    log.debug("读取失败:{}", e.getMessage(), e);
+                    log.debug("Failed to read request body: {}", e.getMessage(), e);
                 else
-                    log.error("读取失败:{}", e.getMessage());
+                    log.error("Failed to read request body: {}", e.getMessage());
                 return createErrorResponse(response, "读取失败", "body_read_error", 400);
             }
         }
         if (log.isDebugEnabled()) {
-            log.debug("===== 代理请求开始 =====");
-            log.debug("方法:{}", request.getMethod());
-            log.debug("路径:{}", proxyPath);
-            log.debug("目标URL:{}", determineTargetUrl(base, target, request, proxyPath));
+            log.debug("===== proxy request start =====");
+            log.debug("method={}", request.getMethod());
+            log.debug("path={}", proxyPath);
+            log.debug("targetUrl={}", determineTargetUrl(base, target, request, proxyPath));
             log.debug("Content-Type: {}", request.getContentType());
             log.debug("Content-Length:{}, hasBody:{}", contentLength, hasBody);
-            log.debug("===== 请求头 =====");
+            log.debug("===== request headers =====");
             Enumeration<String> headerNames = request.getHeaderNames();
             while (headerNames.hasMoreElements()) {
                 String headerName = headerNames.nextElement();
@@ -113,18 +113,18 @@ public class BaseHttpProxyService {
             }
             String denyReason = assertTargetAllowed(finalTargetUrl);
             if (denyReason != null) {
-                log.warn("代理目标被拒绝: reason={}, url={}", denyReason, finalTargetUrl);
+                log.warn("Proxy target rejected: reason={} url={}", denyReason, finalTargetUrl);
                 return createErrorResponse(response, "目标不允许", denyReason, 403);
             }
             if (log.isDebugEnabled()) {
-                log.debug("最终目标 URL: {}", finalTargetUrl);
+                log.debug("Final proxy target URL: {}", finalTargetUrl);
             }
             // 不再在“请求阶段”区分流式/非流式/二进制，统一按透明反向代理处理：
             // - 请求体：使用 bodyStream 直接流式写入上游，同时可保存副本到 user.home/proxy
             // - 响应体：直接从上游 InputStream 拷贝到下游 HttpServletResponse OutputStream，同时可保存副本
             handle(finalTargetUrl, request, bodyStream, contentLength, response, sessionId);
             if (log.isDebugEnabled()) {
-                log.debug("===== 代理请求完成 =====");
+                log.debug("===== proxy request done =====");
             }
             // 响应已直接写入 HttpServletResponse，Controller 层返回 null 即可
             return null;
@@ -132,15 +132,15 @@ public class BaseHttpProxyService {
             if (isClientDisconnect(e)) {
                 String hint = ExceptionUtils.nextBenignExceptionLogHint("proxy-client-disconnect", request);
                 if (hint != null) {
-                    log.info("代理流式响应时客户端连接中断，按正常结束处理{}。方法:{}, 路径:{}, 目标:{}",
+                    log.debug("Proxy client disconnect treated as normal end{}. method={} path={} target={}",
                             hint, request.getMethod(), request.getRequestURI(), determineTargetUrl(base, target, request, proxyPath));
                 }
                 return null;
             }
             if (log.isDebugEnabled())
-                log.debug("代理失败:{}", e.getMessage(), e);
+                log.debug("Proxy failed: {}", e.getMessage(), e);
             else
-                log.error("代理失败:{}", e.getMessage());
+                log.error("Proxy failed: {}", e.getMessage());
             if (!response.isCommitted()) {
                 return createErrorResponse(response, "请求失败：" + e.getMessage(), "error", 500);
             }
@@ -209,7 +209,7 @@ public class BaseHttpProxyService {
                 opts.put("include_usage", true);
                 root.put("stream_options", opts);
                 if (log.isDebugEnabled()) {
-                    log.debug("已注入 stream_options.include_usage=true（原请求无 stream_options）");
+                    log.debug("Injected stream_options.include_usage=true (request had no stream_options)");
                 }
                 return JSON.toJSONString(root).getBytes(StandardCharsets.UTF_8);
             }
@@ -218,7 +218,7 @@ public class BaseHttpProxyService {
                 if (!opts.containsKey("include_usage")) {
                     opts.put("include_usage", true);
                     if (log.isDebugEnabled()) {
-                        log.debug("已注入 stream_options.include_usage=true（原 stream_options 未包含 include_usage）");
+                        log.debug("Injected stream_options.include_usage=true (stream_options lacked include_usage)");
                     }
                     return JSON.toJSONString(root).getBytes(StandardCharsets.UTF_8);
                 }
@@ -226,7 +226,7 @@ public class BaseHttpProxyService {
             return body;
         } catch (Exception e) {
             if (log.isDebugEnabled()) {
-                log.debug("跳过 stream_options 注入（非 JSON 或解析失败）: {}", e.getMessage());
+                log.debug("Skip stream_options inject (non-JSON or parse failed): {}", e.getMessage());
             }
             return body;
         }
@@ -274,17 +274,17 @@ public class BaseHttpProxyService {
      */
     protected void handle(String target, HttpServletRequest request, InputStream bodyStream, int length, HttpServletResponse response, String sessionId) throws Exception {
         if (log.isDebugEnabled()) {
-            log.debug("目标URL: {}", target);
+            log.debug("targetUrl={}", target);
         }
         HttpURLConnection connection = null;
         try {
             connection = connection(target, request, bodyStream, length, sessionId);
             if (log.isDebugEnabled()) {
-                log.debug("上游连接已建立");
+                log.debug("Upstream connection established");
             }
             int statusCode = connection.getResponseCode();
             if (log.isDebugEnabled()) {
-                log.debug("上游响应状态码：{}", statusCode);
+                log.debug("Upstream status code={}", statusCode);
             }
             // 设置下游状态码
             response.setStatus(statusCode);
@@ -307,7 +307,7 @@ public class BaseHttpProxyService {
                         } catch (IOException e) {
                             if (isClientDisconnect(e)) {
                                 if (log.isDebugEnabled()) {
-                                    log.debug("透传响应时客户端已断开，已发送约 {} 字节", total);
+                                    log.debug("Client disconnected while piping response; bytesSent≈{}", total);
                                 }
                                 clientClosed = true;
                                 break;
@@ -319,7 +319,7 @@ public class BaseHttpProxyService {
                                 copy.write(buffer, 0, n);
                                 copy.flush();
                             } catch (IOException e) {
-                                log.warn("保存响应副本失败，sessionId: {}", sessionId, e);
+                                log.warn("Failed to save response copy sessionId={}", sessionId, e);
                                 closeQuietly(copy);
                                 copy = null;
                             }
@@ -327,13 +327,13 @@ public class BaseHttpProxyService {
                         total += n;
                     }
                     if (!clientClosed && log.isDebugEnabled()) {
-                        log.debug("已透传响应体：{} 字节", total);
+                        log.debug("Piped response body bytes={}", total);
                     }
                 } finally {
                     closeQuietly(copy);
                 }
             } else if (log.isDebugEnabled()) {
-                log.debug("上游响应体为空");
+                log.debug("Upstream response body empty");
             }
         } finally {
             if (connection != null) {
@@ -349,7 +349,7 @@ public class BaseHttpProxyService {
                 in.close();
             } catch (IOException e) {
                 if (log.isDebugEnabled())
-                    log.error("关闭输入:{}", e.getMessage(), e);
+                    log.error("Failed to close input: {}", e.getMessage(), e);
             }
         }
     }
@@ -360,7 +360,7 @@ public class BaseHttpProxyService {
                 out.close();
             } catch (IOException e) {
                 if (log.isDebugEnabled())
-                    log.error("关闭输出:{}", e.getMessage(), e);
+                    log.error("Failed to close output: {}", e.getMessage(), e);
             }
         }
     }
@@ -398,7 +398,7 @@ public class BaseHttpProxyService {
             return Files.newOutputStream(filePath);
         } catch (IOException e) {
             if (log.isDebugEnabled())
-                log.debug("无法创建代理副本文件: {}", filePath, e);
+                log.debug("Cannot create proxy copy file: {}", filePath, e);
             return null;
         }
     }
@@ -439,7 +439,7 @@ public class BaseHttpProxyService {
                             copy.write(buf, 0, n);
                             copy.flush();
                         } catch (IOException e) {
-                            log.warn("保存请求副本失败，sessionId: {}", sessionId, e);
+                            log.warn("Failed to save request copy sessionId={}", sessionId, e);
                             closeQuietly(copy);
                             copy = null;
                         }
@@ -447,7 +447,7 @@ public class BaseHttpProxyService {
                 }
                 out.flush();
                 if (log.isDebugEnabled()) {
-                    log.debug("请求长度:{}, 实际长度:{}", length, total);
+                    log.debug("declaredLength={} actualLength={}", length, total);
                 }
             } finally {
                 closeQuietly(copy);
@@ -477,7 +477,7 @@ public class BaseHttpProxyService {
             // 跳过绝对不能转发的头
             if (shouldSkipHeader(headerName)) {
                 if (log.isDebugEnabled())
-                    log.debug("跳过请求头：{}", headerName);
+                    log.debug("Skip request header: {}", headerName);
                 continue;
             }
             // 特殊处理 Referer - 修改为目标服务器域名
@@ -487,7 +487,7 @@ public class BaseHttpProxyService {
                 String modifiedReferer = modifyReferer(referer, targetHost);
                 connection.setRequestProperty(headerName, modifiedReferer);
                 if (log.isDebugEnabled())
-                    log.debug("修改 Referer: {} -> {}", referer, modifiedReferer);
+                    log.debug("Rewrite Referer: {} -> {}", referer, modifiedReferer);
                 continue;
             }
             // 跳过代理特定的头，由我们重新设置
@@ -508,7 +508,7 @@ public class BaseHttpProxyService {
         connection.setRequestProperty("X-Real-IP", clientIp);
         connection.setRequestProperty("X-Forwarded-Proto", getProtocol(request));
         if (log.isDebugEnabled())
-            log.debug("添加代理头 - X-Forwarded-For: {}, X-Real-IP: {}, X-Forwarded-Proto: {}", clientIp, clientIp, getProtocol(request));
+            log.debug("Add proxy headers X-Forwarded-For={} X-Real-IP={} X-Forwarded-Proto={}", clientIp, clientIp, getProtocol(request));
     }
 
     /**
@@ -569,7 +569,7 @@ public class BaseHttpProxyService {
             }
             return newReferer.toString();
         } catch (Exception e) {
-            log.warn("修改 Referer 失败，使用原始值：{}", originalReferer, e);
+            log.warn("Failed to rewrite Referer, using original: {}", originalReferer, e);
             return originalReferer;
         }
     }

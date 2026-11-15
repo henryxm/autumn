@@ -41,7 +41,7 @@ public class SessionFiter implements Filter {
                 }
             } catch (Exception e) {
                 if (log.isDebugEnabled()) {
-                    log.debug("CORS 读取站点基址/白名单失败: {}", e.getMessage());
+                    log.debug("CORS: failed to read site base / origin allowlist: {}", e.getMessage());
                 }
             }
             if (StringUtils.isNotBlank(originHeader)

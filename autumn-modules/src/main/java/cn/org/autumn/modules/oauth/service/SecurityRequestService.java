@@ -227,7 +227,7 @@ public class SecurityRequestService extends ModuleService<SecurityRequestDao, Se
                         REDIS_NONCE_PREFIX + auth + ":" + nonce, "1", NONCE_TTL_MILLIS, TimeUnit.MILLISECONDS);
                 return Boolean.TRUE.equals(ok);
             } catch (Exception e) {
-                log.debug("nonce Redis 不可用，回退本地: {}", e.getMessage());
+                log.debug("Nonce Redis unavailable, falling back to local: {}", e.getMessage());
             }
         }
         if (NONCE_REPLAY_GUARD.size() > NONCE_GC_THRESHOLD) {

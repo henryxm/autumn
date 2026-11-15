@@ -766,7 +766,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
                     shiroSessionService.clearForceLogout(current.getUuid());
                 }
             } catch (Exception e) {
-                log.debug("登录后会话收尾失败: {}", e.getMessage());
+                log.debug("Post-login session finalize failed: {}", e.getMessage());
             }
             applySessionRememberMe(subject, rememberMe);
         });
@@ -839,7 +839,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         try {
             store = baseMapper.getByUuid(uuid);
         } catch (Exception e) {
-            log.warn("对齐会话口令读库失败:uuid={}, err={}", uuid, e.getMessage());
+            log.warn("Session password align: DB read failed uuid={} err={}", uuid, e.getMessage());
             return true;
         }
         if (store == null) {
@@ -859,7 +859,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
             clearUserCacheKeys(store, uuid);
             persistSessionAfterPrincipalPasswordChange();
             if (log.isDebugEnabled()) {
-                log.debug("会话口令与库不一致（惰性升级）:{}, 已同步 Subject", uuid);
+                log.debug("Session password out of sync with store (lazy upgrade); Subject synced uuid={}", uuid);
             }
             return true;
         }
@@ -886,7 +886,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
                 session.touch();
             }
         } catch (Exception e) {
-            log.debug("口令对齐后持久化 Session 失败: {}", e.getMessage());
+            log.debug("Failed to persist Session after password align: {}", e.getMessage());
         }
     }
 
@@ -1285,7 +1285,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
                 ShiroSessionTimeouts.applyRememberMe(session, rememberMe);
             }
         } catch (Exception e) {
-            log.debug("登录后应用记住我超时失败: {}", e.getMessage());
+            log.debug("Failed to apply RememberMe timeout after login: {}", e.getMessage());
         }
     }
 
@@ -1541,10 +1541,10 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
             if (shiroSessionService != null && StringUtils.isNotEmpty(userUuid)) {
                 int count = shiroSessionService.forceLogoutByUserUuid(userUuid);
                 if (log.isDebugEnabled())
-                    log.debug("强制下线，用户UUID: {}, 下线会话数: {}", userUuid, count);
+                    log.debug("Force logout uuid={} sessionCount={}", userUuid, count);
             }
         } catch (Exception e) {
-            log.error("强制用户下线失败，用户UUID: {}", userUuid, e);
+            log.error("Force logout failed uuid={}", userUuid, e);
         }
     }
 

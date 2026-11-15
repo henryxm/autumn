@@ -35,11 +35,11 @@ public final class LegacyPasswordUpgradeSupport {
             return false;
         }
         if (StringUtils.isBlank(rawPasswordFromUser)) {
-            log.warn("口令升级拒绝: 明文为空 uuid={}", userUuid);
+            log.warn("Password upgrade rejected: blank plaintext uuid={}", userUuid);
             return false;
         }
         if (!userUuid.equals(freshFromDb.getUuid())) {
-            log.warn("口令升级拒绝: uuid 不一致 expect={} actual={}", userUuid, freshFromDb.getUuid());
+            log.warn("Password upgrade rejected: uuid mismatch expect={} actual={}", userUuid, freshFromDb.getUuid());
             return false;
         }
         String oldStored = freshFromDb.getPassword();
@@ -49,23 +49,23 @@ public final class LegacyPasswordUpgradeSupport {
         }
         // 关键：仅当「用户明文」对「库中旧 SHA」成立时才允许哈希该明文
         if (!PasswordHashSupport.matchesLegacySha256(rawPasswordFromUser, oldStored, salt)) {
-            log.warn("口令升级拒绝: 旧 SHA 二次校验未通过 uuid={}", userUuid);
+            log.warn("Password upgrade rejected: legacy SHA re-check failed uuid={}", userUuid);
             return false;
         }
         String newStored;
         try {
             newStored = PasswordHashSupport.hashNewFromVerifiedUserInput(rawPasswordFromUser);
         } catch (Exception e) {
-            log.error("口令升级拒绝: 生成 PBKDF2 失败 uuid={} err={}", userUuid, e.getMessage());
+            log.error("Password upgrade rejected: PBKDF2 hash failed uuid={} err={}", userUuid, e.getMessage());
             return false;
         }
         if (!PasswordHashSupport.isPbkdf2(newStored)) {
-            log.error("口令升级拒绝: 生成结果非 PBKDF2 uuid={}", userUuid);
+            log.error("Password upgrade rejected: hash result is not PBKDF2 uuid={}", userUuid);
             return false;
         }
         // 再验一次：新哈希必须能用同一用户明文校验（防止实现错误写入不可登录值）
         if (!PasswordHashSupport.matchesPbkdf2(rawPasswordFromUser, newStored)) {
-            log.error("口令升级拒绝: 新 PBKDF2 自检失败 uuid={}", userUuid);
+            log.error("Password upgrade rejected: new PBKDF2 self-check failed uuid={}", userUuid);
             return false;
         }
         // 物理列名与实体驼峰下划线一致；CAS：仅当 password 仍为旧 SHA 时写入
@@ -76,13 +76,13 @@ public final class LegacyPasswordUpgradeSupport {
         int rows = mapper.update(null, uw);
         if (rows == 1) {
             freshFromDb.setPassword(newStored);
-            if (log.isInfoEnabled()) {
-                log.info("口令已原子升级为 PBKDF2 uuid={}", userUuid);
+            if (log.isDebugEnabled()) {
+                log.debug("Password upgraded atomically to PBKDF2 uuid={}", userUuid);
             }
             return true;
         }
         if (log.isDebugEnabled()) {
-            log.debug("口令升级 CAS 未命中（可能并发已升级）uuid={} rows={}", userUuid, rows);
+            log.debug("Password upgrade CAS miss (likely concurrent upgrade) uuid={} rows={}", userUuid, rows);
         }
         return false;
     }

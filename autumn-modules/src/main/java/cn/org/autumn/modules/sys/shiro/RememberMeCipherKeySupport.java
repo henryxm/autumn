@@ -89,7 +89,7 @@ public final class RememberMeCipherKeySupport {
                 if (StringUtils.isNotBlank(redisExisting) && !cfg.equals(redisExisting)) {
                     byte[] redisWon = tryDecode16(redisExisting);
                     if (redisWon != null) {
-                        log.error("RememberMe cipher-key 与 Redis 不一致，集群以 Redis 为准。请在 SysConfig SECURITY_SESSION_CONFIG 统一密钥或清空 Redis 键后全量滚动");
+                        log.error("RememberMe cipher-key conflicts with Redis; cluster uses Redis. Align SECURITY_SESSION_CONFIG or clear Redis key and roll all nodes");
                         writeLocalQuietly(path, redisExisting);
                         return redisWon;
                     }
@@ -98,9 +98,9 @@ public final class RememberMeCipherKeySupport {
                 writeLocalQuietly(path, cfg.trim());
                 return decoded;
             }
-            log.warn("RememberMe cipher-key 无效（需 Base64 解码后恰好 16 字节），继续尝试 Redis/文件");
+            log.warn("RememberMe cipher-key invalid (must Base64-decode to exactly 16 bytes); trying Redis/file");
         } else if (FORBIDDEN_LEGACY_BASE64.equals(cfg)) {
-            log.warn("拒绝使用公开默认 RememberMe 密钥，继续尝试 Redis/文件");
+            log.warn("Rejected well-known default RememberMe key; trying Redis/file");
         }
 
         String redisB64 = readRedisRaw(redis, namespace);
@@ -109,7 +109,7 @@ public final class RememberMeCipherKeySupport {
             if (decoded != null) {
                 // 自愈：本地文件缺失或与集群不一致时回写
                 writeLocalQuietly(path, redisB64);
-                log.debug("RememberMe 密钥已从 Redis 加载（集群共享），并同步到 {}", path);
+                log.debug("RememberMe key loaded from Redis (cluster shared) and synced to {}", path);
                 return decoded;
             }
         }
@@ -126,14 +126,14 @@ public final class RememberMeCipherKeySupport {
                             if (StringUtils.isNotBlank(won)) {
                                 byte[] redisWon = tryDecode16(won);
                                 if (redisWon != null) {
-                                    log.warn("本地 remember-me.key 与 Redis 不一致，已采用 Redis 密钥。建议统一 Env 或删除分叉本地文件");
+                                    log.warn("Local remember-me.key differs from Redis; using Redis key. Align Env or remove forked local file");
                                     writeLocalQuietly(path, won.trim());
                                     return redisWon;
                                 }
                             }
                         }
                         if (redis == null) {
-                            log.info("RememberMe 密钥来自本地文件 {}（单机/无 Redis）", path);
+                            log.debug("RememberMe key loaded from local file {} (standalone / no Redis)", path);
                         }
                         return decoded;
                     }
@@ -152,20 +152,20 @@ public final class RememberMeCipherKeySupport {
                     byte[] redisWon = tryDecode16(won);
                     if (redisWon != null) {
                         writeLocalQuietly(path, won.trim());
-                        log.info("RememberMe 密钥已由集群其他节点写入 Redis，本节点采用共享密钥并回写 {}", path);
+                        log.debug("RememberMe key already published by another node; adopted Redis key and wrote {}", path);
                         return redisWon;
                     }
                 }
             }
             writeLocalQuietly(path, b64);
             if (redis != null) {
-                log.info("已生成 RememberMe 密钥并写入 Redis + {}", path);
+                log.info("Generated RememberMe key and wrote Redis + {}", path);
             } else {
-                log.info("已生成 RememberMe 密钥并写入 {}（删除该文件后重启将重新生成，旧记住我 Cookie 失效）", path);
+                log.info("Generated RememberMe key and wrote {} (delete file and restart to rotate; old RememberMe cookies become invalid)", path);
             }
             return key;
         } catch (Exception e) {
-            log.error("RememberMe 密钥文件/Redis 处理失败，使用进程内临时密钥（重启即变）: {}", e.getMessage());
+            log.error("RememberMe key file/Redis failed; using in-process ephemeral key (lost on restart): {}", e.getMessage());
             byte[] fallback = new byte[16];
             new SecureRandom().nextBytes(fallback);
             return fallback;
@@ -212,9 +212,9 @@ public final class RememberMeCipherKeySupport {
                 return;
             }
             writeLocalQuietly(target, body.trim());
-            log.info("已将旧 RememberMe 密钥从 {} 迁移到 {}", legacy, target);
+            log.debug("Migrated legacy RememberMe key from {} to {}", legacy, target);
         } catch (Exception e) {
-            log.warn("迁移旧 remember-me.key 失败: {}", e.getMessage());
+            log.warn("Failed to migrate legacy remember-me.key: {}", e.getMessage());
         }
     }
 
@@ -236,7 +236,7 @@ public final class RememberMeCipherKeySupport {
             Files.writeString(path, b64 + "\n", StandardCharsets.UTF_8,
                     StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE);
         } catch (Exception e) {
-            log.warn("写入 RememberMe 密钥文件失败 path={}: {}", path, e.getMessage());
+            log.warn("Failed to write RememberMe key file path={}: {}", path, e.getMessage());
         }
     }
 
@@ -251,7 +251,7 @@ public final class RememberMeCipherKeySupport {
             }
             return v.trim();
         } catch (Exception e) {
-            log.warn("读取 Redis RememberMe 密钥失败: {}", e.getMessage());
+            log.warn("Failed to read RememberMe key from Redis: {}", e.getMessage());
             return null;
         }
     }
@@ -264,7 +264,7 @@ public final class RememberMeCipherKeySupport {
             Boolean ok = redis.opsForValue().setIfAbsent(RedisKeys.getRememberMeCipherKey(namespace), b64.trim());
             return Boolean.TRUE.equals(ok);
         } catch (Exception e) {
-            log.warn("写入 Redis RememberMe 密钥失败: {}", e.getMessage());
+            log.warn("Failed to write RememberMe key to Redis: {}", e.getMessage());
             return false;
         }
     }

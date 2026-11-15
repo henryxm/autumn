@@ -85,14 +85,14 @@ public class AdminBootstrapService {
             SecurityAuthConfig cfg = copyAuth(sysConfigService.getSecurityAuthConfig());
             cfg.setAdminBootstrapPending(false);
             sysConfigService.saveSecurityAuthConfig(cfg);
-            log.info("Cleared admin bootstrap state reason={} wasPending={} hadFile={}", reason, wasPending, hadFile);
+            log.debug("Cleared admin bootstrap state reason={} wasPending={} hadFile={}", reason, wasPending, hadFile);
         }
     }
 
     public void acknowledgeRetain() {
         AdminBootstrapPasswordSupport.deleteQuietly(nodeHome());
         markPending(false, Instant.now().toString());
-        log.info("Admin password retained by user; bootstrap pending cleared");
+        log.debug("Admin password retained by user; bootstrap pending cleared");
     }
 
     public void snooze(Session session) {
