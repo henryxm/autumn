@@ -51,18 +51,50 @@ public final class ApiTokenLoginSupport {
      * 按 OAuth2 client_credentials 等签发的 access_token 解析用户 uuid。
      */
     public static String resolveOAuthUserUuid(String token) {
-        if (StringUtils.isBlank(token))
-            return "";
-        ClientDetailsService clientDetailsService = clientDetailsService();
-        if (clientDetailsService == null || !clientDetailsService.isValidAccessToken(token))
-            return "";
-        TokenStore store = clientDetailsService.get(ValueType.accessToken, token);
-        if (store == null || store.getValue() == null)
-            return "";
+        OAuthTokenInfo info = resolveOAuth(token);
+        return info == null ? "" : info.getUserUuid();
+    }
+
+    /**
+     * 从 OAuth access_token 解析 client_id（即 accessKeyId）；无效则空串。
+     */
+    public static String resolveOAuthClientId(String token) {
+        OAuthTokenInfo info = resolveOAuth(token);
+        return info == null ? "" : info.getClientId();
+    }
+
+    /**
+     * 一次查找 TokenStore，同时得到 userUuid 与 clientId（避免重复 get/isValid）。
+     */
+    public static OAuthTokenInfo resolveOAuth(String token) {
+        TokenStore store = resolveOAuthTokenStore(token);
+        if (store == null)
+            return null;
+        String uuid = "";
         Object value = store.getValue();
         if (value instanceof SysUserEntity)
-            return StringUtils.defaultString(((SysUserEntity) value).getUuid());
-        return "";
+            uuid = StringUtils.defaultString(((SysUserEntity) value).getUuid());
+        return new OAuthTokenInfo(uuid, StringUtils.defaultString(store.getClientId()), store);
+    }
+
+    /**
+     * 有效 OAuth access_token 对应的 {@link TokenStore}；无效返回 null。
+     * 仅一次 {@code get}（与历史 {@code isValidAccessToken} 语义一致：存在即可）。
+     */
+    public static TokenStore resolveOAuthTokenStore(String token) {
+        if (StringUtils.isBlank(token))
+            return null;
+        ClientDetailsService clientDetailsService = clientDetailsService();
+        if (clientDetailsService == null)
+            return null;
+        return clientDetailsService.get(ValueType.accessToken, token);
+    }
+
+    /**
+     * 令牌是否为有效 OAuth access_token（相对遗留 usr_user_token）。
+     */
+    public static boolean isOAuthAccessToken(String token) {
+        return resolveOAuthTokenStore(token) != null;
     }
 
     /**

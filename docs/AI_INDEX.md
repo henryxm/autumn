@@ -52,6 +52,7 @@
 - **`docs/AI_QRC_INTEGRATION.md`**：**第三方集成标准**（Autumn/非 Autumn）
 - **`docs/AI_QRC_CLIENT_API.md`**：**APP 扫码确认手册**
 - **`docs/AI_AUTH_LOGIN_MODES.md`**：**双轨授权登录开发手册**（OAuth2 `uuid` 与 OPL/OPC `openId` 并行体系、自连/第三方全拓扑、选型与防迷路）
+- **`docs/AI_AUTH_CONTEXT.md`**：**请求级 AuthContext**（身份来源 `AuthSource`、accessKey、Controller 注入 / `AuthContexts.current()`）
 - **`docs/AI_MULTI_DOMAIN.md`**：**多域名部署与授权页 Tab**（混合域名 Cookie 隔离、扫码 Host 感知、登录方式记忆）
 - **`docs/AI_AUTH_SCOPE.md`**：**授权 Scope 目录**（OAuth/OPL scope 对照、`AuthScopeCatalog`、`ScopeDefinitionEntity`、authorize UI、Admin API）
 - **`docs/AI_OAUTH_INTEGRATION.md`**：**OAuth2 第三方对接手册**（授权码模式、token、userInfo、账号绑定）
@@ -86,6 +87,7 @@
 - **支付密码 / 安全凭证**（`cn.org.autumn.modules.safe`）：`docs/AI_BOOT.md` + `docs/AI_MAP.md` + **`docs/AI_SAFE_CREDENTIAL_CLIENT_API.md`**（客户端）+ **`docs/AI_SAFE_CREDENTIAL.md`** + **`docs/AI_SAFE_CREDENTIAL_INTEGRATION.md`**（业务仓）+ `docs/AI_STANDARDS.md` + `docs/AI_CRYPTO.md`（传输加密）
 - **扫码登录 QRC**（`cn.org.autumn.modules.qrc`）：`docs/AI_BOOT.md` + `docs/AI_MAP.md` + **`docs/AI_SCAN_LOGIN_STANDARD.md`**（**首选**）+ **`docs/AI_QRC.md`** + **`docs/AI_AUTH_SITE_ROLES.md`**（AS/RP 联邦）+ **`docs/AI_QRC_API.md`** + **`docs/AI_QRC_INTEGRATION.md`**（第三方）+ **`docs/AI_QRC_CLIENT_API.md`**（APP）+ `docs/AI_STANDARDS.md`（集成测试：`web/.../ScanLoginIntegrationTest`、RP 联邦测试）
 - **授权登录 / 第三方账号对接（OAuth2 与开放平台选型）**：**`docs/AI_AUTH_LOGIN_MODES.md`**（**首选总览**，含 §3 Parallel Profile）+ 按角色追加下述子文档
+- **开放 API 审计 / 识别 AccessKey 与登录来源**：**`docs/AI_AUTH_CONTEXT.md`**（`AuthContext` / `AuthSource`，Controller 注入）
 - **OAuth2 第三方登录 / 用户信息对接**（`cn.org.autumn.modules.oauth`）：**`docs/AI_OAUTH_INTEGRATION.md`** + **`docs/AI_AUTH_SCOPE.md`**（scope 目录与 userInfo 裁剪）+ **`docs/AI_QRC_INTEGRATION.md`**（含扫码分支）+ 站内 `/modules/docs/auth-flow`
 - **OPL 开放平台**（`cn.org.autumn.modules.opl`）：**`docs/AI_OPL_INTEGRATION.md`**（HTTP 对接）+ **`docs/AI_AUTH_SCOPE.md`** + **`docs/AI_OPL_SPI.md`**（Service/Extension 扩展）+ **`docs/AI_OPC_INTEGRATION.md`**（RP 接入）
 - **授权 scope 目录 / 管理页 / authorize 文案**（`cn.org.autumn.modules.auth`）：**`docs/AI_AUTH_SCOPE.md`** + `docs/AI_STANDARDS.md` §7（改 `login.html` / scope 片段时）

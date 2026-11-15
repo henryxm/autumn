@@ -2,10 +2,10 @@ package cn.org.autumn.modules.sys.service;
 
 import cn.org.autumn.config.ContextHandler;
 import cn.org.autumn.model.UserContext;
-import cn.org.autumn.modules.bot.entity.RobotEntity;
-import cn.org.autumn.modules.bot.service.RobotService;
 import cn.org.autumn.modules.bot.entity.GuestEntity;
+import cn.org.autumn.modules.bot.entity.RobotEntity;
 import cn.org.autumn.modules.bot.service.GuestService;
+import cn.org.autumn.modules.bot.service.RobotService;
 import cn.org.autumn.modules.bot.service.RobotTokenService;
 import cn.org.autumn.modules.bot.shiro.RobotAccessTokenToken;
 import cn.org.autumn.modules.bot.shiro.RobotPrincipal;
@@ -13,8 +13,12 @@ import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.entity.User;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.sys.support.ApiAuthSupport;
+import cn.org.autumn.modules.sys.support.ApiCredential;
 import cn.org.autumn.modules.sys.support.ApiTokenLoginSupport;
+import cn.org.autumn.modules.sys.support.AuthContextBinder;
+import cn.org.autumn.modules.sys.support.OAuthTokenInfo;
 import cn.org.autumn.opl.OplConstants;
+import cn.org.autumn.web.AuthSource;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -27,7 +31,8 @@ import org.springframework.web.context.request.NativeWebRequest;
 
 /**
  * 解析无 Session API 的 {@link UserContext}（直接返回 {@link SysUserEntity} / {@link RobotEntity} / {@link GuestEntity} 等业务实体）。
- * 临时用户只出现在按 uuid 的资料查询中，不作为登录主体。
+ * <p>
+ * 解析成功时绑定请求级 {@link cn.org.autumn.web.AuthContext}（见 {@link AuthContextBinder}）。
  */
 @Slf4j
 @Service
@@ -53,9 +58,6 @@ public class UserContextService implements ContextHandler {
     @Lazy
     private SysConfigService sysConfigService;
 
-    /**
-     * 按业务 uuid 从缓存取账号实体（用户、机器人或未过期临时用户），不解析请求头令牌。
-     */
     public UserContext getUserContext(String uuid) {
         SysUserEntity user = sysUserService.getCache(uuid);
         if (user != null) {
@@ -73,61 +75,85 @@ public class UserContextService implements ContextHandler {
     }
 
     /**
-     * 从当前请求解析调用者：Shiro → 头令牌 / userUuid 参数；与 {@link #getUserContext(String)} 互补。
-     * <p>
-     * 同时携带令牌与 {@code userUuid} hint 时，hint 须与令牌解析出的 {@link UserContext#getUuid()} 一致；
-     * 仅 hint、无令牌：默认拒绝；仅当 SysConfig 安全加固「允许仅 userUuid hint」开启时保留遗留行为；
-     * {@link OplConstants#API_PLATFORM} 路径始终禁止 hint-only，须携带有效令牌或 Shiro 会话。
+     * 从当前请求解析调用者：Shiro → 头令牌 / userUuid hint。
+     * 成功路径绑定 AuthContext。
      */
     public UserContext resolve(NativeWebRequest webRequest) {
+        ApiCredential credential = ApiAuthSupport.extractCredential(webRequest);
+        String hintUuid = resolveUserUuidHint(webRequest);
+        HttpServletRequest http = webRequest != null ? webRequest.getNativeRequest(HttpServletRequest.class) : null;
+        String token = credential.getToken();
+        boolean robotToken = StringUtils.isNotBlank(token) && token.startsWith(RobotTokenService.TOKEN_PREFIX);
+        OAuthTokenInfo oauth = StringUtils.isNotBlank(token) && !robotToken ? ApiTokenLoginSupport.resolveOAuth(token) : null;
+
         UserContext fromShiro = fromShiro();
-        if (fromShiro != null)
-            return fromShiro;
-        String userUuidHint = resolveUserUuidHint(webRequest);
-        String token = ApiAuthSupport.extractToken(webRequest);
-        if (StringUtils.isNotBlank(token)) {
-            UserContext fromToken = token.startsWith(RobotTokenService.TOKEN_PREFIX)
-                    ? fromRobotToken(token)
-                    : fromUserToken(token);
-            if (StringUtils.isNotBlank(userUuidHint)) {
-                if (fromToken == null || !userUuidHint.equals(fromToken.getUuid()))
-                    return null;
-                return fromToken;
+        if (fromShiro != null) {
+            AuthSource source = fromShiro instanceof RobotEntity ? AuthSource.ROBOT_TOKEN : AuthSource.SESSION;
+            String accessKey = "";
+            if (fromShiro instanceof SysUserEntity) {
+                SysUserEntity su = (SysUserEntity) fromShiro;
+                AuthContextBinder.EnrichResult enriched = AuthContextBinder.enrichSessionWithOAuth(source, su.getUuid(), su.getUsername(), oauth, "");
+                source = enriched.getSource();
+                accessKey = enriched.getAccessKey();
+                if (StringUtils.isBlank(accessKey) && AuthContextBinder.looksLikeAccessKeyShadow(su))
+                    accessKey = StringUtils.defaultString(su.getUsername());
             }
+            bindResolved(http, credential, hintUuid, fromShiro, source, accessKey);
+            return fromShiro;
+        }
+
+        if (StringUtils.isNotBlank(token)) {
+            UserContext fromToken = robotToken ? fromRobotToken(token) : fromUserToken(token, oauth);
+            if (StringUtils.isNotBlank(hintUuid)) {
+                if (fromToken == null || !hintUuid.equals(fromToken.getUuid()))
+                    return null;
+            } else if (fromToken == null) {
+                return null;
+            }
+            AuthSource source = robotToken ? AuthSource.ROBOT_TOKEN : (oauth != null ? AuthSource.OAUTH_TOKEN : AuthSource.USER_TOKEN);
+            String accessKey = robotToken || oauth == null ? "" : oauth.getClientId();
+            bindResolved(http, credential, hintUuid, fromToken, source, accessKey);
             return fromToken;
         }
-        if (StringUtils.isNotBlank(userUuidHint)) {
-            if (isOpenPlatformApiRequest(webRequest)) {
+
+        if (StringUtils.isNotBlank(hintUuid)) {
+            if (isOpenPlatformApiRequest(webRequest) || !sysConfigService.isAllowUserUuidHint())
                 return null;
-            }
-            if (!sysConfigService.isAllowUserUuidHint()) {
+            SysUserEntity fromHint = fromUserUuid(hintUuid);
+            if (fromHint == null)
                 return null;
-            }
-            return fromUserUuid(userUuidHint);
+            bindResolved(http, credential, hintUuid, fromHint, AuthSource.UUID_HINT, "");
+            return fromHint;
         }
         return null;
     }
 
+    private void bindResolved(HttpServletRequest request, ApiCredential credential, String hintUuid, UserContext context, AuthSource source, String accessKey) {
+        if (request == null || context == null)
+            return;
+        String userUuid = context.getUuid();
+        String actorUuid = null;
+        if (context instanceof RobotEntity) {
+            actorUuid = context.getUuid();
+            userUuid = StringUtils.defaultString(context.getSubject());
+        }
+        AuthContextBinder.bind(request, credential, hintUuid, source, userUuid, actorUuid, accessKey);
+    }
+
     static boolean isOpenPlatformApiRequest(NativeWebRequest webRequest) {
-        if (webRequest == null) {
+        if (webRequest == null)
             return false;
-        }
         HttpServletRequest request = webRequest.getNativeRequest(HttpServletRequest.class);
-        if (request == null) {
+        if (request == null)
             return false;
-        }
         String uri = request.getRequestURI();
-        if (StringUtils.isBlank(uri)) {
+        if (StringUtils.isBlank(uri))
             return false;
-        }
         String contextPath = StringUtils.defaultString(request.getContextPath());
         String path = uri.startsWith(contextPath) ? uri.substring(contextPath.length()) : uri;
         return path.startsWith(OplConstants.API_PLATFORM + "/") || path.equals(OplConstants.API_PLATFORM);
     }
 
-    /**
-     * 仅当参数类型为 {@link User} 视图时使用；{@link UserContext} 参数应直接 {@code instanceof} 实体。
-     */
     public User toUser(UserContext context) {
         if (context == null)
             return null;
@@ -198,13 +224,12 @@ public class UserContextService implements ContextHandler {
         return robot;
     }
 
-    /**
-     * 真人令牌：与 minclouds {@code UserInfoResolverToken} 一致，先走 {@link UserTokenFactory}（业务系统令牌），再回落框架 {@code usr_user_token}。
-     */
-    private UserContext fromUserToken(String token) {
+    private UserContext fromUserToken(String token, OAuthTokenInfo oauth) {
         if (StringUtils.isBlank(token))
             return null;
-        String userUuid = ApiTokenLoginSupport.resolveUserUuid(token);
+        String userUuid = oauth != null && StringUtils.isNotBlank(oauth.getUserUuid())
+                ? oauth.getUserUuid()
+                : ApiTokenLoginSupport.resolveLegacyUserUuid(token);
         if (StringUtils.isBlank(userUuid))
             return null;
         return fromUserUuid(userUuid);
@@ -219,9 +244,6 @@ public class UserContextService implements ContextHandler {
         return user;
     }
 
-    /**
-     * 与遗留 {@code UserInfoResolver} 一致：query / header 中的 userUuid。
-     */
     private static String resolveUserUuidHint(NativeWebRequest webRequest) {
         if (webRequest == null)
             return null;

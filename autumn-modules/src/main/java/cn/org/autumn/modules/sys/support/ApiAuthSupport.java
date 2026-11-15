@@ -10,41 +10,55 @@ import org.springframework.web.context.request.NativeWebRequest;
  */
 public final class ApiAuthSupport {
 
+    private static final String[] HEADER_NAMES = {
+            "X-Robot-Token",
+            "Robot-Token",
+            "Token",
+            "Auth",
+            "Authenticated",
+            "Authorization"
+    };
+
     private ApiAuthSupport() {
     }
 
     public static String extractToken(NativeWebRequest webRequest) {
-        if (webRequest == null)
-            return "";
-        String token = header(webRequest, "X-Robot-Token");
-        if (StringUtils.isBlank(token))
-            token = header(webRequest, "Robot-Token");
-        if (StringUtils.isBlank(token))
-            token = header(webRequest, "Token");
-        if (StringUtils.isBlank(token))
-            token = header(webRequest, "Auth");
-        if (StringUtils.isBlank(token))
-            token = header(webRequest, "Authenticated");
-        if (StringUtils.isBlank(token))
-            token = header(webRequest, "Authorization");
-        return normalizeBearer(token);
+        return extractCredential(webRequest).getToken();
     }
 
     public static String extractToken(HttpServletRequest request) {
+        return extractCredential(request).getToken();
+    }
+
+    /**
+     * 解析令牌并返回命中的头名（用于 AuthContext.credentialHeader）。
+     */
+    public static ApiCredential extractCredential(NativeWebRequest webRequest) {
+        if (webRequest == null)
+            return new ApiCredential("", "");
+        for (String name : HEADER_NAMES) {
+            String raw = header(webRequest, name);
+            if (StringUtils.isBlank(raw))
+                continue;
+            String token = normalizeBearer(raw);
+            if (StringUtils.isNotBlank(token))
+                return new ApiCredential(token, name);
+        }
+        return new ApiCredential("", "");
+    }
+
+    public static ApiCredential extractCredential(HttpServletRequest request) {
         if (request == null)
-            return "";
-        String token = request.getHeader("X-Robot-Token");
-        if (StringUtils.isBlank(token))
-            token = request.getHeader("Robot-Token");
-        if (StringUtils.isBlank(token))
-            token = request.getHeader("Token");
-        if (StringUtils.isBlank(token))
-            token = request.getHeader("Auth");
-        if (StringUtils.isBlank(token))
-            token = request.getHeader("Authenticated");
-        if (StringUtils.isBlank(token))
-            token = request.getHeader("Authorization");
-        return normalizeBearer(token);
+            return new ApiCredential("", "");
+        for (String name : HEADER_NAMES) {
+            String raw = request.getHeader(name);
+            if (StringUtils.isBlank(raw))
+                continue;
+            String token = normalizeBearer(raw.trim());
+            if (StringUtils.isNotBlank(token))
+                return new ApiCredential(token, name);
+        }
+        return new ApiCredential("", "");
     }
 
     private static String header(NativeWebRequest webRequest, String name) {
