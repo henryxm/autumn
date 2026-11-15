@@ -38,7 +38,7 @@
 | **C-12** | 超级密码 | 配置 ≥20 位即可登录任意账号 | 默认 **`SECURITY_AUTH_CONFIG.superPasswordEnabled=false` 忽略** | 运维万能密码流程 | 开关 true 且 `SUPER_PASSWORD` ≥20 位 |
 | **C-13** | OAuth Access Token 生成 | `MD5Generator` | CSPRNG 不透明串 | 若客户端校验 token「像 MD5」 | 一般无影响；勿假设 token 格式 |
 | **C-14** | 上传/表单体积 | `-1` 不限制 | 默认 **100MB** | 超大文件上传业务 | 调大 `spring.servlet.multipart.*` / Tomcat 限制 |
-| **C-15** | FreeMarker HTML 自动转义 | 默认不 auto-escape | `output_format=HTML` + auto escaping | 模板故意输出 HTML 片段 | 使用 `?no_esc` / MarkupOutput |
+| **C-15** | FreeMarker HTML 自动转义 | 默认不 auto-escape；存量多用 `?html` | **已回退全局强制**：不设全局 `output_format=HTML`（与 `?html` 互斥会 ParseException） | 若单页要自动转义 | 该模板 `<#ftl output_format="HTML">` 且去掉 `?html`；或继续手写 `?html`（推荐存量） |
 | **C-16** | CSRF（生产默认） | 无全局 CSRF | `SECURITY_AUTH_CONFIG.csrfEnforce`（prod 首次种子 true） | 管理端 Cookie 会话的 POST/PUT/DELETE | 带 `X-CSRF-Token`；或后台关 enforce |
 | **C-17** | Cookie Secure（生产） | 未强制 Secure | prod：`remember-me`/`session` Secure=true | 纯 HTTP 访问生产 | HTTPS 或临时关 Secure |
 | **C-18** | docker-compose | 弱口令、映射 3306/6379、profile=dev | 强制定义密码、默认不暴露 DB/Redis、profile=prod | 本地 compose 一键起 | 设置环境变量；调试可自行改 compose |
@@ -287,8 +287,8 @@
 
 ### 4.5 前端 / 模板
 
-- [ ] 登录页、管理页渲染无大面积转义破坏  
-- [ ] 故意输出 HTML 的模板是否需 `?no_esc`  
+- [ ] 登录页、管理页渲染正常（全局未强制 HTML auto-escape，存量 `?html` 可用）  
+- [ ] 若某页自行 `<#ftl output_format="HTML">`，确认已去掉 `?html`、富文本处用 `?no_esc`  
 
 ---
 

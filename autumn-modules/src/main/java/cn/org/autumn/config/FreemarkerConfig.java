@@ -4,7 +4,6 @@ import cn.org.autumn.site.ViewFactory;
 import cn.org.autumn.view.NameBasedViewResolver;
 import cn.org.autumn.view.ViewTemplateSupport;
 import freemarker.cache.TemplateLoader;
-import freemarker.core.HTMLOutputFormat;
 import freemarker.template.TemplateException;
 import java.io.IOException;
 import java.util.HashMap;
@@ -22,6 +21,13 @@ import org.springframework.web.servlet.view.freemarker.FreeMarkerViewResolver;
 @Configuration
 public class FreemarkerConfig {
 
+    /**
+     * FreeMarker 配置。
+     * <p>
+     * 故意不设置全局 {@code output_format=HTML} / auto-escaping：存量模板大量使用 {@code ?html}，
+     * 与 Markup 自动转义互斥（会 ParseException）。XSS 仍依赖模板显式 {@code ?html} 等；
+     * 若单页需要自动转义，可在该模板写 {@code <#ftl output_format="HTML">}（且勿再写 {@code ?html}）。
+     */
     @Bean
     public FreeMarkerConfigurer freeMarkerConfigurer(List<VariablesHandler> variablesHandlers, TemplateLoader templateLoader) {
         FreeMarkerConfigurer configurer = new FreeMarkerConfigurer();
@@ -35,17 +41,11 @@ public class FreemarkerConfig {
         Properties settings = new Properties();
         settings.setProperty("default_encoding", "utf-8");
         settings.setProperty("number_format", "0.##");
-        // FreeMarker 合法取值：enable_if_default | enable_if_supported | force | disable（勿写 *_true 后缀）
-        settings.setProperty("auto_escaping_policy", "enable_if_default");
-        settings.setProperty("output_format", "HTML");
         configurer.setFreemarkerSettings(settings);
         try {
             // 与 Spring @Configuration 同名，此处用 FQN
             freemarker.template.Configuration configuration = configurer.createConfiguration();
             configuration.setTemplateLoader(templateLoader);
-            // 程序化双保险，避免字符串拼写错误导致启动失败
-            configuration.setOutputFormat(HTMLOutputFormat.INSTANCE);
-            configuration.setAutoEscapingPolicy(freemarker.template.Configuration.ENABLE_IF_DEFAULT_AUTO_ESCAPING_POLICY);
             configurer.setConfiguration(configuration);
         } catch (IOException | TemplateException e) {
             log.debug("freeMarkerConfigurer", e);
