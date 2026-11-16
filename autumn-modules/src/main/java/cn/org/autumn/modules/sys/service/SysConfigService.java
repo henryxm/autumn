@@ -299,11 +299,11 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 {categoryName(SecurityAuthConfig.config), "安全加固", "Security Hardening"},
                 {categoryDescription(SecurityAuthConfig.config), "认证/CSRF/CORS、HTTP 代理、运维 Token、会话与 RememberMe（集群统一）", "Auth/CSRF/CORS, HTTP proxy, ops tokens, session and RememberMe (cluster-wide)"},
                 {configName(SECURITY_AUTH_CONFIG), "安全认证配置", "Security Auth Config"},
-                {configDescription(SECURITY_AUTH_CONFIG), "超级密码开关、引导口令待办、口令升级、hint、CSRF、CORS", "Super-password, bootstrap pending, password upgrade, hint, CSRF, CORS"},
+                {configDescription(SECURITY_AUTH_CONFIG), "超级密码开关、引导口令待办、口令升级、hint、CSRF、CORS、后台全量锁定", "Super-password, bootstrap pending, password upgrade, hint, CSRF, CORS, admin lockdown"},
                 {configName(SECURITY_HTTP_PROXY_CONFIG), "HTTP 代理安全", "HTTP Proxy Security"},
                 {configDescription(SECURITY_HTTP_PROXY_CONFIG), "代理开关、DNS 校验、上游白名单", "Proxy switch, DNS check, upstream allowlist"},
                 {configName(SECURITY_OPS_CONFIG), "运维 Token", "Ops Tokens"},
-                {configDescription(SECURITY_OPS_CONFIG), "clear/reinit 头认证 Token", "clear/reinit header auth tokens"},
+                {configDescription(SECURITY_OPS_CONFIG), "clear/reinit 头认证 Token、Bean 执行开关", "clear/reinit header auth tokens, bean execute switch"},
                 {configName(SECURITY_SESSION_CONFIG), "会话与 RememberMe", "Session and RememberMe"},
                 {configDescription(SECURITY_SESSION_CONFIG), "Cookie Secure/SameSite 与 RememberMe AES 密钥", "Cookie Secure/SameSite and RememberMe AES key"},
         };

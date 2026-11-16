@@ -3,15 +3,20 @@ package cn.org.autumn.modules.sys.controller;
 import cn.org.autumn.annotation.Endpoint;
 import cn.org.autumn.annotation.SkipInterceptor;
 import cn.org.autumn.config.QueueConfig;
+import cn.org.autumn.exception.AException;
 import cn.org.autumn.model.QueueMessage;
+import cn.org.autumn.modules.sys.support.AdminAccessGuard;
 import cn.org.autumn.service.QueueService;
 import cn.org.autumn.utils.R;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 @Slf4j
 @Controller
@@ -22,6 +27,23 @@ public class SysQueueController {
 
     @Autowired
     private QueueService queueService;
+
+    @Autowired
+    private AdminAccessGuard adminAccessGuard;
+
+    private R denyIfUnauthorized() {
+        try {
+            ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            if (attrs == null) {
+                return R.error(403, "无权限访问");
+            }
+            HttpServletRequest request = attrs.getRequest();
+            adminAccessGuard.requireOpsAdmin(request, getClass(), "queue");
+            return null;
+        } catch (AException e) {
+            return R.error(403, "无权限访问");
+        }
+    }
 
     /**
      * 队列管理页面
@@ -37,6 +59,10 @@ public class SysQueueController {
     @GetMapping("/list")
     @ResponseBody
     public R list() {
+        R denied = denyIfUnauthorized();
+        if (denied != null) {
+            return denied;
+        }
         try {
             List<Map<String, Object>> queueList = queueService.getAllQueueInfo();
             return R.ok().put("list", queueList).put("total", queueList.size());
@@ -52,6 +78,10 @@ public class SysQueueController {
     @GetMapping("/info/{name}")
     @ResponseBody
     public R info(@PathVariable("name") String name) {
+        R denied = denyIfUnauthorized();
+        if (denied != null) {
+            return denied;
+        }
         try {
             Map<String, Object> info = queueService.getQueueInfo(name);
             if (info == null) {
@@ -72,6 +102,10 @@ public class SysQueueController {
     public R messages(@PathVariable("name") String name,
                       @RequestParam(value = "page", defaultValue = "1") int page,
                       @RequestParam(value = "limit", defaultValue = "20") int limit) {
+        R denied = denyIfUnauthorized();
+        if (denied != null) {
+            return denied;
+        }
         try {
             Map<String, Object> result = queueService.peekMessages(name, page, limit);
             return R.ok().put("list", result.get("list"))
@@ -90,6 +124,10 @@ public class SysQueueController {
     @PostMapping("/send")
     @ResponseBody
     public R send(@RequestBody Map<String, Object> params) {
+        R denied = denyIfUnauthorized();
+        if (denied != null) {
+            return denied;
+        }
         try {
             String queueName = (String) params.get("queueName");
             Object message = params.get("message");
@@ -129,6 +167,10 @@ public class SysQueueController {
     @PostMapping("/sendBatch")
     @ResponseBody
     public R sendBatch(@RequestBody Map<String, Object> params) {
+        R denied = denyIfUnauthorized();
+        if (denied != null) {
+            return denied;
+        }
         try {
             String queueName = (String) params.get("queueName");
             @SuppressWarnings("unchecked")
@@ -156,6 +198,10 @@ public class SysQueueController {
     @ResponseBody
     public R consume(@PathVariable("name") String name,
                      @RequestParam(value = "count", defaultValue = "1") int count) {
+        R denied = denyIfUnauthorized();
+        if (denied != null) {
+            return denied;
+        }
         try {
             List<Object> messages = new ArrayList<>();
             for (int i = 0; i < count; i++) {
@@ -179,6 +225,10 @@ public class SysQueueController {
     @PostMapping("/clear/{name}")
     @ResponseBody
     public R clear(@PathVariable("name") String name) {
+        R denied = denyIfUnauthorized();
+        if (denied != null) {
+            return denied;
+        }
         try {
             long sizeBefore = queueService.size(name);
             queueService.clear(name);
@@ -195,6 +245,10 @@ public class SysQueueController {
     @PostMapping("/delete/{name}")
     @ResponseBody
     public R delete(@PathVariable("name") String name) {
+        R denied = denyIfUnauthorized();
+        if (denied != null) {
+            return denied;
+        }
         try {
             queueService.delete(name);
             return R.ok("队列已删除");
@@ -210,6 +264,10 @@ public class SysQueueController {
     @PostMapping("/create")
     @ResponseBody
     public R create(@RequestBody Map<String, Object> params) {
+        R denied = denyIfUnauthorized();
+        if (denied != null) {
+            return denied;
+        }
         try {
             String name = (String) params.get("name");
             String type = (String) params.getOrDefault("type", "MEMORY");
@@ -251,6 +309,10 @@ public class SysQueueController {
     @GetMapping("/consumers")
     @ResponseBody
     public R consumers() {
+        R denied = denyIfUnauthorized();
+        if (denied != null) {
+            return denied;
+        }
         try {
             List<Map<String, Object>> consumers = queueService.getConsumerStatus();
             return R.ok().put("list", consumers);
@@ -267,6 +329,10 @@ public class SysQueueController {
     @ResponseBody
     public R startConsumer(@PathVariable("name") String name,
                            @RequestParam(value = "concurrency", defaultValue = "1") int concurrency) {
+        R denied = denyIfUnauthorized();
+        if (denied != null) {
+            return denied;
+        }
         try {
             queueService.start(name, concurrency);
             return R.ok("消费者已启动");
@@ -282,6 +348,10 @@ public class SysQueueController {
     @PostMapping("/consumer/stop/{name}")
     @ResponseBody
     public R stopConsumer(@PathVariable("name") String name) {
+        R denied = denyIfUnauthorized();
+        if (denied != null) {
+            return denied;
+        }
         try {
             queueService.stop(name);
             return R.ok("消费者已停止");
@@ -297,6 +367,10 @@ public class SysQueueController {
     @GetMapping("/stats")
     @ResponseBody
     public R stats() {
+        R denied = denyIfUnauthorized();
+        if (denied != null) {
+            return denied;
+        }
         try {
             Map<String, Object> stats = queueService.getStatistics();
             return R.ok().put("stats", stats);
@@ -312,6 +386,10 @@ public class SysQueueController {
     @GetMapping("/types")
     @ResponseBody
     public R types() {
+        R denied = denyIfUnauthorized();
+        if (denied != null) {
+            return denied;
+        }
         List<Map<String, Object>> types = new ArrayList<>();
         for (QueueConfig.QueueType type : QueueConfig.QueueType.values()) {
             Map<String, Object> item = new HashMap<>();
@@ -329,6 +407,10 @@ public class SysQueueController {
     @PostMapping("/config/update/{name}")
     @ResponseBody
     public R updateConfig(@PathVariable("name") String name, @RequestBody Map<String, Object> params) {
+        R denied = denyIfUnauthorized();
+        if (denied != null) {
+            return denied;
+        }
         try {
             QueueConfig config = queueService.getConfig(name);
             if (config == null) {
@@ -352,6 +434,10 @@ public class SysQueueController {
     @GetMapping("/config/{name}")
     @ResponseBody
     public R getConfig(@PathVariable("name") String name) {
+        R denied = denyIfUnauthorized();
+        if (denied != null) {
+            return denied;
+        }
         try {
             QueueConfig config = queueService.getConfig(name);
             if (config == null) {
@@ -392,6 +478,10 @@ public class SysQueueController {
     public R history(@PathVariable("name") String name,
                      @RequestParam(value = "page", defaultValue = "1") int page,
                      @RequestParam(value = "limit", defaultValue = "20") int limit) {
+        R denied = denyIfUnauthorized();
+        if (denied != null) {
+            return denied;
+        }
         try {
             Map<String, Object> result = queueService.getHistoryMessages(name, page, limit);
             return R.ok().put("list", result.get("list"))
@@ -411,6 +501,10 @@ public class SysQueueController {
     @ResponseBody
     public R deleteHistory(@PathVariable("name") String name,
                            @PathVariable("messageId") String messageId) {
+        R denied = denyIfUnauthorized();
+        if (denied != null) {
+            return denied;
+        }
         try {
             boolean success = queueService.deleteHistoryMessage(name, messageId);
             if (success) {
@@ -430,6 +524,10 @@ public class SysQueueController {
     @PostMapping("/history/clear/{name}")
     @ResponseBody
     public R clearHistory(@PathVariable("name") String name) {
+        R denied = denyIfUnauthorized();
+        if (denied != null) {
+            return denied;
+        }
         try {
             int count = queueService.clearHistory(name);
             return R.ok("已清空 " + count + " 条历史消息").put("cleared", count);
@@ -445,6 +543,10 @@ public class SysQueueController {
     @PostMapping("/deadletter/retry/{name}")
     @ResponseBody
     public R retryDeadLetter(@PathVariable("name") String name) {
+        R denied = denyIfUnauthorized();
+        if (denied != null) {
+            return denied;
+        }
         try {
             int count = queueService.retryDeadLetterMessages(name);
             return R.ok("已重试 " + count + " 条消息").put("count", count);
@@ -460,6 +562,10 @@ public class SysQueueController {
     @PostMapping("/move")
     @ResponseBody
     public R moveMessages(@RequestBody Map<String, Object> params) {
+        R denied = denyIfUnauthorized();
+        if (denied != null) {
+            return denied;
+        }
         try {
             String sourceQueue = (String) params.get("sourceQueue");
             String targetQueue = (String) params.get("targetQueue");

@@ -12,7 +12,7 @@ import java.util.List;
  * 安全加固 · 认证与 CSRF/CORS（SysConfig {@link #CONFIG_KEY}）。
  */
 @ConfigParam(paramKey = SecurityAuthConfig.CONFIG_KEY, category = SecurityAuthConfig.config,
-        name = "安全认证配置", description = "超级密码、引导口令待办、口令升级、hint、CSRF、CORS（集群统一）")
+        name = "安全认证配置", description = "超级密码、引导口令待办、口令升级、hint、CSRF、CORS、后台门禁（集群统一）")
 public class SecurityAuthConfig implements Serializable {
     private static final long serialVersionUID = 1L;
 
@@ -39,6 +39,9 @@ public class SecurityAuthConfig implements Serializable {
 
     @ConfigField(category = InputType.StringType, name = "引导口令确认时间", description = "用户点击「已知晓并保留」时的 ISO-8601 时间；空表示未确认")
     private String bootstrapAcknowledgedAt = "";
+
+    @ConfigField(category = InputType.BooleanType, name = "后台全量锁定", description = "关闭（默认）：非 gen 定制管理页可按菜单权限；开启：运维/gen/其它后台管理页均仅系统管理员。自助 API/页始终不锁；gen 全表与运维页无论开关均仅超管")
+    private boolean adminLockdown = false;
 
     public List<String> validateAndFix() {
         List<String> fixes = new ArrayList<>();
@@ -109,5 +112,13 @@ public class SecurityAuthConfig implements Serializable {
 
     public void setBootstrapAcknowledgedAt(String bootstrapAcknowledgedAt) {
         this.bootstrapAcknowledgedAt = bootstrapAcknowledgedAt;
+    }
+
+    public boolean isAdminLockdown() {
+        return adminLockdown;
+    }
+
+    public void setAdminLockdown(boolean adminLockdown) {
+        this.adminLockdown = adminLockdown;
     }
 }

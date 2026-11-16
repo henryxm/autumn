@@ -1,17 +1,21 @@
 package cn.org.autumn.modules.sys.controller;
 
+import cn.org.autumn.exception.AException;
 import cn.org.autumn.modules.sys.service.SysShiroSessionService;
-import cn.org.autumn.modules.sys.service.SysUserRoleService;
 import cn.org.autumn.modules.sys.shiro.AdminBootstrapService;
 import cn.org.autumn.modules.sys.shiro.ShiroSessionService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
+import cn.org.autumn.modules.sys.support.AdminAccessGuard;
 import cn.org.autumn.modules.sys.support.CsrfTokenSupport;
 import cn.org.autumn.utils.R;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.shiro.session.Session;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
+import jakarta.servlet.http.HttpServletRequest;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -32,10 +36,24 @@ public class SysSessionController {
     private SysShiroSessionService sysShiroSessionService;
 
     @Autowired
-    private SysUserRoleService sysUserRoleService;
+    private AdminBootstrapService adminBootstrapService;
 
     @Autowired
-    private AdminBootstrapService adminBootstrapService;
+    private AdminAccessGuard adminAccessGuard;
+
+    private R denyUnlessOpsAdmin() {
+        try {
+            ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            if (attrs == null) {
+                return R.error(403, "无权限");
+            }
+            HttpServletRequest request = attrs.getRequest();
+            adminAccessGuard.requireOpsAdmin(request, getClass(), "session");
+            return null;
+        } catch (AException e) {
+            return R.error(403, "无权限");
+        }
+    }
 
     /**
      * 当前会话摘要（含引导口令提示）。
@@ -94,8 +112,9 @@ public class SysSessionController {
                   @RequestParam(required = false) String sessionId,
                   @RequestParam(required = false, defaultValue = "1") int page,
                   @RequestParam(required = false, defaultValue = "20") int limit) {
-        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
-            return R.error(403, "无权限");
+        R denied = denyUnlessOpsAdmin();
+        if (denied != null) {
+            return denied;
         }
         String currentId = null;
         try {
@@ -122,8 +141,9 @@ public class SysSessionController {
      */
     @RequestMapping(value = "/delete", method = RequestMethod.DELETE)
     public R delete(@RequestBody Map<String, Object> body) {
-        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
-            return R.error(403, "无权限");
+        R denied = denyUnlessOpsAdmin();
+        if (denied != null) {
+            return denied;
         }
         Object o = body.get("sessionId");
         if (o == null || StringUtils.isBlank(o.toString())) {
@@ -139,8 +159,9 @@ public class SysSessionController {
      */
     @RequestMapping(value = "/forceLogout", method = RequestMethod.DELETE)
     public R forceLogout(@RequestBody Map<String, Object> body) {
-        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
-            return R.error(403, "无权限");
+        R denied = denyUnlessOpsAdmin();
+        if (denied != null) {
+            return denied;
         }
         Object o = body.get("userUuid");
         if (o == null || StringUtils.isBlank(o.toString())) {
@@ -156,8 +177,9 @@ public class SysSessionController {
      */
     @RequestMapping(value = "/clearForceLogout", method = RequestMethod.POST)
     public R clearForceLogout(@RequestBody Map<String, Object> body) {
-        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
-            return R.error(403, "无权限");
+        R denied = denyUnlessOpsAdmin();
+        if (denied != null) {
+            return denied;
         }
         Object o = body.get("userUuid");
         if (o == null || StringUtils.isBlank(o.toString())) {
@@ -173,8 +195,9 @@ public class SysSessionController {
      */
     @RequestMapping(value = "/cleanup-expired", method = RequestMethod.POST)
     public R cleanupExpired() {
-        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
-            return R.error(403, "无权限");
+        R denied = denyUnlessOpsAdmin();
+        if (denied != null) {
+            return denied;
         }
         if (sysShiroSessionService == null) {
             return R.error(500, "会话持久化服务不可用");

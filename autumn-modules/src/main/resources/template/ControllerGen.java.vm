@@ -14,6 +14,12 @@ import ${package}.${moduleName}.service.${className}Service;
 import ${mainPath}.utils.PageUtils;
 import ${mainPath}.utils.R;
 
+/**
+ * 代码生成 CRUD 基类。
+ * 默认：任意 {@code *.controller.gen.*} 仅系统管理员可调（防菜单用户越权读全表）；
+ * 豁免：usr/safe/bot/qrc，及子项目 {@code AdminAccessModuleHandler#selfGenModules()}；
+ * 豁免模块仍按 {@code @RequiresPermissions} / 业务隔离。管理页请 {@code @PageAware(admin=true)}。
+ */
 public class ${className}ControllerGen {
 
     @Autowired

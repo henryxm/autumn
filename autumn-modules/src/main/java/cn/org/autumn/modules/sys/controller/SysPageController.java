@@ -1,6 +1,7 @@
 package cn.org.autumn.modules.sys.controller;
 
 import cn.org.autumn.annotation.SkipInterceptor;
+import cn.org.autumn.exception.AException;
 import cn.org.autumn.opl.OplConstants;
 import cn.org.autumn.opc.OpcConstants;
 import cn.org.autumn.modules.client.support.OauthRpAdminConstants;
@@ -11,10 +12,10 @@ import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.modules.sys.service.SysLogService;
 import cn.org.autumn.modules.sys.service.SysUserRoleService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
+import cn.org.autumn.modules.sys.support.AdminAccessGuard;
 import cn.org.autumn.modules.wall.service.IpWhiteService;
 import cn.org.autumn.modules.wall.site.WallDefault;
 import cn.org.autumn.modules.usr.interceptor.AuthorizationInterceptor;
-import cn.org.autumn.site.AdminShellAccess;
 import cn.org.autumn.site.AuthPageSupport;
 import cn.org.autumn.site.PageFactory;
 import cn.org.autumn.site.PluginFactory;
@@ -73,17 +74,15 @@ public class SysPageController implements ErrorController {
     SitePortalSupport sitePortalSupport;
 
     @Autowired
-    AdminShellAccess adminShellAccess;
-
-    List<String> active = new ArrayList<>();
+    AdminAccessGuard adminAccessGuard;
 
     @RequestMapping(OpcConstants.CONNECTBIND_MANAGE_PAGE)
     @SkipInterceptor
-    public String connectbindManage() {
+    public String connectbindManage(HttpServletRequest request, HttpServletResponse response, Model model) {
         if (!ShiroUtils.isLogin()) {
             return "redirect:/login";
         }
-        return "opc/connectbind";
+        return adminAccessGuard.gateView("opc/connectbind", request, response, model);
     }
 
     @RequestMapping("modules/{module}/{url}")
@@ -94,21 +93,27 @@ public class SysPageController implements ErrorController {
         }
         String view = "/modules/" + module + "/" + url;
         sitePortalSupport.applyToModelForView(request, model, view);
-        return adminShellAccess.denyUnlessSystemAdmin(view, request, response, model);
+        return adminAccessGuard.gateView(view, request, response, model);
     }
 
     @RequestMapping("modules/{module}/{url}.js")
-    public String js(@PathVariable("module") String module, @PathVariable("url") String url, String lang, Model model) {
+    public String js(@PathVariable("module") String module, @PathVariable("url") String url, String lang,
+                     HttpServletRequest request, HttpServletResponse response, Model model) {
         if (StringUtils.isNotBlank(lang)) {
             model.addAttribute("locale", lang);
         }
-        return "/modules/" + module + "/" + url + ".js";
+        String view = "/modules/" + module + "/" + url + ".js";
+        String gated = adminAccessGuard.gateView("/modules/" + module + "/" + url, request, response, model);
+        if ("404".equals(gated) || (gated != null && gated.contains("404"))) {
+            return gated;
+        }
+        return view;
     }
 
     @RequestMapping({"modules/**", "pages/**"})
     public String modules(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
         String view = httpServletRequest.getRequestURI();
-        return adminShellAccess.denyUnlessSystemAdmin(view, httpServletRequest, httpServletResponse, model);
+        return adminAccessGuard.gateView(view, httpServletRequest, httpServletResponse, model);
     }
 
     @RequestMapping("docs/index.html")
@@ -118,57 +123,31 @@ public class SysPageController implements ErrorController {
 
     @RequestMapping(value = {"index.html"})
     public String index(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model, String spm) {
-        active(httpServletRequest);
-        inactive(httpServletRequest);
-        if (isActive(httpServletRequest)) {
-            if (superPositionModelService.menuWithSpm()) {
-                String resourceId = superPositionModelService.getResourceId(httpServletRequest, httpServletResponse, model, spm);
-                sitePortalSupport.applyToModelForView(httpServletRequest, model, resourceId);
-                return resourceId;
+        if (!ShiroUtils.isLogin()) {
+            if (ShiroUtils.needLogin()) {
+                return "redirect:" + WebPathUtils.forBrowser(httpServletRequest, "/login");
             }
-            String indexView = pageFactory.index(httpServletRequest, httpServletResponse, model);
-            return adminShellAccess.denyUnlessSystemAdmin(indexView, httpServletRequest, httpServletResponse, model);
+            return pageFactory._404(httpServletRequest, httpServletResponse, model);
         }
-        if (ShiroUtils.needLogin()) {
-            return "redirect:" + WebPathUtils.forBrowser(httpServletRequest, "/login");
+        if (superPositionModelService.menuWithSpm()) {
+            String resourceId = superPositionModelService.getResourceId(httpServletRequest, httpServletResponse, model, spm);
+            sitePortalSupport.applyToModelForView(httpServletRequest, model, resourceId);
+            return adminAccessGuard.gateView(resourceId, httpServletRequest, httpServletResponse, model);
         }
-        return pageFactory._404(httpServletRequest, httpServletResponse, model);
-    }
-
-    public void active(HttpServletRequest request) {
-        String param = request.getParameter("active");
-        if (StringUtils.isBlank(param) || !"admin".equals(param))
-            return;
-        String sessionId = request.getSession().getId();
-        active.add(sessionId);
-    }
-
-    public boolean isActive(HttpServletRequest request) {
-        if (ShiroUtils.isLogin()) {
-            return true;
-        }
-        String sessionId = request.getSession().getId();
-        return active.contains(sessionId);
-    }
-
-    public void inactive(HttpServletRequest request) {
-        String param = request.getParameter("inactive");
-        if (StringUtils.isNotBlank(param) && "admin".equals(param)) {
-            String sessionId = request.getSession().getId();
-            active.remove(sessionId);
-        }
+        String indexView = pageFactory.index(httpServletRequest, httpServletResponse, model);
+        return adminAccessGuard.gateView(indexView, httpServletRequest, httpServletResponse, model);
     }
 
     @RequestMapping("index1.html")
     public String index1(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
-        if (isActive(httpServletRequest)) {
-            sitePortalSupport.applyToModel(httpServletRequest, model);
-            return adminShellAccess.denyUnlessSystemAdmin("index1", httpServletRequest, httpServletResponse, model);
+        if (!ShiroUtils.isLogin()) {
+            if (ShiroUtils.needLogin()) {
+                return "redirect:" + WebPathUtils.forBrowser(httpServletRequest, "/login");
+            }
+            return pageFactory._404(httpServletRequest, httpServletResponse, model);
         }
-        if (ShiroUtils.needLogin()) {
-            return "redirect:" + WebPathUtils.forBrowser(httpServletRequest, "/login");
-        }
-        return pageFactory._404(httpServletRequest, httpServletResponse, model);
+        sitePortalSupport.applyToModel(httpServletRequest, model);
+        return adminAccessGuard.gateView("index1", httpServletRequest, httpServletResponse, model);
     }
 
     @RequestMapping({"login.html", "login"})
@@ -215,18 +194,14 @@ public class SysPageController implements ErrorController {
 
     @RequestMapping({"siteportal.html"})
     @SkipInterceptor
-    public String siteportal(HttpServletRequest servlet) {
-        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
-            return "404";
-        }
-        ipWhiteService.check(servlet, getClass(), "siteportal");
-        return "siteportal";
+    public String siteportal(HttpServletRequest request, HttpServletResponse response, Model model) {
+        return adminAccessGuard.gateView("siteportal", request, response, model);
     }
 
     @RequestMapping("main.html")
     public String _main(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
         String mainView = pageFactory.main(httpServletRequest, httpServletResponse, model);
-        return adminShellAccess.denyUnlessSystemAdmin(mainView, httpServletRequest, httpServletResponse, model);
+        return adminAccessGuard.gateView(mainView, httpServletRequest, httpServletResponse, model);
     }
 
     @RequestMapping("loading.html")
@@ -265,28 +240,35 @@ public class SysPageController implements ErrorController {
     @RequestMapping({"plugin.html", "plugin"})
     @ResponseBody
     @SkipInterceptor
-    public Object plugin(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+    public Object plugin(HttpServletRequest httpServletRequest) {
+        adminAccessGuard.requireOpsAdmin(httpServletRequest, getClass(), "plugin");
         String unload = httpServletRequest.getParameter("load");
         if (StringUtils.isNotBlank(unload) && unload.equals("unload")) {
+            adminAccessGuard.auditWithIp(httpServletRequest, "plugin.unload", "");
             return pluginFactory.uninstallPlugin();
-        } else {
-            return pluginFactory.installPlugin();
         }
+        adminAccessGuard.auditWithIp(httpServletRequest, "plugin.load", "");
+        return pluginFactory.installPlugin();
     }
 
     @RequestMapping({"classpath.html", "classpath"})
     @ResponseBody
     @SkipInterceptor
-    public String getClassPath() {
-        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
-            return "";
+    public String getClassPath(HttpServletRequest request) {
+        adminAccessGuard.requireOpsAdmin(request, getClass(), "classpath");
         return System.getProperty("java.class.path");
     }
 
     @RequestMapping({"firewall.html", "firewall"})
     @ResponseBody
     @SkipInterceptor
-    public WallDefault wall(Boolean open, Boolean white, Boolean black, Boolean host, Boolean visit, Boolean url) {
+    public Object firewallApi(Boolean open, Boolean white, Boolean black, Boolean host, Boolean visit, Boolean url,
+                              HttpServletRequest request) {
+        adminAccessGuard.requireOpsAdmin(request, getClass(), "firewall");
+        // 关闭 IP 白名单须 clearToken 二次确认，避免盗用会话后关掉运维门禁
+        if (Boolean.FALSE.equals(white)) {
+            assertWallDangerousOpsToken(request);
+        }
         if (null != open)
             wallDefault.setOpen(open);
         if (null != white)
@@ -299,15 +281,16 @@ public class SysPageController implements ErrorController {
             wallDefault.setVisitEnable(visit);
         if (null != url)
             wallDefault.setUrlBlackEnable(url);
+        adminAccessGuard.auditWithIp(request, "firewall.update",
+                "open=" + open + ",white=" + white + ",black=" + black);
         return wallDefault;
     }
 
     @RequestMapping(value = "threading", method = RequestMethod.POST)
     @ResponseBody
     @SkipInterceptor
-    public Map<String, Object> postThreading() {
-        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
-            return null;
+    public Map<String, Object> postThreading(HttpServletRequest request) {
+        adminAccessGuard.requireOpsAdmin(request, getClass(), "threading");
         return threading();
     }
 
@@ -325,264 +308,209 @@ public class SysPageController implements ErrorController {
 
     @RequestMapping({"threading.html"})
     @SkipInterceptor
-    public String getThreading(Model model, HttpServletRequest servlet) {
-        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
-            return "404";
-        ipWhiteService.check(servlet, getClass(), "getThreading");
-        return "thread";
+    public String getThreading(Model model, HttpServletRequest request, HttpServletResponse response) {
+        return adminAccessGuard.gateView("thread", request, response, model);
     }
 
     @RequestMapping({"functionqueue.html"})
     @SkipInterceptor
-    public String getFunctionQueue(Model model, HttpServletRequest servlet) {
-        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
-            return "404";
-        ipWhiteService.check(servlet, getClass(), "getFunctionQueue");
-        return "functionqueue";
+    public String getFunctionQueue(Model model, HttpServletRequest request, HttpServletResponse response) {
+        return adminAccessGuard.gateView("functionqueue", request, response, model);
     }
 
     @RequestMapping({"logger.html"})
     @SkipInterceptor
-    public String logger(Model model, HttpServletRequest servlet) {
-        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
-            return "404";
+    public String logger(Model model, HttpServletRequest request, HttpServletResponse response) {
+        String gated = adminAccessGuard.gateView("logger", request, response, model);
+        if ("404".equals(gated) || (gated != null && gated.contains("404"))) {
+            return gated;
+        }
         model.addAttribute("data", sysLogService.recent());
-        ipWhiteService.check(servlet, getClass(), "logger");
         return "logger";
     }
 
     @RequestMapping({"log.html"})
     @SkipInterceptor
-    public String log(Model model, HttpServletRequest servlet) {
-        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
-            return "404";
+    public String log(Model model, HttpServletRequest request, HttpServletResponse response) {
+        String gated = adminAccessGuard.gateView("log", request, response, model);
+        if ("404".equals(gated) || (gated != null && gated.contains("404"))) {
+            return gated;
+        }
         model.addAttribute("data", sysLogService.recent());
-        ipWhiteService.check(servlet, getClass(), "log");
         return "log";
     }
 
     @RequestMapping({"redis.html"})
     @SkipInterceptor
-    public String redis(HttpServletRequest servlet) {
-        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
-            return "404";
-        ipWhiteService.check(servlet, getClass(), "redis");
-        return "redis";
+    public String redis(HttpServletRequest request, HttpServletResponse response, Model model) {
+        return adminAccessGuard.gateView("redis", request, response, model);
     }
 
     @RequestMapping({"exec.html"})
     @SkipInterceptor
-    public String exec(Model model, HttpServletRequest servlet) {
-        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
-            return "404";
-        ipWhiteService.check(servlet, getClass(), "exec");
-        return "exec";
+    public String exec(Model model, HttpServletRequest request, HttpServletResponse response) {
+        return adminAccessGuard.gateView("exec", request, response, model);
     }
 
     @RequestMapping({"cache.html"})
     @SkipInterceptor
-    public String cache(Model model) {
-        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
-            return "404";
-        return "cache";
+    public String cache(Model model, HttpServletRequest request, HttpServletResponse response) {
+        return adminAccessGuard.gateView("cache", request, response, model);
     }
 
     @RequestMapping({"queue.html"})
     @SkipInterceptor
-    public String queue(Model model) {
-        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
-            return "404";
-        return "queue";
+    public String queue(Model model, HttpServletRequest request, HttpServletResponse response) {
+        return adminAccessGuard.gateView("queue", request, response, model);
     }
 
     @RequestMapping({"database.html"})
     @SkipInterceptor
-    public String database(Model model) {
-        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
-            return "404";
-        return "database";
+    public String database(Model model, HttpServletRequest request, HttpServletResponse response) {
+        return adminAccessGuard.gateView("database", request, response, model);
     }
 
     @RequestMapping({"dbmanage.html"})
     @SkipInterceptor
-    public String dbmanage(HttpServletRequest servlet) {
-        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
-            return "404";
-        ipWhiteService.check(servlet, getClass(), "dbmanage");
-        return "dbmanage";
+    public String dbmanage(HttpServletRequest request, HttpServletResponse response, Model model) {
+        return adminAccessGuard.gateView("dbmanage", request, response, model);
     }
 
     @RequestMapping({"tablescan.html"})
     @SkipInterceptor
-    public String tablescan(HttpServletRequest servlet) {
-        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
-            return "404";
-        ipWhiteService.check(servlet, getClass(), "tablescan");
-        return "tablescan";
+    public String tablescan(HttpServletRequest request, HttpServletResponse response, Model model) {
+        return adminAccessGuard.gateView("tablescan", request, response, model);
     }
 
     @RequestMapping({OplConstants.MANAGE_PAGE})
     @SkipInterceptor
-    public String oplmanage() {
-        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
-            return "404";
-        return "opl/oplmanage";
+    public String oplmanage(HttpServletRequest request, HttpServletResponse response, Model model) {
+        return adminAccessGuard.gateView("opl/oplmanage", request, response, model);
     }
 
     @RequestMapping({OpcConstants.MANAGE_PAGE})
     @SkipInterceptor
-    public String opcmanage() {
-        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
-            return "404";
-        return "opc/opcmanage";
+    public String opcmanage(HttpServletRequest request, HttpServletResponse response, Model model) {
+        return adminAccessGuard.gateView("opc/opcmanage", request, response, model);
     }
 
     @RequestMapping({OauthAdminConstants.MANAGE_AS_PAGE})
     @SkipInterceptor
-    public String oauthasmanage() {
-        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
-            return "404";
-        return "oauth/oauthasmanage";
+    public String oauthasmanage(HttpServletRequest request, HttpServletResponse response, Model model) {
+        return adminAccessGuard.gateView("oauth/oauthasmanage", request, response, model);
     }
 
     @RequestMapping({"authscopemanage.html"})
     @SkipInterceptor
-    public String authscopemanage() {
-        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
-            return "404";
-        return "auth/authscopemanage";
+    public String authscopemanage(HttpServletRequest request, HttpServletResponse response, Model model) {
+        return adminAccessGuard.gateView("auth/authscopemanage", request, response, model);
     }
 
     @RequestMapping({OauthRpAdminConstants.MANAGE_RP_PAGE})
     @SkipInterceptor
-    public String oauthrpmanage() {
-        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
-            return "404";
-        return "client/oauthrpmanage";
+    public String oauthrpmanage(HttpServletRequest request, HttpServletResponse response, Model model) {
+        return adminAccessGuard.gateView("client/oauthrpmanage", request, response, model);
     }
 
     @RequestMapping({"loopjob.html"})
     @SkipInterceptor
-    public String loopjob(Model model) {
-        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
-            return "404";
-        return "loopjob";
+    public String loopjob(Model model, HttpServletRequest request, HttpServletResponse response) {
+        return adminAccessGuard.gateView("loopjob", request, response, model);
     }
 
     @RequestMapping({"cluster.html"})
     @SkipInterceptor
-    public String cluster(Model model) {
-        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
-            return "404";
-        return "cluster";
+    public String cluster(Model model, HttpServletRequest request, HttpServletResponse response) {
+        return adminAccessGuard.gateView("cluster", request, response, model);
     }
 
     @RequestMapping({"loginlog.html"})
     @SkipInterceptor
-    public String loginlog(HttpServletRequest servlet) {
-        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
-            return "404";
-        ipWhiteService.check(servlet, getClass(), "loginlog");
-        return "loginlog";
+    public String loginlog(HttpServletRequest request, HttpServletResponse response, Model model) {
+        return adminAccessGuard.gateView("loginlog", request, response, model);
     }
 
     @RequestMapping({"session.html"})
     @SkipInterceptor
-    public String session(HttpServletRequest servlet) {
-        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
-            return "404";
-        ipWhiteService.check(servlet, getClass(), "session");
-        return "session";
+    public String session(HttpServletRequest request, HttpServletResponse response, Model model) {
+        return adminAccessGuard.gateView("session", request, response, model);
     }
 
     @RequestMapping(value = {"scan.html"}, method = RequestMethod.GET)
     @SkipInterceptor
-    public String scan(Model model, HttpServletRequest request) {
-        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
-            return "404";
+    public String scan(Model model, HttpServletRequest request, HttpServletResponse response) {
+        String gated = adminAccessGuard.gateView("scan", request, response, model);
+        if ("404".equals(gated) || (gated != null && gated.contains("404"))) {
+            return gated;
+        }
         model.addAttribute("url", WebPathUtils.forBrowser(request, "/"));
         return "scan";
     }
 
     @RequestMapping(value = {"shield.html"}, method = RequestMethod.GET)
     @SkipInterceptor
-    public String shield(HttpServletRequest servlet) {
-        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid()))
-            return "404";
-        ipWhiteService.check(servlet, getClass(), "shield");
-        return "shield";
+    public String shield(HttpServletRequest request, HttpServletResponse response, Model model) {
+        return adminAccessGuard.gateView("shield", request, response, model);
     }
 
     @RequestMapping(value = {"clear.html"}, method = RequestMethod.GET)
     @SkipInterceptor
     public String clearPage(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
-        if (ShiroUtils.isLogin()) {
-            if (sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
-                return pageFactory.clear(httpServletRequest, httpServletResponse, model);
-            }
+        String gated = adminAccessGuard.gateView("clear", httpServletRequest, httpServletResponse, model);
+        if ("404".equals(gated) || (gated != null && gated.contains("404"))) {
+            return gated;
         }
-        return "404";
+        return pageFactory.clear(httpServletRequest, httpServletResponse, model);
     }
 
     @ResponseBody
     @RequestMapping(value = {"clear"}, method = RequestMethod.POST)
     @SkipInterceptor
     public String clearPost(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) throws Exception {
-        if (ShiroUtils.isLogin()) {
-            if (sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
-                check(httpServletRequest, "clear");
-                pageFactory.clear(httpServletRequest, httpServletResponse, model);
-            }
-        }
+        adminAccessGuard.requireOpsAdmin(httpServletRequest, getClass(), "clear");
+        check(httpServletRequest, "clear");
+        pageFactory.clear(httpServletRequest, httpServletResponse, model);
         return "404";
     }
 
     @RequestMapping(value = {"reinit.html"}, method = RequestMethod.GET)
     @SkipInterceptor
     public String reinit(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
-        ipWhiteService.check(httpServletRequest, getClass(), "reinit");
-        if (ShiroUtils.isLogin()) {
-            if (sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
-                return pageFactory.reinit(httpServletRequest, httpServletResponse, model);
-            }
+        String gated = adminAccessGuard.gateView("reinit", httpServletRequest, httpServletResponse, model);
+        if ("404".equals(gated) || (gated != null && gated.contains("404"))) {
+            return gated;
         }
-        return "404";
+        return pageFactory.reinit(httpServletRequest, httpServletResponse, model);
     }
 
     @RequestMapping(value = {"fieldencrypt.html"}, method = RequestMethod.GET)
     @SkipInterceptor
     public String fieldencrypt(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
-        ipWhiteService.check(httpServletRequest, getClass(), "fieldencrypt");
-        if (ShiroUtils.isLogin()) {
-            if (sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
-                return pageFactory.fieldencrypt(httpServletRequest, httpServletResponse, model);
-            }
+        String gated = adminAccessGuard.gateView("fieldencrypt", httpServletRequest, httpServletResponse, model);
+        if ("404".equals(gated) || (gated != null && gated.contains("404"))) {
+            return gated;
         }
-        return "404";
+        return pageFactory.fieldencrypt(httpServletRequest, httpServletResponse, model);
     }
 
     @ResponseBody
     @RequestMapping(value = {"reinit"}, method = RequestMethod.POST)
     @SkipInterceptor
     public String reinitPost(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) throws Exception {
-        if (ShiroUtils.isLogin()) {
-            if (sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
-                check(httpServletRequest, "reinit");
-                pageFactory.reinit(httpServletRequest, httpServletResponse, model);
-            }
-        }
+        adminAccessGuard.requireOpsAdmin(httpServletRequest, getClass(), "reinit");
+        check(httpServletRequest, "reinit");
+        pageFactory.reinit(httpServletRequest, httpServletResponse, model);
         return "404";
     }
 
     @RequestMapping(value = {"wall.html"}, method = RequestMethod.GET)
     @SkipInterceptor
-    public String wall(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
-        if (ShiroUtils.isLogin()) {
-            if (sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
-                return pageFactory.wall(httpServletRequest, httpServletResponse, model);
-            }
+    public String wallPage(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        String gated = adminAccessGuard.gateView("wall", httpServletRequest, httpServletResponse, model);
+        if ("404".equals(gated) || (gated != null && gated.contains("404"))) {
+            return gated;
         }
-        return "404";
+        return pageFactory.wall(httpServletRequest, httpServletResponse, model);
     }
 
     public void check(HttpServletRequest request, String method) throws Exception {
@@ -603,5 +531,15 @@ public class SysPageController implements ErrorController {
         }
         // 未在 SysConfig 配置高熵运维 Token 时拒绝（后台「安全加固配置」填写）
         throw new Exception("Unauthenticated");
+    }
+
+    /** 关白名单 / 删当前 IP 等危险操作：复用 clearToken（头 x-clear-authentication）。 */
+    public void assertWallDangerousOpsToken(HttpServletRequest request) {
+        SecurityOpsConfig ops = sysConfigService.getSecurityOpsConfig();
+        String configured = ops != null ? ops.getClearToken() : null;
+        String token = request.getHeader("x-clear-authentication");
+        if (StringUtils.isBlank(configured) || StringUtils.isBlank(token) || !configured.equals(token)) {
+            throw new AException("需要运维 clear Token 确认", 403);
+        }
     }
 }

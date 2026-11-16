@@ -2,8 +2,9 @@ package cn.org.autumn.modules.sys.controller;
 
 import cn.org.autumn.annotation.Endpoint;
 import cn.org.autumn.annotation.SkipInterceptor;
-import cn.org.autumn.modules.sys.service.SysUserRoleService;
+import cn.org.autumn.exception.AException;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
+import cn.org.autumn.modules.sys.support.AdminAccessGuard;
 import cn.org.autumn.thread.FunctionQueue;
 import cn.org.autumn.thread.FunctionTaskRecord;
 import cn.org.autumn.thread.OverflowPolicy;
@@ -12,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -20,6 +22,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 @Slf4j
 @Controller
@@ -33,11 +37,20 @@ public class SysFunctionQueueController {
     FunctionQueue functionQueue;
 
     @Autowired
-    @Lazy
-    SysUserRoleService sysUserRoleService;
+    AdminAccessGuard adminAccessGuard;
 
     private boolean checkPermission() {
-        return ShiroUtils.isLogin() && sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid());
+        try {
+            ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            if (attrs == null) {
+                return false;
+            }
+            HttpServletRequest request = attrs.getRequest();
+            adminAccessGuard.requireOpsAdmin(request, getClass(), "functionqueue");
+            return true;
+        } catch (AException e) {
+            return false;
+        }
     }
 
     @RequestMapping(value = "info", method = RequestMethod.POST)

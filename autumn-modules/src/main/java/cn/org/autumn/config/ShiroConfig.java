@@ -263,18 +263,15 @@ public class ShiroConfig {
         // 社区行为规范：与协议/隐私一致，匿名可读（H5 + 短链）
         filterMap.put("/user/community.html", "anon");
         filterMap.put("/user/community", "anon");
-        filterMap.put("/plugin.html", "anon");
         filterMap.put("/404.html", "anon");
         filterMap.put("/500.html", "anon");
         filterMap.put("/505.html", "anon");
-        filterMap.put("/plugin", "anon");
         filterMap.put("/error.html", "anon");
         filterMap.put("/404", "anon");
         filterMap.put("/500", "anon");
         filterMap.put("/505", "anon");
         filterMap.put("/error", "anon");
-        filterMap.put("/clear", "anon");
-        filterMap.put("/reinit", "anon");
+        // /plugin、/clear、/reinit：须登录；方法内再校验超管 + IP 白名单 / ops Token
         filterMap.put("/sys/ops/admin-bootstrap/**", "anon");
         filterMap.put("/sys/login", "anon");
         filterMap.put("/sys/register", "anon");

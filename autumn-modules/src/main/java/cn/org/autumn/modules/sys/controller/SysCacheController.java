@@ -5,13 +5,14 @@ import cn.org.autumn.annotation.SkipInterceptor;
 import cn.org.autumn.config.CacheConfig;
 import cn.org.autumn.config.EhCacheManager;
 import cn.org.autumn.model.Response;
-import cn.org.autumn.modules.sys.service.SysUserRoleService;
-import cn.org.autumn.modules.sys.shiro.ShiroUtils;
+import cn.org.autumn.exception.AException;
+import cn.org.autumn.modules.sys.support.AdminAccessGuard;
 import cn.org.autumn.service.CacheService;
 import com.google.gson.Gson;
 import java.math.BigDecimal;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.ehcache.Cache;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +20,8 @@ import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 /**
  * 缓存管理控制器
@@ -43,16 +46,26 @@ public class SysCacheController {
     private RedisTemplate<String, Object> redisTemplate;
 
     @Autowired
-    private SysUserRoleService sysUserRoleService;
+    private AdminAccessGuard adminAccessGuard;
 
     @Autowired
     private Gson gson;
 
     /**
-     * 检查权限
+     * 运维权限：系统管理员 + IP 白名单
      */
     private boolean checkPermission() {
-        return ShiroUtils.isLogin() && sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid());
+        try {
+            ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            if (attrs == null) {
+                return false;
+            }
+            HttpServletRequest request = attrs.getRequest();
+            adminAccessGuard.requireOpsAdmin(request, getClass(), "cache");
+            return true;
+        } catch (AException e) {
+            return false;
+        }
     }
 
     /**

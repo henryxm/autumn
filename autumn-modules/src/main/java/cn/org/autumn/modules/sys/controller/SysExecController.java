@@ -1,12 +1,8 @@
 package cn.org.autumn.modules.sys.controller;
 
-import cn.org.autumn.config.Config;
-import cn.org.autumn.exception.AException;
 import cn.org.autumn.model.IP;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
-import cn.org.autumn.modules.sys.service.SysUserRoleService;
-import cn.org.autumn.modules.wall.service.IpWhiteService;
-import cn.org.autumn.modules.wall.service.WallService;
+import cn.org.autumn.modules.sys.support.AdminAccessGuard;
 import cn.org.autumn.utils.SpringContextUtils;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
@@ -33,24 +29,22 @@ import java.util.stream.Collectors;
 @RequestMapping({"/sys/exec"})
 public class SysExecController {
 
-    @Autowired
-    private SysUserRoleService sysUserRoleService;
-
     @Autowired(required = false)
     private Gson gson;
 
     @Autowired
-    IpWhiteService ipWhiteService;
+    private AdminAccessGuard adminAccessGuard;
 
     /**
      * 获取Spring管理的所有Bean列表（分页）
      */
     @RequestMapping(value = "/beans", method = RequestMethod.GET)
     public Map<String, Object> getBeans(@RequestParam(defaultValue = "1") Integer current, @RequestParam(defaultValue = "50") Integer size, @RequestParam(required = false) String search, HttpServletRequest servlet) {
-        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
+        try {
+            adminAccessGuard.requireOpsAdmin(servlet, getClass(), "beans");
+        } catch (Exception e) {
             return null;
         }
-        ipWhiteService.check(servlet, getClass(), "beans");
         ApplicationContext context = SpringContextUtils.getApplicationContext();
         String[] beanNames = context.getBeanDefinitionNames();
         List<Map<String, Object>> allBeans = new ArrayList<>();
@@ -100,10 +94,11 @@ public class SysExecController {
      */
     @RequestMapping(value = "/bean/methods", method = RequestMethod.GET)
     public Map<String, Object> getBeanMethods(@RequestParam String beanName, HttpServletRequest servlet) {
-        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
+        try {
+            adminAccessGuard.requireOpsAdmin(servlet, getClass(), "getBeanMethods");
+        } catch (Exception e) {
             return null;
         }
-        ipWhiteService.check(servlet, getClass(), "getBeanMethods");
         ApplicationContext context = SpringContextUtils.getApplicationContext();
         Object bean = context.getBean(beanName);
         Class<?> beanType = bean.getClass();
@@ -155,16 +150,35 @@ public class SysExecController {
      */
     @RequestMapping(value = "/bean/execute", method = RequestMethod.POST)
     public Map<String, Object> executeBeanMethod(@RequestBody Map<String, Object> request, HttpServletRequest servlet) {
-        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
-            return null;
-        }
-        ipWhiteService.check(servlet, getClass(), "executeBeanMethod");
         Map<String, Object> result = new HashMap<>();
         try {
-            String beanName = (String) request.get("beanName");
-            String methodName = (String) request.get("methodName");
+            adminAccessGuard.requireOpsAdmin(servlet, getClass(), "executeBeanMethod");
+        } catch (Exception e) {
+            return null;
+        }
+        String beanName = (String) request.get("beanName");
+        String methodName = (String) request.get("methodName");
+        String ip = IP.getIp(servlet);
+        String user = "-";
+        try {
+            if (ShiroUtils.isLogin()) {
+                user = StringUtils.defaultIfBlank(ShiroUtils.getUserUuid(), "-");
+            }
+        } catch (Exception ignored) {
+        }
+        if (!adminAccessGuard.isBeanExecuteEnabled()) {
+            log.warn("SecurityAlert denied reason=bean_execute_disabled, user={}, login=true, ip={}, uri={}, target={}#{}, detail=bean executor off, ua={}", user, ip, StringUtils.defaultIfBlank(servlet.getRequestURI(), "-"), beanName, methodName, StringUtils.abbreviate(StringUtils.defaultString(servlet.getHeader("User-Agent")), 120));
+            result.put("success", false);
+            result.put("message", "Bean执行器已关闭");
+            return result;
+        }
+        log.info("SecurityAlert audit action=bean_execute, user={}, ip={}, detail={}:{}", user, ip, beanName, methodName);
+        try {
             @SuppressWarnings("unchecked")
             List<Object> parameters = (List<Object>) request.get("parameters");
+            if (parameters == null) {
+                parameters = Collections.emptyList();
+            }
             ApplicationContext context = SpringContextUtils.getApplicationContext();
             Object bean = context.getBean(beanName);
             Class<?> beanType = bean.getClass();

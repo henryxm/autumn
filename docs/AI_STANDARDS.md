@@ -351,8 +351,17 @@ public class DemoEntity { ... }
   - **匿名公共页**：`@PageAware(login = false)`（按需填 `resource` / `url` / `page` 等指向资源路径）。  
   - **需登录后台页**：`@PageAware(login = true)`。  
   - **仅系统管理员**：`@PageAware(login = true, admin = true)`。已登录非 `isSystemAdministrator` 经 SPM 或 `/modules/**` 直链访问 → **404**（`AdminShellAccess`）；未登录仍按 `login` 走登录跳转。  
+  - **管理台 / 全表配置页**（含子项目 im、vshort、xsignw、bighub 等）：须标 **`admin = true`**，禁止仅靠菜单权限冒充「后台管理员」。  
 
   具体属性以 `cn.org.autumn.annotation.PageAware` 为准。
+
+- **生成 CRUD（`*.controller.gen.*`）与越权（硬约束）**：  
+  - 框架切面 **`GenAdminAccessAspect`**：默认**任意包**下 gen Controller 仅 **系统管理员**可调用，防止有菜单的普通账号读/写全表。  
+  - **豁免**（不强制超管，仍受 `@RequiresPermissions` / 业务隔离）：模块 **`usr` / `safe` / `bot` / `qrc`**；子项目若确有「本人数据」gen，实现 **`cn.org.autumn.config.AdminAccessModuleHandler#selfGenModules()`** 注册模块短名。  
+  - **禁止**把匿名首页、公开 CMS 读接口、C 端列表写进 `controller.gen`；公开能力用可维护 Controller + `@PageAware(login=false)` / Shiro 匿名链。  
+  - **禁止**为「方便运营」通过 SPI 把整站业务模块全部加入自助豁免。  
+  - 兼容与回归清单见 **`docs/AI_SECURITY_HARDENING_3_0_COMPAT.md`**（**C-20**、§4.4 / §4.4.1）。  
+  - 门禁拒绝须打 **`SecurityAlert denied`** 告警日志（字段与 `reason` 见同文档 **§4.4.2**），便于发现提权探测；勿在业务仓另造不兼容格式。
 
 - **页面文案与功能描述（新增硬约束）**：除非需求中有**特殊说明**，所有页面开发都必须以**用户与使用者视角**进行描述与设计，禁止从开发实现视角表达。具体要求：
   - **禁止**出现开发相关专业术语（如接口、数据库、缓存、线程、方法、函数、参数、对象、JSON、SQL、鉴权链路等）。

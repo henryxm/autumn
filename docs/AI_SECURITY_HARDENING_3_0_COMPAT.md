@@ -29,7 +29,8 @@
 | **C-03** | `userUuid` hint-only | 无 Token 时可凭 hint 冒充解析身份 | 默认**拒绝** | 依赖网关只传 `userUuid`、无 Token 的内部调用 | SysConfig `SECURITY_AUTH_CONFIG.allowUserUuidHint=true` |
 | **C-04** | 默认管理员口令 | 未配置时 `admin`/`admin` | 未配置时**随机强口令**并打 info 日志（英文）+ 落盘恢复文件 | 首次安装/自动化装机脚本 | 配置 `systemPassword`（EnvBean） |
 | **C-05** | Dev 空密登录 | 空用户名/密码回填 `admin` | 空则报错 | 本地习惯空 POST 登录的脚本 | 显式传账号密码 |
-| **C-06** | `/plugin/load` 等 | Shiro anon + 无角色校验 | 需登录且系统管理员 | 自动化插件加载 | 先登录超管 Session |
+| **C-06** | `/plugin` / `/plugin.html` | Shiro anon + 无角色校验 | 走 `spm`；方法内超管 + IP 白名单 | 自动化插件加载 | 先登录超管 Session，且客户端 IP 已加白 |
+| **C-20** | 后台门禁 / gen CRUD / Bean 执行 / wall 加白 | 有菜单即可调任意 gen 全表；`/wall/api/ipwhite/add` 无鉴权；exec 默认可调 | **任意** `*.controller.gen.*` 默认仅超管；仅 usr/safe/bot/qrc（+`AdminAccessModuleHandler#selfGenModules`）豁免；运维页超管+IP 白名单；`beanExecuteEnabled` 默认关；加白须鉴权；页面：框架 GEN_MODULES / ops / `@PageAware(admin=true)` 仅超管，子项目业务页默认兼容，`adminLockdown` 可收紧 | 非超管用 gen 管业务全表；匿名加白脚本 | 自助 API/公开首页不变；业务全表改超管或写带隔离的定制 API；豁免用 SPI；后台开 `beanExecuteEnabled`；加白用已加白超管会话 |
 | **C-07** | `/actuator/**` | Shiro anon | 走 `spm`（需登录） | 监控探活若直打 actuator | 改用网关鉴权或登录；health 暴露见 `management.endpoints` |
 | **C-08** | clear/reinit 头认证 | 固定头 `application/client-clear` 等 | **必须**在 SysConfig 配置高熵 ops Token，未配置则拒绝 | 运维脚本 | `SECURITY_OPS_CONFIG.clearToken` / `reinitToken` |
 | **C-09** | CORS 反射 Origin | 任意 Origin + Credentials | 仅同源或 SysConfig CORS 白名单 | 跨域带 Cookie 的前端 | `SECURITY_AUTH_CONFIG.corsAllowedOrigins` |
@@ -280,10 +281,70 @@
 
 - [ ] 非超管列表数据范围（DataFilter）  
 - [ ] 列表非法 `sidx` 不报 500、不注入  
-- [ ] 插件 load/unload 无超管 → 403  
+- [ ] 插件 load/unload 无超管 → 403（`/plugin` 不再 anon；须超管 + IP 白名单）  
 - [ ] actuator 未登录不可随意访问  
 - [ ] clear/reinit：配置 Token 后成功；未配置失败  
 - [ ] prod CSRF：管理 POST 带 `X-CSRF-Token`  
+- [ ] **`SECURITY_AUTH_CONFIG.adminLockdown`**：默认 `false`（模式 A）。运维页与框架 GEN_MODULES 管理页无论开关均仅系统管理员；**任意业务 gen CRUD** 亦仅超管（见下）；自助 API（`/sys/session/self/**`、usr/safe/bot/qrc gen）始终不锁。`true` 时子项目自定义 `modules/**` 与非 gen 定制管理页也仅超管  
+- [ ] **`SECURITY_OPS_CONFIG.beanExecuteEnabled`**：默认 `false`；开启后仍须超管 + IP 白名单，审计日志记账号/IP/Bean/方法  
+- [ ] **`POST /wall/api/ipwhite/add`**：未登录/非超管/未加白 IP → 不写库；关白名单或删当前 IP 须头 `x-clear-authentication` = clearToken  
+- [ ] **`firewall.html`**：非超管不得改 `WallDefault`；`white=false` 须 clearToken  
+- [ ] gen CRUD：非超管调 `*.controller.gen.*` → 403；**usr/safe/bot/qrc**（及 SPI `selfGenModules`）不强制超管  
+- [ ] 子项目 `modules/{biz}/**` **页面**：默认非超管可开（登录由 Spm）；`adminLockdown=true` 或 `@PageAware(admin=true)` 时仅超管  
+- [ ] 普通用户自助：`/sys/session/self/list`、`self/ping`、`/sys/user/info|password` 仍 200（本人数据）  
+- [ ] `/plugin/load|unload` 与 HTML `/plugin` 一致：超管 + IP 白名单  
+
+### 4.4.1 依赖仓兼容矩阵（im / video / bighub / xsign-www）
+
+> 扫描时点：业务仓依赖 Autumn **3.0.0**。框架侧 gen 切点已为 `*..controller.gen..*`（含 `cn.bighub`）；下表「框架已拦」与「业务仓待改」分开。
+
+| 仓 | 首页 / 公开页 | 业务管理页 | gen CRUD API | 框架结论 |
+|----|---------------|------------|--------------|----------|
+| **xsign-www**（`xsignw`） | 公开 Site / `XSignWwwController`；证书与职位等自定义 anon | `login=true` 管理页默认兼容 | `xsignw` gen → 仅超管（切面） | 首页可用；gen 全表已锁 |
+| **im**（`im/file/asr/…`） | 部分 `login=false`；客户端 `/im/api/v1` | 大量 `login=true`、无 `admin=true` | `im/file/asr/…` gen → 仅超管 | 客户端 API 不受 gen 切面影响 |
+| **video**（`vshort`） | `/vshort/api/v1/**` Shiro anon + `@Authenticated` | `VshortPages` 等默认兼容 | `vshort` gen → 仅超管 | 同上 |
+| **bighub**（`cn.bighub.modules.*`） | 门户 SPM；`/admin` 自拦超管 | 控制台默认兼容；**全库无** `admin=true` | `cn.bighub...controller.gen` → 仅超管 | 包名不同**不能**绕过切面 |
+
+**适配要点（框架约定）**
+
+1. **公开首页 / 匿名 API**：`@PageAware(login=false)` 或可维护 Controller + Shiro anon；**禁止**把公开能力写进 `controller.gen`（否则非超管/匿名会 403）。  
+2. **本人数据**：usr/safe/bot/qrc，或 `AdminAccessModuleHandler#selfGenModules()`（仍须权限与行级隔离）。  
+3. **业务全表**：仅超管用 gen；运营部分表 → 可维护 Controller + 数据范围。  
+4. **管理页**：全表/运维向 Site 字段加 **`@PageAware(login = true, admin = true)`**。  
+5. **整站高危**：可开 `adminLockdown=true`（会收紧全部未知 `modules/**`，含用户控制台页，慎用）。
+
+**业务仓残留风险（框架不替代，升级后仍须业务侧整改）**
+
+| 仓 | 残留点 | 建议 |
+|----|--------|------|
+| **xsign-www** | FilterChain 将 `/xsignw/xsignhomepage/**`、`/xsignw/xsignjobvacancypublish/**` 标 anon；Universal Link **写**接口、证书上传/兑换等落在公开面 | anon 仅保留真正公开读方法；写操作改登录/签名校验；**勿**对整个 gen 前缀 anon（gen CRUD 虽被切面拦，子类扩展方法不会） |
+| **im** | 管理页无 `admin=true`；部分运维 REST（如 Zookeeper/Nacos/RobotChannel）未 `isSystemAdmin` | 管理页补 `admin=true`；运维 REST 对齐 `requireOpsAdmin` 或至少超管 |
+| **video** | `/vshort/api/v1/**` 整段 Shiro anon，身份仅靠 `@Authenticated`（含 `notNull=false`） | 审漏注；敏感写接口禁止匿名 Subject |
+| **bighub** | 大量 bare `@PageAware`（默认 `login=false`）含运维向 helps；管理页仅 `login=true` | helps 显式 `login=true`；管理页 `admin=true`；自助继续走 `usercenter` / `*/user/*` |
+
+### 4.4.2 安全告警日志（`SecurityAlert`）
+
+门禁拒绝与高危运维审计统一前缀，便于 SIEM / `grep` 发现提权探测：
+
+| 类型 | 日志形态 | 说明 |
+|------|----------|------|
+| **拒绝** | `WARN … SecurityAlert denied reason=…, user=…, login=…, ip=…, uri=…, target=…, detail=…, ua=…` | 未授权 / 非超管 / IP 未加白 / Bean 执行关闭等 |
+| **审计** | `INFO … SecurityAlert audit action=…, user=…, …` | 已通过门禁的高危动作（如 Bean 执行） |
+
+**常用 `reason`（拒绝）**
+
+| reason | 触发点 |
+|--------|--------|
+| `ops_admin_unauthenticated` / `ops_admin_forbidden` | `requireOpsAdmin`（exec/plugin/queue/wall API 等） |
+| `system_admin_unauthenticated` / `system_admin_forbidden` | `requireSystemAdmin`；gen CRUD 的 `target=gen:…#method` |
+| `admin_page_view` / `ops_view` / `gen_module_view` | `gateView` 页面门禁 |
+| `ops_ip_white` / `ip_white` | 运维页或 `IpWhiteService.check` IP 未加白 |
+| `admin_lockdown` / `custom_manage_*` | lockdown / 定制管理页无菜单 |
+| `admin_shell_unauthenticated` / `admin_shell_forbidden` | `AdminShellAccess.denyUnlessSystemAdmin` |
+| `bean_execute_disabled` | exec Bean 执行器关闭后仍被调用 |
+| `data_filter_unauthenticated` | `@DataFilter` 未登录 |
+
+**运维建议**：对 `SecurityAlert denied` 按 `ip`/`user` 聚合告警；短时大量 `ops_*` / `gen:` / `ip_white` 视为扫描或提权探测。
 
 ### 4.5 前端 / 模板
 

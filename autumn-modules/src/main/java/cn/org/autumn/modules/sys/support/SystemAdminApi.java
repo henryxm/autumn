@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.sys.support;
 
+import cn.org.autumn.exception.AException;
 import cn.org.autumn.modules.sys.service.SysUserRoleService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.utils.R;
@@ -17,6 +18,9 @@ public class SystemAdminApi {
     @Autowired
     private SysUserRoleService sysUserRoleService;
 
+    @Autowired
+    private AdminAccessGuard adminAccessGuard;
+
     public R execute(HttpServletRequest request, String logTag, Supplier<R> action) {
         try {
             if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
@@ -25,6 +29,20 @@ public class SystemAdminApi {
             return action.get();
         } catch (Exception e) {
             log.error("{} admin API failed: {}", logTag, e.getMessage(), e);
+            return R.error(e.getMessage());
+        }
+    }
+
+    /** 运维级：系统管理员 + IP 白名单。 */
+    public R executeOps(HttpServletRequest request, String logTag, Supplier<R> action) {
+        try {
+            adminAccessGuard.requireOpsAdmin(request, getClass(), logTag);
+            return action.get();
+        } catch (AException e) {
+            int code = e.getCode() > 0 ? e.getCode() : 403;
+            return R.error(code, e.getMessage());
+        } catch (Exception e) {
+            log.error("{} ops admin API failed: {}", logTag, e.getMessage(), e);
             return R.error(e.getMessage());
         }
     }

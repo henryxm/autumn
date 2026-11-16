@@ -8,6 +8,7 @@ import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.spm.entity.SuperPositionModelEntity;
 import cn.org.autumn.modules.spm.service.gen.SuperPositionModelServiceGen;
 import cn.org.autumn.modules.sys.service.SysConfigService;
+import cn.org.autumn.modules.sys.support.AdminAccessGuard;
 import cn.org.autumn.utils.IPUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -51,6 +52,9 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
 
     @Autowired
     AdminShellAccess adminShellAccess;
+
+    @Autowired
+    AdminAccessGuard adminAccessGuard;
 
     @Autowired
     LoadFactory loadFactory;
@@ -197,18 +201,18 @@ public class SuperPositionModelService extends SuperPositionModelServiceGen impl
         if (StringUtils.isNotEmpty(path)) {
             if (log.isDebugEnabled())
                 log.debug("路径:{}, 工厂:{}", httpServletRequest.getRequestURL(), path);
-            return adminShellAccess.denyUnlessSystemAdmin(path, httpServletRequest, httpServletResponse, model);
+            return adminAccessGuard.gateView(path, httpServletRequest, httpServletResponse, model);
         }
 
         if (StringUtils.isEmpty(spm)) {
             if (log.isDebugEnabled())
                 log.debug("默认路径:{}", httpServletRequest.getRequestURL());
             String indexView = pageFactory.index(httpServletRequest, httpServletResponse, model);
-            return adminShellAccess.denyUnlessSystemAdmin(indexView, httpServletRequest, httpServletResponse, model);
+            return adminAccessGuard.gateView(indexView, httpServletRequest, httpServletResponse, model);
         }
         SuperPositionModelEntity superPositionModelEntity = getSpm(httpServletRequest, spm);
         if (null != superPositionModelEntity && StringUtils.isNotEmpty(superPositionModelEntity.getResourceId()))
-            return adminShellAccess.denyUnlessSystemAdmin(superPositionModelEntity.getResourceId(), httpServletRequest, httpServletResponse, model);
+            return adminAccessGuard.gateView(superPositionModelEntity.getResourceId(), httpServletRequest, httpServletResponse, model);
         if (log.isDebugEnabled())
             log.debug("无效路径:{}, 返回:404", httpServletRequest.getRequestURL());
         return pageFactory._404(httpServletRequest, httpServletResponse, model);

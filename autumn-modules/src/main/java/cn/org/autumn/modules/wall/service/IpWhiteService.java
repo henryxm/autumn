@@ -5,6 +5,7 @@ import cn.org.autumn.config.Config;
 import cn.org.autumn.database.CrudGuard;
 import cn.org.autumn.exception.AException;
 import cn.org.autumn.model.IP;
+import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.wall.dao.IpWhiteDao;
 import cn.org.autumn.modules.wall.entity.RData;
 import cn.org.autumn.site.InitFactory;
@@ -205,7 +206,15 @@ public class IpWhiteService extends WallCounter<IpWhiteDao, IpWhiteEntity> imple
         if (null != servlet) {
             String ip = IP.getIp(servlet);
             if (wallFactory.isIpWhiteEnable() && !isWhite(ip)) {
-                log.warn("IP未加白:{}, 入口:{}:{}", ip, clazz.getSimpleName(), method);
+                String user = "-";
+                try {
+                    if (ShiroUtils.isLogin()) {
+                        user = StringUtils.defaultIfBlank(ShiroUtils.getUserUuid(), "-");
+                    }
+                } catch (Exception ignored) {
+                }
+                String entry = (clazz != null ? clazz.getSimpleName() : "-") + "#" + StringUtils.defaultIfBlank(method, "-");
+                log.warn("SecurityAlert denied reason=ip_white, user={}, login={}, ip={}, uri={}, target={}, detail=IP未加白, ua={}", user, ShiroUtils.isLogin(), ip, StringUtils.defaultIfBlank(servlet.getRequestURI(), "-"), entry, StringUtils.abbreviate(StringUtils.defaultString(servlet.getHeader("User-Agent")), 120));
                 throw new AException("服务繁忙");
             }
         }

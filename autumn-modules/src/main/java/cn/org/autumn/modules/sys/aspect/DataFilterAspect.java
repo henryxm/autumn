@@ -9,6 +9,7 @@ import cn.org.autumn.modules.sys.service.SysRoleDeptService;
 import cn.org.autumn.modules.sys.service.SysUserRoleService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.utils.Constant;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.Aspect;
@@ -26,6 +27,7 @@ import java.util.Set;
 /**
  * 数据过滤切面：非超管写入 {@link Constant#SQL_FILTER}；超管跳过。
  */
+@Slf4j
 @Aspect
 @Component
 public class DataFilterAspect {
@@ -49,6 +51,8 @@ public class DataFilterAspect {
         if (params != null && params instanceof Map) {
             SysUserEntity user = ShiroUtils.getUserEntity();
             if (user == null) {
+                String target = point.getSignature().getDeclaringTypeName() + "#" + point.getSignature().getName();
+                log.warn("SecurityAlert denied reason=data_filter_unauthenticated, user=-, login=false, ip=-, uri=-, target={}, detail=, ua=-", target);
                 throw new AException("数据权限：未登录");
             }
             // 超级管理员不过滤

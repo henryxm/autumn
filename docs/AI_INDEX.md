@@ -15,7 +15,7 @@
 - **`docs/REDIS_TTL_GUIDE.md`**：**Redis TTL、`Redisson` 与 `RedisExpireUtil`**（何时宜用、常见问题、API 对照、推荐处理顺序与可选扫描脚本）
 - **`docs/REDIS_KEYS_AND_SCAN.md`**：**禁止 `KEYS`、推荐 `SCAN`**（大键空间运维、`redis.html` 事故、批量删键/列表分页推荐写法、**constraints-scan J 组**）
 - `docs/AI_MAP.md`：高频开发能力主图（含生成模板分层与可改/不可改边界）
-- `docs/AI_STANDARDS.md`：**约束性开发规范**（分层、API、定时任务、权限、**FTL §7（HTML `<!--<#if>-->` / JS `//<#if>` / `<title>` 裸 FTL）**、**实体/注解建表/禁止初始化 DDL**、**§10.2 `isUnique` 与 `@Index` 禁止叠用**、**§10.2 单字段索引须字段级 `@Index`**、**§10.4 双键模型**、模块表前缀、**Dao+Provider**、**Controller–Service–Dao**、**statics/pages/Site/PageAware**）
+- `docs/AI_STANDARDS.md`：**约束性开发规范**（分层、API、定时任务、权限、**FTL §7（HTML `<!--<#if>-->` / JS `//<#if>` / `<title>` 裸 FTL）**、**实体/注解建表/禁止初始化 DDL**、**§10.2 `isUnique` 与 `@Index` 禁止叠用**、**§10.2 单字段索引须字段级 `@Index`**、**§10.4 双键模型**、模块表前缀、**Dao+Provider**、**Controller–Service–Dao**、**statics/pages/Site/PageAware（含 admin=true）**、**§14 gen CRUD 仅超管 / `AdminAccessModuleHandler`**）
 - **`docs/AI_DUAL_KEY.md`**：**双主键落地**（`UuidBased` / `SnowBased` / **`UserBased`**、**§3.4 无第二主键仅 `user`**、`AutoIdService`、`Uuid` / `Snow`）
 - `docs/AI_CODE_STYLE.md`：**Java 版式**（方法/调用单行参数、if 条件同行体换行；**import 优先** §7；**日志单行** §8）
 - `docs/AI_SERVICE_COHESION.md`：**实体 Service 内聚**（CRUD/定时任务归实体 Service、约 1000 行再拆类、少工具类）

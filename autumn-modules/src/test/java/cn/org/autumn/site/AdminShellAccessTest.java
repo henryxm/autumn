@@ -75,13 +75,15 @@ class AdminShellAccessTest {
     }
 
     @Test
-    void denyUnlessSystemAdmin_passesThroughWhenNotLoggedIn() {
+    void denyUnlessSystemAdmin_returns404WhenNotLoggedIn() {
         shiroUtils.when(ShiroUtils::isLogin).thenReturn(false);
+        when(pageFactory._404(any(), any(), any())).thenReturn("404");
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
         Model model = new ConcurrentModel();
-        assertEquals("index", access.denyUnlessSystemAdmin("index", request, response, model));
-        verifyNoInteractions(sysUserRoleService, pageFactory);
+        assertEquals("404", access.denyUnlessSystemAdmin("index", request, response, model));
+        verify(pageFactory)._404(eq(request), eq(response), eq(model));
+        verifyNoInteractions(sysUserRoleService);
     }
 
     @Test

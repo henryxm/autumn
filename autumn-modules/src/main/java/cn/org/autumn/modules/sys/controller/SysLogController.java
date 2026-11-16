@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Map;
 
 @Controller
-@RequestMapping({"/sys/log", "/api"})
+@RequestMapping({"/sys/log"})
 public class SysLogController {
 
     @Autowired

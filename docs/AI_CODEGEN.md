@@ -75,8 +75,9 @@
 ### 第三步：业务、接口与页面整合
 
 1. 在 **可维护 `Service`** 中实现领域规则、事务、缓存失效、队列发送、`LoopJob` 周期任务等。
-2. 在 **可维护 `Controller`**（或独立业务 Controller）中增加 **与 `ControllerGen` 不冲突** 的 URL 设计，见 **`docs/AI_STANDARDS.md`** 第 3 节。
-3. **页面**：复杂交互优先 **独立页面**（模块 `pages/` + **`site/*Site`** 上 **`@PageAware`**）；与生成列表页的整合遵循 **FreeMarker** 规则（**`docs/AI_STANDARDS.md`** 第 7 节）。
+2. 在 **可维护 `Controller`**（或独立业务 Controller）中增加 **与 `ControllerGen` 不冲突** 的 URL 设计，见 **`docs/AI_STANDARDS.md`** 第 3 节。公开/C 端/本人数据接口写在这里，**不要**依赖 `ControllerGen` 对匿名或普通用户开放。
+3. **页面**：复杂交互优先 **独立页面**（模块 `pages/` + **`site/*Site`** 上 **`@PageAware`**）；管理全表页须 **`admin = true`**；与生成列表页的整合遵循 **FreeMarker** 规则（**`docs/AI_STANDARDS.md`** 第 7 节 / §14）。
+4. **安全**：`ControllerGen` 默认仅系统管理员可调（`GenAdminAccessAspect`）；豁免模块与 SPI 见 **`docs/AI_STANDARDS.md` §14**、**`docs/AI_SECURITY_HARDENING_3_0_COMPAT.md` C-20**。
 
 ---
 

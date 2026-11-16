@@ -2,15 +2,18 @@ package cn.org.autumn.modules.sys.controller;
 
 import cn.org.autumn.annotation.Endpoint;
 import cn.org.autumn.annotation.SkipInterceptor;
+import cn.org.autumn.exception.AException;
 import cn.org.autumn.model.Response;
 import cn.org.autumn.modules.sys.service.RedisService;
-import cn.org.autumn.modules.sys.service.SysUserRoleService;
-import cn.org.autumn.modules.sys.shiro.ShiroUtils;
+import cn.org.autumn.modules.sys.support.AdminAccessGuard;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 @RestController
 @RequestMapping("/sys/redis")
@@ -22,14 +25,28 @@ public class SysRedisController {
     private RedisService redisService;
 
     @Autowired
-    private SysUserRoleService sysUserRoleService;
+    private AdminAccessGuard adminAccessGuard;
+
+    private boolean denied() {
+        try {
+            ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            if (attrs == null) {
+                return true;
+            }
+            HttpServletRequest request = attrs.getRequest();
+            adminAccessGuard.requireOpsAdmin(request, getClass(), "redis");
+            return false;
+        } catch (AException e) {
+            return true;
+        }
+    }
 
     /**
      * 获取所有数据库信息
      */
     @GetMapping("/databases")
     public Response<List<Map<String, Object>>> getDatabases() {
-        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
+        if (denied()) {
             return Response.fail(null, "无权限访问");
         }
         try {
@@ -48,7 +65,7 @@ public class SysRedisController {
                                                  @RequestParam(defaultValue = "*") String pattern,
                                                  @RequestParam(defaultValue = "1") int page,
                                                  @RequestParam(defaultValue = "20") int size) {
-        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
+        if (denied()) {
             return Response.fail(null, "无权限访问");
         }
         try {
@@ -64,7 +81,7 @@ public class SysRedisController {
      */
     @GetMapping("/key/{key}")
     public Response<Map<String, Object>> getKeyInfo(@PathVariable String key) {
-        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
+        if (denied()) {
             return Response.fail(null, "无权限访问");
         }
         try {
@@ -80,7 +97,7 @@ public class SysRedisController {
      */
     @GetMapping("/value/{key}")
     public Response<Object> getKeyValue(@PathVariable String key) {
-        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
+        if (denied()) {
             return Response.fail(null, "无权限访问");
         }
         try {
@@ -96,7 +113,7 @@ public class SysRedisController {
      */
     @DeleteMapping("/key/{key}")
     public Response<String> deleteKey(@PathVariable String key) {
-        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
+        if (denied()) {
             return Response.fail("无权限访问");
         }
         try {
@@ -117,7 +134,7 @@ public class SysRedisController {
     @DeleteMapping("/keys")
     @SkipInterceptor
     public Response<String> deleteKeys(@RequestBody List<String> keys) {
-        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
+        if (denied()) {
             return Response.fail("无权限访问");
         }
         try {
@@ -134,7 +151,7 @@ public class SysRedisController {
     @DeleteMapping("/database/{database}")
     @SkipInterceptor
     public Response<String> clearDatabase(@PathVariable int database) {
-        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
+        if (denied()) {
             return Response.fail("无权限访问");
         }
         try {
@@ -154,7 +171,7 @@ public class SysRedisController {
      */
     @DeleteMapping("/all")
     public Response<String> clearAllDatabases() {
-        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
+        if (denied()) {
             return Response.fail("无权限访问");
         }
         try {
@@ -174,7 +191,7 @@ public class SysRedisController {
      */
     @PostMapping("/expire/{key}")
     public Response<String> setKeyExpire(@PathVariable String key, @RequestParam long seconds) {
-        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
+        if (denied()) {
             return Response.fail("无权限访问");
         }
         try {
@@ -194,7 +211,7 @@ public class SysRedisController {
      */
     @PostMapping("/clear-keys")
     public Response<String> clearKeysByPattern(@RequestParam String pattern, @RequestParam int database) {
-        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
+        if (denied()) {
             return Response.fail("无权限访问");
         }
         // 防止误操作：不允许删除所有键
@@ -214,7 +231,7 @@ public class SysRedisController {
      */
     @GetMapping("/status")
     public Response<Map<String, Object>> getStatus() {
-        if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
+        if (denied()) {
             return Response.fail(null, "无权限访问");
         }
         try {

@@ -1,7 +1,9 @@
 package cn.org.autumn.site;
 
+import cn.org.autumn.model.IP;
 import cn.org.autumn.modules.sys.service.SysUserRoleService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -23,6 +25,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * {@code redirect:} 不算壳视图——业务 Handler 抢先 redirect 时<strong>必须</strong>对
  * {@link SysUserRoleService#isSystemAdministrator} 返回空串放行，否则会堵死超管 {@code /admin} 入口。
  */
+@Slf4j
 @Component
 public class AdminShellAccess {
 
@@ -61,7 +64,7 @@ public class AdminShellAccess {
         return StringUtils.isNotBlank(bare) && adminPageResources.contains(bare);
     }
 
-    static String normalizeViewKey(String view) {
+    public static String normalizeViewKey(String view) {
         if (StringUtils.isBlank(view)) {
             return "";
         }
@@ -83,19 +86,38 @@ public class AdminShellAccess {
     }
 
     /**
-     * 已登录且非系统管理员命中后台壳或 {@code @PageAware(admin=true)} 资源时改为 404；其它情况原样返回。
+     * 后台壳或 {@code @PageAware(admin=true)}：未登录或非系统管理员 → 404；超管原样返回。
      */
     public String denyUnlessSystemAdmin(String view, HttpServletRequest request, HttpServletResponse response, Model model) {
         boolean restricted = isAdminShellView(view) || isAdminPageView(view);
         if (!restricted) {
             return view;
         }
+        String key = normalizeViewKey(view);
         if (!ShiroUtils.isLogin()) {
-            return view;
+            warnShellDenied("admin_shell_unauthenticated", key, request);
+            return pageFactory._404(request, response, model);
         }
         if (sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
             return view;
         }
+        warnShellDenied("admin_shell_forbidden", key, request);
         return pageFactory._404(request, response, model);
+    }
+
+    private void warnShellDenied(String reason, String target, HttpServletRequest request) {
+        String user = "-";
+        boolean login = false;
+        try {
+            login = ShiroUtils.isLogin();
+            if (login) {
+                user = StringUtils.defaultIfBlank(ShiroUtils.getUserUuid(), "-");
+            }
+        } catch (Exception ignored) {
+        }
+        String ip = request != null ? StringUtils.defaultIfBlank(IP.getIp(request), "-") : "-";
+        String uri = request != null ? StringUtils.defaultIfBlank(request.getRequestURI(), "-") : "-";
+        String ua = request != null ? StringUtils.abbreviate(StringUtils.defaultString(request.getHeader("User-Agent")), 120) : "-";
+        log.warn("SecurityAlert denied reason={}, user={}, login={}, ip={}, uri={}, target={}, detail=, ua={}", reason, user, login, ip, uri, target, ua);
     }
 }

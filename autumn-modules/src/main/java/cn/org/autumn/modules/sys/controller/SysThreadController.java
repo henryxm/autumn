@@ -2,17 +2,21 @@ package cn.org.autumn.modules.sys.controller;
 
 import cn.org.autumn.annotation.Endpoint;
 import cn.org.autumn.annotation.SkipInterceptor;
-import cn.org.autumn.modules.sys.service.SysUserRoleService;
+import cn.org.autumn.exception.AException;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
+import cn.org.autumn.modules.sys.support.AdminAccessGuard;
 import cn.org.autumn.thread.TagTaskExecutor;
 import cn.org.autumn.thread.TaskRecord;
 import cn.org.autumn.utils.R;
 import java.util.*;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 @Slf4j
 @Controller
@@ -26,14 +30,23 @@ public class SysThreadController {
     TagTaskExecutor tagTaskExecutor;
 
     @Autowired
-    @Lazy
-    SysUserRoleService sysUserRoleService;
+    AdminAccessGuard adminAccessGuard;
 
     /**
-     * 权限检查：仅系统管理员可访问
+     * 权限检查：系统管理员 + IP 白名单
      */
     private boolean checkPermission() {
-        return ShiroUtils.isLogin() && sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid());
+        try {
+            ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            if (attrs == null) {
+                return false;
+            }
+            HttpServletRequest request = attrs.getRequest();
+            adminAccessGuard.requireOpsAdmin(request, getClass(), "thread");
+            return true;
+        } catch (AException e) {
+            return false;
+        }
     }
 
     /**
