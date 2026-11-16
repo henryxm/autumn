@@ -123,6 +123,32 @@ public class AdminAccessGuard {
         return cfg != null && cfg.isBeanExecuteEnabled();
     }
 
+    /** WebShell 总开关（默认关）；与业务属性 autumn.webshell.enabled 取更严。 */
+    public boolean isWebShellEnabled() {
+        SecurityOpsConfig cfg = sysConfigService.getSecurityOpsConfig();
+        return cfg != null && cfg.isWebShellEnabled();
+    }
+
+    /**
+     * WebShell：须功能开启 + 系统管理员 + IP 白名单。
+     */
+    public void requireWebShellOps(HttpServletRequest request, Class<?> clazz, String method) {
+        String target = (clazz != null ? clazz.getSimpleName() : "-") + "#" + StringUtils.defaultIfBlank(method, "-");
+        if (!isWebShellEnabled()) {
+            warnDenied("webshell_disabled", target, request, "");
+            throw new AException("无权限", 403);
+        }
+        requireOpsAdmin(request, clazz, method);
+        String uuid = "-";
+        try {
+            if (ShiroUtils.isLogin()) {
+                uuid = StringUtils.defaultIfBlank(ShiroUtils.getUserUuid(), "-");
+            }
+        } catch (Exception ignored) {
+        }
+        auditWithIp(request, "webshell_access", "userUuid=" + uuid + " target=" + target);
+    }
+
     /**
      * 运维 API：已登录系统管理员 + IP 白名单；未登录/非超管直接 403，不先打 IP 未加白。
      */

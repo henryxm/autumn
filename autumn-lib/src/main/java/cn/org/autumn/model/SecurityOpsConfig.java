@@ -12,7 +12,7 @@ import java.util.List;
  * 安全加固 · 运维接口 Token（SysConfig {@link #CONFIG_KEY}）。
  */
 @ConfigParam(paramKey = SecurityOpsConfig.CONFIG_KEY, category = SecurityOpsConfig.config,
-        name = "运维 Token", description = "clear/reinit 头认证 Token；Bean 执行开关；空 Token 则拒绝")
+        name = "运维 Token", description = "clear/reinit 头认证 Token；Bean/WebShell 开关；空 Token 则拒绝")
 public class SecurityOpsConfig implements Serializable {
     private static final long serialVersionUID = 1L;
 
@@ -27,6 +27,9 @@ public class SecurityOpsConfig implements Serializable {
 
     @ConfigField(category = InputType.BooleanType, name = "启用 Bean 执行器", description = "关闭（默认）：/sys/exec/bean/execute 拒绝反射调用；开启后仍须系统管理员 + IP 白名单，并记审计日志")
     private boolean beanExecuteEnabled = false;
+
+    @ConfigField(category = InputType.BooleanType, name = "启用 WebShell", description = "关闭（默认）：/webshell、/shell、/sftp 全部拒绝；开启后仍须系统管理员 + IP 白名单，并受主机白名单约束")
+    private boolean webShellEnabled = false;
 
     public List<String> validateAndFix() {
         List<String> fixes = new ArrayList<>();
@@ -61,5 +64,13 @@ public class SecurityOpsConfig implements Serializable {
 
     public void setBeanExecuteEnabled(boolean beanExecuteEnabled) {
         this.beanExecuteEnabled = beanExecuteEnabled;
+    }
+
+    public boolean isWebShellEnabled() {
+        return webShellEnabled;
+    }
+
+    public void setWebShellEnabled(boolean webShellEnabled) {
+        this.webShellEnabled = webShellEnabled;
     }
 }

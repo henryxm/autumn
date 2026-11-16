@@ -203,6 +203,27 @@ class AdminAccessGuardTest {
     }
 
     @Test
+    void webShellDisabledByDefault() {
+        assertFalse(guard.isWebShellEnabled());
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        assertThrows(AException.class, () -> guard.requireWebShellOps(request, getClass(), "ws"));
+        Mockito.verifyNoInteractions(ipWhiteService);
+    }
+
+    @Test
+    void webShellOps_requiresEnabledThenOpsAdmin() {
+        SecurityOpsConfig ops = new SecurityOpsConfig();
+        ops.setWebShellEnabled(true);
+        when(sysConfigService.getSecurityOpsConfig()).thenReturn(ops);
+        shiroUtils.when(ShiroUtils::isLogin).thenReturn(true);
+        shiroUtils.when(ShiroUtils::getUserUuid).thenReturn("admin");
+        when(sysUserRoleService.isSystemAdministrator("admin")).thenReturn(true);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        guard.requireWebShellOps(request, getClass(), "ws");
+        verify(ipWhiteService).check(eq(request), eq(getClass()), eq("ws"));
+    }
+
+    @Test
     void opsView_ipWhiteFailureReturns404() {
         shiroUtils.when(ShiroUtils::isLogin).thenReturn(true);
         shiroUtils.when(ShiroUtils::getUserUuid).thenReturn("admin");

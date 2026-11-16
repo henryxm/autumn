@@ -361,7 +361,8 @@ public class DemoEntity { ... }
   - **禁止**把匿名首页、公开 CMS 读接口、C 端列表写进 `controller.gen`；公开能力用可维护 Controller + `@PageAware(login=false)` / Shiro 匿名链。  
   - **禁止**为「方便运营」通过 SPI 把整站业务模块全部加入自助豁免。  
   - 兼容与回归清单见 **`docs/AI_SECURITY_HARDENING_3_0_COMPAT.md`**（**C-20**、§4.4 / §4.4.1）。  
-  - 门禁拒绝须打 **`SecurityAlert denied`** 告警日志（字段与 `reason` 见同文档 **§4.4.2**），便于发现提权探测；勿在业务仓另造不兼容格式。
+  - 门禁拒绝须打 **`SecurityAlert denied`** 告警日志（字段与 `reason` 见同文档 **§4.4.2**），便于发现提权探测；勿在业务仓另造不兼容格式。  
+  - **WebShell**（`web-shell` 模块 `/webshell`、`/shell`、`/sftp`）：**默认关闭**；禁止 Shiro `anon`；开启须 `autumn.webshell.enabled=true` 且（3.x）`SECURITY_OPS_CONFIG.webShellEnabled=true`，并配置主机白名单；运行时仍须系统管理员 + IP 白名单（**C-21**）。
 
 - **页面文案与功能描述（新增硬约束）**：除非需求中有**特殊说明**，所有页面开发都必须以**用户与使用者视角**进行描述与设计，禁止从开发实现视角表达。具体要求：
   - **禁止**出现开发相关专业术语（如接口、数据库、缓存、线程、方法、函数、参数、对象、JSON、SQL、鉴权链路等）。

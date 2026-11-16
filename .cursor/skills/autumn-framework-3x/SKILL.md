@@ -273,6 +273,7 @@ description: >-
 - **`resources/statics/`** 公共静态；新后台页 **`pages/`** + **`site/*Site`** + **`@PageAware`**；管理全表页 **`admin=true`**。
 - **gen CRUD 门禁**：`*.controller.gen.*` 默认仅系统管理员（`GenAdminAccessAspect`）；豁免 usr/safe/bot/qrc 或 `AdminAccessModuleHandler#selfGenModules`；公开/C 端接口写可维护 Controller。详见 **`docs/AI_STANDARDS.md` §14**、**`docs/AI_SECURITY_HARDENING_3_0_COMPAT.md` C-20 / §4.4.1**。
 - **安全告警**：门禁拒绝打 **`SecurityAlert denied`**（`reason`/`user`/`ip`/`uri`/`target`）；高危成功操作用 **`SecurityAlert audit`**。检索与 reason 表见兼容手册 **§4.4.2**。
+- **WebShell**：默认关（`webShellEnabled` / `autumn.webshell.enabled`）；开启后超管+IP 白名单+`allowed-hosts`；禁止 anon。见 **C-21**。
 
 ## FreeMarker 模板（§7 摘要）
 
