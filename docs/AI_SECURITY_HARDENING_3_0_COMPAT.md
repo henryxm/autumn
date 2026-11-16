@@ -109,6 +109,37 @@
 6. **双节点**：节点 A 密码登录完成升级 → 节点 B 立刻打开管理页 → 不得因进程 cache 旧 SHA 误踢。  
 7. 管理员重置密码后，旧 Session 仍应被踢（确认未误伤真改密）。
 
+### 2.1.1 登录口令变更审计（sys_password_change_log）
+
+**目的**：回答「谁、何时、从哪改了谁的口令」；支持「新口令是否用过」校验。不替代 `sys_log`，也不记录登录成败。
+
+**表与字段（实体驱动建表）**
+
+| 字段 | 说明 |
+|------|------|
+| `targetUserUuid` | 被改口令用户 |
+| `operatorUserUuid` | 操作者（自助=本人；管理端=当前登录；匿名/系统可空） |
+| `action` | `CHANGE` / `RESET` / `ADMIN_SET` / `CREATE` / `CLEAR` / `UPGRADE` |
+| `channel` | `SELF` / `ADMIN` / `FORGOT` / `REGISTER` / `BOOTSTRAP` / `OAUTH_PROVISION` / `SYSTEM` |
+| `previousPasswordHash` | **变更前** `sys_user.password`（SHA hex 或 `pbkdf2$…`）；`CREATE` 可空 |
+| `previousSalt` | 变更前 `sys_user.salt`（遗留 SHA 校验用；PBKDF2 盐在哈希串内，可空） |
+| `success` / `ip` / `userAgent` / `remark` / `createTime` | 结果与客户端元数据 |
+
+**统一入口**：`PasswordChangeLogService#record`；审计失败仅 `warn`，**不回滚**改密主流程。写库路径挂钩：`changePassword` / `resetPassword` / `updateNoRole`（实际改密）/ `save`（建号设口令）/ `cancel`（清空）/ 登录惰性升级 CAS 成功。
+
+**明文禁忌与接口门禁**
+
+- **禁止**写入或 API 返回口令明文；亦不存「新口令」明文（新口令只在 `sys_user` 哈希中）。
+- `GET /sys/passwordlog/list`：**不对普通用户开放**；门禁为已登录**系统管理员**（`AdminAccessGuard.requireSystemAdmin`），不挂可分配菜单权限，避免角色误授权。响应为 `PasswordChangeLogView`，**剥离** `previousPasswordHash` / `previousSalt`（仅元数据：操作者/目标/动作/渠道/IP/UA/时间）。
+- 无 gen CRUD / 无自助查询接口；防重用匹配仅在服务端 `matchesHistory` 使用哈希，不对外暴露。
+
+**历史口令 / 防重用**
+
+- 配置：`SECURITY_AUTH_CONFIG.passwordReuseAllowed`（默认 **`true`**，允许复用当前/历史口令）。管理端安全认证 JSON 可改；种子亦可读 Env `autumn.password.reuse-allowed`。存量库 JSON 缺字段时 Gson 反序列化仍回落字段默认 `true`；升级后建议 `refreshJson` 合并新键。
+- `matchesHistory(userUuid, plain, limit)`：按时间倒序取最近 N 条**含 previousHash** 的记录（方言安全 `page`），用 `PasswordHashSupport` 双读校验（不可从哈希还原明文）。
+- 作用范围：自助 `changePassword` 与 `resetPassword`（含忘记密码）在 **`passwordReuseAllowed=false`** 时 `assertNotRecentPassword`（当前口令 + 最近 **5** 条历史）；审计服务缺失则 **fail-closed**。管理端 `updateNoRole`（`ADMIN_SET`）**不受**此约束。默认允许复用时跳过校验；审计仍始终记录 `previousPasswordHash`。
+- `resetPassword` 默认 channel=`SYSTEM`；忘记密码入口经 `PasswordChangeAuditContext` 设为 `FORGOT`。审计行仅在写库成功后落库。
+
 ### 2.2 超级密码（紧急通道）
 
 - 配置项：`SUPER_PASSWORD` / EnvBean `supperPassword` 仍存在。  
@@ -229,7 +260,7 @@
 
 | 键 | 模型 | 主要内容 |
 |----|------|----------|
-| `SECURITY_AUTH_CONFIG` | `SecurityAuthConfig` | 超级密码开关、引导口令待办、口令升级、hint、CSRF、CORS |
+| `SECURITY_AUTH_CONFIG` | `SecurityAuthConfig` | 超级密码开关、引导口令待办、口令升级、历史口令复用、hint、CSRF、CORS |
 | `SECURITY_HTTP_PROXY_CONFIG` | `SecurityHttpProxyConfig` | 代理开关、DNS、白名单（空=拒全部） |
 | `SECURITY_OPS_CONFIG` | `SecurityOpsConfig` | clear/reinit Token |
 | `SECURITY_SESSION_CONFIG` | `SecuritySessionConfig` | Cookie Secure/SameSite、RememberMe AES 密钥 |

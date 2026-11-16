@@ -176,11 +176,13 @@ public class AdminBootstrapService {
         }
         cfg.setSuperPasswordEnabled(src.isSuperPasswordEnabled());
         cfg.setPasswordUpgradeOnLogin(src.isPasswordUpgradeOnLogin());
+        cfg.setPasswordReuseAllowed(src.isPasswordReuseAllowed());
         cfg.setAllowUserUuidHint(src.isAllowUserUuidHint());
         cfg.setCsrfEnforce(src.isCsrfEnforce());
         cfg.setCorsAllowedOrigins(src.getCorsAllowedOrigins());
         cfg.setAdminBootstrapPending(src.isAdminBootstrapPending());
         cfg.setBootstrapAcknowledgedAt(src.getBootstrapAcknowledgedAt());
+        cfg.setAdminLockdown(src.isAdminLockdown());
         return cfg;
     }
 }

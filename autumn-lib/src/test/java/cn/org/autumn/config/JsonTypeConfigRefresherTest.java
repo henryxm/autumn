@@ -7,6 +7,7 @@ import cn.org.autumn.model.PayCredentialConfig;
 import cn.org.autumn.model.RobotQuotaConfig;
 import cn.org.autumn.model.RsaConfig;
 import cn.org.autumn.model.ScanLoginConfig;
+import cn.org.autumn.model.SecurityAuthConfig;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import org.junit.jupiter.api.Test;
@@ -29,7 +30,8 @@ class JsonTypeConfigRefresherTest {
                 RobotQuotaConfig.class.getName(),
                 DistributedLockConfig.class.getName(),
                 PayCredentialConfig.class.getName(),
-                ScanLoginConfig.class.getName()
+                ScanLoginConfig.class.getName(),
+                SecurityAuthConfig.class.getName()
         );
     }
 

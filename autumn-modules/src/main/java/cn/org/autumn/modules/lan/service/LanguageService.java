@@ -396,6 +396,7 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
                 {"sys_string_config_name", "参数名", "Config name"},
                 {"sys_string_config_value", "参数值", "Config value"},
                 {"sys_string_system_log", "系统日志", "System log"},
+                {"sys_string_password_change_log", "口令变更日志", "Password change log"},
                 {"sys_string_file_upload", "文件上传", "File upload"},
                 {"sys_string_department_management", "部门管理", "Department management"},
                 {"sys_string_select_department", "选择部门", "Select department"},

@@ -8,6 +8,7 @@ import cn.org.autumn.model.PayCredentialConfig;
 import cn.org.autumn.model.RobotQuotaConfig;
 import cn.org.autumn.model.RsaConfig;
 import cn.org.autumn.model.ScanLoginConfig;
+import cn.org.autumn.model.SecurityAuthConfig;
 import cn.org.autumn.modules.oss.cloud.CloudStorageConfig;
 import cn.org.autumn.modules.sys.entity.LoadingTheme;
 import cn.org.autumn.modules.sys.entity.SysConfigEntity;
@@ -37,7 +38,8 @@ class SysConfigServiceJsonRefreshTest {
                 RobotQuotaConfig.class.getName(),
                 PayCredentialConfig.class.getName(),
                 ScanLoginConfig.class.getName(),
-                AccountAuthConfig.class.getName()
+                AccountAuthConfig.class.getName(),
+                SecurityAuthConfig.class.getName()
         );
     }
 

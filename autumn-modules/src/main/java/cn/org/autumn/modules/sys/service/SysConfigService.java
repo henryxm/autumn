@@ -382,6 +382,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         SecurityAuthConfig c = new SecurityAuthConfig();
         c.setSuperPasswordEnabled(envBool("autumn.super-password.enabled", false));
         c.setPasswordUpgradeOnLogin(envBool("autumn.password.upgrade-on-login", true));
+        c.setPasswordReuseAllowed(envBool("autumn.password.reuse-allowed", true));
         c.setAllowUserUuidHint(envBool("autumn.auth.allow-user-uuid-hint", false));
         c.setCsrfEnforce(envBool("autumn.csrf.enforce", isProdProfile()));
         c.setCorsAllowedOrigins(StringUtils.defaultString(envStr("autumn.cors.allowed-origins", "")));
@@ -993,6 +994,13 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
 
     public boolean isPasswordUpgradeOnLogin() {
         return getSecurityAuthConfig().isPasswordUpgradeOnLogin();
+    }
+
+    /**
+     * 是否允许自助改密复用当前/历史口令；默认 true（允许）。关闭后走防重用校验。
+     */
+    public boolean isPasswordReuseAllowed() {
+        return getSecurityAuthConfig().isPasswordReuseAllowed();
     }
 
     public boolean isAllowUserUuidHint() {

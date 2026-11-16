@@ -12,7 +12,7 @@ import java.util.List;
  * 安全加固 · 认证与 CSRF/CORS（SysConfig {@link #CONFIG_KEY}）。
  */
 @ConfigParam(paramKey = SecurityAuthConfig.CONFIG_KEY, category = SecurityAuthConfig.config,
-        name = "安全认证配置", description = "超级密码、引导口令待办、口令升级、hint、CSRF、CORS、后台门禁（集群统一）")
+        name = "安全认证配置", description = "超级密码、引导口令待办、口令升级、历史口令复用、hint、CSRF、CORS、后台门禁（集群统一）")
 public class SecurityAuthConfig implements Serializable {
     private static final long serialVersionUID = 1L;
 
@@ -24,6 +24,9 @@ public class SecurityAuthConfig implements Serializable {
 
     @ConfigField(category = InputType.BooleanType, name = "登录惰性升级口令", description = "历史 SHA 用户密码登录成功后 CAS 升级为 PBKDF2；关闭则永不改写历史 password")
     private boolean passwordUpgradeOnLogin = true;
+
+    @ConfigField(category = InputType.BooleanType, name = "允许复用历史口令", description = "开启（默认）：自助改密/忘记密码可设为当前或最近用过的口令；关闭：上述路径拒绝与当前口令及最近 5 次历史相同。管理端代设口令不受此约束")
+    private boolean passwordReuseAllowed = true;
 
     @ConfigField(category = InputType.BooleanType, name = "允许仅 userUuid hint", description = "无 Token 时允许凭 userUuid 解析身份（仅内网/网关可信场景；默认关闭）")
     private boolean allowUserUuidHint = false;
@@ -72,6 +75,14 @@ public class SecurityAuthConfig implements Serializable {
 
     public void setPasswordUpgradeOnLogin(boolean passwordUpgradeOnLogin) {
         this.passwordUpgradeOnLogin = passwordUpgradeOnLogin;
+    }
+
+    public boolean isPasswordReuseAllowed() {
+        return passwordReuseAllowed;
+    }
+
+    public void setPasswordReuseAllowed(boolean passwordReuseAllowed) {
+        this.passwordReuseAllowed = passwordReuseAllowed;
     }
 
     public boolean isAllowUserUuidHint() {
