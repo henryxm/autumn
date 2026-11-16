@@ -1,5 +1,6 @@
 package cn.org.autumn.crypto;
 
+import cn.org.autumn.database.runtime.WrapperColumns;
 import cn.org.autumn.table.data.TableInfo;
 import cn.org.autumn.table.service.MysqlTableService;
 import cn.org.autumn.table.utils.ClassTools;
@@ -62,7 +63,6 @@ public class FieldEncryptMigrationService {
                 fm.put("fieldName", meta.getFieldName());
                 fm.put("searchable", meta.isSearchable());
                 fm.put("hashField", meta.getHashFieldName());
-                fm.put("vector", meta.getVector());
                 fields.add(fm);
             }
             m.put("encryptFields", fields);
@@ -100,7 +100,12 @@ public class FieldEncryptMigrationService {
         final int limit = batchSize;
         while (true) {
             final int off = offset;
-            List rows = FieldEncryptContext.runSkip(() -> mapper.selectList(new QueryWrapper<>().last("LIMIT " + limit + " OFFSET " + off)));
+            List rows = FieldEncryptContext.runSkip(() -> {
+                QueryWrapper<?> qw = new QueryWrapper<>();
+                qw.orderByAsc(WrapperColumns.columnInWrapper("id"));
+                qw.last("LIMIT " + limit + " OFFSET " + off);
+                return mapper.selectList(qw);
+            });
             if (rows == null || rows.isEmpty()) {
                 break;
             }

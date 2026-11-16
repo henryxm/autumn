@@ -13,7 +13,12 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
 /**
- * 集群模式下字段加密 Redis 存储：读优先；无值时从环境变量回填并写入 Redis。
+ * 集群模式下字段加密 Redis 存储。
+ * <ul>
+ *   <li>启动：{@link #syncBootstrapFromEnvironment()} 用 yml/环境变量覆盖 Redis（避免陈旧
+ *       {@code write-enabled=false} 挡住新配置）</li>
+ *   <li>运行中：读优先 Redis；无值时从环境变量回填</li>
+ * </ul>
  */
 @Slf4j
 @Component
@@ -46,6 +51,43 @@ public class FieldEncryptRedisStore {
         return RedisKeys.getFieldEncryptRefreshChannel(sysConfigService.getNameSpace());
     }
 
+    /**
+     * 启动时用当前 yml/环境变量覆盖 Redis 中的写入开关与密钥。
+     * 解决：本地已改 {@code crypto.field.enabled=true}，但 Redis 仍残留 {@code write-enabled=false}。
+     * 运行中后台切换仍写 Redis；下次进程启动会再次与环境配置对齐。
+     */
+    public void syncBootstrapFromEnvironment() {
+        if (!isActive()) {
+            return;
+        }
+        FieldEncryptConfigSource.Resolved resolved = configSource.resolveFromEnvironment();
+        boolean fromEnv = resolved.isConfigWriteEnabled();
+        Boolean previous = parseBoolean(readRaw(WRITE_ENABLED));
+        write(WRITE_ENABLED, Boolean.toString(fromEnv));
+        if (previous != null && !previous.equals(fromEnv)) {
+            log.info("Field encrypt Redis write-enabled reconciled: {} -> {} (from env/yml)", previous, fromEnv);
+        }
+
+        String envKey = configSource.validKeyBase64(resolved.getKeyBase64());
+        if (envKey != null) {
+            String cached = trimToNull(readRaw(KEY));
+            if (!envKey.equals(cached)) {
+                write(KEY, envKey);
+                if (cached != null) {
+                    log.info("Field encrypt Redis key reconciled from environment");
+                }
+            }
+        }
+        String envHash = configSource.validHashBase64(
+                StringUtils.isNotBlank(resolved.getHashKeyBase64()) ? resolved.getHashKeyBase64() : envKey);
+        if (envHash != null) {
+            String cachedHash = trimToNull(readRaw(HASH_KEY));
+            if (!envHash.equals(cachedHash)) {
+                write(HASH_KEY, envHash);
+            }
+        }
+    }
+
     /** 读取写入开关；Redis 无值时用 yml/环境变量默认值回填。 */
     public Boolean readWriteEnabled() {
         Boolean parsed = parseBoolean(readRaw(WRITE_ENABLED));
@@ -61,9 +103,9 @@ public class FieldEncryptRedisStore {
         write(WRITE_ENABLED, Boolean.toString(enabled));
     }
 
-    /** 读取主密钥 Base64；Redis 无值时用环境变量回填。 */
+    /** 读取主密钥 Base64；Redis 无值或无效时用环境变量回填。 */
     public String readKeyBase64() {
-        String cached = trimToNull(readRaw(KEY));
+        String cached = configSource.validKeyBase64(trimToNull(readRaw(KEY)));
         if (cached != null) {
             return cached;
         }
@@ -72,12 +114,13 @@ public class FieldEncryptRedisStore {
             return null;
         }
         write(KEY, fromEnv);
+        publishRefresh();
         return fromEnv;
     }
 
-    /** 读取盲索引密钥 Base64；Redis 无值时用环境变量回填。 */
+    /** 读取盲索引密钥 Base64；Redis 无值或无效时用环境变量回填。 */
     public String readHashKeyBase64() {
-        String cached = trimToNull(readRaw(HASH_KEY));
+        String cached = configSource.validHashBase64(trimToNull(readRaw(HASH_KEY)));
         if (cached != null) {
             return cached;
         }
@@ -86,6 +129,7 @@ public class FieldEncryptRedisStore {
             return null;
         }
         write(HASH_KEY, fromEnv);
+        publishRefresh();
         return fromEnv;
     }
 

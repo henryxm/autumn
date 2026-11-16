@@ -93,6 +93,14 @@ autumn:
       prefix: "ENC$v1$"
 ```
 
+docker-compose / 环境变量（由 `FieldEncryptConfigSource` 统一解析；**显式短前缀优先**）：
+
+| 优先级 | 写法 | 示例 |
+|--------|------|------|
+| 1 | 短前缀（与 bighub 一致） | `crypto.field.enabled=true`、`crypto.field.key=...`、`crypto.field.hash-key=...` |
+| 2 | Spring 松散绑定 | `AUTUMN_CRYPTO_FIELD_ENABLED` / `AUTUMN_CRYPTO_FIELD_KEY` / `AUTUMN_CRYPTO_FIELD_HASH_KEY` |
+| 3 | 文档历史名 | `AUTUMN_FIELD_ENCRYPT_ENABLED`、`AUTUMN_FIELD_ENCRYPT_KEY`、`AUTUMN_FIELD_HASH_KEY` |
+
 - `enabled=true` 且密钥无效 → 启动失败。
 - `enabled=false` → 默认不写加密；配置了 `key` 仍可解密带前缀密文。
 - 密钥通过 yml/环境变量注入；后台不可修改运行中密钥。
@@ -111,7 +119,9 @@ autumn:
 | 模式 | 写入开关 | 密钥 |
 |------|----------|------|
 | 单机 | `sys_config.field_encrypt_runtime_write_enabled` | yml/env |
-| 集群 | Redis `{ns}:autumn:field-encrypt:write-enabled` | Redis 优先，空则 env 回填 |
+| 集群 | Redis `{ns}:autumn:field-encrypt:write-enabled` | Redis；启动用 env 对齐 |
+
+**启动对齐**：进程启动时用当前 yml/环境变量（含 `crypto.field.enabled=true`）**覆盖** Redis / sys_config 中的写入开关（及 env 中合法的 key/hash-key）。因此改 compose 后重启即可，无需手动删 `write-enabled=false`。运行中后台切换仍立即生效；下次重启再次与环境配置对齐。
 
 ---
 
@@ -184,16 +194,18 @@ afterRead(row);
 
 ## 4. 管理后台（开发）
 
-页面 **`fieldencrypt.html`**，API 前缀 **`/sys/crypto/field`**（系统管理员）：
+页面 **`fieldencrypt.html`**，API 前缀 **`/sys/crypto/field`**（**系统管理员 + IP 白名单**；Cookie 会话 POST 须带 **`X-CSRF-Token`**）：
 
 | 能力 | 说明 |
 |------|------|
-| `GET /status` | 当前开关、密钥来源、集群模式 |
-| `POST /writeEnabled` | 运行时写入开关 |
-| `POST /test` | 内存加解密往返测试 |
-| `POST /decrypt` | 对 `ENC$v1$...` 密文解密（仅内存，不写库） |
-| `POST /generateKey` | 生成开发用 key/hash-key（复制到 yml 后重启） |
+| `GET /status` | 当前开关、`writeReady`、密钥来源、集群模式；`?reload=true` 才从 Redis 重载 |
 | `GET /list` | 已扫描到的 `@FieldEncrypt` 实体清单 |
+| `POST /writeEnabled` / `resetWriteEnabled` | 运行时写入开关；写操作记 SecurityAlert 审计 |
+| `POST /reloadCluster` | 从 Redis 刷新本机内存 |
+| `POST /test` / `decrypt` | 内存加解密（运维调试；审计不落明文） |
+| `POST /generateKey` / `generateVector` | 仅非生产；生成开发用材料后写入 yml/环境变量并重启 |
+| `POST /migrate` / `restore` | 批量迁移；默认 `dryRun=true`；`batchSize` 上限 2000 |
+| `POST /migrateOne` / `restoreOne` | 单条；默认预检；非预检须 `confirm=true` |
 
 ---
 

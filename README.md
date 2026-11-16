@@ -72,6 +72,8 @@ autumn:
       prefix: "ENC$v1$"
 ```
 
+docker-compose 亦可：`crypto.field.enabled` / `crypto.field.key`，或 `AUTUMN_CRYPTO_FIELD_ENABLED` / `AUTUMN_CRYPTO_FIELD_KEY`（见 `docs/AI_FIELD_ENCRYPT.md` §1）。
+
 ### 关键类
 
 | 类 | 职责 |

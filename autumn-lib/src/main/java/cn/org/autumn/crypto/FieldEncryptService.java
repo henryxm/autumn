@@ -165,14 +165,22 @@ public class FieldEncryptService {
             encryptKey = FieldCrypto.decodeKeyBase64(validKey);
             keySource = source;
         } else if (StringUtils.isNotBlank(keyBase64)) {
-            log.warn("字段加密外部密钥无效，忽略 source:{}", source);
+            log.warn("字段加密外部密钥无效，回退环境变量 source:{}", source);
+            applyEnvironmentKeys(configSource.resolveFromEnvironment());
+            keySource = SOURCE_ENV;
+            hashKeySource = SOURCE_ENV;
+            return;
         }
         String validHash = configSource.validHashBase64(hashKeyBase64);
         if (validHash != null) {
             hashKey = FieldCrypto.decodeKeyBase64(validHash);
             hashKeySource = source;
         } else if (StringUtils.isNotBlank(hashKeyBase64)) {
-            log.warn("字段加密外部 hash-key 无效，忽略 source:{}", source);
+            log.warn("字段加密外部 hash-key 无效，回退环境变量 hash source:{}", source);
+            String envHash = configSource.validHashKeyBase64(
+                    validKey != null ? validKey : configSource.validKeyBase64());
+            hashKey = envHash != null ? FieldCrypto.decodeKeyBase64(envHash) : encryptKey;
+            hashKeySource = SOURCE_ENV;
         } else if (validKey != null && SOURCE_REDIS.equals(source)) {
             hashKey = encryptKey;
             hashKeySource = source;
@@ -622,6 +630,7 @@ public class FieldEncryptService {
         map.put("prefix", prefix);
         map.put("keyConfigured", isKeyConfigured());
         map.put("hashKeyConfigured", isHashKeyConfigured());
+        map.put("writeReady", isWriteEncryptEnabled() && isKeyConfigured() && isHashKeyConfigured());
         map.put("keyEditable", false);
         map.put("keySource", keySource);
         map.put("hashKeySource", hashKeySource);
@@ -709,8 +718,12 @@ public class FieldEncryptService {
     }
 
     private void applyEnvironmentKeys(FieldEncryptConfigSource.Resolved resolved) {
-        encryptKey = FieldCrypto.decodeKeyBase64(resolved.getKeyBase64());
-        hashKey = FieldCrypto.decodeKeyBase64(resolved.getHashKeyBase64());
+        String validKey = configSource.validKeyBase64(resolved.getKeyBase64());
+        encryptKey = validKey != null ? FieldCrypto.decodeKeyBase64(validKey) : null;
+        String hashCandidate = StringUtils.isNotBlank(resolved.getHashKeyBase64())
+                ? resolved.getHashKeyBase64() : validKey;
+        String validHash = configSource.validHashBase64(hashCandidate);
+        hashKey = validHash != null ? FieldCrypto.decodeKeyBase64(validHash) : null;
     }
 
     private void transformEntityForPersist(Object entity, boolean force) {

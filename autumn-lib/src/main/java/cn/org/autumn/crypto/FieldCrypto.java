@@ -89,7 +89,11 @@ public final class FieldCrypto {
         if (StringUtils.isBlank(keyBase64)) {
             return null;
         }
-        return Base64.getDecoder().decode(keyBase64.trim());
+        try {
+            return Base64.getDecoder().decode(keyBase64.trim());
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
     }
 
     /** 生成 AES-256 主密钥（32 字节）的 Base64 字符串，仅供开发配置使用。 */

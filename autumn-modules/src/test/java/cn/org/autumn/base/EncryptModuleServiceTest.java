@@ -255,6 +255,7 @@ public class EncryptModuleServiceTest {
         ReflectionTestUtils.setField(factory, "handlers", Collections.emptyList());
         FieldEncryptConfigSource configSource = new FieldEncryptConfigSource();
         ReflectionTestUtils.setField(configSource, "properties", properties);
+        ReflectionTestUtils.setField(configSource, "environment", new org.springframework.mock.env.MockEnvironment());
         ReflectionTestUtils.setField(configSource, "encryptConfigFactory", factory);
         FieldEncryptService service = new FieldEncryptService();
         ReflectionTestUtils.setField(service, "configSource", configSource);

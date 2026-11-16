@@ -14,8 +14,8 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * 字段存储加密运行时协调。
  * <ul>
- *   <li>集群（Redis 开启）：开关与密钥从 {@link FieldEncryptRedisStore} 加载</li>
- *   <li>单机：密钥来自环境变量，写入开关可覆盖到 sys_config</li>
+ *   <li>集群（Redis 开启）：启动时用 yml/环境变量覆盖 Redis 开关与密钥，再加载到内存；运行中可后台切换</li>
+ *   <li>单机：密钥来自环境变量；启动时将 sys_config 运行时开关与环境配置对齐</li>
  * </ul>
  */
 @Slf4j
@@ -44,8 +44,11 @@ public class FieldEncryptRuntimeService implements InitFactory.Init, InitFactory
     @Override
     public void init() {
         if (isClusterMode()) {
+            // 先用 env/yml 覆盖 Redis，避免陈旧 write-enabled=false 挡住 crypto.field.enabled=true
+            fieldEncryptRedisStore.syncBootstrapFromEnvironment();
             syncFromRedis();
         } else {
+            reconcileStandaloneWriteSwitchWithEnvironment();
             loadStandaloneWriteSwitch();
         }
         fieldEncryptService.validateAfterBootstrap();
@@ -128,6 +131,28 @@ public class FieldEncryptRuntimeService implements InitFactory.Init, InitFactory
         }
     }
 
+    /**
+     * 启动时将 sys_config 运行时开关与当前环境配置对齐（与 Redis bootstrap 同语义）。
+     */
+    private void reconcileStandaloneWriteSwitchWithEnvironment() {
+        boolean fromEnv = fieldEncryptService.isConfigWriteEncryptEnabled();
+        String value = sysConfigService.getValue(RUNTIME_WRITE_ENABLED_KEY);
+        if (StringUtils.isBlank(value)) {
+            return;
+        }
+        String trimmed = value.trim();
+        if (!"true".equalsIgnoreCase(trimmed) && !"false".equalsIgnoreCase(trimmed)) {
+            log.warn("sys_config {} invalid value:{}, clearing override", RUNTIME_WRITE_ENABLED_KEY, value);
+            deleteSysConfigKey(RUNTIME_WRITE_ENABLED_KEY);
+            return;
+        }
+        boolean previous = Boolean.parseBoolean(trimmed);
+        if (previous != fromEnv) {
+            upsertSysConfigValue(RUNTIME_WRITE_ENABLED_KEY, Boolean.toString(fromEnv));
+            log.info("Field encrypt sys_config write-enabled reconciled: {} -> {} (from env/yml)", previous, fromEnv);
+        }
+    }
+
     private void loadStandaloneWriteSwitch() {
         String value = sysConfigService.getValue(RUNTIME_WRITE_ENABLED_KEY);
         if (StringUtils.isBlank(value)) {
@@ -135,13 +160,8 @@ public class FieldEncryptRuntimeService implements InitFactory.Init, InitFactory
             return;
         }
         String trimmed = value.trim();
-        if ("true".equalsIgnoreCase(trimmed)) {
-            fieldEncryptService.setRuntimeWriteEncryptOverride(true);
-            fieldEncryptService.setWriteSwitchSource(FieldEncryptService.SOURCE_SYS_CONFIG);
-            return;
-        }
-        if ("false".equalsIgnoreCase(trimmed)) {
-            fieldEncryptService.setRuntimeWriteEncryptOverride(false);
+        if ("true".equalsIgnoreCase(trimmed) || "false".equalsIgnoreCase(trimmed)) {
+            fieldEncryptService.setRuntimeWriteEncryptOverride(Boolean.parseBoolean(trimmed));
             fieldEncryptService.setWriteSwitchSource(FieldEncryptService.SOURCE_SYS_CONFIG);
             return;
         }

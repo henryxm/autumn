@@ -583,11 +583,20 @@
                     <div class="panel-body">
                         <div class="toggle-box">
                             <div class="toggle-row">
-                                <label class="switch" :title="status.clusterMode ? '切换后写入 Redis 并通知集群' : '切换后持久化到 sys_config'">
-                                    <input type="checkbox" :checked="!!status.writeEncryptEnabled" :disabled="toggleBusy || (!status.keyConfigured && !status.writeEncryptEnabled)" @change="toggleWrite($event)">
+                                <label class="switch" :title="writeToggleTitle">
+                                    <input type="checkbox" :checked="!!status.writeEncryptEnabled" :disabled="!canToggleWrite" @change="toggleWrite($event)">
                                     <span class="slider"></span>
                                 </label>
                                 <span class="toggle-label" v-text="status.writeEncryptEnabled ? '写入加密已开启' : '写入加密已关闭'"></span>
+                            </div>
+                            <div v-if="!status.keyConfigured" class="hint" style="color:#b91c1c;margin-top:12px;">
+                                开关不可用：顶部「主密钥」为<strong>未配置</strong>。请在 docker-compose 配置合法 Base64（32 字节）密钥，例如
+                                <code>crypto.field.key=...</code> 或 <code>AUTUMN_CRYPTO_FIELD_KEY=...</code>，并设置
+                                <code>crypto.field.enabled=true</code> / <code>AUTUMN_CRYPTO_FIELD_ENABLED=true</code>；
+                                必要时删除 Redis <code>*autumn:field-encrypt:key</code> 后重启。右侧可生成 key。后台<strong>不能</strong>在线写入主密钥。
+                            </div>
+                            <div v-else-if="!status.hashKeyConfigured" class="hint" style="color:#b91c1c;margin-top:12px;">
+                                开关不可用：盲索引密钥未配置。请配置 <code>crypto.field.hash-key</code> 或 <code>AUTUMN_CRYPTO_FIELD_HASH_KEY</code>（可与主密钥相同）。
                             </div>
                             <div class="btn-group" style="margin-top:14px;">
                                 <button type="button" class="btn btn-outline btn-sm" :disabled="toggleBusy || (!status.clusterMode && (status.runtimeWriteEncryptOverride === null || status.runtimeWriteEncryptOverride === undefined))" @click="resetWriteOverride">恢复默认</button>
@@ -595,9 +604,10 @@
                             </div>
                         </div>
                         <p class="hint">
-                            <span v-if="status.clusterMode">集群：开关与密钥来自 Redis，变更经频道同步。</span>
-                            <span v-else>单机：密钥来自 yml/env；开关可存 sys_config。</span>
-                            启动默认 <code>autumn.crypto.field.enabled</code>：<strong v-text="status.configWriteEncryptEnabled ? '开' : '关'"></strong>。
+                            <span v-if="status.clusterMode">集群：启动时用 yml/env 覆盖 Redis 开关与密钥；运行中变更写 Redis 并经频道同步。</span>
+                            <span v-else>单机：密钥来自 yml/env；启动时将 sys_config 开关与环境配置对齐。</span>
+                            启动默认写入：<strong v-text="status.configWriteEncryptEnabled ? '开' : '关'"></strong>
+                            （支持 <code>crypto.field.enabled</code> / <code>AUTUMN_CRYPTO_FIELD_ENABLED</code>）。改 compose 后<strong>重启即可</strong>，不必手删 Redis。
                         </p>
                     </div>
                 </div>
@@ -815,10 +825,43 @@
 (function() {
     var ctx = '${request.contextPath}';
     var api = ctx + '/sys/crypto/field';
+    var csrfHeader = 'X-CSRF-Token';
+    var csrfToken = '';
+    function ensureCsrf(done) {
+        if (csrfToken) {
+            done();
+            return;
+        }
+        $.get(ctx + '/sys/session/self/csrf', function(res) {
+            if (res && res.code === 0 && res.csrfToken) {
+                csrfToken = res.csrfToken;
+                if (res.header) {
+                    csrfHeader = res.header;
+                }
+            }
+            done();
+        }).fail(function() { done(); });
+    }
+    function postApi(url, data, ok, fail) {
+        ensureCsrf(function() {
+            var headers = {};
+            if (csrfToken) {
+                headers[csrfHeader] = csrfToken;
+            }
+            $.ajax({
+                type: 'POST',
+                url: url,
+                data: data,
+                headers: headers,
+                success: ok,
+                error: fail
+            });
+        });
+    }
     new Vue({
         el: '#app',
         data: {
-            status: { enabled: false, writeEncryptEnabled: false, configWriteEncryptEnabled: false, runtimeWriteEncryptOverride: null, readDecryptEnabled: false, clusterMode: false, writeSwitchSource: 'config', keySource: 'env', prefix: '', keyConfigured: false, hashKeyConfigured: false, algorithm: '', hashAlgorithm: '' },
+            status: { enabled: false, writeEncryptEnabled: false, configWriteEncryptEnabled: false, runtimeWriteEncryptOverride: null, readDecryptEnabled: false, writeReady: false, clusterMode: false, writeSwitchSource: 'config', keySource: 'env', prefix: '', keyConfigured: false, hashKeyConfigured: false, algorithm: '', hashAlgorithm: '' },
             toggleBusy: false,
             devKeyOutput: null,
             devVectorOutput: null,
@@ -850,9 +893,29 @@
             },
             canSingle: function() {
                 return !!(this.single.entity && (this.single.id || '').toString().trim());
+            },
+            /** 关闭时可开：须 key+hash 已配置；已开启时可关（不依赖 key） */
+            canToggleWrite: function() {
+                if (this.toggleBusy) {
+                    return false;
+                }
+                if (this.status.writeEncryptEnabled) {
+                    return true;
+                }
+                return !!(this.status.keyConfigured && this.status.hashKeyConfigured);
+            },
+            writeToggleTitle: function() {
+                if (!this.status.keyConfigured) {
+                    return '主密钥未配置，无法开启写入加密';
+                }
+                if (!this.status.hashKeyConfigured) {
+                    return '盲索引密钥未配置，无法开启写入加密';
+                }
+                return this.status.clusterMode ? '切换后写入 Redis 并通知集群' : '切换后持久化到 sys_config';
             }
         },
         mounted: function() {
+            ensureCsrf(function() {});
             this.loadStatus();
             this.loadList();
         },
@@ -878,7 +941,7 @@
                 var v = this;
                 var enabled = !!(ev && ev.target && ev.target.checked);
                 v.toggleBusy = true;
-                $.post(api + '/writeEnabled', { enabled: enabled }, function(res) {
+                postApi(api + '/writeEnabled', { enabled: enabled }, function(res) {
                     v.toggleBusy = false;
                     if (res && res.code === 0 && res.data) {
                         v.status = res.data;
@@ -887,7 +950,7 @@
                         if (ev && ev.target) ev.target.checked = !enabled;
                         v.toast((res && res.msg) || '切换失败', 'toast-danger');
                     }
-                }).fail(function() {
+                }, function() {
                     v.toggleBusy = false;
                     if (ev && ev.target) ev.target.checked = !enabled;
                     v.toast('切换请求失败', 'toast-danger');
@@ -896,7 +959,7 @@
             resetWriteOverride: function() {
                 var v = this;
                 v.toggleBusy = true;
-                $.post(api + '/resetWriteEnabled', {}, function(res) {
+                postApi(api + '/resetWriteEnabled', {}, function(res) {
                     v.toggleBusy = false;
                     if (res && res.code === 0 && res.data) {
                         v.status = res.data;
@@ -904,43 +967,43 @@
                     } else {
                         v.toast((res && res.msg) || '操作失败', 'toast-danger');
                     }
-                }).fail(function() {
+                }, function() {
                     v.toggleBusy = false;
                     v.toast('请求失败', 'toast-danger');
                 });
             },
             reloadCluster: function() {
                 var v = this;
-                $.post(api + '/reloadCluster', {}, function(res) {
+                postApi(api + '/reloadCluster', {}, function(res) {
                     if (res && res.code === 0 && res.data) {
                         v.status = res.data;
                         v.toast('已从 Redis 刷新', 'toast-success');
                     } else {
                         v.toast((res && res.msg) || '刷新失败', 'toast-danger');
                     }
-                }).fail(function() { v.toast('请求失败', 'toast-danger'); });
+                }, function() { v.toast('请求失败', 'toast-danger'); });
             },
             generateKey: function() {
                 var v = this;
-                $.post(api + '/generateKey', {}, function(res) {
+                postApi(api + '/generateKey', {}, function(res) {
                     if (res && res.code === 0 && res.data) {
                         v.devKeyOutput = res.data;
                         v.toast('已生成开发用密钥', 'toast-success');
                     } else {
                         v.toast((res && res.msg) || '生成失败', 'toast-danger');
                     }
-                }).fail(function() { v.toast('请求失败', 'toast-danger'); });
+                }, function() { v.toast('请求失败', 'toast-danger'); });
             },
             generateVector: function() {
                 var v = this;
-                $.post(api + '/generateVector', {}, function(res) {
+                postApi(api + '/generateVector', {}, function(res) {
                     if (res && res.code === 0 && res.data) {
                         v.devVectorOutput = res.data;
                         v.toast('已生成随机向量', 'toast-success');
                     } else {
                         v.toast((res && res.msg) || '生成失败', 'toast-danger');
                     }
-                }).fail(function() { v.toast('请求失败', 'toast-danger'); });
+                }, function() { v.toast('请求失败', 'toast-danger'); });
             },
             copyText: function(text) {
                 if (!text) return;
@@ -975,19 +1038,19 @@
             },
             runTest: function() {
                 var v = this;
-                $.post(api + '/test', { plain: v.testPlain, vector: v.testVector || '' }, function(res) {
+                postApi(api + '/test', { plain: v.testPlain, vector: v.testVector || '' }, function(res) {
                     if (res && res.code === 0 && res.data) {
                         v.testResult = res.data;
                         v.toast('测试完成', 'toast-success');
                     } else {
                         v.toast((res && res.msg) || '测试失败', 'toast-danger');
                     }
-                }).fail(function() { v.toast('测试请求失败', 'toast-danger'); });
+                }, function() { v.toast('测试请求失败', 'toast-danger'); });
             },
             runDecrypt: function() {
                 var v = this;
                 v.decryptResult = null;
-                $.post(api + '/decrypt', { cipher: v.decryptCipher || '' }, function(res) {
+                postApi(api + '/decrypt', { cipher: v.decryptCipher || '' }, function(res) {
                     if (res && res.code === 0 && res.data) {
                         v.decryptResult = res.data;
                         v.toast('解密成功', 'toast-success');
@@ -995,7 +1058,7 @@
                         v.decryptResult = { success: false, cipher: v.decryptCipher };
                         v.toast((res && res.msg) || '解密失败', 'toast-danger');
                     }
-                }).fail(function() { v.toast('解密请求失败', 'toast-danger'); });
+                }, function() { v.toast('解密请求失败', 'toast-danger'); });
             },
             selectEntity: function(r) {
                 this.single.entity = r.classFullName;
@@ -1013,14 +1076,15 @@
                 if (!v.canSingle) return;
                 var label = path === 'migrateOne' ? (dryRun ? '预检加密' : '加密') : (dryRun ? '预检还原' : '还原');
                 if (!dryRun && !confirm('确定对 id=' + v.single.id + ' 执行「' + label + '」？')) return;
-                $.post(api + '/' + path, {
+                postApi(api + '/' + path, {
                     entity: v.single.entity,
                     id: v.single.id,
-                    dryRun: dryRun
+                    dryRun: dryRun,
+                    confirm: !dryRun
                 }, function(res) {
                     v.singleResult = v.formatResult(res, label);
                     v.toast((res && res.msg) || (res && res.code === 0 ? label + '完成' : label + '失败'), res && res.code === 0 ? 'toast-success' : 'toast-danger');
-                }).fail(function() { v.toast('请求失败', 'toast-danger'); });
+                }, function() { v.toast('请求失败', 'toast-danger'); });
             },
             batchMigrate: function(dryRun) {
                 this.runBatch('migrate', dryRun);
@@ -1033,14 +1097,14 @@
                 if (!v.batchEntity) return;
                 var label = path === 'migrate' ? (dryRun ? '预检批量加密' : '批量加密') : (dryRun ? '预检批量还原' : '批量还原');
                 if (!dryRun && !confirm('确定对所选实体执行「' + label + '」？')) return;
-                $.post(api + '/' + path, {
+                postApi(api + '/' + path, {
                     entity: v.batchEntity,
                     dryRun: dryRun,
                     batchSize: v.batchSize || 200
                 }, function(res) {
                     v.batchResult = v.formatResult(res, label);
                     v.toast((res && res.msg) || (res && res.code === 0 ? label + '完成' : label + '失败'), res && res.code === 0 ? 'toast-success' : 'toast-danger');
-                }).fail(function() { v.toast('请求失败', 'toast-danger'); });
+                }, function() { v.toast('请求失败', 'toast-danger'); });
             },
             formatResult: function(res, label) {
                 if (!res) return label + '：无响应';
