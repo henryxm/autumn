@@ -27,6 +27,7 @@ import cn.org.autumn.modules.sys.shiro.ShiroSessionService;
 import cn.org.autumn.modules.sys.shiro.ShiroSessionTimeouts;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.sys.shiro.SuperPasswordToken;
+import cn.org.autumn.modules.sys.support.PasswordChangeAuditContext;
 import cn.org.autumn.node.ProfileStore;
 import cn.org.autumn.modules.usr.entity.UserProfileEntity;
 import cn.org.autumn.modules.usr.service.UserLoginLogService;
@@ -144,6 +145,10 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
     @Autowired
     private AdminBootstrapService adminBootstrapService;
 
+    @Autowired
+    @Lazy
+    private PasswordChangeLogService passwordChangeLogService;
+
     @Autowired(required = false)
     private ProfileStore profileStore;
 
@@ -257,7 +262,8 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
             List<String> roleKeys = new ArrayList<>();
             roleKeys.add(Role_System_Administrator);
             String plain = getPassword();
-            current = newUser(getAdmin(), uuidNamespaceService.allocate(), plain, roleKeys);
+            current = PasswordChangeAuditContext.call(PasswordChangeLogService.CHANNEL_BOOTSTRAP, null,
+                    () -> newUser(getAdmin(), uuidNamespaceService.allocate(), plain, roleKeys));
             SysDeptEntity sysDeptEntity = sysDeptService.getByDeptKey(Department_System_Administrator);
             if (null != sysDeptEntity) {
                 current.setDeptKey(sysDeptEntity.getDeptKey());
@@ -324,6 +330,11 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
             user.setUuid(uuidNamespaceService.allocateIfBlank(user.getUuid()));
         boolean result = super.save(user);
         sysUserRoleService.saveOrUpdate(user.getUuid(), user.getRoleKeys());
+        if (result && StringUtils.isNotBlank(password)) {
+            recordPasswordChange(user.getUuid(), PasswordChangeLogService.ACTION_CREATE,
+                    resolvePasswordChannel(PasswordChangeLogService.CHANNEL_ADMIN),
+                    null, null, true, null);
+        }
         return result;
     }
 
@@ -347,11 +358,21 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
     }
 
     public void updateNoRole(SysUserEntity user) {
+        boolean passwordChanging = StringUtils.isNotBlank(user.getPassword());
+        String previousHash = null;
+        String previousSalt = null;
         if (StringUtils.isBlank(user.getPassword())) {
             user.setPassword(null);
             String password = getByUsername(user.getUsername()).getPassword();
             user.setPassword(password);
         } else {
+            if (StringUtils.isNotBlank(user.getUuid())) {
+                SysUserEntity before = baseMapper.getByUuid(user.getUuid());
+                if (before != null) {
+                    previousHash = before.getPassword();
+                    previousSalt = before.getSalt();
+                }
+            }
             user.setPassword(ShiroUtils.hashPassword(user.getPassword()));
         }
         if (StringUtils.isEmpty(user.getUuid()))
@@ -367,7 +388,12 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
                 prevBanned = prev.getBanned();
             }
         }
-        this.updateById(user);
+        boolean updated = this.updateById(user);
+        if (passwordChanging && updated) {
+            recordPasswordChange(user.getUuid(), PasswordChangeLogService.ACTION_ADMIN_SET,
+                    resolvePasswordChannel(PasswordChangeLogService.CHANNEL_ADMIN),
+                    previousHash, previousSalt, true, null);
+        }
         // 管理端全量更新：本机必清；verify / banned 边沿须全集群广播
         if (StringUtils.isNotBlank(user.getUuid())) {
             Integer next = user.getVerify();
@@ -392,6 +418,10 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         // 返回 false 由 Controller 提示「原密码不正确」；勿抛普通 Exception（会被全局处理成「未知错误」）
         if (!ShiroUtils.passwordsMatch(password, userEntity.getPassword(), userEntity.getSalt()))
             return false;
+        validatePasswordLength(newPassword);
+        String previousHash = userEntity.getPassword();
+        String previousSalt = userEntity.getSalt();
+        assertPasswordReusePolicy(userUuid, newPassword, previousHash, previousSalt);
         accountFactory.changing(userEntity);
         String salt = RandomStringUtils.randomAlphanumeric(20);
         userEntity.setSalt(salt);
@@ -401,6 +431,9 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         if (result && StringUtils.isNotEmpty(userUuid)) {
             forceUserLogout(userUuid);
             clearAdminBootstrapIfNeeded(userEntity);
+            recordPasswordChange(userUuid, PasswordChangeLogService.ACTION_CHANGE,
+                    resolvePasswordChannel(PasswordChangeLogService.CHANNEL_SELF),
+                    previousHash, previousSalt, true, null);
         }
         accountFactory.changed(userEntity);
         invalidateUserCacheCluster(userEntity);
@@ -411,6 +444,11 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         SysUserEntity userEntity = getByUuid(userUuid);
         if (null == userEntity)
             return false;
+        validatePasswordLength(newPassword);
+        String previousHash = userEntity.getPassword();
+        String previousSalt = userEntity.getSalt();
+        // 忘记密码等同自助路径，受 passwordReuseAllowed 约束；管理端 ADMIN_SET 不走此方法
+        assertPasswordReusePolicy(userUuid, newPassword, previousHash, previousSalt);
         accountFactory.changing(userEntity);
         String salt = RandomStringUtils.randomAlphanumeric(20);
         userEntity.setSalt(salt);
@@ -420,6 +458,10 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         if (result && StringUtils.isNotEmpty(userUuid)) {
             forceUserLogout(userUuid);
             clearAdminBootstrapIfNeeded(userEntity);
+            // 默认 SYSTEM；忘记密码入口经 PasswordChangeAuditContext 设为 FORGOT
+            recordPasswordChange(userUuid, PasswordChangeLogService.ACTION_RESET,
+                    resolvePasswordChannel(PasswordChangeLogService.CHANNEL_SYSTEM),
+                    previousHash, previousSalt, true, null);
         }
         accountFactory.changed(userEntity);
         invalidateUserCacheCluster(userEntity);
@@ -798,12 +840,18 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
             return;
         }
         String beforePwd = principal.getPassword();
+        String beforeSalt = fresh.getSalt();
         boolean upgraded = LegacyPasswordUpgradeSupport.tryUpgradeAtomically(
                 principal.getUuid(), userSubmittedPassword, fresh, baseMapper);
         // CAS 失败时 fresh 可能仍是旧行视图：再读库，保证 Subject 与权威存储一致
         SysUserEntity store = upgraded ? fresh : baseMapper.getByUuid(principal.getUuid());
         if (store == null) {
             return;
+        }
+        if (upgraded) {
+            recordPasswordChange(principal.getUuid(), PasswordChangeLogService.ACTION_UPGRADE,
+                    PasswordChangeLogService.CHANNEL_SYSTEM,
+                    beforePwd, beforeSalt, true, "legacy SHA to PBKDF2");
         }
         if (!Objects.equals(principal.getPassword(), store.getPassword())) {
             principal.setPassword(store.getPassword());
@@ -1377,6 +1425,8 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
             SysUserEntity entity = getByUuid(uuid);
             if (null == entity || entity.getStatus() == -1)
                 return;
+            String previousHash = entity.getPassword();
+            String previousSalt = entity.getSalt();
             accountFactory.canceling(entity);
             entity.setStatus(-1);
             entity.setPassword("");
@@ -1410,7 +1460,13 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
                 entity.setIdCard(prefix + entity.getIdCard());
             }
             entity.setUpdateTime(new Date());
-            updateById(entity);
+            boolean updated = updateById(entity);
+            if (!updated) {
+                return;
+            }
+            recordPasswordChange(uuid, PasswordChangeLogService.ACTION_CLEAR,
+                    PasswordChangeLogService.CHANNEL_SYSTEM,
+                    previousHash, previousSalt, true, reason);
             clear(uuid);
             accountFactory.canceled(entity);
         } catch (Exception e) {
@@ -1449,7 +1505,8 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         if (!sysConfigService.isRegisterEnabled()) {
             throw new IllegalArgumentException("暂未开放注册，请联系管理员");
         }
-        return createSelfServiceAccount(account, password);
+        return PasswordChangeAuditContext.call(PasswordChangeLogService.CHANNEL_REGISTER, null,
+                () -> createSelfServiceAccount(account, password));
     }
 
     /**
@@ -1457,7 +1514,8 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
      */
     @Transactional(rollbackFor = Exception.class)
     public SysUserEntity provisionConnectUser(String account, String password) {
-        return createSelfServiceAccount(account, password);
+        return PasswordChangeAuditContext.call(PasswordChangeLogService.CHANNEL_OAUTH_PROVISION, null,
+                () -> createSelfServiceAccount(account, password));
     }
 
     private SysUserEntity createSelfServiceAccount(String account, String password) {
@@ -1510,7 +1568,72 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         if (user == null) {
             throw new IllegalArgumentException("账号不存在，请检查手机号、邮箱或用户名");
         }
-        resetPassword(user.getUuid(), newPassword);
+        final String userUuid = user.getUuid();
+        PasswordChangeAuditContext.run(PasswordChangeLogService.CHANNEL_FORGOT, null, () -> {
+            try {
+                resetPassword(userUuid, newPassword);
+            } catch (RuntimeException e) {
+                throw e;
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    private String resolvePasswordChannel(String fallback) {
+        String channel = PasswordChangeAuditContext.channelOrDefault(null);
+        if (StringUtils.isNotBlank(channel)) {
+            return channel;
+        }
+        if (StringUtils.isNotBlank(resolvePasswordOperator())) {
+            return fallback;
+        }
+        if (PasswordChangeLogService.CHANNEL_ADMIN.equals(fallback)) {
+            return PasswordChangeLogService.CHANNEL_SYSTEM;
+        }
+        return fallback;
+    }
+
+    private String resolvePasswordOperator() {
+        String operator = PasswordChangeAuditContext.operatorOrNull();
+        if (StringUtils.isNotBlank(operator)) {
+            return operator;
+        }
+        try {
+            return ShiroUtils.getUserUuid();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private void recordPasswordChange(String targetUserUuid,
+                                      String action,
+                                      String channel,
+                                      String previousPasswordHash,
+                                      String previousSalt,
+                                      boolean success,
+                                      String remark) {
+        if (passwordChangeLogService == null) {
+            return;
+        }
+        passwordChangeLogService.record(targetUserUuid, resolvePasswordOperator(), action, channel,
+                previousPasswordHash, previousSalt, success, remark);
+    }
+
+    /**
+     * 自助改密 / 忘记密码：{@code passwordReuseAllowed=false} 时拒绝当前与最近历史口令。
+     * 管理端 {@code updateNoRole}（ADMIN_SET）不受此约束，可由管理员强制设定。
+     * 防重用开启时审计服务必须可用（fail-closed）。
+     */
+    private void assertPasswordReusePolicy(String userUuid, String newPassword,
+                                           String currentHash, String currentSalt) {
+        if (sysConfigService.isPasswordReuseAllowed()) {
+            return;
+        }
+        if (passwordChangeLogService == null) {
+            throw new IllegalStateException("口令防重用已启用但审计服务不可用");
+        }
+        passwordChangeLogService.assertNotRecentPassword(userUuid, newPassword, currentHash, currentSalt);
     }
 
     private void validatePasswordLength(String password) {
