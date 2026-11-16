@@ -454,6 +454,8 @@ public class AuthorizationController {
         try {
             if (StringUtils.isNotBlank(error)) {
                 if (error.length() > 200) error = error.substring(0, 200);
+                // 供 AuthLoginController AJAX 读取，避免仅写在 redirect query 时丢失
+                model.addAttribute("error", error);
                 String safeCallback = WebPathUtils.safeOauthCallbackForClient(request, callback);
                 if (StringUtils.isNotBlank(safeCallback)) {
                     return redirectUrl(appendQueryParam(safeCallback, "error", error));

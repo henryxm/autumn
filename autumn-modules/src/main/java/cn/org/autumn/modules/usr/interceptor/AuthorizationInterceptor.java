@@ -83,7 +83,9 @@ public class AuthorizationInterceptor implements HandlerInterceptor, Interceptor
         } catch (AException e) {
             throw e;
         } catch (Exception e) {
-            log.error("Authorization preHandle failed: {}", e.getMessage());
+            // 对齐/Redis/DB 异常勿一律「权限验证失败」掩盖根因；对外仍保守
+            log.error("Authorization preHandle failed type={} uri={} err={}",
+                    e.getClass().getSimpleName(), request.getRequestURI(), e.getMessage());
             throw new AException("权限验证失败");
         }
     }

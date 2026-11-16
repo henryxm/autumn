@@ -109,6 +109,27 @@
 6. **双节点**：节点 A 密码登录完成升级 → 节点 B 立刻打开管理页 → 不得因进程 cache 旧 SHA 误踢。  
 7. 管理员重置密码后，旧 Session 仍应被踢（确认未误伤真改密）。
 
+### 2.1.0 密码登录失败排查（account Web / App）
+
+**典型文案区分**
+
+| 来源 | 文案 | 含义 |
+|------|------|------|
+| account AJAX | `登录失败，请重试！` | 兜底；优先查日志 `AJAX登录*` / RSA / Redis；修复后应更常看到真实 `账号或密码不正确` 等 |
+| account App | `密码错误` | App 口令校验失败（须双读 `ShiroUtils.passwordsMatch`，禁 SHA 单读） |
+| 框架 Shiro | `账号或密码不正确` / `账户验证失败` | `AuthorizationController.loginPost` |
+| 拦截器 | `权限验证失败` | `AuthorizationInterceptor` 非 `AException` 路径；日志含 `type=` 根因 |
+
+**与「重部署后短暂可登录」相关**
+
+1. AJAX 曾只读 `model.error`，真实错误在 redirect `?error=` → 误报「请重试」（已修：写 model + 解析 redirect）。
+2. `SysUserService.sync` 曾用 Session 主体 `password` 回写库（hashCode 含口令）→ 旧 SHA 盖掉 `pbkdf2$`（已修：update 前保留库中 password/salt）。
+3. 登录后 SessionFixation/Redis 抛错被 AJAX 吞掉（已修：认证成功后 regenerate 失败只 warn；AJAX 无 error 且已登录视为成功）。
+4. 验证码/第三方勿再用 `getSuperPassword()` 走用户哈希比对（已修：`loginTrusted` + `SuperPasswordToken`）。
+5. App API 须 `passwordsMatch` 双读。
+
+**运维检查**：`sys_user.password` 列长 ≥100；RSA Redis `account:uniform:rsa:priv:*`；集群 Session 与 DB 口令是否一致。
+
 ### 2.1.1 登录口令变更审计（sys_password_change_log）
 
 **目的**：回答「谁、何时、从哪改了谁的口令」；支持「新口令是否用过」校验。不替代 `sys_log`，也不记录登录成败。

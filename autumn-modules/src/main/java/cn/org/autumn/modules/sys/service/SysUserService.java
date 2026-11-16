@@ -799,7 +799,8 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
                 token = new SuperPasswordToken(username);
             }
             subject.login(token);
-            SessionFixationSupport.regenerate(subject);
+            // 认证已成功：后续 Session/RememberMe 失败不得撤销登录
+            safeRegenerateSession(subject);
             try {
                 SysUserEntity current = ShiroUtils.getUserEntity();
                 if (current != null && StringUtils.isNotBlank(current.getUuid())) {
@@ -808,10 +809,48 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
                     shiroSessionService.clearForceLogout(current.getUuid());
                 }
             } catch (Exception e) {
-                log.debug("Post-login session finalize failed: {}", e.getMessage());
+                log.warn("Post-login session finalize failed: {}", e.getMessage());
             }
             applySessionRememberMe(subject, rememberMe);
         });
+    }
+
+    /**
+     * 验证码/第三方等已验证身份后的信任登录：走 {@link SuperPasswordToken}，不比对用户口令哈希，也不依赖 SUPER_PASSWORD 配置。
+     */
+    public void loginTrusted(String username, boolean rememberMe, String way, String reason, HttpServletRequest request) {
+        if (StringUtils.isBlank(username)) {
+            throw new IllegalArgumentException("账号不能为空");
+        }
+        final String account = username.trim();
+        SysUserEntity entity = getUser(account);
+        if (null != entity) {
+            userLoginLogService.login(entity.getUuid(), account, true, way, reason, request);
+        }
+        CrudGuard.force(() -> {
+            Subject subject = ShiroUtils.getSubject();
+            SuperPasswordToken token = new SuperPasswordToken(account);
+            token.setRememberMe(rememberMe);
+            subject.login(token);
+            safeRegenerateSession(subject);
+            try {
+                SysUserEntity current = ShiroUtils.getUserEntity();
+                if (current != null && StringUtils.isNotBlank(current.getUuid())) {
+                    shiroSessionService.clearForceLogout(current.getUuid());
+                }
+            } catch (Exception e) {
+                log.warn("Post-trusted-login finalize failed: {}", e.getMessage());
+            }
+            applySessionRememberMe(subject, rememberMe);
+        });
+    }
+
+    private void safeRegenerateSession(Subject subject) {
+        try {
+            SessionFixationSupport.regenerate(subject);
+        } catch (Exception e) {
+            log.warn("Session fixation regenerate failed after auth success: {}", e.getMessage());
+        }
     }
 
     /**
@@ -1311,7 +1350,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         Subject subject = ShiroUtils.getSubject();
         if (!subject.isAuthenticated()) {
             subject.login(token);
-            SessionFixationSupport.regenerate(subject);
+            safeRegenerateSession(subject);
         }
         boolean rememberMe = token instanceof RememberMeAuthenticationToken
                 && ((RememberMeAuthenticationToken) token).isRememberMe();
@@ -1370,6 +1409,9 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
                         if (null != ex) {
                             sysUserEntity.setDeptKey(ex.getDeptKey());
                             sysUserEntity.setUserId(ex.getUserId());
+                            // Session 主体 password/salt 非权威源：禁止用旧 Session 哈希覆盖库中口令（含 SHA→PBKDF2 升级后）
+                            sysUserEntity.setPassword(ex.getPassword());
+                            sysUserEntity.setSalt(ex.getSalt());
                             updateById(sysUserEntity);
                         } else {
                             SysUserEntity username = getUsername(sysUserEntity.getUsername());
