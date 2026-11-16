@@ -155,6 +155,10 @@ public class PageFactory extends Factory {
         return invoke("fieldencrypt", "fieldencrypt", httpServletRequest, httpServletResponse, model);
     }
 
+    public String configsecure(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        return invoke("configsecure", "configsecure", httpServletRequest, httpServletResponse, model);
+    }
+
     public String dbmanage(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
         return invoke("dbmanage", "dbmanage", httpServletRequest, httpServletResponse, model);
     }

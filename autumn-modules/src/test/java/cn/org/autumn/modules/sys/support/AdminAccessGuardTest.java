@@ -7,7 +7,7 @@ import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.modules.sys.service.SysMenuService;
 import cn.org.autumn.modules.sys.service.SysUserRoleService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
-import cn.org.autumn.modules.wall.service.IpWhiteService;
+import cn.org.autumn.modules.wall.service.IpAdminWhiteService;
 import cn.org.autumn.site.AdminShellAccess;
 import cn.org.autumn.site.PageFactory;
 import org.junit.jupiter.api.AfterEach;
@@ -38,7 +38,7 @@ class AdminAccessGuardTest {
     private SysUserRoleService sysUserRoleService;
     private SysMenuService sysMenuService;
     private SysConfigService sysConfigService;
-    private IpWhiteService ipWhiteService;
+    private IpAdminWhiteService ipAdminWhiteService;
     private PageFactory pageFactory;
     private AdminShellAccess adminShellAccess;
     private MockedStatic<ShiroUtils> shiroUtils;
@@ -49,13 +49,13 @@ class AdminAccessGuardTest {
         sysUserRoleService = mock(SysUserRoleService.class);
         sysMenuService = mock(SysMenuService.class);
         sysConfigService = mock(SysConfigService.class);
-        ipWhiteService = mock(IpWhiteService.class);
+        ipAdminWhiteService = mock(IpAdminWhiteService.class);
         pageFactory = mock(PageFactory.class);
         adminShellAccess = mock(AdminShellAccess.class);
         ReflectionTestUtils.setField(guard, "sysUserRoleService", sysUserRoleService);
         ReflectionTestUtils.setField(guard, "sysMenuService", sysMenuService);
         ReflectionTestUtils.setField(guard, "sysConfigService", sysConfigService);
-        ReflectionTestUtils.setField(guard, "ipWhiteService", ipWhiteService);
+        ReflectionTestUtils.setField(guard, "ipAdminWhiteService", ipAdminWhiteService);
         ReflectionTestUtils.setField(guard, "pageFactory", pageFactory);
         ReflectionTestUtils.setField(guard, "adminShellAccess", adminShellAccess);
         shiroUtils = Mockito.mockStatic(ShiroUtils.class);
@@ -178,7 +178,7 @@ class AdminAccessGuardTest {
         MockHttpServletResponse response = new MockHttpServletResponse();
         Model model = new ConcurrentModel();
         assertEquals("exec", guard.gateView("exec", request, response, model));
-        verify(ipWhiteService).check(eq(request), eq(AdminAccessGuard.class), eq("exec"));
+        verify(ipAdminWhiteService).checkAdmin(eq(request), eq(AdminAccessGuard.class), eq("exec"));
     }
 
     @Test
@@ -186,7 +186,7 @@ class AdminAccessGuardTest {
         shiroUtils.when(ShiroUtils::isLogin).thenReturn(false);
         MockHttpServletRequest request = new MockHttpServletRequest();
         assertThrows(AException.class, () -> guard.requireOpsAdmin(request, getClass(), "x"));
-        Mockito.verifyNoInteractions(ipWhiteService);
+        Mockito.verifyNoInteractions(ipAdminWhiteService);
     }
 
     @Test
@@ -207,7 +207,7 @@ class AdminAccessGuardTest {
         assertFalse(guard.isWebShellEnabled());
         MockHttpServletRequest request = new MockHttpServletRequest();
         assertThrows(AException.class, () -> guard.requireWebShellOps(request, getClass(), "ws"));
-        Mockito.verifyNoInteractions(ipWhiteService);
+        Mockito.verifyNoInteractions(ipAdminWhiteService);
     }
 
     @Test
@@ -220,7 +220,7 @@ class AdminAccessGuardTest {
         when(sysUserRoleService.isSystemAdministrator("admin")).thenReturn(true);
         MockHttpServletRequest request = new MockHttpServletRequest();
         guard.requireWebShellOps(request, getClass(), "ws");
-        verify(ipWhiteService).check(eq(request), eq(getClass()), eq("ws"));
+        verify(ipAdminWhiteService).checkAdmin(eq(request), eq(getClass()), eq("ws"));
     }
 
     @Test
@@ -229,7 +229,40 @@ class AdminAccessGuardTest {
         shiroUtils.when(ShiroUtils::getUserUuid).thenReturn("admin");
         when(sysUserRoleService.isSystemAdministrator("admin")).thenReturn(true);
         MockHttpServletRequest request = new MockHttpServletRequest();
-        doThrow(new AException("服务繁忙")).when(ipWhiteService).check(any(), any(), any());
+        doThrow(new AException("服务繁忙")).when(ipAdminWhiteService).checkAdmin(any(), any(), any());
         assertEquals("404", guard.gateView("wall", request, new MockHttpServletResponse(), new ConcurrentModel()));
     }
+
+    @Test
+    void wall_bootstrapPending_skipsAdminIp() {
+        shiroUtils.when(ShiroUtils::isLogin).thenReturn(true);
+        shiroUtils.when(ShiroUtils::getUserUuid).thenReturn("admin");
+        when(sysUserRoleService.isSystemAdministrator("admin")).thenReturn(true);
+        when(ipAdminWhiteService.isBootstrapPending()).thenReturn(true);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        assertEquals("wall", guard.gateView("wall", request, new MockHttpServletResponse(), new ConcurrentModel()));
+        Mockito.verify(ipAdminWhiteService, Mockito.never()).checkAdmin(any(), any(), any());
+    }
+
+    @Test
+    void requireOpsAdmin_usesAdminIpService() {
+        shiroUtils.when(ShiroUtils::isLogin).thenReturn(true);
+        shiroUtils.when(ShiroUtils::getUserUuid).thenReturn("admin");
+        when(sysUserRoleService.isSystemAdministrator("admin")).thenReturn(true);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        guard.requireOpsAdmin(request, getClass(), "x");
+        verify(ipAdminWhiteService).checkAdmin(eq(request), eq(getClass()), eq("x"));
+    }
+
+    @Test
+    void genGlobalView_requiresAdminIp() {
+        shiroUtils.when(ShiroUtils::isLogin).thenReturn(true);
+        shiroUtils.when(ShiroUtils::getUserUuid).thenReturn("admin");
+        when(sysUserRoleService.isSystemAdministrator("admin")).thenReturn(true);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        assertEquals("modules/sys/user",
+                guard.gateView("modules/sys/user", request, new MockHttpServletResponse(), new ConcurrentModel()));
+        verify(ipAdminWhiteService).checkAdmin(eq(request), eq(AdminAccessGuard.class), eq("modules/sys/user"));
+    }
+
 }

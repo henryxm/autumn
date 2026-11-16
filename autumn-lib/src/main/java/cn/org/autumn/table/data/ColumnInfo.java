@@ -313,12 +313,32 @@ public class ColumnInfo {
         }
         FieldEncrypt fieldEncrypt = field.getAnnotation(FieldEncrypt.class);
         if (fieldEncrypt != null && String.class.equals(ft)) {
-            this.type = DataType.VARCHAR;
-            if (this.length <= 255) {
-                this.length = 1024;
+            // 显式 TEXT/MEDIUMTEXT/LONGTEXT 等大字段（如 SysConfig.paramValue）须保留，
+            // 不可压成 varchar(1024)，否则 ENC$ 密文/大 JSON 会触发 Data truncation。
+            if (!isLobTextType(this.type)) {
+                this.type = DataType.VARCHAR;
+                if (this.length <= 255) {
+                    this.length = 1024;
+                }
             }
         }
         setGenAnnotation(buildAnnotation() + buildFieldEncryptAnnotation(fieldEncrypt));
+    }
+
+    /** 大文本/二进制类型：实体已声明则 @FieldEncrypt 不得改写为 varchar。 */
+    static boolean isLobTextType(String type) {
+        if (type == null || type.isEmpty()) {
+            return false;
+        }
+        String t = type.toLowerCase();
+        return DataType.TEXT.equals(t)
+                || DataType.MEDIUMTEXT.equals(t)
+                || DataType.LONGTEXT.equals(t)
+                || DataType.TINYTEXT.equals(t)
+                || "blob".equals(t)
+                || "mediumblob".equals(t)
+                || "longblob".equals(t)
+                || "tinyblob".equals(t);
     }
 
     private String buildFieldEncryptAnnotation(FieldEncrypt fieldEncrypt) {

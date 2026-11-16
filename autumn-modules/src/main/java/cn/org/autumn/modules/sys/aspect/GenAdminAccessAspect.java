@@ -9,7 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
- * 生成 CRUD（{@code *.controller.gen.*}）默认仅系统管理员，防止菜单权限用户越权读全表。
+ * 生成 CRUD（{@code *.controller.gen.*}）默认仅系统管理员 + 管理 IP 白名单，防止菜单权限用户越权读全表。
  * <p>
  * 豁免：框架自助模块 usr/safe/bot/qrc，以及子项目通过
  * {@link cn.org.autumn.config.AdminAccessModuleHandler#selfGenModules()} 注册的模块。
@@ -29,7 +29,7 @@ public class GenAdminAccessAspect {
         if (adminAccessGuard.shouldRequireSystemAdminForGen(type)) {
             String method = joinPoint.getSignature().getName();
             String target = "gen:" + type.getName() + "#" + method;
-            adminAccessGuard.requireSystemAdmin(target);
+            adminAccessGuard.requireGenAdmin(target);
         }
     }
 }

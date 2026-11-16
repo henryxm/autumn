@@ -18,6 +18,7 @@
 			<a class="btn btn-primary" @click="del"><i class="fa fa-trash-o"></i>&nbsp;${lang.sys_string_delete}</a>
 			<a class="btn btn-info" @click="refreshJsonSelected"><i class="fa fa-refresh"></i>&nbsp;刷新JSON字段</a>
 			<a class="btn btn-info" @click="refreshJsonAll"><i class="fa fa-refresh"></i>&nbsp;刷新全部JSON</a>
+			<a class="btn btn-warning" href="${request.contextPath}/configsecure.html" target="_blank" rel="noopener" title="SysConfig 字段加密：明文编辑、密文落库、单条/批量迁移"><i class="fa fa-key"></i>&nbsp;配置安全</a>
 		</div>
 	    <table id="jqGrid"></table>
 	    <div id="jqGridPager"></div>

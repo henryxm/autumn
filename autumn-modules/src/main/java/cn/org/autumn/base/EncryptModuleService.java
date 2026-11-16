@@ -9,6 +9,7 @@ import cn.org.autumn.crypto.FieldEncryptKtQueryChainWrapper;
 import cn.org.autumn.crypto.FieldEncryptLambdaQueryChainWrapper;
 import cn.org.autumn.crypto.FieldEncryptQueryChainWrapper;
 import cn.org.autumn.crypto.FieldEncryptService;
+import cn.org.autumn.crypto.FieldMeta;
 import cn.org.autumn.table.utils.HumpConvert;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -71,11 +72,37 @@ public abstract class EncryptModuleService<M extends BaseMapper<T>, T> extends M
     }
 
     protected T afterRead(T entity) {
-        return encrypt.onRead(entity);
+        return ensurePlainEncryptedFields(encrypt.onRead(entity));
     }
 
     protected List<T> afterRead(List<T> entities) {
-        return encrypt.onRead(entities);
+        List<T> list = encrypt.onRead(entities);
+        if (list != null) {
+            for (T entity : list) {
+                ensurePlainEncryptedFields(entity);
+            }
+        }
+        return list;
+    }
+
+    /**
+     * onRead 后仍为 ENC$ 时按字段再 decryptValue（元数据补登记 / 扫描竞态兜底），避免业务拿到密文。
+     */
+    private T ensurePlainEncryptedFields(T entity) {
+        if (entity == null || encrypt == null || !encrypt.isReadDecryptEnabled()) {
+            return entity;
+        }
+        for (FieldMeta meta : encrypt.getFields(entity.getClass())) {
+            try {
+                Object raw = meta.getField().get(entity);
+                if (raw instanceof String text && encrypt.needsRestore(text)) {
+                    meta.getField().set(entity, encrypt.decryptValue(text));
+                }
+            } catch (Exception e) {
+                // 单字段失败不阻断整实体回传；解密失败时保留原值并依赖上层 warn
+            }
+        }
+        return entity;
     }
 
     protected Map<String, Object> afterReadMap(Map<String, Object> row) {

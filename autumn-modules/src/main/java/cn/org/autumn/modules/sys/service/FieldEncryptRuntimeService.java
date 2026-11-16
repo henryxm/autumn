@@ -6,7 +6,10 @@ import cn.org.autumn.modules.sys.redis.FieldEncryptRedisStore;
 import cn.org.autumn.site.InitFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.core.annotation.Order;
 import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,8 +17,8 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * 字段存储加密运行时协调。
  * <ul>
- *   <li>集群（Redis 开启）：启动时用 yml/环境变量覆盖 Redis 开关与密钥，再加载到内存；运行中可后台切换</li>
- *   <li>单机：密钥来自环境变量；启动时将 sys_config 运行时开关与环境配置对齐</li>
+ *   <li>集群（Redis 开启）：启动对齐密钥；写开关保留一键开启（env=false 不冲掉 Redis=true），env=true 可强制打开</li>
+ *   <li>单机：密钥来自环境变量；sys_config 运行时写开关同样保留一键开启</li>
  * </ul>
  */
 @Slf4j
@@ -30,9 +33,11 @@ public class FieldEncryptRuntimeService implements InitFactory.Init, InitFactory
     @Autowired
     private FieldEncryptService fieldEncryptService;
 
+    @Lazy
     @Autowired
     private SysConfigService sysConfigService;
 
+    @Lazy
     @Autowired
     private FieldEncryptRedisStore fieldEncryptRedisStore;
 
@@ -41,10 +46,29 @@ public class FieldEncryptRuntimeService implements InitFactory.Init, InitFactory
 
     private volatile boolean refreshSubscribed;
 
+    /**
+     * 早于 Shiro 读 SysConfig 的 {@code @Bean}（见 {@code ShiroConfig @DependsOn}）：从 Redis 预热密钥。
+     */
+    @PostConstruct
+    public void earlyHydrateKeys() {
+        if (fieldEncryptService.isKeyConfigured()) {
+            return;
+        }
+        if (fieldEncryptRedisStore == null || !fieldEncryptRedisStore.isActive()) {
+            return;
+        }
+        if (fieldEncryptRedisStore.tryHydrateKeysEarly(fieldEncryptService)) {
+            log.info("字段加密密钥已从 Redis 早期加载，可供启动期解密 SysConfig（yml 未配 key 时依赖 Redis 历史密钥）");
+        }
+    }
+
+    /**
+     * 须早于 {@link SysConfigService#init()}（{@code @Order(-1000)}）完成密钥/写开关对齐。
+     */
+    @Order(-1500)
     @Override
     public void init() {
         if (isClusterMode()) {
-            // 先用 env/yml 覆盖 Redis，避免陈旧 write-enabled=false 挡住 crypto.field.enabled=true
             fieldEncryptRedisStore.syncBootstrapFromEnvironment();
             syncFromRedis();
         } else {
@@ -62,7 +86,7 @@ public class FieldEncryptRuntimeService implements InitFactory.Init, InitFactory
     }
 
     public boolean isClusterMode() {
-        return fieldEncryptRedisStore.isActive();
+        return fieldEncryptRedisStore != null && fieldEncryptRedisStore.isActive();
     }
 
     /**
@@ -132,7 +156,7 @@ public class FieldEncryptRuntimeService implements InitFactory.Init, InitFactory
     }
 
     /**
-     * 启动时将 sys_config 运行时开关与当前环境配置对齐（与 Redis bootstrap 同语义）。
+     * 启动时与 Redis bootstrap 同语义：env=true 可强制打开；env=false 不冲掉一键开启的 true。
      */
     private void reconcileStandaloneWriteSwitchWithEnvironment() {
         boolean fromEnv = fieldEncryptService.isConfigWriteEncryptEnabled();
@@ -147,9 +171,11 @@ public class FieldEncryptRuntimeService implements InitFactory.Init, InitFactory
             return;
         }
         boolean previous = Boolean.parseBoolean(trimmed);
-        if (previous != fromEnv) {
-            upsertSysConfigValue(RUNTIME_WRITE_ENABLED_KEY, Boolean.toString(fromEnv));
-            log.info("Field encrypt sys_config write-enabled reconciled: {} -> {} (from env/yml)", previous, fromEnv);
+        if (fromEnv && !previous) {
+            upsertSysConfigValue(RUNTIME_WRITE_ENABLED_KEY, "true");
+            log.info("Field encrypt sys_config write-enabled reconciled: false -> true (from env/yml force-on)");
+        } else if (!fromEnv && previous) {
+            log.info("Field encrypt sys_config write-enabled kept=true (env enabled=false does not override runtime one-click)");
         }
     }
 

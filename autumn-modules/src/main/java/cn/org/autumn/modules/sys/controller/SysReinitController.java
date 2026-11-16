@@ -4,7 +4,7 @@ import cn.org.autumn.annotation.SkipInterceptor;
 import cn.org.autumn.config.Config;
 import cn.org.autumn.modules.sys.service.SysUserRoleService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
-import cn.org.autumn.modules.wall.service.IpWhiteService;
+import cn.org.autumn.modules.wall.service.IpAdminWhiteService;
 import cn.org.autumn.table.TableInit;
 import cn.org.autumn.table.data.InitType;
 import cn.org.autumn.table.data.TableInfo;
@@ -39,7 +39,7 @@ public class SysReinitController {
     private SysUserRoleService sysUserRoleService;
 
     @Autowired
-    private IpWhiteService ipWhiteService;
+    private IpAdminWhiteService ipAdminWhiteService;
 
     @Autowired
     private TableFactory tableFactory;
@@ -59,7 +59,7 @@ public class SysReinitController {
      */
     @GetMapping("/list")
     public R list(HttpServletRequest request) {
-        ipWhiteService.check(request, getClass(), "reinit");
+        ipAdminWhiteService.checkAdmin(request, getClass(), "reinit");
         if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
             return R.error(403, "无权限");
         }
@@ -77,7 +77,7 @@ public class SysReinitController {
     public R create(@RequestBody Map<String, Object> body, HttpServletRequest request) {
         if (!reinit)
             return R.ok().put("msg", "未执行任何操作");
-        ipWhiteService.check(request, getClass(), "reinit");
+        ipAdminWhiteService.checkAdmin(request, getClass(), "reinit");
         if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
             return R.error(403, "无权限");
         }
@@ -138,7 +138,7 @@ public class SysReinitController {
      */
     @PostMapping("/defaultInit")
     public R defaultInit(HttpServletRequest request) {
-        ipWhiteService.check(request, getClass(), "reinit");
+        ipAdminWhiteService.checkAdmin(request, getClass(), "reinit");
         if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
             return R.error(403, "无权限");
         }

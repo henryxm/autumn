@@ -53,4 +53,13 @@ public class WallCounterSql extends RuntimeSql {
                 + quote("update_time") + " = " + currentTimestamp()
                 + " WHERE " + quote("host") + " = #{host}";
     }
+
+    public String ipAdminWhiteBump() {
+        String c = quote("count");
+        return "UPDATE " + quote("wall_ip_admin_white") + " SET " + c + " = COALESCE(" + c + ",0) + #{count}, "
+                + quote("user_agent") + " = #{userAgent}, "
+                + quote("today") + " = COALESCE(" + quote("today") + ",0) + #{count}, "
+                + quote("update_time") + " = " + currentTimestamp()
+                + " WHERE " + quote("ip") + " = #{ip}";
+    }
 }

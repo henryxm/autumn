@@ -4,7 +4,7 @@ import cn.org.autumn.modules.sys.log.LogFileService;
 import cn.org.autumn.modules.sys.log.LogFileViewResult;
 import cn.org.autumn.modules.sys.service.SysUserRoleService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
-import cn.org.autumn.modules.wall.service.IpWhiteService;
+import cn.org.autumn.modules.wall.service.IpAdminWhiteService;
 import cn.org.autumn.utils.R;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -41,7 +41,7 @@ public class SysLogFileController {
     private SysUserRoleService sysUserRoleService;
 
     @Autowired
-    private IpWhiteService ipWhiteService;
+    private IpAdminWhiteService ipAdminWhiteService;
 
     @GetMapping("/view")
     public R view(@RequestParam(required = false) String date,
@@ -167,7 +167,7 @@ public class SysLogFileController {
         if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
             return false;
         }
-        ipWhiteService.check(request, getClass(), method);
+        ipAdminWhiteService.checkAdmin(request, getClass(), method);
         return true;
     }
 }

@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.sys.entity;
 
+import cn.org.autumn.annotation.FieldEncrypt;
 import cn.org.autumn.table.annotation.Column;
 import cn.org.autumn.table.annotation.Table;
 import cn.org.autumn.table.data.DataType;
@@ -28,6 +29,8 @@ public class SysConfigEntity implements Serializable {
     private String paramKey;
 
     @NotBlank(message = "参数值不能为空")
+    /** TEXT 可容纳 ENC$v1$ Base64 密文（AES-GCM 膨胀约 1.33× + 前缀与 IV） */
+    @FieldEncrypt
     @Column(type = DataType.TEXT, comment = "value")
     private String paramValue;
 

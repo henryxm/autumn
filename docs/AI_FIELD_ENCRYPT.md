@@ -119,9 +119,29 @@ docker-compose / 环境变量（由 `FieldEncryptConfigSource` 统一解析；**
 | 模式 | 写入开关 | 密钥 |
 |------|----------|------|
 | 单机 | `sys_config.field_encrypt_runtime_write_enabled` | yml/env |
-| 集群 | Redis `{ns}:autumn:field-encrypt:write-enabled` | Redis；启动用 env 对齐 |
+| 集群 | Redis `{ns}:autumn:field-encrypt:write-enabled` | Redis；启动用 env 对齐密钥 |
 
-**启动对齐**：进程启动时用当前 yml/环境变量（含 `crypto.field.enabled=true`）**覆盖** Redis / sys_config 中的写入开关（及 env 中合法的 key/hash-key）。因此改 compose 后重启即可，无需手动删 `write-enabled=false`。运行中后台切换仍立即生效；下次重启再次与环境配置对齐。
+**启动对齐（写开关保留一键开启）**
+
+| 情况 | 行为 |
+|------|------|
+| 存储无写开关 | 用 env/yml `enabled` 种子 |
+| env `enabled=true` | **强制**打开存储中的写开关（升级推高） |
+| env `enabled=false` 且存储已为 `true` | **不覆盖**（保留 fieldencrypt 一键开启，滚动重启不关写） |
+| 合法 key/hash-key | 仍从 env 对齐到 Redis / 本机 |
+
+关写请用后台「写入加密」关闭或「恢复默认」，不要指望把 yml 改回 `enabled=false` 来关掉已一键开启的集群开关。
+
+### 1.3 多节点滚动启用（业务零改动）
+
+业务继续 `SysConfigService.getValue` / `getConfigObject` / `updateValueByKey` / `save` / `update`，无需改业务仓代码。
+
+1. 全节点部署新 Autumn，配置**同一** `crypto.field.key` / `hash-key`，保持 **`crypto.field.enabled=false`**（默认不写加密）。
+2. 确认各节点 `readDecryptEnabled=true`、`writeEncryptEnabled=false`（`fieldencrypt.html` 状态）。
+3. `fieldencrypt.html`：对各 `@FieldEncrypt` 实体预检 migrate → 确认执行；SysConfig 也可用 `configsecure.html`。
+4. 打开运行时「写入加密」（集群 Pub/Sub 同步其它节点）。
+5. 抽检：`getValue` 仍为明文；DB `param_value` 为 `ENC$v1$…`。
+6. 滚动重启后写开关仍为 true（§1.2）。迁移非 dryRun 后框架会 `SysConfigService.reloadAfterFieldEncryptMigration()` 清 Redis/本机 map 并广播失效。
 
 ---
 
@@ -177,6 +197,24 @@ afterRead(row);
 
 **读链未覆盖（见 §0.5）**：`lambdaUpdate` / `update()` 写链、`Wrapper.eq` 查 searchable 明文、`baseMapper` 直查。
 
+### 2.5 SysConfig `paramValue`（全字段落库加密）
+
+| 项 | 约定 |
+|----|------|
+| 实体 | `SysConfigEntity.paramValue`：`@FieldEncrypt` + `TEXT`（容纳 `ENC$v1$` 密文；`ColumnInfo` 对显式 TEXT **不会**压成 `varchar(1024)`） |
+| Service | `SysConfigService` **必须** `extends EncryptModuleService`；`getMenuItems` / `getMenuItemsInternal` 置空（菜单由 `SysMenuService` 维护） |
+| 旁路 | **对外读须明文**：`EncryptModuleService.afterRead` + SysConfig `ensurePlainParamValue` 对残留 `ENC$` 再 `decryptValue`；`getValue`/`getByKey`/`getNameSpace`/`getById`/`list`/`page`/`getObject` 全覆盖；`getObject` 解析失败回落默认对象；无密钥时密文无法解密（须配 key）；`FieldEncryptRuntimeService` `@Order(-1500)` 早于 SysConfig init；`updateValueByKey`/`save`/`update` 写路径受写开关控制；Redis/map **缓存明文** |
+
+### 2.5.1 对外读路径是否穷尽？
+
+| 结论 | 说明 |
+|------|------|
+| **框架 Service CRUD + SysConfig 字符串 API：是（有密钥时）** | 凡继承 `EncryptModuleService` 的 `getById/list/page/select*/读链`，以及 `SysConfigService.getValue/getObject/getByKey`，读出后统一解密；业务仓零改代码即可拿明文 |
+| **未覆盖 / 须人工** | ① `baseMapper`/Dao 直查且未调 `afterRead`；② `ChainWrappers` 绕过 Service；③ 密钥未配置或错误（`decryptValue` 原样返回 `ENC$`）；④ 运维 `runSkip` / `isParamValueEncryptedAtRest`（故意读密文） |
+| **当前仓库 `@FieldEncrypt` 实体** | 仅 `SysConfigEntity.paramValue`、`ConnectAppEntity.appSecret`（均已 `EncryptModuleService` + 约定测试） |
+| 运维页 | `configsecure.html` + `/sys/configsecure/*`（超管 + IP 白名单）；明文列表/编辑，密文落库；存量迁移复用 `FieldEncryptMigrationService`（实体全名 `cn.org.autumn.modules.sys.entity.SysConfigEntity`）；非 dryRun 后 `reloadAfterFieldEncryptMigration` |
+| 通用字段加密页 | `fieldencrypt.html`；迁移 SysConfig 实体时同样刷新配置集群缓存 |
+
 ---
 
 ## 3. 关键类
@@ -187,8 +225,39 @@ afterRead(row);
 | `FieldEncryptService` | `onWrite` / `onRead`、盲索引、`useHashForQuery` |
 | `FieldEncrypt*ChainWrapper` | 读链装饰（`cn.org.autumn.crypto`）；由 `EncryptModuleService` 组装 |
 | `EncryptModuleService` | 带 `@FieldEncrypt` 实体的 Module Service 基类 |
-| `FieldEncryptRuntimeService` | 启动加载运行时开关；集群 Redis 同步 |
+| `FieldEncryptRuntimeService` | 运行时开关与密钥对齐；实现 InitFactory.Init/After（`@Order(-1500)`） |
 | `FieldEncryptAdminController` | 管理 API：`/sys/crypto/field/*` |
+
+---
+
+## 3.1 开发态（IDEA Debug）密钥从哪来？
+
+**没有「开发模式免密钥自动加解密」。** 读解密只认内存里是否已有有效 AES key（`isKeyConfigured()`），与 `Config.isDev()` 无关。
+
+| 阶段 | 密钥来源 | 典型现象 |
+|------|----------|----------|
+| `FieldEncryptRuntimeService` `@PostConstruct`（`ShiroConfig @DependsOn`） | yml/env；若无则 **早期** 用 `autumn.node.namespace`/`default` 读 Redis `{ns}:autumn:field-encrypt:key` | 有 Redis 历史密钥时可在 Shiro Bean 创建前解密 SysConfig |
+| `InitFactory` → `FieldEncryptRuntimeService.init`（`@Order(-1500)`） | 完整对齐 Redis/sys_config 写开关 + 密钥 | 启动完成后管理页「密钥就绪=是」 |
+| 管理页 `generateKey` / 一键开写 | 写入 Redis | 即使 yml 未配 key，下次启动仍可从 Redis 加载 |
+
+IDEA「没配 yml key 却能加解密」= Redis/env 已有历史密钥。**推荐**：`application-dev.yml` 固定同一套 `crypto.field.key`/`hash-key`，且 **`enabled=false`**（仅解密；连共享 Redis 时勿 `enabled=true` 以免推高写开关）。
+
+## 3.2 启动/业务读到密文：日志含义与处理
+
+| 日志关键词 | 含义 | 业务侧怎么做 |
+|------------|------|----------------|
+| `值为密文但字段加密密钥未就绪` | 库中已是 `ENC$`，但 yml/env 无 key，且早期 Redis 也未读到；`getValue`/`getNameSpace` **不返回、不缓存**密文（回落 env/默认） | ① 在 yml/env 配置**加密时使用的同一** key（开发：`enabled=false` 仅配 key，勿对共享 Redis 强制 `enabled=true`）；② 检查 Redis 密码/连通与 `{ns}:autumn:field-encrypt:key`（已有 Redis key **不会**被不同 env key 覆盖）；③ 临时：configsecure 对该项「解密」落明文后重启 |
+| InitFactory 反射 NPE / `not an instance of declaring class` | `obj.getClass().getMethod` 打到 CGLIB 代理壳 | `Factory.invoke` 只用接口 Method；读 ENC$ 的 Shiro Bean `@DependsOn(fieldEncryptRuntimeService)`；LBP 用 static `@Bean` |
+| `密文解密失败` / `解密后仍为密文` | 有 key 但与密文不匹配或损坏 | fieldencrypt 页用密文测解密；换对 key；或 restore 明文后用正确 key 再 migrate |
+| `JSON 解析失败` 且 preview=`ENC$…` | 旧版/未升级时 Gson 误解析密文 | 升级到含 §3.1 早期加载的框架；并按上表配 key |
+| 启动后功能用了默认会话/安全配置 | 上述回落导致 Bean 用了 `new SecuritySessionConfig()` | 配好 key 后**重启**，使 Shiro 等重新读库明文 |
+
+**业务仓纪律（避免 ENC$ 进业务逻辑）**
+
+1. 只通过 `SysConfigService.getValue` / `getConfigObject*` / 继承 `EncryptModuleService` 的 Service 读加密字段；禁止 `baseMapper` 直出未 `afterRead`。
+2. 启动 `@PostConstruct` / `@Bean` 若必须读 JSON SysConfig：确保节点 yml 带 key，或依赖框架早期 Redis 加载；不要假设「无 key 也能解密」。
+3. 多节点：**同一** `crypto.field.key`；先迁密文再开写开关（§1.3）。
+4. 遇到回落默认：先看 warn 表处理，再核对业务是否依赖了非默认的 `SECURITY_*` / 其它 JSON 配置。
 
 ---
 
@@ -206,6 +275,20 @@ afterRead(row);
 | `POST /generateKey` / `generateVector` | 仅非生产；生成开发用材料后写入 yml/环境变量并重启 |
 | `POST /migrate` / `restore` | 批量迁移；默认 `dryRun=true`；`batchSize` 上限 2000 |
 | `POST /migrateOne` / `restoreOne` | 单条；默认预检；非预检须 `confirm=true` |
+
+### 4.1 SysConfig 配置安全页
+
+页面 **`configsecure.html`**，API 前缀 **`/sys/configsecure`**（同样 **系统管理员 + IP 白名单** + CSRF）：
+
+| 能力 | 说明 |
+|------|------|
+| `GET /status` | 字段加密状态快照 + 目标实体/字段 |
+| `GET /list` / `GET /info/{id}` | 明文列表与详情（读路径已解密）；列表行含 `atRestEncrypted` / `canEncrypt` / `canDecrypt`；详情另回 `atRestEncrypted` |
+| `POST /save` / `POST /update` | 明文入参；有密钥时**强制** ENC$ 落库（不依赖全局写开关），缓存仍为明文 |
+| `POST /migrateOne` / `restoreOne` | 单条加密/还原；`id` + 非预检须 `confirm=true`；成功后刷新配置缓存 |
+| `POST /migrate` / `restore` | 仅针对 `SysConfigEntity`；默认 `dryRun=true`；非预检须 `confirm=true` |
+
+菜单：**运维监控 → 配置安全**；**参数管理**（`modules/sys/config`）工具栏「配置安全」快捷跳转；数据库管理页快捷入口一并提供。列表支持单行「加密 / 解密 / 编辑」；编辑保存后自动加密落库；配置安全页可回跳参数管理 / 字段存储加密。
 
 ---
 

@@ -5,7 +5,7 @@ import cn.org.autumn.model.SitePortalConfig;
 import cn.org.autumn.modules.sys.service.SitePortalAdminService;
 import cn.org.autumn.modules.sys.service.SysUserRoleService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
-import cn.org.autumn.modules.wall.service.IpWhiteService;
+import cn.org.autumn.modules.wall.service.IpAdminWhiteService;
 import cn.org.autumn.exception.ResponseThrowable;
 import cn.org.autumn.utils.R;
 import java.util.function.Supplier;
@@ -32,7 +32,7 @@ public class SitePortalAdminController {
     private SysUserRoleService sysUserRoleService;
 
     @Autowired
-    private IpWhiteService ipWhiteService;
+    private IpAdminWhiteService ipAdminWhiteService;
 
     @GetMapping("/config")
     public R config(HttpServletRequest request) {
@@ -64,7 +64,7 @@ public class SitePortalAdminController {
 
     private R admin(HttpServletRequest request, Supplier<R> action) {
         try {
-            ipWhiteService.check(request, getClass(), "siteportal");
+            ipAdminWhiteService.checkAdmin(request, getClass(), "siteportal");
             if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
                 return R.error(403, "无权限");
             }

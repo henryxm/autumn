@@ -141,6 +141,7 @@ public class SysMenuService extends ServiceImpl<SysMenuDao, SysMenuEntity> imple
                 {"函数队列管理", "functionqueue.html", NULL, "1", "fa fa-list-alt", "11", getSystemMenuKey("FunctionQueueManagement"), getOperationsMenuKey(), "sys_string_function_queue_management"},
                 {"重建数据表", "reinit.html", NULL, "1", "fa fa-refresh", "12", getSystemMenuKey("ReinitManagement"), getOperationsMenuKey(), "sys_string_reinit_management"},
                 {"字段加密", "fieldencrypt.html", NULL, "1", "fa fa-lock", "13", getSystemMenuKey("FieldEncryptManagement"), getOperationsMenuKey(), "sys_string_field_encrypt_management"},
+                {"配置安全", "configsecure.html", NULL, "1", "fa fa-key", "13", getSystemMenuKey("ConfigSecureManagement"), getOperationsMenuKey(), "sys_string_config_secure_management"},
                 {"人机检测", "shield.html", NULL, "1", "fa fa-user-secret", "14", getSystemMenuKey("ShieldManagement"), getOperationsMenuKey(), "sys_string_shield_management"},
                 {"版本更新", "scan.html", NULL, "1", "fa fa-mobile", "15", getSystemMenuKey("ScanManagement"), getOperationsMenuKey(), "sys_string_scan_management"},
                 // 经典 OAuth2：先写模块目录（与 OauthMenu/ClientMenu 同 key），再挂叶子；顺序必须先父后子

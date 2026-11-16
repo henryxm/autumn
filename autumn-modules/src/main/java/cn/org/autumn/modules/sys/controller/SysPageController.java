@@ -13,7 +13,7 @@ import cn.org.autumn.modules.sys.service.SysLogService;
 import cn.org.autumn.modules.sys.service.SysUserRoleService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.sys.support.AdminAccessGuard;
-import cn.org.autumn.modules.wall.service.IpWhiteService;
+import cn.org.autumn.modules.wall.service.IpAdminWhiteService;
 import cn.org.autumn.modules.wall.site.WallDefault;
 import cn.org.autumn.modules.usr.interceptor.AuthorizationInterceptor;
 import cn.org.autumn.site.AuthPageSupport;
@@ -59,7 +59,7 @@ public class SysPageController implements ErrorController {
     SysUserRoleService sysUserRoleService;
 
     @Autowired
-    IpWhiteService ipWhiteService;
+    IpAdminWhiteService ipAdminWhiteService;
 
     @Autowired
     private SysLogService sysLogService;
@@ -493,6 +493,16 @@ public class SysPageController implements ErrorController {
         return pageFactory.fieldencrypt(httpServletRequest, httpServletResponse, model);
     }
 
+    @RequestMapping(value = {"configsecure.html"}, method = RequestMethod.GET)
+    @SkipInterceptor
+    public String configsecure(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
+        String gated = adminAccessGuard.gateView("configsecure", httpServletRequest, httpServletResponse, model);
+        if ("404".equals(gated) || (gated != null && gated.contains("404"))) {
+            return gated;
+        }
+        return pageFactory.configsecure(httpServletRequest, httpServletResponse, model);
+    }
+
     @ResponseBody
     @RequestMapping(value = {"reinit"}, method = RequestMethod.POST)
     @SkipInterceptor
@@ -514,7 +524,7 @@ public class SysPageController implements ErrorController {
     }
 
     public void check(HttpServletRequest request, String method) throws Exception {
-        ipWhiteService.check(request, getClass(), "check");
+        ipAdminWhiteService.checkAdmin(request, getClass(), "check");
         String token = request.getHeader("x-" + method + "-authentication");
         if (StringUtils.isBlank(token)) {
             throw new Exception("Unauthenticated");

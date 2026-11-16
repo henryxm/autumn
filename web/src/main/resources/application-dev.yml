@@ -46,5 +46,12 @@ autumn:
   # Springdoc 启动时会扫描全部 Controller，dev 默认关闭以缩短启动
   swagger:
     enabled: false
+  # 字段存储加密：开发只配 key 用于解密历史 ENC$（enabled 保持 false，避免连共享 Redis 时强制打开写加密/覆盖集群密钥）。
+  # 也可依赖 Redis {ns}:autumn:field-encrypt:key；详见 docs/AI_FIELD_ENCRYPT.md §3.1/§3.2
+  crypto:
+    field:
+      enabled: false
+      key:
+      hash-key:
   # HTTP 代理白名单等 → 后台 SysConfig「HTTP 代理安全」
 

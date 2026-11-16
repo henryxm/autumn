@@ -43,7 +43,12 @@ import java.util.*;
 @DependsOn({"env"})
 public class ShiroConfig {
 
+    /**
+     * 读 SysConfig（可能 ENC$）前须完成 {@code fieldEncryptRuntimeService} 的 {@code @PostConstruct} 密钥预热。
+     * {@code fieldEncryptRuntimeService} 只挂在这些 Bean 上，勿升到 Configuration 类级（会拖住 LBP 过早建加密 Bean）。
+     */
     @Bean("sessionManager")
+    @DependsOn("fieldEncryptRuntimeService")
     public SessionManager sessionManager(@Autowired RedisShiroSessionDAO redisShiroSessionDAO,
                                          Environment environment,
                                          @Autowired(required = false) SysConfigService sysConfigService) {
@@ -72,6 +77,7 @@ public class ShiroConfig {
     }
 
     @Bean
+    @DependsOn("fieldEncryptRuntimeService")
     public RememberMeManager rememberMeManager(SimpleCookie rememberMeCookie,
                                                @Autowired(required = false) RedisTemplate redisTemplate,
                                                @Autowired(required = false) StringRedisTemplate stringRedisTemplate,
@@ -104,6 +110,7 @@ public class ShiroConfig {
     }
 
     @Bean
+    @DependsOn("fieldEncryptRuntimeService")
     public SimpleCookie rememberMeCookie(@Autowired(required = false) SysConfigService sysConfigService) {
         SecuritySessionConfig sessionCfg = resolveSessionConfig(sysConfigService);
         SimpleCookie simpleCookie = new SimpleCookie("rememberMe");
@@ -294,8 +301,11 @@ public class ShiroConfig {
         return shiroFilter;
     }
 
+    /**
+     * 必须 static：避免为创建本 BPP 而实例化 {@link ShiroConfig}，连带提前初始化业务 Bean。
+     */
     @Bean("lifecycleBeanPostProcessor")
-    public LifecycleBeanPostProcessor lifecycleBeanPostProcessor() {
+    public static LifecycleBeanPostProcessor lifecycleBeanPostProcessor() {
         return new LifecycleBeanPostProcessor();
     }
 

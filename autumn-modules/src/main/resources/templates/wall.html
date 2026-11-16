@@ -739,8 +739,48 @@
             </div>
         </div>
 
+        <div class="section" id="adminIpBootstrapSection" style="display:none;">
+            <div class="section-title"><i class="fa fa-key"></i>管理 IP 引导</div>
+            <p style="margin:0 0 12px;color:#666;font-size:13px;">管理级白名单为空。请从启动日志复制 <code>AdminIpBootstrap secret=</code> 后的一次性密钥，认领当前访问 IP。</p>
+            <div class="toolbar">
+                <input type="text" id="adminBootstrapSecret" class="layui-input" placeholder="粘贴启动临时密钥" style="min-width:280px;">
+                <button class="layui-btn layui-btn-danger" id="adminBootstrapBtn" type="button"><i class="fa fa-unlock"></i> 认领当前 IP</button>
+                <span style="margin-left:8px;color:#888;font-size:12px;">当前 IP：<span id="adminBootstrapCurrentIp">-</span></span>
+            </div>
+        </div>
+
+        <div class="section" id="adminIpWhiteSection">
+            <div class="section-title"><i class="fa fa-shield"></i>管理 IP 白名单（运维/gen 访问）</div>
+            <div class="toolbar">
+                <input type="text" id="addAdminWhiteIp" class="layui-input" placeholder="输入管理IP地址">
+                <button class="layui-btn layui-btn-success" id="addAdminWhiteBtn" type="button"><i class="fa fa-plus"></i> 添加</button>
+            </div>
+            <div class="table-container">
+                <table class="data-table" id="adminWhiteTable">
+                    <thead>
+                    <tr>
+                        <th>IP地址</th>
+                        <th>访问次数</th>
+                        <th>今日次数</th>
+                        <th>标签</th>
+                        <th>描述</th>
+                        <th>状态</th>
+                        <th>创建时间</th>
+                        <th>操作</th>
+                    </tr>
+                    </thead>
+                    <tbody id="adminWhiteTableBody"></tbody>
+                </table>
+                <div class="table-pager" id="adminWhitePager">
+                    <span id="adminWhitePageInfo">-</span>
+                    <button class="pager-btn" id="adminWhitePrev">上一页</button>
+                    <button class="pager-btn" id="adminWhiteNext">下一页</button>
+                </div>
+            </div>
+        </div>
+
         <div class="section">
-            <div class="section-title"><i class="fa fa-check-circle"></i>IP白名单</div>
+            <div class="section-title"><i class="fa fa-check-circle"></i>用户 IP 白名单（防拉黑，逻辑继承管理 IP）</div>
             <div class="toolbar">
                 <input type="text" id="addWhiteIp" class="layui-input" placeholder="输入IP地址">
                 <button class="layui-btn layui-btn-success" id="addWhiteBtn" type="button"><i class="fa fa-plus"></i> 添加</button>
@@ -785,6 +825,7 @@ $(function(){
     var pageState = {
         black: {curr: 1, limit: 10, total: 0},
         white: {curr: 1, limit: 10, total: 0},
+        adminWhite: {curr: 1, limit: 10, total: 0},
         shield: {curr: 1, limit: 10, total: 0},
         jump: {curr: 1, limit: 10, total: 0},
         securityRequest: {curr: 1, limit: 10, total: 0}
@@ -1192,6 +1233,72 @@ $(function(){
         });
     }
 
+    function renderAdminWhiteTable(data) {
+        var $body = $('#adminWhiteTableBody');
+        $body.empty();
+        if (!data || !data.length) {
+            $body.append('<tr><td colspan="8" style="text-align:center;color:#999;">暂无管理 IP</td></tr>');
+            return;
+        }
+        data.forEach(function(d){
+            var forbidden = Number(d.forbidden || 0) === 1;
+            $body.append('<tr>'
+                + '<td>' + esc(d.ip || '') + '</td>'
+                + '<td>' + (d.count || 0) + '</td>'
+                + '<td>' + (d.today || 0) + '</td>'
+                + '<td>' + esc(d.tag || '') + '</td>'
+                + '<td>' + esc(d.description || '') + '</td>'
+                + '<td>' + (forbidden ? '禁用' : '正常') + '</td>'
+                + '<td>' + formatTime(d.createTime) + '</td>'
+                + '<td><button class="layui-btn layui-btn-xs layui-btn-warm js-admin-white-del" data-ip="' + esc(d.ip || '') + '"><i class="fa fa-trash"></i></button></td>'
+                + '</tr>');
+        });
+    }
+
+    function loadAdminWhiteList() {
+        $.get(__CTX + '/wall/api/ipadminwhite/list', {
+            page: pageState.adminWhite.curr,
+            limit: pageState.adminWhite.limit
+        }, function(res){
+            pageState.adminWhite.total = res && res.count ? res.count : 0;
+            renderAdminWhiteTable(res && res.data ? res.data : []);
+            updatePager('adminWhite');
+        }).fail(function(){
+            renderAdminWhiteTable([]);
+            msg('管理IP白名单加载失败', 'error');
+        });
+    }
+
+    function applyAdminIpBootstrapUi(status) {
+        var pending = !!(status && status.bootstrapPending);
+        $('#adminIpBootstrapSection').toggle(pending);
+        if (status && status.currentIp) {
+            currentIp = status.currentIp;
+            $('#currentIp').text(currentIp);
+            $('#adminBootstrapCurrentIp').text(currentIp);
+        }
+        return pending;
+    }
+
+    function loadAdminIpStatus(thenLoadAll) {
+        $.get(__CTX + '/wall/api/ipadminwhite/status', function(res){
+            var pending = applyAdminIpBootstrapUi(res || {});
+            if (pending) {
+                msg('请先用启动临时密钥认领管理 IP', 'warn');
+                return;
+            }
+            if (thenLoadAll) {
+                loadAll();
+            } else {
+                loadAdminWhiteList();
+            }
+        }).fail(function(){
+            if (thenLoadAll) {
+                loadAll();
+            }
+        });
+    }
+
     function loadShieldList() {
         $.get(__CTX + '/wall/shield/list', {
             page: pageState.shield.curr,
@@ -1295,13 +1402,14 @@ $(function(){
         });
         loadBlackList();
         loadWhiteList();
+        loadAdminWhiteList();
         loadShieldList();
         loadJumpList();
         loadSecurityRequestList();
         loadVerifyStrongLogs();
     }
 
-    loadAll();
+    loadAdminIpStatus(true);
     loadCurrentIp();
 
     $('#firewallOpen').on('change', function(){
@@ -1500,6 +1608,55 @@ $(function(){
                 msg('添加黑名单失败', 'error');
             });
         }
+    });
+
+
+    $('#addAdminWhiteBtn').click(function(){
+        var ip = $.trim($('#addAdminWhiteIp').val());
+        if(ip) {
+            $.post(__CTX + '/wall/api/ipadminwhite/add', {ip: ip}, function(res){
+                if(res.success){
+                    msg('已添加管理IP', 'success');
+                    $('#addAdminWhiteIp').val('');
+                }else{
+                    msg('添加管理IP失败', 'error');
+                }
+                loadAdminWhiteList();
+            }).fail(function(){
+                msg('添加管理IP失败', 'error');
+            });
+        }
+    });
+
+    $('#adminBootstrapBtn').click(function(){
+        var secret = $.trim($('#adminBootstrapSecret').val());
+        if(!secret){
+            msg('请输入启动临时密钥', 'warn');
+            return;
+        }
+        $.post(__CTX + '/wall/api/ipadminwhite/bootstrap', {secret: secret}, function(res){
+            if(res && res.success){
+                msg('已认领管理IP: ' + (res.ip || ''), 'success');
+                $('#adminBootstrapSecret').val('');
+                $('#adminIpBootstrapSection').hide();
+                loadAdminIpStatus(true);
+            }else{
+                msg('认领失败', 'error');
+            }
+        }).fail(function(){
+            msg('认领失败（密钥无效或权限不足）', 'error');
+        });
+    });
+
+    $('#adminWhiteTableBody').on('click', '.js-admin-white-del', function(){
+        var ip = $(this).data('ip');
+        if (!ip) return;
+        $.post(__CTX + '/wall/api/ipadminwhite/remove', {ip: ip}, function(){
+            msg('已移除管理IP', 'success');
+            loadAdminWhiteList();
+        }).fail(function(){
+            msg('移除管理IP失败', 'error');
+        });
     });
 
     $('#addWhiteBtn').click(function(){
@@ -1725,6 +1882,17 @@ $(function(){
         if (pageState.black.curr >= totalPage) return;
         pageState.black.curr++;
         loadBlackList();
+    });
+    $('#adminWhitePrev').on('click', function(){
+        if (pageState.adminWhite.curr <= 1) return;
+        pageState.adminWhite.curr--;
+        loadAdminWhiteList();
+    });
+    $('#adminWhiteNext').on('click', function(){
+        var totalPage = Math.max(1, Math.ceil((pageState.adminWhite.total || 0) / pageState.adminWhite.limit));
+        if (pageState.adminWhite.curr >= totalPage) return;
+        pageState.adminWhite.curr++;
+        loadAdminWhiteList();
     });
     $('#whitePrev').on('click', function(){
         if (pageState.white.curr <= 1) return;

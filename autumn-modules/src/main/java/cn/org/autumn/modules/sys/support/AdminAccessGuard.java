@@ -10,7 +10,7 @@ import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.modules.sys.service.SysMenuService;
 import cn.org.autumn.modules.sys.service.SysUserRoleService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
-import cn.org.autumn.modules.wall.service.IpWhiteService;
+import cn.org.autumn.modules.wall.service.IpAdminWhiteService;
 import cn.org.autumn.site.AdminShellAccess;
 import cn.org.autumn.site.PageFactory;
 import lombok.extern.slf4j.Slf4j;
@@ -31,7 +31,7 @@ import java.util.Locale;
 import java.util.Set;
 
 /**
- * 后台访问统一门禁：运维页（超管 + IP 白名单）、gen CRUD（默认仅超管，自助模块豁免）、
+ * 后台访问统一门禁：运维页（超管 + 管理 IP 白名单）、gen CRUD（默认仅超管+管理 IP，自助模块豁免）、
  * 框架 GEN_MODULES / {@code @PageAware(admin=true)} 管理页、定制管理页（adminLockdown）、自助页放行。
  */
 @Slf4j
@@ -42,7 +42,7 @@ public class AdminAccessGuard {
     private static final Set<String> OPS_VIEWS = Set.of(
             "exec", "redis", "cache", "queue", "database", "dbmanage", "tablescan",
             "loopjob", "cluster", "loginlog", "log", "logger", "session", "threading",
-            "thread", "functionqueue", "reinit", "fieldencrypt", "shield", "scan",
+            "thread", "functionqueue", "reinit", "fieldencrypt", "configsecure", "shield", "scan",
             "wall", "siteportal", "firewall", "plugin", "classpath", "clear"
     );
 
@@ -96,7 +96,7 @@ public class AdminAccessGuard {
     private SysConfigService sysConfigService;
 
     @Autowired
-    private IpWhiteService ipWhiteService;
+    private IpAdminWhiteService ipAdminWhiteService;
 
     @Autowired
     @Lazy
@@ -130,7 +130,7 @@ public class AdminAccessGuard {
     }
 
     /**
-     * WebShell：须功能开启 + 系统管理员 + IP 白名单。
+     * WebShell：须功能开启 + 系统管理员 + 管理 IP 白名单。
      */
     public void requireWebShellOps(HttpServletRequest request, Class<?> clazz, String method) {
         String target = (clazz != null ? clazz.getSimpleName() : "-") + "#" + StringUtils.defaultIfBlank(method, "-");
@@ -150,7 +150,7 @@ public class AdminAccessGuard {
     }
 
     /**
-     * 运维 API：已登录系统管理员 + IP 白名单；未登录/非超管直接 403，不先打 IP 未加白。
+     * 运维 API：已登录系统管理员 + 管理 IP 白名单；未登录/非超管直接 403，不先打 IP 未加白。
      */
     public void requireOpsAdmin(HttpServletRequest request, Class<?> clazz, String method) {
         String target = (clazz != null ? clazz.getSimpleName() : "-") + "#" + StringUtils.defaultIfBlank(method, "-");
@@ -162,7 +162,7 @@ public class AdminAccessGuard {
             warnDenied("ops_admin_forbidden", target, request, "");
             throw new AException("无权限", 403);
         }
-        ipWhiteService.check(request, clazz, method);
+        ipAdminWhiteService.checkAdmin(request, clazz, method);
     }
 
     /** 仅系统管理员（无 IP 白名单），用于 gen 全表 API。 */
@@ -202,7 +202,7 @@ public class AdminAccessGuard {
             if (!ShiroUtils.isLogin() || !isSystemAdmin()) {
                 return denyView("admin_page_view", key, request, response, model);
             }
-            return view;
+            return enforceAdminIpView(key, "admin_page_view", request, response, model, view);
         }
 
         if (isSelfView(key)) {
@@ -213,20 +213,18 @@ public class AdminAccessGuard {
             if (!isSystemAdmin()) {
                 return denyView("ops_view", key, request, response, model);
             }
-            try {
-                ipWhiteService.check(request, getClass(), key);
-            } catch (AException e) {
-                warnDenied("ops_ip_white", key, request, StringUtils.defaultString(e.getMessage()));
-                return pageFactory._404(request, response, model);
+            // 空名单引导：仅 wall 页允许超管进入以认领首条管理 IP
+            if ("wall".equals(stripModulePrefix(key)) && ipAdminWhiteService.isBootstrapPending()) {
+                return view;
             }
-            return view;
+            return enforceAdminIpView(key, "ops_ip_white", request, response, model, view);
         }
 
         if (isGenGlobalView(key)) {
             if (!ShiroUtils.isLogin() || !isSystemAdmin()) {
                 return denyView("gen_module_view", key, request, response, model);
             }
-            return view;
+            return enforceAdminIpView(key, "gen_module_view", request, response, model, view);
         }
 
         if (isCustomManageView(key)) {
@@ -255,6 +253,26 @@ public class AdminAccessGuard {
         }
 
         return view;
+    }
+
+
+    /**
+     * gen 全表 API：系统管理员 + 管理 IP 白名单。
+     */
+    public void requireGenAdmin(String target) {
+        requireSystemAdmin(target);
+        ipAdminWhiteService.checkAdmin(currentRequest(), getClass(), StringUtils.defaultIfBlank(target, "gen"));
+    }
+
+    private String enforceAdminIpView(String key, String reason, HttpServletRequest request,
+                                      HttpServletResponse response, Model model, String view) {
+        try {
+            ipAdminWhiteService.checkAdmin(request, getClass(), key);
+            return view;
+        } catch (AException e) {
+            warnDenied(reason, key, request, StringUtils.defaultString(e.getMessage()));
+            return pageFactory._404(request, response, model);
+        }
     }
 
     private String denyView(String reason, String target, HttpServletRequest request,

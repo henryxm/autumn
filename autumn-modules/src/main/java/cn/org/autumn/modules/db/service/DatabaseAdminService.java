@@ -97,6 +97,7 @@ public class DatabaseAdminService {
         links.add(link("数据库备份", "database.html", "备份、恢复与策略调度"));
         links.add(link("重建数据表", "reinit.html", "按实体同步表结构"));
         links.add(link("字段加密", "fieldencrypt.html", "存储加密与迁移"));
+        links.add(link("配置安全", "configsecure.html", "SysConfig 明文编辑与密文落库"));
         links.add(link("SQL 监控", "druid/sql.html", "Druid SQL 分析"));
         links.add(link("Redis 管理", "redis.html", "缓存键空间运维"));
         return links;

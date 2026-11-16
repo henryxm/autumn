@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.sys.service;
 
+import cn.org.autumn.crypto.FieldEncryptContext;
 import cn.org.autumn.config.GsonConfig;
 import cn.org.autumn.database.runtime.WrapperColumns;
 import org.springframework.beans.factory.annotation.Value;
@@ -41,10 +42,10 @@ import cn.org.autumn.site.ConfigFactory;
 import cn.org.autumn.site.DomainFactory;
 import cn.org.autumn.site.HostFactory;
 import cn.org.autumn.site.InitFactory;
+import cn.org.autumn.base.EncryptModuleService;
 import cn.org.autumn.utils.*;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.google.gson.JsonObject;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
@@ -70,11 +71,12 @@ import java.lang.reflect.Type;
 import java.math.BigDecimal;
 import java.net.URI;
 import java.util.*;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Service
-public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity> implements LoopJob.FiveMinute, LoopJob.OneMinute, HostFactory.Host, InitFactory.Init, InitFactory.After, CategoryHandler, DomainHandler, ClearHandler {
+public class SysConfigService extends EncryptModuleService<SysConfigDao, SysConfigEntity> implements LoopJob.FiveMinute, LoopJob.OneMinute, HostFactory.Host, InitFactory.Init, InitFactory.After, CategoryHandler, DomainHandler, ClearHandler {
 
     public static final String string_type = InputType.StringType.getValue();
     public static final String boolean_type = InputType.BooleanType.getValue();
@@ -171,6 +173,9 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     private String namespace = null;
     private volatile boolean configCacheSubscribed = false;
 
+    /** 启动期「密文但密钥未就绪」按 key 只告警一次，避免 Shiro 多 Bean 刷屏 */
+    private final Set<String> cipherKeyNotReadyWarned = ConcurrentHashMap.newKeySet();
+
     @Order(-1000)
     public void init() {
         clear();
@@ -187,6 +192,22 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     }
 
     public List<String[]> getLanguageList() {
+        return null;
+    }
+
+    /** SysConfig 菜单由 SysMenuService 统一维护，禁止 ModuleService 自动生成。 */
+    @Override
+    public String[][] getMenuItems() {
+        return null;
+    }
+
+    @Override
+    protected String[][] getMenuItemsInternal() {
+        return null;
+    }
+
+    @Override
+    protected List<String[]> getLanguageItemsInternal() {
         return null;
     }
 
@@ -306,6 +327,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 {configDescription(SECURITY_OPS_CONFIG), "clear/reinit 头认证 Token、Bean 执行开关", "clear/reinit header auth tokens, bean execute switch"},
                 {configName(SECURITY_SESSION_CONFIG), "会话与 RememberMe", "Session and RememberMe"},
                 {configDescription(SECURITY_SESSION_CONFIG), "Cookie Secure/SameSite 与 RememberMe AES 密钥", "Cookie Secure/SameSite and RememberMe AES key"},
+                {"sys_string_config_secure_management", "配置安全", "Config storage security"},
         };
     }
 
@@ -447,7 +469,7 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 config.setParamKey(temp);
             SysConfigEntity entity;
             try {
-                entity = baseMapper.queryByKey(temp);
+                entity = afterRead(baseMapper.queryByKey(temp));
             } catch (Exception e) {
                 if (isMissingRelation(e)) {
                     log.warn("SysConfig put skipped (table missing) key={} msg={}", temp, e.getMessage());
@@ -505,7 +527,12 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 }
                 config.setName(configName(config.getParamKey()));
                 config.setDescription(configDescription(config.getParamKey()));
-                baseMapper.insert(config);
+                encrypt.onWrite(config);
+                try {
+                    baseMapper.insert(config);
+                } finally {
+                    restoreAfterWrite(config);
+                }
                 sysConfigRedis.saveOrUpdate(config);
                 langEntity = config;
             } else {
@@ -588,7 +615,26 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     }
 
     public SysConfigEntity getByKey(String key) {
-        return baseMapper.queryByKey(key);
+        return afterRead(baseMapper.queryByKey(key));
+    }
+
+    /**
+     * 所有 Service 读路径（getById/list/page/getByKey/getValue 等）统一：元数据 afterRead + ENC$ 兜底解密。
+     */
+    @Override
+    protected SysConfigEntity afterRead(SysConfigEntity entity) {
+        return ensurePlainParamValue(super.afterRead(entity));
+    }
+
+    @Override
+    protected List<SysConfigEntity> afterRead(List<SysConfigEntity> entities) {
+        List<SysConfigEntity> list = super.afterRead(entities);
+        if (list != null) {
+            for (SysConfigEntity entity : list) {
+                ensurePlainParamValue(entity);
+            }
+        }
+        return list;
     }
 
     public boolean hasKey(String key) {
@@ -685,6 +731,42 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
         }
     }
 
+    /**
+     * 读库原文判断 paramValue 是否已为 ENC$ 密文（跳过 Service 解密）。
+     */
+    public boolean isParamValueEncryptedAtRest(Long id) {
+        if (id == null) {
+            return false;
+        }
+        SysConfigEntity raw = FieldEncryptContext.runSkip(() -> getBaseMapper().selectById(id));
+        return raw != null && encrypt.needsRestore(raw.getParamValue());
+    }
+
+    /**
+     * 字段加密 migrate/restore 写库后：清共享 Redis 配置缓存、本机 map 回源解密，并向集群广播各 key 失效。
+     * 保证他机 {@link #getValue} 不再命中迁移前的明文/脏缓存。
+     */
+    public void reloadAfterFieldEncryptMigration() {
+        try {
+            clear();
+        } catch (Exception e) {
+            log.warn("SysConfig clear after field-encrypt migration fail msg={}", e.getMessage());
+        }
+        try {
+            onFiveMinute();
+        } catch (Exception e) {
+            log.warn("SysConfig reload after field-encrypt migration fail msg={}", e.getMessage());
+        }
+        if (map == null || map.isEmpty()) {
+            return;
+        }
+        for (String key : map.keySet()) {
+            if (StringUtils.isNotBlank(key)) {
+                publishConfigCacheInvalidate(key);
+            }
+        }
+    }
+
     @PostConstruct
     public void subscribeConfigCacheInvalidate() {
         trySubscribeConfigCacheInvalidate();
@@ -755,7 +837,11 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
 
     @Transactional(rollbackFor = Exception.class)
     public void updateValueByKey(String key, String value) {
-        baseMapper.updateValueByKey(key, value);
+        String stored = value;
+        if (StringUtils.isNotBlank(value)) {
+            stored = encrypt.encryptValue(value, null);
+        }
+        baseMapper.updateValueByKey(key, stored);
         sysConfigRedis.delete(key);
         if (null != map)
             map.remove(key);
@@ -795,15 +881,15 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 }
             }
         }
-        if (null != config && null != map) {
-            map.put(key, config);
-        }
         if (config == null) {
             try {
                 config = baseMapper.queryByKey(key);
-                sysConfigRedis.saveOrUpdate(config);
-                if (null != config && null != map) {
-                    map.put(key, config);
+                if (config != null) {
+                    // 先解密再写 Redis，避免共享缓存被 ENC$ 污染
+                    afterRead(config);
+                    if (!isCipherPrefix(config.getParamValue())) {
+                        sysConfigRedis.saveOrUpdate(config);
+                    }
                 }
             } catch (Exception e) {
                 // 空库/建表前：返回 null 让调用方回落默认值，避免 @PostConstruct 阻断 TableInit 全量建表
@@ -814,22 +900,88 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
                 }
                 return null;
             }
+        } else {
+            // map/Redis 命中也须 afterRead：滚动升级无 key 节点可能把 ENC$ 写入 map
+            afterRead(config);
         }
+        ensurePlainParamValue(config);
         String r = config == null ? null : config.getParamValue();
         if (null != r) {
             r = r.trim();
         }
+        // 密钥未就绪或密钥不匹配时：不返回/不缓存密文，避免命名空间/开关被 ENC$ 污染
+        if (isCipherPrefix(r)) {
+            if (encrypt == null || !encrypt.isKeyConfigured()) {
+                warnCipherKeyNotReadyOnce(key);
+            } else {
+                log.warn("SysConfig 值仍为密文（解密失败或密钥不匹配） key={} | 见 docs/AI_FIELD_ENCRYPT.md §3.2", key);
+            }
+            if (map != null) {
+                map.remove(key);
+            }
+            return null;
+        }
+        if (null != config && null != map) {
+            map.put(key, config);
+        }
         return r;
+    }
+
+    /**
+     * 读路径统一：afterRead 后若仍为 ENC$ 则 decryptValue 兜底；无法解密时保持原值，由调用方按密文处理。
+     */
+    private SysConfigEntity ensurePlainParamValue(SysConfigEntity config) {
+        if (config == null || encrypt == null) {
+            return config;
+        }
+        String r = config.getParamValue();
+        if (r != null && (encrypt.needsRestore(r) || isCipherPrefix(r))) {
+            try {
+                String plain = encrypt.decryptValue(r);
+                if (!isCipherPrefix(plain)) {
+                    config.setParamValue(plain);
+                }
+            } catch (Exception e) {
+                log.warn("SysConfig 兜底解密失败 key={} msg={}", config.getParamKey(), e.getMessage());
+            }
+        }
+        return config;
+    }
+
+    private boolean isCipherPrefix(String value) {
+        if (StringUtils.isBlank(value)) {
+            return false;
+        }
+        String encPrefix = encrypt != null && StringUtils.isNotBlank(encrypt.getPrefix())
+                ? encrypt.getPrefix() : "ENC$v1$";
+        return value.startsWith(encPrefix);
+    }
+
+    /** 库内原文仍为 ENC$（跳过 Service 解密），用于禁止校验写回覆盖密文。 */
+    private boolean isUnresolvedCipherAtRest(String key) {
+        if (StringUtils.isBlank(key)) {
+            return false;
+        }
+        try {
+            SysConfigEntity raw = FieldEncryptContext.runSkip(() -> baseMapper.queryByKey(key));
+            return raw != null && isCipherPrefix(raw.getParamValue());
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     public String getNameSpace() {
         if (null == namespace) {
             try {
-                SysConfigEntity config = baseMapper.queryByKey(CLUSTER_NAMESPACE);
+                SysConfigEntity config = ensurePlainParamValue(afterRead(baseMapper.queryByKey(CLUSTER_NAMESPACE)));
                 String r = config == null ? null : config.getParamValue();
                 if (null != r) {
                     r = r.trim();
-                    namespace = r;
+                    if (isCipherPrefix(r)) {
+                        warnCipherKeyNotReadyOnce(CLUSTER_NAMESPACE);
+                    } else if (StringUtils.isNotBlank(r)) {
+                        namespace = r;
+                    }
                 }
             } catch (Exception e) {
                 if (isMissingRelation(e)) {
@@ -1202,10 +1354,49 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
     public <T> T getObject(String key, Class<T> clazz) {
         String value = getValue(key);
         if (StringUtils.isNotBlank(value)) {
-            return GsonConfig.getGson().fromJson(value, clazz);
+            String encPrefix = encrypt != null && StringUtils.isNotBlank(encrypt.getPrefix())
+                    ? encrypt.getPrefix() : "ENC$v1$";
+            boolean looksCipher = value.startsWith(encPrefix);
+            if (looksCipher && (encrypt == null || !encrypt.isKeyConfigured())) {
+                warnCipherKeyNotReadyOnce(key);
+                return newConfigInstance(clazz);
+            }
+            if (looksCipher) {
+                try {
+                    value = encrypt.decryptValue(value);
+                } catch (Exception e) {
+                    log.warn("SysConfig 密文解密失败，回落默认对象 key={} msg={} | 处理：核对 autumn.crypto.field.key 与加密时一致；见 docs/AI_FIELD_ENCRYPT.md §3.2",
+                            key, e.getMessage());
+                    return newConfigInstance(clazz);
+                }
+            }
+            if (value.startsWith(encPrefix)) {
+                log.warn("SysConfig 解密后仍为密文，回落默认对象 key={} | 处理：密钥可能与密文不匹配，在 fieldencrypt 页测试解密或恢复明文后重迁；见 docs/AI_FIELD_ENCRYPT.md §3.2",
+                        key);
+                return newConfigInstance(clazz);
+            }
+            try {
+                return GsonConfig.getGson().fromJson(value, clazz);
+            } catch (Exception e) {
+                log.warn("SysConfig JSON 解析失败，回落默认对象 key={} preview={} msg={}",
+                        key, StringUtils.abbreviate(value, 48), e.getMessage());
+                return newConfigInstance(clazz);
+            }
         }
+        return newConfigInstance(clazz);
+    }
+
+    private void warnCipherKeyNotReadyOnce(String key) {
+        if (!cipherKeyNotReadyWarned.add(key)) {
+            return;
+        }
+        log.warn("SysConfig 值为密文但字段加密密钥未就绪，回落默认对象 key={} | 处理建议：1) application-dev.yml 配置与加密时相同的 autumn.crypto.field.key/hash-key；2) 确认 Redis 中 {ns}:autumn:field-encrypt:key 存在且 Redis 已认证连通；3) 临时可在 configsecure 将该 key 还原明文后重启。详见 docs/AI_FIELD_ENCRYPT.md §3.2",
+                key);
+    }
+
+    private <T> T newConfigInstance(Class<T> clazz) {
         try {
-            return clazz.newInstance();
+            return clazz.getDeclaredConstructor().newInstance();
         } catch (Exception e) {
             throw new AException("获取参数失败");
         }
@@ -1239,13 +1430,17 @@ public class SysConfigService extends ServiceImpl<SysConfigDao, SysConfigEntity>
             } else if (SecuritySessionConfig.class.isAssignableFrom(clazz) && config instanceof SecuritySessionConfig) {
                 fixes = ((SecuritySessionConfig) config).validateAndFix();
             }
-            // 如果配置被修正，记录日志并更新到数据库
+            // 如果配置被修正，记录日志并更新到数据库（库内仍为未解密 ENC$ 时禁止写回，避免用默认对象覆盖密文）
             if (fixes != null && !fixes.isEmpty()) {
                 for (String fix : fixes) {
                     log.debug("[Config validation] {}", fix);
                 }
-                String newValue = GsonConfig.getGson().toJson(config);
-                updateValueByKey(key, newValue);
+                if (isUnresolvedCipherAtRest(key)) {
+                    log.warn("SysConfig 校验修正跳过写回（库值为未解密密文） key={}", key);
+                } else {
+                    String newValue = GsonConfig.getGson().toJson(config);
+                    updateValueByKey(key, newValue);
+                }
             }
         }
         return config;

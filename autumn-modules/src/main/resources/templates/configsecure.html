@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>配置安全</title>
+    <style>
+        :root {
+            --primary: #1a4d8c;
+            --primary-light: #2d6cb5;
+            --primary-dark: #0f3460;
+            --success: #059669;
+            --danger: #dc2626;
+            --warning: #d97706;
+            --muted: #64748b;
+            --border: #e2e8f0;
+            --surface: #ffffff;
+            --bg: #f1f5f9;
+            --radius: 12px;
+            --shadow: 0 4px 24px rgba(15, 52, 96, 0.08);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(160deg, #e8eef5 0%, #f8fafc 40%, #eef2ff 100%);
+            color: #1e293b;
+            line-height: 1.5;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .shell { max-width: 1400px; margin: 0 auto; }
+        .page {
+            background: var(--surface);
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+        .header {
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 45%, var(--primary-light) 100%);
+            color: #fff;
+            padding: 24px 28px;
+        }
+        .header h1 { font-size: 22px; font-weight: 700; }
+        .header-sub { opacity: 0.9; font-size: 13px; margin-top: 6px; max-width: 720px; }
+        .body { padding: 22px 26px 28px; display: flex; flex-direction: column; gap: 18px; }
+        .panel {
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: #fff;
+        }
+        .panel-head {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+            font-weight: 600;
+        }
+        .panel-body { padding: 16px; }
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+        .stat {
+            background: var(--bg);
+            border-radius: 10px;
+            padding: 12px 14px;
+            border: 1px solid var(--border);
+        }
+        .stat .label { font-size: 12px; color: var(--muted); }
+        .stat .value { font-size: 16px; font-weight: 700; margin-top: 4px; word-break: break-all; }
+        .toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+        .toolbar input[type=text] {
+            min-width: 220px;
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+        .btn {
+            border: none;
+            border-radius: 8px;
+            padding: 8px 14px;
+            font-size: 13px;
+            cursor: pointer;
+            background: var(--primary);
+            color: #fff;
+        }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-outline { background: #fff; color: var(--primary); border: 1px solid var(--border); }
+        .btn-success { background: var(--success); }
+        .btn-danger { background: var(--danger); }
+        .btn-warning { background: var(--warning); }
+        .btn-sm { padding: 6px 10px; font-size: 12px; white-space: nowrap; }
+        .table-wrap { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        table.config-table {
+            width: 100%;
+            min-width: 960px;
+            border-collapse: collapse;
+            font-size: 13px;
+            table-layout: fixed;
+        }
+        table.config-table th, table.config-table td {
+            padding: 10px 8px;
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+            vertical-align: middle;
+        }
+        table.config-table th { color: var(--muted); font-weight: 600; background: #f8fafc; }
+        table.config-table .col-id { width: 56px; }
+        table.config-table .col-key { width: 22%; }
+        table.config-table .col-rest { width: 72px; }
+        table.config-table .col-val { width: auto; }
+        table.config-table .col-remark { width: 18%; min-width: 120px; }
+        table.config-table .col-ops { width: 210px; }
+        .cell-clip {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 100%;
+            display: block;
+        }
+        .cell-wrap {
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            white-space: normal;
+            line-height: 1.4;
+            max-height: 3.2em;
+            overflow: hidden;
+        }
+        .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+        .muted { color: var(--muted); }
+        .empty { text-align: center; color: var(--muted); padding: 24px; }
+        .pager { display: flex; gap: 8px; align-items: center; justify-content: flex-end; margin-top: 12px; }
+        .form-row { display: grid; grid-template-columns: 120px 1fr; gap: 10px; margin-bottom: 12px; align-items: start; }
+        .form-row label { color: var(--muted); font-size: 13px; padding-top: 8px; }
+        .form-row input, .form-row textarea {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 13px;
+            font-family: inherit;
+        }
+        .form-row textarea { min-height: 120px; resize: vertical; }
+        .toast {
+            position: fixed; top: 20px; right: 20px; z-index: 9999;
+            min-width: 260px; max-width: 420px; padding: 12px 16px;
+            border-radius: 10px; background: #0f172a; color: #fff; font-size: 13px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+        }
+        .toast.err { background: #7f1d1d; }
+        .hint { font-size: 12px; color: var(--muted); margin-top: 8px; }
+        .result-box {
+            margin-top: 12px; padding: 10px 12px; background: #f8fafc;
+            border: 1px solid var(--border); border-radius: 8px; font-size: 12px; white-space: pre-wrap;
+        }
+        .badge {
+            display: inline-block; padding: 2px 8px; border-radius: 999px;
+            font-size: 11px; font-weight: 600; white-space:nowrap;
+        }
+        .badge-enc { background: #dcfce7; color: #166534; }
+        .badge-plain { background: #fef3c7; color: #92400e; }
+        .badge-unk { background: #e2e8f0; color: #475569; }
+        .ops { display: flex; flex-wrap: nowrap; gap: 6px; align-items: center; }
+        [v-cloak] { display: none; }
+    </style>
+</head>
+<body>
+<div class="shell" id="app" v-cloak>
+    <div class="page">
+        <div class="header">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+                <div>
+                    <h1>配置安全</h1>
+                    <div class="header-sub">sys_config.paramValue 字段存储加密：页面展示与编辑均为明文，落库为 ENC$ 密文。业务侧 getValue/updateValueByKey 无需改代码。滚动发布：先全节点配 key 且保持写加密关闭 → 本页预检/迁移 → 在「字段存储加密」页打开写开关；迁移后会刷新本机与集群配置缓存。</div>
+                </div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;flex-shrink:0;">
+                    <a class="btn btn-outline btn-sm" :href="ctx + '/modules/sys/config.html'" target="_blank" rel="noopener">参数管理</a>
+                    <a class="btn btn-outline btn-sm" :href="ctx + '/fieldencrypt.html'" target="_blank" rel="noopener">字段存储加密</a>
+                </div>
+            </div>
+        </div>
+        <div class="body">
+            <div class="panel">
+                <div class="panel-head">
+                    <span>加密状态</span>
+                    <button type="button" class="btn btn-outline btn-sm" @click="loadStatus">刷新</button>
+                </div>
+                <div class="panel-body">
+                    <div class="stats">
+                        <div class="stat"><div class="label">写入加密</div><div class="value" v-text="yn(status.writeEncryptEnabled)"></div></div>
+                        <div class="stat"><div class="label">读解密</div><div class="value" v-text="yn(status.readDecryptEnabled)"></div></div>
+                        <div class="stat"><div class="label">密钥就绪</div><div class="value" v-text="yn(status.keyConfigured)"></div></div>
+                        <div class="stat"><div class="label">前缀</div><div class="value mono" v-text="status.prefix || '-'"></div></div>
+                    </div>
+                    <p class="hint">实体：{{ entity }} · 字段：paramValue（TEXT，可容纳 ENC$ 密文）</p>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-head">
+                    <span>存量迁移（SysConfigEntity）</span>
+                </div>
+                <div class="panel-body">
+                    <div class="toolbar">
+                        <label class="muted">batchSize</label>
+                        <input type="number" v-model.number="batchSize" min="1" max="2000" style="width:100px;padding:6px 10px;border:1px solid var(--border);border-radius:8px;">
+                        <button type="button" class="btn btn-warning btn-sm" :disabled="!status.keyConfigured" @click="migrate(true)">预检加密</button>
+                        <button type="button" class="btn btn-success btn-sm" :disabled="!status.keyConfigured" @click="migrate(false)">执行加密</button>
+                        <button type="button" class="btn btn-outline btn-sm" :disabled="!status.readDecryptEnabled" @click="restore(true)">预检还原</button>
+                        <button type="button" class="btn btn-danger btn-sm" :disabled="!status.readDecryptEnabled" @click="restore(false)">执行还原</button>
+                    </div>
+                    <div v-if="migrateResult" class="result-box" v-text="migrateResult"></div>
+                    <p class="hint">预检只统计 pending；执行写入须 confirm。建议：预检 → 核对 → 执行 → 刷新列表。</p>
+                </div>
+            </div>
+
+            <div class="panel" v-show="showList">
+                <div class="panel-head">
+                    <span>配置列表（明文）</span>
+                    <button type="button" class="btn btn-outline btn-sm" @click="reload">刷新</button>
+                </div>
+                <div class="panel-body">
+                    <div class="toolbar">
+                        <input type="text" v-model="q.paramKey" @keyup.enter="query" placeholder="按参数名筛选">
+                        <button type="button" class="btn btn-sm" @click="query">查询</button>
+                        <button type="button" class="btn btn-success btn-sm" @click="add">新增</button>
+                    </div>
+                    <div class="table-wrap">
+                    <table class="config-table">
+                        <thead>
+                        <tr>
+                            <th class="col-id">ID</th>
+                            <th class="col-key">参数名</th>
+                            <th class="col-rest">落库</th>
+                            <th class="col-val">参数值（明文）</th>
+                            <th class="col-remark">备注</th>
+                            <th class="col-ops">操作</th>
+                        </tr>
+                        </thead>
+                        <tbody v-if="loading">
+                        <tr><td colspan="6" class="empty">加载中…</td></tr>
+                        </tbody>
+                        <tbody v-else-if="!list.length">
+                        <tr><td colspan="6" class="empty">暂无数据</td></tr>
+                        </tbody>
+                        <tbody v-else>
+                        <tr v-for="row in list" :key="row.id">
+                            <td class="mono" v-text="row.id"></td>
+                            <td class="mono"><span class="cell-clip" :title="row.paramKey" v-text="row.paramKey"></span></td>
+                            <td>
+                                <span class="badge" :class="row.atRestEncrypted ? 'badge-enc' : (status.keyConfigured ? 'badge-plain' : 'badge-unk')"
+                                      v-text="row.atRestEncrypted ? '已加密' : '明文'"></span>
+                            </td>
+                            <td class="mono"><span class="cell-clip" :title="displayValue(row)" v-text="truncate(displayValue(row), 80)"></span></td>
+                            <td class="muted"><span class="cell-wrap" :title="row.remark || ''" v-text="row.remark || '-'"></span></td>
+                            <td>
+                                <div class="ops">
+                                    <button type="button" class="btn btn-outline btn-sm" @click="edit(row.id)">编辑</button>
+                                    <button type="button" class="btn btn-success btn-sm"
+                                            :disabled="!row.canEncrypt || busyId===row.id"
+                                            @click="encryptOne(row)">加密</button>
+                                    <button type="button" class="btn btn-danger btn-sm"
+                                            :disabled="!row.canDecrypt || busyId===row.id"
+                                            @click="decryptOne(row)">解密</button>
+                                </div>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                    </div>
+                    <div class="pager">
+                        <span class="muted">共 {{ totalCount }} 条 · 第 {{ page }} / {{ totalPage || 1 }} 页</span>
+                        <button type="button" class="btn btn-outline btn-sm" :disabled="page<=1" @click="gotoPage(page-1)">上一页</button>
+                        <button type="button" class="btn btn-outline btn-sm" :disabled="page>=totalPage" @click="gotoPage(page+1)">下一页</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel" v-show="!showList">
+                <div class="panel-head">
+                    <span v-text="title"></span>
+                    <button type="button" class="btn btn-outline btn-sm" @click="reload">返回</button>
+                </div>
+                <div class="panel-body">
+                    <div class="form-row" v-if="config.id">
+                        <label>落库状态</label>
+                        <div style="padding-top:8px;">
+                            <span class="badge" :class="editAtRestEncrypted ? 'badge-enc' : 'badge-plain'"
+                                  v-text="editAtRestEncrypted ? '已加密（ENC$）' : '明文'"></span>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <label>参数名</label>
+                        <input type="text" v-model="config.paramKey" :readonly="!!config.id">
+                    </div>
+                    <div class="form-row">
+                        <label>参数值（明文）</label>
+                        <textarea v-model="config.paramValue" placeholder="编辑明文；有密钥时保存后自动 ENC$ 落库"></textarea>
+                    </div>
+                    <div class="form-row">
+                        <label>备注</label>
+                        <input type="text" v-model="config.remark">
+                    </div>
+                    <div class="toolbar" style="margin-top:8px;">
+                        <button type="button" class="btn" :disabled="saving" @click="saveOrUpdate">保存</button>
+                        <button type="button" class="btn btn-outline" @click="reload">取消</button>
+                    </div>
+                    <p class="hint">展示与编辑均为明文。有密钥时本页保存会强制加密落库（不依赖全局写开关）；无密钥则按明文写入。</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div v-if="message" class="toast" :class="{err: messageType==='err'}" v-text="message"></div>
+</div>
+<script src="${request.contextPath}/statics/libs/jquery.min.js"></script>
+<script src="${request.contextPath}/statics/libs/vue.min.js"></script>
+<script>
+(function() {
+    var ctx = '${request.contextPath}';
+    var api = ctx + '/sys/configsecure';
+    var csrfHeader = 'X-CSRF-Token';
+    var csrfToken = '';
+    function ensureCsrf(done) {
+        if (csrfToken) { done(); return; }
+        $.get(ctx + '/sys/session/self/csrf', function(res) {
+            if (res && res.code === 0 && res.csrfToken) {
+                csrfToken = res.csrfToken;
+                if (res.header) csrfHeader = res.header;
+            }
+            done();
+        }).fail(function() { done(); });
+    }
+    function postApi(url, data, ok, fail) {
+        ensureCsrf(function() {
+            var headers = {};
+            if (csrfToken) headers[csrfHeader] = csrfToken;
+            $.ajax({ type: 'POST', url: url, data: data, headers: headers, success: ok, error: fail });
+        });
+    }
+    function postJson(url, body, ok, fail) {
+        ensureCsrf(function() {
+            var headers = { 'Content-Type': 'application/json' };
+            if (csrfToken) headers[csrfHeader] = csrfToken;
+            $.ajax({ type: 'POST', url: url, data: JSON.stringify(body || {}), headers: headers, success: ok, error: fail });
+        });
+    }
+    new Vue({
+        el: '#app',
+        data: {
+            ctx: ctx,
+            status: { writeEncryptEnabled: false, readDecryptEnabled: false, keyConfigured: false, prefix: '' },
+            entity: '',
+            q: { paramKey: '' },
+            list: [],
+            loading: false,
+            page: 1,
+            limit: 10,
+            totalPage: 1,
+            totalCount: 0,
+            showList: true,
+            title: '',
+            config: {},
+            batchSize: 200,
+            migrateResult: '',
+            message: '',
+            messageType: 'ok',
+            busyId: null,
+            saving: false,
+            editAtRestEncrypted: false
+        },
+        mounted: function() {
+            this.loadStatus();
+            this.reload();
+        },
+        methods: {
+            yn: function(v) { return v ? '是' : '否'; },
+            truncate: function(s, n) {
+                s = s == null ? '' : String(s);
+                return s.length > n ? s.substring(0, n) + '…' : s;
+            },
+            /** 列表展示：避免把 ENC$ 长密文撑破表格；解密失败时给短提示 */
+            displayValue: function(row) {
+                var s = row && row.paramValue != null ? String(row.paramValue) : '';
+                if (!s) return '';
+                var prefix = (this.status && this.status.prefix) ? this.status.prefix : 'ENC$';
+                if (s.indexOf(prefix) === 0 || s.indexOf('ENC$') === 0) {
+                    return row.atRestEncrypted ? '[落库已加密，列表未解密]' : s;
+                }
+                return s;
+            },
+            toast: function(msg, err) {
+                var v = this;
+                v.message = msg;
+                v.messageType = err ? 'err' : 'ok';
+                clearTimeout(v._t);
+                v._t = setTimeout(function() { v.message = ''; }, 3200);
+            },
+            loadStatus: function() {
+                var v = this;
+                $.get(api + '/status', function(res) {
+                    if (res && res.code === 0) {
+                        v.status = res.data || v.status;
+                        v.entity = res.entity || '';
+                    } else {
+                        v.toast((res && res.msg) || '状态加载失败', true);
+                    }
+                }).fail(function() { v.toast('状态加载失败', true); });
+            },
+            query: function() { this.page = 1; this.reload(); },
+            gotoPage: function(p) { this.page = p; this.reload(); },
+            reload: function() {
+                var v = this;
+                v.showList = true;
+                v.busyId = null;
+                v.saving = false;
+                v.loading = true;
+                $.get(api + '/list', {
+                    page: v.page,
+                    limit: v.limit,
+                    paramKey: v.q.paramKey || ''
+                }, function(res) {
+                    v.loading = false;
+                    if (res && res.code === 0 && res.page) {
+                        v.list = res.page.list || [];
+                        v.totalPage = res.page.totalPage || 1;
+                        v.totalCount = res.page.totalCount || 0;
+                        v.page = res.page.currPage || v.page;
+                    } else {
+                        v.toast((res && res.msg) || '列表加载失败', true);
+                    }
+                }).fail(function() { v.loading = false; v.toast('列表加载失败', true); });
+            },
+            add: function() {
+                this.showList = false;
+                this.title = '新增配置';
+                this.editAtRestEncrypted = false;
+                this.config = { status: 1, type: 'string', category: 'sys_config', readonly: false, order: 0 };
+            },
+            edit: function(id) {
+                var v = this;
+                $.get(api + '/info/' + id, function(res) {
+                    if (res && res.code === 0) {
+                        v.showList = false;
+                        v.title = '编辑配置';
+                        v.config = res.config || {};
+                        v.editAtRestEncrypted = !!res.atRestEncrypted;
+                    } else {
+                        v.toast((res && res.msg) || '加载失败', true);
+                    }
+                }).fail(function() { v.toast('加载失败', true); });
+            },
+            saveOrUpdate: function() {
+                var v = this;
+                if (v.saving) return;
+                v.saving = true;
+                var url = v.config.id ? (api + '/update') : (api + '/save');
+                postJson(url, v.config, function(res) {
+                    v.saving = false;
+                    if (res && res.code === 0) {
+                        var enc = res.atRestEncrypted;
+                        v.toast(enc ? '已保存并加密落库' : '已保存（当前无密钥，明文落库）');
+                        v.reload();
+                    } else {
+                        v.toast((res && res.msg) || '保存失败', true);
+                    }
+                }, function() { v.saving = false; v.toast('保存失败', true); });
+            },
+            encryptOne: function(row) {
+                if (!row || !row.id) return;
+                if (!confirm('确认加密该配置落库？key=' + (row.paramKey || row.id))) return;
+                this.runOne('migrateOne', row);
+            },
+            decryptOne: function(row) {
+                if (!row || !row.id) return;
+                if (!confirm('确认解密为明文落库？key=' + (row.paramKey || row.id))) return;
+                this.runOne('restoreOne', row);
+            },
+            runOne: function(path, row) {
+                var v = this;
+                v.busyId = row.id;
+                postApi(api + '/' + path, {
+                    id: String(row.id),
+                    dryRun: false,
+                    confirm: true
+                }, function(res) {
+                    v.busyId = null;
+                    if (res && res.code === 0) {
+                        var label = path === 'migrateOne' ? '加密' : '解密';
+                        if (res.processed > 0) {
+                            v.toast(label + '成功 · key=' + (row.paramKey || row.id));
+                            v.reload();
+                        } else {
+                            v.toast((res.msg) || (label + '无变更（可能已是目标态）'));
+                            v.reload();
+                        }
+                    } else {
+                        v.toast((res && res.msg) || '操作失败', true);
+                    }
+                }, function() { v.busyId = null; v.toast('操作失败', true); });
+            },
+            migrate: function(dryRun) {
+                this.runMigrate('migrate', dryRun);
+            },
+            restore: function(dryRun) {
+                this.runMigrate('restore', dryRun);
+            },
+            runMigrate: function(path, dryRun) {
+                var v = this;
+                if (!dryRun && !confirm('确认对 SysConfigEntity 执行非预检' + (path === 'migrate' ? '加密' : '还原') + '？')) {
+                    return;
+                }
+                postApi(api + '/' + path, {
+                    dryRun: dryRun,
+                    batchSize: v.batchSize,
+                    confirm: !dryRun
+                }, function(res) {
+                    if (res && res.code === 0) {
+                        v.migrateResult = (path === 'migrate' ? '加密' : '还原')
+                            + (dryRun ? '预检' : '执行')
+                            + ' · scanned=' + res.scanned
+                            + ' pending=' + res.pending
+                            + ' processed=' + res.processed;
+                        v.toast(v.migrateResult);
+                        if (!dryRun) v.reload();
+                    } else {
+                        v.toast((res && res.msg) || '迁移失败', true);
+                    }
+                }, function() { v.toast('迁移失败', true); });
+            }
+        }
+    });
+})();
+</script>
+</body>
+</html>

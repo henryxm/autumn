@@ -106,4 +106,24 @@ public class WallDaoSql extends RuntimeSql {
     public String jumpEnabled() {
         return "SELECT * FROM " + quote("wall_jump") + " WHERE " + quote("enable") + " = " + enabledTrueSqlLiteral();
     }
+
+    public String ipAdminWhiteGetByIp() {
+        return "SELECT * FROM " + quote("wall_ip_admin_white") + " WHERE " + quote("ip") + " = #{ip}" + limitOne();
+    }
+
+    public String ipAdminWhiteHasIp() {
+        return "SELECT COUNT(*) FROM " + quote("wall_ip_admin_white") + " WHERE " + quote("ip") + " = #{ip}";
+    }
+
+    public String ipAdminWhiteRefreshToday() {
+        return "UPDATE " + quote("wall_ip_admin_white") + " SET " + quote("today") + " = 0";
+    }
+
+    public String ipAdminWhiteGetIps() {
+        return "SELECT wi." + quote("ip") + " FROM " + quote("wall_ip_admin_white") + " wi WHERE wi." + quote("forbidden") + " = #{forbidden}";
+    }
+
+    public String ipAdminWhiteActiveCount() {
+        return "SELECT COUNT(*) FROM " + quote("wall_ip_admin_white") + " WHERE " + quote("forbidden") + " = 0";
+    }
 }

@@ -4,8 +4,10 @@ import cn.org.autumn.exception.AException;
 import cn.org.autumn.model.SecurityOpsConfig;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.modules.sys.support.AdminAccessGuard;
+import cn.org.autumn.modules.wall.entity.IpAdminWhiteEntity;
 import cn.org.autumn.modules.wall.entity.IpBlackEntity;
 import cn.org.autumn.modules.wall.entity.IpWhiteEntity;
+import cn.org.autumn.modules.wall.service.IpAdminWhiteService;
 import cn.org.autumn.modules.wall.service.IpBlackService;
 import cn.org.autumn.modules.wall.service.IpWhiteService;
 import cn.org.autumn.modules.wall.service.ShieldService;
@@ -32,6 +34,9 @@ public class WallController {
 
     @Autowired
     IpWhiteService ipWhiteService;
+
+    @Autowired
+    IpAdminWhiteService ipAdminWhiteService;
 
     @Autowired
     ShieldService shieldService;
@@ -246,5 +251,85 @@ public class WallController {
         requireOps(request, "currentIp");
         String ip = IPUtils.getIp(request);
         return Collections.singletonMap("ip", ip);
+    }
+
+    // 7. 管理级 IP 白名单（运维/gen 门禁；与用户 wall_ip_white 分离）
+    @GetMapping("/ipadminwhite/status")
+    public Map<String, Object> getIpAdminWhiteStatus(HttpServletRequest request) {
+        if (ipAdminWhiteService.isBootstrapPending()) {
+            adminAccessGuard.requireSystemAdmin("ipadminwhiteStatus");
+        } else {
+            requireOps(request, "ipadminwhiteStatus");
+        }
+        Map<String, Object> map = new HashMap<>();
+        map.put("bootstrapPending", ipAdminWhiteService.isBootstrapPending());
+        map.put("empty", ipAdminWhiteService.isEmpty());
+        map.put("currentIp", IPUtils.getIp(request));
+        return map;
+    }
+
+    @PostMapping("/ipadminwhite/bootstrap")
+    public Map<String, Object> bootstrapIpAdminWhite(
+            @RequestParam(required = false) String secret,
+            HttpServletRequest request) {
+        adminAccessGuard.requireSystemAdmin("ipadminwhiteBootstrap");
+        if (StringUtils.isBlank(secret)) {
+            secret = request.getHeader("x-admin-ip-bootstrap");
+        }
+        IpAdminWhiteEntity entity = ipAdminWhiteService.bootstrapClaim(request, secret);
+        adminAccessGuard.auditWithIp(request, "admin_ip_bootstrap", "ip=" + entity.getIp());
+        Map<String, Object> result = new HashMap<>();
+        result.put("success", true);
+        result.put("ip", entity.getIp());
+        return result;
+    }
+
+    @GetMapping("/ipadminwhite/list")
+    public Map<String, Object> getIpAdminWhiteList(@RequestParam Map<String, Object> params, HttpServletRequest request) {
+        requireOps(request, "ipadminwhiteList");
+        PageUtils page = ipAdminWhiteService.queryPage(params);
+        List<Map<String, Object>> data = page.getList().stream()
+                .map(entity -> {
+                    IpAdminWhiteEntity ipEntity = (IpAdminWhiteEntity) entity;
+                    Map<String, Object> item = new HashMap<>();
+                    item.put("ip", ipEntity.getIp() != null ? ipEntity.getIp() : "");
+                    item.put("count", ipEntity.getCount() != null ? ipEntity.getCount() : 0);
+                    item.put("today", ipEntity.getToday() != null ? ipEntity.getToday() : 0);
+                    item.put("tag", ipEntity.getTag() != null ? ipEntity.getTag() : "");
+                    item.put("description", ipEntity.getDescription() != null ? ipEntity.getDescription() : "");
+                    item.put("forbidden", ipEntity.getForbidden() != null ? ipEntity.getForbidden() : 0);
+                    item.put("createTime", ipEntity.getCreateTime() != null ? ipEntity.getCreateTime().getTime() : null);
+                    return item;
+                })
+                .collect(Collectors.toList());
+        Map<String, Object> result = new HashMap<>();
+        result.put("code", 0);
+        result.put("msg", "");
+        result.put("count", page.getTotalCount());
+        result.put("data", data);
+        return result;
+    }
+
+    @PostMapping("/ipadminwhite/add")
+    public Map<String, Object> addIpAdminWhite(@RequestParam String ip, HttpServletRequest request) {
+        requireOps(request, "ipadminwhiteAdd");
+        IpAdminWhiteEntity entity = ipAdminWhiteService.create(ip, "手动添加", "手动添加");
+        adminAccessGuard.auditWithIp(request, "wall.ipadminwhite.add", "ip=" + ip);
+        if (null == entity) {
+            return Collections.singletonMap("fail", false);
+        }
+        return Collections.singletonMap("success", true);
+    }
+
+    @PostMapping("/ipadminwhite/remove")
+    public Map<String, Object> removeIpAdminWhite(@RequestParam String ip, HttpServletRequest request) {
+        requireOps(request, "ipadminwhiteRemove");
+        String current = IPUtils.getIp(request);
+        if (StringUtils.isNotBlank(ip) && ip.equals(current)) {
+            assertClearToken(request);
+        }
+        ipAdminWhiteService.removeByIp(ip);
+        adminAccessGuard.auditWithIp(request, "wall.ipadminwhite.remove", "ip=" + ip);
+        return Collections.singletonMap("success", true);
     }
 }

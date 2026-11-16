@@ -70,16 +70,21 @@ public class IPUtils {
             if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
                 ip = request.getRemoteAddr();
             }
-        } else if (ip.length() > 15) {
+        }
+        // 多跳 XFF：始终取首个非 unknown hop，并 trim（兼容短链与空格）
+        if (ip != null && ip.contains(",")) {
             String[] ips = ip.split(",");
             for (String s : ips) {
-                if (!("unknown".equalsIgnoreCase(s))) {
-                    ip = s;
+                String hop = s == null ? "" : s.trim();
+                if (!hop.isEmpty() && !"unknown".equalsIgnoreCase(hop)) {
+                    ip = hop;
                     break;
                 }
             }
+        } else if (ip != null) {
+            ip = ip.trim();
         }
-        return ip;
+        return ip == null ? "" : ip;
     }
 
     public static boolean isIp(String ip) {

@@ -420,6 +420,7 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
                 {"sys_string_function_queue_management", "函数队列管理", "Function queue management"},
                 {"sys_string_reinit_management", "重建数据表", "Rebuild tables"},
                 {"sys_string_field_encrypt_management", "字段加密", "Field storage encryption"},
+                {"sys_string_config_secure_management", "配置安全", "Config storage security"},
                 {"sys_string_shield_management", "人机检测", "Human verification"},
                 {"sys_string_scan_management", "版本更新", "Version update"},
                 {"sys_string_code_generator", "代码生成", "Code generator"},

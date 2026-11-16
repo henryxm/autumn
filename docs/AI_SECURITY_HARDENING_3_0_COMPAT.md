@@ -29,9 +29,9 @@
 | **C-03** | `userUuid` hint-only | 无 Token 时可凭 hint 冒充解析身份 | 默认**拒绝** | 依赖网关只传 `userUuid`、无 Token 的内部调用 | SysConfig `SECURITY_AUTH_CONFIG.allowUserUuidHint=true` |
 | **C-04** | 默认管理员口令 | 未配置时 `admin`/`admin` | 未配置时**随机强口令**并打 info 日志（英文）+ 落盘恢复文件 | 首次安装/自动化装机脚本 | 配置 `systemPassword`（EnvBean） |
 | **C-05** | Dev 空密登录 | 空用户名/密码回填 `admin` | 空则报错 | 本地习惯空 POST 登录的脚本 | 显式传账号密码 |
-| **C-06** | `/plugin` / `/plugin.html` | Shiro anon + 无角色校验 | 走 `spm`；方法内超管 + IP 白名单 | 自动化插件加载 | 先登录超管 Session，且客户端 IP 已加白 |
-| **C-20** | 后台门禁 / gen CRUD / Bean 执行 / wall 加白 | 有菜单即可调任意 gen 全表；`/wall/api/ipwhite/add` 无鉴权；exec 默认可调 | **任意** `*.controller.gen.*` 默认仅超管；仅 usr/safe/bot/qrc（+`AdminAccessModuleHandler#selfGenModules`）豁免；运维页超管+IP 白名单；`beanExecuteEnabled` 默认关；加白须鉴权；页面：框架 GEN_MODULES / ops / `@PageAware(admin=true)` 仅超管，子项目业务页默认兼容，`adminLockdown` 可收紧 | 非超管用 gen 管业务全表；匿名加白脚本 | 自助 API/公开首页不变；业务全表改超管或写带隔离的定制 API；豁免用 SPI；后台开 `beanExecuteEnabled`；加白用已加白超管会话 |
-| **C-21** | WebShell（`/webshell` `/shell` `/sftp`） | 常默认可连、握手弱鉴权 | **默认关闭**（`SECURITY_OPS_CONFIG.webShellEnabled=false` + `autumn.webshell.enabled=false`）；开启后须超管+IP 白名单+主机白名单 | 依赖 `web-shell` 的现网升级后终端不可用 | 显式双开开关并配置 `allowed-hosts`；禁止 Shiro anon |
+| **C-06** | `/plugin` / `/plugin.html` | Shiro anon + 无角色校验 | 走 `spm`；方法内超管 + **管理 IP 白名单**（`wall_ip_admin_white`） | 自动化插件加载 | 先登录超管 Session，且客户端 IP 已在管理白名单 |
+| **C-20** | 后台门禁 / gen CRUD / Bean 执行 / wall 加白 | 有菜单即可调任意 gen 全表；`/wall/api/ipwhite/add` 无鉴权；exec 默认可调 | **任意** `*.controller.gen.*` 默认仅超管+**管理 IP**；仅 usr/safe/bot/qrc（+SPI）豁免；运维页超管+`wall_ip_admin_white`（与用户 `wall_ip_white` 防火墙防拉黑分离）；空管理名单启动一次性临时密钥引导；`beanExecuteEnabled` 默认关；加白须鉴权；页面：框架 GEN_MODULES / ops / `@PageAware(admin=true)` 仅超管+管理 IP | 非超管用 gen 管业务全表；匿名加白脚本 | 自助 API/公开首页不变；首条管理 IP 用控制台 `AdminIpBootstrap secret=` 认领；加白用已在管理名单的超管会话 |
+| **C-21** | WebShell（`/webshell` `/shell` `/sftp`） | 常默认可连、握手弱鉴权 | **默认关闭**（`SECURITY_OPS_CONFIG.webShellEnabled=false` + `autumn.webshell.enabled=false`）；开启后须超管+**管理 IP**+主机白名单 | 依赖 `web-shell` 的现网升级后终端不可用 | 显式双开开关并配置 `allowed-hosts`；禁止 Shiro anon |
 | **C-07** | `/actuator/**` | Shiro anon | 走 `spm`（需登录） | 监控探活若直打 actuator | 改用网关鉴权或登录；health 暴露见 `management.endpoints` |
 | **C-08** | clear/reinit 头认证 | 固定头 `application/client-clear` 等 | **必须**在 SysConfig 配置高熵 ops Token，未配置则拒绝 | 运维脚本 | `SECURITY_OPS_CONFIG.clearToken` / `reinitToken` |
 | **C-09** | CORS 反射 Origin | 任意 Origin + Credentials | 仅同源或 SysConfig CORS 白名单 | 跨域带 Cookie 的前端 | `SECURITY_AUTH_CONFIG.corsAllowedOrigins` |
@@ -334,20 +334,23 @@
 
 - [ ] 非超管列表数据范围（DataFilter）  
 - [ ] 列表非法 `sidx` 不报 500、不注入  
-- [ ] 插件 load/unload 无超管 → 403（`/plugin` 不再 anon；须超管 + IP 白名单）  
+- [ ] 插件 load/unload 无超管 → 403（`/plugin` 不再 anon；须超管 + 管理 IP 白名单）  
 - [ ] actuator 未登录不可随意访问  
 - [ ] clear/reinit：配置 Token 后成功；未配置失败  
 - [ ] prod CSRF：管理 POST 带 `X-CSRF-Token`  
 - [ ] **`SECURITY_AUTH_CONFIG.adminLockdown`**：默认 `false`（模式 A）。运维页与框架 GEN_MODULES 管理页无论开关均仅系统管理员；**任意业务 gen CRUD** 亦仅超管（见下）；自助 API（`/sys/session/self/**`、usr/safe/bot/qrc gen）始终不锁。`true` 时子项目自定义 `modules/**` 与非 gen 定制管理页也仅超管  
-- [ ] **`SECURITY_OPS_CONFIG.beanExecuteEnabled`**：默认 `false`；开启后仍须超管 + IP 白名单，审计日志记账号/IP/Bean/方法  
-- [ ] **`SECURITY_OPS_CONFIG.webShellEnabled`**：默认 `false`（与 `autumn.webshell.enabled` 取更严）；开启后仍须超管 + IP 白名单 + 主机白名单（C-21）  
+- [ ] **`SECURITY_OPS_CONFIG.beanExecuteEnabled`**：默认 `false`；开启后仍须超管 + 管理 IP 白名单，审计日志记账号/IP/Bean/方法  
+- [ ] **`SECURITY_OPS_CONFIG.webShellEnabled`**：默认 `false`（与 `autumn.webshell.enabled` 取更严）；开启后仍须超管 + 管理 IP 白名单 + 主机白名单（C-21）  
 
-- [ ] **`POST /wall/api/ipwhite/add`**：未登录/非超管/未加白 IP → 不写库；关白名单或删当前 IP 须头 `x-clear-authentication` = clearToken  
+- [ ] **`POST /wall/api/ipwhite/add`**（用户防拉黑名单）：未登录/非超管/管理 IP 未加白 → 不写库；删当前 IP 须头 `x-clear-authentication` = clearToken  
+- [ ] **管理 IP**：`wall_ip_admin_white` 与 `wall_ip_white` 表隔离；运维/gen/`requireOpsAdmin` 走 `IpAdminWhiteService.checkAdmin`，不跟随 `WallDefault.ipWhiteEnable`；**不从用户白名单迁移/回退**，空表初始化；用户 `isWhite` **逻辑继承**管理名单（管理 IP 默认免防火墙拉黑）  
+- [ ] **管理 IP 引导**：空表启动打印 `AdminIpBootstrap secret=`（明文一次）；内存只存 hash；`POST /wall/api/ipadminwhite/bootstrap` 认领当前 IP 后立即清 hash；二次同一密钥失败；名单非空后 bootstrap 拒绝；客户端 IP 解析与 `IPUtils.getIp` 统一（XFF 首 hop + trim）  
+- [ ] **`wall.html`**：空名单+引导中超管可进页认领；认领后增删管理 IP 须已在管理名单；用户白名单区块文案区分「防拉黑」  
 - [ ] **`firewall.html`**：非超管不得改 `WallDefault`；`white=false` 须 clearToken  
-- [ ] gen CRUD：非超管调 `*.controller.gen.*` → 403；**usr/safe/bot/qrc**（及 SPI `selfGenModules`）不强制超管  
+- [ ] gen CRUD：非超管或管理 IP 未加白调 `*.controller.gen.*` → 403；**usr/safe/bot/qrc**（及 SPI `selfGenModules`）不强制超管  
 - [ ] 子项目 `modules/{biz}/**` **页面**：默认非超管可开（登录由 Spm）；`adminLockdown=true` 或 `@PageAware(admin=true)` 时仅超管  
 - [ ] 普通用户自助：`/sys/session/self/list`、`self/ping`、`/sys/user/info|password` 仍 200（本人数据）  
-- [ ] `/plugin/load|unload` 与 HTML `/plugin` 一致：超管 + IP 白名单  
+- [ ] `/plugin/load|unload` 与 HTML `/plugin` 一致：超管 + 管理 IP 白名单  
 
 ### 4.4.1 依赖仓兼容矩阵（im / video / bighub / xsign-www）
 
@@ -393,7 +396,9 @@
 | `ops_admin_unauthenticated` / `ops_admin_forbidden` | `requireOpsAdmin`（exec/plugin/queue/wall API 等） |
 | `system_admin_unauthenticated` / `system_admin_forbidden` | `requireSystemAdmin`；gen CRUD 的 `target=gen:…#method` |
 | `admin_page_view` / `ops_view` / `gen_module_view` | `gateView` 页面门禁 |
-| `ops_ip_white` / `ip_white` | 运维页或 `IpWhiteService.check` IP 未加白 |
+| `ops_ip_white` / `admin_ip_white` | 运维页 / `IpAdminWhiteService.checkAdmin` 管理 IP 未加白 |
+| `ip_white` | 用户防火墙 `IpWhiteService.check`（若仍被调用）IP 未加白 |
+| `admin_ip_bootstrap` | 管理 IP 引导密钥无效/错误（hash 保留可重试） |
 | `admin_lockdown` / `custom_manage_*` | lockdown / 定制管理页无菜单 |
 | `admin_shell_unauthenticated` / `admin_shell_forbidden` | `AdminShellAccess.denyUnlessSystemAdmin` |
 | `bean_execute_disabled` | exec Bean 执行器关闭后仍被调用 |
@@ -402,7 +407,7 @@
 
 成功访问另有 **`SecurityAlert audit action=webshell_*`**（`webshell_access` / `webshell_sftp` / `webshell_ws_*` / `webshell_ssh` 等），凡通过门禁必记。
 
-**运维建议**：对 `SecurityAlert denied` 按 `ip`/`user` 聚合告警；短时大量 `ops_*` / `gen:` / `ip_white` / `webshell_*` 视为扫描或提权探测。
+**运维建议**：对 `SecurityAlert denied` 按 `ip`/`user` 聚合告警；短时大量 `ops_*` / `gen:` / `admin_ip_white` / `admin_ip_bootstrap` / `ip_white` / `webshell_*` 视为扫描或提权探测。
 
 - [ ] **C-21 WebShell**：默认 `/webshell`、`/shell`、`/sftp` 不可用；开启后非超管/未加白 403；未在 `allowed-hosts` 的主机拒绝；检索 `SecurityAlert denied reason=webshell_`
 

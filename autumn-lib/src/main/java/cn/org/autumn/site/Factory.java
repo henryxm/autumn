@@ -4,8 +4,10 @@ import cn.org.autumn.database.CrudGuard;
 import cn.org.autumn.utils.SpringContextUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.aop.support.AopUtils;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.annotation.Order;
+import org.springframework.util.ClassUtils;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -59,8 +61,8 @@ public class Factory {
             Method method;
             Order order = null;
 
-            //获取实例中的排序Order，如果没找到，你从超类中寻找
-            Class<?> clazz = init.getClass();
+            // 排序注解从目标类读取（跳过 CGLIB 代理类）
+            Class<?> clazz = AopUtils.getTargetClass(init);
             try {
                 while (null != clazz && null == order && !clazz.equals(Object.class)) {
                     if (StringUtils.isNotBlank(name)) {
@@ -106,23 +108,33 @@ public class Factory {
 
     /**
      * 调用所有实现了接口 T 的 Bean 的方法，按 {@link Order} 升序。
+     * <p>
+     * 使用接口 {@link Method} 在 Bean（可为 Spring 代理）上调用，走 AOP 到 target。
+     * 勿用 {@code obj.getClass().getMethod(...)}（CGLIB 子类 Method 会打到代理壳或声明类不匹配）。
      */
     public static <T> void invoke(ApplicationContext applicationContext, Class<T> t, String name) {
         Map<Integer, List<T>> ordered = getOrdered(applicationContext, t, name);
         if (null == ordered || ordered.isEmpty()) {
             return;
         }
+        Method ifaceMethod;
+        try {
+            ifaceMethod = t.getMethod(name);
+        } catch (NoSuchMethodException e) {
+            log.error("Init 接口 {}.{} 不存在", t.getSimpleName(), name);
+            return;
+        }
         for (Map.Entry<Integer, List<T>> entry : ordered.entrySet()) {
             List<T> list = entry.getValue();
             for (T obj : list) {
+                String label = ClassUtils.getUserClass(AopUtils.getTargetClass(obj)).getSimpleName();
                 try {
-                    Method m = obj.getClass().getMethod(name);
-                    m.invoke(obj);
+                    ifaceMethod.invoke(obj);
                 } catch (Exception e) {
-                    if (CrudGuard.suppress(e, obj.getClass().getSimpleName() + "." + name)) {
+                    if (CrudGuard.suppress(e, label + "." + name)) {
                         continue;
                     }
-                    log.error("{}.{}", obj.getClass().getSimpleName(), name, e);
+                    log.error("{}.{}", label, name, e);
                 }
             }
         }

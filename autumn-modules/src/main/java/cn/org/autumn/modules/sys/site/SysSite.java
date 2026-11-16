@@ -23,6 +23,9 @@ public class SysSite implements SiteFactory.Site {
     @PageAware(login = true, resource = "modules/sys/config")
     String config;
 
+    @PageAware(login = true, admin = true, page = "configsecure")
+    String configsecure;
+
     @PageAware(login = true, resource = "modules/sys/dept")
     String dept;
 

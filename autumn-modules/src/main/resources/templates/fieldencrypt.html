@@ -590,10 +590,10 @@
                                 <span class="toggle-label" v-text="status.writeEncryptEnabled ? '写入加密已开启' : '写入加密已关闭'"></span>
                             </div>
                             <div v-if="!status.keyConfigured" class="hint" style="color:#b91c1c;margin-top:12px;">
-                                开关不可用：顶部「主密钥」为<strong>未配置</strong>。请在 docker-compose 配置合法 Base64（32 字节）密钥，例如
-                                <code>crypto.field.key=...</code> 或 <code>AUTUMN_CRYPTO_FIELD_KEY=...</code>，并设置
-                                <code>crypto.field.enabled=true</code> / <code>AUTUMN_CRYPTO_FIELD_ENABLED=true</code>；
-                                必要时删除 Redis <code>*autumn:field-encrypt:key</code> 后重启。右侧可生成 key。后台<strong>不能</strong>在线写入主密钥。
+                                开关不可用：顶部「主密钥」为<strong>未配置</strong>。请先配置合法 Base64（32 字节）密钥
+                                <code>crypto.field.key</code> / <code>AUTUMN_CRYPTO_FIELD_KEY</code>（及 hash-key）；
+                                滚动发布阶段可保持 <code>crypto.field.enabled=false</code>，仅配密钥即可解密历史密文。
+                                右侧可生成开发用 key。后台<strong>不能</strong>在线写入主密钥。
                             </div>
                             <div v-else-if="!status.hashKeyConfigured" class="hint" style="color:#b91c1c;margin-top:12px;">
                                 开关不可用：盲索引密钥未配置。请配置 <code>crypto.field.hash-key</code> 或 <code>AUTUMN_CRYPTO_FIELD_HASH_KEY</code>（可与主密钥相同）。
@@ -604,10 +604,16 @@
                             </div>
                         </div>
                         <p class="hint">
-                            <span v-if="status.clusterMode">集群：启动时用 yml/env 覆盖 Redis 开关与密钥；运行中变更写 Redis 并经频道同步。</span>
-                            <span v-else>单机：密钥来自 yml/env；启动时将 sys_config 开关与环境配置对齐。</span>
+                            <strong>多节点一键启用：</strong>① 全节点部署且配同一 key，保持 <code>enabled=false</code>；
+                            ② 下方实体列表预检/执行 migrate（SysConfig 也可用 <a href="${request.contextPath}/configsecure.html" target="_blank" rel="noopener">配置安全</a> 页）；
+                            ③ 打开本开关写加密（集群 Pub/Sub 同步）；④ 滚动重启后写开关仍保持开启（env=false 不会冲掉一键状态）。
+                            关写请用本页关闭或「恢复默认」，勿依赖把 yml 改回 false 来关集群开关。
+                        </p>
+                        <p class="hint">
+                            <span v-if="status.clusterMode">集群：密钥可从 env 对齐到 Redis；写开关已存在时 env=false <strong>不覆盖</strong>一键开启；env=true 可强制打开。运行中变更写 Redis 并经频道同步。</span>
+                            <span v-else>单机：密钥来自 yml/env；sys_config 运行时写开关同样保留一键开启（env=false 不冲掉）。</span>
                             启动默认写入：<strong v-text="status.configWriteEncryptEnabled ? '开' : '关'"></strong>
-                            （支持 <code>crypto.field.enabled</code> / <code>AUTUMN_CRYPTO_FIELD_ENABLED</code>）。改 compose 后<strong>重启即可</strong>，不必手删 Redis。
+                            （<code>crypto.field.enabled</code> / <code>AUTUMN_CRYPTO_FIELD_ENABLED</code>）。
                         </p>
                     </div>
                 </div>

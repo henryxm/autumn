@@ -4,7 +4,7 @@ import cn.org.autumn.annotation.SkipInterceptor;
 import cn.org.autumn.model.SecurityOpsConfig;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.modules.sys.shiro.AdminBootstrapService;
-import cn.org.autumn.modules.wall.service.IpWhiteService;
+import cn.org.autumn.modules.wall.service.IpAdminWhiteService;
 import cn.org.autumn.utils.R;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,7 +30,7 @@ public class AdminBootstrapController {
     private SysConfigService sysConfigService;
 
     @Autowired
-    private IpWhiteService ipWhiteService;
+    private IpAdminWhiteService ipAdminWhiteService;
 
     @GetMapping("/status")
     @SkipInterceptor
@@ -47,7 +47,7 @@ public class AdminBootstrapController {
     }
 
     private void assertOps(HttpServletRequest request) throws Exception {
-        ipWhiteService.check(request, getClass(), "assertOps");
+        ipAdminWhiteService.checkAdmin(request, getClass(), "assertOps");
         String token = request.getHeader(HEADER);
         if (StringUtils.isBlank(token)) {
             throw new Exception("Unauthenticated");

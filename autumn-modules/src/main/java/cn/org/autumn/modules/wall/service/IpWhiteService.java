@@ -18,6 +18,7 @@ import cn.org.autumn.utils.IPUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -25,6 +26,10 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.util.*;
 
+/**
+ * 用户防火墙 IP 白名单（防拉黑）。逻辑上继承管理级 {@link IpAdminWhiteService}：
+ * 已在 {@code wall_ip_admin_white} 的 IP 视为用户白名单命中，无需再写入 {@code wall_ip_white}。
+ */
 @Slf4j
 @Service
 public class IpWhiteService extends WallCounter<IpWhiteDao, IpWhiteEntity> implements InitFactory.Init, LoadFactory.Load, LoopJob.OneMinute, ClearHandler {
@@ -35,6 +40,10 @@ public class IpWhiteService extends WallCounter<IpWhiteDao, IpWhiteEntity> imple
 
     @Autowired
     WallFactory wallFactory;
+
+    @Autowired
+    @Lazy
+    IpAdminWhiteService ipAdminWhiteService;
 
     public Set<String> getIpWhiteList() {
         return ipWhiteList;
@@ -85,13 +94,22 @@ public class IpWhiteService extends WallCounter<IpWhiteDao, IpWhiteEntity> imple
         return 0 < baseMapper.hasIp(ip);
     }
 
+    /**
+     * 名单命中判定（含管理名单继承）。不看防火墙开关——开关由 {@link #isWhite(String, String)} / {@link #check} 处理，
+     * 避免 shield 等调用方在开关关闭时把全网当成白名单。
+     */
     public boolean isWhite(String ip) {
+        if (StringUtils.isBlank(ip)) {
+            return false;
+        }
+        if (ipAdminWhiteService != null && ipAdminWhiteService.isAdminWhite(ip)) {
+            return true;
+        }
         if (ipWhiteList.contains(ip)) {
             return true;
         }
         for (String section : ipWhiteSectionList) {
-            boolean is = IPUtils.isInRange(ip, section);
-            if (is) {
+            if (IPUtils.isInRange(ip, section)) {
                 return true;
             }
         }
@@ -104,6 +122,9 @@ public class IpWhiteService extends WallCounter<IpWhiteDao, IpWhiteEntity> imple
                 return true;
             if (StringUtils.isEmpty(ip))
                 return false;
+            if (ipAdminWhiteService != null && ipAdminWhiteService.isAdminWhite(ip)) {
+                return true;
+            }
             if (ipWhiteList.contains(ip)) {
                 RData rData = new RData();
                 rData.setUserAgent(agent);

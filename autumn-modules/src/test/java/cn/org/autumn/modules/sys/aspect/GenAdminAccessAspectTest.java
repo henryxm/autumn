@@ -36,6 +36,7 @@ class GenAdminAccessAspectTest {
         when(sig.getDeclaringType()).thenReturn(UserProfileControllerGen.class);
         when(sig.getName()).thenReturn("list");
         aspect.requireSystemAdminForGlobalGen(jp);
+        verify(adminAccessGuard, never()).requireGenAdmin(anyString());
         verify(adminAccessGuard, never()).requireSystemAdmin(anyString());
     }
 
@@ -48,6 +49,6 @@ class GenAdminAccessAspectTest {
         when(sig.getDeclaringType()).thenReturn(IpWhiteControllerGen.class);
         when(sig.getName()).thenReturn("list");
         aspect.requireSystemAdminForGlobalGen(jp);
-        verify(adminAccessGuard).requireSystemAdmin(org.mockito.ArgumentMatchers.startsWith("gen:"));
+        verify(adminAccessGuard).requireGenAdmin(org.mockito.ArgumentMatchers.startsWith("gen:"));
     }
 }

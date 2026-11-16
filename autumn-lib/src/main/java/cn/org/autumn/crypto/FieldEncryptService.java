@@ -79,9 +79,8 @@ public class FieldEncryptService {
     @PostConstruct
     public void init() {
         applyEnvironmentConfig(configSource.resolveFromEnvironment());
-        if (isKeyConfigured()) {
-            scanPackage();
-        }
+        // 元数据扫描与密钥无关：无 key 时也要登记 @FieldEncrypt，否则 afterRead 空转导致 ENC$ 明文泄漏给业务
+        scanPackage();
         if (log.isDebugEnabled()) {
             if (isConfigWriteEncryptEnabled()) {
                 log.debug("字段存储加密配置默认写入:开，密文前缀:{}", prefix);
@@ -169,6 +168,9 @@ public class FieldEncryptService {
             applyEnvironmentKeys(configSource.resolveFromEnvironment());
             keySource = SOURCE_ENV;
             hashKeySource = SOURCE_ENV;
+            if (entityFields.isEmpty()) {
+                scanPackage();
+            }
             return;
         }
         String validHash = configSource.validHashBase64(hashKeyBase64);
@@ -184,6 +186,10 @@ public class FieldEncryptService {
         } else if (validKey != null && SOURCE_REDIS.equals(source)) {
             hashKey = encryptKey;
             hashKeySource = source;
+        }
+        // Redis 密钥晚于 @PostConstruct 到达时补扫实体元数据
+        if (isKeyConfigured() && entityFields.isEmpty()) {
+            scanPackage();
         }
     }
 
@@ -218,7 +224,7 @@ public class FieldEncryptService {
     }
 
     private void ensureScanned() {
-        if (!entityFields.isEmpty() || !isKeyConfigured()) {
+        if (!entityFields.isEmpty()) {
             return;
         }
         scanPackage();
@@ -375,7 +381,18 @@ public class FieldEncryptService {
         if (!isReadDecryptEnabled() || entity == null) {
             return;
         }
-        forFieldValues(entity, (meta, value) -> meta.getField().set(entity, decryptValue(value)));
+        Class<?> clazz = entity.getClass();
+        // 表扫描尚未纳入该类时补登记，避免 afterRead 空转把 ENC$ 交给业务
+        if (getFields(clazz).isEmpty()) {
+            registerEntity(clazz);
+        }
+        forFieldValues(entity, (meta, value) -> {
+            try {
+                meta.getField().set(entity, decryptValue(value));
+            } catch (Exception e) {
+                log.warn("字段解密失败 entity={} field={} msg={}", clazz.getSimpleName(), meta.getFieldName(), e.getMessage());
+            }
+        });
     }
 
     /**

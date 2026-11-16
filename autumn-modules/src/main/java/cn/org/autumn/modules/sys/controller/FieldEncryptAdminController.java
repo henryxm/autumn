@@ -5,9 +5,12 @@ import cn.org.autumn.config.Config;
 import cn.org.autumn.crypto.FieldEncryptMigrationService;
 import cn.org.autumn.crypto.FieldEncryptService;
 import cn.org.autumn.exception.AException;
+import cn.org.autumn.modules.sys.entity.SysConfigEntity;
 import cn.org.autumn.modules.sys.service.FieldEncryptRuntimeService;
+import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.modules.sys.support.AdminAccessGuard;
 import cn.org.autumn.utils.R;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,6 +26,7 @@ import java.util.function.Supplier;
 /**
  * 字段存储加密运维 API（系统管理员 + IP 白名单）。
  */
+@Slf4j
 @RestController
 @RequestMapping("sys/crypto/field")
 @SkipInterceptor
@@ -41,6 +45,9 @@ public class FieldEncryptAdminController {
 
     @Autowired
     private AdminAccessGuard adminAccessGuard;
+
+    @Autowired
+    private SysConfigService sysConfigService;
 
     @GetMapping("/status")
     public R status(@RequestParam(value = "reload", defaultValue = "false") boolean reload,
@@ -194,6 +201,9 @@ public class FieldEncryptAdminController {
                 FieldEncryptMigrationService.MigrationResult result = encrypt
                         ? migrationService.migrate(entity, dryRun, size)
                         : migrationService.restore(entity, dryRun, size);
+                if (!dryRun) {
+                    refreshSysConfigCachesIfNeeded(entity);
+                }
                 adminAccessGuard.auditWithIp(request, "field_encrypt_" + action,
                         "entity=" + entity + " dryRun=" + dryRun + " batchSize=" + size
                                 + " processed=" + result.getProcessed());
@@ -214,6 +224,9 @@ public class FieldEncryptAdminController {
                 FieldEncryptMigrationService.MigrationResult result = encrypt
                         ? migrationService.migrateOne(entity, id, dryRun)
                         : migrationService.restoreOne(entity, id, dryRun);
+                if (!dryRun) {
+                    refreshSysConfigCachesIfNeeded(entity);
+                }
                 adminAccessGuard.auditWithIp(request, "field_encrypt_" + action,
                         "entity=" + entity + " id=" + id + " dryRun=" + dryRun);
                 return toMigrationResult(result);
@@ -221,6 +234,20 @@ public class FieldEncryptAdminController {
                 return R.error(e.getMessage());
             }
         });
+    }
+
+    private void refreshSysConfigCachesIfNeeded(String entity) {
+        if (StringUtils.isBlank(entity)) {
+            return;
+        }
+        if (!SysConfigEntity.class.getName().equals(entity.trim())) {
+            return;
+        }
+        try {
+            sysConfigService.reloadAfterFieldEncryptMigration();
+        } catch (Exception e) {
+            log.warn("fieldencrypt 迁移后刷新 SysConfig 缓存失败 entity={} msg={}", entity, e.getMessage());
+        }
     }
 
     private R admin(HttpServletRequest request, String method, Supplier<R> action) {

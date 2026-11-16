@@ -6,7 +6,7 @@ import cn.org.autumn.modules.sys.entity.SystemUpgrade;
 import cn.org.autumn.modules.sys.service.CrudGuardService;
 import cn.org.autumn.modules.sys.service.SysUserRoleService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
-import cn.org.autumn.modules.wall.service.IpWhiteService;
+import cn.org.autumn.modules.wall.service.IpAdminWhiteService;
 import cn.org.autumn.utils.R;
 import java.util.Map;
 import java.util.function.Supplier;
@@ -35,7 +35,7 @@ public class DatabaseAdminController {
     private SysUserRoleService sysUserRoleService;
 
     @Autowired
-    private IpWhiteService ipWhiteService;
+    private IpAdminWhiteService ipAdminWhiteService;
 
     @GetMapping("/overview")
     public R overview(HttpServletRequest request) {
@@ -70,7 +70,7 @@ public class DatabaseAdminController {
 
     private R admin(HttpServletRequest request, Supplier<R> action) {
         try {
-            ipWhiteService.check(request, getClass(), "dbmanage");
+            ipAdminWhiteService.checkAdmin(request, getClass(), "dbmanage");
             if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
                 return R.error(403, "无权限");
             }

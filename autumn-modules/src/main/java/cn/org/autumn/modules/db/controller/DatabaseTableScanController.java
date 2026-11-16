@@ -4,7 +4,7 @@ import cn.org.autumn.annotation.SkipInterceptor;
 import cn.org.autumn.modules.db.service.DatabaseTableScanService;
 import cn.org.autumn.modules.sys.service.SysUserRoleService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
-import cn.org.autumn.modules.wall.service.IpWhiteService;
+import cn.org.autumn.modules.wall.service.IpAdminWhiteService;
 import cn.org.autumn.utils.R;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.Map;
@@ -34,7 +34,7 @@ public class DatabaseTableScanController {
     private SysUserRoleService sysUserRoleService;
 
     @Autowired
-    private IpWhiteService ipWhiteService;
+    private IpAdminWhiteService ipAdminWhiteService;
 
     @PostMapping("/search")
     public R search(@RequestBody Map<String, Object> body, HttpServletRequest request) {
@@ -62,7 +62,7 @@ public class DatabaseTableScanController {
 
     private R admin(HttpServletRequest request, Supplier<R> action) {
         try {
-            ipWhiteService.check(request, getClass(), "tablescan");
+            ipAdminWhiteService.checkAdmin(request, getClass(), "tablescan");
             if (!ShiroUtils.isLogin() || !sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
                 return R.error(403, "无权限");
             }
