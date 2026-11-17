@@ -639,9 +639,24 @@ public class SysConfigService extends EncryptModuleService<SysConfigDao, SysConf
         return list;
     }
 
+    /**
+     * 是否存在配置键。空库/尚未建表时返回 false（与 {@link #getValue} 一致），
+     * 避免首启 {@code shiroFilter} 阶段 FilterChainHandler 读配置导致启动失败。
+     */
     public boolean hasKey(String key) {
-        Integer has = baseMapper.hasKey(key);
-        return null != has && has > 0;
+        if (StringUtils.isBlank(key)) {
+            return false;
+        }
+        try {
+            Integer has = baseMapper.hasKey(key);
+            return null != has && has > 0;
+        } catch (Exception e) {
+            if (isMissingRelation(e)) {
+                log.debug("SysConfig hasKey table unavailable key={} msg={}", key, e.getMessage());
+                return false;
+            }
+            throw e instanceof RuntimeException re ? re : new RuntimeException(e);
+        }
     }
 
     public PageUtils queryPage(Map<String, Object> params) {
