@@ -197,9 +197,11 @@ SPI：
 
 | URI / 能力 | 形态 | L0 | L2 预期 | 说明 |
 |------------|------|----|---------|------|
-| `/ios/applecluster/notify\|nodes\|node` | 继承 Gen 的子类扩展、无 `@RequiresPermissions`，模块 `ios` ∉ GEN_MODULES | 常 anon | **不强制** | 修复前整类连坐 → `system_admin_unauthenticated` |
+| `/ios/applecluster/notify\|nodes\|node` | 继承 Gen 的子类扩展、无 `@RequiresPermissions`，模块 `ios` ∉ GEN_MODULES | 常 anon | **不强制** | 修复前整类连坐 → `system_admin_unauthenticated`；级联「未找到合适的签名服务器」 |
 | `/api/getsupportedlanguage` | `LanguageApi`，模块 `lan` ∈ GEN_MODULES | 视 Filter | **不强制**（`*Api`） | 修复前模块毯误拦 |
-| xsignw / xsign 公开读（子类扩展、无注解） | 同上业务模块 | 视 Filter | **不强制** | 管理面带 `@RequiresPermissions` 的仍强制 |
+| `/lan/language/put` | `LanguageController#put` 子类扩展、无注解；集群 Feign 注册 | 常需登录会话 | **不强制**（方法豁免） | 修复前 `lan` 模块毯 → `system_admin_forbidden` |
+| `/xsign/xsignappconfigdispatch/getQQGroupList` | 子类扩展、无注解，`xsign` ∉ GEN_MODULES | 视 Filter | **不强制** | 同 C-23 |
+| `/xsignw/xsignjobvacancypublish/getJobCount` | 子类扩展、无注解，`xsignw` ∉ GEN_MODULES | 视 Filter | **不强制** | 同 C-23 |
 | gen CRUD `list/save/…` | `*.controller.gen.*` | 通常需登录 | **强制** | 未变 |
 | `/sys/node/*` | `ProfileController`，`node` ∈ GEN_MODULES | 需登录 | **强制** | C-20 |
 

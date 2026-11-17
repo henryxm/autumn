@@ -18,6 +18,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.reflect.MethodSignature;
+import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.core.annotation.AnnotationUtils;
@@ -380,11 +381,14 @@ public class AdminAccessGuard {
         }
         Object target = joinPoint.getTarget();
         Class<?> type = target != null ? target.getClass() : joinPoint.getSignature().getDeclaringType();
+        Class<?> rawTarget = unwrapProxyClass(type);
         Class<?> declaringType = null;
         if (joinPoint.getSignature() instanceof MethodSignature ms) {
             Method m = ms.getMethod();
             if (m != null) {
-                declaringType = m.getDeclaringClass();
+                // 取目标类上最具体方法，避免签名落在 *ControllerGen 导致业务公开/集群口被整类连坐
+                Method specific = AopUtils.getMostSpecificMethod(m, rawTarget != null ? rawTarget : type);
+                declaringType = specific != null ? specific.getDeclaringClass() : m.getDeclaringClass();
             }
         }
         if (declaringType == null) {
@@ -671,6 +675,10 @@ public class AdminAccessGuard {
         }
         // 防火墙探测入口（故意公开）
         if ("ShieldController".equals(simple) && "test".equals(method)) {
+            return true;
+        }
+        // 集群/子系统 Feign 注册多语言资源（非后台 CRUD；见 LanguageController 注释）
+        if ("LanguageController".equals(simple) && "put".equals(method)) {
             return true;
         }
         return false;

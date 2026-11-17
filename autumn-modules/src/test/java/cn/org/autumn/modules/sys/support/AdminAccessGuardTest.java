@@ -174,6 +174,18 @@ class AdminAccessGuardTest {
     }
 
     @Test
+    void languageControllerPut_clusterRegister_exemptFromAdminIp() {
+        Class<?> ctrl = cn.org.autumn.modules.lan.controller.LanguageController.class;
+        Class<?> gen = cn.org.autumn.modules.lan.controller.gen.LanguageControllerGen.class;
+        // Feign 集群注册：login 非超管亦不可连坐（生产 system_admin_forbidden）
+        assertFalse(guard.shouldRequireAdminIpApi(ctrl, ctrl, "put", 1));
+        assertFalse(guard.shouldRequireAdminIpApi(ctrl, "put", 1));
+        // 管理面仍强制
+        assertTrue(guard.shouldRequireAdminIpApi(ctrl, ctrl, "supportedlist", 1));
+        assertTrue(guard.shouldRequireAdminIpApi(ctrl, gen, "list", 1));
+    }
+
+    @Test
     void managedModulesSpi_extendsGenGlobalModule() {
         cn.org.autumn.config.AdminAccessModuleHandler managed = new cn.org.autumn.config.AdminAccessModuleHandler() {
             @Override

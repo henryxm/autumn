@@ -1,0 +1,11 @@
+---
+description: autumn 测试范围约束——禁止无关业务仓夹具与测试
+alwaysApply: true
+---
+
+# autumn 测试范围
+
+- **禁止**在 autumn 仓库内为业务仓创建 Controller 夹具、模拟类或依赖外部仓类型的测试。
+- 用户已自行编写或生成的用例优先沿用；**不要**再追加与本次改动无关的测试文件或夹具包。
+- 门禁/框架行为单测只使用 **autumn 本仓库**已有类型（如 `LanguageController`、`LanguageApi`、`ShieldController`）或测试类内嵌的最小 stub（同文件 `static class`，且不伪造业务模块包名）。
+- 业务仓兼容场景写在对应业务仓测试或文档对照表中，不塞进 autumn。
