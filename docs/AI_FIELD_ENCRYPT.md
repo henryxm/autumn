@@ -284,7 +284,7 @@ IDEA「没配 yml key 却能加解密」= Redis/env 已有历史密钥。**推�
 | `POST /writeEnabled` / `resetWriteEnabled` | 运行时写入开关；写操作记 SecurityAlert 审计 |
 | `POST /reloadCluster` | 从 Redis 刷新本机内存 |
 | `POST /test` / `decrypt` | 内存加解密（运维调试；审计不落明文） |
-| `POST /generateKey` / `generateVector` | 仅非生产；生成开发用材料后写入 yml/环境变量并重启 |
+| `POST /generateKey` / `generateVector` | 随机生成材料（生产亦允许）；仅供复制到 yml/环境变量，不写入运行配置；改密钥须重启；仍须超管+管理 IP |
 | `POST /migrate` / `restore` | 批量迁移；默认 `dryRun=true`；`batchSize` 上限 2000 |
 | `POST /migrateOne` / `restoreOne` | 单条；默认预检；非预检须 `confirm=true` |
 

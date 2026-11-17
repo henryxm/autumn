@@ -1,7 +1,6 @@
 package cn.org.autumn.modules.sys.controller;
 
 import cn.org.autumn.annotation.SkipInterceptor;
-import cn.org.autumn.config.Config;
 import cn.org.autumn.crypto.FieldEncryptMigrationService;
 import cn.org.autumn.crypto.FieldEncryptService;
 import cn.org.autumn.exception.AException;
@@ -102,10 +101,8 @@ public class FieldEncryptAdminController {
     @PostMapping("/generateKey")
     public R generateKey(HttpServletRequest request) {
         return admin(request, "generateKey", () -> {
-            if (Config.isProd()) {
-                return R.error(403, "生产环境禁止在线生成密钥");
-            }
-            adminAccessGuard.auditWithIp(request, "field_encrypt_generate_key", "dev");
+            // 仅随机生成材料供复制到 yml/环境变量，不写入运行配置；生产亦可生成（须超管+管理 IP）
+            adminAccessGuard.auditWithIp(request, "field_encrypt_generate_key", "copy-only");
             return R.ok().put("data", fieldEncryptService.generateDevKeyMaterial());
         });
     }
@@ -113,10 +110,7 @@ public class FieldEncryptAdminController {
     @PostMapping("/generateVector")
     public R generateVector(HttpServletRequest request) {
         return admin(request, "generateVector", () -> {
-            if (Config.isProd()) {
-                return R.error(403, "生产环境禁止在线生成向量");
-            }
-            adminAccessGuard.auditWithIp(request, "field_encrypt_generate_vector", "dev");
+            adminAccessGuard.auditWithIp(request, "field_encrypt_generate_vector", "copy-only");
             return R.ok().put("data", fieldEncryptService.generateDevVector());
         });
     }
