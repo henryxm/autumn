@@ -2,7 +2,8 @@
 
 面向 **非框架仓 / 非 `cn.org.autumn.modules` 前缀** 的业务系统：如何与 Autumn 3.x 统一「**系统管理员 + 管理 IP 白名单**」策略对齐。
 
-兼容总表见 **`docs/AI_SECURITY_HARDENING_3_0_COMPAT.md` C-20**；页面门禁见 **`docs/AI_STANDARDS.md` §14**。
+**完整对比矩阵（API / 页面 / 判定卡）**：[`docs/AI_ADMIN_ACCESS_MATRIX.md`](AI_ADMIN_ACCESS_MATRIX.md)。  
+兼容总表见 **`docs/AI_SECURITY_HARDENING_3_0_COMPAT.md` C-20 / C-22 / C-23**；页面门禁见 **`docs/AI_STANDARDS.md` §14**。
 
 ---
 

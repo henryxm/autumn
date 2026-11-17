@@ -476,7 +476,7 @@ public class ScopeDefinitionController extends ScopeDefinitionControllerGen {
   - 框架切面 **`GenAdminAccessAspect`** 织入 `*..modules..controller..*` 与 `*..controller.gen..*`（**不限** `cn.org.autumn` 前缀）；判定 `shouldRequireAdminIpApi`，执行 `requireGenAdmin`。  
   - **`ControllerGen.java.vm`**：各 CRUD 入口显式调用 **`AdminAccessGuard#enforceAdminIpApiIfRequired`**（与切面双保险；ZIP 重生后生效）。  
   - **豁免**（不强制超管+IP，仍受权限/行级隔离）：模块 **`usr` / `safe` / `bot` / `qrc`**；SPI **`AdminAccessModuleHandler#selfGenModules()`**。  
-  - **业务仓非标准包**：优先改用标准包；手写管理模块用 SPI **`managedModules()`**；异形包薄切面委托 **`AdminAccessGuard#enforceAdminIpApiIfRequired`**。完整标准见 **`docs/AI_ADMIN_IP_BIZ.md`**（模式 A/B/C）。  
+  - **业务仓非标准包**：优先改用标准包；手写管理模块用 SPI **`managedModules()`**；异形包薄切面委托 **`AdminAccessGuard#enforceAdminIpApiIfRequired`**。完整标准见 **`docs/AI_ADMIN_IP_BIZ.md`**（模式 A/B/C）；**API/页面强制对比矩阵**见 **`docs/AI_ADMIN_ACCESS_MATRIX.md`**。  
   - **禁止**把匿名首页、公开 CMS 读接口、C 端列表写进 `controller.gen`；写接口禁止整段 Shiro **`anon`**（§4）。  
   - **禁止**为「方便运营」把整站业务模块塞进 `selfGenModules()`。  
   - 兼容清单 **`docs/AI_SECURITY_HARDENING_3_0_COMPAT.md`**（**C-20**、§4.4）；拒绝日志 **`SecurityAlert denied`**（§4.4.2）。  

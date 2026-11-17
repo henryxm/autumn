@@ -625,6 +625,7 @@ public class AdminAccessGuard {
         if ("SysLoginController".equals(simple)
                 || "SysPageController".equals(simple)
                 || "SysProxyController".equals(simple)
+                || "SysUsingController".equals(simple)
                 || "AuthLoginProviderController".equals(simple)
                 || "AdminBootstrapController".equals(simple)
                 || "WallController".equals(simple)

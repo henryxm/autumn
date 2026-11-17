@@ -125,6 +125,8 @@ class AdminAccessGuardTest {
         assertFalse(guard.shouldRequireAdminIpApi(
                 cn.org.autumn.modules.sys.controller.SysLoginController.class, "login", 2));
         assertFalse(guard.shouldRequireAdminIpApi(
+                cn.org.autumn.modules.sys.controller.SysUsingController.class, "using", 2));
+        assertFalse(guard.shouldRequireAdminIpApi(
                 cn.org.autumn.modules.sys.controller.AuthLoginProviderController.class, "providers", 0));
         assertFalse(guard.shouldRequireAdminIpApi(
                 cn.org.autumn.modules.usr.controller.gen.UserProfileControllerGen.class, "list", 1));
