@@ -133,7 +133,7 @@ redisResilience.execute(
 ## 5. 键空间治理（避免再次膨胀）
 
 1. **几乎所有业务键设置 TTL**（`RedisExpireUtil` / `CacheConfig.redis`）。
-2. **统一命名空间**：`RedisKeys.getXxxKey(namespace, ...)`，集群多租户用 **`CLUSTER_NAMESPACE`**。
+2. **统一命名空间（硬性，见 `docs/AI_STANDARDS.md` §15.1）**：业务键**必须**经 **`RedisKeys.getXxxKey(namespace, ...)`** 或符合 **`autumn:{module}:{biz}:...`**；集群多租户用 **`CLUSTER_NAMESPACE`**。**禁止**裸拼无命名空间 key。
 3. **定期看前缀分布**（运维侧，非应用内 `KEYS`）：
 
    ```bash

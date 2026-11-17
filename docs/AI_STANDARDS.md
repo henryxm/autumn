@@ -10,49 +10,103 @@
 
 ## 2. 架构原则（必须遵守）
 
-### 2.0 代码版式
+### 2.0 代码版式与 Lombok
 
 - Java **方法签名、调用实参、if 条件**的换行约定见 **`docs/AI_CODE_STYLE.md`**（单条分支可无 `{}` 但须换行；与 Checkstyle 冲突时以该文档与本文为准）。
 - **import**：除非类名冲突，**禁止**在业务代码中用全限定类名代替 `import`；见 **`docs/AI_CODE_STYLE.md` §7**。**PR CI**：`bash scripts/check-java-fqn`（白名单 `scripts/fqn-allowlist.txt`）。
-- **日志**：`log.info` / `log.debug` 等**必须单行**，禁止把日志调用拆行；见 **`docs/AI_CODE_STYLE.md` §8**。
+- **实体 Getter/Setter（硬性）**：表实体（`*Entity`）**必须**使用 Lombok **`@Getter` + `@Setter`**（与 **`Entity.java.vm`** / 现有实体一致），**禁止**手写 getter/setter。  
+  - **不要**对表实体使用 **`@Data`**（避免生成基于可变字段的 `equals`/`hashCode`，干扰持久化与集合语义）。  
+  - 对外契约类（`*Request` / `*VO`）可用 **`@Getter`/`@Setter`** 或 **`@Data`**；新代码优先与同模块既有风格一致。
+- **日志（硬性）**：需要打日志的类（Service / Controller / Component 等）**必须**使用 Lombok **`@Slf4j`**，通过 **`log`** 字段输出；**禁止**手动 `LoggerFactory.getLogger` / 手写 `Logger` 字段。  
+  - `log.info` / `log.debug` 等**必须单行**，禁止把日志调用拆行；消息语言与其它细则见 **`docs/AI_CODE_STYLE.md` §8**。  
+  - **级别语义**：**`info`** = 业务里程碑（**禁止**堆栈与 PII）；**`debug`** = 排障细节（**禁止**密码/令牌明文）；**`warn`** = 可恢复降级或预期内拒绝；**`error`** = 须跟进的失败。
 
-### 2.1 高内聚、低耦合
+### 2.1 高内聚、低耦合（业务逻辑落 Service）
 
-- **高内聚**：与某实体（表 / 领域模型）相关的**业务流程、规则、事务边界、`LoopJob` 定时任务**，默认全部实现于该实体对应的 **`XxxService`**（继承链以 `ModuleService` 为默认，见 `docs/AI_MAP.md` §2.7）。**禁止**仅为定时任务/清理再建平行 Service（详见 **`docs/AI_SERVICE_COHESION.md`**）。
+- **实体相关业务逻辑必须落在对应 Service（硬性）**：凡与某实体（表 / 领域模型）相关的**业务流程、校验规则、状态机、事务边界、缓存失效、队列投递、`LoopJob` 定时任务**，**必须**实现于该实体对应的 **`XxxService`**。  
+  - **`XxxService` 必须继承 `ModuleService`**（含字段加密时用 **`EncryptModuleService`**，见 `docs/AI_MAP.md` §2.7、**`docs/AI_FIELD_ENCRYPT.md`**）。  
+  - **禁止**把上述逻辑写在 Controller、ControllerGen、Dao、工具类「壳」或平行 `*Helper` / `*Manager`（详见 **`docs/AI_SERVICE_COHESION.md`**）。  
+  - **禁止**仅为定时任务/清理再建平行 Service。
 - **低耦合**：模块之间避免直接依赖对方**具体实现类**；需要协作时优先 **接口契约**、**事件**、或团队已选型的**远程/本地服务调用**（如 Dubbo、Facade Bean 等），由项目架构统一选型，不在此重复实现细节。
-- **类规模**：单实体 Service 实现类（不含 gen）未超过约 **1000 行** 时，**不**按技术层拆类；开发期重构须**删除悬空类与未引用代码**（见 **`docs/AI_SERVICE_COHESION.md`** §2、§7）。
+- **类规模**：单实体 Service 实现类（不含 gen）**建议上限约 1000 行**；超过时须拆 Facade / 领域私有方法，**禁止**平行影子 Service（见 **`docs/AI_SERVICE_COHESION.md`** §2、§7）。开发期重构须**删除悬空类与未引用代码**。
 
 ### 2.2 分层职责
 
 | 层级 | 职责 | 约束 |
 |------|------|------|
-| **Controller（可维护层）** | HTTP 入参校验与组装、调用 Service、返回视图或统一响应包装 | 与实体对应的业务接口写在 **`controller/*` 下可维护的 `*Controller.java`**，**不写**复杂业务规则与事务；**禁止**直接使用 **Dao**（见 §13） |
-| **Service** | 该实体域内的业务流程、缓存/队列/任务与领域编排 | 逻辑落在 **`service/*` 下与该实体对应的 `*Service`**；通过继承的 **`baseMapper`** 访问本实体持久化，**禁止**再 **`@Autowired`** 本实体 **Dao**（见 §13） |
-| **跨实体 / 跨模块编排** | 组合多个 Service 完成用例 | 放在**发起用例所在项目或模块**的 Service 层（如 `FooFacadeService`、`BarApplicationService`），**禁止**在 Controller 中堆叠多段业务逻辑 |
+| **Controller（可维护层）** | HTTP 入参校验与组装、调用 Service、返回视图或统一响应包装 | 对内接口写在实体 **`*Controller`**（§3）；对外写在独立 Open/Api Controller（§4）；**禁止**承载实体业务规则/事务/状态机；**禁止**引用 **Dao**（§13） |
+| **Service（业务唯一落点，持有 Dao）** | 该实体域内**全部**业务流程、缓存/队列/任务与领域编排 | **必须** `extends ModuleService`（或 `EncryptModuleService`）；**唯一允许经 `baseMapper` 使用本实体 Dao**；**禁止**再注入本 Dao 或任何他域 Dao（§13） |
+| **跨实体 / 跨模块编排** | 组合多个 Service 完成用例 | Facade/Application Service **只注入 Service**；**禁止**直连 Dao；**禁止**在 Controller 堆叠业务逻辑 |
 
 ### 2.3 子项目之间协作
 
 - **尽量减少耦合**：不直接引用对方模块内部包路径下的实现细节；通过**暴露的 API 接口**、**共享 API 模块**、或**注册的服务接口**交互。
 - **聚合多个下游能力**：在**当前子项目**中增加专门的 Service 层编排类，而不是在多个子项目的 Controller 之间互相调用。
+- **框架仓 vs 业务仓（硬性）**：**领域实体 / 业务表**放在**业务工程**模块；**Autumn 框架仓**（`autumn-modules` 等）仅承载通用框架模块。**禁止**在框架仓堆叠业务方专属领域表；业务仓依赖锁定的 Autumn 版本，扫描脚本路径按 **`docs/AI_INDEX.md`**。
+
+### 2.4 事务边界（`@Transactional`）
+
+- **写路径**（插入/更新/删除/改状态）：在**实体 `*Service` 的公有业务方法**上声明 **`@Transactional(rollbackFor = Exception.class)`**（或项目统一等价配置）。
+- **跨实体编排**：仅在 **Facade / Application Service** 方法上开事务；被编排的实体 Service 方法勿再各自乱开嵌套事务除非明确 `REQUIRES_NEW`。
+- **只读查询**：**默认不加** `@Transactional`；确需只读一致性时用 `readOnly = true` 并注明原因。
+- **禁止**在 Controller 上声明业务事务。
 
 ## 3. 对内接口（管理端 / 网页后台）
 
 面向后台管理、内部页面的 HTTP 接口（非对外开放 API）须满足：
 
-1. **不得与 gen 生成控制器冲突**  
-   - **禁止**使用与 **`ControllerGen`**（或同模块代码生成产出的控制器）**相同的请求映射**（如相同的类级 `@RequestMapping` 路径组合与方法级路径、HTTP 方法组合导致与生成路由重复）。  
-   - **禁止**在可维护 `Controller` 中使用与生成控制器中**已存在的、可能引起混淆的同名公开方法名**作为映射方法（团队 Code Review 以「一眼可区分、无路由歧义」为准）。  
+1. **实体可维护 Controller 形态（硬性）**  
+   - 每个实体必须有 **`XxxController extends XxxControllerGen`**（见 §11）。  
+   - 类级映射必须为 **`{module}/{entity名去 Entity 后全小写}`**（与生成器惯例一致），例如：
+
+```java
+@RestController
+@RequestMapping("auth/scopedefinition")
+public class ScopeDefinitionController extends ScopeDefinitionControllerGen {
+}
+```
+
+   - **对内 / 页面调用**的新增接口**必须**写在该实体对应的 **`XxxController`** 中（方法级路径与 gen CRUD **不冲突**，见下条）。  
+   - **禁止**把对外 Open API 写进实体 `*Controller` / `*ControllerGen`（对外见 §4）。
+
+2. **不得与 gen 生成控制器冲突**  
+   - **禁止**使用与 **`ControllerGen`**（或同模块代码生成产出的控制器）**相同的请求映射**（类级路径 + 方法级路径 + HTTP 方法组合导致与生成路由重复）。  
+   - **禁止**在可维护 `Controller` 中使用与生成控制器中**已存在的、可能引起混淆的同名公开方法名**作为映射方法。  
    - 目的：避免路由覆盖、权限配置错误、Swagger/文档重复与线上排障困难。
 
-2. **自定义业务接口**须有**独立、可识别的 URL 命名空间**（如业务前缀 `/api/app/...`、或模块内约定前缀），与生成 CRUD 的默认路径明确区分。
+3. **跨实体编排接口**：可另立 Facade Controller，**不得**冒充实体 CRUD 的 `{module}/{entitylower}` 路径。
 
 ## 4. 对外 API（Open / 第三方调用）
 
-1. **独立控制器**：对外 API 使用**单独的 Controller 类**（例如 `XxxOpenApiController`、`XxxApiController`），与对内页面/管理接口类分离，便于鉴权、限流与文档隔离。
+1. **独立控制器（硬性）**：对外 API **必须**使用**单独的 Controller 类**（如 `XxxApiController`、`XxxOpenApiController`），与对内实体 `*Controller` / `*ControllerGen` **分离**。按**能力分类**拆分多个 Controller；杂项可合并进一个 Controller。**禁止**把对外接口写进实体 ControllerGen。
 
-2. **统一请求响应模型**：对外 body 统一使用框架约定的 **`Request<T>` / `Response<T>`**；兼容旧客户端时使用 **`CompatibleRequest<T>` / `CompatibleResponse<T>`** 及 `@Endpoint(compatible=true)`，与 `docs/AI_CRYPTO.md`、`docs/AI_MAP.md` §2.4 一致。
+2. **新开发 URL（硬性）**：自本规范生效起，**新编写**的对外 HTTP API **必须**为：
 
-3. **应用层加解密**：对外接口须**接入框架应用层自动加解密语义**（请求体 `ciphertext`+`session`、响应头 `X-Encrypt-Session`、握手与业务分离等），**禁止**自造与框架并行的加解密协议。细节以 `docs/AI_MAP.md`、`docs/AI_CRYPTO.md` 为准。
+   ```text
+   POST /{module}/api/v1/{action}
+   ```
+
+   - `{module}` = 模块短名；`{action}` = 动作名（建议小写或驼峰与现有模块文档一致）。  
+   - **历史接口不动**（如既有 `bot/api/v1`、`safe/api/v1`、`/rsa/api/v1/init` 等）；新能力不得再发明平行前缀，除非列入团队**例外白名单**并文档登记。
+
+3. **统一请求响应模型**：对外 body 统一使用 **`Request<T>` / `Response<T>`**。  
+   - **新接口默认**仅用 `Request`/`Response`。  
+   - **`CompatibleRequest` / `CompatibleResponse` + `@Endpoint(compatible=true)`** 仅允许用于**已登记迁移清单**中的存量兼容接口（见 `docs/AI_CRYPTO.md`、`docs/AI_MAP.md` §2.4）。
+
+4. **契约类命名（硬性）**：入参模型后缀 **`*Request`**；出参模型后缀 **`*VO`**。**禁止**新接口以 `*DTO` 同时充当入参与出参，或混用无约定后缀。
+
+5. **`Request` / `Response` 的业务载荷类型（硬性）**：泛型 **`T` 必须是**上述自定义类型化模型类。  
+   - **禁止**：`Map` / `JSONObject` / `Object` / 原始 `String`（承载整段业务 JSON）/ 无界通配。  
+   - **禁止**：把 **`*Entity` 直接作为对外契约的 `T`**。  
+   - 参考：`docs/AI_ROBOT_API.md`（如 `RobotCreateRequest`）。
+
+6. **入参校验（硬性）**：JSON 对外接口使用 **`@Valid @RequestBody Request<*Request>`**（或 `CompatibleRequest` 迁移场景）；校验失败走全局异常或统一 `Response` 错误码，**禁止**在 Controller 内散落手写 null 判断替代 Bean Validation。
+
+7. **错误码（硬性）**：**禁止**新代码对外返回裸 **`setCode(-1)`** 作为业务失败语义。业务失败使用模块**错误码常量类**（段位在模块文档登记，如 safe 专篇）；`msg` 面向调用方可读。
+
+8. **鉴权（硬性）**：对外**写接口禁止**整段 Shiro **`anon` 裸奔**；须登录态、API Token、签名验签等与模块文档一致的机制，并在方法或过滤器层显式校验。读接口若必须匿名，须在安全文档/白名单登记。
+
+9. **应用层加解密**：对外接口须**接入框架应用层自动加解密语义**（请求体 `ciphertext`+`session`、响应头 `X-Encrypt-Session`、握手与业务分离等），**禁止**自造与框架并行的加解密协议。细节以 `docs/AI_MAP.md`、`docs/AI_CRYPTO.md` 为准。
 
 ## 5. 定时任务（禁止 `@Scheduled`）
 
@@ -60,6 +114,7 @@
 
 - **必须**使用 Autumn 任务体系，按场景二选一（详见 `docs/AI_MAP.md` §2.5）：  
   - **固定周期**：实现 **`LoopJob.OneSecond` … `OneWeek`** 中对应接口，配合 **`@JobMeta`**（`skipIfRunning`、`timeout`、`maxConsecutiveErrors`、`assign`、`duty` 等）。同一 Bean 可实现多个周期接口；`JobDuty` 类/方法合并与多接口标法见 **`docs/AI_CLUSTER_JOB_ORCHESTRATION.md` §1.3**。  
+  - **`@JobMeta` 硬默认（新代码）**：周期 **≤1 分钟**（含秒级）的任务 **必须** `skipIfRunning = true`，且 **`timeout` 为正数**；多节点下会写库 / 改共享状态的任务须按集群专篇配置 **singleton / `JobDuty`**，**禁止**默认 `duty=ALL`  silently 多节点重复写。  
   - **复杂日历**：使用框架 **`schedulejob` + `cronExpression`**（及 `@TaskAware` / `@JobMeta` 等既有约定），而非裸 `@Scheduled`。
 
 - 例外：仅允许在**本地调试、单元测试、非交付脚手架**中使用 `@Scheduled`，且不得合并入主分支交付配置。
@@ -71,7 +126,7 @@
 - **新增接口（禁止）**：**所有新编写的 Controller 接口**（含对内业务 API、对外 API、可维护层手写接口）**不得**使用 **`@RequiresPermissions`** 做鉴权。  
   - **普通用户 / 已登录用户**可访问的接口：采用**登录态鉴权**（Session、Token、OAuth 等与项目一致的「已登录即可访问」机制），在 Service 或安全过滤器中按业务需要补充校验，**不**套用管理端权限码注解。
 
-- **例外**：仅当明确属于**与 gen 同构的后台管理扩展**且团队书面约定沿用菜单权限模型时，才允许按框架既有方式使用；默认假设下**新代码一律不用** `@RequiresPermissions`。
+- **例外（须登记）**：仅当明确属于**与 gen 同构的后台管理扩展**，且在模块文档或 PR 说明中**书面登记例外原因**后，才允许沿用菜单权限模型；未登记则 **Review 必须拒绝**。
 
 ## 7. 页面模板与 FreeMarker（HTML / JavaScript）
 
@@ -241,7 +296,11 @@ var uuid = '${uuid!""?js_string}';
 ## 9. 模块目录、包名、表前缀与实体命名（强制）
 
 - **模块根**：`modules/<模块名>/` = 包 `cn.org.autumn.modules.<模块名>` = 表前缀 **`<模块名>_`**。
-- **实体类名**：领域短名 + `Entity`；**禁止**模块名进类名（见 **`docs/AI_BOOT.md` §3.2** 示例 `PayUserPinEntity` / `safe_pay_user_pin`）。
+- **实体类名**：领域短名 + `Entity`；**禁止**把模块名 / 表前缀拼进类名（见 **`docs/AI_BOOT.md` §3.2**）。  
+  - **硬性**：表前缀（如 `auth_`、`safe_`、`bot_`）**只出现在物理表名**（`@TableName`）中，**不得**作为 `*Entity` 类名的前缀。  
+  - **正例**：`@TableName("auth_scope_definition")` → 类名 **`ScopeDefinitionEntity`**（不是 `AuthScopeDefinitionEntity`）。  
+  - **正例**：`@TableName("safe_pay_user_pin")` → 类名 **`PayUserPinEntity`**（不是 `SafePayUserPinEntity`）。  
+  - **反例**：`AuthScopeDefinitionEntity`、`SafePayUserPinEntity`、`BotRobotConfigEntity`（把模块前缀写进类名会导致生成错乱与命名冗余）。
 - **物理表名**：`{模块名}_` + 类名去 `Entity` 后蛇形；**只**在 **`@TableName`** 声明，**`@Table` 禁止写 `value`**（由框架合并）；Dao `quote` 与 `@TableName` 一致。
 
 ## 10. 表/字段注释、索引与字段类型
@@ -249,7 +308,7 @@ var uuid = '${uuid!""?js_string}';
 ### 10.1 注释格式（`@Table` / `@Column.comment`）
 
 - **`comment` 的用途**：描述**字段或整张表**在业务上的含义，以及生成侧会用到的**表头、菜单名、多语言短名**等展示语义；写法上统一为 **`简介名:合理说明`**——**简介名**放在**半角冒号 `:`** 之前，**冒号后**写用途、取值、与其它字段关系等补充说明。
-- **短标题（冒号前）长度**：宜 **2～4 个汉字**（或等价长度），**不做硬性上限**时建议**不超过约 8 个字符**。
+- **短标题（冒号前）长度（硬性）**：**2～8** 个字符（汉字或等价长度），后接半角 **`:`** 与说明。短于 2 或长于 8 均属违规（`id` 等框架保留短名除外）。
 - **冒号前片段必须字段间互不相同（硬性）**：框架在列表、表单、多语言初始化等链路中会对含 `:` 的 `comment`**只取第一个冒号之前**的片段作为**列标题 / 短标题**（详见 `docs/AI_BOOT.md` §3、`docs/AI_MAP.md` §2.10.5）。因此**不同字段**须使用**不同的**冒号前简介名；即使含义相近、语义相同，或同属「统计类」但**统计口径 / 维度不同**的列，也**不得**共用同一冒号前片段，否则生成界面会出现**多个列共用一个表头**、无法区分。
 - **`@Table(comment = "...")`** 与字段级规则相同：表级展示名同样可能只取冒号前段，须避免与别表或同模块其它实体在生成物中的短名无意撞车（按产品语义自行区分即可）。
 
@@ -277,7 +336,7 @@ public class DemoEntity { ... }
 
 ### 10.3 整型、布尔与空值
 
-- **无特殊原因**时，字段尽量使用 **基本类型**（如 `int`、`boolean`）并在 **`@Column`** 上声明**默认值**，减少 **`null`** 分支与 **`NullPointerException`** 风险。
+- **新代码（硬性）**：无特殊原因时，字段**必须**使用 **基本类型**（如 `int`、`boolean`）并在 **`@Column`** 上声明**默认值**；确需可空包装类型须在字段注释或 JavaDoc 写明原因。
 
 ### 10.4 双键模型：管理用自增 `id` + 业务主键（按需）
 
@@ -300,20 +359,68 @@ public class DemoEntity { ... }
    - **仍有 `uuid` 第二主键时**：可增加**非唯一** **`user`** 外键（调用主体，可为真人或机器人 uuid，§1.1）。细则 **§3.5**。  
    - **唯一约束纪律**：业务第二主键列（**`uuid`** 或 **`UserBased` 的 `user`**）须 **`isUnique = true`** 且**禁止**再叠 **`@Index`**（§10.2）。**§3.4** 的 **`user`** **不得**单独 `isUnique`。  
    - **生成与填充**：**`uuid`** 经 **`Uuid` / `Snow`** 与 **`AutoIdService`** 自动补全；**`UserBased.user`** 由业务赋值；**§3.4** 的 **`user`** 由业务赋值。  
-   - **外键列（引用它实体 `uuid`）**：Java 字段名 **`{concept}`** 或 **`{concept}Id`**；**新代码优先 `{concept}`**。细则 **`docs/AI_DUAL_KEY.md` §3.2～§3.5**。  
+   - **外键列（引用它实体 `uuid`）**：Java 字段名 **新代码一律 `{concept}`**；**禁止**新写 **`{concept}Id`**。存量 `{concept}Id` 保持不回退。细则 **`docs/AI_DUAL_KEY.md` §3.2～§3.5**。  
    - **必须用于表间关联 / 对外 ID / 缓存与消息引用的**，须使用 **`uuid`** 或按用户唯一表的 **`user`**，**禁止**用自增 **`id`**。
 
 **小结**：**`id`** = 内部技术与生成 CRUD；**第二主键** = 按需 **`uuid`**、唯一 **`user`**（**`UserBased`**），或**无**（**§3.4 仅 `user` 维度**）。**禁止**把 **`id`** 当成业务主键；**禁止**用户维度已够用仍冗余 **`uuid`**；**禁止**按用户唯一表同时使用 **`uuid`** 与唯一 **`user`**。
 
-**存量（默认不升级）**：历史已存在且未按上述标准建模的实体与字段，**默认不要求 retrofit**；**仅当**任务明确要求升级第二主键 / **`user`** 标准时，方在任务范围内按 **`docs/AI_DUAL_KEY.md` §1.2** 落地。新表、新实体、新字段仍须遵守本节。
+**存量与触发升级**：历史未达标实体**默认不要求全面 retrofit**；但出现下列任一情况时，**任务范围内必须对齐**本节与 **`docs/AI_DUAL_KEY.md`**：  
+1）**触发表结构变更**（增删改列/索引）；2）**新增外键列或关联**；3）**新增对外 Open API** 暴露该资源。其余「仅读写存量字段」任务可不升级。
+
+### 10.5 字段存储加密（`@FieldEncrypt`）
+
+新实体字段若标注 **`@FieldEncrypt`**，须同时满足（细则 **`docs/AI_FIELD_ENCRYPT.md`**）：
+
+1. 对应 Service **必须**继承 **`EncryptModuleService`**（不可仅 `ModuleService`）。  
+2. **`searchable = true`** 时必须手写配套 **hash 列**（框架**不会**自动 DDL）；调用与缓存按专篇 §7。  
+3. **禁止**对加密字段使用会绕过加解密链路的 **`lambdaUpdate` 直写**等路径。
 
 ## 11. 生成层边界与业务落点
 
-- **谁产出生成代码**：凡可由后台 **「代码生成」**（`gen` 模块 + `template/*.vm` + `GenUtils` 路径约定，见 **`docs/AI_CODEGEN.md`**）**稳定复现**的文件，**默认由开发者在目标环境中自行执行生成**（或团队约定的 CI 生成任务），**不**以 AI 在对话里「照模板仿写一整套文件」作为常规交付方式，以免与真实生成器输出漂移、后续无法安全重生成。
-- **对已生成文件的态度**：落入 **`controller/gen/*`**、**`*Pages.java`**、**`list.html` / `list.js`** 等 **可重生层**的生成结果，**禁止**为业务目的在其上**删除、改写、叠加业务逻辑**；需要改行为时只能改 **`resources/template/*.vm`**（或框架约定入口）后 **再生成覆盖**，或把扩展写在**非生成覆盖层**（非 gen 的 `Controller` / `Service`、独立页面、`pages` + `Site` 等）。**可维护壳子**（非 gen 的空/薄骨架）上允许按 **`docs/AI_CODEGEN.md`** 写业务。
-- **`controller/gen/*`**、由 **`SitePages.java.vm`** 生成的 **`site/*Pages.java`**、以及生成产出的 **`list.html` / `list.js`**：**禁止修改、禁止添加任何业务逻辑**；变更须走 **Velocity 模板 `resources/template/*.vm` 并重生成**（与 `docs/AI_MAP.md` 生成矩阵一致）。
+权威条文；流程细节见 **`docs/AI_CODEGEN.md`**。其它文档只摘要并回链本节。
 
-- 代码生成产出的**可维护壳子**：**空的 / 骨架的** **`Controller.java`、`Service.java`、`Dao.java`**（非 gen 路径）是**日常实现业务与流程的位置**；**所有业务逻辑在对应 `Service`**，**Controller** 只做编排与调用 **Service**。
+### 11.0 总原则（硬性）
+
+| 原则 | 含义 |
+|------|------|
+| **可替换** | 凡 `GenUtils` + `template/*.vm` 可稳定复现的文件，须能被生成 ZIP **整文件覆盖**后仍编译可用；**不得**依赖被覆盖的手写差异。 |
+| **禁特有逻辑** | 模板可重生产物（`*ControllerGen`、`*Pages`、`list.html`/`list.js` 等）中**禁止**非模板标准的业务、流程、对外 API；特有逻辑只写可维护层（`*Service`、实体 `*Controller`、独立 Api Controller）。 |
+| **空壳除外** | 仅为编译/继承的**空壳或占位**可存在；一旦填入内容，**只允许模板等价实现**（仍须可替换），**禁止**特有逻辑。 |
+
+### 11.1 必产文件与资源层
+
+每个新实体须有（类名与模板一致）：
+
+| 产物 | 说明 |
+|------|------|
+| `*Entity` | §8～§10；`@Getter`/`@Setter`（§2.0） |
+| `*Service` | `extends ModuleService`（或 `EncryptModuleService`）；**业务唯一落点**（§2.1） |
+| `*Dao`（及需要的 `*DaoSql`） | Service 经 `baseMapper` 使用，不另注入本 Dao（§13） |
+| `*Controller` | `extends *ControllerGen`；`@RequestMapping("{module}/{entitylower}")`（§3） |
+| `controller/gen/*ControllerGen` | 占位，或按 §11.2 填模板等价 CRUD |
+
+```java
+@RestController
+@RequestMapping("auth/scopedefinition")
+public class ScopeDefinitionController extends ScopeDefinitionControllerGen {
+}
+```
+
+- **`list.html` / `list.js` / `*Pages`**：**禁止 AI 写**；开发者**可选** ZIP 落地，落地后适用 §11.0。  
+- ZIP **可不跑**：不阻塞 Service / 实体 Controller / 对外 Api Controller。
+
+### 11.2 `ControllerGen` 预演（未 ZIP 前）
+
+未用后台 ZIP 生成/替换前，若需要与 **`ControllerGen.java.vm`** 相同的管理端 CRUD：**允许 AI 按模板实现到 `*ControllerGen`**，且必须可被后续 ZIP **整文件替换**。  
+**禁止**在 Gen 中写对外 API、与模板不一致的定制逻辑。定制写在 `*Controller` / `*Service`。
+
+### 11.3 落点一览
+
+| 层 | 写什么 |
+|----|--------|
+| `*Service` | 实体相关**全部**业务（§2.1） |
+| 实体 `*Controller` / 独立 Api Controller | 薄编排；对内 §3，对外 §4 |
+| `*ControllerGen` / Pages / list | **仅**模板标准 CRUD；无特有逻辑（§11.0） |
 
 ## 12. Dao、Provider 与多数据库 SQL
 
@@ -331,11 +438,20 @@ public class DemoEntity { ... }
 
 ## 13. Controller、Service、Dao 协作纪律
 
-- **Controller**：**禁止**注入或直接使用 **Dao**；**只**依赖 **Service** 完成业务。
+- **对外禁止直接引用 Dao（硬性）**：**Dao 仅由所属实体的 `*Service`（`ModuleService` 继承链）持有并使用**（经 **`baseMapper`**）。  
+  - **禁止**在 Controller、ControllerGen、Facade、其它 Service、Listener、Job 独立 Bean、Component、工具类等**任何外部位置** `@Autowired` / 注入 / 直接调用 **任意 `*Dao`**。  
+  - **对外访问持久化必须经 Service**：需要读写下表数据时，**只**注入并调用对应 **`*Service`** 的公开方法。  
+  - 理由：Service 已持有 Dao（`ModuleService`），跨层直连 Dao 会绕过缓存、加密、事务与领域规则。
 
-- **本实体 Service**：通过继承链获得的 **`baseMapper`**（或框架等价入口）调用本模块持久化能力，**禁止**再 **`@Autowired`** 本实体 **Dao**（避免重复入口）。
+- **本实体 Service**：须 **`extends ModuleService`**（或 **`EncryptModuleService`**），是该实体**业务逻辑唯一落点**（§2.1）；通过继承链 **`baseMapper`** 访问本实体持久化，**禁止**再 **`@Autowired`** 本实体 **Dao**（避免与基类重复入口）。需日志时类上 **`@Slf4j`**。
 
-- **跨实体访问**：**尽量不**在 Service 中 **`@Autowired` 其他实体的 Dao**；应 **注入其他实体的 Service** 并调用其公开方法。**禁止**在**非该 Dao 所属域的 Service** 中直接使用该 **Dao**。
+- **跨实体访问（硬性）**：**禁止**在 Service 中注入**其他实体的 Dao**；**必须**注入对方 **Service**。Facade / 编排层同样**禁止**直连任何 Dao。
+
+## 13.1 缓存 `@Cache`（摘要硬约束）
+
+- 读走框架 **`getCache` / `getListCache` / `getShareCache`** 等；写库成功后**必须**调用对应 **`removeCache` / `removeListCache` / `removeCacheAll`**（见 **`docs/AI_CODEGEN.md`** §4、**`docs/AI_MAP.md`**）。  
+- **`create = true`** 仅用于专篇/任务**明确允许**的「缓存未命中可建记录」场景；默认 **`false`**。  
+- 同一实体多套 **`@Cache(name=...)`** 时，写路径须按通道失效，禁止漏删。
 
 ## 14. 资源、`statics`、`pages`、`Site` 与 `@PageAware`
 
@@ -358,7 +474,7 @@ public class DemoEntity { ... }
 - **生成 CRUD（`*.controller.gen.*`）与越权（硬约束）**：  
   - 框架切面 **`GenAdminAccessAspect`**：默认**任意包**下 gen Controller 仅 **系统管理员**可调用，防止有菜单的普通账号读/写全表。  
   - **豁免**（不强制超管，仍受 `@RequiresPermissions` / 业务隔离）：模块 **`usr` / `safe` / `bot` / `qrc`**；子项目若确有「本人数据」gen，实现 **`cn.org.autumn.config.AdminAccessModuleHandler#selfGenModules()`** 注册模块短名。  
-  - **禁止**把匿名首页、公开 CMS 读接口、C 端列表写进 `controller.gen`；公开能力用可维护 Controller + `@PageAware(login=false)` / Shiro 匿名链。  
+  - **禁止**把匿名首页、公开 CMS 读接口、C 端列表写进 `controller.gen`；公开**读**页可用可维护 Controller + `@PageAware(login=false)`；对外/对内**写接口禁止**整段 Shiro **`anon` 裸奔**（§4）。  
   - **禁止**为「方便运营」通过 SPI 把整站业务模块全部加入自助豁免。  
   - 兼容与回归清单见 **`docs/AI_SECURITY_HARDENING_3_0_COMPAT.md`**（**C-20**、§4.4 / §4.4.1）。  
   - 门禁拒绝须打 **`SecurityAlert denied`** 告警日志（字段与 `reason` 见同文档 **§4.4.2**），便于发现提权探测；勿在业务仓另造不兼容格式。  
@@ -384,8 +500,8 @@ public class DemoEntity { ... }
 
 1. **禁止** **`RedisTemplate.keys` / `StringRedisTemplate.keys`**（底层 **`KEYS`**，大键空间会阻塞 Redis 并拖垮同实例全部连接）。典型事故见 **`docs/REDIS_KEYS_AND_SCAN.md` §2**。
 2. **必须** 使用 **`SCAN` + `Cursor` + 分批 `delete`**，管理类接口设 **扫描上限** 并在 API 中可表达 **`truncated`**；全库键数用 **`DBSIZE`**，内存用 **`INFO memory`**，STRING 长度用 **`STRLEN`**，禁止为估大小对 Session 等键全量 **`GET`**。
-3. 业务读写 **已知 key** 时走 **`RedisKeys`** / **`RedisUtils`** / **`CacheService`**，不要自建扫描工具类。
-4. 合并前在业务仓执行 **`bash scripts/constraints-scan --redis-keys-only`**（**J 组**）；全文体检默认含 **H + J**。
+3. **键命名（硬性）**：业务自定义 Redis 键**必须**经 **`RedisKeys`**（或项目统一键工厂），或符合 **`autumn:{module}:{biz}:...`** 模板；**禁止**在业务代码中裸拼无命名空间的 key 字符串。已知 key 读写走 **`RedisKeys` / `RedisUtils` / `CacheService`**，不要自建扫描工具类。
+4. **合并前**：建议在业务仓执行 **`bash scripts/constraints-scan`**（全文）或 **`--redis-keys-only`**（**J 组**）；全文体检默认含 **H + J**。本轮规范**不**将扫描结果设为 CI 硬失败，但仍属合并前自检项（与 **`docs/AI_INDEX.md`**「按需」一致）。
 
 完整禁止/推荐写法与 Checklist：**`docs/REDIS_KEYS_AND_SCAN.md`**。
 
@@ -403,12 +519,18 @@ public class DemoEntity { ... }
 | `isUnique=true` 与 `@Index` 禁止叠用 | **§10.2**；Boot/MAP 索引收集见 **`docs/AI_BOOT.md` §3**、**`docs/AI_MAP.md` §2.10.2** |
 | 单字段索引须字段级 `@Index` | **§10.2**；类级 `@Indexes` 仅用于组合索引（≥2 列） |
 | 双键模型、`UuidBased` / `SnowBased` / **`UserBased`** / `AutoIdService` | **§10.4**、**`docs/AI_DUAL_KEY.md` §3～§4**；SQL 见 **`docs/AI_DATABASE.md` §1.1** |
+| Lombok 实体 / `@Slf4j` | **§2.0**、**`docs/AI_CODE_STYLE.md` §5.1 / §8** |
+| 实体业务必须落对应 Service | **§2.1**、**`docs/AI_SERVICE_COHESION.md`** |
+| 对内路径 / 对外 URL / 契约与校验 | **§3、§4** |
+| 生成可替换 / 禁特有逻辑 / 空壳除外 | **§11.0～§11.2**、`docs/AI_CODEGEN.md` |
 | 代码生成端到端流程、三步开发节奏、缓存/队列基类详解 | `docs/AI_CODEGEN.md` |
-| 加解密 | `docs/AI_CRYPTO.md` |
-| 多项目协作与术语 | `docs/AI_GOVERNANCE.md` |
+| 加解密 / Compatible | `docs/AI_CRYPTO.md`、**§4** |
+| 字段存储加密 | **§10.5**、**`docs/AI_FIELD_ENCRYPT.md`** |
+| 多项目协作与术语 | `docs/AI_GOVERNANCE.md`、**§2.3** |
 | 索引与加载组合 | `docs/AI_INDEX.md` |
 | Redis TTL、Redisson、`RedisExpireUtil` 使用说明 | **`docs/REDIS_TTL_GUIDE.md`**、**`docs/REDIS_REDISSON_SPRING_DATA.md`** |
-| Redis 批量扫描、禁止 `KEYS`、推荐 `SCAN` | **`docs/REDIS_KEYS_AND_SCAN.md`**、**§15.1** |
+| Redis 批量扫描、禁止 `KEYS`、键命名 | **`docs/REDIS_KEYS_AND_SCAN.md`**、**§15.1** |
+| Service 内聚与行数 | **`docs/AI_SERVICE_COHESION.md`**、**§2.1** |
 
 ## 17. 维护约定
 

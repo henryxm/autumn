@@ -56,36 +56,31 @@
 
 1. **对齐需求与边界**，列出领域实体、关键字段、查询维度、缓存与异步是否需要。
 2. **编写实体类**（放在目标模块 `entity` 包下），严格遵循：
-   - **`docs/AI_STANDARDS.md`** 第 8～10 节：**`@TableName` + `@Table(comment=…)`（`@Table` 不写 `value`，见 **`docs/AI_BOOT.md` §3.2**）、**`@Column` / `@Index` / `@Indexes`**、`comment` 为 **`简介名:说明`** 且冒号前简介名互异（§10.1）、模块目录 = 包段 = 表前缀且**不把前缀写进类名**；**`isUnique=true` 禁止再 `@Index`**（§10.2）；**单字段索引用字段级 `@Index`**，类级 **`@Indexes` 仅组合索引**（§10.2）等。
-   - **`docs/AI_STANDARDS.md` §10.4** / **`docs/AI_DUAL_KEY.md`**：自增 **`id`** 仅服务后台生成 CRUD；第二主键按需选型（**§1.2**：**存量默认不升级**，新实体/新字段须合规）。
-3. **缓存声明**：在实体上使用 **`cn.org.autumn.annotation.Cache`** / **`@Caches`**（见本文第 4.1 节），声明字段级或类级复合键、**`name`** 区分同一实体上的多套缓存策略、**`unique`** 区分单值与列表语义、**`create`** 是否与自动建记录行为配合。
-4. **依赖框架能力，禁止重复造轮子**：业务 Service 默认继承 **`ModuleService`**，自动具备 **CRUD、菜单/多语言初始化、缓存、队列** 等能力（继承链见 **`docs/AI_MAP.md`** 与本文第 4 节）。**不要**自建平行缓存中间层、消息封装或调度线程替代 **`LoopJob`**。
+   - Lombok：**`@Getter` + `@Setter`**（**禁止**手写 getter/setter，**禁止**表实体 `@Data`，见 **`docs/AI_STANDARDS.md` §2.0**）。
+   - **`docs/AI_STANDARDS.md`** 第 8～10 节：**`@TableName` + `@Table(comment=…)`（`@Table` 不写 `value`）、**`@Column` / `@Index`**、`comment` **2～8 字短标题:`说明`**、表前缀不进类名等。
+   - **`docs/AI_STANDARDS.md` §10.4** / **`docs/AI_DUAL_KEY.md`**：双键按需；触结构变更/新外键/新开放 API 时须对齐。
+3. **缓存声明**：在实体上使用 **`@Cache` / `@Caches`**；**`create=true`** 仅白名单场景（§13.1）。
+4. **Service 承载全部实体业务**：空壳 **`XxxService extends ModuleService`**（或 **`EncryptModuleService`**）；**禁止**把业务写进 Controller。需日志时类上 **`@Slf4j`**。勿自建平行缓存/队列/`LoopJob`。
 
-### 第二步：生成骨架代码（优先人工触发生成）
+### 第二步：空壳 + 可选 ZIP（纪律见 **`docs/AI_STANDARDS.md` §11**）
 
-1. **须由开发者在后台使用代码生成**（或团队 CI 任务）导出 ZIP，解压到与生成器一致的目录结构。**AI 不应**以对话输出**模仿**后台生成器去「写一整套」`Entity`/`Dao`/`ControllerGen`/`list.html` 等**本应 ZIP 落地的文件**；缺少运行环境时，应指导用户执行 **`docs/AI_CODEGEN.md` §1** 中的生成入口，而不是替代生成器手搓全套产物。
-2. **生成代码放置规则**：
-   - 解压路径应与 **`GenUtils.getFileName`** 约定一致（即与「再生成一次」时覆盖的文件一致），避免同一模块存在两套平行目录。
-3. **可编辑边界**（与 **`docs/AI_STANDARDS.md`** 第 11 节一致）：
-   - **`controller/gen/*`、`*Pages.java`、生成的 `list.html` / `list.js`**：视为生成源，**禁止**在上面叠加业务逻辑；需要改行为时改 **`.vm` 模板**并重生成。
-   - **`Controller.java` / `Service.java` / `Dao.java`（非 gen）** 等模板中的 **空壳或薄骨架**：**业务逻辑只写在 `Service`**，`Controller` 只做编排；**在此实现**。
-   - 若模板产出的某文件**已含完整生成逻辑（非空壳）**，则**不要**在该文件中堆业务；应改可维护层或独立类/接口。
-4. **例外（仅当用户明确要求且无法立刻跑生成器时）**：可**极小范围**参照 **`template/*.vm`** 给出片段或单文件草稿，并注明须以真实后台生成结果为准、避免与 **`GenUtils.getFileName`** 约定分叉；**不得**鼓励在已检入的生成物上长期手改与生成器抢维护权。
+1. 创建 §11.1 表中必产文件；对内路径 `{module}/{entitylower}`。  
+2. 未 ZIP 前若需模板同款 CRUD：按 **§11.2** 写入 `*ControllerGen`（须可整文件替换）。  
+3. **禁止 AI** 写 `list.html` / `list.js` / `*Pages`；开发者可选 ZIP 覆盖 Gen/资源层（§11.0）。  
+4. 特有逻辑 → `*Service` / 实体 `*Controller` / 独立 Api Controller；**不进**模板产物。
 
-### 第三步：业务、接口与页面整合
+### 第三步：业务与接口
 
-1. 在 **可维护 `Service`** 中实现领域规则、事务、缓存失效、队列发送、`LoopJob` 周期任务等。
-2. 在 **可维护 `Controller`**（或独立业务 Controller）中增加 **与 `ControllerGen` 不冲突** 的 URL 设计，见 **`docs/AI_STANDARDS.md`** 第 3 节。公开/C 端/本人数据接口写在这里，**不要**依赖 `ControllerGen` 对匿名或普通用户开放。
-3. **页面**：复杂交互优先 **独立页面**（模块 `pages/` + **`site/*Site`** 上 **`@PageAware`**）；管理全表页须 **`admin = true`**；与生成列表页的整合遵循 **FreeMarker** 规则（**`docs/AI_STANDARDS.md`** 第 7 节 / §14）。
-4. **安全**：`ControllerGen` 默认仅系统管理员可调（`GenAdminAccessAspect`）；豁免模块与 SPI 见 **`docs/AI_STANDARDS.md` §14**、**`docs/AI_SECURITY_HARDENING_3_0_COMPAT.md` C-20**。
+1. 实体业务 → **`*Service`**（§2.1）。对内薄 Controller（§3）；对外 `POST /{module}/api/v1/{action}`（§4）。  
+2. 复杂页 → `pages/` + `Site` + `@PageAware`；list 可选 ZIP；FTL 见 §7。  
+3. `ControllerGen` 默认仅超管（§14 / 兼容手册 C-20）。
 
 ---
 
 ## 3. 代码生成使用原则（摘要）
 
-- **改通用行为**：改 **`resources/template/*.vm`** → 再生成；**不要**逐文件改 `ControllerGen` / `*Pages` / `list.html` / `list.js`。
-- **改单模块业务**：改 **非 gen** 的 `Controller` / `Service` / `Site` / `Menu`。
-- **实体与表**：以实体与框架开关为权威；生成器用于 **加速初始骨架**，不是绕过 **`docs/AI_STANDARDS.md`** 第 8 节的理由。
+权威：**`docs/AI_STANDARDS.md` §11.0**（可替换 · 禁特有逻辑 · 空壳除外）。  
+改通用行为改 **`.vm` 再生成**；改业务改非 gen 的 Controller/Service/Site/Api Controller；**禁 AI** 写 list/Pages。
 
 ---
 

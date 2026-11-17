@@ -25,7 +25,8 @@
 - 页面：modules/sys/{page}
 
 必须复用：
-- Service 继承 ModuleService
+- Service 继承 ModuleService；**实体业务只写该 Service**
+- 需日志：类上 `@Slf4j`
 - 分页与查询：BaseService.queryPage/getCondition
 - 缓存：getCache/getListCache + 写后 removeCacheAll
 - 菜单与语言：init() 自动注册（不要手写平行初始化器）
@@ -77,7 +78,7 @@
 - 登录态或身份：{是否涉及}
 
 必须复用：
-- Service 继承 ModuleService
+- Service 继承 ModuleService；**实体业务只写该 Service**；日志 **`@Slf4j`**
 - 用户相关缓存：getCache/getShareCache（跨端资料优先考虑 share）
 - 异步事件：BaseQueueService（登录日志、行为采集等）
 - 周期整理任务：LoopJob.*（如过期清理、同步刷新）
@@ -133,9 +134,9 @@
 - 模板输出：entity/dao/service/controller/controller/gen/site + templates/modules/{module}/*.html|*.js
 
 模板一致性约束：
-- 若模板缺失，先补齐：Entity/Dao/Service/Controller/ControllerGen/Site/Menu/list.html/list.js
+- 必产空壳见 **`docs/AI_STANDARDS.md` §11.1**；生成纪律 **§11.0**；list/Pages 可选 ZIP
 - 不改已有占位符语义（className/moduleName/pathName/columns/pk等）
-- 生成后业务逻辑只能落在非 gen 层（controller/service），避免再次生成覆盖
+- 业务只落 Service；模板产物禁特有逻辑（§11.0）
 
 输出要求：
 - 先给“将生成文件清单”（按路径）

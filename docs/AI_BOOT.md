@@ -8,9 +8,9 @@
 - 优先复用框架能力，禁止重复造轮子。
 - 默认从 `ModuleService` 继承链出发实现业务：
   - `ModuleService -> BaseService -> ShareCacheService -> BaseCacheService -> BaseQueueService`
-- 业务逻辑放可维护层（`controller/*`、`service/*`），避免放 `controller/gen/*` 可重生层。
+- **与实体相关的业务逻辑必须写在对应 `*Service`**（Controller 只编排）；**禁止对外直接引用 Dao**，一律经 Service（Service 持有 Dao）。实体用 Lombok **`@Getter`/`@Setter`**；日志用 **`@Slf4j`**（**`docs/AI_STANDARDS.md` §2.0～§2.1、§13**）。
 - 页面开发默认使用**用户视角**描述功能与交互；除非需求有特殊说明，禁止在页面文案中出现开发术语、后台表名/函数名、技术架构描述。
-- **应用层与数据访问强制规范**（高内聚低耦合、内外 API、gen 路由隔离、禁止生产 `@Scheduled`、新接口禁用 `@RequiresPermissions`、FreeMarker、**禁止常规 DDL `.sql`、注解建表**、**Dao 仅经 Provider 写 SQL**、**Controller 禁用 Dao**、**statics/pages/Site/PageAware** 等）见 **`docs/AI_STANDARDS.md`**，与本文同步遵守。
+- **应用层与数据访问强制规范**（Service 业务落点、内外 API、生成空壳、禁止生产 `@Scheduled`、注解建表、Dao Provider、Controller 禁 Dao 等）见 **`docs/AI_STANDARDS.md`**，与本文同步遵守。
 
 ## 2. 默认技术路径（高频）
 
@@ -20,15 +20,14 @@
 - 缓存：优先 `getCache/getListCache/getShareCache`，写后必须失效。
 - 队列：优先 `BaseQueueService`（发送、消费、重试、死信）。
 - 任务：固定周期优先 `LoopJob.*`，复杂日历规则才用 cron。
-- 生成链路：实体注解驱动建表 -> gen 生成骨架 -> 业务补在非 gen 层。
-- 生成分层约束：`ControllerGen/SitePages/list.html/list.js` 属于可重生层（默认不改）；业务开发优先落在 `Controller/Service/Site/Menu` 可维护层。
+- 生成：必产空壳（含 ControllerGen）→ 业务写 **Service**；list/Pages 可选 ZIP。纪律见 **`docs/AI_STANDARDS.md` §11.0**（可替换、禁特有逻辑、空壳除外）。
 
 ## 3. 注解能力速查（高频）
 
 - `@JobMeta`（任务治理）
   - 作用域：类 + 方法（方法级覆盖类级）。
   - 核心参数：`skipIfRunning`（防重入）、`timeout`（超时观测）、`maxConsecutiveErrors`（连续错误自动禁用）、`assign`（多节点分配）、`delay/async`（异步调度）。
-  - 建议：秒级/分钟级任务默认开启 `skipIfRunning=true`，并设置合理 `timeout`。
+  - **硬默认（新代码）**：周期 ≤1 分钟须 `skipIfRunning=true` 且 `timeout` 为正（**`docs/AI_STANDARDS.md` §5**）。
 - `@TaskAware`（任务触发）
   - 定义 cron 触发、环境模式（`mode`）、展示备注（`remark`）。
   - 职责边界：负责“什么时候触发”；运行治理交给 `@JobMeta`。
@@ -42,7 +41,7 @@
 - `@EnvAware`（配置注入）
   - 在配置 Bean 字段上声明配置键（如 `site.domain`、`node.tag`）。
 - `@Table` / `@Column` / `@Index` / `@Indexes` / `@IndexField`（注解驱动建表，见 `docs/AI_MAP.md` 2.10 节；**表名 / 前缀**见 **§3.2**，**存储引擎 / 字符集 / 排序规则**见 **§3.1**）
-  - `@Table.comment` / `@Column.comment`：`BaseService` 多语言初始化在注释含 **`:`** 时**只取冒号前**作为列表/菜单等处的**短标题**；冒号后为详述。建议 **`短标题（约 1～4 字）：详细说明`**，避免表头被长文案撑满（详见 `docs/AI_MAP.md` 2.10.5）。
+  - `@Table.comment` / `@Column.comment`：`BaseService` 多语言初始化在注释含 **`:`** 时**只取冒号前**作为列表/菜单等处的**短标题**；冒号后为详述。短标题长度 **2～8** 字符（硬性，见 **`docs/AI_STANDARDS.md` §10.1**），格式 **`短标题:详细说明`**（详见 `docs/AI_MAP.md` 2.10.5）。
   - `@Column(isUnique = true)`：**所有情况下**均视为该列已具备唯一索引语义；**禁止**再在同一字段上使用 **`@Index`**（含类级 `@Index` / `@Indexes` 中指向该列的 `@IndexField`），也**禁止**用 `@Indexes` 重复声明同一单列唯一/普通索引，以免 DDL 冲突与迁移对比噪音（见 **`docs/AI_STANDARDS.md` §10.2**）。
   - 字段上已用 `@Index` 的列：**不要**在类级 `@Indexes`（或类级 `@Index` 的 `fields`）里再声明同列的同用途索引，避免 `TableInfo` 收集到重复 `IndexInfo`、建表/变更阶段生成重复索引。
   - **单字段索引**：新代码**一律**在字段上使用 **`@Index`**；**禁止**在类级用 **`@Indexes` / `@Index`** 仅含单列定义普通索引（**除非任务明确指明**）。类级 **`@Indexes`** 用于**组合索引**（≥2 列）等场景（见 **`docs/AI_STANDARDS.md` §10.2**）。
@@ -98,12 +97,12 @@
 {模块名}_{类名去掉 Entity 后缀后的驼峰转蛇形}
 ```
 
-- **模块名** = `modules/<模块>/` 目录名 = 包段 = 表前缀（如 `safe` → **`safe_`**）。
-- **实体类名**用领域短名，**禁止**把模块名拼进类名（反例：`SafePayUserPinEntity`；正例：`PayUserPinEntity`）。
+- **模块名** = `modules/<模块>/` 目录名 = 包段 = 表前缀（如 `safe` → **`safe_`**，`auth` → **`auth_`**）。
+- **实体类名**用领域短名，**禁止**把模块名 / 表前缀拼进类名（反例：`SafePayUserPinEntity`、`AuthScopeDefinitionEntity`；正例：`PayUserPinEntity`、`ScopeDefinitionEntity`）。**表前缀只写在 `@TableName`，不出现在 Entity 类名前面。**
 - **注解（强制）**：物理表名只写在 **`@TableName`**；**`@Table` 不写 `value`**（框架会把 `@TableName` 合并进 `TableInfo`）。**`@Table` 至少保留 `comment`** 等建表元数据。Dao `*DaoSql#quote(...)` 与 `@TableName` 一致。
 - 可选：仅写 `@Table(prefix = "safe_", comment = "...")` 且省略 `@TableName` 时由框架推导（细则同生成器）；新代码推荐显式 **`@TableName`**。
 
-**唯一示例**（模块 `safe`，实体 `PayUserPinEntity`）：
+**示例 1**（模块 `safe`，实体 `PayUserPinEntity`）：
 
 - 表名：`PayUserPin` → `pay_user_pin` → **`safe_pay_user_pin`**
 - 实体：
@@ -112,6 +111,17 @@
 @TableName("safe_pay_user_pin")
 @Table(comment = "支付密码:用户6位支付PIN")
 public class PayUserPinEntity { ... }
+```
+
+**示例 2**（模块 `auth`，实体 `ScopeDefinitionEntity`）：
+
+- 表名：`ScopeDefinition` → `scope_definition` → **`auth_scope_definition`**
+- 实体：
+
+```java
+@TableName("auth_scope_definition")
+@Table(comment = "授权范围:OAuth/OPL scope 定义")
+public class ScopeDefinitionEntity { ... }
 ```
 
 **`@Table.module()`**：可选元数据，**不参与**物理表名拼接。

@@ -56,21 +56,21 @@
 
 完整条文见 **`docs/AI_STANDARDS.md`**。摘要：
 
-- **高内聚、低耦合**：业务流程在实体对应的 **Service**；HTTP 入参出参与调用链在实体对应的 **可维护 Controller**；子项目间优先 **接口 / 服务调用**，跨服务编排放在 **当前项目 Service**。
-- **对内管理端接口**：不得与 **`ControllerGen` 等生成控制器**产生 **相同请求映射** 或易混淆的 **同名映射方法**；自定义接口使用 **独立 URL 前缀**。
-- **对外 API**：**独立 Controller**；统一 **`Request<T>` / `Response<T>`**（兼容用 `Compatible*`）；接入框架 **应用层加解密**（见 `docs/AI_CRYPTO.md`）。
-- **定时任务**：生产代码 **禁止 `@Scheduled`**；使用 **`LoopJob.*` + `@JobMeta`** 或框架 **`schedulejob` + cron**。
-- **`@RequiresPermissions`**：仅代码生成/后台管理语义；**新接口一律不用**，普通用户接口用**登录态**鉴权（见 `docs/AI_STANDARDS.md` §6）。
-- **FreeMarker 页面**：避免与 FTL 冲突；条件等用 **`<!-- -->`** 包裹以保持 HTML 规范；**`<script>` 内插值**须保证渲染后 JS 合法，必要时注释/拆脚本/`<#noparse>`（见 `docs/AI_STANDARDS.md` §7）。
-- **实体与库表**：框架扫描实体并依开关**自动建表/更新**；**禁止**常规 **`DDL .sql`** 初始化脚本（§8）。模块目录名 = 包段 = **表前缀**，**勿**作实体类名前缀（§9）。表/字段 **`comment`** 用 **半角 `:`** 分隔短标题与说明；**凡 `@Column(isUnique=true)` 的字段禁止再使用 `@Index`**（§10.2）；**单字段索引用字段级 `@Index`**，类级 **`@Indexes` 仅用于组合索引**（§10.2）；整型/布尔优先**基本类型 + 默认值**（§10）。每个实体须有自增 **`id`**；第二主键按需（**`docs/AI_DUAL_KEY.md`**）；**存量实体默认不强制升级**，新表/新实体/新字段须合规（**§1.2**）。关联与对外 ID **禁止**用 **`id`**（§10.4；SQL 见 **`docs/AI_DATABASE.md` §1.1**）。
-- **生成层**：**gen**、`SitePages` 生成的 **Pages/html/js** **不修改、不加逻辑**；在生成给出的**空壳** `Controller/Service/Dao` 中实现（§11）。
-- **SQL**：新代码 **禁止** Dao 上内联 SQL，**必须** **Provider**（§12）；多库见 `docs/AI_POSTGRESQL.md`。
-- **调用链**：**Controller** 只用 **Service**；**Service** 用 **`baseMapper`**，**勿**再注入本 Dao；跨域 **调别的 Service**，**勿**用他域 **Dao**（§13）。
+- **高内聚、低耦合**：**与实体相关的业务逻辑必须在对应 `*Service`**（§2.1）；Controller 只编排；实体 **`@Getter`/`@Setter`**，日志 **`@Slf4j`**（§2.0）；子项目间优先接口/服务调用。
+- **对内管理端接口**：实体 **`*Controller extends *ControllerGen`**，`@RequestMapping("{module}/{entitylower}")`；不得与 gen **相同请求映射**；对内扩展写在该 Controller（**`docs/AI_STANDARDS.md` §3**）。
+- **对外 API**：独立 Controller；**新**接口 **`POST /{module}/api/v1/{action}`**；入参 `*Request`、出参 `*VO`；`@Valid`；**`T` 禁止 Map/Entity**；历史 URL 不动（§4）。
+- **定时任务**：生产 **禁止 `@Scheduled`**；`LoopJob` + `@JobMeta`（≤1min 须 `skipIfRunning` + `timeout`）或 `schedulejob` + cron。
+- **`@RequiresPermissions`**：新接口一律不用（例外须登记）；普通用户用登录态（§6）。
+- **FreeMarker 页面**：见 `docs/AI_STANDARDS.md` §7。
+- **实体与库表**：注解建表、禁常规 DDL（§8）；表前缀不进类名（§9）；**短标题 2～8 + `:`**（§10.1）；索引/双键/字段加密见 §10.2～§10.5；触结构变更/新外键/新开放 API 须对齐双键。
+- **生成层**：**`docs/AI_STANDARDS.md` §11.0**（可替换 · 禁特有逻辑 · 空壳除外）；未 ZIP 可预演模板 Gen（§11.2）；禁 AI 写 list/Pages。
+- **SQL**：新代码 **Provider**（§12）；多库见 `docs/AI_POSTGRESQL.md`。
+- **调用链**：**任何外部位置禁止直接引用 Dao**；对外只经 **Service**（Service 持有 Dao / `baseMapper`）。Controller / Facade / 他域 Service 等**只注入 Service**（§13）。
 - **资源**：**`statics/`** 公共静态、匿名可访问、优先复用框架资源；新后台页放模块 **`pages`**；**`site/*Site`** 字段上 **`@PageAware(login=false)`**（匿名）或 **`login=true`**（需登录）注册 SPM 路径（§14）。
 
 ## 3.3 代码生成流程与三步开发（详细）
 
-端到端链路（`GeneratorService`、`TableDao` 反射、`GenUtils`、Velocity 模板）、**优先后台生成 ZIP**、AI 生成须与生成器目录一致、以及 **`@Cache` / 基类缓存队列** 用法：见 **`docs/AI_CODEGEN.md`**。
+生成纪律与三步流程：**`docs/AI_STANDARDS.md` §11** + **`docs/AI_CODEGEN.md`**。
 
 ## 4. 相对路径最小示例
 

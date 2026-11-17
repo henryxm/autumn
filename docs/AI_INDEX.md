@@ -15,10 +15,10 @@
 - **`docs/REDIS_TTL_GUIDE.md`**：**Redis TTL、`Redisson` 与 `RedisExpireUtil`**（何时宜用、常见问题、API 对照、推荐处理顺序与可选扫描脚本）
 - **`docs/REDIS_KEYS_AND_SCAN.md`**：**禁止 `KEYS`、推荐 `SCAN`**（大键空间运维、`redis.html` 事故、批量删键/列表分页推荐写法、**constraints-scan J 组**）
 - `docs/AI_MAP.md`：高频开发能力主图（含生成模板分层与可改/不可改边界）
-- `docs/AI_STANDARDS.md`：**约束性开发规范**（分层、API、定时任务、权限、**FTL §7（HTML `<!--<#if>-->` / JS `//<#if>` / `<title>` 裸 FTL）**、**实体/注解建表/禁止初始化 DDL**、**§10.2 `isUnique` 与 `@Index` 禁止叠用**、**§10.2 单字段索引须字段级 `@Index`**、**§10.4 双键模型**、模块表前缀、**Dao+Provider**、**Controller–Service–Dao**、**statics/pages/Site/PageAware（含 admin=true）**、**§14 gen CRUD 仅超管 / `AdminAccessModuleHandler`**）
+- `docs/AI_STANDARDS.md`：**约束性开发规范**（**§2.0 Lombok + `@Slf4j`**、**§2.1 实体业务落 Service**、**§3～§4 内外 API**、**§11.0 生成可替换、禁特有逻辑进模板产物（空壳除外）**、**§13 禁外部直连 Dao**、**PageAware / gen 超管**）
 - **`docs/AI_DUAL_KEY.md`**：**双主键落地**（`UuidBased` / `SnowBased` / **`UserBased`**、**§3.4 无第二主键仅 `user`**、`AutoIdService`、`Uuid` / `Snow`）
-- `docs/AI_CODE_STYLE.md`：**Java 版式**（方法/调用单行参数、if 条件同行体换行；**import 优先** §7；**日志单行** §8）
-- `docs/AI_SERVICE_COHESION.md`：**实体 Service 内聚**（CRUD/定时任务归实体 Service、约 1000 行再拆类、少工具类）
+- `docs/AI_CODE_STYLE.md`：**Java 版式**（方法/调用；**§5.1 Lombok 实体与 `@Slf4j`**；**import 优先** §7；**日志单行** §8）
+- `docs/AI_SERVICE_COHESION.md`：**实体 Service 内聚（硬）**（业务唯一落点、Controller 薄、约 1000 行再拆、少工具类）
 - **`docs/AI_DATABASE.md`**：**多数据库落地规范**（已支持 `DatabaseType` 清单、**§1.1 关联键与业务主键（承接 `AI_STANDARDS` §10.4）**、**§2.1 `RuntimeSqlDialect` 能力清单与故意不抽象项**、**§4.0 代码层标准写法（`RuntimeSql` / `WrapperColumns`，禁止硬编码方言符号）**、**全库兼容默认**、**Wrapper 安全边界**、**Dao+Provider 强制与推荐分层**、`RuntimeSql` 使用纪律；**§8 老旧注解 Dao / 方言化 Wrapper 升级与一键体检策略**）
 - **`docs/AI_DATABASE_READ_ONLY.md`**：**数据库只读模式**（`CrudGuard` API：`writable` / `opt` / `force` / `suppress`；Init/LoopJob/业务三类写决策表）
 - `docs/AI_DISTRIBUTED_LOCK.md`：分布式锁能力（`DistributedLockService` / `DistributedService`）、场景化加锁、降级与抗雪崩策略、`DistributedLockConfig` 配置项与默认值、业务域快捷模板（含项目示例源码入口）
@@ -35,7 +35,7 @@
 - **`docs/AI_FIELD_ENCRYPT.md`**：**实体字段存储加密**（`@FieldEncrypt`、`EncryptModuleService`、`@Cache` 钩子 §7、`autumn.crypto.field.*`；与传输层 `AI_CRYPTO.md` 独立）
 - `docs/AI_SECURITY.md`：安全强校验、灰度、演练
 - **`docs/AI_SECURITY_HARDENING_3_0_COMPAT.md`**：**3.0.0 安全加固兼容性与回滚**（口令/Token 双读、破坏性变更清单 C-xx/D-xx、配置开关、回归与回滚）
-- `docs/AI_CODEGEN.md`：**代码生成链路（gen / GenUtils / 模板 / 库表反射）**与**推荐三步开发流程**（实体 → 生成骨架 → 业务与页面）；**`BaseCacheService` / `ShareCacheService` / `BaseQueueService`** 能力说明
+- `docs/AI_CODEGEN.md`：**生成链路与三步流程**（纪律回链 **STANDARDS §11**；基类缓存/队列详解）
 - `docs/AI_TEMPLATES.md`：模块任务模板库
 - `docs/AI_GOVERNANCE.md`：治理协作、术语、维护口径
 - `docs/AI_PROMPTS.md`：可复制提示词模板

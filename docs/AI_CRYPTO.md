@@ -56,27 +56,23 @@
 ## 6. 代码模板
 
 ```java
-@PostMapping("/biz/action")
-public CompatibleResponse<BizVO> action(@RequestBody(required = false) CompatibleRequest<BizDTO> request) {
-    BizDTO dto = request != null ? request.getData() : null;
-    if (dto == null) {
-        CompatibleResponse<BizVO> fail = new CompatibleResponse<>();
-        fail.setCode(-1);
-        fail.setMsg("非法请求");
-        return fail;
+// 仅迁移清单中的存量兼容接口使用 Compatible*（见 docs/AI_STANDARDS.md §4）
+@PostMapping("/biz/api/v1/action")
+public CompatibleResponse<BizVO> action(@Valid @RequestBody(required = false) CompatibleRequest<BizRequest> request) {
+    BizRequest data = request != null ? request.getData() : null;
+    if (data == null) {
+        return CompatibleResponse.error(BizCodes.INVALID_REQUEST, "非法请求");
     }
-    return CompatibleResponse.ok(service.action(dto));
+    return CompatibleResponse.ok(service.action(data));
 }
 ```
 
 ```java
-@PostMapping("/demo/action")
-public Response<DemoVO> action(@Valid @RequestBody Request<DemoDTO> request) {
-    DemoDTO dto = request != null ? request.getData() : null;
-    if (dto == null) {
-        return Response.error("非法请求");
-    }
-    return Response.ok(service.action(dto));
+// 新对外接口默认形态（docs/AI_STANDARDS.md §4）
+@PostMapping("/demo/api/v1/action")
+public Response<DemoVO> action(@Valid @RequestBody Request<DemoRequest> request) {
+    DemoRequest data = request.getData();
+    return Response.ok(service.action(data));
 }
 ```
 

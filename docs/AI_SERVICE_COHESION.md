@@ -6,8 +6,8 @@
 
 | 原则 | 说明 |
 |------|------|
-| **一实体一 Service** | 与表/实体对应的 **`XxxService extends ModuleService<XxxDao, XxxEntity>`** 承载该域 **全部业务**：CRUD、规则、事务、**`LoopJob` 定时任务**、缓存回源（`@Cache` + 基类 `getCache`）。 |
-| **Controller 薄** | 只做入参、鉴权上下文、调用 Service、返回 `Response`；**禁止**在 Controller 写 CRUD、配额判断、生命周期状态机。 |
+| **一实体一 Service（硬性）** | 与表/实体对应的 **`XxxService extends ModuleService<XxxDao, XxxEntity>`** 是该域 **业务逻辑唯一落点**：CRUD、规则、事务、**`LoopJob`**、缓存回源（`@Cache` + 基类 `getCache`）。权威条文：**`docs/AI_STANDARDS.md` §2.1**。 |
+| **Controller 薄（硬性）** | 只做入参、鉴权上下文、调用 Service、返回 `Response`；**禁止**在 Controller / ControllerGen / Dao / Helper 写实体业务规则、配额判断、生命周期状态机。 |
 | **禁止为“定时任务”单独拆 Service** | 例如软删超期硬销毁、每日清理，属于 **`RobotEntity` 域运维**，应写在 **`RobotService`** 的 `onOneDay()` / `purge*` 中，**不要**再建 `RobotMaintenanceService` 等平行类。 |
 | **跨实体才拆 Service** | **`RobotQuotaService`**（读全局 `RobotQuotaConfig`）、**`RobotConfigService`**（`bot_robot_config` 实体）等，因 **实体或配置域不同** 而独立，不是因为“方法太多”随意拆。 |
 | **少类、少工具类** | 相似逻辑放在 **同一 Service 的 private 方法** 或 **同一 `support` 包内少量类**；避免 `XxxHelper` / `XxxUtil` 泛滥。 |
@@ -44,8 +44,7 @@ RobotService
 
 ## 4. CRUD 与 Dao
 
-- **持久化只经本实体 Service 的 `baseMapper`**（继承自 `ModuleService`），**禁止**本模块 Controller 或其它 Service **@Autowired 本实体 Dao**。
-- **例外**：另一 **实体** 的 Service 通过 **对方 Service 公共方法** 协作；或团队书面约定的 **Facade** 编排层。
+- **对外禁止直接引用 Dao**（与 **`docs/AI_STANDARDS.md` §13** 一致）：Dao **只**由所属 **`ModuleService` 经 `baseMapper` 持有**。Controller / 其它 Service / Facade / Listener / 独立 Job Bean 等**一律禁止**注入或调用任何 `*Dao`；跨实体协作**只调对方 Service**。
 
 ## 5. 交叉请求（少数例外）
 

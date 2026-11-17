@@ -10,7 +10,7 @@ description: >-
   Prefer import over fully qualified class names unless name clash (docs/AI_CODE_STYLE.md §7);
   log.info/debug/warn/error must be one line, no line breaks in the call (docs/AI_CODE_STYLE.md §8);
   FreeMarker templates: docs/AI_STANDARDS.md §7 (HTML <!--<#if>--> per line, JS //<#if>, title bare inline FTL);
-  Controller must not use Dao; Service uses baseMapper; gen/Pages/list.html/js never hand-edited; statics/pages/Site/PageAware.
+  Never reference Dao outside its ModuleService (access only via Service/baseMapper); entity business logic only in corresponding Service; Service must extend ModuleService; never inject any Dao from Controllers/Facades/other Services; entity Lombok @Getter/@Setter; logging @Slf4j (no LoggerFactory); codegen §11.0: replaceable, no proprietary logic in template products (empty shells excepted); required Entity/Service/Dao/Controller/ControllerGen; §11.2 pre-ZIP template Gen CRUD OK; no AI list/Pages; internal API RequestMapping module/entitylower; new open API POST /{module}/api/v1/{action} with *Request/*VO/@Valid; comment short title 2-8 chars; table prefix never in Entity class name; statics/pages/Site/PageAware.
   Read docs/AI_CODEGEN.md, docs/AI_DATABASE.md, docs/AI_DUAL_KEY.md. Bot/robot: read docs/AI_ROBOT.md + docs/AI_ROBOT_API.md (rbt_, Hook, message/push, cn.org.autumn.modules.bot).
   OAuth/OPL/OPC: read docs/AI_AUTH_LOGIN_MODES.md first; classic RP bind client_web_oauth_bind (WebOauthBindService); OPC bind opc_connect_bind (ConnectBindService); callback uses establishSession not login(upstream).
   scripts/constraints-scan is optional: run only when the user explicitly asks for a constraint audit, CI-style check, or phrases like 约束扫描/规范体检; see skill section "约束扫描（按需）".
@@ -193,14 +193,20 @@ description: >-
 
 ## 规范开发三步（与 `docs/AI_CODEGEN.md` 一致）
 
-1. **先实体**：按 `docs/AI_STANDARDS.md` 建实体与索引注释；**`@Cache` / `@Caches`**；业务 Service 默认继承 **`ModuleService`**；实体含 **`@FieldEncrypt`** 时改继承 **`EncryptModuleService`**（见 **`docs/AI_FIELD_ENCRYPT.md`** §0），勿自建平行缓存/队列/`LoopJob`。
-2. **再生成**：由开发者在后台执行「代码生成」ZIP，路径与 **`GenUtils.getFileName`** 一致；**AI 不**以仿写替代整套生成器输出；仅在非 gen 空壳写业务；**禁止**删改已落库的 `controller/gen`、`*Pages`、`list.html/js`（须改 **`template/*.vm`** 后重生成）。
-3. **后业务**：`Service` 承载规则与事务；可维护 `Controller` 独立 URL；`pages` + `site/*Site` + `@PageAware`。
+1. **先实体**：按 `docs/AI_STANDARDS.md` 建实体（**`@Getter`/`@Setter`**，禁手写 getter/setter 与表实体 `@Data`）；**`@Cache` / `@Caches`**；业务 Service **必须** **`ModuleService`**（含加密则 **`EncryptModuleService`**，见 **`docs/AI_FIELD_ENCRYPT.md`**）；**实体相关业务只写该 Service**；需日志用 **`@Slf4j`**；勿自建平行缓存/队列/`LoopJob`。
+2. **生成**（**`docs/AI_STANDARDS.md` §11**）：§11.0 可替换·禁特有逻辑·空壳除外；必产 Entity/Service/Dao/Controller/ControllerGen；§11.2 未 ZIP 可预演模板 Gen；**禁 AI** 写 list/Pages。
+3. **后业务**：**与实体相关的全部业务逻辑**在对应 **Service**（§2.1）；对内薄 Controller / 对外 Api Controller 只编排；`pages` + `site/*Site` + `@PageAware`。
+
+## 对内 / 对外 API（§3～§4）
+
+- **对内**：`@RequestMapping("{module}/{entitylower}")` + `extends *ControllerGen`（例：`auth/scopedefinition`）；页面调用接口写该 Controller。
+- **对外（新）**：独立 Controller；**`POST /{module}/api/v1/{action}`**；入参 `*Request`、出参 `*VO`；`@Valid @RequestBody Request<…>`；历史 URL 不动。
+- **硬性**：`T` 禁止 Map/JSONObject/Object/Entity；新接口默认非 Compatible；禁裸 `setCode(-1)`；写接口禁 blanket Shiro anon。
 
 ## 实体与数据库（§8～§10）
 
 - 框架扫描 + **`autumn.table.*`** 对齐表结构；**禁止**常规 **`DDL .sql`**。
-- **表名/类名（强制）**：见 **`docs/AI_BOOT.md` §3.2**、**`docs/AI_STANDARDS.md` §9**。摘要：`{模块名}_` + 类名去 `Entity` 蛇形；表名仅 **`@TableName`**，**`@Table` 不写 `value`**（框架自动合并）；Dao `quote` 与 `@TableName` 一致；类名不含模块前缀。示例：`PayUserPinEntity` + `@TableName("safe_pay_user_pin")` + `@Table(comment = "...")`。
+- **表名/类名（强制）**：见 **`docs/AI_BOOT.md` §3.2**、**`docs/AI_STANDARDS.md` §9**。摘要：`{模块名}_` + 类名去 `Entity` 蛇形；表名仅 **`@TableName`**；**表前缀不进 Entity 类名**；`comment` 短标题 **2～8**。示例：`PayUserPinEntity` + `safe_pay_user_pin`；`ScopeDefinitionEntity` + `auth_scope_definition`。
 - **`@Column.comment`**：简介名互异（§10.1）；**`isUnique=true` 禁止再 `@Index`**（§10.2）；**单字段索引用字段级 `@Index`**，类级 **`@Indexes` 仅组合索引（≥2 列）**（§10.2）。
 - **双键**：第二主键按需 **`uuid`** / **`UserBased`** / **无（§3.4 仅 `user`）**；业务 **`user`** 可存 **`sys_user` 或 `bot_robot` 的 uuid**。**存量实体默认不升级**（**`docs/AI_DUAL_KEY.md` §1.2**），除非任务明确要求。详见 **§1.1、§3**。
 
@@ -216,13 +222,14 @@ description: >-
 
 ## 生成层与业务（§11）
 
-- 可重生层：**禁止**在生成结果上删改业务逻辑；改 **`template/*.vm`** 后由开发者重生成；扩展用非 gen 壳子或独立类（**`docs/AI_STANDARDS.md` §11**）。
-- 空壳 **Controller/Service/Dao（非 gen）**：业务落 **Service**。
+- **§11**：§11.0 可替换·禁特有逻辑·空壳除外；必产文件见 §11.1；§11.2 可预演模板 Gen；禁 AI 写 list/Pages。
+- **业务唯一落点 `*Service`**；对内薄 **Controller**；对外独立 Api Controller；实体 **`@Getter`/`@Setter`**；日志 **`@Slf4j`**。
 
 ## SQL 与 Dao（§12～§13，摘要）
 
 - **Provider**  mandatory for new SQL；配合 **`docs/AI_DATABASE.md`**、**`docs/AI_POSTGRESQL.md`**（PG）。
-- **Controller** 禁止 **Dao**；**Service** 用 **`baseMapper`**，勿 **`@Autowired`** 本 **Dao**；跨域只注入 **其他 Service**。
+- **对外禁止直接引用 Dao**：仅所属 **`ModuleService` 经 `baseMapper` 持有**；Controller / Facade / 他域 Service 等**只注入 Service**（**`docs/AI_STANDARDS.md` §13**）。
+- **`@Transactional`**：写路径在实体 Service；编排在 Facade；只读默认不加。
 
 ## Redis 与框架 `RedisConfig`
 
@@ -268,7 +275,8 @@ description: >-
 
 ## 既有纪律（摘要）
 
-- **禁止生产 `@Scheduled`**；新接口 **不用 `@RequiresPermissions`**（登录态）；**FreeMarker** 见 **§7**（HTML `<!-- -->` 包 FTL、JS `//` 包 FTL、`<#noparse>`）。
+- **实体业务只写对应 Service**；实体 **`@Getter`/`@Setter`**；日志 **`@Slf4j`**（禁 `LoggerFactory`）。
+- **禁止生产 `@Scheduled`**；新接口 **不用 `@RequiresPermissions`**（登录态）；**FreeMarker** 见 **§7**。
 - 页面文案：**用户视角**，禁开发术语与表名字段名堆砌。
 - 能力地图：**`docs/AI_MAP.md`**；缓存/队列细节：**`docs/AI_CODEGEN.md`** 第 4 节。
 
@@ -278,11 +286,12 @@ description: >-
 - **改 Java 后**：已执行 **`bash scripts/check-java-fqn`**（PR CI 硬门禁）？
 - 无多余 **`schema.sql` / `init.sql`**？  
 - Dao 无内联 SQL？**Wrapper** 无方言黑魔法？Java 无手写 **反引号/双引号/方括号** 拼 SQL（§4.0）？  
-- **Controller** 未碰 **Dao**？未手改 **gen / list.html/js**？  
+- **任何外部是否未引用 Dao**（只经 Service）？Controller 未写业务规则？实体业务是否全在对应 **Service**？实体是否 **`@Getter`/`@Setter`**？日志是否 **`@Slf4j`**？有空壳？AI **未**写 list/Pages？  
+- 对内路径是否 `{module}/{entitylower}`？对外新接口是否 `POST /{module}/api/v1/{action}` + `*Request`/`*VO`/`@Valid`？  
+- Entity 类名是否**不含**表前缀？`comment` 短标题是否 **2～8**？  
 - 新页有 **`Site` + `@PageAware`**？  
-- 改 **`.html` 模板**：**`AI_STANDARDS` §7**（HTML `<!--<#if>` 独立行；JS `//<#if>`；`<title>` 单行裸 FTL）？
-- 生成路径与 **GenUtils** 一致？
-- 新实体/新字段是否按 **`docs/AI_DUAL_KEY.md`** 选型？**存量默认不 retrofit**，除非任务明确要求升级第二主键 / **`user`** 标准？
+- 改 **`.html` 模板**：**`AI_STANDARDS` §7**？  
+- 新实体/新字段是否按 **`docs/AI_DUAL_KEY.md`** 选型？触结构变更/新外键/新开放 API 是否已对齐？
 - 按用户唯一表是否 **`UserBased` + 唯一 `user`**？用户维度足够时是否避免冗余 **`uuid`**（**§3.4**）？
 - **`isUnique=true` 的 `@Column` 是否未再叠 `@Index`**（§10.2）？
 - 新索引是否**单字段在字段上 `@Index`**、**组合索引才用类级 `@Indexes`**（§10.2）？

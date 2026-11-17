@@ -22,9 +22,11 @@
 
 实现约束：
 - 必须优先复用 Autumn 框架能力，不允许重复造轮子
+- **与实体相关的业务逻辑必须写在对应 `*Service`**（Controller 只编排）
+- 实体用 Lombok **`@Getter`/`@Setter`**；需日志的类用 **`@Slf4j`**（禁止手写 getter/setter 与 `LoggerFactory`）
 - 不破坏现有接口与权限语义
 - 涉及缓存/队列/加密时必须遵循框架默认流程
-- 遵守 `docs/AI_STANDARDS.md`（分层、API、gen 隔离、定时任务、`@RequiresPermissions`、FTL、**禁止 DDL .sql**、**Dao 只用 Provider**、**Controller 禁用 Dao**、**statics/pages/Site**）
+- 遵守 `docs/AI_STANDARDS.md`（§2 Service 落点 / Lombok；§3～§4 API；§11.0 生成可替换·禁特有逻辑；§13 禁外部 Dao 等）
 ```
 
 ## 2. 标准提问模板
@@ -86,7 +88,7 @@
 ```md
 涉及 Autumn 加解密兼容改造时，请严格按以下约束实现：
 
-- 入参兼容统一使用 `CompatibleRequest<T>`，业务侧直接使用 `request.getData()`。
+- 新对外接口默认 `Request<*Request>` / `Response<*VO>` + `@Valid`；`Compatible*` 仅迁移清单；**`T` 禁止** `Map`/`JSONObject`/`Object`/`*Entity`（**`docs/AI_STANDARDS.md` §4**）。
 - 参数解析由 `EncryptArgumentResolver` 统一归一化：
   - 解密后是标准 `{"data": ...}` 时，取 `data` 写入 `CompatibleRequest.data`
   - 解密后是对象/数组/基础类型时，直接作为 `CompatibleRequest.data`

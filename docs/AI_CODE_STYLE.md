@@ -58,8 +58,14 @@ if (pending > limit) throw softDeleteGateException(pending, limit);
 
 ## 5. 内聚与类规模
 
-- **实体 Service 内聚、定时任务、何时拆类**：见 **`docs/AI_SERVICE_COHESION.md`**。
+- **实体相关业务逻辑必须在对应 `XxxService`**（硬性）：见 **`docs/AI_STANDARDS.md` §2.1**、**`docs/AI_SERVICE_COHESION.md`**。Controller / Dao / Helper **不得**承载领域规则。
 - 跨实体编排放在 Facade 或发起用例的 Service，不在 Controller 堆叠规则。
+
+## 5.1 Lombok（实体与日志）
+
+- **表实体**：类上 **`@Getter` + `@Setter`**（与 `Entity.java.vm` 一致）；**禁止**手写 getter/setter；**禁止**对表实体用 **`@Data`**（见 **`docs/AI_STANDARDS.md` §2.0**）。
+- **需打日志的类**：类上 **`@Slf4j`**；**禁止** `LoggerFactory.getLogger` / 手写 `Logger` 字段。
+- 根 `pom` 须配置 Lombok `annotationProcessorPaths`（JDK 9+），见 **`docs/AI_POSTGRESQL.md`** 工具链说明。
 
 ## 6. 维护约定
 
@@ -115,7 +121,7 @@ if (val instanceof java.sql.Date) { ... }
 - **`log.trace` / `log.debug` / `log.info` / `log.warn` / `log.error` 调用必须单行写完**：从 `log.` 到语句结束分号**不得换行**拆成多行。
 - **占位符**：继续用 SLF4J `{}` 传参；参数过多时可在**上一行**先赋给局部变量，但 **`log.xxx(...)` 本身仍占一行**。
 - **禁止**为「对齐」或「省横向滚动」把一条日志拆成多行实参。
-- 日志类使用 Lombok **`@Slf4j`**，禁止手动 `Logger` / `LoggerFactory`（见 **`docs/AI_STANDARDS.md` §2.0**）。
+- 需要日志的类**必须**使用 Lombok **`@Slf4j`**，禁止手动 `Logger` / `LoggerFactory`（见 **`docs/AI_STANDARDS.md` §2.0**、本文 §5.1）。
 
 ```java
 // 推荐

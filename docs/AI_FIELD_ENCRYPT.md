@@ -1,6 +1,7 @@
 # Autumn 字段存储加密（按需加载）
 
-> 用途：实体 `@FieldEncrypt` 字段落库加密、读库解密；与传输层 `docs/AI_CRYPTO.md` **完全独立**（不同密钥、不同算法用途、不同 Service）。
+> 用途：实体 `@FieldEncrypt` 字段落库加密、读库解密；与传输层 `docs/AI_CRYPTO.md` **完全独立**（不同密钥、不同算法用途、不同 Service）。  
+> **应用层硬约束摘要**：见 **`docs/AI_STANDARDS.md` §10.5**（`EncryptModuleService`、`searchable` 必有 hash 列、禁 lambdaUpdate 直写）。
 
 ---
 

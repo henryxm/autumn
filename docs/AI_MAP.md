@@ -7,7 +7,7 @@
 
 ## 0. AI 最小上下文（先读这段再开发）
 
-- **应用层强制规范**：分层、子项目解耦、内外 API、与 gen 路由隔离、禁止生产 `@Scheduled`、**新接口禁止 `@RequiresPermissions`**、**注解建表且禁止常规 DDL `.sql`**、**Dao 只用 Provider 写 SQL**、**Controller 禁用 Dao / Service 禁用他域 Dao**、**gen 与生成 html/js 不改**、**statics/pages/Site/@PageAware** — 全文见 **`docs/AI_STANDARDS.md`**。**代码生成链路、库表反射生成、三步流程与 `@Cache`/基类缓存队列详解**见 **`docs/AI_CODEGEN.md`**。
+- **应用层强制规范**：**实体业务必须落对应 Service**、**对外禁止直接引用 Dao（只经 Service）**、Lombok **`@Getter`/`@Setter` + `@Slf4j`**、内外 API、生成空壳、注解建表、Dao Provider、PageAware — 全文见 **`docs/AI_STANDARDS.md`**。三步流程见 **`docs/AI_CODEGEN.md`**。
 - 一句话原则：
   - 优先复用平台能力，禁止重复造轮子；默认从 `ModuleService` 继承链出发实现业务。
 - Service 默认能力：
@@ -333,11 +333,8 @@ public class DemoService extends ModuleService<DemoDao, DemoEntity> implements L
 
 #### 2.8A.2 AI 开发硬约束（生成体系）
 
-- **生成物来源**：与 **`docs/AI_STANDARDS.md` §11**、本文 **2.8A.1** 一致，**优先由开发者执行后台代码生成（ZIP）** 入库；AI **不**把「仿写整套生成文件」当作默认交付，以免与 **`GenUtils`** 输出不一致、后续重生成覆盖困难。
-- `controller/gen/*` 与 `site/*Pages.java` 视为**生成源**：默认不承载业务逻辑，不在其上做需求改造。
-- 业务接口改造放在 `controller/*Controller.java`（或新增业务 Controller），通过继承/覆盖调用 `*ControllerGen`。
-- 页面业务改造优先放在自定义页面/组件；若必须改生成页，需在需求中明确“允许改模板并接受重生成影响”。
-- 在**非可重生层**协助改动的优先顺序（**不**含用对话仿写整套后台 ZIP 产物）：`Service` -> `Controller` -> `Site` -> `Menu`；避免先改 `gen` 层。
+- **生成纪律**：**`docs/AI_STANDARDS.md` §11**（§11.0 可替换 / 禁特有逻辑 / 空壳除外；§11.2 未 ZIP 可预演模板 Gen；禁 AI 写 list/Pages）。  
+- 改动优先：`Service` → 实体/`Api` Controller → `Site`/`Menu`；可重生产物不加特有逻辑。
 
 #### 2.8A.3 典型落地方式（建议）
 
@@ -445,7 +442,7 @@ public class DemoService extends ModuleService<DemoDao, DemoEntity> implements L
 
 **给 AI / 开发者的写法约定（建议）**：
 
-- **短标题**：放在 **`:` 之前**，一般用 **1～4 个汉字**（或同等长度的简短词组），保证列表/表头不换行、不溢出。
+- **短标题**：放在 **`:` 之前**，长度 **2～8** 个字符（汉字或等价；硬性，见 **`docs/AI_STANDARDS.md` §10.1**），保证列表/表头可读。
 - **详述**：放在 **`:` 之后**，用完整句子说明字段用途、取值含义、与其它字段关系等。
 - **同一实体（及同列表展示域）内冒号前必须互异（硬性）**：不同列的 **`comment`** 在第一个半角 **`:`** 之前的片段须各不相同；含义再接近、或「都是统计」但**口径不同**的字段，也不得共用同一短标题，否则生成列表多列会显示相同表头（见 **`docs/AI_STANDARDS.md` §10.1**）。
 - **示例**：`状态：0=禁用 1=启用，同步上游审核结果`、`邮箱：用于登录与找回密码，唯一`。
@@ -467,16 +464,18 @@ public class DemoService extends ModuleService<DemoDao, DemoEntity> implements L
 
 ## 4. 开发决策规则（给 AI 的硬约束）
 
-- **应用层纪律**（实体域 Service 内聚、可维护 Controller 薄层、子项目解耦、对内接口与 `ControllerGen` 路由隔离、对外独立 API Controller、`Request`/`Response` 与加解密、**禁止生产 `@Scheduled`**、**新接口不得使用 `@RequiresPermissions`**、**FTL 页面与 JS 插值规范**）：以 **`docs/AI_STANDARDS.md`** 全文为准；本节补充框架能力级约束。
+- **应用层纪律**（**实体业务必须落对应 Service**、Lombok **`@Getter`/`@Setter` + `@Slf4j`**、薄 Controller、内外 API、生成空壳、**禁止生产 `@Scheduled`**、**新接口不得 `@RequiresPermissions`**、FTL）：以 **`docs/AI_STANDARDS.md`** 全文为准。
+- **对外 API（硬性）**：独立 Api Controller；**新**接口 `POST /{module}/api/v1/{action}`；入参 `*Request`、出参 `*VO`；`@Valid`；`T` 禁止 Map/Entity；新接口默认非 Compatible（`docs/AI_STANDARDS.md` §4）。
+- **对内路径（硬性）**：实体 Controller `@RequestMapping("{module}/{entitylower}")` 且 `extends *ControllerGen`（§3）。
 - **新增接口禁止**在 Controller 上使用 **`@RequiresPermissions`**（该注解保留给代码生成/后台管理语义）；普通用户可访问接口用**登录态**鉴权（`docs/AI_STANDARDS.md` §6）。
 - **FreeMarker 页面**：避免与 FTL 冲突；条件等可用 **`<!-- -->`** 包裹以保持 HTML 规范；**`<script>`** 内 FTL 插值须保证渲染后 JS 合法；无法避免冲突时用 **`<#noparse>`**（`docs/AI_STANDARDS.md` §7）。
 - **实体与库表**：依赖框架实体扫描与 **`autumn.table.*` 开关**做建表/更新；**禁止**把**常规初始化 DDL `.sql`** 作为默认交付物（`docs/AI_STANDARDS.md` §8）。
 - **实体主键**：自增 **`id`** 仅 gen CRUD；第二主键按需 **`uuid`** / **`UserBased`**，或**无**（**§3.4** 仅 **`user`** 维度）；详见 **`docs/AI_DUAL_KEY.md`** §1、§10.4。
-- **模块名 = 包段 = 表前缀**：**禁止**把模块名当作**实体类名前缀**造成生成错乱；物理表名惯例见 `docs/AI_BOOT.md` §3.2 与 `docs/AI_STANDARDS.md` §9。
+- **模块名 = 包段 = 表前缀**：**禁止**把模块名 / 表前缀当作**实体类名前缀**（正例：`ScopeDefinitionEntity` + `@TableName("auth_scope_definition")`；反例：`AuthScopeDefinitionEntity`）；物理表名惯例见 `docs/AI_BOOT.md` §3.2 与 `docs/AI_STANDARDS.md` §9。
 - **新代码 SQL**：**禁止**在 Dao 接口注解上**硬编码 SQL**；**必须**用 **Provider**（跨库见 **`docs/AI_DATABASE.md`**，PG 细节见 **`docs/AI_POSTGRESQL.md`**）（`docs/AI_STANDARDS.md` §12）。
 - **Controller / Service / Dao**：Controller **禁止**用 Dao；本实体 Service 用 **`baseMapper`**、**禁止**再注入本 Dao；跨实体 **注入 Service** 而非他域 Dao（`docs/AI_STANDARDS.md` §13）。
 - **资源与页面**：静态资源放 **`resources/statics/`** 并优先复用框架已有文件；新后台页放模块 **`pages`**；**`site/*Site.java`** 配 **`@PageAware(login=true/false)`** 做 SPM 指引（`docs/AI_STANDARDS.md` §14）。
-- **生成物**：**gen**、`SitePages` 生成的 **Pages/html/js** **禁止改、禁止加逻辑**（`docs/AI_STANDARDS.md` §11）。
+- **生成物**：见 **`docs/AI_STANDARDS.md` §11.0**（可替换、禁特有逻辑、空壳除外）。
 - 能复用框架能力时，禁止重复造轮子（优先找 `Base*Service` / `*Service` 现有能力）。
 - 改业务逻辑优先“覆盖扩展点”而非修改内核流程。
 - 涉及缓存更新必须同步考虑失效策略（删除单值 + 列表缓存）。
@@ -627,7 +626,7 @@ public class DemoService extends ModuleService<DemoDao, DemoEntity> implements L
   - 解密失败 -> 清理本地会话与 AES 缓存后重握手
 - 提测前 8 项检查：
   - 1) 是否复用 `ModuleService` 继承链
-  - 2) 是否使用 `Request/Response` 或 `Compatible*`
+  - 2) 是否使用 `Request/Response` 或 `Compatible*`，且业务 `T` 为自定义模型类（非 Map/Entity）
   - 3) 是否验证明文调用路径
   - 4) 是否验证密文调用路径
   - 5) 是否验证 header 有/无两种响应

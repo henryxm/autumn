@@ -20,14 +20,15 @@ Autumn 是一套可扩展的后台基础框架：在 Spring Boot 之上提供权
 | 能力 | 说明 | 深入阅读 |
 |------|------|----------|
 | **模块与权限** | `sys / gen / job / db / oauth / usr / oss / lan / spm / wall / bot / safe` 等 | `docs/AI_MAP.md` |
-| **Service 继承链** | `ModuleService` → 缓存 / 队列 / 方言 / 自动 uuid | `docs/AI_CODEGEN.md` · `docs/AI_DUAL_KEY.md` |
+| **Service 继承链** | `ModuleService` → 缓存 / 队列 / 方言 / 自动 uuid；**实体业务只写对应 Service** | `docs/AI_STANDARDS.md` §2.1 · `docs/AI_SERVICE_COHESION.md` |
+| **Lombok** | 实体 **`@Getter`/`@Setter`**；日志 **`@Slf4j`**（禁手写 getter/setter 与 `LoggerFactory`） | `docs/AI_STANDARDS.md` §2.0 · `docs/AI_CODE_STYLE.md` §5.1 |
 | **两级缓存** | EhCache + Redis；`@Cache` 注解回源；共享缓存与失效广播 | `docs/AI_MAP.md` §2.1 |
 | **分布式队列** | Memory / Redis List / Stream / 延迟 / 优先级；重试与死信 | `docs/AI_MAP.md` §2.2 |
 | **分布式锁** | `DistributedService.withLock*`；降级、重试、配置化 | `docs/AI_DISTRIBUTED_LOCK.md` |
 | **HTTP 混合加解密** | RSA 握手 + AES 会话；请求/响应按条件触发 | `docs/AI_CRYPTO.md` |
 | **字段存储加密** | 实体 `@FieldEncrypt` · AES-GCM 落库 · 盲索引查询 · `@Cache` 联动 | **`docs/AI_FIELD_ENCRYPT.md`** |
 | **定时任务** | `LoopJob` 接口周期（推荐）+ `schedulejob` cron | `docs/AI_MAP.md` §2.5 |
-| **代码生成** | 实体注解驱动建表 → gen 模板 → 业务只改非 gen 层 | `docs/AI_CODEGEN.md` |
+| **代码生成** | §11.0 可替换·禁特有逻辑·空壳除外；业务写 Service；list/Pages 可选 ZIP | `docs/AI_STANDARDS.md` §11 · `docs/AI_CODEGEN.md` |
 | **多数据库** | `RuntimeSql` / `WrapperColumns`；Dao 仅 Provider 写 SQL | `docs/AI_DATABASE.md` |
 | **机器人 API** | `/robot/api/v1/*` · Hook 验签 · `rbt_` 推送 | `docs/AI_ROBOT.md` |
 | **支付安全** | `/safe/api/v1/*` · 闸门 · PIN/生物识别 · `PayPinVerifier` | `docs/AI_SAFE_CREDENTIAL.md` |
