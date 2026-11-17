@@ -45,7 +45,8 @@
   - `@Column(isUnique = true)`：**所有情况下**均视为该列已具备唯一索引语义；**禁止**再在同一字段上使用 **`@Index`**（含类级 `@Index` / `@Indexes` 中指向该列的 `@IndexField`），也**禁止**用 `@Indexes` 重复声明同一单列唯一/普通索引，以免 DDL 冲突与迁移对比噪音（见 **`docs/AI_STANDARDS.md` §10.2**）。
   - 字段上已用 `@Index` 的列：**不要**在类级 `@Indexes`（或类级 `@Index` 的 `fields`）里再声明同列的同用途索引，避免 `TableInfo` 收集到重复 `IndexInfo`、建表/变更阶段生成重复索引。
   - **单字段索引**：新代码**一律**在字段上使用 **`@Index`**；**禁止**在类级用 **`@Indexes` / `@Index`** 仅含单列定义普通索引（**除非任务明确指明**）。类级 **`@Indexes`** 用于**组合索引**（≥2 列）等场景（见 **`docs/AI_STANDARDS.md` §10.2**）。
-  - 索引前缀：`IndexPrefixRules` 会按 `@Column.type()` 与 Java 类型收敛前缀长度，非字符串/二进制串列不会生成非法 `` `col`(n) ``；数值、日期等列可正常加 `@Index`（整列索引）。`IndexTypeEnum.FULLTEXT` 仍仅适用于字符型列（MySQL 全文索引语义）。详见 `docs/AI_MAP.md` 2.10.3。
+  - 索引前缀：`IndexPrefixRules` 会按 `@Column.type()` 与 Java 类型收敛前缀长度，非字符串/二进制串列不会生成非法 `` `col`(n) ``；数值、日期等列可正常加 `@Index`（整列索引）。**TEXT/BLOB** 整列索引非法：未写前缀时自动补 **191** 并 WARN。`IndexTypeEnum.FULLTEXT` 仍仅适用于字符型列（MySQL 全文索引语义）。详见 `docs/AI_MAP.md` 2.10.3。
+  - **`defaultValue`（MySQL）**：数值/tinyint 不带引号；`CURRENT_TIMESTAMP` 等时间函数裸写；字符串加引号（VARCHAR `""` → `DEFAULT ''`）。TEXT/BLOB/JSON/GEOMETRY 与 `AUTO_INCREMENT` 的字面量 DEFAULT（含空串）由 `ColumnDefaultRules` **忽略并 WARN**；MySQL 8.0.13+ 括号表达式（如 `(JSON_OBJECT())`）保留。数值/日期上的空串默认值同样清理。JSON/GEOMETRY 的 `isUnique` 会跳过并 WARN（需函数/生成列索引）。
 
 ### 3.1 表结构 SQL 语义枚举（`annotation.sql`）与字符集约定
 

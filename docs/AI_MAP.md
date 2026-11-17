@@ -390,7 +390,7 @@ public class DemoService extends ModuleService<DemoDao, DemoEntity> implements L
 #### 2.10.1 注解职责速览
 
 - **`@Table`（类）**：前缀、模块、注释、存储引擎、字符集等；物理表名以 **`@TableName`** 为准（框架合并进 `TableInfo`，**`@Table` 不写 `value`**，见 **`docs/AI_BOOT.md` §3.2**）。
-- **`@Column`（字段）**：列名、类型、长度、是否可空、主键/自增、默认值、**`comment`（建议「短标题：详述」格式，见 2.10.5）**；**`isUnique = true`** 时在建表 SQL 中会额外生成该列的 `UNIQUE KEY`（见 `QuerySql.createTable` 中对 `columnInfo.isUnique()` 的处理）。
+- **`@Column`（字段）**：列名、类型、长度、是否可空、主键/自增、默认值、**`comment`（建议「短标题：详述」格式，见 2.10.5）**；**`isUnique = true`** 时在建表 SQL 中会额外生成该列的 `UNIQUE KEY`（见 `MysqlSchemaSql.createTable`）。DEFAULT 按 MySQL 规范发射（数值裸写、时间函数裸写、字符串加引号）。**TEXT/BLOB/JSON/GEOMETRY**（及自增列）上的字面量 `defaultValue`（含 `""`）会被 `ColumnDefaultRules` 忽略并 WARN；括号表达式默认值保留。TEXT/BLOB 的 `isUnique` / 索引无前缀时自动补前缀 **191**；JSON/GEOMETRY 的 `isUnique` 跳过并 WARN。
 - **`@Index`（类 / 字段 / 方法 / 注解类型）**：声明二级索引或唯一索引、全文/空间索引等；属性包括 `name`、`fields`（`@IndexField` 数组）、`indexType`（`IndexTypeEnum`）、`indexMethod`（`IndexMethodEnum`）、`comment`。
 - **`@Indexes`（类）**：打包多个 `@Index`，用于组合索引或一次声明多组索引。
 - **`@IndexField`**：`field` 为 Java 属性名（框架内会转为下划线列名），`length` 为索引前缀长度；**`length = 0` 表示不对列加前缀长度**（整列参与索引）。
@@ -422,10 +422,11 @@ public class DemoService extends ModuleService<DemoDao, DemoEntity> implements L
 **当前实现**（`IndexPrefixRules` + `TableInfo.initFrom` 末尾对 `IndexInfo` / `UniqueKeyInfo` 的 `applyPrefixLengthPolicy`）：
 
 - 根据 **`@Column.type()`**（若有）判断是否允许前缀；不允许时前缀长度强制为 **0**，生成 `` `col` ``，**可在任意可索引列上声明 `@Index` / `@Indexes` ** 而不因前缀报错。
+- **TEXT/BLOB 族**：MySQL **要求**前缀；未声明 `length`（或仍为注解默认 **255**）时自动使用 **191** 并 WARN（`isUnique` 内联唯一键同样处理）。JSON/GEOMETRY 不可用普通 BTREE UNIQUE，内联 `isUnique` 会跳过并 WARN。
 - 无 `Column.type` 时，按 Java 类型保守处理：`String` / `byte[]` 可保留前缀长度，其余类型前缀为 0。
 - 类级 `@IndexField` 上误写的非零 `length` 也会按实体字段与 `Column` 收敛。
 
-**仍建议**：需要前缀索引时显式在 `@IndexField` 中写 `length`；字符串列用 `@Column.length` 参与字段级 `@Index` 时，确保 `type` 为字符串类，避免歧义。
+**仍建议**：需要前缀索引时显式在 `@IndexField` 中写 `length`；字符串列用 `@Column.length` 参与字段级 `@Index` 时，确保 `type` 为字符串类，避免歧义。不要给 TEXT/BLOB/JSON 写 `defaultValue`。
 
 #### 2.10.4 `IndexTypeEnum` / `IndexMethodEnum` 提示
 

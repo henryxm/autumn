@@ -1527,7 +1527,7 @@ public class SysConfigService extends EncryptModuleService<SysConfigDao, SysConf
         }
         String cacheKey = jsonCacheKey(key, clazz);
         Object cached = jsonObjectCache.get(cacheKey);
-        if (cached != null && clazz.isInstance(cached)) {
+        if (clazz.isInstance(cached)) {
             return (T) cached;
         }
         String value = getValue(key);
@@ -1544,8 +1544,7 @@ public class SysConfigService extends EncryptModuleService<SysConfigDao, SysConf
 
     private <T> T parseObjectFromValue(String key, Class<T> clazz, String value) {
         if (StringUtils.isNotBlank(value)) {
-            String encPrefix = encrypt != null && StringUtils.isNotBlank(encrypt.getPrefix())
-                    ? encrypt.getPrefix() : "ENC$v1$";
+            String encPrefix = encrypt != null && StringUtils.isNotBlank(encrypt.getPrefix()) ? encrypt.getPrefix() : "ENC$v1$";
             boolean looksCipher = value.startsWith(encPrefix);
             if (looksCipher && (encrypt == null || !encrypt.isKeyConfigured())) {
                 warnCipherKeyNotReadyOnce(key);
@@ -1555,21 +1554,18 @@ public class SysConfigService extends EncryptModuleService<SysConfigDao, SysConf
                 try {
                     value = encrypt.decryptValue(value);
                 } catch (Exception e) {
-                    log.warn("SysConfig 密文解密失败，回落默认对象 key={} msg={} | 处理：核对 autumn.crypto.field.key 与加密时一致；见 docs/AI_FIELD_ENCRYPT.md §3.2",
-                            key, e.getMessage());
+                    log.warn("SysConfig 密文解密失败，回落默认对象 key={} msg={} | 处理：核对 autumn.crypto.field.key 与加密时一致；见 docs/AI_FIELD_ENCRYPT.md §3.2", key, e.getMessage());
                     return newConfigInstance(clazz);
                 }
             }
             if (value.startsWith(encPrefix)) {
-                log.warn("SysConfig 解密后仍为密文，回落默认对象 key={} | 处理：密钥可能与密文不匹配，在 fieldencrypt 页测试解密或恢复明文后重迁；见 docs/AI_FIELD_ENCRYPT.md §3.2",
-                        key);
+                log.warn("SysConfig 解密后仍为密文，回落默认对象 key={} | 处理：密钥可能与密文不匹配，在 fieldencrypt 页测试解密或恢复明文后重迁；见 docs/AI_FIELD_ENCRYPT.md §3.2", key);
                 return newConfigInstance(clazz);
             }
             try {
                 return GsonConfig.getGson().fromJson(value, clazz);
             } catch (Exception e) {
-                log.warn("SysConfig JSON 解析失败，回落默认对象 key={} preview={} msg={}",
-                        key, StringUtils.abbreviate(value, 48), e.getMessage());
+                log.warn("SysConfig JSON 解析失败，回落默认对象 key={} preview={} msg={}", key, StringUtils.abbreviate(value, 48), e.getMessage());
                 return newConfigInstance(clazz);
             }
         }
@@ -1580,8 +1576,14 @@ public class SysConfigService extends EncryptModuleService<SysConfigDao, SysConf
         if (!cipherKeyNotReadyWarned.add(key)) {
             return;
         }
-        log.warn("SysConfig 值为密文但字段加密密钥未就绪，回落默认对象 key={} | 处理建议：1) application-dev.yml 配置与加密时相同的 autumn.crypto.field.key/hash-key；2) 确认 Redis 中 {ns}:autumn:field-encrypt:key 存在且 Redis 已认证连通；3) 临时可在 configsecure 将该 key 还原明文后重启。详见 docs/AI_FIELD_ENCRYPT.md §3.2",
-                key);
+        // 字段加密写开关未开（默认）：库内残留 ENC$ 时静默回落默认对象，避免开发环境刷屏
+        if (encrypt == null || !encrypt.isWriteEncryptEnabled()) {
+            if (log.isDebugEnabled()) {
+                log.debug("SysConfig 值为密文但字段加密未开启且密钥未就绪，回落默认对象 key={}", key);
+            }
+            return;
+        }
+        log.warn("SysConfig 值为密文但字段加密密钥未就绪，回落默认对象 key={} | 处理建议：1) application-dev.yml 配置与加密时相同的 autumn.crypto.field.key/hash-key；2) 确认 Redis 中 {ns}:autumn:field-encrypt:key 存在且 Redis 已认证连通；3) 临时可在 configsecure 将该 key 还原明文后重启。详见 docs/AI_FIELD_ENCRYPT.md §3.2", key);
     }
 
     private <T> T newConfigInstance(Class<T> clazz) {
@@ -1756,8 +1758,7 @@ public class SysConfigService extends EncryptModuleService<SysConfigDao, SysConf
             sessionManager = (SessionManager) Config.getBean("sessionManager");
         if (null == sessionManager)
             return;
-        if (sessionManager instanceof DefaultWebSessionManager) {
-            DefaultWebSessionManager webSessionManager = (DefaultWebSessionManager) sessionManager;
+        if (sessionManager instanceof DefaultWebSessionManager webSessionManager) {
             Cookie cookie = webSessionManager.getSessionIdCookie();
             cookie.setMaxAge(ShiroSessionTimeouts.REMEMBER_ME_COOKIE_MAX_AGE_SEC);
             List<String> siteDomains = getSiteDomainList();
@@ -1921,7 +1922,7 @@ public class SysConfigService extends EncryptModuleService<SysConfigDao, SysConf
     public String[] getNoneSuffix() {
         String v = getValue(NONE_SUFFIX_VIEW);
         if (StringUtils.isNotBlank(v)) {
-            return v.split(",|，|;|；|:|：| ");
+            return v.split("[,，;；:： ]");
         }
         return null;
     }

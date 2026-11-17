@@ -739,6 +739,7 @@ public class MysqlTableService {
             }
             columnInfo.setTypeLength(length);
             normalizeEnumDefaultValue(clazz, field, columnInfo);
+            ColumnDefaultRules.sanitizeMysqlColumnDefault(columnInfo, clazz.getName());
             list.add(columnInfo);
         }
         return list;

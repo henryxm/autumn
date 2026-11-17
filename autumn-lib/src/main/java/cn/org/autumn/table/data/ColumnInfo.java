@@ -14,7 +14,6 @@ import java.math.BigDecimal;
 import java.util.Date;
 import java.util.LinkedHashSet;
 import java.util.Set;
-import java.util.Locale;
 
 /**
  * 用于存放创建表的字段信息
@@ -327,10 +326,10 @@ public class ColumnInfo {
 
     /** 大文本/二进制类型：实体已声明则 @FieldEncrypt 不得改写为 varchar。 */
     static boolean isLobTextType(String type) {
-        if (type == null || type.isEmpty()) {
+        String t = IndexPrefixRules.normalizeMysqlType(type);
+        if (t.isEmpty()) {
             return false;
         }
-        String t = type.toLowerCase();
         return DataType.TEXT.equals(t)
                 || DataType.MEDIUMTEXT.equals(t)
                 || DataType.LONGTEXT.equals(t)
@@ -535,10 +534,8 @@ public class ColumnInfo {
      * 是否可在列定义上指定 CHARACTER SET / COLLATE（字符串相关类型）。
      */
     public boolean supportsSqlCharsetClause() {
-        if (type == null) {
-            return false;
-        }
-        String t = type.toLowerCase(Locale.ROOT);
+        // JSON 在 MySQL 上不可写 CHARACTER SET / COLLATE
+        String t = IndexPrefixRules.normalizeMysqlType(type);
         switch (t) {
             case "varchar":
             case "char":
@@ -548,7 +545,6 @@ public class ColumnInfo {
             case "longtext":
             case "enum":
             case "set":
-            case "json":
                 return true;
             default:
                 return false;

@@ -247,7 +247,7 @@ IDEA「没配 yml key 却能加解密」= Redis/env 已有历史密钥。**推�
 
 | 日志关键词 | 含义 | 业务侧怎么做 |
 |------------|------|----------------|
-| `值为密文但字段加密密钥未就绪` | 库中已是 `ENC$`，但 yml/env 无 key，且早期 Redis 也未读到；`getValue`/`getNameSpace` **不返回、不缓存**密文（回落 env/默认） | ① 在 yml/env 配置**加密时使用的同一** key（开发：`enabled=false` 仅配 key，勿对共享 Redis 强制 `enabled=true`）；② 检查 Redis 密码/连通与 `{ns}:autumn:field-encrypt:key`（已有 Redis key **不会**被不同 env key 覆盖）；③ 临时：configsecure 对该项「解密」落明文后重启 |
+| `值为密文但字段加密密钥未就绪` | **仅当写开关已开启**（`crypto.field.enabled=true` 或运行时一键开写）且库中已是 `ENC$`、密钥未就绪时打 **WARN**。写开关关闭（默认）时只 `DEBUG`，静默回落默认对象，不刷屏 | 若已开写：① 配置加密时同一 key；② 检查 Redis `{ns}:autumn:field-encrypt:key`；③ configsecure 还原明文后重启。默认未开写可忽略；需要读历史密文时仅配 key、保持 `enabled=false` |
 | InitFactory 反射 NPE / `not an instance of declaring class` | `obj.getClass().getMethod` 打到 CGLIB 代理壳 | `Factory.invoke` 只用接口 Method；读 ENC$ 的 Shiro Bean `@DependsOn(fieldEncryptRuntimeService)`；LBP 用 static `@Bean` |
 | `密文解密失败` / `解密后仍为密文` | 有 key 但与密文不匹配或损坏 | fieldencrypt 页用密文测解密；换对 key；或 restore 明文后用正确 key 再 migrate |
 | `JSON 解析失败` 且 preview=`ENC$…` | 旧版/未升级时 Gson 误解析密文 | 升级到含 §3.1 早期加载的框架；并按上表配 key |

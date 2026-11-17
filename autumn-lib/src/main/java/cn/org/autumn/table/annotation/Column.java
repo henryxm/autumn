@@ -69,8 +69,14 @@ public @interface Column{
 	public boolean isAutoIncrement() default false;
 
 	/**
-	 * 默认值，默认为null
-	 * 
+	 * 默认值，默认为 {@code NULL}（DDL 不输出 DEFAULT）。
+	 * <p>MySQL 字面量 DEFAULT：数值/tinyint 不带引号；{@code CURRENT_TIMESTAMP} 等时间函数裸写；
+	 * 字符串加引号（VARCHAR 空串为 {@code DEFAULT ''}）。
+	 * <p>TEXT/BLOB/JSON/GEOMETRY 等及 {@code AUTO_INCREMENT} 不能带字面量 DEFAULT；若仍赋值（含空串
+	 * {@code ""}），{@link cn.org.autumn.table.data.ColumnDefaultRules} 会忽略并 WARN。
+	 * MySQL 8.0.13+ 括号表达式（如 {@code (JSON_OBJECT())}、{@code ('')}）会保留。
+	 * 数值/日期类型上的空串默认值同样清理。
+	 *
 	 * @return 默认值，默认为null
 	 */
 	public String defaultValue() default "NULL";

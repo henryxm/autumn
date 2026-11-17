@@ -2,11 +2,15 @@ package cn.org.autumn.table.relational.dialect.mysql;
 
 import cn.org.autumn.table.annotation.IndexTypeEnum;
 import cn.org.autumn.table.relational.RelationalSchemaSql;
+import cn.org.autumn.table.data.ColumnDefaultRules;
 import cn.org.autumn.table.data.ColumnInfo;
 import cn.org.autumn.table.data.IndexInfo;
+import cn.org.autumn.table.data.IndexPrefixRules;
 import cn.org.autumn.table.data.TableInfo;
 import cn.org.autumn.table.utils.HumpConvert;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Field;
 import java.util.Iterator;
@@ -19,6 +23,8 @@ import java.util.Map;
 public class MysqlSchemaSql implements RelationalSchemaSql {
 
     public static final MysqlSchemaSql INSTANCE = new MysqlSchemaSql();
+
+    private static final Logger log = LoggerFactory.getLogger(MysqlSchemaSql.class);
 
     protected MysqlSchemaSql() {
     }
@@ -172,9 +178,9 @@ public class MysqlSchemaSql implements RelationalSchemaSql {
         if (columnInfo.isAutoIncrement()) {
             sb.append(" AUTO_INCREMENT");
         }
-        if (!"NULL".equals(columnInfo.getDefaultValue())) {
-            sb.append(" DEFAULT '").append(sqlStringLiteral(columnInfo.getDefaultValue())).append("'");
-        }
+        // collect 已 sanitize；此处静默兜底，避免双 WARN；DEFAULT 按 MySQL 字面量规范发射
+        ColumnDefaultRules.sanitizeMysqlColumnDefault(columnInfo, columnInfo.getName(), false);
+        MysqlColumnDefaultSql.appendDefaultClause(columnInfo, sb);
         if (!StringUtils.isEmpty(columnInfo.getComment())) {
             sb.append(" COMMENT '").append(sqlStringLiteral(columnInfo.getComment())).append("'");
         }
@@ -212,9 +218,8 @@ public class MysqlSchemaSql implements RelationalSchemaSql {
         if (columnInfo.isAutoIncrement()) {
             sb.append(" AUTO_INCREMENT");
         }
-        if (!"NULL".equals(columnInfo.getDefaultValue())) {
-            sb.append(" DEFAULT '").append(columnInfo.getDefaultValue()).append("'");
-        }
+        ColumnDefaultRules.sanitizeMysqlColumnDefault(columnInfo, columnInfo.getName(), false);
+        MysqlColumnDefaultSql.appendDefaultClause(columnInfo, sb);
     }
 
     private String addColumnsInternal(final Map<String, Map<TableInfo, ColumnInfo>> map, String action) {
@@ -339,7 +344,7 @@ public class MysqlSchemaSql implements RelationalSchemaSql {
                     primaryKey = primaryKey + split + "`" + columnInfo.getName() + "`";
                 }
                 if (columnInfo.isUnique()) {
-                    stringBuilder.append(", UNIQUE KEY (`").append(columnInfo.getName()).append("`)");
+                    appendInlineUniqueKey(columnInfo, stringBuilder);
                 }
                 if (list.indexOf(columnInfo) != list.size() - 1) {
                     stringBuilder.append(", ");
@@ -364,10 +369,29 @@ public class MysqlSchemaSql implements RelationalSchemaSql {
                 stringBuilder.append(" COLLATE ").append(tableInfo.getCollation());
             }
             if (!StringUtils.isEmpty(tableInfo.getComment())) {
-                stringBuilder.append(" COMMENT='").append(tableInfo.getComment()).append("'");
+                stringBuilder.append(" COMMENT='").append(sqlStringLiteral(tableInfo.getComment())).append("'");
             }
             stringBuilder.append(";");
         }
         return stringBuilder.toString();
+    }
+
+    /**
+     * {@code @Column(isUnique=true)} 内联唯一键；TEXT/BLOB 自动补前缀；JSON/GEOMETRY 跳过并 WARN。
+     */
+    protected void appendInlineUniqueKey(ColumnInfo columnInfo, StringBuilder sb) {
+        if (ColumnDefaultRules.forbidsMysqlBtreeKey(columnInfo.getType())) {
+            log.warn("Inline UNIQUE KEY ignored (type cannot use BTREE unique key): column={} type={}",
+                    columnInfo.getName(), columnInfo.getType());
+            return;
+        }
+        sb.append(", UNIQUE KEY (`").append(columnInfo.getName()).append("`");
+        int prefix = IndexPrefixRules.ensureMysqlKeyPrefixLength(columnInfo.getType(), 0);
+        if (prefix > 0) {
+            log.warn("Inline UNIQUE KEY prefix auto-assigned for LOB column: column={} type={} prefixLength={}",
+                    columnInfo.getName(), columnInfo.getType(), prefix);
+            sb.append("(").append(prefix).append(")");
+        }
+        sb.append(")");
     }
 }
