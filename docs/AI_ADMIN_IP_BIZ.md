@@ -33,6 +33,8 @@ within(*..modules..controller..*)
 
 `@ServerEndpoint` 必须排除：被 CGLIB 代理后 `ServerEndpointExporter` 会按代理类注册，Tomcat 启动失败（兼容项 **C-22**）。JSR-356 端点勿标 `@RestController`。
 
+方法级判定（兼容项 **C-23**）：切面传入方法**声明类**——声明在 `*ControllerGen` / `*.controller.gen.*` 的 CRUD 仍强制；业务模块子类扩展且无 `@RequiresPermissions` 的公开/集群 API **不连坐**；`GEN_MODULES` 下 `*Api` / `*ApiController` 不因模块毯误拦。
+
 ### 模式 A — 推荐（零业务切面）
 
 包名符合下列之一即可被框架切面织入，再由 `shouldRequireAdminIpApi` 判定是否强制：

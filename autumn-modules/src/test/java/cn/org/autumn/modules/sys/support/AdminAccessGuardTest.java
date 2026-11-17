@@ -10,6 +10,7 @@ import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.wall.service.IpAdminWhiteService;
 import cn.org.autumn.site.AdminShellAccess;
 import cn.org.autumn.site.PageFactory;
+import jakarta.websocket.server.ServerEndpoint;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -91,10 +92,6 @@ class AdminAccessGuardTest {
                 cn.org.autumn.modules.bot.controller.gen.RobotControllerGen.class));
         assertTrue(guard.shouldRequireSystemAdminForGen(
                 cn.org.autumn.modules.oauth.controller.gen.ClientDetailsControllerGen.class));
-        assertTrue(guard.shouldRequireSystemAdminForGen(
-                cn.org.autumn.modules.im.controller.gen.ImFixtureControllerGen.class));
-        assertTrue(guard.shouldRequireSystemAdminForGen(
-                cn.bighub.modules.bigmodel.controller.gen.BigmodelFixtureControllerGen.class));
     }
 
     @Test
@@ -146,8 +143,32 @@ class AdminAccessGuardTest {
 
     @Test
     void serverEndpointInControllerPackage_exemptFromAdminIpApi() {
+        assertFalse(guard.shouldRequireAdminIpApi(SocketEndpointFixture.class, "onOpen", 0));
+    }
+
+    @Test
+    void methodDeclaringClass_gatesGenCrudNotLanApi() {
+        Class<?> oauthCtrl = cn.org.autumn.modules.oauth.controller.ClientDetailsController.class;
+        Class<?> oauthGen = cn.org.autumn.modules.oauth.controller.gen.ClientDetailsControllerGen.class;
+        // gen 上 CRUD：仍强制
+        assertTrue(guard.shouldRequireAdminIpApi(oauthCtrl, oauthGen, "list", 1));
+        // GEN_MODULES 子类运维口（无声明类豁免）仍强制
+        assertTrue(guard.shouldRequireAdminIpApi(
+                cn.org.autumn.modules.wall.controller.ShieldController.class,
+                cn.org.autumn.modules.wall.controller.ShieldController.class,
+                "attack", 2));
         assertFalse(guard.shouldRequireAdminIpApi(
-                cn.org.autumn.modules.bugshut.controller.BugshutSocketFixture.class, "onOpen", 0));
+                cn.org.autumn.modules.wall.controller.ShieldController.class,
+                cn.org.autumn.modules.wall.controller.ShieldController.class,
+                "test", 2));
+    }
+
+    @Test
+    void languageApi_inLanModule_notGatedByModuleBlanket() {
+        assertFalse(guard.shouldRequireAdminIpApi(
+                cn.org.autumn.modules.lan.controller.LanguageApi.class, "getSupportedLanguage", 1));
+        assertTrue(AdminAccessGuard.isPublicApiControllerName(
+                cn.org.autumn.modules.lan.controller.LanguageApi.class));
     }
 
     @Test
@@ -155,18 +176,15 @@ class AdminAccessGuardTest {
         cn.org.autumn.config.AdminAccessModuleHandler managed = new cn.org.autumn.config.AdminAccessModuleHandler() {
             @Override
             public java.util.Set<String> managedModules() {
-                return java.util.Set.of("goods", "order");
+                return java.util.Set.of("order", "goods");
             }
         };
         ReflectionTestUtils.setField(guard, "adminAccessModuleHandlers", java.util.List.of(managed));
-        assertTrue(guard.isGenGlobalModule("goods"));
-        assertTrue(guard.isGenGlobalModule("ORDER"));
+        assertTrue(guard.isGenGlobalModule("order"));
+        assertTrue(guard.isGenGlobalModule("GOODS"));
         assertFalse(guard.isGenGlobalModule("unknownbiz"));
-        assertTrue(guard.shouldRequireAdminIpApi(
-                cn.org.autumn.modules.goods.controller.GoodsFixtureController.class, "list", 1));
         ReflectionTestUtils.setField(guard, "adminAccessModuleHandlers", java.util.List.of());
-        assertFalse(guard.shouldRequireAdminIpApi(
-                cn.org.autumn.modules.goods.controller.GoodsFixtureController.class, "list", 1));
+        assertFalse(guard.isGenGlobalModule("order"));
     }
 
     @Test
@@ -182,18 +200,19 @@ class AdminAccessGuardTest {
 
     @Test
     void selfGenModule_spiExtendsExempt() {
-        cn.org.autumn.config.AdminAccessModuleHandler imExempt =
+        Class<?> oauthGen = cn.org.autumn.modules.oauth.controller.gen.ClientDetailsControllerGen.class;
+        assertTrue(guard.shouldRequireSystemAdminForGen(oauthGen));
+        cn.org.autumn.config.AdminAccessModuleHandler oauthExempt =
                 new cn.org.autumn.config.AdminAccessModuleHandler() {
                     @Override
                     public java.util.Set<String> selfGenModules() {
-                        return java.util.Set.of("im");
+                        return java.util.Set.of("oauth");
                     }
                 };
-        ReflectionTestUtils.setField(guard, "adminAccessModuleHandlers", java.util.List.of(imExempt));
-        assertFalse(guard.shouldRequireSystemAdminForGen(
-                cn.org.autumn.modules.im.controller.gen.ImFixtureControllerGen.class));
-        assertTrue(guard.shouldRequireSystemAdminForGen(
-                cn.bighub.modules.bigmodel.controller.gen.BigmodelFixtureControllerGen.class));
+        ReflectionTestUtils.setField(guard, "adminAccessModuleHandlers", java.util.List.of(oauthExempt));
+        assertFalse(guard.shouldRequireSystemAdminForGen(oauthGen));
+        ReflectionTestUtils.setField(guard, "adminAccessModuleHandlers", java.util.List.of());
+        assertTrue(guard.shouldRequireSystemAdminForGen(oauthGen));
     }
 
     @Test
@@ -362,6 +381,14 @@ class AdminAccessGuardTest {
         assertEquals("modules/sys/user",
                 guard.gateView("modules/sys/user", request, new MockHttpServletResponse(), new ConcurrentModel()));
         verify(ipAdminWhiteService).checkAdmin(eq(request), eq(AdminAccessGuard.class), eq("modules/sys/user"));
+    }
+
+    /** 本测专用：验证 {@code @ServerEndpoint} 豁免，非业务仓夹具。 */
+    @ServerEndpoint("/admin-access-guard-fixture/{id}")
+    static class SocketEndpointFixture {
+        public void onOpen() {
+            // no-op
+        }
     }
 
 }

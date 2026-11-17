@@ -15,16 +15,21 @@ import cn.org.autumn.site.AdminShellAccess;
 import cn.org.autumn.site.PageFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.shiro.authz.annotation.RequiresPermissions;
+import org.aspectj.lang.JoinPoint;
+import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.stereotype.Component;
 import org.springframework.ui.Model;
-
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+
+import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
@@ -366,22 +371,42 @@ public class AdminAccessGuard {
     /**
      * 供框架切面与业务仓薄切面共用：若 {@link #shouldRequireAdminIpApi} 为 true 则 {@link #requireGenAdmin}。
      * 业务异形包标准接入见 {@code docs/AI_ADMIN_IP_BIZ.md} 模式 C。
+     * <p>
+     * 切面路径传入方法声明类，避免业务子类扩展的公开/集群 API 被 {@code *ControllerGen} 整类连坐。
      */
-    public void enforceAdminIpApiIfRequired(org.aspectj.lang.JoinPoint joinPoint) {
+    public void enforceAdminIpApiIfRequired(JoinPoint joinPoint) {
         if (joinPoint == null) {
             return;
         }
         Object target = joinPoint.getTarget();
         Class<?> type = target != null ? target.getClass() : joinPoint.getSignature().getDeclaringType();
+        Class<?> declaringType = null;
+        if (joinPoint.getSignature() instanceof MethodSignature ms) {
+            Method m = ms.getMethod();
+            if (m != null) {
+                declaringType = m.getDeclaringClass();
+            }
+        }
+        if (declaringType == null) {
+            declaringType = joinPoint.getSignature().getDeclaringType();
+        }
         String method = joinPoint.getSignature().getName();
         Object[] args = joinPoint.getArgs();
         int argCount = args == null ? 0 : args.length;
-        enforceAdminIpApiIfRequired(type, method, argCount);
+        enforceAdminIpApiIfRequired(type, declaringType, method, argCount);
     }
 
-    /** @see #enforceAdminIpApiIfRequired(org.aspectj.lang.JoinPoint) */
+    /**
+     * gen 模板显式调用（无声明类）：保守按目标类型判定，与历史 CRUD 门禁一致。
+     *
+     * @see #enforceAdminIpApiIfRequired(JoinPoint)
+     */
     public void enforceAdminIpApiIfRequired(Class<?> type, String methodName, int argCount) {
-        if (!shouldRequireAdminIpApi(type, methodName, argCount)) {
+        enforceAdminIpApiIfRequired(type, null, methodName, argCount);
+    }
+
+    public void enforceAdminIpApiIfRequired(Class<?> type, Class<?> declaringType, String methodName, int argCount) {
+        if (!shouldRequireAdminIpApi(type, declaringType, methodName, argCount)) {
             return;
         }
         Class<?> raw = unwrapProxyClass(type);
@@ -456,15 +481,25 @@ public class AdminAccessGuard {
 
     /**
      * 管理 API 是否强制「系统管理员 + 管理 IP（{@link cn.org.autumn.modules.wall.entity.IpAdminWhiteEntity}）」。
-     * 覆盖：非自助 gen、继承 *ControllerGen 的子类覆写、GEN_MODULES 手写管理 Controller、*AdminController。
+     * <p>
+     * 无声明类时保守：非自助 gen / 继承 *ControllerGen / GEN_MODULES 手写管理 Controller / *AdminController。
+     * 有声明类时：gen CRUD 与带 {@code @RequiresPermissions} 的管理面仍强制；业务模块子类扩展的公开方法不连坐。
      *
      * @param argCount 方法实参个数（用于区分 {@code SysUserController#info()} 与 {@code info(uuid)}）
      */
     public boolean shouldRequireAdminIpApi(Class<?> type, String methodName, int argCount) {
+        return shouldRequireAdminIpApi(type, null, methodName, argCount);
+    }
+
+    /**
+     * @param declaringType 方法声明类；切面传入；{@code null} 表示保守（gen 模板 / 单测旧调用）
+     */
+    public boolean shouldRequireAdminIpApi(Class<?> type, Class<?> declaringType, String methodName, int argCount) {
         if (type == null) {
             return false;
         }
         Class<?> raw = unwrapProxyClass(type);
+        Class<?> decl = declaringType != null ? unwrapProxyClass(declaringType) : null;
         String method = StringUtils.defaultString(methodName);
         String module = extractModuleName(raw);
         // JSR-356：勿对 @ServerEndpoint 做管理 API 门禁（亦避免薄切面误织入）
@@ -481,11 +516,24 @@ public class AdminAccessGuard {
         if (isAdminIpExemptMethod(raw, method, argCount)) {
             return false;
         }
-        if (shouldRequireSystemAdminForGen(raw) || extendsRestrictedGenController(raw)) {
+        // 声明在 gen 基类上的 CRUD：始终强制（非自助）
+        if (decl != null && isRestrictedGenDeclaringType(decl)) {
+            return true;
+        }
+        if (extendsRestrictedGenController(raw)) {
+            if (decl != null && !isRestrictedGenDeclaringType(decl)) {
+                // 业务子类扩展方法：有权限注解仍强制；框架 GEN_MODULES 子类运维口仍强制；其余放行
+                if (methodHasRequiresPermissions(decl, method, argCount)) {
+                    return true;
+                }
+                return isGenGlobalModule(module);
+            }
+            // 无声明类（保守）或声明即 gen：整类仍强制
             return true;
         }
         if (isGenGlobalModule(module)) {
-            return true;
+            // LanguageApi 等公开面：勿因模块毯误拦
+            return !isPublicApiControllerName(raw);
         }
         String simple = raw.getSimpleName();
         return simple.endsWith("AdminController");
@@ -493,6 +541,54 @@ public class AdminAccessGuard {
 
     public boolean shouldRequireAdminIpApi(Class<?> type, String methodName) {
         return shouldRequireAdminIpApi(type, methodName, -1);
+    }
+
+    /** 方法声明类是否为受限 gen（{@code *.controller.gen.*} 或 {@code *ControllerGen}，非自助）。 */
+    public boolean isRestrictedGenDeclaringType(Class<?> declaringType) {
+        if (declaringType == null) {
+            return false;
+        }
+        Class<?> decl = unwrapProxyClass(declaringType);
+        if (shouldRequireSystemAdminForGen(decl)) {
+            return true;
+        }
+        return decl.getSimpleName().endsWith("ControllerGen") && !isSelfGenModule(extractModuleName(decl));
+    }
+
+    /** 公开 API 控制器命名：{@code *Api} / {@code *ApiController}。 */
+    public static boolean isPublicApiControllerName(Class<?> type) {
+        if (type == null) {
+            return false;
+        }
+        String simple = unwrapProxyClass(type).getSimpleName();
+        return simple.endsWith("ApiController") || simple.endsWith("Api");
+    }
+
+    private boolean methodHasRequiresPermissions(Class<?> declaringType, String methodName, int argCount) {
+        if (declaringType == null || StringUtils.isBlank(methodName)) {
+            return false;
+        }
+        Method matched = findMethodByNameAndArgCount(declaringType, methodName, argCount);
+        if (matched == null) {
+            return false;
+        }
+        return AnnotationUtils.findAnnotation(matched, RequiresPermissions.class) != null;
+    }
+
+    private static Method findMethodByNameAndArgCount(Class<?> type, String methodName, int argCount) {
+        Class<?> c = type;
+        while (c != null && c != Object.class) {
+            for (Method m : c.getDeclaredMethods()) {
+                if (!m.getName().equals(methodName)) {
+                    continue;
+                }
+                if (argCount < 0 || m.getParameterCount() == argCount) {
+                    return m;
+                }
+            }
+            c = c.getSuperclass();
+        }
+        return null;
     }
 
     /** 继承受限 gen 基类（方法声明在父包时仍强制）。 */
