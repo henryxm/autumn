@@ -12,12 +12,13 @@ import cn.org.autumn.service.RsaService;
 import cn.org.autumn.utils.IPUtils;
 import com.google.gson.Gson;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import java.util.*;
+import java.util.List;
 
 /**
  * RSA加密接口控制器
@@ -55,16 +56,21 @@ public class RsaController {
      */
     @PostMapping("/public-key")
     @Endpoint(hidden = true)
-    public Response<RsaKey> getPublicKey(@Valid @RequestBody Request<?> request, HttpServletRequest servlet) {
+    public Response<RsaKey> getPublicKey(@Valid @RequestBody(required = false) Request<?> request, HttpServletRequest servlet) {
         try {
-            // 使用客户端提交的UUID获取或生成服务端密钥对
-            RsaKey rsaKey = rsaService.getKey(request.getSession());
-            // 转换为PublicKey对象返回给客户端
+            String session = requireSession(request, servlet);
+            if (session == null) {
+                return Response.error(Error.RSA_SESSION_REQUIRED);
+            }
+            RsaKey rsaKey = rsaService.getKey(session);
             RsaKey copy = rsaKey.copy();
             if (log.isDebugEnabled()) {
                 log.debug("获取公钥，UUID:{}, 过期时间:{}, IP:{}", copy.getSession(), copy.getExpireTime(), IPUtils.getIp(servlet));
             }
             return Response.ok(copy);
+        } catch (CodeException e) {
+            log.warn("获取公钥失败:{}, IP:{}", e.getMessage(), IPUtils.getIp(servlet));
+            return Response.error(e);
         } catch (Exception e) {
             log.error("获取公钥:{}, IP:{}", e.getMessage(), IPUtils.getIp(servlet));
             return Response.error(e);
@@ -82,12 +88,17 @@ public class RsaController {
      */
     @PostMapping("/client/public-key")
     @Endpoint(hidden = true)
-    public Response<RsaKey> uploadPublicKey(@Valid @RequestBody RsaKey request, HttpServletRequest servlet) {
+    public Response<RsaKey> uploadPublicKey(@Valid @RequestBody(required = false) RsaKey request, HttpServletRequest servlet) {
         try {
-            // 使用客户端提交的UUID和过期时间保存客户端公钥
-            // 如果客户端提供了过期时间则使用客户端的，否则使用后端默认的
+            if (request == null || StringUtils.isBlank(request.getSession())) {
+                log.warn("上传公钥参数缺失: session 为空, IP:{}", IPUtils.getIp(servlet));
+                return Response.error(Error.RSA_SESSION_REQUIRED);
+            }
+            if (StringUtils.isBlank(request.getPublicKey())) {
+                log.warn("上传公钥参数缺失: publicKey 为空, IP:{}", IPUtils.getIp(servlet));
+                return Response.error(Error.BAD_REQUEST);
+            }
             RsaKey clientPublicKey = rsaService.savePublicKey(request.getSession(), request.getPublicKey(), request.getExpireTime());
-            // 构建返回结果
             RsaKey response = new RsaKey();
             response.setSession(clientPublicKey.getSession());
             response.setExpireTime(clientPublicKey.getExpireTime());
@@ -95,6 +106,9 @@ public class RsaController {
                 log.debug("上传公钥，UUID: {}, 过期时间: {}, IP:{}", clientPublicKey.getSession(), clientPublicKey.getExpireTime(), IPUtils.getIp(servlet));
             }
             return Response.ok(response);
+        } catch (CodeException e) {
+            log.warn("上传公钥失败:{}, IP:{}", e.getMessage(), IPUtils.getIp(servlet));
+            return Response.error(e);
         } catch (Exception e) {
             log.error("上传公钥:{}, IP:{}", e.getMessage(), IPUtils.getIp(servlet));
             return Response.error(e);
@@ -112,30 +126,29 @@ public class RsaController {
      */
     @PostMapping("/aes-key")
     @Endpoint(hidden = true)
-    public Response<AesKey> getAesKey(@Valid @RequestBody Request<?> request, HttpServletRequest servlet) {
+    public Response<AesKey> getAesKey(@Valid @RequestBody(required = false) Request<?> request, HttpServletRequest servlet) {
         try {
-            String session = request.getSession();
-            // 检查客户端公钥是否存在
+            String session = requireSession(request, servlet);
+            if (session == null) {
+                return Response.error(Error.RSA_SESSION_REQUIRED);
+            }
             if (!rsaService.hasValidClientPublicKey(session)) {
                 return Response.error(Error.RSA_CLIENT_PUBLIC_KEY_NOT_FOUND);
             }
-            // 生成或获取AES密钥
             AesKey aesKey = aesService.getKey(session);
-            // 使用客户端公钥加密AES密钥和向量
             String encryptedKey = rsaService.encrypt(aesKey.getKey(), session);
             String encryptedVector = rsaService.encrypt(aesKey.getVector(), session);
-            // 构建返回结果
             AesKey response = new AesKey();
             response.setKey(encryptedKey);
             response.setVector(encryptedVector);
             response.setSession(session);
             response.setExpireTime(aesKey.getExpireTime());
             return Response.ok(response);
-        } catch (cn.org.autumn.exception.CodeException e) {
-            log.error("获取AES密钥失败:{}, IP:{}", e.getMessage(), IPUtils.getIp(servlet));
+        } catch (CodeException e) {
+            log.warn("获取AES密钥失败:{}, IP:{}", e.getMessage(), IPUtils.getIp(servlet));
             return Response.error(e);
         } catch (Exception e) {
-            log.error("获取AES密钥失败:{}, IP:{}", e.getMessage(), IPUtils.getIp(servlet), e);
+            log.error("获取AES密钥失败:{}, IP:{}", e.getMessage(), IPUtils.getIp(servlet));
             return Response.error(e);
         }
     }
@@ -156,18 +169,27 @@ public class RsaController {
      */
     @PostMapping("/init")
     @Endpoint(hidden = true)
-    public Response<Encryption> initEncryption(@Valid @RequestBody Request<InitRequest> request, HttpServletRequest servlet) {
+    public Response<Encryption> initEncryption(@Valid @RequestBody(required = false) Request<InitRequest> request, HttpServletRequest servlet) {
         try {
-            InitRequest initRequest = request.getData();
+            if (request == null || request.getData() == null) {
+                log.warn("初始化参数缺失: body/data 为空, IP:{}", IPUtils.getIp(servlet));
+                return Response.error(Error.BAD_REQUEST);
+            }
             String session = request.getSession();
+            if (StringUtils.isBlank(session)) {
+                log.warn("初始化参数缺失: session 为空, IP:{}", IPUtils.getIp(servlet));
+                return Response.error(Error.RSA_SESSION_REQUIRED);
+            }
+            InitRequest initRequest = request.getData();
             String clientPublicKey = initRequest.getPublicKey();
+            if (StringUtils.isBlank(clientPublicKey)) {
+                log.warn("初始化参数缺失: publicKey 为空, IP:{}", IPUtils.getIp(servlet));
+                return Response.error(Error.BAD_REQUEST);
+            }
             Long expireTime = initRequest.getExpireTime();
-            // 1. 生成或获取服务端密钥对
             RsaKey rsaKey = rsaService.getKey(session);
             RsaKey ras = rsaKey.copy();
-            // 2. 保存客户端公钥
             rsaService.savePublicKey(session, clientPublicKey, expireTime);
-            // 3. 生成或获取AES密钥
             AesKey aesKey = aesService.getKey(session);
             AesKey aes = new AesKey();
             aes.setSession(session);
@@ -181,22 +203,19 @@ public class RsaController {
             String json = gson.toJson(endpoints);
             String end = aesService.encrypt(json, session);
             response.setEndpoints(end);
-            // 返回动态安全请求特征值（客户端附加到User-Agent和X-Encrypt-Auth）
-            // 使用AES会话密钥加密传输，避免明文泄露
             SecurityRequestEntity security = securityRequestService.ensureCurrent();
             response.setAgent(aesService.encrypt(security.getAgent(), session));
             response.setAuth(aesService.encrypt(security.getAuth(), session));
-            // 保存加密密钥信息到数据库
             encryptKeyService.saveOrUpdate(session, rsaKey, clientPublicKey, aesKey);
             return Response.ok(response);
         } catch (CodeException e) {
-            log.error("初始化失败:{}, IP:{}", e.getMessage(), IPUtils.getIp(servlet), e);
+            log.warn("初始化失败:{}, IP:{}", e.getMessage(), IPUtils.getIp(servlet));
             return Response.error(e);
+        } catch (IllegalArgumentException e) {
+            log.warn("初始化参数非法:{}, IP:{}", e.getMessage(), IPUtils.getIp(servlet));
+            return Response.error(Error.BAD_REQUEST);
         } catch (Exception e) {
-            log.error("初始化异常:{}, IP:{}", e.getMessage(), IPUtils.getIp(servlet), e);
-            return Response.error(e);
-        } catch (Throwable e) {
-            log.error("初始化错误:{}, IP:{}", e.getMessage(), IPUtils.getIp(servlet), e);
+            log.error("初始化异常:{}, IP:{}", e.getMessage(), IPUtils.getIp(servlet));
             return Response.error(e);
         }
     }
@@ -213,8 +232,17 @@ public class RsaController {
             List<EndpointInfo> endpoints = rsaService.getEncryptEndpoints();
             return Response.ok(endpoints);
         } catch (Exception e) {
-            log.error("扫描接口: {}", e.getMessage(), e);
+            log.error("扫描接口: {}", e.getMessage());
             return Response.error(e);
         }
+    }
+
+    /** @return session；缺失时已打 warn，返回 null */
+    private static String requireSession(Request<?> request, HttpServletRequest servlet) {
+        if (request == null || StringUtils.isBlank(request.getSession())) {
+            log.warn("RSA 参数缺失: session 为空, IP:{}", IPUtils.getIp(servlet));
+            return null;
+        }
+        return request.getSession();
     }
 }

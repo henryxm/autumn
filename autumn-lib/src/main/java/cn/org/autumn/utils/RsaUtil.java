@@ -90,11 +90,10 @@ public class RsaUtil {
             key = key.replace("-----BEGIN PUBLIC KEY-----", "")
                     .replace("-----BEGIN RSA PUBLIC KEY-----", "")
                     .replace("-----END PUBLIC KEY-----", "")
-                    .replace("-----END RSA PUBLIC KEY-----", "")
-                    .replaceAll("\\s", ""); // 移除所有空白字符（空格、换行等）
+                    .replace("-----END RSA PUBLIC KEY-----", "");
         }
         try {
-            byte[] keyBytes = Base64.getDecoder().decode(key);
+            byte[] keyBytes = Base64Texts.decode(key);
             return new KeyData(keyBytes, isPKCS1);
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("公钥Base64格式错误: " + e.getMessage(), e);
@@ -188,7 +187,7 @@ public class RsaUtil {
         try {
             if (StringUtils.isBlank(data))
                 return "";
-            byte[] keyBytes = Base64.getDecoder().decode(privateKey);
+            byte[] keyBytes = Base64Texts.decode(privateKey);
             PKCS8EncodedKeySpec pkcs8KeySpec = new PKCS8EncodedKeySpec(keyBytes);
             KeyFactory keyFactory = KeyFactory.getInstance(KEY_ALGORITHM);
             PrivateKey priKey = keyFactory.generatePrivate(pkcs8KeySpec);
@@ -197,7 +196,7 @@ public class RsaUtil {
             // RSA解密需要分段解密
             // 从私钥中获取密钥长度
             int keySize = ((RSAPrivateKey) priKey).getModulus().bitLength();
-            byte[] encryptedBytes = Base64.getDecoder().decode(data);
+            byte[] encryptedBytes = Base64Texts.decode(data);
             int inputLen = encryptedBytes.length;
             int maxBlockSize = keySize / 8; // 最大解密块长度
             int offSet = 0;
