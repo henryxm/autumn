@@ -467,6 +467,10 @@ public class AdminAccessGuard {
         Class<?> raw = unwrapProxyClass(type);
         String method = StringUtils.defaultString(methodName);
         String module = extractModuleName(raw);
+        // JSR-356：勿对 @ServerEndpoint 做管理 API 门禁（亦避免薄切面误织入）
+        if (raw.isAnnotationPresent(jakarta.websocket.server.ServerEndpoint.class)) {
+            return false;
+        }
         // 安装向导：仅 autumn.install.mode=true 时装载；无管理 IP 可认领前须可访问
         if ("install".equals(module) || raw.getName().contains(".modules.install.")) {
             return false;

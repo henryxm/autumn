@@ -145,6 +145,12 @@ class AdminAccessGuardTest {
     }
 
     @Test
+    void serverEndpointInControllerPackage_exemptFromAdminIpApi() {
+        assertFalse(guard.shouldRequireAdminIpApi(
+                cn.org.autumn.modules.bugshut.controller.BugshutSocketFixture.class, "onOpen", 0));
+    }
+
+    @Test
     void managedModulesSpi_extendsGenGlobalModule() {
         cn.org.autumn.config.AdminAccessModuleHandler managed = new cn.org.autumn.config.AdminAccessModuleHandler() {
             @Override

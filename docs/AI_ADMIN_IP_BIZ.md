@@ -28,7 +28,10 @@
 within(*..modules..controller..*)
   || within(*..controller.gen..*)
   || within(cn.org.autumn.modules.install..*)
+&& !@within(jakarta.websocket.server.ServerEndpoint)
 ```
+
+`@ServerEndpoint` 必须排除：被 CGLIB 代理后 `ServerEndpointExporter` 会按代理类注册，Tomcat 启动失败（兼容项 **C-22**）。JSR-356 端点勿标 `@RestController`。
 
 ### 模式 A — 推荐（零业务切面）
 

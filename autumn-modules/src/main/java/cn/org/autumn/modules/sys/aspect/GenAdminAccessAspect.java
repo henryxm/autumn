@@ -18,6 +18,8 @@ import org.springframework.stereotype.Component;
  *   <li>{@code *..controller.gen..*}</li>
  *   <li>{@code cn.org.autumn.modules.install..*}（向导；判定侧不强制 IP）</li>
  * </ul>
+ * 排除 {@code @ServerEndpoint}：JSR-356 端点若被 CGLIB 代理，{@code ServerEndpointExporter}
+ * 会按代理类注册，Tomcat 报「not annotated with @ServerEndpoint」导致启动失败（如 bugshut）。
  * 判定与执行见 {@link AdminAccessGuard#enforceAdminIpApiIfRequired}；异形包见 {@code docs/AI_ADMIN_IP_BIZ.md}。
  */
 @Slf4j
@@ -29,7 +31,9 @@ public class GenAdminAccessAspect {
     @Autowired
     private AdminAccessGuard adminAccessGuard;
 
-    @Before("(within(*..modules..controller..*) || within(*..controller.gen..*) || within(cn.org.autumn.modules.install..*)) && execution(public * *(..))")
+    @Before("(within(*..modules..controller..*) || within(*..controller.gen..*) || within(cn.org.autumn.modules.install..*))"
+            + " && execution(public * *(..))"
+            + " && !@within(jakarta.websocket.server.ServerEndpoint)")
     public void requireAdminIpForManagementApi(JoinPoint joinPoint) {
         adminAccessGuard.enforceAdminIpApiIfRequired(joinPoint);
     }
